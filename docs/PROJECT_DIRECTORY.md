@@ -2,7 +2,7 @@
 
 ## 目标与适用范围
 
-本文件定义 `SYBaseProjectWeb` 的目录结构、模块边界与命名约定。
+本文件定义 `SYBaseProjectWeb` 的目录结构、模块边界与命名约定。当前工程已引入 `Vben Admin` 的 monorepo 结构，业务应用根目录为 `apps/web-ele`。
 
 - 适用对象：前端开发者、架构设计者、AI 助手
 - 适用范围：Vue 3 管理台、业务平台、可视化页面及其工程初始化
@@ -12,40 +12,49 @@
 
 ### 1. 根目录基线
 
-根目录默认建议包含以下目录：
+根目录默认包含以下目录：
 
-- `src/`
-- `public/`
+- `apps/web-ele/`
+- `apps/backend-mock/`
+- `packages/`
+- `internal/`
+- `scripts/`
 - `docs/`
-- `mock/`
 - `tests/`
 
 必要的工程文件按脚手架落地，例如：
 
 - `package.json`
 - `pnpm-lock.yaml`
-- `tsconfig.json`
-- `vite.config.ts`
-- `tailwind.config.ts`
-- `.env.*`
+- `pnpm-workspace.yaml`
+- `turbo.json`
+- `eslint.config.mjs`
+- `stylelint.config.mjs`
 
-### 2. `src/` 组织方式
+应用级工程文件位于 `apps/web-ele`，例如：
 
-`src/` 必须采用“应用壳 + 业务模块 + 共享能力”模式：
+- `apps/web-ele/vite.config.ts`
+- `apps/web-ele/tsconfig.json`
+- `apps/web-ele/.env.*`
 
-- `src/app`：应用启动、全局 provider、入口装配、全局错误处理、全局样式注册
-- `src/modules/<domain>`：按业务域组织页面、组件、模块内 store、模块内 API、类型与转换逻辑
-- `src/shared`：通用组件、组合式函数、工具、常量、类型、权限能力
-- `src/router`：路由注册、守卫装配、导航元信息处理
-- `src/stores`：仅放全局级 Pinia store，例如用户会话、主题、布局状态
-- `src/styles`：Tailwind 入口、设计 token、Element Plus 变量覆盖、全局样式
+### 2. `apps/web-ele/src/` 组织方式
+
+`apps/web-ele/src/` 必须采用“Vben 应用壳 + 业务模块 + 共享能力”模式：
+
+- `apps/web-ele/src/main.ts`、`bootstrap.ts`：应用启动、全局 provider、入口装配、全局样式注册
+- `apps/web-ele/src/modules/<domain>`：按业务域组织页面、组件、模块内 store、模块内 API、类型与转换逻辑
+- `apps/web-ele/src/router`：路由注册、守卫装配、导航元信息处理
+- `apps/web-ele/src/store`：应用级 store，例如认证流程扩展
+- `apps/web-ele/src/api`：应用级请求实例与核心接口
+- `apps/web-ele/src/layouts`、`views/_core`：Vben 基础布局、登录与异常页
+- `packages/*`：Vben 共享包、跨应用通用能力、样式与组件基础能力
 
 ### 3. 模块目录契约
 
 业务模块建议按以下结构组织：
 
 ```text
-src/modules/<domain>/
+apps/web-ele/src/modules/<domain>/
 ├── api/
 ├── components/
 ├── store/
@@ -76,6 +85,7 @@ src/modules/<domain>/
 - 禁止把所有类型堆到顶层 `types/`
 - 禁止在 `src/router` 中直接写业务页面实现
 - 禁止把共享层当作默认收纳箱，导致业务边界持续外溢
+- 禁止在 `packages/*` 中直接堆叠单一业务域逻辑
 
 ## 推荐实践
 
@@ -94,7 +104,7 @@ src/modules/<domain>/
 ## 检查清单
 
 - [ ] 根目录包含规范要求的核心目录
-- [ ] `src/` 采用业务模块化结构
+- [ ] `apps/web-ele/src/` 采用业务模块化结构
 - [ ] 全局 store 与模块 store 边界清晰
 - [ ] 路由、样式、共享能力目录职责明确
 - [ ] 未出现大面积顶层平铺的 `views/components/api/store/types`
