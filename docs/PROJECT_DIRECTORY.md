@@ -26,7 +26,6 @@
 - `pnpm-lock.yaml`
 - `tsconfig.json`
 - `vite.config.ts`
-- `tailwind.config.ts`
 - `.env.*`
 
 ### 2. `src/` 组织方式
@@ -37,8 +36,10 @@
 - `src/modules/<domain>`：按业务域组织页面、组件、模块内 store、模块内 API、类型与转换逻辑
 - `src/shared`：通用组件、组合式函数、工具、常量、类型、权限能力
 - `src/router`：路由注册、守卫装配、导航元信息处理
-- `src/stores`：仅放全局级 Pinia store，例如用户会话、主题、布局状态
-- `src/styles`：Tailwind 入口、设计 token、Element Plus 变量覆盖、全局样式
+- `src/stores`：当前业务契约级全局 Pinia store，例如用户会话与权限
+- `src/store`：Art Design Pro 布局、主题、菜单、工作台标签等 UI 外壳状态
+- `src/assets/styles`：Art Design Pro 样式入口、设计 token、Element Plus 变量覆盖、全局样式
+- `src/views`：Art Design Pro layout 容器与系统级外壳视图，不承载业务模块页面
 
 ### 3. 模块目录契约
 

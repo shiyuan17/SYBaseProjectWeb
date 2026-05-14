@@ -10,9 +10,15 @@ export interface AppRouteMeta {
   permissionCodes?: PermissionCode[]
   layout?: AppRouteLayout
   hiddenInMenu?: boolean
+  icon?: string
+  keepAlive?: boolean
+  fixedTab?: boolean
+  activePath?: string
+  isFullPage?: boolean
 }
 
 declare module 'vue-router' {
-  interface RouteMeta extends AppRouteMeta {}
+  interface RouteMeta extends AppRouteMeta {
+    _syRouteMetaBrand?: never
+  }
 }
-

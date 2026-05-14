@@ -18,7 +18,7 @@ export const routes: RouteRecordRaw[] = [
   },
   {
     path: '/',
-    component: () => import('@/shared/layouts/AppShell.vue'),
+    component: () => import('@/views/index/index.vue'),
     meta: {
       title: '后台',
       requiresAuth: true,
@@ -40,7 +40,10 @@ export const routes: RouteRecordRaw[] = [
           title: '仪表盘',
           requiresAuth: true,
           permissionCodes: [PERMISSION_CODES.dashboardView],
-          layout: 'app'
+          layout: 'app',
+          icon: 'ri:dashboard-3-line',
+          keepAlive: false,
+          fixedTab: true
         }
       },
       {
@@ -51,7 +54,9 @@ export const routes: RouteRecordRaw[] = [
           title: '用户列表',
           requiresAuth: true,
           permissionCodes: [PERMISSION_CODES.userManagementView],
-          layout: 'app'
+          layout: 'app',
+          icon: 'ri:user-settings-line',
+          keepAlive: false
         }
       }
     ]
@@ -68,4 +73,3 @@ export const routes: RouteRecordRaw[] = [
     }
   }
 ]
-

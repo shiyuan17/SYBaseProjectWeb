@@ -1,6 +1,6 @@
 # SYBaseProjectWeb
 
-`SYBaseProjectWeb` 是一个面向中后台与业务平台场景的前端工程规范基线仓库，采用 `Vue 3 + Vite + TypeScript + Pinia + Vue Router + Element Plus + Axios + ECharts + TailwindCSS` 作为默认技术栈，用于统一团队的目录组织、编码约束、协作流程与发布要求。
+`SYBaseProjectWeb` 是一个面向中后台与业务平台场景的前端工程规范基线仓库，采用 `Vue 3 + Vite + TypeScript + Pinia + Vue Router + Element Plus + Axios + ECharts + Art Design Pro 样式体系` 作为默认技术栈，用于统一团队的目录组织、编码约束、协作流程与发布要求。
 
 ## 项目定位
 
@@ -8,7 +8,7 @@
 - 为 AI 与人工协作提供同一套执行语境
 - 为后续脚手架、模块开发、接口联调和发布验收提供唯一规范来源
 
-当前阶段仅交付规范体系，不包含脚手架代码、依赖安装或页面实现。
+当前阶段已包含登录、路由守卫、Art Design Pro 风格 layout、示例业务模块、MSW 与测试基线。
 
 ## 技术栈
 
@@ -20,7 +20,7 @@
 - `Element Plus`
 - `Axios`
 - `ECharts`
-- `TailwindCSS`
+- `Art Design Pro 样式体系`
 - `pnpm`
 
 ## 推荐目录骨架
@@ -46,8 +46,10 @@ project-root
     │       └── views/
     ├── router/
     ├── shared/
+    ├── store/
     ├── stores/
-    └── styles/
+    ├── assets/styles/
+    └── views/
 ```
 
 命名示例：

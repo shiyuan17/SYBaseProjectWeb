@@ -63,7 +63,9 @@ export const useSessionStore = defineStore('session', {
       removeStorageValue(STORAGE_KEYS.session)
     },
     hasPermissions(requiredPermissionCodes: string[] = []) {
-      return requiredPermissionCodes.every((permissionCode) => this.permissionCodes.includes(permissionCode))
+      return requiredPermissionCodes.every((permissionCode) =>
+        this.permissionCodes.includes(permissionCode as (typeof this.permissionCodes)[number])
+      )
     },
     persist() {
       saveJson<PersistedSessionState>(STORAGE_KEYS.session, {
@@ -75,4 +77,3 @@ export const useSessionStore = defineStore('session', {
     }
   }
 })
-

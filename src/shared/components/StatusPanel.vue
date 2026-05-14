@@ -1,13 +1,13 @@
 <template>
   <div
-    class="flex flex-col items-start gap-3 rounded-panel border border-dashed p-6"
+    class="flex flex-col items-start gap-3 rounded-custom-sm border border-dashed p-6"
     :class="panelClasses"
   >
     <div class="space-y-1">
-      <h3 class="text-base font-semibold text-slate-900">
+      <h3 class="text-base font-semibold text-g-900">
         {{ title }}
       </h3>
-      <p class="text-sm text-slate-600">
+      <p class="text-sm text-g-600">
         {{ description }}
       </p>
     </div>
@@ -43,6 +43,6 @@ const panelClasses = computed(() => {
     return 'border-emerald-200 bg-emerald-50/70'
   }
 
-  return 'border-slate-200 bg-slate-50'
+  return 'border-g-300 bg-g-100'
 })
 </script>

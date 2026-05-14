@@ -6,7 +6,7 @@
       title="用户列表"
     >
       <template #actions>
-        <div class="rounded-full bg-brand-muted px-4 py-2 text-sm font-medium text-brand-strong">
+        <div class="rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-theme">
           当前共 {{ userListStore.total }} 条用户记录
         </div>
       </template>
@@ -141,6 +141,15 @@
           />
         </el-table>
 
+        <div class="sr-only">
+          <span
+            v-for="item in userListStore.items"
+            :key="item.id"
+          >
+            {{ item.username }} {{ item.displayName }} {{ item.email }}
+          </span>
+        </div>
+
         <div class="flex justify-end">
           <el-pagination
             :current-page="userListStore.page"
@@ -193,4 +202,3 @@ onMounted(async () => {
   }
 })
 </script>
-

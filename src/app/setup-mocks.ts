@@ -5,10 +5,16 @@ export async function setupMocking() {
     return
   }
 
-  const { worker } = await import('../../mock/browser')
+  try {
+    const { worker } = await import('../../mock/browser')
 
-  await worker.start({
-    onUnhandledRequest: 'bypass'
-  })
+    await worker.start({
+      onUnhandledRequest: 'bypass',
+      serviceWorker: {
+        url: '/mockServiceWorker.js'
+      }
+    })
+  } catch (error) {
+    console.warn('[MSW] Mock worker 启动失败，已跳过本地 mock，不阻断应用启动。', error)
+  }
 }
-

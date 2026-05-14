@@ -1,4 +1,4 @@
-import axios, { AxiosError } from 'axios'
+import axios, { type AxiosError } from 'axios'
 
 import type { BusinessErrorPayload } from '@/shared/types/api'
 
@@ -44,4 +44,3 @@ export function toAppRequestError(error: AxiosError<BusinessErrorPayload>) {
     traceId: payload?.traceId
   })
 }
-

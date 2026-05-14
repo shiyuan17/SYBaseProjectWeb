@@ -1,18 +1,18 @@
 <template>
-  <section class="panel-surface p-5">
+  <section class="art-card p-5">
     <div
       v-if="title || description"
       class="mb-4 space-y-1"
     >
       <h2
         v-if="title"
-        class="text-lg font-semibold text-slate-900"
+        class="text-lg font-semibold text-g-900"
       >
         {{ title }}
       </h2>
       <p
         v-if="description"
-        class="text-sm text-slate-600"
+        class="text-sm text-g-600"
       >
         {{ description }}
       </p>
@@ -27,4 +27,3 @@ defineProps<{
   description?: string
 }>()
 </script>
-

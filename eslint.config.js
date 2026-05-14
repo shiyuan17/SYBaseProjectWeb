@@ -25,6 +25,7 @@ export default tseslint.config(
       }
     },
     rules: {
+      'no-undef': 'off',
       'vue/multi-word-component-names': 'off',
       '@typescript-eslint/consistent-type-imports': [
         'error',
@@ -34,6 +35,31 @@ export default tseslint.config(
       ]
     }
   },
+  {
+    files: [
+      'src/assets/**',
+      'src/components/core/**',
+      'src/config/**',
+      'src/directives/**',
+      'src/hooks/**',
+      'src/mock/upgrade/**',
+      'src/router/core/**',
+      'src/store/**',
+      'src/types/**',
+      'src/utils/**',
+      'src/views/outside/**'
+    ],
+    rules: {
+      '@typescript-eslint/consistent-type-imports': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
+      'vue/attribute-hyphenation': 'off',
+      'vue/attributes-order': 'off',
+      'vue/no-required-prop-with-default': 'off',
+      'vue/no-template-shadow': 'off',
+      'vue/no-v-html': 'off',
+      'vue/require-default-prop': 'off',
+      'vue/v-on-event-hyphenation': 'off'
+    }
+  },
   eslintConfigPrettier
 )
-

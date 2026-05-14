@@ -2,7 +2,7 @@
 
 ## 目标与适用范围
 
-本文件定义 `Element Plus + TailwindCSS + ECharts` 技术栈下的界面、交互与视觉一致性规则。
+本文件定义 `Element Plus + Art Design Pro 样式体系 + ECharts` 技术栈下的界面、交互与视觉一致性规则。
 
 - 适用对象：前端开发者、设计协作者、AI 助手
 - 适用范围：页面布局、表单、表格、弹窗、图表、主题变量、空态和错误态
@@ -13,8 +13,8 @@
 ### 1. 技术栈职责边界
 
 - `Element Plus` 负责中后台基础交互组件
-- `TailwindCSS` 负责布局、间距、栅格、快速样式编排与原子化补充
-- 全局设计 token、主题变量、覆盖策略统一在 `src/styles` 管理
+- `Art Design Pro 样式体系` 负责后台 layout、菜单、主题、间距、栅格、工作台标签与原子化补充
+- 全局设计 token、主题变量、覆盖策略统一在 `src/assets/styles` 管理
 - 禁止在页面中无序堆叠内联样式、临时色值和散乱覆盖规则
 
 ### 2. 设计 token
@@ -58,7 +58,7 @@
 
 ## 检查清单
 
-- [ ] Element Plus、TailwindCSS、ECharts 职责边界清晰
+- [ ] Element Plus、Art Design Pro 样式体系、ECharts 职责边界清晰
 - [ ] 设计 token、主题覆盖与样式入口统一
 - [ ] 表单、表格、弹窗、空态、加载态、错误态规则完整
 - [ ] 页面布局层级清晰，兼顾常见桌面和窄屏场景

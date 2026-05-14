@@ -9,6 +9,7 @@ export interface SessionUser {
   id: string
   username: string
   displayName: string
+  email?: string
   permissionCodes: PermissionCode[]
 }
 
@@ -24,4 +25,3 @@ export interface SessionState {
   permissionCodes: PermissionCode[]
   isInitialized: boolean
 }
-
