@@ -1,0 +1,13 @@
+:root {
+  --color-brand: #0f766e;
+  --color-brand-strong: #115e59;
+  --color-brand-muted: #ccfbf1;
+  --color-surface-base: #ffffff;
+  --color-surface-muted: #f8fafc;
+  --color-surface-border: #dbe4ee;
+  --color-state-success: #16a34a;
+  --color-state-warning: #d97706;
+  --color-state-danger: #dc2626;
+  --layout-sidebar-width: 17rem;
+}
+
