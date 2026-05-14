@@ -1,10 +1,10 @@
 {
   "welcomeBack": "欢迎回来",
-  "pageTitle": "开箱即用的大型中后台管理系统",
-  "pageDesc": "工程化、高性能、跨组件库的前端模版",
+  "pageTitle": "SYAdmin 智能运营管理平台",
+  "pageDesc": "统一业务流程、数据看板与权限协作的企业级后台入口",
   "loginSuccess": "登录成功",
   "loginSuccessDesc": "欢迎回来",
-  "loginSubtitle": "请输入您的账户信息以开始管理您的项目",
+  "loginSubtitle": "请输入您的账号和密码登录 SYAdmin",
   "selectAccount": "快速选择账号",
   "username": "账号",
   "password": "密码",

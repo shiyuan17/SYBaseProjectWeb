@@ -28,7 +28,7 @@ const defaultPreferences: Preferences = {
     layout: 'sidebar-nav',
     locale: 'zh-CN',
     loginExpiredMode: 'page',
-    name: 'Vben Admin',
+    name: 'SYAdmin',
     preferencesButtonPosition: 'auto',
     watermark: false,
     watermarkContent: '',
@@ -42,8 +42,8 @@ const defaultPreferences: Preferences = {
     styleType: 'normal',
   },
   copyright: {
-    companyName: 'Vben',
-    companySiteLink: 'https://www.vben.pro',
+    companyName: 'SYAdmin',
+    companySiteLink: '',
     date: '2024',
     enable: true,
     icp: '',
@@ -66,7 +66,8 @@ const defaultPreferences: Preferences = {
   logo: {
     enable: true,
     fit: 'contain',
-    source: 'https://unpkg.com/@vbenjs/static-source@0.1.7/source/logo-v1.webp',
+    source: '/logo-syadmin-icon.png',
+    sourceDark: '/logo-syadmin-icon.png',
   },
   navigation: {
     accordion: true,

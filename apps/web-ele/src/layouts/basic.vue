@@ -25,7 +25,7 @@ import LoginForm from '#/views/_core/authentication/login.vue';
 const notifications = ref<NotificationItem[]>([
   {
     id: 1,
-    avatar: 'https://avatar.vercel.sh/vercel.svg?text=VB',
+    avatar: 'https://avatar.vercel.sh/vercel.svg?text=SY',
     date: '3小时前',
     isRead: true,
     message: '描述信息描述信息描述信息',
@@ -71,7 +71,7 @@ const notifications = ref<NotificationItem[]>([
     isRead: false,
     message: '描述信息描述信息描述信息',
     title: '跳转外部链接示例',
-    link: 'https://doc.vben.pro',
+    link: '/',
   },
 ]);
 
@@ -113,7 +113,7 @@ const menus = computed(() => [
   },
   {
     handler: () => {
-      openWindow(`${VBEN_GITHUB_URL}/issues`, {
+      openWindow('/', {
         target: '_blank',
       });
     },
@@ -223,7 +223,7 @@ watch(
         :avatar
         :menus
         :text="userStore.userInfo?.realName"
-        description="ann.vben@gmail.com"
+        description="SYAdmin"
         tag-text="Pro"
         @logout="handleLogout"
       />
