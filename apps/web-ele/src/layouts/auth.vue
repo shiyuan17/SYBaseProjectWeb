@@ -5,10 +5,11 @@ import { AuthPageLayout } from '@vben/layouts';
 import { preferences } from '@vben/preferences';
 
 import { $t } from '#/locales';
+import { BRAND_LOGO_SOURCE } from '#/preferences-branding';
 
 const appName = computed(() => preferences.app.name);
-const logo = computed(() => preferences.logo.source);
-const logoDark = computed(() => preferences.logo.sourceDark);
+const logo = BRAND_LOGO_SOURCE;
+const logoDark = BRAND_LOGO_SOURCE;
 </script>
 
 <template>

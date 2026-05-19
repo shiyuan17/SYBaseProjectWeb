@@ -9,12 +9,12 @@ export const VBEN_GITHUB_URL = '/';
 export const VBEN_DOC_URL = '/';
 
 /**
- * @zh_CN SYAdmin Logo
+ * @zh_CN 嘉维病理全流程管理系统 Logo
  */
-export const VBEN_LOGO_URL = '/logo-syadmin-icon.png';
+export const VBEN_LOGO_URL = '/logo-syadmin.svg';
 
 /**
- * @zh_CN SYAdmin 首页地址
+ * @zh_CN 嘉维病理全流程管理系统 首页地址
  */
 export const VBEN_PREVIEW_URL = '/';
 

@@ -79,6 +79,8 @@ pnpm test:unit
 
 开发环境默认保留 `apps/backend-mock`，`apps/web-ele/.env.development` 中 `VITE_NITRO_MOCK=true`，用于本地登录、菜单和基础页面联调。
 
+数据库联调与表结构资料统一归档在 [docs/database](/D:/Github/JW/SYBaseProjectWeb/docs/database)，当前已整理 [表信息整理.sql](/D:/Github/JW/SYBaseProjectWeb/docs/database/表信息整理.sql)。`scripts/` 目录只放可执行脚本，不放纯资料型 SQL。
+
 ## 规范文档索引
 
 - [AGENTS.md](./AGENTS.md)

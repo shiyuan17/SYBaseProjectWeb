@@ -1,10 +1,10 @@
 {
   "welcomeBack": "欢迎回来",
-  "pageTitle": "SYAdmin 智能运营管理平台",
-  "pageDesc": "统一业务流程、数据看板与权限协作的企业级后台入口",
+  "pageTitle": "嘉维病理全流程管理系统 ",
+  "pageDesc": "专业病理科数字化解决方案",
   "loginSuccess": "登录成功",
   "loginSuccessDesc": "欢迎回来",
-  "loginSubtitle": "请输入您的账号和密码登录 SYAdmin",
+  "loginSubtitle": "请输入您的账号和密码登录 嘉维病理全流程管理系统",
   "selectAccount": "快速选择账号",
   "username": "账号",
   "password": "密码",

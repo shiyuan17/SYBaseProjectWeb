@@ -105,7 +105,7 @@ describe('preferences-branding', () => {
 
   it('migrates legacy namespace cache and clears old keys', () => {
     const legacyNamespace = 'vben-web-ele-5.7.0-dev';
-    const currentNamespace = 'syadmin-web-ele-5.7.0-dev';
+    const currentNamespace = '嘉维病理全流程管理系统-web-ele-5.7.0-dev';
     const legacyCache = new StorageManager({ prefix: legacyNamespace });
     const currentCache = new StorageManager({ prefix: currentNamespace });
     const legacyPreferences = clonePreferences();

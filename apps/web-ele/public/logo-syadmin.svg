@@ -1,46 +1,46 @@
 <svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="syadmin-top" x1="54" y1="24" x2="198" y2="108" gradientUnits="userSpaceOnUse">
+    <linearGradient id="嘉维病理全流程管理系统-top" x1="54" y1="24" x2="198" y2="108" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#C084FC"/>
       <stop offset="0.55" stop-color="#7C3AED"/>
       <stop offset="1" stop-color="#3B82F6"/>
     </linearGradient>
-    <linearGradient id="syadmin-mid" x1="36" y1="72" x2="214" y2="180" gradientUnits="userSpaceOnUse">
+    <linearGradient id="嘉维病理全流程管理系统-mid" x1="36" y1="72" x2="214" y2="180" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#60A5FA"/>
       <stop offset="0.45" stop-color="#2563EB"/>
       <stop offset="1" stop-color="#14B8A6"/>
     </linearGradient>
-    <linearGradient id="syadmin-base" x1="70" y1="136" x2="186" y2="224" gradientUnits="userSpaceOnUse">
+    <linearGradient id="嘉维病理全流程管理系统-base" x1="70" y1="136" x2="186" y2="224" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#38BDF8"/>
       <stop offset="0.52" stop-color="#2563EB"/>
       <stop offset="1" stop-color="#1D4ED8"/>
     </linearGradient>
-    <filter id="syadmin-shadow" x="36" y="24" width="184" height="184" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+    <filter id="嘉维病理全流程管理系统-shadow" x="36" y="24" width="184" height="184" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
       <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#020617" flood-opacity="0.42"/>
     </filter>
   </defs>
-  <g filter="url(#syadmin-shadow)">
+  <g filter="url(#嘉维病理全流程管理系统-shadow)">
     <path
       d="M78 48C84.6274 44.3507 92.6948 44.3507 99.3222 48L156.678 79.5C163.305 83.1493 167.338 90.0876 167.338 97.5V158.5C167.338 165.912 163.305 172.851 156.678 176.5L99.3222 208C92.6948 211.649 84.6274 211.649 78 208L20.6442 176.5C14.0168 172.851 9.98395 165.912 9.98395 158.5V97.5C9.98395 90.0876 14.0168 83.1493 20.6442 79.5L78 48Z"
       transform="translate(49 24)"
-      fill="url(#syadmin-mid)"
+      fill="url(#嘉维病理全流程管理系统-mid)"
       opacity="0.95"
     />
     <path
       d="M67 20L112 45L67 70L22 45L67 20Z"
       transform="translate(61 32)"
-      fill="url(#syadmin-top)"
+      fill="url(#嘉维病理全流程管理系统-top)"
     />
     <path
       d="M0 0L46 25V88L0 63V0Z"
       transform="translate(84 64)"
-      fill="url(#syadmin-top)"
+      fill="url(#嘉维病理全流程管理系统-top)"
       opacity="0.9"
     />
     <path
       d="M46 0L92 25V88L46 63V0Z"
       transform="translate(84 64)"
-      fill="url(#syadmin-base)"
+      fill="url(#嘉维病理全流程管理系统-base)"
     />
     <path
       d="M18 8C18 3.58172 21.5817 0 26 0H30C34.4183 0 38 3.58172 38 8V54L26 64L18 54V8Z"

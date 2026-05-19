@@ -12,7 +12,7 @@ defineOptions({
 });
 
 withDefaults(defineProps<Props>(), {
-  companyName: 'SYAdmin',
+  companyName: '嘉维病理全流程管理系统',
   companySiteLink: '',
   date: '2024',
   icp: '',

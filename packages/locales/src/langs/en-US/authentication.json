@@ -1,10 +1,10 @@
 {
   "welcomeBack": "Welcome Back",
-  "pageTitle": "SYAdmin Intelligent Operations Console",
+  "pageTitle": "嘉维病理全流程管理系统 Intelligent Operations Console",
   "pageDesc": "Enterprise admin entry for workflows, dashboards, and access control",
   "loginSuccess": "Login Successful",
   "loginSuccessDesc": "Welcome Back",
-  "loginSubtitle": "Sign in to SYAdmin with your account credentials",
+  "loginSubtitle": "Sign in to 嘉维病理全流程管理系统 with your account credentials",
   "selectAccount": "Quick Select Account",
   "username": "Username",
   "password": "Password",

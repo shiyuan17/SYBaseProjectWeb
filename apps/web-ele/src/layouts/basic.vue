@@ -223,7 +223,7 @@ watch(
         :avatar
         :menus
         :text="userStore.userInfo?.realName"
-        description="SYAdmin"
+        description="嘉维病理全流程管理系统"
         tag-text="Pro"
         @logout="handleLogout"
       />

@@ -180,7 +180,7 @@ const trendItems: WorkbenchTrendItem[] = [
     avatar: 'svg:avatar-4',
     content: `发表文章 <a>如何编写一个Vite插件</a> `,
     date: '2天前',
-    title: 'SYAdmin',
+    title: '嘉维病理全流程管理系统',
   },
   {
     avatar: 'svg:avatar-1',
@@ -210,7 +210,7 @@ const trendItems: WorkbenchTrendItem[] = [
     avatar: 'svg:avatar-4',
     content: `发表文章 <a>如何构建企业级管理后台</a> `,
     date: '2021-03-01 20:00',
-    title: 'SYAdmin',
+    title: '嘉维病理全流程管理系统',
   },
 ];
 

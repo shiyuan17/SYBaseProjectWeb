@@ -17,11 +17,12 @@ const LEGACY_BRAND_NAMES = ['Vben', 'Vben Admin', 'Vben Admin Ele'];
 const LEGACY_LOGO_KEYWORDS = [
   '@vbenjs/static-source',
   'logo-v1.webp',
+  'logo-syadmin.svg',
   'vben',
 ];
 
-export const BRAND_LOGO_SOURCE = '/logo-syadmin-icon.png';
-export const BRAND_NAME = 'SYAdmin';
+export const BRAND_LOGO_SOURCE = '/jwbl-logo.svg';
+export const BRAND_NAME = '嘉维病理全流程管理系统';
 export const LEGACY_PREFERENCES_NAMESPACE = 'vben-web-ele';
 
 type PreferencesPatch = DeepPartial<Preferences>;

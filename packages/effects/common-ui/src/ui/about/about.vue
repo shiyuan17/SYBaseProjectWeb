@@ -16,7 +16,7 @@ defineOptions({
 withDefaults(defineProps<Props>(), {
   description:
     '是一个面向企业运营与业务协作场景的管理平台前端，基于 Vue 3、Vite、TypeScript 与 Element Plus 构建，提供统一的登录入口、布局能力与工程化基础。',
-  name: 'SYAdmin',
+  name: '嘉维病理全流程管理系统',
   title: '关于项目',
 });
 
@@ -60,7 +60,7 @@ const {
 const baseDescriptionItems = computed<DescriptionItem[]>(() => {
   const items: DescriptionItem[] = [
     {
-      content: 'SYAdmin',
+      content: '嘉维病理全流程管理系统',
       title: '项目标识',
     },
     {

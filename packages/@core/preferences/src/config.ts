@@ -28,7 +28,7 @@ const defaultPreferences: Preferences = {
     layout: 'sidebar-nav',
     locale: 'zh-CN',
     loginExpiredMode: 'page',
-    name: 'SYAdmin',
+    name: '嘉维病理全流程管理系统',
     preferencesButtonPosition: 'auto',
     watermark: false,
     watermarkContent: '',
@@ -42,7 +42,7 @@ const defaultPreferences: Preferences = {
     styleType: 'normal',
   },
   copyright: {
-    companyName: 'SYAdmin',
+    companyName: '嘉维病理全流程管理系统',
     companySiteLink: '',
     date: '2024',
     enable: true,
@@ -66,8 +66,8 @@ const defaultPreferences: Preferences = {
   logo: {
     enable: true,
     fit: 'contain',
-    source: '/logo-syadmin-icon.png',
-    sourceDark: '/logo-syadmin-icon.png',
+    source: '/logo-syadmin.svg',
+    sourceDark: '/logo-syadmin.svg',
   },
   navigation: {
     accordion: true,
