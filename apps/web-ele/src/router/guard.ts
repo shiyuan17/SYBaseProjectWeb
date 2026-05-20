@@ -5,6 +5,7 @@ import { preferences } from '@vben/preferences';
 import { useAccessStore, useUserStore } from '@vben/stores';
 import { startProgress, stopProgress } from '@vben/utils';
 
+import { getAccessCodesApi } from '#/api';
 import { accessRoutes, coreRouteNames } from '#/router/routes';
 import { useAuthStore } from '#/store';
 
@@ -92,12 +93,19 @@ function setupAccessGuard(router: Router) {
 
     // 生成路由表
     // 当前登录用户拥有的角色标识列表
-    const userInfo = userStore.userInfo || (await authStore.fetchUserInfo());
+    const [userInfo, accessCodes] = await Promise.all([
+      userStore.userInfo ? Promise.resolve(userStore.userInfo) : authStore.fetchUserInfo(),
+      getAccessCodesApi(),
+    ]);
+    accessStore.setAccessCodes(accessCodes);
     const userRoles = userInfo.roles ?? [];
+    const routeAuthorities = [...new Set([...userRoles, ...accessCodes])];
 
     // 生成菜单和路由
     const { accessibleMenus, accessibleRoutes } = await generateAccess({
-      roles: userRoles,
+      // 前端静态路由继续复用 generateAccess 的 authority 过滤，
+      // 这里同时注入角色和权限码，兼容已有 role authority，并支持 M1 的 PERM_SYS_* 页面权限。
+      roles: routeAuthorities,
       router,
       // 则会在菜单中显示，但是访问会被重定向到403
       routes: accessRoutes,
