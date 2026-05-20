@@ -2,6 +2,10 @@ import type { TabsProps } from './types';
 
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 
+import {
+  observeElementResize,
+  supportsResizeObserver,
+} from '@vben-core/shared/utils';
 import { VbenScrollbar } from '@vben-core/shadcn-ui';
 
 import { useDebounceFn } from '@vueuse/core';
@@ -9,7 +13,7 @@ import { useDebounceFn } from '@vueuse/core';
 type DomElement = Element | null | undefined;
 
 export function useTabsViewScroll(props: TabsProps) {
-  let resizeObserver: null | ResizeObserver = null;
+  let stopObserveResize: null | (() => void) = null;
   let mutationObserver: MutationObserver | null = null;
   let tabItemCount = 0;
   const scrollbarRef = ref<InstanceType<typeof VbenScrollbar> | null>(null);
@@ -38,7 +42,6 @@ export function useTabsViewScroll(props: TabsProps) {
     const { scrollbarWidth, scrollViewWidth } = getScrollClientWidth();
 
     if (!scrollbarWidth || !scrollViewWidth) return;
-
     if (scrollbarWidth > scrollViewWidth) return;
 
     scrollViewportEl.value?.scrollBy({
@@ -58,9 +61,12 @@ export function useTabsViewScroll(props: TabsProps) {
       return;
     }
 
-    const viewportEl = scrollbarEl?.querySelector(
+    const viewportEl = scrollbarEl.querySelector(
       'div[data-reka-scroll-area-viewport]',
     );
+    if (!viewportEl) {
+      return;
+    }
 
     scrollViewportEl.value = viewportEl;
     calcShowScrollbarButton();
@@ -68,22 +74,25 @@ export function useTabsViewScroll(props: TabsProps) {
     await nextTick();
     scrollToActiveIntoView();
 
-    // 监听大小变化
-    resizeObserver?.disconnect();
-    resizeObserver = new ResizeObserver(
-      useDebounceFn((_entries: ResizeObserverEntry[]) => {
+    stopObserveResize?.();
+    stopObserveResize = observeElementResize(
+      viewportEl,
+      useDebounceFn(() => {
         calcShowScrollbarButton();
         scrollToActiveIntoView();
       }, 100),
     );
-    resizeObserver.observe(viewportEl);
+
+    if (!supportsResizeObserver()) {
+      calcShowScrollbarButton();
+      scrollToActiveIntoView();
+    }
 
     tabItemCount = props.tabs?.length || 0;
     mutationObserver?.disconnect();
-    // 使用 MutationObserver 仅监听子节点数量变化
     mutationObserver = new MutationObserver(() => {
       const count = viewportEl.querySelectorAll(
-        `div[data-tab-item="true"]`,
+        'div[data-tab-item="true"]',
       ).length;
 
       if (count > tabItemCount) {
@@ -96,7 +105,6 @@ export function useTabsViewScroll(props: TabsProps) {
       }
     });
 
-    // 配置为仅监听子节点的添加和移除
     mutationObserver.observe(viewportEl, {
       attributes: false,
       childList: true,
@@ -108,6 +116,7 @@ export function useTabsViewScroll(props: TabsProps) {
     if (!scrollViewportEl.value) {
       return;
     }
+
     await nextTick();
     const viewportEl = scrollViewportEl.value;
     const { scrollbarWidth } = getScrollClientWidth();
@@ -118,21 +127,17 @@ export function useTabsViewScroll(props: TabsProps) {
     }
 
     requestAnimationFrame(() => {
-      const activeItem = viewportEl?.querySelector('.is-active');
+      const activeItem = viewportEl.querySelector('.is-active');
       activeItem?.scrollIntoView({ behavior: 'smooth', inline: 'start' });
     });
   }
 
-  /**
-   * 计算tabs 宽度，用于判断是否显示左右滚动按钮
-   */
   async function calcShowScrollbarButton() {
     if (!scrollViewportEl.value) {
       return;
     }
 
     const { scrollbarWidth } = getScrollClientWidth();
-
     showScrollButton.value =
       scrollViewportEl.value.scrollWidth > scrollbarWidth;
   }
@@ -144,7 +149,6 @@ export function useTabsViewScroll(props: TabsProps) {
 
   function handleWheel({ deltaY }: WheelEvent) {
     scrollViewportEl.value?.scrollBy({
-      // behavior: 'smooth',
       left: deltaY * 3,
     });
   }
@@ -152,26 +156,12 @@ export function useTabsViewScroll(props: TabsProps) {
   watch(
     () => props.active,
     async () => {
-      // 200为了等待 tab 切换动画完成
-      // setTimeout(() => {
       scrollToActiveIntoView();
-      // }, 300);
     },
     {
       flush: 'post',
     },
   );
-
-  // watch(
-  //   () => props.tabs?.length,
-  //   async () => {
-  //     await nextTick();
-  //     calcShowScrollbarButton();
-  //   },
-  //   {
-  //     flush: 'post',
-  //   },
-  // );
 
   watch(
     () => props.styleType,
@@ -183,9 +173,9 @@ export function useTabsViewScroll(props: TabsProps) {
   onMounted(initScrollbar);
 
   onUnmounted(() => {
-    resizeObserver?.disconnect();
+    stopObserveResize?.();
     mutationObserver?.disconnect();
-    resizeObserver = null;
+    stopObserveResize = null;
     mutationObserver = null;
   });
 

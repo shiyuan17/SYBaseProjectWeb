@@ -1,51 +1,38 @@
-import { baseRequestClient, requestClient } from '#/api/request';
+import { anonymousRequestClient, requestClient } from '#/api/request';
 
 export namespace AuthApi {
-  /** 登录接口参数 */
   export interface LoginParams {
-    password?: string;
-    username?: string;
+    loginName: string;
+    password: string;
   }
 
-  /** 登录接口返回值 */
   export interface LoginResult {
     accessToken: string;
+    expiresAt: string;
   }
 
-  export interface RefreshTokenResult {
-    data: string;
-    status: number;
+  export interface CurrentUserResult {
+    avatar?: null | string;
+    homePath?: null | string;
+    loginName: string;
+    realName: string;
+    roles: string[];
+    userId: string;
   }
 }
 
-/**
- * 登录
- */
 export async function loginApi(data: AuthApi.LoginParams) {
-  return requestClient.post<AuthApi.LoginResult>('/auth/login', data);
+  return anonymousRequestClient.post<AuthApi.LoginResult>('/v1/auth/login', data);
 }
 
-/**
- * 刷新accessToken
- */
-export async function refreshTokenApi() {
-  return baseRequestClient.post<AuthApi.RefreshTokenResult>('/auth/refresh', {
-    withCredentials: true,
-  });
-}
-
-/**
- * 退出登录
- */
 export async function logoutApi() {
-  return baseRequestClient.post('/auth/logout', {
-    withCredentials: true,
-  });
+  return requestClient.post('/v1/auth/logout');
 }
 
-/**
- * 获取用户权限码
- */
+export async function getCurrentUserApi() {
+  return requestClient.get<AuthApi.CurrentUserResult>('/v1/auth/me');
+}
+
 export async function getAccessCodesApi() {
-  return requestClient.get<string[]>('/auth/codes');
+  return requestClient.get<string[]>('/v1/auth/access-codes');
 }

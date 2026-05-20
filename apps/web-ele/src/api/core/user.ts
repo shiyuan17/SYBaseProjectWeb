@@ -1,10 +1,19 @@
 import type { UserInfo } from '@vben/types';
 
-import { requestClient } from '#/api/request';
+import { preferences } from '@vben/preferences';
 
-/**
- * 获取用户信息
- */
+import { getCurrentUserApi } from './auth';
+
 export async function getUserInfoApi() {
-  return requestClient.get<UserInfo>('/user/info');
+  const currentUser = await getCurrentUserApi();
+  return {
+    avatar: currentUser.avatar ?? preferences.app.defaultAvatar,
+    desc: '',
+    homePath: currentUser.homePath || preferences.app.defaultHomePath,
+    realName: currentUser.realName,
+    roles: currentUser.roles ?? [],
+    token: '',
+    userId: currentUser.userId,
+    username: currentUser.loginName,
+  } satisfies UserInfo;
 }

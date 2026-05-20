@@ -10,7 +10,10 @@ import {
   CSS_VARIABLE_LAYOUT_FOOTER_HEIGHT,
   CSS_VARIABLE_LAYOUT_HEADER_HEIGHT,
 } from '@vben-core/shared/constants';
-import { getElementVisibleRect } from '@vben-core/shared/utils';
+import {
+  getElementVisibleRect,
+  observeElementResize,
+} from '@vben-core/shared/utils';
 
 import { useCssVar, useDebounceFn } from '@vueuse/core';
 
@@ -18,7 +21,7 @@ import { useCssVar, useDebounceFn } from '@vueuse/core';
  * @zh_CN content style
  */
 export function useLayoutContentStyle() {
-  let resizeObserver: null | ResizeObserver = null;
+  let stopObserveResize: null | (() => void) = null;
   const contentElement = ref<HTMLDivElement | null>(null);
   const visibleDomRect = ref<null | VisibleDomRect>(null);
   const contentHeight = useCssVar(CSS_VARIABLE_LAYOUT_CONTENT_HEIGHT);
@@ -36,25 +39,26 @@ export function useLayoutContentStyle() {
     };
   });
 
-  const debouncedCalcHeight = useDebounceFn(
-    (_entries: ResizeObserverEntry[]) => {
-      visibleDomRect.value = getElementVisibleRect(contentElement.value);
-      contentHeight.value = `${visibleDomRect.value.height}px`;
-      contentWidth.value = `${visibleDomRect.value.width}px`;
-    },
-    16,
-  );
+  const syncContentRect = () => {
+    visibleDomRect.value = getElementVisibleRect(contentElement.value);
+    contentHeight.value = `${visibleDomRect.value.height}px`;
+    contentWidth.value = `${visibleDomRect.value.width}px`;
+  };
+  const debouncedCalcHeight = useDebounceFn(syncContentRect, 16);
 
   onMounted(() => {
-    if (contentElement.value && !resizeObserver) {
-      resizeObserver = new ResizeObserver(debouncedCalcHeight);
-      resizeObserver.observe(contentElement.value);
+    if (contentElement.value && !stopObserveResize) {
+      syncContentRect();
+      stopObserveResize = observeElementResize(
+        contentElement.value,
+        debouncedCalcHeight,
+      );
     }
   });
 
   onUnmounted(() => {
-    resizeObserver?.disconnect();
-    resizeObserver = null;
+    stopObserveResize?.();
+    stopObserveResize = null;
   });
 
   return { contentElement, overlayStyle, visibleDomRect };

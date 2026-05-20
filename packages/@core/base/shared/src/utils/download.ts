@@ -1,4 +1,8 @@
-import { openWindow } from './window';
+import {
+  supportsAnchorDownload,
+  supportsObjectUrl,
+  supportsWindowOpen,
+} from './browser-capabilities';
 
 interface DownloadOptions<T = string> {
   fileName?: string;
@@ -6,12 +10,15 @@ interface DownloadOptions<T = string> {
   target?: string;
 }
 
-const DEFAULT_FILENAME = 'downloaded_file';
+interface TriggerDownloadOptions {
+  revokeDelay?: number;
+  revokeObjectUrl?: boolean;
+  target?: string;
+}
 
-/**
- * 通过 URL 下载文件，支持跨域
- * @throws {Error} - 当下载失败时抛出错误
- */
+const DEFAULT_FILENAME = 'downloaded_file';
+const DOWNLOAD_ERROR_MESSAGE = 'Failed to download file.';
+
 export async function downloadFileFromUrl({
   fileName,
   source,
@@ -21,40 +28,17 @@ export async function downloadFileFromUrl({
     throw new Error('Invalid URL.');
   }
 
-  const isChrome = window.navigator.userAgent.toLowerCase().includes('chrome');
-  const isSafari = window.navigator.userAgent.toLowerCase().includes('safari');
-
-  if (/iP/.test(window.navigator.userAgent)) {
-    console.error('Your browser does not support download!');
-    return;
-  }
-
-  if (isChrome || isSafari) {
-    triggerDownload(source, resolveFileName(source, fileName));
-    return;
-  }
-  if (!source.includes('?')) {
-    source += '?download';
-  }
-
-  openWindow(source, { target });
+  triggerDownload(source, resolveFileName(source, fileName), { target });
 }
 
-/**
- * 通过 Base64 下载文件
- */
 export function downloadFileFromBase64({ fileName, source }: DownloadOptions) {
   if (!source || typeof source !== 'string') {
     throw new Error('Invalid Base64 data.');
   }
 
-  const resolvedFileName = fileName || DEFAULT_FILENAME;
-  triggerDownload(source, resolvedFileName);
+  triggerDownload(source, fileName || DEFAULT_FILENAME);
 }
 
-/**
- * 通过图片 URL 下载图片文件
- */
 export async function downloadFileFromImageUrl({
   fileName,
   source,
@@ -63,9 +47,6 @@ export async function downloadFileFromImageUrl({
   downloadFileFromBase64({ fileName, source: base64 });
 }
 
-/**
- * 通过 Blob 下载文件
- */
 export function downloadFileFromBlob({
   fileName = DEFAULT_FILENAME,
   source,
@@ -73,47 +54,49 @@ export function downloadFileFromBlob({
   if (!(source instanceof Blob)) {
     throw new TypeError('Invalid Blob data.');
   }
+  if (!supportsObjectUrl()) {
+    throw new Error(DOWNLOAD_ERROR_MESSAGE);
+  }
 
   const url = URL.createObjectURL(source);
-  triggerDownload(url, fileName);
+  triggerDownload(url, fileName, { revokeObjectUrl: true });
 }
 
-/**
- * 下载文件，支持 Blob、字符串和其他 BlobPart 类型
- */
 export function downloadFileFromBlobPart({
   fileName = DEFAULT_FILENAME,
   source,
 }: DownloadOptions<BlobPart>): void {
-  // 如果 data 不是 Blob，则转换为 Blob
+  if (!supportsObjectUrl()) {
+    throw new Error(DOWNLOAD_ERROR_MESSAGE);
+  }
+
   const blob =
     source instanceof Blob
       ? source
       : new Blob([source], { type: 'application/octet-stream' });
 
-  // 创建对象 URL 并触发下载
   const url = URL.createObjectURL(blob);
-  triggerDownload(url, fileName);
+  triggerDownload(url, fileName, { revokeObjectUrl: true });
 }
 
-/**
- * img url to base64
- * @param url
- */
 export function urlToBase64(url: string, mineType?: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    let canvas = document.createElement('CANVAS') as HTMLCanvasElement | null;
+    let canvas = document.createElement('canvas') as HTMLCanvasElement | null;
     const ctx = canvas?.getContext('2d');
     const img = new Image();
+
     img.crossOrigin = '';
     img.addEventListener('load', () => {
       if (!canvas || !ctx) {
         return reject(new Error('Failed to create canvas.'));
       }
+
       canvas.height = img.height;
       canvas.width = img.width;
       ctx.drawImage(img, 0, 0);
+
       const dataURL = canvas.toDataURL(mineType || 'image/png');
+
       canvas = null;
       resolve(dataURL);
     });
@@ -121,37 +104,121 @@ export function urlToBase64(url: string, mineType?: string): Promise<string> {
   });
 }
 
-/**
- * 通用下载触发函数
- * @param href - 文件下载的 URL
- * @param fileName - 下载文件的名称，如果未提供则自动识别
- * @param revokeDelay - 清理 URL 的延迟时间 (毫秒)
- */
 export function triggerDownload(
   href: string,
   fileName: string | undefined,
-  revokeDelay: number = 100,
+  options: TriggerDownloadOptions = {},
 ): void {
-  const defaultFileName = 'downloaded_file';
-  const finalFileName = fileName || defaultFileName;
+  const {
+    revokeDelay = 100,
+    revokeObjectUrl = false,
+    target = '_blank',
+  } = options;
+  const finalFileName = sanitizeFileName(fileName || DEFAULT_FILENAME);
 
-  const link = document.createElement('a');
-  link.href = href;
-  link.download = finalFileName;
-  link.style.display = 'none';
+  try {
+    if (supportsAnchorDownload() && tryAnchorDownload(href, finalFileName)) {
+      return;
+    }
 
-  if (link.download === undefined) {
-    link.setAttribute('target', '_blank');
+    if (tryOpenWindow(href, target)) {
+      return;
+    }
+
+    if (tryNavigate(href)) {
+      return;
+    }
+  } finally {
+    if (revokeObjectUrl && href.startsWith('blob:')) {
+      setTimeout(() => {
+        URL.revokeObjectURL(href);
+      }, revokeDelay);
+    }
   }
 
-  document.body.append(link);
-  link.click();
-  link.remove();
-
-  // 清理临时 URL 以释放内存
-  setTimeout(() => URL.revokeObjectURL(href), revokeDelay);
+  throw new Error(DOWNLOAD_ERROR_MESSAGE);
 }
 
-function resolveFileName(url: string, fileName?: string): string {
-  return fileName || url.slice(url.lastIndexOf('/') + 1) || DEFAULT_FILENAME;
+export function resolveFileName(url: string, fileName?: string): string {
+  if (fileName) {
+    return sanitizeFileName(fileName);
+  }
+
+  const derivedFileName = resolveFileNameFromUrl(url);
+  return sanitizeFileName(derivedFileName || DEFAULT_FILENAME);
+}
+
+export function sanitizeFileName(fileName: string): string {
+  const sanitized = fileName
+    .replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_')
+    .trim();
+
+  return sanitized || DEFAULT_FILENAME;
+}
+
+function resolveFileNameFromUrl(url: string): null | string {
+  const pathname = parsePathname(url);
+  const fileName = pathname.split('/').filter(Boolean).pop();
+
+  if (!fileName) {
+    return null;
+  }
+
+  return safeDecodeURIComponent(fileName);
+}
+
+function parsePathname(url: string): string {
+  try {
+    return new URL(url, window.location.href).pathname;
+  } catch {
+    return url.split('#')[0]?.split('?')[0] || '';
+  }
+}
+
+function safeDecodeURIComponent(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function tryAnchorDownload(href: string, fileName: string): boolean {
+  try {
+    const link = document.createElement('a');
+
+    link.href = href;
+    link.download = fileName;
+    link.rel = 'noopener noreferrer';
+    link.style.display = 'none';
+
+    document.body.append(link);
+    link.click();
+    link.remove();
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function tryNavigate(href: string): boolean {
+  try {
+    window.location.assign(href);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function tryOpenWindow(href: string, target: string): boolean {
+  if (!supportsWindowOpen()) {
+    return false;
+  }
+
+  try {
+    return window.open(href, target, 'noopener=yes,noreferrer=yes') !== null;
+  } catch {
+    return false;
+  }
 }

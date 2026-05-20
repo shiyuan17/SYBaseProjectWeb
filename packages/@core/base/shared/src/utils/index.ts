@@ -1,3 +1,4 @@
+export * from './browser-capabilities';
 export * from './cn';
 export * from './date';
 export * from './diff';
@@ -7,6 +8,7 @@ export * from './inference';
 export * from './letter';
 export * from './merge';
 export * from './nprogress';
+export * from './resize-observer';
 export * from './resources';
 export * from './stack';
 export * from './state-handler';
