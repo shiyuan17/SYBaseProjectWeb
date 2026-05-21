@@ -151,6 +151,64 @@ const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] = [
       },
     ],
   },
+  {
+    component: 'BasicLayout',
+    meta: {
+      icon: 'carbon:flow',
+      order: 120,
+      title: '临床送检工作流',
+    },
+    name: 'WorkflowRoot',
+    path: '/workflow',
+    redirect: '/workflow/clinical-register',
+    children: [
+      {
+        component: '/modules/specimen-workflow/views/ClinicalRegisterView',
+        meta: {
+          icon: 'carbon:catalog',
+          title: '临床登记',
+        },
+        name: 'ClinicalRegister',
+        path: '/workflow/clinical-register',
+      },
+      {
+        component: '/modules/specimen-workflow/views/FixationVerifyView',
+        meta: {
+          icon: 'carbon:checkmark-outline',
+          title: '固定核对',
+        },
+        name: 'FixationVerify',
+        path: '/workflow/fixation-verify',
+      },
+      {
+        component: '/modules/specimen-workflow/views/TransportHandoverView',
+        meta: {
+          icon: 'carbon:delivery',
+          title: '转运交接',
+        },
+        name: 'TransportHandover',
+        path: '/workflow/transport-handover',
+      },
+      {
+        component: '/modules/specimen-workflow/views/SpecimenReceiptView',
+        meta: {
+          icon: 'carbon:archive',
+          title: '标本接收',
+        },
+        name: 'SpecimenReceipt',
+        path: '/workflow/specimen-receipt',
+      },
+      {
+        component: '/modules/specimen-workflow/views/TrackingQueryView',
+        meta: {
+          icon: 'carbon:search',
+          title: '追踪查询',
+        },
+        name: 'TrackingQuery',
+        path: '/workflow/tracking-query',
+      },
+    ],
+  },
 ];
 
 const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[] = [
@@ -282,6 +340,62 @@ const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[] = [
     path: '/workspace',
     pathAliases: ['/workspace'],
     routeName: 'Workspace',
+  },
+  {
+    component: 'BasicLayout',
+    componentAliases: ['WorkflowRoot'],
+    menuCodes: ['M2_WORKFLOW'],
+    path: '/workflow',
+    pathAliases: ['/workflow'],
+    routeName: 'WorkflowRoot',
+  },
+  {
+    component: '/modules/specimen-workflow/views/ClinicalRegisterView',
+    componentAliases: ['ClinicalRegister'],
+    menuCodes: ['M2_CLINICAL'],
+    path: '/workflow/clinical-register',
+    pathAliases: [
+      '/workflow/clinical-register',
+      '/api/v1/specimens/register',
+      '/api/v1/specimen-collections',
+    ],
+    routeName: 'ClinicalRegister',
+  },
+  {
+    component: '/modules/specimen-workflow/views/FixationVerifyView',
+    componentAliases: ['FixationVerify'],
+    menuCodes: ['M2_FIXATION'],
+    path: '/workflow/fixation-verify',
+    pathAliases: ['/workflow/fixation-verify', '/api/v1/specimen-fixations'],
+    routeName: 'FixationVerify',
+  },
+  {
+    component: '/modules/specimen-workflow/views/TransportHandoverView',
+    componentAliases: ['TransportHandover'],
+    menuCodes: ['M2_TRANSPORT'],
+    path: '/workflow/transport-handover',
+    pathAliases: ['/workflow/transport-handover', '/api/v1/transport-orders'],
+    routeName: 'TransportHandover',
+  },
+  {
+    component: '/modules/specimen-workflow/views/SpecimenReceiptView',
+    componentAliases: ['SpecimenReceipt'],
+    menuCodes: ['M2_RECEIPT'],
+    path: '/workflow/specimen-receipt',
+    pathAliases: ['/workflow/specimen-receipt', '/api/v1/specimen-receipts'],
+    routeName: 'SpecimenReceipt',
+  },
+  {
+    component: '/modules/specimen-workflow/views/TrackingQueryView',
+    componentAliases: ['TrackingQuery'],
+    menuCodes: ['M2_TRACKING'],
+    path: '/workflow/tracking-query',
+    pathAliases: [
+      '/workflow/tracking-query',
+      '/api/v1/applications/{id}/tracking',
+      '/api/v1/specimens/barcodes/{barcode}/tracking',
+    ],
+    routeName: 'TrackingQuery',
   },
 ];
 

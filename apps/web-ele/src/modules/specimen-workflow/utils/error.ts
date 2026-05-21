@@ -1,4 +1,4 @@
-type ApiErrorLike = {
+type WorkflowApiErrorLike = {
   code?: string;
   error?: string;
   message?: string;
@@ -12,8 +12,8 @@ type ApiErrorLike = {
   };
 };
 
-export function getSystemPageErrorMessage(error: unknown) {
-  const apiError = error as ApiErrorLike;
+export function getWorkflowPageErrorMessage(error: unknown) {
+  const apiError = error as WorkflowApiErrorLike;
   const status = apiError.response?.status;
   const code = apiError.response?.data?.code || apiError.code || '';
   const responseMessage =
@@ -24,7 +24,7 @@ export function getSystemPageErrorMessage(error: unknown) {
     '';
 
   if (status === 401) {
-    return '登录状态已失效，请重新登录后再访问系统管理。';
+    return '登录状态已失效，请重新登录后再继续操作。';
   }
 
   if (
@@ -32,10 +32,8 @@ export function getSystemPageErrorMessage(error: unknown) {
     code === 'FORBIDDEN' ||
     responseMessage.includes('does not have permission')
   ) {
-    return '当前账号没有访问该页面或功能的权限，请联系管理员配置角色授权。';
+    return '当前账号没有访问该工作流页面或操作该功能的权限。';
   }
 
-  const message = responseMessage || '请检查后端服务和网络连接后重试。';
-
-  return `数据加载失败：${message}`;
+  return responseMessage || '数据加载失败，请稍后重试。';
 }

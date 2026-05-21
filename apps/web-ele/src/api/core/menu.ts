@@ -2,7 +2,7 @@ import type { RouteRecordStringComponent } from '@vben/types';
 
 import type { MenuView } from '#/modules/system-management/types/system-management';
 
-import { requestClient } from '#/api/request';
+import { bodyRequestClient } from '#/api/request';
 
 import {
   getBackendFirstMenuRoutes as resolveBackendFirstMenuRoutes,
@@ -12,7 +12,7 @@ import {
 export { mapMenuViewsToRoutes };
 
 export async function getAllMenusApi() {
-  const menus = await requestClient.get<MenuView[]>('/v1/menus');
+  const menus = await bodyRequestClient.get<MenuView[]>('/v1/menus');
   return mapMenuViewsToRoutes(menus);
 }
 

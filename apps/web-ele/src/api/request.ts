@@ -95,6 +95,10 @@ export const requestClient = createRequestClient(apiURL, {
   responseReturn: 'data',
 });
 
+export const bodyRequestClient = createRequestClient(apiURL, {
+  responseReturn: 'body',
+});
+
 export const anonymousRequestClient = createRequestClient(
   apiURL,
   {

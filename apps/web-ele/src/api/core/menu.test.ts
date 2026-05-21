@@ -3,7 +3,9 @@ import type { MenuView } from '#/modules/system-management/types/system-manageme
 import { describe, expect, it } from 'vitest';
 
 import { M1_PERMISSION_CODES } from '#/modules/system-management/constants';
+import { M2_PERMISSION_CODES } from '#/modules/specimen-workflow/constants';
 import systemRoutes from '#/router/routes/modules/system';
+import workflowRoutes from '#/router/routes/modules/workflow';
 
 import { getBackendFirstMenuRoutes, mapMenuViewsToRoutes } from './menu-mapper';
 
@@ -87,6 +89,53 @@ describe('mapMenuViewsToRoutes', () => {
         component: '/modules/system-management/views/MedicalOrderDictsView',
         name: 'MedicalOrderDicts',
         path: '/system/medical-order-dicts',
+      }),
+    ]);
+  });
+
+  it('converts M2 workflow menu definitions into canonical frontend routes', () => {
+    const routes = mapMenuViewsToRoutes([
+      {
+        componentName: 'WorkflowRoot',
+        enabled: true,
+        icon: 'flow',
+        id: 'MENU_M2_WORKFLOW',
+        menuCode: 'M2_WORKFLOW',
+        menuName: '临床送检工作流',
+        menuType: 'DIRECTORY',
+        parentId: null,
+        path: '/workflow',
+        permissionPrefix: 'm2',
+        sortOrder: 100,
+        visible: true,
+      },
+      {
+        componentName: 'ClinicalRegister',
+        enabled: true,
+        icon: 'catalog',
+        id: 'MENU_M2_CLINICAL',
+        menuCode: 'M2_CLINICAL',
+        menuName: '临床登记',
+        menuType: 'MENU',
+        parentId: 'MENU_M2_WORKFLOW',
+        path: '/api/v1/specimens/register',
+        permissionPrefix: 'm2:clinical',
+        sortOrder: 110,
+        visible: true,
+      },
+    ]);
+
+    expect(routes).toEqual([
+      expect.objectContaining({
+        name: 'WorkflowRoot',
+        path: '/workflow',
+        redirect: '/workflow/clinical-register',
+        children: [
+          expect.objectContaining({
+            name: 'ClinicalRegister',
+            path: '/workflow/clinical-register',
+          }),
+        ],
       }),
     ]);
   });
@@ -213,5 +262,19 @@ describe('system management route access', () => {
     );
     expect(authorities).not.toContain('sys:medical-order-dict:query');
     expect(authorities).not.toContain('sys:medical-order-charge:query');
+  });
+});
+
+describe('workflow route access', () => {
+  it('keeps M2 pages registered with workstation authorities', () => {
+    const workflowRoot = workflowRoutes.find((route) => route.name === 'WorkflowRoot');
+    const trackingRoute = workflowRoot?.children?.find(
+      (route) => route.name === 'TrackingQuery',
+    );
+
+    expect(trackingRoute?.component).toBeTypeOf('function');
+    expect(trackingRoute?.meta?.authority).toEqual([
+      M2_PERMISSION_CODES.SPECIMEN_TRACKING_QUERY,
+    ]);
   });
 });
