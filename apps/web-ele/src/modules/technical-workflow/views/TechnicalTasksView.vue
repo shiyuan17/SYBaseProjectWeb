@@ -33,7 +33,7 @@ import {
   TECHNICAL_TASK_TYPE_OPTIONS,
 } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
-import { formatDateTime, formatNullable } from '../utils/format';
+import { formatDateTime, formatNullable, formatObjectType, formatTaskStatus, formatTaskType } from '../utils/format';
 
 const router = useRouter();
 
@@ -156,7 +156,7 @@ void loadPendingData();
 
       <WorkflowSectionCard
         title="任务筛选"
-        description="查询参数与后端 `/technical-tasks/pending` 完全对齐，便于前后端联调和分页回放。"
+        description="支持按任务类型、状态、对象类型、申请单号和病理号筛选待办任务。"
       >
         <ElForm inline label-width="96px">
           <ElFormItem label="任务类型">
@@ -208,7 +208,7 @@ void loadPendingData();
             <ElInput
               v-model="filters.applicationNo"
               clearable
-              placeholder="请输入 applicationNo"
+              placeholder="请输入申请单号"
               style="width: 220px"
               @keyup.enter="handleSearch"
             />
@@ -217,7 +217,7 @@ void loadPendingData();
             <ElInput
               v-model="filters.pathologyNo"
               clearable
-              placeholder="请输入 pathologyNo"
+              placeholder="请输入病理号"
               style="width: 220px"
               @keyup.enter="handleSearch"
             />
@@ -247,16 +247,16 @@ void loadPendingData();
         description="每条任务都可直接跳转到目标工作站，或进入病例级技术追踪查看上下游状态。"
       >
         <ElTable v-loading="loading" :data="pendingItems" border>
-          <ElTableColumn label="任务 ID" min-width="180" prop="id" />
+          <ElTableColumn label="任务号" min-width="180" prop="id" />
           <ElTableColumn label="任务类型" min-width="120">
             <template #default="{ row }">
-              {{ formatNullable(row.taskType) }}
+              {{ formatTaskType(row.taskType) }}
             </template>
           </ElTableColumn>
           <ElTableColumn label="任务状态" min-width="120">
             <template #default="{ row }">
               <ElTag :type="getTaskStatusTagType(row.taskStatus)">
-                {{ formatNullable(row.taskStatus) }}
+                {{ formatTaskStatus(row.taskStatus) }}
               </ElTag>
             </template>
           </ElTableColumn>
@@ -268,10 +268,10 @@ void loadPendingData();
           <ElTableColumn label="申请单号" min-width="140" prop="applicationNo" />
           <ElTableColumn label="对象类型" min-width="140">
             <template #default="{ row }">
-              {{ formatNullable(row.objectType) }}
+              {{ formatObjectType(row.objectType) }}
             </template>
           </ElTableColumn>
-          <ElTableColumn label="对象 ID" min-width="180">
+          <ElTableColumn label="对象编号" min-width="180">
             <template #default="{ row }">
               {{ formatNullable(row.objectId) }}
             </template>

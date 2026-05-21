@@ -6,6 +6,10 @@ import type {
   PendingTechnicalTaskItem,
   TechnicalTrackingView as TechnicalTrackingViewModel,
 } from '../types/technical-workflow';
+import type {
+  BodyPartNode,
+  TemplateCategoryNode,
+} from '#/modules/system-management/types/system-management';
 
 import { computed, reactive, ref } from 'vue';
 import { useRoute } from 'vue-router';
@@ -22,11 +26,16 @@ import {
   ElFormItem,
   ElInput,
   ElMessage,
+  ElOption,
   ElPagination,
+  ElSelect,
   ElTable,
   ElTableColumn,
   ElTag,
 } from 'element-plus';
+
+import { listBodyParts, listSamplingTemplates } from '#/modules/system-management/api/system-management-service';
+import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
 
 import {
   completeGrossing,
@@ -37,7 +46,13 @@ import {
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
-import { formatDateTime, formatNullable } from '../utils/format';
+import {
+  formatCaseStatus,
+  formatDateTime,
+  formatNullable,
+  formatObjectType,
+  formatTaskStatus,
+} from '../utils/format';
 
 const route = useRoute();
 const userStore = useUserStore();
@@ -49,6 +64,9 @@ const trackingLoading = ref(false);
 const pendingItems = ref<PendingTechnicalTaskItem[]>([]);
 const total = ref(0);
 const trackingResult = ref<null | TechnicalTrackingViewModel>(null);
+const selectedTask = ref<null | PendingTechnicalTaskItem>(null);
+const bodyPartOptions = ref<Array<{ label: string; value: string }>>([]);
+const samplingTemplateOptions = ref<Array<{ label: string; value: string }>>([]);
 
 const filters = reactive({
   page: 1,
@@ -176,6 +194,57 @@ function seedSpecimensFromTracking() {
   }));
 }
 
+function flattenBodyPartOptions(nodes: BodyPartNode[]) {
+  const options: Array<{ label: string; value: string }> = [];
+  const walk = (items: BodyPartNode[], path: string[] = []) => {
+    items.forEach((item) => {
+      const nextPath = [...path, item.partName];
+      options.push({
+        label: nextPath.join(' / '),
+        value: item.id,
+      });
+      if (item.children?.length) {
+        walk(item.children, nextPath);
+      }
+    });
+  };
+  walk(nodes);
+  bodyPartOptions.value = options;
+}
+
+function flattenSamplingTemplateOptions(nodes: TemplateCategoryNode[]) {
+  const options: Array<{ label: string; value: string }> = [];
+  const walk = (items: TemplateCategoryNode[], path: string[] = []) => {
+    items.forEach((item) => {
+      const nextPath = [...path, item.categoryName];
+      item.templates?.forEach((template) => {
+        options.push({
+          label: `${nextPath.join(' / ')} / ${template.templateName}`,
+          value: template.id,
+        });
+      });
+      if (item.children?.length) {
+        walk(item.children, nextPath);
+      }
+    });
+  };
+  walk(nodes);
+  samplingTemplateOptions.value = options;
+}
+
+async function loadSelectOptions() {
+  try {
+    const [bodyParts, samplingTemplates] = await Promise.all([
+      listBodyParts(),
+      listSamplingTemplates(),
+    ]);
+    flattenBodyPartOptions(bodyParts);
+    flattenSamplingTemplateOptions(samplingTemplates);
+  } catch (error) {
+    pageError.value = getWorkflowPageErrorMessage(error);
+  }
+}
+
 async function loadPendingData() {
   loading.value = true;
   pageError.value = '';
@@ -193,7 +262,7 @@ async function loadPendingData() {
 async function loadTracking() {
   const caseId = completeForm.caseId.trim();
   if (!caseId) {
-    ElMessage.warning('请先输入病例 ID');
+    ElMessage.warning('请先从待办任务中选择当前任务');
     return;
   }
 
@@ -210,6 +279,7 @@ async function loadTracking() {
 }
 
 function adoptTask(row: PendingTechnicalTaskItem) {
+  selectedTask.value = row;
   completeForm.taskId = row.id;
   completeForm.caseId = row.caseId;
   if (row.pathologyNo) {
@@ -221,7 +291,7 @@ function adoptTask(row: PendingTechnicalTaskItem) {
 async function startTask(row: PendingTechnicalTaskItem) {
   const payload = normalizeOperatorPayload();
   if (!payload.operatorName) {
-    ElMessage.warning('请先填写操作人');
+    ElMessage.warning('请先选择操作人');
     return;
   }
 
@@ -244,15 +314,15 @@ async function startTask(row: PendingTechnicalTaskItem) {
 async function submitGrossing() {
   const payload = normalizeOperatorPayload();
   if (!completeForm.taskId.trim()) {
-    ElMessage.warning('请先选择或输入任务 ID');
+    ElMessage.warning('请先选择待处理任务');
     return;
   }
   if (!completeForm.caseId.trim()) {
-    ElMessage.warning('请先输入病例 ID');
+    ElMessage.warning('请先选择病例上下文');
     return;
   }
   if (!payload.operatorName) {
-    ElMessage.warning('请先填写操作人');
+    ElMessage.warning('请先选择操作人');
     return;
   }
 
@@ -277,7 +347,7 @@ async function submitGrossing() {
   }));
 
   if (normalizedSpecimens.some((item) => !item.specimenId || !item.specimenType)) {
-    ElMessage.warning('请补齐标本 ID 和标本类型');
+    ElMessage.warning('请补齐标本编号和标本类型');
     return;
   }
   if (
@@ -313,8 +383,22 @@ async function submitGrossing() {
 }
 
 void loadPendingData();
+void loadSelectOptions();
 if (completeForm.caseId) {
   void loadTracking();
+}
+
+const currentTaskContext = computed(() => ({
+  caseId: completeForm.caseId || selectedTask.value?.caseId || '',
+  objectId: selectedTask.value?.objectId ?? '',
+  objectType: selectedTask.value?.objectType ?? '',
+  pathologyNo: selectedTask.value?.pathologyNo ?? '',
+  taskId: completeForm.taskId || selectedTask.value?.id || '',
+}));
+
+function handleOperatorChange(user: null | { id: string; name: string }) {
+  operatorForm.operatorUserId = user?.id ?? '';
+  operatorForm.operatorName = user?.name ?? '';
 }
 </script>
 
@@ -336,10 +420,12 @@ if (completeForm.caseId) {
         <ElForm label-width="96px">
           <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <ElFormItem label="操作人" required>
-              <ElInput v-model="operatorForm.operatorName" placeholder="请输入操作人姓名" />
-            </ElFormItem>
-            <ElFormItem label="操作人 ID">
-              <ElInput v-model="operatorForm.operatorUserId" placeholder="请输入操作人用户 ID" />
+              <SystemUserSelect
+                v-model="operatorForm.operatorUserId"
+                :selected-label="operatorForm.operatorName"
+                placeholder="请选择操作人"
+                @change="handleOperatorChange"
+              />
             </ElFormItem>
             <ElFormItem label="终端编码">
               <ElInput v-model="operatorForm.terminalCode" placeholder="取材终端编码" />
@@ -353,28 +439,38 @@ if (completeForm.caseId) {
 
       <WorkflowSectionCard
         title="病例上下文"
-        description="输入病例 ID 或从待办列表带入后，可加载技术追踪摘要并辅助生成标本明细。"
+        description="优先从待办列表带入当前任务；带入后可加载病例追踪摘要并辅助生成标本明细。"
       >
-        <ElForm inline label-width="88px">
-          <ElFormItem label="任务 ID">
-            <ElInput v-model="completeForm.taskId" placeholder="请输入 taskId" style="width: 240px" />
-          </ElFormItem>
-          <ElFormItem label="病例 ID">
-            <ElInput v-model="completeForm.caseId" placeholder="请输入 caseId" style="width: 240px" />
-          </ElFormItem>
-          <ElFormItem>
-            <ElButton :loading="trackingLoading" type="primary" @click="loadTracking">
-              加载病例追踪
-            </ElButton>
-          </ElFormItem>
-        </ElForm>
+        <ElDescriptions :column="3" border>
+          <ElDescriptionsItem label="当前任务号">
+            {{ formatNullable(currentTaskContext.taskId) }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="病例编号">
+            {{ formatNullable(currentTaskContext.caseId) }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="病理号">
+            {{ formatNullable(currentTaskContext.pathologyNo) }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="对象类型">
+            {{ formatObjectType(currentTaskContext.objectType) }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="对象编号" :span="2">
+            {{ formatNullable(currentTaskContext.objectId) }}
+          </ElDescriptionsItem>
+        </ElDescriptions>
+
+        <div class="mt-4 flex justify-end">
+          <ElButton :loading="trackingLoading" type="primary" @click="loadTracking">
+            加载病例追踪
+          </ElButton>
+        </div>
 
         <ElDescriptions v-if="trackingResult" :column="3" border class="mt-2">
           <ElDescriptionsItem label="病理号">
             {{ formatNullable(trackingResult.pathologyNo) }}
           </ElDescriptionsItem>
           <ElDescriptionsItem label="病例状态">
-            {{ formatNullable(trackingResult.caseStatus) }}
+            {{ formatCaseStatus(trackingResult.caseStatus) }}
           </ElDescriptionsItem>
           <ElDescriptionsItem label="标本数">
             {{ trackingResult.specimens.length }}
@@ -407,20 +503,41 @@ if (completeForm.caseId) {
 
             <ElForm label-width="96px">
               <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                <ElFormItem label="标本 ID" required>
-                  <ElInput v-model="specimen.specimenId" placeholder="请输入 specimenId" />
+                <ElFormItem label="标本编号" required>
+                  <ElInput v-model="specimen.specimenId" disabled placeholder="由病例上下文带入" />
                 </ElFormItem>
                 <ElFormItem label="标本类型" required>
-                  <ElInput v-model="specimen.specimenType" placeholder="例如：ROUTINE" />
+                  <ElInput v-model="specimen.specimenType" placeholder="请输入标本类型" />
                 </ElFormItem>
-                <ElFormItem label="部位 ID">
-                  <ElInput v-model="specimen.bodyPartId" placeholder="请输入 bodyPartId" />
+                <ElFormItem label="取材部位">
+                  <ElSelect
+                    v-model="specimen.bodyPartId"
+                    clearable
+                    filterable
+                    placeholder="请选择取材部位"
+                  >
+                    <ElOption
+                      v-for="option in bodyPartOptions"
+                      :key="option.value"
+                      :label="option.label"
+                      :value="option.value"
+                    />
+                  </ElSelect>
                 </ElFormItem>
-                <ElFormItem label="模板 ID">
-                  <ElInput
+                <ElFormItem label="取材模板">
+                  <ElSelect
                     v-model="specimen.samplingTemplateId"
-                    placeholder="请输入 samplingTemplateId"
-                  />
+                    clearable
+                    filterable
+                    placeholder="请选择取材模板"
+                  >
+                    <ElOption
+                      v-for="option in samplingTemplateOptions"
+                      :key="option.value"
+                      :label="option.label"
+                      :value="option.value"
+                    />
+                  </ElSelect>
                 </ElFormItem>
               </div>
               <ElFormItem label="大体描写">
@@ -482,7 +599,7 @@ if (completeForm.caseId) {
                   </ElButton>
                 </div>
                 <div class="grid gap-4 md:grid-cols-2">
-                  <ElInput v-model="asset.fileUrl" placeholder="附件 URL" />
+                  <ElInput v-model="asset.fileUrl" placeholder="附件地址" />
                   <ElInput v-model="asset.fileName" placeholder="附件名称" />
                 </div>
               </section>
@@ -506,7 +623,7 @@ if (completeForm.caseId) {
             <ElInput
               v-model="filters.pathologyNo"
               clearable
-              placeholder="请输入 pathologyNo"
+              placeholder="请输入病理号"
               style="width: 220px"
               @keyup.enter="loadPendingData"
             />
@@ -522,7 +639,7 @@ if (completeForm.caseId) {
         </ElForm>
 
         <ElTable v-loading="loading" :data="pendingItems" border>
-          <ElTableColumn label="任务 ID" min-width="180" prop="id" />
+          <ElTableColumn label="任务号" min-width="180" prop="id" />
           <ElTableColumn label="病理号" min-width="140">
             <template #default="{ row }">
               {{ formatNullable(row.pathologyNo) }}
@@ -531,16 +648,16 @@ if (completeForm.caseId) {
           <ElTableColumn label="任务状态" min-width="120">
             <template #default="{ row }">
               <ElTag :type="getTaskStatusTagType(row.taskStatus)">
-                {{ formatNullable(row.taskStatus) }}
+                {{ formatTaskStatus(row.taskStatus) }}
               </ElTag>
             </template>
           </ElTableColumn>
           <ElTableColumn label="对象类型" min-width="140">
             <template #default="{ row }">
-              {{ formatNullable(row.objectType) }}
+              {{ formatObjectType(row.objectType) }}
             </template>
           </ElTableColumn>
-          <ElTableColumn label="对象 ID" min-width="180">
+          <ElTableColumn label="对象编号" min-width="180">
             <template #default="{ row }">
               {{ formatNullable(row.objectId) }}
             </template>
@@ -554,7 +671,7 @@ if (completeForm.caseId) {
             <template #default="{ row }">
               <div class="flex gap-2">
                 <ElButton link type="primary" @click="startTask(row)">开始取材</ElButton>
-                <ElButton link type="success" @click="adoptTask(row)">带入表单</ElButton>
+                <ElButton link type="success" @click="adoptTask(row)">设为当前任务</ElButton>
               </div>
             </template>
           </ElTableColumn>

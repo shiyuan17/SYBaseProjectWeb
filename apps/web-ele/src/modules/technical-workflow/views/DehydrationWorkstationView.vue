@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import type { DehydrationBatchResult, PendingTechnicalTaskItem } from '../types/technical-workflow';
+import type {
+  DehydrationBatchResult,
+  PendingTechnicalTaskItem,
+  TechnicalTrackingView as TechnicalTrackingViewModel,
+} from '../types/technical-workflow';
 
 import { computed, reactive, ref } from 'vue';
 import { useRoute } from 'vue-router';
@@ -10,26 +14,39 @@ import { useUserStore } from '@vben/stores';
 import {
   ElAlert,
   ElButton,
+  ElDescriptions,
+  ElDescriptionsItem,
   ElForm,
   ElFormItem,
   ElInput,
   ElMessage,
+  ElOption,
   ElPagination,
+  ElSelect,
   ElTable,
   ElTableColumn,
   ElTag,
 } from 'element-plus';
 
+import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
+
 import {
   completeDehydrationBatch,
   createDehydrationBatch,
+  getTechnicalTracking,
   listPendingTechnicalTasks,
   startDehydrationBatch,
 } from '../api/technical-workflow-service';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
-import { formatDateTime, formatNullable } from '../utils/format';
+import {
+  formatBatchStatus,
+  formatDateTime,
+  formatNullable,
+  formatObjectType,
+  formatTaskStatus,
+} from '../utils/format';
 
 const route = useRoute();
 const userStore = useUserStore();
@@ -40,6 +57,9 @@ const actionLoading = ref(false);
 const pendingItems = ref<PendingTechnicalTaskItem[]>([]);
 const total = ref(0);
 const lastBatchResult = ref<DehydrationBatchResult | null>(null);
+const trackingLoading = ref(false);
+const trackingResult = ref<null | TechnicalTrackingViewModel>(null);
+const selectedTask = ref<null | PendingTechnicalTaskItem>(null);
 
 const filters = reactive({
   page: 1,
@@ -59,6 +79,7 @@ const createForm = reactive({
   basketNo: '',
   caseId: typeof route.query.caseId === 'string' ? route.query.caseId : '',
   deviceNo: '',
+  selectedSamplingBlockIds: [] as string[],
   samplingBlockIdsText:
     typeof route.query.objectId === 'string' && route.query.objectType === 'SAMPLING_BLOCK'
       ? route.query.objectId
@@ -103,28 +124,28 @@ function normalizeOperatorPayload() {
 }
 
 function parseSamplingBlockIds() {
-  return Array.from(
-    new Set(
-      createForm.samplingBlockIdsText
-        .split(/[\s,，]+/)
-        .map((item) => item.trim())
-        .filter(Boolean),
-    ),
-  );
+  const manualIds = createForm.samplingBlockIdsText
+    .split(/[\s,，]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return Array.from(new Set([...createForm.selectedSamplingBlockIds, ...manualIds]));
 }
 
 function adoptTask(row: PendingTechnicalTaskItem) {
+  selectedTask.value = row;
   createForm.caseId = row.caseId;
   if (row.objectType === 'SAMPLING_BLOCK' && row.objectId) {
     const values = parseSamplingBlockIds();
     if (!values.includes(row.objectId)) {
       values.push(row.objectId);
     }
+    createForm.selectedSamplingBlockIds = values;
     createForm.samplingBlockIdsText = values.join('\n');
   }
   if (row.pathologyNo) {
     filters.pathologyNo = row.pathologyNo;
   }
+  void loadTracking();
 }
 
 function addMediaAsset() {
@@ -156,11 +177,33 @@ async function loadPendingData() {
   }
 }
 
+async function loadTracking() {
+  const caseId = createForm.caseId.trim();
+  if (!caseId) {
+    ElMessage.warning('请先从待办任务中选择病例上下文');
+    return;
+  }
+
+  trackingLoading.value = true;
+  pageError.value = '';
+  try {
+    trackingResult.value = await getTechnicalTracking(caseId);
+    const blockIds = trackingResult.value.blocks.map((item) => item.blockId);
+    if (createForm.selectedSamplingBlockIds.length === 0) {
+      createForm.selectedSamplingBlockIds = blockIds;
+    }
+  } catch (error) {
+    pageError.value = getWorkflowPageErrorMessage(error);
+  } finally {
+    trackingLoading.value = false;
+  }
+}
+
 async function submitCreateBatch() {
   const payload = normalizeOperatorPayload();
   const samplingBlockIds = parseSamplingBlockIds();
   if (!createForm.caseId.trim()) {
-    ElMessage.warning('请先输入病例 ID');
+    ElMessage.warning('请先选择病例上下文');
     return;
   }
   if (!createForm.basketNo.trim()) {
@@ -168,11 +211,11 @@ async function submitCreateBatch() {
     return;
   }
   if (!payload.operatorName) {
-    ElMessage.warning('请先填写操作人');
+    ElMessage.warning('请先选择操作人');
     return;
   }
   if (samplingBlockIds.length === 0) {
-    ElMessage.warning('请至少输入一个取材块 ID');
+    ElMessage.warning('请至少选择一个取材块');
     return;
   }
 
@@ -199,11 +242,11 @@ async function submitCreateBatch() {
 async function submitStartBatch() {
   const payload = normalizeOperatorPayload();
   if (!batchForm.batchId.trim()) {
-    ElMessage.warning('请先输入批次 ID');
+    ElMessage.warning('请先选择或带入批次编号');
     return;
   }
   if (!payload.operatorName) {
-    ElMessage.warning('请先填写操作人');
+    ElMessage.warning('请先选择操作人');
     return;
   }
 
@@ -222,11 +265,11 @@ async function submitStartBatch() {
 async function submitCompleteBatch() {
   const payload = normalizeOperatorPayload();
   if (!batchForm.batchId.trim()) {
-    ElMessage.warning('请先输入批次 ID');
+    ElMessage.warning('请先选择或带入批次编号');
     return;
   }
   if (!payload.operatorName) {
-    ElMessage.warning('请先填写操作人');
+    ElMessage.warning('请先选择操作人');
     return;
   }
 
@@ -252,6 +295,22 @@ async function submitCompleteBatch() {
 }
 
 void loadPendingData();
+if (createForm.caseId) {
+  void loadTracking();
+}
+
+const currentTaskContext = computed(() => ({
+  caseId: createForm.caseId || selectedTask.value?.caseId || '',
+  objectId: selectedTask.value?.objectId ?? '',
+  objectType: selectedTask.value?.objectType ?? '',
+  pathologyNo: selectedTask.value?.pathologyNo ?? '',
+  taskId: selectedTask.value?.id ?? '',
+}));
+
+function handleOperatorChange(user: null | { id: string; name: string }) {
+  operatorForm.operatorUserId = user?.id ?? '';
+  operatorForm.operatorName = user?.name ?? '';
+}
 </script>
 
 <template>
@@ -272,10 +331,12 @@ void loadPendingData();
         <ElForm label-width="96px">
           <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <ElFormItem label="操作人" required>
-              <ElInput v-model="operatorForm.operatorName" placeholder="请输入操作人姓名" />
-            </ElFormItem>
-            <ElFormItem label="操作人 ID">
-              <ElInput v-model="operatorForm.operatorUserId" placeholder="请输入操作人用户 ID" />
+              <SystemUserSelect
+                v-model="operatorForm.operatorUserId"
+                :selected-label="operatorForm.operatorName"
+                placeholder="请选择操作人"
+                @change="handleOperatorChange"
+              />
             </ElFormItem>
             <ElFormItem label="终端编码">
               <ElInput v-model="operatorForm.terminalCode" placeholder="脱水终端编码" />
@@ -296,7 +357,7 @@ void loadPendingData();
             <ElInput
               v-model="filters.pathologyNo"
               clearable
-              placeholder="请输入 pathologyNo"
+              placeholder="请输入病理号"
               style="width: 220px"
               @keyup.enter="loadPendingData"
             />
@@ -312,7 +373,7 @@ void loadPendingData();
         </ElForm>
 
         <ElTable v-loading="loading" :data="pendingItems" border>
-          <ElTableColumn label="任务 ID" min-width="180" prop="id" />
+          <ElTableColumn label="任务号" min-width="180" prop="id" />
           <ElTableColumn label="病理号" min-width="140">
             <template #default="{ row }">
               {{ formatNullable(row.pathologyNo) }}
@@ -320,10 +381,10 @@ void loadPendingData();
           </ElTableColumn>
           <ElTableColumn label="对象类型" min-width="140">
             <template #default="{ row }">
-              {{ formatNullable(row.objectType) }}
+              {{ formatObjectType(row.objectType) }}
             </template>
           </ElTableColumn>
-          <ElTableColumn label="对象 ID" min-width="180">
+          <ElTableColumn label="对象编号" min-width="180">
             <template #default="{ row }">
               {{ formatNullable(row.objectId) }}
             </template>
@@ -331,7 +392,7 @@ void loadPendingData();
           <ElTableColumn label="任务状态" min-width="120">
             <template #default="{ row }">
               <ElTag :type="getTaskStatusTagType(row.taskStatus)">
-                {{ formatNullable(row.taskStatus) }}
+                {{ formatTaskStatus(row.taskStatus) }}
               </ElTag>
             </template>
           </ElTableColumn>
@@ -342,7 +403,7 @@ void loadPendingData();
           </ElTableColumn>
           <ElTableColumn fixed="right" label="操作" min-width="120">
             <template #default="{ row }">
-              <ElButton link type="primary" @click="adoptTask(row)">带入批次</ElButton>
+              <ElButton link type="primary" @click="adoptTask(row)">设为当前任务</ElButton>
             </template>
           </ElTableColumn>
         </ElTable>
@@ -362,25 +423,64 @@ void loadPendingData();
 
       <WorkflowSectionCard
         title="创建脱水批次"
-        description="按病例与蜡块集合创建脱水批次，适配扫码篮筐和人工批量选择两类场景。"
+        description="按病例与取材块集合创建脱水批次，默认使用病例上下文下的取材块选择。"
       >
+        <ElDescriptions :column="3" border class="mb-4">
+          <ElDescriptionsItem label="当前任务号">
+            {{ formatNullable(currentTaskContext.taskId) }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="病例编号">
+            {{ formatNullable(currentTaskContext.caseId) }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="病理号">
+            {{ formatNullable(currentTaskContext.pathologyNo) }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="对象类型">
+            {{ formatObjectType(currentTaskContext.objectType) }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="对象编号" :span="2">
+            {{ formatNullable(currentTaskContext.objectId) }}
+          </ElDescriptionsItem>
+        </ElDescriptions>
+
+        <div class="mb-4 flex justify-end">
+          <ElButton :loading="trackingLoading" @click="loadTracking">加载病例取材块</ElButton>
+        </div>
         <ElForm label-width="108px">
           <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <ElFormItem label="病例 ID" required>
-              <ElInput v-model="createForm.caseId" placeholder="请输入 caseId" />
+            <ElFormItem label="病例编号" required>
+              <ElInput v-model="createForm.caseId" disabled placeholder="由当前任务带入" />
             </ElFormItem>
             <ElFormItem label="脱水筐编号" required>
-              <ElInput v-model="createForm.basketNo" placeholder="请输入 basketNo" />
+              <ElInput v-model="createForm.basketNo" placeholder="请输入脱水筐编号" />
             </ElFormItem>
             <ElFormItem label="设备编号">
-              <ElInput v-model="createForm.deviceNo" placeholder="请输入 deviceNo" />
+              <ElInput v-model="createForm.deviceNo" placeholder="请输入设备编号" />
             </ElFormItem>
           </div>
-          <ElFormItem label="取材块 ID 列表" required>
+          <ElFormItem label="取材块选择" required>
+            <ElSelect
+              v-model="createForm.selectedSamplingBlockIds"
+              collapse-tags
+              collapse-tags-tooltip
+              filterable
+              multiple
+              placeholder="请选择当前病例下的取材块"
+              style="width: 100%"
+            >
+              <ElOption
+                v-for="block in trackingResult?.blocks ?? []"
+                :key="block.blockId"
+                :label="`${block.blockCode || block.blockId} / ${block.description || '未命名取材块'}`"
+                :value="block.blockId"
+              />
+            </ElSelect>
+          </ElFormItem>
+          <ElFormItem label="批量粘贴编号">
             <ElInput
               v-model="createForm.samplingBlockIdsText"
               :rows="4"
-              placeholder="支持换行、空格或逗号分隔多个 samplingBlockId"
+              placeholder="支持换行、空格或逗号分隔多个取材块编号"
               type="textarea"
             />
           </ElFormItem>
@@ -394,11 +494,11 @@ void loadPendingData();
 
       <WorkflowSectionCard
         title="批次开始与完成"
-        description="当前以后端已落地接口为准，输入批次 ID 即可记录开始脱水、完成脱水与附件回传。"
+        description="当前以后端已落地接口为准，带入批次编号后可记录开始脱水、完成脱水与附件回传。"
       >
         <ElForm label-width="96px">
-          <ElFormItem label="批次 ID" required>
-            <ElInput v-model="batchForm.batchId" placeholder="请输入 batchId" />
+          <ElFormItem label="批次编号" required>
+            <ElInput v-model="batchForm.batchId" placeholder="请输入批次编号" />
           </ElFormItem>
           <div class="mb-4 flex gap-2">
             <ElButton :loading="actionLoading" type="primary" @click="submitStartBatch">
@@ -425,7 +525,7 @@ void loadPendingData();
                 </ElButton>
               </div>
               <div class="grid gap-4 md:grid-cols-2">
-                <ElInput v-model="asset.fileUrl" placeholder="附件 URL" />
+                <ElInput v-model="asset.fileUrl" placeholder="附件地址" />
                 <ElInput v-model="asset.fileName" placeholder="附件名称" />
               </div>
             </section>
@@ -435,7 +535,7 @@ void loadPendingData();
         <ElAlert
           v-if="lastBatchResult"
           :closable="false"
-          :title="`最近批次：${lastBatchResult.batchNo}（${formatNullable(lastBatchResult.batchStatus)}）`"
+          :title="`最近批次：${lastBatchResult.batchNo}（${formatBatchStatus(lastBatchResult.batchStatus)}）`"
           class="mt-4"
           type="success"
           show-icon

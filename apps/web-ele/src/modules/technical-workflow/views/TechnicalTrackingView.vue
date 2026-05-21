@@ -22,7 +22,22 @@ import {
 import { getTechnicalTracking } from '../api/technical-workflow-service';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { getWorkflowPageErrorMessage } from '../utils/error';
-import { formatDateTime, formatNullable } from '../utils/format';
+import {
+  formatCaseStatus,
+  formatDateTime,
+  formatEvaluationResult,
+  formatEventStatus,
+  formatEventType,
+  formatNullable,
+  formatObjectType,
+  formatQcType,
+  formatQualityStatus,
+  formatReworkType,
+  formatSlideStatus,
+  formatSpecimenStatus,
+  formatTaskStatus,
+  formatTaskType,
+} from '../utils/format';
 
 const route = useRoute();
 
@@ -44,7 +59,7 @@ function getTaskStatusTagType(status?: null | string) {
 async function loadTracking() {
   const normalizedCaseId = caseId.value.trim();
   if (!normalizedCaseId) {
-    pageError.value = '请输入病例 ID';
+    pageError.value = '请输入病例编号';
     trackingResult.value = null;
     return;
   }
@@ -88,14 +103,14 @@ if (caseId.value) {
 
       <WorkflowSectionCard
         title="病例查询"
-        description="当前仅支持按 `caseId` 查询，避免前端推导条码或任务维度的非标准追踪入口。"
+        description="当前仅支持按病例编号查询，避免前端推导条码或任务维度的非标准追踪入口。"
       >
         <ElForm inline label-width="88px">
-          <ElFormItem label="病例 ID" required>
+          <ElFormItem label="病例编号" required>
             <ElInput
               v-model="caseId"
               clearable
-              placeholder="请输入 caseId"
+              placeholder="请输入病例编号"
               style="width: 260px"
               @keyup.enter="loadTracking"
             />
@@ -112,39 +127,39 @@ if (caseId.value) {
       <template v-if="trackingResult">
         <WorkflowSectionCard title="病例摘要" description="展示当前病例在技术流程中的主状态。">
           <ElDescriptions :column="3" border>
-            <ElDescriptionsItem label="病例 ID">
+            <ElDescriptionsItem label="病例编号">
               {{ trackingResult.caseId }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="病理号">
               {{ formatNullable(trackingResult.pathologyNo) }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="病例状态">
-              {{ formatNullable(trackingResult.caseStatus) }}
+              {{ formatCaseStatus(trackingResult.caseStatus) }}
             </ElDescriptionsItem>
           </ElDescriptions>
         </WorkflowSectionCard>
 
         <WorkflowSectionCard title="技术任务" description="病例维度下的全部技术任务轨迹。">
           <ElTable :data="trackingResult.technicalTasks" border>
-            <ElTableColumn label="任务 ID" min-width="180" prop="id" />
+            <ElTableColumn label="任务号" min-width="180" prop="id" />
             <ElTableColumn label="任务类型" min-width="120">
               <template #default="{ row }">
-                {{ formatNullable(row.taskType) }}
+                {{ formatTaskType(row.taskType) }}
               </template>
             </ElTableColumn>
             <ElTableColumn label="任务状态" min-width="120">
               <template #default="{ row }">
                 <ElTag :type="getTaskStatusTagType(row.taskStatus)">
-                  {{ formatNullable(row.taskStatus) }}
+                  {{ formatTaskStatus(row.taskStatus) }}
                 </ElTag>
               </template>
             </ElTableColumn>
             <ElTableColumn label="对象类型" min-width="120">
               <template #default="{ row }">
-                {{ formatNullable(row.objectType) }}
+                {{ formatObjectType(row.objectType) }}
               </template>
             </ElTableColumn>
-            <ElTableColumn label="对象 ID" min-width="180">
+            <ElTableColumn label="对象编号" min-width="180">
               <template #default="{ row }">
                 {{ formatNullable(row.objectId) }}
               </template>
@@ -164,7 +179,7 @@ if (caseId.value) {
 
         <WorkflowSectionCard title="标本摘要" description="追踪病例下所有参与技术流程的标本。">
           <ElTable :data="trackingResult.specimens" border>
-            <ElTableColumn label="标本 ID" min-width="180" prop="specimenId" />
+            <ElTableColumn label="标本编号" min-width="180" prop="specimenId" />
             <ElTableColumn label="标本号" min-width="120">
               <template #default="{ row }">
                 {{ formatNullable(row.specimenNo) }}
@@ -182,7 +197,7 @@ if (caseId.value) {
             </ElTableColumn>
             <ElTableColumn label="状态" min-width="120">
               <template #default="{ row }">
-                {{ formatNullable(row.specimenStatus) }}
+                {{ formatSpecimenStatus(row.specimenStatus) }}
               </template>
             </ElTableColumn>
           </ElTable>
@@ -190,8 +205,8 @@ if (caseId.value) {
 
         <WorkflowSectionCard title="蜡块摘要" description="蜡块用于串联取材、脱水、包埋等上游节点。">
           <ElTable :data="trackingResult.blocks" border>
-            <ElTableColumn label="蜡块 ID" min-width="180" prop="blockId" />
-            <ElTableColumn label="所属标本 ID" min-width="180" prop="specimenId" />
+            <ElTableColumn label="蜡块编号" min-width="180" prop="blockId" />
+            <ElTableColumn label="所属标本编号" min-width="180" prop="specimenId" />
             <ElTableColumn label="蜡块编码" min-width="140">
               <template #default="{ row }">
                 {{ formatNullable(row.blockCode) }}
@@ -212,8 +227,8 @@ if (caseId.value) {
 
         <WorkflowSectionCard title="包埋盒摘要" description="追踪包埋盒编号、切片提示与玻片数量。">
           <ElTable :data="trackingResult.embeddingBoxes" border>
-            <ElTableColumn label="包埋盒 ID" min-width="180" prop="embeddingBoxId" />
-            <ElTableColumn label="所属标本 ID" min-width="180" prop="specimenId" />
+            <ElTableColumn label="包埋盒编号" min-width="180" prop="embeddingBoxId" />
+            <ElTableColumn label="所属标本编号" min-width="180" prop="specimenId" />
             <ElTableColumn label="包埋盒号" min-width="140">
               <template #default="{ row }">
                 {{ formatNullable(row.embeddingBoxNo) }}
@@ -230,22 +245,22 @@ if (caseId.value) {
 
         <WorkflowSectionCard title="玻片摘要" description="展示玻片状态、所属包埋盒以及质控状态。">
           <ElTable :data="trackingResult.slides" border>
-            <ElTableColumn label="玻片 ID" min-width="180" prop="slideId" />
+            <ElTableColumn label="玻片编号" min-width="180" prop="slideId" />
             <ElTableColumn label="玻片号" min-width="140">
               <template #default="{ row }">
                 {{ formatNullable(row.slideNo) }}
               </template>
             </ElTableColumn>
-            <ElTableColumn label="所属标本 ID" min-width="180" prop="specimenId" />
-            <ElTableColumn label="所属包埋盒 ID" min-width="180" prop="embeddingBoxId" />
+            <ElTableColumn label="所属标本编号" min-width="180" prop="specimenId" />
+            <ElTableColumn label="所属包埋盒编号" min-width="180" prop="embeddingBoxId" />
             <ElTableColumn label="玻片状态" min-width="120">
               <template #default="{ row }">
-                {{ formatNullable(row.slideStatus) }}
+                {{ formatSlideStatus(row.slideStatus) }}
               </template>
             </ElTableColumn>
             <ElTableColumn label="质控状态" min-width="120">
               <template #default="{ row }">
-                {{ formatNullable(row.qualityStatus) }}
+                {{ formatQualityStatus(row.qualityStatus) }}
               </template>
             </ElTableColumn>
           </ElTable>
@@ -253,8 +268,8 @@ if (caseId.value) {
 
         <WorkflowSectionCard title="质控历史" description="返工前后的质控记录用于还原问题来源。">
           <ElTable :data="trackingResult.qcEvaluations" border>
-            <ElTableColumn label="质控 ID" min-width="180" prop="qcEvaluationId" />
-            <ElTableColumn label="玻片 ID" min-width="180" prop="slideId" />
+            <ElTableColumn label="质控记录号" min-width="180" prop="qcEvaluationId" />
+            <ElTableColumn label="玻片编号" min-width="180" prop="slideId" />
             <ElTableColumn label="玻片号" min-width="140">
               <template #default="{ row }">
                 {{ formatNullable(row.slideNo) }}
@@ -262,12 +277,12 @@ if (caseId.value) {
             </ElTableColumn>
             <ElTableColumn label="质控类型" min-width="120">
               <template #default="{ row }">
-                {{ formatNullable(row.qcType) }}
+                {{ formatQcType(row.qcType) }}
               </template>
             </ElTableColumn>
             <ElTableColumn label="评估结果" min-width="140">
               <template #default="{ row }">
-                {{ formatNullable(row.evaluationResult) }}
+                {{ formatEvaluationResult(row.evaluationResult) }}
               </template>
             </ElTableColumn>
             <ElTableColumn label="问题描述" min-width="200">
@@ -295,15 +310,15 @@ if (caseId.value) {
 
         <WorkflowSectionCard title="返工单" description="病例级展示当前已创建的返工单。">
           <ElTable :data="trackingResult.reworks" border>
-            <ElTableColumn label="返工单 ID" min-width="180" prop="reworkOrderId" />
+            <ElTableColumn label="返工单号" min-width="180" prop="reworkOrderId" />
             <ElTableColumn label="返工类型" min-width="140">
               <template #default="{ row }">
-                {{ formatNullable(row.reworkType) }}
+                {{ formatReworkType(row.reworkType) }}
               </template>
             </ElTableColumn>
             <ElTableColumn label="状态" min-width="120">
               <template #default="{ row }">
-                {{ formatNullable(row.status) }}
+                {{ formatTaskStatus(row.status) }}
               </template>
             </ElTableColumn>
             <ElTableColumn label="原因" min-width="220">
@@ -323,12 +338,12 @@ if (caseId.value) {
             </ElTableColumn>
             <ElTableColumn label="事件类型" min-width="140">
               <template #default="{ row }">
-                {{ formatNullable(row.eventType) }}
+                {{ formatEventType(row.eventType) }}
               </template>
             </ElTableColumn>
             <ElTableColumn label="事件状态" min-width="120">
               <template #default="{ row }">
-                {{ formatNullable(row.eventStatus) }}
+                {{ formatEventStatus(row.eventStatus) }}
               </template>
             </ElTableColumn>
             <ElTableColumn label="事件时间" min-width="180">

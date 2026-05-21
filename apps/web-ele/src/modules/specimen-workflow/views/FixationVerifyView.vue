@@ -20,6 +20,9 @@ import {
   ElTag,
 } from 'element-plus';
 
+import DepartmentSelect from '#/modules/system-management/components/DepartmentSelect.vue';
+import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
+
 import {
   completeFixation,
   listPendingFixations,
@@ -28,7 +31,7 @@ import {
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
-import { formatDateTime, formatNullable } from '../utils/format';
+import { formatDateTime, formatFixationStatus, formatNullable } from '../utils/format';
 
 type FixationAction = 'complete' | 'start';
 
@@ -105,7 +108,7 @@ async function submitFixation(action: FixationAction, barcode?: string) {
     return;
   }
   if (!actionForm.operatorName.trim()) {
-    ElMessage.warning('请填写操作人');
+    ElMessage.warning('请选择操作人');
     return;
   }
 
@@ -139,6 +142,15 @@ async function submitFixation(action: FixationAction, barcode?: string) {
 }
 
 void loadPendingData();
+
+function handleDepartmentChange(department: null | { id: string; name: string }) {
+  filters.departmentId = department?.id ?? '';
+}
+
+function handleOperatorChange(user: null | { id: string; name: string }) {
+  actionForm.operatorUserId = user?.id ?? '';
+  actionForm.operatorName = user?.name ?? '';
+}
 </script>
 
 <template>
@@ -170,10 +182,12 @@ void loadPendingData();
               />
             </ElFormItem>
             <ElFormItem label="操作人" required>
-              <ElInput v-model="actionForm.operatorName" placeholder="请输入操作人姓名" />
-            </ElFormItem>
-            <ElFormItem label="操作人 ID">
-              <ElInput v-model="actionForm.operatorUserId" placeholder="请输入操作人用户 ID" />
+              <SystemUserSelect
+                v-model="actionForm.operatorUserId"
+                :selected-label="actionForm.operatorName"
+                placeholder="请选择操作人"
+                @change="handleOperatorChange"
+              />
             </ElFormItem>
             <ElFormItem label="固定液类型">
               <ElInput v-model="actionForm.fixationLiquidType" placeholder="例如：10% 中性福尔马林" />
@@ -198,25 +212,23 @@ void loadPendingData();
 
       <WorkflowSectionCard
         title="待固定列表"
-        description="筛选条件固定为 applicationId / departmentId / 日期范围 / 分页，方便与后端分页协议一致。"
+        description="按申请单编号、送检科室和登记日期筛选待固定标本。"
       >
         <ElForm inline label-width="88px">
-          <ElFormItem label="申请单 ID">
+          <ElFormItem label="申请单号">
             <ElInput
               v-model="filters.applicationId"
               clearable
-              placeholder="请输入 applicationId"
+              placeholder="请输入申请单号"
               style="width: 220px"
               @keyup.enter="handleSearch"
             />
           </ElFormItem>
-          <ElFormItem label="送检科室 ID">
-            <ElInput
+          <ElFormItem label="送检科室">
+            <DepartmentSelect
               v-model="filters.departmentId"
-              clearable
-              placeholder="请输入 departmentId"
-              style="width: 220px"
-              @keyup.enter="handleSearch"
+              placeholder="请选择送检科室"
+              @change="handleDepartmentChange"
             />
           </ElFormItem>
           <ElFormItem label="登记日期">
@@ -247,7 +259,7 @@ void loadPendingData();
           <ElTableColumn label="固定状态" min-width="120">
             <template #default="{ row }">
               <ElTag :type="row.fixationStatus === 'COMPLETED' ? 'success' : 'warning'">
-                {{ formatNullable(row.fixationStatus) }}
+                {{ formatFixationStatus(row.fixationStatus) }}
               </ElTag>
             </template>
           </ElTableColumn>

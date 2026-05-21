@@ -30,6 +30,9 @@ import {
   ElTag,
 } from 'element-plus';
 
+import DepartmentSelect from '#/modules/system-management/components/DepartmentSelect.vue';
+import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
+
 import {
   directReceiveSpecimens,
   listPendingReceipts,
@@ -241,7 +244,7 @@ async function submitReceipt() {
     return;
   }
   if (!receiveForm.receivedByName.trim()) {
-    ElMessage.warning('请填写接收人');
+    ElMessage.warning('请选择接收人');
     return;
   }
   if (!validateReceiptItems(receiptDraftItems.value)) {
@@ -283,7 +286,7 @@ function removeDirectReceiptRow(key: number) {
 
 async function submitDirectReceipt() {
   if (!directForm.receivedByName.trim()) {
-    ElMessage.warning('请填写接收人');
+    ElMessage.warning('请选择接收人');
     return;
   }
   if (!validateReceiptItems(directDraftItems.value)) {
@@ -320,13 +323,27 @@ function normalizeReceiptItem(item: ReceiptDraftItem): SpecimenReceiptItemReques
   };
 }
 
+function handleDepartmentChange(department: null | { id: string; name: string }) {
+  filters.departmentId = department?.id ?? '';
+}
+
+function handleReceiveUserChange(user: null | { id: string; name: string }) {
+  receiveForm.receivedByUserId = user?.id ?? '';
+  receiveForm.receivedByName = user?.name ?? '';
+}
+
+function handleDirectReceiveUserChange(user: null | { id: string; name: string }) {
+  directForm.receivedByUserId = user?.id ?? '';
+  directForm.receivedByName = user?.name ?? '';
+}
+
 void loadPendingData();
 </script>
 
 <template>
   <Page
     title="标本接收"
-    description="主流程按转运单接收，补充提供条码直收入口，并展示 caseId / pathologyNo / receiptStatus / unreceivedCount。"
+    description="主流程按转运单接收，补充提供条码直收入口，并展示病例编号、病理号和接收结果。"
   >
     <div class="flex flex-col gap-4">
       <ElAlert
@@ -346,22 +363,20 @@ void loadPendingData();
         </template>
 
         <ElForm inline label-width="88px">
-          <ElFormItem label="申请单 ID">
+          <ElFormItem label="申请单号">
             <ElInput
               v-model="filters.applicationId"
               clearable
-              placeholder="请输入 applicationId"
+              placeholder="请输入申请单号"
               style="width: 220px"
               @keyup.enter="handleSearch"
             />
           </ElFormItem>
-          <ElFormItem label="送检科室 ID">
-            <ElInput
+          <ElFormItem label="送检科室">
+            <DepartmentSelect
               v-model="filters.departmentId"
-              clearable
-              placeholder="请输入 departmentId"
-              style="width: 220px"
-              @keyup.enter="handleSearch"
+              placeholder="请选择送检科室"
+              @change="handleDepartmentChange"
             />
           </ElFormItem>
           <ElFormItem label="追踪日期">
@@ -390,7 +405,7 @@ void loadPendingData();
         />
 
         <ElTable v-loading="loading" :data="groupedTransportOrders" border>
-          <ElTableColumn label="转运单 ID" min-width="180" prop="transportOrderId" />
+          <ElTableColumn label="转运单号" min-width="180" prop="transportOrderId" />
           <ElTableColumn label="申请单号" min-width="150" prop="applicationNo" />
           <ElTableColumn label="患者姓名" min-width="120">
             <template #default="{ row }">
@@ -451,7 +466,7 @@ void loadPendingData();
 
         <template v-else>
           <ElDescriptions :column="2" border class="mb-4">
-            <ElDescriptionsItem label="转运单 ID">
+            <ElDescriptionsItem label="转运单号">
               {{ selectedGroup.transportOrderId }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="申请单号">
@@ -468,12 +483,11 @@ void loadPendingData();
           <ElForm label-width="96px">
             <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               <ElFormItem label="接收人" required>
-                <ElInput v-model="receiveForm.receivedByName" placeholder="请输入接收人姓名" />
-              </ElFormItem>
-              <ElFormItem label="接收人 ID">
-                <ElInput
+                <SystemUserSelect
                   v-model="receiveForm.receivedByUserId"
-                  placeholder="请输入接收人用户 ID"
+                  :selected-label="receiveForm.receivedByName"
+                  placeholder="请选择接收人"
+                  @change="handleReceiveUserChange"
                 />
               </ElFormItem>
               <ElFormItem label="终端编码">
@@ -531,16 +545,16 @@ void loadPendingData();
         description="展示接收后的病例号、病理号、整体签收状态与未签收数量。"
       >
         <ElDescriptions :column="2" border>
-          <ElDescriptionsItem label="caseId">
+          <ElDescriptionsItem label="病例编号">
             {{ formatNullable(receiptResult.caseId) }}
           </ElDescriptionsItem>
-          <ElDescriptionsItem label="pathologyNo">
+          <ElDescriptionsItem label="病理号">
             {{ formatNullable(receiptResult.pathologyNo) }}
           </ElDescriptionsItem>
-          <ElDescriptionsItem label="receiptStatus">
+          <ElDescriptionsItem label="接收状态">
             {{ receiptResult.receiptStatus }}
           </ElDescriptionsItem>
-          <ElDescriptionsItem label="unreceivedCount">
+          <ElDescriptionsItem label="未接收数量">
             {{ receiptResult.unreceivedCount }}
           </ElDescriptionsItem>
         </ElDescriptions>
@@ -551,10 +565,12 @@ void loadPendingData();
       <ElForm label-width="96px">
         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <ElFormItem label="接收人" required>
-            <ElInput v-model="directForm.receivedByName" placeholder="请输入接收人姓名" />
-          </ElFormItem>
-          <ElFormItem label="接收人 ID">
-            <ElInput v-model="directForm.receivedByUserId" placeholder="请输入接收人用户 ID" />
+            <SystemUserSelect
+              v-model="directForm.receivedByUserId"
+              :selected-label="directForm.receivedByName"
+              placeholder="请选择接收人"
+              @change="handleDirectReceiveUserChange"
+            />
           </ElFormItem>
           <ElFormItem label="终端编码">
             <ElInput v-model="directForm.terminalCode" placeholder="工作站终端编码" />

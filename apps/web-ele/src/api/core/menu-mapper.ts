@@ -78,6 +78,15 @@ const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] = [
         path: '/system/roles',
       },
       {
+        component: '/modules/system-management/views/DepartmentsView',
+        meta: {
+          icon: 'carbon:building',
+          title: '科室字典',
+        },
+        name: 'Departments',
+        path: '/system/departments',
+      },
+      {
         component: '/modules/system-management/views/BodyPartsView',
         meta: {
           icon: 'carbon:tree-view',
@@ -320,6 +329,14 @@ const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[] = [
     path: '/system/roles',
     pathAliases: ['/system/roles', '/api/v1/roles'],
     routeName: 'Roles',
+  },
+  {
+    component: '/modules/system-management/views/DepartmentsView',
+    componentAliases: ['Departments', 'system/department/index'],
+    menuCodes: ['DEPARTMENTS', 'SYS_DEPT'],
+    path: '/system/departments',
+    pathAliases: ['/system/departments', '/api/v1/departments'],
+    routeName: 'Departments',
   },
   {
     component: '/modules/system-management/views/BodyPartsView',

@@ -4,6 +4,7 @@ import type {
   ChargeItemPageQuery,
   ChargeItemView,
   ConfigCategoryNode,
+  CreateDepartmentRequest,
   CreateBodyPartRequest,
   CreateChargeItemRequest,
   CreateConfigCategoryRequest,
@@ -17,6 +18,7 @@ import type {
   CreateSystemUserRequest,
   CreateTemplateCategoryRequest,
   CreateTemplateRequest,
+  DepartmentNode,
   GuidelineCategoryNode,
   GuidelineDetailView,
   MedicalOrderCategoryNode,
@@ -38,6 +40,7 @@ import type {
   UpdateChargeItemRequest,
   UpdateConfigCategoryRequest,
   UpdateConfigItemRequest,
+  UpdateDepartmentRequest,
   UpdateGuidelineCategoryRequest,
   UpdateGuidelineRequest,
   UpdateMedicalOrderCategoryRequest,
@@ -189,6 +192,28 @@ export async function listStatCategories() {
 
 export async function listBodyParts() {
   return normalizeArrayResult(await requestClient.get<BodyPartNode[]>('/v1/body-parts'));
+}
+
+export async function listDepartments() {
+  return normalizeArrayResult(await requestClient.get<DepartmentNode[]>('/v1/departments'));
+}
+
+export async function createDepartment(data: CreateDepartmentRequest) {
+  return requestClient.post<DepartmentNode>('/v1/departments', data);
+}
+
+export async function updateDepartment(id: string, data: UpdateDepartmentRequest) {
+  return requestPatch<DepartmentNode>(`/v1/departments/${id}`, data);
+}
+
+export async function updateDepartmentEnabled(id: string, enabled: boolean) {
+  return requestPatch<DepartmentNode>(`/v1/departments/${id}/enabled`, {
+    enabled,
+  });
+}
+
+export async function deleteDepartment(id: string) {
+  return requestClient.delete(`/v1/departments/${id}`);
 }
 
 export async function createBodyPart(data: CreateBodyPartRequest) {

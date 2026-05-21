@@ -36,7 +36,20 @@ import {
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { M2_PERMISSION_CODES } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
-import { formatDate, formatDateTime, formatNullable } from '../utils/format';
+import {
+  formatApplicationFormStatus,
+  formatApplicationStatus,
+  formatApplicationType,
+  formatCurrentNode,
+  formatDate,
+  formatDateTime,
+  formatFixationStatus,
+  formatLabelPrintStatus,
+  formatNullable,
+  formatSpecimenStatus,
+  formatTrackingEventStatus,
+  formatTrackingEventType,
+} from '../utils/format';
 
 const accessStore = useAccessStore();
 
@@ -56,7 +69,7 @@ async function submitQuery() {
   const value = queryValue.value.trim();
   if (!value) {
     ElMessage.warning(
-      queryMode.value === 'application' ? '请输入申请单 ID' : '请输入标本条码',
+      queryMode.value === 'application' ? '请输入申请单号' : '请输入标本条码',
     );
     return;
   }
@@ -99,7 +112,7 @@ async function loadFullApplicationDetail() {
 <template>
   <Page
     title="追踪查询"
-    description="支持按申请单 ID 或标本条码查询送检追踪，固定展示基本信息、标本列表、时间线事件与异常标记。"
+    description="支持按申请单号或标本条码查询送检追踪，固定展示基本信息、标本列表、时间线事件与异常标记。"
   >
     <div class="flex flex-col gap-4">
       <ElAlert
@@ -127,15 +140,15 @@ async function loadFullApplicationDetail() {
         <ElForm inline label-width="72px">
           <ElFormItem label="查询方式">
             <ElRadioGroup v-model="queryMode">
-              <ElRadioButton label="application" value="application">申请单 ID</ElRadioButton>
-              <ElRadioButton label="barcode" value="barcode">标本条码</ElRadioButton>
+              <ElRadioButton label="application" value="application">按申请单</ElRadioButton>
+              <ElRadioButton label="barcode" value="barcode">按标本条码</ElRadioButton>
             </ElRadioGroup>
           </ElFormItem>
-          <ElFormItem :label="queryMode === 'application' ? '申请单 ID' : '标本条码'">
+          <ElFormItem :label="queryMode === 'application' ? '申请单号' : '标本条码'">
             <ElInput
               v-model="queryValue"
               :placeholder="
-                queryMode === 'application' ? '请输入 applicationId' : '请输入 specimen barcode'
+                queryMode === 'application' ? '请输入申请单号' : '请输入标本条码'
               "
               clearable
               style="width: 340px"
@@ -164,23 +177,23 @@ async function loadFullApplicationDetail() {
 
         <WorkflowSectionCard title="基本信息" description="展示申请单状态、当前节点、表单状态与送检摘要。">
           <ElDescriptions :column="2" border>
-            <ElDescriptionsItem label="申请单 ID">
+            <ElDescriptionsItem label="申请单编号">
               {{ trackingResult.id }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="申请单号">
               {{ trackingResult.applicationNo }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="申请单状态">
-              {{ formatNullable(trackingResult.status) }}
+              {{ formatApplicationStatus(trackingResult.status) }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="表单状态">
-              {{ formatNullable(trackingResult.applicationFormStatus) }}
+              {{ formatApplicationFormStatus(trackingResult.applicationFormStatus) }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="当前节点">
-              {{ formatNullable(trackingResult.currentNode) }}
+              {{ formatCurrentNode(trackingResult.currentNode) }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="申请类型">
-              {{ formatNullable(trackingResult.applicationType) }}
+              {{ formatApplicationType(trackingResult.applicationType) }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="患者姓名">
               {{ formatNullable(trackingResult.patientName) }}
@@ -227,18 +240,18 @@ async function loadFullApplicationDetail() {
             <ElTableColumn label="流程状态" min-width="140">
               <template #default="{ row }">
                 <ElTag :type="row.specimenStatus === 'RECEIVED' ? 'success' : 'info'">
-                  {{ formatNullable(row.specimenStatus) }}
+                  {{ formatSpecimenStatus(row.specimenStatus) }}
                 </ElTag>
               </template>
             </ElTableColumn>
             <ElTableColumn label="固定状态" min-width="140">
               <template #default="{ row }">
-                {{ formatNullable(row.fixationStatus) }}
+                {{ formatFixationStatus(row.fixationStatus) }}
               </template>
             </ElTableColumn>
             <ElTableColumn label="标签状态" min-width="140">
               <template #default="{ row }">
-                {{ formatNullable(row.labelPrintStatus) }}
+                {{ formatLabelPrintStatus(row.labelPrintStatus) }}
               </template>
             </ElTableColumn>
           </ElTable>
@@ -254,7 +267,7 @@ async function loadFullApplicationDetail() {
             >
               <div class="space-y-1">
                 <div class="font-medium text-foreground">
-                  {{ formatNullable(event.eventType) }} / {{ formatNullable(event.eventStatus) }}
+                  {{ formatTrackingEventType(event.eventType) }} / {{ formatTrackingEventStatus(event.eventStatus) }}
                 </div>
                 <div class="text-sm text-muted-foreground">
                   {{ formatNullable(event.eventContent) }}
@@ -296,7 +309,7 @@ async function loadFullApplicationDetail() {
       <WorkflowSectionCard
         v-else-if="!loading"
         title="查询结果"
-        description="输入申请单 ID 或标本条码后即可查看追踪结果。"
+        description="输入申请单号或标本条码后即可查看追踪结果。"
       >
         <ElEmpty description="尚未执行查询" />
       </WorkflowSectionCard>

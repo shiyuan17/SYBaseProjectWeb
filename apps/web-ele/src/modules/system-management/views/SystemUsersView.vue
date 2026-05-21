@@ -45,6 +45,7 @@ import {
   updateSystemUser,
   updateSystemUserEnabled,
 } from '../api/system-management-service';
+import DepartmentSelect from '../components/DepartmentSelect.vue';
 import SystemLoadError from '../components/SystemLoadError.vue';
 import SystemSectionCard from '../components/SystemSectionCard.vue';
 import SystemStatusTag from '../components/SystemStatusTag.vue';
@@ -52,8 +53,28 @@ import { M1_PERMISSION_CODES, YES_NO_OPTIONS } from '../constants';
 import { getSystemPageErrorMessage } from '../utils/error';
 import { formatDateTime, formatNullable } from '../utils/format';
 
-type UserFormState = CreateSystemUserRequest & {
+type UserFormState = Omit<
+  CreateSystemUserRequest,
+  | 'avatar'
+  | 'departmentId'
+  | 'departmentName'
+  | 'email'
+  | 'jobNo'
+  | 'loginTagCode'
+  | 'phone'
+  | 'titleName'
+  | 'userCode'
+> & {
+  avatar: string;
+  departmentId: string;
+  departmentName: string;
+  email: string;
   id?: string;
+  jobNo: string;
+  loginTagCode: string;
+  phone: string;
+  titleName: string;
+  userCode: string;
 };
 
 const loading = ref(false);
@@ -205,6 +226,11 @@ function openEditDialog(user: SystemUser) {
     userCode: user.userCode ?? '',
   });
   userDialogVisible.value = true;
+}
+
+function handleDepartmentChange(department: null | { id: string; name: string }) {
+  userForm.departmentId = department?.id ?? '';
+  userForm.departmentName = department?.name ?? '';
 }
 
 async function submitUserForm() {
@@ -560,11 +586,13 @@ onMounted(loadInitialData);
           <ElFormItem label="职称">
             <ElInput v-model="userForm.titleName" placeholder="请输入职称" />
           </ElFormItem>
-          <ElFormItem label="科室 ID">
-            <ElInput v-model="userForm.departmentId" placeholder="请输入科室 ID" />
-          </ElFormItem>
-          <ElFormItem label="科室名称">
-            <ElInput v-model="userForm.departmentName" placeholder="请输入科室名称" />
+          <ElFormItem label="所属科室">
+            <DepartmentSelect
+              v-model="userForm.departmentId"
+              :selected-label="userForm.departmentName || ''"
+              placeholder="请选择所属科室"
+              @change="handleDepartmentChange"
+            />
           </ElFormItem>
           <ElFormItem label="手机号">
             <ElInput v-model="userForm.phone" placeholder="请输入手机号" />

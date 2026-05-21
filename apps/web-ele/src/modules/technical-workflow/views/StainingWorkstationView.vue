@@ -10,6 +10,8 @@ import { useUserStore } from '@vben/stores';
 import {
   ElAlert,
   ElButton,
+  ElDescriptions,
+  ElDescriptionsItem,
   ElForm,
   ElFormItem,
   ElInput,
@@ -20,6 +22,8 @@ import {
   ElTag,
 } from 'element-plus';
 
+import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
+
 import {
   completeSlideStaining,
   listPendingTechnicalTasks,
@@ -28,7 +32,13 @@ import {
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
-import { formatDateTime, formatNullable } from '../utils/format';
+import {
+  formatCaseStatus,
+  formatDateTime,
+  formatNullable,
+  formatObjectType,
+  formatTaskStatus,
+} from '../utils/format';
 
 const route = useRoute();
 const userStore = useUserStore();
@@ -38,6 +48,7 @@ const loading = ref(false);
 const actionLoading = ref(false);
 const pendingItems = ref<PendingTechnicalTaskItem[]>([]);
 const total = ref(0);
+const selectedTask = ref<null | PendingTechnicalTaskItem>(null);
 
 const filters = reactive({
   page: 1,
@@ -91,6 +102,7 @@ function normalizeOperatorPayload() {
 }
 
 function adoptTask(row: PendingTechnicalTaskItem) {
+  selectedTask.value = row;
   completeForm.taskId = row.id;
   if (row.objectType === 'SLIDE' && row.objectId) {
     completeForm.slideId = row.objectId;
@@ -117,7 +129,7 @@ async function loadPendingData() {
 async function startTask(row: PendingTechnicalTaskItem) {
   const payload = normalizeOperatorPayload();
   if (!payload.operatorName) {
-    ElMessage.warning('请先填写操作人');
+    ElMessage.warning('请先选择操作人');
     return;
   }
 
@@ -140,19 +152,19 @@ async function startTask(row: PendingTechnicalTaskItem) {
 async function submitStaining() {
   const payload = normalizeOperatorPayload();
   if (!completeForm.taskId.trim()) {
-    ElMessage.warning('请先输入任务 ID');
+    ElMessage.warning('请先选择待处理任务');
     return;
   }
   if (!completeForm.slideId.trim()) {
-    ElMessage.warning('请先输入玻片 ID');
+    ElMessage.warning('请先选择玻片');
     return;
   }
   if (!completeForm.stainingType.trim()) {
-    ElMessage.warning('请先输入染色类型');
+    ElMessage.warning('请先填写染色类型');
     return;
   }
   if (!payload.operatorName) {
-    ElMessage.warning('请先填写操作人');
+    ElMessage.warning('请先选择操作人');
     return;
   }
 
@@ -166,7 +178,7 @@ async function submitStaining() {
       stainingType: completeForm.stainingType.trim(),
       taskId: completeForm.taskId.trim(),
     });
-    ElMessage.success(`染色完成，病例状态已更新为 ${formatNullable(result.caseStatus)}`);
+    ElMessage.success(`染色完成，病例状态已更新为 ${formatCaseStatus(result.caseStatus)}`);
     await loadPendingData();
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
@@ -176,6 +188,18 @@ async function submitStaining() {
 }
 
 void loadPendingData();
+
+const currentTaskContext = computed(() => ({
+  objectId: completeForm.slideId || selectedTask.value?.objectId || '',
+  objectType: selectedTask.value?.objectType ?? '',
+  pathologyNo: selectedTask.value?.pathologyNo ?? '',
+  taskId: completeForm.taskId || selectedTask.value?.id || '',
+}));
+
+function handleOperatorChange(user: null | { id: string; name: string }) {
+  operatorForm.operatorUserId = user?.id ?? '';
+  operatorForm.operatorName = user?.name ?? '';
+}
 </script>
 
 <template>
@@ -196,10 +220,12 @@ void loadPendingData();
         <ElForm label-width="96px">
           <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <ElFormItem label="操作人" required>
-              <ElInput v-model="operatorForm.operatorName" placeholder="请输入操作人姓名" />
-            </ElFormItem>
-            <ElFormItem label="操作人 ID">
-              <ElInput v-model="operatorForm.operatorUserId" placeholder="请输入操作人用户 ID" />
+              <SystemUserSelect
+                v-model="operatorForm.operatorUserId"
+                :selected-label="operatorForm.operatorName"
+                placeholder="请选择操作人"
+                @change="handleOperatorChange"
+              />
             </ElFormItem>
             <ElFormItem label="终端编码">
               <ElInput v-model="operatorForm.terminalCode" placeholder="染色终端编码" />
@@ -211,14 +237,25 @@ void loadPendingData();
         </ElForm>
       </WorkflowSectionCard>
 
-      <WorkflowSectionCard title="染色完成表单" description="突出玻片 ID、染色类型和质量问题三类核心录入项。">
+      <WorkflowSectionCard title="染色完成表单" description="当前任务上下文带入玻片，表单中只保留用户需要决策的染色信息。">
+        <ElDescriptions :column="2" border class="mb-4">
+          <ElDescriptionsItem label="当前任务号">
+            {{ formatNullable(currentTaskContext.taskId) }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="病理号">
+            {{ formatNullable(currentTaskContext.pathologyNo) }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="对象类型">
+            {{ formatObjectType(currentTaskContext.objectType) }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="玻片编号">
+            {{ formatNullable(currentTaskContext.objectId) }}
+          </ElDescriptionsItem>
+        </ElDescriptions>
         <ElForm label-width="96px">
           <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <ElFormItem label="任务 ID" required>
-              <ElInput v-model="completeForm.taskId" placeholder="请输入 taskId" />
-            </ElFormItem>
-            <ElFormItem label="玻片 ID" required>
-              <ElInput v-model="completeForm.slideId" placeholder="请输入 slideId" />
+            <ElFormItem label="玻片编号" required>
+              <ElInput v-model="completeForm.slideId" disabled placeholder="由当前任务带入" />
             </ElFormItem>
             <ElFormItem label="染色类型" required>
               <ElInput v-model="completeForm.stainingType" placeholder="例如：HE、IHC" />
@@ -242,7 +279,7 @@ void loadPendingData();
 
       <WorkflowSectionCard title="待染色任务" description="列表可直接开始染色，也可带入玻片对象到完成表单。">
         <ElTable v-loading="loading" :data="pendingItems" border>
-          <ElTableColumn label="任务 ID" min-width="180" prop="id" />
+          <ElTableColumn label="任务号" min-width="180" prop="id" />
           <ElTableColumn label="病理号" min-width="140">
             <template #default="{ row }">
               {{ formatNullable(row.pathologyNo) }}
@@ -250,10 +287,10 @@ void loadPendingData();
           </ElTableColumn>
           <ElTableColumn label="对象类型" min-width="140">
             <template #default="{ row }">
-              {{ formatNullable(row.objectType) }}
+              {{ formatObjectType(row.objectType) }}
             </template>
           </ElTableColumn>
-          <ElTableColumn label="对象 ID" min-width="180">
+          <ElTableColumn label="对象编号" min-width="180">
             <template #default="{ row }">
               {{ formatNullable(row.objectId) }}
             </template>
@@ -261,7 +298,7 @@ void loadPendingData();
           <ElTableColumn label="任务状态" min-width="120">
             <template #default="{ row }">
               <ElTag :type="getTaskStatusTagType(row.taskStatus)">
-                {{ formatNullable(row.taskStatus) }}
+                {{ formatTaskStatus(row.taskStatus) }}
               </ElTag>
             </template>
           </ElTableColumn>
@@ -274,7 +311,7 @@ void loadPendingData();
             <template #default="{ row }">
               <div class="flex gap-2">
                 <ElButton link type="primary" @click="startTask(row)">开始染色</ElButton>
-                <ElButton link type="success" @click="adoptTask(row)">带入表单</ElButton>
+                <ElButton link type="success" @click="adoptTask(row)">设为当前任务</ElButton>
               </div>
             </template>
           </ElTableColumn>

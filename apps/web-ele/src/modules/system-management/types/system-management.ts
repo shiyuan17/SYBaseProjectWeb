@@ -129,6 +129,12 @@ export interface BodyPartNode extends TreeNodeBase {
   partName: string;
 }
 
+export interface DepartmentNode extends TreeNodeBase {
+  children: DepartmentNode[];
+  departmentCode: string;
+  departmentName: string;
+}
+
 export interface MedicalOrderItemView {
   categoryId: string;
   defaultContent: null | string;
@@ -328,6 +334,16 @@ export interface CreateBodyPartRequest {
 }
 
 export type UpdateBodyPartRequest = CreateBodyPartRequest;
+
+export interface CreateDepartmentRequest {
+  departmentCode: string;
+  departmentName: string;
+  enabled: boolean;
+  parentId?: null | string;
+  sortOrder: number;
+}
+
+export type UpdateDepartmentRequest = CreateDepartmentRequest;
 
 export interface CreateMedicalOrderCategoryRequest {
   categoryCode: string;

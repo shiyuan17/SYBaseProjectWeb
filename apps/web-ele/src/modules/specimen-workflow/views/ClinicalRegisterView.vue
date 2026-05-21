@@ -30,6 +30,10 @@ import {
   ElTag,
 } from 'element-plus';
 
+import DepartmentSelect from '#/modules/system-management/components/DepartmentSelect.vue';
+import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
+import { GENDER_OPTIONS } from '#/modules/system-management/constants';
+
 import {
   createApplication,
   getApplicationDetail,
@@ -40,7 +44,7 @@ import {
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { APPLICATION_TYPE_OPTIONS, M2_PERMISSION_CODES } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
-import { formatDate, formatDateTime, formatNullable } from '../utils/format';
+import { formatCurrentNode, formatDate, formatDateTime, formatNullable } from '../utils/format';
 
 type RegisterRow = SpecimenRegisterItemRequest & {
   key: number;
@@ -200,7 +204,7 @@ function applyApplicationContext(
 ) {
   const normalizedId = (applicationId ?? applicationIdInput.value).trim();
   if (!normalizedId) {
-    ElMessage.warning('请输入申请单 ID');
+    ElMessage.warning('请输入申请单编号');
     return false;
   }
   const changed = normalizedId !== currentApplicationId.value;
@@ -239,23 +243,15 @@ async function submitCreateApplication() {
     return;
   }
   if (!createForm.patientId?.trim() && !createForm.patientName?.trim()) {
-    ElMessage.warning('患者 ID 与患者姓名至少填写一项');
+    ElMessage.warning('患者编号与患者姓名至少填写一项');
     return;
   }
   if (!createForm.submittingDepartmentId.trim()) {
-    ElMessage.warning('请填写送检科室 ID');
-    return;
-  }
-  if (!createForm.submittingDepartmentName.trim()) {
-    ElMessage.warning('请填写送检科室名称');
+    ElMessage.warning('请选择送检科室');
     return;
   }
   if (!createForm.submittingDoctorName.trim()) {
-    ElMessage.warning('请填写送检医生');
-    return;
-  }
-  if (!createForm.submittingDoctorUserId.trim()) {
-    ElMessage.warning('请填写送检医生用户 ID');
+    ElMessage.warning('请选择送检医生');
     return;
   }
   if (!createForm.clinicalDiagnosis.trim()) {
@@ -335,7 +331,7 @@ async function submitRegister() {
     return;
   }
   if (!registerForm.operatorName.trim()) {
-    ElMessage.warning('请填写操作人');
+    ElMessage.warning('请选择操作人');
     return;
   }
 
@@ -391,7 +387,7 @@ async function submitRetryLabelPrint() {
     return;
   }
   if (!retryForm.operatorName.trim()) {
-    ElMessage.warning('请填写补打操作人');
+    ElMessage.warning('请选择补打操作人');
     return;
   }
   if (!retryForm.printerCode.trim()) {
@@ -421,12 +417,32 @@ const hasApplicationContext = computed(() => Boolean(currentApplicationId.value)
 const detailStatusType = computed(() =>
   applicationDetail.value?.abnormalFlag ? 'danger' : 'success',
 );
+
+function handleSubmittingDepartmentChange(department: null | { id: string; name: string }) {
+  createForm.submittingDepartmentId = department?.id ?? '';
+  createForm.submittingDepartmentName = department?.name ?? '';
+}
+
+function handleSubmittingDoctorChange(user: null | { id: string; name: string }) {
+  createForm.submittingDoctorUserId = user?.id ?? '';
+  createForm.submittingDoctorName = user?.name ?? '';
+}
+
+function handleRegisterOperatorChange(user: null | { id: string; name: string }) {
+  registerForm.operatorUserId = user?.id ?? '';
+  registerForm.operatorName = user?.name ?? '';
+}
+
+function handleRetryOperatorChange(user: null | { id: string; name: string }) {
+  retryForm.operatorUserId = user?.id ?? '';
+  retryForm.operatorName = user?.name ?? '';
+}
 </script>
 
 <template>
   <Page
     title="临床登记"
-    description="按已知 applicationId 执行临床送检登记，可按权限补充申请单创建、详情加载与标签补打。"
+    description="按申请单上下文执行临床送检登记，并支持申请单创建、详情加载与标签补打。"
   >
     <div class="flex flex-col gap-4">
       <ElAlert
@@ -439,14 +455,14 @@ const detailStatusType = computed(() =>
 
       <WorkflowSectionCard
         title="工作上下文"
-        description="首期登记站以已知申请单 ID 进入；若无详情权限，页面不会主动绕权查询申请单。"
+        description="登记站以申请单上下文进入；若无详情权限，页面不会主动绕权查询申请单。"
       >
         <ElForm inline label-width="96px">
-          <ElFormItem label="申请单 ID">
+          <ElFormItem label="申请单编号">
             <ElInput
               v-model="applicationIdInput"
               clearable
-              placeholder="请输入 applicationId"
+              placeholder="请输入申请单编号"
               style="width: 320px"
               @keyup.enter="applyApplicationContext()"
             />
@@ -470,7 +486,7 @@ const detailStatusType = computed(() =>
             {{ hasApplicationContext ? currentApplicationId : '-' }}
           </ElDescriptionsItem>
           <ElDescriptionsItem label="当前节点">
-            {{ formatNullable(applicationDetail?.currentNode) }}
+            {{ formatCurrentNode(applicationDetail?.currentNode) }}
           </ElDescriptionsItem>
           <ElDescriptionsItem label="申请单号">
             {{ formatNullable(applicationDetail?.applicationNo) }}
@@ -492,7 +508,7 @@ const detailStatusType = computed(() =>
           v-if="!canQueryApplicationDetail"
           class="mt-4"
           :closable="false"
-          title="当前账号没有申请单详情查询权限，登记将仅基于已知 applicationId 执行。"
+          title="当前账号没有申请单详情查询权限，登记将仅基于已知申请单上下文执行。"
           type="info"
           show-icon
         />
@@ -508,7 +524,7 @@ const detailStatusType = computed(() =>
             <ElInput
               v-model="importForm.thirdPartySource"
               clearable
-              placeholder="例如：HIS、EMR"
+              placeholder="例如：院内系统、门诊系统"
               style="width: 220px"
               @keyup.enter="submitImportClinicalApplication"
             />
@@ -538,7 +554,7 @@ const detailStatusType = computed(() =>
       <WorkflowSectionCard
         v-if="canCreateApplication"
         title="申请单创建"
-        description="仅对具备 PERM_APPLICATION_CREATE 的角色开放，创建成功后自动切换为当前上下文。"
+        description="仅对具备申请单创建权限的角色开放，创建成功后自动切换为当前上下文。"
       >
         <ElForm label-width="110px">
           <div class="grid gap-4 md:grid-cols-2">
@@ -555,47 +571,46 @@ const detailStatusType = computed(() =>
             <ElFormItem label="申请单号">
               <ElInput v-model="createForm.applicationNo" placeholder="留空时由后端生成" />
             </ElFormItem>
-            <ElFormItem label="患者 ID">
-              <ElInput v-model="createForm.patientId" placeholder="患者 ID / 门诊号 / 住院号" />
+            <ElFormItem label="患者编号">
+              <ElInput v-model="createForm.patientId" placeholder="患者编号 / 门诊号 / 住院号" />
             </ElFormItem>
             <ElFormItem label="患者姓名">
               <ElInput v-model="createForm.patientName" placeholder="请输入患者姓名" />
             </ElFormItem>
             <ElFormItem label="患者性别">
-              <ElInput v-model="createForm.patientGender" placeholder="例如：男 / 女" />
+              <ElSelect v-model="createForm.patientGender" clearable placeholder="请选择患者性别">
+                <ElOption
+                  v-for="option in GENDER_OPTIONS"
+                  :key="option.value"
+                  :label="option.label"
+                  :value="option.value"
+                />
+              </ElSelect>
             </ElFormItem>
             <ElFormItem label="患者年龄">
               <ElInput v-model="createForm.patientAge" placeholder="例如：45 岁" />
             </ElFormItem>
-            <ElFormItem label="送检科室 ID" required>
-              <ElInput
+            <ElFormItem label="送检科室" required>
+              <DepartmentSelect
                 v-model="createForm.submittingDepartmentId"
-                placeholder="请输入送检科室 ID"
-              />
-            </ElFormItem>
-            <ElFormItem label="送检科室名称" required>
-              <ElInput
-                v-model="createForm.submittingDepartmentName"
-                placeholder="请输入送检科室名称"
-              />
-            </ElFormItem>
-            <ElFormItem label="送检医生 ID" required>
-              <ElInput
-                v-model="createForm.submittingDoctorUserId"
-                placeholder="请输入送检医生用户 ID"
+                :selected-label="createForm.submittingDepartmentName"
+                placeholder="请选择送检科室"
+                @change="handleSubmittingDepartmentChange"
               />
             </ElFormItem>
             <ElFormItem label="送检医生" required>
-              <ElInput
-                v-model="createForm.submittingDoctorName"
-                placeholder="请输入送检医生姓名"
+              <SystemUserSelect
+                v-model="createForm.submittingDoctorUserId"
+                :selected-label="createForm.submittingDoctorName"
+                placeholder="请选择送检医生"
+                @change="handleSubmittingDoctorChange"
               />
             </ElFormItem>
             <ElFormItem label="送检部位" required>
               <ElInput v-model="createForm.specimenSite" placeholder="例如：胃窦、甲状腺左叶" />
             </ElFormItem>
             <ElFormItem label="外部单号">
-              <ElInput v-model="createForm.externalOrderNo" placeholder="第三方或HIS单号" />
+              <ElInput v-model="createForm.externalOrderNo" placeholder="第三方来源单号" />
             </ElFormItem>
           </div>
           <ElFormItem label="临床诊断" required>
@@ -638,7 +653,7 @@ const detailStatusType = computed(() =>
         <ElAlert
           v-if="!hasApplicationContext"
           :closable="false"
-          title="请先在上方输入并确认当前申请单 ID。"
+          title="请先在上方输入并确认当前申请单编号。"
           type="warning"
           show-icon
         />
@@ -647,10 +662,12 @@ const detailStatusType = computed(() =>
           <ElForm label-width="104px">
             <div class="grid gap-4 md:grid-cols-2">
               <ElFormItem label="操作人" required>
-                <ElInput v-model="registerForm.operatorName" placeholder="请输入操作人姓名" />
-              </ElFormItem>
-              <ElFormItem label="操作人 ID">
-                <ElInput v-model="registerForm.operatorUserId" placeholder="请输入操作人用户 ID" />
+                <SystemUserSelect
+                  v-model="registerForm.operatorUserId"
+                  :selected-label="registerForm.operatorName"
+                  placeholder="请选择操作人"
+                  @change="handleRegisterOperatorChange"
+                />
               </ElFormItem>
               <ElFormItem label="打印机编码">
                 <ElInput v-model="registerForm.printerCode" placeholder="用于标签打印" />
@@ -774,12 +791,14 @@ const detailStatusType = computed(() =>
         title="标签补打"
         description="对接标签批次补打接口，按批次重新发起打印。"
       >
-        <ElForm inline label-width="96px">
+          <ElForm inline label-width="96px">
           <ElFormItem label="操作人" required>
-            <ElInput v-model="retryForm.operatorName" placeholder="操作人姓名" />
-          </ElFormItem>
-          <ElFormItem label="操作人 ID">
-            <ElInput v-model="retryForm.operatorUserId" placeholder="操作人 ID" />
+            <SystemUserSelect
+              v-model="retryForm.operatorUserId"
+              :selected-label="retryForm.operatorName"
+              placeholder="请选择补打操作人"
+              @change="handleRetryOperatorChange"
+            />
           </ElFormItem>
           <ElFormItem label="打印机编码" required>
             <ElInput v-model="retryForm.printerCode" placeholder="请输入打印机编码" />
@@ -848,7 +867,7 @@ const detailStatusType = computed(() =>
             {{ formatNullable(applicationDetail.patientAge) }}
           </ElDescriptionsItem>
           <ElDescriptionsItem label="当前节点">
-            {{ formatNullable(applicationDetail.currentNode) }}
+            {{ formatCurrentNode(applicationDetail.currentNode) }}
           </ElDescriptionsItem>
           <ElDescriptionsItem label="临床诊断" :span="2">
             {{ formatNullable(applicationDetail.clinicalDiagnosis) }}

@@ -5,6 +5,7 @@ import { M1_PERMISSION_CODES } from '#/modules/system-management/constants';
 const SYSTEM_QUERY_AUTHORITIES = [
   M1_PERMISSION_CODES.SYSTEM_USER_QUERY,
   M1_PERMISSION_CODES.SYSTEM_ROLE_QUERY,
+  M1_PERMISSION_CODES.DEPARTMENT_QUERY,
   M1_PERMISSION_CODES.BODY_PART_QUERY,
   M1_PERMISSION_CODES.ORDER_DICT_QUERY,
   M1_PERMISSION_CODES.ORDER_CHARGE_QUERY,
@@ -46,6 +47,17 @@ const routes: RouteRecordRaw[] = [
           authority: [M1_PERMISSION_CODES.SYSTEM_ROLE_QUERY],
           icon: 'carbon:user-role',
           title: '角色授权',
+        },
+      },
+      {
+        name: 'Departments',
+        path: '/system/departments',
+        component: () =>
+          import('#/modules/system-management/views/DepartmentsView.vue'),
+        meta: {
+          authority: [M1_PERMISSION_CODES.DEPARTMENT_QUERY],
+          icon: 'carbon:building',
+          title: '科室字典',
         },
       },
       {

@@ -3,6 +3,8 @@ export const M1_PERMISSION_CODES = {
   BODY_PART_QUERY: 'PERM_SYS_BODY_PART_QUERY',
   CONFIG_QUERY: 'PERM_SYS_CONFIG_QUERY',
   CONFIG_UPDATE: 'PERM_SYS_CONFIG_UPDATE',
+  DEPARTMENT_CREATE: 'PERM_SYS_DEPARTMENT_CREATE',
+  DEPARTMENT_QUERY: 'PERM_SYS_DEPARTMENT_QUERY',
   GUIDELINE_CREATE: 'PERM_SYS_GUIDELINE_CREATE',
   GUIDELINE_QUERY: 'PERM_SYS_GUIDELINE_QUERY',
   NUMBERING_QUERY: 'PERM_SYS_NUMBERING_QUERY',
@@ -27,3 +29,9 @@ export const YES_NO_OPTIONS = [
   { label: '启用', value: true },
   { label: '停用', value: false },
 ];
+
+export const GENDER_OPTIONS = [
+  { label: '男', value: '男' },
+  { label: '女', value: '女' },
+  { label: '未知', value: '未知' },
+] as const;

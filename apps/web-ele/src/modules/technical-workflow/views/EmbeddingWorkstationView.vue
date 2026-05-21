@@ -10,6 +10,8 @@ import { useUserStore } from '@vben/stores';
 import {
   ElAlert,
   ElButton,
+  ElDescriptions,
+  ElDescriptionsItem,
   ElForm,
   ElFormItem,
   ElInput,
@@ -23,6 +25,8 @@ import {
   ElTag,
 } from 'element-plus';
 
+import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
+
 import {
   completeEmbedding,
   listPendingTechnicalTasks,
@@ -31,7 +35,7 @@ import {
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { DEFAULT_PAGE_SIZE, EVALUATION_LEVEL_OPTIONS } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
-import { formatDateTime, formatNullable } from '../utils/format';
+import { formatDateTime, formatNullable, formatObjectType, formatTaskStatus } from '../utils/format';
 
 const route = useRoute();
 const userStore = useUserStore();
@@ -41,6 +45,7 @@ const loading = ref(false);
 const actionLoading = ref(false);
 const pendingItems = ref<PendingTechnicalTaskItem[]>([]);
 const total = ref(0);
+const selectedTask = ref<null | PendingTechnicalTaskItem>(null);
 
 const filters = reactive({
   page: 1,
@@ -101,6 +106,7 @@ function normalizeOperatorPayload() {
 }
 
 function adoptTask(row: PendingTechnicalTaskItem) {
+  selectedTask.value = row;
   completeForm.taskId = row.id;
   if (row.objectType === 'SAMPLING_BLOCK' && row.objectId) {
     completeForm.samplingBlockId = row.objectId;
@@ -127,7 +133,7 @@ async function loadPendingData() {
 async function startTask(row: PendingTechnicalTaskItem) {
   const payload = normalizeOperatorPayload();
   if (!payload.operatorName) {
-    ElMessage.warning('请先填写操作人');
+    ElMessage.warning('请先选择操作人');
     return;
   }
 
@@ -150,15 +156,15 @@ async function startTask(row: PendingTechnicalTaskItem) {
 async function submitEmbedding() {
   const payload = normalizeOperatorPayload();
   if (!completeForm.taskId.trim()) {
-    ElMessage.warning('请先输入任务 ID');
+    ElMessage.warning('请先选择待处理任务');
     return;
   }
   if (!completeForm.samplingBlockId.trim()) {
-    ElMessage.warning('请先输入取材块 ID');
+    ElMessage.warning('请先选择取材块');
     return;
   }
   if (!payload.operatorName) {
-    ElMessage.warning('请先填写操作人');
+    ElMessage.warning('请先选择操作人');
     return;
   }
 
@@ -190,6 +196,18 @@ async function submitEmbedding() {
 }
 
 void loadPendingData();
+
+const currentTaskContext = computed(() => ({
+  objectId: completeForm.samplingBlockId || selectedTask.value?.objectId || '',
+  objectType: selectedTask.value?.objectType ?? '',
+  pathologyNo: selectedTask.value?.pathologyNo ?? '',
+  taskId: completeForm.taskId || selectedTask.value?.id || '',
+}));
+
+function handleOperatorChange(user: null | { id: string; name: string }) {
+  operatorForm.operatorUserId = user?.id ?? '';
+  operatorForm.operatorName = user?.name ?? '';
+}
 </script>
 
 <template>
@@ -210,10 +228,12 @@ void loadPendingData();
         <ElForm label-width="96px">
           <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <ElFormItem label="操作人" required>
-              <ElInput v-model="operatorForm.operatorName" placeholder="请输入操作人姓名" />
-            </ElFormItem>
-            <ElFormItem label="操作人 ID">
-              <ElInput v-model="operatorForm.operatorUserId" placeholder="请输入操作人用户 ID" />
+              <SystemUserSelect
+                v-model="operatorForm.operatorUserId"
+                :selected-label="operatorForm.operatorName"
+                placeholder="请选择操作人"
+                @change="handleOperatorChange"
+              />
             </ElFormItem>
             <ElFormItem label="终端编码">
               <ElInput v-model="operatorForm.terminalCode" placeholder="包埋终端编码" />
@@ -225,17 +245,28 @@ void loadPendingData();
         </ElForm>
       </WorkflowSectionCard>
 
-      <WorkflowSectionCard title="包埋完成表单" description="突出取材块、包埋盒、切片提示、评估等级和采样评价等关键字段。">
+      <WorkflowSectionCard title="包埋完成表单" description="当前任务上下文带入取材块，表单中只保留用户需要决策的包埋信息。">
+        <ElDescriptions :column="2" border class="mb-4">
+          <ElDescriptionsItem label="当前任务号">
+            {{ formatNullable(currentTaskContext.taskId) }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="病理号">
+            {{ formatNullable(currentTaskContext.pathologyNo) }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="对象类型">
+            {{ formatObjectType(currentTaskContext.objectType) }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="取材块编号">
+            {{ formatNullable(currentTaskContext.objectId) }}
+          </ElDescriptionsItem>
+        </ElDescriptions>
         <ElForm label-width="108px">
           <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <ElFormItem label="任务 ID" required>
-              <ElInput v-model="completeForm.taskId" placeholder="请输入 taskId" />
-            </ElFormItem>
-            <ElFormItem label="取材块 ID" required>
-              <ElInput v-model="completeForm.samplingBlockId" placeholder="请输入 samplingBlockId" />
+            <ElFormItem label="取材块编号" required>
+              <ElInput v-model="completeForm.samplingBlockId" disabled placeholder="由当前任务带入" />
             </ElFormItem>
             <ElFormItem label="包埋盒编号">
-              <ElInput v-model="completeForm.embeddingBoxNo" placeholder="请输入 embeddingBoxNo" />
+              <ElInput v-model="completeForm.embeddingBoxNo" placeholder="请输入包埋盒编号" />
             </ElFormItem>
             <ElFormItem label="蜡块数量" required>
               <ElInputNumber v-model="completeForm.blockCount" :min="1" class="w-full" />
@@ -255,11 +286,11 @@ void loadPendingData();
               </ElSelect>
             </ElFormItem>
             <ElFormItem label="设备编码">
-              <ElInput v-model="completeForm.deviceCode" placeholder="请输入 deviceCode" />
+              <ElInput v-model="completeForm.deviceCode" placeholder="请输入设备编码" />
             </ElFormItem>
           </div>
           <ElFormItem label="切片提示">
-            <ElInput v-model="completeForm.sliceNotice" placeholder="请输入 sliceNotice" />
+            <ElInput v-model="completeForm.sliceNotice" placeholder="请输入切片提示" />
           </ElFormItem>
           <ElFormItem label="取材评估">
             <ElInput
@@ -282,7 +313,7 @@ void loadPendingData();
         description="列表承接包埋任务，支持直接开始，也可将任务对象带入完成表单。"
       >
         <ElTable v-loading="loading" :data="pendingItems" border>
-          <ElTableColumn label="任务 ID" min-width="180" prop="id" />
+          <ElTableColumn label="任务号" min-width="180" prop="id" />
           <ElTableColumn label="病理号" min-width="140">
             <template #default="{ row }">
               {{ formatNullable(row.pathologyNo) }}
@@ -290,10 +321,10 @@ void loadPendingData();
           </ElTableColumn>
           <ElTableColumn label="对象类型" min-width="140">
             <template #default="{ row }">
-              {{ formatNullable(row.objectType) }}
+              {{ formatObjectType(row.objectType) }}
             </template>
           </ElTableColumn>
-          <ElTableColumn label="对象 ID" min-width="180">
+          <ElTableColumn label="对象编号" min-width="180">
             <template #default="{ row }">
               {{ formatNullable(row.objectId) }}
             </template>
@@ -301,7 +332,7 @@ void loadPendingData();
           <ElTableColumn label="任务状态" min-width="120">
             <template #default="{ row }">
               <ElTag :type="getTaskStatusTagType(row.taskStatus)">
-                {{ formatNullable(row.taskStatus) }}
+                {{ formatTaskStatus(row.taskStatus) }}
               </ElTag>
             </template>
           </ElTableColumn>
@@ -314,7 +345,7 @@ void loadPendingData();
             <template #default="{ row }">
               <div class="flex gap-2">
                 <ElButton link type="primary" @click="startTask(row)">开始包埋</ElButton>
-                <ElButton link type="success" @click="adoptTask(row)">带入表单</ElButton>
+                <ElButton link type="success" @click="adoptTask(row)">设为当前任务</ElButton>
               </div>
             </template>
           </ElTableColumn>
