@@ -26,6 +26,11 @@ export interface ApplicationCreateResult {
   id: string;
 }
 
+export interface ImportClinicalApplicationRequest {
+  externalOrderNo: string;
+  thirdPartySource: string;
+}
+
 export interface TrackingEventView {
   eventContent: null | string;
   eventStatus: null | string;

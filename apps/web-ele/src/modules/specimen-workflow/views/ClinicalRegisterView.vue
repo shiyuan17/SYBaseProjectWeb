@@ -2,6 +2,7 @@
 import type {
   ApplicationCreateRequest,
   ApplicationDetailView,
+  ImportClinicalApplicationRequest,
   LabelPrintRetryResult,
   SpecimenRegisterItemRequest,
   SpecimenRegisterResult,
@@ -32,6 +33,7 @@ import {
 import {
   createApplication,
   getApplicationDetail,
+  importClinicalApplication,
   registerSpecimens,
   retryLabelPrint,
 } from '../api/specimen-workflow-service';
@@ -54,6 +56,9 @@ const canCreateApplication = computed(() =>
 const canQueryApplicationDetail = computed(() =>
   accessCodeSet.value.has(M2_PERMISSION_CODES.APPLICATION_DETAIL_QUERY),
 );
+const canImportClinicalApplication = computed(() =>
+  accessCodeSet.value.has(M2_PERMISSION_CODES.CLINICAL_IMPORT),
+);
 
 const currentUserName = computed(() => userStore.userInfo?.realName ?? '');
 const currentUserId = computed(() => userStore.userInfo?.userId ?? '');
@@ -67,6 +72,7 @@ const retryResult = ref<LabelPrintRetryResult | null>(null);
 
 const loadingDetail = ref(false);
 const creatingApplication = ref(false);
+const importingClinicalApplication = ref(false);
 const submittingRegister = ref(false);
 const retryingLabelPrint = ref(false);
 
@@ -109,6 +115,11 @@ const retryForm = reactive({
   printerCode: '',
   remarks: '',
   terminalCode: '',
+});
+
+const importForm = reactive<ImportClinicalApplicationRequest>({
+  externalOrderNo: '',
+  thirdPartySource: '',
 });
 
 const registerItems = ref<RegisterRow[]>([createRegisterRow()]);
@@ -162,6 +173,13 @@ function resetRegisterForm() {
     terminalCode: '',
   });
   registerItems.value = [createRegisterRow()];
+}
+
+function resetImportForm() {
+  Object.assign(importForm, {
+    externalOrderNo: '',
+    thirdPartySource: '',
+  });
 }
 
 function addRegisterRow() {
@@ -275,6 +293,40 @@ async function submitCreateApplication() {
     pageError.value = getWorkflowPageErrorMessage(error);
   } finally {
     creatingApplication.value = false;
+  }
+}
+
+async function submitImportClinicalApplication() {
+  if (!canImportClinicalApplication.value) {
+    return;
+  }
+  if (!importForm.thirdPartySource.trim()) {
+    ElMessage.warning('请填写第三方来源编码');
+    return;
+  }
+  if (!importForm.externalOrderNo.trim()) {
+    ElMessage.warning('请填写外部申请单号');
+    return;
+  }
+
+  importingClinicalApplication.value = true;
+  pageError.value = '';
+  try {
+    const result = await importClinicalApplication({
+      externalOrderNo: importForm.externalOrderNo.trim(),
+      thirdPartySource: importForm.thirdPartySource.trim(),
+    });
+    resetImportForm();
+    applicationDetail.value = null;
+    applyApplicationContext(result.id);
+    ElMessage.success('临床申请导入成功，已切换到当前上下文');
+    if (canQueryApplicationDetail.value) {
+      await loadApplication();
+    }
+  } catch (error) {
+    pageError.value = getWorkflowPageErrorMessage(error);
+  } finally {
+    importingClinicalApplication.value = false;
   }
 }
 
@@ -444,6 +496,43 @@ const detailStatusType = computed(() =>
           type="info"
           show-icon
         />
+      </WorkflowSectionCard>
+
+      <WorkflowSectionCard
+        v-if="canImportClinicalApplication"
+        title="第三方申请导入"
+        description="对接临床系统导入接口，按来源编码与外部申请单号生成院内申请单，并自动切换为当前登记上下文。"
+      >
+        <ElForm inline label-width="112px">
+          <ElFormItem label="第三方来源" required>
+            <ElInput
+              v-model="importForm.thirdPartySource"
+              clearable
+              placeholder="例如：HIS、EMR"
+              style="width: 220px"
+              @keyup.enter="submitImportClinicalApplication"
+            />
+          </ElFormItem>
+          <ElFormItem label="外部申请单号" required>
+            <ElInput
+              v-model="importForm.externalOrderNo"
+              clearable
+              placeholder="请输入外部申请单号"
+              style="width: 280px"
+              @keyup.enter="submitImportClinicalApplication"
+            />
+          </ElFormItem>
+          <ElFormItem>
+            <ElButton @click="resetImportForm">重置</ElButton>
+            <ElButton
+              :loading="importingClinicalApplication"
+              type="primary"
+              @click="submitImportClinicalApplication"
+            >
+              导入申请
+            </ElButton>
+          </ElFormItem>
+        </ElForm>
       </WorkflowSectionCard>
 
       <WorkflowSectionCard

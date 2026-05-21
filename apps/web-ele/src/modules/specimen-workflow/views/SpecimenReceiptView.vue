@@ -282,6 +282,10 @@ function removeDirectReceiptRow(key: number) {
 }
 
 async function submitDirectReceipt() {
+  if (!directForm.receivedByName.trim()) {
+    ElMessage.warning('请填写接收人');
+    return;
+  }
   if (!validateReceiptItems(directDraftItems.value)) {
     return;
   }
@@ -291,7 +295,7 @@ async function submitDirectReceipt() {
   try {
     receiptResult.value = await directReceiveSpecimens({
       items: directDraftItems.value.map(normalizeReceiptItem),
-      receivedByName: directForm.receivedByName.trim() || null,
+      receivedByName: directForm.receivedByName.trim(),
       receivedByUserId: directForm.receivedByUserId.trim() || null,
       terminalCode: directForm.terminalCode.trim() || null,
     });
@@ -546,7 +550,7 @@ void loadPendingData();
     <ElDrawer v-model="directDrawerVisible" title="条码直收" size="52%">
       <ElForm label-width="96px">
         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <ElFormItem label="接收人">
+          <ElFormItem label="接收人" required>
             <ElInput v-model="directForm.receivedByName" placeholder="请输入接收人姓名" />
           </ElFormItem>
           <ElFormItem label="接收人 ID">

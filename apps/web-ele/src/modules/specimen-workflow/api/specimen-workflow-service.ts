@@ -4,6 +4,7 @@ import type {
   ApplicationDetailView,
   DirectSpecimenReceiptRequest,
   FixationResult,
+  ImportClinicalApplicationRequest,
   LabelPrintRetryRequest,
   LabelPrintRetryResult,
   PendingSpecimenPage,
@@ -15,6 +16,7 @@ import type {
   SpecimenReceiptResult,
   SpecimenRegisterRequest,
   SpecimenRegisterResult,
+  SpecimenTrackingSummary,
   TrackingEventView,
   TrackingQueryView,
   TransportOrderCreateRequest,
@@ -23,10 +25,14 @@ import type {
   TransportOrderView,
 } from '../types/specimen-workflow';
 
-import { bodyRequestClient } from '#/api/request';
+import { requestClient } from '#/api/request';
 
-type ApplicationDetailResponse = Omit<ApplicationDetailView, 'recentEvents'> & {
+type ApplicationDetailResponse = Omit<
+  ApplicationDetailView,
+  'recentEvents' | 'specimens'
+> & {
   recentEvents?: TrackingEventView[];
+  specimens?: SpecimenTrackingSummary[];
 };
 type TrackingQueryResponse = Omit<TrackingQueryView, 'recentEvents'> & {
   recentEvents?: TrackingEventView[];
@@ -64,43 +70,52 @@ export function mapPendingTransportOrderPageResponse(
 }
 
 export async function createApplication(data: ApplicationCreateRequest) {
-  return bodyRequestClient.post<ApplicationCreateResult>('/v1/applications', data);
+  return requestClient.post<ApplicationCreateResult>('/v1/applications', data);
+}
+
+export async function importClinicalApplication(
+  data: ImportClinicalApplicationRequest,
+) {
+  return requestClient.post<ApplicationCreateResult>(
+    '/v1/clinical-applications/import',
+    data,
+  );
 }
 
 export async function getApplicationDetail(applicationId: string) {
-  const response = await bodyRequestClient.get<ApplicationDetailResponse>(
+  const response = await requestClient.get<ApplicationDetailResponse>(
     `/v1/applications/${applicationId}`,
   );
   return mapApplicationDetailResponse(response);
 }
 
 export async function getApplicationTracking(applicationId: string) {
-  const response = await bodyRequestClient.get<TrackingQueryResponse>(
+  const response = await requestClient.get<TrackingQueryResponse>(
     `/v1/applications/${applicationId}/tracking`,
   );
   return mapApplicationDetailResponse(response);
 }
 
 export async function getSpecimenTrackingByBarcode(barcode: string) {
-  const response = await bodyRequestClient.get<TrackingQueryResponse>(
+  const response = await requestClient.get<TrackingQueryResponse>(
     `/v1/specimens/barcodes/${barcode}/tracking`,
   );
   return mapApplicationDetailResponse(response);
 }
 
 export async function registerSpecimens(data: SpecimenRegisterRequest) {
-  return bodyRequestClient.post<SpecimenRegisterResult>('/v1/specimens/register', data);
+  return requestClient.post<SpecimenRegisterResult>('/v1/specimens/register', data);
 }
 
 export async function retryLabelPrint(batchNo: string, data: LabelPrintRetryRequest) {
-  return bodyRequestClient.post<LabelPrintRetryResult>(
+  return requestClient.post<LabelPrintRetryResult>(
     `/v1/specimens/label-batches/${batchNo}/retry`,
     data,
   );
 }
 
 export async function listPendingFixations(params: PendingSpecimenQuery) {
-  const response = await bodyRequestClient.get<PendingSpecimenPageResponse>(
+  const response = await requestClient.get<PendingSpecimenPageResponse>(
     '/v1/specimen-fixations/pending',
     { params },
   );
@@ -108,15 +123,15 @@ export async function listPendingFixations(params: PendingSpecimenQuery) {
 }
 
 export async function startFixation(data: SpecimenFixationRequest) {
-  return bodyRequestClient.post<FixationResult>('/v1/specimen-fixations/start', data);
+  return requestClient.post<FixationResult>('/v1/specimen-fixations/start', data);
 }
 
 export async function completeFixation(data: SpecimenFixationRequest) {
-  return bodyRequestClient.post<FixationResult>('/v1/specimen-fixations/complete', data);
+  return requestClient.post<FixationResult>('/v1/specimen-fixations/complete', data);
 }
 
 export async function listPendingTransportOrders(params: PendingTransportOrderQuery) {
-  const response = await bodyRequestClient.get<PendingTransportOrderPageResponse>(
+  const response = await requestClient.get<PendingTransportOrderPageResponse>(
     '/v1/transport-orders/pending',
     { params },
   );
@@ -124,14 +139,14 @@ export async function listPendingTransportOrders(params: PendingTransportOrderQu
 }
 
 export async function createTransportOrder(data: TransportOrderCreateRequest) {
-  return bodyRequestClient.post<TransportOrderView>('/v1/transport-orders', data);
+  return requestClient.post<TransportOrderView>('/v1/transport-orders', data);
 }
 
 export async function printTransportOrder(
   transportOrderId: string,
   data: TransportOrderOperatorRequest,
 ) {
-  return bodyRequestClient.post<TransportOrderView>(
+  return requestClient.post<TransportOrderView>(
     `/v1/transport-orders/${transportOrderId}/print`,
     data,
   );
@@ -141,14 +156,14 @@ export async function handoverTransportOrder(
   transportOrderId: string,
   data: TransportOrderHandoverRequest,
 ) {
-  return bodyRequestClient.post<TransportOrderView>(
+  return requestClient.post<TransportOrderView>(
     `/v1/transport-orders/${transportOrderId}/handover`,
     data,
   );
 }
 
 export async function listPendingReceipts(params: PendingSpecimenQuery) {
-  const response = await bodyRequestClient.get<PendingSpecimenPageResponse>(
+  const response = await requestClient.get<PendingSpecimenPageResponse>(
     '/v1/specimen-receipts/pending',
     { params },
   );
@@ -156,11 +171,11 @@ export async function listPendingReceipts(params: PendingSpecimenQuery) {
 }
 
 export async function receiveSpecimens(data: SpecimenReceiptRequest) {
-  return bodyRequestClient.post<SpecimenReceiptResult>('/v1/specimen-receipts', data);
+  return requestClient.post<SpecimenReceiptResult>('/v1/specimen-receipts', data);
 }
 
 export async function directReceiveSpecimens(data: DirectSpecimenReceiptRequest) {
-  return bodyRequestClient.post<SpecimenReceiptResult>(
+  return requestClient.post<SpecimenReceiptResult>(
     '/v1/specimen-receipts/by-barcodes',
     data,
   );
