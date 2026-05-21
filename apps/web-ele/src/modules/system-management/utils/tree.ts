@@ -8,6 +8,10 @@ export function filterTreeByKeyword<T extends BasicTreeNode>(
   getLabel: (node: T) => string,
   keyword: string,
 ): T[] {
+  if (!Array.isArray(tree)) {
+    return [];
+  }
+
   const normalizedKeyword = keyword.trim().toLowerCase();
   if (!normalizedKeyword) {
     return tree;
@@ -16,7 +20,7 @@ export function filterTreeByKeyword<T extends BasicTreeNode>(
   const filteredNodes = tree
     .map((node) => {
       const children = filterTreeByKeyword(
-        (node.children ?? []) as T[],
+        (Array.isArray(node.children) ? node.children : []) as T[],
         getLabel,
         keyword,
       );
@@ -38,9 +42,13 @@ export function flattenTree<T extends BasicTreeNode>(
   tree: T[],
   collector: (node: T) => void,
 ) {
+  if (!Array.isArray(tree)) {
+    return;
+  }
+
   tree.forEach((node) => {
     collector(node);
-    flattenTree((node.children ?? []) as T[], collector);
+    flattenTree((Array.isArray(node.children) ? node.children : []) as T[], collector);
   });
 }
 
@@ -48,11 +56,18 @@ export function findTreeNodeById<T extends BasicTreeNode>(
   tree: T[],
   id: string,
 ): null | T {
+  if (!Array.isArray(tree)) {
+    return null;
+  }
+
   for (const node of tree) {
     if (node.id === id) {
       return node;
     }
-    const matched = findTreeNodeById((node.children ?? []) as T[], id);
+    const matched = findTreeNodeById(
+      (Array.isArray(node.children) ? node.children : []) as T[],
+      id,
+    );
     if (matched) {
       return matched;
     }
@@ -61,6 +76,10 @@ export function findTreeNodeById<T extends BasicTreeNode>(
 }
 
 export function getTreeExpandedKeys<T extends BasicTreeNode>(tree: T[]) {
+  if (!Array.isArray(tree)) {
+    return [];
+  }
+
   const keys: string[] = [];
   flattenTree(tree, (node) => {
     keys.push(node.id);
