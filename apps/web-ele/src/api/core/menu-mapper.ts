@@ -209,6 +209,91 @@ const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] = [
       },
     ],
   },
+  {
+    component: 'BasicLayout',
+    meta: {
+      icon: 'carbon:operations-record',
+      order: 130,
+      title: '技术组核心生产线',
+    },
+    name: 'TechnicalWorkflowRoot',
+    path: '/technical-workflow',
+    redirect: '/technical-workflow/tasks',
+    children: [
+      {
+        component: '/modules/technical-workflow/views/TechnicalTasksView',
+        meta: {
+          icon: 'carbon:task',
+          title: '任务池',
+        },
+        name: 'TechnicalTasks',
+        path: '/technical-workflow/tasks',
+      },
+      {
+        component: '/modules/technical-workflow/views/GrossingWorkstationView',
+        meta: {
+          icon: 'carbon:scan',
+          title: '取材描写',
+        },
+        name: 'GrossingWorkstation',
+        path: '/technical-workflow/grossing',
+      },
+      {
+        component: '/modules/technical-workflow/views/DehydrationWorkstationView',
+        meta: {
+          icon: 'carbon:data-vis-4',
+          title: '脱水工作站',
+        },
+        name: 'DehydrationWorkstation',
+        path: '/technical-workflow/dehydration',
+      },
+      {
+        component: '/modules/technical-workflow/views/EmbeddingWorkstationView',
+        meta: {
+          icon: 'carbon:cube',
+          title: '包埋工作站',
+        },
+        name: 'EmbeddingWorkstation',
+        path: '/technical-workflow/embedding',
+      },
+      {
+        component: '/modules/technical-workflow/views/SlicingWorkstationView',
+        meta: {
+          icon: 'carbon:cut',
+          title: '切片工作站',
+        },
+        name: 'SlicingWorkstation',
+        path: '/technical-workflow/slicing',
+      },
+      {
+        component: '/modules/technical-workflow/views/StainingWorkstationView',
+        meta: {
+          icon: 'carbon:color-palette',
+          title: '染色出片',
+        },
+        name: 'StainingWorkstation',
+        path: '/technical-workflow/staining',
+      },
+      {
+        component: '/modules/technical-workflow/views/ReworkWorkstationView',
+        meta: {
+          icon: 'carbon:renew',
+          title: '返工工作站',
+        },
+        name: 'ReworkWorkstation',
+        path: '/technical-workflow/rework',
+      },
+      {
+        component: '/modules/technical-workflow/views/TechnicalTrackingView',
+        meta: {
+          icon: 'carbon:search',
+          title: '技术追踪',
+        },
+        name: 'TechnicalTracking',
+        path: '/technical-workflow/tracking',
+      },
+    ],
+  },
 ];
 
 const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[] = [
@@ -396,6 +481,81 @@ const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[] = [
       '/api/v1/specimens/barcodes/{barcode}/tracking',
     ],
     routeName: 'TrackingQuery',
+  },
+  {
+    component: 'BasicLayout',
+    componentAliases: ['TechnicalWorkflowRoot'],
+    menuCodes: ['M3_WORKFLOW'],
+    path: '/technical-workflow',
+    pathAliases: ['/technical-workflow'],
+    routeName: 'TechnicalWorkflowRoot',
+  },
+  {
+    component: '/modules/technical-workflow/views/TechnicalTasksView',
+    componentAliases: ['TechnicalTasks'],
+    menuCodes: ['M3_TASKS'],
+    path: '/technical-workflow/tasks',
+    pathAliases: ['/technical-workflow/tasks', '/api/v1/technical-tasks/pending'],
+    routeName: 'TechnicalTasks',
+  },
+  {
+    component: '/modules/technical-workflow/views/GrossingWorkstationView',
+    componentAliases: ['Grossing'],
+    menuCodes: ['M3_GROSSING'],
+    path: '/technical-workflow/grossing',
+    pathAliases: ['/technical-workflow/grossing', '/api/v1/grossings'],
+    routeName: 'GrossingWorkstation',
+  },
+  {
+    component: '/modules/technical-workflow/views/DehydrationWorkstationView',
+    componentAliases: ['Dehydration'],
+    menuCodes: ['M3_DEHYDRATION'],
+    path: '/technical-workflow/dehydration',
+    pathAliases: ['/technical-workflow/dehydration', '/api/v1/dehydration-batches'],
+    routeName: 'DehydrationWorkstation',
+  },
+  {
+    component: '/modules/technical-workflow/views/EmbeddingWorkstationView',
+    componentAliases: ['Embedding'],
+    menuCodes: ['M3_EMBEDDING'],
+    path: '/technical-workflow/embedding',
+    pathAliases: ['/technical-workflow/embedding', '/api/v1/embeddings'],
+    routeName: 'EmbeddingWorkstation',
+  },
+  {
+    component: '/modules/technical-workflow/views/SlicingWorkstationView',
+    componentAliases: ['Slicing'],
+    menuCodes: ['M3_SLICING'],
+    path: '/technical-workflow/slicing',
+    pathAliases: ['/technical-workflow/slicing', '/api/v1/slicings'],
+    routeName: 'SlicingWorkstation',
+  },
+  {
+    component: '/modules/technical-workflow/views/StainingWorkstationView',
+    componentAliases: ['Staining'],
+    menuCodes: ['M3_STAINING'],
+    path: '/technical-workflow/staining',
+    pathAliases: ['/technical-workflow/staining', '/api/v1/slide-stainings'],
+    routeName: 'StainingWorkstation',
+  },
+  {
+    component: '/modules/technical-workflow/views/ReworkWorkstationView',
+    componentAliases: ['Rework'],
+    menuCodes: ['M3_REWORK'],
+    path: '/technical-workflow/rework',
+    pathAliases: ['/technical-workflow/rework', '/api/v1/rework-orders'],
+    routeName: 'ReworkWorkstation',
+  },
+  {
+    component: '/modules/technical-workflow/views/TechnicalTrackingView',
+    componentAliases: ['TechnicalTracking'],
+    menuCodes: ['M3_TRACKING'],
+    path: '/technical-workflow/tracking',
+    pathAliases: [
+      '/technical-workflow/tracking',
+      '/api/v1/pathology-cases/{id}/technical-tracking',
+    ],
+    routeName: 'TechnicalTracking',
   },
 ];
 

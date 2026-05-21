@@ -4,7 +4,9 @@ import { describe, expect, it } from 'vitest';
 
 import { M1_PERMISSION_CODES } from '#/modules/system-management/constants';
 import { M2_PERMISSION_CODES } from '#/modules/specimen-workflow/constants';
+import { M3_PERMISSION_CODES } from '#/modules/technical-workflow/constants';
 import systemRoutes from '#/router/routes/modules/system';
+import technicalWorkflowRoutes from '#/router/routes/modules/technical-workflow';
 import workflowRoutes from '#/router/routes/modules/workflow';
 
 import { getBackendFirstMenuRoutes, mapMenuViewsToRoutes } from './menu-mapper';
@@ -134,6 +136,71 @@ describe('mapMenuViewsToRoutes', () => {
           expect.objectContaining({
             name: 'ClinicalRegister',
             path: '/workflow/clinical-register',
+          }),
+        ],
+      }),
+    ]);
+  });
+
+  it('converts M3 technical workflow menu definitions into canonical frontend routes', () => {
+    const routes = mapMenuViewsToRoutes([
+      {
+        componentName: 'TechnicalWorkflowRoot',
+        enabled: true,
+        icon: 'operations',
+        id: 'MENU_M3_WORKFLOW',
+        menuCode: 'M3_WORKFLOW',
+        menuName: '技术组核心生产线',
+        menuType: 'DIRECTORY',
+        parentId: null,
+        path: '/technical-workflow',
+        permissionPrefix: 'm3',
+        sortOrder: 120,
+        visible: true,
+      },
+      {
+        componentName: 'TechnicalTasks',
+        enabled: true,
+        icon: 'task',
+        id: 'MENU_M3_TASKS',
+        menuCode: 'M3_TASKS',
+        menuName: '任务池',
+        menuType: 'MENU',
+        parentId: 'MENU_M3_WORKFLOW',
+        path: '/api/v1/technical-tasks/pending',
+        permissionPrefix: 'm3:tasks',
+        sortOrder: 121,
+        visible: true,
+      },
+      {
+        componentName: 'Grossing',
+        enabled: true,
+        icon: 'scan',
+        id: 'MENU_M3_GROSSING',
+        menuCode: 'M3_GROSSING',
+        menuName: '取材描写',
+        menuType: 'MENU',
+        parentId: 'MENU_M3_WORKFLOW',
+        path: '/api/v1/grossings',
+        permissionPrefix: 'm3:grossing',
+        sortOrder: 122,
+        visible: true,
+      },
+    ]);
+
+    expect(routes).toEqual([
+      expect.objectContaining({
+        name: 'TechnicalWorkflowRoot',
+        path: '/technical-workflow',
+        redirect: '/technical-workflow/tasks',
+        children: [
+          expect.objectContaining({
+            name: 'TechnicalTasks',
+            path: '/technical-workflow/tasks',
+          }),
+          expect.objectContaining({
+            name: 'GrossingWorkstation',
+            path: '/technical-workflow/grossing',
           }),
         ],
       }),
@@ -275,6 +342,29 @@ describe('workflow route access', () => {
     expect(trackingRoute?.component).toBeTypeOf('function');
     expect(trackingRoute?.meta?.authority).toEqual([
       M2_PERMISSION_CODES.SPECIMEN_TRACKING_QUERY,
+    ]);
+  });
+});
+
+describe('technical workflow route access', () => {
+  it('keeps M3 pages registered with workstation authorities', () => {
+    const workflowRoot = technicalWorkflowRoutes.find(
+      (route) => route.name === 'TechnicalWorkflowRoot',
+    );
+    const tasksRoute = workflowRoot?.children?.find(
+      (route) => route.name === 'TechnicalTasks',
+    );
+    const trackingRoute = workflowRoot?.children?.find(
+      (route) => route.name === 'TechnicalTracking',
+    );
+
+    expect(tasksRoute?.component).toBeTypeOf('function');
+    expect(trackingRoute?.component).toBeTypeOf('function');
+    expect(tasksRoute?.meta?.authority).toEqual([
+      M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY,
+    ]);
+    expect(trackingRoute?.meta?.authority).toEqual([
+      M3_PERMISSION_CODES.TECHNICAL_TRACKING_QUERY,
     ]);
   });
 });
