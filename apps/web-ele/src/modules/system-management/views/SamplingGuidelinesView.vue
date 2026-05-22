@@ -45,6 +45,10 @@ import SystemSectionCard from '../components/SystemSectionCard.vue';
 import SystemStatusTag from '../components/SystemStatusTag.vue';
 import { M1_PERMISSION_CODES } from '../constants';
 import { getSystemPageErrorMessage } from '../utils/error';
+import {
+  buildGuidelineCategorySubmitPayload,
+  buildGuidelineSubmitPayload,
+} from '../utils/submit-payloads';
 import { filterTreeByKeyword, findTreeNodeById, getTreeExpandedKeys } from '../utils/tree';
 
 const loading = ref(false);
@@ -196,23 +200,18 @@ async function viewGuidelineDetail(id: string) {
 async function submitCategory() {
   dialogLoading.value = true;
   try {
+    const payload = buildGuidelineCategorySubmitPayload(
+      categoryForm,
+      categoryDialogMode.value,
+    );
     if (categoryDialogMode.value === 'create') {
-      await createSamplingGuidelineCategory({
-        categoryCode: categoryForm.categoryCode,
-        categoryName: categoryForm.categoryName,
-        enabled: categoryForm.enabled,
-        parentId: categoryForm.parentId || null,
-        sortOrder: categoryForm.sortOrder,
-      });
+      await createSamplingGuidelineCategory(payload);
       ElMessage.success('规范分类已创建');
     } else {
-      await updateSamplingGuidelineCategory(categoryForm.id, {
-        categoryCode: categoryForm.categoryCode,
-        categoryName: categoryForm.categoryName,
-        enabled: categoryForm.enabled,
-        parentId: categoryForm.parentId || null,
-        sortOrder: categoryForm.sortOrder,
-      } satisfies UpdateGuidelineCategoryRequest);
+      await updateSamplingGuidelineCategory(
+        categoryForm.id,
+        payload as UpdateGuidelineCategoryRequest,
+      );
       ElMessage.success('规范分类已更新');
     }
     categoryDialogVisible.value = false;
@@ -225,25 +224,21 @@ async function submitCategory() {
 async function submitGuideline() {
   dialogLoading.value = true;
   try {
+    const payload = buildGuidelineSubmitPayload(
+      {
+        ...guidelineForm,
+        categoryId:
+          guidelineDialogMode.value === 'create'
+            ? selectedCategoryId.value
+            : guidelineForm.categoryId,
+      },
+      guidelineDialogMode.value,
+    );
     if (guidelineDialogMode.value === 'create') {
-      await createSamplingGuideline({
-        categoryId: selectedCategoryId.value,
-        enabled: guidelineForm.enabled,
-        guidelineCode: guidelineForm.guidelineCode,
-        guidelineContent: guidelineForm.guidelineContent || null,
-        guidelineName: guidelineForm.guidelineName,
-        versionNo: guidelineForm.versionNo || null,
-      });
+      await createSamplingGuideline(payload);
       ElMessage.success('规范已创建');
     } else if (guidelineForm.id) {
-      await updateSamplingGuideline(guidelineForm.id, {
-        categoryId: guidelineForm.categoryId,
-        enabled: guidelineForm.enabled,
-        guidelineCode: guidelineForm.guidelineCode,
-        guidelineContent: guidelineForm.guidelineContent || null,
-        guidelineName: guidelineForm.guidelineName,
-        versionNo: guidelineForm.versionNo || null,
-      } satisfies UpdateGuidelineRequest);
+      await updateSamplingGuideline(guidelineForm.id, payload as UpdateGuidelineRequest);
       ElMessage.success('规范已更新');
     }
     guidelineDialogVisible.value = false;
@@ -279,7 +274,7 @@ onMounted(loadData);
 <template>
   <Page
     title="取材规范"
-    description="维护规范分类树与规范详情，支持新建分类、规范、启停与详情查看。"
+    description="维护规范分类树与规范详情，支持新建分类、规范、启停与详情查看，相关编码由系统自动生成。"
   >
     <SystemLoadError
       v-if="pageError"
@@ -422,9 +417,6 @@ onMounted(loadData);
         <ElFormItem label="父分类 ID">
           <ElInput v-model="categoryForm.parentId" placeholder="根分类可留空" />
         </ElFormItem>
-        <ElFormItem label="分类编码" required>
-          <ElInput v-model="categoryForm.categoryCode" />
-        </ElFormItem>
         <ElFormItem label="分类名称" required>
           <ElInput v-model="categoryForm.categoryName" />
         </ElFormItem>
@@ -449,9 +441,6 @@ onMounted(loadData);
       width="760px"
     >
       <ElForm label-width="108px">
-        <ElFormItem label="规范编码" required>
-          <ElInput v-model="guidelineForm.guidelineCode" />
-        </ElFormItem>
         <ElFormItem label="规范名称" required>
           <ElInput v-model="guidelineForm.guidelineName" />
         </ElFormItem>

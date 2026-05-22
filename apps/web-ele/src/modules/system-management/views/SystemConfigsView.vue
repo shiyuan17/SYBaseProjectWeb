@@ -41,6 +41,7 @@ import SystemSectionCard from '../components/SystemSectionCard.vue';
 import SystemStatusTag from '../components/SystemStatusTag.vue';
 import { M1_PERMISSION_CODES } from '../constants';
 import { getSystemPageErrorMessage } from '../utils/error';
+import { buildConfigCategorySubmitPayload } from '../utils/submit-payloads';
 import { filterTreeByKeyword, findTreeNodeById, getTreeExpandedKeys } from '../utils/tree';
 
 const loading = ref(false);
@@ -179,25 +180,15 @@ function openEditItem(item: ConfigItemView) {
 async function submitCategory() {
   dialogLoading.value = true;
   try {
+    const payload = buildConfigCategorySubmitPayload(
+      categoryForm,
+      categoryDialogMode.value,
+    );
     if (categoryDialogMode.value === 'create') {
-      await createSystemConfigCategory({
-        categoryCode: categoryForm.categoryCode,
-        categoryName: categoryForm.categoryName,
-        categoryType: categoryForm.categoryType || null,
-        enabled: categoryForm.enabled,
-        parentId: categoryForm.parentId || null,
-        sortOrder: categoryForm.sortOrder,
-      });
+      await createSystemConfigCategory(payload);
       ElMessage.success('配置分类已创建');
     } else {
-      await updateSystemConfigCategory(categoryForm.id, {
-        categoryCode: categoryForm.categoryCode,
-        categoryName: categoryForm.categoryName,
-        categoryType: categoryForm.categoryType || null,
-        enabled: categoryForm.enabled,
-        parentId: categoryForm.parentId || null,
-        sortOrder: categoryForm.sortOrder,
-      } satisfies UpdateConfigCategoryRequest);
+      await updateSystemConfigCategory(categoryForm.id, payload as UpdateConfigCategoryRequest);
       ElMessage.success('配置分类已更新');
     }
     categoryDialogVisible.value = false;
@@ -255,7 +246,7 @@ onMounted(loadData);
 <template>
   <Page
     title="系统配置"
-    description="维护配置分类树与配置项列表，支持创建分类、配置项，以及更新配置值。"
+    description="维护配置分类树与配置项列表，分类编码由系统自动生成，支持创建分类、配置项，以及更新配置值。"
   >
     <SystemLoadError
       v-if="pageError"
@@ -388,9 +379,6 @@ onMounted(loadData);
       <ElForm label-width="96px">
         <ElFormItem label="父分类 ID">
           <ElInput v-model="categoryForm.parentId" placeholder="根分类可留空" />
-        </ElFormItem>
-        <ElFormItem label="分类编码" required>
-          <ElInput v-model="categoryForm.categoryCode" />
         </ElFormItem>
         <ElFormItem label="分类名称" required>
           <ElInput v-model="categoryForm.categoryName" />

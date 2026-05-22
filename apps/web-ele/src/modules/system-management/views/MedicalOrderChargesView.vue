@@ -39,8 +39,12 @@ import {
 import SystemLoadError from '../components/SystemLoadError.vue';
 import SystemSectionCard from '../components/SystemSectionCard.vue';
 import SystemStatusTag from '../components/SystemStatusTag.vue';
-import { M1_PERMISSION_CODES, YES_NO_OPTIONS } from '../constants';
+import {
+  M1_PERMISSION_CODES,
+  YES_NO_OPTIONS,
+} from '../constants';
 import { getSystemPageErrorMessage } from '../utils/error';
+import { buildChargeItemSubmitPayload } from '../utils/submit-payloads';
 import { flattenTree } from '../utils/tree';
 
 const loading = ref(false);
@@ -173,29 +177,12 @@ function openEditDialog(item: ChargeItemView) {
 async function submitForm() {
   submitLoading.value = true;
   try {
+    const payload = buildChargeItemSubmitPayload(form, dialogMode.value);
     if (dialogMode.value === 'create') {
-      await createChargeItem({
-        chargeItemCode: form.chargeItemCode,
-        chargeItemName: form.chargeItemName,
-        enabled: form.enabled,
-        orderDictItemId: form.orderDictItemId,
-        price: form.price,
-        sortOrder: form.sortOrder,
-        specification: form.specification || null,
-        unit: form.unit || null,
-      });
+      await createChargeItem(payload);
       ElMessage.success('收费项目已创建');
     } else if (form.id) {
-      await updateChargeItem(form.id, {
-        chargeItemCode: form.chargeItemCode,
-        chargeItemName: form.chargeItemName,
-        enabled: form.enabled,
-        orderDictItemId: form.orderDictItemId,
-        price: form.price,
-        sortOrder: form.sortOrder,
-        specification: form.specification || null,
-        unit: form.unit || null,
-      } satisfies UpdateChargeItemRequest);
+      await updateChargeItem(form.id, payload as UpdateChargeItemRequest);
       ElMessage.success('收费项目已更新');
     }
     dialogVisible.value = false;
@@ -274,7 +261,7 @@ onMounted(loadInitialData);
 <template>
   <Page
     title="医嘱收费"
-    description="维护医嘱收费项目，支持筛选、导入导出和关联医嘱条目。"
+    description="维护医嘱收费项目，收费编码由系统自动生成，支持筛选、导入导出和关联医嘱条目。"
   >
     <SystemLoadError
       v-if="pageError"
@@ -327,7 +314,7 @@ onMounted(loadInitialData);
         </ElForm>
       </SystemSectionCard>
 
-      <SystemSectionCard title="收费项目列表" description="维护收费编码、名称、规格、单位和价格。">
+      <SystemSectionCard title="收费项目列表" description="展示系统自动生成的收费编码，维护名称、规格、单位和价格。">
         <template #extra>
           <input
             ref="importInputRef"
@@ -438,9 +425,6 @@ onMounted(loadInitialData);
               :value="option.value"
             />
           </ElSelect>
-        </ElFormItem>
-        <ElFormItem label="收费编码" required>
-          <ElInput v-model="form.chargeItemCode" />
         </ElFormItem>
         <ElFormItem label="收费名称" required>
           <ElInput v-model="form.chargeItemName" />

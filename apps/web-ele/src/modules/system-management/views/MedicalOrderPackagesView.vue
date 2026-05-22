@@ -35,8 +35,12 @@ import {
 import SystemLoadError from '../components/SystemLoadError.vue';
 import SystemSectionCard from '../components/SystemSectionCard.vue';
 import SystemStatusTag from '../components/SystemStatusTag.vue';
-import { M1_PERMISSION_CODES, YES_NO_OPTIONS } from '../constants';
+import {
+  M1_PERMISSION_CODES,
+  YES_NO_OPTIONS,
+} from '../constants';
 import { getSystemPageErrorMessage } from '../utils/error';
+import { buildPackageSubmitPayload } from '../utils/submit-payloads';
 import { flattenTree } from '../utils/tree';
 
 const loading = ref(false);
@@ -167,27 +171,12 @@ function openEditDialog(row: PackageView) {
 async function submitForm() {
   submitLoading.value = true;
   try {
+    const payload = buildPackageSubmitPayload(form, dialogMode.value);
     if (dialogMode.value === 'create') {
-      await createMedicalOrderPackage({
-        enabled: form.enabled,
-        itemIds: form.itemIds,
-        ownerUserId: form.ownerUserId || null,
-        packageCode: form.packageCode,
-        packageName: form.packageName,
-        packageType: form.packageType || null,
-        remarks: form.remarks || null,
-      });
+      await createMedicalOrderPackage(payload);
       ElMessage.success('医嘱套餐已创建');
     } else {
-      await updateMedicalOrderPackage(form.id, {
-        enabled: form.enabled,
-        itemIds: form.itemIds,
-        ownerUserId: form.ownerUserId || null,
-        packageCode: form.packageCode,
-        packageName: form.packageName,
-        packageType: form.packageType || null,
-        remarks: form.remarks || null,
-      } satisfies UpdatePackageRequest);
+      await updateMedicalOrderPackage(form.id, payload as UpdatePackageRequest);
       ElMessage.success('医嘱套餐已更新');
     }
     dialogVisible.value = false;
@@ -219,7 +208,7 @@ onMounted(loadInitialData);
 <template>
   <Page
     title="医嘱套餐"
-    description="维护医嘱套餐、套餐类型、负责人和套餐条目。"
+    description="维护医嘱套餐、套餐类型、负责人和套餐条目，套餐编码由系统自动生成。"
   >
     <SystemLoadError
       v-if="pageError"
@@ -342,9 +331,6 @@ onMounted(loadInitialData);
       width="760px"
     >
       <ElForm label-width="96px">
-        <ElFormItem label="套餐编码" required>
-          <ElInput v-model="form.packageCode" />
-        </ElFormItem>
         <ElFormItem label="套餐名称" required>
           <ElInput v-model="form.packageName" />
         </ElFormItem>

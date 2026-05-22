@@ -37,6 +37,7 @@ import SystemStatusTag from '../components/SystemStatusTag.vue';
 import { M1_PERMISSION_CODES } from '../constants';
 import { getSystemPageErrorMessage } from '../utils/error';
 import { formatNullable } from '../utils/format';
+import { buildBodyPartSubmitPayload } from '../utils/submit-payloads';
 import {
   filterTreeByKeyword,
   findTreeNodeById,
@@ -129,27 +130,12 @@ function openEditDialog(node: BodyPartNode) {
 async function submitForm() {
   dialogLoading.value = true;
   try {
+    const payload = buildBodyPartSubmitPayload(form, dialogMode.value);
     if (dialogMode.value === 'create') {
-      await createBodyPart({
-        enabled: form.enabled,
-        parentId: form.parentId || null,
-        partAlias: form.partAlias || null,
-        partCode: form.partCode,
-        partLevel: form.partLevel,
-        partName: form.partName,
-        sortOrder: form.sortOrder,
-      });
+      await createBodyPart(payload);
       ElMessage.success('部位节点已创建');
     } else if (form.id) {
-      await updateBodyPart(form.id, {
-        enabled: form.enabled,
-        parentId: form.parentId || null,
-        partAlias: form.partAlias || null,
-        partCode: form.partCode,
-        partLevel: form.partLevel,
-        partName: form.partName,
-        sortOrder: form.sortOrder,
-      } satisfies UpdateBodyPartRequest);
+      await updateBodyPart(form.id, payload as UpdateBodyPartRequest);
       ElMessage.success('部位节点已更新');
     }
     dialogVisible.value = false;
@@ -180,7 +166,7 @@ onMounted(loadData);
 <template>
   <Page
     title="部位字典"
-    description="维护部位层级、编码、别名、排序和启停状态。"
+    description="维护部位层级、别名、排序和启停状态，编码由系统自动生成并在详情中展示。"
   >
     <SystemLoadError
       v-if="pageError"
@@ -281,9 +267,6 @@ onMounted(loadData);
       <ElForm label-width="96px">
         <ElFormItem label="父节点 ID">
           <ElInput v-model="form.parentId" placeholder="根节点可留空" />
-        </ElFormItem>
-        <ElFormItem label="部位编码" required>
-          <ElInput v-model="form.partCode" />
         </ElFormItem>
         <ElFormItem label="部位名称" required>
           <ElInput v-model="form.partName" />

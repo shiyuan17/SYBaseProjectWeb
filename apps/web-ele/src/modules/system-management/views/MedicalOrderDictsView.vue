@@ -46,6 +46,10 @@ import { M1_PERMISSION_CODES } from '../constants';
 import { getSystemPageErrorMessage } from '../utils/error';
 import { formatNullable } from '../utils/format';
 import {
+  buildMedicalOrderCategorySubmitPayload,
+  buildMedicalOrderItemSubmitPayload,
+} from '../utils/submit-payloads';
+import {
   filterTreeByKeyword,
   findTreeNodeById,
   getTreeExpandedKeys,
@@ -182,23 +186,18 @@ function openEditItem(item: MedicalOrderItemView) {
 async function submitCategory() {
   dialogLoading.value = true;
   try {
+    const payload = buildMedicalOrderCategorySubmitPayload(
+      categoryForm,
+      categoryDialogMode.value,
+    );
     if (categoryDialogMode.value === 'create') {
-      await createMedicalOrderCategory({
-        categoryCode: categoryForm.categoryCode,
-        categoryName: categoryForm.categoryName,
-        enabled: categoryForm.enabled,
-        parentId: categoryForm.parentId || null,
-        sortOrder: categoryForm.sortOrder,
-      });
+      await createMedicalOrderCategory(payload);
       ElMessage.success('分类已创建');
     } else if (categoryForm.id) {
-      await updateMedicalOrderCategory(categoryForm.id, {
-        categoryCode: categoryForm.categoryCode,
-        categoryName: categoryForm.categoryName,
-        enabled: categoryForm.enabled,
-        parentId: categoryForm.parentId || null,
-        sortOrder: categoryForm.sortOrder,
-      } satisfies UpdateMedicalOrderCategoryRequest);
+      await updateMedicalOrderCategory(
+        categoryForm.id,
+        payload as UpdateMedicalOrderCategoryRequest,
+      );
       ElMessage.success('分类已更新');
     }
     categoryDialogVisible.value = false;
@@ -211,29 +210,19 @@ async function submitCategory() {
 async function submitItem() {
   dialogLoading.value = true;
   try {
+    const payload = buildMedicalOrderItemSubmitPayload(
+      {
+        ...itemForm,
+        categoryId:
+          itemDialogMode.value === 'create' ? selectedCategoryId.value : itemForm.categoryId,
+      },
+      itemDialogMode.value,
+    );
     if (itemDialogMode.value === 'create') {
-      await createMedicalOrderItem({
-        categoryId: selectedCategoryId.value,
-        defaultContent: itemForm.defaultContent || null,
-        enabled: itemForm.enabled,
-        executionScope: itemForm.executionScope || null,
-        orderItemCode: itemForm.orderItemCode,
-        orderItemName: itemForm.orderItemName,
-        orderType: itemForm.orderType || null,
-        sortOrder: itemForm.sortOrder,
-      });
+      await createMedicalOrderItem(payload);
       ElMessage.success('医嘱条目已创建');
     } else if (itemForm.id) {
-      await updateMedicalOrderItem(itemForm.id, {
-        categoryId: itemForm.categoryId,
-        defaultContent: itemForm.defaultContent || null,
-        enabled: itemForm.enabled,
-        executionScope: itemForm.executionScope || null,
-        orderItemCode: itemForm.orderItemCode,
-        orderItemName: itemForm.orderItemName,
-        orderType: itemForm.orderType || null,
-        sortOrder: itemForm.sortOrder,
-      } satisfies UpdateMedicalOrderItemRequest);
+      await updateMedicalOrderItem(itemForm.id, payload as UpdateMedicalOrderItemRequest);
       ElMessage.success('医嘱条目已更新');
     }
     itemDialogVisible.value = false;
@@ -267,7 +256,7 @@ onMounted(loadData);
 <template>
   <Page
     title="医嘱字典"
-    description="维护医嘱分类、条目、默认内容、执行范围和启停状态。"
+    description="维护医嘱分类、条目、默认内容、执行范围和启停状态，相关编码由系统自动生成。"
   >
     <SystemLoadError
       v-if="pageError"
@@ -419,9 +408,6 @@ onMounted(loadData);
         <ElFormItem label="父分类 ID">
           <ElInput v-model="categoryForm.parentId" placeholder="根分类可留空" />
         </ElFormItem>
-        <ElFormItem label="分类编码" required>
-          <ElInput v-model="categoryForm.categoryCode" />
-        </ElFormItem>
         <ElFormItem label="分类名称" required>
           <ElInput v-model="categoryForm.categoryName" />
         </ElFormItem>
@@ -448,9 +434,6 @@ onMounted(loadData);
       <ElForm label-width="96px">
         <ElFormItem label="所属分类">
           <ElInput v-model="itemForm.categoryId" disabled />
-        </ElFormItem>
-        <ElFormItem label="条目编码" required>
-          <ElInput v-model="itemForm.orderItemCode" />
         </ElFormItem>
         <ElFormItem label="条目名称" required>
           <ElInput v-model="itemForm.orderItemName" />

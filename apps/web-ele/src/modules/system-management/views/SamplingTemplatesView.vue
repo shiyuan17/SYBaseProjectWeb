@@ -49,6 +49,10 @@ import SystemSectionCard from '../components/SystemSectionCard.vue';
 import SystemStatusTag from '../components/SystemStatusTag.vue';
 import { M1_PERMISSION_CODES } from '../constants';
 import { getSystemPageErrorMessage } from '../utils/error';
+import {
+  buildTemplateCategorySubmitPayload,
+  buildTemplateSubmitPayload,
+} from '../utils/submit-payloads';
 import { filterTreeByKeyword, findTreeNodeById, flattenTree, getTreeExpandedKeys } from '../utils/tree';
 
 const loading = ref(false);
@@ -224,23 +228,18 @@ async function viewTemplateDetail(templateId: string) {
 async function submitCategory() {
   dialogLoading.value = true;
   try {
+    const payload = buildTemplateCategorySubmitPayload(
+      categoryForm,
+      categoryDialogMode.value,
+    );
     if (categoryDialogMode.value === 'create') {
-      await createSamplingTemplateCategory({
-        categoryCode: categoryForm.categoryCode,
-        categoryName: categoryForm.categoryName,
-        enabled: categoryForm.enabled,
-        parentId: categoryForm.parentId || null,
-        sortOrder: categoryForm.sortOrder,
-      });
+      await createSamplingTemplateCategory(payload);
       ElMessage.success('模板分类已创建');
     } else {
-      await updateSamplingTemplateCategory(categoryForm.id, {
-        categoryCode: categoryForm.categoryCode,
-        categoryName: categoryForm.categoryName,
-        enabled: categoryForm.enabled,
-        parentId: categoryForm.parentId || null,
-        sortOrder: categoryForm.sortOrder,
-      } satisfies UpdateTemplateCategoryRequest);
+      await updateSamplingTemplateCategory(
+        categoryForm.id,
+        payload as UpdateTemplateCategoryRequest,
+      );
       ElMessage.success('模板分类已更新');
     }
     categoryDialogVisible.value = false;
@@ -253,29 +252,21 @@ async function submitCategory() {
 async function submitTemplate() {
   dialogLoading.value = true;
   try {
+    const payload = buildTemplateSubmitPayload(
+      {
+        ...templateForm,
+        categoryId:
+          templateDialogMode.value === 'create'
+            ? selectedCategoryId.value
+            : templateForm.categoryId,
+      },
+      templateDialogMode.value,
+    );
     if (templateDialogMode.value === 'create') {
-      await createSamplingTemplate({
-        applicableSpecimenType: templateForm.applicableSpecimenType || null,
-        bodyPartIds: templateForm.bodyPartIds,
-        categoryId: selectedCategoryId.value,
-        enabled: templateForm.enabled,
-        splitPartCount: templateForm.splitPartCount,
-        templateCode: templateForm.templateCode,
-        templateContent: templateForm.templateContent || null,
-        templateName: templateForm.templateName,
-      });
+      await createSamplingTemplate(payload);
       ElMessage.success('模板已创建');
     } else if (templateForm.id) {
-      await updateSamplingTemplate(templateForm.id, {
-        applicableSpecimenType: templateForm.applicableSpecimenType || null,
-        bodyPartIds: templateForm.bodyPartIds,
-        categoryId: templateForm.categoryId,
-        enabled: templateForm.enabled,
-        splitPartCount: templateForm.splitPartCount,
-        templateCode: templateForm.templateCode,
-        templateContent: templateForm.templateContent || null,
-        templateName: templateForm.templateName,
-      } satisfies UpdateTemplateRequest);
+      await updateSamplingTemplate(templateForm.id, payload as UpdateTemplateRequest);
       ElMessage.success('模板已更新');
     }
     templateDialogVisible.value = false;
@@ -315,7 +306,7 @@ onMounted(loadInitialData);
 <template>
   <Page
     title="描写模板"
-    description="维护描写模板分类、适用部位、分材份数和模板正文。"
+    description="维护描写模板分类、适用部位、分材份数和模板正文，分类编码与模板编码由系统自动生成。"
   >
     <SystemLoadError
       v-if="pageError"
@@ -469,9 +460,6 @@ onMounted(loadInitialData);
         <ElFormItem label="父分类 ID">
           <ElInput v-model="categoryForm.parentId" placeholder="根分类可留空" />
         </ElFormItem>
-        <ElFormItem label="分类编码" required>
-          <ElInput v-model="categoryForm.categoryCode" />
-        </ElFormItem>
         <ElFormItem label="分类名称" required>
           <ElInput v-model="categoryForm.categoryName" />
         </ElFormItem>
@@ -496,9 +484,6 @@ onMounted(loadInitialData);
       width="760px"
     >
       <ElForm label-width="108px">
-        <ElFormItem label="模板编码" required>
-          <ElInput v-model="templateForm.templateCode" />
-        </ElFormItem>
         <ElFormItem label="模板名称" required>
           <ElInput v-model="templateForm.templateName" />
         </ElFormItem>

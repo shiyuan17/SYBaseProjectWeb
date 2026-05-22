@@ -49,9 +49,16 @@ import DepartmentSelect from '../components/DepartmentSelect.vue';
 import SystemLoadError from '../components/SystemLoadError.vue';
 import SystemSectionCard from '../components/SystemSectionCard.vue';
 import SystemStatusTag from '../components/SystemStatusTag.vue';
-import { M1_PERMISSION_CODES, YES_NO_OPTIONS } from '../constants';
+import {
+  M1_PERMISSION_CODES,
+  YES_NO_OPTIONS,
+} from '../constants';
 import { getSystemPageErrorMessage } from '../utils/error';
 import { formatDateTime, formatNullable } from '../utils/format';
+import {
+  buildSystemUserCreatePayload,
+  buildSystemUserUpdatePayload,
+} from '../utils/submit-payloads';
 
 type UserFormState = Omit<
   CreateSystemUserRequest,
@@ -241,36 +248,10 @@ async function submitUserForm() {
   submitLoading.value = true;
   try {
     if (userDialogMode.value === 'create') {
-      await createSystemUser({
-        avatar: userForm.avatar || null,
-        departmentId: userForm.departmentId || null,
-        departmentName: userForm.departmentName || null,
-        email: userForm.email || null,
-        enabled: userForm.enabled,
-        jobNo: userForm.jobNo || null,
-        loginName: userForm.loginName,
-        loginTagCode: userForm.loginTagCode || null,
-        name: userForm.name,
-        password: userForm.password || null,
-        phone: userForm.phone || null,
-        titleName: userForm.titleName || null,
-        userCode: userForm.userCode || null,
-      });
+      await createSystemUser(buildSystemUserCreatePayload(userForm));
       ElMessage.success('用户已创建');
     } else if (userForm.id) {
-      const payload: UpdateSystemUserRequest = {
-        avatar: userForm.avatar || null,
-        departmentId: userForm.departmentId || null,
-        departmentName: userForm.departmentName || null,
-        email: userForm.email || null,
-        enabled: userForm.enabled,
-        jobNo: userForm.jobNo || null,
-        loginTagCode: userForm.loginTagCode || null,
-        name: userForm.name,
-        phone: userForm.phone || null,
-        titleName: userForm.titleName || null,
-        userCode: userForm.userCode || null,
-      };
+      const payload: UpdateSystemUserRequest = buildSystemUserUpdatePayload(userForm);
       await updateSystemUser(userForm.id, payload);
       ElMessage.success('用户已更新');
     }
@@ -408,7 +389,7 @@ onMounted(loadInitialData);
 <template>
   <Page
     title="系统用户"
-    description="维护系统用户、角色分配、登录日志、导入导出与登录标签。"
+    description="维护系统用户、角色分配、登录日志、导入导出与登录标签，用户编码和登录标签编码由系统自动生成。"
   >
     <SystemLoadError
       v-if="pageError"
@@ -587,9 +568,6 @@ onMounted(loadInitialData);
           <ElFormItem label="姓名" required>
             <ElInput v-model="userForm.name" placeholder="请输入姓名" />
           </ElFormItem>
-          <ElFormItem label="用户编码">
-            <ElInput v-model="userForm.userCode" placeholder="请输入用户编码" />
-          </ElFormItem>
           <ElFormItem label="工号">
             <ElInput v-model="userForm.jobNo" placeholder="请输入工号" />
           </ElFormItem>
@@ -612,9 +590,6 @@ onMounted(loadInitialData);
           </ElFormItem>
           <ElFormItem label="头像地址">
             <ElInput v-model="userForm.avatar" placeholder="请输入头像 URL" />
-          </ElFormItem>
-          <ElFormItem label="登录标签">
-            <ElInput v-model="userForm.loginTagCode" placeholder="请输入登录标签编码" />
           </ElFormItem>
           <ElFormItem label="状态">
             <ElSwitch v-model="userForm.enabled" />

@@ -85,6 +85,7 @@ export interface MenuView {
 export interface PermissionView {
   actionKey: string;
   enabled: boolean;
+  entryPermission: boolean;
   httpMethod: string;
   id: string;
   menuId: string;
@@ -309,7 +310,7 @@ export interface CreateRoleRequest {
   dataScope?: null | string;
   enabled: boolean;
   remarks?: null | string;
-  roleCode: string;
+  roleCode?: null | string;
   roleName: string;
   roleType?: null | string;
 }
@@ -327,7 +328,7 @@ export interface CreateBodyPartRequest {
   enabled: boolean;
   parentId?: null | string;
   partAlias?: null | string;
-  partCode: string;
+  partCode?: null | string;
   partLevel: number;
   partName: string;
   sortOrder: number;
@@ -336,7 +337,7 @@ export interface CreateBodyPartRequest {
 export type UpdateBodyPartRequest = CreateBodyPartRequest;
 
 export interface CreateDepartmentRequest {
-  departmentCode: string;
+  departmentCode?: null | string;
   departmentName: string;
   enabled: boolean;
   parentId?: null | string;
@@ -346,7 +347,7 @@ export interface CreateDepartmentRequest {
 export type UpdateDepartmentRequest = CreateDepartmentRequest;
 
 export interface CreateMedicalOrderCategoryRequest {
-  categoryCode: string;
+  categoryCode?: null | string;
   categoryName: string;
   enabled: boolean;
   parentId?: null | string;
@@ -360,7 +361,7 @@ export interface CreateMedicalOrderItemRequest {
   defaultContent?: null | string;
   enabled: boolean;
   executionScope?: null | string;
-  orderItemCode: string;
+  orderItemCode?: null | string;
   orderItemName: string;
   orderType?: null | string;
   sortOrder: number;
@@ -377,7 +378,7 @@ export interface ChargeItemPageQuery {
 }
 
 export interface CreateChargeItemRequest {
-  chargeItemCode: string;
+  chargeItemCode?: null | string;
   chargeItemName: string;
   enabled: boolean;
   orderDictItemId: string;
@@ -401,7 +402,7 @@ export interface CreatePackageRequest {
   enabled: boolean;
   itemIds: string[];
   ownerUserId?: null | string;
-  packageCode: string;
+  packageCode?: null | string;
   packageName: string;
   packageType?: null | string;
   remarks?: null | string;
@@ -410,7 +411,7 @@ export interface CreatePackageRequest {
 export type UpdatePackageRequest = CreatePackageRequest;
 
 export interface CreateTemplateCategoryRequest {
-  categoryCode: string;
+  categoryCode?: null | string;
   categoryName: string;
   enabled: boolean;
   parentId?: null | string;
@@ -425,7 +426,7 @@ export interface CreateTemplateRequest {
   categoryId: string;
   enabled: boolean;
   splitPartCount: number;
-  templateCode: string;
+  templateCode?: null | string;
   templateContent?: null | string;
   templateName: string;
 }
@@ -433,7 +434,7 @@ export interface CreateTemplateRequest {
 export type UpdateTemplateRequest = CreateTemplateRequest;
 
 export interface CreateGuidelineCategoryRequest {
-  categoryCode: string;
+  categoryCode?: null | string;
   categoryName: string;
   enabled: boolean;
   parentId?: null | string;
@@ -445,7 +446,7 @@ export type UpdateGuidelineCategoryRequest = CreateGuidelineCategoryRequest;
 export interface CreateGuidelineRequest {
   categoryId: string;
   enabled: boolean;
-  guidelineCode: string;
+  guidelineCode?: null | string;
   guidelineContent?: null | string;
   guidelineName: string;
   versionNo?: null | string;
@@ -454,7 +455,7 @@ export interface CreateGuidelineRequest {
 export type UpdateGuidelineRequest = CreateGuidelineRequest;
 
 export interface CreateConfigCategoryRequest {
-  categoryCode: string;
+  categoryCode?: null | string;
   categoryName: string;
   categoryType?: null | string;
   enabled: boolean;

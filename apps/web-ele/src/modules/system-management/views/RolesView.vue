@@ -59,6 +59,11 @@ import {
 } from '../utils/authorization-display';
 import { getSystemPageErrorMessage } from '../utils/error';
 import { formatDateTime, formatNullable } from '../utils/format';
+import {
+  buildRoleAuthorizationPermissionGroups,
+  normalizeManualPermissionIds,
+} from '../utils/role-authorization';
+import { buildRoleSubmitPayload } from '../utils/submit-payloads';
 import { normalizeTreeCheckedKeys } from '../utils/tree';
 
 interface MenuTreeNode extends MenuView {
@@ -77,14 +82,14 @@ const AUTHORIZATION_PANELS: Array<{
   label: string;
 }> = [
   {
-    description: '角色可见菜单与页面入口控制。',
+    description: '选择角色可进入的页面入口菜单，并决定哪些业务页面会出现在导航中。',
     key: 'menus',
-    label: '菜单授权',
+    label: '页面入口',
   },
   {
-    description: '控制页面内按钮与接口动作权限码。',
+    description: '为已选页面配置附加操作权限，基础访问权限会随页面入口自动获得。',
     key: 'permissions',
-    label: '权限授权',
+    label: '页面操作',
   },
   {
     description: '为角色配置可订阅或处理的消息主题。',
@@ -121,6 +126,13 @@ const activeAuthorizationPanelMeta = computed<(typeof AUTHORIZATION_PANELS)[numb
   () =>
     AUTHORIZATION_PANELS.find((panel) => panel.key === activeAuthorizationPanel.value)
     ?? AUTHORIZATION_PANELS[0]!,
+);
+const permissionGroups = computed(() =>
+  buildRoleAuthorizationPermissionGroups(
+    menus.value,
+    permissions.value,
+    authState.menuIds,
+  ),
 );
 
 const roleDialogVisible = ref(false);
@@ -187,6 +199,14 @@ function syncMenuAuthorization(menuIds: string[]) {
   menuTreeReloadKey.value += 1;
 }
 
+function syncManualPermissionAuthorization() {
+  authState.permissionIds = normalizeManualPermissionIds(
+    permissions.value,
+    authState.menuIds,
+    authState.permissionIds,
+  );
+}
+
 async function loadRolesData() {
   loading.value = true;
   pageError.value = '';
@@ -226,6 +246,7 @@ async function loadRoleAuthorization(roleId: string) {
     authState.roleId = authorization.roleId;
     syncMenuAuthorization(authorization.menuIds);
     authState.permissionIds = authorization.permissionIds;
+    syncManualPermissionAuthorization();
     authState.topicIds = authorization.topicIds;
     authState.statScopes = { ...authorization.statScopes };
   } catch (error) {
@@ -237,6 +258,7 @@ async function loadRoleAuthorization(roleId: string) {
 
 function handleMenuCheck(_: MenuTreeNode, checkedState: MenuTreeCheckState) {
   authState.menuIds = normalizeTreeCheckedKeys(checkedState.checkedKeys);
+  syncManualPermissionAuthorization();
 }
 
 function openCreateDialog() {
@@ -263,25 +285,12 @@ function openEditDialog(role: RoleView) {
 async function submitRoleForm() {
   submitLoading.value = true;
   try {
+    const payload = buildRoleSubmitPayload(roleForm, roleDialogMode.value);
     if (roleDialogMode.value === 'create') {
-      await createRole({
-        dataScope: roleForm.dataScope || null,
-        enabled: roleForm.enabled,
-        remarks: roleForm.remarks || null,
-        roleCode: roleForm.roleCode,
-        roleName: roleForm.roleName,
-        roleType: roleForm.roleType || null,
-      });
+      await createRole(payload);
       ElMessage.success('角色已创建');
     } else {
-      await updateRole(roleForm.id, {
-        dataScope: roleForm.dataScope || null,
-        enabled: roleForm.enabled,
-        remarks: roleForm.remarks || null,
-        roleCode: roleForm.roleCode,
-        roleName: roleForm.roleName,
-        roleType: roleForm.roleType || null,
-      } satisfies UpdateRoleRequest);
+      await updateRole(roleForm.id, payload as UpdateRoleRequest);
       ElMessage.success('角色已更新');
     }
     roleDialogVisible.value = false;
@@ -320,9 +329,10 @@ async function saveAuthorization() {
   }
   authSaving.value = true;
   try {
+    syncManualPermissionAuthorization();
     const payload: UpdateRoleAuthorizationRequest = {
       menuIds: authState.menuIds,
-      permissionIds: authState.permissionIds,
+      permissionIds: [...authState.permissionIds],
       statScopes: authState.statScopes,
       topicIds: authState.topicIds,
     };
@@ -347,7 +357,7 @@ onMounted(loadInitialData);
 <template>
   <Page
     title="角色授权"
-    description="维护角色基础信息，并按菜单、权限、消息主题和统计范围四个维度配置授权。"
+    description="维护角色基础信息，并按菜单、权限、消息主题和统计范围四个维度配置授权。角色编码由系统自动生成。"
   >
     <SystemLoadError
       v-if="pageError"
@@ -477,28 +487,93 @@ onMounted(loadInitialData);
                   />
                 </div>
 
-                <ElCheckboxGroup
+                <div
                   v-else-if="panel.key === 'permissions'"
-                  v-model="authState.permissionIds"
-                  class="grid gap-3 lg:grid-cols-2"
+                  class="flex flex-col gap-4"
                 >
-                  <ElCheckbox
-                    v-for="permission in permissions"
-                    :key="permission.id"
-                    :label="permission.id"
-                    border
-                    class="!mx-0 !h-auto !items-start rounded-xl !px-4 !py-3"
+                  <ElEmpty
+                    v-if="permissionGroups.length === 0"
+                    description="请先勾选页面入口菜单后，再配置页面内操作权限"
+                  />
+                  <ElCheckboxGroup
+                    v-else
+                    v-model="authState.permissionIds"
+                    class="grid gap-4"
                   >
-                    <div class="flex flex-col gap-1 leading-5">
-                      <span class="font-medium text-foreground">
-                        {{ permission.permissionName }}
-                      </span>
-                      <span class="text-xs text-muted-foreground">
-                        {{ permission.permissionCode }}
-                      </span>
+                    <div
+                      v-for="group in permissionGroups"
+                      :key="group.menu.id"
+                      class="rounded-2xl border border-border/60 bg-background p-4"
+                    >
+                      <div class="flex flex-wrap items-start justify-between gap-2">
+                        <div class="space-y-1">
+                          <div class="font-medium text-foreground">
+                            {{ group.menu.menuName }}
+                          </div>
+                          <div class="text-xs text-muted-foreground">
+                            {{ group.menu.menuCode }}
+                          </div>
+                        </div>
+                        <div class="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
+                          附加权限 {{ group.manualPermissions.length }}
+                        </div>
+                      </div>
+
+                      <div
+                        v-if="group.entryPermissions.length > 0"
+                        class="mt-4 rounded-xl border border-emerald-200/80 bg-emerald-50/80 p-3"
+                      >
+                        <div class="text-xs font-medium text-emerald-800">
+                          自动生效的基础访问权限
+                        </div>
+                        <div class="mt-3 grid gap-2 lg:grid-cols-2">
+                          <div
+                            v-for="permission in group.entryPermissions"
+                            :key="permission.id"
+                            class="rounded-xl bg-white/90 px-3 py-3 ring-1 ring-emerald-200/70"
+                          >
+                            <div class="font-medium text-foreground">
+                              {{ permission.permissionName }}
+                            </div>
+                            <div class="mt-1 text-xs text-muted-foreground">
+                              {{ permission.permissionCode }}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="mt-4">
+                        <div class="text-xs font-medium text-foreground">
+                          可配置的附加权限
+                        </div>
+                        <div
+                          v-if="group.manualPermissions.length === 0"
+                          class="mt-3 rounded-xl border border-dashed border-border/60 px-4 py-6 text-sm text-muted-foreground"
+                        >
+                          该页面当前没有可单独配置的附加权限。
+                        </div>
+                        <div v-else class="mt-3 grid gap-3 lg:grid-cols-2">
+                          <ElCheckbox
+                            v-for="permission in group.manualPermissions"
+                            :key="permission.id"
+                            :label="permission.id"
+                            border
+                            class="!mx-0 !h-auto !items-start rounded-xl !px-4 !py-3"
+                          >
+                            <div class="flex flex-col gap-1 leading-5">
+                              <span class="font-medium text-foreground">
+                                {{ permission.permissionName }}
+                              </span>
+                              <span class="text-xs text-muted-foreground">
+                                {{ permission.permissionCode }}
+                              </span>
+                            </div>
+                          </ElCheckbox>
+                        </div>
+                      </div>
                     </div>
-                  </ElCheckbox>
-                </ElCheckboxGroup>
+                  </ElCheckboxGroup>
+                </div>
 
                 <ElCheckboxGroup
                   v-else-if="panel.key === 'topics'"
@@ -581,9 +656,6 @@ onMounted(loadInitialData);
       width="640px"
     >
       <ElForm label-width="96px">
-        <ElFormItem label="角色编码" required>
-          <ElInput v-model="roleForm.roleCode" placeholder="请输入角色编码" />
-        </ElFormItem>
         <ElFormItem label="角色名称" required>
           <ElInput v-model="roleForm.roleName" placeholder="请输入角色名称" />
         </ElFormItem>

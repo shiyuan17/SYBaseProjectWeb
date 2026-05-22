@@ -37,6 +37,7 @@ import SystemStatusTag from '../components/SystemStatusTag.vue';
 import { M1_PERMISSION_CODES } from '../constants';
 import { getSystemPageErrorMessage } from '../utils/error';
 import { formatNullable } from '../utils/format';
+import { buildDepartmentSubmitPayload } from '../utils/submit-payloads';
 import {
   filterTreeByKeyword,
   findTreeNodeById,
@@ -123,23 +124,12 @@ function openEditDialog(node: DepartmentNode) {
 async function submitForm() {
   dialogLoading.value = true;
   try {
+    const payload = buildDepartmentSubmitPayload(form, dialogMode.value);
     if (dialogMode.value === 'create') {
-      await createDepartment({
-        departmentCode: form.departmentCode,
-        departmentName: form.departmentName,
-        enabled: form.enabled,
-        parentId: form.parentId || null,
-        sortOrder: form.sortOrder,
-      });
+      await createDepartment(payload);
       ElMessage.success('科室节点已创建');
     } else if (form.id) {
-      await updateDepartment(form.id, {
-        departmentCode: form.departmentCode,
-        departmentName: form.departmentName,
-        enabled: form.enabled,
-        parentId: form.parentId || null,
-        sortOrder: form.sortOrder,
-      } satisfies UpdateDepartmentRequest);
+      await updateDepartment(form.id, payload as UpdateDepartmentRequest);
       ElMessage.success('科室节点已更新');
     }
     dialogVisible.value = false;
@@ -170,7 +160,7 @@ onMounted(loadData);
 <template>
   <Page
     title="科室字典"
-    description="维护科室层级、编码、排序和启停状态，供流程页下拉选择统一复用。"
+    description="维护科室层级、排序和启停状态，编码由系统自动生成并在详情中展示。"
   >
     <SystemLoadError
       v-if="pageError"
@@ -268,9 +258,6 @@ onMounted(loadData);
       <ElForm label-width="96px">
         <ElFormItem label="父节点 ID">
           <ElInput v-model="form.parentId" placeholder="根节点可留空" />
-        </ElFormItem>
-        <ElFormItem label="科室编码" required>
-          <ElInput v-model="form.departmentCode" placeholder="请输入科室编码" />
         </ElFormItem>
         <ElFormItem label="科室名称" required>
           <ElInput v-model="form.departmentName" placeholder="请输入科室名称" />
