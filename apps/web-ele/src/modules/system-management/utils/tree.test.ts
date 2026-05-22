@@ -5,6 +5,7 @@ import {
   findTreeNodeById,
   flattenTree,
   getTreeExpandedKeys,
+  normalizeTreeCheckedKeys,
 } from './tree';
 
 interface TestTreeNode {
@@ -72,5 +73,13 @@ describe('tree utils', () => {
     );
 
     expect(visited).toEqual(['root-2']);
+  });
+
+  it('normalizes checked tree key collections to string arrays', () => {
+    expect(normalizeTreeCheckedKeys(['menu-1', 2, null, 'menu-2'])).toEqual([
+      'menu-1',
+      'menu-2',
+    ]);
+    expect(normalizeTreeCheckedKeys(null)).toEqual([]);
   });
 });

@@ -1,0 +1,2818 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>M1-M4 全面测试执行手册</title>
+    <style>
+      :root {
+        --bg: #f4efe6;
+        --panel: #fffdf8;
+        --panel-strong: #fff8ed;
+        --ink: #1f2430;
+        --muted: #5f6673;
+        --line: #dfd2bf;
+        --line-strong: #c6b291;
+        --accent: #8f3d2e;
+        --accent-soft: #f3ddd4;
+        --accent-deep: #5d241c;
+        --blue: #2f5d7c;
+        --blue-soft: #dcebf5;
+        --green: #496a44;
+        --green-soft: #dce9d8;
+        --gold: #8a6934;
+        --gold-soft: #efe5cf;
+        --shadow: 0 18px 40px rgba(84, 61, 27, 0.08);
+        --radius-xl: 24px;
+        --radius-lg: 18px;
+        --radius-md: 12px;
+        --radius-sm: 8px;
+        --content-width: 1380px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        font:
+          15px/1.65 "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+          sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(143, 61, 46, 0.12), transparent 28%),
+          radial-gradient(circle at top right, rgba(47, 93, 124, 0.12), transparent 26%),
+          linear-gradient(180deg, #f8f3eb 0%, var(--bg) 100%);
+      }
+
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      .page-shell {
+        max-width: var(--content-width);
+        margin: 0 auto;
+        padding: 28px 24px 80px;
+      }
+
+      .hero {
+        position: relative;
+        overflow: hidden;
+        padding: 36px;
+        border: 1px solid rgba(143, 61, 46, 0.18);
+        border-radius: 30px;
+        background:
+          linear-gradient(135deg, rgba(255, 250, 242, 0.96), rgba(248, 240, 228, 0.92)),
+          #fff;
+        box-shadow: var(--shadow);
+      }
+
+      .hero::after {
+        content: "";
+        position: absolute;
+        inset: auto -80px -100px auto;
+        width: 320px;
+        height: 320px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(143, 61, 46, 0.14), transparent 68%);
+        pointer-events: none;
+      }
+
+      .hero-grid {
+        display: grid;
+        grid-template-columns: 1.3fr 0.9fr;
+        gap: 28px;
+        position: relative;
+        z-index: 1;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: rgba(143, 61, 46, 0.08);
+        color: var(--accent-deep);
+        font-weight: 700;
+        letter-spacing: 0.04em;
+      }
+
+      h1,
+      h2,
+      h3,
+      h4 {
+        margin: 0;
+        line-height: 1.2;
+      }
+
+      h1 {
+        margin-top: 18px;
+        font-size: 42px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+      }
+
+      .hero p {
+        margin: 16px 0 0;
+        color: var(--muted);
+        max-width: 880px;
+      }
+
+      .hero-meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        align-content: start;
+      }
+
+      .meta-card {
+        padding: 16px 18px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        background: rgba(255, 255, 255, 0.7);
+      }
+
+      .meta-card strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 13px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .meta-card span,
+      .meta-card code {
+        font-size: 15px;
+        font-weight: 700;
+      }
+
+      .section {
+        margin-top: 24px;
+        padding: 28px;
+        border: 1px solid rgba(95, 102, 115, 0.15);
+        border-radius: var(--radius-xl);
+        background: rgba(255, 253, 248, 0.94);
+        box-shadow: 0 12px 28px rgba(72, 52, 26, 0.05);
+      }
+
+      .section-header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 14px;
+        align-items: flex-end;
+        margin-bottom: 20px;
+      }
+
+      .section-title {
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+
+      .section-desc {
+        margin-top: 8px;
+        color: var(--muted);
+      }
+
+      .badge-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: var(--panel-strong);
+        border: 1px solid var(--line);
+        color: var(--accent-deep);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .toc {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .toc a {
+        display: block;
+        height: 100%;
+        padding: 16px 18px;
+        border-radius: var(--radius-lg);
+        background: linear-gradient(180deg, #fff, #fcf5ea);
+        border: 1px solid var(--line);
+        color: var(--ink);
+        transition:
+          transform 0.18s ease,
+          box-shadow 0.18s ease,
+          border-color 0.18s ease;
+      }
+
+      .toc a:hover {
+        transform: translateY(-2px);
+        border-color: var(--line-strong);
+        box-shadow: 0 10px 20px rgba(88, 64, 31, 0.08);
+        text-decoration: none;
+      }
+
+      .toc small {
+        display: block;
+        margin-top: 6px;
+        color: var(--muted);
+      }
+
+      .prep-grid,
+      .overview-grid,
+      .cards-grid,
+      .source-grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      .prep-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .overview-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .source-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .cards-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .panel {
+        padding: 20px;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--line);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 249, 241, 0.98));
+      }
+
+      .panel h3,
+      .panel h4 {
+        margin-bottom: 10px;
+        font-size: 18px;
+        font-weight: 800;
+      }
+
+      .panel p,
+      .panel li {
+        color: var(--muted);
+      }
+
+      .panel ul,
+      .panel ol {
+        margin: 10px 0 0;
+        padding-left: 20px;
+      }
+
+      .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 8px;
+        overflow: hidden;
+        border-radius: 16px;
+        border: 1px solid var(--line);
+      }
+
+      .data-table thead th {
+        background: #f3e5d7;
+        color: var(--accent-deep);
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .data-table th,
+      .data-table td {
+        padding: 12px 14px;
+        text-align: left;
+        vertical-align: top;
+        border-bottom: 1px solid #ebdfd0;
+      }
+
+      .data-table tbody tr:nth-child(even) {
+        background: rgba(250, 244, 235, 0.7);
+      }
+
+      code {
+        padding: 2px 7px;
+        border-radius: 999px;
+        background: rgba(47, 93, 124, 0.1);
+        color: #254c67;
+        font-family: "Cascadia Mono", Consolas, monospace;
+        font-size: 0.92em;
+      }
+
+      .flow-shell {
+        display: grid;
+        gap: 14px;
+        margin-top: 18px;
+      }
+
+      .flow-line {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .flow-node,
+      .lane-step {
+        position: relative;
+        min-width: 160px;
+        padding: 16px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: #fff;
+        box-shadow: 0 8px 18px rgba(72, 52, 26, 0.06);
+      }
+
+      .flow-node strong,
+      .lane-step strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 15px;
+      }
+
+      .flow-node span,
+      .lane-step span {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .flow-arrow {
+        font-size: 24px;
+        color: var(--line-strong);
+        font-weight: 800;
+      }
+
+      .swimlane {
+        margin-top: 18px;
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        overflow: hidden;
+      }
+
+      .lane {
+        display: grid;
+        grid-template-columns: 240px 1fr;
+        border-top: 1px solid var(--line);
+      }
+
+      .lane:first-child {
+        border-top: 0;
+      }
+
+      .lane-label {
+        padding: 20px;
+        background: linear-gradient(180deg, #f7ede1, #f2e2cd);
+        border-right: 1px solid var(--line);
+      }
+
+      .lane-label strong {
+        display: block;
+        font-size: 17px;
+        color: var(--accent-deep);
+      }
+
+      .lane-label small {
+        display: block;
+        margin-top: 6px;
+        color: var(--muted);
+      }
+
+      .lane-track {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: stretch;
+        gap: 12px;
+        padding: 16px;
+        background: rgba(255, 252, 246, 0.95);
+      }
+
+      .lane-step {
+        flex: 1 1 180px;
+      }
+
+      .lane-step::after {
+        content: "→";
+        position: absolute;
+        top: 50%;
+        right: -11px;
+        transform: translateY(-50%);
+        color: var(--line-strong);
+        font-size: 22px;
+        font-weight: 800;
+      }
+
+      .lane-step:last-child::after {
+        content: "";
+      }
+
+      details.module {
+        margin-top: 24px;
+        border: 1px solid rgba(95, 102, 115, 0.18);
+        border-radius: 26px;
+        background: rgba(255, 253, 248, 0.96);
+        overflow: hidden;
+      }
+
+      details.module[open] {
+        box-shadow: 0 14px 30px rgba(74, 53, 24, 0.08);
+      }
+
+      details.module > summary {
+        list-style: none;
+        cursor: pointer;
+        padding: 24px 28px;
+        background:
+          linear-gradient(135deg, rgba(255, 247, 235, 0.96), rgba(247, 237, 224, 0.94)),
+          #fff;
+      }
+
+      details.module > summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: 1.5fr 0.9fr;
+        gap: 20px;
+        align-items: center;
+      }
+
+      .summary-grid h2 {
+        font-size: 28px;
+      }
+
+      .summary-grid p {
+        margin: 10px 0 0;
+        color: var(--muted);
+      }
+
+      .summary-right {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 10px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: #fff;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .module-body {
+        padding: 0 28px 28px;
+      }
+
+      .role-card {
+        padding: 22px;
+        border-radius: 22px;
+        border: 1px solid var(--line);
+        background: linear-gradient(180deg, #fff, #fff9f0);
+      }
+
+      .role-head {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: flex-start;
+        margin-bottom: 18px;
+      }
+
+      .role-title {
+        font-size: 22px;
+        font-weight: 800;
+      }
+
+      .role-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(47, 93, 124, 0.1);
+        color: #254c67;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .role-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .role-block {
+        padding: 16px;
+        border-radius: 16px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.9);
+      }
+
+      .role-block h4 {
+        margin-bottom: 10px;
+        font-size: 15px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--accent-deep);
+      }
+
+      .role-block ol,
+      .role-block ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      .checklist {
+        margin-top: 12px;
+        display: grid;
+        gap: 8px;
+      }
+
+      .check-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        color: var(--muted);
+      }
+
+      .check-item input {
+        margin-top: 3px;
+        accent-color: var(--accent);
+      }
+
+      .acceptance-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 18px;
+      }
+
+      .acceptance-card {
+        padding: 18px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: linear-gradient(180deg, #fff, #fdf6ea);
+      }
+
+      .acceptance-card h4 {
+        margin-bottom: 8px;
+      }
+
+      .acceptance-card ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+
+      .note-strip {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      .note {
+        padding: 16px 18px;
+        border-radius: 18px;
+        border: 1px solid transparent;
+      }
+
+      .note strong {
+        display: block;
+        margin-bottom: 6px;
+      }
+
+      .note.warn {
+        background: var(--accent-soft);
+        border-color: rgba(143, 61, 46, 0.18);
+      }
+
+      .note.info {
+        background: var(--blue-soft);
+        border-color: rgba(47, 93, 124, 0.16);
+      }
+
+      .note.ok {
+        background: var(--green-soft);
+        border-color: rgba(73, 106, 68, 0.16);
+      }
+
+      .record-table td {
+        height: 48px;
+      }
+
+      .footer {
+        margin-top: 28px;
+        padding: 22px 24px;
+        border-radius: 22px;
+        border: 1px solid var(--line);
+        background: linear-gradient(180deg, rgba(255, 251, 245, 0.95), rgba(249, 240, 228, 0.96));
+        color: var(--muted);
+      }
+
+      .footer p {
+        margin: 8px 0 0;
+      }
+
+      .svg-wrap {
+        margin-top: 18px;
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        background: linear-gradient(180deg, #fff, #fcf5e9);
+        padding: 12px;
+        overflow-x: auto;
+      }
+
+      svg text {
+        font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      }
+
+      @media (max-width: 1160px) {
+        .hero-grid,
+        .summary-grid,
+        .prep-grid,
+        .cards-grid,
+        .acceptance-grid,
+        .note-strip,
+        .toc,
+        .overview-grid,
+        .source-grid,
+        .role-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .lane {
+          grid-template-columns: 1fr;
+        }
+
+        .lane-label {
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+      }
+
+      @media print {
+        body {
+          background: #fff;
+        }
+
+        .page-shell {
+          max-width: none;
+          padding: 0;
+        }
+
+        .hero,
+        .section,
+        details.module,
+        .footer {
+          box-shadow: none;
+        }
+
+        .toc a:hover {
+          transform: none;
+          box-shadow: none;
+        }
+
+        details.module {
+          break-inside: avoid;
+        }
+
+        details.module > summary {
+          cursor: default;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero" id="top">
+        <div class="hero-grid">
+          <div>
+            <span class="eyebrow">M1-M4 Test Handbook</span>
+            <h1>M1-M4 全面测试执行手册</h1>
+            <p>
+              本手册用于组织病理全流程系统前端 M1-M4 的岗位化走通测试。内容对齐当前仓库已实现页面、
+              后端权限种子、集成测试与现有规划文档，覆盖测试准备、角色矩阵、跨模块总流程、各角色 SOP、
+              模块验收清单与结果记录表，适合现场联调、回归测试和阶段验收直接使用。
+            </p>
+          </div>
+          <div class="hero-meta">
+            <div class="meta-card">
+              <strong>文档日期</strong>
+              <span>2026-05-22</span>
+            </div>
+            <div class="meta-card">
+              <strong>交付形态</strong>
+              <span>单文件静态 HTML</span>
+            </div>
+            <div class="meta-card">
+              <strong>适用范围</strong>
+              <span>M1 系统管理 / M2 送检 / M3 技术 / M4 医生</span>
+            </div>
+            <div class="meta-card">
+              <strong>前端仓库</strong>
+              <code>SYBaseProjectWeb</code>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <section class="section" id="cover">
+        <div class="section-header">
+          <div>
+            <div class="section-title">01. 文档首页</div>
+            <div class="section-desc">
+              说明测试手册的适用边界、阅读方式和源码依据。
+            </div>
+          </div>
+          <div class="badge-row">
+            <span class="badge">执行手册</span>
+            <span class="badge">可打印</span>
+            <span class="badge">可勾选</span>
+            <span class="badge">本地可双击打开</span>
+          </div>
+        </div>
+
+        <div class="toc">
+          <a href="#cover">
+            <strong>01 文档首页</strong>
+            <small>适用范围、阅读导航、源码依据</small>
+          </a>
+          <a href="#prep">
+            <strong>02 测试准备</strong>
+            <small>环境、账号、数据、设备与注意事项</small>
+          </a>
+          <a href="#role-matrix">
+            <strong>03 角色总表</strong>
+            <small>模块、岗位、角色代码、测试用户与权限</small>
+          </a>
+          <a href="#cross-flow">
+            <strong>04 总流程</strong>
+            <small>M1 → M2 → M3 → M4 总览闭环</small>
+          </a>
+          <a href="#m1">
+            <strong>05 M1 系统管理</strong>
+            <small>管理员准备与角色授权执行手册</small>
+          </a>
+          <a href="#m2">
+            <strong>06 M2 标本送检</strong>
+            <small>登记、导入、固定、转运、接收、追踪</small>
+          </a>
+          <a href="#m3">
+            <strong>07 M3 技术组</strong>
+            <small>任务池、取材、脱水、包埋、切片、染色</small>
+          </a>
+          <a href="#m4">
+            <strong>08 M4 医生组</strong>
+            <small>分配、诊断、审核、签发、发布、追踪</small>
+          </a>
+        </div>
+
+        <div class="source-grid" style="margin-top: 18px">
+          <div class="panel">
+            <h3>适用边界</h3>
+            <ul>
+              <li>默认面向浏览器端人工走通测试，不替代后端自动化报告。</li>
+              <li>以当前前端已实现页面与菜单入口为准，不扩写未落地交互。</li>
+              <li><code>M4</code> 病理医嘱执行前端独立页面未纳入本次正式走通。</li>
+              <li>打印、扫码枪、国产浏览器兼容性仅记录检查点，需现场补验。</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3>源码依据</h3>
+            <ul>
+              <li><code>docs/M1_M2_WORKFLOW_IMPLEMENTATION_PLAN.md</code></li>
+              <li><code>docs/M3_TECHNICAL_WORKFLOW_IMPLEMENTATION_PLAN.md</code></li>
+              <li><code>docs/M4_M5_ARCHIVE_OPERATION_SUPPORT_IMPLEMENTATION_PLAN.md</code></li>
+              <li><code>docs/detailed_list/01-临床标本送检模块.md</code></li>
+              <li><code>docs/detailed_list/02-技术组工作模块.md</code></li>
+              <li><code>docs/detailed_list/03-医生组工作模块.md</code></li>
+              <li><code>docs/detailed_list/07-系统管理模块.md</code></li>
+              <li><code>D:\Github\JW\SYBaseProject\docs/database/达梦完整部署基线.sql</code></li>
+              <li><code>D:\Github\JW\SYBaseProject\docs/reports/m1-m5-api-test-report-20260521.md</code></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="prep">
+        <div class="section-header">
+          <div>
+            <div class="section-title">02. 测试准备</div>
+            <div class="section-desc">
+              测试前先统一环境、角色、测试数据和设备条件，减少中途阻塞。
+            </div>
+          </div>
+        </div>
+
+        <div class="prep-grid">
+          <div class="panel">
+            <h3>环境准备</h3>
+            <ul>
+              <li>前端环境：部署当前可访问的 <code>web-ele</code> 测试版本。</li>
+              <li>后端环境：对接当前 <code>bl-center</code> 测试环境，接口路由可正常访问。</li>
+              <li>建议浏览器：现代 Chromium 内核浏览器；若有国产浏览器要求，需追加专项记录。</li>
+              <li>联调方式：优先使用真实测试环境，不用本地 Mock 替代主闭环验收。</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3>账号准备</h3>
+            <ul>
+              <li>优先准备后端种子测试用户，避免现场手工造角色导致权限口径不一致。</li>
+              <li>如需重建账号，先由 <code>M1</code> 管理员按本手册完成用户创建和角色分配。</li>
+              <li>建议在测试前确认每个账号可正常登录，并能看到对应菜单目录。</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3>数据准备</h3>
+            <ul>
+              <li>常规病理测试病例 1 组，用于完整 <code>M2 → M3 → M4</code> 主链路。</li>
+              <li>第三方导入测试数据 1 组，用于 <code>M2</code> 临床申请导入路径。</li>
+              <li>返工场景测试病例 1 组，用于 <code>M3</code> 返工补充链路。</li>
+              <li>修订和会诊测试病例 1 组，用于 <code>M4</code> 附加闭环。</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3>设备与现场说明</h3>
+            <ul>
+              <li>标签打印、转运单打印、登录标签打印需至少验证一次成功反馈。</li>
+              <li>若现场具备扫码枪，建议优先用扫码路径执行 <code>M2</code> 固定、接收与追踪。</li>
+              <li>真机打印、扫码枪失败回退、浏览器兼容性需单独在结果记录区说明。</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="note-strip">
+          <div class="note ok">
+            <strong>执行建议</strong>
+            先完成 <code>M1</code> 账号与权限准备，再按 <code>M2 → M3 → M4</code> 顺序走主闭环。
+          </div>
+          <div class="note info">
+            <strong>导入说明</strong>
+            HIS/EMR 导入路径依赖真实测试数据；若导入失败，应记录数据来源、外部单号和错误码。
+          </div>
+          <div class="note warn">
+            <strong>边界提醒</strong>
+            本文不把 <code>M4</code> 医嘱执行页面当作前端正式步骤，避免把后端已具备能力误写成当前前端已支持。
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="role-matrix">
+        <div class="section-header">
+          <div>
+            <div class="section-title">03. 角色总表</div>
+            <div class="section-desc">
+              统一按“中文岗位名 + 真实角色代码 + 测试用户代码”执行，直接映射后端种子数据。
+            </div>
+          </div>
+        </div>
+
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>模块</th>
+              <th>岗位</th>
+              <th>角色代码</th>
+              <th>测试用户代码</th>
+              <th>关键菜单</th>
+              <th>关键权限</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>M1</td>
+              <td>病理管理员</td>
+              <td><code>ROLE_PATHOLOGY_ADMIN</code></td>
+              <td><code>USER_M1_ADMIN</code></td>
+              <td><code>/system/*</code></td>
+              <td><code>PERM_SYS_USER_QUERY</code> / <code>PERM_SYS_ROLE_ASSIGN</code> 等系统管理权限</td>
+            </tr>
+            <tr>
+              <td>M2</td>
+              <td>标本登记岗</td>
+              <td><code>ROLE_M2_CLINICAL_REGISTER</code></td>
+              <td><code>USER_M2_REGISTER</code></td>
+              <td><code>/workflow/clinical-register</code></td>
+              <td><code>PERM_SPECIMEN_REGISTER</code> / <code>PERM_APPLICATION_CREATE</code></td>
+            </tr>
+            <tr>
+              <td>M2</td>
+              <td>申请导入岗</td>
+              <td><code>ROLE_M2_CLINICAL_IMPORT</code></td>
+              <td><code>USER_M2_IMPORT</code></td>
+              <td><code>/workflow/clinical-register</code></td>
+              <td><code>PERM_CLINICAL_IMPORT</code></td>
+            </tr>
+            <tr>
+              <td>M2</td>
+              <td>固定核验岗</td>
+              <td><code>ROLE_M2_FIXATION_VERIFY</code></td>
+              <td><code>USER_M2_FIXATION</code></td>
+              <td><code>/workflow/fixation-verify</code></td>
+              <td><code>PERM_FIXATION_VERIFY</code></td>
+            </tr>
+            <tr>
+              <td>M2</td>
+              <td>转运交接岗</td>
+              <td><code>ROLE_M2_TRANSPORT_HANDOVER</code></td>
+              <td><code>USER_M2_TRANSPORT</code></td>
+              <td><code>/workflow/transport-handover</code></td>
+              <td><code>PERM_TRANSPORT_HANDOVER</code></td>
+            </tr>
+            <tr>
+              <td>M2</td>
+              <td>标本签收岗</td>
+              <td><code>ROLE_M2_SPECIMEN_RECEIVE</code></td>
+              <td><code>USER_M2_RECEIVE</code></td>
+              <td><code>/workflow/specimen-receipt</code></td>
+              <td><code>PERM_SPECIMEN_RECEIVE</code></td>
+            </tr>
+            <tr>
+              <td>M2</td>
+              <td>流程追踪岗</td>
+              <td><code>ROLE_M2_TRACKING_QUERY</code></td>
+              <td><code>USER_M2_TRACKING</code></td>
+              <td><code>/workflow/tracking-query</code></td>
+              <td><code>PERM_SPECIMEN_TRACKING_QUERY</code> / <code>PERM_APPLICATION_DETAIL_QUERY</code></td>
+            </tr>
+            <tr>
+              <td>M3</td>
+              <td>取材岗</td>
+              <td><code>ROLE_M3_GROSSING</code></td>
+              <td><code>USER_M3_GROSSING</code></td>
+              <td><code>/technical-workflow/grossing</code></td>
+              <td><code>PERM_M3_GROSSING</code></td>
+            </tr>
+            <tr>
+              <td>M3</td>
+              <td>脱水岗</td>
+              <td><code>ROLE_M3_DEHYDRATION</code></td>
+              <td><code>USER_M3_DEHYDRATION</code></td>
+              <td><code>/technical-workflow/dehydration</code></td>
+              <td><code>PERM_M3_DEHYDRATION</code></td>
+            </tr>
+            <tr>
+              <td>M3</td>
+              <td>包埋岗</td>
+              <td><code>ROLE_M3_EMBEDDING</code></td>
+              <td><code>USER_M3_EMBEDDING</code></td>
+              <td><code>/technical-workflow/embedding</code></td>
+              <td><code>PERM_M3_EMBEDDING</code></td>
+            </tr>
+            <tr>
+              <td>M3</td>
+              <td>切片岗</td>
+              <td><code>ROLE_M3_SLICING</code></td>
+              <td><code>USER_M3_SLICING</code></td>
+              <td><code>/technical-workflow/slicing</code></td>
+              <td><code>PERM_M3_SLICING</code></td>
+            </tr>
+            <tr>
+              <td>M3</td>
+              <td>染色岗</td>
+              <td><code>ROLE_M3_STAINING</code></td>
+              <td><code>USER_M3_STAINING</code></td>
+              <td><code>/technical-workflow/staining</code></td>
+              <td><code>PERM_M3_STAINING</code></td>
+            </tr>
+            <tr>
+              <td>M3</td>
+              <td>返工岗</td>
+              <td><code>ROLE_M3_REWORK</code></td>
+              <td><code>USER_M3_REWORK</code></td>
+              <td><code>/technical-workflow/rework</code></td>
+              <td><code>PERM_M3_REWORK</code></td>
+            </tr>
+            <tr>
+              <td>M3</td>
+              <td>技术追踪岗</td>
+              <td><code>ROLE_M3_TRACKING</code></td>
+              <td><code>USER_M3_TRACKING</code></td>
+              <td><code>/technical-workflow/tracking</code></td>
+              <td><code>PERM_M3_TECH_TRACKING_QUERY</code></td>
+            </tr>
+            <tr>
+              <td>M4</td>
+              <td>诊断分配岗</td>
+              <td><code>ROLE_M4_ASSIGN</code></td>
+              <td><code>USER_M4_ASSIGN</code></td>
+              <td><code>/doctor-workflow/assignment</code></td>
+              <td><code>PERM_M4_DIAG_TASK_QUERY</code> / <code>PERM_M4_ASSIGN</code></td>
+            </tr>
+            <tr>
+              <td>M4</td>
+              <td>诊断岗</td>
+              <td><code>ROLE_M4_DIAGNOSIS</code></td>
+              <td><code>USER_M4_DIAGNOSIS</code></td>
+              <td><code>/doctor-workflow/workbench</code> / <code>/doctor-workflow/report</code></td>
+              <td><code>PERM_M4_ACCEPT</code> / <code>PERM_M4_START</code> / <code>PERM_M4_REPORT_CREATE</code> / <code>PERM_M4_REPORT_SUBMIT</code></td>
+            </tr>
+            <tr>
+              <td>M4</td>
+              <td>复核岗</td>
+              <td><code>ROLE_M4_REVIEW</code></td>
+              <td><code>USER_M4_REVIEW</code></td>
+              <td><code>/doctor-workflow/report</code></td>
+              <td><code>PERM_M4_REPORT_REVIEW</code></td>
+            </tr>
+            <tr>
+              <td>M4</td>
+              <td>签发岗</td>
+              <td><code>ROLE_M4_SIGN</code></td>
+              <td><code>USER_M4_SIGN</code></td>
+              <td><code>/doctor-workflow/report</code> / <code>/doctor-workflow/revision</code></td>
+              <td><code>PERM_M4_REPORT_SIGN</code> / <code>PERM_M4_REPORT_PUBLISH</code> / <code>PERM_M4_REVISION_APPROVE</code></td>
+            </tr>
+            <tr>
+              <td>M4</td>
+              <td>报告追踪岗</td>
+              <td><code>ROLE_M4_TRACKING</code></td>
+              <td><code>USER_M4_TRACKING</code></td>
+              <td><code>/doctor-workflow/tracking</code></td>
+              <td><code>PERM_M4_REPORT_TRACKING_QUERY</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="section" id="cross-flow">
+        <div class="section-header">
+          <div>
+            <div class="section-title">04. 跨模块总流程</div>
+            <div class="section-desc">
+              把 <code>M1</code> 视作测试前置准备，<code>M2-M4</code> 组成常规病理主闭环。
+            </div>
+          </div>
+        </div>
+
+        <div class="flow-shell">
+          <div class="flow-line">
+            <div class="flow-node">
+              <strong>M1 系统管理</strong>
+              <span>创建用户、分配角色、核对菜单和权限</span>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node">
+              <strong>M2 标本送检</strong>
+              <span>申请单、登记、固定、转运、接收、追踪</span>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node">
+              <strong>M3 技术组</strong>
+              <span>取材、脱水、包埋、切片、染色、追踪</span>
+            </div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-node">
+              <strong>M4 医生组</strong>
+              <span>分配、诊断、报告、审核、签发、发布、追踪</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="svg-wrap">
+          <svg viewBox="0 0 1260 260" width="100%" aria-label="M1-M4 总览流程图">
+            <rect x="20" y="44" width="280" height="164" rx="24" fill="#fff8ed" stroke="#c6b291" />
+            <rect x="340" y="44" width="280" height="164" rx="24" fill="#dcebf5" stroke="#98b6cb" />
+            <rect x="660" y="44" width="280" height="164" rx="24" fill="#dce9d8" stroke="#a7c39d" />
+            <rect x="980" y="44" width="260" height="164" rx="24" fill="#f3ddd4" stroke="#ccab9f" />
+
+            <text x="48" y="84" font-size="28" font-weight="800" fill="#5d241c">M1 测试前置</text>
+            <text x="48" y="118" font-size="18" fill="#5f6673">管理员建用户 / 分配岗位角色</text>
+            <text x="48" y="146" font-size="18" fill="#5f6673">验证菜单、权限、标签打印与基础字典</text>
+            <text x="48" y="174" font-size="18" fill="#5f6673">为主闭环准备可登录账号和初始数据</text>
+
+            <text x="368" y="84" font-size="28" font-weight="800" fill="#254c67">M2 送检闭环</text>
+            <text x="368" y="118" font-size="18" fill="#5f6673">申请单创建或导入</text>
+            <text x="368" y="146" font-size="18" fill="#5f6673">标本登记 → 固定 → 转运 → 接收</text>
+            <text x="368" y="174" font-size="18" fill="#5f6673">申请单与条码双路径追踪</text>
+
+            <text x="688" y="84" font-size="28" font-weight="800" fill="#385236">M3 技术主链</text>
+            <text x="688" y="118" font-size="18" fill="#5f6673">任务池承接病例</text>
+            <text x="688" y="146" font-size="18" fill="#5f6673">取材 → 脱水 → 包埋 → 切片 → 染色</text>
+            <text x="688" y="174" font-size="18" fill="#5f6673">技术追踪核对上下游状态</text>
+
+            <text x="1008" y="84" font-size="28" font-weight="800" fill="#5d241c">M4 医生闭环</text>
+            <text x="1008" y="118" font-size="18" fill="#5f6673">诊断分配 → 接单 → 开始</text>
+            <text x="1008" y="146" font-size="18" fill="#5f6673">草稿 → 提交 → 审核 → 签发 → 发布</text>
+            <text x="1008" y="174" font-size="18" fill="#5f6673">报告追踪、修订、会诊补充闭环</text>
+
+            <path d="M301 126h34" stroke="#b0906a" stroke-width="4" fill="none" />
+            <polygon points="335,126 323,118 323,134" fill="#b0906a" />
+            <path d="M621 126h34" stroke="#8ea8ba" stroke-width="4" fill="none" />
+            <polygon points="655,126 643,118 643,134" fill="#8ea8ba" />
+            <path d="M941 126h24" stroke="#97b08f" stroke-width="4" fill="none" />
+            <polygon points="965,126 953,118 953,134" fill="#97b08f" />
+          </svg>
+        </div>
+
+        <div class="note-strip">
+          <div class="note ok">
+            <strong>执行顺序</strong>
+            推荐完整顺序：<code>M1</code> 账号准备 → <code>M2</code> 送检 → <code>M3</code> 技术 → <code>M4</code> 医生。
+          </div>
+          <div class="note info">
+            <strong>主闭环核心</strong>
+            从 <code>M2</code> 创建申请单开始，到 <code>M4</code> 报告发布结束，是本次最重要的全链路。
+          </div>
+          <div class="note warn">
+            <strong>补充链路</strong>
+            <code>M2</code> 导入、<code>M3</code> 返工、<code>M4</code> 修订与会诊属于补充验证，不影响主闭环先走通。
+          </div>
+        </div>
+      </section>
+
+      <details class="module" id="m1" open>
+        <summary>
+          <div class="summary-grid">
+            <div>
+              <h2>05. M1 系统管理执行手册</h2>
+              <p>
+                目标是先由管理员准备后续闭环所需账号、角色、菜单和权限，并验证登录标签、导入导出与基础数据维护能力。
+              </p>
+            </div>
+            <div class="summary-right">
+              <span class="pill">岗位：病理管理员</span>
+              <span class="pill">角色：ROLE_PATHOLOGY_ADMIN</span>
+              <span class="pill">用户：USER_M1_ADMIN</span>
+            </div>
+          </div>
+        </summary>
+        <div class="module-body">
+          <div class="swimlane">
+            <div class="lane">
+              <div class="lane-label">
+                <strong>病理管理员</strong>
+                <small>用户管理流</small>
+              </div>
+              <div class="lane-track">
+                <div class="lane-step">
+                  <strong>创建测试用户</strong>
+                  <span>在系统用户页新建 M2/M3/M4 所需测试账号</span>
+                </div>
+                <div class="lane-step">
+                  <strong>分配岗位角色</strong>
+                  <span>为各账号设置主角色与对应岗位角色</span>
+                </div>
+                <div class="lane-step">
+                  <strong>验证菜单可见性</strong>
+                  <span>重新登录对应账号，确认只看到应有菜单</span>
+                </div>
+                <div class="lane-step">
+                  <strong>验证标签与导出</strong>
+                  <span>检查登录标签、用户导入导出反馈</span>
+                </div>
+              </div>
+            </div>
+            <div class="lane">
+              <div class="lane-label">
+                <strong>病理管理员</strong>
+                <small>角色授权流</small>
+              </div>
+              <div class="lane-track">
+                <div class="lane-step">
+                  <strong>进入角色授权</strong>
+                  <span>核对目标角色的菜单树与权限树</span>
+                </div>
+                <div class="lane-step">
+                  <strong>保存授权配置</strong>
+                  <span>保存菜单、权限、消息主题、统计范围</span>
+                </div>
+                <div class="lane-step">
+                  <strong>回登录验证</strong>
+                  <span>用目标岗位账号确认入口、按钮和页面权限</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="cards-grid" style="margin-top: 18px">
+            <article class="role-card">
+              <div class="role-head">
+                <div>
+                  <div class="role-title">病理管理员 / 用户管理流</div>
+                  <div class="section-desc">用于准备后续模块测试账号，并验证用户工作台能力。</div>
+                </div>
+                <div class="role-meta">
+                  <span class="tag">ROLE_PATHOLOGY_ADMIN</span>
+                  <span class="tag">USER_M1_ADMIN</span>
+                </div>
+              </div>
+              <div class="role-grid">
+                <div class="role-block">
+                  <h4>入口页面</h4>
+                  <ul>
+                    <li><code>/system/users</code></li>
+                    <li>同模块可补查 <code>/system/configs</code>、<code>/system/numbering-rules</code></li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>前置条件</h4>
+                  <ul>
+                    <li>管理员账号可正常登录。</li>
+                    <li>后端角色种子已存在。</li>
+                    <li>已明确本轮要用的岗位账号列表。</li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>操作步骤</h4>
+                  <ol>
+                    <li>进入系统用户页，按测试计划创建缺失账号。</li>
+                    <li>分别为账号分配目标岗位角色，并设置主角色。</li>
+                    <li>查看登录日志和用户状态，确认账号处于启用状态。</li>
+                    <li>执行一次登录标签打印，记录成功或失败反馈。</li>
+                    <li>按需执行用户导出；若现场需要，执行导入模板验证。</li>
+                  </ol>
+                </div>
+                <div class="role-block">
+                  <h4>预期结果 / 失败点</h4>
+                  <ul>
+                    <li>预期：账号创建成功，角色保存成功，状态可见。</li>
+                    <li>预期：登录标签与导入导出有明确成功反馈。</li>
+                    <li>失败点：角色保存不生效、标签打印失败、导入模板不匹配。</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="checklist">
+                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确，管理员菜单完整可见。</label>
+                <label class="check-item"><input type="checkbox" /> 用户创建、启停、角色分配动作提交后状态已推进。</label>
+                <label class="check-item"><input type="checkbox" /> 目标岗位重新登录后能看到与角色一致的菜单。</label>
+              </div>
+            </article>
+
+            <article class="role-card">
+              <div class="role-head">
+                <div>
+                  <div class="role-title">病理管理员 / 角色授权流</div>
+                  <div class="section-desc">用于核对岗位权限和菜单授权，确保后续模块测试不会因角色问题中断。</div>
+                </div>
+                <div class="role-meta">
+                  <span class="tag">ROLE_PATHOLOGY_ADMIN</span>
+                  <span class="tag">USER_M1_ADMIN</span>
+                </div>
+              </div>
+              <div class="role-grid">
+                <div class="role-block">
+                  <h4>入口页面</h4>
+                  <ul>
+                    <li><code>/system/roles</code></li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>前置条件</h4>
+                  <ul>
+                    <li>目标角色已存在，例如 <code>ROLE_M2_CLINICAL_REGISTER</code>。</li>
+                    <li>测试账号已关联对应角色。</li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>操作步骤</h4>
+                  <ol>
+                    <li>依次打开 M2、M3、M4 目标岗位角色。</li>
+                    <li>核对菜单授权是否包含对应工作流目录和岗位页面。</li>
+                    <li>核对权限授权是否覆盖该岗位所需关键动作。</li>
+                    <li>保存角色授权后，用对应测试账号回登录检查。</li>
+                    <li>如页面按钮显隐异常，回看菜单和权限树是否缺项。</li>
+                  </ol>
+                </div>
+                <div class="role-block">
+                  <h4>预期结果 / 失败点</h4>
+                  <ul>
+                    <li>预期：菜单授权和权限授权保存成功。</li>
+                    <li>预期：目标岗位账号重新登录后只看到本岗位页面。</li>
+                    <li>失败点：页面可见但操作按钮缺失，通常是权限树未授权。</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="checklist">
+                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确，角色授权页可正常保存。</label>
+                <label class="check-item"><input type="checkbox" /> 提交动作后，目标角色的菜单与权限已更新。</label>
+                <label class="check-item"><input type="checkbox" /> 下游岗位登录后能看到一致的菜单与按钮范围。</label>
+              </div>
+            </article>
+          </div>
+
+          <div class="acceptance-grid">
+            <div class="acceptance-card">
+              <h4>最小闭环</h4>
+              <ul>
+                <li>创建 1 个岗位测试用户</li>
+                <li>分配 1 个岗位角色</li>
+                <li>目标账号重新登录看到正确菜单</li>
+                <li>角色授权保存成功</li>
+              </ul>
+            </div>
+            <div class="acceptance-card">
+              <h4>关键异常</h4>
+              <ul>
+                <li>重复用户编码或账号名</li>
+                <li>角色分配后菜单未刷新</li>
+                <li>登录标签打印失败</li>
+                <li>导入模板与系统字段不匹配</li>
+              </ul>
+            </div>
+            <div class="acceptance-card">
+              <h4>未覆盖项</h4>
+              <ul>
+                <li>真实打印机兼容性</li>
+                <li>大批量导入性能</li>
+                <li>更细粒度审计策略确认</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <details class="module" id="m2" open>
+        <summary>
+          <div class="summary-grid">
+            <div>
+              <h2>06. M2 标本送检闭环执行手册</h2>
+              <p>
+                主闭环覆盖申请单创建或导入、标本登记、固定核对、转运交接、标本签收与流程追踪，分别由多个岗位接力完成。
+              </p>
+            </div>
+            <div class="summary-right">
+              <span class="pill">主闭环：登记 → 固定 → 转运 → 接收 → 追踪</span>
+              <span class="pill">补充链路：第三方申请导入</span>
+            </div>
+          </div>
+        </summary>
+        <div class="module-body">
+          <div class="swimlane">
+            <div class="lane">
+              <div class="lane-label">
+                <strong>标本登记岗</strong>
+                <small>ROLE_M2_CLINICAL_REGISTER / USER_M2_REGISTER</small>
+              </div>
+              <div class="lane-track">
+                <div class="lane-step">
+                  <strong>创建申请单</strong>
+                  <span>录入申请信息，建立当前上下文</span>
+                </div>
+                <div class="lane-step">
+                  <strong>登记标本</strong>
+                  <span>补充标本名称、数量、类型并提交</span>
+                </div>
+                <div class="lane-step">
+                  <strong>标签补打</strong>
+                  <span>核对打印结果并记录批次号</span>
+                </div>
+              </div>
+            </div>
+            <div class="lane">
+              <div class="lane-label">
+                <strong>申请导入岗</strong>
+                <small>ROLE_M2_CLINICAL_IMPORT / USER_M2_IMPORT</small>
+              </div>
+              <div class="lane-track">
+                <div class="lane-step">
+                  <strong>第三方导入</strong>
+                  <span>按来源系统和外部单号导入申请单</span>
+                </div>
+                <div class="lane-step">
+                  <strong>切换上下文</strong>
+                  <span>自动进入已导入申请单详情继续登记</span>
+                </div>
+              </div>
+            </div>
+            <div class="lane">
+              <div class="lane-label">
+                <strong>固定核验岗</strong>
+                <small>ROLE_M2_FIXATION_VERIFY / USER_M2_FIXATION</small>
+              </div>
+              <div class="lane-track">
+                <div class="lane-step">
+                  <strong>开始固定</strong>
+                  <span>扫描或选择条码，记录操作人和固定液类型</span>
+                </div>
+                <div class="lane-step">
+                  <strong>完成固定</strong>
+                  <span>确认标本进入已固定状态</span>
+                </div>
+              </div>
+            </div>
+            <div class="lane">
+              <div class="lane-label">
+                <strong>转运交接岗</strong>
+                <small>ROLE_M2_TRANSPORT_HANDOVER / USER_M2_TRANSPORT</small>
+              </div>
+              <div class="lane-track">
+                <div class="lane-step">
+                  <strong>创建转运单</strong>
+                  <span>选择申请单和条码清单生成转运单</span>
+                </div>
+                <div class="lane-step">
+                  <strong>打印转运单</strong>
+                  <span>核对打印反馈和打印人</span>
+                </div>
+                <div class="lane-step">
+                  <strong>完成交接</strong>
+                  <span>填写接收人和接收科室</span>
+                </div>
+              </div>
+            </div>
+            <div class="lane">
+              <div class="lane-label">
+                <strong>标本签收岗</strong>
+                <small>ROLE_M2_SPECIMEN_RECEIVE / USER_M2_RECEIVE</small>
+              </div>
+              <div class="lane-track">
+                <div class="lane-step">
+                  <strong>查询待接收</strong>
+                  <span>按申请单或转运单筛待接收清单</span>
+                </div>
+                <div class="lane-step">
+                  <strong>执行签收</strong>
+                  <span>走转运单接收或条码直收路径</span>
+                </div>
+                <div class="lane-step">
+                  <strong>拒收或退回</strong>
+                  <span>必要时填写原因并保存记录</span>
+                </div>
+              </div>
+            </div>
+            <div class="lane">
+              <div class="lane-label">
+                <strong>流程追踪岗</strong>
+                <small>ROLE_M2_TRACKING_QUERY / USER_M2_TRACKING</small>
+              </div>
+              <div class="lane-track">
+                <div class="lane-step">
+                  <strong>申请单追踪</strong>
+                  <span>核对时间线和节点状态</span>
+                </div>
+                <div class="lane-step">
+                  <strong>条码追踪</strong>
+                  <span>核对单个条码的固定、转运和接收轨迹</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="cards-grid" style="margin-top: 18px">
+            <article class="role-card">
+              <div class="role-head">
+                <div>
+                  <div class="role-title">标本登记岗</div>
+                  <div class="section-desc">主路径为手工创建申请单；完成后继续登记标本并验证标签反馈。</div>
+                </div>
+                <div class="role-meta">
+                  <span class="tag">ROLE_M2_CLINICAL_REGISTER</span>
+                  <span class="tag">USER_M2_REGISTER</span>
+                </div>
+              </div>
+              <div class="role-grid">
+                <div class="role-block">
+                  <h4>入口页面</h4>
+                  <ul>
+                    <li><code>/workflow/clinical-register</code></li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>前置条件</h4>
+                  <ul>
+                    <li>有患者和送检基本信息。</li>
+                    <li>当前账号具备创建申请和登记标本权限。</li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>操作步骤</h4>
+                  <ol>
+                    <li>创建申请单并确认当前上下文已切换到新申请单。</li>
+                    <li>打开申请单详情，核对送检科室、送检医生、申请类型等字段。</li>
+                    <li>录入 1 组或多组标本并提交登记。</li>
+                    <li>查看标签批次号和打印反馈；如需要，执行一次标签补打。</li>
+                  </ol>
+                </div>
+                <div class="role-block">
+                  <h4>预期结果 / 失败点</h4>
+                  <ul>
+                    <li>预期：申请单创建成功并能加载详情。</li>
+                    <li>预期：标本登记成功，标签结果可见。</li>
+                    <li>失败点：上下文未切换、详情数组缺省、打印反馈不明确。</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="checklist">
+                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确，临床登记页可正常访问。</label>
+                <label class="check-item"><input type="checkbox" /> 提交申请单和标本登记后，页面状态、列表和标签信息已推进。</label>
+                <label class="check-item"><input type="checkbox" /> 下游固定、追踪岗位可看到同一申请单和条码数据。</label>
+              </div>
+            </article>
+
+            <article class="role-card">
+              <div class="role-head">
+                <div>
+                  <div class="role-title">申请导入岗</div>
+                  <div class="section-desc">补充验证第三方临床申请导入路径，用于替代手工创建申请单。</div>
+                </div>
+                <div class="role-meta">
+                  <span class="tag">ROLE_M2_CLINICAL_IMPORT</span>
+                  <span class="tag">USER_M2_IMPORT</span>
+                </div>
+              </div>
+              <div class="role-grid">
+                <div class="role-block">
+                  <h4>入口页面</h4>
+                  <ul>
+                    <li><code>/workflow/clinical-register</code></li>
+                    <li>页面内“第三方申请导入”区域</li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>前置条件</h4>
+                  <ul>
+                    <li>已准备 <code>thirdPartySource</code> 和 <code>externalOrderNo</code>。</li>
+                    <li>确认测试环境已接入真实导入数据。</li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>操作步骤</h4>
+                  <ol>
+                    <li>输入来源系统和外部单号，执行导入。</li>
+                    <li>确认导入成功后页面已自动切换到该申请单上下文。</li>
+                    <li>继续执行申请单详情核对与标本登记。</li>
+                    <li>记录导入成功、重复导入或错误提示文案。</li>
+                  </ol>
+                </div>
+                <div class="role-block">
+                  <h4>预期结果 / 失败点</h4>
+                  <ul>
+                    <li>预期：导入成功后可直接承接后续登记流程。</li>
+                    <li>失败点：无导入权限、外部单号重复、HIS/EMR 数据缺失。</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="checklist">
+                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确，导入区块可见。</label>
+                <label class="check-item"><input type="checkbox" /> 导入动作提交后，当前上下文已切换到目标申请单。</label>
+                <label class="check-item"><input type="checkbox" /> 下游登记、追踪可看到同一导入申请单结果。</label>
+              </div>
+            </article>
+
+            <article class="role-card">
+              <div class="role-head">
+                <div>
+                  <div class="role-title">固定核验岗</div>
+                  <div class="section-desc">通过待固定列表或扫码入口执行开始固定、完成固定。</div>
+                </div>
+                <div class="role-meta">
+                  <span class="tag">ROLE_M2_FIXATION_VERIFY</span>
+                  <span class="tag">USER_M2_FIXATION</span>
+                </div>
+              </div>
+              <div class="role-grid">
+                <div class="role-block">
+                  <h4>入口页面</h4>
+                  <ul>
+                    <li><code>/workflow/fixation-verify</code></li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>前置条件</h4>
+                  <ul>
+                    <li>M2 申请单和标本登记已完成。</li>
+                    <li>已知测试条码或可在待固定列表筛出该条记录。</li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>操作步骤</h4>
+                  <ol>
+                    <li>在待固定列表中定位目标标本，或扫描条码填入操作区。</li>
+                    <li>填写操作人和固定液类型，执行“开始固定”。</li>
+                    <li>再次执行“完成固定”，确认状态切换为已固定。</li>
+                    <li>刷新列表，确认待固定数量减少或状态更新。</li>
+                  </ol>
+                </div>
+                <div class="role-block">
+                  <h4>预期结果 / 失败点</h4>
+                  <ul>
+                    <li>预期：开始和完成固定均提示成功。</li>
+                    <li>失败点：重复固定、空操作人、状态不可逆。</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="checklist">
+                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确，固定核对页可访问。</label>
+                <label class="check-item"><input type="checkbox" /> 开始固定和完成固定后，状态已推进。</label>
+                <label class="check-item"><input type="checkbox" /> 转运和追踪页面能看到固定完成结果。</label>
+              </div>
+            </article>
+
+            <article class="role-card">
+              <div class="role-head">
+                <div>
+                  <div class="role-title">转运交接岗</div>
+                  <div class="section-desc">执行创建转运单、打印转运单和交接确认三段式操作。</div>
+                </div>
+                <div class="role-meta">
+                  <span class="tag">ROLE_M2_TRANSPORT_HANDOVER</span>
+                  <span class="tag">USER_M2_TRANSPORT</span>
+                </div>
+              </div>
+              <div class="role-grid">
+                <div class="role-block">
+                  <h4>入口页面</h4>
+                  <ul>
+                    <li><code>/workflow/transport-handover</code></li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>前置条件</h4>
+                  <ul>
+                    <li>目标标本已登记并完成固定。</li>
+                    <li>已准备接收人、接收科室与条码清单。</li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>操作步骤</h4>
+                  <ol>
+                    <li>创建转运单并记录转运单号。</li>
+                    <li>执行一次打印动作，确认打印成功反馈。</li>
+                    <li>打开交接弹层，填写接收人和接收科室并完成交接。</li>
+                    <li>刷新待处理转运单列表，确认状态已变化。</li>
+                  </ol>
+                </div>
+                <div class="role-block">
+                  <h4>预期结果 / 失败点</h4>
+                  <ul>
+                    <li>预期：转运单生成、打印、交接均成功。</li>
+                    <li>失败点：无接收人、条码去重问题、打印网关异常。</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="checklist">
+                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确，转运交接页可访问。</label>
+                <label class="check-item"><input type="checkbox" /> 创建、打印、交接后转运单状态已推进。</label>
+                <label class="check-item"><input type="checkbox" /> 接收和追踪页面可看到同一转运单结果。</label>
+              </div>
+            </article>
+
+            <article class="role-card">
+              <div class="role-head">
+                <div>
+                  <div class="role-title">标本签收岗</div>
+                  <div class="section-desc">支持转运单接收和条码直收两条路径，并可测试拒收或退回。</div>
+                </div>
+                <div class="role-meta">
+                  <span class="tag">ROLE_M2_SPECIMEN_RECEIVE</span>
+                  <span class="tag">USER_M2_RECEIVE</span>
+                </div>
+              </div>
+              <div class="role-grid">
+                <div class="role-block">
+                  <h4>入口页面</h4>
+                  <ul>
+                    <li><code>/workflow/specimen-receipt</code></li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>前置条件</h4>
+                  <ul>
+                    <li>已存在待接收转运单，或已知目标条码。</li>
+                    <li>接收人已明确。</li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>操作步骤</h4>
+                  <ol>
+                    <li>先走主路径：按转运单执行接收，填写接收人并提交。</li>
+                    <li>再补测条码直收：输入条码和接收人，完成直接接收。</li>
+                    <li>若要测异常，选择拒收或退回并填写原因。</li>
+                    <li>刷新列表并核对接收结果、质量评价与未收数量。</li>
+                  </ol>
+                </div>
+                <div class="role-block">
+                  <h4>预期结果 / 失败点</h4>
+                  <ul>
+                    <li>预期：接收成功后状态更新为已接收或部分接收。</li>
+                    <li>失败点：接收人缺失、重复接收、拒收原因为空。</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="checklist">
+                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确，接收页可访问。</label>
+                <label class="check-item"><input type="checkbox" /> 接收或拒收后状态已推进，并有明确反馈。</label>
+                <label class="check-item"><input type="checkbox" /> 追踪页和后续技术链能看到已接收结果。</label>
+              </div>
+            </article>
+
+            <article class="role-card">
+              <div class="role-head">
+                <div>
+                  <div class="role-title">流程追踪岗</div>
+                  <div class="section-desc">通过申请单号和标本条码双路径核对送检闭环是否完整。</div>
+                </div>
+                <div class="role-meta">
+                  <span class="tag">ROLE_M2_TRACKING_QUERY</span>
+                  <span class="tag">USER_M2_TRACKING</span>
+                </div>
+              </div>
+              <div class="role-grid">
+                <div class="role-block">
+                  <h4>入口页面</h4>
+                  <ul>
+                    <li><code>/workflow/tracking-query</code></li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>前置条件</h4>
+                  <ul>
+                    <li>主路径至少完成到接收步骤。</li>
+                    <li>已拿到申请单号和条码。</li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>操作步骤</h4>
+                  <ol>
+                    <li>按申请单号查询，核对基本信息、标本列表和事件时间线。</li>
+                    <li>按条码查询，核对该条码的固定、转运、接收节点。</li>
+                    <li>记录异常标记是否与实际操作一致。</li>
+                  </ol>
+                </div>
+                <div class="role-block">
+                  <h4>预期结果 / 失败点</h4>
+                  <ul>
+                    <li>预期：申请单和条码路径都能看到一致事件链。</li>
+                    <li>失败点：事件缺失、状态不同步、查询输入为空。</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="checklist">
+                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确，追踪页可访问。</label>
+                <label class="check-item"><input type="checkbox" /> 查询后时间线、异常标记和状态已正确展示。</label>
+                <label class="check-item"><input type="checkbox" /> 与登记、固定、转运、接收页面结果保持一致。</label>
+              </div>
+            </article>
+          </div>
+
+          <div class="acceptance-grid">
+            <div class="acceptance-card">
+              <h4>最小闭环</h4>
+              <ul>
+                <li>创建或导入申请单</li>
+                <li>登记标本并完成标签补打</li>
+                <li>完成固定、转运、接收</li>
+                <li>申请单和条码追踪均可查询</li>
+              </ul>
+            </div>
+            <div class="acceptance-card">
+              <h4>关键异常</h4>
+              <ul>
+                <li>重复导入 / 重复接收</li>
+                <li>固定与接收必填项缺失</li>
+                <li>打印动作失败或反馈不明确</li>
+                <li>拒收、退回原因校验失败</li>
+              </ul>
+            </div>
+            <div class="acceptance-card">
+              <h4>未覆盖项</h4>
+              <ul>
+                <li>真机打印链路稳定性</li>
+                <li>扫码枪高频输入体验</li>
+                <li>真实 HIS/EMR 批量导入策略</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <details class="module" id="m3" open>
+        <summary>
+          <div class="summary-grid">
+            <div>
+              <h2>07. M3 技术组生产线执行手册</h2>
+              <p>
+                主闭环覆盖任务池、取材、脱水、包埋、切片、染色与技术追踪；返工单作为补充验证链路单独记录。
+              </p>
+            </div>
+            <div class="summary-right">
+              <span class="pill">主闭环：任务池 → 取材 → 脱水 → 包埋 → 切片 → 染色</span>
+              <span class="pill">补充链路：返工</span>
+            </div>
+          </div>
+        </summary>
+        <div class="module-body">
+          <div class="swimlane">
+            <div class="lane">
+              <div class="lane-label">
+                <strong>技术任务入口</strong>
+                <small>可由各工位从任务池承接</small>
+              </div>
+              <div class="lane-track">
+                <div class="lane-step">
+                  <strong>查询待办</strong>
+                  <span>按任务类型、状态、病理号筛选</span>
+                </div>
+                <div class="lane-step">
+                  <strong>进入工位</strong>
+                  <span>从任务池跳转到对应工作站</span>
+                </div>
+              </div>
+            </div>
+            <div class="lane">
+              <div class="lane-label">
+                <strong>取材岗</strong>
+                <small>ROLE_M3_GROSSING / USER_M3_GROSSING</small>
+              </div>
+              <div class="lane-track">
+                <div class="lane-step">
+                  <strong>开始取材</strong>
+                  <span>承接待办并建立操作上下文</span>
+                </div>
+                <div class="lane-step">
+                  <strong>完成取材</strong>
+                  <span>录入取材信息并生成脱水任务</span>
+                </div>
+              </div>
+            </div>
+            <div class="lane">
+              <div class="lane-label">
+                <strong>脱水岗</strong>
+                <small>ROLE_M3_DEHYDRATION / USER_M3_DEHYDRATION</small>
+              </div>
+              <div class="lane-track">
+                <div class="lane-step">
+                  <strong>创建批次</strong>
+                  <span>选择取材块生成脱水批次</span>
+                </div>
+                <div class="lane-step">
+                  <strong>开始脱水</strong>
+                  <span>记录批次上机信息</span>
+                </div>
+                <div class="lane-step">
+                  <strong>完成脱水</strong>
+                  <span>确认批次结束并进入包埋链路</span>
+                </div>
+              </div>
+            </div>
+            <div class="lane">
+              <div class="lane-label">
+                <strong>包埋岗</strong>
+                <small>ROLE_M3_EMBEDDING / USER_M3_EMBEDDING</small>
+              </div>
+              <div class="lane-track">
+                <div class="lane-step">
+                  <strong>开始包埋</strong>
+                  <span>承接脱水结果并打开当前任务</span>
+                </div>
+                <div class="lane-step">
+                  <strong>完成包埋</strong>
+                  <span>录入包埋盒、块数和切片备注</span>
+                </div>
+              </div>
+            </div>
+            <div class="lane">
+              <div class="lane-label">
+                <strong>切片岗</strong>
+                <small>ROLE_M3_SLICING / USER_M3_SLICING</small>
+              </div>
+              <div class="lane-track">
+                <div class="lane-step">
+                  <strong>开始切片</strong>
+                  <span>承接包埋盒进入切片工作站</span>
+                </div>
+                <div class="lane-step">
+                  <strong>完成切片</strong>
+                  <span>录入玻片数量、厚度和设备信息</span>
+                </div>
+              </div>
+            </div>
+            <div class="lane">
+              <div class="lane-label">
+                <strong>染色岗</strong>
+                <small>ROLE_M3_STAINING / USER_M3_STAINING</small>
+              </div>
+              <div class="lane-track">
+                <div class="lane-step">
+                  <strong>开始染色</strong>
+                  <span>承接玻片进入染色工作站</span>
+                </div>
+                <div class="lane-step">
+                  <strong>完成染色</strong>
+                  <span>确认病例流转到医生诊断待办</span>
+                </div>
+              </div>
+            </div>
+            <div class="lane">
+              <div class="lane-label">
+                <strong>技术追踪岗</strong>
+                <small>ROLE_M3_TRACKING / USER_M3_TRACKING</small>
+              </div>
+              <div class="lane-track">
+                <div class="lane-step">
+                  <strong>病例追踪</strong>
+                  <span>核对任务、标本、蜡块、包埋盒、玻片和事件链</span>
+                </div>
+              </div>
+            </div>
+            <div class="lane">
+              <div class="lane-label">
+                <strong>返工岗</strong>
+                <small>ROLE_M3_REWORK / USER_M3_REWORK</small>
+              </div>
+              <div class="lane-track">
+                <div class="lane-step">
+                  <strong>创建返工单</strong>
+                  <span>按对象类型发起返工</span>
+                </div>
+                <div class="lane-step">
+                  <strong>执行返工单</strong>
+                  <span>记录处理动作并回写追踪信息</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="cards-grid" style="margin-top: 18px">
+            <article class="role-card">
+              <div class="role-head">
+                <div>
+                  <div class="role-title">技术任务入口 / 各工位通用</div>
+                  <div class="section-desc">所有工位都建议先从任务池拉起，便于验证深链与任务分流。</div>
+                </div>
+                <div class="role-meta">
+                  <span class="tag">/technical-workflow/tasks</span>
+                </div>
+              </div>
+              <div class="role-grid">
+                <div class="role-block">
+                  <h4>入口页面</h4>
+                  <ul>
+                    <li><code>/technical-workflow/tasks</code></li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>通用步骤</h4>
+                  <ol>
+                    <li>按病理号或任务类型筛选待办。</li>
+                    <li>点击“进入工作站”跳转到当前工位。</li>
+                    <li>必要时点击“查看追踪”核对上游状态。</li>
+                  </ol>
+                </div>
+                <div class="role-block">
+                  <h4>通用预期</h4>
+                  <ul>
+                    <li>任务池可筛出目标病例。</li>
+                    <li>跳转路径与工位权限一致。</li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>通用失败点</h4>
+                  <ul>
+                    <li>任务未投递到下一工位。</li>
+                    <li>深链参数丢失导致页面上下文不完整。</li>
+                  </ul>
+                </div>
+              </div>
+            </article>
+
+            <article class="role-card">
+              <div class="role-head">
+                <div>
+                  <div class="role-title">取材岗</div>
+                  <div class="section-desc">负责承接待取材任务并生成脱水任务，是技术主链起点。</div>
+                </div>
+                <div class="role-meta">
+                  <span class="tag">ROLE_M3_GROSSING</span>
+                  <span class="tag">USER_M3_GROSSING</span>
+                </div>
+              </div>
+              <div class="role-grid">
+                <div class="role-block"><h4>入口页面</h4><ul><li><code>/technical-workflow/grossing</code></li></ul></div>
+                <div class="role-block"><h4>前置条件</h4><ul><li>M2 已接收完成。</li><li>任务池已生成待取材任务。</li></ul></div>
+                <div class="role-block">
+                  <h4>操作步骤</h4>
+                  <ol>
+                    <li>开始取材任务，填写操作人、终端和备注。</li>
+                    <li>补充取材部位、模板、蜡块及标本描述。</li>
+                    <li>完成取材，记录生成的脱水任务数量。</li>
+                  </ol>
+                </div>
+                <div class="role-block">
+                  <h4>预期结果 / 失败点</h4>
+                  <ul>
+                    <li>预期：取材完成后生成脱水任务。</li>
+                    <li>失败点：未选择任务、上下文丢失、完成后无脱水待办。</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="checklist">
+                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确。</label>
+                <label class="check-item"><input type="checkbox" /> 开始和完成取材后状态已推进。</label>
+                <label class="check-item"><input type="checkbox" /> 脱水岗与技术追踪页可看到结果。</label>
+              </div>
+            </article>
+
+            <article class="role-card">
+              <div class="role-head">
+                <div>
+                  <div class="role-title">脱水岗</div>
+                  <div class="section-desc">通过批次模式承接取材块，验证创建、开始、完成三段式流程。</div>
+                </div>
+                <div class="role-meta">
+                  <span class="tag">ROLE_M3_DEHYDRATION</span>
+                  <span class="tag">USER_M3_DEHYDRATION</span>
+                </div>
+              </div>
+              <div class="role-grid">
+                <div class="role-block"><h4>入口页面</h4><ul><li><code>/technical-workflow/dehydration</code></li></ul></div>
+                <div class="role-block"><h4>前置条件</h4><ul><li>取材已完成并存在脱水任务。</li><li>可获取取材块列表。</li></ul></div>
+                <div class="role-block">
+                  <h4>操作步骤</h4>
+                  <ol>
+                    <li>加载病例取材块并创建脱水批次。</li>
+                    <li>执行批次开始，记录上机信息。</li>
+                    <li>执行批次完成，确认进入包埋工位。</li>
+                  </ol>
+                </div>
+                <div class="role-block">
+                  <h4>预期结果 / 失败点</h4>
+                  <ul>
+                    <li>预期：批次创建成功并可开始、完成。</li>
+                    <li>失败点：取材块未选、跨岗位误操作、批次状态不推进。</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="checklist">
+                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确。</label>
+                <label class="check-item"><input type="checkbox" /> 批次创建、开始、完成后状态已推进。</label>
+                <label class="check-item"><input type="checkbox" /> 包埋岗与技术追踪页可看到结果。</label>
+              </div>
+            </article>
+
+            <article class="role-card">
+              <div class="role-head">
+                <div>
+                  <div class="role-title">包埋岗</div>
+                  <div class="section-desc">承接脱水结果，重点核对包埋盒号、取材评价和切片备注。</div>
+                </div>
+                <div class="role-meta">
+                  <span class="tag">ROLE_M3_EMBEDDING</span>
+                  <span class="tag">USER_M3_EMBEDDING</span>
+                </div>
+              </div>
+              <div class="role-grid">
+                <div class="role-block"><h4>入口页面</h4><ul><li><code>/technical-workflow/embedding</code></li></ul></div>
+                <div class="role-block"><h4>前置条件</h4><ul><li>脱水批次已完成。</li><li>目标任务可在任务池或工位列表中找到。</li></ul></div>
+                <div class="role-block">
+                  <h4>操作步骤</h4>
+                  <ol>
+                    <li>开始包埋任务，确认当前取材块上下文。</li>
+                    <li>填写包埋盒号、块数、切片备注、评价级别等字段。</li>
+                    <li>完成包埋并记录返回结果。</li>
+                  </ol>
+                </div>
+                <div class="role-block">
+                  <h4>预期结果 / 失败点</h4>
+                  <ul>
+                    <li>预期：完成包埋后可生成下游切片上下文。</li>
+                    <li>失败点：包埋盒号缺失、取材块未选、评价数据异常。</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="checklist">
+                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确。</label>
+                <label class="check-item"><input type="checkbox" /> 开始和完成包埋后状态已推进。</label>
+                <label class="check-item"><input type="checkbox" /> 切片岗与技术追踪页可看到结果。</label>
+              </div>
+            </article>
+
+            <article class="role-card">
+              <div class="role-head">
+                <div>
+                  <div class="role-title">切片岗</div>
+                  <div class="section-desc">核对包埋盒承接、玻片数量、厚度和设备编码等切片结果。</div>
+                </div>
+                <div class="role-meta">
+                  <span class="tag">ROLE_M3_SLICING</span>
+                  <span class="tag">USER_M3_SLICING</span>
+                </div>
+              </div>
+              <div class="role-grid">
+                <div class="role-block"><h4>入口页面</h4><ul><li><code>/technical-workflow/slicing</code></li></ul></div>
+                <div class="role-block"><h4>前置条件</h4><ul><li>包埋已完成。</li><li>存在待切片任务。</li></ul></div>
+                <div class="role-block">
+                  <h4>操作步骤</h4>
+                  <ol>
+                    <li>开始切片任务，确认包埋盒上下文。</li>
+                    <li>填写玻片数、每片切片数、厚度和设备编码。</li>
+                    <li>完成切片并记录返回的玻片数量。</li>
+                  </ol>
+                </div>
+                <div class="role-block">
+                  <h4>预期结果 / 失败点</h4>
+                  <ul>
+                    <li>预期：完成切片后生成待染色玻片。</li>
+                    <li>失败点：玻片数为 0、包埋盒未选、设备编码异常。</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="checklist">
+                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确。</label>
+                <label class="check-item"><input type="checkbox" /> 开始和完成切片后状态已推进。</label>
+                <label class="check-item"><input type="checkbox" /> 染色岗与技术追踪页可看到结果。</label>
+              </div>
+            </article>
+
+            <article class="role-card">
+              <div class="role-head">
+                <div>
+                  <div class="role-title">染色岗</div>
+                  <div class="section-desc">验证玻片染色完成后病例可推进到医生诊断任务。</div>
+                </div>
+                <div class="role-meta">
+                  <span class="tag">ROLE_M3_STAINING</span>
+                  <span class="tag">USER_M3_STAINING</span>
+                </div>
+              </div>
+              <div class="role-grid">
+                <div class="role-block"><h4>入口页面</h4><ul><li><code>/technical-workflow/staining</code></li></ul></div>
+                <div class="role-block"><h4>前置条件</h4><ul><li>切片已完成。</li><li>待染色玻片已生成。</li></ul></div>
+                <div class="role-block">
+                  <h4>操作步骤</h4>
+                  <ol>
+                    <li>开始染色任务，确认玻片和染色类型。</li>
+                    <li>完成染色，填写必要质量问题字段。</li>
+                    <li>记录病例状态反馈，确认诊断链路已可见。</li>
+                  </ol>
+                </div>
+                <div class="role-block">
+                  <h4>预期结果 / 失败点</h4>
+                  <ul>
+                    <li>预期：染色完成后进入 <code>DIAGNOSIS_PENDING</code>。</li>
+                    <li>失败点：病例未自动投递到 M4、玻片状态未更新。</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="checklist">
+                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确。</label>
+                <label class="check-item"><input type="checkbox" /> 开始和完成染色后状态已推进。</label>
+                <label class="check-item"><input type="checkbox" /> M4 诊断分配页能看到新生成的诊断任务。</label>
+              </div>
+            </article>
+
+            <article class="role-card">
+              <div class="role-head">
+                <div>
+                  <div class="role-title">技术追踪岗</div>
+                  <div class="section-desc">对病例维度核查技术主链是否完整，重点看任务、蜡块、包埋盒、玻片和事件轨迹。</div>
+                </div>
+                <div class="role-meta">
+                  <span class="tag">ROLE_M3_TRACKING</span>
+                  <span class="tag">USER_M3_TRACKING</span>
+                </div>
+              </div>
+              <div class="role-grid">
+                <div class="role-block"><h4>入口页面</h4><ul><li><code>/technical-workflow/tracking</code></li></ul></div>
+                <div class="role-block"><h4>前置条件</h4><ul><li>主链至少执行到染色完成。</li><li>已拿到病例 ID。</li></ul></div>
+                <div class="role-block">
+                  <h4>操作步骤</h4>
+                  <ol>
+                    <li>输入病例 ID 查询技术追踪。</li>
+                    <li>逐块核对病例摘要、技术任务、标本摘要、蜡块、包埋盒、玻片和事件轨迹。</li>
+                    <li>确认最终状态与工位实际操作一致。</li>
+                  </ol>
+                </div>
+                <div class="role-block">
+                  <h4>预期结果 / 失败点</h4>
+                  <ul>
+                    <li>预期：追踪信息能串起整条技术主链。</li>
+                    <li>失败点：数组缺失、字段未归一化、节点顺序异常。</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="checklist">
+                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确。</label>
+                <label class="check-item"><input type="checkbox" /> 查询后状态和轨迹展示完整。</label>
+                <label class="check-item"><input type="checkbox" /> 与各工位页面结果一致，并能确认已转入 M4。</label>
+              </div>
+            </article>
+
+            <article class="role-card">
+              <div class="role-head">
+                <div>
+                  <div class="role-title">返工岗</div>
+                  <div class="section-desc">补充链路，不阻塞主闭环；用于验证返工单创建和执行的最小可用性。</div>
+                </div>
+                <div class="role-meta">
+                  <span class="tag">ROLE_M3_REWORK</span>
+                  <span class="tag">USER_M3_REWORK</span>
+                </div>
+              </div>
+              <div class="role-grid">
+                <div class="role-block"><h4>入口页面</h4><ul><li><code>/technical-workflow/rework</code></li></ul></div>
+                <div class="role-block"><h4>前置条件</h4><ul><li>已准备可返工病例或对象。</li><li>主闭环可先不依赖返工结果继续。</li></ul></div>
+                <div class="role-block">
+                  <h4>操作步骤</h4>
+                  <ol>
+                    <li>创建 1 条返工单，选择对象层级和返工类型。</li>
+                    <li>在执行区块完成返工动作并保存。</li>
+                    <li>到技术追踪页确认返工记录已写入。</li>
+                  </ol>
+                </div>
+                <div class="role-block">
+                  <h4>预期结果 / 失败点</h4>
+                  <ul>
+                    <li>预期：返工单可创建、可执行，并在追踪中可见。</li>
+                    <li>失败点：对象层级不匹配、返工记录未回流追踪。</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="checklist">
+                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确。</label>
+                <label class="check-item"><input type="checkbox" /> 返工单创建和执行后状态已推进。</label>
+                <label class="check-item"><input type="checkbox" /> 技术追踪可看到返工链路。</label>
+              </div>
+            </article>
+          </div>
+
+          <div class="acceptance-grid">
+            <div class="acceptance-card">
+              <h4>最小闭环</h4>
+              <ul>
+                <li>任务池定位病例</li>
+                <li>完成取材、脱水、包埋、切片、染色</li>
+                <li>技术追踪验证完整轨迹</li>
+                <li>病例成功转入 M4 诊断待办</li>
+              </ul>
+            </div>
+            <div class="acceptance-card">
+              <h4>关键异常</h4>
+              <ul>
+                <li>跨岗位误操作权限校验</li>
+                <li>任务未投递到下一工位</li>
+                <li>设备编码或数量字段非法</li>
+                <li>返工链未回写追踪</li>
+              </ul>
+            </div>
+            <div class="acceptance-card">
+              <h4>未覆盖项</h4>
+              <ul>
+                <li>真机打号机 / 高拍仪 / 摄像机集成</li>
+                <li>复杂批量扫码和图像识别场景</li>
+                <li>更高阶设备失败恢复策略</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <details class="module" id="m4" open>
+        <summary>
+          <div class="summary-grid">
+            <div>
+              <h2>08. M4 医生诊断闭环执行手册</h2>
+              <p>
+                主闭环覆盖诊断分配、责任医生接单与开始、报告草稿、提交审核、驳回重提、签发发布与报告追踪；
+                修订和会诊作为附加闭环补充验证。
+              </p>
+            </div>
+            <div class="summary-right">
+              <span class="pill">主闭环：分配 → 诊断 → 审核 → 签发 → 发布</span>
+              <span class="pill">附加闭环：修订 / 会诊</span>
+            </div>
+          </div>
+        </summary>
+        <div class="module-body">
+          <div class="swimlane">
+            <div class="lane">
+              <div class="lane-label">
+                <strong>诊断分配岗</strong>
+                <small>ROLE_M4_ASSIGN / USER_M4_ASSIGN</small>
+              </div>
+              <div class="lane-track">
+                <div class="lane-step">
+                  <strong>查询待分配任务</strong>
+                  <span>定位来自 M3 染色完成的病例</span>
+                </div>
+                <div class="lane-step">
+                  <strong>分派任务</strong>
+                  <span>指定责任医生、初诊医生和审核医生</span>
+                </div>
+              </div>
+            </div>
+            <div class="lane">
+              <div class="lane-label">
+                <strong>诊断岗</strong>
+                <small>ROLE_M4_DIAGNOSIS / USER_M4_DIAGNOSIS</small>
+              </div>
+              <div class="lane-track">
+                <div class="lane-step">
+                  <strong>接单并开始</strong>
+                  <span>在工作台承接诊断任务</span>
+                </div>
+                <div class="lane-step">
+                  <strong>创建草稿</strong>
+                  <span>创建病理报告并保存草稿</span>
+                </div>
+                <div class="lane-step">
+                  <strong>提交审核</strong>
+                  <span>把报告送入审核流程</span>
+                </div>
+              </div>
+            </div>
+            <div class="lane">
+              <div class="lane-label">
+                <strong>复核岗</strong>
+                <small>ROLE_M4_REVIEW / USER_M4_REVIEW</small>
+              </div>
+              <div class="lane-track">
+                <div class="lane-step">
+                  <strong>审核通过</strong>
+                  <span>报告通过后进入签发阶段</span>
+                </div>
+                <div class="lane-step">
+                  <strong>或驳回</strong>
+                  <span>退回诊断岗补充修改后重新提交</span>
+                </div>
+              </div>
+            </div>
+            <div class="lane">
+              <div class="lane-label">
+                <strong>签发岗</strong>
+                <small>ROLE_M4_SIGN / USER_M4_SIGN</small>
+              </div>
+              <div class="lane-track">
+                <div class="lane-step">
+                  <strong>签发报告</strong>
+                  <span>生成签发版本快照</span>
+                </div>
+                <div class="lane-step">
+                  <strong>发布报告</strong>
+                  <span>完成病例主链闭环</span>
+                </div>
+              </div>
+            </div>
+            <div class="lane">
+              <div class="lane-label">
+                <strong>报告追踪岗</strong>
+                <small>ROLE_M4_TRACKING / USER_M4_TRACKING</small>
+              </div>
+              <div class="lane-track">
+                <div class="lane-step">
+                  <strong>报告追踪查询</strong>
+                  <span>核对诊断任务链、版本链、事件链</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="cards-grid" style="margin-top: 18px">
+            <article class="role-card">
+              <div class="role-head">
+                <div>
+                  <div class="role-title">诊断分配岗</div>
+                  <div class="section-desc">用于把 M3 染色完成后的病例派发给目标医生和审核医生。</div>
+                </div>
+                <div class="role-meta">
+                  <span class="tag">ROLE_M4_ASSIGN</span>
+                  <span class="tag">USER_M4_ASSIGN</span>
+                </div>
+              </div>
+              <div class="role-grid">
+                <div class="role-block"><h4>入口页面</h4><ul><li><code>/doctor-workflow/assignment</code></li></ul></div>
+                <div class="role-block"><h4>前置条件</h4><ul><li>M3 染色已完成。</li><li>目标病例已生成诊断任务。</li></ul></div>
+                <div class="role-block">
+                  <h4>操作步骤</h4>
+                  <ol>
+                    <li>在待诊断任务中找到目标病例。</li>
+                    <li>分派责任医生、初诊医生和审核医生。</li>
+                    <li>提交分派并记录任务编号。</li>
+                  </ol>
+                </div>
+                <div class="role-block">
+                  <h4>预期结果 / 失败点</h4>
+                  <ul>
+                    <li>预期：任务状态从待分配变为已分派。</li>
+                    <li>失败点：责任医生未指定、审核人未指定、无权限分派。</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="checklist">
+                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确。</label>
+                <label class="check-item"><input type="checkbox" /> 分派动作提交后任务状态已推进。</label>
+                <label class="check-item"><input type="checkbox" /> 责任医生工作台与追踪页可看到任务。</label>
+              </div>
+            </article>
+
+            <article class="role-card">
+              <div class="role-head">
+                <div>
+                  <div class="role-title">诊断岗</div>
+                  <div class="section-desc">主闭环核心岗位，负责接单、开始诊断、创建草稿、保存和提交审核。</div>
+                </div>
+                <div class="role-meta">
+                  <span class="tag">ROLE_M4_DIAGNOSIS</span>
+                  <span class="tag">USER_M4_DIAGNOSIS</span>
+                </div>
+              </div>
+              <div class="role-grid">
+                <div class="role-block"><h4>入口页面</h4><ul><li><code>/doctor-workflow/workbench</code></li><li><code>/doctor-workflow/report</code></li></ul></div>
+                <div class="role-block"><h4>前置条件</h4><ul><li>目标任务已分派给责任医生。</li><li>病例在工作台可访问。</li></ul></div>
+                <div class="role-block">
+                  <h4>操作步骤</h4>
+                  <ol>
+                    <li>接单并开始诊断任务。</li>
+                    <li>打开工作台，核对标本、蜡块、玻片和追踪摘要。</li>
+                    <li>创建病理报告，填写诊断内容并保存草稿。</li>
+                    <li>提交审核。</li>
+                    <li>若被驳回，回到报告页修改后重新提交。</li>
+                  </ol>
+                </div>
+                <div class="role-block">
+                  <h4>预期结果 / 失败点</h4>
+                  <ul>
+                    <li>预期：接单、开始、草稿保存、提交审核均成功。</li>
+                    <li>失败点：非责任医生操作、草稿创建失败、退回后无法重新提交。</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="checklist">
+                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确。</label>
+                <label class="check-item"><input type="checkbox" /> 接单、开始、保存草稿、提交审核后状态已推进。</label>
+                <label class="check-item"><input type="checkbox" /> 审核岗和追踪页可看到一致结果。</label>
+              </div>
+            </article>
+
+            <article class="role-card">
+              <div class="role-head">
+                <div>
+                  <div class="role-title">复核岗</div>
+                  <div class="section-desc">负责审核通过或驳回，必须验证驳回后的回流重提链路。</div>
+                </div>
+                <div class="role-meta">
+                  <span class="tag">ROLE_M4_REVIEW</span>
+                  <span class="tag">USER_M4_REVIEW</span>
+                </div>
+              </div>
+              <div class="role-grid">
+                <div class="role-block"><h4>入口页面</h4><ul><li><code>/doctor-workflow/report</code></li></ul></div>
+                <div class="role-block"><h4>前置条件</h4><ul><li>责任医生已提交审核。</li><li>当前用户是指定审核人。</li></ul></div>
+                <div class="role-block">
+                  <h4>操作步骤</h4>
+                  <ol>
+                    <li>打开待审核报告并执行一次“审核通过”。</li>
+                    <li>补充验证驳回链路时，使用另一测试病例执行一次驳回。</li>
+                    <li>确认诊断岗修改并重新提交后，再次执行审核通过。</li>
+                  </ol>
+                </div>
+                <div class="role-block">
+                  <h4>预期结果 / 失败点</h4>
+                  <ul>
+                    <li>预期：审核通过后可进入签发阶段。</li>
+                    <li>预期：驳回后诊断岗可以重新提交。</li>
+                    <li>失败点：非审核人可操作、驳回后流程中断。</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="checklist">
+                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确。</label>
+                <label class="check-item"><input type="checkbox" /> 审核通过或驳回后状态已推进。</label>
+                <label class="check-item"><input type="checkbox" /> 诊断岗、签发岗和追踪页可看到一致状态。</label>
+              </div>
+            </article>
+
+            <article class="role-card">
+              <div class="role-head">
+                <div>
+                  <div class="role-title">签发岗</div>
+                  <div class="section-desc">负责签发与发布，是 M4 主闭环的最终完成岗位。</div>
+                </div>
+                <div class="role-meta">
+                  <span class="tag">ROLE_M4_SIGN</span>
+                  <span class="tag">USER_M4_SIGN</span>
+                </div>
+              </div>
+              <div class="role-grid">
+                <div class="role-block"><h4>入口页面</h4><ul><li><code>/doctor-workflow/report</code></li><li><code>/doctor-workflow/revision</code></li></ul></div>
+                <div class="role-block"><h4>前置条件</h4><ul><li>报告已审核通过。</li><li>当前用户具备签发和发布权限。</li></ul></div>
+                <div class="role-block">
+                  <h4>操作步骤</h4>
+                  <ol>
+                    <li>打开通过审核的报告，执行签发。</li>
+                    <li>确认签发成功后继续执行发布。</li>
+                    <li>记录发布结果，并回看病例状态是否更新。</li>
+                  </ol>
+                </div>
+                <div class="role-block">
+                  <h4>预期结果 / 失败点</h4>
+                  <ul>
+                    <li>预期：签发后生成版本快照，发布后病例进入 <code>REPORT_PUBLISHED</code>。</li>
+                    <li>失败点：非签发人发布、签发成功但病例状态未关闭。</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="checklist">
+                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确。</label>
+                <label class="check-item"><input type="checkbox" /> 签发和发布后状态已推进。</label>
+                <label class="check-item"><input type="checkbox" /> 报告追踪与工作台可看到一致的已发布结果。</label>
+              </div>
+            </article>
+
+            <article class="role-card">
+              <div class="role-head">
+                <div>
+                  <div class="role-title">报告追踪岗</div>
+                  <div class="section-desc">核对主闭环、版本链和事件链是否完整，是最终验收视角。</div>
+                </div>
+                <div class="role-meta">
+                  <span class="tag">ROLE_M4_TRACKING</span>
+                  <span class="tag">USER_M4_TRACKING</span>
+                </div>
+              </div>
+              <div class="role-grid">
+                <div class="role-block"><h4>入口页面</h4><ul><li><code>/doctor-workflow/tracking</code></li></ul></div>
+                <div class="role-block"><h4>前置条件</h4><ul><li>主闭环已至少执行到发布。</li><li>已知病例 ID。</li></ul></div>
+                <div class="role-block">
+                  <h4>操作步骤</h4>
+                  <ol>
+                    <li>打开报告追踪页，按病例查询。</li>
+                    <li>核对诊断任务链、报告版本链、事件链、修订链和会诊链。</li>
+                    <li>确认责任医生、审核医生、签发时间和发布时间可回溯。</li>
+                  </ol>
+                </div>
+                <div class="role-block">
+                  <h4>预期结果 / 失败点</h4>
+                  <ul>
+                    <li>预期：从分派到发布的所有关键动作均可追踪。</li>
+                    <li>失败点：版本链缺失、事件链断裂、状态不同步。</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="checklist">
+                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确。</label>
+                <label class="check-item"><input type="checkbox" /> 查询后链路、版本和状态展示完整。</label>
+                <label class="check-item"><input type="checkbox" /> 与分配、工作台、报告页结果一致。</label>
+              </div>
+            </article>
+
+            <article class="role-card">
+              <div class="role-head">
+                <div>
+                  <div class="role-title">附加闭环：报告修订与会诊</div>
+                  <div class="section-desc">作为 M4 补充验证，建议在主闭环发布完成后用额外病例执行。</div>
+                </div>
+                <div class="role-meta">
+                  <span class="tag">修订：诊断岗 / 签发岗</span>
+                  <span class="tag">会诊：诊断岗 / 复核岗 / 签发岗</span>
+                </div>
+              </div>
+              <div class="role-grid">
+                <div class="role-block">
+                  <h4>修订闭环</h4>
+                  <ol>
+                    <li>已发布报告由诊断岗发起修订申请。</li>
+                    <li>签发岗或具审批权限角色执行批准或驳回。</li>
+                    <li>批准后确认当前报告进入新版本草稿。</li>
+                  </ol>
+                </div>
+                <div class="role-block">
+                  <h4>会诊闭环</h4>
+                  <ol>
+                    <li>诊断岗发起科内会诊并添加参与人。</li>
+                    <li>参与人录入会诊意见。</li>
+                    <li>主持人完成会诊，并回看工作台和追踪摘要。</li>
+                  </ol>
+                </div>
+                <div class="role-block">
+                  <h4>修订预期 / 失败点</h4>
+                  <ul>
+                    <li>预期：修订申请可审批通过或驳回。</li>
+                    <li>失败点：已发布报告无法进入新草稿、审批权限错误。</li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>会诊预期 / 失败点</h4>
+                  <ul>
+                    <li>预期：会诊意见和完成动作回流到摘要与追踪。</li>
+                    <li>失败点：非主持人可完成会诊、意见未回显。</li>
+                  </ul>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <div class="acceptance-grid">
+            <div class="acceptance-card">
+              <h4>最小闭环</h4>
+              <ul>
+                <li>分配任务给责任医生和审核医生</li>
+                <li>责任医生接单、开始、创建草稿并提交</li>
+                <li>审核通过后签发并发布</li>
+                <li>报告追踪页能看到完整链路</li>
+              </ul>
+            </div>
+            <div class="acceptance-card">
+              <h4>关键异常</h4>
+              <ul>
+                <li>审核驳回后重新提交流程</li>
+                <li>跨角色误用：非审核人审核、非签发人签发</li>
+                <li>发布后状态未关闭或版本链缺失</li>
+                <li>修订和会诊摘要未回流工作台/追踪页</li>
+              </ul>
+            </div>
+            <div class="acceptance-card">
+              <h4>未覆盖项</h4>
+              <ul>
+                <li>M4 病理医嘱执行前端独立页面</li>
+                <li>正式 PDF 渲染与打印</li>
+                <li>外部会诊与真实收费集成</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="note-strip">
+            <div class="note warn">
+              <strong>本次未纳入正式前端步骤</strong>
+              <code>M4</code> 病理医嘱执行虽然已有后端角色、权限和接口，但当前前端没有独立页面入口，本手册只把它列为后续补测项。
+            </div>
+            <div class="note info">
+              <strong>建议补测项</strong>
+              后续可单独补一份“医嘱执行岗”手册，按 <code>ROLE_M4_MEDICAL_ORDER_EXECUTE / USER_M4_ORDER_EXECUTE</code> 验证接单、完成与取消。
+            </div>
+            <div class="note ok">
+              <strong>主闭环完成标志</strong>
+              当报告已发布、病例状态闭环、追踪页版本链完整时，可判定 <code>M2 → M3 → M4</code> 主链走通。
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <section class="section" id="record">
+        <div class="section-header">
+          <div>
+            <div class="section-title">09. 结果记录清单</div>
+            <div class="section-desc">
+              建议测试人员现场勾选并补充备注，形成一次完整的执行留痕。
+            </div>
+          </div>
+        </div>
+
+        <table class="data-table record-table">
+          <thead>
+            <tr>
+              <th>模块 / 场景</th>
+              <th>执行岗位</th>
+              <th>是否通过</th>
+              <th>问题摘要</th>
+              <th>截图 / 单号 / 病例号</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>M1 用户管理流</td>
+              <td>病理管理员</td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td>M1 角色授权流</td>
+              <td>病理管理员</td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td>M2 主路径：申请单创建与登记</td>
+              <td>标本登记岗</td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td>M2 补充路径：第三方申请导入</td>
+              <td>申请导入岗</td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td>M2 固定核验</td>
+              <td>固定核验岗</td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td>M2 转运交接</td>
+              <td>转运交接岗</td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td>M2 标本签收</td>
+              <td>标本签收岗</td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td>M2 流程追踪</td>
+              <td>流程追踪岗</td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td>M3 技术主闭环</td>
+              <td>取材 / 脱水 / 包埋 / 切片 / 染色</td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td>M3 技术追踪</td>
+              <td>技术追踪岗</td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td>M3 返工补充链路</td>
+              <td>返工岗</td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td>M4 主闭环发布</td>
+              <td>分配 / 诊断 / 复核 / 签发 / 追踪</td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td>M4 修订闭环</td>
+              <td>诊断岗 / 签发岗</td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td>M4 会诊闭环</td>
+              <td>诊断岗 / 参与人 / 主持人</td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <footer class="footer">
+        <strong>固定保留说明</strong>
+        <p>
+          1. <code>M4</code> 病理医嘱执行前端独立页面缺失，仅记录为后续补测项。<br />
+          2. 真机打印、扫码枪、国产浏览器兼容性需要在目标环境补验。<br />
+          3. 需要真实 HIS/EMR 数据联调的导入路径，应单独记录数据来源、外部单号和错误信息。
+        </p>
+        <p style="margin-top: 16px">
+          返回顶部：
+          <a href="#top">查看文档首页</a>
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import type { ConsultationParticipantInput } from '../types/doctor-workflow';
 
-import { reactive, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 
 import { Page } from '@vben/common-ui';
+import { useAccessStore } from '@vben/stores';
 
 import {
   ElButton,
   ElDescriptions,
   ElDescriptionsItem,
+  ElEmpty,
   ElForm,
   ElFormItem,
   ElInput,
@@ -17,6 +19,7 @@ import {
   ElTableColumn,
 } from 'element-plus';
 
+import { M4_PERMISSION_CODES } from '../constants';
 import {
   commentConsultationParticipant,
   completeConsultation,
@@ -26,6 +29,8 @@ import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { getDoctorWorkflowPageErrorMessage } from '../utils/error';
 import { formatNullable } from '../utils/format';
 
+const accessStore = useAccessStore();
+
 const operating = ref(false);
 const participants = ref<ConsultationParticipantInput[]>([]);
 const lastResult = ref<{
@@ -33,6 +38,16 @@ const lastResult = ref<{
   consultationId?: null | string;
   status?: null | string;
 } | null>(null);
+
+const canCreateConsultation = computed(() =>
+  accessStore.accessCodes.includes(M4_PERMISSION_CODES.CONSULTATION_CREATE),
+);
+const canCommentConsultation = computed(() =>
+  accessStore.accessCodes.includes(M4_PERMISSION_CODES.CONSULTATION_COMMENT),
+);
+const canCompleteConsultation = computed(() =>
+  accessStore.accessCodes.includes(M4_PERMISSION_CODES.CONSULTATION_COMPLETE),
+);
 
 const createForm = reactive({
   caseId: '',
@@ -70,6 +85,10 @@ function ensureOperator(operatorName: string) {
 }
 
 function addParticipant() {
+  if (!canCreateConsultation.value) {
+    ElMessage.warning('当前账号没有发起会诊权限');
+    return;
+  }
   if (!createForm.participantUserId || !createForm.participantName) {
     ElMessage.warning('请填写参与人 ID 和姓名');
     return;
@@ -89,6 +108,10 @@ function removeParticipant(index: number) {
 }
 
 async function submitCreateConsultation() {
+  if (!canCreateConsultation.value) {
+    ElMessage.warning('当前账号没有发起会诊权限');
+    return;
+  }
   if (!createForm.caseId || participants.value.length === 0) {
     ElMessage.warning('请填写病例 ID 并至少添加一名参与人');
     return;
@@ -119,6 +142,10 @@ async function submitCreateConsultation() {
 }
 
 async function submitComment() {
+  if (!canCommentConsultation.value) {
+    ElMessage.warning('当前账号没有录入会诊意见权限');
+    return;
+  }
   if (!commentForm.consultationId || !commentForm.participantId || !commentForm.opinion) {
     ElMessage.warning('请填写会诊 ID、参与人 ID 和意见');
     return;
@@ -148,6 +175,10 @@ async function submitComment() {
 }
 
 async function submitComplete() {
+  if (!canCompleteConsultation.value) {
+    ElMessage.warning('当前账号没有完成会诊权限');
+    return;
+  }
   if (!completeForm.consultationId || !completeForm.opinion) {
     ElMessage.warning('请填写会诊 ID 和主持意见');
     return;
@@ -176,7 +207,11 @@ async function submitComplete() {
 <template>
   <Page title="科内会诊工作站" description="发起会诊、维护参与人、录入参与人意见并完成主持人总结。">
     <div class="flex flex-col gap-4">
-      <WorkflowSectionCard title="发起会诊">
+      <WorkflowSectionCard
+        v-if="canCreateConsultation"
+        title="发起会诊"
+        description="诊断岗可输入病例 ID 并维护参与人列表后发起会诊。"
+      >
         <ElForm label-width="100px">
           <ElFormItem label="病例ID">
             <ElInput v-model="createForm.caseId" />
@@ -224,7 +259,11 @@ async function submitComplete() {
         </ElTable>
       </WorkflowSectionCard>
 
-      <WorkflowSectionCard title="录入参与人意见">
+      <WorkflowSectionCard
+        v-if="canCommentConsultation"
+        title="录入参与人意见"
+        description="被邀请的会诊参与人可填写意见。"
+      >
         <ElForm label-width="100px">
           <ElFormItem label="会诊ID">
             <ElInput v-model="commentForm.consultationId" />
@@ -246,7 +285,11 @@ async function submitComplete() {
         </ElForm>
       </WorkflowSectionCard>
 
-      <WorkflowSectionCard title="完成会诊">
+      <WorkflowSectionCard
+        v-if="canCompleteConsultation"
+        title="完成会诊"
+        description="主持人可在汇总意见后完成会诊。"
+      >
         <ElForm label-width="100px">
           <ElFormItem label="会诊ID">
             <ElInput v-model="completeForm.consultationId" />
@@ -263,6 +306,17 @@ async function submitComplete() {
             </ElButton>
           </ElFormItem>
         </ElForm>
+      </WorkflowSectionCard>
+
+      <WorkflowSectionCard
+        v-if="
+          !canCreateConsultation &&
+          !canCommentConsultation &&
+          !canCompleteConsultation
+        "
+        title="当前无可用操作"
+      >
+        <ElEmpty description="当前账号没有会诊相关权限。" />
       </WorkflowSectionCard>
 
       <WorkflowSectionCard title="最近操作结果">

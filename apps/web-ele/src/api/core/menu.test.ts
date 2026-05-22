@@ -2,11 +2,18 @@ import type { MenuView } from '#/modules/system-management/types/system-manageme
 
 import { describe, expect, it } from 'vitest';
 
-import { M4_PERMISSION_CODES } from '#/modules/doctor-workflow/constants';
+import {
+  M4_CONSULTATION_PAGE_AUTHORITIES,
+  M4_PERMISSION_CODES,
+  M4_REPORT_PAGE_AUTHORITIES,
+  M4_REVISION_PAGE_AUTHORITIES,
+} from '#/modules/doctor-workflow/constants';
+import { M5_PERMISSION_CODES } from '#/modules/operation-support/constants';
 import { M1_PERMISSION_CODES } from '#/modules/system-management/constants';
 import { M2_PERMISSION_CODES } from '#/modules/specimen-workflow/constants';
 import { M3_PERMISSION_CODES } from '#/modules/technical-workflow/constants';
 import doctorWorkflowRoutes from '#/router/routes/modules/doctor-workflow';
+import operationSupportRoutes from '#/router/routes/modules/operation-support';
 import systemRoutes from '#/router/routes/modules/system';
 import technicalWorkflowRoutes from '#/router/routes/modules/technical-workflow';
 import workflowRoutes from '#/router/routes/modules/workflow';
@@ -273,6 +280,89 @@ describe('mapMenuViewsToRoutes', () => {
       }),
     ]);
   });
+
+  it('converts M5 operation support menu definitions into canonical frontend routes', () => {
+    const routes = mapMenuViewsToRoutes([
+      {
+        componentName: 'OperationSupportRoot',
+        enabled: true,
+        icon: 'm5',
+        id: 'MENU_M5_SUPPORT',
+        menuCode: 'M5_SUPPORT',
+        menuName: '归档与运营支撑',
+        menuType: 'DIRECTORY',
+        parentId: null,
+        path: '/operation-support',
+        permissionPrefix: 'm5',
+        sortOrder: 160,
+        visible: true,
+      },
+      {
+        componentName: 'ArchiveManagement',
+        enabled: true,
+        icon: 'archive',
+        id: 'MENU_M5_ARCHIVE',
+        menuCode: 'M5_ARCHIVE',
+        menuName: '归档管理',
+        menuType: 'MENU',
+        parentId: 'MENU_M5_SUPPORT',
+        path: '/api/v1/archive-records/search',
+        permissionPrefix: 'm5:archive',
+        sortOrder: 161,
+        visible: true,
+      },
+      {
+        componentName: 'ReagentLedger',
+        enabled: true,
+        icon: 'reagent',
+        id: 'MENU_M5_REAGENT',
+        menuCode: 'M5_REAGENT',
+        menuName: '试剂台账',
+        menuType: 'MENU',
+        parentId: 'MENU_M5_SUPPORT',
+        path: '/api/v1/reagents',
+        permissionPrefix: 'm5:reagent',
+        sortOrder: 162,
+        visible: true,
+      },
+      {
+        componentName: 'EquipmentLedger',
+        enabled: true,
+        icon: 'equipment',
+        id: 'MENU_M5_EQUIPMENT',
+        menuCode: 'M5_EQUIPMENT',
+        menuName: '设备台账',
+        menuType: 'MENU',
+        parentId: 'MENU_M5_SUPPORT',
+        path: '/api/v1/equipment-records',
+        permissionPrefix: 'm5:equipment',
+        sortOrder: 163,
+        visible: true,
+      },
+    ]);
+
+    expect(routes).toEqual([
+      expect.objectContaining({
+        name: 'OperationSupportRoot',
+        path: '/operation-support',
+        redirect: '/operation-support/archive',
+        children: [
+          expect.objectContaining({
+            name: 'ArchiveManagement',
+            path: '/operation-support/archive',
+          }),
+          expect.objectContaining({
+            name: 'ReagentLedger',
+            path: '/operation-support/reagents',
+          }),
+          expect.objectContaining({
+            name: 'EquipmentLedger',
+            path: '/operation-support/equipment',
+          }),
+        ],
+      }),
+    ]);
+  });
 });
 
 describe('getBackendFirstMenuRoutes', () => {
@@ -332,6 +422,25 @@ describe('getBackendFirstMenuRoutes', () => {
             expect.objectContaining({
               name: 'SystemUsers',
               path: '/system/users',
+            }),
+          ]),
+        }),
+        expect.objectContaining({
+          name: 'OperationSupportRoot',
+          path: '/operation-support',
+          redirect: '/operation-support/archive',
+          children: expect.arrayContaining([
+            expect.objectContaining({
+              name: 'ArchiveManagement',
+              path: '/operation-support/archive',
+            }),
+            expect.objectContaining({
+              name: 'ReagentLedger',
+              path: '/operation-support/reagents',
+            }),
+            expect.objectContaining({
+              name: 'EquipmentLedger',
+              path: '/operation-support/equipment',
             }),
           ]),
         }),
@@ -460,8 +569,49 @@ describe('doctor workflow route access', () => {
     expect(trackingRoute?.meta?.authority).toEqual([
       M4_PERMISSION_CODES.REPORT_TRACKING_QUERY,
     ]);
+    const reportRoute = workflowRoot?.children?.find(
+      (route) => route.name === 'PathologyReport',
+    );
+    const revisionRoute = workflowRoot?.children?.find(
+      (route) => route.name === 'ReportRevision',
+    );
+
+    expect(reportRoute?.meta?.authority).toEqual([...M4_REPORT_PAGE_AUTHORITIES]);
+    expect(revisionRoute?.meta?.authority).toEqual([
+      ...M4_REVISION_PAGE_AUTHORITIES,
+    ]);
     expect(consultationRoute?.meta?.authority).toEqual([
-      M4_PERMISSION_CODES.CONSULTATION_CREATE,
+      ...M4_CONSULTATION_PAGE_AUTHORITIES,
+    ]);
+  });
+});
+
+describe('operation support route access', () => {
+  it('keeps M5 pages registered with operation support authorities', () => {
+    const operationRoot = operationSupportRoutes.find(
+      (route) => route.name === 'OperationSupportRoot',
+    );
+    const archiveRoute = operationRoot?.children?.find(
+      (route) => route.name === 'ArchiveManagement',
+    );
+    const reagentRoute = operationRoot?.children?.find(
+      (route) => route.name === 'ReagentLedger',
+    );
+    const equipmentRoute = operationRoot?.children?.find(
+      (route) => route.name === 'EquipmentLedger',
+    );
+
+    expect(archiveRoute?.component).toBeTypeOf('function');
+    expect(reagentRoute?.component).toBeTypeOf('function');
+    expect(equipmentRoute?.component).toBeTypeOf('function');
+    expect(archiveRoute?.meta?.authority).toEqual([
+      M5_PERMISSION_CODES.ARCHIVE_QUERY,
+    ]);
+    expect(reagentRoute?.meta?.authority).toEqual([
+      M5_PERMISSION_CODES.REAGENT_QUERY,
+    ]);
+    expect(equipmentRoute?.meta?.authority).toEqual([
+      M5_PERMISSION_CODES.EQUIPMENT_QUERY,
     ]);
   });
 });

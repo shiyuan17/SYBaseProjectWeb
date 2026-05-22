@@ -1,0 +1,219 @@
+import type {
+  ArchiveActionResult,
+  ArchiveApplicationFormRequest,
+  ArchiveCabinetView,
+  ArchiveEmbeddingBoxRequest,
+  ArchivePositionView,
+  ArchiveRecordView,
+  ArchiveSlideRequest,
+  CreateArchiveCabinetRequest,
+  CreateEquipmentMaintenanceLogRequest,
+  CreateEquipmentRecordRequest,
+  CreateMaterialLoanRequest,
+  CreateReagentRequest,
+  CreateReagentStockRequest,
+  EquipmentMaintenanceLogView,
+  EquipmentRecordView,
+  EquipmentWarningView,
+  MaterialLoanQuery,
+  MaterialLoanView,
+  ReagentStockView,
+  ReagentView,
+  ReagentWarningView,
+  ReturnMaterialLoanRequest,
+  SearchArchiveRecordsQuery,
+  UpdateArchiveCabinetRequest,
+  UpdateEquipmentRecordRequest,
+  UpdateReagentRequest,
+  UpdateReagentStockRequest,
+} from '../types/operation-support';
+
+import { requestClient } from '#/api/request';
+
+function requestPatch<T>(url: string, data?: unknown) {
+  return requestClient.request<T>(url, {
+    data,
+    method: 'PATCH',
+  });
+}
+
+export function normalizeArrayResult<T>(value: null | T[] | undefined): T[] {
+  return Array.isArray(value) ? value : [];
+}
+
+export async function listArchiveCabinets() {
+  return normalizeArrayResult(
+    await requestClient.get<ArchiveCabinetView[] | null>('/v1/archive-cabinets'),
+  );
+}
+
+export async function createArchiveCabinet(data: CreateArchiveCabinetRequest) {
+  return requestClient.post<ArchiveCabinetView>('/v1/archive-cabinets', data);
+}
+
+export async function updateArchiveCabinet(
+  cabinetId: string,
+  data: UpdateArchiveCabinetRequest,
+) {
+  return requestPatch<ArchiveCabinetView>(`/v1/archive-cabinets/${cabinetId}`, data);
+}
+
+export async function listAvailableArchivePositions(params: {
+  cabinetId?: string;
+  cabinetType?: string;
+}) {
+  return normalizeArrayResult(
+    await requestClient.get<ArchivePositionView[] | null>(
+      '/v1/archive-positions/available',
+      { params },
+    ),
+  );
+}
+
+export async function archiveApplicationForm(data: ArchiveApplicationFormRequest) {
+  return requestClient.post<ArchiveActionResult>(
+    '/v1/archive/application-forms',
+    data,
+  );
+}
+
+export async function archiveEmbeddingBox(data: ArchiveEmbeddingBoxRequest) {
+  return requestClient.post<ArchiveActionResult>(
+    '/v1/archive/embedding-boxes',
+    data,
+  );
+}
+
+export async function archiveSlide(data: ArchiveSlideRequest) {
+  return requestClient.post<ArchiveActionResult>('/v1/archive/slides', data);
+}
+
+export async function searchArchiveRecords(params: SearchArchiveRecordsQuery) {
+  return normalizeArrayResult(
+    await requestClient.get<ArchiveRecordView[] | null>(
+      '/v1/archive-records/search',
+      { params },
+    ),
+  );
+}
+
+export async function listPendingMaterialLoans(params: MaterialLoanQuery) {
+  return normalizeArrayResult(
+    await requestClient.get<MaterialLoanView[] | null>('/v1/material-loans/pending', {
+      params,
+    }),
+  );
+}
+
+export async function createMaterialLoan(data: CreateMaterialLoanRequest) {
+  return requestClient.post<MaterialLoanView>('/v1/material-loans', data);
+}
+
+export async function returnMaterialLoan(
+  loanId: string,
+  data: ReturnMaterialLoanRequest,
+) {
+  return requestClient.post<MaterialLoanView>(
+    `/v1/material-loans/${loanId}/return`,
+    data,
+  );
+}
+
+export async function listReagents(params: {
+  enabled?: boolean;
+  keyword?: string;
+}) {
+  return normalizeArrayResult(
+    await requestClient.get<ReagentView[] | null>('/v1/reagents', { params }),
+  );
+}
+
+export async function createReagent(data: CreateReagentRequest) {
+  return requestClient.post<ReagentView>('/v1/reagents', data);
+}
+
+export async function updateReagent(reagentId: string, data: UpdateReagentRequest) {
+  return requestPatch<ReagentView>(`/v1/reagents/${reagentId}`, data);
+}
+
+export async function listReagentStocks(params: {
+  keyword?: string;
+  stockStatus?: string;
+}) {
+  return normalizeArrayResult(
+    await requestClient.get<ReagentStockView[] | null>('/v1/reagent-stocks', {
+      params,
+    }),
+  );
+}
+
+export async function createReagentStock(data: CreateReagentStockRequest) {
+  return requestClient.post<ReagentStockView>('/v1/reagent-stocks', data);
+}
+
+export async function updateReagentStock(
+  stockId: string,
+  data: UpdateReagentStockRequest,
+) {
+  return requestPatch<ReagentStockView>(`/v1/reagent-stocks/${stockId}`, data);
+}
+
+export async function listReagentWarnings() {
+  return normalizeArrayResult(
+    await requestClient.get<ReagentWarningView[] | null>(
+      '/v1/reagent-stocks/warnings',
+    ),
+  );
+}
+
+export async function listEquipmentRecords(params: {
+  equipmentStatus?: string;
+  keyword?: string;
+}) {
+  return normalizeArrayResult(
+    await requestClient.get<EquipmentRecordView[] | null>(
+      '/v1/equipment-records',
+      { params },
+    ),
+  );
+}
+
+export async function createEquipmentRecord(data: CreateEquipmentRecordRequest) {
+  return requestClient.post<EquipmentRecordView>('/v1/equipment-records', data);
+}
+
+export async function updateEquipmentRecord(
+  equipmentId: string,
+  data: UpdateEquipmentRecordRequest,
+) {
+  return requestPatch<EquipmentRecordView>(
+    `/v1/equipment-records/${equipmentId}`,
+    data,
+  );
+}
+
+export async function listEquipmentMaintenanceLogs(equipmentId: string) {
+  return normalizeArrayResult(
+    await requestClient.get<EquipmentMaintenanceLogView[] | null>(
+      `/v1/equipment-records/${equipmentId}/maintenance-logs`,
+    ),
+  );
+}
+
+export async function createEquipmentMaintenanceLog(
+  equipmentId: string,
+  data: CreateEquipmentMaintenanceLogRequest,
+) {
+  return requestClient.post<EquipmentMaintenanceLogView>(
+    `/v1/equipment-records/${equipmentId}/maintenance-logs`,
+    data,
+  );
+}
+
+export async function listEquipmentWarnings() {
+  return normalizeArrayResult(
+    await requestClient.get<EquipmentWarningView[] | null>(
+      '/v1/equipment-records/warnings',
+    ),
+  );
+}

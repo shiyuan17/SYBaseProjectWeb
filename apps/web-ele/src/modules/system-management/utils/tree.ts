@@ -86,3 +86,11 @@ export function getTreeExpandedKeys<T extends BasicTreeNode>(tree: T[]) {
   });
   return keys;
 }
+
+export function normalizeTreeCheckedKeys(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((item): item is string => typeof item === 'string');
+}

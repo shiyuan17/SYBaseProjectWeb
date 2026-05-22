@@ -5,10 +5,11 @@ import type {
   PendingDiagnosticTaskItem,
 } from '../types/doctor-workflow';
 
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
+import { useAccessStore } from '@vben/stores';
 
 import {
   ElAlert,
@@ -25,6 +26,10 @@ import {
   ElTag,
 } from 'element-plus';
 
+import {
+  M4_PERMISSION_CODES,
+  M4_REPORT_PAGE_AUTHORITIES,
+} from '../constants';
 import {
   acceptDiagnosticTask,
   getDiagnosticWorkbench,
@@ -43,11 +48,13 @@ import { firstQueryParam } from '../utils/route';
 
 const route = useRoute();
 const router = useRouter();
+const accessStore = useAccessStore();
 
 const loading = ref(false);
 const operating = ref(false);
 const pageError = ref('');
 const workbench = ref<DiagnosticWorkbenchView | null>(null);
+const queryCaseId = ref('');
 
 const actionForm = reactive<DiagnosticTaskActionRequest>({
   operatorName: '',
@@ -57,6 +64,16 @@ const actionForm = reactive<DiagnosticTaskActionRequest>({
 
 const caseId = computed(() => firstQueryParam(route.query.caseId));
 const currentTaskId = computed(() => firstQueryParam(route.query.taskId));
+const accessCodeSet = computed(() => new Set(accessStore.accessCodes));
+const canAccept = computed(() =>
+  accessCodeSet.value.has(M4_PERMISSION_CODES.ACCEPT),
+);
+const canStart = computed(() =>
+  accessCodeSet.value.has(M4_PERMISSION_CODES.START),
+);
+const canOpenReport = computed(() =>
+  M4_REPORT_PAGE_AUTHORITIES.some((code) => accessCodeSet.value.has(code)),
+);
 
 const selectedTask = computed(() => {
   if (!workbench.value) {
@@ -71,27 +88,66 @@ const selectedTask = computed(() => {
   );
 });
 
-async function loadWorkbench() {
-  if (!caseId.value) {
-    pageError.value = '缺少病例 ID，无法加载诊断工作台。';
+function clearWorkbench() {
+  pageError.value = '';
+  workbench.value = null;
+}
+
+async function loadWorkbench(targetCaseId = caseId.value) {
+  const normalizedCaseId = targetCaseId.trim();
+  if (!normalizedCaseId) {
+    clearWorkbench();
     return;
   }
 
   loading.value = true;
   pageError.value = '';
   try {
-    workbench.value = await getDiagnosticWorkbench(caseId.value);
+    workbench.value = await getDiagnosticWorkbench(normalizedCaseId);
   } catch (error) {
+    workbench.value = null;
     pageError.value = getDoctorWorkflowPageErrorMessage(error);
   } finally {
     loading.value = false;
   }
 }
 
+function searchWorkbench() {
+  const normalizedCaseId = queryCaseId.value.trim();
+  if (!normalizedCaseId) {
+    ElMessage.warning('请输入病例 ID');
+    return;
+  }
+
+  void router.replace({
+    path: '/doctor-workflow/workbench',
+    query: {
+      caseId: normalizedCaseId,
+    },
+  });
+}
+
+function handleReset() {
+  queryCaseId.value = '';
+  clearWorkbench();
+  void router.replace({
+    path: '/doctor-workflow/workbench',
+    query: {},
+  });
+}
+
 async function runTaskAction(
   action: 'accept' | 'start',
   task: PendingDiagnosticTaskItem | null,
 ) {
+  if (action === 'accept' && !canAccept.value) {
+    ElMessage.warning('当前账号没有接单权限');
+    return;
+  }
+  if (action === 'start' && !canStart.value) {
+    ElMessage.warning('当前账号没有开始诊断权限');
+    return;
+  }
   if (!task) {
     ElMessage.warning('当前病例没有可操作的诊断任务');
     return;
@@ -119,7 +175,7 @@ async function runTaskAction(
 }
 
 function goToReport() {
-  if (!caseId.value) {
+  if (!caseId.value || !canOpenReport.value) {
     return;
   }
 
@@ -134,7 +190,18 @@ function goToReport() {
   });
 }
 
-void loadWorkbench();
+watch(
+  caseId,
+  (value) => {
+    queryCaseId.value = value;
+    if (!value) {
+      clearWorkbench();
+      return;
+    }
+    void loadWorkbench(value);
+  },
+  { immediate: true },
+);
 </script>
 
 <template>
@@ -148,8 +215,35 @@ void loadWorkbench();
         type="error"
       />
 
+      <WorkflowSectionCard
+        title="病例查询"
+        description="支持从菜单独立进入后按病例 ID 查询，也支持从诊断分配页深链进入。"
+      >
+        <ElForm inline label-width="88px">
+          <ElFormItem label="病例 ID" required>
+            <ElInput
+              v-model="queryCaseId"
+              clearable
+              placeholder="请输入病例 ID"
+              style="width: 260px"
+              @keyup.enter="searchWorkbench"
+            />
+          </ElFormItem>
+          <ElFormItem>
+            <ElButton :loading="loading" type="primary" @click="searchWorkbench">
+              查询
+            </ElButton>
+            <ElButton @click="handleReset">重置</ElButton>
+          </ElFormItem>
+        </ElForm>
+      </WorkflowSectionCard>
+
       <WorkflowSectionCard title="病例摘要" description="病例、申请单、临床诊断和当前报告摘要。">
-        <ElEmpty v-if="!loading && !workbench" description="暂无病例数据" />
+        <ElEmpty
+          v-if="!caseId"
+          description="请输入病例 ID，或从诊断分配页进入当前病例工作台。"
+        />
+        <ElEmpty v-else-if="!loading && !workbench" description="暂无病例数据" />
         <ElDescriptions v-else :column="3" border>
           <ElDescriptionsItem label="病例ID">
             {{ formatNullable(workbench?.caseId) }}
@@ -189,133 +283,139 @@ void loadWorkbench();
         </ElDescriptions>
       </WorkflowSectionCard>
 
-      <WorkflowSectionCard title="任务操作" description="接单和开始诊断会调用诊断任务动作接口。">
-        <ElForm inline label-width="80px">
-          <ElFormItem label="操作人">
-            <ElInput
-              v-model="actionForm.operatorName"
-              placeholder="请输入操作人姓名"
-              style="width: 220px"
-            />
-          </ElFormItem>
-          <ElFormItem label="终端">
-            <ElInput
-              v-model="actionForm.terminalCode"
-              placeholder="终端编码"
-              style="width: 180px"
-            />
-          </ElFormItem>
-          <ElFormItem label="备注">
-            <ElInput
-              v-model="actionForm.remarks"
-              placeholder="备注"
-              style="width: 260px"
-            />
-          </ElFormItem>
-          <ElFormItem>
-            <ElButton
-              :loading="operating"
-              type="primary"
-              @click="runTaskAction('accept', selectedTask)"
-            >
-              接单
-            </ElButton>
-            <ElButton
-              :loading="operating"
-              type="success"
-              @click="runTaskAction('start', selectedTask)"
-            >
-              开始诊断
-            </ElButton>
-            <ElButton type="warning" @click="goToReport">报告编辑</ElButton>
-          </ElFormItem>
-        </ElForm>
-      </WorkflowSectionCard>
+      <template v-if="workbench">
+        <WorkflowSectionCard title="任务操作" description="接单和开始诊断会调用诊断任务动作接口。">
+          <ElForm inline label-width="80px">
+            <ElFormItem label="操作人">
+              <ElInput
+                v-model="actionForm.operatorName"
+                placeholder="请输入操作人姓名"
+                style="width: 220px"
+              />
+            </ElFormItem>
+            <ElFormItem label="终端">
+              <ElInput
+                v-model="actionForm.terminalCode"
+                placeholder="终端编码"
+                style="width: 180px"
+              />
+            </ElFormItem>
+            <ElFormItem label="备注">
+              <ElInput
+                v-model="actionForm.remarks"
+                placeholder="备注"
+                style="width: 260px"
+              />
+            </ElFormItem>
+            <ElFormItem>
+              <ElButton
+                v-if="canAccept"
+                :loading="operating"
+                type="primary"
+                @click="runTaskAction('accept', selectedTask)"
+              >
+                接单
+              </ElButton>
+              <ElButton
+                v-if="canStart"
+                :loading="operating"
+                type="success"
+                @click="runTaskAction('start', selectedTask)"
+              >
+                开始诊断
+              </ElButton>
+              <ElButton v-if="canOpenReport" type="warning" @click="goToReport">
+                报告编辑
+              </ElButton>
+            </ElFormItem>
+          </ElForm>
+        </WorkflowSectionCard>
 
-      <WorkflowSectionCard title="诊断任务链">
-        <ElTable v-loading="loading" :data="workbench?.diagnosticTasks ?? []" border>
-          <ElTableColumn label="任务号" min-width="180" prop="id" />
-          <ElTableColumn label="类型" min-width="100">
-            <template #default="{ row }">
-              {{ formatDiagnosticTaskType(row.taskType) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="状态" min-width="110">
-            <template #default="{ row }">
-              {{ formatDiagnosticTaskStatus(row.taskStatus) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="责任医生" min-width="140">
-            <template #default="{ row }">
-              {{ formatNullable(row.diagnosisDoctorName) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="初诊医生" min-width="140">
-            <template #default="{ row }">
-              {{ formatNullable(row.primaryDoctorName) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="审核医生" min-width="140">
-            <template #default="{ row }">
-              {{ formatNullable(row.reviewerName) }}
-            </template>
-          </ElTableColumn>
-        </ElTable>
-      </WorkflowSectionCard>
+        <WorkflowSectionCard title="诊断任务链">
+          <ElTable v-loading="loading" :data="workbench.diagnosticTasks" border>
+            <ElTableColumn label="任务号" min-width="180" prop="id" />
+            <ElTableColumn label="类型" min-width="100">
+              <template #default="{ row }">
+                {{ formatDiagnosticTaskType(row.taskType) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="状态" min-width="110">
+              <template #default="{ row }">
+                {{ formatDiagnosticTaskStatus(row.taskStatus) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="责任医生" min-width="140">
+              <template #default="{ row }">
+                {{ formatNullable(row.diagnosisDoctorName) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="初诊医生" min-width="140">
+              <template #default="{ row }">
+                {{ formatNullable(row.primaryDoctorName) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="审核医生" min-width="140">
+              <template #default="{ row }">
+                {{ formatNullable(row.reviewerName) }}
+              </template>
+            </ElTableColumn>
+          </ElTable>
+        </WorkflowSectionCard>
 
-      <WorkflowSectionCard title="标本 / 蜡块 / 玻片">
-        <div class="grid gap-4 xl:grid-cols-3">
-          <ElTable :data="workbench?.specimens ?? []" border>
-            <ElTableColumn label="标本号" prop="specimenNo" />
-            <ElTableColumn label="名称" prop="specimenName" />
-            <ElTableColumn label="状态" prop="specimenStatus" />
-          </ElTable>
-          <ElTable :data="workbench?.blocks ?? []" border>
-            <ElTableColumn label="蜡块号" prop="blockCode" />
-            <ElTableColumn label="包埋盒" prop="embeddingBoxNo" />
-            <ElTableColumn label="借阅" prop="loanStatus" />
-          </ElTable>
-          <ElTable :data="workbench?.slides ?? []" border>
-            <ElTableColumn label="玻片号" prop="slideNo" />
-            <ElTableColumn label="状态" prop="slideStatus" />
-            <ElTableColumn label="质控" prop="qualityStatus" />
-          </ElTable>
-        </div>
-      </WorkflowSectionCard>
+        <WorkflowSectionCard title="标本 / 蜡块 / 玻片">
+          <div class="grid gap-4 xl:grid-cols-3">
+            <ElTable :data="workbench.specimens" border>
+              <ElTableColumn label="标本号" prop="specimenNo" />
+              <ElTableColumn label="名称" prop="specimenName" />
+              <ElTableColumn label="状态" prop="specimenStatus" />
+            </ElTable>
+            <ElTable :data="workbench.blocks" border>
+              <ElTableColumn label="蜡块号" prop="blockCode" />
+              <ElTableColumn label="包埋盒" prop="embeddingBoxNo" />
+              <ElTableColumn label="借阅" prop="loanStatus" />
+            </ElTable>
+            <ElTable :data="workbench.slides" border>
+              <ElTableColumn label="玻片号" prop="slideNo" />
+              <ElTableColumn label="状态" prop="slideStatus" />
+              <ElTableColumn label="质控" prop="qualityStatus" />
+            </ElTable>
+          </div>
+        </WorkflowSectionCard>
 
-      <WorkflowSectionCard title="修订 / 会诊 / 医嘱摘要">
-        <div class="grid gap-4 xl:grid-cols-3">
-          <ElTable :data="workbench?.revisions ?? []" border>
-            <ElTableColumn label="修订单" prop="requestId" />
-            <ElTableColumn label="状态" prop="requestStatus" />
-            <ElTableColumn label="申请人" prop="requestedByName" />
-          </ElTable>
-          <ElTable :data="workbench?.consultations ?? []" border>
-            <ElTableColumn label="会诊单" prop="consultationId" />
-            <ElTableColumn label="状态" prop="status" />
-            <ElTableColumn label="主持人" prop="hostName" />
-          </ElTable>
-          <ElTable :data="workbench?.medicalOrders ?? []" border>
-            <ElTableColumn label="医嘱号" prop="orderNumber" />
-            <ElTableColumn label="类型" prop="orderType" />
-            <ElTableColumn label="状态" prop="status" />
-          </ElTable>
-        </div>
-      </WorkflowSectionCard>
+        <WorkflowSectionCard title="修订 / 会诊 / 医嘱摘要">
+          <div class="grid gap-4 xl:grid-cols-3">
+            <ElTable :data="workbench.revisions" border>
+              <ElTableColumn label="修订单" prop="requestId" />
+              <ElTableColumn label="状态" prop="requestStatus" />
+              <ElTableColumn label="申请人" prop="requestedByName" />
+            </ElTable>
+            <ElTable :data="workbench.consultations" border>
+              <ElTableColumn label="会诊单" prop="consultationId" />
+              <ElTableColumn label="状态" prop="status" />
+              <ElTableColumn label="主持人" prop="hostName" />
+            </ElTable>
+            <ElTable :data="workbench.medicalOrders" border>
+              <ElTableColumn label="医嘱号" prop="orderNumber" />
+              <ElTableColumn label="类型" prop="orderType" />
+              <ElTableColumn label="状态" prop="status" />
+            </ElTable>
+          </div>
+        </WorkflowSectionCard>
 
-      <WorkflowSectionCard title="技术与诊断事件">
-        <ElTable :data="workbench?.recentEvents ?? []" border>
-          <ElTableColumn label="节点" min-width="140" prop="nodeCode" />
-          <ElTableColumn label="事件" min-width="140" prop="eventType" />
-          <ElTableColumn label="状态" min-width="120" prop="eventStatus" />
-          <ElTableColumn label="时间" min-width="180">
-            <template #default="{ row }">
-              {{ formatDateTime(row.eventTime) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="内容" min-width="240" prop="eventContent" />
-        </ElTable>
-      </WorkflowSectionCard>
+        <WorkflowSectionCard title="技术与诊断事件">
+          <ElTable :data="workbench.recentEvents" border>
+            <ElTableColumn label="节点" min-width="140" prop="nodeCode" />
+            <ElTableColumn label="事件" min-width="140" prop="eventType" />
+            <ElTableColumn label="状态" min-width="120" prop="eventStatus" />
+            <ElTableColumn label="时间" min-width="180">
+              <template #default="{ row }">
+                {{ formatDateTime(row.eventTime) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="内容" min-width="240" prop="eventContent" />
+          </ElTable>
+        </WorkflowSectionCard>
+      </template>
     </div>
   </Page>
 </template>

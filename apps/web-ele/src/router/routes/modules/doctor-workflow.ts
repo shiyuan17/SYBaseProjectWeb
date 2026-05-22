@@ -1,6 +1,11 @@
 import type { RouteRecordRaw } from 'vue-router';
 
-import { M4_PERMISSION_CODES } from '#/modules/doctor-workflow/constants';
+import {
+  M4_CONSULTATION_PAGE_AUTHORITIES,
+  M4_PERMISSION_CODES,
+  M4_REPORT_PAGE_AUTHORITIES,
+  M4_REVISION_PAGE_AUTHORITIES,
+} from '#/modules/doctor-workflow/constants';
 
 const DOCTOR_WORKFLOW_AUTHORITIES = [
   M4_PERMISSION_CODES.DIAG_TASK_QUERY,
@@ -72,7 +77,7 @@ const routes: RouteRecordRaw[] = [
         component: () =>
           import('#/modules/doctor-workflow/views/PathologyReportView.vue'),
         meta: {
-          authority: [M4_PERMISSION_CODES.REPORT_CREATE],
+          authority: [...M4_REPORT_PAGE_AUTHORITIES],
           icon: 'carbon:report',
           title: '病理报告',
         },
@@ -94,7 +99,7 @@ const routes: RouteRecordRaw[] = [
         component: () =>
           import('#/modules/doctor-workflow/views/ReportRevisionView.vue'),
         meta: {
-          authority: [M4_PERMISSION_CODES.REVISION_REQUEST_CREATE],
+          authority: [...M4_REVISION_PAGE_AUTHORITIES],
           icon: 'carbon:document-preliminary',
           title: '报告修订',
         },
@@ -107,7 +112,7 @@ const routes: RouteRecordRaw[] = [
             '#/modules/doctor-workflow/views/ConsultationWorkstationView.vue'
           ),
         meta: {
-          authority: [M4_PERMISSION_CODES.CONSULTATION_CREATE],
+          authority: [...M4_CONSULTATION_PAGE_AUTHORITIES],
           icon: 'carbon:group',
           title: '会诊管理',
         },

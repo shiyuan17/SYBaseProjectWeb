@@ -1,8 +1,24 @@
 import { describe, expect, it } from 'vitest';
 
-import { M4_PERMISSION_CODES } from '#/modules/doctor-workflow/constants';
+import { hasAuthority } from '@vben/utils';
+
+import {
+  M4_CONSULTATION_PAGE_AUTHORITIES,
+  M4_PERMISSION_CODES,
+  M4_REPORT_PAGE_AUTHORITIES,
+  M4_REVISION_PAGE_AUTHORITIES,
+} from '#/modules/doctor-workflow/constants';
 
 import doctorWorkflowRoutes from './doctor-workflow';
+
+function getDoctorWorkflowChildRouteNames(accessCodes: string[]) {
+  const workflowRoot = doctorWorkflowRoutes.find(
+    (route) => route.name === 'DoctorWorkflowRoot',
+  );
+  return (workflowRoot?.children ?? [])
+    .filter((route) => hasAuthority(route, accessCodes))
+    .map((route) => route.name);
+}
 
 describe('doctor workflow routes', () => {
   it('registers M4 doctor workflow routes with permission authorities', () => {
@@ -42,17 +58,96 @@ describe('doctor workflow routes', () => {
     expect(workbenchRoute?.meta?.authority).toEqual([
       M4_PERMISSION_CODES.WORKBENCH_QUERY,
     ]);
-    expect(reportRoute?.meta?.authority).toEqual([
-      M4_PERMISSION_CODES.REPORT_CREATE,
-    ]);
+    expect(reportRoute?.meta?.authority).toEqual([...M4_REPORT_PAGE_AUTHORITIES]);
     expect(trackingRoute?.meta?.authority).toEqual([
       M4_PERMISSION_CODES.REPORT_TRACKING_QUERY,
     ]);
     expect(revisionRoute?.meta?.authority).toEqual([
-      M4_PERMISSION_CODES.REVISION_REQUEST_CREATE,
+      ...M4_REVISION_PAGE_AUTHORITIES,
     ]);
     expect(consultationRoute?.meta?.authority).toEqual([
-      M4_PERMISSION_CODES.CONSULTATION_CREATE,
+      ...M4_CONSULTATION_PAGE_AUTHORITIES,
     ]);
+  });
+
+  it('shows the expected M4 pages for diagnosis role permissions', () => {
+    const routeNames = getDoctorWorkflowChildRouteNames([
+      M4_PERMISSION_CODES.DIAG_TASK_QUERY,
+      M4_PERMISSION_CODES.ACCEPT,
+      M4_PERMISSION_CODES.START,
+      M4_PERMISSION_CODES.WORKBENCH_QUERY,
+      M4_PERMISSION_CODES.REPORT_CREATE,
+      M4_PERMISSION_CODES.REPORT_SUBMIT,
+      M4_PERMISSION_CODES.REVISION_REQUEST_CREATE,
+      M4_PERMISSION_CODES.CONSULTATION_CREATE,
+      M4_PERMISSION_CODES.CONSULTATION_COMMENT,
+      M4_PERMISSION_CODES.CONSULTATION_COMPLETE,
+    ]);
+
+    expect(routeNames).toEqual(
+      expect.arrayContaining([
+        'DiagnosisAssignment',
+        'DiagnosisWorkbench',
+        'PathologyReport',
+        'ReportRevision',
+        'Consultation',
+      ]),
+    );
+    expect(routeNames).not.toContain('ReportTracking');
+  });
+
+  it('shows the expected M4 pages for review role permissions', () => {
+    const routeNames = getDoctorWorkflowChildRouteNames([
+      M4_PERMISSION_CODES.DIAG_TASK_QUERY,
+      M4_PERMISSION_CODES.WORKBENCH_QUERY,
+      M4_PERMISSION_CODES.REPORT_REVIEW,
+      M4_PERMISSION_CODES.CONSULTATION_COMMENT,
+    ]);
+
+    expect(routeNames).toEqual(
+      expect.arrayContaining([
+        'DiagnosisAssignment',
+        'DiagnosisWorkbench',
+        'PathologyReport',
+        'Consultation',
+      ]),
+    );
+    expect(routeNames).not.toContain('ReportRevision');
+    expect(routeNames).not.toContain('ReportTracking');
+  });
+
+  it('shows the expected M4 pages for sign role permissions', () => {
+    const routeNames = getDoctorWorkflowChildRouteNames([
+      M4_PERMISSION_CODES.DIAG_TASK_QUERY,
+      M4_PERMISSION_CODES.WORKBENCH_QUERY,
+      M4_PERMISSION_CODES.REPORT_SIGN,
+      M4_PERMISSION_CODES.REPORT_PUBLISH,
+      M4_PERMISSION_CODES.REVISION_APPROVE,
+      M4_PERMISSION_CODES.CONSULTATION_COMMENT,
+    ]);
+
+    expect(routeNames).toEqual(
+      expect.arrayContaining([
+        'DiagnosisAssignment',
+        'DiagnosisWorkbench',
+        'PathologyReport',
+        'ReportRevision',
+        'Consultation',
+      ]),
+    );
+    expect(routeNames).not.toContain('ReportTracking');
+  });
+
+  it('shows only tracking page for tracking role permissions', () => {
+    const routeNames = getDoctorWorkflowChildRouteNames([
+      M4_PERMISSION_CODES.REPORT_TRACKING_QUERY,
+    ]);
+
+    expect(routeNames).toContain('ReportTracking');
+    expect(routeNames).not.toContain('DiagnosisAssignment');
+    expect(routeNames).not.toContain('DiagnosisWorkbench');
+    expect(routeNames).not.toContain('PathologyReport');
+    expect(routeNames).not.toContain('ReportRevision');
+    expect(routeNames).not.toContain('Consultation');
   });
 });

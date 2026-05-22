@@ -1,19 +1,22 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
+import { useAccessStore } from '@vben/stores';
 
 import {
   ElButton,
   ElDescriptions,
   ElDescriptionsItem,
+  ElEmpty,
   ElForm,
   ElFormItem,
   ElInput,
   ElMessage,
 } from 'element-plus';
 
+import { M4_PERMISSION_CODES } from '../constants';
 import {
   approveReportRevisionRequest,
   createReportRevisionRequest,
@@ -24,6 +27,7 @@ import { getDoctorWorkflowPageErrorMessage } from '../utils/error';
 import { formatNullable } from '../utils/format';
 
 const router = useRouter();
+const accessStore = useAccessStore();
 
 const operating = ref(false);
 const lastResult = ref<{
@@ -33,6 +37,13 @@ const lastResult = ref<{
   requestId?: null | string;
   requestStatus?: null | string;
 } | null>(null);
+
+const canCreateRevision = computed(() =>
+  accessStore.accessCodes.includes(M4_PERMISSION_CODES.REVISION_REQUEST_CREATE),
+);
+const canReviewRevision = computed(() =>
+  accessStore.accessCodes.includes(M4_PERMISSION_CODES.REVISION_APPROVE),
+);
 
 const createForm = reactive({
   operatorName: '',
@@ -59,6 +70,10 @@ function ensureOperator(operatorName: string) {
 }
 
 async function createRevision() {
+  if (!canCreateRevision.value) {
+    ElMessage.warning('当前账号没有发起修订权限');
+    return;
+  }
   if (!createForm.reportId || !createForm.requestReason) {
     ElMessage.warning('请填写报告 ID 和修订原因');
     return;
@@ -86,6 +101,10 @@ async function createRevision() {
 }
 
 async function reviewRevision(action: 'approve' | 'reject') {
+  if (!canReviewRevision.value) {
+    ElMessage.warning('当前账号没有审批修订权限');
+    return;
+  }
   if (!reviewForm.requestId) {
     ElMessage.warning('请填写修订申请 ID');
     return;
@@ -133,7 +152,11 @@ async function reviewRevision(action: 'approve' | 'reject') {
 <template>
   <Page title="报告修订管理" description="对已签发或已发布报告发起修订申请，并完成审批通过或驳回。">
     <div class="flex flex-col gap-4">
-      <WorkflowSectionCard title="发起修订申请">
+      <WorkflowSectionCard
+        v-if="canCreateRevision"
+        title="发起修订申请"
+        description="诊断岗可在此录入报告 ID 和修订原因，发起修订流程。"
+      >
         <ElForm label-width="100px">
           <ElFormItem label="报告ID">
             <ElInput v-model="createForm.reportId" />
@@ -158,7 +181,11 @@ async function reviewRevision(action: 'approve' | 'reject') {
         </ElForm>
       </WorkflowSectionCard>
 
-      <WorkflowSectionCard title="审批修订申请">
+      <WorkflowSectionCard
+        v-if="canReviewRevision"
+        title="审批修订申请"
+        description="签发岗可在此审批通过或驳回修订申请。"
+      >
         <ElForm label-width="100px">
           <ElFormItem label="申请ID">
             <ElInput v-model="reviewForm.requestId" />
@@ -189,6 +216,10 @@ async function reviewRevision(action: 'approve' | 'reject') {
             </ElButton>
           </ElFormItem>
         </ElForm>
+      </WorkflowSectionCard>
+
+      <WorkflowSectionCard v-if="!canCreateRevision && !canReviewRevision" title="当前无可用操作">
+        <ElEmpty description="当前账号没有报告修订相关权限。" />
       </WorkflowSectionCard>
 
       <WorkflowSectionCard title="最近操作结果">

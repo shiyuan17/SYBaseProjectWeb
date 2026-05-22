@@ -5,6 +5,7 @@ import { computed, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
+import { useAccessStore } from '@vben/stores';
 
 import {
   ElAlert,
@@ -27,6 +28,7 @@ import {
   listPendingDiagnosticTasks,
 } from '../api/doctor-workflow-service';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
+import { M4_PERMISSION_CODES } from '../constants';
 import {
   DEFAULT_PAGE_SIZE,
   DIAGNOSTIC_TASK_STATUS_OPTIONS,
@@ -41,6 +43,7 @@ import {
 } from '../utils/format';
 
 const router = useRouter();
+const accessStore = useAccessStore();
 
 const loading = ref(false);
 const assigning = ref(false);
@@ -84,6 +87,9 @@ const currentQuery = computed(() => ({
   taskStatus: filters.taskStatus || undefined,
   taskType: filters.taskType || undefined,
 }));
+const canAssign = computed(() =>
+  accessStore.accessCodes.includes(M4_PERMISSION_CODES.ASSIGN),
+);
 
 function getTaskStatusTagType(status?: null | string) {
   if (status === 'COMPLETED') {
@@ -127,6 +133,10 @@ function handleReset() {
 }
 
 function openAssignDialog(row: PendingDiagnosticTaskItem) {
+  if (!canAssign.value) {
+    ElMessage.warning('当前账号没有分派权限');
+    return;
+  }
   selectedTask.value = row;
   assignForm.diagnosisDoctorName = row.diagnosisDoctorName ?? '';
   assignForm.diagnosisDoctorUserId = row.diagnosisDoctorUserId ?? '';
@@ -277,7 +287,12 @@ void loadPendingData();
           <ElTableColumn fixed="right" label="操作" min-width="190">
             <template #default="{ row }">
               <div class="flex gap-2">
-                <ElButton link type="primary" @click="openAssignDialog(row)">
+                <ElButton
+                  v-if="canAssign"
+                  link
+                  type="primary"
+                  @click="openAssignDialog(row)"
+                >
                   分派
                 </ElButton>
                 <ElButton link type="success" @click="goToWorkbench(row)">

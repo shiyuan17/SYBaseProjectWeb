@@ -8,7 +8,7 @@ import type {
   UserLoginLog,
 } from '#/modules/system-management/types/system-management';
 
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 
 import { Page } from '@vben/common-ui';
 
@@ -137,9 +137,13 @@ const selectedRolesLabel = (user: SystemUser) =>
 
 const roleOptions = computed(() =>
   roles.value.map((item) => ({
-    label: `${item.roleName} (${item.roleCode})`,
+    label: item.roleName,
     value: item.id,
   })),
+);
+
+const selectedRoleOptions = computed(() =>
+  roleOptions.value.filter((item) => selectedRoleIds.value.includes(item.value)),
 );
 
 function resetUserForm() {
@@ -314,6 +318,12 @@ async function submitRoleAssignment() {
     roleSaving.value = false;
   }
 }
+
+watch(selectedRoleIds, (roleIds) => {
+  if (primaryRoleId.value && !roleIds.includes(primaryRoleId.value)) {
+    primaryRoleId.value = '';
+  }
+});
 
 async function openLogDrawer(user: SystemUser) {
   activeUserId.value = user.id;
@@ -620,36 +630,63 @@ onMounted(loadInitialData);
       </template>
     </ElDialog>
 
-    <ElDialog v-model="roleDialogVisible" title="分配角色" width="640px">
-      <div class="mb-4 text-sm text-muted-foreground">当前用户：{{ activeUserName }}</div>
-      <ElForm label-width="88px">
-        <ElFormItem label="角色列表">
-          <ElCheckboxGroup v-model="selectedRoleIds" class="grid gap-2">
-            <ElCheckbox
-              v-for="option in roleOptions"
-              :key="option.value"
-              :label="option.value"
+    <ElDialog v-model="roleDialogVisible" title="分配角色" width="960px">
+      <div class="space-y-5">
+        <div class="rounded-xl border border-border bg-card px-4 py-3">
+          <div class="text-sm text-muted-foreground">当前用户</div>
+          <div class="mt-1 text-base font-medium text-foreground">{{ activeUserName }}</div>
+        </div>
+
+        <ElForm label-position="top" class="space-y-5">
+          <ElFormItem class="!mb-0">
+            <template #label>
+              <div class="flex w-full items-center justify-between">
+                <span>角色列表</span>
+                <span class="text-xs font-normal text-muted-foreground">
+                  已选 {{ selectedRoleIds.length }} / {{ roleOptions.length }}
+                </span>
+              </div>
+            </template>
+            <div class="w-full rounded-xl border border-border/60 bg-card p-4">
+              <ElCheckboxGroup
+                v-model="selectedRoleIds"
+                class="grid max-h-[320px] gap-3 overflow-y-auto pr-1 md:grid-cols-3"
+              >
+                <ElCheckbox
+                  v-for="option in roleOptions"
+                  :key="option.value"
+                  :label="option.value"
+                  border
+                  class="!mx-0 !h-auto !items-start rounded-xl !px-4 !py-3"
+                >
+                  <span class="font-medium leading-5 text-foreground">
+                    {{ option.label }}
+                  </span>
+                </ElCheckbox>
+              </ElCheckboxGroup>
+            </div>
+          </ElFormItem>
+          <ElFormItem class="!mb-0" label="主角色">
+            <ElSelect
+              v-model="primaryRoleId"
+              :disabled="selectedRoleIds.length === 0"
+              clearable
+              placeholder="请选择主角色"
+              style="width: 100%"
             >
-              {{ option.label }}
-            </ElCheckbox>
-          </ElCheckboxGroup>
-        </ElFormItem>
-        <ElFormItem label="主角色">
-          <ElSelect
-            v-model="primaryRoleId"
-            clearable
-            placeholder="请选择主角色"
-            style="width: 100%"
-          >
-            <ElOption
-              v-for="option in roleOptions.filter((item) => selectedRoleIds.includes(item.value))"
-              :key="option.value"
-              :label="option.label"
-              :value="option.value"
-            />
-          </ElSelect>
-        </ElFormItem>
-      </ElForm>
+              <ElOption
+                v-for="option in selectedRoleOptions"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
+            </ElSelect>
+            <div class="mt-2 text-xs text-muted-foreground">
+              主角色用于标记用户当前默认身份，请先在上方勾选候选角色。
+            </div>
+          </ElFormItem>
+        </ElForm>
+      </div>
 
       <template #footer>
         <ElButton @click="roleDialogVisible = false">取消</ElButton>

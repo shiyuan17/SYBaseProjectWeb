@@ -370,6 +370,46 @@ const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] = [
       },
     ],
   },
+  {
+    component: 'BasicLayout',
+    meta: {
+      icon: 'carbon:archive',
+      order: 160,
+      title: '归档与运营支撑',
+    },
+    name: 'OperationSupportRoot',
+    path: '/operation-support',
+    redirect: '/operation-support/archive',
+    children: [
+      {
+        component: '/modules/operation-support/views/ArchiveManagementView',
+        meta: {
+          icon: 'carbon:archive',
+          title: '归档管理',
+        },
+        name: 'ArchiveManagement',
+        path: '/operation-support/archive',
+      },
+      {
+        component: '/modules/operation-support/views/ReagentLedgerView',
+        meta: {
+          icon: 'carbon:chemistry',
+          title: '试剂台账',
+        },
+        name: 'ReagentLedger',
+        path: '/operation-support/reagents',
+      },
+      {
+        component: '/modules/operation-support/views/EquipmentLedgerView',
+        meta: {
+          icon: 'carbon:tools',
+          title: '设备台账',
+        },
+        name: 'EquipmentLedger',
+        path: '/operation-support/equipment',
+      },
+    ],
+  },
 ];
 
 const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[] = [
@@ -708,6 +748,41 @@ const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[] = [
     path: '/doctor-workflow/consultation',
     pathAliases: ['/doctor-workflow/consultation', '/api/v1/consultations'],
     routeName: 'Consultation',
+  },
+  {
+    component: 'BasicLayout',
+    componentAliases: ['OperationSupportRoot'],
+    menuCodes: ['M5_SUPPORT'],
+    path: '/operation-support',
+    pathAliases: ['/operation-support'],
+    routeName: 'OperationSupportRoot',
+  },
+  {
+    component: '/modules/operation-support/views/ArchiveManagementView',
+    componentAliases: ['ArchiveManagement'],
+    menuCodes: ['M5_ARCHIVE'],
+    path: '/operation-support/archive',
+    pathAliases: [
+      '/operation-support/archive',
+      '/api/v1/archive-records/search',
+    ],
+    routeName: 'ArchiveManagement',
+  },
+  {
+    component: '/modules/operation-support/views/ReagentLedgerView',
+    componentAliases: ['ReagentLedger'],
+    menuCodes: ['M5_REAGENT'],
+    path: '/operation-support/reagents',
+    pathAliases: ['/operation-support/reagents', '/api/v1/reagents'],
+    routeName: 'ReagentLedger',
+  },
+  {
+    component: '/modules/operation-support/views/EquipmentLedgerView',
+    componentAliases: ['EquipmentLedger'],
+    menuCodes: ['M5_EQUIPMENT'],
+    path: '/operation-support/equipment',
+    pathAliases: ['/operation-support/equipment', '/api/v1/equipment-records'],
+    routeName: 'EquipmentLedger',
   },
 ];
 

@@ -10,7 +10,7 @@ import type {
   UpdateRoleRequest,
 } from '#/modules/system-management/types/system-management';
 
-import { computed, nextTick, onMounted, reactive, ref, useTemplateRef } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 
 import { Page } from '@vben/common-ui';
 
@@ -31,6 +31,8 @@ import {
   ElSwitch,
   ElTable,
   ElTableColumn,
+  ElTabPane,
+  ElTabs,
   ElTree,
 } from 'element-plus';
 
@@ -50,12 +52,51 @@ import SystemLoadError from '../components/SystemLoadError.vue';
 import SystemSectionCard from '../components/SystemSectionCard.vue';
 import SystemStatusTag from '../components/SystemStatusTag.vue';
 import { M1_PERMISSION_CODES } from '../constants';
+import {
+  formatDataScopeLabel,
+  formatRoleTypeLabel,
+  formatStatScopeLabel,
+} from '../utils/authorization-display';
 import { getSystemPageErrorMessage } from '../utils/error';
 import { formatDateTime, formatNullable } from '../utils/format';
+import { normalizeTreeCheckedKeys } from '../utils/tree';
 
 interface MenuTreeNode extends MenuView {
   children: MenuTreeNode[];
 }
+
+interface MenuTreeCheckState {
+  checkedKeys?: unknown;
+}
+
+type AuthorizationPanelKey = 'menus' | 'permissions' | 'stats' | 'topics';
+
+const AUTHORIZATION_PANELS: Array<{
+  description: string;
+  key: AuthorizationPanelKey;
+  label: string;
+}> = [
+  {
+    description: '角色可见菜单与页面入口控制。',
+    key: 'menus',
+    label: '菜单授权',
+  },
+  {
+    description: '控制页面内按钮与接口动作权限码。',
+    key: 'permissions',
+    label: '权限授权',
+  },
+  {
+    description: '为角色配置可订阅或处理的消息主题。',
+    key: 'topics',
+    label: '消息主题',
+  },
+  {
+    description: '为统计分类设置默认可见范围。',
+    key: 'stats',
+    label: '统计范围',
+  },
+];
 
 const loading = ref(false);
 const authLoading = ref(false);
@@ -68,11 +109,18 @@ const menus = ref<MenuView[]>([]);
 const permissions = ref<PermissionView[]>([]);
 const topics = ref<MessageTopicView[]>([]);
 const statCategories = ref<StatCategoryView[]>([]);
-const menuTreeRef = useTemplateRef<any>('menuTreeRef');
+const activeAuthorizationPanel = ref<AuthorizationPanelKey>('menus');
+const menuTreeDefaultCheckedKeys = ref<string[]>([]);
+const menuTreeReloadKey = ref(0);
 
 const activeRoleId = ref('');
 const activeRole = computed(() =>
   roles.value.find((item) => item.id === activeRoleId.value) ?? null,
+);
+const activeAuthorizationPanelMeta = computed<(typeof AUTHORIZATION_PANELS)[number]>(
+  () =>
+    AUTHORIZATION_PANELS.find((panel) => panel.key === activeAuthorizationPanel.value)
+    ?? AUTHORIZATION_PANELS[0]!,
 );
 
 const roleDialogVisible = ref(false);
@@ -96,7 +144,7 @@ const authState = reactive<RoleAuthorizationView>({
 });
 
 const statScopeOptions = [
-  { label: '全部', value: 'ALL' },
+  { label: '全部数据', value: 'ALL' },
   { label: '本科室', value: 'DEPARTMENT' },
   { label: '本人', value: 'SELF' },
   { label: '自定义', value: 'CUSTOM' },
@@ -131,6 +179,14 @@ function resetRoleForm() {
   });
 }
 
+function syncMenuAuthorization(menuIds: string[]) {
+  const normalizedMenuIds = normalizeTreeCheckedKeys(menuIds);
+
+  authState.menuIds = normalizedMenuIds;
+  menuTreeDefaultCheckedKeys.value = normalizedMenuIds;
+  menuTreeReloadKey.value += 1;
+}
+
 async function loadRolesData() {
   loading.value = true;
   pageError.value = '';
@@ -147,9 +203,11 @@ async function loadRolesData() {
     permissions.value = permissionList;
     topics.value = topicList;
     statCategories.value = statList;
+
     const firstRole = roleList[0];
-    if (!activeRoleId.value && firstRole) {
-      activeRoleId.value = firstRole.id;
+    const hasActiveRole = roleList.some((item) => item.id === activeRoleId.value);
+    if (!hasActiveRole) {
+      activeRoleId.value = firstRole?.id ?? '';
     }
   } catch (error) {
     pageError.value = getSystemPageErrorMessage(error);
@@ -166,17 +224,19 @@ async function loadRoleAuthorization(roleId: string) {
   try {
     const authorization = await getRoleAuthorization(roleId);
     authState.roleId = authorization.roleId;
-    authState.menuIds = authorization.menuIds;
+    syncMenuAuthorization(authorization.menuIds);
     authState.permissionIds = authorization.permissionIds;
     authState.topicIds = authorization.topicIds;
     authState.statScopes = { ...authorization.statScopes };
-    await nextTick();
-    menuTreeRef.value?.setCheckedKeys(authorization.menuIds);
   } catch (error) {
     pageError.value = getSystemPageErrorMessage(error);
   } finally {
     authLoading.value = false;
   }
+}
+
+function handleMenuCheck(_: MenuTreeNode, checkedState: MenuTreeCheckState) {
+  authState.menuIds = normalizeTreeCheckedKeys(checkedState.checkedKeys);
 }
 
 function openCreateDialog() {
@@ -238,9 +298,7 @@ async function handleDeleteRole(role: RoleView) {
     activeRoleId.value = '';
   }
   await loadRolesData();
-  const firstRole = roles.value[0];
-  if (firstRole) {
-    activeRoleId.value = firstRole.id;
+  if (activeRoleId.value) {
     await loadRoleAuthorization(activeRoleId.value);
   }
 }
@@ -251,7 +309,7 @@ async function handleRoleChange(roleId: string) {
 }
 
 function handleCurrentRoleChange(role?: RoleView) {
-  if (role) {
+  if (role && role.id !== activeRoleId.value) {
     void handleRoleChange(role.id);
   }
 }
@@ -263,7 +321,7 @@ async function saveAuthorization() {
   authSaving.value = true;
   try {
     const payload: UpdateRoleAuthorizationRequest = {
-      menuIds: menuTreeRef.value?.getCheckedKeys(false) ?? [],
+      menuIds: authState.menuIds,
       permissionIds: authState.permissionIds,
       statScopes: authState.statScopes,
       topicIds: authState.topicIds,
@@ -289,7 +347,7 @@ onMounted(loadInitialData);
 <template>
   <Page
     title="角色授权"
-    description="维护角色基础信息、菜单权限、消息主题和统计范围授权。"
+    description="维护角色基础信息，并按菜单、权限、消息主题和统计范围四个维度配置授权。"
   >
     <SystemLoadError
       v-if="pageError"
@@ -297,7 +355,7 @@ onMounted(loadInitialData);
       class="mb-4"
       @retry="loadInitialData"
     />
-    <div class="grid gap-4 xl:grid-cols-[360px_minmax(0,1fr)]">
+    <div class="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
       <SystemSectionCard title="角色列表" description="创建、维护角色，并切换右侧授权配置。">
         <template #extra>
           <ElButton
@@ -311,14 +369,15 @@ onMounted(loadInitialData);
 
         <ElTable
           v-loading="loading"
+          :current-row-key="activeRoleId"
           :data="roles"
           border
           highlight-current-row
+          row-key="id"
           @current-change="handleCurrentRoleChange"
           @row-click="handleCurrentRoleChange"
         >
-          <ElTableColumn label="角色名称" min-width="140" prop="roleName" />
-          <ElTableColumn label="角色编码" min-width="150" prop="roleCode" />
+          <ElTableColumn label="角色名称" min-width="150" prop="roleName" />
           <ElTableColumn label="状态" width="90">
             <template #default="scope">
               <SystemStatusTag v-if="scope?.row" :enabled="scope.row.enabled" />
@@ -351,8 +410,8 @@ onMounted(loadInitialData);
 
       <div class="flex flex-col gap-4">
         <SystemSectionCard
-          title="角色信息"
-          description="展示当前角色基础信息，授权保存按四个维度拆分为菜单、权限、消息主题和统计范围。"
+          title="角色摘要"
+          description="展示当前角色基础信息，并在下方切换不同授权分区。"
         >
           <template #extra>
             <ElButton
@@ -370,17 +429,14 @@ onMounted(loadInitialData);
             <ElDescriptionsItem label="角色名称">
               {{ activeRole.roleName }}
             </ElDescriptionsItem>
-            <ElDescriptionsItem label="角色编码">
-              {{ activeRole.roleCode }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="角色类型">
-              {{ formatNullable(activeRole.roleType) }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="数据范围">
-              {{ formatNullable(activeRole.dataScope) }}
-            </ElDescriptionsItem>
             <ElDescriptionsItem label="状态">
               <SystemStatusTag :enabled="activeRole.enabled" />
+            </ElDescriptionsItem>
+            <ElDescriptionsItem label="角色类型">
+              {{ formatRoleTypeLabel(activeRole.roleType) }}
+            </ElDescriptionsItem>
+            <ElDescriptionsItem label="数据范围">
+              {{ formatDataScopeLabel(activeRole.dataScope) }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="更新时间">
               {{ formatDateTime(activeRole.updatedAt) }}
@@ -392,73 +448,130 @@ onMounted(loadInitialData);
           <ElEmpty v-else description="请先选择左侧角色" />
         </SystemSectionCard>
 
-        <div class="grid gap-4 2xl:grid-cols-2">
-          <SystemSectionCard title="菜单授权" description="角色可见菜单与页面入口控制。">
-            <ElTree
-              v-if="activeRole"
-              ref="menuTreeRef"
-              v-loading="authLoading"
-              :data="menuTree"
-              default-expand-all
-              node-key="id"
-              show-checkbox
-              :props="{ children: 'children', label: 'menuName' }"
-            />
-            <ElEmpty v-else description="请选择角色后查看授权" />
-          </SystemSectionCard>
+        <SystemSectionCard
+          :title="activeAuthorizationPanelMeta.label"
+          :description="activeAuthorizationPanelMeta.description"
+        >
+          <ElTabs v-model="activeAuthorizationPanel" class="role-auth-tabs">
+            <ElTabPane
+              v-for="panel in AUTHORIZATION_PANELS"
+              :key="panel.key"
+              :label="panel.label"
+              :name="panel.key"
+            >
+              <template v-if="activeRole">
+                <div
+                  v-if="panel.key === 'menus'"
+                  v-loading="authLoading"
+                  class="max-h-[560px] overflow-auto rounded-xl border border-border/60 p-4"
+                >
+                  <ElTree
+                    :key="menuTreeReloadKey"
+                    :data="menuTree"
+                    :default-checked-keys="menuTreeDefaultCheckedKeys"
+                    default-expand-all
+                    node-key="id"
+                    show-checkbox
+                    :props="{ children: 'children', label: 'menuName' }"
+                    @check="handleMenuCheck"
+                  />
+                </div>
 
-          <SystemSectionCard title="权限授权" description="控制页面内按钮与接口动作权限码。">
-            <ElCheckboxGroup v-if="activeRole" v-model="authState.permissionIds" class="grid gap-2">
-              <ElCheckbox
-                v-for="permission in permissions"
-                :key="permission.id"
-                :label="permission.id"
-              >
-                {{ permission.permissionName }} ({{ permission.permissionCode }})
-              </ElCheckbox>
-            </ElCheckboxGroup>
-            <ElEmpty v-else description="请选择角色后查看授权" />
-          </SystemSectionCard>
-
-          <SystemSectionCard title="消息主题" description="控制角色可订阅或处理的消息主题。">
-            <ElCheckboxGroup v-if="activeRole" v-model="authState.topicIds" class="grid gap-2">
-              <ElCheckbox v-for="topic in topics" :key="topic.id" :label="topic.id">
-                {{ topic.topicName }} ({{ topic.topicCode }})
-              </ElCheckbox>
-            </ElCheckboxGroup>
-            <ElEmpty v-else description="请选择角色后查看授权" />
-          </SystemSectionCard>
-
-          <SystemSectionCard title="统计范围" description="为每个统计分类保存角色级的默认统计视角。">
-            <ElTable v-if="activeRole" :data="statCategories" border>
-              <ElTableColumn label="统计分类" min-width="180">
-                <template #default="scope">
-                  <template v-if="scope?.row">
-                    {{ scope.row.statName }} ({{ scope.row.statCode }})
-                  </template>
-                </template>
-              </ElTableColumn>
-              <ElTableColumn label="范围" min-width="180">
-                <template #default="scope">
-                  <ElSelect
-                    v-if="scope?.row"
-                    v-model="authState.statScopes[scope.row.id]"
-                    clearable
-                    placeholder="请选择范围"
+                <ElCheckboxGroup
+                  v-else-if="panel.key === 'permissions'"
+                  v-model="authState.permissionIds"
+                  class="grid gap-3 lg:grid-cols-2"
+                >
+                  <ElCheckbox
+                    v-for="permission in permissions"
+                    :key="permission.id"
+                    :label="permission.id"
+                    border
+                    class="!mx-0 !h-auto !items-start rounded-xl !px-4 !py-3"
                   >
-                    <ElOption
-                      v-for="option in statScopeOptions"
-                      :key="option.value"
-                      :label="option.label"
-                      :value="option.value"
-                    />
-                  </ElSelect>
-                </template>
-              </ElTableColumn>
-            </ElTable>
-            <ElEmpty v-else description="请选择角色后查看授权" />
-          </SystemSectionCard>
-        </div>
+                    <div class="flex flex-col gap-1 leading-5">
+                      <span class="font-medium text-foreground">
+                        {{ permission.permissionName }}
+                      </span>
+                      <span class="text-xs text-muted-foreground">
+                        {{ permission.permissionCode }}
+                      </span>
+                    </div>
+                  </ElCheckbox>
+                </ElCheckboxGroup>
+
+                <ElCheckboxGroup
+                  v-else-if="panel.key === 'topics'"
+                  v-model="authState.topicIds"
+                  class="grid gap-3 lg:grid-cols-2"
+                >
+                  <ElCheckbox
+                    v-for="topic in topics"
+                    :key="topic.id"
+                    :label="topic.id"
+                    border
+                    class="!mx-0 !h-auto !items-start rounded-xl !px-4 !py-3"
+                  >
+                    <div class="flex flex-col gap-1 leading-5">
+                      <span class="font-medium text-foreground">
+                        {{ topic.topicName }}
+                      </span>
+                      <span class="text-xs text-muted-foreground">
+                        {{ topic.topicCode }}
+                      </span>
+                    </div>
+                  </ElCheckbox>
+                </ElCheckboxGroup>
+
+                <ElTable
+                  v-else
+                  :data="statCategories"
+                  border
+                >
+                  <ElTableColumn label="统计分类" min-width="220">
+                    <template #default="scope">
+                      <template v-if="scope?.row">
+                        <div class="flex flex-col gap-1">
+                          <span class="font-medium text-foreground">
+                            {{ scope.row.statName }}
+                          </span>
+                          <span class="text-xs text-muted-foreground">
+                            {{ scope.row.statCode }}
+                          </span>
+                        </div>
+                      </template>
+                    </template>
+                  </ElTableColumn>
+                  <ElTableColumn label="范围" min-width="220">
+                    <template #default="scope">
+                      <ElSelect
+                        v-if="scope?.row"
+                        v-model="authState.statScopes[scope.row.id]"
+                        clearable
+                        placeholder="请选择范围"
+                      >
+                        <ElOption
+                          v-for="option in statScopeOptions"
+                          :key="option.value"
+                          :label="option.label"
+                          :value="option.value"
+                        />
+                      </ElSelect>
+                    </template>
+                  </ElTableColumn>
+                  <ElTableColumn label="当前说明" min-width="160">
+                    <template #default="scope">
+                      <template v-if="scope?.row">
+                        {{ formatStatScopeLabel(authState.statScopes[scope.row.id]) }}
+                      </template>
+                    </template>
+                  </ElTableColumn>
+                </ElTable>
+              </template>
+              <ElEmpty v-else description="请选择角色后查看授权内容" />
+            </ElTabPane>
+          </ElTabs>
+        </SystemSectionCard>
       </div>
     </div>
 
