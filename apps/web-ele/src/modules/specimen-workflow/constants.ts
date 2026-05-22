@@ -11,8 +11,20 @@ export const M2_PERMISSION_CODES = {
 
 export const M2_WORKFLOW_ROUTE_ITEMS = [
   {
+    code: M2_PERMISSION_CODES.APPLICATION_DETAIL_QUERY,
+    path: '/workflow/application-list',
+  },
+  {
+    code: M2_PERMISSION_CODES.APPLICATION_CREATE,
+    path: '/workflow/application-list',
+  },
+  {
+    code: M2_PERMISSION_CODES.CLINICAL_IMPORT,
+    path: '/workflow/application-list',
+  },
+  {
     code: M2_PERMISSION_CODES.SPECIMEN_REGISTER,
-    path: '/workflow/clinical-register',
+    path: '/workflow/specimen-management',
   },
   {
     code: M2_PERMISSION_CODES.FIXATION_VERIFY,
@@ -54,6 +66,12 @@ export const FIXATION_STATUS_OPTIONS = [
 export const APPLICATION_TYPE_OPTIONS = [
   { label: '常规', value: 'ROUTINE' },
   { label: '冰冻', value: 'FROZEN' },
+] as const;
+
+export const APPLICATION_FORM_STATUS_OPTIONS = [
+  { label: '未上传', value: 'NOT_UPLOADED' },
+  { label: '已上传', value: 'UPLOADED' },
+  { label: '已归档', value: 'ARCHIVED' },
 ] as const;
 
 export const DEFAULT_PAGE_SIZE = 20;

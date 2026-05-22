@@ -165,17 +165,48 @@ const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] = [
     meta: {
       icon: 'carbon:flow',
       order: 120,
-      title: '临床送检工作流',
+      title: '临床送检',
     },
     name: 'WorkflowRoot',
     path: '/workflow',
-    redirect: '/workflow/clinical-register',
+    redirect: '/workflow/entry',
     children: [
+      {
+        component: '/modules/specimen-workflow/views/WorkflowEntryView',
+        meta: {
+          hideInBreadcrumb: true,
+          hideInMenu: true,
+          hideInTab: true,
+          title: '工作流入口',
+        },
+        name: 'WorkflowEntry',
+        path: '/workflow/entry',
+      },
+      {
+        component: '/modules/specimen-workflow/views/ApplicationListView',
+        meta: {
+          icon: 'carbon:list-boxes',
+          title: '申请管理',
+        },
+        name: 'ApplicationList',
+        path: '/workflow/application-list',
+      },
+      {
+        component: '/modules/specimen-workflow/views/SpecimenManagementView',
+        meta: {
+          icon: 'carbon:catalog',
+          title: '标本管理',
+        },
+        name: 'SpecimenManagement',
+        path: '/workflow/specimen-management',
+      },
       {
         component: '/modules/specimen-workflow/views/ClinicalRegisterView',
         meta: {
-          icon: 'carbon:catalog',
-          title: '临床登记',
+          hideInBreadcrumb: true,
+          hideInMenu: true,
+          hideInTab: true,
+          title: '标本管理',
         },
         name: 'ClinicalRegister',
         path: '/workflow/clinical-register',
@@ -559,16 +590,25 @@ const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[] = [
     routeName: 'WorkflowRoot',
   },
   {
-    component: '/modules/specimen-workflow/views/ClinicalRegisterView',
-    componentAliases: ['ClinicalRegister'],
+    component: '/modules/specimen-workflow/views/ApplicationListView',
+    componentAliases: ['ApplicationList'],
+    menuCodes: ['M2_APPLICATION_LIST'],
+    path: '/workflow/application-list',
+    pathAliases: ['/workflow/application-list', '/api/v1/applications'],
+    routeName: 'ApplicationList',
+  },
+  {
+    component: '/modules/specimen-workflow/views/SpecimenManagementView',
+    componentAliases: ['ClinicalRegister', 'SpecimenManagement'],
     menuCodes: ['M2_CLINICAL'],
-    path: '/workflow/clinical-register',
+    path: '/workflow/specimen-management',
     pathAliases: [
+      '/workflow/specimen-management',
       '/workflow/clinical-register',
       '/api/v1/specimens/register',
       '/api/v1/specimen-collections',
     ],
-    routeName: 'ClinicalRegister',
+    routeName: 'SpecimenManagement',
   },
   {
     component: '/modules/specimen-workflow/views/FixationVerifyView',

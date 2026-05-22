@@ -1,4 +1,6 @@
 import type {
+  ApplicationListQuery,
+  ApplicationPage,
   ApplicationCreateRequest,
   ApplicationCreateResult,
   ApplicationDetailView,
@@ -38,6 +40,7 @@ type TrackingQueryResponse = Omit<TrackingQueryView, 'recentEvents'> & {
   recentEvents?: TrackingEventView[];
 };
 
+type ApplicationPageResponse = ApplicationPage;
 type PendingSpecimenPageResponse = PendingSpecimenPage;
 type PendingTransportOrderPageResponse = PendingTransportOrderPage;
 
@@ -60,6 +63,15 @@ export function mapPendingSpecimenPageResponse(
   };
 }
 
+export function mapApplicationPageResponse(
+  response: ApplicationPageResponse,
+): ApplicationPage {
+  return {
+    ...response,
+    items: response.items ?? [],
+  };
+}
+
 export function mapPendingTransportOrderPageResponse(
   response: PendingTransportOrderPageResponse,
 ): PendingTransportOrderPage {
@@ -71,6 +83,13 @@ export function mapPendingTransportOrderPageResponse(
 
 export async function createApplication(data: ApplicationCreateRequest) {
   return requestClient.post<ApplicationCreateResult>('/v1/applications', data);
+}
+
+export async function listApplications(params: ApplicationListQuery) {
+  const response = await requestClient.get<ApplicationPageResponse>('/v1/applications', {
+    params,
+  });
+  return mapApplicationPageResponse(response);
 }
 
 export async function importClinicalApplication(

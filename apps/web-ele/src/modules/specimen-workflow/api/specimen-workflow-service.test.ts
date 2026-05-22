@@ -7,6 +7,8 @@ import { requestClient } from '#/api/request';
 import {
   getApplicationDetail,
   importClinicalApplication,
+  listApplications,
+  mapApplicationPageResponse,
   mapApplicationDetailResponse,
   mapPendingSpecimenPageResponse,
   mapPendingTransportOrderPageResponse,
@@ -150,6 +152,22 @@ describe('specimen-workflow-service mappers', () => {
     expect(mapped.total).toBe(3);
     expect(mapped.items).toEqual([]);
   });
+
+  it('fills omitted application list items', () => {
+    const mapped = mapApplicationPageResponse({
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
+
+    expect(mapped).toEqual({
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
+  });
 });
 
 describe('specimen-workflow-service requests', () => {
@@ -182,5 +200,35 @@ describe('specimen-workflow-service requests', () => {
     });
 
     expect(requestClientMock.get).toHaveBeenCalledWith('/v1/applications/APP-ID');
+  });
+
+  it('uses unified requestClient for application list query', async () => {
+    requestClientMock.get.mockResolvedValue({
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
+
+    await expect(
+      listApplications({
+        applicationNo: 'APP',
+        page: 1,
+        size: 20,
+      }),
+    ).resolves.toEqual({
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
+
+    expect(requestClientMock.get).toHaveBeenCalledWith('/v1/applications', {
+      params: {
+        applicationNo: 'APP',
+        page: 1,
+        size: 20,
+      },
+    });
   });
 });

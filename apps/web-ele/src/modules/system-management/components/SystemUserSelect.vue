@@ -41,7 +41,7 @@ const options = ref<UserOption[]>([]);
 function mapUserOption(user: SystemUser): UserOption {
   return {
     id: user.id,
-    label: `${user.name}（${user.loginName}）`,
+    label: user.name,
     loginName: user.loginName,
     name: user.name,
   };

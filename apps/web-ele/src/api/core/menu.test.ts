@@ -112,7 +112,7 @@ describe('mapMenuViewsToRoutes', () => {
         icon: 'flow',
         id: 'MENU_M2_WORKFLOW',
         menuCode: 'M2_WORKFLOW',
-        menuName: '临床送检工作流',
+        menuName: '临床送检',
         menuType: 'DIRECTORY',
         parentId: null,
         path: '/workflow',
@@ -121,17 +121,31 @@ describe('mapMenuViewsToRoutes', () => {
         visible: true,
       },
       {
+        componentName: 'ApplicationList',
+        enabled: true,
+        icon: 'list',
+        id: 'MENU_M2_APPLICATION_LIST',
+        menuCode: 'M2_APPLICATION_LIST',
+        menuName: '申请管理',
+        menuType: 'MENU',
+        parentId: 'MENU_M2_WORKFLOW',
+        path: '/api/v1/applications',
+        permissionPrefix: 'm2:application-list',
+        sortOrder: 110,
+        visible: true,
+      },
+      {
         componentName: 'ClinicalRegister',
         enabled: true,
         icon: 'catalog',
         id: 'MENU_M2_CLINICAL',
         menuCode: 'M2_CLINICAL',
-        menuName: '临床登记',
+        menuName: '标本管理',
         menuType: 'MENU',
         parentId: 'MENU_M2_WORKFLOW',
         path: '/api/v1/specimens/register',
         permissionPrefix: 'm2:clinical',
-        sortOrder: 110,
+        sortOrder: 111,
         visible: true,
       },
     ]);
@@ -140,11 +154,15 @@ describe('mapMenuViewsToRoutes', () => {
       expect.objectContaining({
         name: 'WorkflowRoot',
         path: '/workflow',
-        redirect: '/workflow/clinical-register',
+        redirect: '/workflow/application-list',
         children: [
           expect.objectContaining({
-            name: 'ClinicalRegister',
-            path: '/workflow/clinical-register',
+            name: 'ApplicationList',
+            path: '/workflow/application-list',
+          }),
+          expect.objectContaining({
+            name: 'SpecimenManagement',
+            path: '/workflow/specimen-management',
           }),
         ],
       }),
@@ -511,11 +529,20 @@ describe('system management route access', () => {
 describe('workflow route access', () => {
   it('keeps M2 pages registered with workstation authorities', () => {
     const workflowRoot = workflowRoutes.find((route) => route.name === 'WorkflowRoot');
+    const listRoute = workflowRoot?.children?.find(
+      (route) => route.name === 'ApplicationList',
+    );
     const trackingRoute = workflowRoot?.children?.find(
       (route) => route.name === 'TrackingQuery',
     );
 
+    expect(listRoute?.component).toBeTypeOf('function');
     expect(trackingRoute?.component).toBeTypeOf('function');
+    expect(listRoute?.meta?.authority).toEqual([
+      M2_PERMISSION_CODES.APPLICATION_DETAIL_QUERY,
+      M2_PERMISSION_CODES.APPLICATION_CREATE,
+      M2_PERMISSION_CODES.CLINICAL_IMPORT,
+    ]);
     expect(trackingRoute?.meta?.authority).toEqual([
       M2_PERMISSION_CODES.SPECIMEN_TRACKING_QUERY,
     ]);

@@ -88,6 +88,43 @@ export interface ApplicationDetailView {
 
 export type TrackingQueryView = ApplicationDetailView;
 
+export interface ApplicationListQuery {
+  applicationFormStatus?: null | string;
+  applicationNo?: null | string;
+  applicationType?: null | string;
+  dateFrom?: null | string;
+  dateTo?: null | string;
+  page: number;
+  patientName?: null | string;
+  size: number;
+  submittingDepartmentId?: null | string;
+}
+
+export interface ApplicationListItem {
+  abnormalFlag: boolean;
+  applicationDate: null | string;
+  applicationFormStatus: null | string;
+  applicationNo: string;
+  applicationType: null | string;
+  createdAt: null | string;
+  currentNode: null | string;
+  id: string;
+  patientAge: null | string;
+  patientGender: null | string;
+  patientName: null | string;
+  submissionDate: null | string;
+  submittingDepartmentName: null | string;
+  submittingDoctorName: null | string;
+  updatedAt: null | string;
+}
+
+export interface ApplicationPage {
+  items: ApplicationListItem[];
+  page: number;
+  size: number;
+  total: number;
+}
+
 export interface SpecimenRegisterItemRequest {
   barcode?: null | string;
   clinicalSymptom?: null | string;

@@ -154,10 +154,7 @@ function handleOperatorChange(user: null | { id: string; name: string }) {
 </script>
 
 <template>
-  <Page
-    title="固定核对"
-    description="按待处理清单或扫码入口执行开始固定、完成固定，提交成功后工作台自动刷新。"
-  >
+  <Page title="固定核对">
     <div class="flex flex-col gap-4">
       <ElAlert
         v-if="pageError"

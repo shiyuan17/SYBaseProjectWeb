@@ -4,7 +4,8 @@ import type {
   TrackingQueryView as WorkflowTrackingQueryView,
 } from '../types/specimen-workflow';
 
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
 import { useAccessStore } from '@vben/stores';
@@ -52,6 +53,7 @@ import {
 } from '../utils/format';
 
 const accessStore = useAccessStore();
+const route = useRoute();
 
 const pageError = ref('');
 const loading = ref(false);
@@ -69,7 +71,7 @@ async function submitQuery() {
   const value = queryValue.value.trim();
   if (!value) {
     ElMessage.warning(
-      queryMode.value === 'application' ? '请输入申请单号' : '请输入标本条码',
+      queryMode.value === 'application' ? '请输入申请单编号 / ID' : '请输入标本条码',
     );
     return;
   }
@@ -89,6 +91,30 @@ async function submitQuery() {
     loading.value = false;
   }
 }
+
+function normalizeRouteQueryValue(value: unknown) {
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return typeof value[0] === 'string' ? value[0] : '';
+  }
+  return '';
+}
+
+watch(
+  () => route.query.applicationId,
+  (value) => {
+    const applicationId = normalizeRouteQueryValue(value).trim();
+    if (!applicationId) {
+      return;
+    }
+    queryMode.value = 'application';
+    queryValue.value = applicationId;
+    void submitQuery();
+  },
+  { immediate: true },
+);
 
 async function loadFullApplicationDetail() {
   if (!trackingResult.value) {
@@ -110,10 +136,7 @@ async function loadFullApplicationDetail() {
 </script>
 
 <template>
-  <Page
-    title="追踪查询"
-    description="支持按申请单号或标本条码查询送检追踪，固定展示基本信息、标本列表、时间线事件与异常标记。"
-  >
+  <Page title="追踪查询">
     <div class="flex flex-col gap-4">
       <ElAlert
         v-if="pageError"
@@ -144,11 +167,11 @@ async function loadFullApplicationDetail() {
               <ElRadioButton label="barcode" value="barcode">按标本条码</ElRadioButton>
             </ElRadioGroup>
           </ElFormItem>
-          <ElFormItem :label="queryMode === 'application' ? '申请单号' : '标本条码'">
+          <ElFormItem :label="queryMode === 'application' ? '申请单编号' : '标本条码'">
             <ElInput
               v-model="queryValue"
               :placeholder="
-                queryMode === 'application' ? '请输入申请单号' : '请输入标本条码'
+                queryMode === 'application' ? '请输入申请单编号 / ID' : '请输入标本条码'
               "
               clearable
               style="width: 340px"

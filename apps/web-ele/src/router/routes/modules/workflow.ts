@@ -3,6 +3,9 @@ import type { RouteRecordRaw } from 'vue-router';
 import { M2_PERMISSION_CODES } from '#/modules/specimen-workflow/constants';
 
 const WORKFLOW_AUTHORITIES = [
+  M2_PERMISSION_CODES.APPLICATION_DETAIL_QUERY,
+  M2_PERMISSION_CODES.APPLICATION_CREATE,
+  M2_PERMISSION_CODES.CLINICAL_IMPORT,
   M2_PERMISSION_CODES.SPECIMEN_REGISTER,
   M2_PERMISSION_CODES.FIXATION_VERIFY,
   M2_PERMISSION_CODES.TRANSPORT_HANDOVER,
@@ -16,7 +19,7 @@ const routes: RouteRecordRaw[] = [
       authority: WORKFLOW_AUTHORITIES,
       icon: 'carbon:flow',
       order: 120,
-      title: '临床送检工作流',
+      title: '临床送检',
     },
     name: 'WorkflowRoot',
     path: '/workflow',
@@ -37,11 +40,39 @@ const routes: RouteRecordRaw[] = [
       },
       {
         component: () =>
-          import('#/modules/specimen-workflow/views/ClinicalRegisterView.vue'),
+          import('#/modules/specimen-workflow/views/ApplicationListView.vue'),
+        meta: {
+          authority: [
+            M2_PERMISSION_CODES.APPLICATION_DETAIL_QUERY,
+            M2_PERMISSION_CODES.APPLICATION_CREATE,
+            M2_PERMISSION_CODES.CLINICAL_IMPORT,
+          ],
+          icon: 'carbon:list-boxes',
+          title: '申请管理',
+        },
+        name: 'ApplicationList',
+        path: '/workflow/application-list',
+      },
+      {
+        component: () =>
+          import('#/modules/specimen-workflow/views/SpecimenManagementView.vue'),
         meta: {
           authority: [M2_PERMISSION_CODES.SPECIMEN_REGISTER],
           icon: 'carbon:catalog',
-          title: '临床登记',
+          title: '标本管理',
+        },
+        name: 'SpecimenManagement',
+        path: '/workflow/specimen-management',
+      },
+      {
+        component: () =>
+          import('#/modules/specimen-workflow/views/ClinicalRegisterView.vue'),
+        meta: {
+          authority: [M2_PERMISSION_CODES.SPECIMEN_REGISTER],
+          hideInBreadcrumb: true,
+          hideInMenu: true,
+          hideInTab: true,
+          title: '标本管理',
         },
         name: 'ClinicalRegister',
         path: '/workflow/clinical-register',

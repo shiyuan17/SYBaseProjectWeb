@@ -265,7 +265,7 @@ onMounted(loadData);
       width="640px"
     >
       <ElForm label-width="96px">
-        <ElFormItem label="父节点 ID">
+        <ElFormItem v-if="dialogMode === 'edit'" label="父节点 ID">
           <ElInput v-model="form.parentId" placeholder="根节点可留空" />
         </ElFormItem>
         <ElFormItem label="部位名称" required>

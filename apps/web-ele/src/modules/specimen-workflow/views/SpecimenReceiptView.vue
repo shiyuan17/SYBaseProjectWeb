@@ -341,10 +341,7 @@ void loadPendingData();
 </script>
 
 <template>
-  <Page
-    title="标本接收"
-    description="主流程按转运单接收，补充提供条码直收入口，并展示病例编号、病理号和接收结果。"
-  >
+  <Page title="标本接收">
     <div class="flex flex-col gap-4">
       <ElAlert
         v-if="pageError"

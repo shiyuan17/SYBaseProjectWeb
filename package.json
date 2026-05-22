@@ -31,9 +31,14 @@
     "postinstall": "pnpm -r run stub --if-present",
     "preinstall": "npx only-allow pnpm",
     "preview": "turbo-run preview",
+    "test:system-management": "node ./scripts/test-system-management.mjs all",
+    "test:system-management:backend": "node ./scripts/test-system-management.mjs backend",
+    "test:system-management:frontend": "node ./scripts/test-system-management.mjs frontend",
     "test:unit": "vitest run --dom"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "catalog:",
+    "@vitest/ui": "catalog:",
     "@changesets/changelog-github": "catalog:",
     "@changesets/cli": "catalog:",
     "@tsdown/css": "catalog:",

@@ -377,7 +377,7 @@ onMounted(loadData);
       width="620px"
     >
       <ElForm label-width="96px">
-        <ElFormItem label="父分类 ID">
+        <ElFormItem v-if="categoryDialogMode === 'edit'" label="父分类 ID">
           <ElInput v-model="categoryForm.parentId" placeholder="根分类可留空" />
         </ElFormItem>
         <ElFormItem label="分类名称" required>

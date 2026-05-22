@@ -337,10 +337,7 @@ void loadOrders();
 </script>
 
 <template>
-  <Page
-    title="转运交接"
-    description="创建转运单、打印交接凭据并完成交接，工作台列表对接新增的转运单分页查询接口。"
-  >
+  <Page title="转运交接">
     <div class="flex flex-col gap-4">
       <ElAlert
         v-if="pageError"
