@@ -303,6 +303,73 @@ const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] = [
       },
     ],
   },
+  {
+    component: 'BasicLayout',
+    meta: {
+      icon: 'carbon:stethoscope',
+      order: 140,
+      title: '医生诊断工作流',
+    },
+    name: 'DoctorWorkflowRoot',
+    path: '/doctor-workflow',
+    redirect: '/doctor-workflow/assignment',
+    children: [
+      {
+        component: '/modules/doctor-workflow/views/DiagnosisAssignmentView',
+        meta: {
+          icon: 'carbon:user-multiple',
+          title: '诊断分配',
+        },
+        name: 'DiagnosisAssignment',
+        path: '/doctor-workflow/assignment',
+      },
+      {
+        component: '/modules/doctor-workflow/views/DiagnosisWorkbenchView',
+        meta: {
+          icon: 'carbon:workspace',
+          title: '诊断工作台',
+        },
+        name: 'DiagnosisWorkbench',
+        path: '/doctor-workflow/workbench',
+      },
+      {
+        component: '/modules/doctor-workflow/views/PathologyReportView',
+        meta: {
+          icon: 'carbon:report',
+          title: '病理报告',
+        },
+        name: 'PathologyReport',
+        path: '/doctor-workflow/report',
+      },
+      {
+        component: '/modules/doctor-workflow/views/ReportTrackingView',
+        meta: {
+          icon: 'carbon:search',
+          title: '报告追踪',
+        },
+        name: 'ReportTracking',
+        path: '/doctor-workflow/tracking',
+      },
+      {
+        component: '/modules/doctor-workflow/views/ReportRevisionView',
+        meta: {
+          icon: 'carbon:document-preliminary',
+          title: '报告修订',
+        },
+        name: 'ReportRevision',
+        path: '/doctor-workflow/revision',
+      },
+      {
+        component: '/modules/doctor-workflow/views/ConsultationWorkstationView',
+        meta: {
+          icon: 'carbon:group',
+          title: '会诊管理',
+        },
+        name: 'Consultation',
+        path: '/doctor-workflow/consultation',
+      },
+    ],
+  },
 ];
 
 const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[] = [
@@ -573,6 +640,74 @@ const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[] = [
       '/api/v1/pathology-cases/{id}/technical-tracking',
     ],
     routeName: 'TechnicalTracking',
+  },
+  {
+    component: 'BasicLayout',
+    componentAliases: ['DoctorWorkflowRoot'],
+    menuCodes: ['M4_WORKFLOW'],
+    path: '/doctor-workflow',
+    pathAliases: ['/doctor-workflow'],
+    routeName: 'DoctorWorkflowRoot',
+  },
+  {
+    component: '/modules/doctor-workflow/views/DiagnosisAssignmentView',
+    componentAliases: ['DiagnosisAssignment'],
+    menuCodes: ['M4_ASSIGN'],
+    path: '/doctor-workflow/assignment',
+    pathAliases: [
+      '/doctor-workflow/assignment',
+      '/api/v1/diagnostic-tasks/pending',
+    ],
+    routeName: 'DiagnosisAssignment',
+  },
+  {
+    component: '/modules/doctor-workflow/views/DiagnosisWorkbenchView',
+    componentAliases: ['DiagnosisWorkbench'],
+    menuCodes: ['M4_WORKBENCH'],
+    path: '/doctor-workflow/workbench',
+    pathAliases: [
+      '/doctor-workflow/workbench',
+      '/api/v1/pathology-cases/{id}/diagnostic-workbench',
+    ],
+    routeName: 'DiagnosisWorkbench',
+  },
+  {
+    component: '/modules/doctor-workflow/views/PathologyReportView',
+    componentAliases: ['PathologyReport'],
+    menuCodes: ['M4_REPORT'],
+    path: '/doctor-workflow/report',
+    pathAliases: ['/doctor-workflow/report', '/api/v1/pathology-reports'],
+    routeName: 'PathologyReport',
+  },
+  {
+    component: '/modules/doctor-workflow/views/ReportTrackingView',
+    componentAliases: ['ReportTracking'],
+    menuCodes: ['M4_TRACKING'],
+    path: '/doctor-workflow/tracking',
+    pathAliases: [
+      '/doctor-workflow/tracking',
+      '/api/v1/pathology-cases/{id}/report-tracking',
+    ],
+    routeName: 'ReportTracking',
+  },
+  {
+    component: '/modules/doctor-workflow/views/ReportRevisionView',
+    componentAliases: ['ReportRevision'],
+    menuCodes: ['M4_REVISION'],
+    path: '/doctor-workflow/revision',
+    pathAliases: [
+      '/doctor-workflow/revision',
+      '/api/v1/report-revision-requests',
+    ],
+    routeName: 'ReportRevision',
+  },
+  {
+    component: '/modules/doctor-workflow/views/ConsultationWorkstationView',
+    componentAliases: ['Consultation'],
+    menuCodes: ['M4_CONSULTATION'],
+    path: '/doctor-workflow/consultation',
+    pathAliases: ['/doctor-workflow/consultation', '/api/v1/consultations'],
+    routeName: 'Consultation',
   },
 ];
 

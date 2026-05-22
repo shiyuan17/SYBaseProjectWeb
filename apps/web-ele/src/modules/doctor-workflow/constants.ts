@@ -1,0 +1,71 @@
+export const M4_PERMISSION_CODES = {
+  ACCEPT: 'PERM_M4_ACCEPT',
+  ASSIGN: 'PERM_M4_ASSIGN',
+  CONSULTATION_COMMENT: 'PERM_M4_CONSULTATION_COMMENT',
+  CONSULTATION_COMPLETE: 'PERM_M4_CONSULTATION_COMPLETE',
+  CONSULTATION_CREATE: 'PERM_M4_CONSULTATION_CREATE',
+  DIAG_TASK_QUERY: 'PERM_M4_DIAG_TASK_QUERY',
+  REPORT_CREATE: 'PERM_M4_REPORT_CREATE',
+  REPORT_PUBLISH: 'PERM_M4_REPORT_PUBLISH',
+  REPORT_REVIEW: 'PERM_M4_REPORT_REVIEW',
+  REPORT_SIGN: 'PERM_M4_REPORT_SIGN',
+  REPORT_SUBMIT: 'PERM_M4_REPORT_SUBMIT',
+  REPORT_TRACKING_QUERY: 'PERM_M4_REPORT_TRACKING_QUERY',
+  REVISION_APPROVE: 'PERM_M4_REVISION_APPROVE',
+  REVISION_REQUEST_CREATE: 'PERM_M4_REVISION_REQUEST_CREATE',
+  START: 'PERM_M4_START',
+  WORKBENCH_QUERY: 'PERM_M4_WORKBENCH_QUERY',
+} as const;
+
+export const M4_WORKFLOW_ROUTE_ITEMS = [
+  {
+    code: M4_PERMISSION_CODES.DIAG_TASK_QUERY,
+    path: '/doctor-workflow/assignment',
+  },
+  {
+    code: M4_PERMISSION_CODES.WORKBENCH_QUERY,
+    path: '/doctor-workflow/workbench',
+  },
+  {
+    code: M4_PERMISSION_CODES.REPORT_CREATE,
+    path: '/doctor-workflow/report',
+  },
+  {
+    code: M4_PERMISSION_CODES.REPORT_TRACKING_QUERY,
+    path: '/doctor-workflow/tracking',
+  },
+  {
+    code: M4_PERMISSION_CODES.REVISION_REQUEST_CREATE,
+    path: '/doctor-workflow/revision',
+  },
+  {
+    code: M4_PERMISSION_CODES.CONSULTATION_CREATE,
+    path: '/doctor-workflow/consultation',
+  },
+] as const;
+
+export const DIAGNOSTIC_TASK_STATUS_OPTIONS = [
+  { label: '待分派', value: 'PENDING' },
+  { label: '已分派', value: 'ASSIGNED' },
+  { label: '已接单', value: 'ACCEPTED' },
+  { label: '诊断中', value: 'IN_PROGRESS' },
+  { label: '已完成', value: 'COMPLETED' },
+  { label: '已取消', value: 'CANCELLED' },
+] as const;
+
+export const DIAGNOSTIC_TASK_TYPE_OPTIONS = [
+  { label: '初诊', value: 'PRIMARY' },
+  { label: '复诊', value: 'REVIEW' },
+  { label: '冰冻', value: 'FROZEN' },
+  { label: '会诊', value: 'CONSULTATION' },
+] as const;
+
+export const REPORT_STATUS_OPTIONS = [
+  { label: '草稿', value: 'DRAFT' },
+  { label: '已提交', value: 'SUBMITTED' },
+  { label: '已审核', value: 'REVIEWED' },
+  { label: '已签发', value: 'SIGNED' },
+  { label: '已发布', value: 'PUBLISHED' },
+] as const;
+
+export const DEFAULT_PAGE_SIZE = 20;

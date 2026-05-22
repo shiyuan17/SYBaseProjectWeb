@@ -2,9 +2,11 @@ import type { MenuView } from '#/modules/system-management/types/system-manageme
 
 import { describe, expect, it } from 'vitest';
 
+import { M4_PERMISSION_CODES } from '#/modules/doctor-workflow/constants';
 import { M1_PERMISSION_CODES } from '#/modules/system-management/constants';
 import { M2_PERMISSION_CODES } from '#/modules/specimen-workflow/constants';
 import { M3_PERMISSION_CODES } from '#/modules/technical-workflow/constants';
+import doctorWorkflowRoutes from '#/router/routes/modules/doctor-workflow';
 import systemRoutes from '#/router/routes/modules/system';
 import technicalWorkflowRoutes from '#/router/routes/modules/technical-workflow';
 import workflowRoutes from '#/router/routes/modules/workflow';
@@ -206,6 +208,71 @@ describe('mapMenuViewsToRoutes', () => {
       }),
     ]);
   });
+
+  it('converts M4 doctor workflow menu definitions into canonical frontend routes', () => {
+    const routes = mapMenuViewsToRoutes([
+      {
+        componentName: 'DoctorWorkflowRoot',
+        enabled: true,
+        icon: 'm4',
+        id: 'MENU_M4_WORKFLOW',
+        menuCode: 'M4_WORKFLOW',
+        menuName: '医生诊断工作流',
+        menuType: 'DIRECTORY',
+        parentId: null,
+        path: '/doctor-workflow',
+        permissionPrefix: 'm4',
+        sortOrder: 130,
+        visible: true,
+      },
+      {
+        componentName: 'DiagnosisAssignment',
+        enabled: true,
+        icon: 'assign',
+        id: 'MENU_M4_ASSIGN',
+        menuCode: 'M4_ASSIGN',
+        menuName: '诊断分配',
+        menuType: 'MENU',
+        parentId: 'MENU_M4_WORKFLOW',
+        path: '/api/v1/diagnostic-tasks/pending',
+        permissionPrefix: 'm4:assign',
+        sortOrder: 131,
+        visible: true,
+      },
+      {
+        componentName: 'PathologyReport',
+        enabled: true,
+        icon: 'report',
+        id: 'MENU_M4_REPORT',
+        menuCode: 'M4_REPORT',
+        menuName: '病理报告',
+        menuType: 'MENU',
+        parentId: 'MENU_M4_WORKFLOW',
+        path: '/api/v1/pathology-reports',
+        permissionPrefix: 'm4:report',
+        sortOrder: 132,
+        visible: true,
+      },
+    ]);
+
+    expect(routes).toEqual([
+      expect.objectContaining({
+        name: 'DoctorWorkflowRoot',
+        path: '/doctor-workflow',
+        redirect: '/doctor-workflow/assignment',
+        children: [
+          expect.objectContaining({
+            name: 'DiagnosisAssignment',
+            path: '/doctor-workflow/assignment',
+          }),
+          expect.objectContaining({
+            name: 'PathologyReport',
+            path: '/doctor-workflow/report',
+          }),
+        ],
+      }),
+    ]);
+  });
 });
 
 describe('getBackendFirstMenuRoutes', () => {
@@ -365,6 +432,36 @@ describe('technical workflow route access', () => {
     ]);
     expect(trackingRoute?.meta?.authority).toEqual([
       M3_PERMISSION_CODES.TECHNICAL_TRACKING_QUERY,
+    ]);
+  });
+});
+
+describe('doctor workflow route access', () => {
+  it('keeps M4 pages registered with doctor workflow authorities', () => {
+    const workflowRoot = doctorWorkflowRoutes.find(
+      (route) => route.name === 'DoctorWorkflowRoot',
+    );
+    const assignmentRoute = workflowRoot?.children?.find(
+      (route) => route.name === 'DiagnosisAssignment',
+    );
+    const trackingRoute = workflowRoot?.children?.find(
+      (route) => route.name === 'ReportTracking',
+    );
+    const consultationRoute = workflowRoot?.children?.find(
+      (route) => route.name === 'Consultation',
+    );
+
+    expect(assignmentRoute?.component).toBeTypeOf('function');
+    expect(trackingRoute?.component).toBeTypeOf('function');
+    expect(consultationRoute?.component).toBeTypeOf('function');
+    expect(assignmentRoute?.meta?.authority).toEqual([
+      M4_PERMISSION_CODES.DIAG_TASK_QUERY,
+    ]);
+    expect(trackingRoute?.meta?.authority).toEqual([
+      M4_PERMISSION_CODES.REPORT_TRACKING_QUERY,
+    ]);
+    expect(consultationRoute?.meta?.authority).toEqual([
+      M4_PERMISSION_CODES.CONSULTATION_CREATE,
     ]);
   });
 });
