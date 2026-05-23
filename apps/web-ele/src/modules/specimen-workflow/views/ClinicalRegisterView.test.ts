@@ -25,7 +25,7 @@ describe('ClinicalRegisterView', () => {
     mockRouter.replace.mockReset();
   });
 
-  it('redirects legacy clinical-register route to specimen management with the same query', async () => {
+  it('redirects the legacy route to specimen management dialog mode', async () => {
     const root = document.createElement('div');
     document.body.append(root);
 
@@ -39,6 +39,7 @@ describe('ClinicalRegisterView', () => {
     expect(mockRouter.replace).toHaveBeenCalledWith({
       path: '/workflow/specimen-management',
       query: {
+        action: 'register',
         applicationId: 'APP-001',
       },
     });

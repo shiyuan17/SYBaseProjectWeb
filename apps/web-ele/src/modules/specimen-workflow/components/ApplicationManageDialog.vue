@@ -9,6 +9,16 @@ import { computed, reactive, ref, watch } from 'vue';
 import { useAccessStore, useUserStore } from '@vben/stores';
 
 import {
+  createEmptyWorkflowReferenceOptions,
+  loadWorkflowReferenceOptionsSafely,
+} from '#/modules/system-management/api/workflow-reference-service';
+import BodyPartSelect from '#/modules/system-management/components/BodyPartSelect.vue';
+import DepartmentSelect from '#/modules/system-management/components/DepartmentSelect.vue';
+import ReferenceOptionSelect from '#/modules/system-management/components/ReferenceOptionSelect.vue';
+import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
+import { GENDER_OPTIONS } from '#/modules/system-management/constants';
+
+import {
   ElAlert,
   ElButton,
   ElDialog,
@@ -22,11 +32,6 @@ import {
   ElTabPane,
   ElTabs,
 } from 'element-plus';
-
-import BodyPartSelect from '#/modules/system-management/components/BodyPartSelect.vue';
-import DepartmentSelect from '#/modules/system-management/components/DepartmentSelect.vue';
-import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
-import { GENDER_OPTIONS } from '#/modules/system-management/constants';
 
 import {
   createApplication,
@@ -83,6 +88,8 @@ const pageError = ref('');
 const activeTab = ref<DialogTabName>(CREATE_TAB);
 const creatingApplication = ref(false);
 const importingClinicalApplication = ref(false);
+const clinicalSymptomSuggestion = ref('');
+const workflowReferenceOptions = ref(createEmptyWorkflowReferenceOptions());
 
 const createForm = reactive<ApplicationCreateRequest>({
   applicationDate: null,
@@ -144,6 +151,7 @@ function resetCreateForm() {
     submittingDoctorUserId: currentUserId.value,
     thirdPartySource: null,
   });
+  clinicalSymptomSuggestion.value = '';
 }
 
 function resetImportForm() {
@@ -160,6 +168,10 @@ function resetDialogState() {
   resetImportForm();
 }
 
+async function loadWorkflowReferenceOptions() {
+  workflowReferenceOptions.value = await loadWorkflowReferenceOptionsSafely();
+}
+
 function closeDialog() {
   dialogVisible.value = false;
 }
@@ -172,6 +184,11 @@ function handleSubmittingDepartmentChange(department: null | { id: string; name:
 function handleSubmittingDoctorChange(user: null | { id: string; name: string }) {
   createForm.submittingDoctorUserId = user?.id ?? '';
   createForm.submittingDoctorName = user?.name ?? '';
+}
+
+function handleClinicalSymptomSuggestionChange(value: string) {
+  clinicalSymptomSuggestion.value = value;
+  createForm.clinicalSymptom = value || null;
 }
 
 async function handleSubmitSuccess(applicationId: string, mode: SubmitMode) {
@@ -266,6 +283,7 @@ watch(
   (visible) => {
     if (visible) {
       resetDialogState();
+      void loadWorkflowReferenceOptions();
       return;
     }
     if (!creatingApplication.value && !importingClinicalApplication.value) {
@@ -397,6 +415,14 @@ watch(
                 />
               </ElFormItem>
               <ElFormItem label="临床症状">
+                <ReferenceOptionSelect
+                  :model-value="clinicalSymptomSuggestion"
+                  :options="workflowReferenceOptions.clinicalSymptoms"
+                  placeholder="可先选建议项，再继续补充"
+                  @update:model-value="handleClinicalSymptomSuggestionChange"
+                />
+              </ElFormItem>
+              <ElFormItem label="症状说明">
                 <ElInput
                   v-model="createForm.clinicalSymptom"
                   :rows="2"

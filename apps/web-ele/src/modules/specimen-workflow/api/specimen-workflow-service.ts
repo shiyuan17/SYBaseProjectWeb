@@ -1,4 +1,5 @@
 import type {
+  ApplicationListItem,
   ApplicationListQuery,
   ApplicationPage,
   ApplicationCreateRequest,
@@ -7,6 +8,7 @@ import type {
   DirectSpecimenReceiptRequest,
   FixationResult,
   ImportClinicalApplicationRequest,
+  LatestSpecimenRegistrationResult,
   LabelPrintRetryRequest,
   LabelPrintRetryResult,
   PendingSpecimenPage,
@@ -38,6 +40,15 @@ type ApplicationDetailResponse = Omit<
 };
 type TrackingQueryResponse = Omit<TrackingQueryView, 'recentEvents'> & {
   recentEvents?: TrackingEventView[];
+};
+type RegistrationResultResponse = Omit<SpecimenRegisterResult, 'specimens'> & {
+  specimens?: SpecimenTrackingSummary[];
+};
+type LatestRegistrationResultResponse = Omit<
+  LatestSpecimenRegistrationResult,
+  'specimens'
+> & {
+  specimens?: SpecimenTrackingSummary[];
 };
 
 type ApplicationPageResponse = ApplicationPage;
@@ -78,6 +89,24 @@ export function mapPendingTransportOrderPageResponse(
   return {
     ...response,
     items: response.items ?? [],
+  };
+}
+
+export function mapRegistrationResultResponse(
+  response: RegistrationResultResponse,
+): SpecimenRegisterResult {
+  return {
+    ...response,
+    specimens: response.specimens ?? [],
+  };
+}
+
+export function mapLatestRegistrationResultResponse(
+  response: LatestRegistrationResultResponse,
+): LatestSpecimenRegistrationResult {
+  return {
+    ...response,
+    specimens: response.specimens ?? [],
   };
 }
 
@@ -123,7 +152,11 @@ export async function getSpecimenTrackingByBarcode(barcode: string) {
 }
 
 export async function registerSpecimens(data: SpecimenRegisterRequest) {
-  return requestClient.post<SpecimenRegisterResult>('/v1/specimens/register', data);
+  const response = await requestClient.post<RegistrationResultResponse>(
+    '/v1/specimens/register',
+    data,
+  );
+  return mapRegistrationResultResponse(response);
 }
 
 export async function retryLabelPrint(batchNo: string, data: LabelPrintRetryRequest) {
@@ -131,6 +164,19 @@ export async function retryLabelPrint(batchNo: string, data: LabelPrintRetryRequ
     `/v1/specimens/label-batches/${batchNo}/retry`,
     data,
   );
+}
+
+export async function getLatestRegistrationResult(applicationId: string) {
+  const response = await requestClient.get<LatestRegistrationResultResponse>(
+    `/v1/specimens/applications/${applicationId}/latest-registration`,
+  );
+  return mapLatestRegistrationResultResponse(response);
+}
+
+export async function lookupApplicationForRegistration(applicationNo: string) {
+  return requestClient.get<ApplicationListItem>('/v1/specimens/applications/lookup', {
+    params: { applicationNo },
+  });
 }
 
 export async function listPendingFixations(params: PendingSpecimenQuery) {

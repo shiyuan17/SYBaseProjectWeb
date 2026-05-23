@@ -8,7 +8,10 @@ const router = useRouter();
 onMounted(() => {
   void router.replace({
     path: '/workflow/specimen-management',
-    query: route.query,
+    query: {
+      ...route.query,
+      action: 'register',
+    },
   });
 });
 </script>

@@ -135,6 +135,7 @@ function goToSpecimenManagement(row: ApplicationListItem) {
   void router.push({
     path: '/workflow/specimen-management',
     query: {
+      action: 'register',
       applicationId: row.id,
     },
   });
@@ -162,6 +163,7 @@ async function handleApplicationSubmitted(payload: {
     await router.push({
       path: '/workflow/specimen-management',
       query: {
+        action: 'register',
         applicationId: payload.applicationId,
       },
     });
@@ -183,12 +185,6 @@ if (canQueryApplications.value) {
         type="error"
         show-icon
       />
-
-      <div v-if="canManageApplications" class="flex justify-end">
-        <ElButton type="primary" @click="createDialogVisible = true">
-          创建
-        </ElButton>
-      </div>
 
       <ElAlert
         v-if="!canQueryApplications"
@@ -279,6 +275,12 @@ if (canQueryApplications.value) {
           title="申请单列表"
           description="列表展示申请单编号、申请单号、患者、流程节点和异常标记。"
         >
+          <template v-if="canManageApplications" #extra>
+            <ElButton type="primary" @click="createDialogVisible = true">
+              创建
+            </ElButton>
+          </template>
+
           <ElTable v-loading="loading" :data="items" border>
             <ElTableColumn label="申请单编号" min-width="220" prop="id" />
             <ElTableColumn label="申请单号" min-width="160" prop="applicationNo" />

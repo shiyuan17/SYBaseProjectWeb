@@ -118,6 +118,10 @@ export const errorMessageResponseInterceptor = (
         return Promise.reject(error);
       }
 
+      if (error?.config?.skipErrorMessage) {
+        return Promise.reject(error);
+      }
+
       const err: string = error?.toString?.() ?? '';
       let errMsg = '';
       if (err?.includes('Network Error')) {

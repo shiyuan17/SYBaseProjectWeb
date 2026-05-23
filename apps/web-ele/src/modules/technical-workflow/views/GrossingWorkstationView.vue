@@ -35,6 +35,11 @@ import {
 } from 'element-plus';
 
 import { listBodyParts, listSamplingTemplates } from '#/modules/system-management/api/system-management-service';
+import {
+  createEmptyWorkflowReferenceOptions,
+  loadWorkflowReferenceOptionsSafely,
+} from '#/modules/system-management/api/workflow-reference-service';
+import ReferenceOptionSelect from '#/modules/system-management/components/ReferenceOptionSelect.vue';
 import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
 
 import {
@@ -67,6 +72,7 @@ const trackingResult = ref<null | TechnicalTrackingViewModel>(null);
 const selectedTask = ref<null | PendingTechnicalTaskItem>(null);
 const bodyPartOptions = ref<Array<{ label: string; value: string }>>([]);
 const samplingTemplateOptions = ref<Array<{ label: string; value: string }>>([]);
+const workflowReferenceOptions = ref(createEmptyWorkflowReferenceOptions());
 
 const filters = reactive({
   page: 1,
@@ -245,6 +251,10 @@ async function loadSelectOptions() {
   }
 }
 
+async function loadWorkflowReferenceOptions() {
+  workflowReferenceOptions.value = await loadWorkflowReferenceOptionsSafely();
+}
+
 async function loadPendingData() {
   loading.value = true;
   pageError.value = '';
@@ -384,6 +394,7 @@ async function submitGrossing() {
 
 void loadPendingData();
 void loadSelectOptions();
+void loadWorkflowReferenceOptions();
 if (completeForm.caseId) {
   void loadTracking();
 }
@@ -507,7 +518,11 @@ function handleOperatorChange(user: null | { id: string; name: string }) {
                   <ElInput v-model="specimen.specimenId" disabled placeholder="由病例上下文带入" />
                 </ElFormItem>
                 <ElFormItem label="标本类型" required>
-                  <ElInput v-model="specimen.specimenType" placeholder="请输入标本类型" />
+                  <ReferenceOptionSelect
+                    v-model="specimen.specimenType"
+                    :options="workflowReferenceOptions.specimenTypes"
+                    placeholder="请选择或输入标本类型"
+                  />
                 </ElFormItem>
                 <ElFormItem label="取材部位">
                   <ElSelect

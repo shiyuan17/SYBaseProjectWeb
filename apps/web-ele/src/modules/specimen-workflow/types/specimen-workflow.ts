@@ -112,9 +112,12 @@ export interface ApplicationListItem {
   patientAge: null | string;
   patientGender: null | string;
   patientName: null | string;
+  registeredSpecimenCount: number;
   submissionDate: null | string;
+  status: null | string;
   submittingDepartmentName: null | string;
   submittingDoctorName: null | string;
+  latestLabelPrintStatus: null | string;
   updatedAt: null | string;
 }
 
@@ -148,6 +151,14 @@ export interface SpecimenRegisterRequest {
 
 export interface SpecimenRegisterResult {
   labelPrintBatchNo: string;
+  labelPrintMessage: null | string;
+  labelPrintSuccess: boolean;
+  specimens: SpecimenTrackingSummary[];
+}
+
+export interface LatestSpecimenRegistrationResult {
+  applicationId: string;
+  labelPrintBatchNo: null | string;
   labelPrintMessage: null | string;
   labelPrintSuccess: boolean;
   specimens: SpecimenTrackingSummary[];

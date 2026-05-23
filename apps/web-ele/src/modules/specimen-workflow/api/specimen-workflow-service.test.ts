@@ -6,12 +6,16 @@ import { requestClient } from '#/api/request';
 
 import {
   getApplicationDetail,
+  getLatestRegistrationResult,
   importClinicalApplication,
   listApplications,
+  lookupApplicationForRegistration,
   mapApplicationPageResponse,
   mapApplicationDetailResponse,
+  mapLatestRegistrationResultResponse,
   mapPendingSpecimenPageResponse,
   mapPendingTransportOrderPageResponse,
+  mapRegistrationResultResponse,
 } from './specimen-workflow-service';
 
 vi.mock('#/api/request', () => ({
@@ -168,6 +172,28 @@ describe('specimen-workflow-service mappers', () => {
       total: 0,
     });
   });
+
+  it('fills omitted registration result specimens', () => {
+    const mapped = mapRegistrationResultResponse({
+      labelPrintBatchNo: 'LP-001',
+      labelPrintMessage: null,
+      labelPrintSuccess: true,
+    });
+
+    expect(mapped.specimens).toEqual([]);
+  });
+
+  it('fills omitted latest registration result specimens', () => {
+    const mapped = mapLatestRegistrationResultResponse({
+      applicationId: 'APP-ID',
+      labelPrintBatchNo: null,
+      labelPrintMessage: null,
+      labelPrintSuccess: false,
+    });
+
+    expect(mapped.applicationId).toBe('APP-ID');
+    expect(mapped.specimens).toEqual([]);
+  });
 });
 
 describe('specimen-workflow-service requests', () => {
@@ -230,5 +256,66 @@ describe('specimen-workflow-service requests', () => {
         size: 20,
       },
     });
+  });
+
+  it('uses unified requestClient for latest registration result query', async () => {
+    requestClientMock.get.mockResolvedValue({
+      applicationId: 'APP-ID',
+      labelPrintBatchNo: 'LP-001',
+      labelPrintMessage: 'printed',
+      labelPrintSuccess: true,
+      specimens: [],
+    });
+
+    await expect(getLatestRegistrationResult('APP-ID')).resolves.toEqual({
+      applicationId: 'APP-ID',
+      labelPrintBatchNo: 'LP-001',
+      labelPrintMessage: 'printed',
+      labelPrintSuccess: true,
+      specimens: [],
+    });
+
+    expect(requestClientMock.get).toHaveBeenCalledWith(
+      '/v1/specimens/applications/APP-ID/latest-registration',
+    );
+  });
+
+  it('uses unified requestClient for registration lookup by application number', async () => {
+    requestClientMock.get.mockResolvedValue({
+      abnormalFlag: false,
+      applicationDate: '2026-05-21',
+      applicationFormStatus: 'NOT_UPLOADED',
+      applicationNo: 'APP-001',
+      applicationType: 'ROUTINE',
+      createdAt: '2026-05-21T10:00:00',
+      currentNode: 'DRAFT',
+      id: 'APP-ID',
+      latestLabelPrintStatus: null,
+      patientAge: '40',
+      patientGender: 'F',
+      patientName: '张三',
+      registeredSpecimenCount: 0,
+      status: 'DRAFT',
+      submissionDate: '2026-05-21',
+      submittingDepartmentName: '外科',
+      submittingDoctorName: '医生A',
+      updatedAt: '2026-05-21T10:00:00',
+    });
+
+    await expect(lookupApplicationForRegistration('APP-001')).resolves.toMatchObject({
+      id: 'APP-ID',
+      applicationNo: 'APP-001',
+      status: 'DRAFT',
+      registeredSpecimenCount: 0,
+    });
+
+    expect(requestClientMock.get).toHaveBeenCalledWith(
+      '/v1/specimens/applications/lookup',
+      {
+        params: {
+          applicationNo: 'APP-001',
+        },
+      },
+    );
   });
 });
