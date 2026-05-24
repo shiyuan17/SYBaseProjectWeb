@@ -40,10 +40,14 @@ export interface TrackingEventView {
   eventType: null | string;
   nodeCode: null | string;
   operatorName: null | string;
+  specimenBarcode?: null | string;
+  specimenId?: null | string;
+  specimenNo?: null | string;
   sourceTerminal: null | string;
 }
 
 export interface SpecimenTrackingSummary {
+  abnormalReason: null | string;
   barcode: string;
   clinicalSymptom?: null | string;
   collectionMode?: null | string;
@@ -52,12 +56,24 @@ export interface SpecimenTrackingSummary {
   fixationStatus: null | string;
   id: string;
   labelPrintStatus: null | string;
+  qualityCheckResult?: null | string;
+  qualityIssueCodes?: string[];
+  receiptStatus?: null | string;
   specimenCount: null | number;
   specimenName: string;
   specimenNo: string;
   specimenSite: null | string;
   specimenStatus: null | string;
   specimenType: null | string;
+}
+
+export interface RegistrationSnapshotView {
+  collectionScene: null | string;
+  operatorName: null | string;
+  operatorUserId: null | string;
+  printerCode: null | string;
+  remarks: null | string;
+  terminalCode: null | string;
 }
 
 export interface ApplicationDetailView {
@@ -247,6 +263,7 @@ export interface LatestSpecimenRegistrationResult {
   labelPrintBatchNo: null | string;
   labelPrintMessage: null | string;
   labelPrintSuccess: boolean;
+  registrationSnapshot: null | RegistrationSnapshotView;
   specimens: SpecimenTrackingSummary[];
 }
 

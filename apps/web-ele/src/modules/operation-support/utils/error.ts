@@ -32,7 +32,7 @@ export function getOperationSupportPageErrorMessage(error: unknown) {
     code === 'FORBIDDEN' ||
     responseMessage.includes('does not have permission')
   ) {
-    return '当前账号没有访问归档与运营支撑模块或操作该功能的权限。';
+    return '当前账号没有访问归档运营管理模块或操作该功能的权限。';
   }
 
   if (status === 409 || code === 'RESOURCE_CONFLICT') {

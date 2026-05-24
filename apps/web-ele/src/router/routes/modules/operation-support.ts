@@ -32,7 +32,7 @@ const routes: RouteRecordRaw[] = [
       authority: OPERATION_SUPPORT_AUTHORITIES,
       icon: 'carbon:archive',
       order: 160,
-      title: '归档与运营支撑',
+      title: '归档运营管理',
     },
     name: 'OperationSupportRoot',
     path: '/operation-support',

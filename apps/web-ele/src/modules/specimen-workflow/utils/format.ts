@@ -69,6 +69,15 @@ const labelPrintStatusLabels = {
   PENDING: '待打印',
   SUCCESS: '打印成功',
 } satisfies Record<string, string>;
+const receiptStatusLabels = {
+  RECEIVED: '已接收',
+  REJECTED: '已拒收',
+  RETURNED: '已退回',
+} satisfies Record<string, string>;
+const qualityCheckResultLabels = {
+  FAILED: '不合格',
+  PASSED: '合格',
+} satisfies Record<string, string>;
 const transportStatusLabels = {
   ...createLabelMap(TRANSPORT_STATUS_OPTIONS),
   CANCELLED: '已取消',
@@ -135,6 +144,14 @@ export function formatFixationStatus(value?: null | string) {
 
 export function formatLabelPrintStatus(value?: null | string) {
   return formatMappedValue(value, labelPrintStatusLabels);
+}
+
+export function formatReceiptStatus(value?: null | string) {
+  return formatMappedValue(value, receiptStatusLabels);
+}
+
+export function formatQualityCheckResult(value?: null | string) {
+  return formatMappedValue(value, qualityCheckResultLabels);
 }
 
 export function formatTransportStatus(value?: null | string) {

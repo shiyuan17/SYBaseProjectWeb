@@ -310,7 +310,7 @@ const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] = [
     meta: {
       icon: 'carbon:operations-record',
       order: 130,
-      title: '技术组核心生产线',
+      title: '生产管理',
     },
     name: 'TechnicalWorkflowRoot',
     path: '/technical-workflow',
@@ -395,7 +395,7 @@ const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] = [
     meta: {
       icon: 'carbon:stethoscope',
       order: 140,
-      title: '医生诊断工作流',
+      title: '诊断管理',
     },
     name: 'DoctorWorkflowRoot',
     path: '/doctor-workflow',
@@ -462,7 +462,7 @@ const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] = [
     meta: {
       icon: 'carbon:archive',
       order: 160,
-      title: '归档与运营支撑',
+      title: '归档运营管理',
     },
     name: 'OperationSupportRoot',
     path: '/operation-support',

@@ -1,8 +1,9 @@
-import { createApp, defineComponent, h, inject, nextTick, provide } from 'vue';
+import { createApp, computed, defineComponent, h, inject, nextTick, provide } from 'vue';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const tableRowKey = Symbol('table-row');
+const tabsContextKey = Symbol('tabs-context');
 
 const { mockAccessStore, mockGetApplicationTracking, mockListApplications } = vi.hoisted(() => ({
   mockAccessStore: {
@@ -130,6 +131,46 @@ vi.mock('element-plus', () => {
     },
   });
 
+  const ElTabs = defineComponent({
+    emits: ['update:modelValue'],
+    props: ['modelValue'],
+    setup(props, { emit, slots }) {
+      const activeName = computed(() => String(props.modelValue ?? ''));
+      provide(tabsContextKey, {
+        activeName,
+        selectTab: (name: string) => emit('update:modelValue', name),
+      });
+      return () => h('div', { 'data-active-tab': activeName.value }, slots.default?.());
+    },
+  });
+
+  const ElTabPane = defineComponent({
+    props: ['label', 'name'],
+    setup(props, { slots }) {
+      const tabsContext = inject<{
+        activeName: ReturnType<typeof computed<string>>;
+        selectTab: (name: string) => void;
+      } | null>(tabsContextKey, null);
+
+      return () => {
+        const name = String(props.name ?? '');
+        const isActive = tabsContext?.activeName.value === name;
+        return h('section', [
+          h(
+            'button',
+            {
+              'data-tab-name': name,
+              type: 'button',
+              onClick: () => tabsContext?.selectTab(name),
+            },
+            props.label,
+          ),
+          isActive ? h('div', { 'data-tab-panel': name }, slots.default?.()) : null,
+        ]);
+      };
+    },
+  });
+
   const RowProvider = defineComponent({
     props: {
       row: {
@@ -191,8 +232,10 @@ vi.mock('element-plus', () => {
     ElOption,
     ElPagination: passthrough(),
     ElSelect,
+    ElTabPane,
     ElTable,
     ElTableColumn,
+    ElTabs,
     ElTag: passthrough('span'),
     ElTimeline,
     ElTimelineItem,
@@ -215,7 +258,7 @@ function buildApplicationRow() {
     patientAge: '42',
     patientGender: 'F',
     patientName: '张三',
-    registeredSpecimenCount: 2,
+    registeredSpecimenCount: 3,
     status: 'SUBMITTED',
     submissionDate: '2026-05-22',
     submittingDepartmentName: '普外科',
@@ -243,12 +286,51 @@ function buildTrackingDetail() {
     patientName: '张三',
     recentEvents: [
       {
-        eventContent: '已登记',
-        eventStatus: 'DONE',
+        eventContent: '创建转运单',
+        eventStatus: 'SUCCESS',
         eventTime: '2026-05-24T08:00:00',
-        eventType: 'REGISTER',
-        nodeCode: 'SPECIMEN_COLLECTION',
+        eventType: 'ORDER_CREATED',
+        nodeCode: 'TRANSPORT',
         operatorName: '李医生',
+        specimenBarcode: 'BC-001',
+        specimenId: 'SPEC-001',
+        specimenNo: 'SP-001',
+        sourceTerminal: 'TERMINAL-1',
+      },
+      {
+        eventContent: '创建转运单',
+        eventStatus: 'SUCCESS',
+        eventTime: '2026-05-24T08:00:00',
+        eventType: 'ORDER_CREATED',
+        nodeCode: 'TRANSPORT',
+        operatorName: '王护士',
+        specimenBarcode: 'BC-002',
+        specimenId: 'SPEC-002',
+        specimenNo: 'SP-002',
+        sourceTerminal: 'TERMINAL-2',
+      },
+      {
+        eventContent: '打印转运单',
+        eventStatus: 'SUCCESS',
+        eventTime: '2026-05-24T08:01:00',
+        eventType: 'ORDER_PRINTED',
+        nodeCode: 'TRANSPORT',
+        operatorName: '前台',
+        specimenBarcode: null,
+        specimenId: null,
+        specimenNo: null,
+        sourceTerminal: 'TERMINAL-3',
+      },
+      {
+        eventContent: '完成交接',
+        eventStatus: 'SUCCESS',
+        eventTime: '2026-05-24T08:02:00',
+        eventType: 'HANDED_OVER',
+        nodeCode: 'TRANSPORT',
+        operatorName: '李医生',
+        specimenBarcode: 'BC-001',
+        specimenId: 'SPEC-001',
+        specimenNo: 'SP-001',
         sourceTerminal: 'TERMINAL-1',
       },
     ],
@@ -258,16 +340,50 @@ function buildTrackingDetail() {
     specimenRemovalTime: '2026-05-22T07:30:00',
     specimens: [
       {
+        abnormalReason: '容器破损',
         barcode: 'BC-001',
         containerCount: 1,
-        containerName: '瓶1',
+        containerName: '瓶',
         fixationStatus: 'FIXING',
         id: 'SPEC-001',
         labelPrintStatus: 'SUCCESS',
+        qualityCheckResult: 'FAILED',
+        qualityIssueCodes: ['CONTAINER_DAMAGE'],
+        receiptStatus: 'REJECTED',
         specimenCount: 1,
         specimenName: '胃组织',
         specimenNo: 'SP-001',
         specimenSite: '胃',
+        specimenStatus: 'REGISTERED',
+        specimenType: '常规',
+      },
+      {
+        abnormalReason: null,
+        barcode: 'BC-002',
+        containerCount: 1,
+        containerName: '瓶',
+        fixationStatus: 'FIXING',
+        id: 'SPEC-002',
+        labelPrintStatus: 'SUCCESS',
+        specimenCount: 1,
+        specimenName: '十二指肠组织',
+        specimenNo: 'SP-002',
+        specimenSite: '十二指肠',
+        specimenStatus: 'REGISTERED',
+        specimenType: '常规',
+      },
+      {
+        abnormalReason: null,
+        barcode: 'BC-003',
+        containerCount: 1,
+        containerName: '瓶',
+        fixationStatus: 'FIXING',
+        id: 'SPEC-003',
+        labelPrintStatus: 'PENDING',
+        specimenCount: 1,
+        specimenName: '空白标本',
+        specimenNo: 'SP-003',
+        specimenSite: '未知',
         specimenStatus: 'REGISTERED',
         specimenType: '常规',
       },
@@ -283,6 +399,10 @@ function buildTrackingDetail() {
   };
 }
 
+function countText(content: string, target: string) {
+  return content.split(target).length - 1;
+}
+
 async function flushAll() {
   await Promise.resolve();
   await nextTick();
@@ -295,6 +415,10 @@ async function mountView(props?: Record<string, unknown>) {
   document.body.append(root);
   const app = createApp({
     render: () => h(TrackingApplicationListView, props ?? {}),
+  });
+  app.directive('loading', {
+    mounted() {},
+    updated() {},
   });
   app.mount(root);
   await flushAll();
@@ -332,34 +456,7 @@ describe('TrackingApplicationListView', () => {
     app.unmount();
   });
 
-  it('loads tracking detail into a dialog when detail is opened', async () => {
-    mockListApplications.mockResolvedValue({
-      items: [buildApplicationRow()],
-      page: 1,
-      size: 20,
-      total: 1,
-    });
-    mockGetApplicationTracking.mockResolvedValue(buildTrackingDetail());
-
-    const { app, root } = await mountView();
-    const detailButton = Array.from(root.querySelectorAll('button')).find(
-      (button) => button.textContent?.trim() === '详情',
-    );
-
-    detailButton?.click();
-    await flushAll();
-
-    expect(mockGetApplicationTracking).toHaveBeenCalledWith('APP-TRACK-001');
-    expect(root.textContent).toContain('异常标记');
-    expect(root.textContent).toContain('基本信息');
-    expect(root.textContent).toContain('标本列表');
-    expect(root.textContent).toContain('时间线事件');
-    expect(root.textContent).toContain('完整申请单详情');
-
-    app.unmount();
-  });
-
-  it('opens detail automatically when an initial application id is provided', async () => {
+  it('renders overall and specimen timeline tabs, with same-second multi-specimen events aggregated in the overall tab', async () => {
     mockListApplications.mockResolvedValue({
       items: [buildApplicationRow()],
       page: 1,
@@ -374,8 +471,79 @@ describe('TrackingApplicationListView', () => {
     });
 
     expect(mockGetApplicationTracking).toHaveBeenCalledWith('APP-TRACK-001');
-    expect(root.textContent).toContain('申请单追踪详情');
-    expect(root.textContent).toContain('异常标记');
+    expect(root.querySelector('[data-tab-name="overall"]')?.textContent).toBe('总时间线');
+    expect(root.querySelector('[data-tab-name="SPEC-001"]')?.textContent).toBe('SP-001');
+    expect(root.querySelector('[data-tab-name="SPEC-002"]')?.textContent).toBe('SP-002');
+    expect(root.querySelector('[data-tab-name="SPEC-003"]')?.textContent).toBe('SP-003');
+    expect(root.textContent).toContain('异常明细');
+    expect(root.textContent).toContain('异常类型：已拒收');
+    expect(root.textContent).toContain('质控结果：不合格');
+    expect(root.textContent).toContain('问题代码：CONTAINER_DAMAGE');
+    expect(root.textContent).toContain('原因：容器破损');
+
+    const overallPanel = root.querySelector('[data-tab-panel="overall"]');
+    expect(overallPanel).not.toBeNull();
+    const overallText = overallPanel?.textContent ?? '';
+    expect(countText(overallText, '创建转运单 / 成功')).toBe(1);
+    expect(overallText).toContain('涉及标本: 2 个');
+    expect(overallText).toContain('SP-001');
+    expect(overallText).toContain('SP-002');
+    expect(overallText).toContain('公共事件');
+    expect(overallText).toContain('打印转运单 / 成功');
+
+    app.unmount();
+  });
+
+  it('shows only the selected specimen events in a specimen tab and excludes public events', async () => {
+    mockListApplications.mockResolvedValue({
+      items: [buildApplicationRow()],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+    mockGetApplicationTracking.mockResolvedValue(buildTrackingDetail());
+
+    const { app, root } = await mountView({
+      initialApplicationId: 'APP-TRACK-001',
+      triggerKey: 1,
+    });
+
+    const specimenTab = root.querySelector<HTMLButtonElement>('[data-tab-name="SPEC-001"]');
+    specimenTab?.click();
+    await flushAll();
+
+    const specimenPanel = root.querySelector('[data-tab-panel="SPEC-001"]');
+    expect(specimenPanel).not.toBeNull();
+    const specimenText = specimenPanel?.textContent ?? '';
+    expect(specimenText).toContain('创建转运单 / 成功');
+    expect(specimenText).toContain('完成交接 / 成功');
+    expect(specimenText).not.toContain('打印转运单 / 成功');
+    expect(specimenText).not.toContain('公共事件');
+    expect(specimenText).not.toContain('SP-002');
+
+    app.unmount();
+  });
+
+  it('shows an empty state for specimen tabs without their own events', async () => {
+    mockListApplications.mockResolvedValue({
+      items: [buildApplicationRow()],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+    mockGetApplicationTracking.mockResolvedValue(buildTrackingDetail());
+
+    const { app, root } = await mountView({
+      initialApplicationId: 'APP-TRACK-001',
+      triggerKey: 1,
+    });
+
+    const emptySpecimenTab = root.querySelector<HTMLButtonElement>('[data-tab-name="SPEC-003"]');
+    emptySpecimenTab?.click();
+    await flushAll();
+
+    const emptySpecimenPanel = root.querySelector('[data-tab-panel="SPEC-003"]');
+    expect(emptySpecimenPanel?.textContent ?? '').toContain('该标本暂无追踪事件');
 
     app.unmount();
   });

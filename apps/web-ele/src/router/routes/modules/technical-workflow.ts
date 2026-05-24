@@ -19,7 +19,7 @@ const routes: RouteRecordRaw[] = [
       authority: TECHNICAL_WORKFLOW_AUTHORITIES,
       icon: 'carbon:operations-record',
       order: 130,
-      title: '技术组核心生产线',
+      title: '生产管理',
     },
     name: 'TechnicalWorkflowRoot',
     path: '/technical-workflow',

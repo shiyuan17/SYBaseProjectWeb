@@ -32,7 +32,7 @@ export function getDoctorWorkflowPageErrorMessage(error: unknown) {
     code === 'FORBIDDEN' ||
     responseMessage.includes('does not have permission')
   ) {
-    return '当前账号没有访问医生诊断工作流或操作该功能的权限。';
+    return '当前账号没有访问诊断管理模块或操作该功能的权限。';
   }
 
   return responseMessage || '数据加载失败，请稍后重试。';

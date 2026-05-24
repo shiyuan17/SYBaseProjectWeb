@@ -135,6 +135,7 @@ vi.mock('../api/specimen-workflow-service', () => ({
     labelPrintBatchNo: null,
     labelPrintMessage: null,
     labelPrintSuccess: false,
+    registrationSnapshot: null,
     specimens: [],
   })),
   listSpecimens: vi.fn(async () => ({

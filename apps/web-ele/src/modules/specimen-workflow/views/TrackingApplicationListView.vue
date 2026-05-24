@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type {
   ApplicationListItem,
+  SpecimenTrackingSummary,
+  TrackingEventView,
   TrackingQueryView as WorkflowTrackingQueryView,
 } from '../types/specimen-workflow';
 
@@ -22,9 +24,11 @@ import {
   ElOption,
   ElPagination,
   ElSelect,
+  ElTabPane,
   ElTable,
   ElTableColumn,
   ElTag,
+  ElTabs,
   ElTimeline,
   ElTimelineItem,
 } from 'element-plus';
@@ -53,10 +57,17 @@ import {
   formatFixationStatus,
   formatLabelPrintStatus,
   formatNullable,
+  formatQualityCheckResult,
+  formatReceiptStatus,
   formatSpecimenStatus,
   formatTrackingEventStatus,
   formatTrackingEventType,
 } from '../utils/format';
+import { buildSpecimenAbnormalDetails } from '../utils/specimen-abnormal';
+import {
+  buildTrackingTimelineData,
+  getSpecimenTimelineLabel,
+} from '../utils/tracking-timeline';
 
 const props = withDefaults(
   defineProps<{
@@ -83,6 +94,7 @@ const total = ref(0);
 const detailVisible = ref(false);
 const detailLoading = ref(false);
 const detailTracking = ref<null | WorkflowTrackingQueryView>(null);
+const activeTimelineTab = ref('overall');
 
 const filters = reactive({
   applicationFormStatus: '',
@@ -131,6 +143,7 @@ async function openDetailById(applicationId: string) {
     return;
   }
 
+  activeTimelineTab.value = 'overall';
   detailVisible.value = true;
   detailLoading.value = true;
   pageError.value = '';
@@ -163,6 +176,40 @@ function handleReset() {
 
 function handleDepartmentChange(department: null | { id: string; name: string }) {
   filters.submittingDepartmentId = department?.id ?? '';
+}
+
+const detailRecentEvents = computed<TrackingEventView[]>(
+  () => detailTracking.value?.recentEvents ?? [],
+);
+
+const detailSpecimens = computed<SpecimenTrackingSummary[]>(
+  () => detailTracking.value?.specimens ?? [],
+);
+
+const detailAbnormalSpecimens = computed(() =>
+  buildSpecimenAbnormalDetails(detailSpecimens.value),
+);
+
+const trackingTimelineData = computed(() =>
+  buildTrackingTimelineData(detailRecentEvents.value, detailSpecimens.value),
+);
+
+const specimenTimelineTabs = computed(() =>
+  detailSpecimens.value.map((specimen) => ({
+    events: trackingTimelineData.value.specimenTimelineMap[specimen.id] ?? [],
+    id: specimen.id,
+    label: getSpecimenTimelineLabel(specimen),
+  })),
+);
+
+function formatAggregateContext(values: string[], multipleLabel: string) {
+  if (values.length === 0) {
+    return '-';
+  }
+  if (values.length === 1) {
+    return values[0];
+  }
+  return `${multipleLabel}（${values.join('、')}）`;
 }
 
 watch(
@@ -366,6 +413,26 @@ watch(
             :type="detailTracking?.abnormalFlag ? 'warning' : 'success'"
             show-icon
           />
+          <div
+            v-if="detailAbnormalSpecimens.length > 0"
+            class="mt-3 flex flex-col gap-3"
+          >
+            <div
+              v-for="specimen in detailAbnormalSpecimens"
+              :key="`${specimen.id}-${specimen.barcode}`"
+              class="rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm"
+            >
+              <div class="font-medium text-foreground">
+                {{ specimen.specimenNo || '-' }} / {{ specimen.barcode || '-' }}
+              </div>
+              <div class="mt-2 grid gap-2 md:grid-cols-2">
+                <div>异常类型：{{ formatReceiptStatus(specimen.status) }}</div>
+                <div>质控结果：{{ formatQualityCheckResult(specimen.qualityCheckResult) }}</div>
+                <div>问题代码：{{ specimen.qualityIssueCodes.length ? specimen.qualityIssueCodes.join('、') : '-' }}</div>
+                <div>原因：{{ specimen.reason || '-' }}</div>
+              </div>
+            </div>
+          </div>
         </WorkflowSectionCard>
 
         <WorkflowSectionCard title="基本信息" description="展示申请单状态、当前节点、表单状态与送检摘要。">
@@ -450,27 +517,87 @@ watch(
                 {{ formatLabelPrintStatus(row.labelPrintStatus) }}
               </template>
             </ElTableColumn>
+            <ElTableColumn label="异常明细" min-width="320">
+              <template #default="{ row }">
+                <div class="flex flex-col gap-1 text-sm">
+                  <div>异常类型：{{ formatReceiptStatus(row.receiptStatus ?? row.specimenStatus) }}</div>
+                  <div>质控结果：{{ formatQualityCheckResult(row.qualityCheckResult) }}</div>
+                  <div>问题代码：{{ row.qualityIssueCodes?.length ? row.qualityIssueCodes.join('、') : '-' }}</div>
+                  <div>原因：{{ formatNullable(row.abnormalReason) }}</div>
+                </div>
+              </template>
+            </ElTableColumn>
           </ElTable>
         </WorkflowSectionCard>
 
         <WorkflowSectionCard title="时间线事件" description="展示最近追踪事件、节点、状态与操作终端。">
-          <ElTimeline v-if="(detailTracking?.recentEvents?.length ?? 0) > 0">
-            <ElTimelineItem
-              v-for="(event, index) in detailTracking?.recentEvents ?? []"
-              :key="`${event.eventTime}-${index}`"
-              :timestamp="formatDateTime(event.eventTime)"
-              placement="top"
+          <ElTabs
+            v-if="detailRecentEvents.length > 0"
+            v-model="activeTimelineTab"
+          >
+            <ElTabPane label="总时间线" name="overall">
+              <ElTimeline>
+                <ElTimelineItem
+                  v-for="group in trackingTimelineData.overallTimelineGroups"
+                  :key="group.key"
+                  :timestamp="formatDateTime(group.eventTime)"
+                  placement="top"
+                >
+                  <div class="space-y-2">
+                    <div class="font-medium text-foreground">
+                      {{ formatTrackingEventType(group.eventType) }} / {{ formatTrackingEventStatus(group.eventStatus) }}
+                    </div>
+                    <div class="text-xs text-muted-foreground">
+                      节点: {{ formatNullable(group.nodeCode) }}，{{ group.specimenCount > 0 ? `涉及标本: ${group.specimenCount} 个` : '公共事件' }}
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                      <ElTag
+                        v-if="group.specimenCount === 0"
+                        type="info"
+                      >
+                        公共事件
+                      </ElTag>
+                      <ElTag
+                        v-for="label in group.specimenLabels"
+                        :key="`${group.key}-${label}`"
+                        type="info"
+                      >
+                        {{ label }}
+                      </ElTag>
+                    </div>
+                    <div class="text-xs text-muted-foreground">
+                      操作人: {{ formatAggregateContext(group.operatorNames, '多操作人') }}，终端: {{ formatAggregateContext(group.sourceTerminals, '多终端') }}
+                    </div>
+                  </div>
+                </ElTimelineItem>
+              </ElTimeline>
+            </ElTabPane>
+            <ElTabPane
+              v-for="specimen in specimenTimelineTabs"
+              :key="specimen.id"
+              :label="specimen.label"
+              :name="specimen.id"
             >
-              <div class="space-y-1">
-                <div class="font-medium text-foreground">
-                  {{ formatTrackingEventType(event.eventType) }} / {{ formatTrackingEventStatus(event.eventStatus) }}
-                </div>
-                <div class="text-xs text-muted-foreground">
-                  节点：{{ formatNullable(event.nodeCode) }}，操作人：{{ formatNullable(event.operatorName) }}，终端：{{ formatNullable(event.sourceTerminal) }}
-                </div>
-              </div>
-            </ElTimelineItem>
-          </ElTimeline>
+              <ElTimeline v-if="specimen.events.length > 0">
+                <ElTimelineItem
+                  v-for="(event, index) in specimen.events"
+                  :key="`${specimen.id}-${event.eventTime}-${event.eventType}-${index}`"
+                  :timestamp="formatDateTime(event.eventTime)"
+                  placement="top"
+                >
+                  <div class="space-y-1">
+                    <div class="font-medium text-foreground">
+                      {{ formatTrackingEventType(event.eventType) }} / {{ formatTrackingEventStatus(event.eventStatus) }}
+                    </div>
+                    <div class="text-xs text-muted-foreground">
+                      节点: {{ formatNullable(event.nodeCode) }}，操作人: {{ formatNullable(event.operatorName) }}，终端: {{ formatNullable(event.sourceTerminal) }}
+                    </div>
+                  </div>
+                </ElTimelineItem>
+              </ElTimeline>
+              <ElEmpty v-else description="该标本暂无追踪事件" />
+            </ElTabPane>
+          </ElTabs>
           <ElEmpty v-else description="暂无最近追踪事件" />
         </WorkflowSectionCard>
 

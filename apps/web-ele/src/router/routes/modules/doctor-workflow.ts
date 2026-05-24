@@ -32,7 +32,7 @@ const routes: RouteRecordRaw[] = [
       authority: DOCTOR_WORKFLOW_AUTHORITIES,
       icon: 'carbon:stethoscope',
       order: 140,
-      title: '医生诊断工作流',
+      title: '诊断管理',
     },
     name: 'DoctorWorkflowRoot',
     path: '/doctor-workflow',

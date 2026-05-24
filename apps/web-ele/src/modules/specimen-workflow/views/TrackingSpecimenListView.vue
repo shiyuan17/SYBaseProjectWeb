@@ -48,8 +48,11 @@ import {
   formatFixationStatus,
   formatLabelPrintStatus,
   formatNullable,
+  formatQualityCheckResult,
+  formatReceiptStatus,
   formatSpecimenStatus,
 } from '../utils/format';
+import { buildSpecimenAbnormalDetails } from '../utils/specimen-abnormal';
 
 type QuickFilterKey = 'ABNORMAL' | 'ALL' | 'PENDING_LABEL' | 'VERIFIED';
 type AbnormalFilterValue = '' | 'false' | 'true';
@@ -137,6 +140,22 @@ const detailLoading = ref(false);
 const detailRow = ref<null | SpecimenManagementListItem>(null);
 const detailApplicationDetail = ref<null | ApplicationDetailView>(null);
 const detailLatestRegisterResult = ref<LatestSpecimenRegistrationResult | null>(null);
+
+const detailTargetSpecimen = computed(() => {
+  const specimenId = detailRow.value?.specimenId;
+  if (!specimenId) {
+    return null;
+  }
+  return (
+    detailApplicationDetail.value?.specimens.find((specimen) => specimen.id === specimenId)
+    ?? detailLatestRegisterResult.value?.specimens.find((specimen) => specimen.id === specimenId)
+    ?? null
+  );
+});
+
+const detailAbnormalSpecimens = computed(() =>
+  detailTargetSpecimen.value ? buildSpecimenAbnormalDetails([detailTargetSpecimen.value]) : [],
+);
 
 function resolveQuickFilterQuery(): Partial<
   Pick<SpecimenManagementListQuery, 'abnormalFlag' | 'labelPrintStatus' | 'specimenStatus'>
@@ -547,6 +566,29 @@ watch(
           type="warning"
           show-icon
         />
+        <WorkflowSectionCard
+          v-if="detailAbnormalSpecimens.length > 0"
+          title="异常明细"
+          description="展示当前异常标本的退回/拒收结果、质控结论、问题代码和原因。"
+        >
+          <div class="flex flex-col gap-3">
+            <div
+              v-for="specimen in detailAbnormalSpecimens"
+              :key="`${specimen.id}-${specimen.barcode}`"
+              class="rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm"
+            >
+              <div class="font-medium text-foreground">
+                {{ specimen.specimenNo || '-' }} / {{ specimen.barcode || '-' }}
+              </div>
+              <div class="mt-2 grid gap-2 md:grid-cols-2">
+                <div>异常类型：{{ formatReceiptStatus(specimen.status) }}</div>
+                <div>质控结果：{{ formatQualityCheckResult(specimen.qualityCheckResult) }}</div>
+                <div>问题代码：{{ specimen.qualityIssueCodes.length ? specimen.qualityIssueCodes.join('、') : '-' }}</div>
+                <div>原因：{{ specimen.reason || '-' }}</div>
+              </div>
+            </div>
+          </div>
+        </WorkflowSectionCard>
 
         <WorkflowSectionCard title="标本基础信息" description="展示标本、条码、容器、状态与最近批次信息。">
           <ElDescriptions :column="2" border>
@@ -665,6 +707,16 @@ watch(
               <ElTableColumn label="标签状态" min-width="120">
                 <template #default="{ row }">
                   {{ formatLabelPrintStatus(row.labelPrintStatus) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="异常明细" min-width="320">
+                <template #default="{ row }">
+                  <div class="flex flex-col gap-1 text-sm">
+                    <div>异常类型：{{ formatReceiptStatus(row.receiptStatus ?? row.specimenStatus) }}</div>
+                    <div>质控结果：{{ formatQualityCheckResult(row.qualityCheckResult) }}</div>
+                    <div>问题代码：{{ row.qualityIssueCodes?.length ? row.qualityIssueCodes.join('、') : '-' }}</div>
+                    <div>原因：{{ formatNullable(row.abnormalReason) }}</div>
+                  </div>
                 </template>
               </ElTableColumn>
             </ElTable>

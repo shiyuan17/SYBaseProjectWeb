@@ -51,8 +51,9 @@ type RegistrationResultResponse = Omit<SpecimenRegisterResult, 'specimens'> & {
 };
 type LatestRegistrationResultResponse = Omit<
   LatestSpecimenRegistrationResult,
-  'specimens'
+  'registrationSnapshot' | 'specimens'
 > & {
+  registrationSnapshot?: LatestSpecimenRegistrationResult['registrationSnapshot'];
   specimens?: SpecimenTrackingSummary[];
 };
 
@@ -73,7 +74,7 @@ export function mapApplicationDetailResponse(
   return {
     ...response,
     recentEvents: response.recentEvents ?? [],
-    specimens: response.specimens ?? [],
+    specimens: (response.specimens ?? []).map(mapSpecimenTrackingSummary),
   };
 }
 
@@ -124,7 +125,7 @@ export function mapRegistrationResultResponse(
 ): SpecimenRegisterResult {
   return {
     ...response,
-    specimens: response.specimens ?? [],
+    specimens: (response.specimens ?? []).map(mapSpecimenTrackingSummary),
   };
 }
 
@@ -133,7 +134,29 @@ export function mapLatestRegistrationResultResponse(
 ): LatestSpecimenRegistrationResult {
   return {
     ...response,
-    specimens: response.specimens ?? [],
+    registrationSnapshot: response.registrationSnapshot
+      ? {
+          collectionScene: response.registrationSnapshot.collectionScene ?? null,
+          operatorName: response.registrationSnapshot.operatorName ?? null,
+          operatorUserId: response.registrationSnapshot.operatorUserId ?? null,
+          printerCode: response.registrationSnapshot.printerCode ?? null,
+          remarks: response.registrationSnapshot.remarks ?? null,
+          terminalCode: response.registrationSnapshot.terminalCode ?? null,
+        }
+      : null,
+    specimens: (response.specimens ?? []).map(mapSpecimenTrackingSummary),
+  };
+}
+
+function mapSpecimenTrackingSummary(
+  specimen: SpecimenTrackingSummary,
+): SpecimenTrackingSummary {
+  return {
+    ...specimen,
+    abnormalReason: specimen.abnormalReason ?? null,
+    qualityCheckResult: specimen.qualityCheckResult ?? null,
+    qualityIssueCodes: specimen.qualityIssueCodes ?? [],
+    receiptStatus: specimen.receiptStatus ?? null,
   };
 }
 

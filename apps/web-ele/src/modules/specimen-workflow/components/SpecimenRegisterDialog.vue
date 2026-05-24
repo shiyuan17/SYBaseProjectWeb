@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import type {
   ApplicationDetailView,
+  LatestSpecimenRegistrationResult,
   SpecimenRegisterItemRequest,
   SpecimenRegisterResult,
+  SpecimenTrackingSummary,
 } from '../types/specimen-workflow';
 
 import { computed, reactive, ref, watch } from 'vue';
@@ -34,6 +36,7 @@ import ReferenceOptionSelect from '#/modules/system-management/components/Refere
 
 import {
   getApplicationDetail,
+  getLatestRegistrationResult,
   registerSpecimens,
 } from '../api/specimen-workflow-service';
 import { M2_PERMISSION_CODES } from '../constants';
@@ -41,10 +44,28 @@ import { getWorkflowPageErrorMessage } from '../utils/error';
 import {
   formatCurrentNode,
   formatNullable,
+  formatQualityCheckResult,
+  formatReceiptStatus,
 } from '../utils/format';
+import { buildSpecimenAbnormalDetails } from '../utils/specimen-abnormal';
 
 type RegisterRow = SpecimenRegisterItemRequest & {
   key: number;
+};
+
+type RegisterFormState = {
+  collectionScene: string;
+  operatorName: string;
+  operatorUserId: string;
+  printerCode: string;
+  remarks: string;
+  terminalCode: string;
+};
+
+type RegisterRowSeed = Omit<RegisterRow, 'key'>;
+
+type RegisterFormSnapshot = RegisterFormState & {
+  items: RegisterRowSeed[];
 };
 
 const props = defineProps<{
@@ -86,29 +107,35 @@ const dialogVisible = computed({
 const applicationDetail = ref<null | ApplicationDetailView>(null);
 const currentApplicationId = ref('');
 const loadingDetail = ref(false);
+const loadingLatestRegistration = ref(false);
 const pageError = ref('');
 const submittingRegister = ref(false);
+const latestRegistrationResult = ref<LatestSpecimenRegistrationResult | null>(null);
+const initialRegisterSnapshot = ref<null | RegisterFormSnapshot>(null);
 const workflowReferenceOptions = ref(createEmptyWorkflowReferenceOptions());
 
-const registerForm = reactive({
-  collectionScene: '',
-  operatorName: currentUserName.value,
-  operatorUserId: currentUserId.value,
-  printerCode: '',
-  remarks: '',
-  terminalCode: '',
-});
+const registerForm = reactive(createDefaultRegisterFormState());
 
 const registerItems = ref<RegisterRow[]>([createRegisterRow()]);
 
-function createRegisterRow(): RegisterRow {
+function createDefaultRegisterFormState(): RegisterFormState {
+  return {
+    collectionScene: '',
+    operatorName: currentUserName.value,
+    operatorUserId: currentUserId.value,
+    printerCode: '',
+    remarks: '',
+    terminalCode: '',
+  };
+}
+
+function createEmptyRegisterRowSeed(): RegisterRowSeed {
   return {
     barcode: '',
     clinicalSymptom: '',
     collectionMode: '',
     containerCount: 1,
     containerName: '',
-    key: Date.now() + Math.floor(Math.random() * 1000),
     specimenCount: 1,
     specimenNameStandardized: '',
     specimenSite: '',
@@ -116,23 +143,80 @@ function createRegisterRow(): RegisterRow {
   };
 }
 
-function resetRegisterForm() {
+function createRegisterRow(seed?: Partial<RegisterRowSeed>): RegisterRow {
+  return {
+    ...createEmptyRegisterRowSeed(),
+    ...seed,
+    key: Date.now() + Math.floor(Math.random() * 1000),
+  };
+}
+
+function mapSpecimenToRegisterRowSeed(specimen: SpecimenTrackingSummary): RegisterRowSeed {
+  return {
+    barcode: specimen.barcode ?? '',
+    clinicalSymptom: specimen.clinicalSymptom ?? '',
+    collectionMode: specimen.collectionMode ?? '',
+    containerCount: specimen.containerCount ?? 1,
+    containerName: specimen.containerName ?? '',
+    specimenCount: specimen.specimenCount ?? 1,
+    specimenNameStandardized: specimen.specimenName ?? '',
+    specimenSite: specimen.specimenSite ?? '',
+    specimenType: specimen.specimenType ?? '',
+  };
+}
+
+function buildRegisterFormSnapshot(
+  result: LatestSpecimenRegistrationResult | null,
+): null | RegisterFormSnapshot {
+  if (!result) {
+    return null;
+  }
+
+  const itemSeeds = result.specimens.map(mapSpecimenToRegisterRowSeed);
+  const snapshot = result.registrationSnapshot;
+  if (!snapshot && itemSeeds.length === 0) {
+    return null;
+  }
+
+  return {
+    collectionScene: snapshot?.collectionScene ?? '',
+    items: itemSeeds.length > 0 ? itemSeeds : [createEmptyRegisterRowSeed()],
+    operatorName: snapshot?.operatorName ?? currentUserName.value,
+    operatorUserId: snapshot?.operatorUserId ?? currentUserId.value,
+    printerCode: snapshot?.printerCode ?? '',
+    remarks: snapshot?.remarks ?? '',
+    terminalCode: snapshot?.terminalCode ?? '',
+  };
+}
+
+function applyRegisterFormSnapshot(snapshot?: null | RegisterFormSnapshot) {
+  const nextSnapshot = snapshot ?? {
+    ...createDefaultRegisterFormState(),
+    items: [createEmptyRegisterRowSeed()],
+  };
+
   Object.assign(registerForm, {
-    collectionScene: '',
-    operatorName: currentUserName.value,
-    operatorUserId: currentUserId.value,
-    printerCode: '',
-    remarks: '',
-    terminalCode: '',
+    collectionScene: nextSnapshot.collectionScene,
+    operatorName: nextSnapshot.operatorName,
+    operatorUserId: nextSnapshot.operatorUserId,
+    printerCode: nextSnapshot.printerCode,
+    remarks: nextSnapshot.remarks,
+    terminalCode: nextSnapshot.terminalCode,
   });
-  registerItems.value = [createRegisterRow()];
+  registerItems.value = nextSnapshot.items.map((item) => createRegisterRow(item));
+}
+
+function resetRegisterForm() {
+  applyRegisterFormSnapshot(initialRegisterSnapshot.value);
 }
 
 function resetDialogState() {
   pageError.value = '';
   applicationDetail.value = null;
   currentApplicationId.value = props.applicationId.trim();
-  resetRegisterForm();
+  latestRegistrationResult.value = null;
+  initialRegisterSnapshot.value = null;
+  applyRegisterFormSnapshot(null);
 }
 
 function addRegisterRow(afterKey?: number) {
@@ -181,10 +265,39 @@ async function loadApplicationDetail(options: { silent?: boolean } = {}) {
   }
 }
 
+async function loadLatestRegistration(options: { silent?: boolean } = {}) {
+  if (!currentApplicationId.value) {
+    if (!options.silent) {
+      ElMessage.warning('缺少申请单编号');
+    }
+    return;
+  }
+
+  loadingLatestRegistration.value = true;
+  pageError.value = '';
+  try {
+    const result = await getLatestRegistrationResult(currentApplicationId.value);
+    latestRegistrationResult.value = result;
+    initialRegisterSnapshot.value = buildRegisterFormSnapshot(result);
+    resetRegisterForm();
+  } catch (error) {
+    pageError.value = getWorkflowPageErrorMessage(error);
+  } finally {
+    loadingLatestRegistration.value = false;
+  }
+}
+
 async function loadWorkflowReferenceOptions() {
   workflowReferenceOptions.value = await loadWorkflowReferenceOptionsSafely({
     enabled: canQueryWorkflowReference.value,
   });
+}
+
+async function refreshDialogContext() {
+  await Promise.all([
+    loadApplicationDetail(),
+    loadLatestRegistration(),
+  ]);
 }
 
 function validateRegisterItems(items: Array<{
@@ -263,20 +376,37 @@ async function submitRegister() {
   submittingRegister.value = true;
   pageError.value = '';
   try {
-    const result = await registerSpecimens({
-      applicationId: currentApplicationId.value,
+    const registrationSnapshot = {
       collectionScene: registerForm.collectionScene.trim() || null,
-      items,
-      operatorName: registerForm.operatorName.trim(),
+      operatorName: registerForm.operatorName.trim() || null,
       operatorUserId: registerForm.operatorUserId.trim() || null,
       printerCode: registerForm.printerCode.trim() || null,
       remarks: registerForm.remarks.trim() || null,
       terminalCode: registerForm.terminalCode.trim() || null,
+    };
+    const result = await registerSpecimens({
+      applicationId: currentApplicationId.value,
+      collectionScene: registrationSnapshot.collectionScene,
+      items,
+      operatorName: registerForm.operatorName.trim(),
+      operatorUserId: registrationSnapshot.operatorUserId,
+      printerCode: registrationSnapshot.printerCode,
+      remarks: registrationSnapshot.remarks,
+      terminalCode: registrationSnapshot.terminalCode,
     });
     emit('registered', {
       applicationId: currentApplicationId.value,
       registerResult: result,
     });
+    latestRegistrationResult.value = {
+      applicationId: currentApplicationId.value,
+      labelPrintBatchNo: result.labelPrintBatchNo,
+      labelPrintMessage: result.labelPrintMessage,
+      labelPrintSuccess: result.labelPrintSuccess,
+      registrationSnapshot,
+      specimens: result.specimens,
+    };
+    initialRegisterSnapshot.value = buildRegisterFormSnapshot(latestRegistrationResult.value);
     resetRegisterForm();
     ElMessage.success('标本登记成功');
   } catch (error) {
@@ -288,6 +418,14 @@ async function submitRegister() {
 
 const detailStatusType = computed(() =>
   applicationDetail.value?.abnormalFlag ? 'danger' : 'success',
+);
+
+const loadingContext = computed(
+  () => loadingDetail.value || loadingLatestRegistration.value,
+);
+
+const abnormalSpecimens = computed(() =>
+  buildSpecimenAbnormalDetails(latestRegistrationResult.value?.specimens ?? []),
 );
 
 function closeDialog() {
@@ -303,6 +441,7 @@ watch(
     resetDialogState();
     await Promise.all([
       loadApplicationDetail({ silent: true }),
+      loadLatestRegistration({ silent: true }),
       loadWorkflowReferenceOptions(),
     ]);
   },
@@ -336,10 +475,38 @@ watch(
         show-icon
       />
 
+      <ElAlert
+        v-if="abnormalSpecimens.length > 0"
+        :closable="false"
+        title="最近一次登记存在异常标本，请根据异常原因修正后重新登记。"
+        type="warning"
+        show-icon
+      >
+        <template #default>
+          <div class="mt-2 flex flex-col gap-2 text-sm">
+            <div
+              v-for="specimen in abnormalSpecimens"
+              :key="`${specimen.id}-${specimen.barcode}`"
+              class="rounded border border-warning/30 bg-warning/10 px-3 py-2"
+            >
+              <div>
+                {{ specimen.specimenNo || '-' }} / {{ specimen.barcode || '-' }}
+              </div>
+              <div class="mt-1 grid gap-1 text-muted-foreground md:grid-cols-2">
+                <div>异常类型：{{ formatReceiptStatus(specimen.status) }}</div>
+                <div>质控结果：{{ formatQualityCheckResult(specimen.qualityCheckResult) }}</div>
+                <div>问题代码：{{ specimen.qualityIssueCodes.length ? specimen.qualityIssueCodes.join('、') : '-' }}</div>
+                <div>原因：{{ specimen.reason || '-' }}</div>
+              </div>
+            </div>
+          </div>
+        </template>
+      </ElAlert>
+
       <section class="rounded-lg border border-border bg-card p-4 shadow-sm">
         <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div class="text-base font-semibold text-foreground">当前上下文</div>
-          <ElButton :loading="loadingDetail" @click="loadApplicationDetail()">
+          <ElButton :loading="loadingContext" @click="refreshDialogContext">
             刷新详情
           </ElButton>
         </div>

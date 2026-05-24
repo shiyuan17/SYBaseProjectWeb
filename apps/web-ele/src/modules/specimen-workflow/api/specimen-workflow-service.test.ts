@@ -112,11 +112,15 @@ describe('specimen-workflow-service mappers', () => {
             eventType: 'REGISTER',
             nodeCode: 'SPECIMEN_COLLECTION',
             operatorName: '张三',
+            specimenBarcode: 'BC-001',
+            specimenId: 'SPEC-ID',
+            specimenNo: 'SP-001',
             sourceTerminal: 'TERMINAL-01',
           },
         ],
         specimens: [
           {
+            abnormalReason: 'return-after-partial',
             barcode: 'BC-001',
             clinicalSymptom: '腹痛',
             collectionMode: 'SURGERY',
@@ -125,6 +129,9 @@ describe('specimen-workflow-service mappers', () => {
             fixationStatus: 'PENDING',
             id: 'SPEC-ID',
             labelPrintStatus: 'PRINTED',
+            qualityCheckResult: 'FAILED',
+            qualityIssueCodes: ['CONTAINER_DAMAGE'],
+            receiptStatus: 'RETURNED',
             specimenCount: 1,
             specimenName: '胃组织',
             specimenNo: 'SP-001',
@@ -137,10 +144,19 @@ describe('specimen-workflow-service mappers', () => {
     );
 
     expect(mapped.recentEvents).toHaveLength(1);
+    expect(mapped.recentEvents[0]).toMatchObject({
+      specimenBarcode: 'BC-001',
+      specimenId: 'SPEC-ID',
+      specimenNo: 'SP-001',
+    });
     expect(mapped.specimens).toHaveLength(1);
     expect(mapped.specimens[0]).toMatchObject({
+      abnormalReason: 'return-after-partial',
       clinicalSymptom: '腹痛',
       collectionMode: 'SURGERY',
+      qualityCheckResult: 'FAILED',
+      qualityIssueCodes: ['CONTAINER_DAMAGE'],
+      receiptStatus: 'RETURNED',
     });
   });
 
@@ -204,9 +220,11 @@ describe('specimen-workflow-service mappers', () => {
       labelPrintBatchNo: null,
       labelPrintMessage: null,
       labelPrintSuccess: false,
+      registrationSnapshot: null,
     });
 
     expect(mapped.applicationId).toBe('APP-ID');
+    expect(mapped.registrationSnapshot).toBeNull();
     expect(mapped.specimens).toEqual([]);
   });
 
@@ -353,7 +371,34 @@ describe('specimen-workflow-service requests', () => {
       labelPrintBatchNo: 'LP-001',
       labelPrintMessage: 'printed',
       labelPrintSuccess: true,
-      specimens: [],
+      registrationSnapshot: {
+        collectionScene: 'WARD',
+        operatorName: '张三',
+        operatorUserId: 'USER-001',
+        printerCode: 'P-01',
+        remarks: '首次登记',
+        terminalCode: 'TERM-001',
+      },
+      specimens: [
+        {
+          abnormalReason: null,
+          barcode: 'BC-001',
+          containerCount: 1,
+          containerName: 'Specimen Bottle',
+          fixationStatus: 'PENDING',
+          id: 'SPEC-ID',
+          labelPrintStatus: 'SUCCESS',
+          qualityCheckResult: null,
+          qualityIssueCodes: [],
+          receiptStatus: null,
+          specimenCount: 1,
+          specimenName: '胃组织',
+          specimenNo: 'SP-001',
+          specimenSite: '胃',
+          specimenStatus: 'REGISTERED',
+          specimenType: '组织',
+        },
+      ],
     });
 
     await expect(getLatestRegistrationResult('APP-ID')).resolves.toEqual({
@@ -361,7 +406,34 @@ describe('specimen-workflow-service requests', () => {
       labelPrintBatchNo: 'LP-001',
       labelPrintMessage: 'printed',
       labelPrintSuccess: true,
-      specimens: [],
+      registrationSnapshot: {
+        collectionScene: 'WARD',
+        operatorName: '张三',
+        operatorUserId: 'USER-001',
+        printerCode: 'P-01',
+        remarks: '首次登记',
+        terminalCode: 'TERM-001',
+      },
+      specimens: [
+        {
+          abnormalReason: null,
+          barcode: 'BC-001',
+          containerCount: 1,
+          containerName: 'Specimen Bottle',
+          fixationStatus: 'PENDING',
+          id: 'SPEC-ID',
+          labelPrintStatus: 'SUCCESS',
+          qualityCheckResult: null,
+          qualityIssueCodes: [],
+          receiptStatus: null,
+          specimenCount: 1,
+          specimenName: '胃组织',
+          specimenNo: 'SP-001',
+          specimenSite: '胃',
+          specimenStatus: 'REGISTERED',
+          specimenType: '组织',
+        },
+      ],
     });
 
     expect(requestClientMock.get).toHaveBeenCalledWith(

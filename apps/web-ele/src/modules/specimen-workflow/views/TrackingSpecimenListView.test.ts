@@ -214,6 +214,7 @@ import TrackingSpecimenListView from './TrackingSpecimenListView.vue';
 function buildSpecimenRow() {
   return {
     abnormalFlag: true,
+    abnormalReason: '容器破损',
     applicationId: 'APP-TRACK-001',
     applicationNo: 'AP202605220001',
     barcode: 'BC-TRACK-001',
@@ -223,8 +224,11 @@ function buildSpecimenRow() {
     labelPrintBatchNo: 'BATCH-001',
     labelPrintStatus: 'FAILED',
     latestTrackingAt: '2026-05-24T08:00:00',
+    qualityCheckResult: 'FAILED',
+    qualityIssueCodes: ['CONTAINER_DAMAGE'],
     patientName: '张三',
     registeredAt: '2026-05-24T08:00:00',
+    receiptStatus: 'REJECTED',
     specimenCount: 1,
     specimenId: 'SPEC-001',
     specimenName: '胃组织',
@@ -287,14 +291,19 @@ function buildLatestResult() {
     labelPrintBatchNo: 'BATCH-001',
     labelPrintMessage: '存在失败',
     labelPrintSuccess: false,
+    registrationSnapshot: null,
     specimens: [
       {
+        abnormalReason: '容器破损',
         barcode: 'BC-TRACK-001',
         containerCount: 1,
         containerName: '瓶1',
         fixationStatus: 'FIXING',
         id: 'SPEC-001',
         labelPrintStatus: 'FAILED',
+        qualityCheckResult: 'FAILED',
+        qualityIssueCodes: ['CONTAINER_DAMAGE'],
+        receiptStatus: 'REJECTED',
         specimenCount: 1,
         specimenName: '胃组织',
         specimenNo: 'SP-001',
@@ -352,7 +361,10 @@ describe('TrackingSpecimenListView', () => {
     mockGetApplicationDetail.mockResolvedValue(buildApplicationDetail());
     mockGetLatestRegistrationResult.mockResolvedValue(buildLatestResult());
 
-    const { app, root } = await mountView();
+    const { app, root } = await mountView({
+      initialBarcode: 'BC-TRACK-001',
+      triggerKey: 1,
+    });
 
     const buttonTexts = Array.from(root.querySelectorAll('button')).map((button) =>
       button.textContent?.trim(),
@@ -362,6 +374,12 @@ describe('TrackingSpecimenListView', () => {
     expect(buttonTexts).not.toContain('补打标签');
     expect(buttonTexts).not.toContain('开始核验');
     expect(buttonTexts).not.toContain('完成核验');
+
+    expect(root.textContent).toContain('异常明细');
+    expect(root.textContent).toContain('异常类型：已拒收');
+    expect(root.textContent).toContain('质控结果：不合格');
+    expect(root.textContent).toContain('问题代码：CONTAINER_DAMAGE');
+    expect(root.textContent).toContain('原因：容器破损');
 
     app.unmount();
   });
