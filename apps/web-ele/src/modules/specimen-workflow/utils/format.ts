@@ -38,6 +38,7 @@ const applicationStatusLabels = {
 const applicationFormStatusLabels = {
   ARCHIVED: '已归档',
   NOT_UPLOADED: '未上传',
+  PENDING: '待补单',
   UPLOADED: '已上传',
 } satisfies Record<string, string>;
 const currentNodeLabels = {

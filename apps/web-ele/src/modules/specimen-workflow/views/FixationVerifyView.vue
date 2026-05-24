@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { PendingSpecimenItem } from '../types/specimen-workflow';
 
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
 import { useUserStore } from '@vben/stores';
@@ -14,50 +15,55 @@ import {
   ElFormItem,
   ElInput,
   ElMessage,
+  ElMessageBox,
+  ElOption,
   ElPagination,
+  ElSelect,
   ElTable,
   ElTableColumn,
   ElTag,
 } from 'element-plus';
 
 import DepartmentSelect from '#/modules/system-management/components/DepartmentSelect.vue';
-import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
 
+import { completeFixation, listPendingFixations } from '../api/specimen-workflow-service';
+import TransportOrderCreateDialog from '../components/TransportOrderCreateDialog.vue';
 import {
-  completeFixation,
-  listPendingFixations,
-  startFixation,
-} from '../api/specimen-workflow-service';
-import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
-import { DEFAULT_PAGE_SIZE } from '../constants';
+  ALL_FIXATION_STATUS_VALUE,
+  DEFAULT_PAGE_SIZE,
+  FIXATION_STATUS_OPTIONS,
+} from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import { formatDateTime, formatFixationStatus, formatNullable } from '../utils/format';
 
-type FixationAction = 'complete' | 'start';
-
 const userStore = useUserStore();
+const route = useRoute();
+
+withDefaults(
+  defineProps<{
+    embedded?: boolean;
+  }>(),
+  {
+    embedded: false,
+  },
+);
 
 const pageError = ref('');
 const loading = ref(false);
 const actionLoading = ref(false);
 const pendingItems = ref<PendingSpecimenItem[]>([]);
 const total = ref(0);
+const createTransportOrderDialogVisible = ref(false);
+const createTransportOrderApplicationId = ref('');
+const createTransportOrderApplicationNo = ref('');
 
 const filters = reactive({
   applicationId: '',
   dateRange: [] as string[],
   departmentId: '',
+  fixationStatus: ALL_FIXATION_STATUS_VALUE,
   page: 1,
   size: DEFAULT_PAGE_SIZE,
-});
-
-const actionForm = reactive({
-  fixationLiquidType: '',
-  operatorName: userStore.userInfo?.realName ?? '',
-  operatorUserId: userStore.userInfo?.userId ?? '',
-  remarks: '',
-  specimenBarcode: '',
-  terminalCode: '',
 });
 
 const currentQuery = computed(() => ({
@@ -65,6 +71,10 @@ const currentQuery = computed(() => ({
   dateFrom: filters.dateRange[0] || undefined,
   dateTo: filters.dateRange[1] || undefined,
   departmentId: filters.departmentId.trim() || undefined,
+  fixationStatus:
+    filters.fixationStatus === ALL_FIXATION_STATUS_VALUE
+      ? undefined
+      : filters.fixationStatus.trim() || undefined,
   page: filters.page,
   size: filters.size,
 }));
@@ -92,47 +102,55 @@ function handleReset() {
   filters.applicationId = '';
   filters.dateRange = [];
   filters.departmentId = '';
+  filters.fixationStatus = ALL_FIXATION_STATUS_VALUE;
   filters.page = 1;
   filters.size = DEFAULT_PAGE_SIZE;
   void loadPendingData();
 }
 
-function adoptBarcode(barcode: string) {
-  actionForm.specimenBarcode = barcode;
+function normalizeRouteQueryValue(value: unknown) {
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return typeof value[0] === 'string' ? value[0] : '';
+  }
+  return '';
 }
 
-async function submitFixation(action: FixationAction, barcode?: string) {
-  const specimenBarcode = (barcode ?? actionForm.specimenBarcode).trim();
+async function submitFixation(barcode: string) {
+  const specimenBarcode = barcode.trim();
+  const operatorName = userStore.userInfo?.realName?.trim() ?? '';
+  const operatorUserId = userStore.userInfo?.userId?.trim() ?? '';
+
   if (!specimenBarcode) {
     ElMessage.warning('请先录入或扫码标本条码');
     return;
   }
-  if (!actionForm.operatorName.trim()) {
-    ElMessage.warning('请选择操作人');
+  if (!operatorName) {
+    ElMessage.warning('缺少当前操作人信息');
+    return;
+  }
+
+  try {
+    await ElMessageBox.confirm('确认该标本已固定完成吗？', '完成固定', {
+      cancelButtonText: '取消',
+      confirmButtonText: '确认',
+      type: 'warning',
+    });
+  } catch {
     return;
   }
 
   actionLoading.value = true;
   pageError.value = '';
   try {
-    const payload = {
-      fixationLiquidType: actionForm.fixationLiquidType.trim() || null,
-      operatorName: actionForm.operatorName.trim(),
-      operatorUserId: actionForm.operatorUserId.trim() || null,
-      remarks: actionForm.remarks.trim() || null,
+    await completeFixation({
+      operatorName,
+      operatorUserId: operatorUserId || null,
       specimenBarcode,
-      terminalCode: actionForm.terminalCode.trim() || null,
-    };
-
-    if (action === 'start') {
-      await startFixation(payload);
-      ElMessage.success(`条码 ${specimenBarcode} 已开始固定`);
-    } else {
-      await completeFixation(payload);
-      ElMessage.success(`条码 ${specimenBarcode} 已完成固定`);
-    }
-
-    actionForm.specimenBarcode = '';
+    });
+    ElMessage.success(`条码 ${specimenBarcode} 已完成固定`);
     await loadPendingData();
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
@@ -141,20 +159,45 @@ async function submitFixation(action: FixationAction, barcode?: string) {
   }
 }
 
-void loadPendingData();
+watch(
+  () => route.query.applicationId,
+  (value) => {
+    const applicationId = normalizeRouteQueryValue(value).trim();
+    filters.applicationId = applicationId;
+    filters.page = 1;
+    void loadPendingData();
+  },
+  { immediate: true },
+);
 
 function handleDepartmentChange(department: null | { id: string; name: string }) {
   filters.departmentId = department?.id ?? '';
 }
 
-function handleOperatorChange(user: null | { id: string; name: string }) {
-  actionForm.operatorUserId = user?.id ?? '';
-  actionForm.operatorName = user?.name ?? '';
+function canCompleteFixation(row: PendingSpecimenItem) {
+  return ['PENDING', 'FIXING'].includes(row.fixationStatus ?? '');
+}
+
+function canCreateTransportOrder(row: PendingSpecimenItem) {
+  return row.fixationStatus === 'COMPLETED';
+}
+
+function openCreateTransportOrderDialog(row: PendingSpecimenItem) {
+  if (!canCreateTransportOrder(row)) {
+    return;
+  }
+  createTransportOrderApplicationId.value = row.applicationId;
+  createTransportOrderApplicationNo.value = row.applicationNo;
+  createTransportOrderDialogVisible.value = true;
+}
+
+function handleTransportOrderCreated() {
+  void loadPendingData();
 }
 </script>
 
 <template>
-  <Page title="固定核对">
+  <Page :title="embedded ? '固定核对' : '固定与转运'">
     <div class="flex flex-col gap-4">
       <ElAlert
         v-if="pageError"
@@ -165,51 +208,8 @@ function handleOperatorChange(user: null | { id: string; name: string }) {
       />
 
       <WorkflowSectionCard
-        title="扫码优先操作"
-        description="推荐使用扫码枪录入条码后直接回车或点击动作按钮，适合固定台主流程。"
-      >
-        <ElForm label-width="96px">
-          <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <ElFormItem label="标本条码" required>
-              <ElInput
-                v-model="actionForm.specimenBarcode"
-                clearable
-                placeholder="扫码后回车"
-                @keyup.enter="submitFixation('start')"
-              />
-            </ElFormItem>
-            <ElFormItem label="操作人" required>
-              <SystemUserSelect
-                v-model="actionForm.operatorUserId"
-                :selected-label="actionForm.operatorName"
-                placeholder="请选择操作人"
-                @change="handleOperatorChange"
-              />
-            </ElFormItem>
-            <ElFormItem label="固定液类型">
-              <ElInput v-model="actionForm.fixationLiquidType" placeholder="例如：10% 中性福尔马林" />
-            </ElFormItem>
-            <ElFormItem label="终端编码">
-              <ElInput v-model="actionForm.terminalCode" placeholder="工作站或扫码设备编码" />
-            </ElFormItem>
-          </div>
-          <ElFormItem label="备注">
-            <ElInput v-model="actionForm.remarks" placeholder="必要时补充固定说明" />
-          </ElFormItem>
-          <div class="flex justify-end gap-2">
-            <ElButton :loading="actionLoading" type="primary" @click="submitFixation('start')">
-              开始固定
-            </ElButton>
-            <ElButton :loading="actionLoading" type="success" @click="submitFixation('complete')">
-              完成固定
-            </ElButton>
-          </div>
-        </ElForm>
-      </WorkflowSectionCard>
-
-      <WorkflowSectionCard
-        title="待固定列表"
-        description="按申请单编号、送检科室和登记日期筛选待固定标本。"
+        title="固定列表"
+        description="按申请单编号、固定状态、送检科室和登记日期筛选标本。"
       >
         <ElForm inline label-width="88px">
           <ElFormItem label="申请单号">
@@ -220,6 +220,20 @@ function handleOperatorChange(user: null | { id: string; name: string }) {
               style="width: 220px"
               @keyup.enter="handleSearch"
             />
+          </ElFormItem>
+          <ElFormItem label="固定状态">
+            <ElSelect
+              v-model="filters.fixationStatus"
+              placeholder="请选择固定状态"
+              style="width: 180px"
+            >
+              <ElOption
+                v-for="option in FIXATION_STATUS_OPTIONS"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
+            </ElSelect>
           </ElFormItem>
           <ElFormItem label="送检科室">
             <DepartmentSelect
@@ -275,25 +289,24 @@ function handleOperatorChange(user: null | { id: string; name: string }) {
               {{ formatDateTime(row.latestTrackingAt) }}
             </template>
           </ElTableColumn>
-          <ElTableColumn fixed="right" label="操作" min-width="220">
+          <ElTableColumn fixed="right" label="操作" min-width="320">
             <template #default="{ row }">
-              <div class="flex flex-wrap gap-2">
-                <ElButton link type="primary" @click="adoptBarcode(row.barcode)">
-                  带入扫码框
-                </ElButton>
+              <div class="flex flex-nowrap items-center gap-3 whitespace-nowrap">
                 <ElButton
-                  :loading="actionLoading"
+                  :disabled="!canCreateTransportOrder(row)"
+                  :title="canCreateTransportOrder(row) ? undefined : '请先完成固定后再创建转运单'"
                   link
                   type="primary"
-                  @click="submitFixation('start', row.barcode)"
+                  @click="openCreateTransportOrderDialog(row)"
                 >
-                  开始固定
+                  创建转运单
                 </ElButton>
                 <ElButton
+                  v-if="canCompleteFixation(row)"
                   :loading="actionLoading"
                   link
                   type="success"
-                  @click="submitFixation('complete', row.barcode)"
+                  @click="submitFixation(row.barcode)"
                 >
                   完成固定
                 </ElButton>
@@ -316,5 +329,12 @@ function handleOperatorChange(user: null | { id: string; name: string }) {
         </div>
       </WorkflowSectionCard>
     </div>
+
+    <TransportOrderCreateDialog
+      v-model="createTransportOrderDialogVisible"
+      :initial-application-id="createTransportOrderApplicationId"
+      :initial-application-no="createTransportOrderApplicationNo"
+      @created="handleTransportOrderCreated"
+    />
   </Page>
 </template>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type {
   ApplicationDetailView,
+  LatestSpecimenRegistrationResult,
   LabelPrintRetryResult,
   SpecimenRegisterResult,
 } from '../types/specimen-workflow';
@@ -78,7 +79,9 @@ const dialogVisible = computed({
 
 const applicationDetail = ref<null | ApplicationDetailView>(null);
 const currentApplicationId = ref('');
-const latestRegisterResult = ref<null | SpecimenRegisterResult>(null);
+const latestRegisterResult = ref<
+  LatestSpecimenRegistrationResult | SpecimenRegisterResult | null
+>(null);
 const currentRetryResult = ref<LabelPrintRetryResult | null>(null);
 const loadingDetail = ref(false);
 const loadingResult = ref(false);

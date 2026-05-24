@@ -1,0 +1,1254 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>临床送检详细流程</title>
+    <style>
+      :root {
+        --bg: #f6f8fb;
+        --paper: #ffffff;
+        --ink: #172033;
+        --muted: #5f6b7a;
+        --line: #dce3ec;
+        --primary: #0f766e;
+        --primary-soft: #e2f5f1;
+        --blue: #2563eb;
+        --blue-soft: #e8f0ff;
+        --amber: #b45309;
+        --amber-soft: #fff4dd;
+        --danger: #b42318;
+        --danger-soft: #ffe7e4;
+        --ok: #15803d;
+        --ok-soft: #e4f7e8;
+        --shadow: 0 18px 45px rgba(20, 37, 63, 0.1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background:
+          linear-gradient(135deg, rgba(15, 118, 110, 0.08), transparent 36%),
+          linear-gradient(180deg, #eef3f8 0%, var(--bg) 46%, #f9fbfd 100%);
+        color: var(--ink);
+        font-family:
+          "Microsoft YaHei",
+          "PingFang SC",
+          "Noto Sans SC",
+          Arial,
+          sans-serif;
+        line-height: 1.7;
+      }
+
+      main {
+        width: min(1180px, calc(100% - 40px));
+        margin: 0 auto;
+        padding: 42px 0 60px;
+      }
+
+      section,
+      .hero-panel,
+      .hero-side {
+        border: 1px solid rgba(105, 123, 145, 0.2);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.94);
+        box-shadow: var(--shadow);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.8fr);
+        gap: 20px;
+        align-items: stretch;
+      }
+
+      .hero-panel,
+      .hero-side {
+        padding: 30px;
+      }
+
+      .eyebrow {
+        color: var(--primary);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3,
+      h4,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        margin-top: 12px;
+        font-size: clamp(32px, 4vw, 52px);
+        line-height: 1.18;
+      }
+
+      h2 {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 18px;
+        font-size: 26px;
+        line-height: 1.3;
+      }
+
+      h2::before {
+        display: inline-block;
+        width: 10px;
+        height: 28px;
+        border-radius: 999px;
+        background: var(--primary);
+        content: "";
+      }
+
+      h3 {
+        font-size: 19px;
+        line-height: 1.35;
+      }
+
+      h4 {
+        margin-bottom: 6px;
+        color: var(--muted);
+        font-size: 13px;
+        letter-spacing: 0.02em;
+      }
+
+      p {
+        margin-top: 10px;
+        color: var(--muted);
+      }
+
+      section {
+        margin-top: 22px;
+        padding: 28px;
+      }
+
+      ul {
+        margin: 10px 0 0;
+        padding-left: 20px;
+      }
+
+      li + li {
+        margin-top: 6px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: var(--paper);
+      }
+
+      th,
+      td {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line);
+        border-right: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th:last-child,
+      td:last-child {
+        border-right: 0;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      th {
+        background: #edf3f8;
+        color: #223047;
+        font-size: 14px;
+        white-space: nowrap;
+      }
+
+      .lead {
+        max-width: 880px;
+        font-size: 17px;
+      }
+
+      .hero-side {
+        display: grid;
+        gap: 14px;
+      }
+
+      .summary-card {
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 16px;
+        background: #f8fafc;
+      }
+
+      .summary-card strong {
+        display: block;
+        color: var(--ink);
+        font-size: 22px;
+        line-height: 1.2;
+      }
+
+      .summary-card span {
+        display: block;
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .tag-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 18px;
+      }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 3px 10px;
+        border-radius: 999px;
+        background: var(--primary-soft);
+        color: var(--primary);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .tag.blue {
+        background: var(--blue-soft);
+        color: var(--blue);
+      }
+
+      .tag.warn {
+        background: var(--amber-soft);
+        color: var(--amber);
+      }
+
+      .tag.danger {
+        background: var(--danger-soft);
+        color: var(--danger);
+      }
+
+      .tag.ok {
+        background: var(--ok-soft);
+        color: var(--ok);
+      }
+
+      .grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      .grid-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .grid-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .flow {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 16px;
+      }
+
+      .flow-node {
+        position: relative;
+        min-height: 160px;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 18px;
+        background: #fbfdff;
+        overflow: hidden;
+      }
+
+      .flow-node::after {
+        position: absolute;
+        right: 16px;
+        bottom: 8px;
+        color: rgba(15, 118, 110, 0.1);
+        font-size: 58px;
+        font-weight: 800;
+        content: attr(data-no);
+      }
+
+      .flow-node h3 {
+        position: relative;
+        z-index: 1;
+      }
+
+      .flow-node p,
+      .flow-node ul {
+        position: relative;
+        z-index: 1;
+      }
+
+      .step-card {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        background: var(--paper);
+        overflow: hidden;
+      }
+
+      .step-head {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: 14px;
+        align-items: center;
+        padding: 18px 20px;
+        border-bottom: 1px solid var(--line);
+        background: #f8fafc;
+      }
+
+      .step-no {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--primary);
+        color: white;
+        font-weight: 800;
+      }
+
+      .step-body {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0;
+      }
+
+      .info-block {
+        min-height: 136px;
+        padding: 18px 20px;
+        border-bottom: 1px solid var(--line);
+        border-right: 1px solid var(--line);
+      }
+
+      .info-block:nth-child(2n) {
+        border-right: 0;
+      }
+
+      .info-block:nth-last-child(-n + 2) {
+        border-bottom: 0;
+      }
+
+      .info-block p {
+        margin-top: 0;
+      }
+
+      .status-table td:first-child {
+        width: 120px;
+        font-weight: 700;
+      }
+
+      .risk-list {
+        display: grid;
+        gap: 14px;
+      }
+
+      .risk-item {
+        border: 1px solid var(--line);
+        border-left: 5px solid var(--amber);
+        border-radius: 14px;
+        padding: 16px 18px;
+        background: #fffdf8;
+      }
+
+      .risk-item.ok {
+        border-left-color: var(--ok);
+        background: #f7fff8;
+      }
+
+      .risk-item.danger {
+        border-left-color: var(--danger);
+        background: #fff8f7;
+      }
+
+      .footer-note {
+        margin-top: 22px;
+        color: var(--muted);
+        font-size: 13px;
+        text-align: center;
+      }
+
+      @media (max-width: 960px) {
+        .hero,
+        .grid-2,
+        .grid-3,
+        .flow,
+        .step-body {
+          grid-template-columns: 1fr;
+        }
+
+        .step-head {
+          grid-template-columns: auto minmax(0, 1fr);
+        }
+
+        .step-head .tag {
+          grid-column: 1 / -1;
+          justify-self: start;
+        }
+
+        .info-block,
+        .info-block:nth-child(2n),
+        .info-block:nth-last-child(-n + 2) {
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .info-block:last-child {
+          border-bottom: 0;
+        }
+
+        table {
+          display: block;
+          overflow-x: auto;
+          white-space: nowrap;
+        }
+      }
+
+      @media (max-width: 640px) {
+        main {
+          width: min(100% - 24px, 1180px);
+          padding-top: 24px;
+        }
+
+        section,
+        .hero-panel,
+        .hero-side {
+          padding: 20px;
+          border-radius: 14px;
+        }
+
+        h1 {
+          font-size: 30px;
+        }
+
+        h2 {
+          font-size: 22px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header class="hero">
+        <div class="hero-panel">
+          <div class="eyebrow">Clinical Submission Workflow</div>
+          <h1>临床送检详细流程</h1>
+          <p class="lead">
+            本文档以当前临床标本送检系统能力为基线，整理一套可培训、可联调、可验收的推荐流程。
+            流程覆盖申请与登记、固定与转运、病理接收、追踪与异常四个主节点，并在每一步标明必须核对的关键要素。
+          </p>
+          <div class="tag-row">
+            <span class="tag ok">现有主链路合理</span>
+            <span class="tag">要素基本足够</span>
+            <span class="tag blue">覆盖前后端实现</span>
+            <span class="tag warn">设备与第三方联调待确认</span>
+          </div>
+        </div>
+        <aside class="hero-side" aria-label="流程摘要">
+          <div class="summary-card">
+            <strong>4 个主节点</strong>
+            <span>申请与登记、固定与转运、病理接收、追踪与异常。</span>
+          </div>
+          <div class="summary-card">
+            <strong>12 个操作步骤</strong>
+            <span>从申请单创建到异常闭环，逐步标注重要信息和校验规则。</span>
+          </div>
+          <div class="summary-card">
+            <strong>6 类要素核查</strong>
+            <span>申请单、标本、固定、转运、接收、追踪逐项核对。</span>
+          </div>
+        </aside>
+      </header>
+
+      <section>
+        <h2>核查结论</h2>
+        <div class="grid grid-3">
+          <div class="summary-card">
+            <h3>流程合理性</h3>
+            <p>
+              当前系统已将申请管理与标本登记收敛为“申请与登记”，将固定核对与转运交接收敛为“固定与转运”，
+              再进入“病理接收”和“追踪与异常”，符合岗位连续操作和质控追溯要求。
+            </p>
+          </div>
+          <div class="summary-card">
+            <h3>要素完整性</h3>
+            <p>
+              申请单、标本条码、固定状态、转运单、接收质控、异常追踪等主数据已具备。
+              推荐继续强化打印、扫码、重复导入和异常整改记录。
+            </p>
+          </div>
+          <div class="summary-card">
+            <h3>落地边界</h3>
+            <p>
+              本 HTML 仅作为流程文档，不调整业务接口、权限码、路由、全局请求封装或后端状态机。
+              现场设备和第三方系统策略需在联调中确认。
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>流程总览</h2>
+        <p>
+          推荐主链路按岗位和状态推进，前一节点的输出即后一节点的核对依据。标本未完成固定不得进入转运，
+          接收异常必须可追踪、可回溯、可统计。
+        </p>
+        <div class="flow">
+          <article class="flow-node" data-no="01">
+            <span class="tag">申请与登记</span>
+            <h3>建单、导入、标本登记</h3>
+            <ul>
+              <li>创建或导入申请单。</li>
+              <li>执行重复申请预警。</li>
+              <li>登记标本并打印标签。</li>
+            </ul>
+          </article>
+          <article class="flow-node" data-no="02">
+            <span class="tag blue">固定与转运</span>
+            <h3>固定核对、转运交接</h3>
+            <ul>
+              <li>扫码记录固定开始和完成。</li>
+              <li>仅已固定标本可创建转运单。</li>
+              <li>打印转运单并完成交接。</li>
+            </ul>
+          </article>
+          <article class="flow-node" data-no="03">
+            <span class="tag ok">病理接收</span>
+            <h3>签收、质控、建病例</h3>
+            <ul>
+              <li>按转运单接收或条码直收。</li>
+              <li>记录容器数量和质控结果。</li>
+              <li>正常接收生成病例号和病理号。</li>
+            </ul>
+          </article>
+          <article class="flow-node" data-no="04">
+            <span class="tag warn">追踪与异常</span>
+            <h3>全链路追踪、异常闭环</h3>
+            <ul>
+              <li>按申请单或条码查询。</li>
+              <li>查看离体、固定、转运、接收时间线。</li>
+              <li>追踪拒收、退回、部分接收。</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <h2>详细流程步骤</h2>
+        <div class="grid">
+          <article class="step-card">
+            <div class="step-head">
+              <span class="step-no">1</span>
+              <h3>申请单创建或第三方导入</h3>
+              <span class="tag">申请与登记</span>
+            </div>
+            <div class="step-body">
+              <div class="info-block">
+                <h4>操作人</h4>
+                <p>临床医生、护士、具备临床申请导入权限的登记人员。</p>
+              </div>
+              <div class="info-block">
+                <h4>前置条件</h4>
+                <p>已获取患者基本信息、医嘱或第三方申请单；当前账号具备申请创建或导入权限。</p>
+              </div>
+              <div class="info-block">
+                <h4>必填信息</h4>
+                <p>患者编号或姓名、申请类型、申请日期、送检日期、来源医院、送检科室、送检医生、临床诊断、送检部位、标本离体时间。</p>
+              </div>
+              <div class="info-block">
+                <h4>系统动作</h4>
+                <p>创建申请单，或按第三方来源和外部申请单号导入申请信息，保存申请单 ID 与申请单号。</p>
+              </div>
+              <div class="info-block">
+                <h4>关键校验</h4>
+                <p>患者编号和患者姓名至少一项；临床诊断、送检部位、科室、医生、离体时间必填；创建前执行重复申请预警。</p>
+              </div>
+              <div class="info-block">
+                <h4>输出结果</h4>
+                <p>申请单 ID、申请单号、当前节点、申请单随附状态，用户可继续进入标本登记。</p>
+              </div>
+              <div class="info-block">
+                <h4>异常处理</h4>
+                <p>强拦截重复申请需停止创建或修正信息；确认级重复申请需人工确认后继续；导入失败需保留第三方来源和外部单号便于排查。</p>
+              </div>
+              <div class="info-block">
+                <h4>当前支持</h4>
+                <p>前端支持手工创建、第三方导入入口、重复预警、保存后进入标本登记；后端提供创建、导入和重复检查接口。</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="step-card">
+            <div class="step-head">
+              <span class="step-no">2</span>
+              <h3>申请单核对与登记准备</h3>
+              <span class="tag">申请与登记</span>
+            </div>
+            <div class="step-body">
+              <div class="info-block">
+                <h4>操作人</h4>
+                <p>标本登记人员、手术台护士、送检登记岗位。</p>
+              </div>
+              <div class="info-block">
+                <h4>前置条件</h4>
+                <p>申请单已创建或导入成功，已能通过申请单 ID、申请单号或扫码定位上下文。</p>
+              </div>
+              <div class="info-block">
+                <h4>必填信息</h4>
+                <p>申请单 ID 或申请单号；登记前需核对患者摘要、送检摘要、申请单状态、表单随附状态、异常标记。</p>
+              </div>
+              <div class="info-block">
+                <h4>系统动作</h4>
+                <p>加载申请单详情、既有标本数量、最近流程事件，并将申请单上下文带入登记抽屉或工作台。</p>
+              </div>
+              <div class="info-block">
+                <h4>关键校验</h4>
+                <p>确认申请单上下文正确，避免登记到错误申请单；无详情权限时只能展示最小上下文并限制信息外露。</p>
+              </div>
+              <div class="info-block">
+                <h4>输出结果</h4>
+                <p>进入标本登记工作台，登记人员明确当前申请单、患者、送检科室、离体时间和随附状态。</p>
+              </div>
+              <div class="info-block">
+                <h4>异常处理</h4>
+                <p>申请单不存在、无权限、状态异常或上下文不一致时，停止登记并提示返回申请管理核对。</p>
+              </div>
+              <div class="info-block">
+                <h4>当前支持</h4>
+                <p>申请列表可直接进入登记；标本管理支持按申请单号扫码或输入查询登记上下文。</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="step-card">
+            <div class="step-head">
+              <span class="step-no">3</span>
+              <h3>标本采集登记</h3>
+              <span class="tag">申请与登记</span>
+            </div>
+            <div class="step-body">
+              <div class="info-block">
+                <h4>操作人</h4>
+                <p>手术台护士、标本登记人员，必要时由临床医生协同确认标本名称和部位。</p>
+              </div>
+              <div class="info-block">
+                <h4>前置条件</h4>
+                <p>申请单上下文已确认，标本已离体并具备登记条件。</p>
+              </div>
+              <div class="info-block">
+                <h4>必填信息</h4>
+                <p>登记人、标本名称、标本数量。推荐补齐采集场景、终端编码、打印机编码、标本类型、标本部位、采集方式、临床症状、条码。</p>
+              </div>
+              <div class="info-block">
+                <h4>系统动作</h4>
+                <p>批量登记申请单下的标本，生成标本编号和条码，尝试触发标签打印并记录打印批次。</p>
+              </div>
+              <div class="info-block">
+                <h4>关键校验</h4>
+                <p>每条标本名称必填；数量必须大于 0；条码不得重复；同一申请单下允许多标本登记。</p>
+              </div>
+              <div class="info-block">
+                <h4>输出结果</h4>
+                <p>标本编号、标本条码、标签打印批次、打印成功或失败信息，标本进入待固定状态。</p>
+              </div>
+              <div class="info-block">
+                <h4>异常处理</h4>
+                <p>标签打印失败不应阻断登记结果展示，应允许后续补打；条码重复或申请单缺失需停止提交。</p>
+              </div>
+              <div class="info-block">
+                <h4>当前支持</h4>
+                <p>前端支持多行标本录入、登记结果回显、标签批次展示；后端校验条码唯一性并保存追踪事件。</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="step-card">
+            <div class="step-head">
+              <span class="step-no">4</span>
+              <h3>标签打印与补打</h3>
+              <span class="tag">申请与登记</span>
+            </div>
+            <div class="step-body">
+              <div class="info-block">
+                <h4>操作人</h4>
+                <p>登记人员、护士、标签打印岗位。</p>
+              </div>
+              <div class="info-block">
+                <h4>前置条件</h4>
+                <p>标本已登记并生成标签批次；打印机或打印网关可用。</p>
+              </div>
+              <div class="info-block">
+                <h4>必填信息</h4>
+                <p>标签批次号、打印机编码、操作人。补打时建议填写补打原因、终端编码和备注。</p>
+              </div>
+              <div class="info-block">
+                <h4>系统动作</h4>
+                <p>按批次提交标签打印或补打请求，返回重试数量、成功数量、失败数量和总体结果。</p>
+              </div>
+              <div class="info-block">
+                <h4>关键校验</h4>
+                <p>仅待打印或打印失败记录允许补打；批量补打必须属于同一标签批次；打印机编码必填。</p>
+              </div>
+              <div class="info-block">
+                <h4>输出结果</h4>
+                <p>标签贴附到标本容器，形成固定、转运、接收各环节扫码核对依据。</p>
+              </div>
+              <div class="info-block">
+                <h4>异常处理</h4>
+                <p>打印失败需显示失败原因和可补打入口；现场需保留人工核对机制，防止标签贴错容器。</p>
+              </div>
+              <div class="info-block">
+                <h4>当前支持</h4>
+                <p>系统已支持登记后打印结果回显和标签补打；真实打印机、模板、国产浏览器兼容仍需现场验证。</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="step-card">
+            <div class="step-head">
+              <span class="step-no">5</span>
+              <h3>固定核对开始</h3>
+              <span class="tag blue">固定与转运</span>
+            </div>
+            <div class="step-body">
+              <div class="info-block">
+                <h4>操作人</h4>
+                <p>台下护士、固定核对岗位。</p>
+              </div>
+              <div class="info-block">
+                <h4>前置条件</h4>
+                <p>标本已登记并贴附标签，可通过条码或二维码识别。</p>
+              </div>
+              <div class="info-block">
+                <h4>必填信息</h4>
+                <p>标本条码、操作人。推荐补齐固定液类型、终端编码和固定说明。</p>
+              </div>
+              <div class="info-block">
+                <h4>系统动作</h4>
+                <p>扫码或录入条码后提交开始固定，记录固定开始节点、操作人和终端。</p>
+              </div>
+              <div class="info-block">
+                <h4>关键校验</h4>
+                <p>条码必须存在；标本必须处于可固定状态；操作人必填。</p>
+              </div>
+              <div class="info-block">
+                <h4>输出结果</h4>
+                <p>标本进入固定中，待固定列表更新，追踪时间线增加固定开始事件。</p>
+              </div>
+              <div class="info-block">
+                <h4>异常处理</h4>
+                <p>条码缺失、错扫、状态不可操作时，提示回到登记或追踪页面核对。</p>
+              </div>
+              <div class="info-block">
+                <h4>当前支持</h4>
+                <p>前端支持扫码优先操作、待固定列表和固定液类型选择；后端提供开始固定接口和状态推进。</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="step-card">
+            <div class="step-head">
+              <span class="step-no">6</span>
+              <h3>固定完成</h3>
+              <span class="tag blue">固定与转运</span>
+            </div>
+            <div class="step-body">
+              <div class="info-block">
+                <h4>操作人</h4>
+                <p>固定核对岗位、护士。</p>
+              </div>
+              <div class="info-block">
+                <h4>前置条件</h4>
+                <p>标本已开始固定，且满足现场固定要求或由岗位人员确认可完成固定。</p>
+              </div>
+              <div class="info-block">
+                <h4>必填信息</h4>
+                <p>标本条码、操作人。推荐补齐固定液类型、完成时间、终端编码和备注。</p>
+              </div>
+              <div class="info-block">
+                <h4>系统动作</h4>
+                <p>提交完成固定，更新固定状态和标本状态，记录固定完成时间线。</p>
+              </div>
+              <div class="info-block">
+                <h4>关键校验</h4>
+                <p>未登记、状态异常或重复完成的标本不能直接完成固定；未完成固定的标本不得进入转运。</p>
+              </div>
+              <div class="info-block">
+                <h4>输出结果</h4>
+                <p>固定状态为已完成，标本进入可转运范围，可被转运交接页面加载。</p>
+              </div>
+              <div class="info-block">
+                <h4>异常处理</h4>
+                <p>固定不合格需在接收质控或追踪异常中体现；固定漏扫需回到固定核对补录。</p>
+              </div>
+              <div class="info-block">
+                <h4>当前支持</h4>
+                <p>后端限制未固定标本不能转运；前端待转运选择项提示“已固定标本”。</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="step-card">
+            <div class="step-head">
+              <span class="step-no">7</span>
+              <h3>创建转运单</h3>
+              <span class="tag blue">固定与转运</span>
+            </div>
+            <div class="step-body">
+              <div class="info-block">
+                <h4>操作人</h4>
+                <p>手术室护士、转运交接岗位、转运人员。</p>
+              </div>
+              <div class="info-block">
+                <h4>前置条件</h4>
+                <p>申请单下至少有一条已完成固定的标本，交接科室和接收科室明确。</p>
+              </div>
+              <div class="info-block">
+                <h4>必填信息</h4>
+                <p>申请单 ID、已固定标本条码、交接科室、交接人、接收科室。推荐填写备注和终端编码。</p>
+              </div>
+              <div class="info-block">
+                <h4>系统动作</h4>
+                <p>为申请单下指定标本创建转运单，保存转运单号、标本条码清单和待转运状态。</p>
+              </div>
+              <div class="info-block">
+                <h4>关键校验</h4>
+                <p>至少选择一条标本；只允许已固定标本转运；条码需属于同一申请单。</p>
+              </div>
+              <div class="info-block">
+                <h4>输出结果</h4>
+                <p>转运单号、待转运状态、标本条码清单，后续可打印和交接。</p>
+              </div>
+              <div class="info-block">
+                <h4>异常处理</h4>
+                <p>发现未固定或不属于当前申请单的条码时，停止创建并返回固定核对或申请单核对。</p>
+              </div>
+              <div class="info-block">
+                <h4>当前支持</h4>
+                <p>前端支持申请单标本加载、手动选择和批量条码粘贴；后端校验固定完成后才能转运。</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="step-card">
+            <div class="step-head">
+              <span class="step-no">8</span>
+              <h3>转运单打印</h3>
+              <span class="tag blue">固定与转运</span>
+            </div>
+            <div class="step-body">
+              <div class="info-block">
+                <h4>操作人</h4>
+                <p>转运交接岗位、打印操作人。</p>
+              </div>
+              <div class="info-block">
+                <h4>前置条件</h4>
+                <p>转运单已创建，转运单状态允许打印，打印设备或打印网关可用。</p>
+              </div>
+              <div class="info-block">
+                <h4>必填信息</h4>
+                <p>转运单号、打印操作人。推荐记录终端编码和打印时间。</p>
+              </div>
+              <div class="info-block">
+                <h4>系统动作</h4>
+                <p>提交转运单打印操作，更新转运单状态并记录打印人员。</p>
+              </div>
+              <div class="info-block">
+                <h4>关键校验</h4>
+                <p>转运单必须存在且处于可打印状态；打印操作人必填。</p>
+              </div>
+              <div class="info-block">
+                <h4>输出结果</h4>
+                <p>纸质或电子转运单，用于现场交接核对，转运单状态可变为已打印。</p>
+              </div>
+              <div class="info-block">
+                <h4>异常处理</h4>
+                <p>打印失败时应允许重试或保留人工交接核对记录，避免标本停滞。</p>
+              </div>
+              <div class="info-block">
+                <h4>当前支持</h4>
+                <p>系统已有打印操作接口和前端弹窗；打印模板、打印机反馈和浏览器兼容需现场确认。</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="step-card">
+            <div class="step-head">
+              <span class="step-no">9</span>
+              <h3>转运交接</h3>
+              <span class="tag blue">固定与转运</span>
+            </div>
+            <div class="step-body">
+              <div class="info-block">
+                <h4>操作人</h4>
+                <p>手术室交接人、转运人员、病理接收前置接收人。</p>
+              </div>
+              <div class="info-block">
+                <h4>前置条件</h4>
+                <p>转运单已创建，现场标本、标签和转运单核对一致。</p>
+              </div>
+              <div class="info-block">
+                <h4>必填信息</h4>
+                <p>转运单号、接收人、标本条码清单。推荐记录交接时间、终端编码和交接说明。</p>
+              </div>
+              <div class="info-block">
+                <h4>系统动作</h4>
+                <p>提交转运交接确认，更新转运单状态为已交接，并把标本推进到待病理接收。</p>
+              </div>
+              <div class="info-block">
+                <h4>关键校验</h4>
+                <p>接收人必填；已取消、已完成或不可交接的转运单不能重复交接。</p>
+              </div>
+              <div class="info-block">
+                <h4>输出结果</h4>
+                <p>转运单进入已交接，待接收列表可按转运单聚合展示标本。</p>
+              </div>
+              <div class="info-block">
+                <h4>异常处理</h4>
+                <p>现场发现标本数量或标签不一致时，不应正常交接，应记录问题并回到前序节点核查。</p>
+              </div>
+              <div class="info-block">
+                <h4>当前支持</h4>
+                <p>前端支持待处理转运单、打印、交接；后端更新转运单状态和标本转运状态。</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="step-card">
+            <div class="step-head">
+              <span class="step-no">10</span>
+              <h3>病理科接收</h3>
+              <span class="tag ok">病理接收</span>
+            </div>
+            <div class="step-body">
+              <div class="info-block">
+                <h4>操作人</h4>
+                <p>病理科接收人员、登记接收医技人员。</p>
+              </div>
+              <div class="info-block">
+                <h4>前置条件</h4>
+                <p>转运单已交接，或直收场景下标本已完成固定并可通过条码识别。</p>
+              </div>
+              <div class="info-block">
+                <h4>必填信息</h4>
+                <p>转运单号或标本条码、接收人、容器数量、质控结果、接收结果。异常时必须填写质量问题代码和原因。</p>
+              </div>
+              <div class="info-block">
+                <h4>系统动作</h4>
+                <p>按转运单批量接收或按条码直收，保存接收明细，必要时生成病例号和病理号。</p>
+              </div>
+              <div class="info-block">
+                <h4>关键校验</h4>
+                <p>正常接收必须质控合格；质控不合格必须选择问题代码；拒收或退回必须填写原因；直收标本必须已完成固定。</p>
+              </div>
+              <div class="info-block">
+                <h4>输出结果</h4>
+                <p>接收成功生成病例号和病理号；拒收、退回、部分接收形成异常标记并保留未接收数量。</p>
+              </div>
+              <div class="info-block">
+                <h4>异常处理</h4>
+                <p>标签缺失、标签不符、容器破损、固定不合格、数量不一致、污染渗漏等应结构化记录。</p>
+              </div>
+              <div class="info-block">
+                <h4>当前支持</h4>
+                <p>系统支持转运单接收、条码直收、接收/拒收/退回、质量问题代码、部分接收和异常标记。</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="step-card">
+            <div class="step-head">
+              <span class="step-no">11</span>
+              <h3>异常处理与闭环</h3>
+              <span class="tag warn">追踪与异常</span>
+            </div>
+            <div class="step-body">
+              <div class="info-block">
+                <h4>操作人</h4>
+                <p>病理接收人员、临床整改责任人、质控人员、流程管理员。</p>
+              </div>
+              <div class="info-block">
+                <h4>前置条件</h4>
+                <p>接收、转运、固定或登记环节发现异常，或系统状态显示部分接收、拒收、退回。</p>
+              </div>
+              <div class="info-block">
+                <h4>必填信息</h4>
+                <p>异常类型、问题代码、拒收或退回原因、责任节点、处理状态、后续整改记录。</p>
+              </div>
+              <div class="info-block">
+                <h4>系统动作</h4>
+                <p>将异常写入标本状态、申请单异常标记和追踪事件，供后续查询、统计和质控分析。</p>
+              </div>
+              <div class="info-block">
+                <h4>关键校验</h4>
+                <p>部分接收、拒收、退回必须可追溯；异常标本应在追踪页和标本列表突出显示。</p>
+              </div>
+              <div class="info-block">
+                <h4>输出结果</h4>
+                <p>异常可查询、可回溯、可用于质控统计，后续整改过程有明确责任和记录。</p>
+              </div>
+              <div class="info-block">
+                <h4>异常处理</h4>
+                <p>需要退回整改的标本应明确退回原因、整改要求和再次送检路径；拒收标本需保留最终原因。</p>
+              </div>
+              <div class="info-block">
+                <h4>当前支持</h4>
+                <p>系统已支持异常标记和追踪查询；建议进一步补齐异常整改状态、责任人和闭环时间。</p>
+              </div>
+            </div>
+          </article>
+
+          <article class="step-card">
+            <div class="step-head">
+              <span class="step-no">12</span>
+              <h3>追踪查询</h3>
+              <span class="tag warn">追踪与异常</span>
+            </div>
+            <div class="step-body">
+              <div class="info-block">
+                <h4>操作人</h4>
+                <p>临床医生、护士、病理接收人员、质控人员、流程管理员。</p>
+              </div>
+              <div class="info-block">
+                <h4>前置条件</h4>
+                <p>已有申请单或标本条码，当前账号具备追踪查询权限。</p>
+              </div>
+              <div class="info-block">
+                <h4>必填信息</h4>
+                <p>申请单号、申请单 ID 或标本条码。</p>
+              </div>
+              <div class="info-block">
+                <h4>系统动作</h4>
+                <p>查询申请单状态、当前节点、标本状态、固定状态、标签打印状态和完整时间线事件。</p>
+              </div>
+              <div class="info-block">
+                <h4>关键校验</h4>
+                <p>查询条件不能为空；具备详情权限时可加载完整申请单信息；无详情权限时只展示允许范围内的追踪信息。</p>
+              </div>
+              <div class="info-block">
+                <h4>输出结果</h4>
+                <p>展示离体、登记、固定、转运、接收和异常的全链路记录，支持按异常标记快速定位问题。</p>
+              </div>
+              <div class="info-block">
+                <h4>异常处理</h4>
+                <p>查询不到记录时提示核对申请单号或条码；异常标记为真时应引导查看最近追踪事件和标本状态。</p>
+              </div>
+              <div class="info-block">
+                <h4>当前支持</h4>
+                <p>前端支持按申请单和条码二选一查询，后端提供申请单追踪和条码追踪接口。</p>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <h2>要素核查表</h2>
+        <table class="status-table">
+          <thead>
+            <tr>
+              <th>类别</th>
+              <th>必备要素</th>
+              <th>关键规则</th>
+              <th>当前状态</th>
+              <th>建议补强</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>申请单</td>
+              <td>患者编号或姓名、申请类型、申请日期、送检日期、来源医院、送检科室、送检医生、临床诊断、送检部位、离体时间、随附状态。</td>
+              <td>创建前重复预警；诊断、部位、科室、医生、离体时间必须明确。</td>
+              <td><span class="tag ok">已支持</span></td>
+              <td>第三方导入的唯一性、错误码和重复导入策略需与 HIS/EMR 联调确认。</td>
+            </tr>
+            <tr>
+              <td>标本</td>
+              <td>标本编号、条码、标本名称、类型、部位、数量、登记人、采集方式、打印批次。</td>
+              <td>名称必填、数量大于 0、条码唯一；标签必须与容器一致。</td>
+              <td><span class="tag ok">已支持</span></td>
+              <td>扫码录入、批量条码去重、现场标签模板与打印设备需继续验证。</td>
+            </tr>
+            <tr>
+              <td>固定</td>
+              <td>标本条码、固定状态、操作人、固定液类型、开始时间、完成时间、终端编码。</td>
+              <td>未固定标本不得转运；状态不可逆场景需清晰提示。</td>
+              <td><span class="tag ok">已支持</span></td>
+              <td>建议补充固定时长、固定液用量或固定不合格原因，便于质控分析。</td>
+            </tr>
+            <tr>
+              <td>转运</td>
+              <td>转运单号、申请单 ID、已固定标本条码、交接科室、交接人、接收科室、接收人、打印状态。</td>
+              <td>至少一条标本；条码属于同一申请单；转运单状态驱动打印与交接。</td>
+              <td><span class="tag ok">已支持</span></td>
+              <td>建议加强条码批量去重、漏扫提示和现场交接差异记录。</td>
+            </tr>
+            <tr>
+              <td>接收</td>
+              <td>转运单号或条码、接收人、容器数量、接收结果、质控结果、问题代码、拒收/退回原因、病例号、病理号。</td>
+              <td>正常接收必须质控合格；不合格必须问题代码；拒收退回必须原因；直收必须已固定。</td>
+              <td><span class="tag ok">已支持</span></td>
+              <td>建议增加接收差异照片、纸质申请单归档、整改责任人和整改完成状态。</td>
+            </tr>
+            <tr>
+              <td>追踪</td>
+              <td>申请单号、条码、当前节点、申请单状态、标本状态、固定状态、标签打印状态、时间线事件、异常标记。</td>
+              <td>按申请单或条码查询；异常节点需突出展示；部分接收、拒收、退回必须可回溯。</td>
+              <td><span class="tag ok">已支持</span></td>
+              <td>建议增加异常闭环看板、超时预警和质控统计入口。</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>接口与页面对应</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>业务能力</th>
+              <th>前端页面</th>
+              <th>接口路径</th>
+              <th>关键输出</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>申请单创建</td>
+              <td>申请与登记</td>
+              <td>POST /api/v1/applications</td>
+              <td>申请单 ID。</td>
+            </tr>
+            <tr>
+              <td>第三方申请导入</td>
+              <td>申请与登记</td>
+              <td>POST /api/v1/clinical-applications/import</td>
+              <td>申请单 ID。</td>
+            </tr>
+            <tr>
+              <td>标本登记与标签补打</td>
+              <td>申请与登记</td>
+              <td>POST /api/v1/specimens/register；POST /api/v1/specimens/label-batches/{batchNo}/retry</td>
+              <td>标本清单、标签批次、打印结果。</td>
+            </tr>
+            <tr>
+              <td>固定开始与完成</td>
+              <td>固定与转运</td>
+              <td>POST /api/v1/specimen-fixations/start；POST /api/v1/specimen-fixations/complete</td>
+              <td>标本 ID、条码、固定状态。</td>
+            </tr>
+            <tr>
+              <td>转运单创建、打印、交接</td>
+              <td>固定与转运</td>
+              <td>POST /api/v1/transport-orders；POST /api/v1/transport-orders/{id}/print；POST /api/v1/transport-orders/{id}/handover</td>
+              <td>转运单号、状态、交接时间。</td>
+            </tr>
+            <tr>
+              <td>病理接收与直收</td>
+              <td>病理接收</td>
+              <td>POST /api/v1/specimen-receipts；POST /api/v1/specimen-receipts/by-barcodes</td>
+              <td>病例号、病理号、接收状态、未接收数量。</td>
+            </tr>
+            <tr>
+              <td>追踪查询</td>
+              <td>追踪与异常</td>
+              <td>GET /api/v1/applications/{id}/tracking；GET /api/v1/specimens/barcodes/{barcode}/tracking</td>
+              <td>当前节点、异常标记、标本摘要、时间线事件。</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>风险与建议</h2>
+        <div class="risk-list">
+          <div class="risk-item ok">
+            <h3>主流程可作为联调验收基线</h3>
+            <p>
+              后端 happy path 已覆盖创建申请、登记、固定、转运、交接、接收、部分接收和追踪。
+              前端菜单与页面也已按连续岗位收敛，可用于临床送检模块培训和联调清单。
+            </p>
+          </div>
+          <div class="risk-item">
+            <h3>打印和扫码能力需要现场验证</h3>
+            <p>
+              标签打印、补打、转运单打印依赖真实打印机、模板、驱动或打印网关；扫码枪输入、批量条码去重和漏扫提示也需要在目标设备上验证。
+            </p>
+          </div>
+          <div class="risk-item">
+            <h3>第三方申请导入策略需确认</h3>
+            <p>
+              第三方来源编码、外部申请单号唯一性、重复导入处理、HIS/EMR 错误码文案和测试数据，需要与接口提供方完成联调确认。
+            </p>
+          </div>
+          <div class="risk-item danger">
+            <h3>异常闭环仍需补强</h3>
+            <p>
+              当前系统能记录拒收、退回、部分接收和异常标记。若要满足质控闭环，建议补充整改责任人、整改状态、整改完成时间、附件或照片归档。
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <p class="footer-note">
+        本文档为临床送检推荐流程说明，不改变现有业务接口、权限模型、路由配置或后端状态机。
+      </p>
+      <section>
+        <h2>2026-05 标本登记对齐补充</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>环节</th>
+              <th>本次对齐内容</th>
+              <th>说明</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>标本登记</td>
+              <td>新增容器名称、容器数量</td>
+              <td>登记核心要素调整为标本名称、标本部位、标本数量、容器名称、容器数量必填；标本类型、采集方式、条码、临床症状保留为选填。</td>
+            </tr>
+            <tr>
+              <td>登记入口</td>
+              <td>恢复申请与登记中的登记页签，改为弹窗登记</td>
+              <td>不再保留申请单查询区，沿用申请与登记工作台上下文直接进入登记弹窗；新增标本行保留在行操作内。</td>
+            </tr>
+            <tr>
+              <td>标本管理</td>
+              <td>补齐容器字段与处理动作</td>
+              <td>列表、详情、登记结果统一展示容器名称与容器数/标本数，并补齐补打标签、异常处理、开始核验、完成核验等上下文操作入口。</td>
+            </tr>
+            <tr>
+              <td>固定核验</td>
+              <td>已核验支持在本页直接处理</td>
+              <td>复用固定开始/完成能力，在标本管理页直接完成核验，不再把“已核验”误映射为标签打印成功。</td>
+            </tr>
+            <tr>
+              <td>标本接收</td>
+              <td>透传登记侧容器信息</td>
+              <td>接收页可见容器名称，容器数量默认带入登记值并允许按实际接收结果修正。</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </body>
+</html>

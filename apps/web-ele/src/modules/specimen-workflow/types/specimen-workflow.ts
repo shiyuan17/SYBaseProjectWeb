@@ -1,6 +1,7 @@
 export interface ApplicationCreateRequest {
   applicationDate?: null | string;
   applicationNo?: null | string;
+  applicationFormStatus?: null | string;
   applicationType: string;
   clinicalDiagnosis: string;
   clinicalSymptom?: null | string;
@@ -13,6 +14,7 @@ export interface ApplicationCreateRequest {
   sourceHospitalId?: null | string;
   sourceHospitalName?: null | string;
   specimenSite: string;
+  specimenRemovalTime?: null | string;
   status?: null | string;
   submissionDate?: null | string;
   submittingDepartmentId: string;
@@ -43,6 +45,10 @@ export interface TrackingEventView {
 
 export interface SpecimenTrackingSummary {
   barcode: string;
+  clinicalSymptom?: null | string;
+  collectionMode?: null | string;
+  containerCount: null | number;
+  containerName: null | string;
   fixationStatus: null | string;
   id: string;
   labelPrintStatus: null | string;
@@ -75,6 +81,7 @@ export interface ApplicationDetailView {
   sourceHospitalId: null | string;
   sourceHospitalName: null | string;
   specimenSite: null | string;
+  specimenRemovalTime: null | string;
   specimens: SpecimenTrackingSummary[];
   status: null | string;
   submissionDate: null | string;
@@ -128,10 +135,89 @@ export interface ApplicationPage {
   total: number;
 }
 
+export interface DuplicateApplicationCheckQuery {
+  applicationDate?: null | string;
+  applicationType?: null | string;
+  externalOrderNo?: null | string;
+  patientId?: null | string;
+  patientName?: null | string;
+  specimenSite?: null | string;
+}
+
+export interface DuplicateApplicationCheckItem {
+  applicationDate: null | string;
+  applicationNo: string;
+  currentNode: null | string;
+  id: string;
+  matchedBy: string[];
+  patientName: null | string;
+  specimenSite: null | string;
+  status: null | string;
+}
+
+export interface DuplicateApplicationCheckResult {
+  items: DuplicateApplicationCheckItem[];
+  suggestedAction: 'ALLOW' | 'BLOCK' | 'CONFIRM' | string;
+}
+
+export interface SpecimenManagementListQuery {
+  abnormalFlag?: boolean;
+  applicationNo?: null | string;
+  dateFrom?: null | string;
+  dateTo?: null | string;
+  departmentId?: null | string;
+  keyword?: null | string;
+  labelPrintStatus?: null | string;
+  page: number;
+  size: number;
+  specimenStatus?: null | string;
+}
+
+export interface SpecimenManagementListItem {
+  abnormalFlag: boolean;
+  applicationId: string;
+  applicationNo: string;
+  barcode: string;
+  containerCount: null | number;
+  containerName: null | string;
+  fixationStatus: null | string;
+  labelPrintBatchNo: null | string;
+  labelPrintStatus: null | string;
+  latestTrackingAt: null | string;
+  patientName: null | string;
+  registeredAt: null | string;
+  specimenCount: null | number;
+  specimenId: string;
+  specimenName: string;
+  specimenNo: string;
+  specimenSite: null | string;
+  specimenStatus: null | string;
+  specimenType: null | string;
+  submittingDepartmentId: null | string;
+  submittingDepartmentName: null | string;
+}
+
+export interface SpecimenManagementListSummary {
+  abnormalCount: number;
+  labelPrintedCount: number;
+  pendingLabelCount: number;
+  totalCount: number;
+}
+
+export interface SpecimenManagementListPage {
+  items: SpecimenManagementListItem[];
+  page: number;
+  size: number;
+  summary: SpecimenManagementListSummary;
+  total: number;
+}
+
 export interface SpecimenRegisterItemRequest {
   barcode?: null | string;
   clinicalSymptom?: null | string;
   collectionMode?: null | string;
+  containerCount: number;
+  containerName: string;
   specimenCount: number;
   specimenNameStandardized: string;
   specimenSite?: null | string;
@@ -186,6 +272,7 @@ export interface PendingSpecimenQuery {
   dateFrom?: null | string;
   dateTo?: null | string;
   departmentId?: null | string;
+  fixationStatus?: null | string;
   page: number;
   size: number;
 }
@@ -195,6 +282,8 @@ export interface PendingSpecimenItem {
   applicationId: string;
   applicationNo: string;
   barcode: string;
+  containerCount: null | number;
+  containerName: null | string;
   fixationStatus: null | string;
   latestTrackingAt: null | string;
   patientName: null | string;
@@ -293,6 +382,8 @@ export interface PendingTransportOrderPage {
 
 export interface SpecimenReceiptItemRequest {
   containerCount?: null | number;
+  qualityCheckResult: string;
+  qualityIssueCodes?: null | string[];
   reason?: null | string;
   receiptStatus: string;
   remarks?: null | string;

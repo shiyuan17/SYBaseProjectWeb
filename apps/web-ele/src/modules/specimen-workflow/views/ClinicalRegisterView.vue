@@ -7,15 +7,15 @@ const router = useRouter();
 
 onMounted(() => {
   void router.replace({
-    path: '/workflow/specimen-management',
+    path: '/workflow/submission-registration',
     query: {
       ...route.query,
-      action: 'register',
+      action: route.query.action ?? 'register',
     },
   });
 });
 </script>
 
 <template>
-  <div class="min-h-[1px]" />
+  <div />
 </template>

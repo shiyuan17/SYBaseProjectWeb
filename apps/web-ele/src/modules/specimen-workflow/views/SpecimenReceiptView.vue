@@ -16,15 +16,16 @@ import {
   ElDatePicker,
   ElDescriptions,
   ElDescriptionsItem,
+  ElDialog,
   ElDrawer,
   ElForm,
   ElFormItem,
   ElInput,
   ElInputNumber,
   ElMessage,
+  ElOption,
   ElPagination,
   ElSelect,
-  ElOption,
   ElTable,
   ElTableColumn,
   ElTag,
@@ -39,12 +40,18 @@ import {
   receiveSpecimens,
 } from '../api/specimen-workflow-service';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
-import { DEFAULT_PAGE_SIZE, RECEIPT_STATUS_OPTIONS } from '../constants';
+import {
+  DEFAULT_PAGE_SIZE,
+  QUALITY_CHECK_RESULT_OPTIONS,
+  QUALITY_ISSUE_CODE_OPTIONS,
+  RECEIPT_STATUS_OPTIONS,
+} from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import { formatDateTime, formatNullable } from '../utils/format';
 
 type ReceiptDraftItem = SpecimenReceiptItemRequest & {
   applicationNo?: string;
+  containerName?: null | string;
   key: number;
   patientName?: null | string;
 };
@@ -53,10 +60,10 @@ type TransportReceiptGroup = {
   applicationId: string;
   applicationNo: string;
   barcodes: string[];
+  items: PendingSpecimenItem[];
   latestTrackingAt: null | string;
   patientName: null | string;
   transportOrderId: string;
-  items: PendingSpecimenItem[];
 };
 
 const userStore = useUserStore();
@@ -86,6 +93,7 @@ const receiveForm = reactive({
 
 const selectedTransportOrderId = ref('');
 const receiptDraftItems = ref<ReceiptDraftItem[]>([]);
+const receiptDialogVisible = ref(false);
 
 const directDrawerVisible = ref(false);
 const directForm = reactive({
@@ -99,6 +107,8 @@ function createReceiptDraftItem(barcode = ''): ReceiptDraftItem {
   return {
     containerCount: 1,
     key: Date.now() + Math.floor(Math.random() * 1000),
+    qualityCheckResult: 'PASSED',
+    qualityIssueCodes: [],
     reason: '',
     receiptStatus: 'RECEIVED',
     remarks: '',
@@ -113,6 +123,7 @@ const groupedTransportOrders = computed<TransportReceiptGroup[]>(() => {
     if (!item.transportOrderId) {
       continue;
     }
+
     const existing = groupMap.get(item.transportOrderId);
     if (existing) {
       existing.items.push(item);
@@ -151,6 +162,16 @@ const orphanPendingCount = computed(
   () => pendingItems.value.filter((item) => !item.transportOrderId).length,
 );
 
+function formatGroupContainerNames(items: PendingSpecimenItem[]) {
+  const names = items
+    .map((item) => item.containerName?.trim())
+    .filter(
+      (value, index, values): value is string =>
+        Boolean(value) && values.indexOf(value) === index,
+    );
+  return names.join('、') || '-';
+}
+
 async function loadPendingData() {
   loading.value = true;
   pageError.value = '';
@@ -167,11 +188,10 @@ async function loadPendingData() {
     total.value = result.total;
 
     if (
-      selectedTransportOrderId.value &&
-      !result.items.some((item) => item.transportOrderId === selectedTransportOrderId.value)
+      selectedTransportOrderId.value
+      && !result.items.some((item) => item.transportOrderId === selectedTransportOrderId.value)
     ) {
-      selectedTransportOrderId.value = '';
-      receiptDraftItems.value = [];
+      closeReceiptDialog();
     }
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
@@ -198,14 +218,24 @@ function prepareReceipt(group: TransportReceiptGroup) {
   selectedTransportOrderId.value = group.transportOrderId;
   receiptDraftItems.value = group.items.map((item) => ({
     applicationNo: item.applicationNo,
-    containerCount: 1,
+    containerCount: item.containerCount ?? 1,
+    containerName: item.containerName,
     key: Date.now() + Math.floor(Math.random() * 1000),
     patientName: item.patientName,
+    qualityCheckResult: 'PASSED',
+    qualityIssueCodes: [],
     reason: '',
     receiptStatus: 'RECEIVED',
     remarks: '',
     specimenBarcode: item.barcode,
   }));
+  receiptDialogVisible.value = true;
+}
+
+function closeReceiptDialog() {
+  receiptDialogVisible.value = false;
+  selectedTransportOrderId.value = '';
+  receiptDraftItems.value = [];
 }
 
 function validateReceiptItems(items: ReceiptDraftItem[]) {
@@ -225,22 +255,47 @@ function validateReceiptItems(items: ReceiptDraftItem[]) {
     ElMessage.warning('容器数量必须大于 0');
     return false;
   }
+  if (items.some((item) => !item.qualityCheckResult.trim())) {
+    ElMessage.warning('请为每一条标本选择质控结果');
+    return false;
+  }
   if (
     items.some(
       (item) =>
-        item.receiptStatus !== 'RECEIVED' &&
-        !(item.reason ?? '').trim(),
+        item.receiptStatus === 'RECEIVED'
+        && item.qualityCheckResult !== 'PASSED',
     )
   ) {
-    ElMessage.warning('拒收或退回时请填写原因');
+    ElMessage.warning('正常接收的标本质控结果必须为合格');
     return false;
   }
+  if (
+    items.some(
+      (item) =>
+        item.qualityCheckResult === 'FAILED'
+        && !(item.qualityIssueCodes && item.qualityIssueCodes.length > 0),
+    )
+  ) {
+    ElMessage.warning('质控不合格时必须选择问题代码');
+    return false;
+  }
+  if (
+    items.some(
+      (item) =>
+        item.receiptStatus !== 'RECEIVED'
+        && !item.reason?.trim(),
+    )
+  ) {
+    ElMessage.warning('拒收或退回时必须填写原因');
+    return false;
+  }
+
   return true;
 }
 
 async function submitReceipt() {
-  if (!selectedTransportOrderId.value) {
-    ElMessage.warning('请先从待接收转运单中选择一条记录');
+  if (!selectedGroup.value) {
+    ElMessage.warning('请先选择待接收转运单');
     return;
   }
   if (!receiveForm.receivedByName.trim()) {
@@ -259,11 +314,10 @@ async function submitReceipt() {
       receivedByName: receiveForm.receivedByName.trim(),
       receivedByUserId: receiveForm.receivedByUserId.trim() || null,
       terminalCode: receiveForm.terminalCode.trim() || null,
-      transportOrderId: selectedTransportOrderId.value,
+      transportOrderId: selectedGroup.value.transportOrderId,
     });
     ElMessage.success('标本接收成功');
-    selectedTransportOrderId.value = '';
-    receiptDraftItems.value = [];
+    closeReceiptDialog();
     await loadPendingData();
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
@@ -278,7 +332,7 @@ function addDirectReceiptRow() {
 
 function removeDirectReceiptRow(key: number) {
   if (directDraftItems.value.length === 1) {
-    ElMessage.warning('至少保留一条直收记录');
+    ElMessage.warning('至少保留一行直接接收项');
     return;
   }
   directDraftItems.value = directDraftItems.value.filter((item) => item.key !== key);
@@ -316,6 +370,10 @@ async function submitDirectReceipt() {
 function normalizeReceiptItem(item: ReceiptDraftItem): SpecimenReceiptItemRequest {
   return {
     containerCount: item.containerCount,
+    qualityCheckResult: item.qualityCheckResult.trim(),
+    qualityIssueCodes: item.qualityIssueCodes?.length
+      ? item.qualityIssueCodes
+      : null,
     reason: item.reason?.trim() || null,
     receiptStatus: item.receiptStatus.trim(),
     remarks: item.remarks?.trim() || null,
@@ -341,7 +399,7 @@ void loadPendingData();
 </script>
 
 <template>
-  <Page title="标本接收">
+  <Page title="病理接收">
     <div class="flex flex-col gap-4">
       <ElAlert
         v-if="pageError"
@@ -414,6 +472,11 @@ void loadPendingData();
               {{ row.items.length }}
             </template>
           </ElTableColumn>
+          <ElTableColumn label="容器名称" min-width="180">
+            <template #default="{ row }">
+              {{ formatGroupContainerNames(row.items) }}
+            </template>
+          </ElTableColumn>
           <ElTableColumn label="最近追踪时间" min-width="180">
             <template #default="{ row }">
               {{ formatDateTime(row.latestTrackingAt) }}
@@ -430,7 +493,7 @@ void loadPendingData();
           </ElTableColumn>
           <ElTableColumn fixed="right" label="操作" width="120">
             <template #default="{ row }">
-              <ElButton link type="primary" @click="prepareReceipt(row)">准备接收</ElButton>
+              <ElButton link type="primary" @click="prepareReceipt(row)">接收</ElButton>
             </template>
           </ElTableColumn>
         </ElTable>
@@ -447,93 +510,6 @@ void loadPendingData();
             @size-change="loadPendingData"
           />
         </div>
-      </WorkflowSectionCard>
-
-      <WorkflowSectionCard
-        title="按转运单接收"
-        description="支持逐条录入接收结果、拒收原因、容器数量与备注。"
-      >
-        <ElAlert
-          v-if="!selectedGroup"
-          :closable="false"
-          title="请先在上方选择一条待接收转运单。"
-          type="info"
-          show-icon
-        />
-
-        <template v-else>
-          <ElDescriptions :column="2" border class="mb-4">
-            <ElDescriptionsItem label="转运单号">
-              {{ selectedGroup.transportOrderId }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="申请单号">
-              {{ selectedGroup.applicationNo }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="患者姓名">
-              {{ formatNullable(selectedGroup.patientName) }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="待接收标本数">
-              {{ selectedGroup.items.length }}
-            </ElDescriptionsItem>
-          </ElDescriptions>
-
-          <ElForm label-width="96px">
-            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <ElFormItem label="接收人" required>
-                <SystemUserSelect
-                  v-model="receiveForm.receivedByUserId"
-                  :selected-label="receiveForm.receivedByName"
-                  placeholder="请选择接收人"
-                  @change="handleReceiveUserChange"
-                />
-              </ElFormItem>
-              <ElFormItem label="终端编码">
-                <ElInput v-model="receiveForm.terminalCode" placeholder="工作站终端编码" />
-              </ElFormItem>
-            </div>
-          </ElForm>
-
-          <ElTable :data="receiptDraftItems" border>
-            <ElTableColumn label="标本条码" min-width="180">
-              <template #default="{ row }">
-                <ElInput v-model="row.specimenBarcode" placeholder="标本条码" />
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="接收结果" min-width="140">
-              <template #default="{ row }">
-                <ElSelect v-model="row.receiptStatus" style="width: 100%">
-                  <ElOption
-                    v-for="option in RECEIPT_STATUS_OPTIONS"
-                    :key="option.value"
-                    :label="option.label"
-                    :value="option.value"
-                  />
-                </ElSelect>
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="容器数量" min-width="120">
-              <template #default="{ row }">
-                <ElInputNumber v-model="row.containerCount" :min="1" style="width: 100%" />
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="原因" min-width="180">
-              <template #default="{ row }">
-                <ElInput v-model="row.reason" placeholder="拒收 / 退回原因" />
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="备注" min-width="180">
-              <template #default="{ row }">
-                <ElInput v-model="row.remarks" placeholder="补充说明" />
-              </template>
-            </ElTableColumn>
-          </ElTable>
-
-          <div class="mt-4 flex justify-end">
-            <ElButton :loading="receiveLoading" type="primary" @click="submitReceipt">
-              提交接收
-            </ElButton>
-          </div>
-        </template>
       </WorkflowSectionCard>
 
       <WorkflowSectionCard
@@ -558,6 +534,128 @@ void loadPendingData();
       </WorkflowSectionCard>
     </div>
 
+    <ElDialog
+      v-model="receiptDialogVisible"
+      destroy-on-close
+      title="接收标本"
+      width="78%"
+      @closed="closeReceiptDialog"
+    >
+      <template v-if="selectedGroup">
+        <ElDescriptions :column="2" border class="mb-4">
+          <ElDescriptionsItem label="转运单号">
+            {{ selectedGroup.transportOrderId }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="申请单号">
+            {{ selectedGroup.applicationNo }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="患者姓名">
+            {{ formatNullable(selectedGroup.patientName) }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="待接收标本数">
+            {{ selectedGroup.items.length }}
+          </ElDescriptionsItem>
+        </ElDescriptions>
+
+        <ElForm label-width="96px">
+          <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <ElFormItem label="接收人" required>
+              <SystemUserSelect
+                v-model="receiveForm.receivedByUserId"
+                :selected-label="receiveForm.receivedByName"
+                placeholder="请选择接收人"
+                @change="handleReceiveUserChange"
+              />
+            </ElFormItem>
+            <ElFormItem label="终端编码">
+              <ElInput v-model="receiveForm.terminalCode" placeholder="工作站终端编码" />
+            </ElFormItem>
+          </div>
+        </ElForm>
+
+        <ElTable :data="receiptDraftItems" row-key="key" border max-height="420">
+          <ElTableColumn label="标本条码" min-width="180">
+            <template #default="{ row }">
+              <ElInput v-model="row.specimenBarcode" placeholder="标本条码" />
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="接收结果" min-width="140">
+            <template #default="{ row }">
+              <ElSelect v-model="row.receiptStatus" style="width: 100%">
+                <ElOption
+                  v-for="option in RECEIPT_STATUS_OPTIONS"
+                  :key="option.value"
+                  :label="option.label"
+                  :value="option.value"
+                />
+              </ElSelect>
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="容器名称" min-width="160">
+            <template #default="{ row }">
+              {{ formatNullable(row.containerName) }}
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="容器数量" min-width="120">
+            <template #default="{ row }">
+              <ElInputNumber v-model="row.containerCount" :min="1" style="width: 100%" />
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="质控结果" min-width="140">
+            <template #default="{ row }">
+              <ElSelect v-model="row.qualityCheckResult" style="width: 100%">
+                <ElOption
+                  v-for="option in QUALITY_CHECK_RESULT_OPTIONS"
+                  :key="option.value"
+                  :label="option.label"
+                  :value="option.value"
+                />
+              </ElSelect>
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="问题代码" min-width="220">
+            <template #default="{ row }">
+              <ElSelect
+                v-model="row.qualityIssueCodes"
+                collapse-tags
+                collapse-tags-tooltip
+                filterable
+                multiple
+                placeholder="请选择问题代码"
+                style="width: 100%"
+              >
+                <ElOption
+                  v-for="option in QUALITY_ISSUE_CODE_OPTIONS"
+                  :key="option.value"
+                  :label="option.label"
+                  :value="option.value"
+                />
+              </ElSelect>
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="原因" min-width="180">
+            <template #default="{ row }">
+              <ElInput v-model="row.reason" placeholder="拒收 / 退回原因" />
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="备注" min-width="180">
+            <template #default="{ row }">
+              <ElInput v-model="row.remarks" placeholder="补充说明" />
+            </template>
+          </ElTableColumn>
+        </ElTable>
+      </template>
+
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <ElButton @click="closeReceiptDialog">取消</ElButton>
+          <ElButton :loading="receiveLoading" type="primary" @click="submitReceipt">
+            提交接收
+          </ElButton>
+        </div>
+      </template>
+    </ElDialog>
+
     <ElDrawer v-model="directDrawerVisible" title="条码直收" size="52%">
       <ElForm label-width="96px">
         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -579,7 +677,7 @@ void loadPendingData();
         <ElButton type="primary" @click="addDirectReceiptRow">新增条码</ElButton>
       </div>
 
-      <ElTable :data="directDraftItems" border>
+      <ElTable :data="directDraftItems" row-key="key" border>
         <ElTableColumn label="标本条码" min-width="180">
           <template #default="{ row }">
             <ElInput v-model="row.specimenBarcode" placeholder="请输入标本条码" />
@@ -600,6 +698,38 @@ void loadPendingData();
         <ElTableColumn label="容器数量" min-width="120">
           <template #default="{ row }">
             <ElInputNumber v-model="row.containerCount" :min="1" style="width: 100%" />
+          </template>
+        </ElTableColumn>
+        <ElTableColumn label="质控结果" min-width="140">
+          <template #default="{ row }">
+            <ElSelect v-model="row.qualityCheckResult" style="width: 100%">
+              <ElOption
+                v-for="option in QUALITY_CHECK_RESULT_OPTIONS"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
+            </ElSelect>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn label="问题代码" min-width="220">
+          <template #default="{ row }">
+            <ElSelect
+              v-model="row.qualityIssueCodes"
+              collapse-tags
+              collapse-tags-tooltip
+              filterable
+              multiple
+              placeholder="请选择问题代码"
+              style="width: 100%"
+            >
+              <ElOption
+                v-for="option in QUALITY_ISSUE_CODE_OPTIONS"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
+              />
+            </ElSelect>
           </template>
         </ElTableColumn>
         <ElTableColumn label="原因" min-width="180">

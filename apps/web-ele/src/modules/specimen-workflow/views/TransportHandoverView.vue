@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import type {
-  ApplicationDetailView,
   PendingTransportOrderItem,
   TransportOrderView,
 } from '../types/specimen-workflow';
 
-import { computed, reactive, ref } from 'vue';
+import { reactive, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
 import { useUserStore } from '@vben/stores';
@@ -33,8 +33,6 @@ import DepartmentSelect from '#/modules/system-management/components/DepartmentS
 import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
 
 import {
-  createTransportOrder,
-  getApplicationDetail,
   handoverTransportOrder,
   listPendingTransportOrders,
   printTransportOrder,
@@ -45,10 +43,19 @@ import { getWorkflowPageErrorMessage } from '../utils/error';
 import { formatDateTime, formatNullable, formatTransportStatus } from '../utils/format';
 
 const userStore = useUserStore();
+const route = useRoute();
+
+withDefaults(
+  defineProps<{
+    embedded?: boolean;
+  }>(),
+  {
+    embedded: false,
+  },
+);
 
 const pageError = ref('');
 const loading = ref(false);
-const createLoading = ref(false);
 const printLoading = ref(false);
 const handoverLoading = ref(false);
 
@@ -56,7 +63,6 @@ const orders = ref<PendingTransportOrderItem[]>([]);
 const total = ref(0);
 const latestOrder = ref<null | TransportOrderView>(null);
 const activeOrder = ref<PendingTransportOrderItem | null>(null);
-const applicationDetail = ref<null | ApplicationDetailView>(null);
 
 const filters = reactive({
   applicationId: '',
@@ -65,20 +71,6 @@ const filters = reactive({
   page: 1,
   size: DEFAULT_PAGE_SIZE,
   status: '',
-});
-
-const createForm = reactive({
-  applicationId: '',
-  handoverDepartmentId: '',
-  handoverDepartmentName: '',
-  handoverUserId: userStore.userInfo?.userId ?? '',
-  handoverUserName: userStore.userInfo?.realName ?? '',
-  receiverDepartmentId: '',
-  receiverDepartmentName: '',
-  remarks: '',
-  selectedSpecimenBarcodes: [] as string[],
-  specimenBarcodesText: '',
-  terminalCode: '',
 });
 
 const printDialogVisible = ref(false);
@@ -94,16 +86,6 @@ const handoverForm = reactive({
   receiverUserName: userStore.userInfo?.realName ?? '',
   remarks: '',
   terminalCode: '',
-});
-
-function splitSpecimenBarcodes(value: string) {
-  return [...new Set(value.split(/[\s,，;；]+/).map((item) => item.trim()).filter(Boolean))];
-}
-
-const mergedSpecimenBarcodes = computed(() => {
-  const selected = createForm.selectedSpecimenBarcodes;
-  const manual = splitSpecimenBarcodes(createForm.specimenBarcodesText);
-  return [...new Set([...selected, ...manual])];
 });
 
 async function loadOrders() {
@@ -143,89 +125,14 @@ function handleReset() {
   void loadOrders();
 }
 
-function resetCreateForm() {
-  Object.assign(createForm, {
-    applicationId: '',
-    handoverDepartmentId: '',
-    handoverDepartmentName: '',
-    handoverUserId: userStore.userInfo?.userId ?? '',
-    handoverUserName: userStore.userInfo?.realName ?? '',
-    receiverDepartmentId: '',
-    receiverDepartmentName: '',
-    remarks: '',
-    selectedSpecimenBarcodes: [],
-    specimenBarcodesText: '',
-    terminalCode: '',
-  });
-  applicationDetail.value = null;
-}
-
-async function loadApplicationContext() {
-  const applicationId = createForm.applicationId.trim();
-  if (!applicationId) {
-    ElMessage.warning('请先输入申请单编号');
-    return;
+function normalizeRouteQueryValue(value: unknown) {
+  if (typeof value === 'string') {
+    return value;
   }
-
-  pageError.value = '';
-  try {
-    applicationDetail.value = await getApplicationDetail(applicationId);
-    createForm.selectedSpecimenBarcodes = applicationDetail.value.specimens
-      .map((item) => item.barcode)
-      .filter(Boolean);
-    ElMessage.success('申请单标本列表已加载');
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
+  if (Array.isArray(value)) {
+    return typeof value[0] === 'string' ? value[0] : '';
   }
-}
-
-async function submitCreate() {
-  const specimenBarcodes = mergedSpecimenBarcodes.value;
-  if (!createForm.applicationId.trim()) {
-    ElMessage.warning('请填写申请单编号');
-    return;
-  }
-  if (!createForm.handoverDepartmentId.trim()) {
-    ElMessage.warning('请选择交接科室');
-    return;
-  }
-  if (!createForm.handoverUserName.trim()) {
-    ElMessage.warning('请选择交接人');
-    return;
-  }
-  if (!createForm.receiverDepartmentId.trim()) {
-    ElMessage.warning('请选择接收科室');
-    return;
-  }
-  if (specimenBarcodes.length === 0) {
-    ElMessage.warning('请至少选择一条标本');
-    return;
-  }
-
-  createLoading.value = true;
-  pageError.value = '';
-  try {
-    latestOrder.value = await createTransportOrder({
-      applicationId: createForm.applicationId.trim(),
-      handoverDepartmentId: createForm.handoverDepartmentId.trim() || null,
-      handoverDepartmentName: createForm.handoverDepartmentName.trim(),
-      handoverUserId: createForm.handoverUserId.trim() || null,
-      handoverUserName: createForm.handoverUserName.trim(),
-      receiverDepartmentId: createForm.receiverDepartmentId.trim() || null,
-      receiverDepartmentName: createForm.receiverDepartmentName.trim(),
-      remarks: createForm.remarks.trim() || null,
-      specimenBarcodes,
-      terminalCode: createForm.terminalCode.trim() || null,
-    });
-    ElMessage.success('转运单创建成功');
-    filters.applicationId = createForm.applicationId.trim();
-    resetCreateForm();
-    await loadOrders();
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
-  } finally {
-    createLoading.value = false;
-  }
+  return '';
 }
 
 function openPrintDialog(order: PendingTransportOrderItem) {
@@ -308,21 +215,6 @@ function handleFilterDepartmentChange(department: null | { id: string; name: str
   filters.departmentId = department?.id ?? '';
 }
 
-function handleHandoverDepartmentChange(department: null | { id: string; name: string }) {
-  createForm.handoverDepartmentId = department?.id ?? '';
-  createForm.handoverDepartmentName = department?.name ?? '';
-}
-
-function handleReceiverDepartmentChange(department: null | { id: string; name: string }) {
-  createForm.receiverDepartmentId = department?.id ?? '';
-  createForm.receiverDepartmentName = department?.name ?? '';
-}
-
-function handleHandoverUserChange(user: null | { id: string; name: string }) {
-  createForm.handoverUserId = user?.id ?? '';
-  createForm.handoverUserName = user?.name ?? '';
-}
-
 function handlePrintUserChange(user: null | { id: string; name: string }) {
   printForm.operatorUserId = user?.id ?? '';
   printForm.operatorName = user?.name ?? '';
@@ -333,11 +225,20 @@ function handleReceiverUserChange(user: null | { id: string; name: string }) {
   handoverForm.receiverUserName = user?.name ?? '';
 }
 
-void loadOrders();
+watch(
+  () => route.query.applicationId,
+  (value) => {
+    const applicationId = normalizeRouteQueryValue(value).trim();
+    filters.applicationId = applicationId;
+    filters.page = 1;
+    void loadOrders();
+  },
+  { immediate: true },
+);
 </script>
 
 <template>
-  <Page title="转运交接">
+  <Page :title="embedded ? '转运交接' : '固定与转运'">
     <div class="flex flex-col gap-4">
       <ElAlert
         v-if="pageError"
@@ -348,92 +249,9 @@ void loadOrders();
       />
 
       <WorkflowSectionCard
-        title="创建转运单"
-        description="支持按申请单创建转运单，并以标本选择为主、批量扫码粘贴为辅完成交接。"
-      >
-        <div class="mb-4 flex justify-end">
-          <ElButton @click="loadApplicationContext">加载申请单标本</ElButton>
-        </div>
-        <ElForm label-width="108px">
-          <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <ElFormItem label="申请单编号" required>
-              <ElInput v-model="createForm.applicationId" placeholder="请输入申请单编号" />
-            </ElFormItem>
-            <ElFormItem label="交接科室" required>
-              <DepartmentSelect
-                v-model="createForm.handoverDepartmentId"
-                :selected-label="createForm.handoverDepartmentName"
-                placeholder="请选择交接科室"
-                @change="handleHandoverDepartmentChange"
-              />
-            </ElFormItem>
-            <ElFormItem label="交接人" required>
-              <SystemUserSelect
-                v-model="createForm.handoverUserId"
-                :selected-label="createForm.handoverUserName"
-                placeholder="请选择交接人"
-                @change="handleHandoverUserChange"
-              />
-            </ElFormItem>
-            <ElFormItem label="接收科室" required>
-              <DepartmentSelect
-                v-model="createForm.receiverDepartmentId"
-                :selected-label="createForm.receiverDepartmentName"
-                placeholder="请选择接收科室"
-                @change="handleReceiverDepartmentChange"
-              />
-            </ElFormItem>
-            <ElFormItem label="终端编码">
-              <ElInput v-model="createForm.terminalCode" placeholder="工作站终端编码" />
-            </ElFormItem>
-          </div>
-          <ElFormItem label="标本选择" required>
-            <ElSelect
-              v-model="createForm.selectedSpecimenBarcodes"
-              collapse-tags
-              collapse-tags-tooltip
-              filterable
-              multiple
-              placeholder="请选择当前申请单下的标本"
-              style="width: 100%"
-            >
-              <ElOption
-                v-for="specimen in applicationDetail?.specimens ?? []"
-                :key="specimen.id"
-                :label="`${specimen.specimenName}（${specimen.barcode}）`"
-                :value="specimen.barcode"
-              />
-            </ElSelect>
-          </ElFormItem>
-          <ElFormItem label="批量扫码 / 粘贴">
-            <ElInput
-              v-model="createForm.specimenBarcodesText"
-              :rows="4"
-              placeholder="支持换行、空格、逗号分隔多个条码"
-              type="textarea"
-            />
-          </ElFormItem>
-          <ElFormItem label="备注">
-            <ElInput
-              v-model="createForm.remarks"
-              :rows="2"
-              placeholder="补充转运说明"
-              type="textarea"
-            />
-          </ElFormItem>
-          <div class="flex justify-end gap-2">
-            <ElButton @click="resetCreateForm">重置</ElButton>
-            <ElButton :loading="createLoading" type="primary" @click="submitCreate">
-              创建转运单
-            </ElButton>
-          </div>
-        </ElForm>
-      </WorkflowSectionCard>
-
-      <WorkflowSectionCard
         v-if="latestOrder"
         title="最近操作结果"
-        description="展示最近一次创建、打印或交接后返回的转运单摘要。"
+        description="展示最近一次打印或交接后返回的转运单摘要。"
       >
         <ElDescriptions :column="2" border>
           <ElDescriptionsItem label="转运单号">

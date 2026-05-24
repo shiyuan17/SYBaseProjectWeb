@@ -21,6 +21,7 @@ import { GENDER_OPTIONS } from '#/modules/system-management/constants';
 import {
   ElAlert,
   ElButton,
+  ElDatePicker,
   ElDialog,
   ElEmpty,
   ElForm,
@@ -35,9 +36,11 @@ import {
 
 import {
   createApplication,
+  duplicateCheckApplications,
   importClinicalApplication,
 } from '../api/specimen-workflow-service';
 import {
+  APPLICATION_FORM_STATUS_OPTIONS,
   APPLICATION_TYPE_OPTIONS,
   M2_PERMISSION_CODES,
 } from '../constants';
@@ -73,6 +76,9 @@ const canCreateApplication = computed(() =>
 const canImportClinicalApplication = computed(() =>
   accessCodeSet.value.has(M2_PERMISSION_CODES.CLINICAL_IMPORT),
 );
+const canQueryWorkflowReference = computed(() =>
+  accessCodeSet.value.has(M2_PERMISSION_CODES.WORKFLOW_REFERENCE_QUERY),
+);
 const hasManageCapability = computed(
   () => canCreateApplication.value || canImportClinicalApplication.value,
 );
@@ -88,12 +94,17 @@ const pageError = ref('');
 const activeTab = ref<DialogTabName>(CREATE_TAB);
 const creatingApplication = ref(false);
 const importingClinicalApplication = ref(false);
+const duplicateChecking = ref(false);
+const duplicateCheckMessage = ref('');
+const duplicateSuggestedAction = ref('ALLOW');
+const duplicateConfirmed = ref(false);
 const clinicalSymptomSuggestion = ref('');
 const workflowReferenceOptions = ref(createEmptyWorkflowReferenceOptions());
 
 const createForm = reactive<ApplicationCreateRequest>({
   applicationDate: null,
   applicationNo: null,
+  applicationFormStatus: 'PENDING',
   applicationType: 'ROUTINE',
   clinicalDiagnosis: '',
   clinicalSymptom: null,
@@ -106,6 +117,7 @@ const createForm = reactive<ApplicationCreateRequest>({
   sourceHospitalId: null,
   sourceHospitalName: null,
   specimenSite: '',
+  specimenRemovalTime: null,
   status: null,
   submissionDate: null,
   submittingDepartmentId: '',
@@ -131,6 +143,7 @@ function resetCreateForm() {
   Object.assign(createForm, {
     applicationDate: null,
     applicationNo: null,
+    applicationFormStatus: 'PENDING',
     applicationType: 'ROUTINE',
     clinicalDiagnosis: '',
     clinicalSymptom: null,
@@ -143,6 +156,7 @@ function resetCreateForm() {
     sourceHospitalId: null,
     sourceHospitalName: null,
     specimenSite: '',
+    specimenRemovalTime: null,
     status: null,
     submissionDate: null,
     submittingDepartmentId: '',
@@ -152,6 +166,9 @@ function resetCreateForm() {
     thirdPartySource: null,
   });
   clinicalSymptomSuggestion.value = '';
+  duplicateCheckMessage.value = '';
+  duplicateSuggestedAction.value = 'ALLOW';
+  duplicateConfirmed.value = false;
 }
 
 function resetImportForm() {
@@ -169,7 +186,9 @@ function resetDialogState() {
 }
 
 async function loadWorkflowReferenceOptions() {
-  workflowReferenceOptions.value = await loadWorkflowReferenceOptionsSafely();
+  workflowReferenceOptions.value = await loadWorkflowReferenceOptionsSafely({
+    enabled: canQueryWorkflowReference.value,
+  });
 }
 
 function closeDialog() {
@@ -191,6 +210,63 @@ function handleClinicalSymptomSuggestionChange(value: string) {
   createForm.clinicalSymptom = value || null;
 }
 
+function confirmDuplicateWarning() {
+  duplicateConfirmed.value = true;
+  ElMessage.success('已确认疑似重复申请，保存时将继续提交');
+}
+
+function trimOrNull(value?: null | string) {
+  const normalized = value?.trim();
+  return normalized ? normalized : null;
+}
+
+async function handleDuplicateCheck() {
+  if (!trimOrNull(createForm.patientId) && !trimOrNull(createForm.patientName)) {
+    ElMessage.warning('请先填写患者编号或患者姓名');
+    return false;
+  }
+  if (!trimOrNull(createForm.externalOrderNo) && !trimOrNull(createForm.applicationDate)) {
+    ElMessage.warning('请至少填写外部单号或申请日期');
+    return false;
+  }
+
+  duplicateChecking.value = true;
+  pageError.value = '';
+  duplicateConfirmed.value = false;
+  try {
+    const result = await duplicateCheckApplications({
+      applicationDate: trimOrNull(createForm.applicationDate),
+      applicationType: trimOrNull(createForm.applicationType),
+      externalOrderNo: trimOrNull(createForm.externalOrderNo),
+      patientId: trimOrNull(createForm.patientId),
+      patientName: trimOrNull(createForm.patientName),
+      specimenSite: trimOrNull(createForm.specimenSite),
+    });
+    duplicateSuggestedAction.value = result.suggestedAction;
+    if (result.items.length === 0) {
+      duplicateCheckMessage.value = '未发现疑似重复申请';
+      duplicateConfirmed.value = true;
+      ElMessage.success(duplicateCheckMessage.value);
+      return true;
+    }
+    duplicateCheckMessage.value =
+      result.suggestedAction === 'BLOCK'
+        ? '命中强拦截级重复申请，请核对后停止创建或调整申请信息'
+        : `发现 ${result.items.length} 条疑似重复申请，确认无误后可继续保存`;
+    if (result.suggestedAction === 'BLOCK') {
+      ElMessage.warning(duplicateCheckMessage.value);
+      return false;
+    }
+    ElMessage.info(duplicateCheckMessage.value);
+    return false;
+  } catch (error) {
+    pageError.value = getWorkflowPageErrorMessage(error);
+    return false;
+  } finally {
+    duplicateChecking.value = false;
+  }
+}
+
 async function handleSubmitSuccess(applicationId: string, mode: SubmitMode) {
   closeDialog();
   emit('submitted', { applicationId, mode });
@@ -202,6 +278,18 @@ async function submitCreateApplication(mode: SubmitMode) {
   }
   if (!createForm.patientId?.trim() && !createForm.patientName?.trim()) {
     ElMessage.warning('患者编号与患者姓名至少填写一项');
+    return;
+  }
+  if (!createForm.applicationDate?.trim()) {
+    ElMessage.warning('请选择申请日期');
+    return;
+  }
+  if (!createForm.submissionDate?.trim()) {
+    ElMessage.warning('请选择送检日期');
+    return;
+  }
+  if (!createForm.sourceHospitalName?.trim()) {
+    ElMessage.warning('请填写来源医院');
     return;
   }
   if (!createForm.submittingDepartmentId.trim()) {
@@ -220,6 +308,16 @@ async function submitCreateApplication(mode: SubmitMode) {
     ElMessage.warning('请填写送检部位');
     return;
   }
+  if (!createForm.specimenRemovalTime?.trim()) {
+    ElMessage.warning('请选择标本离体时间');
+    return;
+  }
+  if (!duplicateConfirmed.value) {
+    const duplicatePassed = await handleDuplicateCheck();
+    if (!duplicatePassed) {
+      return;
+    }
+  }
 
   creatingApplication.value = true;
   pageError.value = '';
@@ -233,11 +331,12 @@ async function submitCreateApplication(mode: SubmitMode) {
       remarks: createForm.remarks?.trim() || null,
       sourceHospitalId: createForm.sourceHospitalId?.trim() || null,
       sourceHospitalName: createForm.sourceHospitalName?.trim() || null,
+      specimenRemovalTime: createForm.specimenRemovalTime?.trim() || null,
       submittingDoctorName: createForm.submittingDoctorName.trim(),
       submittingDoctorUserId: createForm.submittingDoctorUserId.trim(),
     });
     ElMessage.success(
-      mode === 'save' ? '申请单创建成功' : '申请单创建成功，正在前往标本管理',
+      mode === 'save' ? '申请单创建成功' : '申请单创建成功，正在前往标本登记',
     );
     await handleSubmitSuccess(result.id, mode);
   } catch (error) {
@@ -268,7 +367,7 @@ async function submitImportClinicalApplication(mode: SubmitMode) {
       thirdPartySource: importForm.thirdPartySource.trim(),
     });
     ElMessage.success(
-      mode === 'save' ? '临床申请导入成功' : '临床申请导入成功，正在前往标本管理',
+      mode === 'save' ? '临床申请导入成功' : '临床申请导入成功，正在前往标本登记',
     );
     await handleSubmitSuccess(result.id, mode);
   } catch (error) {
@@ -277,6 +376,24 @@ async function submitImportClinicalApplication(mode: SubmitMode) {
     importingClinicalApplication.value = false;
   }
 }
+
+watch(
+  () => [
+    createForm.patientId,
+    createForm.patientName,
+    createForm.externalOrderNo,
+    createForm.applicationDate,
+    createForm.applicationType,
+    createForm.specimenSite,
+  ],
+  () => {
+    if (duplicateCheckMessage.value || duplicateConfirmed.value) {
+      duplicateCheckMessage.value = '';
+      duplicateSuggestedAction.value = 'ALLOW';
+      duplicateConfirmed.value = false;
+    }
+  },
+);
 
 watch(
   () => props.modelValue,
@@ -322,7 +439,7 @@ watch(
         >
           <WorkflowSectionCard
             title="手工创建申请单"
-            description="创建成功后可直接留在申请管理，也可继续进入标本管理。"
+            description="创建成功后可留在申请列表，也可继续进入标本登记。"
           >
             <ElForm label-width="110px">
               <div class="grid gap-4 md:grid-cols-2">
@@ -377,6 +494,46 @@ watch(
                     placeholder="例如：45 岁"
                   />
                 </ElFormItem>
+                <ElFormItem label="申请日期" required>
+                  <ElDatePicker
+                    v-model="createForm.applicationDate"
+                    placeholder="请选择申请日期"
+                    type="date"
+                    value-format="YYYY-MM-DD"
+                  />
+                </ElFormItem>
+                <ElFormItem label="送检日期" required>
+                  <ElDatePicker
+                    v-model="createForm.submissionDate"
+                    placeholder="请选择送检日期"
+                    type="date"
+                    value-format="YYYY-MM-DD"
+                  />
+                </ElFormItem>
+                <ElFormItem label="离体时间" required>
+                  <ElDatePicker
+                    v-model="createForm.specimenRemovalTime"
+                    placeholder="请选择标本离体时间"
+                    type="datetime"
+                    value-format="YYYY-MM-DDTHH:mm:ss"
+                  />
+                </ElFormItem>
+                <ElFormItem label="申请单随附">
+                  <ElSelect v-model="createForm.applicationFormStatus" placeholder="请选择随附状态">
+                    <ElOption
+                      v-for="option in APPLICATION_FORM_STATUS_OPTIONS"
+                      :key="option.value"
+                      :label="option.label"
+                      :value="option.value"
+                    />
+                  </ElSelect>
+                </ElFormItem>
+                <ElFormItem label="来源医院" required>
+                  <ElInput
+                    v-model="createForm.sourceHospitalName"
+                    placeholder="请输入来源医院"
+                  />
+                </ElFormItem>
                 <ElFormItem label="送检科室" required>
                   <DepartmentSelect
                     v-model="createForm.submittingDepartmentId"
@@ -405,6 +562,22 @@ watch(
                     placeholder="第三方来源单号"
                   />
                 </ElFormItem>
+              </div>
+              <ElAlert
+                v-if="duplicateCheckMessage"
+                :closable="false"
+                :title="duplicateCheckMessage"
+                :type="duplicateSuggestedAction === 'BLOCK' ? 'warning' : 'info'"
+                class="mb-4"
+                show-icon
+              />
+              <div
+                v-if="duplicateCheckMessage && duplicateSuggestedAction === 'CONFIRM'"
+                class="mb-4 flex justify-end"
+              >
+                <ElButton type="primary" @click="confirmDuplicateWarning">
+                  确认继续保存
+                </ElButton>
               </div>
               <ElFormItem label="临床诊断" required>
                 <ElInput
@@ -449,7 +622,7 @@ watch(
         >
           <WorkflowSectionCard
             title="第三方申请导入"
-            description="按来源编码和外部申请单号导入，成功后可继续进入标本管理。"
+            description="按来源编码和外部申请单号导入，成功后可继续进入标本登记。"
           >
             <ElForm label-width="112px">
               <ElFormItem label="第三方来源" required>
@@ -483,6 +656,12 @@ watch(
         <template v-if="activeTab === CREATE_TAB && canCreateApplication">
           <ElButton @click="resetCreateForm">重置</ElButton>
           <ElButton
+            :loading="duplicateChecking"
+            @click="handleDuplicateCheck"
+          >
+            重复预警
+          </ElButton>
+          <ElButton
             :loading="creatingApplication"
             type="primary"
             @click="submitCreateApplication('save')"
@@ -494,7 +673,7 @@ watch(
             type="primary"
             @click="submitCreateApplication('save-and-manage')"
           >
-            保存并前往标本管理
+            保存并前往标本登记
           </ElButton>
         </template>
         <template v-else-if="activeTab === IMPORT_TAB && canImportClinicalApplication">
@@ -511,7 +690,7 @@ watch(
             type="primary"
             @click="submitImportClinicalApplication('save-and-manage')"
           >
-            保存并前往标本管理
+            保存并前往标本登记
           </ElButton>
         </template>
       </div>

@@ -104,7 +104,7 @@ describe('mapMenuViewsToRoutes', () => {
     ]);
   });
 
-  it('converts M2 workflow menu definitions into canonical frontend routes', () => {
+  it('converts M2 workflow menu definitions into the consolidated clinical submission routes', () => {
     const routes = mapMenuViewsToRoutes([
       {
         componentName: 'WorkflowRoot',
@@ -121,31 +121,59 @@ describe('mapMenuViewsToRoutes', () => {
         visible: true,
       },
       {
-        componentName: 'ApplicationList',
+        componentName: 'SubmissionRegistration',
         enabled: true,
         icon: 'list',
         id: 'MENU_M2_APPLICATION_LIST',
         menuCode: 'M2_APPLICATION_LIST',
-        menuName: '申请管理',
+        menuName: '申请与登记',
         menuType: 'MENU',
         parentId: 'MENU_M2_WORKFLOW',
-        path: '/api/v1/applications',
+        path: '/workflow/submission-registration',
         permissionPrefix: 'm2:application-list',
         sortOrder: 110,
         visible: true,
       },
       {
-        componentName: 'ClinicalRegister',
+        componentName: 'FixationTransport',
         enabled: true,
-        icon: 'catalog',
-        id: 'MENU_M2_CLINICAL',
-        menuCode: 'M2_CLINICAL',
-        menuName: '标本管理',
+        icon: 'check',
+        id: 'MENU_M2_FIXATION',
+        menuCode: 'M2_FIXATION',
+        menuName: '固定与转运',
         menuType: 'MENU',
         parentId: 'MENU_M2_WORKFLOW',
-        path: '/api/v1/specimens/register',
-        permissionPrefix: 'm2:clinical',
-        sortOrder: 111,
+        path: '/workflow/fixation-transport',
+        permissionPrefix: 'm2:fixation',
+        sortOrder: 120,
+        visible: true,
+      },
+      {
+        componentName: 'PathologyReceipt',
+        enabled: true,
+        icon: 'archive',
+        id: 'MENU_M2_RECEIPT',
+        menuCode: 'M2_RECEIPT',
+        menuName: '病理接收',
+        menuType: 'MENU',
+        parentId: 'MENU_M2_WORKFLOW',
+        path: '/workflow/pathology-receipt',
+        permissionPrefix: 'm2:receipt',
+        sortOrder: 130,
+        visible: true,
+      },
+      {
+        componentName: 'TrackingException',
+        enabled: true,
+        icon: 'search',
+        id: 'MENU_M2_TRACKING',
+        menuCode: 'M2_TRACKING',
+        menuName: '追踪与异常',
+        menuType: 'MENU',
+        parentId: 'MENU_M2_WORKFLOW',
+        path: '/workflow/tracking-exception',
+        permissionPrefix: 'm2:tracking',
+        sortOrder: 140,
         visible: true,
       },
     ]);
@@ -154,15 +182,23 @@ describe('mapMenuViewsToRoutes', () => {
       expect.objectContaining({
         name: 'WorkflowRoot',
         path: '/workflow',
-        redirect: '/workflow/application-list',
+        redirect: '/workflow/submission-registration',
         children: [
           expect.objectContaining({
-            name: 'ApplicationList',
-            path: '/workflow/application-list',
+            name: 'SubmissionRegistration',
+            path: '/workflow/submission-registration',
           }),
           expect.objectContaining({
-            name: 'SpecimenManagement',
-            path: '/workflow/specimen-management',
+            name: 'FixationTransport',
+            path: '/workflow/fixation-transport',
+          }),
+          expect.objectContaining({
+            name: 'PathologyReceipt',
+            path: '/workflow/pathology-receipt',
+          }),
+          expect.objectContaining({
+            name: 'TrackingException',
+            path: '/workflow/tracking-exception',
           }),
         ],
       }),
@@ -527,21 +563,22 @@ describe('system management route access', () => {
 });
 
 describe('workflow route access', () => {
-  it('keeps M2 pages registered with workstation authorities', () => {
+  it('keeps M2 consolidated pages registered with workstation authorities', () => {
     const workflowRoot = workflowRoutes.find((route) => route.name === 'WorkflowRoot');
-    const listRoute = workflowRoot?.children?.find(
-      (route) => route.name === 'ApplicationList',
+    const submissionRoute = workflowRoot?.children?.find(
+      (route) => route.name === 'SubmissionRegistration',
     );
     const trackingRoute = workflowRoot?.children?.find(
-      (route) => route.name === 'TrackingQuery',
+      (route) => route.name === 'TrackingException',
     );
 
-    expect(listRoute?.component).toBeTypeOf('function');
+    expect(submissionRoute?.component).toBeTypeOf('function');
     expect(trackingRoute?.component).toBeTypeOf('function');
-    expect(listRoute?.meta?.authority).toEqual([
+    expect(submissionRoute?.meta?.authority).toEqual([
       M2_PERMISSION_CODES.APPLICATION_DETAIL_QUERY,
       M2_PERMISSION_CODES.APPLICATION_CREATE,
       M2_PERMISSION_CODES.CLINICAL_IMPORT,
+      M2_PERMISSION_CODES.SPECIMEN_REGISTER,
     ]);
     expect(trackingRoute?.meta?.authority).toEqual([
       M2_PERMISSION_CODES.SPECIMEN_TRACKING_QUERY,

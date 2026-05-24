@@ -5,6 +5,8 @@ import type {
   ApplicationCreateRequest,
   ApplicationCreateResult,
   ApplicationDetailView,
+  DuplicateApplicationCheckQuery,
+  DuplicateApplicationCheckResult,
   DirectSpecimenReceiptRequest,
   FixationResult,
   ImportClinicalApplicationRequest,
@@ -15,6 +17,9 @@ import type {
   PendingSpecimenQuery,
   PendingTransportOrderPage,
   PendingTransportOrderQuery,
+  SpecimenManagementListPage,
+  SpecimenManagementListQuery,
+  SpecimenManagementListSummary,
   SpecimenFixationRequest,
   SpecimenReceiptRequest,
   SpecimenReceiptResult,
@@ -54,6 +59,13 @@ type LatestRegistrationResultResponse = Omit<
 type ApplicationPageResponse = ApplicationPage;
 type PendingSpecimenPageResponse = PendingSpecimenPage;
 type PendingTransportOrderPageResponse = PendingTransportOrderPage;
+type SpecimenManagementListPageResponse = Omit<
+  SpecimenManagementListPage,
+  'items' | 'summary'
+> & {
+  items?: SpecimenManagementListPage['items'];
+  summary?: Partial<SpecimenManagementListSummary>;
+};
 
 export function mapApplicationDetailResponse(
   response: ApplicationDetailResponse,
@@ -92,6 +104,21 @@ export function mapPendingTransportOrderPageResponse(
   };
 }
 
+export function mapSpecimenManagementListPageResponse(
+  response: SpecimenManagementListPageResponse,
+): SpecimenManagementListPage {
+  return {
+    ...response,
+    items: response.items ?? [],
+    summary: {
+      abnormalCount: response.summary?.abnormalCount ?? 0,
+      labelPrintedCount: response.summary?.labelPrintedCount ?? 0,
+      pendingLabelCount: response.summary?.pendingLabelCount ?? 0,
+      totalCount: response.summary?.totalCount ?? 0,
+    },
+  };
+}
+
 export function mapRegistrationResultResponse(
   response: RegistrationResultResponse,
 ): SpecimenRegisterResult {
@@ -121,6 +148,15 @@ export async function listApplications(params: ApplicationListQuery) {
   return mapApplicationPageResponse(response);
 }
 
+export async function duplicateCheckApplications(
+  params: DuplicateApplicationCheckQuery,
+) {
+  return requestClient.get<DuplicateApplicationCheckResult>(
+    '/v1/applications/duplicate-check',
+    { params },
+  );
+}
+
 export async function importClinicalApplication(
   data: ImportClinicalApplicationRequest,
 ) {
@@ -142,6 +178,11 @@ export async function getApplicationTracking(applicationId: string) {
     `/v1/applications/${applicationId}/tracking`,
   );
   return mapApplicationDetailResponse(response);
+}
+
+export async function getApplicationTrackingByApplicationNo(applicationNo: string) {
+  const application = await lookupApplicationForRegistration(applicationNo);
+  return getApplicationTracking(application.id);
 }
 
 export async function getSpecimenTrackingByBarcode(barcode: string) {
@@ -177,6 +218,16 @@ export async function lookupApplicationForRegistration(applicationNo: string) {
   return requestClient.get<ApplicationListItem>('/v1/specimens/applications/lookup', {
     params: { applicationNo },
   });
+}
+
+export async function listSpecimens(params: SpecimenManagementListQuery) {
+  const response = await requestClient.get<SpecimenManagementListPageResponse>(
+    '/v1/specimens',
+    {
+      params,
+    },
+  );
+  return mapSpecimenManagementListPageResponse(response);
 }
 
 export async function listPendingFixations(params: PendingSpecimenQuery) {

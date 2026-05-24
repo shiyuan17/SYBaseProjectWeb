@@ -8,7 +8,8 @@ const { mockAccessStore, mockRoute, mockRouter, mockUserStore } = vi.hoisted(() 
   },
   mockRoute: {
     query: {
-      applicationId: 'APP-001',
+      action: 'register',
+      applicationId: 'APP-ID',
     } as Record<string, string>,
   },
   mockRouter: {
@@ -21,6 +22,11 @@ const { mockAccessStore, mockRoute, mockRouter, mockUserStore } = vi.hoisted(() 
       userId: 'USER-001',
     },
   },
+}));
+
+const registerDialogProps = vi.hoisted(() => ({
+  applicationId: '',
+  modelValue: false,
 }));
 
 vi.mock('vue-router', () => ({
@@ -40,6 +46,23 @@ vi.mock('@vben/stores', () => ({
   useUserStore: () => mockUserStore,
 }));
 
+vi.mock('#/modules/system-management/api/workflow-reference-service', () => ({
+  createEmptyWorkflowReferenceOptions: () => ({
+    clinicalSymptoms: [],
+    collectionModes: [],
+    containerNames: [],
+    fixationLiquidTypes: [],
+    specimenTypes: [],
+  }),
+  loadWorkflowReferenceOptionsSafely: vi.fn(async () => ({
+    clinicalSymptoms: [{ label: '肿物', value: '肿物' }],
+    collectionModes: [{ label: '手术', value: 'SURGERY' }],
+    containerNames: [{ label: '标本瓶', value: '标本瓶' }],
+    fixationLiquidTypes: [{ label: '10% 中性福尔马林', value: 'FORMALIN' }],
+    specimenTypes: [{ label: '常规', value: 'ROUTINE' }],
+  })),
+}));
+
 vi.mock('#/modules/system-management/components/DepartmentSelect.vue', () => ({
   default: {
     props: ['modelValue', 'placeholder'],
@@ -47,46 +70,87 @@ vi.mock('#/modules/system-management/components/DepartmentSelect.vue', () => ({
   },
 }));
 
-vi.mock('#/modules/system-management/components/BodyPartSelect.vue', () => ({
+vi.mock('#/modules/system-management/components/ReferenceOptionSelect.vue', () => ({
   default: {
-    props: ['modelValue', 'placeholder'],
+    props: ['modelValue', 'options', 'placeholder'],
     template: '<div />',
   },
 }));
 
 vi.mock('#/modules/system-management/components/SystemUserSelect.vue', () => ({
   default: {
-    props: ['modelValue', 'placeholder', 'selectedLabel'],
+    props: ['modelValue', 'selectedLabel', 'placeholder'],
     template: '<div />',
   },
-}));
-
-vi.mock('../api/specimen-workflow-service', () => ({
-  listApplications: vi.fn(),
 }));
 
 vi.mock('../components/SpecimenRegisterDialog.vue', () => ({
   default: {
     props: ['applicationId', 'modelValue'],
-    template:
-      '<div data-testid="specimen-register-dialog">{{ JSON.stringify({ kind: "register", applicationId, modelValue }) }}</div>',
+    setup(props: { applicationId: string; modelValue: boolean }) {
+      registerDialogProps.applicationId = props.applicationId;
+      registerDialogProps.modelValue = props.modelValue;
+      return {};
+    },
+    template: '<div data-testid="register-dialog-proxy" />',
   },
 }));
 
-vi.mock('../components/SpecimenRegisterResultDialog.vue', () => ({
-  default: {
-    props: ['applicationId', 'registerResult', 'modelValue'],
-    template:
-      '<div data-testid="specimen-register-result-dialog">{{ JSON.stringify({ kind: "result", applicationId, modelValue }) }}</div>',
-  },
-}));
-
-vi.mock('../components/SpecimenLabelRetryDialog.vue', () => ({
-  default: {
-    props: ['applicationId', 'registerResult', 'retryResult', 'modelValue'],
-    template:
-      '<div data-testid="specimen-label-retry-dialog">{{ JSON.stringify({ kind: "retry", applicationId, modelValue }) }}</div>',
-  },
+vi.mock('../api/specimen-workflow-service', () => ({
+  completeFixation: vi.fn(),
+  getApplicationDetail: vi.fn(async () => ({
+    abnormalFlag: false,
+    applicationDate: '2026-05-21',
+    applicationFormStatus: 'PENDING',
+    applicationNo: 'APP-001',
+    applicationType: 'ROUTINE',
+    clinicalDiagnosis: '诊断',
+    clinicalSymptom: null,
+    createdAt: '2026-05-21T10:00:00',
+    currentNode: 'SPECIMEN_COLLECTION',
+    externalOrderNo: null,
+    id: 'APP-ID',
+    patientAge: '40',
+    patientGender: 'F',
+    patientId: 'P-001',
+    patientName: '张三',
+    recentEvents: [],
+    remarks: null,
+    sourceHospitalId: null,
+    sourceHospitalName: '本院',
+    specimenRemovalTime: '2026-05-21T09:30:00',
+    specimenSite: '胃',
+    specimens: [],
+    status: 'SUBMITTED',
+    submissionDate: '2026-05-21',
+    submittingDepartmentId: 'DEP-1',
+    submittingDepartmentName: '外科',
+    submittingDoctorName: '医生A',
+    submittingDoctorUserId: 'DOC-1',
+    thirdPartySource: null,
+    updatedAt: '2026-05-21T10:00:00',
+  })),
+  getLatestRegistrationResult: vi.fn(async () => ({
+    applicationId: 'APP-ID',
+    labelPrintBatchNo: null,
+    labelPrintMessage: null,
+    labelPrintSuccess: false,
+    specimens: [],
+  })),
+  listSpecimens: vi.fn(async () => ({
+    items: [],
+    page: 1,
+    size: 20,
+    summary: {
+      abnormalCount: 0,
+      labelPrintedCount: 0,
+      pendingLabelCount: 0,
+      totalCount: 0,
+    },
+    total: 0,
+  })),
+  retryLabelPrint: vi.fn(),
+  startFixation: vi.fn(),
 }));
 
 import SpecimenManagementView from './SpecimenManagementView.vue';
@@ -96,10 +160,16 @@ describe('SpecimenManagementView', () => {
     mockAccessStore.accessCodes = [];
     mockRouter.push.mockReset();
     mockRouter.replace.mockReset();
+    registerDialogProps.applicationId = '';
+    registerDialogProps.modelValue = false;
+    document.body.innerHTML = '';
   });
 
-  it('uses route query application id as the current registration context', async () => {
-    mockAccessStore.accessCodes = ['PERM_SPECIMEN_REGISTER'];
+  it('opens registration dialog directly from route query application id', async () => {
+    mockAccessStore.accessCodes = [
+      'PERM_APPLICATION_DETAIL_QUERY',
+      'PERM_SPECIMEN_REGISTER',
+    ];
 
     const root = document.createElement('div');
     document.body.append(root);
@@ -110,9 +180,13 @@ describe('SpecimenManagementView', () => {
 
     app.mount(root);
     await nextTick();
+    await Promise.resolve();
+    await nextTick();
 
-    expect(root.textContent).toContain('APP-001');
-    expect(root.textContent).toContain('当前登记上下文：APP-001');
+    expect(registerDialogProps.applicationId).toBe('APP-ID');
+    expect(registerDialogProps.modelValue).toBe(true);
+    expect(document.body.textContent).toContain('工作台概览');
+    expect(document.body.textContent).toContain('标本列表');
 
     app.unmount();
     root.remove();

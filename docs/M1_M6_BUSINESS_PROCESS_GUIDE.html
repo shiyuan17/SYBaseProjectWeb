@@ -1,0 +1,2013 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>M1-M6 业务流程总览与操作方案</title>
+    <style>
+      :root {
+        --bg: #f5f1e8;
+        --paper: rgba(255, 252, 246, 0.96);
+        --paper-strong: #fffaf1;
+        --ink: #1d2430;
+        --muted: #5d6676;
+        --line: #dccfbd;
+        --line-strong: #bea887;
+        --primary: #8a402e;
+        --primary-soft: #f3ddd2;
+        --primary-deep: #5f281d;
+        --teal: #2d6274;
+        --teal-soft: #d9ebef;
+        --green: #4b6b46;
+        --green-soft: #dcead8;
+        --gold: #8a6c34;
+        --gold-soft: #efe3c6;
+        --blue: #365f8c;
+        --blue-soft: #dce8f6;
+        --gray-soft: #ece7de;
+        --shadow: 0 18px 40px rgba(82, 63, 33, 0.08);
+        --radius-xl: 28px;
+        --radius-lg: 18px;
+        --radius-md: 12px;
+        --radius-sm: 8px;
+        --content-width: 1560px;
+        --nav-width: 290px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        font:
+          15px/1.7 "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+          sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(138, 64, 46, 0.12), transparent 26%),
+          radial-gradient(circle at top right, rgba(45, 98, 116, 0.12), transparent 24%),
+          linear-gradient(180deg, #faf6ee 0%, var(--bg) 100%);
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      button {
+        font: inherit;
+      }
+
+      code {
+        padding: 2px 6px;
+        border-radius: 999px;
+        background: rgba(29, 36, 48, 0.06);
+        color: var(--primary-deep);
+        font-size: 0.92em;
+      }
+
+      .layout {
+        max-width: var(--content-width);
+        margin: 0 auto;
+        padding: 28px 22px 80px;
+      }
+
+      .hero {
+        position: relative;
+        overflow: hidden;
+        padding: 34px 36px;
+        border: 1px solid rgba(138, 64, 46, 0.18);
+        border-radius: 32px;
+        background:
+          linear-gradient(140deg, rgba(255, 250, 243, 0.96), rgba(248, 239, 227, 0.92)),
+          #fff;
+        box-shadow: var(--shadow);
+      }
+
+      .hero::after {
+        content: "";
+        position: absolute;
+        inset: auto -70px -90px auto;
+        width: 280px;
+        height: 280px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(138, 64, 46, 0.14), transparent 68%);
+        pointer-events: none;
+      }
+
+      .hero-grid {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-columns: 1.5fr 0.95fr;
+        gap: 28px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: rgba(138, 64, 46, 0.08);
+        color: var(--primary-deep);
+        font-weight: 700;
+        letter-spacing: 0.05em;
+      }
+
+      h1,
+      h2,
+      h3,
+      h4 {
+        margin: 0;
+        line-height: 1.2;
+      }
+
+      h1 {
+        margin-top: 18px;
+        font-size: 42px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+      }
+
+      h2 {
+        font-size: 30px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+      }
+
+      h3 {
+        font-size: 20px;
+        font-weight: 800;
+      }
+
+      .hero p {
+        margin: 16px 0 0;
+        color: var(--muted);
+        max-width: 860px;
+      }
+
+      .hero-meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        align-content: start;
+      }
+
+      .meta-card {
+        padding: 16px 18px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        background: rgba(255, 255, 255, 0.72);
+      }
+
+      .meta-card strong {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 12px;
+        color: var(--muted);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .meta-card span {
+        font-size: 15px;
+        font-weight: 700;
+      }
+
+      .content-shell {
+        display: grid;
+        grid-template-columns: var(--nav-width) minmax(0, 1fr);
+        gap: 22px;
+        margin-top: 24px;
+        align-items: start;
+      }
+
+      .side-nav {
+        position: sticky;
+        top: 18px;
+        padding: 18px;
+        border: 1px solid rgba(95, 102, 118, 0.14);
+        border-radius: 24px;
+        background: rgba(255, 252, 246, 0.92);
+        box-shadow: 0 14px 28px rgba(75, 58, 34, 0.05);
+      }
+
+      .side-nav h3 {
+        font-size: 18px;
+      }
+
+      .side-nav p {
+        margin: 8px 0 14px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .nav-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .nav-link {
+        display: block;
+        padding: 10px 12px;
+        border: 1px solid transparent;
+        border-radius: 12px;
+        color: var(--muted);
+        transition:
+          background 0.2s ease,
+          border-color 0.2s ease,
+          color 0.2s ease,
+          transform 0.2s ease;
+      }
+
+      .nav-link:hover,
+      .nav-link.active {
+        color: var(--primary-deep);
+        background: rgba(138, 64, 46, 0.08);
+        border-color: rgba(138, 64, 46, 0.14);
+        transform: translateX(2px);
+      }
+
+      .main {
+        min-width: 0;
+      }
+
+      .section {
+        margin-bottom: 22px;
+        padding: 28px;
+        border: 1px solid rgba(95, 102, 118, 0.14);
+        border-radius: var(--radius-xl);
+        background: var(--paper);
+        box-shadow: 0 12px 30px rgba(74, 52, 25, 0.05);
+      }
+
+      .section-header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        gap: 14px;
+        align-items: flex-end;
+        margin-bottom: 18px;
+      }
+
+      .section-desc {
+        margin-top: 10px;
+        max-width: 900px;
+        color: var(--muted);
+      }
+
+      .badge-row,
+      .status-row,
+      .tag-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .badge,
+      .tag,
+      .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 11px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: var(--paper-strong);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .status-live {
+        border-color: rgba(75, 107, 70, 0.28);
+        background: var(--green-soft);
+        color: #2f492d;
+      }
+
+      .status-backend {
+        border-color: rgba(54, 95, 140, 0.28);
+        background: var(--blue-soft);
+        color: #244565;
+      }
+
+      .status-plan {
+        border-color: rgba(138, 108, 52, 0.28);
+        background: var(--gold-soft);
+        color: #6d5324;
+      }
+
+      .toc-grid,
+      .module-grid,
+      .summary-grid,
+      .topic-grid,
+      .legend-grid {
+        display: grid;
+        gap: 14px;
+      }
+
+      .toc-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        margin-top: 20px;
+      }
+
+      .summary-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .module-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .topic-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .legend-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .toc-card,
+      .info-card,
+      .process-card,
+      .topic-card,
+      .legend-card {
+        padding: 16px 18px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+        background: rgba(255, 255, 255, 0.78);
+      }
+
+      .toc-card:hover {
+        border-color: rgba(138, 64, 46, 0.2);
+        background: rgba(255, 250, 244, 0.95);
+      }
+
+      .toc-card strong,
+      .info-card strong,
+      .process-card strong,
+      .topic-card strong,
+      .legend-card strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 16px;
+      }
+
+      .toc-card span,
+      .info-card p,
+      .process-card p,
+      .topic-card p,
+      .legend-card p {
+        color: var(--muted);
+        margin: 0;
+      }
+
+      .subsection {
+        margin-top: 24px;
+      }
+
+      .svg-shell {
+        margin-top: 16px;
+        padding: 16px;
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background:
+          linear-gradient(180deg, rgba(255, 251, 245, 0.98), rgba(250, 244, 235, 0.96));
+      }
+
+      svg {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .flow-table-wrap {
+        margin-top: 16px;
+        overflow-x: auto;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.82);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 14px 14px;
+        border-bottom: 1px solid rgba(220, 207, 189, 0.74);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: rgba(138, 64, 46, 0.07);
+        color: var(--primary-deep);
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.03em;
+      }
+
+      tr:last-child td {
+        border-bottom: none;
+      }
+
+      td small {
+        display: block;
+        margin-top: 4px;
+        color: var(--muted);
+      }
+
+      .key-list,
+      .bullet-list {
+        margin: 12px 0 0;
+        padding-left: 18px;
+      }
+
+      .key-list li,
+      .bullet-list li {
+        margin: 6px 0;
+        color: var(--muted);
+      }
+
+      .two-col {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 18px;
+      }
+
+      .note-box {
+        padding: 16px 18px;
+        border: 1px dashed rgba(138, 64, 46, 0.28);
+        border-radius: 16px;
+        background: rgba(243, 221, 210, 0.38);
+      }
+
+      .note-box strong {
+        display: block;
+        margin-bottom: 8px;
+      }
+
+      .matrix-table th:first-child,
+      .matrix-table td:first-child {
+        min-width: 140px;
+      }
+
+      .footer-note {
+        margin-top: 12px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .back-top {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 16px;
+        padding: 10px 14px;
+        border-radius: 999px;
+        border: 1px solid rgba(138, 64, 46, 0.18);
+        background: rgba(255, 255, 255, 0.88);
+        color: var(--primary-deep);
+        font-weight: 700;
+      }
+
+      @media (max-width: 1280px) {
+        .hero-grid,
+        .content-shell,
+        .two-col {
+          grid-template-columns: 1fr;
+        }
+
+        .side-nav {
+          position: static;
+        }
+
+        .toc-grid,
+        .summary-grid,
+        .module-grid,
+        .topic-grid,
+        .legend-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 820px) {
+        .layout {
+          padding: 18px 14px 56px;
+        }
+
+        .hero,
+        .section {
+          padding: 22px 18px;
+          border-radius: 22px;
+        }
+
+        h1 {
+          font-size: 32px;
+        }
+
+        h2 {
+          font-size: 26px;
+        }
+
+        .hero-meta,
+        .toc-grid,
+        .summary-grid,
+        .module-grid,
+        .topic-grid,
+        .legend-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media print {
+        body {
+          background: #fff;
+        }
+
+        .layout {
+          max-width: none;
+          padding: 0;
+        }
+
+        .side-nav {
+          display: none;
+        }
+
+        .hero,
+        .section {
+          box-shadow: none;
+          break-inside: avoid;
+        }
+
+        .content-shell {
+          display: block;
+        }
+
+        .back-top {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout" id="top">
+      <header class="hero">
+        <div class="hero-grid">
+          <div>
+            <span class="eyebrow">M1-M6 Business Process Guide</span>
+            <h1>M1-M6 业务流程总览与操作方案</h1>
+            <p>
+              本文档用于汇总病理全流程系统的
+              <code>M1-M6</code> 业务主线、岗位分工、关键单据对象流转与补充链路，
+              适合作为产品方案讲解、业务培训材料和跨团队对齐底稿。文档采用岗位泳道图 +
+              操作步骤表的方式呈现，并显式标注每条流程的当前现状。
+            </p>
+            <div class="badge-row" style="margin-top: 18px">
+              <span class="badge">独立静态 HTML</span>
+              <span class="badge">岗位泳道图</span>
+              <span class="badge">M1-M6 全量口径</span>
+              <span class="badge">含补充流程专题</span>
+            </div>
+          </div>
+          <div class="hero-meta">
+            <div class="meta-card">
+              <strong>定位</strong>
+              <span>产品方案稿 + 业务讲解底稿</span>
+            </div>
+            <div class="meta-card">
+              <strong>交付范围</strong>
+              <span>M1-M6 主流程、补充流程、角色矩阵、现状说明</span>
+            </div>
+            <div class="meta-card">
+              <strong>现状标签</strong>
+              <span>已落地 / 已有后端能力 / 规划补齐</span>
+            </div>
+            <div class="meta-card">
+              <strong>编制依据</strong>
+              <span>M1-M4 手册、M5/M6 规划、后端权限与接口种子</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="toc-grid">
+          <a class="toc-card" href="#overview">
+            <strong>01 全局总览</strong>
+            <span>M1-M6 主链路、分工边界和全局泳道图</span>
+          </a>
+          <a class="toc-card" href="#m1">
+            <strong>02 M1 系统管理</strong>
+            <span>账号、角色、字典、编号与配置</span>
+          </a>
+          <a class="toc-card" href="#m2">
+            <strong>03 M2 标本送检</strong>
+            <span>申请、导入、登记、核验、交接与追踪</span>
+          </a>
+          <a class="toc-card" href="#m3">
+            <strong>04 M3 技术生产线</strong>
+            <span>任务池、取材、脱水、包埋、切片、染色、返工</span>
+          </a>
+          <a class="toc-card" href="#m4">
+            <strong>05 M4 医生诊断</strong>
+            <span>分配、诊断、报告、修订、会诊、医嘱执行</span>
+          </a>
+          <a class="toc-card" href="#m5">
+            <strong>06 M5 归档与运营</strong>
+            <span>归档、借阅、试剂、设备与预警</span>
+          </a>
+          <a class="toc-card" href="#m6">
+            <strong>07 M6 集成与统计</strong>
+            <span>集成任务、收费、历史、统计</span>
+          </a>
+          <a class="toc-card" href="#other-flows">
+            <strong>08 其他流程专题</strong>
+            <span>返工、修订、会诊、借阅归还与支撑链路</span>
+          </a>
+        </div>
+      </header>
+
+      <div class="content-shell">
+        <aside class="side-nav">
+          <h3>导航目录</h3>
+          <p>点击跳转到对应模块。滚动时会自动高亮当前区块。</p>
+          <nav class="nav-list">
+            <a class="nav-link" href="#overview">M1-M6 全局总览</a>
+            <a class="nav-link" href="#m1">M1 系统管理</a>
+            <a class="nav-link" href="#m2">M2 标本送检</a>
+            <a class="nav-link" href="#m3">M3 技术组生产线</a>
+            <a class="nav-link" href="#m4">M4 医生诊断</a>
+            <a class="nav-link" href="#m5">M5 归档与运营支撑</a>
+            <a class="nav-link" href="#m6">M6 集成/收费/历史/统计</a>
+            <a class="nav-link" href="#other-flows">其他流程专题</a>
+            <a class="nav-link" href="#roles">角色矩阵与术语说明</a>
+          </nav>
+        </aside>
+
+        <main class="main">
+          <section class="section" id="overview" data-nav="overview">
+            <div class="section-header">
+              <div>
+                <h2>01. M1-M6 全局总览</h2>
+                <p class="section-desc">
+                  全局闭环以“管理员准备 -> 标本送检 -> 技术生产 -> 医生诊断 ->
+                  归档运营 -> 集成统计支撑”为主线组织。M1 负责底座与前置，M2-M5
+                  负责常规病理主闭环，M6 负责医院外围系统对接、统计报表与历史数据支撑。
+                </p>
+              </div>
+              <div class="status-row">
+                <span class="status-pill status-live">M1-M4：前端主能力已落地</span>
+                <span class="status-pill status-backend">M4 医嘱执行 / M6：后端能力明确</span>
+                <span class="status-pill status-plan">M5-M6 前端开放程度仍在推进</span>
+              </div>
+            </div>
+
+            <div class="summary-grid">
+              <div class="info-card">
+                <strong>M1 管理底座</strong>
+                <p>负责账号、角色、基础字典、系统配置和编号规则，保证后续岗位可用。</p>
+              </div>
+              <div class="info-card">
+                <strong>M2-M5 主闭环</strong>
+                <p>覆盖从申请单创建到报告发布、再到材料归档与借阅回库的核心业务闭环。</p>
+              </div>
+              <div class="info-card">
+                <strong>M6 外围支撑</strong>
+                <p>覆盖集成任务追踪、收费回写与对账、历史报告导入/查询、统计报表生成。</p>
+              </div>
+            </div>
+
+            <div class="svg-shell">
+              <svg viewBox="0 0 1420 510" aria-label="M1-M6 全局泳道图">
+                <defs>
+                  <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+                    <path d="M0,0 L8,3 L0,6 Z" fill="#7e8a98"></path>
+                  </marker>
+                </defs>
+                <rect x="12" y="20" width="1396" height="70" rx="24" fill="#fff6ea" stroke="#d9c6aa"></rect>
+                <text x="36" y="48" font-size="28" font-weight="800" fill="#5f281d">常规病理主闭环 + 集成支撑总览</text>
+                <text x="36" y="74" font-size="16" fill="#5d6676">按岗位泳道展示从权限准备到归档、再到外围系统支撑的业务关系</text>
+
+                <rect x="24" y="112" width="160" height="60" rx="18" fill="#f3ddd2" stroke="#cfaa9f"></rect>
+                <text x="48" y="146" font-size="24" font-weight="800" fill="#5f281d">管理员</text>
+                <rect x="24" y="182" width="160" height="60" rx="18" fill="#d9ebef" stroke="#b3ced6"></rect>
+                <text x="48" y="216" font-size="24" font-weight="800" fill="#214b58">送检岗位</text>
+                <rect x="24" y="252" width="160" height="60" rx="18" fill="#dcead8" stroke="#b7d0b1"></rect>
+                <text x="48" y="286" font-size="24" font-weight="800" fill="#375134">技术岗位</text>
+                <rect x="24" y="322" width="160" height="60" rx="18" fill="#efe3c6" stroke="#d5c190"></rect>
+                <text x="48" y="356" font-size="24" font-weight="800" fill="#6d5324">医生岗位</text>
+                <rect x="24" y="392" width="160" height="60" rx="18" fill="#dce8f6" stroke="#b4c9e0"></rect>
+                <text x="48" y="426" font-size="24" font-weight="800" fill="#244565">运营支撑</text>
+
+                <line x1="204" y1="142" x2="1368" y2="142" stroke="#d8d0c2"></line>
+                <line x1="204" y1="212" x2="1368" y2="212" stroke="#d8d0c2"></line>
+                <line x1="204" y1="282" x2="1368" y2="282" stroke="#d8d0c2"></line>
+                <line x1="204" y1="352" x2="1368" y2="352" stroke="#d8d0c2"></line>
+                <line x1="204" y1="422" x2="1368" y2="422" stroke="#d8d0c2"></line>
+
+                <rect x="232" y="120" width="180" height="44" rx="14" fill="#fff" stroke="#d0b4ab"></rect>
+                <text x="256" y="148" font-size="18" font-weight="700" fill="#5f281d">M1 账号/角色准备</text>
+
+                <rect x="444" y="190" width="188" height="44" rx="14" fill="#fff" stroke="#b5d0d8"></rect>
+                <text x="470" y="218" font-size="18" font-weight="700" fill="#214b58">M2 申请与标本送检</text>
+
+                <rect x="674" y="260" width="190" height="44" rx="14" fill="#fff" stroke="#b8cfb0"></rect>
+                <text x="706" y="288" font-size="18" font-weight="700" fill="#375134">M3 技术生产流转</text>
+
+                <rect x="898" y="330" width="200" height="44" rx="14" fill="#fff" stroke="#dac58c"></rect>
+                <text x="932" y="358" font-size="18" font-weight="700" fill="#6d5324">M4 诊断与报告发布</text>
+
+                <rect x="1128" y="400" width="198" height="44" rx="14" fill="#fff" stroke="#b8cae2"></rect>
+                <text x="1164" y="428" font-size="18" font-weight="700" fill="#244565">M5 归档与借阅回库</text>
+
+                <rect x="1128" y="120" width="198" height="44" rx="14" fill="#fff" stroke="#b8cae2"></rect>
+                <text x="1164" y="148" font-size="18" font-weight="700" fill="#244565">M6 集成与统计支撑</text>
+
+                <path d="M412 142 L444 142 L444 212" stroke="#7e8a98" stroke-width="3" fill="none" marker-end="url(#arrow)"></path>
+                <path d="M632 212 L674 212 L674 282" stroke="#7e8a98" stroke-width="3" fill="none" marker-end="url(#arrow)"></path>
+                <path d="M864 282 L898 282 L898 352" stroke="#7e8a98" stroke-width="3" fill="none" marker-end="url(#arrow)"></path>
+                <path d="M1098 352 L1128 352 L1128 422" stroke="#7e8a98" stroke-width="3" fill="none" marker-end="url(#arrow)"></path>
+                <path d="M1228 164 L1228 392" stroke="#8ea2b8" stroke-width="2.5" stroke-dasharray="8 8" fill="none"></path>
+
+                <text x="248" y="188" font-size="14" fill="#5d6676">用户、角色、字典、编号、配置</text>
+                <text x="446" y="258" font-size="14" fill="#5d6676">申请单、导入单、标本对象、交接记录</text>
+                <text x="674" y="328" font-size="14" fill="#5d6676">技术任务、蜡块、包埋盒、玻片、返工单</text>
+                <text x="902" y="398" font-size="14" fill="#5d6676">诊断任务、报告版本、修订单、会诊单、医嘱</text>
+                <text x="1048" y="470" font-size="14" fill="#5d6676">档案位置信息回流查询场景，支撑后续借阅与追溯</text>
+                <text x="1012" y="106" font-size="14" fill="#5d6676">M6 贯穿主闭环，处理集成任务、收费、历史数据和统计分析</text>
+              </svg>
+            </div>
+
+            <div class="module-grid subsection">
+              <div class="process-card">
+                <strong>主闭环对象</strong>
+                <p>申请单、标本、蜡块、包埋盒、玻片、诊断任务、病理报告、归档记录。</p>
+              </div>
+              <div class="process-card">
+                <strong>补充闭环对象</strong>
+                <p>返工单、修订单、会诊单、病理医嘱、借阅单、集成任务、收费记录、历史报告、统计报表。</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="m1" data-nav="m1">
+            <div class="section-header">
+              <div>
+                <h2>02. M1 系统管理</h2>
+                <p class="section-desc">
+                  M1 作为全系统前置管理底座，负责账号、角色、基础字典、编号规则和系统配置，
+                  其目标不是完成病例业务本身，而是保障 M2-M6 业务岗位能正确进入系统、看到对应菜单并使用统一规则。
+                </p>
+              </div>
+              <div class="status-row">
+                <span class="status-pill status-live">系统用户：已落地</span>
+                <span class="status-pill status-live">角色授权：已落地</span>
+                <span class="status-pill status-live">基础字典/编号/配置：已落地</span>
+              </div>
+            </div>
+
+            <div class="tag-row">
+              <span class="tag">关键岗位：病理管理员</span>
+              <span class="tag">关键对象：用户、角色、权限、字典项、编号规则</span>
+              <span class="tag">目标：给 M2-M6 提供统一入口和规则底座</span>
+            </div>
+
+            <div class="svg-shell">
+              <svg viewBox="0 0 1320 360" aria-label="M1 系统管理泳道图">
+                <defs>
+                  <marker id="arrow-m1" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+                    <path d="M0,0 L8,3 L0,6 Z" fill="#7e8a98"></path>
+                  </marker>
+                </defs>
+                <rect x="12" y="16" width="1296" height="62" rx="20" fill="#fff6ec" stroke="#dac5a9"></rect>
+                <text x="32" y="44" font-size="26" font-weight="800" fill="#5f281d">M1 主流程：账号与规则准备</text>
+                <text x="32" y="66" font-size="15" fill="#5d6676">管理员在上线前或联调前完成账户、角色、字典和系统规则初始化</text>
+
+                <rect x="26" y="104" width="170" height="58" rx="16" fill="#f3ddd2" stroke="#cfaa9f"></rect>
+                <text x="50" y="138" font-size="22" font-weight="800" fill="#5f281d">病理管理员</text>
+                <rect x="26" y="182" width="170" height="58" rx="16" fill="#dce8f6" stroke="#b7cae0"></rect>
+                <text x="50" y="216" font-size="22" font-weight="800" fill="#244565">业务岗位账号</text>
+                <rect x="26" y="260" width="170" height="58" rx="16" fill="#dcead8" stroke="#b8cfb0"></rect>
+                <text x="50" y="294" font-size="22" font-weight="800" fill="#375134">系统规则集</text>
+
+                <line x1="220" y1="133" x2="1270" y2="133" stroke="#d8d0c2"></line>
+                <line x1="220" y1="211" x2="1270" y2="211" stroke="#d8d0c2"></line>
+                <line x1="220" y1="289" x2="1270" y2="289" stroke="#d8d0c2"></line>
+
+                <rect x="240" y="111" width="164" height="44" rx="14" fill="#fff" stroke="#d0b4ab"></rect>
+                <text x="268" y="139" font-size="17" font-weight="700" fill="#5f281d">创建/启停用户</text>
+                <rect x="440" y="111" width="168" height="44" rx="14" fill="#fff" stroke="#d0b4ab"></rect>
+                <text x="468" y="139" font-size="17" font-weight="700" fill="#5f281d">分配岗位角色</text>
+                <rect x="646" y="111" width="172" height="44" rx="14" fill="#fff" stroke="#d0b4ab"></rect>
+                <text x="678" y="139" font-size="17" font-weight="700" fill="#5f281d">维护基础字典</text>
+                <rect x="854" y="111" width="180" height="44" rx="14" fill="#fff" stroke="#d0b4ab"></rect>
+                <text x="886" y="139" font-size="17" font-weight="700" fill="#5f281d">配置编号规则</text>
+                <rect x="1066" y="111" width="180" height="44" rx="14" fill="#fff" stroke="#d0b4ab"></rect>
+                <text x="1098" y="139" font-size="17" font-weight="700" fill="#5f281d">校验系统参数</text>
+
+                <path d="M404 133 L440 133" stroke="#7e8a98" stroke-width="3" marker-end="url(#arrow-m1)"></path>
+                <path d="M608 133 L646 133" stroke="#7e8a98" stroke-width="3" marker-end="url(#arrow-m1)"></path>
+                <path d="M818 133 L854 133" stroke="#7e8a98" stroke-width="3" marker-end="url(#arrow-m1)"></path>
+                <path d="M1034 133 L1066 133" stroke="#7e8a98" stroke-width="3" marker-end="url(#arrow-m1)"></path>
+
+                <path d="M524 155 L524 211" stroke="#89a0b8" stroke-width="2.5" stroke-dasharray="8 8" marker-end="url(#arrow-m1)"></path>
+                <text x="470" y="202" font-size="14" fill="#5d6676">重新登录验证菜单可见性</text>
+                <path d="M944 155 L944 289" stroke="#89a0b8" stroke-width="2.5" stroke-dasharray="8 8" marker-end="url(#arrow-m1)"></path>
+                <text x="904" y="274" font-size="14" fill="#5d6676">编号、参数回流业务模块</text>
+              </svg>
+            </div>
+
+            <div class="flow-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>步骤</th>
+                    <th>执行岗位</th>
+                    <th>操作动作</th>
+                    <th>输入/前置</th>
+                    <th>输出/结果</th>
+                    <th>异常点</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1. 创建用户</td>
+                    <td>病理管理员</td>
+                    <td>在系统用户页新增 M2-M6 所需岗位账号，设置启停状态与基础信息。</td>
+                    <td>岗位名单、账号策略、部门信息。</td>
+                    <td>生成可登录账号。</td>
+                    <td>账号编码重复、状态未生效、部门归属错误。</td>
+                  </tr>
+                  <tr>
+                    <td>2. 分配角色</td>
+                    <td>病理管理员</td>
+                    <td>为账号绑定主角色和岗位角色，确认菜单与权限树。</td>
+                    <td>后端角色种子、岗位权限定义。</td>
+                    <td>账号具备对应模块入口和操作权限。</td>
+                    <td>角色保存后菜单未刷新、岗位错配导致页面不可见。</td>
+                  </tr>
+                  <tr>
+                    <td>3. 维护字典</td>
+                    <td>病理管理员</td>
+                    <td>维护部位字典、医嘱字典、收费字典、模板和取材规范等主数据。</td>
+                    <td>业务编码标准、科室约定值。</td>
+                    <td>业务页面具备稳定下拉项与默认模板。</td>
+                    <td>字典缺项、命名不统一、前后端枚举口径不一致。</td>
+                  </tr>
+                  <tr>
+                    <td>4. 配置编号与系统参数</td>
+                    <td>病理管理员</td>
+                    <td>设置申请单号、病理号、包埋盒号、玻片号等编号规则，并核对系统参数。</td>
+                    <td>编号前缀、流水规则、系统配置项。</td>
+                    <td>下游模块能按规则生成唯一编号并读取参数。</td>
+                    <td>编号冲突、规则未发布、关键参数未回流页面。</td>
+                  </tr>
+                  <tr>
+                    <td>5. 登录回归</td>
+                    <td>对应业务岗位</td>
+                    <td>重新登录系统，验证菜单、入口和基础动作是否可见。</td>
+                    <td>前四步已完成。</td>
+                    <td>M2-M6 账号可按岗位进入对应模块。</td>
+                    <td>角色正确但菜单未可见、入口跳到旧路径、按钮缺权限。</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="two-col subsection">
+              <div class="process-card">
+                <strong>关键单据/对象流转</strong>
+                <ul class="key-list">
+                  <li>用户对象：账号状态、所属部门、主角色、岗位角色。</li>
+                  <li>角色对象：菜单树、权限树、查询/操作授权。</li>
+                  <li>基础字典：部位、医嘱、收费、模板、取材规范。</li>
+                  <li>规则对象：病理号、申请单号、玻片号、包埋盒号编号规则。</li>
+                </ul>
+              </div>
+              <div class="note-box">
+                <strong>现状说明</strong>
+                <div class="status-row">
+                  <span class="status-pill status-live">系统用户：已落地</span>
+                  <span class="status-pill status-live">角色授权：已落地</span>
+                  <span class="status-pill status-live">字典/配置：已落地</span>
+                </div>
+                <ul class="bullet-list">
+                  <li>当前仓库已存在系统管理服务层、路由与测试。</li>
+                  <li>M1 在业务上主要充当前置准备区，不直接承接病例流转。</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="m2" data-nav="m2">
+            <div class="section-header">
+              <div>
+                <h2>03. M2 标本送检</h2>
+                <p class="section-desc">
+                  M2 负责把临床申请、标本对象和送检交接链路结构化进入系统，是病理主闭环的入口。
+                  主路径是“申请单创建 -> 标本登记 -> 固定核验 -> 转运交接 -> 标本签收 -> 流程追踪”，
+                  补充路径包含第三方临床申请导入。
+                </p>
+              </div>
+              <div class="status-row">
+                <span class="status-pill status-live">申请创建/登记/签收：已落地</span>
+                <span class="status-pill status-live">流程追踪：已落地</span>
+                <span class="status-pill status-backend">第三方导入：已有接口与入口规划</span>
+              </div>
+            </div>
+
+            <div class="tag-row">
+              <span class="tag">关键岗位：申请创建岗、标本登记岗、固定核验岗、转运交接岗、签收岗、追踪岗</span>
+              <span class="tag">关键对象：申请单、标本、交接记录、签收记录、追踪事件</span>
+            </div>
+
+            <div class="svg-shell">
+              <svg viewBox="0 0 1460 430" aria-label="M2 标本送检泳道图">
+                <defs>
+                  <marker id="arrow-m2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+                    <path d="M0,0 L8,3 L0,6 Z" fill="#7e8a98"></path>
+                  </marker>
+                </defs>
+                <rect x="14" y="18" width="1432" height="62" rx="20" fill="#eff8fb" stroke="#c7dce3"></rect>
+                <text x="36" y="46" font-size="26" font-weight="800" fill="#214b58">M2 主流程：申请到签收</text>
+                <text x="36" y="68" font-size="15" fill="#5d6676">补充链路：第三方临床导入与未固定提醒</text>
+
+                <rect x="22" y="104" width="176" height="50" rx="16" fill="#d9ebef" stroke="#b5d0d8"></rect>
+                <text x="42" y="136" font-size="21" font-weight="800" fill="#214b58">申请创建/导入岗</text>
+                <rect x="22" y="164" width="176" height="50" rx="16" fill="#d9ebef" stroke="#b5d0d8"></rect>
+                <text x="56" y="196" font-size="21" font-weight="800" fill="#214b58">标本登记岗</text>
+                <rect x="22" y="224" width="176" height="50" rx="16" fill="#d9ebef" stroke="#b5d0d8"></rect>
+                <text x="56" y="256" font-size="21" font-weight="800" fill="#214b58">固定核验岗</text>
+                <rect x="22" y="284" width="176" height="50" rx="16" fill="#d9ebef" stroke="#b5d0d8"></rect>
+                <text x="56" y="316" font-size="21" font-weight="800" fill="#214b58">交接/签收岗</text>
+                <rect x="22" y="344" width="176" height="50" rx="16" fill="#dce8f6" stroke="#b7cae0"></rect>
+                <text x="56" y="376" font-size="21" font-weight="800" fill="#244565">追踪查询岗</text>
+
+                <line x1="220" y1="129" x2="1418" y2="129" stroke="#d8d0c2"></line>
+                <line x1="220" y1="189" x2="1418" y2="189" stroke="#d8d0c2"></line>
+                <line x1="220" y1="249" x2="1418" y2="249" stroke="#d8d0c2"></line>
+                <line x1="220" y1="309" x2="1418" y2="309" stroke="#d8d0c2"></line>
+                <line x1="220" y1="369" x2="1418" y2="369" stroke="#d8d0c2"></line>
+
+                <rect x="242" y="107" width="166" height="44" rx="14" fill="#fff" stroke="#b9d4dc"></rect>
+                <text x="272" y="135" font-size="17" font-weight="700" fill="#214b58">创建申请单</text>
+                <rect x="446" y="107" width="188" height="44" rx="14" fill="#fff" stroke="#b9d4dc"></rect>
+                <text x="474" y="135" font-size="17" font-weight="700" fill="#214b58">第三方临床导入</text>
+                <rect x="674" y="167" width="174" height="44" rx="14" fill="#fff" stroke="#b9d4dc"></rect>
+                <text x="706" y="195" font-size="17" font-weight="700" fill="#214b58">标本登记建档</text>
+                <rect x="886" y="227" width="174" height="44" rx="14" fill="#fff" stroke="#b9d4dc"></rect>
+                <text x="918" y="255" font-size="17" font-weight="700" fill="#214b58">固定核验</text>
+                <rect x="1096" y="287" width="174" height="44" rx="14" fill="#fff" stroke="#b9d4dc"></rect>
+                <text x="1128" y="315" font-size="17" font-weight="700" fill="#214b58">交接与签收</text>
+                <rect x="1268" y="347" width="144" height="44" rx="14" fill="#fff" stroke="#bbcae1"></rect>
+                <text x="1294" y="375" font-size="17" font-weight="700" fill="#244565">流程追踪</text>
+
+                <path d="M408 129 L446 129" stroke="#7e8a98" stroke-width="3" marker-end="url(#arrow-m2)"></path>
+                <path d="M540 151 L540 189 L674 189" stroke="#7e8a98" stroke-width="3" fill="none" marker-end="url(#arrow-m2)"></path>
+                <path d="M848 189 L886 189 L886 249" stroke="#7e8a98" stroke-width="3" fill="none" marker-end="url(#arrow-m2)"></path>
+                <path d="M1060 249 L1096 249 L1096 309" stroke="#7e8a98" stroke-width="3" fill="none" marker-end="url(#arrow-m2)"></path>
+                <path d="M1270 309 L1270 369" stroke="#7e8a98" stroke-width="3" fill="none" marker-end="url(#arrow-m2)"></path>
+
+                <text x="666" y="101" font-size="14" fill="#5d6676">导入链路与手工创建链路在登记前汇合</text>
+                <text x="844" y="157" font-size="14" fill="#5d6676">生成标本对象、申请单关联和条码信息</text>
+                <text x="1048" y="218" font-size="14" fill="#5d6676">未固定、信息不全、异常标本需提示</text>
+                <text x="1186" y="280" font-size="14" fill="#5d6676">交接记录与签收记录进入事件链</text>
+              </svg>
+            </div>
+
+            <div class="flow-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>步骤</th>
+                    <th>执行岗位</th>
+                    <th>操作动作</th>
+                    <th>输入/前置</th>
+                    <th>输出/结果</th>
+                    <th>异常点</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1. 申请创建或导入</td>
+                    <td>申请创建岗 / 临床导入岗</td>
+                    <td>手工创建申请单，或从第三方系统导入临床申请。</td>
+                    <td>患者信息、申请信息、来源系统数据。</td>
+                    <td>形成申请单主记录，保留来源与外部单号。</td>
+                    <td>重复导入、字段缺失、来源系统编码不一致。</td>
+                  </tr>
+                  <tr>
+                    <td>2. 标本登记</td>
+                    <td>标本登记岗</td>
+                    <td>录入送检标本信息，建立申请单与标本对象关系。</td>
+                    <td>申请单已存在，标本基础信息齐备。</td>
+                    <td>生成标本记录、条码或对象编号。</td>
+                    <td>标本数量不符、对象缺失、编号回写失败。</td>
+                  </tr>
+                  <tr>
+                    <td>3. 固定核验</td>
+                    <td>固定核验岗</td>
+                    <td>核验固定状态、容器、数量和临床信息一致性。</td>
+                    <td>标本已登记。</td>
+                    <td>形成固定核验结果，异常标本进入提醒链。</td>
+                    <td>未固定、固定不足、信息不匹配。</td>
+                  </tr>
+                  <tr>
+                    <td>4. 转运交接</td>
+                    <td>转运交接岗</td>
+                    <td>完成送检过程中的交接登记，记录交接人和时间。</td>
+                    <td>核验完成或允许先交接后补录。</td>
+                    <td>形成交接事件和转运轨迹。</td>
+                    <td>漏交接、重复交接、交接对象不完整。</td>
+                  </tr>
+                  <tr>
+                    <td>5. 标本签收</td>
+                    <td>标本签收岗</td>
+                    <td>按申请单/标本完成签收，确认进入病理内部处理链。</td>
+                    <td>交接记录可见。</td>
+                    <td>标本进入后续 M3 任务生成链。</td>
+                    <td>部分签收、漏签收、对象状态未推进。</td>
+                  </tr>
+                  <tr>
+                    <td>6. 流程追踪</td>
+                    <td>流程追踪岗</td>
+                    <td>按申请单或病例查看送检、签收、异常提醒和后续流转情况。</td>
+                    <td>事件链已累计。</td>
+                    <td>可查询完整 M2 流程轨迹。</td>
+                    <td>事件漏写入、查询口径不统一、异常摘要缺失。</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="two-col subsection">
+              <div class="process-card">
+                <strong>关键单据/对象流转</strong>
+                <ul class="key-list">
+                  <li>申请单：可来自手工创建或第三方临床导入。</li>
+                  <li>标本对象：与申请单关联，进入核验、交接、签收和追踪链。</li>
+                  <li>交接/签收记录：构成 M2 事件链，并作为 M3 上游前置。</li>
+                  <li>追踪摘要：承载状态、时间点、异常提醒和后续模块入口线索。</li>
+                </ul>
+              </div>
+              <div class="note-box">
+                <strong>现状说明</strong>
+                <div class="status-row">
+                  <span class="status-pill status-live">主送检链路：已落地</span>
+                  <span class="status-pill status-backend">第三方导入：已有能力与入口规划</span>
+                </div>
+                <ul class="bullet-list">
+                  <li>M2 当前已形成独立工作流模块与统一入口。</li>
+                  <li>第三方临床导入在文档与服务层规划中占位，是本模块的重要补充路径。</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="m3" data-nav="m3">
+            <div class="section-header">
+              <div>
+                <h2>04. M3 技术组生产线</h2>
+                <p class="section-desc">
+                  M3 承担技术生产主线，覆盖待办任务池、取材、脱水、包埋、切片、染色、技术追踪和返工链路。
+                  核心目标是把 M2 签收进入的病例转化为可供医生诊断的玻片和完整技术过程记录。
+                </p>
+              </div>
+              <div class="status-row">
+                <span class="status-pill status-live">任务池/取材/脱水/包埋/切片/染色：已落地</span>
+                <span class="status-pill status-live">技术追踪/返工：已落地</span>
+                <span class="status-pill status-backend">质控留痕：后端与追踪链已明确</span>
+              </div>
+            </div>
+
+            <div class="tag-row">
+              <span class="tag">关键岗位：任务池、取材岗、脱水岗、包埋岗、切片岗、染色岗、返工岗、技术追踪岗</span>
+              <span class="tag">关键对象：技术任务、蜡块、包埋盒、玻片、返工单、质控记录</span>
+            </div>
+
+            <div class="svg-shell">
+              <svg viewBox="0 0 1500 470" aria-label="M3 技术组生产线泳道图">
+                <defs>
+                  <marker id="arrow-m3" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+                    <path d="M0,0 L8,3 L0,6 Z" fill="#7e8a98"></path>
+                  </marker>
+                </defs>
+                <rect x="16" y="18" width="1468" height="64" rx="20" fill="#edf7ea" stroke="#c8dbbf"></rect>
+                <text x="36" y="46" font-size="26" font-weight="800" fill="#375134">M3 主流程：技术任务到玻片出片</text>
+                <text x="36" y="68" font-size="15" fill="#5d6676">返工与质控作为补充链路写入技术追踪</text>
+
+                <rect x="24" y="102" width="170" height="48" rx="16" fill="#dcead8" stroke="#b8cfb0"></rect>
+                <text x="54" y="133" font-size="20" font-weight="800" fill="#375134">任务池</text>
+                <rect x="24" y="156" width="170" height="48" rx="16" fill="#dcead8" stroke="#b8cfb0"></rect>
+                <text x="54" y="187" font-size="20" font-weight="800" fill="#375134">取材岗</text>
+                <rect x="24" y="210" width="170" height="48" rx="16" fill="#dcead8" stroke="#b8cfb0"></rect>
+                <text x="54" y="241" font-size="20" font-weight="800" fill="#375134">脱水/包埋岗</text>
+                <rect x="24" y="264" width="170" height="48" rx="16" fill="#dcead8" stroke="#b8cfb0"></rect>
+                <text x="54" y="295" font-size="20" font-weight="800" fill="#375134">切片/染色岗</text>
+                <rect x="24" y="318" width="170" height="48" rx="16" fill="#dce8f6" stroke="#b7cae0"></rect>
+                <text x="54" y="349" font-size="20" font-weight="800" fill="#244565">追踪/返工岗</text>
+                <rect x="24" y="372" width="170" height="48" rx="16" fill="#efe3c6" stroke="#d5c190"></rect>
+                <text x="54" y="403" font-size="20" font-weight="800" fill="#6d5324">M4 诊断入口</text>
+
+                <line x1="214" y1="126" x2="1460" y2="126" stroke="#d8d0c2"></line>
+                <line x1="214" y1="180" x2="1460" y2="180" stroke="#d8d0c2"></line>
+                <line x1="214" y1="234" x2="1460" y2="234" stroke="#d8d0c2"></line>
+                <line x1="214" y1="288" x2="1460" y2="288" stroke="#d8d0c2"></line>
+                <line x1="214" y1="342" x2="1460" y2="342" stroke="#d8d0c2"></line>
+                <line x1="214" y1="396" x2="1460" y2="396" stroke="#d8d0c2"></line>
+
+                <rect x="236" y="104" width="170" height="44" rx="14" fill="#fff" stroke="#bdd3b5"></rect>
+                <text x="268" y="132" font-size="17" font-weight="700" fill="#375134">查询待办任务</text>
+                <rect x="442" y="158" width="156" height="44" rx="14" fill="#fff" stroke="#bdd3b5"></rect>
+                <text x="476" y="186" font-size="17" font-weight="700" fill="#375134">取材完成</text>
+                <rect x="630" y="212" width="174" height="44" rx="14" fill="#fff" stroke="#bdd3b5"></rect>
+                <text x="660" y="240" font-size="17" font-weight="700" fill="#375134">脱水与包埋完成</text>
+                <rect x="838" y="266" width="174" height="44" rx="14" fill="#fff" stroke="#bdd3b5"></rect>
+                <text x="868" y="294" font-size="17" font-weight="700" fill="#375134">切片与染色完成</text>
+                <rect x="1048" y="320" width="166" height="44" rx="14" fill="#fff" stroke="#bbcae1"></rect>
+                <text x="1080" y="348" font-size="17" font-weight="700" fill="#244565">技术追踪 / 返工</text>
+                <rect x="1260" y="374" width="164" height="44" rx="14" fill="#fff" stroke="#d6c189"></rect>
+                <text x="1294" y="402" font-size="17" font-weight="700" fill="#6d5324">投递 M4 诊断</text>
+
+                <path d="M406 126 L442 126 L442 180" stroke="#7e8a98" stroke-width="3" fill="none" marker-end="url(#arrow-m3)"></path>
+                <path d="M598 180 L630 180 L630 234" stroke="#7e8a98" stroke-width="3" fill="none" marker-end="url(#arrow-m3)"></path>
+                <path d="M804 234 L838 234 L838 288" stroke="#7e8a98" stroke-width="3" fill="none" marker-end="url(#arrow-m3)"></path>
+                <path d="M1012 288 L1048 288 L1048 342" stroke="#7e8a98" stroke-width="3" fill="none" marker-end="url(#arrow-m3)"></path>
+                <path d="M1214 342 L1260 342 L1260 396" stroke="#7e8a98" stroke-width="3" fill="none" marker-end="url(#arrow-m3)"></path>
+
+                <path d="M1130 320 L1130 234 L892 234" stroke="#89a0b8" stroke-width="2.5" stroke-dasharray="8 8" fill="none" marker-end="url(#arrow-m3)"></path>
+                <text x="938" y="220" font-size="14" fill="#5d6676">返工时可回退到取材/包埋/切片/染色任一环节</text>
+                <text x="416" y="110" font-size="14" fill="#5d6676">任务池统一汇总取材、脱水、包埋、切片、染色待办</text>
+                <text x="1226" y="330" font-size="14" fill="#5d6676">追踪页汇总任务链、对象链、质控和返工事件</text>
+              </svg>
+            </div>
+
+            <div class="flow-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>步骤</th>
+                    <th>执行岗位</th>
+                    <th>操作动作</th>
+                    <th>输入/前置</th>
+                    <th>输出/结果</th>
+                    <th>异常点</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1. 任务池接单</td>
+                    <td>技术任务池/各工位岗位</td>
+                    <td>按任务类型、状态、病理号等查询待办，进入对应工作站。</td>
+                    <td>M2 已签收并生成技术任务。</td>
+                    <td>定位到可执行技术任务。</td>
+                    <td>任务池未投递、工位权限不足、超时任务不可见。</td>
+                  </tr>
+                  <tr>
+                    <td>2. 取材</td>
+                    <td>取材岗</td>
+                    <td>开始并完成取材，生成蜡块/取材结果与后续脱水任务。</td>
+                    <td>待取材任务、病例上下文。</td>
+                    <td>形成取材记录和下游任务。</td>
+                    <td>对象数量不符、取材描述缺失、下游任务未生成。</td>
+                  </tr>
+                  <tr>
+                    <td>3. 脱水与包埋</td>
+                    <td>脱水岗 / 包埋岗</td>
+                    <td>完成批次脱水、包埋和包埋盒信息回写。</td>
+                    <td>蜡块对象、脱水批次、设备信息。</td>
+                    <td>形成包埋盒与可切片对象。</td>
+                    <td>批次状态错误、设备信息缺失、包埋盒号异常。</td>
+                  </tr>
+                  <tr>
+                    <td>4. 切片与染色</td>
+                    <td>切片岗 / 染色岗</td>
+                    <td>完成切片数量、厚度和染色情况登记，产出玻片。</td>
+                    <td>包埋盒、切片参数、染色参数。</td>
+                    <td>形成可供诊断使用的玻片对象。</td>
+                    <td>玻片数量异常、质量问题未记录、染色状态未更新。</td>
+                  </tr>
+                  <tr>
+                    <td>5. 技术追踪</td>
+                    <td>技术追踪岗</td>
+                    <td>按病例查看技术任务链、标本链、蜡块链、玻片链和事件链。</td>
+                    <td>病例已进入 M3 处理。</td>
+                    <td>形成可追溯的技术履历。</td>
+                    <td>对象链断裂、质控历史缺失、事件回写不完整。</td>
+                  </tr>
+                  <tr>
+                    <td>6. 返工与质控留痕</td>
+                    <td>返工岗 / 质控岗位</td>
+                    <td>创建返工单、执行返工动作，并把质控评价写入追踪链。</td>
+                    <td>可返工对象、质控规则。</td>
+                    <td>返工单、返工结果和质控记录回流病例轨迹。</td>
+                    <td>返工对象层级不匹配、返工后未回推主链、质控结果丢失。</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="two-col subsection">
+              <div class="process-card">
+                <strong>关键单据/对象流转</strong>
+                <ul class="key-list">
+                  <li>任务对象：待办任务按类型分发到不同工位。</li>
+                  <li>物理对象：标本 -> 蜡块 -> 包埋盒 -> 玻片。</li>
+                  <li>返工对象：可按病例、标本、蜡块、包埋盒、玻片发起返工。</li>
+                  <li>追踪摘要：技术事件、质控评价和返工记录都进入统一追踪链。</li>
+                </ul>
+              </div>
+              <div class="note-box">
+                <strong>现状说明</strong>
+                <div class="status-row">
+                  <span class="status-pill status-live">主生产线：已落地</span>
+                  <span class="status-pill status-live">返工与追踪：已落地</span>
+                  <span class="status-pill status-backend">质控扩展：已有结构与记录口径</span>
+                </div>
+                <ul class="bullet-list">
+                  <li>M3 现有文档已明确复用 M2 接收作为上游前置，不重复建设登记接收工作站。</li>
+                  <li>返工作为补充链路单独记录，但不阻塞主玻片出片链先走通。</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="m4" data-nav="m4">
+            <div class="section-header">
+              <div>
+                <h2>05. M4 医生诊断</h2>
+                <p class="section-desc">
+                  M4 覆盖诊断分配、诊断任务签收与开始、工作台诊断、报告全生命周期、报告追踪、修订、会诊和病理医嘱执行。
+                  主目标是把 M3 生产完成的病例推进到报告签发发布，并形成可审计的修订和会诊链。
+                </p>
+              </div>
+              <div class="status-row">
+                <span class="status-pill status-live">分配/工作台/报告/追踪/修订/会诊：已落地</span>
+                <span class="status-pill status-backend">病理医嘱执行：已有后端能力</span>
+                <span class="status-pill status-plan">独立医嘱执行页：规划补齐</span>
+              </div>
+            </div>
+
+            <div class="tag-row">
+              <span class="tag">关键岗位：诊断分配岗、诊断岗、复核岗、签发岗、报告追踪岗、医嘱执行岗</span>
+              <span class="tag">关键对象：诊断任务、病理报告、报告版本、修订单、会诊单、病理医嘱</span>
+            </div>
+
+            <div class="svg-shell">
+              <svg viewBox="0 0 1520 490" aria-label="M4 医生诊断泳道图">
+                <defs>
+                  <marker id="arrow-m4" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+                    <path d="M0,0 L8,3 L0,6 Z" fill="#7e8a98"></path>
+                  </marker>
+                </defs>
+                <rect x="16" y="18" width="1488" height="64" rx="20" fill="#f7f0dc" stroke="#dacb9d"></rect>
+                <text x="36" y="46" font-size="26" font-weight="800" fill="#6d5324">M4 主流程：诊断任务到报告发布</text>
+                <text x="36" y="68" font-size="15" fill="#5d6676">补充链路：修订、会诊、病理医嘱执行</text>
+
+                <rect x="22" y="102" width="176" height="50" rx="16" fill="#efe3c6" stroke="#d5c190"></rect>
+                <text x="46" y="134" font-size="20" font-weight="800" fill="#6d5324">诊断分配岗</text>
+                <rect x="22" y="158" width="176" height="50" rx="16" fill="#efe3c6" stroke="#d5c190"></rect>
+                <text x="58" y="190" font-size="20" font-weight="800" fill="#6d5324">诊断岗</text>
+                <rect x="22" y="214" width="176" height="50" rx="16" fill="#efe3c6" stroke="#d5c190"></rect>
+                <text x="58" y="246" font-size="20" font-weight="800" fill="#6d5324">复核/签发岗</text>
+                <rect x="22" y="270" width="176" height="50" rx="16" fill="#dce8f6" stroke="#b7cae0"></rect>
+                <text x="58" y="302" font-size="20" font-weight="800" fill="#244565">追踪与修订岗</text>
+                <rect x="22" y="326" width="176" height="50" rx="16" fill="#dce8f6" stroke="#b7cae0"></rect>
+                <text x="58" y="358" font-size="20" font-weight="800" fill="#244565">会诊/医嘱执行岗</text>
+                <rect x="22" y="382" width="176" height="50" rx="16" fill="#dcead8" stroke="#b8cfb0"></rect>
+                <text x="58" y="414" font-size="20" font-weight="800" fill="#375134">M5 / M6 下游</text>
+
+                <line x1="218" y1="127" x2="1480" y2="127" stroke="#d8d0c2"></line>
+                <line x1="218" y1="183" x2="1480" y2="183" stroke="#d8d0c2"></line>
+                <line x1="218" y1="239" x2="1480" y2="239" stroke="#d8d0c2"></line>
+                <line x1="218" y1="295" x2="1480" y2="295" stroke="#d8d0c2"></line>
+                <line x1="218" y1="351" x2="1480" y2="351" stroke="#d8d0c2"></line>
+                <line x1="218" y1="407" x2="1480" y2="407" stroke="#d8d0c2"></line>
+
+                <rect x="242" y="105" width="170" height="44" rx="14" fill="#fff" stroke="#d7c48d"></rect>
+                <text x="270" y="133" font-size="17" font-weight="700" fill="#6d5324">诊断任务分配</text>
+                <rect x="444" y="161" width="172" height="44" rx="14" fill="#fff" stroke="#d7c48d"></rect>
+                <text x="470" y="189" font-size="17" font-weight="700" fill="#6d5324">签收并开始诊断</text>
+                <rect x="650" y="161" width="168" height="44" rx="14" fill="#fff" stroke="#d7c48d"></rect>
+                <text x="680" y="189" font-size="17" font-weight="700" fill="#6d5324">诊断工作台</text>
+                <rect x="854" y="217" width="186" height="44" rx="14" fill="#fff" stroke="#d7c48d"></rect>
+                <text x="886" y="245" font-size="17" font-weight="700" fill="#6d5324">报告提交/复核/签发</text>
+                <rect x="1072" y="273" width="174" height="44" rx="14" fill="#fff" stroke="#bbcae1"></rect>
+                <text x="1106" y="301" font-size="17" font-weight="700" fill="#244565">追踪与修订</text>
+                <rect x="1280" y="329" width="174" height="44" rx="14" fill="#fff" stroke="#bbcae1"></rect>
+                <text x="1312" y="357" font-size="17" font-weight="700" fill="#244565">会诊 / 医嘱执行</text>
+
+                <path d="M412 127 L444 127 L444 183" stroke="#7e8a98" stroke-width="3" fill="none" marker-end="url(#arrow-m4)"></path>
+                <path d="M616 183 L650 183" stroke="#7e8a98" stroke-width="3" marker-end="url(#arrow-m4)"></path>
+                <path d="M818 183 L854 183 L854 239" stroke="#7e8a98" stroke-width="3" fill="none" marker-end="url(#arrow-m4)"></path>
+                <path d="M1040 239 L1072 239 L1072 295" stroke="#7e8a98" stroke-width="3" fill="none" marker-end="url(#arrow-m4)"></path>
+                <path d="M1246 295 L1280 295 L1280 351" stroke="#7e8a98" stroke-width="3" fill="none" marker-end="url(#arrow-m4)"></path>
+                <path d="M1368 373 L1368 407" stroke="#7e8a98" stroke-width="3" fill="none" marker-end="url(#arrow-m4)"></path>
+
+                <path d="M1160 317 L1160 239 L970 239" stroke="#89a0b8" stroke-width="2.5" stroke-dasharray="8 8" fill="none" marker-end="url(#arrow-m4)"></path>
+                <text x="982" y="225" font-size="14" fill="#5d6676">报告发布后仍可发起修订，形成版本链</text>
+                <path d="M1368 329 L1368 183 L742 183" stroke="#89a0b8" stroke-width="2.5" stroke-dasharray="8 8" fill="none" marker-end="url(#arrow-m4)"></path>
+                <text x="1188" y="170" font-size="14" fill="#5d6676">会诊意见、医嘱摘要可回流到工作台和追踪页</text>
+              </svg>
+            </div>
+
+            <div class="flow-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>步骤</th>
+                    <th>执行岗位</th>
+                    <th>操作动作</th>
+                    <th>输入/前置</th>
+                    <th>输出/结果</th>
+                    <th>异常点</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1. 诊断分配</td>
+                    <td>诊断分配岗</td>
+                    <td>查询待诊断任务并分派给目标诊断医生与后续审核人。</td>
+                    <td>M3 染色完成并生成诊断任务。</td>
+                    <td>任务进入目标医生待办。</td>
+                    <td>任务漏分配、分派目标错误、角色权限不匹配。</td>
+                  </tr>
+                  <tr>
+                    <td>2. 签收与开始</td>
+                    <td>诊断岗</td>
+                    <td>签收诊断任务，进入工作台并开始诊断。</td>
+                    <td>待诊断任务可见。</td>
+                    <td>任务状态进入处理中。</td>
+                    <td>重复签收、状态未切换、工作台上下文不完整。</td>
+                  </tr>
+                  <tr>
+                    <td>3. 工作台诊断与报告创建</td>
+                    <td>诊断岗</td>
+                    <td>查看标本/蜡块/玻片上下文，创建并编辑病理报告。</td>
+                    <td>病例上下文、技术追踪、诊断模板。</td>
+                    <td>形成报告草稿与诊断结论。</td>
+                    <td>上下文缺失、报告草稿丢失、病理号映射错误。</td>
+                  </tr>
+                  <tr>
+                    <td>4. 提交、复核、签发、发布</td>
+                    <td>诊断岗 / 复核岗 / 签发岗</td>
+                    <td>按报告生命周期完成提交、复核、签发和正式发布。</td>
+                    <td>报告草稿已完成。</td>
+                    <td>形成正式发布报告，并可触发收费/归档等下游链路。</td>
+                    <td>跨角色误用、驳回后状态未回退、发布后摘要未同步。</td>
+                  </tr>
+                  <tr>
+                    <td>5. 报告追踪</td>
+                    <td>报告追踪岗</td>
+                    <td>查询报告版本链、任务链、事件链、修订链、会诊链和医嘱链。</td>
+                    <td>病例已进入 M4。</td>
+                    <td>形成完整诊断审计轨迹。</td>
+                    <td>版本链断裂、事件不回显、摘要不同步。</td>
+                  </tr>
+                  <tr>
+                    <td>6. 修订、会诊、医嘱执行</td>
+                    <td>诊断岗 / 复核岗 / 签发岗 / 医嘱执行岗</td>
+                    <td>已发布报告可发起修订；复杂病例可发起会诊；病理医嘱可查询、签收、完成或取消。</td>
+                    <td>已发布报告、会诊需求或医嘱需求。</td>
+                    <td>形成修订链、会诊链和医嘱事件链。</td>
+                    <td>非主持人完成会诊、医嘱状态无法回写、独立执行页缺失导致入口不统一。</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="two-col subsection">
+              <div class="process-card">
+                <strong>关键单据/对象流转</strong>
+                <ul class="key-list">
+                  <li>诊断任务：由 M3 玻片完成后生成并进入分配链。</li>
+                  <li>病理报告：经历草稿、提交、复核、签发、发布，并维护版本链。</li>
+                  <li>修订/会诊：作为发布后的补充闭环，与工作台和追踪页互相回流。</li>
+                  <li>病理医嘱：与诊断上下文关联，可查询待执行、签收、完成和取消。</li>
+                </ul>
+              </div>
+              <div class="note-box">
+                <strong>现状说明</strong>
+                <div class="status-row">
+                  <span class="status-pill status-live">诊断主闭环：已落地</span>
+                  <span class="status-pill status-live">修订/会诊：已落地</span>
+                  <span class="status-pill status-backend">病理医嘱执行：已有后端能力</span>
+                  <span class="status-pill status-plan">独立前端入口：规划补齐</span>
+                </div>
+                <ul class="bullet-list">
+                  <li>当前前端工作台和追踪页已显示医嘱摘要，但没有独立医嘱执行页面入口。</li>
+                  <li>本方案按理想全量业务纳入医嘱执行链，并明确标记其现状边界。</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="m5" data-nav="m5">
+            <div class="section-header">
+              <div>
+                <h2>06. M5 归档与运营支撑</h2>
+                <p class="section-desc">
+                  M5 负责病例材料的归档、借阅与回库，以及试剂、设备两类科室运营台账能力。
+                  业务上承接 M4 报告发布后的归档动作，同时把档案位置和借阅状态回流给后续查询场景。
+                </p>
+              </div>
+              <div class="status-row">
+                <span class="status-pill status-backend">归档/试剂/设备接口与权限：已有后端能力</span>
+                <span class="status-pill status-plan">前端独立模块：规划补齐</span>
+                <span class="status-pill status-plan">拍照/扫码/打印：规划补齐</span>
+              </div>
+            </div>
+
+            <div class="tag-row">
+              <span class="tag">关键岗位：归档管理员、试剂管理员、设备管理员、借阅经办人</span>
+              <span class="tag">关键对象：归档柜、库位、归档记录、借阅单、试剂库存、设备档案、维护记录</span>
+            </div>
+
+            <div class="svg-shell">
+              <svg viewBox="0 0 1500 470" aria-label="M5 归档与运营支撑泳道图">
+                <defs>
+                  <marker id="arrow-m5" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+                    <path d="M0,0 L8,3 L0,6 Z" fill="#7e8a98"></path>
+                  </marker>
+                </defs>
+                <rect x="16" y="18" width="1468" height="64" rx="20" fill="#edf3fb" stroke="#c6d5e6"></rect>
+                <text x="36" y="46" font-size="26" font-weight="800" fill="#244565">M5 主流程：归档回库与运营台账</text>
+                <text x="36" y="68" font-size="15" fill="#5d6676">主链路承接 M4 发布结果，补充链路覆盖借阅归还、试剂库存和设备维护</text>
+
+                <rect x="24" y="102" width="184" height="50" rx="16" fill="#dce8f6" stroke="#b7cae0"></rect>
+                <text x="54" y="134" font-size="20" font-weight="800" fill="#244565">归档管理员</text>
+                <rect x="24" y="158" width="184" height="50" rx="16" fill="#dce8f6" stroke="#b7cae0"></rect>
+                <text x="54" y="190" font-size="20" font-weight="800" fill="#244565">借阅经办人</text>
+                <rect x="24" y="214" width="184" height="50" rx="16" fill="#dce8f6" stroke="#b7cae0"></rect>
+                <text x="54" y="246" font-size="20" font-weight="800" fill="#244565">试剂管理员</text>
+                <rect x="24" y="270" width="184" height="50" rx="16" fill="#dce8f6" stroke="#b7cae0"></rect>
+                <text x="54" y="302" font-size="20" font-weight="800" fill="#244565">设备管理员</text>
+                <rect x="24" y="326" width="184" height="50" rx="16" fill="#efe3c6" stroke="#d5c190"></rect>
+                <text x="54" y="358" font-size="20" font-weight="800" fill="#6d5324">M4/M6 查询侧</text>
+
+                <line x1="228" y1="127" x2="1470" y2="127" stroke="#d8d0c2"></line>
+                <line x1="228" y1="183" x2="1470" y2="183" stroke="#d8d0c2"></line>
+                <line x1="228" y1="239" x2="1470" y2="239" stroke="#d8d0c2"></line>
+                <line x1="228" y1="295" x2="1470" y2="295" stroke="#d8d0c2"></line>
+                <line x1="228" y1="351" x2="1470" y2="351" stroke="#d8d0c2"></line>
+
+                <rect x="248" y="105" width="182" height="44" rx="14" fill="#fff" stroke="#bbcae1"></rect>
+                <text x="276" y="133" font-size="17" font-weight="700" fill="#244565">维护归档柜与库位</text>
+                <rect x="466" y="105" width="180" height="44" rx="14" fill="#fff" stroke="#bbcae1"></rect>
+                <text x="496" y="133" font-size="17" font-weight="700" fill="#244565">执行申请单/玻片归档</text>
+                <rect x="684" y="161" width="176" height="44" rx="14" fill="#fff" stroke="#bbcae1"></rect>
+                <text x="716" y="189" font-size="17" font-weight="700" fill="#244565">借阅与归还</text>
+                <rect x="896" y="217" width="174" height="44" rx="14" fill="#fff" stroke="#bbcae1"></rect>
+                <text x="926" y="245" font-size="17" font-weight="700" fill="#244565">试剂台账与库存</text>
+                <rect x="1108" y="273" width="176" height="44" rx="14" fill="#fff" stroke="#bbcae1"></rect>
+                <text x="1140" y="301" font-size="17" font-weight="700" fill="#244565">设备台账与维护</text>
+                <rect x="1314" y="329" width="136" height="44" rx="14" fill="#fff" stroke="#d7c48d"></rect>
+                <text x="1344" y="357" font-size="17" font-weight="700" fill="#6d5324">位置回流</text>
+
+                <path d="M430 127 L466 127" stroke="#7e8a98" stroke-width="3" marker-end="url(#arrow-m5)"></path>
+                <path d="M646 127 L684 127 L684 183" stroke="#7e8a98" stroke-width="3" fill="none" marker-end="url(#arrow-m5)"></path>
+                <path d="M860 183 L896 183 L896 239" stroke="#7e8a98" stroke-width="3" fill="none" marker-end="url(#arrow-m5)"></path>
+                <path d="M1070 239 L1108 239 L1108 295" stroke="#7e8a98" stroke-width="3" fill="none" marker-end="url(#arrow-m5)"></path>
+                <path d="M1284 295 L1314 295 L1314 351" stroke="#7e8a98" stroke-width="3" fill="none" marker-end="url(#arrow-m5)"></path>
+
+                <path d="M556 149 L556 351 L1314 351" stroke="#89a0b8" stroke-width="2.5" stroke-dasharray="8 8" fill="none" marker-end="url(#arrow-m5)"></path>
+                <text x="566" y="166" font-size="14" fill="#5d6676">归档位置和在库状态可回流到 M4 查询和 M6 历史场景</text>
+              </svg>
+            </div>
+
+            <div class="flow-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>步骤</th>
+                    <th>执行岗位</th>
+                    <th>操作动作</th>
+                    <th>输入/前置</th>
+                    <th>输出/结果</th>
+                    <th>异常点</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1. 归档柜与库位维护</td>
+                    <td>归档管理员</td>
+                    <td>创建/更新归档柜，查询可用库位，准备归档空间。</td>
+                    <td>档案柜基础信息、容量规则。</td>
+                    <td>形成可用归档空间。</td>
+                    <td>容量不足、库位状态错误、柜编码重复。</td>
+                  </tr>
+                  <tr>
+                    <td>2. 申请单/包埋盒/玻片归档</td>
+                    <td>归档管理员</td>
+                    <td>对已完成病例的申请单、包埋盒或玻片执行归档，绑定位置。</td>
+                    <td>M4 报告发布、对象可归档。</td>
+                    <td>形成归档记录与位置映射。</td>
+                    <td>重复占位、对象状态不允许归档、位置回写失败。</td>
+                  </tr>
+                  <tr>
+                    <td>3. 借阅与归还</td>
+                    <td>借阅经办人</td>
+                    <td>对在库材料发起借阅、登记借出，再执行归还回库。</td>
+                    <td>归档位置已存在，材料在库。</td>
+                    <td>形成借阅单、归还记录和最新在库状态。</td>
+                    <td>重复借阅、重复归还、借阅状态未同步查询侧。</td>
+                  </tr>
+                  <tr>
+                    <td>4. 试剂台账与库存预警</td>
+                    <td>试剂管理员</td>
+                    <td>维护试剂主数据、库存批次、近效期与低库存预警。</td>
+                    <td>试剂基础信息、批次信息、阈值规则。</td>
+                    <td>形成试剂台账与库存告警。</td>
+                    <td>库存为负、批次过期、阈值不合理。</td>
+                  </tr>
+                  <tr>
+                    <td>5. 设备台账与维护</td>
+                    <td>设备管理员</td>
+                    <td>维护设备档案、登记维护保养记录和设备预警。</td>
+                    <td>设备编号、分类、维护计划。</td>
+                    <td>形成设备状态、下一次维护时间和预警结果。</td>
+                    <td>维护时间不合法、设备状态错误、预警未刷新。</td>
+                  </tr>
+                  <tr>
+                    <td>6. 查询回流</td>
+                    <td>M4/M6 查询侧</td>
+                    <td>在医生工作台、报告追踪或历史场景中查看归档位置、借阅状态和物资支撑信息。</td>
+                    <td>前述链路已形成记录。</td>
+                    <td>下游模块获得可追溯的归档和运营支撑信息。</td>
+                    <td>位置不回流、借阅状态滞后、跨模块摘要不一致。</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="two-col subsection">
+              <div class="process-card">
+                <strong>关键单据/对象流转</strong>
+                <ul class="key-list">
+                  <li>归档对象：申请单、包埋盒、玻片都可绑定归档位置。</li>
+                  <li>借阅对象：在库材料形成借阅单和归还记录。</li>
+                  <li>试剂对象：主数据 + 库存批次 + 预警。</li>
+                  <li>设备对象：设备档案 + 维护日志 + 到期预警。</li>
+                </ul>
+              </div>
+              <div class="note-box">
+                <strong>现状说明</strong>
+                <div class="status-row">
+                  <span class="status-pill status-backend">权限/菜单/接口：已有后端能力</span>
+                  <span class="status-pill status-plan">前端模块：规划补齐</span>
+                  <span class="status-pill status-plan">拍照/扫码/打印：规划补齐</span>
+                </div>
+                <ul class="bullet-list">
+                  <li>M5 已有较完整后端菜单、权限和接口矩阵，但前端独立模块仍处于实现规划阶段。</li>
+                  <li>真实设备接入不在当前落地范围内，需要后续兼容性专项验证。</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="m6" data-nav="m6">
+            <div class="section-header">
+              <div>
+                <h2>07. M6 集成 / 收费 / 历史 / 统计</h2>
+                <p class="section-desc">
+                  M6 负责把病理主闭环与医院外围系统连接起来，围绕集成任务、收费回写与对账、历史报告导入/查询、
+                  统计指标与报表生成构建外部支撑能力。它不是单独的病例生产链，而是贯穿 M2-M5 的外围能力层。
+                </p>
+              </div>
+              <div class="status-row">
+                <span class="status-pill status-backend">控制器/权限/测试基线：已有后端能力</span>
+                <span class="status-pill status-backend">临床导入/收费/历史/统计：已有代码与接口</span>
+                <span class="status-pill status-plan">前端统一门户：规划补齐</span>
+              </div>
+            </div>
+
+            <div class="tag-row">
+              <span class="tag">关键岗位：集成运营管理员、历史报告管理员、统计质控管理员</span>
+              <span class="tag">关键对象：集成任务、收费记录、历史导入任务、历史报告、统计指标、统计模板、统计报表</span>
+            </div>
+
+            <div class="svg-shell">
+              <svg viewBox="0 0 1520 500" aria-label="M6 集成与统计泳道图">
+                <defs>
+                  <marker id="arrow-m6" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+                    <path d="M0,0 L8,3 L0,6 Z" fill="#7e8a98"></path>
+                  </marker>
+                </defs>
+                <rect x="16" y="18" width="1488" height="64" rx="20" fill="#f3f6fd" stroke="#c7d1e8"></rect>
+                <text x="36" y="46" font-size="26" font-weight="800" fill="#244565">M6 主流程：外围集成与数据支撑</text>
+                <text x="36" y="68" font-size="15" fill="#5d6676">以集成任务为主线，连接临床导入、收费回写、历史报告和统计分析</text>
+
+                <rect x="24" y="102" width="194" height="50" rx="16" fill="#dce8f6" stroke="#b7cae0"></rect>
+                <text x="48" y="134" font-size="20" font-weight="800" fill="#244565">集成运营管理员</text>
+                <rect x="24" y="158" width="194" height="50" rx="16" fill="#dce8f6" stroke="#b7cae0"></rect>
+                <text x="48" y="190" font-size="20" font-weight="800" fill="#244565">收费管理岗</text>
+                <rect x="24" y="214" width="194" height="50" rx="16" fill="#dce8f6" stroke="#b7cae0"></rect>
+                <text x="48" y="246" font-size="20" font-weight="800" fill="#244565">历史报告管理员</text>
+                <rect x="24" y="270" width="194" height="50" rx="16" fill="#dce8f6" stroke="#b7cae0"></rect>
+                <text x="48" y="302" font-size="20" font-weight="800" fill="#244565">统计质控管理员</text>
+                <rect x="24" y="326" width="194" height="50" rx="16" fill="#dcead8" stroke="#b8cfb0"></rect>
+                <text x="48" y="358" font-size="20" font-weight="800" fill="#375134">主业务模块</text>
+
+                <line x1="238" y1="127" x2="1482" y2="127" stroke="#d8d0c2"></line>
+                <line x1="238" y1="183" x2="1482" y2="183" stroke="#d8d0c2"></line>
+                <line x1="238" y1="239" x2="1482" y2="239" stroke="#d8d0c2"></line>
+                <line x1="238" y1="295" x2="1482" y2="295" stroke="#d8d0c2"></line>
+                <line x1="238" y1="351" x2="1482" y2="351" stroke="#d8d0c2"></line>
+
+                <rect x="260" y="105" width="186" height="44" rx="14" fill="#fff" stroke="#bbcae1"></rect>
+                <text x="294" y="133" font-size="17" font-weight="700" fill="#244565">查询集成任务</text>
+                <rect x="480" y="105" width="194" height="44" rx="14" fill="#fff" stroke="#bbcae1"></rect>
+                <text x="508" y="133" font-size="17" font-weight="700" fill="#244565">关联临床导入任务</text>
+                <rect x="710" y="161" width="188" height="44" rx="14" fill="#fff" stroke="#bbcae1"></rect>
+                <text x="744" y="189" font-size="17" font-weight="700" fill="#244565">收费查询/回执/重试</text>
+                <rect x="934" y="217" width="190" height="44" rx="14" fill="#fff" stroke="#bbcae1"></rect>
+                <text x="966" y="245" font-size="17" font-weight="700" fill="#244565">历史导入与历史查询</text>
+                <rect x="1160" y="273" width="194" height="44" rx="14" fill="#fff" stroke="#bbcae1"></rect>
+                <text x="1190" y="301" font-size="17" font-weight="700" fill="#244565">统计指标/模板/报表</text>
+                <rect x="1376" y="329" width="106" height="44" rx="14" fill="#fff" stroke="#bdd3b5"></rect>
+                <text x="1400" y="357" font-size="17" font-weight="700" fill="#375134">回流主链</text>
+
+                <path d="M446 127 L480 127" stroke="#7e8a98" stroke-width="3" marker-end="url(#arrow-m6)"></path>
+                <path d="M674 127 L710 127 L710 183" stroke="#7e8a98" stroke-width="3" fill="none" marker-end="url(#arrow-m6)"></path>
+                <path d="M898 183 L934 183 L934 239" stroke="#7e8a98" stroke-width="3" fill="none" marker-end="url(#arrow-m6)"></path>
+                <path d="M1124 239 L1160 239 L1160 295" stroke="#7e8a98" stroke-width="3" fill="none" marker-end="url(#arrow-m6)"></path>
+                <path d="M1354 295 L1376 295 L1376 351" stroke="#7e8a98" stroke-width="3" fill="none" marker-end="url(#arrow-m6)"></path>
+
+                <path d="M578 149 L578 351 L1376 351" stroke="#89a0b8" stroke-width="2.5" stroke-dasharray="8 8" fill="none" marker-end="url(#arrow-m6)"></path>
+                <text x="588" y="166" font-size="14" fill="#5d6676">临床导入可回流 M2 申请单链，收费/统计可回流运营与质控视图</text>
+                <text x="704" y="149" font-size="14" fill="#5d6676">收费对账与补偿状态依赖集成任务追踪</text>
+              </svg>
+            </div>
+
+            <div class="flow-table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>步骤</th>
+                    <th>执行岗位</th>
+                    <th>操作动作</th>
+                    <th>输入/前置</th>
+                    <th>输出/结果</th>
+                    <th>异常点</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>1. 查询集成任务</td>
+                    <td>集成运营管理员</td>
+                    <td>查询外围系统交互产生的集成任务，查看请求、响应、状态和补偿信息。</td>
+                    <td>外围系统调用已产生任务记录。</td>
+                    <td>形成可追踪的集成任务视图。</td>
+                    <td>失败原因缺失、任务关联业务对象不明确。</td>
+                  </tr>
+                  <tr>
+                    <td>2. 临床导入关联</td>
+                    <td>集成运营管理员</td>
+                    <td>把临床导入任务与申请单创建结果关联，核对来源系统与外部单号。</td>
+                    <td>导入任务或外部数据包。</td>
+                    <td>导入结果进入 M2 申请单链。</td>
+                    <td>幂等拦截失效、重复建单、来源系统编码错配。</td>
+                  </tr>
+                  <tr>
+                    <td>3. 收费查询、回执、重试与对账</td>
+                    <td>收费管理岗</td>
+                    <td>查询收费记录，处理收费回执、失败重试和周期性对账。</td>
+                    <td>报告发布、收费记录、外部收费系统回执。</td>
+                    <td>形成收费状态、重试状态和对账结果。</td>
+                    <td>回执未接收、重试无出口、对账结果不可追溯。</td>
+                  </tr>
+                  <tr>
+                    <td>4. 历史报告导入与查询</td>
+                    <td>历史报告管理员</td>
+                    <td>导入历史报告，按来源、患者、病理号、外部报告号等维度查询。</td>
+                    <td>历史数据包、历史导入任务。</td>
+                    <td>形成历史报告、版本链和导入任务结果。</td>
+                    <td>重复导入、版本重建失败、检索字段缺失。</td>
+                  </tr>
+                  <tr>
+                    <td>5. 统计指标、模板与报表</td>
+                    <td>统计质控管理员</td>
+                    <td>查询统计指标与模板，执行报表查询与导出。</td>
+                    <td>统计指标定义、模板定义、时间范围或科室条件。</td>
+                    <td>形成质控/运营/工作量统计报表。</td>
+                    <td>指标口径不一致、模板缺失、导出任务失败。</td>
+                  </tr>
+                  <tr>
+                    <td>6. 回流业务主链</td>
+                    <td>主业务模块查询侧</td>
+                    <td>将导入、收费、历史和统计结果回流给 M2-M5 的查询、运营和质控场景。</td>
+                    <td>M6 支撑数据已形成。</td>
+                    <td>业务侧获得完整外围支撑信息。</td>
+                    <td>跨模块摘要不同步、查询条件不统一、审计链断裂。</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="two-col subsection">
+              <div class="process-card">
+                <strong>关键单据/对象流转</strong>
+                <ul class="key-list">
+                  <li>集成任务：作为 M6 总入口，承载外部交互状态、失败原因和补偿信息。</li>
+                  <li>收费记录：与报告发布或医嘱收费场景关联，支持回执、重试和对账。</li>
+                  <li>历史导入任务/历史报告：形成历史检索入口和版本重建记录。</li>
+                  <li>统计指标/模板/报表：支撑质控、运营和工作量分析。</li>
+                </ul>
+              </div>
+              <div class="note-box">
+                <strong>现状说明</strong>
+                <div class="status-row">
+                  <span class="status-pill status-backend">后端能力与权限：已有</span>
+                  <span class="status-pill status-backend">自动化测试基线：已有</span>
+                  <span class="status-pill status-plan">前端统一门户：规划补齐</span>
+                </div>
+                <ul class="bullet-list">
+                  <li>M6 准入文档明确了临床导入、收费、历史、统计的代码与测试基线。</li>
+                  <li>本方案按理想全量业务呈现，但不把所有 M6 页面描述成已完全开放的前端入口。</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="other-flows" data-nav="other-flows">
+            <div class="section-header">
+              <div>
+                <h2>08. 其他流程专题</h2>
+                <p class="section-desc">
+                  除模块主流程外，以下八类专题链路对业务培训和联调验收也很关键。
+                  它们要么是主闭环的重要补充，要么是上线前必须明确的异常/支撑路径。
+                </p>
+              </div>
+              <div class="status-row">
+                <span class="status-pill status-live">M3 返工 / M4 修订 / M4 会诊：已具主链支撑</span>
+                <span class="status-pill status-backend">M4 医嘱 / M6 支撑链：后端能力明确</span>
+                <span class="status-pill status-plan">M5 借阅运营门户：规划补齐</span>
+              </div>
+            </div>
+
+            <div class="topic-grid">
+              <div class="topic-card">
+                <strong>1. 常规病理主闭环</strong>
+                <p><code>M1 -> M2 -> M3 -> M4 -> M5</code>。管理员准备岗位与规则后，从申请单创建到标本送检、技术生产、诊断发布，再到归档回库形成常规主链。</p>
+                <ul class="bullet-list">
+                  <li>前置：账号、角色、字典、编号规则已就绪。</li>
+                  <li>结果：报告发布且材料归档可追溯。</li>
+                </ul>
+              </div>
+              <div class="topic-card">
+                <strong>2. 临床导入补充链路</strong>
+                <p>第三方系统申请单导入后，直接汇合到 M2 登记链。重点关注来源系统、外部单号、幂等和失败补录机制。</p>
+                <ul class="bullet-list">
+                  <li>前置：集成任务可追踪。</li>
+                  <li>结果：导入申请单进入 M2 正常送检流程。</li>
+                </ul>
+              </div>
+              <div class="topic-card">
+                <strong>3. M3 返工链路</strong>
+                <p>病例、标本、蜡块、包埋盒或玻片任一层级出现问题时，可发起返工单并回退到对应技术环节。</p>
+                <ul class="bullet-list">
+                  <li>重点：返工对象层级、返工原因、返工后状态回写。</li>
+                  <li>结果：返工事件进入技术追踪页。</li>
+                </ul>
+              </div>
+              <div class="topic-card">
+                <strong>4. M4 修订链路</strong>
+                <p>报告已发布后，如需更正或补充，可由诊断岗发起修订申请，经审批后形成新版本链。</p>
+                <ul class="bullet-list">
+                  <li>重点：审批权限、版本链、旧版本可追溯。</li>
+                  <li>结果：工作台和追踪页同步显示修订摘要。</li>
+                </ul>
+              </div>
+              <div class="topic-card">
+                <strong>5. M4 会诊链路</strong>
+                <p>复杂病例由诊断岗发起科内会诊，参与人提交会诊意见，主持人完成会诊并回流到摘要和追踪。</p>
+                <ul class="bullet-list">
+                  <li>重点：主持人权限、意见回显、完成动作审计。</li>
+                  <li>结果：会诊过程可追溯并影响最终诊断判断。</li>
+                </ul>
+              </div>
+              <div class="topic-card">
+                <strong>6. M4 医嘱执行链路</strong>
+                <p>诊断过程中可创建病理医嘱，执行岗负责查询待执行医嘱、签收、完成或取消，形成医嘱状态链。</p>
+                <ul class="bullet-list">
+                  <li>重点：待执行查询、签收、完成、取消、追踪摘要。</li>
+                  <li>结果：医嘱事件回流工作台和报告追踪页。</li>
+                </ul>
+              </div>
+              <div class="topic-card">
+                <strong>7. M5 借阅归还链路</strong>
+                <p>归档材料可因会诊、复查、教学等原因借出，再通过归还动作回到在库状态，并保留借阅历史。</p>
+                <ul class="bullet-list">
+                  <li>重点：在库校验、重复借阅/重复归还控制、位置回写。</li>
+                  <li>结果：医生查询侧能感知当前材料是否外借。</li>
+                </ul>
+              </div>
+              <div class="topic-card">
+                <strong>8. M6 收费/历史/统计支撑链路</strong>
+                <p>报告发布或运营分析场景下，收费回执与对账、历史报告检索、统计指标报表都属于重要支撑链，虽不直接参与主生产，却影响上线完整性。</p>
+                <ul class="bullet-list">
+                  <li>重点：失败重试、历史版本、报表口径、任务可观测性。</li>
+                  <li>结果：外围系统链路可监控、可回放、可追责。</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="roles" data-nav="roles">
+            <div class="section-header">
+              <div>
+                <h2>09. 角色矩阵与术语说明</h2>
+                <p class="section-desc">
+                  本节用于统一岗位理解、减少跨文档歧义，并通过现状说明表把理想全量业务和当前仓库状态对齐。
+                </p>
+              </div>
+              <div class="status-row">
+                <span class="status-pill status-live">角色矩阵：按现有种子与文档整理</span>
+                <span class="status-pill status-backend">现状说明：含后端能力边界</span>
+              </div>
+            </div>
+
+            <div class="subsection">
+              <h3>09.1 角色矩阵</h3>
+              <div class="flow-table-wrap">
+                <table class="matrix-table">
+                  <thead>
+                    <tr>
+                      <th>模块</th>
+                      <th>岗位</th>
+                      <th>角色/典型账号</th>
+                      <th>主要职责</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>M1</td>
+                      <td>病理管理员</td>
+                      <td><code>ROLE_PATHOLOGY_ADMIN</code></td>
+                      <td>创建账号、分配角色、维护字典、编号规则和系统参数。</td>
+                    </tr>
+                    <tr>
+                      <td>M2</td>
+                      <td>申请创建 / 导入 / 登记 / 核验 / 签收 / 追踪岗</td>
+                      <td><code>ROLE_M2_*</code></td>
+                      <td>完成申请单进入、标本登记、固定核验、交接签收和送检追踪。</td>
+                    </tr>
+                    <tr>
+                      <td>M3</td>
+                      <td>取材 / 脱水 / 包埋 / 切片 / 染色 / 返工 / 追踪岗</td>
+                      <td><code>ROLE_M3_*</code></td>
+                      <td>完成技术生产链、返工补充链和技术追踪。</td>
+                    </tr>
+                    <tr>
+                      <td>M4</td>
+                      <td>诊断分配 / 诊断 / 复核 / 签发 / 追踪 / 医嘱执行岗</td>
+                      <td><code>ROLE_M4_*</code>、<code>ROLE_M4_MEDICAL_ORDER_EXECUTE</code></td>
+                      <td>完成诊断任务分配、报告发布、修订、会诊和医嘱执行。</td>
+                    </tr>
+                    <tr>
+                      <td>M5</td>
+                      <td>归档管理员 / 试剂设备管理员</td>
+                      <td><code>ROLE_ARCHIVE_MANAGER</code>、<code>ROLE_REAGENT_DEVICE_MANAGER</code></td>
+                      <td>维护归档、借阅、试剂台账和设备台账。</td>
+                    </tr>
+                    <tr>
+                      <td>M6</td>
+                      <td>集成运营管理员 / 历史报告管理员 / 统计质控管理员</td>
+                      <td><code>ROLE_PATHOLOGY_ADMIN</code>、<code>ROLE_ARCHIVE_MANAGER</code>、<code>ROLE_QUALITY_MANAGER</code></td>
+                      <td>处理集成任务、收费、历史报告和统计分析。</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="subsection">
+              <h3>09.2 术语说明</h3>
+              <div class="legend-grid">
+                <div class="legend-card">
+                  <strong>申请单</strong>
+                  <p>病理业务最早进入系统的单据，可由手工创建或第三方临床导入产生。</p>
+                </div>
+                <div class="legend-card">
+                  <strong>病例 / 病理号</strong>
+                  <p>贯穿 M2-M6 的统一主线标识，用于关联标本、技术对象、报告和历史记录。</p>
+                </div>
+                <div class="legend-card">
+                  <strong>技术任务</strong>
+                  <p>M3 中按工位拆分的待办对象，包括取材、脱水、包埋、切片、染色和返工。</p>
+                </div>
+                <div class="legend-card">
+                  <strong>诊断任务</strong>
+                  <p>由 M3 完成后生成，进入 M4 分配、签收和诊断工作台流程。</p>
+                </div>
+                <div class="legend-card">
+                  <strong>归档记录</strong>
+                  <p>记录申请单、包埋盒、玻片的归档位置、操作人和状态，并支撑借阅回库。</p>
+                </div>
+                <div class="legend-card">
+                  <strong>集成任务</strong>
+                  <p>M6 的统一追踪对象，用于记录外部系统交互、失败原因和补偿状态。</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="subsection">
+              <h3>09.3 现状说明表</h3>
+              <div class="flow-table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>主题</th>
+                      <th>理想全量业务口径</th>
+                      <th>当前仓库现状</th>
+                      <th>标签</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>M1 系统管理</td>
+                      <td>完整承接账号、角色、字典、编号、系统参数维护。</td>
+                      <td>前端服务层、路由和测试已存在，作为 M2-M6 前置准备区可直接支撑。</td>
+                      <td><span class="status-pill status-live">已落地</span></td>
+                    </tr>
+                    <tr>
+                      <td>M2 标本送检</td>
+                      <td>手工创建与第三方导入双入口，覆盖登记、核验、交接、签收和追踪。</td>
+                      <td>主送检链路已落地；第三方导入已在规划和接口口径中明确。</td>
+                      <td><span class="status-pill status-live">已落地</span> <span class="status-pill status-backend">已有后端能力</span></td>
+                    </tr>
+                    <tr>
+                      <td>M3 技术生产线</td>
+                      <td>完整承接任务池、技术工位、返工与追踪。</td>
+                      <td>前端模块、路由和测试均已形成，返工与追踪链已纳入。</td>
+                      <td><span class="status-pill status-live">已落地</span></td>
+                    </tr>
+                    <tr>
+                      <td>M4 诊断闭环</td>
+                      <td>完整承接诊断、报告、修订、会诊和病理医嘱执行。</td>
+                      <td>诊断、报告、修订、会诊已落地；医嘱执行后端能力已具备但前端独立页未完整开放。</td>
+                      <td><span class="status-pill status-live">已落地</span> <span class="status-pill status-backend">已有后端能力</span> <span class="status-pill status-plan">规划补齐</span></td>
+                    </tr>
+                    <tr>
+                      <td>M5 归档与运营</td>
+                      <td>归档、借阅、试剂和设备形成完整前后端工作台。</td>
+                      <td>后端菜单、权限、接口矩阵已明确；前端独立模块仍在规划实现阶段。</td>
+                      <td><span class="status-pill status-backend">已有后端能力</span> <span class="status-pill status-plan">规划补齐</span></td>
+                    </tr>
+                    <tr>
+                      <td>M6 集成与统计</td>
+                      <td>形成统一集成门户，覆盖导入、收费、历史、统计及可观测性。</td>
+                      <td>后端控制器、权限和自动化测试基线已形成；前端统一门户仍需补齐。</td>
+                      <td><span class="status-pill status-backend">已有后端能力</span> <span class="status-pill status-plan">规划补齐</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="footer-note">
+                说明：本文件按理想全量业务口径组织内容，但所有未完全开放的前端入口都已在表中标出，
+                用于避免把“已有后端能力”误解成“前端已正式上线”。
+              </p>
+            </div>
+
+            <a class="back-top" href="#top">返回顶部</a>
+          </section>
+        </main>
+      </div>
+    </div>
+
+    <script>
+      const sections = Array.from(document.querySelectorAll('[data-nav]'));
+      const navLinks = Array.from(document.querySelectorAll('.nav-link'));
+      const linkMap = new Map(
+        navLinks.map((link) => [link.getAttribute('href').slice(1), link]),
+      );
+
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            navLinks.forEach((link) => link.classList.remove('active'));
+            const activeLink = linkMap.get(entry.target.id);
+            if (activeLink) activeLink.classList.add('active');
+          });
+        },
+        {
+          rootMargin: '-20% 0px -55% 0px',
+          threshold: 0.12,
+        },
+      );
+
+      sections.forEach((section) => observer.observe(section));
+      const firstLink = navLinks[0];
+      if (firstLink) firstLink.classList.add('active');
+    </script>
+  </body>
+</html>

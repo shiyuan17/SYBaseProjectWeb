@@ -3,6 +3,7 @@ import type { RouteRecordStringComponent } from '@vben/types';
 import type { MenuView } from '#/modules/system-management/types/system-management';
 
 type BackendMenuComponentDefinition = {
+  canonicalTitle?: string;
   component: string;
   componentAliases: string[];
   menuCodes?: string[];
@@ -183,9 +184,48 @@ const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] = [
         path: '/workflow/entry',
       },
       {
-        component: '/modules/specimen-workflow/views/ApplicationListView',
+        component: '/modules/specimen-workflow/views/SubmissionRegistrationView',
         meta: {
           icon: 'carbon:list-boxes',
+          title: '申请与登记',
+        },
+        name: 'SubmissionRegistration',
+        path: '/workflow/submission-registration',
+      },
+      {
+        component: '/modules/specimen-workflow/views/FixationTransportView',
+        meta: {
+          icon: 'carbon:checkmark-outline',
+          title: '固定与转运',
+        },
+        name: 'FixationTransport',
+        path: '/workflow/fixation-transport',
+      },
+      {
+        component: '/modules/specimen-workflow/views/SpecimenReceiptView',
+        meta: {
+          icon: 'carbon:archive',
+          title: '病理接收',
+        },
+        name: 'PathologyReceipt',
+        path: '/workflow/pathology-receipt',
+      },
+      {
+        component: '/modules/specimen-workflow/views/TrackingQueryView',
+        meta: {
+          icon: 'carbon:search',
+          title: '追踪与异常',
+        },
+        name: 'TrackingException',
+        path: '/workflow/tracking-exception',
+      },
+      {
+        component: '/modules/specimen-workflow/views/ApplicationListView',
+        redirect: '/workflow/submission-registration',
+        meta: {
+          hideInBreadcrumb: true,
+          hideInMenu: true,
+          hideInTab: true,
           title: '申请管理',
         },
         name: 'ApplicationList',
@@ -193,8 +233,11 @@ const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] = [
       },
       {
         component: '/modules/specimen-workflow/views/SpecimenManagementView',
+        redirect: '/workflow/submission-registration?action=register',
         meta: {
-          icon: 'carbon:catalog',
+          hideInBreadcrumb: true,
+          hideInMenu: true,
+          hideInTab: true,
           title: '标本管理',
         },
         name: 'SpecimenManagement',
@@ -202,19 +245,23 @@ const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] = [
       },
       {
         component: '/modules/specimen-workflow/views/ClinicalRegisterView',
+        redirect: '/workflow/submission-registration?action=register',
         meta: {
           hideInBreadcrumb: true,
           hideInMenu: true,
           hideInTab: true,
-          title: '标本管理',
+          title: '送检登记兼容页',
         },
         name: 'ClinicalRegister',
         path: '/workflow/clinical-register',
       },
       {
         component: '/modules/specimen-workflow/views/FixationVerifyView',
+        redirect: '/workflow/fixation-transport?tab=fixation',
         meta: {
-          icon: 'carbon:checkmark-outline',
+          hideInBreadcrumb: true,
+          hideInMenu: true,
+          hideInTab: true,
           title: '固定核对',
         },
         name: 'FixationVerify',
@@ -222,8 +269,11 @@ const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] = [
       },
       {
         component: '/modules/specimen-workflow/views/TransportHandoverView',
+        redirect: '/workflow/fixation-transport?tab=transport',
         meta: {
-          icon: 'carbon:delivery',
+          hideInBreadcrumb: true,
+          hideInMenu: true,
+          hideInTab: true,
           title: '转运交接',
         },
         name: 'TransportHandover',
@@ -231,8 +281,11 @@ const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] = [
       },
       {
         component: '/modules/specimen-workflow/views/SpecimenReceiptView',
+        redirect: '/workflow/pathology-receipt',
         meta: {
-          icon: 'carbon:archive',
+          hideInBreadcrumb: true,
+          hideInMenu: true,
+          hideInTab: true,
           title: '标本接收',
         },
         name: 'SpecimenReceipt',
@@ -240,8 +293,11 @@ const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] = [
       },
       {
         component: '/modules/specimen-workflow/views/TrackingQueryView',
+        redirect: '/workflow/tracking-exception',
         meta: {
-          icon: 'carbon:search',
+          hideInBreadcrumb: true,
+          hideInMenu: true,
+          hideInTab: true,
           title: '追踪查询',
         },
         name: 'TrackingQuery',
@@ -590,61 +646,68 @@ const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[] = [
     routeName: 'WorkflowRoot',
   },
   {
-    component: '/modules/specimen-workflow/views/ApplicationListView',
-    componentAliases: ['ApplicationList'],
-    menuCodes: ['M2_APPLICATION_LIST'],
-    path: '/workflow/application-list',
-    pathAliases: ['/workflow/application-list', '/api/v1/applications'],
-    routeName: 'ApplicationList',
-  },
-  {
-    component: '/modules/specimen-workflow/views/SpecimenManagementView',
-    componentAliases: ['ClinicalRegister', 'SpecimenManagement'],
-    menuCodes: ['M2_CLINICAL'],
-    path: '/workflow/specimen-management',
+    canonicalTitle: '申请与登记',
+    component: '/modules/specimen-workflow/views/SubmissionRegistrationView',
+    componentAliases: [
+      'ApplicationList',
+      'ClinicalRegister',
+      'SpecimenManagement',
+      'SubmissionRegistration',
+    ],
+    menuCodes: ['M2_APPLICATION_LIST', 'M2_CLINICAL'],
+    path: '/workflow/submission-registration',
     pathAliases: [
+      '/workflow/submission-registration',
+      '/workflow/application-list',
       '/workflow/specimen-management',
       '/workflow/clinical-register',
+      '/api/v1/applications',
       '/api/v1/specimens/register',
       '/api/v1/specimen-collections',
     ],
-    routeName: 'SpecimenManagement',
+    routeName: 'SubmissionRegistration',
   },
   {
-    component: '/modules/specimen-workflow/views/FixationVerifyView',
-    componentAliases: ['FixationVerify'],
-    menuCodes: ['M2_FIXATION'],
-    path: '/workflow/fixation-verify',
-    pathAliases: ['/workflow/fixation-verify', '/api/v1/specimen-fixations'],
-    routeName: 'FixationVerify',
-  },
-  {
-    component: '/modules/specimen-workflow/views/TransportHandoverView',
-    componentAliases: ['TransportHandover'],
-    menuCodes: ['M2_TRANSPORT'],
-    path: '/workflow/transport-handover',
-    pathAliases: ['/workflow/transport-handover', '/api/v1/transport-orders'],
-    routeName: 'TransportHandover',
-  },
-  {
-    component: '/modules/specimen-workflow/views/SpecimenReceiptView',
-    componentAliases: ['SpecimenReceipt'],
-    menuCodes: ['M2_RECEIPT'],
-    path: '/workflow/specimen-receipt',
-    pathAliases: ['/workflow/specimen-receipt', '/api/v1/specimen-receipts'],
-    routeName: 'SpecimenReceipt',
-  },
-  {
-    component: '/modules/specimen-workflow/views/TrackingQueryView',
-    componentAliases: ['TrackingQuery'],
-    menuCodes: ['M2_TRACKING'],
-    path: '/workflow/tracking-query',
+    canonicalTitle: '固定与转运',
+    component: '/modules/specimen-workflow/views/FixationTransportView',
+    componentAliases: ['FixationTransport', 'FixationVerify', 'TransportHandover'],
+    menuCodes: ['M2_FIXATION', 'M2_TRANSPORT'],
+    path: '/workflow/fixation-transport',
     pathAliases: [
+      '/workflow/fixation-transport',
+      '/workflow/fixation-verify',
+      '/workflow/transport-handover',
+      '/api/v1/specimen-fixations',
+      '/api/v1/transport-orders',
+    ],
+    routeName: 'FixationTransport',
+  },
+  {
+    canonicalTitle: '病理接收',
+    component: '/modules/specimen-workflow/views/SpecimenReceiptView',
+    componentAliases: ['PathologyReceipt', 'SpecimenReceipt'],
+    menuCodes: ['M2_RECEIPT'],
+    path: '/workflow/pathology-receipt',
+    pathAliases: [
+      '/workflow/pathology-receipt',
+      '/workflow/specimen-receipt',
+      '/api/v1/specimen-receipts',
+    ],
+    routeName: 'PathologyReceipt',
+  },
+  {
+    canonicalTitle: '追踪与异常',
+    component: '/modules/specimen-workflow/views/TrackingQueryView',
+    componentAliases: ['TrackingException', 'TrackingQuery'],
+    menuCodes: ['M2_TRACKING'],
+    path: '/workflow/tracking-exception',
+    pathAliases: [
+      '/workflow/tracking-exception',
       '/workflow/tracking-query',
       '/api/v1/applications/{id}/tracking',
       '/api/v1/specimens/barcodes/{barcode}/tracking',
     ],
-    routeName: 'TrackingQuery',
+    routeName: 'TrackingException',
   },
   {
     component: 'BasicLayout',
@@ -888,11 +951,14 @@ function convertMenuNode(
   node: MenuTreeNode,
 ): null | RouteRecordStringComponent<string> {
   const definition = findMenuDefinition(node);
-  const children = node.children
+  const convertedChildren = node.children
     .map((child) => convertMenuNode(child))
     .filter(
       (child): child is RouteRecordStringComponent<string> => child !== null,
     );
+  const children = convertedChildren.filter((child, index, routes) => {
+    return routes.findIndex((route) => route.name === child.name) === index;
+  });
 
   if (!definition) {
     return null;
@@ -903,7 +969,7 @@ function convertMenuNode(
     meta: {
       icon: node.icon || undefined,
       order: node.sortOrder,
-      title: node.menuName,
+      title: definition.canonicalTitle ?? node.menuName,
     },
     name: definition.routeName,
     path: definition.path,

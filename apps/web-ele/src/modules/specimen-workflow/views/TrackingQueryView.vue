@@ -1,98 +1,37 @@
 <script setup lang="ts">
-import type {
-  ApplicationDetailView,
-  TrackingQueryView as WorkflowTrackingQueryView,
-} from '../types/specimen-workflow';
-
 import { computed, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
 import { useAccessStore } from '@vben/stores';
 
-import {
-  ElAlert,
-  ElButton,
-  ElDescriptions,
-  ElDescriptionsItem,
-  ElEmpty,
-  ElForm,
-  ElFormItem,
-  ElInput,
-  ElMessage,
-  ElRadioButton,
-  ElRadioGroup,
-  ElTable,
-  ElTableColumn,
-  ElTag,
-  ElTimeline,
-  ElTimelineItem,
-} from 'element-plus';
+import { ElAlert, ElEmpty, ElTabPane, ElTabs } from 'element-plus';
 
-import {
-  getApplicationDetail,
-  getApplicationTracking,
-  getSpecimenTrackingByBarcode,
-} from '../api/specimen-workflow-service';
-import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { M2_PERMISSION_CODES } from '../constants';
-import { getWorkflowPageErrorMessage } from '../utils/error';
-import {
-  formatApplicationFormStatus,
-  formatApplicationStatus,
-  formatApplicationType,
-  formatCurrentNode,
-  formatDate,
-  formatDateTime,
-  formatFixationStatus,
-  formatLabelPrintStatus,
-  formatNullable,
-  formatSpecimenStatus,
-  formatTrackingEventStatus,
-  formatTrackingEventType,
-} from '../utils/format';
 
-const accessStore = useAccessStore();
+import TrackingApplicationListView from './TrackingApplicationListView.vue';
+import TrackingSpecimenListView from './TrackingSpecimenListView.vue';
+
+type TrackingTab = 'applications' | 'specimens';
+
 const route = useRoute();
+const accessStore = useAccessStore();
 
-const pageError = ref('');
-const loading = ref(false);
-const detailLoading = ref(false);
-const queryMode = ref<'application' | 'barcode'>('application');
-const queryValue = ref('');
-const trackingResult = ref<null | WorkflowTrackingQueryView>(null);
-const applicationDetail = ref<null | ApplicationDetailView>(null);
-
-const canQueryDetail = computed(() =>
-  accessStore.accessCodes.includes(M2_PERMISSION_CODES.APPLICATION_DETAIL_QUERY),
+const accessCodeSet = computed(() => new Set(accessStore.accessCodes));
+const canViewApplications = computed(() =>
+  accessCodeSet.value.has(M2_PERMISSION_CODES.APPLICATION_DETAIL_QUERY),
+);
+const canViewSpecimens = computed(() =>
+  accessCodeSet.value.has(M2_PERMISSION_CODES.SPECIMEN_REGISTER),
 );
 
-async function submitQuery() {
-  const value = queryValue.value.trim();
-  if (!value) {
-    ElMessage.warning(
-      queryMode.value === 'application' ? '请输入申请单编号 / ID' : '请输入标本条码',
-    );
-    return;
-  }
+const activeTab = ref<TrackingTab>('applications');
+const applicationId = ref('');
+const applicationTriggerKey = ref(0);
+const barcode = ref('');
+const specimenTriggerKey = ref(0);
 
-  loading.value = true;
-  pageError.value = '';
-  applicationDetail.value = null;
-  try {
-    trackingResult.value =
-      queryMode.value === 'application'
-        ? await getApplicationTracking(value)
-        : await getSpecimenTrackingByBarcode(value);
-    ElMessage.success('追踪信息已更新');
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
-  } finally {
-    loading.value = false;
-  }
-}
-
-function normalizeRouteQueryValue(value: unknown) {
+function normalizeQueryValue(value: unknown) {
   if (typeof value === 'string') {
     return value;
   }
@@ -102,240 +41,95 @@ function normalizeRouteQueryValue(value: unknown) {
   return '';
 }
 
+function resolveAvailableTab(preferredTab: TrackingTab): TrackingTab {
+  if (preferredTab === 'applications' && canViewApplications.value) {
+    return 'applications';
+  }
+  if (preferredTab === 'specimens' && canViewSpecimens.value) {
+    return 'specimens';
+  }
+  return canViewApplications.value ? 'applications' : 'specimens';
+}
+
 watch(
-  () => route.query.applicationId,
-  (value) => {
-    const applicationId = normalizeRouteQueryValue(value).trim();
-    if (!applicationId) {
+  () =>
+    [
+      route.query.applicationId,
+      route.query.barcode,
+      canViewApplications.value,
+      canViewSpecimens.value,
+    ] as const,
+  ([applicationIdQuery, barcodeQuery]) => {
+    const normalizedBarcode = normalizeQueryValue(barcodeQuery).trim();
+    const normalizedApplicationId = normalizeQueryValue(applicationIdQuery).trim();
+
+    if (normalizedBarcode) {
+      activeTab.value = resolveAvailableTab('specimens');
+      applicationId.value = '';
+      barcode.value = normalizedBarcode;
+      specimenTriggerKey.value += 1;
       return;
     }
-    queryMode.value = 'application';
-    queryValue.value = applicationId;
-    void submitQuery();
+
+    if (normalizedApplicationId) {
+      activeTab.value = resolveAvailableTab('applications');
+      applicationId.value = normalizedApplicationId;
+      barcode.value = '';
+      applicationTriggerKey.value += 1;
+      return;
+    }
+
+    activeTab.value = resolveAvailableTab('applications');
+    applicationId.value = '';
+    barcode.value = '';
   },
   { immediate: true },
 );
-
-async function loadFullApplicationDetail() {
-  if (!trackingResult.value) {
-    ElMessage.warning('请先查询追踪信息');
-    return;
-  }
-
-  detailLoading.value = true;
-  pageError.value = '';
-  try {
-    applicationDetail.value = await getApplicationDetail(trackingResult.value.id);
-    ElMessage.success('完整申请单详情已加载');
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
-  } finally {
-    detailLoading.value = false;
-  }
-}
 </script>
 
 <template>
-  <Page title="追踪查询">
+  <Page title="追踪与异常">
     <div class="flex flex-col gap-4">
       <ElAlert
-        v-if="pageError"
+        v-if="!canViewApplications && !canViewSpecimens"
         :closable="false"
-        :title="pageError"
-        type="error"
+        title="当前账号只有追踪菜单权限，暂无申请单列表或标本列表查看权限。"
+        type="info"
         show-icon
       />
 
-      <WorkflowSectionCard
-        title="查询入口"
-        description="按申请单或按标本条码二选一查询；若具备详情权限，可进一步查看完整申请单。"
+      <ElTabs
+        v-if="canViewApplications || canViewSpecimens"
+        v-model="activeTab"
       >
-        <template #extra>
-          <ElButton
-            v-if="canQueryDetail && trackingResult"
-            :loading="detailLoading"
-            @click="loadFullApplicationDetail"
-          >
-            查看完整申请单详情
-          </ElButton>
-        </template>
-
-        <ElForm inline label-width="72px">
-          <ElFormItem label="查询方式">
-            <ElRadioGroup v-model="queryMode">
-              <ElRadioButton label="application" value="application">按申请单</ElRadioButton>
-              <ElRadioButton label="barcode" value="barcode">按标本条码</ElRadioButton>
-            </ElRadioGroup>
-          </ElFormItem>
-          <ElFormItem :label="queryMode === 'application' ? '申请单编号' : '标本条码'">
-            <ElInput
-              v-model="queryValue"
-              :placeholder="
-                queryMode === 'application' ? '请输入申请单编号 / ID' : '请输入标本条码'
-              "
-              clearable
-              style="width: 340px"
-              @keyup.enter="submitQuery"
-            />
-          </ElFormItem>
-          <ElFormItem>
-            <ElButton :loading="loading" type="primary" @click="submitQuery">查询</ElButton>
-          </ElFormItem>
-        </ElForm>
-      </WorkflowSectionCard>
-
-      <template v-if="trackingResult">
-        <WorkflowSectionCard title="异常标记" description="用于快速识别当前申请单是否存在流程异常。">
-          <ElAlert
-            :closable="false"
-            :title="
-              trackingResult.abnormalFlag
-                ? '当前申请单存在异常标记，请结合最近追踪事件和标本状态重点核对。'
-                : '当前申请单未标记异常。'
-            "
-            :type="trackingResult.abnormalFlag ? 'warning' : 'success'"
-            show-icon
-          />
-        </WorkflowSectionCard>
-
-        <WorkflowSectionCard title="基本信息" description="展示申请单状态、当前节点、表单状态与送检摘要。">
-          <ElDescriptions :column="2" border>
-            <ElDescriptionsItem label="申请单编号">
-              {{ trackingResult.id }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="申请单号">
-              {{ trackingResult.applicationNo }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="申请单状态">
-              {{ formatApplicationStatus(trackingResult.status) }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="表单状态">
-              {{ formatApplicationFormStatus(trackingResult.applicationFormStatus) }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="当前节点">
-              {{ formatCurrentNode(trackingResult.currentNode) }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="申请类型">
-              {{ formatApplicationType(trackingResult.applicationType) }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="患者姓名">
-              {{ formatNullable(trackingResult.patientName) }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="患者标识">
-              {{ formatNullable(trackingResult.patientId) }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="送检科室">
-              {{ formatNullable(trackingResult.submittingDepartmentName) }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="送检医生">
-              {{ formatNullable(trackingResult.submittingDoctorName) }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="申请日期">
-              {{ formatDate(trackingResult.applicationDate) }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="送检日期">
-              {{ formatDate(trackingResult.submissionDate) }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="临床诊断" :span="2">
-              {{ formatNullable(trackingResult.clinicalDiagnosis) }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="临床症状" :span="2">
-              {{ formatNullable(trackingResult.clinicalSymptom) }}
-            </ElDescriptionsItem>
-          </ElDescriptions>
-        </WorkflowSectionCard>
-
-        <WorkflowSectionCard title="标本列表" description="展示当前申请单下标本摘要、状态和标签打印情况。">
-          <ElTable :data="trackingResult.specimens" border>
-            <ElTableColumn label="标本号" min-width="140" prop="specimenNo" />
-            <ElTableColumn label="条码" min-width="180" prop="barcode" />
-            <ElTableColumn label="标本名称" min-width="180" prop="specimenName" />
-            <ElTableColumn label="标本类型" min-width="140">
-              <template #default="{ row }">
-                {{ formatNullable(row.specimenType) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="标本部位" min-width="140">
-              <template #default="{ row }">
-                {{ formatNullable(row.specimenSite) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="流程状态" min-width="140">
-              <template #default="{ row }">
-                <ElTag :type="row.specimenStatus === 'RECEIVED' ? 'success' : 'info'">
-                  {{ formatSpecimenStatus(row.specimenStatus) }}
-                </ElTag>
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="固定状态" min-width="140">
-              <template #default="{ row }">
-                {{ formatFixationStatus(row.fixationStatus) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="标签状态" min-width="140">
-              <template #default="{ row }">
-                {{ formatLabelPrintStatus(row.labelPrintStatus) }}
-              </template>
-            </ElTableColumn>
-          </ElTable>
-        </WorkflowSectionCard>
-
-        <WorkflowSectionCard title="时间线事件" description="展示最近追踪事件、节点、状态与操作终端。">
-          <ElTimeline v-if="trackingResult.recentEvents.length > 0">
-            <ElTimelineItem
-              v-for="(event, index) in trackingResult.recentEvents"
-              :key="`${event.eventTime}-${index}`"
-              :timestamp="formatDateTime(event.eventTime)"
-              placement="top"
-            >
-              <div class="space-y-1">
-                <div class="font-medium text-foreground">
-                  {{ formatTrackingEventType(event.eventType) }} / {{ formatTrackingEventStatus(event.eventStatus) }}
-                </div>
-                <div class="text-sm text-muted-foreground">
-                  {{ formatNullable(event.eventContent) }}
-                </div>
-                <div class="text-xs text-muted-foreground">
-                  节点：{{ formatNullable(event.nodeCode) }}，操作人：{{ formatNullable(event.operatorName) }}，终端：{{ formatNullable(event.sourceTerminal) }}
-                </div>
-              </div>
-            </ElTimelineItem>
-          </ElTimeline>
-          <ElEmpty v-else description="暂无最近追踪事件" />
-        </WorkflowSectionCard>
-
-        <WorkflowSectionCard
-          v-if="applicationDetail"
-          title="完整申请单详情"
-          description="仅在具备详情权限时展示，便于在追踪页补充核对完整业务字段。"
+        <ElTabPane
+          v-if="canViewApplications"
+          label="申请单列表"
+          name="applications"
         >
-          <ElDescriptions :column="2" border>
-            <ElDescriptionsItem label="外部单号">
-              {{ formatNullable(applicationDetail.externalOrderNo) }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="来源医院">
-              {{ formatNullable(applicationDetail.sourceHospitalName) }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="备注" :span="2">
-              {{ formatNullable(applicationDetail.remarks) }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="创建时间">
-              {{ formatDateTime(applicationDetail.createdAt) }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="更新时间">
-              {{ formatDateTime(applicationDetail.updatedAt) }}
-            </ElDescriptionsItem>
-          </ElDescriptions>
-        </WorkflowSectionCard>
-      </template>
+          <TrackingApplicationListView
+            :initial-application-id="applicationId"
+            :trigger-key="applicationTriggerKey"
+          />
+        </ElTabPane>
+        <ElTabPane
+          v-if="canViewSpecimens"
+          label="标本列表"
+          name="specimens"
+        >
+          <TrackingSpecimenListView
+            :initial-barcode="barcode"
+            :trigger-key="specimenTriggerKey"
+          />
+        </ElTabPane>
+      </ElTabs>
 
-      <WorkflowSectionCard
-        v-else-if="!loading"
-        title="查询结果"
-        description="输入申请单号或标本条码后即可查看追踪结果。"
+      <div
+        v-else
+        class="rounded-lg border border-dashed border-border bg-card p-8"
       >
-        <ElEmpty description="尚未执行查询" />
-      </WorkflowSectionCard>
+        <ElEmpty description="当前账号暂无追踪列表查看权限" />
+      </div>
     </div>
   </Page>
 </template>

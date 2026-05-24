@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ApplicationListItem } from '../types/specimen-workflow';
 
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
@@ -27,6 +27,7 @@ import DepartmentSelect from '#/modules/system-management/components/DepartmentS
 
 import { listApplications } from '../api/specimen-workflow-service';
 import ApplicationManageDialog from '../components/ApplicationManageDialog.vue';
+import SpecimenRegisterDialog from '../components/SpecimenRegisterDialog.vue';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import {
   APPLICATION_FORM_STATUS_OPTIONS,
@@ -47,10 +48,25 @@ import {
 const router = useRouter();
 const accessStore = useAccessStore();
 
+const props = withDefaults(
+  defineProps<{
+    embedded?: boolean;
+    pendingRegistrationApplicationId?: string;
+    registrationTriggerKey?: number;
+  }>(),
+  {
+    embedded: false,
+    pendingRegistrationApplicationId: '',
+    registrationTriggerKey: 0,
+  },
+);
+
 const loading = ref(false);
 const pageError = ref('');
 const createDialogVisible = ref(false);
 const items = ref<ApplicationListItem[]>([]);
+const registerDialogApplicationId = ref('');
+const registerDialogVisible = ref(false);
 const total = ref(0);
 
 const filters = reactive({
@@ -128,22 +144,25 @@ function handleDepartmentChange(department: null | { id: string; name: string })
   filters.submittingDepartmentId = department?.id ?? '';
 }
 
+function openRegistrationDialog(applicationId: string) {
+  const normalizedApplicationId = applicationId.trim();
+  if (!normalizedApplicationId) {
+    return;
+  }
+  registerDialogApplicationId.value = normalizedApplicationId;
+  registerDialogVisible.value = true;
+}
+
 function goToSpecimenManagement(row: ApplicationListItem) {
   if (!canOpenSpecimenManagement.value) {
     return;
   }
-  void router.push({
-    path: '/workflow/specimen-management',
-    query: {
-      action: 'register',
-      applicationId: row.id,
-    },
-  });
+  openRegistrationDialog(row.id);
 }
 
 function goToTracking(row: ApplicationListItem) {
   void router.push({
-    path: '/workflow/tracking-query',
+    path: '/workflow/tracking-exception',
     query: {
       applicationId: row.id,
     },
@@ -160,23 +179,28 @@ async function handleApplicationSubmitted(payload: {
   }
 
   if (payload.mode === 'save-and-manage') {
-    await router.push({
-      path: '/workflow/specimen-management',
-      query: {
-        action: 'register',
-        applicationId: payload.applicationId,
-      },
-    });
+    openRegistrationDialog(payload.applicationId);
   }
 }
 
 if (canQueryApplications.value) {
   void loadApplications();
 }
+
+watch(
+  () => [props.pendingRegistrationApplicationId, props.registrationTriggerKey] as const,
+  ([applicationId]) => {
+    const normalizedApplicationId = applicationId.trim();
+    if (!normalizedApplicationId) {
+      return;
+    }
+    openRegistrationDialog(normalizedApplicationId);
+  },
+);
 </script>
 
 <template>
-  <Page title="申请管理">
+  <Page :title="embedded ? undefined : '申请与登记'">
     <div class="flex flex-col gap-4">
       <ElAlert
         v-if="pageError"
@@ -311,6 +335,11 @@ if (canQueryApplications.value) {
                 {{ formatCurrentNode(row.currentNode) }}
               </template>
             </ElTableColumn>
+            <ElTableColumn label="申请人" min-width="120">
+              <template #default="{ row }">
+                {{ formatNullable(row.submittingDoctorName) }}
+              </template>
+            </ElTableColumn>
             <ElTableColumn label="申请日期" min-width="120">
               <template #default="{ row }">
                 {{ formatDate(row.applicationDate) }}
@@ -337,10 +366,10 @@ if (canQueryApplications.value) {
                     type="primary"
                     @click="goToSpecimenManagement(row)"
                   >
-                    标本管理
+                    登记标本
                   </ElButton>
                   <ElButton link type="primary" @click="goToTracking(row)">
-                    追踪查询
+                    追踪与异常
                   </ElButton>
                 </div>
               </template>
@@ -369,6 +398,11 @@ if (canQueryApplications.value) {
       <ApplicationManageDialog
         v-model="createDialogVisible"
         @submitted="handleApplicationSubmitted"
+      />
+      <SpecimenRegisterDialog
+        v-model="registerDialogVisible"
+        :application-id="registerDialogApplicationId"
+        @registered="loadApplications"
       />
     </div>
   </Page>

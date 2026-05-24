@@ -69,6 +69,9 @@ const accessCodeSet = computed(() => new Set(accessStore.accessCodes));
 const canQueryApplicationDetail = computed(() =>
   accessCodeSet.value.has(M2_PERMISSION_CODES.APPLICATION_DETAIL_QUERY),
 );
+const canQueryWorkflowReference = computed(() =>
+  accessCodeSet.value.has(M2_PERMISSION_CODES.WORKFLOW_REFERENCE_QUERY),
+);
 
 const currentUserName = computed(() => userStore.userInfo?.realName ?? '');
 const currentUserId = computed(() => userStore.userInfo?.userId ?? '');
@@ -103,6 +106,8 @@ function createRegisterRow(): RegisterRow {
     barcode: '',
     clinicalSymptom: '',
     collectionMode: '',
+    containerCount: 1,
+    containerName: '',
     key: Date.now() + Math.floor(Math.random() * 1000),
     specimenCount: 1,
     specimenNameStandardized: '',
@@ -130,13 +135,25 @@ function resetDialogState() {
   resetRegisterForm();
 }
 
-function addRegisterRow() {
-  registerItems.value.push(createRegisterRow());
+function addRegisterRow(afterKey?: number) {
+  const nextRow = createRegisterRow();
+  if (!afterKey) {
+    registerItems.value.push(nextRow);
+    return;
+  }
+
+  const targetIndex = registerItems.value.findIndex((item) => item.key === afterKey);
+  if (targetIndex === -1) {
+    registerItems.value.push(nextRow);
+    return;
+  }
+
+  registerItems.value.splice(targetIndex + 1, 0, nextRow);
 }
 
 function removeRegisterRow(key: number) {
   if (registerItems.value.length === 1) {
-    ElMessage.warning('至少保留一行标本明细');
+    ElMessage.warning('至少保留一行标本登记项');
     return;
   }
   registerItems.value = registerItems.value.filter((item) => item.key !== key);
@@ -165,7 +182,56 @@ async function loadApplicationDetail(options: { silent?: boolean } = {}) {
 }
 
 async function loadWorkflowReferenceOptions() {
-  workflowReferenceOptions.value = await loadWorkflowReferenceOptionsSafely();
+  workflowReferenceOptions.value = await loadWorkflowReferenceOptionsSafely({
+    enabled: canQueryWorkflowReference.value,
+  });
+}
+
+function validateRegisterItems(items: Array<{
+  barcode: null | string;
+  clinicalSymptom: null | string;
+  collectionMode: null | string;
+  containerCount: number;
+  containerName: string;
+  specimenCount: number;
+  specimenNameStandardized: string;
+  specimenSite: null | string;
+  specimenType: null | string;
+}>) {
+  if (items.some((item) => !item.specimenNameStandardized)) {
+    ElMessage.warning('请完整填写每一行标本名称');
+    return false;
+  }
+  if (items.some((item) => !item.specimenSite)) {
+    ElMessage.warning('请完整填写每一行标本部位');
+    return false;
+  }
+  if (items.some((item) => !item.containerName)) {
+    ElMessage.warning('请完整填写每一行容器名称');
+    return false;
+  }
+  if (items.some((item) => !item.specimenCount || item.specimenCount < 1)) {
+    ElMessage.warning('标本数量必须大于 0');
+    return false;
+  }
+  if (items.some((item) => !item.containerCount || item.containerCount < 1)) {
+    ElMessage.warning('容器数量必须大于 0');
+    return false;
+  }
+
+  const barcodeSet = new Set<string>();
+  for (const item of items) {
+    if (!item.barcode) {
+      continue;
+    }
+    if (barcodeSet.has(item.barcode)) {
+      ElMessage.warning('同一次登记中的条码不能重复');
+      return false;
+    }
+    barcodeSet.add(item.barcode);
+  }
+
+  return true;
 }
 
 async function submitRegister() {
@@ -182,18 +248,15 @@ async function submitRegister() {
     barcode: item.barcode?.trim() || null,
     clinicalSymptom: item.clinicalSymptom?.trim() || null,
     collectionMode: item.collectionMode?.trim() || null,
+    containerCount: item.containerCount,
+    containerName: item.containerName.trim(),
     specimenCount: item.specimenCount,
     specimenNameStandardized: item.specimenNameStandardized.trim(),
     specimenSite: item.specimenSite?.trim() || null,
     specimenType: item.specimenType?.trim() || null,
   }));
 
-  if (items.some((item) => !item.specimenNameStandardized)) {
-    ElMessage.warning('请完整填写每一行标本名称');
-    return;
-  }
-  if (items.some((item) => !item.specimenCount || item.specimenCount < 1)) {
-    ElMessage.warning('标本数量必须大于 0');
+  if (!validateRegisterItems(items)) {
     return;
   }
 
@@ -216,9 +279,6 @@ async function submitRegister() {
     });
     resetRegisterForm();
     ElMessage.success('标本登记成功');
-    if (canQueryApplicationDetail.value) {
-      await loadApplicationDetail({ silent: true });
-    }
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
   } finally {
@@ -257,9 +317,9 @@ watch(
     destroy-on-close
     title="标本登记"
     top="4vh"
-    width="1480px"
+    width="min(1680px, calc(100vw - 32px))"
   >
-    <div class="flex flex-col gap-4">
+    <div class="flex max-h-[72vh] flex-col gap-4 overflow-y-auto pr-1">
       <ElAlert
         v-if="pageError"
         :closable="false"
@@ -271,20 +331,20 @@ watch(
       <ElAlert
         v-if="!canQueryApplicationDetail"
         :closable="false"
-        title="当前账号没有申请单详情查询权限，弹窗中仅展示当前申请单编号并允许直接登记。"
+        title="当前账号没有申请单详情查询权限，弹窗中仅展示申请单编号并允许直接登记。"
         type="info"
         show-icon
       />
 
       <section class="rounded-lg border border-border bg-card p-4 shadow-sm">
-        <div class="mb-4 flex items-center justify-between gap-4">
+        <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div class="text-base font-semibold text-foreground">当前上下文</div>
           <ElButton :loading="loadingDetail" @click="loadApplicationDetail()">
             刷新详情
           </ElButton>
         </div>
 
-        <ElDescriptions :column="3" border>
+        <ElDescriptions :column="2" border>
           <ElDescriptionsItem label="申请单编号">
             {{ currentApplicationId || '-' }}
           </ElDescriptionsItem>
@@ -312,20 +372,20 @@ watch(
         <div class="mb-4 text-base font-semibold text-foreground">登记表单</div>
 
         <ElForm label-width="104px">
-          <div class="grid gap-4 md:grid-cols-2">
-            <ElFormItem label="操作人" required>
+          <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <ElFormItem label="登记人" required>
               <ElInput :model-value="registerForm.operatorName" disabled />
             </ElFormItem>
-            <ElFormItem label="打印机编码">
+            <ElFormItem label="打印机编号">
               <ElInput
                 v-model="registerForm.printerCode"
                 placeholder="用于标签打印"
               />
             </ElFormItem>
-            <ElFormItem label="终端编码">
+            <ElFormItem label="终端编号">
               <ElInput
                 v-model="registerForm.terminalCode"
-                placeholder="扫码枪 / 工作站终端"
+                placeholder="扫码枪或工作站终端"
               />
             </ElFormItem>
             <ElFormItem label="采集场景">
@@ -345,14 +405,7 @@ watch(
           </ElFormItem>
         </ElForm>
 
-        <div class="mb-3 flex items-center justify-between gap-2">
-          <div class="text-sm text-muted-foreground">
-            当前登记上下文：{{ currentApplicationId }}
-          </div>
-          <ElButton type="primary" @click="addRegisterRow">新增标本行</ElButton>
-        </div>
-
-        <ElTable :data="registerItems" border>
+        <ElTable :data="registerItems" :max-height="360" border>
           <ElTableColumn label="标本名称" min-width="180">
             <template #default="{ row }">
               <ElInput
@@ -384,9 +437,23 @@ watch(
               />
             </template>
           </ElTableColumn>
-          <ElTableColumn label="数量" min-width="120">
+          <ElTableColumn label="标本数量" min-width="120">
             <template #default="{ row }">
               <ElInputNumber v-model="row.specimenCount" :min="1" style="width: 100%" />
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="容器名称" min-width="160">
+            <template #default="{ row }">
+              <ReferenceOptionSelect
+                v-model="row.containerName"
+                :options="workflowReferenceOptions.containerNames"
+                placeholder="请选择或输入容器名称"
+              />
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="容器数量" min-width="120">
+            <template #default="{ row }">
+              <ElInputNumber v-model="row.containerCount" :min="1" style="width: 100%" />
             </template>
           </ElTableColumn>
           <ElTableColumn label="条码" min-width="180">
@@ -403,11 +470,16 @@ watch(
               />
             </template>
           </ElTableColumn>
-          <ElTableColumn fixed="right" label="操作" width="100">
+          <ElTableColumn fixed="right" label="操作" width="140">
             <template #default="{ row }">
-              <ElButton link type="danger" @click="removeRegisterRow(row.key)">
-                删除
-              </ElButton>
+              <div class="flex items-center gap-3">
+                <ElButton link type="primary" @click="addRegisterRow(row.key)">
+                  新增
+                </ElButton>
+                <ElButton link type="danger" @click="removeRegisterRow(row.key)">
+                  删除
+                </ElButton>
+              </div>
             </template>
           </ElTableColumn>
         </ElTable>

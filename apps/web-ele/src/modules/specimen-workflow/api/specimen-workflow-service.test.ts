@@ -6,14 +6,18 @@ import { requestClient } from '#/api/request';
 
 import {
   getApplicationDetail,
+  getApplicationTrackingByApplicationNo,
   getLatestRegistrationResult,
   importClinicalApplication,
   listApplications,
+  listPendingFixations,
+  listSpecimens,
   lookupApplicationForRegistration,
   mapApplicationPageResponse,
   mapApplicationDetailResponse,
   mapLatestRegistrationResultResponse,
   mapPendingSpecimenPageResponse,
+  mapSpecimenManagementListPageResponse,
   mapPendingTransportOrderPageResponse,
   mapRegistrationResultResponse,
 } from './specimen-workflow-service';
@@ -37,6 +41,8 @@ type ApplicationDetailResponse = Parameters<
 function createApplicationDetailResponse(
   overrides: Partial<ApplicationDetailResponse> = {},
 ): ApplicationDetailResponse {
+  const { specimenRemovalTime = null, ...restOverrides } = overrides;
+
   return {
     abnormalFlag: false,
     applicationDate: '2026-05-21',
@@ -57,6 +63,7 @@ function createApplicationDetailResponse(
     sourceHospitalId: null,
     sourceHospitalName: null,
     specimenSite: '胃',
+    specimenRemovalTime,
     status: 'SUBMITTED',
     submissionDate: '2026-05-21',
     submittingDepartmentId: 'DEP-1',
@@ -65,7 +72,7 @@ function createApplicationDetailResponse(
     submittingDoctorUserId: 'DOC-1',
     thirdPartySource: null,
     updatedAt: '2026-05-21T10:00:00',
-    ...overrides,
+    ...restOverrides,
   };
 }
 
@@ -111,6 +118,10 @@ describe('specimen-workflow-service mappers', () => {
         specimens: [
           {
             barcode: 'BC-001',
+            clinicalSymptom: '腹痛',
+            collectionMode: 'SURGERY',
+            containerCount: 1,
+            containerName: 'Specimen Bottle',
             fixationStatus: 'PENDING',
             id: 'SPEC-ID',
             labelPrintStatus: 'PRINTED',
@@ -127,6 +138,10 @@ describe('specimen-workflow-service mappers', () => {
 
     expect(mapped.recentEvents).toHaveLength(1);
     expect(mapped.specimens).toHaveLength(1);
+    expect(mapped.specimens[0]).toMatchObject({
+      clinicalSymptom: '腹痛',
+      collectionMode: 'SURGERY',
+    });
   });
 
   it('keeps pending specimen pagination stable', () => {
@@ -194,6 +209,27 @@ describe('specimen-workflow-service mappers', () => {
     expect(mapped.applicationId).toBe('APP-ID');
     expect(mapped.specimens).toEqual([]);
   });
+
+  it('fills omitted specimen management page structures', () => {
+    const mapped = mapSpecimenManagementListPageResponse({
+      page: 1,
+      size: 20,
+      total: 0,
+    });
+
+    expect(mapped).toEqual({
+      items: [],
+      page: 1,
+      size: 20,
+      summary: {
+        abnormalCount: 0,
+        labelPrintedCount: 0,
+        pendingLabelCount: 0,
+        totalCount: 0,
+      },
+      total: 0,
+    });
+  });
 });
 
 describe('specimen-workflow-service requests', () => {
@@ -226,6 +262,59 @@ describe('specimen-workflow-service requests', () => {
     });
 
     expect(requestClientMock.get).toHaveBeenCalledWith('/v1/applications/APP-ID');
+  });
+
+  it('looks up application id before querying tracking by application number', async () => {
+    requestClientMock.get
+      .mockResolvedValueOnce({
+        abnormalFlag: false,
+        applicationDate: '2026-05-21',
+        applicationFormStatus: 'NOT_UPLOADED',
+        applicationNo: 'AP202605220001',
+        applicationType: 'ROUTINE',
+        createdAt: '2026-05-21T10:00:00',
+        currentNode: 'DRAFT',
+        id: 'APP-ID',
+        latestLabelPrintStatus: null,
+        patientAge: '40',
+        patientGender: 'F',
+        patientName: '张三',
+        registeredSpecimenCount: 0,
+        status: 'DRAFT',
+        submissionDate: '2026-05-21',
+        submittingDepartmentName: '外科',
+        submittingDoctorName: '医生A',
+        updatedAt: '2026-05-21T10:00:00',
+      })
+      .mockResolvedValueOnce(
+        createApplicationDetailResponse({
+          applicationNo: 'AP202605220001',
+          id: 'APP-ID',
+        }),
+      );
+
+    await expect(
+      getApplicationTrackingByApplicationNo('AP202605220001'),
+    ).resolves.toMatchObject({
+      applicationNo: 'AP202605220001',
+      id: 'APP-ID',
+      recentEvents: [],
+      specimens: [],
+    });
+
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      1,
+      '/v1/specimens/applications/lookup',
+      {
+        params: {
+          applicationNo: 'AP202605220001',
+        },
+      },
+    );
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      2,
+      '/v1/applications/APP-ID/tracking',
+    );
   });
 
   it('uses unified requestClient for application list query', async () => {
@@ -317,5 +406,107 @@ describe('specimen-workflow-service requests', () => {
         },
       },
     );
+  });
+
+  it('uses unified requestClient for specimen management list query', async () => {
+    requestClientMock.get.mockResolvedValue({
+      items: [
+        {
+          abnormalFlag: false,
+          applicationId: 'APP-ID',
+          applicationNo: 'APP-001',
+          barcode: 'BC-001',
+          fixationStatus: 'PENDING',
+          labelPrintBatchNo: 'LP-001',
+          labelPrintStatus: 'FAILED',
+          latestTrackingAt: '2026-05-21T10:00:00',
+          patientName: '张三',
+          registeredAt: '2026-05-21T10:00:00',
+          specimenCount: 1,
+          specimenId: 'SPEC-ID',
+          specimenName: '胃组织',
+          specimenNo: 'SP-001',
+          specimenSite: '胃',
+          specimenStatus: 'REGISTERED',
+          specimenType: 'ROUTINE',
+          submittingDepartmentId: 'DEP-1',
+          submittingDepartmentName: '外科',
+        },
+      ],
+      page: 1,
+      size: 20,
+      summary: {
+        abnormalCount: 0,
+        labelPrintedCount: 0,
+        pendingLabelCount: 1,
+        totalCount: 1,
+      },
+      total: 1,
+    });
+
+    await expect(
+      listSpecimens({
+        keyword: 'APP-001',
+        labelPrintStatus: 'FAILED',
+        page: 1,
+        size: 20,
+      }),
+    ).resolves.toMatchObject({
+      items: [
+        {
+          applicationId: 'APP-ID',
+          labelPrintBatchNo: 'LP-001',
+          specimenId: 'SPEC-ID',
+        },
+      ],
+      summary: {
+        pendingLabelCount: 1,
+        totalCount: 1,
+      },
+      total: 1,
+    });
+
+    expect(requestClientMock.get).toHaveBeenCalledWith('/v1/specimens', {
+      params: {
+        keyword: 'APP-001',
+        labelPrintStatus: 'FAILED',
+        page: 1,
+        size: 20,
+      },
+    });
+  });
+
+  it('uses unified requestClient for pending fixation list query', async () => {
+    requestClientMock.get.mockResolvedValue({
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
+
+    await expect(
+      listPendingFixations({
+        applicationId: 'APP-ID',
+        departmentId: 'DEP-1',
+        fixationStatus: 'FIXING',
+        page: 1,
+        size: 20,
+      }),
+    ).resolves.toEqual({
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
+
+    expect(requestClientMock.get).toHaveBeenCalledWith('/v1/specimen-fixations/pending', {
+      params: {
+        applicationId: 'APP-ID',
+        departmentId: 'DEP-1',
+        fixationStatus: 'FIXING',
+        page: 1,
+        size: 20,
+      },
+    });
   });
 });
