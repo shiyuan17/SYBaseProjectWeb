@@ -4,6 +4,7 @@ import {
   QC_TYPE_OPTIONS,
   REWORK_TYPE_OPTIONS,
   TECHNICAL_OBJECT_TYPE_OPTIONS,
+  TECHNICAL_TASK_PRIORITY_OPTIONS,
   TECHNICAL_TASK_STATUS_OPTIONS,
   TECHNICAL_TASK_TYPE_OPTIONS,
 } from '../constants';
@@ -31,6 +32,7 @@ const taskStatusLabels = {
   RETURNED: '已退回',
 } satisfies Record<string, string>;
 const objectTypeLabels = createLabelMap(TECHNICAL_OBJECT_TYPE_OPTIONS);
+const taskPriorityLabels = createLabelMap(TECHNICAL_TASK_PRIORITY_OPTIONS);
 const reworkTypeLabels = {
   ...createLabelMap(REWORK_TYPE_OPTIONS),
   ADD_SLIDE: '补片',
@@ -105,6 +107,10 @@ export function formatTaskType(value?: null | string) {
 
 export function formatTaskStatus(value?: null | string) {
   return formatMappedValue(value, taskStatusLabels);
+}
+
+export function formatTaskPriority(value?: null | string) {
+  return formatMappedValue(value, taskPriorityLabels);
 }
 
 export function formatObjectType(value?: null | string) {

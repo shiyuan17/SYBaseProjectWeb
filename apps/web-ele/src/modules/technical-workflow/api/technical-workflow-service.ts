@@ -8,15 +8,20 @@ import type {
   EmbeddingResult,
   ExecuteReworkOrderRequest,
   GrossingCompleteRequest,
+  GrossingMediaAssetUploadResponse,
   GrossingResult,
   PendingTechnicalTaskPage,
   PendingTechnicalTaskQuery,
   ReworkOrderResult,
-  SlideStainingCompleteRequest,
-  SlideStainingResult,
   SlicingCompleteRequest,
   SlicingResult,
+  SlideStainingCompleteRequest,
+  SlideStainingResult,
   TaskOperationResult,
+  TechnicalTaskAssignRequest,
+  TechnicalTaskClaimRequest,
+  TechnicalTaskPriorityRequest,
+  TechnicalTaskReleaseRequest,
   TechnicalTaskStartRequest,
   TechnicalTrackingView,
 } from '../types/technical-workflow';
@@ -63,11 +68,51 @@ export async function listPendingTechnicalTasks(params: PendingTechnicalTaskQuer
   return mapPendingTechnicalTaskPageResponse(response);
 }
 
-export async function getTechnicalTracking(caseId: string) {
+export async function getTechnicalTracking(caseIdentifier: string) {
   const response = await requestClient.get<TechnicalTrackingResponse>(
-    `/v1/pathology-cases/${caseId}/technical-tracking`,
+    `/v1/pathology-cases/${encodeURIComponent(caseIdentifier)}/technical-tracking`,
   );
   return mapTechnicalTrackingResponse(response);
+}
+
+export async function assignTechnicalTask(
+  taskId: string,
+  data: TechnicalTaskAssignRequest,
+) {
+  return requestClient.post<PendingTechnicalTaskPage['items'][number]>(
+    `/v1/technical-tasks/${encodeURIComponent(taskId)}/assign`,
+    data,
+  );
+}
+
+export async function claimTechnicalTask(
+  taskId: string,
+  data: TechnicalTaskClaimRequest,
+) {
+  return requestClient.post<PendingTechnicalTaskPage['items'][number]>(
+    `/v1/technical-tasks/${encodeURIComponent(taskId)}/claim`,
+    data,
+  );
+}
+
+export async function releaseTechnicalTask(
+  taskId: string,
+  data: TechnicalTaskReleaseRequest,
+) {
+  return requestClient.post<PendingTechnicalTaskPage['items'][number]>(
+    `/v1/technical-tasks/${encodeURIComponent(taskId)}/release`,
+    data,
+  );
+}
+
+export async function updateTechnicalTaskPriority(
+  taskId: string,
+  data: TechnicalTaskPriorityRequest,
+) {
+  return requestClient.post<PendingTechnicalTaskPage['items'][number]>(
+    `/v1/technical-tasks/${encodeURIComponent(taskId)}/priority`,
+    data,
+  );
 }
 
 export async function startGrossing(data: TechnicalTaskStartRequest) {
@@ -76,6 +121,13 @@ export async function startGrossing(data: TechnicalTaskStartRequest) {
 
 export async function completeGrossing(data: GrossingCompleteRequest) {
   return requestClient.post<GrossingResult>('/v1/grossings/complete', data);
+}
+
+export async function uploadGrossingMediaAsset(file: File) {
+  return requestClient.upload<GrossingMediaAssetUploadResponse>(
+    '/v1/grossing-media-assets',
+    { file },
+  );
 }
 
 export async function createDehydrationBatch(data: CreateDehydrationBatchRequest) {

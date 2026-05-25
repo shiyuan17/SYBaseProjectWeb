@@ -1,77 +1,58 @@
 <script setup lang="ts">
-import type { PendingTechnicalTaskItem } from '../types/technical-workflow';
+import type {
+  PendingTechnicalTaskItem,
+  TechnicalTrackingView as TechnicalTrackingViewModel,
+} from '../types/technical-workflow';
 
-import { computed, reactive, ref } from 'vue';
-import { useRoute } from 'vue-router';
+import { computed, reactive, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
-import { useUserStore } from '@vben/stores';
 
 import {
   ElAlert,
   ElButton,
-  ElDescriptions,
-  ElDescriptionsItem,
   ElForm,
   ElFormItem,
   ElInput,
   ElMessage,
   ElPagination,
-  ElTable,
-  ElTableColumn,
-  ElTag,
 } from 'element-plus';
 
-import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
-
 import {
-  completeSlideStaining,
+  getTechnicalTracking,
   listPendingTechnicalTasks,
   startSlideStaining,
 } from '../api/technical-workflow-service';
+import StainingProcessDialog from '../components/StainingProcessDialog.vue';
+import TechnicalCaseContextPanel from '../components/TechnicalCaseContextPanel.vue';
+import TechnicalTaskQueuePanel from '../components/TechnicalTaskQueuePanel.vue';
+import TechnicalTaskStartDialog from '../components/TechnicalTaskStartDialog.vue';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
+import WorkstationTaskFocusPanel from '../components/WorkstationTaskFocusPanel.vue';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
-import {
-  formatCaseStatus,
-  formatDateTime,
-  formatNullable,
-  formatObjectType,
-  formatTaskStatus,
-} from '../utils/format';
+import { buildWorkstationCaseContext, buildWorkstationQueueItems } from '../utils/workstation';
 
 const route = useRoute();
-const userStore = useUserStore();
+const router = useRouter();
 
 const pageError = ref('');
 const loading = ref(false);
-const actionLoading = ref(false);
+const trackingLoading = ref(false);
 const pendingItems = ref<PendingTechnicalTaskItem[]>([]);
-const total = ref(0);
 const selectedTask = ref<null | PendingTechnicalTaskItem>(null);
+const total = ref(0);
+const startDialogVisible = ref(false);
+const processDialogVisible = ref(false);
+const trackingResult = ref<null | TechnicalTrackingViewModel>(null);
+const pendingAutoProcessTaskId = ref('');
 
 const filters = reactive({
   page: 1,
   pathologyNo: typeof route.query.pathologyNo === 'string' ? route.query.pathologyNo : '',
   size: DEFAULT_PAGE_SIZE,
-  timedOutOnly: false,
-});
-
-const operatorForm = reactive({
-  operatorName: userStore.userInfo?.realName ?? '',
-  operatorUserId: userStore.userInfo?.userId ?? '',
-  remarks: '',
-  terminalCode: '',
-});
-
-const completeForm = reactive({
-  qualityIssue: '',
-  slideId:
-    typeof route.query.objectId === 'string' && route.query.objectType === 'SLIDE'
-      ? route.query.objectId
-      : '',
-  stainingType: 'HE',
-  taskId: typeof route.query.taskId === 'string' ? route.query.taskId : '',
+  timedOutOnly: route.query.mode === 'exception',
 });
 
 const currentQuery = computed(() => ({
@@ -82,33 +63,40 @@ const currentQuery = computed(() => ({
   timedOutOnly: filters.timedOutOnly,
 }));
 
-function getTaskStatusTagType(status?: null | string) {
-  if (status === 'COMPLETED') {
-    return 'success';
+const queueItems = computed(() => buildWorkstationQueueItems(pendingItems.value, 'STAINING'));
+const caseContext = computed(() =>
+  trackingResult.value ? buildWorkstationCaseContext(trackingResult.value, 'STAINING') : null,
+);
+
+async function loadTrackingForTask(task: null | PendingTechnicalTaskItem) {
+  if (!task?.caseId) {
+    trackingResult.value = null;
+    return;
   }
-  if (status === 'IN_PROGRESS') {
-    return 'warning';
+  trackingLoading.value = true;
+  try {
+    trackingResult.value = await getTechnicalTracking(task.caseId);
+  } catch (error) {
+    trackingResult.value = null;
+    pageError.value = getWorkflowPageErrorMessage(error);
+  } finally {
+    trackingLoading.value = false;
   }
-  return 'info';
 }
 
-function normalizeOperatorPayload() {
-  return {
-    operatorName: operatorForm.operatorName.trim(),
-    operatorUserId: operatorForm.operatorUserId.trim() || null,
-    remarks: operatorForm.remarks.trim() || null,
-    terminalCode: operatorForm.terminalCode.trim() || null,
-  };
-}
-
-function adoptTask(row: PendingTechnicalTaskItem) {
-  selectedTask.value = row;
-  completeForm.taskId = row.id;
-  if (row.objectType === 'SLIDE' && row.objectId) {
-    completeForm.slideId = row.objectId;
+function selectTask(taskId: string, openProcess = false) {
+  const matchedTask = pendingItems.value.find((item) => item.id === taskId) ?? null;
+  if (!matchedTask) {
+    return;
   }
-  if (row.pathologyNo) {
-    filters.pathologyNo = row.pathologyNo;
+  selectedTask.value = matchedTask;
+  if (openProcess) {
+    if (matchedTask.taskStatus === 'PENDING') {
+      pendingAutoProcessTaskId.value = matchedTask.id;
+      startDialogVisible.value = true;
+      return;
+    }
+    processDialogVisible.value = true;
   }
 }
 
@@ -119,6 +107,15 @@ async function loadPendingData() {
     const result = await listPendingTechnicalTasks(currentQuery.value);
     pendingItems.value = result.items;
     total.value = result.total;
+
+    const deepLinkedTaskId = typeof route.query.taskId === 'string' ? route.query.taskId : '';
+    const preferredTaskId =
+      pendingAutoProcessTaskId.value || deepLinkedTaskId || selectedTask.value?.id || result.items[0]?.id;
+    if (preferredTaskId) {
+      selectTask(preferredTaskId, Boolean(pendingAutoProcessTaskId.value || deepLinkedTaskId));
+    } else {
+      selectedTask.value = null;
+    }
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
   } finally {
@@ -126,86 +123,39 @@ async function loadPendingData() {
   }
 }
 
-async function startTask(row: PendingTechnicalTaskItem) {
-  const payload = normalizeOperatorPayload();
-  if (!payload.operatorName) {
-    ElMessage.warning('请先选择操作人');
-    return;
-  }
-
-  actionLoading.value = true;
-  pageError.value = '';
-  try {
-    await startSlideStaining({
-      ...payload,
-      taskId: row.id,
-    });
-    ElMessage.success(`任务 ${row.id} 已开始染色`);
-    await loadPendingData();
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
-  } finally {
-    actionLoading.value = false;
+async function handleStartSubmitted() {
+  startDialogVisible.value = false;
+  await loadPendingData();
+  if (pendingAutoProcessTaskId.value) {
+    processDialogVisible.value = true;
+    pendingAutoProcessTaskId.value = '';
   }
 }
 
-async function submitStaining() {
-  const payload = normalizeOperatorPayload();
-  if (!completeForm.taskId.trim()) {
-    ElMessage.warning('请先选择待处理任务');
-    return;
-  }
-  if (!completeForm.slideId.trim()) {
-    ElMessage.warning('请先选择玻片');
-    return;
-  }
-  if (!completeForm.stainingType.trim()) {
-    ElMessage.warning('请先填写染色类型');
-    return;
-  }
-  if (!payload.operatorName) {
-    ElMessage.warning('请先选择操作人');
-    return;
-  }
-
-  actionLoading.value = true;
-  pageError.value = '';
-  try {
-    const result = await completeSlideStaining({
-      ...payload,
-      qualityIssue: completeForm.qualityIssue.trim() || null,
-      slideId: completeForm.slideId.trim(),
-      stainingType: completeForm.stainingType.trim(),
-      taskId: completeForm.taskId.trim(),
-    });
-    ElMessage.success(`染色完成，病例状态已更新为 ${formatCaseStatus(result.caseStatus)}`);
-    await loadPendingData();
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
-  } finally {
-    actionLoading.value = false;
-  }
+async function handleProcessSubmitted() {
+  processDialogVisible.value = false;
+  await loadPendingData();
 }
+
+function openTaskProcessing() {
+  if (!selectedTask.value) {
+    ElMessage.warning('请先从左侧队列选择任务');
+    return;
+  }
+  selectTask(selectedTask.value.id, true);
+}
+
+watch(selectedTask, (task) => {
+  void loadTrackingForTask(task);
+});
 
 void loadPendingData();
-
-const currentTaskContext = computed(() => ({
-  objectId: completeForm.slideId || selectedTask.value?.objectId || '',
-  objectType: selectedTask.value?.objectType ?? '',
-  pathologyNo: selectedTask.value?.pathologyNo ?? '',
-  taskId: completeForm.taskId || selectedTask.value?.id || '',
-}));
-
-function handleOperatorChange(user: null | { id: string; name: string }) {
-  operatorForm.operatorUserId = user?.id ?? '';
-  operatorForm.operatorName = user?.name ?? '';
-}
 </script>
 
 <template>
   <Page
     title="染色出片"
-    description="承接切片后的染色任务，录入玻片、染色类型与质量问题，并记录出片后的病例状态。"
+    description="让玻片信息、异常提醒和染色处理入口同屏停留，减少技师在任务池与追踪页之间来回切换。"
   >
     <div class="flex flex-col gap-4">
       <ElAlert
@@ -216,119 +166,96 @@ function handleOperatorChange(user: null | { id: string; name: string }) {
         show-icon
       />
 
-      <WorkflowSectionCard title="操作上下文" description="开始染色和完成染色共用操作人、终端与备注信息。">
-        <ElForm label-width="96px">
-          <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <ElFormItem label="操作人" required>
-              <SystemUserSelect
-                v-model="operatorForm.operatorUserId"
-                :selected-label="operatorForm.operatorName"
-                placeholder="请选择操作人"
-                @change="handleOperatorChange"
-              />
-            </ElFormItem>
-            <ElFormItem label="终端编码">
-              <ElInput v-model="operatorForm.terminalCode" placeholder="染色终端编码" />
-            </ElFormItem>
-            <ElFormItem label="备注">
-              <ElInput v-model="operatorForm.remarks" placeholder="必要时补充说明" />
-            </ElFormItem>
-          </div>
-        </ElForm>
-      </WorkflowSectionCard>
-
-      <WorkflowSectionCard title="染色完成表单" description="当前任务上下文带入玻片，表单中只保留用户需要决策的染色信息。">
-        <ElDescriptions :column="2" border class="mb-4">
-          <ElDescriptionsItem label="当前任务号">
-            {{ formatNullable(currentTaskContext.taskId) }}
-          </ElDescriptionsItem>
-          <ElDescriptionsItem label="病理号">
-            {{ formatNullable(currentTaskContext.pathologyNo) }}
-          </ElDescriptionsItem>
-          <ElDescriptionsItem label="对象类型">
-            {{ formatObjectType(currentTaskContext.objectType) }}
-          </ElDescriptionsItem>
-          <ElDescriptionsItem label="玻片编号">
-            {{ formatNullable(currentTaskContext.objectId) }}
-          </ElDescriptionsItem>
-        </ElDescriptions>
-        <ElForm label-width="96px">
-          <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <ElFormItem label="玻片编号" required>
-              <ElInput v-model="completeForm.slideId" disabled placeholder="由当前任务带入" />
-            </ElFormItem>
-            <ElFormItem label="染色类型" required>
-              <ElInput v-model="completeForm.stainingType" placeholder="例如：HE、IHC" />
-            </ElFormItem>
-          </div>
-          <ElFormItem label="质量问题">
-            <ElInput
-              v-model="completeForm.qualityIssue"
-              :rows="3"
-              placeholder="必要时记录染色质量问题"
-              type="textarea"
-            />
-          </ElFormItem>
-          <div class="flex justify-end">
-            <ElButton :loading="actionLoading" type="primary" @click="submitStaining">
-              完成染色
+      <div class="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)_360px]">
+        <TechnicalTaskQueuePanel
+          :items="queueItems"
+          :loading="loading"
+          :selected-task-id="selectedTask?.id ?? ''"
+          title="待染色任务"
+          description="默认按异常、待处理和病例维度排序，优先支持同一病例连续处理。"
+          @select="selectTask"
+        >
+          <template #filters>
+            <ElForm label-width="56px">
+              <ElFormItem label="病理号">
+                <ElInput
+                  v-model="filters.pathologyNo"
+                  clearable
+                  placeholder="病理号 / 玻片号"
+                  @keyup.enter="loadPendingData"
+                />
+              </ElFormItem>
+            </ElForm>
+          </template>
+          <template #extra>
+            <ElButton
+              :type="filters.timedOutOnly ? 'danger' : 'default'"
+              @click="filters.timedOutOnly = !filters.timedOutOnly; loadPendingData()"
+            >
+              {{ filters.timedOutOnly ? '仅异常' : '全部任务' }}
             </ElButton>
+          </template>
+        </TechnicalTaskQueuePanel>
+
+        <WorkflowSectionCard
+          title="当前处理对象"
+          description="将开始动作和染色处理收敛为单入口，当前阶段先复用稳定弹窗表单。"
+        >
+          <WorkstationTaskFocusPanel
+            action-title="核对玻片、登记染色类型并确认出片"
+            :next-flow-label="caseContext?.nextFlowLabel"
+            object-title="玻片 + 染色类型 + 出片结果"
+            reminder-title="质量确认、异常回流和后续诊断流向"
+            :task="selectedTask"
+          >
+            <div class="mt-4 flex flex-wrap gap-3">
+              <ElButton type="primary" @click="openTaskProcessing">
+                {{ selectedTask?.taskStatus === 'PENDING' ? '开始并处理染色' : '继续处理染色' }}
+              </ElButton>
+              <ElButton
+                @click="router.push({ path: '/technical-workflow/tracking', query: { caseId: selectedTask?.caseId ?? '' } })"
+              >
+                查看生产轨迹
+              </ElButton>
+            </div>
+
+            <div class="mt-4 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
+              当前先统一外层工作站交互，后续可继续补强同病例多玻片批量染色、预设染色方案和扫码连续上机。
+            </div>
+          </WorkstationTaskFocusPanel>
+
+          <div class="mt-4 flex justify-end">
+            <ElPagination
+              v-model:current-page="filters.page"
+              v-model:page-size="filters.size"
+              :page-sizes="[10, 20, 50, 100]"
+              :total="total"
+              background
+              layout="total, sizes, prev, pager, next"
+              @change="loadPendingData"
+            />
           </div>
-        </ElForm>
-      </WorkflowSectionCard>
+        </WorkflowSectionCard>
 
-      <WorkflowSectionCard title="待染色任务" description="列表可直接开始染色，也可带入玻片对象到完成表单。">
-        <ElTable v-loading="loading" :data="pendingItems" border>
-          <ElTableColumn label="任务号" min-width="180" prop="id" />
-          <ElTableColumn label="病理号" min-width="140">
-            <template #default="{ row }">
-              {{ formatNullable(row.pathologyNo) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="对象类型" min-width="140">
-            <template #default="{ row }">
-              {{ formatObjectType(row.objectType) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="对象编号" min-width="180">
-            <template #default="{ row }">
-              {{ formatNullable(row.objectId) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="任务状态" min-width="120">
-            <template #default="{ row }">
-              <ElTag :type="getTaskStatusTagType(row.taskStatus)">
-                {{ formatTaskStatus(row.taskStatus) }}
-              </ElTag>
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="创建时间" min-width="180">
-            <template #default="{ row }">
-              {{ formatDateTime(row.createdAt) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn fixed="right" label="操作" min-width="180">
-            <template #default="{ row }">
-              <div class="flex gap-2">
-                <ElButton link type="primary" @click="startTask(row)">开始染色</ElButton>
-                <ElButton link type="success" @click="adoptTask(row)">设为当前任务</ElButton>
-              </div>
-            </template>
-          </ElTableColumn>
-        </ElTable>
-
-        <div class="mt-4 flex justify-end">
-          <ElPagination
-            v-model:current-page="filters.page"
-            v-model:page-size="filters.size"
-            :page-sizes="[10, 20, 50, 100]"
-            :total="total"
-            background
-            layout="total, sizes, prev, pager, next, jumper"
-            @change="loadPendingData"
-          />
-        </div>
-      </WorkflowSectionCard>
+        <TechnicalCaseContextPanel :context="caseContext" :loading="trackingLoading" />
+      </div>
     </div>
+
+    <TechnicalTaskStartDialog
+      v-model="startDialogVisible"
+      confirm-text="开始染色"
+      :submit-action="(taskId, payload) => startSlideStaining({ ...payload, taskId })"
+      :success-message="(task) => `任务 ${task.id} 已开始染色`"
+      :task="selectedTask"
+      terminal-placeholder="染色终端编码"
+      title="开始染色"
+      @submitted="handleStartSubmitted"
+    />
+
+    <StainingProcessDialog
+      v-model="processDialogVisible"
+      :task="selectedTask"
+      @submitted="handleProcessSubmitted"
+    />
   </Page>
 </template>

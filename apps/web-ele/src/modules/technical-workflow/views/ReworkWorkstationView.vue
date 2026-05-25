@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import type { TechnicalTrackingView as TechnicalTrackingViewModel } from '../types/technical-workflow';
+import type {
+  ReworkOrderResult,
+  TechnicalTrackingView as TechnicalTrackingViewModel,
+} from '../types/technical-workflow';
 
-import { computed, reactive, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { computed, reactive, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
-import { useUserStore } from '@vben/stores';
 
 import {
   ElAlert,
@@ -16,21 +18,17 @@ import {
   ElFormItem,
   ElInput,
   ElMessage,
-  ElOption,
-  ElSelect,
   ElTable,
   ElTableColumn,
+  ElTag,
 } from 'element-plus';
 
-import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
-
-import {
-  createReworkOrder,
-  executeReworkOrder,
-  getTechnicalTracking,
-} from '../api/technical-workflow-service';
+import { getTechnicalTracking } from '../api/technical-workflow-service';
+import ReworkCreateDialog from '../components/ReworkCreateDialog.vue';
+import ReworkExecuteDialog from '../components/ReworkExecuteDialog.vue';
+import TechnicalCaseContextPanel from '../components/TechnicalCaseContextPanel.vue';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
-import { QC_TYPE_OPTIONS, REWORK_TYPE_OPTIONS } from '../constants';
+import { REWORK_TYPE_ROUTE_MAP, TASK_TYPE_TITLE_MAP } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import {
   formatDateTime,
@@ -40,114 +38,82 @@ import {
   formatReworkType,
   formatTaskStatus,
 } from '../utils/format';
+import { buildWorkstationCaseContext } from '../utils/workstation';
 
 const route = useRoute();
-const userStore = useUserStore();
+const router = useRouter();
+
+const REWORK_NEXT_TASK_MAP: Record<string, string> = {
+  REGROSSING: 'GROSSING',
+  REEMBED: 'EMBEDDING',
+  RESLICE: 'SLICING',
+  RESTAIN: 'STAINING',
+};
 
 const pageError = ref('');
-const actionLoading = ref(false);
 const trackingLoading = ref(false);
 const trackingResult = ref<null | TechnicalTrackingViewModel>(null);
+const createDialogVisible = ref(false);
+const executeDialogVisible = ref(false);
+const initialReworkOrderId = ref('');
+const deepLinkedHandled = ref(false);
+const nextStep = ref<null | { message: string; route: string; title: string }>(null);
 
-const operatorForm = reactive({
-  operatorName: userStore.userInfo?.realName ?? '',
-  operatorUserId: userStore.userInfo?.userId ?? '',
-  remarks: '',
-  terminalCode: '',
-});
-
-const createForm = reactive({
+const queryForm = reactive({
   caseId: typeof route.query.caseId === 'string' ? route.query.caseId : '',
-  embeddingBoxId:
-    typeof route.query.objectId === 'string' && route.query.objectType === 'EMBEDDING_BOX'
-      ? route.query.objectId
-      : '',
-  qcType: '',
-  reason: '',
-  reworkType: 'RESTAIN',
-  samplingBlockId:
-    typeof route.query.objectId === 'string' && route.query.objectType === 'SAMPLING_BLOCK'
-      ? route.query.objectId
-      : '',
-  slideId:
-    typeof route.query.objectId === 'string' && route.query.objectType === 'SLIDE'
-      ? route.query.objectId
-      : '',
-  specimenId:
-    typeof route.query.objectId === 'string' && route.query.objectType === 'SPECIMEN'
-      ? route.query.objectId
-      : '',
 });
 
-const executeForm = reactive({
-  reworkOrderId: '',
-});
+const resolvedCaseId = computed(() => trackingResult.value?.caseId?.trim() ?? '');
 
-const targetObjectOptions = computed(() => {
-  if (!trackingResult.value) {
-    return [];
-  }
-  if (createForm.reworkType === 'REGROSSING') {
-    return trackingResult.value.specimens.map((item) => ({
-      label: `${item.specimenNo || item.specimenId} / ${item.specimenName || '未命名标本'}`,
-      value: item.specimenId,
-    }));
-  }
-  if (createForm.reworkType === 'REEMBED') {
-    return trackingResult.value.blocks.map((item) => ({
-      label: `${item.blockCode || item.blockId} / ${item.description || '未命名蜡块'}`,
-      value: item.blockId,
-    }));
-  }
-  if (createForm.reworkType === 'RESLICE') {
-    return trackingResult.value.embeddingBoxes.map((item) => ({
-      label: `${item.embeddingBoxNo || item.embeddingBoxId} / 玻片数 ${item.slideCount}`,
-      value: item.embeddingBoxId,
-    }));
-  }
-  return trackingResult.value.slides.map((item) => ({
-    label: `${item.slideNo || item.slideId} / ${item.qualityStatus || '未评价'}`,
-    value: item.slideId,
-  }));
-});
+const caseContext = computed(() =>
+  trackingResult.value ? buildWorkstationCaseContext(trackingResult.value) : null,
+);
 
-const targetObjectLabel = computed(() => {
-  if (createForm.reworkType === 'REGROSSING') {
-    return '标本';
+const sourceObjectSummary = computed(() => {
+  const objectId = typeof route.query.objectId === 'string' ? route.query.objectId : '';
+  const objectType = typeof route.query.objectType === 'string' ? route.query.objectType : '';
+  if (!objectId && !objectType) {
+    return null;
   }
-  if (createForm.reworkType === 'REEMBED') {
-    return '取材块';
-  }
-  if (createForm.reworkType === 'RESLICE') {
-    return '包埋盒';
-  }
-  return '玻片';
-});
-
-function normalizeOperatorPayload() {
   return {
-    operatorName: operatorForm.operatorName.trim(),
-    operatorUserId: operatorForm.operatorUserId.trim() || null,
-    remarks: operatorForm.remarks.trim() || null,
-    terminalCode: operatorForm.terminalCode.trim() || null,
+    objectId,
+    objectType,
+    pathologyNo: typeof route.query.pathologyNo === 'string' ? route.query.pathologyNo : '',
+  };
+});
+
+function resolveNextStep(reworkType?: null | string, message = '返工已处理，可回到对应工位继续作业。') {
+  const routePath = reworkType ? REWORK_TYPE_ROUTE_MAP[reworkType] : '';
+  const taskType = reworkType ? REWORK_NEXT_TASK_MAP[reworkType] : '';
+  if (!routePath || !taskType) {
+    nextStep.value = null;
+    return;
+  }
+  nextStep.value = {
+    message,
+    route: routePath,
+    title: TASK_TYPE_TITLE_MAP[taskType] ?? routePath,
   };
 }
 
-function adoptReworkOrder(reworkOrderId: string) {
-  executeForm.reworkOrderId = reworkOrderId;
-}
-
 async function loadTracking() {
-  const caseId = createForm.caseId.trim();
-  if (!caseId) {
-    ElMessage.warning('请先输入病例编号');
+  const caseIdentifier = queryForm.caseId.trim();
+  if (!caseIdentifier) {
+    ElMessage.warning('请输入病例ID、病理号或对象ID');
     return;
   }
 
   trackingLoading.value = true;
   pageError.value = '';
   try {
-    trackingResult.value = await getTechnicalTracking(caseId);
+    trackingResult.value = await getTechnicalTracking(caseIdentifier);
+    if (
+      !deepLinkedHandled.value &&
+      (route.query.taskId || route.query.objectId || route.query.mode === 'exception')
+    ) {
+      deepLinkedHandled.value = true;
+      createDialogVisible.value = true;
+    }
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
   } finally {
@@ -155,96 +121,74 @@ async function loadTracking() {
   }
 }
 
-async function submitCreateRework() {
-  const payload = normalizeOperatorPayload();
-  if (!createForm.caseId.trim()) {
-    ElMessage.warning('请先输入病例编号');
+function openCreateDialog() {
+  if (!trackingResult.value) {
+    ElMessage.warning('请先加载病例追踪');
     return;
   }
-  if (!createForm.reworkType) {
-    ElMessage.warning('请选择返工类型');
-    return;
-  }
-  if (!createForm.reason.trim()) {
-    ElMessage.warning('请先输入返工原因');
-    return;
-  }
-  if (!payload.operatorName) {
-    ElMessage.warning('请先选择操作人');
-    return;
-  }
-
-  actionLoading.value = true;
-  pageError.value = '';
-  try {
-    await createReworkOrder({
-      ...payload,
-      caseId: createForm.caseId.trim(),
-      embeddingBoxId: createForm.embeddingBoxId.trim() || null,
-      qcType: createForm.qcType || null,
-      reason: createForm.reason.trim(),
-      reworkType: createForm.reworkType,
-      samplingBlockId: createForm.samplingBlockId.trim() || null,
-      slideId: createForm.slideId.trim() || null,
-      specimenId: createForm.specimenId.trim() || null,
-    });
-    ElMessage.success('返工单创建成功');
-    await loadTracking();
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
-  } finally {
-    actionLoading.value = false;
-  }
+  createDialogVisible.value = true;
 }
 
-async function submitExecuteRework() {
-  const payload = normalizeOperatorPayload();
-  if (!executeForm.reworkOrderId.trim()) {
-    ElMessage.warning('请先选择返工单');
+function openExecuteDialog(reworkOrderId = '') {
+  if (!trackingResult.value) {
+    ElMessage.warning('请先加载病例追踪');
     return;
   }
-  if (!payload.operatorName) {
-    ElMessage.warning('请先选择操作人');
-    return;
-  }
-
-  actionLoading.value = true;
-  pageError.value = '';
-  try {
-    await executeReworkOrder(executeForm.reworkOrderId.trim(), payload);
-    ElMessage.success('返工单执行成功');
-    await loadTracking();
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
-  } finally {
-    actionLoading.value = false;
-  }
+  initialReworkOrderId.value = reworkOrderId;
+  executeDialogVisible.value = true;
 }
 
-if (createForm.caseId) {
+function goToWorkstationByReworkType(reworkType?: null | string) {
+  const routePath = reworkType ? REWORK_TYPE_ROUTE_MAP[reworkType] : '';
+  if (!routePath || !resolvedCaseId.value) {
+    ElMessage.warning('当前返工类型缺少可跳转工位');
+    return;
+  }
+  void router.push({
+    path: routePath,
+    query: {
+      caseId: resolvedCaseId.value,
+      mode: 'exception',
+      pathologyNo: trackingResult.value?.pathologyNo ?? '',
+    },
+  });
+}
+
+function goToSuggestedNextStep() {
+  if (!nextStep.value || !resolvedCaseId.value) {
+    return;
+  }
+  void router.push({
+    path: nextStep.value.route,
+    query: {
+      caseId: resolvedCaseId.value,
+      mode: 'exception',
+      pathologyNo: trackingResult.value?.pathologyNo ?? '',
+    },
+  });
+}
+
+async function handleCreateSubmitted(result: ReworkOrderResult) {
+  createDialogVisible.value = false;
+  resolveNextStep(result.reworkType, '返工单已创建，可直接回到对应工位处理。');
+  await loadTracking();
+}
+
+async function handleExecuteSubmitted(result: ReworkOrderResult) {
+  executeDialogVisible.value = false;
+  resolveNextStep(result.reworkType, '返工单已执行，可继续回到目标工位完成处理。');
+  await loadTracking();
+}
+
+if (queryForm.caseId) {
   void loadTracking();
-}
-
-watch(
-  () => createForm.reworkType,
-  () => {
-    createForm.embeddingBoxId = '';
-    createForm.samplingBlockId = '';
-    createForm.slideId = '';
-    createForm.specimenId = '';
-  },
-);
-
-function handleOperatorChange(user: null | { id: string; name: string }) {
-  operatorForm.operatorUserId = user?.id ?? '';
-  operatorForm.operatorName = user?.name ?? '';
 }
 </script>
 
 <template>
   <Page
     title="返工工作站"
-    description="支持创建与执行返工单，并通过病例级追踪查看返工、质控和对象上下文。"
+    description="将返工从独立补录页前移为异常处理中心，病例概览、返工创建与回流动作同屏完成。"
   >
     <div class="flex flex-col gap-4">
       <ElAlert
@@ -255,197 +199,173 @@ function handleOperatorChange(user: null | { id: string; name: string }) {
         show-icon
       />
 
-      <WorkflowSectionCard title="操作上下文" description="创建与执行返工单共用当前操作人、终端和备注信息。">
-        <ElForm label-width="96px">
-          <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <ElFormItem label="操作人" required>
-              <SystemUserSelect
-                v-model="operatorForm.operatorUserId"
-                :selected-label="operatorForm.operatorName"
-                placeholder="请选择操作人"
-                @change="handleOperatorChange"
+      <div class="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)_360px]">
+        <WorkflowSectionCard
+          title="异常入口"
+          description="支持从病例编号直接进入，也兼容任务池和工位右侧提醒带着病例信息跳入。"
+        >
+          <ElForm label-width="96px">
+            <ElFormItem label="病例编号" required>
+              <ElInput
+                v-model="queryForm.caseId"
+                clearable
+                placeholder="请输入病例编号"
+                @keyup.enter="loadTracking"
               />
             </ElFormItem>
-            <ElFormItem label="终端编码">
-              <ElInput v-model="operatorForm.terminalCode" placeholder="返工工作站终端编码" />
+            <ElFormItem>
+              <ElButton :loading="trackingLoading" type="primary" @click="loadTracking">
+                加载病例追踪
+              </ElButton>
             </ElFormItem>
-            <ElFormItem label="备注">
-              <ElInput v-model="operatorForm.remarks" placeholder="必要时补充返工说明" />
-            </ElFormItem>
-          </div>
-        </ElForm>
-      </WorkflowSectionCard>
+          </ElForm>
 
-      <WorkflowSectionCard title="创建返工单" description="可针对病例、标本、蜡块、包埋盒或玻片创建返工单。">
-        <ElDescriptions :column="2" border class="mb-4">
-          <ElDescriptionsItem label="病例编号">
-            {{ formatNullable(createForm.caseId) }}
-          </ElDescriptionsItem>
-          <ElDescriptionsItem label="病理号">
-            {{ formatNullable(trackingResult?.pathologyNo) }}
-          </ElDescriptionsItem>
-        </ElDescriptions>
-        <ElForm label-width="108px">
-          <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <ElFormItem label="病例编号" required>
-              <ElInput v-model="createForm.caseId" placeholder="请输入病例编号" />
-            </ElFormItem>
-            <ElFormItem label="返工类型" required>
-              <ElSelect v-model="createForm.reworkType" placeholder="请选择返工类型">
-                <ElOption
-                  v-for="option in REWORK_TYPE_OPTIONS"
-                  :key="option.value"
-                  :label="option.label"
-                  :value="option.value"
-                />
-              </ElSelect>
-            </ElFormItem>
-            <ElFormItem label="质控类型">
-              <ElSelect v-model="createForm.qcType" clearable placeholder="请选择质控类型">
-                <ElOption
-                  v-for="option in QC_TYPE_OPTIONS"
-                  :key="option.value"
-                  :label="option.label"
-                  :value="option.value"
-                />
-              </ElSelect>
-            </ElFormItem>
-            <ElFormItem :label="`${targetObjectLabel}选择`">
-              <ElSelect
-                :model-value="
-                  createForm.reworkType === 'REGROSSING'
-                    ? createForm.specimenId
-                    : createForm.reworkType === 'REEMBED'
-                      ? createForm.samplingBlockId
-                      : createForm.reworkType === 'RESLICE'
-                        ? createForm.embeddingBoxId
-                        : createForm.slideId
-                "
-                clearable
-                filterable
-                :placeholder="`请选择${targetObjectLabel}`"
-                style="width: 100%"
-                @update:model-value="
-                  (value) => {
-                    createForm.specimenId = createForm.reworkType === 'REGROSSING' ? value : '';
-                    createForm.samplingBlockId = createForm.reworkType === 'REEMBED' ? value : '';
-                    createForm.embeddingBoxId = createForm.reworkType === 'RESLICE' ? value : '';
-                    createForm.slideId = createForm.reworkType === 'RESTAIN' ? value : '';
-                  }
-                "
-              >
-                <ElOption
-                  v-for="option in targetObjectOptions"
-                  :key="option.value"
-                  :label="option.label"
-                  :value="option.value"
-                />
-              </ElSelect>
-            </ElFormItem>
+          <div
+            v-if="sourceObjectSummary"
+            class="mt-4 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground"
+          >
+            当前深链对象：{{ formatNullable(sourceObjectSummary.objectType) }} / {{ formatNullable(sourceObjectSummary.objectId) }}
           </div>
-          <ElFormItem label="返工原因" required>
-            <ElInput
-              v-model="createForm.reason"
-              :rows="3"
-              placeholder="请输入返工原因"
-              type="textarea"
-            />
-          </ElFormItem>
-          <div class="flex justify-end gap-2">
-            <ElButton :loading="trackingLoading" @click="loadTracking">加载病例追踪</ElButton>
-            <ElButton :loading="actionLoading" type="primary" @click="submitCreateRework">
+
+          <div class="mt-4 flex flex-wrap gap-3">
+            <ElButton :disabled="!trackingResult" type="primary" @click="openCreateDialog">
               创建返工单
             </ElButton>
-          </div>
-        </ElForm>
-      </WorkflowSectionCard>
-
-      <WorkflowSectionCard title="执行返工单" description="优先从病例追踪结果中选择返工单，也支持直接带入待执行返工单。">
-        <ElForm inline label-width="96px">
-          <ElFormItem label="返工单" required>
-            <ElSelect
-              v-model="executeForm.reworkOrderId"
-              clearable
-              filterable
-              placeholder="请选择返工单"
-              style="width: 280px"
-            >
-              <ElOption
-                v-for="rework in trackingResult?.reworks ?? []"
-                :key="rework.reworkOrderId"
-                :label="`${rework.reworkOrderId} / ${rework.reworkType || '未命名类型'} / ${rework.status || '未知状态'}`"
-                :value="rework.reworkOrderId"
-              />
-            </ElSelect>
-          </ElFormItem>
-          <ElFormItem>
-            <ElButton :loading="actionLoading" type="success" @click="submitExecuteRework">
+            <ElButton :disabled="!trackingResult?.reworks?.length" type="success" @click="openExecuteDialog()">
               执行返工单
             </ElButton>
-          </ElFormItem>
-        </ElForm>
-      </WorkflowSectionCard>
+          </div>
+        </WorkflowSectionCard>
 
-      <WorkflowSectionCard
-        v-if="trackingResult"
-        title="病例返工与质控概览"
-        description="用于确认当前病例已有返工单、质控记录和对象上下文。"
-      >
-        <ElTable :data="trackingResult.reworks" border>
-          <ElTableColumn label="返工单号" min-width="180" prop="reworkOrderId" />
-          <ElTableColumn label="返工类型" min-width="140">
-            <template #default="{ row }">
-              {{ formatReworkType(row.reworkType) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="状态" min-width="120">
-            <template #default="{ row }">
-              {{ formatTaskStatus(row.status) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="原因" min-width="220">
-            <template #default="{ row }">
-              {{ formatNullable(row.reason) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn fixed="right" label="操作" min-width="120">
-            <template #default="{ row }">
-              <ElButton link type="primary" @click="adoptReworkOrder(row.reworkOrderId)">
-                带入执行
-              </ElButton>
-            </template>
-          </ElTableColumn>
-        </ElTable>
+        <div class="flex flex-col gap-4">
+          <WorkflowSectionCard
+            title="当前异常处理区"
+            description="保留现有返工弹窗逻辑，但把病例摘要、返工列表和下一步回流动作固定在主区域。"
+          >
+            <template v-if="trackingResult">
+              <ElDescriptions :column="2" border>
+                <ElDescriptionsItem label="病例编号">{{ formatNullable(trackingResult.caseId) }}</ElDescriptionsItem>
+                <ElDescriptionsItem label="病理号">{{ formatNullable(trackingResult.pathologyNo) }}</ElDescriptionsItem>
+                <ElDescriptionsItem label="返工数">{{ trackingResult.reworks.length }}</ElDescriptionsItem>
+                <ElDescriptionsItem label="质控异常数">{{ trackingResult.qcEvaluations.length }}</ElDescriptionsItem>
+              </ElDescriptions>
 
-        <ElTable :data="trackingResult.qcEvaluations" border class="mt-4">
-          <ElTableColumn label="玻片编号" min-width="180" prop="slideId" />
-          <ElTableColumn label="玻片号" min-width="140">
-            <template #default="{ row }">
-              {{ formatNullable(row.slideNo) }}
+              <ElAlert
+                v-if="nextStep"
+                class="mt-4"
+                :closable="false"
+                :title="`建议下一步：${nextStep.title}`"
+                type="success"
+                show-icon
+              >
+                <template #default>
+                  <div class="flex flex-wrap items-center justify-between gap-3">
+                    <span>{{ nextStep.message }}</span>
+                    <ElButton plain size="small" type="success" @click="goToSuggestedNextStep">
+                      返回对应工位
+                    </ElButton>
+                  </div>
+                </template>
+              </ElAlert>
             </template>
-          </ElTableColumn>
-          <ElTableColumn label="质控类型" min-width="120">
-            <template #default="{ row }">
-              {{ formatQcType(row.qcType) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="评估结果" min-width="140">
-            <template #default="{ row }">
-              {{ formatEvaluationResult(row.evaluationResult) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="改进建议" min-width="220">
-            <template #default="{ row }">
-              {{ formatNullable(row.improvementSuggestion) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="评估时间" min-width="180">
-            <template #default="{ row }">
-              {{ formatDateTime(row.evaluatedAt) }}
-            </template>
-          </ElTableColumn>
-        </ElTable>
-      </WorkflowSectionCard>
+            <div v-else class="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
+              加载病例后，这里会固定展示返工摘要、返工列表和回流入口。
+            </div>
+          </WorkflowSectionCard>
+
+          <WorkflowSectionCard
+            v-if="trackingResult"
+            title="返工单列表"
+            description="返工来源和目标工位都在当前页直接确认，不需要再回忆对象层级。"
+          >
+            <ElTable :data="trackingResult.reworks" border>
+              <ElTableColumn label="返工单号" min-width="180" prop="reworkOrderId" />
+              <ElTableColumn label="返工类型" min-width="140">
+                <template #default="{ row }">
+                  {{ formatReworkType(row.reworkType) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="状态" min-width="120">
+                <template #default="{ row }">
+                  <ElTag :type="row.status === 'COMPLETED' ? 'success' : row.status === 'IN_PROGRESS' ? 'warning' : 'info'">
+                    {{ formatTaskStatus(row.status) }}
+                  </ElTag>
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="原因" min-width="220">
+                <template #default="{ row }">
+                  {{ formatNullable(row.reason) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn fixed="right" label="操作" min-width="220">
+                <template #default="{ row }">
+                  <div class="flex items-center gap-2">
+                    <ElButton link type="primary" @click="openExecuteDialog(row.reworkOrderId)">
+                      执行返工
+                    </ElButton>
+                    <ElButton link type="success" @click="goToWorkstationByReworkType(row.reworkType)">
+                      回到对应工位
+                    </ElButton>
+                  </div>
+                </template>
+              </ElTableColumn>
+            </ElTable>
+          </WorkflowSectionCard>
+
+          <WorkflowSectionCard
+            v-if="trackingResult"
+            title="质控与异常记录"
+            description="返工前先核对质控问题、改进建议和评估时间。"
+          >
+            <ElTable :data="trackingResult.qcEvaluations" border>
+              <ElTableColumn label="玻片编号" min-width="180" prop="slideId" />
+              <ElTableColumn label="玻片号" min-width="140">
+                <template #default="{ row }">
+                  {{ formatNullable(row.slideNo) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="质控类型" min-width="120">
+                <template #default="{ row }">
+                  {{ formatQcType(row.qcType) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="评估结果" min-width="140">
+                <template #default="{ row }">
+                  {{ formatEvaluationResult(row.evaluationResult) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="改进建议" min-width="220">
+                <template #default="{ row }">
+                  {{ formatNullable(row.improvementSuggestion) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="评估时间" min-width="180">
+                <template #default="{ row }">
+                  {{ formatDateTime(row.evaluatedAt) }}
+                </template>
+              </ElTableColumn>
+            </ElTable>
+          </WorkflowSectionCard>
+        </div>
+
+        <TechnicalCaseContextPanel :context="caseContext" :loading="trackingLoading" />
+      </div>
     </div>
+
+    <ReworkCreateDialog
+      v-model="createDialogVisible"
+      :case-id="resolvedCaseId"
+      :initial-object-id="typeof route.query.objectId === 'string' ? route.query.objectId : ''"
+      :initial-object-type="typeof route.query.objectType === 'string' ? route.query.objectType : ''"
+      :tracking-result="trackingResult"
+      @submitted="handleCreateSubmitted"
+    />
+
+    <ReworkExecuteDialog
+      v-model="executeDialogVisible"
+      :initial-rework-order-id="initialReworkOrderId"
+      :tracking-result="trackingResult"
+      @submitted="handleExecuteSubmitted"
+    />
   </Page>
 </template>

@@ -5,6 +5,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { requestClient } from '#/api/request';
 
 import {
+  assignTechnicalTask,
+  claimTechnicalTask,
   completeDehydrationBatch,
   completeEmbedding,
   completeGrossing,
@@ -17,11 +19,13 @@ import {
   listPendingTechnicalTasks,
   mapPendingTechnicalTaskPageResponse,
   mapTechnicalTrackingResponse,
+  releaseTechnicalTask,
   startDehydrationBatch,
   startEmbedding,
   startGrossing,
   startSlicing,
   startSlideStaining,
+  updateTechnicalTaskPriority,
 } from './technical-workflow-service';
 
 vi.mock('#/api/request', () => ({
@@ -88,6 +92,8 @@ describe('technical-workflow-service requests', () => {
       pathologyNo: 'BL-001',
       size: 20,
       taskType: 'GROSSING',
+      priority: 'STAT',
+      currentNode: 'GROSSING',
       timedOutOnly: true,
     });
 
@@ -99,6 +105,8 @@ describe('technical-workflow-service requests', () => {
           pathologyNo: 'BL-001',
           size: 20,
           taskType: 'GROSSING',
+          priority: 'STAT',
+          currentNode: 'GROSSING',
           timedOutOnly: true,
         },
       },
@@ -121,6 +129,77 @@ describe('technical-workflow-service requests', () => {
 
     expect(requestClientMock.get).toHaveBeenCalledWith(
       '/v1/pathology-cases/CASE-001/technical-tracking',
+    );
+  });
+
+  it('posts task management endpoints with exact paths', async () => {
+    await assignTechnicalTask('TASK/1', {
+      assignedToName: '技师A',
+      operatorName: '调度员',
+      priority: 'STAT',
+      stationCode: 'GROSSING',
+    });
+    await claimTechnicalTask('TASK-2', {
+      assignedToName: '技师B',
+      assignedToUserId: 'USER-B',
+      operatorName: '技师B',
+    });
+    await releaseTechnicalTask('TASK-3', {
+      operatorName: '调度员',
+      remarks: '释放',
+    });
+    await updateTechnicalTaskPriority('TASK-4', {
+      operatorName: '调度员',
+      priority: 'PRIORITY',
+    });
+
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      1,
+      '/v1/technical-tasks/TASK%2F1/assign',
+      {
+        assignedToName: '技师A',
+        operatorName: '调度员',
+        priority: 'STAT',
+        stationCode: 'GROSSING',
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      2,
+      '/v1/technical-tasks/TASK-2/claim',
+      {
+        assignedToName: '技师B',
+        assignedToUserId: 'USER-B',
+        operatorName: '技师B',
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      3,
+      '/v1/technical-tasks/TASK-3/release',
+      {
+        operatorName: '调度员',
+        remarks: '释放',
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      4,
+      '/v1/technical-tasks/TASK-4/priority',
+      {
+        operatorName: '调度员',
+        priority: 'PRIORITY',
+      },
+    );
+  });
+
+  it('encodes technical tracking identifiers in the path', async () => {
+    requestClientMock.get.mockResolvedValue({
+      caseId: 'CASE-001',
+      pathologyNo: 'BL/2026/001',
+    });
+
+    await getTechnicalTracking('BL/2026/001');
+
+    expect(requestClientMock.get).toHaveBeenCalledWith(
+      '/v1/pathology-cases/BL%2F2026%2F001/technical-tracking',
     );
   });
 

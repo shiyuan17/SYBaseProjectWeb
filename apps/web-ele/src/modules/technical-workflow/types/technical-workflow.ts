@@ -5,6 +5,9 @@ export interface PendingTechnicalTaskQuery {
   objectType?: null | string;
   page: number;
   pathologyNo?: null | string;
+  assignedToUserId?: null | string;
+  currentNode?: null | string;
+  priority?: null | string;
   size: number;
   taskStatus?: null | string;
   taskType?: null | string;
@@ -23,13 +26,29 @@ export interface PendingTechnicalTaskItem {
   objectType: null | string;
   pathologyNo: null | string;
   payload: null | string;
+  assignedToName?: null | string;
+  assignedToUserId?: null | string;
+  currentNode?: null | string;
+  expectedCompletedAt?: null | string;
   remarks: null | string;
+  productionRemarks?: null | string;
+  receivedAt?: null | string;
+  stationCode?: null | string;
+  stationName?: null | string;
   specimenId: null | string;
   startedAt: null | string;
   taskStatus: null | string;
   taskType: null | string;
+  priority?: null | string;
   timedOut: boolean;
   timeoutRuleCode: null | string;
+}
+
+export interface TechnicalOperatorFormValue {
+  operatorName: string;
+  operatorUserId: string;
+  remarks: string;
+  terminalCode: string;
 }
 
 export interface PendingTechnicalTaskPage {
@@ -124,6 +143,45 @@ export interface TechnicalTaskStartRequest {
   terminalCode?: null | string;
 }
 
+export interface TechnicalTaskAssignRequest {
+  assignedToName?: null | string;
+  assignedToUserId?: null | string;
+  expectedCompletedAt?: null | string;
+  operatorName: string;
+  operatorUserId?: null | string;
+  priority?: null | string;
+  productionRemarks?: null | string;
+  stationCode?: null | string;
+  stationName?: null | string;
+  terminalCode?: null | string;
+}
+
+export interface TechnicalTaskClaimRequest {
+  assignedToName: string;
+  assignedToUserId: string;
+  operatorName: string;
+  operatorUserId?: null | string;
+  remarks?: null | string;
+  stationCode?: null | string;
+  stationName?: null | string;
+  terminalCode?: null | string;
+}
+
+export interface TechnicalTaskReleaseRequest {
+  operatorName: string;
+  operatorUserId?: null | string;
+  remarks?: null | string;
+  terminalCode?: null | string;
+}
+
+export interface TechnicalTaskPriorityRequest {
+  operatorName: string;
+  operatorUserId?: null | string;
+  priority: string;
+  productionRemarks?: null | string;
+  terminalCode?: null | string;
+}
+
 export interface TaskOperationResult {
   caseId: string;
   caseStatus: null | string;
@@ -136,6 +194,13 @@ export interface MediaAssetItem {
   fileUrl: string;
 }
 
+export interface GrossingMediaAssetUploadResponse {
+  contentType: string;
+  fileName: string;
+  fileUrl: string;
+  size: number;
+}
+
 export interface GrossingBlockItemRequest {
   blockDescription?: null | string;
   blockSite?: null | string;
@@ -144,10 +209,14 @@ export interface GrossingBlockItemRequest {
 
 export interface GrossingSpecimenItemRequest {
   blocks: GrossingBlockItemRequest[];
+  blockCount?: null | number;
   bodyPartId?: null | string;
+  cutSurfaceFeature?: null | string;
   grossDescription?: null | string;
+  marginMarking?: null | string;
   mediaAssets?: MediaAssetItem[];
   samplingTemplateId?: null | string;
+  sizeText?: null | string;
   specimenId: string;
   specimenType: string;
 }
@@ -286,4 +355,57 @@ export interface ReworkOrderResult {
   caseId: string;
   reworkType: null | string;
   status: null | string;
+}
+
+export interface WorkstationAlert {
+  actionLabel?: string;
+  actionQuery?: Record<string, string>;
+  actionRoute?: string;
+  description: string;
+  id: string;
+  severity: 'danger' | 'info' | 'success' | 'warning';
+  title: string;
+}
+
+export interface ObjectProgressNode {
+  children?: ObjectProgressNode[];
+  id: string;
+  label: string;
+  parentId?: string;
+  secondaryLabel?: null | string;
+  status?: null | string;
+  type: 'CASE' | 'EMBEDDING_BOX' | 'SAMPLING_BLOCK' | 'SLIDE' | 'SPECIMEN';
+}
+
+export interface WorkstationCaseContext {
+  activeTaskCount: number;
+  alerts: WorkstationAlert[];
+  blockCount: number;
+  caseId: string;
+  caseStatus: null | string;
+  currentTaskSuggestions: string[];
+  embeddingBoxCount: number;
+  nextFlowLabel: string;
+  pathologyNo: null | string;
+  pendingReworkCount: number;
+  progressNodes: ObjectProgressNode[];
+  recentEvents: TechnicalTrackingEventSummary[];
+  slideCount: number;
+  specimenCount: number;
+}
+
+export interface WorkstationQueueItem {
+  alertLevel: 'danger' | 'info' | 'success' | 'warning';
+  badges: string[];
+  searchText: string;
+  task: PendingTechnicalTaskItem;
+}
+
+export interface WorkstationSummaryBucket {
+  inProgress: number;
+  path: string;
+  pending: number;
+  taskType: string;
+  timedOut: number;
+  title: string;
 }

@@ -50,12 +50,19 @@ export const TECHNICAL_TASK_TYPE_OPTIONS = [
   { label: '包埋', value: 'EMBEDDING' },
   { label: '切片', value: 'SLICING' },
   { label: '染色出片', value: 'STAINING' },
+  { label: '返工', value: 'REWORK' },
 ] as const;
 
 export const TECHNICAL_TASK_STATUS_OPTIONS = [
   { label: '待处理', value: 'PENDING' },
   { label: '处理中', value: 'IN_PROGRESS' },
   { label: '已完成', value: 'COMPLETED' },
+] as const;
+
+export const TECHNICAL_TASK_PRIORITY_OPTIONS = [
+  { label: '普通', value: 'NORMAL' },
+  { label: '优先', value: 'PRIORITY' },
+  { label: '急诊', value: 'STAT' },
 ] as const;
 
 export const TECHNICAL_OBJECT_TYPE_OPTIONS = [
@@ -91,6 +98,30 @@ export const TASK_TYPE_ROUTE_MAP: Record<string, string> = {
   DEHYDRATION: '/technical-workflow/dehydration',
   EMBEDDING: '/technical-workflow/embedding',
   GROSSING: '/technical-workflow/grossing',
+  REWORK: '/technical-workflow/rework',
   SLICING: '/technical-workflow/slicing',
   STAINING: '/technical-workflow/staining',
+};
+
+export const TASK_TYPE_TITLE_MAP: Record<string, string> = {
+  DEHYDRATION: '脱水工作站',
+  EMBEDDING: '包埋工作站',
+  GROSSING: '取材描写',
+  REWORK: '返工工作站',
+  SLICING: '切片工作站',
+  STAINING: '染色出片',
+};
+
+export const NEXT_TASK_TYPE_MAP: Record<string, string> = {
+  DEHYDRATION: 'EMBEDDING',
+  EMBEDDING: 'SLICING',
+  GROSSING: 'DEHYDRATION',
+  SLICING: 'STAINING',
+};
+
+export const REWORK_TYPE_ROUTE_MAP: Record<string, string> = {
+  REGROSSING: '/technical-workflow/grossing',
+  REEMBED: '/technical-workflow/embedding',
+  RESLICE: '/technical-workflow/slicing',
+  RESTAIN: '/technical-workflow/staining',
 };

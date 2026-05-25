@@ -144,7 +144,7 @@ const routes: RouteRecordRaw[] = [
           import('#/modules/system-management/views/NumberingRulesView.vue'),
         meta: {
           authority: [M1_PERMISSION_CODES.NUMBERING_QUERY],
-          icon: 'carbon:number-1',
+          icon: 'carbon:list-numbered',
           title: '编号规则',
         },
       },

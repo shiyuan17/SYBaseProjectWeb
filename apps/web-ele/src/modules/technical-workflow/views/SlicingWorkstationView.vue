@@ -1,75 +1,58 @@
 <script setup lang="ts">
-import type { PendingTechnicalTaskItem } from '../types/technical-workflow';
+import type {
+  PendingTechnicalTaskItem,
+  TechnicalTrackingView as TechnicalTrackingViewModel,
+} from '../types/technical-workflow';
 
-import { computed, reactive, ref } from 'vue';
-import { useRoute } from 'vue-router';
+import { computed, reactive, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
-import { useUserStore } from '@vben/stores';
 
 import {
   ElAlert,
   ElButton,
-  ElDescriptions,
-  ElDescriptionsItem,
   ElForm,
   ElFormItem,
   ElInput,
-  ElInputNumber,
   ElMessage,
   ElPagination,
-  ElTable,
-  ElTableColumn,
-  ElTag,
 } from 'element-plus';
 
-import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
-
 import {
-  completeSlicing,
+  getTechnicalTracking,
   listPendingTechnicalTasks,
   startSlicing,
 } from '../api/technical-workflow-service';
+import SlicingProcessDialog from '../components/SlicingProcessDialog.vue';
+import TechnicalCaseContextPanel from '../components/TechnicalCaseContextPanel.vue';
+import TechnicalTaskQueuePanel from '../components/TechnicalTaskQueuePanel.vue';
+import TechnicalTaskStartDialog from '../components/TechnicalTaskStartDialog.vue';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
+import WorkstationTaskFocusPanel from '../components/WorkstationTaskFocusPanel.vue';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
-import { formatDateTime, formatNullable, formatObjectType, formatTaskStatus } from '../utils/format';
+import { buildWorkstationCaseContext, buildWorkstationQueueItems } from '../utils/workstation';
 
 const route = useRoute();
-const userStore = useUserStore();
+const router = useRouter();
 
 const pageError = ref('');
 const loading = ref(false);
-const actionLoading = ref(false);
+const trackingLoading = ref(false);
 const pendingItems = ref<PendingTechnicalTaskItem[]>([]);
-const total = ref(0);
 const selectedTask = ref<null | PendingTechnicalTaskItem>(null);
+const total = ref(0);
+const startDialogVisible = ref(false);
+const processDialogVisible = ref(false);
+const trackingResult = ref<null | TechnicalTrackingViewModel>(null);
+const pendingAutoProcessTaskId = ref('');
 
 const filters = reactive({
   page: 1,
   pathologyNo: typeof route.query.pathologyNo === 'string' ? route.query.pathologyNo : '',
   size: DEFAULT_PAGE_SIZE,
-  timedOutOnly: false,
-});
-
-const operatorForm = reactive({
-  operatorName: userStore.userInfo?.realName ?? '',
-  operatorUserId: userStore.userInfo?.userId ?? '',
-  remarks: '',
-  terminalCode: '',
-});
-
-const completeForm = reactive({
-  deviceCode: '',
-  embeddingBoxId:
-    typeof route.query.objectId === 'string' && route.query.objectType === 'EMBEDDING_BOX'
-      ? route.query.objectId
-      : '',
-  qualityIssue: '',
-  slideCount: 1,
-  sliceCountPerSlide: 1,
-  sliceThickness: '',
-  taskId: typeof route.query.taskId === 'string' ? route.query.taskId : '',
+  timedOutOnly: route.query.mode === 'exception',
 });
 
 const currentQuery = computed(() => ({
@@ -80,33 +63,40 @@ const currentQuery = computed(() => ({
   timedOutOnly: filters.timedOutOnly,
 }));
 
-function getTaskStatusTagType(status?: null | string) {
-  if (status === 'COMPLETED') {
-    return 'success';
+const queueItems = computed(() => buildWorkstationQueueItems(pendingItems.value, 'SLICING'));
+const caseContext = computed(() =>
+  trackingResult.value ? buildWorkstationCaseContext(trackingResult.value, 'SLICING') : null,
+);
+
+async function loadTrackingForTask(task: null | PendingTechnicalTaskItem) {
+  if (!task?.caseId) {
+    trackingResult.value = null;
+    return;
   }
-  if (status === 'IN_PROGRESS') {
-    return 'warning';
+  trackingLoading.value = true;
+  try {
+    trackingResult.value = await getTechnicalTracking(task.caseId);
+  } catch (error) {
+    trackingResult.value = null;
+    pageError.value = getWorkflowPageErrorMessage(error);
+  } finally {
+    trackingLoading.value = false;
   }
-  return 'info';
 }
 
-function normalizeOperatorPayload() {
-  return {
-    operatorName: operatorForm.operatorName.trim(),
-    operatorUserId: operatorForm.operatorUserId.trim() || null,
-    remarks: operatorForm.remarks.trim() || null,
-    terminalCode: operatorForm.terminalCode.trim() || null,
-  };
-}
-
-function adoptTask(row: PendingTechnicalTaskItem) {
-  selectedTask.value = row;
-  completeForm.taskId = row.id;
-  if (row.objectType === 'EMBEDDING_BOX' && row.objectId) {
-    completeForm.embeddingBoxId = row.objectId;
+function selectTask(taskId: string, openProcess = false) {
+  const matchedTask = pendingItems.value.find((item) => item.id === taskId) ?? null;
+  if (!matchedTask) {
+    return;
   }
-  if (row.pathologyNo) {
-    filters.pathologyNo = row.pathologyNo;
+  selectedTask.value = matchedTask;
+  if (openProcess) {
+    if (matchedTask.taskStatus === 'PENDING') {
+      pendingAutoProcessTaskId.value = matchedTask.id;
+      startDialogVisible.value = true;
+      return;
+    }
+    processDialogVisible.value = true;
   }
 }
 
@@ -117,6 +107,15 @@ async function loadPendingData() {
     const result = await listPendingTechnicalTasks(currentQuery.value);
     pendingItems.value = result.items;
     total.value = result.total;
+
+    const deepLinkedTaskId = typeof route.query.taskId === 'string' ? route.query.taskId : '';
+    const preferredTaskId =
+      pendingAutoProcessTaskId.value || deepLinkedTaskId || selectedTask.value?.id || result.items[0]?.id;
+    if (preferredTaskId) {
+      selectTask(preferredTaskId, Boolean(pendingAutoProcessTaskId.value || deepLinkedTaskId));
+    } else {
+      selectedTask.value = null;
+    }
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
   } finally {
@@ -124,85 +123,39 @@ async function loadPendingData() {
   }
 }
 
-async function startTask(row: PendingTechnicalTaskItem) {
-  const payload = normalizeOperatorPayload();
-  if (!payload.operatorName) {
-    ElMessage.warning('请先选择操作人');
-    return;
-  }
-
-  actionLoading.value = true;
-  pageError.value = '';
-  try {
-    await startSlicing({
-      ...payload,
-      taskId: row.id,
-    });
-    ElMessage.success(`任务 ${row.id} 已开始切片`);
-    await loadPendingData();
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
-  } finally {
-    actionLoading.value = false;
+async function handleStartSubmitted() {
+  startDialogVisible.value = false;
+  await loadPendingData();
+  if (pendingAutoProcessTaskId.value) {
+    processDialogVisible.value = true;
+    pendingAutoProcessTaskId.value = '';
   }
 }
 
-async function submitSlicing() {
-  const payload = normalizeOperatorPayload();
-  if (!completeForm.taskId.trim()) {
-    ElMessage.warning('请先选择待处理任务');
-    return;
-  }
-  if (!completeForm.embeddingBoxId.trim()) {
-    ElMessage.warning('请先选择包埋盒');
-    return;
-  }
-  if (!payload.operatorName) {
-    ElMessage.warning('请先选择操作人');
-    return;
-  }
-
-  actionLoading.value = true;
-  pageError.value = '';
-  try {
-    const result = await completeSlicing({
-      ...payload,
-      deviceCode: completeForm.deviceCode.trim() || null,
-      embeddingBoxId: completeForm.embeddingBoxId.trim(),
-      qualityIssue: completeForm.qualityIssue.trim() || null,
-      slideCount: completeForm.slideCount,
-      sliceCountPerSlide: completeForm.sliceCountPerSlide,
-      sliceThickness: completeForm.sliceThickness.trim() || null,
-      taskId: completeForm.taskId.trim(),
-    });
-    ElMessage.success(`切片完成，已生成 ${result.slideIds.length} 张玻片`);
-    await loadPendingData();
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
-  } finally {
-    actionLoading.value = false;
-  }
+async function handleProcessSubmitted() {
+  processDialogVisible.value = false;
+  await loadPendingData();
 }
+
+function openTaskProcessing() {
+  if (!selectedTask.value) {
+    ElMessage.warning('请先从左侧队列选择任务');
+    return;
+  }
+  selectTask(selectedTask.value.id, true);
+}
+
+watch(selectedTask, (task) => {
+  void loadTrackingForTask(task);
+});
 
 void loadPendingData();
-
-const currentTaskContext = computed(() => ({
-  objectId: completeForm.embeddingBoxId || selectedTask.value?.objectId || '',
-  objectType: selectedTask.value?.objectType ?? '',
-  pathologyNo: selectedTask.value?.pathologyNo ?? '',
-  taskId: completeForm.taskId || selectedTask.value?.id || '',
-}));
-
-function handleOperatorChange(user: null | { id: string; name: string }) {
-  operatorForm.operatorUserId = user?.id ?? '';
-  operatorForm.operatorName = user?.name ?? '';
-}
 </script>
 
 <template>
   <Page
     title="切片工作站"
-    description="承接包埋后的切片任务，录入包埋盒、玻片数量、切片厚度和质量问题，形成后续染色出片对象。"
+    description="让包埋盒信息、切片提示和处理入口同时常驻在工位里，减少来回查找。"
   >
     <div class="flex flex-col gap-4">
       <ElAlert
@@ -213,132 +166,96 @@ function handleOperatorChange(user: null | { id: string; name: string }) {
         show-icon
       />
 
-      <WorkflowSectionCard title="操作上下文" description="开始切片和完成切片共用操作人、终端与备注信息。">
-        <ElForm label-width="96px">
-          <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <ElFormItem label="操作人" required>
-              <SystemUserSelect
-                v-model="operatorForm.operatorUserId"
-                :selected-label="operatorForm.operatorName"
-                placeholder="请选择操作人"
-                @change="handleOperatorChange"
-              />
-            </ElFormItem>
-            <ElFormItem label="终端编码">
-              <ElInput v-model="operatorForm.terminalCode" placeholder="切片终端编码" />
-            </ElFormItem>
-            <ElFormItem label="备注">
-              <ElInput v-model="operatorForm.remarks" placeholder="必要时补充说明" />
-            </ElFormItem>
-          </div>
-        </ElForm>
-      </WorkflowSectionCard>
-
-      <WorkflowSectionCard title="切片完成表单" description="当前任务上下文带入包埋盒，表单中只保留用户需要决策的切片信息。">
-        <ElDescriptions :column="2" border class="mb-4">
-          <ElDescriptionsItem label="当前任务号">
-            {{ formatNullable(currentTaskContext.taskId) }}
-          </ElDescriptionsItem>
-          <ElDescriptionsItem label="病理号">
-            {{ formatNullable(currentTaskContext.pathologyNo) }}
-          </ElDescriptionsItem>
-          <ElDescriptionsItem label="对象类型">
-            {{ formatObjectType(currentTaskContext.objectType) }}
-          </ElDescriptionsItem>
-          <ElDescriptionsItem label="包埋盒编号">
-            {{ formatNullable(currentTaskContext.objectId) }}
-          </ElDescriptionsItem>
-        </ElDescriptions>
-        <ElForm label-width="108px">
-          <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <ElFormItem label="包埋盒编号" required>
-              <ElInput v-model="completeForm.embeddingBoxId" disabled placeholder="由当前任务带入" />
-            </ElFormItem>
-            <ElFormItem label="玻片数量" required>
-              <ElInputNumber v-model="completeForm.slideCount" :min="1" class="w-full" />
-            </ElFormItem>
-            <ElFormItem label="每片切片数">
-              <ElInputNumber
-                v-model="completeForm.sliceCountPerSlide"
-                :min="1"
-                class="w-full"
-              />
-            </ElFormItem>
-            <ElFormItem label="切片厚度">
-              <ElInput v-model="completeForm.sliceThickness" placeholder="例如：4μm" />
-            </ElFormItem>
-            <ElFormItem label="设备编码">
-              <ElInput v-model="completeForm.deviceCode" placeholder="请输入设备编码" />
-            </ElFormItem>
-          </div>
-          <ElFormItem label="质量问题">
-            <ElInput
-              v-model="completeForm.qualityIssue"
-              :rows="3"
-              placeholder="必要时记录切片质量问题"
-              type="textarea"
-            />
-          </ElFormItem>
-          <div class="flex justify-end">
-            <ElButton :loading="actionLoading" type="primary" @click="submitSlicing">
-              完成切片
+      <div class="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)_360px]">
+        <TechnicalTaskQueuePanel
+          :items="queueItems"
+          :loading="loading"
+          :selected-task-id="selectedTask?.id ?? ''"
+          title="待切片任务"
+          description="默认按异常、待处理和病例维度排序，优先帮助技师持续处理同类对象。"
+          @select="selectTask"
+        >
+          <template #filters>
+            <ElForm label-width="56px">
+              <ElFormItem label="病理号">
+                <ElInput
+                  v-model="filters.pathologyNo"
+                  clearable
+                  placeholder="病理号/包埋盒号"
+                  @keyup.enter="loadPendingData"
+                />
+              </ElFormItem>
+            </ElForm>
+          </template>
+          <template #extra>
+            <ElButton
+              :type="filters.timedOutOnly ? 'danger' : 'default'"
+              @click="filters.timedOutOnly = !filters.timedOutOnly; loadPendingData()"
+            >
+              {{ filters.timedOutOnly ? '仅异常' : '全部任务' }}
             </ElButton>
+          </template>
+        </TechnicalTaskQueuePanel>
+
+        <WorkflowSectionCard
+          title="当前处理对象"
+          description="当前先统一工位交互模型，后续再继续细化同盒批量切片和结构化提醒。"
+        >
+          <WorkstationTaskFocusPanel
+            action-title="核对蜡块、登记切片参数并生成玻片"
+            :next-flow-label="caseContext?.nextFlowLabel"
+            object-title="包埋盒/蜡块 + 玻片"
+            reminder-title="切片提示、质量问题和重切/返工"
+            :task="selectedTask"
+          >
+            <div class="mt-4 flex flex-wrap gap-3">
+              <ElButton type="primary" @click="openTaskProcessing">
+                {{ selectedTask?.taskStatus === 'PENDING' ? '开始并处理切片' : '继续处理切片' }}
+              </ElButton>
+              <ElButton
+                @click="router.push({ path: '/technical-workflow/tracking', query: { caseId: selectedTask?.caseId ?? '' } })"
+              >
+                查看生产轨迹
+              </ElButton>
+            </div>
+
+            <div class="mt-4 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
+              当前先复用现有切片表单与接口，后续再把同盒批量、重切提醒和白片提示进一步前置成结构化交互。
+            </div>
+          </WorkstationTaskFocusPanel>
+
+          <div class="mt-4 flex justify-end">
+            <ElPagination
+              v-model:current-page="filters.page"
+              v-model:page-size="filters.size"
+              :page-sizes="[10, 20, 50, 100]"
+              :total="total"
+              background
+              layout="total, sizes, prev, pager, next"
+              @change="loadPendingData"
+            />
           </div>
-        </ElForm>
-      </WorkflowSectionCard>
+        </WorkflowSectionCard>
 
-      <WorkflowSectionCard title="待切片任务" description="列表可直接开始切片，也可带入对象信息到完成表单。">
-        <ElTable v-loading="loading" :data="pendingItems" border>
-          <ElTableColumn label="任务号" min-width="180" prop="id" />
-          <ElTableColumn label="病理号" min-width="140">
-            <template #default="{ row }">
-              {{ formatNullable(row.pathologyNo) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="对象类型" min-width="140">
-            <template #default="{ row }">
-              {{ formatObjectType(row.objectType) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="对象编号" min-width="180">
-            <template #default="{ row }">
-              {{ formatNullable(row.objectId) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="任务状态" min-width="120">
-            <template #default="{ row }">
-              <ElTag :type="getTaskStatusTagType(row.taskStatus)">
-                {{ formatTaskStatus(row.taskStatus) }}
-              </ElTag>
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="创建时间" min-width="180">
-            <template #default="{ row }">
-              {{ formatDateTime(row.createdAt) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn fixed="right" label="操作" min-width="180">
-            <template #default="{ row }">
-              <div class="flex gap-2">
-                <ElButton link type="primary" @click="startTask(row)">开始切片</ElButton>
-                <ElButton link type="success" @click="adoptTask(row)">设为当前任务</ElButton>
-              </div>
-            </template>
-          </ElTableColumn>
-        </ElTable>
-
-        <div class="mt-4 flex justify-end">
-          <ElPagination
-            v-model:current-page="filters.page"
-            v-model:page-size="filters.size"
-            :page-sizes="[10, 20, 50, 100]"
-            :total="total"
-            background
-            layout="total, sizes, prev, pager, next, jumper"
-            @change="loadPendingData"
-          />
-        </div>
-      </WorkflowSectionCard>
+        <TechnicalCaseContextPanel :context="caseContext" :loading="trackingLoading" />
+      </div>
     </div>
+
+    <TechnicalTaskStartDialog
+      v-model="startDialogVisible"
+      confirm-text="开始切片"
+      :submit-action="(taskId, payload) => startSlicing({ ...payload, taskId })"
+      :success-message="(task) => `任务 ${task.id} 已开始切片`"
+      :task="selectedTask"
+      terminal-placeholder="切片终端编码"
+      title="开始切片"
+      @submitted="handleStartSubmitted"
+    />
+
+    <SlicingProcessDialog
+      v-model="processDialogVisible"
+      :task="selectedTask"
+      @submitted="handleProcessSubmitted"
+    />
   </Page>
 </template>

@@ -153,7 +153,7 @@ const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] = [
       {
         component: '/modules/system-management/views/NumberingRulesView',
         meta: {
-          icon: 'carbon:number-1',
+          icon: 'carbon:list-numbered',
           title: '编号规则',
         },
         name: 'NumberingRules',
