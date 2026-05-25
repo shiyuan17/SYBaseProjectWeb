@@ -53,6 +53,9 @@ vi.mock('#/modules/system-management/api/system-management-service', () => ({
 
 vi.mock('#/modules/system-management/api/workflow-reference-service', () => ({
   createEmptyWorkflowReferenceOptions: () => ({
+    cutSurfaceFeatures: [],
+    marginMarkings: [],
+    specimenImageSizes: [],
     specimenTypes: [],
   }),
   loadWorkflowReferenceOptionsSafely: mockLoadWorkflowReferenceOptionsSafely,
@@ -422,6 +425,9 @@ async function mountDialog(options: {
   mockListBodyParts.mockResolvedValue(options.bodyParts ?? []);
   mockListSamplingTemplates.mockResolvedValue(options.samplingTemplates ?? []);
   mockLoadWorkflowReferenceOptionsSafely.mockResolvedValue({
+    cutSurfaceFeatures: [],
+    marginMarkings: [],
+    specimenImageSizes: [],
     specimenTypes: [],
   });
   mockGetTechnicalTracking.mockResolvedValue(createTrackingResult());

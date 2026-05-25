@@ -9,7 +9,7 @@ const props = withDefaults(
   defineProps<{
     clearable?: boolean;
     disabled?: boolean;
-    modelValue: string;
+    modelValue?: null | string;
     options: WorkflowReferenceOption[];
     placeholder?: string;
   }>(),
@@ -50,8 +50,9 @@ function findMatchedOption(value: string) {
 }
 
 function syncInputValueWithModelValue() {
-  const matchedOption = findMatchedOption(props.modelValue);
-  inputValue.value = matchedOption?.label ?? props.modelValue;
+  const currentValue = props.modelValue ?? '';
+  const matchedOption = findMatchedOption(currentValue);
+  inputValue.value = matchedOption?.label ?? currentValue;
 }
 
 function querySearch(

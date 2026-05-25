@@ -5,7 +5,7 @@ import { computed, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
-import { useAccessStore } from '@vben/stores';
+import { useAccessStore, useUserStore } from '@vben/stores';
 
 import {
   ElAlert,
@@ -28,6 +28,7 @@ import {
   listPendingDiagnosticTasks,
 } from '../api/doctor-workflow-service';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
+import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
 import { M4_PERMISSION_CODES } from '../constants';
 import {
   DEFAULT_PAGE_SIZE,
@@ -44,6 +45,7 @@ import {
 
 const router = useRouter();
 const accessStore = useAccessStore();
+const userStore = useUserStore();
 
 const loading = ref(false);
 const assigning = ref(false);
@@ -72,6 +74,7 @@ const assignForm = reactive({
   diagnosisDoctorName: '',
   diagnosisDoctorUserId: '',
   operatorName: '',
+  operatorUserId: '',
   primaryDoctorName: '',
   primaryDoctorUserId: '',
   remarks: '',
@@ -144,6 +147,30 @@ function openAssignDialog(row: PendingDiagnosticTaskItem) {
   assignForm.primaryDoctorUserId = row.primaryDoctorUserId ?? '';
   assignForm.reviewerName = row.reviewerName ?? '';
   assignForm.reviewerUserId = row.reviewerUserId ?? '';
+  assignForm.operatorName = userStore.userInfo?.realName ?? '';
+  assignForm.operatorUserId = userStore.userInfo?.userId ?? '';
+  assignForm.remarks = '';
+  assignForm.terminalCode = '';
+}
+
+function handleDiagnosisDoctorChange(user: null | { id: string; name: string }) {
+  assignForm.diagnosisDoctorUserId = user?.id ?? '';
+  assignForm.diagnosisDoctorName = user?.name ?? '';
+}
+
+function handlePrimaryDoctorChange(user: null | { id: string; name: string }) {
+  assignForm.primaryDoctorUserId = user?.id ?? '';
+  assignForm.primaryDoctorName = user?.name ?? '';
+}
+
+function handleReviewerChange(user: null | { id: string; name: string }) {
+  assignForm.reviewerUserId = user?.id ?? '';
+  assignForm.reviewerName = user?.name ?? '';
+}
+
+function handleOperatorChange(user: null | { id: string; name: string }) {
+  assignForm.operatorUserId = user?.id ?? '';
+  assignForm.operatorName = user?.name ?? '';
 }
 
 async function submitAssign() {
@@ -154,7 +181,7 @@ async function submitAssign() {
     !assignForm.diagnosisDoctorUserId ||
     !assignForm.primaryDoctorUserId ||
     !assignForm.reviewerUserId ||
-    !assignForm.operatorName
+    !assignForm.operatorUserId
   ) {
     ElMessage.warning('请完整填写责任医生、初诊医生、审核医生和操作人');
     return;
@@ -324,26 +351,37 @@ void loadPendingData();
       @closed="selectedTask = null"
     >
       <ElForm label-width="120px">
-        <ElFormItem label="责任医生ID">
-          <ElInput v-model="assignForm.diagnosisDoctorUserId" />
+        <ElFormItem label="责任医生" required>
+          <SystemUserSelect
+            v-model="assignForm.diagnosisDoctorUserId"
+            :selected-label="assignForm.diagnosisDoctorName"
+            placeholder="请选择责任医生"
+            @change="handleDiagnosisDoctorChange"
+          />
         </ElFormItem>
-        <ElFormItem label="责任医生姓名">
-          <ElInput v-model="assignForm.diagnosisDoctorName" />
+        <ElFormItem label="初诊医生" required>
+          <SystemUserSelect
+            v-model="assignForm.primaryDoctorUserId"
+            :selected-label="assignForm.primaryDoctorName"
+            placeholder="请选择初诊医生"
+            @change="handlePrimaryDoctorChange"
+          />
         </ElFormItem>
-        <ElFormItem label="初诊医生ID">
-          <ElInput v-model="assignForm.primaryDoctorUserId" />
+        <ElFormItem label="审核医生" required>
+          <SystemUserSelect
+            v-model="assignForm.reviewerUserId"
+            :selected-label="assignForm.reviewerName"
+            placeholder="请选择审核医生"
+            @change="handleReviewerChange"
+          />
         </ElFormItem>
-        <ElFormItem label="初诊医生姓名">
-          <ElInput v-model="assignForm.primaryDoctorName" />
-        </ElFormItem>
-        <ElFormItem label="审核医生ID">
-          <ElInput v-model="assignForm.reviewerUserId" />
-        </ElFormItem>
-        <ElFormItem label="审核医生姓名">
-          <ElInput v-model="assignForm.reviewerName" />
-        </ElFormItem>
-        <ElFormItem label="操作人">
-          <ElInput v-model="assignForm.operatorName" />
+        <ElFormItem label="操作人" required>
+          <SystemUserSelect
+            v-model="assignForm.operatorUserId"
+            :selected-label="assignForm.operatorName"
+            placeholder="请选择操作人"
+            @change="handleOperatorChange"
+          />
         </ElFormItem>
         <ElFormItem label="终端编码">
           <ElInput v-model="assignForm.terminalCode" />

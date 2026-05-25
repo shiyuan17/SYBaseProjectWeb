@@ -649,13 +649,19 @@ watch(
                 </span>
               </div>
               <div class="grid gap-3 md:grid-cols-[180px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
-                <ElInput v-model="specimen.sizeText" placeholder="大小，如 3.2x2.1x1.0cm" />
-                <ElInput
+                <ReferenceOptionSelect
+                  v-model="specimen.sizeText"
+                  :options="workflowReferenceOptions.specimenImageSizes"
+                  placeholder="大小，如 3.2x2.1x1.0cm"
+                />
+                <ReferenceOptionSelect
                   v-model="specimen.cutSurfaceFeature"
+                  :options="workflowReferenceOptions.cutSurfaceFeatures"
                   placeholder="切面特征，如灰白、质硬、坏死"
                 />
-                <ElInput
+                <ReferenceOptionSelect
                   v-model="specimen.marginMarking"
+                  :options="workflowReferenceOptions.marginMarkings"
                   placeholder="切缘标记，如上缘墨染"
                 />
                 <ElInputNumber

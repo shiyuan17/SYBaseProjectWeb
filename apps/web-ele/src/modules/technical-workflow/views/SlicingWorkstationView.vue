@@ -67,6 +67,12 @@ const queueItems = computed(() => buildWorkstationQueueItems(pendingItems.value,
 const caseContext = computed(() =>
   trackingResult.value ? buildWorkstationCaseContext(trackingResult.value, 'SLICING') : null,
 );
+const canProcessSelectedTask = computed(() =>
+  ['IN_PROGRESS', 'PENDING'].includes(selectedTask.value?.taskStatus ?? ''),
+);
+const processActionLabel = computed(() =>
+  selectedTask.value?.taskStatus === 'PENDING' ? '开始并处理切片' : '继续处理切片',
+);
 
 async function loadTrackingForTask(task: null | PendingTechnicalTaskItem) {
   if (!task?.caseId) {
@@ -94,6 +100,10 @@ function selectTask(taskId: string, openProcess = false) {
     if (matchedTask.taskStatus === 'PENDING') {
       pendingAutoProcessTaskId.value = matchedTask.id;
       startDialogVisible.value = true;
+      return;
+    }
+    if (matchedTask.taskStatus !== 'IN_PROGRESS') {
+      pendingAutoProcessTaskId.value = '';
       return;
     }
     processDialogVisible.value = true;
@@ -209,8 +219,8 @@ void loadPendingData();
             :task="selectedTask"
           >
             <div class="mt-4 flex flex-wrap gap-3">
-              <ElButton type="primary" @click="openTaskProcessing">
-                {{ selectedTask?.taskStatus === 'PENDING' ? '开始并处理切片' : '继续处理切片' }}
+              <ElButton v-if="canProcessSelectedTask" type="primary" @click="openTaskProcessing">
+                {{ processActionLabel }}
               </ElButton>
               <ElButton
                 @click="router.push({ path: '/technical-workflow/tracking', query: { caseId: selectedTask?.caseId ?? '' } })"

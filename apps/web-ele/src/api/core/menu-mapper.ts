@@ -497,6 +497,55 @@ const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] = [
       },
     ],
   },
+  {
+    component: 'BasicLayout',
+    meta: {
+      icon: 'carbon:data-base',
+      order: 190,
+      title: '集成与统计',
+    },
+    name: 'M6Root',
+    path: '/m6',
+    redirect: '/m6/statistics',
+    children: [
+      {
+        component: '/views/_core/fallback/coming-soon',
+        meta: {
+          icon: 'carbon:connect',
+          title: '集成任务',
+        },
+        name: 'IntegrationManagement',
+        path: '/m6/integration',
+      },
+      {
+        component: '/views/_core/fallback/coming-soon',
+        meta: {
+          icon: 'carbon:currency',
+          title: '收费管理',
+        },
+        name: 'BillingManagement',
+        path: '/m6/billing',
+      },
+      {
+        component: '/views/_core/fallback/coming-soon',
+        meta: {
+          icon: 'carbon:document',
+          title: '历史报告',
+        },
+        name: 'HistoricalReports',
+        path: '/m6/history',
+      },
+      {
+        component: '/modules/m6-statistics/views/StatisticsAnalysisView',
+        meta: {
+          icon: 'carbon:chart-line',
+          title: '统计分析',
+        },
+        name: 'StatisticsAnalysis',
+        path: '/m6/statistics',
+      },
+    ],
+  },
 ];
 
 const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[] = [
@@ -886,6 +935,52 @@ const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[] = [
     path: '/operation-support/equipment',
     pathAliases: ['/operation-support/equipment', '/api/v1/equipment-records'],
     routeName: 'EquipmentLedger',
+  },
+  {
+    component: 'BasicLayout',
+    componentAliases: ['M6Root'],
+    menuCodes: ['M6_SUPPORT'],
+    path: '/m6',
+    pathAliases: ['/m6'],
+    routeName: 'M6Root',
+  },
+  {
+    component: '/views/_core/fallback/coming-soon',
+    componentAliases: ['IntegrationManagement'],
+    menuCodes: ['M6_INTEGRATION'],
+    path: '/m6/integration',
+    pathAliases: ['/m6/integration', '/api/v1/integration-tasks'],
+    routeName: 'IntegrationManagement',
+  },
+  {
+    component: '/views/_core/fallback/coming-soon',
+    componentAliases: ['BillingManagement'],
+    menuCodes: ['M6_BILLING'],
+    path: '/m6/billing',
+    pathAliases: ['/m6/billing', '/api/v1/billing-records'],
+    routeName: 'BillingManagement',
+  },
+  {
+    component: '/views/_core/fallback/coming-soon',
+    componentAliases: ['HistoricalReports'],
+    menuCodes: ['M6_HISTORY'],
+    path: '/m6/history',
+    pathAliases: ['/m6/history', '/api/v1/historical-reports'],
+    routeName: 'HistoricalReports',
+  },
+  {
+    component: '/modules/m6-statistics/views/StatisticsAnalysisView',
+    componentAliases: ['StatisticsAnalysis'],
+    menuCodes: ['M6_STAT'],
+    path: '/m6/statistics',
+    pathAliases: [
+      '/m6/statistics',
+      '/api/v1/stat-indicators',
+      '/api/v1/stat-report-templates',
+      '/api/v1/stat-reports/query',
+      '/api/v1/stat-reports/export',
+    ],
+    routeName: 'StatisticsAnalysis',
   },
 ];
 

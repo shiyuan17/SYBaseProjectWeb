@@ -340,7 +340,9 @@ async function flushAll() {
   await nextTick();
 }
 
-async function mountDialog(latestResult = buildLatestRegistrationResult()) {
+async function mountDialog(
+  latestResult: LatestSpecimenRegistrationResult = buildLatestRegistrationResult(),
+) {
   mockGetApplicationDetail.mockResolvedValue(buildApplicationDetail());
   mockGetLatestRegistrationResult.mockResolvedValue(latestResult);
   mockLoadWorkflowReferenceOptionsSafely.mockResolvedValue({

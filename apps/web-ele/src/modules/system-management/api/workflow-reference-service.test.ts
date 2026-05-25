@@ -31,16 +31,22 @@ describe('workflow-reference-service', () => {
         clinicalSymptoms: [{ label: '肿物', value: '' }],
         collectionModes: [{ label: '手术', value: 'SURGERY' }],
         containerNames: [{ label: '标本瓶', value: '' }],
+        cutSurfaceFeatures: [{ label: '灰白', value: '' }],
+        marginMarkings: [{ label: '上缘墨染', value: '' }],
+        specimenImageSizes: [{ label: '3.2x2.1x1.0cm', value: '' }],
       }),
     ).toEqual({
       clinicalSymptoms: [{ label: '肿物', value: '肿物' }],
       collectionModes: [{ label: '手术', value: 'SURGERY' }],
       containerNames: [{ label: '标本瓶', value: '标本瓶' }],
+      cutSurfaceFeatures: [{ label: '灰白', value: '灰白' }],
       fixationLiquidTypes: [
         { label: '10% 中性福尔马林', value: 'FORMALIN' },
         { label: '酒精', value: 'ETHANOL' },
         { label: '生理盐水', value: 'SALINE' },
       ],
+      marginMarkings: [{ label: '上缘墨染', value: '上缘墨染' }],
+      specimenImageSizes: [{ label: '3.2x2.1x1.0cm', value: '3.2x2.1x1.0cm' }],
       specimenTypes: [
         { label: '常规', value: 'ROUTINE' },
         { label: '冰冻', value: 'FROZEN' },
@@ -75,10 +81,24 @@ describe('workflow-reference-service', () => {
         { label: '离心管', value: '离心管' },
         { label: '无菌采样杯', value: '无菌采样杯' },
       ],
+      cutSurfaceFeatures: [
+        { label: '灰白', value: '灰白' },
+        { label: '质硬', value: '质硬' },
+        { label: '坏死', value: '坏死' },
+      ],
       fixationLiquidTypes: [
         { label: '10% 中性福尔马林', value: 'FORMALIN' },
         { label: '酒精', value: 'ETHANOL' },
         { label: '生理盐水', value: 'SALINE' },
+      ],
+      marginMarkings: [
+        { label: '上缘墨染', value: '上缘墨染' },
+        { label: '下缘墨染', value: '下缘墨染' },
+        { label: '基底部墨染', value: '基底部墨染' },
+      ],
+      specimenImageSizes: [
+        { label: '3.2x2.1x1.0cm', value: '3.2x2.1x1.0cm' },
+        { label: '1.5x1.0x0.3cm', value: '1.5x1.0x0.3cm' },
       ],
       specimenTypes: [{ label: '常规', value: 'ROUTINE' }],
     });
@@ -98,8 +118,13 @@ describe('workflow-reference-service', () => {
       clinicalSymptoms: expect.arrayContaining([{ label: '肿物', value: '肿物' }]),
       collectionModes: expect.arrayContaining([{ label: '手术', value: 'SURGERY' }]),
       containerNames: expect.arrayContaining([{ label: '标本瓶', value: '标本瓶' }]),
+      cutSurfaceFeatures: expect.arrayContaining([{ label: '灰白', value: '灰白' }]),
       fixationLiquidTypes: expect.arrayContaining([
         { label: '10% 中性福尔马林', value: 'FORMALIN' },
+      ]),
+      marginMarkings: expect.arrayContaining([{ label: '上缘墨染', value: '上缘墨染' }]),
+      specimenImageSizes: expect.arrayContaining([
+        { label: '3.2x2.1x1.0cm', value: '3.2x2.1x1.0cm' },
       ]),
       specimenTypes: expect.arrayContaining([{ label: '常规', value: 'ROUTINE' }]),
     });

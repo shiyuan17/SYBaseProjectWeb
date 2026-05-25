@@ -11,13 +11,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { M4_PERMISSION_CODES } from '../constants';
 
 const {
+  assignDiagnosticTaskMock,
   getDiagnosticWorkbenchMock,
   getReportTrackingMock,
   listPendingDiagnosticTasksMock,
   mockAccessStore,
   mockRoute,
   mockRouter,
+  mockUserStore,
 } = vi.hoisted(() => ({
+  assignDiagnosticTaskMock: vi.fn<(taskId: string, data: unknown) => Promise<unknown>>(),
   getDiagnosticWorkbenchMock: vi.fn<
     (caseId: string) => Promise<DiagnosticWorkbenchView>
   >(),
@@ -36,6 +39,12 @@ const {
   mockRouter: {
     push: vi.fn(),
     replace: vi.fn(),
+  },
+  mockUserStore: {
+    userInfo: {
+      realName: '当前分派员',
+      userId: 'USER-CURRENT',
+    },
   },
 }));
 
@@ -68,12 +77,13 @@ vi.mock('@vben/common-ui', () => ({
 
 vi.mock('@vben/stores', () => ({
   useAccessStore: () => mockAccessStore,
+  useUserStore: () => mockUserStore,
 }));
 
 vi.mock('../api/doctor-workflow-service', () => ({
   acceptDiagnosticTask: vi.fn(),
   approveReportRevisionRequest: vi.fn(),
-  assignDiagnosticTask: vi.fn(),
+  assignDiagnosticTask: assignDiagnosticTaskMock,
   commentConsultationParticipant: vi.fn(),
   completeConsultation: vi.fn(),
   createConsultation: vi.fn(),
@@ -92,12 +102,73 @@ vi.mock('../api/doctor-workflow-service', () => ({
   submitPathologyReport: vi.fn(),
 }));
 
+vi.mock('#/modules/system-management/components/SystemUserSelect.vue', () => ({
+  default: defineComponent({
+    props: ['modelValue', 'placeholder', 'selectedLabel'],
+    emits: ['change', 'update:modelValue'],
+    setup(props, { emit }) {
+      return () =>
+        h('div', { 'data-testid': props.placeholder ?? 'system-user-select' }, [
+          h('span', props.selectedLabel ?? ''),
+          h(
+            'button',
+            {
+              type: 'button',
+              onClick: () => {
+                const nextUser = resolveMockUserByPlaceholder(String(props.placeholder ?? ''));
+                emit('update:modelValue', nextUser.id);
+                emit('change', nextUser);
+              },
+            },
+            `选择${props.placeholder ?? '人员'}`,
+          ),
+          h(
+            'button',
+            {
+              type: 'button',
+              onClick: () => {
+                emit('update:modelValue', '');
+                emit('change', null);
+              },
+            },
+            `清空${props.placeholder ?? '人员'}`,
+          ),
+        ]);
+    },
+  }),
+}));
+
 import ConsultationWorkstationView from './ConsultationWorkstationView.vue';
 import DiagnosisAssignmentView from './DiagnosisAssignmentView.vue';
 import DiagnosisWorkbenchView from './DiagnosisWorkbenchView.vue';
 import PathologyReportView from './PathologyReportView.vue';
 import ReportRevisionView from './ReportRevisionView.vue';
 import ReportTrackingView from './ReportTrackingView.vue';
+
+function resolveMockUserByPlaceholder(placeholder: string) {
+  if (placeholder.includes('责任医生')) {
+    return {
+      id: 'DOC-DIAG',
+      name: '责任医生甲',
+    };
+  }
+  if (placeholder.includes('初诊医生')) {
+    return {
+      id: 'DOC-PRIMARY',
+      name: '初诊医生乙',
+    };
+  }
+  if (placeholder.includes('审核医生')) {
+    return {
+      id: 'DOC-REVIEW',
+      name: '审核医生丙',
+    };
+  }
+  return {
+    id: 'USER-OPERATOR',
+    name: '分派操作员',
+  };
+}
 
 const workbenchFixture: DiagnosticWorkbenchView = {
   applicationNo: 'APP-001',
@@ -157,9 +228,15 @@ function resetTestState() {
   mockRoute.query = {};
   mockRouter.push.mockReset();
   mockRouter.replace.mockReset();
+  assignDiagnosticTaskMock.mockReset();
   listPendingDiagnosticTasksMock.mockReset();
   getDiagnosticWorkbenchMock.mockReset();
   getReportTrackingMock.mockReset();
+  mockUserStore.userInfo = {
+    realName: '当前分派员',
+    userId: 'USER-CURRENT',
+  };
+  assignDiagnosticTaskMock.mockResolvedValue({});
   listPendingDiagnosticTasksMock.mockResolvedValue({
     items: [],
     page: 1,
@@ -198,6 +275,13 @@ async function mountView(component: object) {
   await flushAsyncWork();
 
   return {
+    clickButton: (text: string) => {
+      const button = Array.from(root.querySelectorAll('button')).find(
+        (item) => item.textContent?.trim() === text,
+      );
+      expect(button).toBeTruthy();
+      button?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    },
     buttonTexts: () =>
       Array.from(root.querySelectorAll('button')).map(
         (button) => button.textContent?.trim() ?? '',
@@ -242,6 +326,117 @@ describe('doctor workflow view visibility', () => {
     ];
     const assignableWrapper = await mountView(DiagnosisAssignmentView);
     expect(assignableWrapper.buttonTexts()).toContain('分派');
+    assignableWrapper.unmount();
+  });
+
+  it('defaults operator to current user when opening assign dialog', async () => {
+    listPendingDiagnosticTasksMock.mockResolvedValue({
+      items: [
+        {
+          caseId: 'CASE-001',
+          diagnosisDoctorName: '既有责任医生',
+          diagnosisDoctorUserId: 'DOC-OLD-1',
+          id: 'TASK-001',
+          primaryDoctorName: '既有初诊医生',
+          primaryDoctorUserId: 'DOC-OLD-2',
+          reviewerName: '既有审核医生',
+          reviewerUserId: 'DOC-OLD-3',
+          taskStatus: 'PENDING',
+          taskType: 'PRIMARY',
+        },
+      ],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+    mockAccessStore.accessCodes = [M4_PERMISSION_CODES.ASSIGN];
+
+    const wrapper = await mountView(DiagnosisAssignmentView);
+    wrapper.clickButton('分派');
+    await flushAsyncWork();
+
+    expect(wrapper.text()).toContain('当前分派员');
+    expect(wrapper.text()).toContain('既有责任医生');
+    expect(wrapper.text()).toContain('既有初诊医生');
+    expect(wrapper.text()).toContain('既有审核医生');
+    wrapper.unmount();
+  });
+
+  it('submits selected doctor and operator ids and names from searchable selects', async () => {
+    listPendingDiagnosticTasksMock.mockResolvedValue({
+      items: [
+        {
+          caseId: 'CASE-001',
+          id: 'TASK-001',
+          taskStatus: 'PENDING',
+          taskType: 'PRIMARY',
+        },
+      ],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+    mockAccessStore.accessCodes = [M4_PERMISSION_CODES.ASSIGN];
+
+    const wrapper = await mountView(DiagnosisAssignmentView);
+    wrapper.clickButton('分派');
+    await flushAsyncWork();
+
+    wrapper.clickButton('选择请选择责任医生');
+    wrapper.clickButton('选择请选择初诊医生');
+    wrapper.clickButton('选择请选择审核医生');
+    wrapper.clickButton('选择请选择操作人');
+    await flushAsyncWork();
+    wrapper.clickButton('确认分派');
+    await flushAsyncWork();
+
+    expect(assignDiagnosticTaskMock).toHaveBeenCalledWith(
+      'TASK-001',
+      expect.objectContaining({
+        diagnosisDoctorName: '责任医生甲',
+        diagnosisDoctorUserId: 'DOC-DIAG',
+        operatorName: '分派操作员',
+        operatorUserId: 'USER-OPERATOR',
+        primaryDoctorName: '初诊医生乙',
+        primaryDoctorUserId: 'DOC-PRIMARY',
+        reviewerName: '审核医生丙',
+        reviewerUserId: 'DOC-REVIEW',
+      }),
+    );
+    wrapper.unmount();
+  });
+
+  it('blocks submit when a required selected user is cleared', async () => {
+    listPendingDiagnosticTasksMock.mockResolvedValue({
+      items: [
+        {
+          caseId: 'CASE-001',
+          id: 'TASK-001',
+          taskStatus: 'PENDING',
+          taskType: 'PRIMARY',
+        },
+      ],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+    mockAccessStore.accessCodes = [M4_PERMISSION_CODES.ASSIGN];
+
+    const wrapper = await mountView(DiagnosisAssignmentView);
+    wrapper.clickButton('分派');
+    await flushAsyncWork();
+
+    wrapper.clickButton('选择请选择责任医生');
+    wrapper.clickButton('选择请选择初诊医生');
+    wrapper.clickButton('选择请选择审核医生');
+    await flushAsyncWork();
+    wrapper.clickButton('清空请选择操作人');
+    await flushAsyncWork();
+    wrapper.clickButton('确认分派');
+    await flushAsyncWork();
+
+    expect(assignDiagnosticTaskMock).not.toHaveBeenCalled();
+    wrapper.unmount();
   });
 
   it('shows guidance instead of missing-case error on empty workbench route', async () => {

@@ -38,10 +38,24 @@ function createDefaultWorkflowReferenceOptions(): WorkflowReferenceOptionsRespon
       { label: '离心管', value: '离心管' },
       { label: '无菌采样杯', value: '无菌采样杯' },
     ],
+    cutSurfaceFeatures: [
+      { label: '灰白', value: '灰白' },
+      { label: '质硬', value: '质硬' },
+      { label: '坏死', value: '坏死' },
+    ],
     fixationLiquidTypes: [
       { label: '10% 中性福尔马林', value: 'FORMALIN' },
       { label: '酒精', value: 'ETHANOL' },
       { label: '生理盐水', value: 'SALINE' },
+    ],
+    marginMarkings: [
+      { label: '上缘墨染', value: '上缘墨染' },
+      { label: '下缘墨染', value: '下缘墨染' },
+      { label: '基底部墨染', value: '基底部墨染' },
+    ],
+    specimenImageSizes: [
+      { label: '3.2x2.1x1.0cm', value: '3.2x2.1x1.0cm' },
+      { label: '1.5x1.0x0.3cm', value: '1.5x1.0x0.3cm' },
     ],
     specimenTypes: [
       { label: '常规', value: 'ROUTINE' },
@@ -79,7 +93,10 @@ export function createEmptyWorkflowReferenceOptions(): WorkflowReferenceOptionsR
     clinicalSymptoms: [],
     collectionModes: [],
     containerNames: [],
+    cutSurfaceFeatures: [],
     fixationLiquidTypes: [],
+    marginMarkings: [],
+    specimenImageSizes: [],
     specimenTypes: [],
   };
 }
@@ -101,9 +118,21 @@ export function mapWorkflowReferenceOptionsResponse(
       normalizeReferenceOptions(response?.containerNames),
       defaults.containerNames,
     ),
+    cutSurfaceFeatures: withDefaultOptions(
+      normalizeReferenceOptions(response?.cutSurfaceFeatures),
+      defaults.cutSurfaceFeatures,
+    ),
     fixationLiquidTypes: withDefaultOptions(
       normalizeReferenceOptions(response?.fixationLiquidTypes),
       defaults.fixationLiquidTypes,
+    ),
+    marginMarkings: withDefaultOptions(
+      normalizeReferenceOptions(response?.marginMarkings),
+      defaults.marginMarkings,
+    ),
+    specimenImageSizes: withDefaultOptions(
+      normalizeReferenceOptions(response?.specimenImageSizes),
+      defaults.specimenImageSizes,
     ),
     specimenTypes: withDefaultOptions(
       normalizeReferenceOptions(response?.specimenTypes),
