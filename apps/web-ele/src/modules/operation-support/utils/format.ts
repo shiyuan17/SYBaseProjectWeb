@@ -2,10 +2,13 @@ import {
   ARCHIVE_CABINET_STATUS_OPTIONS,
   ARCHIVE_CABINET_TYPE_OPTIONS,
   ARCHIVE_OBJECT_TYPE_OPTIONS,
+  ARCHIVE_POSITION_STATUS_OPTIONS,
+  ARCHIVE_STORAGE_STATUS_OPTIONS,
   EQUIPMENT_CATEGORY_OPTIONS,
   EQUIPMENT_STATUS_OPTIONS,
   MAINTENANCE_STATUS_OPTIONS,
   MAINTENANCE_TYPE_OPTIONS,
+  MATERIAL_LOAN_STATUS_OPTIONS,
   MATERIAL_TYPE_OPTIONS,
   REAGENT_STOCK_STATUS_OPTIONS,
 } from '../constants';
@@ -33,8 +36,20 @@ export function formatArchiveObjectType(value?: null | string) {
   return findOptionLabel(ARCHIVE_OBJECT_TYPE_OPTIONS, value);
 }
 
+export function formatArchivePositionStatus(value?: null | string) {
+  return findOptionLabel(ARCHIVE_POSITION_STATUS_OPTIONS, value);
+}
+
 export function formatMaterialType(value?: null | string) {
   return findOptionLabel(MATERIAL_TYPE_OPTIONS, value);
+}
+
+export function formatArchiveStorageStatus(value?: null | string) {
+  return findOptionLabel(ARCHIVE_STORAGE_STATUS_OPTIONS, value);
+}
+
+export function formatMaterialLoanStatus(value?: null | string) {
+  return findOptionLabel(MATERIAL_LOAN_STATUS_OPTIONS, value);
 }
 
 export function formatReagentStockStatus(value?: null | string) {

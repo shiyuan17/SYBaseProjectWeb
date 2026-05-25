@@ -22,23 +22,53 @@ export const M5_PERMISSION_CODES = {
   SLIDE_ARCHIVE: 'PERM_M5_SLIDE_ARCHIVE',
 } as const;
 
+export const M5_ARCHIVE_PAGE_AUTHORITIES = [
+  M5_PERMISSION_CODES.ARCHIVE_CABINET_QUERY,
+  M5_PERMISSION_CODES.ARCHIVE_CABINET_CREATE,
+  M5_PERMISSION_CODES.ARCHIVE_CABINET_UPDATE,
+  M5_PERMISSION_CODES.APPLICATION_FORM_ARCHIVE,
+  M5_PERMISSION_CODES.EMBEDDING_BOX_ARCHIVE,
+  M5_PERMISSION_CODES.SLIDE_ARCHIVE,
+  M5_PERMISSION_CODES.ARCHIVE_QUERY,
+  M5_PERMISSION_CODES.LOAN_CREATE,
+  M5_PERMISSION_CODES.LOAN_RETURN,
+  M5_PERMISSION_CODES.LOAN_QUERY,
+] as const;
+
+export const M5_REAGENT_PAGE_AUTHORITIES = [
+  M5_PERMISSION_CODES.REAGENT_QUERY,
+  M5_PERMISSION_CODES.REAGENT_CREATE,
+  M5_PERMISSION_CODES.REAGENT_UPDATE,
+  M5_PERMISSION_CODES.REAGENT_STOCK_QUERY,
+  M5_PERMISSION_CODES.REAGENT_STOCK_UPDATE,
+  M5_PERMISSION_CODES.REAGENT_WARNING_QUERY,
+] as const;
+
+export const M5_EQUIPMENT_PAGE_AUTHORITIES = [
+  M5_PERMISSION_CODES.EQUIPMENT_QUERY,
+  M5_PERMISSION_CODES.EQUIPMENT_CREATE,
+  M5_PERMISSION_CODES.EQUIPMENT_UPDATE,
+  M5_PERMISSION_CODES.EQUIPMENT_MAINTENANCE_CREATE,
+  M5_PERMISSION_CODES.EQUIPMENT_WARNING_QUERY,
+] as const;
+
 export const M5_OPERATION_ROUTE_ITEMS = [
   {
-    code: M5_PERMISSION_CODES.ARCHIVE_QUERY,
+    codes: M5_ARCHIVE_PAGE_AUTHORITIES,
     path: '/operation-support/archive',
   },
   {
-    code: M5_PERMISSION_CODES.REAGENT_QUERY,
+    codes: M5_REAGENT_PAGE_AUTHORITIES,
     path: '/operation-support/reagents',
   },
   {
-    code: M5_PERMISSION_CODES.EQUIPMENT_QUERY,
+    codes: M5_EQUIPMENT_PAGE_AUTHORITIES,
     path: '/operation-support/equipment',
   },
 ] as const;
 
 export const ARCHIVE_CABINET_STATUS_OPTIONS = [
-  { label: '启用', value: 'ENABLED' },
+  { label: '启用', value: 'ACTIVE' },
   { label: '停用', value: 'DISABLED' },
 ] as const;
 
@@ -58,6 +88,22 @@ export const ARCHIVE_OBJECT_TYPE_OPTIONS = [
 export const MATERIAL_TYPE_OPTIONS = [
   { label: '包埋盒', value: 'EMBEDDING_BOX' },
   { label: '玻片', value: 'SLIDE' },
+] as const;
+
+export const ARCHIVE_POSITION_STATUS_OPTIONS = [
+  { label: '可用', value: 'AVAILABLE' },
+  { label: '已占用', value: 'OCCUPIED' },
+  { label: '已停用', value: 'DISABLED' },
+] as const;
+
+export const ARCHIVE_STORAGE_STATUS_OPTIONS = [
+  { label: '在库', value: 'IN_STORAGE' },
+  { label: '已借出', value: 'BORROWED' },
+] as const;
+
+export const MATERIAL_LOAN_STATUS_OPTIONS = [
+  { label: '借出中', value: 'BORROWED' },
+  { label: '已归还', value: 'RETURNED' },
 ] as const;
 
 export const REAGENT_ENABLED_OPTIONS = [

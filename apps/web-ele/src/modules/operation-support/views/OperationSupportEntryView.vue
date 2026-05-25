@@ -5,17 +5,13 @@ import { useRouter } from 'vue-router';
 import { Fallback } from '@vben/common-ui';
 import { useAccessStore } from '@vben/stores';
 
-import { M5_OPERATION_ROUTE_ITEMS } from '../constants';
+import { getOperationSupportEntryPath } from '../access';
 
 const router = useRouter();
 const accessStore = useAccessStore();
 
 const targetPath = computed(() => {
-  const accessCodes = new Set(accessStore.accessCodes);
-  return (
-    M5_OPERATION_ROUTE_ITEMS.find((item) => accessCodes.has(item.code))?.path ??
-    null
-  );
+  return getOperationSupportEntryPath(accessStore.accessCodes);
 });
 
 onMounted(() => {

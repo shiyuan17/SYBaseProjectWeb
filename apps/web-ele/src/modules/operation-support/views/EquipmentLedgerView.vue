@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import type {
   EquipmentRecordView,
+  EquipmentWarningView,
 } from '../types/operation-support';
 
 import { computed, reactive, ref } from 'vue';
 
-import { Page } from '@vben/common-ui';
+import { Fallback, Page } from '@vben/common-ui';
+import { useAccessStore, useUserStore } from '@vben/stores';
 
 import {
   ElAlert,
   ElButton,
+  ElDescriptions,
+  ElDescriptionsItem,
   ElDialog,
   ElForm,
   ElFormItem,
@@ -22,6 +26,7 @@ import {
   ElTag,
 } from 'element-plus';
 
+import { getEquipmentLedgerCapabilities } from '../access';
 import {
   createEquipmentMaintenanceLog,
   createEquipmentRecord,
@@ -47,6 +52,16 @@ import {
   formatWarningType,
 } from '../utils/format';
 
+const accessStore = useAccessStore();
+const userStore = useUserStore();
+
+const capabilities = computed(() =>
+  getEquipmentLedgerCapabilities(accessStore.accessCodes),
+);
+const currentOperatorName = computed(
+  () => userStore.userInfo?.realName?.trim() ?? '',
+);
+
 const loading = reactive({
   equipment: false,
   logs: false,
@@ -57,7 +72,7 @@ const pageError = ref('');
 const equipmentRecords = ref<EquipmentRecordView[]>([]);
 const selectedEquipment = ref<EquipmentRecordView | null>(null);
 const logs = ref(awaitSafeLogs());
-const warnings = ref(awaitSafeWarnings());
+const warnings = ref<EquipmentWarningView[]>([]);
 const editingEquipment = ref<EquipmentRecordView | null>(null);
 const equipmentDialogVisible = computed({
   get: () => editingEquipment.value !== null,
@@ -70,10 +85,6 @@ const equipmentDialogVisible = computed({
 
 function awaitSafeLogs() {
   return [] as Awaited<ReturnType<typeof listEquipmentMaintenanceLogs>>;
-}
-
-function awaitSafeWarnings() {
-  return [] as Awaited<ReturnType<typeof listEquipmentWarnings>>;
 }
 
 const equipmentFilters = reactive({
@@ -124,6 +135,10 @@ function getWarningTagType(type?: null | string) {
   return 'info';
 }
 
+function getDefaultOperatorName() {
+  return currentOperatorName.value;
+}
+
 function resetEquipmentForm() {
   equipmentForm.enabledAt = '';
   equipmentForm.equipmentCategory = '';
@@ -133,11 +148,26 @@ function resetEquipmentForm() {
   equipmentForm.locationDescription = '';
   equipmentForm.modelNo = '';
   equipmentForm.nextMaintenanceAt = '';
-  equipmentForm.operatorName = '';
+  equipmentForm.operatorName = getDefaultOperatorName();
   equipmentForm.remarks = '';
 }
 
+function resetLogForm() {
+  logForm.description = '';
+  logForm.maintenanceStatus = 'COMPLETED';
+  logForm.maintenanceType = 'MAINTENANCE';
+  logForm.nextMaintenanceAt = '';
+  logForm.operatorName = getDefaultOperatorName();
+  logForm.performedAt = '';
+  logForm.remarks = '';
+}
+
 function openCreateEquipmentDialog() {
+  if (!capabilities.value.canCreateEquipment) {
+    ElMessage.warning('当前账号没有设备档案维护权限');
+    return;
+  }
+
   editingEquipment.value = {
     enabledAt: null,
     equipmentCategory: null,
@@ -154,6 +184,11 @@ function openCreateEquipmentDialog() {
 }
 
 function openEditEquipmentDialog(row: EquipmentRecordView) {
+  if (!capabilities.value.canUpdateEquipment) {
+    ElMessage.warning('当前账号没有设备档案维护权限');
+    return;
+  }
+
   editingEquipment.value = row;
   equipmentForm.enabledAt = row.enabledAt ?? '';
   equipmentForm.equipmentCategory = row.equipmentCategory ?? '';
@@ -163,11 +198,26 @@ function openEditEquipmentDialog(row: EquipmentRecordView) {
   equipmentForm.locationDescription = row.locationDescription ?? '';
   equipmentForm.modelNo = row.modelNo ?? '';
   equipmentForm.nextMaintenanceAt = row.nextMaintenanceAt ?? '';
-  equipmentForm.operatorName = '';
+  equipmentForm.operatorName = getDefaultOperatorName();
   equipmentForm.remarks = row.remarks ?? '';
 }
 
+function syncSelectedEquipment() {
+  if (!selectedEquipment.value) {
+    return;
+  }
+
+  selectedEquipment.value =
+    equipmentRecords.value.find((item) => item.id === selectedEquipment.value?.id) ?? null;
+}
+
 async function loadEquipmentRecords() {
+  if (!capabilities.value.canQueryEquipment) {
+    equipmentRecords.value = [];
+    selectedEquipment.value = null;
+    return;
+  }
+
   loading.equipment = true;
   pageError.value = '';
   try {
@@ -175,6 +225,7 @@ async function loadEquipmentRecords() {
       equipmentStatus: equipmentFilters.equipmentStatus || undefined,
       keyword: equipmentFilters.keyword.trim() || undefined,
     });
+    syncSelectedEquipment();
   } catch (error) {
     pageError.value = getOperationSupportPageErrorMessage(error);
   } finally {
@@ -183,6 +234,11 @@ async function loadEquipmentRecords() {
 }
 
 async function loadWarnings() {
+  if (!capabilities.value.canQueryWarnings) {
+    warnings.value = [];
+    return;
+  }
+
   loading.warnings = true;
   try {
     warnings.value = await listEquipmentWarnings();
@@ -193,8 +249,14 @@ async function loadWarnings() {
   }
 }
 
-async function selectEquipment(row: EquipmentRecordView) {
+async function selectEquipment(row: EquipmentRecordView | null) {
   selectedEquipment.value = row;
+  logs.value = [];
+
+  if (!row || !capabilities.value.canQueryEquipment) {
+    return;
+  }
+
   loading.logs = true;
   try {
     logs.value = await listEquipmentMaintenanceLogs(row.id);
@@ -205,19 +267,57 @@ async function selectEquipment(row: EquipmentRecordView) {
   }
 }
 
+function scrollToEquipmentDetail() {
+  document.getElementById('equipment-detail')?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'start',
+  });
+}
+
+async function navigateToEquipmentDetail(warning: EquipmentWarningView) {
+  if (!capabilities.value.canQueryEquipment) {
+    ElMessage.warning('当前账号没有设备档案查询权限，无法打开设备详情');
+    return;
+  }
+
+  equipmentFilters.keyword = warning.equipmentCode;
+  equipmentFilters.equipmentStatus = '';
+  await loadEquipmentRecords();
+
+  const matchedEquipment = equipmentRecords.value.find(
+    (item) => item.id === warning.equipmentId,
+  );
+  if (!matchedEquipment) {
+    ElMessage.warning('未找到对应设备，请刷新后重试');
+    return;
+  }
+
+  await selectEquipment(matchedEquipment);
+  scrollToEquipmentDetail();
+  ElMessage.success(`已定位到设备 ${warning.equipmentCode}`);
+}
+
 async function submitEquipment() {
-  if (!equipmentForm.equipmentName || !equipmentForm.equipmentStatus || !equipmentForm.operatorName) {
+  if (!editingEquipment.value) {
+    return;
+  }
+
+  if (
+    !equipmentForm.equipmentName ||
+    !equipmentForm.equipmentStatus ||
+    !equipmentForm.operatorName
+  ) {
     ElMessage.warning('请填写设备名称、设备状态和操作人');
     return;
   }
-  if (!editingEquipment.value?.id && !equipmentForm.equipmentCode) {
+  if (!editingEquipment.value.id && !equipmentForm.equipmentCode) {
     ElMessage.warning('新增设备需要填写设备编码');
     return;
   }
 
   submitting.value = true;
   try {
-    if (editingEquipment.value?.id) {
+    if (editingEquipment.value.id) {
       await updateEquipmentRecord(editingEquipment.value.id, {
         enabledAt: equipmentForm.enabledAt || undefined,
         equipmentCategory: equipmentForm.equipmentCategory || undefined,
@@ -259,7 +359,12 @@ async function submitMaintenanceLog() {
     ElMessage.warning('请先选择设备');
     return;
   }
-  if (!logForm.maintenanceType || !logForm.maintenanceStatus || !logForm.performedAt || !logForm.operatorName) {
+  if (
+    !logForm.maintenanceType ||
+    !logForm.maintenanceStatus ||
+    !logForm.performedAt ||
+    !logForm.operatorName
+  ) {
     ElMessage.warning('请填写维护类型、状态、执行时间和操作人');
     return;
   }
@@ -276,10 +381,12 @@ async function submitMaintenanceLog() {
       remarks: logForm.remarks || undefined,
     });
     ElMessage.success('维护记录已新增');
-    logForm.description = '';
-    logForm.nextMaintenanceAt = '';
-    logForm.remarks = '';
-    await Promise.all([selectEquipment(selectedEquipment.value), loadEquipmentRecords(), loadWarnings()]);
+    resetLogForm();
+    await Promise.all([
+      selectEquipment(selectedEquipment.value),
+      loadEquipmentRecords(),
+      loadWarnings(),
+    ]);
   } catch (error) {
     ElMessage.error(getOperationSupportPageErrorMessage(error));
   } finally {
@@ -287,11 +394,35 @@ async function submitMaintenanceLog() {
   }
 }
 
-void Promise.all([loadEquipmentRecords(), loadWarnings()]);
+async function initializePage() {
+  const tasks: Promise<void>[] = [];
+
+  if (capabilities.value.canQueryEquipment) {
+    tasks.push(loadEquipmentRecords());
+  }
+  if (capabilities.value.canQueryWarnings) {
+    tasks.push(loadWarnings());
+  }
+  resetLogForm();
+
+  await Promise.all(tasks);
+}
+
+void initializePage();
 </script>
 
 <template>
-  <Page title="设备台账" description="维护设备档案、保养维修记录，并跟踪到期和逾期预警。">
+  <div
+    v-if="!capabilities.canViewPage"
+    class="flex min-h-[360px] items-center justify-center"
+  >
+    <Fallback status="403" />
+  </div>
+  <Page
+    v-else
+    title="设备台账"
+    description="维护设备台账、保养记录，并跟踪 DUE_SOON 与 OVERDUE 预警。"
+  >
     <div class="flex flex-col gap-4">
       <ElAlert
         v-if="pageError"
@@ -301,100 +432,158 @@ void Promise.all([loadEquipmentRecords(), loadWarnings()]);
         type="error"
       />
 
-      <OperationSectionCard title="设备档案" description="按关键字和设备状态查询设备台账。">
+      <OperationSectionCard
+        v-if="
+          capabilities.canQueryEquipment ||
+          capabilities.canCreateEquipment ||
+          capabilities.canUpdateEquipment
+        "
+        title="设备台账"
+        description="按关键字和设备状态查询设备台账，维护设备基础档案。"
+      >
         <template #extra>
-          <ElButton type="primary" @click="openCreateEquipmentDialog">新增设备</ElButton>
+          <ElButton
+            v-if="capabilities.canCreateEquipment"
+            type="primary"
+            @click="openCreateEquipmentDialog"
+          >
+            新增设备
+          </ElButton>
         </template>
-        <ElForm inline label-width="88px">
-          <ElFormItem label="关键字">
-            <ElInput
-              v-model="equipmentFilters.keyword"
-              clearable
-              placeholder="编码/名称"
-              style="width: 220px"
-              @keyup.enter="loadEquipmentRecords"
-            />
-          </ElFormItem>
-          <ElFormItem label="状态">
-            <ElSelect
-              v-model="equipmentFilters.equipmentStatus"
-              clearable
-              placeholder="全部"
-              style="width: 160px"
-            >
-              <ElOption
-                v-for="option in EQUIPMENT_STATUS_OPTIONS"
-                :key="option.value"
-                :label="option.label"
-                :value="option.value"
-              />
-            </ElSelect>
-          </ElFormItem>
-          <ElFormItem>
-            <ElButton
-              :loading="loading.equipment"
-              type="primary"
-              @click="loadEquipmentRecords"
-            >
-              查询
-            </ElButton>
-          </ElFormItem>
-        </ElForm>
-        <ElTable
-          v-loading="loading.equipment"
-          :data="equipmentRecords"
-          border
-          highlight-current-row
-          @current-change="selectEquipment"
-        >
-          <ElTableColumn label="设备编码" min-width="140" prop="equipmentCode" />
-          <ElTableColumn label="设备名称" min-width="180" prop="equipmentName" />
-          <ElTableColumn label="类别" min-width="120">
-            <template #default="{ row }">
-              {{ formatEquipmentCategory(row.equipmentCategory) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="型号" min-width="120">
-            <template #default="{ row }">{{ formatNullable(row.modelNo) }}</template>
-          </ElTableColumn>
-          <ElTableColumn label="状态" min-width="110">
-            <template #default="{ row }">
-              <ElTag :type="getEquipmentStatusTagType(row.equipmentStatus)">
-                {{ formatEquipmentStatus(row.equipmentStatus) }}
-              </ElTag>
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="下次保养" min-width="180">
-            <template #default="{ row }">
-              {{ formatNullable(row.nextMaintenanceAt) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn fixed="right" label="操作" width="100">
-            <template #default="{ row }">
-              <ElButton link type="primary" @click.stop="openEditEquipmentDialog(row)">
-                编辑
-              </ElButton>
-            </template>
-          </ElTableColumn>
-        </ElTable>
-      </OperationSectionCard>
-
-      <OperationSectionCard title="维修保养记录" description="选择设备后查看和新增维修保养记录。">
         <ElAlert
-          v-if="!selectedEquipment"
+          v-if="!capabilities.canQueryEquipment"
           :closable="false"
-          title="请在设备档案表中选择一台设备。"
-          type="info"
+          title="当前账号没有设备档案查询权限，仅可使用已开放的维护或预警能力。"
+          type="warning"
         />
         <template v-else>
           <ElForm inline label-width="88px">
-            <ElFormItem label="设备">
+            <ElFormItem label="关键字">
               <ElInput
-                :model-value="`${selectedEquipment.equipmentCode} ${selectedEquipment.equipmentName}`"
-                disabled
-                style="width: 260px"
+                v-model="equipmentFilters.keyword"
+                clearable
+                placeholder="编码/名称"
+                style="width: 220px"
+                @keyup.enter="loadEquipmentRecords"
               />
             </ElFormItem>
+            <ElFormItem label="状态">
+              <ElSelect
+                v-model="equipmentFilters.equipmentStatus"
+                clearable
+                placeholder="全部"
+                style="width: 160px"
+              >
+                <ElOption
+                  v-for="option in EQUIPMENT_STATUS_OPTIONS"
+                  :key="option.value"
+                  :label="option.label"
+                  :value="option.value"
+                />
+              </ElSelect>
+            </ElFormItem>
+            <ElFormItem>
+              <ElButton
+                :loading="loading.equipment"
+                type="primary"
+                @click="loadEquipmentRecords"
+              >
+                查询
+              </ElButton>
+            </ElFormItem>
+          </ElForm>
+          <ElTable
+            v-loading="loading.equipment"
+            :data="equipmentRecords"
+            border
+            highlight-current-row
+            @current-change="selectEquipment"
+          >
+            <ElTableColumn label="设备编码" min-width="140" prop="equipmentCode" />
+            <ElTableColumn label="设备名称" min-width="180" prop="equipmentName" />
+            <ElTableColumn label="类别" min-width="120">
+              <template #default="{ row }">
+                {{ formatEquipmentCategory(row.equipmentCategory) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="型号" min-width="120">
+              <template #default="{ row }">{{ formatNullable(row.modelNo) }}</template>
+            </ElTableColumn>
+            <ElTableColumn label="状态" min-width="110">
+              <template #default="{ row }">
+                <ElTag :type="getEquipmentStatusTagType(row.equipmentStatus)">
+                  {{ formatEquipmentStatus(row.equipmentStatus) }}
+                </ElTag>
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="下次保养" min-width="180">
+              <template #default="{ row }">
+                {{ formatNullable(row.nextMaintenanceAt) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn
+              v-if="capabilities.canUpdateEquipment"
+              fixed="right"
+              label="操作"
+              width="100"
+            >
+              <template #default="{ row }">
+                <ElButton link type="primary" @click.stop="openEditEquipmentDialog(row)">
+                  编辑
+                </ElButton>
+              </template>
+            </ElTableColumn>
+          </ElTable>
+        </template>
+      </OperationSectionCard>
+
+      <OperationSectionCard
+        id="equipment-detail"
+        title="设备详情与保养记录"
+        description="用于承接设备选择和预警跳转，查看对应设备的台账详情与保养记录。"
+      >
+        <ElAlert
+          v-if="!selectedEquipment"
+          :closable="false"
+          title="请在设备台账中选择一台设备，或在预警列表中点击“查看设备”。"
+          type="info"
+        />
+        <template v-else>
+          <ElDescriptions :column="2" border class="mb-4">
+            <ElDescriptionsItem label="设备编码">
+              {{ selectedEquipment.equipmentCode }}
+            </ElDescriptionsItem>
+            <ElDescriptionsItem label="设备名称">
+              {{ selectedEquipment.equipmentName }}
+            </ElDescriptionsItem>
+            <ElDescriptionsItem label="设备类别">
+              {{ formatEquipmentCategory(selectedEquipment.equipmentCategory) }}
+            </ElDescriptionsItem>
+            <ElDescriptionsItem label="设备状态">
+              {{ formatEquipmentStatus(selectedEquipment.equipmentStatus) }}
+            </ElDescriptionsItem>
+            <ElDescriptionsItem label="型号">
+              {{ formatNullable(selectedEquipment.modelNo) }}
+            </ElDescriptionsItem>
+            <ElDescriptionsItem label="位置">
+              {{ formatNullable(selectedEquipment.locationDescription) }}
+            </ElDescriptionsItem>
+            <ElDescriptionsItem label="启用时间">
+              {{ formatNullable(selectedEquipment.enabledAt) }}
+            </ElDescriptionsItem>
+            <ElDescriptionsItem label="下次保养">
+              {{ formatNullable(selectedEquipment.nextMaintenanceAt) }}
+            </ElDescriptionsItem>
+            <ElDescriptionsItem label="备注">
+              {{ formatNullable(selectedEquipment.remarks) }}
+            </ElDescriptionsItem>
+          </ElDescriptions>
+
+          <ElForm
+            v-if="capabilities.canCreateMaintenanceLog"
+            inline
+            label-width="88px"
+          >
             <ElFormItem label="维护类型">
               <ElSelect v-model="logForm.maintenanceType" style="width: 140px">
                 <ElOption
@@ -438,7 +627,17 @@ void Promise.all([loadEquipmentRecords(), loadWarnings()]);
               </ElButton>
             </ElFormItem>
           </ElForm>
-          <ElForm label-width="88px">
+          <ElAlert
+            v-else
+            :closable="false"
+            class="mb-4"
+            title="当前账号没有设备保养记录维护权限，仅可查看设备详情和预警。"
+            type="warning"
+          />
+          <ElForm
+            v-if="capabilities.canCreateMaintenanceLog"
+            label-width="88px"
+          >
             <ElFormItem label="说明">
               <ElInput v-model="logForm.description" type="textarea" />
             </ElFormItem>
@@ -474,7 +673,11 @@ void Promise.all([loadEquipmentRecords(), loadWarnings()]);
         </template>
       </OperationSectionCard>
 
-      <OperationSectionCard title="设备预警" description="展示即将到期或已逾期维护的设备。">
+      <OperationSectionCard
+        v-if="capabilities.canQueryWarnings"
+        title="设备预警"
+        description="支持 DUE_SOON 与 OVERDUE 预警，并可跳转到对应设备详情。"
+      >
         <template #extra>
           <ElButton :loading="loading.warnings" @click="loadWarnings">刷新</ElButton>
         </template>
@@ -496,6 +699,18 @@ void Promise.all([loadEquipmentRecords(), loadWarnings()]);
           <ElTableColumn label="下次保养" min-width="180">
             <template #default="{ row }">
               {{ formatNullable(row.nextMaintenanceAt) }}
+            </template>
+          </ElTableColumn>
+          <ElTableColumn
+            v-if="capabilities.canQueryEquipment"
+            fixed="right"
+            label="跳转"
+            width="110"
+          >
+            <template #default="{ row }">
+              <ElButton link type="primary" @click="navigateToEquipmentDetail(row)">
+                查看设备
+              </ElButton>
             </template>
           </ElTableColumn>
         </ElTable>

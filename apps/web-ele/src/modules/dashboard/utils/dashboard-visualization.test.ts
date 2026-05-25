@@ -201,7 +201,7 @@ describe('dashboard visualization helpers', () => {
           },
         ],
         id: 'technical',
-        title: '生产管理',
+        title: '制片管理',
       }),
     ]);
 

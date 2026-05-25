@@ -8,7 +8,12 @@ import {
   M4_REPORT_PAGE_AUTHORITIES,
   M4_REVISION_PAGE_AUTHORITIES,
 } from '#/modules/doctor-workflow/constants';
-import { M5_PERMISSION_CODES } from '#/modules/operation-support/constants';
+import {
+  M5_ARCHIVE_PAGE_AUTHORITIES,
+  M5_EQUIPMENT_PAGE_AUTHORITIES,
+  M5_PERMISSION_CODES,
+  M5_REAGENT_PAGE_AUTHORITIES,
+} from '#/modules/operation-support/constants';
 import { M1_PERMISSION_CODES } from '#/modules/system-management/constants';
 import { M2_PERMISSION_CODES } from '#/modules/specimen-workflow/constants';
 import { M3_PERMISSION_CODES } from '#/modules/technical-workflow/constants';
@@ -213,7 +218,7 @@ describe('mapMenuViewsToRoutes', () => {
         icon: 'operations',
         id: 'MENU_M3_WORKFLOW',
         menuCode: 'M3_WORKFLOW',
-        menuName: '生产管理',
+        menuName: '制片管理',
         menuType: 'DIRECTORY',
         parentId: null,
         path: '/technical-workflow',
@@ -669,13 +674,13 @@ describe('operation support route access', () => {
     expect(reagentRoute?.component).toBeTypeOf('function');
     expect(equipmentRoute?.component).toBeTypeOf('function');
     expect(archiveRoute?.meta?.authority).toEqual([
-      M5_PERMISSION_CODES.ARCHIVE_QUERY,
+      ...M5_ARCHIVE_PAGE_AUTHORITIES,
     ]);
     expect(reagentRoute?.meta?.authority).toEqual([
-      M5_PERMISSION_CODES.REAGENT_QUERY,
+      ...M5_REAGENT_PAGE_AUTHORITIES,
     ]);
     expect(equipmentRoute?.meta?.authority).toEqual([
-      M5_PERMISSION_CODES.EQUIPMENT_QUERY,
+      ...M5_EQUIPMENT_PAGE_AUTHORITIES,
     ]);
   });
 });

@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { M5_PERMISSION_CODES } from '#/modules/operation-support/constants';
+import {
+  M5_ARCHIVE_PAGE_AUTHORITIES,
+  M5_EQUIPMENT_PAGE_AUTHORITIES,
+  M5_PERMISSION_CODES,
+  M5_REAGENT_PAGE_AUTHORITIES,
+} from '#/modules/operation-support/constants';
 
 import operationSupportRoutes from './operation-support';
 
@@ -29,13 +34,19 @@ describe('operation support routes', () => {
     expect(reagentRoute?.path).toBe('/operation-support/reagents');
     expect(equipmentRoute?.path).toBe('/operation-support/equipment');
     expect(archiveRoute?.meta?.authority).toEqual([
-      M5_PERMISSION_CODES.ARCHIVE_QUERY,
+      ...M5_ARCHIVE_PAGE_AUTHORITIES,
     ]);
     expect(reagentRoute?.meta?.authority).toEqual([
-      M5_PERMISSION_CODES.REAGENT_QUERY,
+      ...M5_REAGENT_PAGE_AUTHORITIES,
     ]);
     expect(equipmentRoute?.meta?.authority).toEqual([
-      M5_PERMISSION_CODES.EQUIPMENT_QUERY,
+      ...M5_EQUIPMENT_PAGE_AUTHORITIES,
     ]);
+    expect(operationRoot?.meta?.authority).toContain(
+      M5_PERMISSION_CODES.REAGENT_WARNING_QUERY,
+    );
+    expect(operationRoot?.meta?.authority).toContain(
+      M5_PERMISSION_CODES.EQUIPMENT_MAINTENANCE_CREATE,
+    );
   });
 });

@@ -1,29 +1,15 @@
 import type { RouteRecordRaw } from 'vue-router';
 
-import { M5_PERMISSION_CODES } from '#/modules/operation-support/constants';
+import {
+  M5_ARCHIVE_PAGE_AUTHORITIES,
+  M5_EQUIPMENT_PAGE_AUTHORITIES,
+  M5_REAGENT_PAGE_AUTHORITIES,
+} from '#/modules/operation-support/constants';
 
 const OPERATION_SUPPORT_AUTHORITIES = [
-  M5_PERMISSION_CODES.ARCHIVE_CABINET_QUERY,
-  M5_PERMISSION_CODES.ARCHIVE_CABINET_CREATE,
-  M5_PERMISSION_CODES.ARCHIVE_CABINET_UPDATE,
-  M5_PERMISSION_CODES.APPLICATION_FORM_ARCHIVE,
-  M5_PERMISSION_CODES.EMBEDDING_BOX_ARCHIVE,
-  M5_PERMISSION_CODES.SLIDE_ARCHIVE,
-  M5_PERMISSION_CODES.ARCHIVE_QUERY,
-  M5_PERMISSION_CODES.LOAN_CREATE,
-  M5_PERMISSION_CODES.LOAN_RETURN,
-  M5_PERMISSION_CODES.LOAN_QUERY,
-  M5_PERMISSION_CODES.REAGENT_QUERY,
-  M5_PERMISSION_CODES.REAGENT_CREATE,
-  M5_PERMISSION_CODES.REAGENT_UPDATE,
-  M5_PERMISSION_CODES.REAGENT_STOCK_QUERY,
-  M5_PERMISSION_CODES.REAGENT_STOCK_UPDATE,
-  M5_PERMISSION_CODES.REAGENT_WARNING_QUERY,
-  M5_PERMISSION_CODES.EQUIPMENT_QUERY,
-  M5_PERMISSION_CODES.EQUIPMENT_CREATE,
-  M5_PERMISSION_CODES.EQUIPMENT_UPDATE,
-  M5_PERMISSION_CODES.EQUIPMENT_MAINTENANCE_CREATE,
-  M5_PERMISSION_CODES.EQUIPMENT_WARNING_QUERY,
+  ...M5_ARCHIVE_PAGE_AUTHORITIES,
+  ...M5_REAGENT_PAGE_AUTHORITIES,
+  ...M5_EQUIPMENT_PAGE_AUTHORITIES,
 ];
 
 const routes: RouteRecordRaw[] = [
@@ -57,7 +43,7 @@ const routes: RouteRecordRaw[] = [
         component: () =>
           import('#/modules/operation-support/views/ArchiveManagementView.vue'),
         meta: {
-          authority: [M5_PERMISSION_CODES.ARCHIVE_QUERY],
+          authority: [...M5_ARCHIVE_PAGE_AUTHORITIES],
           icon: 'carbon:archive',
           title: '归档管理',
         },
@@ -68,7 +54,7 @@ const routes: RouteRecordRaw[] = [
         component: () =>
           import('#/modules/operation-support/views/ReagentLedgerView.vue'),
         meta: {
-          authority: [M5_PERMISSION_CODES.REAGENT_QUERY],
+          authority: [...M5_REAGENT_PAGE_AUTHORITIES],
           icon: 'carbon:chemistry',
           title: '试剂台账',
         },
@@ -79,7 +65,7 @@ const routes: RouteRecordRaw[] = [
         component: () =>
           import('#/modules/operation-support/views/EquipmentLedgerView.vue'),
         meta: {
-          authority: [M5_PERMISSION_CODES.EQUIPMENT_QUERY],
+          authority: [...M5_EQUIPMENT_PAGE_AUTHORITIES],
           icon: 'carbon:tools',
           title: '设备台账',
         },

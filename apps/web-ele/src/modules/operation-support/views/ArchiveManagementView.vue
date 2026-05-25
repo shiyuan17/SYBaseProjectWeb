@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import type {
+  ArchiveApplicationFormRequest,
   ArchiveCabinetView,
+  ArchiveEmbeddingBoxRequest,
   ArchivePositionView,
   ArchiveRecordView,
+  ArchiveSlideRequest,
   MaterialLoanView,
 } from '../types/operation-support';
 
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 
-import { Page } from '@vben/common-ui';
+import { Fallback, Page } from '@vben/common-ui';
+import { useAccessStore, useUserStore } from '@vben/stores';
 
 import {
   ElAlert,
@@ -24,8 +28,6 @@ import {
   ElTable,
   ElTableColumn,
   ElTag,
-  ElTabs,
-  ElTabPane,
 } from 'element-plus';
 
 import {
@@ -46,6 +48,8 @@ import {
   ARCHIVE_CABINET_STATUS_OPTIONS,
   ARCHIVE_CABINET_TYPE_OPTIONS,
   ARCHIVE_OBJECT_TYPE_OPTIONS,
+  M5_ARCHIVE_PAGE_AUTHORITIES,
+  M5_PERMISSION_CODES,
   MATERIAL_TYPE_OPTIONS,
 } from '../constants';
 import { getOperationSupportPageErrorMessage } from '../utils/error';
@@ -53,9 +57,112 @@ import {
   formatArchiveCabinetStatus,
   formatArchiveCabinetType,
   formatArchiveObjectType,
+  formatArchivePositionStatus,
+  formatArchiveStorageStatus,
+  formatMaterialLoanStatus,
   formatMaterialType,
   formatNullable,
 } from '../utils/format';
+
+type CabinetFormState = {
+  cabinetCode: string;
+  cabinetName: string;
+  cabinetStatus: string;
+  cabinetType: string;
+  layerCount: number;
+  locationDescription: string;
+  operatorName: string;
+  operatorUserId: string;
+  remarks: string;
+  slotCountPerLayer: number;
+  terminalCode: string;
+};
+
+type ArchiveFormState = {
+  caseId: string;
+  embeddingBoxId: string;
+  fileName: string;
+  fileUrl: string;
+  objectType: string;
+  operatorName: string;
+  operatorUserId: string;
+  remarks: string;
+  slideId: string;
+  terminalCode: string;
+};
+
+type LoanFormState = {
+  borrowPurpose: string;
+  borrowedByName: string;
+  borrowedByUserId: string;
+  materialId: string;
+  materialType: string;
+  operatorName: string;
+  operatorUserId: string;
+  remarks: string;
+  terminalCode: string;
+};
+
+type ReturnFormState = {
+  operatorName: string;
+  operatorUserId: string;
+  remarks: string;
+  terminalCode: string;
+};
+
+type PositionWorkbenchRow = ArchivePositionView & {
+  cabinetCode: string;
+  cabinetName: string;
+  cabinetStatus: string;
+  cabinetType: string;
+  selectable: boolean;
+  statusReason: string;
+};
+
+const accessStore = useAccessStore();
+const userStore = useUserStore();
+
+const accessCodeSet = computed(() => new Set(accessStore.accessCodes));
+const canViewArchivePage = computed(() =>
+  M5_ARCHIVE_PAGE_AUTHORITIES.some((code) => accessCodeSet.value.has(code)),
+);
+const canQueryCabinets = computed(() =>
+  accessCodeSet.value.has(M5_PERMISSION_CODES.ARCHIVE_CABINET_QUERY),
+);
+const canCreateCabinet = computed(() =>
+  accessCodeSet.value.has(M5_PERMISSION_CODES.ARCHIVE_CABINET_CREATE),
+);
+const canUpdateCabinet = computed(() =>
+  accessCodeSet.value.has(M5_PERMISSION_CODES.ARCHIVE_CABINET_UPDATE),
+);
+const canArchiveApplicationForm = computed(() =>
+  accessCodeSet.value.has(M5_PERMISSION_CODES.APPLICATION_FORM_ARCHIVE),
+);
+const canArchiveEmbeddingBox = computed(() =>
+  accessCodeSet.value.has(M5_PERMISSION_CODES.EMBEDDING_BOX_ARCHIVE),
+);
+const canArchiveSlide = computed(() =>
+  accessCodeSet.value.has(M5_PERMISSION_CODES.SLIDE_ARCHIVE),
+);
+const canQueryRecords = computed(() =>
+  accessCodeSet.value.has(M5_PERMISSION_CODES.ARCHIVE_QUERY),
+);
+const canCreateLoan = computed(() =>
+  accessCodeSet.value.has(M5_PERMISSION_CODES.LOAN_CREATE),
+);
+const canQueryLoans = computed(() =>
+  accessCodeSet.value.has(M5_PERMISSION_CODES.LOAN_QUERY),
+);
+const canReturnLoan = computed(() =>
+  accessCodeSet.value.has(M5_PERMISSION_CODES.LOAN_RETURN),
+);
+
+const currentOperatorName = computed(
+  () => userStore.userInfo?.realName?.trim() ?? '',
+);
+const currentOperatorUserId = computed(
+  () => userStore.userInfo?.userId?.trim() ?? '',
+);
 
 const loading = reactive({
   cabinets: false,
@@ -64,18 +171,25 @@ const loading = reactive({
   records: false,
 });
 const submitting = ref(false);
-const pageError = ref('');
+const cabinetError = ref('');
+const loanError = ref('');
+const positionError = ref('');
+const recordError = ref('');
+
 const cabinets = ref<ArchiveCabinetView[]>([]);
-const positions = ref<ArchivePositionView[]>([]);
+const availablePositions = ref<ArchivePositionView[]>([]);
 const records = ref<ArchiveRecordView[]>([]);
-const loans = ref<MaterialLoanView[]>([]);
+const pendingLoans = ref<MaterialLoanView[]>([]);
+const selectedPositionCode = ref('');
 const editingCabinet = ref<ArchiveCabinetView | null>(null);
 const returningLoan = ref<MaterialLoanView | null>(null);
+const cabinetDialogMode = ref<'create' | 'edit' | null>(null);
+
 const cabinetDialogVisible = computed({
-  get: () => editingCabinet.value !== null,
+  get: () => cabinetDialogMode.value !== null,
   set: (visible: boolean) => {
     if (!visible) {
-      editingCabinet.value = null;
+      closeCabinetDialog();
     }
   },
 });
@@ -83,40 +197,61 @@ const returnDialogVisible = computed({
   get: () => returningLoan.value !== null,
   set: (visible: boolean) => {
     if (!visible) {
-      returningLoan.value = null;
+      closeReturnDialog();
     }
   },
 });
+const isEditingCabinet = computed(() => cabinetDialogMode.value === 'edit');
 
-const cabinetForm = reactive({
+const cabinetForm = reactive<CabinetFormState>({
   cabinetCode: '',
   cabinetName: '',
-  cabinetStatus: 'ENABLED',
+  cabinetStatus: 'ACTIVE',
   cabinetType: 'STANDARD',
   layerCount: 1,
   locationDescription: '',
   operatorName: '',
+  operatorUserId: '',
   remarks: '',
   slotCountPerLayer: 10,
   terminalCode: '',
 });
 
-const positionFilters = reactive({
-  cabinetId: '',
-  cabinetType: '',
-});
-
-const archiveForm = reactive({
-  archivePositionId: '',
+const archiveForm = reactive<ArchiveFormState>({
   caseId: '',
   embeddingBoxId: '',
   fileName: '',
   fileUrl: '',
   objectType: 'APPLICATION_FORM',
   operatorName: '',
+  operatorUserId: '',
   remarks: '',
   slideId: '',
   terminalCode: '',
+});
+
+const loanForm = reactive<LoanFormState>({
+  borrowPurpose: '',
+  borrowedByName: '',
+  borrowedByUserId: '',
+  materialId: '',
+  materialType: 'SLIDE',
+  operatorName: '',
+  operatorUserId: '',
+  remarks: '',
+  terminalCode: '',
+});
+
+const returnForm = reactive<ReturnFormState>({
+  operatorName: '',
+  operatorUserId: '',
+  remarks: '',
+  terminalCode: '',
+});
+
+const positionFilters = reactive({
+  cabinetId: '',
+  cabinetType: '',
 });
 
 const recordFilters = reactive({
@@ -130,29 +265,317 @@ const loanFilters = reactive({
   materialType: '',
 });
 
-const loanForm = reactive({
-  borrowedByName: '',
-  borrowedByUserId: '',
-  borrowPurpose: '',
-  materialId: '',
-  materialType: 'SLIDE',
-  operatorName: '',
-  remarks: '',
-  terminalCode: '',
+const filteredCabinets = computed(() =>
+  cabinets.value
+    .filter((cabinet) => {
+      if (positionFilters.cabinetId && cabinet.id !== positionFilters.cabinetId) {
+        return false;
+      }
+      if (
+        positionFilters.cabinetType &&
+        cabinet.cabinetType !== positionFilters.cabinetType
+      ) {
+        return false;
+      }
+      return true;
+    })
+    .slice()
+    .sort((left, right) => left.cabinetCode.localeCompare(right.cabinetCode)),
+);
+
+const availablePositionCodeMap = computed(
+  () =>
+    new Map(
+      availablePositions.value.map((position) => [position.positionCode, position]),
+    ),
+);
+
+const positionRows = computed<PositionWorkbenchRow[]>(() => {
+  return filteredCabinets.value.flatMap((cabinet) => {
+    const rows: PositionWorkbenchRow[] = [];
+
+    for (let layerNo = 1; layerNo <= cabinet.layerCount; layerNo += 1) {
+      for (let slotNo = 1; slotNo <= cabinet.slotCountPerLayer; slotNo += 1) {
+        const positionCode = buildPositionCode(cabinet.cabinetCode, layerNo, slotNo);
+        const availablePosition = availablePositionCodeMap.value.get(positionCode);
+        const positionStatus =
+          cabinet.cabinetStatus === 'DISABLED'
+            ? 'DISABLED'
+            : availablePosition
+              ? 'AVAILABLE'
+              : 'OCCUPIED';
+
+        rows.push({
+          cabinetCode: cabinet.cabinetCode,
+          cabinetId: cabinet.id,
+          cabinetName: cabinet.cabinetName,
+          cabinetStatus: cabinet.cabinetStatus,
+          cabinetType: cabinet.cabinetType,
+          id: availablePosition?.id ?? `${cabinet.id}-${layerNo}-${slotNo}`,
+          layerNo,
+          positionCode,
+          positionStatus,
+          selectable: positionStatus === 'AVAILABLE',
+          slotNo,
+          statusReason: getPositionStatusReason(positionStatus, cabinet.cabinetName),
+        });
+      }
+    }
+
+    return rows;
+  });
 });
 
-const returnForm = reactive({
-  archivePositionId: '',
-  operatorName: '',
-  remarks: '',
-  terminalCode: '',
+const selectedPosition = computed(
+  () =>
+    positionRows.value.find(
+      (position) =>
+        position.positionCode === selectedPositionCode.value && position.selectable,
+    ) ?? null,
+);
+
+const positionSummary = computed(() => {
+  const summary = {
+    available: 0,
+    disabled: 0,
+    occupied: 0,
+    total: positionRows.value.length,
+  };
+
+  for (const row of positionRows.value) {
+    if (row.positionStatus === 'AVAILABLE') {
+      summary.available += 1;
+      continue;
+    }
+    if (row.positionStatus === 'DISABLED') {
+      summary.disabled += 1;
+      continue;
+    }
+    summary.occupied += 1;
+  }
+
+  return summary;
 });
 
-function getStatusTagType(status?: null | string) {
-  if (status === 'ENABLED' || status === 'IN_STORAGE' || status === 'RETURNED') {
+const cabinetCapacityPreview = computed(
+  () => cabinetForm.layerCount * cabinetForm.slotCountPerLayer,
+);
+const cabinetPositionRulePreview = computed(() =>
+  cabinetForm.cabinetCode
+    ? buildPositionCode(cabinetForm.cabinetCode.trim(), 1, 1)
+    : 'CAB-01-L1-S1',
+);
+const selectedPositionLabel = computed(
+  () => selectedPosition.value?.positionCode || '未选择柜位',
+);
+const selectedReturnPositionId = computed(() => selectedPosition.value?.id);
+const selectedReturnPositionDescription = computed(() => {
+  if (!selectedPosition.value) {
+    return '未指定替代柜位时，系统默认归还到原始归档柜位；若原柜位不可用，后端会要求选择新的可用柜位。';
+  }
+  return `当前会将 ${selectedPosition.value.positionCode} 作为归还替代柜位。`;
+});
+const archiveSubmitButtonText = computed(() => {
+  if (archiveForm.objectType === 'EMBEDDING_BOX') {
+    return '提交蜡块归档';
+  }
+  if (archiveForm.objectType === 'SLIDE') {
+    return '提交玻片归档';
+  }
+  return '提交申请单归档';
+});
+const archivePermissionWarning = computed(() => {
+  if (archiveForm.objectType === 'EMBEDDING_BOX' && !canArchiveEmbeddingBox.value) {
+    return '当前账号缺少蜡块归档权限。';
+  }
+  if (archiveForm.objectType === 'SLIDE' && !canArchiveSlide.value) {
+    return '当前账号缺少玻片归档权限。';
+  }
+  if (
+    archiveForm.objectType === 'APPLICATION_FORM' &&
+    !canArchiveApplicationForm.value
+  ) {
+    return '当前账号缺少申请单归档权限。';
+  }
+  if (!canQueryCabinets.value) {
+    return '当前账号缺少归档柜查询权限，无法选择归档柜位。';
+  }
+  return '';
+});
+const canSubmitArchive = computed(() => !archivePermissionWarning.value);
+
+watch(
+  () => currentOperatorName.value,
+  (operatorName) => {
+    populateOperatorDefaults(operatorName, currentOperatorUserId.value);
+  },
+  { immediate: true },
+);
+
+watch(
+  () => currentOperatorUserId.value,
+  (operatorUserId) => {
+    populateOperatorDefaults(currentOperatorName.value, operatorUserId);
+  },
+  { immediate: true },
+);
+
+watch(positionRows, (rows) => {
+  if (
+    selectedPositionCode.value &&
+    !rows.some(
+      (row) =>
+        row.positionCode === selectedPositionCode.value && row.selectable,
+    )
+  ) {
+    selectedPositionCode.value = '';
+  }
+});
+
+watch(
+  () => archiveForm.objectType,
+  () => {
+    archiveForm.caseId = '';
+    archiveForm.embeddingBoxId = '';
+    archiveForm.fileName = '';
+    archiveForm.fileUrl = '';
+    archiveForm.remarks = '';
+    archiveForm.slideId = '';
+  },
+);
+
+function populateOperatorDefaults(operatorName: string, operatorUserId: string) {
+  if (!cabinetForm.operatorName && operatorName) {
+    cabinetForm.operatorName = operatorName;
+  }
+  if (!cabinetForm.operatorUserId && operatorUserId) {
+    cabinetForm.operatorUserId = operatorUserId;
+  }
+  if (!archiveForm.operatorName && operatorName) {
+    archiveForm.operatorName = operatorName;
+  }
+  if (!archiveForm.operatorUserId && operatorUserId) {
+    archiveForm.operatorUserId = operatorUserId;
+  }
+  if (!loanForm.operatorName && operatorName) {
+    loanForm.operatorName = operatorName;
+  }
+  if (!loanForm.operatorUserId && operatorUserId) {
+    loanForm.operatorUserId = operatorUserId;
+  }
+  if (!returnForm.operatorName && operatorName) {
+    returnForm.operatorName = operatorName;
+  }
+  if (!returnForm.operatorUserId && operatorUserId) {
+    returnForm.operatorUserId = operatorUserId;
+  }
+}
+
+function buildPositionCode(cabinetCode: string, layerNo: number, slotNo: number) {
+  return `${cabinetCode}-L${layerNo}-S${slotNo}`;
+}
+
+function createCabinetFormDefaults(): CabinetFormState {
+  return {
+    cabinetCode: '',
+    cabinetName: '',
+    cabinetStatus: 'ACTIVE',
+    cabinetType: 'STANDARD',
+    layerCount: 1,
+    locationDescription: '',
+    operatorName: currentOperatorName.value,
+    operatorUserId: currentOperatorUserId.value,
+    remarks: '',
+    slotCountPerLayer: 10,
+    terminalCode: '',
+  };
+}
+
+function applyCabinetFormState(nextState: CabinetFormState) {
+  cabinetForm.cabinetCode = nextState.cabinetCode;
+  cabinetForm.cabinetName = nextState.cabinetName;
+  cabinetForm.cabinetStatus = nextState.cabinetStatus;
+  cabinetForm.cabinetType = nextState.cabinetType;
+  cabinetForm.layerCount = nextState.layerCount;
+  cabinetForm.locationDescription = nextState.locationDescription;
+  cabinetForm.operatorName = nextState.operatorName;
+  cabinetForm.operatorUserId = nextState.operatorUserId;
+  cabinetForm.remarks = nextState.remarks;
+  cabinetForm.slotCountPerLayer = nextState.slotCountPerLayer;
+  cabinetForm.terminalCode = nextState.terminalCode;
+}
+
+function closeCabinetDialog() {
+  cabinetDialogMode.value = null;
+  editingCabinet.value = null;
+  applyCabinetFormState(createCabinetFormDefaults());
+}
+
+function openCreateCabinetDialog() {
+  cabinetDialogMode.value = 'create';
+  editingCabinet.value = null;
+  applyCabinetFormState(createCabinetFormDefaults());
+}
+
+function openEditCabinetDialog(cabinet: ArchiveCabinetView) {
+  cabinetDialogMode.value = 'edit';
+  editingCabinet.value = cabinet;
+  applyCabinetFormState({
+    cabinetCode: cabinet.cabinetCode,
+    cabinetName: cabinet.cabinetName,
+    cabinetStatus: cabinet.cabinetStatus,
+    cabinetType: cabinet.cabinetType,
+    layerCount: cabinet.layerCount,
+    locationDescription: cabinet.locationDescription ?? '',
+    operatorName: currentOperatorName.value,
+    operatorUserId: currentOperatorUserId.value,
+    remarks: cabinet.remarks ?? '',
+    slotCountPerLayer: cabinet.slotCountPerLayer,
+    terminalCode: '',
+  });
+}
+
+function createReturnFormDefaults(): ReturnFormState {
+  return {
+    operatorName: currentOperatorName.value,
+    operatorUserId: currentOperatorUserId.value,
+    remarks: '',
+    terminalCode: '',
+  };
+}
+
+function closeReturnDialog() {
+  returningLoan.value = null;
+  returnForm.operatorName = createReturnFormDefaults().operatorName;
+  returnForm.operatorUserId = createReturnFormDefaults().operatorUserId;
+  returnForm.remarks = '';
+  returnForm.terminalCode = '';
+}
+
+function openReturnDialog(loan: MaterialLoanView) {
+  returningLoan.value = loan;
+  const defaults = createReturnFormDefaults();
+  returnForm.operatorName = defaults.operatorName;
+  returnForm.operatorUserId = defaults.operatorUserId;
+  returnForm.remarks = '';
+  returnForm.terminalCode = '';
+}
+
+function getCabinetStatusTagType(status?: null | string) {
+  if (status === 'ACTIVE') {
     return 'success';
   }
-  if (status === 'BORROWED') {
+  if (status === 'DISABLED') {
+    return 'info';
+  }
+  return 'primary';
+}
+
+function getPositionStatusTagType(status?: null | string) {
+  if (status === 'AVAILABLE') {
+    return 'success';
+  }
+  if (status === 'OCCUPIED') {
     return 'warning';
   }
   if (status === 'DISABLED') {
@@ -161,184 +584,114 @@ function getStatusTagType(status?: null | string) {
   return 'primary';
 }
 
-function clearCabinetForm() {
-  editingCabinet.value = null;
-  cabinetForm.cabinetCode = '';
-  cabinetForm.cabinetName = '';
-  cabinetForm.cabinetStatus = 'ENABLED';
-  cabinetForm.cabinetType = 'STANDARD';
-  cabinetForm.layerCount = 1;
-  cabinetForm.locationDescription = '';
-  cabinetForm.operatorName = '';
-  cabinetForm.remarks = '';
-  cabinetForm.slotCountPerLayer = 10;
-  cabinetForm.terminalCode = '';
+function getArchiveStatusTagType(status?: null | string) {
+  if (status === 'IN_STORAGE') {
+    return 'success';
+  }
+  if (status === 'BORROWED') {
+    return 'warning';
+  }
+  return 'info';
 }
 
-function openCreateCabinetDialog() {
-  clearCabinetForm();
-  editingCabinet.value = {
-    cabinetCode: '',
-    cabinetName: '',
-    cabinetStatus: 'ENABLED',
-    cabinetType: 'STANDARD',
-    capacity: 0,
-    id: '',
-    layerCount: 1,
-    locationDescription: '',
-    remarks: '',
-    slotCountPerLayer: 10,
-  };
+function getLoanStatusTagType(status?: null | string) {
+  if (status === 'BORROWED') {
+    return 'warning';
+  }
+  if (status === 'RETURNED') {
+    return 'success';
+  }
+  return 'info';
 }
 
-function openEditCabinetDialog(row: ArchiveCabinetView) {
-  editingCabinet.value = row;
-  cabinetForm.cabinetCode = row.cabinetCode;
-  cabinetForm.cabinetName = row.cabinetName;
-  cabinetForm.cabinetStatus = row.cabinetStatus;
-  cabinetForm.cabinetType = row.cabinetType;
-  cabinetForm.layerCount = row.layerCount;
-  cabinetForm.locationDescription = row.locationDescription ?? '';
-  cabinetForm.remarks = row.remarks ?? '';
-  cabinetForm.slotCountPerLayer = row.slotCountPerLayer;
+function getPositionStatusReason(status: string, cabinetName: string) {
+  if (status === 'AVAILABLE') {
+    return '柜位可用于后续归档选择。';
+  }
+  if (status === 'DISABLED') {
+    return `${cabinetName} 已停用，当前柜位不可分配。`;
+  }
+  return '柜位已被占用，需释放后才能再次使用。';
+}
+
+function getToggleCabinetActionLabel(cabinetStatus: string) {
+  return cabinetStatus === 'DISABLED' ? '启用' : '停用';
+}
+
+function selectPosition(position: PositionWorkbenchRow) {
+  if (!position.selectable) {
+    return;
+  }
+
+  selectedPositionCode.value = position.positionCode;
+  ElMessage.success(`已选择柜位 ${position.positionCode}`);
+}
+
+function clearSelectedPosition() {
+  selectedPositionCode.value = '';
+}
+
+function getArchivePermissionForObjectType(objectType: string) {
+  if (objectType === 'EMBEDDING_BOX') {
+    return canArchiveEmbeddingBox.value;
+  }
+  if (objectType === 'SLIDE') {
+    return canArchiveSlide.value;
+  }
+  return canArchiveApplicationForm.value;
 }
 
 async function loadCabinets() {
+  if (!canQueryCabinets.value) {
+    cabinets.value = [];
+    cabinetError.value = '';
+    return;
+  }
+
   loading.cabinets = true;
-  pageError.value = '';
+  cabinetError.value = '';
+
   try {
     cabinets.value = await listArchiveCabinets();
   } catch (error) {
-    pageError.value = getOperationSupportPageErrorMessage(error);
+    cabinetError.value = getOperationSupportPageErrorMessage(error);
   } finally {
     loading.cabinets = false;
   }
 }
 
-async function submitCabinet() {
-  if (
-    !cabinetForm.cabinetName ||
-    !cabinetForm.operatorName ||
-    cabinetForm.layerCount < 1 ||
-    cabinetForm.slotCountPerLayer < 1
-  ) {
-    ElMessage.warning('请填写柜名称、操作人，并确认层数和位数大于 0');
-    return;
-  }
-  if (!editingCabinet.value?.id && !cabinetForm.cabinetCode) {
-    ElMessage.warning('新增归档柜需要填写柜编号');
-    return;
-  }
-
-  submitting.value = true;
-  try {
-    if (editingCabinet.value?.id) {
-      await updateArchiveCabinet(editingCabinet.value.id, {
-        cabinetName: cabinetForm.cabinetName,
-        cabinetStatus: cabinetForm.cabinetStatus,
-        locationDescription: cabinetForm.locationDescription || undefined,
-        operatorName: cabinetForm.operatorName,
-        remarks: cabinetForm.remarks || undefined,
-        terminalCode: cabinetForm.terminalCode || undefined,
-      });
-      ElMessage.success('归档柜已更新');
-    } else {
-      await createArchiveCabinet({
-        cabinetCode: cabinetForm.cabinetCode,
-        cabinetName: cabinetForm.cabinetName,
-        cabinetType: cabinetForm.cabinetType,
-        layerCount: cabinetForm.layerCount,
-        locationDescription: cabinetForm.locationDescription || undefined,
-        operatorName: cabinetForm.operatorName,
-        remarks: cabinetForm.remarks || undefined,
-        slotCountPerLayer: cabinetForm.slotCountPerLayer,
-        terminalCode: cabinetForm.terminalCode || undefined,
-      });
-      ElMessage.success('归档柜已创建');
-    }
-    cabinetDialogVisible.value = false;
-    await loadCabinets();
-  } catch (error) {
-    ElMessage.error(getOperationSupportPageErrorMessage(error));
-  } finally {
-    submitting.value = false;
-  }
-}
-
 async function loadPositions() {
+  if (!canQueryCabinets.value) {
+    availablePositions.value = [];
+    positionError.value = '';
+    return;
+  }
+
   loading.positions = true;
+  positionError.value = '';
+
   try {
-    positions.value = await listAvailableArchivePositions({
+    availablePositions.value = await listAvailableArchivePositions({
       cabinetId: positionFilters.cabinetId || undefined,
       cabinetType: positionFilters.cabinetType || undefined,
     });
   } catch (error) {
-    ElMessage.error(getOperationSupportPageErrorMessage(error));
+    positionError.value = getOperationSupportPageErrorMessage(error);
   } finally {
     loading.positions = false;
   }
 }
 
-async function submitArchive() {
-  if (!archiveForm.archivePositionId || !archiveForm.operatorName) {
-    ElMessage.warning('请选择归档位置并填写操作人');
+async function loadRecords() {
+  if (!canQueryRecords.value) {
+    records.value = [];
+    recordError.value = '';
     return;
   }
 
-  submitting.value = true;
-  try {
-    if (archiveForm.objectType === 'APPLICATION_FORM') {
-      if (!archiveForm.caseId) {
-        ElMessage.warning('申请单归档需要填写病例ID');
-        return;
-      }
-      await archiveApplicationForm({
-        archivePositionId: archiveForm.archivePositionId,
-        caseId: archiveForm.caseId,
-        fileName: archiveForm.fileName || undefined,
-        fileUrl: archiveForm.fileUrl || undefined,
-        operatorName: archiveForm.operatorName,
-        remarks: archiveForm.remarks || undefined,
-        terminalCode: archiveForm.terminalCode || undefined,
-      });
-    } else if (archiveForm.objectType === 'EMBEDDING_BOX') {
-      if (!archiveForm.embeddingBoxId) {
-        ElMessage.warning('包埋盒归档需要填写包埋盒ID');
-        return;
-      }
-      await archiveEmbeddingBox({
-        archivePositionId: archiveForm.archivePositionId,
-        embeddingBoxId: archiveForm.embeddingBoxId,
-        operatorName: archiveForm.operatorName,
-        remarks: archiveForm.remarks || undefined,
-        terminalCode: archiveForm.terminalCode || undefined,
-      });
-    } else {
-      if (!archiveForm.slideId) {
-        ElMessage.warning('玻片归档需要填写玻片ID');
-        return;
-      }
-      await archiveSlide({
-        archivePositionId: archiveForm.archivePositionId,
-        operatorName: archiveForm.operatorName,
-        remarks: archiveForm.remarks || undefined,
-        slideId: archiveForm.slideId,
-        terminalCode: archiveForm.terminalCode || undefined,
-      });
-    }
-
-    ElMessage.success('归档操作已完成');
-    archiveForm.archivePositionId = '';
-    await Promise.all([loadPositions(), loadRecords()]);
-  } catch (error) {
-    ElMessage.error(getOperationSupportPageErrorMessage(error));
-  } finally {
-    submitting.value = false;
-  }
-}
-
-async function loadRecords() {
   loading.records = true;
+  recordError.value = '';
+
   try {
     records.value = await searchArchiveRecords({
       caseId: recordFilters.caseId.trim() || undefined,
@@ -346,52 +699,201 @@ async function loadRecords() {
       objectType: recordFilters.objectType || undefined,
     });
   } catch (error) {
-    ElMessage.error(getOperationSupportPageErrorMessage(error));
+    recordError.value = getOperationSupportPageErrorMessage(error);
   } finally {
     loading.records = false;
   }
 }
 
 async function loadLoans() {
+  if (!canQueryLoans.value) {
+    pendingLoans.value = [];
+    loanError.value = '';
+    return;
+  }
+
   loading.loans = true;
+  loanError.value = '';
+
   try {
-    loans.value = await listPendingMaterialLoans({
+    pendingLoans.value = await listPendingMaterialLoans({
       keyword: loanFilters.keyword.trim() || undefined,
       materialType: loanFilters.materialType || undefined,
     });
   } catch (error) {
-    ElMessage.error(getOperationSupportPageErrorMessage(error));
+    loanError.value = getOperationSupportPageErrorMessage(error);
   } finally {
     loading.loans = false;
   }
 }
 
-async function submitLoan() {
-  if (
-    !loanForm.materialType ||
-    !loanForm.materialId ||
-    !loanForm.borrowedByName ||
-    !loanForm.operatorName
-  ) {
-    ElMessage.warning('请填写材料类型、材料ID、借阅人和操作人');
+function validateCabinetForm() {
+  if (!cabinetForm.cabinetName.trim()) {
+    ElMessage.warning('请填写归档柜名称。');
+    return false;
+  }
+  if (!cabinetForm.operatorName.trim()) {
+    ElMessage.warning('请填写操作人。');
+    return false;
+  }
+  if (cabinetDialogMode.value === 'create' && !cabinetForm.cabinetCode.trim()) {
+    ElMessage.warning('新增归档柜时必须填写归档柜编号。');
+    return false;
+  }
+  if (cabinetForm.layerCount < 1 || cabinetForm.slotCountPerLayer < 1) {
+    ElMessage.warning('层数和每层柜位数必须大于 0。');
+    return false;
+  }
+  return true;
+}
+
+function validateArchiveForm() {
+  if (!getArchivePermissionForObjectType(archiveForm.objectType)) {
+    ElMessage.warning(archivePermissionWarning.value);
+    return false;
+  }
+  if (!canQueryCabinets.value || !selectedPosition.value) {
+    ElMessage.warning('请先在柜位工作站中选择一个可用柜位。');
+    return false;
+  }
+  if (!archiveForm.operatorName.trim()) {
+    ElMessage.warning('请填写归档操作人。');
+    return false;
+  }
+  if (archiveForm.objectType === 'APPLICATION_FORM') {
+    if (!archiveForm.caseId.trim()) {
+      ElMessage.warning('申请单归档必须填写病例 ID。');
+      return false;
+    }
+    return true;
+  }
+  if (archiveForm.objectType === 'EMBEDDING_BOX' && !archiveForm.embeddingBoxId.trim()) {
+    ElMessage.warning('蜡块归档必须填写蜡块 ID。');
+    return false;
+  }
+  if (archiveForm.objectType === 'SLIDE' && !archiveForm.slideId.trim()) {
+    ElMessage.warning('玻片归档必须填写玻片 ID。');
+    return false;
+  }
+  return true;
+}
+
+function validateLoanForm() {
+  if (!canCreateLoan.value) {
+    ElMessage.warning('当前账号缺少借出权限。');
+    return false;
+  }
+  if (!loanForm.materialId.trim()) {
+    ElMessage.warning('请填写借出材料 ID。');
+    return false;
+  }
+  if (!loanForm.borrowedByName.trim()) {
+    ElMessage.warning('请填写借阅人姓名。');
+    return false;
+  }
+  if (!loanForm.operatorName.trim()) {
+    ElMessage.warning('请填写借出操作人。');
+    return false;
+  }
+  return true;
+}
+
+function validateReturnForm() {
+  if (!canReturnLoan.value) {
+    ElMessage.warning('当前账号缺少归还权限。');
+    return false;
+  }
+  if (!returningLoan.value) {
+    ElMessage.warning('请先选择待归还记录。');
+    return false;
+  }
+  if (!returnForm.operatorName.trim()) {
+    ElMessage.warning('请填写归还操作人。');
+    return false;
+  }
+  return true;
+}
+
+function resetArchiveForm() {
+  archiveForm.caseId = '';
+  archiveForm.embeddingBoxId = '';
+  archiveForm.fileName = '';
+  archiveForm.fileUrl = '';
+  archiveForm.objectType = 'APPLICATION_FORM';
+  archiveForm.operatorName = currentOperatorName.value;
+  archiveForm.operatorUserId = currentOperatorUserId.value;
+  archiveForm.remarks = '';
+  archiveForm.slideId = '';
+  archiveForm.terminalCode = '';
+}
+
+function resetLoanForm() {
+  loanForm.borrowPurpose = '';
+  loanForm.borrowedByName = '';
+  loanForm.borrowedByUserId = '';
+  loanForm.materialId = '';
+  loanForm.materialType = 'SLIDE';
+  loanForm.operatorName = currentOperatorName.value;
+  loanForm.operatorUserId = currentOperatorUserId.value;
+  loanForm.remarks = '';
+  loanForm.terminalCode = '';
+}
+
+async function refreshArchiveWorkspace() {
+  const tasks: Array<Promise<unknown>> = [];
+
+  if (canQueryCabinets.value) {
+    tasks.push(loadPositions());
+  }
+  if (canQueryRecords.value) {
+    tasks.push(loadRecords());
+  }
+  if (canQueryLoans.value) {
+    tasks.push(loadLoans());
+  }
+
+  if (tasks.length > 0) {
+    await Promise.all(tasks);
+  }
+}
+
+async function submitCabinet() {
+  if (!validateCabinetForm()) {
     return;
   }
 
   submitting.value = true;
+
   try {
-    await createMaterialLoan({
-      borrowedByName: loanForm.borrowedByName,
-      borrowedByUserId: loanForm.borrowedByUserId || undefined,
-      borrowPurpose: loanForm.borrowPurpose || undefined,
-      materialId: loanForm.materialId,
-      materialType: loanForm.materialType,
-      operatorName: loanForm.operatorName,
-      remarks: loanForm.remarks || undefined,
-      terminalCode: loanForm.terminalCode || undefined,
-    });
-    ElMessage.success('材料借阅已创建');
-    loanForm.materialId = '';
-    await loadLoans();
+    if (cabinetDialogMode.value === 'edit' && editingCabinet.value) {
+      await updateArchiveCabinet(editingCabinet.value.id, {
+        cabinetName: cabinetForm.cabinetName.trim(),
+        cabinetStatus: cabinetForm.cabinetStatus,
+        locationDescription: cabinetForm.locationDescription.trim() || undefined,
+        operatorName: cabinetForm.operatorName.trim(),
+        operatorUserId: cabinetForm.operatorUserId.trim() || undefined,
+        remarks: cabinetForm.remarks.trim() || undefined,
+        terminalCode: cabinetForm.terminalCode.trim() || undefined,
+      });
+      ElMessage.success('归档柜信息已更新。');
+    } else {
+      await createArchiveCabinet({
+        cabinetCode: cabinetForm.cabinetCode.trim(),
+        cabinetName: cabinetForm.cabinetName.trim(),
+        cabinetType: cabinetForm.cabinetType,
+        layerCount: cabinetForm.layerCount,
+        locationDescription: cabinetForm.locationDescription.trim() || undefined,
+        operatorName: cabinetForm.operatorName.trim(),
+        operatorUserId: cabinetForm.operatorUserId.trim() || undefined,
+        remarks: cabinetForm.remarks.trim() || undefined,
+        slotCountPerLayer: cabinetForm.slotCountPerLayer,
+        terminalCode: cabinetForm.terminalCode.trim() || undefined,
+      });
+      ElMessage.success('归档柜已创建，系统已同步生成柜位。');
+    }
+
+    closeCabinetDialog();
+    await Promise.all([loadCabinets(), loadPositions()]);
   } catch (error) {
     ElMessage.error(getOperationSupportPageErrorMessage(error));
   } finally {
@@ -399,31 +901,136 @@ async function submitLoan() {
   }
 }
 
-function openReturnDialog(row: MaterialLoanView) {
-  returningLoan.value = row;
-  returnForm.archivePositionId = '';
-  returnForm.operatorName = '';
-  returnForm.remarks = '';
-  returnForm.terminalCode = '';
+async function toggleCabinetStatus(cabinet: ArchiveCabinetView) {
+  if (!currentOperatorName.value) {
+    ElMessage.warning('当前登录账号缺少操作人姓名，请通过编辑弹窗补充后再执行启停。');
+    return;
+  }
+
+  submitting.value = true;
+
+  try {
+    await updateArchiveCabinet(cabinet.id, {
+      cabinetName: cabinet.cabinetName,
+      cabinetStatus: cabinet.cabinetStatus === 'DISABLED' ? 'ACTIVE' : 'DISABLED',
+      locationDescription: cabinet.locationDescription ?? undefined,
+      operatorName: currentOperatorName.value,
+      operatorUserId: currentOperatorUserId.value || undefined,
+      remarks: cabinet.remarks ?? undefined,
+    });
+
+    ElMessage.success(
+      `归档柜已${cabinet.cabinetStatus === 'DISABLED' ? '启用' : '停用'}。`,
+    );
+    await Promise.all([loadCabinets(), loadPositions()]);
+  } catch (error) {
+    ElMessage.error(getOperationSupportPageErrorMessage(error));
+  } finally {
+    submitting.value = false;
+  }
+}
+
+async function submitArchive() {
+  if (!validateArchiveForm() || !selectedPosition.value) {
+    return;
+  }
+
+  submitting.value = true;
+
+  try {
+    if (archiveForm.objectType === 'APPLICATION_FORM') {
+      const request: ArchiveApplicationFormRequest = {
+        archivePositionId: selectedPosition.value.id,
+        caseId: archiveForm.caseId.trim(),
+        fileName: archiveForm.fileName.trim() || undefined,
+        fileUrl: archiveForm.fileUrl.trim() || undefined,
+        operatorName: archiveForm.operatorName.trim(),
+        operatorUserId: archiveForm.operatorUserId.trim() || undefined,
+        remarks: archiveForm.remarks.trim() || undefined,
+        terminalCode: archiveForm.terminalCode.trim() || undefined,
+      };
+      await archiveApplicationForm(request);
+      ElMessage.success('申请单归档已完成。');
+    } else if (archiveForm.objectType === 'EMBEDDING_BOX') {
+      const request: ArchiveEmbeddingBoxRequest = {
+        archivePositionId: selectedPosition.value.id,
+        embeddingBoxId: archiveForm.embeddingBoxId.trim(),
+        operatorName: archiveForm.operatorName.trim(),
+        operatorUserId: archiveForm.operatorUserId.trim() || undefined,
+        remarks: archiveForm.remarks.trim() || undefined,
+        terminalCode: archiveForm.terminalCode.trim() || undefined,
+      };
+      await archiveEmbeddingBox(request);
+      ElMessage.success('蜡块归档已完成。');
+    } else {
+      const request: ArchiveSlideRequest = {
+        archivePositionId: selectedPosition.value.id,
+        operatorName: archiveForm.operatorName.trim(),
+        operatorUserId: archiveForm.operatorUserId.trim() || undefined,
+        remarks: archiveForm.remarks.trim() || undefined,
+        slideId: archiveForm.slideId.trim(),
+        terminalCode: archiveForm.terminalCode.trim() || undefined,
+      };
+      await archiveSlide(request);
+      ElMessage.success('玻片归档已完成。');
+    }
+
+    resetArchiveForm();
+    await refreshArchiveWorkspace();
+  } catch (error) {
+    ElMessage.error(getOperationSupportPageErrorMessage(error));
+  } finally {
+    submitting.value = false;
+  }
+}
+
+async function submitLoan() {
+  if (!validateLoanForm()) {
+    return;
+  }
+
+  submitting.value = true;
+
+  try {
+    await createMaterialLoan({
+      borrowPurpose: loanForm.borrowPurpose.trim() || undefined,
+      borrowedByName: loanForm.borrowedByName.trim(),
+      borrowedByUserId: loanForm.borrowedByUserId.trim() || undefined,
+      materialId: loanForm.materialId.trim(),
+      materialType: loanForm.materialType,
+      operatorName: loanForm.operatorName.trim(),
+      operatorUserId: loanForm.operatorUserId.trim() || undefined,
+      remarks: loanForm.remarks.trim() || undefined,
+      terminalCode: loanForm.terminalCode.trim() || undefined,
+    });
+    ElMessage.success('材料借出已登记。');
+    resetLoanForm();
+    await refreshArchiveWorkspace();
+  } catch (error) {
+    ElMessage.error(getOperationSupportPageErrorMessage(error));
+  } finally {
+    submitting.value = false;
+  }
 }
 
 async function submitReturn() {
-  if (!returningLoan.value || !returnForm.operatorName) {
-    ElMessage.warning('请填写归还操作人');
+  if (!validateReturnForm() || !returningLoan.value) {
     return;
   }
 
   submitting.value = true;
+
   try {
     await returnMaterialLoan(returningLoan.value.loanId, {
-      archivePositionId: returnForm.archivePositionId || undefined,
-      operatorName: returnForm.operatorName,
-      remarks: returnForm.remarks || undefined,
-      terminalCode: returnForm.terminalCode || undefined,
+      archivePositionId: selectedReturnPositionId.value,
+      operatorName: returnForm.operatorName.trim(),
+      operatorUserId: returnForm.operatorUserId.trim() || undefined,
+      remarks: returnForm.remarks.trim() || undefined,
+      terminalCode: returnForm.terminalCode.trim() || undefined,
     });
-    ElMessage.success('材料已归还');
-    returnDialogVisible.value = false;
-    await Promise.all([loadLoans(), loadRecords(), loadPositions()]);
+    ElMessage.success('材料归还已完成。');
+    closeReturnDialog();
+    await refreshArchiveWorkspace();
   } catch (error) {
     ElMessage.error(getOperationSupportPageErrorMessage(error));
   } finally {
@@ -431,180 +1038,331 @@ async function submitReturn() {
   }
 }
 
-void Promise.all([loadCabinets(), loadPositions(), loadRecords(), loadLoans()]);
+async function initializePage() {
+  if (!canViewArchivePage.value) {
+    return;
+  }
+
+  const tasks: Array<Promise<unknown>> = [];
+
+  if (canQueryCabinets.value) {
+    tasks.push(loadCabinets(), loadPositions());
+  }
+  if (canQueryRecords.value) {
+    tasks.push(loadRecords());
+  }
+  if (canQueryLoans.value) {
+    tasks.push(loadLoans());
+  }
+
+  if (tasks.length > 0) {
+    await Promise.all(tasks);
+  }
+}
+
+void initializePage();
 </script>
 
 <template>
-  <Page title="归档管理" description="维护归档柜、库位、归档记录，并处理包埋盒与玻片借阅归还。">
+  <div v-if="!canViewArchivePage" class="flex min-h-[360px] items-center justify-center">
+    <Fallback status="403" />
+  </div>
+
+  <Page
+    v-else
+    title="归档管理"
+    description="统一处理申请单、蜡块、玻片归档，以及借出、待归还和归还工作站。"
+  >
     <div class="flex flex-col gap-4">
       <ElAlert
-        v-if="pageError"
         :closable="false"
-        :title="pageError"
-        show-icon
-        type="error"
-      />
+        title="医生工作台状态回流"
+        type="info"
+      >
+        <template #default>
+          申请单归档后，医生工作台会通过既有接口回流 `applicationFormArchiveStatus`、`applicationFormArchiveLocation` 与 `applicationFormImageUrl`；
+          蜡块、玻片借出与归还后，医生工作台中的 `archiveStatus`、`archiveLocation` 与 `loanStatus` 会随着后端聚合结果刷新。
+        </template>
+      </ElAlert>
 
-      <OperationSectionCard title="归档柜" description="维护归档柜编码、容量和启停状态。">
+      <ElAlert
+        :closable="false"
+        title="柜位编码规则：${cabinetCode}-L${layerNo}-S${slotNo}"
+        type="info"
+      >
+        <template #default>
+          柜位查询会展示完整柜位视图：可用柜位可直接选择，未返回的活动柜位视为“已占用”，停用归档柜下的柜位统一标记为“已停用”。
+        </template>
+      </ElAlert>
+
+      <OperationSectionCard title="归档柜工作站" description="查看、创建、编辑归档柜，并执行启用或停用。">
         <template #extra>
-          <ElButton type="primary" @click="openCreateCabinetDialog">
+          <ElButton
+            :disabled="!canCreateCabinet"
+            :title="canCreateCabinet ? undefined : '当前账号缺少归档柜新增权限'"
+            type="primary"
+            @click="openCreateCabinetDialog"
+          >
             新增归档柜
           </ElButton>
         </template>
-        <ElTable v-loading="loading.cabinets" :data="cabinets" border>
-          <ElTableColumn label="柜编号" min-width="140" prop="cabinetCode" />
-          <ElTableColumn label="柜名称" min-width="160" prop="cabinetName" />
-          <ElTableColumn label="类型" min-width="120">
-            <template #default="{ row }">
-              {{ formatArchiveCabinetType(row.cabinetType) }}
+
+        <ElAlert
+          v-if="!canQueryCabinets"
+          :closable="false"
+          type="warning"
+        >
+          <template #title>
+            当前账号缺少归档柜查询权限，无法查看归档柜与柜位工作站。
+          </template>
+        </ElAlert>
+
+        <template v-else>
+          <ElAlert
+            v-if="cabinetError"
+            :closable="false"
+            class="mb-4"
+            :title="cabinetError"
+            show-icon
+            type="error"
+          />
+
+          <ElAlert
+            v-if="!canCreateCabinet || !canUpdateCabinet"
+            :closable="false"
+            class="mb-4"
+            type="warning"
+          >
+            <template #title>
+              当前账号具备归档柜查询权限，但部分维护能力受限。
             </template>
-          </ElTableColumn>
-          <ElTableColumn label="容量" min-width="90" prop="capacity" />
-          <ElTableColumn label="状态" min-width="100">
-            <template #default="{ row }">
-              <ElTag :type="getStatusTagType(row.cabinetStatus)">
-                {{ formatArchiveCabinetStatus(row.cabinetStatus) }}
-              </ElTag>
+            <template #default>
+              <span v-if="!canCreateCabinet">未授权新增归档柜。</span>
+              <span v-if="!canCreateCabinet && !canUpdateCabinet"> </span>
+              <span v-if="!canUpdateCabinet">未授权更新或启停归档柜。</span>
             </template>
-          </ElTableColumn>
-          <ElTableColumn label="位置" min-width="180">
-            <template #default="{ row }">
-              {{ formatNullable(row.locationDescription) }}
+          </ElAlert>
+
+          <ElTable v-loading="loading.cabinets" :data="cabinets" border>
+            <ElTableColumn label="归档柜编号" min-width="150" prop="cabinetCode" />
+            <ElTableColumn label="归档柜名称" min-width="180" prop="cabinetName" />
+            <ElTableColumn label="柜体类型" min-width="120">
+              <template #default="{ row }">
+                {{ formatArchiveCabinetType(row.cabinetType) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="容量" min-width="120">
+              <template #default="{ row }">
+                {{ row.layerCount }} 层 × {{ row.slotCountPerLayer }} 位 = {{ row.capacity }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="状态" min-width="100">
+              <template #default="{ row }">
+                <ElTag :type="getCabinetStatusTagType(row.cabinetStatus)">
+                  {{ formatArchiveCabinetStatus(row.cabinetStatus) }}
+                </ElTag>
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="位置说明" min-width="180">
+              <template #default="{ row }">
+                {{ formatNullable(row.locationDescription) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="备注" min-width="180">
+              <template #default="{ row }">
+                {{ formatNullable(row.remarks) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn fixed="right" label="操作" min-width="170">
+              <template #default="{ row }">
+                <div class="flex items-center gap-2">
+                  <ElButton
+                    :disabled="!canUpdateCabinet"
+                    link
+                    type="primary"
+                    @click="openEditCabinetDialog(row)"
+                  >
+                    编辑
+                  </ElButton>
+                  <ElButton
+                    :disabled="!canUpdateCabinet"
+                    link
+                    type="primary"
+                    @click="toggleCabinetStatus(row)"
+                  >
+                    {{ getToggleCabinetActionLabel(row.cabinetStatus) }}
+                  </ElButton>
+                </div>
+              </template>
+            </ElTableColumn>
+          </ElTable>
+        </template>
+      </OperationSectionCard>
+
+      <OperationSectionCard title="柜位查询与选择" description="按归档柜或柜体类型查询柜位，并为归档或替代归还选择当前可用柜位。">
+        <template v-if="!canQueryCabinets">
+          <ElAlert
+            :closable="false"
+            type="warning"
+          >
+            <template #title>
+              当前账号缺少归档柜查询权限，无法查询可用柜位。
             </template>
-          </ElTableColumn>
-          <ElTableColumn fixed="right" label="操作" width="100">
-            <template #default="{ row }">
-              <ElButton link type="primary" @click="openEditCabinetDialog(row)">
-                编辑
+            <template #default>
+              若需要执行归档或为归还指定替代柜位，请先补齐 M5 归档柜查询权限。
+            </template>
+          </ElAlert>
+        </template>
+
+        <template v-else>
+          <ElAlert
+            v-if="positionError"
+            :closable="false"
+            class="mb-4"
+            :title="positionError"
+            show-icon
+            type="error"
+          />
+
+          <ElForm inline label-width="96px">
+            <ElFormItem label="归档柜">
+              <ElSelect
+                v-model="positionFilters.cabinetId"
+                clearable
+                filterable
+                placeholder="全部归档柜"
+                style="width: 240px"
+              >
+                <ElOption
+                  v-for="cabinet in cabinets"
+                  :key="cabinet.id"
+                  :label="`${cabinet.cabinetCode} ${cabinet.cabinetName}`"
+                  :value="cabinet.id"
+                />
+              </ElSelect>
+            </ElFormItem>
+            <ElFormItem label="柜体类型">
+              <ElSelect
+                v-model="positionFilters.cabinetType"
+                clearable
+                placeholder="全部类型"
+                style="width: 180px"
+              >
+                <ElOption
+                  v-for="option in ARCHIVE_CABINET_TYPE_OPTIONS"
+                  :key="option.value"
+                  :label="option.label"
+                  :value="option.value"
+                />
+              </ElSelect>
+            </ElFormItem>
+            <ElFormItem>
+              <ElButton :loading="loading.positions" type="primary" @click="loadPositions">
+                查询柜位
               </ElButton>
-            </template>
-          </ElTableColumn>
-        </ElTable>
-      </OperationSectionCard>
+              <ElButton :disabled="!selectedPosition" @click="clearSelectedPosition">
+                清空选择
+              </ElButton>
+            </ElFormItem>
+          </ElForm>
 
-      <OperationSectionCard title="归档操作" description="先筛选可用库位，再按对象类型执行归档。">
-        <ElForm inline label-width="88px">
-          <ElFormItem label="归档柜">
-            <ElSelect
-              v-model="positionFilters.cabinetId"
-              clearable
-              filterable
-              placeholder="全部归档柜"
-              style="width: 220px"
-            >
-              <ElOption
-                v-for="cabinet in cabinets"
-                :key="cabinet.id"
-                :label="`${cabinet.cabinetCode} ${cabinet.cabinetName}`"
-                :value="cabinet.id"
-              />
-            </ElSelect>
-          </ElFormItem>
-          <ElFormItem label="柜类型">
-            <ElSelect
-              v-model="positionFilters.cabinetType"
-              clearable
-              placeholder="全部类型"
-              style="width: 160px"
-            >
-              <ElOption
-                v-for="option in ARCHIVE_CABINET_TYPE_OPTIONS"
-                :key="option.value"
-                :label="option.label"
-                :value="option.value"
-              />
-            </ElSelect>
-          </ElFormItem>
-          <ElFormItem>
-            <ElButton :loading="loading.positions" type="primary" @click="loadPositions">
-              查询库位
-            </ElButton>
-          </ElFormItem>
-        </ElForm>
+          <div class="mt-4 grid gap-4 md:grid-cols-4">
+            <div class="rounded-lg border border-[var(--el-border-color)] p-4">
+              <div class="text-sm text-[var(--el-text-color-secondary)]">柜位总数</div>
+              <div class="mt-2 text-2xl font-semibold">{{ positionSummary.total }}</div>
+            </div>
+            <div class="rounded-lg border border-[var(--el-border-color)] p-4">
+              <div class="text-sm text-[var(--el-text-color-secondary)]">可用柜位</div>
+              <div class="mt-2 text-2xl font-semibold text-[var(--el-color-success)]">
+                {{ positionSummary.available }}
+              </div>
+            </div>
+            <div class="rounded-lg border border-[var(--el-border-color)] p-4">
+              <div class="text-sm text-[var(--el-text-color-secondary)]">已占用柜位</div>
+              <div class="mt-2 text-2xl font-semibold text-[var(--el-color-warning)]">
+                {{ positionSummary.occupied }}
+              </div>
+            </div>
+            <div class="rounded-lg border border-[var(--el-border-color)] p-4">
+              <div class="text-sm text-[var(--el-text-color-secondary)]">已停用柜位</div>
+              <div class="mt-2 text-2xl font-semibold text-[var(--el-text-color-secondary)]">
+                {{ positionSummary.disabled }}
+              </div>
+            </div>
+          </div>
 
-        <ElTabs class="mt-2">
-          <ElTabPane label="执行归档">
-            <ElForm label-width="110px">
-              <ElFormItem label="对象类型">
-                <ElSelect v-model="archiveForm.objectType" style="width: 220px">
-                  <ElOption
-                    v-for="option in ARCHIVE_OBJECT_TYPE_OPTIONS"
-                    :key="option.value"
-                    :label="option.label"
-                    :value="option.value"
-                  />
-                </ElSelect>
-              </ElFormItem>
-              <ElFormItem label="归档位置">
-                <ElSelect
-                  v-model="archiveForm.archivePositionId"
-                  filterable
-                  placeholder="请选择可用库位"
-                  style="width: 320px"
+          <div class="mt-4 rounded-lg border border-dashed border-[var(--el-border-color)] p-4">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <div class="text-sm text-[var(--el-text-color-secondary)]">当前选中柜位</div>
+                <div class="mt-2 text-base font-medium">{{ selectedPositionLabel }}</div>
+                <div class="mt-1 text-sm text-[var(--el-text-color-secondary)]">
+                  <template v-if="selectedPosition">
+                    {{ selectedPosition.cabinetCode }} / 第 {{ selectedPosition.layerNo }} 层 / 第 {{ selectedPosition.slotNo }} 位
+                  </template>
+                  <template v-else>
+                    暂未选择柜位，可在下表中从“可用”柜位执行选择。
+                  </template>
+                </div>
+              </div>
+              <ElTag v-if="selectedPosition" type="success">可直接用于归档 / 替代归还</ElTag>
+            </div>
+          </div>
+
+          <ElTable v-loading="loading.positions" :data="positionRows" border class="mt-4">
+            <ElTableColumn label="柜位编码" min-width="180" prop="positionCode" />
+            <ElTableColumn label="归档柜" min-width="180">
+              <template #default="{ row }">
+                {{ row.cabinetCode }} {{ row.cabinetName }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="柜体类型" min-width="120">
+              <template #default="{ row }">
+                {{ formatArchiveCabinetType(row.cabinetType) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="层号" min-width="90" prop="layerNo" />
+            <ElTableColumn label="位号" min-width="90" prop="slotNo" />
+            <ElTableColumn label="柜位状态" min-width="110">
+              <template #default="{ row }">
+                <ElTag :type="getPositionStatusTagType(row.positionStatus)">
+                  {{ formatArchivePositionStatus(row.positionStatus) }}
+                </ElTag>
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="状态说明" min-width="220">
+              <template #default="{ row }">
+                {{ row.statusReason }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn fixed="right" label="选择" min-width="110">
+              <template #default="{ row }">
+                <ElButton
+                  :disabled="!row.selectable"
+                  link
+                  type="primary"
+                  @click="selectPosition(row)"
                 >
-                  <ElOption
-                    v-for="position in positions"
-                    :key="position.id"
-                    :label="position.positionCode"
-                    :value="position.id"
-                  />
-                </ElSelect>
-              </ElFormItem>
-              <ElFormItem v-if="archiveForm.objectType === 'APPLICATION_FORM'" label="病例ID">
-                <ElInput v-model="archiveForm.caseId" style="width: 320px" />
-              </ElFormItem>
-              <ElFormItem v-if="archiveForm.objectType === 'APPLICATION_FORM'" label="图片URL">
-                <ElInput v-model="archiveForm.fileUrl" style="width: 420px" />
-              </ElFormItem>
-              <ElFormItem v-if="archiveForm.objectType === 'APPLICATION_FORM'" label="文件名">
-                <ElInput v-model="archiveForm.fileName" style="width: 320px" />
-              </ElFormItem>
-              <ElFormItem v-if="archiveForm.objectType === 'EMBEDDING_BOX'" label="包埋盒ID">
-                <ElInput v-model="archiveForm.embeddingBoxId" style="width: 320px" />
-              </ElFormItem>
-              <ElFormItem v-if="archiveForm.objectType === 'SLIDE'" label="玻片ID">
-                <ElInput v-model="archiveForm.slideId" style="width: 320px" />
-              </ElFormItem>
-              <ElFormItem label="操作人">
-                <ElInput v-model="archiveForm.operatorName" style="width: 220px" />
-              </ElFormItem>
-              <ElFormItem label="终端编码">
-                <ElInput v-model="archiveForm.terminalCode" style="width: 220px" />
-              </ElFormItem>
-              <ElFormItem label="备注">
-                <ElInput v-model="archiveForm.remarks" type="textarea" />
-              </ElFormItem>
-              <ElFormItem>
-                <ElButton :loading="submitting" type="primary" @click="submitArchive">
-                  提交归档
+                  {{ selectedPositionCode === row.positionCode ? '已选择' : '选择' }}
                 </ElButton>
-              </ElFormItem>
-            </ElForm>
-          </ElTabPane>
-          <ElTabPane label="可用库位">
-            <ElTable v-loading="loading.positions" :data="positions" border>
-              <ElTableColumn label="库位编码" min-width="180" prop="positionCode" />
-              <ElTableColumn label="层" width="90" prop="layerNo" />
-              <ElTableColumn label="位" width="90" prop="slotNo" />
-              <ElTableColumn label="状态" min-width="120" prop="positionStatus" />
-            </ElTable>
-          </ElTabPane>
-        </ElTabs>
+              </template>
+            </ElTableColumn>
+          </ElTable>
+        </template>
       </OperationSectionCard>
 
-      <OperationSectionCard title="归档记录" description="按关键字、对象类型或病例ID查询归档记录。">
-        <ElForm inline label-width="88px">
-          <ElFormItem label="关键字">
-            <ElInput
-              v-model="recordFilters.keyword"
-              clearable
-              placeholder="病理号/对象编号"
-              style="width: 220px"
-              @keyup.enter="loadRecords"
-            />
-          </ElFormItem>
-          <ElFormItem label="对象类型">
-            <ElSelect v-model="recordFilters.objectType" clearable style="width: 160px">
+      <OperationSectionCard title="统一归档操作" description="申请单图片仅使用 fileUrl，不执行真实上传。归档时直接复用上方所选可用柜位。">
+        <ElAlert
+          v-if="archivePermissionWarning"
+          :closable="false"
+          class="mb-4"
+          :title="archivePermissionWarning"
+          type="warning"
+        />
+
+        <ElForm label-width="110px">
+          <ElFormItem label="对象类型" required>
+            <ElSelect v-model="archiveForm.objectType" style="width: 220px">
               <ElOption
                 v-for="option in ARCHIVE_OBJECT_TYPE_OPTIONS"
                 :key="option.value"
@@ -613,91 +1371,206 @@ void Promise.all([loadCabinets(), loadPositions(), loadRecords(), loadLoans()]);
               />
             </ElSelect>
           </ElFormItem>
-          <ElFormItem label="病例ID">
+          <ElFormItem label="目标柜位" required>
+            <div class="flex flex-col gap-2">
+              <div class="text-sm font-medium">{{ selectedPositionLabel }}</div>
+              <div class="text-xs text-[var(--el-text-color-secondary)]">
+                归档会直接使用上方“柜位查询与选择”中当前选中的可用柜位。
+              </div>
+            </div>
+          </ElFormItem>
+          <ElFormItem v-if="archiveForm.objectType === 'APPLICATION_FORM'" label="病例 ID" required>
+            <ElInput v-model="archiveForm.caseId" placeholder="请输入病例 ID" style="width: 320px" />
+          </ElFormItem>
+          <ElFormItem v-if="archiveForm.objectType === 'APPLICATION_FORM'" label="图片 URL">
             <ElInput
-              v-model="recordFilters.caseId"
-              clearable
-              style="width: 220px"
-              @keyup.enter="loadRecords"
+              v-model="archiveForm.fileUrl"
+              placeholder="请输入申请单图片 fileUrl"
+              style="width: 520px"
             />
           </ElFormItem>
+          <ElFormItem v-if="archiveForm.objectType === 'APPLICATION_FORM'" label="文件名">
+            <ElInput
+              v-model="archiveForm.fileName"
+              placeholder="可选，便于后续识别"
+              style="width: 320px"
+            />
+          </ElFormItem>
+          <ElFormItem v-if="archiveForm.objectType === 'EMBEDDING_BOX'" label="蜡块 ID" required>
+            <ElInput
+              v-model="archiveForm.embeddingBoxId"
+              placeholder="请输入蜡块 ID"
+              style="width: 320px"
+            />
+          </ElFormItem>
+          <ElFormItem v-if="archiveForm.objectType === 'SLIDE'" label="玻片 ID" required>
+            <ElInput
+              v-model="archiveForm.slideId"
+              placeholder="请输入玻片 ID"
+              style="width: 320px"
+            />
+          </ElFormItem>
+          <ElFormItem label="操作人" required>
+            <ElInput v-model="archiveForm.operatorName" style="width: 220px" />
+          </ElFormItem>
+          <ElFormItem label="终端编码">
+            <ElInput v-model="archiveForm.terminalCode" style="width: 220px" />
+          </ElFormItem>
+          <ElFormItem label="备注">
+            <ElInput v-model="archiveForm.remarks" type="textarea" />
+          </ElFormItem>
           <ElFormItem>
-            <ElButton :loading="loading.records" type="primary" @click="loadRecords">
-              查询
+            <ElButton
+              :disabled="!canSubmitArchive"
+              :loading="submitting"
+              type="primary"
+              @click="submitArchive"
+            >
+              {{ archiveSubmitButtonText }}
             </ElButton>
           </ElFormItem>
         </ElForm>
-        <ElTable v-loading="loading.records" :data="records" border>
-          <ElTableColumn label="病理号" min-width="140">
-            <template #default="{ row }">
-              {{ formatNullable(row.pathologyNo) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="患者" min-width="120">
-            <template #default="{ row }">
-              {{ formatNullable(row.patientName) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="对象类型" min-width="120">
-            <template #default="{ row }">
-              {{ formatArchiveObjectType(row.objectType) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="对象编号" min-width="160">
-            <template #default="{ row }">
-              {{ formatNullable(row.objectCode) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="归档位置" min-width="180">
-            <template #default="{ row }">
-              {{ formatNullable(row.archiveLocation) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="归档状态" min-width="120">
-            <template #default="{ row }">
-              <ElTag :type="getStatusTagType(row.archiveStatus)">
-                {{ formatNullable(row.archiveStatus) }}
-              </ElTag>
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="借阅状态" min-width="120">
-            <template #default="{ row }">
-              {{ formatNullable(row.loanStatus) }}
-            </template>
-          </ElTableColumn>
-        </ElTable>
       </OperationSectionCard>
 
-      <OperationSectionCard title="材料借阅" description="创建包埋盒或玻片借阅，并处理待归还记录。">
-        <ElForm inline label-width="88px">
-          <ElFormItem label="材料类型">
-            <ElSelect v-model="loanFilters.materialType" clearable style="width: 160px">
-              <ElOption
-                v-for="option in MATERIAL_TYPE_OPTIONS"
-                :key="option.value"
-                :label="option.label"
-                :value="option.value"
+      <OperationSectionCard title="归档记录查询" description="按病例、对象类型或关键字查询归档结果，并核对医生工作台回流状态。">
+        <template v-if="!canQueryRecords">
+          <ElAlert
+            :closable="false"
+            title="当前账号缺少归档记录查询权限。"
+            type="warning"
+          />
+        </template>
+
+        <template v-else>
+          <ElAlert
+            v-if="recordError"
+            :closable="false"
+            class="mb-4"
+            :title="recordError"
+            show-icon
+            type="error"
+          />
+
+          <ElForm inline label-width="88px">
+            <ElFormItem label="关键字">
+              <ElInput
+                v-model="recordFilters.keyword"
+                clearable
+                placeholder="病理号 / 对象编号"
+                style="width: 220px"
+                @keyup.enter="loadRecords"
               />
-            </ElSelect>
-          </ElFormItem>
-          <ElFormItem label="关键字">
-            <ElInput
-              v-model="loanFilters.keyword"
-              clearable
-              style="width: 220px"
-              @keyup.enter="loadLoans"
-            />
-          </ElFormItem>
-          <ElFormItem>
-            <ElButton :loading="loading.loans" type="primary" @click="loadLoans">
-              查询待归还
-            </ElButton>
-          </ElFormItem>
-        </ElForm>
+            </ElFormItem>
+            <ElFormItem label="对象类型">
+              <ElSelect v-model="recordFilters.objectType" clearable style="width: 160px">
+                <ElOption
+                  v-for="option in ARCHIVE_OBJECT_TYPE_OPTIONS"
+                  :key="option.value"
+                  :label="option.label"
+                  :value="option.value"
+                />
+              </ElSelect>
+            </ElFormItem>
+            <ElFormItem label="病例 ID">
+              <ElInput
+                v-model="recordFilters.caseId"
+                clearable
+                placeholder="请输入病例 ID"
+                style="width: 220px"
+                @keyup.enter="loadRecords"
+              />
+            </ElFormItem>
+            <ElFormItem>
+              <ElButton :loading="loading.records" type="primary" @click="loadRecords">
+                查询归档记录
+              </ElButton>
+            </ElFormItem>
+          </ElForm>
+
+          <ElTable v-loading="loading.records" :data="records" border>
+            <ElTableColumn label="病例 ID" min-width="140" prop="caseId" />
+            <ElTableColumn label="病理号" min-width="140">
+              <template #default="{ row }">
+                {{ formatNullable(row.pathologyNo) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="申请单号" min-width="140">
+              <template #default="{ row }">
+                {{ formatNullable(row.applicationNo) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="患者" min-width="120">
+              <template #default="{ row }">
+                {{ formatNullable(row.patientName) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="对象类型" min-width="120">
+              <template #default="{ row }">
+                {{ formatArchiveObjectType(row.objectType) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="对象编号" min-width="160">
+              <template #default="{ row }">
+                {{ formatNullable(row.objectCode || row.objectId) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="归档状态" min-width="120">
+              <template #default="{ row }">
+                <ElTag :type="getArchiveStatusTagType(row.archiveStatus)">
+                  {{ formatArchiveStorageStatus(row.archiveStatus) }}
+                </ElTag>
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="归档位置" min-width="180">
+              <template #default="{ row }">
+                {{ formatNullable(row.archiveLocation) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="借阅状态" min-width="120">
+              <template #default="{ row }">
+                <ElTag v-if="row.loanStatus" :type="getLoanStatusTagType(row.loanStatus)">
+                  {{ formatMaterialLoanStatus(row.loanStatus) }}
+                </ElTag>
+                <span v-else>-</span>
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="归档时间" min-width="180">
+              <template #default="{ row }">
+                {{ formatNullable(row.archivedAt) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="归档人" min-width="120">
+              <template #default="{ row }">
+                {{ formatNullable(row.storedByName) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="借阅人" min-width="120">
+              <template #default="{ row }">
+                {{ formatNullable(row.borrowedByName) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="借出时间" min-width="180">
+              <template #default="{ row }">
+                {{ formatNullable(row.borrowedAt) }}
+              </template>
+            </ElTableColumn>
+          </ElTable>
+        </template>
+      </OperationSectionCard>
+
+      <OperationSectionCard title="借出与待归还" description="对蜡块、玻片执行借出，并处理待归还列表。">
+        <ElAlert
+          v-if="loanError"
+          :closable="false"
+          class="mb-4"
+          :title="loanError"
+          show-icon
+          type="error"
+        />
 
         <ElForm class="mb-4" inline label-width="88px">
           <ElFormItem label="材料类型">
-            <ElSelect v-model="loanForm.materialType" style="width: 150px">
+            <ElSelect v-model="loanForm.materialType" style="width: 160px">
               <ElOption
                 v-for="option in MATERIAL_TYPE_OPTIONS"
                 :key="option.value"
@@ -706,65 +1579,143 @@ void Promise.all([loadCabinets(), loadPositions(), loadRecords(), loadLoans()]);
               />
             </ElSelect>
           </ElFormItem>
-          <ElFormItem label="材料ID">
-            <ElInput v-model="loanForm.materialId" style="width: 220px" />
+          <ElFormItem label="材料 ID" required>
+            <ElInput v-model="loanForm.materialId" placeholder="请输入材料 ID" style="width: 220px" />
           </ElFormItem>
-          <ElFormItem label="借阅人">
-            <ElInput v-model="loanForm.borrowedByName" style="width: 180px" />
+          <ElFormItem label="借阅人" required>
+            <ElInput v-model="loanForm.borrowedByName" placeholder="请输入借阅人姓名" style="width: 180px" />
           </ElFormItem>
-          <ElFormItem label="操作人">
+          <ElFormItem label="用途">
+            <ElInput v-model="loanForm.borrowPurpose" placeholder="可选，填写借阅用途" style="width: 220px" />
+          </ElFormItem>
+          <ElFormItem label="操作人" required>
             <ElInput v-model="loanForm.operatorName" style="width: 180px" />
           </ElFormItem>
           <ElFormItem>
-            <ElButton :loading="submitting" type="success" @click="submitLoan">
-              创建借阅
+            <ElButton
+              :disabled="!canCreateLoan"
+              :loading="submitting"
+              type="primary"
+              @click="submitLoan"
+            >
+              提交借出
             </ElButton>
           </ElFormItem>
         </ElForm>
 
-        <ElTable v-loading="loading.loans" :data="loans" border>
-          <ElTableColumn label="材料类型" min-width="120">
-            <template #default="{ row }">
-              {{ formatMaterialType(row.materialType) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="对象编号" min-width="160">
-            <template #default="{ row }">
-              {{ formatNullable(row.objectCode) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="借阅人" min-width="120" prop="borrowedByName" />
-          <ElTableColumn label="借阅时间" min-width="180">
-            <template #default="{ row }">
-              {{ formatNullable(row.borrowedAt) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="用途" min-width="180">
-            <template #default="{ row }">
-              {{ formatNullable(row.borrowPurpose) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn fixed="right" label="操作" width="100">
-            <template #default="{ row }">
-              <ElButton link type="primary" @click="openReturnDialog(row)">
-                归还
+        <ElAlert
+          v-if="!canQueryLoans"
+          :closable="false"
+          class="mb-4"
+          title="当前账号缺少待归还列表查询权限。"
+          type="warning"
+        />
+
+        <template v-else>
+          <ElForm inline label-width="88px">
+            <ElFormItem label="材料类型">
+              <ElSelect v-model="loanFilters.materialType" clearable style="width: 160px">
+                <ElOption
+                  v-for="option in MATERIAL_TYPE_OPTIONS"
+                  :key="option.value"
+                  :label="option.label"
+                  :value="option.value"
+                />
+              </ElSelect>
+            </ElFormItem>
+            <ElFormItem label="关键字">
+              <ElInput
+                v-model="loanFilters.keyword"
+                clearable
+                placeholder="病理号 / 对象编号"
+                style="width: 220px"
+                @keyup.enter="loadLoans"
+              />
+            </ElFormItem>
+            <ElFormItem>
+              <ElButton :loading="loading.loans" type="primary" @click="loadLoans">
+                查询待归还
               </ElButton>
-            </template>
-          </ElTableColumn>
-        </ElTable>
+            </ElFormItem>
+          </ElForm>
+
+          <ElTable v-loading="loading.loans" :data="pendingLoans" border class="mt-4">
+            <ElTableColumn label="借阅单号" min-width="160" prop="loanId" />
+            <ElTableColumn label="病例 ID" min-width="140" prop="caseId" />
+            <ElTableColumn label="病理号" min-width="140">
+              <template #default="{ row }">
+                {{ formatNullable(row.pathologyNo) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="材料类型" min-width="120">
+              <template #default="{ row }">
+                {{ formatMaterialType(row.materialType) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="对象编号" min-width="160">
+              <template #default="{ row }">
+                {{ formatNullable(row.objectCode || row.materialId) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="借阅状态" min-width="120">
+              <template #default="{ row }">
+                <ElTag :type="getLoanStatusTagType(row.loanStatus)">
+                  {{ formatMaterialLoanStatus(row.loanStatus) }}
+                </ElTag>
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="借阅人" min-width="120">
+              <template #default="{ row }">
+                {{ formatNullable(row.borrowedByName) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="借出时间" min-width="180">
+              <template #default="{ row }">
+                {{ formatNullable(row.borrowedAt) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="借阅用途" min-width="180">
+              <template #default="{ row }">
+                {{ formatNullable(row.borrowPurpose) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn fixed="right" label="操作" min-width="110">
+              <template #default="{ row }">
+                <ElButton
+                  :disabled="!canReturnLoan"
+                  link
+                  type="primary"
+                  @click="openReturnDialog(row)"
+                >
+                  归还
+                </ElButton>
+              </template>
+            </ElTableColumn>
+          </ElTable>
+        </template>
       </OperationSectionCard>
     </div>
 
-    <ElDialog v-model="cabinetDialogVisible" title="归档柜维护" width="680px">
-      <ElForm label-width="110px">
-        <ElFormItem label="柜编号" required>
-          <ElInput v-model="cabinetForm.cabinetCode" :disabled="!!editingCabinet?.id" />
+    <ElDialog
+      v-model="cabinetDialogVisible"
+      :title="cabinetDialogMode === 'edit' ? '更新归档柜' : '新增归档柜'"
+      width="720px"
+    >
+      <ElForm label-width="118px">
+        <ElFormItem label="归档柜编号" required>
+          <ElInput
+            v-model="cabinetForm.cabinetCode"
+            :disabled="cabinetDialogMode === 'edit'"
+          />
         </ElFormItem>
-        <ElFormItem label="柜名称" required>
+        <ElFormItem label="归档柜名称" required>
           <ElInput v-model="cabinetForm.cabinetName" />
         </ElFormItem>
-        <ElFormItem label="柜类型" required>
-          <ElSelect v-model="cabinetForm.cabinetType" :disabled="!!editingCabinet?.id">
+        <ElFormItem label="柜体类型" required>
+          <ElSelect
+            v-model="cabinetForm.cabinetType"
+            :disabled="cabinetDialogMode === 'edit'"
+          >
             <ElOption
               v-for="option in ARCHIVE_CABINET_TYPE_OPTIONS"
               :key="option.value"
@@ -776,19 +1727,19 @@ void Promise.all([loadCabinets(), loadPositions(), loadRecords(), loadLoans()]);
         <ElFormItem label="层数" required>
           <ElInputNumber
             v-model="cabinetForm.layerCount"
-            :disabled="!!editingCabinet?.id"
+            :disabled="cabinetDialogMode === 'edit'"
             :min="1"
           />
         </ElFormItem>
-        <ElFormItem label="每层位数" required>
+        <ElFormItem label="每层柜位数" required>
           <ElInputNumber
             v-model="cabinetForm.slotCountPerLayer"
-            :disabled="!!editingCabinet?.id"
+            :disabled="cabinetDialogMode === 'edit'"
             :min="1"
           />
         </ElFormItem>
-        <ElFormItem label="状态" required>
-          <ElSelect v-model="cabinetForm.cabinetStatus">
+        <ElFormItem label="归档柜状态" required>
+          <ElSelect v-model="cabinetForm.cabinetStatus" :disabled="!isEditingCabinet">
             <ElOption
               v-for="option in ARCHIVE_CABINET_STATUS_OPTIONS"
               :key="option.value"
@@ -810,6 +1761,16 @@ void Promise.all([loadCabinets(), loadPositions(), loadRecords(), loadLoans()]);
           <ElInput v-model="cabinetForm.remarks" type="textarea" />
         </ElFormItem>
       </ElForm>
+
+      <ElAlert :closable="false" class="mt-4" type="info">
+        <template #title>
+          柜位生成预览：{{ cabinetCapacityPreview }} 个柜位，编码示例 {{ cabinetPositionRulePreview }}
+        </template>
+        <template #default>
+          新增归档柜后，系统会按“层数 × 每层柜位数”自动初始化柜位，初始状态固定为“启用”；更新时仅允许维护基础信息和启停状态，不会重建已有柜位。
+        </template>
+      </ElAlert>
+
       <template #footer>
         <ElButton @click="cabinetDialogVisible = false">取消</ElButton>
         <ElButton :loading="submitting" type="primary" @click="submitCabinet">
@@ -818,22 +1779,28 @@ void Promise.all([loadCabinets(), loadPositions(), loadRecords(), loadLoans()]);
       </template>
     </ElDialog>
 
-    <ElDialog v-model="returnDialogVisible" title="材料归还" width="560px">
-      <ElForm label-width="110px">
-        <ElFormItem label="归档位置">
-          <ElSelect
-            v-model="returnForm.archivePositionId"
-            clearable
-            filterable
-            placeholder="可不填，默认归还原库位"
-          >
-            <ElOption
-              v-for="position in positions"
-              :key="position.id"
-              :label="position.positionCode"
-              :value="position.id"
-            />
-          </ElSelect>
+    <ElDialog
+      v-model="returnDialogVisible"
+      title="材料归还"
+      width="640px"
+    >
+      <ElForm label-width="118px">
+        <ElFormItem label="借阅单号">
+          <span>{{ formatNullable(returningLoan?.loanId) }}</span>
+        </ElFormItem>
+        <ElFormItem label="材料类型">
+          <span>{{ formatMaterialType(returningLoan?.materialType) }}</span>
+        </ElFormItem>
+        <ElFormItem label="材料 ID">
+          <span>{{ formatNullable(returningLoan?.materialId) }}</span>
+        </ElFormItem>
+        <ElFormItem label="替代柜位">
+          <div class="flex flex-col gap-2">
+            <div class="font-medium">{{ selectedPositionLabel }}</div>
+            <div class="text-xs text-[var(--el-text-color-secondary)]">
+              {{ selectedReturnPositionDescription }}
+            </div>
+          </div>
         </ElFormItem>
         <ElFormItem label="操作人" required>
           <ElInput v-model="returnForm.operatorName" />
@@ -845,6 +1812,13 @@ void Promise.all([loadCabinets(), loadPositions(), loadRecords(), loadLoans()]);
           <ElInput v-model="returnForm.remarks" type="textarea" />
         </ElFormItem>
       </ElForm>
+
+      <ElAlert :closable="false" class="mt-4" type="info">
+        <template #default>
+          未指定替代柜位时，系统会优先尝试归还到原始柜位；若原柜位已占用或已停用，后端会返回校验提示，请先在“柜位查询与选择”中重新选定可用柜位。
+        </template>
+      </ElAlert>
+
       <template #footer>
         <ElButton @click="returnDialogVisible = false">取消</ElButton>
         <ElButton :loading="submitting" type="primary" @click="submitReturn">

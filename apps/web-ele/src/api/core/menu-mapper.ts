@@ -310,7 +310,7 @@ const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] = [
     meta: {
       icon: 'carbon:operations-record',
       order: 130,
-      title: '生产管理',
+      title: '制片管理',
     },
     name: 'TechnicalWorkflowRoot',
     path: '/technical-workflow',

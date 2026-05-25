@@ -296,7 +296,7 @@ export async function loadTechnicalDomainData(
         (item.taskType && TASK_TYPE_ROUTE_MAP[item.taskType]) ||
         '/technical-workflow/tasks',
       severity: item.timedOut ? 'danger' : item.taskType === 'REWORK' ? 'warning' : 'info',
-      source: '生产管理',
+      source: '制片管理',
       title: `${TASK_TYPE_TITLE_MAP[item.taskType ?? ''] ?? item.taskType ?? '技术任务'} / ${
         item.pathologyNo || item.caseId
       }`,
@@ -329,7 +329,7 @@ export async function loadTechnicalDomainData(
     cards,
     id: 'technical',
     quickEntries,
-    title: '生产管理',
+    title: '制片管理',
   };
 }
 
