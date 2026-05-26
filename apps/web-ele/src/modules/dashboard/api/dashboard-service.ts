@@ -615,13 +615,13 @@ export async function loadQualityDomainData(
       title: '统计分析',
     },
     {
-      description: '查看集成任务占位页',
+      description: '查看集成任务轨迹与补偿状态',
       id: 'quality-entry-2',
       route: '/m6/integration',
       title: '集成任务',
     },
     {
-      description: '查看历史报告占位页',
+      description: '查看历史报告导入任务与入库结果',
       id: 'quality-entry-3',
       route: '/m6/history',
       title: '历史报告',

@@ -109,6 +109,13 @@ const MEDICAL_ORDER_TYPE_OPTIONS = [
   { label: '其他', value: 'OTHER' },
 ] as const;
 
+function matchesAllowedStatus(
+  status: string,
+  allowedStatuses: readonly string[],
+) {
+  return allowedStatuses.some((allowedStatus) => allowedStatus === status);
+}
+
 const selectedTask = computed(() => {
   if (!workbench.value) {
     return null;
@@ -153,9 +160,7 @@ const canAcceptSelectedTask = computed(() => {
   return (
     canAccept.value &&
     isAssignedToCurrentUser.value &&
-    ACCEPTABLE_TASK_STATUSES.includes(
-      taskStatus as (typeof ACCEPTABLE_TASK_STATUSES)[number],
-    )
+    matchesAllowedStatus(taskStatus, ACCEPTABLE_TASK_STATUSES)
   );
 });
 
@@ -164,9 +169,7 @@ const canStartSelectedTask = computed(() => {
   return (
     canStart.value &&
     isAssignedToCurrentUser.value &&
-    STARTABLE_TASK_STATUSES.includes(
-      taskStatus as (typeof STARTABLE_TASK_STATUSES)[number],
-    )
+    matchesAllowedStatus(taskStatus, STARTABLE_TASK_STATUSES)
   );
 });
 

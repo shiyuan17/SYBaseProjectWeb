@@ -1,16 +1,17 @@
 import type { RouteRecordRaw } from 'vue-router';
 
-import { M6_PERMISSION_CODES } from '#/modules/m6-statistics/constants';
+import {
+  M6_BILLING_PAGE_AUTHORITIES,
+  M6_HISTORY_PAGE_AUTHORITIES,
+  M6_INTEGRATION_PAGE_AUTHORITIES,
+  M6_STATISTICS_PAGE_AUTHORITIES,
+} from '#/modules/m6-management/constants';
 
 const M6_AUTHORITIES = [
-  M6_PERMISSION_CODES.INTEGRATION_TASK_QUERY,
-  M6_PERMISSION_CODES.BILLING_QUERY,
-  M6_PERMISSION_CODES.HISTORY_IMPORT,
-  M6_PERMISSION_CODES.HISTORY_QUERY,
-  M6_PERMISSION_CODES.STAT_INDICATOR_QUERY,
-  M6_PERMISSION_CODES.STAT_TEMPLATE_QUERY,
-  M6_PERMISSION_CODES.STAT_REPORT_QUERY,
-  M6_PERMISSION_CODES.STAT_REPORT_EXPORT,
+  ...M6_INTEGRATION_PAGE_AUTHORITIES,
+  ...M6_BILLING_PAGE_AUTHORITIES,
+  ...M6_HISTORY_PAGE_AUTHORITIES,
+  ...M6_STATISTICS_PAGE_AUTHORITIES,
 ];
 
 const routes: RouteRecordRaw[] = [
@@ -23,12 +24,25 @@ const routes: RouteRecordRaw[] = [
     },
     name: 'M6Root',
     path: '/m6',
-    redirect: '/m6/statistics',
+    redirect: '/m6/entry',
     children: [
       {
-        component: () => import('#/views/_core/fallback/coming-soon.vue'),
+        component: () => import('#/modules/m6-management/views/M6EntryView.vue'),
         meta: {
-          authority: [M6_PERMISSION_CODES.INTEGRATION_TASK_QUERY],
+          authority: M6_AUTHORITIES,
+          hideInBreadcrumb: true,
+          hideInMenu: true,
+          hideInTab: true,
+          title: 'M6 入口',
+        },
+        name: 'M6Entry',
+        path: '/m6/entry',
+      },
+      {
+        component: () =>
+          import('#/modules/m6-management/views/IntegrationManagementView.vue'),
+        meta: {
+          authority: [...M6_INTEGRATION_PAGE_AUTHORITIES],
           icon: 'carbon:connect',
           title: '集成任务',
         },
@@ -36,9 +50,10 @@ const routes: RouteRecordRaw[] = [
         path: '/m6/integration',
       },
       {
-        component: () => import('#/views/_core/fallback/coming-soon.vue'),
+        component: () =>
+          import('#/modules/m6-management/views/BillingManagementView.vue'),
         meta: {
-          authority: [M6_PERMISSION_CODES.BILLING_QUERY],
+          authority: [...M6_BILLING_PAGE_AUTHORITIES],
           icon: 'carbon:currency',
           title: '收费管理',
         },
@@ -46,9 +61,10 @@ const routes: RouteRecordRaw[] = [
         path: '/m6/billing',
       },
       {
-        component: () => import('#/views/_core/fallback/coming-soon.vue'),
+        component: () =>
+          import('#/modules/m6-management/views/HistoricalReportsView.vue'),
         meta: {
-          authority: [M6_PERMISSION_CODES.HISTORY_QUERY],
+          authority: [...M6_HISTORY_PAGE_AUTHORITIES],
           icon: 'carbon:document',
           title: '历史报告',
         },
@@ -59,11 +75,7 @@ const routes: RouteRecordRaw[] = [
         component: () =>
           import('#/modules/m6-statistics/views/StatisticsAnalysisView.vue'),
         meta: {
-          authority: [
-            M6_PERMISSION_CODES.STAT_INDICATOR_QUERY,
-            M6_PERMISSION_CODES.STAT_TEMPLATE_QUERY,
-            M6_PERMISSION_CODES.STAT_REPORT_QUERY,
-          ],
+          authority: [...M6_STATISTICS_PAGE_AUTHORITIES],
           icon: 'carbon:chart-line',
           title: '统计分析',
         },

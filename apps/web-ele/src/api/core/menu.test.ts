@@ -13,10 +13,18 @@ import {
   M5_EQUIPMENT_PAGE_AUTHORITIES,
   M5_REAGENT_PAGE_AUTHORITIES,
 } from '#/modules/operation-support/constants';
+import {
+  M6_BILLING_PAGE_AUTHORITIES,
+  M6_HISTORY_PAGE_AUTHORITIES,
+  M6_INTEGRATION_PAGE_AUTHORITIES,
+  M6_PERMISSION_CODES,
+  M6_STATISTICS_PAGE_AUTHORITIES,
+} from '#/modules/m6-management/constants';
 import { M1_PERMISSION_CODES } from '#/modules/system-management/constants';
 import { M2_PERMISSION_CODES } from '#/modules/specimen-workflow/constants';
 import { M3_PERMISSION_CODES } from '#/modules/technical-workflow/constants';
 import doctorWorkflowRoutes from '#/router/routes/modules/doctor-workflow';
+import m6Routes from '#/router/routes/modules/m6';
 import operationSupportRoutes from '#/router/routes/modules/operation-support';
 import systemRoutes from '#/router/routes/modules/system';
 import technicalWorkflowRoutes from '#/router/routes/modules/technical-workflow';
@@ -421,6 +429,92 @@ describe('mapMenuViewsToRoutes', () => {
       }),
     ]);
   });
+
+  it('converts M6 management menu definitions into canonical frontend routes', () => {
+    const routes = mapMenuViewsToRoutes([
+      {
+        componentName: 'M6Root',
+        enabled: true,
+        icon: 'm6',
+        id: 'MENU_M6_SUPPORT',
+        menuCode: 'M6_SUPPORT',
+        menuName: '集成与统计',
+        menuType: 'DIRECTORY',
+        parentId: null,
+        path: '/m6',
+        permissionPrefix: 'm6',
+        sortOrder: 190,
+        visible: true,
+      },
+      {
+        componentName: 'IntegrationManagement',
+        enabled: true,
+        icon: 'connect',
+        id: 'MENU_M6_INTEGRATION',
+        menuCode: 'M6_INTEGRATION',
+        menuName: '集成任务',
+        menuType: 'MENU',
+        parentId: 'MENU_M6_SUPPORT',
+        path: '/api/v1/integration-tasks',
+        permissionPrefix: 'm6:integration',
+        sortOrder: 191,
+        visible: true,
+      },
+      {
+        componentName: 'BillingManagement',
+        enabled: true,
+        icon: 'currency',
+        id: 'MENU_M6_BILLING',
+        menuCode: 'M6_BILLING',
+        menuName: '收费管理',
+        menuType: 'MENU',
+        parentId: 'MENU_M6_SUPPORT',
+        path: '/api/v1/billing-records',
+        permissionPrefix: 'm6:billing',
+        sortOrder: 192,
+        visible: true,
+      },
+      {
+        componentName: 'HistoricalReports',
+        enabled: true,
+        icon: 'history',
+        id: 'MENU_M6_HISTORY',
+        menuCode: 'M6_HISTORY',
+        menuName: '历史报告',
+        menuType: 'MENU',
+        parentId: 'MENU_M6_SUPPORT',
+        path: '/api/v1/historical-reports',
+        permissionPrefix: 'm6:history',
+        sortOrder: 193,
+        visible: true,
+      },
+    ]);
+
+    expect(routes).toEqual([
+      expect.objectContaining({
+        name: 'M6Root',
+        path: '/m6',
+        redirect: '/m6/integration',
+        children: [
+          expect.objectContaining({
+            component: '/modules/m6-management/views/IntegrationManagementView',
+            name: 'IntegrationManagement',
+            path: '/m6/integration',
+          }),
+          expect.objectContaining({
+            component: '/modules/m6-management/views/BillingManagementView',
+            name: 'BillingManagement',
+            path: '/m6/billing',
+          }),
+          expect.objectContaining({
+            component: '/modules/m6-management/views/HistoricalReportsView',
+            name: 'HistoricalReports',
+            path: '/m6/history',
+          }),
+        ],
+      }),
+    ]);
+  });
 });
 
 describe('getBackendFirstMenuRoutes', () => {
@@ -681,5 +775,46 @@ describe('operation support route access', () => {
     expect(equipmentRoute?.meta?.authority).toEqual([
       ...M5_EQUIPMENT_PAGE_AUTHORITIES,
     ]);
+  });
+});
+
+describe('m6 route access', () => {
+  it('keeps M6 pages registered with management authorities', () => {
+    const m6Root = m6Routes.find((route) => route.name === 'M6Root');
+    const integrationRoute = m6Root?.children?.find(
+      (route) => route.name === 'IntegrationManagement',
+    );
+    const billingRoute = m6Root?.children?.find(
+      (route) => route.name === 'BillingManagement',
+    );
+    const historyRoute = m6Root?.children?.find(
+      (route) => route.name === 'HistoricalReports',
+    );
+    const statisticsRoute = m6Root?.children?.find(
+      (route) => route.name === 'StatisticsAnalysis',
+    );
+
+    expect(integrationRoute?.component).toBeTypeOf('function');
+    expect(billingRoute?.component).toBeTypeOf('function');
+    expect(historyRoute?.component).toBeTypeOf('function');
+    expect(statisticsRoute?.component).toBeTypeOf('function');
+    expect(integrationRoute?.meta?.authority).toEqual([
+      ...M6_INTEGRATION_PAGE_AUTHORITIES,
+    ]);
+    expect(billingRoute?.meta?.authority).toEqual([
+      ...M6_BILLING_PAGE_AUTHORITIES,
+    ]);
+    expect(historyRoute?.meta?.authority).toEqual([
+      ...M6_HISTORY_PAGE_AUTHORITIES,
+    ]);
+    expect(statisticsRoute?.meta?.authority).toEqual([
+      ...M6_STATISTICS_PAGE_AUTHORITIES,
+    ]);
+    expect(m6Root?.meta?.authority).toContain(
+      M6_PERMISSION_CODES.BILLING_RECONCILE,
+    );
+    expect(m6Root?.meta?.authority).toContain(
+      M6_PERMISSION_CODES.HISTORY_IMPORT,
+    );
   });
 });

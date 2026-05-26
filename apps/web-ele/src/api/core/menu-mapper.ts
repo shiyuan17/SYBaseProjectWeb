@@ -506,10 +506,21 @@ const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] = [
     },
     name: 'M6Root',
     path: '/m6',
-    redirect: '/m6/statistics',
+    redirect: '/m6/entry',
     children: [
       {
-        component: '/views/_core/fallback/coming-soon',
+        component: '/modules/m6-management/views/M6EntryView',
+        meta: {
+          hideInBreadcrumb: true,
+          hideInMenu: true,
+          hideInTab: true,
+          title: 'M6 入口',
+        },
+        name: 'M6Entry',
+        path: '/m6/entry',
+      },
+      {
+        component: '/modules/m6-management/views/IntegrationManagementView',
         meta: {
           icon: 'carbon:connect',
           title: '集成任务',
@@ -518,7 +529,7 @@ const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] = [
         path: '/m6/integration',
       },
       {
-        component: '/views/_core/fallback/coming-soon',
+        component: '/modules/m6-management/views/BillingManagementView',
         meta: {
           icon: 'carbon:currency',
           title: '收费管理',
@@ -527,7 +538,7 @@ const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] = [
         path: '/m6/billing',
       },
       {
-        component: '/views/_core/fallback/coming-soon',
+        component: '/modules/m6-management/views/HistoricalReportsView',
         meta: {
           icon: 'carbon:document',
           title: '历史报告',
@@ -945,7 +956,7 @@ const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[] = [
     routeName: 'M6Root',
   },
   {
-    component: '/views/_core/fallback/coming-soon',
+    component: '/modules/m6-management/views/IntegrationManagementView',
     componentAliases: ['IntegrationManagement'],
     menuCodes: ['M6_INTEGRATION'],
     path: '/m6/integration',
@@ -953,7 +964,7 @@ const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[] = [
     routeName: 'IntegrationManagement',
   },
   {
-    component: '/views/_core/fallback/coming-soon',
+    component: '/modules/m6-management/views/BillingManagementView',
     componentAliases: ['BillingManagement'],
     menuCodes: ['M6_BILLING'],
     path: '/m6/billing',
@@ -961,7 +972,7 @@ const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[] = [
     routeName: 'BillingManagement',
   },
   {
-    component: '/views/_core/fallback/coming-soon',
+    component: '/modules/m6-management/views/HistoricalReportsView',
     componentAliases: ['HistoricalReports'],
     menuCodes: ['M6_HISTORY'],
     path: '/m6/history',
