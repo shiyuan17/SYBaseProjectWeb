@@ -1,4 +1,5 @@
 import type {
+  CreateMedicalOrderRequest,
   AssignDiagnosticTaskRequest,
   CommentConsultationParticipantRequest,
   CompleteConsultationRequest,
@@ -7,6 +8,10 @@ import type {
   CreateReportRevisionRequest,
   DiagnosticTaskActionRequest,
   DiagnosticWorkbenchView,
+  MedicalOrderActionRequest,
+  MedicalOrderOperationResult,
+  PendingMedicalOrderPage,
+  PendingMedicalOrderQuery,
   PathologyReportDraft,
   PathologyReportOperationResult,
   PendingDiagnosticTaskPage,
@@ -21,12 +26,24 @@ import type {
 import { requestClient } from '#/api/request';
 
 type PendingDiagnosticTaskPageResponse = Partial<PendingDiagnosticTaskPage>;
+type PendingMedicalOrderPageResponse = Partial<PendingMedicalOrderPage>;
 type DiagnosticWorkbenchResponse = Partial<DiagnosticWorkbenchView>;
 type ReportTrackingResponse = Partial<ReportTrackingView>;
 
 export function mapPendingDiagnosticTaskPageResponse(
   response: PendingDiagnosticTaskPageResponse,
 ): PendingDiagnosticTaskPage {
+  return {
+    items: response.items ?? [],
+    page: response.page ?? 1,
+    size: response.size ?? 20,
+    total: response.total ?? 0,
+  };
+}
+
+export function mapPendingMedicalOrderPageResponse(
+  response: PendingMedicalOrderPageResponse,
+): PendingMedicalOrderPage {
   return {
     items: response.items ?? [],
     page: response.page ?? 1,
@@ -100,6 +117,16 @@ export async function listPendingDiagnosticTasks(
   return mapPendingDiagnosticTaskPageResponse(response);
 }
 
+export async function listPendingMedicalOrders(
+  params: PendingMedicalOrderQuery,
+) {
+  const response = await requestClient.get<PendingMedicalOrderPageResponse>(
+    '/v1/medical-orders/pending',
+    { params },
+  );
+  return mapPendingMedicalOrderPageResponse(response);
+}
+
 export async function assignDiagnosticTask(
   taskId: string,
   data: AssignDiagnosticTaskRequest,
@@ -126,6 +153,43 @@ export async function startDiagnosticTask(
 ) {
   return requestClient.post<unknown>(
     `/v1/diagnostic-tasks/${taskId}/start`,
+    data,
+  );
+}
+
+export async function createMedicalOrder(data: CreateMedicalOrderRequest) {
+  return requestClient.post<MedicalOrderOperationResult>(
+    '/v1/medical-orders',
+    data,
+  );
+}
+
+export async function acceptMedicalOrder(
+  orderId: string,
+  data: MedicalOrderActionRequest,
+) {
+  return requestClient.post<MedicalOrderOperationResult>(
+    `/v1/medical-orders/${orderId}/accept`,
+    data,
+  );
+}
+
+export async function completeMedicalOrder(
+  orderId: string,
+  data: MedicalOrderActionRequest,
+) {
+  return requestClient.post<MedicalOrderOperationResult>(
+    `/v1/medical-orders/${orderId}/complete`,
+    data,
+  );
+}
+
+export async function cancelMedicalOrder(
+  orderId: string,
+  data: MedicalOrderActionRequest,
+) {
+  return requestClient.post<MedicalOrderOperationResult>(
+    `/v1/medical-orders/${orderId}/cancel`,
     data,
   );
 }

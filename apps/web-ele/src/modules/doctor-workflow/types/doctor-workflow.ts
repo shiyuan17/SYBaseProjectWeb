@@ -143,6 +143,25 @@ export interface MedicalOrderSummary {
   status?: null | string;
 }
 
+export interface PendingMedicalOrderQuery {
+  page: number;
+  pathologyNo?: string;
+  size: number;
+  status?: string;
+}
+
+export interface PendingMedicalOrderItem extends MedicalOrderSummary {
+  caseId: string;
+  orderId: string;
+}
+
+export interface PendingMedicalOrderPage {
+  items: PendingMedicalOrderItem[];
+  page: number;
+  size: number;
+  total: number;
+}
+
 export interface ConsultationSummary {
   completedAt?: null | string;
   consultationId: string;
@@ -217,6 +236,30 @@ export interface PathologyReportDraft extends DiagnosticTaskActionRequest {
   microscopicExam?: string;
   richTextContent?: string;
   taskId: string;
+}
+
+export interface CreateMedicalOrderRequest {
+  caseId: string;
+  operatorName: string;
+  operatorUserId?: string;
+  orderContent: string;
+  orderType: string;
+  remarks?: string;
+  terminalCode?: string;
+}
+
+export interface MedicalOrderActionRequest {
+  operatorName: string;
+  operatorUserId?: string;
+  remarks?: string;
+  terminalCode?: string;
+}
+
+export interface MedicalOrderOperationResult {
+  caseId?: null | string;
+  orderId: string;
+  orderNumber?: null | string;
+  status?: null | string;
 }
 
 export type SavePathologyReportDraftRequest = Omit<

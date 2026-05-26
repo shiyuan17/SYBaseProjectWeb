@@ -5,18 +5,24 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { requestClient } from '#/api/request';
 
 import {
+  acceptMedicalOrder,
   acceptDiagnosticTask,
   approveReportRevisionRequest,
   assignDiagnosticTask,
+  cancelMedicalOrder,
   commentConsultationParticipant,
+  completeMedicalOrder,
   completeConsultation,
+  createMedicalOrder,
   createConsultation,
   createPathologyReport,
   createReportRevisionRequest,
   getDiagnosticWorkbench,
   getReportTracking,
+  listPendingMedicalOrders,
   listPendingDiagnosticTasks,
   mapDiagnosticWorkbenchResponse,
+  mapPendingMedicalOrderPageResponse,
   mapPendingDiagnosticTaskPageResponse,
   mapReportTrackingResponse,
   publishPathologyReport,
@@ -49,6 +55,15 @@ beforeEach(() => {
 describe('doctor-workflow-service mappers', () => {
   it('normalizes pending diagnostic task pagination', () => {
     expect(mapPendingDiagnosticTaskPageResponse({})).toEqual({
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
+  });
+
+  it('normalizes pending medical order pagination', () => {
+    expect(mapPendingMedicalOrderPageResponse({})).toEqual({
       items: [],
       page: 1,
       size: 20,
@@ -126,6 +141,34 @@ describe('doctor-workflow-service requests', () => {
     );
   });
 
+  it('queries pending medical orders with backend query names', async () => {
+    requestClientMock.get.mockResolvedValue({
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
+
+    await listPendingMedicalOrders({
+      page: 1,
+      pathologyNo: 'BL-001',
+      size: 20,
+      status: 'PENDING',
+    });
+
+    expect(requestClientMock.get).toHaveBeenCalledWith(
+      '/v1/medical-orders/pending',
+      {
+        params: {
+          page: 1,
+          pathologyNo: 'BL-001',
+          size: 20,
+          status: 'PENDING',
+        },
+      },
+    );
+  });
+
   it('posts diagnostic task action endpoints with exact paths', async () => {
     await assignDiagnosticTask('TASK-1', {
       diagnosisDoctorName: '责任医生',
@@ -161,6 +204,44 @@ describe('doctor-workflow-service requests', () => {
       3,
       '/v1/diagnostic-tasks/TASK-1/start',
       { operatorName: '责任医生' },
+    );
+  });
+
+  it('posts medical order endpoints with exact paths', async () => {
+    await createMedicalOrder({
+      caseId: 'CASE-1',
+      operatorName: '诊断医生',
+      orderContent: '补做特殊染色',
+      orderType: 'SPECIAL_STAIN',
+    });
+    await acceptMedicalOrder('ORDER-1', { operatorName: '执行岗' });
+    await completeMedicalOrder('ORDER-1', { operatorName: '执行岗' });
+    await cancelMedicalOrder('ORDER-1', { operatorName: '诊断医生' });
+
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      1,
+      '/v1/medical-orders',
+      {
+        caseId: 'CASE-1',
+        operatorName: '诊断医生',
+        orderContent: '补做特殊染色',
+        orderType: 'SPECIAL_STAIN',
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      2,
+      '/v1/medical-orders/ORDER-1/accept',
+      { operatorName: '执行岗' },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      3,
+      '/v1/medical-orders/ORDER-1/complete',
+      { operatorName: '执行岗' },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      4,
+      '/v1/medical-orders/ORDER-1/cancel',
+      { operatorName: '诊断医生' },
     );
   });
 

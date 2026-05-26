@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import type { ReportTrackingView } from '../types/doctor-workflow';
+import type { MedicalOrderSummary, ReportTrackingView } from '../types/doctor-workflow';
 
 import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
-import { useAccessStore } from '@vben/stores';
+import { useAccessStore, useUserStore } from '@vben/stores';
 
 import {
   ElAlert,
@@ -22,14 +22,22 @@ import {
   ElTag,
 } from 'element-plus';
 
-import { M4_REPORT_PAGE_AUTHORITIES } from '../constants';
-import { getReportTracking } from '../api/doctor-workflow-service';
+import {
+  M4_MEDICAL_ORDER_PAGE_AUTHORITIES,
+  M4_PERMISSION_CODES,
+  M4_REPORT_PAGE_AUTHORITIES,
+} from '../constants';
+import {
+  cancelMedicalOrder,
+  getReportTracking,
+} from '../api/doctor-workflow-service';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { getDoctorWorkflowPageErrorMessage } from '../utils/error';
 import {
   formatDateTime,
   formatDiagnosticTaskStatus,
   formatDiagnosticTaskType,
+  formatMedicalOrderStatus,
   formatNullable,
   formatReportStatus,
 } from '../utils/format';
@@ -38,17 +46,29 @@ import { firstQueryParam } from '../utils/route';
 const route = useRoute();
 const router = useRouter();
 const accessStore = useAccessStore();
+const userStore = useUserStore();
 
 const loading = ref(false);
+const operating = ref(false);
 const pageError = ref('');
 const tracking = ref<ReportTrackingView | null>(null);
 const queryCaseId = ref('');
 
 const caseId = computed(() => firstQueryParam(route.query.caseId));
+const currentUserId = computed(() => userStore.userInfo?.userId ?? '');
+const currentUserName = computed(() => userStore.userInfo?.realName ?? '');
 const canOpenReport = computed(() => {
   const accessCodeSet = new Set(accessStore.accessCodes);
   return M4_REPORT_PAGE_AUTHORITIES.some((code) => accessCodeSet.has(code));
 });
+const canCancelMedicalOrder = computed(() =>
+  accessStore.accessCodes.includes(M4_PERMISSION_CODES.MEDICAL_ORDER_CANCEL),
+);
+const canOpenMedicalOrders = computed(() =>
+  M4_MEDICAL_ORDER_PAGE_AUTHORITIES.some((code) =>
+    accessStore.accessCodes.includes(code),
+  ),
+);
 
 async function loadTracking(targetCaseId = caseId.value) {
   const normalizedCaseId = targetCaseId.trim();
@@ -107,6 +127,49 @@ function goToReport() {
       reportId: tracking.value.currentReport?.reportId ?? undefined,
     },
   });
+}
+
+function goToMedicalOrders() {
+  if (!tracking.value || !canOpenMedicalOrders.value) {
+    return;
+  }
+
+  void router.push({
+    path: '/doctor-workflow/medical-orders',
+    query: {
+      pathologyNo: tracking.value.pathologyNo ?? undefined,
+    },
+  });
+}
+
+async function runCancelMedicalOrder(order: MedicalOrderSummary) {
+  if (!canCancelMedicalOrder.value) {
+    ElMessage.warning('当前账号没有取消医嘱权限');
+    return;
+  }
+  if (order.status !== 'PENDING') {
+    ElMessage.warning('仅待处理医嘱可取消');
+    return;
+  }
+  if (!currentUserName.value.trim()) {
+    ElMessage.warning('当前登录账号缺少姓名信息，无法执行取消');
+    return;
+  }
+
+  operating.value = true;
+  try {
+    await cancelMedicalOrder(order.orderId, {
+      operatorName: currentUserName.value.trim(),
+      operatorUserId: currentUserId.value || undefined,
+      remarks: '从报告跟踪页取消医嘱',
+    });
+    ElMessage.success('病理医嘱已取消');
+    await loadTracking();
+  } catch (error) {
+    ElMessage.error(getDoctorWorkflowPageErrorMessage(error));
+  } finally {
+    operating.value = false;
+  }
 }
 
 watch(
@@ -235,6 +298,15 @@ watch(
         </WorkflowSectionCard>
 
         <WorkflowSectionCard title="事件链 / 修订链 / 会诊链 / 医嘱链">
+          <template #extra>
+            <ElButton
+              v-if="canOpenMedicalOrders"
+              type="warning"
+              @click="goToMedicalOrders"
+            >
+              进入医嘱工作台
+            </ElButton>
+          </template>
           <div class="grid gap-4 xl:grid-cols-2">
             <ElTable :data="tracking.events" border>
               <ElTableColumn label="节点" prop="nodeCode" />
@@ -258,7 +330,24 @@ watch(
             <ElTable :data="tracking.medicalOrders" border>
               <ElTableColumn label="医嘱号" prop="orderNumber" />
               <ElTableColumn label="内容" prop="orderContent" />
-              <ElTableColumn label="状态" prop="status" />
+              <ElTableColumn label="状态">
+                <template #default="{ row }">
+                  {{ formatMedicalOrderStatus(row.status) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn v-if="canCancelMedicalOrder" label="操作" min-width="120">
+                <template #default="{ row }">
+                  <ElButton
+                    :disabled="row.status !== 'PENDING'"
+                    :loading="operating"
+                    size="small"
+                    type="danger"
+                    @click="runCancelMedicalOrder(row)"
+                  >
+                    取消
+                  </ElButton>
+                </template>
+              </ElTableColumn>
             </ElTable>
           </div>
         </WorkflowSectionCard>

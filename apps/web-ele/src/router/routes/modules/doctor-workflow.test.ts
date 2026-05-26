@@ -4,6 +4,7 @@ import { hasAuthority } from '@vben/utils';
 
 import {
   M4_CONSULTATION_PAGE_AUTHORITIES,
+  M4_MEDICAL_ORDER_PAGE_AUTHORITIES,
   M4_PERMISSION_CODES,
   M4_REPORT_PAGE_AUTHORITIES,
   M4_REVISION_PAGE_AUTHORITIES,
@@ -37,6 +38,9 @@ describe('doctor workflow routes', () => {
     const trackingRoute = workflowRoot?.children?.find(
       (route) => route.name === 'ReportTracking',
     );
+    const medicalOrderRoute = workflowRoot?.children?.find(
+      (route) => route.name === 'MedicalOrderWorkbench',
+    );
     const revisionRoute = workflowRoot?.children?.find(
       (route) => route.name === 'ReportRevision',
     );
@@ -50,6 +54,7 @@ describe('doctor workflow routes', () => {
     expect(workbenchRoute?.path).toBe('/doctor-workflow/workbench');
     expect(reportRoute?.path).toBe('/doctor-workflow/report');
     expect(trackingRoute?.path).toBe('/doctor-workflow/tracking');
+    expect(medicalOrderRoute?.path).toBe('/doctor-workflow/medical-orders');
     expect(revisionRoute?.path).toBe('/doctor-workflow/revision');
     expect(consultationRoute?.path).toBe('/doctor-workflow/consultation');
     expect(assignmentRoute?.meta?.authority).toEqual([
@@ -61,6 +66,9 @@ describe('doctor workflow routes', () => {
     expect(reportRoute?.meta?.authority).toEqual([...M4_REPORT_PAGE_AUTHORITIES]);
     expect(trackingRoute?.meta?.authority).toEqual([
       M4_PERMISSION_CODES.REPORT_TRACKING_QUERY,
+    ]);
+    expect(medicalOrderRoute?.meta?.authority).toEqual([
+      ...M4_MEDICAL_ORDER_PAGE_AUTHORITIES,
     ]);
     expect(revisionRoute?.meta?.authority).toEqual([
       ...M4_REVISION_PAGE_AUTHORITIES,
@@ -138,6 +146,19 @@ describe('doctor workflow routes', () => {
     expect(routeNames).not.toContain('ReportTracking');
   });
 
+  it('shows medical order workstation for execution role permissions', () => {
+    const routeNames = getDoctorWorkflowChildRouteNames([
+      M4_PERMISSION_CODES.MEDICAL_ORDER_QUERY,
+      M4_PERMISSION_CODES.MEDICAL_ORDER_ACCEPT,
+      M4_PERMISSION_CODES.MEDICAL_ORDER_COMPLETE,
+    ]);
+
+    expect(routeNames).toContain('MedicalOrderWorkbench');
+    expect(routeNames).not.toContain('DiagnosisAssignment');
+    expect(routeNames).not.toContain('DiagnosisWorkbench');
+    expect(routeNames).not.toContain('PathologyReport');
+  });
+
   it('shows only tracking page for tracking role permissions', () => {
     const routeNames = getDoctorWorkflowChildRouteNames([
       M4_PERMISSION_CODES.REPORT_TRACKING_QUERY,
@@ -149,5 +170,6 @@ describe('doctor workflow routes', () => {
     expect(routeNames).not.toContain('PathologyReport');
     expect(routeNames).not.toContain('ReportRevision');
     expect(routeNames).not.toContain('Consultation');
+    expect(routeNames).not.toContain('MedicalOrderWorkbench');
   });
 });

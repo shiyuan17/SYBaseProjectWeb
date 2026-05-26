@@ -2,6 +2,7 @@ import type { RouteRecordRaw } from 'vue-router';
 
 import {
   M4_CONSULTATION_PAGE_AUTHORITIES,
+  M4_MEDICAL_ORDER_PAGE_AUTHORITIES,
   M4_PERMISSION_CODES,
   M4_REPORT_PAGE_AUTHORITIES,
   M4_REVISION_PAGE_AUTHORITIES,
@@ -24,6 +25,11 @@ const DOCTOR_WORKFLOW_AUTHORITIES = [
   M4_PERMISSION_CODES.CONSULTATION_CREATE,
   M4_PERMISSION_CODES.CONSULTATION_COMMENT,
   M4_PERMISSION_CODES.CONSULTATION_COMPLETE,
+  M4_PERMISSION_CODES.MEDICAL_ORDER_QUERY,
+  M4_PERMISSION_CODES.MEDICAL_ORDER_ACCEPT,
+  M4_PERMISSION_CODES.MEDICAL_ORDER_COMPLETE,
+  M4_PERMISSION_CODES.MEDICAL_ORDER_CREATE,
+  M4_PERMISSION_CODES.MEDICAL_ORDER_CANCEL,
 ];
 
 const routes: RouteRecordRaw[] = [
@@ -94,6 +100,17 @@ const routes: RouteRecordRaw[] = [
         },
         name: 'ReportTracking',
         path: '/doctor-workflow/tracking',
+      },
+      {
+        component: () =>
+          import('#/modules/doctor-workflow/views/MedicalOrderWorkbenchView.vue'),
+        meta: {
+          authority: [...M4_MEDICAL_ORDER_PAGE_AUTHORITIES],
+          icon: 'carbon:task-approved',
+          title: '病理医嘱执行',
+        },
+        name: 'MedicalOrderWorkbench',
+        path: '/doctor-workflow/medical-orders',
       },
       {
         component: () =>

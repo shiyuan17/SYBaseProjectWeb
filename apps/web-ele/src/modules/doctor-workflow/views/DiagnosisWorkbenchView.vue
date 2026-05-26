@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type {
+  CreateMedicalOrderRequest,
   DiagnosticTaskActionRequest,
   DiagnosticWorkbenchView,
+  MedicalOrderSummary,
   PendingDiagnosticTaskItem,
 } from '../types/doctor-workflow';
 
@@ -14,6 +16,7 @@ import { useAccessStore, useUserStore } from '@vben/stores';
 import {
   ElAlert,
   ElButton,
+  ElDialog,
   ElDescriptions,
   ElDescriptionsItem,
   ElEmpty,
@@ -21,17 +24,22 @@ import {
   ElFormItem,
   ElInput,
   ElMessage,
+  ElOption,
+  ElSelect,
   ElTable,
   ElTableColumn,
   ElTag,
 } from 'element-plus';
 
 import {
+  M4_MEDICAL_ORDER_PAGE_AUTHORITIES,
   M4_PERMISSION_CODES,
   M4_REPORT_PAGE_AUTHORITIES,
 } from '../constants';
 import {
   acceptDiagnosticTask,
+  cancelMedicalOrder,
+  createMedicalOrder,
   getDiagnosticWorkbench,
   startDiagnosticTask,
 } from '../api/doctor-workflow-service';
@@ -41,6 +49,8 @@ import {
   formatDateTime,
   formatDiagnosticTaskStatus,
   formatDiagnosticTaskType,
+  formatMedicalOrderStatus,
+  formatMedicalOrderType,
   formatNullable,
   formatReportStatus,
 } from '../utils/format';
@@ -56,7 +66,9 @@ const STARTABLE_TASK_STATUSES = ['ASSIGNED', 'ACCEPTED'] as const;
 
 const loading = ref(false);
 const operating = ref(false);
+const orderOperating = ref(false);
 const pageError = ref('');
+const medicalOrderDialogVisible = ref(false);
 const workbench = ref<DiagnosticWorkbenchView | null>(null);
 const queryCaseId = ref('');
 
@@ -80,6 +92,22 @@ const canStart = computed(() =>
 const canOpenReport = computed(() =>
   M4_REPORT_PAGE_AUTHORITIES.some((code) => accessCodeSet.value.has(code)),
 );
+const canCreateMedicalOrder = computed(() =>
+  accessCodeSet.value.has(M4_PERMISSION_CODES.MEDICAL_ORDER_CREATE),
+);
+const canCancelMedicalOrder = computed(() =>
+  accessCodeSet.value.has(M4_PERMISSION_CODES.MEDICAL_ORDER_CANCEL),
+);
+const canOpenMedicalOrders = computed(() =>
+  M4_MEDICAL_ORDER_PAGE_AUTHORITIES.some((code) => accessCodeSet.value.has(code)),
+);
+
+const MEDICAL_ORDER_TYPE_OPTIONS = [
+  { label: '特殊染色', value: 'SPECIAL_STAIN' },
+  { label: '重染', value: 'RE_STAIN' },
+  { label: '免疫组化', value: 'IMMUNOHISTOCHEMISTRY' },
+  { label: '其他', value: 'OTHER' },
+] as const;
 
 const selectedTask = computed(() => {
   if (!workbench.value) {
@@ -159,10 +187,16 @@ function buildTaskActionBlockedMessage(
   }
 
   const status = task.taskStatus ?? '';
-  const allowedStatuses =
-    action === 'accept' ? ACCEPTABLE_TASK_STATUSES : STARTABLE_TASK_STATUSES;
+  const isAllowedStatus =
+    action === 'accept'
+      ? ACCEPTABLE_TASK_STATUSES.includes(
+          status as (typeof ACCEPTABLE_TASK_STATUSES)[number],
+        )
+      : STARTABLE_TASK_STATUSES.includes(
+          status as (typeof STARTABLE_TASK_STATUSES)[number],
+        );
 
-  if (!allowedStatuses.includes(status as (typeof allowedStatuses)[number])) {
+  if (!isAllowedStatus) {
     return action === 'accept'
       ? `当前任务状态为${formatDiagnosticTaskStatus(status)}，不可接单`
       : `当前任务状态为${formatDiagnosticTaskStatus(status)}，不可开始诊断`;
@@ -184,6 +218,16 @@ const startBlockedMessage = computed(() =>
 const taskActionHint = computed(
   () => acceptBlockedMessage.value || startBlockedMessage.value,
 );
+
+const medicalOrderForm = reactive<CreateMedicalOrderRequest>({
+  caseId: '',
+  operatorName: '',
+  operatorUserId: '',
+  orderContent: '',
+  orderType: '',
+  remarks: '',
+  terminalCode: '',
+});
 
 function clearWorkbench() {
   pageError.value = '';
@@ -288,6 +332,110 @@ function goToReport() {
       pathologyNo: workbench.value?.pathologyNo ?? undefined,
       reportId: workbench.value?.currentReport?.reportId ?? undefined,
       taskId: (selectedTask.value?.id ?? currentTaskId.value) || undefined,
+    },
+  });
+}
+
+function openMedicalOrderDialog() {
+  if (!caseId.value) {
+    ElMessage.warning('请先选择病例');
+    return;
+  }
+  if (!canCreateMedicalOrder.value) {
+    ElMessage.warning('当前账号没有创建医嘱权限');
+    return;
+  }
+
+  medicalOrderForm.caseId = caseId.value;
+  medicalOrderForm.operatorName = currentUserName.value || actionForm.operatorName;
+  medicalOrderForm.operatorUserId = currentUserId.value;
+  medicalOrderForm.orderContent = '';
+  medicalOrderForm.orderType = '';
+  medicalOrderForm.remarks = '';
+  medicalOrderForm.terminalCode = actionForm.terminalCode;
+  medicalOrderDialogVisible.value = true;
+}
+
+async function submitMedicalOrder() {
+  if (!medicalOrderForm.caseId.trim()) {
+    ElMessage.warning('缺少病例 ID');
+    return;
+  }
+  if (!medicalOrderForm.operatorName.trim()) {
+    ElMessage.warning('请填写操作人姓名');
+    return;
+  }
+  if (!medicalOrderForm.orderType) {
+    ElMessage.warning('请选择医嘱类型');
+    return;
+  }
+  if (!medicalOrderForm.orderContent.trim()) {
+    ElMessage.warning('请填写医嘱内容');
+    return;
+  }
+
+  orderOperating.value = true;
+  try {
+    await createMedicalOrder({
+      caseId: medicalOrderForm.caseId.trim(),
+      operatorName: medicalOrderForm.operatorName.trim(),
+      operatorUserId: medicalOrderForm.operatorUserId?.trim() || undefined,
+      orderContent: medicalOrderForm.orderContent.trim(),
+      orderType: medicalOrderForm.orderType,
+      remarks: medicalOrderForm.remarks?.trim() || undefined,
+      terminalCode: medicalOrderForm.terminalCode?.trim() || undefined,
+    });
+    medicalOrderDialogVisible.value = false;
+    ElMessage.success('病理医嘱已创建');
+    await loadWorkbench();
+  } catch (error) {
+    ElMessage.error(getDoctorWorkflowPageErrorMessage(error));
+  } finally {
+    orderOperating.value = false;
+  }
+}
+
+async function runCancelMedicalOrder(order: MedicalOrderSummary) {
+  if (!canCancelMedicalOrder.value) {
+    ElMessage.warning('当前账号没有取消医嘱权限');
+    return;
+  }
+  if (order.status !== 'PENDING') {
+    ElMessage.warning('仅待处理医嘱可取消');
+    return;
+  }
+
+  const operatorName = currentUserName.value || actionForm.operatorName;
+  if (!operatorName.trim()) {
+    ElMessage.warning('请先补齐当前登录账号姓名');
+    return;
+  }
+
+  orderOperating.value = true;
+  try {
+    await cancelMedicalOrder(order.orderId, {
+      operatorName: operatorName.trim(),
+      operatorUserId: currentUserId.value || undefined,
+      remarks: '从诊断工作台取消医嘱',
+      terminalCode: actionForm.terminalCode?.trim() || undefined,
+    });
+    ElMessage.success('病理医嘱已取消');
+    await loadWorkbench();
+  } catch (error) {
+    ElMessage.error(getDoctorWorkflowPageErrorMessage(error));
+  } finally {
+    orderOperating.value = false;
+  }
+}
+
+function goToMedicalOrders() {
+  if (!canOpenMedicalOrders.value) {
+    return;
+  }
+  void router.push({
+    path: '/doctor-workflow/medical-orders',
+    query: {
+      pathologyNo: workbench.value?.pathologyNo ?? undefined,
     },
   });
 }
@@ -512,6 +660,24 @@ watch(
         </WorkflowSectionCard>
 
         <WorkflowSectionCard title="修订 / 会诊 / 医嘱摘要">
+          <template #extra>
+            <div class="flex flex-wrap gap-2">
+              <ElButton
+                v-if="canCreateMedicalOrder"
+                type="primary"
+                @click="openMedicalOrderDialog"
+              >
+                新增医嘱
+              </ElButton>
+              <ElButton
+                v-if="canOpenMedicalOrders"
+                type="warning"
+                @click="goToMedicalOrders"
+              >
+                进入医嘱工作台
+              </ElButton>
+            </div>
+          </template>
           <div class="grid gap-4 xl:grid-cols-3">
             <ElTable :data="workbench.revisions" border>
               <ElTableColumn label="修订单" prop="requestId" />
@@ -525,8 +691,29 @@ watch(
             </ElTable>
             <ElTable :data="workbench.medicalOrders" border>
               <ElTableColumn label="医嘱号" prop="orderNumber" />
-              <ElTableColumn label="类型" prop="orderType" />
-              <ElTableColumn label="状态" prop="status" />
+              <ElTableColumn label="类型">
+                <template #default="{ row }">
+                  {{ formatMedicalOrderType(row.orderType) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="状态">
+                <template #default="{ row }">
+                  {{ formatMedicalOrderStatus(row.status) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn v-if="canCancelMedicalOrder" label="操作" min-width="120">
+                <template #default="{ row }">
+                  <ElButton
+                    :disabled="row.status !== 'PENDING'"
+                    :loading="orderOperating"
+                    size="small"
+                    type="danger"
+                    @click="runCancelMedicalOrder(row)"
+                  >
+                    取消
+                  </ElButton>
+                </template>
+              </ElTableColumn>
             </ElTable>
           </div>
         </WorkflowSectionCard>
@@ -546,5 +733,56 @@ watch(
         </WorkflowSectionCard>
       </template>
     </div>
+
+    <ElDialog
+      v-model="medicalOrderDialogVisible"
+      title="创建病理医嘱"
+      width="640px"
+    >
+      <ElForm label-width="100px">
+        <ElFormItem label="病例 ID" required>
+          <ElInput v-model="medicalOrderForm.caseId" disabled />
+        </ElFormItem>
+        <ElFormItem label="医嘱类型" required>
+          <ElSelect
+            v-model="medicalOrderForm.orderType"
+            placeholder="请选择医嘱类型"
+            style="width: 220px"
+          >
+            <ElOption
+              v-for="option in MEDICAL_ORDER_TYPE_OPTIONS"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            />
+          </ElSelect>
+        </ElFormItem>
+        <ElFormItem label="医嘱内容" required>
+          <ElInput
+            v-model="medicalOrderForm.orderContent"
+            :rows="4"
+            maxlength="1000"
+            show-word-limit
+            type="textarea"
+          />
+        </ElFormItem>
+        <ElFormItem label="操作人" required>
+          <ElInput v-model="medicalOrderForm.operatorName" />
+        </ElFormItem>
+        <ElFormItem label="终端编码">
+          <ElInput v-model="medicalOrderForm.terminalCode" />
+        </ElFormItem>
+        <ElFormItem label="备注">
+          <ElInput v-model="medicalOrderForm.remarks" type="textarea" />
+        </ElFormItem>
+      </ElForm>
+
+      <template #footer>
+        <ElButton @click="medicalOrderDialogVisible = false">取消</ElButton>
+        <ElButton :loading="orderOperating" type="primary" @click="submitMedicalOrder">
+          创建
+        </ElButton>
+      </template>
+    </ElDialog>
   </Page>
 </template>

@@ -1,5 +1,6 @@
 import type {
   DiagnosticWorkbenchView,
+  PendingMedicalOrderPage,
   PendingDiagnosticTaskPage,
   ReportTrackingView as ReportTrackingData,
 } from '../types/doctor-workflow';
@@ -11,10 +12,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { M4_PERMISSION_CODES } from '../constants';
 
 const {
+  acceptMedicalOrderMock,
   acceptDiagnosticTaskMock,
   assignDiagnosticTaskMock,
+  cancelMedicalOrderMock,
+  completeMedicalOrderMock,
+  createMedicalOrderMock,
   getDiagnosticWorkbenchMock,
   getReportTrackingMock,
+  listPendingMedicalOrdersMock,
   listPendingDiagnosticTasksMock,
   mockAccessStore,
   mockRoute,
@@ -22,17 +28,30 @@ const {
   mockUserStore,
   startDiagnosticTaskMock,
 } = vi.hoisted(() => ({
+  acceptMedicalOrderMock: vi.fn<
+    (orderId: string, data: unknown) => Promise<unknown>
+  >(),
   acceptDiagnosticTaskMock: vi.fn<
     (taskId: string, data: unknown) => Promise<unknown>
   >(),
   assignDiagnosticTaskMock: vi.fn<
     (taskId: string, data: unknown) => Promise<unknown>
   >(),
+  cancelMedicalOrderMock: vi.fn<
+    (orderId: string, data: unknown) => Promise<unknown>
+  >(),
+  completeMedicalOrderMock: vi.fn<
+    (orderId: string, data: unknown) => Promise<unknown>
+  >(),
+  createMedicalOrderMock: vi.fn<(data: unknown) => Promise<unknown>>(),
   getDiagnosticWorkbenchMock: vi.fn<
     (caseId: string) => Promise<DiagnosticWorkbenchView>
   >(),
   getReportTrackingMock: vi.fn<
     (caseId: string) => Promise<ReportTrackingData>
+  >(),
+  listPendingMedicalOrdersMock: vi.fn<
+    (query: unknown) => Promise<PendingMedicalOrderPage>
   >(),
   listPendingDiagnosticTasksMock: vi.fn<
     (query: unknown) => Promise<PendingDiagnosticTaskPage>
@@ -91,16 +110,21 @@ vi.mock('@vben/stores', () => ({
 }));
 
 vi.mock('../api/doctor-workflow-service', () => ({
+  acceptMedicalOrder: acceptMedicalOrderMock,
   acceptDiagnosticTask: acceptDiagnosticTaskMock,
   approveReportRevisionRequest: vi.fn(),
   assignDiagnosticTask: assignDiagnosticTaskMock,
+  cancelMedicalOrder: cancelMedicalOrderMock,
   commentConsultationParticipant: vi.fn(),
+  completeMedicalOrder: completeMedicalOrderMock,
   completeConsultation: vi.fn(),
   createConsultation: vi.fn(),
+  createMedicalOrder: createMedicalOrderMock,
   createPathologyReport: vi.fn(),
   createReportRevisionRequest: vi.fn(),
   getDiagnosticWorkbench: getDiagnosticWorkbenchMock,
   getReportTracking: getReportTrackingMock,
+  listPendingMedicalOrders: listPendingMedicalOrdersMock,
   listPendingDiagnosticTasks: listPendingDiagnosticTasksMock,
   publishPathologyReport: vi.fn(),
   rejectPathologyReport: vi.fn(),
@@ -153,6 +177,7 @@ vi.mock('#/modules/system-management/components/SystemUserSelect.vue', () => ({
 import ConsultationWorkstationView from './ConsultationWorkstationView.vue';
 import DiagnosisAssignmentView from './DiagnosisAssignmentView.vue';
 import DiagnosisWorkbenchView from './DiagnosisWorkbenchView.vue';
+import MedicalOrderWorkbenchView from './MedicalOrderWorkbenchView.vue';
 import PathologyReportView from './PathologyReportView.vue';
 import ReportRevisionView from './ReportRevisionView.vue';
 import ReportTrackingView from './ReportTrackingView.vue';
@@ -239,14 +264,59 @@ const trackingFixture: ReportTrackingData = {
   versions: [],
 };
 
+const pendingMedicalOrderPageFixture: PendingMedicalOrderPage = {
+  items: [
+    {
+      acceptedAt: null,
+      billingStatus: 'UNBILLED',
+      caseId: 'CASE-001',
+      completedAt: null,
+      doctorName: '当前分派员',
+      executorName: null,
+      orderContent: '补做特殊染色',
+      orderDate: '2026-05-26T09:00:00',
+      orderId: 'ORDER-001',
+      orderNumber: 'MO-001',
+      orderType: 'SPECIAL_STAIN',
+      pathologyNo: 'PATH-001',
+      patientName: '张三',
+      status: 'PENDING',
+    },
+    {
+      acceptedAt: '2026-05-26T09:10:00',
+      billingStatus: 'BILLED',
+      caseId: 'CASE-002',
+      completedAt: null,
+      doctorName: '当前分派员',
+      executorName: '执行岗甲',
+      orderContent: '补做免疫组化',
+      orderDate: '2026-05-26T09:05:00',
+      orderId: 'ORDER-002',
+      orderNumber: 'MO-002',
+      orderType: 'IMMUNOHISTOCHEMISTRY',
+      pathologyNo: 'PATH-002',
+      patientName: '李四',
+      status: 'ACCEPTED',
+    },
+  ],
+  page: 1,
+  size: 50,
+  total: 2,
+};
+
 function resetTestState() {
   mockAccessStore.accessCodes = [];
   mockRoute.query = {};
   mockRouter.push.mockReset();
   mockRouter.replace.mockReset();
+  acceptMedicalOrderMock.mockReset();
   acceptDiagnosticTaskMock.mockReset();
   assignDiagnosticTaskMock.mockReset();
+  cancelMedicalOrderMock.mockReset();
+  completeMedicalOrderMock.mockReset();
+  createMedicalOrderMock.mockReset();
   listPendingDiagnosticTasksMock.mockReset();
+  listPendingMedicalOrdersMock.mockReset();
   getDiagnosticWorkbenchMock.mockReset();
   getReportTrackingMock.mockReset();
   startDiagnosticTaskMock.mockReset();
@@ -254,14 +324,19 @@ function resetTestState() {
     realName: '当前分派员',
     userId: 'USER-CURRENT',
   };
+  acceptMedicalOrderMock.mockResolvedValue({});
   acceptDiagnosticTaskMock.mockResolvedValue({});
   assignDiagnosticTaskMock.mockResolvedValue({});
+  cancelMedicalOrderMock.mockResolvedValue({});
+  completeMedicalOrderMock.mockResolvedValue({});
+  createMedicalOrderMock.mockResolvedValue({});
   listPendingDiagnosticTasksMock.mockResolvedValue({
     items: [],
     page: 1,
     size: 20,
     total: 0,
   });
+  listPendingMedicalOrdersMock.mockResolvedValue(pendingMedicalOrderPageFixture);
   getDiagnosticWorkbenchMock.mockResolvedValue(workbenchFixture);
   getReportTrackingMock.mockResolvedValue(trackingFixture);
   startDiagnosticTaskMock.mockResolvedValue({});
@@ -295,10 +370,11 @@ async function mountView(component: object) {
   await flushAsyncWork();
 
   return {
-    clickButton: (text: string) => {
-      const button = Array.from(root.querySelectorAll('button')).find(
+    clickButton: (text: string, index = 0) => {
+      const buttons = Array.from(root.querySelectorAll('button')).filter(
         (item) => item.textContent?.trim() === text,
       );
+      const button = buttons[index];
       expect(button).toBeTruthy();
       button?.click();
     },
@@ -306,10 +382,11 @@ async function mountView(component: object) {
       Array.from(root.querySelectorAll('button')).map(
         (button) => button.textContent?.trim() ?? '',
       ),
-    isButtonDisabled: (text: string) => {
-      const button = Array.from(root.querySelectorAll('button')).find(
+    isButtonDisabled: (text: string, index = 0) => {
+      const buttons = Array.from(root.querySelectorAll('button')).filter(
         (item) => item.textContent?.trim() === text,
       );
+      const button = buttons[index];
       expect(button).toBeTruthy();
       return button?.hasAttribute('disabled') ?? false;
     },
@@ -594,6 +671,71 @@ describe('doctor workflow view visibility', () => {
     wrapper.unmount();
   });
 
+  it('opens medical order workstation from diagnosis workbench when execution page is available', async () => {
+    mockRoute.query = {
+      caseId: 'CASE-001',
+      taskId: 'TASK-001',
+    };
+    mockAccessStore.accessCodes = [
+      M4_PERMISSION_CODES.WORKBENCH_QUERY,
+      M4_PERMISSION_CODES.MEDICAL_ORDER_CREATE,
+      M4_PERMISSION_CODES.MEDICAL_ORDER_QUERY,
+    ];
+
+    const wrapper = await mountView(DiagnosisWorkbenchView);
+
+    expect(wrapper.buttonTexts()).toContain('新增医嘱');
+    expect(wrapper.buttonTexts()).toContain('进入医嘱工作台');
+
+    wrapper.clickButton('进入医嘱工作台');
+    await flushAsyncWork();
+
+    expect(mockRouter.push).toHaveBeenCalledWith({
+      path: '/doctor-workflow/medical-orders',
+      query: {
+        pathologyNo: 'PATH-001',
+      },
+    });
+    wrapper.unmount();
+  });
+
+  it('cancels pending medical order from diagnosis workbench', async () => {
+    mockRoute.query = {
+      caseId: 'CASE-001',
+      taskId: 'TASK-001',
+    };
+    mockAccessStore.accessCodes = [
+      M4_PERMISSION_CODES.WORKBENCH_QUERY,
+      M4_PERMISSION_CODES.MEDICAL_ORDER_CANCEL,
+    ];
+    getDiagnosticWorkbenchMock.mockResolvedValue({
+      ...workbenchFixture,
+      medicalOrders: [
+        {
+          orderId: 'ORDER-001',
+          orderNumber: 'MO-001',
+          orderType: 'SPECIAL_STAIN',
+          status: 'PENDING',
+        },
+      ],
+    });
+
+    const wrapper = await mountView(DiagnosisWorkbenchView);
+
+    expect(wrapper.buttonTexts()).toContain('取消');
+    wrapper.clickButton('取消');
+    await flushAsyncWork();
+
+    expect(cancelMedicalOrderMock).toHaveBeenCalledWith(
+      'ORDER-001',
+      expect.objectContaining({
+        operatorName: mockUserStore.userInfo.realName,
+        operatorUserId: mockUserStore.userInfo.userId,
+      }),
+    );
+    wrapper.unmount();
+  });
+
   it('shows only review actions for report review role', async () => {
     mockRoute.query = {
       caseId: 'CASE-001',
@@ -646,5 +788,142 @@ describe('doctor workflow view visibility', () => {
     expect(getReportTrackingMock).toHaveBeenCalledWith('CASE-001');
     expect(wrapper.text()).toContain('病例查询');
     expect(wrapper.buttonTexts()).not.toContain('进入报告');
+    wrapper.unmount();
+  });
+
+  it('opens medical order workstation and cancels pending order from tracking view', async () => {
+    mockRoute.query = {
+      caseId: 'CASE-001',
+    };
+    mockAccessStore.accessCodes = [
+      M4_PERMISSION_CODES.REPORT_TRACKING_QUERY,
+      M4_PERMISSION_CODES.MEDICAL_ORDER_QUERY,
+      M4_PERMISSION_CODES.MEDICAL_ORDER_CANCEL,
+    ];
+    getReportTrackingMock.mockResolvedValue({
+      ...trackingFixture,
+      medicalOrders: [
+        {
+          orderId: 'ORDER-003',
+          orderNumber: 'MO-003',
+          orderType: 'SPECIAL_STAIN',
+          pathologyNo: 'PATH-001',
+          status: 'PENDING',
+        },
+      ],
+    });
+
+    const wrapper = await mountView(ReportTrackingView);
+
+    expect(wrapper.buttonTexts()).toContain('进入医嘱工作台');
+    wrapper.clickButton('进入医嘱工作台');
+    await flushAsyncWork();
+
+    expect(mockRouter.push).toHaveBeenCalledWith({
+      path: '/doctor-workflow/medical-orders',
+      query: {
+        pathologyNo: 'PATH-001',
+      },
+    });
+
+    wrapper.clickButton('取消');
+    await flushAsyncWork();
+
+    expect(cancelMedicalOrderMock).toHaveBeenCalledWith(
+      'ORDER-003',
+      expect.objectContaining({
+        operatorName: mockUserStore.userInfo.realName,
+        operatorUserId: mockUserStore.userInfo.userId,
+      }),
+    );
+    wrapper.unmount();
+  });
+
+  it('accepts pending medical order in medical order workstation', async () => {
+    mockAccessStore.accessCodes = [
+      M4_PERMISSION_CODES.MEDICAL_ORDER_QUERY,
+      M4_PERMISSION_CODES.MEDICAL_ORDER_ACCEPT,
+    ];
+
+    const wrapper = await mountView(MedicalOrderWorkbenchView);
+
+    expect(listPendingMedicalOrdersMock).toHaveBeenCalledWith({
+      page: 1,
+      pathologyNo: undefined,
+      size: 50,
+      status: undefined,
+    });
+    expect(wrapper.buttonTexts()).toContain('接收');
+    expect(wrapper.isButtonDisabled('接收')).toBe(false);
+
+    wrapper.clickButton('接收');
+    await flushAsyncWork();
+
+    expect(acceptMedicalOrderMock).toHaveBeenCalledWith(
+      'ORDER-001',
+      expect.objectContaining({
+        operatorName: mockUserStore.userInfo.realName,
+        operatorUserId: mockUserStore.userInfo.userId,
+      }),
+    );
+    wrapper.unmount();
+  });
+
+  it('completes accepted medical order in medical order workstation', async () => {
+    mockAccessStore.accessCodes = [
+      M4_PERMISSION_CODES.MEDICAL_ORDER_QUERY,
+      M4_PERMISSION_CODES.MEDICAL_ORDER_COMPLETE,
+    ];
+    listPendingMedicalOrdersMock.mockResolvedValue({
+      ...pendingMedicalOrderPageFixture,
+      items: [pendingMedicalOrderPageFixture.items[1]!],
+      total: 1,
+    });
+
+    const wrapper = await mountView(MedicalOrderWorkbenchView);
+
+    expect(wrapper.buttonTexts()).toContain('完成');
+    expect(wrapper.isButtonDisabled('完成')).toBe(false);
+
+    wrapper.clickButton('完成');
+    await flushAsyncWork();
+
+    expect(completeMedicalOrderMock).toHaveBeenCalledWith(
+      'ORDER-002',
+      expect.objectContaining({
+        operatorName: mockUserStore.userInfo.realName,
+        operatorUserId: mockUserStore.userInfo.userId,
+      }),
+    );
+    wrapper.unmount();
+  });
+
+  it('cancels pending medical order in medical order workstation', async () => {
+    mockAccessStore.accessCodes = [
+      M4_PERMISSION_CODES.MEDICAL_ORDER_QUERY,
+      M4_PERMISSION_CODES.MEDICAL_ORDER_CANCEL,
+    ];
+    listPendingMedicalOrdersMock.mockResolvedValue({
+      ...pendingMedicalOrderPageFixture,
+      items: [pendingMedicalOrderPageFixture.items[0]!],
+      total: 1,
+    });
+
+    const wrapper = await mountView(MedicalOrderWorkbenchView);
+
+    expect(wrapper.buttonTexts()).toContain('取消');
+    expect(wrapper.isButtonDisabled('取消')).toBe(false);
+
+    wrapper.clickButton('取消');
+    await flushAsyncWork();
+
+    expect(cancelMedicalOrderMock).toHaveBeenCalledWith(
+      'ORDER-001',
+      expect.objectContaining({
+        operatorName: mockUserStore.userInfo.realName,
+        operatorUserId: mockUserStore.userInfo.userId,
+      }),
+    );
+    wrapper.unmount();
   });
 });

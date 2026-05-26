@@ -24,6 +24,20 @@ const REPORT_STATUS_LABELS: Record<string, string> = {
   SUBMITTED: '已提交',
 };
 
+const MEDICAL_ORDER_STATUS_LABELS: Record<string, string> = {
+  ACCEPTED: '已接收',
+  CANCELLED: '已取消',
+  COMPLETED: '已完成',
+  PENDING: '待处理',
+};
+
+const MEDICAL_ORDER_TYPE_LABELS: Record<string, string> = {
+  IMMUNOHISTOCHEMISTRY: '免疫组化',
+  OTHER: '其他',
+  RE_STAIN: '重染',
+  SPECIAL_STAIN: '特殊染色',
+};
+
 export function formatNullable(value?: null | number | string) {
   if (value === null || value === undefined || value === '') {
     return EMPTY_TEXT;
@@ -54,4 +68,18 @@ export function formatReportStatus(value?: null | string) {
     return EMPTY_TEXT;
   }
   return REPORT_STATUS_LABELS[value] ?? value;
+}
+
+export function formatMedicalOrderStatus(value?: null | string) {
+  if (!value) {
+    return EMPTY_TEXT;
+  }
+  return MEDICAL_ORDER_STATUS_LABELS[value] ?? value;
+}
+
+export function formatMedicalOrderType(value?: null | string) {
+  if (!value) {
+    return EMPTY_TEXT;
+  }
+  return MEDICAL_ORDER_TYPE_LABELS[value] ?? value;
 }
