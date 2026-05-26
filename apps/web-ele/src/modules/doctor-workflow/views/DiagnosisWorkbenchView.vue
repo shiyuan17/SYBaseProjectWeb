@@ -9,7 +9,7 @@ import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
-import { useAccessStore } from '@vben/stores';
+import { useAccessStore, useUserStore } from '@vben/stores';
 
 import {
   ElAlert,
@@ -49,6 +49,10 @@ import { firstQueryParam } from '../utils/route';
 const route = useRoute();
 const router = useRouter();
 const accessStore = useAccessStore();
+const userStore = useUserStore();
+
+const ACCEPTABLE_TASK_STATUSES = ['PENDING', 'ASSIGNED'] as const;
+const STARTABLE_TASK_STATUSES = ['ASSIGNED', 'ACCEPTED'] as const;
 
 const loading = ref(false);
 const operating = ref(false);
@@ -65,6 +69,8 @@ const actionForm = reactive<DiagnosticTaskActionRequest>({
 const caseId = computed(() => firstQueryParam(route.query.caseId));
 const currentTaskId = computed(() => firstQueryParam(route.query.taskId));
 const accessCodeSet = computed(() => new Set(accessStore.accessCodes));
+const currentUserId = computed(() => userStore.userInfo?.userId ?? '');
+const currentUserName = computed(() => userStore.userInfo?.realName ?? '');
 const canAccept = computed(() =>
   accessCodeSet.value.has(M4_PERMISSION_CODES.ACCEPT),
 );
@@ -87,6 +93,97 @@ const selectedTask = computed(() => {
     null
   );
 });
+
+const selectedTaskAssigneeLabel = computed(() => {
+  const task = selectedTask.value;
+  if (!task) {
+    return '';
+  }
+
+  const labels = [
+    task.diagnosisDoctorName,
+    task.primaryDoctorName,
+  ].filter((value): value is string => Boolean(value?.trim()));
+
+  return labels.length > 0 ? Array.from(new Set(labels)).join(' / ') : '';
+});
+
+const isAssignedToCurrentUser = computed(() => {
+  const task = selectedTask.value;
+  const userId = currentUserId.value;
+
+  return Boolean(
+    task &&
+      userId &&
+      (userId === task.diagnosisDoctorUserId ||
+        userId === task.primaryDoctorUserId),
+  );
+});
+
+const canAcceptSelectedTask = computed(() => {
+  const taskStatus = selectedTask.value?.taskStatus ?? '';
+  return (
+    canAccept.value &&
+    isAssignedToCurrentUser.value &&
+    ACCEPTABLE_TASK_STATUSES.includes(
+      taskStatus as (typeof ACCEPTABLE_TASK_STATUSES)[number],
+    )
+  );
+});
+
+const canStartSelectedTask = computed(() => {
+  const taskStatus = selectedTask.value?.taskStatus ?? '';
+  return (
+    canStart.value &&
+    isAssignedToCurrentUser.value &&
+    STARTABLE_TASK_STATUSES.includes(
+      taskStatus as (typeof STARTABLE_TASK_STATUSES)[number],
+    )
+  );
+});
+
+function buildTaskActionBlockedMessage(
+  action: 'accept' | 'start',
+  task: PendingDiagnosticTaskItem | null,
+) {
+  if (!task) {
+    return '当前病例没有可操作的诊断任务';
+  }
+
+  if (!isAssignedToCurrentUser.value) {
+    const assigneeLabel = selectedTaskAssigneeLabel.value;
+    if (assigneeLabel) {
+      return `当前登录账号未被分配到该诊断任务，责任/初诊医生：${assigneeLabel}。请使用被分配账号操作，或先回分派页核对人员。`;
+    }
+    return '当前诊断任务尚未分配到当前登录账号，请先回分派页核对责任/初诊医生';
+  }
+
+  const status = task.taskStatus ?? '';
+  const allowedStatuses =
+    action === 'accept' ? ACCEPTABLE_TASK_STATUSES : STARTABLE_TASK_STATUSES;
+
+  if (!allowedStatuses.includes(status as (typeof allowedStatuses)[number])) {
+    return action === 'accept'
+      ? `当前任务状态为${formatDiagnosticTaskStatus(status)}，不可接单`
+      : `当前任务状态为${formatDiagnosticTaskStatus(status)}，不可开始诊断`;
+  }
+
+  return '';
+}
+
+const acceptBlockedMessage = computed(() =>
+  canAccept.value
+    ? buildTaskActionBlockedMessage('accept', selectedTask.value)
+    : '',
+);
+
+const startBlockedMessage = computed(() =>
+  canStart.value ? buildTaskActionBlockedMessage('start', selectedTask.value) : '',
+);
+
+const taskActionHint = computed(
+  () => acceptBlockedMessage.value || startBlockedMessage.value,
+);
 
 function clearWorkbench() {
   pageError.value = '';
@@ -148,8 +245,13 @@ async function runTaskAction(
     ElMessage.warning('当前账号没有开始诊断权限');
     return;
   }
-  if (!task) {
-    ElMessage.warning('当前病例没有可操作的诊断任务');
+
+  const blockedMessage =
+    action === 'accept'
+      ? buildTaskActionBlockedMessage('accept', task)
+      : buildTaskActionBlockedMessage('start', task);
+  if (blockedMessage) {
+    ElMessage.warning(blockedMessage);
     return;
   }
   if (!actionForm.operatorName) {
@@ -160,10 +262,10 @@ async function runTaskAction(
   operating.value = true;
   try {
     if (action === 'accept') {
-      await acceptDiagnosticTask(task.id, actionForm);
+      await acceptDiagnosticTask(task!.id, actionForm);
       ElMessage.success('诊断任务已接单');
     } else {
-      await startDiagnosticTask(task.id, actionForm);
+      await startDiagnosticTask(task!.id, actionForm);
       ElMessage.success('诊断任务已开始');
     }
     await loadWorkbench();
@@ -191,6 +293,16 @@ function goToReport() {
 }
 
 watch(
+  currentUserName,
+  (value) => {
+    if (!actionForm.operatorName && value) {
+      actionForm.operatorName = value;
+    }
+  },
+  { immediate: true },
+);
+
+watch(
   caseId,
   (value) => {
     queryCaseId.value = value;
@@ -205,7 +317,10 @@ watch(
 </script>
 
 <template>
-  <Page title="诊断工作台" description="按病例聚合展示诊断所需上下文，承载接单、开始诊断和报告编辑入口。">
+  <Page
+    title="诊断工作台"
+    description="按病例聚合展示诊断所需上下文，承载接单、开始诊断和报告编辑入口。"
+  >
     <div class="flex flex-col gap-4">
       <ElAlert
         v-if="pageError"
@@ -217,7 +332,7 @@ watch(
 
       <WorkflowSectionCard
         title="病例查询"
-        description="支持从菜单独立进入后按病例 ID 查询，也支持从诊断分配页深链进入。"
+        description="支持从菜单独立进入后按病例 ID 查询，也支持从诊断分派页深链进入。"
       >
         <ElForm inline label-width="88px">
           <ElFormItem label="病例 ID" required>
@@ -241,7 +356,7 @@ watch(
       <WorkflowSectionCard title="病例摘要" description="病例、申请单、临床诊断和当前报告摘要。">
         <ElEmpty
           v-if="!caseId"
-          description="请输入病例 ID，或从诊断分配页进入当前病例工作台。"
+          description="请输入病例 ID，或从诊断分派页进入当前病例工作台。"
         />
         <ElEmpty v-else-if="!loading && !workbench" description="暂无病例数据" />
         <ElDescriptions v-else :column="3" border>
@@ -284,7 +399,10 @@ watch(
       </WorkflowSectionCard>
 
       <template v-if="workbench">
-        <WorkflowSectionCard title="任务操作" description="接单和开始诊断会调用诊断任务动作接口。">
+        <WorkflowSectionCard
+          title="任务操作"
+          description="接单和开始诊断会调用诊断任务动作接口。"
+        >
           <ElForm inline label-width="80px">
             <ElFormItem label="操作人">
               <ElInput
@@ -310,6 +428,7 @@ watch(
             <ElFormItem>
               <ElButton
                 v-if="canAccept"
+                :disabled="!canAcceptSelectedTask"
                 :loading="operating"
                 type="primary"
                 @click="runTaskAction('accept', selectedTask)"
@@ -318,6 +437,7 @@ watch(
               </ElButton>
               <ElButton
                 v-if="canStart"
+                :disabled="!canStartSelectedTask"
                 :loading="operating"
                 type="success"
                 @click="runTaskAction('start', selectedTask)"
@@ -329,6 +449,15 @@ watch(
               </ElButton>
             </ElFormItem>
           </ElForm>
+
+          <ElAlert
+            v-if="taskActionHint"
+            :closable="false"
+            :title="taskActionHint"
+            class="mt-3"
+            show-icon
+            type="warning"
+          />
         </WorkflowSectionCard>
 
         <WorkflowSectionCard title="诊断任务链">

@@ -64,3 +64,6 @@ vite.config.ts.*
 .codegraph/
 skills-lock.json
 tests/reports/
+playwright-report/
+test-results/
+tests/e2e/.auth/
