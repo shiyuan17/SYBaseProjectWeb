@@ -297,7 +297,7 @@ if (caseId.value) {
 <template>
   <Page
     title="技术追踪"
-    description="按病例维度切换对象树、流程时间线、任务返工与质控异常，不再把所有层级一次平铺。"
+    description="按病例维度查看对象树、流程时间线、任务返工与质控异常。"
   >
     <div class="flex flex-col gap-4">
       <ElAlert
@@ -310,7 +310,7 @@ if (caseId.value) {
 
       <WorkflowSectionCard
         title="病例查询"
-        description="支持按病例ID、病理号或对象ID进入对象树追踪视图，后续可继续扩展扫码或条码入口。"
+        description="支持按病例ID、病理号或对象ID查询对象树追踪视图。"
       >
         <ElForm inline label-width="112px">
           <ElFormItem label="病例/病理/对象" required>
@@ -332,7 +332,7 @@ if (caseId.value) {
       </WorkflowSectionCard>
 
       <template v-if="trackingResult && context">
-        <WorkflowSectionCard title="病例摘要" description="先展示主状态，再进入对象树和时间线追踪。">
+        <WorkflowSectionCard title="病例摘要" description="展示病例主状态和当前聚焦对象。">
           <ElDescriptions :column="4" border>
             <ElDescriptionsItem label="病例编号">{{ trackingResult.caseId }}</ElDescriptionsItem>
             <ElDescriptionsItem label="病理号">{{ formatNullable(trackingResult.pathologyNo) }}</ElDescriptionsItem>
@@ -346,7 +346,7 @@ if (caseId.value) {
         <div class="grid gap-4 xl:grid-cols-[300px_1fr]">
           <WorkflowSectionCard
             title="对象树"
-            description="按照病例、标本、蜡块、包埋盒、玻片展开，帮助定位当前追踪对象。"
+            description="按照病例、标本、蜡块、包埋盒、玻片展开。"
           >
             <ElTree
               v-if="treeData.length > 0"
@@ -369,7 +369,7 @@ if (caseId.value) {
             <ElEmpty v-else description="当前病例还没有可追踪对象" />
           </WorkflowSectionCard>
 
-          <WorkflowSectionCard title="追踪详情" description="按时间线、任务返工和质控异常三类查看当前对象。">
+          <WorkflowSectionCard title="追踪详情" description="按时间线、任务返工和质控异常查看当前对象。">
             <ElTabs v-model="activeTab">
               <ElTabPane label="流程时间线" name="timeline">
                 <div v-if="workflowTimelineSteps.length > 0" class="tracking-flow overflow-x-auto">
@@ -505,7 +505,7 @@ if (caseId.value) {
                   <ElAlert
                     v-if="context.alerts.length > 0"
                     :closable="false"
-                    :title="`当前聚焦对象有 ${context.alerts.length} 条前置提醒`"
+                    :title="`当前聚焦对象有 ${context.alerts.length} 条提醒`"
                     type="warning"
                     show-icon
                   />
@@ -549,7 +549,7 @@ if (caseId.value) {
         </div>
 
         <div class="grid gap-4 xl:grid-cols-3">
-          <WorkflowSectionCard title="标本摘要" description="保留对象层级表格，便于横向核对。">
+          <WorkflowSectionCard title="标本摘要" description="展示对象层级中的标本信息。">
             <ElTable :data="trackingResult.specimens" border>
               <ElTableColumn label="标本号" min-width="120">
                 <template #default="{ row }">
@@ -569,7 +569,7 @@ if (caseId.value) {
             </ElTable>
           </WorkflowSectionCard>
 
-          <WorkflowSectionCard title="包埋与切片" description="前置查看包埋盒提示和玻片状态。">
+          <WorkflowSectionCard title="包埋与切片" description="展示包埋盒提示和玻片状态。">
             <ElTable :data="trackingResult.embeddingBoxes" border>
               <ElTableColumn label="包埋盒号" min-width="140">
                 <template #default="{ row }">
@@ -585,7 +585,7 @@ if (caseId.value) {
             </ElTable>
           </WorkflowSectionCard>
 
-          <WorkflowSectionCard title="玻片状态" description="用于快速判断是否已完成切片、染色和质控。">
+          <WorkflowSectionCard title="玻片状态" description="展示切片、染色和质控状态。">
             <ElTable :data="trackingResult.slides" border>
               <ElTableColumn label="玻片号" min-width="140">
                 <template #default="{ row }">

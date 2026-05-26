@@ -197,8 +197,8 @@ onMounted(() => {
     title="角色工作台"
     :description="
       visibleDomainTitles
-        ? `按当前权限汇总 ${visibleDomainTitles} 的待办、预警、快捷入口与通知。`
-        : '按当前权限汇总我的待办、异常预警、快捷入口与通知协同。'
+        ? `汇总 ${visibleDomainTitles} 的待办、预警、快捷入口与通知。`
+        : '汇总当前权限下的待办、预警、快捷入口与通知。'
     "
   >
     <div class="flex flex-col gap-6">
@@ -216,7 +216,7 @@ onMounted(() => {
                 你好，{{ userStore.userInfo?.realName || '当前用户' }}
               </h2>
               <p class="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-                将当前角色的待办重心、异常预警、常用入口与通知协同收敛到同一视图里，帮助你先处理关键任务，再进入具体业务页面。
+                当前页面汇总角色待办、预警、常用入口与通知。
               </p>
             </div>
             <div class="flex flex-wrap items-center gap-3">
@@ -240,7 +240,7 @@ onMounted(() => {
                 {{ visualSummary.heroCard?.value || '0' }}
               </div>
               <div class="mt-2 text-sm text-muted-foreground">
-                {{ visualSummary.heroCard?.title || '当前没有需要优先处理的待办' }}
+                {{ visualSummary.heroCard?.title || '当前没有待办事项' }}
               </div>
             </article>
             <article class="rounded-[24px] border border-border bg-background/75 p-4 shadow-sm backdrop-blur">
@@ -248,7 +248,7 @@ onMounted(() => {
               <div class="mt-3 text-3xl font-semibold text-foreground">
                 {{ visualSummary.spotlight.warningRiskCount }}
               </div>
-              <div class="mt-2 text-sm text-muted-foreground">包含高风险与提醒级异常，建议优先处理</div>
+              <div class="mt-2 text-sm text-muted-foreground">包含高风险与提醒级异常</div>
             </article>
             <article class="rounded-[24px] border border-border bg-background/75 p-4 shadow-sm backdrop-blur">
               <div class="text-xs uppercase tracking-[0.18em] text-muted-foreground">业务域覆盖</div>
@@ -262,7 +262,7 @@ onMounted(() => {
               <div class="mt-3 text-3xl font-semibold text-foreground">
                 {{ visualSummary.quickEntries.length }}
               </div>
-              <div class="mt-2 text-sm text-muted-foreground">面向当前权限整理出的高频控制台入口</div>
+              <div class="mt-2 text-sm text-muted-foreground">当前权限下的常用入口</div>
             </article>
           </div>
         </div>
@@ -280,7 +280,7 @@ onMounted(() => {
         <div class="flex flex-col gap-4">
           <DashboardSectionCard
             title="我的待办驾驶舱"
-            description="将最重要的待办前置成主卡，剩余待办按紧凑卡片展开。"
+            description="展示当前待办卡片。"
             card-class="dashboard-surface border-0"
             body-class="px-5 pb-5 pt-2"
           >
@@ -320,7 +320,7 @@ onMounted(() => {
                               : 'info'
                       "
                     >
-                      {{ visualSummary.heroCard.tag || '优先处理' }}
+                      {{ visualSummary.heroCard.tag || '待办' }}
                     </ElTag>
                   </div>
                   <div class="mt-8 text-5xl font-semibold tracking-tight text-foreground">
@@ -377,13 +377,13 @@ onMounted(() => {
                 </article>
               </div>
             </div>
-            <ElEmpty v-else description="当前没有需要处理的待办事项" />
+            <ElEmpty v-else description="暂无待办事项" />
           </DashboardSectionCard>
 
           <div class="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
             <DashboardSectionCard
               title="待办分布"
-              description="按业务域聚合当前角色的待办数量，快速看清工作重心。"
+              description="按业务域聚合当前角色的待办数量。"
               card-class="dashboard-surface border-0"
               body-class="px-5 pb-5 pt-2"
             >
@@ -399,7 +399,7 @@ onMounted(() => {
 
             <DashboardSectionCard
               title="快捷入口矩阵"
-              description="按业务域分组展示常用入口，减少在菜单里来回寻找。"
+              description="按业务域分组展示常用入口。"
               card-class="dashboard-surface border-0"
               body-class="px-5 pb-5 pt-2"
             >
@@ -437,7 +437,7 @@ onMounted(() => {
                   </div>
                 </section>
               </div>
-              <ElEmpty v-else description="当前没有可展示的快捷入口" />
+              <ElEmpty v-else description="暂无快捷入口" />
             </DashboardSectionCard>
           </div>
         </div>
@@ -445,7 +445,7 @@ onMounted(() => {
         <div class="flex flex-col gap-4">
           <DashboardSectionCard
             title="异常 / 预警流"
-            description="把需要优先响应的风险按严重度集中起来，保持纵向可扫读。"
+            description="按严重度展示异常和预警。"
             card-class="dashboard-surface border-0"
             body-class="px-5 pb-5 pt-2"
           >
@@ -483,12 +483,12 @@ onMounted(() => {
                 </button>
               </article>
             </div>
-            <ElEmpty v-else description="当前没有需要优先处理的异常或预警" />
+            <ElEmpty v-else description="当前没有异常或预警" />
           </DashboardSectionCard>
 
           <DashboardSectionCard
             title="通知与协同"
-            :description="`集中处理 ${userStore.userInfo?.realName || '当前用户'} 的站内通知和协同动作。`"
+            :description="`展示 ${userStore.userInfo?.realName || '当前用户'} 的站内通知和协同动作。`"
             card-class="dashboard-surface border-0"
             body-class="px-5 pb-5 pt-2"
           >
@@ -540,7 +540,7 @@ onMounted(() => {
                 </div>
               </article>
             </div>
-            <ElEmpty v-else description="当前没有通知消息" />
+            <ElEmpty v-else description="暂无通知消息" />
           </DashboardSectionCard>
         </div>
       </div>

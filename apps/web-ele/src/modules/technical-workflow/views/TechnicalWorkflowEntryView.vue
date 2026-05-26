@@ -95,7 +95,7 @@ onMounted(() => {
   <Page
     v-else
     title="生产总控台"
-    description="按工位查看待办、处理中与异常风险，减少技师从任务池开始找任务的跳转成本。"
+    description="按工位查看待办、处理中与异常风险。"
   >
     <div class="flex flex-col gap-4">
       <ElAlert
@@ -108,7 +108,7 @@ onMounted(() => {
 
       <WorkflowSectionCard
         title="工位总览"
-        description="当前基于可见待办任务汇总，优先反映各工位待处理、处理中与超时情况。"
+        description="基于可见待办任务汇总各工位状态。"
       >
         <ElSkeleton v-if="loading" :rows="6" animated />
         <div v-else class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -152,7 +152,7 @@ onMounted(() => {
       <div class="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
         <WorkflowSectionCard
           title="快捷入口"
-          description="为当前账号优先提供最常进入的工位入口，减少先跳任务池的额外一步。"
+          description="展示当前账号常用的工位入口。"
         >
           <div class="grid gap-3 md:grid-cols-2">
             <button
@@ -172,7 +172,7 @@ onMounted(() => {
 
         <WorkflowSectionCard
           title="异常待处理"
-          description="将超时、返工和带备注的任务前置展示，便于快速转入异常处理。"
+          description="展示超时、返工和带备注的任务。"
         >
           <div v-if="recentAbnormalItems.length > 0" class="flex flex-col gap-3">
             <article
@@ -194,7 +194,7 @@ onMounted(() => {
                 </ElTag>
               </div>
               <div class="mt-2 text-xs text-muted-foreground">
-                {{ item.remarks ? `备注：${item.remarks}` : '该任务建议优先跟进处理。' }}
+                {{ item.remarks ? `备注：${item.remarks}` : '该任务无备注信息。' }}
               </div>
               <div class="mt-3">
                 <ElButton
@@ -208,7 +208,7 @@ onMounted(() => {
             </article>
           </div>
           <div v-else class="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-            当前没有需要优先处理的异常任务
+            当前没有异常任务
           </div>
         </WorkflowSectionCard>
       </div>

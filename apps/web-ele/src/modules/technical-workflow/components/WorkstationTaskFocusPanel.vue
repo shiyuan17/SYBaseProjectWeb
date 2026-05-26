@@ -25,7 +25,7 @@ withDefaults(
     task: null | PendingTechnicalTaskItem;
   }>(),
   {
-    emptyDescription: '左侧选中任务后，这里会固定展示当前处理对象和操作入口。',
+    emptyDescription: '左侧选中任务后，这里展示当前处理对象和操作入口。',
     nextFlowLabel: '按任务状态流转',
   },
 );
@@ -58,7 +58,7 @@ withDefaults(
           {{ reminderTitle }}
         </div>
         <div class="mt-1 text-xs text-muted-foreground">
-          {{ task.timedOut ? '该任务已超时，建议优先处理' : (task.remarks || '当前无额外备注') }}
+          {{ task.timedOut ? '该任务已超时' : (task.remarks || '当前无额外备注') }}
         </div>
       </article>
       <article class="rounded-lg border border-border bg-card p-3">

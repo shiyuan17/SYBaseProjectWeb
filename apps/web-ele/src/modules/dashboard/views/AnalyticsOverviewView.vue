@@ -262,7 +262,7 @@ onMounted(() => {
 <template>
   <Page
     title="分析页"
-    description="提供病理全流程的轻量业务洞察，并将深度查询引导至正式统计分析模块。"
+    description="汇总病理全流程的核心指标、运营信号与风险数据。"
   >
     <div class="flex flex-col gap-6">
       <section class="dashboard-hero relative overflow-hidden rounded-[32px] border border-border bg-card px-6 py-6 text-foreground shadow-sm">
@@ -277,7 +277,7 @@ onMounted(() => {
               </div>
               <h2 class="mt-4 text-3xl font-semibold tracking-tight text-foreground">分析页总览驾驶舱</h2>
               <p class="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-                将核心 KPI、质控达成、工作量结构和风险分布前置展示，帮助你先看清当前业务态势，再进入正式统计分析模块深挖。
+                展示核心 KPI、质控指标、工作量结构和风险分布。
               </p>
             </div>
             <div class="flex flex-wrap items-center gap-3">
@@ -312,14 +312,14 @@ onMounted(() => {
             />
           </div>
 
-          <ElEmpty v-else description="当前没有可展示的核心指标数据" />
+          <ElEmpty v-else description="暂无核心指标数据" />
         </div>
       </section>
 
       <section class="grid gap-4 xl:grid-cols-2">
         <DashboardSectionCard
           title="质控达成"
-          description="只展示百分比类质控指标，用环形视图快速判断本月达成水平。"
+          description="展示百分比类质控指标。"
           card-class="dashboard-surface border-0"
           body-class="px-5 pb-5 pt-2"
         >
@@ -327,7 +327,7 @@ onMounted(() => {
             :error="pageError"
             :loading="loading"
             :option="qualityChartOption"
-            empty-description="暂无可用于达成图的质控百分比指标"
+            empty-description="暂无质控百分比指标"
             height="280px"
             @retry="loadPage"
           />
@@ -335,7 +335,7 @@ onMounted(() => {
 
         <DashboardSectionCard
           title="工作量结构"
-          description="将当前工作量以横向条形图展示，便于快速比较任务量级。"
+          description="展示当前工作量分布。"
           card-class="dashboard-surface border-0"
           body-class="px-5 pb-5 pt-2"
         >
@@ -351,7 +351,7 @@ onMounted(() => {
 
         <DashboardSectionCard
           title="运营信号"
-          description="不混合不同量纲坐标轴，用运营条带表达当前病例、收费和预警信号。"
+          description="展示当前病例、收费和预警信号。"
           card-class="dashboard-surface border-0"
           body-class="px-5 pb-5 pt-2"
         >
@@ -389,7 +389,7 @@ onMounted(() => {
 
         <DashboardSectionCard
           title="风险分布"
-          description="按风险来源聚合技术、运营与通知压力，配合下方卡片联动处理。"
+          description="按风险来源汇总技术、运营与通知压力。"
           card-class="dashboard-surface border-0"
           body-class="px-5 pb-5 pt-2"
         >
@@ -397,7 +397,7 @@ onMounted(() => {
             :error="pageError"
             :loading="loading"
             :option="riskChartOption"
-            empty-description="当前没有需要展示的风险分布"
+            empty-description="暂无风险分布数据"
             height="280px"
             @retry="loadPage"
           />
@@ -406,7 +406,7 @@ onMounted(() => {
 
       <DashboardSectionCard
         title="风险联动处理"
-        description="将风险图表里的重点项拉成可操作卡片，帮助快速转入处理页面。"
+        description="展示风险分布中的重点项。"
         card-class="dashboard-surface border-0"
         body-class="px-5 pb-5 pt-2"
       >
@@ -454,7 +454,7 @@ onMounted(() => {
           v-else-if="!pageError"
           class="rounded-[24px] border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground"
         >
-          当前没有需要特别关注的风险项
+          当前没有风险项
         </div>
       </DashboardSectionCard>
 

@@ -289,7 +289,7 @@ export async function loadTechnicalDomainData(
     .filter((item) => item.timedOut || item.taskType === 'REWORK' || item.remarks)
     .slice(0, 5)
     .map((item) => ({
-      description: item.remarks || `${item.pathologyNo || item.caseId} 需要优先处理`,
+      description: item.remarks || `${item.pathologyNo || item.caseId} 待处理`,
       id: item.id,
       query: { caseId: item.caseId, mode: 'exception' },
       route:
@@ -608,7 +608,7 @@ export async function loadQualityDomainData(
 
   const quickEntries: DashboardQuickEntry[] = [
     {
-      description: '进入正式统计分析模块',
+      description: '统计分析入口',
       highlight: true,
       id: 'quality-entry-1',
       route: '/m6/statistics',

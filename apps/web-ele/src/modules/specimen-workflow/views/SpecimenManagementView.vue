@@ -1013,7 +1013,7 @@ function closeResultDialog() {
         <ElAlert
           v-if="detailRow?.abnormalFlag"
           :closable="false"
-          title="该标本当前处于异常状态，请结合追踪信息尽快处理。"
+          title="该标本当前处于异常状态。"
           type="warning"
           show-icon
         />

@@ -351,7 +351,7 @@ watch(
 
     <WorkflowSectionCard
       title="工作台概览"
-      description="通过快捷筛选和状态统计快速定位追踪对象。"
+      description="展示快捷筛选和状态统计。"
     >
       <div class="flex flex-wrap gap-2">
         <ElButton
@@ -562,7 +562,7 @@ watch(
         <ElAlert
           v-if="detailRow?.abnormalFlag"
           :closable="false"
-          title="该标本当前处于异常状态，请结合追踪信息尽快处理。"
+          title="该标本当前处于异常状态。"
           type="warning"
           show-icon
         />

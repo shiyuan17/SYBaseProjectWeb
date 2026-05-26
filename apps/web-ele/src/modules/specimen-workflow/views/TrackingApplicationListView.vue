@@ -402,7 +402,7 @@ watch(
       width="1120px"
     >
       <div v-loading="detailLoading" class="flex flex-col gap-4">
-        <WorkflowSectionCard title="异常标记" description="用于快速识别当前申请单是否存在流程异常。">
+        <WorkflowSectionCard title="异常标记" description="展示当前申请单的流程异常标记。">
           <ElAlert
             :closable="false"
             :title="
@@ -604,7 +604,7 @@ watch(
         <WorkflowSectionCard
           v-if="canQueryApplications"
           title="完整申请单详情"
-          description="展示来源医院、外部单号与补充信息，便于追踪页核对业务字段。"
+          description="展示来源医院、外部单号与补充信息。"
         >
           <ElDescriptions :column="2" border>
             <ElDescriptionsItem label="外部单号">

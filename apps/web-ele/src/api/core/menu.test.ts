@@ -11,7 +11,6 @@ import {
 import {
   M5_ARCHIVE_PAGE_AUTHORITIES,
   M5_EQUIPMENT_PAGE_AUTHORITIES,
-  M5_PERMISSION_CODES,
   M5_REAGENT_PAGE_AUTHORITIES,
 } from '#/modules/operation-support/constants';
 import { M1_PERMISSION_CODES } from '#/modules/system-management/constants';
