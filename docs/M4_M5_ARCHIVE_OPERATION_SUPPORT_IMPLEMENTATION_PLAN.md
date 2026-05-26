@@ -51,12 +51,12 @@ M4 服务层位于 `apps/web-ele/src/modules/doctor-workflow/api/doctor-workflow
 - `apps/web-ele/src/api/core/menu.test.ts` 已包含 M4 菜单映射断言。
 - `apps/web-ele/src/api/core/menu-mapper.ts` 已包含 `M4_WORKFLOW / M4_ASSIGN / M4_WORKBENCH / M4_REPORT / M4_TRACKING / M4_REVISION / M4_CONSULTATION` 映射。
 
-### 2.4 M4 待补缺口
+### 2.4 M4 历史缺口复盘
 
 - 后端已具备 M4 医嘱执行能力，包括 `/api/v1/medical-orders`、`/api/v1/medical-orders/pending`、`/api/v1/medical-orders/{id}/accept`、`/api/v1/medical-orders/{id}/complete`、`/api/v1/medical-orders/{id}/cancel`。
 - 后端菜单已存在 `M4_MEDICAL_ORDER`，权限码包括 `PERM_M4_MEDICAL_ORDER_CREATE`、`PERM_M4_MEDICAL_ORDER_CANCEL`、`PERM_M4_MEDICAL_ORDER_QUERY`、`PERM_M4_MEDICAL_ORDER_ACCEPT`、`PERM_M4_MEDICAL_ORDER_COMPLETE`。
-- 当前前端只在诊断工作台和报告追踪中展示医嘱摘要，尚未提供独立的医嘱执行页面与菜单映射。
-- 建议将 M4 医嘱执行页面作为 M4 补齐任务单独排期，不阻塞 M5 归档运营支撑文档与前端规划。
+- 当前前端已补齐独立医嘱执行页面、权限常量、service 与入口跳转，诊断工作台和报告追踪页也已与医嘱状态联动。
+- 本节保留为历史核查说明：M4 医嘱执行缺口已关闭，不再作为独立待补事项。
 
 ## 3. M5 范围确认
 
@@ -287,14 +287,14 @@ pnpm.cmd -F @vben/web-ele run typecheck
 - M5 会新增业务路由、菜单映射和模块服务层，但不改变全局路由守卫与权限模型。
 - 后端 M5 菜单当前仍有 API 路径，需要前端映射为规范页面路由，否则菜单会跳到接口地址。
 - 归档拍照、高拍仪、扫码枪、打印能力未纳入本轮真实设备接入，需要后续兼容性专项验证。
-- M4 医嘱执行页面仍是待补缺口，建议独立于 M5 归档运营支撑排期。
-- M6 统计、历史数据、集成、收费能力已有后端线索，但需后续单独文档规划。
+- M4 医嘱执行缺口已在当前代码中关闭，后续只保留目标环境联调与角色菜单验收。
+- M6 统计、历史数据、集成、收费前台已补齐，后续重点转为外围系统联调与现场验收。
 
 ## 9. 移交摘要
 
 - 已完成: M4 完成情况核查、M5 范围确认、页面规划、接口矩阵、权限菜单规划、测试与联调方案。
-- 进行中: M5 前端 `operation-support` 模块尚未实现。
-- 待处理: 新增 M5 模块、路由、页面、服务层、菜单映射和测试；M4 医嘱执行页面需另行补齐。
+- 进行中: 治理文档与现场验收清单同步更新。
+- 待处理: 目标环境验收，包括真实拍照/扫码/设备能力、角色菜单配置、外部收费回执与历史导入数据源核验。
 - 关键决策: M5 仅覆盖归档管理、试剂台账、设备台账；M6 能力不混入本轮。
 - 已知风险: 后端菜单路径为 API 地址，需要前端映射；真实拍照、扫码、设备能力仍需目标环境验证。
-- 建议下一步: 先实现 M5 服务层与路由测试，再按归档、试剂、设备三个页面分批完成前端界面。
+- 建议下一步: 执行角色可达性与现场验收清单，重点核对外部收费回执、历史导入真实数据源、CSV 编码 / 文件名与角色菜单可见性。

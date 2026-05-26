@@ -607,15 +607,15 @@
           <div class="hero-meta">
             <div class="meta-card">
               <strong>总体结论</strong>
-              <span>部分闭环</span>
+              <span>已闭环</span>
             </div>
             <div class="meta-card">
               <strong>主判断</strong>
-              <span>M1-M5 常规病理主链已闭环，M4 医嘱执行与 M6 支撑链未闭环</span>
+              <span>M1-M6 当前代码已形成前后端可用闭环；原高风险断层已关闭，剩余问题转为治理与现场验收</span>
             </div>
             <div class="meta-card">
               <strong>高风险问题</strong>
-              <span>2 项：M4 缺独立医嘱执行入口；M6 三条支撑链前端仍为占位页</span>
+              <span>0 项：M4 医嘱执行与 M6 integration / billing / history 前台已补齐</span>
             </div>
             <div class="meta-card">
               <strong>审查范围</strong>
@@ -721,11 +721,11 @@
               <div>
                 <h2>02. 总体结论与风险分级</h2>
                 <p class="section-desc">
-                  系统不是“未完成”，也不是“全量闭环”。更准确的判断是：常规病理主链已经跑通到归档，支撑链仍存在明确断点。
+                  当前代码事实已经不同于首次审查版本。M4 医嘱执行工作台与 M6 三个真实管理页已落地，原先的高风险断层已经关闭；当前重点转为治理同步和目标环境验收。
                 </p>
               </div>
               <div class="status-row">
-                <span class="status-pill status-warn">总评：部分闭环</span>
+                <span class="status-pill status-ok">总评：已闭环</span>
               </div>
             </div>
 
@@ -735,39 +735,39 @@
                 <p><code>M1 -> M2 -> M3 -> M4 -> M5</code> 代码证据完整，已形成从送检、技术生产、诊断到归档回填的闭环。</p>
               </div>
               <div class="score-card">
-                <strong>M4 角色断层</strong>
-                <p>病理医嘱后端已具备创建、查询、接单、完成、取消能力，但前端没有独立工作台，执行角色无法闭环。</p>
+                <strong>M4 医嘱链</strong>
+                <p>独立路由、权限常量、service、执行工作台与视图测试已补齐，病理医嘱从创建到执行回流已形成前台闭环。</p>
               </div>
               <div class="score-card">
-                <strong>M6 支撑链断层</strong>
-                <p>集成任务、收费管理、历史报告后端已落地并有集成测试，前端仍是 <code>coming-soon</code>，支持岗无法收口。</p>
+                <strong>M6 支撑链</strong>
+                <p><code>integration</code>、<code>billing</code>、<code>history</code> 已由占位页替换为真实工作面，管理员、归档岗和质量岗可进入对应功能页。</p>
               </div>
               <div class="score-card">
                 <strong>文档治理偏差</strong>
-                <p>M5 在当前代码中已经实现前端主工作台，但旧实施计划仍将其表述为“未实现”，会误导验收与排期。</p>
+                <p>当前主要风险已不在业务缺口，而在旧文档和旧审查结论仍停留在补齐前状态；若不回写，将继续误导验收与汇报。</p>
               </div>
             </div>
 
             <div class="grid-3" style="margin-top: 18px">
-              <div class="finding-card high">
-                <span class="finding-label high">High Risk</span>
-                <strong>病理医嘱执行链对执行角色不可用</strong>
-                <p>医生可以产生医嘱摘要，后端可以查询与执行，但执行岗在前端没有入口。这不是体验问题，而是责任交接断点。</p>
-              </div>
-              <div class="finding-card high">
-                <span class="finding-label high">High Risk</span>
-                <strong>M6 三条支撑链被占位页截断</strong>
-                <p>集成任务、收费管理、历史报告均已在后端形成控制器与测试，但前端没有可操作门面，导致角色权限存在而任务不可完成。</p>
+              <div class="finding-card medium">
+                <span class="finding-label medium">Medium Risk</span>
+                <strong>历史审查结论已过期</strong>
+                <p>如果继续使用补齐前的 HTML 报告、实施计划或口头结论，会把已落地能力误判成缺口，直接影响验收排序和资源投入。</p>
               </div>
               <div class="finding-card medium">
                 <span class="finding-label medium">Medium Risk</span>
-                <strong>文档现状落后于代码现状</strong>
-                <p>如果仍以旧计划文档为验收依据，会把已交付能力误判为未交付，带来重复排期与错误风险说明。</p>
+                <strong>现场联调仍需独立验收</strong>
+                <p>外部收费回执、真实历史数据源、CSV 编码与文件名、真实角色菜单配置仍属于目标环境验收项，不能用当前代码通过替代现场验证。</p>
+              </div>
+              <div class="finding-card medium">
+                <span class="finding-label medium">Medium Risk</span>
+                <strong>角色治理要持续清单化</strong>
+                <p>本轮已经关闭“有角色、无页面”的显性断层，但后续新增菜单和权限仍可能复发，必须用角色可达性清单持续守住基线。</p>
               </div>
             </div>
 
             <div class="quote-box" style="margin-top: 18px">
-              本系统的准确产品判断应当是：<strong>M1-M5 常规病理业务链已能闭环，M6 仍是后端先行、前端未跟上；M4 医嘱执行是当前最清晰的角色缺口。</strong>
+              本轮代码回收后的准确判断是：<strong>M1-M6 当前前后端主能力已闭环，M4 医嘱执行与 M6 integration / billing / history 的高风险缺口已经关闭；剩余工作以治理同步和现场验收为主。</strong>
             </div>
           </section>
 
@@ -781,7 +781,7 @@
               </div>
               <div class="status-row">
                 <span class="status-pill status-ok">M1-M5 主链：总体可闭环</span>
-                <span class="status-pill status-warn">M4/M6：存在局部断层</span>
+                <span class="status-pill status-ok">M4/M6：闭环缺口已关闭</span>
               </div>
             </div>
 
@@ -936,18 +936,19 @@
                         <li><code>/doctor-workflow/tracking</code></li>
                         <li><code>/doctor-workflow/revision</code></li>
                         <li><code>/doctor-workflow/consultation</code></li>
+                        <li><code>/doctor-workflow/medical-orders</code></li>
                       </ul>
                     </td>
-                    <td>分派医生、诊断医生、审核 / 签发医生、修订审批、会诊参与者；<strong>缺少可用的医嘱执行前台角色</strong></td>
+                    <td>分派医生、诊断医生、审核 / 签发医生、修订审批、会诊参与者、医嘱执行岗</td>
                     <td>M3 生成的诊断任务、技术对象、病例上下文</td>
-                    <td>任务分派、接单、开始诊断、报告创建 / 保存 / 提交 / 审核 / 驳回 / 签发 / 发布、修订、会诊、追踪</td>
-                    <td>报告版本链、会诊链、修订链、病理报告发布结果；医嘱仅以摘要方式展示</td>
+                    <td>任务分派、接单、开始诊断、报告创建 / 保存 / 提交 / 审核 / 驳回 / 签发 / 发布、修订、会诊、医嘱创建 / 接单 / 完成 / 取消、追踪</td>
+                    <td>报告版本链、会诊链、修订链、病理报告发布结果、医嘱状态链与执行回流</td>
                     <td>M5 归档回填；M6 计费 / 历史 / 统计支持</td>
                     <td>
                       <div class="evidence-list">
                         <div class="evidence-item"><strong>已实现链路</strong><small><code>doctor-workflow.ts</code>、<code>doctor-workflow-service.ts</code>、<code>DoctorWorkflowEntryView.vue</code></small></div>
-                        <div class="evidence-item"><strong>医嘱仅摘要化</strong><small><code>DiagnosisWorkbenchView.vue</code> 与 <code>ReportTrackingView.vue</code> 只展示 <code>medicalOrders</code> 表格，无独立执行页</small></div>
-                        <div class="evidence-item"><strong>缺口信号</strong><small><code>constants.ts</code> 不含 <code>PERM_M4_MEDICAL_ORDER_*</code>，路由中也无医嘱工作台</small></div>
+                        <div class="evidence-item"><strong>医嘱入口已补齐</strong><small><code>doctor-workflow.ts</code> 新增 <code>/doctor-workflow/medical-orders</code>；<code>DoctorWorkflowEntryView.vue</code> 可按权限跳转</small></div>
+                        <div class="evidence-item"><strong>工作台与摘要联动</strong><small><code>MedicalOrderWorkbenchView.vue</code>、<code>DiagnosisWorkbenchView.vue</code>、<code>ReportTrackingView.vue</code></small></div>
                       </div>
                     </td>
                     <td>
@@ -967,7 +968,7 @@
                         <li><code>InternalConsultationIntegrationTest</code></li>
                       </ul>
                     </td>
-                    <td><span class="status-pill status-warn">部分闭环</span></td>
+                    <td><span class="status-pill status-ok">已闭环</span></td>
                   </tr>
 
                   <tr>
@@ -1013,9 +1014,9 @@
                     <td>
                       <ul>
                         <li><code>/m6/statistics</code>：已实现</li>
-                        <li><code>/m6/integration</code>：占位页</li>
-                        <li><code>/m6/billing</code>：占位页</li>
-                        <li><code>/m6/history</code>：占位页</li>
+                        <li><code>/m6/integration</code>：真实页面</li>
+                        <li><code>/m6/billing</code>：真实页面</li>
+                        <li><code>/m6/history</code>：真实页面</li>
                       </ul>
                     </td>
                     <td>病理管理员、归档岗、质量岗</td>
@@ -1025,8 +1026,8 @@
                     <td>回流到运营、质控、诊断追踪与管理侧分析</td>
                     <td>
                       <div class="evidence-list">
-                        <div class="evidence-item"><strong>仅统计页可用</strong><small><code>m6-statistics-service.ts</code>、<code>StatisticsAnalysisView.vue</code></small></div>
-                        <div class="evidence-item"><strong>其余三页不可用</strong><small><code>apps/web-ele/src/router/routes/modules/m6.ts</code> 与 <code>menu-mapper.ts</code> 将 integration / billing / history 指向 <code>coming-soon</code></small></div>
+                        <div class="evidence-item"><strong>真实管理页</strong><small><code>M6EntryView.vue</code>、<code>IntegrationManagementView.vue</code>、<code>BillingManagementView.vue</code>、<code>HistoricalReportsView.vue</code></small></div>
+                        <div class="evidence-item"><strong>菜单与路由已校准</strong><small><code>apps/web-ele/src/router/routes/modules/m6.ts</code> 与 <code>menu-mapper.ts</code> 已映射真实组件</small></div>
                       </div>
                     </td>
                     <td>
@@ -1046,14 +1047,14 @@
                         <li><code>M6ObservabilityIntegrationTest</code></li>
                       </ul>
                     </td>
-                    <td><span class="status-pill status-danger">后端具备但前端未闭环</span></td>
+                    <td><span class="status-pill status-ok">已闭环</span></td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
             <p class="footer-note">
-              判定说明：M4 被标为“部分闭环”，不是因为诊断报告主链未跑通，而是因为医嘱执行角色已经进入后端权限模型，却没有前端落点；M6 被标为“后端具备但前端未闭环”，是因为统计页以外的三条支持链仍被占位页截断。
+              判定说明：本次回收后，M4 与 M6 之前的显性前端断层已经关闭。保留该节的目的，是把“补齐前缺口”与“补齐后事实”明确区分，避免旧结论继续流转。
             </p>
           </section>
 
@@ -1062,12 +1063,12 @@
               <div>
                 <h2>04. 角色覆盖与缺失角色分析</h2>
                 <p class="section-desc">
-                  审查重点不是“有没有权限码”，而是“角色能否在前端完成自身职责”。角色存在但无入口，本质上仍是流程断层。
+                  审查重点仍然是“角色能否在前端完成自身职责”。本轮代码已经补齐主要断层，因此这一节从“找缺口”转为“确认角色可达性是否真实成立”。
                 </p>
               </div>
               <div class="status-row">
-                <span class="status-pill status-warn">缺失角色：1 个</span>
-                <span class="status-pill status-danger">可用性缺口：3 条 M6 支撑链</span>
+                <span class="status-pill status-ok">缺失角色：0 个</span>
+                <span class="status-pill status-info">剩余重点：角色菜单配置与现场权限验收</span>
               </div>
             </div>
 
@@ -1085,10 +1086,10 @@
                 <tbody>
                   <tr>
                     <td>病理管理员</td>
-                    <td><code>/system/*</code>、<code>/workflow/*</code>、<code>/technical-workflow/*</code>、<code>/doctor-workflow/*</code>、<code>/operation-support/*</code>、<code>/m6/statistics</code></td>
+                    <td><code>/system/*</code>、<code>/workflow/*</code>、<code>/technical-workflow/*</code>、<code>/doctor-workflow/*</code>、<code>/operation-support/*</code>、<code>/m6/*</code></td>
                     <td><code>ROLE_PATHOLOGY_ADMIN</code>，对应 M1-M6 多模块种子</td>
-                    <td><span class="status-pill status-warn">部分完整</span></td>
-                    <td>管理员具备主链操作面，但在 <code>/m6/integration</code>、<code>/m6/billing</code>、<code>/m6/history</code> 仍会落到占位页。</td>
+                    <td><span class="status-pill status-ok">完整</span></td>
+                    <td>管理员已具备系统治理、主链操作面和 M6 四个真实管理页入口；剩余工作是目标环境角色配置核验，而不是前端补洞。</td>
                   </tr>
                   <tr>
                     <td>护士 / 送检岗</td>
@@ -1106,17 +1107,17 @@
                   </tr>
                   <tr>
                     <td>医生</td>
-                    <td><code>/doctor-workflow/assignment</code>、<code>/doctor-workflow/workbench</code>、<code>/doctor-workflow/report</code>、<code>/doctor-workflow/revision</code>、<code>/doctor-workflow/consultation</code>、<code>/doctor-workflow/tracking</code></td>
+                    <td><code>/doctor-workflow/assignment</code>、<code>/doctor-workflow/workbench</code>、<code>/doctor-workflow/report</code>、<code>/doctor-workflow/revision</code>、<code>/doctor-workflow/consultation</code>、<code>/doctor-workflow/tracking</code>、<code>/doctor-workflow/medical-orders</code></td>
                     <td>M4 分派、诊断、审核、签发、修订、会诊相关种子完整；另有 <code>ROLE_M4_MEDICAL_ORDER_EXECUTE</code></td>
-                    <td><span class="status-pill status-warn">部分完整</span></td>
-                    <td>诊断报告主链完整，但 <code>ROLE_M4_MEDICAL_ORDER_EXECUTE</code> 缺前端入口，医生组扩展职责没有收口。</td>
+                    <td><span class="status-pill status-ok">完整</span></td>
+                    <td><code>ROLE_M4_MEDICAL_ORDER_EXECUTE</code> 已有独立前台入口、权限常量、service 和执行工作台，不再属于缺失角色。</td>
                   </tr>
                   <tr>
                     <td>归档岗</td>
-                    <td><code>/operation-support/archive</code>、<code>/m6/statistics</code></td>
+                    <td><code>/operation-support/archive</code>、<code>/m6/history</code>、<code>/m6/statistics</code></td>
                     <td><code>ROLE_ARCHIVE_MANAGER</code>，并拥有部分 M6 历史相关权限种子</td>
-                    <td><span class="status-pill status-warn">部分完整</span></td>
-                    <td>M5 归档借阅前台完整，但 M6 历史报告前端仍未实现，M6 相关职责不可在产品内闭环。</td>
+                    <td><span class="status-pill status-ok">完整</span></td>
+                    <td>M5 归档借阅前台与 M6 历史报告页均已具备真实工作面，归档岗职责已可在产品内闭环。</td>
                   </tr>
                   <tr>
                     <td>试剂设备岗</td>
@@ -1127,10 +1128,10 @@
                   </tr>
                   <tr>
                     <td>质量岗</td>
-                    <td><code>/m6/statistics</code></td>
+                    <td><code>/m6/statistics</code>、<code>/m6/integration</code></td>
                     <td><code>ROLE_QUALITY_MANAGER</code>，拥有统计查询与导出权限</td>
-                    <td><span class="status-pill status-ok">完整（限统计）</span></td>
-                    <td>统计分析前端已可用；但质量岗如果被要求参与更广义 M6 集成支持，则当前前台不足。</td>
+                    <td><span class="status-pill status-ok">完整</span></td>
+                    <td>统计分析前端可用；若质量岗被授予集成任务查询权限，也已有真实入口承接更广义的 M6 支撑职责。</td>
                   </tr>
                 </tbody>
               </table>
@@ -1139,8 +1140,8 @@
             <div class="summary-note" style="margin-top: 18px">
               <strong>缺失角色结论</strong>
               <div class="bullet-list">
-                <li><strong>明确缺失：</strong><code>ROLE_M4_MEDICAL_ORDER_EXECUTE</code> 已在后端菜单、权限、角色种子中存在，但前端没有独立路由、页面、权限常量和 service，属于实质缺失角色。</li>
-                <li><strong>伪可用角色：</strong>M6 管理员 / 归档 / 质量角色在权限层存在，但 integration / billing / history 三条链路会落到占位页，属于“有角色、无工作面”。</li>
+                <li><strong>当前结论：</strong>本轮代码已关闭“有角色、无页面”的显性断层，<code>ROLE_M4_MEDICAL_ORDER_EXECUTE</code> 与 M6 相关角色均已具备前台工作面。</li>
+                <li><strong>治理要求：</strong>后续仍需用角色可达性清单持续核对“入口页、菜单映射、主操作、测试证据”，避免同类断层在新增模块中再次出现。</li>
               </div>
             </div>
           </section>
@@ -1167,15 +1168,15 @@
                 </ul>
               </div>
 
-              <div class="finding-card high">
-                <span class="finding-label high">Finding 2 / High</span>
-                <strong>M6 三条支撑链后端成熟、前端未交付</strong>
-                <p><code>integration</code>、<code>billing</code>、<code>history</code> 在后端已有 controller、权限种子和集成测试，但前端路由仍统一指向 <code>coming-soon</code>。这不是“页面还没美化”，而是角色无法收口。</p>
+              <div class="finding-card medium">
+                <span class="finding-label medium">Finding 2 / Medium</span>
+                <strong>M6 已补齐，后续重点转为目标环境验收</strong>
+                <p><code>integration</code>、<code>billing</code>、<code>history</code> 已经由真实页面承接，前端不再是占位状态。当前真正需要推进的是外围系统联调、历史数据源核验和现场角色菜单配置。</p>
                 <ul class="bullet-list">
-                  <li>前端证据：<code>apps/web-ele/src/router/routes/modules/m6.ts</code> 把 <code>/m6/integration</code>、<code>/m6/billing</code>、<code>/m6/history</code> 指向占位页；<code>menu-mapper.ts</code> 同步把后端菜单映射到占位页。</li>
+                  <li>前端证据：<code>apps/web-ele/src/router/routes/modules/m6.ts</code>、<code>menu-mapper.ts</code>、<code>m6-management/*</code> 已映射并实现四个真实入口页。</li>
                   <li>后端证据：<code>M6ManagementController.java</code> 已暴露 integration、billing、historical-report、stat-report 相关接口；<code>V27__seed_m6_authorization_and_indicator_defs.sql</code> 已完整种下菜单与权限。</li>
-                  <li>测试证据：<code>M6BillingIntegrationTest</code>、<code>M6HistoricalReportIntegrationTest</code>、<code>M6StatisticsIntegrationTest</code>、<code>M6AuthorizationIntegrationTest</code>、<code>M6ObservabilityIntegrationTest</code>。</li>
-                  <li>影响：管理员、归档岗、质量岗在支持链上只能看到“能力存在”，不能实际完成操作。</li>
+                  <li>测试证据：<code>m6.test.ts</code>、<code>m6-management-service.test.ts</code>、<code>m6-management-views.test.ts</code> 以及既有 <code>M6*IntegrationTest</code>。</li>
+                  <li>影响：若不做现场验收，风险会从“前端缺口”转成“联调与实施偏差”。</li>
                 </ul>
               </div>
 
@@ -1297,14 +1298,14 @@
                     <td><span class="score-cell score-yes">有</span></td>
                     <td><span class="score-cell score-yes">有</span></td>
                     <td><strong>5 / 5</strong></td>
-                    <td>统计分析本身可用，问题不在统计页，而在 M6 其余三条支持链未交付。</td>
+                    <td>统计分析与其余三条支持链均已具备真实前台，M6 的重点已从“未交付”转为“上线前验收”。</td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
             <p class="footer-note">
-              结论重点：本项目当前的主要风险不是“无法度量”，而是“部分路径虽然可度量，却没有交给对应角色可用的前台入口”。这会让系统在数据上看似完整，在业务上却无法闭环。
+              结论重点：本项目当前的主要风险已经不再是“角色没有前台入口”，而是“治理材料与目标环境验收是否跟上当前代码版本”。如果这两项不收口，闭环结论仍会在实施阶段被人为打散。
             </p>
           </section>
 
@@ -1319,20 +1320,20 @@
             </div>
 
             <div class="grid-3">
-              <div class="finding-card high">
-                <span class="finding-label high">P0</span>
-                <strong>补齐 M4 病理医嘱执行工作台</strong>
-                <p>新增独立路由、权限常量、service、菜单映射和页面工作台，至少覆盖 pending / accept / complete / cancel 主操作。否则医生链永远停在“可创建、不可执行”。</p>
+              <div class="finding-card medium">
+                <span class="finding-label medium">P1</span>
+                <strong>冻结旧结论，统一对外口径</strong>
+                <p>把补齐前的“缺口版”结论标记为历史状态，后续统一以当前代码事实沟通，避免 M4 / M6 再被误报为未闭环。</p>
               </div>
-              <div class="finding-card high">
-                <span class="finding-label high">P0</span>
-                <strong>补齐 M6 integration / billing / history 前端</strong>
-                <p>如果短期不能交付，就必须从产品口径上明确降级并隐藏菜单；继续保留“有权限但落占位页”的状态不可接受。</p>
+              <div class="finding-card medium">
+                <span class="finding-label medium">P1</span>
+                <strong>执行现场验收清单</strong>
+                <p>围绕外部收费回执、历史导入真实数据源、CSV 编码 / 文件名、角色菜单可见性和工作面可达性开展目标环境核验，不再把这类问题留给后续口头补充。</p>
               </div>
               <div class="finding-card medium">
                 <span class="finding-label medium">P1</span>
                 <strong>同步修正文档基线</strong>
-                <p>将 M5 已实现、M6 部分已实现、M4 医嘱执行缺口等现状写回正式文档，避免后续验收和汇报继续沿用过期说法。</p>
+                <p>将 M5 已实现、M4 医嘱执行已补齐、M6 四页真实可用等现状写回正式文档，避免后续验收和汇报继续沿用过期说法。</p>
               </div>
               <div class="finding-card medium">
                 <span class="finding-label medium">P1</span>
@@ -1347,7 +1348,7 @@
               <div class="finding-card low">
                 <span class="finding-label low">P2</span>
                 <strong>把“主链闭环”和“支持链闭环”分开汇报</strong>
-                <p>后续对外表达应明确：常规病理主链已闭环到 M5；系统全量口径仍是部分闭环。混用这两个口径，会持续制造误判。</p>
+                <p>后续对外表达应明确：本轮代码基线下 M1-M6 主能力已闭环；若谈现场上线状态，则需单列目标环境验收结果。不要再把“代码闭环”与“实施验收”混成一个口径。</p>
               </div>
             </div>
           </section>
@@ -1384,9 +1385,9 @@
             <div class="summary-note" style="margin-top: 18px">
               <strong>最终判断</strong>
               <p>
-                以当前代码事实为准，<strong>SYBaseProject 的常规病理业务主链已经从 M1 跑通到 M5；系统全量口径仍为部分闭环。</strong>
-                真正阻断全量闭环的，不是 M2-M5 主线，而是 <strong>M4 病理医嘱执行角色无前台落点</strong> 与
-                <strong>M6 integration / billing / history 三条支撑链前端未交付</strong>。
+                以当前代码事实为准，<strong>SYBaseProject 的 M1-M6 当前前后端主能力已经闭环。</strong>
+                本轮已关闭的关键断层包括 <strong>M4 病理医嘱执行工作台</strong> 与
+                <strong>M6 integration / billing / history 三条真实前台链路</strong>；剩余工作集中在治理同步和目标环境验收。
               </p>
             </div>
 
