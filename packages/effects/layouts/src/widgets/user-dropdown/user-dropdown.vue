@@ -23,6 +23,7 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
   VbenAvatar,
+  VbenButton,
   VbenIcon,
 } from '@vben-core/shadcn-ui';
 
@@ -185,7 +186,10 @@ if (enableShortcutKey.value) {
   <LogoutModal
     :cancel-text="$t('common.cancel')"
     :confirm-text="$t('common.confirm')"
+    :footer="true"
     :fullscreen-button="false"
+    :show-cancel-button="true"
+    :show-confirm-button="true"
     :title="$t('common.prompt')"
     centered
     content-class="px-8 min-h-10"
@@ -193,6 +197,14 @@ if (enableShortcutKey.value) {
     header-class="border-none"
   >
     {{ $t('ui.widgets.logoutTip') }}
+    <template #footer>
+      <VbenButton variant="ghost" @click="logoutModalApi.close()">
+        {{ $t('common.cancel') }}
+      </VbenButton>
+      <VbenButton @click="handleSubmitLogout">
+        {{ $t('common.confirm') }}
+      </VbenButton>
+    </template>
   </LogoutModal>
 
   <DropdownMenu v-model:open="openPopover">

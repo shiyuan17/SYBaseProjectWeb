@@ -60,4 +60,10 @@ vite.config.ts.*
 .agents
 .claude
 .codex
+.codex-artifacts/
+.codegraph/
 skills-lock.json
+tests/reports/
+playwright-report/
+test-results/
+tests/e2e/.auth/

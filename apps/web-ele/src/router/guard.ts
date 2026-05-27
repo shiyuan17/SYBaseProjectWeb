@@ -5,10 +5,15 @@ import { preferences } from '@vben/preferences';
 import { useAccessStore, useUserStore } from '@vben/stores';
 import { startProgress, stopProgress } from '@vben/utils';
 
+import { getAccessCodesApi } from '#/api';
 import { accessRoutes, coreRouteNames } from '#/router/routes';
 import { useAuthStore } from '#/store';
 
 import { generateAccess } from './access';
+import {
+  buildLoginRedirectQuery,
+  resolvePostLoginRedirect,
+} from './login-redirect';
 
 /**
  * 通用守卫配置
@@ -53,10 +58,9 @@ function setupAccessGuard(router: Router) {
     // 基本路由，这些路由不需要进入权限拦截
     if (coreRouteNames.includes(to.name as string)) {
       if (to.path === LOGIN_PATH && accessStore.accessToken) {
-        return decodeURIComponent(
-          (to.query?.redirect as string) ||
-            userStore.userInfo?.homePath ||
-            preferences.app.defaultHomePath,
+        return resolvePostLoginRedirect(
+          to.query?.redirect,
+          userStore.userInfo?.homePath || preferences.app.defaultHomePath,
         );
       }
       return true;
@@ -74,10 +78,10 @@ function setupAccessGuard(router: Router) {
         return {
           path: LOGIN_PATH,
           // 如不需要，直接删除 query
-          query:
-            to.fullPath === preferences.app.defaultHomePath
-              ? {}
-              : { redirect: encodeURIComponent(to.fullPath) },
+          query: buildLoginRedirectQuery(
+            to.fullPath,
+            preferences.app.defaultHomePath,
+          ),
           // 携带当前跳转的页面，登录后重新跳转该页面
           replace: true,
         };
@@ -92,12 +96,19 @@ function setupAccessGuard(router: Router) {
 
     // 生成路由表
     // 当前登录用户拥有的角色标识列表
-    const userInfo = userStore.userInfo || (await authStore.fetchUserInfo());
+    const [userInfo, accessCodes] = await Promise.all([
+      userStore.userInfo ? Promise.resolve(userStore.userInfo) : authStore.fetchUserInfo(),
+      getAccessCodesApi(),
+    ]);
+    accessStore.setAccessCodes(accessCodes);
     const userRoles = userInfo.roles ?? [];
+    const routeAuthorities = [...new Set([...userRoles, ...accessCodes])];
 
     // 生成菜单和路由
     const { accessibleMenus, accessibleRoutes } = await generateAccess({
-      roles: userRoles,
+      // 前端静态路由继续复用 generateAccess 的 authority 过滤，
+      // 这里同时注入角色和权限码，兼容已有 role authority，并支持 M1 的 PERM_SYS_* 页面权限。
+      roles: routeAuthorities,
       router,
       // 则会在菜单中显示，但是访问会被重定向到403
       routes: accessRoutes,
@@ -107,13 +118,17 @@ function setupAccessGuard(router: Router) {
     accessStore.setAccessMenus(accessibleMenus);
     accessStore.setAccessRoutes(accessibleRoutes);
     accessStore.setIsAccessChecked(true);
-    const redirectPath = (from.query.redirect ??
-      (to.path === preferences.app.defaultHomePath
+    const fallbackPath =
+      to.path === preferences.app.defaultHomePath
         ? userInfo.homePath || preferences.app.defaultHomePath
-        : to.fullPath)) as string;
+        : to.fullPath;
+    const redirectPath = resolvePostLoginRedirect(
+      from.query.redirect,
+      fallbackPath,
+    );
 
     return {
-      ...router.resolve(decodeURIComponent(redirectPath)),
+      ...router.resolve(redirectPath),
       replace: true,
     };
   });

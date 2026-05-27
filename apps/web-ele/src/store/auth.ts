@@ -1,4 +1,5 @@
 import type { Recordable, UserInfo } from '@vben/types';
+import type { AuthApi } from '#/api';
 
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
@@ -12,6 +13,10 @@ import { defineStore } from 'pinia';
 
 import { getAccessCodesApi, getUserInfoApi, loginApi, logoutApi } from '#/api';
 import { $t } from '#/locales';
+import {
+  buildLoginRedirectQuery,
+  resolvePostLoginRedirect,
+} from '#/router/login-redirect';
 
 export const useAuthStore = defineStore('auth', () => {
   const accessStore = useAccessStore();
@@ -19,6 +24,24 @@ export const useAuthStore = defineStore('auth', () => {
   const router = useRouter();
 
   const loginLoading = ref(false);
+
+  async function redirectToLogin(redirect: boolean = true) {
+    await router.replace({
+      path: LOGIN_PATH,
+      query: redirect
+        ? buildLoginRedirectQuery(
+            router.currentRoute.value.fullPath,
+            preferences.app.defaultHomePath,
+          )
+        : {},
+    });
+  }
+
+  async function logoutLocal(redirect: boolean = true) {
+    resetAllStores();
+    accessStore.setLoginExpired(false);
+    await redirectToLogin(redirect);
+  }
 
   /**
    * 异步处理登录操作
@@ -33,7 +56,7 @@ export const useAuthStore = defineStore('auth', () => {
     let userInfo: null | UserInfo = null;
     try {
       loginLoading.value = true;
-      const { accessToken } = await loginApi(params);
+      const { accessToken } = await loginApi(params as AuthApi.LoginParams);
 
       // 如果成功获取到 accessToken
       if (accessToken) {
@@ -46,7 +69,10 @@ export const useAuthStore = defineStore('auth', () => {
           getAccessCodesApi(),
         ]);
 
-        userInfo = fetchUserInfoResult;
+        userInfo = {
+          ...fetchUserInfoResult,
+          token: accessToken,
+        };
 
         userStore.setUserInfo(userInfo);
         accessStore.setAccessCodes(accessCodes);
@@ -54,11 +80,16 @@ export const useAuthStore = defineStore('auth', () => {
         if (accessStore.loginExpired) {
           accessStore.setLoginExpired(false);
         } else {
-          onSuccess
-            ? await onSuccess?.()
-            : await router.push(
+          if (onSuccess) {
+            await onSuccess?.();
+          } else {
+            await router.push(
+              resolvePostLoginRedirect(
+                router.currentRoute.value.query.redirect,
                 userInfo.homePath || preferences.app.defaultHomePath,
-              );
+              ),
+            );
+          }
         }
 
         if (userInfo?.realName) {
@@ -78,24 +109,22 @@ export const useAuthStore = defineStore('auth', () => {
     };
   }
 
-  async function logout(redirect: boolean = true) {
-    try {
-      await logoutApi();
-    } catch {
-      // 不做任何处理
-    }
-    resetAllStores();
-    accessStore.setLoginExpired(false);
+  async function logout(
+    options: boolean | { invokeLogoutApi?: boolean; redirect?: boolean } = true,
+  ) {
+    const normalizedOptions =
+      typeof options === 'boolean' ? { redirect: options } : options;
+    const { invokeLogoutApi = true, redirect = true } = normalizedOptions;
 
-    // 回登录页带上当前路由地址
-    await router.replace({
-      path: LOGIN_PATH,
-      query: redirect
-        ? {
-            redirect: encodeURIComponent(router.currentRoute.value.fullPath),
-          }
-        : {},
-    });
+    if (invokeLogoutApi) {
+      try {
+        await logoutApi();
+      } catch {
+        // 不做任何处理
+      }
+    }
+
+    await logoutLocal(redirect);
   }
 
   async function fetchUserInfo() {
@@ -114,5 +143,6 @@ export const useAuthStore = defineStore('auth', () => {
     fetchUserInfo,
     loginLoading,
     logout,
+    logoutLocal,
   };
 });

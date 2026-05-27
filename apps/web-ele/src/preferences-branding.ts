@@ -1,5 +1,3 @@
-import type { DeepPartial } from '@vben-core/typings';
-
 import type { Preferences } from '@vben/preferences';
 
 import { getPreferences, updatePreferences } from '@vben/preferences';
@@ -13,7 +11,7 @@ const STORAGE_KEYS = {
 } as const;
 
 const LEGACY_BRAND_LINK_KEYWORDS = ['doc.vben.pro', 'vben.pro'];
-const LEGACY_BRAND_NAMES = ['Vben', 'Vben Admin', 'Vben Admin Ele'];
+const LEGACY_BRAND_NAMES = new Set(['Vben', 'Vben Admin', 'Vben Admin Ele']);
 const LEGACY_LOGO_KEYWORDS = [
   '@vbenjs/static-source',
   'logo-v1.webp',
@@ -26,6 +24,14 @@ export const BRAND_NAME = '嘉维病理全流程管理系统';
 export const LEGACY_PREFERENCES_NAMESPACE = 'vben-web-ele';
 
 type PreferencesPatch = DeepPartial<Preferences>;
+
+type DeepPartial<T> = T extends (...args: any[]) => any
+  ? T
+  : T extends object
+    ? {
+        [K in keyof T]?: DeepPartial<T[K]>;
+      }
+    : T;
 
 function clearLegacyPreferenceCache(cache: StorageManager) {
   Object.values(STORAGE_KEYS).forEach((storageKey) => {
@@ -50,7 +56,7 @@ function isLegacyBrandName(value: null | string | undefined) {
     return false;
   }
 
-  return LEGACY_BRAND_NAMES.includes(value.trim());
+  return LEGACY_BRAND_NAMES.has(value.trim());
 }
 
 function isLegacyLogoSource(value: null | string | undefined) {

@@ -1,0 +1,784 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SYBaseProjectWeb 前端系统性审查报告</title>
+    <style>
+      :root {
+        --bg: #f4f6f8;
+        --panel: rgba(255, 255, 255, 0.94);
+        --panel-strong: #ffffff;
+        --ink: #16202a;
+        --muted: #607080;
+        --line: #d6dde5;
+        --primary: #184e77;
+        --primary-soft: #e6f0f8;
+        --danger: #b42318;
+        --danger-soft: #fdecea;
+        --warn: #b54708;
+        --warn-soft: #fff1df;
+        --ok: #166534;
+        --ok-soft: #dcfce7;
+        --info: #175cd3;
+        --info-soft: #e8f0ff;
+        --shadow: 0 18px 40px rgba(22, 32, 42, 0.08);
+        --radius-xl: 26px;
+        --radius-lg: 18px;
+        --radius-md: 12px;
+        --max-width: 1320px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        font:
+          15px/1.72 "Segoe UI", "PingFang SC", "Hiragino Sans GB",
+          "Microsoft YaHei", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(24, 78, 119, 0.1), transparent 28%),
+          radial-gradient(circle at top right, rgba(181, 71, 8, 0.08), transparent 24%),
+          linear-gradient(180deg, #f8fafc 0%, var(--bg) 100%);
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      code {
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: rgba(22, 32, 42, 0.06);
+        color: #0f3f62;
+        font-size: 0.93em;
+      }
+
+      pre {
+        overflow-x: auto;
+        margin: 0;
+        padding: 16px 18px;
+        border: 1px solid rgba(24, 78, 119, 0.12);
+        border-radius: 14px;
+        background: #f6f9fc;
+        color: #143247;
+        font: 13px/1.65 "Cascadia Code", Consolas, monospace;
+      }
+
+      .page {
+        max-width: var(--max-width);
+        margin: 0 auto;
+        padding: 28px 22px 72px;
+      }
+
+      .hero {
+        margin-bottom: 24px;
+        padding: 34px 36px;
+        border: 1px solid rgba(24, 78, 119, 0.12);
+        border-radius: 30px;
+        background:
+          linear-gradient(135deg, rgba(24, 78, 119, 0.96), rgba(20, 61, 90, 0.94)),
+          #184e77;
+        color: #f7fbff;
+        box-shadow: var(--shadow);
+      }
+
+      .hero h1 {
+        margin: 0 0 12px;
+        font-size: 34px;
+        line-height: 1.18;
+      }
+
+      .hero p {
+        max-width: 980px;
+        margin: 0;
+        color: rgba(247, 251, 255, 0.86);
+      }
+
+      .hero-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.12);
+        color: #f7fbff;
+        font-size: 13px;
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 16px;
+        margin: 24px 0 28px;
+      }
+
+      .metric {
+        padding: 20px 22px;
+        border: 1px solid rgba(24, 78, 119, 0.12);
+        border-radius: 18px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+      }
+
+      .metric .label {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .metric .value {
+        margin-top: 10px;
+        font-size: 30px;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr);
+        gap: 22px;
+        align-items: start;
+      }
+
+      .toc,
+      .panel {
+        border: 1px solid rgba(24, 78, 119, 0.1);
+        border-radius: 22px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+      }
+
+      .toc {
+        position: sticky;
+        top: 18px;
+        padding: 22px 20px;
+      }
+
+      .toc h2 {
+        margin: 0 0 14px;
+        font-size: 16px;
+      }
+
+      .toc ol {
+        margin: 0;
+        padding-left: 18px;
+      }
+
+      .toc li + li {
+        margin-top: 10px;
+      }
+
+      .toc a {
+        color: var(--muted);
+      }
+
+      .content {
+        display: grid;
+        gap: 18px;
+      }
+
+      .panel {
+        padding: 26px 28px;
+      }
+
+      .panel h2 {
+        margin: 0 0 14px;
+        font-size: 24px;
+      }
+
+      .panel h3 {
+        margin: 22px 0 10px;
+        font-size: 17px;
+      }
+
+      .lead {
+        margin: 0 0 16px;
+        color: #253646;
+        font-size: 16px;
+      }
+
+      .badge-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 16px 0 18px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+
+      .p1 {
+        background: var(--danger-soft);
+        color: var(--danger);
+      }
+
+      .p2 {
+        background: var(--warn-soft);
+        color: var(--warn);
+      }
+
+      .p3 {
+        background: var(--info-soft);
+        color: var(--info);
+      }
+
+      .good {
+        background: var(--ok-soft);
+        color: var(--ok);
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 20px;
+      }
+
+      li + li {
+        margin-top: 10px;
+      }
+
+      .evidence-list li strong,
+      .risk-list li strong {
+        color: #122f44;
+      }
+
+      .callout {
+        margin-top: 16px;
+        padding: 16px 18px;
+        border-left: 4px solid var(--primary);
+        border-radius: 12px;
+        background: var(--primary-soft);
+      }
+
+      .warning {
+        border-left-color: var(--warn);
+        background: var(--warn-soft);
+      }
+
+      .danger {
+        border-left-color: var(--danger);
+        background: var(--danger-soft);
+      }
+
+      .info {
+        border-left-color: var(--info);
+        background: var(--info-soft);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 14px;
+        overflow: hidden;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+      }
+
+      th,
+      td {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #f5f8fb;
+        color: #284053;
+        font-size: 13px;
+      }
+
+      tr:last-child td {
+        border-bottom: none;
+      }
+
+      .small {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .quote {
+        margin-top: 14px;
+      }
+
+      .footer {
+        margin-top: 26px;
+        padding: 22px 24px;
+        border: 1px dashed rgba(24, 78, 119, 0.25);
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.7);
+      }
+
+      @media (max-width: 1080px) {
+        .summary-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        .toc {
+          position: static;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .page {
+          padding: 18px 14px 40px;
+        }
+
+        .hero,
+        .panel,
+        .toc {
+          padding: 20px 18px;
+        }
+
+        .summary-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .hero h1 {
+          font-size: 28px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <h1>SYBaseProjectWeb 前端系统性审查报告</h1>
+        <p>
+          本报告基于对 monorepo 根工程、共享 <code>packages</code> 和业务应用
+          <code>apps/web-ele</code> 的静态审查结果生成，重点覆盖代码质量、架构合理性、性能、可维护性、工程规范与安全边界。
+          结论以问题导向输出，不回避结构性缺陷，也不把已有治理基础误判为无效。
+        </p>
+        <div class="hero-meta">
+          <span class="chip">审查日期：2026-05-27</span>
+          <span class="chip">审查范围：全工程</span>
+          <span class="chip">审查方式：静态审查 + 配置检查 + 抽样验证</span>
+          <span class="chip">报告形式：单文件 HTML</span>
+        </div>
+      </header>
+
+      <section class="summary-grid" aria-label="summary">
+        <article class="metric">
+          <div class="label">总体结论</div>
+          <div class="value">中偏下</div>
+          <div class="small">框架基础正确，执行质量失衡，页面层复杂度已经失控。</div>
+        </article>
+        <article class="metric">
+          <div class="label">P1 级问题</div>
+          <div class="value">4</div>
+          <div class="small">主要集中在页面职责、状态边界、安全注入面和认证恢复能力。</div>
+        </article>
+        <article class="metric">
+          <div class="label">验证结果</div>
+          <div class="value">通过</div>
+          <div class="small"><code>typecheck</code> 与 <code>vitest</code> 均通过。</div>
+        </article>
+        <article class="metric">
+          <div class="label">代表性负担</div>
+          <div class="value">1816 行</div>
+          <div class="small">最大业务页面 <code>ArchiveManagementView.vue</code> 的单文件规模。</div>
+        </article>
+      </section>
+
+      <div class="layout">
+        <aside class="toc">
+          <h2>目录</h2>
+          <ol>
+            <li><a href="#section-1">项目整体评价</a></li>
+            <li><a href="#section-2">代码质量</a></li>
+            <li><a href="#section-3">性能与体验</a></li>
+            <li><a href="#section-4">工程与规范</a></li>
+            <li><a href="#section-5">安全与边界</a></li>
+            <li><a href="#section-6">高优先级改进建议</a></li>
+            <li><a href="#section-7">验证与边界说明</a></li>
+          </ol>
+        </aside>
+
+        <main class="content">
+          <section class="panel" id="section-1">
+            <h2>1. 项目整体评价</h2>
+            <p class="lead">
+              技术选型本身没有问题。<code>Vue 3 + TypeScript + Pinia + Vue Router + Element Plus + pnpm + turbo</code>
+              适合中后台场景，工程也具备 monorepo、共享包、统一请求层、统一路由入口和测试基线。问题不在“选型错误”，而在“架构落地质量失衡”。
+            </p>
+            <div class="badge-row">
+              <span class="badge good">技术栈合理</span>
+              <span class="badge p2">分层执行弱化</span>
+              <span class="badge p1">页面层失控</span>
+            </div>
+            <ul class="evidence-list">
+              <li>
+                <strong>基础壳层清晰：</strong>
+                <code>apps/web-ele/src/router/routes/index.ts</code> 使用
+                <code>import.meta.glob</code> 聚合模块路由，具备动态路由和按模块组织的基础能力。
+              </li>
+              <li>
+                <strong>请求层集中：</strong>
+                <code>apps/web-ele/src/api/request.ts</code> 已统一挂载鉴权头、默认响应拦截器和错误提示。
+              </li>
+              <li>
+                <strong>架构问题不在壳层，而在业务实现：</strong>
+                目录看似模块化，但复杂度没有沉到 composable、store action、服务编排层，而是大量回流到视图文件。
+              </li>
+              <li>
+                <strong>定性判断：</strong>
+                这不是典型的“架构混乱型项目”，而是“架构框架正确，但执行纪律不足，页面层复杂度长期无人兜底”的项目。
+              </li>
+            </ul>
+            <div class="callout">
+              结论：项目具备现代前端工程的基础壳层，但尚未形成足以约束业务复杂度的执行机制。当前代码库仍可维护，但维护成本已经进入上升区间。
+            </div>
+          </section>
+
+          <section class="panel" id="section-2">
+            <h2>2. 代码质量</h2>
+            <p class="lead">
+              当前代码质量的核心问题不是“局部写法差”，而是“超大 SFC + 页面承担过多职责”。这已经不是审美问题，而是明确的维护性风险。
+            </p>
+            <div class="badge-row">
+              <span class="badge p1">单文件复杂度过高</span>
+              <span class="badge p1">视图层承担业务编排</span>
+              <span class="badge p2">类型边界偏宽</span>
+            </div>
+
+            <h3>结论</h3>
+            <ul class="risk-list">
+              <li>组件职责边界不稳定，多个页面已经同时承担权限判断、请求编排、状态机、弹窗流转、格式化和跳转逻辑。</li>
+              <li>目录层面的模块化存在，但实现层面的复用与职责下沉不足，导致复杂度集中在页面文件本身。</li>
+              <li>TypeScript 基线可用，但并不严格，宽泛对象类型和兜底断言仍然存在。</li>
+            </ul>
+
+            <h3>证据</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>证据点</th>
+                  <th>说明</th>
+                  <th>风险判断</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>ArchiveManagementView.vue</code> 共 1816 行</td>
+                  <td><code>apps/web-ele/src/modules/operation-support/views/ArchiveManagementView.vue</code></td>
+                  <td>P1。单文件集成权限、表单、归档、借还、柜位、错误和对话框状态，不符合单一职责。</td>
+                </tr>
+                <tr>
+                  <td><code>SpecimenManagementView.vue</code> 共 1414 行</td>
+                  <td><code>apps/web-ele/src/modules/specimen-workflow/views/SpecimenManagementView.vue</code></td>
+                  <td>P1。登记、详情、补打、核验、筛选、分页、路由回填和错误处理被堆在一个页面。</td>
+                </tr>
+                <tr>
+                  <td>高密度响应式状态</td>
+                  <td>
+                    两个代表性页面都包含大量 <code>computed</code>、<code>ref</code>、<code>reactive</code>、<code>watch</code>。
+                    例如 <code>ArchiveManagementView.vue:125-435</code>、<code>SpecimenManagementView.vue:95-428</code>。
+                  </td>
+                  <td>P2。响应式状态链条过长，后续变更容易引入联动回归。</td>
+                </tr>
+                <tr>
+                  <td>类型边界偏宽</td>
+                  <td>
+                    <code>apps/web-ele/src/store/auth.ts:47</code> 使用 <code>Recordable&lt;any&gt;</code>；
+                    共享层和适配层存在大量 <code>Record&lt;string, any&gt;</code>；
+                    多处测试与底层包使用 <code>as unknown as</code>。
+                  </td>
+                  <td>P2。类型系统能工作，但没有形成足够严格的边界。</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="quote">
+              <pre>apps/web-ele/src/store/auth.ts:47
+params: Recordable&lt;any&gt;</pre>
+            </div>
+
+            <div class="callout warning">
+              结论不是“TypeScript 已失效”，而是“TypeScript 主要保证了基本连通性，但尚未有效约束关键边界”。这两者差别很大，不能混为一谈。
+            </div>
+          </section>
+
+          <section class="panel" id="section-3">
+            <h2>3. 性能与体验</h2>
+            <p class="lead">
+              首屏与路由层具备现代实践基础，主要风险不在构建链，而在运行期的页面复杂度、重复刷新编排和大组件状态同步成本。
+            </p>
+            <div class="badge-row">
+              <span class="badge good">支持懒加载</span>
+              <span class="badge p2">页面状态链条过长</span>
+              <span class="badge p2">重复请求治理不足</span>
+            </div>
+
+            <h3>结论</h3>
+            <ul>
+              <li>动态路由和页面懒加载已使用，基础首屏策略并不落后。</li>
+              <li>实际风险来自页面运行期：局部状态多、弹窗多、明细区多、watch 链多、表格操作重。</li>
+              <li>当前没有直接证据证明存在确定性内存泄漏，但复杂页面结构已经显著提高了卡顿和泄漏概率。</li>
+            </ul>
+
+            <h3>证据</h3>
+            <ul class="evidence-list">
+              <li>
+                <strong>路由层具备懒加载基础：</strong>
+                <code>apps/web-ele/src/router/routes/index.ts</code> 通过
+                <code>import.meta.glob</code> 聚合模块路由。
+              </li>
+              <li>
+                <strong>大型页面内部存在高频状态联动：</strong>
+                <code>SpecimenManagementView.vue</code> 中多个弹窗、抽屉、列表、详情和路由回填逻辑共同存在；
+                <code>ArchiveManagementView.vue</code> 同时维护归档柜、柜位、借还、记录查询等多块工作台状态。
+              </li>
+              <li>
+                <strong>请求并发控制未形成明显统一策略：</strong>
+                页面级查询多以
+                <code>loadXxx()</code> 方式直接触发，报告中未看到通用的取消请求、过时结果丢弃或最新请求优先封装。
+              </li>
+              <li>
+                <strong>图表/监听类页面需重点关注：</strong>
+                项目中存在多处
+                <code>watch</code> 调度，当前尚不足以断定泄漏，但足以判定复杂度持续上升。
+              </li>
+            </ul>
+
+            <div class="callout info">
+              这里不能下“性能差”的武断结论。更准确的表述是：项目已经出现明显的性能脆弱性，且后续新增需求会优先放大这一脆弱性。
+            </div>
+          </section>
+
+          <section class="panel" id="section-4">
+            <h2>4. 工程与规范</h2>
+            <p class="lead">
+              工程治理基础是存在的，而且并不弱；真正的问题是这些规则尚未形成针对复杂度的有效门禁。
+            </p>
+            <div class="badge-row">
+              <span class="badge good">工具链齐全</span>
+              <span class="badge p2">规则落地强度不足</span>
+              <span class="badge p3">复杂度门禁缺位</span>
+            </div>
+
+            <h3>明确成立的优点</h3>
+            <ul>
+              <li><code>pnpm + turbo</code> 的 monorepo 基础成立。</li>
+              <li><code>eslint.config.mjs</code>、<code>stylelint.config.mjs</code>、<code>lefthook.yml</code>、<code>.commitlintrc.js</code> 均已配置。</li>
+              <li><code>pnpm --filter @vben/web-ele typecheck</code> 通过。</li>
+              <li><code>pnpm test:unit</code> 通过，85 个测试文件、537 个用例全部通过。</li>
+            </ul>
+
+            <h3>问题与缺口</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>问题</th>
+                  <th>证据</th>
+                  <th>判断</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>规则没有阻止超大文件继续膨胀</td>
+                  <td>1816 行、1414 行的核心业务页面仍可顺利通过现有链路。</td>
+                  <td>P2。格式化和 lint 解决的是风格一致性，不解决设计复杂度。</td>
+                </tr>
+                <tr>
+                  <td>命名总体统一，但硬编码仍散落</td>
+                  <td>
+                    多个技术工作站页面直接在模板内写
+                    <code>router.push({ path: '/technical-workflow/tracking' ... })</code>。
+                  </td>
+                  <td>P2。路径常量化和导航封装不足，后续改路由成本高。</td>
+                </tr>
+                <tr>
+                  <td>复杂度门禁缺失</td>
+                  <td>未见针对文件体量、页面职责、路径硬编码、模块边界的专项约束。</td>
+                  <td>P3。治理工具有了，但治理目标不够具体。</td>
+                </tr>
+                <tr>
+                  <td>测试链路有轻微前瞻风险</td>
+                  <td>Vitest 报告 1 条 <code>vi.mock</code> 顶层提升警告，未来版本可能升级为错误。</td>
+                  <td>P3。短期不阻塞，长期应清理。</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="quote">
+              <pre>apps/web-ele/src/modules/technical-workflow/views/GrossingWorkstationView.vue:215
+@click="router.push({ path: '/technical-workflow/tracking', query: { caseId: selectedTask?.caseId ?? '' } })"</pre>
+            </div>
+          </section>
+
+          <section class="panel" id="section-5">
+            <h2>5. 安全与边界</h2>
+            <p class="lead">
+              安全部分必须直接下风险判断。当前项目没有出现明显的恶意代码迹象，但存在若干不能轻描淡写的边界问题。
+            </p>
+            <div class="badge-row">
+              <span class="badge p1">存在 XSS 注入面</span>
+              <span class="badge p1">认证恢复能力偏弱</span>
+              <span class="badge p2">持久化策略需复核</span>
+            </div>
+
+            <h3>主要风险</h3>
+            <ul class="risk-list">
+              <li>
+                <strong>XSS 风险面存在：</strong>
+                共享包内存在直接 <code>v-html</code> 渲染。若上游内容没有严格净化，组件本身就形成注入入口。
+              </li>
+              <li>
+                <strong>认证恢复能力弱：</strong>
+                请求层统一注入 <code>Authorization</code> 头，但刷新 token 被显式禁用。
+              </li>
+              <li>
+                <strong>会话持久化策略需复核：</strong>
+                看到共享 store 的持久化插件和本地存储使用，但未在本次审查中拿到完整安全策略说明。
+              </li>
+              <li>
+                <strong>路由权限依赖首次访问流程：</strong>
+                权限守卫虽然没有塞入大量业务请求，但权限生成仍强依赖 <code>isAccessChecked</code> 与首次加载流程。
+              </li>
+            </ul>
+
+            <h3>证据</h3>
+            <ul class="evidence-list">
+              <li>
+                <strong>XSS 注入面：</strong>
+                <code>packages/effects/common-ui/src/ui/dashboard/workbench/workbench-trends.vue:51</code>、
+                <code>packages/effects/common-ui/src/ui/dashboard/workbench/workbench-todo.vue:50</code>、
+                <code>packages/effects/plugins/src/tiptap/preview.vue:32</code>
+                使用 <code>v-html</code>。
+              </li>
+              <li>
+                <strong>认证恢复关闭：</strong>
+                <code>apps/web-ele/src/api/request.ts:46</code>
+                明确抛出 <code>Refresh token is disabled</code>；
+                <code>apps/web-ele/src/api/request.ts:57</code> 统一注入鉴权头；
+                <code>apps/web-ele/src/api/request.ts:87</code> 主要依赖全局 <code>ElMessage.error</code> 提示。
+              </li>
+              <li>
+                <strong>权限守卫路径：</strong>
+                <code>apps/web-ele/src/router/guard.ts:90-98</code>
+                使用 <code>isAccessChecked</code> 和 <code>Promise.all([fetchUserInfo, getAccessCodesApi])</code> 生成访问能力。
+              </li>
+              <li>
+                <strong>本地持久化迹象：</strong>
+                <code>packages/stores/src/setup.ts:57</code> 涉及 <code>localStorage</code>；
+                <code>packages/stores/src/modules/access.ts:102</code> 存在 <code>persist</code> 配置。
+              </li>
+            </ul>
+
+            <div class="callout danger">
+              这里最需要避免的误判是“现在没出安全事故，所以暂时不是问题”。<code>v-html</code> 和会话持久化边界都属于静态审查阶段就应明确标红的事项。
+            </div>
+          </section>
+
+          <section class="panel" id="section-6">
+            <h2>6. 高优先级改进建议（4 条）</h2>
+            <p class="lead">
+              以下建议按“问题 → 风险 → 方案”组织，优先级已经按实际治理收益排序。
+            </p>
+            <table>
+              <thead>
+                <tr>
+                  <th>优先级</th>
+                  <th>问题</th>
+                  <th>风险</th>
+                  <th>具体改进方案</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><span class="badge p1">P1</span></td>
+                  <td>超大页面长期堆积</td>
+                  <td>单个页面成为事实上的微型子系统，任何需求变更都可能引发跨区域回归。</td>
+                  <td>
+                    先从 <code>ArchiveManagementView.vue</code> 和 <code>SpecimenManagementView.vue</code> 开始拆分，
+                    以“列表筛选区 / 明细区 / 对话框流 / 数据编排”拆成多个 section component 和 composable，
+                    禁止再向原页面继续堆叠职责。
+                  </td>
+                </tr>
+                <tr>
+                  <td><span class="badge p1">P1</span></td>
+                  <td>请求与状态编排滞留在视图层</td>
+                  <td>页面直接承担业务流程后，错误处理、并发策略、刷新策略和复用都会碎片化。</td>
+                  <td>
+                    将页面级 <code>loadXxx</code>、提交、重试、路由回填、数据拼装下沉为
+                    <code>useXxx</code> composable 或模块 store action，
+                    页面只保留装配职责和极薄的交互入口。
+                  </td>
+                </tr>
+                <tr>
+                  <td><span class="badge p2">P2</span></td>
+                  <td>路由路径与权限码硬编码散落</td>
+                  <td>路径或权限变更需要全仓搜改，且模板内字符串难以被重构工具稳定发现。</td>
+                  <td>
+                    建立模块级路由常量与导航 helper，逐步替换模板内直接写死的
+                    <code>path</code> 和业务权限字符串；为高频工作台页优先治理。
+                  </td>
+                </tr>
+                <tr>
+                  <td><span class="badge p1">P1</span></td>
+                  <td>安全边界与类型边界都偏松</td>
+                  <td><code>v-html</code> 形成注入面，宽泛对象类型削弱关键数据约束，问题一旦叠加会放大事故面。</td>
+                  <td>
+                    对所有 <code>v-html</code> 引入明确的上游净化责任或替代渲染方案；
+                    收紧 <code>any</code>、<code>Record&lt;string, any&gt;</code>、<code>Recordable&lt;any&gt;</code> 的使用范围，
+                    先从认证表单、共享适配层和表单基础设施治理。
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section class="panel" id="section-7">
+            <h2>7. 验证与边界说明</h2>
+            <h3>已验证</h3>
+            <ul>
+              <li>已检查根工程与 <code>apps/web-ele</code> 的工程结构、依赖与脚本。</li>
+              <li>已抽样审查请求层、路由守卫、认证 store、共享包风险点和代表性业务页面。</li>
+              <li><code>pnpm --filter @vben/web-ele typecheck</code> 通过。</li>
+              <li><code>pnpm test:unit</code> 通过，85 个测试文件、537 个用例全部通过。</li>
+              <li>已记录 1 条 Vitest mock 顶层提升警告，属于后续兼容性风险。</li>
+            </ul>
+
+            <h3>未验证</h3>
+            <ul>
+              <li>未执行真实生产流量下的性能剖析，无法对首屏时长、交互耗时和内存曲线下最终结论。</li>
+              <li>未完成浏览器专项兼容矩阵验证，尤其是导出、打印、国产环境与复杂工作台页面。</li>
+              <li>未对后端真实 token 生命周期、CSRF 策略、服务端净化责任进行联调确认。</li>
+              <li>未进行渗透测试或动态安全测试，本报告不替代安全专项审计。</li>
+            </ul>
+
+            <div class="footer">
+              <strong>最终判断：</strong>
+              这是一个“工程基础不差，但业务复杂度治理明显滞后”的项目。最优先的工作不是继续堆功能，也不是先大规模改工具链，而是压制页面层膨胀、收回业务编排边界、补齐安全与类型约束。继续按当前模式扩展，未来的主要成本不会是开发速度，而是回归成本和修改不确定性。
+            </div>
+          </section>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

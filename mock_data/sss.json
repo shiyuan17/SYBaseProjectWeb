@@ -1,0 +1,86 @@
+[
+    {
+      "buildingId": "B001",
+      "buildingName": "外科大楼",
+      "floors": 12,
+      "location": "院区北侧",
+      "operatingRooms": [
+        {
+          "roomId": "OR-101",
+          "roomName": "第一手术室",
+          "floor": 3,
+          "roomType": "洁净手术室",
+          "cleanLevel": "百级",
+          "status": "空闲",
+          "capacity": 8,
+          "equipment": ["麻醉机", "呼吸机", "腹腔镜系统"]
+        },
+        {
+          "roomId": "OR-102",
+          "roomName": "第二手术室",
+          "floor": 3,
+          "roomType": "洁净手术室",
+          "cleanLevel": "千级",
+          "status": "使用中",
+          "capacity": 6,
+          "equipment": ["麻醉机", "C臂机"]
+        },
+        {
+          "roomId": "OR-103",
+          "roomName": "第三手术室",
+          "floor": 4,
+          "roomType": "普通手术室",
+          "cleanLevel": "万级",
+          "status": "维护中",
+          "capacity": 6,
+          "equipment": ["麻醉机"]
+        }
+      ]
+    },
+    {
+      "buildingId": "B002",
+      "buildingName": "门诊医技楼",
+      "floors": 8,
+      "location": "院区中部",
+      "operatingRooms": [
+        {
+          "roomId": "OR-201",
+          "roomName": "日间手术室A",
+          "floor": 5,
+          "roomType": "日间手术室",
+          "cleanLevel": "千级",
+          "status": "空闲",
+          "capacity": 4,
+          "equipment": ["麻醉机", "监护仪"]
+        },
+        {
+          "roomId": "OR-202",
+          "roomName": "日间手术室B",
+          "floor": 5,
+          "roomType": "日间手术室",
+          "cleanLevel": "千级",
+          "status": "预约中",
+          "capacity": 4,
+          "equipment": ["麻醉机"]
+        }
+      ]
+    },
+    {
+      "buildingId": "B003",
+      "buildingName": "感染病楼",
+      "floors": 6,
+      "location": "院区南侧",
+      "operatingRooms": [
+        {
+          "roomId": "OR-301",
+          "roomName": "负压手术室",
+          "floor": 2,
+          "roomType": "负压手术室",
+          "cleanLevel": "百级",
+          "status": "使用中",
+          "capacity": 6,
+          "equipment": ["负压通风系统", "麻醉机", "隔离设备"]
+        }
+      ]
+    }
+  ]

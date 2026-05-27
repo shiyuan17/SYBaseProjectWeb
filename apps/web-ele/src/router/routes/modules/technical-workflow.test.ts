@@ -1,0 +1,27 @@
+import { describe, expect, it } from 'vitest';
+
+import { M3_PERMISSION_CODES } from '#/modules/technical-workflow/constants';
+
+import technicalWorkflowRoutes from './technical-workflow';
+
+describe('technical workflow routes', () => {
+  it('registers M3 workstation routes with permission authorities', () => {
+    const workflowRoot = technicalWorkflowRoutes.find(
+      (route) => route.name === 'TechnicalWorkflowRoot',
+    );
+    const tasksRoute = workflowRoot?.children?.find(
+      (route) => route.name === 'TechnicalTasks',
+    );
+    const grossingRoute = workflowRoot?.children?.find(
+      (route) => route.name === 'GrossingWorkstation',
+    );
+
+    expect(workflowRoot?.path).toBe('/technical-workflow');
+    expect(tasksRoute?.meta?.authority).toEqual([
+      M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY,
+    ]);
+    expect(grossingRoute?.meta?.authority).toEqual([
+      M3_PERMISSION_CODES.GROSSING,
+    ]);
+  });
+});

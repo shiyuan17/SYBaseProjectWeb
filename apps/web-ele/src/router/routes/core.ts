@@ -4,6 +4,7 @@ import { LOGIN_PATH } from '@vben/constants';
 import { preferences } from '@vben/preferences';
 
 import { $t } from '#/locales';
+import { LEGACY_LOGIN_PATH } from '#/router/login-redirect';
 
 const BasicLayout = () => import('#/layouts/basic.vue');
 const AuthPageLayout = () => import('#/layouts/auth.vue');
@@ -37,6 +38,17 @@ const coreRoutes: RouteRecordRaw[] = [
     path: '/',
     redirect: preferences.app.defaultHomePath,
     children: [],
+  },
+  {
+    path: LEGACY_LOGIN_PATH,
+    redirect: LOGIN_PATH,
+    name: 'LegacyLogin',
+    meta: {
+      hideInBreadcrumb: true,
+      hideInMenu: true,
+      hideInTab: true,
+      title: $t('page.auth.login'),
+    },
   },
   {
     component: AuthPageLayout,

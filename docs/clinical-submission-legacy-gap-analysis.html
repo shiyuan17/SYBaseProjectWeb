@@ -1,0 +1,962 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>临床送检现状与旧工作站 HTML 对齐分析</title>
+    <style>
+      :root {
+        --bg: #f4f7fb;
+        --paper: rgba(255, 255, 255, 0.96);
+        --ink: #1c2736;
+        --muted: #5d6b7c;
+        --line: #dbe4ef;
+        --primary: #0f766e;
+        --primary-soft: #ddf5f1;
+        --blue: #2563eb;
+        --blue-soft: #e6efff;
+        --amber: #b45309;
+        --amber-soft: #fff1dc;
+        --danger: #b42318;
+        --danger-soft: #ffe8e5;
+        --ok: #15803d;
+        --ok-soft: #e6f7ea;
+        --shadow: 0 18px 48px rgba(20, 34, 55, 0.1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(15, 118, 110, 0.12), transparent 28%),
+          radial-gradient(circle at top right, rgba(37, 99, 235, 0.1), transparent 24%),
+          linear-gradient(180deg, #edf3f9 0%, #f4f7fb 42%, #f8fbfe 100%);
+        font-family:
+          "Microsoft YaHei",
+          "PingFang SC",
+          "Noto Sans SC",
+          Arial,
+          sans-serif;
+        line-height: 1.7;
+      }
+
+      main {
+        width: min(1280px, calc(100% - 40px));
+        margin: 0 auto;
+        padding: 28px 0 56px;
+      }
+
+      .hero,
+      section {
+        border: 1px solid rgba(95, 123, 157, 0.18);
+        border-radius: 22px;
+        background: var(--paper);
+        box-shadow: var(--shadow);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.82fr);
+        gap: 22px;
+        padding: 30px;
+      }
+
+      .hero-side {
+        display: grid;
+        gap: 14px;
+      }
+
+      .metric {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 16px 18px;
+        background: #f9fbfd;
+      }
+
+      .metric strong {
+        display: block;
+        font-size: 30px;
+        line-height: 1.1;
+      }
+
+      .metric span {
+        display: block;
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .eyebrow {
+        color: var(--primary);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3,
+      h4,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        margin-top: 12px;
+        font-size: clamp(30px, 4.6vw, 52px);
+        line-height: 1.2;
+      }
+
+      h2 {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 18px;
+        font-size: 26px;
+      }
+
+      h2::before {
+        display: inline-block;
+        width: 10px;
+        height: 28px;
+        border-radius: 999px;
+        background: var(--primary);
+        content: "";
+      }
+
+      h3 {
+        font-size: 18px;
+        line-height: 1.35;
+      }
+
+      h4 {
+        margin-bottom: 8px;
+        font-size: 14px;
+      }
+
+      p {
+        margin-top: 10px;
+        color: var(--muted);
+      }
+
+      section {
+        margin-top: 22px;
+        padding: 28px;
+      }
+
+      .lead {
+        max-width: 920px;
+        font-size: 16px;
+      }
+
+      .tag-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 18px;
+      }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 3px 10px;
+        border-radius: 999px;
+        background: var(--primary-soft);
+        color: var(--primary);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .tag.blue {
+        background: var(--blue-soft);
+        color: var(--blue);
+      }
+
+      .tag.warn {
+        background: var(--amber-soft);
+        color: var(--amber);
+      }
+
+      .tag.danger {
+        background: var(--danger-soft);
+        color: var(--danger);
+      }
+
+      .tag.ok {
+        background: var(--ok-soft);
+        color: var(--ok);
+      }
+
+      .grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      .grid-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .grid-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .grid-4 {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .card,
+      .phase,
+      .gap-card,
+      .callout {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: #fbfdff;
+        padding: 18px;
+      }
+
+      .callout {
+        margin-top: 16px;
+      }
+
+      .callout strong {
+        display: block;
+        margin-bottom: 6px;
+      }
+
+      .callout.info {
+        background: #f7fbff;
+      }
+
+      .callout.warn {
+        background: var(--amber-soft);
+      }
+
+      .callout.danger {
+        background: var(--danger-soft);
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        border-radius: 16px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+      }
+
+      th,
+      td {
+        padding: 14px 16px;
+        border: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+        font-size: 14px;
+      }
+
+      th {
+        background: #eef4fa;
+        color: #223048;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      code {
+        padding: 1px 6px;
+        border-radius: 999px;
+        background: #eef3f8;
+        color: #1e3a5f;
+        font-family:
+          "Cascadia Code",
+          Consolas,
+          monospace;
+        font-size: 12px;
+      }
+
+      ul {
+        margin: 10px 0 0;
+        padding-left: 20px;
+      }
+
+      li + li {
+        margin-top: 6px;
+      }
+
+      .flow {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 16px;
+      }
+
+      .flow-node {
+        position: relative;
+        min-height: 200px;
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: #fbfdff;
+        padding: 18px;
+        overflow: hidden;
+      }
+
+      .flow-node::after {
+        position: absolute;
+        right: -12px;
+        bottom: -18px;
+        color: rgba(15, 118, 110, 0.08);
+        font-size: 88px;
+        font-weight: 800;
+        content: attr(data-no);
+      }
+
+      .flow-node h3,
+      .flow-node p,
+      .flow-node ul {
+        position: relative;
+        z-index: 1;
+      }
+
+      .phase {
+        border-left: 6px solid var(--primary);
+      }
+
+      .phase.p1 {
+        border-left-color: #2563eb;
+      }
+
+      .phase.p2 {
+        border-left-color: #b45309;
+      }
+
+      .phase.p3 {
+        border-left-color: #b42318;
+      }
+
+      .source-list {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .footer-note {
+        margin-top: 24px;
+        color: var(--muted);
+        font-size: 13px;
+        text-align: center;
+      }
+
+      @media (max-width: 1040px) {
+        .hero,
+        .grid-2,
+        .grid-3,
+        .grid-4,
+        .flow {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 720px) {
+        main {
+          width: calc(100% - 24px);
+          padding-top: 16px;
+        }
+
+        .hero,
+        section {
+          padding: 20px;
+          border-radius: 16px;
+        }
+
+        h1 {
+          font-size: 30px;
+        }
+
+        h2 {
+          font-size: 22px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header class="hero">
+        <div>
+          <div class="eyebrow">Legacy Gap Analysis</div>
+          <h1>临床送检现状 vs 旧工作站参考 HTML 对齐分析</h1>
+          <p class="lead">
+            本文档以当前仓库 <code>specimen-workflow</code> 模块为现状真值，以参考
+            <code>clinical-pathology-workstation-analysis.html</code> 中描述的旧临床病理工作站为对照基线，
+            聚焦“当前前端已经承接了什么、哪些能力只是合并呈现、哪些旧模块仍未独立落地”，并给出分阶段执行方案。
+          </p>
+          <div class="tag-row">
+            <span class="tag ok">保留 4 个可见入口</span>
+            <span class="tag">不回退为 11 个独立菜单</span>
+            <span class="tag blue">当前实现优先于历史概念</span>
+            <span class="tag warn">后端主链路仅覆盖 M2 主流程</span>
+          </div>
+        </div>
+        <aside class="hero-side">
+          <div class="metric">
+            <strong>4 / 11</strong>
+            <span>当前以 4 个可见入口承载旧工作站 11 个业务模块。</span>
+          </div>
+          <div class="metric">
+            <strong>3 类结论</strong>
+            <span>差异统一归类为“已合并承载 / 部分覆盖 / 当前缺失或需扩展”。</span>
+          </div>
+          <div class="metric">
+            <strong>P0 - P3</strong>
+            <span>执行路线按文档补齐、前端补齐、前端增强、后端扩展四阶段推进。</span>
+          </div>
+        </aside>
+      </header>
+
+      <section>
+        <h2>对比范围</h2>
+        <p>
+          本次结论只建立在当前仓库和当前参考文件上，不推断线上运行态，也不把历史桌面端的描述自动视为 web
+          端已具备能力。
+        </p>
+        <div class="grid grid-2">
+          <div class="card">
+            <h3>当前前端真值来源</h3>
+            <ul class="source-list">
+              <li><code>apps/web-ele/src/router/routes/modules/workflow.ts</code></li>
+              <li><code>apps/web-ele/src/modules/specimen-workflow/views/*</code></li>
+              <li><code>apps/web-ele/src/modules/specimen-workflow/components/*</code></li>
+              <li><code>apps/web-ele/src/modules/specimen-workflow/api/specimen-workflow-service.ts</code></li>
+              <li><code>apps/web-ele/src/modules/specimen-workflow/types/specimen-workflow.ts</code></li>
+              <li><code>docs/clinical-submission-process.html</code></li>
+              <li><code>docs/clinical-submission-workflow-review.html</code></li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>当前后端真值来源</h3>
+            <ul class="source-list">
+              <li><code>D:\Github\JW\SYBaseProject\bl-center\src\main\java\com\company\bl\interfaces\controller\*.java</code></li>
+              <li><code>D:\Github\JW\SYBaseProject\bl-center\src\test\java\com\company\bl\interfaces\AbstractSpecimenWorkflowIntegrationTest.java</code></li>
+              <li><code>D:\Github\JW\SYBaseProject\bl-center\src\test\java\com\company\bl\interfaces\M2RoleScenarioIntegrationTest.java</code></li>
+              <li><code>D:\Github\JW\SYBaseProject\README.md</code></li>
+            </ul>
+          </div>
+        </div>
+        <div class="callout info">
+          <strong>判定原则</strong>
+          只要当前 web 端没有独立入口、独立视图、独立动作或可验证的数据契约，就不认定为“已实现同名旧模块”，最多算“部分覆盖”。
+        </div>
+      </section>
+
+      <section>
+        <h2>流程对比总览</h2>
+        <p>
+          旧参考 HTML 把临床病理工作站描述为 11 个模块的桌面式工作站；当前 web 端则将临床送检收敛为 4
+          个可见入口，并通过隐藏兼容路由保留老入口别名。
+        </p>
+        <div class="flow">
+          <article class="flow-node" data-no="01">
+            <span class="tag">申请与登记</span>
+            <h3>当前承接旧“标本登记”主链路</h3>
+            <ul>
+              <li>入口：<code>/workflow/submission-registration</code></li>
+              <li>承载：申请单列表、手工建单、第三方导入、标本登记、标签补打</li>
+              <li>兼容：<code>/workflow/application-list</code>、<code>/workflow/specimen-management</code>、<code>/workflow/clinical-register</code></li>
+            </ul>
+          </article>
+          <article class="flow-node" data-no="02">
+            <span class="tag blue">固定与转运</span>
+            <h3>当前承接旧“固定/转运相关”链路</h3>
+            <ul>
+              <li>入口：<code>/workflow/fixation-transport</code></li>
+              <li>页签：固定核对、转运交接</li>
+              <li>兼容：<code>/workflow/fixation-verify</code>、<code>/workflow/transport-handover</code></li>
+            </ul>
+          </article>
+          <article class="flow-node" data-no="03">
+            <span class="tag ok">病理接收</span>
+            <h3>当前把旧“接收相邻环节”提升为显式入口</h3>
+            <ul>
+              <li>入口：<code>/workflow/pathology-receipt</code></li>
+              <li>承载：按转运单接收、条码直收、质控、退回、拒收</li>
+              <li>兼容：<code>/workflow/specimen-receipt</code></li>
+            </ul>
+          </article>
+          <article class="flow-node" data-no="04">
+            <span class="tag warn">追踪与异常</span>
+            <h3>当前承接旧“综合信息 + 追踪查询”</h3>
+            <ul>
+              <li>入口：<code>/workflow/tracking-exception</code></li>
+              <li>页签：申请单列表、标本列表</li>
+              <li>兼容：<code>/workflow/tracking-query</code></li>
+            </ul>
+          </article>
+        </div>
+        <div class="callout warn">
+          <strong>核心判断</strong>
+          当前 web 端不是“缺少临床送检流程”，而是采用了“按连续操作链收敛入口”的产品结构。因此本轮对齐不应回退菜单模型，而应先把旧模块映射与缺口描述讲清。
+        </div>
+      </section>
+
+      <section>
+        <h2>旧 11 模块映射结果</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>旧工作站模块</th>
+                <th>当前承载入口 / 组件</th>
+                <th>结论</th>
+                <th>说明</th>
+                <th>后续处理建议</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>标本登记</td>
+                <td>
+                  <code>SubmissionRegistrationView</code><br />
+                  <code>ApplicationManageDialog</code><br />
+                  <code>ApplicationListView</code><br />
+                  <code>SpecimenRegisterDialog</code><br />
+                  <code>SpecimenManagementView</code>
+                </td>
+                <td><span class="tag ok">已合并承载</span></td>
+                <td>旧“标本登记”被拆为“申请单创建/导入 + 标本登记弹窗 + 登记后管理列表”，不再是单页工作站。</td>
+                <td>文档补足映射关系，避免把“拆分承载”误判为“未实现”。</td>
+              </tr>
+              <tr>
+                <td>标本核对</td>
+                <td>
+                  <code>FixationVerifyView</code><br />
+                  <code>SpecimenReceiptView</code>
+                </td>
+                <td><span class="tag warn">部分覆盖</span></td>
+                <td>当前有固定核验、接收质控和扫码接收，但没有旧桌面端那种独立“台上核对/批量状态更新”工作台。</td>
+                <td>P2 在现有入口内增强“核对语义”，P3 再决定是否补独立核对模块。</td>
+              </tr>
+              <tr>
+                <td>标本核对记录</td>
+                <td>无独立页面</td>
+                <td><span class="tag danger">当前缺失</span></td>
+                <td>当前只有追踪事件和最近节点，不存在按核对人、核对类型、批次统计的独立记录页。</td>
+                <td>需新增页面模型和查询接口，属于 P3。</td>
+              </tr>
+              <tr>
+                <td>条码绑定</td>
+                <td>无独立页面</td>
+                <td><span class="tag danger">当前缺失</span></td>
+                <td>当前标本条码主要在登记时录入或由后端生成，没有旧桌面端独立“绑定/改绑”工作台。</td>
+                <td>需先确认业务是否仍需要“补绑定”场景，再决定 P3 扩展。</td>
+              </tr>
+              <tr>
+                <td>离体时间设置</td>
+                <td>
+                  <code>ApplicationManageDialog</code><br />
+                  <code>TrackingApplicationListView</code>
+                </td>
+                <td><span class="tag warn">部分覆盖</span></td>
+                <td>离体时间当前作为申请单字段创建时录入，并在追踪详情展示；没有独立补录工作台。</td>
+                <td>P1 补文档说明，P2 可在现有入口增加“补录/查看”分区。</td>
+              </tr>
+              <tr>
+                <td>固定时间设置</td>
+                <td>
+                  <code>FixationTransportView</code><br />
+                  <code>FixationVerifyView</code>
+                </td>
+                <td><span class="tag ok">已合并承载</span></td>
+                <td>当前通过开始固定 / 完成固定记录固定流程与时间，不再拆为独立“固定时间设置”页。</td>
+                <td>维持现状，通过文档解释“旧独立页已被页签化合并”。</td>
+              </tr>
+              <tr>
+                <td>标本确认</td>
+                <td>无独立页面</td>
+                <td><span class="tag danger">当前缺失</span></td>
+                <td>当前没有旧工作站中的“确认人选择 + 批量确认”独立状态环节。</td>
+                <td>若业务仍保留该状态，需后端新增状态机和前端页面，属于 P3。</td>
+              </tr>
+              <tr>
+                <td>标本入库</td>
+                <td>无独立页面</td>
+                <td><span class="tag danger">当前缺失</span></td>
+                <td>当前 M2 主链路在病理接收后直接进入追踪，没有“库内入库”独立台账页。</td>
+                <td>需领域确认是否并入 M3 或后续库管域，再决定扩展边界。</td>
+              </tr>
+              <tr>
+                <td>标本出库</td>
+                <td>
+                  <code>TransportHandoverView</code>
+                </td>
+                <td><span class="tag warn">部分覆盖</span></td>
+                <td>当前“转运交接”更接近术中/送检转运，不等同旧桌面端病理科库内“出库”语义。</td>
+                <td>文档中必须显式区分“转运交接”与“库内出库”。</td>
+              </tr>
+              <tr>
+                <td>标本综合信息</td>
+                <td>
+                  <code>TrackingQueryView</code><br />
+                  <code>TrackingApplicationListView</code><br />
+                  <code>TrackingSpecimenListView</code>
+                </td>
+                <td><span class="tag ok">已合并承载</span></td>
+                <td>旧“综合信息”与“追踪查询”已被合并成申请单维度 + 标本维度的双列表追踪视图。</td>
+                <td>维持当前信息架构，补足旧模块映射说明。</td>
+              </tr>
+              <tr>
+                <td>标本管理</td>
+                <td>
+                  <code>SpecimenManagementView</code>
+                </td>
+                <td><span class="tag warn">部分覆盖</span></td>
+                <td>当前偏重列表、详情、标签补打、固定核验和上下文跳转，不等同旧桌面端“异常修正工作站”。</td>
+                <td>P2 可增强“异常整改单”视图；真正补齐仍需 P3。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2>元素差异矩阵</h2>
+        <p>
+          这一部分不再按旧模块写概念，而是按当前真实页面和组件写“它现在到底有什么元素”，方便后续逐项对齐。
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>当前页面 / 组件</th>
+                <th>标题与入口</th>
+                <th>筛选项</th>
+                <th>表格列 / 详情</th>
+                <th>动作按钮</th>
+                <th>上下文透传方式</th>
+                <th>旧模块映射</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>SubmissionRegistrationView</code></td>
+                <td>“申请与登记”，使用页签承接“申请管理 / 标本登记”。</td>
+                <td>无自身筛选，依赖子页面。</td>
+                <td>无自身列表；内部挂载 <code>ApplicationListView</code> 与 <code>SpecimenManagementView</code>。</td>
+                <td>无自身动作；通过 query 切换页签与触发登记。</td>
+                <td><code>action=register</code>、<code>applicationId</code> 透传到登记页签。</td>
+                <td>旧“标本登记”、旧“申请管理”、旧“送检登记兼容页”。</td>
+              </tr>
+              <tr>
+                <td><code>ApplicationListView</code> + <code>ApplicationManageDialog</code></td>
+                <td>申请管理区；负责建单、导入、查看待登记申请单。</td>
+                <td>申请单号、患者姓名、送检科室、申请类型、表单状态、申请日期。</td>
+                <td>申请单编号、申请单号、患者信息、送检科室、申请类型、表单状态、当前节点、申请人、申请日期、更新时间、异常标记。</td>
+                <td>创建、登记标本、追踪与异常；弹窗内支持手工创建、第三方导入、重复预警、保存并前往标本登记。</td>
+                <td>点击“登记标本”带入 <code>applicationId</code>；点击“追踪与异常”跳转追踪页并附 query。</td>
+                <td>旧“标本登记”前置申请工作台。</td>
+              </tr>
+              <tr>
+                <td><code>SpecimenManagementView</code> + <code>SpecimenRegisterDialog</code></td>
+                <td>标本管理区；当前最接近“登记后工作台”。</td>
+                <td>关键字、送检科室、标本状态、标签状态、异常标记、登记日期；另有快捷筛选与统计卡片。</td>
+                <td>列表展示标本编号、条码、关联申请单、患者、科室、登记时间、标签状态、标本状态、异常标记；详情抽屉展示标本基础信息、所属申请单信息、最近流程节点、最近标签批次结果。</td>
+                <td>登记标本、批量/单条补打标签、开始核验、完成核验、详情、去追踪与异常。</td>
+                <td>从 query 中接收 <code>applicationId</code> 和 <code>action=register</code> 自动打开登记弹窗；详情中再跳追踪页。</td>
+                <td>旧“标本登记”后置工作台；部分承接旧“标本管理”。</td>
+              </tr>
+              <tr>
+                <td><code>FixationVerifyView</code></td>
+                <td>“固定与转运”中的“固定核对”页签。</td>
+                <td>申请单号、固定状态、送检科室、登记日期。</td>
+                <td>申请单号、患者姓名、标本号、条码、固定状态、送检科室、登记时间、最近追踪。</td>
+                <td>完成固定、创建转运单。</td>
+                <td>从 query 中读取 <code>applicationId</code> 自动筛选。</td>
+                <td>旧“固定时间设置”，以及旧“标本核对”的一部分。</td>
+              </tr>
+              <tr>
+                <td><code>TransportHandoverView</code> + <code>TransportOrderCreateDialog</code></td>
+                <td>“固定与转运”中的“转运交接”页签。</td>
+                <td>申请单号、送检科室、转运状态、待转运日期。</td>
+                <td>转运单号、申请单号、患者姓名、交接科室、接收科室、状态、待转运时间、交接时间、标本条码；创建弹窗显示申请单、交接人与接收科室、可选标本条码。</td>
+                <td>创建转运单、打印、交接。</td>
+                <td>创建转运单弹窗可直接带入 <code>applicationId</code> 和 <code>applicationNo</code>。</td>
+                <td>旧“标本出库/转运相关”，不是旧“库内出库”的完全等价物。</td>
+              </tr>
+              <tr>
+                <td><code>SpecimenReceiptView</code></td>
+                <td>“病理接收”独立入口。</td>
+                <td>申请单号、送检科室、追踪日期。</td>
+                <td>主列表按 <code>transportOrderId</code> 聚合，显示转运单、申请单、患者、标本数、容器名称、最近追踪时间、条码；接收弹窗展示接收人、终端、每条标本的接收结果、容器数量、质控结果、问题代码、原因、备注；另有条码直收抽屉。</td>
+                <td>接收、条码直收、提交接收 / 提交直收。</td>
+                <td>当前不从旧工作站继承，而是新晋升为显式入口；接收结果回显 <code>caseId</code>、<code>pathologyNo</code>、<code>receiptStatus</code>、<code>unreceivedCount</code>。</td>
+                <td>旧参考中提到的“接收相邻环节”，当前被独立显式化。</td>
+              </tr>
+              <tr>
+                <td><code>TrackingApplicationListView</code></td>
+                <td>“追踪与异常”中的申请单页签。</td>
+                <td>申请单号、患者姓名、送检科室、申请类型、表单状态、申请日期。</td>
+                <td>申请单列表；详情弹窗展示异常标记、基本信息、标本列表、时间线事件、完整申请单详情。</td>
+                <td>详情。</td>
+                <td>从 query 读取 <code>applicationId</code> 自动打开详情。</td>
+                <td>旧“综合信息”与“追踪查询”的申请单维度承接面。</td>
+              </tr>
+              <tr>
+                <td><code>TrackingSpecimenListView</code></td>
+                <td>“追踪与异常”中的标本页签。</td>
+                <td>关键字、送检科室、标本状态、标签状态、异常标记、登记日期；另有快捷筛选与统计卡片。</td>
+                <td>标本列表；详情弹窗展示异常明细、标本基础信息、所属申请单信息、最近流程节点、最近标签批次结果。</td>
+                <td>详情。</td>
+                <td>从 query 读取 <code>barcode</code> 自动筛选并打开详情。</td>
+                <td>旧“综合信息”与“追踪查询”的标本维度承接面。</td>
+              </tr>
+              <tr>
+                <td><code>ClinicalRegisterView</code></td>
+                <td>兼容路由页，仅用于重定向。</td>
+                <td>无。</td>
+                <td>无。</td>
+                <td>无。</td>
+                <td>统一重定向到 <code>/workflow/submission-registration?action=register</code>。</td>
+                <td>旧“送检登记兼容页”的路由兼容层。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2>关键差异定性</h2>
+        <div class="grid grid-3">
+          <div class="gap-card">
+            <span class="tag ok">已合并承载</span>
+            <ul>
+              <li>旧“标本登记”已拆分到 <code>ApplicationManageDialog</code>、<code>SpecimenRegisterDialog</code>、<code>ApplicationListView</code>、<code>SpecimenManagementView</code>。</li>
+              <li>旧“固定 / 转运”已被 <code>FixationTransportView</code> 的两个页签合并承载。</li>
+              <li>旧“综合信息”与“追踪查询”已被 <code>TrackingApplicationListView</code> 与 <code>TrackingSpecimenListView</code> 合并承载。</li>
+            </ul>
+          </div>
+          <div class="gap-card">
+            <span class="tag warn">部分覆盖</span>
+            <ul>
+              <li>旧“离体时间”目前只作为申请单字段与追踪详情展示，不是独立工作台。</li>
+              <li>旧“标本管理”目前更偏列表、详情、补打标签、固定核验，不等同旧桌面端异常修正工作站。</li>
+              <li>旧“接收后病例 / 病理号生成”当前有结果回显，但完全依赖接收接口返回，不是前端可控流程节点。</li>
+              <li>旧“标本核对”与旧“标本出库”只被当前流程部分吸收，语义并不完全等价。</li>
+            </ul>
+          </div>
+          <div class="gap-card">
+            <span class="tag danger">当前缺失或未独立呈现</span>
+            <ul>
+              <li>标本核对独立页</li>
+              <li>标本核对记录</li>
+              <li>条码绑定独立页</li>
+              <li>离体时间设置独立页</li>
+              <li>标本确认独立页</li>
+              <li>标本入库 / 出库独立页</li>
+              <li>申请单打印、检查状态、已签发报告查看、患者核对开关</li>
+            </ul>
+          </div>
+        </div>
+        <div class="callout danger">
+          <strong>需要写死给实现者的判断</strong>
+          以上缺口里，除了文案、入口说明、字段可见性和上下文透传之外，绝大多数都不是“前端多写一个页面”就能完成。它们往往意味着后端要同时补接口、状态机、权限种子和测试。
+        </div>
+      </section>
+
+      <section>
+        <h2>缺口清单与处理方式</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>缺口项</th>
+                <th>当前状态</th>
+                <th>是否可只做前端</th>
+                <th>处理建议</th>
+                <th>优先级</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>旧模块映射说明不够直观</td>
+                <td>已有流程页和评审页，但没有单独“旧 vs 新”差异文档。</td>
+                <td>可以</td>
+                <td>本次新增专门对齐文档，并在后续评审材料中引用。</td>
+                <td>P0</td>
+              </tr>
+              <tr>
+                <td>旧入口与现入口关系不透明</td>
+                <td>兼容路由已经存在，但使用者很难从 UI 直接理解。</td>
+                <td>可以</td>
+                <td>补文案、补工作台说明、补入口映射说明。</td>
+                <td>P1</td>
+              </tr>
+              <tr>
+                <td>详情页中旧字段语义不够完整</td>
+                <td>离体时间、接收结果、标签批次已有展示，但缺“这是旧模块中的哪一环”的说明。</td>
+                <td>可以</td>
+                <td>在详情视图或说明文档中补字段语义映射。</td>
+                <td>P1</td>
+              </tr>
+              <tr>
+                <td>从列表到登记 / 接收 / 追踪的上下文传递不完全显式</td>
+                <td>已有 <code>applicationId</code> / <code>barcode</code> query 透传。</td>
+                <td>可以</td>
+                <td>继续统一 query、入口说明和回跳策略。</td>
+                <td>P1</td>
+              </tr>
+              <tr>
+                <td>旧“核对”语义缺专门表达</td>
+                <td>被拆散在固定核验、接收质控与追踪中。</td>
+                <td>部分可以</td>
+                <td>先在现有 4 入口内增加“核对视角”或分区说明；若要独立成模块，再走后端扩展。</td>
+                <td>P2 / P3</td>
+              </tr>
+              <tr>
+                <td>旧“离体时间设置”独立工作台</td>
+                <td>无独立页。</td>
+                <td>部分可以</td>
+                <td>可先增加展示和补录入口；真正独立模块仍需后端契约确认。</td>
+                <td>P2 / P3</td>
+              </tr>
+              <tr>
+                <td>条码绑定、核对记录、确认、入库、出库</td>
+                <td>当前无独立页面和独立状态链。</td>
+                <td>不可以</td>
+                <td>需要领域确认、接口扩展、菜单权限与测试一起补。</td>
+                <td>P3</td>
+              </tr>
+              <tr>
+                <td>旧申请单打印 / 检查状态 / 已签发报告 / 患者核对开关</td>
+                <td>当前 web 仓库未发现对应入口或契约。</td>
+                <td>不可以</td>
+                <td>先确认业务是否仍保留，再决定是否作为新需求实现。</td>
+                <td>P3</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2>后端联动边界</h2>
+        <p>
+          当前后端 M2 主链路是明确可验证的，但它只覆盖“申请 -> 登记 -> 固定 -> 转运 -> 接收 -> 追踪”，并没有为旧 11
+          模块中的全部独立工作站提供一一对应的领域能力。
+        </p>
+        <div class="grid grid-2">
+          <div class="card">
+            <h3>当前已落的主链路</h3>
+            <ul>
+              <li><code>POST /api/v1/applications</code>：创建申请单</li>
+              <li><code>POST /api/v1/clinical-applications/import</code>：第三方导入</li>
+              <li><code>POST /api/v1/specimens/register</code>：标本登记</li>
+              <li><code>POST /api/v1/specimen-fixations/start</code> / <code>complete</code>：固定</li>
+              <li><code>POST /api/v1/transport-orders</code> / <code>print</code> / <code>handover</code>：转运</li>
+              <li><code>POST /api/v1/specimen-receipts</code> / <code>by-barcodes</code>：接收</li>
+              <li><code>GET /api/v1/applications/{id}/tracking</code> / <code>GET /api/v1/specimens/barcodes/{barcode}/tracking</code>：追踪</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>当前不足以 1:1 支撑的旧模块</h3>
+            <ul>
+              <li>独立标本核对状态流与核对记录批次查询</li>
+              <li>条码绑定 / 改绑 / 修正</li>
+              <li>标本确认状态节点</li>
+              <li>病理科入库 / 出库台账</li>
+              <li>旧工作站中的申请单打印、检查状态、报告查看、患者核对配置开关</li>
+            </ul>
+          </div>
+        </div>
+        <div class="callout warn">
+          <strong>边界结论</strong>
+          如果后续要把旧 11 模块“逐个补成页面”，那已经不是单纯的前端对齐，而是新的领域扩展任务；必须同步变更接口、权限、菜单种子、状态机和测试。
+        </div>
+      </section>
+
+      <section>
+        <h2>执行路线</h2>
+        <div class="grid grid-2">
+          <div class="phase">
+            <span class="tag">P0</span>
+            <h3>文档补齐</h3>
+            <ul>
+              <li>新增本对齐分析 HTML。</li>
+              <li>把“旧 11 模块 -> 当前 4 入口”的映射写死。</li>
+              <li>把“已合并承载 / 部分覆盖 / 当前缺失”写成固定判断。</li>
+            </ul>
+          </div>
+          <div class="phase p1">
+            <span class="tag blue">P1</span>
+            <h3>仅前端可做的对齐</h3>
+            <ul>
+              <li>补文案和映射说明。</li>
+              <li>补兼容入口关系说明。</li>
+              <li>补详情里的旧字段可见性与语义提示。</li>
+              <li>补从列表到追踪 / 登记 / 接收的上下文透传与回跳说明。</li>
+            </ul>
+          </div>
+          <div class="phase p2">
+            <span class="tag warn">P2</span>
+            <h3>前端增强但不改权限模型</h3>
+            <ul>
+              <li>在现有 4 入口内增加“旧模块映射视图”或“工作台分区”。</li>
+              <li>把离体时间、核对语义、综合台账展示得更接近旧流程。</li>
+              <li>保持现有权限与路由结构不变。</li>
+            </ul>
+          </div>
+          <div class="phase p3">
+            <span class="tag danger">P3</span>
+            <h3>需人工确认后的领域扩展</h3>
+            <ul>
+              <li>条码绑定、核对记录、确认、入库、出库等独立模块。</li>
+              <li>新增菜单、权限种子、接口、状态机与测试。</li>
+              <li>属于黄区 / 红区交界，必须先人工确认再实施。</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>验收与校验建议</h2>
+        <div class="grid grid-2">
+          <div class="card">
+            <h3>P0 文档验收</h3>
+            <ul>
+              <li>11 个旧模块全部出现在映射表中。</li>
+              <li>每个旧模块都被标记为“已合并 / 部分覆盖 / 缺失”之一。</li>
+              <li>每个现状结论都能回指到具体前端视图、组件、路由或后端接口 / 测试。</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>后续实现阶段验收</h3>
+            <ul>
+              <li>兼容路由继续覆盖 <code>submission-registration</code>、<code>fixation-transport</code>、<code>pathology-receipt</code>、<code>tracking-exception</code> 及隐藏重定向路由。</li>
+              <li>现有 <code>specimen-workflow</code> 视图测试继续通过。</li>
+              <li>后端至少复跑 M2 角色场景集成测试，确认主链路无回归。</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>最终结论</h2>
+        <p>
+          当前 web 端临床送检并不是“少了一整套流程”，而是采用了与旧桌面工作站完全不同的信息架构：把旧 11
+          模块压缩为 4 个连续工作流入口，再用弹窗、详情抽屉和兼容路由承接上下文。真正需要做的不是盲目“恢复 11
+          菜单”，而是先把旧模块映射讲清，再分辨哪些只是表达方式差异，哪些才是确实缺少的领域能力。
+        </p>
+        <div class="callout info">
+          <strong>建议落地方向</strong>
+          先按 P0 / P1 完成文档和前端表达层对齐；只有在业务明确要求回补旧工作站能力时，才进入 P3 的接口与状态机扩展。
+        </div>
+      </section>
+
+      <p class="footer-note">
+        文档假设：“当前临床送检”专指本仓库 <code>specimen-workflow</code> 模块实现，不代表线上运行态，也不默认等价于历史桌面端。
+      </p>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,152 @@
+[
+    {
+      "applicationInfo": {
+        "applicationNo": "1122",
+        "applicationDate": "2020-12-07 17:49:00",
+        "checkItem": "手术标本检查与诊断(显微摄影)",
+        "patientName": "刘雨晴",
+        "idNo": "34734663",
+        "gender": "女",
+        "age": "30岁1月15天",
+        "applyDept": "急诊科",
+        "applyDoctor": "张宏",
+        "specimenType": "常规",
+        "clinicalHistory": "临床病历测试",
+        "clinicalDiagnosis": "1:糖尿病伴肾并发症",
+        "contagiousSpecimen": {
+          "isolation": false,
+          "hiv": false,
+          "tuberculosis": false,
+          "hepatitis": false,
+          "syphilis": false
+        }
+      },
+      "surgeryInfo": {
+        "surgeryName": "",
+        "clinicalFindings": "",
+        "fixationPerson": "周永坚",
+        "fixationTime": "2024-09-02 21:19:26",
+        "fixativeType": "福尔马林"
+      },
+      "gynecologyInfo": {
+        "menopause": false,
+        "lastMenstrualPeriod": null,
+        "hpvResult": "人乳头瘤病毒(HPV)检测结果",
+        "previousCytology": "以往宫颈脱落细胞检查结果",
+        "previousTreatment": "以往宫颈治疗史",
+        "additionalNotes": "",
+        "specialConditions": {
+          "menopause": false,
+          "hormoneReplacement": false,
+          "birthControl": false,
+          "iud": false,
+          "pregnancy": false,
+          "lactation": false,
+          "abnormalBleeding": false,
+          "radiotherapy": false,
+          "hysterectomy": false,
+          "other": ""
+        }
+      }
+    },
+    {
+      "applicationInfo": {
+        "applicationNo": "1123",
+        "applicationDate": "2021-01-15 08:30:00",
+        "checkItem": "妇科病理检查",
+        "patientName": "李晓芳",
+        "idNo": "58294756",
+        "gender": "女",
+        "age": "45岁6月20天",
+        "applyDept": "妇科",
+        "applyDoctor": "王丽",
+        "specimenType": "常规",
+        "clinicalHistory": "绝经后阴道出血",
+        "clinicalDiagnosis": "宫颈上皮内瘤变",
+        "contagiousSpecimen": {
+          "isolation": true,
+          "hiv": false,
+          "tuberculosis": false,
+          "hepatitis": true,
+          "syphilis": false
+        }
+      },
+      "surgeryInfo": {
+        "surgeryName": "宫颈锥切术",
+        "clinicalFindings": "宫颈肥大，醋酸白试验阳性",
+        "fixationPerson": "陈医生",
+        "fixationTime": "2024-10-05 14:22:10",
+        "fixativeType": "福尔马林"
+      },
+      "gynecologyInfo": {
+        "menopause": true,
+        "lastMenstrualPeriod": "2020-12-01",
+        "hpvResult": "高危型HPV16阳性",
+        "previousCytology": "ASC-US",
+        "previousTreatment": "无",
+        "additionalNotes": "患者拒绝进一步手术",
+        "specialConditions": {
+          "menopause": true,
+          "hormoneReplacement": false,
+          "birthControl": false,
+          "iud": false,
+          "pregnancy": false,
+          "lactation": false,
+          "abnormalBleeding": true,
+          "radiotherapy": false,
+          "hysterectomy": false,
+          "other": ""
+        }
+      }
+    },
+    {
+      "applicationInfo": {
+        "applicationNo": "1124",
+        "applicationDate": "2021-02-20 10:15:00",
+        "checkItem": "乳腺肿物活检",
+        "patientName": "张敏",
+        "idNo": "63847291",
+        "gender": "女",
+        "age": "35岁3月10天",
+        "applyDept": "普外科",
+        "applyDoctor": "刘强",
+        "specimenType": "常规",
+        "clinicalHistory": "乳腺纤维腺瘤术后复查",
+        "clinicalDiagnosis": "乳腺增生伴结节",
+        "contagiousSpecimen": {
+          "isolation": false,
+          "hiv": false,
+          "tuberculosis": false,
+          "hepatitis": false,
+          "syphilis": false
+        }
+      },
+      "surgeryInfo": {
+        "surgeryName": "乳腺肿物切除术",
+        "clinicalFindings": "右乳外上象限可触及肿块约1.5cm",
+        "fixationPerson": "赵护士",
+        "fixationTime": "2024-11-12 09:45:33",
+        "fixativeType": "福尔马林"
+      },
+      "gynecologyInfo": {
+        "menopause": false,
+        "lastMenstrualPeriod": "2024-11-01",
+        "hpvResult": "阴性",
+        "previousCytology": "正常",
+        "previousTreatment": "乳腺纤维腺瘤切除术后",
+        "additionalNotes": "建议定期复查",
+        "specialConditions": {
+          "menopause": false,
+          "hormoneReplacement": false,
+          "birthControl": true,
+          "iud": false,
+          "pregnancy": false,
+          "lactation": false,
+          "abnormalBleeding": false,
+          "radiotherapy": false,
+          "hysterectomy": false,
+          "other": ""
+        }
+      }
+    }
+  ]
