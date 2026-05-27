@@ -146,7 +146,20 @@ export const useNotificationStore = defineStore('notification-center', () => {
     Object.assign(query, DEFAULT_QUERY);
   }
 
+  function $reset() {
+    listLoading.value = false;
+    popupLoading.value = false;
+    preferencesLoading.value = false;
+    pageItems.value = [];
+    popupItems.value = [];
+    total.value = 0;
+    unreadCount.value = 0;
+    preferences.value = createDefaultNotificationPreferences();
+    resetQuery();
+  }
+
   return {
+    $reset,
     archiveMany,
     archiveOne,
     archivePopupItems,

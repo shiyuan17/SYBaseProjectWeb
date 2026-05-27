@@ -266,4 +266,86 @@ describe('useNotificationStore', () => {
       todoTask: true,
     });
   });
+
+  it('resets local notification state for global logout cleanup', () => {
+    const store = useNotificationStore();
+
+    store.listLoading = true;
+    store.popupLoading = true;
+    store.preferencesLoading = true;
+    store.pageItems = [
+      {
+        actionLink: null,
+        actionQuery: {},
+        actionRoute: '/notification-center',
+        actionText: '查看',
+        avatar: 'https://example.com/avatar.png',
+        category: 'SYSTEM_MESSAGE',
+        content: '系统通知内容',
+        createdAt: '2026-05-25 10:30:00',
+        id: 'NOTICE-PAGE',
+        level: 'MEDIUM',
+        readAt: null,
+        status: 'UNREAD',
+        summary: '系统通知',
+        title: '系统通知',
+        topicCode: 'TOPIC-PAGE',
+      },
+    ];
+    store.popupItems = [
+      {
+        actionLink: null,
+        actionQuery: {},
+        actionRoute: null,
+        actionText: null,
+        avatar: 'https://example.com/avatar.png',
+        category: 'TODO_TASK',
+        content: '待办通知内容',
+        createdAt: '2026-05-25 10:31:00',
+        id: 'NOTICE-POPUP',
+        level: 'HIGH',
+        readAt: null,
+        status: 'UNREAD',
+        summary: '待办通知',
+        title: '待办通知',
+        topicCode: 'TOPIC-POPUP',
+      },
+    ];
+    store.total = 18;
+    store.unreadCount = 3;
+    store.preferences = {
+      accountPassword: false,
+      systemMessage: false,
+      todoTask: false,
+    };
+    store.query.category = 'TODO_TASK';
+    store.query.keyword = '报告';
+    store.query.page = 3;
+    store.query.size = 20;
+    store.query.status = 'UNREAD';
+
+    store.$reset();
+
+    expect(store.listLoading).toBe(false);
+    expect(store.popupLoading).toBe(false);
+    expect(store.preferencesLoading).toBe(false);
+    expect(store.pageItems).toEqual([]);
+    expect(store.popupItems).toEqual([]);
+    expect(store.total).toBe(0);
+    expect(store.unreadCount).toBe(0);
+    expect(store.preferences).toEqual({
+      accountPassword: true,
+      systemMessage: true,
+      todoTask: true,
+    });
+    expect(store.query).toEqual({
+      category: '',
+      keyword: '',
+      page: 1,
+      size: 10,
+      status: 'ALL',
+    });
+    expect(store.showDot).toBe(false);
+    expect(store.popupNotifications).toEqual([]);
+  });
 });

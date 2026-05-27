@@ -13,6 +13,10 @@ import { defineStore } from 'pinia';
 
 import { getAccessCodesApi, getUserInfoApi, loginApi, logoutApi } from '#/api';
 import { $t } from '#/locales';
+import {
+  buildLoginRedirectQuery,
+  resolvePostLoginRedirect,
+} from '#/router/login-redirect';
 
 export const useAuthStore = defineStore('auth', () => {
   const accessStore = useAccessStore();
@@ -25,9 +29,10 @@ export const useAuthStore = defineStore('auth', () => {
     await router.replace({
       path: LOGIN_PATH,
       query: redirect
-        ? {
-            redirect: encodeURIComponent(router.currentRoute.value.fullPath),
-          }
+        ? buildLoginRedirectQuery(
+            router.currentRoute.value.fullPath,
+            preferences.app.defaultHomePath,
+          )
         : {},
     });
   }
@@ -75,11 +80,16 @@ export const useAuthStore = defineStore('auth', () => {
         if (accessStore.loginExpired) {
           accessStore.setLoginExpired(false);
         } else {
-          onSuccess
-            ? await onSuccess?.()
-            : await router.push(
+          if (onSuccess) {
+            await onSuccess?.();
+          } else {
+            await router.push(
+              resolvePostLoginRedirect(
+                router.currentRoute.value.query.redirect,
                 userInfo.homePath || preferences.app.defaultHomePath,
-              );
+              ),
+            );
+          }
         }
 
         if (userInfo?.realName) {
