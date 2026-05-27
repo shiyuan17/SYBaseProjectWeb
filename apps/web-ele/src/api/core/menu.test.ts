@@ -147,6 +147,20 @@ describe('mapMenuViewsToRoutes', () => {
         visible: true,
       },
       {
+        componentName: 'ApplicationRegistrationWorkbench',
+        enabled: true,
+        icon: 'workspace',
+        id: 'MENU_M2_CLINICAL_WORKBENCH',
+        menuCode: 'M2_CLINICAL_WORKBENCH',
+        menuName: '申请登记工作台',
+        menuType: 'MENU',
+        parentId: 'MENU_M2_WORKFLOW',
+        path: '/workflow/application-registration-workbench',
+        permissionPrefix: 'm2:clinical-workbench',
+        sortOrder: 115,
+        visible: true,
+      },
+      {
         componentName: 'FixationTransport',
         enabled: true,
         icon: 'check',
@@ -199,6 +213,12 @@ describe('mapMenuViewsToRoutes', () => {
           expect.objectContaining({
             name: 'SubmissionRegistration',
             path: '/workflow/submission-registration',
+          }),
+          expect.objectContaining({
+            component:
+              '/modules/specimen-workflow/views/ApplicationRegistrationWorkbenchView',
+            name: 'ApplicationRegistrationWorkbench',
+            path: '/workflow/application-registration-workbench',
           }),
           expect.objectContaining({
             name: 'FixationTransport',
@@ -261,6 +281,20 @@ describe('mapMenuViewsToRoutes', () => {
         sortOrder: 122,
         visible: true,
       },
+      {
+        componentName: 'FrozenWorkstation',
+        enabled: true,
+        icon: 'snow',
+        id: 'MENU_M3_FROZEN',
+        menuCode: 'M3_FROZEN',
+        menuName: '冰冻工作台',
+        menuType: 'MENU',
+        parentId: 'MENU_M3_WORKFLOW',
+        path: '/api/v1/frozen-sessions',
+        permissionPrefix: 'm3:frozen',
+        sortOrder: 123,
+        visible: true,
+      },
     ]);
 
     expect(routes).toEqual([
@@ -276,6 +310,10 @@ describe('mapMenuViewsToRoutes', () => {
           expect.objectContaining({
             name: 'GrossingWorkstation',
             path: '/technical-workflow/grossing',
+          }),
+          expect.objectContaining({
+            name: 'FrozenWorkstation',
+            path: '/technical-workflow/frozen',
           }),
         ],
       }),
@@ -326,6 +364,20 @@ describe('mapMenuViewsToRoutes', () => {
         sortOrder: 132,
         visible: true,
       },
+      {
+        componentName: 'FrozenReport',
+        enabled: true,
+        icon: 'snow',
+        id: 'MENU_M4_FROZEN_REPORT',
+        menuCode: 'M4_FROZEN_REPORT',
+        menuName: '冰冻快速报告',
+        menuType: 'MENU',
+        parentId: 'MENU_M4_WORKFLOW',
+        path: '/api/v1/frozen-sessions',
+        permissionPrefix: 'm4:frozen-report',
+        sortOrder: 133,
+        visible: true,
+      },
     ]);
 
     expect(routes).toEqual([
@@ -341,6 +393,10 @@ describe('mapMenuViewsToRoutes', () => {
           expect.objectContaining({
             name: 'PathologyReport',
             path: '/doctor-workflow/report',
+          }),
+          expect.objectContaining({
+            name: 'FrozenReport',
+            path: '/doctor-workflow/frozen-report',
           }),
         ],
       }),
@@ -692,13 +748,20 @@ describe('technical workflow route access', () => {
     const tasksRoute = workflowRoot?.children?.find(
       (route) => route.name === 'TechnicalTasks',
     );
+    const frozenRoute = workflowRoot?.children?.find(
+      (route) => route.name === 'FrozenWorkstation',
+    );
     const trackingRoute = workflowRoot?.children?.find(
       (route) => route.name === 'TechnicalTracking',
     );
 
     expect(tasksRoute?.component).toBeTypeOf('function');
+    expect(frozenRoute?.component).toBeTypeOf('function');
     expect(trackingRoute?.component).toBeTypeOf('function');
     expect(tasksRoute?.meta?.authority).toEqual([
+      M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY,
+    ]);
+    expect(frozenRoute?.meta?.authority).toEqual([
       M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY,
     ]);
     expect(trackingRoute?.meta?.authority).toEqual([
@@ -718,12 +781,16 @@ describe('doctor workflow route access', () => {
     const trackingRoute = workflowRoot?.children?.find(
       (route) => route.name === 'ReportTracking',
     );
+    const frozenReportRoute = workflowRoot?.children?.find(
+      (route) => route.name === 'FrozenReport',
+    );
     const consultationRoute = workflowRoot?.children?.find(
       (route) => route.name === 'Consultation',
     );
 
     expect(assignmentRoute?.component).toBeTypeOf('function');
     expect(trackingRoute?.component).toBeTypeOf('function');
+    expect(frozenReportRoute?.component).toBeTypeOf('function');
     expect(consultationRoute?.component).toBeTypeOf('function');
     expect(assignmentRoute?.meta?.authority).toEqual([
       M4_PERMISSION_CODES.DIAG_TASK_QUERY,
@@ -739,6 +806,9 @@ describe('doctor workflow route access', () => {
     );
 
     expect(reportRoute?.meta?.authority).toEqual([...M4_REPORT_PAGE_AUTHORITIES]);
+    expect(frozenReportRoute?.meta?.authority).toEqual([
+      ...M4_REPORT_PAGE_AUTHORITIES,
+    ]);
     expect(revisionRoute?.meta?.authority).toEqual([
       ...M4_REVISION_PAGE_AUTHORITIES,
     ]);

@@ -51,6 +51,17 @@ const routes: RouteRecordRaw[] = [
       },
       {
         component: () =>
+          import('#/modules/technical-workflow/views/FrozenWorkstationView.vue'),
+        meta: {
+          authority: [M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY],
+          icon: 'carbon:snowflake',
+          title: '冰冻工作台',
+        },
+        name: 'FrozenWorkstation',
+        path: '/technical-workflow/frozen',
+      },
+      {
+        component: () =>
           import('#/modules/technical-workflow/views/GrossingWorkstationView.vue'),
         meta: {
           authority: [M3_PERMISSION_CODES.GROSSING],

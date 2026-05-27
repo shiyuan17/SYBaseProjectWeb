@@ -2,11 +2,13 @@ import type {
   ApplicationListItem,
   ApplicationListQuery,
   ApplicationPage,
+  ApplicationFormReprintRequest,
   ApplicationCreateRequest,
   ApplicationCreateResult,
   ApplicationDetailView,
   DuplicateApplicationCheckQuery,
   DuplicateApplicationCheckResult,
+  SpecimenCheckInRequest,
   DirectSpecimenReceiptRequest,
   FixationResult,
   ImportClinicalApplicationRequest,
@@ -20,12 +22,16 @@ import type {
   SpecimenManagementListPage,
   SpecimenManagementListQuery,
   SpecimenManagementListSummary,
+  SpecimenBarcodeBindingRequest,
+  SpecimenConfirmRequest,
   SpecimenFixationRequest,
   SpecimenReceiptRequest,
   SpecimenReceiptResult,
   SpecimenRegisterRequest,
   SpecimenRegisterResult,
   SpecimenTrackingSummary,
+  SpecimenVerificationRequest,
+  SpecimenVerificationRecord,
   TrackingEventView,
   TrackingQueryView,
   TransportOrderCreateRequest,
@@ -33,8 +39,46 @@ import type {
   TransportOrderOperatorRequest,
   TransportOrderView,
 } from '../types/specimen-workflow';
+import {
+  bindSpecimenBarcodeMock,
+  checkInSpecimenMock,
+  completeFixationMock,
+  completeSpecimenVerificationMock,
+  confirmSpecimenMock,
+  createApplicationMock,
+  createTransportOrderMock,
+  directReceiveSpecimensMock,
+  duplicateCheckApplicationsMock,
+  getApplicationDetailMock,
+  getApplicationTrackingByApplicationNoMock,
+  getApplicationTrackingMock,
+  getLatestRegistrationResultMock,
+  getSpecimenTrackingByBarcodeMock,
+  handoverTransportOrderMock,
+  importClinicalApplicationMock,
+  listApplicationsMock,
+  listPendingFixationsMock,
+  listPendingReceiptsMock,
+  listPendingTransportOrdersMock,
+  listSpecimenVerificationRecordsMock,
+  listSpecimensMock,
+  lookupApplicationForRegistrationMock,
+  printTransportOrderMock,
+  receiveSpecimensMock,
+  registerSpecimensMock,
+  rebindSpecimenBarcodeMock,
+  reprintApplicationFormMock,
+  resetMockState as resetSpecimenWorkflowMockState,
+  retryLabelPrintMock,
+  startSpecimenVerificationMock,
+  startFixationMock,
+} from './specimen-workflow-mock';
 
 import { requestClient } from '#/api/request';
+
+const USE_SPECIMEN_WORKFLOW_MOCK =
+  import.meta.env.MODE === 'test'
+  || import.meta.env.VITE_SPECIMEN_WORKFLOW_MOCK === 'true';
 
 type ApplicationDetailResponse = Omit<
   ApplicationDetailView,
@@ -73,8 +117,15 @@ export function mapApplicationDetailResponse(
 ): ApplicationDetailView {
   return {
     ...response,
+    fixationCompletedAt: response.fixationCompletedAt ?? null,
+    patientCheckStatus: response.patientCheckStatus ?? null,
     recentEvents: response.recentEvents ?? [],
+    receiptAbnormalSummary: response.receiptAbnormalSummary ?? null,
+    reportIssued: response.reportIssued ?? false,
+    reportStatus: response.reportStatus ?? null,
+    specimenConfirmedAt: response.specimenConfirmedAt ?? null,
     specimens: (response.specimens ?? []).map(mapSpecimenTrackingSummary),
+    unreceivedCount: response.unreceivedCount ?? 0,
   };
 }
 
@@ -83,7 +134,19 @@ export function mapPendingSpecimenPageResponse(
 ): PendingSpecimenPage {
   return {
     ...response,
-    items: response.items ?? [],
+    items: (response.items ?? []).map((item) => ({
+      ...item,
+      abnormalType: item.abnormalType ?? null,
+      batchAbnormalFlag: item.batchAbnormalFlag ?? false,
+      checkInStatus: item.checkInStatus ?? null,
+      checkedInAt: item.checkedInAt ?? null,
+      checkedInByName: item.checkedInByName ?? null,
+      reminderCount: item.reminderCount ?? 0,
+      unreceivedCount: item.unreceivedCount ?? 0,
+      verificationCompletedAt: item.verificationCompletedAt ?? null,
+      verificationStartedAt: item.verificationStartedAt ?? null,
+      verificationStatus: item.verificationStatus ?? null,
+    })),
   };
 }
 
@@ -101,7 +164,12 @@ export function mapPendingTransportOrderPageResponse(
 ): PendingTransportOrderPage {
   return {
     ...response,
-    items: response.items ?? [],
+    items: (response.items ?? []).map((item) => ({
+      ...item,
+      batchAbnormalFlag: item.batchAbnormalFlag ?? false,
+      reminderCount: item.reminderCount ?? 0,
+      unreceivedCount: item.unreceivedCount ?? 0,
+    })),
   };
 }
 
@@ -110,7 +178,20 @@ export function mapSpecimenManagementListPageResponse(
 ): SpecimenManagementListPage {
   return {
     ...response,
-    items: response.items ?? [],
+    items: (response.items ?? []).map((item) => ({
+      ...item,
+      abnormalType: item.abnormalType ?? null,
+      barcodeBindingStatus: item.barcodeBindingStatus ?? null,
+      checkInStatus: item.checkInStatus ?? null,
+      checkedInAt: item.checkedInAt ?? null,
+      checkedInByName: item.checkedInByName ?? null,
+      fixationCompletedAt: item.fixationCompletedAt ?? null,
+      recentNode: item.recentNode ?? null,
+      specimenConfirmedAt: item.specimenConfirmedAt ?? null,
+      verificationCompletedAt: item.verificationCompletedAt ?? null,
+      verificationStartedAt: item.verificationStartedAt ?? null,
+      verificationStatus: item.verificationStatus ?? null,
+    })),
     summary: {
       abnormalCount: response.summary?.abnormalCount ?? 0,
       labelPrintedCount: response.summary?.labelPrintedCount ?? 0,
@@ -154,17 +235,33 @@ function mapSpecimenTrackingSummary(
   return {
     ...specimen,
     abnormalReason: specimen.abnormalReason ?? null,
+    abnormalType: specimen.abnormalType ?? null,
+    barcodeBindingStatus: specimen.barcodeBindingStatus ?? null,
+    checkInStatus: specimen.checkInStatus ?? null,
+    checkedInAt: specimen.checkedInAt ?? null,
+    checkedInByName: specimen.checkedInByName ?? null,
+    fixationCompletedAt: specimen.fixationCompletedAt ?? null,
     qualityCheckResult: specimen.qualityCheckResult ?? null,
     qualityIssueCodes: specimen.qualityIssueCodes ?? [],
     receiptStatus: specimen.receiptStatus ?? null,
+    specimenConfirmedAt: specimen.specimenConfirmedAt ?? null,
+    verificationCompletedAt: specimen.verificationCompletedAt ?? null,
+    verificationStartedAt: specimen.verificationStartedAt ?? null,
+    verificationStatus: specimen.verificationStatus ?? null,
   };
 }
 
 export async function createApplication(data: ApplicationCreateRequest) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return createApplicationMock(data);
+  }
   return requestClient.post<ApplicationCreateResult>('/v1/applications', data);
 }
 
 export async function listApplications(params: ApplicationListQuery) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return listApplicationsMock(params);
+  }
   const response = await requestClient.get<ApplicationPageResponse>('/v1/applications', {
     params,
   });
@@ -174,6 +271,9 @@ export async function listApplications(params: ApplicationListQuery) {
 export async function duplicateCheckApplications(
   params: DuplicateApplicationCheckQuery,
 ) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return duplicateCheckApplicationsMock(params);
+  }
   return requestClient.get<DuplicateApplicationCheckResult>(
     '/v1/applications/duplicate-check',
     { params },
@@ -183,6 +283,9 @@ export async function duplicateCheckApplications(
 export async function importClinicalApplication(
   data: ImportClinicalApplicationRequest,
 ) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return importClinicalApplicationMock(data);
+  }
   return requestClient.post<ApplicationCreateResult>(
     '/v1/clinical-applications/import',
     data,
@@ -190,6 +293,9 @@ export async function importClinicalApplication(
 }
 
 export async function getApplicationDetail(applicationId: string) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return getApplicationDetailMock(applicationId);
+  }
   const response = await requestClient.get<ApplicationDetailResponse>(
     `/v1/applications/${applicationId}`,
   );
@@ -197,6 +303,9 @@ export async function getApplicationDetail(applicationId: string) {
 }
 
 export async function getApplicationTracking(applicationId: string) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return getApplicationTrackingMock(applicationId);
+  }
   const response = await requestClient.get<TrackingQueryResponse>(
     `/v1/applications/${applicationId}/tracking`,
   );
@@ -204,11 +313,17 @@ export async function getApplicationTracking(applicationId: string) {
 }
 
 export async function getApplicationTrackingByApplicationNo(applicationNo: string) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return getApplicationTrackingByApplicationNoMock(applicationNo);
+  }
   const application = await lookupApplicationForRegistration(applicationNo);
   return getApplicationTracking(application.id);
 }
 
 export async function getSpecimenTrackingByBarcode(barcode: string) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return getSpecimenTrackingByBarcodeMock(barcode);
+  }
   const response = await requestClient.get<TrackingQueryResponse>(
     `/v1/specimens/barcodes/${barcode}/tracking`,
   );
@@ -216,6 +331,9 @@ export async function getSpecimenTrackingByBarcode(barcode: string) {
 }
 
 export async function registerSpecimens(data: SpecimenRegisterRequest) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return registerSpecimensMock(data);
+  }
   const response = await requestClient.post<RegistrationResultResponse>(
     '/v1/specimens/register',
     data,
@@ -224,6 +342,9 @@ export async function registerSpecimens(data: SpecimenRegisterRequest) {
 }
 
 export async function retryLabelPrint(batchNo: string, data: LabelPrintRetryRequest) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return retryLabelPrintMock(batchNo, data);
+  }
   return requestClient.post<LabelPrintRetryResult>(
     `/v1/specimens/label-batches/${batchNo}/retry`,
     data,
@@ -231,6 +352,9 @@ export async function retryLabelPrint(batchNo: string, data: LabelPrintRetryRequ
 }
 
 export async function getLatestRegistrationResult(applicationId: string) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return getLatestRegistrationResultMock(applicationId);
+  }
   const response = await requestClient.get<LatestRegistrationResultResponse>(
     `/v1/specimens/applications/${applicationId}/latest-registration`,
   );
@@ -238,12 +362,18 @@ export async function getLatestRegistrationResult(applicationId: string) {
 }
 
 export async function lookupApplicationForRegistration(applicationNo: string) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return lookupApplicationForRegistrationMock(applicationNo);
+  }
   return requestClient.get<ApplicationListItem>('/v1/specimens/applications/lookup', {
     params: { applicationNo },
   });
 }
 
 export async function listSpecimens(params: SpecimenManagementListQuery) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return listSpecimensMock(params);
+  }
   const response = await requestClient.get<SpecimenManagementListPageResponse>(
     '/v1/specimens',
     {
@@ -254,6 +384,9 @@ export async function listSpecimens(params: SpecimenManagementListQuery) {
 }
 
 export async function listPendingFixations(params: PendingSpecimenQuery) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return listPendingFixationsMock(params);
+  }
   const response = await requestClient.get<PendingSpecimenPageResponse>(
     '/v1/specimen-fixations/pending',
     { params },
@@ -261,15 +394,46 @@ export async function listPendingFixations(params: PendingSpecimenQuery) {
   return mapPendingSpecimenPageResponse(response);
 }
 
+export async function startSpecimenVerification(data: SpecimenVerificationRequest) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return startSpecimenVerificationMock(data);
+  }
+  return requestClient.post<SpecimenTrackingSummary>(
+    '/v1/specimen-verifications/start',
+    data,
+  );
+}
+
+export async function completeSpecimenVerification(
+  data: SpecimenVerificationRequest,
+) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return completeSpecimenVerificationMock(data);
+  }
+  return requestClient.post<SpecimenTrackingSummary>(
+    '/v1/specimen-verifications/complete',
+    data,
+  );
+}
+
 export async function startFixation(data: SpecimenFixationRequest) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return startFixationMock(data);
+  }
   return requestClient.post<FixationResult>('/v1/specimen-fixations/start', data);
 }
 
 export async function completeFixation(data: SpecimenFixationRequest) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return completeFixationMock(data);
+  }
   return requestClient.post<FixationResult>('/v1/specimen-fixations/complete', data);
 }
 
 export async function listPendingTransportOrders(params: PendingTransportOrderQuery) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return listPendingTransportOrdersMock(params);
+  }
   const response = await requestClient.get<PendingTransportOrderPageResponse>(
     '/v1/transport-orders/pending',
     { params },
@@ -278,6 +442,9 @@ export async function listPendingTransportOrders(params: PendingTransportOrderQu
 }
 
 export async function createTransportOrder(data: TransportOrderCreateRequest) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return createTransportOrderMock(data);
+  }
   return requestClient.post<TransportOrderView>('/v1/transport-orders', data);
 }
 
@@ -285,6 +452,9 @@ export async function printTransportOrder(
   transportOrderId: string,
   data: TransportOrderOperatorRequest,
 ) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return printTransportOrderMock(transportOrderId, data);
+  }
   return requestClient.post<TransportOrderView>(
     `/v1/transport-orders/${transportOrderId}/print`,
     data,
@@ -295,6 +465,9 @@ export async function handoverTransportOrder(
   transportOrderId: string,
   data: TransportOrderHandoverRequest,
 ) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return handoverTransportOrderMock(transportOrderId, data);
+  }
   return requestClient.post<TransportOrderView>(
     `/v1/transport-orders/${transportOrderId}/handover`,
     data,
@@ -302,6 +475,9 @@ export async function handoverTransportOrder(
 }
 
 export async function listPendingReceipts(params: PendingSpecimenQuery) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return listPendingReceiptsMock(params);
+  }
   const response = await requestClient.get<PendingSpecimenPageResponse>(
     '/v1/specimen-receipts/pending',
     { params },
@@ -310,12 +486,111 @@ export async function listPendingReceipts(params: PendingSpecimenQuery) {
 }
 
 export async function receiveSpecimens(data: SpecimenReceiptRequest) {
-  return requestClient.post<SpecimenReceiptResult>('/v1/specimen-receipts', data);
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return receiveSpecimensMock(data);
+  }
+  const response = await requestClient.post<SpecimenReceiptResult>(
+    '/v1/specimen-receipts',
+    data,
+  );
+  return {
+    ...response,
+    batchAbnormalFlag: response.batchAbnormalFlag ?? false,
+    receiptAbnormalSummary: response.receiptAbnormalSummary ?? null,
+    reminderCount: response.reminderCount ?? 0,
+  };
 }
 
 export async function directReceiveSpecimens(data: DirectSpecimenReceiptRequest) {
-  return requestClient.post<SpecimenReceiptResult>(
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return directReceiveSpecimensMock(data);
+  }
+  const response = await requestClient.post<SpecimenReceiptResult>(
     '/v1/specimen-receipts/by-barcodes',
     data,
   );
+  return {
+    ...response,
+    batchAbnormalFlag: response.batchAbnormalFlag ?? false,
+    receiptAbnormalSummary: response.receiptAbnormalSummary ?? null,
+    reminderCount: response.reminderCount ?? 0,
+  };
+}
+
+export async function bindSpecimenBarcode(
+  barcode: string,
+  data: SpecimenBarcodeBindingRequest,
+) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return bindSpecimenBarcodeMock(barcode, data);
+  }
+  return requestClient.post<SpecimenTrackingSummary>(
+    `/v1/specimens/barcodes/${barcode}/bindings`,
+    data,
+  );
+}
+
+export async function rebindSpecimenBarcode(
+  barcode: string,
+  data: SpecimenBarcodeBindingRequest,
+) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return rebindSpecimenBarcodeMock(barcode, data);
+  }
+  return requestClient.put<SpecimenTrackingSummary>(
+    `/v1/specimens/barcodes/${barcode}/bindings`,
+    data,
+  );
+}
+
+export async function confirmSpecimen(
+  barcode: string,
+  data: SpecimenConfirmRequest,
+) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return confirmSpecimenMock(barcode, data);
+  }
+  return requestClient.post<SpecimenTrackingSummary>(
+    `/v1/specimens/barcodes/${barcode}/confirm`,
+    data,
+  );
+}
+
+export async function checkInSpecimen(
+  barcode: string,
+  data: SpecimenCheckInRequest,
+) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return checkInSpecimenMock(barcode, data);
+  }
+  return requestClient.post<SpecimenTrackingSummary>(
+    `/v1/specimens/barcodes/${barcode}/check-in`,
+    data,
+  );
+}
+
+export async function listSpecimenVerificationRecords(barcode: string) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return listSpecimenVerificationRecordsMock(barcode);
+  }
+  return requestClient.get<SpecimenVerificationRecord[]>(
+    `/v1/specimens/barcodes/${barcode}/verification-records`,
+  );
+}
+
+export async function reprintApplicationForm(
+  applicationId: string,
+  data: ApplicationFormReprintRequest,
+) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return reprintApplicationFormMock(applicationId, data);
+  }
+  return requestClient.post<TrackingEventView>(
+    `/v1/applications/${applicationId}/reprint-form`,
+    data,
+  );
+}
+
+export function resetMockState() {
+  resetSpecimenWorkflowMockState();
 }

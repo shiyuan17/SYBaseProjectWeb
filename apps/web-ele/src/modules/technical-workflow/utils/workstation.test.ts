@@ -145,7 +145,7 @@ describe('workstation utilities', () => {
     expect(context.nextFlowLabel).toBe('包埋工作站');
     expect(context.pendingReworkCount).toBe(1);
     expect(context.currentTaskSuggestions).toEqual(['薄切', '重新切片', '染色偏浅']);
-    expect(context.alerts.map((alert) => alert.actionLabel)).toEqual([
+    expect(context.alerts.map((alert) => alert.action?.label)).toEqual([
       '进入返工',
       '查看生产轨迹',
       '进入下一工位',

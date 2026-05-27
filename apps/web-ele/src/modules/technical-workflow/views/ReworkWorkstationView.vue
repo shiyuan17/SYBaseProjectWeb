@@ -2,6 +2,7 @@
 import type {
   ReworkOrderResult,
   TechnicalTrackingView as TechnicalTrackingViewModel,
+  TechnicalWorkflowTaskType,
 } from '../types/technical-workflow';
 
 import { computed, reactive, ref } from 'vue';
@@ -28,7 +29,7 @@ import ReworkCreateDialog from '../components/ReworkCreateDialog.vue';
 import ReworkExecuteDialog from '../components/ReworkExecuteDialog.vue';
 import TechnicalCaseContextPanel from '../components/TechnicalCaseContextPanel.vue';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
-import { REWORK_TYPE_ROUTE_MAP, TASK_TYPE_TITLE_MAP } from '../constants';
+import { TASK_TYPE_TITLE_MAP } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import {
   formatDateTime,
@@ -38,12 +39,14 @@ import {
   formatReworkType,
   formatTaskStatus,
 } from '../utils/format';
+import { useTechnicalWorkflowNavigation } from '../utils/navigation';
 import { buildWorkstationCaseContext } from '../utils/workstation';
 
 const route = useRoute();
 const router = useRouter();
+const navigation = useTechnicalWorkflowNavigation(router);
 
-const REWORK_NEXT_TASK_MAP: Record<string, string> = {
+const REWORK_NEXT_TASK_MAP: Record<string, TechnicalWorkflowTaskType> = {
   REGROSSING: 'GROSSING',
   REEMBED: 'EMBEDDING',
   RESLICE: 'SLICING',
@@ -57,7 +60,7 @@ const createDialogVisible = ref(false);
 const executeDialogVisible = ref(false);
 const initialReworkOrderId = ref('');
 const deepLinkedHandled = ref(false);
-const nextStep = ref<null | { message: string; route: string; title: string }>(null);
+const nextStep = ref<null | { message: string; taskType: TechnicalWorkflowTaskType; title: string }>(null);
 
 const queryForm = reactive({
   caseId: typeof route.query.caseId === 'string' ? route.query.caseId : '',
@@ -82,17 +85,19 @@ const sourceObjectSummary = computed(() => {
   };
 });
 
-function resolveNextStep(reworkType?: null | string, message = '返工已处理，可回到对应工位继续作业。') {
-  const routePath = reworkType ? REWORK_TYPE_ROUTE_MAP[reworkType] : '';
+function resolveNextStep(
+  reworkType?: null | string,
+  message = '返工已处理，可回到对应工位继续作业。',
+) {
   const taskType = reworkType ? REWORK_NEXT_TASK_MAP[reworkType] : '';
-  if (!routePath || !taskType) {
+  if (!taskType) {
     nextStep.value = null;
     return;
   }
   nextStep.value = {
     message,
-    route: routePath,
-    title: TASK_TYPE_TITLE_MAP[taskType] ?? routePath,
+    taskType,
+    title: TASK_TYPE_TITLE_MAP[taskType] ?? taskType,
   };
 }
 
@@ -139,18 +144,15 @@ function openExecuteDialog(reworkOrderId = '') {
 }
 
 function goToWorkstationByReworkType(reworkType?: null | string) {
-  const routePath = reworkType ? REWORK_TYPE_ROUTE_MAP[reworkType] : '';
-  if (!routePath || !resolvedCaseId.value) {
+  const taskType = reworkType ? REWORK_NEXT_TASK_MAP[reworkType] : '';
+  if (!taskType || !resolvedCaseId.value) {
     ElMessage.warning('当前返工类型缺少可跳转工位');
     return;
   }
-  void router.push({
-    path: routePath,
-    query: {
-      caseId: resolvedCaseId.value,
-      mode: 'exception',
-      pathologyNo: trackingResult.value?.pathologyNo ?? '',
-    },
+  void navigation.goToTaskType(taskType, {
+    caseId: resolvedCaseId.value,
+    mode: 'exception',
+    pathologyNo: trackingResult.value?.pathologyNo ?? undefined,
   });
 }
 
@@ -158,13 +160,10 @@ function goToSuggestedNextStep() {
   if (!nextStep.value || !resolvedCaseId.value) {
     return;
   }
-  void router.push({
-    path: nextStep.value.route,
-    query: {
-      caseId: resolvedCaseId.value,
-      mode: 'exception',
-      pathologyNo: trackingResult.value?.pathologyNo ?? '',
-    },
+  void navigation.goToTaskType(nextStep.value.taskType, {
+    caseId: resolvedCaseId.value,
+    mode: 'exception',
+    pathologyNo: trackingResult.value?.pathologyNo ?? undefined,
   });
 }
 
@@ -188,7 +187,7 @@ if (queryForm.caseId) {
 <template>
   <Page
     title="返工工作站"
-    description="将返工从独立补录页前移为异常处理中心，病例概览、返工创建与回流动作同屏完成。"
+    description="将返工从独立补录页面前移为异常处理中心，病例概览、返工创建与回流动作同屏完成。"
   >
     <div class="flex flex-col gap-4">
       <ElAlert
@@ -224,7 +223,8 @@ if (queryForm.caseId) {
             v-if="sourceObjectSummary"
             class="mt-4 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground"
           >
-            当前深链对象：{{ formatNullable(sourceObjectSummary.objectType) }} / {{ formatNullable(sourceObjectSummary.objectId) }}
+            当前深链对象：{{ formatNullable(sourceObjectSummary.objectType) }} /
+            {{ formatNullable(sourceObjectSummary.objectId) }}
           </div>
 
           <div class="mt-4 flex flex-wrap gap-3">
@@ -268,7 +268,10 @@ if (queryForm.caseId) {
                 </template>
               </ElAlert>
             </template>
-            <div v-else class="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
+            <div
+              v-else
+              class="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground"
+            >
               加载病例后，这里会固定展示返工摘要、返工列表和回流入口。
             </div>
           </WorkflowSectionCard>
@@ -276,7 +279,7 @@ if (queryForm.caseId) {
           <WorkflowSectionCard
             v-if="trackingResult"
             title="返工单列表"
-            description="返工来源和目标工位都在当前页直接确认，不需要再回忆对象层级。"
+            description="返工来源和目标工位都在当前页面直接确认，不需要再回忆对象层级。"
           >
             <ElTable :data="trackingResult.reworks" border>
               <ElTableColumn label="返工单号" min-width="180" prop="reworkOrderId" />

@@ -14,6 +14,49 @@ export interface PendingTechnicalTaskQuery {
   timedOutOnly?: boolean;
 }
 
+export type TechnicalWorkflowMode = 'exception' | 'queue';
+
+export type TechnicalWorkflowChainType = 'EXCEPTION' | 'FROZEN' | 'REGULAR';
+
+export type TechnicalWorkflowObjectType =
+  | 'CASE'
+  | 'EMBEDDING_BOX'
+  | 'SAMPLING_BLOCK'
+  | 'SLIDE'
+  | 'SPECIMEN';
+
+export type TechnicalWorkflowTaskType =
+  | 'DEHYDRATION'
+  | 'EMBEDDING'
+  | 'FROZEN'
+  | 'GROSSING'
+  | 'REWORK'
+  | 'SLICING'
+  | 'STAINING';
+
+export interface TechnicalWorkflowDeepLinkQuery {
+  caseId?: string;
+  mode?: TechnicalWorkflowMode;
+  objectId?: string;
+  objectType?: string;
+  pathologyNo?: string;
+  tab?: 'abnormal' | 'timeline' | 'work-items';
+  taskId?: string;
+}
+
+export interface TechnicalWorkflowRouteMeta {
+  authorityCode: string;
+  chain: TechnicalWorkflowChainType;
+  icon?: string;
+  isEntry?: boolean;
+  isTracking?: boolean;
+  isVisibleInMenu?: boolean;
+  key: string;
+  name: string;
+  path: string;
+  title: string;
+}
+
 export interface PendingTechnicalTaskItem {
   applicationId: string;
   applicationNo: string;
@@ -357,10 +400,24 @@ export interface ReworkOrderResult {
   status: null | string;
 }
 
-export interface WorkstationAlert {
-  actionLabel?: string;
-  actionQuery?: Record<string, string>;
-  actionRoute?: string;
+export interface TechnicalWorkflowAlertAction {
+  label: string;
+  query?: TechnicalWorkflowDeepLinkQuery;
+  target:
+    | {
+        routeType: 'REWORK';
+      }
+    | {
+        routeType: 'TASK_TYPE';
+        taskType: TechnicalWorkflowTaskType;
+      }
+    | {
+        routeType: 'TRACKING';
+      };
+}
+
+export interface TechnicalWorkflowAlert {
+  action?: TechnicalWorkflowAlertAction;
   description: string;
   id: string;
   severity: 'danger' | 'info' | 'success' | 'warning';
@@ -374,12 +431,12 @@ export interface ObjectProgressNode {
   parentId?: string;
   secondaryLabel?: null | string;
   status?: null | string;
-  type: 'CASE' | 'EMBEDDING_BOX' | 'SAMPLING_BLOCK' | 'SLIDE' | 'SPECIMEN';
+  type: TechnicalWorkflowObjectType;
 }
 
 export interface WorkstationCaseContext {
   activeTaskCount: number;
-  alerts: WorkstationAlert[];
+  alerts: TechnicalWorkflowAlert[];
   blockCount: number;
   caseId: string;
   caseStatus: null | string;
@@ -402,10 +459,11 @@ export interface WorkstationQueueItem {
 }
 
 export interface WorkstationSummaryBucket {
+  chain: TechnicalWorkflowChainType;
   inProgress: number;
   path: string;
   pending: number;
-  taskType: string;
+  taskType: TechnicalWorkflowTaskType;
   timedOut: number;
   title: string;
 }

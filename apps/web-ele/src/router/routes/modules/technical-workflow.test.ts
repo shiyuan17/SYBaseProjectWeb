@@ -12,12 +12,19 @@ describe('technical workflow routes', () => {
     const tasksRoute = workflowRoot?.children?.find(
       (route) => route.name === 'TechnicalTasks',
     );
+    const frozenRoute = workflowRoot?.children?.find(
+      (route) => route.name === 'FrozenWorkstation',
+    );
     const grossingRoute = workflowRoot?.children?.find(
       (route) => route.name === 'GrossingWorkstation',
     );
 
     expect(workflowRoot?.path).toBe('/technical-workflow');
     expect(tasksRoute?.meta?.authority).toEqual([
+      M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY,
+    ]);
+    expect(frozenRoute?.path).toBe('/technical-workflow/frozen');
+    expect(frozenRoute?.meta?.authority).toEqual([
       M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY,
     ]);
     expect(grossingRoute?.meta?.authority).toEqual([

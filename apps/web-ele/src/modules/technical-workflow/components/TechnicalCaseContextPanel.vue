@@ -13,6 +13,7 @@ import {
   ElTimelineItem,
 } from 'element-plus';
 
+import { useTechnicalWorkflowNavigation } from '../utils/navigation';
 import {
   formatCaseStatus,
   formatDateTime,
@@ -28,6 +29,7 @@ const props = defineProps<{
 }>();
 
 const router = useRouter();
+const navigation = useTechnicalWorkflowNavigation(router);
 
 const summaryItems = computed(() => {
   if (!props.context) {
@@ -45,16 +47,6 @@ const summaryItems = computed(() => {
     { label: '待返工', value: String(props.context.pendingReworkCount) },
   ];
 });
-
-function goToAlertRoute(route?: string, query?: Record<string, string>) {
-  if (!route) {
-    return;
-  }
-  void router.push({
-    path: route,
-    query,
-  });
-}
 </script>
 
 <template>
@@ -88,14 +80,14 @@ function goToAlertRoute(route?: string, query?: Record<string, string>) {
         >
           <template #default>
             <div class="text-sm leading-6">{{ alert.description }}</div>
-            <div v-if="alert.actionLabel" class="mt-3">
+            <div v-if="alert.action" class="mt-3">
               <ElButton
+                plain
                 size="small"
                 type="primary"
-                plain
-                @click="goToAlertRoute(alert.actionRoute, alert.actionQuery)"
+                @click="navigation.goToAlertAction(alert.action)"
               >
-                {{ alert.actionLabel }}
+                {{ alert.action.label }}
               </ElButton>
             </div>
           </template>

@@ -67,6 +67,20 @@ export const FIXATION_STATUS_OPTIONS = [
   { label: '已固定', value: 'COMPLETED' },
 ] as const;
 
+export const ALL_VERIFICATION_STATUS_VALUE = 'ALL';
+
+export const VERIFICATION_STATUS_OPTIONS = [
+  { label: '所有', value: ALL_VERIFICATION_STATUS_VALUE },
+  { label: '待核对', value: 'UNVERIFIED' },
+  { label: '核对中', value: 'VERIFYING' },
+  { label: '已核对', value: 'VERIFIED' },
+] as const;
+
+export const CHECK_IN_STATUS_OPTIONS = [
+  { label: '待入库', value: 'NOT_CHECKED_IN' },
+  { label: '已入库', value: 'CHECKED_IN' },
+] as const;
+
 export const APPLICATION_TYPE_OPTIONS = [
   { label: '常规', value: 'ROUTINE' },
   { label: '冰冻', value: 'FROZEN' },

@@ -3,9 +3,10 @@ import type {
   ObjectProgressNode,
   TechnicalTrackingEventSummary,
   TechnicalTrackingView as TechnicalTrackingViewModel,
+  TechnicalWorkflowDeepLinkQuery,
 } from '../types/technical-workflow';
 
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
@@ -51,6 +52,8 @@ import { buildWorkstationCaseContext } from '../utils/workstation';
 
 const route = useRoute();
 
+type TrackingTab = NonNullable<TechnicalWorkflowDeepLinkQuery['tab']>;
+
 interface TrackingTreeNode {
   children: TrackingTreeNode[];
   id: string;
@@ -80,12 +83,59 @@ const workflowStepDefinitions = [
   { nodeCode: 'QUALITY_CONTROL', title: '质控闭环' },
 ] as const;
 
+const TRACKING_TABS: TrackingTab[] = ['abnormal', 'timeline', 'work-items'];
+
 const pageError = ref('');
 const loading = ref(false);
 const caseId = ref(typeof route.query.caseId === 'string' ? route.query.caseId : '');
 const trackingResult = ref<null | TechnicalTrackingViewModel>(null);
-const activeTab = ref<'abnormal' | 'timeline' | 'work-items'>('timeline');
+const activeTab = ref<TrackingTab>(resolveInitialTab());
 const selectedNodeId = ref('');
+
+function normalizeQueryValue(value: unknown) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function resolveInitialTab(): TrackingTab {
+  const tab = normalizeQueryValue(route.query.tab);
+  return TRACKING_TABS.includes(tab as TrackingTab) ? (tab as TrackingTab) : 'timeline';
+}
+
+function resolveTaskObjectId(taskId: string, tracking: TechnicalTrackingViewModel) {
+  if (!taskId) {
+    return '';
+  }
+  return tracking.technicalTasks.find((item) => item.id === taskId)?.objectId?.trim() ?? '';
+}
+
+function resolveAbnormalNodeId(tracking: TechnicalTrackingViewModel) {
+  const qcEvaluation = tracking.qcEvaluations.find((item) => item.slideId || item.specimenId);
+  if (qcEvaluation?.slideId?.trim()) {
+    return qcEvaluation.slideId.trim();
+  }
+  if (qcEvaluation?.specimenId?.trim()) {
+    return qcEvaluation.specimenId.trim();
+  }
+  return tracking.technicalTasks.find((item) => item.objectId?.trim())?.objectId?.trim() ?? tracking.caseId;
+}
+
+function resolveSelectedNodeId(tracking: TechnicalTrackingViewModel) {
+  const objectId = normalizeQueryValue(route.query.objectId);
+  if (objectId) {
+    return objectId;
+  }
+
+  const taskObjectId = resolveTaskObjectId(normalizeQueryValue(route.query.taskId), tracking);
+  if (taskObjectId) {
+    return taskObjectId;
+  }
+
+  if (activeTab.value === 'abnormal') {
+    return resolveAbnormalNodeId(tracking);
+  }
+
+  return tracking.caseId;
+}
 
 function getTaskStatusTagType(status?: null | string) {
   if (status === 'COMPLETED') {
@@ -215,12 +265,14 @@ const workflowTimelineSteps = computed<WorkflowTimelineStep[]>(() => {
       .map((event) => getEventNodeCode(event))
       .filter(Boolean),
   );
+
   let lastCompletedIndex = -1;
   workflowStepDefinitions.forEach((step, index) => {
     if (completedNodeCodes.has(step.nodeCode) || completedEventNodeCodes.has(step.nodeCode)) {
       lastCompletedIndex = index;
     }
   });
+
   const activeNodeIndex = activeTaskNode
     ? workflowStepDefinitions.findIndex((step) => step.nodeCode === activeTaskNode)
     : -1;
@@ -235,6 +287,7 @@ const workflowTimelineSteps = computed<WorkflowTimelineStep[]>(() => {
     const status: WorkflowTimelineStep['status'] = completed
       ? 'completed'
       : (index === currentIndex ? 'current' : 'pending');
+
     let statusText = '-';
     if (latestEvent) {
       statusText = formatEventStatus(latestEvent.eventStatus);
@@ -273,7 +326,8 @@ async function loadTracking() {
   pageError.value = '';
   try {
     trackingResult.value = await getTechnicalTracking(normalizedCaseId);
-    selectedNodeId.value = trackingResult.value.caseId;
+    activeTab.value = resolveInitialTab();
+    selectedNodeId.value = resolveSelectedNodeId(trackingResult.value);
   } catch (error) {
     trackingResult.value = null;
     pageError.value = getWorkflowPageErrorMessage(error);
@@ -285,9 +339,35 @@ async function loadTracking() {
 function handleReset() {
   caseId.value = '';
   pageError.value = '';
+  activeTab.value = 'timeline';
   selectedNodeId.value = '';
   trackingResult.value = null;
 }
+
+watch(
+  () => route.query,
+  (query) => {
+    const nextCaseId = normalizeQueryValue(query.caseId);
+    const previousCaseId = caseId.value.trim();
+
+    caseId.value = nextCaseId;
+    activeTab.value = resolveInitialTab();
+
+    if (!trackingResult.value) {
+      if (nextCaseId) {
+        void loadTracking();
+      }
+      return;
+    }
+
+    if (nextCaseId && nextCaseId !== previousCaseId) {
+      void loadTracking();
+      return;
+    }
+
+    selectedNodeId.value = resolveSelectedNodeId(trackingResult.value);
+  },
+);
 
 if (caseId.value) {
   void loadTracking();

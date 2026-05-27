@@ -2,8 +2,10 @@ import dayjs from 'dayjs';
 
 import {
   APPLICATION_TYPE_OPTIONS,
+  CHECK_IN_STATUS_OPTIONS,
   FIXATION_STATUS_OPTIONS,
   TRANSPORT_STATUS_OPTIONS,
+  VERIFICATION_STATUS_OPTIONS,
 } from '../constants';
 
 function createLabelMap(options: ReadonlyArray<{ label: string; value: string }>) {
@@ -25,6 +27,10 @@ const fixationStatusLabels = {
   ...createLabelMap(FIXATION_STATUS_OPTIONS),
   ABNORMAL: '异常',
 } satisfies Record<string, string>;
+const verificationStatusLabels = createLabelMap(
+  VERIFICATION_STATUS_OPTIONS.filter((option) => option.value !== 'ALL'),
+);
+const checkInStatusLabels = createLabelMap(CHECK_IN_STATUS_OPTIONS);
 const applicationStatusLabels = {
   CANCELLED: '已取消',
   CLOSED: '已闭环',
@@ -42,6 +48,8 @@ const applicationFormStatusLabels = {
   UPLOADED: '已上传',
 } satisfies Record<string, string>;
 const currentNodeLabels = {
+  CHECK_IN: '标本入库',
+  CONFIRMATION: '标本确认',
   DRAFT: '草稿',
   FIXATION: '固定',
   IN_TRANSIT: '转运中',
@@ -54,8 +62,10 @@ const currentNodeLabels = {
   SPECIMEN_COLLECTION: '标本登记',
   SUBMITTED: '已提交',
   TRANSPORT: '转运交接',
+  VERIFICATION: '标本核对',
 } satisfies Record<string, string>;
 const specimenStatusLabels = {
+  CHECKED_IN: '已入库',
   FIXED: '固定完成',
   FIXING: '固定中',
   IN_TRANSIT: '转运中',
@@ -63,6 +73,8 @@ const specimenStatusLabels = {
   REGISTERED: '已登记',
   REJECTED: '已拒收',
   RETURNED: '已退回',
+  VERIFIED: '已核对',
+  VERIFYING: '核对中',
 } satisfies Record<string, string>;
 const labelPrintStatusLabels = {
   FAILED: '打印失败',
@@ -84,6 +96,7 @@ const transportStatusLabels = {
   COMPLETED: '已完成',
 } satisfies Record<string, string>;
 const trackingEventTypeLabels = {
+  CHECKED_IN: '执行入库',
   COMPLETED: '完成固定',
   DIRECT_RECEIVE: '直接接收',
   HANDED_OVER: '完成交接',
@@ -96,6 +109,8 @@ const trackingEventTypeLabels = {
   RETRY: '标签补打',
   RETURNED: '退回标本',
   STARTED: '开始固定',
+  VERIFIED: '完成核对',
+  VERIFYING: '开始核对',
 } satisfies Record<string, string>;
 const trackingEventStatusLabels = {
   FAILED: '失败',
@@ -140,6 +155,14 @@ export function formatSpecimenStatus(value?: null | string) {
 
 export function formatFixationStatus(value?: null | string) {
   return formatMappedValue(value, fixationStatusLabels);
+}
+
+export function formatVerificationStatus(value?: null | string) {
+  return formatMappedValue(value, verificationStatusLabels);
+}
+
+export function formatCheckInStatus(value?: null | string) {
+  return formatMappedValue(value, checkInStatusLabels);
 }
 
 export function formatLabelPrintStatus(value?: null | string) {

@@ -1,13 +1,25 @@
 <script lang="ts" setup>
-defineProps<{
-  description?: string;
-  title: string;
-}>();
+withDefaults(
+  defineProps<{
+    autoHeight?: boolean;
+    description?: string;
+    title: string;
+  }>(),
+  {
+    autoHeight: false,
+  },
+);
 </script>
 
 <template>
-  <section class="rounded-lg border border-border bg-card p-4 shadow-sm">
-    <header class="mb-4 flex items-start justify-between gap-4">
+  <section
+    :class="
+      autoHeight
+        ? 'flex min-h-0 flex-col rounded-lg border border-border bg-card p-3 shadow-sm'
+        : 'flex h-full min-h-0 flex-col rounded-lg border border-border bg-card p-3 shadow-sm'
+    "
+  >
+    <header class="mb-3 flex items-start justify-between gap-3">
       <div>
         <h3 class="text-base font-semibold text-foreground">{{ title }}</h3>
       </div>
@@ -15,6 +27,8 @@ defineProps<{
         <slot name="extra" />
       </div>
     </header>
-    <slot />
+    <div class="min-h-0 flex-1">
+      <slot />
+    </div>
   </section>
 </template>

@@ -62,6 +62,10 @@ export const M4_WORKFLOW_ROUTE_ITEMS = [
     path: '/doctor-workflow/report',
   },
   {
+    code: M4_PERMISSION_CODES.REPORT_CREATE,
+    path: '/doctor-workflow/frozen-report',
+  },
+  {
     code: M4_PERMISSION_CODES.REPORT_TRACKING_QUERY,
     path: '/doctor-workflow/tracking',
   },

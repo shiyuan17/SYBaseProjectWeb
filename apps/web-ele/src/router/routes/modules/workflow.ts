@@ -13,6 +13,13 @@ const WORKFLOW_AUTHORITIES = [
   M2_PERMISSION_CODES.SPECIMEN_TRACKING_QUERY,
 ];
 
+const SUBMISSION_WORKBENCH_AUTHORITIES = [
+  M2_PERMISSION_CODES.APPLICATION_DETAIL_QUERY,
+  M2_PERMISSION_CODES.APPLICATION_CREATE,
+  M2_PERMISSION_CODES.CLINICAL_IMPORT,
+  M2_PERMISSION_CODES.SPECIMEN_REGISTER,
+];
+
 function redirectWithQuery(
   path: string,
   defaults: LocationQueryRaw = {},
@@ -55,17 +62,25 @@ const routes: RouteRecordRaw[] = [
         component: () =>
           import('#/modules/specimen-workflow/views/SubmissionRegistrationView.vue'),
         meta: {
-          authority: [
-            M2_PERMISSION_CODES.APPLICATION_DETAIL_QUERY,
-            M2_PERMISSION_CODES.APPLICATION_CREATE,
-            M2_PERMISSION_CODES.CLINICAL_IMPORT,
-            M2_PERMISSION_CODES.SPECIMEN_REGISTER,
-          ],
+          authority: SUBMISSION_WORKBENCH_AUTHORITIES,
           icon: 'carbon:list-boxes',
           title: '申请与登记',
         },
         name: 'SubmissionRegistration',
         path: '/workflow/submission-registration',
+      },
+      {
+        component: () =>
+          import(
+            '#/modules/specimen-workflow/views/ApplicationRegistrationWorkbenchView.vue'
+          ),
+        meta: {
+          authority: SUBMISSION_WORKBENCH_AUTHORITIES,
+          icon: 'carbon:workspace',
+          title: '申请登记工作台',
+        },
+        name: 'ApplicationRegistrationWorkbench',
+        path: '/workflow/application-registration-workbench',
       },
       {
         redirect: redirectWithQuery('/workflow/submission-registration'),

@@ -2,7 +2,9 @@ import type {
   ObjectProgressNode,
   PendingTechnicalTaskItem,
   TechnicalTrackingView,
-  WorkstationAlert,
+  TechnicalWorkflowAlert,
+  TechnicalWorkflowChainType,
+  TechnicalWorkflowTaskType,
   WorkstationCaseContext,
   WorkstationQueueItem,
   WorkstationSummaryBucket,
@@ -26,15 +28,11 @@ function createAlert(
   id: string,
   title: string,
   description: string,
-  severity: WorkstationAlert['severity'],
-  actionLabel?: string,
-  actionRoute?: string,
-  actionQuery?: Record<string, string>,
-): WorkstationAlert {
+  severity: TechnicalWorkflowAlert['severity'],
+  action?: TechnicalWorkflowAlert['action'],
+): TechnicalWorkflowAlert {
   return {
-    actionLabel,
-    actionQuery,
-    actionRoute,
+    action,
     description,
     id,
     severity,
@@ -48,17 +46,20 @@ export function buildWorkstationQueueItems(
 ): WorkstationQueueItem[] {
   return items
     .map((task) => {
+      const nextTaskType = currentTaskType
+        ? NEXT_TASK_TYPE_MAP[currentTaskType as TechnicalWorkflowTaskType]
+        : undefined;
       const badges = dedupeStrings([
         task.timedOut ? '超时' : '',
         task.taskStatus === 'IN_PROGRESS' ? '处理中' : '',
-        currentTaskType && NEXT_TASK_TYPE_MAP[currentTaskType] === task.taskType ? '下一工位待衔接' : '',
+        nextTaskType && nextTaskType === task.taskType ? '下一工位待衔接' : '',
         task.remarks ? '有备注' : '',
       ]);
       const alertLevel: WorkstationQueueItem['alertLevel'] = task.timedOut
         ? 'danger'
-        : (task.taskStatus === 'IN_PROGRESS'
+        : task.taskStatus === 'IN_PROGRESS'
           ? 'warning'
-          : 'info');
+          : 'info';
 
       return {
         alertLevel,
@@ -97,7 +98,9 @@ export function buildWorkstationQueueItems(
           'zh-CN',
         );
       }
-      return normalizeText(left.task.createdAt).localeCompare(normalizeText(right.task.createdAt));
+      return normalizeText(left.task.createdAt).localeCompare(
+        normalizeText(right.task.createdAt),
+      );
     });
 }
 
@@ -105,13 +108,15 @@ export function buildWorkstationCaseContext(
   tracking: TechnicalTrackingView,
   currentTaskType?: null | string,
 ): WorkstationCaseContext {
-  const alerts: WorkstationAlert[] = [];
+  const alerts: TechnicalWorkflowAlert[] = [];
   const activeTasks = tracking.technicalTasks.filter(
     (task) => task.taskStatus === 'IN_PROGRESS' || task.taskStatus === 'PENDING',
   );
   const pendingReworks = tracking.reworks.filter((item) => item.status !== 'COMPLETED');
   const unqualifiedQc = tracking.qcEvaluations.find(
-    (item) => item.evaluationResult === 'REWORK_REQUIRED' || item.evaluationResult === 'UNQUALIFIED',
+    (item) =>
+      item.evaluationResult === 'REWORK_REQUIRED'
+      || item.evaluationResult === 'UNQUALIFIED',
   );
 
   const rework = pendingReworks[0];
@@ -122,45 +127,59 @@ export function buildWorkstationCaseContext(
         '存在待处理返工',
         `返工单 ${rework.reworkOrderId} 仍未闭环，建议优先确认原因并回流到对应工位。`,
         'danger',
-        '进入返工',
-        '/technical-workflow/rework',
         {
-          caseId: tracking.caseId,
-          mode: 'exception',
-          pathologyNo: tracking.pathologyNo ?? '',
+          label: '进入返工',
+          query: {
+            caseId: tracking.caseId,
+            mode: 'exception',
+            pathologyNo: tracking.pathologyNo ?? undefined,
+          },
+          target: {
+            routeType: 'REWORK',
+          },
         },
       ),
     );
   }
 
-  const qc = unqualifiedQc;
-  if (qc) {
+  if (unqualifiedQc) {
     alerts.push(
       createAlert(
-        `qc-${qc.qcEvaluationId}`,
+        `qc-${unqualifiedQc.qcEvaluationId}`,
         '发现质控风险',
-        `${qc.slideNo || qc.slideId} 存在质控问题，建议先核对问题描述和改进建议。`,
+        `${unqualifiedQc.slideNo || unqualifiedQc.slideId} 存在质控问题，建议先核对问题描述和改进建议。`,
         'warning',
-        '查看生产轨迹',
-        '/technical-workflow/tracking',
         {
-          caseId: tracking.caseId,
+          label: '查看生产轨迹',
+          query: {
+            caseId: tracking.caseId,
+            tab: 'abnormal',
+          },
+          target: {
+            routeType: 'TRACKING',
+          },
         },
       ),
     );
   }
 
-  const downstreamTaskType = currentTaskType ? NEXT_TASK_TYPE_MAP[currentTaskType] : '';
+  const downstreamTaskType = currentTaskType
+    ? NEXT_TASK_TYPE_MAP[currentTaskType as TechnicalWorkflowTaskType]
+    : undefined;
+
   let nextFlowLabel = '复核/闭环';
   if (downstreamTaskType) {
     nextFlowLabel = TASK_TYPE_TITLE_MAP[downstreamTaskType] ?? downstreamTaskType;
   } else if (currentTaskType === 'STAINING') {
     nextFlowLabel = '后续诊断流程';
-  } else if (tracking.reworks.some((item) => item.status !== 'COMPLETED')) {
+  } else if (pendingReworks.length > 0) {
     nextFlowLabel = '返工回流';
   }
+
   if (downstreamTaskType) {
-    const downstreamCount = activeTasks.filter((item) => item.taskType === downstreamTaskType).length;
+    const downstreamCount = activeTasks.filter(
+      (item) => item.taskType === downstreamTaskType,
+    ).length;
     if (downstreamCount > 0) {
       alerts.push(
         createAlert(
@@ -168,12 +187,17 @@ export function buildWorkstationCaseContext(
           '存在下一工位待衔接任务',
           `${TASK_TYPE_TITLE_MAP[downstreamTaskType] ?? downstreamTaskType} 当前已有 ${downstreamCount} 条待办，可在完成当前对象后继续处理。`,
           'info',
-          '进入下一工位',
-          TASK_TYPE_ROUTE_MAP[downstreamTaskType],
           {
-            caseId: tracking.caseId,
-            mode: 'queue',
-            pathologyNo: tracking.pathologyNo ?? '',
+            label: '进入下一工位',
+            query: {
+              caseId: tracking.caseId,
+              mode: 'queue',
+              pathologyNo: tracking.pathologyNo ?? undefined,
+            },
+            target: {
+              routeType: 'TASK_TYPE',
+              taskType: downstreamTaskType as TechnicalWorkflowTaskType,
+            },
           },
         ),
       );
@@ -244,6 +268,16 @@ export function buildWorkstationCaseContext(
   };
 }
 
+function resolveSummaryChain(taskType: TechnicalWorkflowTaskType): TechnicalWorkflowChainType {
+  if (taskType === 'FROZEN') {
+    return 'FROZEN';
+  }
+  if (taskType === 'REWORK') {
+    return 'EXCEPTION';
+  }
+  return 'REGULAR';
+}
+
 export function buildWorkstationSummaryBuckets(
   items: PendingTechnicalTaskItem[],
 ): WorkstationSummaryBucket[] {
@@ -257,13 +291,17 @@ export function buildWorkstationSummaryBuckets(
   });
 
   return [...byType.entries()]
-    .map(([taskType, bucketItems]) => ({
-      inProgress: bucketItems.filter((item) => item.taskStatus === 'IN_PROGRESS').length,
-      path: TASK_TYPE_ROUTE_MAP[taskType] ?? '/technical-workflow/tasks',
-      pending: bucketItems.filter((item) => item.taskStatus === 'PENDING').length,
-      taskType,
-      timedOut: bucketItems.filter((item) => item.timedOut).length,
-      title: TASK_TYPE_TITLE_MAP[taskType] ?? taskType,
-    }))
+    .map(([taskType, bucketItems]) => {
+      const normalizedTaskType = taskType as TechnicalWorkflowTaskType;
+      return {
+        chain: resolveSummaryChain(normalizedTaskType),
+        inProgress: bucketItems.filter((item) => item.taskStatus === 'IN_PROGRESS').length,
+        path: TASK_TYPE_ROUTE_MAP[normalizedTaskType] ?? '/technical-workflow/tasks',
+        pending: bucketItems.filter((item) => item.taskStatus === 'PENDING').length,
+        taskType: normalizedTaskType,
+        timedOut: bucketItems.filter((item) => item.timedOut).length,
+        title: TASK_TYPE_TITLE_MAP[normalizedTaskType] ?? normalizedTaskType,
+      };
+    })
     .toSorted((left, right) => left.path.localeCompare(right.path));
 }

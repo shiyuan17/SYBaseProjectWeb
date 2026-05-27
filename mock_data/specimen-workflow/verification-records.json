@@ -1,0 +1,41 @@
+[
+  {
+    "id": "VR-004-REBIND",
+    "applicationId": "APP-004",
+    "specimenId": "SPEC-004-1",
+    "barcode": "BC-004-01-R",
+    "verificationType": "BARCODE_REBIND",
+    "operatorName": "护士甲",
+    "operatorUserId": "USR-004",
+    "verifiedAt": "2026-05-26T11:10:00",
+    "result": "SUCCESS",
+    "remarks": "旧条码 BC-004-01 更正为 BC-004-01-R",
+    "terminalCode": "TERM-REG-03"
+  },
+  {
+    "id": "VR-006-CONFIRM",
+    "applicationId": "APP-006",
+    "specimenId": "SPEC-006-1",
+    "barcode": "BC-006-01",
+    "verificationType": "SPECIMEN_CONFIRM",
+    "operatorName": "固定员乙",
+    "operatorUserId": "USR-006",
+    "verifiedAt": "2026-05-26T11:25:00",
+    "result": "SUCCESS",
+    "remarks": "固定完成后已确认标本信息",
+    "terminalCode": "TERM-FIX-02"
+  },
+  {
+    "id": "VR-007-QC",
+    "applicationId": "APP-007",
+    "specimenId": "SPEC-007-1",
+    "barcode": "BC-007-01",
+    "verificationType": "QUALITY_CHECK",
+    "operatorName": "接收员乙",
+    "operatorUserId": "USR-PA-02",
+    "verifiedAt": "2026-05-26T13:05:00",
+    "result": "FAILED",
+    "remarks": "固定不足且容器数量不符",
+    "terminalCode": "TERM-REC-02"
+  }
+]

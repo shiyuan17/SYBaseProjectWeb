@@ -1,0 +1,186 @@
+[
+  {
+    "packageId": "SPKG-001",
+    "packageName": "乳腺肿物常规取材套餐",
+    "applyDept": "普外科",
+    "description": "适用于乳腺肿物切除后常规送检，包含病灶、周边皮肤及切缘组织。",
+    "items": [
+      {
+        "specimenName": "右乳外上象限结节",
+        "specimenSite": "乳腺",
+        "quantity": 1,
+        "status": "新增"
+      },
+      {
+        "specimenName": "右乳周围皮肤组织",
+        "specimenSite": "皮肤",
+        "quantity": 1,
+        "status": "新增"
+      },
+      {
+        "specimenName": "乳腺病灶切缘组织",
+        "specimenSite": "乳腺",
+        "quantity": 1,
+        "status": "新增"
+      }
+    ]
+  },
+  {
+    "packageId": "SPKG-002",
+    "packageName": "宫颈多点活检套餐",
+    "applyDept": "妇科",
+    "description": "适用于宫颈异常筛查后的多点取材登记，快速补齐常见点位。",
+    "items": [
+      {
+        "specimenName": "宫颈 3 点位组织",
+        "specimenSite": "宫颈",
+        "quantity": 1,
+        "status": "新增"
+      },
+      {
+        "specimenName": "宫颈 6 点位组织",
+        "specimenSite": "宫颈",
+        "quantity": 1,
+        "status": "新增"
+      },
+      {
+        "specimenName": "宫颈 9 点位组织",
+        "specimenSite": "宫颈",
+        "quantity": 1,
+        "status": "新增"
+      }
+    ]
+  },
+  {
+    "packageId": "SPKG-003",
+    "packageName": "骨病灶送检套餐",
+    "applyDept": "骨科",
+    "description": "适用于骨病灶清创或刮除术后送检，包含病灶及周边软组织。",
+    "items": [
+      {
+        "specimenName": "右侧胫骨感染病灶",
+        "specimenSite": "骨骼点",
+        "quantity": 1,
+        "status": "标本确认"
+      },
+      {
+        "specimenName": "病灶周边软组织",
+        "specimenSite": "软组织",
+        "quantity": 1,
+        "status": "新增"
+      }
+    ]
+  },
+  {
+    "packageId": "SPKG-004",
+    "packageName": "乳腺切缘补送套餐",
+    "applyDept": "普外科",
+    "description": "适用于乳腺病灶补送切缘或周边组织，便于快速补登记。",
+    "items": [
+      {
+        "specimenName": "乳腺上切缘组织",
+        "specimenSite": "乳腺",
+        "quantity": 1,
+        "status": "新增"
+      },
+      {
+        "specimenName": "乳腺下切缘组织",
+        "specimenSite": "乳腺",
+        "quantity": 1,
+        "status": "新增"
+      },
+      {
+        "specimenName": "乳腺外侧切缘组织",
+        "specimenSite": "乳腺",
+        "quantity": 1,
+        "status": "新增"
+      }
+    ]
+  },
+  {
+    "packageId": "SPKG-005",
+    "packageName": "关节滑膜活检套餐",
+    "applyDept": "骨科",
+    "description": "适用于关节镜或开放取材后的滑膜组织送检登记。",
+    "items": [
+      {
+        "specimenName": "膝关节滑膜组织",
+        "specimenSite": "关节",
+        "quantity": 1,
+        "status": "新增"
+      },
+      {
+        "specimenName": "髋关节滑膜组织",
+        "specimenSite": "关节",
+        "quantity": 1,
+        "status": "新增"
+      }
+    ]
+  },
+  {
+    "packageId": "SPKG-006",
+    "packageName": "宫颈锥切补取套餐",
+    "applyDept": "妇科",
+    "description": "适用于宫颈锥切后追加宫腔或宫颈补充取材。",
+    "items": [
+      {
+        "specimenName": "宫颈锥切标本",
+        "specimenSite": "宫颈",
+        "quantity": 1,
+        "status": "新增"
+      },
+      {
+        "specimenName": "宫腔内容物",
+        "specimenSite": "子宫",
+        "quantity": 1,
+        "status": "新增"
+      }
+    ]
+  },
+  {
+    "packageId": "SPKG-007",
+    "packageName": "急诊清创送检套餐",
+    "applyDept": "急诊科",
+    "description": "适用于急诊清创、感染灶处理后的快速登记，包含病灶与边缘组织。",
+    "items": [
+      {
+        "specimenName": "右侧胫骨感染病灶",
+        "specimenSite": "骨骼点",
+        "quantity": 1,
+        "status": "标本确认"
+      },
+      {
+        "specimenName": "病灶周边软组织",
+        "specimenSite": "软组织",
+        "quantity": 1,
+        "status": "新增"
+      },
+      {
+        "specimenName": "感染边缘组织",
+        "specimenSite": "软组织",
+        "quantity": 1,
+        "status": "新增"
+      }
+    ]
+  },
+  {
+    "packageId": "SPKG-008",
+    "packageName": "急诊创面皮肤活检套餐",
+    "applyDept": "急诊科",
+    "description": "适用于急诊创面坏死或可疑感染时的皮肤活检送检登记。",
+    "items": [
+      {
+        "specimenName": "创面坏死皮肤组织",
+        "specimenSite": "皮肤",
+        "quantity": 1,
+        "status": "新增"
+      },
+      {
+        "specimenName": "创缘活检组织",
+        "specimenSite": "皮肤",
+        "quantity": 1,
+        "status": "新增"
+      }
+    ]
+  }
+]

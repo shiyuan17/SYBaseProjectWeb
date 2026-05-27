@@ -87,6 +87,153 @@ const dashboardMenus = [
   },
 ];
 
+const workflowBackendFirstMenus = [
+  {
+    meta: {
+      icon: 'carbon:flow',
+      order: 120,
+      title: '临床送检',
+    },
+    name: 'WorkflowRoot',
+    path: '/workflow',
+    children: [
+      {
+        name: 'SubmissionRegistration',
+        path: '/workflow/submission-registration',
+        component: '/modules/specimen-workflow/views/SubmissionRegistrationView',
+        meta: {
+          icon: 'carbon:list-boxes',
+          title: '申请与登记',
+        },
+      },
+      {
+        name: 'ApplicationRegistrationWorkbench',
+        path: '/workflow/application-registration-workbench',
+        component:
+          '/modules/specimen-workflow/views/ApplicationRegistrationWorkbenchView',
+        meta: {
+          icon: 'carbon:workspace',
+          title: '申请登记工作台',
+        },
+      },
+      {
+        name: 'FixationTransport',
+        path: '/workflow/fixation-transport',
+        component: '/modules/specimen-workflow/views/FixationTransportView',
+        meta: {
+          icon: 'carbon:checkmark-outline',
+          title: '固定与转运',
+        },
+      },
+      {
+        name: 'PathologyReceipt',
+        path: '/workflow/pathology-receipt',
+        component: '/modules/specimen-workflow/views/SpecimenReceiptView',
+        meta: {
+          icon: 'carbon:archive',
+          title: '病理接收',
+        },
+      },
+      {
+        name: 'TrackingException',
+        path: '/workflow/tracking-exception',
+        component: '/modules/specimen-workflow/views/TrackingQueryView',
+        meta: {
+          icon: 'carbon:search',
+          title: '追踪与异常',
+        },
+      },
+    ],
+  },
+];
+
+const workflowMenuList = [
+  {
+    id: 12_000,
+    componentName: 'WorkflowRoot',
+    enabled: true,
+    icon: 'carbon:flow',
+    menuCode: 'M2_WORKFLOW',
+    menuName: '临床送检',
+    menuType: 'DIRECTORY',
+    parentId: null,
+    path: '/workflow',
+    permissionPrefix: 'm2',
+    sortOrder: 120,
+    visible: true,
+  },
+  {
+    id: 12_001,
+    componentName: 'SubmissionRegistration',
+    enabled: true,
+    icon: 'carbon:list-boxes',
+    menuCode: 'M2_APPLICATION_LIST',
+    menuName: '申请与登记',
+    menuType: 'MENU',
+    parentId: 12_000,
+    path: '/workflow/submission-registration',
+    permissionPrefix: 'm2:application-list',
+    sortOrder: 121,
+    visible: true,
+  },
+  {
+    id: 12_002,
+    componentName: 'ApplicationRegistrationWorkbench',
+    enabled: true,
+    icon: 'carbon:workspace',
+    menuCode: 'M2_CLINICAL_WORKBENCH',
+    menuName: '申请登记工作台',
+    menuType: 'MENU',
+    parentId: 12_000,
+    path: '/workflow/application-registration-workbench',
+    permissionPrefix: 'm2:clinical-workbench',
+    sortOrder: 122,
+    visible: true,
+  },
+  {
+    id: 12_003,
+    componentName: 'FixationTransport',
+    enabled: true,
+    icon: 'carbon:checkmark-outline',
+    menuCode: 'M2_FIXATION',
+    menuName: '固定与转运',
+    menuType: 'MENU',
+    parentId: 12_000,
+    path: '/workflow/fixation-transport',
+    permissionPrefix: 'm2:fixation',
+    sortOrder: 123,
+    visible: true,
+  },
+  {
+    id: 12_004,
+    componentName: 'PathologyReceipt',
+    enabled: true,
+    icon: 'carbon:archive',
+    menuCode: 'M2_RECEIPT',
+    menuName: '病理接收',
+    menuType: 'MENU',
+    parentId: 12_000,
+    path: '/workflow/pathology-receipt',
+    permissionPrefix: 'm2:receipt',
+    sortOrder: 124,
+    visible: true,
+  },
+  {
+    id: 12_005,
+    componentName: 'TrackingException',
+    enabled: true,
+    icon: 'carbon:search',
+    menuCode: 'M2_TRACKING',
+    menuName: '追踪与异常',
+    menuType: 'MENU',
+    parentId: 12_000,
+    path: '/workflow/tracking-exception',
+    permissionPrefix: 'm2:tracking',
+    sortOrder: 125,
+    visible: true,
+  },
+];
+
 const createDemosMenus = (role: 'admin' | 'super' | 'user') => {
   const roleWithMenus = {
     admin: {
@@ -178,20 +325,21 @@ const createDemosMenus = (role: 'admin' | 'super' | 'user') => {
 
 export const MOCK_MENUS = [
   {
-    menus: [...dashboardMenus, ...createDemosMenus('super')],
+    menus: [...dashboardMenus, ...workflowBackendFirstMenus, ...createDemosMenus('super')],
     username: 'vben',
   },
   {
-    menus: [...dashboardMenus, ...createDemosMenus('admin')],
+    menus: [...dashboardMenus, ...workflowBackendFirstMenus, ...createDemosMenus('admin')],
     username: 'admin',
   },
   {
-    menus: [...dashboardMenus, ...createDemosMenus('user')],
+    menus: [...dashboardMenus, ...workflowBackendFirstMenus, ...createDemosMenus('user')],
     username: 'jack',
   },
 ];
 
 export const MOCK_MENU_LIST = [
+  ...workflowMenuList,
   {
     id: 1,
     name: 'Workspace',

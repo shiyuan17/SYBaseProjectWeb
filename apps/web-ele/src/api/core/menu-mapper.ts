@@ -193,6 +193,16 @@ const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] = [
         path: '/workflow/submission-registration',
       },
       {
+        component:
+          '/modules/specimen-workflow/views/ApplicationRegistrationWorkbenchView',
+        meta: {
+          icon: 'carbon:workspace',
+          title: '申请登记工作台',
+        },
+        name: 'ApplicationRegistrationWorkbench',
+        path: '/workflow/application-registration-workbench',
+      },
+      {
         component: '/modules/specimen-workflow/views/FixationTransportView',
         meta: {
           icon: 'carbon:checkmark-outline',
@@ -326,6 +336,15 @@ const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] = [
         path: '/technical-workflow/tasks',
       },
       {
+        component: '/modules/technical-workflow/views/FrozenWorkstationView',
+        meta: {
+          icon: 'carbon:snowflake',
+          title: '冰冻工作台',
+        },
+        name: 'FrozenWorkstation',
+        path: '/technical-workflow/frozen',
+      },
+      {
         component: '/modules/technical-workflow/views/GrossingWorkstationView',
         meta: {
           icon: 'carbon:scan',
@@ -427,6 +446,15 @@ const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] = [
         },
         name: 'PathologyReport',
         path: '/doctor-workflow/report',
+      },
+      {
+        component: '/modules/doctor-workflow/views/FrozenReportView',
+        meta: {
+          icon: 'carbon:snowflake',
+          title: '冰冻快速报告',
+        },
+        name: 'FrozenReport',
+        path: '/doctor-workflow/frozen-report',
       },
       {
         component: '/modules/doctor-workflow/views/ReportTrackingView',
@@ -728,6 +756,15 @@ const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[] = [
     routeName: 'SubmissionRegistration',
   },
   {
+    canonicalTitle: '申请登记工作台',
+    component: '/modules/specimen-workflow/views/ApplicationRegistrationWorkbenchView',
+    componentAliases: ['ApplicationRegistrationWorkbench'],
+    menuCodes: ['M2_CLINICAL_WORKBENCH'],
+    path: '/workflow/application-registration-workbench',
+    pathAliases: ['/workflow/application-registration-workbench'],
+    routeName: 'ApplicationRegistrationWorkbench',
+  },
+  {
     canonicalTitle: '固定与转运',
     component: '/modules/specimen-workflow/views/FixationTransportView',
     componentAliases: ['FixationTransport', 'FixationVerify', 'TransportHandover'],
@@ -784,6 +821,14 @@ const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[] = [
     path: '/technical-workflow/tasks',
     pathAliases: ['/technical-workflow/tasks', '/api/v1/technical-tasks/pending'],
     routeName: 'TechnicalTasks',
+  },
+  {
+    component: '/modules/technical-workflow/views/FrozenWorkstationView',
+    componentAliases: ['FrozenWorkstation'],
+    menuCodes: ['M3_FROZEN'],
+    path: '/technical-workflow/frozen',
+    pathAliases: ['/technical-workflow/frozen'],
+    routeName: 'FrozenWorkstation',
   },
   {
     component: '/modules/technical-workflow/views/GrossingWorkstationView',
@@ -881,6 +926,14 @@ const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[] = [
     path: '/doctor-workflow/report',
     pathAliases: ['/doctor-workflow/report', '/api/v1/pathology-reports'],
     routeName: 'PathologyReport',
+  },
+  {
+    component: '/modules/doctor-workflow/views/FrozenReportView',
+    componentAliases: ['FrozenReport'],
+    menuCodes: ['M4_FROZEN_REPORT'],
+    path: '/doctor-workflow/frozen-report',
+    pathAliases: ['/doctor-workflow/frozen-report'],
+    routeName: 'FrozenReport',
   },
   {
     component: '/modules/doctor-workflow/views/ReportTrackingView',

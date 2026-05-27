@@ -32,10 +32,12 @@ import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import WorkstationTaskFocusPanel from '../components/WorkstationTaskFocusPanel.vue';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
+import { useTechnicalWorkflowNavigation } from '../utils/navigation';
 import { buildWorkstationCaseContext, buildWorkstationQueueItems } from '../utils/workstation';
 
 const route = useRoute();
 const router = useRouter();
+const navigation = useTechnicalWorkflowNavigation(router);
 
 const pageError = ref('');
 const loading = ref(false);
@@ -223,7 +225,7 @@ void loadPendingData();
                 {{ processActionLabel }}
               </ElButton>
               <ElButton
-                @click="router.push({ path: '/technical-workflow/tracking', query: { caseId: selectedTask?.caseId ?? '' } })"
+                @click="navigation.goToTracking({ caseId: selectedTask?.caseId ?? undefined })"
               >
                 查看生产轨迹
               </ElButton>

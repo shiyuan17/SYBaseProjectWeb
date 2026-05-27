@@ -29,13 +29,14 @@ import SystemUserSelect from '#/modules/system-management/components/SystemUserS
 
 import {
   assignTechnicalTask,
+  claimTechnicalTask,
   listPendingTechnicalTasks,
   releaseTechnicalTask,
+  updateTechnicalTaskPriority,
 } from '../api/technical-workflow-service';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import {
   DEFAULT_PAGE_SIZE,
-  TASK_TYPE_ROUTE_MAP,
   TASK_TYPE_TITLE_MAP,
   TECHNICAL_TASK_PRIORITY_OPTIONS,
   TECHNICAL_TASK_STATUS_OPTIONS,
@@ -49,17 +50,23 @@ import {
   formatTaskStatus,
   formatTaskType,
 } from '../utils/format';
+import { useTechnicalWorkflowNavigation } from '../utils/navigation';
 
 const router = useRouter();
+const navigation = useTechnicalWorkflowNavigation(router);
 const userStore = useUserStore();
 
 const pageError = ref('');
 const loading = ref(false);
 const submittingAssignment = ref(false);
+const bulkLoading = ref(false);
 const pendingItems = ref<PendingTechnicalTaskItem[]>([]);
 const total = ref(0);
 const assignmentDialogVisible = ref(false);
 const selectedTask = ref<null | PendingTechnicalTaskItem>(null);
+const selectedTaskIds = ref<string[]>([]);
+const viewMode = ref<'case' | 'task'>('task');
+const bulkPriority = ref('NORMAL');
 
 const stationOptions = [
   { label: '取材台', value: 'GROSSING' },
@@ -123,30 +130,43 @@ const visibleItems = computed(() => {
   return pendingItems.value;
 });
 
+const groupedItems = computed(() => {
+  const grouped = new Map<string, PendingTechnicalTaskItem[]>();
+  visibleItems.value.forEach((item) => {
+    const key = item.caseId || item.pathologyNo || item.id;
+    grouped.set(key, [...(grouped.get(key) ?? []), item]);
+  });
+  return [...grouped.entries()].map(([key, items]) => ({
+    caseId: items[0]?.caseId ?? key,
+    items,
+    pathologyNo: items[0]?.pathologyNo ?? '',
+    taskCount: items.length,
+    timedOutCount: items.filter((item) => item.timedOut).length,
+  }));
+});
+
+const selectedRows = computed(() =>
+  visibleItems.value.filter((item) => selectedTaskIds.value.includes(item.id)),
+);
+
 const taskStats = computed(() => {
-  const activeItems = pendingItems.value.filter(
-    (item) => item.taskStatus !== 'COMPLETED',
-  );
+  const activeItems = pendingItems.value.filter((item) => item.taskStatus !== 'COMPLETED');
   return [
     {
       label: '待生产标本',
       value: activeItems.length,
-      tone: 'primary',
     },
     {
-      label: '急诊/快速',
+      label: '急诊/加急',
       value: pendingItems.value.filter((item) => item.priority === 'STAT').length,
-      tone: 'danger',
     },
     {
       label: '今日已完成',
       value: pendingItems.value.filter((item) => item.taskStatus === 'COMPLETED').length,
-      tone: 'success',
     },
     {
       label: '超时风险',
       value: pendingItems.value.filter((item) => item.timedOut).length,
-      tone: 'warning',
     },
   ];
 });
@@ -172,11 +192,28 @@ function getPriorityTagType(priority?: null | string) {
 }
 
 function formatCurrentNode(row: PendingTechnicalTaskItem) {
-  return TASK_TYPE_TITLE_MAP[row.currentNode ?? row.taskType ?? ''] ?? formatTaskType(row.currentNode ?? row.taskType);
+  return (
+    TASK_TYPE_TITLE_MAP[row.currentNode ?? row.taskType ?? '']
+    ?? formatTaskType(row.currentNode ?? row.taskType)
+  );
 }
 
 function formatResponsible(row: PendingTechnicalTaskItem) {
   return row.assignedToName?.trim() || '未分派';
+}
+
+function syncStationName(stationCode: string) {
+  assignmentForm.stationName =
+    stationOptions.find((item) => item.value === stationCode)?.label ?? '';
+}
+
+function handleAssignedUserChange(user: null | { id: string; name: string }) {
+  assignmentForm.assignedToUserId = user?.id ?? '';
+  assignmentForm.assignedToName = user?.name ?? '';
+}
+
+function handleSelectionChange(rows: PendingTechnicalTaskItem[]) {
+  selectedTaskIds.value = rows.map((item) => item.id);
 }
 
 async function loadPendingData() {
@@ -211,6 +248,7 @@ function handleReset() {
   filters.taskStatus = '';
   filters.taskType = '';
   filters.timedOutOnly = false;
+  selectedTaskIds.value = [];
   void loadPendingData();
 }
 
@@ -225,21 +263,11 @@ function openAssignDialog(row: PendingTechnicalTaskItem) {
   assignmentForm.productionRemarks = row.productionRemarks ?? '';
   assignmentForm.stationCode = row.stationCode ?? row.currentNode ?? row.taskType ?? '';
   assignmentForm.stationName =
-    row.stationName ??
-    stationOptions.find((item) => item.value === assignmentForm.stationCode)?.label ??
-    '';
+    row.stationName
+    ?? stationOptions.find((item) => item.value === assignmentForm.stationCode)?.label
+    ?? '';
   assignmentForm.terminalCode = '';
   assignmentDialogVisible.value = true;
-}
-
-function syncStationName(stationCode: string) {
-  assignmentForm.stationName =
-    stationOptions.find((item) => item.value === stationCode)?.label ?? '';
-}
-
-function handleAssignedUserChange(user: null | { id: string; name: string }) {
-  assignmentForm.assignedToUserId = user?.id ?? '';
-  assignmentForm.assignedToName = user?.name ?? '';
 }
 
 async function submitAssignment() {
@@ -294,32 +322,111 @@ async function releaseAssignment(row: PendingTechnicalTaskItem) {
   }
 }
 
-function goToWorkstation(row: PendingTechnicalTaskItem) {
-  const targetPath = row.taskType ? TASK_TYPE_ROUTE_MAP[row.taskType] : '';
-  if (!targetPath) {
-    ElMessage.warning('当前任务类型未配置工作站入口');
+async function runBulkClaim() {
+  const operatorName = userStore.userInfo?.realName;
+  const operatorUserId = userStore.userInfo?.userId;
+  if (!selectedRows.value.length) {
+    ElMessage.warning('请先选择任务');
     return;
   }
+  if (!operatorName || !operatorUserId) {
+    ElMessage.warning('请先确认当前操作人');
+    return;
+  }
+  bulkLoading.value = true;
+  try {
+    await Promise.all(
+      selectedRows.value.map((row) =>
+        claimTechnicalTask(row.id, {
+          assignedToName: operatorName,
+          assignedToUserId: operatorUserId,
+          operatorName,
+          operatorUserId,
+          remarks: '任务池批量认领',
+        })),
+    );
+    ElMessage.success(`已认领 ${selectedRows.value.length} 条任务`);
+    selectedTaskIds.value = [];
+    await loadPendingData();
+  } catch (error) {
+    ElMessage.error(getWorkflowPageErrorMessage(error));
+  } finally {
+    bulkLoading.value = false;
+  }
+}
 
-  void router.push({
-    path: targetPath,
-    query: {
-      caseId: row.caseId,
-      objectId: row.objectId ?? undefined,
-      objectType: row.objectType ?? undefined,
-      pathologyNo: row.pathologyNo ?? undefined,
-      taskId: row.id,
-      mode: row.timedOut ? 'exception' : 'queue',
-    },
-  });
+async function runBulkRelease() {
+  const operatorName = userStore.userInfo?.realName;
+  if (!selectedRows.value.length) {
+    ElMessage.warning('请先选择任务');
+    return;
+  }
+  if (!operatorName) {
+    ElMessage.warning('请先确认当前操作人');
+    return;
+  }
+  bulkLoading.value = true;
+  try {
+    await Promise.all(
+      selectedRows.value.map((row) =>
+        releaseTechnicalTask(row.id, {
+          operatorName,
+          operatorUserId: userStore.userInfo?.userId ?? null,
+          remarks: '任务池批量释放责任人',
+        })),
+    );
+    ElMessage.success(`已释放 ${selectedRows.value.length} 条任务`);
+    selectedTaskIds.value = [];
+    await loadPendingData();
+  } catch (error) {
+    ElMessage.error(getWorkflowPageErrorMessage(error));
+  } finally {
+    bulkLoading.value = false;
+  }
+}
+
+async function runBulkPriorityUpdate() {
+  const operatorName = userStore.userInfo?.realName;
+  if (!selectedRows.value.length) {
+    ElMessage.warning('请先选择任务');
+    return;
+  }
+  if (!operatorName) {
+    ElMessage.warning('请先确认当前操作人');
+    return;
+  }
+  bulkLoading.value = true;
+  try {
+    await Promise.all(
+      selectedRows.value.map((row) =>
+        updateTechnicalTaskPriority(row.id, {
+          operatorName,
+          operatorUserId: userStore.userInfo?.userId ?? null,
+          priority: bulkPriority.value,
+          productionRemarks: '任务池批量调整优先级',
+        })),
+    );
+    ElMessage.success(`已调整 ${selectedRows.value.length} 条任务优先级`);
+    selectedTaskIds.value = [];
+    await loadPendingData();
+  } catch (error) {
+    ElMessage.error(getWorkflowPageErrorMessage(error));
+  } finally {
+    bulkLoading.value = false;
+  }
+}
+
+function goToWorkstation(row: PendingTechnicalTaskItem) {
+  void navigation.goToTask(row, row.timedOut ? 'exception' : 'queue');
 }
 
 function goToTracking(row: PendingTechnicalTaskItem) {
-  void router.push({
-    path: '/technical-workflow/tracking',
-    query: {
-      caseId: row.caseId,
-    },
+  void navigation.goToTracking({
+    caseId: row.caseId,
+    objectId: row.objectId ?? undefined,
+    objectType: row.objectType ?? undefined,
+    pathologyNo: row.pathologyNo ?? undefined,
+    taskId: row.id,
   });
 }
 
@@ -391,12 +498,7 @@ void loadPendingData();
             </ElSelect>
           </ElFormItem>
           <ElFormItem label="分派状态">
-            <ElSelect
-              v-model="filters.assignmentStatus"
-              clearable
-              placeholder="全部"
-              style="width: 150px"
-            >
+            <ElSelect v-model="filters.assignmentStatus" clearable placeholder="全部" style="width: 150px">
               <ElOption label="未分派" value="UNASSIGNED" />
               <ElOption label="已分派" value="ASSIGNED" />
             </ElSelect>
@@ -448,8 +550,95 @@ void loadPendingData();
         </ElForm>
       </WorkflowSectionCard>
 
-      <WorkflowSectionCard title="生产任务" description="按病理号、节点、责任技师和期望完成时间推进。">
-        <ElTable v-loading="loading" :data="visibleItems" border>
+      <WorkflowSectionCard title="调度操作" description="支持病例聚合视图、任务平铺视图和批量调度动作。">
+        <div class="flex flex-wrap items-center gap-3">
+          <ElButton :plain="viewMode !== 'task'" type="primary" @click="viewMode = 'task'">
+            调度视图
+          </ElButton>
+          <ElButton :plain="viewMode !== 'case'" type="primary" @click="viewMode = 'case'">
+            连续处理视图
+          </ElButton>
+          <ElButton :loading="bulkLoading" @click="runBulkClaim">批量认领</ElButton>
+          <ElButton :loading="bulkLoading" @click="runBulkRelease">批量释放</ElButton>
+          <ElSelect v-model="bulkPriority" style="width: 140px">
+            <ElOption
+              v-for="option in TECHNICAL_TASK_PRIORITY_OPTIONS"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            />
+          </ElSelect>
+          <ElButton :loading="bulkLoading" @click="runBulkPriorityUpdate">批量调优先级</ElButton>
+          <span class="text-sm text-muted-foreground">已选 {{ selectedTaskIds.length }} 条</span>
+        </div>
+      </WorkflowSectionCard>
+
+      <WorkflowSectionCard
+        v-if="viewMode === 'case'"
+        title="连续处理视图"
+        description="按病例聚合查看同一病例下的连续任务，便于现场连贯处理。"
+      >
+        <div class="grid gap-3">
+          <article
+            v-for="group in groupedItems"
+            :key="group.caseId"
+            class="rounded-lg border border-border bg-card p-4"
+          >
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div class="text-sm font-semibold text-foreground">
+                  {{ formatNullable(group.pathologyNo) }}
+                </div>
+                <div class="mt-1 text-xs text-muted-foreground">
+                  病例 {{ group.caseId }}，共 {{ group.taskCount }} 条任务，超时 {{ group.timedOutCount }} 条
+                </div>
+              </div>
+              <ElButton
+                link
+                type="primary"
+                @click="navigation.goToTracking({ caseId: group.caseId, pathologyNo: group.pathologyNo || undefined })"
+              >
+                查看追踪
+              </ElButton>
+            </div>
+
+            <div class="mt-4 grid gap-2">
+              <button
+                v-for="task in group.items"
+                :key="task.id"
+                class="flex items-center justify-between rounded-md border border-border px-3 py-3 text-left transition-colors hover:border-primary"
+                type="button"
+                @click="goToWorkstation(task)"
+              >
+                <div>
+                  <div class="text-sm font-medium text-foreground">
+                    {{ formatTaskType(task.taskType) }} / {{ formatNullable(task.objectId) }}
+                  </div>
+                  <div class="mt-1 text-xs text-muted-foreground">
+                    {{ formatCurrentNode(task) }} / {{ formatDateTime(task.receivedAt || task.createdAt) }}
+                  </div>
+                </div>
+                <ElTag :type="task.timedOut ? 'danger' : getTaskStatusTagType(task.taskStatus)">
+                  {{ task.timedOut ? '超时' : formatTaskStatus(task.taskStatus) }}
+                </ElTag>
+              </button>
+            </div>
+          </article>
+        </div>
+      </WorkflowSectionCard>
+
+      <WorkflowSectionCard
+        v-else
+        title="生产任务"
+        description="按病理号、节点、责任技师和期望完成时间推进。"
+      >
+        <ElTable
+          v-loading="loading"
+          :data="visibleItems"
+          border
+          @selection-change="handleSelectionChange"
+        >
+          <ElTableColumn type="selection" width="48" />
           <ElTableColumn label="病理号" min-width="140">
             <template #default="{ row }">
               {{ formatNullable(row.pathologyNo) }}
@@ -565,7 +754,7 @@ void loadPendingData();
             />
           </ElSelect>
         </ElFormItem>
-        <ElFormItem label="分派工作台">
+        <ElFormItem label="分派工作站">
           <ElSelect
             v-model="assignmentForm.stationCode"
             class="w-full"

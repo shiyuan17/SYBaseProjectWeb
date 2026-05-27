@@ -92,6 +92,15 @@ const mergedSpecimenBarcodes = computed(() => {
   return [...new Set([...selected, ...manual])];
 });
 
+const eligibleSpecimens = computed(() =>
+  (applicationDetail.value?.specimens ?? []).filter((item) =>
+    item.verificationStatus === 'VERIFIED'
+    && item.fixationStatus === 'COMPLETED'
+    && Boolean(item.specimenConfirmedAt)
+    && item.checkInStatus === 'CHECKED_IN',
+  ),
+);
+
 function clearApplicationContext() {
   applicationDetail.value = null;
   createForm.selectedSpecimenBarcodes = [];
@@ -137,7 +146,12 @@ async function loadApplicationContext(showEmptyWarning = false) {
     }
     applicationDetail.value = detail;
     createForm.selectedSpecimenBarcodes = detail.specimens
-      .filter((item) => item.fixationStatus === 'COMPLETED')
+      .filter((item) =>
+        item.verificationStatus === 'VERIFIED'
+        && item.fixationStatus === 'COMPLETED'
+        && Boolean(item.specimenConfirmedAt)
+        && item.checkInStatus === 'CHECKED_IN',
+      )
       .map((item) => item.barcode)
       .filter(Boolean);
   } catch (error) {
@@ -276,6 +290,10 @@ watch(
         show-icon
       />
 
+      <div class="text-sm text-muted-foreground">
+        仅允许已完成核对、已固定完成、已确认且已入库的标本创建转运单。
+      </div>
+
       <ElForm label-width="132px">
         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <ElFormItem label="申请单编号" required>
@@ -324,11 +342,11 @@ watch(
             collapse-tags-tooltip
             filterable
             multiple
-            placeholder="请选择当前申请单下已固定标本"
+            placeholder="请选择当前申请单下已核对、已固定、已确认且已入库的标本"
             style="width: 100%"
           >
             <ElOption
-              v-for="specimen in applicationDetail?.specimens ?? []"
+              v-for="specimen in eligibleSpecimens"
               :key="specimen.id"
               :label="formatSpecimenOptionLabel(specimen)"
               :value="specimen.barcode"
@@ -349,6 +367,11 @@ watch(
               </div>
             </ElOption>
           </ElSelect>
+        </ElFormItem>
+        <ElFormItem label="建单前置条件">
+          <div class="text-sm text-[var(--el-text-color-secondary)]">
+            仅允许已完成核对、标本固定、标本确认和标本入库的标本创建转运单。
+          </div>
         </ElFormItem>
         <ElFormItem label="批量扫码 / 粘贴">
           <ElInput

@@ -1,152 +1,246 @@
 [
-    {
-      "applicationInfo": {
-        "applicationNo": "1122",
-        "applicationDate": "2020-12-07 17:49:00",
-        "checkItem": "手术标本检查与诊断(显微摄影)",
-        "patientName": "刘雨晴",
-        "idNo": "34734663",
-        "gender": "女",
-        "age": "30岁1月15天",
-        "applyDept": "急诊科",
-        "applyDoctor": "张宏",
-        "specimenType": "常规",
-        "clinicalHistory": "临床病历测试",
-        "clinicalDiagnosis": "1:糖尿病伴肾并发症",
-        "contagiousSpecimen": {
-          "isolation": false,
-          "hiv": false,
-          "tuberculosis": false,
-          "hepatitis": false,
-          "syphilis": false
-        }
-      },
-      "surgeryInfo": {
-        "surgeryName": "",
-        "clinicalFindings": "",
-        "fixationPerson": "周永坚",
-        "fixationTime": "2024-09-02 21:19:26",
-        "fixativeType": "福尔马林"
-      },
-      "gynecologyInfo": {
-        "menopause": false,
-        "lastMenstrualPeriod": null,
-        "hpvResult": "人乳头瘤病毒(HPV)检测结果",
-        "previousCytology": "以往宫颈脱落细胞检查结果",
-        "previousTreatment": "以往宫颈治疗史",
-        "additionalNotes": "",
-        "specialConditions": {
-          "menopause": false,
-          "hormoneReplacement": false,
-          "birthControl": false,
-          "iud": false,
-          "pregnancy": false,
-          "lactation": false,
-          "abnormalBleeding": false,
-          "radiotherapy": false,
-          "hysterectomy": false,
-          "other": ""
-        }
+  {
+    "applicationInfo": {
+      "applicationNo": "1122",
+      "applicationDate": "2020-12-07 17:49:00",
+      "inpatientNo": "ZY0001122",
+      "checkItem": "手术标本检查与诊断（显微摄影）",
+      "patientName": "刘雨晴",
+      "idNo": "34734663",
+      "gender": "女",
+      "age": "30岁1月15天",
+      "bedNo": "12床",
+      "wardName": "惠侨楼 12A",
+      "phone": "13800001122",
+      "applyDept": "急诊科",
+      "applyDoctor": "张宏",
+      "specimenType": "常规",
+      "deliveryRequirement": "2小时内送达病理科",
+      "clinicalHistory": "临床病历测试，反复右膝疼痛伴活动受限。",
+      "imagingResult": "MRI提示右膝关节骨髓水肿，滑膜增厚。",
+      "clinicalDiagnosis": "1:糖尿病肾病并发症",
+      "endoscopyDiagnosis": "请结合术中所见补充内镜诊断",
+      "remark": "患者已签署知情同意书。",
+      "patientVerified": true,
+      "frozenReminder": false,
+      "registrationStatus": "登记",
+      "contagiousSpecimen": {
+        "isolation": false,
+        "hiv": false,
+        "tuberculosis": false,
+        "hepatitis": false,
+        "syphilis": false
       }
     },
-    {
-      "applicationInfo": {
-        "applicationNo": "1123",
-        "applicationDate": "2021-01-15 08:30:00",
-        "checkItem": "妇科病理检查",
-        "patientName": "李晓芳",
-        "idNo": "58294756",
-        "gender": "女",
-        "age": "45岁6月20天",
-        "applyDept": "妇科",
-        "applyDoctor": "王丽",
-        "specimenType": "常规",
-        "clinicalHistory": "绝经后阴道出血",
-        "clinicalDiagnosis": "宫颈上皮内瘤变",
-        "contagiousSpecimen": {
-          "isolation": true,
-          "hiv": false,
-          "tuberculosis": false,
-          "hepatitis": true,
-          "syphilis": false
-        }
+    "surgeryInfo": {
+      "buildingId": "B001",
+      "roomId": "OR-102",
+      "surgeryName": "右侧胫骨病灶清创术",
+      "clinicalFindings": "术中见胫骨近端骨质破坏，周围软组织充血水肿。",
+      "fixationPerson": "周永坚",
+      "fixationTime": "2026-05-27 11:07:02",
+      "fixativeType": "福尔马林"
+    },
+    "gynecologyInfo": {
+      "menopause": false,
+      "lastMenstrualPeriod": null,
+      "hpvResult": "人乳头瘤病毒（HPV）检测结果阴性",
+      "previousCytology": "既往宫颈脱落细胞检查结果未见异常",
+      "previousTreatment": "无",
+      "additionalNotes": "",
+      "specialConditions": {
+        "menopause": false,
+        "hormoneReplacement": false,
+        "birthControl": false,
+        "iud": false,
+        "pregnancy": false,
+        "lactation": false,
+        "abnormalBleeding": false,
+        "radiotherapy": false,
+        "hysterectomy": false,
+        "other": ""
+      }
+    },
+    "specimenItems": [
+      {
+        "specimenNo": "22498",
+        "specimenName": "右侧胫骨感染病灶",
+        "specimenSite": "骨髓炎",
+        "quantity": 1,
+        "status": "标本确认"
       },
-      "surgeryInfo": {
-        "surgeryName": "宫颈锥切术",
-        "clinicalFindings": "宫颈肥大，醋酸白试验阳性",
-        "fixationPerson": "陈医生",
-        "fixationTime": "2024-10-05 14:22:10",
-        "fixativeType": "福尔马林"
+      {
+        "specimenNo": "22499",
+        "specimenName": "左股骨骨髓炎病灶",
+        "specimenSite": "骨髓炎",
+        "quantity": 1,
+        "status": "标本确认"
       },
-      "gynecologyInfo": {
+      {
+        "specimenNo": "22500",
+        "specimenName": "膀胱后壁肿物",
+        "specimenSite": "膀胱",
+        "quantity": 1,
+        "status": "离体"
+      }
+    ]
+  },
+  {
+    "applicationInfo": {
+      "applicationNo": "1123",
+      "applicationDate": "2021-01-15 08:30:00",
+      "inpatientNo": "ZY0001123",
+      "checkItem": "妇科病理检查",
+      "patientName": "李晓芳",
+      "idNo": "58294756",
+      "gender": "女",
+      "age": "45岁0月0天",
+      "bedNo": "28床",
+      "wardName": "妇科病区 3A",
+      "phone": "13800001123",
+      "applyDept": "妇科",
+      "applyDoctor": "王丽",
+      "specimenType": "常规",
+      "deliveryRequirement": "标本离体后立即送检",
+      "clinicalHistory": "绝经后阴道出血 2 周。",
+      "imagingResult": "阴道镜示宫颈局部醋酸白试验阳性。",
+      "clinicalDiagnosis": "宫颈上皮内瘤变",
+      "endoscopyDiagnosis": "阴道镜提示宫颈 3 点位异常区",
+      "remark": "建议优先处理妇科专项信息。",
+      "patientVerified": true,
+      "frozenReminder": true,
+      "registrationStatus": "登记",
+      "contagiousSpecimen": {
+        "isolation": true,
+        "hiv": false,
+        "tuberculosis": false,
+        "hepatitis": true,
+        "syphilis": false
+      }
+    },
+    "surgeryInfo": {
+      "buildingId": "B002",
+      "roomId": "OR-201",
+      "surgeryName": "宫颈锥切术",
+      "clinicalFindings": "宫颈肥大，3 点位可见醋酸白上皮。",
+      "fixationPerson": "陈医生",
+      "fixationTime": "2026-05-27 10:06:07",
+      "fixativeType": "福尔马林"
+    },
+    "gynecologyInfo": {
+      "menopause": true,
+      "lastMenstrualPeriod": "2020-12-01",
+      "hpvResult": "高危型 HPV16 阳性",
+      "previousCytology": "ASC-US",
+      "previousTreatment": "无",
+      "additionalNotes": "患者拒绝进一步手术。",
+      "specialConditions": {
         "menopause": true,
-        "lastMenstrualPeriod": "2020-12-01",
-        "hpvResult": "高危型HPV16阳性",
-        "previousCytology": "ASC-US",
-        "previousTreatment": "无",
-        "additionalNotes": "患者拒绝进一步手术",
-        "specialConditions": {
-          "menopause": true,
-          "hormoneReplacement": false,
-          "birthControl": false,
-          "iud": false,
-          "pregnancy": false,
-          "lactation": false,
-          "abnormalBleeding": true,
-          "radiotherapy": false,
-          "hysterectomy": false,
-          "other": ""
-        }
+        "hormoneReplacement": false,
+        "birthControl": false,
+        "iud": false,
+        "pregnancy": false,
+        "lactation": false,
+        "abnormalBleeding": true,
+        "radiotherapy": false,
+        "hysterectomy": false,
+        "other": ""
       }
     },
-    {
-      "applicationInfo": {
-        "applicationNo": "1124",
-        "applicationDate": "2021-02-20 10:15:00",
-        "checkItem": "乳腺肿物活检",
-        "patientName": "张敏",
-        "idNo": "63847291",
-        "gender": "女",
-        "age": "35岁3月10天",
-        "applyDept": "普外科",
-        "applyDoctor": "刘强",
-        "specimenType": "常规",
-        "clinicalHistory": "乳腺纤维腺瘤术后复查",
-        "clinicalDiagnosis": "乳腺增生伴结节",
-        "contagiousSpecimen": {
-          "isolation": false,
-          "hiv": false,
-          "tuberculosis": false,
-          "hepatitis": false,
-          "syphilis": false
-        }
+    "specimenItems": [
+      {
+        "specimenNo": "22501",
+        "specimenName": "宫颈 3 点位组织",
+        "specimenSite": "宫颈",
+        "quantity": 1,
+        "status": "新增"
       },
-      "surgeryInfo": {
-        "surgeryName": "乳腺肿物切除术",
-        "clinicalFindings": "右乳外上象限可触及肿块约1.5cm",
-        "fixationPerson": "赵护士",
-        "fixationTime": "2024-11-12 09:45:33",
-        "fixativeType": "福尔马林"
-      },
-      "gynecologyInfo": {
-        "menopause": false,
-        "lastMenstrualPeriod": "2024-11-01",
-        "hpvResult": "阴性",
-        "previousCytology": "正常",
-        "previousTreatment": "乳腺纤维腺瘤切除术后",
-        "additionalNotes": "建议定期复查",
-        "specialConditions": {
-          "menopause": false,
-          "hormoneReplacement": false,
-          "birthControl": true,
-          "iud": false,
-          "pregnancy": false,
-          "lactation": false,
-          "abnormalBleeding": false,
-          "radiotherapy": false,
-          "hysterectomy": false,
-          "other": ""
-        }
+      {
+        "specimenNo": "22502",
+        "specimenName": "宫颈 6 点位组织",
+        "specimenSite": "宫颈",
+        "quantity": 1,
+        "status": "新增"
       }
-    }
-  ]
+    ]
+  },
+  {
+    "applicationInfo": {
+      "applicationNo": "1124",
+      "applicationDate": "2021-02-20 10:15:00",
+      "inpatientNo": "ZY0001124",
+      "checkItem": "乳腺肿物活检",
+      "patientName": "张敏",
+      "idNo": "63847291",
+      "gender": "女",
+      "age": "35岁0月0天",
+      "bedNo": "16床",
+      "wardName": "普外科病区 8B",
+      "phone": "13800001124",
+      "applyDept": "普外科",
+      "applyDoctor": "刘强",
+      "specimenType": "常规",
+      "deliveryRequirement": "双人核对后送检",
+      "clinicalHistory": "乳腺纤维腺瘤术后复查。",
+      "imagingResult": "超声示右乳外上象限低回声结节。",
+      "clinicalDiagnosis": "乳腺增生伴结节",
+      "endoscopyDiagnosis": "无",
+      "remark": "关注右乳外上象限病灶边界。",
+      "patientVerified": false,
+      "frozenReminder": false,
+      "registrationStatus": "登记",
+      "contagiousSpecimen": {
+        "isolation": false,
+        "hiv": false,
+        "tuberculosis": false,
+        "hepatitis": false,
+        "syphilis": false
+      }
+    },
+    "surgeryInfo": {
+      "buildingId": "B001",
+      "roomId": "OR-101",
+      "surgeryName": "乳腺肿物切除术",
+      "clinicalFindings": "右乳外上象限可触及约 1.5cm 结节。",
+      "fixationPerson": "赵护士",
+      "fixationTime": "2026-05-27 09:45:33",
+      "fixativeType": "福尔马林"
+    },
+    "gynecologyInfo": {
+      "menopause": false,
+      "lastMenstrualPeriod": "2026-05-01",
+      "hpvResult": "阴性",
+      "previousCytology": "正常",
+      "previousTreatment": "乳腺纤维腺瘤切除术后",
+      "additionalNotes": "建议定期复查。",
+      "specialConditions": {
+        "menopause": false,
+        "hormoneReplacement": false,
+        "birthControl": true,
+        "iud": false,
+        "pregnancy": false,
+        "lactation": false,
+        "abnormalBleeding": false,
+        "radiotherapy": false,
+        "hysterectomy": false,
+        "other": ""
+      }
+    },
+    "specimenItems": [
+      {
+        "specimenNo": "22503",
+        "specimenName": "右乳外上象限结节",
+        "specimenSite": "乳腺",
+        "quantity": 1,
+        "status": "新增"
+      },
+      {
+        "specimenNo": "22504",
+        "specimenName": "右乳周围皮肤组织",
+        "specimenSite": "皮肤",
+        "quantity": 1,
+        "status": "新增"
+      }
+    ]
+  }
+]

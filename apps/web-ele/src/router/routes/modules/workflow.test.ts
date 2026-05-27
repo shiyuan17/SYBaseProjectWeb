@@ -10,6 +10,9 @@ describe('workflow routes', () => {
     const submissionRoute = workflowRoot?.children?.find(
       (route) => route.name === 'SubmissionRegistration',
     );
+    const workbenchRoute = workflowRoot?.children?.find(
+      (route) => route.name === 'ApplicationRegistrationWorkbench',
+    );
     const fixationTransportRoute = workflowRoot?.children?.find(
       (route) => route.name === 'FixationTransport',
     );
@@ -32,6 +35,7 @@ describe('workflow routes', () => {
     expect(workflowRoot?.path).toBe('/workflow');
     expect(visibleRoutes?.map((route) => route.name)).toEqual([
       'SubmissionRegistration',
+      'ApplicationRegistrationWorkbench',
       'FixationTransport',
       'PathologyReceipt',
       'TrackingException',
@@ -39,6 +43,14 @@ describe('workflow routes', () => {
     expect(submissionRoute?.path).toBe('/workflow/submission-registration');
     expect(submissionRoute?.meta?.title).toBe('申请与登记');
     expect(submissionRoute?.meta?.authority).toEqual([
+      M2_PERMISSION_CODES.APPLICATION_DETAIL_QUERY,
+      M2_PERMISSION_CODES.APPLICATION_CREATE,
+      M2_PERMISSION_CODES.CLINICAL_IMPORT,
+      M2_PERMISSION_CODES.SPECIMEN_REGISTER,
+    ]);
+    expect(workbenchRoute?.path).toBe('/workflow/application-registration-workbench');
+    expect(workbenchRoute?.meta?.title).toBe('申请登记工作台');
+    expect(workbenchRoute?.meta?.authority).toEqual([
       M2_PERMISSION_CODES.APPLICATION_DETAIL_QUERY,
       M2_PERMISSION_CODES.APPLICATION_CREATE,
       M2_PERMISSION_CODES.CLINICAL_IMPORT,

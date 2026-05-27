@@ -1,0 +1,114 @@
+[
+  {
+    "applicationId": "APP-002",
+    "labelPrintBatchNo": "LB-002",
+    "labelPrintMessage": "标签打印成功",
+    "labelPrintSuccess": true,
+    "registrationSnapshot": {
+      "collectionScene": "门诊",
+      "operatorName": "赵医生",
+      "operatorUserId": "DOC-002",
+      "printerCode": "PRN-002",
+      "remarks": "首次登记",
+      "terminalCode": "TERM-REG-01"
+    },
+    "specimenIds": ["SPEC-002-1"],
+    "createdAt": "2026-05-26T09:15:00"
+  },
+  {
+    "applicationId": "APP-003",
+    "labelPrintBatchNo": "LB-003",
+    "labelPrintMessage": "标签打印成功",
+    "labelPrintSuccess": true,
+    "registrationSnapshot": {
+      "collectionScene": "手术室",
+      "operatorName": "陈医生",
+      "operatorUserId": "DOC-003",
+      "printerCode": "PRN-003",
+      "remarks": "冰冻登记",
+      "terminalCode": "TERM-REG-02"
+    },
+    "specimenIds": ["SPEC-003-1"],
+    "createdAt": "2026-05-26T09:40:00"
+  },
+  {
+    "applicationId": "APP-004",
+    "labelPrintBatchNo": "LB-004",
+    "labelPrintMessage": "条码重绑后重新打印成功",
+    "labelPrintSuccess": true,
+    "registrationSnapshot": {
+      "collectionScene": "门诊",
+      "operatorName": "周医生",
+      "operatorUserId": "DOC-004",
+      "printerCode": "PRN-004",
+      "remarks": "条码更正后补打",
+      "terminalCode": "TERM-REG-03"
+    },
+    "specimenIds": ["SPEC-004-1"],
+    "createdAt": "2026-05-26T11:10:00"
+  },
+  {
+    "applicationId": "APP-005",
+    "labelPrintBatchNo": "LB-005",
+    "labelPrintMessage": "标签打印成功",
+    "labelPrintSuccess": true,
+    "registrationSnapshot": {
+      "collectionScene": "病房",
+      "operatorName": "杨医生",
+      "operatorUserId": "DOC-005",
+      "printerCode": "PRN-005",
+      "remarks": "转运前登记",
+      "terminalCode": "TERM-REG-04"
+    },
+    "specimenIds": ["SPEC-005-1"],
+    "createdAt": "2026-05-26T10:22:00"
+  },
+  {
+    "applicationId": "APP-006",
+    "labelPrintBatchNo": "LB-006",
+    "labelPrintMessage": "标签打印成功",
+    "labelPrintSuccess": true,
+    "registrationSnapshot": {
+      "collectionScene": "手术室",
+      "operatorName": "吴医生",
+      "operatorUserId": "DOC-006",
+      "printerCode": "PRN-006",
+      "remarks": "首次登记",
+      "terminalCode": "TERM-REG-05"
+    },
+    "specimenIds": ["SPEC-006-1"],
+    "createdAt": "2026-05-26T10:55:00"
+  },
+  {
+    "applicationId": "APP-007",
+    "labelPrintBatchNo": "LB-007",
+    "labelPrintMessage": "存在 1 条标签打印失败",
+    "labelPrintSuccess": false,
+    "registrationSnapshot": {
+      "collectionScene": "病房",
+      "operatorName": "许医生",
+      "operatorUserId": "DOC-007",
+      "printerCode": "PRN-007",
+      "remarks": "双份标本登记",
+      "terminalCode": "TERM-REG-06"
+    },
+    "specimenIds": ["SPEC-007-1", "SPEC-007-2"],
+    "createdAt": "2026-05-26T11:06:00"
+  },
+  {
+    "applicationId": "APP-008",
+    "labelPrintBatchNo": "LB-008",
+    "labelPrintMessage": "标签打印成功",
+    "labelPrintSuccess": true,
+    "registrationSnapshot": {
+      "collectionScene": "门诊",
+      "operatorName": "孙医生",
+      "operatorUserId": "DOC-008",
+      "printerCode": "PRN-008",
+      "remarks": "拒收样例",
+      "terminalCode": "TERM-REG-07"
+    },
+    "specimenIds": ["SPEC-008-1"],
+    "createdAt": "2026-05-26T11:22:00"
+  }
+]

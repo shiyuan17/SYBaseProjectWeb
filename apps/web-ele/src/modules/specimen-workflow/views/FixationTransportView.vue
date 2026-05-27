@@ -7,12 +7,23 @@ import { useAccessStore } from '@vben/stores';
 
 import { ElTabPane, ElTabs } from 'element-plus';
 
+import SpecimenBarcodeBindingPanel from '../components/SpecimenBarcodeBindingPanel.vue';
+import SpecimenCheckInPanel from '../components/SpecimenCheckInPanel.vue';
+import SpecimenConfirmationPanel from '../components/SpecimenConfirmationPanel.vue';
+import SpecimenFixationTimePanel from '../components/SpecimenFixationTimePanel.vue';
+import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { M2_PERMISSION_CODES } from '../constants';
 
 import FixationVerifyView from './FixationVerifyView.vue';
 import TransportHandoverView from './TransportHandoverView.vue';
 
-type FixationTransportTab = 'fixation' | 'transport';
+type FixationTransportTab =
+  | 'binding'
+  | 'check-in'
+  | 'confirmation'
+  | 'fixation'
+  | 'transport'
+  | 'verification';
 
 const route = useRoute();
 const accessStore = useAccessStore();
@@ -25,20 +36,34 @@ const canHandoverTransport = computed(() =>
   accessCodeSet.value.has(M2_PERMISSION_CODES.TRANSPORT_HANDOVER),
 );
 
-const activeTab = ref<FixationTransportTab>('fixation');
+const activeTab = ref<FixationTransportTab>('verification');
 
 function resolveAvailableTab(preferredTab: FixationTransportTab): FixationTransportTab {
   if (preferredTab === 'transport' && canHandoverTransport.value) {
     return 'transport';
   }
-  if (preferredTab === 'fixation' && canVerifyFixation.value) {
-    return 'fixation';
+  if (
+    ['verification', 'fixation', 'binding', 'confirmation', 'check-in'].includes(
+      preferredTab,
+    )
+    && canVerifyFixation.value
+  ) {
+    return preferredTab;
   }
-  return canHandoverTransport.value ? 'transport' : 'fixation';
+  return canVerifyFixation.value ? 'verification' : 'transport';
 }
 
 function resolveRouteInitialTab(): FixationTransportTab {
-  return route.query.tab === 'transport' ? 'transport' : 'fixation';
+  if (
+    route.query.tab === 'fixation'
+    || route.query.tab === 'binding'
+    || route.query.tab === 'confirmation'
+    || route.query.tab === 'check-in'
+    || route.query.tab === 'transport'
+  ) {
+    return route.query.tab;
+  }
+  return 'verification';
 }
 
 watch(
@@ -52,21 +77,59 @@ watch(
 
 <template>
   <Page>
-    <ElTabs v-model="activeTab">
-      <ElTabPane
-        v-if="canVerifyFixation"
-        label="固定核对"
-        name="fixation"
-      >
-        <FixationVerifyView embedded />
-      </ElTabPane>
-      <ElTabPane
-        v-if="canHandoverTransport"
-        label="转运交接"
-        name="transport"
-      >
-        <TransportHandoverView embedded />
-      </ElTabPane>
-    </ElTabs>
+    <div class="flex flex-col gap-4">
+      <ElTabs v-model="activeTab">
+        <ElTabPane
+          v-if="canVerifyFixation"
+          label="标本核对"
+          name="verification"
+        >
+          <FixationVerifyView embedded />
+        </ElTabPane>
+        <ElTabPane
+          v-if="canVerifyFixation"
+          label="标本固定"
+          name="fixation"
+        >
+          <WorkflowSectionCard title="标本固定">
+            <SpecimenFixationTimePanel />
+          </WorkflowSectionCard>
+        </ElTabPane>
+        <ElTabPane
+          v-if="canVerifyFixation"
+          label="条码绑定"
+          name="binding"
+        >
+          <WorkflowSectionCard title="条码绑定">
+            <SpecimenBarcodeBindingPanel />
+          </WorkflowSectionCard>
+        </ElTabPane>
+        <ElTabPane
+          v-if="canVerifyFixation"
+          label="标本确认"
+          name="confirmation"
+        >
+          <WorkflowSectionCard title="标本确认">
+            <SpecimenConfirmationPanel />
+          </WorkflowSectionCard>
+        </ElTabPane>
+        <ElTabPane
+          v-if="canVerifyFixation"
+          label="标本入库"
+          name="check-in"
+        >
+          <WorkflowSectionCard title="标本入库">
+            <SpecimenCheckInPanel />
+          </WorkflowSectionCard>
+        </ElTabPane>
+        <ElTabPane
+          v-if="canHandoverTransport"
+          label="转运/出库"
+          name="transport"
+        >
+          <TransportHandoverView embedded />
+        </ElTabPane>
+      </ElTabs>
+    </div>
   </Page>
 </template>

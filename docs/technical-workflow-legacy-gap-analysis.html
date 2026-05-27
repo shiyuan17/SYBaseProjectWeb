@@ -1,0 +1,823 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>制片管理现状 vs 旧技术组工作站对比分析</title>
+    <style>
+      :root {
+        --bg: #f4f7fb;
+        --paper: rgba(255, 255, 255, 0.97);
+        --ink: #1d2735;
+        --muted: #5f6d7f;
+        --line: #dbe4ef;
+        --primary: #0f766e;
+        --primary-soft: #dcf4f0;
+        --blue: #2563eb;
+        --blue-soft: #e8f0ff;
+        --amber: #b45309;
+        --amber-soft: #fff1dc;
+        --danger: #b42318;
+        --danger-soft: #ffe8e5;
+        --ok: #15803d;
+        --ok-soft: #e5f7ea;
+        --shadow: 0 18px 48px rgba(20, 34, 55, 0.1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(15, 118, 110, 0.12), transparent 28%),
+          radial-gradient(circle at top right, rgba(37, 99, 235, 0.1), transparent 24%),
+          linear-gradient(180deg, #edf3f9 0%, #f4f7fb 42%, #f8fbfe 100%);
+        font-family:
+          "Microsoft YaHei",
+          "PingFang SC",
+          "Noto Sans SC",
+          Arial,
+          sans-serif;
+        line-height: 1.7;
+      }
+
+      main {
+        width: min(1280px, calc(100% - 40px));
+        margin: 0 auto;
+        padding: 28px 0 56px;
+      }
+
+      .hero,
+      section {
+        border: 1px solid rgba(95, 123, 157, 0.18);
+        border-radius: 22px;
+        background: var(--paper);
+        box-shadow: var(--shadow);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.5fr) minmax(300px, 0.8fr);
+        gap: 22px;
+        padding: 30px;
+      }
+
+      .hero-side {
+        display: grid;
+        gap: 14px;
+      }
+
+      .metric {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 16px 18px;
+        background: #f9fbfd;
+      }
+
+      .metric strong {
+        display: block;
+        font-size: 30px;
+        line-height: 1.1;
+      }
+
+      .metric span {
+        display: block;
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .eyebrow {
+        color: var(--primary);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3,
+      h4,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        margin-top: 12px;
+        font-size: clamp(30px, 4.6vw, 50px);
+        line-height: 1.2;
+      }
+
+      h2 {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 18px;
+        font-size: 26px;
+      }
+
+      h2::before {
+        display: inline-block;
+        width: 10px;
+        height: 28px;
+        border-radius: 999px;
+        background: var(--primary);
+        content: "";
+      }
+
+      h3 {
+        font-size: 18px;
+        line-height: 1.35;
+      }
+
+      h4 {
+        margin-bottom: 8px;
+        font-size: 14px;
+      }
+
+      p {
+        margin-top: 10px;
+        color: var(--muted);
+      }
+
+      section {
+        margin-top: 22px;
+        padding: 28px;
+      }
+
+      .lead {
+        max-width: 930px;
+        font-size: 16px;
+      }
+
+      .tag-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 18px;
+      }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 3px 10px;
+        border-radius: 999px;
+        background: var(--primary-soft);
+        color: var(--primary);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .tag.blue {
+        background: var(--blue-soft);
+        color: var(--blue);
+      }
+
+      .tag.warn {
+        background: var(--amber-soft);
+        color: var(--amber);
+      }
+
+      .tag.danger {
+        background: var(--danger-soft);
+        color: var(--danger);
+      }
+
+      .tag.ok {
+        background: var(--ok-soft);
+        color: var(--ok);
+      }
+
+      .grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      .grid-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .grid-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .grid-4 {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .card,
+      .flow-node,
+      .gap-card,
+      .callout {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: #fbfdff;
+        padding: 18px;
+      }
+
+      .callout {
+        margin-top: 16px;
+      }
+
+      .callout strong {
+        display: block;
+        margin-bottom: 6px;
+      }
+
+      .callout.info {
+        background: #f7fbff;
+      }
+
+      .callout.warn {
+        background: var(--amber-soft);
+      }
+
+      .callout.danger {
+        background: var(--danger-soft);
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        border-radius: 16px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+      }
+
+      th,
+      td {
+        padding: 14px 16px;
+        border: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+        font-size: 14px;
+      }
+
+      th {
+        background: #eef4fa;
+        color: #223048;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      code {
+        padding: 1px 6px;
+        border-radius: 999px;
+        background: #eef3f8;
+        color: #1e3a5f;
+        font-family:
+          "Cascadia Code",
+          Consolas,
+          monospace;
+        font-size: 12px;
+      }
+
+      ul {
+        margin: 10px 0 0;
+        padding-left: 20px;
+      }
+
+      li + li {
+        margin-top: 6px;
+      }
+
+      .flow {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+      }
+
+      .flow-node h3 {
+        margin-top: 10px;
+      }
+
+      .flow-node p {
+        margin-top: 8px;
+      }
+
+      .source-list {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .footer-note {
+        margin-top: 24px;
+        color: var(--muted);
+        font-size: 13px;
+        text-align: center;
+      }
+
+      @media (max-width: 1040px) {
+        .hero,
+        .grid-2,
+        .grid-3,
+        .grid-4,
+        .flow {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 720px) {
+        main {
+          width: calc(100% - 24px);
+          padding-top: 16px;
+        }
+
+        .hero,
+        section {
+          padding: 20px;
+          border-radius: 16px;
+        }
+
+        h1 {
+          font-size: 30px;
+        }
+
+        h2 {
+          font-size: 22px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header class="hero">
+        <div>
+          <div class="eyebrow">Technical Workflow Gap Analysis</div>
+          <h1>制片管理现状 vs 旧技术组工作站对比分析</h1>
+          <p class="lead">
+            本文档以当前仓库 <code>technical-workflow</code> 模块为“制片管理”现状真值，
+            以参考文件 <code>technical-workstation.html</code> 中描述的旧技术组工作站为对照基线，
+            聚焦回答三件事：<strong>流程有什么不一样、要素有什么区别、交互有什么区别</strong>，
+            并明确当前 <code>M2</code> 与 <code>M3</code> 的职责边界。
+          </p>
+          <div class="tag-row">
+            <span class="tag ok">当前基线：M3 technical-workflow</span>
+            <span class="tag">旧链路整体纳入对比</span>
+            <span class="tag blue">登记/接收已外移到 M2</span>
+            <span class="tag warn">以当前前端页面现状为主口径</span>
+          </div>
+        </div>
+        <aside class="hero-side">
+          <div class="metric">
+            <strong>9 个页面</strong>
+            <span>当前制片管理由入口页、任务池、5 个主工位、返工和追踪页共同组成，而不是单一工作站页面。</span>
+          </div>
+          <div class="metric">
+            <strong>2 条主判断</strong>
+            <span>当前 Web 新增了任务池、入口总控、脱水批次、返工与追踪；旧工作站内置的登记/接收已前移到 M2。</span>
+          </div>
+          <div class="metric">
+            <strong>3 类差异</strong>
+            <span>差异统一归纳为外移、显式化/新增、以及交互模式重组，避免把边界变化误判为功能缺失。</span>
+          </div>
+        </aside>
+      </header>
+
+      <section>
+        <h2>1. 背景与结论摘要</h2>
+        <p>
+          旧技术组工作站是典型的桌面端流水线工作站模型：从登记、接收到取材、包埋、切片、染色出片，
+          通过多个 WinForms 页面直接推进病例。当前 Web 端的“制片管理”则只覆盖 <code>M3</code>，
+          默认前提是病例已经完成 <code>M2</code> 的接收上游流程，再进入技术生产线。
+        </p>
+        <div class="grid grid-2">
+          <div class="gap-card">
+            <span class="tag ok">核心结论一</span>
+            <ul>
+              <li>当前 Web 比旧 HTML 多了任务池、入口总控、显式脱水批次、显式返工、技术追踪。</li>
+              <li>这些不是简单“页面装饰”，而是把生产调度、异常闭环和上下文查看前移成了一级能力。</li>
+            </ul>
+          </div>
+          <div class="gap-card">
+            <span class="tag blue">核心结论二</span>
+            <ul>
+              <li>当前 Web 比旧 HTML 少了技术组内自带的登记/接收入口。</li>
+              <li>这不是当前制片管理遗漏，而是业务边界调整：登记/接收已经前移到 <code>M2</code>，不再属于当前 <code>M3</code> 模块本体。</li>
+            </ul>
+          </div>
+        </div>
+        <div class="callout info">
+          <strong>M2 / M3 边界</strong>
+          当前体系下，<code>M2</code> 承接申请、标本登记、固定、转运、接收等上游动作；
+          <code>M3</code> 从技术待办进入，负责取材、脱水、包埋、切片、染色、返工和技术追踪。
+          因此旧工作站中的“登记 / 接收”保留在本报告中参与整体链路对比，但结论必须标记为“已外移”，而不是“当前缺失”。
+        </div>
+      </section>
+
+      <section>
+        <h2>2. 对比范围与证据来源</h2>
+        <p>
+          本次报告以当前仓库里的前端页面、路由、服务函数和工位上下文工具为主要真值，
+          旧参考以 <code>technical-workstation.html</code> 中的入口、流程说明、功能地图和交互描述为准。
+        </p>
+        <div class="grid grid-2">
+          <div class="card">
+            <h3>当前 Web 证据</h3>
+            <ul class="source-list">
+              <li><code>apps/web-ele/src/router/routes/modules/technical-workflow.ts</code></li>
+              <li><code>apps/web-ele/src/modules/technical-workflow/api/technical-workflow-service.ts</code></li>
+              <li><code>apps/web-ele/src/modules/technical-workflow/types/technical-workflow.ts</code></li>
+              <li><code>apps/web-ele/src/modules/technical-workflow/utils/workstation.ts</code></li>
+              <li><code>TechnicalWorkflowEntryView.vue</code></li>
+              <li><code>TechnicalTasksView.vue</code></li>
+              <li><code>GrossingWorkstationView.vue</code> / <code>DehydrationWorkstationView.vue</code> / <code>EmbeddingWorkstationView.vue</code></li>
+              <li><code>SlicingWorkstationView.vue</code> / <code>StainingWorkstationView.vue</code> / <code>ReworkWorkstationView.vue</code> / <code>TechnicalTrackingView.vue</code></li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>旧参考 HTML 证据</h3>
+            <ul class="source-list">
+              <li><code>technical-workstation.html</code> 的“模块入口”</li>
+              <li><code>technical-workstation.html</code> 的“核心功能地图”</li>
+              <li><code>technical-workstation.html</code> 的“典型工作流程”</li>
+              <li><code>technical-workstation.html</code> 的“交互关系”</li>
+              <li>旧页面涉及的登记、登记接收、取材描写、取材台、包埋、常规切片、冰冻切片、染色出片</li>
+            </ul>
+          </div>
+        </div>
+        <div class="grid grid-2" style="margin-top: 16px;">
+          <div class="card">
+            <h3>当前页面范围</h3>
+            <ul class="source-list">
+              <li><code>/technical-workflow/entry</code></li>
+              <li><code>/technical-workflow/tasks</code></li>
+              <li><code>/technical-workflow/grossing</code></li>
+              <li><code>/technical-workflow/dehydration</code></li>
+              <li><code>/technical-workflow/embedding</code></li>
+              <li><code>/technical-workflow/slicing</code></li>
+              <li><code>/technical-workflow/staining</code></li>
+              <li><code>/technical-workflow/rework</code></li>
+              <li><code>/technical-workflow/tracking</code></li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>旧参考范围</h3>
+            <ul class="source-list">
+              <li>登记</li>
+              <li>登记接收</li>
+              <li>取材描写</li>
+              <li>取材台</li>
+              <li>包埋</li>
+              <li>常规切片</li>
+              <li>冰冻切片</li>
+              <li>染色出片</li>
+            </ul>
+          </div>
+        </div>
+        <div class="callout warn">
+          <strong>判定口径</strong>
+          当前报告不把后端接口实现写成主体内容，也不做线上运行态审计。
+          只要当前前端存在独立路由、视图、动作与对象表达，就认定为当前 Web 已显式承载；
+          如果旧能力被移交到 <code>M2</code>，就标记为“外移”，不标记为“缺失”。
+        </div>
+      </section>
+
+      <section>
+        <h2>3. 流程差异对比</h2>
+        <p>
+          旧技术组工作站强调“技术组内部一站式流水线”，当前 Web 强调“上游完成接收后，进入任务化制片工作台”。
+          因此两者的主差异不是某个工序消失，而是起点、组织方式和闭环能力发生了重组。
+        </p>
+        <div class="flow">
+          <article class="flow-node">
+            <span class="tag">旧整体链路</span>
+            <h3>登记 → 接收 → 取材描写 → 包埋 → 切片 → 染色出片</h3>
+            <ul>
+              <li>登记与接收都属于技术组工作站内部入口。</li>
+              <li>取材后直接衔接包埋、切片和染色。</li>
+              <li>常规切片与冰冻切片共用切片能力，但以不同入口进入。</li>
+              <li>流程推进主要依赖多个窗体切换与现场扫码/打印动作。</li>
+            </ul>
+          </article>
+          <article class="flow-node">
+            <span class="tag blue">当前 Web 链路</span>
+            <h3>M2 接收上游 → M3 入口页 / 任务池 → 取材 → 脱水 → 包埋 → 切片 → 染色 → 返工 → 技术追踪</h3>
+            <ul>
+              <li>登记/接收不再位于制片管理内部，而是作为 M2 前置。</li>
+              <li>M3 以入口总控和任务池作为统一调度起点。</li>
+              <li>新增显式“脱水”批次环节，不再在旧链路中隐式承接。</li>
+              <li>返工和技术追踪被抬升为独立页面，而不是散落在各工位后的附属动作。</li>
+            </ul>
+          </article>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>流程节点</th>
+                <th>旧技术组工作站</th>
+                <th>当前制片管理</th>
+                <th>差异结论</th>
+                <th>说明</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>登记</td>
+                <td>技术组内部入口，工作站起点。</td>
+                <td>不在当前 <code>M3</code> 内，已前移到 <code>M2</code>。</td>
+                <td><span class="tag blue">外移</span></td>
+                <td>当前制片管理不再负责病例首次登记，这是边界调整，不是前端缺失。</td>
+              </tr>
+              <tr>
+                <td>接收</td>
+                <td>登记接收作为技术组内部流程节点。</td>
+                <td>不在当前 <code>M3</code> 内，已前移到 <code>M2</code> 标本接收链路。</td>
+                <td><span class="tag blue">外移</span></td>
+                <td>当前进入制片管理时默认已完成接收上游。</td>
+              </tr>
+              <tr>
+                <td>取材描写</td>
+                <td>通过 <code>FrmPlan</code> / 取材台直接进入处理。</td>
+                <td>通过任务池或工位队列进入 <code>/technical-workflow/grossing</code>。</td>
+                <td><span class="tag ok">显式化</span></td>
+                <td>工序仍在，但入口从“模块按钮直达”改为“任务驱动 + 工位化处理”。</td>
+              </tr>
+              <tr>
+                <td>脱水</td>
+                <td>旧参考主流程里未被单独强调为工作台层级。</td>
+                <td>当前有独立 <code>/technical-workflow/dehydration</code>，强调批次创建、开始、完成。</td>
+                <td><span class="tag ok">新增显式化</span></td>
+                <td>当前 Web 把原本偏后台或隐式的制程步骤抬成了明确工位。</td>
+              </tr>
+              <tr>
+                <td>包埋</td>
+                <td>独立包埋页面。</td>
+                <td>独立包埋工位，且带病例上下文与下一工位提示。</td>
+                <td><span class="tag ok">显式化</span></td>
+                <td>工序一致，但当前 Web 更强调流程上下文与衔接关系。</td>
+              </tr>
+              <tr>
+                <td>切片</td>
+                <td>常规切片和冰冻切片分入口，共用切片处理能力。</td>
+                <td>当前统一到 <code>/technical-workflow/slicing</code>，未拆出独立冰冻入口。</td>
+                <td><span class="tag warn">弱化</span></td>
+                <td>当前前端重点是统一切片工位模型，未把冰冻流程显式展开为单独 Web 工位。</td>
+              </tr>
+              <tr>
+                <td>染色出片</td>
+                <td>独立染色页面，承接切片后的上机出片。</td>
+                <td>独立染色工位，并与追踪、返工、异常提醒联动。</td>
+                <td><span class="tag ok">显式化</span></td>
+                <td>当前 Web 增强了与后续追踪、异常闭环的连接。</td>
+              </tr>
+              <tr>
+                <td>返工</td>
+                <td>旧参考只在流程说明中提及返工评价，不是明确独立入口。</td>
+                <td>独立 <code>/technical-workflow/rework</code>，支持创建、执行、回流建议。</td>
+                <td><span class="tag ok">新增显式化</span></td>
+                <td>返工从隐式异常处理变成了明确的闭环中心。</td>
+              </tr>
+              <tr>
+                <td>追踪</td>
+                <td>旧参考以流程说明和上下游关系理解为主。</td>
+                <td>独立 <code>/technical-workflow/tracking</code>，聚合对象树、时间线、任务、返工、QC。</td>
+                <td><span class="tag ok">新增显式化</span></td>
+                <td>当前 Web 为制片线增加了专门的可视化追踪层。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2>4. 要素差异对比</h2>
+        <p>
+          旧工作站和当前制片管理的区别，不只在页面名字，更在于页面承载的对象、状态、异常、角色和批次能力不同。
+          下表按固定矩阵逐项对比。
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>维度</th>
+                <th>旧技术组工作站</th>
+                <th>当前制片管理</th>
+                <th>差异结论</th>
+                <th>说明</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>页面入口形态</td>
+                <td>主窗体按钮直达多个独立 WinForms 页面。</td>
+                <td>根路由下组织为入口页、任务池、工位页、返工页、追踪页。</td>
+                <td><span class="tag ok">合并承载</span></td>
+                <td>当前入口更像“工作台集合”，而不是同级按钮菜单。</td>
+              </tr>
+              <tr>
+                <td>工序节点</td>
+                <td>登记、接收、取材、包埋、切片、冰冻、染色。</td>
+                <td>M2 接收上游 + M3 取材、脱水、包埋、切片、染色、返工、追踪。</td>
+                <td><span class="tag blue">外移 + 新增</span></td>
+                <td>登记/接收外移到 M2，脱水/返工/追踪在 M3 中被显式抬升。</td>
+              </tr>
+              <tr>
+                <td>任务对象</td>
+                <td>以申请单、标本、蜡块、玻片为主，更多依赖页面语义理解。</td>
+                <td>类型显式分层为病例、标本、蜡块、包埋盒、玻片、技术任务、返工单。</td>
+                <td><span class="tag ok">显式化</span></td>
+                <td>当前前端通过任务对象和追踪对象模型把实体层级直接展示出来。</td>
+              </tr>
+              <tr>
+                <td>状态/追踪信息</td>
+                <td>状态推进分散在各页面和后台逻辑中。</td>
+                <td>任务状态、当前节点、超时、病例状态、事件轨迹、对象树集中可见。</td>
+                <td><span class="tag ok">显式化</span></td>
+                <td>当前 Web 强调状态可视和追踪可查。</td>
+              </tr>
+              <tr>
+                <td>批次能力</td>
+                <td>旧参考中更强调工序执行本身。</td>
+                <td>脱水批次被明确建模，支持创建、开始、完成和批次反馈。</td>
+                <td><span class="tag ok">新增显式化</span></td>
+                <td>批次处理在当前 Web 中是重要的一类对象和动作。</td>
+              </tr>
+              <tr>
+                <td>返工能力</td>
+                <td>返工评价存在，但不是单独工作台主视角。</td>
+                <td>返工单支持创建、执行、回到对应工位和下一步建议。</td>
+                <td><span class="tag ok">新增显式化</span></td>
+                <td>返工从“后置异常动作”变成“主流程闭环能力”。</td>
+              </tr>
+              <tr>
+                <td>质量/异常信息</td>
+                <td>更多依赖现场经验、扫码和页面内反馈。</td>
+                <td>任务超时、质控问题、返工提醒、异常模式入口被统一表达。</td>
+                <td><span class="tag ok">显式化</span></td>
+                <td>当前 Web 更强调异常聚合和风险前置。</td>
+              </tr>
+              <tr>
+                <td>设备/扫码/打印表达</td>
+                <td>扫码、打印、现场设备感更强，是高频交互中心。</td>
+                <td>保留终端编码、打号结果、附件占位等表达，但设备集成更多是字段和结果反馈层。</td>
+                <td><span class="tag warn">弱化</span></td>
+                <td>当前前端更偏工作台组织，设备交互深度弱于旧桌面端现场形态。</td>
+              </tr>
+              <tr>
+                <td>角色分工表达</td>
+                <td>从页面名称和岗位操作隐式体现登记员、接收员、取材技师、切片技师、染色技师。</td>
+                <td>通过权限码、任务分派、责任技师、工位权限和回流建议来表达角色分工。</td>
+                <td><span class="tag ok">显式化</span></td>
+                <td>当前 Web 的角色边界更依赖任务与权限，而不是单纯页面名称。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2>5. 交互差异对比</h2>
+        <p>
+          旧技术组工作站强调“模块按钮直达 + 现场高频处理”，当前制片管理强调“任务驱动 + 工位同屏处理 + 右侧上下文”。
+          两者并非谁多谁少，而是交互重心不同。
+        </p>
+        <div class="grid grid-2">
+          <div class="gap-card">
+            <span class="tag">旧桌面工作站交互</span>
+            <ul>
+              <li>模块按钮直达，用户先决定进哪个工作站。</li>
+              <li>页面分散，流程推进依赖窗体切换。</li>
+              <li>扫码、打印、批量处理是现场高频入口。</li>
+              <li>同一病例的上下文更多依赖操作者记忆和页面间跳转。</li>
+            </ul>
+          </div>
+          <div class="gap-card">
+            <span class="tag blue">当前 Web 工位化交互</span>
+            <ul>
+              <li>任务先进入入口总控和任务池，再流向具体工位。</li>
+              <li>工位统一采用左侧队列、中区处理、右侧病例上下文。</li>
+              <li>通过 query 深链直接把 <code>taskId / caseId / objectId / mode</code> 带入工位。</li>
+              <li>返工与追踪被前移成显式入口，减少异常处理散落在各页。</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>当前交互能力</th>
+                <th>当前页面表达</th>
+                <th>相对旧工作站的变化</th>
+                <th>差异结论</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>entry</code> 总览和快捷入口</td>
+                <td><code>/technical-workflow/entry</code> 展示工位汇总、快捷入口、异常待处理。</td>
+                <td>旧工作站没有单独的入口总控页，更多是主窗体按钮分发。</td>
+                <td><span class="tag ok">新增显式化</span></td>
+              </tr>
+              <tr>
+                <td><code>tasks</code> 分派/释放/进入工位/追踪</td>
+                <td><code>/technical-workflow/tasks</code> 提供任务筛选、责任技师分派、释放责任人、进入工位、查看追踪。</td>
+                <td>旧工作站更像工序直达，不强调先在统一任务池调度。</td>
+                <td><span class="tag ok">新增显式化</span></td>
+              </tr>
+              <tr>
+                <td>统一工位骨架</td>
+                <td>取材、脱水、包埋、切片、染色页面统一为“左侧队列 + 中区处理 + 右侧上下文”。</td>
+                <td>旧页面更偏单工位功能页，缺少统一工作台骨架。</td>
+                <td><span class="tag ok">合并承载</span></td>
+              </tr>
+              <tr>
+                <td>病例上下文右侧常驻</td>
+                <td>工位中常驻病例概况、对象进度、提醒、下一工位建议。</td>
+                <td>旧工作站上下文更多通过页面切换或业务经验理解。</td>
+                <td><span class="tag ok">显式化</span></td>
+              </tr>
+              <tr>
+                <td><code>tracking</code> 聚合追踪</td>
+                <td><code>/technical-workflow/tracking</code> 聚合对象树、流程时间线、任务、返工、QC、事件。</td>
+                <td>旧工作站未把这些追踪信息集中成单一 Web 视图。</td>
+                <td><span class="tag ok">新增显式化</span></td>
+              </tr>
+              <tr>
+                <td><code>rework</code> 创建、执行、回流建议</td>
+                <td><code>/technical-workflow/rework</code> 支持从深链对象发起返工、执行返工单、回到对应工位。</td>
+                <td>旧工作站虽然有返工语义，但没有如此显式的异常闭环入口。</td>
+                <td><span class="tag ok">新增显式化</span></td>
+              </tr>
+              <tr>
+                <td>设备现场感</td>
+                <td>当前页面保留终端编码、打号结果、批次结果、附件占位等交互。</td>
+                <td>旧桌面端更强调扫码枪、打印机、现场设备的直接驱动。</td>
+                <td><span class="tag warn">弱化</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout danger">
+          <strong>交互层面的真正变化</strong>
+          当前 Web 不是把旧页面原样搬到浏览器，而是把“先选工作站，再在页面内找对象”重构成
+          “先看任务和病例上下文，再进入当前对象处理”。因此阅读差异时，应该优先理解交互组织方式变化，而不是只按旧页面名找一一对应关系。
+        </div>
+      </section>
+
+      <section>
+        <h2>6. 结论与建议</h2>
+        <div class="grid grid-3">
+          <div class="gap-card">
+            <span class="tag ok">流程结论</span>
+            <ul>
+              <li>当前制片管理不是旧技术组工作站的“少量缺页版”，而是边界重组后的 <code>M3</code> 工作台。</li>
+              <li>登记/接收外移到 <code>M2</code>，脱水、返工、追踪在 <code>M3</code> 中被显式增强。</li>
+            </ul>
+          </div>
+          <div class="gap-card">
+            <span class="tag blue">要素结论</span>
+            <ul>
+              <li>当前 Web 的核心要素从“页面按钮”转向“任务对象、状态、病例上下文、异常闭环”。</li>
+              <li>对象层级和追踪信息的可视化程度高于旧参考。</li>
+            </ul>
+          </div>
+          <div class="gap-card">
+            <span class="tag warn">交互结论</span>
+            <ul>
+              <li>当前 Web 强于调度、追踪和闭环表达，弱于旧桌面端的现场设备交互感。</li>
+              <li>这是工作台模型切换，不应直接解读为实现不足。</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="callout info">
+          <strong>建议一：对外沟通口径</strong>
+          在评审或汇报中，应把当前制片管理描述为“基于 M2/M3 分层后的技术生产工作台”，而不是“旧技术组工作站 Web 版”。
+        </div>
+
+        <div class="callout warn">
+          <strong>建议二：后续差异判断原则</strong>
+          若后续有人继续追问“为什么没有登记/接收入口”，应直接说明这是 <code>M2</code> 负责范围。
+          若追问“为什么没有独立冰冻切片入口或更强设备交互”，那才属于当前 Web 相对旧桌面模型的弱化点。
+        </div>
+
+        <div class="callout danger">
+          <strong>建议三：需求分流</strong>
+          未来若要进一步贴近旧桌面端体验，优先补的是：
+          1. 冰冻切片等特殊流程的显式工位表达；
+          2. 更强的扫码、批量处理和设备反馈；
+          3. 工位内更结构化的异常与质量控制提示。
+          这些属于新的产品增强需求，不属于本次文档对齐范围。
+        </div>
+      </section>
+
+      <p class="footer-note">
+        文档假设：“制片管理现状”仅指当前仓库 <code>technical-workflow</code> 模块，不代表线上运行态，也不默认等价于历史桌面端完整边界。
+      </p>
+    </main>
+  </body>
+</html>

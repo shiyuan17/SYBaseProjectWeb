@@ -2,12 +2,17 @@ import { createApp, defineComponent, h, nextTick } from 'vue';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const { mockAccessStore, mockRoute } = vi.hoisted(() => ({
+const { mockAccessStore, mockRoute, mockWorkflowService } = vi.hoisted(() => ({
   mockAccessStore: {
     accessCodes: [] as string[],
   },
   mockRoute: {
     query: {} as Record<string, string>,
+  },
+  mockWorkflowService: {
+    getApplicationTracking: vi.fn(),
+    getSpecimenTrackingByBarcode: vi.fn(),
+    listSpecimenVerificationRecords: vi.fn(),
   },
 }));
 
@@ -24,6 +29,12 @@ vi.mock('@vben/common-ui', () => ({
 
 vi.mock('@vben/stores', () => ({
   useAccessStore: () => mockAccessStore,
+}));
+
+vi.mock('../api/specimen-workflow-service', () => ({
+  getApplicationTracking: mockWorkflowService.getApplicationTracking,
+  getSpecimenTrackingByBarcode: mockWorkflowService.getSpecimenTrackingByBarcode,
+  listSpecimenVerificationRecords: mockWorkflowService.listSpecimenVerificationRecords,
 }));
 
 vi.mock('element-plus', () => {
@@ -77,10 +88,56 @@ vi.mock('element-plus', () => {
         }, slots.default?.());
     },
   });
+  const ElSelect = defineComponent({
+    emits: ['change', 'update:modelValue'],
+    props: ['modelValue'],
+    setup(props, { emit, slots }) {
+      return () =>
+        h(
+          'select',
+          {
+            value: props.modelValue,
+            onChange: (event: Event) => {
+              const value = (event.target as HTMLSelectElement).value;
+              emit('update:modelValue', value);
+              emit('change', value);
+            },
+          },
+          slots.default?.(),
+        );
+    },
+  });
+  const ElOption = defineComponent({
+    props: ['label', 'value'],
+    setup(props) {
+      return () => h('option', { value: props.value }, props.label);
+    },
+  });
+  const ElTable = defineComponent({
+    props: ['data'],
+    setup(props, { slots }) {
+      return () => h('div', { 'data-testid': 'verification-table' }, [JSON.stringify(props.data), slots.default?.()]);
+    },
+  });
+  const ElTableColumn = defineComponent({
+    setup(_, { slots }) {
+      return () => h('div', slots.default?.({ row: {} }));
+    },
+  });
+  const ElTag = defineComponent({
+    setup(_, { slots }) {
+      return () => h('span', slots.default?.());
+    },
+  });
   return {
     ElAlert,
     ElEmpty,
+    ElOption,
+    ElSelect,
     ElTabPane,
+    ElTable,
+    ElTableColumn,
+    ElTag,
     ElTabs,
   };
 });
@@ -118,6 +175,9 @@ describe('TrackingQueryView', () => {
   afterEach(() => {
     mockAccessStore.accessCodes = [];
     mockRoute.query = {};
+    mockWorkflowService.getApplicationTracking.mockReset();
+    mockWorkflowService.getSpecimenTrackingByBarcode.mockReset();
+    mockWorkflowService.listSpecimenVerificationRecords.mockReset();
     document.body.innerHTML = '';
   });
 
@@ -157,6 +217,17 @@ describe('TrackingQueryView', () => {
       applicationId: 'APP-TRACK-001',
     };
 
+    mockWorkflowService.getApplicationTracking.mockResolvedValue({
+      specimens: [
+        {
+          barcode: 'BC-APP-001',
+          specimenName: '肺组织',
+          specimenNo: 'SP-APP-001',
+        },
+      ],
+    });
+    mockWorkflowService.listSpecimenVerificationRecords.mockResolvedValue([]);
+
     const { app, root } = await mountView();
 
     expect(root.querySelector('[data-active-tab="applications"]')).not.toBeNull();
@@ -176,12 +247,65 @@ describe('TrackingQueryView', () => {
       barcode: 'BC-TRACK-001',
     };
 
+    mockWorkflowService.getSpecimenTrackingByBarcode.mockResolvedValue({
+      specimens: [
+        {
+          barcode: 'BC-TRACK-001',
+          specimenName: '胃组织',
+          specimenNo: 'SP-TRACK-001',
+        },
+      ],
+    });
+    mockWorkflowService.listSpecimenVerificationRecords.mockResolvedValue([]);
+
     const { app, root } = await mountView();
 
     expect(root.querySelector('[data-active-tab="specimens"]')).not.toBeNull();
     const specimenList = root.querySelector('[data-testid="tracking-specimen-list"]');
     expect(specimenList?.getAttribute('data-barcode')).toBe('BC-TRACK-001');
     expect(specimenList?.getAttribute('data-trigger-key')).toBe('1');
+
+    app.unmount();
+  });
+
+  it('loads and renders verification records for the current barcode context', async () => {
+    mockAccessStore.accessCodes = [
+      'PERM_APPLICATION_DETAIL_QUERY',
+      'PERM_SPECIMEN_REGISTER',
+    ];
+    mockRoute.query = {
+      barcode: 'BC-TRACK-001',
+    };
+    mockWorkflowService.getSpecimenTrackingByBarcode.mockResolvedValue({
+      specimens: [
+        {
+          barcode: 'BC-TRACK-001',
+          specimenName: '胃组织',
+          specimenNo: 'SP-TRACK-001',
+        },
+      ],
+    });
+    mockWorkflowService.listSpecimenVerificationRecords.mockResolvedValue([
+      {
+        applicationId: 'APP-001',
+        barcode: 'BC-TRACK-001',
+        operatorName: '张三',
+        remarks: '完成标本确认',
+        result: 'SUCCESS',
+        specimenId: 'SPEC-001',
+        terminalCode: 'TERM-001',
+        verificationType: 'SPECIMEN_CONFIRM',
+        verifiedAt: '2026-05-26T11:25:00',
+      },
+    ]);
+
+    const { app, root } = await mountView();
+    await nextTick();
+
+    expect(mockWorkflowService.listSpecimenVerificationRecords).toHaveBeenCalledWith('BC-TRACK-001');
+    expect(root.textContent).toContain('核对记录视图');
+    expect(root.textContent).toContain('SPECIMEN_CONFIRM');
+    expect(root.textContent).toContain('完成标本确认');
 
     app.unmount();
   });

@@ -48,23 +48,33 @@ export interface TrackingEventView {
 
 export interface SpecimenTrackingSummary {
   abnormalReason: null | string;
+  abnormalType?: null | string;
   barcode: string;
+  barcodeBindingStatus?: null | string;
+  checkInStatus?: null | string;
+  checkedInAt?: null | string;
+  checkedInByName?: null | string;
   clinicalSymptom?: null | string;
   collectionMode?: null | string;
   containerCount: null | number;
   containerName: null | string;
   fixationStatus: null | string;
+  fixationCompletedAt?: null | string;
   id: string;
   labelPrintStatus: null | string;
   qualityCheckResult?: null | string;
   qualityIssueCodes?: string[];
   receiptStatus?: null | string;
   specimenCount: null | number;
+  specimenConfirmedAt?: null | string;
   specimenName: string;
   specimenNo: string;
   specimenSite: null | string;
   specimenStatus: null | string;
   specimenType: null | string;
+  verificationCompletedAt?: null | string;
+  verificationStartedAt?: null | string;
+  verificationStatus?: null | string;
 }
 
 export interface RegistrationSnapshotView {
@@ -87,16 +97,22 @@ export interface ApplicationDetailView {
   createdAt: null | string;
   currentNode: null | string;
   externalOrderNo: null | string;
+  fixationCompletedAt?: null | string;
   id: string;
   patientAge: null | string;
   patientGender: null | string;
   patientId: null | string;
+  patientCheckStatus?: null | string;
   patientName: null | string;
   recentEvents: TrackingEventView[];
   remarks: null | string;
+  reportIssued?: boolean;
+  reportStatus?: null | string;
+  receiptAbnormalSummary?: null | string;
   sourceHospitalId: null | string;
   sourceHospitalName: null | string;
   specimenSite: null | string;
+  specimenConfirmedAt?: null | string;
   specimenRemovalTime: null | string;
   specimens: SpecimenTrackingSummary[];
   status: null | string;
@@ -106,6 +122,7 @@ export interface ApplicationDetailView {
   submittingDoctorName: null | string;
   submittingDoctorUserId: null | string;
   thirdPartySource: null | string;
+  unreceivedCount?: number;
   updatedAt: null | string;
 }
 
@@ -134,8 +151,12 @@ export interface ApplicationListItem {
   id: string;
   patientAge: null | string;
   patientGender: null | string;
+  patientCheckStatus?: null | string;
   patientName: null | string;
   registeredSpecimenCount: number;
+  reportIssued?: boolean;
+  reportStatus?: null | string;
+  receiptAbnormalSummary?: null | string;
   submissionDate: null | string;
   status: null | string;
   submittingDepartmentName: null | string;
@@ -191,18 +212,26 @@ export interface SpecimenManagementListQuery {
 
 export interface SpecimenManagementListItem {
   abnormalFlag: boolean;
+  abnormalType?: null | string;
   applicationId: string;
   applicationNo: string;
   barcode: string;
+  barcodeBindingStatus?: null | string;
+  checkInStatus?: null | string;
+  checkedInAt?: null | string;
+  checkedInByName?: null | string;
   containerCount: null | number;
   containerName: null | string;
   fixationStatus: null | string;
+  fixationCompletedAt?: null | string;
   labelPrintBatchNo: null | string;
   labelPrintStatus: null | string;
   latestTrackingAt: null | string;
   patientName: null | string;
+  recentNode?: null | string;
   registeredAt: null | string;
   specimenCount: null | number;
+  specimenConfirmedAt?: null | string;
   specimenId: string;
   specimenName: string;
   specimenNo: string;
@@ -211,6 +240,9 @@ export interface SpecimenManagementListItem {
   specimenType: null | string;
   submittingDepartmentId: null | string;
   submittingDepartmentName: null | string;
+  verificationCompletedAt?: null | string;
+  verificationStartedAt?: null | string;
+  verificationStatus?: null | string;
 }
 
 export interface SpecimenManagementListSummary {
@@ -284,33 +316,98 @@ export interface LabelPrintRetryResult {
   successCount: number;
 }
 
+export interface SpecimenBarcodeBindingRequest {
+  operatorName: string;
+  operatorUserId?: null | string;
+  remarks?: null | string;
+  targetBarcode: string;
+  terminalCode?: null | string;
+}
+
+export interface SpecimenVerificationRequest {
+  operatorName: string;
+  operatorUserId?: null | string;
+  remarks?: null | string;
+  specimenBarcode: string;
+  terminalCode?: null | string;
+}
+
+export interface SpecimenConfirmRequest {
+  operatorName: string;
+  operatorUserId?: null | string;
+  remarks?: null | string;
+  terminalCode?: null | string;
+}
+
+export interface SpecimenCheckInRequest {
+  operatorName: string;
+  operatorUserId?: null | string;
+  remarks?: null | string;
+  specimenBarcode: string;
+  terminalCode?: null | string;
+}
+
+export interface SpecimenVerificationRecord {
+  applicationId: string;
+  barcode: string;
+  operatorName: string;
+  remarks: null | string;
+  result: string;
+  specimenId: string;
+  terminalCode: null | string;
+  verificationType: string;
+  verifiedAt: string;
+}
+
+export interface ApplicationFormReprintRequest {
+  operatorName: string;
+  operatorUserId?: null | string;
+  remarks?: null | string;
+  terminalCode?: null | string;
+}
+
 export interface PendingSpecimenQuery {
   applicationId?: null | string;
   dateFrom?: null | string;
   dateTo?: null | string;
   departmentId?: null | string;
   fixationStatus?: null | string;
+  checkInStatus?: null | string;
   page: number;
   size: number;
+  verificationStatus?: null | string;
 }
 
 export interface PendingSpecimenItem {
   abnormalFlag: boolean;
+  abnormalType?: null | string;
   applicationId: string;
   applicationNo: string;
+  batchAbnormalFlag?: boolean;
   barcode: string;
+  checkInStatus?: null | string;
+  checkedInAt?: null | string;
+  checkedInByName?: null | string;
   containerCount: null | number;
   containerName: null | string;
+  fixationCompletedAt?: null | string;
+  fixationLiquidType?: null | string;
+  fixationStartedAt?: null | string;
   fixationStatus: null | string;
   latestTrackingAt: null | string;
   patientName: null | string;
   registeredAt: null | string;
+  reminderCount?: number;
   specimenId: string;
   specimenNo: string;
   specimenStatus: null | string;
   submittingDepartmentId: null | string;
   submittingDepartmentName: null | string;
   transportOrderId: null | string;
+  unreceivedCount?: number;
+  verificationCompletedAt?: null | string;
+  verificationStartedAt?: null | string;
+  verificationStatus?: null | string;
 }
 
 export interface PendingSpecimenPage {
@@ -379,15 +476,18 @@ export interface PendingTransportOrderQuery extends PendingSpecimenQuery {
 export interface PendingTransportOrderItem {
   applicationId: string;
   applicationNo: string;
+  batchAbnormalFlag?: boolean;
   handedOverAt: null | string;
   handoverDepartmentName: null | string;
   id: string;
   patientName: null | string;
   receiverDepartmentName: null | string;
+  reminderCount?: number;
   specimenBarcodes: string[];
   status: string;
   toBeTransportedAt: null | string;
   transportOrderNo: string;
+  unreceivedCount?: number;
 }
 
 export interface PendingTransportOrderPage {
@@ -423,8 +523,11 @@ export interface DirectSpecimenReceiptRequest {
 }
 
 export interface SpecimenReceiptResult {
+  batchAbnormalFlag?: boolean;
   caseId: null | string;
   pathologyNo: null | string;
+  receiptAbnormalSummary?: null | string;
   receiptStatus: string;
+  reminderCount?: number;
   unreceivedCount: number;
 }

@@ -1,0 +1,618 @@
+[
+  {
+    "applicationId": "APP-FR-001",
+    "applicationNo": "SQD-FS-20260527-001",
+    "autoPrintSlides": true,
+    "caseId": "CASE-FR-001",
+    "compareStatus": null,
+    "compareSummary": null,
+    "currentTaskType": "RECEIVE",
+    "finalConfirmedAt": null,
+    "finalDiagnosis": null,
+    "frozenPathologyNo": "F260527001",
+    "grossingCompletedAt": null,
+    "grossingDescription": "术中子宫内膜冰冻，待接收核对。",
+    "grossingStartedAt": null,
+    "handoverComment": null,
+    "hasRegularCaseLinked": false,
+    "id": "FS-001",
+    "intraoperativePhoneBack": false,
+    "nextAction": "完成冰冻接收",
+    "patientName": "张敏",
+    "phoneBackAt": null,
+    "preliminaryResult": null,
+    "receivedAt": null,
+    "remainingTissueStatus": "PENDING",
+    "reminders": [
+      "术中预约已到达，等待冰冻接收。"
+    ],
+    "reportConfirmedAt": null,
+    "requestedAt": "2026-05-27T08:20:00",
+    "requestDoctorName": "陈医生",
+    "sessionNo": "FS-20260527-01",
+    "sessionStatus": "REQUESTED",
+    "slicingCompletedAt": null,
+    "slicingStartedAt": null,
+    "tasks": [
+      {
+        "completedAt": "2026-05-27T08:20:00",
+        "id": "FS-001-T1",
+        "operatorName": "陈医生",
+        "remarks": "术中冰冻申请",
+        "startedAt": "2026-05-27T08:20:00",
+        "status": "COMPLETED",
+        "taskType": "APPOINTMENT",
+        "timeoutLevel": "NONE"
+      },
+      {
+        "completedAt": null,
+        "id": "FS-001-T2",
+        "operatorName": null,
+        "remarks": null,
+        "startedAt": null,
+        "status": "PENDING",
+        "taskType": "RECEIVE",
+        "timeoutLevel": "ORANGE"
+      },
+      {
+        "completedAt": null,
+        "id": "FS-001-T3",
+        "operatorName": null,
+        "remarks": null,
+        "startedAt": null,
+        "status": "PENDING",
+        "taskType": "GROSSING",
+        "timeoutLevel": "NONE"
+      },
+      {
+        "completedAt": null,
+        "id": "FS-001-T4",
+        "operatorName": null,
+        "remarks": null,
+        "startedAt": null,
+        "status": "PENDING",
+        "taskType": "SLICING",
+        "timeoutLevel": "NONE"
+      },
+      {
+        "completedAt": null,
+        "id": "FS-001-T5",
+        "operatorName": null,
+        "remarks": null,
+        "startedAt": null,
+        "status": "PENDING",
+        "taskType": "REPORT",
+        "timeoutLevel": "NONE"
+      },
+      {
+        "completedAt": null,
+        "id": "FS-001-T6",
+        "operatorName": null,
+        "remarks": null,
+        "startedAt": null,
+        "status": "PENDING",
+        "taskType": "PHONE_BACK",
+        "timeoutLevel": "NONE"
+      },
+      {
+        "completedAt": null,
+        "id": "FS-001-T7",
+        "operatorName": null,
+        "remarks": null,
+        "startedAt": null,
+        "status": "PENDING",
+        "taskType": "COMPARE",
+        "timeoutLevel": "NONE"
+      },
+      {
+        "completedAt": null,
+        "id": "FS-001-T8",
+        "operatorName": null,
+        "remarks": null,
+        "startedAt": null,
+        "status": "PENDING",
+        "taskType": "REMAINING_TISSUE",
+        "timeoutLevel": "NONE"
+      },
+      {
+        "completedAt": null,
+        "id": "FS-001-T9",
+        "operatorName": null,
+        "remarks": null,
+        "startedAt": null,
+        "status": "PENDING",
+        "taskType": "HANDOVER",
+        "timeoutLevel": "NONE"
+      }
+    ],
+    "timeline": [
+      {
+        "eventContent": "创建冰冻术中申请",
+        "eventTime": "2026-05-27T08:20:00",
+        "eventType": "FROZEN_REQUESTED",
+        "id": "FE-001",
+        "nodeCode": "APPOINTMENT",
+        "operatorName": "陈医生"
+      }
+    ],
+    "timeoutLevel": "ORANGE"
+  },
+  {
+    "applicationId": "APP-FR-002",
+    "applicationNo": "SQD-FS-20260527-002",
+    "autoPrintSlides": true,
+    "caseId": "CASE-FR-002",
+    "compareStatus": null,
+    "compareSummary": null,
+    "currentTaskType": "GROSSING",
+    "finalConfirmedAt": null,
+    "finalDiagnosis": null,
+    "frozenPathologyNo": "F260527002",
+    "grossingCompletedAt": null,
+    "grossingDescription": "乳腺肿物，已接收待取材。",
+    "grossingStartedAt": null,
+    "handoverComment": null,
+    "hasRegularCaseLinked": true,
+    "id": "FS-002",
+    "intraoperativePhoneBack": false,
+    "nextAction": "开始冰冻取材",
+    "patientName": "李娜",
+    "phoneBackAt": null,
+    "preliminaryResult": null,
+    "receivedAt": "2026-05-27T09:05:00",
+    "remainingTissueStatus": "PENDING",
+    "reminders": [
+      "冰冻接收已完成，需尽快完成取材。"
+    ],
+    "reportConfirmedAt": null,
+    "requestedAt": "2026-05-27T08:40:00",
+    "requestDoctorName": "王医生",
+    "sessionNo": "FS-20260527-02",
+    "sessionStatus": "RECEIVED",
+    "slicingCompletedAt": null,
+    "slicingStartedAt": null,
+    "tasks": [
+      {
+        "completedAt": "2026-05-27T08:40:00",
+        "id": "FS-002-T1",
+        "operatorName": "王医生",
+        "remarks": "术中冰冻申请",
+        "startedAt": "2026-05-27T08:40:00",
+        "status": "COMPLETED",
+        "taskType": "APPOINTMENT",
+        "timeoutLevel": "NONE"
+      },
+      {
+        "completedAt": "2026-05-27T09:05:00",
+        "id": "FS-002-T2",
+        "operatorName": "接收技师甲",
+        "remarks": "完成接收",
+        "startedAt": "2026-05-27T08:58:00",
+        "status": "COMPLETED",
+        "taskType": "RECEIVE",
+        "timeoutLevel": "NONE"
+      },
+      {
+        "completedAt": null,
+        "id": "FS-002-T3",
+        "operatorName": null,
+        "remarks": null,
+        "startedAt": null,
+        "status": "PENDING",
+        "taskType": "GROSSING",
+        "timeoutLevel": "ORANGE"
+      },
+      {
+        "completedAt": null,
+        "id": "FS-002-T4",
+        "operatorName": null,
+        "remarks": null,
+        "startedAt": null,
+        "status": "PENDING",
+        "taskType": "SLICING",
+        "timeoutLevel": "NONE"
+      },
+      {
+        "completedAt": null,
+        "id": "FS-002-T5",
+        "operatorName": null,
+        "remarks": null,
+        "startedAt": null,
+        "status": "PENDING",
+        "taskType": "REPORT",
+        "timeoutLevel": "NONE"
+      },
+      {
+        "completedAt": null,
+        "id": "FS-002-T6",
+        "operatorName": null,
+        "remarks": null,
+        "startedAt": null,
+        "status": "PENDING",
+        "taskType": "PHONE_BACK",
+        "timeoutLevel": "NONE"
+      },
+      {
+        "completedAt": null,
+        "id": "FS-002-T7",
+        "operatorName": null,
+        "remarks": null,
+        "startedAt": null,
+        "status": "PENDING",
+        "taskType": "COMPARE",
+        "timeoutLevel": "NONE"
+      },
+      {
+        "completedAt": null,
+        "id": "FS-002-T8",
+        "operatorName": null,
+        "remarks": null,
+        "startedAt": null,
+        "status": "PENDING",
+        "taskType": "REMAINING_TISSUE",
+        "timeoutLevel": "NONE"
+      },
+      {
+        "completedAt": null,
+        "id": "FS-002-T9",
+        "operatorName": null,
+        "remarks": null,
+        "startedAt": null,
+        "status": "PENDING",
+        "taskType": "HANDOVER",
+        "timeoutLevel": "NONE"
+      }
+    ],
+    "timeline": [
+      {
+        "eventContent": "完成冰冻接收",
+        "eventTime": "2026-05-27T09:05:00",
+        "eventType": "FROZEN_RECEIVE_COMPLETED",
+        "id": "FE-002",
+        "nodeCode": "RECEIVE",
+        "operatorName": "接收技师甲"
+      },
+      {
+        "eventContent": "创建冰冻术中申请",
+        "eventTime": "2026-05-27T08:40:00",
+        "eventType": "FROZEN_REQUESTED",
+        "id": "FE-001",
+        "nodeCode": "APPOINTMENT",
+        "operatorName": "王医生"
+      }
+    ],
+    "timeoutLevel": "ORANGE"
+  },
+  {
+    "applicationId": "APP-FR-003",
+    "applicationNo": "SQD-FS-20260527-003",
+    "autoPrintSlides": true,
+    "caseId": "CASE-FR-003",
+    "compareStatus": null,
+    "compareSummary": null,
+    "currentTaskType": "SLICING",
+    "finalConfirmedAt": null,
+    "finalDiagnosis": null,
+    "frozenPathologyNo": "F260527003",
+    "grossingCompletedAt": "2026-05-27T09:32:00",
+    "grossingDescription": "甲状腺结节，已完成取材待切片。",
+    "grossingStartedAt": "2026-05-27T09:20:00",
+    "handoverComment": null,
+    "hasRegularCaseLinked": true,
+    "id": "FS-003",
+    "intraoperativePhoneBack": false,
+    "nextAction": "完成冰冻切片",
+    "patientName": "赵磊",
+    "phoneBackAt": null,
+    "preliminaryResult": null,
+    "receivedAt": "2026-05-27T09:10:00",
+    "remainingTissueStatus": "PENDING",
+    "reminders": [
+      "切片阶段超过橙色阈值，需尽快出片。"
+    ],
+    "reportConfirmedAt": null,
+    "requestedAt": "2026-05-27T08:55:00",
+    "requestDoctorName": "刘医生",
+    "sessionNo": "FS-20260527-03",
+    "sessionStatus": "GROSSING",
+    "slicingCompletedAt": null,
+    "slicingStartedAt": null,
+    "tasks": [
+      {
+        "completedAt": "2026-05-27T08:55:00",
+        "id": "FS-003-T1",
+        "operatorName": "刘医生",
+        "remarks": "术中冰冻申请",
+        "startedAt": "2026-05-27T08:55:00",
+        "status": "COMPLETED",
+        "taskType": "APPOINTMENT",
+        "timeoutLevel": "NONE"
+      },
+      {
+        "completedAt": "2026-05-27T09:10:00",
+        "id": "FS-003-T2",
+        "operatorName": "接收技师乙",
+        "remarks": "完成接收",
+        "startedAt": "2026-05-27T09:02:00",
+        "status": "COMPLETED",
+        "taskType": "RECEIVE",
+        "timeoutLevel": "NONE"
+      },
+      {
+        "completedAt": "2026-05-27T09:32:00",
+        "id": "FS-003-T3",
+        "operatorName": "取材技师甲",
+        "remarks": "完成冰冻取材",
+        "startedAt": "2026-05-27T09:20:00",
+        "status": "COMPLETED",
+        "taskType": "GROSSING",
+        "timeoutLevel": "NONE"
+      },
+      {
+        "completedAt": null,
+        "id": "FS-003-T4",
+        "operatorName": null,
+        "remarks": null,
+        "startedAt": null,
+        "status": "PENDING",
+        "taskType": "SLICING",
+        "timeoutLevel": "RED"
+      },
+      {
+        "completedAt": null,
+        "id": "FS-003-T5",
+        "operatorName": null,
+        "remarks": null,
+        "startedAt": null,
+        "status": "PENDING",
+        "taskType": "REPORT",
+        "timeoutLevel": "NONE"
+      },
+      {
+        "completedAt": null,
+        "id": "FS-003-T6",
+        "operatorName": null,
+        "remarks": null,
+        "startedAt": null,
+        "status": "PENDING",
+        "taskType": "PHONE_BACK",
+        "timeoutLevel": "NONE"
+      },
+      {
+        "completedAt": null,
+        "id": "FS-003-T7",
+        "operatorName": null,
+        "remarks": null,
+        "startedAt": null,
+        "status": "PENDING",
+        "taskType": "COMPARE",
+        "timeoutLevel": "NONE"
+      },
+      {
+        "completedAt": null,
+        "id": "FS-003-T8",
+        "operatorName": null,
+        "remarks": null,
+        "startedAt": null,
+        "status": "PENDING",
+        "taskType": "REMAINING_TISSUE",
+        "timeoutLevel": "NONE"
+      },
+      {
+        "completedAt": null,
+        "id": "FS-003-T9",
+        "operatorName": null,
+        "remarks": null,
+        "startedAt": null,
+        "status": "PENDING",
+        "taskType": "HANDOVER",
+        "timeoutLevel": "NONE"
+      }
+    ],
+    "timeline": [
+      {
+        "eventContent": "完成冰冻取材",
+        "eventTime": "2026-05-27T09:32:00",
+        "eventType": "FROZEN_GROSSING_COMPLETED",
+        "id": "FE-003",
+        "nodeCode": "GROSSING",
+        "operatorName": "取材技师甲"
+      },
+      {
+        "eventContent": "完成冰冻接收",
+        "eventTime": "2026-05-27T09:10:00",
+        "eventType": "FROZEN_RECEIVE_COMPLETED",
+        "id": "FE-002",
+        "nodeCode": "RECEIVE",
+        "operatorName": "接收技师乙"
+      },
+      {
+        "eventContent": "创建冰冻术中申请",
+        "eventTime": "2026-05-27T08:55:00",
+        "eventType": "FROZEN_REQUESTED",
+        "id": "FE-001",
+        "nodeCode": "APPOINTMENT",
+        "operatorName": "刘医生"
+      }
+    ],
+    "timeoutLevel": "RED"
+  },
+  {
+    "applicationId": "APP-FR-004",
+    "applicationNo": "SQD-FS-20260527-004",
+    "autoPrintSlides": false,
+    "caseId": "CASE-FR-004",
+    "compareStatus": "PENDING",
+    "compareSummary": null,
+    "currentTaskType": "COMPARE",
+    "finalConfirmedAt": "2026-05-27T10:18:00",
+    "finalDiagnosis": "术中冰冻考虑良性病变。",
+    "frozenPathologyNo": "F260527004",
+    "grossingCompletedAt": "2026-05-27T09:40:00",
+    "grossingDescription": "胃部肿物快速取材。",
+    "grossingStartedAt": "2026-05-27T09:24:00",
+    "handoverComment": null,
+    "hasRegularCaseLinked": true,
+    "id": "FS-004",
+    "intraoperativePhoneBack": true,
+    "nextAction": "完成冰石对比",
+    "patientName": "周洋",
+    "phoneBackAt": "2026-05-27T10:12:00",
+    "preliminaryResult": "术中冰冻考虑良性病变。",
+    "receivedAt": "2026-05-27T09:15:00",
+    "remainingTissueStatus": "PENDING",
+    "reminders": [
+      "快速报告已电话回报，待石蜡结果回流后完成冰石对比。"
+    ],
+    "reportConfirmedAt": "2026-05-27T10:18:00",
+    "requestedAt": "2026-05-27T09:00:00",
+    "requestDoctorName": "黄医生",
+    "sessionNo": "FS-20260527-04",
+    "sessionStatus": "CONFIRMED",
+    "slicingCompletedAt": "2026-05-27T09:55:00",
+    "slicingStartedAt": "2026-05-27T09:42:00",
+    "tasks": [
+      {
+        "completedAt": "2026-05-27T09:00:00",
+        "id": "FS-004-T1",
+        "operatorName": "黄医生",
+        "remarks": "术中冰冻申请",
+        "startedAt": "2026-05-27T09:00:00",
+        "status": "COMPLETED",
+        "taskType": "APPOINTMENT",
+        "timeoutLevel": "NONE"
+      },
+      {
+        "completedAt": "2026-05-27T09:15:00",
+        "id": "FS-004-T2",
+        "operatorName": "接收技师甲",
+        "remarks": "完成接收",
+        "startedAt": "2026-05-27T09:08:00",
+        "status": "COMPLETED",
+        "taskType": "RECEIVE",
+        "timeoutLevel": "NONE"
+      },
+      {
+        "completedAt": "2026-05-27T09:40:00",
+        "id": "FS-004-T3",
+        "operatorName": "取材技师乙",
+        "remarks": "完成取材",
+        "startedAt": "2026-05-27T09:24:00",
+        "status": "COMPLETED",
+        "taskType": "GROSSING",
+        "timeoutLevel": "NONE"
+      },
+      {
+        "completedAt": "2026-05-27T09:55:00",
+        "id": "FS-004-T4",
+        "operatorName": "切片技师甲",
+        "remarks": "完成切片并打印玻片",
+        "startedAt": "2026-05-27T09:42:00",
+        "status": "COMPLETED",
+        "taskType": "SLICING",
+        "timeoutLevel": "NONE"
+      },
+      {
+        "completedAt": "2026-05-27T10:12:00",
+        "id": "FS-004-T5",
+        "operatorName": "报告医生甲",
+        "remarks": "快速报告已完成",
+        "startedAt": "2026-05-27T09:58:00",
+        "status": "COMPLETED",
+        "taskType": "REPORT",
+        "timeoutLevel": "NONE"
+      },
+      {
+        "completedAt": "2026-05-27T10:12:00",
+        "id": "FS-004-T6",
+        "operatorName": "报告医生甲",
+        "remarks": "已电话回报手术室",
+        "startedAt": "2026-05-27T10:10:00",
+        "status": "COMPLETED",
+        "taskType": "PHONE_BACK",
+        "timeoutLevel": "NONE"
+      },
+      {
+        "completedAt": null,
+        "id": "FS-004-T7",
+        "operatorName": null,
+        "remarks": null,
+        "startedAt": null,
+        "status": "PENDING",
+        "taskType": "COMPARE",
+        "timeoutLevel": "ORANGE"
+      },
+      {
+        "completedAt": null,
+        "id": "FS-004-T8",
+        "operatorName": null,
+        "remarks": null,
+        "startedAt": null,
+        "status": "PENDING",
+        "taskType": "REMAINING_TISSUE",
+        "timeoutLevel": "NONE"
+      },
+      {
+        "completedAt": null,
+        "id": "FS-004-T9",
+        "operatorName": null,
+        "remarks": null,
+        "startedAt": null,
+        "status": "PENDING",
+        "taskType": "HANDOVER",
+        "timeoutLevel": "NONE"
+      }
+    ],
+    "timeline": [
+      {
+        "eventContent": "冰冻快速报告最终确认",
+        "eventTime": "2026-05-27T10:18:00",
+        "eventType": "FROZEN_REPORT_CONFIRMED",
+        "id": "FE-006",
+        "nodeCode": "REPORT",
+        "operatorName": "报告医生甲"
+      },
+      {
+        "eventContent": "完成术中电话回报",
+        "eventTime": "2026-05-27T10:12:00",
+        "eventType": "FROZEN_PHONE_BACK_COMPLETED",
+        "id": "FE-005",
+        "nodeCode": "REPORT",
+        "operatorName": "报告医生甲"
+      },
+      {
+        "eventContent": "保存冰冻初步结果",
+        "eventTime": "2026-05-27T10:05:00",
+        "eventType": "FROZEN_PRELIMINARY_SAVED",
+        "id": "FE-004",
+        "nodeCode": "REPORT",
+        "operatorName": "报告医生甲"
+      },
+      {
+        "eventContent": "完成冰冻切片",
+        "eventTime": "2026-05-27T09:55:00",
+        "eventType": "FROZEN_SLICING_COMPLETED",
+        "id": "FE-003",
+        "nodeCode": "SLICING",
+        "operatorName": "切片技师甲"
+      },
+      {
+        "eventContent": "完成冰冻取材",
+        "eventTime": "2026-05-27T09:40:00",
+        "eventType": "FROZEN_GROSSING_COMPLETED",
+        "id": "FE-002",
+        "nodeCode": "GROSSING",
+        "operatorName": "取材技师乙"
+      },
+      {
+        "eventContent": "完成冰冻接收",
+        "eventTime": "2026-05-27T09:15:00",
+        "eventType": "FROZEN_RECEIVE_COMPLETED",
+        "id": "FE-001",
+        "nodeCode": "RECEIVE",
+        "operatorName": "接收技师甲"
+      }
+    ],
+    "timeoutLevel": "ORANGE"
+  }
+]

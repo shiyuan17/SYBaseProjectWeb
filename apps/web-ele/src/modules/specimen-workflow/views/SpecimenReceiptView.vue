@@ -37,6 +37,7 @@ import SystemUserSelect from '#/modules/system-management/components/SystemUserS
 import {
   directReceiveSpecimens,
   listPendingReceipts,
+  reprintApplicationForm,
   receiveSpecimens,
 } from '../api/specimen-workflow-service';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
@@ -59,11 +60,14 @@ type ReceiptDraftItem = SpecimenReceiptItemRequest & {
 type TransportReceiptGroup = {
   applicationId: string;
   applicationNo: string;
+  batchAbnormalFlag: boolean;
   barcodes: string[];
   items: PendingSpecimenItem[];
   latestTrackingAt: null | string;
   patientName: null | string;
+  reminderCount: number;
   transportOrderId: string;
+  unreceivedCount: number;
 };
 
 const userStore = useUserStore();
@@ -128,23 +132,29 @@ const groupedTransportOrders = computed<TransportReceiptGroup[]>(() => {
     if (existing) {
       existing.items.push(item);
       existing.barcodes.push(item.barcode);
+      existing.batchAbnormalFlag = existing.batchAbnormalFlag || Boolean(item.batchAbnormalFlag);
       existing.latestTrackingAt =
         existing.latestTrackingAt && item.latestTrackingAt
           ? existing.latestTrackingAt > item.latestTrackingAt
             ? existing.latestTrackingAt
             : item.latestTrackingAt
           : existing.latestTrackingAt || item.latestTrackingAt;
+      existing.reminderCount = Math.max(existing.reminderCount, item.reminderCount ?? 0);
+      existing.unreceivedCount = Math.max(existing.unreceivedCount, item.unreceivedCount ?? 0);
       continue;
     }
 
     groupMap.set(item.transportOrderId, {
       applicationId: item.applicationId,
       applicationNo: item.applicationNo,
+      batchAbnormalFlag: Boolean(item.batchAbnormalFlag),
       barcodes: [item.barcode],
       items: [item],
       latestTrackingAt: item.latestTrackingAt,
       patientName: item.patientName,
+      reminderCount: item.reminderCount ?? 0,
       transportOrderId: item.transportOrderId,
+      unreceivedCount: item.unreceivedCount ?? 0,
     });
   }
 
@@ -160,6 +170,15 @@ const selectedGroup = computed(
 
 const orphanPendingCount = computed(
   () => pendingItems.value.filter((item) => !item.transportOrderId).length,
+);
+const abnormalBatchCount = computed(
+  () => groupedTransportOrders.value.filter((item) => item.batchAbnormalFlag).length,
+);
+const totalReminderCount = computed(() =>
+  groupedTransportOrders.value.reduce(
+    (sum, item) => sum + (item.reminderCount ?? 0),
+    0,
+  ),
 );
 
 function formatGroupContainerNames(items: PendingSpecimenItem[]) {
@@ -230,6 +249,28 @@ function prepareReceipt(group: TransportReceiptGroup) {
     specimenBarcode: item.barcode,
   }));
   receiptDialogVisible.value = true;
+}
+
+async function handleReprintApplicationForm(group: TransportReceiptGroup) {
+  const operatorName = userStore.userInfo?.realName?.trim() ?? '';
+  const operatorUserId = userStore.userInfo?.userId?.trim() ?? '';
+  if (!operatorName) {
+    ElMessage.warning('缺少当前操作人信息');
+    return;
+  }
+
+  pageError.value = '';
+  try {
+    await reprintApplicationForm(group.applicationId, {
+      operatorName,
+      operatorUserId: operatorUserId || null,
+      remarks: `病理接收页补打印申请单，转运单 ${group.transportOrderId}`,
+      terminalCode: receiveForm.terminalCode.trim() || null,
+    });
+    ElMessage.success(`申请单 ${group.applicationNo} 补打印成功`);
+  } catch (error) {
+    pageError.value = getWorkflowPageErrorMessage(error);
+  }
 }
 
 function closeReceiptDialog() {
@@ -411,11 +452,32 @@ void loadPendingData();
 
       <WorkflowSectionCard
         title="待接收转运单"
-        description="待接收列表按后端标本分页返回，在前端按 transportOrderId 聚合成接收工作台。"
+        description="待接收列表按后端标本分页返回，在前端按 transportOrderId 聚合成接收工作台，并显式展示异常批次、提醒计数和未接收数量。"
       >
         <template #extra>
           <ElButton type="primary" @click="directDrawerVisible = true">条码直收</ElButton>
         </template>
+
+        <div class="mb-4 grid gap-3 md:grid-cols-3">
+          <div class="rounded-lg border border-border bg-card p-4 shadow-sm">
+            <div class="text-sm text-muted-foreground">待接收批次</div>
+            <div class="mt-2 text-2xl font-semibold text-foreground">
+              {{ groupedTransportOrders.length }}
+            </div>
+          </div>
+          <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm">
+            <div class="text-sm text-muted-foreground">异常批次</div>
+            <div class="mt-2 text-2xl font-semibold text-amber-600">
+              {{ abnormalBatchCount }}
+            </div>
+          </div>
+          <div class="rounded-lg border border-red-200 bg-red-50 p-4 shadow-sm">
+            <div class="text-sm text-muted-foreground">提醒计数</div>
+            <div class="mt-2 text-2xl font-semibold text-red-600">
+              {{ totalReminderCount }}
+            </div>
+          </div>
+        </div>
 
         <ElForm inline label-width="88px">
           <ElFormItem label="申请单号">
@@ -472,6 +534,14 @@ void loadPendingData();
               {{ row.items.length }}
             </template>
           </ElTableColumn>
+          <ElTableColumn label="提醒/未接收" min-width="140">
+            <template #default="{ row }">
+              <div class="flex flex-col gap-1 text-sm">
+                <span>提醒: {{ row.reminderCount }}</span>
+                <span>未接收: {{ row.unreceivedCount }}</span>
+              </div>
+            </template>
+          </ElTableColumn>
           <ElTableColumn label="容器名称" min-width="180">
             <template #default="{ row }">
               {{ formatGroupContainerNames(row.items) }}
@@ -485,6 +555,13 @@ void loadPendingData();
           <ElTableColumn label="标本条码" min-width="240">
             <template #default="{ row }">
               <div class="flex flex-wrap gap-1">
+                <ElTag
+                  v-if="row.batchAbnormalFlag"
+                  effect="dark"
+                  type="danger"
+                >
+                  异常批次
+                </ElTag>
                 <ElTag v-for="barcode in row.barcodes" :key="barcode" effect="plain" type="info">
                   {{ barcode }}
                 </ElTag>
@@ -493,7 +570,12 @@ void loadPendingData();
           </ElTableColumn>
           <ElTableColumn fixed="right" label="操作" width="120">
             <template #default="{ row }">
-              <ElButton link type="primary" @click="prepareReceipt(row)">接收</ElButton>
+              <div class="flex flex-col items-start gap-1">
+                <ElButton link type="primary" @click="prepareReceipt(row)">接收</ElButton>
+                <ElButton link type="info" @click="handleReprintApplicationForm(row)">
+                  补打印申请单
+                </ElButton>
+              </div>
             </template>
           </ElTableColumn>
         </ElTable>
@@ -515,7 +597,7 @@ void loadPendingData();
       <WorkflowSectionCard
         v-if="receiptResult"
         title="接收结果"
-        description="展示接收后的病例号、病理号、整体签收状态与未签收数量。"
+        description="展示接收后的病例号、病理号、整体签收状态、未签收数量与异常摘要。"
       >
         <ElDescriptions :column="2" border>
           <ElDescriptionsItem label="病例编号">
@@ -529,6 +611,17 @@ void loadPendingData();
           </ElDescriptionsItem>
           <ElDescriptionsItem label="未接收数量">
             {{ receiptResult.unreceivedCount }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="提醒计数">
+            {{ receiptResult.reminderCount ?? 0 }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="异常批次">
+            <ElTag :type="receiptResult.batchAbnormalFlag ? 'danger' : 'success'">
+              {{ receiptResult.batchAbnormalFlag ? '是' : '否' }}
+            </ElTag>
+          </ElDescriptionsItem>
+          <ElDescriptionsItem :span="2" label="异常摘要">
+            {{ formatNullable(receiptResult.receiptAbnormalSummary) }}
           </ElDescriptionsItem>
         </ElDescriptions>
       </WorkflowSectionCard>
@@ -555,7 +648,22 @@ void loadPendingData();
           <ElDescriptionsItem label="待接收标本数">
             {{ selectedGroup.items.length }}
           </ElDescriptionsItem>
+          <ElDescriptionsItem label="未接收数量">
+            {{ selectedGroup.unreceivedCount }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="批次提醒">
+            {{ selectedGroup.reminderCount }}
+          </ElDescriptionsItem>
         </ElDescriptions>
+
+        <ElAlert
+          v-if="selectedGroup.batchAbnormalFlag"
+          class="mb-4"
+          :closable="false"
+          title="当前批次含异常标记，请重点核对容器数量、质控问题和拒收/退回原因。"
+          type="warning"
+          show-icon
+        />
 
         <ElForm label-width="96px">
           <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

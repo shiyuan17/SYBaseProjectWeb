@@ -12,6 +12,7 @@ export default defineConfig(async () => {
         }),
       ],
       server: {
+        allowedHosts: ['.ngrok-free.dev'],
         proxy: {
           '/api/v1/auth': {
             changeOrigin: true,

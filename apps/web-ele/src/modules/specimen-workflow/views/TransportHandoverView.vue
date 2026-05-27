@@ -4,7 +4,7 @@ import type {
   TransportOrderView,
 } from '../types/specimen-workflow';
 
-import { reactive, ref, watch } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
@@ -37,6 +37,7 @@ import {
   listPendingTransportOrders,
   printTransportOrder,
 } from '../api/specimen-workflow-service';
+import TransportOrderCreateDialog from '../components/TransportOrderCreateDialog.vue';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { DEFAULT_PAGE_SIZE, TRANSPORT_STATUS_OPTIONS } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
@@ -58,6 +59,7 @@ const pageError = ref('');
 const loading = ref(false);
 const printLoading = ref(false);
 const handoverLoading = ref(false);
+const createDialogVisible = ref(false);
 
 const orders = ref<PendingTransportOrderItem[]>([]);
 const total = ref(0);
@@ -73,6 +75,11 @@ const filters = reactive({
   status: '',
 });
 
+const routeApplicationNo = ref('');
+
+const createDialogApplicationId = computed(() => filters.applicationId.trim());
+const createDialogApplicationNo = computed(() => routeApplicationNo.value.trim());
+
 const printDialogVisible = ref(false);
 const printForm = reactive({
   operatorName: userStore.userInfo?.realName ?? '',
@@ -87,6 +94,16 @@ const handoverForm = reactive({
   remarks: '',
   terminalCode: '',
 });
+
+function normalizeRouteQueryValue(value: unknown) {
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return typeof value[0] === 'string' ? value[0] : '';
+  }
+  return '';
+}
 
 async function loadOrders() {
   loading.value = true;
@@ -122,17 +139,12 @@ function handleReset() {
   filters.page = 1;
   filters.size = DEFAULT_PAGE_SIZE;
   filters.status = '';
+  routeApplicationNo.value = '';
   void loadOrders();
 }
 
-function normalizeRouteQueryValue(value: unknown) {
-  if (typeof value === 'string') {
-    return value;
-  }
-  if (Array.isArray(value)) {
-    return typeof value[0] === 'string' ? value[0] : '';
-  }
-  return '';
+function openCreateDialog() {
+  createDialogVisible.value = true;
 }
 
 function openPrintDialog(order: PendingTransportOrderItem) {
@@ -207,6 +219,10 @@ async function submitHandover() {
   }
 }
 
+function handleTransportOrderCreated() {
+  void loadOrders();
+}
+
 function canHandover(order: PendingTransportOrderItem) {
   return ['PENDING', 'PRINTED'].includes(order.status);
 }
@@ -226,10 +242,10 @@ function handleReceiverUserChange(user: null | { id: string; name: string }) {
 }
 
 watch(
-  () => route.query.applicationId,
-  (value) => {
-    const applicationId = normalizeRouteQueryValue(value).trim();
-    filters.applicationId = applicationId;
+  () => [route.query.applicationId, route.query.applicationNo],
+  ([applicationIdValue, applicationNoValue]) => {
+    filters.applicationId = normalizeRouteQueryValue(applicationIdValue).trim();
+    routeApplicationNo.value = normalizeRouteQueryValue(applicationNoValue).trim();
     filters.page = 1;
     void loadOrders();
   },
@@ -238,7 +254,7 @@ watch(
 </script>
 
 <template>
-  <Page :title="embedded ? '转运交接' : '固定与转运'">
+  <Page :title="embedded ? '转运/出库' : '固定与转运'">
     <div class="flex flex-col gap-4">
       <ElAlert
         v-if="pageError"
@@ -251,7 +267,7 @@ watch(
       <WorkflowSectionCard
         v-if="latestOrder"
         title="最近操作结果"
-        description="展示最近一次打印或交接后返回的转运单摘要。"
+        description="展示最近一次打印或交接后的转运单摘要。"
       >
         <ElDescriptions :column="2" border>
           <ElDescriptionsItem label="转运单号">
@@ -281,9 +297,13 @@ watch(
       </WorkflowSectionCard>
 
       <WorkflowSectionCard
-        title="待处理转运单"
-        description="工作台列表支持按申请单号、送检科室、日期范围和状态筛选。"
+        title="转运/出库"
+        description="统一承接创建转运单、打印转运单和交接动作。"
       >
+        <template #extra>
+          <ElButton type="primary" @click="openCreateDialog">创建转运单</ElButton>
+        </template>
+
         <ElForm inline label-width="88px">
           <ElFormItem label="申请单号">
             <ElInput
@@ -412,6 +432,13 @@ watch(
         </div>
       </WorkflowSectionCard>
     </div>
+
+    <TransportOrderCreateDialog
+      v-model="createDialogVisible"
+      :initial-application-id="createDialogApplicationId"
+      :initial-application-no="createDialogApplicationNo"
+      @created="handleTransportOrderCreated"
+    />
 
     <ElDialog
       v-model="printDialogVisible"

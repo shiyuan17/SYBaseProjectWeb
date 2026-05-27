@@ -3,82 +3,99 @@ import { createApp, h, nextTick } from 'vue';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  ALL_FIXATION_STATUS_VALUE,
-  FIXATION_STATUS_OPTIONS,
+  ALL_VERIFICATION_STATUS_VALUE,
+  VERIFICATION_STATUS_OPTIONS,
 } from '../constants';
 import FixationVerifyView from './FixationVerifyView.vue';
 
 const {
-  completeFixationMock,
+  completeSpecimenVerificationMock,
   confirmMock,
   listPendingFixationsMock,
+  startSpecimenVerificationMock,
 } = vi.hoisted(() => ({
-  completeFixationMock: vi.fn(async () => ({
-    barcode: 'SP-PENDING',
-    fixationStatus: 'COMPLETED',
-    specimenId: 'SPEC-PENDING',
+  completeSpecimenVerificationMock: vi.fn(async () => ({
+    barcode: 'SP-VERIFYING',
+    id: 'SPEC-VERIFYING',
+    specimenNo: 'SP202605230002',
+    specimenStatus: 'VERIFIED',
+    verificationCompletedAt: '2026-05-23T12:48:44',
+    verificationStartedAt: '2026-05-23T12:45:44',
+    verificationStatus: 'VERIFIED',
   })),
   confirmMock: vi.fn(async () => 'confirm'),
   listPendingFixationsMock: vi.fn(async () => ({
     items: [
       {
         abnormalFlag: false,
-        applicationId: 'APP-PENDING',
+        applicationId: 'APP-UNVERIFIED',
         applicationNo: 'AP202605230001',
-        barcode: 'SP-PENDING',
-        containerCount: 1,
-        containerName: 'Bottle',
+        barcode: 'SP-UNVERIFIED',
         fixationStatus: 'PENDING',
         latestTrackingAt: '2026-05-23 12:44:44',
         patientName: 'Alice',
         registeredAt: '2026-05-23 12:44:44',
-        specimenId: 'SPEC-PENDING',
+        specimenId: 'SPEC-UNVERIFIED',
         specimenNo: 'SP202605230001',
         specimenStatus: 'REGISTERED',
         submittingDepartmentId: 'DEPT-001',
         submittingDepartmentName: 'Pathology',
         transportOrderId: null,
+        verificationCompletedAt: null,
+        verificationStartedAt: null,
+        verificationStatus: 'UNVERIFIED',
       },
       {
         abnormalFlag: false,
-        applicationId: 'APP-FIXING',
+        applicationId: 'APP-VERIFYING',
         applicationNo: 'AP202605230002',
-        barcode: 'SP-FIXING',
-        containerCount: 1,
-        containerName: 'Bottle',
-        fixationStatus: 'FIXING',
+        barcode: 'SP-VERIFYING',
+        fixationStatus: 'PENDING',
         latestTrackingAt: '2026-05-23 12:45:44',
         patientName: 'Bob',
         registeredAt: '2026-05-23 12:45:44',
-        specimenId: 'SPEC-FIXING',
+        specimenId: 'SPEC-VERIFYING',
         specimenNo: 'SP202605230002',
-        specimenStatus: 'FIXING',
+        specimenStatus: 'VERIFYING',
         submittingDepartmentId: 'DEPT-001',
         submittingDepartmentName: 'Pathology',
         transportOrderId: null,
+        verificationCompletedAt: null,
+        verificationStartedAt: '2026-05-23 12:45:44',
+        verificationStatus: 'VERIFYING',
       },
       {
         abnormalFlag: false,
-        applicationId: 'APP-COMPLETED',
+        applicationId: 'APP-VERIFIED',
         applicationNo: 'AP202605230003',
-        barcode: 'SP-COMPLETED',
-        containerCount: 1,
-        containerName: 'Bottle',
-        fixationStatus: 'COMPLETED',
+        barcode: 'SP-VERIFIED',
+        fixationStatus: 'PENDING',
         latestTrackingAt: '2026-05-23 12:46:44',
         patientName: 'Carol',
         registeredAt: '2026-05-23 12:46:44',
-        specimenId: 'SPEC-COMPLETED',
+        specimenId: 'SPEC-VERIFIED',
         specimenNo: 'SP202605230003',
-        specimenStatus: 'FIXED',
+        specimenStatus: 'VERIFIED',
         submittingDepartmentId: 'DEPT-001',
         submittingDepartmentName: 'Pathology',
         transportOrderId: null,
+        verificationCompletedAt: '2026-05-23 12:46:44',
+        verificationStartedAt: '2026-05-23 12:45:44',
+        verificationStatus: 'VERIFIED',
       },
     ],
     page: 1,
     size: 20,
     total: 3,
+  })),
+  startSpecimenVerificationMock: vi.fn(async () => ({
+    barcode: 'SP-UNVERIFIED',
+    id: 'SPEC-UNVERIFIED',
+    specimenNo: 'SP202605230001',
+    specimenStatus: 'VERIFYING',
+    verificationCompletedAt: null,
+    verificationStartedAt: '2026-05-23T12:44:44',
+    verificationStatus: 'VERIFYING',
   })),
 }));
 
@@ -119,14 +136,6 @@ vi.mock('../components/WorkflowSectionCard.vue', () => ({
   },
 }));
 
-vi.mock('../components/TransportOrderCreateDialog.vue', () => ({
-  default: {
-    props: ['modelValue', 'initialApplicationId', 'initialApplicationNo'],
-    template:
-      '<div data-testid="transport-order-create-dialog" :data-open="String(modelValue)" :data-application-id="initialApplicationId" :data-application-no="initialApplicationNo" />',
-  },
-}));
-
 vi.mock('element-plus', async () => {
   const actual = await vi.importActual<typeof import('element-plus')>('element-plus');
   return {
@@ -137,8 +146,9 @@ vi.mock('element-plus', async () => {
 });
 
 vi.mock('../api/specimen-workflow-service', () => ({
-  completeFixation: completeFixationMock,
+  completeSpecimenVerification: completeSpecimenVerificationMock,
   listPendingFixations: listPendingFixationsMock,
+  startSpecimenVerification: startSpecimenVerificationMock,
 }));
 
 function mountView() {
@@ -160,94 +170,73 @@ describe('FixationVerifyView', () => {
     vi.clearAllMocks();
   });
 
-  it('uses all as the default fixation filter and queries without fixationStatus', async () => {
-    const { app, container } = mountView();
+  it('uses all as the default verification filter and queries without verificationStatus', async () => {
+    const { app } = mountView();
     await nextTick();
     await Promise.resolve();
     await nextTick();
 
-    expect(FIXATION_STATUS_OPTIONS.some((option) => option.value === ALL_FIXATION_STATUS_VALUE)).toBe(
-      true,
-    );
+    expect(
+      VERIFICATION_STATUS_OPTIONS.some((option) => option.value === ALL_VERIFICATION_STATUS_VALUE),
+    ).toBe(true);
     expect(listPendingFixationsMock).toHaveBeenCalledWith(
-      expect.objectContaining({ fixationStatus: undefined }),
+      expect.objectContaining({ verificationStatus: undefined }),
     );
-    expect(container.textContent).toContain('所有');
 
     app.unmount();
   });
 
-  it('shows only complete fixation for pending and fixing rows, and disables transport before completion', async () => {
+  it('shows verification actions only and removes fixation/transport actions', async () => {
     const { app, container } = mountView();
     await nextTick();
     await Promise.resolve();
     await nextTick();
 
     const buttons = [...container.querySelectorAll('button')];
-    const createButtons = buttons.filter((button) => button.textContent?.includes('创建转运单'));
-    const completeButtons = buttons.filter((button) => button.textContent?.includes('完成固定'));
-    const startButtons = buttons.filter((button) => button.textContent?.includes('开始固定'));
+    const startButtons = buttons.filter((button) => button.textContent?.includes('开始核对'));
+    const completeButtons = buttons.filter((button) => button.textContent?.includes('完成核对'));
 
-    expect(startButtons).toHaveLength(0);
-    expect(completeButtons).toHaveLength(2);
-    expect(createButtons).toHaveLength(3);
-    expect(createButtons[0]?.hasAttribute('disabled')).toBe(true);
-    expect(createButtons[1]?.hasAttribute('disabled')).toBe(true);
-    expect(createButtons[2]?.hasAttribute('disabled')).toBe(false);
-    expect(createButtons[0]?.getAttribute('title')).toContain('请先完成固定后再创建转运单');
+    expect(startButtons).toHaveLength(1);
+    expect(completeButtons).toHaveLength(1);
+    expect(container.textContent).not.toContain('开始固定');
+    expect(container.textContent).not.toContain('完成固定');
+    expect(container.textContent).not.toContain('创建转运单');
 
-    createButtons[0]?.click();
+    startButtons[0]?.click();
+    await Promise.resolve();
     await nextTick();
-    expect(
-      container
-        .querySelector('[data-testid="transport-order-create-dialog"]')
-        ?.getAttribute('data-open'),
-    ).toBe('false');
-
-    createButtons[2]?.click();
-    await nextTick();
-    expect(
-      container
-        .querySelector('[data-testid="transport-order-create-dialog"]')
-        ?.getAttribute('data-open'),
-    ).toBe('true');
-    expect(
-      container
-        .querySelector('[data-testid="transport-order-create-dialog"]')
-        ?.getAttribute('data-application-id'),
-    ).toBe('APP-COMPLETED');
-    expect(
-      container
-        .querySelector('[data-testid="transport-order-create-dialog"]')
-        ?.getAttribute('data-application-no'),
-    ).toBe('AP202605230003');
+    expect(startSpecimenVerificationMock).toHaveBeenCalledWith({
+      operatorName: 'Test User',
+      operatorUserId: 'USER-001',
+      specimenBarcode: 'SP-UNVERIFIED',
+    });
 
     app.unmount();
   });
 
-  it('confirms before completing fixation and calls the complete api', async () => {
+  it('confirms before completing verification and only completes verifying rows', async () => {
     const { app, container } = mountView();
     await nextTick();
     await Promise.resolve();
     await nextTick();
 
     const completeButtons = [...container.querySelectorAll('button')].filter((button) =>
-      button.textContent?.includes('完成固定'),
+      button.textContent?.includes('完成核对'),
     );
 
     completeButtons[0]?.click();
     await Promise.resolve();
     await nextTick();
 
-    expect(confirmMock).toHaveBeenCalledWith('确认该标本已固定完成吗？', '完成固定', {
+    expect(confirmMock).toHaveBeenCalledWith('确认该标本已完成核对吗？', '完成核对', {
       cancelButtonText: '取消',
       confirmButtonText: '确认',
       type: 'warning',
     });
-    expect(completeFixationMock).toHaveBeenCalledWith({
+    expect(completeSpecimenVerificationMock).toHaveBeenCalledWith({
       operatorName: 'Test User',
       operatorUserId: 'USER-001',
-      specimenBarcode: 'SP-PENDING',
+      specimenBarcode: 'SP-VERIFYING',
     });
 
     app.unmount();

@@ -92,6 +92,17 @@ const routes: RouteRecordRaw[] = [
       },
       {
         component: () =>
+          import('#/modules/doctor-workflow/views/FrozenReportView.vue'),
+        meta: {
+          authority: [...M4_REPORT_PAGE_AUTHORITIES],
+          icon: 'carbon:snowflake',
+          title: '冰冻快速报告',
+        },
+        name: 'FrozenReport',
+        path: '/doctor-workflow/frozen-report',
+      },
+      {
+        component: () =>
           import('#/modules/doctor-workflow/views/ReportTrackingView.vue'),
         meta: {
           authority: [M4_PERMISSION_CODES.REPORT_TRACKING_QUERY],

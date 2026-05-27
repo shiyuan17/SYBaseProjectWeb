@@ -26,15 +26,23 @@ import {
 
 import DepartmentSelect from '#/modules/system-management/components/DepartmentSelect.vue';
 
-import { completeFixation, listPendingFixations } from '../api/specimen-workflow-service';
-import TransportOrderCreateDialog from '../components/TransportOrderCreateDialog.vue';
 import {
-  ALL_FIXATION_STATUS_VALUE,
+  completeSpecimenVerification,
+  listPendingFixations,
+  startSpecimenVerification,
+} from '../api/specimen-workflow-service';
+import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
+import {
+  ALL_VERIFICATION_STATUS_VALUE,
   DEFAULT_PAGE_SIZE,
-  FIXATION_STATUS_OPTIONS,
+  VERIFICATION_STATUS_OPTIONS,
 } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
-import { formatDateTime, formatFixationStatus, formatNullable } from '../utils/format';
+import {
+  formatDateTime,
+  formatNullable,
+  formatVerificationStatus,
+} from '../utils/format';
 
 const userStore = useUserStore();
 const route = useRoute();
@@ -53,17 +61,14 @@ const loading = ref(false);
 const actionLoading = ref(false);
 const pendingItems = ref<PendingSpecimenItem[]>([]);
 const total = ref(0);
-const createTransportOrderDialogVisible = ref(false);
-const createTransportOrderApplicationId = ref('');
-const createTransportOrderApplicationNo = ref('');
 
 const filters = reactive({
   applicationId: '',
   dateRange: [] as string[],
   departmentId: '',
-  fixationStatus: ALL_FIXATION_STATUS_VALUE,
   page: 1,
   size: DEFAULT_PAGE_SIZE,
+  verificationStatus: ALL_VERIFICATION_STATUS_VALUE,
 });
 
 const currentQuery = computed(() => ({
@@ -71,21 +76,45 @@ const currentQuery = computed(() => ({
   dateFrom: filters.dateRange[0] || undefined,
   dateTo: filters.dateRange[1] || undefined,
   departmentId: filters.departmentId.trim() || undefined,
-  fixationStatus:
-    filters.fixationStatus === ALL_FIXATION_STATUS_VALUE
-      ? undefined
-      : filters.fixationStatus.trim() || undefined,
   page: filters.page,
   size: filters.size,
+  verificationStatus:
+    filters.verificationStatus === ALL_VERIFICATION_STATUS_VALUE
+      ? undefined
+      : filters.verificationStatus.trim() || undefined,
 }));
+
+function normalizeRouteQueryValue(value: unknown) {
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return typeof value[0] === 'string' ? value[0] : '';
+  }
+  return '';
+}
+
+function canStartVerification(row: PendingSpecimenItem) {
+  return row.verificationStatus === 'UNVERIFIED';
+}
+
+function canCompleteVerification(row: PendingSpecimenItem) {
+  return row.verificationStatus === 'VERIFYING';
+}
+
+function handleDepartmentChange(department: null | { id: string; name: string }) {
+  filters.departmentId = department?.id ?? '';
+}
 
 async function loadPendingData() {
   loading.value = true;
   pageError.value = '';
   try {
     const result = await listPendingFixations(currentQuery.value);
-    pendingItems.value = result.items;
-    total.value = result.total;
+    pendingItems.value = result.items.filter((item) =>
+      ['UNVERIFIED', 'VERIFYING'].includes(item.verificationStatus ?? 'UNVERIFIED'),
+    );
+    total.value = pendingItems.value.length;
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
   } finally {
@@ -102,29 +131,50 @@ function handleReset() {
   filters.applicationId = '';
   filters.dateRange = [];
   filters.departmentId = '';
-  filters.fixationStatus = ALL_FIXATION_STATUS_VALUE;
   filters.page = 1;
   filters.size = DEFAULT_PAGE_SIZE;
+  filters.verificationStatus = ALL_VERIFICATION_STATUS_VALUE;
   void loadPendingData();
 }
 
-function normalizeRouteQueryValue(value: unknown) {
-  if (typeof value === 'string') {
-    return value;
-  }
-  if (Array.isArray(value)) {
-    return typeof value[0] === 'string' ? value[0] : '';
-  }
-  return '';
-}
-
-async function submitFixation(barcode: string) {
-  const specimenBarcode = barcode.trim();
+async function submitStartVerification(row: PendingSpecimenItem) {
+  const specimenBarcode = row.barcode.trim();
   const operatorName = userStore.userInfo?.realName?.trim() ?? '';
   const operatorUserId = userStore.userInfo?.userId?.trim() ?? '';
 
   if (!specimenBarcode) {
-    ElMessage.warning('请先录入或扫码标本条码');
+    ElMessage.warning('请先录入或扫描标本条码');
+    return;
+  }
+  if (!operatorName) {
+    ElMessage.warning('缺少当前操作人信息');
+    return;
+  }
+
+  actionLoading.value = true;
+  pageError.value = '';
+  try {
+    await startSpecimenVerification({
+      operatorName,
+      operatorUserId: operatorUserId || null,
+      specimenBarcode,
+    });
+    ElMessage.success(`条码 ${specimenBarcode} 已开始核对`);
+    await loadPendingData();
+  } catch (error) {
+    pageError.value = getWorkflowPageErrorMessage(error);
+  } finally {
+    actionLoading.value = false;
+  }
+}
+
+async function submitCompleteVerification(row: PendingSpecimenItem) {
+  const specimenBarcode = row.barcode.trim();
+  const operatorName = userStore.userInfo?.realName?.trim() ?? '';
+  const operatorUserId = userStore.userInfo?.userId?.trim() ?? '';
+
+  if (!specimenBarcode) {
+    ElMessage.warning('请先录入或扫描标本条码');
     return;
   }
   if (!operatorName) {
@@ -133,7 +183,7 @@ async function submitFixation(barcode: string) {
   }
 
   try {
-    await ElMessageBox.confirm('确认该标本已固定完成吗？', '完成固定', {
+    await ElMessageBox.confirm('确认该标本已完成核对吗？', '完成核对', {
       cancelButtonText: '取消',
       confirmButtonText: '确认',
       type: 'warning',
@@ -145,12 +195,12 @@ async function submitFixation(barcode: string) {
   actionLoading.value = true;
   pageError.value = '';
   try {
-    await completeFixation({
+    await completeSpecimenVerification({
       operatorName,
       operatorUserId: operatorUserId || null,
       specimenBarcode,
     });
-    ElMessage.success(`条码 ${specimenBarcode} 已完成固定`);
+    ElMessage.success(`条码 ${specimenBarcode} 已完成核对`);
     await loadPendingData();
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
@@ -162,42 +212,16 @@ async function submitFixation(barcode: string) {
 watch(
   () => route.query.applicationId,
   (value) => {
-    const applicationId = normalizeRouteQueryValue(value).trim();
-    filters.applicationId = applicationId;
+    filters.applicationId = normalizeRouteQueryValue(value).trim();
     filters.page = 1;
     void loadPendingData();
   },
   { immediate: true },
 );
-
-function handleDepartmentChange(department: null | { id: string; name: string }) {
-  filters.departmentId = department?.id ?? '';
-}
-
-function canCompleteFixation(row: PendingSpecimenItem) {
-  return ['PENDING', 'FIXING'].includes(row.fixationStatus ?? '');
-}
-
-function canCreateTransportOrder(row: PendingSpecimenItem) {
-  return row.fixationStatus === 'COMPLETED';
-}
-
-function openCreateTransportOrderDialog(row: PendingSpecimenItem) {
-  if (!canCreateTransportOrder(row)) {
-    return;
-  }
-  createTransportOrderApplicationId.value = row.applicationId;
-  createTransportOrderApplicationNo.value = row.applicationNo;
-  createTransportOrderDialogVisible.value = true;
-}
-
-function handleTransportOrderCreated() {
-  void loadPendingData();
-}
 </script>
 
 <template>
-  <Page :title="embedded ? '固定核对' : '固定与转运'">
+  <Page :title="embedded ? '标本核对' : '固定与转运'">
     <div class="flex flex-col gap-4">
       <ElAlert
         v-if="pageError"
@@ -208,8 +232,8 @@ function handleTransportOrderCreated() {
       />
 
       <WorkflowSectionCard
-        title="固定列表"
-        description="按申请单编号、固定状态、送检科室和登记日期筛选标本。"
+        title="标本核对"
+        description="按申请单号、核对状态、送检科室和登记日期筛选标本，并在当前场景完成开始核对或完成核对。"
       >
         <ElForm inline label-width="88px">
           <ElFormItem label="申请单号">
@@ -221,14 +245,14 @@ function handleTransportOrderCreated() {
               @keyup.enter="handleSearch"
             />
           </ElFormItem>
-          <ElFormItem label="固定状态">
+          <ElFormItem label="核对状态">
             <ElSelect
-              v-model="filters.fixationStatus"
-              placeholder="请选择固定状态"
+              v-model="filters.verificationStatus"
+              placeholder="请选择核对状态"
               style="width: 180px"
             >
               <ElOption
-                v-for="option in FIXATION_STATUS_OPTIONS"
+                v-for="option in VERIFICATION_STATUS_OPTIONS"
                 :key="option.value"
                 :label="option.label"
                 :value="option.value"
@@ -267,21 +291,29 @@ function handleTransportOrderCreated() {
           </ElTableColumn>
           <ElTableColumn label="标本号" min-width="140" prop="specimenNo" />
           <ElTableColumn label="条码" min-width="180" prop="barcode" />
-          <ElTableColumn label="固定状态" min-width="120">
+          <ElTableColumn label="核对状态" min-width="120">
             <template #default="{ row }">
-              <ElTag :type="row.fixationStatus === 'COMPLETED' ? 'success' : 'warning'">
-                {{ formatFixationStatus(row.fixationStatus) }}
+              <ElTag
+                :type="
+                  row.verificationStatus === 'VERIFIED'
+                    ? 'success'
+                    : row.verificationStatus === 'VERIFYING'
+                      ? 'warning'
+                      : 'info'
+                "
+              >
+                {{ formatVerificationStatus(row.verificationStatus) }}
               </ElTag>
             </template>
           </ElTableColumn>
-          <ElTableColumn label="送检科室" min-width="160">
+          <ElTableColumn label="开始核对时间" min-width="180">
             <template #default="{ row }">
-              {{ formatNullable(row.submittingDepartmentName) }}
+              {{ formatDateTime(row.verificationStartedAt) }}
             </template>
           </ElTableColumn>
-          <ElTableColumn label="登记时间" min-width="180">
+          <ElTableColumn label="完成核对时间" min-width="180">
             <template #default="{ row }">
-              {{ formatDateTime(row.registeredAt) }}
+              {{ formatDateTime(row.verificationCompletedAt) }}
             </template>
           </ElTableColumn>
           <ElTableColumn label="最近追踪" min-width="180">
@@ -289,26 +321,26 @@ function handleTransportOrderCreated() {
               {{ formatDateTime(row.latestTrackingAt) }}
             </template>
           </ElTableColumn>
-          <ElTableColumn fixed="right" label="操作" min-width="320">
+          <ElTableColumn fixed="right" label="操作" min-width="220">
             <template #default="{ row }">
               <div class="flex flex-nowrap items-center gap-3 whitespace-nowrap">
                 <ElButton
-                  :disabled="!canCreateTransportOrder(row)"
-                  :title="canCreateTransportOrder(row) ? undefined : '请先完成固定后再创建转运单'"
+                  v-if="canStartVerification(row)"
+                  :loading="actionLoading"
                   link
                   type="primary"
-                  @click="openCreateTransportOrderDialog(row)"
+                  @click="submitStartVerification(row)"
                 >
-                  创建转运单
+                  开始核对
                 </ElButton>
                 <ElButton
-                  v-if="canCompleteFixation(row)"
+                  v-if="canCompleteVerification(row)"
                   :loading="actionLoading"
                   link
                   type="success"
-                  @click="submitFixation(row.barcode)"
+                  @click="submitCompleteVerification(row)"
                 >
-                  完成固定
+                  完成核对
                 </ElButton>
               </div>
             </template>
@@ -323,18 +355,9 @@ function handleTransportOrderCreated() {
             :total="total"
             background
             layout="total, sizes, prev, pager, next"
-            @current-change="loadPendingData"
-            @size-change="loadPendingData"
           />
         </div>
       </WorkflowSectionCard>
     </div>
-
-    <TransportOrderCreateDialog
-      v-model="createTransportOrderDialogVisible"
-      :initial-application-id="createTransportOrderApplicationId"
-      :initial-application-no="createTransportOrderApplicationNo"
-      @created="handleTransportOrderCreated"
-    />
   </Page>
 </template>
