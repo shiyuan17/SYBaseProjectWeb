@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import type { PendingSpecimenItem } from '../types/specimen-workflow';
+import type {
+  SpecimenRemovalItem,
+  SpecimenRemovalSummary,
+} from '../types/specimen-workflow';
 
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
@@ -16,9 +19,7 @@ import {
   ElInput,
   ElMessage,
   ElMessageBox,
-  ElOption,
   ElPagination,
-  ElSelect,
   ElTable,
   ElTableColumn,
   ElTag,
@@ -27,22 +28,14 @@ import {
 import DepartmentSelect from '#/modules/system-management/components/DepartmentSelect.vue';
 
 import {
-  completeSpecimenVerification,
-  listPendingFixations,
-  startSpecimenVerification,
+  confirmSpecimenRemoval,
+  getApplicationDetail,
+  listPendingSpecimenRemovals,
 } from '../api/specimen-workflow-service';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
-import {
-  ALL_VERIFICATION_STATUS_VALUE,
-  DEFAULT_PAGE_SIZE,
-  VERIFICATION_STATUS_OPTIONS,
-} from '../constants';
+import { DEFAULT_PAGE_SIZE } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
-import {
-  formatDateTime,
-  formatNullable,
-  formatVerificationStatus,
-} from '../utils/format';
+import { formatDateTime, formatNullable } from '../utils/format';
 
 const userStore = useUserStore();
 const route = useRoute();
@@ -56,32 +49,37 @@ withDefaults(
   },
 );
 
+const emptySummary: SpecimenRemovalSummary = {
+  abnormalCount: 0,
+  confirmedCount: 0,
+  pendingCount: 0,
+  totalCount: 0,
+};
+
 const pageError = ref('');
 const loading = ref(false);
 const actionLoading = ref(false);
-const pendingItems = ref<PendingSpecimenItem[]>([]);
+const pendingItems = ref<SpecimenRemovalItem[]>([]);
+const summary = ref<SpecimenRemovalSummary>({ ...emptySummary });
 const total = ref(0);
 
+let routeSyncToken = 0;
+
 const filters = reactive({
-  applicationId: '',
+  applicationNo: '',
   dateRange: [] as string[],
   departmentId: '',
   page: 1,
   size: DEFAULT_PAGE_SIZE,
-  verificationStatus: ALL_VERIFICATION_STATUS_VALUE,
 });
 
 const currentQuery = computed(() => ({
-  applicationId: filters.applicationId.trim() || undefined,
+  applicationNo: filters.applicationNo.trim() || undefined,
   dateFrom: filters.dateRange[0] || undefined,
   dateTo: filters.dateRange[1] || undefined,
   departmentId: filters.departmentId.trim() || undefined,
   page: filters.page,
   size: filters.size,
-  verificationStatus:
-    filters.verificationStatus === ALL_VERIFICATION_STATUS_VALUE
-      ? undefined
-      : filters.verificationStatus.trim() || undefined,
 }));
 
 function normalizeRouteQueryValue(value: unknown) {
@@ -94,12 +92,12 @@ function normalizeRouteQueryValue(value: unknown) {
   return '';
 }
 
-function canStartVerification(row: PendingSpecimenItem) {
-  return row.verificationStatus === 'UNVERIFIED';
+function canConfirmRemoval(row: SpecimenRemovalItem) {
+  return !row.specimenRemovalAt;
 }
 
-function canCompleteVerification(row: PendingSpecimenItem) {
-  return row.verificationStatus === 'VERIFYING';
+function formatRemovalStatus(row: SpecimenRemovalItem) {
+  return row.specimenRemovalAt ? '离体' : '未设置';
 }
 
 function handleDepartmentChange(department: null | { id: string; name: string }) {
@@ -110,13 +108,15 @@ async function loadPendingData() {
   loading.value = true;
   pageError.value = '';
   try {
-    const result = await listPendingFixations(currentQuery.value);
-    pendingItems.value = result.items.filter((item) =>
-      ['UNVERIFIED', 'VERIFYING'].includes(item.verificationStatus ?? 'UNVERIFIED'),
-    );
-    total.value = pendingItems.value.length;
+    const result = await listPendingSpecimenRemovals(currentQuery.value);
+    pendingItems.value = result.items;
+    summary.value = result.summary;
+    total.value = result.total;
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
+    pendingItems.value = [];
+    summary.value = { ...emptySummary };
+    total.value = 0;
   } finally {
     loading.value = false;
   }
@@ -128,47 +128,15 @@ function handleSearch() {
 }
 
 function handleReset() {
-  filters.applicationId = '';
+  filters.applicationNo = '';
   filters.dateRange = [];
   filters.departmentId = '';
   filters.page = 1;
   filters.size = DEFAULT_PAGE_SIZE;
-  filters.verificationStatus = ALL_VERIFICATION_STATUS_VALUE;
   void loadPendingData();
 }
 
-async function submitStartVerification(row: PendingSpecimenItem) {
-  const specimenBarcode = row.barcode.trim();
-  const operatorName = userStore.userInfo?.realName?.trim() ?? '';
-  const operatorUserId = userStore.userInfo?.userId?.trim() ?? '';
-
-  if (!specimenBarcode) {
-    ElMessage.warning('请先录入或扫描标本条码');
-    return;
-  }
-  if (!operatorName) {
-    ElMessage.warning('缺少当前操作人信息');
-    return;
-  }
-
-  actionLoading.value = true;
-  pageError.value = '';
-  try {
-    await startSpecimenVerification({
-      operatorName,
-      operatorUserId: operatorUserId || null,
-      specimenBarcode,
-    });
-    ElMessage.success(`条码 ${specimenBarcode} 已开始核对`);
-    await loadPendingData();
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
-  } finally {
-    actionLoading.value = false;
-  }
-}
-
-async function submitCompleteVerification(row: PendingSpecimenItem) {
+async function submitConfirmRemoval(row: SpecimenRemovalItem) {
   const specimenBarcode = row.barcode.trim();
   const operatorName = userStore.userInfo?.realName?.trim() ?? '';
   const operatorUserId = userStore.userInfo?.userId?.trim() ?? '';
@@ -183,7 +151,7 @@ async function submitCompleteVerification(row: PendingSpecimenItem) {
   }
 
   try {
-    await ElMessageBox.confirm('确认该标本已完成核对吗？', '完成核对', {
+    await ElMessageBox.confirm('确认该标本已离体吗？', '离体确认', {
       cancelButtonText: '取消',
       confirmButtonText: '确认',
       type: 'warning',
@@ -195,12 +163,13 @@ async function submitCompleteVerification(row: PendingSpecimenItem) {
   actionLoading.value = true;
   pageError.value = '';
   try {
-    await completeSpecimenVerification({
+    await confirmSpecimenRemoval({
       operatorName,
       operatorUserId: operatorUserId || null,
+      remarks: '离体确认',
       specimenBarcode,
     });
-    ElMessage.success(`条码 ${specimenBarcode} 已完成核对`);
+    ElMessage.success(`条码 ${specimenBarcode} 已完成离体确认`);
     await loadPendingData();
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
@@ -209,19 +178,44 @@ async function submitCompleteVerification(row: PendingSpecimenItem) {
   }
 }
 
+async function syncApplicationNoFromRoute() {
+  const currentToken = ++routeSyncToken;
+  const routeApplicationNo = normalizeRouteQueryValue(route.query.applicationNo).trim();
+  const routeApplicationId = normalizeRouteQueryValue(route.query.applicationId).trim();
+  let resolvedApplicationNo = routeApplicationNo;
+
+  if (!resolvedApplicationNo && routeApplicationId) {
+    try {
+      const detail = await getApplicationDetail(routeApplicationId);
+      if (currentToken !== routeSyncToken) {
+        return;
+      }
+      resolvedApplicationNo = detail.applicationNo.trim();
+    } catch {
+      resolvedApplicationNo = '';
+    }
+  }
+
+  if (currentToken !== routeSyncToken) {
+    return;
+  }
+
+  filters.applicationNo = resolvedApplicationNo;
+  filters.page = 1;
+  await loadPendingData();
+}
+
 watch(
-  () => route.query.applicationId,
-  (value) => {
-    filters.applicationId = normalizeRouteQueryValue(value).trim();
-    filters.page = 1;
-    void loadPendingData();
+  () => [route.query.applicationNo, route.query.applicationId],
+  () => {
+    void syncApplicationNoFromRoute();
   },
   { immediate: true },
 );
 </script>
 
 <template>
-  <Page :title="embedded ? '标本核对' : '固定与转运'">
+  <Page :title="embedded ? '离体确认' : '固定与转运'">
     <div class="flex flex-col gap-4">
       <ElAlert
         v-if="pageError"
@@ -232,32 +226,25 @@ watch(
       />
 
       <WorkflowSectionCard
-        title="标本核对"
-        description="按申请单号、核对状态、送检科室和登记日期筛选标本，并在当前场景完成开始核对或完成核对。"
+        title="离体确认"
+        description="按申请单号、送检科室和登记日期筛选标本，并在当前场景完成离体确认。"
       >
+        <div class="mb-4 flex flex-wrap items-center gap-4 text-sm">
+          <div class="font-semibold text-[color:#d6453d]">设置离体时间</div>
+          <div>全部 <span class="text-xl font-semibold text-primary">{{ summary.totalCount }}</span></div>
+          <div>已离体 <span class="text-xl font-semibold text-success">{{ summary.confirmedCount }}</span></div>
+          <div>未设置 <span class="text-xl font-semibold text-danger">{{ summary.pendingCount }}</span></div>
+        </div>
+
         <ElForm inline label-width="88px">
           <ElFormItem label="申请单号">
             <ElInput
-              v-model="filters.applicationId"
+              v-model="filters.applicationNo"
               clearable
               placeholder="请输入申请单号"
               style="width: 220px"
               @keyup.enter="handleSearch"
             />
-          </ElFormItem>
-          <ElFormItem label="核对状态">
-            <ElSelect
-              v-model="filters.verificationStatus"
-              placeholder="请选择核对状态"
-              style="width: 180px"
-            >
-              <ElOption
-                v-for="option in VERIFICATION_STATUS_OPTIONS"
-                :key="option.value"
-                :label="option.label"
-                :value="option.value"
-              />
-            </ElSelect>
           </ElFormItem>
           <ElFormItem label="送检科室">
             <DepartmentSelect
@@ -283,65 +270,83 @@ watch(
         </ElForm>
 
         <ElTable v-loading="loading" :data="pendingItems" border>
-          <ElTableColumn label="申请单号" min-width="150" prop="applicationNo" />
-          <ElTableColumn label="患者姓名" min-width="120">
+          <ElTableColumn label="序号" width="72">
+            <template #default="{ $index }">
+              {{ (filters.page - 1) * filters.size + $index + 1 }}
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="申请单" min-width="150" prop="applicationNo" />
+          <ElTableColumn label="标本编号" min-width="140" prop="specimenNo" />
+          <ElTableColumn label="姓名" min-width="120">
             <template #default="{ row }">
               {{ formatNullable(row.patientName) }}
             </template>
           </ElTableColumn>
-          <ElTableColumn label="标本号" min-width="140" prop="specimenNo" />
-          <ElTableColumn label="条码" min-width="180" prop="barcode" />
-          <ElTableColumn label="核对状态" min-width="120">
+          <ElTableColumn label="住院号" min-width="140">
             <template #default="{ row }">
-              <ElTag
-                :type="
-                  row.verificationStatus === 'VERIFIED'
-                    ? 'success'
-                    : row.verificationStatus === 'VERIFYING'
-                      ? 'warning'
-                      : 'info'
-                "
-              >
-                {{ formatVerificationStatus(row.verificationStatus) }}
+              {{ formatNullable(row.inpatientNo) }}
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="性别" min-width="90">
+            <template #default="{ row }">
+              {{ formatNullable(row.patientGender) }}
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="手术间" min-width="140">
+            <template #default="{ row }">
+              {{ formatNullable(row.surgeryName) }}
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="标本名称" min-width="180">
+            <template #default="{ row }">
+              {{ formatNullable(row.specimenName) }}
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="标本状态" min-width="120">
+            <template #default="{ row }">
+              <ElTag :type="row.specimenRemovalAt ? 'success' : 'danger'">
+                {{ formatRemovalStatus(row) }}
               </ElTag>
             </template>
           </ElTableColumn>
-          <ElTableColumn label="开始核对时间" min-width="180">
+          <ElTableColumn label="类型" min-width="100">
             <template #default="{ row }">
-              {{ formatDateTime(row.verificationStartedAt) }}
+              {{ formatNullable(row.specimenType) }}
             </template>
           </ElTableColumn>
-          <ElTableColumn label="完成核对时间" min-width="180">
+          <ElTableColumn label="离体时间" min-width="180">
             <template #default="{ row }">
-              {{ formatDateTime(row.verificationCompletedAt) }}
+              {{ formatDateTime(row.specimenRemovalAt) }}
             </template>
           </ElTableColumn>
-          <ElTableColumn label="最近追踪" min-width="180">
+          <ElTableColumn label="离体操作人" min-width="140">
             <template #default="{ row }">
-              {{ formatDateTime(row.latestTrackingAt) }}
+              {{ formatNullable(row.specimenRemovalOperatorName) }}
             </template>
           </ElTableColumn>
-          <ElTableColumn fixed="right" label="操作" min-width="220">
+          <ElTableColumn label="添加时间" min-width="180">
             <template #default="{ row }">
-              <div class="flex flex-nowrap items-center gap-3 whitespace-nowrap">
+              {{ formatDateTime(row.registeredAt) }}
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="添加人" min-width="140">
+            <template #default="{ row }">
+              {{ formatNullable(row.registeredByName) }}
+            </template>
+          </ElTableColumn>
+          <ElTableColumn fixed="right" label="操作" min-width="120">
+            <template #default="{ row }">
+              <div class="flex min-h-8 items-center">
                 <ElButton
-                  v-if="canStartVerification(row)"
+                  v-if="canConfirmRemoval(row)"
                   :loading="actionLoading"
                   link
                   type="primary"
-                  @click="submitStartVerification(row)"
+                  @click="submitConfirmRemoval(row)"
                 >
-                  开始核对
+                  离体确认
                 </ElButton>
-                <ElButton
-                  v-if="canCompleteVerification(row)"
-                  :loading="actionLoading"
-                  link
-                  type="success"
-                  @click="submitCompleteVerification(row)"
-                >
-                  完成核对
-                </ElButton>
+                <span v-else class="text-muted-foreground">-</span>
               </div>
             </template>
           </ElTableColumn>
@@ -355,6 +360,8 @@ watch(
             :total="total"
             background
             layout="total, sizes, prev, pager, next"
+            @current-change="loadPendingData"
+            @size-change="loadPendingData"
           />
         </div>
       </WorkflowSectionCard>

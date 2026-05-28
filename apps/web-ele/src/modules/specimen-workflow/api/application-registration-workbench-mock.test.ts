@@ -14,14 +14,21 @@ describe('application registration workbench mock service', () => {
   it('looks up the same record by application number and inpatient number', async () => {
     const byApplicationNo = await lookupApplicationRegistrationWorkbenchRecord({
       keyword: '1122',
+      queryType: 'APPLICATION_NO',
     });
     const byInpatientNo = await lookupApplicationRegistrationWorkbenchRecord({
       keyword: 'ZY0001122',
+      queryType: 'INPATIENT_NO',
+    });
+    const byPatientName = await lookupApplicationRegistrationWorkbenchRecord({
+      keyword: '张',
+      queryType: 'PATIENT_NAME',
     });
 
     expect(byApplicationNo?.patientInfo.applicationNo).toBe('1122');
     expect(byInpatientNo?.patientInfo.inpatientNo).toBe('ZY0001122');
     expect(byInpatientNo).toEqual(byApplicationNo);
+    expect(byPatientName?.patientInfo.patientName).toContain('张');
   });
 
   it('filters operating rooms by selected operating building', async () => {

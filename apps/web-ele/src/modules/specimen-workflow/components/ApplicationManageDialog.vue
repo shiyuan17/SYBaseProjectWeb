@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type {
   ApplicationCreateRequest,
+  ApplicationDetailView,
   ImportClinicalApplicationRequest,
 } from '../types/specimen-workflow';
 
@@ -37,7 +38,9 @@ import {
 import {
   createApplication,
   duplicateCheckApplications,
+  getApplicationDetail,
   importClinicalApplication,
+  updateApplication,
 } from '../api/specimen-workflow-service';
 import {
   APPLICATION_FORM_STATUS_OPTIONS,
@@ -49,11 +52,20 @@ import { getWorkflowPageErrorMessage } from '../utils/error';
 import WorkflowSectionCard from './WorkflowSectionCard.vue';
 
 type DialogTabName = 'create' | 'import';
+type DialogMode = 'create' | 'edit';
 type SubmitMode = 'save' | 'save-and-manage';
 
-const props = defineProps<{
-  modelValue: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    applicationId?: null | string;
+    mode?: DialogMode;
+    modelValue: boolean;
+  }>(),
+  {
+    applicationId: null,
+    mode: 'create',
+  },
+);
 
 const emit = defineEmits<{
   submitted: [{ applicationId: string; mode: SubmitMode }];
@@ -73,6 +85,9 @@ const accessCodeSet = computed(() => new Set(accessStore.accessCodes));
 const canCreateApplication = computed(() =>
   accessCodeSet.value.has(M2_PERMISSION_CODES.APPLICATION_CREATE),
 );
+const canUpdateApplication = computed(() =>
+  accessCodeSet.value.has(M2_PERMISSION_CODES.APPLICATION_UPDATE),
+);
 const canImportClinicalApplication = computed(() =>
   accessCodeSet.value.has(M2_PERMISSION_CODES.CLINICAL_IMPORT),
 );
@@ -81,6 +96,31 @@ const canQueryWorkflowReference = computed(() =>
 );
 const hasManageCapability = computed(
   () => canCreateApplication.value || canImportClinicalApplication.value,
+);
+const isEditMode = computed(() => props.mode === 'edit');
+const canSubmitCreateForm = computed(() =>
+  isEditMode.value ? canUpdateApplication.value : canCreateApplication.value,
+);
+const canShowCreateForm = computed(() => canSubmitCreateForm.value);
+const canShowImportTab = computed(() =>
+  !isEditMode.value && canImportClinicalApplication.value,
+);
+const hasDialogCapability = computed(() =>
+  isEditMode.value ? canUpdateApplication.value : hasManageCapability.value,
+);
+const dialogTitle = computed(() =>
+  isEditMode.value ? '编辑申请单' : '申请单详情',
+);
+const createFormTitle = computed(() =>
+  isEditMode.value ? '编辑申请单' : '手工创建申请单',
+);
+const createFormDescription = computed(() =>
+  isEditMode.value
+    ? '仅允许未进入下游流程的申请单保存修改。'
+    : '创建成功后可留在申请列表，也可继续进入标本登记。',
+);
+const editableApplicationFormStatusOptions = computed(() =>
+  APPLICATION_FORM_STATUS_OPTIONS.filter((option) => option.value !== 'VOIDED'),
 );
 
 const dialogVisible = computed({
@@ -94,6 +134,7 @@ const pageError = ref('');
 const activeTab = ref<DialogTabName>(CREATE_TAB);
 const creatingApplication = ref(false);
 const importingClinicalApplication = ref(false);
+const loadingApplicationDetail = ref(false);
 const duplicateChecking = ref(false);
 const duplicateCheckMessage = ref('');
 const duplicateSuggestedAction = ref('ALLOW');
@@ -133,6 +174,9 @@ const importForm = reactive<ImportClinicalApplicationRequest>({
 });
 
 function getInitialTab() {
+  if (isEditMode.value) {
+    return CREATE_TAB;
+  }
   if (canCreateApplication.value) {
     return CREATE_TAB;
   }
@@ -183,6 +227,50 @@ function resetDialogState() {
   activeTab.value = getInitialTab();
   resetCreateForm();
   resetImportForm();
+}
+
+function fillCreateForm(detail: ApplicationDetailView) {
+  Object.assign(createForm, {
+    applicationDate: detail.applicationDate,
+    applicationNo: detail.applicationNo,
+    applicationFormStatus: detail.applicationFormStatus ?? 'PENDING',
+    applicationType: detail.applicationType ?? 'ROUTINE',
+    clinicalDiagnosis: detail.clinicalDiagnosis ?? '',
+    clinicalSymptom: detail.clinicalSymptom,
+    externalOrderNo: detail.externalOrderNo,
+    patientAge: detail.patientAge,
+    patientGender: detail.patientGender,
+    patientId: detail.patientId,
+    patientName: detail.patientName,
+    remarks: detail.remarks,
+    sourceHospitalId: detail.sourceHospitalId,
+    sourceHospitalName: detail.sourceHospitalName,
+    specimenSite: detail.specimenSite ?? '',
+    specimenRemovalTime: detail.specimenRemovalTime,
+    status: detail.status,
+    submissionDate: detail.submissionDate,
+    submittingDepartmentId: detail.submittingDepartmentId ?? '',
+    submittingDepartmentName: detail.submittingDepartmentName ?? '',
+    submittingDoctorName: detail.submittingDoctorName ?? '',
+    submittingDoctorUserId: detail.submittingDoctorUserId ?? '',
+    thirdPartySource: detail.thirdPartySource,
+  });
+  clinicalSymptomSuggestion.value = detail.clinicalSymptom ?? '';
+}
+
+async function loadApplicationForEdit() {
+  if (!isEditMode.value || !props.applicationId) {
+    return;
+  }
+  loadingApplicationDetail.value = true;
+  pageError.value = '';
+  try {
+    fillCreateForm(await getApplicationDetail(props.applicationId));
+  } catch (error) {
+    pageError.value = getWorkflowPageErrorMessage(error);
+  } finally {
+    loadingApplicationDetail.value = false;
+  }
 }
 
 async function loadWorkflowReferenceOptions() {
@@ -242,18 +330,23 @@ async function handleDuplicateCheck() {
       patientName: trimOrNull(createForm.patientName),
       specimenSite: trimOrNull(createForm.specimenSite),
     });
-    duplicateSuggestedAction.value = result.suggestedAction;
-    if (result.items.length === 0) {
+    const duplicateItems = isEditMode.value
+      ? result.items.filter((item) => item.id !== props.applicationId)
+      : result.items;
+    duplicateSuggestedAction.value = duplicateItems.length === 0
+      ? 'ALLOW'
+      : duplicateItems.length === 1 ? 'CONFIRM' : result.suggestedAction;
+    if (duplicateItems.length === 0) {
       duplicateCheckMessage.value = '未发现疑似重复申请';
       duplicateConfirmed.value = true;
       ElMessage.success(duplicateCheckMessage.value);
       return true;
     }
     duplicateCheckMessage.value =
-      result.suggestedAction === 'BLOCK'
+      duplicateSuggestedAction.value === 'BLOCK'
         ? '命中强拦截级重复申请，请核对后停止创建或调整申请信息'
-        : `发现 ${result.items.length} 条疑似重复申请，确认无误后可继续保存`;
-    if (result.suggestedAction === 'BLOCK') {
+        : `发现 ${duplicateItems.length} 条疑似重复申请，确认无误后可继续保存`;
+    if (duplicateSuggestedAction.value === 'BLOCK') {
       ElMessage.warning(duplicateCheckMessage.value);
       return false;
     }
@@ -273,7 +366,7 @@ async function handleSubmitSuccess(applicationId: string, mode: SubmitMode) {
 }
 
 async function submitCreateApplication(mode: SubmitMode) {
-  if (!canCreateApplication.value) {
+  if (!canSubmitCreateForm.value) {
     return;
   }
   if (!createForm.patientId?.trim() && !createForm.patientName?.trim()) {
@@ -322,7 +415,7 @@ async function submitCreateApplication(mode: SubmitMode) {
   creatingApplication.value = true;
   pageError.value = '';
   try {
-    const result = await createApplication({
+    const payload = {
       ...createForm,
       patientAge: createForm.patientAge?.trim() || null,
       patientGender: createForm.patientGender?.trim() || null,
@@ -334,9 +427,14 @@ async function submitCreateApplication(mode: SubmitMode) {
       specimenRemovalTime: createForm.specimenRemovalTime?.trim() || null,
       submittingDoctorName: createForm.submittingDoctorName.trim(),
       submittingDoctorUserId: createForm.submittingDoctorUserId.trim(),
-    });
+    };
+    const result = isEditMode.value && props.applicationId
+      ? await updateApplication(props.applicationId, payload)
+      : await createApplication(payload);
     ElMessage.success(
-      mode === 'save' ? '申请单创建成功' : '申请单创建成功，正在前往标本登记',
+      isEditMode.value
+        ? '申请单更新成功'
+        : mode === 'save' ? '申请单创建成功' : '申请单创建成功，正在前往标本登记',
     );
     await handleSubmitSuccess(result.id, mode);
   } catch (error) {
@@ -401,12 +499,14 @@ watch(
     if (visible) {
       resetDialogState();
       void loadWorkflowReferenceOptions();
+      void loadApplicationForEdit();
       return;
     }
-    if (!creatingApplication.value && !importingClinicalApplication.value) {
+    if (!creatingApplication.value && !importingClinicalApplication.value && !loadingApplicationDetail.value) {
       resetDialogState();
     }
   },
+  { immediate: true },
 );
 </script>
 
@@ -415,10 +515,10 @@ watch(
     v-model="dialogVisible"
     :close-on-click-modal="false"
     destroy-on-close
-    title="申请单详情"
+    :title="dialogTitle"
     width="960px"
   >
-    <div class="flex flex-col gap-4">
+    <div v-loading="loadingApplicationDetail" class="flex flex-col gap-4">
       <ElAlert
         v-if="pageError"
         :closable="false"
@@ -428,18 +528,18 @@ watch(
       />
 
       <ElTabs
-        v-if="hasManageCapability"
+        v-if="hasDialogCapability"
         v-model="activeTab"
         class="min-h-[480px]"
       >
         <ElTabPane
-          v-if="canCreateApplication"
+          v-if="canShowCreateForm"
           :name="CREATE_TAB"
-          label="手工创建"
+          :label="isEditMode ? '编辑' : '手工创建'"
         >
           <WorkflowSectionCard
-            title="手工创建申请单"
-            description="创建成功后可留在申请列表，也可继续进入标本登记。"
+            :title="createFormTitle"
+            :description="createFormDescription"
           >
             <ElForm label-width="110px">
               <div class="grid gap-4 md:grid-cols-2">
@@ -521,7 +621,7 @@ watch(
                 <ElFormItem label="申请单随附">
                   <ElSelect v-model="createForm.applicationFormStatus" placeholder="请选择随附状态">
                     <ElOption
-                      v-for="option in APPLICATION_FORM_STATUS_OPTIONS"
+                      v-for="option in editableApplicationFormStatusOptions"
                       :key="option.value"
                       :label="option.label"
                       :value="option.value"
@@ -616,7 +716,7 @@ watch(
         </ElTabPane>
 
         <ElTabPane
-          v-if="canImportClinicalApplication"
+          v-if="canShowImportTab"
           :name="IMPORT_TAB"
           label="第三方导入"
         >
@@ -646,16 +746,17 @@ watch(
 
       <ElEmpty
         v-else
-        description="当前账号没有申请单创建或导入权限"
+        :description="isEditMode ? '当前账号没有申请单编辑权限' : '当前账号没有申请单创建或导入权限'"
       />
     </div>
 
     <template #footer>
       <div class="flex justify-end gap-2">
         <ElButton @click="closeDialog">取消</ElButton>
-        <template v-if="activeTab === CREATE_TAB && canCreateApplication">
-          <ElButton @click="resetCreateForm">重置</ElButton>
+        <template v-if="activeTab === CREATE_TAB && canSubmitCreateForm">
+          <ElButton v-if="!isEditMode" @click="resetCreateForm">重置</ElButton>
           <ElButton
+            v-if="!isEditMode"
             :loading="duplicateChecking"
             @click="handleDuplicateCheck"
           >
@@ -673,10 +774,10 @@ watch(
             type="primary"
             @click="submitCreateApplication('save-and-manage')"
           >
-            保存并前往标本登记
+            {{ isEditMode ? '保存并前往标本登记' : '保存并前往标本登记' }}
           </ElButton>
         </template>
-        <template v-else-if="activeTab === IMPORT_TAB && canImportClinicalApplication">
+        <template v-else-if="activeTab === IMPORT_TAB && canShowImportTab">
           <ElButton @click="resetImportForm">重置</ElButton>
           <ElButton
             :loading="importingClinicalApplication"

@@ -126,6 +126,29 @@ const workflowBackendFirstMenus = [
         },
       },
       {
+        name: 'TrackingException',
+        path: '/workflow/tracking-exception',
+        component: '/modules/specimen-workflow/views/TrackingQueryView',
+        meta: {
+          icon: 'carbon:search',
+          title: '追踪与异常',
+        },
+      },
+    ],
+  },
+];
+
+const technicalWorkflowBackendFirstMenus = [
+  {
+    meta: {
+      icon: 'carbon:operations-record',
+      order: 130,
+      title: '制片管理',
+    },
+    name: 'TechnicalWorkflowRoot',
+    path: '/technical-workflow',
+    children: [
+      {
         name: 'PathologyReceipt',
         path: '/workflow/pathology-receipt',
         component: '/modules/specimen-workflow/views/SpecimenReceiptView',
@@ -135,12 +158,30 @@ const workflowBackendFirstMenus = [
         },
       },
       {
-        name: 'TrackingException',
-        path: '/workflow/tracking-exception',
-        component: '/modules/specimen-workflow/views/TrackingQueryView',
+        name: 'TechnicalTasks',
+        path: '/technical-workflow/tasks',
+        component: '/modules/technical-workflow/views/TechnicalTasksView',
         meta: {
-          icon: 'carbon:search',
-          title: '追踪与异常',
+          icon: 'carbon:task',
+          title: '任务池',
+        },
+      },
+      {
+        name: 'FrozenWorkstation',
+        path: '/technical-workflow/frozen',
+        component: '/modules/technical-workflow/views/FrozenWorkstationView',
+        meta: {
+          icon: 'carbon:snowflake',
+          title: '冰冻工作台',
+        },
+      },
+      {
+        name: 'GrossingWorkstation',
+        path: '/technical-workflow/grossing',
+        component: '/modules/technical-workflow/views/GrossingWorkstationView',
+        meta: {
+          icon: 'carbon:scan',
+          title: '取材描写',
         },
       },
     ],
@@ -205,20 +246,6 @@ const workflowMenuList = [
     visible: true,
   },
   {
-    id: 12_004,
-    componentName: 'PathologyReceipt',
-    enabled: true,
-    icon: 'carbon:archive',
-    menuCode: 'M2_RECEIPT',
-    menuName: '病理接收',
-    menuType: 'MENU',
-    parentId: 12_000,
-    path: '/workflow/pathology-receipt',
-    permissionPrefix: 'm2:receipt',
-    sortOrder: 124,
-    visible: true,
-  },
-  {
     id: 12_005,
     componentName: 'TrackingException',
     enabled: true,
@@ -230,6 +257,79 @@ const workflowMenuList = [
     path: '/workflow/tracking-exception',
     permissionPrefix: 'm2:tracking',
     sortOrder: 125,
+    visible: true,
+  },
+];
+
+const technicalWorkflowMenuList = [
+  {
+    id: 13_000,
+    componentName: 'TechnicalWorkflowRoot',
+    enabled: true,
+    icon: 'carbon:operations-record',
+    menuCode: 'M3_WORKFLOW',
+    menuName: '制片管理',
+    menuType: 'DIRECTORY',
+    parentId: null,
+    path: '/technical-workflow',
+    permissionPrefix: 'm3',
+    sortOrder: 130,
+    visible: true,
+  },
+  {
+    id: 13_001,
+    componentName: 'PathologyReceipt',
+    enabled: true,
+    icon: 'carbon:archive',
+    menuCode: 'M2_RECEIPT',
+    menuName: '病理接收',
+    menuType: 'MENU',
+    parentId: 13_000,
+    path: '/workflow/pathology-receipt',
+    permissionPrefix: 'm2:receipt',
+    sortOrder: 131,
+    visible: true,
+  },
+  {
+    id: 13_002,
+    componentName: 'TechnicalTasks',
+    enabled: true,
+    icon: 'carbon:task',
+    menuCode: 'M3_TASKS',
+    menuName: '任务池',
+    menuType: 'MENU',
+    parentId: 13_000,
+    path: '/technical-workflow/tasks',
+    permissionPrefix: 'm3:tasks',
+    sortOrder: 132,
+    visible: true,
+  },
+  {
+    id: 13_003,
+    componentName: 'FrozenWorkstation',
+    enabled: true,
+    icon: 'carbon:snowflake',
+    menuCode: 'M3_FROZEN',
+    menuName: '冰冻工作台',
+    menuType: 'MENU',
+    parentId: 13_000,
+    path: '/technical-workflow/frozen',
+    permissionPrefix: 'm3:frozen',
+    sortOrder: 133,
+    visible: true,
+  },
+  {
+    id: 13_004,
+    componentName: 'Grossing',
+    enabled: true,
+    icon: 'carbon:scan',
+    menuCode: 'M3_GROSSING',
+    menuName: '取材描写',
+    menuType: 'MENU',
+    parentId: 13_000,
+    path: '/technical-workflow/grossing',
+    permissionPrefix: 'm3:grossing',
+    sortOrder: 134,
     visible: true,
   },
 ];
@@ -325,21 +425,37 @@ const createDemosMenus = (role: 'admin' | 'super' | 'user') => {
 
 export const MOCK_MENUS = [
   {
-    menus: [...dashboardMenus, ...workflowBackendFirstMenus, ...createDemosMenus('super')],
+    menus: [
+      ...dashboardMenus,
+      ...workflowBackendFirstMenus,
+      ...technicalWorkflowBackendFirstMenus,
+      ...createDemosMenus('super'),
+    ],
     username: 'vben',
   },
   {
-    menus: [...dashboardMenus, ...workflowBackendFirstMenus, ...createDemosMenus('admin')],
+    menus: [
+      ...dashboardMenus,
+      ...workflowBackendFirstMenus,
+      ...technicalWorkflowBackendFirstMenus,
+      ...createDemosMenus('admin'),
+    ],
     username: 'admin',
   },
   {
-    menus: [...dashboardMenus, ...workflowBackendFirstMenus, ...createDemosMenus('user')],
+    menus: [
+      ...dashboardMenus,
+      ...workflowBackendFirstMenus,
+      ...technicalWorkflowBackendFirstMenus,
+      ...createDemosMenus('user'),
+    ],
     username: 'jack',
   },
 ];
 
 export const MOCK_MENU_LIST = [
   ...workflowMenuList,
+  ...technicalWorkflowMenuList,
   {
     id: 1,
     name: 'Workspace',

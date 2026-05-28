@@ -45,7 +45,7 @@ vi.mock('element-plus', () => {
             'data-testid': 'verification-tab',
             type: 'button',
             onClick: () => emit('update:modelValue', 'verification'),
-          }, '标本核对'),
+          }, '离体确认'),
           h('button', {
             'data-testid': 'fixation-tab',
             type: 'button',
@@ -161,7 +161,8 @@ describe('FixationTransportView', () => {
 
     expect(mockRouter.replace).not.toHaveBeenCalled();
     expect(mockRouter.push).not.toHaveBeenCalled();
-    expect(root.textContent).toContain('标本核对');
+    expect(root.textContent).toContain('离体确认');
+    expect(root.textContent).not.toContain('标本核对');
     expect(root.textContent).toContain('标本固定');
     expect(root.textContent).toContain('条码绑定');
     expect(root.textContent).toContain('标本确认');

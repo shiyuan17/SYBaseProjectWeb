@@ -40,12 +40,14 @@ const applicationStatusLabels = {
   RECEIVED: '已接收',
   REJECTED: '已拒收',
   SUBMITTED: '已提交',
+  VOIDED: '已作废',
 } satisfies Record<string, string>;
 const applicationFormStatusLabels = {
   ARCHIVED: '已归档',
   NOT_UPLOADED: '未上传',
   PENDING: '待补单',
   UPLOADED: '已上传',
+  VOIDED: '已作废',
 } satisfies Record<string, string>;
 const currentNodeLabels = {
   CHECK_IN: '标本入库',
@@ -63,6 +65,7 @@ const currentNodeLabels = {
   SUBMITTED: '已提交',
   TRANSPORT: '转运交接',
   VERIFICATION: '标本核对',
+  VOIDED: '已作废',
 } satisfies Record<string, string>;
 const specimenStatusLabels = {
   CHECKED_IN: '已入库',

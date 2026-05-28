@@ -16,9 +16,6 @@ describe('workflow routes', () => {
     const fixationTransportRoute = workflowRoot?.children?.find(
       (route) => route.name === 'FixationTransport',
     );
-    const receiptRoute = workflowRoot?.children?.find(
-      (route) => route.name === 'PathologyReceipt',
-    );
     const trackingRoute = workflowRoot?.children?.find(
       (route) => route.name === 'TrackingException',
     );
@@ -37,7 +34,6 @@ describe('workflow routes', () => {
       'SubmissionRegistration',
       'ApplicationRegistrationWorkbench',
       'FixationTransport',
-      'PathologyReceipt',
       'TrackingException',
     ]);
     expect(submissionRoute?.path).toBe('/workflow/submission-registration');
@@ -64,10 +60,6 @@ describe('workflow routes', () => {
     expect(compatibilityRoute?.path).toBe('/workflow/clinical-register');
     expect(compatibilityRoute?.meta?.title).toBe('送检登记兼容页');
     expect(compatibilityRoute?.meta?.hideInMenu).toBe(true);
-    expect(receiptRoute?.path).toBe('/workflow/pathology-receipt');
-    expect(receiptRoute?.meta?.authority).toEqual([
-      M2_PERMISSION_CODES.SPECIMEN_RECEIVE,
-    ]);
     expect(trackingRoute?.path).toBe('/workflow/tracking-exception');
     expect(trackingRoute?.meta?.authority).toEqual([
       M2_PERMISSION_CODES.SPECIMEN_TRACKING_QUERY,

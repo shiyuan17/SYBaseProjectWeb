@@ -81,7 +81,7 @@ watch(
       <ElTabs v-model="activeTab">
         <ElTabPane
           v-if="canVerifyFixation"
-          label="标本核对"
+          label="离体确认"
           name="verification"
         >
           <FixationVerifyView embedded />

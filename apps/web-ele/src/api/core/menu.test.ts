@@ -175,20 +175,6 @@ describe('mapMenuViewsToRoutes', () => {
         visible: true,
       },
       {
-        componentName: 'PathologyReceipt',
-        enabled: true,
-        icon: 'archive',
-        id: 'MENU_M2_RECEIPT',
-        menuCode: 'M2_RECEIPT',
-        menuName: '病理接收',
-        menuType: 'MENU',
-        parentId: 'MENU_M2_WORKFLOW',
-        path: '/workflow/pathology-receipt',
-        permissionPrefix: 'm2:receipt',
-        sortOrder: 130,
-        visible: true,
-      },
-      {
         componentName: 'TrackingException',
         enabled: true,
         icon: 'search',
@@ -225,10 +211,6 @@ describe('mapMenuViewsToRoutes', () => {
             path: '/workflow/fixation-transport',
           }),
           expect.objectContaining({
-            name: 'PathologyReceipt',
-            path: '/workflow/pathology-receipt',
-          }),
-          expect.objectContaining({
             name: 'TrackingException',
             path: '/workflow/tracking-exception',
           }),
@@ -250,6 +232,20 @@ describe('mapMenuViewsToRoutes', () => {
         parentId: null,
         path: '/technical-workflow',
         permissionPrefix: 'm3',
+        sortOrder: 120,
+        visible: true,
+      },
+      {
+        componentName: 'PathologyReceipt',
+        enabled: true,
+        icon: 'archive',
+        id: 'MENU_M2_RECEIPT',
+        menuCode: 'M2_RECEIPT',
+        menuName: '病理接收',
+        menuType: 'MENU',
+        parentId: 'MENU_M3_WORKFLOW',
+        path: '/workflow/pathology-receipt',
+        permissionPrefix: 'm2:receipt',
         sortOrder: 120,
         visible: true,
       },
@@ -301,8 +297,12 @@ describe('mapMenuViewsToRoutes', () => {
       expect.objectContaining({
         name: 'TechnicalWorkflowRoot',
         path: '/technical-workflow',
-        redirect: '/technical-workflow/tasks',
+        redirect: '/workflow/pathology-receipt',
         children: [
+          expect.objectContaining({
+            name: 'PathologyReceipt',
+            path: '/workflow/pathology-receipt',
+          }),
           expect.objectContaining({
             name: 'TechnicalTasks',
             path: '/technical-workflow/tasks',
@@ -745,6 +745,9 @@ describe('technical workflow route access', () => {
     const workflowRoot = technicalWorkflowRoutes.find(
       (route) => route.name === 'TechnicalWorkflowRoot',
     );
+    const receiptRoute = workflowRoot?.children?.find(
+      (route) => route.name === 'PathologyReceipt',
+    );
     const tasksRoute = workflowRoot?.children?.find(
       (route) => route.name === 'TechnicalTasks',
     );
@@ -756,8 +759,12 @@ describe('technical workflow route access', () => {
     );
 
     expect(tasksRoute?.component).toBeTypeOf('function');
+    expect(receiptRoute?.component).toBeTypeOf('function');
     expect(frozenRoute?.component).toBeTypeOf('function');
     expect(trackingRoute?.component).toBeTypeOf('function');
+    expect(receiptRoute?.meta?.authority).toEqual([
+      M2_PERMISSION_CODES.SPECIMEN_RECEIVE,
+    ]);
     expect(tasksRoute?.meta?.authority).toEqual([
       M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY,
     ]);

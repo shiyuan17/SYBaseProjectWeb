@@ -5,7 +5,7 @@ import type {
   WorkbenchSpecimenPrintContext,
 } from '../types/application-registration-workbench';
 
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 import {
   ElAutocomplete,
@@ -22,7 +22,11 @@ import {
   buildSearchKeywords,
   matchesSearchKeyword,
 } from '../utils/specimen-dictionary-search';
-import { buildSpecimenPrintDocument } from '../utils/specimen-print';
+import { formatSpecimenStatus } from '../utils/format';
+import {
+  buildSpecimenBatchPrintDocument,
+  buildSpecimenPrintDocument,
+} from '../utils/specimen-print';
 import WorkflowSectionCard from './WorkflowSectionCard.vue';
 
 type SpecimenSiteOption = {
@@ -60,8 +64,22 @@ const specimenSiteOptions = computed<SpecimenSiteOption[]>(() => {
   return [...siteMap.values()];
 });
 
+const selectedItemIds = ref<string[]>([]);
+
 function getStatusTagType(status: string) {
   switch (status.trim()) {
+    case 'CHECKED_IN':
+    case 'FIXED':
+    case 'FIXING':
+    case 'IN_TRANSIT':
+    case 'RECEIVED':
+    case 'REGISTERED':
+    case 'VERIFIED':
+    case 'VERIFYING':
+      return 'primary';
+    case 'REJECTED':
+    case 'RETURNED':
+      return 'warning';
     case '标本确认':
       return 'success';
     case '离体':
@@ -243,31 +261,62 @@ function appendCommonSpecimen(option: SpecimenDictionaryEntryOption) {
   });
 }
 
-async function previewSpecimen(item: WorkbenchSpecimenItem) {
-  if (!props.printContext) {
-    ElMessage.warning('当前缺少标签预览所需的患者上下文信息');
-    return;
+function openPrintWindow(documentHtml: string) {
+  const printWindow = window.open('', '_blank', 'width=420,height=360');
+  if (!printWindow) {
+    ElMessage.warning('打印窗口被浏览器拦截，请允许弹窗后重试');
+    return null;
   }
 
-  const previewWindow = window.open('', '_blank', 'width=340,height=260');
-  if (!previewWindow) {
-    ElMessage.warning('预览窗口被浏览器拦截，请允许弹窗后重试');
+  printWindow.document.open();
+  printWindow.document.write(documentHtml);
+  printWindow.document.close();
+  return printWindow;
+}
+
+async function printSpecimen(item: WorkbenchSpecimenItem) {
+  if (!props.printContext) {
+    ElMessage.warning('当前缺少标签打印所需的患者上下文信息');
     return;
   }
 
   try {
-    const previewDocument = await buildSpecimenPrintDocument({
+    const printDocument = buildSpecimenPrintDocument({
       context: props.printContext,
       item,
     });
-
-    previewWindow.document.open();
-    previewWindow.document.write(previewDocument);
-    previewWindow.document.close();
+    openPrintWindow(printDocument);
   } catch (error) {
-    previewWindow.close();
     console.error(error);
-    ElMessage.error('标签预览生成失败，请稍后重试');
+    ElMessage.error('标签打印内容生成失败，请稍后重试');
+  }
+}
+
+function handleSelectionChange(rows: WorkbenchSpecimenItem[]) {
+  selectedItemIds.value = rows.map((item) => item.id);
+}
+
+function handleBatchPrint() {
+  if (!props.printContext) {
+    ElMessage.warning('当前缺少标签打印所需的患者上下文信息');
+    return;
+  }
+
+  const selectedItems = props.items.filter((item) => selectedItemIds.value.includes(item.id));
+  if (selectedItems.length === 0) {
+    ElMessage.warning('请先勾选需要打印的标本');
+    return;
+  }
+
+  try {
+    const printDocument = buildSpecimenBatchPrintDocument({
+      context: props.printContext,
+      items: selectedItems,
+    });
+    openPrintWindow(printDocument);
+  } catch (error) {
+    console.error(error);
+    ElMessage.error('批量打印内容生成失败，请稍后重试');
   }
 }
 
@@ -286,19 +335,30 @@ function normalizeSpecimenSiteOption(option: Record<string, unknown>) {
       <div class="flex gap-2">
         <ElButton disabled size="small">修改手术间</ElButton>
         <ElButton size="small" @click="emit('select-package')">选择套餐</ElButton>
+        <ElButton :disabled="selectedItemIds.length === 0" size="small" @click="handleBatchPrint">
+          批量打印标本
+        </ElButton>
         <ElButton size="small" type="primary" @click="emit('add-manual')">
           添加标本
         </ElButton>
       </div>
     </template>
 
-    <div class="flex h-full min-h-0 flex-col">
+    <div class="flex flex-col" :class="props.items.length > 0 ? 'h-full min-h-0' : ''">
       <div class="mb-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
         <span>当前手术室：{{ roomLabel || '-' }}</span>
       </div>
 
-      <div class="min-h-0 flex-1">
-        <ElTable :data="props.items" border height="100%" size="small">
+      <div :class="props.items.length > 0 ? 'min-h-0 flex-1' : ''">
+        <ElTable
+          :data="props.items"
+          :height="props.items.length > 0 ? '100%' : undefined"
+          border
+          row-key="id"
+          size="small"
+          @selection-change="handleSelectionChange"
+        >
+          <ElTableColumn type="selection" width="48" />
           <ElTableColumn align="center" label="#" width="52">
             <template #default="{ $index }">
               {{ $index + 1 }}
@@ -373,15 +433,15 @@ function normalizeSpecimenSiteOption(option: Record<string, unknown>) {
                 round
                 size="small"
               >
-                {{ row.status || '-' }}
+                {{ formatSpecimenStatus(row.status) }}
               </ElTag>
             </template>
           </ElTableColumn>
           <ElTableColumn fixed="right" label="操作" width="132">
             <template #default="{ row }">
               <div class="flex items-center gap-2">
-                <ElButton link size="small" type="primary" @click="previewSpecimen(row)">
-                  预览
+                <ElButton link size="small" type="primary" @click="printSpecimen(row)">
+                  打印
                 </ElButton>
                 <ElButton link size="small" type="danger" @click="removeItem(row.id)">
                   删除

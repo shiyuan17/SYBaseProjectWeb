@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ApplicationListItem } from '../types/specimen-workflow';
 
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
@@ -15,6 +15,8 @@ import {
   ElForm,
   ElFormItem,
   ElInput,
+  ElMessage,
+  ElMessageBox,
   ElOption,
   ElPagination,
   ElSelect,
@@ -25,9 +27,11 @@ import {
 
 import DepartmentSelect from '#/modules/system-management/components/DepartmentSelect.vue';
 
-import { listApplications } from '../api/specimen-workflow-service';
+import {
+  deleteApplication,
+  listApplications,
+} from '../api/specimen-workflow-service';
 import ApplicationManageDialog from '../components/ApplicationManageDialog.vue';
-import SpecimenRegisterDialog from '../components/SpecimenRegisterDialog.vue';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import {
   APPLICATION_FORM_STATUS_OPTIONS,
@@ -48,25 +52,22 @@ import {
 const router = useRouter();
 const accessStore = useAccessStore();
 
-const props = withDefaults(
+withDefaults(
   defineProps<{
     embedded?: boolean;
-    pendingRegistrationApplicationId?: string;
-    registrationTriggerKey?: number;
   }>(),
   {
     embedded: false,
-    pendingRegistrationApplicationId: '',
-    registrationTriggerKey: 0,
   },
 );
 
 const loading = ref(false);
 const pageError = ref('');
-const createDialogVisible = ref(false);
+const manageDialogVisible = ref(false);
+const manageDialogMode = ref<'create' | 'edit'>('create');
+const currentApplicationId = ref<null | string>(null);
+const deletingApplicationId = ref<null | string>(null);
 const items = ref<ApplicationListItem[]>([]);
-const registerDialogApplicationId = ref('');
-const registerDialogVisible = ref(false);
 const total = ref(0);
 
 const filters = reactive({
@@ -87,10 +88,20 @@ const canQueryApplications = computed(() =>
 const canOpenSpecimenManagement = computed(() =>
   accessCodeSet.value.has(M2_PERMISSION_CODES.SPECIMEN_REGISTER),
 );
+const canCreateApplications = computed(
+  () => accessCodeSet.value.has(M2_PERMISSION_CODES.APPLICATION_CREATE),
+);
+const canImportApplications = computed(
+  () => accessCodeSet.value.has(M2_PERMISSION_CODES.CLINICAL_IMPORT),
+);
+const canUpdateApplications = computed(
+  () => accessCodeSet.value.has(M2_PERMISSION_CODES.APPLICATION_UPDATE),
+);
+const canDeleteApplications = computed(
+  () => accessCodeSet.value.has(M2_PERMISSION_CODES.APPLICATION_DELETE),
+);
 const canManageApplications = computed(
-  () =>
-    accessCodeSet.value.has(M2_PERMISSION_CODES.APPLICATION_CREATE) ||
-    accessCodeSet.value.has(M2_PERMISSION_CODES.CLINICAL_IMPORT),
+  () => canCreateApplications.value || canImportApplications.value,
 );
 
 async function loadApplications() {
@@ -144,20 +155,63 @@ function handleDepartmentChange(department: null | { id: string; name: string })
   filters.submittingDepartmentId = department?.id ?? '';
 }
 
-function openRegistrationDialog(applicationId: string) {
-  const normalizedApplicationId = applicationId.trim();
-  if (!normalizedApplicationId) {
+function goToSpecimenManagement(row: ApplicationListItem) {
+  if (!canOpenSpecimenManagement.value || row.voided) {
     return;
   }
-  registerDialogApplicationId.value = normalizedApplicationId;
-  registerDialogVisible.value = true;
+  void router.push({
+    path: '/workflow/submission-registration',
+    query: {
+      action: 'register',
+      applicationId: row.id,
+    },
+  });
 }
 
-function goToSpecimenManagement(row: ApplicationListItem) {
-  if (!canOpenSpecimenManagement.value) {
+function openCreateDialog() {
+  manageDialogMode.value = 'create';
+  currentApplicationId.value = null;
+  manageDialogVisible.value = true;
+}
+
+function openEditDialog(row: ApplicationListItem) {
+  if (!canUpdateApplications.value || !row.editable) {
     return;
   }
-  openRegistrationDialog(row.id);
+  manageDialogMode.value = 'edit';
+  currentApplicationId.value = row.id;
+  manageDialogVisible.value = true;
+}
+
+async function handleDeleteApplication(row: ApplicationListItem) {
+  if (!canDeleteApplications.value || !row.deletable) {
+    return;
+  }
+  try {
+    await ElMessageBox.confirm(
+      `确认删除申请单 ${row.applicationNo}？删除后申请单将作废，不会物理删除，可通过“已作废”状态筛选回查。`,
+      '删除申请单',
+      {
+        cancelButtonText: '取消',
+        confirmButtonText: '确认删除',
+        type: 'warning',
+      },
+    );
+  } catch {
+    return;
+  }
+
+  deletingApplicationId.value = row.id;
+  pageError.value = '';
+  try {
+    await deleteApplication(row.id);
+    ElMessage.success('申请单已作废');
+    await loadApplications();
+  } catch (error) {
+    pageError.value = getWorkflowPageErrorMessage(error);
+  } finally {
+    deletingApplicationId.value = null;
+  }
 }
 
 function goToTracking(row: ApplicationListItem) {
@@ -179,24 +233,19 @@ async function handleApplicationSubmitted(payload: {
   }
 
   if (payload.mode === 'save-and-manage') {
-    openRegistrationDialog(payload.applicationId);
+    void router.push({
+      path: '/workflow/submission-registration',
+      query: {
+        action: 'register',
+        applicationId: payload.applicationId,
+      },
+    });
   }
 }
 
 if (canQueryApplications.value) {
   void loadApplications();
 }
-
-watch(
-  () => [props.pendingRegistrationApplicationId, props.registrationTriggerKey] as const,
-  ([applicationId]) => {
-    const normalizedApplicationId = applicationId.trim();
-    if (!normalizedApplicationId) {
-      return;
-    }
-    openRegistrationDialog(normalizedApplicationId);
-  },
-);
 </script>
 
 <template>
@@ -300,7 +349,7 @@ watch(
           description="列表展示申请单编号、申请单号、患者、流程节点和异常标记。"
         >
           <template v-if="canManageApplications" #extra>
-            <ElButton type="primary" @click="createDialogVisible = true">
+            <ElButton type="primary" @click="openCreateDialog">
               创建
             </ElButton>
           </template>
@@ -357,16 +406,38 @@ watch(
                 </ElTag>
               </template>
             </ElTableColumn>
-            <ElTableColumn fixed="right" label="操作" min-width="180">
+            <ElTableColumn fixed="right" label="操作" min-width="260">
               <template #default="{ row }">
                 <div class="flex gap-2">
                   <ElButton
-                    :disabled="!canOpenSpecimenManagement"
+                    :disabled="!canOpenSpecimenManagement || row.voided"
                     link
+                    :title="row.voided ? row.operationDisabledReason || '申请单已作废' : undefined"
                     type="primary"
                     @click="goToSpecimenManagement(row)"
                   >
                     登记标本
+                  </ElButton>
+                  <ElButton
+                    v-if="canUpdateApplications"
+                    :disabled="!row.editable"
+                    link
+                    :title="row.editable ? undefined : row.operationDisabledReason || '当前申请单不可编辑'"
+                    type="primary"
+                    @click="openEditDialog(row)"
+                  >
+                    编辑
+                  </ElButton>
+                  <ElButton
+                    v-if="canDeleteApplications"
+                    :disabled="!row.deletable || deletingApplicationId === row.id"
+                    link
+                    :loading="deletingApplicationId === row.id"
+                    :title="row.deletable ? undefined : row.operationDisabledReason || '当前申请单不可删除'"
+                    type="danger"
+                    @click="handleDeleteApplication(row)"
+                  >
+                    删除
                   </ElButton>
                   <ElButton link type="primary" @click="goToTracking(row)">
                     追踪与异常
@@ -396,13 +467,10 @@ watch(
       </template>
 
       <ApplicationManageDialog
-        v-model="createDialogVisible"
+        v-model="manageDialogVisible"
+        :application-id="currentApplicationId"
+        :mode="manageDialogMode"
         @submitted="handleApplicationSubmitted"
-      />
-      <SpecimenRegisterDialog
-        v-model="registerDialogVisible"
-        :application-id="registerDialogApplicationId"
-        @registered="loadApplications"
       />
     </div>
   </Page>

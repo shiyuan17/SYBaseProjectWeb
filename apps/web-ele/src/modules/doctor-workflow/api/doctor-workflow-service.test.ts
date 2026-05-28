@@ -269,6 +269,16 @@ describe('doctor-workflow-service requests', () => {
     );
   });
 
+  it('keeps pathology number identifiers in report tracking request paths', async () => {
+    requestClientMock.get.mockResolvedValue({ caseId: 'CASE-1' });
+
+    await getReportTracking('BL-202605240003');
+
+    expect(requestClientMock.get).toHaveBeenCalledWith(
+      '/v1/pathology-cases/BL-202605240003/report-tracking',
+    );
+  });
+
   it('posts pathology report lifecycle endpoints with exact paths', async () => {
     await createPathologyReport({
       caseId: 'CASE-1',

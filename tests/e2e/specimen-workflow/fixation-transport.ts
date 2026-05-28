@@ -3,6 +3,7 @@ import { expect, type Page } from 'playwright/test';
 import { workflowDefaults } from '../helpers/env';
 import {
   clickTableAction,
+  fillInputByLabel,
   fillTextareaByLabel,
   getDialog,
   selectTreeOptionByLabel,
@@ -33,9 +34,33 @@ export class FixationTransportPage {
     await expect(this.page.getByText('待处理转运单')).toBeVisible();
   }
 
+  async startFixation(barcode: string, fixationLiquid = '10% 中性福尔马林') {
+    await waitForTableRow(this.page, barcode);
+    await clickTableAction(this.page, barcode, '开始固定');
+
+    const dialog = getDialog(this.page, '开始固定');
+    await expect(dialog).toBeVisible();
+    await fillInputByLabel(dialog, '固定液类型', fixationLiquid);
+
+    const [startResponse] = await Promise.all([
+      this.page.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST'
+          && response.url().includes('/api/v1/specimen-fixations/start'),
+      ),
+      dialog.getByRole('button', { name: '确认开始固定' }).click(),
+    ]);
+
+    expect(startResponse.ok(), `条码 ${barcode} 的开始固定接口返回失败。`).toBeTruthy();
+    await waitForToast(this.page, '已开始固定');
+  }
+
   async completeFixation(barcode: string) {
     await waitForTableRow(this.page, barcode);
     await clickTableAction(this.page, barcode, '完成固定');
+
+    const dialog = getDialog(this.page, '完成固定');
+    await expect(dialog).toBeVisible();
 
     const [completeResponse] = await Promise.all([
       this.page.waitForResponse(
@@ -43,7 +68,7 @@ export class FixationTransportPage {
           response.request().method() === 'POST'
           && response.url().includes('/api/v1/specimen-fixations/complete'),
       ),
-      this.page.getByRole('button', { name: '确认' }).click(),
+      dialog.getByRole('button', { name: '确认完成固定' }).click(),
     ]);
 
     expect(completeResponse.ok(), `条码 ${barcode} 的完成固定接口返回失败。`).toBeTruthy();

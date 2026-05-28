@@ -9,6 +9,8 @@ import { useAccessStore } from '@vben/stores';
 
 import { ElAlert, ElButton, ElSkeleton, ElTag } from 'element-plus';
 
+import { M2_PERMISSION_CODES } from '#/modules/specimen-workflow/constants';
+
 import { listPendingTechnicalTasks } from '../api/technical-workflow-service';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { M3_WORKFLOW_ROUTE_ITEMS, TECHNICAL_WORKFLOW_ROUTE_META } from '../constants';
@@ -32,8 +34,16 @@ const pendingItems = ref<PendingTechnicalTaskItem[]>([]);
 
 const accessCodes = computed(() => new Set(accessStore.accessCodes));
 
+const canAccessReceipt = computed(() =>
+  accessCodes.value.has(M2_PERMISSION_CODES.SPECIMEN_RECEIVE),
+);
+
 const canAccessAnyM3 = computed(() =>
   M3_WORKFLOW_ROUTE_ITEMS.some((item) => accessCodes.value.has(item.code)),
+);
+
+const canAccessWorkflowEntry = computed(
+  () => canAccessAnyM3.value || canAccessReceipt.value,
 );
 
 const canAccessFrozen = computed(() =>
@@ -100,7 +110,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div v-if="!canAccessAnyM3" class="flex min-h-[360px] items-center justify-center">
+  <div v-if="!canAccessWorkflowEntry" class="flex min-h-[360px] items-center justify-center">
     <Fallback status="403" />
   </div>
   <Page
@@ -109,6 +119,25 @@ onMounted(() => {
     description="围绕常规制片主链、冰冻工作台和异常闭环组织入口，让 M3 从任务调度到返工追踪保持连续。"
   >
     <div class="flex flex-col gap-4">
+      <WorkflowSectionCard
+        v-if="canAccessReceipt"
+        title="病理接收入口"
+        description="病理接收菜单已归入制片管理，接收岗可从这里继续沿用原页面和原权限完成接收。"
+      >
+        <div class="rounded-lg border border-border bg-card p-4">
+          <div class="text-sm font-semibold text-foreground">进入病理接收</div>
+          <div class="mt-2 text-xs text-muted-foreground">
+            页面地址仍保持 `/workflow/pathology-receipt`，不影响现有业务链路和外部跳转。
+          </div>
+          <div class="mt-3">
+            <ElButton type="primary" @click="navigation.goToPath('/workflow/pathology-receipt')">
+              打开病理接收
+            </ElButton>
+          </div>
+        </div>
+      </WorkflowSectionCard>
+
+      <template v-if="canAccessAnyM3">
       <ElAlert
         v-if="pageError"
         :closable="false"
@@ -303,6 +332,7 @@ onMounted(() => {
           </div>
         </WorkflowSectionCard>
       </div>
+      </template>
     </div>
   </Page>
 </template>

@@ -8,6 +8,7 @@ import ApplicationRegistrationPatientPanel from './ApplicationRegistrationPatien
 
 function createRecordFixture(): ApplicationRegistrationWorkbenchRecord {
   return {
+    applicationId: 'APP-1122',
     contagiousSpecimen: {
       hepatitis: false,
       hiv: false,
@@ -88,6 +89,7 @@ async function mountPanel() {
   const updateRecordMock = vi.fn((value: ApplicationRegistrationWorkbenchRecord) => {
     latestRecord = value;
   });
+  const reprintMock = vi.fn();
 
   const app = createApp({
     data() {
@@ -108,6 +110,7 @@ async function mountPanel() {
         buildingLabel: this.buildingLabel,
         record: this.record,
         roomLabel: this.roomLabel,
+        onReprintApplicationForm: reprintMock,
         'onUpdate:record': this.handleRecordUpdate,
       });
     },
@@ -121,6 +124,7 @@ async function mountPanel() {
       return latestRecord;
     },
     root,
+    reprintMock,
     unmount() {
       app.unmount();
       root.remove();
@@ -190,6 +194,22 @@ describe('ApplicationRegistrationPatientPanel', () => {
       wrapper.root.querySelector('[data-testid="patient-value-clinicalHistory"]')
         ?.textContent,
     ).toContain('双击修改后的病史');
+
+    wrapper.unmount();
+  });
+
+  it('shows reprint button and emits current application id', async () => {
+    const wrapper = await mountPanel();
+
+    wrapper.root
+      .querySelectorAll<HTMLButtonElement>('button')
+      .forEach((button) => {
+        if (button.textContent?.includes('补打申请单')) {
+          button.click();
+        }
+      });
+
+    expect(wrapper.reprintMock).toHaveBeenCalledWith('APP-1122');
 
     wrapper.unmount();
   });

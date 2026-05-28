@@ -152,4 +152,44 @@ describe('TransportHandoverView', () => {
 
     app.unmount();
   });
+
+  it('forwards specimenNo when searching transport orders by specimen serial number', async () => {
+    const { app, container } = mountView();
+    await nextTick();
+    await Promise.resolve();
+    await nextTick();
+
+    vi.clearAllMocks();
+
+    const specimenNoInput = container.querySelector(
+      'input[placeholder="请输入标本流水号"]',
+    ) as HTMLInputElement | null;
+    specimenNoInput!.value = 'SP-TR-001';
+    specimenNoInput!.dispatchEvent(new Event('input', { bubbles: true }));
+    specimenNoInput!.dispatchEvent(
+      new KeyboardEvent('keyup', { bubbles: true, code: 'Enter', key: 'Enter' }),
+    );
+    await nextTick();
+    await Promise.resolve();
+    await nextTick();
+
+    expect(listPendingTransportOrdersMock).toHaveBeenCalledWith(
+      expect.objectContaining({ specimenNo: 'SP-TR-001' }),
+    );
+
+    app.unmount();
+  });
+
+  it('does not render a page-level error alert when the initial load fails', async () => {
+    listPendingTransportOrdersMock.mockRejectedValueOnce(new Error('资源不存在'));
+
+    const { app, container } = mountView();
+    await nextTick();
+    await Promise.resolve();
+    await nextTick();
+
+    expect(container.textContent).not.toContain('资源不存在');
+
+    app.unmount();
+  });
 });

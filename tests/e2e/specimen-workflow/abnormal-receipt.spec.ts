@@ -41,7 +41,9 @@ test('abnormal receipt: reject one specimen and expose abnormal tracking', async
     try {
       const workflowPage = new FixationTransportPage(page);
       await workflowPage.gotoFixation();
+      await workflowPage.startFixation(runData.barcodes[0]);
       await workflowPage.completeFixation(runData.barcodes[0]);
+      await workflowPage.startFixation(runData.barcodes[1]);
       await workflowPage.completeFixation(runData.barcodes[1]);
 
       const transportOrder = await workflowPage.createTransportOrder([...runData.barcodes]);

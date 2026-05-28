@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import type { ApplicationRegistrationWorkbenchRecord } from '../types/application-registration-workbench';
 
-import { nextTick, ref } from 'vue';
+import { computed, nextTick, ref } from 'vue';
 
 import {
   ElButton,
+  ElDescriptions,
+  ElDescriptionsItem,
+  ElDivider,
   ElEmpty,
   ElInput,
   ElOption,
-  ElScrollbar,
   ElSelect,
   ElTag,
 } from 'element-plus';
@@ -22,6 +24,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
+  (event: 'reprint-application-form', applicationId: string): void;
   (event: 'update:record', value: ApplicationRegistrationWorkbenchRecord): void;
 }>();
 
@@ -49,8 +52,35 @@ type WorkbenchSection = {
   title: string;
 };
 
+type WorkbenchSummaryItem = {
+  emphasized?: boolean;
+  label: string;
+  span?: number;
+  value: string;
+};
+
 const activeEditorKey = ref('');
 const editingValue = ref('');
+
+const summaryItems = computed(() =>
+  props.record ? buildSummaryItems(props.record) : [],
+);
+
+const patientTags = computed(() =>
+  props.record ? buildPatientTags(props.record) : [],
+);
+
+const contagiousTags = computed(() =>
+  props.record ? buildContagiousTags(props.record) : [],
+);
+
+const gynecologyTags = computed(() =>
+  props.record ? buildGynecologyTags(props.record) : [],
+);
+
+const sections = computed(() =>
+  props.record ? buildSections(props.record) : [],
+);
 
 function formatValue(value: null | string | undefined) {
   return value && value.trim() ? value : '-';
@@ -60,20 +90,39 @@ function normalizeTextValue(value: string) {
   return value.trim();
 }
 
-function buildSummaryItems(record: ApplicationRegistrationWorkbenchRecord) {
+function buildSummaryItems(record: ApplicationRegistrationWorkbenchRecord): WorkbenchSummaryItem[] {
+  const wardLabel = formatValue(record.patientInfo.wardName);
+  const bedLabel = formatValue(record.patientInfo.bedNo);
+
   return [
-    { label: '申请单号', value: record.patientInfo.applicationNo },
-    { label: '住院号', value: record.patientInfo.inpatientNo || '-' },
-    { label: '患者', value: record.patientInfo.patientName },
+    {
+      emphasized: true,
+      label: '申请单号',
+      value: formatValue(record.patientInfo.applicationNo),
+    },
+    { label: '住院号', value: formatValue(record.patientInfo.inpatientNo) },
+    {
+      emphasized: true,
+      label: '患者',
+      value: formatValue(record.patientInfo.patientName),
+    },
     {
       label: '性别/年龄',
       value: `${record.patientInfo.gender || '-'} / ${record.patientInfo.age || '-'}`,
     },
-    { label: '床号', value: formatValue(record.patientInfo.bedNo) },
-    { label: '病区', value: formatValue(record.patientInfo.wardName) },
-    { label: '申请科室', value: formatValue(record.patientInfo.applyDept) },
-    { label: '申请医生', value: formatValue(record.patientInfo.applyDoctor) },
+    {
+      label: '病区/床号',
+      value:
+        wardLabel === '-' && bedLabel === '-'
+          ? '-'
+          : `${wardLabel}${bedLabel === '-' ? '' : ` / ${bedLabel}`}`,
+    },
     { label: '联系电话', value: formatValue(record.patientInfo.phone) },
+    {
+      label: '申请科室/医生',
+      span: 2,
+      value: `${formatValue(record.patientInfo.applyDept)} / ${formatValue(record.patientInfo.applyDoctor)}`,
+    },
   ];
 }
 
@@ -393,6 +442,22 @@ function buildSections(record: ApplicationRegistrationWorkbenchRecord): Workbenc
   ];
 }
 
+function getSectionDescriptionColumns(sectionKey: string) {
+  return sectionKey === 'clinical' ? 2 : 2;
+}
+
+function getSectionItemSpan(sectionKey: string, item: WorkbenchInfoItem) {
+  if (item.editorType === 'textarea') {
+    return 2;
+  }
+
+  if (item.key === 'buildingRoom' || item.key === 'fixationInfo') {
+    return 2;
+  }
+
+  return 1;
+}
+
 function cancelEditing() {
   activeEditorKey.value = '';
   editingValue.value = '';
@@ -437,32 +502,59 @@ function handleValueDoubleClick(item: WorkbenchInfoItem) {
   }
   void beginEditing(item);
 }
+
+function emitReprintApplicationForm() {
+  const applicationId = props.record?.applicationId?.trim() ?? '';
+  if (!applicationId) {
+    return;
+  }
+  emit('reprint-application-form', applicationId);
+}
 </script>
 
 <template>
   <WorkflowSectionCard title="患者信息">
     <template v-if="props.record" #extra>
-      <ElButton disabled size="small">补打申请单号</ElButton>
+      <ElButton size="small" @click="emitReprintApplicationForm">补打申请单</ElButton>
     </template>
 
     <template v-if="props.record">
-      <div class="flex h-full min-h-0 flex-col gap-3">
-        <div class="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-          <div
-            v-for="item in buildSummaryItems(props.record)"
-            :key="item.label"
-            class="rounded-md border border-border/80 bg-muted/15 px-4 py-3"
+      <div class="flex h-full min-h-0 flex-col gap-2 overflow-y-auto pr-1">
+        <div class="overflow-hidden rounded-lg border border-border/80 bg-card shadow-sm">
+          <ElDescriptions
+            :column="3"
+            border
+            size="small"
+            class="patient-summary-descriptions"
           >
-            <div class="text-xs font-medium text-muted-foreground">{{ item.label }}</div>
-            <div class="mt-1 break-words text-[13px] font-semibold text-foreground sm:text-sm">
-              {{ item.value }}
-            </div>
-          </div>
+            <ElDescriptionsItem
+              v-for="item in summaryItems"
+              :key="item.label"
+              :label="item.label"
+              :span="item.span ?? 1"
+            >
+              <span
+                class="break-words text-[11px] font-medium leading-4 text-foreground"
+                :class="
+                  item.label === '申请单号'
+                    ? 'text-[12px] font-semibold'
+                    : item.emphasized
+                      ? 'text-[13px] font-semibold'
+                      : ''
+                "
+              >
+                {{ item.value }}
+              </span>
+            </ElDescriptionsItem>
+          </ElDescriptions>
         </div>
 
-        <div class="flex flex-wrap gap-2">
+        <div
+          v-if="patientTags.length || contagiousTags.length"
+          class="flex flex-wrap gap-1 rounded-lg border border-border/70 bg-muted/10 px-1.5 py-0.5"
+        >
           <ElTag
-            v-for="tag in buildPatientTags(props.record)"
+            v-for="tag in patientTags"
             :key="tag.label"
             :type="tag.type"
             effect="plain"
@@ -471,7 +563,7 @@ function handleValueDoubleClick(item: WorkbenchInfoItem) {
             {{ tag.label }}
           </ElTag>
           <ElTag
-            v-for="tag in buildContagiousTags(props.record)"
+            v-for="tag in contagiousTags"
             :key="tag.label"
             effect="plain"
             size="small"
@@ -481,43 +573,42 @@ function handleValueDoubleClick(item: WorkbenchInfoItem) {
           </ElTag>
         </div>
 
-        <ElScrollbar class="min-h-0 flex-1">
-          <div class="grid gap-2 pr-2 xl:grid-cols-3">
-            <section
-              v-for="section in buildSections(props.record)"
-              :key="section.key"
-              class="overflow-hidden rounded-lg border border-border/80 bg-background/70"
-            >
-              <div class="border-b border-border/70 px-3 py-2 text-sm font-semibold text-foreground">
-                {{ section.title }}
-              </div>
+        <div class="flex min-h-0 flex-col gap-1">
+          <section
+            v-for="section in sections"
+            :key="section.key"
+            class="px-0"
+          >
+            <ElDivider class="patient-section-divider" content-position="center">
+              <span class="patient-section-divider__text">{{ section.title }}</span>
+            </ElDivider>
 
-              <div class="divide-y divide-border/60">
-                <div
-                  v-for="item in section.items"
-                  :key="item.key"
-                  :data-testid="`patient-item-${item.key}`"
-                  class="group/item relative flex flex-col gap-1.5 px-3 py-2.5 transition-colors hover:bg-primary/5"
-                >
+            <ElDescriptions
+              :column="getSectionDescriptionColumns(section.key)"
+              border
+              size="small"
+              class="patient-section-descriptions"
+            >
+              <ElDescriptionsItem
+                v-for="item in section.items"
+                :key="item.key"
+                :data-testid="`patient-item-${item.key}`"
+                :label="item.label"
+                :span="getSectionItemSpan(section.key, item)"
+              >
+                <div class="group/item relative min-h-4">
                   <button
                     v-if="item.editorType !== 'readonly' && activeEditorKey !== item.key"
                     :data-testid="`patient-edit-${item.key}`"
-                    class="absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-md border border-border/70 bg-background/95 text-muted-foreground opacity-0 shadow-sm transition-all duration-150 hover:border-primary/50 hover:text-primary group-hover/item:opacity-100"
+                    class="absolute right-0 top-0 inline-flex h-4 w-4 items-center justify-center rounded-sm border border-border/70 bg-background/95 text-[10px] text-muted-foreground opacity-0 shadow-sm transition-all duration-150 hover:border-primary/50 hover:text-primary group-hover/item:opacity-100"
                     type="button"
                     @click.stop="beginEditing(item)"
                   >
-                    <span class="text-[13px] leading-none">编</span>
+                    <span class="leading-none">编</span>
                   </button>
 
-                  <div
-                    class="pr-8 text-xs font-medium text-muted-foreground"
-                    :class="item.editorType === 'readonly' ? 'pr-0' : ''"
-                  >
-                    {{ item.label }}
-                  </div>
-
                   <template v-if="activeEditorKey === item.key">
-                    <div :data-editor-key="item.key" class="flex items-start gap-2">
+                    <div :data-editor-key="item.key" class="flex items-start gap-1.5">
                       <div class="min-w-0 flex-1">
                         <ElInput
                           v-if="item.editorType === 'text'"
@@ -566,7 +657,7 @@ function handleValueDoubleClick(item: WorkbenchInfoItem) {
                           type="primary"
                           @click="saveEditing(item)"
                         >
-                          <span class="text-[13px] leading-none">存</span>
+                          <span class="text-[12px] leading-none">存</span>
                         </ElButton>
                         <ElButton
                           :data-testid="`patient-cancel-${item.key}`"
@@ -575,7 +666,7 @@ function handleValueDoubleClick(item: WorkbenchInfoItem) {
                           size="small"
                           @click="cancelEditing"
                         >
-                          <span class="text-[13px] leading-none">取消</span>
+                          <span class="text-[12px] leading-none">取消</span>
                         </ElButton>
                       </div>
                     </div>
@@ -584,37 +675,94 @@ function handleValueDoubleClick(item: WorkbenchInfoItem) {
                   <div
                     v-else
                     :data-testid="`patient-value-${item.key}`"
-                    class="break-words text-sm font-medium leading-6 text-foreground"
-                    :class="item.editorType === 'readonly' ? '' : 'cursor-text'"
+                    class="break-words pr-5 text-[11px] font-medium leading-4 text-foreground"
+                    :class="item.editorType === 'readonly' ? 'pr-0' : 'cursor-text'"
                     @dblclick="handleValueDoubleClick(item)"
                   >
                     {{ item.value }}
                   </div>
                 </div>
-              </div>
+              </ElDescriptionsItem>
+            </ElDescriptions>
 
-              <div
-                v-if="section.key === 'gynecology' && buildGynecologyTags(props.record).length > 0"
-                class="border-t border-border/60 px-3 py-2.5"
-              >
-                <div class="flex flex-wrap gap-2">
-                  <ElTag
-                    v-for="tag in buildGynecologyTags(props.record)"
-                    :key="tag.label"
-                    effect="plain"
-                    size="small"
-                    type="warning"
-                  >
-                    {{ tag.label }}
-                  </ElTag>
-                </div>
+            <div
+              v-if="section.key === 'gynecology' && gynecologyTags.length > 0"
+              class="px-1.5 py-0.5"
+            >
+              <div class="flex flex-wrap gap-1">
+                <ElTag
+                  v-for="tag in gynecologyTags"
+                  :key="tag.label"
+                  effect="plain"
+                  size="small"
+                  type="warning"
+                >
+                  {{ tag.label }}
+                </ElTag>
               </div>
-            </section>
+            </div>
+          </section>
           </div>
-        </ElScrollbar>
       </div>
     </template>
 
     <ElEmpty v-else description="请先查询住院号或申请单号" />
   </WorkflowSectionCard>
 </template>
+
+<style scoped>
+:deep(.patient-summary-descriptions .el-descriptions__label),
+:deep(.patient-summary-descriptions .el-descriptions__content) {
+  padding: 3px 6px;
+}
+
+:deep(.patient-summary-descriptions .el-descriptions__label) {
+  width: 68px;
+  white-space: nowrap;
+  font-size: 10px;
+}
+
+:deep(.patient-summary-descriptions .el-descriptions__content) {
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+:deep(.patient-section-divider) {
+  margin: 1px 0 4px;
+}
+
+:deep(.patient-section-divider .el-divider__text) {
+  padding: 0 6px;
+  background-color: transparent;
+}
+
+.patient-section-divider__text {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0 6px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 16px;
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+}
+
+:deep(.patient-section-descriptions .el-descriptions__label),
+:deep(.patient-section-descriptions .el-descriptions__content) {
+  padding: 3px 6px;
+  vertical-align: top;
+}
+
+:deep(.patient-section-descriptions .el-descriptions__label) {
+  width: 70px;
+  white-space: nowrap;
+  font-size: 10px;
+}
+
+:deep(.patient-section-descriptions .el-descriptions__content) {
+  font-size: 11px;
+  line-height: 1.25;
+}
+</style>

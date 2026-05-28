@@ -2,107 +2,91 @@ import { createApp, h, nextTick } from 'vue';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import {
-  ALL_VERIFICATION_STATUS_VALUE,
-  VERIFICATION_STATUS_OPTIONS,
-} from '../constants';
 import FixationVerifyView from './FixationVerifyView.vue';
 
 const {
-  completeSpecimenVerificationMock,
   confirmMock,
-  listPendingFixationsMock,
-  startSpecimenVerificationMock,
+  confirmSpecimenRemovalMock,
+  getApplicationDetailMock,
+  listPendingSpecimenRemovalsMock,
+  mockRoute,
 } = vi.hoisted(() => ({
-  completeSpecimenVerificationMock: vi.fn(async () => ({
-    barcode: 'SP-VERIFYING',
-    id: 'SPEC-VERIFYING',
-    specimenNo: 'SP202605230002',
-    specimenStatus: 'VERIFIED',
-    verificationCompletedAt: '2026-05-23T12:48:44',
-    verificationStartedAt: '2026-05-23T12:45:44',
-    verificationStatus: 'VERIFIED',
-  })),
   confirmMock: vi.fn(async () => 'confirm'),
-  listPendingFixationsMock: vi.fn(async () => ({
+  confirmSpecimenRemovalMock: vi.fn(async () => ({
+    barcode: 'SP-PENDING',
+    operatorName: 'Test User',
+    specimenId: 'SPEC-PENDING',
+    specimenRemovalAt: '2026-05-23T13:20:00',
+  })),
+  getApplicationDetailMock: vi.fn(async () => ({
+    applicationNo: 'AP-LOOKUP-001',
+  })),
+  listPendingSpecimenRemovalsMock: vi.fn(async () => ({
     items: [
       {
         abnormalFlag: false,
-        applicationId: 'APP-UNVERIFIED',
+        applicationId: 'APP-PENDING',
         applicationNo: 'AP202605230001',
-        barcode: 'SP-UNVERIFIED',
-        fixationStatus: 'PENDING',
+        barcode: 'SP-PENDING',
+        confirmedAt: null,
+        containerCount: 1,
+        containerName: '福尔马林瓶',
+        inpatientNo: 'ZYH-001',
         latestTrackingAt: '2026-05-23 12:44:44',
+        patientGender: '女',
         patientName: 'Alice',
         registeredAt: '2026-05-23 12:44:44',
-        specimenId: 'SPEC-UNVERIFIED',
+        registeredByName: '周永坚',
+        specimenId: 'SPEC-PENDING',
+        specimenName: '右股骨骨髓',
         specimenNo: 'SP202605230001',
+        specimenRemovalAt: null,
+        specimenRemovalOperatorName: null,
         specimenStatus: 'REGISTERED',
-        submittingDepartmentId: 'DEPT-001',
-        submittingDepartmentName: 'Pathology',
-        transportOrderId: null,
-        verificationCompletedAt: null,
-        verificationStartedAt: null,
-        verificationStatus: 'UNVERIFIED',
+        specimenType: '常规',
+        surgeryName: '手术室2',
       },
       {
         abnormalFlag: false,
-        applicationId: 'APP-VERIFYING',
+        applicationId: 'APP-CONFIRMED',
         applicationNo: 'AP202605230002',
-        barcode: 'SP-VERIFYING',
-        fixationStatus: 'PENDING',
+        barcode: 'SP-CONFIRMED',
+        confirmedAt: '2026-05-23T12:45:44',
+        containerCount: 1,
+        containerName: '福尔马林瓶',
+        inpatientNo: 'ZYH-002',
         latestTrackingAt: '2026-05-23 12:45:44',
+        patientGender: '男',
         patientName: 'Bob',
         registeredAt: '2026-05-23 12:45:44',
-        specimenId: 'SPEC-VERIFYING',
+        registeredByName: '周永坚',
+        specimenId: 'SPEC-CONFIRMED',
+        specimenName: '膀胱后壁肿物',
         specimenNo: 'SP202605230002',
-        specimenStatus: 'VERIFYING',
-        submittingDepartmentId: 'DEPT-001',
-        submittingDepartmentName: 'Pathology',
-        transportOrderId: null,
-        verificationCompletedAt: null,
-        verificationStartedAt: '2026-05-23 12:45:44',
-        verificationStatus: 'VERIFYING',
-      },
-      {
-        abnormalFlag: false,
-        applicationId: 'APP-VERIFIED',
-        applicationNo: 'AP202605230003',
-        barcode: 'SP-VERIFIED',
-        fixationStatus: 'PENDING',
-        latestTrackingAt: '2026-05-23 12:46:44',
-        patientName: 'Carol',
-        registeredAt: '2026-05-23 12:46:44',
-        specimenId: 'SPEC-VERIFIED',
-        specimenNo: 'SP202605230003',
-        specimenStatus: 'VERIFIED',
-        submittingDepartmentId: 'DEPT-001',
-        submittingDepartmentName: 'Pathology',
-        transportOrderId: null,
-        verificationCompletedAt: '2026-05-23 12:46:44',
-        verificationStartedAt: '2026-05-23 12:45:44',
-        verificationStatus: 'VERIFIED',
+        specimenRemovalAt: '2026-05-23T12:45:44',
+        specimenRemovalOperatorName: 'AD1',
+        specimenStatus: 'REMOVED',
+        specimenType: '常规',
+        surgeryName: '手术室2',
       },
     ],
     page: 1,
     size: 20,
-    total: 3,
+    summary: {
+      abnormalCount: 0,
+      confirmedCount: 1,
+      pendingCount: 1,
+      totalCount: 2,
+    },
+    total: 2,
   })),
-  startSpecimenVerificationMock: vi.fn(async () => ({
-    barcode: 'SP-UNVERIFIED',
-    id: 'SPEC-UNVERIFIED',
-    specimenNo: 'SP202605230001',
-    specimenStatus: 'VERIFYING',
-    verificationCompletedAt: null,
-    verificationStartedAt: '2026-05-23T12:44:44',
-    verificationStatus: 'VERIFYING',
-  })),
+  mockRoute: {
+    query: {} as Record<string, string>,
+  },
 }));
 
 vi.mock('vue-router', () => ({
-  useRoute: () => ({
-    query: {},
-  }),
+  useRoute: () => mockRoute,
 }));
 
 vi.mock('@vben/common-ui', () => ({
@@ -146,9 +130,9 @@ vi.mock('element-plus', async () => {
 });
 
 vi.mock('../api/specimen-workflow-service', () => ({
-  completeSpecimenVerification: completeSpecimenVerificationMock,
-  listPendingFixations: listPendingFixationsMock,
-  startSpecimenVerification: startSpecimenVerificationMock,
+  confirmSpecimenRemoval: confirmSpecimenRemovalMock,
+  getApplicationDetail: getApplicationDetailMock,
+  listPendingSpecimenRemovals: listPendingSpecimenRemovalsMock,
 }));
 
 function mountView() {
@@ -164,80 +148,102 @@ function mountView() {
   return { app, container };
 }
 
+async function flushView() {
+  await nextTick();
+  await Promise.resolve();
+  await nextTick();
+}
+
 describe('FixationVerifyView', () => {
   afterEach(() => {
     document.body.innerHTML = '';
+    mockRoute.query = {};
     vi.clearAllMocks();
   });
 
-  it('uses all as the default verification filter and queries without verificationStatus', async () => {
+  it('queries removal workbench data without verificationStatus by default', async () => {
     const { app } = mountView();
-    await nextTick();
-    await Promise.resolve();
-    await nextTick();
+    await flushView();
 
-    expect(
-      VERIFICATION_STATUS_OPTIONS.some((option) => option.value === ALL_VERIFICATION_STATUS_VALUE),
-    ).toBe(true);
-    expect(listPendingFixationsMock).toHaveBeenCalledWith(
-      expect.objectContaining({ verificationStatus: undefined }),
+    expect(listPendingSpecimenRemovalsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        applicationNo: undefined,
+        dateFrom: undefined,
+        dateTo: undefined,
+        departmentId: undefined,
+        page: 1,
+        size: 20,
+      }),
     );
+
+    const firstCall = listPendingSpecimenRemovalsMock.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect(firstCall).not.toHaveProperty('verificationStatus');
 
     app.unmount();
   });
 
-  it('shows verification actions only and removes fixation/transport actions', async () => {
+  it('renders removal-centric content and actions', async () => {
     const { app, container } = mountView();
-    await nextTick();
-    await Promise.resolve();
-    await nextTick();
+    await flushView();
 
-    const buttons = [...container.querySelectorAll('button')];
-    const startButtons = buttons.filter((button) => button.textContent?.includes('开始核对'));
-    const completeButtons = buttons.filter((button) => button.textContent?.includes('完成核对'));
+    const confirmButtons = [...container.querySelectorAll('button')].filter((button) =>
+      button.textContent?.includes('离体确认'),
+    );
 
-    expect(startButtons).toHaveLength(1);
-    expect(completeButtons).toHaveLength(1);
-    expect(container.textContent).not.toContain('开始固定');
-    expect(container.textContent).not.toContain('完成固定');
-    expect(container.textContent).not.toContain('创建转运单');
-
-    startButtons[0]?.click();
-    await Promise.resolve();
-    await nextTick();
-    expect(startSpecimenVerificationMock).toHaveBeenCalledWith({
-      operatorName: 'Test User',
-      operatorUserId: 'USER-001',
-      specimenBarcode: 'SP-UNVERIFIED',
-    });
+    expect(container.textContent).toContain('离体确认');
+    expect(container.textContent).toContain('设置离体时间');
+    expect(container.textContent).toContain('全部');
+    expect(container.textContent).toContain('已离体');
+    expect(container.textContent).toContain('未设置');
+    expect(container.textContent).toContain('申请单');
+    expect(container.textContent).toContain('标本编号');
+    expect(container.textContent).toContain('离体时间');
+    expect(container.textContent).toContain('离体操作人');
+    expect(container.textContent).not.toContain('开始核对');
+    expect(container.textContent).not.toContain('完成核对');
+    expect(confirmButtons).toHaveLength(1);
 
     app.unmount();
   });
 
-  it('confirms before completing verification and only completes verifying rows', async () => {
+  it('confirms removal and refreshes the list after submission', async () => {
     const { app, container } = mountView();
-    await nextTick();
-    await Promise.resolve();
-    await nextTick();
+    await flushView();
 
-    const completeButtons = [...container.querySelectorAll('button')].filter((button) =>
-      button.textContent?.includes('完成核对'),
+    const confirmButtons = [...container.querySelectorAll('button')].filter((button) =>
+      button.textContent?.includes('离体确认'),
     );
 
-    completeButtons[0]?.click();
-    await Promise.resolve();
-    await nextTick();
+    confirmButtons[0]?.click();
+    await flushView();
 
-    expect(confirmMock).toHaveBeenCalledWith('确认该标本已完成核对吗？', '完成核对', {
+    expect(confirmMock).toHaveBeenCalledWith('确认该标本已离体吗？', '离体确认', {
       cancelButtonText: '取消',
       confirmButtonText: '确认',
       type: 'warning',
     });
-    expect(completeSpecimenVerificationMock).toHaveBeenCalledWith({
+    expect(confirmSpecimenRemovalMock).toHaveBeenCalledWith({
       operatorName: 'Test User',
       operatorUserId: 'USER-001',
-      specimenBarcode: 'SP-VERIFYING',
+      remarks: '离体确认',
+      specimenBarcode: 'SP-PENDING',
     });
+    expect(listPendingSpecimenRemovalsMock).toHaveBeenCalledTimes(2);
+
+    app.unmount();
+  });
+
+  it('resolves legacy applicationId query into applicationNo before loading', async () => {
+    mockRoute.query = { applicationId: 'APP-LOOKUP' };
+    const { app } = mountView();
+    await flushView();
+
+    expect(getApplicationDetailMock).toHaveBeenCalledWith('APP-LOOKUP');
+    expect(listPendingSpecimenRemovalsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        applicationNo: 'AP-LOOKUP-001',
+      }),
+    );
 
     app.unmount();
   });

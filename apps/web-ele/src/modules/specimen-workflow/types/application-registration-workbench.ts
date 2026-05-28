@@ -1,6 +1,13 @@
 export interface WorkbenchLookupQuery {
+  queryType?: WorkbenchLookupType;
   keyword: string;
 }
+
+export type WorkbenchLookupType =
+  | 'APPLICATION_NO'
+  | 'AUTO'
+  | 'INPATIENT_NO'
+  | 'PATIENT_NAME';
 
 export interface OperatingRoomOption {
   buildingId: string;

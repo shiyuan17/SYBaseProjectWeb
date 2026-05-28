@@ -6,7 +6,9 @@ import {
   completeFixation,
   completeSpecimenVerification,
   confirmSpecimen,
+  createApplication,
   createTransportOrder,
+  deleteApplication,
   getApplicationDetail,
   getApplicationTrackingByApplicationNo,
   getLatestRegistrationResult,
@@ -14,9 +16,12 @@ import {
   handoverTransportOrder,
   listApplications,
   listPendingFixations,
+  listPendingSpecimenRemovals,
   listPendingReceipts,
   listPendingTransportOrders,
   listSpecimenVerificationRecords,
+  mapPendingSpecimenPageResponse,
+  mapSpecimenRemovalPageResponse,
   lookupApplicationForRegistration,
   printTransportOrder,
   receiveSpecimens,
@@ -27,6 +32,7 @@ import {
   rebindSpecimenBarcode,
   startFixation,
   startSpecimenVerification,
+  updateApplication,
 } from './specimen-workflow-service';
 
 describe('specimen-workflow-service mock flow', () => {
@@ -47,6 +53,63 @@ describe('specimen-workflow-service mock flow', () => {
     expect(detail.specimens).toHaveLength(2);
     expect(detail.receiptAbnormalSummary).toContain('退回');
     expect(detail.unreceivedCount).toBe(2);
+  });
+
+  it('updates and logically deletes applications before downstream starts', async () => {
+    const created = await createApplication({
+      applicationDate: '2026-05-28',
+      applicationType: 'ROUTINE',
+      clinicalDiagnosis: '胃镜活检',
+      patientName: '待编辑患者',
+      sourceHospitalName: '协作医院',
+      specimenRemovalTime: '2026-05-28T09:00:00',
+      specimenSite: '胃窦',
+      submissionDate: '2026-05-28',
+      submittingDepartmentId: 'DEP-TEST',
+      submittingDepartmentName: '消化科',
+      submittingDoctorName: '测试医生',
+      submittingDoctorUserId: 'DOC-TEST',
+    });
+
+    await updateApplication(created.id, {
+      applicationDate: '2026-05-28',
+      applicationNo: 'M2-EDIT-001',
+      applicationType: 'FROZEN',
+      clinicalDiagnosis: '术中冰冻',
+      patientName: '已编辑患者',
+      sourceHospitalName: '协作医院',
+      specimenRemovalTime: '2026-05-28T09:30:00',
+      specimenSite: '甲状腺左叶',
+      submissionDate: '2026-05-28',
+      submittingDepartmentId: 'DEP-TEST',
+      submittingDepartmentName: '普外科',
+      submittingDoctorName: '编辑医生',
+      submittingDoctorUserId: 'DOC-EDIT',
+    });
+
+    const updated = await getApplicationDetail(created.id);
+    expect(updated.applicationNo).toBe('M2-EDIT-001');
+    expect(updated.patientName).toBe('已编辑患者');
+    expect(updated.editable).toBe(true);
+    expect(updated.deletable).toBe(true);
+
+    await deleteApplication(created.id);
+    const defaultPage = await listApplications({ page: 1, size: 200 });
+    expect(defaultPage.items.some((item) => item.id === created.id)).toBe(false);
+
+    const voidedPage = await listApplications({
+      applicationFormStatus: 'VOIDED',
+      page: 1,
+      size: 200,
+    });
+    const voided = voidedPage.items.find((item) => item.id === created.id);
+    expect(voided?.voided).toBe(true);
+    expect(voided?.editable).toBe(false);
+    expect(voided?.currentNode).toBe('VOIDED');
+  });
+
+  it('blocks logical delete after downstream workflow starts', async () => {
+    await expect(deleteApplication('APP-007')).rejects.toThrow('下游流程');
   });
 
   it('runs the full mock flow: register -> verify -> fix -> confirm -> check-in -> transport', async () => {
@@ -345,13 +408,103 @@ describe('specimen-workflow-service mock flow', () => {
     expect(transportOrders.items.some((item) => item.transportOrderNo === 'TR-20260526-007')).toBe(true);
   });
 
-  it('keeps verification and fixation lists queryable with the new fields', async () => {
-    const list = await listPendingFixations({
+  it('keeps verification, fixation, and transport lists queryable with specimenNo', async () => {
+    const fixationList = await listPendingFixations({
       page: 1,
       size: 20,
+      specimenNo: 'SP-002-01',
       verificationStatus: 'VERIFIED',
     });
 
-    expect(list.items.every((item) => item.verificationStatus === 'VERIFIED')).toBe(true);
+    expect(fixationList.items).toHaveLength(1);
+    expect(fixationList.items[0]?.specimenNo).toBe('SP-002-01');
+    expect(fixationList.items.every((item) => item.verificationStatus === 'VERIFIED')).toBe(true);
+
+    const transportOrders = await listPendingTransportOrders({
+      page: 1,
+      size: 20,
+      specimenNo: 'SP-007-01',
+    });
+
+    expect(transportOrders.items).toHaveLength(1);
+    expect(transportOrders.items[0]?.transportOrderNo).toBe('TR-20260526-007');
+  });
+
+  it('falls back to unverified when pending fixation items omit verification fields', () => {
+    const page = mapPendingSpecimenPageResponse({
+      items: [
+        {
+          abnormalFlag: false,
+          applicationId: 'APP-FALLBACK',
+          applicationNo: 'AP-FALLBACK',
+          barcode: 'BC-FALLBACK',
+          containerCount: 1,
+          containerName: 'Bottle',
+          fixationStatus: 'PENDING',
+          latestTrackingAt: null,
+          patientName: 'Alice',
+          registeredAt: null,
+          specimenId: 'SPEC-FALLBACK',
+          specimenNo: 'SP-FALLBACK',
+          specimenStatus: 'REGISTERED',
+          submittingDepartmentId: 'DEPT-001',
+          submittingDepartmentName: 'Pathology',
+          transportOrderId: null,
+          verificationCompletedAt: null,
+          verificationStartedAt: null,
+          verificationStatus: null,
+        },
+      ],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+
+    expect(page.items[0]?.verificationStatus).toBe('UNVERIFIED');
+  });
+
+  it('fills removal summary and operator fallback fields when removal page data is partial', async () => {
+    const page = mapSpecimenRemovalPageResponse({
+      items: [
+        {
+          abnormalFlag: false,
+          applicationId: 'APP-REMOVAL',
+          applicationNo: 'AP-REMOVAL',
+          barcode: 'BC-REMOVAL',
+          inpatientNo: null,
+          latestTrackingAt: null,
+          patientGender: null,
+          patientName: 'Alice',
+          registeredAt: null,
+          registeredByName: '导入用户',
+          specimenId: 'SPEC-REMOVAL',
+          specimenName: '胃体组织',
+          specimenNo: 'SP-REMOVAL',
+          specimenRemovalAt: null,
+          specimenRemovalOperatorName: undefined,
+          specimenStatus: 'REGISTERED',
+          specimenType: '常规',
+          surgeryName: null,
+        },
+      ],
+      page: 1,
+      size: 20,
+      summary: {
+        confirmedCount: 1,
+      },
+      total: 1,
+    });
+
+    expect(page.items[0]?.specimenRemovalOperatorName).toBeNull();
+    expect(page.summary.totalCount).toBe(0);
+    expect(page.summary.confirmedCount).toBe(1);
+    expect(page.summary.pendingCount).toBe(0);
+    expect(page.summary.abnormalCount).toBe(0);
+
+    const removalList = await listPendingSpecimenRemovals({
+      page: 1,
+      size: 20,
+    });
+    expect(removalList.summary.totalCount).toBeGreaterThan(0);
   });
 });

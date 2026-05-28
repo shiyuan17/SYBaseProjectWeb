@@ -9,6 +9,7 @@ import type {
   WorkbenchContagiousSpecimen,
   WorkbenchGynecologyInfo,
   WorkbenchLookupQuery,
+  WorkbenchLookupType,
   WorkbenchSpecialConditions,
   WorkbenchSpecimenItem,
 } from '../types/application-registration-workbench';
@@ -290,15 +291,26 @@ export async function lookupApplicationRegistrationWorkbenchRecord(
   query: WorkbenchLookupQuery,
 ) {
   const normalizedKeyword = query.keyword.trim();
+  const queryType: WorkbenchLookupType = query.queryType ?? 'INPATIENT_NO';
   if (!normalizedKeyword) {
     return null;
   }
 
   const matchedRecord = rawRecords.find((record) => {
-    return (
-      record.applicationInfo.applicationNo === normalizedKeyword ||
-      record.applicationInfo.inpatientNo === normalizedKeyword
-    );
+    if (queryType === 'APPLICATION_NO') {
+      return record.applicationInfo.applicationNo === normalizedKeyword;
+    }
+    if (queryType === 'PATIENT_NAME') {
+      return record.applicationInfo.patientName.includes(normalizedKeyword);
+    }
+    if (queryType === 'AUTO') {
+      return (
+        record.applicationInfo.applicationNo === normalizedKeyword ||
+        record.applicationInfo.inpatientNo === normalizedKeyword ||
+        record.applicationInfo.patientName.includes(normalizedKeyword)
+      );
+    }
+    return record.applicationInfo.inpatientNo === normalizedKeyword;
   });
 
   return matchedRecord ? mapRecord(matchedRecord) : null;

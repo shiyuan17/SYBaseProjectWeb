@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import type { PendingSpecimenItem } from '../types/specimen-workflow';
+import type {
+  ApplicationDetailView,
+  PendingSpecimenItem,
+  SpecimenFixationRequest,
+} from '../types/specimen-workflow';
 
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-
-import { useUserStore } from '@vben/stores';
 
 import {
   ElAlert,
@@ -14,7 +16,6 @@ import {
   ElFormItem,
   ElInput,
   ElMessage,
-  ElMessageBox,
   ElOption,
   ElPagination,
   ElSelect,
@@ -27,6 +28,7 @@ import DepartmentSelect from '#/modules/system-management/components/DepartmentS
 
 import {
   completeFixation,
+  getApplicationDetail,
   listPendingFixations,
   startFixation,
 } from '../api/specimen-workflow-service';
@@ -43,7 +45,8 @@ import {
   formatVerificationStatus,
 } from '../utils/format';
 
-const userStore = useUserStore();
+import SpecimenFixationActionDialog from './SpecimenFixationActionDialog.vue';
+
 const route = useRoute();
 
 const pageError = ref('');
@@ -51,6 +54,7 @@ const loading = ref(false);
 const actionLoading = ref(false);
 const pendingItems = ref<PendingSpecimenItem[]>([]);
 const total = ref(0);
+const applicationDetailMap = ref<Record<string, ApplicationDetailView>>({});
 
 const filters = reactive({
   applicationId: '',
@@ -59,7 +63,12 @@ const filters = reactive({
   fixationStatus: ALL_FIXATION_STATUS_VALUE,
   page: 1,
   size: DEFAULT_PAGE_SIZE,
+  specimenNo: '',
 });
+
+const dialogVisible = ref(false);
+const dialogAction = ref<'complete' | 'start'>('start');
+const dialogRow = ref<null | PendingSpecimenItem>(null);
 
 const currentQuery = computed(() => ({
   applicationId: filters.applicationId.trim() || undefined,
@@ -72,6 +81,7 @@ const currentQuery = computed(() => ({
       : filters.fixationStatus.trim() || undefined,
   page: filters.page,
   size: filters.size,
+  specimenNo: filters.specimenNo.trim() || undefined,
 }));
 
 function normalizeRouteQueryValue(value: unknown) {
@@ -88,6 +98,13 @@ function handleDepartmentChange(department: null | { id: string; name: string })
   filters.departmentId = department?.id ?? '';
 }
 
+function hasFixationTimingAnomaly(row: PendingSpecimenItem) {
+  return (
+    (row.fixationStatus === 'FIXING' && !row.fixationStartedAt)
+    || (row.fixationStatus === 'COMPLETED' && !row.fixationCompletedAt)
+  );
+}
+
 function canStartFixation(row: PendingSpecimenItem) {
   return row.fixationStatus === 'PENDING' && row.verificationStatus === 'VERIFIED';
 }
@@ -96,19 +113,51 @@ function canCompleteFixation(row: PendingSpecimenItem) {
   return row.fixationStatus === 'FIXING';
 }
 
+function getApplicationDetailForRow(row: PendingSpecimenItem) {
+  return applicationDetailMap.value[row.applicationId] ?? null;
+}
+
+async function loadApplicationDetails(rows: PendingSpecimenItem[]) {
+  const applicationIds = [...new Set(rows.map((row) => row.applicationId))];
+  const entries = await Promise.all(
+    applicationIds.map(async (applicationId) => {
+      try {
+        return [applicationId, await getApplicationDetail(applicationId)] as const;
+      } catch {
+        return [applicationId, null] as const;
+      }
+    }),
+  );
+  applicationDetailMap.value = Object.fromEntries(
+    entries.filter((entry): entry is [string, ApplicationDetailView] => entry[1] !== null),
+  );
+}
+
 async function loadPendingData() {
   loading.value = true;
   pageError.value = '';
   try {
-    const result = await listPendingFixations(currentQuery.value);
-    pendingItems.value = result.items.filter((item) =>
-      item.fixationStatus === 'FIXING'
-      || item.fixationStatus === 'COMPLETED'
-      || item.verificationStatus === 'VERIFIED',
-    );
-    total.value = pendingItems.value.length;
+    const query = {
+      ...currentQuery.value,
+      verificationStatus: 'VERIFIED' as const,
+    };
+    const result = await listPendingFixations(query);
+    const usesPreciseSearch = Boolean(query.applicationId || query.specimenNo);
+
+    pendingItems.value = usesPreciseSearch
+      ? result.items
+      : result.items.filter((item) =>
+          item.fixationStatus === 'FIXING'
+          || item.fixationStatus === 'COMPLETED'
+          || item.verificationStatus === 'VERIFIED',
+        );
+    total.value = usesPreciseSearch ? result.total : pendingItems.value.length;
+    await loadApplicationDetails(pendingItems.value);
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
+    pendingItems.value = [];
+    total.value = 0;
+    applicationDetailMap.value = {};
   } finally {
     loading.value = false;
   }
@@ -126,75 +175,28 @@ function handleReset() {
   filters.fixationStatus = ALL_FIXATION_STATUS_VALUE;
   filters.page = 1;
   filters.size = DEFAULT_PAGE_SIZE;
+  filters.specimenNo = '';
   void loadPendingData();
 }
 
-async function submitStartFixation(row: PendingSpecimenItem) {
-  const specimenBarcode = row.barcode.trim();
-  const operatorName = userStore.userInfo?.realName?.trim() ?? '';
-  const operatorUserId = userStore.userInfo?.userId?.trim() ?? '';
-
-  if (!specimenBarcode) {
-    ElMessage.warning('请先录入或扫码标本条码');
-    return;
-  }
-  if (!operatorName) {
-    ElMessage.warning('缺少当前操作人信息');
-    return;
-  }
-
-  actionLoading.value = true;
-  pageError.value = '';
-  try {
-    await startFixation({
-      fixationLiquidType: row.fixationLiquidType ?? null,
-      operatorName,
-      operatorUserId: operatorUserId || null,
-      specimenBarcode,
-    });
-    ElMessage.success(`条码 ${specimenBarcode} 已开始固定`);
-    await loadPendingData();
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
-  } finally {
-    actionLoading.value = false;
-  }
+function openFixationDialog(row: PendingSpecimenItem, action: 'complete' | 'start') {
+  dialogRow.value = row;
+  dialogAction.value = action;
+  dialogVisible.value = true;
 }
 
-async function submitCompleteFixation(row: PendingSpecimenItem) {
-  const specimenBarcode = row.barcode.trim();
-  const operatorName = userStore.userInfo?.realName?.trim() ?? '';
-  const operatorUserId = userStore.userInfo?.userId?.trim() ?? '';
-
-  if (!specimenBarcode) {
-    ElMessage.warning('请先录入或扫码标本条码');
-    return;
-  }
-  if (!operatorName) {
-    ElMessage.warning('缺少当前操作人信息');
-    return;
-  }
-
-  try {
-    await ElMessageBox.confirm('确认该标本已完成固定吗？', '完成固定', {
-      cancelButtonText: '取消',
-      confirmButtonText: '确认',
-      type: 'warning',
-    });
-  } catch {
-    return;
-  }
-
+async function submitFixation(payload: SpecimenFixationRequest) {
   actionLoading.value = true;
   pageError.value = '';
   try {
-    await completeFixation({
-      fixationLiquidType: row.fixationLiquidType ?? null,
-      operatorName,
-      operatorUserId: operatorUserId || null,
-      specimenBarcode,
-    });
-    ElMessage.success(`条码 ${specimenBarcode} 已完成固定`);
+    if (dialogAction.value === 'start') {
+      await startFixation(payload);
+      ElMessage.success('已开始固定');
+    } else {
+      await completeFixation(payload);
+      ElMessage.success('已完成固定');
+    }
+    dialogVisible.value = false;
     await loadPendingData();
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
@@ -225,7 +227,7 @@ watch(
     />
 
     <div class="text-sm text-muted-foreground">
-      仅展示已完成核对且未进入接收终态的标本；核对未完成的标本请先在“标本核对”场景处理。
+      仅展示已完成核对且未进入接收终态的标本；开始固定必须选择固定液，开始固定记录开始时间，完成固定记录完成时间，两者均写入追踪。
     </div>
 
     <ElForm inline label-width="88px">
@@ -234,6 +236,15 @@ watch(
           v-model="filters.applicationId"
           clearable
           placeholder="请输入申请单号"
+          style="width: 220px"
+          @keyup.enter="handleSearch"
+        />
+      </ElFormItem>
+      <ElFormItem label="标本流水号">
+        <ElInput
+          v-model="filters.specimenNo"
+          clearable
+          placeholder="请输入标本流水号"
           style="width: 220px"
           @keyup.enter="handleSearch"
         />
@@ -291,17 +302,20 @@ watch(
       </ElTableColumn>
       <ElTableColumn label="固定状态" min-width="120">
         <template #default="{ row }">
-          <ElTag
-            :type="
-              row.fixationStatus === 'COMPLETED'
-                ? 'success'
-                : row.fixationStatus === 'FIXING'
-                  ? 'warning'
-                  : 'info'
-            "
-          >
-            {{ formatFixationStatus(row.fixationStatus) }}
-          </ElTag>
+          <div class="flex items-center gap-2">
+            <ElTag
+              :type="
+                row.fixationStatus === 'COMPLETED'
+                  ? 'success'
+                  : row.fixationStatus === 'FIXING'
+                    ? 'warning'
+                    : 'info'
+              "
+            >
+              {{ formatFixationStatus(row.fixationStatus) }}
+            </ElTag>
+            <ElTag v-if="hasFixationTimingAnomaly(row)" type="danger">时间异常</ElTag>
+          </div>
         </template>
       </ElTableColumn>
       <ElTableColumn label="固定液类型" min-width="160">
@@ -319,6 +333,11 @@ watch(
           {{ formatDateTime(row.fixationCompletedAt) }}
         </template>
       </ElTableColumn>
+      <ElTableColumn label="离体时间" min-width="180">
+        <template #default="{ row }">
+          {{ formatDateTime(getApplicationDetailForRow(row)?.specimenRemovalTime) }}
+        </template>
+      </ElTableColumn>
       <ElTableColumn label="最近追踪" min-width="180">
         <template #default="{ row }">
           {{ formatDateTime(row.latestTrackingAt) }}
@@ -332,7 +351,7 @@ watch(
               :loading="actionLoading"
               link
               type="primary"
-              @click="submitStartFixation(row)"
+              @click="openFixationDialog(row, 'start')"
             >
               开始固定
             </ElButton>
@@ -341,7 +360,7 @@ watch(
               :loading="actionLoading"
               link
               type="success"
-              @click="submitCompleteFixation(row)"
+              @click="openFixationDialog(row, 'complete')"
             >
               完成固定
             </ElButton>
@@ -362,5 +381,14 @@ watch(
         @size-change="loadPendingData"
       />
     </div>
+
+    <SpecimenFixationActionDialog
+      v-model="dialogVisible"
+      :action="dialogAction"
+      :application-detail="dialogRow ? getApplicationDetailForRow(dialogRow) : null"
+      :loading="actionLoading"
+      :row="dialogRow"
+      @submit="submitFixation"
+    />
   </div>
 </template>

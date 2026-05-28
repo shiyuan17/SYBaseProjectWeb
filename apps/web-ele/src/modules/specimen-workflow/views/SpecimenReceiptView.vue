@@ -47,7 +47,6 @@ import {
   QUALITY_ISSUE_CODE_OPTIONS,
   RECEIPT_STATUS_OPTIONS,
 } from '../constants';
-import { getWorkflowPageErrorMessage } from '../utils/error';
 import { formatDateTime, formatNullable } from '../utils/format';
 
 type ReceiptDraftItem = SpecimenReceiptItemRequest & {
@@ -72,7 +71,6 @@ type TransportReceiptGroup = {
 
 const userStore = useUserStore();
 
-const pageError = ref('');
 const loading = ref(false);
 const receiveLoading = ref(false);
 const directReceiveLoading = ref(false);
@@ -193,7 +191,6 @@ function formatGroupContainerNames(items: PendingSpecimenItem[]) {
 
 async function loadPendingData() {
   loading.value = true;
-  pageError.value = '';
   try {
     const result = await listPendingReceipts({
       applicationId: filters.applicationId.trim() || undefined,
@@ -212,8 +209,7 @@ async function loadPendingData() {
     ) {
       closeReceiptDialog();
     }
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
+  } catch {
   } finally {
     loading.value = false;
   }
@@ -259,7 +255,6 @@ async function handleReprintApplicationForm(group: TransportReceiptGroup) {
     return;
   }
 
-  pageError.value = '';
   try {
     await reprintApplicationForm(group.applicationId, {
       operatorName,
@@ -268,8 +263,7 @@ async function handleReprintApplicationForm(group: TransportReceiptGroup) {
       terminalCode: receiveForm.terminalCode.trim() || null,
     });
     ElMessage.success(`申请单 ${group.applicationNo} 补打印成功`);
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
+  } catch {
   }
 }
 
@@ -348,7 +342,6 @@ async function submitReceipt() {
   }
 
   receiveLoading.value = true;
-  pageError.value = '';
   try {
     receiptResult.value = await receiveSpecimens({
       items: receiptDraftItems.value.map(normalizeReceiptItem),
@@ -360,8 +353,7 @@ async function submitReceipt() {
     ElMessage.success('标本接收成功');
     closeReceiptDialog();
     await loadPendingData();
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
+  } catch {
   } finally {
     receiveLoading.value = false;
   }
@@ -389,7 +381,6 @@ async function submitDirectReceipt() {
   }
 
   directReceiveLoading.value = true;
-  pageError.value = '';
   try {
     receiptResult.value = await directReceiveSpecimens({
       items: directDraftItems.value.map(normalizeReceiptItem),
@@ -401,8 +392,7 @@ async function submitDirectReceipt() {
     directDrawerVisible.value = false;
     directDraftItems.value = [createReceiptDraftItem()];
     await loadPendingData();
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
+  } catch {
   } finally {
     directReceiveLoading.value = false;
   }
@@ -442,14 +432,6 @@ void loadPendingData();
 <template>
   <Page title="病理接收">
     <div class="flex flex-col gap-4">
-      <ElAlert
-        v-if="pageError"
-        :closable="false"
-        :title="pageError"
-        type="error"
-        show-icon
-      />
-
       <WorkflowSectionCard
         title="待接收转运单"
         description="待接收列表按后端标本分页返回，在前端按 transportOrderId 聚合成接收工作台，并显式展示异常批次、提醒计数和未接收数量。"

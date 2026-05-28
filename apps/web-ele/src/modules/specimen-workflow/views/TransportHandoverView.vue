@@ -11,7 +11,6 @@ import { Page } from '@vben/common-ui';
 import { useUserStore } from '@vben/stores';
 
 import {
-  ElAlert,
   ElButton,
   ElDatePicker,
   ElDescriptions,
@@ -40,7 +39,6 @@ import {
 import TransportOrderCreateDialog from '../components/TransportOrderCreateDialog.vue';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { DEFAULT_PAGE_SIZE, TRANSPORT_STATUS_OPTIONS } from '../constants';
-import { getWorkflowPageErrorMessage } from '../utils/error';
 import { formatDateTime, formatNullable, formatTransportStatus } from '../utils/format';
 
 const userStore = useUserStore();
@@ -55,7 +53,6 @@ withDefaults(
   },
 );
 
-const pageError = ref('');
 const loading = ref(false);
 const printLoading = ref(false);
 const handoverLoading = ref(false);
@@ -72,6 +69,7 @@ const filters = reactive({
   departmentId: '',
   page: 1,
   size: DEFAULT_PAGE_SIZE,
+  specimenNo: '',
   status: '',
 });
 
@@ -107,7 +105,6 @@ function normalizeRouteQueryValue(value: unknown) {
 
 async function loadOrders() {
   loading.value = true;
-  pageError.value = '';
   try {
     const result = await listPendingTransportOrders({
       applicationId: filters.applicationId.trim() || undefined,
@@ -116,12 +113,12 @@ async function loadOrders() {
       departmentId: filters.departmentId.trim() || undefined,
       page: filters.page,
       size: filters.size,
+      specimenNo: filters.specimenNo.trim() || undefined,
       status: filters.status || undefined,
     });
     orders.value = result.items;
     total.value = result.total;
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
+  } catch {
   } finally {
     loading.value = false;
   }
@@ -138,6 +135,7 @@ function handleReset() {
   filters.departmentId = '';
   filters.page = 1;
   filters.size = DEFAULT_PAGE_SIZE;
+  filters.specimenNo = '';
   filters.status = '';
   routeApplicationNo.value = '';
   void loadOrders();
@@ -174,7 +172,6 @@ async function submitPrint() {
   }
 
   printLoading.value = true;
-  pageError.value = '';
   try {
     latestOrder.value = await printTransportOrder(activeOrder.value.id, {
       operatorName: printForm.operatorName.trim(),
@@ -184,8 +181,7 @@ async function submitPrint() {
     printDialogVisible.value = false;
     ElMessage.success('转运单打印成功');
     await loadOrders();
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
+  } catch {
   } finally {
     printLoading.value = false;
   }
@@ -201,7 +197,6 @@ async function submitHandover() {
   }
 
   handoverLoading.value = true;
-  pageError.value = '';
   try {
     latestOrder.value = await handoverTransportOrder(activeOrder.value.id, {
       receiverUserId: handoverForm.receiverUserId.trim() || null,
@@ -212,8 +207,7 @@ async function submitHandover() {
     handoverDialogVisible.value = false;
     ElMessage.success('转运交接成功');
     await loadOrders();
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
+  } catch {
   } finally {
     handoverLoading.value = false;
   }
@@ -256,14 +250,6 @@ watch(
 <template>
   <Page :title="embedded ? '转运/出库' : '固定与转运'">
     <div class="flex flex-col gap-4">
-      <ElAlert
-        v-if="pageError"
-        :closable="false"
-        :title="pageError"
-        type="error"
-        show-icon
-      />
-
       <WorkflowSectionCard
         v-if="latestOrder"
         title="最近操作结果"
@@ -310,6 +296,15 @@ watch(
               v-model="filters.applicationId"
               clearable
               placeholder="请输入申请单号"
+              style="width: 220px"
+              @keyup.enter="handleSearch"
+            />
+          </ElFormItem>
+          <ElFormItem label="标本流水号">
+            <ElInput
+              v-model="filters.specimenNo"
+              clearable
+              placeholder="请输入标本流水号"
               style="width: 220px"
               @keyup.enter="handleSearch"
             />

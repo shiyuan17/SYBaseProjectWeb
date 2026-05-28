@@ -6,6 +6,7 @@ import type {
   ApplicationCreateRequest,
   ApplicationCreateResult,
   ApplicationDetailView,
+  ApplicationUpdateRequest,
   DuplicateApplicationCheckQuery,
   DuplicateApplicationCheckResult,
   SpecimenCheckInRequest,
@@ -22,6 +23,12 @@ import type {
   SpecimenManagementListPage,
   SpecimenManagementListQuery,
   SpecimenManagementListSummary,
+  SpecimenRemovalConfirmRequest,
+  SpecimenRemovalConfirmResult,
+  SpecimenRemovalItem,
+  SpecimenRemovalPage,
+  SpecimenRemovalQuery,
+  SpecimenRemovalSummary,
   SpecimenBarcodeBindingRequest,
   SpecimenConfirmRequest,
   SpecimenFixationRequest,
@@ -44,9 +51,11 @@ import {
   checkInSpecimenMock,
   completeFixationMock,
   completeSpecimenVerificationMock,
+  confirmSpecimenRemovalMock,
   confirmSpecimenMock,
   createApplicationMock,
   createTransportOrderMock,
+  deleteApplicationMock,
   directReceiveSpecimensMock,
   duplicateCheckApplicationsMock,
   getApplicationDetailMock,
@@ -58,6 +67,7 @@ import {
   importClinicalApplicationMock,
   listApplicationsMock,
   listPendingFixationsMock,
+  listPendingSpecimenRemovalsMock,
   listPendingReceiptsMock,
   listPendingTransportOrdersMock,
   listSpecimenVerificationRecordsMock,
@@ -72,6 +82,7 @@ import {
   retryLabelPrintMock,
   startSpecimenVerificationMock,
   startFixationMock,
+  updateApplicationMock,
 } from './specimen-workflow-mock';
 
 import { requestClient } from '#/api/request';
@@ -111,13 +122,24 @@ type SpecimenManagementListPageResponse = Omit<
   items?: SpecimenManagementListPage['items'];
   summary?: Partial<SpecimenManagementListSummary>;
 };
+type SpecimenRemovalPageResponse = Omit<
+  SpecimenRemovalPage,
+  'items' | 'summary'
+> & {
+  items?: SpecimenRemovalItem[];
+  summary?: Partial<SpecimenRemovalSummary>;
+};
 
 export function mapApplicationDetailResponse(
   response: ApplicationDetailResponse,
 ): ApplicationDetailView {
   return {
     ...response,
+    currentNode: response.voided ? 'VOIDED' : response.currentNode,
+    deletable: response.deletable ?? false,
+    editable: response.editable ?? false,
     fixationCompletedAt: response.fixationCompletedAt ?? null,
+    operationDisabledReason: response.operationDisabledReason ?? null,
     patientCheckStatus: response.patientCheckStatus ?? null,
     recentEvents: response.recentEvents ?? [],
     receiptAbnormalSummary: response.receiptAbnormalSummary ?? null,
@@ -126,6 +148,7 @@ export function mapApplicationDetailResponse(
     specimenConfirmedAt: response.specimenConfirmedAt ?? null,
     specimens: (response.specimens ?? []).map(mapSpecimenTrackingSummary),
     unreceivedCount: response.unreceivedCount ?? 0,
+    voided: response.voided ?? response.status === 'VOIDED',
   };
 }
 
@@ -134,20 +157,47 @@ export function mapPendingSpecimenPageResponse(
 ): PendingSpecimenPage {
   return {
     ...response,
-    items: (response.items ?? []).map((item) => ({
-      ...item,
-      abnormalType: item.abnormalType ?? null,
-      batchAbnormalFlag: item.batchAbnormalFlag ?? false,
-      checkInStatus: item.checkInStatus ?? null,
-      checkedInAt: item.checkedInAt ?? null,
-      checkedInByName: item.checkedInByName ?? null,
-      reminderCount: item.reminderCount ?? 0,
-      unreceivedCount: item.unreceivedCount ?? 0,
-      verificationCompletedAt: item.verificationCompletedAt ?? null,
-      verificationStartedAt: item.verificationStartedAt ?? null,
-      verificationStatus: item.verificationStatus ?? null,
-    })),
+    items: (response.items ?? []).map((item) => {
+      const verificationCompletedAt = item.verificationCompletedAt ?? null;
+      const verificationStartedAt = item.verificationStartedAt ?? null;
+
+      return {
+        ...item,
+        abnormalType: item.abnormalType ?? null,
+        batchAbnormalFlag: item.batchAbnormalFlag ?? false,
+        checkInStatus: item.checkInStatus ?? null,
+        checkedInAt: item.checkedInAt ?? null,
+        checkedInByName: item.checkedInByName ?? null,
+        reminderCount: item.reminderCount ?? 0,
+        unreceivedCount: item.unreceivedCount ?? 0,
+        verificationCompletedAt,
+        verificationStartedAt,
+        verificationStatus: resolvePendingSpecimenVerificationStatus(
+          item.verificationStatus,
+          verificationStartedAt,
+          verificationCompletedAt,
+        ),
+      };
+    }),
   };
+}
+
+function resolvePendingSpecimenVerificationStatus(
+  verificationStatus: null | string | undefined,
+  verificationStartedAt: null | string,
+  verificationCompletedAt: null | string,
+) {
+  const normalizedStatus = verificationStatus?.trim();
+  if (normalizedStatus) {
+    return normalizedStatus;
+  }
+  if (verificationCompletedAt) {
+    return 'VERIFIED';
+  }
+  if (verificationStartedAt) {
+    return 'VERIFYING';
+  }
+  return 'UNVERIFIED';
 }
 
 export function mapApplicationPageResponse(
@@ -155,7 +205,14 @@ export function mapApplicationPageResponse(
 ): ApplicationPage {
   return {
     ...response,
-    items: response.items ?? [],
+    items: (response.items ?? []).map((item) => ({
+      ...item,
+      currentNode: item.voided ? 'VOIDED' : item.currentNode,
+      deletable: item.deletable ?? false,
+      editable: item.editable ?? false,
+      operationDisabledReason: item.operationDisabledReason ?? null,
+      voided: item.voided ?? item.status === 'VOIDED',
+    })),
   };
 }
 
@@ -196,6 +253,26 @@ export function mapSpecimenManagementListPageResponse(
       abnormalCount: response.summary?.abnormalCount ?? 0,
       labelPrintedCount: response.summary?.labelPrintedCount ?? 0,
       pendingLabelCount: response.summary?.pendingLabelCount ?? 0,
+      totalCount: response.summary?.totalCount ?? 0,
+    },
+  };
+}
+
+export function mapSpecimenRemovalPageResponse(
+  response: SpecimenRemovalPageResponse,
+): SpecimenRemovalPage {
+  return {
+    ...response,
+    items: (response.items ?? []).map((item) => ({
+      ...item,
+      confirmedAt: item.confirmedAt ?? null,
+      specimenRemovalAt: item.specimenRemovalAt ?? null,
+      specimenRemovalOperatorName: item.specimenRemovalOperatorName ?? null,
+    })),
+    summary: {
+      abnormalCount: response.summary?.abnormalCount ?? 0,
+      confirmedCount: response.summary?.confirmedCount ?? 0,
+      pendingCount: response.summary?.pendingCount ?? 0,
       totalCount: response.summary?.totalCount ?? 0,
     },
   };
@@ -256,6 +333,31 @@ export async function createApplication(data: ApplicationCreateRequest) {
     return createApplicationMock(data);
   }
   return requestClient.post<ApplicationCreateResult>('/v1/applications', data);
+}
+
+export async function updateApplication(
+  applicationId: string,
+  data: ApplicationUpdateRequest,
+) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return updateApplicationMock(applicationId, data);
+  }
+  return requestClient.request<ApplicationCreateResult>(
+    `/v1/applications/${applicationId}`,
+    {
+      data,
+      method: 'PATCH',
+    },
+  );
+}
+
+export async function deleteApplication(applicationId: string) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return deleteApplicationMock(applicationId);
+  }
+  return requestClient.delete<ApplicationCreateResult>(
+    `/v1/applications/${applicationId}`,
+  );
 }
 
 export async function listApplications(params: ApplicationListQuery) {
@@ -428,6 +530,31 @@ export async function completeFixation(data: SpecimenFixationRequest) {
     return completeFixationMock(data);
   }
   return requestClient.post<FixationResult>('/v1/specimen-fixations/complete', data);
+}
+
+export async function listPendingSpecimenRemovals(params: SpecimenRemovalQuery) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return listPendingSpecimenRemovalsMock(params);
+  }
+  const response = await requestClient.get<SpecimenRemovalPageResponse>(
+    '/v1/specimen-removals/pending',
+    { params },
+  );
+  return mapSpecimenRemovalPageResponse(response);
+}
+
+export async function confirmSpecimenRemoval(data: SpecimenRemovalConfirmRequest) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return confirmSpecimenRemovalMock(data);
+  }
+  return requestClient.post<SpecimenRemovalConfirmResult>('/v1/specimen-removals/confirm', data);
+}
+
+export async function exportSpecimenRemovals(params: SpecimenRemovalQuery) {
+  return requestClient.download('/v1/specimen-removals/export', {
+    params,
+    responseReturn: 'body',
+  });
 }
 
 export async function listPendingTransportOrders(params: PendingTransportOrderQuery) {

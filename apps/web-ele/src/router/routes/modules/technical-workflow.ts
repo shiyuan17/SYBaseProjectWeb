@@ -1,8 +1,10 @@
 import type { RouteRecordRaw } from 'vue-router';
 
+import { M2_PERMISSION_CODES } from '#/modules/specimen-workflow/constants';
 import { M3_PERMISSION_CODES } from '#/modules/technical-workflow/constants';
 
 const TECHNICAL_WORKFLOW_AUTHORITIES = [
+  M2_PERMISSION_CODES.SPECIMEN_RECEIVE,
   M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY,
   M3_PERMISSION_CODES.GROSSING,
   M3_PERMISSION_CODES.DEHYDRATION,
@@ -37,6 +39,17 @@ const routes: RouteRecordRaw[] = [
         },
         name: 'TechnicalWorkflowEntry',
         path: '/technical-workflow/entry',
+      },
+      {
+        component: () =>
+          import('#/modules/specimen-workflow/views/SpecimenReceiptView.vue'),
+        meta: {
+          authority: [M2_PERMISSION_CODES.SPECIMEN_RECEIVE],
+          icon: 'carbon:archive',
+          title: '病理接收',
+        },
+        name: 'PathologyReceipt',
+        path: '/workflow/pathology-receipt',
       },
       {
         component: () =>

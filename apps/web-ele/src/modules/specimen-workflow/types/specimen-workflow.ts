@@ -28,6 +28,8 @@ export interface ApplicationCreateResult {
   id: string;
 }
 
+export interface ApplicationUpdateRequest extends ApplicationCreateRequest {}
+
 export interface ImportClinicalApplicationRequest {
   externalOrderNo: string;
   thirdPartySource: string;
@@ -96,9 +98,12 @@ export interface ApplicationDetailView {
   clinicalSymptom: null | string;
   createdAt: null | string;
   currentNode: null | string;
+  deletable: boolean;
+  editable: boolean;
   externalOrderNo: null | string;
   fixationCompletedAt?: null | string;
   id: string;
+  operationDisabledReason: null | string;
   patientAge: null | string;
   patientGender: null | string;
   patientId: null | string;
@@ -124,6 +129,7 @@ export interface ApplicationDetailView {
   thirdPartySource: null | string;
   unreceivedCount?: number;
   updatedAt: null | string;
+  voided: boolean;
 }
 
 export type TrackingQueryView = ApplicationDetailView;
@@ -148,11 +154,14 @@ export interface ApplicationListItem {
   applicationType: null | string;
   createdAt: null | string;
   currentNode: null | string;
+  deletable: boolean;
+  editable: boolean;
   id: string;
   patientAge: null | string;
   patientGender: null | string;
   patientCheckStatus?: null | string;
   patientName: null | string;
+  operationDisabledReason: null | string;
   registeredSpecimenCount: number;
   reportIssued?: boolean;
   reportStatus?: null | string;
@@ -163,6 +172,7 @@ export interface ApplicationListItem {
   submittingDoctorName: null | string;
   latestLabelPrintStatus: null | string;
   updatedAt: null | string;
+  voided: boolean;
 }
 
 export interface ApplicationPage {
@@ -250,6 +260,73 @@ export interface SpecimenManagementListSummary {
   labelPrintedCount: number;
   pendingLabelCount: number;
   totalCount: number;
+}
+
+export interface SpecimenRemovalQuery {
+  abnormalFlag?: boolean;
+  applicationNo?: null | string;
+  dateFrom?: null | string;
+  dateTo?: null | string;
+  departmentId?: null | string;
+  keyword?: null | string;
+  page: number;
+  size: number;
+  specimenStatus?: null | string;
+}
+
+export interface SpecimenRemovalItem {
+  abnormalFlag: boolean;
+  applicationId: string;
+  applicationNo: string;
+  barcode: string;
+  confirmedAt?: null | string;
+  containerCount: null | number;
+  containerName: null | string;
+  inpatientNo: null | string;
+  latestTrackingAt: null | string;
+  patientGender: null | string;
+  patientName: null | string;
+  registeredAt: null | string;
+  labelPrintBatchNo?: null | string;
+  registeredByName: null | string;
+  specimenId: string;
+  specimenName: string;
+  specimenNo: string;
+  specimenRemovalAt: null | string;
+  specimenRemovalOperatorName: null | string;
+  specimenStatus: null | string;
+  specimenType: null | string;
+  surgeryName: null | string;
+}
+
+export interface SpecimenRemovalSummary {
+  abnormalCount: number;
+  confirmedCount: number;
+  pendingCount: number;
+  totalCount: number;
+}
+
+export interface SpecimenRemovalPage {
+  items: SpecimenRemovalItem[];
+  page: number;
+  size: number;
+  summary: SpecimenRemovalSummary;
+  total: number;
+}
+
+export interface SpecimenRemovalConfirmRequest {
+  operatorName: string;
+  operatorUserId?: null | string;
+  remarks?: null | string;
+  specimenBarcode: string;
+  terminalCode?: null | string;
+}
+
+export interface SpecimenRemovalConfirmResult {
+  barcode: string;
+  operatorName: string;
+  specimenId: string;
+  specimenRemovalAt: string;
 }
 
 export interface SpecimenManagementListPage {
@@ -375,6 +452,7 @@ export interface PendingSpecimenQuery {
   checkInStatus?: null | string;
   page: number;
   size: number;
+  specimenNo?: null | string;
   verificationStatus?: null | string;
 }
 

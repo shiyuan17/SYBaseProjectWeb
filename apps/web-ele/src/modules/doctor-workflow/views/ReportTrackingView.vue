@@ -52,7 +52,7 @@ const loading = ref(false);
 const operating = ref(false);
 const pageError = ref('');
 const tracking = ref<ReportTrackingView | null>(null);
-const queryCaseId = ref('');
+const queryCaseIdentifier = ref('');
 
 const caseId = computed(() => firstQueryParam(route.query.caseId));
 const currentUserId = computed(() => userStore.userInfo?.userId ?? '');
@@ -91,22 +91,22 @@ async function loadTracking(targetCaseId = caseId.value) {
 }
 
 function searchTracking() {
-  const normalizedCaseId = queryCaseId.value.trim();
-  if (!normalizedCaseId) {
-    ElMessage.warning('请输入病例 ID');
+  const normalizedCaseIdentifier = queryCaseIdentifier.value.trim();
+  if (!normalizedCaseIdentifier) {
+    ElMessage.warning('请输入病例 ID 或病理号');
     return;
   }
 
   void router.replace({
     path: '/doctor-workflow/tracking',
     query: {
-      caseId: normalizedCaseId,
+      caseId: normalizedCaseIdentifier,
     },
   });
 }
 
 function handleReset() {
-  queryCaseId.value = '';
+  queryCaseIdentifier.value = '';
   pageError.value = '';
   tracking.value = null;
   void router.replace({
@@ -152,7 +152,7 @@ async function runCancelMedicalOrder(order: MedicalOrderSummary) {
     return;
   }
   if (!currentUserName.value.trim()) {
-    ElMessage.warning('当前登录账号缺少姓名信息，无法执行取消');
+    ElMessage.warning('当前登录账号缺少姓名信息，无法执行取消。');
     return;
   }
 
@@ -161,7 +161,7 @@ async function runCancelMedicalOrder(order: MedicalOrderSummary) {
     await cancelMedicalOrder(order.orderId, {
       operatorName: currentUserName.value.trim(),
       operatorUserId: currentUserId.value || undefined,
-      remarks: '从报告跟踪页取消医嘱',
+      remarks: '从报告追踪页取消医嘱',
     });
     ElMessage.success('病理医嘱已取消');
     await loadTracking();
@@ -175,7 +175,7 @@ async function runCancelMedicalOrder(order: MedicalOrderSummary) {
 watch(
   caseId,
   (value) => {
-    queryCaseId.value = value;
+    queryCaseIdentifier.value = value;
     if (!value) {
       pageError.value = '';
       tracking.value = null;
@@ -188,7 +188,7 @@ watch(
 </script>
 
 <template>
-  <Page title="报告跟踪" description="展示诊断任务链、报告版本链、事件链、修订链、会诊链与医嘱链。">
+  <Page title="报告追踪" description="展示诊断任务链、报告版本链、事件链、修订链、会诊链与医嘱链。">
     <div class="flex flex-col gap-4">
       <ElAlert
         v-if="pageError"
@@ -200,14 +200,14 @@ watch(
 
       <WorkflowSectionCard
         title="病例查询"
-        description="支持从菜单独立进入后按病例 ID 查询报告跟踪，也支持从其他页面深链进入。"
+        description="支持从菜单独立进入后按病例 ID 或病理号查询报告追踪，也支持从其他页面深链进入。"
       >
         <ElForm inline label-width="88px">
-          <ElFormItem label="病例 ID" required>
+          <ElFormItem label="病例 ID / 病理号" required>
             <ElInput
-              v-model="queryCaseId"
+              v-model="queryCaseIdentifier"
               clearable
-              placeholder="请输入病例 ID"
+              placeholder="请输入病例 ID 或病理号"
               style="width: 260px"
               @keyup.enter="searchTracking"
             />
@@ -221,12 +221,12 @@ watch(
         </ElForm>
       </WorkflowSectionCard>
 
-      <WorkflowSectionCard title="跟踪摘要">
+      <WorkflowSectionCard title="追踪摘要">
         <ElEmpty
           v-if="!caseId"
-          description="请输入病例 ID 查询报告跟踪，或从其他流程页面进入当前病例。"
+          description="请输入病例 ID 或病理号查询报告追踪，或从其他流程页面进入当前病例。"
         />
-        <ElEmpty v-else-if="!loading && !tracking" description="暂无跟踪数据" />
+        <ElEmpty v-else-if="!loading && !tracking" description="暂无追踪数据" />
         <ElDescriptions v-else :column="4" border>
           <ElDescriptionsItem label="病例ID">
             {{ formatNullable(tracking?.caseId) }}

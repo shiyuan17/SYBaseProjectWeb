@@ -9,7 +9,6 @@ const WORKFLOW_AUTHORITIES = [
   M2_PERMISSION_CODES.SPECIMEN_REGISTER,
   M2_PERMISSION_CODES.FIXATION_VERIFY,
   M2_PERMISSION_CODES.TRANSPORT_HANDOVER,
-  M2_PERMISSION_CODES.SPECIMEN_RECEIVE,
   M2_PERMISSION_CODES.SPECIMEN_TRACKING_QUERY,
 ];
 
@@ -173,6 +172,7 @@ const routes: RouteRecordRaw[] = [
           import('#/modules/specimen-workflow/views/SpecimenReceiptView.vue'),
         meta: {
           authority: [M2_PERMISSION_CODES.SPECIMEN_RECEIVE],
+          hideInMenu: true,
           icon: 'carbon:archive',
           title: '病理接收',
         },

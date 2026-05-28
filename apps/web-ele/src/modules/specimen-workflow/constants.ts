@@ -1,6 +1,8 @@
 export const M2_PERMISSION_CODES = {
   APPLICATION_CREATE: 'PERM_APPLICATION_CREATE',
+  APPLICATION_DELETE: 'PERM_APPLICATION_DELETE',
   APPLICATION_DETAIL_QUERY: 'PERM_APPLICATION_DETAIL_QUERY',
+  APPLICATION_UPDATE: 'PERM_APPLICATION_UPDATE',
   WORKFLOW_REFERENCE_QUERY: 'PERM_WORKFLOW_REFERENCE_QUERY',
   SPECIMEN_REGISTER: 'PERM_SPECIMEN_REGISTER',
   FIXATION_VERIFY: 'PERM_FIXATION_VERIFY',
@@ -17,6 +19,14 @@ export const M2_WORKFLOW_ROUTE_ITEMS = [
   },
   {
     code: M2_PERMISSION_CODES.APPLICATION_CREATE,
+    path: '/workflow/submission-registration',
+  },
+  {
+    code: M2_PERMISSION_CODES.APPLICATION_UPDATE,
+    path: '/workflow/submission-registration',
+  },
+  {
+    code: M2_PERMISSION_CODES.APPLICATION_DELETE,
     path: '/workflow/submission-registration',
   },
   {
@@ -91,6 +101,7 @@ export const APPLICATION_FORM_STATUS_OPTIONS = [
   { label: '待补单', value: 'PENDING' },
   { label: '已上传', value: 'UPLOADED' },
   { label: '已归档', value: 'ARCHIVED' },
+  { label: '已作废', value: 'VOIDED' },
 ] as const;
 
 export const QUALITY_CHECK_RESULT_OPTIONS = [

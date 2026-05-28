@@ -99,6 +99,7 @@ export async function lookupApplicationRegistrationWorkbenchRecord(
       '/v1/application-registration-workbench/lookup',
       {
         params: {
+          queryType: query.queryType,
           keyword: query.keyword.trim(),
         },
       },

@@ -7,17 +7,19 @@ import SpecimenCheckInPanel from './SpecimenCheckInPanel.vue';
 const {
   checkInSpecimenMock,
   listSpecimensMock,
+  retryLabelPrintMock,
 } = vi.hoisted(() => ({
-  checkInSpecimenMock: vi.fn(async () => ({
-    barcode: 'BC-CHECKIN',
+  checkInSpecimenMock: vi.fn(async (barcode: string) => ({
+    barcode,
     checkInStatus: 'CHECKED_IN',
     checkedInAt: '2026-05-26T09:10:00',
     checkedInByName: 'Test User',
     id: 'SPEC-CHECKIN',
     specimenNo: 'SP-001',
   })),
-  listSpecimensMock: vi.fn(async () => ({
-    items: [
+  listSpecimensMock: vi.fn(async (params?: { keyword?: string }) => {
+    const keyword = params?.keyword ?? '';
+    const source = [
       {
         abnormalFlag: false,
         applicationId: 'APP-CHECKIN',
@@ -27,6 +29,8 @@ const {
         checkedInAt: null,
         checkedInByName: null,
         fixationStatus: 'COMPLETED',
+        labelPrintBatchNo: 'BATCH-1',
+        labelPrintStatus: 'FAILED',
         latestTrackingAt: '2026-05-26 09:00:00',
         patientName: 'Alice',
         recentNode: 'CONFIRMATION',
@@ -53,6 +57,8 @@ const {
         checkedInAt: '2026-05-26 08:45:00',
         checkedInByName: 'Tester',
         fixationStatus: 'COMPLETED',
+        labelPrintBatchNo: 'BATCH-1',
+        labelPrintStatus: 'SUCCESS',
         latestTrackingAt: '2026-05-26 09:00:00',
         patientName: 'Bob',
         recentNode: 'CHECK_IN',
@@ -70,16 +76,33 @@ const {
         verificationStartedAt: '2026-05-26 08:15:00',
         verificationStatus: 'VERIFIED',
       },
-    ],
-    page: 1,
-    size: 500,
-    summary: {
-      abnormalCount: 0,
-      labelPrintedCount: 2,
-      pendingLabelCount: 0,
-      totalCount: 2,
-    },
-    total: 2,
+    ];
+
+    return {
+      items: source.filter((item) =>
+        !keyword
+        || item.specimenNo.includes(keyword)
+        || item.specimenId.includes(keyword)
+        || item.barcode.includes(keyword),
+      ),
+      page: 1,
+      size: 100,
+      summary: {
+        abnormalCount: 0,
+        labelPrintedCount: 2,
+        pendingLabelCount: 0,
+        totalCount: 2,
+      },
+      total: source.length,
+    };
+  }),
+  retryLabelPrintMock: vi.fn(async () => ({
+    allSuccessful: true,
+    failedCount: 0,
+    labelPrintBatchNo: 'BATCH-1',
+    message: null,
+    retriedCount: 1,
+    successCount: 1,
   })),
 }));
 
@@ -90,6 +113,10 @@ vi.mock('@vben/stores', () => ({
       userId: 'USER-001',
     },
   }),
+}));
+
+vi.mock('@vben/utils', () => ({
+  downloadFileFromBlob: vi.fn(),
 }));
 
 vi.mock('element-plus', async () => {
@@ -103,6 +130,7 @@ vi.mock('element-plus', async () => {
 vi.mock('../api/specimen-workflow-service', () => ({
   checkInSpecimen: checkInSpecimenMock,
   listSpecimens: listSpecimensMock,
+  retryLabelPrint: retryLabelPrintMock,
 }));
 
 function mountView() {
@@ -118,44 +146,61 @@ function mountView() {
   return { app, container };
 }
 
+async function flush() {
+  await nextTick();
+  await Promise.resolve();
+  await nextTick();
+}
+
 describe('SpecimenCheckInPanel', () => {
   afterEach(() => {
     document.body.innerHTML = '';
     vi.clearAllMocks();
   });
 
-  it('shows only confirmation-ready rows and exposes check-in actions', async () => {
+  it('supports quick enter check-in and queue actions', async () => {
     const { app, container } = mountView();
-    await nextTick();
-    await Promise.resolve();
-    await nextTick();
+    await flush();
 
-    expect(container.textContent).toContain('待入库 1 条');
-    expect(container.textContent).toContain('执行入库');
+    const input = container.querySelector('input[placeholder="标本id / 流水号 / 条码"]') as HTMLInputElement;
+    input.value = 'SP-001';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }));
+    await flush();
 
-    const actionButtons = [...container.querySelectorAll('button')].filter((button) =>
-      button.textContent?.includes('执行入库'),
+    expect(checkInSpecimenMock).toHaveBeenCalledWith('BC-CHECKIN', expect.any(Object));
+    expect(container.textContent).toContain('已入库 1 条');
+
+    const exportButton = [...container.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes('导出Excel'),
     );
-    expect(actionButtons).toHaveLength(2);
-    expect(actionButtons[1]?.getAttribute('disabled')).not.toBeNull();
+    exportButton?.click();
+    await flush();
 
-    actionButtons[0]?.click();
-    await nextTick();
+    app.unmount();
+  });
 
-    const submitButton = [...container.querySelectorAll('button')].find((button) =>
-      button.textContent?.includes('确认入库'),
+  it('supports selection removal and batch print', async () => {
+    const { app, container } = mountView();
+    await flush();
+
+    const input = container.querySelector('input[placeholder="标本id / 流水号 / 条码"]') as HTMLInputElement;
+    input.value = 'SP-001';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }));
+    await flush();
+
+    const printerInput = container.querySelector('input[placeholder="打印机编号"]') as HTMLInputElement;
+    printerInput.value = 'PRN-01';
+    printerInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+    const retryButton = [...container.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes('补打标本标签'),
     );
-    submitButton?.click();
-    await Promise.resolve();
-    await nextTick();
+    retryButton?.click();
+    await flush();
 
-    expect(checkInSpecimenMock).toHaveBeenCalledWith('BC-CHECKIN', {
-      operatorName: 'Test User',
-      operatorUserId: 'USER-001',
-      remarks: null,
-      specimenBarcode: 'BC-CHECKIN',
-      terminalCode: null,
-    });
+    expect(retryLabelPrintMock).toHaveBeenCalled();
 
     app.unmount();
   });

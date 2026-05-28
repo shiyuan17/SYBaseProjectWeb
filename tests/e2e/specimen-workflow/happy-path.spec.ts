@@ -45,9 +45,11 @@ test('happy path: create, register, fix, transport, receive and track specimens'
     const { context, page } = await openRolePage(browser, 'fixation', '/workflow/fixation-verify');
 
     try {
-      const workflowPage = new FixationTransportPage(page);
-      await workflowPage.gotoFixation();
+    const workflowPage = new FixationTransportPage(page);
+    await workflowPage.gotoFixation();
+      await workflowPage.startFixation(runData.barcodes[0]);
       await workflowPage.completeFixation(runData.barcodes[0]);
+      await workflowPage.startFixation(runData.barcodes[1]);
       await workflowPage.completeFixation(runData.barcodes[1]);
 
       const transportOrder = await workflowPage.createTransportOrder([...runData.barcodes]);

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type {
+  ApplicationFormReprintRequest,
   ApplicationDetailView,
   LabelPrintRetryResult,
   LatestSpecimenRegistrationResult,
@@ -8,6 +9,7 @@ import type {
   SpecimenManagementListSummary,
   SpecimenRegisterResult,
 } from '../types/specimen-workflow';
+import type { ApplicationRegistrationWorkbenchRecord } from '../types/application-registration-workbench';
 
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -51,9 +53,11 @@ import {
   getApplicationDetail,
   getLatestRegistrationResult,
   listSpecimens,
+  reprintApplicationForm,
   retryLabelPrint,
   startFixation,
 } from '../api/specimen-workflow-service';
+import ApplicationRegistrationWorkbenchPanel from '../components/ApplicationRegistrationWorkbenchPanel.vue';
 import SpecimenRegisterDialog from '../components/SpecimenRegisterDialog.vue';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { DEFAULT_PAGE_SIZE, M2_PERMISSION_CODES } from '../constants';
@@ -69,6 +73,7 @@ import {
   formatSpecimenStatus,
 } from '../utils/format';
 import { buildSpecimenAbnormalDetails } from '../utils/specimen-abnormal';
+import { buildApplicationFormPrintDocument } from '../utils/specimen-print';
 
 type QuickFilterKey = 'ABNORMAL' | 'ALL' | 'PENDING_LABEL' | 'VERIFIED';
 type AbnormalFilterValue = '' | 'false' | 'true';
@@ -168,6 +173,9 @@ const filters = reactive({
   specimenStatus: '',
 });
 
+const workbenchLookupKeyword = ref('');
+const workbenchLookupQueryType = ref<'APPLICATION_NO' | 'AUTO' | 'INPATIENT_NO' | 'PATIENT_NAME'>('INPATIENT_NO');
+const workbenchLookupTriggerKey = ref(0);
 const registerDialogVisible = ref(false);
 const registerDialogApplicationId = ref('');
 
@@ -266,6 +274,16 @@ function normalizeRouteQueryValue(value: unknown) {
     return typeof value[0] === 'string' ? value[0] : '';
   }
   return '';
+}
+
+function triggerWorkbenchLookup(keyword: string, queryType: 'APPLICATION_NO' | 'AUTO' | 'INPATIENT_NO' | 'PATIENT_NAME' = 'AUTO') {
+  const normalizedKeyword = keyword.trim();
+  if (!normalizedKeyword) {
+    return;
+  }
+  workbenchLookupKeyword.value = normalizedKeyword;
+  workbenchLookupQueryType.value = queryType;
+  workbenchLookupTriggerKey.value += 1;
 }
 
 function resolveQuickFilterQuery(): Partial<
@@ -369,57 +387,13 @@ async function applyRouteInitialFilter() {
   await loadSpecimens();
 }
 
-function resolveSelectedRegisterApplicationId() {
-  if (props.registrationApplicationId.trim()) {
-    return props.registrationApplicationId.trim();
-  }
-
-  const routeApplicationId = normalizeRouteQueryValue(route.query.applicationId).trim();
-  if (routeApplicationId) {
-    return routeApplicationId;
-  }
-
-  const applicationIds = Array.from(
-    new Set(
-      selectedRows.value
-        .map((row) => row.applicationId)
-        .filter((applicationId) => Boolean(applicationId)),
-    ),
-  );
-
-  if (applicationIds.length > 1) {
-    ElMessage.warning('请选择同一申请单下的标本后再登记');
-    return '';
-  }
-
-  return applicationIds[0] ?? '';
-}
-
-async function openRegisterDialogForApplication(applicationId: string) {
-  const normalizedApplicationId = applicationId.trim();
-  if (!normalizedApplicationId) {
-    return;
-  }
-  registerDialogApplicationId.value = normalizedApplicationId;
-  registerDialogVisible.value = true;
-}
-
-async function openRegisterDialog() {
-  const applicationId = resolveSelectedRegisterApplicationId();
-  if (!applicationId) {
-    ElMessage.warning('请先从申请单进入，或在当前列表中选中同一申请单下的标本');
-    return;
-  }
-  await openRegisterDialogForApplication(applicationId);
-}
-
 watch(
   () => [route.query.applicationId, route.query.action],
   ([applicationId, action]) => {
     const normalizedApplicationId = normalizeRouteQueryValue(applicationId).trim();
     void applyRouteInitialFilter();
     if (action === 'register' && normalizedApplicationId) {
-      void openRegisterDialogForApplication(normalizedApplicationId);
+      triggerWorkbenchLookup(normalizedApplicationId, 'AUTO');
     }
   },
   { immediate: true },
@@ -433,7 +407,7 @@ watch(
     }
     const normalizedApplicationId = applicationId.trim();
     if (normalizedApplicationId) {
-      void openRegisterDialogForApplication(normalizedApplicationId);
+      triggerWorkbenchLookup(normalizedApplicationId, 'AUTO');
     }
   },
 );
@@ -490,6 +464,52 @@ function handleRegisterSuccess(payload: {
   registerDialogVisible.value = false;
   resultDialogVisible.value = true;
   void loadSpecimens();
+}
+
+function handleWorkbenchSaved() {
+  void loadSpecimens();
+}
+
+function openPrintWindow(documentHtml: string) {
+  const printWindow = window.open('', '_blank', 'width=960,height=760');
+  if (!printWindow) {
+    ElMessage.warning('打印窗口被浏览器拦截，请允许弹窗后重试');
+    return null;
+  }
+
+  printWindow.document.open();
+  printWindow.document.write(documentHtml);
+  printWindow.document.close();
+  return printWindow;
+}
+
+async function handleWorkbenchReprintApplicationForm(payload: {
+  applicationId: string;
+  record: ApplicationRegistrationWorkbenchRecord;
+}) {
+  const applicationId = payload.applicationId.trim();
+  const operatorName = currentUserName.value.trim();
+  if (!applicationId || !operatorName) {
+    ElMessage.warning('缺少补打申请单所需的操作人信息');
+    return;
+  }
+
+  const requestPayload: ApplicationFormReprintRequest = {
+    operatorName,
+    operatorUserId: currentUserId.value.trim() || null,
+    remarks: `申请与登记工作台补打申请单：${payload.record.patientInfo.applicationNo || applicationId}`,
+    terminalCode: null,
+  };
+
+  pageError.value = '';
+  try {
+    const printDocument = buildApplicationFormPrintDocument(payload.record);
+    openPrintWindow(printDocument);
+    await reprintApplicationForm(applicationId, requestPayload);
+    ElMessage.success(`申请单 ${payload.record.patientInfo.applicationNo || applicationId} 补打成功`);
+  } catch (error) {
+    pageError.value = getWorkflowPageErrorMessage(error);
+  }
 }
 
 async function openDetailDrawer(row: SpecimenManagementListItem) {
@@ -761,6 +781,14 @@ function closeResultDialog() {
       />
 
       <template v-if="canManageSpecimens">
+        <ApplicationRegistrationWorkbenchPanel
+          :lookup-keyword="workbenchLookupKeyword"
+          :lookup-query-type="workbenchLookupQueryType"
+          :lookup-trigger-key="workbenchLookupTriggerKey"
+          @reprint-application-form="handleWorkbenchReprintApplicationForm"
+          @save-workbench="handleWorkbenchSaved"
+        />
+
         <WorkflowSectionCard
           title="工作台概览"
           description="围绕登记、贴签、核验和异常处理组织当前工作台。"
@@ -868,7 +896,6 @@ function closeResultDialog() {
                 <div class="flex flex-wrap gap-2">
                   <ElButton type="primary" @click="handleSearch">查询</ElButton>
                   <ElButton @click="handleReset">重置</ElButton>
-                  <ElButton type="primary" plain @click="openRegisterDialog">登记标本</ElButton>
                   <ElButton :disabled="selectedRows.length === 0" plain @click="handleBulkRetry">
                     批量补打
                   </ElButton>

@@ -6,6 +6,7 @@ import type {
   ApplicationListItem,
   ApplicationListQuery,
   ApplicationPage,
+  ApplicationUpdateRequest,
   DirectSpecimenReceiptRequest,
   DuplicateApplicationCheckResult,
   DuplicateApplicationCheckQuery,
@@ -18,6 +19,12 @@ import type {
   PendingSpecimenItem,
   PendingSpecimenPage,
   PendingSpecimenQuery,
+  SpecimenRemovalConfirmRequest,
+  SpecimenRemovalConfirmResult,
+  SpecimenRemovalItem,
+  SpecimenRemovalPage,
+  SpecimenRemovalQuery,
+  SpecimenRemovalSummary,
   PendingTransportOrderItem,
   PendingTransportOrderPage,
   PendingTransportOrderQuery,
@@ -325,6 +332,42 @@ function getTransportOrderBySpecimenId(specimenId: string) {
   );
 }
 
+function hasStartedDownstreamWorkflow(applicationId: string) {
+  const specimens = getSpecimensByApplicationId(applicationId);
+  return specimens.some((item) =>
+    item.fixationStatus !== 'PENDING'
+    || item.specimenStatus !== 'REGISTERED'
+    || Boolean(item.specimenConfirmedAt)
+    || Boolean(item.checkInStatus && item.checkInStatus !== 'NOT_CHECKED_IN')
+    || Boolean(getTransportOrderBySpecimenId(item.id)),
+  );
+}
+
+function resolveApplicationOperationState(application: RawApplication) {
+  if (application.status === 'VOIDED') {
+    return {
+      deletable: false,
+      editable: false,
+      operationDisabledReason: '申请单已作废，不能再编辑或作废',
+      voided: true,
+    };
+  }
+  if (hasStartedDownstreamWorkflow(application.id)) {
+    return {
+      deletable: false,
+      editable: false,
+      operationDisabledReason: '申请单已进入下游流程，不能再编辑或作废',
+      voided: false,
+    };
+  }
+  return {
+    deletable: true,
+    editable: true,
+    operationDisabledReason: null,
+    voided: false,
+  };
+}
+
 function appendWorkflowEvent(payload: Omit<RawWorkflowEvent, 'id'>) {
   const event: RawWorkflowEvent = {
     ...payload,
@@ -475,6 +518,34 @@ function mapSpecimenManagementItem(specimen: RawSpecimen): SpecimenManagementLis
   };
 }
 
+function mapSpecimenRemovalItem(specimen: RawSpecimen): SpecimenRemovalItem {
+  const application = getApplicationById(specimen.applicationId);
+  const workbenchRecord = state.applications.find((item) => item.id === specimen.applicationId);
+  return {
+    abnormalFlag: isSpecimenAbnormal(specimen),
+    applicationId: application.id,
+    applicationNo: application.applicationNo,
+    barcode: specimen.barcode,
+    confirmedAt: specimen.specimenRemovalAt ?? null,
+    containerCount: specimen.containerCount,
+    containerName: specimen.containerName,
+    inpatientNo: normalizeText(application.applicationNo) || null,
+    latestTrackingAt: specimen.latestTrackingAt ?? null,
+    patientGender: application.patientGender ?? null,
+    patientName: application.patientName,
+    registeredAt: specimen.registeredAt,
+    registeredByName: '系统导入',
+    specimenId: specimen.id,
+    specimenName: specimen.specimenName,
+    specimenNo: specimen.specimenNo,
+    specimenRemovalAt: specimen.specimenRemovalAt ?? null,
+    specimenRemovalOperatorName: specimen.specimenRemovalOperatorName ?? null,
+    specimenStatus: specimen.specimenStatus,
+    specimenType: specimen.specimenType,
+    surgeryName: application.submittingDepartmentName ?? null,
+  };
+}
+
 function mapPendingSpecimenItem(specimen: RawSpecimen): PendingSpecimenItem {
   const application = getApplicationById(specimen.applicationId);
   const order = getTransportOrderBySpecimenId(specimen.id);
@@ -609,6 +680,12 @@ function mapPendingTransportOrderItem(order: RawTransportOrder): PendingTranspor
 }
 
 function resolveApplicationCurrentNode(specimens: RawSpecimen[]) {
+  const application = specimens[0]?.applicationId
+    ? state.applications.find((item) => item.id === specimens[0]?.applicationId)
+    : null;
+  if (application?.status === 'VOIDED') {
+    return 'VOIDED';
+  }
   if (specimens.some((item) => item.receiptStatus === 'REJECTED')) {
     return 'REJECTED';
   }
@@ -643,6 +720,9 @@ function resolveApplicationCurrentNode(specimens: RawSpecimen[]) {
 }
 
 function resolveApplicationStatus(application: RawApplication, specimens: RawSpecimen[]) {
+  if (application.status === 'VOIDED') {
+    return 'VOIDED';
+  }
   if (specimens.length === 0) {
     return application.status;
   }
@@ -676,6 +756,7 @@ function mapApplicationListItem(application: RawApplication): ApplicationListIte
   const specimens = getSpecimensByApplicationId(application.id);
   const latestRegisteredSpecimen = [...specimens]
     .sort((left, right) => compareNullableDateDesc(left.registeredAt, right.registeredAt))[0];
+  const operationState = resolveApplicationOperationState(application);
 
   return {
     abnormalFlag: specimens.some((item) => isSpecimenAbnormal(item)),
@@ -684,9 +765,12 @@ function mapApplicationListItem(application: RawApplication): ApplicationListIte
     applicationNo: application.applicationNo,
     applicationType: application.applicationType,
     createdAt: application.createdAt,
-    currentNode: resolveApplicationCurrentNode(specimens),
+    currentNode: application.status === 'VOIDED' ? 'VOIDED' : resolveApplicationCurrentNode(specimens),
+    deletable: operationState.deletable,
+    editable: operationState.editable,
     id: application.id,
     latestLabelPrintStatus: latestRegisteredSpecimen?.labelPrintStatus ?? null,
+    operationDisabledReason: operationState.operationDisabledReason,
     patientAge: application.patientAge,
     patientGender: application.patientGender,
     patientCheckStatus: application.patientCheckStatus ?? 'UNKNOWN',
@@ -700,6 +784,7 @@ function mapApplicationListItem(application: RawApplication): ApplicationListIte
     submittingDepartmentName: application.submittingDepartmentName,
     submittingDoctorName: application.submittingDoctorName,
     updatedAt: application.updatedAt,
+    voided: operationState.voided,
   };
 }
 
@@ -721,13 +806,17 @@ function mapApplicationTrackingView(application: RawApplication): TrackingQueryV
     .filter(Boolean)
     .sort(compareNullableDateDesc)[0] ?? null;
   const recentEvents = getApplicationEvents(application.id);
+  const operationState = resolveApplicationOperationState(application);
 
   return {
     ...application,
     abnormalFlag: specimens.some((item) => isSpecimenAbnormal(item)),
-    currentNode: resolveApplicationCurrentNode(specimens),
+    currentNode: application.status === 'VOIDED' ? 'VOIDED' : resolveApplicationCurrentNode(specimens),
+    deletable: operationState.deletable,
+    editable: operationState.editable,
     fixationCompletedAt,
     patientCheckStatus: application.patientCheckStatus ?? 'UNKNOWN',
+    operationDisabledReason: operationState.operationDisabledReason,
     receiptAbnormalSummary: buildReceiptAbnormalSummary(specimens),
     recentEvents,
     reportIssued: application.reportIssued ?? false,
@@ -737,6 +826,7 @@ function mapApplicationTrackingView(application: RawApplication): TrackingQueryV
     status: resolveApplicationStatus(application, specimens),
     unreceivedCount: specimens.filter((item) => item.receiptStatus !== 'RECEIVED').length,
     updatedAt: application.updatedAt,
+    voided: operationState.voided,
   };
 }
 
@@ -854,9 +944,12 @@ export async function createApplicationMock(
     clinicalSymptom: data.clinicalSymptom ?? null,
     createdAt: now,
     currentNode: 'SUBMITTED',
+    deletable: true,
+    editable: true,
     externalOrderNo: data.externalOrderNo ?? null,
     fixationCompletedAt: null,
     id: applicationId,
+    operationDisabledReason: null,
     patientAge: data.patientAge ?? null,
     patientGender: data.patientGender ?? null,
     patientId: data.patientId ?? null,
@@ -879,17 +972,84 @@ export async function createApplicationMock(
     thirdPartySource: data.thirdPartySource ?? null,
     unreceivedCount: 0,
     updatedAt: now,
+    voided: false,
   });
 
   return { id: applicationId };
 }
 
+export async function updateApplicationMock(
+  applicationId: string,
+  data: ApplicationUpdateRequest,
+): Promise<ApplicationCreateResult> {
+  const application = getApplicationById(applicationId);
+  const operationState = resolveApplicationOperationState(application);
+  if (!operationState.editable) {
+    throw new Error(operationState.operationDisabledReason ?? '申请单当前状态不可编辑');
+  }
+  const applicationNo = normalizeText(data.applicationNo) || application.applicationNo;
+  const conflict = state.applications.find((item) =>
+    item.id !== application.id
+    && item.status !== 'VOIDED'
+    && item.applicationNo === applicationNo,
+  );
+  if (conflict) {
+    throw new Error('申请单号已存在');
+  }
+  Object.assign(application, {
+    applicationDate: data.applicationDate ?? application.applicationDate,
+    applicationFormStatus: data.applicationFormStatus ?? application.applicationFormStatus,
+    applicationNo,
+    applicationType: data.applicationType,
+    clinicalDiagnosis: data.clinicalDiagnosis,
+    clinicalSymptom: data.clinicalSymptom ?? null,
+    externalOrderNo: data.externalOrderNo ?? null,
+    patientAge: data.patientAge ?? null,
+    patientGender: data.patientGender ?? null,
+    patientId: data.patientId ?? null,
+    patientName: data.patientName ?? null,
+    remarks: data.remarks ?? null,
+    sourceHospitalId: data.sourceHospitalId ?? null,
+    sourceHospitalName: data.sourceHospitalName ?? null,
+    specimenRemovalTime: data.specimenRemovalTime ?? null,
+    specimenSite: data.specimenSite,
+    submissionDate: data.submissionDate ?? application.submissionDate,
+    submittingDepartmentId: data.submittingDepartmentId,
+    submittingDepartmentName: data.submittingDepartmentName,
+    submittingDoctorName: data.submittingDoctorName,
+    submittingDoctorUserId: data.submittingDoctorUserId,
+    thirdPartySource: data.thirdPartySource ?? null,
+    updatedAt: createTimestamp(),
+  });
+  return { id: application.id };
+}
+
+export async function deleteApplicationMock(
+  applicationId: string,
+): Promise<ApplicationCreateResult> {
+  const application = getApplicationById(applicationId);
+  const operationState = resolveApplicationOperationState(application);
+  if (!operationState.deletable) {
+    throw new Error(operationState.operationDisabledReason ?? '申请单当前状态不可作废');
+  }
+  application.status = 'VOIDED';
+  application.currentNode = 'VOIDED';
+  application.updatedAt = createTimestamp();
+  state.specimens = state.specimens.filter((item) => item.applicationId !== application.id);
+  state.registrationBatches = state.registrationBatches.filter((item) => item.applicationId !== application.id);
+  state.workflowEvents = state.workflowEvents.filter((item) => item.applicationId !== application.id);
+  return { id: application.id };
+}
+
 export async function listApplicationsMock(
   params: ApplicationListQuery,
 ): Promise<ApplicationPage> {
+  const formStatus = normalizeText(params.applicationFormStatus);
   const filtered = state.applications
     .filter((item) =>
-      (!normalizeText(params.applicationFormStatus) || item.applicationFormStatus === params.applicationFormStatus)
+      (formStatus === 'VOIDED'
+        ? item.status === 'VOIDED'
+        : item.status !== 'VOIDED' && (!formStatus || item.applicationFormStatus === formStatus))
       && (!normalizeText(params.applicationType) || item.applicationType === params.applicationType)
       && includesText(item.applicationNo, params.applicationNo)
       && includesText(item.patientName, params.patientName)
@@ -906,6 +1066,7 @@ export async function duplicateCheckApplicationsMock(
   params: DuplicateApplicationCheckQuery,
 ): Promise<DuplicateApplicationCheckResult> {
   const items = state.applications
+    .filter((application) => application.status !== 'VOIDED')
     .map((application) => {
       const matchedBy = [
         params.externalOrderNo && normalizeText(application.externalOrderNo) === normalizeText(params.externalOrderNo)
@@ -1201,6 +1362,7 @@ export async function listPendingFixationsMock(
         && (!normalizeText(params.applicationId)
           || application.id === params.applicationId
           || application.applicationNo === params.applicationId)
+        && (!normalizeText(params.specimenNo) || item.specimenNo === params.specimenNo)
         && (!normalizeText(params.departmentId) || application.submittingDepartmentId === params.departmentId)
         && (!normalizeText(params.fixationStatus) || item.fixationStatus === params.fixationStatus)
         && (!normalizeText(params.verificationStatus)
@@ -1400,18 +1562,97 @@ export async function completeFixationMock(
   };
 }
 
+export async function listPendingSpecimenRemovalsMock(
+  params: SpecimenRemovalQuery,
+): Promise<SpecimenRemovalPage> {
+  const filteredItems = state.specimens
+    .filter((item) => {
+      const application = getApplicationById(item.applicationId);
+      const keyword = normalizeText(params.keyword);
+      const matchesKeyword = !keyword
+        || includesText(application.applicationNo, keyword)
+        || includesText(application.patientName, keyword)
+        || includesText(item.specimenNo, keyword)
+        || includesText(item.barcode, keyword)
+        || includesText(item.specimenName, keyword);
+
+      return matchesKeyword
+        && (!normalizeText(params.applicationNo) || application.applicationNo === params.applicationNo)
+        && (!normalizeText(params.departmentId) || application.submittingDepartmentId === params.departmentId)
+        && (!normalizeText(params.specimenStatus) || item.specimenStatus === params.specimenStatus)
+        && (params.abnormalFlag === undefined || isSpecimenAbnormal(item) === params.abnormalFlag)
+        && withinDateRange(item.registeredAt, params.dateFrom, params.dateTo);
+    })
+    .sort((left, right) =>
+      compareNullableDateDesc(
+        left.specimenRemovalAt ?? left.registeredAt,
+        right.specimenRemovalAt ?? right.registeredAt,
+      ),
+    )
+    .map(mapSpecimenRemovalItem);
+
+  const summary: SpecimenRemovalSummary = {
+    abnormalCount: filteredItems.filter((item) => item.abnormalFlag).length,
+    confirmedCount: filteredItems.filter((item) => Boolean(item.specimenRemovalAt)).length,
+    pendingCount: filteredItems.filter((item) => !item.specimenRemovalAt).length,
+    totalCount: filteredItems.length,
+  };
+
+  return {
+    ...paginateItems(filteredItems, params.page, params.size),
+    summary,
+  };
+}
+
+export async function confirmSpecimenRemovalMock(
+  data: SpecimenRemovalConfirmRequest,
+): Promise<SpecimenRemovalConfirmResult> {
+  const specimen = resolveSpecimenByIdentifier(data.specimenBarcode);
+  if (specimen.specimenRemovalAt) {
+    throw new Error(`标本 ${specimen.barcode} 已完成离体确认`);
+  }
+  const eventTime = createTimestamp();
+  specimen.specimenRemovalAt = eventTime;
+  specimen.specimenRemovalOperatorName = data.operatorName;
+  specimen.latestTrackingAt = eventTime;
+  appendWorkflowEvent({
+    applicationId: specimen.applicationId,
+    eventContent: '离体确认完成',
+    eventStatus: 'SUCCESS',
+    eventTime,
+    eventType: 'COMPLETED',
+    nodeCode: 'REMOVAL',
+    operatorName: data.operatorName,
+    sourceTerminal: data.terminalCode ?? null,
+    specimenBarcode: specimen.barcode,
+    specimenId: specimen.id,
+    specimenNo: specimen.specimenNo,
+  });
+  return {
+    barcode: specimen.barcode,
+    operatorName: data.operatorName,
+    specimenId: specimen.id,
+    specimenRemovalAt: eventTime,
+  };
+}
+
 export async function listPendingTransportOrdersMock(
   params: PendingTransportOrderQuery,
 ): Promise<PendingTransportOrderPage> {
   const filteredItems = state.transportOrders
     .filter((item) => {
       const application = getApplicationById(item.applicationId);
+      const matchesSpecimenNo = !normalizeText(params.specimenNo)
+        || item.specimenIds
+          .map((specimenId) => state.specimens.find((specimen) => specimen.id === specimenId))
+          .some((specimen) => specimen?.specimenNo === params.specimenNo);
       return item.status !== 'COMPLETED'
         && item.status !== 'CANCELLED'
         && (!normalizeText(params.status) || item.status === params.status)
         && (!normalizeText(params.applicationId)
           || application.id === params.applicationId
           || application.applicationNo === params.applicationId)
+        && matchesSpecimenNo
         && (!normalizeText(params.departmentId) || application.submittingDepartmentId === params.departmentId)
         && withinDateRange(item.createdAt, params.dateFrom, params.dateTo);
     })

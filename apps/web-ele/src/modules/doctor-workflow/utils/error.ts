@@ -35,5 +35,9 @@ export function getDoctorWorkflowPageErrorMessage(error: unknown) {
     return '当前账号没有访问诊断管理模块或操作该功能的权限。';
   }
 
+  if (status === 404 || code === 'RESOURCE_NOT_FOUND') {
+    return responseMessage || '未找到对应的病例，请核对病例 ID 或病理号。';
+  }
+
   return responseMessage || '数据加载失败，请稍后重试。';
 }

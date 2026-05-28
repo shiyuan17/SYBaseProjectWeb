@@ -1,10 +1,10 @@
-import { createApp, h, nextTick } from 'vue';
+import { createApp, h, nextTick, watch } from 'vue';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const { mockAccessStore, mockRoute, mockRouter, mockUserStore } = vi.hoisted(() => ({
   mockAccessStore: {
-    accessCodes: [] as string[],
+    accessCodes: [] as string[] ,
   },
   mockRoute: {
     query: {
@@ -28,6 +28,14 @@ const registerDialogProps = vi.hoisted(() => ({
   applicationId: '',
   modelValue: false,
 }));
+
+const workbenchPanelProps = vi.hoisted(() => ({
+  lookupKeyword: '',
+  lookupQueryType: '',
+  lookupTriggerKey: 0,
+}));
+
+const reprintApplicationFormMock = vi.hoisted(() => vi.fn());
 
 vi.mock('vue-router', () => ({
   useRoute: () => mockRoute,
@@ -88,11 +96,118 @@ vi.mock('../components/SpecimenRegisterDialog.vue', () => ({
   default: {
     props: ['applicationId', 'modelValue'],
     setup(props: { applicationId: string; modelValue: boolean }) {
-      registerDialogProps.applicationId = props.applicationId;
-      registerDialogProps.modelValue = props.modelValue;
+      watch(
+        () => [props.applicationId, props.modelValue] as const,
+        ([applicationId, modelValue]) => {
+          registerDialogProps.applicationId = applicationId;
+          registerDialogProps.modelValue = modelValue;
+        },
+        { immediate: true },
+      );
       return {};
     },
     template: '<div data-testid="register-dialog-proxy" />',
+  },
+}));
+
+vi.mock('../components/ApplicationRegistrationWorkbenchPanel.vue', () => ({
+  default: {
+    props: ['lookupKeyword', 'lookupQueryType', 'lookupTriggerKey'],
+    emits: ['reprint-application-form', 'save-workbench'],
+    setup(props: { lookupKeyword: string; lookupQueryType: string; lookupTriggerKey: number }, { emit }: any) {
+      watch(
+        () => [props.lookupKeyword, props.lookupQueryType, props.lookupTriggerKey] as const,
+        ([lookupKeyword, lookupQueryType, lookupTriggerKey]) => {
+          workbenchPanelProps.lookupKeyword = lookupKeyword;
+          workbenchPanelProps.lookupQueryType = lookupQueryType;
+          workbenchPanelProps.lookupTriggerKey = lookupTriggerKey;
+        },
+        { immediate: true },
+      );
+      return {
+        emitReprintApplicationForm() {
+          emit('reprint-application-form', {
+            applicationId: props.lookupKeyword || 'APP-ID',
+            record: {
+              applicationId: props.lookupKeyword || 'APP-ID',
+              contagiousSpecimen: {
+                hepatitis: false,
+                hiv: false,
+                isolation: false,
+                syphilis: false,
+                tuberculosis: false,
+              },
+              gynecologyInfo: {
+                additionalNotes: '补充说明',
+                hpvResult: '阴性',
+                lastMenstrualPeriod: '2026-05-01',
+                menopause: false,
+                previousCytology: '正常',
+                previousTreatment: '无',
+                specialConditions: {
+                  abnormalBleeding: false,
+                  birthControl: false,
+                  hormoneReplacement: false,
+                  hysterectomy: false,
+                  iud: false,
+                  lactation: false,
+                  menopause: false,
+                  other: '补充说明',
+                  pregnancy: false,
+                  radiotherapy: false,
+                },
+              },
+              patientInfo: {
+                age: '40',
+                applicationDate: '2026-05-21 10:00:00',
+                applicationNo: 'APP-001',
+                applyDept: '外科',
+                applyDoctor: '医生A',
+                bedNo: '12床',
+                checkItem: '检查项目',
+                clinicalDiagnosis: '诊断',
+                clinicalHistory: '病史',
+                deliveryRequirement: '尽快送检',
+                endoscopyDiagnosis: '内镜诊断',
+                frozenReminder: false,
+                gender: '女',
+                idNo: 'P-001',
+                imagingResult: '影像结果',
+                inpatientNo: 'ZY001',
+                patientName: '张三',
+                patientVerified: false,
+                phone: '13800000000',
+                registrationStatus: '登记',
+                remark: '备注',
+                specimenType: '常规',
+                wardName: '外科病区',
+              },
+              specimenItems: [
+                {
+                  id: 'item-1',
+                  quantity: 1,
+                  specimenName: '右侧肿物病灶',
+                  specimenNo: '22498',
+                  specimenSite: '骨颈',
+                  status: '新增',
+                },
+              ],
+              surgeryInfo: {
+                buildingId: '惠侨楼',
+                clinicalFindings: '术中所见',
+                fixativeType: '福尔马林',
+                fixationPerson: '周永康',
+                fixationTime: '2026-05-27 11:07:02',
+                roomId: '手术室一',
+                surgeryName: '右侧肿瘤切除术',
+              },
+            },
+          });
+        },
+      };
+    },
+    template:
+      '<div data-testid="workbench-panel-proxy" :data-keyword="lookupKeyword" :data-query-type="lookupQueryType" :data-trigger="lookupTriggerKey"><button data-testid="reprint-application-button" type="button" @click="emitReprintApplicationForm">补打申请单</button></div>',
   },
 }));
 
@@ -119,7 +234,7 @@ vi.mock('../api/specimen-workflow-service', () => ({
     sourceHospitalId: null,
     sourceHospitalName: '本院',
     specimenRemovalTime: '2026-05-21T09:30:00',
-    specimenSite: '胃',
+    specimenSite: '胸',
     specimens: [],
     status: 'SUBMITTED',
     submissionDate: '2026-05-21',
@@ -150,6 +265,7 @@ vi.mock('../api/specimen-workflow-service', () => ({
     },
     total: 0,
   })),
+  reprintApplicationForm: reprintApplicationFormMock,
   retryLabelPrint: vi.fn(),
   startFixation: vi.fn(),
 }));
@@ -163,10 +279,14 @@ describe('SpecimenManagementView', () => {
     mockRouter.replace.mockReset();
     registerDialogProps.applicationId = '';
     registerDialogProps.modelValue = false;
+    workbenchPanelProps.lookupKeyword = '';
+    workbenchPanelProps.lookupQueryType = '';
+    workbenchPanelProps.lookupTriggerKey = 0;
+    reprintApplicationFormMock.mockReset();
     document.body.innerHTML = '';
   });
 
-  it('opens registration dialog directly from route query application id', async () => {
+  it('forwards route application id to the embedded workbench panel', async () => {
     mockAccessStore.accessCodes = [
       'PERM_APPLICATION_DETAIL_QUERY',
       'PERM_SPECIMEN_REGISTER',
@@ -184,10 +304,50 @@ describe('SpecimenManagementView', () => {
     await Promise.resolve();
     await nextTick();
 
-    expect(registerDialogProps.applicationId).toBe('APP-ID');
-    expect(registerDialogProps.modelValue).toBe(true);
+    expect(workbenchPanelProps.lookupKeyword).toBe('APP-ID');
+    expect(workbenchPanelProps.lookupQueryType).toBe('AUTO');
+    expect(workbenchPanelProps.lookupTriggerKey).toBe(1);
     expect(document.body.textContent).toContain('工作台概览');
     expect(document.body.textContent).toContain('标本列表');
+    expect(registerDialogProps.modelValue).toBe(false);
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('reprints application form when the panel requests it', async () => {
+    mockAccessStore.accessCodes = [
+      'PERM_APPLICATION_DETAIL_QUERY',
+      'PERM_SPECIMEN_REGISTER',
+    ];
+
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    const app = createApp({
+      render: () => h(SpecimenManagementView),
+    });
+
+    app.mount(root);
+    await nextTick();
+    await Promise.resolve();
+    await nextTick();
+
+    root
+      .querySelector<HTMLButtonElement>('[data-testid="reprint-application-button"]')!
+      .click();
+    await nextTick();
+    await Promise.resolve();
+    await nextTick();
+
+    expect(reprintApplicationFormMock).toHaveBeenCalledTimes(1);
+    expect(reprintApplicationFormMock).toHaveBeenCalledWith(
+      'APP-ID',
+      expect.objectContaining({
+        operatorName: '测试用户',
+      }),
+    );
+    expect(document.body.textContent).not.toContain('兼容登记');
 
     app.unmount();
     root.remove();
