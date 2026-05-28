@@ -79,7 +79,7 @@ const {
 
 const panelClasses = computed(() =>
   props.fullHeight
-    ? 'flex h-[calc(100vh-136px)] min-h-0 flex-col gap-3 overflow-hidden'
+    ? 'flex h-full min-h-0 flex-col gap-3 overflow-hidden'
     : 'flex flex-col gap-3',
 );
 
@@ -153,9 +153,9 @@ function emitReprintApplicationForm(applicationId: string) {
 
     <template v-if="canRenderWorkbench">
       <div
-        class="grid min-h-0 flex-1 gap-3 xl:items-start xl:grid-cols-[minmax(360px,1fr)_minmax(0,2fr)]"
+        class="grid min-h-0 flex-1 gap-3 overflow-hidden xl:grid-cols-[minmax(360px,1fr)_minmax(0,2fr)]"
       >
-        <div class="min-h-0 xl:sticky xl:top-0 xl:self-start xl:h-[calc(100vh-220px)] xl:overflow-hidden">
+        <div class="min-h-0 overflow-hidden xl:h-full">
           <ApplicationRegistrationPatientPanel
             :building-label="selectedBuilding?.buildingName ?? ''"
             :record="currentRecord"
@@ -166,7 +166,7 @@ function emitReprintApplicationForm(applicationId: string) {
           />
         </div>
 
-        <div class="flex min-h-0 flex-col gap-3 xl:h-[calc(100vh-220px)] xl:overflow-y-auto xl:pr-1">
+        <div class="flex min-h-0 flex-col gap-3 overflow-y-auto pr-1 xl:h-full">
           <ApplicationRegistrationSpecimenTable
             :common-specimen-options="commonSpecimenOptions"
             :items="specimenItems"
