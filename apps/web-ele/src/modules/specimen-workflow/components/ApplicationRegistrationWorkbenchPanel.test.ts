@@ -612,7 +612,7 @@ describe('ApplicationRegistrationWorkbenchPanel', () => {
     const wrapper = await mountPanel();
 
     expect(wrapper.root.querySelector('[data-testid="empty"]')?.textContent).toBe(
-      '请输入住院号查询',
+      '请输入申请单号查询',
     );
     expect(wrapper.root.querySelector('[data-testid="patient-panel"]')).toBeNull();
 
@@ -625,7 +625,7 @@ describe('ApplicationRegistrationWorkbenchPanel', () => {
 
     expect(lookupApplicationRegistrationWorkbenchRecordMock).toHaveBeenCalledWith({
       keyword: '1124',
-      queryType: 'INPATIENT_NO',
+      queryType: 'APPLICATION_NO',
     });
     expect(
       wrapper.root.querySelector('[data-testid="patient-panel-text"]')?.textContent,

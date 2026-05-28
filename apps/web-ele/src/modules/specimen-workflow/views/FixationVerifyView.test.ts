@@ -6,12 +6,21 @@ import FixationVerifyView from './FixationVerifyView.vue';
 
 const {
   confirmMock,
+  confirmSpecimenRemovalByIdentifierMock,
   confirmSpecimenRemovalMock,
   getApplicationDetailMock,
   listPendingSpecimenRemovalsMock,
+  messageSuccessMock,
+  messageWarningMock,
   mockRoute,
 } = vi.hoisted(() => ({
   confirmMock: vi.fn(async () => 'confirm'),
+  confirmSpecimenRemovalByIdentifierMock: vi.fn(async () => ({
+    barcode: 'SP-PENDING',
+    operatorName: 'Test User',
+    specimenId: 'SPEC-PENDING',
+    specimenRemovalAt: '2026-05-23T13:20:00',
+  })),
   confirmSpecimenRemovalMock: vi.fn(async () => ({
     barcode: 'SP-PENDING',
     operatorName: 'Test User',
@@ -80,6 +89,8 @@ const {
     },
     total: 2,
   })),
+  messageSuccessMock: vi.fn(),
+  messageWarningMock: vi.fn(),
   mockRoute: {
     query: {} as Record<string, string>,
   },
@@ -124,12 +135,13 @@ vi.mock('element-plus', async () => {
   const actual = await vi.importActual<typeof import('element-plus')>('element-plus');
   return {
     ...actual,
-    ElMessage: { success: vi.fn(), warning: vi.fn() },
+    ElMessage: { success: messageSuccessMock, warning: messageWarningMock },
     ElMessageBox: { confirm: confirmMock },
   };
 });
 
 vi.mock('../api/specimen-workflow-service', () => ({
+  confirmSpecimenRemovalByIdentifier: confirmSpecimenRemovalByIdentifierMock,
   confirmSpecimenRemoval: confirmSpecimenRemovalMock,
   getApplicationDetail: getApplicationDetailMock,
   listPendingSpecimenRemovals: listPendingSpecimenRemovalsMock,
@@ -195,6 +207,8 @@ describe('FixationVerifyView', () => {
     expect(container.textContent).toContain('全部');
     expect(container.textContent).toContain('已离体');
     expect(container.textContent).toContain('未设置');
+    expect(container.textContent).toContain('标本ID');
+    expect(container.textContent).toContain('标本流水号');
     expect(container.textContent).toContain('申请单');
     expect(container.textContent).toContain('标本编号');
     expect(container.textContent).toContain('离体时间');
@@ -229,6 +243,91 @@ describe('FixationVerifyView', () => {
       specimenBarcode: 'SP-PENDING',
     });
     expect(listPendingSpecimenRemovalsMock).toHaveBeenCalledTimes(2);
+
+    app.unmount();
+  });
+
+  it('quick confirms by barcode on enter and refocuses the barcode input', async () => {
+    const { app, container } = mountView();
+    await flushView();
+
+    const barcodeInput = container.querySelector(
+      'input[placeholder="请输入标本ID后按回车确认"]',
+    ) as HTMLInputElement | null;
+    expect(barcodeInput).not.toBeNull();
+
+    barcodeInput!.value = 'SP-PENDING';
+    barcodeInput!.dispatchEvent(new Event('input', { bubbles: true }));
+    barcodeInput!.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: 'Enter' }));
+    await flushView();
+
+    expect(confirmSpecimenRemovalByIdentifierMock).toHaveBeenCalledWith({
+      identifier: 'SP-PENDING',
+      identifierType: 'BARCODE',
+      operatorName: 'Test User',
+      operatorUserId: 'USER-001',
+      remarks: '离体确认',
+    });
+    expect(listPendingSpecimenRemovalsMock).toHaveBeenCalledTimes(2);
+    expect(messageSuccessMock).toHaveBeenCalledWith('条码 SP-PENDING 已完成离体确认');
+    expect(barcodeInput!.value).toBe('');
+
+    app.unmount();
+  });
+
+  it('quick confirms by specimenNo on enter and refocuses the specimenNo input', async () => {
+    const { app, container } = mountView();
+    await flushView();
+
+    const specimenNoInput = container.querySelector(
+      'input[placeholder="请输入标本流水号后按回车确认"]',
+    ) as HTMLInputElement | null;
+    expect(specimenNoInput).not.toBeNull();
+
+    specimenNoInput!.value = 'SP202605230001';
+    specimenNoInput!.dispatchEvent(new Event('input', { bubbles: true }));
+    specimenNoInput!.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: 'Enter' }));
+    await flushView();
+
+    expect(confirmSpecimenRemovalByIdentifierMock).toHaveBeenCalledWith({
+      identifier: 'SP202605230001',
+      identifierType: 'SPECIMEN_NO',
+      operatorName: 'Test User',
+      operatorUserId: 'USER-001',
+      remarks: '离体确认',
+    });
+    expect(messageSuccessMock).toHaveBeenCalledWith('标本流水号 SP202605230001 已完成离体确认');
+    expect(specimenNoInput!.value).toBe('');
+
+    app.unmount();
+  });
+
+  it('keeps quick confirm input when quick confirm fails', async () => {
+    confirmSpecimenRemovalByIdentifierMock.mockRejectedValueOnce(
+      new Error('标本流水号对应多条记录，无法自动确认'),
+    );
+    const { app, container } = mountView();
+    await flushView();
+
+    const specimenNoInput = container.querySelector(
+      'input[placeholder="请输入标本流水号后按回车确认"]',
+    ) as HTMLInputElement | null;
+    expect(specimenNoInput).not.toBeNull();
+
+    specimenNoInput!.value = 'SP-DUPLICATE';
+    specimenNoInput!.dispatchEvent(new Event('input', { bubbles: true }));
+    specimenNoInput!.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: 'Enter' }));
+    await flushView();
+
+    expect(confirmSpecimenRemovalByIdentifierMock).toHaveBeenCalledWith({
+      identifier: 'SP-DUPLICATE',
+      identifierType: 'SPECIMEN_NO',
+      operatorName: 'Test User',
+      operatorUserId: 'USER-001',
+      remarks: '离体确认',
+    });
+    expect(specimenNoInput!.value).toBe('SP-DUPLICATE');
+    expect(container.textContent).toContain('标本流水号对应多条记录，无法自动确认');
 
     app.unmount();
   });

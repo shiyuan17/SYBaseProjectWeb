@@ -21,6 +21,7 @@ import type {
   PendingSpecimenQuery,
   SpecimenRemovalConfirmRequest,
   SpecimenRemovalConfirmResult,
+  SpecimenRemovalQuickConfirmRequest,
   SpecimenRemovalItem,
   SpecimenRemovalPage,
   SpecimenRemovalQuery,
@@ -314,6 +315,52 @@ function resolveSpecimenByIdentifier(identifier: string) {
     throw new Error(`未找到标本: ${identifier}`);
   }
   return specimen;
+}
+
+function resolveSpecimenByBarcode(barcode: string) {
+  const normalizedBarcode = normalizeText(barcode);
+  const specimen = state.specimens.find((item) => item.barcode === normalizedBarcode);
+  if (!specimen) {
+    throw new Error('未找到对应标本');
+  }
+  return specimen;
+}
+
+function resolveSpecimensBySpecimenNo(specimenNo: string) {
+  const normalizedSpecimenNo = normalizeText(specimenNo);
+  return state.specimens.filter((item) => item.specimenNo === normalizedSpecimenNo);
+}
+
+function applySpecimenRemovalConfirmation(
+  specimen: RawSpecimen,
+  data: Pick<SpecimenRemovalConfirmRequest, 'operatorName' | 'terminalCode'>,
+): SpecimenRemovalConfirmResult {
+  if (specimen.specimenRemovalAt) {
+    throw new Error(`标本 ${specimen.barcode} 已完成离体确认`);
+  }
+  const eventTime = createTimestamp();
+  specimen.specimenRemovalAt = eventTime;
+  specimen.specimenRemovalOperatorName = data.operatorName;
+  specimen.latestTrackingAt = eventTime;
+  appendWorkflowEvent({
+    applicationId: specimen.applicationId,
+    eventContent: '离体确认完成',
+    eventStatus: 'SUCCESS',
+    eventTime,
+    eventType: 'COMPLETED',
+    nodeCode: 'REMOVAL',
+    operatorName: data.operatorName,
+    sourceTerminal: data.terminalCode ?? null,
+    specimenBarcode: specimen.barcode,
+    specimenId: specimen.id,
+    specimenNo: specimen.specimenNo,
+  });
+  return {
+    barcode: specimen.barcode,
+    operatorName: data.operatorName,
+    specimenId: specimen.id,
+    specimenRemovalAt: eventTime,
+  };
 }
 
 function findTransportOrderById(transportOrderId: string) {
@@ -1168,6 +1215,7 @@ export async function registerSpecimensMock(
       state.specimens.map((specimen) => specimen.id),
     );
     const barcode = normalizeText(item.barcode) || `BC-${application.id.slice(-3)}-${String(index + 1).padStart(2, '0')}-${state.specimens.length + index + 1}`;
+    const overriddenSpecimenNo = normalizeText((item as { specimenNo?: string }).specimenNo);
     const specimen: RawSpecimen = {
       applicationId: application.id,
       barcode,
@@ -1196,7 +1244,8 @@ export async function registerSpecimensMock(
       specimenConfirmedAt: null,
       specimenCount: item.specimenCount,
       specimenName: item.specimenNameStandardized,
-      specimenNo: `SP-${application.id.slice(-3)}-${String(getSpecimensByApplicationId(application.id).length + index + 1).padStart(2, '0')}`,
+      specimenNo: overriddenSpecimenNo
+        || `SP-${application.id.slice(-3)}-${String(getSpecimensByApplicationId(application.id).length + index + 1).padStart(2, '0')}`,
       specimenSite: item.specimenSite ?? application.specimenSite ?? null,
       specimenStatus: 'REGISTERED',
       specimenType: item.specimenType ?? null,
@@ -1607,33 +1656,23 @@ export async function listPendingSpecimenRemovalsMock(
 export async function confirmSpecimenRemovalMock(
   data: SpecimenRemovalConfirmRequest,
 ): Promise<SpecimenRemovalConfirmResult> {
-  const specimen = resolveSpecimenByIdentifier(data.specimenBarcode);
-  if (specimen.specimenRemovalAt) {
-    throw new Error(`标本 ${specimen.barcode} 已完成离体确认`);
+  return applySpecimenRemovalConfirmation(resolveSpecimenByBarcode(data.specimenBarcode), data);
+}
+
+export async function confirmSpecimenRemovalByIdentifierMock(
+  data: SpecimenRemovalQuickConfirmRequest,
+): Promise<SpecimenRemovalConfirmResult> {
+  if (data.identifierType === 'BARCODE') {
+    return applySpecimenRemovalConfirmation(resolveSpecimenByBarcode(data.identifier), data);
   }
-  const eventTime = createTimestamp();
-  specimen.specimenRemovalAt = eventTime;
-  specimen.specimenRemovalOperatorName = data.operatorName;
-  specimen.latestTrackingAt = eventTime;
-  appendWorkflowEvent({
-    applicationId: specimen.applicationId,
-    eventContent: '离体确认完成',
-    eventStatus: 'SUCCESS',
-    eventTime,
-    eventType: 'COMPLETED',
-    nodeCode: 'REMOVAL',
-    operatorName: data.operatorName,
-    sourceTerminal: data.terminalCode ?? null,
-    specimenBarcode: specimen.barcode,
-    specimenId: specimen.id,
-    specimenNo: specimen.specimenNo,
-  });
-  return {
-    barcode: specimen.barcode,
-    operatorName: data.operatorName,
-    specimenId: specimen.id,
-    specimenRemovalAt: eventTime,
-  };
+  const matchedSpecimens = resolveSpecimensBySpecimenNo(data.identifier);
+  if (matchedSpecimens.length === 0) {
+    throw new Error('未找到对应标本');
+  }
+  if (matchedSpecimens.length > 1) {
+    throw new Error('标本流水号对应多条记录，无法自动确认');
+  }
+  return applySpecimenRemovalConfirmation(matchedSpecimens[0], data);
 }
 
 export async function listPendingTransportOrdersMock(

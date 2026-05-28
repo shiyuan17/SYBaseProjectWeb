@@ -122,18 +122,25 @@ function mountView() {
   return { app, container };
 }
 
+async function flush() {
+  await nextTick();
+  await Promise.resolve();
+  await nextTick();
+}
+
 describe('TransportHandoverView', () => {
   afterEach(() => {
     document.body.innerHTML = '';
     vi.clearAllMocks();
   });
 
-  it('owns the create transport order entry and forwards route application context', async () => {
+  it('renders the check-in style transport workspace and forwards route context', async () => {
     const { app, container } = mountView();
-    await nextTick();
-    await Promise.resolve();
-    await nextTick();
+    await flush();
 
+    expect(container.textContent).toContain('转运/出库');
+    expect(container.textContent).toContain('批量打印');
+    expect(container.textContent).toContain('批量交接');
     expect(container.textContent).toContain('创建转运单');
     expect(listPendingTransportOrdersMock).toHaveBeenCalledWith(
       expect.objectContaining({ applicationId: 'APP-002' }),
@@ -143,7 +150,7 @@ describe('TransportHandoverView', () => {
       button.textContent?.includes('创建转运单'),
     );
     createButton?.click();
-    await nextTick();
+    await flush();
 
     const dialog = container.querySelector('[data-testid="transport-order-create-dialog"]');
     expect(dialog?.getAttribute('data-open')).toBe('true');
@@ -155,9 +162,7 @@ describe('TransportHandoverView', () => {
 
   it('forwards specimenNo when searching transport orders by specimen serial number', async () => {
     const { app, container } = mountView();
-    await nextTick();
-    await Promise.resolve();
-    await nextTick();
+    await flush();
 
     vi.clearAllMocks();
 
@@ -169,9 +174,7 @@ describe('TransportHandoverView', () => {
     specimenNoInput!.dispatchEvent(
       new KeyboardEvent('keyup', { bubbles: true, code: 'Enter', key: 'Enter' }),
     );
-    await nextTick();
-    await Promise.resolve();
-    await nextTick();
+    await flush();
 
     expect(listPendingTransportOrdersMock).toHaveBeenCalledWith(
       expect.objectContaining({ specimenNo: 'SP-TR-001' }),
@@ -184,9 +187,7 @@ describe('TransportHandoverView', () => {
     listPendingTransportOrdersMock.mockRejectedValueOnce(new Error('资源不存在'));
 
     const { app, container } = mountView();
-    await nextTick();
-    await Promise.resolve();
-    await nextTick();
+    await flush();
 
     expect(container.textContent).not.toContain('资源不存在');
 

@@ -3,6 +3,7 @@ import type { ApplicationRegistrationWorkbenchRecord } from '../types/applicatio
 
 import { computed, nextTick, ref } from 'vue';
 
+import { Check, UserRoundPen, X } from '@vben/icons';
 import {
   ElButton,
   ElDescriptions,
@@ -513,7 +514,7 @@ function emitReprintApplicationForm() {
 </script>
 
 <template>
-  <WorkflowSectionCard title="患者信息">
+  <WorkflowSectionCard class="max-h-full overflow-hidden" auto-height title="患者信息">
     <template v-if="props.record" #extra>
       <ElButton size="small" @click="emitReprintApplicationForm">补打申请单</ElButton>
     </template>
@@ -599,16 +600,18 @@ function emitReprintApplicationForm() {
                 <div class="group/item relative min-h-4">
                   <button
                     v-if="item.editorType !== 'readonly' && activeEditorKey !== item.key"
+                    aria-label="编辑"
                     :data-testid="`patient-edit-${item.key}`"
                     class="absolute right-0 top-0 inline-flex h-4 w-4 items-center justify-center rounded-sm border border-border/70 bg-background/95 text-[10px] text-muted-foreground opacity-0 shadow-sm transition-all duration-150 hover:border-primary/50 hover:text-primary group-hover/item:opacity-100"
+                    title="编辑"
                     type="button"
                     @click.stop="beginEditing(item)"
                   >
-                    <span class="leading-none">编</span>
+                    <UserRoundPen aria-hidden="true" class="h-3 w-3" />
                   </button>
 
                   <template v-if="activeEditorKey === item.key">
-                    <div :data-editor-key="item.key" class="flex items-start gap-1.5">
+                    <div :data-editor-key="item.key" class="patient-inline-editor">
                       <div class="min-w-0 flex-1">
                         <ElInput
                           v-if="item.editorType === 'text'"
@@ -648,26 +651,30 @@ function emitReprintApplicationForm() {
                         </ElSelect>
                       </div>
 
-                      <div class="flex shrink-0 flex-col gap-1">
+                      <div class="patient-inline-editor__actions">
                         <ElButton
+                          aria-label="保存"
                           :data-testid="`patient-save-${item.key}`"
+                          :icon="Check"
+                          class="patient-inline-editor__button"
                           circle
                           plain
                           size="small"
+                          title="保存"
                           type="primary"
                           @click="saveEditing(item)"
-                        >
-                          <span class="text-[12px] leading-none">存</span>
-                        </ElButton>
+                        />
                         <ElButton
+                          aria-label="取消"
                           :data-testid="`patient-cancel-${item.key}`"
+                          :icon="X"
+                          class="patient-inline-editor__button"
                           circle
                           plain
                           size="small"
+                          title="取消"
                           @click="cancelEditing"
-                        >
-                          <span class="text-[12px] leading-none">取消</span>
-                        </ElButton>
+                        />
                       </div>
                     </div>
                   </template>
@@ -764,5 +771,32 @@ function emitReprintApplicationForm() {
 :deep(.patient-section-descriptions .el-descriptions__content) {
   font-size: 11px;
   line-height: 1.25;
+}
+
+.patient-inline-editor {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.patient-inline-editor__actions {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+:deep(.patient-inline-editor__button.el-button) {
+  width: 24px;
+  height: 24px;
+  min-height: 24px;
+  margin-left: 0;
+  padding: 0;
+}
+
+:deep(.patient-inline-editor__button .el-icon) {
+  width: 13px;
+  height: 13px;
+  font-size: 13px;
 }
 </style>

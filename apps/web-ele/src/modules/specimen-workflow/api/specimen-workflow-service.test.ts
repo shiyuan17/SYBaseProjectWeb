@@ -5,6 +5,7 @@ import {
   checkInSpecimen,
   completeFixation,
   completeSpecimenVerification,
+  confirmSpecimenRemovalByIdentifier,
   confirmSpecimen,
   createApplication,
   createTransportOrder,
@@ -506,5 +507,107 @@ describe('specimen-workflow-service mock flow', () => {
       size: 20,
     });
     expect(removalList.summary.totalCount).toBeGreaterThan(0);
+  });
+
+  it('supports quick removal confirmation by barcode and specimenNo', async () => {
+    const removalList = await listPendingSpecimenRemovals({
+      page: 1,
+      size: 20,
+    });
+    const quickConfirmBarcode = removalList.items.find((item) => !item.specimenRemovalAt)?.barcode ?? '';
+
+    const byBarcode = await confirmSpecimenRemovalByIdentifier({
+      identifier: quickConfirmBarcode,
+      identifierType: 'BARCODE',
+      operatorName: 'quick-user',
+      operatorUserId: 'USER-QUICK',
+      remarks: '离体确认',
+    });
+    expect(byBarcode.barcode).toBe(quickConfirmBarcode);
+
+    await expect(confirmSpecimenRemovalByIdentifier({
+      identifier: quickConfirmBarcode,
+      identifierType: 'BARCODE',
+      operatorName: 'quick-user',
+    })).rejects.toThrow('已完成离体确认');
+
+    const registerResult = await registerSpecimens({
+      applicationId: 'APP-001',
+      items: [
+        {
+          barcode: 'BC-REMOVAL-QUICK-001',
+          collectionMode: 'SURGERY',
+          containerCount: 1,
+          containerName: '福尔马林瓶',
+          specimenCount: 1,
+          specimenNameStandardized: '胃体组织',
+          specimenSite: '胃体',
+          specimenType: 'ROUTINE',
+        },
+      ],
+      operatorName: 'nurse-a',
+      printerCode: 'P-01',
+    });
+    const specimenNo = registerResult.specimens[0]?.specimenNo ?? '';
+
+    const bySpecimenNo = await confirmSpecimenRemovalByIdentifier({
+      identifier: specimenNo,
+      identifierType: 'SPECIMEN_NO',
+      operatorName: 'quick-user',
+      operatorUserId: 'USER-QUICK',
+    });
+    expect(bySpecimenNo.barcode).toBe('BC-REMOVAL-QUICK-001');
+  });
+
+  it('rejects quick removal confirmation when specimenNo matches multiple records', async () => {
+    const registerResult = await registerSpecimens({
+      applicationId: 'APP-001',
+      items: [
+        {
+          barcode: 'BC-REMOVAL-DUP-001',
+          collectionMode: 'SURGERY',
+          containerCount: 1,
+          containerName: '福尔马林瓶',
+          specimenCount: 1,
+          specimenNameStandardized: '胃体组织',
+          specimenSite: '胃体',
+          specimenType: 'ROUTINE',
+        },
+      ],
+      operatorName: 'nurse-a',
+      printerCode: 'P-01',
+    });
+    const targetSpecimenNo = registerResult.specimens[0]?.specimenNo ?? '';
+
+    await registerSpecimens({
+      applicationId: 'APP-002',
+      items: [
+        {
+          barcode: 'BC-REMOVAL-DUP-002',
+          collectionMode: 'SURGERY',
+          containerCount: 1,
+          containerName: '福尔马林瓶',
+          specimenCount: 1,
+          specimenNameStandardized: '胃窦组织',
+          specimenNo: targetSpecimenNo,
+          specimenSite: '胃窦',
+          specimenType: 'ROUTINE',
+        } as any,
+      ],
+      operatorName: 'nurse-a',
+      printerCode: 'P-01',
+    });
+
+    await expect(confirmSpecimenRemovalByIdentifier({
+      identifier: targetSpecimenNo,
+      identifierType: 'SPECIMEN_NO',
+      operatorName: 'quick-user',
+    })).rejects.toThrow('标本流水号对应多条记录，无法自动确认');
+
+    await expect(confirmSpecimenRemovalByIdentifier({
+      identifier: 'NOT-FOUND',
+      identifierType: 'BARCODE',
+      operatorName: 'quick-user',
+    })).rejects.toThrow('未找到对应标本');
   });
 });

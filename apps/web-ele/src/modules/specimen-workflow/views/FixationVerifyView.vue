@@ -4,7 +4,7 @@ import type {
   SpecimenRemovalSummary,
 } from '../types/specimen-workflow';
 
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, nextTick, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
@@ -28,6 +28,7 @@ import {
 import DepartmentSelect from '#/modules/system-management/components/DepartmentSelect.vue';
 
 import {
+  confirmSpecimenRemovalByIdentifier,
   confirmSpecimenRemoval,
   getApplicationDetail,
   listPendingSpecimenRemovals,
@@ -39,6 +40,9 @@ import { formatDateTime, formatNullable } from '../utils/format';
 
 const userStore = useUserStore();
 const route = useRoute();
+type QuickInputRef = InstanceType<typeof ElInput> & {
+  input?: HTMLInputElement | null;
+};
 
 withDefaults(
   defineProps<{
@@ -59,9 +63,19 @@ const emptySummary: SpecimenRemovalSummary = {
 const pageError = ref('');
 const loading = ref(false);
 const actionLoading = ref(false);
+const barcodeQuickInput = ref('');
+const specimenNoQuickInput = ref('');
+const barcodeQuickInputContainerRef = ref<HTMLDivElement | null>(null);
+const specimenNoQuickInputContainerRef = ref<HTMLDivElement | null>(null);
+const barcodeQuickInputRef = ref<null | QuickInputRef>(null);
+const specimenNoQuickInputRef = ref<null | QuickInputRef>(null);
 const pendingItems = ref<SpecimenRemovalItem[]>([]);
 const summary = ref<SpecimenRemovalSummary>({ ...emptySummary });
 const total = ref(0);
+const quickActionLoading = reactive({
+  barcode: false,
+  specimenNo: false,
+});
 
 let routeSyncToken = 0;
 
@@ -136,10 +150,79 @@ function handleReset() {
   void loadPendingData();
 }
 
+type QuickConfirmIdentifierType = 'BARCODE' | 'SPECIMEN_NO';
+
+function resolveCurrentOperator() {
+  return {
+    operatorName: userStore.userInfo?.realName?.trim() ?? '',
+    operatorUserId: userStore.userInfo?.userId?.trim() ?? '',
+  };
+}
+
+function focusQuickInput(identifierType: QuickConfirmIdentifierType) {
+  const inputRef = identifierType === 'BARCODE'
+    ? barcodeQuickInputRef.value
+    : specimenNoQuickInputRef.value;
+  const containerRef = identifierType === 'BARCODE'
+    ? barcodeQuickInputContainerRef.value
+    : specimenNoQuickInputContainerRef.value;
+  const nativeInput = containerRef?.querySelector('input');
+  nativeInput?.focus();
+  if (nativeInput !== document.activeElement) {
+    inputRef?.input?.focus();
+  }
+  if (nativeInput !== document.activeElement && inputRef?.input !== document.activeElement) {
+    inputRef?.focus();
+  }
+}
+
+async function submitQuickConfirm(identifierType: QuickConfirmIdentifierType) {
+  const isBarcode = identifierType === 'BARCODE';
+  const currentValue = isBarcode ? barcodeQuickInput.value : specimenNoQuickInput.value;
+  const normalizedValue = currentValue.trim();
+  const { operatorName, operatorUserId } = resolveCurrentOperator();
+
+  if (!normalizedValue) {
+    ElMessage.warning(isBarcode ? '请先输入标本ID' : '请先输入标本流水号');
+    return;
+  }
+  if (!operatorName) {
+    ElMessage.warning('缺少当前操作人信息');
+    return;
+  }
+
+  quickActionLoading.barcode = isBarcode;
+  quickActionLoading.specimenNo = !isBarcode;
+  pageError.value = '';
+  try {
+    await confirmSpecimenRemovalByIdentifier({
+      identifier: normalizedValue,
+      identifierType,
+      operatorName,
+      operatorUserId: operatorUserId || null,
+      remarks: '离体确认',
+    });
+    if (isBarcode) {
+      barcodeQuickInput.value = '';
+      ElMessage.success(`条码 ${normalizedValue} 已完成离体确认`);
+    } else {
+      specimenNoQuickInput.value = '';
+      ElMessage.success(`标本流水号 ${normalizedValue} 已完成离体确认`);
+    }
+    await loadPendingData();
+  } catch (error) {
+    pageError.value = getWorkflowPageErrorMessage(error);
+  } finally {
+    quickActionLoading.barcode = false;
+    quickActionLoading.specimenNo = false;
+    await nextTick();
+    focusQuickInput(identifierType);
+  }
+}
+
 async function submitConfirmRemoval(row: SpecimenRemovalItem) {
   const specimenBarcode = row.barcode.trim();
-  const operatorName = userStore.userInfo?.realName?.trim() ?? '';
-  const operatorUserId = userStore.userInfo?.userId?.trim() ?? '';
+  const { operatorName, operatorUserId } = resolveCurrentOperator();
 
   if (!specimenBarcode) {
     ElMessage.warning('请先录入或扫描标本条码');
@@ -227,13 +310,44 @@ watch(
 
       <WorkflowSectionCard
         title="离体确认"
-        description="按申请单号、送检科室和登记日期筛选标本，并在当前场景完成离体确认。"
+        description="支持按标本ID或标本流水号回车快速确认，也可按申请单号、送检科室和登记日期筛选标本后逐条确认。"
       >
         <div class="mb-4 flex flex-wrap items-center gap-4 text-sm">
           <div class="font-semibold text-[color:#d6453d]">设置离体时间</div>
           <div>全部 <span class="text-xl font-semibold text-primary">{{ summary.totalCount }}</span></div>
           <div>已离体 <span class="text-xl font-semibold text-success">{{ summary.confirmedCount }}</span></div>
           <div>未设置 <span class="text-xl font-semibold text-danger">{{ summary.pendingCount }}</span></div>
+        </div>
+
+        <div class="mb-4 grid gap-3 rounded-lg border border-[color:#dbe3f0] bg-[color:#f7f9fc] p-4 md:grid-cols-2">
+          <div
+            ref="barcodeQuickInputContainerRef"
+            v-loading="quickActionLoading.barcode"
+            class="flex items-center gap-3"
+          >
+            <div class="min-w-20 text-sm font-medium text-[color:#1f2d3d]">标本ID</div>
+            <ElInput
+              ref="barcodeQuickInputRef"
+              v-model="barcodeQuickInput"
+              clearable
+              placeholder="请输入标本ID后按回车确认"
+              @keyup.enter="submitQuickConfirm('BARCODE')"
+            />
+          </div>
+          <div
+            ref="specimenNoQuickInputContainerRef"
+            v-loading="quickActionLoading.specimenNo"
+            class="flex items-center gap-3"
+          >
+            <div class="min-w-24 text-sm font-medium text-[color:#1f2d3d]">标本流水号</div>
+            <ElInput
+              ref="specimenNoQuickInputRef"
+              v-model="specimenNoQuickInput"
+              clearable
+              placeholder="请输入标本流水号后按回车确认"
+              @keyup.enter="submitQuickConfirm('SPECIMEN_NO')"
+            />
+          </div>
         </div>
 
         <ElForm inline label-width="88px">

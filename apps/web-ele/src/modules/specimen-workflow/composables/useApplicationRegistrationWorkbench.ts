@@ -39,7 +39,7 @@ type UseApplicationRegistrationWorkbenchOptions = {
 
 function normalizeVisibleLookupType(type?: WorkbenchLookupType): WorkbenchLookupType {
   if (!type || type === 'AUTO') {
-    return 'INPATIENT_NO';
+    return 'APPLICATION_NO';
   }
   return type;
 }

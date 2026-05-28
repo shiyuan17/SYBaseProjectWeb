@@ -22,7 +22,7 @@ const props = withDefaults(
   {
     fullHeight: false,
     lookupKeyword: '',
-    lookupQueryType: 'INPATIENT_NO',
+    lookupQueryType: 'APPLICATION_NO',
     lookupTriggerKey: 0,
   },
 );
@@ -87,7 +87,7 @@ watch(
   () => [props.lookupKeyword, props.lookupQueryType, props.lookupTriggerKey] as const,
   ([keyword, queryType]) => {
     const normalizedQueryType =
-      queryType === 'AUTO' || !queryType ? 'INPATIENT_NO' : queryType;
+      queryType === 'AUTO' || !queryType ? 'APPLICATION_NO' : queryType;
     handleSearchTypeChange(normalizedQueryType);
     const normalizedKeyword = keyword.trim();
     if (!normalizedKeyword) {
@@ -160,7 +160,7 @@ function emitReprintApplicationForm(applicationId: string) {
             :building-label="selectedBuilding?.buildingName ?? ''"
             :record="currentRecord"
             :room-label="selectedRoom?.roomName ?? ''"
-            class="h-full"
+            class="max-h-full"
             @reprint-application-form="emitReprintApplicationForm"
             @update:record="handleRecordChange"
           />
@@ -193,7 +193,7 @@ function emitReprintApplicationForm(applicationId: string) {
           <ApplicationRegistrationDictionaryPanel
             :dictionary-keyword="dictionaryKeyword"
             :groups="dictionaryGroups"
-            class="min-h-0 xl:flex-1 xl:overflow-hidden"
+            class="shrink-0"
             @append="handleAppendSpecimen"
             @update:dictionary-keyword="dictionaryKeyword = $event"
           />

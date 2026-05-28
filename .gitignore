@@ -67,3 +67,5 @@ tests/reports/
 playwright-report/
 test-results/
 tests/e2e/.auth/
+.understand-anything/
+.repomix/

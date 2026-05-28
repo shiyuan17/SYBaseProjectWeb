@@ -262,7 +262,7 @@ function appendCommonSpecimen(option: SpecimenDictionaryEntryOption) {
 }
 
 function openPrintWindow(documentHtml: string) {
-  const printWindow = window.open('', '_blank', 'width=420,height=360');
+  const printWindow = window.open('', '_blank', 'width=960,height=760');
   if (!printWindow) {
     ElMessage.warning('打印窗口被浏览器拦截，请允许弹窗后重试');
     return null;
@@ -344,15 +344,15 @@ function normalizeSpecimenSiteOption(option: Record<string, unknown>) {
       </div>
     </template>
 
-    <div class="flex flex-col" :class="props.items.length > 0 ? 'h-full min-h-0' : ''">
+    <div class="flex flex-col">
       <div class="mb-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
         <span>当前手术室：{{ roomLabel || '-' }}</span>
       </div>
 
-      <div :class="props.items.length > 0 ? 'min-h-0 flex-1' : ''">
+      <div>
         <ElTable
           :data="props.items"
-          :height="props.items.length > 0 ? '100%' : undefined"
+          :max-height="props.items.length > 0 ? 280 : undefined"
           border
           row-key="id"
           size="small"

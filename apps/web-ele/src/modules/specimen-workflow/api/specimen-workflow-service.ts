@@ -25,6 +25,7 @@ import type {
   SpecimenManagementListSummary,
   SpecimenRemovalConfirmRequest,
   SpecimenRemovalConfirmResult,
+  SpecimenRemovalQuickConfirmRequest,
   SpecimenRemovalItem,
   SpecimenRemovalPage,
   SpecimenRemovalQuery,
@@ -52,6 +53,7 @@ import {
   completeFixationMock,
   completeSpecimenVerificationMock,
   confirmSpecimenRemovalMock,
+  confirmSpecimenRemovalByIdentifierMock,
   confirmSpecimenMock,
   createApplicationMock,
   createTransportOrderMock,
@@ -548,6 +550,16 @@ export async function confirmSpecimenRemoval(data: SpecimenRemovalConfirmRequest
     return confirmSpecimenRemovalMock(data);
   }
   return requestClient.post<SpecimenRemovalConfirmResult>('/v1/specimen-removals/confirm', data);
+}
+
+export async function confirmSpecimenRemovalByIdentifier(data: SpecimenRemovalQuickConfirmRequest) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return confirmSpecimenRemovalByIdentifierMock(data);
+  }
+  return requestClient.post<SpecimenRemovalConfirmResult>(
+    '/v1/specimen-removals/confirm-by-identifier',
+    data,
+  );
 }
 
 export async function exportSpecimenRemovals(params: SpecimenRemovalQuery) {

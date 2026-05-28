@@ -322,6 +322,17 @@ export interface SpecimenRemovalConfirmRequest {
   terminalCode?: null | string;
 }
 
+export type SpecimenRemovalIdentifierType = 'BARCODE' | 'SPECIMEN_NO';
+
+export interface SpecimenRemovalQuickConfirmRequest {
+  identifier: string;
+  identifierType: SpecimenRemovalIdentifierType;
+  operatorName: string;
+  operatorUserId?: null | string;
+  remarks?: null | string;
+  terminalCode?: null | string;
+}
+
 export interface SpecimenRemovalConfirmResult {
   barcode: string;
   operatorName: string;
