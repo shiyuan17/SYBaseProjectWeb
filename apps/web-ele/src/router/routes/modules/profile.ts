@@ -1,6 +1,8 @@
 import type { RouteRecordRaw } from 'vue-router';
 
-const routes: RouteRecordRaw[] = [
+import { applyKeepAliveToTabRoutes } from '#/router/routes/keep-alive';
+
+const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
   {
     meta: {
       hideInBreadcrumb: true,
@@ -11,6 +13,6 @@ const routes: RouteRecordRaw[] = [
     path: '/profile',
     component: () => import('#/views/_core/profile/index.vue'),
   },
-];
+]);
 
 export default routes;

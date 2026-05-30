@@ -1,6 +1,7 @@
 import type { RouteRecordRaw } from 'vue-router';
 
 import { M1_PERMISSION_CODES } from '#/modules/system-management/constants';
+import { applyKeepAliveToTabRoutes } from '#/router/routes/keep-alive';
 
 const SYSTEM_QUERY_AUTHORITIES = [
   M1_PERMISSION_CODES.SYSTEM_USER_QUERY,
@@ -16,7 +17,7 @@ const SYSTEM_QUERY_AUTHORITIES = [
   M1_PERMISSION_CODES.NUMBERING_QUERY,
 ];
 
-const routes: RouteRecordRaw[] = [
+const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
   {
     meta: {
       authority: SYSTEM_QUERY_AUTHORITIES,
@@ -150,6 +151,6 @@ const routes: RouteRecordRaw[] = [
       },
     ],
   },
-];
+]);
 
 export default routes;

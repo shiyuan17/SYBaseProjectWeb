@@ -1,6 +1,7 @@
 import type { RouteRecordStringComponent } from '@vben/types';
 
 import type { MenuView } from '#/modules/system-management/types/system-management';
+import { applyKeepAliveToTabRoutes } from '#/router/routes/keep-alive';
 
 type BackendMenuComponentDefinition = {
   canonicalTitle?: string;
@@ -16,7 +17,8 @@ type MenuTreeNode = MenuView & {
   children: MenuTreeNode[];
 };
 
-const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] = [
+const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
+  applyKeepAliveToTabRoutes([
   {
     component: 'BasicLayout',
     meta: {
@@ -585,7 +587,7 @@ const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] = [
       },
     ],
   },
-];
+  ]);
 
 const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[] = [
   {
@@ -1154,11 +1156,13 @@ function hasUsableRoutes(routes: RouteRecordStringComponent<string>[]) {
 export function mapMenuViewsToRoutes(
   menus: MenuView[],
 ): RouteRecordStringComponent<string>[] {
-  return buildMenuTree(menus)
-    .map((menu) => convertMenuNode(menu))
-    .filter(
-      (route): route is RouteRecordStringComponent<string> => route !== null,
-    );
+  return applyKeepAliveToTabRoutes(
+    buildMenuTree(menus)
+      .map((menu) => convertMenuNode(menu))
+      .filter(
+        (route): route is RouteRecordStringComponent<string> => route !== null,
+      ),
+  );
 }
 
 export async function getBackendFirstMenuRoutes(

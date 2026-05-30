@@ -2,6 +2,7 @@ import type { RouteRecordRaw } from 'vue-router';
 
 import { M2_PERMISSION_CODES } from '#/modules/specimen-workflow/constants';
 import { M3_PERMISSION_CODES } from '#/modules/technical-workflow/constants';
+import { applyKeepAliveToTabRoutes } from '#/router/routes/keep-alive';
 
 const TECHNICAL_WORKFLOW_AUTHORITIES = [
   M2_PERMISSION_CODES.SPECIMEN_RECEIVE,
@@ -15,7 +16,7 @@ const TECHNICAL_WORKFLOW_AUTHORITIES = [
   M3_PERMISSION_CODES.TECHNICAL_TRACKING_QUERY,
 ];
 
-const routes: RouteRecordRaw[] = [
+const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
   {
     meta: {
       authority: TECHNICAL_WORKFLOW_AUTHORITIES,
@@ -152,6 +153,6 @@ const routes: RouteRecordRaw[] = [
       },
     ],
   },
-];
+]);
 
 export default routes;

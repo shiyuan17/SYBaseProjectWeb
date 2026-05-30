@@ -30,9 +30,13 @@ describe('operation support routes', () => {
     expect(operationRoot?.path).toBe('/operation-support');
     expect(operationRoot?.redirect).toBe('/operation-support/entry');
     expect(entryRoute?.path).toBe('/operation-support/entry');
+    expect(entryRoute?.meta?.keepAlive).toBeUndefined();
     expect(archiveRoute?.path).toBe('/operation-support/archive');
+    expect(archiveRoute?.meta?.keepAlive).toBe(true);
     expect(reagentRoute?.path).toBe('/operation-support/reagents');
+    expect(reagentRoute?.meta?.keepAlive).toBe(true);
     expect(equipmentRoute?.path).toBe('/operation-support/equipment');
+    expect(equipmentRoute?.meta?.keepAlive).toBe(true);
     expect(archiveRoute?.meta?.authority).toEqual([
       ...M5_ARCHIVE_PAGE_AUTHORITIES,
     ]);

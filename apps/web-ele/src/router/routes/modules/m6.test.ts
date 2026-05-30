@@ -39,10 +39,15 @@ describe('m6 routes', () => {
     expect(m6Root?.path).toBe('/m6');
     expect(m6Root?.redirect).toBe('/m6/entry');
     expect(entryRoute?.path).toBe('/m6/entry');
+    expect(entryRoute?.meta?.keepAlive).toBeUndefined();
     expect(integrationRoute?.path).toBe('/m6/integration');
+    expect(integrationRoute?.meta?.keepAlive).toBe(true);
     expect(billingRoute?.path).toBe('/m6/billing');
+    expect(billingRoute?.meta?.keepAlive).toBe(true);
     expect(historyRoute?.path).toBe('/m6/history');
+    expect(historyRoute?.meta?.keepAlive).toBe(true);
     expect(statisticsRoute?.path).toBe('/m6/statistics');
+    expect(statisticsRoute?.meta?.keepAlive).toBe(true);
     expect(integrationRoute?.meta?.authority).toEqual([
       ...M6_INTEGRATION_PAGE_AUTHORITIES,
     ]);

@@ -38,6 +38,7 @@ describe('workflow routes', () => {
     ]);
     expect(submissionRoute?.path).toBe('/workflow/submission-registration');
     expect(submissionRoute?.meta?.title).toBe('申请与登记');
+    expect(submissionRoute?.meta?.keepAlive).toBe(true);
     expect(submissionRoute?.meta?.authority).toEqual([
       M2_PERMISSION_CODES.APPLICATION_DETAIL_QUERY,
       M2_PERMISSION_CODES.APPLICATION_CREATE,
@@ -46,6 +47,7 @@ describe('workflow routes', () => {
     ]);
     expect(workbenchRoute?.path).toBe('/workflow/application-registration-workbench');
     expect(workbenchRoute?.meta?.title).toBe('申请登记工作台');
+    expect(workbenchRoute?.meta?.keepAlive).toBe(true);
     expect(workbenchRoute?.meta?.authority).toEqual([
       M2_PERMISSION_CODES.APPLICATION_DETAIL_QUERY,
       M2_PERMISSION_CODES.APPLICATION_CREATE,
@@ -53,6 +55,7 @@ describe('workflow routes', () => {
       M2_PERMISSION_CODES.SPECIMEN_REGISTER,
     ]);
     expect(fixationTransportRoute?.path).toBe('/workflow/fixation-transport');
+    expect(fixationTransportRoute?.meta?.keepAlive).toBe(true);
     expect(fixationTransportRoute?.meta?.authority).toEqual([
       M2_PERMISSION_CODES.FIXATION_VERIFY,
       M2_PERMISSION_CODES.TRANSPORT_HANDOVER,
@@ -60,12 +63,15 @@ describe('workflow routes', () => {
     expect(compatibilityRoute?.path).toBe('/workflow/clinical-register');
     expect(compatibilityRoute?.meta?.title).toBe('送检登记兼容页');
     expect(compatibilityRoute?.meta?.hideInMenu).toBe(true);
+    expect(compatibilityRoute?.meta?.keepAlive).toBeUndefined();
     expect(trackingRoute?.path).toBe('/workflow/tracking-exception');
+    expect(trackingRoute?.meta?.keepAlive).toBe(true);
     expect(trackingRoute?.meta?.authority).toEqual([
       M2_PERMISSION_CODES.SPECIMEN_TRACKING_QUERY,
     ]);
     expect(trackingQueryRoute?.path).toBe('/workflow/tracking-query');
     expect(trackingQueryRoute?.meta?.title).toBe('追踪查询');
     expect(trackingQueryRoute?.meta?.hideInMenu).toBe(true);
+    expect(trackingQueryRoute?.meta?.keepAlive).toBeUndefined();
   });
 });

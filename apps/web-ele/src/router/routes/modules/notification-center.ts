@@ -1,6 +1,8 @@
 import type { RouteRecordRaw } from 'vue-router';
 
-const routes: RouteRecordRaw[] = [
+import { applyKeepAliveToTabRoutes } from '#/router/routes/keep-alive';
+
+const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
   {
     meta: {
       hideInMenu: true,
@@ -11,6 +13,6 @@ const routes: RouteRecordRaw[] = [
     component: () =>
       import('#/modules/notification-center/views/NotificationCenterView.vue'),
   },
-];
+]);
 
 export default routes;

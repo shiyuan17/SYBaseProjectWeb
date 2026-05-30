@@ -5,6 +5,7 @@ import {
   M5_EQUIPMENT_PAGE_AUTHORITIES,
   M5_REAGENT_PAGE_AUTHORITIES,
 } from '#/modules/operation-support/constants';
+import { applyKeepAliveToTabRoutes } from '#/router/routes/keep-alive';
 
 const OPERATION_SUPPORT_AUTHORITIES = [
   ...M5_ARCHIVE_PAGE_AUTHORITIES,
@@ -12,7 +13,7 @@ const OPERATION_SUPPORT_AUTHORITIES = [
   ...M5_EQUIPMENT_PAGE_AUTHORITIES,
 ];
 
-const routes: RouteRecordRaw[] = [
+const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
   {
     meta: {
       authority: OPERATION_SUPPORT_AUTHORITIES,
@@ -74,6 +75,6 @@ const routes: RouteRecordRaw[] = [
       },
     ],
   },
-];
+]);
 
 export default routes;

@@ -1,8 +1,9 @@
 import type { RouteRecordRaw } from 'vue-router';
 
 import { $t } from '#/locales';
+import { applyKeepAliveToTabRoutes } from '#/router/routes/keep-alive';
 
-const routes: RouteRecordRaw[] = [
+const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
   {
     meta: {
       icon: 'lucide:layout-dashboard',
@@ -33,6 +34,6 @@ const routes: RouteRecordRaw[] = [
       },
     ],
   },
-];
+]);
 
 export default routes;

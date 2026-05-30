@@ -105,11 +105,17 @@ describe('mapMenuViewsToRoutes', () => {
     expect(routes[0]?.children).toEqual([
       expect.objectContaining({
         component: '/modules/system-management/views/SystemUsersView',
+        meta: expect.objectContaining({
+          keepAlive: true,
+        }),
         name: 'SystemUsers',
         path: '/system/users',
       }),
       expect.objectContaining({
         component: '/modules/system-management/views/MedicalOrderDictsView',
+        meta: expect.objectContaining({
+          keepAlive: true,
+        }),
         name: 'MedicalOrderDicts',
         path: '/system/medical-order-dicts',
       }),
@@ -197,20 +203,32 @@ describe('mapMenuViewsToRoutes', () => {
         redirect: '/workflow/submission-registration',
         children: [
           expect.objectContaining({
+            meta: expect.objectContaining({
+              keepAlive: true,
+            }),
             name: 'SubmissionRegistration',
             path: '/workflow/submission-registration',
           }),
           expect.objectContaining({
             component:
               '/modules/specimen-workflow/views/ApplicationRegistrationWorkbenchView',
+            meta: expect.objectContaining({
+              keepAlive: true,
+            }),
             name: 'ApplicationRegistrationWorkbench',
             path: '/workflow/application-registration-workbench',
           }),
           expect.objectContaining({
+            meta: expect.objectContaining({
+              keepAlive: true,
+            }),
             name: 'FixationTransport',
             path: '/workflow/fixation-transport',
           }),
           expect.objectContaining({
+            meta: expect.objectContaining({
+              keepAlive: true,
+            }),
             name: 'TrackingException',
             path: '/workflow/tracking-exception',
           }),
@@ -300,18 +318,30 @@ describe('mapMenuViewsToRoutes', () => {
         redirect: '/workflow/pathology-receipt',
         children: [
           expect.objectContaining({
+            meta: expect.objectContaining({
+              keepAlive: true,
+            }),
             name: 'PathologyReceipt',
             path: '/workflow/pathology-receipt',
           }),
           expect.objectContaining({
+            meta: expect.objectContaining({
+              keepAlive: true,
+            }),
             name: 'TechnicalTasks',
             path: '/technical-workflow/tasks',
           }),
           expect.objectContaining({
+            meta: expect.objectContaining({
+              keepAlive: true,
+            }),
             name: 'GrossingWorkstation',
             path: '/technical-workflow/grossing',
           }),
           expect.objectContaining({
+            meta: expect.objectContaining({
+              keepAlive: true,
+            }),
             name: 'FrozenWorkstation',
             path: '/technical-workflow/frozen',
           }),
@@ -387,14 +417,23 @@ describe('mapMenuViewsToRoutes', () => {
         redirect: '/doctor-workflow/assignment',
         children: [
           expect.objectContaining({
+            meta: expect.objectContaining({
+              keepAlive: true,
+            }),
             name: 'DiagnosisAssignment',
             path: '/doctor-workflow/assignment',
           }),
           expect.objectContaining({
+            meta: expect.objectContaining({
+              keepAlive: true,
+            }),
             name: 'PathologyReport',
             path: '/doctor-workflow/report',
           }),
           expect.objectContaining({
+            meta: expect.objectContaining({
+              keepAlive: true,
+            }),
             name: 'FrozenReport',
             path: '/doctor-workflow/frozen-report',
           }),
@@ -470,14 +509,23 @@ describe('mapMenuViewsToRoutes', () => {
         redirect: '/operation-support/archive',
         children: [
           expect.objectContaining({
+            meta: expect.objectContaining({
+              keepAlive: true,
+            }),
             name: 'ArchiveManagement',
             path: '/operation-support/archive',
           }),
           expect.objectContaining({
+            meta: expect.objectContaining({
+              keepAlive: true,
+            }),
             name: 'ReagentLedger',
             path: '/operation-support/reagents',
           }),
           expect.objectContaining({
+            meta: expect.objectContaining({
+              keepAlive: true,
+            }),
             name: 'EquipmentLedger',
             path: '/operation-support/equipment',
           }),
@@ -554,16 +602,25 @@ describe('mapMenuViewsToRoutes', () => {
         children: [
           expect.objectContaining({
             component: '/modules/m6-management/views/IntegrationManagementView',
+            meta: expect.objectContaining({
+              keepAlive: true,
+            }),
             name: 'IntegrationManagement',
             path: '/m6/integration',
           }),
           expect.objectContaining({
             component: '/modules/m6-management/views/BillingManagementView',
+            meta: expect.objectContaining({
+              keepAlive: true,
+            }),
             name: 'BillingManagement',
             path: '/m6/billing',
           }),
           expect.objectContaining({
             component: '/modules/m6-management/views/HistoricalReportsView',
+            meta: expect.objectContaining({
+              keepAlive: true,
+            }),
             name: 'HistoricalReports',
             path: '/m6/history',
           }),
@@ -611,6 +668,9 @@ describe('getBackendFirstMenuRoutes', () => {
     expect(routes).toBe(backendRoutes);
     expect(routes[0]?.children).toEqual([
       expect.objectContaining({
+        meta: expect.objectContaining({
+          keepAlive: true,
+        }),
         name: 'SystemUsers',
         path: '/system/users',
       }),
@@ -628,6 +688,9 @@ describe('getBackendFirstMenuRoutes', () => {
           redirect: '/system/users',
           children: expect.arrayContaining([
             expect.objectContaining({
+              meta: expect.objectContaining({
+                keepAlive: true,
+              }),
               name: 'SystemUsers',
               path: '/system/users',
             }),
@@ -639,14 +702,23 @@ describe('getBackendFirstMenuRoutes', () => {
           redirect: '/operation-support/archive',
           children: expect.arrayContaining([
             expect.objectContaining({
+              meta: expect.objectContaining({
+                keepAlive: true,
+              }),
               name: 'ArchiveManagement',
               path: '/operation-support/archive',
             }),
             expect.objectContaining({
+              meta: expect.objectContaining({
+                keepAlive: true,
+              }),
               name: 'ReagentLedger',
               path: '/operation-support/reagents',
             }),
             expect.objectContaining({
+              meta: expect.objectContaining({
+                keepAlive: true,
+              }),
               name: 'EquipmentLedger',
               path: '/operation-support/equipment',
             }),
@@ -668,6 +740,9 @@ describe('getBackendFirstMenuRoutes', () => {
           children: expect.arrayContaining([
             expect.objectContaining({
               component: '/modules/system-management/views/SystemUsersView',
+              meta: expect.objectContaining({
+                keepAlive: true,
+              }),
               name: 'SystemUsers',
               path: '/system/users',
             }),

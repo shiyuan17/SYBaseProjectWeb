@@ -28,18 +28,26 @@ describe('technical workflow routes', () => {
       M2_PERMISSION_CODES.SPECIMEN_RECEIVE,
     );
     expect(receiptRoute?.path).toBe('/workflow/pathology-receipt');
+    expect(receiptRoute?.meta?.keepAlive).toBe(true);
     expect(receiptRoute?.meta?.authority).toEqual([
       M2_PERMISSION_CODES.SPECIMEN_RECEIVE,
     ]);
+    expect(tasksRoute?.meta?.keepAlive).toBe(true);
     expect(tasksRoute?.meta?.authority).toEqual([
       M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY,
     ]);
     expect(frozenRoute?.path).toBe('/technical-workflow/frozen');
+    expect(frozenRoute?.meta?.keepAlive).toBe(true);
     expect(frozenRoute?.meta?.authority).toEqual([
       M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY,
     ]);
+    expect(grossingRoute?.meta?.keepAlive).toBe(true);
     expect(grossingRoute?.meta?.authority).toEqual([
       M3_PERMISSION_CODES.GROSSING,
     ]);
+    const entryRoute = workflowRoot?.children?.find(
+      (route) => route.name === 'TechnicalWorkflowEntry',
+    );
+    expect(entryRoute?.meta?.keepAlive).toBeUndefined();
   });
 });

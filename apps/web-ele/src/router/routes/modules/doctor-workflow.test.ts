@@ -54,13 +54,21 @@ describe('doctor workflow routes', () => {
     expect(workflowRoot?.path).toBe('/doctor-workflow');
     expect(workflowRoot?.redirect).toBe('/doctor-workflow/entry');
     expect(assignmentRoute?.path).toBe('/doctor-workflow/assignment');
+    expect(assignmentRoute?.meta?.keepAlive).toBe(true);
     expect(workbenchRoute?.path).toBe('/doctor-workflow/workbench');
+    expect(workbenchRoute?.meta?.keepAlive).toBe(true);
     expect(reportRoute?.path).toBe('/doctor-workflow/report');
+    expect(reportRoute?.meta?.keepAlive).toBe(true);
     expect(frozenReportRoute?.path).toBe('/doctor-workflow/frozen-report');
+    expect(frozenReportRoute?.meta?.keepAlive).toBe(true);
     expect(trackingRoute?.path).toBe('/doctor-workflow/tracking');
+    expect(trackingRoute?.meta?.keepAlive).toBe(true);
     expect(medicalOrderRoute?.path).toBe('/doctor-workflow/medical-orders');
+    expect(medicalOrderRoute?.meta?.keepAlive).toBe(true);
     expect(revisionRoute?.path).toBe('/doctor-workflow/revision');
+    expect(revisionRoute?.meta?.keepAlive).toBe(true);
     expect(consultationRoute?.path).toBe('/doctor-workflow/consultation');
+    expect(consultationRoute?.meta?.keepAlive).toBe(true);
     expect(assignmentRoute?.meta?.authority).toEqual([
       M4_PERMISSION_CODES.DIAG_TASK_QUERY,
     ]);
@@ -83,6 +91,10 @@ describe('doctor workflow routes', () => {
     expect(consultationRoute?.meta?.authority).toEqual([
       ...M4_CONSULTATION_PAGE_AUTHORITIES,
     ]);
+    const entryRoute = workflowRoot?.children?.find(
+      (route) => route.name === 'DoctorWorkflowEntry',
+    );
+    expect(entryRoute?.meta?.keepAlive).toBeUndefined();
   });
 
   it('shows the expected M4 pages for diagnosis role permissions', () => {

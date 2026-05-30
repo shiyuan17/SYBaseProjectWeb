@@ -1,6 +1,7 @@
 import type { LocationQueryRaw, RouteRecordRaw } from 'vue-router';
 
 import { M2_PERMISSION_CODES } from '#/modules/specimen-workflow/constants';
+import { applyKeepAliveToTabRoutes } from '#/router/routes/keep-alive';
 
 const WORKFLOW_AUTHORITIES = [
   M2_PERMISSION_CODES.APPLICATION_DETAIL_QUERY,
@@ -32,7 +33,7 @@ function redirectWithQuery(
   });
 }
 
-const routes: RouteRecordRaw[] = [
+const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
   {
     meta: {
       authority: WORKFLOW_AUTHORITIES,
@@ -216,6 +217,6 @@ const routes: RouteRecordRaw[] = [
       },
     ],
   },
-];
+]);
 
 export default routes;

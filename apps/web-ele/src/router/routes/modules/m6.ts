@@ -6,6 +6,7 @@ import {
   M6_INTEGRATION_PAGE_AUTHORITIES,
   M6_STATISTICS_PAGE_AUTHORITIES,
 } from '#/modules/m6-management/constants';
+import { applyKeepAliveToTabRoutes } from '#/router/routes/keep-alive';
 
 const M6_AUTHORITIES = [
   ...M6_INTEGRATION_PAGE_AUTHORITIES,
@@ -14,7 +15,7 @@ const M6_AUTHORITIES = [
   ...M6_STATISTICS_PAGE_AUTHORITIES,
 ];
 
-const routes: RouteRecordRaw[] = [
+const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
   {
     meta: {
       authority: M6_AUTHORITIES,
@@ -84,6 +85,6 @@ const routes: RouteRecordRaw[] = [
       },
     ],
   },
-];
+]);
 
 export default routes;

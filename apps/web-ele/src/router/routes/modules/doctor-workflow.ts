@@ -7,6 +7,7 @@ import {
   M4_REPORT_PAGE_AUTHORITIES,
   M4_REVISION_PAGE_AUTHORITIES,
 } from '#/modules/doctor-workflow/constants';
+import { applyKeepAliveToTabRoutes } from '#/router/routes/keep-alive';
 
 const DOCTOR_WORKFLOW_AUTHORITIES = [
   M4_PERMISSION_CODES.DIAG_TASK_QUERY,
@@ -32,7 +33,7 @@ const DOCTOR_WORKFLOW_AUTHORITIES = [
   M4_PERMISSION_CODES.MEDICAL_ORDER_CANCEL,
 ];
 
-const routes: RouteRecordRaw[] = [
+const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
   {
     meta: {
       authority: DOCTOR_WORKFLOW_AUTHORITIES,
@@ -149,6 +150,6 @@ const routes: RouteRecordRaw[] = [
       },
     ],
   },
-];
+]);
 
 export default routes;
