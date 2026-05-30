@@ -7,13 +7,22 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const workspaceRoot = path.resolve(__dirname, '..');
 const mode = process.argv[2] ?? 'all';
-const reportRoot = path.join(workspaceRoot, 'tests', 'reports', 'system-management');
+const reportRoot = path.join(
+  workspaceRoot,
+  'tests',
+  'reports',
+  'system-management',
+);
 const frontendReportDir = path.join(reportRoot, 'frontend');
 const backendReportDir = path.join(reportRoot, 'backend');
 const aggregateReportPath = path.join(reportRoot, 'index.html');
 const frontendTestReportPath = path.join(frontendReportDir, 'test-report.html');
 const frontendCoverageDir = path.join(frontendReportDir, 'coverage');
-const backendTestReportPath = path.join(backendReportDir, 'test-report', 'index.html');
+const backendTestReportPath = path.join(
+  backendReportDir,
+  'test-report',
+  'index.html',
+);
 const backendCoverageDir = path.join(backendReportDir, 'coverage');
 
 const backendRepoInput = process.env.SY_BACKEND_REPO_PATH ?? '../SYBaseProject';
@@ -73,7 +82,11 @@ function runCommand(command, args, cwd) {
         resolve();
         return;
       }
-      reject(new Error(`Command failed (${code ?? 'unknown'}): ${command} ${args.join(' ')}`));
+      reject(
+        new Error(
+          `Command failed (${code ?? 'unknown'}): ${command} ${args.join(' ')}`,
+        ),
+      );
     });
   });
 }
@@ -167,9 +180,16 @@ async function runBackend() {
     '后端测试报告',
   );
 
-  const jacocoSourceDir = path.join(backendModulePath, 'target', 'site', 'jacoco');
+  const jacocoSourceDir = path.join(
+    backendModulePath,
+    'target',
+    'site',
+    'jacoco',
+  );
   if (!(await pathExists(jacocoSourceDir))) {
-    throw new Error('Unable to locate the backend JaCoCo HTML report directory.');
+    throw new Error(
+      'Unable to locate the backend JaCoCo HTML report directory.',
+    );
   }
   await cp(jacocoSourceDir, backendCoverageDir, {
     force: true,

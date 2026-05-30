@@ -2,9 +2,8 @@ import { createApp, defineComponent, h, inject, onMounted, provide } from 'vue';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import SystemUserSelect from './SystemUserSelect.vue';
-
 import { listSystemUsers } from '../api/system-management-service';
+import SystemUserSelect from './SystemUserSelect.vue';
 
 const selectOptionKey = Symbol('select-option');
 
@@ -16,8 +15,12 @@ vi.mock('element-plus', () => {
   const ElSelect = defineComponent({
     name: 'ElSelect',
     setup(_, { attrs, slots }) {
-      const updateModelValue = attrs['onUpdate:modelValue'] as ((value: string) => void) | undefined;
-      const visibleChange = attrs.onVisibleChange as ((visible: boolean) => void) | undefined;
+      const updateModelValue = attrs['onUpdate:modelValue'] as
+        | ((value: string) => void)
+        | undefined;
+      const visibleChange = attrs.onVisibleChange as
+        | ((visible: boolean) => void)
+        | undefined;
 
       provide(selectOptionKey, (value: string) => {
         updateModelValue?.(value);
@@ -27,7 +30,8 @@ vi.mock('element-plus', () => {
         visibleChange?.(true);
       });
 
-      return () => h('div', { 'data-testid': 'select-root' }, slots.default?.());
+      return () =>
+        h('div', { 'data-testid': 'select-root' }, slots.default?.());
     },
   });
 
@@ -132,14 +136,17 @@ describe('SystemUserSelect', () => {
         return h(SystemUserSelect, {
           modelValue: '',
           'onUpdate:modelValue': (value: string) => updates.push(value),
-          onChange: (user: null | { id: string; name: string }) => changes.push(user),
+          onChange: (user: null | { id: string; name: string }) =>
+            changes.push(user),
         });
       },
     });
     app.mount(root);
 
     await new Promise((resolve) => setTimeout(resolve, 0));
-    root.querySelector<HTMLButtonElement>('[data-option-value="USER-1"]')?.click();
+    root
+      .querySelector<HTMLButtonElement>('[data-option-value="USER-1"]')
+      ?.click();
 
     expect(updates).toEqual(['USER-1']);
     expect(changes).toEqual([

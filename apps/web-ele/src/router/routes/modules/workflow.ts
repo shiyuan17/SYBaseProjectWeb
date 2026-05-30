@@ -71,9 +71,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
       },
       {
         component: () =>
-          import(
-            '#/modules/specimen-workflow/views/ApplicationRegistrationWorkbenchView.vue'
-          ),
+          import('#/modules/specimen-workflow/views/ApplicationRegistrationWorkbenchView.vue'),
         meta: {
           authority: SUBMISSION_WORKBENCH_AUTHORITIES,
           icon: 'carbon:workspace',

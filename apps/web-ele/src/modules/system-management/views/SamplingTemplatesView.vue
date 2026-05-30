@@ -53,7 +53,12 @@ import {
   buildTemplateCategorySubmitPayload,
   buildTemplateSubmitPayload,
 } from '../utils/submit-payloads';
-import { filterTreeByKeyword, findTreeNodeById, flattenTree, getTreeExpandedKeys } from '../utils/tree';
+import {
+  filterTreeByKeyword,
+  findTreeNodeById,
+  flattenTree,
+  getTreeExpandedKeys,
+} from '../utils/tree';
 
 const loading = ref(false);
 const detailLoading = ref(false);
@@ -92,7 +97,11 @@ const templateForm = reactive<CreateTemplateRequest & { id?: string }>({
 });
 
 const filteredTree = computed(() =>
-  filterTreeByKeyword(treeData.value, (node) => node.categoryName, keyword.value),
+  filterTreeByKeyword(
+    treeData.value,
+    (node) => node.categoryName,
+    keyword.value,
+  ),
 );
 const expandedKeys = computed(() => getTreeExpandedKeys(filteredTree.value));
 const selectedCategory = computed(() =>
@@ -266,7 +275,10 @@ async function submitTemplate() {
       await createSamplingTemplate(payload);
       ElMessage.success('模板已创建');
     } else if (templateForm.id) {
-      await updateSamplingTemplate(templateForm.id, payload as UpdateTemplateRequest);
+      await updateSamplingTemplate(
+        templateForm.id,
+        payload as UpdateTemplateRequest,
+      );
       ElMessage.success('模板已更新');
     }
     templateDialogVisible.value = false;
@@ -315,7 +327,10 @@ onMounted(loadInitialData);
       @retry="loadInitialData"
     />
     <div class="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-      <SystemSectionCard title="模板分类树" description="搜索并维护模板分类层级。">
+      <SystemSectionCard
+        title="模板分类树"
+        description="搜索并维护模板分类层级。"
+      >
         <template #extra>
           <ElButton
             v-access:code="M1_PERMISSION_CODES.TEMPLATE_CREATE"
@@ -340,7 +355,10 @@ onMounted(loadInitialData);
       </SystemSectionCard>
 
       <div class="flex flex-col gap-4">
-        <SystemSectionCard title="分类与模板列表" description="在选中分类下维护模板明细。">
+        <SystemSectionCard
+          title="分类与模板列表"
+          description="在选中分类下维护模板明细。"
+        >
           <template #extra>
             <ElButton
               v-if="selectedCategory"
@@ -366,9 +384,21 @@ onMounted(loadInitialData);
             </ElButton>
           </template>
 
-          <ElTable :data="selectedCategory?.templates ?? []" border @row-click="handleTemplateRowClick">
-            <ElTableColumn label="模板编码" min-width="140" prop="templateCode" />
-            <ElTableColumn label="模板名称" min-width="180" prop="templateName" />
+          <ElTable
+            :data="selectedCategory?.templates ?? []"
+            border
+            @row-click="handleTemplateRowClick"
+          >
+            <ElTableColumn
+              label="模板编码"
+              min-width="140"
+              prop="templateCode"
+            />
+            <ElTableColumn
+              label="模板名称"
+              min-width="180"
+              prop="templateName"
+            />
             <ElTableColumn label="分材份数" width="100" prop="splitPartCount" />
             <ElTableColumn label="部位数" width="100">
               <template #default="scope">
@@ -377,7 +407,10 @@ onMounted(loadInitialData);
             </ElTableColumn>
             <ElTableColumn label="状态" width="90">
               <template #default="scope">
-                <SystemStatusTag v-if="scope?.row" :enabled="scope.row.enabled" />
+                <SystemStatusTag
+                  v-if="scope?.row"
+                  :enabled="scope.row.enabled"
+                />
               </template>
             </ElTableColumn>
             <ElTableColumn fixed="right" label="操作" min-width="180">
@@ -422,7 +455,10 @@ onMounted(loadInitialData);
           </div>
         </SystemSectionCard>
 
-        <SystemSectionCard title="模板详情" description="点击上方模板行查看详情与部位回显。">
+        <SystemSectionCard
+          title="模板详情"
+          description="点击上方模板行查看详情与部位回显。"
+        >
           <ElDescriptions v-if="selectedTemplate" :column="2" border>
             <ElDescriptionsItem label="模板编码">
               {{ selectedTemplate.templateCode }}
@@ -440,10 +476,16 @@ onMounted(loadInitialData);
               <SystemStatusTag :enabled="selectedTemplate.enabled" />
             </ElDescriptionsItem>
             <ElDescriptionsItem label="适用部位">
-              {{ selectedTemplate.bodyParts.map((item) => item.bodyPartName).join('、') || '-' }}
+              {{
+                selectedTemplate.bodyParts
+                  .map((item) => item.bodyPartName)
+                  .join('、') || '-'
+              }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="模板内容" :span="2">
-              <pre class="text-foreground whitespace-pre-wrap text-sm">{{ selectedTemplate.templateContent || '-' }}</pre>
+              <pre class="text-foreground whitespace-pre-wrap text-sm">{{
+                selectedTemplate.templateContent || '-'
+              }}</pre>
             </ElDescriptionsItem>
           </ElDescriptions>
           <ElEmpty v-else description="请先选择模板查看详情" />
@@ -472,7 +514,11 @@ onMounted(loadInitialData);
       </ElForm>
       <template #footer>
         <ElButton @click="categoryDialogVisible = false">取消</ElButton>
-        <ElButton :loading="dialogLoading" type="primary" @click="submitCategory">
+        <ElButton
+          :loading="dialogLoading"
+          type="primary"
+          @click="submitCategory"
+        >
           保存
         </ElButton>
       </template>
@@ -510,7 +556,11 @@ onMounted(loadInitialData);
           </ElSelect>
         </ElFormItem>
         <ElFormItem label="模板内容">
-          <ElInput v-model="templateForm.templateContent" :rows="8" type="textarea" />
+          <ElInput
+            v-model="templateForm.templateContent"
+            :rows="8"
+            type="textarea"
+          />
         </ElFormItem>
         <ElFormItem label="状态">
           <ElSwitch v-model="templateForm.enabled" />
@@ -518,7 +568,11 @@ onMounted(loadInitialData);
       </ElForm>
       <template #footer>
         <ElButton @click="templateDialogVisible = false">取消</ElButton>
-        <ElButton :loading="dialogLoading" type="primary" @click="submitTemplate">
+        <ElButton
+          :loading="dialogLoading"
+          type="primary"
+          @click="submitTemplate"
+        >
           保存
         </ElButton>
       </template>

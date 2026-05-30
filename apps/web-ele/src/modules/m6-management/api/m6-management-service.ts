@@ -5,8 +5,8 @@ import type {
   HistoricalImportJobQuery,
   HistoricalImportJobView,
   HistoricalReportQuery,
-  HistoricalReportView,
   HistoricalReportVersionView,
+  HistoricalReportView,
   ImportHistoricalReportsRequest,
   IntegrationTaskQuery,
   IntegrationTaskView,
@@ -146,7 +146,7 @@ export function mapHistoricalReportResponse(
     sourceDoctorName: normalizeString(item.sourceDoctorName),
     sourceSystem: normalizeString(item.sourceSystem),
     versions: Array.isArray(item.versions)
-      ? item.versions.map(mapHistoricalReportVersion)
+      ? item.versions.map((version) => mapHistoricalReportVersion(version))
       : [],
   };
 }
@@ -180,7 +180,9 @@ export async function listIntegrationTasks(query: IntegrationTaskQuery) {
     },
   );
 
-  return Array.isArray(response) ? response.map(mapIntegrationTaskResponse) : [];
+  return Array.isArray(response)
+    ? response.map((item) => mapIntegrationTaskResponse(item))
+    : [];
 }
 
 export async function listBillingRecords(query: BillingRecordQuery) {
@@ -199,7 +201,9 @@ export async function listBillingRecords(query: BillingRecordQuery) {
     },
   );
 
-  return Array.isArray(response) ? response.map(mapBillingRecordResponse) : [];
+  return Array.isArray(response)
+    ? response.map((item) => mapBillingRecordResponse(item))
+    : [];
 }
 
 export async function receiveBillingReceipt(
@@ -243,7 +247,9 @@ export async function importHistoricalReports(
   return mapHistoricalImportJobResponse(response ?? {});
 }
 
-export async function listHistoricalImportJobs(query: HistoricalImportJobQuery) {
+export async function listHistoricalImportJobs(
+  query: HistoricalImportJobQuery,
+) {
   const response = await requestClient.get<Partial<HistoricalImportJobView>[]>(
     '/v1/historical-report-import-jobs',
     {
@@ -258,7 +264,7 @@ export async function listHistoricalImportJobs(query: HistoricalImportJobQuery) 
   );
 
   return Array.isArray(response)
-    ? response.map(mapHistoricalImportJobResponse)
+    ? response.map((item) => mapHistoricalImportJobResponse(item))
     : [];
 }
 
@@ -278,5 +284,7 @@ export async function listHistoricalReports(query: HistoricalReportQuery) {
     },
   );
 
-  return Array.isArray(response) ? response.map(mapHistoricalReportResponse) : [];
+  return Array.isArray(response)
+    ? response.map((item) => mapHistoricalReportResponse(item))
+    : [];
 }

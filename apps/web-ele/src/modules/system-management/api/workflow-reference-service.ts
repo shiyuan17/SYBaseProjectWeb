@@ -5,10 +5,10 @@ import type {
 
 import { requestClient } from '#/api/request';
 
-let cachedWorkflowReferenceOptions: null | WorkflowReferenceOptionsResponse = null;
-let pendingWorkflowReferenceOptionsRequest:
-  | null
-  | Promise<WorkflowReferenceOptionsResponse> = null;
+let cachedWorkflowReferenceOptions: null | WorkflowReferenceOptionsResponse =
+  null;
+let pendingWorkflowReferenceOptionsRequest: null | Promise<WorkflowReferenceOptionsResponse> =
+  null;
 
 function normalizeText(value: null | string | undefined) {
   if (typeof value !== 'string') {
@@ -67,7 +67,7 @@ function createDefaultWorkflowReferenceOptions(): WorkflowReferenceOptionsRespon
 }
 
 function normalizeReferenceOptions(
-  options: null | WorkflowReferenceOption[] | undefined,
+  options: null | undefined | WorkflowReferenceOption[],
 ) {
   return (options ?? [])
     .map((option) => {
@@ -153,9 +153,12 @@ export async function listWorkflowReferenceOptions(
   }
 
   pendingWorkflowReferenceOptionsRequest = requestClient
-    .get<Partial<WorkflowReferenceOptionsResponse>>('/v1/workflow-reference-options', {
-      skipErrorMessage: options.skipErrorMessage,
-    })
+    .get<Partial<WorkflowReferenceOptionsResponse>>(
+      '/v1/workflow-reference-options',
+      {
+        skipErrorMessage: options.skipErrorMessage,
+      },
+    )
     .then((response) => {
       const normalized = mapWorkflowReferenceOptionsResponse(response);
       cachedWorkflowReferenceOptions = normalized;

@@ -27,7 +27,7 @@ const USE_APPLICATION_REGISTRATION_WORKBENCH_MOCK =
   import.meta.env.VITE_SPECIMEN_WORKFLOW_MOCK === 'true';
 
 function isPresent<T>(value: null | T | undefined): value is T {
-  return value != null;
+  return value !== null && value !== undefined;
 }
 
 function normalizeRecord(

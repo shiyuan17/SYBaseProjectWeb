@@ -13,7 +13,6 @@ import {
   ElTimelineItem,
 } from 'element-plus';
 
-import { useTechnicalWorkflowNavigation } from '../utils/navigation';
 import {
   formatCaseStatus,
   formatDateTime,
@@ -21,6 +20,7 @@ import {
   formatEventType,
   formatNullable,
 } from '../utils/format';
+import { useTechnicalWorkflowNavigation } from '../utils/navigation';
 import WorkflowSectionCard from './WorkflowSectionCard.vue';
 
 const props = defineProps<{
@@ -51,7 +51,10 @@ const summaryItems = computed(() => {
 
 <template>
   <div class="flex flex-col gap-4">
-    <WorkflowSectionCard title="病例概览" description="固定展示病例摘要、下一流向和当前生产风险。">
+    <WorkflowSectionCard
+      title="病例概览"
+      description="固定展示病例摘要、下一流向和当前生产风险。"
+    >
       <div v-if="context" class="grid gap-3 md:grid-cols-2">
         <article
           v-for="item in summaryItems"
@@ -59,7 +62,9 @@ const summaryItems = computed(() => {
           class="rounded-lg border border-border bg-card p-3"
         >
           <div class="text-xs text-muted-foreground">{{ item.label }}</div>
-          <div class="mt-1 text-sm font-semibold text-foreground">{{ item.value }}</div>
+          <div class="mt-1 text-sm font-semibold text-foreground">
+            {{ item.value }}
+          </div>
         </article>
       </div>
       <ElEmpty v-else description="选中任务后显示病例概览" />
@@ -96,8 +101,14 @@ const summaryItems = computed(() => {
       <ElEmpty v-else description="当前没有需要前置提醒的异常或下一工位提示" />
     </WorkflowSectionCard>
 
-    <WorkflowSectionCard title="质控与返工" description="汇总切片提示、返工原因与质控建议。">
-      <div v-if="context?.currentTaskSuggestions.length" class="flex flex-col gap-2">
+    <WorkflowSectionCard
+      title="质控与返工"
+      description="汇总切片提示、返工原因与质控建议。"
+    >
+      <div
+        v-if="context?.currentTaskSuggestions.length"
+        class="flex flex-col gap-2"
+      >
         <div
           v-for="suggestion in context.currentTaskSuggestions"
           :key="suggestion"
@@ -109,7 +120,10 @@ const summaryItems = computed(() => {
       <ElEmpty v-else description="当前病例暂无质控或返工提醒" />
     </WorkflowSectionCard>
 
-    <WorkflowSectionCard title="节点记录" description="展示节点操作、质控、返工和流转记录。">
+    <WorkflowSectionCard
+      title="节点记录"
+      description="展示节点操作、质控、返工和流转记录。"
+    >
       <ElTimeline v-if="context?.recentEvents.length">
         <ElTimelineItem
           v-for="event in context.recentEvents"
@@ -117,8 +131,12 @@ const summaryItems = computed(() => {
           :timestamp="formatDateTime(event.eventTime)"
         >
           <div class="flex flex-wrap items-center gap-2">
-            <span class="font-medium text-foreground">{{ formatEventType(event.eventType) }}</span>
-            <ElTag effect="plain" size="small">{{ formatEventStatus(event.eventStatus) }}</ElTag>
+            <span class="font-medium text-foreground">{{
+              formatEventType(event.eventType)
+            }}</span>
+            <ElTag effect="plain" size="small">
+              {{ formatEventStatus(event.eventStatus) }}
+            </ElTag>
             <span class="text-xs text-muted-foreground">
               {{ formatNullable(event.operatorName) }}
             </span>

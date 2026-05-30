@@ -32,9 +32,12 @@ import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import WorkstationTaskFocusPanel from '../components/WorkstationTaskFocusPanel.vue';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
-import { useTechnicalWorkflowNavigation } from '../utils/navigation';
 import { formatBatchStatus } from '../utils/format';
-import { buildWorkstationCaseContext, buildWorkstationQueueItems } from '../utils/workstation';
+import { useTechnicalWorkflowNavigation } from '../utils/navigation';
+import {
+  buildWorkstationCaseContext,
+  buildWorkstationQueueItems,
+} from '../utils/workstation';
 
 const route = useRoute();
 const router = useRouter();
@@ -55,7 +58,8 @@ const pendingAutoCreateTaskId = ref('');
 
 const filters = reactive({
   page: 1,
-  pathologyNo: typeof route.query.pathologyNo === 'string' ? route.query.pathologyNo : '',
+  pathologyNo:
+    typeof route.query.pathologyNo === 'string' ? route.query.pathologyNo : '',
   size: DEFAULT_PAGE_SIZE,
   timedOutOnly: route.query.mode === 'exception',
 });
@@ -68,9 +72,13 @@ const currentQuery = computed(() => ({
   timedOutOnly: filters.timedOutOnly,
 }));
 
-const queueItems = computed(() => buildWorkstationQueueItems(pendingItems.value, 'DEHYDRATION'));
+const queueItems = computed(() =>
+  buildWorkstationQueueItems(pendingItems.value, 'DEHYDRATION'),
+);
 const caseContext = computed(() =>
-  trackingResult.value ? buildWorkstationCaseContext(trackingResult.value, 'DEHYDRATION') : null,
+  trackingResult.value
+    ? buildWorkstationCaseContext(trackingResult.value, 'DEHYDRATION')
+    : null,
 );
 
 async function loadTrackingForTask(task: null | PendingTechnicalTaskItem) {
@@ -90,7 +98,8 @@ async function loadTrackingForTask(task: null | PendingTechnicalTaskItem) {
 }
 
 function selectTask(taskId: string, openCreate = false) {
-  const matchedTask = pendingItems.value.find((item) => item.id === taskId) ?? null;
+  const matchedTask =
+    pendingItems.value.find((item) => item.id === taskId) ?? null;
   if (!matchedTask) {
     return;
   }
@@ -109,11 +118,18 @@ async function loadPendingData() {
     pendingItems.value = result.items;
     total.value = result.total;
 
-    const deepLinkedTaskId = typeof route.query.taskId === 'string' ? route.query.taskId : '';
+    const deepLinkedTaskId =
+      typeof route.query.taskId === 'string' ? route.query.taskId : '';
     const preferredTaskId =
-      pendingAutoCreateTaskId.value || deepLinkedTaskId || selectedTask.value?.id || result.items[0]?.id;
+      pendingAutoCreateTaskId.value ||
+      deepLinkedTaskId ||
+      selectedTask.value?.id ||
+      result.items[0]?.id;
     if (preferredTaskId) {
-      selectTask(preferredTaskId, Boolean(pendingAutoCreateTaskId.value || deepLinkedTaskId));
+      selectTask(
+        preferredTaskId,
+        Boolean(pendingAutoCreateTaskId.value || deepLinkedTaskId),
+      );
     } else {
       selectedTask.value = null;
     }
@@ -198,7 +214,10 @@ void loadPendingData();
           <template #extra>
             <ElButton
               :type="filters.timedOutOnly ? 'danger' : 'default'"
-              @click="filters.timedOutOnly = !filters.timedOutOnly; loadPendingData()"
+              @click="
+                filters.timedOutOnly = !filters.timedOutOnly;
+                loadPendingData();
+              "
             >
               {{ filters.timedOutOnly ? '仅异常' : '全部任务' }}
             </ElButton>
@@ -224,7 +243,11 @@ void loadPendingData();
                 开始 / 完成批次
               </ElButton>
               <ElButton
-                @click="navigation.goToTracking({ caseId: selectedTask?.caseId ?? undefined })"
+                @click="
+                  navigation.goToTracking({
+                    caseId: selectedTask?.caseId ?? undefined,
+                  })
+                "
               >
                 查看生产轨迹
               </ElButton>
@@ -239,11 +262,15 @@ void loadPendingData();
               show-icon
             >
               <template #default>
-                本批次已关联 {{ latestBatchResult.taskCount }} 个对象，可继续开始脱水或在完成后补充附件占位。
+                本批次已关联
+                {{ latestBatchResult.taskCount }}
+                个对象，可继续开始脱水或在完成后补充附件占位。
               </template>
             </ElAlert>
 
-            <div class="mt-4 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
+            <div
+              class="mt-4 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground"
+            >
               一期先把“待脱水对象”与“当前批次”放回同一视图，后续可继续补扫码连续入筐、同病例一键全选和真实批次看板。
             </div>
           </WorkstationTaskFocusPanel>
@@ -261,7 +288,10 @@ void loadPendingData();
           </div>
         </WorkflowSectionCard>
 
-        <TechnicalCaseContextPanel :context="caseContext" :loading="trackingLoading" />
+        <TechnicalCaseContextPanel
+          :context="caseContext"
+          :loading="trackingLoading"
+        />
       </div>
     </div>
 

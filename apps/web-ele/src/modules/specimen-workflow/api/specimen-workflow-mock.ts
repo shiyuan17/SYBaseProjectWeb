@@ -179,7 +179,7 @@ function createInitialState(): MockState {
 }
 
 function isPresent<T>(value: null | T | undefined): value is T {
-  return value != null;
+  return value !== null && value !== undefined;
 }
 
 function cloneSeed<T>(value: T): T {

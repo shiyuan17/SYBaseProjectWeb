@@ -20,8 +20,13 @@
       }
       body {
         margin: 0;
-        font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
-        background: linear-gradient(180deg, #eef7f5 0%, var(--bg) 42%, #ffffff 100%);
+        font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+        background: linear-gradient(
+          180deg,
+          #eef7f5 0%,
+          var(--bg) 42%,
+          #ffffff 100%
+        );
         color: var(--text);
       }
       main {
@@ -39,7 +44,11 @@
         border: 1px solid rgba(15, 118, 110, 0.16);
         border-radius: 24px;
         background:
-          radial-gradient(circle at top right, rgba(15, 118, 110, 0.14), transparent 34%),
+          radial-gradient(
+            circle at top right,
+            rgba(15, 118, 110, 0.14),
+            transparent 34%
+          ),
           linear-gradient(135deg, #ffffff 0%, #eef8f6 100%);
         box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
       }
@@ -133,8 +142,9 @@
         <h1 style="margin-top: 14px">冰冻流程专项实施方案</h1>
         <p>
           目标形态采用“<strong>不新增一级业务域、在技术组与医生组内新增冰冻专项入口</strong>”。
-          通过显式 <code>FrozenSession</code> 与阶段任务模型，替代旧 WinForm 中大量依赖
-          <code>isFrozen</code> 参数分支的实现方式，先以 Web mock 流程跑通术中冰冻主链路，再平滑切换真实后端。
+          通过显式 <code>FrozenSession</code> 与阶段任务模型，替代旧 WinForm
+          中大量依赖 <code>isFrozen</code> 参数分支的实现方式，先以 Web mock
+          流程跑通术中冰冻主链路，再平滑切换真实后端。
         </p>
       </section>
 
@@ -142,20 +152,49 @@
         <section class="card">
           <h2>1. 当前实现结论</h2>
           <ul>
-            <li>旧系统冰冻不是单页闭环，而是预约、接收、取材、切片、快速报告、冰石对比、提醒看板和交接班的跨页组合。</li>
-            <li>技术侧主要通过 <code>FrmReceive(1)</code>、<code>FrmPlan(true)</code>、<code>FrmSectionV2(true)</code> 等参数化复用页面承接。</li>
-            <li>报告侧通过 <code>FrmFrozenMetion</code>、<code>FrmRep</code>、<code>FrmIceFrozen</code> 分别处理提醒、快速报告与冰石对比。</li>
-            <li class="accent">问题不在功能缺失，而在规则散、状态隐式、长期维护成本高。</li>
+            <li>
+              旧系统冰冻不是单页闭环，而是预约、接收、取材、切片、快速报告、冰石对比、提醒看板和交接班的跨页组合。
+            </li>
+            <li>
+              技术侧主要通过
+              <code>FrmReceive(1)</code>、<code>FrmPlan(true)</code>、<code
+                >FrmSectionV2(true)</code
+              >
+              等参数化复用页面承接。
+            </li>
+            <li>
+              报告侧通过
+              <code>FrmFrozenMetion</code>、<code>FrmRep</code>、<code
+                >FrmIceFrozen</code
+              >
+              分别处理提醒、快速报告与冰石对比。
+            </li>
+            <li class="accent">
+              问题不在功能缺失，而在规则散、状态隐式、长期维护成本高。
+            </li>
           </ul>
         </section>
 
         <section class="card">
           <h2>2. 新系统落点</h2>
           <ul>
-            <li>技术组新增 <code>/technical-workflow/frozen</code>，承接冰冻接收、取材、切片和提醒。</li>
-            <li>医生组新增 <code>/doctor-workflow/frozen-report</code>，承接初步结果、电话回报、最终确认、冰石对比和剩余组织处理。</li>
-            <li>临床送检侧仅保留“冰冻进度查看”和与常规流程的关联展示，不回收全部作业动作。</li>
-            <li>前端先统一走模块内 mock，会话数据源固定为 <code>mock_data/frozen-workflow/frozen-sessions.json</code>。</li>
+            <li>
+              技术组新增
+              <code>/technical-workflow/frozen</code
+              >，承接冰冻接收、取材、切片和提醒。
+            </li>
+            <li>
+              医生组新增
+              <code>/doctor-workflow/frozen-report</code
+              >，承接初步结果、电话回报、最终确认、冰石对比和剩余组织处理。
+            </li>
+            <li>
+              临床送检侧仅保留“冰冻进度查看”和与常规流程的关联展示，不回收全部作业动作。
+            </li>
+            <li>
+              前端先统一走模块内 mock，会话数据源固定为
+              <code>mock_data/frozen-workflow/frozen-sessions.json</code>。
+            </li>
           </ul>
         </section>
       </div>
@@ -163,14 +202,30 @@
       <section class="card" style="margin-top: 24px">
         <h2>3. 目标状态机</h2>
         <div class="timeline">
-          <div class="timeline-item"><strong>REQUESTED</strong>：术中申请已创建，等待冰冻接收。</div>
-          <div class="timeline-item"><strong>RECEIVED</strong>：完成冰冻接收，进入取材。</div>
-          <div class="timeline-item"><strong>GROSSING</strong>：完成取材，进入切片。</div>
-          <div class="timeline-item"><strong>SLICING</strong>：完成切片，进入快速报告。</div>
-          <div class="timeline-item"><strong>DIAGNOSING / REPORTED</strong>：完成术中初步结果与电话回报。</div>
-          <div class="timeline-item"><strong>CONFIRMED</strong>：快速报告最终确认。</div>
-          <div class="timeline-item"><strong>PARAFFIN_REVIEWED</strong>：完成冰石对比。</div>
-          <div class="timeline-item"><strong>CLOSED</strong>：剩余组织处理与交接班闭环完成。</div>
+          <div class="timeline-item">
+            <strong>REQUESTED</strong>：术中申请已创建，等待冰冻接收。
+          </div>
+          <div class="timeline-item">
+            <strong>RECEIVED</strong>：完成冰冻接收，进入取材。
+          </div>
+          <div class="timeline-item">
+            <strong>GROSSING</strong>：完成取材，进入切片。
+          </div>
+          <div class="timeline-item">
+            <strong>SLICING</strong>：完成切片，进入快速报告。
+          </div>
+          <div class="timeline-item">
+            <strong>DIAGNOSING / REPORTED</strong>：完成术中初步结果与电话回报。
+          </div>
+          <div class="timeline-item">
+            <strong>CONFIRMED</strong>：快速报告最终确认。
+          </div>
+          <div class="timeline-item">
+            <strong>PARAFFIN_REVIEWED</strong>：完成冰石对比。
+          </div>
+          <div class="timeline-item">
+            <strong>CLOSED</strong>：剩余组织处理与交接班闭环完成。
+          </div>
         </div>
       </section>
 
@@ -214,18 +269,33 @@
           <ol>
             <li>前端先落 mock 会话模型、技术组/医生组专项入口与最小状态机。</li>
             <li>补真实后端接口时，保持前端入口不变，只替换服务层实现。</li>
-            <li>后端以 <code>frozen_sessions</code> 为主表扩展任务、提醒、冰石对比与剩余组织记录。</li>
-            <li>联调时优先验证“技术侧完成切片后，医生侧可直接接续快速报告”。</li>
+            <li>
+              后端以
+              <code>frozen_sessions</code>
+              为主表扩展任务、提醒、冰石对比与剩余组织记录。
+            </li>
+            <li>
+              联调时优先验证“技术侧完成切片后，医生侧可直接接续快速报告”。
+            </li>
           </ol>
         </section>
 
         <section class="card">
           <h2>6. 验收重点</h2>
           <ul>
-            <li>技术组冰冻入口可完成接收 → 取材 → 切片，状态会同步推到医生侧。</li>
-            <li>医生组冰冻入口可完成初步结果 → 电话回报 → 确认 → 冰石对比 → 剩余组织处理。</li>
-            <li>同一冰冻会话在技术侧与医生侧展示的是同一条时间线，而不是两套独立假数据。</li>
-            <li>Chromium 下中文无乱码，入口路径、标题和时间线文本与页面实际一致。</li>
+            <li>
+              技术组冰冻入口可完成接收 → 取材 → 切片，状态会同步推到医生侧。
+            </li>
+            <li>
+              医生组冰冻入口可完成初步结果 → 电话回报 → 确认 → 冰石对比 →
+              剩余组织处理。
+            </li>
+            <li>
+              同一冰冻会话在技术侧与医生侧展示的是同一条时间线，而不是两套独立假数据。
+            </li>
+            <li>
+              Chromium 下中文无乱码，入口路径、标题和时间线文本与页面实际一致。
+            </li>
           </ul>
         </section>
       </div>

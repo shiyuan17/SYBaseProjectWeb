@@ -23,9 +23,7 @@
     "preliminaryResult": null,
     "receivedAt": null,
     "remainingTissueStatus": "PENDING",
-    "reminders": [
-      "术中预约已到达，等待冰冻接收。"
-    ],
+    "reminders": ["术中预约已到达，等待冰冻接收。"],
     "reportConfirmedAt": null,
     "requestedAt": "2026-05-27T08:20:00",
     "requestDoctorName": "陈医生",
@@ -161,9 +159,7 @@
     "preliminaryResult": null,
     "receivedAt": "2026-05-27T09:05:00",
     "remainingTissueStatus": "PENDING",
-    "reminders": [
-      "冰冻接收已完成，需尽快完成取材。"
-    ],
+    "reminders": ["冰冻接收已完成，需尽快完成取材。"],
     "reportConfirmedAt": null,
     "requestedAt": "2026-05-27T08:40:00",
     "requestDoctorName": "王医生",
@@ -307,9 +303,7 @@
     "preliminaryResult": null,
     "receivedAt": "2026-05-27T09:10:00",
     "remainingTissueStatus": "PENDING",
-    "reminders": [
-      "切片阶段超过橙色阈值，需尽快出片。"
-    ],
+    "reminders": ["切片阶段超过橙色阈值，需尽快出片。"],
     "reportConfirmedAt": null,
     "requestedAt": "2026-05-27T08:55:00",
     "requestDoctorName": "刘医生",
@@ -461,9 +455,7 @@
     "preliminaryResult": "术中冰冻考虑良性病变。",
     "receivedAt": "2026-05-27T09:15:00",
     "remainingTissueStatus": "PENDING",
-    "reminders": [
-      "快速报告已电话回报，待石蜡结果回流后完成冰石对比。"
-    ],
+    "reminders": ["快速报告已电话回报，待石蜡结果回流后完成冰石对比。"],
     "reportConfirmedAt": "2026-05-27T10:18:00",
     "requestedAt": "2026-05-27T09:00:00",
     "requestDoctorName": "黄医生",

@@ -16,7 +16,9 @@ describe('operation support access helpers', () => {
       M5_PERMISSION_CODES.ARCHIVE_QUERY,
     ];
 
-    expect(getOperationSupportEntryPath(archiveCodes)).toBe('/operation-support/archive');
+    expect(getOperationSupportEntryPath(archiveCodes)).toBe(
+      '/operation-support/archive',
+    );
     expect(canViewArchivePage(archiveCodes)).toBe(true);
 
     const reagentCapabilities = getReagentLedgerCapabilities(archiveCodes);
@@ -49,14 +51,16 @@ describe('operation support access helpers', () => {
       '/operation-support/reagents',
     );
 
-    const reagentCapabilities = getReagentLedgerCapabilities(reagentDeviceCodes);
+    const reagentCapabilities =
+      getReagentLedgerCapabilities(reagentDeviceCodes);
     expect(reagentCapabilities.canViewPage).toBe(true);
     expect(reagentCapabilities.canCreateReagent).toBe(true);
     expect(reagentCapabilities.canUpdateReagent).toBe(true);
     expect(reagentCapabilities.canManageStocks).toBe(true);
     expect(reagentCapabilities.canQueryWarnings).toBe(true);
 
-    const equipmentCapabilities = getEquipmentLedgerCapabilities(reagentDeviceCodes);
+    const equipmentCapabilities =
+      getEquipmentLedgerCapabilities(reagentDeviceCodes);
     expect(equipmentCapabilities.canViewPage).toBe(true);
     expect(equipmentCapabilities.canCreateEquipment).toBe(true);
     expect(equipmentCapabilities.canUpdateEquipment).toBe(true);
@@ -69,15 +73,19 @@ describe('operation support access helpers', () => {
       getOperationSupportEntryPath([M5_PERMISSION_CODES.REAGENT_WARNING_QUERY]),
     ).toBe('/operation-support/reagents');
     expect(
-      getReagentLedgerCapabilities([M5_PERMISSION_CODES.REAGENT_WARNING_QUERY]).canViewPage,
+      getReagentLedgerCapabilities([M5_PERMISSION_CODES.REAGENT_WARNING_QUERY])
+        .canViewPage,
     ).toBe(true);
 
     expect(
-      getOperationSupportEntryPath([M5_PERMISSION_CODES.EQUIPMENT_WARNING_QUERY]),
+      getOperationSupportEntryPath([
+        M5_PERMISSION_CODES.EQUIPMENT_WARNING_QUERY,
+      ]),
     ).toBe('/operation-support/equipment');
     expect(
-      getEquipmentLedgerCapabilities([M5_PERMISSION_CODES.EQUIPMENT_WARNING_QUERY])
-        .canViewPage,
+      getEquipmentLedgerCapabilities([
+        M5_PERMISSION_CODES.EQUIPMENT_WARNING_QUERY,
+      ]).canViewPage,
     ).toBe(true);
   });
 });

@@ -28,7 +28,8 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
     redirect: '/m6/entry',
     children: [
       {
-        component: () => import('#/modules/m6-management/views/M6EntryView.vue'),
+        component: () =>
+          import('#/modules/m6-management/views/M6EntryView.vue'),
         meta: {
           authority: M6_AUTHORITIES,
           hideInBreadcrumb: true,

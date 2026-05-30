@@ -22,7 +22,9 @@ export function assignTechnicalOperatorForm(
   Object.assign(target, createTechnicalOperatorDefaults(userInfo));
 }
 
-export function normalizeTechnicalOperatorPayload(form: TechnicalOperatorFormValue) {
+export function normalizeTechnicalOperatorPayload(
+  form: TechnicalOperatorFormValue,
+) {
   return {
     operatorName: form.operatorName.trim(),
     operatorUserId: form.operatorUserId.trim() || null,

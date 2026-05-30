@@ -16,7 +16,8 @@ function readCssVar(name: string, fallback: string) {
     return fallback;
   }
 
-  const value = window.getComputedStyle(document.documentElement)
+  const value = window
+    .getComputedStyle(document.documentElement)
     .getPropertyValue(name)
     .trim();
 
@@ -27,10 +28,16 @@ export function getDashboardChartTheme(isDark: boolean): DashboardChartTheme {
   return {
     danger: readCssVar('--el-color-danger', isDark ? '#f87171' : '#dc2626'),
     info: readCssVar('--el-color-info', isDark ? '#60a5fa' : '#2563eb'),
-    neutral: readCssVar('--el-text-color-secondary', isDark ? '#94a3b8' : '#64748b'),
+    neutral: readCssVar(
+      '--el-text-color-secondary',
+      isDark ? '#94a3b8' : '#64748b',
+    ),
     primary: readCssVar('--el-color-primary', isDark ? '#60a5fa' : '#2563eb'),
     success: readCssVar('--el-color-success', isDark ? '#34d399' : '#059669'),
-    textPrimary: readCssVar('--el-text-color-primary', isDark ? '#f8fafc' : '#0f172a'),
+    textPrimary: readCssVar(
+      '--el-text-color-primary',
+      isDark ? '#f8fafc' : '#0f172a',
+    ),
     textSecondary: readCssVar(
       '--el-text-color-regular',
       isDark ? '#cbd5e1' : '#334155',

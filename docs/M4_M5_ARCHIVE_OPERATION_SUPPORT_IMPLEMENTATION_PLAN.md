@@ -181,42 +181,42 @@ apps/web-ele/src/modules/operation-support/
 
 统一通过 `requestClient` 使用 `/v1` 路径：
 
-| 能力 | 方法 | 路径 |
-| --- | --- | --- |
-| 查询归档柜 | `GET` | `/v1/archive-cabinets` |
-| 创建归档柜 | `POST` | `/v1/archive-cabinets` |
-| 更新归档柜 | `PATCH` | `/v1/archive-cabinets/{id}` |
-| 查询可用库位 | `GET` | `/v1/archive-positions/available` |
-| 申请单归档 | `POST` | `/v1/archive/application-forms` |
-| 包埋盒归档 | `POST` | `/v1/archive/embedding-boxes` |
-| 玻片归档 | `POST` | `/v1/archive/slides` |
-| 查询归档记录 | `GET` | `/v1/archive-records/search` |
-| 查询待归还借阅 | `GET` | `/v1/material-loans/pending` |
-| 创建材料借阅 | `POST` | `/v1/material-loans` |
-| 归还材料 | `POST` | `/v1/material-loans/{id}/return` |
+| 能力           | 方法    | 路径                              |
+| -------------- | ------- | --------------------------------- |
+| 查询归档柜     | `GET`   | `/v1/archive-cabinets`            |
+| 创建归档柜     | `POST`  | `/v1/archive-cabinets`            |
+| 更新归档柜     | `PATCH` | `/v1/archive-cabinets/{id}`       |
+| 查询可用库位   | `GET`   | `/v1/archive-positions/available` |
+| 申请单归档     | `POST`  | `/v1/archive/application-forms`   |
+| 包埋盒归档     | `POST`  | `/v1/archive/embedding-boxes`     |
+| 玻片归档       | `POST`  | `/v1/archive/slides`              |
+| 查询归档记录   | `GET`   | `/v1/archive-records/search`      |
+| 查询待归还借阅 | `GET`   | `/v1/material-loans/pending`      |
+| 创建材料借阅   | `POST`  | `/v1/material-loans`              |
+| 归还材料       | `POST`  | `/v1/material-loans/{id}/return`  |
 
 ### 5.4 试剂接口
 
-| 能力 | 方法 | 路径 |
-| --- | --- | --- |
-| 查询试剂 | `GET` | `/v1/reagents` |
-| 创建试剂 | `POST` | `/v1/reagents` |
-| 更新试剂 | `PATCH` | `/v1/reagents/{id}` |
-| 查询库存批次 | `GET` | `/v1/reagent-stocks` |
-| 创建库存批次 | `POST` | `/v1/reagent-stocks` |
-| 更新库存批次 | `PATCH` | `/v1/reagent-stocks/{id}` |
-| 查询库存预警 | `GET` | `/v1/reagent-stocks/warnings` |
+| 能力         | 方法    | 路径                          |
+| ------------ | ------- | ----------------------------- |
+| 查询试剂     | `GET`   | `/v1/reagents`                |
+| 创建试剂     | `POST`  | `/v1/reagents`                |
+| 更新试剂     | `PATCH` | `/v1/reagents/{id}`           |
+| 查询库存批次 | `GET`   | `/v1/reagent-stocks`          |
+| 创建库存批次 | `POST`  | `/v1/reagent-stocks`          |
+| 更新库存批次 | `PATCH` | `/v1/reagent-stocks/{id}`     |
+| 查询库存预警 | `GET`   | `/v1/reagent-stocks/warnings` |
 
 ### 5.5 设备接口
 
-| 能力 | 方法 | 路径 |
-| --- | --- | --- |
-| 查询设备档案 | `GET` | `/v1/equipment-records` |
-| 创建设备档案 | `POST` | `/v1/equipment-records` |
-| 更新设备档案 | `PATCH` | `/v1/equipment-records/{id}` |
-| 查询维修保养记录 | `GET` | `/v1/equipment-records/{id}/maintenance-logs` |
-| 新增维修保养记录 | `POST` | `/v1/equipment-records/{id}/maintenance-logs` |
-| 查询设备预警 | `GET` | `/v1/equipment-records/warnings` |
+| 能力             | 方法    | 路径                                          |
+| ---------------- | ------- | --------------------------------------------- |
+| 查询设备档案     | `GET`   | `/v1/equipment-records`                       |
+| 创建设备档案     | `POST`  | `/v1/equipment-records`                       |
+| 更新设备档案     | `PATCH` | `/v1/equipment-records/{id}`                  |
+| 查询维修保养记录 | `GET`   | `/v1/equipment-records/{id}/maintenance-logs` |
+| 新增维修保养记录 | `POST`  | `/v1/equipment-records/{id}/maintenance-logs` |
+| 查询设备预警     | `GET`   | `/v1/equipment-records/warnings`              |
 
 ## 6. 实施任务拆分
 

@@ -98,13 +98,13 @@ export function mapNotificationRecordDto(
 export function mapNotificationListPage(
   value:
     | null
+    | undefined
     | {
         items?: NotificationRecordDto[];
         page?: number;
         size?: number;
         total?: number;
-      }
-    | undefined,
+      },
   fallbackPage: number,
   fallbackSize: number,
 ): NotificationListPage {

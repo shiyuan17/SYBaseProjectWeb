@@ -89,11 +89,9 @@ describe('notification-center-service', () => {
   });
 
   it('normalizes unread count and preferences defaults', async () => {
-    requestClientMock.get
-      .mockResolvedValueOnce({})
-      .mockResolvedValueOnce({
-        systemMessage: false,
-      });
+    requestClientMock.get.mockResolvedValueOnce({}).mockResolvedValueOnce({
+      systemMessage: false,
+    });
 
     await expect(getMyNotificationUnreadCount()).resolves.toBe(0);
     await expect(getMyNotificationPreferences()).resolves.toEqual({

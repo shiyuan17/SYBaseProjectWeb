@@ -22,7 +22,11 @@ import {
 
 import { completeSlideStaining } from '../api/technical-workflow-service';
 import { getWorkflowPageErrorMessage } from '../utils/error';
-import { formatCaseStatus, formatNullable, formatObjectType } from '../utils/format';
+import {
+  formatCaseStatus,
+  formatNullable,
+  formatObjectType,
+} from '../utils/format';
 import {
   assignTechnicalOperatorForm,
   createTechnicalOperatorDefaults,
@@ -73,7 +77,7 @@ function resetDialogState() {
   assignTechnicalOperatorForm(operatorForm, userStore.userInfo ?? undefined);
   completeForm.qualityIssue = '';
   completeForm.slideId =
-    props.task?.objectType === 'SLIDE' ? props.task.objectId ?? '' : '';
+    props.task?.objectType === 'SLIDE' ? (props.task.objectId ?? '') : '';
   completeForm.stainingType = 'HE';
   completeForm.taskId = props.task?.id ?? '';
 }
@@ -107,7 +111,9 @@ async function submitStaining() {
       stainingType: completeForm.stainingType.trim(),
       taskId: completeForm.taskId.trim(),
     });
-    ElMessage.success(`染色完成，病例状态已更新为 ${formatCaseStatus(result.caseStatus)}`);
+    ElMessage.success(
+      `染色完成，病例状态已更新为 ${formatCaseStatus(result.caseStatus)}`,
+    );
     emit('submitted');
     dialogVisible.value = false;
   } catch (error) {
@@ -167,10 +173,17 @@ watch(
         />
         <div class="grid gap-4 md:grid-cols-2">
           <ElFormItem label="玻片编号" required>
-            <ElInput v-model="completeForm.slideId" placeholder="由当前任务带入" readonly />
+            <ElInput
+              v-model="completeForm.slideId"
+              placeholder="由当前任务带入"
+              readonly
+            />
           </ElFormItem>
           <ElFormItem label="染色类型" required>
-            <ElInput v-model="completeForm.stainingType" placeholder="例如：HE、IHC" />
+            <ElInput
+              v-model="completeForm.stainingType"
+              placeholder="例如：HE、IHC"
+            />
           </ElFormItem>
         </div>
         <ElFormItem label="质量问题">

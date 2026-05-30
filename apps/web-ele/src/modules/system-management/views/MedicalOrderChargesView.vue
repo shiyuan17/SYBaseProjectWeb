@@ -39,10 +39,7 @@ import {
 import SystemLoadError from '../components/SystemLoadError.vue';
 import SystemSectionCard from '../components/SystemSectionCard.vue';
 import SystemStatusTag from '../components/SystemStatusTag.vue';
-import {
-  M1_PERMISSION_CODES,
-  YES_NO_OPTIONS,
-} from '../constants';
+import { M1_PERMISSION_CODES, YES_NO_OPTIONS } from '../constants';
 import { getSystemPageErrorMessage } from '../utils/error';
 import { buildChargeItemSubmitPayload } from '../utils/submit-payloads';
 import { flattenTree } from '../utils/tree';
@@ -270,7 +267,10 @@ onMounted(loadInitialData);
       @retry="loadInitialData"
     />
     <div class="flex flex-col gap-4">
-      <SystemSectionCard title="筛选条件" description="按关键字、启停状态和医嘱条目筛选。">
+      <SystemSectionCard
+        title="筛选条件"
+        description="按关键字、启停状态和医嘱条目筛选。"
+      >
         <ElForm inline label-width="72px">
           <ElFormItem label="关键字">
             <ElInput
@@ -282,7 +282,12 @@ onMounted(loadInitialData);
             />
           </ElFormItem>
           <ElFormItem label="状态">
-            <ElSelect v-model="filters.enabled" clearable placeholder="全部" style="width: 160px">
+            <ElSelect
+              v-model="filters.enabled"
+              clearable
+              placeholder="全部"
+              style="width: 160px"
+            >
               <ElOption
                 v-for="option in YES_NO_OPTIONS"
                 :key="String(option.value)"
@@ -314,7 +319,10 @@ onMounted(loadInitialData);
         </ElForm>
       </SystemSectionCard>
 
-      <SystemSectionCard title="收费项目列表" description="展示系统自动生成的收费编码，维护名称、规格、单位和价格。">
+      <SystemSectionCard
+        title="收费项目列表"
+        description="展示系统自动生成的收费编码，维护名称、规格、单位和价格。"
+      >
         <template #extra>
           <input
             ref="importInputRef"
@@ -323,8 +331,12 @@ onMounted(loadInitialData);
             type="file"
             @change="handleImport"
           />
-          <ElButton :loading="importLoading" @click="triggerImport">导入</ElButton>
-          <ElButton :loading="exportLoading" @click="handleExport">导出</ElButton>
+          <ElButton :loading="importLoading" @click="triggerImport">
+            导入
+          </ElButton>
+          <ElButton :loading="exportLoading" @click="handleExport">
+            导出
+          </ElButton>
           <ElButton
             v-access:code="M1_PERMISSION_CODES.ORDER_CHARGE_CREATE"
             type="primary"
@@ -335,8 +347,16 @@ onMounted(loadInitialData);
         </template>
 
         <ElTable v-loading="loading" :data="items" border>
-          <ElTableColumn label="收费编码" min-width="140" prop="chargeItemCode" />
-          <ElTableColumn label="收费名称" min-width="180" prop="chargeItemName" />
+          <ElTableColumn
+            label="收费编码"
+            min-width="140"
+            prop="chargeItemCode"
+          />
+          <ElTableColumn
+            label="收费名称"
+            min-width="180"
+            prop="chargeItemName"
+          />
           <ElTableColumn label="医嘱条目" min-width="180">
             <template #default="scope">
               {{ scope?.row?.orderItemName ?? '-' }}

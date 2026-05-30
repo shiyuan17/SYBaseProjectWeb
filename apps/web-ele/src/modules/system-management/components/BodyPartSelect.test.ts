@@ -2,9 +2,8 @@ import { createApp, defineComponent, h, nextTick, onMounted, ref } from 'vue';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import BodyPartSelect from './BodyPartSelect.vue';
-
 import { listBodyParts } from '../api/system-management-service';
+import BodyPartSelect from './BodyPartSelect.vue';
 
 vi.mock('../api/system-management-service', () => ({
   listBodyParts: vi.fn(),
@@ -42,7 +41,9 @@ vi.mock('element-plus', () => {
       return () =>
         h('div', [
           (() => {
-            const blurHandler = attrs.onBlur as ((event: FocusEvent) => void) | undefined;
+            const blurHandler = attrs.onBlur as
+              | ((event: FocusEvent) => void)
+              | undefined;
             const updateModelValue = attrs['onUpdate:modelValue'] as
               | ((value: string) => void)
               | undefined;
@@ -66,7 +67,9 @@ vi.mock('element-plus', () => {
                 'data-option-value': item.value,
                 type: 'button',
                 onClick: () => {
-                  const selectHandler = attrs.onSelect as ((option: any) => void) | undefined;
+                  const selectHandler = attrs.onSelect as
+                    | ((option: any) => void)
+                    | undefined;
                   selectHandler?.(item);
                 },
               },

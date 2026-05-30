@@ -1,7 +1,7 @@
 import type {
   DiagnosticWorkbenchView,
-  PendingMedicalOrderPage,
   PendingDiagnosticTaskPage,
+  PendingMedicalOrderPage,
   ReportTrackingView as ReportTrackingData,
 } from '../types/doctor-workflow';
 
@@ -28,34 +28,25 @@ const {
   mockUserStore,
   startDiagnosticTaskMock,
 } = vi.hoisted(() => ({
-  acceptMedicalOrderMock: vi.fn<
-    (orderId: string, data: unknown) => Promise<unknown>
-  >(),
-  acceptDiagnosticTaskMock: vi.fn<
-    (taskId: string, data: unknown) => Promise<unknown>
-  >(),
-  assignDiagnosticTaskMock: vi.fn<
-    (taskId: string, data: unknown) => Promise<unknown>
-  >(),
-  cancelMedicalOrderMock: vi.fn<
-    (orderId: string, data: unknown) => Promise<unknown>
-  >(),
-  completeMedicalOrderMock: vi.fn<
-    (orderId: string, data: unknown) => Promise<unknown>
-  >(),
+  acceptMedicalOrderMock:
+    vi.fn<(orderId: string, data: unknown) => Promise<unknown>>(),
+  acceptDiagnosticTaskMock:
+    vi.fn<(taskId: string, data: unknown) => Promise<unknown>>(),
+  assignDiagnosticTaskMock:
+    vi.fn<(taskId: string, data: unknown) => Promise<unknown>>(),
+  cancelMedicalOrderMock:
+    vi.fn<(orderId: string, data: unknown) => Promise<unknown>>(),
+  completeMedicalOrderMock:
+    vi.fn<(orderId: string, data: unknown) => Promise<unknown>>(),
   createMedicalOrderMock: vi.fn<(data: unknown) => Promise<unknown>>(),
-  getDiagnosticWorkbenchMock: vi.fn<
-    (caseId: string) => Promise<DiagnosticWorkbenchView>
-  >(),
-  getReportTrackingMock: vi.fn<
-    (caseId: string) => Promise<ReportTrackingData>
-  >(),
-  listPendingMedicalOrdersMock: vi.fn<
-    (query: unknown) => Promise<PendingMedicalOrderPage>
-  >(),
-  listPendingDiagnosticTasksMock: vi.fn<
-    (query: unknown) => Promise<PendingDiagnosticTaskPage>
-  >(),
+  getDiagnosticWorkbenchMock:
+    vi.fn<(caseId: string) => Promise<DiagnosticWorkbenchView>>(),
+  getReportTrackingMock:
+    vi.fn<(caseId: string) => Promise<ReportTrackingData>>(),
+  listPendingMedicalOrdersMock:
+    vi.fn<(query: unknown) => Promise<PendingMedicalOrderPage>>(),
+  listPendingDiagnosticTasksMock:
+    vi.fn<(query: unknown) => Promise<PendingDiagnosticTaskPage>>(),
   mockAccessStore: {
     accessCodes: [] as string[],
   },
@@ -72,9 +63,8 @@ const {
       userId: 'USER-CURRENT',
     },
   },
-  startDiagnosticTaskMock: vi.fn<
-    (taskId: string, data: unknown) => Promise<unknown>
-  >(),
+  startDiagnosticTaskMock:
+    vi.fn<(taskId: string, data: unknown) => Promise<unknown>>(),
 }));
 
 vi.mock('vue-router', () => ({
@@ -336,7 +326,9 @@ function resetTestState() {
     size: 20,
     total: 0,
   });
-  listPendingMedicalOrdersMock.mockResolvedValue(pendingMedicalOrderPageFixture);
+  listPendingMedicalOrdersMock.mockResolvedValue(
+    pendingMedicalOrderPageFixture,
+  );
   getDiagnosticWorkbenchMock.mockResolvedValue(workbenchFixture);
   getReportTrackingMock.mockResolvedValue(trackingFixture);
   startDiagnosticTaskMock.mockResolvedValue({});
@@ -353,7 +345,7 @@ async function flushAsyncWork() {
 
 async function mountView(component: object) {
   const root = document.createElement('div');
-  document.body.appendChild(root);
+  document.body.append(root);
 
   const app = createApp({
     render() {
@@ -371,7 +363,7 @@ async function mountView(component: object) {
 
   return {
     clickButton: (text: string, index = 0) => {
-      const buttons = Array.from(root.querySelectorAll('button')).filter(
+      const buttons = [...root.querySelectorAll('button')].filter(
         (item) => item.textContent?.trim() === text,
       );
       const button = buttons[index];
@@ -379,11 +371,11 @@ async function mountView(component: object) {
       button?.click();
     },
     buttonTexts: () =>
-      Array.from(root.querySelectorAll('button')).map(
+      [...root.querySelectorAll('button')].map(
         (button) => button.textContent?.trim() ?? '',
       ),
     isButtonDisabled: (text: string, index = 0) => {
-      const buttons = Array.from(root.querySelectorAll('button')).filter(
+      const buttons = [...root.querySelectorAll('button')].filter(
         (item) => item.textContent?.trim() === text,
       );
       const button = buttons[index];
@@ -660,7 +652,9 @@ describe('doctor workflow view visibility', () => {
 
     expect(wrapper.isButtonDisabled('接单')).toBe(true);
     expect(wrapper.isButtonDisabled('开始诊断')).toBe(true);
-    expect(wrapper.text()).toContain('Other Diagnosis Doctor / Other Primary Doctor');
+    expect(wrapper.text()).toContain(
+      'Other Diagnosis Doctor / Other Primary Doctor',
+    );
 
     wrapper.clickButton('接单');
     wrapper.clickButton('开始诊断');

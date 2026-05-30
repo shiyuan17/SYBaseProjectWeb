@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import type { FrozenSession, FrozenSessionDetail } from '#/modules/frozen-workflow/types/frozen-workflow';
+import type {
+  FrozenSession,
+  FrozenSessionDetail,
+} from '#/modules/frozen-workflow/types/frozen-workflow';
 
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -79,7 +82,7 @@ const currentActionLabel = computed(() => {
   return '';
 });
 const canOperate = computed(() =>
-  ['RECEIVE', 'GROSSING', 'SLICING'].includes(
+  ['GROSSING', 'RECEIVE', 'SLICING'].includes(
     selectedDetail.value?.currentTaskType ?? '',
   ),
 );
@@ -110,12 +113,15 @@ async function loadWorkbench() {
     reminderSummary.value = result.reminders;
     if (!selectedSessionId.value) {
       selectedSessionId.value =
-        (typeof route.query.sessionId === 'string' ? route.query.sessionId : '')
-        || result.sessions[0]?.id
-        || '';
+        (typeof route.query.sessionId === 'string'
+          ? route.query.sessionId
+          : '') ||
+        result.sessions[0]?.id ||
+        '';
     }
   } catch (error) {
-    pageError.value = error instanceof Error ? error.message : '冰冻工作台加载失败';
+    pageError.value =
+      error instanceof Error ? error.message : '冰冻工作台加载失败';
   } finally {
     loading.value = false;
   }
@@ -130,7 +136,8 @@ async function loadDetail(sessionId: string) {
     selectedDetail.value = await getFrozenSessionDetail(sessionId);
   } catch (error) {
     selectedDetail.value = null;
-    pageError.value = error instanceof Error ? error.message : '冰冻会话加载失败';
+    pageError.value =
+      error instanceof Error ? error.message : '冰冻会话加载失败';
   }
 }
 
@@ -144,12 +151,23 @@ async function runCurrentAction() {
   actionLoading.value = true;
   try {
     const payload = buildOperatorPayload();
-    if (selectedDetail.value.currentTaskType === 'RECEIVE') {
-      await completeFrozenReceive(selectedDetail.value.id, payload);
-    } else if (selectedDetail.value.currentTaskType === 'GROSSING') {
-      await completeFrozenGrossing(selectedDetail.value.id, payload);
-    } else if (selectedDetail.value.currentTaskType === 'SLICING') {
-      await completeFrozenSlicing(selectedDetail.value.id, payload);
+    switch (selectedDetail.value.currentTaskType) {
+      case 'GROSSING': {
+        await completeFrozenGrossing(selectedDetail.value.id, payload);
+
+        break;
+      }
+      case 'RECEIVE': {
+        await completeFrozenReceive(selectedDetail.value.id, payload);
+
+        break;
+      }
+      case 'SLICING': {
+        await completeFrozenSlicing(selectedDetail.value.id, payload);
+
+        break;
+      }
+      // No default
     }
     ElMessage.success(`${currentActionLabel.value}成功`);
     await loadWorkbench();
@@ -258,11 +276,23 @@ void loadWorkbench();
               </template>
             </ElTableColumn>
             <ElTableColumn label="患者" min-width="100" prop="patientName" />
-            <ElTableColumn label="当前节点" min-width="120" prop="currentTaskType" />
+            <ElTableColumn
+              label="当前节点"
+              min-width="120"
+              prop="currentTaskType"
+            />
             <ElTableColumn label="下一动作" min-width="160" prop="nextAction" />
             <ElTableColumn label="提醒等级" min-width="100">
               <template #default="{ row }">
-                <ElTag :type="row.timeoutLevel === 'RED' ? 'danger' : row.timeoutLevel === 'ORANGE' ? 'warning' : 'info'">
+                <ElTag
+                  :type="
+                    row.timeoutLevel === 'RED'
+                      ? 'danger'
+                      : row.timeoutLevel === 'ORANGE'
+                        ? 'warning'
+                        : 'info'
+                  "
+                >
                   {{ row.timeoutLevel }}
                 </ElTag>
               </template>
@@ -342,7 +372,9 @@ void loadWorkbench();
                   class="rounded-lg border border-border bg-background p-3"
                 >
                   <div class="flex items-center justify-between gap-3">
-                    <div class="font-medium text-foreground">{{ event.eventContent }}</div>
+                    <div class="font-medium text-foreground">
+                      {{ event.eventContent }}
+                    </div>
                     <ElTag type="info">{{ event.nodeCode }}</ElTag>
                   </div>
                   <div class="mt-1 text-sm text-muted-foreground">

@@ -27,9 +27,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
     children: [
       {
         component: () =>
-          import(
-            '#/modules/operation-support/views/OperationSupportEntryView.vue'
-          ),
+          import('#/modules/operation-support/views/OperationSupportEntryView.vue'),
         meta: {
           authority: OPERATION_SUPPORT_AUTHORITIES,
           hideInBreadcrumb: true,

@@ -28,6 +28,9 @@
     "dev": "turbo-run dev",
     "dev:ele": "pnpm -F @vben/web-ele run dev",
     "lint": "vsh lint",
+    "linear:pull": "node ./scripts/linear-sync.mjs pull",
+    "linear:register": "node ./scripts/linear-sync.mjs register",
+    "linear:sync": "node ./scripts/linear-sync.mjs sync",
     "postinstall": "pnpm -r run stub --if-present",
     "preinstall": "npx only-allow pnpm",
     "preview": "turbo-run preview",
@@ -38,8 +41,6 @@
     "test:unit": "vitest run --dom"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "catalog:",
-    "@vitest/ui": "catalog:",
     "@changesets/changelog-github": "catalog:",
     "@changesets/cli": "catalog:",
     "@tsdown/css": "catalog:",
@@ -56,6 +57,8 @@
     "@vben/vsh": "workspace:*",
     "@vitejs/plugin-vue": "catalog:",
     "@vitejs/plugin-vue-jsx": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "@vitest/ui": "catalog:",
     "cross-env": "catalog:",
     "cspell": "catalog:",
     "happy-dom": "catalog:",

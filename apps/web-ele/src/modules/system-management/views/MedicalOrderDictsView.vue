@@ -67,7 +67,9 @@ const selectedCategoryId = ref('');
 const categoryDialogMode = ref<'create' | 'edit'>('create');
 const itemDialogMode = ref<'create' | 'edit'>('create');
 
-const categoryForm = reactive<CreateMedicalOrderCategoryRequest & { id?: string }>({
+const categoryForm = reactive<
+  CreateMedicalOrderCategoryRequest & { id?: string }
+>({
   categoryCode: '',
   categoryName: '',
   enabled: true,
@@ -87,7 +89,11 @@ const itemForm = reactive<CreateMedicalOrderItemRequest & { id?: string }>({
 });
 
 const filteredTree = computed(() =>
-  filterTreeByKeyword(treeData.value, (node) => node.categoryName, treeKeyword.value),
+  filterTreeByKeyword(
+    treeData.value,
+    (node) => node.categoryName,
+    treeKeyword.value,
+  ),
 );
 const expandedKeys = computed(() => getTreeExpandedKeys(filteredTree.value));
 const selectedCategory = computed(() =>
@@ -214,7 +220,9 @@ async function submitItem() {
       {
         ...itemForm,
         categoryId:
-          itemDialogMode.value === 'create' ? selectedCategoryId.value : itemForm.categoryId,
+          itemDialogMode.value === 'create'
+            ? selectedCategoryId.value
+            : itemForm.categoryId,
       },
       itemDialogMode.value,
     );
@@ -222,7 +230,10 @@ async function submitItem() {
       await createMedicalOrderItem(payload);
       ElMessage.success('医嘱条目已创建');
     } else if (itemForm.id) {
-      await updateMedicalOrderItem(itemForm.id, payload as UpdateMedicalOrderItemRequest);
+      await updateMedicalOrderItem(
+        itemForm.id,
+        payload as UpdateMedicalOrderItemRequest,
+      );
       ElMessage.success('医嘱条目已更新');
     }
     itemDialogVisible.value = false;
@@ -265,7 +276,10 @@ onMounted(loadData);
       @retry="loadData"
     />
     <div class="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-      <SystemSectionCard title="分类树" description="新增、编辑和定位医嘱字典分类。">
+      <SystemSectionCard
+        title="分类树"
+        description="新增、编辑和定位医嘱字典分类。"
+      >
         <template #extra>
           <ElButton
             v-access:code="M1_PERMISSION_CODES.ORDER_DICT_CREATE"
@@ -290,7 +304,10 @@ onMounted(loadData);
       </SystemSectionCard>
 
       <div class="flex flex-col gap-4">
-        <SystemSectionCard title="分类详情" description="维护分类基础信息与子分类。">
+        <SystemSectionCard
+          title="分类详情"
+          description="维护分类基础信息与子分类。"
+        >
           <template #extra>
             <ElButton
               v-if="selectedCategory"
@@ -334,7 +351,10 @@ onMounted(loadData);
           <ElEmpty v-else description="请先选择左侧分类" />
         </SystemSectionCard>
 
-        <SystemSectionCard title="医嘱条目" description="当前分类下的医嘱条目维护。">
+        <SystemSectionCard
+          title="医嘱条目"
+          description="当前分类下的医嘱条目维护。"
+        >
           <template #extra>
             <ElButton
               v-access:code="M1_PERMISSION_CODES.ORDER_DICT_CREATE"
@@ -347,8 +367,16 @@ onMounted(loadData);
           </template>
 
           <ElTable :data="selectedCategory?.items ?? []" border>
-            <ElTableColumn label="条目编码" min-width="140" prop="orderItemCode" />
-            <ElTableColumn label="条目名称" min-width="180" prop="orderItemName" />
+            <ElTableColumn
+              label="条目编码"
+              min-width="140"
+              prop="orderItemCode"
+            />
+            <ElTableColumn
+              label="条目名称"
+              min-width="180"
+              prop="orderItemName"
+            />
             <ElTableColumn label="医嘱类型" min-width="120">
               <template #default="scope">
                 {{ formatNullable(scope?.row?.orderType) }}
@@ -361,7 +389,10 @@ onMounted(loadData);
             </ElTableColumn>
             <ElTableColumn label="状态" width="90">
               <template #default="scope">
-                <SystemStatusTag v-if="scope?.row" :enabled="scope.row.enabled" />
+                <SystemStatusTag
+                  v-if="scope?.row"
+                  :enabled="scope.row.enabled"
+                />
               </template>
             </ElTableColumn>
             <ElTableColumn fixed="right" label="操作" min-width="180">
@@ -420,7 +451,11 @@ onMounted(loadData);
       </ElForm>
       <template #footer>
         <ElButton @click="categoryDialogVisible = false">取消</ElButton>
-        <ElButton :loading="dialogLoading" type="primary" @click="submitCategory">
+        <ElButton
+          :loading="dialogLoading"
+          type="primary"
+          @click="submitCategory"
+        >
           保存
         </ElButton>
       </template>

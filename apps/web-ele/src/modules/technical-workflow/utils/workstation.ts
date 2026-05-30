@@ -21,7 +21,9 @@ function normalizeText(value?: null | string) {
 }
 
 function dedupeStrings(values: Array<null | string | undefined>) {
-  return [...new Set(values.map((item) => normalizeText(item)).filter(Boolean))];
+  return [
+    ...new Set(values.map((item) => normalizeText(item)).filter(Boolean)),
+  ];
 }
 
 function createAlert(
@@ -110,13 +112,16 @@ export function buildWorkstationCaseContext(
 ): WorkstationCaseContext {
   const alerts: TechnicalWorkflowAlert[] = [];
   const activeTasks = tracking.technicalTasks.filter(
-    (task) => task.taskStatus === 'IN_PROGRESS' || task.taskStatus === 'PENDING',
+    (task) =>
+      task.taskStatus === 'IN_PROGRESS' || task.taskStatus === 'PENDING',
   );
-  const pendingReworks = tracking.reworks.filter((item) => item.status !== 'COMPLETED');
+  const pendingReworks = tracking.reworks.filter(
+    (item) => item.status !== 'COMPLETED',
+  );
   const unqualifiedQc = tracking.qcEvaluations.find(
     (item) =>
-      item.evaluationResult === 'REWORK_REQUIRED'
-      || item.evaluationResult === 'UNQUALIFIED',
+      item.evaluationResult === 'REWORK_REQUIRED' ||
+      item.evaluationResult === 'UNQUALIFIED',
   );
 
   const rework = pendingReworks[0];
@@ -169,7 +174,8 @@ export function buildWorkstationCaseContext(
 
   let nextFlowLabel = '复核/闭环';
   if (downstreamTaskType) {
-    nextFlowLabel = TASK_TYPE_TITLE_MAP[downstreamTaskType] ?? downstreamTaskType;
+    nextFlowLabel =
+      TASK_TYPE_TITLE_MAP[downstreamTaskType] ?? downstreamTaskType;
   } else if (currentTaskType === 'STAINING') {
     nextFlowLabel = '后续诊断流程';
   } else if (pendingReworks.length > 0) {
@@ -268,7 +274,9 @@ export function buildWorkstationCaseContext(
   };
 }
 
-function resolveSummaryChain(taskType: TechnicalWorkflowTaskType): TechnicalWorkflowChainType {
+function resolveSummaryChain(
+  taskType: TechnicalWorkflowTaskType,
+): TechnicalWorkflowChainType {
   if (taskType === 'FROZEN') {
     return 'FROZEN';
   }
@@ -295,9 +303,14 @@ export function buildWorkstationSummaryBuckets(
       const normalizedTaskType = taskType as TechnicalWorkflowTaskType;
       return {
         chain: resolveSummaryChain(normalizedTaskType),
-        inProgress: bucketItems.filter((item) => item.taskStatus === 'IN_PROGRESS').length,
-        path: TASK_TYPE_ROUTE_MAP[normalizedTaskType] ?? '/technical-workflow/tasks',
-        pending: bucketItems.filter((item) => item.taskStatus === 'PENDING').length,
+        inProgress: bucketItems.filter(
+          (item) => item.taskStatus === 'IN_PROGRESS',
+        ).length,
+        path:
+          TASK_TYPE_ROUTE_MAP[normalizedTaskType] ??
+          '/technical-workflow/tasks',
+        pending: bucketItems.filter((item) => item.taskStatus === 'PENDING')
+          .length,
         taskType: normalizedTaskType,
         timedOut: bucketItems.filter((item) => item.timedOut).length,
         title: TASK_TYPE_TITLE_MAP[normalizedTaskType] ?? normalizedTaskType,

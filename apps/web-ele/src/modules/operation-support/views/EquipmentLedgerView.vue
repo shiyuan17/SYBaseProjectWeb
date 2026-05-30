@@ -208,7 +208,9 @@ function syncSelectedEquipment() {
   }
 
   selectedEquipment.value =
-    equipmentRecords.value.find((item) => item.id === selectedEquipment.value?.id) ?? null;
+    equipmentRecords.value.find(
+      (item) => item.id === selectedEquipment.value?.id,
+    ) ?? null;
 }
 
 async function loadEquipmentRecords() {
@@ -268,7 +270,7 @@ async function selectEquipment(row: EquipmentRecordView | null) {
 }
 
 function scrollToEquipmentDetail() {
-  document.getElementById('equipment-detail')?.scrollIntoView({
+  document.querySelector('#equipment-detail')?.scrollIntoView({
     behavior: 'smooth',
     block: 'start',
   });
@@ -499,15 +501,25 @@ void initializePage();
             highlight-current-row
             @current-change="selectEquipment"
           >
-            <ElTableColumn label="设备编码" min-width="140" prop="equipmentCode" />
-            <ElTableColumn label="设备名称" min-width="180" prop="equipmentName" />
+            <ElTableColumn
+              label="设备编码"
+              min-width="140"
+              prop="equipmentCode"
+            />
+            <ElTableColumn
+              label="设备名称"
+              min-width="180"
+              prop="equipmentName"
+            />
             <ElTableColumn label="类别" min-width="120">
               <template #default="{ row }">
                 {{ formatEquipmentCategory(row.equipmentCategory) }}
               </template>
             </ElTableColumn>
             <ElTableColumn label="型号" min-width="120">
-              <template #default="{ row }">{{ formatNullable(row.modelNo) }}</template>
+              <template #default="{ row }">
+                {{ formatNullable(row.modelNo) }}
+              </template>
             </ElTableColumn>
             <ElTableColumn label="状态" min-width="110">
               <template #default="{ row }">
@@ -528,7 +540,11 @@ void initializePage();
               width="100"
             >
               <template #default="{ row }">
-                <ElButton link type="primary" @click.stop="openEditEquipmentDialog(row)">
+                <ElButton
+                  link
+                  type="primary"
+                  @click.stop="openEditEquipmentDialog(row)"
+                >
                   编辑
                 </ElButton>
               </template>
@@ -595,7 +611,10 @@ void initializePage();
               </ElSelect>
             </ElFormItem>
             <ElFormItem label="维护状态">
-              <ElSelect v-model="logForm.maintenanceStatus" style="width: 140px">
+              <ElSelect
+                v-model="logForm.maintenanceStatus"
+                style="width: 140px"
+              >
                 <ElOption
                   v-for="option in MAINTENANCE_STATUS_OPTIONS"
                   :key="option.value"
@@ -622,7 +641,11 @@ void initializePage();
               <ElInput v-model="logForm.operatorName" style="width: 160px" />
             </ElFormItem>
             <ElFormItem>
-              <ElButton :loading="submitting" type="success" @click="submitMaintenanceLog">
+              <ElButton
+                :loading="submitting"
+                type="success"
+                @click="submitMaintenanceLog"
+              >
                 新增记录
               </ElButton>
             </ElFormItem>
@@ -653,7 +676,11 @@ void initializePage();
                 {{ formatMaintenanceStatus(row.maintenanceStatus) }}
               </template>
             </ElTableColumn>
-            <ElTableColumn label="执行时间" min-width="180" prop="performedAt" />
+            <ElTableColumn
+              label="执行时间"
+              min-width="180"
+              prop="performedAt"
+            />
             <ElTableColumn label="执行人" min-width="120">
               <template #default="{ row }">
                 {{ formatNullable(row.performedByName) }}
@@ -679,7 +706,9 @@ void initializePage();
         description="支持 DUE_SOON 与 OVERDUE 预警，并可跳转到对应设备详情。"
       >
         <template #extra>
-          <ElButton :loading="loading.warnings" @click="loadWarnings">刷新</ElButton>
+          <ElButton :loading="loading.warnings" @click="loadWarnings">
+            刷新
+          </ElButton>
         </template>
         <ElTable v-loading="loading.warnings" :data="warnings" border>
           <ElTableColumn label="预警" min-width="110">
@@ -689,8 +718,16 @@ void initializePage();
               </ElTag>
             </template>
           </ElTableColumn>
-          <ElTableColumn label="设备编码" min-width="140" prop="equipmentCode" />
-          <ElTableColumn label="设备名称" min-width="180" prop="equipmentName" />
+          <ElTableColumn
+            label="设备编码"
+            min-width="140"
+            prop="equipmentCode"
+          />
+          <ElTableColumn
+            label="设备名称"
+            min-width="180"
+            prop="equipmentName"
+          />
           <ElTableColumn label="状态" min-width="120">
             <template #default="{ row }">
               {{ formatEquipmentStatus(row.equipmentStatus) }}
@@ -708,7 +745,11 @@ void initializePage();
             width="110"
           >
             <template #default="{ row }">
-              <ElButton link type="primary" @click="navigateToEquipmentDetail(row)">
+              <ElButton
+                link
+                type="primary"
+                @click="navigateToEquipmentDetail(row)"
+              >
                 查看设备
               </ElButton>
             </template>
@@ -717,7 +758,11 @@ void initializePage();
       </OperationSectionCard>
     </div>
 
-    <ElDialog v-model="equipmentDialogVisible" title="设备档案维护" width="680px">
+    <ElDialog
+      v-model="equipmentDialogVisible"
+      title="设备档案维护"
+      width="680px"
+    >
       <ElForm label-width="120px">
         <ElFormItem label="设备编码" required>
           <ElInput
@@ -755,7 +800,10 @@ void initializePage();
           <ElInput v-model="equipmentForm.locationDescription" />
         </ElFormItem>
         <ElFormItem label="启用时间">
-          <ElInput v-model="equipmentForm.enabledAt" placeholder="YYYY-MM-DDTHH:mm:ss" />
+          <ElInput
+            v-model="equipmentForm.enabledAt"
+            placeholder="YYYY-MM-DDTHH:mm:ss"
+          />
         </ElFormItem>
         <ElFormItem label="下次保养">
           <ElInput

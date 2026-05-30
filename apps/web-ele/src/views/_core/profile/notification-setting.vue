@@ -1,11 +1,13 @@
 <script setup lang="ts">
+import type { NotificationPreferencesDto } from '#/modules/notification-center/types/notification-center';
+
 import { computed, onMounted } from 'vue';
 
 import { ProfileNotificationSetting } from '@vben/common-ui';
+
 import { ElMessage } from 'element-plus';
 
 import { useNotificationStore } from '#/modules/notification-center/store/useNotificationStore';
-import type { NotificationPreferencesDto } from '#/modules/notification-center/types/notification-center';
 import { getNotificationPageErrorMessage } from '#/modules/notification-center/utils/error';
 
 const notificationStore = useNotificationStore();

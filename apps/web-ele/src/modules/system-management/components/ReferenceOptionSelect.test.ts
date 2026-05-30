@@ -37,7 +37,9 @@ vi.mock('element-plus', () => {
       return () =>
         h('div', [
           (() => {
-            const blurHandler = attrs.onBlur as ((event: FocusEvent) => void) | undefined;
+            const blurHandler = attrs.onBlur as
+              | ((event: FocusEvent) => void)
+              | undefined;
             const updateModelValue = attrs['onUpdate:modelValue'] as
               | ((value: string) => void)
               | undefined;
@@ -61,7 +63,9 @@ vi.mock('element-plus', () => {
                 'data-option-value': item.value,
                 type: 'button',
                 onClick: () => {
-                  const selectHandler = attrs.onSelect as ((option: any) => void) | undefined;
+                  const selectHandler = attrs.onSelect as
+                    | ((option: any) => void)
+                    | undefined;
                   selectHandler?.(item);
                 },
               },
@@ -76,7 +80,8 @@ vi.mock('element-plus', () => {
     ElAutocomplete,
   };
 });
-const { default: ReferenceOptionSelect } = await import('./ReferenceOptionSelect.vue');
+const { default: ReferenceOptionSelect } =
+  await import('./ReferenceOptionSelect.vue');
 
 describe('ReferenceOptionSelect', () => {
   it('displays labels while emitting the selected standardized value', async () => {
@@ -99,7 +104,9 @@ describe('ReferenceOptionSelect', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(root.textContent).toContain('常规');
-    root.querySelector<HTMLButtonElement>('[data-option-value="ROUTINE"]')?.click();
+    root
+      .querySelector<HTMLButtonElement>('[data-option-value="ROUTINE"]')
+      ?.click();
 
     expect(updates.at(-1)).toBe('ROUTINE');
 

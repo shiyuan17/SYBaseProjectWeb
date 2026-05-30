@@ -4,19 +4,16 @@ import { createApp, defineComponent, h, nextTick } from 'vue';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const {
-  mockAccessStore,
-  mockListPendingTechnicalTasks,
-  mockRouter,
-} = vi.hoisted(() => ({
-  mockAccessStore: {
-    accessCodes: [] as string[],
-  },
-  mockListPendingTechnicalTasks: vi.fn(),
-  mockRouter: {
-    push: vi.fn(),
-  },
-}));
+const { mockAccessStore, mockListPendingTechnicalTasks, mockRouter } =
+  vi.hoisted(() => ({
+    mockAccessStore: {
+      accessCodes: [] as string[],
+    },
+    mockListPendingTechnicalTasks: vi.fn(),
+    mockRouter: {
+      push: vi.fn(),
+    },
+  }));
 
 vi.mock('vue-router', () => ({
   useRouter: () => mockRouter,

@@ -113,20 +113,19 @@ const permissions: PermissionView[] = [
 
 describe('role-authorization utils', () => {
   it('builds permission groups only for selected page menus', () => {
-    const groups = buildRoleAuthorizationPermissionGroups(
-      menus,
-      permissions,
-      ['MENU_SYSTEM', 'MENU_SYS_ROLES'],
-    );
+    const groups = buildRoleAuthorizationPermissionGroups(menus, permissions, [
+      'MENU_SYSTEM',
+      'MENU_SYS_ROLES',
+    ]);
 
     expect(groups).toHaveLength(1);
     expect(groups[0]?.menu.id).toBe('MENU_SYS_ROLES');
-    expect(groups[0]?.entryPermissions.map((permission) => permission.id)).toEqual([
-      'PERM_SYS_ROLE_QUERY',
-    ]);
-    expect(groups[0]?.manualPermissions.map((permission) => permission.id)).toEqual([
-      'PERM_SYS_ROLE_ASSIGN',
-    ]);
+    expect(
+      groups[0]?.entryPermissions.map((permission) => permission.id),
+    ).toEqual(['PERM_SYS_ROLE_QUERY']);
+    expect(
+      groups[0]?.manualPermissions.map((permission) => permission.id),
+    ).toEqual(['PERM_SYS_ROLE_ASSIGN']);
   });
 
   it('drops entry permissions and unselected-menu permissions from manual payloads', () => {
@@ -149,7 +148,11 @@ describe('role-authorization utils', () => {
         menus,
         permissions,
         ['MENU_SYSTEM', 'MENU_SYS_ROLES', 'MENU_M3_TASKS'],
-        ['PERM_SYS_ROLE_ASSIGN', 'PERM_M3_TASK_QUERY', 'PERM_M3_GROSSING_START'],
+        [
+          'PERM_SYS_ROLE_ASSIGN',
+          'PERM_M3_TASK_QUERY',
+          'PERM_M3_GROSSING_START',
+        ],
       ),
     ).toEqual({
       autoEntryPermissionCount: 2,

@@ -6,7 +6,9 @@ import workflowRoutes from './workflow';
 
 describe('workflow routes', () => {
   it('registers the consolidated M2 workflow routes with hidden legacy redirects', () => {
-    const workflowRoot = workflowRoutes.find((route) => route.name === 'WorkflowRoot');
+    const workflowRoot = workflowRoutes.find(
+      (route) => route.name === 'WorkflowRoot',
+    );
     const submissionRoute = workflowRoot?.children?.find(
       (route) => route.name === 'SubmissionRegistration',
     );
@@ -45,7 +47,9 @@ describe('workflow routes', () => {
       M2_PERMISSION_CODES.CLINICAL_IMPORT,
       M2_PERMISSION_CODES.SPECIMEN_REGISTER,
     ]);
-    expect(workbenchRoute?.path).toBe('/workflow/application-registration-workbench');
+    expect(workbenchRoute?.path).toBe(
+      '/workflow/application-registration-workbench',
+    );
     expect(workbenchRoute?.meta?.title).toBe('申请登记工作台');
     expect(workbenchRoute?.meta?.keepAlive).toBe(true);
     expect(workbenchRoute?.meta?.authority).toEqual([

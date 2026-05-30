@@ -17,11 +17,15 @@ function findOptionLabel(
   options: readonly { label: string; value: boolean | string }[],
   value?: boolean | null | string,
 ) {
-  return options.find((option) => option.value === value)?.label ?? value ?? '-';
+  return (
+    options.find((option) => option.value === value)?.label ?? value ?? '-'
+  );
 }
 
 export function formatNullable(value?: null | number | string) {
-  return value === null || value === undefined || value === '' ? '-' : String(value);
+  return value === null || value === undefined || value === ''
+    ? '-'
+    : String(value);
 }
 
 export function formatArchiveCabinetStatus(value?: null | string) {

@@ -100,7 +100,8 @@ const workflowBackendFirstMenus = [
       {
         name: 'SubmissionRegistration',
         path: '/workflow/submission-registration',
-        component: '/modules/specimen-workflow/views/SubmissionRegistrationView',
+        component:
+          '/modules/specimen-workflow/views/SubmissionRegistrationView',
         meta: {
           icon: 'carbon:list-boxes',
           title: '申请与登记',

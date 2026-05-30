@@ -1,12 +1,22 @@
-import type { FieldOptions, FormContext, GenericObject } from 'vee-validate';
+import type {
+  FieldOptions,
+  FormContext,
+  FormState,
+  GenericObject,
+  ResetFormOpts,
+  ValidationOptions,
+} from 'vee-validate';
 import type { ZodTypeAny } from 'zod';
 
-import type { Component, HtmlHTMLAttributes, Ref } from 'vue';
+import type {
+  Component,
+  ComponentPublicInstance,
+  HtmlHTMLAttributes,
+  Ref,
+} from 'vue';
 
 import type { VbenButtonProps } from '@vben-core/shadcn-ui';
 import type { ClassType, MaybeComputedRef } from '@vben-core/typings';
-
-import type { FormApi } from './form-api';
 
 export type FormLayout = 'horizontal' | 'inline' | 'vertical';
 
@@ -505,7 +515,58 @@ export interface VbenFormProps<
   submitOnEnter?: boolean;
 }
 
-export type ExtendedFormApi = FormApi & {
+export interface FormApiLike {
+  form: FormActions;
+  getFieldComponentRef: <T = ComponentPublicInstance>(
+    fieldName: string,
+  ) => T | undefined;
+  getFocusedField: () => string | undefined;
+  getLatestSubmissionValues: () => Record<string, any>;
+  getState: () => null | VbenFormProps;
+  getValues: <T = Record<string, any>>() => Promise<T>;
+  isFieldValid: (fieldName: string) => Promise<boolean>;
+  isMounted: boolean;
+  merge: (formApi: FormApiLike) => FormApiLike;
+  mount: (
+    formActions: FormActions,
+    componentRefMap?: Map<string, unknown>,
+  ) => void;
+  removeSchemaByFields: (fields: string[]) => Promise<void>;
+  resetForm: (
+    state?: Partial<FormState<GenericObject>> | undefined,
+    opts?: Partial<ResetFormOpts>,
+  ) => Promise<unknown>;
+  resetValidate: () => Promise<void>;
+  scrollToFirstError: (errors: Record<string, any> | string) => void;
+  setFieldValue: (
+    field: string,
+    value: any,
+    shouldValidate?: boolean,
+  ) => Promise<void>;
+  setLatestSubmissionValues: (values: null | Record<string, any>) => void;
+  setState: (
+    stateOrFn:
+      | ((prev: VbenFormProps) => Partial<VbenFormProps>)
+      | Partial<VbenFormProps>,
+  ) => void;
+  setValues: (
+    fields: Record<string, any>,
+    filterFields?: boolean,
+    shouldValidate?: boolean,
+  ) => Promise<void>;
+  state: null | VbenFormProps;
+  submitForm: (e?: Event) => Promise<Record<string, any>>;
+  unmount: () => void;
+  updateSchema: (schema: Partial<FormSchema>[]) => void;
+  validate: (opts?: Partial<ValidationOptions>) => Promise<any>;
+  validateAndSubmitForm: () => Promise<Record<string, any> | undefined>;
+  validateField: (
+    fieldName: string,
+    opts?: Partial<ValidationOptions>,
+  ) => Promise<any>;
+}
+
+export type ExtendedFormApi = FormApiLike & {
   useStore: <T = NoInfer<VbenFormProps>>(
     selector?: (state: NoInfer<VbenFormProps>) => T,
   ) => Readonly<Ref<T>>;

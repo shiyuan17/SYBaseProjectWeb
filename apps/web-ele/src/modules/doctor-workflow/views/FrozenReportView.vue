@@ -41,7 +41,7 @@ const loading = ref(false);
 const actionLoading = ref(false);
 const pageError = ref('');
 const sessionOptions = ref<
-  Array<{ id: string; frozenPathologyNo: string; patientName: string }>
+  Array<{ frozenPathologyNo: string; id: string; patientName: string }>
 >([]);
 const selectedSessionId = ref('');
 const detail = ref<FrozenSessionDetail | null>(null);
@@ -61,10 +61,14 @@ const canSavePreliminary = computed(
   () => detail.value?.currentTaskType === 'REPORT',
 );
 const canConfirm = computed(
-  () => detail.value?.currentTaskType === 'COMPARE' && !detail.value?.finalConfirmedAt,
+  () =>
+    detail.value?.currentTaskType === 'COMPARE' &&
+    !detail.value?.finalConfirmedAt,
 );
 const canCompare = computed(
-  () => detail.value?.currentTaskType === 'COMPARE' && Boolean(detail.value?.finalConfirmedAt),
+  () =>
+    detail.value?.currentTaskType === 'COMPARE' &&
+    Boolean(detail.value?.finalConfirmedAt),
 );
 const canClose = computed(
   () => detail.value?.currentTaskType === 'REMAINING_TISSUE',
@@ -99,9 +103,11 @@ async function loadSessionList() {
   }));
   if (!selectedSessionId.value) {
     selectedSessionId.value =
-      (typeof route.query.sessionId === 'string' ? route.query.sessionId : '')
-      || result.items[0]?.id
-      || '';
+      (typeof route.query.sessionId === 'string'
+        ? route.query.sessionId
+        : '') ||
+      result.items[0]?.id ||
+      '';
   }
 }
 
@@ -118,7 +124,8 @@ async function loadDetail(sessionId: string) {
     form.compareSummary = detail.value.compareSummary ?? '';
   } catch (error) {
     detail.value = null;
-    pageError.value = error instanceof Error ? error.message : '冰冻会话加载失败';
+    pageError.value =
+      error instanceof Error ? error.message : '冰冻会话加载失败';
   } finally {
     loading.value = false;
   }
@@ -230,7 +237,9 @@ async function closeSession() {
   try {
     await completeFrozenRemainingTissue(detail.value.id, {
       ...buildPayload(),
-      remainingTissueStatus: form.remainingTissueStatus as 'DISPOSED' | 'RETAINED',
+      remainingTissueStatus: form.remainingTissueStatus as
+        | 'DISPOSED'
+        | 'RETAINED',
     });
     ElMessage.success('剩余组织处理与交接班已完成');
     await loadDetail(detail.value.id);
@@ -316,7 +325,9 @@ void loadSessionList();
               {{ detail.sessionStatus }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="电话回报">
-              <ElTag :type="detail.intraoperativePhoneBack ? 'success' : 'warning'">
+              <ElTag
+                :type="detail.intraoperativePhoneBack ? 'success' : 'warning'"
+              >
                 {{ detail.intraoperativePhoneBack ? '已完成' : '未完成' }}
               </ElTag>
             </ElDescriptionsItem>
@@ -370,7 +381,10 @@ void loadSessionList();
                 />
               </ElFormItem>
               <ElFormItem label="剩余组织">
-                <ElSelect v-model="form.remainingTissueStatus" style="width: 220px">
+                <ElSelect
+                  v-model="form.remainingTissueStatus"
+                  style="width: 220px"
+                >
                   <ElOption label="保留" value="RETAINED" />
                   <ElOption label="已处理" value="DISPOSED" />
                 </ElSelect>
@@ -435,7 +449,9 @@ void loadSessionList();
               class="rounded-lg border border-border bg-background p-3"
             >
               <div class="flex items-center justify-between gap-3">
-                <div class="font-medium text-foreground">{{ event.eventContent }}</div>
+                <div class="font-medium text-foreground">
+                  {{ event.eventContent }}
+                </div>
                 <ElTag type="info">{{ event.nodeCode }}</ElTag>
               </div>
               <div class="mt-1 text-sm text-muted-foreground">

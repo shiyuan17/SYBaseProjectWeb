@@ -28,14 +28,15 @@
       body {
         margin: 0;
         background:
-          radial-gradient(circle at 20% 10%, rgba(15, 118, 110, 0.12), transparent 28rem),
+          radial-gradient(
+            circle at 20% 10%,
+            rgba(15, 118, 110, 0.12),
+            transparent 28rem
+          ),
           linear-gradient(135deg, #fbf7ef 0%, var(--bg) 52%, #efe6d4 100%);
         color: var(--ink);
         font-family:
-          "Noto Serif SC",
-          "Source Han Serif SC",
-          "Microsoft YaHei",
-          serif;
+          'Noto Serif SC', 'Source Han Serif SC', 'Microsoft YaHei', serif;
         line-height: 1.65;
       }
 
@@ -99,7 +100,7 @@
         height: 30px;
         border-radius: 999px;
         background: var(--primary);
-        content: "";
+        content: '';
       }
 
       h3 {
@@ -333,8 +334,9 @@
           <div class="card">
             <span class="tag warn">真实操作链</span>
             <p>
-              当前链路分散为：申请管理 -> 创建/导入弹窗 -> 标本管理 -> 二次查询申请单 ->
-              登记标本 -> 固定核对 -> 转运交接 -> 标本接收 -> 追踪查询。
+              当前链路分散为：申请管理 -> 创建/导入弹窗 -> 标本管理 ->
+              二次查询申请单 -> 登记标本 -> 固定核对 -> 转运交接 -> 标本接收 ->
+              追踪查询。
             </p>
           </div>
           <div class="card">
@@ -391,7 +393,8 @@
           </div>
         </div>
         <div class="note">
-          旧路径 `/workflow/application-list`、`/workflow/specimen-management`、`/workflow/clinical-register`、
+          旧路径
+          `/workflow/application-list`、`/workflow/specimen-management`、`/workflow/clinical-register`、
           `/workflow/fixation-verify`、`/workflow/transport-handover`、`/workflow/specimen-receipt`、
           `/workflow/tracking-query` 全部隐藏并 redirect 到新入口。
         </div>
@@ -444,23 +447,35 @@
           <tbody>
             <tr>
               <td>申请与登记</td>
-              <td>申请日期、送检日期、来源医院、送检科室、送检医生、临床诊断、送检部位、离体时间、申请单随附状态。</td>
-              <td>外部申请号重复强拦截；同患者同日同部位同类型提示人工确认；登记抽屉不再要求二次查询。</td>
+              <td>
+                申请日期、送检日期、来源医院、送检科室、送检医生、临床诊断、送检部位、离体时间、申请单随附状态。
+              </td>
+              <td>
+                外部申请号重复强拦截；同患者同日同部位同类型提示人工确认；登记抽屉不再要求二次查询。
+              </td>
             </tr>
             <tr>
               <td>固定与转运</td>
-              <td>开始固定时间、固定完成时间、固定液、操作人、终端、备注、交接人。</td>
+              <td>
+                开始固定时间、固定完成时间、固定液、操作人、终端、备注、交接人。
+              </td>
               <td>未固定标本不进入可转运清单；完成固定后才能创建转运单。</td>
             </tr>
             <tr>
               <td>病理接收</td>
               <td>容器数量、质控结果、问题代码、退回/拒收原因、接收人。</td>
-              <td>正常接收必须质控合格；质控不合格必须选问题代码；退回/拒收必须填结构化原因。</td>
+              <td>
+                正常接收必须质控合格；质控不合格必须选问题代码；退回/拒收必须填结构化原因。
+              </td>
             </tr>
             <tr>
               <td>追踪与异常</td>
-              <td>申请单号、applicationId、条码、异常标记、拒收/退回原因、关键时间链。</td>
-              <td>前序页面异常跳转自动带查询条件；部分接收、拒收、退回必须可追溯。</td>
+              <td>
+                申请单号、applicationId、条码、异常标记、拒收/退回原因、关键时间链。
+              </td>
+              <td>
+                前序页面异常跳转自动带查询条件；部分接收、拒收、退回必须可追溯。
+              </td>
             </tr>
           </tbody>
         </table>
@@ -538,9 +553,18 @@
         </div>
         <p class="source">
           流程原则参考：
-          <a href="https://documents.cap.org/documents/practical-guide-specimen-handling.pdf">CAP Specimen Handling</a>、
-          <a href="https://pathology.jhu.edu/patient-care/testing/surgical-pathology">Johns Hopkins Surgical Pathology</a>、
-          <a href="https://lsom.uthscsa.edu/pathology/reference-labs/histology-immunohistochemistry-laboratory/specimen-requirements-testing-schedule/">UT Health Specimen Requirements</a>。
+          <a
+            href="https://documents.cap.org/documents/practical-guide-specimen-handling.pdf"
+            >CAP Specimen Handling</a
+          >、
+          <a
+            href="https://pathology.jhu.edu/patient-care/testing/surgical-pathology"
+            >Johns Hopkins Surgical Pathology</a
+          >、
+          <a
+            href="https://lsom.uthscsa.edu/pathology/reference-labs/histology-immunohistochemistry-laboratory/specimen-requirements-testing-schedule/"
+            >UT Health Specimen Requirements</a
+          >。
         </p>
       </section>
       <section>
@@ -549,8 +573,13 @@
           <div class="change-item">
             <h3>登记要素</h3>
             <ul>
-              <li>标本登记核心要素升级为标本名称、标本部位、标本数量、容器名称、容器数量。</li>
-              <li>容器名称采用“字典建议 + 可手输”，v1 仅保存文本快照，不引入单独容器编码。</li>
+              <li>
+                标本登记核心要素升级为标本名称、标本部位、标本数量、容器名称、容器数量。
+              </li>
+              <li>
+                容器名称采用“字典建议 + 可手输”，v1
+                仅保存文本快照，不引入单独容器编码。
+              </li>
               <li>条码仍保持选填，但填写后继续受唯一性约束。</li>
             </ul>
           </div>
@@ -566,8 +595,12 @@
             <h3>管理与核验</h3>
             <ul>
               <li>标本管理列表与详情已补齐容器名称、容器数/标本数展示。</li>
-              <li>标签打印状态和操作列补齐补打标签、异常处理、开始核验、完成核验入口。</li>
-              <li>“已核验”筛选语义调整为固定完成，不再依赖标签打印成功状态。</li>
+              <li>
+                标签打印状态和操作列补齐补打标签、异常处理、开始核验、完成核验入口。
+              </li>
+              <li>
+                “已核验”筛选语义调整为固定完成，不再依赖标签打印成功状态。
+              </li>
             </ul>
           </div>
           <div class="change-item">
@@ -575,7 +608,9 @@
             <ul>
               <li>接收页默认继承登记侧容器数量，并展示容器名称上下文。</li>
               <li>接收环节仍允许修正容器数量，作为实际接收结果。</li>
-              <li>工作流参考字典新增病理标本容器名称分类，支持前后端统一维护。</li>
+              <li>
+                工作流参考字典新增病理标本容器名称分类，支持前后端统一维护。
+              </li>
             </ul>
           </div>
         </div>

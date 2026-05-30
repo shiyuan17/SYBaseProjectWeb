@@ -352,7 +352,7 @@ async function handleRetryLabelPrint() {
   retryLoading.value = true;
   pageError.value = '';
   try {
-    await retryLabelPrint(batchNos[0]!, {
+    await retryLabelPrint(batchNos[0] || '', {
       operatorName: operatorForm.operatorName.trim(),
       operatorUserId: operatorForm.operatorUserId.trim() || null,
       printerCode: operatorForm.printerCode.trim(),

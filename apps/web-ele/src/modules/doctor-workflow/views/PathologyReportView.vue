@@ -24,7 +24,6 @@ import {
   ElTag,
 } from 'element-plus';
 
-import { M4_PERMISSION_CODES } from '../constants';
 import {
   createPathologyReport,
   getDiagnosticWorkbench,
@@ -36,6 +35,7 @@ import {
   submitPathologyReport,
 } from '../api/doctor-workflow-service';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
+import { M4_PERMISSION_CODES } from '../constants';
 import { getDoctorWorkflowPageErrorMessage } from '../utils/error';
 import { formatNullable, formatReportStatus } from '../utils/format';
 import { firstQueryParam } from '../utils/route';
@@ -264,7 +264,10 @@ async function saveDraft() {
 
   saving.value = true;
   try {
-    const result = await savePathologyReportDraft(activeReportId.value, payload);
+    const result = await savePathologyReportDraft(
+      activeReportId.value,
+      payload,
+    );
     reportStatus.value = result.reportStatus ?? null;
     versionNo.value = result.versionNo ?? null;
     ElMessage.success('报告草稿已保存');
@@ -308,7 +311,10 @@ async function runReportAction(
 
   saving.value = true;
   try {
-    const result = await actionMap[action](activeReportId.value, actionPayload.value);
+    const result = await actionMap[action](
+      activeReportId.value,
+      actionPayload.value,
+    );
     reportStatus.value = result.reportStatus ?? null;
     versionNo.value = result.versionNo ?? null;
     ElMessage.success('报告状态已更新');
@@ -369,7 +375,10 @@ watch(
 </script>
 
 <template>
-  <Page title="报告编辑与流转" description="创建草稿、保存正文，并完成提交、审核、驳回、签发、发布闭环。">
+  <Page
+    title="报告编辑与流转"
+    description="创建草稿、保存正文，并完成提交、审核、驳回、签发、发布闭环。"
+  >
     <div class="flex flex-col gap-4">
       <ElAlert
         v-if="pageError"
@@ -412,7 +421,11 @@ watch(
             />
           </ElFormItem>
           <ElFormItem>
-            <ElButton :loading="loading" type="primary" @click="searchReportContext">
+            <ElButton
+              :loading="loading"
+              type="primary"
+              @click="searchReportContext"
+            >
               查询
             </ElButton>
             <ElButton @click="handleReset">重置</ElButton>
@@ -462,7 +475,11 @@ watch(
               <ElInput v-model="form.grossExam" :rows="4" type="textarea" />
             </ElFormItem>
             <ElFormItem label="镜下所见">
-              <ElInput v-model="form.microscopicExam" :rows="4" type="textarea" />
+              <ElInput
+                v-model="form.microscopicExam"
+                :rows="4"
+                type="textarea"
+              />
             </ElFormItem>
             <ElFormItem label="最终诊断">
               <ElInput
@@ -474,15 +491,25 @@ watch(
               />
             </ElFormItem>
             <ElFormItem label="富文本正文">
-              <ElInput v-model="form.richTextContent" :rows="6" type="textarea" />
+              <ElInput
+                v-model="form.richTextContent"
+                :rows="6"
+                type="textarea"
+              />
             </ElFormItem>
           </ElForm>
         </WorkflowSectionCard>
 
-        <WorkflowSectionCard title="流转操作" description="按钮会按当前账号权限显示。">
+        <WorkflowSectionCard
+          title="流转操作"
+          description="按钮会按当前账号权限显示。"
+        >
           <ElForm label-width="100px">
             <ElFormItem label="操作人">
-              <ElInput v-model="form.operatorName" placeholder="请输入操作人姓名" />
+              <ElInput
+                v-model="form.operatorName"
+                placeholder="请输入操作人姓名"
+              />
             </ElFormItem>
             <ElFormItem label="终端编码">
               <ElInput v-model="form.terminalCode" placeholder="终端编码" />

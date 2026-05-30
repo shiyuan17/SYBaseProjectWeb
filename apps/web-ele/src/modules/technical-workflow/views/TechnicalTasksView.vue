@@ -150,7 +150,9 @@ const selectedRows = computed(() =>
 );
 
 const taskStats = computed(() => {
-  const activeItems = pendingItems.value.filter((item) => item.taskStatus !== 'COMPLETED');
+  const activeItems = pendingItems.value.filter(
+    (item) => item.taskStatus !== 'COMPLETED',
+  );
   return [
     {
       label: '待生产标本',
@@ -158,11 +160,14 @@ const taskStats = computed(() => {
     },
     {
       label: '急诊/加急',
-      value: pendingItems.value.filter((item) => item.priority === 'STAT').length,
+      value: pendingItems.value.filter((item) => item.priority === 'STAT')
+        .length,
     },
     {
       label: '今日已完成',
-      value: pendingItems.value.filter((item) => item.taskStatus === 'COMPLETED').length,
+      value: pendingItems.value.filter(
+        (item) => item.taskStatus === 'COMPLETED',
+      ).length,
     },
     {
       label: '超时风险',
@@ -193,8 +198,8 @@ function getPriorityTagType(priority?: null | string) {
 
 function formatCurrentNode(row: PendingTechnicalTaskItem) {
   return (
-    TASK_TYPE_TITLE_MAP[row.currentNode ?? row.taskType ?? '']
-    ?? formatTaskType(row.currentNode ?? row.taskType)
+    TASK_TYPE_TITLE_MAP[row.currentNode ?? row.taskType ?? ''] ??
+    formatTaskType(row.currentNode ?? row.taskType)
   );
 }
 
@@ -261,11 +266,13 @@ function openAssignDialog(row: PendingTechnicalTaskItem) {
   assignmentForm.operatorUserId = userStore.userInfo?.userId ?? '';
   assignmentForm.priority = row.priority ?? 'NORMAL';
   assignmentForm.productionRemarks = row.productionRemarks ?? '';
-  assignmentForm.stationCode = row.stationCode ?? row.currentNode ?? row.taskType ?? '';
+  assignmentForm.stationCode =
+    row.stationCode ?? row.currentNode ?? row.taskType ?? '';
   assignmentForm.stationName =
-    row.stationName
-    ?? stationOptions.find((item) => item.value === assignmentForm.stationCode)?.label
-    ?? '';
+    row.stationName ??
+    stationOptions.find((item) => item.value === assignmentForm.stationCode)
+      ?.label ??
+    '';
   assignmentForm.terminalCode = '';
   assignmentDialogVisible.value = true;
 }
@@ -325,7 +332,7 @@ async function releaseAssignment(row: PendingTechnicalTaskItem) {
 async function runBulkClaim() {
   const operatorName = userStore.userInfo?.realName;
   const operatorUserId = userStore.userInfo?.userId;
-  if (!selectedRows.value.length) {
+  if (selectedRows.value.length === 0) {
     ElMessage.warning('请先选择任务');
     return;
   }
@@ -343,7 +350,8 @@ async function runBulkClaim() {
           operatorName,
           operatorUserId,
           remarks: '任务池批量认领',
-        })),
+        }),
+      ),
     );
     ElMessage.success(`已认领 ${selectedRows.value.length} 条任务`);
     selectedTaskIds.value = [];
@@ -357,7 +365,7 @@ async function runBulkClaim() {
 
 async function runBulkRelease() {
   const operatorName = userStore.userInfo?.realName;
-  if (!selectedRows.value.length) {
+  if (selectedRows.value.length === 0) {
     ElMessage.warning('请先选择任务');
     return;
   }
@@ -373,7 +381,8 @@ async function runBulkRelease() {
           operatorName,
           operatorUserId: userStore.userInfo?.userId ?? null,
           remarks: '任务池批量释放责任人',
-        })),
+        }),
+      ),
     );
     ElMessage.success(`已释放 ${selectedRows.value.length} 条任务`);
     selectedTaskIds.value = [];
@@ -387,7 +396,7 @@ async function runBulkRelease() {
 
 async function runBulkPriorityUpdate() {
   const operatorName = userStore.userInfo?.realName;
-  if (!selectedRows.value.length) {
+  if (selectedRows.value.length === 0) {
     ElMessage.warning('请先选择任务');
     return;
   }
@@ -404,7 +413,8 @@ async function runBulkPriorityUpdate() {
           operatorUserId: userStore.userInfo?.userId ?? null,
           priority: bulkPriority.value,
           productionRemarks: '任务池批量调整优先级',
-        })),
+        }),
+      ),
     );
     ElMessage.success(`已调整 ${selectedRows.value.length} 条任务优先级`);
     selectedTaskIds.value = [];
@@ -450,15 +460,27 @@ void loadPendingData();
           :key="item.label"
           class="rounded border border-border bg-background p-4"
         >
-          <div class="text-sm text-[var(--el-text-color-secondary)]">{{ item.label }}</div>
-          <div class="mt-2 text-2xl font-semibold text-foreground">{{ item.value }}</div>
+          <div class="text-sm text-[var(--el-text-color-secondary)]">
+            {{ item.label }}
+          </div>
+          <div class="mt-2 text-2xl font-semibold text-foreground">
+            {{ item.value }}
+          </div>
         </section>
       </div>
 
-      <WorkflowSectionCard title="任务筛选" description="按任务类型、优先级、节点和分派状态查看生产任务。">
+      <WorkflowSectionCard
+        title="任务筛选"
+        description="按任务类型、优先级、节点和分派状态查看生产任务。"
+      >
         <ElForm inline label-width="96px">
           <ElFormItem label="任务类型">
-            <ElSelect v-model="filters.taskType" clearable placeholder="全部" style="width: 160px">
+            <ElSelect
+              v-model="filters.taskType"
+              clearable
+              placeholder="全部"
+              style="width: 160px"
+            >
               <ElOption
                 v-for="option in TECHNICAL_TASK_TYPE_OPTIONS"
                 :key="option.value"
@@ -468,7 +490,12 @@ void loadPendingData();
             </ElSelect>
           </ElFormItem>
           <ElFormItem label="优先级">
-            <ElSelect v-model="filters.priority" clearable placeholder="全部" style="width: 140px">
+            <ElSelect
+              v-model="filters.priority"
+              clearable
+              placeholder="全部"
+              style="width: 140px"
+            >
               <ElOption
                 v-for="option in TECHNICAL_TASK_PRIORITY_OPTIONS"
                 :key="option.value"
@@ -478,7 +505,12 @@ void loadPendingData();
             </ElSelect>
           </ElFormItem>
           <ElFormItem label="任务状态">
-            <ElSelect v-model="filters.taskStatus" clearable placeholder="全部" style="width: 150px">
+            <ElSelect
+              v-model="filters.taskStatus"
+              clearable
+              placeholder="全部"
+              style="width: 150px"
+            >
               <ElOption
                 v-for="option in TECHNICAL_TASK_STATUS_OPTIONS"
                 :key="option.value"
@@ -488,7 +520,12 @@ void loadPendingData();
             </ElSelect>
           </ElFormItem>
           <ElFormItem label="当前节点">
-            <ElSelect v-model="filters.currentNode" clearable placeholder="全部" style="width: 160px">
+            <ElSelect
+              v-model="filters.currentNode"
+              clearable
+              placeholder="全部"
+              style="width: 160px"
+            >
               <ElOption
                 v-for="option in TECHNICAL_TASK_TYPE_OPTIONS"
                 :key="option.value"
@@ -498,7 +535,12 @@ void loadPendingData();
             </ElSelect>
           </ElFormItem>
           <ElFormItem label="分派状态">
-            <ElSelect v-model="filters.assignmentStatus" clearable placeholder="全部" style="width: 150px">
+            <ElSelect
+              v-model="filters.assignmentStatus"
+              clearable
+              placeholder="全部"
+              style="width: 150px"
+            >
               <ElOption label="未分派" value="UNASSIGNED" />
               <ElOption label="已分派" value="ASSIGNED" />
             </ElSelect>
@@ -550,16 +592,31 @@ void loadPendingData();
         </ElForm>
       </WorkflowSectionCard>
 
-      <WorkflowSectionCard title="调度操作" description="支持病例聚合视图、任务平铺视图和批量调度动作。">
+      <WorkflowSectionCard
+        title="调度操作"
+        description="支持病例聚合视图、任务平铺视图和批量调度动作。"
+      >
         <div class="flex flex-wrap items-center gap-3">
-          <ElButton :plain="viewMode !== 'task'" type="primary" @click="viewMode = 'task'">
+          <ElButton
+            :plain="viewMode !== 'task'"
+            type="primary"
+            @click="viewMode = 'task'"
+          >
             调度视图
           </ElButton>
-          <ElButton :plain="viewMode !== 'case'" type="primary" @click="viewMode = 'case'">
+          <ElButton
+            :plain="viewMode !== 'case'"
+            type="primary"
+            @click="viewMode = 'case'"
+          >
             连续处理视图
           </ElButton>
-          <ElButton :loading="bulkLoading" @click="runBulkClaim">批量认领</ElButton>
-          <ElButton :loading="bulkLoading" @click="runBulkRelease">批量释放</ElButton>
+          <ElButton :loading="bulkLoading" @click="runBulkClaim">
+            批量认领
+          </ElButton>
+          <ElButton :loading="bulkLoading" @click="runBulkRelease">
+            批量释放
+          </ElButton>
           <ElSelect v-model="bulkPriority" style="width: 140px">
             <ElOption
               v-for="option in TECHNICAL_TASK_PRIORITY_OPTIONS"
@@ -568,8 +625,12 @@ void loadPendingData();
               :value="option.value"
             />
           </ElSelect>
-          <ElButton :loading="bulkLoading" @click="runBulkPriorityUpdate">批量调优先级</ElButton>
-          <span class="text-sm text-muted-foreground">已选 {{ selectedTaskIds.length }} 条</span>
+          <ElButton :loading="bulkLoading" @click="runBulkPriorityUpdate">
+            批量调优先级
+          </ElButton>
+          <span class="text-sm text-muted-foreground"
+            >已选 {{ selectedTaskIds.length }} 条</span
+          >
         </div>
       </WorkflowSectionCard>
 
@@ -590,13 +651,19 @@ void loadPendingData();
                   {{ formatNullable(group.pathologyNo) }}
                 </div>
                 <div class="mt-1 text-xs text-muted-foreground">
-                  病例 {{ group.caseId }}，共 {{ group.taskCount }} 条任务，超时 {{ group.timedOutCount }} 条
+                  病例 {{ group.caseId }}，共 {{ group.taskCount }} 条任务，超时
+                  {{ group.timedOutCount }} 条
                 </div>
               </div>
               <ElButton
                 link
                 type="primary"
-                @click="navigation.goToTracking({ caseId: group.caseId, pathologyNo: group.pathologyNo || undefined })"
+                @click="
+                  navigation.goToTracking({
+                    caseId: group.caseId,
+                    pathologyNo: group.pathologyNo || undefined,
+                  })
+                "
               >
                 查看追踪
               </ElButton>
@@ -612,14 +679,24 @@ void loadPendingData();
               >
                 <div>
                   <div class="text-sm font-medium text-foreground">
-                    {{ formatTaskType(task.taskType) }} / {{ formatNullable(task.objectId) }}
+                    {{ formatTaskType(task.taskType) }} /
+                    {{ formatNullable(task.objectId) }}
                   </div>
                   <div class="mt-1 text-xs text-muted-foreground">
-                    {{ formatCurrentNode(task) }} / {{ formatDateTime(task.receivedAt || task.createdAt) }}
+                    {{ formatCurrentNode(task) }} /
+                    {{ formatDateTime(task.receivedAt || task.createdAt) }}
                   </div>
                 </div>
-                <ElTag :type="task.timedOut ? 'danger' : getTaskStatusTagType(task.taskStatus)">
-                  {{ task.timedOut ? '超时' : formatTaskStatus(task.taskStatus) }}
+                <ElTag
+                  :type="
+                    task.timedOut
+                      ? 'danger'
+                      : getTaskStatusTagType(task.taskStatus)
+                  "
+                >
+                  {{
+                    task.timedOut ? '超时' : formatTaskStatus(task.taskStatus)
+                  }}
                 </ElTag>
               </button>
             </div>
@@ -701,7 +778,9 @@ void loadPendingData();
           <ElTableColumn fixed="right" label="操作" min-width="240">
             <template #default="{ row }">
               <div class="flex flex-wrap gap-2">
-                <ElButton link type="primary" @click="openAssignDialog(row)">分派</ElButton>
+                <ElButton link type="primary" @click="openAssignDialog(row)">
+                  分派
+                </ElButton>
                 <ElButton
                   v-if="row.assignedToUserId"
                   link
@@ -710,7 +789,9 @@ void loadPendingData();
                 >
                   释放
                 </ElButton>
-                <ElButton link type="success" @click="goToWorkstation(row)">进入工位</ElButton>
+                <ElButton link type="success" @click="goToWorkstation(row)">
+                  进入工位
+                </ElButton>
                 <ElButton link @click="goToTracking(row)">追踪</ElButton>
               </div>
             </template>
@@ -742,7 +823,10 @@ void loadPendingData();
           <ElInput :model-value="selectedTask?.pathologyNo ?? ''" disabled />
         </ElFormItem>
         <ElFormItem label="任务类型">
-          <ElInput :model-value="formatTaskType(selectedTask?.taskType)" disabled />
+          <ElInput
+            :model-value="formatTaskType(selectedTask?.taskType)"
+            disabled
+          />
         </ElFormItem>
         <ElFormItem label="优先级">
           <ElSelect v-model="assignmentForm.priority" class="w-full">
@@ -799,7 +883,11 @@ void loadPendingData();
       </ElForm>
       <template #footer>
         <ElButton @click="assignmentDialogVisible = false">取消</ElButton>
-        <ElButton :loading="submittingAssignment" type="primary" @click="submitAssignment">
+        <ElButton
+          :loading="submittingAssignment"
+          type="primary"
+          @click="submitAssignment"
+        >
           确认分派
         </ElButton>
       </template>

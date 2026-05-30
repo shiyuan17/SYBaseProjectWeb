@@ -2,9 +2,9 @@ import type {
   FrozenActionPayload,
   FrozenParaffinCompareRequest,
   FrozenPhoneBackRequest,
+  FrozenRemainingTissueRequest,
   FrozenReminderItem,
   FrozenReminderSummary,
-  FrozenRemainingTissueRequest,
   FrozenSession,
   FrozenSessionDetail,
   FrozenSessionListPage,
@@ -29,7 +29,7 @@ function createInitialState() {
 }
 
 function cloneSeed<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value)) as T;
+  return structuredClone(value);
 }
 
 function normalizeText(value?: null | string) {
@@ -64,7 +64,10 @@ function findSession(sessionId: string) {
   return session;
 }
 
-function findTask(session: RawFrozenSession, taskType: FrozenSessionTask['taskType']) {
+function findTask(
+  session: RawFrozenSession,
+  taskType: FrozenSessionTask['taskType'],
+) {
   const task = session.tasks.find((item) => item.taskType === taskType);
   if (!task) {
     throw new Error(`冰冻会话 ${session.id} 缺少任务 ${taskType}`);
@@ -115,9 +118,9 @@ function updateTaskStatus(
 
 function applySessionSummary(session: RawFrozenSession): FrozenSession {
   const {
-    reminders,
-    tasks,
-    timeline,
+    reminders: _reminders,
+    tasks: _tasks,
+    timeline: _timeline,
     ...summary
   } = session;
   return summary;
@@ -139,11 +142,18 @@ function buildReminderItem(session: RawFrozenSession): FrozenReminderItem {
   };
 }
 
-function buildReminderSummary(sessions: RawFrozenSession[]): FrozenReminderSummary {
+function buildReminderSummary(
+  sessions: RawFrozenSession[],
+): FrozenReminderSummary {
   const items = sessions
-    .filter((item) => item.sessionStatus !== 'CANCELLED' && item.sessionStatus !== 'CLOSED')
-    .sort((left, right) => compareDateDesc(left.requestedAt, right.requestedAt))
-    .map(buildReminderItem);
+    .filter(
+      (item) =>
+        item.sessionStatus !== 'CANCELLED' && item.sessionStatus !== 'CLOSED',
+    )
+    .toSorted((left, right) =>
+      compareDateDesc(left.requestedAt, right.requestedAt),
+    )
+    .map((item) => buildReminderItem(item));
 
   return {
     items,
@@ -241,8 +251,10 @@ export async function listFrozenSessionsMock(
         .map((value) => normalizeText(value).toLowerCase())
         .some((value) => value.includes(keyword));
     })
-    .sort((left, right) => compareDateDesc(left.requestedAt, right.requestedAt))
-    .map(applySessionSummary);
+    .toSorted((left, right) =>
+      compareDateDesc(left.requestedAt, right.requestedAt),
+    )
+    .map((item) => applySessionSummary(item));
 
   return paginateItems(items, query.page, query.size);
 }
@@ -259,10 +271,14 @@ export async function getFrozenSessionDetailMock(sessionId: string) {
 export async function getFrozenTechnicalWorkbenchMock(): Promise<FrozenTechnicalWorkbenchView> {
   const sessions = state.sessions
     .filter((item) =>
-      ['RECEIVED', 'GROSSING', 'REQUESTED', 'SLICING'].includes(item.sessionStatus),
+      ['GROSSING', 'RECEIVED', 'REQUESTED', 'SLICING'].includes(
+        item.sessionStatus,
+      ),
     )
-    .sort((left, right) => compareDateDesc(left.requestedAt, right.requestedAt))
-    .map(applySessionSummary);
+    .toSorted((left, right) =>
+      compareDateDesc(left.requestedAt, right.requestedAt),
+    )
+    .map((item) => applySessionSummary(item));
 
   return {
     reminders: buildReminderSummary(state.sessions),
@@ -375,7 +391,14 @@ export async function completeFrozenPhoneBackMock(
   reportTask.completedAt = eventTime;
   reportTask.operatorName = payload.operatorName;
   reportTask.remarks = payload.remarks ?? null;
-  updateTaskStatus(session, 'PHONE_BACK', 'COMPLETED', payload.operatorName, payload.remarks ?? null, eventTime);
+  updateTaskStatus(
+    session,
+    'PHONE_BACK',
+    'COMPLETED',
+    payload.operatorName,
+    payload.remarks ?? null,
+    eventTime,
+  );
   session.intraoperativePhoneBack = true;
   session.phoneBackAt = eventTime;
   session.preliminaryResult = payload.preliminaryResult;

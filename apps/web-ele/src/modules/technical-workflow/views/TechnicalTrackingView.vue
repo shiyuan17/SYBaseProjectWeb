@@ -84,10 +84,13 @@ const workflowStepDefinitions = [
 ] as const;
 
 const TRACKING_TABS: TrackingTab[] = ['abnormal', 'timeline', 'work-items'];
+const TRACKING_TAB_SET = new Set<TrackingTab>(TRACKING_TABS);
 
 const pageError = ref('');
 const loading = ref(false);
-const caseId = ref(typeof route.query.caseId === 'string' ? route.query.caseId : '');
+const caseId = ref(
+  typeof route.query.caseId === 'string' ? route.query.caseId : '',
+);
 const trackingResult = ref<null | TechnicalTrackingViewModel>(null);
 const activeTab = ref<TrackingTab>(resolveInitialTab());
 const selectedNodeId = ref('');
@@ -98,25 +101,40 @@ function normalizeQueryValue(value: unknown) {
 
 function resolveInitialTab(): TrackingTab {
   const tab = normalizeQueryValue(route.query.tab);
-  return TRACKING_TABS.includes(tab as TrackingTab) ? (tab as TrackingTab) : 'timeline';
+  return TRACKING_TAB_SET.has(tab as TrackingTab)
+    ? (tab as TrackingTab)
+    : 'timeline';
 }
 
-function resolveTaskObjectId(taskId: string, tracking: TechnicalTrackingViewModel) {
+function resolveTaskObjectId(
+  taskId: string,
+  tracking: TechnicalTrackingViewModel,
+) {
   if (!taskId) {
     return '';
   }
-  return tracking.technicalTasks.find((item) => item.id === taskId)?.objectId?.trim() ?? '';
+  return (
+    tracking.technicalTasks
+      .find((item) => item.id === taskId)
+      ?.objectId?.trim() ?? ''
+  );
 }
 
 function resolveAbnormalNodeId(tracking: TechnicalTrackingViewModel) {
-  const qcEvaluation = tracking.qcEvaluations.find((item) => item.slideId || item.specimenId);
+  const qcEvaluation = tracking.qcEvaluations.find(
+    (item) => item.slideId || item.specimenId,
+  );
   if (qcEvaluation?.slideId?.trim()) {
     return qcEvaluation.slideId.trim();
   }
   if (qcEvaluation?.specimenId?.trim()) {
     return qcEvaluation.specimenId.trim();
   }
-  return tracking.technicalTasks.find((item) => item.objectId?.trim())?.objectId?.trim() ?? tracking.caseId;
+  return (
+    tracking.technicalTasks
+      .find((item) => item.objectId?.trim())
+      ?.objectId?.trim() ?? tracking.caseId
+  );
 }
 
 function resolveSelectedNodeId(tracking: TechnicalTrackingViewModel) {
@@ -125,7 +143,10 @@ function resolveSelectedNodeId(tracking: TechnicalTrackingViewModel) {
     return objectId;
   }
 
-  const taskObjectId = resolveTaskObjectId(normalizeQueryValue(route.query.taskId), tracking);
+  const taskObjectId = resolveTaskObjectId(
+    normalizeQueryValue(route.query.taskId),
+    tracking,
+  );
   if (taskObjectId) {
     return taskObjectId;
   }
@@ -148,7 +169,9 @@ function getTaskStatusTagType(status?: null | string) {
 }
 
 const context = computed(() =>
-  trackingResult.value ? buildWorkstationCaseContext(trackingResult.value) : null,
+  trackingResult.value
+    ? buildWorkstationCaseContext(trackingResult.value)
+    : null,
 );
 
 const treeData = computed(() => {
@@ -178,7 +201,11 @@ const selectedNode = computed(() => {
   if (!selectedNodeId.value || !context.value) {
     return null;
   }
-  return context.value.progressNodes.find((item) => item.id === selectedNodeId.value) ?? null;
+  return (
+    context.value.progressNodes.find(
+      (item) => item.id === selectedNodeId.value,
+    ) ?? null
+  );
 });
 
 const filteredTasks = computed(() => {
@@ -188,7 +215,9 @@ const filteredTasks = computed(() => {
   if (!selectedNode.value || selectedNode.value.type === 'CASE') {
     return trackingResult.value.technicalTasks;
   }
-  return trackingResult.value.technicalTasks.filter((item) => item.objectId === selectedNode.value?.id);
+  return trackingResult.value.technicalTasks.filter(
+    (item) => item.objectId === selectedNode.value?.id,
+  );
 });
 
 const filteredReworks = computed(() => {
@@ -213,10 +242,14 @@ const filteredQcEvaluations = computed(() => {
     return trackingResult.value.qcEvaluations;
   }
   if (selectedNode.value.type === 'SLIDE') {
-    return trackingResult.value.qcEvaluations.filter((item) => item.slideId === selectedNode.value?.id);
+    return trackingResult.value.qcEvaluations.filter(
+      (item) => item.slideId === selectedNode.value?.id,
+    );
   }
   if (selectedNode.value.type === 'SPECIMEN') {
-    return trackingResult.value.qcEvaluations.filter((item) => item.specimenId === selectedNode.value?.id);
+    return trackingResult.value.qcEvaluations.filter(
+      (item) => item.specimenId === selectedNode.value?.id,
+    );
   }
   return trackingResult.value.qcEvaluations;
 });
@@ -233,8 +266,12 @@ function getEventNodeCode(event: TechnicalTrackingEventSummary) {
 }
 
 function isCompletedEvent(event: TechnicalTrackingEventSummary) {
-  return event.eventStatus === 'SUCCESS'
-    && ['COMPLETE', 'CREATE_BATCH', 'EVALUATE', 'EXECUTE', 'MARK'].includes(event.eventType ?? '');
+  return (
+    event.eventStatus === 'SUCCESS' &&
+    ['COMPLETE', 'CREATE_BATCH', 'EVALUATE', 'EXECUTE', 'MARK'].includes(
+      event.eventType ?? '',
+    )
+  );
 }
 
 const workflowTimelineSteps = computed<WorkflowTimelineStep[]>(() => {
@@ -251,8 +288,9 @@ const workflowTimelineSteps = computed<WorkflowTimelineStep[]>(() => {
     eventsByNode.set(nodeCode, event);
   });
 
-  const activeTaskNode = trackingResult.value.technicalTasks.find((task) =>
-    task.taskStatus === 'IN_PROGRESS' || task.taskStatus === 'PENDING',
+  const activeTaskNode = trackingResult.value.technicalTasks.find(
+    (task) =>
+      task.taskStatus === 'IN_PROGRESS' || task.taskStatus === 'PENDING',
   )?.taskType;
   const completedNodeCodes = new Set(
     trackingResult.value.technicalTasks
@@ -268,25 +306,37 @@ const workflowTimelineSteps = computed<WorkflowTimelineStep[]>(() => {
 
   let lastCompletedIndex = -1;
   workflowStepDefinitions.forEach((step, index) => {
-    if (completedNodeCodes.has(step.nodeCode) || completedEventNodeCodes.has(step.nodeCode)) {
+    if (
+      completedNodeCodes.has(step.nodeCode) ||
+      completedEventNodeCodes.has(step.nodeCode)
+    ) {
       lastCompletedIndex = index;
     }
   });
 
   const activeNodeIndex = activeTaskNode
-    ? workflowStepDefinitions.findIndex((step) => step.nodeCode === activeTaskNode)
+    ? workflowStepDefinitions.findIndex(
+        (step) => step.nodeCode === activeTaskNode,
+      )
     : -1;
-  const currentIndex = activeNodeIndex >= 0
-    ? activeNodeIndex
-    : Math.min(lastCompletedIndex + 1, workflowStepDefinitions.length - 1);
+  const currentIndex =
+    activeNodeIndex >= 0
+      ? activeNodeIndex
+      : Math.min(lastCompletedIndex + 1, workflowStepDefinitions.length - 1);
 
   return workflowStepDefinitions.map((step, index) => {
     const latestEvent = eventsByNode.get(step.nodeCode);
-    const task = trackingResult.value?.technicalTasks.find((item) => item.taskType === step.nodeCode);
-    const completed = completedNodeCodes.has(step.nodeCode) || completedEventNodeCodes.has(step.nodeCode);
+    const task = trackingResult.value?.technicalTasks.find(
+      (item) => item.taskType === step.nodeCode,
+    );
+    const completed =
+      completedNodeCodes.has(step.nodeCode) ||
+      completedEventNodeCodes.has(step.nodeCode);
     const status: WorkflowTimelineStep['status'] = completed
       ? 'completed'
-      : (index === currentIndex ? 'current' : 'pending');
+      : index === currentIndex
+        ? 'current'
+        : 'pending';
 
     let statusText = '-';
     if (latestEvent) {
@@ -301,10 +351,14 @@ const workflowTimelineSteps = computed<WorkflowTimelineStep[]>(() => {
       content: formatNullable(latestEvent?.eventContent ?? task?.remarks),
       index: index + 1,
       nodeCode: step.nodeCode,
-      operatorName: formatNullable(latestEvent?.operatorName ?? task?.assignedToName),
+      operatorName: formatNullable(
+        latestEvent?.operatorName ?? task?.assignedToName,
+      ),
       status,
       statusText,
-      time: formatDateTime(latestEvent?.eventTime ?? task?.completedAt ?? task?.startedAt),
+      time: formatDateTime(
+        latestEvent?.eventTime ?? task?.completedAt ?? task?.startedAt,
+      ),
       title: step.title,
     };
   });
@@ -412,13 +466,26 @@ if (caseId.value) {
       </WorkflowSectionCard>
 
       <template v-if="trackingResult && context">
-        <WorkflowSectionCard title="病例摘要" description="展示病例主状态和当前聚焦对象。">
+        <WorkflowSectionCard
+          title="病例摘要"
+          description="展示病例主状态和当前聚焦对象。"
+        >
           <ElDescriptions :column="4" border>
-            <ElDescriptionsItem label="病例编号">{{ trackingResult.caseId }}</ElDescriptionsItem>
-            <ElDescriptionsItem label="病理号">{{ formatNullable(trackingResult.pathologyNo) }}</ElDescriptionsItem>
-            <ElDescriptionsItem label="病例状态">{{ formatCaseStatus(trackingResult.caseStatus) }}</ElDescriptionsItem>
+            <ElDescriptionsItem label="病例编号">
+              {{ trackingResult.caseId }}
+            </ElDescriptionsItem>
+            <ElDescriptionsItem label="病理号">
+              {{ formatNullable(trackingResult.pathologyNo) }}
+            </ElDescriptionsItem>
+            <ElDescriptionsItem label="病例状态">
+              {{ formatCaseStatus(trackingResult.caseStatus) }}
+            </ElDescriptionsItem>
             <ElDescriptionsItem label="当前聚焦对象">
-              {{ selectedNode ? `${selectedNode.label} / ${formatObjectType(selectedNode.type)}` : '病例' }}
+              {{
+                selectedNode
+                  ? `${selectedNode.label} / ${formatObjectType(selectedNode.type)}`
+                  : '病例'
+              }}
             </ElDescriptionsItem>
           </ElDescriptions>
         </WorkflowSectionCard>
@@ -439,7 +506,9 @@ if (caseId.value) {
             >
               <template #default="{ data }">
                 <div class="flex min-w-0 items-center gap-2">
-                  <span class="truncate text-sm text-foreground">{{ data.label }}</span>
+                  <span class="truncate text-sm text-foreground">{{
+                    data.label
+                  }}</span>
                   <ElTag v-if="data.status" effect="plain" size="small">
                     {{ formatTaskStatus(data.status) }}
                   </ElTag>
@@ -449,10 +518,16 @@ if (caseId.value) {
             <ElEmpty v-else description="当前病例还没有可追踪对象" />
           </WorkflowSectionCard>
 
-          <WorkflowSectionCard title="追踪详情" description="按时间线、任务返工和质控异常查看当前对象。">
+          <WorkflowSectionCard
+            title="追踪详情"
+            description="按时间线、任务返工和质控异常查看当前对象。"
+          >
             <ElTabs v-model="activeTab">
               <ElTabPane label="流程时间线" name="timeline">
-                <div v-if="workflowTimelineSteps.length > 0" class="tracking-flow overflow-x-auto">
+                <div
+                  v-if="workflowTimelineSteps.length > 0"
+                  class="tracking-flow overflow-x-auto"
+                >
                   <ol
                     class="tracking-flow__list"
                     :style="{ '--step-count': workflowTimelineSteps.length }"
@@ -465,7 +540,10 @@ if (caseId.value) {
                     >
                       <div class="tracking-flow__marker">
                         <span v-if="step.status === 'completed'">✓</span>
-                        <span v-else-if="step.status === 'current'" class="tracking-flow__current-dot"></span>
+                        <span
+                          v-else-if="step.status === 'current'"
+                          class="tracking-flow__current-dot"
+                        ></span>
                         <span v-else>{{ step.index }}</span>
                       </div>
                       <div class="tracking-flow__body">
@@ -476,20 +554,33 @@ if (caseId.value) {
                             v-if="step.statusText !== '-'"
                             effect="plain"
                             size="small"
-                            :type="step.status === 'completed' ? 'success' : step.status === 'current' ? 'primary' : 'info'"
+                            :type="
+                              step.status === 'completed'
+                                ? 'success'
+                                : step.status === 'current'
+                                  ? 'primary'
+                                  : 'info'
+                            "
                           >
                             {{ step.statusText }}
                           </ElTag>
                           <span>{{ step.operatorName }}</span>
                         </div>
-                        <div class="tracking-flow__content">{{ step.content }}</div>
+                        <div class="tracking-flow__content">
+                          {{ step.content }}
+                        </div>
                       </div>
                     </li>
                   </ol>
                 </div>
 
-                <div v-if="context.recentEvents.length > 0" class="mt-5 rounded border border-border p-3">
-                  <div class="mb-3 text-sm font-semibold text-foreground">最近事件</div>
+                <div
+                  v-if="context.recentEvents.length > 0"
+                  class="mt-5 rounded border border-border p-3"
+                >
+                  <div class="mb-3 text-sm font-semibold text-foreground">
+                    最近事件
+                  </div>
                   <div class="grid gap-2 md:grid-cols-2">
                     <div
                       v-for="event in context.recentEvents"
@@ -497,9 +588,15 @@ if (caseId.value) {
                       class="rounded bg-muted/40 p-3"
                     >
                       <div class="flex flex-wrap items-center gap-2">
-                        <span class="font-medium text-foreground">{{ formatEventType(event.eventType) }}</span>
-                        <ElTag effect="plain" size="small">{{ formatEventStatus(event.eventStatus) }}</ElTag>
-                        <span class="text-xs text-muted-foreground">{{ formatDateTime(event.eventTime) }}</span>
+                        <span class="font-medium text-foreground">{{
+                          formatEventType(event.eventType)
+                        }}</span>
+                        <ElTag effect="plain" size="small">
+                          {{ formatEventStatus(event.eventStatus) }}
+                        </ElTag>
+                        <span class="text-xs text-muted-foreground">{{
+                          formatDateTime(event.eventTime)
+                        }}</span>
                       </div>
                       <div class="mt-1 text-sm text-muted-foreground">
                         {{ formatNullable(event.eventContent) }}
@@ -507,13 +604,18 @@ if (caseId.value) {
                     </div>
                   </div>
                 </div>
-                <ElEmpty v-if="workflowTimelineSteps.length === 0" description="当前对象暂无节点记录" />
+                <ElEmpty
+                  v-if="workflowTimelineSteps.length === 0"
+                  description="当前对象暂无节点记录"
+                />
               </ElTabPane>
 
               <ElTabPane label="技术任务与返工" name="work-items">
                 <div class="flex flex-col gap-4">
                   <div>
-                    <h4 class="mb-3 text-sm font-semibold text-foreground">技术任务</h4>
+                    <h4 class="mb-3 text-sm font-semibold text-foreground">
+                      技术任务
+                    </h4>
                     <ElTable :data="filteredTasks" border>
                       <ElTableColumn label="任务号" min-width="180" prop="id" />
                       <ElTableColumn label="任务类型" min-width="120">
@@ -557,9 +659,15 @@ if (caseId.value) {
                   </div>
 
                   <div>
-                    <h4 class="mb-3 text-sm font-semibold text-foreground">返工单</h4>
+                    <h4 class="mb-3 text-sm font-semibold text-foreground">
+                      返工单
+                    </h4>
                     <ElTable :data="filteredReworks" border>
-                      <ElTableColumn label="返工单号" min-width="180" prop="reworkOrderId" />
+                      <ElTableColumn
+                        label="返工单号"
+                        min-width="180"
+                        prop="reworkOrderId"
+                      />
                       <ElTableColumn label="返工类型" min-width="140">
                         <template #default="{ row }">
                           {{ formatReworkType(row.reworkType) }}
@@ -590,7 +698,11 @@ if (caseId.value) {
                     show-icon
                   />
                   <ElTable :data="filteredQcEvaluations" border>
-                    <ElTableColumn label="质控记录号" min-width="180" prop="qcEvaluationId" />
+                    <ElTableColumn
+                      label="质控记录号"
+                      min-width="180"
+                      prop="qcEvaluationId"
+                    />
                     <ElTableColumn label="玻片号" min-width="140">
                       <template #default="{ row }">
                         {{ formatNullable(row.slideNo) }}
@@ -629,7 +741,10 @@ if (caseId.value) {
         </div>
 
         <div class="grid gap-4 xl:grid-cols-3">
-          <WorkflowSectionCard title="标本摘要" description="展示对象层级中的标本信息。">
+          <WorkflowSectionCard
+            title="标本摘要"
+            description="展示对象层级中的标本信息。"
+          >
             <ElTable :data="trackingResult.specimens" border>
               <ElTableColumn label="标本号" min-width="120">
                 <template #default="{ row }">
@@ -649,7 +764,10 @@ if (caseId.value) {
             </ElTable>
           </WorkflowSectionCard>
 
-          <WorkflowSectionCard title="包埋与切片" description="展示包埋盒提示和玻片状态。">
+          <WorkflowSectionCard
+            title="包埋与切片"
+            description="展示包埋盒提示和玻片状态。"
+          >
             <ElTable :data="trackingResult.embeddingBoxes" border>
               <ElTableColumn label="包埋盒号" min-width="140">
                 <template #default="{ row }">
@@ -661,11 +779,18 @@ if (caseId.value) {
                   {{ formatNullable(row.sliceNotice) }}
                 </template>
               </ElTableColumn>
-              <ElTableColumn label="玻片数量" min-width="100" prop="slideCount" />
+              <ElTableColumn
+                label="玻片数量"
+                min-width="100"
+                prop="slideCount"
+              />
             </ElTable>
           </WorkflowSectionCard>
 
-          <WorkflowSectionCard title="玻片状态" description="展示切片、染色和质控状态。">
+          <WorkflowSectionCard
+            title="玻片状态"
+            description="展示切片、染色和质控状态。"
+          >
             <ElTable :data="trackingResult.slides" border>
               <ElTableColumn label="玻片号" min-width="140">
                 <template #default="{ row }">
@@ -758,19 +883,19 @@ if (caseId.value) {
   font-size: 14px;
   font-weight: 700;
   color: #94a3b8;
-  background: #ffffff;
+  background: #fff;
   border: 2px solid var(--pending-color);
   border-radius: 999px;
 }
 
 .tracking-flow__item.is-completed .tracking-flow__marker {
-  color: #ffffff;
+  color: #fff;
   background: var(--completed-color);
   border-color: var(--completed-color);
 }
 
 .tracking-flow__item.is-current .tracking-flow__marker {
-  color: #ffffff;
+  color: #fff;
   background: var(--current-color);
   border-color: #bfdbfe;
   box-shadow: 0 0 0 4px #dbeafe;
@@ -779,7 +904,7 @@ if (caseId.value) {
 .tracking-flow__current-dot {
   width: 8px;
   height: 8px;
-  background: #ffffff;
+  background: #fff;
   border-radius: 999px;
 }
 
@@ -802,16 +927,16 @@ if (caseId.value) {
 .tracking-flow__content {
   min-height: 18px;
   overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 12px;
   line-height: 18px;
   color: hsl(var(--muted-foreground));
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .tracking-flow__meta {
   display: flex;
-  align-items: center;
   gap: 6px;
+  align-items: center;
 }
 </style>

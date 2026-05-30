@@ -1,12 +1,15 @@
 <script setup lang="ts">
+import type { EchartsUIType } from '@vben/plugins/echarts';
+
 import { computed, onMounted, ref, watch } from 'vue';
 
 import { EchartsUI, useEcharts } from '@vben/plugins/echarts';
-import type { EchartsUIType } from '@vben/plugins/echarts';
 
 import { ElButton, ElEmpty, ElSkeleton } from 'element-plus';
 
-type ChartOption = Parameters<ReturnType<typeof useEcharts>['renderEcharts']>[0];
+type ChartOption = Parameters<
+  ReturnType<typeof useEcharts>['renderEcharts']
+>[0];
 
 const props = withDefaults(
   defineProps<{
@@ -78,7 +81,10 @@ onMounted(() => {
 
 <template>
   <div class="relative min-h-[220px]">
-    <div v-if="error" class="flex min-h-[220px] flex-col items-center justify-center gap-4 rounded-3xl border border-dashed border-danger/35 bg-danger/5 px-6 py-8 text-center">
+    <div
+      v-if="error"
+      class="flex min-h-[220px] flex-col items-center justify-center gap-4 rounded-3xl border border-dashed border-danger/35 bg-danger/5 px-6 py-8 text-center"
+    >
       <p class="max-w-[28rem] text-sm text-danger">{{ error }}</p>
       <ElButton type="danger" plain @click="handleRetry">重试</ElButton>
     </div>

@@ -27,13 +27,13 @@ import {
 
 import WorkflowSectionCard from '#/modules/doctor-workflow/components/WorkflowSectionCard.vue';
 
+import { getBillingManagementCapabilities } from '../access';
 import {
   listBillingRecords,
   receiveBillingReceipt,
   reconcileBilling,
   retryBilling,
 } from '../api/m6-management-service';
-import { getBillingManagementCapabilities } from '../access';
 
 const accessStore = useAccessStore();
 const userStore = useUserStore();
@@ -106,7 +106,8 @@ async function loadRecords() {
     });
   } catch (error) {
     records.value = [];
-    pageError.value = error instanceof Error ? error.message : '收费记录加载失败';
+    pageError.value =
+      error instanceof Error ? error.message : '收费记录加载失败';
   } finally {
     loading.value = false;
   }
@@ -165,7 +166,9 @@ async function submitReceipt() {
     ElMessage.success('收费回执已登记');
     await loadRecords();
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '收费回执登记失败');
+    ElMessage.error(
+      error instanceof Error ? error.message : '收费回执登记失败',
+    );
   } finally {
     operating.value = false;
   }
@@ -242,10 +245,16 @@ onMounted(() => {
       >
         <ElForm inline label-width="90px">
           <ElFormItem label="收费阶段">
-            <ElInput v-model="queryForm.billingStage" placeholder="如 SPECIAL_ORDER" />
+            <ElInput
+              v-model="queryForm.billingStage"
+              placeholder="如 SPECIAL_ORDER"
+            />
           </ElFormItem>
           <ElFormItem label="收费状态">
-            <ElInput v-model="queryForm.billingStatus" placeholder="如 FAILED / SUCCESS" />
+            <ElInput
+              v-model="queryForm.billingStatus"
+              placeholder="如 FAILED / SUCCESS"
+            />
           </ElFormItem>
           <ElFormItem label="病例 ID">
             <ElInput v-model="queryForm.caseId" placeholder="病例主键" />
@@ -254,10 +263,16 @@ onMounted(() => {
             <ElInput v-model="queryForm.orderId" placeholder="医嘱主键" />
           </ElFormItem>
           <ElFormItem label="外部系统">
-            <ElInput v-model="queryForm.externalSystem" placeholder="如 MOCK_BILLING" />
+            <ElInput
+              v-model="queryForm.externalSystem"
+              placeholder="如 MOCK_BILLING"
+            />
           </ElFormItem>
           <ElFormItem label="起始时间">
-            <ElInput v-model="queryForm.from" placeholder="YYYY-MM-DDTHH:mm:ss" />
+            <ElInput
+              v-model="queryForm.from"
+              placeholder="YYYY-MM-DDTHH:mm:ss"
+            />
           </ElFormItem>
           <ElFormItem label="结束时间">
             <ElInput v-model="queryForm.to" placeholder="YYYY-MM-DDTHH:mm:ss" />
@@ -291,10 +306,16 @@ onMounted(() => {
       >
         <ElForm inline label-width="90px">
           <ElFormItem label="起始时间">
-            <ElInput v-model="reconcileForm.from" placeholder="YYYY-MM-DDTHH:mm:ss" />
+            <ElInput
+              v-model="reconcileForm.from"
+              placeholder="YYYY-MM-DDTHH:mm:ss"
+            />
           </ElFormItem>
           <ElFormItem label="结束时间">
-            <ElInput v-model="reconcileForm.to" placeholder="YYYY-MM-DDTHH:mm:ss" />
+            <ElInput
+              v-model="reconcileForm.to"
+              placeholder="YYYY-MM-DDTHH:mm:ss"
+            />
           </ElFormItem>
           <ElFormItem>
             <ElButton
@@ -316,7 +337,10 @@ onMounted(() => {
         title="收费记录"
         :description="`当前返回 ${records.length} 条收费记录。`"
       >
-        <ElEmpty v-if="!loading && records.length === 0 && !pageError" description="暂无收费记录" />
+        <ElEmpty
+          v-if="!loading && records.length === 0 && !pageError"
+          description="暂无收费记录"
+        />
         <ElTable v-else v-loading="loading" :data="records" border>
           <ElTableColumn label="收费单号" min-width="160" prop="billingNo" />
           <ElTableColumn label="收费阶段" min-width="130" prop="billingStage" />
@@ -324,7 +348,15 @@ onMounted(() => {
           <ElTableColumn label="金额" min-width="120" prop="amount" />
           <ElTableColumn label="状态" min-width="120">
             <template #default="{ row }">
-              <ElTag :type="row.billingStatus === 'SUCCESS' ? 'success' : row.billingStatus === 'FAILED' ? 'danger' : 'warning'">
+              <ElTag
+                :type="
+                  row.billingStatus === 'SUCCESS'
+                    ? 'success'
+                    : row.billingStatus === 'FAILED'
+                      ? 'danger'
+                      : 'warning'
+                "
+              >
                 {{ displayText(row.billingStatus) }}
               </ElTag>
             </template>

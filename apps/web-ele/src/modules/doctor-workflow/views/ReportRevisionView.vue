@@ -16,13 +16,13 @@ import {
   ElMessage,
 } from 'element-plus';
 
-import { M4_PERMISSION_CODES } from '../constants';
 import {
   approveReportRevisionRequest,
   createReportRevisionRequest,
   rejectReportRevisionRequest,
 } from '../api/doctor-workflow-service';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
+import { M4_PERMISSION_CODES } from '../constants';
 import { getDoctorWorkflowPageErrorMessage } from '../utils/error';
 import { formatNullable } from '../utils/format';
 
@@ -30,13 +30,13 @@ const router = useRouter();
 const accessStore = useAccessStore();
 
 const operating = ref(false);
-const lastResult = ref<{
+const lastResult = ref<null | {
   approvedVersionNo?: null | number;
   caseId?: null | string;
   reportId?: null | string;
   requestId?: null | string;
   requestStatus?: null | string;
-} | null>(null);
+}>(null);
 
 const canCreateRevision = computed(() =>
   accessStore.accessCodes.includes(M4_PERMISSION_CODES.REVISION_REQUEST_CREATE),
@@ -129,9 +129,15 @@ async function reviewRevision(action: 'approve' | 'reject') {
       action === 'approve'
         ? await approveReportRevisionRequest(reviewForm.requestId, payload)
         : await rejectReportRevisionRequest(reviewForm.requestId, payload);
-    ElMessage.success(action === 'approve' ? '修订申请已通过' : '修订申请已驳回');
+    ElMessage.success(
+      action === 'approve' ? '修订申请已通过' : '修订申请已驳回',
+    );
 
-    if (action === 'approve' && lastResult.value.caseId && lastResult.value.reportId) {
+    if (
+      action === 'approve' &&
+      lastResult.value.caseId &&
+      lastResult.value.reportId
+    ) {
       void router.push({
         path: '/doctor-workflow/report',
         query: {
@@ -150,7 +156,10 @@ async function reviewRevision(action: 'approve' | 'reject') {
 </script>
 
 <template>
-  <Page title="报告修订管理" description="对已签发或已发布报告发起修订申请，并完成审批通过或驳回。">
+  <Page
+    title="报告修订管理"
+    description="对已签发或已发布报告发起修订申请，并完成审批通过或驳回。"
+  >
     <div class="flex flex-col gap-4">
       <WorkflowSectionCard
         v-if="canCreateRevision"
@@ -162,7 +171,11 @@ async function reviewRevision(action: 'approve' | 'reject') {
             <ElInput v-model="createForm.reportId" />
           </ElFormItem>
           <ElFormItem label="修订原因">
-            <ElInput v-model="createForm.requestReason" :rows="4" type="textarea" />
+            <ElInput
+              v-model="createForm.requestReason"
+              :rows="4"
+              type="textarea"
+            />
           </ElFormItem>
           <ElFormItem label="操作人">
             <ElInput v-model="createForm.operatorName" />
@@ -174,7 +187,11 @@ async function reviewRevision(action: 'approve' | 'reject') {
             <ElInput v-model="createForm.remarks" type="textarea" />
           </ElFormItem>
           <ElFormItem>
-            <ElButton :loading="operating" type="primary" @click="createRevision">
+            <ElButton
+              :loading="operating"
+              type="primary"
+              @click="createRevision"
+            >
               发起修订
             </ElButton>
           </ElFormItem>
@@ -218,7 +235,10 @@ async function reviewRevision(action: 'approve' | 'reject') {
         </ElForm>
       </WorkflowSectionCard>
 
-      <WorkflowSectionCard v-if="!canCreateRevision && !canReviewRevision" title="当前无可用操作">
+      <WorkflowSectionCard
+        v-if="!canCreateRevision && !canReviewRevision"
+        title="当前无可用操作"
+      >
         <ElEmpty description="当前账号没有报告修订相关权限。" />
       </WorkflowSectionCard>
 

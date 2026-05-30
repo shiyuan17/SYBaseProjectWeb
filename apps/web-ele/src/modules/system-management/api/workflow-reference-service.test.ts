@@ -106,31 +106,49 @@ describe('workflow-reference-service', () => {
     await listWorkflowReferenceOptions();
 
     expect(requestClientMock.get).toHaveBeenCalledTimes(1);
-    expect(requestClientMock.get).toHaveBeenCalledWith('/v1/workflow-reference-options', {
-      skipErrorMessage: undefined,
-    });
+    expect(requestClientMock.get).toHaveBeenCalledWith(
+      '/v1/workflow-reference-options',
+      {
+        skipErrorMessage: undefined,
+      },
+    );
   });
 
   it('returns default options when safe loading fails', async () => {
     requestClientMock.get.mockRejectedValue(new Error('boom'));
 
     await expect(loadWorkflowReferenceOptionsSafely()).resolves.toMatchObject({
-      clinicalSymptoms: expect.arrayContaining([{ label: '肿物', value: '肿物' }]),
-      collectionModes: expect.arrayContaining([{ label: '手术', value: 'SURGERY' }]),
-      containerNames: expect.arrayContaining([{ label: '标本瓶', value: '标本瓶' }]),
-      cutSurfaceFeatures: expect.arrayContaining([{ label: '灰白', value: '灰白' }]),
+      clinicalSymptoms: expect.arrayContaining([
+        { label: '肿物', value: '肿物' },
+      ]),
+      collectionModes: expect.arrayContaining([
+        { label: '手术', value: 'SURGERY' },
+      ]),
+      containerNames: expect.arrayContaining([
+        { label: '标本瓶', value: '标本瓶' },
+      ]),
+      cutSurfaceFeatures: expect.arrayContaining([
+        { label: '灰白', value: '灰白' },
+      ]),
       fixationLiquidTypes: expect.arrayContaining([
         { label: '10% 中性福尔马林', value: 'FORMALIN' },
       ]),
-      marginMarkings: expect.arrayContaining([{ label: '上缘墨染', value: '上缘墨染' }]),
+      marginMarkings: expect.arrayContaining([
+        { label: '上缘墨染', value: '上缘墨染' },
+      ]),
       specimenImageSizes: expect.arrayContaining([
         { label: '3.2x2.1x1.0cm', value: '3.2x2.1x1.0cm' },
       ]),
-      specimenTypes: expect.arrayContaining([{ label: '常规', value: 'ROUTINE' }]),
+      specimenTypes: expect.arrayContaining([
+        { label: '常规', value: 'ROUTINE' },
+      ]),
     });
 
-    expect(requestClientMock.get).toHaveBeenCalledWith('/v1/workflow-reference-options', {
-      skipErrorMessage: true,
-    });
+    expect(requestClientMock.get).toHaveBeenCalledWith(
+      '/v1/workflow-reference-options',
+      {
+        skipErrorMessage: true,
+      },
+    );
   });
 });

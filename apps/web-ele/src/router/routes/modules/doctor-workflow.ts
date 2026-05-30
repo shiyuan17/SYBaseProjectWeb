@@ -137,9 +137,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
       },
       {
         component: () =>
-          import(
-            '#/modules/doctor-workflow/views/ConsultationWorkstationView.vue'
-          ),
+          import('#/modules/doctor-workflow/views/ConsultationWorkstationView.vue'),
         meta: {
           authority: [...M4_CONSULTATION_PAGE_AUTHORITIES],
           icon: 'carbon:group',

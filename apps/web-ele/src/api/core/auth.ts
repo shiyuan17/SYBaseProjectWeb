@@ -22,7 +22,10 @@ export namespace AuthApi {
 }
 
 export async function loginApi(data: AuthApi.LoginParams) {
-  return anonymousRequestClient.post<AuthApi.LoginResult>('/v1/auth/login', data);
+  return anonymousRequestClient.post<AuthApi.LoginResult>(
+    '/v1/auth/login',
+    data,
+  );
 }
 
 export async function logoutApi() {

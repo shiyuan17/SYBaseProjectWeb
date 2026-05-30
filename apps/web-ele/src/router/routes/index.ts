@@ -5,11 +5,7 @@ import { mergeRouteModules, traverseTreeValues } from '@vben/utils';
 import { coreRoutes, fallbackNotFoundRoute } from './core';
 
 const dynamicRouteFiles = import.meta.glob(
-  [
-    './modules/**/*.ts',
-    '!./modules/**/*.test.ts',
-    '!./modules/**/*.spec.ts',
-  ],
+  ['./modules/**/*.ts', '!./modules/**/*.test.ts', '!./modules/**/*.spec.ts'],
   {
     eager: true,
   },

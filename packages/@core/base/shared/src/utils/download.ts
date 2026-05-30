@@ -149,8 +149,14 @@ export function resolveFileName(url: string, fileName?: string): string {
 }
 
 export function sanitizeFileName(fileName: string): string {
-  const sanitized = fileName
-    .replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_')
+  const illegalCharacters = String.raw`<>:"/\|?*`;
+  const sanitized = Array.from(fileName, (character) => {
+    const characterCode = character.codePointAt(0) ?? 0;
+    return characterCode < 32 || illegalCharacters.includes(character)
+      ? '_'
+      : character;
+  })
+    .join('')
     .trim();
 
   return sanitized || DEFAULT_FILENAME;
@@ -158,7 +164,7 @@ export function sanitizeFileName(fileName: string): string {
 
 function resolveFileNameFromUrl(url: string): null | string {
   const pathname = parsePathname(url);
-  const fileName = pathname.split('/').filter(Boolean).pop();
+  const fileName = pathname.split('/').findLast(Boolean);
 
   if (!fileName) {
     return null;

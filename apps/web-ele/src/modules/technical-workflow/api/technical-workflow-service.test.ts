@@ -283,7 +283,9 @@ describe('technical-workflow-service requests', () => {
       3,
       '/v1/dehydration-batches/BATCH-1/complete',
       {
-        mediaAssets: [{ fileName: '1.jpg', fileUrl: 'http://example.com/1.jpg' }],
+        mediaAssets: [
+          { fileName: '1.jpg', fileUrl: 'http://example.com/1.jpg' },
+        ],
         operatorName: '脱水员',
       },
     );

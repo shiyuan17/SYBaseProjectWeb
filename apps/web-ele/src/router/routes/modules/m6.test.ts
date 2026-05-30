@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
-
 import { hasAuthority } from '@vben/utils';
+
+import { describe, expect, it } from 'vitest';
 
 import {
   M6_BILLING_PAGE_AUTHORITIES,
@@ -22,7 +22,9 @@ function getM6ChildRouteNames(accessCodes: string[]) {
 describe('m6 routes', () => {
   it('registers M6 routes with entry and page authorities', () => {
     const m6Root = m6Routes.find((route) => route.name === 'M6Root');
-    const entryRoute = m6Root?.children?.find((route) => route.name === 'M6Entry');
+    const entryRoute = m6Root?.children?.find(
+      (route) => route.name === 'M6Entry',
+    );
     const integrationRoute = m6Root?.children?.find(
       (route) => route.name === 'IntegrationManagement',
     );

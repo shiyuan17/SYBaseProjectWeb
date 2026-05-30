@@ -4,19 +4,20 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { M4_PERMISSION_CODES } from '../constants';
 
-const { mockAccessStore, mockRoute, mockRouter, getReportTrackingMock } = vi.hoisted(() => ({
-  getReportTrackingMock: vi.fn(),
-  mockAccessStore: {
-    accessCodes: [] as string[],
-  },
-  mockRoute: {
-    query: {} as Record<string, string | undefined>,
-  },
-  mockRouter: {
-    push: vi.fn(),
-    replace: vi.fn(),
-  },
-}));
+const { mockAccessStore, mockRoute, mockRouter, getReportTrackingMock } =
+  vi.hoisted(() => ({
+    getReportTrackingMock: vi.fn(),
+    mockAccessStore: {
+      accessCodes: [] as string[],
+    },
+    mockRoute: {
+      query: {} as Record<string, string | undefined>,
+    },
+    mockRouter: {
+      push: vi.fn(),
+      replace: vi.fn(),
+    },
+  }));
 
 vi.mock('vue-router', () => ({
   useRoute: () => mockRoute,
@@ -65,7 +66,7 @@ async function flush() {
 
 async function mountView() {
   const root = document.createElement('div');
-  document.body.appendChild(root);
+  document.body.append(root);
 
   const app = createApp({
     render() {
@@ -103,7 +104,9 @@ describe('ReportTrackingView', () => {
     const wrapper = await mountView();
 
     expect(wrapper.root.textContent).toContain('病例 ID / 病理号');
-    expect(wrapper.root.textContent).toContain('请输入病例 ID 或病理号查询报告追踪');
+    expect(wrapper.root.textContent).toContain(
+      '请输入病例 ID 或病理号查询报告追踪',
+    );
 
     wrapper.unmount();
   });

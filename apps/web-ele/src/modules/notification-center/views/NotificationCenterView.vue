@@ -1,4 +1,11 @@
 <script setup lang="ts">
+import type { CheckboxValueType } from 'element-plus';
+
+import type {
+  NotificationCategory,
+  NotificationViewModel,
+} from '../types/notification-center';
+
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
@@ -16,15 +23,9 @@ import {
   ElSpace,
   ElTag,
 } from 'element-plus';
-import type { CheckboxValueType } from 'element-plus';
-
 import { storeToRefs } from 'pinia';
 
 import { useNotificationStore } from '../store/useNotificationStore';
-import type {
-  NotificationCategory,
-  NotificationViewModel,
-} from '../types/notification-center';
 import { getNotificationPageErrorMessage } from '../utils/error';
 
 const notificationStore = useNotificationStore();
@@ -199,7 +200,9 @@ onMounted(async () => {
   <Page title="通知中心" description="集中查看、筛选和处理个人站内通知。">
     <div class="flex flex-col gap-4">
       <ElCard shadow="never">
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div
+          class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
+        >
           <ElSpace wrap>
             <ElSegmented
               :model-value="query.status"
@@ -222,7 +225,11 @@ onMounted(async () => {
             />
             <ElButton @click="loadNotifications">刷新</ElButton>
             <ElButton @click="handleMarkAllRead">全部已读</ElButton>
-            <ElButton :disabled="!hasSelection" type="danger" @click="handleArchiveSelected">
+            <ElButton
+              :disabled="!hasSelection"
+              type="danger"
+              @click="handleArchiveSelected"
+            >
               归档已选
             </ElButton>
           </ElSpace>
@@ -241,7 +248,9 @@ onMounted(async () => {
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
               <ElCheckbox v-model="allChecked">全选当前页</ElCheckbox>
-              <span class="text-sm text-muted-foreground">当前共 {{ total }} 条通知</span>
+              <span class="text-sm text-muted-foreground"
+                >当前共 {{ total }} 条通知</span
+              >
             </div>
           </div>
         </template>
@@ -261,7 +270,9 @@ onMounted(async () => {
               <div class="flex items-start gap-3">
                 <ElCheckbox
                   :model-value="selectedIds.includes(notification.id)"
-                  @change="(checked) => toggleSelection(notification.id, checked)"
+                  @change="
+                    (checked) => toggleSelection(notification.id, checked)
+                  "
                 />
                 <img
                   :src="notification.avatar"
@@ -277,7 +288,11 @@ onMounted(async () => {
                     >
                       {{ notification.title }}
                     </button>
-                    <ElTag :type="notification.status === 'UNREAD' ? 'danger' : 'info'">
+                    <ElTag
+                      :type="
+                        notification.status === 'UNREAD' ? 'danger' : 'info'
+                      "
+                    >
                       {{ resolveStatusLabel(notification) }}
                     </ElTag>
                     <ElTag effect="plain">
@@ -287,7 +302,10 @@ onMounted(async () => {
                   <p class="text-sm text-muted-foreground">
                     {{ notification.summary }}
                   </p>
-                  <p v-if="notification.content" class="text-sm text-foreground">
+                  <p
+                    v-if="notification.content"
+                    class="text-sm text-foreground"
+                  >
                     {{ notification.content }}
                   </p>
                   <div class="text-xs text-muted-foreground">
@@ -308,7 +326,11 @@ onMounted(async () => {
                 <ElButton link type="primary" @click="handleOpen(notification)">
                   查看
                 </ElButton>
-                <ElButton link type="danger" @click="handleArchive(notification)">
+                <ElButton
+                  link
+                  type="danger"
+                  @click="handleArchive(notification)"
+                >
                   归档
                 </ElButton>
               </ElSpace>

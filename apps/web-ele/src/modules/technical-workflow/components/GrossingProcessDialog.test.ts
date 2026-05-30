@@ -1,4 +1,3 @@
-/* eslint-disable vue/one-component-per-file, vue/require-prop-types -- Element Plus mocks are compact inline test doubles for this dialog. */
 import {
   createApp,
   defineComponent,
@@ -61,21 +60,27 @@ vi.mock('#/modules/system-management/api/workflow-reference-service', () => ({
   loadWorkflowReferenceOptionsSafely: mockLoadWorkflowReferenceOptionsSafely,
 }));
 
-vi.mock('#/modules/system-management/components/ReferenceOptionSelect.vue', () => ({
-  default: defineComponent({
-    props: ['modelValue', 'placeholder'],
-    emits: ['update:modelValue'],
-    setup(props, { emit }) {
-      return () =>
-        h('input', {
-          placeholder: props.placeholder,
-          value: props.modelValue,
-          onInput: (event: Event) =>
-            emit('update:modelValue', (event.target as HTMLInputElement).value),
-        });
-    },
+vi.mock(
+  '#/modules/system-management/components/ReferenceOptionSelect.vue',
+  () => ({
+    default: defineComponent({
+      props: ['modelValue', 'placeholder'],
+      emits: ['update:modelValue'],
+      setup(props, { emit }) {
+        return () =>
+          h('input', {
+            placeholder: props.placeholder,
+            value: props.modelValue,
+            onInput: (event: Event) =>
+              emit(
+                'update:modelValue',
+                (event.target as HTMLInputElement).value,
+              ),
+          });
+      },
+    }),
   }),
-}));
+);
 
 vi.mock('./TechnicalOperatorFields.vue', () => ({
   default: defineComponent({
@@ -136,7 +141,11 @@ vi.mock('element-plus', () => {
     setup(props, { slots }) {
       return () =>
         props.modelValue
-          ? h('section', [h('h3', props.title), slots.default?.(), slots.footer?.()])
+          ? h('section', [
+              h('h3', props.title),
+              slots.default?.(),
+              slots.footer?.(),
+            ])
           : null;
     },
   });
@@ -155,13 +164,19 @@ vi.mock('element-plus', () => {
               rows: props.rows,
               value: props.modelValue,
               onInput: (event: Event) =>
-                emit('update:modelValue', (event.target as HTMLTextAreaElement).value),
+                emit(
+                  'update:modelValue',
+                  (event.target as HTMLTextAreaElement).value,
+                ),
             })
           : h('input', {
               placeholder: props.placeholder,
               value: props.modelValue,
               onInput: (event: Event) =>
-                emit('update:modelValue', (event.target as HTMLInputElement).value),
+                emit(
+                  'update:modelValue',
+                  (event.target as HTMLInputElement).value,
+                ),
             });
     },
   });
@@ -176,7 +191,10 @@ vi.mock('element-plus', () => {
           type: 'number',
           value: props.modelValue,
           onInput: (event: Event) =>
-            emit('update:modelValue', Number((event.target as HTMLInputElement).value)),
+            emit(
+              'update:modelValue',
+              Number((event.target as HTMLInputElement).value),
+            ),
         });
     },
   });
@@ -234,7 +252,8 @@ vi.mock('element-plus', () => {
     const childrenKey = treeProps.children || 'children';
     const labelKey = treeProps.label || 'name';
     const disabledKey = treeProps.disabled || 'disabled';
-    const options: Array<{ disabled: boolean; label: string; value: string }> = [];
+    const options: Array<{ disabled: boolean; label: string; value: string }> =
+      [];
     const walk = (items: TreeSelectOption[]) => {
       items.forEach((item) => {
         options.push({
@@ -263,7 +282,10 @@ vi.mock('element-plus', () => {
             'aria-label': props.placeholder,
             value: props.modelValue,
             onChange: (event: Event) =>
-              emit('update:modelValue', (event.target as HTMLSelectElement).value),
+              emit(
+                'update:modelValue',
+                (event.target as HTMLSelectElement).value,
+              ),
           },
           flattenTreeSelectOptions(props.data, props.props).map((option) =>
             h(
@@ -299,11 +321,7 @@ vi.mock('element-plus', () => {
         selectTab,
       });
       return () =>
-        h(
-          'div',
-          { 'data-active-tab': activeName.value },
-          slots.default?.(),
-        );
+        h('div', { 'data-active-tab': activeName.value }, slots.default?.());
     },
   });
 
@@ -327,7 +345,9 @@ vi.mock('element-plus', () => {
             },
             props.label,
           ),
-          isActive ? h('div', { 'data-tab-panel': props.name }, slots.default?.()) : null,
+          isActive
+            ? h('div', { 'data-tab-panel': props.name }, slots.default?.())
+            : null,
         ]);
       };
     },
@@ -418,10 +438,12 @@ async function flushAll() {
   await nextTick();
 }
 
-async function mountDialog(options: {
-  bodyParts?: object[];
-  samplingTemplates?: object[];
-} = {}) {
+async function mountDialog(
+  options: {
+    bodyParts?: object[];
+    samplingTemplates?: object[];
+  } = {},
+) {
   mockListBodyParts.mockResolvedValue(options.bodyParts ?? []);
   mockListSamplingTemplates.mockResolvedValue(options.samplingTemplates ?? []);
   mockLoadWorkflowReferenceOptionsSafely.mockResolvedValue({
@@ -440,7 +462,8 @@ async function mountDialog(options: {
   mockUploadGrossingMediaAsset.mockResolvedValue({
     contentType: 'image/jpeg',
     fileName: 'uploaded-specimen.jpg',
-    fileUrl: '/api/v1/grossing-media-assets/files/20260525/uploaded-specimen.jpg',
+    fileUrl:
+      '/api/v1/grossing-media-assets/files/20260525/uploaded-specimen.jpg',
     size: 5,
   });
 
@@ -469,8 +492,8 @@ async function mountDialog(options: {
 }
 
 function findButton(root: HTMLElement, text: string) {
-  const button = [...root.querySelectorAll<HTMLButtonElement>('button')].find((item) =>
-    item.textContent?.includes(text),
+  const button = [...root.querySelectorAll<HTMLButtonElement>('button')].find(
+    (item) => item.textContent?.includes(text),
   );
   if (!button) {
     throw new Error(`Missing button: ${text}`);
@@ -489,12 +512,16 @@ function findTabButton(root: HTMLElement, label: string) {
 }
 
 function inputByPlaceholder(root: HTMLElement, placeholder: string, index = 0) {
-  const elements = [...root.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+  const elements = [
+    ...root.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
       `[placeholder="${placeholder}"]`,
-    )];
+    ),
+  ];
   const element = elements[index];
   if (!element) {
-    throw new Error(`Missing input for placeholder: ${placeholder} at index ${index}`);
+    throw new Error(
+      `Missing input for placeholder: ${placeholder} at index ${index}`,
+    );
   }
   return element;
 }
@@ -511,7 +538,9 @@ function setInputValue(
 }
 
 async function uploadFile(root: HTMLElement, file: File) {
-  const input = root.querySelector<HTMLInputElement>('input[aria-label="上传影像"]');
+  const input = root.querySelector<HTMLInputElement>(
+    'input[aria-label="上传影像"]',
+  );
   if (!input) {
     throw new Error('Missing upload input');
   }
@@ -524,7 +553,9 @@ async function uploadFile(root: HTMLElement, file: File) {
 }
 
 function selectByLabel(root: HTMLElement, label: string) {
-  const select = root.querySelector<HTMLSelectElement>(`select[aria-label="${label}"]`);
+  const select = root.querySelector<HTMLSelectElement>(
+    `select[aria-label="${label}"]`,
+  );
   if (!select) {
     throw new Error(`Missing select for label: ${label}`);
   }
@@ -556,7 +587,9 @@ describe('GrossingProcessDialog', () => {
     expect(mockGetTechnicalTracking).toHaveBeenCalledWith('CASE-001');
     expect(findTabButton(root, 'SP-001').dataset.active).toBe('true');
     expect(findTabButton(root, 'SP-002').dataset.active).toBe('false');
-    expect(root.textContent).toContain('当前仅编辑该标本对应的取材、蜡块和影像信息。');
+    expect(root.textContent).toContain(
+      '当前仅编辑该标本对应的取材、蜡块和影像信息。',
+    );
 
     app.unmount();
   });
@@ -654,9 +687,9 @@ describe('GrossingProcessDialog', () => {
       ],
     });
 
-    const categoryOption = [...selectByLabel(root, '请选择取材模板').options].find(
-      (option) => option.value === 'TC-GROSS',
-    );
+    const categoryOption = [
+      ...selectByLabel(root, '请选择取材模板').options,
+    ].find((option) => option.value === 'TC-GROSS');
     expect(categoryOption?.disabled).toBe(true);
 
     setSelectValue(root, '请选择取材部位', 'BP-STOMACH-BODY');
@@ -771,7 +804,9 @@ describe('GrossingProcessDialog', () => {
       taskId: 'TASK-001',
       terminalCode: null,
     });
-    expect(messageSuccess).toHaveBeenCalledWith('取材完成，已生成 2 条脱水任务');
+    expect(messageSuccess).toHaveBeenCalledWith(
+      '取材完成，已生成 2 条脱水任务',
+    );
 
     app.unmount();
   });
@@ -792,7 +827,9 @@ describe('GrossingProcessDialog', () => {
     );
 
     expect(mockUploadGrossingMediaAsset).toHaveBeenCalledTimes(1);
-    expect(inputByPlaceholder(root, '影像名称').value).toBe('uploaded-specimen.jpg');
+    expect(inputByPlaceholder(root, '影像名称').value).toBe(
+      'uploaded-specimen.jpg',
+    );
     expect(root.textContent).toContain('查看影像');
 
     findButton(root, '完成取材').click();
@@ -809,7 +846,8 @@ describe('GrossingProcessDialog', () => {
             mediaAssets: [
               {
                 fileName: 'uploaded-specimen.jpg',
-                fileUrl: '/api/v1/grossing-media-assets/files/20260525/uploaded-specimen.jpg',
+                fileUrl:
+                  '/api/v1/grossing-media-assets/files/20260525/uploaded-specimen.jpg',
               },
             ],
             specimenId: 'SPEC-002',
@@ -824,10 +862,15 @@ describe('GrossingProcessDialog', () => {
   it('blocks unsupported image uploads before calling the API', async () => {
     const { app, root } = await mountDialog();
 
-    await uploadFile(root, new File(['text'], 'specimen.txt', { type: 'text/plain' }));
+    await uploadFile(
+      root,
+      new File(['text'], 'specimen.txt', { type: 'text/plain' }),
+    );
 
     expect(mockUploadGrossingMediaAsset).not.toHaveBeenCalled();
-    expect(messageWarning).toHaveBeenCalledWith('仅支持 JPG、PNG、WEBP、BMP 格式的标本摄影像');
+    expect(messageWarning).toHaveBeenCalledWith(
+      '仅支持 JPG、PNG、WEBP、BMP 格式的标本摄影像',
+    );
 
     app.unmount();
   });

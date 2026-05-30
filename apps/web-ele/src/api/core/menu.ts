@@ -5,8 +5,8 @@ import type { MenuView } from '#/modules/system-management/types/system-manageme
 import { requestClient } from '#/api/request';
 
 import {
-  getBackendFirstMenuRoutes as resolveBackendFirstMenuRoutes,
   mapMenuViewsToRoutes,
+  getBackendFirstMenuRoutes as resolveBackendFirstMenuRoutes,
 } from './menu-mapper';
 
 export { mapMenuViewsToRoutes };
@@ -17,8 +17,9 @@ export async function getAllMenusApi() {
 }
 
 export async function getBackendFirstMenuRoutes(
-  fetchMenuRoutes: () => Promise<RouteRecordStringComponent<string>[]> =
-    getAllMenusApi,
+  fetchMenuRoutes: () => Promise<
+    RouteRecordStringComponent<string>[]
+  > = getAllMenusApi,
 ) {
   return resolveBackendFirstMenuRoutes(fetchMenuRoutes);
 }

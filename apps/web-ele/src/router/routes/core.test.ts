@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
-
 import { LOGIN_PATH } from '@vben/constants';
+
+import { describe, expect, it } from 'vitest';
 
 import { LEGACY_LOGIN_PATH } from '#/router/login-redirect';
 

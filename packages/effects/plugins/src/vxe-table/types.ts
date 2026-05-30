@@ -1,4 +1,5 @@
 import type {
+  VxeGridInstance,
   VxeGridListeners,
   VxeGridPropTypes,
   VxeGridProps as VxeTableGridProps,
@@ -9,11 +10,12 @@ import type { Ref } from 'vue';
 
 import type { ClassType, DeepPartial } from '@vben/types';
 
-import type { BaseFormComponentType, VbenFormProps } from '@vben-core/form-ui';
-
-import type { VxeGridApi } from './api';
-
-import { useVbenForm } from '@vben-core/form-ui';
+import type {
+  BaseFormComponentType,
+  ExtendedFormApi,
+  useVbenForm,
+  VbenFormProps,
+} from '@vben-core/form-ui';
 
 export interface VxePaginationInfo {
   currentPage: number;
@@ -85,11 +87,38 @@ export interface VxeGridProps<
   separator?: boolean | SeparatorOptions;
 }
 
+export interface VxeGridApiLike<
+  T extends Record<string, any> = any,
+  D extends BaseFormComponentType = BaseFormComponentType,
+  P extends Record<string, any> = Record<never, never>,
+> {
+  formApi: ExtendedFormApi;
+  grid: VxeGridInstance<T>;
+  state: null | VxeGridProps<T, D, P>;
+  mount: (
+    instance: null | VxeGridInstance<T>,
+    formApi: ExtendedFormApi,
+  ) => void;
+  query: (params?: Record<string, any>) => Promise<void>;
+  reload: (params?: Record<string, any>) => Promise<void>;
+  setGridOptions: (
+    options: Partial<VxeGridProps<T, D, P>['gridOptions']>,
+  ) => void;
+  setLoading: (isLoading: boolean) => void;
+  setState: (
+    stateOrFn:
+      | ((prev: VxeGridProps<T, D, P>) => Partial<VxeGridProps<T, D, P>>)
+      | Partial<VxeGridProps<T, D, P>>,
+  ) => void;
+  toggleSearchForm: (show?: boolean) => boolean | undefined;
+  unmount: () => void;
+}
+
 export type ExtendedVxeGridApi<
   D extends Record<string, any> = any,
   F extends BaseFormComponentType = BaseFormComponentType,
   P extends Record<string, any> = Record<never, never>,
-> = VxeGridApi<D, F, P> & {
+> = VxeGridApiLike<D, F, P> & {
   useStore: <S = NoInfer<VxeGridProps<D, F, P>>>(
     selector?: (state: NoInfer<VxeGridProps<D, F, P>>) => S,
   ) => Readonly<Ref<S>>;

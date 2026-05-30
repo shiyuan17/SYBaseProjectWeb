@@ -19,13 +19,13 @@ import {
   ElTableColumn,
 } from 'element-plus';
 
-import { M4_PERMISSION_CODES } from '../constants';
 import {
   commentConsultationParticipant,
   completeConsultation,
   createConsultation,
 } from '../api/doctor-workflow-service';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
+import { M4_PERMISSION_CODES } from '../constants';
 import { getDoctorWorkflowPageErrorMessage } from '../utils/error';
 import { formatNullable } from '../utils/format';
 
@@ -33,11 +33,11 @@ const accessStore = useAccessStore();
 
 const operating = ref(false);
 const participants = ref<ConsultationParticipantInput[]>([]);
-const lastResult = ref<{
+const lastResult = ref<null | {
   caseId?: null | string;
   consultationId?: null | string;
   status?: null | string;
-} | null>(null);
+}>(null);
 
 const canCreateConsultation = computed(() =>
   accessStore.accessCodes.includes(M4_PERMISSION_CODES.CONSULTATION_CREATE),
@@ -146,7 +146,11 @@ async function submitComment() {
     ElMessage.warning('当前账号没有录入会诊意见权限');
     return;
   }
-  if (!commentForm.consultationId || !commentForm.participantId || !commentForm.opinion) {
+  if (
+    !commentForm.consultationId ||
+    !commentForm.participantId ||
+    !commentForm.opinion
+  ) {
     ElMessage.warning('请填写会诊 ID、参与人 ID 和意见');
     return;
   }
@@ -205,7 +209,10 @@ async function submitComplete() {
 </script>
 
 <template>
-  <Page title="科内会诊工作站" description="发起会诊、维护参与人、录入参与人意见并完成主持人总结。">
+  <Page
+    title="科内会诊工作站"
+    description="发起会诊、维护参与人、录入参与人意见并完成主持人总结。"
+  >
     <div class="flex flex-col gap-4">
       <WorkflowSectionCard
         v-if="canCreateConsultation"
@@ -278,7 +285,11 @@ async function submitComplete() {
             <ElInput v-model="commentForm.operatorName" />
           </ElFormItem>
           <ElFormItem>
-            <ElButton :loading="operating" type="primary" @click="submitComment">
+            <ElButton
+              :loading="operating"
+              type="primary"
+              @click="submitComment"
+            >
               保存意见
             </ElButton>
           </ElFormItem>
@@ -301,7 +312,11 @@ async function submitComplete() {
             <ElInput v-model="completeForm.operatorName" />
           </ElFormItem>
           <ElFormItem>
-            <ElButton :loading="operating" type="success" @click="submitComplete">
+            <ElButton
+              :loading="operating"
+              type="success"
+              @click="submitComplete"
+            >
               完成会诊
             </ElButton>
           </ElFormItem>

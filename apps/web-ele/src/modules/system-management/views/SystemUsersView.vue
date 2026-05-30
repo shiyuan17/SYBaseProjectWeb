@@ -49,10 +49,7 @@ import DepartmentSelect from '../components/DepartmentSelect.vue';
 import SystemLoadError from '../components/SystemLoadError.vue';
 import SystemSectionCard from '../components/SystemSectionCard.vue';
 import SystemStatusTag from '../components/SystemStatusTag.vue';
-import {
-  M1_PERMISSION_CODES,
-  YES_NO_OPTIONS,
-} from '../constants';
+import { M1_PERMISSION_CODES, YES_NO_OPTIONS } from '../constants';
 import { getSystemPageErrorMessage } from '../utils/error';
 import { formatDateTime, formatNullable } from '../utils/format';
 import {
@@ -140,7 +137,9 @@ const printPreview = ref<null | PrintLoginTagResponse>(null);
 const printDialogVisible = ref(false);
 
 const selectedRolesLabel = (user: SystemUser) =>
-  user.roles.length > 0 ? user.roles.map((item) => item.roleName).join('、') : '-';
+  user.roles.length > 0
+    ? user.roles.map((item) => item.roleName).join('、')
+    : '-';
 
 const roleOptions = computed(() =>
   roles.value.map((item) => ({
@@ -150,7 +149,9 @@ const roleOptions = computed(() =>
 );
 
 const selectedRoleOptions = computed(() =>
-  roleOptions.value.filter((item) => selectedRoleIds.value.includes(item.value)),
+  roleOptions.value.filter((item) =>
+    selectedRoleIds.value.includes(item.value),
+  ),
 );
 
 function resetUserForm() {
@@ -239,7 +240,9 @@ function openEditDialog(user: SystemUser) {
   userDialogVisible.value = true;
 }
 
-function handleDepartmentChange(department: null | { id: string; name: string }) {
+function handleDepartmentChange(
+  department: null | { id: string; name: string },
+) {
   userForm.departmentId = department?.id ?? '';
   userForm.departmentName = department?.name ?? '';
 }
@@ -251,7 +254,8 @@ async function submitUserForm() {
       await createSystemUser(buildSystemUserCreatePayload(userForm));
       ElMessage.success('用户已创建');
     } else if (userForm.id) {
-      const payload: UpdateSystemUserRequest = buildSystemUserUpdatePayload(userForm);
+      const payload: UpdateSystemUserRequest =
+        buildSystemUserUpdatePayload(userForm);
       await updateSystemUser(userForm.id, payload);
       ElMessage.success('用户已更新');
     }
@@ -398,7 +402,10 @@ onMounted(loadInitialData);
       @retry="loadInitialData"
     />
     <div class="flex flex-col gap-4">
-      <SystemSectionCard title="筛选条件" description="支持关键字、启停状态与分页查询。">
+      <SystemSectionCard
+        title="筛选条件"
+        description="支持关键字、启停状态与分页查询。"
+      >
         <ElForm inline label-width="72px">
           <ElFormItem label="关键字">
             <ElInput
@@ -431,7 +438,10 @@ onMounted(loadInitialData);
         </ElForm>
       </SystemSectionCard>
 
-      <SystemSectionCard title="用户列表" description="支持新增、编辑、启停、角色分配和登录日志查看。">
+      <SystemSectionCard
+        title="用户列表"
+        description="支持新增、编辑、启停、角色分配和登录日志查看。"
+      >
         <template #extra>
           <input
             ref="importInputRef"
@@ -447,7 +457,9 @@ onMounted(loadInitialData);
           >
             导入
           </ElButton>
-          <ElButton :loading="exportLoading" @click="handleExport">导出</ElButton>
+          <ElButton :loading="exportLoading" @click="handleExport">
+            导出
+          </ElButton>
           <ElButton
             v-access:code="M1_PERMISSION_CODES.SYSTEM_USER_CREATE"
             type="primary"
@@ -563,7 +575,10 @@ onMounted(loadInitialData);
             />
           </ElFormItem>
           <ElFormItem v-if="userDialogMode === 'create'" label="初始密码">
-            <ElInput v-model="userForm.password" placeholder="留空则按后端默认策略" />
+            <ElInput
+              v-model="userForm.password"
+              placeholder="留空则按后端默认策略"
+            />
           </ElFormItem>
           <ElFormItem label="姓名" required>
             <ElInput v-model="userForm.name" placeholder="请输入姓名" />
@@ -599,7 +614,11 @@ onMounted(loadInitialData);
 
       <template #footer>
         <ElButton @click="userDialogVisible = false">取消</ElButton>
-        <ElButton :loading="submitLoading" type="primary" @click="submitUserForm">
+        <ElButton
+          :loading="submitLoading"
+          type="primary"
+          @click="submitUserForm"
+        >
           保存
         </ElButton>
       </template>
@@ -609,7 +628,9 @@ onMounted(loadInitialData);
       <div class="space-y-5">
         <div class="rounded-xl border border-border bg-card px-4 py-3">
           <div class="text-sm text-muted-foreground">当前用户</div>
-          <div class="mt-1 text-base font-medium text-foreground">{{ activeUserName }}</div>
+          <div class="mt-1 text-base font-medium text-foreground">
+            {{ activeUserName }}
+          </div>
         </div>
 
         <ElForm label-position="top" class="space-y-5">
@@ -665,13 +686,21 @@ onMounted(loadInitialData);
 
       <template #footer>
         <ElButton @click="roleDialogVisible = false">取消</ElButton>
-        <ElButton :loading="roleSaving" type="primary" @click="submitRoleAssignment">
+        <ElButton
+          :loading="roleSaving"
+          type="primary"
+          @click="submitRoleAssignment"
+        >
           保存角色
         </ElButton>
       </template>
     </ElDialog>
 
-    <ElDrawer v-model="logDrawerVisible" :title="`${activeUserName} 的登录日志`" size="58%">
+    <ElDrawer
+      v-model="logDrawerVisible"
+      :title="`${activeUserName} 的登录日志`"
+      size="58%"
+    >
       <ElTable v-loading="logLoading" :data="loginLogs" border>
         <ElTableColumn label="登录时间" min-width="160">
           <template #default="scope">
@@ -719,7 +748,9 @@ onMounted(loadInitialData);
             {{ printPreview.loginTagCode }}
           </ElDescriptionsItem>
           <ElDescriptionsItem label="内容">
-            <pre class="text-foreground whitespace-pre-wrap text-sm">{{ printPreview.content }}</pre>
+            <pre class="text-foreground whitespace-pre-wrap text-sm">{{
+              printPreview.content
+            }}</pre>
           </ElDescriptionsItem>
         </ElDescriptions>
       </template>

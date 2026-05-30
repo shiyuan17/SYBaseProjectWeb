@@ -13,7 +13,8 @@ const accessStore = useAccessStore();
 const targetPath = computed(() => {
   const accessCodes = new Set(accessStore.accessCodes);
   return (
-    M4_WORKFLOW_ROUTE_ITEMS.find((item) => accessCodes.has(item.code))?.path ?? null
+    M4_WORKFLOW_ROUTE_ITEMS.find((item) => accessCodes.has(item.code))?.path ??
+    null
   );
 });
 

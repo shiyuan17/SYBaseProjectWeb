@@ -31,15 +31,23 @@ describe('login redirect helpers', () => {
   });
 
   it('keeps business page redirect queries', () => {
-    expect(buildLoginRedirectQuery('/workspace?tab=today', '/analytics')).toEqual({
+    expect(
+      buildLoginRedirectQuery('/workspace?tab=today', '/analytics'),
+    ).toEqual({
       redirect: '%2Fworkspace%3Ftab%3Dtoday',
     });
   });
 
   it('falls back after login when redirect points to a login page', () => {
-    expect(resolvePostLoginRedirect('%252Flogin', '/analytics')).toBe('/analytics');
-    expect(resolvePostLoginRedirect('/auth/login', '/analytics')).toBe('/analytics');
+    expect(resolvePostLoginRedirect('%252Flogin', '/analytics')).toBe(
+      '/analytics',
+    );
+    expect(resolvePostLoginRedirect('/auth/login', '/analytics')).toBe(
+      '/analytics',
+    );
     expect(resolvePostLoginRedirect('', '/analytics')).toBe('/analytics');
-    expect(resolvePostLoginRedirect('%2Fworkspace', '/analytics')).toBe('/workspace');
+    expect(resolvePostLoginRedirect('%2Fworkspace', '/analytics')).toBe(
+      '/workspace',
+    );
   });
 });

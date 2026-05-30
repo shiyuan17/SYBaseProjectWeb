@@ -92,5 +92,8 @@ export function getEquipmentLedgerCapabilities(accessCodes: string[]) {
 }
 
 export function canViewArchivePage(accessCodes: string[]) {
-  return hasAnyPermission(createAccessCodeSet(accessCodes), M5_ARCHIVE_PAGE_AUTHORITIES);
+  return hasAnyPermission(
+    createAccessCodeSet(accessCodes),
+    M5_ARCHIVE_PAGE_AUTHORITIES,
+  );
 }

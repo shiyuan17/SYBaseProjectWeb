@@ -42,11 +42,22 @@
         margin: 0;
         color: var(--ink);
         font:
-          15px/1.65 "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+          15px/1.65 'Segoe UI',
+          'PingFang SC',
+          'Hiragino Sans GB',
+          'Microsoft YaHei',
           sans-serif;
         background:
-          radial-gradient(circle at top left, rgba(143, 61, 46, 0.12), transparent 28%),
-          radial-gradient(circle at top right, rgba(47, 93, 124, 0.12), transparent 26%),
+          radial-gradient(
+            circle at top left,
+            rgba(143, 61, 46, 0.12),
+            transparent 28%
+          ),
+          radial-gradient(
+            circle at top right,
+            rgba(47, 93, 124, 0.12),
+            transparent 26%
+          ),
           linear-gradient(180deg, #f8f3eb 0%, var(--bg) 100%);
       }
 
@@ -72,19 +83,27 @@
         border: 1px solid rgba(143, 61, 46, 0.18);
         border-radius: 30px;
         background:
-          linear-gradient(135deg, rgba(255, 250, 242, 0.96), rgba(248, 240, 228, 0.92)),
+          linear-gradient(
+            135deg,
+            rgba(255, 250, 242, 0.96),
+            rgba(248, 240, 228, 0.92)
+          ),
           #fff;
         box-shadow: var(--shadow);
       }
 
       .hero::after {
-        content: "";
+        content: '';
         position: absolute;
         inset: auto -80px -100px auto;
         width: 320px;
         height: 320px;
         border-radius: 50%;
-        background: radial-gradient(circle, rgba(143, 61, 46, 0.14), transparent 68%);
+        background: radial-gradient(
+          circle,
+          rgba(143, 61, 46, 0.14),
+          transparent 68%
+        );
         pointer-events: none;
       }
 
@@ -267,7 +286,11 @@
         padding: 20px;
         border-radius: var(--radius-lg);
         border: 1px solid var(--line);
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 249, 241, 0.98));
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.98),
+          rgba(255, 249, 241, 0.98)
+        );
       }
 
       .panel h3,
@@ -322,7 +345,7 @@
         border-radius: 999px;
         background: rgba(47, 93, 124, 0.1);
         color: #254c67;
-        font-family: "Cascadia Mono", Consolas, monospace;
+        font-family: 'Cascadia Mono', Consolas, monospace;
         font-size: 0.92em;
       }
 
@@ -418,7 +441,7 @@
       }
 
       .lane-step::after {
-        content: "→";
+        content: '→';
         position: absolute;
         top: 50%;
         right: -11px;
@@ -429,7 +452,7 @@
       }
 
       .lane-step:last-child::after {
-        content: "";
+        content: '';
       }
 
       details.module {
@@ -449,7 +472,11 @@
         cursor: pointer;
         padding: 24px 28px;
         background:
-          linear-gradient(135deg, rgba(255, 247, 235, 0.96), rgba(247, 237, 224, 0.94)),
+          linear-gradient(
+            135deg,
+            rgba(255, 247, 235, 0.96),
+            rgba(247, 237, 224, 0.94)
+          ),
           #fff;
       }
 
@@ -644,7 +671,11 @@
         padding: 22px 24px;
         border-radius: 22px;
         border: 1px solid var(--line);
-        background: linear-gradient(180deg, rgba(255, 251, 245, 0.95), rgba(249, 240, 228, 0.96));
+        background: linear-gradient(
+          180deg,
+          rgba(255, 251, 245, 0.95),
+          rgba(249, 240, 228, 0.96)
+        );
         color: var(--muted);
       }
 
@@ -662,7 +693,7 @@
       }
 
       svg text {
-        font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+        font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
       }
 
       @media (max-width: 1160px) {
@@ -729,8 +760,10 @@
             <span class="eyebrow">M1-M4 Test Handbook</span>
             <h1>M1-M4 全面测试执行手册</h1>
             <p>
-              本手册用于组织病理全流程系统前端 M1-M4 的岗位化走通测试。内容对齐当前仓库已实现页面、
-              后端权限种子、集成测试与现有规划文档，覆盖测试准备、角色矩阵、跨模块总流程、各角色 SOP、
+              本手册用于组织病理全流程系统前端 M1-M4
+              的岗位化走通测试。内容对齐当前仓库已实现页面、
+              后端权限种子、集成测试与现有规划文档，覆盖测试准备、角色矩阵、跨模块总流程、各角色
+              SOP、
               模块验收清单与结果记录表，适合现场联调、回归测试和阶段验收直接使用。
             </p>
           </div>
@@ -812,7 +845,9 @@
             <ul>
               <li>默认面向浏览器端人工走通测试，不替代后端自动化报告。</li>
               <li>以当前前端已实现页面与菜单入口为准，不扩写未落地交互。</li>
-              <li><code>M4</code> 病理医嘱执行前端独立页面未纳入本次正式走通。</li>
+              <li>
+                <code>M4</code> 病理医嘱执行前端独立页面未纳入本次正式走通。
+              </li>
               <li>打印、扫码枪、国产浏览器兼容性仅记录检查点，需现场补验。</li>
             </ul>
           </div>
@@ -820,14 +855,28 @@
             <h3>源码依据</h3>
             <ul>
               <li><code>docs/M1_M2_WORKFLOW_IMPLEMENTATION_PLAN.md</code></li>
-              <li><code>docs/M3_TECHNICAL_WORKFLOW_IMPLEMENTATION_PLAN.md</code></li>
-              <li><code>docs/M4_M5_ARCHIVE_OPERATION_SUPPORT_IMPLEMENTATION_PLAN.md</code></li>
+              <li>
+                <code>docs/M3_TECHNICAL_WORKFLOW_IMPLEMENTATION_PLAN.md</code>
+              </li>
+              <li>
+                <code
+                  >docs/M4_M5_ARCHIVE_OPERATION_SUPPORT_IMPLEMENTATION_PLAN.md</code
+                >
+              </li>
               <li><code>docs/detailed_list/01-临床标本送检模块.md</code></li>
               <li><code>docs/detailed_list/02-技术组工作模块.md</code></li>
               <li><code>docs/detailed_list/03-医生组工作模块.md</code></li>
               <li><code>docs/detailed_list/07-系统管理模块.md</code></li>
-              <li><code>D:\Github\JW\SYBaseProject\docs/database/达梦完整部署基线.sql</code></li>
-              <li><code>D:\Github\JW\SYBaseProject\docs/reports/m1-m5-api-test-report-20260521.md</code></li>
+              <li>
+                <code
+                  >D:\Github\JW\SYBaseProject\docs/database/达梦完整部署基线.sql</code
+                >
+              </li>
+              <li>
+                <code
+                  >D:\Github\JW\SYBaseProject\docs/reports/m1-m5-api-test-report-20260521.md</code
+                >
+              </li>
             </ul>
           </div>
         </div>
@@ -847,35 +896,66 @@
           <div class="panel">
             <h3>环境准备</h3>
             <ul>
-              <li>前端环境：部署当前可访问的 <code>web-ele</code> 测试版本。</li>
-              <li>后端环境：对接当前 <code>bl-center</code> 测试环境，接口路由可正常访问。</li>
-              <li>建议浏览器：现代 Chromium 内核浏览器；若有国产浏览器要求，需追加专项记录。</li>
-              <li>联调方式：优先使用真实测试环境，不用本地 Mock 替代主闭环验收。</li>
+              <li>
+                前端环境：部署当前可访问的 <code>web-ele</code> 测试版本。
+              </li>
+              <li>
+                后端环境：对接当前
+                <code>bl-center</code> 测试环境，接口路由可正常访问。
+              </li>
+              <li>
+                建议浏览器：现代 Chromium
+                内核浏览器；若有国产浏览器要求，需追加专项记录。
+              </li>
+              <li>
+                联调方式：优先使用真实测试环境，不用本地 Mock 替代主闭环验收。
+              </li>
             </ul>
           </div>
           <div class="panel">
             <h3>账号准备</h3>
             <ul>
-              <li>优先准备后端种子测试用户，避免现场手工造角色导致权限口径不一致。</li>
-              <li>如需重建账号，先由 <code>M1</code> 管理员按本手册完成用户创建和角色分配。</li>
-              <li>建议在测试前确认每个账号可正常登录，并能看到对应菜单目录。</li>
+              <li>
+                优先准备后端种子测试用户，避免现场手工造角色导致权限口径不一致。
+              </li>
+              <li>
+                如需重建账号，先由
+                <code>M1</code> 管理员按本手册完成用户创建和角色分配。
+              </li>
+              <li>
+                建议在测试前确认每个账号可正常登录，并能看到对应菜单目录。
+              </li>
             </ul>
           </div>
           <div class="panel">
             <h3>数据准备</h3>
             <ul>
-              <li>常规病理测试病例 1 组，用于完整 <code>M2 → M3 → M4</code> 主链路。</li>
-              <li>第三方导入测试数据 1 组，用于 <code>M2</code> 临床申请导入路径。</li>
-              <li>返工场景测试病例 1 组，用于 <code>M3</code> 返工补充链路。</li>
+              <li>
+                常规病理测试病例 1 组，用于完整
+                <code>M2 → M3 → M4</code> 主链路。
+              </li>
+              <li>
+                第三方导入测试数据 1 组，用于 <code>M2</code> 临床申请导入路径。
+              </li>
+              <li>
+                返工场景测试病例 1 组，用于 <code>M3</code> 返工补充链路。
+              </li>
               <li>修订和会诊测试病例 1 组，用于 <code>M4</code> 附加闭环。</li>
             </ul>
           </div>
           <div class="panel">
             <h3>设备与现场说明</h3>
             <ul>
-              <li>标签打印、转运单打印、登录标签打印需至少验证一次成功反馈。</li>
-              <li>若现场具备扫码枪，建议优先用扫码路径执行 <code>M2</code> 固定、接收与追踪。</li>
-              <li>真机打印、扫码枪失败回退、浏览器兼容性需单独在结果记录区说明。</li>
+              <li>
+                标签打印、转运单打印、登录标签打印需至少验证一次成功反馈。
+              </li>
+              <li>
+                若现场具备扫码枪，建议优先用扫码路径执行
+                <code>M2</code> 固定、接收与追踪。
+              </li>
+              <li>
+                真机打印、扫码枪失败回退、浏览器兼容性需单独在结果记录区说明。
+              </li>
             </ul>
           </div>
         </div>
@@ -883,15 +963,19 @@
         <div class="note-strip">
           <div class="note ok">
             <strong>执行建议</strong>
-            先完成 <code>M1</code> 账号与权限准备，再按 <code>M2 → M3 → M4</code> 顺序走主闭环。
+            先完成 <code>M1</code> 账号与权限准备，再按
+            <code>M2 → M3 → M4</code> 顺序走主闭环。
           </div>
           <div class="note info">
             <strong>导入说明</strong>
-            HIS/EMR 导入路径依赖真实测试数据；若导入失败，应记录数据来源、外部单号和错误码。
+            HIS/EMR
+            导入路径依赖真实测试数据；若导入失败，应记录数据来源、外部单号和错误码。
           </div>
           <div class="note warn">
             <strong>边界提醒</strong>
-            本文不把 <code>M4</code> 医嘱执行页面当作前端正式步骤，避免把后端已具备能力误写成当前前端已支持。
+            本文不把
+            <code>M4</code>
+            医嘱执行页面当作前端正式步骤，避免把后端已具备能力误写成当前前端已支持。
           </div>
         </div>
       </section>
@@ -901,7 +985,8 @@
           <div>
             <div class="section-title">03. 角色总表</div>
             <div class="section-desc">
-              统一按“中文岗位名 + 真实角色代码 + 测试用户代码”执行，直接映射后端种子数据。
+              统一按“中文岗位名 + 真实角色代码 +
+              测试用户代码”执行，直接映射后端种子数据。
             </div>
           </div>
         </div>
@@ -924,7 +1009,10 @@
               <td><code>ROLE_PATHOLOGY_ADMIN</code></td>
               <td><code>USER_M1_ADMIN</code></td>
               <td><code>/system/*</code></td>
-              <td><code>PERM_SYS_USER_QUERY</code> / <code>PERM_SYS_ROLE_ASSIGN</code> 等系统管理权限</td>
+              <td>
+                <code>PERM_SYS_USER_QUERY</code> /
+                <code>PERM_SYS_ROLE_ASSIGN</code> 等系统管理权限
+              </td>
             </tr>
             <tr>
               <td>M2</td>
@@ -932,7 +1020,10 @@
               <td><code>ROLE_M2_CLINICAL_REGISTER</code></td>
               <td><code>USER_M2_REGISTER</code></td>
               <td><code>/workflow/clinical-register</code></td>
-              <td><code>PERM_SPECIMEN_REGISTER</code> / <code>PERM_APPLICATION_CREATE</code></td>
+              <td>
+                <code>PERM_SPECIMEN_REGISTER</code> /
+                <code>PERM_APPLICATION_CREATE</code>
+              </td>
             </tr>
             <tr>
               <td>M2</td>
@@ -972,7 +1063,10 @@
               <td><code>ROLE_M2_TRACKING_QUERY</code></td>
               <td><code>USER_M2_TRACKING</code></td>
               <td><code>/workflow/tracking-query</code></td>
-              <td><code>PERM_SPECIMEN_TRACKING_QUERY</code> / <code>PERM_APPLICATION_DETAIL_QUERY</code></td>
+              <td>
+                <code>PERM_SPECIMEN_TRACKING_QUERY</code> /
+                <code>PERM_APPLICATION_DETAIL_QUERY</code>
+              </td>
             </tr>
             <tr>
               <td>M3</td>
@@ -1036,15 +1130,25 @@
               <td><code>ROLE_M4_ASSIGN</code></td>
               <td><code>USER_M4_ASSIGN</code></td>
               <td><code>/doctor-workflow/assignment</code></td>
-              <td><code>PERM_M4_DIAG_TASK_QUERY</code> / <code>PERM_M4_ASSIGN</code></td>
+              <td>
+                <code>PERM_M4_DIAG_TASK_QUERY</code> /
+                <code>PERM_M4_ASSIGN</code>
+              </td>
             </tr>
             <tr>
               <td>M4</td>
               <td>诊断岗</td>
               <td><code>ROLE_M4_DIAGNOSIS</code></td>
               <td><code>USER_M4_DIAGNOSIS</code></td>
-              <td><code>/doctor-workflow/workbench</code> / <code>/doctor-workflow/report</code></td>
-              <td><code>PERM_M4_ACCEPT</code> / <code>PERM_M4_START</code> / <code>PERM_M4_REPORT_CREATE</code> / <code>PERM_M4_REPORT_SUBMIT</code></td>
+              <td>
+                <code>/doctor-workflow/workbench</code> /
+                <code>/doctor-workflow/report</code>
+              </td>
+              <td>
+                <code>PERM_M4_ACCEPT</code> / <code>PERM_M4_START</code> /
+                <code>PERM_M4_REPORT_CREATE</code> /
+                <code>PERM_M4_REPORT_SUBMIT</code>
+              </td>
             </tr>
             <tr>
               <td>M4</td>
@@ -1059,8 +1163,15 @@
               <td>签发岗</td>
               <td><code>ROLE_M4_SIGN</code></td>
               <td><code>USER_M4_SIGN</code></td>
-              <td><code>/doctor-workflow/report</code> / <code>/doctor-workflow/revision</code></td>
-              <td><code>PERM_M4_REPORT_SIGN</code> / <code>PERM_M4_REPORT_PUBLISH</code> / <code>PERM_M4_REVISION_APPROVE</code></td>
+              <td>
+                <code>/doctor-workflow/report</code> /
+                <code>/doctor-workflow/revision</code>
+              </td>
+              <td>
+                <code>PERM_M4_REPORT_SIGN</code> /
+                <code>PERM_M4_REPORT_PUBLISH</code> /
+                <code>PERM_M4_REVISION_APPROVE</code>
+              </td>
             </tr>
             <tr>
               <td>M4</td>
@@ -1079,7 +1190,8 @@
           <div>
             <div class="section-title">04. 跨模块总流程</div>
             <div class="section-desc">
-              把 <code>M1</code> 视作测试前置准备，<code>M2-M4</code> 组成常规病理主闭环。
+              把 <code>M1</code> 视作测试前置准备，<code>M2-M4</code>
+              组成常规病理主闭环。
             </div>
           </div>
         </div>
@@ -1109,37 +1221,138 @@
         </div>
 
         <div class="svg-wrap">
-          <svg viewBox="0 0 1260 260" width="100%" aria-label="M1-M4 总览流程图">
-            <rect x="20" y="44" width="280" height="164" rx="24" fill="#fff8ed" stroke="#c6b291" />
-            <rect x="340" y="44" width="280" height="164" rx="24" fill="#dcebf5" stroke="#98b6cb" />
-            <rect x="660" y="44" width="280" height="164" rx="24" fill="#dce9d8" stroke="#a7c39d" />
-            <rect x="980" y="44" width="260" height="164" rx="24" fill="#f3ddd4" stroke="#ccab9f" />
+          <svg
+            viewBox="0 0 1260 260"
+            width="100%"
+            aria-label="M1-M4 总览流程图"
+          >
+            <rect
+              x="20"
+              y="44"
+              width="280"
+              height="164"
+              rx="24"
+              fill="#fff8ed"
+              stroke="#c6b291"
+            />
+            <rect
+              x="340"
+              y="44"
+              width="280"
+              height="164"
+              rx="24"
+              fill="#dcebf5"
+              stroke="#98b6cb"
+            />
+            <rect
+              x="660"
+              y="44"
+              width="280"
+              height="164"
+              rx="24"
+              fill="#dce9d8"
+              stroke="#a7c39d"
+            />
+            <rect
+              x="980"
+              y="44"
+              width="260"
+              height="164"
+              rx="24"
+              fill="#f3ddd4"
+              stroke="#ccab9f"
+            />
 
-            <text x="48" y="84" font-size="28" font-weight="800" fill="#5d241c">M1 测试前置</text>
-            <text x="48" y="118" font-size="18" fill="#5f6673">管理员建用户 / 分配岗位角色</text>
-            <text x="48" y="146" font-size="18" fill="#5f6673">验证菜单、权限、标签打印与基础字典</text>
-            <text x="48" y="174" font-size="18" fill="#5f6673">为主闭环准备可登录账号和初始数据</text>
+            <text x="48" y="84" font-size="28" font-weight="800" fill="#5d241c">
+              M1 测试前置
+            </text>
+            <text x="48" y="118" font-size="18" fill="#5f6673">
+              管理员建用户 / 分配岗位角色
+            </text>
+            <text x="48" y="146" font-size="18" fill="#5f6673">
+              验证菜单、权限、标签打印与基础字典
+            </text>
+            <text x="48" y="174" font-size="18" fill="#5f6673">
+              为主闭环准备可登录账号和初始数据
+            </text>
 
-            <text x="368" y="84" font-size="28" font-weight="800" fill="#254c67">M2 送检闭环</text>
-            <text x="368" y="118" font-size="18" fill="#5f6673">申请单创建或导入</text>
-            <text x="368" y="146" font-size="18" fill="#5f6673">标本登记 → 固定 → 转运 → 接收</text>
-            <text x="368" y="174" font-size="18" fill="#5f6673">申请单与条码双路径追踪</text>
+            <text
+              x="368"
+              y="84"
+              font-size="28"
+              font-weight="800"
+              fill="#254c67"
+            >
+              M2 送检闭环
+            </text>
+            <text x="368" y="118" font-size="18" fill="#5f6673">
+              申请单创建或导入
+            </text>
+            <text x="368" y="146" font-size="18" fill="#5f6673">
+              标本登记 → 固定 → 转运 → 接收
+            </text>
+            <text x="368" y="174" font-size="18" fill="#5f6673">
+              申请单与条码双路径追踪
+            </text>
 
-            <text x="688" y="84" font-size="28" font-weight="800" fill="#385236">M3 技术主链</text>
-            <text x="688" y="118" font-size="18" fill="#5f6673">任务池承接病例</text>
-            <text x="688" y="146" font-size="18" fill="#5f6673">取材 → 脱水 → 包埋 → 切片 → 染色</text>
-            <text x="688" y="174" font-size="18" fill="#5f6673">技术追踪核对上下游状态</text>
+            <text
+              x="688"
+              y="84"
+              font-size="28"
+              font-weight="800"
+              fill="#385236"
+            >
+              M3 技术主链
+            </text>
+            <text x="688" y="118" font-size="18" fill="#5f6673">
+              任务池承接病例
+            </text>
+            <text x="688" y="146" font-size="18" fill="#5f6673">
+              取材 → 脱水 → 包埋 → 切片 → 染色
+            </text>
+            <text x="688" y="174" font-size="18" fill="#5f6673">
+              技术追踪核对上下游状态
+            </text>
 
-            <text x="1008" y="84" font-size="28" font-weight="800" fill="#5d241c">M4 医生闭环</text>
-            <text x="1008" y="118" font-size="18" fill="#5f6673">诊断分配 → 接单 → 开始</text>
-            <text x="1008" y="146" font-size="18" fill="#5f6673">草稿 → 提交 → 审核 → 签发 → 发布</text>
-            <text x="1008" y="174" font-size="18" fill="#5f6673">报告追踪、修订、会诊补充闭环</text>
+            <text
+              x="1008"
+              y="84"
+              font-size="28"
+              font-weight="800"
+              fill="#5d241c"
+            >
+              M4 医生闭环
+            </text>
+            <text x="1008" y="118" font-size="18" fill="#5f6673">
+              诊断分配 → 接单 → 开始
+            </text>
+            <text x="1008" y="146" font-size="18" fill="#5f6673">
+              草稿 → 提交 → 审核 → 签发 → 发布
+            </text>
+            <text x="1008" y="174" font-size="18" fill="#5f6673">
+              报告追踪、修订、会诊补充闭环
+            </text>
 
-            <path d="M301 126h34" stroke="#b0906a" stroke-width="4" fill="none" />
+            <path
+              d="M301 126h34"
+              stroke="#b0906a"
+              stroke-width="4"
+              fill="none"
+            />
             <polygon points="335,126 323,118 323,134" fill="#b0906a" />
-            <path d="M621 126h34" stroke="#8ea8ba" stroke-width="4" fill="none" />
+            <path
+              d="M621 126h34"
+              stroke="#8ea8ba"
+              stroke-width="4"
+              fill="none"
+            />
             <polygon points="655,126 643,118 643,134" fill="#8ea8ba" />
-            <path d="M941 126h24" stroke="#97b08f" stroke-width="4" fill="none" />
+            <path
+              d="M941 126h24"
+              stroke="#97b08f"
+              stroke-width="4"
+              fill="none"
+            />
             <polygon points="965,126 953,118 953,134" fill="#97b08f" />
           </svg>
         </div>
@@ -1147,15 +1360,18 @@
         <div class="note-strip">
           <div class="note ok">
             <strong>执行顺序</strong>
-            推荐完整顺序：<code>M1</code> 账号准备 → <code>M2</code> 送检 → <code>M3</code> 技术 → <code>M4</code> 医生。
+            推荐完整顺序：<code>M1</code> 账号准备 → <code>M2</code> 送检 →
+            <code>M3</code> 技术 → <code>M4</code> 医生。
           </div>
           <div class="note info">
             <strong>主闭环核心</strong>
-            从 <code>M2</code> 创建申请单开始，到 <code>M4</code> 报告发布结束，是本次最重要的全链路。
+            从 <code>M2</code> 创建申请单开始，到
+            <code>M4</code> 报告发布结束，是本次最重要的全链路。
           </div>
           <div class="note warn">
             <strong>补充链路</strong>
-            <code>M2</code> 导入、<code>M3</code> 返工、<code>M4</code> 修订与会诊属于补充验证，不影响主闭环先走通。
+            <code>M2</code> 导入、<code>M3</code> 返工、<code>M4</code>
+            修订与会诊属于补充验证，不影响主闭环先走通。
           </div>
         </div>
       </section>
@@ -1229,7 +1445,9 @@
               <div class="role-head">
                 <div>
                   <div class="role-title">病理管理员 / 用户管理流</div>
-                  <div class="section-desc">用于准备后续模块测试账号，并验证用户工作台能力。</div>
+                  <div class="section-desc">
+                    用于准备后续模块测试账号，并验证用户工作台能力。
+                  </div>
                 </div>
                 <div class="role-meta">
                   <span class="tag">ROLE_PATHOLOGY_ADMIN</span>
@@ -1241,7 +1459,11 @@
                   <h4>入口页面</h4>
                   <ul>
                     <li><code>/system/users</code></li>
-                    <li>同模块可补查 <code>/system/configs</code>、<code>/system/numbering-rules</code></li>
+                    <li>
+                      同模块可补查 <code>/system/configs</code>、<code
+                        >/system/numbering-rules</code
+                      >
+                    </li>
                   </ul>
                 </div>
                 <div class="role-block">
@@ -1267,14 +1489,25 @@
                   <ul>
                     <li>预期：账号创建成功，角色保存成功，状态可见。</li>
                     <li>预期：登录标签与导入导出有明确成功反馈。</li>
-                    <li>失败点：角色保存不生效、标签打印失败、导入模板不匹配。</li>
+                    <li>
+                      失败点：角色保存不生效、标签打印失败、导入模板不匹配。
+                    </li>
                   </ul>
                 </div>
               </div>
               <div class="checklist">
-                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确，管理员菜单完整可见。</label>
-                <label class="check-item"><input type="checkbox" /> 用户创建、启停、角色分配动作提交后状态已推进。</label>
-                <label class="check-item"><input type="checkbox" /> 目标岗位重新登录后能看到与角色一致的菜单。</label>
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  页面入口与权限正确，管理员菜单完整可见。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  用户创建、启停、角色分配动作提交后状态已推进。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  目标岗位重新登录后能看到与角色一致的菜单。</label
+                >
               </div>
             </article>
 
@@ -1282,7 +1515,9 @@
               <div class="role-head">
                 <div>
                   <div class="role-title">病理管理员 / 角色授权流</div>
-                  <div class="section-desc">用于核对岗位权限和菜单授权，确保后续模块测试不会因角色问题中断。</div>
+                  <div class="section-desc">
+                    用于核对岗位权限和菜单授权，确保后续模块测试不会因角色问题中断。
+                  </div>
                 </div>
                 <div class="role-meta">
                   <span class="tag">ROLE_PATHOLOGY_ADMIN</span>
@@ -1299,7 +1534,10 @@
                 <div class="role-block">
                   <h4>前置条件</h4>
                   <ul>
-                    <li>目标角色已存在，例如 <code>ROLE_M2_CLINICAL_REGISTER</code>。</li>
+                    <li>
+                      目标角色已存在，例如
+                      <code>ROLE_M2_CLINICAL_REGISTER</code>。
+                    </li>
                     <li>测试账号已关联对应角色。</li>
                   </ul>
                 </div>
@@ -1318,14 +1556,25 @@
                   <ul>
                     <li>预期：菜单授权和权限授权保存成功。</li>
                     <li>预期：目标岗位账号重新登录后只看到本岗位页面。</li>
-                    <li>失败点：页面可见但操作按钮缺失，通常是权限树未授权。</li>
+                    <li>
+                      失败点：页面可见但操作按钮缺失，通常是权限树未授权。
+                    </li>
                   </ul>
                 </div>
               </div>
               <div class="checklist">
-                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确，角色授权页可正常保存。</label>
-                <label class="check-item"><input type="checkbox" /> 提交动作后，目标角色的菜单与权限已更新。</label>
-                <label class="check-item"><input type="checkbox" /> 下游岗位登录后能看到一致的菜单与按钮范围。</label>
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  页面入口与权限正确，角色授权页可正常保存。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  提交动作后，目标角色的菜单与权限已更新。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  下游岗位登录后能看到一致的菜单与按钮范围。</label
+                >
               </div>
             </article>
           </div>
@@ -1493,7 +1742,9 @@
               <div class="role-head">
                 <div>
                   <div class="role-title">标本登记岗</div>
-                  <div class="section-desc">主路径为手工创建申请单；完成后继续登记标本并验证标签反馈。</div>
+                  <div class="section-desc">
+                    主路径为手工创建申请单；完成后继续登记标本并验证标签反馈。
+                  </div>
                 </div>
                 <div class="role-meta">
                   <span class="tag">ROLE_M2_CLINICAL_REGISTER</span>
@@ -1518,9 +1769,13 @@
                   <h4>操作步骤</h4>
                   <ol>
                     <li>创建申请单并确认当前上下文已切换到新申请单。</li>
-                    <li>打开申请单详情，核对送检科室、送检医生、申请类型等字段。</li>
+                    <li>
+                      打开申请单详情，核对送检科室、送检医生、申请类型等字段。
+                    </li>
                     <li>录入 1 组或多组标本并提交登记。</li>
-                    <li>查看标签批次号和打印反馈；如需要，执行一次标签补打。</li>
+                    <li>
+                      查看标签批次号和打印反馈；如需要，执行一次标签补打。
+                    </li>
                   </ol>
                 </div>
                 <div class="role-block">
@@ -1528,14 +1783,25 @@
                   <ul>
                     <li>预期：申请单创建成功并能加载详情。</li>
                     <li>预期：标本登记成功，标签结果可见。</li>
-                    <li>失败点：上下文未切换、详情数组缺省、打印反馈不明确。</li>
+                    <li>
+                      失败点：上下文未切换、详情数组缺省、打印反馈不明确。
+                    </li>
                   </ul>
                 </div>
               </div>
               <div class="checklist">
-                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确，临床登记页可正常访问。</label>
-                <label class="check-item"><input type="checkbox" /> 提交申请单和标本登记后，页面状态、列表和标签信息已推进。</label>
-                <label class="check-item"><input type="checkbox" /> 下游固定、追踪岗位可看到同一申请单和条码数据。</label>
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  页面入口与权限正确，临床登记页可正常访问。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  提交申请单和标本登记后，页面状态、列表和标签信息已推进。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  下游固定、追踪岗位可看到同一申请单和条码数据。</label
+                >
               </div>
             </article>
 
@@ -1543,7 +1809,9 @@
               <div class="role-head">
                 <div>
                   <div class="role-title">申请导入岗</div>
-                  <div class="section-desc">补充验证第三方临床申请导入路径，用于替代手工创建申请单。</div>
+                  <div class="section-desc">
+                    补充验证第三方临床申请导入路径，用于替代手工创建申请单。
+                  </div>
                 </div>
                 <div class="role-meta">
                   <span class="tag">ROLE_M2_CLINICAL_IMPORT</span>
@@ -1561,7 +1829,10 @@
                 <div class="role-block">
                   <h4>前置条件</h4>
                   <ul>
-                    <li>已准备 <code>thirdPartySource</code> 和 <code>externalOrderNo</code>。</li>
+                    <li>
+                      已准备 <code>thirdPartySource</code> 和
+                      <code>externalOrderNo</code>。
+                    </li>
                     <li>确认测试环境已接入真实导入数据。</li>
                   </ul>
                 </div>
@@ -1578,14 +1849,25 @@
                   <h4>预期结果 / 失败点</h4>
                   <ul>
                     <li>预期：导入成功后可直接承接后续登记流程。</li>
-                    <li>失败点：无导入权限、外部单号重复、HIS/EMR 数据缺失。</li>
+                    <li>
+                      失败点：无导入权限、外部单号重复、HIS/EMR 数据缺失。
+                    </li>
                   </ul>
                 </div>
               </div>
               <div class="checklist">
-                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确，导入区块可见。</label>
-                <label class="check-item"><input type="checkbox" /> 导入动作提交后，当前上下文已切换到目标申请单。</label>
-                <label class="check-item"><input type="checkbox" /> 下游登记、追踪可看到同一导入申请单结果。</label>
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  页面入口与权限正确，导入区块可见。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  导入动作提交后，当前上下文已切换到目标申请单。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  下游登记、追踪可看到同一导入申请单结果。</label
+                >
               </div>
             </article>
 
@@ -1593,7 +1875,9 @@
               <div class="role-head">
                 <div>
                   <div class="role-title">固定核验岗</div>
-                  <div class="section-desc">通过待固定列表或扫码入口执行开始固定、完成固定。</div>
+                  <div class="section-desc">
+                    通过待固定列表或扫码入口执行开始固定、完成固定。
+                  </div>
                 </div>
                 <div class="role-meta">
                   <span class="tag">ROLE_M2_FIXATION_VERIFY</span>
@@ -1632,9 +1916,18 @@
                 </div>
               </div>
               <div class="checklist">
-                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确，固定核对页可访问。</label>
-                <label class="check-item"><input type="checkbox" /> 开始固定和完成固定后，状态已推进。</label>
-                <label class="check-item"><input type="checkbox" /> 转运和追踪页面能看到固定完成结果。</label>
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  页面入口与权限正确，固定核对页可访问。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  开始固定和完成固定后，状态已推进。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  转运和追踪页面能看到固定完成结果。</label
+                >
               </div>
             </article>
 
@@ -1642,7 +1935,9 @@
               <div class="role-head">
                 <div>
                   <div class="role-title">转运交接岗</div>
-                  <div class="section-desc">执行创建转运单、打印转运单和交接确认三段式操作。</div>
+                  <div class="section-desc">
+                    执行创建转运单、打印转运单和交接确认三段式操作。
+                  </div>
                 </div>
                 <div class="role-meta">
                   <span class="tag">ROLE_M2_TRANSPORT_HANDOVER</span>
@@ -1681,9 +1976,18 @@
                 </div>
               </div>
               <div class="checklist">
-                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确，转运交接页可访问。</label>
-                <label class="check-item"><input type="checkbox" /> 创建、打印、交接后转运单状态已推进。</label>
-                <label class="check-item"><input type="checkbox" /> 接收和追踪页面可看到同一转运单结果。</label>
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  页面入口与权限正确，转运交接页可访问。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  创建、打印、交接后转运单状态已推进。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  接收和追踪页面可看到同一转运单结果。</label
+                >
               </div>
             </article>
 
@@ -1691,7 +1995,9 @@
               <div class="role-head">
                 <div>
                   <div class="role-title">标本签收岗</div>
-                  <div class="section-desc">支持转运单接收和条码直收两条路径，并可测试拒收或退回。</div>
+                  <div class="section-desc">
+                    支持转运单接收和条码直收两条路径，并可测试拒收或退回。
+                  </div>
                 </div>
                 <div class="role-meta">
                   <span class="tag">ROLE_M2_SPECIMEN_RECEIVE</span>
@@ -1730,9 +2036,18 @@
                 </div>
               </div>
               <div class="checklist">
-                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确，接收页可访问。</label>
-                <label class="check-item"><input type="checkbox" /> 接收或拒收后状态已推进，并有明确反馈。</label>
-                <label class="check-item"><input type="checkbox" /> 追踪页和后续技术链能看到已接收结果。</label>
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  页面入口与权限正确，接收页可访问。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  接收或拒收后状态已推进，并有明确反馈。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  追踪页和后续技术链能看到已接收结果。</label
+                >
               </div>
             </article>
 
@@ -1740,7 +2055,9 @@
               <div class="role-head">
                 <div>
                   <div class="role-title">流程追踪岗</div>
-                  <div class="section-desc">通过申请单号和标本条码双路径核对送检闭环是否完整。</div>
+                  <div class="section-desc">
+                    通过申请单号和标本条码双路径核对送检闭环是否完整。
+                  </div>
                 </div>
                 <div class="role-meta">
                   <span class="tag">ROLE_M2_TRACKING_QUERY</span>
@@ -1764,7 +2081,9 @@
                 <div class="role-block">
                   <h4>操作步骤</h4>
                   <ol>
-                    <li>按申请单号查询，核对基本信息、标本列表和事件时间线。</li>
+                    <li>
+                      按申请单号查询，核对基本信息、标本列表和事件时间线。
+                    </li>
                     <li>按条码查询，核对该条码的固定、转运、接收节点。</li>
                     <li>记录异常标记是否与实际操作一致。</li>
                   </ol>
@@ -1778,9 +2097,18 @@
                 </div>
               </div>
               <div class="checklist">
-                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确，追踪页可访问。</label>
-                <label class="check-item"><input type="checkbox" /> 查询后时间线、异常标记和状态已正确展示。</label>
-                <label class="check-item"><input type="checkbox" /> 与登记、固定、转运、接收页面结果保持一致。</label>
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  页面入口与权限正确，追踪页可访问。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  查询后时间线、异常标记和状态已正确展示。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  与登记、固定、转运、接收页面结果保持一致。</label
+                >
               </div>
             </article>
           </div>
@@ -1826,7 +2154,9 @@
               </p>
             </div>
             <div class="summary-right">
-              <span class="pill">主闭环：任务池 → 取材 → 脱水 → 包埋 → 切片 → 染色</span>
+              <span class="pill"
+                >主闭环：任务池 → 取材 → 脱水 → 包埋 → 切片 → 染色</span
+              >
               <span class="pill">补充链路：返工</span>
             </div>
           </div>
@@ -1968,7 +2298,9 @@
               <div class="role-head">
                 <div>
                   <div class="role-title">技术任务入口 / 各工位通用</div>
-                  <div class="section-desc">所有工位都建议先从任务池拉起，便于验证深链与任务分流。</div>
+                  <div class="section-desc">
+                    所有工位都建议先从任务池拉起，便于验证深链与任务分流。
+                  </div>
                 </div>
                 <div class="role-meta">
                   <span class="tag">/technical-workflow/tasks</span>
@@ -2010,7 +2342,9 @@
               <div class="role-head">
                 <div>
                   <div class="role-title">取材岗</div>
-                  <div class="section-desc">负责承接待取材任务并生成脱水任务，是技术主链起点。</div>
+                  <div class="section-desc">
+                    负责承接待取材任务并生成脱水任务，是技术主链起点。
+                  </div>
                 </div>
                 <div class="role-meta">
                   <span class="tag">ROLE_M3_GROSSING</span>
@@ -2018,8 +2352,19 @@
                 </div>
               </div>
               <div class="role-grid">
-                <div class="role-block"><h4>入口页面</h4><ul><li><code>/technical-workflow/grossing</code></li></ul></div>
-                <div class="role-block"><h4>前置条件</h4><ul><li>M2 已接收完成。</li><li>任务池已生成待取材任务。</li></ul></div>
+                <div class="role-block">
+                  <h4>入口页面</h4>
+                  <ul>
+                    <li><code>/technical-workflow/grossing</code></li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>前置条件</h4>
+                  <ul>
+                    <li>M2 已接收完成。</li>
+                    <li>任务池已生成待取材任务。</li>
+                  </ul>
+                </div>
                 <div class="role-block">
                   <h4>操作步骤</h4>
                   <ol>
@@ -2037,9 +2382,16 @@
                 </div>
               </div>
               <div class="checklist">
-                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确。</label>
-                <label class="check-item"><input type="checkbox" /> 开始和完成取材后状态已推进。</label>
-                <label class="check-item"><input type="checkbox" /> 脱水岗与技术追踪页可看到结果。</label>
+                <label class="check-item"
+                  ><input type="checkbox" /> 页面入口与权限正确。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" /> 开始和完成取材后状态已推进。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  脱水岗与技术追踪页可看到结果。</label
+                >
               </div>
             </article>
 
@@ -2047,7 +2399,9 @@
               <div class="role-head">
                 <div>
                   <div class="role-title">脱水岗</div>
-                  <div class="section-desc">通过批次模式承接取材块，验证创建、开始、完成三段式流程。</div>
+                  <div class="section-desc">
+                    通过批次模式承接取材块，验证创建、开始、完成三段式流程。
+                  </div>
                 </div>
                 <div class="role-meta">
                   <span class="tag">ROLE_M3_DEHYDRATION</span>
@@ -2055,8 +2409,19 @@
                 </div>
               </div>
               <div class="role-grid">
-                <div class="role-block"><h4>入口页面</h4><ul><li><code>/technical-workflow/dehydration</code></li></ul></div>
-                <div class="role-block"><h4>前置条件</h4><ul><li>取材已完成并存在脱水任务。</li><li>可获取取材块列表。</li></ul></div>
+                <div class="role-block">
+                  <h4>入口页面</h4>
+                  <ul>
+                    <li><code>/technical-workflow/dehydration</code></li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>前置条件</h4>
+                  <ul>
+                    <li>取材已完成并存在脱水任务。</li>
+                    <li>可获取取材块列表。</li>
+                  </ul>
+                </div>
                 <div class="role-block">
                   <h4>操作步骤</h4>
                   <ol>
@@ -2074,9 +2439,17 @@
                 </div>
               </div>
               <div class="checklist">
-                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确。</label>
-                <label class="check-item"><input type="checkbox" /> 批次创建、开始、完成后状态已推进。</label>
-                <label class="check-item"><input type="checkbox" /> 包埋岗与技术追踪页可看到结果。</label>
+                <label class="check-item"
+                  ><input type="checkbox" /> 页面入口与权限正确。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  批次创建、开始、完成后状态已推进。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  包埋岗与技术追踪页可看到结果。</label
+                >
               </div>
             </article>
 
@@ -2084,7 +2457,9 @@
               <div class="role-head">
                 <div>
                   <div class="role-title">包埋岗</div>
-                  <div class="section-desc">承接脱水结果，重点核对包埋盒号、取材评价和切片备注。</div>
+                  <div class="section-desc">
+                    承接脱水结果，重点核对包埋盒号、取材评价和切片备注。
+                  </div>
                 </div>
                 <div class="role-meta">
                   <span class="tag">ROLE_M3_EMBEDDING</span>
@@ -2092,8 +2467,19 @@
                 </div>
               </div>
               <div class="role-grid">
-                <div class="role-block"><h4>入口页面</h4><ul><li><code>/technical-workflow/embedding</code></li></ul></div>
-                <div class="role-block"><h4>前置条件</h4><ul><li>脱水批次已完成。</li><li>目标任务可在任务池或工位列表中找到。</li></ul></div>
+                <div class="role-block">
+                  <h4>入口页面</h4>
+                  <ul>
+                    <li><code>/technical-workflow/embedding</code></li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>前置条件</h4>
+                  <ul>
+                    <li>脱水批次已完成。</li>
+                    <li>目标任务可在任务池或工位列表中找到。</li>
+                  </ul>
+                </div>
                 <div class="role-block">
                   <h4>操作步骤</h4>
                   <ol>
@@ -2111,9 +2497,16 @@
                 </div>
               </div>
               <div class="checklist">
-                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确。</label>
-                <label class="check-item"><input type="checkbox" /> 开始和完成包埋后状态已推进。</label>
-                <label class="check-item"><input type="checkbox" /> 切片岗与技术追踪页可看到结果。</label>
+                <label class="check-item"
+                  ><input type="checkbox" /> 页面入口与权限正确。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" /> 开始和完成包埋后状态已推进。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  切片岗与技术追踪页可看到结果。</label
+                >
               </div>
             </article>
 
@@ -2121,7 +2514,9 @@
               <div class="role-head">
                 <div>
                   <div class="role-title">切片岗</div>
-                  <div class="section-desc">核对包埋盒承接、玻片数量、厚度和设备编码等切片结果。</div>
+                  <div class="section-desc">
+                    核对包埋盒承接、玻片数量、厚度和设备编码等切片结果。
+                  </div>
                 </div>
                 <div class="role-meta">
                   <span class="tag">ROLE_M3_SLICING</span>
@@ -2129,8 +2524,19 @@
                 </div>
               </div>
               <div class="role-grid">
-                <div class="role-block"><h4>入口页面</h4><ul><li><code>/technical-workflow/slicing</code></li></ul></div>
-                <div class="role-block"><h4>前置条件</h4><ul><li>包埋已完成。</li><li>存在待切片任务。</li></ul></div>
+                <div class="role-block">
+                  <h4>入口页面</h4>
+                  <ul>
+                    <li><code>/technical-workflow/slicing</code></li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>前置条件</h4>
+                  <ul>
+                    <li>包埋已完成。</li>
+                    <li>存在待切片任务。</li>
+                  </ul>
+                </div>
                 <div class="role-block">
                   <h4>操作步骤</h4>
                   <ol>
@@ -2148,9 +2554,16 @@
                 </div>
               </div>
               <div class="checklist">
-                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确。</label>
-                <label class="check-item"><input type="checkbox" /> 开始和完成切片后状态已推进。</label>
-                <label class="check-item"><input type="checkbox" /> 染色岗与技术追踪页可看到结果。</label>
+                <label class="check-item"
+                  ><input type="checkbox" /> 页面入口与权限正确。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" /> 开始和完成切片后状态已推进。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  染色岗与技术追踪页可看到结果。</label
+                >
               </div>
             </article>
 
@@ -2158,7 +2571,9 @@
               <div class="role-head">
                 <div>
                   <div class="role-title">染色岗</div>
-                  <div class="section-desc">验证玻片染色完成后病例可推进到医生诊断任务。</div>
+                  <div class="section-desc">
+                    验证玻片染色完成后病例可推进到医生诊断任务。
+                  </div>
                 </div>
                 <div class="role-meta">
                   <span class="tag">ROLE_M3_STAINING</span>
@@ -2166,8 +2581,19 @@
                 </div>
               </div>
               <div class="role-grid">
-                <div class="role-block"><h4>入口页面</h4><ul><li><code>/technical-workflow/staining</code></li></ul></div>
-                <div class="role-block"><h4>前置条件</h4><ul><li>切片已完成。</li><li>待染色玻片已生成。</li></ul></div>
+                <div class="role-block">
+                  <h4>入口页面</h4>
+                  <ul>
+                    <li><code>/technical-workflow/staining</code></li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>前置条件</h4>
+                  <ul>
+                    <li>切片已完成。</li>
+                    <li>待染色玻片已生成。</li>
+                  </ul>
+                </div>
                 <div class="role-block">
                   <h4>操作步骤</h4>
                   <ol>
@@ -2179,15 +2605,24 @@
                 <div class="role-block">
                   <h4>预期结果 / 失败点</h4>
                   <ul>
-                    <li>预期：染色完成后进入 <code>DIAGNOSIS_PENDING</code>。</li>
+                    <li>
+                      预期：染色完成后进入 <code>DIAGNOSIS_PENDING</code>。
+                    </li>
                     <li>失败点：病例未自动投递到 M4、玻片状态未更新。</li>
                   </ul>
                 </div>
               </div>
               <div class="checklist">
-                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确。</label>
-                <label class="check-item"><input type="checkbox" /> 开始和完成染色后状态已推进。</label>
-                <label class="check-item"><input type="checkbox" /> M4 诊断分配页能看到新生成的诊断任务。</label>
+                <label class="check-item"
+                  ><input type="checkbox" /> 页面入口与权限正确。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" /> 开始和完成染色后状态已推进。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" /> M4
+                  诊断分配页能看到新生成的诊断任务。</label
+                >
               </div>
             </article>
 
@@ -2195,7 +2630,9 @@
               <div class="role-head">
                 <div>
                   <div class="role-title">技术追踪岗</div>
-                  <div class="section-desc">对病例维度核查技术主链是否完整，重点看任务、蜡块、包埋盒、玻片和事件轨迹。</div>
+                  <div class="section-desc">
+                    对病例维度核查技术主链是否完整，重点看任务、蜡块、包埋盒、玻片和事件轨迹。
+                  </div>
                 </div>
                 <div class="role-meta">
                   <span class="tag">ROLE_M3_TRACKING</span>
@@ -2203,13 +2640,26 @@
                 </div>
               </div>
               <div class="role-grid">
-                <div class="role-block"><h4>入口页面</h4><ul><li><code>/technical-workflow/tracking</code></li></ul></div>
-                <div class="role-block"><h4>前置条件</h4><ul><li>主链至少执行到染色完成。</li><li>已拿到病例 ID。</li></ul></div>
+                <div class="role-block">
+                  <h4>入口页面</h4>
+                  <ul>
+                    <li><code>/technical-workflow/tracking</code></li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>前置条件</h4>
+                  <ul>
+                    <li>主链至少执行到染色完成。</li>
+                    <li>已拿到病例 ID。</li>
+                  </ul>
+                </div>
                 <div class="role-block">
                   <h4>操作步骤</h4>
                   <ol>
                     <li>输入病例 ID 查询技术追踪。</li>
-                    <li>逐块核对病例摘要、技术任务、标本摘要、蜡块、包埋盒、玻片和事件轨迹。</li>
+                    <li>
+                      逐块核对病例摘要、技术任务、标本摘要、蜡块、包埋盒、玻片和事件轨迹。
+                    </li>
                     <li>确认最终状态与工位实际操作一致。</li>
                   </ol>
                 </div>
@@ -2222,9 +2672,16 @@
                 </div>
               </div>
               <div class="checklist">
-                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确。</label>
-                <label class="check-item"><input type="checkbox" /> 查询后状态和轨迹展示完整。</label>
-                <label class="check-item"><input type="checkbox" /> 与各工位页面结果一致，并能确认已转入 M4。</label>
+                <label class="check-item"
+                  ><input type="checkbox" /> 页面入口与权限正确。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" /> 查询后状态和轨迹展示完整。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  与各工位页面结果一致，并能确认已转入 M4。</label
+                >
               </div>
             </article>
 
@@ -2232,7 +2689,9 @@
               <div class="role-head">
                 <div>
                   <div class="role-title">返工岗</div>
-                  <div class="section-desc">补充链路，不阻塞主闭环；用于验证返工单创建和执行的最小可用性。</div>
+                  <div class="section-desc">
+                    补充链路，不阻塞主闭环；用于验证返工单创建和执行的最小可用性。
+                  </div>
                 </div>
                 <div class="role-meta">
                   <span class="tag">ROLE_M3_REWORK</span>
@@ -2240,8 +2699,19 @@
                 </div>
               </div>
               <div class="role-grid">
-                <div class="role-block"><h4>入口页面</h4><ul><li><code>/technical-workflow/rework</code></li></ul></div>
-                <div class="role-block"><h4>前置条件</h4><ul><li>已准备可返工病例或对象。</li><li>主闭环可先不依赖返工结果继续。</li></ul></div>
+                <div class="role-block">
+                  <h4>入口页面</h4>
+                  <ul>
+                    <li><code>/technical-workflow/rework</code></li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>前置条件</h4>
+                  <ul>
+                    <li>已准备可返工病例或对象。</li>
+                    <li>主闭环可先不依赖返工结果继续。</li>
+                  </ul>
+                </div>
                 <div class="role-block">
                   <h4>操作步骤</h4>
                   <ol>
@@ -2259,9 +2729,16 @@
                 </div>
               </div>
               <div class="checklist">
-                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确。</label>
-                <label class="check-item"><input type="checkbox" /> 返工单创建和执行后状态已推进。</label>
-                <label class="check-item"><input type="checkbox" /> 技术追踪可看到返工链路。</label>
+                <label class="check-item"
+                  ><input type="checkbox" /> 页面入口与权限正确。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  返工单创建和执行后状态已推进。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" /> 技术追踪可看到返工链路。</label
+                >
               </div>
             </article>
           </div>
@@ -2402,7 +2879,9 @@
               <div class="role-head">
                 <div>
                   <div class="role-title">诊断分配岗</div>
-                  <div class="section-desc">用于把 M3 染色完成后的病例派发给目标医生和审核医生。</div>
+                  <div class="section-desc">
+                    用于把 M3 染色完成后的病例派发给目标医生和审核医生。
+                  </div>
                 </div>
                 <div class="role-meta">
                   <span class="tag">ROLE_M4_ASSIGN</span>
@@ -2410,8 +2889,19 @@
                 </div>
               </div>
               <div class="role-grid">
-                <div class="role-block"><h4>入口页面</h4><ul><li><code>/doctor-workflow/assignment</code></li></ul></div>
-                <div class="role-block"><h4>前置条件</h4><ul><li>M3 染色已完成。</li><li>目标病例已生成诊断任务。</li></ul></div>
+                <div class="role-block">
+                  <h4>入口页面</h4>
+                  <ul>
+                    <li><code>/doctor-workflow/assignment</code></li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>前置条件</h4>
+                  <ul>
+                    <li>M3 染色已完成。</li>
+                    <li>目标病例已生成诊断任务。</li>
+                  </ul>
+                </div>
                 <div class="role-block">
                   <h4>操作步骤</h4>
                   <ol>
@@ -2429,9 +2919,17 @@
                 </div>
               </div>
               <div class="checklist">
-                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确。</label>
-                <label class="check-item"><input type="checkbox" /> 分派动作提交后任务状态已推进。</label>
-                <label class="check-item"><input type="checkbox" /> 责任医生工作台与追踪页可看到任务。</label>
+                <label class="check-item"
+                  ><input type="checkbox" /> 页面入口与权限正确。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  分派动作提交后任务状态已推进。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  责任医生工作台与追踪页可看到任务。</label
+                >
               </div>
             </article>
 
@@ -2439,7 +2937,9 @@
               <div class="role-head">
                 <div>
                   <div class="role-title">诊断岗</div>
-                  <div class="section-desc">主闭环核心岗位，负责接单、开始诊断、创建草稿、保存和提交审核。</div>
+                  <div class="section-desc">
+                    主闭环核心岗位，负责接单、开始诊断、创建草稿、保存和提交审核。
+                  </div>
                 </div>
                 <div class="role-meta">
                   <span class="tag">ROLE_M4_DIAGNOSIS</span>
@@ -2447,8 +2947,20 @@
                 </div>
               </div>
               <div class="role-grid">
-                <div class="role-block"><h4>入口页面</h4><ul><li><code>/doctor-workflow/workbench</code></li><li><code>/doctor-workflow/report</code></li></ul></div>
-                <div class="role-block"><h4>前置条件</h4><ul><li>目标任务已分派给责任医生。</li><li>病例在工作台可访问。</li></ul></div>
+                <div class="role-block">
+                  <h4>入口页面</h4>
+                  <ul>
+                    <li><code>/doctor-workflow/workbench</code></li>
+                    <li><code>/doctor-workflow/report</code></li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>前置条件</h4>
+                  <ul>
+                    <li>目标任务已分派给责任医生。</li>
+                    <li>病例在工作台可访问。</li>
+                  </ul>
+                </div>
                 <div class="role-block">
                   <h4>操作步骤</h4>
                   <ol>
@@ -2463,14 +2975,24 @@
                   <h4>预期结果 / 失败点</h4>
                   <ul>
                     <li>预期：接单、开始、草稿保存、提交审核均成功。</li>
-                    <li>失败点：非责任医生操作、草稿创建失败、退回后无法重新提交。</li>
+                    <li>
+                      失败点：非责任医生操作、草稿创建失败、退回后无法重新提交。
+                    </li>
                   </ul>
                 </div>
               </div>
               <div class="checklist">
-                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确。</label>
-                <label class="check-item"><input type="checkbox" /> 接单、开始、保存草稿、提交审核后状态已推进。</label>
-                <label class="check-item"><input type="checkbox" /> 审核岗和追踪页可看到一致结果。</label>
+                <label class="check-item"
+                  ><input type="checkbox" /> 页面入口与权限正确。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  接单、开始、保存草稿、提交审核后状态已推进。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  审核岗和追踪页可看到一致结果。</label
+                >
               </div>
             </article>
 
@@ -2478,7 +3000,9 @@
               <div class="role-head">
                 <div>
                   <div class="role-title">复核岗</div>
-                  <div class="section-desc">负责审核通过或驳回，必须验证驳回后的回流重提链路。</div>
+                  <div class="section-desc">
+                    负责审核通过或驳回，必须验证驳回后的回流重提链路。
+                  </div>
                 </div>
                 <div class="role-meta">
                   <span class="tag">ROLE_M4_REVIEW</span>
@@ -2486,8 +3010,19 @@
                 </div>
               </div>
               <div class="role-grid">
-                <div class="role-block"><h4>入口页面</h4><ul><li><code>/doctor-workflow/report</code></li></ul></div>
-                <div class="role-block"><h4>前置条件</h4><ul><li>责任医生已提交审核。</li><li>当前用户是指定审核人。</li></ul></div>
+                <div class="role-block">
+                  <h4>入口页面</h4>
+                  <ul>
+                    <li><code>/doctor-workflow/report</code></li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>前置条件</h4>
+                  <ul>
+                    <li>责任医生已提交审核。</li>
+                    <li>当前用户是指定审核人。</li>
+                  </ul>
+                </div>
                 <div class="role-block">
                   <h4>操作步骤</h4>
                   <ol>
@@ -2506,9 +3041,16 @@
                 </div>
               </div>
               <div class="checklist">
-                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确。</label>
-                <label class="check-item"><input type="checkbox" /> 审核通过或驳回后状态已推进。</label>
-                <label class="check-item"><input type="checkbox" /> 诊断岗、签发岗和追踪页可看到一致状态。</label>
+                <label class="check-item"
+                  ><input type="checkbox" /> 页面入口与权限正确。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" /> 审核通过或驳回后状态已推进。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  诊断岗、签发岗和追踪页可看到一致状态。</label
+                >
               </div>
             </article>
 
@@ -2516,7 +3058,9 @@
               <div class="role-head">
                 <div>
                   <div class="role-title">签发岗</div>
-                  <div class="section-desc">负责签发与发布，是 M4 主闭环的最终完成岗位。</div>
+                  <div class="section-desc">
+                    负责签发与发布，是 M4 主闭环的最终完成岗位。
+                  </div>
                 </div>
                 <div class="role-meta">
                   <span class="tag">ROLE_M4_SIGN</span>
@@ -2524,8 +3068,20 @@
                 </div>
               </div>
               <div class="role-grid">
-                <div class="role-block"><h4>入口页面</h4><ul><li><code>/doctor-workflow/report</code></li><li><code>/doctor-workflow/revision</code></li></ul></div>
-                <div class="role-block"><h4>前置条件</h4><ul><li>报告已审核通过。</li><li>当前用户具备签发和发布权限。</li></ul></div>
+                <div class="role-block">
+                  <h4>入口页面</h4>
+                  <ul>
+                    <li><code>/doctor-workflow/report</code></li>
+                    <li><code>/doctor-workflow/revision</code></li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>前置条件</h4>
+                  <ul>
+                    <li>报告已审核通过。</li>
+                    <li>当前用户具备签发和发布权限。</li>
+                  </ul>
+                </div>
                 <div class="role-block">
                   <h4>操作步骤</h4>
                   <ol>
@@ -2537,15 +3093,25 @@
                 <div class="role-block">
                   <h4>预期结果 / 失败点</h4>
                   <ul>
-                    <li>预期：签发后生成版本快照，发布后病例进入 <code>REPORT_PUBLISHED</code>。</li>
+                    <li>
+                      预期：签发后生成版本快照，发布后病例进入
+                      <code>REPORT_PUBLISHED</code>。
+                    </li>
                     <li>失败点：非签发人发布、签发成功但病例状态未关闭。</li>
                   </ul>
                 </div>
               </div>
               <div class="checklist">
-                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确。</label>
-                <label class="check-item"><input type="checkbox" /> 签发和发布后状态已推进。</label>
-                <label class="check-item"><input type="checkbox" /> 报告追踪与工作台可看到一致的已发布结果。</label>
+                <label class="check-item"
+                  ><input type="checkbox" /> 页面入口与权限正确。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" /> 签发和发布后状态已推进。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  报告追踪与工作台可看到一致的已发布结果。</label
+                >
               </div>
             </article>
 
@@ -2553,7 +3119,9 @@
               <div class="role-head">
                 <div>
                   <div class="role-title">报告追踪岗</div>
-                  <div class="section-desc">核对主闭环、版本链和事件链是否完整，是最终验收视角。</div>
+                  <div class="section-desc">
+                    核对主闭环、版本链和事件链是否完整，是最终验收视角。
+                  </div>
                 </div>
                 <div class="role-meta">
                   <span class="tag">ROLE_M4_TRACKING</span>
@@ -2561,13 +3129,26 @@
                 </div>
               </div>
               <div class="role-grid">
-                <div class="role-block"><h4>入口页面</h4><ul><li><code>/doctor-workflow/tracking</code></li></ul></div>
-                <div class="role-block"><h4>前置条件</h4><ul><li>主闭环已至少执行到发布。</li><li>已知病例 ID。</li></ul></div>
+                <div class="role-block">
+                  <h4>入口页面</h4>
+                  <ul>
+                    <li><code>/doctor-workflow/tracking</code></li>
+                  </ul>
+                </div>
+                <div class="role-block">
+                  <h4>前置条件</h4>
+                  <ul>
+                    <li>主闭环已至少执行到发布。</li>
+                    <li>已知病例 ID。</li>
+                  </ul>
+                </div>
                 <div class="role-block">
                   <h4>操作步骤</h4>
                   <ol>
                     <li>打开报告追踪页，按病例查询。</li>
-                    <li>核对诊断任务链、报告版本链、事件链、修订链和会诊链。</li>
+                    <li>
+                      核对诊断任务链、报告版本链、事件链、修订链和会诊链。
+                    </li>
                     <li>确认责任医生、审核医生、签发时间和发布时间可回溯。</li>
                   </ol>
                 </div>
@@ -2580,9 +3161,17 @@
                 </div>
               </div>
               <div class="checklist">
-                <label class="check-item"><input type="checkbox" /> 页面入口与权限正确。</label>
-                <label class="check-item"><input type="checkbox" /> 查询后链路、版本和状态展示完整。</label>
-                <label class="check-item"><input type="checkbox" /> 与分配、工作台、报告页结果一致。</label>
+                <label class="check-item"
+                  ><input type="checkbox" /> 页面入口与权限正确。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  查询后链路、版本和状态展示完整。</label
+                >
+                <label class="check-item"
+                  ><input type="checkbox" />
+                  与分配、工作台、报告页结果一致。</label
+                >
               </div>
             </article>
 
@@ -2590,7 +3179,9 @@
               <div class="role-head">
                 <div>
                   <div class="role-title">附加闭环：报告修订与会诊</div>
-                  <div class="section-desc">作为 M4 补充验证，建议在主闭环发布完成后用额外病例执行。</div>
+                  <div class="section-desc">
+                    作为 M4 补充验证，建议在主闭环发布完成后用额外病例执行。
+                  </div>
                 </div>
                 <div class="role-meta">
                   <span class="tag">修订：诊断岗 / 签发岗</span>
@@ -2664,15 +3255,19 @@
           <div class="note-strip">
             <div class="note warn">
               <strong>本次未纳入正式前端步骤</strong>
-              <code>M4</code> 病理医嘱执行虽然已有后端角色、权限和接口，但当前前端没有独立页面入口，本手册只把它列为后续补测项。
+              <code>M4</code>
+              病理医嘱执行虽然已有后端角色、权限和接口，但当前前端没有独立页面入口，本手册只把它列为后续补测项。
             </div>
             <div class="note info">
               <strong>建议补测项</strong>
-              后续可单独补一份“医嘱执行岗”手册，按 <code>ROLE_M4_MEDICAL_ORDER_EXECUTE / USER_M4_ORDER_EXECUTE</code> 验证接单、完成与取消。
+              后续可单独补一份“医嘱执行岗”手册，按
+              <code>ROLE_M4_MEDICAL_ORDER_EXECUTE / USER_M4_ORDER_EXECUTE</code>
+              验证接单、完成与取消。
             </div>
             <div class="note ok">
               <strong>主闭环完成标志</strong>
-              当报告已发布、病例状态闭环、追踪页版本链完整时，可判定 <code>M2 → M3 → M4</code> 主链走通。
+              当报告已发布、病例状态闭环、追踪页版本链完整时，可判定
+              <code>M2 → M3 → M4</code> 主链走通。
             </div>
           </div>
         </div>
@@ -2804,9 +3399,12 @@
       <footer class="footer">
         <strong>固定保留说明</strong>
         <p>
-          1. <code>M4</code> 病理医嘱执行前端独立页面缺失，仅记录为后续补测项。<br />
+          1.
+          <code>M4</code>
+          病理医嘱执行前端独立页面缺失，仅记录为后续补测项。<br />
           2. 真机打印、扫码枪、国产浏览器兼容性需要在目标环境补验。<br />
-          3. 需要真实 HIS/EMR 数据联调的导入路径，应单独记录数据来源、外部单号和错误信息。
+          3. 需要真实 HIS/EMR
+          数据联调的导入路径，应单独记录数据来源、外部单号和错误信息。
         </p>
         <p style="margin-top: 16px">
           返回顶部：

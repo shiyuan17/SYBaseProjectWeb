@@ -10,17 +10,29 @@ import type {
   DashboardWorkspaceCard,
 } from '../types/dashboard';
 
-import type { NotificationViewModel } from '#/modules/notification-center/types/notification-center';
 import type { PendingDiagnosticTaskItem } from '#/modules/doctor-workflow/types/doctor-workflow';
-import type { EquipmentWarningView, MaterialLoanView, ReagentWarningView } from '#/modules/operation-support/types/operation-support';
+import type { NotificationViewModel } from '#/modules/notification-center/types/notification-center';
+import type {
+  EquipmentWarningView,
+  MaterialLoanView,
+  ReagentWarningView,
+} from '#/modules/operation-support/types/operation-support';
 import type { PendingSpecimenItem } from '#/modules/specimen-workflow/types/specimen-workflow';
 import type { PendingTechnicalTaskItem } from '#/modules/technical-workflow/types/technical-workflow';
 
 import dayjs from 'dayjs';
 
-import { getMyNotificationUnreadCount, listMyNotifications } from '#/modules/notification-center/api/notification-center-service';
 import { listPendingDiagnosticTasks } from '#/modules/doctor-workflow/api/doctor-workflow-service';
 import { M4_PERMISSION_CODES } from '#/modules/doctor-workflow/constants';
+import {
+  listStatIndicators,
+  queryStatReport,
+} from '#/modules/m6-statistics/api/m6-statistics-service';
+import { M6_PERMISSION_CODES } from '#/modules/m6-statistics/constants';
+import {
+  getMyNotificationUnreadCount,
+  listMyNotifications,
+} from '#/modules/notification-center/api/notification-center-service';
 import {
   listEquipmentWarnings,
   listPendingMaterialLoans,
@@ -40,16 +52,12 @@ import {
   TASK_TYPE_ROUTE_MAP,
   TASK_TYPE_TITLE_MAP,
 } from '#/modules/technical-workflow/constants';
-import { listStatIndicators, queryStatReport } from '#/modules/m6-statistics/api/m6-statistics-service';
-import { M6_PERMISSION_CODES } from '#/modules/m6-statistics/constants';
 
 function hasAnyPermission(accessCodes: string[], codes: string[]) {
   return codes.some((code) => accessCodes.includes(code));
 }
 
-function formatCount(value: number) {
-  return String(value);
-}
+const formatCount = String;
 
 function formatCurrency(value: string) {
   const numeric = Number(value);
@@ -86,7 +94,7 @@ export async function loadNotificationSummary(): Promise<DashboardNotificationSu
   ]);
 
   return {
-    items: page.items.map(mapNotificationItem),
+    items: page.items.map((item) => mapNotificationItem(item)),
     unreadCount,
   };
 }
@@ -109,24 +117,25 @@ export async function loadSpecimenDomainData(
     return null;
   }
 
-  const [applications, fixations, transportOrders, receipts] = await Promise.all([
-    listApplications({
-      page: 1,
-      size: 5,
-    }),
-    listPendingFixations({
-      page: 1,
-      size: 5,
-    }),
-    listPendingTransportOrders({
-      page: 1,
-      size: 5,
-    }),
-    listPendingReceipts({
-      page: 1,
-      size: 5,
-    }),
-  ]);
+  const [applications, fixations, transportOrders, receipts] =
+    await Promise.all([
+      listApplications({
+        page: 1,
+        size: 5,
+      }),
+      listPendingFixations({
+        page: 1,
+        size: 5,
+      }),
+      listPendingTransportOrders({
+        page: 1,
+        size: 5,
+      }),
+      listPendingReceipts({
+        page: 1,
+        size: 5,
+      }),
+    ]);
 
   const cards: DashboardWorkspaceCard[] = [
     {
@@ -277,7 +286,9 @@ export async function loadTechnicalDomainData(
         items.filter((item) => item.taskStatus === 'IN_PROGRESS').length
       } 条`,
       id: `technical-${taskType}`,
-      query: { mode: items.some((item) => item.timedOut) ? 'exception' : 'queue' },
+      query: {
+        mode: items.some((item) => item.timedOut) ? 'exception' : 'queue',
+      },
       route: TASK_TYPE_ROUTE_MAP[taskType] ?? '/technical-workflow/tasks',
       tag: items.some((item) => item.timedOut) ? '含超时' : undefined,
       title: TASK_TYPE_TITLE_MAP[taskType] ?? taskType,
@@ -286,7 +297,9 @@ export async function loadTechnicalDomainData(
     }));
 
   const alerts: DashboardAlertItem[] = visibleItems
-    .filter((item) => item.timedOut || item.taskType === 'REWORK' || item.remarks)
+    .filter(
+      (item) => item.timedOut || item.taskType === 'REWORK' || item.remarks,
+    )
     .slice(0, 5)
     .map((item) => ({
       description: item.remarks || `${item.pathologyNo || item.caseId} 待处理`,
@@ -295,7 +308,11 @@ export async function loadTechnicalDomainData(
       route:
         (item.taskType && TASK_TYPE_ROUTE_MAP[item.taskType]) ||
         '/technical-workflow/tasks',
-      severity: item.timedOut ? 'danger' : item.taskType === 'REWORK' ? 'warning' : 'info',
+      severity: item.timedOut
+        ? 'danger'
+        : item.taskType === 'REWORK'
+          ? 'warning'
+          : 'info',
       source: '制片管理',
       title: `${TASK_TYPE_TITLE_MAP[item.taskType ?? ''] ?? item.taskType ?? '技术任务'} / ${
         item.pathologyNo || item.caseId
@@ -355,9 +372,15 @@ export async function loadDoctorDomainData(
     size: 50,
   });
 
-  const assigned = result.items.filter((item) => item.taskStatus === 'ASSIGNED');
-  const accepted = result.items.filter((item) => item.taskStatus === 'ACCEPTED');
-  const inProgress = result.items.filter((item) => item.taskStatus === 'IN_PROGRESS');
+  const assigned = result.items.filter(
+    (item) => item.taskStatus === 'ASSIGNED',
+  );
+  const accepted = result.items.filter(
+    (item) => item.taskStatus === 'ACCEPTED',
+  );
+  const inProgress = result.items.filter(
+    (item) => item.taskStatus === 'IN_PROGRESS',
+  );
 
   const cards: DashboardWorkspaceCard[] = [
     {
@@ -386,26 +409,28 @@ export async function loadDoctorDomainData(
     },
   ];
 
-  const alerts: DashboardAlertItem[] = result.items.slice(0, 5).map((item: PendingDiagnosticTaskItem) => ({
-    description: `${item.patientName || '未命名患者'} / ${
-      item.taskStatus || 'PENDING'
-    }`,
-    id: `doctor-${item.id}`,
-    query: {
-      caseId: item.caseId,
-      pathologyNo: item.pathologyNo ?? '',
-      taskId: item.id,
-    },
-    route: '/doctor-workflow/workbench',
-    severity:
-      item.taskStatus === 'IN_PROGRESS'
-        ? 'info'
-        : item.taskStatus === 'ASSIGNED'
-          ? 'warning'
-          : 'danger',
-    source: '诊断管理',
-    title: item.pathologyNo || item.caseId,
-  }));
+  const alerts: DashboardAlertItem[] = result.items
+    .slice(0, 5)
+    .map((item: PendingDiagnosticTaskItem) => ({
+      description: `${item.patientName || '未命名患者'} / ${
+        item.taskStatus || 'PENDING'
+      }`,
+      id: `doctor-${item.id}`,
+      query: {
+        caseId: item.caseId,
+        pathologyNo: item.pathologyNo ?? '',
+        taskId: item.id,
+      },
+      route: '/doctor-workflow/workbench',
+      severity:
+        item.taskStatus === 'IN_PROGRESS'
+          ? 'info'
+          : item.taskStatus === 'ASSIGNED'
+            ? 'warning'
+            : 'danger',
+      source: '诊断管理',
+      title: item.pathologyNo || item.caseId,
+    }));
 
   const quickEntries: DashboardQuickEntry[] = [
     {
@@ -575,7 +600,8 @@ export async function loadQualityDomainData(
       route: '/m6/statistics',
       title: '质控统计',
       tone: 'info',
-      value: metricMap.get('QC_DIAGNOSIS_TIMELINESS_RATE')?.metricValue ?? '0.00',
+      value:
+        metricMap.get('QC_DIAGNOSIS_TIMELINESS_RATE')?.metricValue ?? '0.00',
     },
     {
       description: '集成任务与外围系统联动',
@@ -638,7 +664,12 @@ export async function loadQualityDomainData(
 }
 
 function mapRowsToTable(
-  rows: Array<{ indicatorCode: string; indicatorName: string; metricUnit: string; metricValue: string }>,
+  rows: Array<{
+    indicatorCode: string;
+    indicatorName: string;
+    metricUnit: string;
+    metricValue: string;
+  }>,
   wantedCodes: string[],
 ) {
   return wantedCodes
@@ -658,33 +689,41 @@ export async function loadAnalyticsOverview(
   const from = dayjs().startOf('month').format('YYYY-MM-DDTHH:mm:ss');
   const to = dayjs().endOf('day').format('YYYY-MM-DDTHH:mm:ss');
 
-  const [quality, operation, workload, technical, reagents, equipment, notifications, indicators] =
-    await Promise.all([
-      queryStatReport({
-        category: 'QUALITY',
-        from,
-        to,
-      }),
-      queryStatReport({
-        category: 'OPERATION',
-        from,
-        to,
-      }),
-      queryStatReport({
-        category: 'WORKLOAD',
-        from,
-        to,
-      }),
-      listPendingTechnicalTasks({
-        page: 1,
-        size: 100,
-        timedOutOnly: false,
-      }),
-      listReagentWarnings(),
-      listEquipmentWarnings(),
-      loadNotificationSummary(),
-      listStatIndicators(),
-    ]);
+  const [
+    quality,
+    operation,
+    workload,
+    technical,
+    reagents,
+    equipment,
+    notifications,
+    indicators,
+  ] = await Promise.all([
+    queryStatReport({
+      category: 'QUALITY',
+      from,
+      to,
+    }),
+    queryStatReport({
+      category: 'OPERATION',
+      from,
+      to,
+    }),
+    queryStatReport({
+      category: 'WORKLOAD',
+      from,
+      to,
+    }),
+    listPendingTechnicalTasks({
+      page: 1,
+      size: 100,
+      timedOutOnly: false,
+    }),
+    listReagentWarnings(),
+    listEquipmentWarnings(),
+    loadNotificationSummary(),
+    listStatIndicators(),
+  ]);
 
   const indicatorNameMap = new Map(
     indicators.map((item) => [item.indicatorCode, item.indicatorName]),
@@ -727,17 +766,24 @@ export async function loadAnalyticsOverview(
       query: { category: 'WORKLOAD' },
       route: '/m6/statistics',
       title: indicatorNameMap.get('OP_PERFORMANCE_WORKLOAD') ?? '绩效工作量',
-      unit: getMetric(operation.rows, 'OP_PERFORMANCE_WORKLOAD')?.metricUnit ?? 'COUNT',
-      value: getMetric(operation.rows, 'OP_PERFORMANCE_WORKLOAD')?.metricValue ?? '0',
+      unit:
+        getMetric(operation.rows, 'OP_PERFORMANCE_WORKLOAD')?.metricUnit ??
+        'COUNT',
+      value:
+        getMetric(operation.rows, 'OP_PERFORMANCE_WORKLOAD')?.metricValue ??
+        '0',
     },
     {
       description: '标本固定合格率',
       id: 'kpi-fixation-rate',
       query: { category: 'QUALITY' },
       route: '/m6/statistics',
-      title: indicatorNameMap.get('QC_SPECIMEN_FIXATION_RATE') ?? '标本固定合格率',
+      title:
+        indicatorNameMap.get('QC_SPECIMEN_FIXATION_RATE') ?? '标本固定合格率',
       unit: 'PERCENT',
-      value: getMetric(quality.rows, 'QC_SPECIMEN_FIXATION_RATE')?.metricValue ?? '0.00',
+      value:
+        getMetric(quality.rows, 'QC_SPECIMEN_FIXATION_RATE')?.metricValue ??
+        '0.00',
     },
     {
       description: '临床病理符合率',
@@ -746,16 +792,21 @@ export async function loadAnalyticsOverview(
       route: '/m6/statistics',
       title: indicatorNameMap.get('QC_CLINICAL_MATCH_RATE') ?? '临床病理符合率',
       unit: 'PERCENT',
-      value: getMetric(quality.rows, 'QC_CLINICAL_MATCH_RATE')?.metricValue ?? '0.00',
+      value:
+        getMetric(quality.rows, 'QC_CLINICAL_MATCH_RATE')?.metricValue ??
+        '0.00',
     },
     {
       description: '诊断及时率',
       id: 'kpi-diagnosis-timeliness',
       query: { category: 'QUALITY' },
       route: '/m6/statistics',
-      title: indicatorNameMap.get('QC_DIAGNOSIS_TIMELINESS_RATE') ?? '诊断及时率',
+      title:
+        indicatorNameMap.get('QC_DIAGNOSIS_TIMELINESS_RATE') ?? '诊断及时率',
       unit: 'PERCENT',
-      value: getMetric(quality.rows, 'QC_DIAGNOSIS_TIMELINESS_RATE')?.metricValue ?? '0.00',
+      value:
+        getMetric(quality.rows, 'QC_DIAGNOSIS_TIMELINESS_RATE')?.metricValue ??
+        '0.00',
     },
     {
       description: '技术与取材质控异常数',
@@ -765,8 +816,14 @@ export async function loadAnalyticsOverview(
       title: '技术/取材质控异常数',
       unit: 'COUNT',
       value: String(
-        Number(getMetric(quality.rows, 'QC_TECHNICAL_QUALITY_COUNT')?.metricValue ?? 0) +
-          Number(getMetric(quality.rows, 'QC_GROSSING_QUALITY_COUNT')?.metricValue ?? 0),
+        Number(
+          getMetric(quality.rows, 'QC_TECHNICAL_QUALITY_COUNT')?.metricValue ??
+            0,
+        ) +
+          Number(
+            getMetric(quality.rows, 'QC_GROSSING_QUALITY_COUNT')?.metricValue ??
+              0,
+          ),
       ),
     },
   ];
@@ -781,7 +838,8 @@ export async function loadAnalyticsOverview(
       title: '技术超时',
     },
     {
-      count: technical.items.filter((item) => item.taskType === 'REWORK').length,
+      count: technical.items.filter((item) => item.taskType === 'REWORK')
+        .length,
       description: '返工单与返工任务',
       id: 'risk-rework',
       route: '/technical-workflow/rework',

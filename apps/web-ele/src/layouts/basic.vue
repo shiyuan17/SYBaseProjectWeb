@@ -12,6 +12,7 @@ import {
 } from '@vben/layouts';
 import { preferences, usePreferences } from '@vben/preferences';
 import { useAccessStore, useUserStore } from '@vben/stores';
+
 import { storeToRefs } from 'pinia';
 
 import { $t } from '#/locales';

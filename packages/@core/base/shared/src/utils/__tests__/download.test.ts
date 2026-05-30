@@ -24,9 +24,9 @@ describe('download utils', () => {
   });
 
   it('prefers the explicit file name and sanitizes invalid characters', () => {
-    expect(resolveFileName('https://example.com/files/report.csv', 'a:b?.csv')).toBe(
-      'a_b_.csv',
-    );
+    expect(
+      resolveFileName('https://example.com/files/report.csv', 'a:b?.csv'),
+    ).toBe('a_b_.csv');
     expect(sanitizeFileName('  测试 report.xlsx  ')).toBe('测试 report.xlsx');
   });
 
@@ -43,7 +43,9 @@ describe('download utils', () => {
     const clickSpy = vi.spyOn(anchor, 'click').mockImplementation(() => {});
 
     vi.spyOn(capabilities, 'supportsAnchorDownload').mockReturnValue(true);
-    vi.spyOn(document, 'createElement').mockImplementation(((tagName: string) => {
+    vi.spyOn(document, 'createElement').mockImplementation(((
+      tagName: string,
+    ) => {
       if (tagName.toLowerCase() === 'a') {
         return anchor;
       }
@@ -78,9 +80,9 @@ describe('download utils', () => {
     vi.spyOn(capabilities, 'supportsAnchorDownload').mockReturnValue(true);
     vi.spyOn(capabilities, 'supportsObjectUrl').mockReturnValue(true);
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-download');
-    const revokeSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(
-      () => {},
-    );
+    const revokeSpy = vi
+      .spyOn(URL, 'revokeObjectURL')
+      .mockImplementation(() => {});
 
     downloadFileFromBlob({
       fileName: 'report.xlsx',

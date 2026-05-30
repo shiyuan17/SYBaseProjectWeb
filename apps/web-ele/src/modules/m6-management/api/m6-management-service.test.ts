@@ -145,29 +145,37 @@ describe('m6-management-service requests', () => {
       to: '2026-05-26T23:59:59',
     });
 
-    expect(requestClientMock.get).toHaveBeenNthCalledWith(1, '/v1/integration-tasks', {
-      params: {
-        businessId: 'BUS-1',
-        businessType: 'BILLING_RECORD',
-        compensationStatus: 'RETRY_PENDING',
-        externalSystem: 'MOCK_BILLING',
-        reconciliationStatus: 'MATCHED',
-        stageCode: 'REPORT_PUBLISH',
-        taskStatus: 'FAILED',
-        taskType: 'BILLING_SUBMIT',
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      1,
+      '/v1/integration-tasks',
+      {
+        params: {
+          businessId: 'BUS-1',
+          businessType: 'BILLING_RECORD',
+          compensationStatus: 'RETRY_PENDING',
+          externalSystem: 'MOCK_BILLING',
+          reconciliationStatus: 'MATCHED',
+          stageCode: 'REPORT_PUBLISH',
+          taskStatus: 'FAILED',
+          taskType: 'BILLING_SUBMIT',
+        },
       },
-    });
-    expect(requestClientMock.get).toHaveBeenNthCalledWith(2, '/v1/billing-records', {
-      params: {
-        billingStage: 'SPECIAL_ORDER',
-        billingStatus: 'FAILED',
-        caseId: 'CASE-1',
-        externalSystem: 'MOCK_BILLING',
-        from: '2026-05-01T00:00:00',
-        orderId: 'ORDER-1',
-        to: '2026-05-26T23:59:59',
+    );
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      2,
+      '/v1/billing-records',
+      {
+        params: {
+          billingStage: 'SPECIAL_ORDER',
+          billingStatus: 'FAILED',
+          caseId: 'CASE-1',
+          externalSystem: 'MOCK_BILLING',
+          from: '2026-05-01T00:00:00',
+          orderId: 'ORDER-1',
+          to: '2026-05-26T23:59:59',
+        },
       },
-    });
+    );
     expect(requestClientMock.get).toHaveBeenNthCalledWith(
       3,
       '/v1/historical-report-import-jobs',
@@ -181,17 +189,21 @@ describe('m6-management-service requests', () => {
         },
       },
     );
-    expect(requestClientMock.get).toHaveBeenNthCalledWith(4, '/v1/historical-reports', {
-      params: {
-        applicationNo: 'APP-1',
-        externalReportNo: 'HIS-RPT-001',
-        from: '2026-05-01T00:00:00',
-        pathologyNo: 'PATH-1',
-        patientId: 'PAT-1',
-        sourceSystem: 'MOCK_HIS',
-        to: '2026-05-26T23:59:59',
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      4,
+      '/v1/historical-reports',
+      {
+        params: {
+          applicationNo: 'APP-1',
+          externalReportNo: 'HIS-RPT-001',
+          from: '2026-05-01T00:00:00',
+          pathologyNo: 'PATH-1',
+          patientId: 'PAT-1',
+          sourceSystem: 'MOCK_HIS',
+          to: '2026-05-26T23:59:59',
+        },
       },
-    });
+    );
   });
 
   it('posts billing and history action endpoints with exact paths', async () => {

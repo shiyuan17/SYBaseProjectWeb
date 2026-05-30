@@ -210,7 +210,7 @@ export function buildWorkspaceTodoCards(
         return mapped;
       }),
     )
-    .sort((left, right) => right.priority - left.priority);
+    .toSorted((left, right) => right.priority - left.priority);
 }
 
 export function buildWorkspaceAlerts(
@@ -229,7 +229,7 @@ export function buildWorkspaceAlerts(
         return mapped;
       }),
     )
-    .sort((left, right) => right.priority - left.priority);
+    .toSorted((left, right) => right.priority - left.priority);
 }
 
 export function buildWorkspaceQuickEntries(
@@ -290,7 +290,8 @@ export function buildWorkspaceSpotlight(
     dangerCount: cards.filter((card) => card.tone === 'danger').length,
     infoCount: cards.filter((card) => card.tone === 'info').length,
     warningCount: cards.filter((card) => card.tone === 'warning').length,
-    warningRiskCount: alerts.filter((alert) => alert.severity !== 'info').length,
+    warningRiskCount: alerts.filter((alert) => alert.severity !== 'info')
+      .length,
   };
 }
 
@@ -325,8 +326,7 @@ export function getVisualToneClasses(tone: DashboardVisualTone) {
       return {
         badge:
           'bg-[color-mix(in_srgb,var(--el-color-danger)_12%,transparent)] text-[var(--el-color-danger)] ring-1 ring-inset ring-[color-mix(in_srgb,var(--el-color-danger)_26%,transparent)]',
-        glow:
-          'from-[color-mix(in_srgb,var(--el-color-danger)_18%,transparent)] via-[color-mix(in_srgb,var(--el-color-danger)_8%,transparent)] to-transparent',
+        glow: 'from-[color-mix(in_srgb,var(--el-color-danger)_18%,transparent)] via-[color-mix(in_srgb,var(--el-color-danger)_8%,transparent)] to-transparent',
         line: 'bg-[var(--el-color-danger)]',
         text: 'text-[var(--el-color-danger)]',
       };
@@ -335,8 +335,7 @@ export function getVisualToneClasses(tone: DashboardVisualTone) {
       return {
         badge:
           'bg-[color-mix(in_srgb,var(--el-color-info)_12%,transparent)] text-[var(--el-color-info)] ring-1 ring-inset ring-[color-mix(in_srgb,var(--el-color-info)_26%,transparent)]',
-        glow:
-          'from-[color-mix(in_srgb,var(--el-color-info)_18%,transparent)] via-[color-mix(in_srgb,var(--el-color-info)_8%,transparent)] to-transparent',
+        glow: 'from-[color-mix(in_srgb,var(--el-color-info)_18%,transparent)] via-[color-mix(in_srgb,var(--el-color-info)_8%,transparent)] to-transparent',
         line: 'bg-[var(--el-color-info)]',
         text: 'text-[var(--el-color-info)]',
       };
@@ -345,8 +344,7 @@ export function getVisualToneClasses(tone: DashboardVisualTone) {
       return {
         badge:
           'bg-[color-mix(in_srgb,var(--el-color-primary)_12%,transparent)] text-[var(--el-color-primary)] ring-1 ring-inset ring-[color-mix(in_srgb,var(--el-color-primary)_26%,transparent)]',
-        glow:
-          'from-[color-mix(in_srgb,var(--el-color-primary)_18%,transparent)] via-[color-mix(in_srgb,var(--el-color-primary)_8%,transparent)] to-transparent',
+        glow: 'from-[color-mix(in_srgb,var(--el-color-primary)_18%,transparent)] via-[color-mix(in_srgb,var(--el-color-primary)_8%,transparent)] to-transparent',
         line: 'bg-[var(--el-color-primary)]',
         text: 'text-[var(--el-color-primary)]',
       };
@@ -355,8 +353,7 @@ export function getVisualToneClasses(tone: DashboardVisualTone) {
       return {
         badge:
           'bg-[color-mix(in_srgb,var(--el-color-success)_12%,transparent)] text-[var(--el-color-success)] ring-1 ring-inset ring-[color-mix(in_srgb,var(--el-color-success)_26%,transparent)]',
-        glow:
-          'from-[color-mix(in_srgb,var(--el-color-success)_18%,transparent)] via-[color-mix(in_srgb,var(--el-color-success)_8%,transparent)] to-transparent',
+        glow: 'from-[color-mix(in_srgb,var(--el-color-success)_18%,transparent)] via-[color-mix(in_srgb,var(--el-color-success)_8%,transparent)] to-transparent',
         line: 'bg-[var(--el-color-success)]',
         text: 'text-[var(--el-color-success)]',
       };
@@ -365,8 +362,7 @@ export function getVisualToneClasses(tone: DashboardVisualTone) {
       return {
         badge:
           'bg-[color-mix(in_srgb,var(--el-color-warning)_12%,transparent)] text-[var(--el-color-warning)] ring-1 ring-inset ring-[color-mix(in_srgb,var(--el-color-warning)_26%,transparent)]',
-        glow:
-          'from-[color-mix(in_srgb,var(--el-color-warning)_18%,transparent)] via-[color-mix(in_srgb,var(--el-color-warning)_8%,transparent)] to-transparent',
+        glow: 'from-[color-mix(in_srgb,var(--el-color-warning)_18%,transparent)] via-[color-mix(in_srgb,var(--el-color-warning)_8%,transparent)] to-transparent',
         line: 'bg-[var(--el-color-warning)]',
         text: 'text-[var(--el-color-warning)]',
       };
@@ -375,8 +371,7 @@ export function getVisualToneClasses(tone: DashboardVisualTone) {
       return {
         badge:
           'bg-muted text-muted-foreground ring-1 ring-inset ring-border/80',
-        glow:
-          'from-[color-mix(in_srgb,var(--el-text-color-secondary)_12%,transparent)] via-[color-mix(in_srgb,var(--el-text-color-secondary)_5%,transparent)] to-transparent',
+        glow: 'from-[color-mix(in_srgb,var(--el-text-color-secondary)_12%,transparent)] via-[color-mix(in_srgb,var(--el-text-color-secondary)_5%,transparent)] to-transparent',
         line: 'bg-[var(--el-border-color)]',
         text: 'text-muted-foreground',
       };
@@ -393,7 +388,7 @@ export function groupQuickEntriesByDomain(
     groups.set(entry.domainId, [...current, entry]);
   });
 
-  return Array.from(groups.entries()).map(([domainId, entries]) => ({
+  return [...groups.entries()].map(([domainId, entries]) => ({
     domainId,
     domainTitle: entries[0]?.domainTitle ?? domainId,
     entries,

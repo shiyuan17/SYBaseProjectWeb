@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { useEcharts } from '@vben/plugins/echarts';
 import type {
   DashboardDomainData,
   DashboardNotificationSummary,
@@ -31,19 +30,18 @@ import {
 } from '../api/dashboard-service';
 import DashboardChartPanel from '../components/DashboardChartPanel.vue';
 import DashboardSectionCard from '../components/DashboardSectionCard.vue';
+import { buildWorkspaceDistributionChartOption } from '../utils/dashboard-chart-options';
+import { getDashboardChartTheme } from '../utils/dashboard-theme';
 import {
   buildWorkspaceVisualSummary,
   getVisualToneClasses,
   groupQuickEntriesByDomain,
 } from '../utils/dashboard-visualization';
-import { getDashboardChartTheme } from '../utils/dashboard-theme';
 
 const accessStore = useAccessStore();
 const userStore = useUserStore();
 const router = useRouter();
 const { isDark } = usePreferences();
-
-type ChartOption = Parameters<ReturnType<typeof useEcharts>['renderEcharts']>[0];
 
 const todoLoading = ref(false);
 const alertLoading = ref(false);
@@ -65,56 +63,20 @@ const visibleDomainTitles = computed(() =>
   domainData.value.map((item) => item.title).join(' / '),
 );
 
-const visualSummary = computed(() => buildWorkspaceVisualSummary(domainData.value));
+const visualSummary = computed(() =>
+  buildWorkspaceVisualSummary(domainData.value),
+);
 const quickEntryGroups = computed(() =>
   groupQuickEntriesByDomain(visualSummary.value.quickEntries),
 );
 const chartTheme = computed(() => getDashboardChartTheme(isDark.value));
 
-const workspaceDistributionOption = computed<ChartOption | null>(() => {
-  const data = visualSummary.value.distribution;
-  if (data.length === 0) {
-    return null;
-  }
-
-  const colorMap: Record<string, string> = {
-    danger: chartTheme.value.danger,
-    info: chartTheme.value.info,
-    neutral: chartTheme.value.neutral,
-    primary: chartTheme.value.primary,
-    success: chartTheme.value.success,
-    warning: chartTheme.value.warning,
-  };
-
-  return {
-    color: data.map((item) => colorMap[item.tone] ?? chartTheme.value.neutral),
-    legend: {
-      bottom: 0,
-      textStyle: {
-        color: chartTheme.value.textSecondary,
-      },
-    },
-    series: [
-      {
-        center: ['50%', '42%'],
-        data: data.map((item) => ({
-          name: item.label,
-          value: item.value,
-        })),
-        label: {
-          color: chartTheme.value.textPrimary,
-          formatter: '{b}',
-        },
-        radius: ['42%', '72%'],
-        type: 'pie',
-      },
-    ],
-    tooltip: {
-      formatter: '{b}：{c} 项待办',
-      trigger: 'item',
-    },
-  } as ChartOption;
-});
+const workspaceDistributionOption = computed(() =>
+  buildWorkspaceDistributionChartOption(
+    visualSummary.value.distribution,
+    chartTheme.value,
+  ),
+);
 
 async function navigateTo(
   route?: string,
@@ -202,17 +164,27 @@ onMounted(() => {
     "
   >
     <div class="flex flex-col gap-6">
-      <section class="dashboard-hero relative overflow-hidden rounded-[32px] border border-border bg-card px-6 py-6 text-foreground shadow-sm">
-        <div class="dashboard-hero__backdrop pointer-events-none absolute inset-0" />
+      <section
+        class="dashboard-hero relative overflow-hidden rounded-[32px] border border-border bg-card px-6 py-6 text-foreground shadow-sm"
+      >
+        <div
+          class="dashboard-hero__backdrop pointer-events-none absolute inset-0"
+        ></div>
         <div class="relative flex flex-col gap-6">
-          <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div
+            class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"
+          >
             <div class="max-w-3xl">
-              <div class="inline-flex items-center gap-2 rounded-full border border-border/80 bg-background/80 px-3 py-1 text-xs text-muted-foreground">
+              <div
+                class="inline-flex items-center gap-2 rounded-full border border-border/80 bg-background/80 px-3 py-1 text-xs text-muted-foreground"
+              >
                 <span>角色驾驶舱</span>
                 <span class="text-[var(--el-border-color)]">•</span>
                 <span>{{ visibleDomainTitles || '待办聚焦模式' }}</span>
               </div>
-              <h2 class="mt-4 text-3xl font-semibold tracking-tight text-foreground">
+              <h2
+                class="mt-4 text-3xl font-semibold tracking-tight text-foreground"
+              >
                 你好，{{ userStore.userInfo?.realName || '当前用户' }}
               </h2>
               <p class="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
@@ -220,7 +192,9 @@ onMounted(() => {
               </p>
             </div>
             <div class="flex flex-wrap items-center gap-3">
-              <span class="rounded-full border border-border/80 bg-background/80 px-3 py-1 text-xs text-muted-foreground">
+              <span
+                class="rounded-full border border-border/80 bg-background/80 px-3 py-1 text-xs text-muted-foreground"
+              >
                 未读通知 {{ notificationSummary.unreadCount }}
               </span>
               <ElButton
@@ -234,8 +208,14 @@ onMounted(() => {
           </div>
 
           <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <article class="rounded-[24px] border border-border bg-background/75 p-4 shadow-sm backdrop-blur">
-              <div class="text-xs uppercase tracking-[0.18em] text-muted-foreground">重点待办</div>
+            <article
+              class="rounded-[24px] border border-border bg-background/75 p-4 shadow-sm backdrop-blur"
+            >
+              <div
+                class="text-xs uppercase tracking-[0.18em] text-muted-foreground"
+              >
+                重点待办
+              </div>
               <div class="mt-3 text-3xl font-semibold text-foreground">
                 {{ visualSummary.heroCard?.value || '0' }}
               </div>
@@ -243,26 +223,50 @@ onMounted(() => {
                 {{ visualSummary.heroCard?.title || '当前没有待办事项' }}
               </div>
             </article>
-            <article class="rounded-[24px] border border-border bg-background/75 p-4 shadow-sm backdrop-blur">
-              <div class="text-xs uppercase tracking-[0.18em] text-muted-foreground">高风险预警</div>
+            <article
+              class="rounded-[24px] border border-border bg-background/75 p-4 shadow-sm backdrop-blur"
+            >
+              <div
+                class="text-xs uppercase tracking-[0.18em] text-muted-foreground"
+              >
+                高风险预警
+              </div>
               <div class="mt-3 text-3xl font-semibold text-foreground">
                 {{ visualSummary.spotlight.warningRiskCount }}
               </div>
-              <div class="mt-2 text-sm text-muted-foreground">包含高风险与提醒级异常</div>
+              <div class="mt-2 text-sm text-muted-foreground">
+                包含高风险与提醒级异常
+              </div>
             </article>
-            <article class="rounded-[24px] border border-border bg-background/75 p-4 shadow-sm backdrop-blur">
-              <div class="text-xs uppercase tracking-[0.18em] text-muted-foreground">业务域覆盖</div>
+            <article
+              class="rounded-[24px] border border-border bg-background/75 p-4 shadow-sm backdrop-blur"
+            >
+              <div
+                class="text-xs uppercase tracking-[0.18em] text-muted-foreground"
+              >
+                业务域覆盖
+              </div>
               <div class="mt-3 text-3xl font-semibold text-foreground">
                 {{ visualSummary.domainSummaries.length }}
               </div>
-              <div class="mt-2 text-sm text-muted-foreground">当前首页共汇聚 {{ visibleDomainTitles || '暂无可见域' }}</div>
+              <div class="mt-2 text-sm text-muted-foreground">
+                当前首页共汇聚 {{ visibleDomainTitles || '暂无可见域' }}
+              </div>
             </article>
-            <article class="rounded-[24px] border border-border bg-background/75 p-4 shadow-sm backdrop-blur">
-              <div class="text-xs uppercase tracking-[0.18em] text-muted-foreground">快捷入口</div>
+            <article
+              class="rounded-[24px] border border-border bg-background/75 p-4 shadow-sm backdrop-blur"
+            >
+              <div
+                class="text-xs uppercase tracking-[0.18em] text-muted-foreground"
+              >
+                快捷入口
+              </div>
               <div class="mt-3 text-3xl font-semibold text-foreground">
                 {{ visualSummary.quickEntries.length }}
               </div>
-              <div class="mt-2 text-sm text-muted-foreground">当前权限下的常用入口</div>
+              <div class="mt-2 text-sm text-muted-foreground">
+                当前权限下的常用入口
+              </div>
             </article>
           </div>
         </div>
@@ -284,24 +288,46 @@ onMounted(() => {
             card-class="dashboard-surface border-0"
             body-class="px-5 pb-5 pt-2"
           >
-            <div v-if="todoError" class="flex items-center justify-between gap-4">
+            <div
+              v-if="todoError"
+              class="flex items-center justify-between gap-4"
+            >
               <span class="text-sm text-danger">{{ todoError }}</span>
               <ElButton @click="loadWorkspaceSections">重试</ElButton>
             </div>
             <ElSkeleton v-else-if="todoLoading" :rows="8" animated />
-            <div v-else-if="visualSummary.heroCard" class="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-              <article class="relative overflow-hidden rounded-[28px] border border-border bg-card/90 p-5 text-foreground shadow-sm">
+            <div
+              v-else-if="visualSummary.heroCard"
+              class="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]"
+            >
+              <article
+                class="relative overflow-hidden rounded-[28px] border border-border bg-card/90 p-5 text-foreground shadow-sm"
+              >
                 <div
                   class="pointer-events-none absolute inset-0 bg-gradient-to-br opacity-85"
-                  :class="getVisualToneClasses(visualSummary.heroCard.tone === 'info' ? 'primary' : visualSummary.heroCard.tone).glow"
-                />
-                <div class="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--el-bg-color)_82%,transparent),color-mix(in_srgb,var(--el-bg-color-page)_36%,transparent))]" />
+                  :class="
+                    getVisualToneClasses(
+                      visualSummary.heroCard.tone === 'info'
+                        ? 'primary'
+                        : visualSummary.heroCard.tone,
+                    ).glow
+                  "
+                ></div>
+                <div
+                  class="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--el-bg-color)_82%,transparent),color-mix(in_srgb,var(--el-bg-color-page)_36%,transparent))]"
+                ></div>
                 <div class="relative flex h-full flex-col">
                   <div class="flex items-start justify-between gap-3">
                     <div>
                       <span
                         class="inline-flex rounded-full px-2.5 py-1 text-[11px] font-medium"
-                        :class="getVisualToneClasses(visualSummary.heroCard.tone === 'info' ? 'primary' : visualSummary.heroCard.tone).badge"
+                        :class="
+                          getVisualToneClasses(
+                            visualSummary.heroCard.tone === 'info'
+                              ? 'primary'
+                              : visualSummary.heroCard.tone,
+                          ).badge
+                        "
                       >
                         {{ visualSummary.heroCard.domainTitle }}
                       </span>
@@ -323,23 +349,29 @@ onMounted(() => {
                       {{ visualSummary.heroCard.tag || '待办' }}
                     </ElTag>
                   </div>
-                  <div class="mt-8 text-5xl font-semibold tracking-tight text-foreground">
+                  <div
+                    class="mt-8 text-5xl font-semibold tracking-tight text-foreground"
+                  >
                     {{ visualSummary.heroCard.value }}
                   </div>
-                  <p class="mt-3 max-w-[30ch] text-sm leading-6 text-muted-foreground">
+                  <p
+                    class="mt-3 max-w-[30ch] text-sm leading-6 text-muted-foreground"
+                  >
                     {{ visualSummary.heroCard.description }}
                   </p>
                   <div class="mt-6 flex flex-wrap gap-3">
                     <ElButton
                       type="primary"
-                      @click="navigateTo(visualSummary.heroCard.route, visualSummary.heroCard.query)"
+                      @click="
+                        navigateTo(
+                          visualSummary.heroCard.route,
+                          visualSummary.heroCard.query,
+                        )
+                      "
                     >
                       进入处理
                     </ElButton>
-                    <ElButton
-                      plain
-                      @click="navigateTo('/notifications')"
-                    >
+                    <ElButton plain @click="navigateTo('/notifications')">
                       查看协同消息
                     </ElButton>
                   </div>
@@ -354,18 +386,30 @@ onMounted(() => {
                 >
                   <div class="flex items-start justify-between gap-3">
                     <div>
-                      <div class="text-xs uppercase tracking-[0.16em] text-[var(--el-text-color-secondary)]">{{ card.domainTitle }}</div>
-                      <div class="mt-2 text-sm font-semibold text-foreground">{{ card.title }}</div>
+                      <div
+                        class="text-xs uppercase tracking-[0.16em] text-[var(--el-text-color-secondary)]"
+                      >
+                        {{ card.domainTitle }}
+                      </div>
+                      <div class="mt-2 text-sm font-semibold text-foreground">
+                        {{ card.title }}
+                      </div>
                     </div>
                     <span
                       class="rounded-full px-2.5 py-1 text-[11px] font-medium"
-                      :class="getVisualToneClasses(card.tone === 'info' ? 'info' : card.tone).badge"
+                      :class="
+                        getVisualToneClasses(
+                          card.tone === 'info' ? 'info' : card.tone,
+                        ).badge
+                      "
                     >
                       {{ card.tag || '待办' }}
                     </span>
                   </div>
                   <div class="mt-4 flex items-end justify-between gap-3">
-                    <div class="text-3xl font-semibold text-foreground">{{ card.value }}</div>
+                    <div class="text-3xl font-semibold text-foreground">
+                      {{ card.value }}
+                    </div>
                     <button
                       class="text-xs text-muted-foreground transition-colors hover:text-primary"
                       type="button"
@@ -403,7 +447,10 @@ onMounted(() => {
               card-class="dashboard-surface border-0"
               body-class="px-5 pb-5 pt-2"
             >
-              <div v-if="quickError" class="flex items-center justify-between gap-4">
+              <div
+                v-if="quickError"
+                class="flex items-center justify-between gap-4"
+              >
                 <span class="text-sm text-danger">{{ quickError }}</span>
                 <ElButton @click="loadWorkspaceSections">重试</ElButton>
               </div>
@@ -414,7 +461,9 @@ onMounted(() => {
                   :key="group.domainId"
                   class="rounded-[24px] border border-border bg-card/75 p-4 shadow-sm"
                 >
-                  <div class="mb-3 text-sm font-semibold text-foreground">{{ group.domainTitle }}</div>
+                  <div class="mb-3 text-sm font-semibold text-foreground">
+                    {{ group.domainTitle }}
+                  </div>
                   <div class="grid gap-3 md:grid-cols-2">
                     <button
                       v-for="entry in group.entries"
@@ -424,7 +473,9 @@ onMounted(() => {
                       @click="navigateTo(entry.route, entry.query)"
                     >
                       <div class="flex items-center justify-between gap-3">
-                        <div class="text-sm font-semibold text-foreground">{{ entry.title }}</div>
+                        <div class="text-sm font-semibold text-foreground">
+                          {{ entry.title }}
+                        </div>
                         <span
                           v-if="entry.highlight"
                           class="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] text-primary"
@@ -432,7 +483,9 @@ onMounted(() => {
                           推荐
                         </span>
                       </div>
-                      <div class="mt-2 text-xs leading-5 text-muted-foreground">{{ entry.description }}</div>
+                      <div class="mt-2 text-xs leading-5 text-muted-foreground">
+                        {{ entry.description }}
+                      </div>
                     </button>
                   </div>
                 </section>
@@ -449,12 +502,18 @@ onMounted(() => {
             card-class="dashboard-surface border-0"
             body-class="px-5 pb-5 pt-2"
           >
-            <div v-if="alertError" class="flex items-center justify-between gap-4">
+            <div
+              v-if="alertError"
+              class="flex items-center justify-between gap-4"
+            >
               <span class="text-sm text-danger">{{ alertError }}</span>
               <ElButton @click="loadWorkspaceSections">重试</ElButton>
             </div>
             <ElSkeleton v-else-if="alertLoading" :rows="7" animated />
-            <div v-else-if="visualSummary.alerts.length > 0" class="flex flex-col gap-3">
+            <div
+              v-else-if="visualSummary.alerts.length > 0"
+              class="flex flex-col gap-3"
+            >
               <article
                 v-for="item in visualSummary.alerts"
                 :key="item.id"
@@ -462,18 +521,42 @@ onMounted(() => {
               >
                 <div class="flex items-start justify-between gap-3">
                   <div>
-                    <div class="text-xs uppercase tracking-[0.16em] text-[var(--el-text-color-secondary)]">{{ item.domainTitle }}</div>
-                    <div class="mt-2 text-sm font-semibold text-foreground">{{ item.title }}</div>
-                    <div class="mt-1 text-xs text-muted-foreground">{{ item.source }}</div>
+                    <div
+                      class="text-xs uppercase tracking-[0.16em] text-[var(--el-text-color-secondary)]"
+                    >
+                      {{ item.domainTitle }}
+                    </div>
+                    <div class="mt-2 text-sm font-semibold text-foreground">
+                      {{ item.title }}
+                    </div>
+                    <div class="mt-1 text-xs text-muted-foreground">
+                      {{ item.source }}
+                    </div>
                   </div>
                   <span
                     class="rounded-full px-2.5 py-1 text-[11px] font-medium"
-                    :class="getVisualToneClasses(item.severity === 'danger' ? 'danger' : item.severity === 'warning' ? 'warning' : 'info').badge"
+                    :class="
+                      getVisualToneClasses(
+                        item.severity === 'danger'
+                          ? 'danger'
+                          : item.severity === 'warning'
+                            ? 'warning'
+                            : 'info',
+                      ).badge
+                    "
                   >
-                    {{ item.severity === 'danger' ? '高风险' : item.severity === 'warning' ? '提醒' : '关注' }}
+                    {{
+                      item.severity === 'danger'
+                        ? '高风险'
+                        : item.severity === 'warning'
+                          ? '提醒'
+                          : '关注'
+                    }}
                   </span>
                 </div>
-                <div class="mt-3 text-sm leading-6 text-muted-foreground">{{ item.description }}</div>
+                <div class="mt-3 text-sm leading-6 text-muted-foreground">
+                  {{ item.description }}
+                </div>
                 <button
                   class="mt-4 text-sm text-primary transition-colors hover:text-primary/80"
                   type="button"
@@ -493,17 +576,25 @@ onMounted(() => {
             body-class="px-5 pb-5 pt-2"
           >
             <template #header-extra>
-              <ElTag :type="notificationSummary.unreadCount > 0 ? 'warning' : 'info'">
+              <ElTag
+                :type="notificationSummary.unreadCount > 0 ? 'warning' : 'info'"
+              >
                 未读 {{ notificationSummary.unreadCount }}
               </ElTag>
             </template>
 
-            <div v-if="notificationError" class="flex items-center justify-between gap-4">
+            <div
+              v-if="notificationError"
+              class="flex items-center justify-between gap-4"
+            >
               <span class="text-sm text-danger">{{ notificationError }}</span>
               <ElButton @click="loadNotifications">重试</ElButton>
             </div>
             <ElSkeleton v-else-if="notificationLoading" :rows="5" animated />
-            <div v-else-if="notificationSummary.items.length > 0" class="flex flex-col gap-3">
+            <div
+              v-else-if="notificationSummary.items.length > 0"
+              class="flex flex-col gap-3"
+            >
               <article
                 v-for="item in notificationSummary.items"
                 :key="item.id"
@@ -511,22 +602,37 @@ onMounted(() => {
               >
                 <div class="flex items-start justify-between gap-3">
                   <div>
-                    <div class="text-sm font-semibold text-foreground">{{ item.title }}</div>
-                    <div class="mt-1 text-xs text-muted-foreground">{{ item.createdAt || '-' }}</div>
+                    <div class="text-sm font-semibold text-foreground">
+                      {{ item.title }}
+                    </div>
+                    <div class="mt-1 text-xs text-muted-foreground">
+                      {{ item.createdAt || '-' }}
+                    </div>
                   </div>
                   <span
                     class="rounded-full px-2.5 py-1 text-[11px] font-medium"
-                    :class="getVisualToneClasses(item.status === 'UNREAD' ? 'warning' : 'neutral').badge"
+                    :class="
+                      getVisualToneClasses(
+                        item.status === 'UNREAD' ? 'warning' : 'neutral',
+                      ).badge
+                    "
                   >
                     {{ item.status === 'UNREAD' ? '未读' : '已读' }}
                   </span>
                 </div>
-                <div class="mt-3 text-sm leading-6 text-muted-foreground">{{ item.summary }}</div>
+                <div class="mt-3 text-sm leading-6 text-muted-foreground">
+                  {{ item.summary }}
+                </div>
                 <div class="mt-4 flex gap-3">
                   <button
                     class="text-sm text-primary transition-colors hover:text-primary/80"
                     type="button"
-                    @click="navigateTo(item.actionRoute || '/notifications', item.query)"
+                    @click="
+                      navigateTo(
+                        item.actionRoute || '/notifications',
+                        item.query,
+                      )
+                    "
                   >
                     查看 →
                   </button>
@@ -550,7 +656,6 @@ onMounted(() => {
 
 <style scoped>
 :deep(.dashboard-surface.el-card) {
-  border: 1px solid var(--el-border-color);
   background:
     linear-gradient(
       180deg,
@@ -562,12 +667,15 @@ onMounted(() => {
       color-mix(in srgb, var(--el-color-primary) 10%, transparent),
       transparent 28%
     );
-  box-shadow: 0 18px 36px -28px color-mix(in srgb, var(--el-text-color-primary) 22%, transparent);
+  border: 1px solid var(--el-border-color);
+  box-shadow: 0 18px 36px -28px
+    color-mix(in srgb, var(--el-text-color-primary) 22%, transparent);
 }
 
 :deep(.dashboard-surface .el-card__header) {
-  border-bottom: 1px solid color-mix(in srgb, var(--el-border-color) 88%, transparent);
   padding: 18px 20px 14px;
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--el-border-color) 88%, transparent);
 }
 
 .dashboard-hero__backdrop {

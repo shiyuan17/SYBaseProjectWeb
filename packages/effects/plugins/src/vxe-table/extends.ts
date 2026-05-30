@@ -2,12 +2,12 @@ import type { VxeGridProps, VxeUIExport } from 'vxe-table';
 
 import type { Recordable } from '@vben/types';
 
-import type { VxeGridApi } from './api';
+import type { VxeGridApiLike } from './types';
 
 import { formatDate, formatDateTime, isFunction } from '@vben/utils';
 
 export function extendProxyOptions(
-  api: VxeGridApi,
+  api: VxeGridApiLike,
   options: VxeGridProps,
   getFormValues: () => Recordable<any>,
 ) {
@@ -25,7 +25,7 @@ export function extendProxyOptions(
 
 function extendProxyOption(
   key: string,
-  api: VxeGridApi,
+  api: VxeGridApiLike,
   options: VxeGridProps,
   getFormValues: () => Recordable<any>,
 ) {

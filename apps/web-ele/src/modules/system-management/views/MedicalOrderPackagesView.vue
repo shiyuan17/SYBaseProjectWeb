@@ -35,10 +35,7 @@ import {
 import SystemLoadError from '../components/SystemLoadError.vue';
 import SystemSectionCard from '../components/SystemSectionCard.vue';
 import SystemStatusTag from '../components/SystemStatusTag.vue';
-import {
-  M1_PERMISSION_CODES,
-  YES_NO_OPTIONS,
-} from '../constants';
+import { M1_PERMISSION_CODES, YES_NO_OPTIONS } from '../constants';
 import { getSystemPageErrorMessage } from '../utils/error';
 import { buildPackageSubmitPayload } from '../utils/submit-payloads';
 import { flattenTree } from '../utils/tree';
@@ -217,7 +214,10 @@ onMounted(loadInitialData);
       @retry="loadInitialData"
     />
     <div class="flex flex-col gap-4">
-      <SystemSectionCard title="筛选条件" description="按关键字、启停状态和套餐类型筛选。">
+      <SystemSectionCard
+        title="筛选条件"
+        description="按关键字、启停状态和套餐类型筛选。"
+      >
         <ElForm inline label-width="72px">
           <ElFormItem label="关键字">
             <ElInput
@@ -229,7 +229,12 @@ onMounted(loadInitialData);
             />
           </ElFormItem>
           <ElFormItem label="状态">
-            <ElSelect v-model="filters.enabled" clearable placeholder="全部" style="width: 160px">
+            <ElSelect
+              v-model="filters.enabled"
+              clearable
+              placeholder="全部"
+              style="width: 160px"
+            >
               <ElOption
                 v-for="option in YES_NO_OPTIONS"
                 :key="String(option.value)"
@@ -239,7 +244,10 @@ onMounted(loadInitialData);
             </ElSelect>
           </ElFormItem>
           <ElFormItem label="套餐类型">
-            <ElInput v-model="filters.packageType" placeholder="请输入套餐类型" />
+            <ElInput
+              v-model="filters.packageType"
+              placeholder="请输入套餐类型"
+            />
           </ElFormItem>
           <ElFormItem>
             <ElButton type="primary" @click="handleSearch">查询</ElButton>
@@ -248,7 +256,10 @@ onMounted(loadInitialData);
         </ElForm>
       </SystemSectionCard>
 
-      <SystemSectionCard title="套餐列表" description="支持新增、编辑、启停和删除。">
+      <SystemSectionCard
+        title="套餐列表"
+        description="支持新增、编辑、启停和删除。"
+      >
         <template #extra>
           <ElButton
             v-access:code="M1_PERMISSION_CODES.PACKAGE_CREATE"

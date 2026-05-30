@@ -8,8 +8,8 @@ import { ElAutocomplete } from 'element-plus';
 import { listBodyParts } from '../api/system-management-service';
 
 type BodyPartOption = {
-  label: string;
   keywords: string[];
+  label: string;
   value: string;
 };
 
@@ -45,7 +45,11 @@ function flattenBodyPartOptions(nodes: BodyPartNode[], path: string[] = []) {
     const nextPath = [...path, node.partName];
     nextOptions.push({
       label: nextPath.join(' / '),
-      keywords: [node.partName, node.partAlias ?? '', nextPath.join(' / ')].filter(Boolean),
+      keywords: [
+        node.partName,
+        node.partAlias ?? '',
+        nextPath.join(' / '),
+      ].filter(Boolean),
       value: node.partName,
     });
     if (node.children?.length) {
@@ -61,7 +65,10 @@ async function loadBodyPartOptions() {
   options.value = flattenBodyPartOptions(nodes);
 }
 
-function querySearch(keyword: string, callback: (items: BodyPartOption[]) => void) {
+function querySearch(
+  keyword: string,
+  callback: (items: BodyPartOption[]) => void,
+) {
   const normalizedKeyword = normalizeKeyword(keyword);
   if (!normalizedKeyword) {
     callback(options.value);
@@ -70,7 +77,9 @@ function querySearch(keyword: string, callback: (items: BodyPartOption[]) => voi
 
   callback(
     options.value.filter((option) =>
-      option.keywords.some((item) => normalizeKeyword(item).includes(normalizedKeyword)),
+      option.keywords.some((item) =>
+        normalizeKeyword(item).includes(normalizedKeyword),
+      ),
     ),
   );
 }
@@ -138,7 +147,10 @@ onMounted(loadBodyPartOptions);
     <template #default="{ item }">
       <div class="flex flex-col">
         <span>{{ item.value }}</span>
-        <span v-if="item.label !== item.value" class="text-xs text-muted-foreground">
+        <span
+          v-if="item.label !== item.value"
+          class="text-xs text-muted-foreground"
+        >
           {{ item.label }}
         </span>
       </div>

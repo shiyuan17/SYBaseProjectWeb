@@ -17,7 +17,8 @@ function mapIndicator(item: Partial<StatIndicatorView>): StatIndicatorView {
     description: item.description ?? '',
     enabled: item.enabled ?? false,
     id: item.id ?? '',
-    indicatorCategory: (item.indicatorCategory ?? 'QUALITY') as StatIndicatorView['indicatorCategory'],
+    indicatorCategory: (item.indicatorCategory ??
+      'QUALITY') as StatIndicatorView['indicatorCategory'],
     indicatorCode: item.indicatorCode ?? '',
     indicatorName: item.indicatorName ?? '',
     metricScope: item.metricScope ?? '',
@@ -37,7 +38,8 @@ function mapTemplate(
     sortOrder: item.sortOrder ?? 0,
     templateCode: item.templateCode ?? '',
     templateName: item.templateName ?? '',
-    templateType: (item.templateType ?? 'QUALITY') as StatReportTemplateView['templateType'],
+    templateType: (item.templateType ??
+      'QUALITY') as StatReportTemplateView['templateType'],
   };
 }
 
@@ -51,7 +53,9 @@ export async function listStatIndicators(category?: null | string) {
     },
   );
 
-  return Array.isArray(response) ? response.map(mapIndicator) : [];
+  return Array.isArray(response)
+    ? response.map((item) => mapIndicator(item))
+    : [];
 }
 
 export async function listStatReportTemplates(templateType?: null | string) {
@@ -64,7 +68,9 @@ export async function listStatReportTemplates(templateType?: null | string) {
     },
   );
 
-  return Array.isArray(response) ? response.map(mapTemplate) : [];
+  return Array.isArray(response)
+    ? response.map((item) => mapTemplate(item))
+    : [];
 }
 
 export async function queryStatReport(payload: StatReportQuery) {

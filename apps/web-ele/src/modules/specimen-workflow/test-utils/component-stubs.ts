@@ -28,7 +28,7 @@ type SlotContext = Pick<SetupContext, 'slots'>;
 type EmitSlotContext = EmitContext & SlotContext;
 
 function toText(value: unknown) {
-  return value == null ? '' : String(value);
+  return value === null || value === undefined ? '' : String(value);
 }
 
 function toBooleanAttribute(value: unknown) {
@@ -121,7 +121,10 @@ export function createInputNumberStub(): FunctionalComponent<StubProps> {
       ...props,
       min: typeof props.min === 'number' ? props.min : undefined,
       type: 'number',
-      value: props.modelValue == null ? '' : String(props.modelValue),
+      value:
+        props.modelValue === null || props.modelValue === undefined
+          ? ''
+          : String(props.modelValue),
       onInput: (event: Event) =>
         emit(
           'update:modelValue',
@@ -293,7 +296,8 @@ export function createTableStub(rowContextKey: symbol): Component {
           'div',
           {
             'data-height':
-              props.height == null && props.maxHeight == null
+              (props.height === null || props.height === undefined) &&
+              (props.maxHeight === null || props.maxHeight === undefined)
                 ? ''
                 : String(props.height ?? props.maxHeight),
             'data-testid': 'table',
@@ -349,7 +353,9 @@ export function createTableColumnStub(rowContextKey: symbol): Component {
                 props.prop && rowContext
                   ? rowContext.row[String(props.prop)]
                   : undefined;
-              return value == null ? undefined : h('span', String(value));
+              return value === null || value === undefined
+                ? undefined
+                : h('span', String(value));
             })(),
         );
     },

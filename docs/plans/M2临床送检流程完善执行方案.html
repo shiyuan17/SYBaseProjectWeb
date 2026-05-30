@@ -38,15 +38,19 @@
         margin: 0;
         color: var(--ink);
         background:
-          radial-gradient(circle at top left, rgba(15, 118, 110, 0.12), transparent 28%),
-          radial-gradient(circle at top right, rgba(37, 99, 235, 0.1), transparent 24%),
+          radial-gradient(
+            circle at top left,
+            rgba(15, 118, 110, 0.12),
+            transparent 28%
+          ),
+          radial-gradient(
+            circle at top right,
+            rgba(37, 99, 235, 0.1),
+            transparent 24%
+          ),
           linear-gradient(180deg, #edf3f9 0%, #f4f7fb 42%, #f8fbfe 100%);
         font-family:
-          "Microsoft YaHei",
-          "PingFang SC",
-          "Noto Sans SC",
-          Arial,
-          sans-serif;
+          'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', Arial, sans-serif;
         line-height: 1.7;
       }
 
@@ -145,7 +149,7 @@
         height: 28px;
         border-radius: 999px;
         background: var(--primary);
-        content: "";
+        content: '';
       }
 
       h3 {
@@ -342,8 +346,12 @@
         left: 8px;
         bottom: 0;
         width: 2px;
-        background: linear-gradient(180deg, var(--primary), rgba(15, 118, 110, 0.08));
-        content: "";
+        background: linear-gradient(
+          180deg,
+          var(--primary),
+          rgba(15, 118, 110, 0.08)
+        );
+        content: '';
       }
 
       .lane-item {
@@ -368,7 +376,7 @@
         border: 3px solid var(--primary);
         border-radius: 50%;
         background: #fff;
-        content: "";
+        content: '';
       }
 
       .phase-list {
@@ -431,8 +439,9 @@
           <div class="eyebrow">M2 Clinical Workflow Plan</div>
           <h1>临床送检流程完善与执行方案</h1>
           <p class="lead">
-            本方案面向当前仓库的 M2 临床送检闭环，目标是在不拆分顶层 4 个主入口的前提下，
-            逐步补齐外部临床病理工作站分析文档中强调的 11 类能力，并形成可执行、可联调、可验收的前后端改造路径。
+            本方案面向当前仓库的 M2 临床送检闭环，目标是在不拆分顶层 4
+            个主入口的前提下， 逐步补齐外部临床病理工作站分析文档中强调的 11
+            类能力，并形成可执行、可联调、可验收的前后端改造路径。
           </p>
           <div class="tag-row">
             <span class="tag">保留 4 个主入口</span>
@@ -444,15 +453,21 @@
         <div class="hero-side">
           <div class="metric">
             <strong>4</strong>
-            <span>当前前端主入口：申请与登记、固定与转运、病理接收、追踪与异常</span>
+            <span
+              >当前前端主入口：申请与登记、固定与转运、病理接收、追踪与异常</span
+            >
           </div>
           <div class="metric">
             <strong>11</strong>
-            <span>目标工作站能力：登记、核对、记录、条码、时间、确认、出入库、综合信息、异常管理</span>
+            <span
+              >目标工作站能力：登记、核对、记录、条码、时间、确认、出入库、综合信息、异常管理</span
+            >
           </div>
           <div class="metric">
             <strong>4 阶段</strong>
-            <span>方案交付、前端显式能力、后端补口联调、回归验收与 SOP 同步</span>
+            <span
+              >方案交付、前端显式能力、后端补口联调、回归验收与 SOP 同步</span
+            >
           </div>
         </div>
       </div>
@@ -463,22 +478,28 @@
           <div class="card">
             <h3>当前实现</h3>
             <p>
-              当前系统已经落地 M2 主链路：<code>申请创建/导入 -&gt; 标本登记 -&gt; 固定 -&gt; 转运 -&gt; 接收 -&gt; 追踪</code>。
-              前端形态收敛为 4 个合并工作台，后端已有申请、登记、固定、转运、接收、追踪主链路接口与测试基线。
+              当前系统已经落地 M2 主链路：<code
+                >申请创建/导入 -&gt; 标本登记 -&gt; 固定 -&gt; 转运 -&gt; 接收
+                -&gt; 追踪</code
+              >。 前端形态收敛为 4
+              个合并工作台，后端已有申请、登记、固定、转运、接收、追踪主链路接口与测试基线。
             </p>
           </div>
           <div class="card">
             <h3>目标原则</h3>
             <p>
-              对齐外部 <code>clinical-pathology-workstation-analysis.html</code> 的工作站模型，
-              但不照搬 WinForm 菜单拆分方式；本轮优先保留现有 4 个顶层入口，采用页内场景拆分、提示增强、聚合字段扩展来补齐能力。
+              对齐外部
+              <code>clinical-pathology-workstation-analysis.html</code>
+              的工作站模型， 但不照搬 WinForm 菜单拆分方式；本轮优先保留现有 4
+              个顶层入口，采用页内场景拆分、提示增强、聚合字段扩展来补齐能力。
             </p>
           </div>
         </div>
         <div class="callout warn" style="margin-top: 16px">
           <h3>本轮边界</h3>
           <p>
-            默认不修改全局路由守卫、Axios 全局拦截器和顶层权限模型。若后续出现“异常修正必须独立授权”这类红区变更，再单独发起人工确认。
+            默认不修改全局路由守卫、Axios
+            全局拦截器和顶层权限模型。若后续出现“异常修正必须独立授权”这类红区变更，再单独发起人工确认。
           </p>
         </div>
       </section>
@@ -486,7 +507,8 @@
       <section id="matrix">
         <h2>2. 当前实现与目标流程差异矩阵</h2>
         <p>
-          差异矩阵按“目标能力 / 当前承接位置 / 当前状态 / 缺口 / 建议改造”组织，重点识别哪些能力已被合并承接，哪些仍缺显式入口或后端支持。
+          差异矩阵按“目标能力 / 当前承接位置 / 当前状态 / 缺口 /
+          建议改造”组织，重点识别哪些能力已被合并承接，哪些仍缺显式入口或后端支持。
         </p>
         <div class="matrix-wrap">
           <table>
@@ -502,17 +524,28 @@
             <tbody>
               <tr>
                 <td>标本登记</td>
-                <td><code>/workflow/submission-registration</code> → 标本登记页</td>
+                <td>
+                  <code>/workflow/submission-registration</code> → 标本登记页
+                </td>
                 <td><span class="status done">已落地</span></td>
-                <td>缺患者核对显式状态、报告/检查状态快捷查看、离体时间采集入口</td>
-                <td>在“申请与登记”内补充查询头部能力、患者核对状态区和时间采集入口</td>
+                <td>
+                  缺患者核对显式状态、报告/检查状态快捷查看、离体时间采集入口
+                </td>
+                <td>
+                  在“申请与登记”内补充查询头部能力、患者核对状态区和时间采集入口
+                </td>
               </tr>
               <tr>
                 <td>标本核对</td>
                 <td><code>/workflow/fixation-transport</code> → 标本核对</td>
                 <td><span class="status partial">部分承接</span></td>
-                <td>虽已拆出独立页签，但仍需补齐真实后端核对记录与异常回查，确保“核对先于固定”稳定闭环</td>
-                <td>固定保留“开始核对 / 完成核对”双动作，并把核对记录查询统一收敛到“追踪与异常”视图</td>
+                <td>
+                  虽已拆出独立页签，但仍需补齐真实后端核对记录与异常回查，确保“核对先于固定”稳定闭环
+                </td>
+                <td>
+                  固定保留“开始核对 /
+                  完成核对”双动作，并把核对记录查询统一收敛到“追踪与异常”视图
+                </td>
               </tr>
               <tr>
                 <td>标本核对记录</td>
@@ -526,21 +559,30 @@
                 <td>登记场景内隐含依赖条码；暂无独立工作台</td>
                 <td><span class="status todo">待补齐</span></td>
                 <td>缺手术室/手术间维度待绑定列表与重绑机制</td>
-                <td>在“固定与转运”新增条码处理子场景，后端补条码绑定/重绑接口</td>
+                <td>
+                  在“固定与转运”新增条码处理子场景，后端补条码绑定/重绑接口
+                </td>
               </tr>
               <tr>
                 <td>离体时间设置</td>
                 <td>申请/追踪聚合字段中仅有有限承接</td>
                 <td><span class="status todo">待补齐</span></td>
                 <td>无专门录入动作与展示关系</td>
-                <td>在“申请与登记”补离体时间采集入口，并在追踪页展示与固定时间关系</td>
+                <td>
+                  在“申请与登记”补离体时间采集入口，并在追踪页展示与固定时间关系
+                </td>
               </tr>
               <tr>
                 <td>标本固定（对应外部“固定时间设置”）</td>
                 <td><code>/workflow/fixation-transport</code> → 标本固定</td>
                 <td><span class="status partial">已显式承接</span></td>
-                <td>前端语义已回正，但仍需后端补齐固定时间、固定液类型、异常固定质控的真实聚合</td>
-                <td>保持“开始固定 / 完成固定”仅在标本固定场景执行，并补充固定时差提醒和追踪字段</td>
+                <td>
+                  前端语义已回正，但仍需后端补齐固定时间、固定液类型、异常固定质控的真实聚合
+                </td>
+                <td>
+                  保持“开始固定 /
+                  完成固定”仅在标本固定场景执行，并补充固定时差提醒和追踪字段
+                </td>
               </tr>
               <tr>
                 <td>标本确认</td>
@@ -553,7 +595,9 @@
                 <td>标本入库</td>
                 <td><code>/workflow/fixation-transport</code> → 标本入库</td>
                 <td><span class="status partial">已显式承接</span></td>
-                <td>已补页内独立场景，但仍需真实接口支撑入库记录、入库人和时间聚合</td>
+                <td>
+                  已补页内独立场景，但仍需真实接口支撑入库记录、入库人和时间聚合
+                </td>
                 <td>保留“执行入库”独立动作，并把入库作为转运建单前置条件</td>
               </tr>
               <tr>
@@ -568,14 +612,18 @@
                 <td><code>/workflow/tracking-exception</code></td>
                 <td><span class="status partial">部分承接</span></td>
                 <td>缺核对记录、接收摘要、患者核对状态等综合信息</td>
-                <td>扩展申请追踪和标本追踪视图，补齐节点、事件、异常与时间摘要</td>
+                <td>
+                  扩展申请追踪和标本追踪视图，补齐节点、事件、异常与时间摘要
+                </td>
               </tr>
               <tr>
                 <td>标本管理/异常修正</td>
                 <td><code>SpecimenManagementView</code></td>
                 <td><span class="status partial">部分承接</span></td>
                 <td>缺异常修正规则说明和入口说明，现场人员容易误走正常流程</td>
-                <td>在“追踪与异常”与“申请与登记”增加异常修正入口说明与使用边界</td>
+                <td>
+                  在“追踪与异常”与“申请与登记”增加异常修正入口说明与使用边界
+                </td>
               </tr>
               <tr>
                 <td>接收模式/打印/患者核对配置分支</td>
@@ -596,28 +644,35 @@
             <h3>工作台一：申请与登记</h3>
             <p>
               对应目标能力：申请查询、患者核对、登记录入、标签补打、离体时间采集、异常补录入口。
-              继续使用 <code>/workflow/submission-registration</code>，通过页内卡片、分栏和对话框拆分子场景。
+              继续使用
+              <code>/workflow/submission-registration</code
+              >，通过页内卡片、分栏和对话框拆分子场景。
             </p>
           </div>
           <div class="lane-item">
             <h3>工作台二：固定与转运</h3>
             <p>
               对应目标能力：标本核对、标本固定、条码绑定、标本确认、标本入库、转运/出库。
-              继续使用 <code>/workflow/fixation-transport</code>，从“双标签页”演进为“6 个子场景工作台”。
+              继续使用
+              <code>/workflow/fixation-transport</code>，从“双标签页”演进为“6
+              个子场景工作台”。
             </p>
           </div>
           <div class="lane-item">
             <h3>工作台三：病理接收</h3>
             <p>
               对应目标能力：转运单接收、条码直收、部分接收、拒收、退回、质控问题记录、未接收提醒、申请单补打印承接位。
-              继续使用 <code>/workflow/pathology-receipt</code>，重点强化异常闭环。
+              继续使用
+              <code>/workflow/pathology-receipt</code>，重点强化异常闭环。
             </p>
           </div>
           <div class="lane-item">
             <h3>工作台四：追踪与异常</h3>
             <p>
               对应目标能力：标本综合信息、申请追踪、标本追踪、核对记录、异常修正说明与回查。
-              继续使用 <code>/workflow/tracking-exception</code>，承担综合台账和例外处理入口说明。
+              继续使用
+              <code>/workflow/tracking-exception</code
+              >，承担综合台账和例外处理入口说明。
             </p>
           </div>
         </div>
@@ -625,9 +680,13 @@
         <div class="callout" style="margin-top: 18px">
           <h3>兼容入口策略</h3>
           <p>
-            保留旧入口 <code>/workflow/clinical-register</code>、<code>/workflow/fixation-verify</code>、
-            <code>/workflow/transport-handover</code>、<code>/workflow/specimen-receipt</code>、
-            <code>/workflow/tracking-query</code> 作为兼容跳转，不改变现有对外路径语义。
+            保留旧入口
+            <code>/workflow/clinical-register</code
+            >、<code>/workflow/fixation-verify</code>、
+            <code>/workflow/transport-handover</code
+            >、<code>/workflow/specimen-receipt</code>、
+            <code>/workflow/tracking-query</code>
+            作为兼容跳转，不改变现有对外路径语义。
           </p>
         </div>
       </section>
@@ -638,33 +697,55 @@
           <div class="card">
             <h3>申请与登记</h3>
             <ul>
-              <li>增加申请单号扫码/输入检索头部区，统一“查询、重复申请提醒、患者核对状态、报告状态/检查状态”展示。</li>
-              <li>把登记页内显式拆成“登记录入”“标签补打”“条码处理”“异常补录”子场景。</li>
-              <li>增加离体时间采集入口，明确与送检时间、固定时间的展示顺序。</li>
+              <li>
+                增加申请单号扫码/输入检索头部区，统一“查询、重复申请提醒、患者核对状态、报告状态/检查状态”展示。
+              </li>
+              <li>
+                把登记页内显式拆成“登记录入”“标签补打”“条码处理”“异常补录”子场景。
+              </li>
+              <li>
+                增加离体时间采集入口，明确与送检时间、固定时间的展示顺序。
+              </li>
             </ul>
           </div>
           <div class="card">
             <h3>固定与转运</h3>
             <ul>
-              <li>保留顶层合并页，但从 2 个 tab 扩展到 6 个子场景：标本核对、标本固定、条码绑定、标本确认、标本入库、转运/出库。</li>
-              <li>核对场景只保留“开始核对 / 完成核对”，固定场景只保留“开始固定 / 完成固定”，不再混放动作。</li>
-              <li>转运单创建前必须满足“已核对、已固定、已确认、已入库”，并增强打印、交接、异常批次标记和“待出库/已出库”语义。</li>
+              <li>
+                保留顶层合并页，但从 2 个 tab 扩展到 6
+                个子场景：标本核对、标本固定、条码绑定、标本确认、标本入库、转运/出库。
+              </li>
+              <li>
+                核对场景只保留“开始核对 / 完成核对”，固定场景只保留“开始固定 /
+                完成固定”，不再混放动作。
+              </li>
+              <li>
+                转运单创建前必须满足“已核对、已固定、已确认、已入库”，并增强打印、交接、异常批次标记和“待出库/已出库”语义。
+              </li>
             </ul>
           </div>
           <div class="card">
             <h3>病理接收</h3>
             <ul>
               <li>保留按转运单接收和按条码直收。</li>
-              <li>强化部分接收、拒收、退回、质控问题、容器数量异常的交互说明与结果回显。</li>
+              <li>
+                强化部分接收、拒收、退回、质控问题、容器数量异常的交互说明与结果回显。
+              </li>
               <li>增加未接收数量、异常批次提醒和申请单补打印承接位。</li>
             </ul>
           </div>
           <div class="card">
             <h3>追踪与异常</h3>
             <ul>
-              <li>申请追踪页展示全流程节点、当前节点、异常标记、时间线和接收摘要。</li>
-              <li>标本追踪页展示条码、状态、固定/接收结果、最近事件和异常原因。</li>
-              <li>增加核对记录视图和异常修正入口说明，异常修正仍收敛在现有管理能力内。</li>
+              <li>
+                申请追踪页展示全流程节点、当前节点、异常标记、时间线和接收摘要。
+              </li>
+              <li>
+                标本追踪页展示条码、状态、固定/接收结果、最近事件和异常原因。
+              </li>
+              <li>
+                增加核对记录视图和异常修正入口说明，异常修正仍收敛在现有管理能力内。
+              </li>
             </ul>
           </div>
         </div>
@@ -688,10 +769,24 @@
             <h3>保持不变的主链路接口</h3>
             <ul>
               <li><code>POST /v1/specimens/register</code></li>
-              <li><code>POST /v1/specimen-fixations/start</code> / <code>complete</code></li>
-              <li><code>POST /v1/transport-orders</code>、<code>print</code>、<code>handover</code></li>
-              <li><code>POST /v1/specimen-receipts</code>、<code>/by-barcodes</code></li>
-              <li><code>GET /v1/applications/{id}/tracking</code>、<code>/v1/specimens/barcodes/{barcode}/tracking</code></li>
+              <li>
+                <code>POST /v1/specimen-fixations/start</code> /
+                <code>complete</code>
+              </li>
+              <li>
+                <code>POST /v1/transport-orders</code
+                >、<code>print</code>、<code>handover</code>
+              </li>
+              <li>
+                <code>POST /v1/specimen-receipts</code>、<code
+                  >/by-barcodes</code
+                >
+              </li>
+              <li>
+                <code>GET /v1/applications/{id}/tracking</code>、<code
+                  >/v1/specimens/barcodes/{barcode}/tracking</code
+                >
+              </li>
             </ul>
           </div>
         </div>
@@ -708,12 +803,16 @@
             <tbody>
               <tr>
                 <td>申请详情 / 申请追踪</td>
-                <td>患者核对状态、报告状态/是否已签发、离体时间、固定时间、确认时间、入库时间、接收异常摘要</td>
+                <td>
+                  患者核对状态、报告状态/是否已签发、离体时间、固定时间、确认时间、入库时间、接收异常摘要
+                </td>
                 <td>支撑登记前核对、临床确认、追踪回查和现场异常判断</td>
               </tr>
               <tr>
                 <td>标本管理列表</td>
-                <td>是否已核对、是否已绑定条码、入库状态/时间、异常类型、最近操作节点</td>
+                <td>
+                  是否已核对、是否已绑定条码、入库状态/时间、异常类型、最近操作节点
+                </td>
                 <td>支撑现场批量处理、快速筛选与异常补录</td>
               </tr>
               <tr>
@@ -733,7 +832,8 @@
         <div class="callout warn" style="margin-top: 18px">
           <h3>权限与边界约束</h3>
           <p>
-            默认复用现有 M2 权限组承载新增按钮与子场景，不在本轮新增顶层权限菜单。若后端确认“异常修正”必须独立授权，则转入人工确认流程。
+            默认复用现有 M2
+            权限组承载新增按钮与子场景，不在本轮新增顶层权限菜单。若后端确认“异常修正”必须独立授权，则转入人工确认流程。
           </p>
         </div>
       </section>
@@ -743,34 +843,51 @@
         <div class="phase-list">
           <div class="phase">
             <h3>阶段一：方案页与差异基线</h3>
-            <p>交付正式 HTML 方案页，确定目标工作站映射、差异矩阵、字段清单和验收范围。</p>
+            <p>
+              交付正式 HTML
+              方案页，确定目标工作站映射、差异矩阵、字段清单和验收范围。
+            </p>
           </div>
           <div class="phase">
             <h3>阶段二：前端显式能力补齐</h3>
-            <p>优先实现不依赖新接口的页内结构调整、核对/固定/确认/入库场景拆分、异常提示和信息聚合展示。</p>
+            <p>
+              优先实现不依赖新接口的页内结构调整、核对/固定/确认/入库场景拆分、异常提示和信息聚合展示。
+            </p>
           </div>
           <div class="phase">
             <h3>阶段三：后端补口与联调</h3>
-            <p>补齐条码绑定、离体时间、核对记录、标本确认、接收异常摘要等接口和聚合字段，完成前后端联调。</p>
+            <p>
+              补齐条码绑定、离体时间、核对记录、标本确认、接收异常摘要等接口和聚合字段，完成前后端联调。
+            </p>
           </div>
           <div class="phase">
             <h3>阶段四：E2E 回归与 SOP 同步</h3>
-            <p>完成主链路与异常链路回归，输出岗位 SOP、试点培训材料和联调记录。</p>
+            <p>
+              完成主链路与异常链路回归，输出岗位 SOP、试点培训材料和联调记录。
+            </p>
           </div>
         </div>
 
         <div class="grid grid-3" style="margin-top: 18px">
           <div class="callout warn">
             <h3>风险一：工作站形态理解偏差</h3>
-            <p>若把 WinForm 的 11 个菜单直接搬成前端一级菜单，会抬高培训和路由复杂度，不符合本轮“保留 4 个主入口”的约束。</p>
+            <p>
+              若把 WinForm 的 11
+              个菜单直接搬成前端一级菜单，会抬高培训和路由复杂度，不符合本轮“保留
+              4 个主入口”的约束。
+            </p>
           </div>
           <div class="callout warn">
             <h3>风险二：后端字段未补齐</h3>
-            <p>若只做前端界面拆分而不补聚合字段，会导致患者核对、接收摘要、核对记录等场景仍只能靠人工判断。</p>
+            <p>
+              若只做前端界面拆分而不补聚合字段，会导致患者核对、接收摘要、核对记录等场景仍只能靠人工判断。
+            </p>
           </div>
           <div class="callout danger">
             <h3>风险三：异常流程继续隐含</h3>
-            <p>部分接收、拒收、退回、容器问题等若缺乏醒目提示和结果回显，现场仍会把异常标本硬推进到正常流程。</p>
+            <p>
+              部分接收、拒收、退回、容器问题等若缺乏醒目提示和结果回显，现场仍会把异常标本硬推进到正常流程。
+            </p>
           </div>
         </div>
       </section>
@@ -781,7 +898,9 @@
           <div class="card">
             <h3>单元测试</h3>
             <ul>
-              <li>新增场景切换、状态映射、异常标签、提醒计数、差异字段格式化。</li>
+              <li>
+                新增场景切换、状态映射、异常标签、提醒计数、差异字段格式化。
+              </li>
               <li>核对记录、接收摘要、批次异常标识等前端转换逻辑。</li>
             </ul>
           </div>
@@ -812,22 +931,33 @@
           <div class="card">
             <h3>E2E 与文档验收</h3>
             <ul>
-              <li>正常主链路：申请 -&gt; 登记 -&gt; 核对 -&gt; 固定 -&gt; 确认 -&gt; 入库 -&gt; 转运 -&gt; 接收 -&gt; 追踪</li>
-              <li>异常主链路：拒收/部分接收 -&gt; 异常标记 -&gt; 追踪回查 -&gt; 异常修正</li>
-              <li>HTML 文档在 Chromium 下正常打开、中文无乱码、章节完整可读。</li>
+              <li>
+                正常主链路：申请 -&gt; 登记 -&gt; 核对 -&gt; 固定 -&gt; 确认
+                -&gt; 入库 -&gt; 转运 -&gt; 接收 -&gt; 追踪
+              </li>
+              <li>
+                异常主链路：拒收/部分接收 -&gt; 异常标记 -&gt; 追踪回查 -&gt;
+                异常修正
+              </li>
+              <li>
+                HTML 文档在 Chromium 下正常打开、中文无乱码、章节完整可读。
+              </li>
             </ul>
           </div>
         </div>
 
         <div class="checklist">
           <div class="check-item">
-            <strong>验收标准 1：</strong> 四个主入口不变，但 11 类目标能力在页面结构或接口设计中均能找到明确承接位。
+            <strong>验收标准 1：</strong> 四个主入口不变，但 11
+            类目标能力在页面结构或接口设计中均能找到明确承接位。
           </div>
           <div class="check-item">
-            <strong>验收标准 2：</strong> 部分接收、拒收、退回、容器质量问题等异常分支具备可视化提示、结果回显和追踪落点。
+            <strong>验收标准 2：</strong>
+            部分接收、拒收、退回、容器质量问题等异常分支具备可视化提示、结果回显和追踪落点。
           </div>
           <div class="check-item">
-            <strong>验收标准 3：</strong> 申请追踪和标本追踪可回看患者核对、时间节点、当前节点、异常摘要和最近操作上下文。
+            <strong>验收标准 3：</strong>
+            申请追踪和标本追踪可回看患者核对、时间节点、当前节点、异常摘要和最近操作上下文。
           </div>
         </div>
       </section>
@@ -840,14 +970,22 @@
             <ul>
               <li>以“保留 4 个合并工作台、补齐 11 类能力”为最终形态。</li>
               <li>本轮不修改全局权限模型、路由守卫、Axios 全局拦截器。</li>
-              <li><code>标本入库</code> 本轮纳入 <code>/workflow/fixation-transport</code> 页内独立场景，不新增顶层菜单。</li>
+              <li>
+                <code>标本入库</code> 本轮纳入
+                <code>/workflow/fixation-transport</code>
+                页内独立场景，不新增顶层菜单。
+              </li>
             </ul>
           </div>
           <div class="card">
             <h3>配置分支处理原则</h3>
             <ul>
-              <li>患者核对、接收模式、申请单打印按钮等配置型能力，本轮先做前端可承接位和字段设计。</li>
-              <li>不直接硬编码医院特定模式，避免把现场配置误写成统一业务标准。</li>
+              <li>
+                患者核对、接收模式、申请单打印按钮等配置型能力，本轮先做前端可承接位和字段设计。
+              </li>
+              <li>
+                不直接硬编码医院特定模式，避免把现场配置误写成统一业务标准。
+              </li>
               <li>若院区存在明显差异，再在后续阶段通过配置驱动实现。</li>
             </ul>
           </div>

@@ -16,6 +16,7 @@ const props = withDefaults(
   {
     clearable: true,
     disabled: false,
+    modelValue: null,
     placeholder: '请选择或输入内容',
   },
 );
@@ -43,8 +44,12 @@ function findMatchedOption(value: string) {
     return null;
   }
   return (
-    normalizedOptions.value.find((option) => option.value === normalizedValue) ??
-    normalizedOptions.value.find((option) => option.label === normalizedValue) ??
+    normalizedOptions.value.find(
+      (option) => option.value === normalizedValue,
+    ) ??
+    normalizedOptions.value.find(
+      (option) => option.label === normalizedValue,
+    ) ??
     null
   );
 }

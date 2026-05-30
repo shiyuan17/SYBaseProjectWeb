@@ -43,7 +43,8 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
       {
         name: 'Roles',
         path: '/system/roles',
-        component: () => import('#/modules/system-management/views/RolesView.vue'),
+        component: () =>
+          import('#/modules/system-management/views/RolesView.vue'),
         meta: {
           authority: [M1_PERMISSION_CODES.SYSTEM_ROLE_QUERY],
           icon: 'carbon:user-role',

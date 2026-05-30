@@ -107,22 +107,37 @@ onMounted(() => {
       >
         <ElForm inline label-width="90px">
           <ElFormItem label="任务类型">
-            <ElInput v-model="queryForm.taskType" placeholder="如 BILLING_SUBMIT" />
+            <ElInput
+              v-model="queryForm.taskType"
+              placeholder="如 BILLING_SUBMIT"
+            />
           </ElFormItem>
           <ElFormItem label="业务类型">
-            <ElInput v-model="queryForm.businessType" placeholder="如 BILLING_RECORD" />
+            <ElInput
+              v-model="queryForm.businessType"
+              placeholder="如 BILLING_RECORD"
+            />
           </ElFormItem>
           <ElFormItem label="业务 ID">
             <ElInput v-model="queryForm.businessId" placeholder="业务主键" />
           </ElFormItem>
           <ElFormItem label="任务状态">
-            <ElInput v-model="queryForm.taskStatus" placeholder="如 SUCCESS / FAILED" />
+            <ElInput
+              v-model="queryForm.taskStatus"
+              placeholder="如 SUCCESS / FAILED"
+            />
           </ElFormItem>
           <ElFormItem label="阶段编码">
-            <ElInput v-model="queryForm.stageCode" placeholder="如 REPORT_PUBLISH" />
+            <ElInput
+              v-model="queryForm.stageCode"
+              placeholder="如 REPORT_PUBLISH"
+            />
           </ElFormItem>
           <ElFormItem label="外部系统">
-            <ElInput v-model="queryForm.externalSystem" placeholder="如 MOCK_BILLING" />
+            <ElInput
+              v-model="queryForm.externalSystem"
+              placeholder="如 MOCK_BILLING"
+            />
           </ElFormItem>
           <ElFormItem label="补偿状态">
             <ElInput
@@ -149,17 +164,32 @@ onMounted(() => {
         title="任务列表"
         :description="`当前返回 ${tasks.length} 条集成任务记录。`"
       >
-        <ElEmpty v-if="!loading && tasks.length === 0 && !pageError" description="暂无集成任务" />
+        <ElEmpty
+          v-if="!loading && tasks.length === 0 && !pageError"
+          description="暂无集成任务"
+        />
         <ElTable v-else v-loading="loading" :data="tasks" border>
           <ElTableColumn label="任务 ID" min-width="180" prop="id" />
           <ElTableColumn label="任务类型" min-width="140" prop="taskType" />
           <ElTableColumn label="业务类型" min-width="140" prop="businessType" />
           <ElTableColumn label="业务 ID" min-width="160" prop="businessId" />
           <ElTableColumn label="阶段" min-width="140" prop="stageCode" />
-          <ElTableColumn label="外部系统" min-width="140" prop="externalSystem" />
+          <ElTableColumn
+            label="外部系统"
+            min-width="140"
+            prop="externalSystem"
+          />
           <ElTableColumn label="任务状态" min-width="120">
             <template #default="{ row }">
-              <ElTag :type="row.taskStatus === 'SUCCESS' ? 'success' : row.taskStatus === 'FAILED' ? 'danger' : 'warning'">
+              <ElTag
+                :type="
+                  row.taskStatus === 'SUCCESS'
+                    ? 'success'
+                    : row.taskStatus === 'FAILED'
+                      ? 'danger'
+                      : 'warning'
+                "
+              >
                 {{ displayText(row.taskStatus) }}
               </ElTag>
             </template>

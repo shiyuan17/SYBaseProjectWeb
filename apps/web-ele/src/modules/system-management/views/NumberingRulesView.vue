@@ -38,7 +38,9 @@ const drawerVisible = ref(false);
 const pageError = ref('');
 const items = ref<NumberingRuleView[]>([]);
 
-const form = reactive<UpdateNumberingRuleRequest & { id: string; ruleCode: string }>({
+const form = reactive<
+  UpdateNumberingRuleRequest & { id: string; ruleCode: string }
+>({
   datePattern: '',
   enabled: true,
   id: '',
@@ -111,7 +113,10 @@ onMounted(loadData);
       class="mb-4"
       @retry="loadData"
     />
-    <SystemSectionCard title="规则列表" description="只读展示核心字段，通过抽屉进行规则更新。">
+    <SystemSectionCard
+      title="规则列表"
+      description="只读展示核心字段，通过抽屉进行规则更新。"
+    >
       <ElTable v-loading="loading" :data="items" border>
         <ElTableColumn label="规则编码" min-width="140" prop="ruleCode" />
         <ElTableColumn label="业务类型" min-width="140" prop="bizType" />
@@ -154,7 +159,11 @@ onMounted(loadData);
       </ElTable>
     </SystemSectionCard>
 
-    <ElDrawer v-model="drawerVisible" :title="`编辑规则 ${form.ruleCode}`" size="520px">
+    <ElDrawer
+      v-model="drawerVisible"
+      :title="`编辑规则 ${form.ruleCode}`"
+      size="520px"
+    >
       <ElForm label-width="108px">
         <ElFormItem label="规则编码">
           <ElInput v-model="form.ruleCode" disabled />
@@ -169,7 +178,10 @@ onMounted(loadData);
           <ElInputNumber v-model="form.seqLength" :max="12" :min="1" />
         </ElFormItem>
         <ElFormItem label="重置策略">
-          <ElInput v-model="form.resetPolicy" placeholder="例如 DAILY / MONTHLY" />
+          <ElInput
+            v-model="form.resetPolicy"
+            placeholder="例如 DAILY / MONTHLY"
+          />
         </ElFormItem>
         <ElFormItem label="作用域">
           <ElInput v-model="form.scopeType" placeholder="例如 GLOBAL / LAB" />

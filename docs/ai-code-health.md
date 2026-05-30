@@ -8,11 +8,11 @@ Version: 1.0
 
 本规范用于约束 AI（Codex、Claude Code、Cursor、Copilot、OpenClaw、Gemini 等）生成代码时的行为，目标不是追求极致抽象或最少代码，而是持续产出：
 
-* 易理解
-* 易维护
-* 易测试
-* 易扩展
-* 易审查
+- 易理解
+- 易维护
+- 易测试
+- 易扩展
+- 易审查
 
 的健康代码。
 
@@ -57,11 +57,11 @@ Version: 1.0
 ### 正例
 
 ```ts
-function validateOrder(order: Order): ValidationResult
+function validateOrder(order: Order): ValidationResult;
 ```
 
 ```ts
-function calculatePrice(items: OrderItem[]): number
+function calculatePrice(items: OrderItem[]): number;
 ```
 
 ### 反例
@@ -77,10 +77,10 @@ function processOrder() {
 
 同时承担：
 
-* 校验
-* 计算
-* 持久化
-* 消息通知
+- 校验
+- 计算
+- 持久化
+- 消息通知
 
 违反单一职责原则。
 
@@ -90,9 +90,9 @@ function processOrder() {
 
 同一个函数内不要混用：
 
-* 业务逻辑
-* 技术实现
-* 基础设施细节
+- 业务逻辑
+- 技术实现
+- 基础设施细节
 
 ### 正例
 
@@ -102,9 +102,7 @@ async function createOrder(command: CreateOrderCommand) {
 
   await orderRepository.save(order);
 
-  await eventBus.publish(
-    new OrderCreated(order.id)
-  );
+  await eventBus.publish(new OrderCreated(order.id));
 }
 ```
 
@@ -147,7 +145,7 @@ globalState.user = user;
 
 ```ts
 function updateOrder(order) {
-  order.status = "PAID";
+  order.status = 'PAID';
 }
 ```
 
@@ -158,12 +156,10 @@ function updateOrder(order) {
 返回新对象：
 
 ```ts
-function markOrderPaid(
-  order: Order
-): Order {
+function markOrderPaid(order: Order): Order {
   return {
     ...order,
-    status: "PAID"
+    status: 'PAID',
   };
 }
 ```
@@ -174,9 +170,9 @@ function markOrderPaid(
 
 函数必须可以：
 
-* 单独调用
-* 独立验证
-* 无环境依赖
+- 单独调用
+- 独立验证
+- 无环境依赖
 
 ---
 
@@ -184,12 +180,12 @@ function markOrderPaid(
 
 ### 行数是参考值，不是目标
 
-| 类型     | 建议      |
-| ------ | ------- |
+| 类型         | 建议     |
+| ------------ | -------- |
 | 业务编排函数 | ≤ 30 行  |
-| 算法函数   | ≤ 60 行  |
-| UI组件   | ≤ 100 行 |
-| 配置文件   | 不限制     |
+| 算法函数     | ≤ 60 行  |
+| UI组件       | ≤ 100 行 |
+| 配置文件     | 不限制   |
 
 ---
 
@@ -197,9 +193,9 @@ function markOrderPaid(
 
 为了减少行数：
 
-* 过度抽象
-* 提取无意义函数
-* 拆分到无法阅读
+- 过度抽象
+- 提取无意义函数
+- 拆分到无法阅读
 
 ---
 
@@ -229,9 +225,9 @@ function process() {
 
 禁止：
 
-* 缩写
-* 自造术语
-* 模糊表达
+- 缩写
+- 自造术语
+- 模糊表达
 
 命名应直接体现业务意图。
 
@@ -248,13 +244,13 @@ function process() {
 示例：
 
 ```ts
-createOrder()
+createOrder();
 
-calculatePrice()
+calculatePrice();
 
-validateUser()
+validateUser();
 
-generateReport()
+generateReport();
 ```
 
 ---
@@ -273,13 +269,13 @@ can
 示例：
 
 ```ts
-isPaid
+isPaid;
 
-hasStock
+hasStock;
 
-shouldRetry
+shouldRetry;
 
-canDelete
+canDelete;
 ```
 
 ---
@@ -289,13 +285,13 @@ canDelete
 使用业务语义。
 
 ```ts
-totalAmount
+totalAmount;
 
-retryCount
+retryCount;
 
-paymentMethod
+paymentMethod;
 
-deliveryAddress
+deliveryAddress;
 ```
 
 ---
@@ -305,11 +301,11 @@ deliveryAddress
 使用过去式。
 
 ```ts
-OrderCreated
+OrderCreated;
 
-OrderCanceled
+OrderCanceled;
 
-PaymentFailed
+PaymentFailed;
 ```
 
 ---
@@ -317,14 +313,14 @@ PaymentFailed
 ## 3.6 禁止命名
 
 ```ts
-data
-info
-tmp
-flag
-obj
-res
-result1
-testData
+data;
+info;
+tmp;
+flag;
+obj;
+res;
+result1;
+testData;
 ```
 
 ---
@@ -340,13 +336,13 @@ testData
 禁止：
 
 ```ts
-any
+any;
 ```
 
 必须使用：
 
 ```ts
-unknown
+unknown;
 ```
 
 或明确类型。
@@ -358,9 +354,7 @@ unknown
 ### 正例
 
 ```ts
-function calculateTotal(
-  items: CartItem[]
-): number
+function calculateTotal(items: CartItem[]): number;
 ```
 
 ---
@@ -368,8 +362,7 @@ function calculateTotal(
 ### 反例
 
 ```ts
-function calculateTotal(items) {
-}
+function calculateTotal(items) {}
 ```
 
 ---
@@ -384,7 +377,7 @@ function calculateTotal(items) {
 createOrder({
   userId,
   items,
-  couponCode
+  couponCode,
 });
 ```
 
@@ -393,11 +386,7 @@ createOrder({
 ### 避免
 
 ```ts
-createOrder(
-  userId,
-  items,
-  couponCode
-);
+createOrder(userId, items, couponCode);
 ```
 
 ---
@@ -418,27 +407,24 @@ type CreateOrderResult
 
 优先使用：
 
-* Zod
-* Joi
-* JSON Schema
+- Zod
+- Joi
+- JSON Schema
 
 统一输入校验。
 
 示例：
 
 ```ts
-export const CreateOrderSchema =
-  z.object({
-    userId: z.string(),
-    items: z.array(
-      z.object({
-        skuId: z.string(),
-        qty: z.number()
-          .int()
-          .positive()
-      })
-    )
-  });
+export const CreateOrderSchema = z.object({
+  userId: z.string(),
+  items: z.array(
+    z.object({
+      skuId: z.string(),
+      qty: z.number().int().positive(),
+    }),
+  ),
+});
 ```
 
 ---
@@ -455,9 +441,7 @@ export const CreateOrderSchema =
 
 ```ts
 try {
-}
-catch {
-}
+} catch {}
 ```
 
 ---
@@ -467,7 +451,7 @@ catch {
 禁止：
 
 ```ts
-throw "error";
+throw 'error';
 ```
 
 ---
@@ -476,8 +460,8 @@ throw "error";
 
 ```ts
 throw new BusinessError({
-  code: "ORDER_NOT_FOUND",
-  message: "订单不存在"
+  code: 'ORDER_NOT_FOUND',
+  message: '订单不存在',
 });
 ```
 
@@ -485,13 +469,13 @@ throw new BusinessError({
 
 ## 5.4 错误分类
 
-| 类型     | 处理方式  |
-| ------ | ----- |
-| 用户输入错误 | 4xx   |
-| 权限错误   | 403   |
-| 资源不存在  | 404   |
+| 类型         | 处理方式   |
+| ------------ | ---------- |
+| 用户输入错误 | 4xx        |
+| 权限错误     | 403        |
+| 资源不存在   | 404        |
 | 业务规则失败 | 业务错误码 |
-| 系统异常   | 日志+告警 |
+| 系统异常     | 日志+告警  |
 
 ---
 
@@ -522,10 +506,7 @@ CurrentUser.get();
 显式依赖注入：
 
 ```ts
-createOrder(
-  command,
-  repository
-);
+createOrder(command, repository);
 ```
 
 ---
@@ -610,13 +591,13 @@ AI 应优先生成：
 测试业务行为：
 
 ```ts
-shouldCreateOrder()
+shouldCreateOrder();
 ```
 
 而不是：
 
 ```ts
-shouldCallFunctionTwice()
+shouldCallFunctionTwice();
 ```
 
 ---
@@ -625,9 +606,9 @@ shouldCallFunctionTwice()
 
 必须覆盖：
 
-* 业务规则
-* 边界条件
-* 异常路径
+- 业务规则
+- 边界条件
+- 异常路径
 
 ---
 
@@ -659,56 +640,56 @@ shouldCallFunctionTwice()
 
 ## 函数
 
-* [ ] 是否能一句话说明函数作用？
-* [ ] 是否只负责一件事情？
-* [ ] 是否混用了多个抽象层级？
-* [ ] 是否存在隐藏副作用？
-* [ ] 是否容易测试？
+- [ ] 是否能一句话说明函数作用？
+- [ ] 是否只负责一件事情？
+- [ ] 是否混用了多个抽象层级？
+- [ ] 是否存在隐藏副作用？
+- [ ] 是否容易测试？
 
 ---
 
 ## 命名
 
-* [ ] 是否表达真实业务含义？
-* [ ] 是否存在缩写？
-* [ ] 是否存在模糊命名？
+- [ ] 是否表达真实业务含义？
+- [ ] 是否存在缩写？
+- [ ] 是否存在模糊命名？
 
 ---
 
 ## 类型
 
-* [ ] 是否使用了 any？
-* [ ] 是否声明了公共 API 类型？
-* [ ] 返回值是否明确？
+- [ ] 是否使用了 any？
+- [ ] 是否声明了公共 API 类型？
+- [ ] 返回值是否明确？
 
 ---
 
 ## 错误处理
 
-* [ ] 是否吞异常？
-* [ ] 是否使用结构化错误？
-* [ ] 是否具备明确错误码？
+- [ ] 是否吞异常？
+- [ ] 是否使用结构化错误？
+- [ ] 是否具备明确错误码？
 
 ---
 
 ## 可维护性
 
-* [ ] 新人能否在 30 秒内看懂？
-* [ ] 是否存在无意义抽象？
-* [ ] 是否存在频繁跳转阅读？
-* [ ] 是否降低了系统认知成本？
+- [ ] 新人能否在 30 秒内看懂？
+- [ ] 是否存在无意义抽象？
+- [ ] 是否存在频繁跳转阅读？
+- [ ] 是否降低了系统认知成本？
 
 ---
 
 # 健康度评分模型
 
-| 维度    | 权重  |
-| ----- | --- |
-| 可读性   | 30% |
-| 命名质量  | 20% |
-| 测试能力  | 20% |
-| 类型完整性 | 15% |
-| 错误处理  | 15% |
+| 维度       | 权重 |
+| ---------- | ---- |
+| 可读性     | 30%  |
+| 命名质量   | 20%  |
+| 测试能力   | 20%  |
+| 类型完整性 | 15%  |
+| 错误处理   | 15%  |
 
 总分：
 

@@ -73,8 +73,8 @@ const stocks = ref<ReagentStockView[]>([]);
 const warnings = ref<ReagentWarningView[]>([]);
 const selectedReagent = ref<null | ReagentView>(null);
 const selectedStock = ref<null | ReagentStockView>(null);
-const editingReagent = ref<ReagentView | null>(null);
-const editingStock = ref<ReagentStockView | null>(null);
+const editingReagent = ref<null | ReagentView>(null);
+const editingStock = ref<null | ReagentStockView>(null);
 const reagentDialogVisible = computed({
   get: () => editingReagent.value !== null,
   set: (visible: boolean) => {
@@ -93,7 +93,7 @@ const stockDialogVisible = computed({
 });
 
 const reagentFilters = reactive<{
-  enabled: boolean | '';
+  enabled: '' | boolean;
   keyword: string;
 }>({
   enabled: '',
@@ -210,7 +210,8 @@ function openEditReagentDialog(row: ReagentView) {
 
   editingReagent.value = row;
   reagentForm.defaultLowStockThreshold =
-    row.defaultLowStockThreshold === null || row.defaultLowStockThreshold === undefined
+    row.defaultLowStockThreshold === null ||
+    row.defaultLowStockThreshold === undefined
       ? undefined
       : Number(row.defaultLowStockThreshold);
   reagentForm.defaultNearExpiryDays = row.defaultNearExpiryDays ?? undefined;
@@ -278,7 +279,8 @@ function syncSelectedReagent() {
   }
 
   selectedReagent.value =
-    reagents.value.find((item) => item.id === selectedReagent.value?.id) ?? null;
+    reagents.value.find((item) => item.id === selectedReagent.value?.id) ??
+    null;
 }
 
 function syncSelectedStock() {
@@ -303,7 +305,8 @@ function setSelectedStock(row: null | ReagentStockView) {
   }
 
   selectedReagent.value =
-    reagents.value.find((item) => item.id === row.reagentId) ?? selectedReagent.value;
+    reagents.value.find((item) => item.id === row.reagentId) ??
+    selectedReagent.value;
 }
 
 function setSelectedReagent(row: null | ReagentView) {
@@ -311,7 +314,7 @@ function setSelectedReagent(row: null | ReagentView) {
 }
 
 function scrollToStockDetail() {
-  document.getElementById('reagent-stock-detail')?.scrollIntoView({
+  document.querySelector('#reagent-stock-detail')?.scrollIntoView({
     behavior: 'smooth',
     block: 'start',
   });
@@ -327,7 +330,8 @@ async function loadReagents() {
   pageError.value = '';
   try {
     reagents.value = await listReagents({
-      enabled: reagentFilters.enabled === '' ? undefined : reagentFilters.enabled,
+      enabled:
+        reagentFilters.enabled === '' ? undefined : reagentFilters.enabled,
       keyword: reagentFilters.keyword.trim() || undefined,
     });
     syncSelectedReagent();
@@ -474,7 +478,10 @@ async function submitStock() {
     ElMessage.warning('库存数量不能为负数');
     return;
   }
-  if (stockForm.lowStockThreshold !== undefined && stockForm.lowStockThreshold < 0) {
+  if (
+    stockForm.lowStockThreshold !== undefined &&
+    stockForm.lowStockThreshold < 0
+  ) {
     ElMessage.warning('低库存阈值不能为负数');
     return;
   }
@@ -608,7 +615,11 @@ void initializePage();
               </ElSelect>
             </ElFormItem>
             <ElFormItem>
-              <ElButton :loading="loading.reagents" type="primary" @click="loadReagents">
+              <ElButton
+                :loading="loading.reagents"
+                type="primary"
+                @click="loadReagents"
+              >
                 查询
               </ElButton>
             </ElFormItem>
@@ -620,16 +631,30 @@ void initializePage();
             highlight-current-row
             @current-change="setSelectedReagent"
           >
-            <ElTableColumn label="试剂编码" min-width="140" prop="reagentCode" />
-            <ElTableColumn label="试剂名称" min-width="180" prop="reagentName" />
+            <ElTableColumn
+              label="试剂编码"
+              min-width="140"
+              prop="reagentCode"
+            />
+            <ElTableColumn
+              label="试剂名称"
+              min-width="180"
+              prop="reagentName"
+            />
             <ElTableColumn label="规格" min-width="120">
-              <template #default="{ row }">{{ formatNullable(row.specification) }}</template>
+              <template #default="{ row }">
+                {{ formatNullable(row.specification) }}
+              </template>
             </ElTableColumn>
             <ElTableColumn label="单位" min-width="90">
-              <template #default="{ row }">{{ formatNullable(row.unit) }}</template>
+              <template #default="{ row }">
+                {{ formatNullable(row.unit) }}
+              </template>
             </ElTableColumn>
             <ElTableColumn label="厂家" min-width="160">
-              <template #default="{ row }">{{ formatNullable(row.manufacturer) }}</template>
+              <template #default="{ row }">
+                {{ formatNullable(row.manufacturer) }}
+              </template>
             </ElTableColumn>
             <ElTableColumn label="低库存阈值" min-width="120">
               <template #default="{ row }">
@@ -650,7 +675,11 @@ void initializePage();
               width="100"
             >
               <template #default="{ row }">
-                <ElButton link type="primary" @click="openEditReagentDialog(row)">
+                <ElButton
+                  link
+                  type="primary"
+                  @click="openEditReagentDialog(row)"
+                >
                   编辑
                 </ElButton>
               </template>
@@ -706,7 +735,11 @@ void initializePage();
               </ElSelect>
             </ElFormItem>
             <ElFormItem>
-              <ElButton :loading="loading.stocks" type="primary" @click="loadStocks">
+              <ElButton
+                :loading="loading.stocks"
+                type="primary"
+                @click="loadStocks"
+              >
                 查询
               </ElButton>
             </ElFormItem>
@@ -720,12 +753,15 @@ void initializePage();
           >
             <ElTableColumn label="试剂" min-width="220">
               <template #default="{ row }">
-                {{ formatNullable(row.reagentCode) }} {{ formatNullable(row.reagentName) }}
+                {{ formatNullable(row.reagentCode) }}
+                {{ formatNullable(row.reagentName) }}
               </template>
             </ElTableColumn>
             <ElTableColumn label="批号" min-width="140" prop="batchNo" />
             <ElTableColumn label="数量" min-width="100">
-              <template #default="{ row }">{{ formatNullable(row.stockQuantity) }}</template>
+              <template #default="{ row }">
+                {{ formatNullable(row.stockQuantity) }}
+              </template>
             </ElTableColumn>
             <ElTableColumn label="状态" min-width="110">
               <template #default="{ row }">
@@ -735,10 +771,14 @@ void initializePage();
               </template>
             </ElTableColumn>
             <ElTableColumn label="有效期" min-width="130">
-              <template #default="{ row }">{{ formatNullable(row.expiryDate) }}</template>
+              <template #default="{ row }">
+                {{ formatNullable(row.expiryDate) }}
+              </template>
             </ElTableColumn>
             <ElTableColumn label="存放位置" min-width="160">
-              <template #default="{ row }">{{ formatNullable(row.storageLocation) }}</template>
+              <template #default="{ row }">
+                {{ formatNullable(row.storageLocation) }}
+              </template>
             </ElTableColumn>
             <ElTableColumn
               v-if="capabilities.canManageStocks"
@@ -815,7 +855,9 @@ void initializePage();
         description="支持 LOW_STOCK 与 NEAR_EXPIRY 预警，并可跳转到对应批次详情。"
       >
         <template #extra>
-          <ElButton :loading="loading.warnings" @click="loadWarnings">刷新</ElButton>
+          <ElButton :loading="loading.warnings" @click="loadWarnings">
+            刷新
+          </ElButton>
         </template>
         <ElTable v-loading="loading.warnings" :data="warnings" border>
           <ElTableColumn label="预警" min-width="110">
@@ -832,10 +874,14 @@ void initializePage();
           </ElTableColumn>
           <ElTableColumn label="批号" min-width="140" prop="batchNo" />
           <ElTableColumn label="当前数量" min-width="110">
-            <template #default="{ row }">{{ formatNullable(row.stockQuantity) }}</template>
+            <template #default="{ row }">
+              {{ formatNullable(row.stockQuantity) }}
+            </template>
           </ElTableColumn>
           <ElTableColumn label="有效期" min-width="130">
-            <template #default="{ row }">{{ formatNullable(row.expiryDate) }}</template>
+            <template #default="{ row }">
+              {{ formatNullable(row.expiryDate) }}
+            </template>
           </ElTableColumn>
           <ElTableColumn
             v-if="capabilities.canQueryStocks"
@@ -856,7 +902,10 @@ void initializePage();
     <ElDialog v-model="reagentDialogVisible" title="试剂维护" width="680px">
       <ElForm label-width="120px">
         <ElFormItem label="试剂编码" required>
-          <ElInput v-model="reagentForm.reagentCode" :disabled="!!editingReagent?.id" />
+          <ElInput
+            v-model="reagentForm.reagentCode"
+            :disabled="!!editingReagent?.id"
+          />
         </ElFormItem>
         <ElFormItem label="试剂名称" required>
           <ElInput v-model="reagentForm.reagentName" />
@@ -871,7 +920,10 @@ void initializePage();
           <ElInput v-model="reagentForm.manufacturer" />
         </ElFormItem>
         <ElFormItem label="低库存阈值">
-          <ElInputNumber v-model="reagentForm.defaultLowStockThreshold" :min="0" />
+          <ElInputNumber
+            v-model="reagentForm.defaultLowStockThreshold"
+            :min="0"
+          />
         </ElFormItem>
         <ElFormItem label="近效期天数">
           <ElInputNumber v-model="reagentForm.defaultNearExpiryDays" :min="0" />

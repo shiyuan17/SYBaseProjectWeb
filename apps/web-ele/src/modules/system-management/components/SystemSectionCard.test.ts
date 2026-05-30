@@ -33,11 +33,11 @@ describe('SystemSectionCard', () => {
     expect(section).not.toBeNull();
     expect(title).not.toBeNull();
     expect(description).not.toBeNull();
-    expect(Array.from(section!.classList)).toEqual(
+    expect([...section!.classList]).toEqual(
       expect.arrayContaining(['bg-card', 'border-border']),
     );
-    expect(Array.from(title!.classList)).toContain('text-foreground');
-    expect(Array.from(description!.classList)).toContain('text-muted-foreground');
+    expect([...title!.classList]).toContain('text-foreground');
+    expect([...description!.classList]).toContain('text-muted-foreground');
     expect(root.innerHTML).not.toContain('bg-white');
     expect(root.innerHTML).not.toContain('text-slate-');
     expect(root.innerHTML).not.toContain('border-slate-');

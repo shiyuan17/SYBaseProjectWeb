@@ -24,9 +24,16 @@ import {
   ElSelect,
 } from 'element-plus';
 
-import { createDehydrationBatch, getTechnicalTracking } from '../api/technical-workflow-service';
+import {
+  createDehydrationBatch,
+  getTechnicalTracking,
+} from '../api/technical-workflow-service';
 import { getWorkflowPageErrorMessage } from '../utils/error';
-import { formatCaseStatus, formatNullable, formatObjectType } from '../utils/format';
+import {
+  formatCaseStatus,
+  formatNullable,
+  formatObjectType,
+} from '../utils/format';
 import {
   assignTechnicalOperatorForm,
   createTechnicalOperatorDefaults,
@@ -95,7 +102,8 @@ function resetDialogState() {
     props.task?.objectType === 'SAMPLING_BLOCK' && props.task.objectId
       ? [props.task.objectId]
       : [];
-  createForm.samplingBlockIdsText = createForm.selectedSamplingBlockIds.join('\n');
+  createForm.samplingBlockIdsText =
+    createForm.selectedSamplingBlockIds.join('\n');
 }
 
 async function loadTracking() {
@@ -218,13 +226,23 @@ watch(
         />
         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <ElFormItem label="病例编号" required>
-            <ElInput v-model="createForm.caseId" placeholder="由当前任务带入" readonly />
+            <ElInput
+              v-model="createForm.caseId"
+              placeholder="由当前任务带入"
+              readonly
+            />
           </ElFormItem>
           <ElFormItem label="脱水筐编号" required>
-            <ElInput v-model="createForm.basketNo" placeholder="请输入脱水筐编号" />
+            <ElInput
+              v-model="createForm.basketNo"
+              placeholder="请输入脱水筐编号"
+            />
           </ElFormItem>
           <ElFormItem label="设备编号">
-            <ElInput v-model="createForm.deviceNo" placeholder="请输入设备编号" />
+            <ElInput
+              v-model="createForm.deviceNo"
+              placeholder="请输入设备编号"
+            />
           </ElFormItem>
         </div>
         <ElFormItem label="取材块选择" required>
@@ -256,10 +274,17 @@ watch(
       </ElForm>
 
       <div class="flex items-center justify-between">
-        <div v-if="trackingResult" class="text-sm text-[var(--el-text-color-secondary)]">
-          {{ `病例状态：${formatCaseStatus(trackingResult.caseStatus)}，可选取材块 ${trackingResult.blocks.length} 个` }}
+        <div
+          v-if="trackingResult"
+          class="text-sm text-[var(--el-text-color-secondary)]"
+        >
+          {{
+            `病例状态：${formatCaseStatus(trackingResult.caseStatus)}，可选取材块 ${trackingResult.blocks.length} 个`
+          }}
         </div>
-        <ElButton :loading="trackingLoading" @click="loadTracking">刷新病例取材块</ElButton>
+        <ElButton :loading="trackingLoading" @click="loadTracking">
+          刷新病例取材块
+        </ElButton>
       </div>
     </div>
 

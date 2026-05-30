@@ -64,7 +64,9 @@ export const useNotificationStore = defineStore('notification-center', () => {
         status: 'ALL',
       });
       popupItems.value = result.items;
-      unreadCount.value = result.items.filter((item) => item.status === 'UNREAD').length;
+      unreadCount.value = result.items.filter(
+        (item) => item.status === 'UNREAD',
+      ).length;
       if (result.total > result.items.length) {
         await refreshUnreadCount();
       }
@@ -73,7 +75,9 @@ export const useNotificationStore = defineStore('notification-center', () => {
     }
   }
 
-  async function loadPageNotifications(overrides?: Partial<NotificationListQuery>) {
+  async function loadPageNotifications(
+    overrides?: Partial<NotificationListQuery>,
+  ) {
     listLoading.value = true;
     try {
       Object.assign(query, overrides ?? {});
@@ -124,7 +128,8 @@ export const useNotificationStore = defineStore('notification-center', () => {
   async function savePreferences(nextPreferences: NotificationPreferencesDto) {
     preferencesLoading.value = true;
     try {
-      preferences.value = await updateMyNotificationPreferences(nextPreferences);
+      preferences.value =
+        await updateMyNotificationPreferences(nextPreferences);
     } finally {
       preferencesLoading.value = false;
     }

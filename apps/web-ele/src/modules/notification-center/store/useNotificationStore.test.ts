@@ -1,8 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
 import { createPinia, setActivePinia } from 'pinia';
-
-import { useNotificationStore } from './useNotificationStore';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   archiveMyNotification,
@@ -14,6 +11,7 @@ import {
   markMyNotificationRead,
   updateMyNotificationPreferences,
 } from '../api/notification-center-service';
+import { useNotificationStore } from './useNotificationStore';
 
 vi.mock('../api/notification-center-service', () => ({
   archiveMyNotification: vi.fn(),
@@ -27,13 +25,19 @@ vi.mock('../api/notification-center-service', () => ({
 }));
 
 const listMyNotificationsMock = vi.mocked(listMyNotifications);
-const getMyNotificationUnreadCountMock = vi.mocked(getMyNotificationUnreadCount);
+const getMyNotificationUnreadCountMock = vi.mocked(
+  getMyNotificationUnreadCount,
+);
 const markMyNotificationReadMock = vi.mocked(markMyNotificationRead);
 const markAllMyNotificationsReadMock = vi.mocked(markAllMyNotificationsRead);
 const archiveMyNotificationMock = vi.mocked(archiveMyNotification);
 const archiveMyNotificationsMock = vi.mocked(archiveMyNotifications);
-const getMyNotificationPreferencesMock = vi.mocked(getMyNotificationPreferences);
-const updateMyNotificationPreferencesMock = vi.mocked(updateMyNotificationPreferences);
+const getMyNotificationPreferencesMock = vi.mocked(
+  getMyNotificationPreferences,
+);
+const updateMyNotificationPreferencesMock = vi.mocked(
+  updateMyNotificationPreferences,
+);
 
 describe('useNotificationStore', () => {
   beforeEach(() => {

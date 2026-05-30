@@ -60,28 +60,41 @@ const createDialogVisible = ref(false);
 const executeDialogVisible = ref(false);
 const initialReworkOrderId = ref('');
 const deepLinkedHandled = ref(false);
-const nextStep = ref<null | { message: string; taskType: TechnicalWorkflowTaskType; title: string }>(null);
+const nextStep = ref<null | {
+  message: string;
+  taskType: TechnicalWorkflowTaskType;
+  title: string;
+}>(null);
 
 const queryForm = reactive({
   caseId: typeof route.query.caseId === 'string' ? route.query.caseId : '',
 });
 
-const resolvedCaseId = computed(() => trackingResult.value?.caseId?.trim() ?? '');
+const resolvedCaseId = computed(
+  () => trackingResult.value?.caseId?.trim() ?? '',
+);
 
 const caseContext = computed(() =>
-  trackingResult.value ? buildWorkstationCaseContext(trackingResult.value) : null,
+  trackingResult.value
+    ? buildWorkstationCaseContext(trackingResult.value)
+    : null,
 );
 
 const sourceObjectSummary = computed(() => {
-  const objectId = typeof route.query.objectId === 'string' ? route.query.objectId : '';
-  const objectType = typeof route.query.objectType === 'string' ? route.query.objectType : '';
+  const objectId =
+    typeof route.query.objectId === 'string' ? route.query.objectId : '';
+  const objectType =
+    typeof route.query.objectType === 'string' ? route.query.objectType : '';
   if (!objectId && !objectType) {
     return null;
   }
   return {
     objectId,
     objectType,
-    pathologyNo: typeof route.query.pathologyNo === 'string' ? route.query.pathologyNo : '',
+    pathologyNo:
+      typeof route.query.pathologyNo === 'string'
+        ? route.query.pathologyNo
+        : '',
   };
 });
 
@@ -114,7 +127,9 @@ async function loadTracking() {
     trackingResult.value = await getTechnicalTracking(caseIdentifier);
     if (
       !deepLinkedHandled.value &&
-      (route.query.taskId || route.query.objectId || route.query.mode === 'exception')
+      (route.query.taskId ||
+        route.query.objectId ||
+        route.query.mode === 'exception')
     ) {
       deepLinkedHandled.value = true;
       createDialogVisible.value = true;
@@ -175,7 +190,10 @@ async function handleCreateSubmitted(result: ReworkOrderResult) {
 
 async function handleExecuteSubmitted(result: ReworkOrderResult) {
   executeDialogVisible.value = false;
-  resolveNextStep(result.reworkType, '返工单已执行，可继续回到目标工位完成处理。');
+  resolveNextStep(
+    result.reworkType,
+    '返工单已执行，可继续回到目标工位完成处理。',
+  );
   await loadTracking();
 }
 
@@ -213,7 +231,11 @@ if (queryForm.caseId) {
               />
             </ElFormItem>
             <ElFormItem>
-              <ElButton :loading="trackingLoading" type="primary" @click="loadTracking">
+              <ElButton
+                :loading="trackingLoading"
+                type="primary"
+                @click="loadTracking"
+              >
                 加载病例追踪
               </ElButton>
             </ElFormItem>
@@ -228,10 +250,18 @@ if (queryForm.caseId) {
           </div>
 
           <div class="mt-4 flex flex-wrap gap-3">
-            <ElButton :disabled="!trackingResult" type="primary" @click="openCreateDialog">
+            <ElButton
+              :disabled="!trackingResult"
+              type="primary"
+              @click="openCreateDialog"
+            >
               创建返工单
             </ElButton>
-            <ElButton :disabled="!trackingResult?.reworks?.length" type="success" @click="openExecuteDialog()">
+            <ElButton
+              :disabled="!trackingResult?.reworks?.length"
+              type="success"
+              @click="openExecuteDialog()"
+            >
               执行返工单
             </ElButton>
           </div>
@@ -244,10 +274,18 @@ if (queryForm.caseId) {
           >
             <template v-if="trackingResult">
               <ElDescriptions :column="2" border>
-                <ElDescriptionsItem label="病例编号">{{ formatNullable(trackingResult.caseId) }}</ElDescriptionsItem>
-                <ElDescriptionsItem label="病理号">{{ formatNullable(trackingResult.pathologyNo) }}</ElDescriptionsItem>
-                <ElDescriptionsItem label="返工数">{{ trackingResult.reworks.length }}</ElDescriptionsItem>
-                <ElDescriptionsItem label="质控异常数">{{ trackingResult.qcEvaluations.length }}</ElDescriptionsItem>
+                <ElDescriptionsItem label="病例编号">
+                  {{ formatNullable(trackingResult.caseId) }}
+                </ElDescriptionsItem>
+                <ElDescriptionsItem label="病理号">
+                  {{ formatNullable(trackingResult.pathologyNo) }}
+                </ElDescriptionsItem>
+                <ElDescriptionsItem label="返工数">
+                  {{ trackingResult.reworks.length }}
+                </ElDescriptionsItem>
+                <ElDescriptionsItem label="质控异常数">
+                  {{ trackingResult.qcEvaluations.length }}
+                </ElDescriptionsItem>
               </ElDescriptions>
 
               <ElAlert
@@ -259,9 +297,16 @@ if (queryForm.caseId) {
                 show-icon
               >
                 <template #default>
-                  <div class="flex flex-wrap items-center justify-between gap-3">
+                  <div
+                    class="flex flex-wrap items-center justify-between gap-3"
+                  >
                     <span>{{ nextStep.message }}</span>
-                    <ElButton plain size="small" type="success" @click="goToSuggestedNextStep">
+                    <ElButton
+                      plain
+                      size="small"
+                      type="success"
+                      @click="goToSuggestedNextStep"
+                    >
                       返回对应工位
                     </ElButton>
                   </div>
@@ -282,7 +327,11 @@ if (queryForm.caseId) {
             description="返工来源和目标工位都在当前页面直接确认，不需要再回忆对象层级。"
           >
             <ElTable :data="trackingResult.reworks" border>
-              <ElTableColumn label="返工单号" min-width="180" prop="reworkOrderId" />
+              <ElTableColumn
+                label="返工单号"
+                min-width="180"
+                prop="reworkOrderId"
+              />
               <ElTableColumn label="返工类型" min-width="140">
                 <template #default="{ row }">
                   {{ formatReworkType(row.reworkType) }}
@@ -290,7 +339,15 @@ if (queryForm.caseId) {
               </ElTableColumn>
               <ElTableColumn label="状态" min-width="120">
                 <template #default="{ row }">
-                  <ElTag :type="row.status === 'COMPLETED' ? 'success' : row.status === 'IN_PROGRESS' ? 'warning' : 'info'">
+                  <ElTag
+                    :type="
+                      row.status === 'COMPLETED'
+                        ? 'success'
+                        : row.status === 'IN_PROGRESS'
+                          ? 'warning'
+                          : 'info'
+                    "
+                  >
                     {{ formatTaskStatus(row.status) }}
                   </ElTag>
                 </template>
@@ -303,10 +360,18 @@ if (queryForm.caseId) {
               <ElTableColumn fixed="right" label="操作" min-width="220">
                 <template #default="{ row }">
                   <div class="flex items-center gap-2">
-                    <ElButton link type="primary" @click="openExecuteDialog(row.reworkOrderId)">
+                    <ElButton
+                      link
+                      type="primary"
+                      @click="openExecuteDialog(row.reworkOrderId)"
+                    >
                       执行返工
                     </ElButton>
-                    <ElButton link type="success" @click="goToWorkstationByReworkType(row.reworkType)">
+                    <ElButton
+                      link
+                      type="success"
+                      @click="goToWorkstationByReworkType(row.reworkType)"
+                    >
                       回到对应工位
                     </ElButton>
                   </div>
@@ -351,15 +416,22 @@ if (queryForm.caseId) {
           </WorkflowSectionCard>
         </div>
 
-        <TechnicalCaseContextPanel :context="caseContext" :loading="trackingLoading" />
+        <TechnicalCaseContextPanel
+          :context="caseContext"
+          :loading="trackingLoading"
+        />
       </div>
     </div>
 
     <ReworkCreateDialog
       v-model="createDialogVisible"
       :case-id="resolvedCaseId"
-      :initial-object-id="typeof route.query.objectId === 'string' ? route.query.objectId : ''"
-      :initial-object-type="typeof route.query.objectType === 'string' ? route.query.objectType : ''"
+      :initial-object-id="
+        typeof route.query.objectId === 'string' ? route.query.objectId : ''
+      "
+      :initial-object-type="
+        typeof route.query.objectType === 'string' ? route.query.objectType : ''
+      "
       :tracking-result="trackingResult"
       @submitted="handleCreateSubmitted"
     />

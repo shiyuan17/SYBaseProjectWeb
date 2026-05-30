@@ -41,7 +41,7 @@ const {
   mockRetryBilling: vi.fn(),
   mockUserStore: {
     userInfo: {
-      realName: '\u7ba1\u7406\u5458',
+      realName: '\u7BA1\u7406\u5458',
       userId: 'USER-ADMIN',
     },
   },
@@ -307,7 +307,7 @@ const importJobFixture: HistoricalImportJobView = {
   reconciliationStatus: 'MATCHED',
   remarks: '',
   requestedAt: '2026-05-26T07:00:00',
-  requestedByName: '\u5f52\u6863\u5458',
+  requestedByName: '\u5F52\u6863\u5458',
   requestedByUserId: 'USER-ARCHIVE',
   retryCount: 0,
   sourceSystem: 'MOCK_HIS',
@@ -326,11 +326,11 @@ const historicalReportFixture: HistoricalReportView = {
   importJobId: 'JOB-1',
   pathologyNo: 'PATH-1',
   patientId: 'PAT-1',
-  patientName: '\u5f20\u4e09',
+  patientName: '\u5F20\u4E09',
   reportDate: '2026-05-20',
   reportSummary: 'summary',
-  sourceDepartmentName: '\u75c5\u7406\u79d1',
-  sourceDoctorName: '\u533b\u751fA',
+  sourceDepartmentName: '\u75C5\u7406\u79D1',
+  sourceDoctorName: '\u533B\u751FA',
   sourceSystem: 'MOCK_HIS',
   versions: [
     {
@@ -399,7 +399,7 @@ describe('m6 management views', () => {
       M6_PERMISSION_CODES.HISTORY_QUERY,
     ];
     mockUserStore.userInfo = {
-      realName: '\u7ba1\u7406\u5458',
+      realName: '\u7BA1\u7406\u5458',
       userId: 'USER-ADMIN',
     };
     mockListIntegrationTasks.mockResolvedValue([integrationTaskFixture]);
@@ -437,7 +437,7 @@ describe('m6 management views', () => {
     expect(mockListIntegrationTasks).toHaveBeenCalledTimes(1);
 
     setInputValue('input[placeholder*="BILLING_SUBMIT"]', 'BILLING_SUBMIT');
-    findButton('\u67e5\u8be2').click();
+    findButton('\u67E5\u8BE2').click();
     await flushView();
 
     expect(mockListIntegrationTasks).toHaveBeenNthCalledWith(
@@ -447,7 +447,7 @@ describe('m6 management views', () => {
       }),
     );
 
-    findButton('\u91cd\u7f6e').click();
+    findButton('\u91CD\u7F6E').click();
     await flushView();
 
     expect(mockListIntegrationTasks).toHaveBeenNthCalledWith(
@@ -467,30 +467,30 @@ describe('m6 management views', () => {
 
     expect(mockListBillingRecords).toHaveBeenCalledTimes(1);
 
-    findButton('\u91cd\u8bd5').click();
+    findButton('\u91CD\u8BD5').click();
     await flushView();
     expect(mockRetryBilling).toHaveBeenCalledWith('BILL-1', {
-      operatorName: '\u7ba1\u7406\u5458',
+      operatorName: '\u7BA1\u7406\u5458',
       operatorUserId: 'USER-ADMIN',
     });
 
-    findButton('\u767b\u8bb0\u56de\u6267').click();
+    findButton('\u767B\u8BB0\u56DE\u6267').click();
     await flushView();
-    findButton('\u63d0\u4ea4\u56de\u6267').click();
+    findButton('\u63D0\u4EA4\u56DE\u6267').click();
     await flushView();
     expect(mockReceiveBillingReceipt).toHaveBeenCalledWith('BILL-1', {
       billingStatus: 'SUCCESS',
       externalBillNo: undefined,
-      operatorName: '\u7ba1\u7406\u5458',
+      operatorName: '\u7BA1\u7406\u5458',
       operatorUserId: 'USER-ADMIN',
       remarks: undefined,
     });
 
-    findButton('\u6267\u884c\u5bf9\u8d26').click();
+    findButton('\u6267\u884C\u5BF9\u8D26').click();
     await flushView();
     expect(mockReconcileBilling).toHaveBeenCalledWith({
       from: undefined,
-      operatorName: '\u7ba1\u7406\u5458',
+      operatorName: '\u7BA1\u7406\u5458',
       operatorUserId: 'USER-ADMIN',
       to: undefined,
     });
@@ -508,13 +508,13 @@ describe('m6 management views', () => {
     expect(mockListHistoricalImportJobs).toHaveBeenCalledTimes(1);
     expect(mockListHistoricalReports).toHaveBeenCalledTimes(1);
 
-    findButton('\u53d1\u8d77\u5bfc\u5165').click();
+    findButton('\u53D1\u8D77\u5BFC\u5165').click();
     await flushView();
 
     expect(mockImportHistoricalReports).toHaveBeenCalledWith({
       applicationNo: undefined,
       from: undefined,
-      operatorName: '\u7ba1\u7406\u5458',
+      operatorName: '\u7BA1\u7406\u5458',
       operatorUserId: 'USER-ADMIN',
       pathologyNo: undefined,
       patientId: undefined,

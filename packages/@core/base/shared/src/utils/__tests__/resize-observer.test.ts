@@ -13,18 +13,18 @@ describe('observeElementResize', () => {
   it('uses ResizeObserver when the browser supports it', () => {
     const observe = vi.fn();
     const disconnect = vi.fn();
-    let triggerResize: null | (() => void) = null;
+    let triggerResize: (() => void) | null = null;
 
     globalThis.ResizeObserver = class {
-      constructor(callback: ResizeObserverCallback) {
-        triggerResize = () => callback([], this as ResizeObserver);
-      }
-
       disconnect = disconnect;
 
       observe = observe;
 
       unobserve = vi.fn();
+
+      constructor(callback: ResizeObserverCallback) {
+        triggerResize = () => callback([], this as ResizeObserver);
+      }
     } as never;
 
     const element = document.createElement('div');

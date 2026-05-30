@@ -108,7 +108,10 @@ async function submitStartBatch() {
   submitting.value = true;
   pageError.value = '';
   try {
-    lastBatchResult.value = await startDehydrationBatch(batchForm.batchId.trim(), payload);
+    lastBatchResult.value = await startDehydrationBatch(
+      batchForm.batchId.trim(),
+      payload,
+    );
     ElMessage.success(`批次 ${lastBatchResult.value.batchNo} 已开始脱水`);
     emit('submitted', lastBatchResult.value);
   } catch (error) {
@@ -132,15 +135,18 @@ async function submitCompleteBatch() {
   submitting.value = true;
   pageError.value = '';
   try {
-    lastBatchResult.value = await completeDehydrationBatch(batchForm.batchId.trim(), {
-      ...payload,
-      mediaAssets: batchForm.mediaAssets
-        .filter((item) => item.fileUrl.trim())
-        .map((item) => ({
-          fileName: (item.fileName ?? '').trim() || null,
-          fileUrl: item.fileUrl.trim(),
-        })),
-    });
+    lastBatchResult.value = await completeDehydrationBatch(
+      batchForm.batchId.trim(),
+      {
+        ...payload,
+        mediaAssets: batchForm.mediaAssets
+          .filter((item) => item.fileUrl.trim())
+          .map((item) => ({
+            fileName: (item.fileName ?? '').trim() || null,
+            fileUrl: item.fileUrl.trim(),
+          })),
+      },
+    );
     ElMessage.success(`批次 ${lastBatchResult.value.batchNo} 已完成脱水`);
     emit('submitted', lastBatchResult.value);
     dialogVisible.value = false;
@@ -190,7 +196,9 @@ watch(
 
         <div class="mb-2 mt-4 flex items-center justify-between">
           <h4 class="text-sm font-medium text-foreground">附件占位</h4>
-          <ElButton link type="primary" @click="addMediaAsset">新增附件</ElButton>
+          <ElButton link type="primary" @click="addMediaAsset">
+            新增附件
+          </ElButton>
         </div>
         <div class="flex flex-col gap-3">
           <section
@@ -199,7 +207,11 @@ watch(
             class="rounded border border-border p-3"
           >
             <div class="mb-3 flex justify-end">
-              <ElButton link type="danger" @click="removeMediaAsset(assetIndex)">
+              <ElButton
+                link
+                type="danger"
+                @click="removeMediaAsset(assetIndex)"
+              >
                 删除附件
               </ElButton>
             </div>
@@ -225,7 +237,11 @@ watch(
       <ElButton :loading="submitting" type="primary" @click="submitStartBatch">
         开始脱水
       </ElButton>
-      <ElButton :loading="submitting" type="success" @click="submitCompleteBatch">
+      <ElButton
+        :loading="submitting"
+        type="success"
+        @click="submitCompleteBatch"
+      >
         完成脱水
       </ElButton>
     </template>

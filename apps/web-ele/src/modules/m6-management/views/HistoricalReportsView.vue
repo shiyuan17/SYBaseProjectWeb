@@ -25,12 +25,12 @@ import {
 
 import WorkflowSectionCard from '#/modules/doctor-workflow/components/WorkflowSectionCard.vue';
 
+import { getHistoryManagementCapabilities } from '../access';
 import {
   importHistoricalReports,
   listHistoricalImportJobs,
   listHistoricalReports,
 } from '../api/m6-management-service';
-import { getHistoryManagementCapabilities } from '../access';
 
 const accessStore = useAccessStore();
 const userStore = useUserStore();
@@ -106,7 +106,8 @@ async function loadHistoryData() {
   } catch (error) {
     jobs.value = [];
     reports.value = [];
-    pageError.value = error instanceof Error ? error.message : '历史报告加载失败';
+    pageError.value =
+      error instanceof Error ? error.message : '历史报告加载失败';
   } finally {
     loading.value = false;
   }
@@ -145,7 +146,9 @@ async function handleImport() {
     ElMessage.success('历史报告导入任务已创建');
     await loadHistoryData();
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '历史报告导入失败');
+    ElMessage.error(
+      error instanceof Error ? error.message : '历史报告导入失败',
+    );
   } finally {
     importLoading.value = false;
   }
@@ -189,7 +192,10 @@ onMounted(() => {
       >
         <ElForm inline label-width="90px">
           <ElFormItem label="来源系统">
-            <ElInput v-model="importForm.sourceSystem" placeholder="如 MOCK_HIS" />
+            <ElInput
+              v-model="importForm.sourceSystem"
+              placeholder="如 MOCK_HIS"
+            />
           </ElFormItem>
           <ElFormItem label="患者 ID">
             <ElInput v-model="importForm.patientId" />
@@ -201,10 +207,16 @@ onMounted(() => {
             <ElInput v-model="importForm.applicationNo" />
           </ElFormItem>
           <ElFormItem label="起始时间">
-            <ElInput v-model="importForm.from" placeholder="YYYY-MM-DDTHH:mm:ss" />
+            <ElInput
+              v-model="importForm.from"
+              placeholder="YYYY-MM-DDTHH:mm:ss"
+            />
           </ElFormItem>
           <ElFormItem label="结束时间">
-            <ElInput v-model="importForm.to" placeholder="YYYY-MM-DDTHH:mm:ss" />
+            <ElInput
+              v-model="importForm.to"
+              placeholder="YYYY-MM-DDTHH:mm:ss"
+            />
           </ElFormItem>
           <ElFormItem label="操作人">
             <ElInput v-model="importForm.operatorName" />
@@ -237,7 +249,10 @@ onMounted(() => {
             <ElInput v-model="jobQueryForm.sourceSystem" />
           </ElFormItem>
           <ElFormItem label="任务状态">
-            <ElInput v-model="jobQueryForm.importStatus" placeholder="如 COMPLETED" />
+            <ElInput
+              v-model="jobQueryForm.importStatus"
+              placeholder="如 COMPLETED"
+            />
           </ElFormItem>
           <ElFormItem label="任务患者 ID">
             <ElInput v-model="jobQueryForm.patientId" />
@@ -261,13 +276,23 @@ onMounted(() => {
             <ElInput v-model="reportQueryForm.externalReportNo" />
           </ElFormItem>
           <ElFormItem label="报告开始时间">
-            <ElInput v-model="reportQueryForm.from" placeholder="YYYY-MM-DDTHH:mm:ss" />
+            <ElInput
+              v-model="reportQueryForm.from"
+              placeholder="YYYY-MM-DDTHH:mm:ss"
+            />
           </ElFormItem>
           <ElFormItem label="报告结束时间">
-            <ElInput v-model="reportQueryForm.to" placeholder="YYYY-MM-DDTHH:mm:ss" />
+            <ElInput
+              v-model="reportQueryForm.to"
+              placeholder="YYYY-MM-DDTHH:mm:ss"
+            />
           </ElFormItem>
           <ElFormItem>
-            <ElButton :loading="loading" type="primary" @click="loadHistoryData">
+            <ElButton
+              :loading="loading"
+              type="primary"
+              @click="loadHistoryData"
+            >
               查询
             </ElButton>
             <ElButton @click="handleReset">重置</ElButton>
@@ -279,13 +304,24 @@ onMounted(() => {
         title="导入作业"
         :description="`当前返回 ${jobs.length} 条导入任务。`"
       >
-        <ElEmpty v-if="!loading && jobs.length === 0 && !pageError" description="暂无导入任务" />
+        <ElEmpty
+          v-if="!loading && jobs.length === 0 && !pageError"
+          description="暂无导入任务"
+        />
         <ElTable v-else v-loading="loading" :data="jobs" border>
           <ElTableColumn label="作业 ID" min-width="180" prop="id" />
           <ElTableColumn label="来源系统" min-width="120" prop="sourceSystem" />
           <ElTableColumn label="导入状态" min-width="120">
             <template #default="{ row }">
-              <ElTag :type="row.importStatus === 'COMPLETED' ? 'success' : row.importStatus === 'FAILED' ? 'danger' : 'warning'">
+              <ElTag
+                :type="
+                  row.importStatus === 'COMPLETED'
+                    ? 'success'
+                    : row.importStatus === 'FAILED'
+                      ? 'danger'
+                      : 'warning'
+                "
+              >
                 {{ displayText(row.importStatus) }}
               </ElTag>
             </template>
@@ -305,7 +341,9 @@ onMounted(() => {
           </ElTableColumn>
           <ElTableColumn label="错误信息" min-width="220">
             <template #default="{ row }">
-              {{ displayText(row.lastErrorMessage || row.taskLastErrorMessage) }}
+              {{
+                displayText(row.lastErrorMessage || row.taskLastErrorMessage)
+              }}
             </template>
           </ElTableColumn>
         </ElTable>
@@ -315,11 +353,18 @@ onMounted(() => {
         title="历史报告"
         :description="`当前返回 ${reports.length} 条历史报告。`"
       >
-        <ElEmpty v-if="!loading && reports.length === 0 && !pageError" description="暂无历史报告" />
+        <ElEmpty
+          v-if="!loading && reports.length === 0 && !pageError"
+          description="暂无历史报告"
+        />
         <ElTable v-else v-loading="loading" :data="reports" border>
           <ElTableColumn label="历史报告 ID" min-width="180" prop="id" />
           <ElTableColumn label="来源系统" min-width="120" prop="sourceSystem" />
-          <ElTableColumn label="外部报告号" min-width="160" prop="externalReportNo" />
+          <ElTableColumn
+            label="外部报告号"
+            min-width="160"
+            prop="externalReportNo"
+          />
           <ElTableColumn label="患者" min-width="120" prop="patientName" />
           <ElTableColumn label="病理号" min-width="140" prop="pathologyNo" />
           <ElTableColumn label="报告日期" min-width="160">

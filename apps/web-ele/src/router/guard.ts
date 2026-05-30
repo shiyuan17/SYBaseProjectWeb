@@ -97,7 +97,9 @@ function setupAccessGuard(router: Router) {
     // 生成路由表
     // 当前登录用户拥有的角色标识列表
     const [userInfo, accessCodes] = await Promise.all([
-      userStore.userInfo ? Promise.resolve(userStore.userInfo) : authStore.fetchUserInfo(),
+      userStore.userInfo
+        ? Promise.resolve(userStore.userInfo)
+        : authStore.fetchUserInfo(),
       getAccessCodesApi(),
     ]);
     accessStore.setAccessCodes(accessCodes);

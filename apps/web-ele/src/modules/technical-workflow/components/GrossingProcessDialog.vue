@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { UploadProps, UploadRequestOptions } from 'element-plus';
+
 import type {
   GrossingBlockItemRequest,
   GrossingSpecimenItemRequest,
@@ -35,7 +36,10 @@ import {
   ElUpload,
 } from 'element-plus';
 
-import { listBodyParts, listSamplingTemplates } from '#/modules/system-management/api/system-management-service';
+import {
+  listBodyParts,
+  listSamplingTemplates,
+} from '#/modules/system-management/api/system-management-service';
 import {
   createEmptyWorkflowReferenceOptions,
   loadWorkflowReferenceOptionsSafely,
@@ -48,7 +52,11 @@ import {
   uploadGrossingMediaAsset,
 } from '../api/technical-workflow-service';
 import { getWorkflowPageErrorMessage } from '../utils/error';
-import { formatCaseStatus, formatNullable, formatObjectType } from '../utils/format';
+import {
+  formatCaseStatus,
+  formatNullable,
+  formatObjectType,
+} from '../utils/format';
 import {
   assignTechnicalOperatorForm,
   createTechnicalOperatorDefaults,
@@ -148,7 +156,9 @@ const currentTaskContext = computed(() => ({
   taskId: completeForm.taskId || props.task?.id || '',
 }));
 const activeSpecimenIndex = computed(() =>
-  specimenTabMetas.value.findIndex((item) => item.key === activeSpecimenKey.value),
+  specimenTabMetas.value.findIndex(
+    (item) => item.key === activeSpecimenKey.value,
+  ),
 );
 
 function createSpecimenTabMeta(trackingLabel = '') {
@@ -219,7 +229,9 @@ function seedSpecimensFromTracking() {
   );
 }
 
-function mapSamplingTemplateTree(nodes: TemplateCategoryNode[]): SamplingTemplateTreeOption[] {
+function mapSamplingTemplateTree(
+  nodes: TemplateCategoryNode[],
+): SamplingTemplateTreeOption[] {
   return nodes.map<SamplingTemplateTreeOption>((item) => ({
     children: [
       ...(item.children?.length ? mapSamplingTemplateTree(item.children) : []),
@@ -248,7 +260,8 @@ async function ensureSelectOptionsLoaded() {
       loadWorkflowReferenceOptionsSafely(),
     ]);
     bodyPartTreeOptions.value = bodyParts;
-    samplingTemplateTreeOptions.value = mapSamplingTemplateTree(samplingTemplates);
+    samplingTemplateTreeOptions.value =
+      mapSamplingTemplateTree(samplingTemplates);
     workflowReferenceOptions.value = referenceOptions;
     initialized.value = true;
   } catch (error) {
@@ -292,9 +305,9 @@ function removeSpecimen(index: number) {
   const nextActiveIndex =
     activeSpecimenIndex.value === index
       ? Math.max(0, Math.min(index, completeForm.specimens.length - 2))
-      : (activeSpecimenIndex.value > index
+      : activeSpecimenIndex.value > index
         ? activeSpecimenIndex.value - 1
-        : activeSpecimenIndex.value);
+        : activeSpecimenIndex.value;
 
   completeForm.specimens.splice(index, 1);
   specimenTabMetas.value.splice(index, 1);
@@ -318,7 +331,9 @@ function removeBlock(specimenIndex: number, blockIndex: number) {
 }
 
 function addMediaAsset(specimenIndex: number) {
-  completeForm.specimens[specimenIndex]?.mediaAssets?.push(createEmptyMediaAsset());
+  completeForm.specimens[specimenIndex]?.mediaAssets?.push(
+    createEmptyMediaAsset(),
+  );
 }
 
 function removeMediaAsset(specimenIndex: number, assetIndex: number) {
@@ -326,11 +341,15 @@ function removeMediaAsset(specimenIndex: number, assetIndex: number) {
 }
 
 function getSpecimenUploadKey(specimenIndex: number) {
-  return specimenTabMetas.value[specimenIndex]?.key ?? `specimen-${specimenIndex}`;
+  return (
+    specimenTabMetas.value[specimenIndex]?.key ?? `specimen-${specimenIndex}`
+  );
 }
 
 function isSpecimenUploading(specimenIndex: number) {
-  return uploadingSpecimenKeys.value.includes(getSpecimenUploadKey(specimenIndex));
+  return uploadingSpecimenKeys.value.includes(
+    getSpecimenUploadKey(specimenIndex),
+  );
 }
 
 function setSpecimenUploading(specimenIndex: number, uploading: boolean) {
@@ -427,17 +446,20 @@ async function submitGrossing() {
     specimenType: item.specimenType.trim(),
   }));
 
-  if (normalizedSpecimens.some((item) => !item.specimenId || !item.specimenType)) {
+  if (
+    normalizedSpecimens.some((item) => !item.specimenId || !item.specimenType)
+  ) {
     ElMessage.warning('请补齐标本编号和标本类型');
     return;
   }
   if (
-    normalizedSpecimens.some(
-      (item) =>
-        item.blocks.every(
-          (block) =>
-            !block.blockDescription && !block.blockSite && !block.specialRequirement,
-        ),
+    normalizedSpecimens.some((item) =>
+      item.blocks.every(
+        (block) =>
+          !block.blockDescription &&
+          !block.blockSite &&
+          !block.specialRequirement,
+      ),
     )
   ) {
     ElMessage.warning('每个标本至少需要一条有效的蜡块明细');
@@ -453,7 +475,9 @@ async function submitGrossing() {
       specimens: normalizedSpecimens,
       taskId: completeForm.taskId.trim(),
     });
-    ElMessage.success(`取材完成，已生成 ${result.createdDehydrationTaskCount} 条脱水任务`);
+    ElMessage.success(
+      `取材完成，已生成 ${result.createdDehydrationTaskCount} 条脱水任务`,
+    );
     emit('submitted');
     dialogVisible.value = false;
   } catch (error) {
@@ -526,7 +550,10 @@ watch(
         <div class="text-sm text-[var(--el-text-color-secondary)]">
           优先从病例追踪带入标本，弹窗内仅保留当前处理所需的信息。
         </div>
-        <ElButton :loading="trackingLoading || selectLoading" @click="loadTracking">
+        <ElButton
+          :loading="trackingLoading || selectLoading"
+          @click="loadTracking"
+        >
           加载病例追踪
         </ElButton>
       </div>
@@ -612,7 +639,11 @@ watch(
                     <ElTreeSelect
                       v-model="specimen.samplingTemplateId"
                       :data="samplingTemplateTreeOptions"
-                      :props="{ children: 'children', disabled: 'disabled', label: 'name' }"
+                      :props="{
+                        children: 'children',
+                        disabled: 'disabled',
+                        label: 'name',
+                      }"
                       clearable
                       filterable
                       node-key="id"
@@ -629,10 +660,18 @@ watch(
                       type="textarea"
                     />
                     <div class="flex flex-wrap items-start justify-end gap-2">
-                      <ElButton link type="primary" @click="addMediaAsset(specimenIndex)">
+                      <ElButton
+                        link
+                        type="primary"
+                        @click="addMediaAsset(specimenIndex)"
+                      >
                         手工补充影像
                       </ElButton>
-                      <ElButton link type="danger" @click="removeSpecimen(specimenIndex)">
+                      <ElButton
+                        link
+                        type="danger"
+                        @click="removeSpecimen(specimenIndex)"
+                      >
                         删除标本
                       </ElButton>
                     </div>
@@ -643,12 +682,16 @@ watch(
 
             <div class="mt-4 rounded-lg border border-border p-4">
               <div class="mb-3 flex items-center justify-between">
-                <h5 class="text-sm font-medium text-foreground">标本影像与取材要素</h5>
+                <h5 class="text-sm font-medium text-foreground">
+                  标本影像与取材要素
+                </h5>
                 <span class="text-xs text-[var(--el-text-color-secondary)]">
                   影像可通过下方上传区关联到当前标本。
                 </span>
               </div>
-              <div class="grid gap-3 md:grid-cols-[180px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
+              <div
+                class="grid gap-3 md:grid-cols-[180px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]"
+              >
                 <ReferenceOptionSelect
                   v-model="specimen.sizeText"
                   :options="workflowReferenceOptions.specimenImageSizes"
@@ -704,11 +747,26 @@ watch(
                       <div class="text-sm font-medium text-foreground">
                         蜡块 {{ blockIndex + 1 }}
                       </div>
-                      <ElInput v-model="block.blockSite" placeholder="蜡块部位" />
-                      <ElInput v-model="block.blockDescription" placeholder="蜡块描述" />
-                      <ElInput v-model="block.specialRequirement" placeholder="特殊要求" />
-                      <div class="flex flex-wrap items-center justify-end gap-2">
-                        <ElButton link type="primary" @click="addBlock(specimenIndex)">
+                      <ElInput
+                        v-model="block.blockSite"
+                        placeholder="蜡块部位"
+                      />
+                      <ElInput
+                        v-model="block.blockDescription"
+                        placeholder="蜡块描述"
+                      />
+                      <ElInput
+                        v-model="block.specialRequirement"
+                        placeholder="特殊要求"
+                      />
+                      <div
+                        class="flex flex-wrap items-center justify-end gap-2"
+                      >
+                        <ElButton
+                          link
+                          type="primary"
+                          @click="addBlock(specimenIndex)"
+                        >
                           新增蜡块
                         </ElButton>
                         <ElButton
@@ -739,19 +797,27 @@ watch(
                 :show-file-list="false"
                 :disabled="isSpecimenUploading(specimenIndex)"
               >
-                <ElButton :loading="isSpecimenUploading(specimenIndex)" type="primary">
+                <ElButton
+                  :loading="isSpecimenUploading(specimenIndex)"
+                  type="primary"
+                >
                   上传影像
                 </ElButton>
               </ElUpload>
             </div>
-            <div v-if="specimen.mediaAssets?.length" class="flex flex-col gap-3">
+            <div
+              v-if="specimen.mediaAssets?.length"
+              class="flex flex-col gap-3"
+            >
               <section
                 v-for="(asset, assetIndex) in specimen.mediaAssets"
                 :key="assetIndex"
                 class="rounded border border-border p-3"
               >
                 <div class="mb-3 flex items-center justify-between gap-3">
-                  <span class="text-sm font-medium text-foreground">影像 {{ assetIndex + 1 }}</span>
+                  <span class="text-sm font-medium text-foreground"
+                    >影像 {{ assetIndex + 1 }}</span
+                  >
                   <ElButton
                     link
                     type="danger"

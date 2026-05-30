@@ -19,22 +19,21 @@ withDefaults(
 </script>
 
 <template>
-  <ElCard
-    :body-class="bodyClass"
-    :class="cardClass"
-    shadow="never"
-  >
+  <ElCard :body-class="bodyClass" :class="cardClass" shadow="never">
     <template #header>
-      <div :class="['flex items-start justify-between gap-3', headerClass]">
+      <div
+        class="flex items-start justify-between gap-3"
+        :class="[headerClass]"
+      >
         <div>
           <div class="text-base font-semibold text-foreground">{{ title }}</div>
           <div v-if="description" class="mt-1 text-sm text-muted-foreground">
             {{ description }}
           </div>
         </div>
-        <slot name="header-extra" />
+        <slot name="header-extra"></slot>
       </div>
     </template>
-    <slot />
+    <slot></slot>
   </ElCard>
 </template>

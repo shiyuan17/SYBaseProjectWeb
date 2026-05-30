@@ -20,9 +20,9 @@ import {
   listEquipmentRecords,
   listEquipmentWarnings,
   listPendingMaterialLoans,
+  listReagents,
   listReagentStocks,
   listReagentWarnings,
-  listReagents,
   normalizeArrayResult,
   returnMaterialLoan,
   searchArchiveRecords,
@@ -210,9 +210,13 @@ describe('operation-support-service reagent requests', () => {
     expect(requestClientMock.get).toHaveBeenNthCalledWith(1, '/v1/reagents', {
       params: { enabled: true, keyword: 'RG' },
     });
-    expect(requestClientMock.get).toHaveBeenNthCalledWith(2, '/v1/reagent-stocks', {
-      params: { stockStatus: 'ACTIVE' },
-    });
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      2,
+      '/v1/reagent-stocks',
+      {
+        params: { stockStatus: 'ACTIVE' },
+      },
+    );
     expect(requestClientMock.get).toHaveBeenNthCalledWith(
       3,
       '/v1/reagent-stocks/warnings',

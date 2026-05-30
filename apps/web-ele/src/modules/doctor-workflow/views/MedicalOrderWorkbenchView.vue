@@ -22,7 +22,6 @@ import {
   ElTableColumn,
 } from 'element-plus';
 
-import { M4_PERMISSION_CODES } from '../constants';
 import {
   acceptMedicalOrder,
   cancelMedicalOrder,
@@ -30,6 +29,7 @@ import {
   listPendingMedicalOrders,
 } from '../api/doctor-workflow-service';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
+import { M4_PERMISSION_CODES } from '../constants';
 import { getDoctorWorkflowPageErrorMessage } from '../utils/error';
 import {
   formatDateTime,
@@ -183,7 +183,10 @@ void loadOrders();
     description="面向医嘱执行岗和管理员的医嘱工作台，支持查询、接收、完成和取消待处理医嘱。"
   >
     <div class="flex flex-col gap-4">
-      <WorkflowSectionCard title="查询条件" description="按病理号和状态筛选待处理医嘱。">
+      <WorkflowSectionCard
+        title="查询条件"
+        description="按病理号和状态筛选待处理医嘱。"
+      >
         <ElForm inline label-width="88px">
           <ElFormItem label="病理号">
             <ElInput
@@ -195,7 +198,11 @@ void loadOrders();
             />
           </ElFormItem>
           <ElFormItem label="状态">
-            <ElSelect v-model="queryForm.status" placeholder="全部状态" style="width: 180px">
+            <ElSelect
+              v-model="queryForm.status"
+              placeholder="全部状态"
+              style="width: 180px"
+            >
               <ElOption
                 v-for="option in STATUS_OPTIONS"
                 :key="option.value"
@@ -242,7 +249,10 @@ void loadOrders();
         </ElForm>
       </WorkflowSectionCard>
 
-      <ElEmpty v-if="!loading && !pageError && orders.length === 0" description="暂无医嘱数据" />
+      <ElEmpty
+        v-if="!loading && !pageError && orders.length === 0"
+        description="暂无医嘱数据"
+      />
 
       <WorkflowSectionCard
         title="医嘱列表"

@@ -36,7 +36,11 @@ function normalizeMessage(message: string) {
   if (trimmedMessage.includes('Material loan is not pending return')) {
     return '该借阅记录已完成归还或状态无效，不能重复归还。';
   }
-  if (trimmedMessage.includes('A replacement archive position is required for return')) {
+  if (
+    trimmedMessage.includes(
+      'A replacement archive position is required for return',
+    )
+  ) {
     return '原归档柜位不可用，请为归还操作选择新的归档柜位。';
   }
   if (trimmedMessage.includes('Material loan not found')) {

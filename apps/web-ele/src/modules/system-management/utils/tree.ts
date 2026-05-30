@@ -48,7 +48,10 @@ export function flattenTree<T extends BasicTreeNode>(
 
   tree.forEach((node) => {
     collector(node);
-    flattenTree((Array.isArray(node.children) ? node.children : []) as T[], collector);
+    flattenTree(
+      (Array.isArray(node.children) ? node.children : []) as T[],
+      collector,
+    );
   });
 }
 

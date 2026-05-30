@@ -53,7 +53,7 @@ export interface FrozenSession {
   applicationNo: string;
   autoPrintSlides: boolean;
   caseId: string;
-  compareStatus: null | 'MISMATCH' | 'PENDING' | 'SIGNED_OFF';
+  compareStatus: 'MISMATCH' | 'PENDING' | 'SIGNED_OFF' | null;
   compareSummary: null | string;
   currentTaskType: FrozenTaskType;
   finalConfirmedAt: null | string;

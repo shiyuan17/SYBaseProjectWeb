@@ -30,10 +30,9 @@ export async function listMyNotifications(params: NotificationListQuery) {
 }
 
 export async function getMyNotificationUnreadCount() {
-  const response =
-    await requestClient.get<NotificationUnreadCountDto>(
-      '/v1/my/notifications/unread-count',
-    );
+  const response = await requestClient.get<NotificationUnreadCountDto>(
+    '/v1/my/notifications/unread-count',
+  );
 
   return typeof response?.unreadCount === 'number' ? response.unreadCount : 0;
 }
@@ -56,9 +55,7 @@ export async function archiveMyNotification(id: string) {
   });
 }
 
-export async function archiveMyNotifications(
-  data: NotificationArchiveRequest,
-) {
+export async function archiveMyNotifications(data: NotificationArchiveRequest) {
   return requestClient.request('/v1/my/notifications/archive', {
     data,
     method: 'PATCH',
@@ -66,10 +63,9 @@ export async function archiveMyNotifications(
 }
 
 export async function getMyNotificationPreferences() {
-  const response =
-    await requestClient.get<Partial<NotificationPreferencesDto>>(
-      '/v1/my/notification-preferences',
-    );
+  const response = await requestClient.get<Partial<NotificationPreferencesDto>>(
+    '/v1/my/notification-preferences',
+  );
 
   return {
     ...createDefaultNotificationPreferences(),

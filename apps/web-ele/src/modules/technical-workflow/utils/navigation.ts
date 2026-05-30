@@ -1,3 +1,5 @@
+import type { Router } from 'vue-router';
+
 import type {
   PendingTechnicalTaskItem,
   TechnicalWorkflowAlertAction,
@@ -5,13 +7,14 @@ import type {
   TechnicalWorkflowTaskType,
 } from '../types/technical-workflow';
 
-import type { Router } from 'vue-router';
-
-import { TECHNICAL_WORKFLOW_ROUTE_META, TASK_TYPE_ROUTE_MAP } from '../constants';
+import {
+  TASK_TYPE_ROUTE_MAP,
+  TECHNICAL_WORKFLOW_ROUTE_META,
+} from '../constants';
 
 function normalizeQueryValue(value?: null | string) {
   const trimmed = value?.trim();
-  return trimmed ? trimmed : undefined;
+  return trimmed || undefined;
 }
 
 function buildQuery(query?: TechnicalWorkflowDeepLinkQuery) {
@@ -62,12 +65,18 @@ export function useTechnicalWorkflowNavigation(router: Router) {
     });
   }
 
-  function goToTaskType(taskType: TechnicalWorkflowTaskType, query?: TechnicalWorkflowDeepLinkQuery) {
+  function goToTaskType(
+    taskType: TechnicalWorkflowTaskType,
+    query?: TechnicalWorkflowDeepLinkQuery,
+  ) {
     const path = resolveTaskTypePath(taskType);
     return pushToPath(path, query);
   }
 
-  function goToTask(task: PendingTechnicalTaskItem, mode?: TechnicalWorkflowDeepLinkQuery['mode']) {
+  function goToTask(
+    task: PendingTechnicalTaskItem,
+    mode?: TechnicalWorkflowDeepLinkQuery['mode'],
+  ) {
     const path = resolveTaskTypePath(task.taskType);
     return pushToPath(path, buildTaskDeepLinkQuery(task, mode));
   }

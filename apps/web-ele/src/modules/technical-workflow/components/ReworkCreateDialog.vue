@@ -134,8 +134,10 @@ const selectedObjectValue = computed({
   },
   set: (value: string) => {
     createForm.specimenId = createForm.reworkType === 'REGROSSING' ? value : '';
-    createForm.samplingBlockId = createForm.reworkType === 'REEMBED' ? value : '';
-    createForm.embeddingBoxId = createForm.reworkType === 'RESLICE' ? value : '';
+    createForm.samplingBlockId =
+      createForm.reworkType === 'REEMBED' ? value : '';
+    createForm.embeddingBoxId =
+      createForm.reworkType === 'RESLICE' ? value : '';
     createForm.slideId = createForm.reworkType === 'RESTAIN' ? value : '';
   },
 });
@@ -276,7 +278,10 @@ watch(
         />
         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <ElFormItem label="返工类型" required>
-            <ElSelect v-model="createForm.reworkType" placeholder="请选择返工类型">
+            <ElSelect
+              v-model="createForm.reworkType"
+              placeholder="请选择返工类型"
+            >
               <ElOption
                 v-for="option in REWORK_TYPE_OPTIONS"
                 :key="option.value"
@@ -286,7 +291,11 @@ watch(
             </ElSelect>
           </ElFormItem>
           <ElFormItem label="质控类型">
-            <ElSelect v-model="createForm.qcType" clearable placeholder="请选择质控类型">
+            <ElSelect
+              v-model="createForm.qcType"
+              clearable
+              placeholder="请选择质控类型"
+            >
               <ElOption
                 v-for="option in QC_TYPE_OPTIONS"
                 :key="option.value"
@@ -325,7 +334,11 @@ watch(
 
     <template #footer>
       <ElButton @click="dialogVisible = false">取消</ElButton>
-      <ElButton :loading="submitting" type="primary" @click="submitCreateRework">
+      <ElButton
+        :loading="submitting"
+        type="primary"
+        @click="submitCreateRework"
+      >
         创建返工单
       </ElButton>
     </template>

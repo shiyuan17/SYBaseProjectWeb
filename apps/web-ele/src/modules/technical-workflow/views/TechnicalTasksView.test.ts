@@ -1,4 +1,3 @@
-/* eslint-disable vue/one-component-per-file -- Compact inline test doubles keep this view test focused. */
 import type { PendingTechnicalTaskItem } from '../types/technical-workflow';
 
 import { createApp, defineComponent, h, inject, nextTick, provide } from 'vue';
@@ -66,10 +65,16 @@ vi.mock('#/modules/system-management/components/SystemUserSelect.vue', () => ({
     setup(props, { emit }) {
       return () => {
         assignedUserSelectProps.modelValue = String(props.modelValue ?? '');
-        assignedUserSelectProps.selectedLabel = String(props.selectedLabel ?? '');
+        assignedUserSelectProps.selectedLabel = String(
+          props.selectedLabel ?? '',
+        );
 
         return h('div', { 'data-testid': 'assigned-user-select' }, [
-          h('span', { 'data-testid': 'assigned-user-label' }, props.selectedLabel),
+          h(
+            'span',
+            { 'data-testid': 'assigned-user-label' },
+            props.selectedLabel,
+          ),
           h(
             'button',
             {
@@ -188,14 +193,20 @@ vi.mock('element-plus', () => {
               rows: props.rows,
               value: props.modelValue,
               onInput: (event: Event) =>
-                emit('update:modelValue', (event.target as HTMLTextAreaElement).value),
+                emit(
+                  'update:modelValue',
+                  (event.target as HTMLTextAreaElement).value,
+                ),
             })
           : h('input', {
               disabled: props.disabled,
               placeholder: props.placeholder,
               value: props.modelValue,
               onInput: (event: Event) =>
-                emit('update:modelValue', (event.target as HTMLInputElement).value),
+                emit(
+                  'update:modelValue',
+                  (event.target as HTMLInputElement).value,
+                ),
             });
     },
   });
@@ -243,7 +254,10 @@ vi.mock('element-plus', () => {
           checked: props.modelValue,
           type: 'checkbox',
           onChange: (event: Event) =>
-            emit('update:modelValue', (event.target as HTMLInputElement).checked),
+            emit(
+              'update:modelValue',
+              (event.target as HTMLInputElement).checked,
+            ),
         });
     },
   });
@@ -409,7 +423,9 @@ describe('TechnicalTasksView', () => {
 
     findButton('分派').click();
     await nextTick();
-    document.querySelector<HTMLButtonElement>('[data-testid="choose-user"]')?.click();
+    document
+      .querySelector<HTMLButtonElement>('[data-testid="choose-user"]')
+      ?.click();
     await nextTick();
     findButton('确认分派').click();
     await flushView();
@@ -433,7 +449,9 @@ describe('TechnicalTasksView', () => {
 
     findButton('分派').click();
     await nextTick();
-    document.querySelector<HTMLButtonElement>('[data-testid="clear-user"]')?.click();
+    document
+      .querySelector<HTMLButtonElement>('[data-testid="clear-user"]')
+      ?.click();
     await nextTick();
     findButton('确认分派').click();
     await flushView();

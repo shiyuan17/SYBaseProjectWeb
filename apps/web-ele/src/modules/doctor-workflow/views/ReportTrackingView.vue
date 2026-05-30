@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import type { MedicalOrderSummary, ReportTrackingView } from '../types/doctor-workflow';
+import type {
+  MedicalOrderSummary,
+  ReportTrackingView,
+} from '../types/doctor-workflow';
 
 import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -23,15 +26,15 @@ import {
 } from 'element-plus';
 
 import {
-  M4_MEDICAL_ORDER_PAGE_AUTHORITIES,
-  M4_PERMISSION_CODES,
-  M4_REPORT_PAGE_AUTHORITIES,
-} from '../constants';
-import {
   cancelMedicalOrder,
   getReportTracking,
 } from '../api/doctor-workflow-service';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
+import {
+  M4_MEDICAL_ORDER_PAGE_AUTHORITIES,
+  M4_PERMISSION_CODES,
+  M4_REPORT_PAGE_AUTHORITIES,
+} from '../constants';
 import { getDoctorWorkflowPageErrorMessage } from '../utils/error';
 import {
   formatDateTime,
@@ -51,7 +54,7 @@ const userStore = useUserStore();
 const loading = ref(false);
 const operating = ref(false);
 const pageError = ref('');
-const tracking = ref<ReportTrackingView | null>(null);
+const tracking = ref<null | ReportTrackingView>(null);
 const queryCaseIdentifier = ref('');
 
 const caseId = computed(() => firstQueryParam(route.query.caseId));
@@ -188,7 +191,10 @@ watch(
 </script>
 
 <template>
-  <Page title="报告追踪" description="展示诊断任务链、报告版本链、事件链、修订链、会诊链与医嘱链。">
+  <Page
+    title="报告追踪"
+    description="展示诊断任务链、报告版本链、事件链、修订链、会诊链与医嘱链。"
+  >
     <div class="flex flex-col gap-4">
       <ElAlert
         v-if="pageError"
@@ -274,7 +280,11 @@ watch(
                 {{ formatDiagnosticTaskStatus(row.taskStatus) }}
               </template>
             </ElTableColumn>
-            <ElTableColumn label="责任医生" min-width="140" prop="diagnosisDoctorName" />
+            <ElTableColumn
+              label="责任医生"
+              min-width="140"
+              prop="diagnosisDoctorName"
+            />
             <ElTableColumn label="完成时间" min-width="180">
               <template #default="{ row }">
                 {{ formatDateTime(row.completedAt) }}
@@ -288,7 +298,11 @@ watch(
             <ElTableColumn label="版本ID" min-width="180" prop="versionId" />
             <ElTableColumn label="版本号" min-width="100" prop="versionNo" />
             <ElTableColumn label="状态" min-width="120" prop="versionStatus" />
-            <ElTableColumn label="最终诊断快照" min-width="260" prop="finalDiagnosisSnapshot" />
+            <ElTableColumn
+              label="最终诊断快照"
+              min-width="260"
+              prop="finalDiagnosisSnapshot"
+            />
             <ElTableColumn label="签发时间" min-width="180">
               <template #default="{ row }">
                 {{ formatDateTime(row.signedAt) }}
@@ -335,7 +349,11 @@ watch(
                   {{ formatMedicalOrderStatus(row.status) }}
                 </template>
               </ElTableColumn>
-              <ElTableColumn v-if="canCancelMedicalOrder" label="操作" min-width="120">
+              <ElTableColumn
+                v-if="canCancelMedicalOrder"
+                label="操作"
+                min-width="120"
+              >
                 <template #default="{ row }">
                   <ElButton
                     :disabled="row.status !== 'PENDING'"

@@ -4,11 +4,11 @@ import type {
   ChargeItemPageQuery,
   ChargeItemView,
   ConfigCategoryNode,
-  CreateDepartmentRequest,
   CreateBodyPartRequest,
   CreateChargeItemRequest,
   CreateConfigCategoryRequest,
   CreateConfigItemRequest,
+  CreateDepartmentRequest,
   CreateGuidelineCategoryRequest,
   CreateGuidelineRequest,
   CreateMedicalOrderCategoryRequest,
@@ -84,9 +84,12 @@ export function normalizePagedResult<T>(
 export async function listSystemUsers(params: Record<string, unknown>) {
   const page = typeof params.page === 'number' ? params.page : 1;
   const size = typeof params.size === 'number' ? params.size : 10;
-  const result = await requestClient.get<PagedResult<SystemUser>>('/v1/system-users', {
-    params,
-  });
+  const result = await requestClient.get<PagedResult<SystemUser>>(
+    '/v1/system-users',
+    {
+      params,
+    },
+  );
   return normalizePagedResult(result, page, size);
 }
 
@@ -94,7 +97,10 @@ export async function createSystemUser(data: CreateSystemUserRequest) {
   return requestClient.post<SystemUser>('/v1/system-users', data);
 }
 
-export async function updateSystemUser(id: string, data: UpdateSystemUserRequest) {
+export async function updateSystemUser(
+  id: string,
+  data: UpdateSystemUserRequest,
+) {
   return requestPatch<SystemUser>(`/v1/system-users/${id}`, data);
 }
 
@@ -113,7 +119,10 @@ export async function assignSystemUserRoles(
   });
 }
 
-export async function listUserLoginLogs(id: string, params: Record<string, unknown>) {
+export async function listUserLoginLogs(
+  id: string,
+  params: Record<string, unknown>,
+) {
   const page = typeof params.page === 'number' ? params.page : 1;
   const size = typeof params.size === 'number' ? params.size : 10;
   const result = await requestClient.get<PagedResult<UserLoginLog>>(
@@ -179,30 +188,43 @@ export async function listMenus() {
 }
 
 export async function listPermissions() {
-  return normalizeArrayResult(await requestClient.get<PermissionView[]>('/v1/permissions'));
+  return normalizeArrayResult(
+    await requestClient.get<PermissionView[]>('/v1/permissions'),
+  );
 }
 
 export async function listMessageTopics() {
-  return normalizeArrayResult(await requestClient.get<MessageTopicView[]>('/v1/message-topics'));
+  return normalizeArrayResult(
+    await requestClient.get<MessageTopicView[]>('/v1/message-topics'),
+  );
 }
 
 export async function listStatCategories() {
-  return normalizeArrayResult(await requestClient.get<StatCategoryView[]>('/v1/stat-categories'));
+  return normalizeArrayResult(
+    await requestClient.get<StatCategoryView[]>('/v1/stat-categories'),
+  );
 }
 
 export async function listBodyParts() {
-  return normalizeArrayResult(await requestClient.get<BodyPartNode[]>('/v1/body-parts'));
+  return normalizeArrayResult(
+    await requestClient.get<BodyPartNode[]>('/v1/body-parts'),
+  );
 }
 
 export async function listDepartments() {
-  return normalizeArrayResult(await requestClient.get<DepartmentNode[]>('/v1/departments'));
+  return normalizeArrayResult(
+    await requestClient.get<DepartmentNode[]>('/v1/departments'),
+  );
 }
 
 export async function createDepartment(data: CreateDepartmentRequest) {
   return requestClient.post<DepartmentNode>('/v1/departments', data);
 }
 
-export async function updateDepartment(id: string, data: UpdateDepartmentRequest) {
+export async function updateDepartment(
+  id: string,
+  data: UpdateDepartmentRequest,
+) {
   return requestPatch<DepartmentNode>(`/v1/departments/${id}`, data);
 }
 
@@ -236,7 +258,9 @@ export async function deleteBodyPart(id: string) {
 
 export async function listMedicalOrderDicts() {
   return normalizeArrayResult(
-    await requestClient.get<MedicalOrderCategoryNode[]>('/v1/medical-order-dicts'),
+    await requestClient.get<MedicalOrderCategoryNode[]>(
+      '/v1/medical-order-dicts',
+    ),
   );
 }
 
@@ -263,7 +287,9 @@ export async function deleteMedicalOrderCategory(id: string) {
   return requestClient.delete(`/v1/medical-order-dicts/categories/${id}`);
 }
 
-export async function createMedicalOrderItem(data: CreateMedicalOrderItemRequest) {
+export async function createMedicalOrderItem(
+  data: CreateMedicalOrderItemRequest,
+) {
   return requestClient.post('/v1/medical-order-dicts/items', data);
 }
 
@@ -274,7 +300,10 @@ export async function updateMedicalOrderItem(
   return requestPatch(`/v1/medical-order-dicts/items/${id}`, data);
 }
 
-export async function updateMedicalOrderItemEnabled(id: string, enabled: boolean) {
+export async function updateMedicalOrderItemEnabled(
+  id: string,
+  enabled: boolean,
+) {
   return requestPatch(`/v1/medical-order-dicts/items/${id}/enabled`, {
     enabled,
   });
@@ -299,7 +328,10 @@ export async function createChargeItem(data: CreateChargeItemRequest) {
   );
 }
 
-export async function updateChargeItem(id: string, data: UpdateChargeItemRequest) {
+export async function updateChargeItem(
+  id: string,
+  data: UpdateChargeItemRequest,
+) {
   return requestPatch<ChargeItemView>(
     `/v1/medical-order-charge-items/${id}`,
     data,
@@ -325,7 +357,9 @@ export async function exportChargeItems(params: Record<string, unknown>) {
 }
 
 export async function importChargeItems(file: File) {
-  return requestClient.upload('/v1/medical-order-charge-items/import', { file });
+  return requestClient.upload('/v1/medical-order-charge-items/import', {
+    file,
+  });
 }
 
 export async function listMedicalOrderPackagesPage(params: PackagePageQuery) {
@@ -344,20 +378,16 @@ export async function updateMedicalOrderPackage(
   id: string,
   data: UpdatePackageRequest,
 ) {
-  return requestPatch<PackageView>(
-    `/v1/medical-order-packages/${id}`,
-    data,
-  );
+  return requestPatch<PackageView>(`/v1/medical-order-packages/${id}`, data);
 }
 
 export async function updateMedicalOrderPackageEnabled(
   id: string,
   enabled: boolean,
 ) {
-  return requestPatch<PackageView>(
-    `/v1/medical-order-packages/${id}/enabled`,
-    { enabled },
-  );
+  return requestPatch<PackageView>(`/v1/medical-order-packages/${id}/enabled`, {
+    enabled,
+  });
 }
 
 export async function deleteMedicalOrderPackage(id: string) {
@@ -401,11 +431,17 @@ export async function createSamplingTemplate(data: CreateTemplateRequest) {
   return requestClient.post<TemplateDetailView>('/v1/sampling-templates', data);
 }
 
-export async function updateSamplingTemplate(id: string, data: UpdateTemplateRequest) {
+export async function updateSamplingTemplate(
+  id: string,
+  data: UpdateTemplateRequest,
+) {
   return requestPatch<TemplateDetailView>(`/v1/sampling-templates/${id}`, data);
 }
 
-export async function updateSamplingTemplateEnabled(id: string, enabled: boolean) {
+export async function updateSamplingTemplateEnabled(
+  id: string,
+  enabled: boolean,
+) {
   return requestPatch<TemplateDetailView>(
     `/v1/sampling-templates/${id}/enabled`,
     { enabled },
@@ -468,7 +504,10 @@ export async function updateSamplingGuideline(
   );
 }
 
-export async function updateSamplingGuidelineEnabled(id: string, enabled: boolean) {
+export async function updateSamplingGuidelineEnabled(
+  id: string,
+  enabled: boolean,
+) {
   return requestPatch<GuidelineDetailView>(
     `/v1/sampling-guidelines/${id}/enabled`,
     { enabled },
@@ -485,7 +524,9 @@ export async function listSystemConfigs() {
   );
 }
 
-export async function createSystemConfigCategory(data: CreateConfigCategoryRequest) {
+export async function createSystemConfigCategory(
+  data: CreateConfigCategoryRequest,
+) {
   return requestClient.post<ConfigCategoryNode>(
     '/v1/system-configs/categories',
     data,

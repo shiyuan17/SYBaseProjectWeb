@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
-
 import { hasAuthority } from '@vben/utils';
+
+import { describe, expect, it } from 'vitest';
 
 import {
   M4_CONSULTATION_PAGE_AUTHORITIES,
@@ -75,7 +75,9 @@ describe('doctor workflow routes', () => {
     expect(workbenchRoute?.meta?.authority).toEqual([
       M4_PERMISSION_CODES.WORKBENCH_QUERY,
     ]);
-    expect(reportRoute?.meta?.authority).toEqual([...M4_REPORT_PAGE_AUTHORITIES]);
+    expect(reportRoute?.meta?.authority).toEqual([
+      ...M4_REPORT_PAGE_AUTHORITIES,
+    ]);
     expect(frozenReportRoute?.meta?.authority).toEqual([
       ...M4_REPORT_PAGE_AUTHORITIES,
     ]);

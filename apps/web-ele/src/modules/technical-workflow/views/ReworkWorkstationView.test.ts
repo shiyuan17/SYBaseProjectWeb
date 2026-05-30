@@ -1,28 +1,23 @@
-/* eslint-disable vue/one-component-per-file -- Inline stubs keep the regression test focused on routing and payload wiring. */
 import { createApp, defineComponent, h, inject, nextTick, provide } from 'vue';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const tableRowsKey = Symbol('table-rows');
 
-const {
-  messageWarning,
-  mockGetTechnicalTracking,
-  mockRoute,
-  mockRouter,
-} = vi.hoisted(() => ({
-  messageWarning: vi.fn(),
-  mockGetTechnicalTracking: vi.fn(),
-  mockRoute: {
-    query: {
-      caseId: 'BL-001',
-      mode: 'exception',
-    } as Record<string, string>,
-  },
-  mockRouter: {
-    push: vi.fn(),
-  },
-}));
+const { messageWarning, mockGetTechnicalTracking, mockRoute, mockRouter } =
+  vi.hoisted(() => ({
+    messageWarning: vi.fn(),
+    mockGetTechnicalTracking: vi.fn(),
+    mockRoute: {
+      query: {
+        caseId: 'BL-001',
+        mode: 'exception',
+      } as Record<string, string>,
+    },
+    mockRouter: {
+      push: vi.fn(),
+    },
+  }));
 
 vi.mock('vue-router', () => ({
   useRoute: () => mockRoute,
@@ -72,7 +67,13 @@ vi.mock('../components/TechnicalCaseContextPanel.vue', () => ({
 
 vi.mock('../components/ReworkCreateDialog.vue', () => ({
   default: defineComponent({
-    props: ['caseId', 'initialObjectId', 'initialObjectType', 'modelValue', 'trackingResult'],
+    props: [
+      'caseId',
+      'initialObjectId',
+      'initialObjectType',
+      'modelValue',
+      'trackingResult',
+    ],
     emits: ['submitted', 'update:modelValue'],
     setup(props) {
       return () =>
@@ -166,7 +167,10 @@ vi.mock('element-plus', () => {
   const ElTableColumn = defineComponent({
     props: ['label', 'prop'],
     setup(props, { slots }) {
-      const getRows = inject<() => Record<string, unknown>[]>(tableRowsKey, () => []);
+      const getRows = inject<() => Record<string, unknown>[]>(
+        tableRowsKey,
+        () => [],
+      );
       return () =>
         h('section', [
           h('strong', props.label),
@@ -178,7 +182,8 @@ vi.mock('element-plus', () => {
                 : props.prop
                   ? String(row[props.prop] ?? '')
                   : '',
-            )),
+            ),
+          ),
         ]);
     },
   });
@@ -281,7 +286,9 @@ describe('ReworkWorkstationView', () => {
     expect(mockGetTechnicalTracking).toHaveBeenCalledWith('BL-001');
     expect(document.body.textContent).toContain('CASE-001');
 
-    const createDialog = document.querySelector<HTMLElement>('[data-testid="rework-create-dialog"]');
+    const createDialog = document.querySelector<HTMLElement>(
+      '[data-testid="rework-create-dialog"]',
+    );
     expect(createDialog?.dataset.caseId).toBe('CASE-001');
     expect(createDialog?.dataset.visible).toBe('true');
 

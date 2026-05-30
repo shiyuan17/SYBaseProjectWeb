@@ -1166,8 +1166,8 @@ function printApplicationForm() {
 
 :deep(.patient-summary-descriptions .el-descriptions__label) {
   width: 68px;
-  white-space: nowrap;
   font-size: 10px;
+  white-space: nowrap;
 }
 
 :deep(.patient-summary-descriptions .el-descriptions__content) {
@@ -1189,13 +1189,13 @@ function printApplicationForm() {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
   padding: 0 6px;
   font-size: 10px;
   font-weight: 600;
   line-height: 16px;
   color: var(--el-color-primary);
   background: var(--el-color-primary-light-9);
+  border-radius: 999px;
 }
 
 :deep(.patient-section-descriptions .el-descriptions__label),
@@ -1206,8 +1206,8 @@ function printApplicationForm() {
 
 :deep(.patient-section-descriptions .el-descriptions__label) {
   width: 88px;
-  white-space: nowrap;
   font-size: 10px;
+  white-space: nowrap;
 }
 
 :deep(.patient-section-descriptions .el-descriptions__content) {
@@ -1217,23 +1217,23 @@ function printApplicationForm() {
 
 .patient-inline-editor {
   display: flex;
-  align-items: center;
   gap: 6px;
+  align-items: center;
 }
 
 .patient-inline-editor__actions {
   display: inline-flex;
   flex-shrink: 0;
-  align-items: center;
   gap: 4px;
+  align-items: center;
 }
 
 :deep(.patient-inline-editor__button.el-button) {
   width: 24px;
   height: 24px;
   min-height: 24px;
-  margin-left: 0;
   padding: 0;
+  margin-left: 0;
 }
 
 :deep(.patient-inline-editor__button .el-icon) {

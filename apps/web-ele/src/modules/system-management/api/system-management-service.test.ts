@@ -103,7 +103,12 @@ describe('system-management-service requests', () => {
       });
 
     await expect(
-      service.listSystemUsers({ enabled: true, keyword: 'pathology', page: 1, size: 20 }),
+      service.listSystemUsers({
+        enabled: true,
+        keyword: 'pathology',
+        page: 1,
+        size: 20,
+      }),
     ).resolves.toEqual({
       items: [{ id: 'USER-1' }],
       page: 3,
@@ -120,14 +125,18 @@ describe('system-management-service requests', () => {
       total: 0,
     });
 
-    expect(requestClientMock.get).toHaveBeenNthCalledWith(1, '/v1/system-users', {
-      params: {
-        enabled: true,
-        keyword: 'pathology',
-        page: 1,
-        size: 20,
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      1,
+      '/v1/system-users',
+      {
+        params: {
+          enabled: true,
+          keyword: 'pathology',
+          page: 1,
+          size: 20,
+        },
       },
-    });
+    );
     expect(requestClientMock.get).toHaveBeenNthCalledWith(
       2,
       '/v1/system-users/USER-1/login-logs',
@@ -164,12 +173,16 @@ describe('system-management-service requests', () => {
     await service.exportSystemUsers({ enabled: true, keyword: 'sys-user' });
     await service.printSystemUserLoginTag('USER-1');
 
-    expect(requestClientMock.post).toHaveBeenNthCalledWith(1, '/v1/system-users', {
-      enabled: true,
-      loginName: 'sys-user',
-      name: 'System User',
-      password: '123456',
-    });
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      1,
+      '/v1/system-users',
+      {
+        enabled: true,
+        loginName: 'sys-user',
+        name: 'System User',
+        password: '123456',
+      },
+    );
     expect(requestClientMock.request).toHaveBeenNthCalledWith(
       1,
       '/v1/system-users/USER-1',
@@ -192,19 +205,28 @@ describe('system-management-service requests', () => {
         method: 'PATCH',
       },
     );
-    expect(requestClientMock.put).toHaveBeenCalledWith('/v1/system-users/USER-1/roles', {
-      assignments: [{ primary: true, roleId: 'ROLE-1' }],
-    });
-    expect(requestClientMock.upload).toHaveBeenCalledWith('/v1/system-users/import', {
-      file,
-    });
-    expect(requestClientMock.download).toHaveBeenCalledWith('/v1/system-users/export', {
-      params: {
-        enabled: true,
-        keyword: 'sys-user',
+    expect(requestClientMock.put).toHaveBeenCalledWith(
+      '/v1/system-users/USER-1/roles',
+      {
+        assignments: [{ primary: true, roleId: 'ROLE-1' }],
       },
-      responseReturn: 'body',
-    });
+    );
+    expect(requestClientMock.upload).toHaveBeenCalledWith(
+      '/v1/system-users/import',
+      {
+        file,
+      },
+    );
+    expect(requestClientMock.download).toHaveBeenCalledWith(
+      '/v1/system-users/export',
+      {
+        params: {
+          enabled: true,
+          keyword: 'sys-user',
+        },
+        responseReturn: 'body',
+      },
+    );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       2,
       '/v1/system-users/USER-1/print-login-tag',
@@ -214,7 +236,10 @@ describe('system-management-service requests', () => {
   it('covers role authorization and lookup endpoints', async () => {
     requestClientMock.get
       .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ permissionIds: ['PERM_SYS_ROLE_QUERY'], roleId: 'ROLE-1' })
+      .mockResolvedValueOnce({
+        permissionIds: ['PERM_SYS_ROLE_QUERY'],
+        roleId: 'ROLE-1',
+      })
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(undefined)
       .mockResolvedValueOnce(null)
@@ -255,8 +280,14 @@ describe('system-management-service requests', () => {
     );
     expect(requestClientMock.get).toHaveBeenNthCalledWith(3, '/v1/menus');
     expect(requestClientMock.get).toHaveBeenNthCalledWith(4, '/v1/permissions');
-    expect(requestClientMock.get).toHaveBeenNthCalledWith(5, '/v1/message-topics');
-    expect(requestClientMock.get).toHaveBeenNthCalledWith(6, '/v1/stat-categories');
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      5,
+      '/v1/message-topics',
+    );
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      6,
+      '/v1/stat-categories',
+    );
     expect(requestClientMock.get).toHaveBeenNthCalledWith(7, '/v1/body-parts');
     expect(requestClientMock.post).toHaveBeenCalledWith('/v1/roles', {
       enabled: true,
@@ -315,11 +346,15 @@ describe('system-management-service requests', () => {
     await service.deleteBodyPart('BP-1');
 
     expect(requestClientMock.get).toHaveBeenCalledWith('/v1/departments');
-    expect(requestClientMock.post).toHaveBeenNthCalledWith(1, '/v1/departments', {
-      departmentName: 'Pathology',
-      enabled: true,
-      parentId: 'DEPT_ROOT',
-    });
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      1,
+      '/v1/departments',
+      {
+        departmentName: 'Pathology',
+        enabled: true,
+        parentId: 'DEPT_ROOT',
+      },
+    );
     expect(requestClientMock.request).toHaveBeenNthCalledWith(
       1,
       '/v1/departments/DEPT-1',
@@ -343,21 +378,32 @@ describe('system-management-service requests', () => {
         method: 'PATCH',
       },
     );
-    expect(requestClientMock.delete).toHaveBeenNthCalledWith(1, '/v1/departments/DEPT-1');
-    expect(requestClientMock.post).toHaveBeenNthCalledWith(2, '/v1/body-parts', {
-      enabled: true,
-      parentId: 'BP_ROOT',
-      partName: 'Lung',
-    });
-    expect(requestClientMock.request).toHaveBeenNthCalledWith(3, '/v1/body-parts/BP-1', {
-      data: {
+    expect(requestClientMock.delete).toHaveBeenNthCalledWith(
+      1,
+      '/v1/departments/DEPT-1',
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      2,
+      '/v1/body-parts',
+      {
         enabled: true,
         parentId: 'BP_ROOT',
-        partCode: null,
-        partName: 'Updated Lung',
+        partName: 'Lung',
       },
-      method: 'PATCH',
-    });
+    );
+    expect(requestClientMock.request).toHaveBeenNthCalledWith(
+      3,
+      '/v1/body-parts/BP-1',
+      {
+        data: {
+          enabled: true,
+          parentId: 'BP_ROOT',
+          partCode: null,
+          partName: 'Updated Lung',
+        },
+        method: 'PATCH',
+      },
+    );
     expect(requestClientMock.request).toHaveBeenNthCalledWith(
       4,
       '/v1/body-parts/BP-1/enabled',
@@ -368,7 +414,10 @@ describe('system-management-service requests', () => {
         method: 'PATCH',
       },
     );
-    expect(requestClientMock.delete).toHaveBeenNthCalledWith(2, '/v1/body-parts/BP-1');
+    expect(requestClientMock.delete).toHaveBeenNthCalledWith(
+      2,
+      '/v1/body-parts/BP-1',
+    );
   });
 
   it('covers medical-order dictionaries and charge-item endpoints', async () => {
@@ -376,18 +425,20 @@ describe('system-management-service requests', () => {
       type: 'text/csv',
     });
 
-    requestClientMock.get
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({
-        items: null,
-        page: undefined,
-        size: undefined,
-        total: undefined,
-      });
+    requestClientMock.get.mockResolvedValueOnce(null).mockResolvedValueOnce({
+      items: null,
+      page: undefined,
+      size: undefined,
+      total: undefined,
+    });
 
     await expect(service.listMedicalOrderDicts()).resolves.toEqual([]);
     await expect(
-      service.listChargeItemsPage({ orderDictItemId: 'ODI_HE', page: 1, size: 20 } as never),
+      service.listChargeItemsPage({
+        orderDictItemId: 'ODI_HE',
+        page: 1,
+        size: 20,
+      } as never),
     ).resolves.toEqual({
       items: [],
       page: 1,
@@ -439,7 +490,10 @@ describe('system-management-service requests', () => {
     await service.exportChargeItems({ enabled: true, keyword: 'HE' });
     await service.importChargeItems(chargeFile);
 
-    expect(requestClientMock.get).toHaveBeenNthCalledWith(1, '/v1/medical-order-dicts');
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      1,
+      '/v1/medical-order-dicts',
+    );
     expect(requestClientMock.get).toHaveBeenNthCalledWith(
       2,
       '/v1/medical-order-charge-items/page',
@@ -477,11 +531,15 @@ describe('system-management-service requests', () => {
       1,
       '/v1/medical-order-dicts/categories/ODC-1',
     );
-    expect(requestClientMock.post).toHaveBeenNthCalledWith(2, '/v1/medical-order-dicts/items', {
-      categoryId: 'ODC-1',
-      enabled: true,
-      orderItemName: 'HE',
-    });
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      2,
+      '/v1/medical-order-dicts/items',
+      {
+        categoryId: 'ODC-1',
+        enabled: true,
+        orderItemName: 'HE',
+      },
+    );
     expect(requestClientMock.request).toHaveBeenNthCalledWith(
       2,
       '/v1/medical-order-dicts/items/ODI-1',
@@ -573,7 +631,11 @@ describe('system-management-service requests', () => {
     });
 
     await expect(
-      service.listMedicalOrderPackagesPage({ keyword: 'routine', page: 2, size: 50 } as never),
+      service.listMedicalOrderPackagesPage({
+        keyword: 'routine',
+        page: 2,
+        size: 50,
+      } as never),
     ).resolves.toEqual({
       items: [],
       page: 2,
@@ -597,19 +659,25 @@ describe('system-management-service requests', () => {
     await service.updateMedicalOrderPackageEnabled('PKG-1', false);
     await service.deleteMedicalOrderPackage('PKG-1');
 
-    expect(requestClientMock.get).toHaveBeenCalledWith('/v1/medical-order-packages/page', {
-      params: {
-        keyword: 'routine',
-        page: 2,
-        size: 50,
+    expect(requestClientMock.get).toHaveBeenCalledWith(
+      '/v1/medical-order-packages/page',
+      {
+        params: {
+          keyword: 'routine',
+          page: 2,
+          size: 50,
+        },
       },
-    });
-    expect(requestClientMock.post).toHaveBeenCalledWith('/v1/medical-order-packages', {
-      enabled: true,
-      itemIds: ['ODI_HE'],
-      packageName: 'Routine package',
-      packageType: 'PUBLIC',
-    });
+    );
+    expect(requestClientMock.post).toHaveBeenCalledWith(
+      '/v1/medical-order-packages',
+      {
+        enabled: true,
+        itemIds: ['ODI_HE'],
+        packageName: 'Routine package',
+        packageType: 'PUBLIC',
+      },
+    );
     expect(requestClientMock.request).toHaveBeenNthCalledWith(
       1,
       '/v1/medical-order-packages/PKG-1',
@@ -634,7 +702,9 @@ describe('system-management-service requests', () => {
         method: 'PATCH',
       },
     );
-    expect(requestClientMock.delete).toHaveBeenCalledWith('/v1/medical-order-packages/PKG-1');
+    expect(requestClientMock.delete).toHaveBeenCalledWith(
+      '/v1/medical-order-packages/PKG-1',
+    );
   });
 
   it('covers sampling template endpoints', async () => {
@@ -675,8 +745,14 @@ describe('system-management-service requests', () => {
     await service.updateSamplingTemplateEnabled('ST-1', false);
     await service.deleteSamplingTemplate('ST-1');
 
-    expect(requestClientMock.get).toHaveBeenNthCalledWith(1, '/v1/sampling-templates');
-    expect(requestClientMock.get).toHaveBeenNthCalledWith(2, '/v1/sampling-templates/ST-1');
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      1,
+      '/v1/sampling-templates',
+    );
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      2,
+      '/v1/sampling-templates/ST-1',
+    );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       1,
       '/v1/sampling-templates/categories',
@@ -701,12 +777,16 @@ describe('system-management-service requests', () => {
       1,
       '/v1/sampling-templates/categories/STC-1',
     );
-    expect(requestClientMock.post).toHaveBeenNthCalledWith(2, '/v1/sampling-templates', {
-      bodyPartIds: ['BP_STOMACH'],
-      categoryId: 'STC-1',
-      enabled: true,
-      templateName: 'Routine template',
-    });
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      2,
+      '/v1/sampling-templates',
+      {
+        bodyPartIds: ['BP_STOMACH'],
+        categoryId: 'STC-1',
+        enabled: true,
+        templateName: 'Routine template',
+      },
+    );
     expect(requestClientMock.request).toHaveBeenNthCalledWith(
       2,
       '/v1/sampling-templates/ST-1',
@@ -731,13 +811,17 @@ describe('system-management-service requests', () => {
         method: 'PATCH',
       },
     );
-    expect(requestClientMock.delete).toHaveBeenNthCalledWith(2, '/v1/sampling-templates/ST-1');
+    expect(requestClientMock.delete).toHaveBeenNthCalledWith(
+      2,
+      '/v1/sampling-templates/ST-1',
+    );
   });
 
   it('covers sampling guideline endpoints', async () => {
-    requestClientMock.get
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ id: 'SG-1', guidelineName: 'Routine guideline' });
+    requestClientMock.get.mockResolvedValueOnce(null).mockResolvedValueOnce({
+      id: 'SG-1',
+      guidelineName: 'Routine guideline',
+    });
 
     await expect(service.listSamplingGuidelines()).resolves.toEqual([]);
     await expect(service.getSamplingGuidelineDetail('SG-1')).resolves.toEqual({
@@ -770,7 +854,10 @@ describe('system-management-service requests', () => {
     await service.updateSamplingGuidelineEnabled('SG-1', false);
     await service.deleteSamplingGuideline('SG-1');
 
-    expect(requestClientMock.get).toHaveBeenNthCalledWith(1, '/v1/sampling-guidelines');
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      1,
+      '/v1/sampling-guidelines',
+    );
     expect(requestClientMock.get).toHaveBeenNthCalledWith(
       2,
       '/v1/sampling-guidelines/SG-1',
@@ -799,11 +886,15 @@ describe('system-management-service requests', () => {
       1,
       '/v1/sampling-guidelines/categories/SGC-1',
     );
-    expect(requestClientMock.post).toHaveBeenNthCalledWith(2, '/v1/sampling-guidelines', {
-      categoryId: 'SGC-1',
-      enabled: true,
-      guidelineName: 'Routine guideline',
-    });
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      2,
+      '/v1/sampling-guidelines',
+      {
+        categoryId: 'SGC-1',
+        enabled: true,
+        guidelineName: 'Routine guideline',
+      },
+    );
     expect(requestClientMock.request).toHaveBeenNthCalledWith(
       2,
       '/v1/sampling-guidelines/SG-1',
@@ -834,7 +925,9 @@ describe('system-management-service requests', () => {
   });
 
   it('covers system-config and numbering-rule endpoints', async () => {
-    requestClientMock.get.mockResolvedValueOnce(null).mockResolvedValueOnce(undefined);
+    requestClientMock.get
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(undefined);
 
     await expect(service.listSystemConfigs()).resolves.toEqual([]);
     await expect(service.listNumberingRules()).resolves.toEqual([]);
@@ -874,8 +967,14 @@ describe('system-management-service requests', () => {
       seqLength: 4,
     } as never);
 
-    expect(requestClientMock.get).toHaveBeenNthCalledWith(1, '/v1/system-configs');
-    expect(requestClientMock.get).toHaveBeenNthCalledWith(2, '/v1/numbering-rules');
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      1,
+      '/v1/system-configs',
+    );
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      2,
+      '/v1/numbering-rules',
+    );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       1,
       '/v1/system-configs/categories',
@@ -902,12 +1001,16 @@ describe('system-management-service requests', () => {
       1,
       '/v1/system-configs/categories/SCC-1',
     );
-    expect(requestClientMock.post).toHaveBeenNthCalledWith(2, '/v1/system-configs/items', {
-      categoryId: 'SCC-1',
-      configKey: 'template.match',
-      configValue: 'true',
-      enabled: true,
-    });
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      2,
+      '/v1/system-configs/items',
+      {
+        categoryId: 'SCC-1',
+        configKey: 'template.match',
+        configValue: 'true',
+        enabled: true,
+      },
+    );
     expect(requestClientMock.request).toHaveBeenNthCalledWith(
       2,
       '/v1/system-configs/items/SCI-1',

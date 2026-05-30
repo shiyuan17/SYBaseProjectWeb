@@ -33,7 +33,10 @@ import WorkstationTaskFocusPanel from '../components/WorkstationTaskFocusPanel.v
 import { DEFAULT_PAGE_SIZE } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import { useTechnicalWorkflowNavigation } from '../utils/navigation';
-import { buildWorkstationCaseContext, buildWorkstationQueueItems } from '../utils/workstation';
+import {
+  buildWorkstationCaseContext,
+  buildWorkstationQueueItems,
+} from '../utils/workstation';
 
 const route = useRoute();
 const router = useRouter();
@@ -52,7 +55,8 @@ const pendingAutoProcessTaskId = ref('');
 
 const filters = reactive({
   page: 1,
-  pathologyNo: typeof route.query.pathologyNo === 'string' ? route.query.pathologyNo : '',
+  pathologyNo:
+    typeof route.query.pathologyNo === 'string' ? route.query.pathologyNo : '',
   size: DEFAULT_PAGE_SIZE,
   timedOutOnly: route.query.mode === 'exception',
 });
@@ -65,9 +69,13 @@ const currentQuery = computed(() => ({
   timedOutOnly: filters.timedOutOnly,
 }));
 
-const queueItems = computed(() => buildWorkstationQueueItems(pendingItems.value, 'GROSSING'));
+const queueItems = computed(() =>
+  buildWorkstationQueueItems(pendingItems.value, 'GROSSING'),
+);
 const caseContext = computed(() =>
-  trackingResult.value ? buildWorkstationCaseContext(trackingResult.value, 'GROSSING') : null,
+  trackingResult.value
+    ? buildWorkstationCaseContext(trackingResult.value, 'GROSSING')
+    : null,
 );
 
 async function loadTrackingForTask(task: null | PendingTechnicalTaskItem) {
@@ -87,7 +95,8 @@ async function loadTrackingForTask(task: null | PendingTechnicalTaskItem) {
 }
 
 function selectTask(taskId: string, openProcess = false) {
-  const matchedTask = pendingItems.value.find((item) => item.id === taskId) ?? null;
+  const matchedTask =
+    pendingItems.value.find((item) => item.id === taskId) ?? null;
   if (!matchedTask) {
     return;
   }
@@ -110,10 +119,18 @@ async function loadPendingData() {
     pendingItems.value = result.items;
     total.value = result.total;
 
-    const deepLinkedTaskId = typeof route.query.taskId === 'string' ? route.query.taskId : '';
-    const preferredTaskId = pendingAutoProcessTaskId.value || deepLinkedTaskId || selectedTask.value?.id || result.items[0]?.id;
+    const deepLinkedTaskId =
+      typeof route.query.taskId === 'string' ? route.query.taskId : '';
+    const preferredTaskId =
+      pendingAutoProcessTaskId.value ||
+      deepLinkedTaskId ||
+      selectedTask.value?.id ||
+      result.items[0]?.id;
     if (preferredTaskId) {
-      selectTask(preferredTaskId, Boolean(pendingAutoProcessTaskId.value || deepLinkedTaskId));
+      selectTask(
+        preferredTaskId,
+        Boolean(pendingAutoProcessTaskId.value || deepLinkedTaskId),
+      );
     } else {
       selectedTask.value = null;
     }
@@ -191,7 +208,10 @@ void loadPendingData();
           <template #extra>
             <ElButton
               :type="filters.timedOutOnly ? 'danger' : 'default'"
-              @click="filters.timedOutOnly = !filters.timedOutOnly; loadPendingData()"
+              @click="
+                filters.timedOutOnly = !filters.timedOutOnly;
+                loadPendingData();
+              "
             >
               {{ filters.timedOutOnly ? '仅异常' : '全部任务' }}
             </ElButton>
@@ -211,16 +231,26 @@ void loadPendingData();
           >
             <div class="mt-4 flex flex-wrap gap-3">
               <ElButton type="primary" @click="openTaskProcessing">
-                {{ selectedTask?.taskStatus === 'PENDING' ? '开始并处理取材' : '继续处理取材' }}
+                {{
+                  selectedTask?.taskStatus === 'PENDING'
+                    ? '开始并处理取材'
+                    : '继续处理取材'
+                }}
               </ElButton>
               <ElButton
-                @click="navigation.goToTracking({ caseId: selectedTask?.caseId ?? undefined })"
+                @click="
+                  navigation.goToTracking({
+                    caseId: selectedTask?.caseId ?? undefined,
+                  })
+                "
               >
                 查看生产轨迹
               </ElButton>
             </div>
 
-            <div class="mt-4 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
+            <div
+              class="mt-4 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground"
+            >
               取材表单仍沿用当前稳定实现；本次先把任务选择、病例核对和开始/处理入口集中到同一工位视图中。
             </div>
           </WorkstationTaskFocusPanel>
@@ -238,7 +268,10 @@ void loadPendingData();
           </div>
         </WorkflowSectionCard>
 
-        <TechnicalCaseContextPanel :context="caseContext" :loading="trackingLoading" />
+        <TechnicalCaseContextPanel
+          :context="caseContext"
+          :loading="trackingLoading"
+        />
       </div>
     </div>
 
@@ -246,7 +279,9 @@ void loadPendingData();
       v-model="startDialogVisible"
       confirm-text="开始取材"
       remarks-placeholder="必要时补充取材说明"
-      :submit-action="(taskId, payload) => startGrossing({ ...payload, taskId })"
+      :submit-action="
+        (taskId, payload) => startGrossing({ ...payload, taskId })
+      "
       :success-message="(task) => `任务 ${task.id} 已开始取材`"
       :task="selectedTask"
       terminal-placeholder="取材终端编码"

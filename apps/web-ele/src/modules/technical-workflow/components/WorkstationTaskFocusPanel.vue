@@ -40,7 +40,8 @@ withDefaults(
           {{ objectTitle }}
         </div>
         <div class="mt-1 text-xs text-muted-foreground">
-          {{ formatObjectType(task.objectType) }} / {{ formatNullable(task.objectId) }}
+          {{ formatObjectType(task.objectType) }} /
+          {{ formatNullable(task.objectId) }}
         </div>
       </article>
       <article class="rounded-lg border border-border bg-card p-3">
@@ -58,7 +59,9 @@ withDefaults(
           {{ reminderTitle }}
         </div>
         <div class="mt-1 text-xs text-muted-foreground">
-          {{ task.timedOut ? '该任务已超时' : (task.remarks || '当前无额外备注') }}
+          {{
+            task.timedOut ? '该任务已超时' : task.remarks || '当前无额外备注'
+          }}
         </div>
       </article>
       <article class="rounded-lg border border-border bg-card p-3">
@@ -74,11 +77,25 @@ withDefaults(
 
     <ElDescriptions :column="2" border>
       <ElDescriptionsItem label="任务号">{{ task.id }}</ElDescriptionsItem>
-      <ElDescriptionsItem label="病理号">{{ formatNullable(task.pathologyNo) }}</ElDescriptionsItem>
-      <ElDescriptionsItem label="对象类型">{{ formatObjectType(task.objectType) }}</ElDescriptionsItem>
-      <ElDescriptionsItem label="对象编号">{{ formatNullable(task.objectId) }}</ElDescriptionsItem>
+      <ElDescriptionsItem label="病理号">
+        {{ formatNullable(task.pathologyNo) }}
+      </ElDescriptionsItem>
+      <ElDescriptionsItem label="对象类型">
+        {{ formatObjectType(task.objectType) }}
+      </ElDescriptionsItem>
+      <ElDescriptionsItem label="对象编号">
+        {{ formatNullable(task.objectId) }}
+      </ElDescriptionsItem>
       <ElDescriptionsItem label="任务状态">
-        <ElTag :type="task.taskStatus === 'IN_PROGRESS' ? 'warning' : task.timedOut ? 'danger' : 'info'">
+        <ElTag
+          :type="
+            task.taskStatus === 'IN_PROGRESS'
+              ? 'warning'
+              : task.timedOut
+                ? 'danger'
+                : 'info'
+          "
+        >
           {{ formatTaskStatus(task.taskStatus) }}
         </ElTag>
       </ElDescriptionsItem>

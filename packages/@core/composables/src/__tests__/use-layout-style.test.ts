@@ -33,10 +33,9 @@ describe('useLayoutContentStyle', () => {
     );
     vi.spyOn(window, 'innerHeight', 'get').mockReturnValue(800);
     vi.spyOn(window, 'innerWidth', 'get').mockReturnValue(1200);
-    vi.spyOn(
-      HTMLElement.prototype,
-      'getBoundingClientRect',
-    ).mockImplementation(() => rect as DOMRect);
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+      () => rect as DOMRect,
+    );
   });
 
   afterEach(() => {
@@ -48,32 +47,32 @@ describe('useLayoutContentStyle', () => {
   it('observes element size changes when ResizeObserver is available', async () => {
     const observe = vi.fn();
     const disconnect = vi.fn();
-    let triggerResize: null | (() => void) = null;
-    let layoutState: ReturnType<typeof useLayoutContentStyle> | null = null;
+    let triggerResize: (() => void) | null = null;
+    let layoutState: null | ReturnType<typeof useLayoutContentStyle> = null;
 
     globalThis.ResizeObserver = class {
-      constructor(callback: ResizeObserverCallback) {
-        triggerResize = () => callback([], this as ResizeObserver);
-      }
-
       disconnect = disconnect;
 
       observe = observe;
 
       unobserve = vi.fn();
+
+      constructor(callback: ResizeObserverCallback) {
+        triggerResize = () => callback([], this as ResizeObserver);
+      }
     } as never;
 
     const TestComponent = defineComponent({
-      template: '<div ref="contentElement"></div>',
       setup() {
         layoutState = useLayoutContentStyle();
         return layoutState;
       },
+      template: '<div ref="contentElement"></div>',
     });
     const root = document.createElement('div');
     const app = createApp(TestComponent);
 
-    document.body.appendChild(root);
+    document.body.append(root);
     app.mount(root);
     await nextTick();
 
@@ -100,21 +99,21 @@ describe('useLayoutContentStyle', () => {
   });
 
   it('falls back to window resize events when ResizeObserver is unavailable', async () => {
-    let layoutState: ReturnType<typeof useLayoutContentStyle> | null = null;
+    let layoutState: null | ReturnType<typeof useLayoutContentStyle> = null;
 
     globalThis.ResizeObserver = undefined as never;
 
     const TestComponent = defineComponent({
-      template: '<div ref="contentElement"></div>',
       setup() {
         layoutState = useLayoutContentStyle();
         return layoutState;
       },
+      template: '<div ref="contentElement"></div>',
     });
     const root = document.createElement('div');
     const app = createApp(TestComponent);
 
-    document.body.appendChild(root);
+    document.body.append(root);
     app.mount(root);
     await nextTick();
 

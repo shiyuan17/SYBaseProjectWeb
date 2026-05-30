@@ -77,6 +77,42 @@ pnpm lint
 pnpm test:unit
 ```
 
+## Linear 计划同步
+
+仓库内的 Linear 计划同步配置统一放在根目录 `linear-setting.json`，这里只保留 project、team、label 和计划项元数据，不再存放 token。
+
+使用前请先在仓库根目录创建 `.env.local`，或在当前终端会话中注入 `LINEAR_API_TOKEN`：
+
+```bash
+LINEAR_API_TOKEN=your_linear_token
+```
+
+PowerShell 示例：
+
+```powershell
+$env:LINEAR_API_TOKEN = "your_linear_token"
+```
+
+根目录 `.env.local` 示例：
+
+```bash
+LINEAR_API_TOKEN=your_linear_token
+```
+
+`.env.local` 已被 `.gitignore` 忽略，适合放本地私有 token。准备好 token 后，可使用以下命令维护 `JWBL` project 下的健康度计划：
+
+```bash
+pnpm linear:register
+pnpm linear:sync
+pnpm linear:pull
+```
+
+命令说明：
+
+- `pnpm linear:register`：校验 `JWBL` project、`Sidney` team 与 `frontend` 标签，缺失时自动注册标签。
+- `pnpm linear:sync`：把 `linear-setting.json` 中的计划项同步到 Linear，已存在任务按标题做幂等更新。
+- `pnpm linear:pull`：先执行注册校验，再回拉当前计划项与对应的 Linear issue 编号。
+
 开发环境默认保留 `apps/backend-mock`，`apps/web-ele/.env.development` 中 `VITE_NITRO_MOCK=true`，用于本地登录、菜单和基础页面联调。
 
 数据库联调与表结构资料统一归档在 [docs/database](/D:/Github/JW/SYBaseProjectWeb/docs/database)，当前已整理 [表信息整理.sql](/D:/Github/JW/SYBaseProjectWeb/docs/database/表信息整理.sql)。`scripts/` 目录只放可执行脚本，不放纯资料型 SQL。

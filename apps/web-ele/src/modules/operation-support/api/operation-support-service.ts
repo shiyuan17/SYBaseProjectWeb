@@ -43,7 +43,9 @@ export function normalizeArrayResult<T>(value: null | T[] | undefined): T[] {
 
 export async function listArchiveCabinets() {
   return normalizeArrayResult(
-    await requestClient.get<ArchiveCabinetView[] | null>('/v1/archive-cabinets'),
+    await requestClient.get<ArchiveCabinetView[] | null>(
+      '/v1/archive-cabinets',
+    ),
   );
 }
 
@@ -55,7 +57,10 @@ export async function updateArchiveCabinet(
   cabinetId: string,
   data: UpdateArchiveCabinetRequest,
 ) {
-  return requestPatch<ArchiveCabinetView>(`/v1/archive-cabinets/${cabinetId}`, data);
+  return requestPatch<ArchiveCabinetView>(
+    `/v1/archive-cabinets/${cabinetId}`,
+    data,
+  );
 }
 
 export async function listAvailableArchivePositions(params: {
@@ -70,7 +75,9 @@ export async function listAvailableArchivePositions(params: {
   );
 }
 
-export async function archiveApplicationForm(data: ArchiveApplicationFormRequest) {
+export async function archiveApplicationForm(
+  data: ArchiveApplicationFormRequest,
+) {
   return requestClient.post<ArchiveActionResult>(
     '/v1/archive/application-forms',
     data,
@@ -99,9 +106,12 @@ export async function searchArchiveRecords(params: SearchArchiveRecordsQuery) {
 
 export async function listPendingMaterialLoans(params: MaterialLoanQuery) {
   return normalizeArrayResult(
-    await requestClient.get<MaterialLoanView[] | null>('/v1/material-loans/pending', {
-      params,
-    }),
+    await requestClient.get<MaterialLoanView[] | null>(
+      '/v1/material-loans/pending',
+      {
+        params,
+      },
+    ),
   );
 }
 
@@ -124,7 +134,7 @@ export async function listReagents(params: {
   keyword?: string;
 }) {
   return normalizeArrayResult(
-    await requestClient.get<ReagentView[] | null>('/v1/reagents', { params }),
+    await requestClient.get<null | ReagentView[]>('/v1/reagents', { params }),
   );
 }
 
@@ -132,7 +142,10 @@ export async function createReagent(data: CreateReagentRequest) {
   return requestClient.post<ReagentView>('/v1/reagents', data);
 }
 
-export async function updateReagent(reagentId: string, data: UpdateReagentRequest) {
+export async function updateReagent(
+  reagentId: string,
+  data: UpdateReagentRequest,
+) {
   return requestPatch<ReagentView>(`/v1/reagents/${reagentId}`, data);
 }
 
@@ -141,7 +154,7 @@ export async function listReagentStocks(params: {
   stockStatus?: string;
 }) {
   return normalizeArrayResult(
-    await requestClient.get<ReagentStockView[] | null>('/v1/reagent-stocks', {
+    await requestClient.get<null | ReagentStockView[]>('/v1/reagent-stocks', {
       params,
     }),
   );
@@ -160,7 +173,7 @@ export async function updateReagentStock(
 
 export async function listReagentWarnings() {
   return normalizeArrayResult(
-    await requestClient.get<ReagentWarningView[] | null>(
+    await requestClient.get<null | ReagentWarningView[]>(
       '/v1/reagent-stocks/warnings',
     ),
   );
@@ -178,7 +191,9 @@ export async function listEquipmentRecords(params: {
   );
 }
 
-export async function createEquipmentRecord(data: CreateEquipmentRecordRequest) {
+export async function createEquipmentRecord(
+  data: CreateEquipmentRecordRequest,
+) {
   return requestClient.post<EquipmentRecordView>('/v1/equipment-records', data);
 }
 

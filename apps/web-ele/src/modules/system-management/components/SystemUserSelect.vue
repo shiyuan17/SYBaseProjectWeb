@@ -74,7 +74,7 @@ async function remoteSearch(keyword: string) {
       page: 1,
       size: 20,
     });
-    options.value = result.items.map(mapUserOption);
+    options.value = result.items.map((item) => mapUserOption(item));
     ensureSelectedOption();
   } finally {
     loading.value = false;

@@ -15,9 +15,9 @@ defineProps<{
         </p>
       </div>
       <div v-if="$slots.extra" class="shrink-0">
-        <slot name="extra" />
+        <slot name="extra"></slot>
       </div>
     </header>
-    <slot />
+    <slot></slot>
   </section>
 </template>

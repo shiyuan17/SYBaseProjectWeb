@@ -44,13 +44,15 @@ function getItemStyle(item: WorkstationQueueItem) {
   if (item.alertLevel === 'danger') {
     return {
       backgroundColor: 'color-mix(in srgb, var(--el-color-danger) 6%, white)',
-      borderColor: 'color-mix(in srgb, var(--el-color-danger) 35%, var(--el-border-color))',
+      borderColor:
+        'color-mix(in srgb, var(--el-color-danger) 35%, var(--el-border-color))',
     };
   }
   if (item.alertLevel === 'warning') {
     return {
       backgroundColor: 'color-mix(in srgb, var(--el-color-warning) 6%, white)',
-      borderColor: 'color-mix(in srgb, var(--el-color-warning) 35%, var(--el-border-color))',
+      borderColor:
+        'color-mix(in srgb, var(--el-color-warning) 35%, var(--el-border-color))',
     };
   }
   return undefined;
@@ -66,7 +68,10 @@ function getItemStyle(item: WorkstationQueueItem) {
 
     <ElSkeleton v-if="loading && !hasItems" :rows="6" animated />
 
-    <div v-else-if="hasItems" class="flex max-h-[70vh] flex-col gap-3 overflow-y-auto pr-1">
+    <div
+      v-else-if="hasItems"
+      class="flex max-h-[70vh] flex-col gap-3 overflow-y-auto pr-1"
+    >
       <button
         v-for="item in items"
         :key="item.task.id"
@@ -81,10 +86,19 @@ function getItemStyle(item: WorkstationQueueItem) {
               {{ formatNullable(item.task.pathologyNo) }}
             </div>
             <div class="mt-1 text-xs text-muted-foreground">
-              {{ formatObjectType(item.task.objectType) }} / {{ formatNullable(item.task.objectId) }}
+              {{ formatObjectType(item.task.objectType) }} /
+              {{ formatNullable(item.task.objectId) }}
             </div>
           </div>
-          <ElTag :type="item.alertLevel === 'danger' ? 'danger' : item.alertLevel === 'warning' ? 'warning' : 'info'">
+          <ElTag
+            :type="
+              item.alertLevel === 'danger'
+                ? 'danger'
+                : item.alertLevel === 'warning'
+                  ? 'warning'
+                  : 'info'
+            "
+          >
             {{ formatTaskStatus(item.task.taskStatus) }}
           </ElTag>
         </div>
@@ -95,7 +109,13 @@ function getItemStyle(item: WorkstationQueueItem) {
             :key="badge"
             effect="plain"
             size="small"
-            :type="badge === '超时' ? 'danger' : badge === '处理中' ? 'warning' : 'info'"
+            :type="
+              badge === '超时'
+                ? 'danger'
+                : badge === '处理中'
+                  ? 'warning'
+                  : 'info'
+            "
           >
             {{ badge }}
           </ElTag>

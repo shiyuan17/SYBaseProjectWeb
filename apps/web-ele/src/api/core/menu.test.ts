@@ -9,19 +9,19 @@ import {
   M4_REVISION_PAGE_AUTHORITIES,
 } from '#/modules/doctor-workflow/constants';
 import {
-  M5_ARCHIVE_PAGE_AUTHORITIES,
-  M5_EQUIPMENT_PAGE_AUTHORITIES,
-  M5_REAGENT_PAGE_AUTHORITIES,
-} from '#/modules/operation-support/constants';
-import {
   M6_BILLING_PAGE_AUTHORITIES,
   M6_HISTORY_PAGE_AUTHORITIES,
   M6_INTEGRATION_PAGE_AUTHORITIES,
   M6_PERMISSION_CODES,
   M6_STATISTICS_PAGE_AUTHORITIES,
 } from '#/modules/m6-management/constants';
-import { M1_PERMISSION_CODES } from '#/modules/system-management/constants';
+import {
+  M5_ARCHIVE_PAGE_AUTHORITIES,
+  M5_EQUIPMENT_PAGE_AUTHORITIES,
+  M5_REAGENT_PAGE_AUTHORITIES,
+} from '#/modules/operation-support/constants';
 import { M2_PERMISSION_CODES } from '#/modules/specimen-workflow/constants';
+import { M1_PERMISSION_CODES } from '#/modules/system-management/constants';
 import { M3_PERMISSION_CODES } from '#/modules/technical-workflow/constants';
 import doctorWorkflowRoutes from '#/router/routes/modules/doctor-workflow';
 import m6Routes from '#/router/routes/modules/m6';
@@ -755,7 +755,9 @@ describe('getBackendFirstMenuRoutes', () => {
 
 describe('system management route access', () => {
   it('keeps page routes registered with query permission authorities', () => {
-    const systemRoot = systemRoutes.find((route) => route.name === 'SystemRoot');
+    const systemRoot = systemRoutes.find(
+      (route) => route.name === 'SystemRoot',
+    );
     const systemUserRoute = systemRoot?.children?.find(
       (route) => route.name === 'SystemUsers',
     );
@@ -774,10 +776,14 @@ describe('system management route access', () => {
   });
 
   it('does not use legacy system permission keys as page authorities', () => {
-    const systemRoot = systemRoutes.find((route) => route.name === 'SystemRoot');
+    const systemRoot = systemRoutes.find(
+      (route) => route.name === 'SystemRoot',
+    );
     const authorities = [
       ...(systemRoot?.meta?.authority ?? []),
-      ...(systemRoot?.children ?? []).flatMap((route) => route.meta?.authority ?? []),
+      ...(systemRoot?.children ?? []).flatMap(
+        (route) => route.meta?.authority ?? [],
+      ),
     ];
 
     expect(authorities).toEqual(
@@ -793,7 +799,9 @@ describe('system management route access', () => {
 
 describe('workflow route access', () => {
   it('keeps M2 consolidated pages registered with workstation authorities', () => {
-    const workflowRoot = workflowRoutes.find((route) => route.name === 'WorkflowRoot');
+    const workflowRoot = workflowRoutes.find(
+      (route) => route.name === 'WorkflowRoot',
+    );
     const submissionRoute = workflowRoot?.children?.find(
       (route) => route.name === 'SubmissionRegistration',
     );
@@ -887,7 +895,9 @@ describe('doctor workflow route access', () => {
       (route) => route.name === 'ReportRevision',
     );
 
-    expect(reportRoute?.meta?.authority).toEqual([...M4_REPORT_PAGE_AUTHORITIES]);
+    expect(reportRoute?.meta?.authority).toEqual([
+      ...M4_REPORT_PAGE_AUTHORITIES,
+    ]);
     expect(frozenReportRoute?.meta?.authority).toEqual([
       ...M4_REPORT_PAGE_AUTHORITIES,
     ]);

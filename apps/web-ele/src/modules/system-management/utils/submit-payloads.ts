@@ -31,14 +31,14 @@ type StringLike = null | string | undefined;
 type ReadonlyCodeMode = 'create' | 'edit';
 
 function toNullableString(value: StringLike) {
-  return value ? value : null;
+  return value || null;
 }
 
 function withReadonlyCodeField<T extends object, K extends string>(
   payload: T,
   codeField: K,
   mode: ReadonlyCodeMode,
-): T | (T & Record<K, null>) {
+): (Record<K, null> & T) | T {
   if (mode === 'create') {
     return payload;
   }
@@ -46,15 +46,18 @@ function withReadonlyCodeField<T extends object, K extends string>(
   return {
     ...payload,
     [codeField]: null,
-  } as T & Record<K, null>;
+  } as Record<K, null> & T;
 }
 
-export function buildDepartmentSubmitPayload(form: {
-  departmentName: string;
-  enabled: boolean;
-  parentId?: StringLike;
-  sortOrder: number;
-}, mode: ReadonlyCodeMode): CreateDepartmentRequest | UpdateDepartmentRequest {
+export function buildDepartmentSubmitPayload(
+  form: {
+    departmentName: string;
+    enabled: boolean;
+    parentId?: StringLike;
+    sortOrder: number;
+  },
+  mode: ReadonlyCodeMode,
+): CreateDepartmentRequest | UpdateDepartmentRequest {
   return withReadonlyCodeField(
     {
       departmentName: form.departmentName,
@@ -67,14 +70,17 @@ export function buildDepartmentSubmitPayload(form: {
   );
 }
 
-export function buildBodyPartSubmitPayload(form: {
-  enabled: boolean;
-  parentId?: StringLike;
-  partAlias?: StringLike;
-  partLevel: number;
-  partName: string;
-  sortOrder: number;
-}, mode: ReadonlyCodeMode): CreateBodyPartRequest | UpdateBodyPartRequest {
+export function buildBodyPartSubmitPayload(
+  form: {
+    enabled: boolean;
+    parentId?: StringLike;
+    partAlias?: StringLike;
+    partLevel: number;
+    partName: string;
+    sortOrder: number;
+  },
+  mode: ReadonlyCodeMode,
+): CreateBodyPartRequest | UpdateBodyPartRequest {
   return withReadonlyCodeField(
     {
       enabled: form.enabled,
@@ -89,13 +95,16 @@ export function buildBodyPartSubmitPayload(form: {
   );
 }
 
-export function buildRoleSubmitPayload(form: {
-  dataScope?: StringLike;
-  enabled: boolean;
-  remarks?: StringLike;
-  roleName: string;
-  roleType?: StringLike;
-}, mode: ReadonlyCodeMode): CreateRoleRequest | UpdateRoleRequest {
+export function buildRoleSubmitPayload(
+  form: {
+    dataScope?: StringLike;
+    enabled: boolean;
+    remarks?: StringLike;
+    roleName: string;
+    roleType?: StringLike;
+  },
+  mode: ReadonlyCodeMode,
+): CreateRoleRequest | UpdateRoleRequest {
   return withReadonlyCodeField(
     {
       dataScope: toNullableString(form.dataScope),
@@ -163,12 +172,15 @@ export function buildSystemUserUpdatePayload(form: {
   };
 }
 
-export function buildMedicalOrderCategorySubmitPayload(form: {
-  categoryName: string;
-  enabled: boolean;
-  parentId?: StringLike;
-  sortOrder: number;
-}, mode: ReadonlyCodeMode): CreateMedicalOrderCategoryRequest | UpdateMedicalOrderCategoryRequest {
+export function buildMedicalOrderCategorySubmitPayload(
+  form: {
+    categoryName: string;
+    enabled: boolean;
+    parentId?: StringLike;
+    sortOrder: number;
+  },
+  mode: ReadonlyCodeMode,
+): CreateMedicalOrderCategoryRequest | UpdateMedicalOrderCategoryRequest {
   return withReadonlyCodeField(
     {
       categoryName: form.categoryName,
@@ -181,15 +193,18 @@ export function buildMedicalOrderCategorySubmitPayload(form: {
   );
 }
 
-export function buildMedicalOrderItemSubmitPayload(form: {
-  categoryId: string;
-  defaultContent?: StringLike;
-  enabled: boolean;
-  executionScope?: StringLike;
-  orderItemName: string;
-  orderType?: StringLike;
-  sortOrder: number;
-}, mode: ReadonlyCodeMode): CreateMedicalOrderItemRequest | UpdateMedicalOrderItemRequest {
+export function buildMedicalOrderItemSubmitPayload(
+  form: {
+    categoryId: string;
+    defaultContent?: StringLike;
+    enabled: boolean;
+    executionScope?: StringLike;
+    orderItemName: string;
+    orderType?: StringLike;
+    sortOrder: number;
+  },
+  mode: ReadonlyCodeMode,
+): CreateMedicalOrderItemRequest | UpdateMedicalOrderItemRequest {
   return withReadonlyCodeField(
     {
       categoryId: form.categoryId,
@@ -205,15 +220,18 @@ export function buildMedicalOrderItemSubmitPayload(form: {
   );
 }
 
-export function buildChargeItemSubmitPayload(form: {
-  chargeItemName: string;
-  enabled: boolean;
-  orderDictItemId: string;
-  price: number;
-  sortOrder: number;
-  specification?: StringLike;
-  unit?: StringLike;
-}, mode: ReadonlyCodeMode): CreateChargeItemRequest | UpdateChargeItemRequest {
+export function buildChargeItemSubmitPayload(
+  form: {
+    chargeItemName: string;
+    enabled: boolean;
+    orderDictItemId: string;
+    price: number;
+    sortOrder: number;
+    specification?: StringLike;
+    unit?: StringLike;
+  },
+  mode: ReadonlyCodeMode,
+): CreateChargeItemRequest | UpdateChargeItemRequest {
   return withReadonlyCodeField(
     {
       chargeItemName: form.chargeItemName,
@@ -229,14 +247,17 @@ export function buildChargeItemSubmitPayload(form: {
   );
 }
 
-export function buildPackageSubmitPayload(form: {
-  enabled: boolean;
-  itemIds: string[];
-  ownerUserId?: StringLike;
-  packageName: string;
-  packageType?: StringLike;
-  remarks?: StringLike;
-}, mode: ReadonlyCodeMode): CreatePackageRequest | UpdatePackageRequest {
+export function buildPackageSubmitPayload(
+  form: {
+    enabled: boolean;
+    itemIds: string[];
+    ownerUserId?: StringLike;
+    packageName: string;
+    packageType?: StringLike;
+    remarks?: StringLike;
+  },
+  mode: ReadonlyCodeMode,
+): CreatePackageRequest | UpdatePackageRequest {
   return withReadonlyCodeField(
     {
       enabled: form.enabled,
@@ -251,12 +272,15 @@ export function buildPackageSubmitPayload(form: {
   );
 }
 
-export function buildTemplateCategorySubmitPayload(form: {
-  categoryName: string;
-  enabled: boolean;
-  parentId?: StringLike;
-  sortOrder: number;
-}, mode: ReadonlyCodeMode): CreateTemplateCategoryRequest | UpdateTemplateCategoryRequest {
+export function buildTemplateCategorySubmitPayload(
+  form: {
+    categoryName: string;
+    enabled: boolean;
+    parentId?: StringLike;
+    sortOrder: number;
+  },
+  mode: ReadonlyCodeMode,
+): CreateTemplateCategoryRequest | UpdateTemplateCategoryRequest {
   return withReadonlyCodeField(
     {
       categoryName: form.categoryName,
@@ -269,15 +293,18 @@ export function buildTemplateCategorySubmitPayload(form: {
   );
 }
 
-export function buildTemplateSubmitPayload(form: {
-  applicableSpecimenType?: StringLike;
-  bodyPartIds: string[];
-  categoryId: string;
-  enabled: boolean;
-  splitPartCount: number;
-  templateContent?: StringLike;
-  templateName: string;
-}, mode: ReadonlyCodeMode): CreateTemplateRequest | UpdateTemplateRequest {
+export function buildTemplateSubmitPayload(
+  form: {
+    applicableSpecimenType?: StringLike;
+    bodyPartIds: string[];
+    categoryId: string;
+    enabled: boolean;
+    splitPartCount: number;
+    templateContent?: StringLike;
+    templateName: string;
+  },
+  mode: ReadonlyCodeMode,
+): CreateTemplateRequest | UpdateTemplateRequest {
   return withReadonlyCodeField(
     {
       applicableSpecimenType: toNullableString(form.applicableSpecimenType),
@@ -293,12 +320,15 @@ export function buildTemplateSubmitPayload(form: {
   );
 }
 
-export function buildGuidelineCategorySubmitPayload(form: {
-  categoryName: string;
-  enabled: boolean;
-  parentId?: StringLike;
-  sortOrder: number;
-}, mode: ReadonlyCodeMode): CreateGuidelineCategoryRequest | UpdateGuidelineCategoryRequest {
+export function buildGuidelineCategorySubmitPayload(
+  form: {
+    categoryName: string;
+    enabled: boolean;
+    parentId?: StringLike;
+    sortOrder: number;
+  },
+  mode: ReadonlyCodeMode,
+): CreateGuidelineCategoryRequest | UpdateGuidelineCategoryRequest {
   return withReadonlyCodeField(
     {
       categoryName: form.categoryName,
@@ -311,13 +341,16 @@ export function buildGuidelineCategorySubmitPayload(form: {
   );
 }
 
-export function buildGuidelineSubmitPayload(form: {
-  categoryId: string;
-  enabled: boolean;
-  guidelineContent?: StringLike;
-  guidelineName: string;
-  versionNo?: StringLike;
-}, mode: ReadonlyCodeMode): CreateGuidelineRequest | UpdateGuidelineRequest {
+export function buildGuidelineSubmitPayload(
+  form: {
+    categoryId: string;
+    enabled: boolean;
+    guidelineContent?: StringLike;
+    guidelineName: string;
+    versionNo?: StringLike;
+  },
+  mode: ReadonlyCodeMode,
+): CreateGuidelineRequest | UpdateGuidelineRequest {
   return withReadonlyCodeField(
     {
       categoryId: form.categoryId,
@@ -331,13 +364,16 @@ export function buildGuidelineSubmitPayload(form: {
   );
 }
 
-export function buildConfigCategorySubmitPayload(form: {
-  categoryName: string;
-  categoryType?: StringLike;
-  enabled: boolean;
-  parentId?: StringLike;
-  sortOrder: number;
-}, mode: ReadonlyCodeMode): CreateConfigCategoryRequest | UpdateConfigCategoryRequest {
+export function buildConfigCategorySubmitPayload(
+  form: {
+    categoryName: string;
+    categoryType?: StringLike;
+    enabled: boolean;
+    parentId?: StringLike;
+    sortOrder: number;
+  },
+  mode: ReadonlyCodeMode,
+): CreateConfigCategoryRequest | UpdateConfigCategoryRequest {
   return withReadonlyCodeField(
     {
       categoryName: form.categoryName,

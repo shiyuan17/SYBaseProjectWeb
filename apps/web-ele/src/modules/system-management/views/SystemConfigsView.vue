@@ -42,7 +42,11 @@ import SystemStatusTag from '../components/SystemStatusTag.vue';
 import { M1_PERMISSION_CODES } from '../constants';
 import { getSystemPageErrorMessage } from '../utils/error';
 import { buildConfigCategorySubmitPayload } from '../utils/submit-payloads';
-import { filterTreeByKeyword, findTreeNodeById, getTreeExpandedKeys } from '../utils/tree';
+import {
+  filterTreeByKeyword,
+  findTreeNodeById,
+  getTreeExpandedKeys,
+} from '../utils/tree';
 
 const loading = ref(false);
 const dialogLoading = ref(false);
@@ -79,7 +83,11 @@ const itemForm = reactive<CreateConfigItemRequest & { id?: string }>({
 });
 
 const filteredTree = computed(() =>
-  filterTreeByKeyword(treeData.value, (node) => node.categoryName, keyword.value),
+  filterTreeByKeyword(
+    treeData.value,
+    (node) => node.categoryName,
+    keyword.value,
+  ),
 );
 const expandedKeys = computed(() => getTreeExpandedKeys(filteredTree.value));
 const selectedCategory = computed(() =>
@@ -188,7 +196,10 @@ async function submitCategory() {
       await createSystemConfigCategory(payload);
       ElMessage.success('配置分类已创建');
     } else {
-      await updateSystemConfigCategory(categoryForm.id, payload as UpdateConfigCategoryRequest);
+      await updateSystemConfigCategory(
+        categoryForm.id,
+        payload as UpdateConfigCategoryRequest,
+      );
       ElMessage.success('配置分类已更新');
     }
     categoryDialogVisible.value = false;
@@ -255,7 +266,10 @@ onMounted(loadData);
       @retry="loadData"
     />
     <div class="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-      <SystemSectionCard title="配置分类树" description="搜索配置分类并切换配置项列表。">
+      <SystemSectionCard
+        title="配置分类树"
+        description="搜索配置分类并切换配置项列表。"
+      >
         <template #extra>
           <ElButton
             v-access:code="M1_PERMISSION_CODES.CONFIG_UPDATE"
@@ -280,7 +294,10 @@ onMounted(loadData);
       </SystemSectionCard>
 
       <div class="flex flex-col gap-4">
-        <SystemSectionCard title="分类详情" description="维护分类基础信息和子分类。">
+        <SystemSectionCard
+          title="分类详情"
+          description="维护分类基础信息和子分类。"
+        >
           <template #extra>
             <ElButton
               v-if="selectedCategory"
@@ -322,7 +339,10 @@ onMounted(loadData);
           </div>
         </SystemSectionCard>
 
-        <SystemSectionCard title="配置项列表" description="更新配置值、备注和启停状态。">
+        <SystemSectionCard
+          title="配置项列表"
+          description="更新配置值、备注和启停状态。"
+        >
           <template #extra>
             <ElButton
               v-access:code="M1_PERMISSION_CODES.CONFIG_UPDATE"
@@ -341,7 +361,10 @@ onMounted(loadData);
             <ElTableColumn label="值类型" min-width="120" prop="valueType" />
             <ElTableColumn label="状态" width="90">
               <template #default="scope">
-                <SystemStatusTag v-if="scope?.row" :enabled="scope.row.enabled" />
+                <SystemStatusTag
+                  v-if="scope?.row"
+                  :enabled="scope.row.enabled"
+                />
               </template>
             </ElTableColumn>
             <ElTableColumn fixed="right" label="操作" min-width="150">
@@ -395,7 +418,11 @@ onMounted(loadData);
       </ElForm>
       <template #footer>
         <ElButton @click="categoryDialogVisible = false">取消</ElButton>
-        <ElButton :loading="dialogLoading" type="primary" @click="submitCategory">
+        <ElButton
+          :loading="dialogLoading"
+          type="primary"
+          @click="submitCategory"
+        >
           保存
         </ElButton>
       </template>
@@ -408,19 +435,32 @@ onMounted(loadData);
     >
       <ElForm label-width="108px">
         <ElFormItem label="配置键" required>
-          <ElInput v-model="itemForm.configKey" :disabled="itemDialogMode === 'edit'" />
+          <ElInput
+            v-model="itemForm.configKey"
+            :disabled="itemDialogMode === 'edit'"
+          />
         </ElFormItem>
         <ElFormItem label="配置名称" required>
-          <ElInput v-model="itemForm.configName" :disabled="itemDialogMode === 'edit'" />
+          <ElInput
+            v-model="itemForm.configName"
+            :disabled="itemDialogMode === 'edit'"
+          />
         </ElFormItem>
         <ElFormItem label="配置值">
           <ElInput v-model="itemForm.configValue" type="textarea" />
         </ElFormItem>
         <ElFormItem label="值类型">
-          <ElInput v-model="itemForm.valueType" :disabled="itemDialogMode === 'edit'" />
+          <ElInput
+            v-model="itemForm.valueType"
+            :disabled="itemDialogMode === 'edit'"
+          />
         </ElFormItem>
         <ElFormItem label="排序">
-          <ElInputNumber v-model="itemForm.sortOrder" :disabled="itemDialogMode === 'edit'" :min="0" />
+          <ElInputNumber
+            v-model="itemForm.sortOrder"
+            :disabled="itemDialogMode === 'edit'"
+            :min="0"
+          />
         </ElFormItem>
         <ElFormItem label="备注">
           <ElInput v-model="itemForm.remarks" type="textarea" />

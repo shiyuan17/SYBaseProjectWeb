@@ -77,7 +77,9 @@ function resetDialogState() {
   assignTechnicalOperatorForm(operatorForm, userStore.userInfo ?? undefined);
   completeForm.deviceCode = '';
   completeForm.embeddingBoxId =
-    props.task?.objectType === 'EMBEDDING_BOX' ? props.task.objectId ?? '' : '';
+    props.task?.objectType === 'EMBEDDING_BOX'
+      ? (props.task.objectId ?? '')
+      : '';
   completeForm.qualityIssue = '';
   completeForm.slideCount = 1;
   completeForm.sliceCountPerSlide = 1;
@@ -173,10 +175,18 @@ watch(
         />
         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <ElFormItem label="包埋盒编号" required>
-            <ElInput v-model="completeForm.embeddingBoxId" placeholder="由当前任务带入" readonly />
+            <ElInput
+              v-model="completeForm.embeddingBoxId"
+              placeholder="由当前任务带入"
+              readonly
+            />
           </ElFormItem>
           <ElFormItem label="玻片数量" required>
-            <ElInputNumber v-model="completeForm.slideCount" :min="1" class="w-full" />
+            <ElInputNumber
+              v-model="completeForm.slideCount"
+              :min="1"
+              class="w-full"
+            />
           </ElFormItem>
           <ElFormItem label="每片切片数">
             <ElInputNumber
@@ -186,10 +196,16 @@ watch(
             />
           </ElFormItem>
           <ElFormItem label="切片厚度">
-            <ElInput v-model="completeForm.sliceThickness" placeholder="例如：4μm" />
+            <ElInput
+              v-model="completeForm.sliceThickness"
+              placeholder="例如：4μm"
+            />
           </ElFormItem>
           <ElFormItem label="设备编码">
-            <ElInput v-model="completeForm.deviceCode" placeholder="请输入设备编码" />
+            <ElInput
+              v-model="completeForm.deviceCode"
+              placeholder="请输入设备编码"
+            />
           </ElFormItem>
         </div>
         <ElFormItem label="质量问题">

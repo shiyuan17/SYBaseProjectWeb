@@ -21,7 +21,7 @@ import { useCssVar, useDebounceFn } from '@vueuse/core';
  * @zh_CN content style
  */
 export function useLayoutContentStyle() {
-  let stopObserveResize: null | (() => void) = null;
+  let stopObserveResize: (() => void) | null = null;
   const contentElement = ref<HTMLDivElement | null>(null);
   const visibleDomRect = ref<null | VisibleDomRect>(null);
   const contentHeight = useCssVar(CSS_VARIABLE_LAYOUT_CONTENT_HEIGHT);

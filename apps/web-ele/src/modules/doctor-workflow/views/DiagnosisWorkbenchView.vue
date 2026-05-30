@@ -16,9 +16,9 @@ import { useAccessStore, useUserStore } from '@vben/stores';
 import {
   ElAlert,
   ElButton,
-  ElDialog,
   ElDescriptions,
   ElDescriptionsItem,
+  ElDialog,
   ElEmpty,
   ElForm,
   ElFormItem,
@@ -32,11 +32,6 @@ import {
 } from 'element-plus';
 
 import {
-  M4_MEDICAL_ORDER_PAGE_AUTHORITIES,
-  M4_PERMISSION_CODES,
-  M4_REPORT_PAGE_AUTHORITIES,
-} from '../constants';
-import {
   acceptDiagnosticTask,
   cancelMedicalOrder,
   createMedicalOrder,
@@ -44,6 +39,11 @@ import {
   startDiagnosticTask,
 } from '../api/doctor-workflow-service';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
+import {
+  M4_MEDICAL_ORDER_PAGE_AUTHORITIES,
+  M4_PERMISSION_CODES,
+  M4_REPORT_PAGE_AUTHORITIES,
+} from '../constants';
 import { getDoctorWorkflowPageErrorMessage } from '../utils/error';
 import {
   formatDateTime,
@@ -99,7 +99,9 @@ const canCancelMedicalOrder = computed(() =>
   accessCodeSet.value.has(M4_PERMISSION_CODES.MEDICAL_ORDER_CANCEL),
 );
 const canOpenMedicalOrders = computed(() =>
-  M4_MEDICAL_ORDER_PAGE_AUTHORITIES.some((code) => accessCodeSet.value.has(code)),
+  M4_MEDICAL_ORDER_PAGE_AUTHORITIES.some((code) =>
+    accessCodeSet.value.has(code),
+  ),
 );
 
 const MEDICAL_ORDER_TYPE_OPTIONS = [
@@ -113,7 +115,7 @@ function matchesAllowedStatus(
   status: string,
   allowedStatuses: readonly string[],
 ) {
-  return allowedStatuses.some((allowedStatus) => allowedStatus === status);
+  return allowedStatuses.includes(status);
 }
 
 const selectedTask = computed(() => {
@@ -135,12 +137,11 @@ const selectedTaskAssigneeLabel = computed(() => {
     return '';
   }
 
-  const labels = [
-    task.diagnosisDoctorName,
-    task.primaryDoctorName,
-  ].filter((value): value is string => Boolean(value?.trim()));
+  const labels = [task.diagnosisDoctorName, task.primaryDoctorName].filter(
+    (value): value is string => Boolean(value?.trim()),
+  );
 
-  return labels.length > 0 ? Array.from(new Set(labels)).join(' / ') : '';
+  return labels.length > 0 ? [...new Set(labels)].join(' / ') : '';
 });
 
 const isAssignedToCurrentUser = computed(() => {
@@ -149,9 +150,9 @@ const isAssignedToCurrentUser = computed(() => {
 
   return Boolean(
     task &&
-      userId &&
-      (userId === task.diagnosisDoctorUserId ||
-        userId === task.primaryDoctorUserId),
+    userId &&
+    (userId === task.diagnosisDoctorUserId ||
+      userId === task.primaryDoctorUserId),
   );
 });
 
@@ -175,7 +176,7 @@ const canStartSelectedTask = computed(() => {
 
 function buildTaskActionBlockedMessage(
   action: 'accept' | 'start',
-  task: PendingDiagnosticTaskItem | null,
+  task: null | PendingDiagnosticTaskItem,
 ) {
   if (!task) {
     return '当前病例没有可操作的诊断任务';
@@ -215,7 +216,9 @@ const acceptBlockedMessage = computed(() =>
 );
 
 const startBlockedMessage = computed(() =>
-  canStart.value ? buildTaskActionBlockedMessage('start', selectedTask.value) : '',
+  canStart.value
+    ? buildTaskActionBlockedMessage('start', selectedTask.value)
+    : '',
 );
 
 const taskActionHint = computed(
@@ -282,7 +285,7 @@ function handleReset() {
 
 async function runTaskAction(
   action: 'accept' | 'start',
-  task: PendingDiagnosticTaskItem | null,
+  task: null | PendingDiagnosticTaskItem,
 ) {
   if (action === 'accept' && !canAccept.value) {
     ElMessage.warning('当前账号没有接单权限');
@@ -306,13 +309,18 @@ async function runTaskAction(
     return;
   }
 
+  if (!task) {
+    ElMessage.warning('褰撳墠娌℃湁鍙搷浣滅殑璇婃柇浠诲姟');
+    return;
+  }
+
   operating.value = true;
   try {
     if (action === 'accept') {
-      await acceptDiagnosticTask(task!.id, actionForm);
+      await acceptDiagnosticTask(task.id, actionForm);
       ElMessage.success('诊断任务已接单');
     } else {
-      await startDiagnosticTask(task!.id, actionForm);
+      await startDiagnosticTask(task.id, actionForm);
       ElMessage.success('诊断任务已开始');
     }
     await loadWorkbench();
@@ -350,7 +358,8 @@ function openMedicalOrderDialog() {
   }
 
   medicalOrderForm.caseId = caseId.value;
-  medicalOrderForm.operatorName = currentUserName.value || actionForm.operatorName;
+  medicalOrderForm.operatorName =
+    currentUserName.value || actionForm.operatorName;
   medicalOrderForm.operatorUserId = currentUserId.value;
   medicalOrderForm.orderContent = '';
   medicalOrderForm.orderType = '';
@@ -496,7 +505,11 @@ watch(
             />
           </ElFormItem>
           <ElFormItem>
-            <ElButton :loading="loading" type="primary" @click="searchWorkbench">
+            <ElButton
+              :loading="loading"
+              type="primary"
+              @click="searchWorkbench"
+            >
               查询
             </ElButton>
             <ElButton @click="handleReset">重置</ElButton>
@@ -504,12 +517,18 @@ watch(
         </ElForm>
       </WorkflowSectionCard>
 
-      <WorkflowSectionCard title="病例摘要" description="病例、申请单、临床诊断和当前报告摘要。">
+      <WorkflowSectionCard
+        title="病例摘要"
+        description="病例、申请单、临床诊断和当前报告摘要。"
+      >
         <ElEmpty
           v-if="!caseId"
           description="请输入病例 ID，或从诊断分派页进入当前病例工作台。"
         />
-        <ElEmpty v-else-if="!loading && !workbench" description="暂无病例数据" />
+        <ElEmpty
+          v-else-if="!loading && !workbench"
+          description="暂无病例数据"
+        />
         <ElDescriptions v-else :column="3" border>
           <ElDescriptionsItem label="病例ID">
             {{ formatNullable(workbench?.caseId) }}
@@ -704,7 +723,11 @@ watch(
                   {{ formatMedicalOrderStatus(row.status) }}
                 </template>
               </ElTableColumn>
-              <ElTableColumn v-if="canCancelMedicalOrder" label="操作" min-width="120">
+              <ElTableColumn
+                v-if="canCancelMedicalOrder"
+                label="操作"
+                min-width="120"
+              >
                 <template #default="{ row }">
                   <ElButton
                     :disabled="row.status !== 'PENDING'"
@@ -782,7 +805,11 @@ watch(
 
       <template #footer>
         <ElButton @click="medicalOrderDialogVisible = false">取消</ElButton>
-        <ElButton :loading="orderOperating" type="primary" @click="submitMedicalOrder">
+        <ElButton
+          :loading="orderOperating"
+          type="primary"
+          @click="submitMedicalOrder"
+        >
           创建
         </ElButton>
       </template>

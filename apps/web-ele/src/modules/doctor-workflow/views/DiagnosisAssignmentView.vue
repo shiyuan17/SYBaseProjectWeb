@@ -23,17 +23,18 @@ import {
   ElTag,
 } from 'element-plus';
 
+import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
+
 import {
   assignDiagnosticTask,
   listPendingDiagnosticTasks,
 } from '../api/doctor-workflow-service';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
-import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
-import { M4_PERMISSION_CODES } from '../constants';
 import {
   DEFAULT_PAGE_SIZE,
   DIAGNOSTIC_TASK_STATUS_OPTIONS,
   DIAGNOSTIC_TASK_TYPE_OPTIONS,
+  M4_PERMISSION_CODES,
 } from '../constants';
 import { getDoctorWorkflowPageErrorMessage } from '../utils/error';
 import {
@@ -52,7 +53,7 @@ const assigning = ref(false);
 const pageError = ref('');
 const pendingItems = ref<PendingDiagnosticTaskItem[]>([]);
 const total = ref(0);
-const selectedTask = ref<PendingDiagnosticTaskItem | null>(null);
+const selectedTask = ref<null | PendingDiagnosticTaskItem>(null);
 const assignDialogVisible = computed({
   get: () => selectedTask.value !== null,
   set: (visible: boolean) => {
@@ -153,7 +154,9 @@ function openAssignDialog(row: PendingDiagnosticTaskItem) {
   assignForm.terminalCode = '';
 }
 
-function handleDiagnosisDoctorChange(user: null | { id: string; name: string }) {
+function handleDiagnosisDoctorChange(
+  user: null | { id: string; name: string },
+) {
   assignForm.diagnosisDoctorUserId = user?.id ?? '';
   assignForm.diagnosisDoctorName = user?.name ?? '';
 }
@@ -228,7 +231,10 @@ void loadPendingData();
         type="error"
       />
 
-      <WorkflowSectionCard title="任务筛选" description="按任务类型、状态和病理号查询待分派诊断任务。">
+      <WorkflowSectionCard
+        title="任务筛选"
+        description="按任务类型、状态和病理号查询待分派诊断任务。"
+      >
         <ElForm inline label-width="88px">
           <ElFormItem label="任务类型">
             <ElSelect
@@ -276,7 +282,10 @@ void loadPendingData();
         </ElForm>
       </WorkflowSectionCard>
 
-      <WorkflowSectionCard title="待分派任务" description="后端返回的 `/diagnostic-tasks/pending` 任务池，操作后刷新列表。">
+      <WorkflowSectionCard
+        title="待分派任务"
+        description="后端返回的 `/diagnostic-tasks/pending` 任务池，操作后刷新列表。"
+      >
         <ElTable v-loading="loading" :data="pendingItems" border>
           <ElTableColumn label="任务号" min-width="180" prop="id" />
           <ElTableColumn label="任务类型" min-width="110">

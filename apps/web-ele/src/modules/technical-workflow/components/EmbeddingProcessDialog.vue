@@ -84,7 +84,9 @@ function resetDialogState() {
   completeForm.embeddingBoxNo = '';
   completeForm.evaluationLevel = '';
   completeForm.samplingBlockId =
-    props.task?.objectType === 'SAMPLING_BLOCK' ? props.task.objectId ?? '' : '';
+    props.task?.objectType === 'SAMPLING_BLOCK'
+      ? (props.task.objectId ?? '')
+      : '';
   completeForm.samplingEvaluation = '';
   completeForm.sliceNotice = '';
   completeForm.taskId = props.task?.id ?? '';
@@ -190,13 +192,24 @@ watch(
             />
           </ElFormItem>
           <ElFormItem label="包埋盒编号">
-            <ElInput v-model="completeForm.embeddingBoxNo" placeholder="请输入包埋盒编号" />
+            <ElInput
+              v-model="completeForm.embeddingBoxNo"
+              placeholder="请输入包埋盒编号"
+            />
           </ElFormItem>
           <ElFormItem label="蜡块数量" required>
-            <ElInputNumber v-model="completeForm.blockCount" :min="1" class="w-full" />
+            <ElInputNumber
+              v-model="completeForm.blockCount"
+              :min="1"
+              class="w-full"
+            />
           </ElFormItem>
           <ElFormItem label="评估等级">
-            <ElSelect v-model="completeForm.evaluationLevel" clearable placeholder="请选择评估等级">
+            <ElSelect
+              v-model="completeForm.evaluationLevel"
+              clearable
+              placeholder="请选择评估等级"
+            >
               <ElOption
                 v-for="option in EVALUATION_LEVEL_OPTIONS"
                 :key="option.value"
@@ -206,11 +219,17 @@ watch(
             </ElSelect>
           </ElFormItem>
           <ElFormItem label="设备编码">
-            <ElInput v-model="completeForm.deviceCode" placeholder="请输入设备编码" />
+            <ElInput
+              v-model="completeForm.deviceCode"
+              placeholder="请输入设备编码"
+            />
           </ElFormItem>
         </div>
         <ElFormItem label="切片提示">
-          <ElInput v-model="completeForm.sliceNotice" placeholder="请输入切片提示" />
+          <ElInput
+            v-model="completeForm.sliceNotice"
+            placeholder="请输入切片提示"
+          />
         </ElFormItem>
         <ElFormItem label="取材评估">
           <ElInput

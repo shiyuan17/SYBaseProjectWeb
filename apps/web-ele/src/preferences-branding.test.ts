@@ -2,8 +2,8 @@ import type { Preferences } from '@vben/preferences';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { defaultPreferences } from '../../../packages/@core/preferences/src/config';
 import { StorageManager } from '../../../packages/@core/base/shared/src/cache/storage-manager';
+import { defaultPreferences } from '../../../packages/@core/preferences/src/config';
 
 function clonePreferences() {
   return structuredClone(defaultPreferences) as Preferences;
@@ -130,7 +130,8 @@ describe('preferences-branding', () => {
       legacyNamespace,
     });
 
-    const migratedPreferences = currentCache.getItem<Preferences>('preferences');
+    const migratedPreferences =
+      currentCache.getItem<Preferences>('preferences');
 
     expect(migratedPreferences?.app.name).toBe(brandingModule.BRAND_NAME);
     expect(migratedPreferences?.app.locale).toBe('en-US');

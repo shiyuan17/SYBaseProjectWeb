@@ -21,8 +21,14 @@ export function getSelectedPageMenus(
 ): MenuView[] {
   const selectedMenuIdSet = new Set(normalizeIds(selectedMenuIds));
   return [...menus]
-    .filter((menu) => menu.menuType === 'MENU' && selectedMenuIdSet.has(menu.id))
-    .sort((left, right) => left.sortOrder - right.sortOrder || left.menuCode.localeCompare(right.menuCode));
+    .filter(
+      (menu) => menu.menuType === 'MENU' && selectedMenuIdSet.has(menu.id),
+    )
+    .toSorted(
+      (left, right) =>
+        left.sortOrder - right.sortOrder ||
+        left.menuCode.localeCompare(right.menuCode),
+    );
 }
 
 export function buildRoleAuthorizationPermissionGroups(
@@ -35,11 +41,19 @@ export function buildRoleAuthorizationPermissionGroups(
   return selectedPageMenus.map((menu) => {
     const menuPermissions = [...permissions]
       .filter((permission) => permission.menuId === menu.id)
-      .sort((left, right) => left.sortOrder - right.sortOrder || left.permissionCode.localeCompare(right.permissionCode));
+      .toSorted(
+        (left, right) =>
+          left.sortOrder - right.sortOrder ||
+          left.permissionCode.localeCompare(right.permissionCode),
+      );
 
     return {
-      entryPermissions: menuPermissions.filter((permission) => permission.entryPermission),
-      manualPermissions: menuPermissions.filter((permission) => !permission.entryPermission),
+      entryPermissions: menuPermissions.filter(
+        (permission) => permission.entryPermission,
+      ),
+      manualPermissions: menuPermissions.filter(
+        (permission) => !permission.entryPermission,
+      ),
       menu,
     };
   });

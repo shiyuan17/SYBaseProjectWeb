@@ -44,11 +44,22 @@
         margin: 0;
         color: var(--ink);
         font:
-          15px/1.75 "Segoe UI", "PingFang SC", "Hiragino Sans GB",
-          "Microsoft YaHei", sans-serif;
+          15px/1.75 'Segoe UI',
+          'PingFang SC',
+          'Hiragino Sans GB',
+          'Microsoft YaHei',
+          sans-serif;
         background:
-          radial-gradient(circle at top left, rgba(31, 79, 122, 0.1), transparent 28%),
-          radial-gradient(circle at top right, rgba(180, 71, 8, 0.08), transparent 26%),
+          radial-gradient(
+            circle at top left,
+            rgba(31, 79, 122, 0.1),
+            transparent 28%
+          ),
+          radial-gradient(
+            circle at top right,
+            rgba(180, 71, 8, 0.08),
+            transparent 26%
+          ),
           linear-gradient(180deg, #f8fafc 0%, var(--bg) 100%);
       }
 
@@ -78,20 +89,28 @@
         border: 1px solid rgba(31, 79, 122, 0.12);
         border-radius: 32px;
         background:
-          linear-gradient(140deg, rgba(255, 255, 255, 0.97), rgba(244, 248, 252, 0.94)),
+          linear-gradient(
+            140deg,
+            rgba(255, 255, 255, 0.97),
+            rgba(244, 248, 252, 0.94)
+          ),
           #fff;
         box-shadow: var(--shadow);
       }
 
       .hero::after {
-        content: "";
+        content: '';
         position: absolute;
         right: -84px;
         bottom: -96px;
         width: 320px;
         height: 320px;
         border-radius: 50%;
-        background: radial-gradient(circle, rgba(31, 79, 122, 0.14), transparent 68%);
+        background: radial-gradient(
+          circle,
+          rgba(31, 79, 122, 0.14),
+          transparent 68%
+        );
         pointer-events: none;
       }
 
@@ -332,17 +351,29 @@
 
       .finding-card.high {
         border-color: rgba(180, 35, 24, 0.22);
-        background: linear-gradient(180deg, rgba(253, 236, 234, 0.76), rgba(255, 255, 255, 0.94));
+        background: linear-gradient(
+          180deg,
+          rgba(253, 236, 234, 0.76),
+          rgba(255, 255, 255, 0.94)
+        );
       }
 
       .finding-card.medium {
         border-color: rgba(181, 71, 8, 0.22);
-        background: linear-gradient(180deg, rgba(255, 241, 223, 0.78), rgba(255, 255, 255, 0.94));
+        background: linear-gradient(
+          180deg,
+          rgba(255, 241, 223, 0.78),
+          rgba(255, 255, 255, 0.94)
+        );
       }
 
       .finding-card.low {
         border-color: rgba(23, 92, 211, 0.18);
-        background: linear-gradient(180deg, rgba(232, 240, 255, 0.78), rgba(255, 255, 255, 0.94));
+        background: linear-gradient(
+          180deg,
+          rgba(232, 240, 255, 0.78),
+          rgba(255, 255, 255, 0.94)
+        );
       }
 
       .finding-label {
@@ -594,7 +625,8 @@
             <p>
               本报告只以 <code>SYBaseProjectWeb</code> 与
               <code>SYBaseProject</code> 当前代码事实为准，审查
-              <code>M1 -> M6</code> 全链路是否闭环、是否存在逻辑断层或缺失角色，以及关键路径是否具备可度量性。
+              <code>M1 -> M6</code>
+              全链路是否闭环、是否存在逻辑断层或缺失角色，以及关键路径是否具备可度量性。
               业务规划文档、SOP 和既有 HTML 仅作对照，不直接视为已落地能力。
             </p>
             <div class="badge-row" style="margin-top: 18px">
@@ -611,15 +643,24 @@
             </div>
             <div class="meta-card">
               <strong>主判断</strong>
-              <span>M1-M6 当前代码已形成前后端可用闭环；原高风险断层已关闭，剩余问题转为治理与现场验收</span>
+              <span
+                >M1-M6
+                当前代码已形成前后端可用闭环；原高风险断层已关闭，剩余问题转为治理与现场验收</span
+              >
             </div>
             <div class="meta-card">
               <strong>高风险问题</strong>
-              <span>0 项：M4 医嘱执行与 M6 integration / billing / history 前台已补齐</span>
+              <span
+                >0 项：M4 医嘱执行与 M6 integration / billing / history
+                前台已补齐</span
+              >
             </div>
             <div class="meta-card">
               <strong>审查范围</strong>
-              <span>前端路由 / 页面 / service / 菜单映射 / 权限常量；后端 controller / 权限种子 / 集成测试</span>
+              <span
+                >前端路由 / 页面 / service / 菜单映射 / 权限常量；后端
+                controller / 权限种子 / 集成测试</span
+              >
             </div>
           </div>
         </div>
@@ -686,7 +727,9 @@
                 </p>
               </div>
               <div class="status-row">
-                <span class="status-pill status-info">事实时间点：2026-05-26</span>
+                <span class="status-pill status-info"
+                  >事实时间点：2026-05-26</span
+                >
                 <span class="status-pill status-info">口径：真实落地</span>
               </div>
             </div>
@@ -694,24 +737,41 @@
             <div class="grid-3">
               <div class="info-card">
                 <strong>证据优先级</strong>
-                <p>前端路由、页面、service、菜单映射、权限常量为一手证据；后端 controller、权限种子、集成测试为二手交叉验证；文档只作背景对照。</p>
+                <p>
+                  前端路由、页面、service、菜单映射、权限常量为一手证据；后端
+                  controller、权限种子、集成测试为二手交叉验证；文档只作背景对照。
+                </p>
               </div>
               <div class="info-card">
                 <strong>闭环判定档位</strong>
-                <p><code>已闭环</code>、<code>部分闭环</code>、<code>后端具备但前端未闭环</code>、<code>仅文档存在</code>、<code>未落地</code> 五档。</p>
+                <p>
+                  <code>已闭环</code
+                  >、<code>部分闭环</code>、<code>后端具备但前端未闭环</code>、<code>仅文档存在</code>、<code
+                    >未落地</code
+                  >
+                  五档。
+                </p>
               </div>
               <div class="info-card">
                 <strong>排除项</strong>
-                <p>本次不把打印机、扫码枪、真实外部系统、真实收费回调链路的现场环境验收，等同为代码未闭环；但会单独标为目标环境待验。</p>
+                <p>
+                  本次不把打印机、扫码枪、真实外部系统、真实收费回调链路的现场环境验收，等同为代码未闭环；但会单独标为目标环境待验。
+                </p>
               </div>
             </div>
 
             <div class="summary-note" style="margin-top: 18px">
               <strong>审查边界</strong>
               <div class="bullet-list">
-                <li>前端仓库：<code>apps/web-ele/src/router/routes/modules/*</code>、<code>apps/web-ele/src/modules/*/api/*</code>、<code>apps/web-ele/src/api/core/menu-mapper.ts</code>、各模块入口页与视图。</li>
-                <li>后端仓库：<code>bl-center/src/main/java/.../controller/*</code>、<code>bl-center/src/main/resources/db/migration/*</code>、代表性集成测试类。</li>
-                <li>对照文档：<code>docs/M4_M5_ARCHIVE_OPERATION_SUPPORT_IMPLEMENTATION_PLAN.md</code>、<code>docs/M1_M6_BUSINESS_PROCESS_GUIDE.html</code>、<code>docs/phase1_5/*</code>。</li>
+                <li>
+                  前端仓库：<code>apps/web-ele/src/router/routes/modules/*</code>、<code>apps/web-ele/src/modules/*/api/*</code>、<code>apps/web-ele/src/api/core/menu-mapper.ts</code>、各模块入口页与视图。
+                </li>
+                <li>
+                  后端仓库：<code>bl-center/src/main/java/.../controller/*</code>、<code>bl-center/src/main/resources/db/migration/*</code>、代表性集成测试类。
+                </li>
+                <li>
+                  对照文档：<code>docs/M4_M5_ARCHIVE_OPERATION_SUPPORT_IMPLEMENTATION_PLAN.md</code>、<code>docs/M1_M6_BUSINESS_PROCESS_GUIDE.html</code>、<code>docs/phase1_5/*</code>。
+                </li>
               </div>
             </div>
           </section>
@@ -721,7 +781,8 @@
               <div>
                 <h2>02. 总体结论与风险分级</h2>
                 <p class="section-desc">
-                  当前代码事实已经不同于首次审查版本。M4 医嘱执行工作台与 M6 三个真实管理页已落地，原先的高风险断层已经关闭；当前重点转为治理同步和目标环境验收。
+                  当前代码事实已经不同于首次审查版本。M4 医嘱执行工作台与 M6
+                  三个真实管理页已落地，原先的高风险断层已经关闭；当前重点转为治理同步和目标环境验收。
                 </p>
               </div>
               <div class="status-row">
@@ -732,19 +793,31 @@
             <div class="grid-4">
               <div class="score-card">
                 <strong>主业务主链</strong>
-                <p><code>M1 -> M2 -> M3 -> M4 -> M5</code> 代码证据完整，已形成从送检、技术生产、诊断到归档回填的闭环。</p>
+                <p>
+                  <code>M1 -> M2 -> M3 -> M4 -> M5</code>
+                  代码证据完整，已形成从送检、技术生产、诊断到归档回填的闭环。
+                </p>
               </div>
               <div class="score-card">
                 <strong>M4 医嘱链</strong>
-                <p>独立路由、权限常量、service、执行工作台与视图测试已补齐，病理医嘱从创建到执行回流已形成前台闭环。</p>
+                <p>
+                  独立路由、权限常量、service、执行工作台与视图测试已补齐，病理医嘱从创建到执行回流已形成前台闭环。
+                </p>
               </div>
               <div class="score-card">
                 <strong>M6 支撑链</strong>
-                <p><code>integration</code>、<code>billing</code>、<code>history</code> 已由占位页替换为真实工作面，管理员、归档岗和质量岗可进入对应功能页。</p>
+                <p>
+                  <code>integration</code>、<code>billing</code>、<code
+                    >history</code
+                  >
+                  已由占位页替换为真实工作面，管理员、归档岗和质量岗可进入对应功能页。
+                </p>
               </div>
               <div class="score-card">
                 <strong>文档治理偏差</strong>
-                <p>当前主要风险已不在业务缺口，而在旧文档和旧审查结论仍停留在补齐前状态；若不回写，将继续误导验收与汇报。</p>
+                <p>
+                  当前主要风险已不在业务缺口，而在旧文档和旧审查结论仍停留在补齐前状态；若不回写，将继续误导验收与汇报。
+                </p>
               </div>
             </div>
 
@@ -752,22 +825,34 @@
               <div class="finding-card medium">
                 <span class="finding-label medium">Medium Risk</span>
                 <strong>历史审查结论已过期</strong>
-                <p>如果继续使用补齐前的 HTML 报告、实施计划或口头结论，会把已落地能力误判成缺口，直接影响验收排序和资源投入。</p>
+                <p>
+                  如果继续使用补齐前的 HTML
+                  报告、实施计划或口头结论，会把已落地能力误判成缺口，直接影响验收排序和资源投入。
+                </p>
               </div>
               <div class="finding-card medium">
                 <span class="finding-label medium">Medium Risk</span>
                 <strong>现场联调仍需独立验收</strong>
-                <p>外部收费回执、真实历史数据源、CSV 编码与文件名、真实角色菜单配置仍属于目标环境验收项，不能用当前代码通过替代现场验证。</p>
+                <p>
+                  外部收费回执、真实历史数据源、CSV
+                  编码与文件名、真实角色菜单配置仍属于目标环境验收项，不能用当前代码通过替代现场验证。
+                </p>
               </div>
               <div class="finding-card medium">
                 <span class="finding-label medium">Medium Risk</span>
                 <strong>角色治理要持续清单化</strong>
-                <p>本轮已经关闭“有角色、无页面”的显性断层，但后续新增菜单和权限仍可能复发，必须用角色可达性清单持续守住基线。</p>
+                <p>
+                  本轮已经关闭“有角色、无页面”的显性断层，但后续新增菜单和权限仍可能复发，必须用角色可达性清单持续守住基线。
+                </p>
               </div>
             </div>
 
             <div class="quote-box" style="margin-top: 18px">
-              本轮代码回收后的准确判断是：<strong>M1-M6 当前前后端主能力已闭环，M4 医嘱执行与 M6 integration / billing / history 的高风险缺口已经关闭；剩余工作以治理同步和现场验收为主。</strong>
+              本轮代码回收后的准确判断是：<strong
+                >M1-M6 当前前后端主能力已闭环，M4 医嘱执行与 M6 integration /
+                billing / history
+                的高风险缺口已经关闭；剩余工作以治理同步和现场验收为主。</strong
+              >
             </div>
           </section>
 
@@ -780,7 +865,9 @@
                 </p>
               </div>
               <div class="status-row">
-                <span class="status-pill status-ok">M1-M5 主链：总体可闭环</span>
+                <span class="status-pill status-ok"
+                  >M1-M5 主链：总体可闭环</span
+                >
                 <span class="status-pill status-ok">M4/M6：闭环缺口已关闭</span>
               </div>
             </div>
@@ -814,28 +901,71 @@
                     </td>
                     <td>病理管理员</td>
                     <td>组织、账号、角色、基础字典、编号规则、系统配置</td>
-                    <td>用户、角色、科室、部位、医嘱字典、收费、套餐、模板、规范、配置、编号规则维护</td>
+                    <td>
+                      用户、角色、科室、部位、医嘱字典、收费、套餐、模板、规范、配置、编号规则维护
+                    </td>
                     <td>可供 M2-M6 使用的治理底座</td>
                     <td>M2-M6 全模块</td>
                     <td>
                       <div class="evidence-list">
-                        <div class="evidence-item"><strong>路由</strong><small><code>apps/web-ele/src/router/routes/modules/system.ts</code></small></div>
-                        <div class="evidence-item"><strong>服务层</strong><small><code>apps/web-ele/src/modules/system-management/api/system-management-service.ts</code></small></div>
-                        <div class="evidence-item"><strong>菜单映射</strong><small><code>apps/web-ele/src/api/core/menu-mapper.ts</code></small></div>
+                        <div class="evidence-item">
+                          <strong>路由</strong
+                          ><small
+                            ><code
+                              >apps/web-ele/src/router/routes/modules/system.ts</code
+                            ></small
+                          >
+                        </div>
+                        <div class="evidence-item">
+                          <strong>服务层</strong
+                          ><small
+                            ><code
+                              >apps/web-ele/src/modules/system-management/api/system-management-service.ts</code
+                            ></small
+                          >
+                        </div>
+                        <div class="evidence-item">
+                          <strong>菜单映射</strong
+                          ><small
+                            ><code
+                              >apps/web-ele/src/api/core/menu-mapper.ts</code
+                            ></small
+                          >
+                        </div>
                       </div>
                     </td>
                     <td>
                       <div class="evidence-list">
-                        <div class="evidence-item"><strong>Controller</strong><small><code>SystemManagementController.java</code>、<code>MedicalOrderController.java</code>、<code>SamplingController.java</code>、<code>NumberingRuleController.java</code></small></div>
-                        <div class="evidence-item"><strong>权限 / 菜单种子</strong><small><code>V5__seed_m1_role_test_users.sql</code> 及相关 migration</small></div>
+                        <div class="evidence-item">
+                          <strong>Controller</strong
+                          ><small
+                            ><code>SystemManagementController.java</code
+                            >、<code>MedicalOrderController.java</code>、<code>SamplingController.java</code>、<code
+                              >NumberingRuleController.java</code
+                            ></small
+                          >
+                        </div>
+                        <div class="evidence-item">
+                          <strong>权限 / 菜单种子</strong
+                          ><small
+                            ><code>V5__seed_m1_role_test_users.sql</code> 及相关
+                            migration</small
+                          >
+                        </div>
                       </div>
                     </td>
                     <td>
                       <ul>
                         <li><code>system-management-service.test.ts</code></li>
                         <li><code>tree.test.ts</code></li>
-                        <li><code>SystemManagementUserIntegrationTest</code></li>
-                        <li><code>SystemManagementRoleAndMenuIntegrationTest</code></li>
+                        <li>
+                          <code>SystemManagementUserIntegrationTest</code>
+                        </li>
+                        <li>
+                          <code
+                            >SystemManagementRoleAndMenuIntegrationTest</code
+                          >
+                        </li>
                       </ul>
                     </td>
                     <td><span class="status-pill status-ok">已闭环</span></td>
@@ -852,30 +982,75 @@
                       </ul>
                     </td>
                     <td>护士 / 送检岗 / 固定岗 / 转运岗 / 接收岗 / 追踪岗</td>
-                    <td>M1 提供的账号、字典、模板、编号规则；临床申请单或第三方导入申请</td>
-                    <td>申请创建 / 导入、标本登记、固定、转运交接、病理接收、追踪查询</td>
-                    <td>病理病例、标本、固定记录、转运单、接收记录、追踪事件</td>
+                    <td>
+                      M1
+                      提供的账号、字典、模板、编号规则；临床申请单或第三方导入申请
+                    </td>
+                    <td>
+                      申请创建 /
+                      导入、标本登记、固定、转运交接、病理接收、追踪查询
+                    </td>
+                    <td>
+                      病理病例、标本、固定记录、转运单、接收记录、追踪事件
+                    </td>
                     <td>M3 技术任务生成与病例承接</td>
                     <td>
                       <div class="evidence-list">
-                        <div class="evidence-item"><strong>路由</strong><small><code>apps/web-ele/src/router/routes/modules/workflow.ts</code></small></div>
-                        <div class="evidence-item"><strong>入口页</strong><small><code>WorkflowEntryView.vue</code></small></div>
-                        <div class="evidence-item"><strong>服务层</strong><small><code>specimen-workflow-service.ts</code></small></div>
+                        <div class="evidence-item">
+                          <strong>路由</strong
+                          ><small
+                            ><code
+                              >apps/web-ele/src/router/routes/modules/workflow.ts</code
+                            ></small
+                          >
+                        </div>
+                        <div class="evidence-item">
+                          <strong>入口页</strong
+                          ><small><code>WorkflowEntryView.vue</code></small>
+                        </div>
+                        <div class="evidence-item">
+                          <strong>服务层</strong
+                          ><small
+                            ><code>specimen-workflow-service.ts</code></small
+                          >
+                        </div>
                       </div>
                     </td>
                     <td>
                       <div class="evidence-list">
-                        <div class="evidence-item"><strong>Controller</strong><small><code>SpecimenController.java</code>、<code>SpecimenFixationController.java</code>、<code>TransportOrderController.java</code>、<code>SpecimenReceiptController.java</code></small></div>
-                        <div class="evidence-item"><strong>权限种子</strong><small><code>V4__seed_m2_workflow_authorization.sql</code></small></div>
+                        <div class="evidence-item">
+                          <strong>Controller</strong
+                          ><small
+                            ><code>SpecimenController.java</code
+                            >、<code>SpecimenFixationController.java</code>、<code>TransportOrderController.java</code>、<code
+                              >SpecimenReceiptController.java</code
+                            ></small
+                          >
+                        </div>
+                        <div class="evidence-item">
+                          <strong>权限种子</strong
+                          ><small
+                            ><code
+                              >V4__seed_m2_workflow_authorization.sql</code
+                            ></small
+                          >
+                        </div>
                       </div>
                     </td>
                     <td>
                       <ul>
                         <li><code>workflow.test.ts</code></li>
                         <li><code>specimen-workflow-service.test.ts</code></li>
-                        <li><code>SpecimenWorkflowHappyPathIntegrationTest</code></li>
-                        <li><code>SpecimenWorkflowClosureIntegrationTest</code></li>
-                        <li><code>M6ClinicalIntegrationTest</code>（导入入口交叉验证）</li>
+                        <li>
+                          <code>SpecimenWorkflowHappyPathIntegrationTest</code>
+                        </li>
+                        <li>
+                          <code>SpecimenWorkflowClosureIntegrationTest</code>
+                        </li>
+                        <li>
+                          <code>M6ClinicalIntegrationTest</code
+                          >（导入入口交叉验证）
+                        </li>
                       </ul>
                     </td>
                     <td><span class="status-pill status-ok">已闭环</span></td>
@@ -897,21 +1072,59 @@
                     </td>
                     <td>技师各工位角色</td>
                     <td>M2 接收后的病例、标本、病理号</td>
-                    <td>任务分派 / 认领 / 释放 / 优先级调整，取材、脱水、包埋、切片、染色、返工、技术追踪</td>
+                    <td>
+                      任务分派 / 认领 / 释放 /
+                      优先级调整，取材、脱水、包埋、切片、染色、返工、技术追踪
+                    </td>
                     <td>蜡块、包埋盒、玻片、返工单、质控事件、诊断任务</td>
                     <td>M4 诊断任务与工作台</td>
                     <td>
                       <div class="evidence-list">
-                        <div class="evidence-item"><strong>路由</strong><small><code>technical-workflow.ts</code></small></div>
-                        <div class="evidence-item"><strong>入口 / 总控页</strong><small><code>TechnicalWorkflowEntryView.vue</code></small></div>
-                        <div class="evidence-item"><strong>服务层</strong><small><code>technical-workflow-service.ts</code></small></div>
+                        <div class="evidence-item">
+                          <strong>路由</strong
+                          ><small><code>technical-workflow.ts</code></small>
+                        </div>
+                        <div class="evidence-item">
+                          <strong>入口 / 总控页</strong
+                          ><small
+                            ><code>TechnicalWorkflowEntryView.vue</code></small
+                          >
+                        </div>
+                        <div class="evidence-item">
+                          <strong>服务层</strong
+                          ><small
+                            ><code>technical-workflow-service.ts</code></small
+                          >
+                        </div>
                       </div>
                     </td>
                     <td>
                       <div class="evidence-list">
-                        <div class="evidence-item"><strong>Controller</strong><small><code>TechnicalTaskController.java</code>、<code>GrossingController.java</code>、<code>EmbeddingController.java</code>、<code>SlicingController.java</code>、<code>SlideStainingController.java</code>、<code>ReworkOrderController.java</code></small></div>
-                        <div class="evidence-item"><strong>追踪接口</strong><small><code>PathologyCaseTechnicalTrackingController.java</code></small></div>
-                        <div class="evidence-item"><strong>权限种子</strong><small><code>V7__seed_m3_workflow_authorization.sql</code></small></div>
+                        <div class="evidence-item">
+                          <strong>Controller</strong
+                          ><small
+                            ><code>TechnicalTaskController.java</code
+                            >、<code>GrossingController.java</code>、<code>EmbeddingController.java</code>、<code>SlicingController.java</code>、<code>SlideStainingController.java</code>、<code
+                              >ReworkOrderController.java</code
+                            ></small
+                          >
+                        </div>
+                        <div class="evidence-item">
+                          <strong>追踪接口</strong
+                          ><small
+                            ><code
+                              >PathologyCaseTechnicalTrackingController.java</code
+                            ></small
+                          >
+                        </div>
+                        <div class="evidence-item">
+                          <strong>权限种子</strong
+                          ><small
+                            ><code
+                              >V7__seed_m3_workflow_authorization.sql</code
+                            ></small
+                          >
+                        </div>
                       </div>
                     </td>
                     <td>
@@ -919,7 +1132,11 @@
                         <li><code>technical-workflow.test.ts</code></li>
                         <li><code>technical-workflow-service.test.ts</code></li>
                         <li><code>TechnicalWorkflowIntegrationTest</code></li>
-                        <li><code>TechnicalWorkflowQueryEnhancementIntegrationTest</code></li>
+                        <li>
+                          <code
+                            >TechnicalWorkflowQueryEnhancementIntegrationTest</code
+                          >
+                        </li>
                         <li><code>GrossingMediaAssetIntegrationTest</code></li>
                       </ul>
                     </td>
@@ -939,23 +1156,80 @@
                         <li><code>/doctor-workflow/medical-orders</code></li>
                       </ul>
                     </td>
-                    <td>分派医生、诊断医生、审核 / 签发医生、修订审批、会诊参与者、医嘱执行岗</td>
+                    <td>
+                      分派医生、诊断医生、审核 /
+                      签发医生、修订审批、会诊参与者、医嘱执行岗
+                    </td>
                     <td>M3 生成的诊断任务、技术对象、病例上下文</td>
-                    <td>任务分派、接单、开始诊断、报告创建 / 保存 / 提交 / 审核 / 驳回 / 签发 / 发布、修订、会诊、医嘱创建 / 接单 / 完成 / 取消、追踪</td>
-                    <td>报告版本链、会诊链、修订链、病理报告发布结果、医嘱状态链与执行回流</td>
+                    <td>
+                      任务分派、接单、开始诊断、报告创建 / 保存 / 提交 / 审核 /
+                      驳回 / 签发 / 发布、修订、会诊、医嘱创建 / 接单 / 完成 /
+                      取消、追踪
+                    </td>
+                    <td>
+                      报告版本链、会诊链、修订链、病理报告发布结果、医嘱状态链与执行回流
+                    </td>
                     <td>M5 归档回填；M6 计费 / 历史 / 统计支持</td>
                     <td>
                       <div class="evidence-list">
-                        <div class="evidence-item"><strong>已实现链路</strong><small><code>doctor-workflow.ts</code>、<code>doctor-workflow-service.ts</code>、<code>DoctorWorkflowEntryView.vue</code></small></div>
-                        <div class="evidence-item"><strong>医嘱入口已补齐</strong><small><code>doctor-workflow.ts</code> 新增 <code>/doctor-workflow/medical-orders</code>；<code>DoctorWorkflowEntryView.vue</code> 可按权限跳转</small></div>
-                        <div class="evidence-item"><strong>工作台与摘要联动</strong><small><code>MedicalOrderWorkbenchView.vue</code>、<code>DiagnosisWorkbenchView.vue</code>、<code>ReportTrackingView.vue</code></small></div>
+                        <div class="evidence-item">
+                          <strong>已实现链路</strong
+                          ><small
+                            ><code>doctor-workflow.ts</code
+                            >、<code>doctor-workflow-service.ts</code>、<code
+                              >DoctorWorkflowEntryView.vue</code
+                            ></small
+                          >
+                        </div>
+                        <div class="evidence-item">
+                          <strong>医嘱入口已补齐</strong
+                          ><small
+                            ><code>doctor-workflow.ts</code> 新增
+                            <code>/doctor-workflow/medical-orders</code>；<code
+                              >DoctorWorkflowEntryView.vue</code
+                            >
+                            可按权限跳转</small
+                          >
+                        </div>
+                        <div class="evidence-item">
+                          <strong>工作台与摘要联动</strong
+                          ><small
+                            ><code>MedicalOrderWorkbenchView.vue</code
+                            >、<code>DiagnosisWorkbenchView.vue</code>、<code
+                              >ReportTrackingView.vue</code
+                            ></small
+                          >
+                        </div>
                       </div>
                     </td>
                     <td>
                       <div class="evidence-list">
-                        <div class="evidence-item"><strong>Controller</strong><small><code>DiagnosticTaskController.java</code>、<code>PathologyReportController.java</code>、<code>ReportRevisionRequestController.java</code>、<code>PathologyCaseDiagnosticController.java</code></small></div>
-                        <div class="evidence-item"><strong>后端已具备医嘱能力</strong><small><code>PathologyMedicalOrderController.java</code></small></div>
-                        <div class="evidence-item"><strong>权限 / 角色种子</strong><small><code>V19__seed_m4_batch2_authorization.sql</code>、<code>V20__reconcile_m4_batch2_authorization.java</code></small></div>
+                        <div class="evidence-item">
+                          <strong>Controller</strong
+                          ><small
+                            ><code>DiagnosticTaskController.java</code
+                            >、<code>PathologyReportController.java</code>、<code>ReportRevisionRequestController.java</code>、<code
+                              >PathologyCaseDiagnosticController.java</code
+                            ></small
+                          >
+                        </div>
+                        <div class="evidence-item">
+                          <strong>后端已具备医嘱能力</strong
+                          ><small
+                            ><code
+                              >PathologyMedicalOrderController.java</code
+                            ></small
+                          >
+                        </div>
+                        <div class="evidence-item">
+                          <strong>权限 / 角色种子</strong
+                          ><small
+                            ><code>V19__seed_m4_batch2_authorization.sql</code
+                            >、<code
+                              >V20__reconcile_m4_batch2_authorization.java</code
+                            ></small
+                          >
+                        </div>
                       </div>
                     </td>
                     <td>
@@ -965,7 +1239,9 @@
                         <li><code>doctor-workflow-visibility.test.ts</code></li>
                         <li><code>DiagnosticWorkflowIntegrationTest</code></li>
                         <li><code>DiagnosticRevisionIntegrationTest</code></li>
-                        <li><code>InternalConsultationIntegrationTest</code></li>
+                        <li>
+                          <code>InternalConsultationIntegrationTest</code>
+                        </li>
                       </ul>
                     </td>
                     <td><span class="status-pill status-ok">已闭环</span></td>
@@ -981,21 +1257,58 @@
                       </ul>
                     </td>
                     <td>归档岗、试剂设备岗</td>
-                    <td>已发布报告、申请单、包埋盒、玻片、库存批次、设备档案</td>
-                    <td>归档柜维护、归档、借阅 / 归还、试剂维护 / 库存 / 预警、设备档案 / 维护 / 预警</td>
+                    <td>
+                      已发布报告、申请单、包埋盒、玻片、库存批次、设备档案
+                    </td>
+                    <td>
+                      归档柜维护、归档、借阅 / 归还、试剂维护 / 库存 /
+                      预警、设备档案 / 维护 / 预警
+                    </td>
                     <td>归档位置、借阅状态、库存预警、设备预警</td>
                     <td>反向回填 M4 工作台与报告追踪；运营管理使用</td>
                     <td>
                       <div class="evidence-list">
-                        <div class="evidence-item"><strong>路由</strong><small><code>operation-support.ts</code></small></div>
-                        <div class="evidence-item"><strong>服务层</strong><small><code>operation-support-service.ts</code></small></div>
-                        <div class="evidence-item"><strong>入口与权限</strong><small><code>OperationSupportEntryView.vue</code>、<code>access.ts</code></small></div>
+                        <div class="evidence-item">
+                          <strong>路由</strong
+                          ><small><code>operation-support.ts</code></small>
+                        </div>
+                        <div class="evidence-item">
+                          <strong>服务层</strong
+                          ><small
+                            ><code>operation-support-service.ts</code></small
+                          >
+                        </div>
+                        <div class="evidence-item">
+                          <strong>入口与权限</strong
+                          ><small
+                            ><code>OperationSupportEntryView.vue</code>、<code
+                              >access.ts</code
+                            ></small
+                          >
+                        </div>
                       </div>
                     </td>
                     <td>
                       <div class="evidence-list">
-                        <div class="evidence-item"><strong>Controller</strong><small><code>ArchiveCabinetController.java</code>、<code>ArchiveRecordController.java</code>、<code>MaterialLoanController.java</code>、<code>ReagentController.java</code>、<code>EquipmentRecordController.java</code></small></div>
-                        <div class="evidence-item"><strong>权限种子</strong><small><code>V23__seed_m5_archive_operation_authorization.sql</code>、<code>V24__reconcile_m5_archive_operation_authorization.java</code></small></div>
+                        <div class="evidence-item">
+                          <strong>Controller</strong
+                          ><small
+                            ><code>ArchiveCabinetController.java</code
+                            >、<code>ArchiveRecordController.java</code>、<code>MaterialLoanController.java</code>、<code>ReagentController.java</code>、<code
+                              >EquipmentRecordController.java</code
+                            ></small
+                          >
+                        </div>
+                        <div class="evidence-item">
+                          <strong>权限种子</strong
+                          ><small
+                            ><code
+                              >V23__seed_m5_archive_operation_authorization.sql</code
+                            >、<code
+                              >V24__reconcile_m5_archive_operation_authorization.java</code
+                            ></small
+                          >
+                        </div>
                       </div>
                     </td>
                     <td>
@@ -1003,7 +1316,9 @@
                         <li><code>operation-support.test.ts</code></li>
                         <li><code>operation-support-service.test.ts</code></li>
                         <li><code>ArchiveWorkflowIntegrationTest</code></li>
-                        <li><code>ArchiveRoleAuthorizationIntegrationTest</code></li>
+                        <li>
+                          <code>ArchiveRoleAuthorizationIntegrationTest</code>
+                        </li>
                       </ul>
                     </td>
                     <td><span class="status-pill status-ok">已闭环</span></td>
@@ -1020,21 +1335,62 @@
                       </ul>
                     </td>
                     <td>病理管理员、归档岗、质量岗</td>
-                    <td>临床导入任务、计费回执 / 重试 / 对账、历史报告导入、统计指标与模板</td>
-                    <td>集成任务追踪、收费管理、历史报告管理、统计查询与导出</td>
+                    <td>
+                      临床导入任务、计费回执 / 重试 /
+                      对账、历史报告导入、统计指标与模板
+                    </td>
+                    <td>
+                      集成任务追踪、收费管理、历史报告管理、统计查询与导出
+                    </td>
                     <td>支撑性任务状态、计费记录、历史数据、统计报表</td>
                     <td>回流到运营、质控、诊断追踪与管理侧分析</td>
                     <td>
                       <div class="evidence-list">
-                        <div class="evidence-item"><strong>真实管理页</strong><small><code>M6EntryView.vue</code>、<code>IntegrationManagementView.vue</code>、<code>BillingManagementView.vue</code>、<code>HistoricalReportsView.vue</code></small></div>
-                        <div class="evidence-item"><strong>菜单与路由已校准</strong><small><code>apps/web-ele/src/router/routes/modules/m6.ts</code> 与 <code>menu-mapper.ts</code> 已映射真实组件</small></div>
+                        <div class="evidence-item">
+                          <strong>真实管理页</strong
+                          ><small
+                            ><code>M6EntryView.vue</code
+                            >、<code>IntegrationManagementView.vue</code>、<code>BillingManagementView.vue</code>、<code
+                              >HistoricalReportsView.vue</code
+                            ></small
+                          >
+                        </div>
+                        <div class="evidence-item">
+                          <strong>菜单与路由已校准</strong
+                          ><small
+                            ><code
+                              >apps/web-ele/src/router/routes/modules/m6.ts</code
+                            >
+                            与 <code>menu-mapper.ts</code> 已映射真实组件</small
+                          >
+                        </div>
                       </div>
                     </td>
                     <td>
                       <div class="evidence-list">
-                        <div class="evidence-item"><strong>Controller</strong><small><code>M6ManagementController.java</code></small></div>
-                        <div class="evidence-item"><strong>权限种子</strong><small><code>V27__seed_m6_authorization_and_indicator_defs.sql</code></small></div>
-                        <div class="evidence-item"><strong>临床导入交叉链路</strong><small><code>POST /api/v1/clinical-applications/import</code> 与相关种子、测试</small></div>
+                        <div class="evidence-item">
+                          <strong>Controller</strong
+                          ><small
+                            ><code>M6ManagementController.java</code></small
+                          >
+                        </div>
+                        <div class="evidence-item">
+                          <strong>权限种子</strong
+                          ><small
+                            ><code
+                              >V27__seed_m6_authorization_and_indicator_defs.sql</code
+                            ></small
+                          >
+                        </div>
+                        <div class="evidence-item">
+                          <strong>临床导入交叉链路</strong
+                          ><small
+                            ><code
+                              >POST /api/v1/clinical-applications/import</code
+                            >
+                            与相关种子、测试</small
+                          >
+                        </div>
                       </div>
                     </td>
                     <td>
@@ -1054,7 +1410,8 @@
             </div>
 
             <p class="footer-note">
-              判定说明：本次回收后，M4 与 M6 之前的显性前端断层已经关闭。保留该节的目的，是把“补齐前缺口”与“补齐后事实”明确区分，避免旧结论继续流转。
+              判定说明：本次回收后，M4 与 M6
+              之前的显性前端断层已经关闭。保留该节的目的，是把“补齐前缺口”与“补齐后事实”明确区分，避免旧结论继续流转。
             </p>
           </section>
 
@@ -1068,7 +1425,9 @@
               </div>
               <div class="status-row">
                 <span class="status-pill status-ok">缺失角色：0 个</span>
-                <span class="status-pill status-info">剩余重点：角色菜单配置与现场权限验收</span>
+                <span class="status-pill status-info"
+                  >剩余重点：角色菜单配置与现场权限验收</span
+                >
               </div>
             </div>
 
@@ -1086,52 +1445,118 @@
                 <tbody>
                   <tr>
                     <td>病理管理员</td>
-                    <td><code>/system/*</code>、<code>/workflow/*</code>、<code>/technical-workflow/*</code>、<code>/doctor-workflow/*</code>、<code>/operation-support/*</code>、<code>/m6/*</code></td>
-                    <td><code>ROLE_PATHOLOGY_ADMIN</code>，对应 M1-M6 多模块种子</td>
+                    <td>
+                      <code>/system/*</code
+                      >、<code>/workflow/*</code>、<code>/technical-workflow/*</code>、<code>/doctor-workflow/*</code>、<code>/operation-support/*</code>、<code
+                        >/m6/*</code
+                      >
+                    </td>
+                    <td>
+                      <code>ROLE_PATHOLOGY_ADMIN</code>，对应 M1-M6 多模块种子
+                    </td>
                     <td><span class="status-pill status-ok">完整</span></td>
-                    <td>管理员已具备系统治理、主链操作面和 M6 四个真实管理页入口；剩余工作是目标环境角色配置核验，而不是前端补洞。</td>
+                    <td>
+                      管理员已具备系统治理、主链操作面和 M6
+                      四个真实管理页入口；剩余工作是目标环境角色配置核验，而不是前端补洞。
+                    </td>
                   </tr>
                   <tr>
                     <td>护士 / 送检岗</td>
-                    <td><code>/workflow/submission-registration</code>、<code>/workflow/fixation-transport</code>、<code>/workflow/pathology-receipt</code>、<code>/workflow/tracking-exception</code></td>
-                    <td><code>ROLE_M2_CLINICAL_REGISTER</code>、<code>ROLE_M2_FIXATION_VERIFY</code>、<code>ROLE_M2_TRANSPORT_HANDOVER</code>、<code>ROLE_M2_SPECIMEN_RECEIVE</code>、<code>ROLE_M2_TRACKING_QUERY</code>、<code>ROLE_M2_CLINICAL_IMPORT</code></td>
+                    <td>
+                      <code>/workflow/submission-registration</code
+                      >、<code>/workflow/fixation-transport</code>、<code>/workflow/pathology-receipt</code>、<code
+                        >/workflow/tracking-exception</code
+                      >
+                    </td>
+                    <td>
+                      <code>ROLE_M2_CLINICAL_REGISTER</code
+                      >、<code>ROLE_M2_FIXATION_VERIFY</code>、<code>ROLE_M2_TRANSPORT_HANDOVER</code>、<code>ROLE_M2_SPECIMEN_RECEIVE</code>、<code>ROLE_M2_TRACKING_QUERY</code>、<code
+                        >ROLE_M2_CLINICAL_IMPORT</code
+                      >
+                    </td>
                     <td><span class="status-pill status-ok">完整</span></td>
-                    <td>M2 入口、服务、权限和 happy path 测试都完整，送检主职责具备可操作前台。</td>
+                    <td>
+                      M2 入口、服务、权限和 happy path
+                      测试都完整，送检主职责具备可操作前台。
+                    </td>
                   </tr>
                   <tr>
                     <td>技师</td>
                     <td><code>/technical-workflow/*</code></td>
-                    <td><code>ROLE_M3_GROSSING</code>、<code>ROLE_M3_DEHYDRATION</code>、<code>ROLE_M3_EMBEDDING</code>、<code>ROLE_M3_SLICING</code>、<code>ROLE_M3_STAINING</code>、<code>ROLE_M3_REWORK</code>、<code>ROLE_M3_TRACKING</code></td>
+                    <td>
+                      <code>ROLE_M3_GROSSING</code
+                      >、<code>ROLE_M3_DEHYDRATION</code>、<code>ROLE_M3_EMBEDDING</code>、<code>ROLE_M3_SLICING</code>、<code>ROLE_M3_STAINING</code>、<code>ROLE_M3_REWORK</code>、<code
+                        >ROLE_M3_TRACKING</code
+                      >
+                    </td>
                     <td><span class="status-pill status-ok">完整</span></td>
-                    <td>M3 已形成工位页、任务池、追踪与返工页，角色边界清楚，入口可达。</td>
+                    <td>
+                      M3
+                      已形成工位页、任务池、追踪与返工页，角色边界清楚，入口可达。
+                    </td>
                   </tr>
                   <tr>
                     <td>医生</td>
-                    <td><code>/doctor-workflow/assignment</code>、<code>/doctor-workflow/workbench</code>、<code>/doctor-workflow/report</code>、<code>/doctor-workflow/revision</code>、<code>/doctor-workflow/consultation</code>、<code>/doctor-workflow/tracking</code>、<code>/doctor-workflow/medical-orders</code></td>
-                    <td>M4 分派、诊断、审核、签发、修订、会诊相关种子完整；另有 <code>ROLE_M4_MEDICAL_ORDER_EXECUTE</code></td>
+                    <td>
+                      <code>/doctor-workflow/assignment</code
+                      >、<code>/doctor-workflow/workbench</code>、<code>/doctor-workflow/report</code>、<code>/doctor-workflow/revision</code>、<code>/doctor-workflow/consultation</code>、<code>/doctor-workflow/tracking</code>、<code
+                        >/doctor-workflow/medical-orders</code
+                      >
+                    </td>
+                    <td>
+                      M4 分派、诊断、审核、签发、修订、会诊相关种子完整；另有
+                      <code>ROLE_M4_MEDICAL_ORDER_EXECUTE</code>
+                    </td>
                     <td><span class="status-pill status-ok">完整</span></td>
-                    <td><code>ROLE_M4_MEDICAL_ORDER_EXECUTE</code> 已有独立前台入口、权限常量、service 和执行工作台，不再属于缺失角色。</td>
+                    <td>
+                      <code>ROLE_M4_MEDICAL_ORDER_EXECUTE</code>
+                      已有独立前台入口、权限常量、service
+                      和执行工作台，不再属于缺失角色。
+                    </td>
                   </tr>
                   <tr>
                     <td>归档岗</td>
-                    <td><code>/operation-support/archive</code>、<code>/m6/history</code>、<code>/m6/statistics</code></td>
-                    <td><code>ROLE_ARCHIVE_MANAGER</code>，并拥有部分 M6 历史相关权限种子</td>
+                    <td>
+                      <code>/operation-support/archive</code
+                      >、<code>/m6/history</code>、<code>/m6/statistics</code>
+                    </td>
+                    <td>
+                      <code>ROLE_ARCHIVE_MANAGER</code>，并拥有部分 M6
+                      历史相关权限种子
+                    </td>
                     <td><span class="status-pill status-ok">完整</span></td>
-                    <td>M5 归档借阅前台与 M6 历史报告页均已具备真实工作面，归档岗职责已可在产品内闭环。</td>
+                    <td>
+                      M5 归档借阅前台与 M6
+                      历史报告页均已具备真实工作面，归档岗职责已可在产品内闭环。
+                    </td>
                   </tr>
                   <tr>
                     <td>试剂设备岗</td>
-                    <td><code>/operation-support/reagents</code>、<code>/operation-support/equipment</code></td>
+                    <td>
+                      <code>/operation-support/reagents</code>、<code
+                        >/operation-support/equipment</code
+                      >
+                    </td>
                     <td><code>ROLE_REAGENT_DEVICE_MANAGER</code></td>
                     <td><span class="status-pill status-ok">完整</span></td>
-                    <td>M5 试剂和设备台账入口、权限与预警都已落地，不应再被视为“规划中”。</td>
+                    <td>
+                      M5
+                      试剂和设备台账入口、权限与预警都已落地，不应再被视为“规划中”。
+                    </td>
                   </tr>
                   <tr>
                     <td>质量岗</td>
-                    <td><code>/m6/statistics</code>、<code>/m6/integration</code></td>
-                    <td><code>ROLE_QUALITY_MANAGER</code>，拥有统计查询与导出权限</td>
+                    <td>
+                      <code>/m6/statistics</code>、<code>/m6/integration</code>
+                    </td>
+                    <td>
+                      <code>ROLE_QUALITY_MANAGER</code>，拥有统计查询与导出权限
+                    </td>
                     <td><span class="status-pill status-ok">完整</span></td>
-                    <td>统计分析前端可用；若质量岗被授予集成任务查询权限，也已有真实入口承接更广义的 M6 支撑职责。</td>
+                    <td>
+                      统计分析前端可用；若质量岗被授予集成任务查询权限，也已有真实入口承接更广义的
+                      M6 支撑职责。
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -1140,8 +1565,17 @@
             <div class="summary-note" style="margin-top: 18px">
               <strong>缺失角色结论</strong>
               <div class="bullet-list">
-                <li><strong>当前结论：</strong>本轮代码已关闭“有角色、无页面”的显性断层，<code>ROLE_M4_MEDICAL_ORDER_EXECUTE</code> 与 M6 相关角色均已具备前台工作面。</li>
-                <li><strong>治理要求：</strong>后续仍需用角色可达性清单持续核对“入口页、菜单映射、主操作、测试证据”，避免同类断层在新增模块中再次出现。</li>
+                <li>
+                  <strong>当前结论：</strong
+                  >本轮代码已关闭“有角色、无页面”的显性断层，<code
+                    >ROLE_M4_MEDICAL_ORDER_EXECUTE</code
+                  >
+                  与 M6 相关角色均已具备前台工作面。
+                </li>
+                <li>
+                  <strong>治理要求：</strong
+                  >后续仍需用角色可达性清单持续核对“入口页、菜单映射、主操作、测试证据”，避免同类断层在新增模块中再次出现。
+                </li>
               </div>
             </div>
           </section>
@@ -1160,46 +1594,118 @@
               <div class="finding-card high">
                 <span class="finding-label high">Finding 1 / High</span>
                 <strong>M4 病理医嘱执行链断在前端角色落点</strong>
-                <p>后端已经把病理医嘱纳入正式菜单、权限和执行角色，前端却没有独立工作台。这意味着“创建医嘱”和“执行医嘱”被拆成了两个世界：医生侧能看到摘要，执行侧没有工作面。</p>
+                <p>
+                  后端已经把病理医嘱纳入正式菜单、权限和执行角色，前端却没有独立工作台。这意味着“创建医嘱”和“执行医嘱”被拆成了两个世界：医生侧能看到摘要，执行侧没有工作面。
+                </p>
                 <ul class="bullet-list">
-                  <li>前端证据：<code>doctor-workflow.ts</code> 无医嘱路由；<code>constants.ts</code> 无 <code>PERM_M4_MEDICAL_ORDER_*</code>；<code>DiagnosisWorkbenchView.vue</code> 与 <code>ReportTrackingView.vue</code> 只做摘要展示。</li>
-                  <li>后端证据：<code>PathologyMedicalOrderController.java</code> 已提供 create / pending / accept / complete / cancel；<code>V19__seed_m4_batch2_authorization.sql</code> 已种下 <code>ROLE_M4_MEDICAL_ORDER_EXECUTE</code> 及权限。</li>
-                  <li>影响：角色交接不成立。系统可以生成医嘱，但不能保证执行岗在产品内完成自己的职责。</li>
+                  <li>
+                    前端证据：<code>doctor-workflow.ts</code> 无医嘱路由；<code
+                      >constants.ts</code
+                    >
+                    无 <code>PERM_M4_MEDICAL_ORDER_*</code>；<code
+                      >DiagnosisWorkbenchView.vue</code
+                    >
+                    与 <code>ReportTrackingView.vue</code> 只做摘要展示。
+                  </li>
+                  <li>
+                    后端证据：<code>PathologyMedicalOrderController.java</code>
+                    已提供 create / pending / accept / complete / cancel；<code
+                      >V19__seed_m4_batch2_authorization.sql</code
+                    >
+                    已种下 <code>ROLE_M4_MEDICAL_ORDER_EXECUTE</code> 及权限。
+                  </li>
+                  <li>
+                    影响：角色交接不成立。系统可以生成医嘱，但不能保证执行岗在产品内完成自己的职责。
+                  </li>
                 </ul>
               </div>
 
               <div class="finding-card medium">
                 <span class="finding-label medium">Finding 2 / Medium</span>
                 <strong>M6 已补齐，后续重点转为目标环境验收</strong>
-                <p><code>integration</code>、<code>billing</code>、<code>history</code> 已经由真实页面承接，前端不再是占位状态。当前真正需要推进的是外围系统联调、历史数据源核验和现场角色菜单配置。</p>
+                <p>
+                  <code>integration</code>、<code>billing</code>、<code
+                    >history</code
+                  >
+                  已经由真实页面承接，前端不再是占位状态。当前真正需要推进的是外围系统联调、历史数据源核验和现场角色菜单配置。
+                </p>
                 <ul class="bullet-list">
-                  <li>前端证据：<code>apps/web-ele/src/router/routes/modules/m6.ts</code>、<code>menu-mapper.ts</code>、<code>m6-management/*</code> 已映射并实现四个真实入口页。</li>
-                  <li>后端证据：<code>M6ManagementController.java</code> 已暴露 integration、billing、historical-report、stat-report 相关接口；<code>V27__seed_m6_authorization_and_indicator_defs.sql</code> 已完整种下菜单与权限。</li>
-                  <li>测试证据：<code>m6.test.ts</code>、<code>m6-management-service.test.ts</code>、<code>m6-management-views.test.ts</code> 以及既有 <code>M6*IntegrationTest</code>。</li>
-                  <li>影响：若不做现场验收，风险会从“前端缺口”转成“联调与实施偏差”。</li>
+                  <li>
+                    前端证据：<code>apps/web-ele/src/router/routes/modules/m6.ts</code>、<code>menu-mapper.ts</code>、<code
+                      >m6-management/*</code
+                    >
+                    已映射并实现四个真实入口页。
+                  </li>
+                  <li>
+                    后端证据：<code>M6ManagementController.java</code> 已暴露
+                    integration、billing、historical-report、stat-report
+                    相关接口；<code
+                      >V27__seed_m6_authorization_and_indicator_defs.sql</code
+                    >
+                    已完整种下菜单与权限。
+                  </li>
+                  <li>
+                    测试证据：<code>m6.test.ts</code>、<code>m6-management-service.test.ts</code>、<code
+                      >m6-management-views.test.ts</code
+                    >
+                    以及既有 <code>M6*IntegrationTest</code>。
+                  </li>
+                  <li>
+                    影响：若不做现场验收，风险会从“前端缺口”转成“联调与实施偏差”。
+                  </li>
                 </ul>
               </div>
 
               <div class="finding-card medium">
                 <span class="finding-label medium">Finding 3 / Medium</span>
                 <strong>M5 已实现，但旧实施计划仍在误报“未实现”</strong>
-                <p>当前代码里 <code>operation-support</code> 已经包含路由、入口页、archive / reagents / equipment 三个工作台、service 与测试；旧文档仍把它描述为待实现，说明治理文档已落后于代码。</p>
+                <p>
+                  当前代码里
+                  <code>operation-support</code> 已经包含路由、入口页、archive /
+                  reagents / equipment 三个工作台、service
+                  与测试；旧文档仍把它描述为待实现，说明治理文档已落后于代码。
+                </p>
                 <ul class="bullet-list">
-                  <li>前端证据：<code>apps/web-ele/src/modules/operation-support/*</code>、<code>operation-support.ts</code>、<code>operation-support-service.test.ts</code>、<code>access.test.ts</code>。</li>
-                  <li>后端证据：<code>ArchiveWorkflowIntegrationTest</code>、<code>ArchiveRoleAuthorizationIntegrationTest</code>、M5 controller 与权限种子均已存在。</li>
-                  <li>对照文档：<code>docs/M4_M5_ARCHIVE_OPERATION_SUPPORT_IMPLEMENTATION_PLAN.md</code> 仍把 M5 表述为“尚未实现”。</li>
-                  <li>影响：验收、排期、对外汇报极易出现重复说明和错误风险判断。</li>
+                  <li>
+                    前端证据：<code>apps/web-ele/src/modules/operation-support/*</code>、<code>operation-support.ts</code>、<code>operation-support-service.test.ts</code>、<code>access.test.ts</code>。
+                  </li>
+                  <li>
+                    后端证据：<code>ArchiveWorkflowIntegrationTest</code>、<code>ArchiveRoleAuthorizationIntegrationTest</code>、M5
+                    controller 与权限种子均已存在。
+                  </li>
+                  <li>
+                    对照文档：<code
+                      >docs/M4_M5_ARCHIVE_OPERATION_SUPPORT_IMPLEMENTATION_PLAN.md</code
+                    >
+                    仍把 M5 表述为“尚未实现”。
+                  </li>
+                  <li>
+                    影响：验收、排期、对外汇报极易出现重复说明和错误风险判断。
+                  </li>
                 </ul>
               </div>
 
               <div class="finding-card low">
                 <span class="finding-label low">Finding 4 / Low</span>
                 <strong>未发现真正影响业务的重复环节</strong>
-                <p>当前代码中的“重复”主要是兼容别名、菜单映射和统一入口跳转，不构成业务重复录入或重复审批。把这些别名误判成流程重复，会得出错误结论。</p>
+                <p>
+                  当前代码中的“重复”主要是兼容别名、菜单映射和统一入口跳转，不构成业务重复录入或重复审批。把这些别名误判成流程重复，会得出错误结论。
+                </p>
                 <ul class="bullet-list">
-                  <li>示例：<code>/workflow/application-list</code>、<code>/workflow/clinical-register</code> 最终回到同一登记页；这属于兼容路径，不是多套业务流程。</li>
-                  <li>示例：<code>menu-mapper.ts</code> 中大量 <code>pathAliases</code> 用于兼容后端菜单路径，不是重复页面实现。</li>
-                  <li>结论：当前更大的问题不是重复，而是角色断层与前后端交付不对齐。</li>
+                  <li>
+                    示例：<code>/workflow/application-list</code>、<code
+                      >/workflow/clinical-register</code
+                    >
+                    最终回到同一登记页；这属于兼容路径，不是多套业务流程。
+                  </li>
+                  <li>
+                    示例：<code>menu-mapper.ts</code> 中大量
+                    <code>pathAliases</code>
+                    用于兼容后端菜单路径，不是重复页面实现。
+                  </li>
+                  <li>
+                    结论：当前更大的问题不是重复，而是角色断层与前后端交付不对齐。
+                  </li>
                 </ul>
               </div>
             </div>
@@ -1210,7 +1716,8 @@
               <div>
                 <h2>06. 关键路径可度量性评估</h2>
                 <p class="section-desc">
-                  可度量性统一按五项检查：是否有明确输入、是否有状态迁移、是否有责任人 / 操作人记录、是否有追踪 / 审计视图、是否有测试或观测证据。
+                  可度量性统一按五项检查：是否有明确输入、是否有状态迁移、是否有责任人
+                  / 操作人记录、是否有追踪 / 审计视图、是否有测试或观测证据。
                 </p>
               </div>
             </div>
@@ -1278,7 +1785,9 @@
                     <td><span class="score-cell score-yes">有</span></td>
                     <td><span class="score-cell score-yes">有</span></td>
                     <td><strong>5 / 5</strong></td>
-                    <td>后端可度量，但前台不可达；这是“可度量但不可交付”的典型断层。</td>
+                    <td>
+                      后端可度量，但前台不可达；这是“可度量但不可交付”的典型断层。
+                    </td>
                   </tr>
                   <tr>
                     <td>M6 集成 / 计费 / 历史支持链</td>
@@ -1288,7 +1797,9 @@
                     <td><span class="score-cell score-yes">有</span></td>
                     <td><span class="score-cell score-yes">有</span></td>
                     <td><strong>5 / 5</strong></td>
-                    <td>后端具备完整度量基础，但前端缺工作面，导致角色无法利用这些度量能力完成任务。</td>
+                    <td>
+                      后端具备完整度量基础，但前端缺工作面，导致角色无法利用这些度量能力完成任务。
+                    </td>
                   </tr>
                   <tr>
                     <td>M6 统计分析</td>
@@ -1298,7 +1809,10 @@
                     <td><span class="score-cell score-yes">有</span></td>
                     <td><span class="score-cell score-yes">有</span></td>
                     <td><strong>5 / 5</strong></td>
-                    <td>统计分析与其余三条支持链均已具备真实前台，M6 的重点已从“未交付”转为“上线前验收”。</td>
+                    <td>
+                      统计分析与其余三条支持链均已具备真实前台，M6
+                      的重点已从“未交付”转为“上线前验收”。
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -1323,32 +1837,49 @@
               <div class="finding-card medium">
                 <span class="finding-label medium">P1</span>
                 <strong>冻结旧结论，统一对外口径</strong>
-                <p>把补齐前的“缺口版”结论标记为历史状态，后续统一以当前代码事实沟通，避免 M4 / M6 再被误报为未闭环。</p>
+                <p>
+                  把补齐前的“缺口版”结论标记为历史状态，后续统一以当前代码事实沟通，避免
+                  M4 / M6 再被误报为未闭环。
+                </p>
               </div>
               <div class="finding-card medium">
                 <span class="finding-label medium">P1</span>
                 <strong>执行现场验收清单</strong>
-                <p>围绕外部收费回执、历史导入真实数据源、CSV 编码 / 文件名、角色菜单可见性和工作面可达性开展目标环境核验，不再把这类问题留给后续口头补充。</p>
+                <p>
+                  围绕外部收费回执、历史导入真实数据源、CSV 编码 /
+                  文件名、角色菜单可见性和工作面可达性开展目标环境核验，不再把这类问题留给后续口头补充。
+                </p>
               </div>
               <div class="finding-card medium">
                 <span class="finding-label medium">P1</span>
                 <strong>同步修正文档基线</strong>
-                <p>将 M5 已实现、M4 医嘱执行已补齐、M6 四页真实可用等现状写回正式文档，避免后续验收和汇报继续沿用过期说法。</p>
+                <p>
+                  将 M5 已实现、M4 医嘱执行已补齐、M6
+                  四页真实可用等现状写回正式文档，避免后续验收和汇报继续沿用过期说法。
+                </p>
               </div>
               <div class="finding-card medium">
                 <span class="finding-label medium">P1</span>
                 <strong>建立角色可达性清单</strong>
-                <p>每个后端种子角色都应有一张前端可达性清单，明确“入口页面、菜单映射、主操作、测试类”。这样可以提前发现“有角色、无页面”的断层。</p>
+                <p>
+                  每个后端种子角色都应有一张前端可达性清单，明确“入口页面、菜单映射、主操作、测试类”。这样可以提前发现“有角色、无页面”的断层。
+                </p>
               </div>
               <div class="finding-card low">
                 <span class="finding-label low">P2</span>
                 <strong>继续保留兼容别名，但文档化其目的</strong>
-                <p>M2 的兼容路由和菜单别名不是问题，问题在于它们容易被外部评审误解成重复流程。应在规则文档中显式说明这是兼容策略。</p>
+                <p>
+                  M2
+                  的兼容路由和菜单别名不是问题，问题在于它们容易被外部评审误解成重复流程。应在规则文档中显式说明这是兼容策略。
+                </p>
               </div>
               <div class="finding-card low">
                 <span class="finding-label low">P2</span>
                 <strong>把“主链闭环”和“支持链闭环”分开汇报</strong>
-                <p>后续对外表达应明确：本轮代码基线下 M1-M6 主能力已闭环；若谈现场上线状态，则需单列目标环境验收结果。不要再把“代码闭环”与“实施验收”混成一个口径。</p>
+                <p>
+                  后续对外表达应明确：本轮代码基线下 M1-M6
+                  主能力已闭环；若谈现场上线状态，则需单列目标环境验收结果。不要再把“代码闭环”与“实施验收”混成一个口径。
+                </p>
               </div>
             </div>
           </section>
@@ -1367,17 +1898,33 @@
               <div class="legend-card">
                 <strong>1. 不计为业务重复的内容</strong>
                 <ul class="bullet-list">
-                  <li><code>/workflow/application-list</code>、<code>/workflow/clinical-register</code> 等兼容路由最终导向统一页，不算重复业务环节。</li>
-                  <li><code>menu-mapper.ts</code> 里的 <code>pathAliases</code> 是后端菜单兼容策略，不算重复页面实现。</li>
-                  <li>入口页自动跳转到首个可用工位，是权限导航策略，不算流程多走一步。</li>
+                  <li>
+                    <code>/workflow/application-list</code>、<code
+                      >/workflow/clinical-register</code
+                    >
+                    等兼容路由最终导向统一页，不算重复业务环节。
+                  </li>
+                  <li>
+                    <code>menu-mapper.ts</code> 里的
+                    <code>pathAliases</code>
+                    是后端菜单兼容策略，不算重复页面实现。
+                  </li>
+                  <li>
+                    入口页自动跳转到首个可用工位，是权限导航策略，不算流程多走一步。
+                  </li>
                 </ul>
               </div>
 
               <div class="legend-card">
                 <strong>2. 未纳入代码闭环判断但需现场验证的内容</strong>
                 <ul class="bullet-list">
-                  <li>真实打印机、扫码枪、设备 SDK、外部收费系统、真实历史导入数据源。</li>
-                  <li>这些属于目标环境验收，不应反向覆盖当前代码闭环判断，但必须在上线前补验。</li>
+                  <li>
+                    真实打印机、扫码枪、设备
+                    SDK、外部收费系统、真实历史导入数据源。
+                  </li>
+                  <li>
+                    这些属于目标环境验收，不应反向覆盖当前代码闭环判断，但必须在上线前补验。
+                  </li>
                 </ul>
               </div>
             </div>
@@ -1385,9 +1932,14 @@
             <div class="summary-note" style="margin-top: 18px">
               <strong>最终判断</strong>
               <p>
-                以当前代码事实为准，<strong>SYBaseProject 的 M1-M6 当前前后端主能力已经闭环。</strong>
-                本轮已关闭的关键断层包括 <strong>M4 病理医嘱执行工作台</strong> 与
-                <strong>M6 integration / billing / history 三条真实前台链路</strong>；剩余工作集中在治理同步和目标环境验收。
+                以当前代码事实为准，<strong
+                  >SYBaseProject 的 M1-M6 当前前后端主能力已经闭环。</strong
+                >
+                本轮已关闭的关键断层包括
+                <strong>M4 病理医嘱执行工作台</strong> 与
+                <strong
+                  >M6 integration / billing / history 三条真实前台链路</strong
+                >；剩余工作集中在治理同步和目标环境验收。
               </p>
             </div>
 

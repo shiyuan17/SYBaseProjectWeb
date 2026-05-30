@@ -224,13 +224,17 @@ describe('dashboard visualization helpers', () => {
   });
 
   it('returns stable empty-state structures for empty input', () => {
-    expect(buildAnalyticsVisualSummary(createOverview({
-      kpiCards: [],
-      operationRows: [],
-      qualityRows: [],
-      riskCards: [],
-      workloadRows: [],
-    }))).toEqual({
+    expect(
+      buildAnalyticsVisualSummary(
+        createOverview({
+          kpiCards: [],
+          operationRows: [],
+          qualityRows: [],
+          riskCards: [],
+          workloadRows: [],
+        }),
+      ),
+    ).toEqual({
       heroMetrics: [],
       operationSignals: [],
       qualityChartData: [],

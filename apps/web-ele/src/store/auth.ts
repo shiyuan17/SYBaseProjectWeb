@@ -1,4 +1,5 @@
 import type { Recordable, UserInfo } from '@vben/types';
+
 import type { AuthApi } from '#/api';
 
 import { ref } from 'vue';
@@ -80,16 +81,14 @@ export const useAuthStore = defineStore('auth', () => {
         if (accessStore.loginExpired) {
           accessStore.setLoginExpired(false);
         } else {
-          if (onSuccess) {
-            await onSuccess?.();
-          } else {
-            await router.push(
-              resolvePostLoginRedirect(
-                router.currentRoute.value.query.redirect,
-                userInfo.homePath || preferences.app.defaultHomePath,
-              ),
-            );
-          }
+          await (onSuccess
+            ? onSuccess?.()
+            : router.push(
+                resolvePostLoginRedirect(
+                  router.currentRoute.value.query.redirect,
+                  userInfo.homePath || preferences.app.defaultHomePath,
+                ),
+              ));
         }
 
         if (userInfo?.realName) {

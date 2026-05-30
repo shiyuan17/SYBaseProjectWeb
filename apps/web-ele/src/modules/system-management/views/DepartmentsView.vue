@@ -62,7 +62,11 @@ const form = reactive<CreateDepartmentRequest & { id?: string }>({
 });
 
 const filteredTree = computed(() =>
-  filterTreeByKeyword(treeData.value, (node) => node.departmentName, keyword.value),
+  filterTreeByKeyword(
+    treeData.value,
+    (node) => node.departmentName,
+    keyword.value,
+  ),
 );
 const expandedKeys = computed(() => getTreeExpandedKeys(filteredTree.value));
 const selectedNode = computed(() =>
@@ -193,7 +197,10 @@ onMounted(loadData);
         />
       </SystemSectionCard>
 
-      <SystemSectionCard title="节点详情" description="展示当前选中节点信息，并提供子节点维护入口。">
+      <SystemSectionCard
+        title="节点详情"
+        description="展示当前选中节点信息，并提供子节点维护入口。"
+      >
         <template #extra>
           <ElButton
             v-if="selectedNode"

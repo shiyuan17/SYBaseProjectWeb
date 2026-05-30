@@ -33,7 +33,10 @@ const props = withDefaults(
     confirmText: string;
     modelValue: boolean;
     remarksPlaceholder?: string;
-    submitAction: (taskId: string, payload: BatchOperatorRequest) => Promise<unknown>;
+    submitAction: (
+      taskId: string,
+      payload: BatchOperatorRequest,
+    ) => Promise<unknown>;
     successMessage: (task: PendingTechnicalTaskItem) => string;
     task: null | PendingTechnicalTaskItem;
     terminalPlaceholder?: string;
@@ -70,7 +73,13 @@ function resetDialogState() {
 }
 
 async function submitStart() {
-  const taskId = props.task?.id?.trim();
+  const task = props.task;
+  if (!task) {
+    ElMessage.warning('当前缺少待处理任务');
+    return;
+  }
+
+  const taskId = task?.id?.trim();
   if (!taskId) {
     ElMessage.warning('当前缺少待处理任务');
     return;
@@ -86,7 +95,7 @@ async function submitStart() {
   pageError.value = '';
   try {
     await props.submitAction(taskId, payload);
-    ElMessage.success(props.successMessage(props.task!));
+    ElMessage.success(props.successMessage(task));
     emit('submitted');
     dialogVisible.value = false;
   } catch (error) {

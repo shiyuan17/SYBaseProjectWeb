@@ -83,7 +83,10 @@ async function submitExecuteRework() {
   submitting.value = true;
   pageError.value = '';
   try {
-    const result = await executeReworkOrder(executeForm.reworkOrderId.trim(), payload);
+    const result = await executeReworkOrder(
+      executeForm.reworkOrderId.trim(),
+      payload,
+    );
     ElMessage.success('返工单执行成功');
     emit('submitted', result);
     dialogVisible.value = false;
@@ -149,7 +152,11 @@ watch(
 
     <template #footer>
       <ElButton @click="dialogVisible = false">取消</ElButton>
-      <ElButton :loading="submitting" type="success" @click="submitExecuteRework">
+      <ElButton
+        :loading="submitting"
+        type="success"
+        @click="submitExecuteRework"
+      >
         执行返工单
       </ElButton>
     </template>

@@ -60,7 +60,9 @@ export function mapTechnicalTrackingResponse(
   };
 }
 
-export async function listPendingTechnicalTasks(params: PendingTechnicalTaskQuery) {
+export async function listPendingTechnicalTasks(
+  params: PendingTechnicalTaskQuery,
+) {
   const response = await requestClient.get<PendingTechnicalTaskPageResponse>(
     '/v1/technical-tasks/pending',
     { params },
@@ -130,8 +132,13 @@ export async function uploadGrossingMediaAsset(file: File) {
   );
 }
 
-export async function createDehydrationBatch(data: CreateDehydrationBatchRequest) {
-  return requestClient.post<DehydrationBatchResult>('/v1/dehydration-batches', data);
+export async function createDehydrationBatch(
+  data: CreateDehydrationBatchRequest,
+) {
+  return requestClient.post<DehydrationBatchResult>(
+    '/v1/dehydration-batches',
+    data,
+  );
 }
 
 export async function startDehydrationBatch(
@@ -171,10 +178,15 @@ export async function completeSlicing(data: SlicingCompleteRequest) {
 }
 
 export async function startSlideStaining(data: TechnicalTaskStartRequest) {
-  return requestClient.post<TaskOperationResult>('/v1/slide-stainings/start', data);
+  return requestClient.post<TaskOperationResult>(
+    '/v1/slide-stainings/start',
+    data,
+  );
 }
 
-export async function completeSlideStaining(data: SlideStainingCompleteRequest) {
+export async function completeSlideStaining(
+  data: SlideStainingCompleteRequest,
+) {
   return requestClient.post<SlideStainingResult>(
     '/v1/slide-stainings/complete',
     data,

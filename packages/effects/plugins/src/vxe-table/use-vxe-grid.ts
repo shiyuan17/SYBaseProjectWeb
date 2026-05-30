@@ -26,11 +26,7 @@ export function useVbenVxeGrid<
 >(options: VxeGridProps<T, D, P>) {
   // const IS_REACTIVE = isReactive(options);
   const api = new VxeGridApi<T, D, P>(options);
-  const extendedApi: ExtendedVxeGridApi<T, D, P> = api as ExtendedVxeGridApi<
-    T,
-    D,
-    P
-  >;
+  const extendedApi: ExtendedVxeGridApi<T, D, P> = api as never;
   extendedApi.useStore = (selector) => {
     return useStore(api.store, selector);
   };

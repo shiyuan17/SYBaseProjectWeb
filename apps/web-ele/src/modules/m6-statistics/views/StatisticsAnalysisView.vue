@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import type { RoleView } from '#/modules/system-management/types/system-management';
 import type {
   StatIndicatorCategory,
   StatIndicatorView,
   StatReportResult,
   StatReportTemplateView,
 } from '../types/m6-statistics';
+
+import type { RoleView } from '#/modules/system-management/types/system-management';
 
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 
@@ -27,19 +28,18 @@ import {
   ElTableColumn,
 } from 'element-plus';
 
+import DashboardSectionCard from '#/modules/dashboard/components/DashboardSectionCard.vue';
+import { listRoles } from '#/modules/system-management/api/system-management-service';
 import DepartmentSelect from '#/modules/system-management/components/DepartmentSelect.vue';
 import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
-import {
-  listRoles,
-} from '#/modules/system-management/api/system-management-service';
-import DashboardSectionCard from '#/modules/dashboard/components/DashboardSectionCard.vue';
-import { M6_STAT_CATEGORY_TABS } from '../constants';
+
 import {
   exportStatReport,
   listStatIndicators,
   listStatReportTemplates,
   queryStatReport,
 } from '../api/m6-statistics-service';
+import { M6_STAT_CATEGORY_TABS } from '../constants';
 
 const userStore = useUserStore();
 
@@ -51,7 +51,7 @@ const activeCategory = ref<StatIndicatorCategory>('QUALITY');
 const indicators = ref<StatIndicatorView[]>([]);
 const templates = ref<StatReportTemplateView[]>([]);
 const roles = ref<RoleView[]>([]);
-const report = ref<StatReportResult | null>(null);
+const report = ref<null | StatReportResult>(null);
 
 const filters = reactive({
   dateRange: [] as string[],
@@ -69,7 +69,9 @@ const availableTemplates = computed(() =>
 );
 
 const availableIndicators = computed(() =>
-  indicators.value.filter((item) => item.indicatorCategory === activeCategory.value),
+  indicators.value.filter(
+    (item) => item.indicatorCategory === activeCategory.value,
+  ),
 );
 
 const roleOptions = computed(() =>
@@ -158,7 +160,9 @@ async function handleExport() {
   }
 }
 
-function handleDepartmentChange(department: null | { id: string; name: string }) {
+function handleDepartmentChange(
+  department: null | { id: string; name: string },
+) {
   filters.departmentId = department?.id ?? '';
   filters.departmentName = department?.name ?? '';
 }
@@ -288,20 +292,33 @@ onMounted(async () => {
               查询
             </ElButton>
             <ElButton @click="handleReset">重置</ElButton>
-            <ElButton :loading="exportLoading" @click="handleExport">导出 CSV</ElButton>
+            <ElButton :loading="exportLoading" @click="handleExport">
+              导出 CSV
+            </ElButton>
           </ElFormItem>
         </ElForm>
       </DashboardSectionCard>
 
-      <DashboardSectionCard title="报表结果" description="当前结果完全以 M6 后端统计口径返回值为准。">
+      <DashboardSectionCard
+        title="报表结果"
+        description="当前结果完全以 M6 后端统计口径返回值为准。"
+      >
         <div v-if="pageError" class="flex items-center justify-between gap-4">
           <span class="text-sm text-danger">{{ pageError }}</span>
           <ElButton @click="handleQuery">重试</ElButton>
         </div>
         <ElSkeleton v-else-if="loading" :rows="8" animated />
         <ElTable v-else-if="report?.rows?.length" :data="report.rows" border>
-          <ElTableColumn label="指标编码" min-width="180" prop="indicatorCode" />
-          <ElTableColumn label="指标名称" min-width="220" prop="indicatorName" />
+          <ElTableColumn
+            label="指标编码"
+            min-width="180"
+            prop="indicatorCode"
+          />
+          <ElTableColumn
+            label="指标名称"
+            min-width="220"
+            prop="indicatorName"
+          />
           <ElTableColumn label="结果值" min-width="140" prop="metricValue" />
           <ElTableColumn label="单位" min-width="120" prop="metricUnit" />
         </ElTable>

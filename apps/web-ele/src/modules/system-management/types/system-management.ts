@@ -354,7 +354,8 @@ export interface CreateMedicalOrderCategoryRequest {
   sortOrder: number;
 }
 
-export type UpdateMedicalOrderCategoryRequest = CreateMedicalOrderCategoryRequest;
+export type UpdateMedicalOrderCategoryRequest =
+  CreateMedicalOrderCategoryRequest;
 
 export interface CreateMedicalOrderItemRequest {
   categoryId: string;

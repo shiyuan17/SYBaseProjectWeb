@@ -33,7 +33,10 @@ import WorkstationTaskFocusPanel from '../components/WorkstationTaskFocusPanel.v
 import { DEFAULT_PAGE_SIZE } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import { useTechnicalWorkflowNavigation } from '../utils/navigation';
-import { buildWorkstationCaseContext, buildWorkstationQueueItems } from '../utils/workstation';
+import {
+  buildWorkstationCaseContext,
+  buildWorkstationQueueItems,
+} from '../utils/workstation';
 
 const route = useRoute();
 const router = useRouter();
@@ -52,7 +55,8 @@ const pendingAutoProcessTaskId = ref('');
 
 const filters = reactive({
   page: 1,
-  pathologyNo: typeof route.query.pathologyNo === 'string' ? route.query.pathologyNo : '',
+  pathologyNo:
+    typeof route.query.pathologyNo === 'string' ? route.query.pathologyNo : '',
   size: DEFAULT_PAGE_SIZE,
   timedOutOnly: route.query.mode === 'exception',
 });
@@ -65,15 +69,21 @@ const currentQuery = computed(() => ({
   timedOutOnly: filters.timedOutOnly,
 }));
 
-const queueItems = computed(() => buildWorkstationQueueItems(pendingItems.value, 'STAINING'));
+const queueItems = computed(() =>
+  buildWorkstationQueueItems(pendingItems.value, 'STAINING'),
+);
 const caseContext = computed(() =>
-  trackingResult.value ? buildWorkstationCaseContext(trackingResult.value, 'STAINING') : null,
+  trackingResult.value
+    ? buildWorkstationCaseContext(trackingResult.value, 'STAINING')
+    : null,
 );
 const canProcessSelectedTask = computed(() =>
   ['IN_PROGRESS', 'PENDING'].includes(selectedTask.value?.taskStatus ?? ''),
 );
 const processActionLabel = computed(() =>
-  selectedTask.value?.taskStatus === 'PENDING' ? '开始并处理染色' : '继续处理染色',
+  selectedTask.value?.taskStatus === 'PENDING'
+    ? '开始并处理染色'
+    : '继续处理染色',
 );
 
 async function loadTrackingForTask(task: null | PendingTechnicalTaskItem) {
@@ -93,7 +103,8 @@ async function loadTrackingForTask(task: null | PendingTechnicalTaskItem) {
 }
 
 function selectTask(taskId: string, openProcess = false) {
-  const matchedTask = pendingItems.value.find((item) => item.id === taskId) ?? null;
+  const matchedTask =
+    pendingItems.value.find((item) => item.id === taskId) ?? null;
   if (!matchedTask) {
     return;
   }
@@ -120,11 +131,18 @@ async function loadPendingData() {
     pendingItems.value = result.items;
     total.value = result.total;
 
-    const deepLinkedTaskId = typeof route.query.taskId === 'string' ? route.query.taskId : '';
+    const deepLinkedTaskId =
+      typeof route.query.taskId === 'string' ? route.query.taskId : '';
     const preferredTaskId =
-      pendingAutoProcessTaskId.value || deepLinkedTaskId || selectedTask.value?.id || result.items[0]?.id;
+      pendingAutoProcessTaskId.value ||
+      deepLinkedTaskId ||
+      selectedTask.value?.id ||
+      result.items[0]?.id;
     if (preferredTaskId) {
-      selectTask(preferredTaskId, Boolean(pendingAutoProcessTaskId.value || deepLinkedTaskId));
+      selectTask(
+        preferredTaskId,
+        Boolean(pendingAutoProcessTaskId.value || deepLinkedTaskId),
+      );
     } else {
       selectedTask.value = null;
     }
@@ -202,7 +220,10 @@ void loadPendingData();
           <template #extra>
             <ElButton
               :type="filters.timedOutOnly ? 'danger' : 'default'"
-              @click="filters.timedOutOnly = !filters.timedOutOnly; loadPendingData()"
+              @click="
+                filters.timedOutOnly = !filters.timedOutOnly;
+                loadPendingData();
+              "
             >
               {{ filters.timedOutOnly ? '仅异常' : '全部任务' }}
             </ElButton>
@@ -221,17 +242,27 @@ void loadPendingData();
             :task="selectedTask"
           >
             <div class="mt-4 flex flex-wrap gap-3">
-              <ElButton v-if="canProcessSelectedTask" type="primary" @click="openTaskProcessing">
+              <ElButton
+                v-if="canProcessSelectedTask"
+                type="primary"
+                @click="openTaskProcessing"
+              >
                 {{ processActionLabel }}
               </ElButton>
               <ElButton
-                @click="navigation.goToTracking({ caseId: selectedTask?.caseId ?? undefined })"
+                @click="
+                  navigation.goToTracking({
+                    caseId: selectedTask?.caseId ?? undefined,
+                  })
+                "
               >
                 查看生产轨迹
               </ElButton>
             </div>
 
-            <div class="mt-4 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
+            <div
+              class="mt-4 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground"
+            >
               当前先统一外层工作站交互，后续可继续补强同病例多玻片批量染色、预设染色方案和扫码连续上机。
             </div>
           </WorkstationTaskFocusPanel>
@@ -249,14 +280,19 @@ void loadPendingData();
           </div>
         </WorkflowSectionCard>
 
-        <TechnicalCaseContextPanel :context="caseContext" :loading="trackingLoading" />
+        <TechnicalCaseContextPanel
+          :context="caseContext"
+          :loading="trackingLoading"
+        />
       </div>
     </div>
 
     <TechnicalTaskStartDialog
       v-model="startDialogVisible"
       confirm-text="开始染色"
-      :submit-action="(taskId, payload) => startSlideStaining({ ...payload, taskId })"
+      :submit-action="
+        (taskId, payload) => startSlideStaining({ ...payload, taskId })
+      "
       :success-message="(task) => `任务 ${task.id} 已开始染色`"
       :task="selectedTask"
       terminal-placeholder="染色终端编码"

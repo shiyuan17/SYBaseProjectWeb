@@ -311,8 +311,7 @@ export interface CreateConsultationRequest extends DiagnosticTaskActionRequest {
   participants: ConsultationParticipantInput[];
 }
 
-export interface CommentConsultationParticipantRequest
-  extends DiagnosticTaskActionRequest {
+export interface CommentConsultationParticipantRequest extends DiagnosticTaskActionRequest {
   opinion: string;
 }
 

@@ -49,7 +49,11 @@ import {
   buildGuidelineCategorySubmitPayload,
   buildGuidelineSubmitPayload,
 } from '../utils/submit-payloads';
-import { filterTreeByKeyword, findTreeNodeById, getTreeExpandedKeys } from '../utils/tree';
+import {
+  filterTreeByKeyword,
+  findTreeNodeById,
+  getTreeExpandedKeys,
+} from '../utils/tree';
 
 const loading = ref(false);
 const detailLoading = ref(false);
@@ -85,7 +89,11 @@ const guidelineForm = reactive<CreateGuidelineRequest & { id?: string }>({
 });
 
 const filteredTree = computed(() =>
-  filterTreeByKeyword(treeData.value, (node) => node.categoryName, keyword.value),
+  filterTreeByKeyword(
+    treeData.value,
+    (node) => node.categoryName,
+    keyword.value,
+  ),
 );
 const expandedKeys = computed(() => getTreeExpandedKeys(filteredTree.value));
 const selectedCategory = computed(() =>
@@ -238,7 +246,10 @@ async function submitGuideline() {
       await createSamplingGuideline(payload);
       ElMessage.success('规范已创建');
     } else if (guidelineForm.id) {
-      await updateSamplingGuideline(guidelineForm.id, payload as UpdateGuidelineRequest);
+      await updateSamplingGuideline(
+        guidelineForm.id,
+        payload as UpdateGuidelineRequest,
+      );
       ElMessage.success('规范已更新');
     }
     guidelineDialogVisible.value = false;
@@ -283,7 +294,10 @@ onMounted(loadData);
       @retry="loadData"
     />
     <div class="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-      <SystemSectionCard title="规范分类树" description="搜索并维护取材规范分类层级。">
+      <SystemSectionCard
+        title="规范分类树"
+        description="搜索并维护取材规范分类层级。"
+      >
         <template #extra>
           <ElButton
             v-access:code="M1_PERMISSION_CODES.GUIDELINE_CREATE"
@@ -308,7 +322,10 @@ onMounted(loadData);
       </SystemSectionCard>
 
       <div class="flex flex-col gap-4">
-        <SystemSectionCard title="分类与规范列表" description="维护当前分类下的规范明细。">
+        <SystemSectionCard
+          title="分类与规范列表"
+          description="维护当前分类下的规范明细。"
+        >
           <template #extra>
             <ElButton
               v-if="selectedCategory"
@@ -334,13 +351,28 @@ onMounted(loadData);
             </ElButton>
           </template>
 
-          <ElTable :data="selectedCategory?.guidelines ?? []" border @row-click="handleGuidelineRowClick">
-            <ElTableColumn label="规范编码" min-width="140" prop="guidelineCode" />
-            <ElTableColumn label="规范名称" min-width="180" prop="guidelineName" />
+          <ElTable
+            :data="selectedCategory?.guidelines ?? []"
+            border
+            @row-click="handleGuidelineRowClick"
+          >
+            <ElTableColumn
+              label="规范编码"
+              min-width="140"
+              prop="guidelineCode"
+            />
+            <ElTableColumn
+              label="规范名称"
+              min-width="180"
+              prop="guidelineName"
+            />
             <ElTableColumn label="版本号" min-width="120" prop="versionNo" />
             <ElTableColumn label="状态" width="90">
               <template #default="scope">
-                <SystemStatusTag v-if="scope?.row" :enabled="scope.row.enabled" />
+                <SystemStatusTag
+                  v-if="scope?.row"
+                  :enabled="scope.row.enabled"
+                />
               </template>
             </ElTableColumn>
             <ElTableColumn fixed="right" label="操作" min-width="180">
@@ -385,7 +417,10 @@ onMounted(loadData);
           </div>
         </SystemSectionCard>
 
-        <SystemSectionCard title="规范详情" description="点击上方规范行查看正文内容。">
+        <SystemSectionCard
+          title="规范详情"
+          description="点击上方规范行查看正文内容。"
+        >
           <ElDescriptions v-if="selectedGuideline" :column="2" border>
             <ElDescriptionsItem label="规范编码">
               {{ selectedGuideline.guidelineCode }}
@@ -400,7 +435,9 @@ onMounted(loadData);
               <SystemStatusTag :enabled="selectedGuideline.enabled" />
             </ElDescriptionsItem>
             <ElDescriptionsItem label="规范内容" :span="2">
-              <pre class="text-foreground whitespace-pre-wrap text-sm">{{ selectedGuideline.guidelineContent || '-' }}</pre>
+              <pre class="text-foreground whitespace-pre-wrap text-sm">{{
+                selectedGuideline.guidelineContent || '-'
+              }}</pre>
             </ElDescriptionsItem>
           </ElDescriptions>
           <ElEmpty v-else description="请先选择规范查看详情" />
@@ -429,7 +466,11 @@ onMounted(loadData);
       </ElForm>
       <template #footer>
         <ElButton @click="categoryDialogVisible = false">取消</ElButton>
-        <ElButton :loading="dialogLoading" type="primary" @click="submitCategory">
+        <ElButton
+          :loading="dialogLoading"
+          type="primary"
+          @click="submitCategory"
+        >
           保存
         </ElButton>
       </template>
@@ -448,7 +489,11 @@ onMounted(loadData);
           <ElInput v-model="guidelineForm.versionNo" />
         </ElFormItem>
         <ElFormItem label="规范内容">
-          <ElInput v-model="guidelineForm.guidelineContent" :rows="8" type="textarea" />
+          <ElInput
+            v-model="guidelineForm.guidelineContent"
+            :rows="8"
+            type="textarea"
+          />
         </ElFormItem>
         <ElFormItem label="状态">
           <ElSwitch v-model="guidelineForm.enabled" />
@@ -456,7 +501,11 @@ onMounted(loadData);
       </ElForm>
       <template #footer>
         <ElButton @click="guidelineDialogVisible = false">取消</ElButton>
-        <ElButton :loading="dialogLoading" type="primary" @click="submitGuideline">
+        <ElButton
+          :loading="dialogLoading"
+          type="primary"
+          @click="submitGuideline"
+        >
           保存
         </ElButton>
       </template>

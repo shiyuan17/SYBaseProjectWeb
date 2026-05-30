@@ -1,0 +1,109 @@
+{
+  "linear-api-url": "https://api.linear.app/graphql",
+  "linear-web-url": "https://linear.app/sidneyone/project/jwbl-e41404512a99/overview",
+  "linear-team": {
+    "id": "ca0ba9fa-d4f0-45f8-8db7-878947b149ff",
+    "key": "SID",
+    "name": "Sidney"
+  },
+  "linear-project": {
+    "id": "62b8398e-7534-4b54-82b9-b3d042826d92",
+    "name": "JWBL",
+    "slugId": "e41404512a99"
+  },
+  "linear-labels": [
+    {
+      "name": "frontend",
+      "description": "前端健康度治理任务统一标签",
+      "color": "#0f766e",
+      "id": "d2b4703c-6f3c-4ae8-b8e6-2bcddb1b2baf"
+    }
+  ],
+  "linear-sync": {
+    "default-labels": ["frontend"],
+    "register-before-pull": true,
+    "register-before-sync": true
+  },
+  "linear-plan": [
+    {
+      "phase": "阶段1",
+      "domain": "lint-quality",
+      "title": "[阶段1][lint-quality] 回收临时豁免并清理剩余告警",
+      "description": "目标：收尾 lint 与 warning 治理，减少临时豁免并把阶段 1 的质量基线稳定下来。\n\n范围：\n- 清理剩余排序类、unused catalog、测试桩告警与 e2e helper 兼容问题。\n- 复查当前 lint 例外项，能回收的回收，无法立即收回的补充注释与后续拆解说明。\n- 确认 lint 在本地和 CI 环境都能稳定执行完成。\n\n完成标准：\n- `pnpm lint` 稳定通过。\n- 不再依赖临时规避来掩盖已知告警。",
+      "dueDate": "2026-06-01",
+      "labels": ["frontend"]
+    },
+    {
+      "phase": "阶段1",
+      "domain": "test-runtime",
+      "title": "[阶段1][test-runtime] 稳定 Vitest 运行时与 mock 告警",
+      "description": "目标：把阶段 1 剩余测试运行时噪音收口，保证健康度基线可重复。\n\n范围：\n- 处理 Vitest 运行时中的 mock 警告、组件桩告警和环境兼容问题。\n- 校验关键测试套件在当前依赖版本下的稳定性。\n- 补齐必要的测试工具层说明，避免同类告警反复出现。\n\n完成标准：\n- `pnpm test:unit` 稳定通过且无新增运行时噪音。\n- 影响测试稳定性的 mock/桩问题形成明确收口。",
+      "dueDate": "2026-06-02",
+      "labels": ["frontend"]
+    },
+    {
+      "phase": "阶段2",
+      "domain": "dashboard",
+      "title": "[阶段2][dashboard] 拆分 Dashboard 与菜单映射热点",
+      "description": "目标：降低 dashboard 与菜单映射热点文件的复杂度和变更风险。\n\n范围：\n- 拆分 dashboard 大视图与图表/布局映射逻辑。\n- 识别 `menu-mapper` 中的静态兜底、后端菜单映射与展示拼装职责，并向 mapper / schema / config 拆解。\n- 收敛热点文件的职责边界，降低跨模块改动联动范围。\n\n完成标准：\n- 关键热点文件体量明显下降。\n- 菜单映射与 dashboard 视图职责边界更清晰。",
+      "dueDate": "2026-06-05",
+      "labels": ["frontend"]
+    },
+    {
+      "phase": "阶段2",
+      "domain": "technical-workflow",
+      "title": "[阶段2][technical-workflow] 拆分技师工作流热点视图",
+      "description": "目标：拆分技师工作流高复杂度页面，降低维护成本。\n\n范围：\n- 优先处理 `TechnicalTasksView.vue` 及相关工作站热点视图。\n- 将 DTO 映射、查询构造、表单状态、弹窗逻辑与工作站状态组织抽到 composable / mapper / view-model。\n- 保持既有交互链路与业务语义不变。\n\n完成标准：\n- 主要热点视图显著瘦身。\n- 工作流页面的状态组织和弹窗逻辑可独立测试。",
+      "dueDate": "2026-06-09",
+      "labels": ["frontend"]
+    },
+    {
+      "phase": "阶段2",
+      "domain": "operation-support",
+      "title": "[阶段2][operation-support] 拆分档案与台账页面",
+      "description": "目标：收敛运营支撑模块超大页面的结构债。\n\n范围：\n- 优先拆分 `ArchiveManagementView.vue` 以及相关台账类页面。\n- 把查询表单、列表列定义、详情弹窗、导出/辅助逻辑下沉到 composable / schema / helper。\n- 保持现有权限边界和接口契约不变。\n\n完成标准：\n- 档案与台账类页面主文件体量明显下降。\n- 列表、表单、弹窗逻辑边界清晰。",
+      "dueDate": "2026-06-11",
+      "labels": ["frontend"]
+    },
+    {
+      "phase": "阶段2",
+      "domain": "doctor-workflow",
+      "title": "[阶段2][doctor-workflow] 拆分诊断工作台热点",
+      "description": "目标：降低诊断工作台和医生工作流页面的耦合与复杂度。\n\n范围：\n- 优先处理 `DiagnosisWorkbenchView.vue` 及同类热点视图。\n- 分离查询条件、业务状态聚合、视图配置和弹窗操作链路。\n- 为后续补测试与业务迭代留出更稳定的模块边界。\n\n完成标准：\n- 诊断工作台热点视图完成职责拆分。\n- 关键状态与配置逻辑可以脱离页面主体复用或测试。",
+      "dueDate": "2026-06-13",
+      "labels": ["frontend"]
+    },
+    {
+      "phase": "阶段2",
+      "domain": "specimen-workflow",
+      "title": "[阶段2][specimen-workflow] 拆分标本流程与 mock",
+      "description": "目标：同步治理标本流程页面与超大 mock 文件的结构债。\n\n范围：\n- 拆分 `SpecimenManagementView.vue` 等热点页面。\n- 对 `specimen-workflow-mock.ts` 进行按领域切分，降低单文件膨胀。\n- 把 mock、DTO 映射、视图状态和流程辅助逻辑按职责拆开。\n\n完成标准：\n- 标本流程热点页面和 mock 文件体量显著收敛。\n- mock 与业务视图不再高度缠绕。",
+      "dueDate": "2026-06-16",
+      "labels": ["frontend"]
+    },
+    {
+      "phase": "阶段3",
+      "domain": "tests",
+      "title": "[阶段3][tests] 补薄弱模块单测",
+      "description": "目标：为当前薄弱模块补齐基础单测，降低回归盲区。\n\n范围：\n- 优先补 `m6-statistics`、`dashboard`、`frozen-workflow` 等薄弱区域。\n- 补路由/登录/请求边界附近的核心行为测试。\n- 按模块补充最小有效用例，优先覆盖高风险映射和状态逻辑。\n\n完成标准：\n- 薄弱模块不再是 0 测试或明显空白。\n- 关键边界行为具备最小回归保护。",
+      "dueDate": "2026-06-20",
+      "labels": ["frontend"]
+    },
+    {
+      "phase": "阶段3",
+      "domain": "e2e",
+      "title": "[阶段3][e2e] 补关键登录/路由/请求 smoke",
+      "description": "目标：建立最小可用的关键链路 smoke e2e，补上端到端验证缺口。\n\n范围：\n- 优先覆盖登录、路由守卫、菜单进入、请求边界等关键链路。\n- 复用现有 Playwright 目录与 helper，整理基础环境准备。\n- 仅先覆盖高价值 smoke，不一次性追求大而全。\n\n完成标准：\n- 至少一组关键链路 smoke 可在标准环境执行。\n- 登录/路由/请求闭环具备端到端可见性。",
+      "dueDate": "2026-06-24",
+      "labels": ["frontend"]
+    },
+    {
+      "phase": "阶段3",
+      "domain": "ci",
+      "title": "[阶段3][ci] 纳入 typecheck/build/unit/lint/circular 门禁",
+      "description": "目标：把当前健康度基线收敛到 CI 门禁，防止后续回退。\n\n范围：\n- 将 `typecheck`、`build:ele`、`test:unit`、`lint`、`check:circular` 纳入可见门禁。\n- 明确失败信号、输出位置和最小验收说明。\n- 校验本地命令与 CI 门禁口径一致。\n\n完成标准：\n- 核心健康度检查进入 CI。\n- 回归风险可以在合并前被及时暴露。",
+      "dueDate": "2026-06-27",
+      "labels": ["frontend"]
+    }
+  ]
+}

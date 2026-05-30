@@ -1,16 +1,14 @@
 <script setup lang="ts">
-import type { useEcharts } from '@vben/plugins/echarts';
 import type { AnalyticsOverviewResult } from '../types/dashboard';
 
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
-import dayjs from 'dayjs';
-
 import { Page } from '@vben/common-ui';
 import { usePreferences } from '@vben/preferences';
 import { useAccessStore } from '@vben/stores';
 
+import dayjs from 'dayjs';
 import { ElButton, ElEmpty, ElSkeleton } from 'element-plus';
 
 import { loadAnalyticsOverview } from '../api/dashboard-service';
@@ -18,12 +16,15 @@ import DashboardChartPanel from '../components/DashboardChartPanel.vue';
 import DashboardHeroMetricCard from '../components/DashboardHeroMetricCard.vue';
 import DashboardSectionCard from '../components/DashboardSectionCard.vue';
 import {
+  buildQualityChartOption,
+  buildRiskDistributionChartOption,
+  buildWorkloadChartOption,
+} from '../utils/dashboard-chart-options';
+import { getDashboardChartTheme } from '../utils/dashboard-theme';
+import {
   buildAnalyticsVisualSummary,
   getVisualToneClasses,
 } from '../utils/dashboard-visualization';
-import { getDashboardChartTheme } from '../utils/dashboard-theme';
-
-type ChartOption = Parameters<ReturnType<typeof useEcharts>['renderEcharts']>[0];
 
 const accessStore = useAccessStore();
 const router = useRouter();
@@ -41,7 +42,8 @@ const overview = ref<AnalyticsOverviewResult>({
 
 const currentMonthLabel = computed(() => dayjs().format('YYYY 年 MM 月'));
 const dateRangeLabel = computed(
-  () => `${dayjs().startOf('month').format('MM.DD')} - ${dayjs().format('MM.DD')}`,
+  () =>
+    `${dayjs().startOf('month').format('MM.DD')} - ${dayjs().format('MM.DD')}`,
 );
 
 const hasContent = computed(
@@ -53,176 +55,31 @@ const hasContent = computed(
     overview.value.workloadRows.length > 0,
 );
 
-const visualSummary = computed(() => buildAnalyticsVisualSummary(overview.value));
+const visualSummary = computed(() =>
+  buildAnalyticsVisualSummary(overview.value),
+);
 const chartTheme = computed(() => getDashboardChartTheme(isDark.value));
 
-const qualityChartOption = computed<ChartOption | null>(() => {
-  const data = visualSummary.value.qualityChartData;
-  if (data.length === 0) {
-    return null;
-  }
+const qualityChartOption = computed(() =>
+  buildQualityChartOption(
+    visualSummary.value.qualityChartData,
+    chartTheme.value,
+  ),
+);
 
-  return {
-    color: [chartTheme.value.success, '#22c55e', '#10b981'],
-    legend: {
-      bottom: 0,
-      icon: 'circle',
-      itemHeight: 8,
-      itemWidth: 8,
-      textStyle: {
-        color: chartTheme.value.textSecondary,
-        fontSize: 12,
-      },
-    },
-    series: data.map((item, index) => ({
-      center: [`${22 + index * 28}%`, '45%'],
-      clockwise: true,
-      data: [
-        {
-          itemStyle: {
-            color: [chartTheme.value.success, '#34d399', '#10b981'][index % 3],
-          },
-          name: item.label,
-          value: item.value,
-        },
-        {
-          itemStyle: {
-            color: chartTheme.value.trackColor,
-          },
-          tooltip: {
-            show: false,
-          },
-          value: Math.max(100 - item.value, 0),
-        },
-      ],
-      hoverAnimation: false,
-      label: {
-        color: chartTheme.value.textPrimary,
-        fontSize: 18,
-        fontWeight: 600,
-        formatter: `${item.valueText}%`,
-        position: 'center',
-      },
-      radius: ['58%', '75%'],
-      startAngle: 90,
-      type: 'pie',
-    })),
-    tooltip: {
-      formatter: '{b}：{c}%',
-      trigger: 'item',
-    },
-  } as ChartOption;
-});
+const workloadChartOption = computed(() =>
+  buildWorkloadChartOption(
+    visualSummary.value.workloadChartData,
+    chartTheme.value,
+  ),
+);
 
-const workloadChartOption = computed<ChartOption | null>(() => {
-  const data = visualSummary.value.workloadChartData;
-  if (data.length === 0) {
-    return null;
-  }
-
-  return {
-    grid: {
-      bottom: 0,
-      left: 110,
-      right: 20,
-      top: 24,
-    },
-    series: [
-      {
-        barMaxWidth: 18,
-        data: data.map((item, index) => ({
-          itemStyle: {
-            borderRadius: [0, 9, 9, 0],
-            color: index === 0 ? '#38bdf8' : '#a78bfa',
-          },
-          value: item.value,
-        })),
-        label: {
-          color: chartTheme.value.textSecondary,
-          formatter: ({ dataIndex }: { dataIndex: number }) =>
-            `${data[dataIndex]?.valueText ?? '0'} ${data[dataIndex]?.unit ?? ''}`,
-          position: 'right',
-          show: true,
-        },
-        type: 'bar',
-      },
-    ],
-    tooltip: {
-      trigger: 'axis',
-    },
-    xAxis: {
-      axisLabel: {
-        color: chartTheme.value.textTertiary,
-      },
-      splitLine: {
-        lineStyle: {
-          color: chartTheme.value.trackColor,
-        },
-        show: true,
-      },
-      type: 'value',
-    },
-    yAxis: {
-      axisLabel: {
-        color: chartTheme.value.textSecondary,
-      },
-      axisLine: {
-        show: false,
-      },
-      axisTick: {
-        show: false,
-      },
-      data: data.map((item) => item.label),
-      type: 'category',
-    },
-  } as ChartOption;
-});
-
-const riskChartOption = computed<ChartOption | null>(() => {
-  const data = visualSummary.value.riskDistribution;
-  if (data.length === 0) {
-    return null;
-  }
-
-  const colorMap: Record<string, string> = {
-    danger: chartTheme.value.danger,
-    info: chartTheme.value.info,
-    neutral: chartTheme.value.neutral,
-    primary: chartTheme.value.primary,
-    success: chartTheme.value.success,
-    warning: chartTheme.value.warning,
-  };
-
-  return {
-    color: data.map((item) => colorMap[item.tone] ?? chartTheme.value.neutral),
-    legend: {
-      bottom: 0,
-      textStyle: {
-        color: chartTheme.value.textSecondary,
-      },
-    },
-    series: [
-      {
-        center: ['50%', '42%'],
-        data: data.map((item) => ({
-          name: item.label,
-          value: item.value,
-        })),
-        label: {
-          color: chartTheme.value.textPrimary,
-          formatter: '{b}',
-        },
-        radius: ['35%', '72%'],
-        roseType: 'area',
-        type: 'pie',
-      },
-    ],
-    tooltip: {
-      formatter: '{b}：{c} 项',
-      trigger: 'item',
-    },
-  } as ChartOption;
-});
+const riskChartOption = computed(() =>
+  buildRiskDistributionChartOption(
+    visualSummary.value.riskDistribution,
+    chartTheme.value,
+  ),
+);
 
 async function navigateTo(route?: string, query?: Record<string, string>) {
   if (!route) {
@@ -265,17 +122,29 @@ onMounted(() => {
     description="汇总病理全流程的核心指标、运营信号与风险数据。"
   >
     <div class="flex flex-col gap-6">
-      <section class="dashboard-hero relative overflow-hidden rounded-[32px] border border-border bg-card px-6 py-6 text-foreground shadow-sm">
-        <div class="dashboard-hero__backdrop pointer-events-none absolute inset-0" />
+      <section
+        class="dashboard-hero relative overflow-hidden rounded-[32px] border border-border bg-card px-6 py-6 text-foreground shadow-sm"
+      >
+        <div
+          class="dashboard-hero__backdrop pointer-events-none absolute inset-0"
+        ></div>
         <div class="relative flex flex-col gap-6">
-          <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div
+            class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"
+          >
             <div class="max-w-3xl">
-              <div class="inline-flex items-center gap-2 rounded-full border border-border/80 bg-background/80 px-3 py-1 text-xs text-muted-foreground">
+              <div
+                class="inline-flex items-center gap-2 rounded-full border border-border/80 bg-background/80 px-3 py-1 text-xs text-muted-foreground"
+              >
                 <span>{{ currentMonthLabel }}</span>
                 <span class="text-[var(--el-border-color)]">•</span>
                 <span>{{ dateRangeLabel }}</span>
               </div>
-              <h2 class="mt-4 text-3xl font-semibold tracking-tight text-foreground">分析页总览驾驶舱</h2>
+              <h2
+                class="mt-4 text-3xl font-semibold tracking-tight text-foreground"
+              >
+                分析页总览驾驶舱
+              </h2>
               <p class="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
                 展示核心 KPI、质控指标、工作量结构和风险分布。
               </p>
@@ -288,11 +157,16 @@ onMounted(() => {
               >
                 进入正式统计分析
               </ElButton>
-              <ElButton v-if="pageError" type="danger" @click="loadPage">重新加载</ElButton>
+              <ElButton v-if="pageError" type="danger" @click="loadPage">
+                重新加载
+              </ElButton>
             </div>
           </div>
 
-          <div v-if="pageError" class="rounded-3xl border border-danger/30 bg-danger/8 px-5 py-4 text-sm text-danger">
+          <div
+            v-if="pageError"
+            class="rounded-3xl border border-danger/30 bg-danger/8 px-5 py-4 text-sm text-danger"
+          >
             {{ pageError }}
           </div>
 
@@ -356,7 +230,10 @@ onMounted(() => {
           body-class="px-5 pb-5 pt-2"
         >
           <ElSkeleton v-if="loading" :rows="6" animated />
-          <div v-else-if="visualSummary.operationSignals.length > 0" class="grid gap-4">
+          <div
+            v-else-if="visualSummary.operationSignals.length > 0"
+            class="grid gap-4"
+          >
             <article
               v-for="signal in visualSummary.operationSignals"
               :key="signal.code"
@@ -364,14 +241,25 @@ onMounted(() => {
             >
               <div class="flex items-start justify-between gap-3">
                 <div>
-                  <div class="text-sm font-semibold text-foreground">{{ signal.label }}</div>
-                  <div class="mt-1 text-xs text-muted-foreground">{{ signal.description }}</div>
+                  <div class="text-sm font-semibold text-foreground">
+                    {{ signal.label }}
+                  </div>
+                  <div class="mt-1 text-xs text-muted-foreground">
+                    {{ signal.description }}
+                  </div>
                 </div>
                 <div class="text-right">
-                  <div class="text-[11px] uppercase tracking-[0.18em] text-[var(--el-text-color-secondary)]">{{ signal.emphasis }}</div>
+                  <div
+                    class="text-[11px] uppercase tracking-[0.18em] text-[var(--el-text-color-secondary)]"
+                  >
+                    {{ signal.emphasis }}
+                  </div>
                   <div class="mt-1 text-lg font-semibold text-foreground">
                     {{ signal.value }}
-                    <span class="ml-1 text-xs font-normal text-muted-foreground">{{ signal.unit }}</span>
+                    <span
+                      class="ml-1 text-xs font-normal text-muted-foreground"
+                      >{{ signal.unit }}</span
+                    >
                   </div>
                 </div>
               </div>
@@ -380,7 +268,7 @@ onMounted(() => {
                   class="h-full rounded-full transition-all duration-500"
                   :class="getVisualToneClasses(signal.tone).line"
                   :style="{ width: `${signal.progress}%` }"
-                />
+                ></div>
               </div>
             </article>
           </div>
@@ -423,12 +311,16 @@ onMounted(() => {
             <div
               class="pointer-events-none absolute inset-0 bg-gradient-to-br opacity-80"
               :class="getVisualToneClasses(card.tone).glow"
-            />
-            <div class="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--el-bg-color)_82%,transparent),color-mix(in_srgb,var(--el-bg-color-page)_36%,transparent))]" />
+            ></div>
+            <div
+              class="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--el-bg-color)_82%,transparent),color-mix(in_srgb,var(--el-bg-color-page)_36%,transparent))]"
+            ></div>
             <div class="relative">
               <div class="flex items-start justify-between gap-3">
                 <div>
-                  <div class="text-sm font-semibold text-foreground">{{ card.label }}</div>
+                  <div class="text-sm font-semibold text-foreground">
+                    {{ card.label }}
+                  </div>
                   <div class="mt-1 text-xs text-muted-foreground">
                     当前识别 {{ card.valueText }} 项需要跟进的风险信号
                   </div>
@@ -437,14 +329,27 @@ onMounted(() => {
                   class="rounded-full px-2.5 py-1 text-[11px] font-medium"
                   :class="getVisualToneClasses(card.tone).badge"
                 >
-                  {{ card.severity === 'danger' ? '高风险' : card.severity === 'warning' ? '需关注' : '观察中' }}
+                  {{
+                    card.severity === 'danger'
+                      ? '高风险'
+                      : card.severity === 'warning'
+                        ? '需关注'
+                        : '观察中'
+                  }}
                 </span>
               </div>
               <div class="mt-6 flex items-end justify-between">
-                <div class="text-4xl font-semibold tracking-tight text-foreground">{{ card.valueText }}</div>
+                <div
+                  class="text-4xl font-semibold tracking-tight text-foreground"
+                >
+                  {{ card.valueText }}
+                </div>
                 <div class="text-xs text-muted-foreground">{{ card.unit }}</div>
               </div>
-              <ElButton class="mt-6 w-full" @click="navigateTo(card.route, card.query)">
+              <ElButton
+                class="mt-6 w-full"
+                @click="navigateTo(card.route, card.query)"
+              >
                 查看详情
               </ElButton>
             </div>
@@ -470,7 +375,6 @@ onMounted(() => {
 
 <style scoped>
 :deep(.dashboard-surface.el-card) {
-  border: 1px solid var(--el-border-color);
   background:
     linear-gradient(
       180deg,
@@ -482,12 +386,15 @@ onMounted(() => {
       color-mix(in srgb, var(--el-color-primary) 10%, transparent),
       transparent 28%
     );
-  box-shadow: 0 18px 36px -28px color-mix(in srgb, var(--el-text-color-primary) 22%, transparent);
+  border: 1px solid var(--el-border-color);
+  box-shadow: 0 18px 36px -28px
+    color-mix(in srgb, var(--el-text-color-primary) 22%, transparent);
 }
 
 :deep(.dashboard-surface .el-card__header) {
-  border-bottom: 1px solid color-mix(in srgb, var(--el-border-color) 88%, transparent);
   padding: 18px 20px 14px;
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--el-border-color) 88%, transparent);
 }
 
 .dashboard-hero__backdrop {

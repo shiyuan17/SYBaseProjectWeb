@@ -2,18 +2,18 @@ import type { TabsProps } from './types';
 
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 
+import { VbenScrollbar } from '@vben-core/shadcn-ui';
 import {
   observeElementResize,
   supportsResizeObserver,
 } from '@vben-core/shared/utils';
-import { VbenScrollbar } from '@vben-core/shadcn-ui';
 
 import { useDebounceFn } from '@vueuse/core';
 
 type DomElement = Element | null | undefined;
 
 export function useTabsViewScroll(props: TabsProps) {
-  let stopObserveResize: null | (() => void) = null;
+  let stopObserveResize: (() => void) | null = null;
   let mutationObserver: MutationObserver | null = null;
   let tabItemCount = 0;
   const scrollbarRef = ref<InstanceType<typeof VbenScrollbar> | null>(null);

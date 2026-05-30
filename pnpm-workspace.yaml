@@ -37,13 +37,10 @@ catalog:
   '@intlify/unplugin-vue-i18n': ^11.0.7
   '@jspm/generator': ^2.13.0
   '@manypkg/get-packages': ^3.1.0
-  '@nolebase/vitepress-plugin-git-changelog': ^2.18.2
-  '@playwright/test': ^1.59.1
   '@pnpm/workspace.read-manifest': ^1000.3.1
   '@stylistic/stylelint-plugin': ^5.1.0
   '@tailwindcss/typography': ^0.5.19
   '@tailwindcss/vite': ^4.2.2
-  '@tanstack/vue-query': ^5.97.0
   '@tanstack/vue-store': ^0.10.0
   '@tiptap/core': ^3.22.3
   '@tiptap/extension-document': ^3.22.3
@@ -68,21 +65,18 @@ catalog:
   '@types/qrcode': ^1.5.6
   '@types/qs': ^6.15.0
   '@types/sortablejs': ^1.15.9
-  '@vitest/coverage-v8': 4.1.5
-  '@vitest/ui': 4.1.5
   '@typescript-eslint/eslint-plugin': ^8.58.1
   '@typescript-eslint/parser': ^8.58.1
   '@vee-validate/zod': ^4.15.1
-  '@vite-pwa/vitepress': ^1.1.0
   '@vitejs/plugin-vue': ^6.0.6
   '@vitejs/plugin-vue-jsx': ^5.1.5
+  '@vitest/coverage-v8': 4.1.5
+  '@vitest/ui': 4.1.5
   '@vue/shared': ^3.5.32
   '@vue/test-utils': ^2.4.6
   '@vueuse/core': ^14.2.1
   '@vueuse/integrations': ^14.2.1
   '@vueuse/motion': ^3.0.3
-  ant-design-vue: ^4.2.6
-  antdv-next: ^1.1.9
   archiver: ^7.0.1
   axios: ^1.15.0
   axios-mock-adapter: ^2.1.0
@@ -129,8 +123,6 @@ catalog:
   lefthook: ^2.1.5
   lodash.clonedeep: ^4.5.0
   lucide-vue-next: ^0.577.0
-  medium-zoom: ^1.1.0
-  naive-ui: ^2.44.1
   nitropack: ^2.13.3
   nprogress: ^0.2.0
   ora: ^9.3.0
@@ -166,7 +158,6 @@ catalog:
   stylelint-scss: ^7.0.0
   tailwind-merge: ^3.5.0
   tailwindcss: ^4.2.2
-  tdesign-vue-next: ^1.19.0
   theme-colors: ^0.1.0
   tippy.js: ^6.3.7
   tsdown: ^0.21.8
@@ -182,8 +173,6 @@ catalog:
   vite-plugin-lazy-import: ^1.0.7
   vite-plugin-pwa: ^1.2.0
   vite-plugin-vue-devtools: ^8.1.1
-  vitepress: ^1.6.4
-  vitepress-plugin-group-icons: ^1.7.3
   vitest: ^4.1.4
   vue: ^3.5.32
   vue-eslint-parser: ^10.4.0

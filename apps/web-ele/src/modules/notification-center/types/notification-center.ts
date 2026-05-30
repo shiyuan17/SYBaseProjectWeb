@@ -75,7 +75,7 @@ export interface NotificationViewModel {
   topicCode: string;
 }
 
-export interface NotificationListPage extends PagedResult<NotificationViewModel> {}
+export type NotificationListPage = PagedResult<NotificationViewModel>;
 
 export interface NotificationPopupItem extends NotificationItem {
   actionRoute?: string | undefined;
