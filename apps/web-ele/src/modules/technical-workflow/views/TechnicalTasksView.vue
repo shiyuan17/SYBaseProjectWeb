@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import type { PendingTechnicalTaskItem } from '../types/technical-workflow';
+import type {
+  PendingTechnicalTaskItem,
+  TechnicalTaskAssignmentForm,
+  TechnicalTaskBoardViewMode,
+  TechnicalTaskCaseGroup,
+  TechnicalTaskPoolFilters,
+  TechnicalTaskStatCard,
+} from '../types/technical-workflow';
 
 import { computed, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
@@ -7,25 +14,7 @@ import { useRouter } from 'vue-router';
 import { Page } from '@vben/common-ui';
 import { useUserStore } from '@vben/stores';
 
-import {
-  ElAlert,
-  ElButton,
-  ElDatePicker,
-  ElDialog,
-  ElForm,
-  ElFormItem,
-  ElInput,
-  ElMessage,
-  ElOption,
-  ElPagination,
-  ElSelect,
-  ElSwitch,
-  ElTable,
-  ElTableColumn,
-  ElTag,
-} from 'element-plus';
-
-import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
+import { ElAlert, ElMessage } from 'element-plus';
 
 import {
   assignTechnicalTask,
@@ -34,22 +23,19 @@ import {
   releaseTechnicalTask,
   updateTechnicalTaskPriority,
 } from '../api/technical-workflow-service';
-import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
+import TechnicalTaskAssignmentDialog from '../components/TechnicalTaskAssignmentDialog.vue';
+import TechnicalTaskBulkActionsBar from '../components/TechnicalTaskBulkActionsBar.vue';
+import TechnicalTaskCaseBoard from '../components/TechnicalTaskCaseBoard.vue';
+import TechnicalTaskFilterPanel from '../components/TechnicalTaskFilterPanel.vue';
+import TechnicalTaskStatsGrid from '../components/TechnicalTaskStatsGrid.vue';
+import TechnicalTaskTablePanel from '../components/TechnicalTaskTablePanel.vue';
 import {
   DEFAULT_PAGE_SIZE,
-  TASK_TYPE_TITLE_MAP,
   TECHNICAL_TASK_PRIORITY_OPTIONS,
   TECHNICAL_TASK_STATUS_OPTIONS,
   TECHNICAL_TASK_TYPE_OPTIONS,
 } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
-import {
-  formatDateTime,
-  formatNullable,
-  formatTaskPriority,
-  formatTaskStatus,
-  formatTaskType,
-} from '../utils/format';
 import { useTechnicalWorkflowNavigation } from '../utils/navigation';
 
 const router = useRouter();
@@ -65,7 +51,7 @@ const total = ref(0);
 const assignmentDialogVisible = ref(false);
 const selectedTask = ref<null | PendingTechnicalTaskItem>(null);
 const selectedTaskIds = ref<string[]>([]);
-const viewMode = ref<'case' | 'task'>('task');
+const viewMode = ref<TechnicalTaskBoardViewMode>('task');
 const bulkPriority = ref('NORMAL');
 
 const stationOptions = [
@@ -77,7 +63,7 @@ const stationOptions = [
   { label: '返工工作站', value: 'REWORK' },
 ];
 
-const filters = reactive({
+const filters = reactive<TechnicalTaskPoolFilters>({
   applicationNo: '',
   assignedToUserId: '',
   assignmentStatus: '',
@@ -92,7 +78,30 @@ const filters = reactive({
   timedOutOnly: false,
 });
 
-const assignmentForm = reactive({
+const filtersModel = computed({
+  get: () => filters,
+  set: (nextFilters: TechnicalTaskPoolFilters) => {
+    Object.assign(filters, nextFilters);
+  },
+});
+
+const currentPageModel = computed({
+  get: () => filters.page,
+  set: (page: number) => {
+    filters.page = page;
+    void loadPendingData();
+  },
+});
+
+const pageSizeModel = computed({
+  get: () => filters.size,
+  set: (size: number) => {
+    filters.size = size;
+    void loadPendingData();
+  },
+});
+
+const assignmentForm = reactive<TechnicalTaskAssignmentForm>({
   assignedToName: '',
   assignedToUserId: '',
   expectedCompletedAt: '',
@@ -103,6 +112,13 @@ const assignmentForm = reactive({
   stationCode: '',
   stationName: '',
   terminalCode: '',
+});
+
+const assignmentFormModel = computed({
+  get: () => assignmentForm,
+  set: (nextForm: TechnicalTaskAssignmentForm) => {
+    Object.assign(assignmentForm, nextForm);
+  },
 });
 
 const currentQuery = computed(() => ({
@@ -130,7 +146,7 @@ const visibleItems = computed(() => {
   return pendingItems.value;
 });
 
-const groupedItems = computed(() => {
+const groupedItems = computed<TechnicalTaskCaseGroup[]>(() => {
   const grouped = new Map<string, PendingTechnicalTaskItem[]>();
   visibleItems.value.forEach((item) => {
     const key = item.caseId || item.pathologyNo || item.id;
@@ -149,7 +165,7 @@ const selectedRows = computed(() =>
   visibleItems.value.filter((item) => selectedTaskIds.value.includes(item.id)),
 );
 
-const taskStats = computed(() => {
+const taskStats = computed<TechnicalTaskStatCard[]>(() => {
   const activeItems = pendingItems.value.filter(
     (item) => item.taskStatus !== 'COMPLETED',
   );
@@ -175,47 +191,6 @@ const taskStats = computed(() => {
     },
   ];
 });
-
-function getTaskStatusTagType(status?: null | string) {
-  if (status === 'COMPLETED') {
-    return 'success';
-  }
-  if (status === 'IN_PROGRESS') {
-    return 'warning';
-  }
-  return 'info';
-}
-
-function getPriorityTagType(priority?: null | string) {
-  if (priority === 'STAT') {
-    return 'danger';
-  }
-  if (priority === 'PRIORITY') {
-    return 'warning';
-  }
-  return 'info';
-}
-
-function formatCurrentNode(row: PendingTechnicalTaskItem) {
-  return (
-    TASK_TYPE_TITLE_MAP[row.currentNode ?? row.taskType ?? ''] ??
-    formatTaskType(row.currentNode ?? row.taskType)
-  );
-}
-
-function formatResponsible(row: PendingTechnicalTaskItem) {
-  return row.assignedToName?.trim() || '未分派';
-}
-
-function syncStationName(stationCode: string) {
-  assignmentForm.stationName =
-    stationOptions.find((item) => item.value === stationCode)?.label ?? '';
-}
-
-function handleAssignedUserChange(user: null | { id: string; name: string }) {
-  assignmentForm.assignedToUserId = user?.id ?? '';
-  assignmentForm.assignedToName = user?.name ?? '';
-}
 
 function handleSelectionChange(rows: PendingTechnicalTaskItem[]) {
   selectedTaskIds.value = rows.map((item) => item.id);
@@ -440,6 +415,13 @@ function goToTracking(row: PendingTechnicalTaskItem) {
   });
 }
 
+function goToCaseTracking(group: TechnicalTaskCaseGroup) {
+  void navigation.goToTracking({
+    caseId: group.caseId,
+    pathologyNo: group.pathologyNo || undefined,
+  });
+}
+
 void loadPendingData();
 </script>
 
@@ -454,443 +436,59 @@ void loadPendingData();
         show-icon
       />
 
-      <div class="grid gap-4 md:grid-cols-4">
-        <section
-          v-for="item in taskStats"
-          :key="item.label"
-          class="rounded border border-border bg-background p-4"
-        >
-          <div class="text-sm text-[var(--el-text-color-secondary)]">
-            {{ item.label }}
-          </div>
-          <div class="mt-2 text-2xl font-semibold text-foreground">
-            {{ item.value }}
-          </div>
-        </section>
-      </div>
+      <TechnicalTaskStatsGrid :items="taskStats" />
 
-      <WorkflowSectionCard
-        title="任务筛选"
-        description="按任务类型、优先级、节点和分派状态查看生产任务。"
-      >
-        <ElForm inline label-width="96px">
-          <ElFormItem label="任务类型">
-            <ElSelect
-              v-model="filters.taskType"
-              clearable
-              placeholder="全部"
-              style="width: 160px"
-            >
-              <ElOption
-                v-for="option in TECHNICAL_TASK_TYPE_OPTIONS"
-                :key="option.value"
-                :label="option.label"
-                :value="option.value"
-              />
-            </ElSelect>
-          </ElFormItem>
-          <ElFormItem label="优先级">
-            <ElSelect
-              v-model="filters.priority"
-              clearable
-              placeholder="全部"
-              style="width: 140px"
-            >
-              <ElOption
-                v-for="option in TECHNICAL_TASK_PRIORITY_OPTIONS"
-                :key="option.value"
-                :label="option.label"
-                :value="option.value"
-              />
-            </ElSelect>
-          </ElFormItem>
-          <ElFormItem label="任务状态">
-            <ElSelect
-              v-model="filters.taskStatus"
-              clearable
-              placeholder="全部"
-              style="width: 150px"
-            >
-              <ElOption
-                v-for="option in TECHNICAL_TASK_STATUS_OPTIONS"
-                :key="option.value"
-                :label="option.label"
-                :value="option.value"
-              />
-            </ElSelect>
-          </ElFormItem>
-          <ElFormItem label="当前节点">
-            <ElSelect
-              v-model="filters.currentNode"
-              clearable
-              placeholder="全部"
-              style="width: 160px"
-            >
-              <ElOption
-                v-for="option in TECHNICAL_TASK_TYPE_OPTIONS"
-                :key="option.value"
-                :label="option.label"
-                :value="option.value"
-              />
-            </ElSelect>
-          </ElFormItem>
-          <ElFormItem label="分派状态">
-            <ElSelect
-              v-model="filters.assignmentStatus"
-              clearable
-              placeholder="全部"
-              style="width: 150px"
-            >
-              <ElOption label="未分派" value="UNASSIGNED" />
-              <ElOption label="已分派" value="ASSIGNED" />
-            </ElSelect>
-          </ElFormItem>
-          <ElFormItem label="责任人">
-            <ElInput
-              v-model="filters.assignedToUserId"
-              clearable
-              placeholder="责任人ID"
-              style="width: 160px"
-              @keyup.enter="handleSearch"
-            />
-          </ElFormItem>
-          <ElFormItem label="申请单号">
-            <ElInput
-              v-model="filters.applicationNo"
-              clearable
-              placeholder="申请单号"
-              style="width: 180px"
-              @keyup.enter="handleSearch"
-            />
-          </ElFormItem>
-          <ElFormItem label="病理号">
-            <ElInput
-              v-model="filters.pathologyNo"
-              clearable
-              placeholder="病理号"
-              style="width: 180px"
-              @keyup.enter="handleSearch"
-            />
-          </ElFormItem>
-          <ElFormItem label="接收时间">
-            <ElDatePicker
-              v-model="filters.createdRange"
-              end-placeholder="结束"
-              range-separator="至"
-              start-placeholder="开始"
-              type="datetimerange"
-              value-format="YYYY-MM-DDTHH:mm:ss"
-            />
-          </ElFormItem>
-          <ElFormItem label="仅超时">
-            <ElSwitch v-model="filters.timedOutOnly" />
-          </ElFormItem>
-          <ElFormItem>
-            <ElButton type="primary" @click="handleSearch">查询</ElButton>
-            <ElButton @click="handleReset">重置</ElButton>
-          </ElFormItem>
-        </ElForm>
-      </WorkflowSectionCard>
+      <TechnicalTaskFilterPanel
+        v-model:filter-state="filtersModel"
+        :priority-options="TECHNICAL_TASK_PRIORITY_OPTIONS"
+        :status-options="TECHNICAL_TASK_STATUS_OPTIONS"
+        :task-type-options="TECHNICAL_TASK_TYPE_OPTIONS"
+        @reset="handleReset"
+        @search="handleSearch"
+      />
 
-      <WorkflowSectionCard
-        title="调度操作"
-        description="支持病例聚合视图、任务平铺视图和批量调度动作。"
-      >
-        <div class="flex flex-wrap items-center gap-3">
-          <ElButton
-            :plain="viewMode !== 'task'"
-            type="primary"
-            @click="viewMode = 'task'"
-          >
-            调度视图
-          </ElButton>
-          <ElButton
-            :plain="viewMode !== 'case'"
-            type="primary"
-            @click="viewMode = 'case'"
-          >
-            连续处理视图
-          </ElButton>
-          <ElButton :loading="bulkLoading" @click="runBulkClaim">
-            批量认领
-          </ElButton>
-          <ElButton :loading="bulkLoading" @click="runBulkRelease">
-            批量释放
-          </ElButton>
-          <ElSelect v-model="bulkPriority" style="width: 140px">
-            <ElOption
-              v-for="option in TECHNICAL_TASK_PRIORITY_OPTIONS"
-              :key="option.value"
-              :label="option.label"
-              :value="option.value"
-            />
-          </ElSelect>
-          <ElButton :loading="bulkLoading" @click="runBulkPriorityUpdate">
-            批量调优先级
-          </ElButton>
-          <span class="text-sm text-muted-foreground"
-            >已选 {{ selectedTaskIds.length }} 条</span
-          >
-        </div>
-      </WorkflowSectionCard>
+      <TechnicalTaskBulkActionsBar
+        v-model:bulk-priority="bulkPriority"
+        v-model:view-mode="viewMode"
+        :bulk-loading="bulkLoading"
+        :priority-options="TECHNICAL_TASK_PRIORITY_OPTIONS"
+        :selected-count="selectedTaskIds.length"
+        @bulk-claim="runBulkClaim"
+        @bulk-priority-update="runBulkPriorityUpdate"
+        @bulk-release="runBulkRelease"
+      />
 
-      <WorkflowSectionCard
+      <TechnicalTaskCaseBoard
         v-if="viewMode === 'case'"
-        title="连续处理视图"
-        description="按病例聚合查看同一病例下的连续任务，便于现场连贯处理。"
-      >
-        <div class="grid gap-3">
-          <article
-            v-for="group in groupedItems"
-            :key="group.caseId"
-            class="rounded-lg border border-border bg-card p-4"
-          >
-            <div class="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <div class="text-sm font-semibold text-foreground">
-                  {{ formatNullable(group.pathologyNo) }}
-                </div>
-                <div class="mt-1 text-xs text-muted-foreground">
-                  病例 {{ group.caseId }}，共 {{ group.taskCount }} 条任务，超时
-                  {{ group.timedOutCount }} 条
-                </div>
-              </div>
-              <ElButton
-                link
-                type="primary"
-                @click="
-                  navigation.goToTracking({
-                    caseId: group.caseId,
-                    pathologyNo: group.pathologyNo || undefined,
-                  })
-                "
-              >
-                查看追踪
-              </ElButton>
-            </div>
+        :groups="groupedItems"
+        :loading="loading"
+        @open-tracking="goToCaseTracking"
+        @open-workstation="goToWorkstation"
+      />
 
-            <div class="mt-4 grid gap-2">
-              <button
-                v-for="task in group.items"
-                :key="task.id"
-                class="flex items-center justify-between rounded-md border border-border px-3 py-3 text-left transition-colors hover:border-primary"
-                type="button"
-                @click="goToWorkstation(task)"
-              >
-                <div>
-                  <div class="text-sm font-medium text-foreground">
-                    {{ formatTaskType(task.taskType) }} /
-                    {{ formatNullable(task.objectId) }}
-                  </div>
-                  <div class="mt-1 text-xs text-muted-foreground">
-                    {{ formatCurrentNode(task) }} /
-                    {{ formatDateTime(task.receivedAt || task.createdAt) }}
-                  </div>
-                </div>
-                <ElTag
-                  :type="
-                    task.timedOut
-                      ? 'danger'
-                      : getTaskStatusTagType(task.taskStatus)
-                  "
-                >
-                  {{
-                    task.timedOut ? '超时' : formatTaskStatus(task.taskStatus)
-                  }}
-                </ElTag>
-              </button>
-            </div>
-          </article>
-        </div>
-      </WorkflowSectionCard>
-
-      <WorkflowSectionCard
+      <TechnicalTaskTablePanel
         v-else
-        title="生产任务"
-        description="按病理号、节点、责任技师和期望完成时间推进。"
-      >
-        <ElTable
-          v-loading="loading"
-          :data="visibleItems"
-          border
-          @selection-change="handleSelectionChange"
-        >
-          <ElTableColumn type="selection" width="48" />
-          <ElTableColumn label="病理号" min-width="140">
-            <template #default="{ row }">
-              {{ formatNullable(row.pathologyNo) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="标本/对象" min-width="180">
-            <template #default="{ row }">
-              <div class="font-medium">{{ formatNullable(row.objectId) }}</div>
-              <div class="text-xs text-[var(--el-text-color-secondary)]">
-                {{ formatNullable(row.specimenId) }}
-              </div>
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="任务类型" min-width="120">
-            <template #default="{ row }">
-              {{ formatTaskType(row.taskType) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="优先级" min-width="100">
-            <template #default="{ row }">
-              <ElTag :type="getPriorityTagType(row.priority)">
-                {{ formatTaskPriority(row.priority) }}
-              </ElTag>
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="接收时间" min-width="170">
-            <template #default="{ row }">
-              {{ formatDateTime(row.receivedAt || row.createdAt) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="当前节点" min-width="130">
-            <template #default="{ row }">
-              {{ formatCurrentNode(row) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="责任技师" min-width="130">
-            <template #default="{ row }">
-              <ElTag :type="row.assignedToUserId ? 'success' : 'info'">
-                {{ formatResponsible(row) }}
-              </ElTag>
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="状态" min-width="110">
-            <template #default="{ row }">
-              <ElTag :type="getTaskStatusTagType(row.taskStatus)">
-                {{ formatTaskStatus(row.taskStatus) }}
-              </ElTag>
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="期望完成" min-width="170">
-            <template #default="{ row }">
-              {{ formatDateTime(row.expectedCompletedAt || row.deadlineAt) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn label="备注" min-width="180">
-            <template #default="{ row }">
-              {{ formatNullable(row.productionRemarks || row.remarks) }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn fixed="right" label="操作" min-width="240">
-            <template #default="{ row }">
-              <div class="flex flex-wrap gap-2">
-                <ElButton link type="primary" @click="openAssignDialog(row)">
-                  分派
-                </ElButton>
-                <ElButton
-                  v-if="row.assignedToUserId"
-                  link
-                  type="warning"
-                  @click="releaseAssignment(row)"
-                >
-                  释放
-                </ElButton>
-                <ElButton link type="success" @click="goToWorkstation(row)">
-                  进入工位
-                </ElButton>
-                <ElButton link @click="goToTracking(row)">追踪</ElButton>
-              </div>
-            </template>
-          </ElTableColumn>
-        </ElTable>
-
-        <div class="mt-4 flex justify-end">
-          <ElPagination
-            v-model:current-page="filters.page"
-            v-model:page-size="filters.size"
-            :page-sizes="[10, 20, 50, 100]"
-            :total="total"
-            background
-            layout="total, sizes, prev, pager, next, jumper"
-            @change="loadPendingData"
-          />
-        </div>
-      </WorkflowSectionCard>
+        v-model:current-page="currentPageModel"
+        v-model:page-size="pageSizeModel"
+        :items="visibleItems"
+        :loading="loading"
+        :total="total"
+        @assign="openAssignDialog"
+        @open-tracking="goToTracking"
+        @open-workstation="goToWorkstation"
+        @release="releaseAssignment"
+        @selection-change="handleSelectionChange"
+      />
     </div>
 
-    <ElDialog
-      v-model="assignmentDialogVisible"
-      :close-on-click-modal="false"
-      title="任务分派"
-      width="640px"
-    >
-      <ElForm label-width="120px">
-        <ElFormItem label="病理号">
-          <ElInput :model-value="selectedTask?.pathologyNo ?? ''" disabled />
-        </ElFormItem>
-        <ElFormItem label="任务类型">
-          <ElInput
-            :model-value="formatTaskType(selectedTask?.taskType)"
-            disabled
-          />
-        </ElFormItem>
-        <ElFormItem label="优先级">
-          <ElSelect v-model="assignmentForm.priority" class="w-full">
-            <ElOption
-              v-for="option in TECHNICAL_TASK_PRIORITY_OPTIONS"
-              :key="option.value"
-              :label="option.label"
-              :value="option.value"
-            />
-          </ElSelect>
-        </ElFormItem>
-        <ElFormItem label="分派工作站">
-          <ElSelect
-            v-model="assignmentForm.stationCode"
-            class="w-full"
-            @change="syncStationName"
-          >
-            <ElOption
-              v-for="option in stationOptions"
-              :key="option.value"
-              :label="option.label"
-              :value="option.value"
-            />
-          </ElSelect>
-        </ElFormItem>
-        <ElFormItem label="责任技师">
-          <SystemUserSelect
-            v-model="assignmentForm.assignedToUserId"
-            :selected-label="assignmentForm.assignedToName"
-            placeholder="请选择或搜索责任技师"
-            @change="handleAssignedUserChange"
-          />
-        </ElFormItem>
-        <ElFormItem label="期望完成时间">
-          <ElDatePicker
-            v-model="assignmentForm.expectedCompletedAt"
-            class="w-full"
-            placeholder="选择时间"
-            type="datetime"
-            value-format="YYYY-MM-DDTHH:mm:ss"
-          />
-        </ElFormItem>
-        <ElFormItem label="生产备注">
-          <ElInput
-            v-model="assignmentForm.productionRemarks"
-            :rows="3"
-            placeholder="特殊处理要求"
-            type="textarea"
-          />
-        </ElFormItem>
-        <ElFormItem label="操作人">
-          <ElInput v-model="assignmentForm.operatorName" clearable />
-        </ElFormItem>
-      </ElForm>
-      <template #footer>
-        <ElButton @click="assignmentDialogVisible = false">取消</ElButton>
-        <ElButton
-          :loading="submittingAssignment"
-          type="primary"
-          @click="submitAssignment"
-        >
-          确认分派
-        </ElButton>
-      </template>
-    </ElDialog>
+    <TechnicalTaskAssignmentDialog
+      v-model:form="assignmentFormModel"
+      v-model:visible="assignmentDialogVisible"
+      :priority-options="TECHNICAL_TASK_PRIORITY_OPTIONS"
+      :station-options="stationOptions"
+      :submitting="submittingAssignment"
+      :task="selectedTask"
+      @submit="submitAssignment"
+    />
   </Page>
 </template>

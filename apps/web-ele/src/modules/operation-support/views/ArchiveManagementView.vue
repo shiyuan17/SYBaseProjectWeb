@@ -8,6 +8,7 @@ import type {
   ArchiveSlideRequest,
   MaterialLoanView,
 } from '../types/operation-support';
+import type { PositionWorkbenchRow } from '../utils/archive-workbench';
 
 import { computed, reactive, ref, watch } from 'vue';
 
@@ -52,6 +53,16 @@ import {
   M5_PERMISSION_CODES,
   MATERIAL_TYPE_OPTIONS,
 } from '../constants';
+import {
+  buildArchivePositionRows,
+  buildPositionCode,
+  getArchiveStatusTagType,
+  getCabinetStatusTagType,
+  getLoanStatusTagType,
+  getPositionStatusTagType,
+  getToggleCabinetActionLabel,
+  summarizeArchivePositions,
+} from '../utils/archive-workbench';
 import { getOperationSupportPageErrorMessage } from '../utils/error';
 import {
   formatArchiveCabinetStatus,
@@ -108,15 +119,6 @@ type ReturnFormState = {
   operatorUserId: string;
   remarks: string;
   terminalCode: string;
-};
-
-type PositionWorkbenchRow = ArchivePositionView & {
-  cabinetCode: string;
-  cabinetName: string;
-  cabinetStatus: string;
-  cabinetType: string;
-  selectable: boolean;
-  statusReason: string;
 };
 
 const accessStore = useAccessStore();
@@ -287,58 +289,11 @@ const filteredCabinets = computed(() =>
     ),
 );
 
-const availablePositionCodeMap = computed(
-  () =>
-    new Map(
-      availablePositions.value.map((position) => [
-        position.positionCode,
-        position,
-      ]),
-    ),
-);
-
 const positionRows = computed<PositionWorkbenchRow[]>(() => {
-  return filteredCabinets.value.flatMap((cabinet) => {
-    const rows: PositionWorkbenchRow[] = [];
-
-    for (let layerNo = 1; layerNo <= cabinet.layerCount; layerNo += 1) {
-      for (let slotNo = 1; slotNo <= cabinet.slotCountPerLayer; slotNo += 1) {
-        const positionCode = buildPositionCode(
-          cabinet.cabinetCode,
-          layerNo,
-          slotNo,
-        );
-        const availablePosition =
-          availablePositionCodeMap.value.get(positionCode);
-        const positionStatus =
-          cabinet.cabinetStatus === 'DISABLED'
-            ? 'DISABLED'
-            : availablePosition
-              ? 'AVAILABLE'
-              : 'OCCUPIED';
-
-        rows.push({
-          cabinetCode: cabinet.cabinetCode,
-          cabinetId: cabinet.id,
-          cabinetName: cabinet.cabinetName,
-          cabinetStatus: cabinet.cabinetStatus,
-          cabinetType: cabinet.cabinetType,
-          id: availablePosition?.id ?? `${cabinet.id}-${layerNo}-${slotNo}`,
-          layerNo,
-          positionCode,
-          positionStatus,
-          selectable: positionStatus === 'AVAILABLE',
-          slotNo,
-          statusReason: getPositionStatusReason(
-            positionStatus,
-            cabinet.cabinetName,
-          ),
-        });
-      }
-    }
-
-    return rows;
-  });
+  return buildArchivePositionRows(
+    filteredCabinets.value,
+    availablePositions.value,
+  );
 });
 
 const selectedPosition = computed(
@@ -350,28 +305,9 @@ const selectedPosition = computed(
     ) ?? null,
 );
 
-const positionSummary = computed(() => {
-  const summary = {
-    available: 0,
-    disabled: 0,
-    occupied: 0,
-    total: positionRows.value.length,
-  };
-
-  for (const row of positionRows.value) {
-    if (row.positionStatus === 'AVAILABLE') {
-      summary.available += 1;
-      continue;
-    }
-    if (row.positionStatus === 'DISABLED') {
-      summary.disabled += 1;
-      continue;
-    }
-    summary.occupied += 1;
-  }
-
-  return summary;
-});
+const positionSummary = computed(() =>
+  summarizeArchivePositions(positionRows.value),
+);
 
 const cabinetCapacityPreview = computed(
   () => cabinetForm.layerCount * cabinetForm.slotCountPerLayer,
@@ -493,14 +429,6 @@ function populateOperatorDefaults(
   }
 }
 
-function buildPositionCode(
-  cabinetCode: string,
-  layerNo: number,
-  slotNo: number,
-) {
-  return `${cabinetCode}-L${layerNo}-S${slotNo}`;
-}
-
 function createCabinetFormDefaults(): CabinetFormState {
   return {
     cabinetCode: '',
@@ -585,63 +513,6 @@ function openReturnDialog(loan: MaterialLoanView) {
   returnForm.operatorUserId = defaults.operatorUserId;
   returnForm.remarks = '';
   returnForm.terminalCode = '';
-}
-
-function getCabinetStatusTagType(status?: null | string) {
-  if (status === 'ACTIVE') {
-    return 'success';
-  }
-  if (status === 'DISABLED') {
-    return 'info';
-  }
-  return 'primary';
-}
-
-function getPositionStatusTagType(status?: null | string) {
-  if (status === 'AVAILABLE') {
-    return 'success';
-  }
-  if (status === 'OCCUPIED') {
-    return 'warning';
-  }
-  if (status === 'DISABLED') {
-    return 'info';
-  }
-  return 'primary';
-}
-
-function getArchiveStatusTagType(status?: null | string) {
-  if (status === 'IN_STORAGE') {
-    return 'success';
-  }
-  if (status === 'BORROWED') {
-    return 'warning';
-  }
-  return 'info';
-}
-
-function getLoanStatusTagType(status?: null | string) {
-  if (status === 'BORROWED') {
-    return 'warning';
-  }
-  if (status === 'RETURNED') {
-    return 'success';
-  }
-  return 'info';
-}
-
-function getPositionStatusReason(status: string, cabinetName: string) {
-  if (status === 'AVAILABLE') {
-    return '柜位可用于后续归档选择。';
-  }
-  if (status === 'DISABLED') {
-    return `${cabinetName} 已停用，当前柜位不可分配。`;
-  }
-  return '柜位已被占用，需释放后才能再次使用。';
-}
-
-function getToggleCabinetActionLabel(cabinetStatus: string) {
-  return cabinetStatus === 'DISABLED' ? '启用' : '停用';
 }
 
 function selectPosition(position: PositionWorkbenchRow) {

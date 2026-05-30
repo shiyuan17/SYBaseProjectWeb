@@ -6,6 +6,24 @@ const settingsPath = path.join(workspaceRoot, 'linear-setting.json');
 const mode = process.argv[2] ?? 'sync';
 const showJson = process.argv.includes('--json');
 
+function readMultiValueOption(flag) {
+  const values = [];
+  for (let index = 0; index < process.argv.length; index += 1) {
+    if (process.argv[index] !== flag) {
+      continue;
+    }
+    const nextValue = process.argv[index + 1];
+    if (
+      typeof nextValue === 'string' &&
+      nextValue.trim() !== '' &&
+      !nextValue.startsWith('--')
+    ) {
+      values.push(nextValue.trim());
+    }
+  }
+  return values;
+}
+
 function fail(message) {
   throw new Error(message);
 }
@@ -251,6 +269,21 @@ function buildIssueFilter(settings, titles, projectOnly = false) {
   };
 }
 
+function buildProjectIssueFilter(settings) {
+  return {
+    team: {
+      id: {
+        eq: settings.team.id,
+      },
+    },
+    project: {
+      id: {
+        eq: settings.project.id,
+      },
+    },
+  };
+}
+
 function buildLabelFilter(settings, labelNames) {
   return {
     team: {
@@ -455,6 +488,38 @@ async function listIssues(settings, titles, projectOnly = false) {
   return data.issues?.nodes ?? [];
 }
 
+async function listProjectIssues(settings) {
+  const data = await requestLinear(
+    settings,
+    graphqlDocument`
+      query IssuesByProject($filter: IssueFilter!) {
+        issues(first: 250, includeArchived: false, filter: $filter) {
+          nodes {
+            id
+            number
+            identifier
+            title
+            url
+            updatedAt
+            dueDate
+            labels {
+              nodes {
+                id
+                name
+              }
+            }
+          }
+        }
+      }
+    `,
+    {
+      filter: buildProjectIssueFilter(settings),
+    },
+  );
+
+  return data.issues?.nodes ?? [];
+}
+
 async function createIssue(settings, item, labelIds) {
   const data = await requestLinear(
     settings,
@@ -517,6 +582,55 @@ async function updateIssue(settings, issueId, item, labelIds) {
   );
 
   return data.issueUpdate.issue;
+}
+
+async function archiveIssue(settings, issueId) {
+  try {
+    const data = await requestLinear(
+      settings,
+      graphqlDocument`
+        mutation ArchiveIssue($id: String!) {
+          issueArchive(id: $id) {
+            success
+            issue {
+              id
+              identifier
+              title
+              url
+            }
+          }
+        }
+      `,
+      {
+        id: issueId,
+      },
+    );
+
+    return data.issueArchive.issue;
+  } catch {
+    const data = await requestLinear(
+      settings,
+      graphqlDocument`
+        mutation ArchiveIssue($id: String!, $archived: Boolean!) {
+          issueArchive(id: $id, archived: $archived) {
+            success
+            issue {
+              id
+              identifier
+              title
+              url
+            }
+          }
+        }
+      `,
+      {
+        id: issueId,
+        archived: true,
+      },
+    );
+
+    return data.issueArchive.issue;
+  }
 }
 
 async function registerCommand() {
@@ -669,6 +783,79 @@ async function pullCommand() {
   }
 }
 
+function normalizeNameSet(values) {
+  return new Set(values.map((value) => value.trim().toLowerCase()));
+}
+
+async function cleanupFrontendCommand() {
+  const settings = await loadSettings();
+  await ensureRegister(settings);
+
+  const keepDomains = normalizeNameSet(readMultiValueOption('--keep-domain'));
+  const explicitKeepTitles = new Set(readMultiValueOption('--keep-title'));
+  const frontendLabelNames =
+    readMultiValueOption('--label').length > 0
+      ? readMultiValueOption('--label')
+      : (settings.sync['default-labels'] ?? []).map(String);
+
+  const planKeepTitles = settings.plan
+    .filter((item) => keepDomains.has(item.domain.toLowerCase()))
+    .map((item) => item.title);
+  const keepTitles = new Set([...explicitKeepTitles, ...planKeepTitles]);
+
+  const frontendLabelNameSet = normalizeNameSet(frontendLabelNames);
+  const projectIssues = await listProjectIssues(settings);
+  const frontendIssues = projectIssues.filter((issue) =>
+    (issue.labels?.nodes ?? []).some((label) =>
+      frontendLabelNameSet.has(label.name.toLowerCase()),
+    ),
+  );
+
+  const kept = [];
+  const archived = [];
+  const targets = frontendIssues.filter((issue) => {
+    const shouldKeep = keepTitles.has(issue.title);
+    if (shouldKeep) {
+      kept.push(issue);
+    }
+    return !shouldKeep;
+  });
+
+  for (const issue of targets) {
+    const archivedIssue = await archiveIssue(settings, issue.id);
+    archived.push(archivedIssue ?? issue);
+  }
+
+  const summary = {
+    archived: archived.map((issue) => ({
+      identifier: issue.identifier,
+      title: issue.title,
+      url: issue.url,
+    })),
+    kept: kept.map((issue) => ({
+      identifier: issue.identifier,
+      title: issue.title,
+      url: issue.url,
+    })),
+    totalFrontendIssues: frontendIssues.length,
+  };
+
+  if (showJson) {
+    console.log(JSON.stringify(summary, null, 2));
+    return;
+  }
+
+  console.log(
+    `Cleanup complete: archived ${archived.length}, kept ${kept.length}, matched ${frontendIssues.length} frontend issues.`,
+  );
+  for (const issue of archived) {
+    console.log(`- ARCHIVED ${issue.identifier}: ${issue.title}`);
+  }
+  for (const issue of kept) {
+    console.log(`- KEPT ${issue.identifier}: ${issue.title}`);
+  }
+}
+
 async function main() {
   if (mode === 'register') {
     await registerCommand();
@@ -682,6 +869,11 @@ async function main() {
 
   if (mode === 'sync') {
     await syncCommand();
+    return;
+  }
+
+  if (mode === 'cleanup-frontend') {
+    await cleanupFrontendCommand();
     return;
   }
 

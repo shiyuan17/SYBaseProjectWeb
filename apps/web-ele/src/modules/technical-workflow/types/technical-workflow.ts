@@ -16,6 +16,8 @@ export interface PendingTechnicalTaskQuery {
 
 export type TechnicalWorkflowMode = 'exception' | 'queue';
 
+export type TechnicalTaskBoardViewMode = 'case' | 'task';
+
 export type TechnicalWorkflowChainType = 'EXCEPTION' | 'FROZEN' | 'REGULAR';
 
 export type TechnicalWorkflowObjectType =
@@ -85,6 +87,52 @@ export interface PendingTechnicalTaskItem {
   priority?: null | string;
   timedOut: boolean;
   timeoutRuleCode: null | string;
+}
+
+export interface TechnicalTaskSelectOption {
+  label: string;
+  value: string;
+}
+
+export interface TechnicalTaskPoolFilters {
+  applicationNo: string;
+  assignedToUserId: string;
+  assignmentStatus: string;
+  createdRange: string[];
+  currentNode: string;
+  page: number;
+  pathologyNo: string;
+  priority: string;
+  size: number;
+  taskStatus: string;
+  taskType: string;
+  timedOutOnly: boolean;
+}
+
+export interface TechnicalTaskCaseGroup {
+  caseId: string;
+  items: PendingTechnicalTaskItem[];
+  pathologyNo: string;
+  taskCount: number;
+  timedOutCount: number;
+}
+
+export interface TechnicalTaskStatCard {
+  label: string;
+  value: number;
+}
+
+export interface TechnicalTaskAssignmentForm {
+  assignedToName: string;
+  assignedToUserId: string;
+  expectedCompletedAt: string;
+  operatorName: string;
+  operatorUserId: string;
+  priority: string;
+  productionRemarks: string;
+  stationCode: string;
+  stationName: string;
+  terminalCode: string;
 }
 
 export interface TechnicalOperatorFormValue {

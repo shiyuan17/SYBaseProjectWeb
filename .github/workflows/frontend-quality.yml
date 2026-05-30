@@ -1,0 +1,66 @@
+name: frontend-quality
+
+on:
+  pull_request:
+    paths:
+      - 'apps/web-ele/**'
+      - 'packages/**'
+      - 'internal/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'apps/web-ele/**'
+      - 'packages/**'
+      - 'internal/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'pnpm-lock.yaml'
+      - 'package.json'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+
+jobs:
+  frontend-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          cache: pnpm
+          node-version: 22.18.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check
+        run: pnpm check:type
+
+      - name: Build web ele
+        run: pnpm build:ele
+
+      - name: Unit tests
+        run: pnpm test:unit
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Circular dependency check
+        run: pnpm check:circular

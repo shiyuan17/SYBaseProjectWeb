@@ -162,6 +162,12 @@ export interface DashboardWorkspaceQuickEntry extends DashboardQuickEntry {
   domainTitle: string;
 }
 
+export interface DashboardWorkspaceQuickEntryGroup {
+  domainId: string;
+  domainTitle: string;
+  entries: DashboardWorkspaceQuickEntry[];
+}
+
 export interface DashboardDomainSummary {
   alertCount: number;
   cardCount: number;

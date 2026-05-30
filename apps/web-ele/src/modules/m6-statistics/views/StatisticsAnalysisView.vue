@@ -40,6 +40,10 @@ import {
   queryStatReport,
 } from '../api/m6-statistics-service';
 import { M6_STAT_CATEGORY_TABS } from '../constants';
+import {
+  buildStatReportFileName,
+  buildStatReportPayload,
+} from '../utils/report-query';
 
 const userStore = useUserStore();
 
@@ -93,17 +97,7 @@ function downloadBlob(blob: Blob, fileName: string) {
 }
 
 function buildPayload() {
-  return {
-    category: activeCategory.value,
-    departmentId: filters.departmentId || undefined,
-    from: filters.dateRange[0] || undefined,
-    indicatorCode: filters.indicatorCode || undefined,
-    operatorName: filters.operatorName || undefined,
-    operatorUserId: filters.operatorUserId || undefined,
-    roleId: filters.roleId || undefined,
-    templateCode: filters.templateCode || undefined,
-    to: filters.dateRange[1] || undefined,
-  };
+  return buildStatReportPayload(activeCategory.value, filters);
 }
 
 async function loadReferenceData() {
@@ -147,7 +141,7 @@ async function handleExport() {
     if (result instanceof Blob) {
       downloadBlob(
         result,
-        `${filters.templateCode || activeCategory.value.toLowerCase()}-stat-report.csv`,
+        buildStatReportFileName(activeCategory.value, filters.templateCode),
       );
       ElMessage.success('导出成功');
     }

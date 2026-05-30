@@ -10,6 +10,8 @@ import {
   buildQualityChartData,
   buildRiskDistribution,
   buildWorkspaceVisualSummary,
+  getVisualToneClasses,
+  groupQuickEntriesByDomain,
 } from './dashboard-visualization';
 
 function createOverview(
@@ -257,5 +259,65 @@ describe('dashboard visualization helpers', () => {
       },
       todoCards: [],
     });
+  });
+
+  it('groups workspace quick entries by domain in source order', () => {
+    expect(
+      groupQuickEntriesByDomain([
+        {
+          description: '登记入口',
+          domainId: 'specimen',
+          domainTitle: '临床送检',
+          id: 'register',
+          route: '/specimen-workflow/register',
+          title: '登记',
+        },
+        {
+          description: '任务池入口',
+          domainId: 'technical',
+          domainTitle: '制片管理',
+          id: 'tasks',
+          route: '/technical-workflow/tasks',
+          title: '任务池',
+        },
+        {
+          description: '接收入口',
+          domainId: 'specimen',
+          domainTitle: '临床送检',
+          id: 'receipt',
+          route: '/specimen-workflow/receipt',
+          title: '接收',
+        },
+      ]),
+    ).toEqual([
+      {
+        domainId: 'specimen',
+        domainTitle: '临床送检',
+        entries: [
+          expect.objectContaining({ id: 'register' }),
+          expect.objectContaining({ id: 'receipt' }),
+        ],
+      },
+      {
+        domainId: 'technical',
+        domainTitle: '制片管理',
+        entries: [expect.objectContaining({ id: 'tasks' })],
+      },
+    ]);
+  });
+
+  it('keeps visual tone class contracts stable for component extraction', () => {
+    expect(getVisualToneClasses('danger')).toEqual(
+      expect.objectContaining({
+        badge: expect.stringContaining('var(--el-color-danger)'),
+        line: 'bg-[var(--el-color-danger)]',
+      }),
+    );
+    expect(getVisualToneClasses('neutral')).toEqual(
+      expect.objectContaining({
+        badge: expect.stringContaining('bg-muted'),
+        text: 'text-muted-foreground',
+      }),
+    );
   });
 });

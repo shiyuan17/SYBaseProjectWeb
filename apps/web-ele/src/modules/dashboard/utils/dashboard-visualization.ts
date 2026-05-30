@@ -12,6 +12,7 @@ import type {
   DashboardVisualTone,
   DashboardWorkspaceAlert,
   DashboardWorkspaceQuickEntry,
+  DashboardWorkspaceQuickEntryGroup,
   DashboardWorkspaceTodoCard,
 } from '../types/dashboard';
 
@@ -381,7 +382,7 @@ export function getVisualToneClasses(tone: DashboardVisualTone) {
 
 export function groupQuickEntriesByDomain(
   quickEntries: DashboardWorkspaceQuickEntry[],
-) {
+): DashboardWorkspaceQuickEntryGroup[] {
   const groups = new Map<string, DashboardWorkspaceQuickEntry[]>();
   quickEntries.forEach((entry) => {
     const current = groups.get(entry.domainId) ?? [];

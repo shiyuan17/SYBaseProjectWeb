@@ -9,6 +9,9 @@ import {
   completeFrozenSlicing,
   confirmFrozenReport,
   getFrozenSessionDetail,
+  getFrozenTechnicalWorkbench,
+  listFrozenReminders,
+  listFrozenSessions,
   resetFrozenMockState,
   saveFrozenPreliminaryReport,
 } from './frozen-workflow-service';
@@ -90,5 +93,28 @@ describe('frozen workflow service mock', () => {
     detail = await getFrozenSessionDetail('FS-001');
     expect(detail.sessionStatus).toBe('CLOSED');
     expect(detail.remainingTissueStatus).toBe('DISPOSED');
+  });
+
+  it('filters frozen sessions and exposes reminder summary for smoke entry', async () => {
+    resetFrozenMockState();
+
+    const requestedPage = await listFrozenSessions({
+      keyword: 'FS-20260527-01',
+      page: 1,
+      sessionStatus: 'REQUESTED',
+      size: 10,
+    });
+    expect(requestedPage.items).toHaveLength(1);
+    expect(requestedPage.items[0]?.sessionNo).toBe('FS-20260527-01');
+
+    const reminders = await listFrozenReminders();
+    expect(reminders.total).toBe(reminders.items.length);
+    expect(reminders.redCount + reminders.orangeCount).toBeGreaterThanOrEqual(
+      0,
+    );
+
+    const workbench = await getFrozenTechnicalWorkbench();
+    expect(workbench.reminders.total).toBe(reminders.total);
+    expect(workbench.sessions.length).toBeGreaterThan(0);
   });
 });

@@ -1,63 +1,37 @@
 <script setup lang="ts">
-import type { AnalyticsOverviewResult } from '../types/dashboard';
-
-import { computed, onMounted, ref } from 'vue';
+import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
 import { usePreferences } from '@vben/preferences';
-import { useAccessStore } from '@vben/stores';
 
-import dayjs from 'dayjs';
 import { ElButton, ElEmpty, ElSkeleton } from 'element-plus';
 
-import { loadAnalyticsOverview } from '../api/dashboard-service';
 import DashboardChartPanel from '../components/DashboardChartPanel.vue';
 import DashboardHeroMetricCard from '../components/DashboardHeroMetricCard.vue';
+import DashboardOperationSignalList from '../components/DashboardOperationSignalList.vue';
+import DashboardRiskDistributionGrid from '../components/DashboardRiskDistributionGrid.vue';
 import DashboardSectionCard from '../components/DashboardSectionCard.vue';
+import { useAnalyticsOverviewDashboard } from '../composables/useAnalyticsOverviewDashboard';
 import {
   buildQualityChartOption,
   buildRiskDistributionChartOption,
   buildWorkloadChartOption,
 } from '../utils/dashboard-chart-options';
 import { getDashboardChartTheme } from '../utils/dashboard-theme';
-import {
-  buildAnalyticsVisualSummary,
-  getVisualToneClasses,
-} from '../utils/dashboard-visualization';
 
-const accessStore = useAccessStore();
 const router = useRouter();
 const { isDark } = usePreferences();
+const {
+  currentMonthLabel,
+  dateRangeLabel,
+  hasContent,
+  loading,
+  loadPage,
+  pageError,
+  visualSummary,
+} = useAnalyticsOverviewDashboard();
 
-const loading = ref(false);
-const pageError = ref('');
-const overview = ref<AnalyticsOverviewResult>({
-  kpiCards: [],
-  operationRows: [],
-  qualityRows: [],
-  riskCards: [],
-  workloadRows: [],
-});
-
-const currentMonthLabel = computed(() => dayjs().format('YYYY 年 MM 月'));
-const dateRangeLabel = computed(
-  () =>
-    `${dayjs().startOf('month').format('MM.DD')} - ${dayjs().format('MM.DD')}`,
-);
-
-const hasContent = computed(
-  () =>
-    overview.value.kpiCards.length > 0 ||
-    overview.value.riskCards.length > 0 ||
-    overview.value.operationRows.length > 0 ||
-    overview.value.qualityRows.length > 0 ||
-    overview.value.workloadRows.length > 0,
-);
-
-const visualSummary = computed(() =>
-  buildAnalyticsVisualSummary(overview.value),
-);
 const chartTheme = computed(() => getDashboardChartTheme(isDark.value));
 
 const qualityChartOption = computed(() =>
@@ -90,30 +64,6 @@ async function navigateTo(route?: string, query?: Record<string, string>) {
     query,
   });
 }
-
-async function loadPage() {
-  loading.value = true;
-  pageError.value = '';
-  try {
-    overview.value = await loadAnalyticsOverview([...accessStore.accessCodes]);
-  } catch (error) {
-    pageError.value =
-      error instanceof Error ? error.message : '分析页加载失败，请稍后重试';
-    overview.value = {
-      kpiCards: [],
-      operationRows: [],
-      qualityRows: [],
-      riskCards: [],
-      workloadRows: [],
-    };
-  } finally {
-    loading.value = false;
-  }
-}
-
-onMounted(() => {
-  void loadPage();
-});
 </script>
 
 <template>
@@ -229,50 +179,10 @@ onMounted(() => {
           card-class="dashboard-surface border-0"
           body-class="px-5 pb-5 pt-2"
         >
-          <ElSkeleton v-if="loading" :rows="6" animated />
-          <div
-            v-else-if="visualSummary.operationSignals.length > 0"
-            class="grid gap-4"
-          >
-            <article
-              v-for="signal in visualSummary.operationSignals"
-              :key="signal.code"
-              class="rounded-[24px] border border-border bg-card/80 p-4 text-foreground shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30"
-            >
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <div class="text-sm font-semibold text-foreground">
-                    {{ signal.label }}
-                  </div>
-                  <div class="mt-1 text-xs text-muted-foreground">
-                    {{ signal.description }}
-                  </div>
-                </div>
-                <div class="text-right">
-                  <div
-                    class="text-[11px] uppercase tracking-[0.18em] text-[var(--el-text-color-secondary)]"
-                  >
-                    {{ signal.emphasis }}
-                  </div>
-                  <div class="mt-1 text-lg font-semibold text-foreground">
-                    {{ signal.value }}
-                    <span
-                      class="ml-1 text-xs font-normal text-muted-foreground"
-                      >{{ signal.unit }}</span
-                    >
-                  </div>
-                </div>
-              </div>
-              <div class="mt-4 h-2 overflow-hidden rounded-full bg-muted/70">
-                <div
-                  class="h-full rounded-full transition-all duration-500"
-                  :class="getVisualToneClasses(signal.tone).line"
-                  :style="{ width: `${signal.progress}%` }"
-                ></div>
-              </div>
-            </article>
-          </div>
-          <ElEmpty v-else description="暂无运营信号数据" />
+          <DashboardOperationSignalList
+            :loading="loading"
+            :signals="visualSummary.operationSignals"
+          />
         </DashboardSectionCard>
 
         <DashboardSectionCard
@@ -298,69 +208,12 @@ onMounted(() => {
         card-class="dashboard-surface border-0"
         body-class="px-5 pb-5 pt-2"
       >
-        <ElSkeleton v-if="loading" :rows="5" animated />
-        <div
-          v-else-if="visualSummary.riskDistribution.length > 0"
-          class="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
-        >
-          <article
-            v-for="card in visualSummary.riskDistribution"
-            :key="card.id"
-            class="group relative overflow-hidden rounded-[26px] border border-border bg-card/90 p-5 text-foreground shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-lg"
-          >
-            <div
-              class="pointer-events-none absolute inset-0 bg-gradient-to-br opacity-80"
-              :class="getVisualToneClasses(card.tone).glow"
-            ></div>
-            <div
-              class="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--el-bg-color)_82%,transparent),color-mix(in_srgb,var(--el-bg-color-page)_36%,transparent))]"
-            ></div>
-            <div class="relative">
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <div class="text-sm font-semibold text-foreground">
-                    {{ card.label }}
-                  </div>
-                  <div class="mt-1 text-xs text-muted-foreground">
-                    当前识别 {{ card.valueText }} 项需要跟进的风险信号
-                  </div>
-                </div>
-                <span
-                  class="rounded-full px-2.5 py-1 text-[11px] font-medium"
-                  :class="getVisualToneClasses(card.tone).badge"
-                >
-                  {{
-                    card.severity === 'danger'
-                      ? '高风险'
-                      : card.severity === 'warning'
-                        ? '需关注'
-                        : '观察中'
-                  }}
-                </span>
-              </div>
-              <div class="mt-6 flex items-end justify-between">
-                <div
-                  class="text-4xl font-semibold tracking-tight text-foreground"
-                >
-                  {{ card.valueText }}
-                </div>
-                <div class="text-xs text-muted-foreground">{{ card.unit }}</div>
-              </div>
-              <ElButton
-                class="mt-6 w-full"
-                @click="navigateTo(card.route, card.query)"
-              >
-                查看详情
-              </ElButton>
-            </div>
-          </article>
-        </div>
-        <div
-          v-else-if="!pageError"
-          class="rounded-[24px] border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground"
-        >
-          当前没有风险项
-        </div>
+        <DashboardRiskDistributionGrid
+          :has-error="Boolean(pageError)"
+          :items="visualSummary.riskDistribution"
+          :loading="loading"
+          @open="navigateTo($event.route, $event.query)"
+        />
       </DashboardSectionCard>
 
       <div
