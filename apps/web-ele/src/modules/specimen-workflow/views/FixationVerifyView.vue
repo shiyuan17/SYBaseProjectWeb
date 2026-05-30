@@ -159,6 +159,51 @@ function resolveCurrentOperator() {
   };
 }
 
+
+async function resolveQuickConfirmIdentifierType(
+  identifierType: QuickConfirmIdentifierType,
+  identifier: string,
+) {
+  const normalizedIdentifier = identifier.trim();
+  const currentMatches = pendingItems.value.filter((item) =>
+    item.barcode.trim() === normalizedIdentifier
+    || item.specimenNo.trim() === normalizedIdentifier);
+
+  const hasBarcodeMatch = currentMatches.some((item) => item.barcode.trim() === normalizedIdentifier);
+  const hasSpecimenNoMatch = currentMatches.some((item) => item.specimenNo.trim() === normalizedIdentifier);
+
+  if (hasBarcodeMatch && !hasSpecimenNoMatch) {
+    return 'BARCODE' as const;
+  }
+  if (hasSpecimenNoMatch && !hasBarcodeMatch) {
+    return 'SPECIMEN_NO' as const;
+  }
+  if (hasBarcodeMatch || hasSpecimenNoMatch) {
+    return identifierType;
+  }
+
+  const lookupResult = await listPendingSpecimenRemovals({
+    ...currentQuery.value,
+    keyword: normalizedIdentifier,
+    page: 1,
+    size: 100,
+  });
+  const lookupMatches = lookupResult.items.filter((item) =>
+    item.barcode.trim() === normalizedIdentifier
+    || item.specimenNo.trim() === normalizedIdentifier);
+  const lookupHasBarcodeMatch = lookupMatches.some((item) => item.barcode.trim() === normalizedIdentifier);
+  const lookupHasSpecimenNoMatch = lookupMatches.some((item) => item.specimenNo.trim() === normalizedIdentifier);
+
+  if (lookupHasBarcodeMatch && !lookupHasSpecimenNoMatch) {
+    return 'BARCODE' as const;
+  }
+  if (lookupHasSpecimenNoMatch && !lookupHasBarcodeMatch) {
+    return 'SPECIMEN_NO' as const;
+  }
+
+  return identifierType;
+}
+
 function focusQuickInput(identifierType: QuickConfirmIdentifierType) {
   const inputRef = identifierType === 'BARCODE'
     ? barcodeQuickInputRef.value
@@ -195,13 +240,15 @@ async function submitQuickConfirm(identifierType: QuickConfirmIdentifierType) {
   quickActionLoading.specimenNo = !isBarcode;
   pageError.value = '';
   try {
+    const resolvedIdentifierType = await resolveQuickConfirmIdentifierType(identifierType, normalizedValue);
     await confirmSpecimenRemovalByIdentifier({
       identifier: normalizedValue,
-      identifierType,
+      identifierType: resolvedIdentifierType,
       operatorName,
       operatorUserId: operatorUserId || null,
       remarks: '离体确认',
     });
+
     if (isBarcode) {
       barcodeQuickInput.value = '';
       ElMessage.success(`条码 ${normalizedValue} 已完成离体确认`);
@@ -298,7 +345,7 @@ watch(
 </script>
 
 <template>
-  <Page :title="embedded ? '离体确认' : '固定与转运'">
+  <Page :title="embedded ? '' : '固定与转运'">
     <div class="flex flex-col gap-4">
       <ElAlert
         v-if="pageError"

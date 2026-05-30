@@ -73,6 +73,8 @@ type RawSpecimen = {
   containerName: null | string;
   fixationCompletedAt: null | string;
   fixationLiquidType: null | string;
+  fixationOperatorName?: null | string;
+  fixationOperatorUserId?: null | string;
   fixationStartedAt: null | string;
   fixationStatus: null | string;
   id: string;
@@ -220,6 +222,8 @@ function normalizeSeedSpecimen(
     checkInStatus: derivedCheckInStatus,
     checkedInAt,
     checkedInByName,
+    fixationOperatorName: specimen.fixationOperatorName ?? null,
+    fixationOperatorUserId: specimen.fixationOperatorUserId ?? null,
     specimenConfirmedAt,
     verificationCompletedAt,
     verificationStartedAt,
@@ -341,6 +345,9 @@ function applySpecimenRemovalConfirmation(
   const eventTime = createTimestamp();
   specimen.specimenRemovalAt = eventTime;
   specimen.specimenRemovalOperatorName = data.operatorName;
+  specimen.verificationStatus = 'VERIFIED';
+  specimen.verificationStartedAt ??= eventTime;
+  specimen.verificationCompletedAt = eventTime;
   specimen.latestTrackingAt = eventTime;
   appendWorkflowEvent({
     applicationId: specimen.applicationId,
@@ -508,6 +515,10 @@ function mapSpecimenTrackingSummary(specimen: RawSpecimen): SpecimenTrackingSumm
     containerCount: specimen.containerCount,
     containerName: specimen.containerName,
     fixationCompletedAt: specimen.fixationCompletedAt,
+    fixationLiquidType: specimen.fixationLiquidType,
+    fixationOperatorName: specimen.fixationOperatorName ?? null,
+    fixationOperatorUserId: specimen.fixationOperatorUserId ?? null,
+    fixationStartedAt: specimen.fixationStartedAt,
     fixationStatus: specimen.fixationStatus,
     id: specimen.id,
     labelPrintStatus: specimen.labelPrintStatus,
@@ -542,6 +553,10 @@ function mapSpecimenManagementItem(specimen: RawSpecimen): SpecimenManagementLis
     containerCount: specimen.containerCount,
     containerName: specimen.containerName,
     fixationCompletedAt: specimen.fixationCompletedAt,
+    fixationLiquidType: specimen.fixationLiquidType,
+    fixationOperatorName: specimen.fixationOperatorName ?? null,
+    fixationOperatorUserId: specimen.fixationOperatorUserId ?? null,
+    fixationStartedAt: specimen.fixationStartedAt,
     fixationStatus: specimen.fixationStatus,
     labelPrintBatchNo: specimen.labelPrintBatchNo,
     labelPrintStatus: specimen.labelPrintStatus,
@@ -612,6 +627,8 @@ function mapPendingSpecimenItem(specimen: RawSpecimen): PendingSpecimenItem {
     containerName: specimen.containerName,
     fixationCompletedAt: specimen.fixationCompletedAt,
     fixationLiquidType: specimen.fixationLiquidType,
+    fixationOperatorName: specimen.fixationOperatorName ?? null,
+    fixationOperatorUserId: specimen.fixationOperatorUserId ?? null,
     fixationStartedAt: specimen.fixationStartedAt,
     fixationStatus: specimen.fixationStatus,
     latestTrackingAt: specimen.latestTrackingAt,
@@ -1009,13 +1026,13 @@ export async function createApplicationMock(
     sourceHospitalName: data.sourceHospitalName ?? null,
     specimenConfirmedAt: null,
     specimenRemovalTime: data.specimenRemovalTime ?? null,
-    specimenSite: data.specimenSite,
+    specimenSite: data.specimenSite ?? null,
     status: data.status ?? 'SUBMITTED',
     submissionDate: data.submissionDate ?? now.slice(0, 10),
-    submittingDepartmentId: data.submittingDepartmentId,
-    submittingDepartmentName: data.submittingDepartmentName,
-    submittingDoctorName: data.submittingDoctorName,
-    submittingDoctorUserId: data.submittingDoctorUserId,
+    submittingDepartmentId: data.submittingDepartmentId ?? null,
+    submittingDepartmentName: data.submittingDepartmentName ?? null,
+    submittingDoctorName: data.submittingDoctorName ?? null,
+    submittingDoctorUserId: data.submittingDoctorUserId ?? null,
     thirdPartySource: data.thirdPartySource ?? null,
     unreceivedCount: 0,
     updatedAt: now,
@@ -1059,12 +1076,12 @@ export async function updateApplicationMock(
     sourceHospitalId: data.sourceHospitalId ?? null,
     sourceHospitalName: data.sourceHospitalName ?? null,
     specimenRemovalTime: data.specimenRemovalTime ?? null,
-    specimenSite: data.specimenSite,
+    specimenSite: data.specimenSite ?? null,
     submissionDate: data.submissionDate ?? application.submissionDate,
-    submittingDepartmentId: data.submittingDepartmentId,
-    submittingDepartmentName: data.submittingDepartmentName,
-    submittingDoctorName: data.submittingDoctorName,
-    submittingDoctorUserId: data.submittingDoctorUserId,
+    submittingDepartmentId: data.submittingDepartmentId ?? null,
+    submittingDepartmentName: data.submittingDepartmentName ?? null,
+    submittingDoctorName: data.submittingDoctorName ?? null,
+    submittingDoctorUserId: data.submittingDoctorUserId ?? null,
     thirdPartySource: data.thirdPartySource ?? null,
     updatedAt: createTimestamp(),
   });
@@ -1558,6 +1575,10 @@ export async function startFixationMock(
   updateApplicationFromSpecimens(specimen.applicationId);
   return {
     barcode: specimen.barcode,
+    fixationCompletedAt: specimen.fixationCompletedAt,
+    fixationLiquidType: specimen.fixationLiquidType,
+    operatorName: data.operatorName,
+    operatorUserId: data.operatorUserId ?? null,
     fixationStatus: specimen.fixationStatus ?? 'FIXING',
     specimenId: specimen.id,
   };
@@ -1568,7 +1589,13 @@ export async function completeFixationMock(
 ): Promise<FixationResult> {
   const specimen = resolveSpecimenByIdentifier(data.specimenBarcode);
   assertSpecimenNotInReceiptTerminalState(specimen, '完成固定');
-  if (specimen.fixationStatus !== 'FIXING') {
+  if (!isSpecimenVerified(specimen)) {
+    throw new Error(`标本 ${specimen.barcode} 尚未完成核对`);
+  }
+  if (specimen.fixationStatus === 'COMPLETED') {
+    throw new Error(`标本 ${specimen.barcode} 已完成固定`);
+  }
+  if (specimen.fixationStatus !== 'FIXING' && specimen.fixationStatus !== 'PENDING') {
     throw new Error(`标本 ${specimen.barcode} 当前状态不允许完成固定`);
   }
   const eventTime = createTimestamp();
@@ -1576,6 +1603,8 @@ export async function completeFixationMock(
   specimen.fixationStartedAt = specimen.fixationStartedAt ?? eventTime;
   specimen.fixationCompletedAt = eventTime;
   specimen.fixationLiquidType = data.fixationLiquidType ?? specimen.fixationLiquidType;
+  specimen.fixationOperatorName = data.operatorName;
+  specimen.fixationOperatorUserId = data.operatorUserId ?? null;
   specimen.specimenStatus = 'FIXED';
   specimen.latestTrackingAt = eventTime;
   appendWorkflowEvent({
@@ -1606,6 +1635,10 @@ export async function completeFixationMock(
   updateApplicationFromSpecimens(specimen.applicationId);
   return {
     barcode: specimen.barcode,
+    fixationCompletedAt: specimen.fixationCompletedAt,
+    fixationLiquidType: specimen.fixationLiquidType,
+    operatorName: specimen.fixationOperatorName,
+    operatorUserId: specimen.fixationOperatorUserId,
     fixationStatus: specimen.fixationStatus ?? 'COMPLETED',
     specimenId: specimen.id,
   };

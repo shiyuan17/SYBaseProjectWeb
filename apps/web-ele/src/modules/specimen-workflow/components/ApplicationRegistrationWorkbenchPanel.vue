@@ -6,6 +6,7 @@ import { computed, watch } from 'vue';
 import { ElAlert, ElEmpty } from 'element-plus';
 
 import { useApplicationRegistrationWorkbench } from '../composables/useApplicationRegistrationWorkbench';
+import { formatApplicationStatus } from '../utils/format';
 import ApplicationRegistrationDictionaryPanel from './ApplicationRegistrationDictionaryPanel.vue';
 import ApplicationRegistrationPackageDialog from './ApplicationRegistrationPackageDialog.vue';
 import ApplicationRegistrationPatientPanel from './ApplicationRegistrationPatientPanel.vue';
@@ -16,7 +17,11 @@ const props = withDefaults(
   defineProps<{
     fullHeight?: boolean;
     lookupKeyword?: string;
-    lookupQueryType?: 'APPLICATION_NO' | 'AUTO' | 'INPATIENT_NO' | 'PATIENT_NAME';
+    lookupQueryType?:
+      | 'APPLICATION_NO'
+      | 'AUTO'
+      | 'INPATIENT_NO'
+      | 'PATIENT_NAME';
     lookupTriggerKey?: number;
   }>(),
   {
@@ -83,8 +88,18 @@ const panelClasses = computed(() =>
     : 'flex flex-col gap-3',
 );
 
+const formattedRegistrationStatus = computed(() => {
+  const status = currentRecord.value?.patientInfo.registrationStatus;
+  return status ? formatApplicationStatus(status) : '待登记';
+});
+
 watch(
-  () => [props.lookupKeyword, props.lookupQueryType, props.lookupTriggerKey] as const,
+  () =>
+    [
+      props.lookupKeyword,
+      props.lookupQueryType,
+      props.lookupTriggerKey,
+    ] as const,
   ([keyword, queryType]) => {
     const normalizedQueryType =
       queryType === 'AUTO' || !queryType ? 'APPLICATION_NO' : queryType;
@@ -109,11 +124,18 @@ async function submitWorkbenchSave() {
 }
 
 function emitReprintApplicationForm(applicationId: string) {
-  if (!applicationId || !currentRecord.value) {
+  if (!currentRecord.value) {
+    return;
+  }
+
+  const reprintApplicationId =
+    applicationId.trim() ||
+    currentRecord.value.patientInfo.applicationNo.trim();
+  if (!reprintApplicationId) {
     return;
   }
   emit('reprint-application-form', {
-    applicationId,
+    applicationId: reprintApplicationId,
     record: currentRecord.value,
   });
 }
@@ -135,7 +157,7 @@ function emitReprintApplicationForm(applicationId: string) {
         :building-options="buildingOptions"
         :frozen-reminder="currentRecord?.patientInfo.frozenReminder ?? false"
         :patient-verified="currentRecord?.patientInfo.patientVerified ?? false"
-        :registration-status="currentRecord?.patientInfo.registrationStatus ?? '待登记'"
+        :registration-status="formattedRegistrationStatus"
         :room-id="selectedRoomId"
         :room-options="roomOptions"
         :save-disabled="saveDisabled"
@@ -199,14 +221,15 @@ function emitReprintApplicationForm(applicationId: string) {
           />
         </div>
       </div>
-
     </template>
 
     <div
       v-else
       class="flex flex-1 items-center justify-center rounded-lg border border-dashed border-border bg-card px-6 py-14 shadow-sm"
     >
-      <ElEmpty :description="loading ? '正在查询工作台数据...' : emptyDescription" />
+      <ElEmpty
+        :description="loading ? '正在查询工作台数据...' : emptyDescription"
+      />
     </div>
 
     <ApplicationRegistrationPackageDialog

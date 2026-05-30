@@ -21,6 +21,7 @@ import {
   listPendingReceipts,
   listPendingTransportOrders,
   listSpecimenVerificationRecords,
+  listSpecimens,
   mapPendingSpecimenPageResponse,
   mapSpecimenRemovalPageResponse,
   lookupApplicationForRegistration,
@@ -524,6 +525,12 @@ describe('specimen-workflow-service mock flow', () => {
       remarks: '离体确认',
     });
     expect(byBarcode.barcode).toBe(quickConfirmBarcode);
+    const confirmedSpecimens = await listSpecimens({
+      keyword: quickConfirmBarcode,
+      page: 1,
+      size: 20,
+    });
+    expect(confirmedSpecimens.items[0]?.verificationStatus).toBe('VERIFIED');
 
     await expect(confirmSpecimenRemovalByIdentifier({
       identifier: quickConfirmBarcode,
@@ -557,6 +564,30 @@ describe('specimen-workflow-service mock flow', () => {
       operatorUserId: 'USER-QUICK',
     });
     expect(bySpecimenNo.barcode).toBe('BC-REMOVAL-QUICK-001');
+    const directFixation = await completeFixation({
+      fixationLiquidType: 'FORMALIN',
+      operatorName: 'quick-user',
+      operatorUserId: 'USER-QUICK',
+      specimenBarcode: bySpecimenNo.barcode,
+    });
+    expect(directFixation).toMatchObject({
+      barcode: bySpecimenNo.barcode,
+      fixationLiquidType: 'FORMALIN',
+      fixationStatus: 'COMPLETED',
+      operatorName: 'quick-user',
+    });
+    expect(directFixation.fixationCompletedAt).toBeTruthy();
+    const fixedSpecimens = await listSpecimens({
+      keyword: bySpecimenNo.barcode,
+      page: 1,
+      size: 20,
+    });
+    expect(fixedSpecimens.items[0]).toMatchObject({
+      fixationLiquidType: 'FORMALIN',
+      fixationOperatorName: 'quick-user',
+      fixationStatus: 'COMPLETED',
+      specimenStatus: 'FIXED',
+    });
   });
 
   it('rejects quick removal confirmation when specimenNo matches multiple records', async () => {

@@ -296,7 +296,7 @@ describe('FixationVerifyView', () => {
       operatorUserId: 'USER-001',
       remarks: '离体确认',
     });
-    expect(messageSuccessMock).toHaveBeenCalledWith('标本流水号 SP202605230001 已完成离体确认');
+    expect(messageSuccessMock).toHaveBeenCalledWith('\u6807\u672c\u6d41\u6c34\u53f7 SP202605230001 \u5df2\u5b8c\u6210\u79bb\u4f53\u786e\u8ba4');
     expect(specimenNoInput!.value).toBe('');
 
     app.unmount();

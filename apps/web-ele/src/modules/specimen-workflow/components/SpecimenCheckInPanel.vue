@@ -78,6 +78,8 @@ const selectedRows = computed(() =>
   queueItems.value.filter((item) => selectedRowKeys.value.includes(item.specimenId)),
 );
 
+const selectedCount = computed(() => selectedRows.value.length);
+
 const pendingCount = computed(
   () => queueItems.value.filter((item) => item.queueStatus !== 'SUCCESS').length,
 );
@@ -394,35 +396,46 @@ async function handleExport() {
       {{ pageError }}
     </div>
 
-    <div class="flex flex-wrap items-center gap-2">
-      <div class="text-2xl font-semibold text-danger">标本入库</div>
-      <span class="text-sm text-muted-foreground">全部</span>
-      <span class="text-2xl font-semibold text-primary">{{ pendingCount }}</span>
+    <div class="flex flex-wrap items-center gap-4 text-sm">
+      <div class="font-semibold text-[color:#d6453d]">标本入库</div>
+      <div>
+        全部
+        <span class="text-xl font-semibold text-primary">{{ queueItems.length }}</span>
+      </div>
+      <div>
+        已选
+        <span class="text-xl font-semibold text-success">{{ selectedCount }}</span>
+      </div>
+      <div>
+        待处理
+        <span class="text-xl font-semibold text-danger">{{ pendingCount }}</span>
+      </div>
     </div>
 
-    <div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-      <div class="flex flex-wrap items-center gap-3">
-        <ElInput
-          v-model="scanInput"
-          clearable
-          placeholder="标本id / 流水号 / 条码"
-          style="width: 260px"
-          @keyup.enter="handleQuickCheckIn"
-        />
-        <span class="text-sm text-muted-foreground">选择操作人</span>
-        <ElInput v-model="operatorForm.operatorName" style="width: 160px" />
-        <ElInput v-model="operatorForm.printerCode" placeholder="打印机编号" style="width: 140px" />
-        <ElInput v-model="operatorForm.terminalCode" placeholder="终端编号" style="width: 140px" />
-        <ElButton :loading="actionLoading" type="primary" @click="handleQuickCheckIn">
-          标本入库
-        </ElButton>
-        <ElButton :loading="retryLoading" @click="handleBatchCheckIn">批量入库</ElButton>
-        <ElButton @click="clearSelection">清除选择行</ElButton>
-        <ElButton @click="clearQueue">清除列表</ElButton>
-        <ElButton :loading="retryLoading" @click="handleRetryLabelPrint">补打标本标签</ElButton>
-        <ElButton @click="handleReset">重置</ElButton>
-        <ElButton :loading="exportLoading" @click="handleExport">导出Excel</ElButton>
-      </div>
+    <div class="flex flex-wrap items-center gap-2">
+      <ElInput
+        v-model="scanInput"
+        clearable
+        placeholder="标本id / 流水号 / 条码"
+        style="width: 260px"
+        @keyup.enter="handleQuickCheckIn"
+      />
+      <ElInput
+        v-model="operatorForm.operatorName"
+        placeholder="选择操作人"
+        style="width: 160px"
+      />
+      <ElInput v-model="operatorForm.printerCode" placeholder="打印机编号" style="width: 140px" />
+      <ElInput v-model="operatorForm.terminalCode" placeholder="终端编号" style="width: 140px" />
+      <ElButton :loading="actionLoading" type="primary" @click="handleQuickCheckIn">
+        标本入库
+      </ElButton>
+      <ElButton :loading="retryLoading" @click="handleBatchCheckIn">批量入库</ElButton>
+      <ElButton @click="clearSelection">清除选择行</ElButton>
+      <ElButton @click="clearQueue">清除列表</ElButton>
+      <ElButton :loading="retryLoading" @click="handleRetryLabelPrint">补打标本标签</ElButton>
+      <ElButton @click="handleReset">重置</ElButton>
+      <ElButton :loading="exportLoading" @click="handleExport">导出Excel</ElButton>
     </div>
 
     <ElTable

@@ -7,22 +7,18 @@ import type {
 
 import { computed, reactive, ref, watch } from 'vue';
 
-import { useAccessStore, useUserStore } from '@vben/stores';
+import { useAccessStore } from '@vben/stores';
 
 import {
   createEmptyWorkflowReferenceOptions,
   loadWorkflowReferenceOptionsSafely,
 } from '#/modules/system-management/api/workflow-reference-service';
-import BodyPartSelect from '#/modules/system-management/components/BodyPartSelect.vue';
-import DepartmentSelect from '#/modules/system-management/components/DepartmentSelect.vue';
 import ReferenceOptionSelect from '#/modules/system-management/components/ReferenceOptionSelect.vue';
-import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
 import { GENDER_OPTIONS } from '#/modules/system-management/constants';
 
 import {
   ElAlert,
   ElButton,
-  ElDatePicker,
   ElDialog,
   ElEmpty,
   ElForm,
@@ -73,13 +69,10 @@ const emit = defineEmits<{
 }>();
 
 const accessStore = useAccessStore();
-const userStore = useUserStore();
 
 const CREATE_TAB: DialogTabName = 'create';
 const IMPORT_TAB: DialogTabName = 'import';
 
-const currentUserName = computed(() => userStore.userInfo?.realName ?? '');
-const currentUserId = computed(() => userStore.userInfo?.userId ?? '');
 const accessCodeSet = computed(() => new Set(accessStore.accessCodes));
 
 const canCreateApplication = computed(() =>
@@ -157,14 +150,8 @@ const createForm = reactive<ApplicationCreateRequest>({
   remarks: null,
   sourceHospitalId: null,
   sourceHospitalName: null,
-  specimenSite: '',
-  specimenRemovalTime: null,
   status: null,
   submissionDate: null,
-  submittingDepartmentId: '',
-  submittingDepartmentName: '',
-  submittingDoctorName: currentUserName.value,
-  submittingDoctorUserId: currentUserId.value,
   thirdPartySource: null,
 });
 
@@ -199,14 +186,8 @@ function resetCreateForm() {
     remarks: null,
     sourceHospitalId: null,
     sourceHospitalName: null,
-    specimenSite: '',
-    specimenRemovalTime: null,
     status: null,
     submissionDate: null,
-    submittingDepartmentId: '',
-    submittingDepartmentName: '',
-    submittingDoctorName: currentUserName.value,
-    submittingDoctorUserId: currentUserId.value,
     thirdPartySource: null,
   });
   clinicalSymptomSuggestion.value = '';
@@ -245,14 +226,8 @@ function fillCreateForm(detail: ApplicationDetailView) {
     remarks: detail.remarks,
     sourceHospitalId: detail.sourceHospitalId,
     sourceHospitalName: detail.sourceHospitalName,
-    specimenSite: detail.specimenSite ?? '',
-    specimenRemovalTime: detail.specimenRemovalTime,
     status: detail.status,
     submissionDate: detail.submissionDate,
-    submittingDepartmentId: detail.submittingDepartmentId ?? '',
-    submittingDepartmentName: detail.submittingDepartmentName ?? '',
-    submittingDoctorName: detail.submittingDoctorName ?? '',
-    submittingDoctorUserId: detail.submittingDoctorUserId ?? '',
     thirdPartySource: detail.thirdPartySource,
   });
   clinicalSymptomSuggestion.value = detail.clinicalSymptom ?? '';
@@ -281,16 +256,6 @@ async function loadWorkflowReferenceOptions() {
 
 function closeDialog() {
   dialogVisible.value = false;
-}
-
-function handleSubmittingDepartmentChange(department: null | { id: string; name: string }) {
-  createForm.submittingDepartmentId = department?.id ?? '';
-  createForm.submittingDepartmentName = department?.name ?? '';
-}
-
-function handleSubmittingDoctorChange(user: null | { id: string; name: string }) {
-  createForm.submittingDoctorUserId = user?.id ?? '';
-  createForm.submittingDoctorName = user?.name ?? '';
 }
 
 function handleClinicalSymptomSuggestionChange(value: string) {
@@ -328,7 +293,6 @@ async function handleDuplicateCheck() {
       externalOrderNo: trimOrNull(createForm.externalOrderNo),
       patientId: trimOrNull(createForm.patientId),
       patientName: trimOrNull(createForm.patientName),
-      specimenSite: trimOrNull(createForm.specimenSite),
     });
     const duplicateItems = isEditMode.value
       ? result.items.filter((item) => item.id !== props.applicationId)
@@ -385,24 +349,8 @@ async function submitCreateApplication(mode: SubmitMode) {
     ElMessage.warning('请填写来源医院');
     return;
   }
-  if (!createForm.submittingDepartmentId.trim()) {
-    ElMessage.warning('请选择送检科室');
-    return;
-  }
-  if (!createForm.submittingDoctorName.trim()) {
-    ElMessage.warning('请选择送检医生');
-    return;
-  }
   if (!createForm.clinicalDiagnosis.trim()) {
     ElMessage.warning('请填写临床诊断');
-    return;
-  }
-  if (!createForm.specimenSite.trim()) {
-    ElMessage.warning('请填写送检部位');
-    return;
-  }
-  if (!createForm.specimenRemovalTime?.trim()) {
-    ElMessage.warning('请选择标本离体时间');
     return;
   }
   if (!duplicateConfirmed.value) {
@@ -424,9 +372,6 @@ async function submitCreateApplication(mode: SubmitMode) {
       remarks: createForm.remarks?.trim() || null,
       sourceHospitalId: createForm.sourceHospitalId?.trim() || null,
       sourceHospitalName: createForm.sourceHospitalName?.trim() || null,
-      specimenRemovalTime: createForm.specimenRemovalTime?.trim() || null,
-      submittingDoctorName: createForm.submittingDoctorName.trim(),
-      submittingDoctorUserId: createForm.submittingDoctorUserId.trim(),
     };
     const result = isEditMode.value && props.applicationId
       ? await updateApplication(props.applicationId, payload)
@@ -482,7 +427,6 @@ watch(
     createForm.externalOrderNo,
     createForm.applicationDate,
     createForm.applicationType,
-    createForm.specimenSite,
   ],
   () => {
     if (duplicateCheckMessage.value || duplicateConfirmed.value) {
@@ -610,14 +554,6 @@ watch(
                     value-format="YYYY-MM-DD"
                   />
                 </ElFormItem>
-                <ElFormItem label="离体时间" required>
-                  <ElDatePicker
-                    v-model="createForm.specimenRemovalTime"
-                    placeholder="请选择标本离体时间"
-                    type="datetime"
-                    value-format="YYYY-MM-DDTHH:mm:ss"
-                  />
-                </ElFormItem>
                 <ElFormItem label="申请单随附">
                   <ElSelect v-model="createForm.applicationFormStatus" placeholder="请选择随附状态">
                     <ElOption
@@ -632,28 +568,6 @@ watch(
                   <ElInput
                     v-model="createForm.sourceHospitalName"
                     placeholder="请输入来源医院"
-                  />
-                </ElFormItem>
-                <ElFormItem label="送检科室" required>
-                  <DepartmentSelect
-                    v-model="createForm.submittingDepartmentId"
-                    :selected-label="createForm.submittingDepartmentName"
-                    placeholder="请选择送检科室"
-                    @change="handleSubmittingDepartmentChange"
-                  />
-                </ElFormItem>
-                <ElFormItem label="送检医生" required>
-                  <SystemUserSelect
-                    v-model="createForm.submittingDoctorUserId"
-                    :selected-label="createForm.submittingDoctorName"
-                    placeholder="请选择送检医生"
-                    @change="handleSubmittingDoctorChange"
-                  />
-                </ElFormItem>
-                <ElFormItem label="送检部位" required>
-                  <BodyPartSelect
-                    v-model="createForm.specimenSite"
-                    placeholder="例如：胃窦、甲状腺左叶"
                   />
                 </ElFormItem>
                 <ElFormItem label="外部单号">

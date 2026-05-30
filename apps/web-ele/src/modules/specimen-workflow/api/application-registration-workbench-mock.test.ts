@@ -27,6 +27,7 @@ describe('application registration workbench mock service', () => {
 
     expect(byApplicationNo?.patientInfo.applicationNo).toBe('1122');
     expect(byInpatientNo?.patientInfo.inpatientNo).toBe('ZY0001122');
+    expect(byApplicationNo?.surgeryInfo.specimenRemovalTime ?? '').not.toBeUndefined();
     expect(byInpatientNo).toEqual(byApplicationNo);
     expect(byPatientName?.patientInfo.patientName).toContain('张');
   });

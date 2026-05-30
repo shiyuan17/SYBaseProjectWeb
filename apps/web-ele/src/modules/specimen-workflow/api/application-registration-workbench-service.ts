@@ -86,6 +86,7 @@ function normalizeRecord(
       fixationPerson: record.surgeryInfo?.fixationPerson ?? '',
       fixationTime: record.surgeryInfo?.fixationTime ?? '',
       roomId: record.surgeryInfo?.roomId ?? '',
+      specimenRemovalTime: record.surgeryInfo?.specimenRemovalTime ?? '',
       surgeryName: record.surgeryInfo?.surgeryName ?? '',
     },
   };

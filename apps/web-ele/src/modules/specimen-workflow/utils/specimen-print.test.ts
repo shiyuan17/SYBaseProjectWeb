@@ -32,7 +32,9 @@ describe('buildSpecimenPrintDocument', () => {
     expect(documentHtml).toContain('潘姐（女）');
     expect(documentHtml).toContain('26-05-27 11:02  手术室2');
     expect(documentHtml).toContain('右侧胫骨感染病灶');
-    expect(documentHtml).toContain('https://api.qrserver.com/v1/create-qr-code/');
+    expect(documentHtml).toContain(
+      'https://api.qrserver.com/v1/create-qr-code/',
+    );
     expect(documentHtml).toContain('window.print()');
     expect(documentHtml).not.toContain('仅供预览');
   });
@@ -72,7 +74,7 @@ describe('buildSpecimenPrintDocument', () => {
     expect(documentHtml).toContain('sheet-break');
   });
 
-  it('renders application core content without legacy register sections', () => {
+  it('renders application form reprint fields and qrcode', () => {
     const documentHtml = buildApplicationFormPrintDocument({
       applicationId: 'APP-001',
       contagiousSpecimen: {
@@ -144,14 +146,28 @@ describe('buildSpecimenPrintDocument', () => {
         fixationPerson: '周永坚',
         fixationTime: '2026-05-27 11:07:02',
         roomId: '手术室1',
+        specimenRemovalTime: '2026-05-27 11:06:07',
         surgeryName: '右侧胫骨病灶清创术',
       },
     });
 
-    expect(documentHtml).toContain('申请单补打');
+    expect(documentHtml).toContain('补打申请单');
+    expect(documentHtml).toContain('申请单号');
+    expect(documentHtml).toContain('AP202605280005');
+    expect(documentHtml).toContain('名称');
     expect(documentHtml).toContain('刘雨晴');
-    expect(documentHtml).toContain('右侧胫骨感染病灶');
+    expect(documentHtml).toContain('性别');
+    expect(documentHtml).toContain('女');
+    expect(documentHtml).toContain('年龄');
+    expect(documentHtml).toContain('30岁');
+    expect(documentHtml).toContain('申请单二维码');
+    expect(documentHtml).toContain(
+      'https://api.qrserver.com/v1/create-qr-code/',
+    );
+    expect(documentHtml).toContain(encodeURIComponent('AP202605280005'));
+    expect(documentHtml).toContain('window.print()');
+    expect(documentHtml).not.toContain('基本信息');
+    expect(documentHtml).not.toContain('右侧胫骨感染病灶');
     expect(documentHtml).not.toContain('兼容登记');
-    expect(documentHtml).not.toContain('最近标签批次结果');
   });
 });

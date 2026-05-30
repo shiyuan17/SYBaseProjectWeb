@@ -12,6 +12,8 @@ const {
   getApplicationDetailMock,
   listSpecimensMock,
   lookupApplicationRegistrationWorkbenchRecordMock,
+  loadWorkflowReferenceOptionsMock,
+  completeFixationMock,
   retryLabelPrintMock,
   successMock,
   warningMock,
@@ -84,6 +86,28 @@ const {
       total: 1,
     };
   }),
+  completeFixationMock: vi.fn(async (payload: { fixationLiquidType: string; operatorName: string; specimenBarcode: string }) => ({
+    barcode: payload.specimenBarcode,
+    fixationCompletedAt: '2026-05-26 10:00:00',
+    fixationLiquidType: payload.fixationLiquidType,
+    fixationStatus: 'COMPLETED',
+    operatorName: payload.operatorName,
+    operatorUserId: 'USER-001',
+    specimenId: 'SPEC-002',
+  })),
+  loadWorkflowReferenceOptionsMock: vi.fn(async () => ({
+    clinicalSymptoms: [],
+    collectionModes: [],
+    containerNames: [],
+    cutSurfaceFeatures: [],
+    fixationLiquidTypes: [
+      { label: '10% 中性福尔马林', value: 'FORMALIN' },
+      { label: '酒精', value: 'ETHANOL' },
+    ],
+    marginMarkings: [],
+    specimenImageSizes: [],
+    specimenTypes: [],
+  })),
   lookupApplicationRegistrationWorkbenchRecordMock: vi.fn(async ({ keyword }: { keyword: string }) => ({
     applicationId: keyword === 'M2-001' ? 'APP-001' : 'APP-002',
     contagiousSpecimen: {
@@ -181,8 +205,52 @@ vi.mock('../api/application-registration-workbench-service', () => ({
 
 vi.mock('../api/specimen-workflow-service', () => ({
   getApplicationDetail: getApplicationDetailMock,
+  completeFixation: completeFixationMock,
   listSpecimens: listSpecimensMock,
   retryLabelPrint: retryLabelPrintMock,
+}));
+
+vi.mock('#/modules/system-management/api/workflow-reference-service', () => ({
+  createEmptyWorkflowReferenceOptions: () => ({
+    clinicalSymptoms: [],
+    collectionModes: [],
+    containerNames: [],
+    cutSurfaceFeatures: [],
+    fixationLiquidTypes: [],
+    marginMarkings: [],
+    specimenImageSizes: [],
+    specimenTypes: [],
+  }),
+  loadWorkflowReferenceOptionsSafely: loadWorkflowReferenceOptionsMock,
+}));
+
+vi.mock('#/modules/system-management/components/ReferenceOptionSelect.vue', () => ({
+  default: defineComponent({
+    props: {
+      modelValue: { default: '', type: String },
+      options: { default: () => [], type: Array },
+      placeholder: { default: '', type: String },
+    },
+    emits: ['update:modelValue'],
+    setup(props, { emit }) {
+      return () =>
+        h(
+          'select',
+          {
+            'data-testid': 'reference-option-select',
+            value: props.modelValue,
+            onChange: (event: Event) =>
+              emit('update:modelValue', (event.target as HTMLSelectElement).value),
+          },
+          [
+            h('option', { value: '' }, props.placeholder),
+            ...(props.options as Array<{ label: string; value: string }>).map((option) =>
+              h('option', { value: option.value }, option.label),
+            ),
+          ],
+        );
+    },
+  }),
 }));
 
 vi.mock('element-plus', () => ({
@@ -385,19 +453,32 @@ describe('SpecimenFixationTimePanel', () => {
     vi.clearAllMocks();
   });
 
-  it('adds a specimen to the queue and renders figure 2 columns', async () => {
+  it('completes fixation by scan and renders the fixed fields', async () => {
     const { app, container } = mountView();
 
-    await addRow(container, 'SP-001');
+    await flushView();
+    const fixationLiquidSelect = container.querySelector(
+      'select[data-testid="reference-option-select"]',
+    ) as HTMLSelectElement | null;
+    expect(fixationLiquidSelect?.value).toBe('FORMALIN');
+
+    await addRow(container, 'SP-002');
 
     expect(container.textContent).toContain('固定时间');
     expect(container.textContent).toContain('固定人');
+    expect(container.textContent).toContain('固定液类型');
     expect(container.textContent).toContain('病人ID');
-    expect(container.textContent).toContain('乳腺组织');
-    expect(container.textContent).toContain('王护士');
-    expect(container.textContent).toContain('PAT-001');
-    expect(getApplicationDetailMock).toHaveBeenCalledWith('APP-001');
-    expect(lookupApplicationRegistrationWorkbenchRecordMock).toHaveBeenCalled();
+    expect(container.textContent).toContain('肺组织');
+    expect(container.textContent).toContain('10% 中性福尔马林');
+    expect(container.textContent).toContain('Test User');
+    expect(container.textContent).toContain('PAT-002');
+    expect(completeFixationMock).toHaveBeenCalledWith({
+      fixationLiquidType: 'FORMALIN',
+      operatorName: 'Test User',
+      operatorUserId: 'USER-001',
+      remarks: '扫码完成固定',
+      specimenBarcode: 'BC-002',
+    });
 
     app.unmount();
   });
@@ -409,6 +490,52 @@ describe('SpecimenFixationTimePanel', () => {
     await addRow(container, 'SP-001');
 
     expect(warningMock).toHaveBeenCalledWith('该标本已在当前列表中');
+
+    app.unmount();
+  });
+
+  it('explains when a matched specimen is not verified yet', async () => {
+    listSpecimensMock.mockResolvedValueOnce({
+      items: [
+        {
+          abnormalFlag: false,
+          applicationId: 'APP-003',
+          applicationNo: 'M2-003',
+          barcode: 'BC-003',
+          fixationCompletedAt: null,
+          fixationStartedAt: null,
+          fixationStatus: 'PENDING',
+          labelPrintBatchNo: 'LB-003',
+          labelPrintStatus: 'SUCCESS',
+          latestTrackingAt: '2026-05-26 09:30:00',
+          patientName: 'Carol',
+          registeredAt: '2026-05-26 08:30:00',
+          specimenId: 'SPEC-003',
+          specimenName: '胃组织',
+          specimenNo: 'SP-003',
+          specimenStatus: 'REGISTERED',
+          specimenType: '常规',
+          verificationStatus: 'UNVERIFIED',
+        },
+      ],
+      page: 1,
+      size: 100,
+      summary: {
+        abnormalCount: 0,
+        labelPrintedCount: 0,
+        pendingLabelCount: 0,
+        totalCount: 1,
+      },
+      total: 1,
+    });
+    const { app, container } = mountView();
+
+    await addRow(container, 'SP-003');
+
+    expect(warningMock).toHaveBeenCalledWith(
+      '标本尚未完成离体确认，请先完成离体确认后再固定',
+    );
+    expect(container.textContent).not.toContain('胃组织');
 
     app.unmount();
   });

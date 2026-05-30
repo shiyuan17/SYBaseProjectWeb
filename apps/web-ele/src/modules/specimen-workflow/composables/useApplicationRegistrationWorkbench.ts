@@ -64,6 +64,60 @@ function cloneRecord(
   };
 }
 
+function buildSpecimenDictionaryEntryKey(partName: string, specimenName: string) {
+  return `${partName.trim().toLowerCase()}\u0000${specimenName.trim().toLowerCase()}`;
+}
+
+function buildSpecimenPartKey(partName: string) {
+  return partName.trim().toLowerCase();
+}
+
+function dedupeCommonSpecimenOptionsByPart(
+  options: SpecimenDictionaryEntryOption[],
+) {
+  const seen = new Set<string>();
+  return options.filter((option) => {
+    const key = buildSpecimenPartKey(option.partName);
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
+function filterCommonSpecimensFromDictionaryGroups(
+  groups: SpecimenDictionaryGroup[],
+  commonOptions: SpecimenDictionaryEntryOption[],
+) {
+  if (commonOptions.length === 0) {
+    return groups;
+  }
+
+  const commonEntryKeys = new Set(
+    commonOptions.map((option) =>
+      buildSpecimenDictionaryEntryKey(option.partName, option.specimenName),
+    ),
+  );
+
+  return groups
+    .map((group) => ({
+      ...group,
+      subParts: group.subParts
+        .map((part) => ({
+          ...part,
+          specimens: part.specimens.filter(
+            (specimenName) =>
+              !commonEntryKeys.has(
+                buildSpecimenDictionaryEntryKey(part.partName, specimenName),
+              ),
+          ),
+        }))
+        .filter((part) => part.specimens.length > 0),
+    }))
+    .filter((group) => group.subParts.length > 0);
+}
+
 function getLookupEmptyDescription(type: WorkbenchLookupType) {
   if (type === 'APPLICATION_NO') {
     return '请输入申请单号查询';
@@ -108,7 +162,6 @@ export function useApplicationRegistrationWorkbench(
   const selectedRoomId = ref('');
   const specimenItems = ref<WorkbenchSpecimenItem[]>([]);
   const packageDialogVisible = ref(false);
-  const specimenSequenceSeed = ref(22500);
   const latestRegistrationResult = ref<LatestSpecimenRegistrationResult | null>(
     null,
   );
@@ -135,22 +188,6 @@ export function useApplicationRegistrationWorkbench(
       specimenItems.value.length === 0,
   );
 
-  function resetSpecimenSequence(items: WorkbenchSpecimenItem[]) {
-    const maxSequence = items.reduce((currentMax, item) => {
-      const numericValue = Number(item.specimenNo);
-      return Number.isFinite(numericValue)
-        ? Math.max(currentMax, numericValue)
-        : currentMax;
-    }, 22500);
-
-    specimenSequenceSeed.value = maxSequence;
-  }
-
-  function nextSpecimenNo() {
-    specimenSequenceSeed.value += 1;
-    return String(specimenSequenceSeed.value).padStart(5, '0');
-  }
-
   function createSpecimenItem(
     payload: Pick<
       SpecimenPackageItem,
@@ -158,13 +195,11 @@ export function useApplicationRegistrationWorkbench(
     >,
     source: string,
   ): WorkbenchSpecimenItem {
-    const specimenNo = nextSpecimenNo();
-
     return {
-      id: `${source}-${specimenNo}-${specimenItems.value.length + 1}`,
+      id: `${source}-${specimenItems.value.length + 1}`,
       quantity: payload.quantity,
       specimenName: payload.specimenName,
-      specimenNo,
+      specimenNo: '',
       specimenSite: payload.specimenSite,
       status: payload.status,
     };
@@ -185,7 +220,6 @@ export function useApplicationRegistrationWorkbench(
   function syncWorkbenchRecord(record: ApplicationRegistrationWorkbenchRecord) {
     currentRecord.value = cloneRecord(record);
     specimenItems.value = cloneSpecimenItems(record.specimenItems);
-    resetSpecimenSequence(record.specimenItems);
     selectedBuildingId.value = record.surgeryInfo.buildingId ?? '';
     selectedRoomId.value = record.surgeryInfo.roomId ?? '';
   }
@@ -203,8 +237,12 @@ export function useApplicationRegistrationWorkbench(
   }
 
   async function refreshDictionaryGroups() {
-    dictionaryGroups.value = await listSpecimenDictionaryGroups(
+    const groups = await listSpecimenDictionaryGroups(
       dictionaryKeyword.value,
+    );
+    dictionaryGroups.value = filterCommonSpecimensFromDictionaryGroups(
+      groups,
+      commonSpecimenOptions.value,
     );
   }
 
@@ -425,7 +463,6 @@ export function useApplicationRegistrationWorkbench(
       specimenItems: specimenItems.value.map((item) => ({
         quantity: item.quantity,
         specimenName: item.specimenName.trim(),
-        specimenNo: item.specimenNo,
         specimenSite: item.specimenSite.trim(),
         status: item.status,
       })),
@@ -488,7 +525,9 @@ export function useApplicationRegistrationWorkbench(
     try {
       buildingOptions.value = await listOperatingBuildingOptions();
       specimenEntryOptions.value = await listSpecimenDictionaryEntryOptions();
-      commonSpecimenOptions.value = await listCommonSpecimenOptions();
+      commonSpecimenOptions.value = dedupeCommonSpecimenOptionsByPart(
+        await listCommonSpecimenOptions(),
+      );
       specimenPackageOptions.value = await listSpecimenPackageOptions();
       await refreshDictionaryGroups();
     } catch (error) {

@@ -146,6 +146,7 @@ export interface WorkbenchSurgeryInfo {
   fixationPerson: null | string;
   fixationTime: null | string;
   roomId: null | string;
+  specimenRemovalTime: null | string;
   surgeryName: null | string;
 }
 
@@ -165,7 +166,6 @@ export interface SaveApplicationRegistrationWorkbenchRequest {
   specimenItems: Array<{
     quantity: number;
     specimenName: string;
-    specimenNo: string;
     specimenSite: string;
     status: string;
   }>;

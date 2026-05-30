@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type {
-  ApplicationFormReprintRequest,
   ApplicationDetailView,
   LabelPrintRetryResult,
   LatestSpecimenRegistrationResult,
@@ -53,7 +52,6 @@ import {
   getApplicationDetail,
   getLatestRegistrationResult,
   listSpecimens,
-  reprintApplicationForm,
   retryLabelPrint,
   startFixation,
 } from '../api/specimen-workflow-service';
@@ -174,7 +172,9 @@ const filters = reactive({
 });
 
 const workbenchLookupKeyword = ref('');
-const workbenchLookupQueryType = ref<'APPLICATION_NO' | 'AUTO' | 'INPATIENT_NO' | 'PATIENT_NAME'>('INPATIENT_NO');
+const workbenchLookupQueryType = ref<
+  'APPLICATION_NO' | 'AUTO' | 'INPATIENT_NO' | 'PATIENT_NAME'
+>('INPATIENT_NO');
 const workbenchLookupTriggerKey = ref(0);
 const registerDialogVisible = ref(false);
 const registerDialogApplicationId = ref('');
@@ -183,7 +183,9 @@ const detailDrawerVisible = ref(false);
 const detailLoading = ref(false);
 const detailRow = ref<null | SpecimenManagementListItem>(null);
 const detailApplicationDetail = ref<null | ApplicationDetailView>(null);
-const detailLatestRegisterResult = ref<LatestSpecimenRegistrationResult | null>(null);
+const detailLatestRegisterResult = ref<LatestSpecimenRegistrationResult | null>(
+  null,
+);
 
 const detailTargetSpecimen = computed(() => {
   const specimenId = detailRow.value?.specimenId;
@@ -191,14 +193,20 @@ const detailTargetSpecimen = computed(() => {
     return null;
   }
   return (
-    detailApplicationDetail.value?.specimens.find((specimen) => specimen.id === specimenId)
-    ?? detailLatestRegisterResult.value?.specimens.find((specimen) => specimen.id === specimenId)
-    ?? null
+    detailApplicationDetail.value?.specimens.find(
+      (specimen) => specimen.id === specimenId,
+    ) ??
+    detailLatestRegisterResult.value?.specimens.find(
+      (specimen) => specimen.id === specimenId,
+    ) ??
+    null
   );
 });
 
 const detailAbnormalSpecimens = computed(() =>
-  detailTargetSpecimen.value ? buildSpecimenAbnormalDetails([detailTargetSpecimen.value]) : [],
+  detailTargetSpecimen.value
+    ? buildSpecimenAbnormalDetails([detailTargetSpecimen.value])
+    : [],
 );
 
 const resultDialogVisible = ref(false);
@@ -276,7 +284,14 @@ function normalizeRouteQueryValue(value: unknown) {
   return '';
 }
 
-function triggerWorkbenchLookup(keyword: string, queryType: 'APPLICATION_NO' | 'AUTO' | 'INPATIENT_NO' | 'PATIENT_NAME' = 'AUTO') {
+function triggerWorkbenchLookup(
+  keyword: string,
+  queryType:
+    | 'APPLICATION_NO'
+    | 'AUTO'
+    | 'INPATIENT_NO'
+    | 'PATIENT_NAME' = 'AUTO',
+) {
   const normalizedKeyword = keyword.trim();
   if (!normalizedKeyword) {
     return;
@@ -287,7 +302,10 @@ function triggerWorkbenchLookup(keyword: string, queryType: 'APPLICATION_NO' | '
 }
 
 function resolveQuickFilterQuery(): Partial<
-  Pick<SpecimenManagementListQuery, 'abnormalFlag' | 'labelPrintStatus' | 'specimenStatus'>
+  Pick<
+    SpecimenManagementListQuery,
+    'abnormalFlag' | 'labelPrintStatus' | 'specimenStatus'
+  >
 > {
   if (quickFilter.value === 'ABNORMAL') {
     return { abnormalFlag: true };
@@ -322,7 +340,8 @@ function buildListQuery(): SpecimenManagementListQuery {
     labelPrintStatus: filters.labelPrintStatus || quickQuery.labelPrintStatus,
     page: filters.page,
     size: filters.size,
-    specimenStatus: filters.specimenStatus || quickQuery.specimenStatus || undefined,
+    specimenStatus:
+      filters.specimenStatus || quickQuery.specimenStatus || undefined,
   };
 }
 
@@ -338,9 +357,15 @@ function isNotFoundError(error: unknown) {
     };
   };
   const responseMessage =
-    apiError.response?.data?.error || apiError.response?.data?.message || apiError.message || '';
+    apiError.response?.data?.error ||
+    apiError.response?.data?.message ||
+    apiError.message ||
+    '';
 
-  return apiError.response?.status === 404 || responseMessage === 'Resource not found';
+  return (
+    apiError.response?.status === 404 ||
+    responseMessage === 'Resource not found'
+  );
 }
 
 async function loadSpecimens() {
@@ -373,7 +398,9 @@ async function loadSpecimens() {
 }
 
 async function applyRouteInitialFilter() {
-  const applicationId = normalizeRouteQueryValue(route.query.applicationId).trim();
+  const applicationId = normalizeRouteQueryValue(
+    route.query.applicationId,
+  ).trim();
   if (applicationId && canQueryApplicationDetail.value) {
     try {
       const detail = await getApplicationDetail(applicationId);
@@ -390,7 +417,8 @@ async function applyRouteInitialFilter() {
 watch(
   () => [route.query.applicationId, route.query.action],
   ([applicationId, action]) => {
-    const normalizedApplicationId = normalizeRouteQueryValue(applicationId).trim();
+    const normalizedApplicationId =
+      normalizeRouteQueryValue(applicationId).trim();
     void applyRouteInitialFilter();
     if (action === 'register' && normalizedApplicationId) {
       triggerWorkbenchLookup(normalizedApplicationId, 'AUTO');
@@ -400,7 +428,8 @@ watch(
 );
 
 watch(
-  () => [props.registrationApplicationId, props.registrationTriggerKey] as const,
+  () =>
+    [props.registrationApplicationId, props.registrationTriggerKey] as const,
   ([applicationId]) => {
     if (!props.embedded) {
       return;
@@ -430,7 +459,9 @@ function handleReset() {
   void applyRouteInitialFilter();
 }
 
-function handleDepartmentChange(department: null | { id: string; name: string }) {
+function handleDepartmentChange(
+  department: null | { id: string; name: string },
+) {
   filters.departmentId = department?.id ?? '';
 }
 
@@ -483,30 +514,22 @@ function openPrintWindow(documentHtml: string) {
   return printWindow;
 }
 
-async function handleWorkbenchReprintApplicationForm(payload: {
+function handleWorkbenchReprintApplicationForm(payload: {
   applicationId: string;
   record: ApplicationRegistrationWorkbenchRecord;
 }) {
-  const applicationId = payload.applicationId.trim();
-  const operatorName = currentUserName.value.trim();
-  if (!applicationId || !operatorName) {
-    ElMessage.warning('缺少补打申请单所需的操作人信息');
+  const applicationId =
+    payload.applicationId.trim() ||
+    payload.record.patientInfo.applicationNo.trim();
+  if (!applicationId) {
+    ElMessage.warning('缺少补打申请单所需的申请单号');
     return;
   }
-
-  const requestPayload: ApplicationFormReprintRequest = {
-    operatorName,
-    operatorUserId: currentUserId.value.trim() || null,
-    remarks: `申请与登记工作台补打申请单：${payload.record.patientInfo.applicationNo || applicationId}`,
-    terminalCode: null,
-  };
 
   pageError.value = '';
   try {
     const printDocument = buildApplicationFormPrintDocument(payload.record);
     openPrintWindow(printDocument);
-    await reprintApplicationForm(applicationId, requestPayload);
-    ElMessage.success(`申请单 ${payload.record.patientInfo.applicationNo || applicationId} 补打成功`);
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
   }
@@ -536,7 +559,10 @@ async function openDetailDrawer(row: SpecimenManagementListItem) {
 }
 
 function canRetryBatch(row: SpecimenManagementListItem) {
-  return Boolean(row.labelPrintBatchNo) && ['FAILED', 'PENDING'].includes(row.labelPrintStatus ?? '');
+  return (
+    Boolean(row.labelPrintBatchNo) &&
+    ['FAILED', 'PENDING'].includes(row.labelPrintStatus ?? '')
+  );
 }
 
 function isVerifyCompleted(row: SpecimenManagementListItem) {
@@ -544,14 +570,21 @@ function isVerifyCompleted(row: SpecimenManagementListItem) {
 }
 
 function canStartVerify(row: SpecimenManagementListItem) {
-  return !row.abnormalFlag && !isVerifyCompleted(row) && row.fixationStatus !== 'FIXING';
+  return (
+    !row.abnormalFlag &&
+    !isVerifyCompleted(row) &&
+    row.fixationStatus !== 'FIXING'
+  );
 }
 
 function canCompleteVerify(row: SpecimenManagementListItem) {
   return !row.abnormalFlag && row.fixationStatus === 'FIXING';
 }
 
-function openRetryDialog(rows: SpecimenManagementListItem[], sourceLabel: string) {
+function openRetryDialog(
+  rows: SpecimenManagementListItem[],
+  sourceLabel: string,
+) {
   if (!rows.length) {
     ElMessage.warning('请先选择需要补打的标本');
     return;
@@ -615,7 +648,10 @@ async function submitRetry() {
     currentRetryResult.value = result;
     ElMessage.success('批次补打已提交');
     await loadSpecimens();
-    if (detailDrawerVisible.value && detailRow.value?.applicationId === retryContext.applicationId) {
+    if (
+      detailDrawerVisible.value &&
+      detailRow.value?.applicationId === retryContext.applicationId
+    ) {
       await openDetailDrawer(detailRow.value);
     }
   } catch (error) {
@@ -633,7 +669,9 @@ function openRetryDialogFromLatestResult() {
 
   openRetryDialog(
     result.specimens
-      .filter((item) => ['FAILED', 'PENDING'].includes(item.labelPrintStatus ?? ''))
+      .filter((item) =>
+        ['FAILED', 'PENDING'].includes(item.labelPrintStatus ?? ''),
+      )
       .map((item) => ({
         abnormalFlag: false,
         applicationId: latestRegisterApplicationId.value,
@@ -670,7 +708,10 @@ function goToTracking(row: SpecimenManagementListItem) {
   });
 }
 
-async function openVerifyDialog(row: SpecimenManagementListItem, action: VerifyAction) {
+async function openVerifyDialog(
+  row: SpecimenManagementListItem,
+  action: VerifyAction,
+) {
   verifyAction.value = action;
   verifyTargetRow.value = row;
   verifyDialogVisible.value = true;
@@ -716,8 +757,13 @@ async function submitVerify() {
 
     verifyDialogVisible.value = false;
     await loadSpecimens();
-    if (detailDrawerVisible.value && detailRow.value?.specimenId === verifyTargetRow.value?.specimenId) {
-      const latestRow = items.value.find((item) => item.specimenId === verifyTargetRow.value?.specimenId);
+    if (
+      detailDrawerVisible.value &&
+      detailRow.value?.specimenId === verifyTargetRow.value?.specimenId
+    ) {
+      const latestRow = items.value.find(
+        (item) => item.specimenId === verifyTargetRow.value?.specimenId,
+      );
       if (latestRow) {
         await openDetailDrawer(latestRow);
       }
@@ -782,6 +828,7 @@ function closeResultDialog() {
 
       <template v-if="canManageSpecimens">
         <ApplicationRegistrationWorkbenchPanel
+          full-height
           :lookup-keyword="workbenchLookupKeyword"
           :lookup-query-type="workbenchLookupQueryType"
           :lookup-trigger-key="workbenchLookupTriggerKey"
@@ -794,21 +841,37 @@ function closeResultDialog() {
           description="围绕登记、贴签、核验和异常处理组织当前工作台。"
         >
           <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <section class="rounded-lg border border-border bg-card p-4 shadow-sm">
+            <section
+              class="rounded-lg border border-border bg-card p-4 shadow-sm"
+            >
               <div class="text-sm text-muted-foreground">登记总数</div>
-              <div class="mt-2 text-2xl font-semibold text-foreground">{{ summary.totalCount }}</div>
+              <div class="mt-2 text-2xl font-semibold text-foreground">
+                {{ summary.totalCount }}
+              </div>
             </section>
-            <section class="rounded-lg border border-border bg-card p-4 shadow-sm">
+            <section
+              class="rounded-lg border border-border bg-card p-4 shadow-sm"
+            >
               <div class="text-sm text-muted-foreground">已贴签</div>
-              <div class="mt-2 text-2xl font-semibold text-foreground">{{ summary.labelPrintedCount }}</div>
+              <div class="mt-2 text-2xl font-semibold text-foreground">
+                {{ summary.labelPrintedCount }}
+              </div>
             </section>
-            <section class="rounded-lg border border-border bg-card p-4 shadow-sm">
+            <section
+              class="rounded-lg border border-border bg-card p-4 shadow-sm"
+            >
               <div class="text-sm text-muted-foreground">待贴签</div>
-              <div class="mt-2 text-2xl font-semibold text-foreground">{{ summary.pendingLabelCount }}</div>
+              <div class="mt-2 text-2xl font-semibold text-foreground">
+                {{ summary.pendingLabelCount }}
+              </div>
             </section>
-            <section class="rounded-lg border border-border bg-card p-4 shadow-sm">
+            <section
+              class="rounded-lg border border-border bg-card p-4 shadow-sm"
+            >
               <div class="text-sm text-muted-foreground">异常</div>
-              <div class="mt-2 text-2xl font-semibold text-foreground">{{ summary.abnormalCount }}</div>
+              <div class="mt-2 text-2xl font-semibold text-foreground">
+                {{ summary.abnormalCount }}
+              </div>
             </section>
           </div>
         </WorkflowSectionCard>
@@ -849,7 +912,11 @@ function closeResultDialog() {
                 />
               </ElFormItem>
               <ElFormItem label="标签状态">
-                <ElSelect v-model="filters.labelPrintStatus" clearable style="width: 100%">
+                <ElSelect
+                  v-model="filters.labelPrintStatus"
+                  clearable
+                  style="width: 100%"
+                >
                   <ElOption
                     v-for="option in labelPrintStatusOptions"
                     :key="option.value"
@@ -859,7 +926,11 @@ function closeResultDialog() {
                 </ElSelect>
               </ElFormItem>
               <ElFormItem label="标本状态">
-                <ElSelect v-model="filters.specimenStatus" clearable style="width: 100%">
+                <ElSelect
+                  v-model="filters.specimenStatus"
+                  clearable
+                  style="width: 100%"
+                >
                   <ElOption
                     v-for="option in specimenStatusOptions"
                     :key="option.value"
@@ -869,7 +940,11 @@ function closeResultDialog() {
                 </ElSelect>
               </ElFormItem>
               <ElFormItem label="异常标记">
-                <ElSelect v-model="filters.abnormalFlag" clearable style="width: 100%">
+                <ElSelect
+                  v-model="filters.abnormalFlag"
+                  clearable
+                  style="width: 100%"
+                >
                   <ElOption
                     v-for="option in abnormalFilterOptions"
                     :key="option.value"
@@ -880,7 +955,9 @@ function closeResultDialog() {
               </ElFormItem>
             </div>
 
-            <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_auto]">
+            <div
+              class="grid gap-4 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_auto]"
+            >
               <ElFormItem label="登记日期">
                 <ElDatePicker
                   v-model="filters.dateRange"
@@ -896,7 +973,11 @@ function closeResultDialog() {
                 <div class="flex flex-wrap gap-2">
                   <ElButton type="primary" @click="handleSearch">查询</ElButton>
                   <ElButton @click="handleReset">重置</ElButton>
-                  <ElButton :disabled="selectedRows.length === 0" plain @click="handleBulkRetry">
+                  <ElButton
+                    :disabled="selectedRows.length === 0"
+                    plain
+                    @click="handleBulkRetry"
+                  >
                     批量补打
                   </ElButton>
                 </div>
@@ -913,7 +994,11 @@ function closeResultDialog() {
           >
             <ElTableColumn type="selection" width="48" />
             <ElTableColumn label="标本编号" min-width="150" prop="specimenNo" />
-            <ElTableColumn label="关联申请单" min-width="160" prop="applicationNo" />
+            <ElTableColumn
+              label="关联申请单"
+              min-width="160"
+              prop="applicationNo"
+            />
             <ElTableColumn label="患者姓名" min-width="120">
               <template #default="{ row }">
                 {{ formatNullable(row.patientName) }}
@@ -924,7 +1009,11 @@ function closeResultDialog() {
                 {{ formatNullable(row.submittingDepartmentName) }}
               </template>
             </ElTableColumn>
-            <ElTableColumn label="标本名称" min-width="180" prop="specimenName" />
+            <ElTableColumn
+              label="标本名称"
+              min-width="180"
+              prop="specimenName"
+            />
             <ElTableColumn label="容器名称" min-width="150">
               <template #default="{ row }">
                 {{ formatNullable(row.containerName) }}
@@ -977,10 +1066,20 @@ function closeResultDialog() {
             <ElTableColumn fixed="right" label="操作" width="220">
               <template #default="{ row }">
                 <div class="flex flex-wrap gap-x-3 gap-y-1">
-                  <ElButton v-if="row.abnormalFlag" link type="danger" @click="goToTracking(row)">
+                  <ElButton
+                    v-if="row.abnormalFlag"
+                    link
+                    type="danger"
+                    @click="goToTracking(row)"
+                  >
                     异常处理
                   </ElButton>
-                  <ElButton v-else-if="canRetryBatch(row)" link type="primary" @click="handleRowRetry(row)">
+                  <ElButton
+                    v-else-if="canRetryBatch(row)"
+                    link
+                    type="primary"
+                    @click="handleRowRetry(row)"
+                  >
                     补打标签
                   </ElButton>
                   <ElButton
@@ -1048,7 +1147,9 @@ function closeResultDialog() {
           v-if="detailAbnormalSpecimens.length > 0"
           class="rounded-lg border border-warning/30 bg-warning/10 px-4 py-4"
         >
-          <div class="mb-3 text-base font-semibold text-foreground">异常明细</div>
+          <div class="mb-3 text-base font-semibold text-foreground">
+            异常明细
+          </div>
           <div class="flex flex-col gap-3">
             <div
               v-for="specimen in detailAbnormalSpecimens"
@@ -1060,8 +1161,18 @@ function closeResultDialog() {
               </div>
               <div class="mt-2 grid gap-2 md:grid-cols-2">
                 <div>异常类型：{{ formatReceiptStatus(specimen.status) }}</div>
-                <div>质控结果：{{ formatQualityCheckResult(specimen.qualityCheckResult) }}</div>
-                <div>问题代码：{{ specimen.qualityIssueCodes.length ? specimen.qualityIssueCodes.join('、') : '-' }}</div>
+                <div>
+                  质控结果：{{
+                    formatQualityCheckResult(specimen.qualityCheckResult)
+                  }}
+                </div>
+                <div>
+                  问题代码：{{
+                    specimen.qualityIssueCodes.length
+                      ? specimen.qualityIssueCodes.join('、')
+                      : '-'
+                  }}
+                </div>
                 <div>原因：{{ specimen.reason || '-' }}</div>
               </div>
             </div>
@@ -1069,7 +1180,9 @@ function closeResultDialog() {
         </section>
 
         <section class="rounded-lg border border-border bg-card p-4 shadow-sm">
-          <div class="mb-4 text-base font-semibold text-foreground">标本基础信息</div>
+          <div class="mb-4 text-base font-semibold text-foreground">
+            标本基础信息
+          </div>
           <ElDescriptions :column="2" border>
             <ElDescriptionsItem label="标本编号">
               {{ detailRow?.specimenNo || '-' }}
@@ -1111,19 +1224,31 @@ function closeResultDialog() {
         </section>
 
         <section class="rounded-lg border border-border bg-card p-4 shadow-sm">
-          <div class="mb-4 text-base font-semibold text-foreground">所属申请单信息</div>
+          <div class="mb-4 text-base font-semibold text-foreground">
+            所属申请单信息
+          </div>
           <ElDescriptions :column="2" border>
             <ElDescriptionsItem label="申请单号">
-              {{ formatNullable(detailApplicationDetail?.applicationNo ?? detailRow?.applicationNo) }}
+              {{
+                formatNullable(
+                  detailApplicationDetail?.applicationNo ??
+                    detailRow?.applicationNo,
+                )
+              }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="患者姓名">
-              {{ formatNullable(detailApplicationDetail?.patientName ?? detailRow?.patientName) }}
+              {{
+                formatNullable(
+                  detailApplicationDetail?.patientName ??
+                    detailRow?.patientName,
+                )
+              }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="送检科室">
               {{
                 formatNullable(
-                  detailApplicationDetail?.submittingDepartmentName
-                    ?? detailRow?.submittingDepartmentName,
+                  detailApplicationDetail?.submittingDepartmentName ??
+                    detailRow?.submittingDepartmentName,
                 )
               }}
             </ElDescriptionsItem>
@@ -1138,7 +1263,9 @@ function closeResultDialog() {
 
         <section class="rounded-lg border border-border bg-card p-4 shadow-sm">
           <div class="mb-4 flex items-center justify-between gap-2">
-            <div class="text-base font-semibold text-foreground">最近流程节点</div>
+            <div class="text-base font-semibold text-foreground">
+              最近流程节点
+            </div>
             <ElButton
               v-if="detailRow"
               link
@@ -1151,12 +1278,15 @@ function closeResultDialog() {
 
           <ElTimeline v-if="detailApplicationDetail?.recentEvents?.length">
             <ElTimelineItem
-              v-for="(event, index) in detailApplicationDetail.recentEvents.slice(-6).reverse()"
+              v-for="(event, index) in detailApplicationDetail.recentEvents
+                .slice(-6)
+                .reverse()"
               :key="`${event.eventTime}-${event.nodeCode}-${index}`"
               :timestamp="formatDateTime(event.eventTime)"
             >
               <div class="font-medium text-foreground">
-                {{ formatCurrentNode(event.nodeCode) }} / {{ formatNullable(event.eventType) }}
+                {{ formatCurrentNode(event.nodeCode) }} /
+                {{ formatNullable(event.eventType) }}
               </div>
               <div class="text-sm text-muted-foreground">
                 {{ formatNullable(event.operatorName) }}
@@ -1168,7 +1298,9 @@ function closeResultDialog() {
         </section>
 
         <section class="rounded-lg border border-border bg-card p-4 shadow-sm">
-          <div class="mb-4 text-base font-semibold text-foreground">最近标签批次结果</div>
+          <div class="mb-4 text-base font-semibold text-foreground">
+            最近标签批次结果
+          </div>
 
           <template v-if="detailLatestRegisterResult?.labelPrintBatchNo">
             <ElDescriptions :column="2" border>
@@ -1176,19 +1308,43 @@ function closeResultDialog() {
                 {{ detailLatestRegisterResult.labelPrintBatchNo }}
               </ElDescriptionsItem>
               <ElDescriptionsItem label="打印结果">
-                <ElTag :type="detailLatestRegisterResult.labelPrintSuccess ? 'success' : 'warning'">
-                  {{ detailLatestRegisterResult.labelPrintSuccess ? '成功' : '存在失败' }}
+                <ElTag
+                  :type="
+                    detailLatestRegisterResult.labelPrintSuccess
+                      ? 'success'
+                      : 'warning'
+                  "
+                >
+                  {{
+                    detailLatestRegisterResult.labelPrintSuccess
+                      ? '成功'
+                      : '存在失败'
+                  }}
                 </ElTag>
               </ElDescriptionsItem>
               <ElDescriptionsItem :span="2" label="结果说明">
-                {{ formatNullable(detailLatestRegisterResult.labelPrintMessage) }}
+                {{
+                  formatNullable(detailLatestRegisterResult.labelPrintMessage)
+                }}
               </ElDescriptionsItem>
             </ElDescriptions>
 
-            <ElTable :data="detailLatestRegisterResult.specimens" border class="mt-4">
-              <ElTableColumn label="标本编号" min-width="140" prop="specimenNo" />
+            <ElTable
+              :data="detailLatestRegisterResult.specimens"
+              border
+              class="mt-4"
+            >
+              <ElTableColumn
+                label="标本编号"
+                min-width="140"
+                prop="specimenNo"
+              />
               <ElTableColumn label="条码" min-width="180" prop="barcode" />
-              <ElTableColumn label="标本名称" min-width="180" prop="specimenName" />
+              <ElTableColumn
+                label="标本名称"
+                min-width="180"
+                prop="specimenName"
+              />
               <ElTableColumn label="容器名称" min-width="140">
                 <template #default="{ row }">
                   {{ formatNullable(row.containerName) }}
@@ -1196,7 +1352,9 @@ function closeResultDialog() {
               </ElTableColumn>
               <ElTableColumn label="容器数/标本数" min-width="140">
                 <template #default="{ row }">
-                  {{ `${row.containerCount ?? '-'} / ${row.specimenCount ?? '-'}` }}
+                  {{
+                    `${row.containerCount ?? '-'} / ${row.specimenCount ?? '-'}`
+                  }}
                 </template>
               </ElTableColumn>
               <ElTableColumn label="标签状态" min-width="120">
@@ -1207,9 +1365,25 @@ function closeResultDialog() {
               <ElTableColumn label="异常明细" min-width="320">
                 <template #default="{ row }">
                   <div class="flex flex-col gap-1 text-sm">
-                    <div>异常类型：{{ formatReceiptStatus(row.receiptStatus ?? row.specimenStatus) }}</div>
-                    <div>质控结果：{{ formatQualityCheckResult(row.qualityCheckResult) }}</div>
-                    <div>问题代码：{{ row.qualityIssueCodes?.length ? row.qualityIssueCodes.join('、') : '-' }}</div>
+                    <div>
+                      异常类型：{{
+                        formatReceiptStatus(
+                          row.receiptStatus ?? row.specimenStatus,
+                        )
+                      }}
+                    </div>
+                    <div>
+                      质控结果：{{
+                        formatQualityCheckResult(row.qualityCheckResult)
+                      }}
+                    </div>
+                    <div>
+                      问题代码：{{
+                        row.qualityIssueCodes?.length
+                          ? row.qualityIssueCodes.join('、')
+                          : '-'
+                      }}
+                    </div>
                     <div>原因：{{ formatNullable(row.abnormalReason) }}</div>
                   </div>
                 </template>
@@ -1238,8 +1412,16 @@ function closeResultDialog() {
               {{ latestRegisterResult?.labelPrintBatchNo || '-' }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="打印结果">
-              <ElTag :type="latestRegisterResult?.labelPrintSuccess ? 'success' : 'warning'">
-                {{ latestRegisterResult?.labelPrintSuccess ? '成功' : '存在失败' }}
+              <ElTag
+                :type="
+                  latestRegisterResult?.labelPrintSuccess
+                    ? 'success'
+                    : 'warning'
+                "
+              >
+                {{
+                  latestRegisterResult?.labelPrintSuccess ? '成功' : '存在失败'
+                }}
               </ElTag>
             </ElDescriptionsItem>
             <ElDescriptionsItem label="结果说明">
@@ -1247,10 +1429,18 @@ function closeResultDialog() {
             </ElDescriptionsItem>
           </ElDescriptions>
 
-          <ElTable :data="latestRegisterResult?.specimens ?? []" border class="mt-4">
+          <ElTable
+            :data="latestRegisterResult?.specimens ?? []"
+            border
+            class="mt-4"
+          >
             <ElTableColumn label="标本编号" min-width="140" prop="specimenNo" />
             <ElTableColumn label="条码" min-width="180" prop="barcode" />
-            <ElTableColumn label="标本名称" min-width="180" prop="specimenName" />
+            <ElTableColumn
+              label="标本名称"
+              min-width="180"
+              prop="specimenName"
+            />
             <ElTableColumn label="容器名称" min-width="140">
               <template #default="{ row }">
                 {{ formatNullable(row.containerName) }}
@@ -1258,7 +1448,9 @@ function closeResultDialog() {
             </ElTableColumn>
             <ElTableColumn label="容器数/标本数" min-width="140">
               <template #default="{ row }">
-                {{ `${row.containerCount ?? '-'} / ${row.specimenCount ?? '-'}` }}
+                {{
+                  `${row.containerCount ?? '-'} / ${row.specimenCount ?? '-'}`
+                }}
               </template>
             </ElTableColumn>
             <ElTableColumn label="标签状态" min-width="120">
@@ -1279,7 +1471,10 @@ function closeResultDialog() {
         <div class="flex justify-end gap-2">
           <ElButton @click="closeResultDialog">关闭</ElButton>
           <ElButton
-            v-if="latestRegisterResult?.labelPrintBatchNo && !latestRegisterResult.labelPrintSuccess"
+            v-if="
+              latestRegisterResult?.labelPrintBatchNo &&
+              !latestRegisterResult.labelPrintSuccess
+            "
             type="primary"
             @click="openRetryDialogFromLatestResult()"
           >
@@ -1309,8 +1504,16 @@ function closeResultDialog() {
               {{ retrySelectionCount }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="最近结果">
-              <ElTag :type="currentRetryResult?.allSuccessful ? 'success' : 'info'">
-                {{ currentRetryResult ? (currentRetryResult.allSuccessful ? '全部成功' : '已提交补打') : '待执行' }}
+              <ElTag
+                :type="currentRetryResult?.allSuccessful ? 'success' : 'info'"
+              >
+                {{
+                  currentRetryResult
+                    ? currentRetryResult.allSuccessful
+                      ? '全部成功'
+                      : '已提交补打'
+                    : '待执行'
+                }}
               </ElTag>
             </ElDescriptionsItem>
           </ElDescriptions>
@@ -1323,10 +1526,16 @@ function closeResultDialog() {
                 <ElInput :model-value="retryForm.operatorName" disabled />
               </ElFormItem>
               <ElFormItem label="打印机编号" required>
-                <ElInput v-model="retryForm.printerCode" placeholder="请输入打印机编号" />
+                <ElInput
+                  v-model="retryForm.printerCode"
+                  placeholder="请输入打印机编号"
+                />
               </ElFormItem>
               <ElFormItem label="终端编号">
-                <ElInput v-model="retryForm.terminalCode" placeholder="工作站或扫码设备编号" />
+                <ElInput
+                  v-model="retryForm.terminalCode"
+                  placeholder="工作站或扫码设备编号"
+                />
               </ElFormItem>
             </div>
             <ElFormItem label="备注">
@@ -1335,13 +1544,18 @@ function closeResultDialog() {
           </ElForm>
         </section>
 
-        <section v-if="currentRetryResult" class="rounded-lg border border-border bg-card p-4 shadow-sm">
+        <section
+          v-if="currentRetryResult"
+          class="rounded-lg border border-border bg-card p-4 shadow-sm"
+        >
           <ElDescriptions :column="2" border>
             <ElDescriptionsItem label="批次号">
               {{ currentRetryResult.labelPrintBatchNo }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="整体结果">
-              <ElTag :type="currentRetryResult.allSuccessful ? 'success' : 'warning'">
+              <ElTag
+                :type="currentRetryResult.allSuccessful ? 'success' : 'warning'"
+              >
                 {{ currentRetryResult.allSuccessful ? '全部成功' : '部分成功' }}
               </ElTag>
             </ElDescriptionsItem>
@@ -1364,7 +1578,11 @@ function closeResultDialog() {
       <template #footer>
         <div class="flex justify-end gap-2">
           <ElButton @click="retryDialogVisible = false">取消</ElButton>
-          <ElButton :loading="retrySubmitting" type="primary" @click="submitRetry">
+          <ElButton
+            :loading="retrySubmitting"
+            type="primary"
+            @click="submitRetry"
+          >
             提交补打
           </ElButton>
         </div>
@@ -1391,7 +1609,9 @@ function closeResultDialog() {
               {{ formatNullable(verifyTargetRow?.containerName) }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="容器数/标本数">
-              {{ verifyTargetRow ? formatContainerRatio(verifyTargetRow) : '-' }}
+              {{
+                verifyTargetRow ? formatContainerRatio(verifyTargetRow) : '-'
+              }}
             </ElDescriptionsItem>
           </ElDescriptions>
         </section>
@@ -1415,7 +1635,10 @@ function closeResultDialog() {
                 />
               </ElFormItem>
               <ElFormItem label="终端编号">
-                <ElInput v-model="verifyForm.terminalCode" placeholder="工作站或扫码设备编号" />
+                <ElInput
+                  v-model="verifyForm.terminalCode"
+                  placeholder="工作站或扫码设备编号"
+                />
               </ElFormItem>
             </div>
             <ElFormItem label="备注">
@@ -1433,7 +1656,11 @@ function closeResultDialog() {
       <template #footer>
         <div class="flex justify-end gap-2">
           <ElButton @click="verifyDialogVisible = false">取消</ElButton>
-          <ElButton :loading="verifySubmitting" type="primary" @click="submitVerify">
+          <ElButton
+            :loading="verifySubmitting"
+            type="primary"
+            @click="submitVerify"
+          >
             {{ verifyAction === 'start' ? '开始核验' : '完成核验' }}
           </ElButton>
         </div>

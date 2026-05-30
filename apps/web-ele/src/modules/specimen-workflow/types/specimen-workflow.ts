@@ -13,14 +13,14 @@ export interface ApplicationCreateRequest {
   remarks?: null | string;
   sourceHospitalId?: null | string;
   sourceHospitalName?: null | string;
-  specimenSite: string;
+  specimenSite?: null | string;
   specimenRemovalTime?: null | string;
   status?: null | string;
   submissionDate?: null | string;
-  submittingDepartmentId: string;
-  submittingDepartmentName: string;
-  submittingDoctorName: string;
-  submittingDoctorUserId: string;
+  submittingDepartmentId?: null | string;
+  submittingDepartmentName?: null | string;
+  submittingDoctorName?: null | string;
+  submittingDoctorUserId?: null | string;
   thirdPartySource?: null | string;
 }
 
@@ -62,6 +62,10 @@ export interface SpecimenTrackingSummary {
   containerName: null | string;
   fixationStatus: null | string;
   fixationCompletedAt?: null | string;
+  fixationLiquidType?: null | string;
+  fixationOperatorName?: null | string;
+  fixationOperatorUserId?: null | string;
+  fixationStartedAt?: null | string;
   id: string;
   labelPrintStatus: null | string;
   qualityCheckResult?: null | string;
@@ -234,6 +238,10 @@ export interface SpecimenManagementListItem {
   containerName: null | string;
   fixationStatus: null | string;
   fixationCompletedAt?: null | string;
+  fixationLiquidType?: null | string;
+  fixationOperatorName?: null | string;
+  fixationOperatorUserId?: null | string;
+  fixationStartedAt?: null | string;
   labelPrintBatchNo: null | string;
   labelPrintStatus: null | string;
   latestTrackingAt: null | string;
@@ -481,6 +489,8 @@ export interface PendingSpecimenItem {
   containerName: null | string;
   fixationCompletedAt?: null | string;
   fixationLiquidType?: null | string;
+  fixationOperatorName?: null | string;
+  fixationOperatorUserId?: null | string;
   fixationStartedAt?: null | string;
   fixationStatus: null | string;
   latestTrackingAt: null | string;
@@ -517,6 +527,10 @@ export interface SpecimenFixationRequest {
 
 export interface FixationResult {
   barcode: string;
+  fixationCompletedAt?: null | string;
+  fixationLiquidType?: null | string;
+  operatorName?: null | string;
+  operatorUserId?: null | string;
   fixationStatus: string;
   specimenId: string;
 }

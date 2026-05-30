@@ -1,8 +1,166 @@
 import type { ApplicationRegistrationWorkbenchRecord } from '../types/application-registration-workbench';
 
-import { createApp, h, nextTick } from 'vue';
+import { createApp, defineComponent, h, nextTick } from 'vue';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+const warningMock = vi.hoisted(() => vi.fn());
+const errorMock = vi.hoisted(() => vi.fn());
+
+vi.mock('element-plus/theme-chalk/base.css', () => ({}));
+
+vi.mock('@vben/icons', async () => {
+  const { defineComponent, h } = await import('vue');
+
+  const createIcon = (name: string) =>
+    defineComponent({
+      name,
+      setup() {
+        return () => h('span', { 'aria-hidden': 'true' });
+      },
+    });
+
+  return {
+    Check: createIcon('Check'),
+    UserRoundPen: createIcon('UserRoundPen'),
+    X: createIcon('X'),
+  };
+});
+
+vi.mock('element-plus', () => {
+  const simpleInput = defineComponent({
+    props: {
+      modelValue: { default: '', type: String },
+      type: { default: 'text', type: String },
+    },
+    emits: [
+      'update:modelValue',
+      'keyup.enter',
+      'keyup.esc',
+      'keydown.ctrl.enter',
+    ],
+    setup(props, { emit }) {
+      return () =>
+        props.type === 'textarea'
+          ? h('textarea', {
+              value: props.modelValue,
+              onInput: (event: Event) =>
+                emit(
+                  'update:modelValue',
+                  (event.target as HTMLTextAreaElement).value,
+                ),
+              onKeydown: (event: KeyboardEvent) => {
+                if (event.key === 'Enter' && event.ctrlKey) {
+                  emit('keydown.ctrl.enter', event);
+                }
+              },
+              onKeyup: (event: KeyboardEvent) => {
+                if (event.key === 'Enter') {
+                  emit('keyup.enter', event);
+                }
+                if (event.key === 'Escape') {
+                  emit('keyup.esc', event);
+                }
+              },
+            })
+          : h('input', {
+              value: props.modelValue,
+              onInput: (event: Event) =>
+                emit(
+                  'update:modelValue',
+                  (event.target as HTMLInputElement).value,
+                ),
+              onKeyup: (event: KeyboardEvent) => {
+                if (event.key === 'Enter') {
+                  emit('keyup.enter', event);
+                }
+                if (event.key === 'Escape') {
+                  emit('keyup.esc', event);
+                }
+              },
+            });
+    },
+  });
+
+  return {
+    ElButton: defineComponent({
+      emits: ['click'],
+      setup(_, { emit, slots }) {
+        return () =>
+          h(
+            'button',
+            {
+              onClick: () => emit('click'),
+              type: 'button',
+            },
+            slots.default?.(),
+          );
+      },
+    }),
+    ElDescriptions: defineComponent({
+      setup(_, { slots }) {
+        return () =>
+          h('div', { 'data-testid': 'descriptions' }, slots.default?.());
+      },
+    }),
+    ElDescriptionsItem: defineComponent({
+      props: { label: { default: '', type: String } },
+      setup(props, { slots }) {
+        return () =>
+          h('div', { 'data-label': props.label }, [
+            h('span', props.label),
+            slots.default?.(),
+          ]);
+      },
+    }),
+    ElDivider: defineComponent({
+      setup(_, { slots }) {
+        return () => h('div', { 'data-testid': 'divider' }, slots.default?.());
+      },
+    }),
+    ElEmpty: defineComponent({
+      props: { description: { default: '', type: String } },
+      setup(props) {
+        return () => h('div', { 'data-testid': 'empty' }, props.description);
+      },
+    }),
+    ElInput: simpleInput,
+    ElMessage: {
+      error: errorMock,
+      warning: warningMock,
+    },
+    ElOption: defineComponent({
+      props: {
+        label: { default: '', type: String },
+        value: { default: '', type: [String, Number, Boolean] },
+      },
+      setup(props) {
+        return () => h('option', { value: props.value as string }, props.label);
+      },
+    }),
+    ElSelect: defineComponent({
+      props: {
+        modelValue: { default: '', type: String },
+      },
+      emits: ['update:modelValue'],
+      setup(props, { emit, slots }) {
+        return () =>
+          h(
+            'select',
+            {
+              value: props.modelValue,
+              onChange: (event: Event) =>
+                emit(
+                  'update:modelValue',
+                  (event.target as HTMLSelectElement).value,
+                ),
+            },
+            slots.default?.(),
+          );
+      },
+    }),
+  };
+});
 
 import ApplicationRegistrationPatientPanel from './ApplicationRegistrationPatientPanel.vue';
 
@@ -69,6 +227,7 @@ function createRecordFixture(): ApplicationRegistrationWorkbenchRecord {
       fixationPerson: '周永坚',
       fixationTime: '2026-05-27 11:07:02',
       roomId: 'OR-102',
+      specimenRemovalTime: '2026-05-27 12:05:00',
       surgeryName: '右侧胫骨病灶清创术',
     },
   };
@@ -81,14 +240,19 @@ async function flushPromises() {
   await nextTick();
 }
 
-async function mountPanel() {
+async function mountPanel(
+  props: Record<string, unknown> = {},
+  initialRecord: ApplicationRegistrationWorkbenchRecord = createRecordFixture(),
+) {
   const root = document.createElement('div');
   document.body.append(root);
 
-  let latestRecord = createRecordFixture();
-  const updateRecordMock = vi.fn((value: ApplicationRegistrationWorkbenchRecord) => {
-    latestRecord = value;
-  });
+  let latestRecord = initialRecord;
+  const updateRecordMock = vi.fn(
+    (value: ApplicationRegistrationWorkbenchRecord) => {
+      latestRecord = value;
+    },
+  );
   const reprintMock = vi.fn();
 
   const app = createApp({
@@ -108,6 +272,7 @@ async function mountPanel() {
     render() {
       return h(ApplicationRegistrationPatientPanel, {
         buildingLabel: this.buildingLabel,
+        ...props,
         record: this.record,
         roomLabel: this.roomLabel,
         onReprintApplicationForm: reprintMock,
@@ -137,13 +302,16 @@ describe('ApplicationRegistrationPatientPanel', () => {
   afterEach(() => {
     document.body.innerHTML = '';
     vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('allows editing a field through the hover edit button', async () => {
     const wrapper = await mountPanel();
 
     wrapper.root
-      .querySelector<HTMLButtonElement>('[data-testid="patient-edit-checkItem"]')!
+      .querySelector<HTMLButtonElement>(
+        '[data-testid="patient-edit-checkItem"]',
+      )!
       .click();
     await flushPromises();
 
@@ -154,14 +322,19 @@ describe('ApplicationRegistrationPatientPanel', () => {
     await flushPromises();
 
     wrapper.root
-      .querySelector<HTMLButtonElement>('[data-testid="patient-save-checkItem"]')!
+      .querySelector<HTMLButtonElement>(
+        '[data-testid="patient-save-checkItem"]',
+      )!
       .click();
     await flushPromises();
 
     expect(wrapper.updateRecordMock).toHaveBeenCalledTimes(1);
-    expect(wrapper.getLatestRecord().patientInfo.checkItem).toBe('更新后的检查项目');
+    expect(wrapper.getLatestRecord().patientInfo.checkItem).toBe(
+      '更新后的检查项目',
+    );
     expect(
-      wrapper.root.querySelector('[data-testid="patient-value-checkItem"]')?.textContent,
+      wrapper.root.querySelector('[data-testid="patient-value-checkItem"]')
+        ?.textContent,
     ).toContain('更新后的检查项目');
 
     wrapper.unmount();
@@ -171,18 +344,23 @@ describe('ApplicationRegistrationPatientPanel', () => {
     const wrapper = await mountPanel();
 
     wrapper.root
-      .querySelector<HTMLElement>('[data-testid="patient-value-clinicalHistory"]')!
+      .querySelector<HTMLElement>(
+        '[data-testid="patient-value-clinicalHistory"]',
+      )!
       .dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
     await flushPromises();
 
-    const textarea = wrapper.root.querySelector<HTMLTextAreaElement>('textarea');
+    const textarea =
+      wrapper.root.querySelector<HTMLTextAreaElement>('textarea');
     expect(textarea).not.toBeNull();
     textarea!.value = '双击修改后的病史';
     textarea!.dispatchEvent(new Event('input'));
     await flushPromises();
 
     wrapper.root
-      .querySelector<HTMLButtonElement>('[data-testid="patient-save-clinicalHistory"]')!
+      .querySelector<HTMLButtonElement>(
+        '[data-testid="patient-save-clinicalHistory"]',
+      )!
       .click();
     await flushPromises();
 
@@ -191,14 +369,47 @@ describe('ApplicationRegistrationPatientPanel', () => {
       '双击修改后的病史',
     );
     expect(
-      wrapper.root.querySelector('[data-testid="patient-value-clinicalHistory"]')
-        ?.textContent,
+      wrapper.root.querySelector(
+        '[data-testid="patient-value-clinicalHistory"]',
+      )?.textContent,
     ).toContain('双击修改后的病史');
 
     wrapper.unmount();
   });
 
-  it('shows reprint button and emits current application id', async () => {
+  it('renders the expanded field groups', async () => {
+    const wrapper = await mountPanel();
+
+    expect(wrapper.root.textContent).toContain('申请单号');
+    expect(wrapper.root.textContent).toContain('患者姓名');
+    expect(wrapper.root.textContent).toContain('病区');
+    expect(wrapper.root.textContent).toContain('床号');
+    expect(wrapper.root.textContent).toContain('申请信息');
+    expect(wrapper.root.textContent).toContain('传染性标本');
+    expect(wrapper.root.textContent).toContain('手术信息');
+    expect(wrapper.root.textContent).toContain('妇科信息');
+    expect(wrapper.root.textContent).toContain('特殊情况标注');
+    expect(wrapper.root.textContent).toContain('标本离体时间');
+    expect(wrapper.root.textContent).toContain('冰冻提醒');
+    expect(wrapper.root.textContent).not.toContain('基本信息');
+    expect(wrapper.root.textContent).not.toContain('患者已核对');
+
+    wrapper.unmount();
+  });
+
+  it('prints application form directly from the reprint button', async () => {
+    const printWindowState = { html: '' };
+    vi.spyOn(window, 'open').mockImplementation(() => {
+      return {
+        document: {
+          close: vi.fn(),
+          open: vi.fn(),
+          write: (html: string) => {
+            printWindowState.html = html;
+          },
+        },
+      } as any;
+    });
     const wrapper = await mountPanel();
 
     wrapper.root
@@ -209,7 +420,61 @@ describe('ApplicationRegistrationPatientPanel', () => {
         }
       });
 
-    expect(wrapper.reprintMock).toHaveBeenCalledWith('APP-1122');
+    expect(window.open).toHaveBeenCalledWith(
+      '',
+      '_blank',
+      'width=960,height=760',
+    );
+    expect(printWindowState.html).toContain('补打申请单');
+    expect(printWindowState.html).toContain('申请单号');
+    expect(printWindowState.html).toContain('1122');
+    expect(wrapper.reprintMock).not.toHaveBeenCalled();
+
+    wrapper.unmount();
+  });
+
+  it('falls back to application no when printing without application id', async () => {
+    const printWindowState = { html: '' };
+    vi.spyOn(window, 'open').mockImplementation(() => {
+      return {
+        document: {
+          close: vi.fn(),
+          open: vi.fn(),
+          write: (html: string) => {
+            printWindowState.html = html;
+          },
+        },
+      } as any;
+    });
+    const record = createRecordFixture();
+    record.applicationId = '';
+    record.patientInfo.applicationNo = 'AP202605280003';
+    const wrapper = await mountPanel({}, record);
+
+    wrapper.root
+      .querySelectorAll<HTMLButtonElement>('button')
+      .forEach((button) => {
+        if (button.textContent?.includes('补打申请单')) {
+          button.click();
+        }
+      });
+
+    expect(window.open).toHaveBeenCalledTimes(1);
+    expect(printWindowState.html).toContain('AP202605280003');
+    expect(wrapper.reprintMock).not.toHaveBeenCalled();
+
+    wrapper.unmount();
+  });
+
+  it('uses full-height mode when requested', async () => {
+    const wrapper = await mountPanel({ fullHeight: true });
+
+    const card = wrapper.root.querySelector('section');
+    expect(card?.className).toContain('min-h-[420px]');
+    expect(wrapper.root.querySelector('.overflow-y-auto')?.className).toContain(
+      'overflow-y-auto',
+    );
+    expect(wrapper.root.textContent).toContain('特殊情况标注');
 
     wrapper.unmount();
   });

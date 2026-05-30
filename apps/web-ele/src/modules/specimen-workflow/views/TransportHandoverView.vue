@@ -182,6 +182,20 @@ function openHandoverDialog(order: PendingTransportOrderItem) {
   handoverDialogVisible.value = true;
 }
 
+function openSelectedPrintDialog() {
+  const [order] = selectedRows.value;
+  if (order) {
+    openPrintDialog(order);
+  }
+}
+
+function openSelectedHandoverDialog() {
+  const [order] = selectedRows.value;
+  if (order) {
+    openHandoverDialog(order);
+  }
+}
+
 function getTargetOrders() {
   if (selectedRows.value.length > 0) {
     return selectedRows.value;
@@ -287,7 +301,7 @@ watch(
 </script>
 
 <template>
-  <Page :title="embedded ? '转运/出库' : '固定与转运'">
+  <Page :title="embedded ? '' : '固定与转运'">
     <div class="flex flex-col gap-4">
       <WorkflowSectionCard
         v-if="latestOrder"
@@ -321,86 +335,77 @@ watch(
         </ElDescriptions>
       </WorkflowSectionCard>
 
-      <WorkflowSectionCard
-        title="转运/出库"
-        description="统一承接创建转运单、打印转运单和交接动作。"
-      >
-        <template #extra>
-          <ElButton type="primary" @click="openCreateDialog">创建转运单</ElButton>
-        </template>
-
+      <WorkflowSectionCard title="转运/出库">
         <div class="flex flex-col gap-3">
-          <div class="flex flex-wrap items-center gap-3">
-            <div class="text-2xl font-semibold text-danger">转运/出库</div>
-            <span class="text-sm text-muted-foreground">全部</span>
-            <span class="text-2xl font-semibold text-primary">{{ total }}</span>
+          <div class="flex flex-wrap items-center gap-4 text-sm">
+            <div class="font-semibold text-[color:#d6453d]">转运/出库</div>
+            <div>
+              全部
+              <span class="text-xl font-semibold text-primary">{{ total }}</span>
+            </div>
+            <div>
+              已选
+              <span class="text-xl font-semibold text-success">{{ selectedRows.length }}</span>
+            </div>
           </div>
 
-          <ElForm inline label-width="88px">
-            <ElFormItem label="申请单号">
-              <ElInput
-                v-model="filters.applicationId"
-                clearable
-                placeholder="请输入申请单号"
-                style="width: 220px"
-                @keyup.enter="handleSearch"
-              />
-            </ElFormItem>
-            <ElFormItem label="标本流水号">
-              <ElInput
-                v-model="filters.specimenNo"
-                clearable
-                placeholder="请输入标本流水号"
-                style="width: 220px"
-                @keyup.enter="handleSearch"
-              />
-            </ElFormItem>
-            <ElFormItem label="送检科室">
+          <div class="flex flex-wrap items-center gap-2">
+            <ElInput
+              v-model="filters.applicationId"
+              clearable
+              placeholder="请输入申请单号"
+              style="width: 220px"
+              @keyup.enter="handleSearch"
+            />
+            <ElInput
+              v-model="filters.specimenNo"
+              clearable
+              placeholder="请输入标本流水号"
+              style="width: 220px"
+              @keyup.enter="handleSearch"
+            />
+            <div class="w-[180px]">
               <DepartmentSelect
                 v-model="filters.departmentId"
-                placeholder="请选择送检科室"
+                placeholder="送检科室"
                 @change="handleFilterDepartmentChange"
               />
-            </ElFormItem>
-            <ElFormItem label="转运状态">
-              <ElSelect
-                v-model="filters.status"
-                clearable
-                placeholder="全部状态"
-                style="width: 180px"
-              >
-                <ElOption
-                  v-for="option in TRANSPORT_STATUS_OPTIONS"
-                  :key="option.value"
-                  :label="option.label"
-                  :value="option.value"
-                />
-              </ElSelect>
-            </ElFormItem>
-            <ElFormItem label="待转运日期">
-              <ElDatePicker
-                v-model="filters.dateRange"
-                end-placeholder="结束日期"
-                range-separator="至"
-                start-placeholder="开始日期"
-                type="daterange"
-                value-format="YYYY-MM-DD"
+            </div>
+            <ElSelect
+              v-model="filters.status"
+              clearable
+              placeholder="全部状态"
+              style="width: 180px"
+            >
+              <ElOption
+                v-for="option in TRANSPORT_STATUS_OPTIONS"
+                :key="option.value"
+                :label="option.label"
+                :value="option.value"
               />
-            </ElFormItem>
-            <ElFormItem>
-              <ElButton type="primary" @click="handleSearch">查询</ElButton>
-              <ElButton @click="handleReset">重置</ElButton>
-            </ElFormItem>
-          </ElForm>
-
-          <div class="flex flex-wrap items-center gap-2">
-            <ElButton :disabled="selectedRows.length === 0" @click="openPrintDialog(selectedRows[0])">
+            </ElSelect>
+            <ElDatePicker
+              v-model="filters.dateRange"
+              end-placeholder="结束日期"
+              range-separator="至"
+              start-placeholder="开始日期"
+              style="width: 320px"
+              type="daterange"
+              value-format="YYYY-MM-DD"
+            />
+            <ElButton type="primary" @click="handleSearch">查询</ElButton>
+            <ElButton @click="handleReset">重置</ElButton>
+            <ElButton type="primary" @click="openCreateDialog">创建转运单</ElButton>
+            <ElButton
+              :disabled="selectedRows.length === 0"
+              @click="openSelectedPrintDialog"
+            >
               批量打印
             </ElButton>
             <ElButton
               :disabled="selectedRows.length === 0"
               type="success"
-              @click="openHandoverDialog(selectedRows[0])"
+              @click="openSelectedHandoverDialog"
             >
               批量交接
             </ElButton>

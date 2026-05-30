@@ -6,7 +6,7 @@ import type {
   SpecimenManagementListItem,
 } from '../types/specimen-workflow';
 
-import { computed, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 
 import { useUserStore } from '@vben/stores';
 import { downloadFileFromBlob } from '@vben/utils';
@@ -24,8 +24,15 @@ import {
   ElTag,
 } from 'element-plus';
 
+import {
+  createEmptyWorkflowReferenceOptions,
+  loadWorkflowReferenceOptionsSafely,
+} from '#/modules/system-management/api/workflow-reference-service';
+import ReferenceOptionSelect from '#/modules/system-management/components/ReferenceOptionSelect.vue';
+
 import { lookupApplicationRegistrationWorkbenchRecord } from '../api/application-registration-workbench-service';
 import {
+  completeFixation,
   getApplicationDetail,
   listSpecimens,
   retryLabelPrint,
@@ -55,6 +62,7 @@ type FixationWorkbenchRow = SpecimenManagementListItem & {
 };
 
 const MAX_QUERY_SIZE = 100;
+const DEFAULT_FIXATION_LIQUID_TYPE = 'FORMALIN';
 const RECEIPT_LOCKED_STATUSES = ['RECEIVED', 'REJECTED', 'RETURNED'];
 
 const userStore = useUserStore();
@@ -65,8 +73,10 @@ const retrySubmitting = ref(false);
 const retryDialogVisible = ref(false);
 const batchRetryResult = ref<LabelPrintRetryResult | null>(null);
 const scanInput = ref('');
+const fixationLiquidType = ref(DEFAULT_FIXATION_LIQUID_TYPE);
 const queueItems = ref<FixationWorkbenchRow[]>([]);
 const selectedRows = ref<FixationWorkbenchRow[]>([]);
+const workflowReferenceOptions = ref(createEmptyWorkflowReferenceOptions());
 
 const workbenchRecordCache = reactive(
   new Map<string, ApplicationRegistrationWorkbenchRecord | null>(),
@@ -111,12 +121,48 @@ function resolveFixationTagType(status: null | string | undefined) {
   return 'info';
 }
 
+function resolveFixationLiquidLabel(value: null | string | undefined) {
+  const normalizedValue = normalizeText(value);
+  if (!normalizedValue) {
+    return '-';
+  }
+  const option = workflowReferenceOptions.value.fixationLiquidTypes.find(
+    (item) => item.value === normalizedValue || item.label === normalizedValue,
+  );
+  return option?.label ?? normalizedValue;
+}
+
+async function ensureReferenceOptionsLoaded() {
+  workflowReferenceOptions.value = await loadWorkflowReferenceOptionsSafely({ enabled: true });
+  if (!normalizeText(fixationLiquidType.value)) {
+    fixationLiquidType.value =
+      workflowReferenceOptions.value.fixationLiquidTypes[0]?.value ?? DEFAULT_FIXATION_LIQUID_TYPE;
+  }
+}
+
 function isReceiptLocked(row: SpecimenManagementListItem) {
   return RECEIPT_LOCKED_STATUSES.includes(row.specimenStatus ?? '');
 }
 
 function isVisibleInFixationScene(row: SpecimenManagementListItem) {
   return row.verificationStatus === 'VERIFIED' && !isReceiptLocked(row);
+}
+
+function resolveUnavailableMessage(
+  items: SpecimenManagementListItem[],
+  keyword: string,
+) {
+  const exactMatches = resolveExactMatches(items, keyword);
+  const targetItems = exactMatches.length > 0 ? exactMatches : items;
+  if (
+    targetItems.some((item) => normalizeText(item.verificationStatus) !== 'VERIFIED')
+  ) {
+    return '标本尚未完成离体确认，请先完成离体确认后再固定';
+  }
+  if (targetItems.some(isReceiptLocked)) {
+    return '标本已接收、拒收或退回，不能完成固定';
+  }
+  return '未找到可固定的标本';
 }
 
 async function ensureWorkbenchRecord(applicationNo: string) {
@@ -175,7 +221,9 @@ function buildQueueRow(
 
   return {
     ...row,
-    fixationOperatorName: normalizeText(workbenchRecord?.surgeryInfo.fixationPerson),
+    fixationOperatorName:
+      normalizeText(row.fixationOperatorName)
+      || normalizeText(workbenchRecord?.surgeryInfo.fixationPerson),
     fixationTime: row.fixationCompletedAt ?? row.fixationStartedAt ?? null,
     inpatientNo: normalizeText(workbenchRecord?.patientInfo.inpatientNo),
     patientGenderLabel: normalizeGenderLabel(
@@ -218,27 +266,47 @@ function removeRows(specimenIds: string[]) {
   selectedRows.value = selectedRows.value.filter((item) => !targetSet.has(item.specimenId));
 }
 
-async function handleAddToQueue() {
+function upsertQueueRow(row: FixationWorkbenchRow) {
+  const existingIndex = queueItems.value.findIndex((item) => item.specimenId === row.specimenId);
+  if (existingIndex >= 0) {
+    queueItems.value.splice(existingIndex, 1, row);
+    return;
+  }
+  queueItems.value.unshift(row);
+}
+
+async function handleCompleteFixationByScan() {
   const keyword = normalizeText(scanInput.value);
   if (!keyword) {
     ElMessage.warning('请输入流水号或标本ID');
+    return;
+  }
+  const operatorName = normalizeText(userStore.userInfo?.realName);
+  const operatorUserId = normalizeText(userStore.userInfo?.userId);
+  const selectedFixationLiquidType = normalizeText(fixationLiquidType.value);
+  if (!operatorName) {
+    ElMessage.warning('缺少当前固定人信息');
+    return;
+  }
+  if (!selectedFixationLiquidType) {
+    ElMessage.warning('请选择固定液类型');
     return;
   }
 
   loading.value = true;
   pageError.value = '';
   try {
-    const result = await listSpecimens({
+    const listResult = await listSpecimens({
       keyword,
       page: 1,
       size: MAX_QUERY_SIZE,
     });
-    const visibleRows = result.items.filter(isVisibleInFixationScene);
+    const visibleRows = listResult.items.filter(isVisibleInFixationScene);
     const exactMatches = resolveExactMatches(visibleRows, keyword);
     const candidates = exactMatches.length > 0 ? exactMatches : visibleRows;
 
     if (candidates.length === 0) {
-      ElMessage.warning('未找到可加入固定列表的标本');
+      ElMessage.warning(resolveUnavailableMessage(listResult.items, keyword));
       return;
     }
     if (candidates.length > 1) {
@@ -258,10 +326,27 @@ async function handleAddToQueue() {
       return;
     }
 
-    const nextRow = await buildEnrichedRow(matchedRow);
-    queueItems.value.unshift(nextRow);
+    const result = await completeFixation({
+      fixationLiquidType: selectedFixationLiquidType,
+      operatorName,
+      operatorUserId: operatorUserId || null,
+      remarks: '扫码完成固定',
+      specimenBarcode: matchedRow.barcode || matchedRow.specimenNo,
+    });
+    const completedAt = result.fixationCompletedAt ?? new Date().toISOString();
+    const nextRow = await buildEnrichedRow({
+      ...matchedRow,
+      fixationCompletedAt: completedAt,
+      fixationLiquidType: result.fixationLiquidType ?? selectedFixationLiquidType,
+      fixationOperatorName: result.operatorName ?? operatorName,
+      fixationOperatorUserId: result.operatorUserId ?? (operatorUserId || null),
+      fixationStatus: result.fixationStatus,
+      latestTrackingAt: completedAt,
+      specimenStatus: 'FIXED',
+    });
+    upsertQueueRow(nextRow);
     scanInput.value = '';
-    ElMessage.success('已加入固定列表');
+    ElMessage.success(`条码 ${matchedRow.barcode || keyword} 已完成固定`);
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
   } finally {
@@ -376,6 +461,7 @@ function buildExportRows() {
     ),
     formatDateTime(row.fixationTime),
     formatNullable(row.fixationOperatorName),
+    resolveFixationLiquidLabel(row.fixationLiquidType),
     formatDateTime(row.queueAddedAt),
     formatNullable(row.queueAddedByName),
     formatNullable(row.patientIdLabel),
@@ -402,6 +488,7 @@ function handleExportExcel() {
     '离体时间',
     '固定时间',
     '固定人',
+    '固定液类型',
     '添加时间',
     '添加人',
     '病人ID',
@@ -433,6 +520,10 @@ function handleExportExcel() {
   });
   ElMessage.success('导出成功');
 }
+
+onMounted(() => {
+  void ensureReferenceOptionsLoaded();
+});
 </script>
 
 <template>
@@ -463,7 +554,13 @@ function handleExportExcel() {
         clearable
         placeholder="流水号 / 标本ID"
         style="width: 260px"
-        @keyup.enter="handleAddToQueue"
+        @keyup.enter="handleCompleteFixationByScan"
+      />
+      <ReferenceOptionSelect
+        v-model="fixationLiquidType"
+        :options="workflowReferenceOptions.fixationLiquidTypes"
+        placeholder="请选择固定液类型"
+        style="width: 220px"
       />
       <ElButton @click="handleClearSelectionRows">清除选择行</ElButton>
       <ElButton @click="handleClearList">清除列表</ElButton>
@@ -537,6 +634,11 @@ function handleExportExcel() {
       <ElTableColumn label="固定人" min-width="120">
         <template #default="{ row }">
           {{ formatNullable(row.fixationOperatorName) }}
+        </template>
+      </ElTableColumn>
+      <ElTableColumn label="固定液类型" min-width="150">
+        <template #default="{ row }">
+          {{ resolveFixationLiquidLabel(row.fixationLiquidType) }}
         </template>
       </ElTableColumn>
       <ElTableColumn label="添加时间" min-width="170">

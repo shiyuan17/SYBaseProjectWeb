@@ -2,27 +2,29 @@ import { createApp, h, nextTick, watch } from 'vue';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const { mockAccessStore, mockRoute, mockRouter, mockUserStore } = vi.hoisted(() => ({
-  mockAccessStore: {
-    accessCodes: [] as string[] ,
-  },
-  mockRoute: {
-    query: {
-      action: 'register',
-      applicationId: 'APP-ID',
-    } as Record<string, string>,
-  },
-  mockRouter: {
-    push: vi.fn(),
-    replace: vi.fn(),
-  },
-  mockUserStore: {
-    userInfo: {
-      realName: '测试用户',
-      userId: 'USER-001',
+const { mockAccessStore, mockRoute, mockRouter, mockUserStore } = vi.hoisted(
+  () => ({
+    mockAccessStore: {
+      accessCodes: [] as string[],
     },
-  },
-}));
+    mockRoute: {
+      query: {
+        action: 'register',
+        applicationId: 'APP-ID',
+      } as Record<string, string>,
+    },
+    mockRouter: {
+      push: vi.fn(),
+      replace: vi.fn(),
+    },
+    mockUserStore: {
+      userInfo: {
+        realName: '测试用户',
+        userId: 'USER-001',
+      },
+    },
+  }),
+);
 
 const registerDialogProps = vi.hoisted(() => ({
   applicationId: '',
@@ -36,6 +38,9 @@ const workbenchPanelProps = vi.hoisted(() => ({
 }));
 
 const reprintApplicationFormMock = vi.hoisted(() => vi.fn());
+const warningMock = vi.hoisted(() => vi.fn());
+const successMock = vi.hoisted(() => vi.fn());
+const errorMock = vi.hoisted(() => vi.fn());
 
 vi.mock('vue-router', () => ({
   useRoute: () => mockRoute,
@@ -53,6 +58,18 @@ vi.mock('@vben/stores', () => ({
   useAccessStore: () => mockAccessStore,
   useUserStore: () => mockUserStore,
 }));
+
+vi.mock('element-plus', async () => {
+  const actual = await vi.importActual<any>('element-plus');
+  return {
+    ...actual,
+    ElMessage: {
+      warning: warningMock,
+      success: successMock,
+      error: errorMock,
+    },
+  };
+});
 
 vi.mock('#/modules/system-management/api/workflow-reference-service', () => ({
   createEmptyWorkflowReferenceOptions: () => ({
@@ -78,12 +95,15 @@ vi.mock('#/modules/system-management/components/DepartmentSelect.vue', () => ({
   },
 }));
 
-vi.mock('#/modules/system-management/components/ReferenceOptionSelect.vue', () => ({
-  default: {
-    props: ['modelValue', 'options', 'placeholder'],
-    template: '<div />',
-  },
-}));
+vi.mock(
+  '#/modules/system-management/components/ReferenceOptionSelect.vue',
+  () => ({
+    default: {
+      props: ['modelValue', 'options', 'placeholder'],
+      template: '<div />',
+    },
+  }),
+);
 
 vi.mock('#/modules/system-management/components/SystemUserSelect.vue', () => ({
   default: {
@@ -114,9 +134,21 @@ vi.mock('../components/ApplicationRegistrationWorkbenchPanel.vue', () => ({
   default: {
     props: ['lookupKeyword', 'lookupQueryType', 'lookupTriggerKey'],
     emits: ['reprint-application-form', 'save-workbench'],
-    setup(props: { lookupKeyword: string; lookupQueryType: string; lookupTriggerKey: number }, { emit }: any) {
+    setup(
+      props: {
+        lookupKeyword: string;
+        lookupQueryType: string;
+        lookupTriggerKey: number;
+      },
+      { emit }: any,
+    ) {
       watch(
-        () => [props.lookupKeyword, props.lookupQueryType, props.lookupTriggerKey] as const,
+        () =>
+          [
+            props.lookupKeyword,
+            props.lookupQueryType,
+            props.lookupTriggerKey,
+          ] as const,
         ([lookupKeyword, lookupQueryType, lookupTriggerKey]) => {
           workbenchPanelProps.lookupKeyword = lookupKeyword;
           workbenchPanelProps.lookupQueryType = lookupQueryType;
@@ -127,9 +159,15 @@ vi.mock('../components/ApplicationRegistrationWorkbenchPanel.vue', () => ({
       return {
         emitReprintApplicationForm() {
           emit('reprint-application-form', {
-            applicationId: props.lookupKeyword || 'APP-ID',
+            applicationId:
+              props.lookupKeyword === 'MISSING'
+                ? ''
+                : props.lookupKeyword || 'APP-ID',
             record: {
-              applicationId: props.lookupKeyword || 'APP-ID',
+              applicationId:
+                props.lookupKeyword === 'MISSING'
+                  ? ''
+                  : props.lookupKeyword || 'APP-ID',
               contagiousSpecimen: {
                 hepatitis: false,
                 hiv: false,
@@ -275,6 +313,8 @@ import SpecimenManagementView from './SpecimenManagementView.vue';
 describe('SpecimenManagementView', () => {
   afterEach(() => {
     mockAccessStore.accessCodes = [];
+    mockRoute.query.applicationId = 'APP-ID';
+    mockRoute.query.action = 'register';
     mockRouter.push.mockReset();
     mockRouter.replace.mockReset();
     registerDialogProps.applicationId = '';
@@ -283,6 +323,10 @@ describe('SpecimenManagementView', () => {
     workbenchPanelProps.lookupQueryType = '';
     workbenchPanelProps.lookupTriggerKey = 0;
     reprintApplicationFormMock.mockReset();
+    warningMock.mockReset();
+    successMock.mockReset();
+    errorMock.mockReset();
+    vi.restoreAllMocks();
     document.body.innerHTML = '';
   });
 
@@ -315,11 +359,25 @@ describe('SpecimenManagementView', () => {
     root.remove();
   });
 
-  it('reprints application form when the panel requests it', async () => {
+  it('opens print window when the panel requests reprint', async () => {
     mockAccessStore.accessCodes = [
       'PERM_APPLICATION_DETAIL_QUERY',
       'PERM_SPECIMEN_REGISTER',
     ];
+    const printWindowState = { html: '' };
+    vi.spyOn(window, 'open').mockImplementation(() => {
+      return {
+        close: vi.fn(),
+        document: {
+          close: vi.fn(),
+          open: vi.fn(),
+          write: (html: string) => {
+            printWindowState.html = html;
+          },
+        },
+        focus: vi.fn(),
+      } as any;
+    });
 
     const root = document.createElement('div');
     document.body.append(root);
@@ -334,20 +392,59 @@ describe('SpecimenManagementView', () => {
     await nextTick();
 
     root
-      .querySelector<HTMLButtonElement>('[data-testid="reprint-application-button"]')!
+      .querySelector<HTMLButtonElement>(
+        '[data-testid="reprint-application-button"]',
+      )!
       .click();
     await nextTick();
     await Promise.resolve();
     await nextTick();
 
-    expect(reprintApplicationFormMock).toHaveBeenCalledTimes(1);
-    expect(reprintApplicationFormMock).toHaveBeenCalledWith(
-      'APP-ID',
-      expect.objectContaining({
-        operatorName: '测试用户',
-      }),
-    );
+    expect(window.open).toHaveBeenCalledTimes(1);
+    expect(printWindowState.html).toContain('补打申请单');
+    expect(printWindowState.html).toContain('申请单号');
+    expect(printWindowState.html).toContain('APP-001');
+    expect(reprintApplicationFormMock).not.toHaveBeenCalled();
     expect(document.body.textContent).not.toContain('兼容登记');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('uses application no fallback and warns when popup is blocked', async () => {
+    mockAccessStore.accessCodes = [
+      'PERM_APPLICATION_DETAIL_QUERY',
+      'PERM_SPECIMEN_REGISTER',
+    ];
+    mockRoute.query.applicationId = 'MISSING';
+    vi.spyOn(window, 'open').mockReturnValue(null);
+
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    const app = createApp({
+      render: () => h(SpecimenManagementView),
+    });
+
+    app.mount(root);
+    await nextTick();
+    await Promise.resolve();
+    await nextTick();
+
+    root
+      .querySelector<HTMLButtonElement>(
+        '[data-testid="reprint-application-button"]',
+      )!
+      .click();
+    await nextTick();
+    await Promise.resolve();
+    await nextTick();
+
+    expect(window.open).toHaveBeenCalledTimes(1);
+    expect(warningMock).toHaveBeenCalledWith(
+      '打印窗口被浏览器拦截，请允许弹窗后重试',
+    );
+    expect(reprintApplicationFormMock).not.toHaveBeenCalled();
 
     app.unmount();
     root.remove();

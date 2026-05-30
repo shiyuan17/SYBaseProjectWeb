@@ -81,6 +81,7 @@ type RawRecord = {
     fixationPerson: string;
     fixationTime: string;
     roomId: string;
+    specimenRemovalTime?: string;
     surgeryName: string;
   };
 };
@@ -214,6 +215,7 @@ function mapRecord(record: RawRecord): ApplicationRegistrationWorkbenchRecord {
       fixationPerson: surgeryInfo.fixationPerson,
       fixationTime: surgeryInfo.fixationTime,
       roomId: surgeryInfo.roomId,
+      specimenRemovalTime: surgeryInfo.specimenRemovalTime ?? '',
       surgeryName: surgeryInfo.surgeryName,
     },
   };

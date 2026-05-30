@@ -42,31 +42,7 @@ vi.mock('#/modules/system-management/api/workflow-reference-service', () => ({
   })),
 }));
 
-vi.mock('#/modules/system-management/components/BodyPartSelect.vue', () => ({
-  default: {
-    emits: ['change', 'update:modelValue'],
-    props: ['modelValue', 'options', 'placeholder', 'selectedLabel'],
-    template: '<input :placeholder="placeholder" :value="modelValue" />',
-  },
-}));
-
-vi.mock('#/modules/system-management/components/DepartmentSelect.vue', () => ({
-  default: {
-    emits: ['change', 'update:modelValue'],
-    props: ['modelValue', 'options', 'placeholder', 'selectedLabel'],
-    template: '<input :placeholder="placeholder" :value="modelValue" />',
-  },
-}));
-
 vi.mock('#/modules/system-management/components/ReferenceOptionSelect.vue', () => ({
-  default: {
-    emits: ['change', 'update:modelValue'],
-    props: ['modelValue', 'options', 'placeholder', 'selectedLabel'],
-    template: '<input :placeholder="placeholder" :value="modelValue" />',
-  },
-}));
-
-vi.mock('#/modules/system-management/components/SystemUserSelect.vue', () => ({
   default: {
     emits: ['change', 'update:modelValue'],
     props: ['modelValue', 'options', 'placeholder', 'selectedLabel'],
@@ -225,15 +201,13 @@ function buildApplicationDetail() {
     remarks: null,
     sourceHospitalId: null,
     sourceHospitalName: '协作医院',
-    specimenRemovalTime: '2026-05-28T09:00:00',
-    specimenSite: '胃窦',
     specimens: [],
     status: 'SUBMITTED',
     submissionDate: '2026-05-28',
-    submittingDepartmentId: 'DEP-001',
-    submittingDepartmentName: '外科',
-    submittingDoctorName: '李医生',
-    submittingDoctorUserId: 'DOC-001',
+    submittingDepartmentId: null,
+    submittingDepartmentName: null,
+    submittingDoctorName: null,
+    submittingDoctorUserId: null,
     thirdPartySource: null,
     updatedAt: '2026-05-28T09:00:00',
     voided: false,
@@ -291,6 +265,10 @@ describe('ApplicationManageDialog', () => {
     expect(mockGetApplicationDetail).toHaveBeenCalledWith('APP-EDIT-001');
     expect(root.textContent).toContain('编辑申请单');
     expect(root.textContent).not.toContain('第三方导入');
+    expect(root.textContent).not.toContain('送检科室');
+    expect(root.textContent).not.toContain('送检医生');
+    expect(root.textContent).not.toContain('送检部位');
+    expect(root.textContent).not.toContain('离体时间');
 
     const saveButton = Array.from(root.querySelectorAll('button')).find(
       (button) => button.textContent?.trim() === '保存',
@@ -304,9 +282,12 @@ describe('ApplicationManageDialog', () => {
       expect.objectContaining({
         applicationNo: 'M2-EDIT-001',
         patientName: '张三',
-        specimenSite: '胃窦',
       }),
     );
+    expect(mockUpdateApplication.mock.calls[0]?.[1]).not.toHaveProperty('specimenSite');
+    expect(mockUpdateApplication.mock.calls[0]?.[1]).not.toHaveProperty('specimenRemovalTime');
+    expect(mockUpdateApplication.mock.calls[0]?.[1]).not.toHaveProperty('submittingDepartmentId');
+    expect(mockUpdateApplication.mock.calls[0]?.[1]).not.toHaveProperty('submittingDoctorName');
 
     app.unmount();
   });

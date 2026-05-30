@@ -279,6 +279,10 @@ async function printSpecimen(item: WorkbenchSpecimenItem) {
     ElMessage.warning('当前缺少标签打印所需的患者上下文信息');
     return;
   }
+  if (!item.specimenNo) {
+    ElMessage.warning('请先保存登记后再打印标本标签');
+    return;
+  }
 
   try {
     const printDocument = buildSpecimenPrintDocument({
@@ -305,6 +309,10 @@ function handleBatchPrint() {
   const selectedItems = props.items.filter((item) => selectedItemIds.value.includes(item.id));
   if (selectedItems.length === 0) {
     ElMessage.warning('请先勾选需要打印的标本');
+    return;
+  }
+  if (selectedItems.some((item) => !item.specimenNo)) {
+    ElMessage.warning('请先保存登记后再批量打印标本标签');
     return;
   }
 
@@ -364,7 +372,11 @@ function normalizeSpecimenSiteOption(option: Record<string, unknown>) {
               {{ $index + 1 }}
             </template>
           </ElTableColumn>
-          <ElTableColumn label="流水号" min-width="98" prop="specimenNo" />
+          <ElTableColumn label="流水号" min-width="120">
+            <template #default="{ row }">
+              <span class="text-muted-foreground">{{ row.specimenNo || '保存后生成' }}</span>
+            </template>
+          </ElTableColumn>
           <ElTableColumn label="标本名称" min-width="260">
             <template #default="{ row }">
               <ElAutocomplete
@@ -440,7 +452,13 @@ function normalizeSpecimenSiteOption(option: Record<string, unknown>) {
           <ElTableColumn fixed="right" label="操作" width="132">
             <template #default="{ row }">
               <div class="flex items-center gap-2">
-                <ElButton link size="small" type="primary" @click="printSpecimen(row)">
+                <ElButton
+                  :disabled="!row.specimenNo"
+                  link
+                  size="small"
+                  type="primary"
+                  @click="printSpecimen(row)"
+                >
                   打印
                 </ElButton>
                 <ElButton link size="small" type="danger" @click="removeItem(row.id)">

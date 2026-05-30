@@ -56,7 +56,12 @@ function buildDateRoomLine(context: WorkbenchSpecimenPrintContext) {
   return `${formatLabelTime(context.surgeryTime)}  ${context.roomLabel || '-'}`;
 }
 
-function buildQrCodeValue(
+function buildQrCodeImageUrl(value: string, size = 180) {
+  const encodedValue = encodeURIComponent(value);
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=0&data=${encodedValue}`;
+}
+
+function buildSpecimenQrCodeValue(
   context: WorkbenchSpecimenPrintContext,
   item: WorkbenchSpecimenItem,
 ) {
@@ -72,19 +77,13 @@ function buildQrCodeValue(
   });
 }
 
-function buildQrCodeImageUrl(
-  context: WorkbenchSpecimenPrintContext,
-  item: WorkbenchSpecimenItem,
-) {
-  const encodedValue = encodeURIComponent(buildQrCodeValue(context, item));
-  return `https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=0&data=${encodedValue}`;
-}
-
 function buildSpecimenLabelMarkup(
   context: WorkbenchSpecimenPrintContext,
   item: WorkbenchSpecimenItem,
 ) {
-  const qrCodeImageUrl = buildQrCodeImageUrl(context, item);
+  const qrCodeImageUrl = buildQrCodeImageUrl(
+    buildSpecimenQrCodeValue(context, item),
+  );
   return `
     <section class="label">
       <div class="top">
@@ -233,118 +232,51 @@ export function buildSpecimenBatchPrintDocument({
   );
 }
 
-function buildApplicationFormSection(title: string, rows: Array<[string, string]>) {
-  const items = rows
-    .map(
-      ([label, value]) => `
-        <div class="field">
-          <div class="label">${escapeHtml(label)}</div>
-          <div class="value">${escapeHtml(value || '-')}</div>
-        </div>
-      `,
-    )
-    .join('');
-
-  return `
-    <section class="section">
-      <div class="section-title">${escapeHtml(title)}</div>
-      <div class="grid">${items}</div>
-    </section>
-  `;
-}
-
-function formatBooleanText(value: boolean) {
-  return value ? '是' : '否';
-}
-
 export function buildApplicationFormPrintDocument(
   record: ApplicationRegistrationWorkbenchRecord,
 ) {
   const patient = record.patientInfo;
-  const surgery = record.surgeryInfo;
-  const gynecology = record.gynecologyInfo;
-  const specimenRows = record.specimenItems.length
-    ? record.specimenItems
-    : [{ id: '', quantity: 0, specimenName: '-', specimenNo: '-', specimenSite: '-', status: '-' }];
+  const applicationNo = patient.applicationNo || record.applicationId || '-';
+  const qrCodeImageUrl = buildQrCodeImageUrl(applicationNo, 220);
 
   const bodyHtml = `
-    <main class="form">
+    <main class="application-ticket">
       <header class="header">
         <div>
-          <div class="title">申请单补打</div>
-          <div class="subtitle">核心申请单内容</div>
+          <div class="title">补打申请单</div>
+          <div class="subtitle">申请单信息</div>
         </div>
-        <div class="no">${escapeHtml(patient.applicationNo || '-')}</div>
+        <div class="no">${escapeHtml(applicationNo)}</div>
       </header>
-      ${buildApplicationFormSection('患者信息', [
-        ['患者', patient.patientName],
-        ['性别/年龄', `${patient.gender || '-'} / ${patient.age || '-'}`],
-        ['住院号', patient.inpatientNo || '-'],
-        ['床号', patient.bedNo || '-'],
-        ['病区', patient.wardName || '-'],
-        ['申请科室', patient.applyDept || '-'],
-        ['申请医生', patient.applyDoctor || '-'],
-        ['联系电话', patient.phone || '-'],
-        ['申请日期', patient.applicationDate || '-'],
-      ])}
-      ${buildApplicationFormSection('临床信息', [
-        ['检查项目', patient.checkItem || '-'],
-        ['临床病史', patient.clinicalHistory || '-'],
-        ['影像结果', patient.imagingResult || '-'],
-        ['临床诊断', patient.clinicalDiagnosis || '-'],
-        ['内镜诊断', patient.endoscopyDiagnosis || '-'],
-        ['备注', patient.remark || '-'],
-      ])}
-      ${buildApplicationFormSection('手术信息', [
-        ['手术名称', surgery.surgeryName || '-'],
-        ['手术楼/手术室', `${surgery.buildingId || '-'} / ${surgery.roomId || '-'}`],
-        ['术中所见', surgery.clinicalFindings || '-'],
-        ['标本固定时间', surgery.fixationTime || '-'],
-        ['固定人员', surgery.fixationPerson || '-'],
-        ['固定液类型', surgery.fixativeType || '-'],
-      ])}
-      ${buildApplicationFormSection('妇科信息', [
-        ['是否绝经', formatBooleanText(gynecology.menopause)],
-        ['末次月经', gynecology.lastMenstrualPeriod || '-'],
-        ['HPV', gynecology.hpvResult || '-'],
-        ['既往宫颈脱落细胞', gynecology.previousCytology || '-'],
-        ['既往宫颈治疗史', gynecology.previousTreatment || '-'],
-        ['补充说明', gynecology.additionalNotes || gynecology.specialConditions.other || '-'],
-      ])}
-      <section class="section">
-        <div class="section-title">标本核心信息</div>
-        <table class="table">
-          <thead>
-            <tr>
-              <th>标本号</th>
-              <th>名称</th>
-              <th>部位</th>
-              <th>数量</th>
-              <th>状态</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${specimenRows
-              .map(
-                (item) => `
-                  <tr>
-                    <td>${escapeHtml(item.specimenNo || '-')}</td>
-                    <td>${escapeHtml(item.specimenName || '-')}</td>
-                    <td>${escapeHtml(item.specimenSite || '-')}</td>
-                    <td>${escapeHtml(String(item.quantity || 0))}</td>
-                    <td>${escapeHtml(item.status || '-')}</td>
-                  </tr>
-                `,
-              )
-              .join('')}
-          </tbody>
-        </table>
+      <section class="content">
+        <div class="fields">
+          <div class="field">
+            <div class="label">申请单号</div>
+            <div class="value strong">${escapeHtml(applicationNo)}</div>
+          </div>
+          <div class="field">
+            <div class="label">名称</div>
+            <div class="value">${escapeHtml(patient.patientName || '-')}</div>
+          </div>
+          <div class="field">
+            <div class="label">性别</div>
+            <div class="value">${escapeHtml(patient.gender || '-')}</div>
+          </div>
+          <div class="field">
+            <div class="label">年龄</div>
+            <div class="value">${escapeHtml(patient.age || '-')}</div>
+          </div>
+        </div>
+        <div class="qr-panel">
+          <img alt="申请单二维码" class="qr" src="${qrCodeImageUrl}" />
+          <div class="qr-label">二维码</div>
+        </div>
       </section>
     </main>
   `;
 
   return buildPrintShell(
-    `申请单补打 - ${patient.applicationNo || '申请单'}`,
+    `补打申请单 - ${applicationNo}`,
     bodyHtml,
     `
       @page {
@@ -355,10 +287,11 @@ export function buildApplicationFormPrintDocument(
         font-family: "SimHei", "Microsoft YaHei", "PingFang SC", sans-serif;
         color: #111827;
       }
-      .form {
+      .application-ticket {
         display: flex;
         flex-direction: column;
-        gap: 8mm;
+        gap: 9mm;
+        max-width: 148mm;
       }
       .header {
         display: flex;
@@ -381,55 +314,56 @@ export function buildApplicationFormPrintDocument(
         font-size: 6mm;
         font-weight: 700;
       }
-      .section {
-        display: flex;
-        flex-direction: column;
-        gap: 3mm;
+      .content {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 38mm;
+        gap: 8mm;
+        align-items: start;
       }
-      .section-title {
-        font-size: 4.6mm;
-        font-weight: 700;
-        color: #111827;
-      }
-      .grid {
+      .fields {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 2.4mm 4mm;
+        gap: 3mm 4mm;
       }
       .field {
         display: flex;
         flex-direction: column;
         gap: 1mm;
-        padding: 2.4mm 3mm;
+        padding: 3mm;
         border: 1px solid #e5e7eb;
         border-radius: 2mm;
-        min-height: 15mm;
+        min-height: 18mm;
       }
       .label {
         font-size: 3mm;
         color: #6b7280;
       }
       .value {
-        font-size: 3.8mm;
+        font-size: 5mm;
         line-height: 1.35;
         white-space: pre-wrap;
         word-break: break-word;
       }
-      .table {
-        width: 100%;
-        border-collapse: collapse;
-      }
-      .table th,
-      .table td {
-        border: 1px solid #e5e7eb;
-        padding: 2.5mm 2.8mm;
-        font-size: 3.4mm;
-        vertical-align: top;
-        text-align: left;
-      }
-      .table th {
-        background: #f9fafb;
+      .value.strong {
         font-weight: 700;
+      }
+      .qr-panel {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2mm;
+        border: 1px solid #e5e7eb;
+        border-radius: 2mm;
+        padding: 3mm;
+      }
+      .qr {
+        width: 32mm;
+        height: 32mm;
+        display: block;
+      }
+      .qr-label {
+        font-size: 3.2mm;
+        color: #6b7280;
       }
     `,
   );

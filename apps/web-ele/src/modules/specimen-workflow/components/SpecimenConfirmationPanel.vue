@@ -572,60 +572,61 @@ void loadSpecimens();
       show-icon
     />
 
-    <div class="flex flex-col gap-3 rounded-lg border border-border bg-card px-4 py-4 shadow-sm">
-      <div class="flex flex-wrap items-end gap-3">
-        <div class="min-w-[220px] flex-1">
-          <div class="mb-1 text-sm text-muted-foreground">快速扫描 / 查询</div>
-          <ElInput
-            v-model="filters.keyword"
-            clearable
-            placeholder="申请单号 / 标本编号 / 条码，回车立即确认"
-            @keyup.enter="tryQuickConfirmByKeyword"
-          />
-        </div>
-        <div class="min-w-[240px]">
-          <div class="mb-1 text-sm text-muted-foreground">选择操作人</div>
-          <SystemUserSelect
-            v-model="operatorForm.operatorUserId"
-            :selected-label="operatorForm.operatorName"
-            placeholder="请选择操作人"
-            @change="handleOperatorChange"
-          />
-        </div>
-        <div class="min-w-[180px]">
-          <div class="mb-1 text-sm text-muted-foreground">终端编号</div>
-          <ElInput v-model="operatorForm.terminalCode" placeholder="可选" />
-        </div>
+    <div class="flex flex-wrap items-center gap-4 text-sm">
+      <div class="font-semibold text-[color:#d6453d]">标本确认</div>
+      <div>
+        全部
+        <span class="text-xl font-semibold text-primary">{{ summary.allCount }}</span>
       </div>
-
-      <div class="flex flex-wrap items-center gap-2">
-        <ElButton :loading="loading" type="primary" @click="handleSearch">查询</ElButton>
-        <ElButton :loading="actionLoading" type="success" @click="handleConfirmSelected">
-          标本确认
-        </ElButton>
-        <ElButton @click="handleClearSelectionRows">清除选择行</ElButton>
-        <ElButton @click="handleClearList">清除列表</ElButton>
-        <ElButton @click="handleRetryLabel">补打标本标签</ElButton>
-        <ElButton @click="handleExportExcel">导出Excel</ElButton>
-        <ElButton @click="handleReset">重置</ElButton>
+      <div>
+        标本确认
+        <span class="text-xl font-semibold text-success">{{ summary.confirmedCount }}</span>
       </div>
-
-      <div class="flex flex-wrap items-center gap-4 text-sm">
-        <div class="font-semibold text-[color:#d6453d]">标本确认</div>
-        <div>全部 <span class="text-xl font-semibold text-primary">{{ summary.allCount }}</span></div>
-        <div>标本确认 <span class="text-xl font-semibold text-success">{{ summary.confirmedCount }}</span></div>
-        <div>未确认 <span class="text-xl font-semibold text-danger">{{ summary.pendingCount }}</span></div>
+      <div>
+        未确认
+        <span class="text-xl font-semibold text-danger">{{ summary.pendingCount }}</span>
       </div>
     </div>
 
-    <div class="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
-      <ElTable
-        v-loading="loading"
-        :data="pagedItems"
-        border
-        max-height="520"
-        @selection-change="handleSelectionChange"
-      >
+    <div class="flex flex-wrap items-center gap-2">
+      <ElInput
+        v-model="filters.keyword"
+        clearable
+        placeholder="申请单号 / 标本编号 / 条码"
+        style="width: 300px"
+        @keyup.enter="tryQuickConfirmByKeyword"
+      />
+      <div class="w-[220px]">
+        <SystemUserSelect
+          v-model="operatorForm.operatorUserId"
+          :selected-label="operatorForm.operatorName"
+          placeholder="选择操作人"
+          @change="handleOperatorChange"
+        />
+      </div>
+      <ElInput
+        v-model="operatorForm.terminalCode"
+        placeholder="终端编号"
+        style="width: 160px"
+      />
+      <ElButton :loading="loading" type="primary" @click="handleSearch">查询</ElButton>
+      <ElButton :loading="actionLoading" type="success" @click="handleConfirmSelected">
+        标本确认
+      </ElButton>
+      <ElButton @click="handleClearSelectionRows">清除选择行</ElButton>
+      <ElButton @click="handleClearList">清除列表</ElButton>
+      <ElButton @click="handleRetryLabel">补打标本标签</ElButton>
+      <ElButton @click="handleExportExcel">导出Excel</ElButton>
+      <ElButton @click="handleReset">重置</ElButton>
+    </div>
+
+    <ElTable
+      v-loading="loading"
+      :data="pagedItems"
+      border
+      max-height="520"
+      @selection-change="handleSelectionChange"
+    >
         <ElTableColumn type="selection" width="52" />
         <ElTableColumn label="序" width="64">
           <template #default="{ $index }">
@@ -699,8 +700,7 @@ void loadSpecimens();
             </ElButton>
           </template>
         </ElTableColumn>
-      </ElTable>
-    </div>
+    </ElTable>
 
     <div class="flex justify-end">
       <ElPagination
