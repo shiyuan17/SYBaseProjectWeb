@@ -1,10 +1,22 @@
-import { createApp, defineComponent, h, inject, nextTick, provide, toRef } from 'vue';
+import type { LatestSpecimenRegistrationResult } from '../types/specimen-workflow';
+
+import { createApp, h, nextTick } from 'vue';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { LatestSpecimenRegistrationResult } from '../types/specimen-workflow';
+import {
+  createAlertStub,
+  createButtonStub,
+  createDescriptionsItemStub,
+  createDialogStub,
+  createInputNumberStub,
+  createInputStub,
+  createPassthroughStub,
+  createTableColumnStub,
+  createTableStub,
+} from '../test-utils/component-stubs';
 
-const tableRowKey = Symbol('table-row');
+const tableRowKey = vi.hoisted(() => Symbol('table-row'));
 
 const {
   messageSuccess,
@@ -54,38 +66,15 @@ vi.mock('#/modules/system-management/api/workflow-reference-service', () => ({
 }));
 
 vi.mock('#/modules/system-management/components/BodyPartSelect.vue', () => ({
-  default: defineComponent({
-    emits: ['update:modelValue'],
-    props: ['modelValue', 'placeholder'],
-    setup(props, { emit }) {
-      return () =>
-        h('input', {
-          'data-component': 'body-part-select',
-          placeholder: props.placeholder,
-          value: props.modelValue,
-          onInput: (event: Event) =>
-            emit('update:modelValue', (event.target as HTMLInputElement).value),
-        });
-    },
-  }),
+  default: createInputStub(),
 }));
 
-vi.mock('#/modules/system-management/components/ReferenceOptionSelect.vue', () => ({
-  default: defineComponent({
-    emits: ['update:modelValue'],
-    props: ['modelValue', 'placeholder'],
-    setup(props, { emit }) {
-      return () =>
-        h('input', {
-          'data-component': 'reference-option-select',
-          placeholder: props.placeholder,
-          value: props.modelValue,
-          onInput: (event: Event) =>
-            emit('update:modelValue', (event.target as HTMLInputElement).value),
-        });
-    },
+vi.mock(
+  '#/modules/system-management/components/ReferenceOptionSelect.vue',
+  () => ({
+    default: createInputStub(),
   }),
-}));
+);
 
 vi.mock('../api/specimen-workflow-service', () => ({
   getApplicationDetail: mockGetApplicationDetail,
@@ -94,166 +83,23 @@ vi.mock('../api/specimen-workflow-service', () => ({
 }));
 
 vi.mock('element-plus', () => {
-  const passthrough = (tag = 'div') =>
-    defineComponent({
-      props: ['label', 'title'],
-      setup(props, { slots }) {
-        return () =>
-          h(tag, [
-            props.title ? h('div', props.title) : null,
-            props.label ? h('label', props.label) : null,
-            slots.default?.(),
-          ]);
-      },
-    });
-
-  const ElAlert = defineComponent({
-    props: ['title'],
-    setup(props, { slots }) {
-      return () =>
-        h('section', [
-          props.title ? h('div', props.title) : null,
-          slots.default?.(),
-        ]);
-    },
-  });
-
-  const ElButton = defineComponent({
-    emits: ['click'],
-    setup(_, { emit, slots }) {
-      return () =>
-        h(
-          'button',
-          {
-            type: 'button',
-            onClick: (event: MouseEvent) => emit('click', event),
-          },
-          slots.default?.(),
-        );
-    },
-  });
-
-  const ElDialog = defineComponent({
-    props: ['modelValue', 'title'],
-    setup(props, { slots }) {
-      return () =>
-        props.modelValue
-          ? h('section', [h('h3', props.title), slots.default?.(), slots.footer?.()])
-          : null;
-    },
-  });
-
-  const ElInput = defineComponent({
-    emits: ['update:modelValue'],
-    props: ['disabled', 'modelValue', 'placeholder', 'rows', 'type'],
-    setup(props, { emit }) {
-      return () =>
-        props.type === 'textarea'
-          ? h('textarea', {
-              disabled: props.disabled,
-              placeholder: props.placeholder,
-              rows: props.rows,
-              value: props.modelValue,
-              onInput: (event: Event) =>
-                emit('update:modelValue', (event.target as HTMLTextAreaElement).value),
-            })
-          : h('input', {
-              disabled: props.disabled,
-              placeholder: props.placeholder,
-              value: props.modelValue,
-              onInput: (event: Event) =>
-                emit('update:modelValue', (event.target as HTMLInputElement).value),
-            });
-    },
-  });
-
-  const ElInputNumber = defineComponent({
-    emits: ['update:modelValue'],
-    props: ['min', 'modelValue'],
-    setup(props, { emit }) {
-      return () =>
-        h('input', {
-          min: props.min,
-          type: 'number',
-          value: props.modelValue,
-          onInput: (event: Event) =>
-            emit('update:modelValue', Number((event.target as HTMLInputElement).value)),
-        });
-    },
-  });
-
-  const ElDescriptionsItem = defineComponent({
-    props: ['label'],
-    setup(props, { slots }) {
-      return () => h('div', [h('strong', `${props.label}:`), slots.default?.()]);
-    },
-  });
-
-  const RowProvider = defineComponent({
-    props: {
-      row: {
-        required: true,
-        type: Object,
-      },
-    },
-    setup(props, { slots }) {
-      provide(tableRowKey, toRef(props, 'row'));
-      return () => h('div', slots.default?.());
-    },
-  });
-
-  const ElTable = defineComponent({
-    props: {
-      data: {
-        default: () => [],
-        type: Array,
-      },
-    },
-    setup(props, { slots }) {
-      return () =>
-        h(
-          'div',
-          (props.data as unknown[]).map((row, index) =>
-            h(RowProvider, { key: index, row: row as Record<string, unknown> }, () =>
-              slots.default?.(),
-            ),
-          ),
-        );
-    },
-  });
-
-  const ElTableColumn = defineComponent({
-    props: ['label', 'prop'],
-    setup(props, { slots }) {
-      return () => {
-        const row = inject<{ value: null | Record<string, unknown> } | null>(tableRowKey, null);
-        const currentRow = row?.value ?? null;
-        const value = props.prop && currentRow ? currentRow[props.prop] : undefined;
-        return h('div', [
-          props.label ? h('span', props.label) : null,
-          slots.default ? slots.default({ row: currentRow }) : value == null ? null : h('span', String(value)),
-        ]);
-      };
-    },
-  });
-
   return {
-    ElAlert,
-    ElButton,
-    ElDescriptions: passthrough(),
-    ElDescriptionsItem,
-    ElDialog,
-    ElForm: passthrough('form'),
-    ElFormItem: passthrough(),
-    ElInput,
-    ElInputNumber,
+    ElAlert: createAlertStub(),
+    ElButton: createButtonStub(),
+    ElDescriptions: createPassthroughStub(),
+    ElDescriptionsItem: createDescriptionsItemStub(),
+    ElDialog: createDialogStub(),
+    ElForm: createPassthroughStub('form'),
+    ElFormItem: createPassthroughStub(),
+    ElInput: createInputStub(),
+    ElInputNumber: createInputNumberStub(),
     ElMessage: {
       success: messageSuccess,
       warning: messageWarning,
     },
-    ElTable,
-    ElTableColumn,
-    ElTag: passthrough('span'),
+    ElTable: createTableStub(tableRowKey),
+    ElTableColumn: createTableColumnStub(tableRowKey),
+    ElTag: createPassthroughStub('span'),
   };
 });
 
@@ -356,12 +202,13 @@ async function mountDialog(
   const root = document.createElement('div');
   document.body.append(root);
   const app = createApp({
-    render: () => h(SpecimenRegisterDialog, {
-      applicationId: 'APP-ID',
-      modelValue: true,
-      'onUpdate:modelValue': () => {},
-      onRegistered: () => {},
-    }),
+    render: () =>
+      h(SpecimenRegisterDialog, {
+        applicationId: 'APP-ID',
+        modelValue: true,
+        'onUpdate:modelValue': () => {},
+        onRegistered: () => {},
+      }),
   });
   app.mount(root);
   await flushAll();
@@ -369,11 +216,11 @@ async function mountDialog(
 }
 
 function inputByPlaceholder(root: HTMLElement, placeholder: string) {
-  const elements = Array.from(
-    root.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+  const elements = [
+    ...root.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
       `[placeholder="${placeholder}"]`,
     ),
-  );
+  ];
   const element = elements.at(-1);
   if (!element) {
     throw new Error(`Missing input for placeholder: ${placeholder}`);
@@ -404,9 +251,15 @@ describe('SpecimenRegisterDialog', () => {
     expect(root.textContent).toContain('问题代码：CONTAINER_DAMAGE');
     expect(root.textContent).toContain('原因：容器破损');
     expect(inputByPlaceholder(root, '用于标签打印').value).toBe('P-01');
-    expect(inputByPlaceholder(root, '扫码枪或工作站终端').value).toBe('TERM-01');
-    expect(inputByPlaceholder(root, '例如：门诊、病房、手术室').value).toBe('门诊');
-    expect(inputByPlaceholder(root, '补充登记说明').value).toBe('请补充容器信息');
+    expect(inputByPlaceholder(root, '扫码枪或工作站终端').value).toBe(
+      'TERM-01',
+    );
+    expect(inputByPlaceholder(root, '例如：门诊、病房、手术室').value).toBe(
+      '门诊',
+    );
+    expect(inputByPlaceholder(root, '补充登记说明').value).toBe(
+      '请补充容器信息',
+    );
     expect(inputByPlaceholder(root, '标准化标本名称').value).toBe('胃组织');
 
     app.unmount();
@@ -424,7 +277,7 @@ describe('SpecimenRegisterDialog', () => {
     specimenNameInput.dispatchEvent(new Event('input'));
     await flushAll();
 
-    const resetButton = Array.from(root.querySelectorAll('button')).find((button) =>
+    const resetButton = [...root.querySelectorAll('button')].find((button) =>
       button.textContent?.includes('重置登记表单'),
     );
     resetButton?.click();
@@ -452,7 +305,10 @@ describe('SpecimenRegisterDialog', () => {
     expect(inputByPlaceholder(root, '扫码枪或工作站终端').value).toBe('');
     expect(inputByPlaceholder(root, '例如：门诊、病房、手术室').value).toBe('');
     expect(inputByPlaceholder(root, '标准化标本名称').value).toBe('');
-    expect(root.querySelector<HTMLInputElement>('input[disabled]')?.value).toBe('当前登录人');
+    const operatorInput = [
+      ...root.querySelectorAll<HTMLInputElement>('input'),
+    ].find((input) => input.disabled);
+    expect(operatorInput?.value).toBe('当前登录人');
 
     app.unmount();
   });

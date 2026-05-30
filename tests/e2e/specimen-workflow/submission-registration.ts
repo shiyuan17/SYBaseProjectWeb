@@ -1,4 +1,8 @@
-import { expect, type Page } from 'playwright/test';
+import type { Page } from 'playwright/test';
+
+import type { WorkflowRunData } from './helpers/test-data';
+
+import { expect } from 'playwright/test';
 
 import { workflowDefaults } from '../helpers/env';
 import {
@@ -9,7 +13,6 @@ import {
   selectTreeOptionByLabel,
   waitForToast,
 } from './helpers/ui';
-import type { WorkflowRunData } from './helpers/test-data';
 
 type ApplicationCreateResult = {
   id: string;
@@ -33,13 +36,6 @@ function formatDateTime(date: Date) {
 
 export class SubmissionRegistrationPage {
   constructor(private readonly page: Page) {}
-
-  async goto() {
-    await this.page.goto('/workflow/submission-registration', {
-      waitUntil: 'domcontentloaded',
-    });
-    await expect(this.page.getByRole('button', { name: '创建' })).toBeVisible();
-  }
 
   async createApplicationAndOpenRegistration(data: WorkflowRunData) {
     await this.page.getByRole('button', { name: '创建' }).click();
@@ -73,8 +69,8 @@ export class SubmissionRegistrationPage {
     const [createResponse] = await Promise.all([
       this.page.waitForResponse(
         (response) =>
-          response.request().method() === 'POST'
-          && response.url().includes('/api/v1/applications'),
+          response.request().method() === 'POST' &&
+          response.url().includes('/api/v1/applications'),
       ),
       dialog.getByRole('button', { name: '保存并前往标本登记' }).click(),
     ]);
@@ -88,20 +84,37 @@ export class SubmissionRegistrationPage {
     return createPayload.data as ApplicationCreateResult;
   }
 
+  async goto() {
+    await this.page.goto('/workflow/submission-registration', {
+      waitUntil: 'domcontentloaded',
+    });
+    await expect(this.page.getByRole('button', { name: '创建' })).toBeVisible();
+  }
+
   async registerSpecimens(data: WorkflowRunData) {
     const dialog = getDialog(this.page, '标本登记');
     await expect(dialog).toBeVisible();
 
     await fillInputByLabel(dialog, '打印机编号', 'P-01');
-    await this.fillRegisterRow(0, data.specimenName, data.specimenSite, data.barcodes[0]);
+    await this.fillRegisterRow(
+      0,
+      data.specimenName,
+      data.specimenSite,
+      data.barcodes[0],
+    );
     await dialog.getByRole('button', { name: '新增' }).first().click();
-    await this.fillRegisterRow(1, data.specimenName, data.specimenSite, data.barcodes[1]);
+    await this.fillRegisterRow(
+      1,
+      data.specimenName,
+      data.specimenSite,
+      data.barcodes[1],
+    );
 
     const [registerResponse] = await Promise.all([
       this.page.waitForResponse(
         (response) =>
-          response.request().method() === 'POST'
-          && response.url().includes('/api/v1/specimens/register'),
+          response.request().method() === 'POST' &&
+          response.url().includes('/api/v1/specimens/register'),
       ),
       dialog.getByRole('button', { name: '提交登记' }).click(),
     ]);
@@ -109,7 +122,8 @@ export class SubmissionRegistrationPage {
     expect(registerResponse.ok(), '标本登记接口返回失败。').toBeTruthy();
 
     await waitForToast(this.page, '标本登记成功');
-    return (await registerResponse.json()).data as RegistrationResult;
+    const registerPayload = await registerResponse.json();
+    return registerPayload.data as RegistrationResult;
   }
 
   private async fillRegisterRow(

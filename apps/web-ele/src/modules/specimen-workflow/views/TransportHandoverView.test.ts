@@ -96,7 +96,8 @@ vi.mock('../components/TransportOrderCreateDialog.vue', () => ({
 }));
 
 vi.mock('element-plus', async () => {
-  const actual = await vi.importActual<typeof import('element-plus')>('element-plus');
+  const actual =
+    await vi.importActual<typeof import('element-plus')>('element-plus');
   return {
     ...actual,
     ElMessage: { success: vi.fn(), warning: vi.fn() },
@@ -146,16 +147,18 @@ describe('TransportHandoverView', () => {
       expect.objectContaining({ applicationId: 'APP-002' }),
     );
 
-    const createButton = [...container.querySelectorAll('button')].find((button) =>
-      button.textContent?.includes('创建转运单'),
+    const createButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('创建转运单'),
     );
     createButton?.click();
     await flush();
 
-    const dialog = container.querySelector('[data-testid="transport-order-create-dialog"]');
-    expect(dialog?.getAttribute('data-open')).toBe('true');
-    expect(dialog?.getAttribute('data-application-id')).toBe('APP-002');
-    expect(dialog?.getAttribute('data-application-no')).toBe('M2-20260526-002');
+    const dialog = container.querySelector<HTMLElement>(
+      '[data-testid="transport-order-create-dialog"]',
+    );
+    expect(dialog?.dataset.open).toBe('true');
+    expect(dialog?.dataset.applicationId).toBe('APP-002');
+    expect(dialog?.dataset.applicationNo).toBe('M2-20260526-002');
 
     app.unmount();
   });
@@ -172,7 +175,11 @@ describe('TransportHandoverView', () => {
     specimenNoInput!.value = 'SP-TR-001';
     specimenNoInput!.dispatchEvent(new Event('input', { bubbles: true }));
     specimenNoInput!.dispatchEvent(
-      new KeyboardEvent('keyup', { bubbles: true, code: 'Enter', key: 'Enter' }),
+      new KeyboardEvent('keyup', {
+        bubbles: true,
+        code: 'Enter',
+        key: 'Enter',
+      }),
     );
     await flush();
 
@@ -184,7 +191,9 @@ describe('TransportHandoverView', () => {
   });
 
   it('does not render a page-level error alert when the initial load fails', async () => {
-    listPendingTransportOrdersMock.mockRejectedValueOnce(new Error('资源不存在'));
+    listPendingTransportOrdersMock.mockRejectedValueOnce(
+      new Error('资源不存在'),
+    );
 
     const { app, container } = mountView();
     await flush();

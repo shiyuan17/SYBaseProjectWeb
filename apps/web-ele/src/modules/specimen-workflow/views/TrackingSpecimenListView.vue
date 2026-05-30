@@ -74,7 +74,9 @@ const canManageSpecimens = computed(() =>
   accessStore.accessCodes.includes(M2_PERMISSION_CODES.SPECIMEN_REGISTER),
 );
 const canQueryApplicationDetail = computed(() =>
-  accessStore.accessCodes.includes(M2_PERMISSION_CODES.APPLICATION_DETAIL_QUERY),
+  accessStore.accessCodes.includes(
+    M2_PERMISSION_CODES.APPLICATION_DETAIL_QUERY,
+  ),
 );
 
 const quickFilterOptions: Array<{ key: QuickFilterKey; label: string }> = [
@@ -138,8 +140,10 @@ const filters = reactive({
 const detailVisible = ref(false);
 const detailLoading = ref(false);
 const detailRow = ref<null | SpecimenManagementListItem>(null);
-const detailApplicationDetail = ref<null | ApplicationDetailView>(null);
-const detailLatestRegisterResult = ref<LatestSpecimenRegistrationResult | null>(null);
+const detailApplicationDetail = ref<ApplicationDetailView | null>(null);
+const detailLatestRegisterResult = ref<LatestSpecimenRegistrationResult | null>(
+  null,
+);
 
 const detailTargetSpecimen = computed(() => {
   const specimenId = detailRow.value?.specimenId;
@@ -147,18 +151,27 @@ const detailTargetSpecimen = computed(() => {
     return null;
   }
   return (
-    detailApplicationDetail.value?.specimens.find((specimen) => specimen.id === specimenId)
-    ?? detailLatestRegisterResult.value?.specimens.find((specimen) => specimen.id === specimenId)
-    ?? null
+    detailApplicationDetail.value?.specimens.find(
+      (specimen) => specimen.id === specimenId,
+    ) ??
+    detailLatestRegisterResult.value?.specimens.find(
+      (specimen) => specimen.id === specimenId,
+    ) ??
+    null
   );
 });
 
 const detailAbnormalSpecimens = computed(() =>
-  detailTargetSpecimen.value ? buildSpecimenAbnormalDetails([detailTargetSpecimen.value]) : [],
+  detailTargetSpecimen.value
+    ? buildSpecimenAbnormalDetails([detailTargetSpecimen.value])
+    : [],
 );
 
 function resolveQuickFilterQuery(): Partial<
-  Pick<SpecimenManagementListQuery, 'abnormalFlag' | 'labelPrintStatus' | 'specimenStatus'>
+  Pick<
+    SpecimenManagementListQuery,
+    'abnormalFlag' | 'labelPrintStatus' | 'specimenStatus'
+  >
 > {
   if (quickFilter.value === 'ABNORMAL') {
     return { abnormalFlag: true };
@@ -193,7 +206,8 @@ function buildListQuery(): SpecimenManagementListQuery {
     labelPrintStatus: filters.labelPrintStatus || quickQuery.labelPrintStatus,
     page: filters.page,
     size: filters.size,
-    specimenStatus: filters.specimenStatus || quickQuery.specimenStatus || undefined,
+    specimenStatus:
+      filters.specimenStatus || quickQuery.specimenStatus || undefined,
   };
 }
 
@@ -208,7 +222,11 @@ function labelTagType(status?: null | string) {
 }
 
 function specimenTagType(row: SpecimenManagementListItem) {
-  if (row.abnormalFlag || row.specimenStatus === 'REJECTED' || row.specimenStatus === 'RETURNED') {
+  if (
+    row.abnormalFlag ||
+    row.specimenStatus === 'REJECTED' ||
+    row.specimenStatus === 'RETURNED'
+  ) {
     return 'danger';
   }
   if (row.specimenStatus === 'RECEIVED' || row.specimenStatus === 'FIXED') {
@@ -305,7 +323,9 @@ function handleReset() {
   void loadSpecimens();
 }
 
-function handleDepartmentChange(department: null | { id: string; name: string }) {
+function handleDepartmentChange(
+  department: null | { id: string; name: string },
+) {
   filters.departmentId = department?.id ?? '';
 }
 
@@ -482,7 +502,11 @@ watch(
       <ElTable v-loading="listLoading" :data="items" border>
         <ElTableColumn label="标本编号" min-width="150" prop="specimenNo" />
         <ElTableColumn label="条码" min-width="180" prop="barcode" />
-        <ElTableColumn label="关联申请单" min-width="160" prop="applicationNo" />
+        <ElTableColumn
+          label="关联申请单"
+          min-width="160"
+          prop="applicationNo"
+        />
         <ElTableColumn label="患者姓名" min-width="120">
           <template #default="{ row }">
             {{ formatNullable(row.patientName) }}
@@ -582,15 +606,28 @@ watch(
               </div>
               <div class="mt-2 grid gap-2 md:grid-cols-2">
                 <div>异常类型：{{ formatReceiptStatus(specimen.status) }}</div>
-                <div>质控结果：{{ formatQualityCheckResult(specimen.qualityCheckResult) }}</div>
-                <div>问题代码：{{ specimen.qualityIssueCodes.length ? specimen.qualityIssueCodes.join('、') : '-' }}</div>
+                <div>
+                  质控结果：{{
+                    formatQualityCheckResult(specimen.qualityCheckResult)
+                  }}
+                </div>
+                <div>
+                  问题代码：{{
+                    specimen.qualityIssueCodes.length > 0
+                      ? specimen.qualityIssueCodes.join('、')
+                      : '-'
+                  }}
+                </div>
                 <div>原因：{{ specimen.reason || '-' }}</div>
               </div>
             </div>
           </div>
         </WorkflowSectionCard>
 
-        <WorkflowSectionCard title="标本基础信息" description="展示标本、条码、容器、状态与最近批次信息。">
+        <WorkflowSectionCard
+          title="标本基础信息"
+          description="展示标本、条码、容器、状态与最近批次信息。"
+        >
           <ElDescriptions :column="2" border>
             <ElDescriptionsItem label="标本编号">
               {{ detailRow?.specimenNo || '-' }}
@@ -631,19 +668,32 @@ watch(
           </ElDescriptions>
         </WorkflowSectionCard>
 
-        <WorkflowSectionCard title="所属申请单信息" description="展示关联申请单的患者、科室、节点和临床诊断。">
+        <WorkflowSectionCard
+          title="所属申请单信息"
+          description="展示关联申请单的患者、科室、节点和临床诊断。"
+        >
           <ElDescriptions :column="2" border>
             <ElDescriptionsItem label="申请单号">
-              {{ formatNullable(detailApplicationDetail?.applicationNo ?? detailRow?.applicationNo) }}
+              {{
+                formatNullable(
+                  detailApplicationDetail?.applicationNo ??
+                    detailRow?.applicationNo,
+                )
+              }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="患者姓名">
-              {{ formatNullable(detailApplicationDetail?.patientName ?? detailRow?.patientName) }}
+              {{
+                formatNullable(
+                  detailApplicationDetail?.patientName ??
+                    detailRow?.patientName,
+                )
+              }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="送检科室">
               {{
                 formatNullable(
-                  detailApplicationDetail?.submittingDepartmentName
-                    ?? detailRow?.submittingDepartmentName,
+                  detailApplicationDetail?.submittingDepartmentName ??
+                    detailRow?.submittingDepartmentName,
                 )
               }}
             </ElDescriptionsItem>
@@ -656,15 +706,21 @@ watch(
           </ElDescriptions>
         </WorkflowSectionCard>
 
-        <WorkflowSectionCard title="最近流程节点" description="展示最近追踪事件和操作上下文。">
+        <WorkflowSectionCard
+          title="最近流程节点"
+          description="展示最近追踪事件和操作上下文。"
+        >
           <ElTimeline v-if="detailApplicationDetail?.recentEvents?.length">
             <ElTimelineItem
-              v-for="(event, index) in detailApplicationDetail.recentEvents.slice(-6).reverse()"
+              v-for="(event, index) in detailApplicationDetail.recentEvents
+                .slice(-6)
+                .reverse()"
               :key="`${event.eventTime}-${event.nodeCode}-${index}`"
               :timestamp="formatDateTime(event.eventTime)"
             >
               <div class="font-medium text-foreground">
-                {{ formatCurrentNode(event.nodeCode) }} / {{ formatNullable(event.eventType) }}
+                {{ formatCurrentNode(event.nodeCode) }} /
+                {{ formatNullable(event.eventType) }}
               </div>
               <div class="text-sm text-muted-foreground">
                 {{ formatNullable(event.operatorName) }}
@@ -674,26 +730,53 @@ watch(
           <ElEmpty v-else description="暂无流程节点记录" />
         </WorkflowSectionCard>
 
-        <WorkflowSectionCard title="最近标签批次结果" description="展示当前申请单最近一次登记批次及其标本结果。">
+        <WorkflowSectionCard
+          title="最近标签批次结果"
+          description="展示当前申请单最近一次登记批次及其标本结果。"
+        >
           <template v-if="detailLatestRegisterResult?.labelPrintBatchNo">
             <ElDescriptions :column="2" border>
               <ElDescriptionsItem label="标签批次号">
                 {{ detailLatestRegisterResult.labelPrintBatchNo }}
               </ElDescriptionsItem>
               <ElDescriptionsItem label="打印结果">
-                <ElTag :type="detailLatestRegisterResult.labelPrintSuccess ? 'success' : 'warning'">
-                  {{ detailLatestRegisterResult.labelPrintSuccess ? '成功' : '存在失败' }}
+                <ElTag
+                  :type="
+                    detailLatestRegisterResult.labelPrintSuccess
+                      ? 'success'
+                      : 'warning'
+                  "
+                >
+                  {{
+                    detailLatestRegisterResult.labelPrintSuccess
+                      ? '成功'
+                      : '存在失败'
+                  }}
                 </ElTag>
               </ElDescriptionsItem>
               <ElDescriptionsItem :span="2" label="结果说明">
-                {{ formatNullable(detailLatestRegisterResult.labelPrintMessage) }}
+                {{
+                  formatNullable(detailLatestRegisterResult.labelPrintMessage)
+                }}
               </ElDescriptionsItem>
             </ElDescriptions>
 
-            <ElTable :data="detailLatestRegisterResult.specimens" border class="mt-4">
-              <ElTableColumn label="标本编号" min-width="140" prop="specimenNo" />
+            <ElTable
+              :data="detailLatestRegisterResult.specimens"
+              border
+              class="mt-4"
+            >
+              <ElTableColumn
+                label="标本编号"
+                min-width="140"
+                prop="specimenNo"
+              />
               <ElTableColumn label="条码" min-width="180" prop="barcode" />
-              <ElTableColumn label="标本名称" min-width="180" prop="specimenName" />
+              <ElTableColumn
+                label="标本名称"
+                min-width="180"
+                prop="specimenName"
+              />
               <ElTableColumn label="容器名称" min-width="140">
                 <template #default="{ row }">
                   {{ formatNullable(row.containerName) }}
@@ -701,7 +784,9 @@ watch(
               </ElTableColumn>
               <ElTableColumn label="容器数/标本数" min-width="140">
                 <template #default="{ row }">
-                  {{ `${row.containerCount ?? '-'} / ${row.specimenCount ?? '-'}` }}
+                  {{
+                    `${row.containerCount ?? '-'} / ${row.specimenCount ?? '-'}`
+                  }}
                 </template>
               </ElTableColumn>
               <ElTableColumn label="标签状态" min-width="120">
@@ -712,9 +797,25 @@ watch(
               <ElTableColumn label="异常明细" min-width="320">
                 <template #default="{ row }">
                   <div class="flex flex-col gap-1 text-sm">
-                    <div>异常类型：{{ formatReceiptStatus(row.receiptStatus ?? row.specimenStatus) }}</div>
-                    <div>质控结果：{{ formatQualityCheckResult(row.qualityCheckResult) }}</div>
-                    <div>问题代码：{{ row.qualityIssueCodes?.length ? row.qualityIssueCodes.join('、') : '-' }}</div>
+                    <div>
+                      异常类型：{{
+                        formatReceiptStatus(
+                          row.receiptStatus ?? row.specimenStatus,
+                        )
+                      }}
+                    </div>
+                    <div>
+                      质控结果：{{
+                        formatQualityCheckResult(row.qualityCheckResult)
+                      }}
+                    </div>
+                    <div>
+                      问题代码：{{
+                        row.qualityIssueCodes?.length
+                          ? row.qualityIssueCodes.join('、')
+                          : '-'
+                      }}
+                    </div>
                     <div>原因：{{ formatNullable(row.abnormalReason) }}</div>
                   </div>
                 </template>

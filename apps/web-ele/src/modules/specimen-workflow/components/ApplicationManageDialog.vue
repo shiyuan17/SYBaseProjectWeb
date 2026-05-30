@@ -10,13 +10,6 @@ import { computed, reactive, ref, watch } from 'vue';
 import { useAccessStore } from '@vben/stores';
 
 import {
-  createEmptyWorkflowReferenceOptions,
-  loadWorkflowReferenceOptionsSafely,
-} from '#/modules/system-management/api/workflow-reference-service';
-import ReferenceOptionSelect from '#/modules/system-management/components/ReferenceOptionSelect.vue';
-import { GENDER_OPTIONS } from '#/modules/system-management/constants';
-
-import {
   ElAlert,
   ElButton,
   ElDialog,
@@ -32,6 +25,13 @@ import {
 } from 'element-plus';
 
 import {
+  createEmptyWorkflowReferenceOptions,
+  loadWorkflowReferenceOptionsSafely,
+} from '#/modules/system-management/api/workflow-reference-service';
+import ReferenceOptionSelect from '#/modules/system-management/components/ReferenceOptionSelect.vue';
+import { GENDER_OPTIONS } from '#/modules/system-management/constants';
+
+import {
   createApplication,
   duplicateCheckApplications,
   getApplicationDetail,
@@ -44,7 +44,6 @@ import {
   M2_PERMISSION_CODES,
 } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
-
 import WorkflowSectionCard from './WorkflowSectionCard.vue';
 
 type DialogTabName = 'create' | 'import';
@@ -95,8 +94,8 @@ const canSubmitCreateForm = computed(() =>
   isEditMode.value ? canUpdateApplication.value : canCreateApplication.value,
 );
 const canShowCreateForm = computed(() => canSubmitCreateForm.value);
-const canShowImportTab = computed(() =>
-  !isEditMode.value && canImportClinicalApplication.value,
+const canShowImportTab = computed(
+  () => !isEditMode.value && canImportClinicalApplication.value,
 );
 const hasDialogCapability = computed(() =>
   isEditMode.value ? canUpdateApplication.value : hasManageCapability.value,
@@ -270,15 +269,21 @@ function confirmDuplicateWarning() {
 
 function trimOrNull(value?: null | string) {
   const normalized = value?.trim();
-  return normalized ? normalized : null;
+  return normalized || null;
 }
 
 async function handleDuplicateCheck() {
-  if (!trimOrNull(createForm.patientId) && !trimOrNull(createForm.patientName)) {
+  if (
+    !trimOrNull(createForm.patientId) &&
+    !trimOrNull(createForm.patientName)
+  ) {
     ElMessage.warning('请先填写患者编号或患者姓名');
     return false;
   }
-  if (!trimOrNull(createForm.externalOrderNo) && !trimOrNull(createForm.applicationDate)) {
+  if (
+    !trimOrNull(createForm.externalOrderNo) &&
+    !trimOrNull(createForm.applicationDate)
+  ) {
     ElMessage.warning('请至少填写外部单号或申请日期');
     return false;
   }
@@ -297,9 +302,13 @@ async function handleDuplicateCheck() {
     const duplicateItems = isEditMode.value
       ? result.items.filter((item) => item.id !== props.applicationId)
       : result.items;
-    duplicateSuggestedAction.value = duplicateItems.length === 0
-      ? 'ALLOW'
-      : duplicateItems.length === 1 ? 'CONFIRM' : result.suggestedAction;
+    if (duplicateItems.length === 0) {
+      duplicateSuggestedAction.value = 'ALLOW';
+    } else if (duplicateItems.length === 1) {
+      duplicateSuggestedAction.value = 'CONFIRM';
+    } else {
+      duplicateSuggestedAction.value = result.suggestedAction;
+    }
     if (duplicateItems.length === 0) {
       duplicateCheckMessage.value = '未发现疑似重复申请';
       duplicateConfirmed.value = true;
@@ -373,14 +382,17 @@ async function submitCreateApplication(mode: SubmitMode) {
       sourceHospitalId: createForm.sourceHospitalId?.trim() || null,
       sourceHospitalName: createForm.sourceHospitalName?.trim() || null,
     };
-    const result = isEditMode.value && props.applicationId
-      ? await updateApplication(props.applicationId, payload)
-      : await createApplication(payload);
-    ElMessage.success(
-      isEditMode.value
-        ? '申请单更新成功'
-        : mode === 'save' ? '申请单创建成功' : '申请单创建成功，正在前往标本登记',
-    );
+    const result =
+      isEditMode.value && props.applicationId
+        ? await updateApplication(props.applicationId, payload)
+        : await createApplication(payload);
+    let submitSuccessMessage = '申请单创建成功，正在前往标本登记';
+    if (isEditMode.value) {
+      submitSuccessMessage = '申请单更新成功';
+    } else if (mode === 'save') {
+      submitSuccessMessage = '申请单创建成功';
+    }
+    ElMessage.success(submitSuccessMessage);
     await handleSubmitSuccess(result.id, mode);
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
@@ -410,7 +422,9 @@ async function submitImportClinicalApplication(mode: SubmitMode) {
       thirdPartySource: importForm.thirdPartySource.trim(),
     });
     ElMessage.success(
-      mode === 'save' ? '临床申请导入成功' : '临床申请导入成功，正在前往标本登记',
+      mode === 'save'
+        ? '临床申请导入成功'
+        : '临床申请导入成功，正在前往标本登记',
     );
     await handleSubmitSuccess(result.id, mode);
   } catch (error) {
@@ -446,7 +460,11 @@ watch(
       void loadApplicationForEdit();
       return;
     }
-    if (!creatingApplication.value && !importingClinicalApplication.value && !loadingApplicationDetail.value) {
+    if (
+      !creatingApplication.value &&
+      !importingClinicalApplication.value &&
+      !loadingApplicationDetail.value
+    ) {
       resetDialogState();
     }
   },
@@ -555,7 +573,10 @@ watch(
                   />
                 </ElFormItem>
                 <ElFormItem label="申请单随附">
-                  <ElSelect v-model="createForm.applicationFormStatus" placeholder="请选择随附状态">
+                  <ElSelect
+                    v-model="createForm.applicationFormStatus"
+                    placeholder="请选择随附状态"
+                  >
                     <ElOption
                       v-for="option in editableApplicationFormStatusOptions"
                       :key="option.value"
@@ -581,12 +602,17 @@ watch(
                 v-if="duplicateCheckMessage"
                 :closable="false"
                 :title="duplicateCheckMessage"
-                :type="duplicateSuggestedAction === 'BLOCK' ? 'warning' : 'info'"
+                :type="
+                  duplicateSuggestedAction === 'BLOCK' ? 'warning' : 'info'
+                "
                 class="mb-4"
                 show-icon
               />
               <div
-                v-if="duplicateCheckMessage && duplicateSuggestedAction === 'CONFIRM'"
+                v-if="
+                  duplicateCheckMessage &&
+                  duplicateSuggestedAction === 'CONFIRM'
+                "
                 class="mb-4 flex justify-end"
               >
                 <ElButton type="primary" @click="confirmDuplicateWarning">
@@ -660,7 +686,11 @@ watch(
 
       <ElEmpty
         v-else
-        :description="isEditMode ? '当前账号没有申请单编辑权限' : '当前账号没有申请单创建或导入权限'"
+        :description="
+          isEditMode
+            ? '当前账号没有申请单编辑权限'
+            : '当前账号没有申请单创建或导入权限'
+        "
       />
     </div>
 

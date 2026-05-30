@@ -33,13 +33,13 @@ const props = withDefaults(
 );
 
 const emit = defineEmits<{
-  'reprint-application-form': [
+  reprintApplicationForm: [
     payload: {
       applicationId: string;
       record: ApplicationRegistrationWorkbenchRecord;
     },
   ];
-  'save-workbench': [payload: { recordApplicationId: string }];
+  saveWorkbench: [payload: { recordApplicationId: string }];
 }>();
 
 const {
@@ -118,7 +118,7 @@ async function submitWorkbenchSave() {
   if (!result || !currentRecord.value?.applicationId) {
     return;
   }
-  emit('save-workbench', {
+  emit('saveWorkbench', {
     recordApplicationId: currentRecord.value.applicationId,
   });
 }
@@ -134,7 +134,7 @@ function emitReprintApplicationForm(applicationId: string) {
   if (!reprintApplicationId) {
     return;
   }
-  emit('reprint-application-form', {
+  emit('reprintApplicationForm', {
     applicationId: reprintApplicationId,
     record: currentRecord.value,
   });

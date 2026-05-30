@@ -1,6 +1,8 @@
 import type { Browser, BrowserContext, Page } from 'playwright/test';
 
-import { e2eEnv, getStorageStatePath, type E2ERole } from './env';
+import type { E2ERole } from './env';
+
+import { e2eEnv, getStorageStatePath } from './env';
 
 export async function openRolePage(
   browser: Browser,

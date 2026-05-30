@@ -1,4 +1,6 @@
-import { expect, type Page } from 'playwright/test';
+import type { Page } from 'playwright/test';
+
+import { expect } from 'playwright/test';
 
 import {
   getDialog,
@@ -31,8 +33,8 @@ export class PathologyReceiptPage {
     const [receiptResponse] = await Promise.all([
       this.page.waitForResponse(
         (response) =>
-          response.request().method() === 'POST'
-          && /\/api\/v1\/specimen-receipts$/.test(response.url()),
+          response.request().method() === 'POST' &&
+          response.url().endsWith('/api/v1/specimen-receipts'),
       ),
       dialog.getByRole('button', { name: '提交接收' }).click(),
     ]);
@@ -40,7 +42,8 @@ export class PathologyReceiptPage {
     expect(receiptResponse.ok(), '标本接收接口返回失败。').toBeTruthy();
     await waitForToast(this.page, '标本接收成功');
     await expect(this.page.getByText('接收结果')).toBeVisible();
-    return (await receiptResponse.json()).data as ReceiptResult;
+    const receiptPayload = await receiptResponse.json();
+    return receiptPayload.data as ReceiptResult;
   }
 
   async rejectOneSpecimen(transportOrderId: string, reason: string) {
@@ -59,7 +62,9 @@ export class PathologyReceiptPage {
 
     await qualityIssueSelect.click();
     await this.page
-      .locator('.el-select-dropdown:visible .el-select-dropdown__item:not(.is-disabled)')
+      .locator(
+        '.el-select-dropdown:visible .el-select-dropdown__item:not(.is-disabled)',
+      )
       .nth(2)
       .click();
 
@@ -68,8 +73,8 @@ export class PathologyReceiptPage {
     const [receiptResponse] = await Promise.all([
       this.page.waitForResponse(
         (response) =>
-          response.request().method() === 'POST'
-          && /\/api\/v1\/specimen-receipts$/.test(response.url()),
+          response.request().method() === 'POST' &&
+          response.url().endsWith('/api/v1/specimen-receipts'),
       ),
       dialog.getByRole('button', { name: '提交接收' }).click(),
     ]);
@@ -77,12 +82,16 @@ export class PathologyReceiptPage {
     expect(receiptResponse.ok(), '异常接收接口返回失败。').toBeTruthy();
     await waitForToast(this.page, '标本接收成功');
     await expect(this.page.getByText('接收结果')).toBeVisible();
-    return (await receiptResponse.json()).data as ReceiptResult;
+    const receiptPayload = await receiptResponse.json();
+    return receiptPayload.data as ReceiptResult;
   }
 
   private async openReceiptDialog(transportOrderId: string) {
     await waitForTableRow(this.page, transportOrderId);
-    const row = this.page.locator('.el-table__row').filter({ hasText: transportOrderId }).first();
+    const row = this.page
+      .locator('.el-table__row')
+      .filter({ hasText: transportOrderId })
+      .first();
     await row.getByRole('button', { name: '接收' }).click();
     await expect(getDialog(this.page, '接收标本')).toBeVisible();
   }

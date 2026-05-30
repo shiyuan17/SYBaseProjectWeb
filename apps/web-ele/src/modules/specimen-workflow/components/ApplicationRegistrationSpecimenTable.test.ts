@@ -4,132 +4,43 @@ import type {
   WorkbenchSpecimenPrintContext,
 } from '../types/application-registration-workbench';
 
-import {
-  computed,
-  createApp,
-  defineComponent,
-  h,
-  inject,
-  provide,
-  type ComputedRef,
-} from 'vue';
+import { createApp } from 'vue';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const tableDataKey = Symbol('table-data');
+import {
+  createAutocompleteStub,
+  createButtonStub,
+  createEmptyStub,
+  createInputNumberStub,
+  createPassthroughStub,
+  createTableColumnStub,
+  createTableStub,
+  createTagStub,
+} from '../test-utils/component-stubs';
+
+const tableDataKey = vi.hoisted(() => Symbol('table-data'));
 const buildSpecimenPrintDocumentMock = vi.hoisted(() => vi.fn());
 const buildSpecimenBatchPrintDocumentMock = vi.hoisted(() => vi.fn());
 const warningMock = vi.hoisted(() => vi.fn());
 const errorMock = vi.hoisted(() => vi.fn());
 
 vi.mock('element-plus', () => ({
-  ElAutocomplete: defineComponent({
-    props: {
-      modelValue: { default: '', type: String },
-    },
-    emits: ['blur', 'select', 'update:model-value'],
-    setup(props) {
-      return () => h('div', { 'data-testid': 'autocomplete' }, props.modelValue);
-    },
-  }),
-  ElButton: defineComponent({
-    emits: ['click'],
-    setup(_, { emit, slots }) {
-      return () =>
-        h(
-          'button',
-          {
-            onClick: () => emit('click'),
-            type: 'button',
-          },
-          slots.default?.(),
-        );
-    },
-  }),
-  ElEmpty: defineComponent({
-    props: {
-      description: { default: '', type: String },
-    },
-    setup(props) {
-      return () => h('div', { 'data-testid': 'empty' }, props.description);
-    },
-  }),
-  ElInputNumber: defineComponent({
-    props: {
-      modelValue: { default: 1, type: Number },
-    },
-    emits: ['update:model-value'],
-    setup(props) {
-      return () => h('div', { 'data-testid': 'input-number' }, String(props.modelValue));
-    },
-  }),
+  ElAutocomplete: createAutocompleteStub(),
+  ElButton: createButtonStub(),
+  ElEmpty: createEmptyStub(),
+  ElInputNumber: createInputNumberStub(),
   ElMessage: {
     error: errorMock,
     warning: warningMock,
   },
-  ElTable: defineComponent({
-    props: {
-      data: { default: () => [], type: Array },
-      height: { default: undefined, type: [Number, String] },
-    },
-    emits: ['selection-change'],
-    setup(props, { slots }) {
-      provide(
-        tableDataKey,
-        computed(() => props.data),
-      );
-      return () =>
-        h(
-          'div',
-          {
-            'data-height': props.height === undefined ? '' : String(props.height),
-            'data-testid': 'table',
-          },
-          slots.default?.(),
-        );
-    },
-  }),
-  ElTableColumn: defineComponent({
-    props: {
-      label: { default: '', type: String },
-      prop: { default: '', type: String },
-    },
-    setup(props, { slots }) {
-      const data = inject<ComputedRef<WorkbenchSpecimenItem[]>>(tableDataKey);
-
-      return () =>
-        h(
-          'div',
-          { 'data-column-label': props.label },
-          (data?.value ?? []).map((row, index) =>
-            h(
-              'div',
-              {
-                'data-column-cell': `${props.label}-${index}`,
-              },
-              slots.default?.({ $index: index, row }) ??
-                (props.prop ? String(row[props.prop as keyof WorkbenchSpecimenItem] ?? '') : ''),
-            ),
-          ),
-        );
-    },
-  }),
-  ElTag: defineComponent({
-    props: {
-      type: { default: '', type: String },
-    },
-    setup(props, { slots }) {
-      return () => h('span', { 'data-tag-type': props.type }, slots.default?.());
-    },
-  }),
+  ElTable: createTableStub(tableDataKey),
+  ElTableColumn: createTableColumnStub(tableDataKey),
+  ElTag: createTagStub(),
 }));
 
 vi.mock('./WorkflowSectionCard.vue', () => ({
-  default: defineComponent({
-    setup(_, { slots }) {
-      return () => h('section', slots.default?.());
-    },
-  }),
+  default: createPassthroughStub('section'),
 }));
 
 vi.mock('../utils/specimen-print', () => ({
@@ -159,7 +70,7 @@ function createProps(items: WorkbenchSpecimenItem[]) {
   return {
     commonSpecimenOptions: [] as SpecimenDictionaryEntryOption[],
     items,
-    printContext: null as WorkbenchSpecimenPrintContext | null,
+    printContext: null as null | WorkbenchSpecimenPrintContext,
     roomLabel: 'A01',
     specimenEntryOptions: [] as SpecimenDictionaryEntryOption[],
   };
@@ -169,7 +80,10 @@ function renderComponent(items: WorkbenchSpecimenItem[]): Wrapper {
   const container = document.createElement('div');
   document.body.append(container);
 
-  const app = createApp(ApplicationRegistrationSpecimenTable, createProps(items));
+  const app = createApp(
+    ApplicationRegistrationSpecimenTable,
+    createProps(items),
+  );
   app.mount(container);
 
   return {
@@ -199,9 +113,9 @@ describe('ApplicationRegistrationSpecimenTable', () => {
       createSpecimenItem('UNKNOWN_STATUS'),
     ]);
 
-    const tagTexts = [...wrapper.container.querySelectorAll('[data-tag-type]')].map((node) =>
-      node.textContent?.trim(),
-    );
+    const tagTexts = [
+      ...wrapper.container.querySelectorAll('[data-tag-type]'),
+    ].map((node) => node.textContent?.trim());
 
     expect(tagTexts).toEqual([
       '固定完成',
@@ -224,9 +138,9 @@ describe('ApplicationRegistrationSpecimenTable', () => {
       createSpecimenItem('RETURNED'),
     ]);
 
-    const tagTypes = [...wrapper.container.querySelectorAll('[data-tag-type]')].map((node) =>
-      node.getAttribute('data-tag-type'),
-    );
+    const tagTypes = [
+      ...wrapper.container.querySelectorAll<HTMLElement>('[data-tag-type]'),
+    ].map((node) => node.dataset.tagType);
 
     expect(tagTypes).toEqual(['primary', 'info', 'warning']);
 
@@ -236,9 +150,13 @@ describe('ApplicationRegistrationSpecimenTable', () => {
   it('does not force table full height when there are no specimen rows', () => {
     const wrapper = renderComponent([]);
 
-    const table = wrapper.container.querySelector('[data-testid="table"]');
-    expect(table?.getAttribute('data-height')).toBe('');
-    expect(wrapper.container.textContent).toContain('暂无标本，请从下方字典、常用标本或套餐中快速追加');
+    const table = wrapper.container.querySelector<HTMLElement>(
+      '[data-testid="table"]',
+    );
+    expect(table?.dataset.height).toBe('');
+    expect(wrapper.container.textContent).toContain(
+      '暂无标本，请从下方字典、常用标本或套餐中快速追加',
+    );
 
     wrapper.unmount();
   });
@@ -255,12 +173,14 @@ describe('ApplicationRegistrationSpecimenTable', () => {
   it('warns when printing without print context', async () => {
     const wrapper = renderComponent([createSpecimenItem('FIXED')]);
 
-    const printButton = [...wrapper.container.querySelectorAll('button')].find((button) =>
-      button.textContent?.includes('打印'),
+    const printButton = [...wrapper.container.querySelectorAll('button')].find(
+      (button) => button.textContent?.trim() === '打印',
     );
     printButton?.click();
 
-    expect(warningMock).toHaveBeenCalledWith('当前缺少标签打印所需的患者上下文信息');
+    expect(warningMock).toHaveBeenCalledWith(
+      '当前缺少标签打印所需的患者上下文信息',
+    );
 
     wrapper.unmount();
   });

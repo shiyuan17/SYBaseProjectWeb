@@ -1,8 +1,6 @@
-import {
-  expect,
-  type Locator,
-  type Page,
-} from 'playwright/test';
+import type { Locator, Page } from 'playwright/test';
+
+import { expect } from 'playwright/test';
 
 type Scope = Locator | Page;
 
@@ -11,7 +9,9 @@ function rootLocator(scope: Scope) {
 }
 
 export async function waitForToast(page: Page, text: string) {
-  await expect(page.locator('.el-message').filter({ hasText: text }).last()).toBeVisible();
+  await expect(
+    page.locator('.el-message').filter({ hasText: text }).last(),
+  ).toBeVisible();
 }
 
 export function getDialog(page: Page, title?: string) {
@@ -19,15 +19,20 @@ export function getDialog(page: Page, title?: string) {
   if (!title) {
     return dialogs.last();
   }
-  return dialogs.filter({
-    has: page.locator('.el-dialog__title').filter({ hasText: title }),
-  }).last();
+  return dialogs
+    .filter({
+      has: page.locator('.el-dialog__title').filter({ hasText: title }),
+    })
+    .last();
 }
 
 export function getDrawer(page: Page, title: string) {
-  return page.locator('.el-drawer:visible').filter({
-    has: page.locator('.el-drawer__title').filter({ hasText: title }),
-  }).last();
+  return page
+    .locator('.el-drawer:visible')
+    .filter({
+      has: page.locator('.el-drawer__title').filter({ hasText: title }),
+    })
+    .last();
 }
 
 export function getFormItem(scope: Scope, label: string) {
@@ -39,7 +44,11 @@ export function getFormItem(scope: Scope, label: string) {
     .first();
 }
 
-export async function fillInputByLabel(scope: Scope, label: string, value: string) {
+export async function fillInputByLabel(
+  scope: Scope,
+  label: string,
+  value: string,
+) {
   const item = getFormItem(scope, label);
   await expect(item).toBeVisible();
   const input = item.locator('input').first();
@@ -47,7 +56,11 @@ export async function fillInputByLabel(scope: Scope, label: string, value: strin
   await input.fill(value);
 }
 
-export async function fillTextareaByLabel(scope: Scope, label: string, value: string) {
+export async function fillTextareaByLabel(
+  scope: Scope,
+  label: string,
+  value: string,
+) {
   const item = getFormItem(scope, label);
   await expect(item).toBeVisible();
   const textarea = item.locator('textarea').first();
@@ -55,7 +68,11 @@ export async function fillTextareaByLabel(scope: Scope, label: string, value: st
   await textarea.fill(value);
 }
 
-export async function fillAutocompleteByLabel(scope: Scope, label: string, value: string) {
+export async function fillAutocompleteByLabel(
+  scope: Scope,
+  label: string,
+  value: string,
+) {
   const item = getFormItem(scope, label);
   const input = item.locator('input').first();
   await input.click();
@@ -64,7 +81,9 @@ export async function fillAutocompleteByLabel(scope: Scope, label: string, value
 }
 
 async function clickSelectTrigger(item: Locator) {
-  const trigger = item.locator('.el-select__wrapper, [role="combobox"], .el-tree-select').first();
+  const trigger = item
+    .locator('.el-select__wrapper, [role="combobox"], .el-tree-select')
+    .first();
   if ((await trigger.count()) > 0) {
     await trigger.click();
     return;
@@ -81,10 +100,14 @@ export async function selectTreeOptionByLabel(
 ) {
   const item = getFormItem(scope, label);
   await clickSelectTrigger(item);
-  const dropdown = page.locator('.el-select-dropdown:visible, .el-popper:visible').last();
+  const dropdown = page
+    .locator('.el-select-dropdown:visible, .el-popper:visible')
+    .last();
   await expect(dropdown).toBeVisible();
   const tree = dropdown.locator('.el-tree');
-  await expect(tree.locator('.el-tree-node__content').first()).toBeVisible({ timeout: 5_000 });
+  await expect(tree.locator('.el-tree-node__content').first()).toBeVisible({
+    timeout: 5000,
+  });
 
   const input = item.locator('input:not([readonly])').first();
 
@@ -94,14 +117,19 @@ export async function selectTreeOptionByLabel(
       await input.fill(candidate);
     }
 
-    const option = tree.locator('.el-tree-node__content').filter({ hasText: candidate }).first();
-    if (await option.isVisible({ timeout: 1_000 }).catch(() => false)) {
+    const option = tree
+      .locator('.el-tree-node__content')
+      .filter({ hasText: candidate })
+      .first();
+    if (await option.isVisible({ timeout: 1000 }).catch(() => false)) {
       await option.click();
       return candidate;
     }
   }
 
-  throw new Error(`未能在树选择器 ${label} 中找到候选项: ${candidates.join(', ')}`);
+  throw new Error(
+    `未能在树选择器 ${label} 中找到候选项: ${candidates.join(', ')}`,
+  );
 }
 
 export async function selectOptionByLabel(
@@ -112,9 +140,12 @@ export async function selectOptionByLabel(
 ) {
   const item = getFormItem(scope, label);
   await clickSelectTrigger(item);
-  const option = page.locator('.el-select-dropdown:visible .el-select-dropdown__item').filter({
-    hasText: optionLabel,
-  }).first();
+  const option = page
+    .locator('.el-select-dropdown:visible .el-select-dropdown__item')
+    .filter({
+      hasText: optionLabel,
+    })
+    .first();
   await option.click();
 }
 
@@ -125,13 +156,22 @@ export async function selectOptionByIndex(
 ) {
   await trigger.click();
   const option = page
-    .locator('.el-select-dropdown:visible .el-select-dropdown__item:not(.is-disabled)')
+    .locator(
+      '.el-select-dropdown:visible .el-select-dropdown__item:not(.is-disabled)',
+    )
     .nth(optionIndex);
   await option.click();
 }
 
-export async function clickTableAction(page: Page, rowText: string, actionText: string) {
-  const row = page.locator('.el-table__row:visible').filter({ hasText: rowText }).first();
+export async function clickTableAction(
+  page: Page,
+  rowText: string,
+  actionText: string,
+) {
+  const row = page
+    .locator('.el-table__row:visible')
+    .filter({ hasText: rowText })
+    .first();
   await expect(row).toBeVisible();
   await row.getByRole('button', { name: actionText }).click();
 }

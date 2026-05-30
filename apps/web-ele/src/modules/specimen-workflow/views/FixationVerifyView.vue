@@ -28,8 +28,8 @@ import {
 import DepartmentSelect from '#/modules/system-management/components/DepartmentSelect.vue';
 
 import {
-  confirmSpecimenRemovalByIdentifier,
   confirmSpecimenRemoval,
+  confirmSpecimenRemovalByIdentifier,
   getApplicationDetail,
   listPendingSpecimenRemovals,
 } from '../api/specimen-workflow-service';
@@ -37,12 +37,6 @@ import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import { formatDateTime, formatNullable } from '../utils/format';
-
-const userStore = useUserStore();
-const route = useRoute();
-type QuickInputRef = InstanceType<typeof ElInput> & {
-  input?: HTMLInputElement | null;
-};
 
 withDefaults(
   defineProps<{
@@ -52,6 +46,11 @@ withDefaults(
     embedded: false,
   },
 );
+const userStore = useUserStore();
+const route = useRoute();
+type QuickInputRef = InstanceType<typeof ElInput> & {
+  input?: HTMLInputElement | null;
+};
 
 const emptySummary: SpecimenRemovalSummary = {
   abnormalCount: 0,
@@ -114,7 +113,9 @@ function formatRemovalStatus(row: SpecimenRemovalItem) {
   return row.specimenRemovalAt ? '离体' : '未设置';
 }
 
-function handleDepartmentChange(department: null | { id: string; name: string }) {
+function handleDepartmentChange(
+  department: null | { id: string; name: string },
+) {
   filters.departmentId = department?.id ?? '';
 }
 
@@ -159,18 +160,23 @@ function resolveCurrentOperator() {
   };
 }
 
-
 async function resolveQuickConfirmIdentifierType(
   identifierType: QuickConfirmIdentifierType,
   identifier: string,
 ) {
   const normalizedIdentifier = identifier.trim();
-  const currentMatches = pendingItems.value.filter((item) =>
-    item.barcode.trim() === normalizedIdentifier
-    || item.specimenNo.trim() === normalizedIdentifier);
+  const currentMatches = pendingItems.value.filter(
+    (item) =>
+      item.barcode.trim() === normalizedIdentifier ||
+      item.specimenNo.trim() === normalizedIdentifier,
+  );
 
-  const hasBarcodeMatch = currentMatches.some((item) => item.barcode.trim() === normalizedIdentifier);
-  const hasSpecimenNoMatch = currentMatches.some((item) => item.specimenNo.trim() === normalizedIdentifier);
+  const hasBarcodeMatch = currentMatches.some(
+    (item) => item.barcode.trim() === normalizedIdentifier,
+  );
+  const hasSpecimenNoMatch = currentMatches.some(
+    (item) => item.specimenNo.trim() === normalizedIdentifier,
+  );
 
   if (hasBarcodeMatch && !hasSpecimenNoMatch) {
     return 'BARCODE' as const;
@@ -188,11 +194,17 @@ async function resolveQuickConfirmIdentifierType(
     page: 1,
     size: 100,
   });
-  const lookupMatches = lookupResult.items.filter((item) =>
-    item.barcode.trim() === normalizedIdentifier
-    || item.specimenNo.trim() === normalizedIdentifier);
-  const lookupHasBarcodeMatch = lookupMatches.some((item) => item.barcode.trim() === normalizedIdentifier);
-  const lookupHasSpecimenNoMatch = lookupMatches.some((item) => item.specimenNo.trim() === normalizedIdentifier);
+  const lookupMatches = lookupResult.items.filter(
+    (item) =>
+      item.barcode.trim() === normalizedIdentifier ||
+      item.specimenNo.trim() === normalizedIdentifier,
+  );
+  const lookupHasBarcodeMatch = lookupMatches.some(
+    (item) => item.barcode.trim() === normalizedIdentifier,
+  );
+  const lookupHasSpecimenNoMatch = lookupMatches.some(
+    (item) => item.specimenNo.trim() === normalizedIdentifier,
+  );
 
   if (lookupHasBarcodeMatch && !lookupHasSpecimenNoMatch) {
     return 'BARCODE' as const;
@@ -205,25 +217,32 @@ async function resolveQuickConfirmIdentifierType(
 }
 
 function focusQuickInput(identifierType: QuickConfirmIdentifierType) {
-  const inputRef = identifierType === 'BARCODE'
-    ? barcodeQuickInputRef.value
-    : specimenNoQuickInputRef.value;
-  const containerRef = identifierType === 'BARCODE'
-    ? barcodeQuickInputContainerRef.value
-    : specimenNoQuickInputContainerRef.value;
+  const inputRef =
+    identifierType === 'BARCODE'
+      ? barcodeQuickInputRef.value
+      : specimenNoQuickInputRef.value;
+  const containerRef =
+    identifierType === 'BARCODE'
+      ? barcodeQuickInputContainerRef.value
+      : specimenNoQuickInputContainerRef.value;
   const nativeInput = containerRef?.querySelector('input');
   nativeInput?.focus();
   if (nativeInput !== document.activeElement) {
     inputRef?.input?.focus();
   }
-  if (nativeInput !== document.activeElement && inputRef?.input !== document.activeElement) {
+  if (
+    nativeInput !== document.activeElement &&
+    inputRef?.input !== document.activeElement
+  ) {
     inputRef?.focus();
   }
 }
 
 async function submitQuickConfirm(identifierType: QuickConfirmIdentifierType) {
   const isBarcode = identifierType === 'BARCODE';
-  const currentValue = isBarcode ? barcodeQuickInput.value : specimenNoQuickInput.value;
+  const currentValue = isBarcode
+    ? barcodeQuickInput.value
+    : specimenNoQuickInput.value;
   const normalizedValue = currentValue.trim();
   const { operatorName, operatorUserId } = resolveCurrentOperator();
 
@@ -240,7 +259,10 @@ async function submitQuickConfirm(identifierType: QuickConfirmIdentifierType) {
   quickActionLoading.specimenNo = !isBarcode;
   pageError.value = '';
   try {
-    const resolvedIdentifierType = await resolveQuickConfirmIdentifierType(identifierType, normalizedValue);
+    const resolvedIdentifierType = await resolveQuickConfirmIdentifierType(
+      identifierType,
+      normalizedValue,
+    );
     await confirmSpecimenRemovalByIdentifier({
       identifier: normalizedValue,
       identifierType: resolvedIdentifierType,
@@ -310,8 +332,12 @@ async function submitConfirmRemoval(row: SpecimenRemovalItem) {
 
 async function syncApplicationNoFromRoute() {
   const currentToken = ++routeSyncToken;
-  const routeApplicationNo = normalizeRouteQueryValue(route.query.applicationNo).trim();
-  const routeApplicationId = normalizeRouteQueryValue(route.query.applicationId).trim();
+  const routeApplicationNo = normalizeRouteQueryValue(
+    route.query.applicationNo,
+  ).trim();
+  const routeApplicationId = normalizeRouteQueryValue(
+    route.query.applicationId,
+  ).trim();
   let resolvedApplicationNo = routeApplicationNo;
 
   if (!resolvedApplicationNo && routeApplicationId) {
@@ -361,18 +387,37 @@ watch(
       >
         <div class="mb-4 flex flex-wrap items-center gap-4 text-sm">
           <div class="font-semibold text-[color:#d6453d]">设置离体时间</div>
-          <div>全部 <span class="text-xl font-semibold text-primary">{{ summary.totalCount }}</span></div>
-          <div>已离体 <span class="text-xl font-semibold text-success">{{ summary.confirmedCount }}</span></div>
-          <div>未设置 <span class="text-xl font-semibold text-danger">{{ summary.pendingCount }}</span></div>
+          <div>
+            全部
+            <span class="text-xl font-semibold text-primary">{{
+              summary.totalCount
+            }}</span>
+          </div>
+          <div>
+            已离体
+            <span class="text-xl font-semibold text-success">{{
+              summary.confirmedCount
+            }}</span>
+          </div>
+          <div>
+            未设置
+            <span class="text-xl font-semibold text-danger">{{
+              summary.pendingCount
+            }}</span>
+          </div>
         </div>
 
-        <div class="mb-4 grid gap-3 rounded-lg border border-[color:#dbe3f0] bg-[color:#f7f9fc] p-4 md:grid-cols-2">
+        <div
+          class="mb-4 grid gap-3 rounded-lg border border-[color:#dbe3f0] bg-[color:#f7f9fc] p-4 md:grid-cols-2"
+        >
           <div
             ref="barcodeQuickInputContainerRef"
             v-loading="quickActionLoading.barcode"
             class="flex items-center gap-3"
           >
-            <div class="min-w-20 text-sm font-medium text-[color:#1f2d3d]">标本ID</div>
+            <div class="min-w-20 text-sm font-medium text-[color:#1f2d3d]">
+              标本ID
+            </div>
             <ElInput
               ref="barcodeQuickInputRef"
               v-model="barcodeQuickInput"
@@ -386,7 +431,9 @@ watch(
             v-loading="quickActionLoading.specimenNo"
             class="flex items-center gap-3"
           >
-            <div class="min-w-24 text-sm font-medium text-[color:#1f2d3d]">标本流水号</div>
+            <div class="min-w-24 text-sm font-medium text-[color:#1f2d3d]">
+              标本流水号
+            </div>
             <ElInput
               ref="specimenNoQuickInputRef"
               v-model="specimenNoQuickInput"

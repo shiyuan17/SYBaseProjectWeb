@@ -8,9 +8,54 @@ import type {
   SpecimenPackageOption,
 } from '../types/application-registration-workbench';
 
-import { createApp, defineComponent, h, nextTick } from 'vue';
+import { createApp, h, nextTick, type SetupContext } from 'vue';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import {
+  createAlertStub,
+  createButtonStub,
+  createDescriptionsItemStub,
+  createEmptyStub,
+  createPassthroughStub,
+} from '../test-utils/component-stubs';
+
+type EmitContext = {
+  emit: (event: string, ...args: unknown[]) => void;
+};
+
+type SlotContext = Pick<SetupContext, 'slots'>;
+
+type ToolbarStubProps = {
+  buildingId: string;
+  buildingOptions: OperatingBuildingOption[];
+  frozenReminder: boolean;
+  patientVerified: boolean;
+  registrationStatus: string;
+  roomId: string;
+  roomOptions: OperatingRoomOption[];
+  saveDisabled: boolean;
+  saving: boolean;
+  searchKeyword: string;
+  searchType: string;
+};
+
+type PatientPanelStubProps = {
+  buildingLabel: string;
+  record: ApplicationRegistrationWorkbenchRecord | null;
+  roomLabel: string;
+};
+
+type SpecimenTableStubProps = {
+  commonSpecimenOptions: SpecimenDictionaryEntryOption[];
+  items: ApplicationRegistrationWorkbenchRecord['specimenItems'];
+  roomLabel: string;
+};
+
+type DictionaryPanelStubProps = {
+  dictionaryKeyword: string;
+  groups: SpecimenDictionaryGroup[];
+};
 
 const {
   listCommonSpecimenOptionsMock,
@@ -55,86 +100,32 @@ const {
 }));
 
 vi.mock('element-plus', () => ({
-  ElAlert: defineComponent({
-    props: { title: { default: '', type: String } },
-    setup(props, { slots }) {
-      return () =>
-        h('div', { 'data-testid': 'alert' }, [props.title, slots.default?.()]);
-    },
-  }),
-  ElButton: defineComponent({
-    emits: ['click'],
-    props: {
-      disabled: { default: false, type: Boolean },
-      type: { default: '', type: String },
-    },
-    setup(props, { emit, slots }) {
-      return () =>
-        h(
-          'button',
-          {
-            disabled: props.disabled,
-            'data-type': props.type,
-            onClick: () => emit('click'),
-            type: 'button',
-          },
-          slots.default?.(),
-        );
-    },
-  }),
-  ElDescriptions: defineComponent({
-    setup(_, { slots }) {
-      return () =>
-        h('div', { 'data-testid': 'descriptions' }, slots.default?.());
-    },
-  }),
-  ElDescriptionsItem: defineComponent({
-    props: { label: { default: '', type: String } },
-    setup(props, { slots }) {
-      return () => h('div', `${props.label}:${slots.default?.()}`);
-    },
-  }),
-  ElEmpty: defineComponent({
-    props: { description: { default: '', type: String } },
-    setup(props) {
-      return () => h('div', { 'data-testid': 'empty' }, props.description);
-    },
-  }),
+  ElAlert: createAlertStub(),
+  ElButton: createButtonStub(),
+  ElDescriptions: createPassthroughStub('div'),
+  ElDescriptionsItem: createDescriptionsItemStub(),
+  ElEmpty: createEmptyStub(),
   ElMessage: {
     success: messageSuccessMock,
     warning: messageWarningMock,
   },
-  ElTable: defineComponent({
-    props: { data: { default: () => [], type: Array } },
-    setup(props) {
-      return () =>
-        h('div', { 'data-testid': 'table' }, JSON.stringify(props.data));
-    },
-  }),
-  ElTableColumn: defineComponent({
-    setup() {
-      return () => null;
-    },
-  }),
-  ElTag: defineComponent({
-    props: { type: { default: '', type: String } },
-    setup(props, { slots }) {
-      return () =>
-        h('span', { 'data-tag-type': props.type }, slots.default?.());
-    },
-  }),
+  ElTable: ((props: Record<string, unknown>) =>
+    h(
+      'div',
+      { 'data-testid': 'table' },
+      JSON.stringify(props.data),
+    )) as unknown,
+  ElTableColumn: (() => null) as unknown,
+  ElTag: createPassthroughStub('span'),
 }));
 
-vi.mock('../api/application-registration-workbench-mock', () => ({
+vi.mock('../api/application-registration-workbench-service', () => ({
   listCommonSpecimenOptions: listCommonSpecimenOptionsMock,
   listOperatingBuildingOptions: listOperatingBuildingOptionsMock,
   listOperatingRoomOptions: listOperatingRoomOptionsMock,
   listSpecimenDictionaryEntryOptions: listSpecimenDictionaryEntryOptionsMock,
   listSpecimenDictionaryGroups: listSpecimenDictionaryGroupsMock,
   listSpecimenPackageOptions: listSpecimenPackageOptionsMock,
-}));
-
-vi.mock('../api/application-registration-workbench-service', () => ({
   lookupApplicationRegistrationWorkbenchRecord:
     lookupApplicationRegistrationWorkbenchRecordMock,
   saveApplicationRegistrationWorkbench:
@@ -153,15 +144,15 @@ vi.mock('../api/specimen-workflow-service', () => ({
 }));
 
 vi.mock('./WorkflowSectionCard.vue', () => ({
-  default: defineComponent({
-    setup(_, { slots }) {
+  default: {
+    setup(_: Record<string, never>, { slots }: SlotContext) {
       return () => h('section', slots.default?.());
     },
-  }),
+  },
 }));
 
 vi.mock('./ApplicationRegistrationWorkbenchToolbar.vue', () => ({
-  default: defineComponent({
+  default: {
     props: {
       buildingId: { default: '', type: String },
       buildingOptions: { default: () => [], type: Array },
@@ -183,7 +174,7 @@ vi.mock('./ApplicationRegistrationWorkbenchToolbar.vue', () => ({
       'update:searchKeyword',
       'update:searchType',
     ],
-    setup(props, { emit }) {
+    setup(props: ToolbarStubProps, { emit }: EmitContext) {
       return () =>
         h('div', { 'data-testid': 'toolbar' }, [
           h('div', { 'data-testid': 'toolbar-building' }, props.buildingId),
@@ -240,18 +231,18 @@ vi.mock('./ApplicationRegistrationWorkbenchToolbar.vue', () => ({
           ),
         ]);
     },
-  }),
+  },
 }));
 
 vi.mock('./ApplicationRegistrationPatientPanel.vue', () => ({
-  default: defineComponent({
+  default: {
     props: {
       buildingLabel: { default: '', type: String },
       record: { default: null, type: Object },
       roomLabel: { default: '', type: String },
     },
     emits: ['reprint-application-form', 'update:record'],
-    setup(props, { emit }) {
+    setup(props: PatientPanelStubProps, { emit }: EmitContext) {
       return () =>
         h('div', { 'data-testid': 'patient-panel' }, [
           h(
@@ -302,18 +293,18 @@ vi.mock('./ApplicationRegistrationPatientPanel.vue', () => ({
           ),
         ]);
     },
-  }),
+  },
 }));
 
 vi.mock('./ApplicationRegistrationSpecimenTable.vue', () => ({
-  default: defineComponent({
+  default: {
     props: {
       commonSpecimenOptions: { default: () => [], type: Array },
       items: { default: () => [], type: Array },
       roomLabel: { default: '', type: String },
     },
     emits: ['add-manual', 'append', 'select-package', 'update:items'],
-    setup(props) {
+    setup(props: SpecimenTableStubProps) {
       return () =>
         h('div', { 'data-testid': 'specimen-table' }, [
           h('div', { 'data-testid': 'specimen-room' }, props.roomLabel),
@@ -329,17 +320,17 @@ vi.mock('./ApplicationRegistrationSpecimenTable.vue', () => ({
           ),
         ]);
     },
-  }),
+  },
 }));
 
 vi.mock('./ApplicationRegistrationDictionaryPanel.vue', () => ({
-  default: defineComponent({
+  default: {
     props: {
       dictionaryKeyword: { default: '', type: String },
       groups: { default: () => [], type: Array },
     },
     emits: ['append', 'update:dictionaryKeyword'],
-    setup(props, { emit }) {
+    setup(props: DictionaryPanelStubProps, { emit }: EmitContext) {
       return () =>
         h('div', { 'data-testid': 'dictionary-panel' }, [
           h(
@@ -362,11 +353,11 @@ vi.mock('./ApplicationRegistrationDictionaryPanel.vue', () => ({
           ),
         ]);
     },
-  }),
+  },
 }));
 
 vi.mock('./ApplicationRegistrationPackageDialog.vue', () => ({
-  default: defineComponent({
+  default: {
     props: {
       modelValue: { default: false, type: Boolean },
       packageOptions: { default: () => [], type: Array },
@@ -376,7 +367,7 @@ vi.mock('./ApplicationRegistrationPackageDialog.vue', () => ({
     setup() {
       return () => h('div', { 'data-testid': 'package-dialog' });
     },
-  }),
+  },
 }));
 
 import ApplicationRegistrationWorkbenchPanel from './ApplicationRegistrationWorkbenchPanel.vue';
@@ -650,13 +641,12 @@ async function mountPanel(props: Record<string, unknown> = {}) {
   document.body.append(root);
   const reprintMock = vi.fn();
 
-  const app = createApp({
-    render: () =>
-      h(ApplicationRegistrationWorkbenchPanel, {
-        ...props,
-        onReprintApplicationForm: reprintMock,
-      }),
-  });
+  const app = createApp(() =>
+    h(ApplicationRegistrationWorkbenchPanel, {
+      ...props,
+      onReprintApplicationForm: reprintMock,
+    }),
+  );
 
   app.mount(root);
   await flushPromises();

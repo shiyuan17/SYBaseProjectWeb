@@ -1,6 +1,17 @@
-import { createApp, defineComponent, h, nextTick } from 'vue';
+import { createApp, h, nextTick } from 'vue';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import {
+  createButtonStub,
+  createDialogStub,
+  createInputStub,
+  createModelTextStub,
+  createOptionStub,
+  createPassthroughStub,
+  createSelectStub,
+  createWorkflowSectionCardStub,
+} from '../test-utils/component-stubs';
 
 const {
   mockAccessStore,
@@ -42,13 +53,12 @@ vi.mock('#/modules/system-management/api/workflow-reference-service', () => ({
   })),
 }));
 
-vi.mock('#/modules/system-management/components/ReferenceOptionSelect.vue', () => ({
-  default: {
-    emits: ['change', 'update:modelValue'],
-    props: ['modelValue', 'options', 'placeholder', 'selectedLabel'],
-    template: '<input :placeholder="placeholder" :value="modelValue" />',
-  },
-}));
+vi.mock(
+  '#/modules/system-management/components/ReferenceOptionSelect.vue',
+  () => ({
+    default: createModelTextStub('data-placeholder'),
+  }),
+);
 
 vi.mock('#/modules/system-management/constants', () => ({
   GENDER_OPTIONS: [
@@ -66,112 +76,28 @@ vi.mock('../api/specimen-workflow-service', () => ({
 }));
 
 vi.mock('./WorkflowSectionCard.vue', () => ({
-  default: {
-    props: ['description', 'title'],
-    template:
-      '<section><h2>{{ title }}</h2><p v-if="description">{{ description }}</p><slot /></section>',
-  },
+  default: createWorkflowSectionCardStub(),
 }));
 
 vi.mock('element-plus', () => {
-  const passthrough = (tag = 'div') =>
-    defineComponent({
-      props: ['description', 'label', 'modelValue', 'title'],
-      setup(props, { slots }) {
-        return () =>
-          h(tag, [
-            props.title ? h('div', props.title) : null,
-            props.label ? h('span', props.label) : null,
-            props.description ? h('div', props.description) : null,
-            slots.default?.(),
-          ]);
-      },
-    });
-
-  const ElButton = defineComponent({
-    emits: ['click'],
-    props: ['disabled', 'loading', 'type'],
-    setup(props, { emit, slots }) {
-      return () =>
-        h(
-          'button',
-          {
-            disabled: Boolean(props.disabled),
-            type: 'button',
-            onClick: (event: MouseEvent) => emit('click', event),
-          },
-          slots.default?.(),
-        );
-    },
-  });
-
-  const ElDialog = defineComponent({
-    emits: ['update:modelValue'],
-    props: ['modelValue', 'title'],
-    setup(props, { slots }) {
-      return () =>
-        props.modelValue
-          ? h('section', [h('h3', props.title), slots.default?.(), slots.footer?.()])
-          : null;
-    },
-  });
-
-  const ElInput = defineComponent({
-    emits: ['update:modelValue'],
-    props: ['modelValue', 'placeholder'],
-    setup(props, { emit }) {
-      return () =>
-        h('input', {
-          placeholder: props.placeholder,
-          value: props.modelValue,
-          onInput: (event: Event) =>
-            emit('update:modelValue', (event.target as HTMLInputElement).value),
-        });
-    },
-  });
-
-  const ElSelect = defineComponent({
-    emits: ['update:modelValue'],
-    props: ['modelValue'],
-    setup(props, { emit, slots }) {
-      return () =>
-        h(
-          'select',
-          {
-            value: props.modelValue,
-            onChange: (event: Event) =>
-              emit('update:modelValue', (event.target as HTMLSelectElement).value),
-          },
-          slots.default?.(),
-        );
-    },
-  });
-
-  const ElOption = defineComponent({
-    props: ['label', 'value'],
-    setup(props) {
-      return () => h('option', { value: props.value }, props.label);
-    },
-  });
-
   return {
-    ElAlert: passthrough(),
-    ElButton,
-    ElDatePicker: ElInput,
-    ElDialog,
-    ElEmpty: passthrough(),
-    ElForm: passthrough('form'),
-    ElFormItem: passthrough(),
-    ElInput,
+    ElAlert: createPassthroughStub(),
+    ElButton: createButtonStub(),
+    ElDatePicker: createInputStub(),
+    ElDialog: createDialogStub(),
+    ElEmpty: createPassthroughStub(),
+    ElForm: createPassthroughStub('form'),
+    ElFormItem: createPassthroughStub(),
+    ElInput: createInputStub(),
     ElMessage: {
       info: vi.fn(),
       success: vi.fn(),
       warning: vi.fn(),
     },
-    ElOption,
-    ElSelect,
-    ElTabPane: passthrough('section'),
-    ElTabs: passthrough(),
+    ElOption: createOptionStub(),
+    ElSelect: createSelectStub(),
+    ElTabPane: createPassthroughStub('section'),
+    ElTabs: createPassthroughStub(),
   };
 });
 
@@ -270,7 +196,7 @@ describe('ApplicationManageDialog', () => {
     expect(root.textContent).not.toContain('送检部位');
     expect(root.textContent).not.toContain('离体时间');
 
-    const saveButton = Array.from(root.querySelectorAll('button')).find(
+    const saveButton = [...root.querySelectorAll('button')].find(
       (button) => button.textContent?.trim() === '保存',
     );
     saveButton?.click();
@@ -284,10 +210,18 @@ describe('ApplicationManageDialog', () => {
         patientName: '张三',
       }),
     );
-    expect(mockUpdateApplication.mock.calls[0]?.[1]).not.toHaveProperty('specimenSite');
-    expect(mockUpdateApplication.mock.calls[0]?.[1]).not.toHaveProperty('specimenRemovalTime');
-    expect(mockUpdateApplication.mock.calls[0]?.[1]).not.toHaveProperty('submittingDepartmentId');
-    expect(mockUpdateApplication.mock.calls[0]?.[1]).not.toHaveProperty('submittingDoctorName');
+    expect(mockUpdateApplication.mock.calls[0]?.[1]).not.toHaveProperty(
+      'specimenSite',
+    );
+    expect(mockUpdateApplication.mock.calls[0]?.[1]).not.toHaveProperty(
+      'specimenRemovalTime',
+    );
+    expect(mockUpdateApplication.mock.calls[0]?.[1]).not.toHaveProperty(
+      'submittingDepartmentId',
+    );
+    expect(mockUpdateApplication.mock.calls[0]?.[1]).not.toHaveProperty(
+      'submittingDoctorName',
+    );
 
     app.unmount();
   });

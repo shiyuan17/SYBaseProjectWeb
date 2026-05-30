@@ -30,7 +30,10 @@ const emit = defineEmits<{
     </template>
 
     <ElScrollbar max-height="112px">
-      <div v-if="props.groups.length > 0" class="grid gap-1.5 pr-1.5 2xl:grid-cols-2">
+      <div
+        v-if="props.groups.length > 0"
+        class="grid gap-1.5 pr-1.5 2xl:grid-cols-2"
+      >
         <section
           v-for="group in props.groups"
           :key="group.systemId"

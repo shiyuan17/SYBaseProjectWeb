@@ -23,8 +23,6 @@ import {
   listSpecimenDictionaryEntryOptions,
   listSpecimenDictionaryGroups,
   listSpecimenPackageOptions,
-} from '../api/application-registration-workbench-mock';
-import {
   lookupApplicationRegistrationWorkbenchRecord,
   saveApplicationRegistrationWorkbench,
 } from '../api/application-registration-workbench-service';
@@ -37,7 +35,9 @@ type UseApplicationRegistrationWorkbenchOptions = {
   initialTriggerKey?: number;
 };
 
-function normalizeVisibleLookupType(type?: WorkbenchLookupType): WorkbenchLookupType {
+function normalizeVisibleLookupType(
+  type?: WorkbenchLookupType,
+): WorkbenchLookupType {
   if (!type || type === 'AUTO') {
     return 'APPLICATION_NO';
   }
@@ -64,7 +64,10 @@ function cloneRecord(
   };
 }
 
-function buildSpecimenDictionaryEntryKey(partName: string, specimenName: string) {
+function buildSpecimenDictionaryEntryKey(
+  partName: string,
+  specimenName: string,
+) {
   return `${partName.trim().toLowerCase()}\u0000${specimenName.trim().toLowerCase()}`;
 }
 
@@ -151,7 +154,9 @@ export function useApplicationRegistrationWorkbench(
   const emptyDescription = ref(getLookupEmptyDescription(searchType.value));
   const searchKeyword = ref(options.initialKeyword?.trim() ?? '');
   const dictionaryKeyword = ref('');
-  const currentRecord = ref<ApplicationRegistrationWorkbenchRecord | null>(null);
+  const currentRecord = ref<ApplicationRegistrationWorkbenchRecord | null>(
+    null,
+  );
   const buildingOptions = ref<OperatingBuildingOption[]>([]);
   const roomOptions = ref<OperatingRoomOption[]>([]);
   const dictionaryGroups = ref<SpecimenDictionaryGroup[]>([]);
@@ -175,7 +180,8 @@ export function useApplicationRegistrationWorkbench(
 
   const selectedRoom = computed(
     () =>
-      roomOptions.value.find((room) => room.roomId === selectedRoomId.value) ?? null,
+      roomOptions.value.find((room) => room.roomId === selectedRoomId.value) ??
+      null,
   );
 
   const canRenderWorkbench = computed(() => currentRecord.value !== null);
@@ -237,9 +243,7 @@ export function useApplicationRegistrationWorkbench(
   }
 
   async function refreshDictionaryGroups() {
-    const groups = await listSpecimenDictionaryGroups(
-      dictionaryKeyword.value,
-    );
+    const groups = await listSpecimenDictionaryGroups(dictionaryKeyword.value);
     dictionaryGroups.value = filterCommonSpecimensFromDictionaryGroups(
       groups,
       commonSpecimenOptions.value,
@@ -249,7 +253,8 @@ export function useApplicationRegistrationWorkbench(
   async function refreshRoomOptions(buildingId: string, preferredRoomId = '') {
     roomOptions.value = await listOperatingRoomOptions(buildingId);
     selectedRoomId.value =
-      roomOptions.value.find((room) => room.roomId === preferredRoomId)?.roomId ??
+      roomOptions.value.find((room) => room.roomId === preferredRoomId)
+        ?.roomId ??
       roomOptions.value[0]?.roomId ??
       '';
   }
@@ -429,10 +434,15 @@ export function useApplicationRegistrationWorkbench(
   }
 
   function handleCreatePackage(createdPackage: SpecimenPackageOption) {
-    specimenPackageOptions.value = [createdPackage, ...specimenPackageOptions.value];
+    specimenPackageOptions.value = [
+      createdPackage,
+      ...specimenPackageOptions.value,
+    ];
   }
 
-  function handleRecordChange(updatedRecord: ApplicationRegistrationWorkbenchRecord) {
+  function handleRecordChange(
+    updatedRecord: ApplicationRegistrationWorkbenchRecord,
+  ) {
     currentRecord.value = cloneRecord(updatedRecord);
   }
 

@@ -18,11 +18,11 @@ import {
   ElTag,
 } from 'element-plus';
 
+import { formatSpecimenStatus } from '../utils/format';
 import {
   buildSearchKeywords,
   matchesSearchKeyword,
 } from '../utils/specimen-dictionary-search';
-import { formatSpecimenStatus } from '../utils/format';
 import {
   buildSpecimenBatchPrintDocument,
   buildSpecimenPrintDocument,
@@ -37,15 +37,15 @@ type SpecimenSiteOption = {
 const props = defineProps<{
   commonSpecimenOptions: SpecimenDictionaryEntryOption[];
   items: WorkbenchSpecimenItem[];
-  printContext: WorkbenchSpecimenPrintContext | null;
+  printContext: null | WorkbenchSpecimenPrintContext;
   roomLabel: string;
   specimenEntryOptions: SpecimenDictionaryEntryOption[];
 }>();
 
 const emit = defineEmits<{
-  'add-manual': [];
+  addManual: [];
   append: [payload: { specimenName: string; specimenSite: string }];
-  'select-package': [];
+  selectPackage: [];
   'update:items': [items: WorkbenchSpecimenItem[]];
 }>();
 
@@ -56,7 +56,10 @@ const specimenSiteOptions = computed<SpecimenSiteOption[]>(() => {
     if (!siteMap.has(option.partName)) {
       siteMap.set(option.partName, {
         partName: option.partName,
-        searchKeywords: buildSearchKeywords([option.systemName, option.partName]),
+        searchKeywords: buildSearchKeywords([
+          option.systemName,
+          option.partName,
+        ]),
       });
     }
   });
@@ -75,19 +78,25 @@ function getStatusTagType(status: string) {
     case 'RECEIVED':
     case 'REGISTERED':
     case 'VERIFIED':
-    case 'VERIFYING':
+    case 'VERIFYING': {
       return 'primary';
+    }
     case 'REJECTED':
-    case 'RETURNED':
+    case 'RETURNED': {
       return 'warning';
-    case '标本确认':
-      return 'success';
-    case '离体':
-      return 'warning';
-    case '新增':
+    }
+    case '新增': {
       return 'info';
-    default:
+    }
+    case '标本确认': {
+      return 'success';
+    }
+    case '离体': {
+      return 'warning';
+    }
+    default: {
       return 'primary';
+    }
   }
 }
 
@@ -111,7 +120,9 @@ function updateItem(
 
 function updateSpecimenItem(
   itemId: string,
-  payload: Partial<Pick<WorkbenchSpecimenItem, 'specimenName' | 'specimenSite'>>,
+  payload: Partial<
+    Pick<WorkbenchSpecimenItem, 'specimenName' | 'specimenSite'>
+  >,
 ) {
   emit(
     'update:items',
@@ -187,8 +198,9 @@ function findMatchedSpecimenSite(value: string) {
   }
 
   return (
-    specimenSiteOptions.value.find((option) => option.partName === normalizedValue) ??
-    null
+    specimenSiteOptions.value.find(
+      (option) => option.partName === normalizedValue,
+    ) ?? null
   );
 }
 
@@ -306,7 +318,9 @@ function handleBatchPrint() {
     return;
   }
 
-  const selectedItems = props.items.filter((item) => selectedItemIds.value.includes(item.id));
+  const selectedItems = props.items.filter((item) =>
+    selectedItemIds.value.includes(item.id),
+  );
   if (selectedItems.length === 0) {
     ElMessage.warning('请先勾选需要打印的标本');
     return;
@@ -342,18 +356,26 @@ function normalizeSpecimenSiteOption(option: Record<string, unknown>) {
     <template #extra>
       <div class="flex gap-2">
         <ElButton disabled size="small">修改手术间</ElButton>
-        <ElButton size="small" @click="emit('select-package')">选择套餐</ElButton>
-        <ElButton :disabled="selectedItemIds.length === 0" size="small" @click="handleBatchPrint">
+        <ElButton size="small" @click="emit('selectPackage')">
+          选择套餐
+        </ElButton>
+        <ElButton
+          :disabled="selectedItemIds.length === 0"
+          size="small"
+          @click="handleBatchPrint"
+        >
           批量打印标本
         </ElButton>
-        <ElButton size="small" type="primary" @click="emit('add-manual')">
+        <ElButton size="small" type="primary" @click="emit('addManual')">
           添加标本
         </ElButton>
       </div>
     </template>
 
     <div class="flex flex-col">
-      <div class="mb-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+      <div
+        class="mb-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
+      >
         <span>当前手术室：{{ roomLabel || '-' }}</span>
       </div>
 
@@ -374,7 +396,9 @@ function normalizeSpecimenSiteOption(option: Record<string, unknown>) {
           </ElTableColumn>
           <ElTableColumn label="流水号" min-width="120">
             <template #default="{ row }">
-              <span class="text-muted-foreground">{{ row.specimenNo || '保存后生成' }}</span>
+              <span class="text-muted-foreground">{{
+                row.specimenNo || '保存后生成'
+              }}</span>
             </template>
           </ElTableColumn>
           <ElTableColumn label="标本名称" min-width="260">
@@ -433,7 +457,9 @@ function normalizeSpecimenSiteOption(option: Record<string, unknown>) {
                 :model-value="row.quantity"
                 size="small"
                 style="width: 100%"
-                @update:model-value="updateItem(row.id, 'quantity', $event ?? 1)"
+                @update:model-value="
+                  updateItem(row.id, 'quantity', $event ?? 1)
+                "
               />
             </template>
           </ElTableColumn>
@@ -461,7 +487,12 @@ function normalizeSpecimenSiteOption(option: Record<string, unknown>) {
                 >
                   打印
                 </ElButton>
-                <ElButton link size="small" type="danger" @click="removeItem(row.id)">
+                <ElButton
+                  link
+                  size="small"
+                  type="danger"
+                  @click="removeItem(row.id)"
+                >
                   删除
                 </ElButton>
               </div>
@@ -471,7 +502,9 @@ function normalizeSpecimenSiteOption(option: Record<string, unknown>) {
       </div>
 
       <div v-if="props.items.length === 0" class="py-5">
-        <ElEmpty description="暂无标本，请从下方字典、常用标本或套餐中快速追加" />
+        <ElEmpty
+          description="暂无标本，请从下方字典、常用标本或套餐中快速追加"
+        />
       </div>
 
       <div
@@ -494,7 +527,9 @@ function normalizeSpecimenSiteOption(option: Record<string, unknown>) {
             @click="appendCommonSpecimen(option)"
           >
             <span>{{ option.specimenName }}</span>
-            <span class="text-[11px] text-emerald-600/80">{{ option.partName }}</span>
+            <span class="text-[11px] text-emerald-600/80">{{
+              option.partName
+            }}</span>
           </button>
         </div>
       </div>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ApplicationRegistrationWorkbenchRecord } from '../types/application-registration-workbench';
 import type {
   ApplicationDetailView,
   LabelPrintRetryResult,
@@ -8,7 +9,6 @@ import type {
   SpecimenManagementListSummary,
   SpecimenRegisterResult,
 } from '../types/specimen-workflow';
-import type { ApplicationRegistrationWorkbenchRecord } from '../types/application-registration-workbench';
 
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -23,20 +23,20 @@ import {
   ElDescriptions,
   ElDescriptionsItem,
   ElDialog,
+  ElDrawer,
   ElEmpty,
   ElForm,
   ElFormItem,
   ElInput,
+  ElMessage,
+  ElOption,
   ElPagination,
   ElSelect,
-  ElOption,
   ElTable,
   ElTableColumn,
   ElTag,
   ElTimeline,
   ElTimelineItem,
-  ElDrawer,
-  ElMessage,
 } from 'element-plus';
 
 import {
@@ -77,11 +77,6 @@ type QuickFilterKey = 'ABNORMAL' | 'ALL' | 'PENDING_LABEL' | 'VERIFIED';
 type AbnormalFilterValue = '' | 'false' | 'true';
 type VerifyAction = 'complete' | 'start';
 
-const route = useRoute();
-const router = useRouter();
-const accessStore = useAccessStore();
-const userStore = useUserStore();
-
 const props = withDefaults(
   defineProps<{
     embedded?: boolean;
@@ -94,6 +89,10 @@ const props = withDefaults(
     registrationTriggerKey: 0,
   },
 );
+const route = useRoute();
+const router = useRouter();
+const accessStore = useAccessStore();
+const userStore = useUserStore();
 
 const accessCodeSet = computed(() => new Set(accessStore.accessCodes));
 const canManageSpecimens = computed(() =>
@@ -182,7 +181,7 @@ const registerDialogApplicationId = ref('');
 const detailDrawerVisible = ref(false);
 const detailLoading = ref(false);
 const detailRow = ref<null | SpecimenManagementListItem>(null);
-const detailApplicationDetail = ref<null | ApplicationDetailView>(null);
+const detailApplicationDetail = ref<ApplicationDetailView | null>(null);
 const detailLatestRegisterResult = ref<LatestSpecimenRegistrationResult | null>(
   null,
 );
@@ -211,7 +210,7 @@ const detailAbnormalSpecimens = computed(() =>
 
 const resultDialogVisible = ref(false);
 const latestRegisterApplicationId = ref('');
-const latestRegisterResult = ref<SpecimenRegisterResult | null>(null);
+const latestRegisterResult = ref<null | SpecimenRegisterResult>(null);
 
 const retryDialogVisible = ref(false);
 const retrySubmitting = ref(false);
@@ -585,7 +584,7 @@ function openRetryDialog(
   rows: SpecimenManagementListItem[],
   sourceLabel: string,
 ) {
-  if (!rows.length) {
+  if (rows.length === 0) {
     ElMessage.warning('请先选择需要补打的标本');
     return;
   }
@@ -595,13 +594,9 @@ function openRetryDialog(
   }
 
   const [firstRow] = rows;
-  const batchNumbers = Array.from(
-    new Set(
-      rows
-        .map((row) => row.labelPrintBatchNo)
-        .filter((value): value is string => Boolean(value)),
-    ),
-  );
+  const batchNumbers = [
+    ...new Set(rows.map((row) => row.labelPrintBatchNo).filter(Boolean)),
+  ];
   const [batchNo] = batchNumbers;
   if (!firstRow || batchNumbers.length !== 1 || !batchNo) {
     ElMessage.warning('批量补打仅允许选择同一标签批次');
@@ -1168,7 +1163,7 @@ function closeResultDialog() {
                 </div>
                 <div>
                   问题代码：{{
-                    specimen.qualityIssueCodes.length
+                    specimen.qualityIssueCodes.length > 0
                       ? specimen.qualityIssueCodes.join('、')
                       : '-'
                   }}

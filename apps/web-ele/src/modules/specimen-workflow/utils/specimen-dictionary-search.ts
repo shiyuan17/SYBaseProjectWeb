@@ -35,7 +35,7 @@ function isAsciiLetterOrDigit(char: string) {
 }
 
 function isChineseChar(char: string) {
-  return /[\u3400-\u9fff]/u.test(char);
+  return /[\u3400-\u9FFF]/u.test(char);
 }
 
 function getPinyinInitial(char: string) {
@@ -47,7 +47,10 @@ function getPinyinInitial(char: string) {
     return '';
   }
 
-  for (const [index, [initial, boundary]] of PINYIN_INITIAL_BOUNDARIES.entries()) {
+  for (const [
+    index,
+    [initial, boundary],
+  ] of PINYIN_INITIAL_BOUNDARIES.entries()) {
     const nextBoundary = PINYIN_INITIAL_BOUNDARIES[index + 1]?.[1];
     if (
       pinyinCollator.compare(char, boundary) >= 0 &&
@@ -61,9 +64,7 @@ function getPinyinInitial(char: string) {
 }
 
 export function buildPinyinInitials(value: string) {
-  return Array.from(value)
-    .map((char) => getPinyinInitial(char))
-    .join('');
+  return [...value].map((char) => getPinyinInitial(char)).join('');
 }
 
 export function buildSearchKeywords(values: string[]) {

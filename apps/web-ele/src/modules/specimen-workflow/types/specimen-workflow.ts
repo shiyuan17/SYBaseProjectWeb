@@ -28,7 +28,7 @@ export interface ApplicationCreateResult {
   id: string;
 }
 
-export interface ApplicationUpdateRequest extends ApplicationCreateRequest {}
+export type ApplicationUpdateRequest = ApplicationCreateRequest;
 
 export interface ImportClinicalApplicationRequest {
   externalOrderNo: string;

@@ -57,9 +57,11 @@ function pushUnique(target: string[], value?: null | string) {
 export function getSpecimenTimelineLabel(
   specimen: Pick<SpecimenTrackingSummary, 'barcode' | 'id' | 'specimenNo'>,
 ) {
-  return normalizeText(specimen.specimenNo)
-    || normalizeText(specimen.barcode)
-    || specimen.id;
+  return (
+    normalizeText(specimen.specimenNo) ||
+    normalizeText(specimen.barcode) ||
+    specimen.id
+  );
 }
 
 export function buildTrackingTimelineData(
@@ -72,7 +74,10 @@ export function buildTrackingTimelineData(
   const specimenTimelineMap: Record<string, TrackingEventView[]> = {};
   const fallbackSpecimenAssignmentCountMap = new Map<string, number>();
   const specimenLabelMap = Object.fromEntries(
-    specimens.map((specimen) => [specimen.id, getSpecimenTimelineLabel(specimen)]),
+    specimens.map((specimen) => [
+      specimen.id,
+      getSpecimenTimelineLabel(specimen),
+    ]),
   );
   const orderedSpecimens = specimens.map((specimen) => ({
     id: specimen.id,
@@ -123,9 +128,9 @@ export function buildTrackingTimelineData(
       }
       pushUnique(
         group.specimenLabels,
-        specimenLabelMap[specimenId]
-          ?? event.specimenNo
-          ?? event.specimenBarcode,
+        specimenLabelMap[specimenId] ??
+          event.specimenNo ??
+          event.specimenBarcode,
       );
       continue;
     }
@@ -164,7 +169,8 @@ function resolveEventSpecimenId(
     eventType,
     normalizeText(event.eventStatus),
   ].join('|');
-  const assignmentIndex = fallbackSpecimenAssignmentCountMap.get(fallbackKey) ?? 0;
+  const assignmentIndex =
+    fallbackSpecimenAssignmentCountMap.get(fallbackKey) ?? 0;
   fallbackSpecimenAssignmentCountMap.set(fallbackKey, assignmentIndex + 1);
 
   return specimens[assignmentIndex]?.id ?? '';

@@ -8,6 +8,7 @@ import {
   listSpecimenDictionaryGroups,
   listSpecimenPackageOptions,
   lookupApplicationRegistrationWorkbenchRecord,
+  saveApplicationRegistrationWorkbenchMock,
 } from './application-registration-workbench-mock';
 
 describe('application registration workbench mock service', () => {
@@ -27,7 +28,9 @@ describe('application registration workbench mock service', () => {
 
     expect(byApplicationNo?.patientInfo.applicationNo).toBe('1122');
     expect(byInpatientNo?.patientInfo.inpatientNo).toBe('ZY0001122');
-    expect(byApplicationNo?.surgeryInfo.specimenRemovalTime ?? '').not.toBeUndefined();
+    expect(
+      byApplicationNo?.surgeryInfo.specimenRemovalTime ?? '',
+    ).not.toBeUndefined();
     expect(byInpatientNo).toEqual(byApplicationNo);
     expect(byPatientName?.patientInfo.patientName).toContain('张');
   });
@@ -43,9 +46,9 @@ describe('application registration workbench mock service', () => {
       'OR-201',
       'OR-202',
     ]);
-    expect(
-      buildingB002Rooms.every((room) => room.buildingId === 'B002'),
-    ).toBe(true);
+    expect(buildingB002Rooms.every((room) => room.buildingId === 'B002')).toBe(
+      true,
+    );
   });
 
   it('filters specimen dictionary groups by Chinese keyword', async () => {
@@ -93,6 +96,93 @@ describe('application registration workbench mock service', () => {
     });
     expect(emergencyPackages.map((item) => item.packageName)).toEqual(
       expect.arrayContaining(['急诊清创送检套餐', '急诊创面皮肤活检套餐']),
+    );
+  });
+
+  it('persists saved workbench changes through the mock service boundary', async () => {
+    const savedRecord = await saveApplicationRegistrationWorkbenchMock('1122', {
+      contagiousSpecimen: {
+        hepatitis: false,
+        hiv: false,
+        isolation: false,
+        syphilis: false,
+        tuberculosis: false,
+      },
+      gynecologyInfo: {
+        additionalNotes: '已补充保存',
+        hpvResult: null,
+        lastMenstrualPeriod: null,
+        menopause: false,
+        previousCytology: '',
+        previousTreatment: '',
+        specialConditions: {
+          abnormalBleeding: false,
+          birthControl: false,
+          hormoneReplacement: false,
+          hysterectomy: false,
+          iud: false,
+          lactation: false,
+          menopause: false,
+          other: '',
+          pregnancy: false,
+          radiotherapy: false,
+        },
+      },
+      patientInfo: {
+        age: '42',
+        applicationDate: '2026-05-23',
+        applicationNo: '1122',
+        applyDept: '骨科',
+        applyDoctor: '张医生',
+        bedNo: '12A',
+        checkItem: '常规病理',
+        clinicalDiagnosis: '慢性骨髓炎',
+        clinicalHistory: '保存后应可再次查询',
+        deliveryRequirement: '',
+        endoscopyDiagnosis: '',
+        frozenReminder: false,
+        gender: '男',
+        idNo: '320000000000000000',
+        imagingResult: '',
+        inpatientNo: 'ZY0001122',
+        patientName: '张某某',
+        patientVerified: true,
+        phone: '13800000000',
+        registrationStatus: 'SAVED',
+        remark: '测试保存',
+        specimenType: '常规',
+        wardName: '骨科病房',
+      },
+      specimenItems: [
+        {
+          quantity: 2,
+          specimenName: '保存后的右侧胫骨感染病灶',
+          specimenSite: '右胫骨',
+          status: '待登记',
+        },
+      ],
+      surgeryInfo: {
+        buildingId: 'B001',
+        clinicalFindings: '局部红肿',
+        fixativeType: '10%中性福尔马林',
+        fixationPerson: '王护士',
+        fixationTime: '2026-05-23 10:20:00',
+        roomId: 'OR-101',
+        specimenRemovalTime: '2026-05-23 10:10:00',
+        surgeryName: '感染灶清创',
+      },
+    });
+    const lookedUpRecord = await lookupApplicationRegistrationWorkbenchRecord({
+      keyword: '1122',
+      queryType: 'APPLICATION_NO',
+    });
+
+    expect(savedRecord.patientInfo.registrationStatus).toBe('SAVED');
+    expect(savedRecord.specimenItems[0]?.specimenName).toBe(
+      '保存后的右侧胫骨感染病灶',
+    );
+    expect(lookedUpRecord?.patientInfo.clinicalHistory).toBe(
+      '保存后应可再次查询',
     );
   });
 });

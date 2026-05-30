@@ -39,10 +39,11 @@ import {
 import TransportOrderCreateDialog from '../components/TransportOrderCreateDialog.vue';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { DEFAULT_PAGE_SIZE, TRANSPORT_STATUS_OPTIONS } from '../constants';
-import { formatDateTime, formatNullable, formatTransportStatus } from '../utils/format';
-
-const userStore = useUserStore();
-const route = useRoute();
+import {
+  formatDateTime,
+  formatNullable,
+  formatTransportStatus,
+} from '../utils/format';
 
 withDefaults(
   defineProps<{
@@ -52,6 +53,8 @@ withDefaults(
     embedded: false,
   },
 );
+const userStore = useUserStore();
+const route = useRoute();
 
 const loading = ref(false);
 const printLoading = ref(false);
@@ -65,7 +68,7 @@ const selectedRows = computed(() =>
 const orders = ref<PendingTransportOrderItem[]>([]);
 const total = ref(0);
 const latestOrder = ref<null | TransportOrderView>(null);
-const activeOrder = ref<PendingTransportOrderItem | null>(null);
+const activeOrder = ref<null | PendingTransportOrderItem>(null);
 
 const filters = reactive({
   applicationId: '',
@@ -80,7 +83,9 @@ const filters = reactive({
 const routeApplicationNo = ref('');
 
 const createDialogApplicationId = computed(() => filters.applicationId.trim());
-const createDialogApplicationNo = computed(() => routeApplicationNo.value.trim());
+const createDialogApplicationNo = computed(() =>
+  routeApplicationNo.value.trim(),
+);
 
 const printDialogVisible = ref(false);
 const printForm = reactive({
@@ -101,14 +106,18 @@ const printDialogTitle = computed(() => {
   if (selectedRows.value.length > 1) {
     return `批量打印转运单（${selectedRows.value.length} 条）`;
   }
-  return activeOrder.value ? `打印转运单 ${activeOrder.value.transportOrderNo}` : '打印转运单';
+  return activeOrder.value
+    ? `打印转运单 ${activeOrder.value.transportOrderNo}`
+    : '打印转运单';
 });
 
 const handoverDialogTitle = computed(() => {
   if (selectedRows.value.length > 1) {
     return `批量交接转运单（${selectedRows.value.length} 条）`;
   }
-  return activeOrder.value ? `交接转运单 ${activeOrder.value.transportOrderNo}` : '交接转运单';
+  return activeOrder.value
+    ? `交接转运单 ${activeOrder.value.transportOrderNo}`
+    : '交接转运单';
 });
 
 function normalizeRouteQueryValue(value: unknown) {
@@ -136,7 +145,8 @@ async function loadOrders() {
     });
     orders.value = result.items;
     total.value = result.total;
-  } catch {
+  } catch (error) {
+    void error;
   } finally {
     loading.value = false;
   }
@@ -226,7 +236,8 @@ async function submitPrint() {
     selectedRowKeys.value = [];
     ElMessage.success('转运单打印成功');
     await loadOrders();
-  } catch {
+  } catch (error) {
+    void error;
   } finally {
     printLoading.value = false;
   }
@@ -256,7 +267,8 @@ async function submitHandover() {
     selectedRowKeys.value = [];
     ElMessage.success('转运交接成功');
     await loadOrders();
-  } catch {
+  } catch (error) {
+    void error;
   } finally {
     handoverLoading.value = false;
   }
@@ -270,7 +282,9 @@ function canHandover(order: PendingTransportOrderItem) {
   return ['PENDING', 'PRINTED'].includes(order.status);
 }
 
-function handleFilterDepartmentChange(department: null | { id: string; name: string }) {
+function handleFilterDepartmentChange(
+  department: null | { id: string; name: string },
+) {
   filters.departmentId = department?.id ?? '';
 }
 
@@ -292,7 +306,8 @@ watch(
   () => [route.query.applicationId, route.query.applicationNo],
   ([applicationIdValue, applicationNoValue]) => {
     filters.applicationId = normalizeRouteQueryValue(applicationIdValue).trim();
-    routeApplicationNo.value = normalizeRouteQueryValue(applicationNoValue).trim();
+    routeApplicationNo.value =
+      normalizeRouteQueryValue(applicationNoValue).trim();
     filters.page = 1;
     void loadOrders();
   },
@@ -313,7 +328,11 @@ watch(
             {{ latestOrder.transportOrderNo }}
           </ElDescriptionsItem>
           <ElDescriptionsItem label="状态">
-            <ElTag :type="latestOrder.status === 'HANDED_OVER' ? 'success' : 'warning'">
+            <ElTag
+              :type="
+                latestOrder.status === 'HANDED_OVER' ? 'success' : 'warning'
+              "
+            >
               {{ formatTransportStatus(latestOrder.status) }}
             </ElTag>
           </ElDescriptionsItem>
@@ -341,11 +360,15 @@ watch(
             <div class="font-semibold text-[color:#d6453d]">转运/出库</div>
             <div>
               全部
-              <span class="text-xl font-semibold text-primary">{{ total }}</span>
+              <span class="text-xl font-semibold text-primary">{{
+                total
+              }}</span>
             </div>
             <div>
               已选
-              <span class="text-xl font-semibold text-success">{{ selectedRows.length }}</span>
+              <span class="text-xl font-semibold text-success">{{
+                selectedRows.length
+              }}</span>
             </div>
           </div>
 
@@ -395,7 +418,9 @@ watch(
             />
             <ElButton type="primary" @click="handleSearch">查询</ElButton>
             <ElButton @click="handleReset">重置</ElButton>
-            <ElButton type="primary" @click="openCreateDialog">创建转运单</ElButton>
+            <ElButton type="primary" @click="openCreateDialog">
+              创建转运单
+            </ElButton>
             <ElButton
               :disabled="selectedRows.length === 0"
               @click="openSelectedPrintDialog"
@@ -411,10 +436,23 @@ watch(
             </ElButton>
           </div>
 
-          <ElTable v-loading="loading" :data="orders" border @selection-change="handleSelectionChange">
+          <ElTable
+            v-loading="loading"
+            :data="orders"
+            border
+            @selection-change="handleSelectionChange"
+          >
             <ElTableColumn type="selection" width="38" />
-            <ElTableColumn label="转运单号" min-width="160" prop="transportOrderNo" />
-            <ElTableColumn label="申请单号" min-width="150" prop="applicationNo" />
+            <ElTableColumn
+              label="转运单号"
+              min-width="160"
+              prop="transportOrderNo"
+            />
+            <ElTableColumn
+              label="申请单号"
+              min-width="150"
+              prop="applicationNo"
+            />
             <ElTableColumn label="患者姓名" min-width="120">
               <template #default="{ row }">
                 {{ formatNullable(row.patientName) }}
@@ -432,7 +470,9 @@ watch(
             </ElTableColumn>
             <ElTableColumn label="状态" min-width="120">
               <template #default="{ row }">
-                <ElTag :type="row.status === 'HANDED_OVER' ? 'success' : 'warning'">
+                <ElTag
+                  :type="row.status === 'HANDED_OVER' ? 'success' : 'warning'"
+                >
                   {{ formatTransportStatus(row.status) }}
                 </ElTag>
               </template>
@@ -464,7 +504,9 @@ watch(
             <ElTableColumn fixed="right" label="操作" min-width="180">
               <template #default="{ row }">
                 <div class="flex flex-wrap gap-2">
-                  <ElButton link type="primary" @click="openPrintDialog(row)">打印</ElButton>
+                  <ElButton link type="primary" @click="openPrintDialog(row)">
+                    打印
+                  </ElButton>
                   <ElButton
                     :disabled="!canHandover(row)"
                     link
@@ -516,7 +558,10 @@ watch(
           />
         </ElFormItem>
         <ElFormItem label="终端编码">
-          <ElInput v-model="printForm.terminalCode" placeholder="请输入终端编码" />
+          <ElInput
+            v-model="printForm.terminalCode"
+            placeholder="请输入终端编码"
+          />
         </ElFormItem>
       </ElForm>
       <template #footer>
@@ -542,7 +587,10 @@ watch(
           />
         </ElFormItem>
         <ElFormItem label="终端编码">
-          <ElInput v-model="handoverForm.terminalCode" placeholder="请输入终端编码" />
+          <ElInput
+            v-model="handoverForm.terminalCode"
+            placeholder="请输入终端编码"
+          />
         </ElFormItem>
         <ElFormItem label="备注">
           <ElInput
@@ -555,7 +603,11 @@ watch(
       </ElForm>
       <template #footer>
         <ElButton @click="handoverDialogVisible = false">取消</ElButton>
-        <ElButton :loading="handoverLoading" type="primary" @click="submitHandover">
+        <ElButton
+          :loading="handoverLoading"
+          type="primary"
+          @click="submitHandover"
+        >
           确认交接
         </ElButton>
       </template>

@@ -37,8 +37,8 @@ import SystemUserSelect from '#/modules/system-management/components/SystemUserS
 import {
   directReceiveSpecimens,
   listPendingReceipts,
-  reprintApplicationForm,
   receiveSpecimens,
+  reprintApplicationForm,
 } from '../api/specimen-workflow-service';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import {
@@ -59,8 +59,8 @@ type ReceiptDraftItem = SpecimenReceiptItemRequest & {
 type TransportReceiptGroup = {
   applicationId: string;
   applicationNo: string;
-  batchAbnormalFlag: boolean;
   barcodes: string[];
+  batchAbnormalFlag: boolean;
   items: PendingSpecimenItem[];
   latestTrackingAt: null | string;
   patientName: null | string;
@@ -130,15 +130,20 @@ const groupedTransportOrders = computed<TransportReceiptGroup[]>(() => {
     if (existing) {
       existing.items.push(item);
       existing.barcodes.push(item.barcode);
-      existing.batchAbnormalFlag = existing.batchAbnormalFlag || Boolean(item.batchAbnormalFlag);
-      existing.latestTrackingAt =
-        existing.latestTrackingAt && item.latestTrackingAt
-          ? existing.latestTrackingAt > item.latestTrackingAt
-            ? existing.latestTrackingAt
-            : item.latestTrackingAt
-          : existing.latestTrackingAt || item.latestTrackingAt;
-      existing.reminderCount = Math.max(existing.reminderCount, item.reminderCount ?? 0);
-      existing.unreceivedCount = Math.max(existing.unreceivedCount, item.unreceivedCount ?? 0);
+      existing.batchAbnormalFlag =
+        existing.batchAbnormalFlag || Boolean(item.batchAbnormalFlag);
+      existing.latestTrackingAt = pickLatestTrackingAt(
+        existing.latestTrackingAt,
+        item.latestTrackingAt,
+      );
+      existing.reminderCount = Math.max(
+        existing.reminderCount,
+        item.reminderCount ?? 0,
+      );
+      existing.unreceivedCount = Math.max(
+        existing.unreceivedCount,
+        item.unreceivedCount ?? 0,
+      );
       continue;
     }
 
@@ -170,7 +175,9 @@ const orphanPendingCount = computed(
   () => pendingItems.value.filter((item) => !item.transportOrderId).length,
 );
 const abnormalBatchCount = computed(
-  () => groupedTransportOrders.value.filter((item) => item.batchAbnormalFlag).length,
+  () =>
+    groupedTransportOrders.value.filter((item) => item.batchAbnormalFlag)
+      .length,
 );
 const totalReminderCount = computed(() =>
   groupedTransportOrders.value.reduce(
@@ -189,6 +196,17 @@ function formatGroupContainerNames(items: PendingSpecimenItem[]) {
   return names.join('、') || '-';
 }
 
+function pickLatestTrackingAt(
+  current: null | string,
+  next: null | string,
+): null | string {
+  if (current && next) {
+    return [current, next].toSorted()[1] ?? null;
+  }
+
+  return current || next;
+}
+
 async function loadPendingData() {
   loading.value = true;
   try {
@@ -204,12 +222,15 @@ async function loadPendingData() {
     total.value = result.total;
 
     if (
-      selectedTransportOrderId.value
-      && !result.items.some((item) => item.transportOrderId === selectedTransportOrderId.value)
+      selectedTransportOrderId.value &&
+      !result.items.some(
+        (item) => item.transportOrderId === selectedTransportOrderId.value,
+      )
     ) {
       closeReceiptDialog();
     }
-  } catch {
+  } catch (error) {
+    void error;
   } finally {
     loading.value = false;
   }
@@ -263,8 +284,7 @@ async function handleReprintApplicationForm(group: TransportReceiptGroup) {
       terminalCode: receiveForm.terminalCode.trim() || null,
     });
     ElMessage.success(`申请单 ${group.applicationNo} 补打印成功`);
-  } catch {
-  }
+  } catch {}
 }
 
 function closeReceiptDialog() {
@@ -297,8 +317,8 @@ function validateReceiptItems(items: ReceiptDraftItem[]) {
   if (
     items.some(
       (item) =>
-        item.receiptStatus === 'RECEIVED'
-        && item.qualityCheckResult !== 'PASSED',
+        item.receiptStatus === 'RECEIVED' &&
+        item.qualityCheckResult !== 'PASSED',
     )
   ) {
     ElMessage.warning('正常接收的标本质控结果必须为合格');
@@ -307,8 +327,8 @@ function validateReceiptItems(items: ReceiptDraftItem[]) {
   if (
     items.some(
       (item) =>
-        item.qualityCheckResult === 'FAILED'
-        && !(item.qualityIssueCodes && item.qualityIssueCodes.length > 0),
+        item.qualityCheckResult === 'FAILED' &&
+        !(item.qualityIssueCodes && item.qualityIssueCodes.length > 0),
     )
   ) {
     ElMessage.warning('质控不合格时必须选择问题代码');
@@ -316,9 +336,7 @@ function validateReceiptItems(items: ReceiptDraftItem[]) {
   }
   if (
     items.some(
-      (item) =>
-        item.receiptStatus !== 'RECEIVED'
-        && !item.reason?.trim(),
+      (item) => item.receiptStatus !== 'RECEIVED' && !item.reason?.trim(),
     )
   ) {
     ElMessage.warning('拒收或退回时必须填写原因');
@@ -344,7 +362,7 @@ async function submitReceipt() {
   receiveLoading.value = true;
   try {
     receiptResult.value = await receiveSpecimens({
-      items: receiptDraftItems.value.map(normalizeReceiptItem),
+      items: receiptDraftItems.value.map((item) => normalizeReceiptItem(item)),
       receivedByName: receiveForm.receivedByName.trim(),
       receivedByUserId: receiveForm.receivedByUserId.trim() || null,
       terminalCode: receiveForm.terminalCode.trim() || null,
@@ -353,7 +371,8 @@ async function submitReceipt() {
     ElMessage.success('标本接收成功');
     closeReceiptDialog();
     await loadPendingData();
-  } catch {
+  } catch (error) {
+    void error;
   } finally {
     receiveLoading.value = false;
   }
@@ -368,7 +387,9 @@ function removeDirectReceiptRow(key: number) {
     ElMessage.warning('至少保留一行直接接收项');
     return;
   }
-  directDraftItems.value = directDraftItems.value.filter((item) => item.key !== key);
+  directDraftItems.value = directDraftItems.value.filter(
+    (item) => item.key !== key,
+  );
 }
 
 async function submitDirectReceipt() {
@@ -383,7 +404,7 @@ async function submitDirectReceipt() {
   directReceiveLoading.value = true;
   try {
     receiptResult.value = await directReceiveSpecimens({
-      items: directDraftItems.value.map(normalizeReceiptItem),
+      items: directDraftItems.value.map((item) => normalizeReceiptItem(item)),
       receivedByName: directForm.receivedByName.trim(),
       receivedByUserId: directForm.receivedByUserId.trim() || null,
       terminalCode: directForm.terminalCode.trim() || null,
@@ -392,13 +413,16 @@ async function submitDirectReceipt() {
     directDrawerVisible.value = false;
     directDraftItems.value = [createReceiptDraftItem()];
     await loadPendingData();
-  } catch {
+  } catch (error) {
+    void error;
   } finally {
     directReceiveLoading.value = false;
   }
 }
 
-function normalizeReceiptItem(item: ReceiptDraftItem): SpecimenReceiptItemRequest {
+function normalizeReceiptItem(
+  item: ReceiptDraftItem,
+): SpecimenReceiptItemRequest {
   return {
     containerCount: item.containerCount,
     qualityCheckResult: item.qualityCheckResult.trim(),
@@ -412,7 +436,9 @@ function normalizeReceiptItem(item: ReceiptDraftItem): SpecimenReceiptItemReques
   };
 }
 
-function handleDepartmentChange(department: null | { id: string; name: string }) {
+function handleDepartmentChange(
+  department: null | { id: string; name: string },
+) {
   filters.departmentId = department?.id ?? '';
 }
 
@@ -421,7 +447,9 @@ function handleReceiveUserChange(user: null | { id: string; name: string }) {
   receiveForm.receivedByName = user?.name ?? '';
 }
 
-function handleDirectReceiveUserChange(user: null | { id: string; name: string }) {
+function handleDirectReceiveUserChange(
+  user: null | { id: string; name: string },
+) {
   directForm.receivedByUserId = user?.id ?? '';
   directForm.receivedByName = user?.name ?? '';
 }
@@ -437,7 +465,9 @@ void loadPendingData();
         description="待接收列表按后端标本分页返回，在前端按 transportOrderId 聚合成接收工作台，并显式展示异常批次、提醒计数和未接收数量。"
       >
         <template #extra>
-          <ElButton type="primary" @click="directDrawerVisible = true">条码直收</ElButton>
+          <ElButton type="primary" @click="directDrawerVisible = true">
+            条码直收
+          </ElButton>
         </template>
 
         <div class="mb-4 grid gap-3 md:grid-cols-3">
@@ -447,7 +477,9 @@ void loadPendingData();
               {{ groupedTransportOrders.length }}
             </div>
           </div>
-          <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm">
+          <div
+            class="rounded-lg border border-amber-200 bg-amber-50 p-4 shadow-sm"
+          >
             <div class="text-sm text-muted-foreground">异常批次</div>
             <div class="mt-2 text-2xl font-semibold text-amber-600">
               {{ abnormalBatchCount }}
@@ -504,8 +536,16 @@ void loadPendingData();
         />
 
         <ElTable v-loading="loading" :data="groupedTransportOrders" border>
-          <ElTableColumn label="转运单号" min-width="180" prop="transportOrderId" />
-          <ElTableColumn label="申请单号" min-width="150" prop="applicationNo" />
+          <ElTableColumn
+            label="转运单号"
+            min-width="180"
+            prop="transportOrderId"
+          />
+          <ElTableColumn
+            label="申请单号"
+            min-width="150"
+            prop="applicationNo"
+          />
           <ElTableColumn label="患者姓名" min-width="120">
             <template #default="{ row }">
               {{ formatNullable(row.patientName) }}
@@ -537,14 +577,15 @@ void loadPendingData();
           <ElTableColumn label="标本条码" min-width="240">
             <template #default="{ row }">
               <div class="flex flex-wrap gap-1">
-                <ElTag
-                  v-if="row.batchAbnormalFlag"
-                  effect="dark"
-                  type="danger"
-                >
+                <ElTag v-if="row.batchAbnormalFlag" effect="dark" type="danger">
                   异常批次
                 </ElTag>
-                <ElTag v-for="barcode in row.barcodes" :key="barcode" effect="plain" type="info">
+                <ElTag
+                  v-for="barcode in row.barcodes"
+                  :key="barcode"
+                  effect="plain"
+                  type="info"
+                >
                   {{ barcode }}
                 </ElTag>
               </div>
@@ -553,8 +594,14 @@ void loadPendingData();
           <ElTableColumn fixed="right" label="操作" width="120">
             <template #default="{ row }">
               <div class="flex flex-col items-start gap-1">
-                <ElButton link type="primary" @click="prepareReceipt(row)">接收</ElButton>
-                <ElButton link type="info" @click="handleReprintApplicationForm(row)">
+                <ElButton link type="primary" @click="prepareReceipt(row)">
+                  接收
+                </ElButton>
+                <ElButton
+                  link
+                  type="info"
+                  @click="handleReprintApplicationForm(row)"
+                >
                   补打印申请单
                 </ElButton>
               </div>
@@ -598,7 +645,9 @@ void loadPendingData();
             {{ receiptResult.reminderCount ?? 0 }}
           </ElDescriptionsItem>
           <ElDescriptionsItem label="异常批次">
-            <ElTag :type="receiptResult.batchAbnormalFlag ? 'danger' : 'success'">
+            <ElTag
+              :type="receiptResult.batchAbnormalFlag ? 'danger' : 'success'"
+            >
               {{ receiptResult.batchAbnormalFlag ? '是' : '否' }}
             </ElTag>
           </ElDescriptionsItem>
@@ -658,12 +707,20 @@ void loadPendingData();
               />
             </ElFormItem>
             <ElFormItem label="终端编码">
-              <ElInput v-model="receiveForm.terminalCode" placeholder="工作站终端编码" />
+              <ElInput
+                v-model="receiveForm.terminalCode"
+                placeholder="工作站终端编码"
+              />
             </ElFormItem>
           </div>
         </ElForm>
 
-        <ElTable :data="receiptDraftItems" row-key="key" border max-height="420">
+        <ElTable
+          :data="receiptDraftItems"
+          row-key="key"
+          border
+          max-height="420"
+        >
           <ElTableColumn label="标本条码" min-width="180">
             <template #default="{ row }">
               <ElInput v-model="row.specimenBarcode" placeholder="标本条码" />
@@ -688,7 +745,11 @@ void loadPendingData();
           </ElTableColumn>
           <ElTableColumn label="容器数量" min-width="120">
             <template #default="{ row }">
-              <ElInputNumber v-model="row.containerCount" :min="1" style="width: 100%" />
+              <ElInputNumber
+                v-model="row.containerCount"
+                :min="1"
+                style="width: 100%"
+              />
             </template>
           </ElTableColumn>
           <ElTableColumn label="质控结果" min-width="140">
@@ -739,7 +800,11 @@ void loadPendingData();
       <template #footer>
         <div class="flex justify-end gap-2">
           <ElButton @click="closeReceiptDialog">取消</ElButton>
-          <ElButton :loading="receiveLoading" type="primary" @click="submitReceipt">
+          <ElButton
+            :loading="receiveLoading"
+            type="primary"
+            @click="submitReceipt"
+          >
             提交接收
           </ElButton>
         </div>
@@ -758,19 +823,27 @@ void loadPendingData();
             />
           </ElFormItem>
           <ElFormItem label="终端编码">
-            <ElInput v-model="directForm.terminalCode" placeholder="工作站终端编码" />
+            <ElInput
+              v-model="directForm.terminalCode"
+              placeholder="工作站终端编码"
+            />
           </ElFormItem>
         </div>
       </ElForm>
 
       <div class="mb-3 flex justify-end">
-        <ElButton type="primary" @click="addDirectReceiptRow">新增条码</ElButton>
+        <ElButton type="primary" @click="addDirectReceiptRow">
+          新增条码
+        </ElButton>
       </div>
 
       <ElTable :data="directDraftItems" row-key="key" border>
         <ElTableColumn label="标本条码" min-width="180">
           <template #default="{ row }">
-            <ElInput v-model="row.specimenBarcode" placeholder="请输入标本条码" />
+            <ElInput
+              v-model="row.specimenBarcode"
+              placeholder="请输入标本条码"
+            />
           </template>
         </ElTableColumn>
         <ElTableColumn label="接收结果" min-width="140">
@@ -787,7 +860,11 @@ void loadPendingData();
         </ElTableColumn>
         <ElTableColumn label="容器数量" min-width="120">
           <template #default="{ row }">
-            <ElInputNumber v-model="row.containerCount" :min="1" style="width: 100%" />
+            <ElInputNumber
+              v-model="row.containerCount"
+              :min="1"
+              style="width: 100%"
+            />
           </template>
         </ElTableColumn>
         <ElTableColumn label="质控结果" min-width="140">
@@ -834,7 +911,11 @@ void loadPendingData();
         </ElTableColumn>
         <ElTableColumn fixed="right" label="操作" width="90">
           <template #default="{ row }">
-            <ElButton link type="danger" @click="removeDirectReceiptRow(row.key)">
+            <ElButton
+              link
+              type="danger"
+              @click="removeDirectReceiptRow(row.key)"
+            >
               删除
             </ElButton>
           </template>
@@ -843,7 +924,11 @@ void loadPendingData();
 
       <div class="mt-4 flex justify-end gap-2">
         <ElButton @click="directDrawerVisible = false">取消</ElButton>
-        <ElButton :loading="directReceiveLoading" type="primary" @click="submitDirectReceipt">
+        <ElButton
+          :loading="directReceiveLoading"
+          type="primary"
+          @click="submitDirectReceipt"
+        >
           提交直收
         </ElButton>
       </div>

@@ -2,6 +2,7 @@ import type {
   ApplicationRegistrationWorkbenchRecord,
   OperatingBuildingOption,
   OperatingRoomOption,
+  SaveApplicationRegistrationWorkbenchRequest,
   SpecimenDictionaryEntryOption,
   SpecimenDictionaryGroup,
   SpecimenPackageItem,
@@ -13,15 +14,15 @@ import type {
   WorkbenchSpecialConditions,
   WorkbenchSpecimenItem,
 } from '../types/application-registration-workbench';
-import {
-  buildSearchKeywords,
-  matchesSearchKeyword,
-} from '../utils/specimen-dictionary-search';
 
 import bbRaw from '../../../../../../mock_data/bb.json';
 import bbtcRaw from '../../../../../../mock_data/bbtc.json';
 import sqdRaw from '../../../../../../mock_data/sqd.json';
 import sssRaw from '../../../../../../mock_data/sss.json';
+import {
+  buildSearchKeywords,
+  matchesSearchKeyword,
+} from '../utils/specimen-dictionary-search';
 
 type RawContagiousSpecimen = WorkbenchContagiousSpecimen;
 
@@ -77,9 +78,9 @@ type RawRecord = {
   surgeryInfo: {
     buildingId: string;
     clinicalFindings: string;
-    fixativeType: string;
     fixationPerson: string;
     fixationTime: string;
+    fixativeType: string;
     roomId: string;
     specimenRemovalTime?: string;
     surgeryName: string;
@@ -123,6 +124,7 @@ const rawBuildings = sssRaw as RawBuilding[];
 const rawDictionaryGroups = bbRaw as RawDictionaryGroup[];
 const rawSpecimenPackages = bbtcRaw as RawSpecimenPackage[];
 const commonSpecimenKeywordLimit = 8;
+let workbenchRecords = rawRecords.map((record) => mapRecord(record));
 
 function cloneSpecialConditions(
   conditions: RawSpecialConditions,
@@ -169,7 +171,8 @@ function mapSpecimenItem(
 }
 
 function mapRecord(record: RawRecord): ApplicationRegistrationWorkbenchRecord {
-  const { applicationInfo, gynecologyInfo, specimenItems, surgeryInfo } = record;
+  const { applicationInfo, gynecologyInfo, specimenItems, surgeryInfo } =
+    record;
   return {
     applicationId: applicationInfo.applicationNo || applicationInfo.inpatientNo,
     contagiousSpecimen: {
@@ -218,6 +221,22 @@ function mapRecord(record: RawRecord): ApplicationRegistrationWorkbenchRecord {
       specimenRemovalTime: surgeryInfo.specimenRemovalTime ?? '',
       surgeryName: surgeryInfo.surgeryName,
     },
+  };
+}
+
+function cloneWorkbenchRecord(
+  record: ApplicationRegistrationWorkbenchRecord,
+): ApplicationRegistrationWorkbenchRecord {
+  return {
+    applicationId: record.applicationId,
+    contagiousSpecimen: { ...record.contagiousSpecimen },
+    gynecologyInfo: {
+      ...record.gynecologyInfo,
+      specialConditions: { ...record.gynecologyInfo.specialConditions },
+    },
+    patientInfo: { ...record.patientInfo },
+    specimenItems: record.specimenItems.map((item) => ({ ...item })),
+    surgeryInfo: { ...record.surgeryInfo },
   };
 }
 
@@ -272,7 +291,9 @@ function flattenDictionaryEntryOptions() {
 
 const specimenDictionaryEntryOptions = flattenDictionaryEntryOptions();
 
-function mapSpecimenPackage(rawPackage: RawSpecimenPackage): SpecimenPackageOption {
+function mapSpecimenPackage(
+  rawPackage: RawSpecimenPackage,
+): SpecimenPackageOption {
   return {
     applyDept: rawPackage.applyDept,
     description: rawPackage.description,
@@ -284,7 +305,10 @@ function mapSpecimenPackage(rawPackage: RawSpecimenPackage): SpecimenPackageOpti
       rawPackage.packageName,
       rawPackage.applyDept,
       rawPackage.description,
-      ...rawPackage.items.flatMap((item) => [item.specimenName, item.specimenSite]),
+      ...rawPackage.items.flatMap((item) => [
+        item.specimenName,
+        item.specimenSite,
+      ]),
     ]),
   };
 }
@@ -298,24 +322,24 @@ export async function lookupApplicationRegistrationWorkbenchRecord(
     return null;
   }
 
-  const matchedRecord = rawRecords.find((record) => {
+  const matchedRecord = workbenchRecords.find((record) => {
     if (queryType === 'APPLICATION_NO') {
-      return record.applicationInfo.applicationNo === normalizedKeyword;
+      return record.patientInfo.applicationNo === normalizedKeyword;
     }
     if (queryType === 'PATIENT_NAME') {
-      return record.applicationInfo.patientName.includes(normalizedKeyword);
+      return record.patientInfo.patientName.includes(normalizedKeyword);
     }
     if (queryType === 'AUTO') {
       return (
-        record.applicationInfo.applicationNo === normalizedKeyword ||
-        record.applicationInfo.inpatientNo === normalizedKeyword ||
-        record.applicationInfo.patientName.includes(normalizedKeyword)
+        record.patientInfo.applicationNo === normalizedKeyword ||
+        record.patientInfo.inpatientNo === normalizedKeyword ||
+        record.patientInfo.patientName.includes(normalizedKeyword)
       );
     }
-    return record.applicationInfo.inpatientNo === normalizedKeyword;
+    return record.patientInfo.inpatientNo === normalizedKeyword;
   });
 
-  return matchedRecord ? mapRecord(matchedRecord) : null;
+  return matchedRecord ? cloneWorkbenchRecord(matchedRecord) : null;
 }
 
 export async function listOperatingBuildingOptions() {
@@ -371,10 +395,12 @@ export async function listSpecimenDictionaryGroups(keyword = '') {
             partId: part.partId,
             partName: part.partName,
             specimens:
-              matchedSpecimens.length > 0 ? matchedSpecimens : [...part.specimens],
+              matchedSpecimens.length > 0
+                ? matchedSpecimens
+                : [...part.specimens],
           };
         })
-        .filter((part): part is SpecimenDictionaryGroup['subParts'][number] => Boolean(part));
+        .filter(Boolean);
 
       if (
         !matchesSearchKeyword(
@@ -390,14 +416,14 @@ export async function listSpecimenDictionaryGroups(keyword = '') {
         subParts:
           filteredParts.length > 0
             ? filteredParts
-            : cloneDictionaryGroups().find(
+            : (cloneDictionaryGroups().find(
                 (item) => item.systemId === group.systemId,
-              )?.subParts ?? [],
+              )?.subParts ?? []),
         systemId: group.systemId,
         systemName: group.systemName,
       };
     })
-    .filter((group): group is SpecimenDictionaryGroup => Boolean(group));
+    .filter(Boolean);
 }
 
 export async function listSpecimenDictionaryEntryOptions(keyword = '') {
@@ -419,10 +445,7 @@ export async function listCommonSpecimenOptions() {
     .map((option) => ({ ...option }));
 }
 
-export async function listSpecimenPackageOptions(
-  keyword = '',
-  applyDept = '',
-) {
+export async function listSpecimenPackageOptions(keyword = '', applyDept = '') {
   const normalizedKeyword = keyword.trim();
   const normalizedDept = applyDept.trim();
 
@@ -439,4 +462,51 @@ export async function listSpecimenPackageOptions(
 
       return matchesDept && matchesKeyword;
     });
+}
+
+export async function saveApplicationRegistrationWorkbenchMock(
+  applicationId: string,
+  payload: SaveApplicationRegistrationWorkbenchRequest,
+) {
+  const normalizedApplicationId = applicationId.trim();
+  const recordIndex = workbenchRecords.findIndex(
+    (item) =>
+      item.applicationId === normalizedApplicationId ||
+      item.patientInfo.applicationNo === normalizedApplicationId ||
+      item.patientInfo.inpatientNo === normalizedApplicationId,
+  );
+  const currentRecord =
+    recordIndex === -1 ? null : workbenchRecords[recordIndex];
+
+  const nextRecord: ApplicationRegistrationWorkbenchRecord = {
+    applicationId:
+      currentRecord?.applicationId ??
+      normalizedApplicationId ??
+      payload.patientInfo.applicationNo,
+    contagiousSpecimen: { ...payload.contagiousSpecimen },
+    gynecologyInfo: {
+      ...payload.gynecologyInfo,
+      specialConditions: { ...payload.gynecologyInfo.specialConditions },
+    },
+    patientInfo: { ...payload.patientInfo },
+    specimenItems: payload.specimenItems.map((item, index) => ({
+      id:
+        currentRecord?.specimenItems[index]?.id ??
+        `${normalizedApplicationId || payload.patientInfo.applicationNo}-${index + 1}`,
+      quantity: item.quantity,
+      specimenName: item.specimenName,
+      specimenNo: currentRecord?.specimenItems[index]?.specimenNo ?? '',
+      specimenSite: item.specimenSite,
+      status: item.status,
+    })),
+    surgeryInfo: { ...payload.surgeryInfo },
+  };
+
+  if (recordIndex === -1) {
+    workbenchRecords = [...workbenchRecords, nextRecord];
+  } else {
+    workbenchRecords[recordIndex] = nextRecord;
+  }
+
+  return cloneWorkbenchRecord(nextRecord);
 }

@@ -4,6 +4,7 @@ import type { SpecimenManagementListItem } from '../types/specimen-workflow';
 import { computed, reactive, ref } from 'vue';
 
 import { useUserStore } from '@vben/stores';
+import { downloadFileFromBlob } from '@vben/utils';
 
 import {
   ElButton,
@@ -20,7 +21,6 @@ import {
   retryLabelPrint,
 } from '../api/specimen-workflow-service';
 import { getWorkflowPageErrorMessage } from '../utils/error';
-import { downloadFileFromBlob } from '@vben/utils';
 import {
   formatCheckInStatus,
   formatDateTime,
@@ -29,7 +29,7 @@ import {
 } from '../utils/format';
 
 const MAX_QUERY_SIZE = 100;
-const RECEIPT_LOCKED_STATUSES = ['RECEIVED', 'REJECTED', 'RETURNED'];
+const RECEIPT_LOCKED_STATUSES = new Set(['RECEIVED', 'REJECTED', 'RETURNED']);
 const EXPORT_HEADERS = [
   '序',
   '申请单',
@@ -48,8 +48,8 @@ const EXPORT_HEADERS = [
 ] as const;
 
 type QueueItem = SpecimenManagementListItem & {
-  checkedInByName?: null | string;
   checkedInAt?: null | string;
+  checkedInByName?: null | string;
   queueAddedAt: string;
   queueAddedByName: string;
   queueStatus: 'FAILED' | 'PENDING' | 'SUCCESS';
@@ -75,13 +75,16 @@ const operatorForm = reactive({
 });
 
 const selectedRows = computed(() =>
-  queueItems.value.filter((item) => selectedRowKeys.value.includes(item.specimenId)),
+  queueItems.value.filter((item) =>
+    selectedRowKeys.value.includes(item.specimenId),
+  ),
 );
 
 const selectedCount = computed(() => selectedRows.value.length);
 
 const pendingCount = computed(
-  () => queueItems.value.filter((item) => item.queueStatus !== 'SUCCESS').length,
+  () =>
+    queueItems.value.filter((item) => item.queueStatus !== 'SUCCESS').length,
 );
 
 function normalizeText(value?: null | string) {
@@ -89,15 +92,15 @@ function normalizeText(value?: null | string) {
 }
 
 function isReceiptLocked(row: SpecimenManagementListItem) {
-  return RECEIPT_LOCKED_STATUSES.includes(row.specimenStatus ?? '');
+  return RECEIPT_LOCKED_STATUSES.has(row.specimenStatus ?? '');
 }
 
 function isVisibleInCheckInScene(row: SpecimenManagementListItem) {
   return (
-    row.verificationStatus === 'VERIFIED'
-    && row.fixationStatus === 'COMPLETED'
-    && Boolean(row.specimenConfirmedAt)
-    && !isReceiptLocked(row)
+    row.verificationStatus === 'VERIFIED' &&
+    row.fixationStatus === 'COMPLETED' &&
+    Boolean(row.specimenConfirmedAt) &&
+    !isReceiptLocked(row)
   );
 }
 
@@ -105,15 +108,18 @@ function buildQueueItem(row: SpecimenManagementListItem): QueueItem {
   return {
     ...row,
     queueAddedAt: new Date().toISOString(),
-    queueAddedByName: operatorForm.operatorName.trim() || userStore.userInfo?.realName || '-',
+    queueAddedByName:
+      operatorForm.operatorName.trim() || userStore.userInfo?.realName || '-',
     queueStatus: row.checkInStatus === 'CHECKED_IN' ? 'SUCCESS' : 'PENDING',
   };
 }
 
 function upsertQueueItem(row: SpecimenManagementListItem) {
-  const index = queueItems.value.findIndex((item) => item.specimenId === row.specimenId);
+  const index = queueItems.value.findIndex(
+    (item) => item.specimenId === row.specimenId,
+  );
   const nextRow = buildQueueItem(row);
-  if (index >= 0) {
+  if (index !== -1) {
     const existingRow = queueItems.value[index];
     if (!existingRow) {
       return nextRow;
@@ -132,8 +138,12 @@ function upsertQueueItem(row: SpecimenManagementListItem) {
 
 function removeQueueItems(specimenIds: string[]) {
   const targetSet = new Set(specimenIds);
-  queueItems.value = queueItems.value.filter((item) => !targetSet.has(item.specimenId));
-  selectedRowKeys.value = selectedRowKeys.value.filter((item) => !targetSet.has(item));
+  queueItems.value = queueItems.value.filter(
+    (item) => !targetSet.has(item.specimenId),
+  );
+  selectedRowKeys.value = selectedRowKeys.value.filter(
+    (item) => !targetSet.has(item),
+  );
 }
 
 function clearSelection() {
@@ -146,11 +156,13 @@ function clearQueue() {
 }
 
 function isCheckInReady(row: SpecimenManagementListItem) {
-  return row.checkInStatus !== 'CHECKED_IN'
-    && row.verificationStatus === 'VERIFIED'
-    && row.fixationStatus === 'COMPLETED'
-    && Boolean(row.specimenConfirmedAt)
-    && !isReceiptLocked(row);
+  return (
+    row.checkInStatus !== 'CHECKED_IN' &&
+    row.verificationStatus === 'VERIFIED' &&
+    row.fixationStatus === 'COMPLETED' &&
+    Boolean(row.specimenConfirmedAt) &&
+    !isReceiptLocked(row)
+  );
 }
 
 async function loadMatchingSpecimens(keyword: string) {
@@ -163,7 +175,10 @@ async function loadMatchingSpecimens(keyword: string) {
   return result.items.filter((item) => isVisibleInCheckInScene(item));
 }
 
-function resolveExactMatch(items: SpecimenManagementListItem[], keyword: string) {
+function resolveExactMatch(
+  items: SpecimenManagementListItem[],
+  keyword: string,
+) {
   const normalizedKeyword = normalizeText(keyword);
   const matches = items.filter((item) =>
     [item.specimenId, item.specimenNo, item.barcode].some(
@@ -246,7 +261,9 @@ async function handleQuickCheckIn() {
       return;
     }
 
-    const existingRow = queueItems.value.find((item) => item.specimenId === row.specimenId);
+    const existingRow = queueItems.value.find(
+      (item) => item.specimenId === row.specimenId,
+    );
     if (existingRow?.checkInStatus === 'CHECKED_IN') {
       ElMessage.success('该标本已完成入库');
       scanInput.value = '';
@@ -286,7 +303,7 @@ function canBatchOperate(row: QueueItem) {
 }
 
 async function handleBatchCheckIn() {
-  const targets = selectedRows.value.filter(canBatchOperate);
+  const targets = selectedRows.value.filter((row) => canBatchOperate(row));
   if (targets.length === 0) {
     ElMessage.warning('请先选择需要入库的标本');
     return;
@@ -304,20 +321,25 @@ async function handleBatchCheckIn() {
 
 async function handleRetryLabelPrint() {
   const selectedTargets = selectedRows.value;
-  const fallbackBatchNos = Array.from(
-    new Set(queueItems.value.map((row) => row.labelPrintBatchNo).filter(Boolean)),
-  );
-  const targets = selectedTargets.length > 0
-    ? selectedTargets
-    : queueItems.value.filter((row) => row.labelPrintBatchNo === fallbackBatchNos[0]);
+  const fallbackBatchNos = [
+    ...new Set(
+      queueItems.value.map((row) => row.labelPrintBatchNo).filter(Boolean),
+    ),
+  ];
+  const targets =
+    selectedTargets.length > 0
+      ? selectedTargets
+      : queueItems.value.filter(
+          (row) => row.labelPrintBatchNo === fallbackBatchNos[0],
+        );
   if (targets.length === 0) {
     ElMessage.warning('请先选择需要补打的标本');
     return;
   }
 
-  const batchNos = Array.from(
-    new Set(targets.map((row) => row.labelPrintBatchNo).filter(Boolean)),
-  );
+  const batchNos = [
+    ...new Set(targets.map((row) => row.labelPrintBatchNo).filter(Boolean)),
+  ];
   if (batchNos.length !== 1) {
     ElMessage.warning('仅支持同一标签批次补打');
     return;
@@ -372,11 +394,13 @@ async function handleExport() {
       resolveExportValue(row.queueAddedByName),
     ]);
     const csv = [EXPORT_HEADERS, ...rows]
-      .map((line) => line.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(','))
+      .map((line) =>
+        line.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(','),
+      )
       .join('\n');
     downloadFileFromBlob({
       fileName: `specimen-check-in-${new Date().toISOString().slice(0, 10)}.csv`,
-      source: new Blob(['\ufeff', csv], { type: 'text/csv;charset=utf-8' }),
+      source: new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8' }),
     });
     ElMessage.success('导出成功');
   } catch (error) {
@@ -400,15 +424,21 @@ async function handleExport() {
       <div class="font-semibold text-[color:#d6453d]">标本入库</div>
       <div>
         全部
-        <span class="text-xl font-semibold text-primary">{{ queueItems.length }}</span>
+        <span class="text-xl font-semibold text-primary">{{
+          queueItems.length
+        }}</span>
       </div>
       <div>
         已选
-        <span class="text-xl font-semibold text-success">{{ selectedCount }}</span>
+        <span class="text-xl font-semibold text-success">{{
+          selectedCount
+        }}</span>
       </div>
       <div>
         待处理
-        <span class="text-xl font-semibold text-danger">{{ pendingCount }}</span>
+        <span class="text-xl font-semibold text-danger">{{
+          pendingCount
+        }}</span>
       </div>
     </div>
 
@@ -425,17 +455,35 @@ async function handleExport() {
         placeholder="选择操作人"
         style="width: 160px"
       />
-      <ElInput v-model="operatorForm.printerCode" placeholder="打印机编号" style="width: 140px" />
-      <ElInput v-model="operatorForm.terminalCode" placeholder="终端编号" style="width: 140px" />
-      <ElButton :loading="actionLoading" type="primary" @click="handleQuickCheckIn">
+      <ElInput
+        v-model="operatorForm.printerCode"
+        placeholder="打印机编号"
+        style="width: 140px"
+      />
+      <ElInput
+        v-model="operatorForm.terminalCode"
+        placeholder="终端编号"
+        style="width: 140px"
+      />
+      <ElButton
+        :loading="actionLoading"
+        type="primary"
+        @click="handleQuickCheckIn"
+      >
         标本入库
       </ElButton>
-      <ElButton :loading="retryLoading" @click="handleBatchCheckIn">批量入库</ElButton>
+      <ElButton :loading="retryLoading" @click="handleBatchCheckIn">
+        批量入库
+      </ElButton>
       <ElButton @click="clearSelection">清除选择行</ElButton>
       <ElButton @click="clearQueue">清除列表</ElButton>
-      <ElButton :loading="retryLoading" @click="handleRetryLabelPrint">补打标本标签</ElButton>
+      <ElButton :loading="retryLoading" @click="handleRetryLabelPrint">
+        补打标本标签
+      </ElButton>
       <ElButton @click="handleReset">重置</ElButton>
-      <ElButton :loading="exportLoading" @click="handleExport">导出Excel</ElButton>
+      <ElButton :loading="exportLoading" @click="handleExport">
+        导出Excel
+      </ElButton>
     </div>
 
     <ElTable
@@ -451,14 +499,10 @@ async function handleExport() {
       <ElTableColumn label="标本编号" min-width="130" prop="specimenNo" />
       <ElTableColumn label="姓名" min-width="110" prop="patientName" />
       <ElTableColumn label="住院号" min-width="110">
-        <template #default>
-          -
-        </template>
+        <template #default> - </template>
       </ElTableColumn>
       <ElTableColumn label="性别" min-width="90">
-        <template #default>
-          -
-        </template>
+        <template #default> - </template>
       </ElTableColumn>
       <ElTableColumn label="手术间" min-width="120">
         <template #default="{ row }">
@@ -514,8 +558,9 @@ async function handleExport() {
     </ElTable>
 
     <div class="text-sm text-muted-foreground">
-      已入库 {{ queueItems.filter((item) => item.queueStatus === 'SUCCESS').length }} 条，
-      待处理 {{ pendingCount }} 条
+      已入库
+      {{ queueItems.filter((item) => item.queueStatus === 'SUCCESS').length }}
+      条， 待处理 {{ pendingCount }} 条
     </div>
   </div>
 </template>

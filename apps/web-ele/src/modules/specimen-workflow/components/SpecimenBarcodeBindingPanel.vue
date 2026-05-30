@@ -33,7 +33,7 @@ import {
 } from '../utils/format';
 
 const MAX_QUERY_SIZE = 500;
-const RECEIPT_LOCKED_STATUSES = ['RECEIVED', 'REJECTED', 'RETURNED'];
+const RECEIPT_LOCKED_STATUSES = new Set(['RECEIVED', 'REJECTED', 'RETURNED']);
 
 const userStore = useUserStore();
 
@@ -65,12 +65,10 @@ const bindingForm = reactive({
   terminalCode: '',
 });
 
-const isRebinding = computed(() =>
-  Boolean(targetRow.value?.barcode?.trim()),
-);
+const isRebinding = computed(() => Boolean(targetRow.value?.barcode?.trim()));
 
 function isReceiptLocked(row: SpecimenManagementListItem) {
-  return RECEIPT_LOCKED_STATUSES.includes(row.specimenStatus ?? '');
+  return RECEIPT_LOCKED_STATUSES.has(row.specimenStatus ?? '');
 }
 
 function isVisibleInBindingScene(row: SpecimenManagementListItem) {
@@ -86,7 +84,9 @@ async function loadSpecimens() {
       page: 1,
       size: MAX_QUERY_SIZE,
     });
-    eligibleItems.value = result.items.filter(isVisibleInBindingScene);
+    eligibleItems.value = result.items.filter((item) =>
+      isVisibleInBindingScene(item),
+    );
     if ((filters.page - 1) * filters.size >= eligibleItems.value.length) {
       filters.page = 1;
     }
@@ -117,7 +117,9 @@ function openDialog(row: SpecimenManagementListItem) {
   bindingForm.operatorName = userStore.userInfo?.realName ?? '';
   bindingForm.operatorUserId = userStore.userInfo?.userId ?? '';
   bindingForm.remarks = '';
-  bindingForm.targetBarcode = row.barcode?.trim() ? `${row.barcode.trim()}-NEW` : '';
+  bindingForm.targetBarcode = row.barcode?.trim()
+    ? `${row.barcode.trim()}-NEW`
+    : '';
   bindingForm.terminalCode = '';
   dialogVisible.value = true;
 }
@@ -139,23 +141,21 @@ async function submitBinding() {
   actionLoading.value = true;
   pageError.value = '';
   try {
-    if (isRebinding.value) {
-      await rebindSpecimenBarcode(row.barcode || row.specimenId, {
-        operatorName: bindingForm.operatorName.trim(),
-        operatorUserId: bindingForm.operatorUserId.trim() || null,
-        remarks: bindingForm.remarks.trim() || null,
-        targetBarcode: bindingForm.targetBarcode.trim(),
-        terminalCode: bindingForm.terminalCode.trim() || null,
-      });
-    } else {
-      await bindSpecimenBarcode(row.specimenId, {
-        operatorName: bindingForm.operatorName.trim(),
-        operatorUserId: bindingForm.operatorUserId.trim() || null,
-        remarks: bindingForm.remarks.trim() || null,
-        targetBarcode: bindingForm.targetBarcode.trim(),
-        terminalCode: bindingForm.terminalCode.trim() || null,
-      });
-    }
+    await (isRebinding.value
+      ? rebindSpecimenBarcode(row.barcode || row.specimenId, {
+          operatorName: bindingForm.operatorName.trim(),
+          operatorUserId: bindingForm.operatorUserId.trim() || null,
+          remarks: bindingForm.remarks.trim() || null,
+          targetBarcode: bindingForm.targetBarcode.trim(),
+          terminalCode: bindingForm.terminalCode.trim() || null,
+        })
+      : bindSpecimenBarcode(row.specimenId, {
+          operatorName: bindingForm.operatorName.trim(),
+          operatorUserId: bindingForm.operatorUserId.trim() || null,
+          remarks: bindingForm.remarks.trim() || null,
+          targetBarcode: bindingForm.targetBarcode.trim(),
+          terminalCode: bindingForm.terminalCode.trim() || null,
+        }));
     ElMessage.success(isRebinding.value ? '条码重绑成功' : '条码绑定成功');
     dialogVisible.value = false;
     await loadSpecimens();
@@ -195,12 +195,7 @@ void loadSpecimens();
       </div>
     </div>
 
-    <ElTable
-      v-loading="loading"
-      :data="pagedItems"
-      border
-      max-height="420"
-    >
+    <ElTable v-loading="loading" :data="pagedItems" border max-height="420">
       <ElTableColumn label="申请单号" min-width="150" prop="applicationNo" />
       <ElTableColumn label="标本号" min-width="140" prop="specimenNo" />
       <ElTableColumn label="当前条码" min-width="180">
@@ -212,7 +207,9 @@ void loadSpecimens();
         <template #default="{ row }">
           <div class="flex flex-col gap-1 text-sm">
             <span>{{ row.specimenName }}</span>
-            <span class="text-muted-foreground">{{ formatNullable(row.specimenSite) }}</span>
+            <span class="text-muted-foreground">{{
+              formatNullable(row.specimenSite)
+            }}</span>
           </div>
         </template>
       </ElTableColumn>
@@ -220,7 +217,9 @@ void loadSpecimens();
         <template #default="{ row }">
           <div class="flex flex-col gap-1 text-sm">
             <span>{{ formatFixationStatus(row.fixationStatus) }}</span>
-            <span class="text-muted-foreground">{{ formatSpecimenStatus(row.specimenStatus) }}</span>
+            <span class="text-muted-foreground">{{
+              formatSpecimenStatus(row.specimenStatus)
+            }}</span>
           </div>
         </template>
       </ElTableColumn>
@@ -231,7 +230,9 @@ void loadSpecimens();
       </ElTableColumn>
       <ElTableColumn label="绑定状态" min-width="120">
         <template #default="{ row }">
-          <ElTag :type="row.barcodeBindingStatus === 'BOUND' ? 'success' : 'info'">
+          <ElTag
+            :type="row.barcodeBindingStatus === 'BOUND' ? 'success' : 'info'"
+          >
             {{ row.barcodeBindingStatus === 'BOUND' ? '已绑定' : '未绑定' }}
           </ElTag>
         </template>
@@ -280,10 +281,16 @@ void loadSpecimens();
           <div>{{ formatNullable(targetRow.barcode) }}</div>
         </ElFormItem>
         <ElFormItem label="目标条码" required>
-          <ElInput v-model="bindingForm.targetBarcode" placeholder="请输入新条码" />
+          <ElInput
+            v-model="bindingForm.targetBarcode"
+            placeholder="请输入新条码"
+          />
         </ElFormItem>
         <ElFormItem label="终端编码">
-          <ElInput v-model="bindingForm.terminalCode" placeholder="工作站或扫码设备编号" />
+          <ElInput
+            v-model="bindingForm.terminalCode"
+            placeholder="工作站或扫码设备编号"
+          />
         </ElFormItem>
         <ElFormItem label="说明">
           <ElInput v-model="bindingForm.remarks" placeholder="补充绑定说明" />
@@ -294,7 +301,11 @@ void loadSpecimens();
     <template #footer>
       <div class="flex justify-end gap-2">
         <ElButton @click="dialogVisible = false">取消</ElButton>
-        <ElButton :loading="actionLoading" type="primary" @click="submitBinding">
+        <ElButton
+          :loading="actionLoading"
+          type="primary"
+          @click="submitBinding"
+        >
           提交
         </ElButton>
       </div>

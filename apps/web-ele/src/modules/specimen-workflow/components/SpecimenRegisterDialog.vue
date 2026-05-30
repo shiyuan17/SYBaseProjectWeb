@@ -104,13 +104,15 @@ const dialogVisible = computed({
   },
 });
 
-const applicationDetail = ref<null | ApplicationDetailView>(null);
+const applicationDetail = ref<ApplicationDetailView | null>(null);
 const currentApplicationId = ref('');
 const loadingDetail = ref(false);
 const loadingLatestRegistration = ref(false);
 const pageError = ref('');
 const submittingRegister = ref(false);
-const latestRegistrationResult = ref<LatestSpecimenRegistrationResult | null>(null);
+const latestRegistrationResult = ref<LatestSpecimenRegistrationResult | null>(
+  null,
+);
 const initialRegisterSnapshot = ref<null | RegisterFormSnapshot>(null);
 const workflowReferenceOptions = ref(createEmptyWorkflowReferenceOptions());
 
@@ -151,7 +153,9 @@ function createRegisterRow(seed?: Partial<RegisterRowSeed>): RegisterRow {
   };
 }
 
-function mapSpecimenToRegisterRowSeed(specimen: SpecimenTrackingSummary): RegisterRowSeed {
+function mapSpecimenToRegisterRowSeed(
+  specimen: SpecimenTrackingSummary,
+): RegisterRowSeed {
   return {
     barcode: specimen.barcode ?? '',
     clinicalSymptom: specimen.clinicalSymptom ?? '',
@@ -172,7 +176,9 @@ function buildRegisterFormSnapshot(
     return null;
   }
 
-  const itemSeeds = result.specimens.map(mapSpecimenToRegisterRowSeed);
+  const itemSeeds = result.specimens.map((item) =>
+    mapSpecimenToRegisterRowSeed(item),
+  );
   const snapshot = result.registrationSnapshot;
   if (!snapshot && itemSeeds.length === 0) {
     return null;
@@ -203,7 +209,9 @@ function applyRegisterFormSnapshot(snapshot?: null | RegisterFormSnapshot) {
     remarks: nextSnapshot.remarks,
     terminalCode: nextSnapshot.terminalCode,
   });
-  registerItems.value = nextSnapshot.items.map((item) => createRegisterRow(item));
+  registerItems.value = nextSnapshot.items.map((item) =>
+    createRegisterRow(item),
+  );
 }
 
 function resetRegisterForm() {
@@ -226,7 +234,9 @@ function addRegisterRow(afterKey?: number) {
     return;
   }
 
-  const targetIndex = registerItems.value.findIndex((item) => item.key === afterKey);
+  const targetIndex = registerItems.value.findIndex(
+    (item) => item.key === afterKey,
+  );
   if (targetIndex === -1) {
     registerItems.value.push(nextRow);
     return;
@@ -257,7 +267,9 @@ async function loadApplicationDetail(options: { silent?: boolean } = {}) {
   loadingDetail.value = true;
   pageError.value = '';
   try {
-    applicationDetail.value = await getApplicationDetail(currentApplicationId.value);
+    applicationDetail.value = await getApplicationDetail(
+      currentApplicationId.value,
+    );
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
   } finally {
@@ -276,7 +288,9 @@ async function loadLatestRegistration(options: { silent?: boolean } = {}) {
   loadingLatestRegistration.value = true;
   pageError.value = '';
   try {
-    const result = await getLatestRegistrationResult(currentApplicationId.value);
+    const result = await getLatestRegistrationResult(
+      currentApplicationId.value,
+    );
     latestRegistrationResult.value = result;
     initialRegisterSnapshot.value = buildRegisterFormSnapshot(result);
     resetRegisterForm();
@@ -294,23 +308,22 @@ async function loadWorkflowReferenceOptions() {
 }
 
 async function refreshDialogContext() {
-  await Promise.all([
-    loadApplicationDetail(),
-    loadLatestRegistration(),
-  ]);
+  await Promise.all([loadApplicationDetail(), loadLatestRegistration()]);
 }
 
-function validateRegisterItems(items: Array<{
-  barcode: null | string;
-  clinicalSymptom: null | string;
-  collectionMode: null | string;
-  containerCount: number;
-  containerName: string;
-  specimenCount: number;
-  specimenNameStandardized: string;
-  specimenSite: null | string;
-  specimenType: null | string;
-}>) {
+function validateRegisterItems(
+  items: Array<{
+    barcode: null | string;
+    clinicalSymptom: null | string;
+    collectionMode: null | string;
+    containerCount: number;
+    containerName: string;
+    specimenCount: number;
+    specimenNameStandardized: string;
+    specimenSite: null | string;
+    specimenType: null | string;
+  }>,
+) {
   if (items.some((item) => !item.specimenNameStandardized)) {
     ElMessage.warning('请完整填写每一行标本名称');
     return false;
@@ -406,7 +419,9 @@ async function submitRegister() {
       registrationSnapshot,
       specimens: result.specimens,
     };
-    initialRegisterSnapshot.value = buildRegisterFormSnapshot(latestRegistrationResult.value);
+    initialRegisterSnapshot.value = buildRegisterFormSnapshot(
+      latestRegistrationResult.value,
+    );
     resetRegisterForm();
     ElMessage.success('标本登记成功');
   } catch (error) {
@@ -494,8 +509,18 @@ watch(
               </div>
               <div class="mt-1 grid gap-1 text-muted-foreground md:grid-cols-2">
                 <div>异常类型：{{ formatReceiptStatus(specimen.status) }}</div>
-                <div>质控结果：{{ formatQualityCheckResult(specimen.qualityCheckResult) }}</div>
-                <div>问题代码：{{ specimen.qualityIssueCodes.length ? specimen.qualityIssueCodes.join('、') : '-' }}</div>
+                <div>
+                  质控结果：{{
+                    formatQualityCheckResult(specimen.qualityCheckResult)
+                  }}
+                </div>
+                <div>
+                  问题代码：{{
+                    specimen.qualityIssueCodes.length > 0
+                      ? specimen.qualityIssueCodes.join('、')
+                      : '-'
+                  }}
+                </div>
                 <div>原因：{{ specimen.reason || '-' }}</div>
               </div>
             </div>
@@ -504,7 +529,9 @@ watch(
       </ElAlert>
 
       <section class="rounded-lg border border-border bg-card p-4 shadow-sm">
-        <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div
+          class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between"
+        >
           <div class="text-base font-semibold text-foreground">当前上下文</div>
           <ElButton :loading="loadingContext" @click="refreshDialogContext">
             刷新详情
@@ -606,7 +633,11 @@ watch(
           </ElTableColumn>
           <ElTableColumn label="标本数量" min-width="120">
             <template #default="{ row }">
-              <ElInputNumber v-model="row.specimenCount" :min="1" style="width: 100%" />
+              <ElInputNumber
+                v-model="row.specimenCount"
+                :min="1"
+                style="width: 100%"
+              />
             </template>
           </ElTableColumn>
           <ElTableColumn label="容器名称" min-width="160">
@@ -620,7 +651,11 @@ watch(
           </ElTableColumn>
           <ElTableColumn label="容器数量" min-width="120">
             <template #default="{ row }">
-              <ElInputNumber v-model="row.containerCount" :min="1" style="width: 100%" />
+              <ElInputNumber
+                v-model="row.containerCount"
+                :min="1"
+                style="width: 100%"
+              />
             </template>
           </ElTableColumn>
           <ElTableColumn label="条码" min-width="180">
@@ -643,7 +678,11 @@ watch(
                 <ElButton link type="primary" @click="addRegisterRow(row.key)">
                   新增
                 </ElButton>
-                <ElButton link type="danger" @click="removeRegisterRow(row.key)">
+                <ElButton
+                  link
+                  type="danger"
+                  @click="removeRegisterRow(row.key)"
+                >
                   删除
                 </ElButton>
               </div>
@@ -653,7 +692,11 @@ watch(
 
         <div class="mt-4 flex justify-end gap-2">
           <ElButton @click="resetRegisterForm">重置登记表单</ElButton>
-          <ElButton :loading="submittingRegister" type="primary" @click="submitRegister">
+          <ElButton
+            :loading="submittingRegister"
+            type="primary"
+            @click="submitRegister"
+          >
             提交登记
           </ElButton>
         </div>

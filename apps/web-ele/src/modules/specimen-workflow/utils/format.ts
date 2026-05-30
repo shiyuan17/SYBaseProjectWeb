@@ -8,8 +8,12 @@ import {
   VERIFICATION_STATUS_OPTIONS,
 } from '../constants';
 
-function createLabelMap(options: ReadonlyArray<{ label: string; value: string }>) {
-  return Object.fromEntries(options.map((option) => [option.value, option.label]));
+function createLabelMap(
+  options: ReadonlyArray<{ label: string; value: string }>,
+) {
+  return Object.fromEntries(
+    options.map((option) => [option.value, option.label]),
+  );
 }
 
 function formatMappedValue(

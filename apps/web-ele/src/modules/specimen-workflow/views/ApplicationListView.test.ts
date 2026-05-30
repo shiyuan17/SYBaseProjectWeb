@@ -1,8 +1,18 @@
-import { createApp, defineComponent, h, inject, nextTick, provide } from 'vue';
+import { createApp, h, nextTick } from 'vue';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const tableRowKey = Symbol('table-row');
+import {
+  createButtonStub,
+  createInputStub,
+  createOptionStub,
+  createPassthroughStub,
+  createSelectStub,
+  createTableColumnStub,
+  createTableStub,
+} from '../test-utils/component-stubs';
+
+const tableRowKey = vi.hoisted(() => Symbol('table-row'));
 
 const {
   mockAccessStore,
@@ -75,147 +85,26 @@ vi.mock('../api/specimen-workflow-service', () => ({
 }));
 
 vi.mock('element-plus', () => {
-  const passthrough = (tag = 'div') =>
-    defineComponent({
-      props: ['description', 'label', 'modelValue', 'title'],
-      setup(props, { slots }) {
-        return () =>
-          h(tag, [
-            props.title ? h('div', props.title) : null,
-            props.label ? h('span', props.label) : null,
-            props.description ? h('div', props.description) : null,
-            slots.default?.(),
-          ]);
-      },
-    });
-
-  const ElButton = defineComponent({
-    emits: ['click'],
-    props: ['disabled', 'loading', 'title', 'type'],
-    setup(props, { emit, slots }) {
-      return () =>
-        h(
-          'button',
-          {
-            disabled: Boolean(props.disabled),
-            title: props.title,
-            type: 'button',
-            onClick: (event: MouseEvent) => {
-              if (!props.disabled) {
-                emit('click', event);
-              }
-            },
-          },
-          slots.default?.(),
-        );
-    },
-  });
-
-  const ElInput = defineComponent({
-    emits: ['update:modelValue'],
-    props: ['modelValue', 'placeholder'],
-    setup(props, { emit }) {
-      return () =>
-        h('input', {
-          placeholder: props.placeholder,
-          value: props.modelValue,
-          onInput: (event: Event) =>
-            emit('update:modelValue', (event.target as HTMLInputElement).value),
-        });
-    },
-  });
-
-  const ElSelect = defineComponent({
-    emits: ['update:modelValue'],
-    props: ['modelValue'],
-    setup(props, { emit, slots }) {
-      return () =>
-        h(
-          'select',
-          {
-            value: props.modelValue,
-            onChange: (event: Event) =>
-              emit('update:modelValue', (event.target as HTMLSelectElement).value),
-          },
-          slots.default?.(),
-        );
-    },
-  });
-
-  const ElOption = defineComponent({
-    props: ['label', 'value'],
-    setup(props) {
-      return () => h('option', { value: props.value }, props.label);
-    },
-  });
-
-  const RowProvider = defineComponent({
-    props: {
-      row: {
-        required: true,
-        type: Object,
-      },
-    },
-    setup(props, { slots }) {
-      provide(tableRowKey, props.row);
-      return () => h('div', { class: 'table-row' }, slots.default?.());
-    },
-  });
-
-  const ElTable = defineComponent({
-    props: {
-      data: {
-        default: () => [],
-        type: Array,
-      },
-    },
-    setup(props, { slots }) {
-      return () =>
-        h(
-          'div',
-          (props.data as unknown[]).map((row, index) =>
-            h(RowProvider, { key: index, row: row as Record<string, unknown> }, () =>
-              slots.default?.(),
-            ),
-          ),
-        );
-    },
-  });
-
-  const ElTableColumn = defineComponent({
-    props: ['label', 'prop'],
-    setup(props, { slots }) {
-      return () => {
-        const row = inject<Record<string, unknown> | null>(tableRowKey, null);
-        const value = props.prop && row ? row[props.prop] : undefined;
-        return h('div', [
-          props.label ? h('span', props.label) : null,
-          slots.default ? slots.default({ row }) : value == null ? null : h('span', String(value)),
-        ]);
-      };
-    },
-  });
-
   return {
-    ElAlert: passthrough(),
-    ElButton,
-    ElDatePicker: passthrough(),
-    ElEmpty: passthrough(),
-    ElForm: passthrough('form'),
-    ElFormItem: passthrough(),
-    ElInput,
+    ElAlert: createPassthroughStub(),
+    ElButton: createButtonStub(),
+    ElDatePicker: createPassthroughStub(),
+    ElEmpty: createPassthroughStub(),
+    ElForm: createPassthroughStub('form'),
+    ElFormItem: createPassthroughStub(),
+    ElInput: createInputStub(),
     ElMessage: {
       success: mockMessageSuccess,
     },
     ElMessageBox: {
       confirm: mockConfirm,
     },
-    ElOption,
-    ElPagination: passthrough(),
-    ElSelect,
-    ElTable,
-    ElTableColumn,
-    ElTag: passthrough('span'),
+    ElOption: createOptionStub(),
+    ElPagination: createPassthroughStub(),
+    ElSelect: createSelectStub(),
+    ElTable: createTableStub(tableRowKey),
+    ElTableColumn: createTableColumnStub(tableRowKey),
+    ElTag: createPassthroughStub('span'),
   };
 });
 
@@ -296,10 +185,10 @@ describe('ApplicationListView', () => {
     });
 
     const { app, root } = await mountView();
-    const editButton = Array.from(root.querySelectorAll('button')).find(
+    const editButton = [...root.querySelectorAll('button')].find(
       (button) => button.textContent?.trim() === '编辑',
     );
-    const deleteButton = Array.from(root.querySelectorAll('button')).find(
+    const deleteButton = [...root.querySelectorAll('button')].find(
       (button) => button.textContent?.trim() === '删除',
     );
 
@@ -309,9 +198,11 @@ describe('ApplicationListView', () => {
     editButton?.click();
     await flushAll();
 
-    const dialog = root.querySelector('[data-testid="manage-dialog"]');
-    expect(dialog?.getAttribute('data-mode')).toBe('edit');
-    expect(dialog?.getAttribute('data-application-id')).toBe('APP-001');
+    const dialog = root.querySelector<HTMLElement>(
+      '[data-testid="manage-dialog"]',
+    );
+    expect(dialog?.dataset.mode).toBe('edit');
+    expect(dialog?.dataset.applicationId).toBe('APP-001');
 
     app.unmount();
   });
@@ -331,10 +222,10 @@ describe('ApplicationListView', () => {
     });
 
     const { app, root } = await mountView();
-    const editButton = Array.from(root.querySelectorAll('button')).find(
+    const editButton = [...root.querySelectorAll('button')].find(
       (button) => button.textContent?.trim() === '编辑',
     );
-    const deleteButton = Array.from(root.querySelectorAll('button')).find(
+    const deleteButton = [...root.querySelectorAll('button')].find(
       (button) => button.textContent?.trim() === '删除',
     );
 
@@ -357,7 +248,7 @@ describe('ApplicationListView', () => {
     });
 
     const { app, root } = await mountView();
-    const deleteButton = Array.from(root.querySelectorAll('button')).find(
+    const deleteButton = [...root.querySelectorAll('button')].find(
       (button) => button.textContent?.trim() === '删除',
     );
 

@@ -24,6 +24,8 @@ import {
   ElTag,
 } from 'element-plus';
 
+import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
+
 import { lookupApplicationRegistrationWorkbenchRecord } from '../api/application-registration-workbench-service';
 import {
   confirmSpecimen,
@@ -33,12 +35,7 @@ import {
 } from '../api/specimen-workflow-service';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
-import {
-  formatDateTime,
-  formatNullable,
-} from '../utils/format';
-
-import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
+import { formatDateTime, formatNullable } from '../utils/format';
 
 type CachedApplicationContext = {
   patientGender: null | string;
@@ -54,7 +51,7 @@ type ConfirmationListRow = SpecimenManagementListItem & {
 };
 
 const MAX_QUERY_SIZE = 500;
-const RECEIPT_LOCKED_STATUSES = ['RECEIVED', 'REJECTED', 'RETURNED'];
+const RECEIPT_LOCKED_STATUSES = new Set(['RECEIVED', 'REJECTED', 'RETURNED']);
 
 const userStore = useUserStore();
 
@@ -106,7 +103,9 @@ const total = computed(() => workingRows.value.length);
 
 const summary = computed(() => {
   const allCount = workingRows.value.length;
-  const confirmedCount = workingRows.value.filter((item) => Boolean(item.specimenConfirmedAt)).length;
+  const confirmedCount = workingRows.value.filter((item) =>
+    Boolean(item.specimenConfirmedAt),
+  ).length;
   return {
     allCount,
     confirmedCount,
@@ -136,15 +135,15 @@ function normalizeGenderLabel(value: null | string | undefined) {
 }
 
 function isReceiptLocked(row: SpecimenManagementListItem) {
-  return RECEIPT_LOCKED_STATUSES.includes(row.specimenStatus ?? '');
+  return RECEIPT_LOCKED_STATUSES.has(row.specimenStatus ?? '');
 }
 
 function isVisibleInConfirmationScene(row: SpecimenManagementListItem) {
   return (
-    row.fixationStatus === 'COMPLETED'
-    && row.verificationStatus === 'VERIFIED'
-    && row.checkInStatus !== 'CHECKED_IN'
-    && !isReceiptLocked(row)
+    row.fixationStatus === 'COMPLETED' &&
+    row.verificationStatus === 'VERIFIED' &&
+    row.checkInStatus !== 'CHECKED_IN' &&
+    !isReceiptLocked(row)
   );
 }
 
@@ -153,7 +152,10 @@ function canConfirm(row: ConfirmationListRow) {
 }
 
 function canRetryLabel(row: ConfirmationListRow) {
-  return Boolean(row.labelPrintBatchNo) && ['FAILED', 'PENDING'].includes(row.labelPrintStatus ?? '');
+  return (
+    Boolean(row.labelPrintBatchNo) &&
+    ['FAILED', 'PENDING'].includes(row.labelPrintStatus ?? '')
+  );
 }
 
 async function ensureWorkbenchRecord(applicationNo: string) {
@@ -213,37 +215,34 @@ function enhanceRow(
       applicationContext?.patientGender ?? workbenchRecord?.patientInfo.gender,
     ),
     registrationOperatorName:
-      applicationContext?.submittingDoctorName
-      || workbenchRecord?.patientInfo.applyDoctor?.trim()
-      || workbenchRecord?.surgeryInfo.fixationPerson?.trim()
-      || '',
-    registrationTime: row.registeredAt ?? workbenchRecord?.surgeryInfo.fixationTime ?? null,
+      applicationContext?.submittingDoctorName ||
+      workbenchRecord?.patientInfo.applyDoctor?.trim() ||
+      workbenchRecord?.surgeryInfo.fixationPerson?.trim() ||
+      '',
+    registrationTime:
+      row.registeredAt ?? workbenchRecord?.surgeryInfo.fixationTime ?? null,
     surgeryName:
-      workbenchRecord?.surgeryInfo.roomId?.trim()
-      || workbenchRecord?.surgeryInfo.surgeryName?.trim()
-      || '',
+      workbenchRecord?.surgeryInfo.roomId?.trim() ||
+      workbenchRecord?.surgeryInfo.surgeryName?.trim() ||
+      '',
   };
 }
 
 async function buildEnhancedRows(items: SpecimenManagementListItem[]) {
-  const applicationNos = Array.from(
-    new Set(
-      items
-        .map((item) => item.applicationNo?.trim())
-        .filter((value): value is string => Boolean(value)),
-    ),
-  );
-  const applicationIds = Array.from(
-    new Set(
-      items
-        .map((item) => item.applicationId?.trim())
-        .filter((value): value is string => Boolean(value)),
-    ),
-  );
+  const applicationNos = [
+    ...new Set(items.map((item) => item.applicationNo?.trim()).filter(Boolean)),
+  ];
+  const applicationIds = [
+    ...new Set(items.map((item) => item.applicationId?.trim()).filter(Boolean)),
+  ];
 
   await Promise.all([
-    ...applicationNos.map((applicationNo) => ensureWorkbenchRecord(applicationNo)),
-    ...applicationIds.map((applicationId) => ensureApplicationContext(applicationId)),
+    ...applicationNos.map((applicationNo) =>
+      ensureWorkbenchRecord(applicationNo),
+    ),
+    ...applicationIds.map((applicationId) =>
+      ensureApplicationContext(applicationId),
+    ),
   ]);
 
   return items.map((item) =>
@@ -273,7 +272,9 @@ async function loadSpecimens() {
       page: 1,
       size: MAX_QUERY_SIZE,
     });
-    const visibleRows = result.items.filter(isVisibleInConfirmationScene);
+    const visibleRows = result.items.filter((item) =>
+      isVisibleInConfirmationScene(item),
+    );
     const enhancedRows = await buildEnhancedRows(visibleRows);
     applyRows(enhancedRows);
   } catch (error) {
@@ -301,7 +302,7 @@ function buildConfirmPayload() {
 }
 
 async function confirmRows(rows: ConfirmationListRow[]) {
-  if (!rows.length) {
+  if (rows.length === 0) {
     ElMessage.warning('请先选择需要确认的标本');
     return;
   }
@@ -309,8 +310,8 @@ async function confirmRows(rows: ConfirmationListRow[]) {
     return;
   }
 
-  const pendingRows = rows.filter(canConfirm);
-  if (!pendingRows.length) {
+  const pendingRows = rows.filter((row) => canConfirm(row));
+  if (pendingRows.length === 0) {
     ElMessage.warning('当前所选标本均已确认');
     return;
   }
@@ -320,7 +321,9 @@ async function confirmRows(rows: ConfirmationListRow[]) {
   try {
     const payload = buildConfirmPayload();
     await Promise.all(
-      pendingRows.map((row) => confirmSpecimen(row.barcode || row.specimenId, payload)),
+      pendingRows.map((row) =>
+        confirmSpecimen(row.barcode || row.specimenId, payload),
+      ),
     );
     ElMessage.success(`已完成 ${pendingRows.length} 条标本确认`);
     await loadSpecimens();
@@ -344,7 +347,9 @@ async function tryQuickConfirmByKeyword() {
   const normalizedKeyword = keyword.toLowerCase();
   const matchedRows = allRows.value.filter((row) => {
     const candidates = [row.applicationNo, row.specimenNo, row.barcode];
-    return candidates.some((value) => value?.trim().toLowerCase() === normalizedKeyword);
+    return candidates.some(
+      (value) => value?.trim().toLowerCase() === normalizedKeyword,
+    );
   });
 
   if (matchedRows.length === 1) {
@@ -400,13 +405,17 @@ function handleConfirmRow(row: ConfirmationListRow) {
 }
 
 function handleClearSelectionRows() {
-  const selectedSpecimenIds = new Set(selectedRows.value.map((item) => item.specimenId));
-  if (!selectedSpecimenIds.size) {
+  const selectedSpecimenIds = new Set(
+    selectedRows.value.map((item) => item.specimenId),
+  );
+  if (selectedSpecimenIds.size === 0) {
     ElMessage.warning('请先勾选需要清除的行');
     return;
   }
 
-  workingRows.value = workingRows.value.filter((item) => !selectedSpecimenIds.has(item.specimenId));
+  workingRows.value = workingRows.value.filter(
+    (item) => !selectedSpecimenIds.has(item.specimenId),
+  );
   selectedRows.value = [];
   ElMessage.success('已清除选择行');
 }
@@ -419,24 +428,24 @@ function handleClearList() {
 }
 
 function openRetryDialog(rows: ConfirmationListRow[]) {
-  if (!rows.length) {
+  if (rows.length === 0) {
     ElMessage.warning('请先选择需要补打标签的标本');
     return;
   }
 
-  const retryableRows = rows.filter(canRetryLabel);
-  if (!retryableRows.length) {
+  const retryableRows = rows.filter((row) => canRetryLabel(row));
+  if (retryableRows.length === 0) {
     ElMessage.warning('所选标本没有可补打的标签批次');
     return;
   }
 
-  const batchNos = Array.from(
-    new Set(
+  const batchNos = [
+    ...new Set(
       retryableRows
         .map((item) => item.labelPrintBatchNo?.trim())
-        .filter((value): value is string => Boolean(value)),
+        .filter(Boolean),
     ),
-  );
+  ];
 
   if (batchNos.length !== 1) {
     ElMessage.warning('补打标签仅支持同一标签批次的标本');
@@ -510,7 +519,7 @@ function buildExportRows() {
 }
 
 function handleExportExcel() {
-  if (!workingRows.value.length) {
+  if (workingRows.value.length === 0) {
     ElMessage.warning('当前没有可导出的标本数据');
     return;
   }
@@ -539,11 +548,11 @@ function handleExportExcel() {
       <body>
         <table>
           ${tableRows
-            .map(
-              (row) =>
-                `<tr>${row.map((cell) => `<td>${String(cell ?? '')}</td>`).join('')}</tr>`,
-            )
-            .join('')}
+              .map(
+                (row) =>
+                  `<tr>${row.map((cell) => `<td>${String(cell ?? '')}</td>`).join('')}</tr>`,
+              )
+              .join('')}
         </table>
       </body>
     </html>
@@ -576,15 +585,21 @@ void loadSpecimens();
       <div class="font-semibold text-[color:#d6453d]">标本确认</div>
       <div>
         全部
-        <span class="text-xl font-semibold text-primary">{{ summary.allCount }}</span>
+        <span class="text-xl font-semibold text-primary">{{
+          summary.allCount
+        }}</span>
       </div>
       <div>
         标本确认
-        <span class="text-xl font-semibold text-success">{{ summary.confirmedCount }}</span>
+        <span class="text-xl font-semibold text-success">{{
+          summary.confirmedCount
+        }}</span>
       </div>
       <div>
         未确认
-        <span class="text-xl font-semibold text-danger">{{ summary.pendingCount }}</span>
+        <span class="text-xl font-semibold text-danger">{{
+          summary.pendingCount
+        }}</span>
       </div>
     </div>
 
@@ -609,8 +624,14 @@ void loadSpecimens();
         placeholder="终端编号"
         style="width: 160px"
       />
-      <ElButton :loading="loading" type="primary" @click="handleSearch">查询</ElButton>
-      <ElButton :loading="actionLoading" type="success" @click="handleConfirmSelected">
+      <ElButton :loading="loading" type="primary" @click="handleSearch">
+        查询
+      </ElButton>
+      <ElButton
+        :loading="actionLoading"
+        type="success"
+        @click="handleConfirmSelected"
+      >
         标本确认
       </ElButton>
       <ElButton @click="handleClearSelectionRows">清除选择行</ElButton>
@@ -627,79 +648,79 @@ void loadSpecimens();
       max-height="520"
       @selection-change="handleSelectionChange"
     >
-        <ElTableColumn type="selection" width="52" />
-        <ElTableColumn label="序" width="64">
-          <template #default="{ $index }">
-            {{ (filters.page - 1) * filters.size + $index + 1 }}
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="申请单" min-width="120" prop="applicationNo" />
-        <ElTableColumn label="标本编号" min-width="120" prop="specimenNo" />
-        <ElTableColumn label="姓名" min-width="100">
-          <template #default="{ row }">
-            {{ formatNullable(row.patientName) }}
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="住院号" min-width="120">
-          <template #default="{ row }">
-            {{ formatNullable(row.inpatientNo) }}
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="性别" min-width="80">
-          <template #default="{ row }">
-            {{ formatNullable(row.patientGenderLabel) }}
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="手术间" min-width="120">
-          <template #default="{ row }">
-            {{ formatNullable(row.surgeryName) }}
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="标本名称" min-width="180" prop="specimenName" />
-        <ElTableColumn label="标本状态" min-width="120">
-          <template #default="{ row }">
-            <ElTag :type="row.specimenConfirmedAt ? 'success' : 'danger'">
-              {{ row.specimenConfirmedAt ? '标本确认' : '未确认' }}
-            </ElTag>
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="类型" min-width="100">
-          <template #default="{ row }">
-            {{ formatNullable(row.specimenType) }}
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="确认时间" min-width="140">
-          <template #default="{ row }">
-            {{ formatDateTime(row.specimenConfirmedAt) }}
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="确认人" min-width="120">
-          <template #default>
-            {{ formatNullable(operatorForm.operatorName) }}
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="添加时间" min-width="140">
-          <template #default="{ row }">
-            {{ formatDateTime(row.registrationTime) }}
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="添加人" min-width="120">
-          <template #default="{ row }">
-            {{ formatNullable(row.registrationOperatorName) }}
-          </template>
-        </ElTableColumn>
-        <ElTableColumn fixed="right" label="操作" width="110">
-          <template #default="{ row }">
-            <ElButton
-              link
-              :disabled="!canConfirm(row)"
-              type="primary"
-              @click="handleConfirmRow(row)"
-            >
-              标本确认
-            </ElButton>
-          </template>
-        </ElTableColumn>
+      <ElTableColumn type="selection" width="52" />
+      <ElTableColumn label="序" width="64">
+        <template #default="{ $index }">
+          {{ (filters.page - 1) * filters.size + $index + 1 }}
+        </template>
+      </ElTableColumn>
+      <ElTableColumn label="申请单" min-width="120" prop="applicationNo" />
+      <ElTableColumn label="标本编号" min-width="120" prop="specimenNo" />
+      <ElTableColumn label="姓名" min-width="100">
+        <template #default="{ row }">
+          {{ formatNullable(row.patientName) }}
+        </template>
+      </ElTableColumn>
+      <ElTableColumn label="住院号" min-width="120">
+        <template #default="{ row }">
+          {{ formatNullable(row.inpatientNo) }}
+        </template>
+      </ElTableColumn>
+      <ElTableColumn label="性别" min-width="80">
+        <template #default="{ row }">
+          {{ formatNullable(row.patientGenderLabel) }}
+        </template>
+      </ElTableColumn>
+      <ElTableColumn label="手术间" min-width="120">
+        <template #default="{ row }">
+          {{ formatNullable(row.surgeryName) }}
+        </template>
+      </ElTableColumn>
+      <ElTableColumn label="标本名称" min-width="180" prop="specimenName" />
+      <ElTableColumn label="标本状态" min-width="120">
+        <template #default="{ row }">
+          <ElTag :type="row.specimenConfirmedAt ? 'success' : 'danger'">
+            {{ row.specimenConfirmedAt ? '标本确认' : '未确认' }}
+          </ElTag>
+        </template>
+      </ElTableColumn>
+      <ElTableColumn label="类型" min-width="100">
+        <template #default="{ row }">
+          {{ formatNullable(row.specimenType) }}
+        </template>
+      </ElTableColumn>
+      <ElTableColumn label="确认时间" min-width="140">
+        <template #default="{ row }">
+          {{ formatDateTime(row.specimenConfirmedAt) }}
+        </template>
+      </ElTableColumn>
+      <ElTableColumn label="确认人" min-width="120">
+        <template #default>
+          {{ formatNullable(operatorForm.operatorName) }}
+        </template>
+      </ElTableColumn>
+      <ElTableColumn label="添加时间" min-width="140">
+        <template #default="{ row }">
+          {{ formatDateTime(row.registrationTime) }}
+        </template>
+      </ElTableColumn>
+      <ElTableColumn label="添加人" min-width="120">
+        <template #default="{ row }">
+          {{ formatNullable(row.registrationOperatorName) }}
+        </template>
+      </ElTableColumn>
+      <ElTableColumn fixed="right" label="操作" width="110">
+        <template #default="{ row }">
+          <ElButton
+            link
+            :disabled="!canConfirm(row)"
+            type="primary"
+            @click="handleConfirmRow(row)"
+          >
+            标本确认
+          </ElButton>
+        </template>
+      </ElTableColumn>
     </ElTable>
 
     <div class="flex justify-end">
@@ -722,15 +743,21 @@ void loadSpecimens();
     width="760px"
   >
     <div class="flex flex-col gap-4">
-      <section class="rounded-lg border border-border bg-card px-4 py-4 shadow-sm">
+      <section
+        class="rounded-lg border border-border bg-card px-4 py-4 shadow-sm"
+      >
         <div class="mb-4 text-base font-semibold text-foreground">补打范围</div>
         <div class="grid gap-3 text-sm md:grid-cols-2">
           <div>涉及标本数：{{ retryTargetRows.length }}</div>
-          <div>标签批次号：{{ retryTargetRows[0]?.labelPrintBatchNo || '-' }}</div>
+          <div>
+            标签批次号：{{ retryTargetRows[0]?.labelPrintBatchNo || '-' }}
+          </div>
         </div>
       </section>
 
-      <section class="rounded-lg border border-border bg-card px-4 py-4 shadow-sm">
+      <section
+        class="rounded-lg border border-border bg-card px-4 py-4 shadow-sm"
+      >
         <ElForm label-width="96px">
           <div class="grid gap-4 md:grid-cols-2">
             <ElFormItem label="操作人" required>
@@ -742,7 +769,10 @@ void loadSpecimens();
               />
             </ElFormItem>
             <ElFormItem label="打印机编号" required>
-              <ElInput v-model="retryForm.printerCode" placeholder="请输入打印机编号" />
+              <ElInput
+                v-model="retryForm.printerCode"
+                placeholder="请输入打印机编号"
+              />
             </ElFormItem>
             <ElFormItem label="终端编号">
               <ElInput v-model="retryForm.terminalCode" placeholder="可选" />
@@ -761,7 +791,9 @@ void loadSpecimens();
         <div class="mb-4 text-base font-semibold text-foreground">补打结果</div>
         <div class="grid gap-3 text-sm md:grid-cols-2">
           <div>批次号：{{ batchRetryResult.labelPrintBatchNo }}</div>
-          <div>结果：{{ batchRetryResult.allSuccessful ? '全部成功' : '部分成功' }}</div>
+          <div>
+            结果：{{ batchRetryResult.allSuccessful ? '全部成功' : '部分成功' }}
+          </div>
           <div>成功数：{{ batchRetryResult.successCount }}</div>
           <div>失败数：{{ batchRetryResult.failedCount }}</div>
           <div>重试数：{{ batchRetryResult.retriedCount }}</div>
@@ -773,7 +805,11 @@ void loadSpecimens();
     <template #footer>
       <div class="flex justify-end gap-2">
         <ElButton @click="retryDialogVisible = false">取消</ElButton>
-        <ElButton :loading="retrySubmitting" type="primary" @click="submitRetryLabel">
+        <ElButton
+          :loading="retrySubmitting"
+          type="primary"
+          @click="submitRetryLabel"
+        >
           提交补打
         </ElButton>
       </div>

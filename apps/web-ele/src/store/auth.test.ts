@@ -1,4 +1,7 @@
+import { createPinia, setActivePinia } from 'pinia';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { useAuthStore } from './auth';
 
 const mocks = vi.hoisted(() => {
   const router = {
@@ -53,10 +56,6 @@ vi.mock('#/api', () => ({
 vi.mock('element-plus', () => ({
   ElNotification: vi.fn(),
 }));
-
-import { setActivePinia, createPinia } from 'pinia';
-
-import { useAuthStore } from './auth';
 
 describe('auth store navigation', () => {
   beforeEach(() => {

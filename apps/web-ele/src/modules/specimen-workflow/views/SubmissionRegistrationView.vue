@@ -8,7 +8,6 @@ import { useAccessStore } from '@vben/stores';
 import { ElTabPane, ElTabs } from 'element-plus';
 
 import { M2_PERMISSION_CODES } from '../constants';
-
 import ApplicationListView from './ApplicationListView.vue';
 import SpecimenManagementView from './SpecimenManagementView.vue';
 

@@ -13,7 +13,6 @@ import SpecimenConfirmationPanel from '../components/SpecimenConfirmationPanel.v
 import SpecimenFixationTimePanel from '../components/SpecimenFixationTimePanel.vue';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { M2_PERMISSION_CODES } from '../constants';
-
 import FixationVerifyView from './FixationVerifyView.vue';
 import TransportHandoverView from './TransportHandoverView.vue';
 
@@ -38,15 +37,21 @@ const canHandoverTransport = computed(() =>
 
 const activeTab = ref<FixationTransportTab>('verification');
 
-function resolveAvailableTab(preferredTab: FixationTransportTab): FixationTransportTab {
+function resolveAvailableTab(
+  preferredTab: FixationTransportTab,
+): FixationTransportTab {
   if (preferredTab === 'transport' && canHandoverTransport.value) {
     return 'transport';
   }
   if (
-    ['verification', 'fixation', 'binding', 'confirmation', 'check-in'].includes(
-      preferredTab,
-    )
-    && canVerifyFixation.value
+    [
+      'binding',
+      'check-in',
+      'confirmation',
+      'fixation',
+      'verification',
+    ].includes(preferredTab) &&
+    canVerifyFixation.value
   ) {
     return preferredTab;
   }
@@ -55,11 +60,11 @@ function resolveAvailableTab(preferredTab: FixationTransportTab): FixationTransp
 
 function resolveRouteInitialTab(): FixationTransportTab {
   if (
-    route.query.tab === 'fixation'
-    || route.query.tab === 'binding'
-    || route.query.tab === 'confirmation'
-    || route.query.tab === 'check-in'
-    || route.query.tab === 'transport'
+    route.query.tab === 'fixation' ||
+    route.query.tab === 'binding' ||
+    route.query.tab === 'confirmation' ||
+    route.query.tab === 'check-in' ||
+    route.query.tab === 'transport'
   ) {
     return route.query.tab;
   }
@@ -86,20 +91,12 @@ watch(
         >
           <FixationVerifyView embedded />
         </ElTabPane>
-        <ElTabPane
-          v-if="canVerifyFixation"
-          label="标本固定"
-          name="fixation"
-        >
+        <ElTabPane v-if="canVerifyFixation" label="标本固定" name="fixation">
           <WorkflowSectionCard title="标本固定">
             <SpecimenFixationTimePanel />
           </WorkflowSectionCard>
         </ElTabPane>
-        <ElTabPane
-          v-if="canVerifyFixation"
-          label="条码绑定"
-          name="binding"
-        >
+        <ElTabPane v-if="canVerifyFixation" label="条码绑定" name="binding">
           <WorkflowSectionCard title="条码绑定">
             <SpecimenBarcodeBindingPanel />
           </WorkflowSectionCard>
@@ -113,11 +110,7 @@ watch(
             <SpecimenConfirmationPanel />
           </WorkflowSectionCard>
         </ElTabPane>
-        <ElTabPane
-          v-if="canVerifyFixation"
-          label="标本入库"
-          name="check-in"
-        >
+        <ElTabPane v-if="canVerifyFixation" label="标本入库" name="check-in">
           <WorkflowSectionCard title="标本入库">
             <SpecimenCheckInPanel />
           </WorkflowSectionCard>

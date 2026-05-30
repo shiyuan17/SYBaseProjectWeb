@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { ApplicationDetailView } from '../types/specimen-workflow';
+
 import { computed, reactive, ref, watch } from 'vue';
 
 import { useUserStore } from '@vben/stores';
@@ -22,7 +24,6 @@ import {
   createTransportOrder,
   getApplicationDetail,
 } from '../api/specimen-workflow-service';
-import type { ApplicationDetailView } from '../types/specimen-workflow';
 import { getWorkflowPageErrorMessage } from '../utils/error';
 
 const props = withDefaults(
@@ -46,7 +47,7 @@ const userStore = useUserStore();
 
 const pageError = ref('');
 const createLoading = ref(false);
-const applicationDetail = ref<null | ApplicationDetailView>(null);
+const applicationDetail = ref<ApplicationDetailView | null>(null);
 
 const dialogVisible = computed({
   get: () => props.modelValue,
@@ -83,7 +84,14 @@ const createForm = reactive({
 });
 
 function splitSpecimenBarcodes(value: string) {
-  return [...new Set(value.split(/[\s,，；;]+/).map((item) => item.trim()).filter(Boolean))];
+  return [
+    ...new Set(
+      value
+        .split(/[\s,，；;]+/)
+        .map((item) => item.trim())
+        .filter(Boolean),
+    ),
+  ];
 }
 
 const mergedSpecimenBarcodes = computed(() => {
@@ -93,11 +101,12 @@ const mergedSpecimenBarcodes = computed(() => {
 });
 
 const eligibleSpecimens = computed(() =>
-  (applicationDetail.value?.specimens ?? []).filter((item) =>
-    item.verificationStatus === 'VERIFIED'
-    && item.fixationStatus === 'COMPLETED'
-    && Boolean(item.specimenConfirmedAt)
-    && item.checkInStatus === 'CHECKED_IN',
+  (applicationDetail.value?.specimens ?? []).filter(
+    (item) =>
+      item.verificationStatus === 'VERIFIED' &&
+      item.fixationStatus === 'COMPLETED' &&
+      Boolean(item.specimenConfirmedAt) &&
+      item.checkInStatus === 'CHECKED_IN',
   ),
 );
 
@@ -146,11 +155,12 @@ async function loadApplicationContext(showEmptyWarning = false) {
     }
     applicationDetail.value = detail;
     createForm.selectedSpecimenBarcodes = detail.specimens
-      .filter((item) =>
-        item.verificationStatus === 'VERIFIED'
-        && item.fixationStatus === 'COMPLETED'
-        && Boolean(item.specimenConfirmedAt)
-        && item.checkInStatus === 'CHECKED_IN',
+      .filter(
+        (item) =>
+          item.verificationStatus === 'VERIFIED' &&
+          item.fixationStatus === 'COMPLETED' &&
+          Boolean(item.specimenConfirmedAt) &&
+          item.checkInStatus === 'CHECKED_IN',
       )
       .map((item) => item.barcode)
       .filter(Boolean);
@@ -162,27 +172,47 @@ async function loadApplicationContext(showEmptyWarning = false) {
   }
 }
 
-function resolveSpecimenName(specimen: ApplicationDetailView['specimens'][number]) {
+function resolveSpecimenName(
+  specimen: ApplicationDetailView['specimens'][number],
+) {
   return specimen.specimenName?.trim() || '未命名标本';
 }
 
-function resolveSpecimenType(specimen: ApplicationDetailView['specimens'][number]) {
+function resolveSpecimenType(
+  specimen: ApplicationDetailView['specimens'][number],
+) {
   return specimen.specimenType?.trim() || '未填写';
 }
 
-function resolveSpecimenSite(specimen: ApplicationDetailView['specimens'][number]) {
-  return specimen.specimenSite?.trim() || applicationDetail.value?.specimenSite?.trim() || '未填写';
+function resolveSpecimenSite(
+  specimen: ApplicationDetailView['specimens'][number],
+) {
+  return (
+    specimen.specimenSite?.trim() ||
+    applicationDetail.value?.specimenSite?.trim() ||
+    '未填写'
+  );
 }
 
-function resolveSpecimenCollectionMode(specimen: ApplicationDetailView['specimens'][number]) {
+function resolveSpecimenCollectionMode(
+  specimen: ApplicationDetailView['specimens'][number],
+) {
   return specimen.collectionMode?.trim() || '未填写';
 }
 
-function resolveSpecimenClinicalSymptom(specimen: ApplicationDetailView['specimens'][number]) {
-  return specimen.clinicalSymptom?.trim() || applicationDetail.value?.clinicalSymptom?.trim() || '未填写';
+function resolveSpecimenClinicalSymptom(
+  specimen: ApplicationDetailView['specimens'][number],
+) {
+  return (
+    specimen.clinicalSymptom?.trim() ||
+    applicationDetail.value?.clinicalSymptom?.trim() ||
+    '未填写'
+  );
 }
 
-function formatSpecimenOptionLabel(specimen: ApplicationDetailView['specimens'][number]) {
+function formatSpecimenOptionLabel(
+  specimen: ApplicationDetailView['specimens'][number],
+) {
   return [
     resolveSpecimenName(specimen),
     `类型:${resolveSpecimenType(specimen)}`,
@@ -244,12 +274,16 @@ function handleDialogClosed() {
   resetCreateForm();
 }
 
-function handleHandoverDepartmentChange(department: null | { id: string; name: string }) {
+function handleHandoverDepartmentChange(
+  department: null | { id: string; name: string },
+) {
   createForm.handoverDepartmentId = department?.id ?? '';
   createForm.handoverDepartmentName = department?.name ?? '';
 }
 
-function handleReceiverDepartmentChange(department: null | { id: string; name: string }) {
+function handleReceiverDepartmentChange(
+  department: null | { id: string; name: string },
+) {
   createForm.receiverDepartmentId = department?.id ?? '';
   createForm.receiverDepartmentName = department?.name ?? '';
 }
@@ -332,7 +366,10 @@ watch(
             />
           </ElFormItem>
           <ElFormItem label="终端编码">
-            <ElInput v-model="createForm.terminalCode" placeholder="工作站终端编码" />
+            <ElInput
+              v-model="createForm.terminalCode"
+              placeholder="工作站终端编码"
+            />
           </ElFormItem>
         </div>
         <ElFormItem label="标本选择" required>
@@ -352,10 +389,14 @@ watch(
               :value="specimen.barcode"
             >
               <div class="flex flex-col gap-1 py-1">
-                <span class="font-medium text-[14px] text-[var(--el-text-color-primary)]">
+                <span
+                  class="font-medium text-[14px] text-[var(--el-text-color-primary)]"
+                >
                   {{ resolveSpecimenName(specimen) }}
                 </span>
-                <span class="text-[12px] leading-5 text-[var(--el-text-color-secondary)]">
+                <span
+                  class="text-[12px] leading-5 text-[var(--el-text-color-secondary)]"
+                >
                   {{ `类型:${resolveSpecimenType(specimen)}` }}
                   <span class="mx-1 text-[var(--el-border-color)]">|</span>
                   {{ `部位:${resolveSpecimenSite(specimen)}` }}

@@ -16,12 +16,6 @@ import {
   ElTag,
 } from 'element-plus';
 
-const lookupTypeOptions: Array<{ label: string; value: WorkbenchLookupType }> = [
-  { label: '住院号', value: 'INPATIENT_NO' },
-  { label: '申请单号', value: 'APPLICATION_NO' },
-  { label: '姓名', value: 'PATIENT_NAME' },
-];
-
 const props = defineProps<{
   buildingId: string;
   buildingOptions: OperatingBuildingOption[];
@@ -44,17 +38,30 @@ const emit = defineEmits<{
   'update:searchKeyword': [value: string];
   'update:searchType': [value: WorkbenchLookupType];
 }>();
+
+const lookupTypeOptions: Array<{ label: string; value: WorkbenchLookupType }> =
+  [
+    { label: '住院号', value: 'INPATIENT_NO' },
+    { label: '申请单号', value: 'APPLICATION_NO' },
+    { label: '姓名', value: 'PATIENT_NAME' },
+  ];
 </script>
 
 <template>
   <div class="rounded-lg border border-border bg-card px-4 py-2.5 shadow-sm">
-    <div class="flex flex-col gap-2 xl:flex-row xl:flex-nowrap xl:items-center xl:gap-3">
+    <div
+      class="flex flex-col gap-2 xl:flex-row xl:flex-nowrap xl:items-center xl:gap-3"
+    >
       <div
         class="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 text-sm text-foreground xl:flex-nowrap"
       >
         <span class="font-semibold">登记状态</span>
         <ElTag type="primary">{{ registrationStatus || '待登记' }}</ElTag>
-        <ElCheckbox :model-value="patientVerified" disabled label="患者已核对" />
+        <ElCheckbox
+          :model-value="patientVerified"
+          disabled
+          label="患者已核对"
+        />
         <ElCheckbox :model-value="frozenReminder" disabled label="冰冻提醒" />
       </div>
 

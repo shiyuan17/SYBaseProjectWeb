@@ -1,4 +1,16 @@
-import { computed, createApp, defineComponent, h, inject, nextTick, provide, ref, useAttrs, type ComputedRef, type Ref } from 'vue';
+import {
+  computed,
+  type ComputedRef,
+  createApp,
+  h,
+  inject,
+  nextTick,
+  provide,
+  ref,
+  type Ref,
+  type SetupContext,
+  useAttrs,
+} from 'vue';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -6,6 +18,63 @@ import SpecimenFixationTimePanel from './SpecimenFixationTimePanel.vue';
 
 const tableDataKey = Symbol('table-data');
 const tableSelectionKey = Symbol('table-selection');
+
+type EmitContext = {
+  emit: (event: string, ...args: unknown[]) => void;
+};
+
+type SlotContext = Pick<SetupContext, 'slots'>;
+
+type EmitSlotContext = EmitContext & SlotContext;
+
+type ReferenceOption = {
+  label: string;
+  value: string;
+};
+
+type ReferenceOptionSelectProps = {
+  modelValue: string;
+  options: ReferenceOption[];
+  placeholder: string;
+};
+
+type AlertProps = {
+  title: string;
+};
+
+type ButtonProps = {
+  loading: boolean;
+  type: string;
+};
+
+type DialogProps = {
+  modelValue: boolean;
+  title: string;
+};
+
+type FormItemProps = {
+  label: string;
+};
+
+type InputProps = {
+  disabled: boolean;
+  modelValue: string;
+  placeholder: string;
+};
+
+type TableProps = {
+  data: Record<string, unknown>[];
+};
+
+type TableColumnProps = {
+  label: string;
+  prop: string;
+  type: string;
+};
+
+type TagProps = {
+  type: string;
+};
 
 const {
   downloadFileFromBlobMock,
@@ -25,7 +94,10 @@ const {
     patientGender: applicationId === 'APP-001' ? '女' : '男',
     patientId: applicationId === 'APP-001' ? 'PAT-001' : 'PAT-002',
     recentEvents: [],
-    specimenRemovalTime: applicationId === 'APP-001' ? '2026-05-26 07:40:00' : '2026-05-26 08:10:00',
+    specimenRemovalTime:
+      applicationId === 'APP-001'
+        ? '2026-05-26 07:40:00'
+        : '2026-05-26 08:10:00',
     specimens: [],
   })),
   listSpecimensMock: vi.fn(async ({ keyword }: { keyword?: string }) => {
@@ -73,7 +145,9 @@ const {
     ];
     return {
       items: rows.filter((item) =>
-        [item.specimenId, item.specimenNo, item.barcode].includes(keyword ?? ''),
+        [item.barcode, item.specimenId, item.specimenNo].includes(
+          keyword ?? '',
+        ),
       ),
       page: 1,
       size: 100,
@@ -86,15 +160,21 @@ const {
       total: 1,
     };
   }),
-  completeFixationMock: vi.fn(async (payload: { fixationLiquidType: string; operatorName: string; specimenBarcode: string }) => ({
-    barcode: payload.specimenBarcode,
-    fixationCompletedAt: '2026-05-26 10:00:00',
-    fixationLiquidType: payload.fixationLiquidType,
-    fixationStatus: 'COMPLETED',
-    operatorName: payload.operatorName,
-    operatorUserId: 'USER-001',
-    specimenId: 'SPEC-002',
-  })),
+  completeFixationMock: vi.fn(
+    async (payload: {
+      fixationLiquidType: string;
+      operatorName: string;
+      specimenBarcode: string;
+    }) => ({
+      barcode: payload.specimenBarcode,
+      fixationCompletedAt: '2026-05-26 10:00:00',
+      fixationLiquidType: payload.fixationLiquidType,
+      fixationStatus: 'COMPLETED',
+      operatorName: payload.operatorName,
+      operatorUserId: 'USER-001',
+      specimenId: 'SPEC-002',
+    }),
+  ),
   loadWorkflowReferenceOptionsMock: vi.fn(async () => ({
     clinicalSymptoms: [],
     collectionModes: [],
@@ -108,71 +188,73 @@ const {
     specimenImageSizes: [],
     specimenTypes: [],
   })),
-  lookupApplicationRegistrationWorkbenchRecordMock: vi.fn(async ({ keyword }: { keyword: string }) => ({
-    applicationId: keyword === 'M2-001' ? 'APP-001' : 'APP-002',
-    contagiousSpecimen: {
-      hepatitis: false,
-      hiv: false,
-      isolation: false,
-      syphilis: false,
-      tuberculosis: false,
-    },
-    gynecologyInfo: {
-      additionalNotes: '',
-      hpvResult: null,
-      lastMenstrualPeriod: null,
-      menopause: false,
-      previousCytology: '',
-      previousTreatment: '',
-      specialConditions: {
-        abnormalBleeding: false,
-        birthControl: false,
-        hormoneReplacement: false,
-        hysterectomy: false,
-        iud: false,
-        lactation: false,
-        menopause: false,
-        other: '',
-        pregnancy: false,
-        radiotherapy: false,
+  lookupApplicationRegistrationWorkbenchRecordMock: vi.fn(
+    async ({ keyword }: { keyword: string }) => ({
+      applicationId: keyword === 'M2-001' ? 'APP-001' : 'APP-002',
+      contagiousSpecimen: {
+        hepatitis: false,
+        hiv: false,
+        isolation: false,
+        syphilis: false,
+        tuberculosis: false,
       },
-    },
-    patientInfo: {
-      age: '42',
-      applicationDate: '2026-05-26',
-      applicationNo: keyword,
-      applyDept: '外科',
-      applyDoctor: '张医生',
-      bedNo: null,
-      checkItem: null,
-      clinicalDiagnosis: null,
-      clinicalHistory: null,
-      deliveryRequirement: null,
-      endoscopyDiagnosis: null,
-      frozenReminder: false,
-      gender: keyword === 'M2-001' ? '女' : '男',
-      idNo: null,
-      imagingResult: null,
-      inpatientNo: keyword === 'M2-001' ? 'ZY-001' : 'ZY-002',
-      patientName: keyword === 'M2-001' ? 'Alice' : 'Bob',
-      patientVerified: true,
-      phone: null,
-      registrationStatus: null,
-      remark: null,
-      specimenType: null,
-      wardName: null,
-    },
-    specimenItems: [],
-    surgeryInfo: {
-      buildingId: null,
-      clinicalFindings: null,
-      fixativeType: null,
-      fixationPerson: keyword === 'M2-001' ? '王护士' : '',
-      fixationTime: null,
-      roomId: keyword === 'M2-001' ? '手术室1' : '手术室2',
-      surgeryName: keyword === 'M2-001' ? '乳腺切除术' : '肺叶切除术',
-    },
-  })),
+      gynecologyInfo: {
+        additionalNotes: '',
+        hpvResult: null,
+        lastMenstrualPeriod: null,
+        menopause: false,
+        previousCytology: '',
+        previousTreatment: '',
+        specialConditions: {
+          abnormalBleeding: false,
+          birthControl: false,
+          hormoneReplacement: false,
+          hysterectomy: false,
+          iud: false,
+          lactation: false,
+          menopause: false,
+          other: '',
+          pregnancy: false,
+          radiotherapy: false,
+        },
+      },
+      patientInfo: {
+        age: '42',
+        applicationDate: '2026-05-26',
+        applicationNo: keyword,
+        applyDept: '外科',
+        applyDoctor: '张医生',
+        bedNo: null,
+        checkItem: null,
+        clinicalDiagnosis: null,
+        clinicalHistory: null,
+        deliveryRequirement: null,
+        endoscopyDiagnosis: null,
+        frozenReminder: false,
+        gender: keyword === 'M2-001' ? '女' : '男',
+        idNo: null,
+        imagingResult: null,
+        inpatientNo: keyword === 'M2-001' ? 'ZY-001' : 'ZY-002',
+        patientName: keyword === 'M2-001' ? 'Alice' : 'Bob',
+        patientVerified: true,
+        phone: null,
+        registrationStatus: null,
+        remark: null,
+        specimenType: null,
+        wardName: null,
+      },
+      specimenItems: [],
+      surgeryInfo: {
+        buildingId: null,
+        clinicalFindings: null,
+        fixativeType: null,
+        fixationPerson: keyword === 'M2-001' ? '王护士' : '',
+        fixationTime: null,
+        roomId: keyword === 'M2-001' ? '手术室1' : '手术室2',
+        surgeryName: keyword === 'M2-001' ? '乳腺切除术' : '肺叶切除术',
+      },
+    }),
+  ),
   retryLabelPrintMock: vi.fn(async () => ({
     allSuccessful: true,
     failedCount: 0,
@@ -224,51 +306,57 @@ vi.mock('#/modules/system-management/api/workflow-reference-service', () => ({
   loadWorkflowReferenceOptionsSafely: loadWorkflowReferenceOptionsMock,
 }));
 
-vi.mock('#/modules/system-management/components/ReferenceOptionSelect.vue', () => ({
-  default: defineComponent({
-    props: {
-      modelValue: { default: '', type: String },
-      options: { default: () => [], type: Array },
-      placeholder: { default: '', type: String },
-    },
-    emits: ['update:modelValue'],
-    setup(props, { emit }) {
-      return () =>
-        h(
-          'select',
-          {
-            'data-testid': 'reference-option-select',
-            value: props.modelValue,
-            onChange: (event: Event) =>
-              emit('update:modelValue', (event.target as HTMLSelectElement).value),
-          },
-          [
-            h('option', { value: '' }, props.placeholder),
-            ...(props.options as Array<{ label: string; value: string }>).map((option) =>
-              h('option', { value: option.value }, option.label),
-            ),
-          ],
-        );
+vi.mock(
+  '#/modules/system-management/components/ReferenceOptionSelect.vue',
+  () => ({
+    default: {
+      props: {
+        modelValue: { default: '', type: String },
+        options: { default: () => [], type: Array },
+        placeholder: { default: '', type: String },
+      },
+      emits: ['update:modelValue'],
+      setup(props: ReferenceOptionSelectProps, { emit }: EmitContext) {
+        return () =>
+          h(
+            'select',
+            {
+              'data-testid': 'reference-option-select',
+              value: props.modelValue,
+              onChange: (event: Event) =>
+                emit(
+                  'update:modelValue',
+                  (event.target as HTMLSelectElement).value,
+                ),
+            },
+            [
+              h('option', { value: '' }, props.placeholder),
+              ...(props.options as Array<{ label: string; value: string }>).map(
+                (option) => h('option', { value: option.value }, option.label),
+              ),
+            ],
+          );
+      },
     },
   }),
-}));
+);
 
 vi.mock('element-plus', () => ({
-  ElAlert: defineComponent({
+  ElAlert: {
     props: {
       title: { default: '', type: String },
     },
-    setup(props) {
+    setup(props: AlertProps) {
       return () => h('div', { 'data-testid': 'alert' }, props.title);
     },
-  }),
-  ElButton: defineComponent({
+  },
+  ElButton: {
     props: {
       loading: { default: false, type: Boolean },
       type: { default: '', type: String },
     },
     emits: ['click'],
-    setup(props, { emit, slots }) {
+    setup(props: ButtonProps, { emit, slots }: EmitSlotContext) {
       return () =>
         h(
           'button',
@@ -281,14 +369,14 @@ vi.mock('element-plus', () => ({
           slots.default?.(),
         );
     },
-  }),
-  ElDialog: defineComponent({
+  },
+  ElDialog: {
     props: {
       modelValue: { default: false, type: Boolean },
       title: { default: '', type: String },
     },
     emits: ['update:modelValue'],
-    setup(props, { slots }) {
+    setup(props: DialogProps, { slots }: SlotContext) {
       return () =>
         props.modelValue
           ? h('div', { 'data-testid': 'dialog' }, [
@@ -298,28 +386,28 @@ vi.mock('element-plus', () => ({
             ])
           : null;
     },
-  }),
-  ElForm: defineComponent({
-    setup(_, { slots }) {
+  },
+  ElForm: {
+    setup(_: Record<string, never>, { slots }: SlotContext) {
       return () => h('form', slots.default?.());
     },
-  }),
-  ElFormItem: defineComponent({
+  },
+  ElFormItem: {
     props: {
       label: { default: '', type: String },
     },
-    setup(props, { slots }) {
+    setup(props: FormItemProps, { slots }: SlotContext) {
       return () => h('label', [props.label, slots.default?.()]);
     },
-  }),
-  ElInput: defineComponent({
+  },
+  ElInput: {
     props: {
       disabled: { default: false, type: Boolean },
       modelValue: { default: '', type: String },
       placeholder: { default: '', type: String },
     },
     emits: ['keyup', 'update:modelValue'],
-    setup(props, { emit }) {
+    setup(props: InputProps, { emit }: EmitContext) {
       const attrs = useAttrs();
       return () =>
         h('input', {
@@ -327,21 +415,22 @@ vi.mock('element-plus', () => ({
           disabled: props.disabled,
           placeholder: props.placeholder,
           value: props.modelValue,
-          onInput: (event: Event) => emit('update:modelValue', (event.target as HTMLInputElement).value),
+          onInput: (event: Event) =>
+            emit('update:modelValue', (event.target as HTMLInputElement).value),
           onKeyup: (event: KeyboardEvent) => emit('keyup', event),
         });
     },
-  }),
+  },
   ElMessage: {
     success: successMock,
     warning: warningMock,
   },
-  ElTable: defineComponent({
+  ElTable: {
     props: {
       data: { default: () => [], type: Array },
     },
     emits: ['selection-change'],
-    setup(props, { emit, slots }) {
+    setup(props: TableProps, { emit, slots }: EmitSlotContext) {
       const selectedIndexes = ref<number[]>([]);
       provide(
         tableDataKey,
@@ -358,14 +447,14 @@ vi.mock('element-plus', () => ({
       });
       return () => h('div', { 'data-testid': 'table' }, slots.default?.());
     },
-  }),
-  ElTableColumn: defineComponent({
+  },
+  ElTableColumn: {
     props: {
       label: { default: '', type: String },
       prop: { default: '', type: String },
       type: { default: '', type: String },
     },
-    setup(props, { slots }) {
+    setup(props: TableColumnProps, { slots }: SlotContext) {
       const data = inject<ComputedRef<Record<string, unknown>[]>>(tableDataKey);
       const selectionController = inject<{
         emitSelection: () => void;
@@ -373,57 +462,55 @@ vi.mock('element-plus', () => ({
       }>(tableSelectionKey);
 
       return () =>
-        h(
-          'div',
-          { 'data-column-label': props.label || props.type },
-          [
-            props.label || props.type,
-            ...(data?.value ?? []).map((row, index) => {
-              if (props.type === 'selection') {
-                return h('input', {
-                  checked: selectionController?.selectedIndexes.value.includes(index) ?? false,
-                  'data-selection-index': String(index),
-                  onClick: (event: Event) => {
-                    const checked = (event.target as HTMLInputElement).checked;
-                    const current = selectionController?.selectedIndexes.value ?? [];
-                    selectionController!.selectedIndexes.value = checked
-                      ? [...current, index]
-                      : current.filter((item) => item !== index);
-                    selectionController?.emitSelection();
-                  },
-                  type: 'checkbox',
-                });
-              }
-
-              return h(
-                'div',
-                {
-                  'data-column-cell': `${props.label}-${index}`,
+        h('div', { 'data-column-label': props.label || props.type }, [
+          props.label || props.type,
+          ...(data?.value ?? []).map((row, index) => {
+            if (props.type === 'selection') {
+              return h('input', {
+                checked:
+                  selectionController?.selectedIndexes.value.includes(index) ??
+                  false,
+                'data-selection-index': String(index),
+                onClick: (event: Event) => {
+                  const checked = (event.target as HTMLInputElement).checked;
+                  const current =
+                    selectionController?.selectedIndexes.value ?? [];
+                  selectionController!.selectedIndexes.value = checked
+                    ? [...current, index]
+                    : current.filter((item) => item !== index);
+                  selectionController?.emitSelection();
                 },
-                slots.default?.({ $index: index, row }) ??
-                  (props.prop ? String(row[props.prop] ?? '') : ''),
-              );
-            }),
-          ],
-        );
+                type: 'checkbox',
+              });
+            }
+
+            return h(
+              'div',
+              {
+                'data-column-cell': `${props.label}-${index}`,
+              },
+              slots.default?.({ $index: index, row }) ??
+                (props.prop ? String(row[props.prop] ?? '') : ''),
+            );
+          }),
+        ]);
     },
-  }),
-  ElTag: defineComponent({
+  },
+  ElTag: {
     props: {
       type: { default: '', type: String },
     },
-    setup(props, { slots }) {
-      return () => h('span', { 'data-tag-type': props.type }, slots.default?.());
+    setup(props: TagProps, { slots }: SlotContext) {
+      return () =>
+        h('span', { 'data-tag-type': props.type }, slots.default?.());
     },
-  }),
+  },
 }));
 
 function mountView() {
   const container = document.createElement('div');
   document.body.append(container);
-  const app = createApp({
-    render: () => h(SpecimenFixationTimePanel),
-  });
+  const app = createApp(SpecimenFixationTimePanel);
 
   app.directive('loading', {});
   app.mount(container);
@@ -438,11 +525,15 @@ async function flushView() {
 }
 
 async function addRow(container: HTMLElement, value: string) {
-  const input = container.querySelector('input[placeholder="流水号 / 标本ID"]') as HTMLInputElement;
+  const input = container.querySelector(
+    'input[placeholder="流水号 / 标本ID"]',
+  ) as HTMLInputElement;
   input.value = value;
   input.dispatchEvent(new Event('input', { bubbles: true }));
   await flushView();
-  input.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: 'Enter' }));
+  input.dispatchEvent(
+    new KeyboardEvent('keyup', { bubbles: true, key: 'Enter' }),
+  );
   await flushView();
   await flushView();
 }
@@ -552,8 +643,8 @@ describe('SpecimenFixationTimePanel', () => {
     selectionCheckbox?.click();
     await flushView();
 
-    const clearSelectedButton = [...container.querySelectorAll('button')].find((button) =>
-      button.textContent?.includes('清除选择行'),
+    const clearSelectedButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('清除选择行'),
     );
     clearSelectedButton?.click();
     await flushView();
@@ -561,8 +652,8 @@ describe('SpecimenFixationTimePanel', () => {
     expect(container.textContent).not.toContain('乳腺组织');
     expect(successMock).toHaveBeenCalledWith('已清除选择行');
 
-    const clearListButton = [...container.querySelectorAll('button')].find((button) =>
-      button.textContent?.includes('清除列表'),
+    const clearListButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('清除列表'),
     );
     clearListButton?.click();
     await flushView();
@@ -578,8 +669,8 @@ describe('SpecimenFixationTimePanel', () => {
 
     await addRow(container, 'SP-001');
 
-    const retryButton = [...container.querySelectorAll('button')].find((button) =>
-      button.textContent?.includes('补打标本标签'),
+    const retryButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('补打标本标签'),
     );
     retryButton?.click();
     await flushView();
@@ -590,8 +681,8 @@ describe('SpecimenFixationTimePanel', () => {
     printerInput!.value = 'P-01';
     printerInput!.dispatchEvent(new Event('input', { bubbles: true }));
 
-    const submitButton = [...document.body.querySelectorAll('button')].find((button) =>
-      button.textContent?.includes('提交补打'),
+    const submitButton = [...document.body.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('提交补打'),
     );
     submitButton?.click();
     await flushView();
@@ -612,8 +703,8 @@ describe('SpecimenFixationTimePanel', () => {
 
     await addRow(container, 'SP-001');
 
-    const exportButton = [...container.querySelectorAll('button')].find((button) =>
-      button.textContent?.includes('导出Excel'),
+    const exportButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('导出Excel'),
     );
     exportButton?.click();
     await flushView();

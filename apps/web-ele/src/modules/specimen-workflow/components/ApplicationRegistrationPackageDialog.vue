@@ -33,7 +33,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   confirm: [selectedPackage: SpecimenPackageOption];
-  'create-package': [createdPackage: SpecimenPackageOption];
+  createPackage: [createdPackage: SpecimenPackageOption];
   'update:modelValue': [value: boolean];
 }>();
 
@@ -52,7 +52,9 @@ const packageForm = reactive({
 const packageItems = ref<EditablePackageItem[]>([]);
 
 const deptOptions = computed(() =>
-  [...new Set(props.packageOptions.map((item) => item.applyDept))].filter(Boolean),
+  [...new Set(props.packageOptions.map((item) => item.applyDept))].filter(
+    Boolean,
+  ),
 );
 
 const filteredPackageOptions = computed(() => {
@@ -87,7 +89,8 @@ const canSubmitPackage = computed(() => {
   }
 
   return packageItems.value.every(
-    (item) => item.specimenName.trim() && item.specimenSite.trim() && item.quantity > 0,
+    (item) =>
+      item.specimenName.trim() && item.specimenSite.trim() && item.quantity > 0,
   );
 });
 
@@ -129,7 +132,8 @@ function createEmptyPackageItem(): EditablePackageItem {
 
 function resetPackageForm() {
   packageForm.packageName = '';
-  packageForm.applyDept = props.preferredDept?.trim() || selectedDept.value || '';
+  packageForm.applyDept =
+    props.preferredDept?.trim() || selectedDept.value || '';
   packageForm.description = '';
   packageItems.value = [createEmptyPackageItem()];
 }
@@ -205,11 +209,14 @@ function handleCreatePackage() {
       packageForm.packageName,
       packageForm.applyDept,
       packageForm.description,
-      ...normalizedItems.flatMap((item) => [item.specimenName, item.specimenSite]),
+      ...normalizedItems.flatMap((item) => [
+        item.specimenName,
+        item.specimenSite,
+      ]),
     ]),
   };
 
-  emit('create-package', createdPackage);
+  emit('createPackage', createdPackage);
   creating.value = false;
   selectedDept.value = createdPackage.applyDept;
   selectedPackageId.value = createdPackage.packageId;
@@ -258,7 +265,12 @@ watch(
           placeholder="输入套餐名、标本名或拼音首字母"
           size="small"
         />
-        <ElSelect v-model="selectedDept" clearable placeholder="全部科室" size="small">
+        <ElSelect
+          v-model="selectedDept"
+          clearable
+          placeholder="全部科室"
+          size="small"
+        >
           <ElOption label="全部科室" value="" />
           <ElOption
             v-for="dept in deptOptions"
@@ -299,7 +311,9 @@ watch(
                 </div>
               </div>
               <ElTag
-                :type="item.packageId === selectedPackageId ? 'primary' : 'info'"
+                :type="
+                  item.packageId === selectedPackageId ? 'primary' : 'info'
+                "
                 effect="plain"
                 size="small"
               >
@@ -333,7 +347,9 @@ watch(
         </div>
       </ElScrollbar>
 
-      <div class="flex items-center justify-end gap-2 border-t border-border/70 pt-2">
+      <div
+        class="flex items-center justify-end gap-2 border-t border-border/70 pt-2"
+      >
         <ElButton size="small" @click="closeDrawer">取消</ElButton>
         <ElButton
           :disabled="!selectedPackage"
@@ -411,7 +427,9 @@ watch(
             :model-value="item.status"
             placeholder="状态"
             size="small"
-            @update:model-value="handleUpdatePackageItem(item.id, 'status', $event)"
+            @update:model-value="
+              handleUpdatePackageItem(item.id, 'status', $event)
+            "
           />
           <ElButton
             :disabled="packageItems.length === 1"

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type {
   ApplicationDetailView,
-  LatestSpecimenRegistrationResult,
   LabelPrintRetryResult,
+  LatestSpecimenRegistrationResult,
   SpecimenRegisterResult,
 } from '../types/specimen-workflow';
 
@@ -31,10 +31,7 @@ import {
 } from '../api/specimen-workflow-service';
 import { M2_PERMISSION_CODES } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
-import {
-  formatCurrentNode,
-  formatNullable,
-} from '../utils/format';
+import { formatCurrentNode, formatNullable } from '../utils/format';
 
 const props = withDefaults(
   defineProps<{
@@ -77,10 +74,10 @@ const dialogVisible = computed({
   },
 });
 
-const applicationDetail = ref<null | ApplicationDetailView>(null);
+const applicationDetail = ref<ApplicationDetailView | null>(null);
 const currentApplicationId = ref('');
 const latestRegisterResult = ref<
-  LatestSpecimenRegistrationResult | SpecimenRegisterResult | null
+  LatestSpecimenRegistrationResult | null | SpecimenRegisterResult
 >(null);
 const currentRetryResult = ref<LabelPrintRetryResult | null>(null);
 const loadingDetail = ref(false);
@@ -126,7 +123,9 @@ async function loadApplicationDetail() {
   loadingDetail.value = true;
   pageError.value = '';
   try {
-    applicationDetail.value = await getApplicationDetail(currentApplicationId.value);
+    applicationDetail.value = await getApplicationDetail(
+      currentApplicationId.value,
+    );
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
   } finally {
@@ -140,8 +139,12 @@ async function loadLatestRegisterResult() {
   }
   loadingResult.value = true;
   try {
-    const result = await getLatestRegistrationResult(currentApplicationId.value);
-    latestRegisterResult.value = result.labelPrintBatchNo ? result : props.registerResult;
+    const result = await getLatestRegistrationResult(
+      currentApplicationId.value,
+    );
+    latestRegisterResult.value = result.labelPrintBatchNo
+      ? result
+      : props.registerResult;
   } catch (error) {
     if (!props.registerResult) {
       pageError.value = getWorkflowPageErrorMessage(error);
@@ -197,9 +200,11 @@ const detailStatusType = computed(() =>
   applicationDetail.value?.abnormalFlag ? 'danger' : 'success',
 );
 
-const hasFailedLabels = computed(() =>
-  latestRegisterResult.value?.specimens.some((item) => item.labelPrintStatus === 'FAILED') ??
-  false,
+const hasFailedLabels = computed(
+  () =>
+    latestRegisterResult.value?.specimens.some(
+      (item) => item.labelPrintStatus === 'FAILED',
+    ) ?? false,
 );
 
 async function refreshDialog() {
@@ -248,7 +253,10 @@ watch(
       <section class="rounded-lg border border-border bg-card p-4 shadow-sm">
         <div class="mb-4 flex items-center justify-between gap-4">
           <div class="text-base font-semibold text-foreground">当前上下文</div>
-          <ElButton :loading="loadingDetail || loadingResult" @click="refreshDialog()">
+          <ElButton
+            :loading="loadingDetail || loadingResult"
+            @click="refreshDialog()"
+          >
             刷新详情
           </ElButton>
         </div>
@@ -286,8 +294,14 @@ watch(
               {{ latestRegisterResult.labelPrintBatchNo }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="原始打印结果">
-              <ElTag :type="latestRegisterResult.labelPrintSuccess ? 'success' : 'warning'">
-                {{ latestRegisterResult.labelPrintSuccess ? '成功' : '存在失败' }}
+              <ElTag
+                :type="
+                  latestRegisterResult.labelPrintSuccess ? 'success' : 'warning'
+                "
+              >
+                {{
+                  latestRegisterResult.labelPrintSuccess ? '成功' : '存在失败'
+                }}
               </ElTag>
             </ElDescriptionsItem>
             <ElDescriptionsItem label="原始消息" :span="2">
@@ -309,10 +323,16 @@ watch(
               <ElInput :model-value="retryForm.operatorName" disabled />
             </ElFormItem>
             <ElFormItem label="打印机编码" required>
-              <ElInput v-model="retryForm.printerCode" placeholder="请输入打印机编码" />
+              <ElInput
+                v-model="retryForm.printerCode"
+                placeholder="请输入打印机编码"
+              />
             </ElFormItem>
             <ElFormItem label="终端编码">
-              <ElInput v-model="retryForm.terminalCode" placeholder="终端编码" />
+              <ElInput
+                v-model="retryForm.terminalCode"
+                placeholder="终端编码"
+              />
             </ElFormItem>
           </ElForm>
 
@@ -333,12 +353,19 @@ watch(
             </ElButton>
           </div>
 
-          <ElDescriptions v-if="currentRetryResult" :column="2" border class="mt-4">
+          <ElDescriptions
+            v-if="currentRetryResult"
+            :column="2"
+            border
+            class="mt-4"
+          >
             <ElDescriptionsItem label="批次号">
               {{ currentRetryResult.labelPrintBatchNo }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="整体结果">
-              <ElTag :type="currentRetryResult.allSuccessful ? 'success' : 'warning'">
+              <ElTag
+                :type="currentRetryResult.allSuccessful ? 'success' : 'warning'"
+              >
                 {{ currentRetryResult.allSuccessful ? '全部成功' : '部分成功' }}
               </ElTag>
             </ElDescriptionsItem>

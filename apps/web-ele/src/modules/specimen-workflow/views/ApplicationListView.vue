@@ -49,9 +49,6 @@ import {
   formatNullable,
 } from '../utils/format';
 
-const router = useRouter();
-const accessStore = useAccessStore();
-
 withDefaults(
   defineProps<{
     embedded?: boolean;
@@ -60,6 +57,8 @@ withDefaults(
     embedded: false,
   },
 );
+const router = useRouter();
+const accessStore = useAccessStore();
 
 const loading = ref(false);
 const pageError = ref('');
@@ -88,17 +87,17 @@ const canQueryApplications = computed(() =>
 const canOpenSpecimenManagement = computed(() =>
   accessCodeSet.value.has(M2_PERMISSION_CODES.SPECIMEN_REGISTER),
 );
-const canCreateApplications = computed(
-  () => accessCodeSet.value.has(M2_PERMISSION_CODES.APPLICATION_CREATE),
+const canCreateApplications = computed(() =>
+  accessCodeSet.value.has(M2_PERMISSION_CODES.APPLICATION_CREATE),
 );
-const canImportApplications = computed(
-  () => accessCodeSet.value.has(M2_PERMISSION_CODES.CLINICAL_IMPORT),
+const canImportApplications = computed(() =>
+  accessCodeSet.value.has(M2_PERMISSION_CODES.CLINICAL_IMPORT),
 );
-const canUpdateApplications = computed(
-  () => accessCodeSet.value.has(M2_PERMISSION_CODES.APPLICATION_UPDATE),
+const canUpdateApplications = computed(() =>
+  accessCodeSet.value.has(M2_PERMISSION_CODES.APPLICATION_UPDATE),
 );
-const canDeleteApplications = computed(
-  () => accessCodeSet.value.has(M2_PERMISSION_CODES.APPLICATION_DELETE),
+const canDeleteApplications = computed(() =>
+  accessCodeSet.value.has(M2_PERMISSION_CODES.APPLICATION_DELETE),
 );
 const canManageApplications = computed(
   () => canCreateApplications.value || canImportApplications.value,
@@ -123,7 +122,8 @@ async function loadApplications() {
       page: filters.page,
       patientName: filters.patientName.trim() || undefined,
       size: filters.size,
-      submittingDepartmentId: filters.submittingDepartmentId.trim() || undefined,
+      submittingDepartmentId:
+        filters.submittingDepartmentId.trim() || undefined,
     });
     items.value = result.items;
     total.value = result.total;
@@ -151,7 +151,9 @@ function handleReset() {
   void loadApplications();
 }
 
-function handleDepartmentChange(department: null | { id: string; name: string }) {
+function handleDepartmentChange(
+  department: null | { id: string; name: string },
+) {
   filters.submittingDepartmentId = department?.id ?? '';
 }
 
@@ -349,14 +351,16 @@ if (canQueryApplications.value) {
           description="列表展示申请单编号、申请单号、患者、流程节点和异常标记。"
         >
           <template v-if="canManageApplications" #extra>
-            <ElButton type="primary" @click="openCreateDialog">
-              创建
-            </ElButton>
+            <ElButton type="primary" @click="openCreateDialog"> 创建 </ElButton>
           </template>
 
           <ElTable v-loading="loading" :data="items" border>
             <ElTableColumn label="申请单编号" min-width="220" prop="id" />
-            <ElTableColumn label="申请单号" min-width="160" prop="applicationNo" />
+            <ElTableColumn
+              label="申请单号"
+              min-width="160"
+              prop="applicationNo"
+            />
             <ElTableColumn label="患者信息" min-width="180">
               <template #default="{ row }">
                 {{ formatNullable(row.patientName) }} /
@@ -412,7 +416,11 @@ if (canQueryApplications.value) {
                   <ElButton
                     :disabled="!canOpenSpecimenManagement || row.voided"
                     link
-                    :title="row.voided ? row.operationDisabledReason || '申请单已作废' : undefined"
+                    :title="
+                      row.voided
+                        ? row.operationDisabledReason || '申请单已作废'
+                        : undefined
+                    "
                     type="primary"
                     @click="goToSpecimenManagement(row)"
                   >
@@ -422,7 +430,11 @@ if (canQueryApplications.value) {
                     v-if="canUpdateApplications"
                     :disabled="!row.editable"
                     link
-                    :title="row.editable ? undefined : row.operationDisabledReason || '当前申请单不可编辑'"
+                    :title="
+                      row.editable
+                        ? undefined
+                        : row.operationDisabledReason || '当前申请单不可编辑'
+                    "
                     type="primary"
                     @click="openEditDialog(row)"
                   >
@@ -430,10 +442,16 @@ if (canQueryApplications.value) {
                   </ElButton>
                   <ElButton
                     v-if="canDeleteApplications"
-                    :disabled="!row.deletable || deletingApplicationId === row.id"
+                    :disabled="
+                      !row.deletable || deletingApplicationId === row.id
+                    "
                     link
                     :loading="deletingApplicationId === row.id"
-                    :title="row.deletable ? undefined : row.operationDisabledReason || '当前申请单不可删除'"
+                    :title="
+                      row.deletable
+                        ? undefined
+                        : row.operationDisabledReason || '当前申请单不可删除'
+                    "
                     type="danger"
                     @click="handleDeleteApplication(row)"
                   >

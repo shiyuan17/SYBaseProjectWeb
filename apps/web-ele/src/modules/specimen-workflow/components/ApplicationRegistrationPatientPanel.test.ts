@@ -1,8 +1,18 @@
 import type { ApplicationRegistrationWorkbenchRecord } from '../types/application-registration-workbench';
 
-import { createApp, defineComponent, h, nextTick } from 'vue';
+import { createApp, h, nextTick } from 'vue';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import {
+  createButtonStub,
+  createDescriptionsItemStub,
+  createEmptyStub,
+  createInputStub,
+  createOptionStub,
+  createPassthroughStub,
+  createSelectStub,
+} from '../test-utils/component-stubs';
 
 const warningMock = vi.hoisted(() => vi.fn());
 const errorMock = vi.hoisted(() => vi.fn());
@@ -10,15 +20,10 @@ const errorMock = vi.hoisted(() => vi.fn());
 vi.mock('element-plus/theme-chalk/base.css', () => ({}));
 
 vi.mock('@vben/icons', async () => {
-  const { defineComponent, h } = await import('vue');
+  const { h } = await import('vue');
 
   const createIcon = (name: string) =>
-    defineComponent({
-      name,
-      setup() {
-        return () => h('span', { 'aria-hidden': 'true' });
-      },
-    });
+    (() => h('span', { 'aria-hidden': 'true', 'data-icon': name })) as unknown;
 
   return {
     Check: createIcon('Check'),
@@ -28,137 +33,19 @@ vi.mock('@vben/icons', async () => {
 });
 
 vi.mock('element-plus', () => {
-  const simpleInput = defineComponent({
-    props: {
-      modelValue: { default: '', type: String },
-      type: { default: 'text', type: String },
-    },
-    emits: [
-      'update:modelValue',
-      'keyup.enter',
-      'keyup.esc',
-      'keydown.ctrl.enter',
-    ],
-    setup(props, { emit }) {
-      return () =>
-        props.type === 'textarea'
-          ? h('textarea', {
-              value: props.modelValue,
-              onInput: (event: Event) =>
-                emit(
-                  'update:modelValue',
-                  (event.target as HTMLTextAreaElement).value,
-                ),
-              onKeydown: (event: KeyboardEvent) => {
-                if (event.key === 'Enter' && event.ctrlKey) {
-                  emit('keydown.ctrl.enter', event);
-                }
-              },
-              onKeyup: (event: KeyboardEvent) => {
-                if (event.key === 'Enter') {
-                  emit('keyup.enter', event);
-                }
-                if (event.key === 'Escape') {
-                  emit('keyup.esc', event);
-                }
-              },
-            })
-          : h('input', {
-              value: props.modelValue,
-              onInput: (event: Event) =>
-                emit(
-                  'update:modelValue',
-                  (event.target as HTMLInputElement).value,
-                ),
-              onKeyup: (event: KeyboardEvent) => {
-                if (event.key === 'Enter') {
-                  emit('keyup.enter', event);
-                }
-                if (event.key === 'Escape') {
-                  emit('keyup.esc', event);
-                }
-              },
-            });
-    },
-  });
-
   return {
-    ElButton: defineComponent({
-      emits: ['click'],
-      setup(_, { emit, slots }) {
-        return () =>
-          h(
-            'button',
-            {
-              onClick: () => emit('click'),
-              type: 'button',
-            },
-            slots.default?.(),
-          );
-      },
-    }),
-    ElDescriptions: defineComponent({
-      setup(_, { slots }) {
-        return () =>
-          h('div', { 'data-testid': 'descriptions' }, slots.default?.());
-      },
-    }),
-    ElDescriptionsItem: defineComponent({
-      props: { label: { default: '', type: String } },
-      setup(props, { slots }) {
-        return () =>
-          h('div', { 'data-label': props.label }, [
-            h('span', props.label),
-            slots.default?.(),
-          ]);
-      },
-    }),
-    ElDivider: defineComponent({
-      setup(_, { slots }) {
-        return () => h('div', { 'data-testid': 'divider' }, slots.default?.());
-      },
-    }),
-    ElEmpty: defineComponent({
-      props: { description: { default: '', type: String } },
-      setup(props) {
-        return () => h('div', { 'data-testid': 'empty' }, props.description);
-      },
-    }),
-    ElInput: simpleInput,
+    ElButton: createButtonStub(),
+    ElDescriptions: createPassthroughStub('div'),
+    ElDescriptionsItem: createDescriptionsItemStub(),
+    ElDivider: createPassthroughStub('div'),
+    ElEmpty: createEmptyStub(),
+    ElInput: createInputStub(),
     ElMessage: {
       error: errorMock,
       warning: warningMock,
     },
-    ElOption: defineComponent({
-      props: {
-        label: { default: '', type: String },
-        value: { default: '', type: [String, Number, Boolean] },
-      },
-      setup(props) {
-        return () => h('option', { value: props.value as string }, props.label);
-      },
-    }),
-    ElSelect: defineComponent({
-      props: {
-        modelValue: { default: '', type: String },
-      },
-      emits: ['update:modelValue'],
-      setup(props, { emit, slots }) {
-        return () =>
-          h(
-            'select',
-            {
-              value: props.modelValue,
-              onChange: (event: Event) =>
-                emit(
-                  'update:modelValue',
-                  (event.target as HTMLSelectElement).value,
-                ),
-            },
-            slots.default?.(),
-          );
-      },
-    }),
+    ElOption: createOptionStub(),
+    ElSelect: createSelectStub(),
   };
 });
 
@@ -412,13 +299,10 @@ describe('ApplicationRegistrationPatientPanel', () => {
     });
     const wrapper = await mountPanel();
 
-    wrapper.root
-      .querySelectorAll<HTMLButtonElement>('button')
-      .forEach((button) => {
-        if (button.textContent?.includes('补打申请单')) {
-          button.click();
-        }
-      });
+    const printButton = [
+      ...wrapper.root.querySelectorAll<HTMLButtonElement>('button'),
+    ].find((button) => button.textContent?.includes('补打申请单'));
+    printButton?.click();
 
     expect(window.open).toHaveBeenCalledWith(
       '',
@@ -451,13 +335,10 @@ describe('ApplicationRegistrationPatientPanel', () => {
     record.patientInfo.applicationNo = 'AP202605280003';
     const wrapper = await mountPanel({}, record);
 
-    wrapper.root
-      .querySelectorAll<HTMLButtonElement>('button')
-      .forEach((button) => {
-        if (button.textContent?.includes('补打申请单')) {
-          button.click();
-        }
-      });
+    const printButton = [
+      ...wrapper.root.querySelectorAll<HTMLButtonElement>('button'),
+    ].find((button) => button.textContent?.includes('补打申请单'));
+    printButton?.click();
 
     expect(window.open).toHaveBeenCalledTimes(1);
     expect(printWindowState.html).toContain('AP202605280003');

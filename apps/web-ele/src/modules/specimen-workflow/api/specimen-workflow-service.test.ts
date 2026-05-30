@@ -5,8 +5,8 @@ import {
   checkInSpecimen,
   completeFixation,
   completeSpecimenVerification,
-  confirmSpecimenRemovalByIdentifier,
   confirmSpecimen,
+  confirmSpecimenRemovalByIdentifier,
   createApplication,
   createTransportOrder,
   deleteApplication,
@@ -17,21 +17,21 @@ import {
   handoverTransportOrder,
   listApplications,
   listPendingFixations,
-  listPendingSpecimenRemovals,
   listPendingReceipts,
+  listPendingSpecimenRemovals,
   listPendingTransportOrders,
-  listSpecimenVerificationRecords,
   listSpecimens,
+  listSpecimenVerificationRecords,
+  lookupApplicationForRegistration,
   mapPendingSpecimenPageResponse,
   mapSpecimenRemovalPageResponse,
-  lookupApplicationForRegistration,
   printTransportOrder,
+  rebindSpecimenBarcode,
   receiveSpecimens,
   registerSpecimens,
   reprintApplicationForm,
   resetMockState,
   retryLabelPrint,
-  rebindSpecimenBarcode,
   startFixation,
   startSpecimenVerification,
   updateApplication,
@@ -97,7 +97,9 @@ describe('specimen-workflow-service mock flow', () => {
 
     await deleteApplication(created.id);
     const defaultPage = await listApplications({ page: 1, size: 200 });
-    expect(defaultPage.items.some((item) => item.id === created.id)).toBe(false);
+    expect(defaultPage.items.some((item) => item.id === created.id)).toBe(
+      false,
+    );
 
     const voidedPage = await listApplications({
       applicationFormStatus: 'VOIDED',
@@ -290,7 +292,9 @@ describe('specimen-workflow-service mock flow', () => {
     expect(rebound.barcodeBindingStatus).toBe('BOUND');
 
     const tracking = await getSpecimenTrackingByBarcode('BC-004-01-R2');
-    expect(tracking.specimens.some((item) => item.barcode === 'BC-004-01-R2')).toBe(true);
+    expect(
+      tracking.specimens.some((item) => item.barcode === 'BC-004-01-R2'),
+    ).toBe(true);
 
     const records = await listSpecimenVerificationRecords('BC-004-01-R2');
     expect(records[0]?.verificationType).toBe('BARCODE_REBIND');
@@ -310,8 +314,12 @@ describe('specimen-workflow-service mock flow', () => {
       page: 1,
       size: 20,
     });
-    expect(pendingReceipts.items.some((item) => item.transportOrderId === 'TO-006')).toBe(true);
-    expect(pendingReceipts.items.some((item) => item.batchAbnormalFlag)).toBe(true);
+    expect(
+      pendingReceipts.items.some((item) => item.transportOrderId === 'TO-006'),
+    ).toBe(true);
+    expect(pendingReceipts.items.some((item) => item.batchAbnormalFlag)).toBe(
+      true,
+    );
 
     const receiptResult = await receiveSpecimens({
       items: [
@@ -331,7 +339,8 @@ describe('specimen-workflow-service mock flow', () => {
     expect(receiptResult.receiptStatus).toBe('RECEIVED');
     expect(receiptResult.unreceivedCount).toBe(0);
 
-    const tracking = await getApplicationTrackingByApplicationNo('M2-20260526-006');
+    const tracking =
+      await getApplicationTrackingByApplicationNo('M2-20260526-006');
     expect(tracking.status).toBe('RECEIVED');
     expect(tracking.specimens[0]?.receiptStatus).toBe('RECEIVED');
   });
@@ -381,7 +390,8 @@ describe('specimen-workflow-service mock flow', () => {
   });
 
   it('keeps lookup, latest result retry, and reprint actions runnable in mock mode', async () => {
-    const application = await lookupApplicationForRegistration('M2-20260526-007');
+    const application =
+      await lookupApplicationForRegistration('M2-20260526-007');
     expect(application.id).toBe('APP-007');
 
     const latest = await getLatestRegistrationResult('APP-007');
@@ -407,7 +417,11 @@ describe('specimen-workflow-service mock flow', () => {
       page: 1,
       size: 20,
     });
-    expect(transportOrders.items.some((item) => item.transportOrderNo === 'TR-20260526-007')).toBe(true);
+    expect(
+      transportOrders.items.some(
+        (item) => item.transportOrderNo === 'TR-20260526-007',
+      ),
+    ).toBe(true);
   });
 
   it('keeps verification, fixation, and transport lists queryable with specimenNo', async () => {
@@ -420,7 +434,11 @@ describe('specimen-workflow-service mock flow', () => {
 
     expect(fixationList.items).toHaveLength(1);
     expect(fixationList.items[0]?.specimenNo).toBe('SP-002-01');
-    expect(fixationList.items.every((item) => item.verificationStatus === 'VERIFIED')).toBe(true);
+    expect(
+      fixationList.items.every(
+        (item) => item.verificationStatus === 'VERIFIED',
+      ),
+    ).toBe(true);
 
     const transportOrders = await listPendingTransportOrders({
       page: 1,
@@ -473,6 +491,8 @@ describe('specimen-workflow-service mock flow', () => {
           applicationId: 'APP-REMOVAL',
           applicationNo: 'AP-REMOVAL',
           barcode: 'BC-REMOVAL',
+          containerCount: null,
+          containerName: null,
           inpatientNo: null,
           latestTrackingAt: null,
           patientGender: null,
@@ -483,7 +503,7 @@ describe('specimen-workflow-service mock flow', () => {
           specimenName: '胃体组织',
           specimenNo: 'SP-REMOVAL',
           specimenRemovalAt: null,
-          specimenRemovalOperatorName: undefined,
+          specimenRemovalOperatorName: null,
           specimenStatus: 'REGISTERED',
           specimenType: '常规',
           surgeryName: null,
@@ -515,7 +535,8 @@ describe('specimen-workflow-service mock flow', () => {
       page: 1,
       size: 20,
     });
-    const quickConfirmBarcode = removalList.items.find((item) => !item.specimenRemovalAt)?.barcode ?? '';
+    const quickConfirmBarcode =
+      removalList.items.find((item) => !item.specimenRemovalAt)?.barcode ?? '';
 
     const byBarcode = await confirmSpecimenRemovalByIdentifier({
       identifier: quickConfirmBarcode,
@@ -532,11 +553,13 @@ describe('specimen-workflow-service mock flow', () => {
     });
     expect(confirmedSpecimens.items[0]?.verificationStatus).toBe('VERIFIED');
 
-    await expect(confirmSpecimenRemovalByIdentifier({
-      identifier: quickConfirmBarcode,
-      identifierType: 'BARCODE',
-      operatorName: 'quick-user',
-    })).rejects.toThrow('已完成离体确认');
+    await expect(
+      confirmSpecimenRemovalByIdentifier({
+        identifier: quickConfirmBarcode,
+        identifierType: 'BARCODE',
+        operatorName: 'quick-user',
+      }),
+    ).rejects.toThrow('已完成离体确认');
 
     const registerResult = await registerSpecimens({
       applicationId: 'APP-001',
@@ -629,16 +652,20 @@ describe('specimen-workflow-service mock flow', () => {
       printerCode: 'P-01',
     });
 
-    await expect(confirmSpecimenRemovalByIdentifier({
-      identifier: targetSpecimenNo,
-      identifierType: 'SPECIMEN_NO',
-      operatorName: 'quick-user',
-    })).rejects.toThrow('标本流水号对应多条记录，无法自动确认');
+    await expect(
+      confirmSpecimenRemovalByIdentifier({
+        identifier: targetSpecimenNo,
+        identifierType: 'SPECIMEN_NO',
+        operatorName: 'quick-user',
+      }),
+    ).rejects.toThrow('标本流水号对应多条记录，无法自动确认');
 
-    await expect(confirmSpecimenRemovalByIdentifier({
-      identifier: 'NOT-FOUND',
-      identifierType: 'BARCODE',
-      operatorName: 'quick-user',
-    })).rejects.toThrow('未找到对应标本');
+    await expect(
+      confirmSpecimenRemovalByIdentifier({
+        identifier: 'NOT-FOUND',
+        identifierType: 'BARCODE',
+        operatorName: 'quick-user',
+      }),
+    ).rejects.toThrow('未找到对应标本');
   });
 });

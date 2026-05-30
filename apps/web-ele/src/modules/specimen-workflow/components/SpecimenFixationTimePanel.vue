@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { ApplicationRegistrationWorkbenchRecord } from '../types/application-registration-workbench';
 import type {
-  ApplicationDetailView,
   LabelPrintRetryResult,
   SpecimenManagementListItem,
 } from '../types/specimen-workflow';
@@ -63,7 +62,7 @@ type FixationWorkbenchRow = SpecimenManagementListItem & {
 
 const MAX_QUERY_SIZE = 100;
 const DEFAULT_FIXATION_LIQUID_TYPE = 'FORMALIN';
-const RECEIPT_LOCKED_STATUSES = ['RECEIVED', 'REJECTED', 'RETURNED'];
+const RECEIPT_LOCKED_STATUSES = new Set(['RECEIVED', 'REJECTED', 'RETURNED']);
 
 const userStore = useUserStore();
 
@@ -133,15 +132,18 @@ function resolveFixationLiquidLabel(value: null | string | undefined) {
 }
 
 async function ensureReferenceOptionsLoaded() {
-  workflowReferenceOptions.value = await loadWorkflowReferenceOptionsSafely({ enabled: true });
+  workflowReferenceOptions.value = await loadWorkflowReferenceOptionsSafely({
+    enabled: true,
+  });
   if (!normalizeText(fixationLiquidType.value)) {
     fixationLiquidType.value =
-      workflowReferenceOptions.value.fixationLiquidTypes[0]?.value ?? DEFAULT_FIXATION_LIQUID_TYPE;
+      workflowReferenceOptions.value.fixationLiquidTypes[0]?.value ??
+      DEFAULT_FIXATION_LIQUID_TYPE;
   }
 }
 
 function isReceiptLocked(row: SpecimenManagementListItem) {
-  return RECEIPT_LOCKED_STATUSES.includes(row.specimenStatus ?? '');
+  return RECEIPT_LOCKED_STATUSES.has(row.specimenStatus ?? '');
 }
 
 function isVisibleInFixationScene(row: SpecimenManagementListItem) {
@@ -155,11 +157,13 @@ function resolveUnavailableMessage(
   const exactMatches = resolveExactMatches(items, keyword);
   const targetItems = exactMatches.length > 0 ? exactMatches : items;
   if (
-    targetItems.some((item) => normalizeText(item.verificationStatus) !== 'VERIFIED')
+    targetItems.some(
+      (item) => normalizeText(item.verificationStatus) !== 'VERIFIED',
+    )
   ) {
     return '标本尚未完成离体确认，请先完成离体确认后再固定';
   }
-  if (targetItems.some(isReceiptLocked)) {
+  if (targetItems.some((item) => isReceiptLocked(item))) {
     return '标本已接收、拒收或退回，不能完成固定';
   }
   return '未找到可固定的标本';
@@ -222,8 +226,8 @@ function buildQueueRow(
   return {
     ...row,
     fixationOperatorName:
-      normalizeText(row.fixationOperatorName)
-      || normalizeText(workbenchRecord?.surgeryInfo.fixationPerson),
+      normalizeText(row.fixationOperatorName) ||
+      normalizeText(workbenchRecord?.surgeryInfo.fixationPerson),
     fixationTime: row.fixationCompletedAt ?? row.fixationStartedAt ?? null,
     inpatientNo: normalizeText(workbenchRecord?.patientInfo.inpatientNo),
     patientGenderLabel: normalizeGenderLabel(
@@ -233,8 +237,8 @@ function buildQueueRow(
     queueAddedAt,
     queueAddedByName,
     surgeryName:
-      normalizeText(workbenchRecord?.surgeryInfo.roomId)
-      || normalizeText(workbenchRecord?.surgeryInfo.surgeryName),
+      normalizeText(workbenchRecord?.surgeryInfo.roomId) ||
+      normalizeText(workbenchRecord?.surgeryInfo.surgeryName),
   };
 }
 
@@ -247,7 +251,10 @@ async function buildEnrichedRow(row: SpecimenManagementListItem) {
   return buildQueueRow(row, applicationContext, workbenchRecord);
 }
 
-function resolveExactMatches(items: SpecimenManagementListItem[], keyword: string) {
+function resolveExactMatches(
+  items: SpecimenManagementListItem[],
+  keyword: string,
+) {
   const normalizedKeyword = normalizeText(keyword).toLowerCase();
   return items.filter((item) =>
     [item.specimenId, item.specimenNo, item.barcode].some(
@@ -262,13 +269,19 @@ function handleSelectionChange(rows: FixationWorkbenchRow[]) {
 
 function removeRows(specimenIds: string[]) {
   const targetSet = new Set(specimenIds);
-  queueItems.value = queueItems.value.filter((item) => !targetSet.has(item.specimenId));
-  selectedRows.value = selectedRows.value.filter((item) => !targetSet.has(item.specimenId));
+  queueItems.value = queueItems.value.filter(
+    (item) => !targetSet.has(item.specimenId),
+  );
+  selectedRows.value = selectedRows.value.filter(
+    (item) => !targetSet.has(item.specimenId),
+  );
 }
 
 function upsertQueueRow(row: FixationWorkbenchRow) {
-  const existingIndex = queueItems.value.findIndex((item) => item.specimenId === row.specimenId);
-  if (existingIndex >= 0) {
+  const existingIndex = queueItems.value.findIndex(
+    (item) => item.specimenId === row.specimenId,
+  );
+  if (existingIndex !== -1) {
     queueItems.value.splice(existingIndex, 1, row);
     return;
   }
@@ -301,7 +314,9 @@ async function handleCompleteFixationByScan() {
       page: 1,
       size: MAX_QUERY_SIZE,
     });
-    const visibleRows = listResult.items.filter(isVisibleInFixationScene);
+    const visibleRows = listResult.items.filter((item) =>
+      isVisibleInFixationScene(item),
+    );
     const exactMatches = resolveExactMatches(visibleRows, keyword);
     const candidates = exactMatches.length > 0 ? exactMatches : visibleRows;
 
@@ -319,7 +334,9 @@ async function handleCompleteFixationByScan() {
       return;
     }
 
-    const existingRow = queueItems.value.find((item) => item.specimenId === matchedRow.specimenId);
+    const existingRow = queueItems.value.find(
+      (item) => item.specimenId === matchedRow.specimenId,
+    );
     if (existingRow) {
       ElMessage.warning('该标本已在当前列表中');
       scanInput.value = '';
@@ -337,7 +354,8 @@ async function handleCompleteFixationByScan() {
     const nextRow = await buildEnrichedRow({
       ...matchedRow,
       fixationCompletedAt: completedAt,
-      fixationLiquidType: result.fixationLiquidType ?? selectedFixationLiquidType,
+      fixationLiquidType:
+        result.fixationLiquidType ?? selectedFixationLiquidType,
       fixationOperatorName: result.operatorName ?? operatorName,
       fixationOperatorUserId: result.operatorUserId ?? (operatorUserId || null),
       fixationStatus: result.fixationStatus,
@@ -389,13 +407,13 @@ function handleRetryLabel() {
     return;
   }
 
-  const batchNos = Array.from(
-    new Set(
+  const batchNos = [
+    ...new Set(
       targets
         .map((item) => normalizeText(item.labelPrintBatchNo))
-        .filter((value): value is string => Boolean(value)),
+        .filter(Boolean),
     ),
-  );
+  ];
   if (batchNos.length === 0) {
     ElMessage.warning('当前列表缺少可补打的标签批次');
     return;
@@ -457,7 +475,8 @@ function buildExportRows() {
     formatFixationStatus(row.fixationStatus),
     formatNullable(row.specimenType),
     formatDateTime(
-      applicationContextCache.get(normalizeText(row.applicationId))?.specimenRemovalTime ?? null,
+      applicationContextCache.get(normalizeText(row.applicationId))
+        ?.specimenRemovalTime ?? null,
     ),
     formatDateTime(row.fixationTime),
     formatNullable(row.fixationOperatorName),
@@ -501,11 +520,11 @@ function handleExportExcel() {
       <body>
         <table>
           ${tableRows
-            .map(
-              (row) =>
-                `<tr>${row.map((cell) => `<td>${String(cell ?? '')}</td>`).join('')}</tr>`,
-            )
-            .join('')}
+              .map(
+                (row) =>
+                  `<tr>${row.map((cell) => `<td>${String(cell ?? '')}</td>`).join('')}</tr>`,
+              )
+              .join('')}
         </table>
       </body>
     </html>
@@ -540,11 +559,15 @@ onMounted(() => {
       <div class="font-semibold text-[color:#d6453d]">设置固定时间</div>
       <div>
         全部
-        <span class="text-xl font-semibold text-primary">{{ queueItems.length }}</span>
+        <span class="text-xl font-semibold text-primary">{{
+          queueItems.length
+        }}</span>
       </div>
       <div>
         已选
-        <span class="text-xl font-semibold text-success">{{ selectedCount }}</span>
+        <span class="text-xl font-semibold text-success">{{
+          selectedCount
+        }}</span>
       </div>
     </div>
 
@@ -620,8 +643,8 @@ onMounted(() => {
         <template #default="{ row }">
           {{
             formatDateTime(
-              applicationContextCache.get(normalizeText(row.applicationId))?.specimenRemovalTime
-                ?? null,
+              applicationContextCache.get(normalizeText(row.applicationId))
+                ?.specimenRemovalTime ?? null,
             )
           }}
         </template>
@@ -667,22 +690,31 @@ onMounted(() => {
     width="760px"
   >
     <div class="flex flex-col gap-4">
-      <section class="rounded-lg border border-border bg-card px-4 py-4 shadow-sm">
+      <section
+        class="rounded-lg border border-border bg-card px-4 py-4 shadow-sm"
+      >
         <div class="mb-4 text-base font-semibold text-foreground">补打范围</div>
         <div class="grid gap-3 text-sm md:grid-cols-2">
           <div>涉及标本数：{{ retryTargetRows.length }}</div>
-          <div>标签批次号：{{ retryTargetRows[0]?.labelPrintBatchNo || '-' }}</div>
+          <div>
+            标签批次号：{{ retryTargetRows[0]?.labelPrintBatchNo || '-' }}
+          </div>
         </div>
       </section>
 
-      <section class="rounded-lg border border-border bg-card px-4 py-4 shadow-sm">
+      <section
+        class="rounded-lg border border-border bg-card px-4 py-4 shadow-sm"
+      >
         <ElForm label-width="96px">
           <div class="grid gap-4 md:grid-cols-2">
             <ElFormItem label="操作人" required>
               <ElInput v-model="retryForm.operatorName" disabled />
             </ElFormItem>
             <ElFormItem label="打印机编号" required>
-              <ElInput v-model="retryForm.printerCode" placeholder="请输入打印机编号" />
+              <ElInput
+                v-model="retryForm.printerCode"
+                placeholder="请输入打印机编号"
+              />
             </ElFormItem>
             <ElFormItem label="终端编号">
               <ElInput v-model="retryForm.terminalCode" placeholder="可选" />
@@ -701,7 +733,9 @@ onMounted(() => {
         <div class="mb-4 text-base font-semibold text-foreground">补打结果</div>
         <div class="grid gap-3 text-sm md:grid-cols-2">
           <div>批次号：{{ batchRetryResult.labelPrintBatchNo }}</div>
-          <div>结果：{{ batchRetryResult.allSuccessful ? '全部成功' : '部分成功' }}</div>
+          <div>
+            结果：{{ batchRetryResult.allSuccessful ? '全部成功' : '部分成功' }}
+          </div>
           <div>成功数：{{ batchRetryResult.successCount }}</div>
           <div>失败数：{{ batchRetryResult.failedCount }}</div>
           <div>重试数：{{ batchRetryResult.retriedCount }}</div>
@@ -713,7 +747,11 @@ onMounted(() => {
     <template #footer>
       <div class="flex justify-end gap-2">
         <ElButton @click="retryDialogVisible = false">取消</ElButton>
-        <ElButton :loading="retrySubmitting" type="primary" @click="submitRetryLabel">
+        <ElButton
+          :loading="retrySubmitting"
+          type="primary"
+          @click="submitRetryLabel"
+        >
           提交补打
         </ElButton>
       </div>

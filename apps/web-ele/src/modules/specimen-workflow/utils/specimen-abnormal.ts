@@ -35,19 +35,24 @@ export function buildSpecimenAbnormalDetails(
     const qualityIssueCodes = normalizeCodes(specimen.qualityIssueCodes);
     const reason = specimen.abnormalReason?.trim() || null;
     const hasAbnormalInfo = Boolean(
-      status || qualityCheckResult === 'FAILED' || qualityIssueCodes.length > 0 || reason,
+      status ||
+      qualityCheckResult === 'FAILED' ||
+      qualityIssueCodes.length > 0 ||
+      reason,
     );
     if (!hasAbnormalInfo) {
       return [];
     }
-    return [{
-      barcode: specimen.barcode,
-      id: specimen.id,
-      qualityCheckResult,
-      qualityIssueCodes,
-      reason,
-      specimenNo: specimen.specimenNo,
-      status,
-    }];
+    return [
+      {
+        barcode: specimen.barcode,
+        id: specimen.id,
+        qualityCheckResult,
+        qualityIssueCodes,
+        reason,
+        specimenNo: specimen.specimenNo,
+        status,
+      },
+    ];
   });
 }

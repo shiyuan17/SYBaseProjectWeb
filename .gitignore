@@ -69,3 +69,5 @@ test-results/
 tests/e2e/.auth/
 .understand-anything/
 .repomix/
+data/state_store.db/
+data/stream_store/

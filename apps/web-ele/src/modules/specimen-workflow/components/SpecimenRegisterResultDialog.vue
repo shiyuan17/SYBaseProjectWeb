@@ -27,10 +27,7 @@ import {
 } from '../api/specimen-workflow-service';
 import { M2_PERMISSION_CODES } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
-import {
-  formatCurrentNode,
-  formatNullable,
-} from '../utils/format';
+import { formatCurrentNode, formatNullable } from '../utils/format';
 
 const props = withDefaults(
   defineProps<{
@@ -61,13 +58,13 @@ const dialogVisible = computed({
   },
 });
 
-const applicationDetail = ref<null | ApplicationDetailView>(null);
+const applicationDetail = ref<ApplicationDetailView | null>(null);
 const currentApplicationId = ref('');
 const loadingDetail = ref(false);
 const loadingResult = ref(false);
 const pageError = ref('');
 const latestRegisterResult = ref<
-  LatestSpecimenRegistrationResult | SpecimenRegisterResult | null
+  LatestSpecimenRegistrationResult | null | SpecimenRegisterResult
 >(null);
 
 function resetDialogState() {
@@ -88,7 +85,9 @@ async function loadApplicationDetail() {
   loadingDetail.value = true;
   pageError.value = '';
   try {
-    applicationDetail.value = await getApplicationDetail(currentApplicationId.value);
+    applicationDetail.value = await getApplicationDetail(
+      currentApplicationId.value,
+    );
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
   } finally {
@@ -102,8 +101,12 @@ async function loadLatestRegisterResult() {
   }
   loadingResult.value = true;
   try {
-    const result = await getLatestRegistrationResult(currentApplicationId.value);
-    latestRegisterResult.value = result.labelPrintBatchNo ? result : props.registerResult;
+    const result = await getLatestRegistrationResult(
+      currentApplicationId.value,
+    );
+    latestRegisterResult.value = result.labelPrintBatchNo
+      ? result
+      : props.registerResult;
   } catch (error) {
     if (!props.registerResult) {
       pageError.value = getWorkflowPageErrorMessage(error);
@@ -168,7 +171,10 @@ watch(
       <section class="rounded-lg border border-border bg-card p-4 shadow-sm">
         <div class="mb-4 flex items-center justify-between gap-4">
           <div class="text-base font-semibold text-foreground">当前上下文</div>
-          <ElButton :loading="loadingDetail || loadingResult" @click="refreshDialog()">
+          <ElButton
+            :loading="loadingDetail || loadingResult"
+            @click="refreshDialog()"
+          >
             刷新详情
           </ElButton>
         </div>
@@ -206,8 +212,14 @@ watch(
               {{ latestRegisterResult.labelPrintBatchNo }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="打印结果">
-              <ElTag :type="latestRegisterResult.labelPrintSuccess ? 'success' : 'warning'">
-                {{ latestRegisterResult.labelPrintSuccess ? '成功' : '存在失败' }}
+              <ElTag
+                :type="
+                  latestRegisterResult.labelPrintSuccess ? 'success' : 'warning'
+                "
+              >
+                {{
+                  latestRegisterResult.labelPrintSuccess ? '成功' : '存在失败'
+                }}
               </ElTag>
             </ElDescriptionsItem>
             <ElDescriptionsItem label="结果消息" :span="2">
@@ -218,9 +230,17 @@ watch(
           <ElTable :data="latestRegisterResult.specimens" border class="mt-4">
             <ElTableColumn label="标本号" min-width="140" prop="specimenNo" />
             <ElTableColumn label="条码" min-width="180" prop="barcode" />
-            <ElTableColumn label="标本名称" min-width="160" prop="specimenName" />
+            <ElTableColumn
+              label="标本名称"
+              min-width="160"
+              prop="specimenName"
+            />
             <ElTableColumn label="状态" min-width="120" prop="specimenStatus" />
-            <ElTableColumn label="标签状态" min-width="120" prop="labelPrintStatus" />
+            <ElTableColumn
+              label="标签状态"
+              min-width="120"
+              prop="labelPrintStatus"
+            />
             <ElTableColumn label="部位" min-width="120">
               <template #default="{ row }">
                 {{ formatNullable(row.specimenSite) }}

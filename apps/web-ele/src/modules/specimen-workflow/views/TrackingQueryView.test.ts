@@ -1,6 +1,14 @@
-import { createApp, defineComponent, h, nextTick } from 'vue';
+import { createApp, h, nextTick } from 'vue';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import {
+  createAlertStub,
+  createEmptyStub,
+  createOptionStub,
+  createSelectStub,
+  createTagStub,
+} from '../test-utils/component-stubs';
 
 const { mockAccessStore, mockRoute, mockWorkflowService } = vi.hoisted(() => ({
   mockAccessStore: {
@@ -33,111 +41,60 @@ vi.mock('@vben/stores', () => ({
 
 vi.mock('../api/specimen-workflow-service', () => ({
   getApplicationTracking: mockWorkflowService.getApplicationTracking,
-  getSpecimenTrackingByBarcode: mockWorkflowService.getSpecimenTrackingByBarcode,
-  listSpecimenVerificationRecords: mockWorkflowService.listSpecimenVerificationRecords,
+  getSpecimenTrackingByBarcode:
+    mockWorkflowService.getSpecimenTrackingByBarcode,
+  listSpecimenVerificationRecords:
+    mockWorkflowService.listSpecimenVerificationRecords,
 }));
 
 vi.mock('element-plus', () => {
-  const ElAlert = defineComponent({
-    props: ['title'],
-    setup(props) {
-      return () => h('div', props.title);
-    },
-  });
-  const ElEmpty = defineComponent({
-    props: ['description'],
-    setup(props) {
-      return () => h('div', props.description);
-    },
-  });
-  const ElTabs = defineComponent({
-    emits: ['update:modelValue'],
-    props: ['modelValue'],
-    setup(props, { emit, slots }) {
-      return () =>
-        h('div', [
-          h(
-            'button',
-            {
-              'data-testid': 'applications-tab',
-              type: 'button',
-              onClick: () => emit('update:modelValue', 'applications'),
-            },
-            '申请单列表',
-          ),
-          h(
-            'button',
-            {
-              'data-testid': 'specimens-tab',
-              type: 'button',
-              onClick: () => emit('update:modelValue', 'specimens'),
-            },
-            '标本列表',
-          ),
-          h('div', { 'data-active-tab': props.modelValue }, slots.default?.()),
-        ]);
-    },
-  });
-  const ElTabPane = defineComponent({
-    props: ['label', 'name'],
-    setup(props, { slots }) {
-      return () =>
-        h('section', {
-          'data-name': props.name,
-          'data-label': props.label,
-        }, slots.default?.());
-    },
-  });
-  const ElSelect = defineComponent({
-    emits: ['change', 'update:modelValue'],
-    props: ['modelValue'],
-    setup(props, { emit, slots }) {
-      return () =>
-        h(
-          'select',
-          {
-            value: props.modelValue,
-            onChange: (event: Event) => {
-              const value = (event.target as HTMLSelectElement).value;
-              emit('update:modelValue', value);
-              emit('change', value);
-            },
-          },
-          slots.default?.(),
-        );
-    },
-  });
-  const ElOption = defineComponent({
-    props: ['label', 'value'],
-    setup(props) {
-      return () => h('option', { value: props.value }, props.label);
-    },
-  });
-  const ElTable = defineComponent({
-    props: ['data'],
-    setup(props, { slots }) {
-      return () => h('div', { 'data-testid': 'verification-table' }, [JSON.stringify(props.data), slots.default?.()]);
-    },
-  });
-  const ElTableColumn = defineComponent({
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.({ row: {} }));
-    },
-  });
-  const ElTag = defineComponent({
-    setup(_, { slots }) {
-      return () => h('span', slots.default?.());
-    },
-  });
+  const ElTabs = ((props: Record<string, unknown>, { emit, slots }: any) =>
+    h('div', [
+      h(
+        'button',
+        {
+          'data-testid': 'applications-tab',
+          type: 'button',
+          onClick: () => emit('update:modelValue', 'applications'),
+        },
+        '?????',
+      ),
+      h(
+        'button',
+        {
+          'data-testid': 'specimens-tab',
+          type: 'button',
+          onClick: () => emit('update:modelValue', 'specimens'),
+        },
+        '????',
+      ),
+      h('div', { 'data-active-tab': props.modelValue }, slots.default?.()),
+    ])) as unknown;
+  const ElTabPane = ((props: Record<string, unknown>, { slots }: any) =>
+    h(
+      'section',
+      {
+        'data-label': props.label,
+        'data-name': props.name,
+      },
+      slots.default?.(),
+    )) as unknown;
+  const ElTable = ((props: Record<string, unknown>, { slots }: any) =>
+    h('div', { 'data-testid': 'verification-table' }, [
+      JSON.stringify(props.data),
+      slots.default?.(),
+    ])) as unknown;
+  const ElTableColumn = ((_: Record<string, unknown>, { slots }: any) =>
+    h('div', slots.default?.({ row: {} }))) as unknown;
   return {
-    ElAlert,
-    ElEmpty,
-    ElOption,
-    ElSelect,
+    ElAlert: createAlertStub(),
+    ElEmpty: createEmptyStub(),
+    ElOption: createOptionStub(),
+    ElSelect: createSelectStub(),
     ElTabPane,
     ElTable,
     ElTableColumn,
-    ElTag,
+    ElTag: createTagStub(),
     ElTabs,
   };
 });
@@ -166,6 +123,10 @@ async function mountView() {
   const app = createApp({
     render: () => h(TrackingQueryView),
   });
+  app.directive('loading', {
+    mounted() {},
+    updated() {},
+  });
   app.mount(root);
   await nextTick();
   return { app, root };
@@ -189,10 +150,16 @@ describe('TrackingQueryView', () => {
 
     const { app, root } = await mountView();
 
-    expect(root.querySelector('[data-testid="tracking-application-list"]')).not.toBeNull();
-    expect(root.querySelector('[data-testid="tracking-specimen-list"]')).not.toBeNull();
-    expect(root.textContent).toContain('申请单列表');
-    expect(root.textContent).toContain('标本列表');
+    expect(
+      root.querySelector('[data-testid="tracking-application-list"]'),
+    ).not.toBeNull();
+    expect(
+      root.querySelector('[data-testid="tracking-specimen-list"]'),
+    ).not.toBeNull();
+    expect(
+      root.querySelector('[data-testid="applications-tab"]'),
+    ).not.toBeNull();
+    expect(root.querySelector('[data-testid="specimens-tab"]')).not.toBeNull();
 
     app.unmount();
   });
@@ -202,8 +169,12 @@ describe('TrackingQueryView', () => {
 
     expect(root.textContent).toContain('当前账号只有追踪菜单权限');
     expect(root.textContent).toContain('当前账号暂无追踪列表查看权限');
-    expect(root.querySelector('[data-testid="tracking-application-list"]')).toBeNull();
-    expect(root.querySelector('[data-testid="tracking-specimen-list"]')).toBeNull();
+    expect(
+      root.querySelector('[data-testid="tracking-application-list"]'),
+    ).toBeNull();
+    expect(
+      root.querySelector('[data-testid="tracking-specimen-list"]'),
+    ).toBeNull();
 
     app.unmount();
   });
@@ -230,10 +201,14 @@ describe('TrackingQueryView', () => {
 
     const { app, root } = await mountView();
 
-    expect(root.querySelector('[data-active-tab="applications"]')).not.toBeNull();
-    const applicationList = root.querySelector('[data-testid="tracking-application-list"]');
-    expect(applicationList?.getAttribute('data-application-id')).toBe('APP-TRACK-001');
-    expect(applicationList?.getAttribute('data-trigger-key')).toBe('1');
+    expect(
+      root.querySelector('[data-active-tab="applications"]'),
+    ).not.toBeNull();
+    const applicationList = root.querySelector<HTMLElement>(
+      '[data-testid="tracking-application-list"]',
+    );
+    expect(applicationList?.dataset.applicationId).toBe('APP-TRACK-001');
+    expect(applicationList?.dataset.triggerKey).toBe('1');
 
     app.unmount();
   });
@@ -261,9 +236,11 @@ describe('TrackingQueryView', () => {
     const { app, root } = await mountView();
 
     expect(root.querySelector('[data-active-tab="specimens"]')).not.toBeNull();
-    const specimenList = root.querySelector('[data-testid="tracking-specimen-list"]');
-    expect(specimenList?.getAttribute('data-barcode')).toBe('BC-TRACK-001');
-    expect(specimenList?.getAttribute('data-trigger-key')).toBe('1');
+    const specimenList = root.querySelector<HTMLElement>(
+      '[data-testid="tracking-specimen-list"]',
+    );
+    expect(specimenList?.dataset.barcode).toBe('BC-TRACK-001');
+    expect(specimenList?.dataset.triggerKey).toBe('1');
 
     app.unmount();
   });
@@ -302,7 +279,9 @@ describe('TrackingQueryView', () => {
     const { app, root } = await mountView();
     await nextTick();
 
-    expect(mockWorkflowService.listSpecimenVerificationRecords).toHaveBeenCalledWith('BC-TRACK-001');
+    expect(
+      mockWorkflowService.listSpecimenVerificationRecords,
+    ).toHaveBeenCalledWith('BC-TRACK-001');
     expect(root.textContent).toContain('核对记录视图');
     expect(root.textContent).toContain('SPECIMEN_CONFIRM');
     expect(root.textContent).toContain('完成标本确认');

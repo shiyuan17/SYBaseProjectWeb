@@ -60,7 +60,8 @@ vi.mock('../components/WorkflowSectionCard.vue', () => ({
 }));
 
 vi.mock('element-plus', async () => {
-  const actual = await vi.importActual<typeof import('element-plus')>('element-plus');
+  const actual =
+    await vi.importActual<typeof import('element-plus')>('element-plus');
   return {
     ...actual,
     ElMessage: { success: vi.fn(), warning: vi.fn() },

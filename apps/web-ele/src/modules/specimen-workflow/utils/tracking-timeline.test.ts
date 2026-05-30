@@ -1,9 +1,9 @@
-import { describe, expect, it } from 'vitest';
-
 import type {
   SpecimenTrackingSummary,
   TrackingEventView,
 } from '../types/specimen-workflow';
+
+import { describe, expect, it } from 'vitest';
 
 import {
   buildTrackingTimelineData,
@@ -93,7 +93,11 @@ describe('tracking-timeline', () => {
       ],
       [
         createSpecimen(),
-        createSpecimen({ barcode: 'BC-002', id: 'SPEC-002', specimenNo: 'SP-002' }),
+        createSpecimen({
+          barcode: 'BC-002',
+          id: 'SPEC-002',
+          specimenNo: 'SP-002',
+        }),
       ],
     );
 
@@ -137,10 +141,7 @@ describe('tracking-timeline', () => {
       specimenId: null,
       specimenNo: null,
     });
-    const data = buildTrackingTimelineData(
-      [publicEvent],
-      [createSpecimen()],
-    );
+    const data = buildTrackingTimelineData([publicEvent], [createSpecimen()]);
 
     expect(data.publicEvents).toEqual([publicEvent]);
     expect(data.specimenTimelineMap).toEqual({});
@@ -182,8 +183,16 @@ describe('tracking-timeline', () => {
       ],
       [
         createSpecimen(),
-        createSpecimen({ barcode: 'BC-002', id: 'SPEC-002', specimenNo: 'SP-002' }),
-        createSpecimen({ barcode: 'BC-003', id: 'SPEC-003', specimenNo: 'SP-003' }),
+        createSpecimen({
+          barcode: 'BC-002',
+          id: 'SPEC-002',
+          specimenNo: 'SP-002',
+        }),
+        createSpecimen({
+          barcode: 'BC-003',
+          id: 'SPEC-003',
+          specimenNo: 'SP-003',
+        }),
       ],
     );
 
@@ -212,7 +221,11 @@ describe('tracking-timeline', () => {
       ],
       [
         createSpecimen(),
-        createSpecimen({ barcode: 'BC-002', id: 'SPEC-002', specimenNo: 'SP-002' }),
+        createSpecimen({
+          barcode: 'BC-002',
+          id: 'SPEC-002',
+          specimenNo: 'SP-002',
+        }),
       ],
     );
 

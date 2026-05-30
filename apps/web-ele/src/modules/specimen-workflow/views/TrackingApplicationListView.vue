@@ -24,11 +24,11 @@ import {
   ElOption,
   ElPagination,
   ElSelect,
-  ElTabPane,
   ElTable,
   ElTableColumn,
-  ElTag,
+  ElTabPane,
   ElTabs,
+  ElTag,
   ElTimeline,
   ElTimelineItem,
 } from 'element-plus';
@@ -83,7 +83,9 @@ const props = withDefaults(
 const accessStore = useAccessStore();
 
 const canQueryApplications = computed(() =>
-  accessStore.accessCodes.includes(M2_PERMISSION_CODES.APPLICATION_DETAIL_QUERY),
+  accessStore.accessCodes.includes(
+    M2_PERMISSION_CODES.APPLICATION_DETAIL_QUERY,
+  ),
 );
 
 const loading = ref(false);
@@ -126,7 +128,8 @@ async function loadApplications() {
       page: filters.page,
       patientName: filters.patientName.trim() || undefined,
       size: filters.size,
-      submittingDepartmentId: filters.submittingDepartmentId.trim() || undefined,
+      submittingDepartmentId:
+        filters.submittingDepartmentId.trim() || undefined,
     });
     items.value = result.items;
     total.value = result.total;
@@ -148,7 +151,9 @@ async function openDetailById(applicationId: string) {
   detailLoading.value = true;
   pageError.value = '';
   try {
-    detailTracking.value = await getApplicationTracking(normalizedApplicationId);
+    detailTracking.value = await getApplicationTracking(
+      normalizedApplicationId,
+    );
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
     detailVisible.value = false;
@@ -174,7 +179,9 @@ function handleReset() {
   void loadApplications();
 }
 
-function handleDepartmentChange(department: null | { id: string; name: string }) {
+function handleDepartmentChange(
+  department: null | { id: string; name: string },
+) {
   filters.submittingDepartmentId = department?.id ?? '';
 }
 
@@ -402,7 +409,10 @@ watch(
       width="1120px"
     >
       <div v-loading="detailLoading" class="flex flex-col gap-4">
-        <WorkflowSectionCard title="异常标记" description="展示当前申请单的流程异常标记。">
+        <WorkflowSectionCard
+          title="异常标记"
+          description="展示当前申请单的流程异常标记。"
+        >
           <ElAlert
             :closable="false"
             :title="
@@ -427,15 +437,28 @@ watch(
               </div>
               <div class="mt-2 grid gap-2 md:grid-cols-2">
                 <div>异常类型：{{ formatReceiptStatus(specimen.status) }}</div>
-                <div>质控结果：{{ formatQualityCheckResult(specimen.qualityCheckResult) }}</div>
-                <div>问题代码：{{ specimen.qualityIssueCodes.length ? specimen.qualityIssueCodes.join('、') : '-' }}</div>
+                <div>
+                  质控结果：{{
+                    formatQualityCheckResult(specimen.qualityCheckResult)
+                  }}
+                </div>
+                <div>
+                  问题代码：{{
+                    specimen.qualityIssueCodes.length > 0
+                      ? specimen.qualityIssueCodes.join('、')
+                      : '-'
+                  }}
+                </div>
                 <div>原因：{{ specimen.reason || '-' }}</div>
               </div>
             </div>
           </div>
         </WorkflowSectionCard>
 
-        <WorkflowSectionCard title="基本信息" description="展示申请单状态、当前节点、表单状态与送检摘要。">
+        <WorkflowSectionCard
+          title="基本信息"
+          description="展示申请单状态、当前节点、表单状态与送检摘要。"
+        >
           <ElDescriptions :column="2" border>
             <ElDescriptionsItem label="申请单编号">
               {{ detailTracking?.id || '-' }}
@@ -447,7 +470,11 @@ watch(
               {{ formatApplicationStatus(detailTracking?.status) }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="表单状态">
-              {{ formatApplicationFormStatus(detailTracking?.applicationFormStatus) }}
+              {{
+                formatApplicationFormStatus(
+                  detailTracking?.applicationFormStatus,
+                )
+              }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="当前节点">
               {{ formatCurrentNode(detailTracking?.currentNode) }}
@@ -485,11 +512,18 @@ watch(
           </ElDescriptions>
         </WorkflowSectionCard>
 
-        <WorkflowSectionCard title="标本列表" description="展示当前申请单下标本摘要、状态和标签打印情况。">
+        <WorkflowSectionCard
+          title="标本列表"
+          description="展示当前申请单下标本摘要、状态和标签打印情况。"
+        >
           <ElTable :data="detailTracking?.specimens ?? []" border>
             <ElTableColumn label="标本号" min-width="140" prop="specimenNo" />
             <ElTableColumn label="条码" min-width="180" prop="barcode" />
-            <ElTableColumn label="标本名称" min-width="180" prop="specimenName" />
+            <ElTableColumn
+              label="标本名称"
+              min-width="180"
+              prop="specimenName"
+            />
             <ElTableColumn label="标本类型" min-width="140">
               <template #default="{ row }">
                 {{ formatNullable(row.specimenType) }}
@@ -502,7 +536,9 @@ watch(
             </ElTableColumn>
             <ElTableColumn label="流程状态" min-width="140">
               <template #default="{ row }">
-                <ElTag :type="row.specimenStatus === 'RECEIVED' ? 'success' : 'info'">
+                <ElTag
+                  :type="row.specimenStatus === 'RECEIVED' ? 'success' : 'info'"
+                >
                   {{ formatSpecimenStatus(row.specimenStatus) }}
                 </ElTag>
               </template>
@@ -520,9 +556,25 @@ watch(
             <ElTableColumn label="异常明细" min-width="320">
               <template #default="{ row }">
                 <div class="flex flex-col gap-1 text-sm">
-                  <div>异常类型：{{ formatReceiptStatus(row.receiptStatus ?? row.specimenStatus) }}</div>
-                  <div>质控结果：{{ formatQualityCheckResult(row.qualityCheckResult) }}</div>
-                  <div>问题代码：{{ row.qualityIssueCodes?.length ? row.qualityIssueCodes.join('、') : '-' }}</div>
+                  <div>
+                    异常类型：{{
+                      formatReceiptStatus(
+                        row.receiptStatus ?? row.specimenStatus,
+                      )
+                    }}
+                  </div>
+                  <div>
+                    质控结果：{{
+                      formatQualityCheckResult(row.qualityCheckResult)
+                    }}
+                  </div>
+                  <div>
+                    问题代码：{{
+                      row.qualityIssueCodes?.length
+                        ? row.qualityIssueCodes.join('、')
+                        : '-'
+                    }}
+                  </div>
                   <div>原因：{{ formatNullable(row.abnormalReason) }}</div>
                 </div>
               </template>
@@ -530,7 +582,10 @@ watch(
           </ElTable>
         </WorkflowSectionCard>
 
-        <WorkflowSectionCard title="时间线事件" description="展示最近追踪事件、节点、状态与操作终端。">
+        <WorkflowSectionCard
+          title="时间线事件"
+          description="展示最近追踪事件、节点、状态与操作终端。"
+        >
           <ElTabs
             v-if="detailRecentEvents.length > 0"
             v-model="activeTimelineTab"
@@ -545,16 +600,18 @@ watch(
                 >
                   <div class="space-y-2">
                     <div class="font-medium text-foreground">
-                      {{ formatTrackingEventType(group.eventType) }} / {{ formatTrackingEventStatus(group.eventStatus) }}
+                      {{ formatTrackingEventType(group.eventType) }} /
+                      {{ formatTrackingEventStatus(group.eventStatus) }}
                     </div>
                     <div class="text-xs text-muted-foreground">
-                      节点: {{ formatNullable(group.nodeCode) }}，{{ group.specimenCount > 0 ? `涉及标本: ${group.specimenCount} 个` : '公共事件' }}
+                      节点: {{ formatNullable(group.nodeCode) }}，{{
+                        group.specimenCount > 0
+                          ? `涉及标本: ${group.specimenCount} 个`
+                          : '公共事件'
+                      }}
                     </div>
                     <div class="flex flex-wrap gap-2">
-                      <ElTag
-                        v-if="group.specimenCount === 0"
-                        type="info"
-                      >
+                      <ElTag v-if="group.specimenCount === 0" type="info">
                         公共事件
                       </ElTag>
                       <ElTag
@@ -566,7 +623,13 @@ watch(
                       </ElTag>
                     </div>
                     <div class="text-xs text-muted-foreground">
-                      操作人: {{ formatAggregateContext(group.operatorNames, '多操作人') }}，终端: {{ formatAggregateContext(group.sourceTerminals, '多终端') }}
+                      操作人:
+                      {{
+                        formatAggregateContext(group.operatorNames, '多操作人')
+                      }}，终端:
+                      {{
+                        formatAggregateContext(group.sourceTerminals, '多终端')
+                      }}
                     </div>
                   </div>
                 </ElTimelineItem>
@@ -587,10 +650,13 @@ watch(
                 >
                   <div class="space-y-1">
                     <div class="font-medium text-foreground">
-                      {{ formatTrackingEventType(event.eventType) }} / {{ formatTrackingEventStatus(event.eventStatus) }}
+                      {{ formatTrackingEventType(event.eventType) }} /
+                      {{ formatTrackingEventStatus(event.eventStatus) }}
                     </div>
                     <div class="text-xs text-muted-foreground">
-                      节点: {{ formatNullable(event.nodeCode) }}，操作人: {{ formatNullable(event.operatorName) }}，终端: {{ formatNullable(event.sourceTerminal) }}
+                      节点: {{ formatNullable(event.nodeCode) }}，操作人:
+                      {{ formatNullable(event.operatorName) }}，终端:
+                      {{ formatNullable(event.sourceTerminal) }}
                     </div>
                   </div>
                 </ElTimelineItem>

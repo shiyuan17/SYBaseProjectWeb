@@ -4,6 +4,7 @@ import type { ApplicationRegistrationWorkbenchRecord } from '../types/applicatio
 import { computed, nextTick, ref } from 'vue';
 
 import { Check, UserRoundPen, X } from '@vben/icons';
+
 import {
   ElButton,
   ElDescriptions,
@@ -805,14 +806,13 @@ async function beginEditing(item: WorkbenchInfoItem) {
   }
 
   activeEditorKey.value = item.key;
-  editingValue.value =
-    item.editorType === 'select'
-      ? item.value === '是'
-        ? 'true'
-        : 'false'
-      : item.value === '-'
-        ? ''
-        : item.value;
+  if (item.editorType === 'select') {
+    editingValue.value = item.value === '是' ? 'true' : 'false';
+  } else if (item.value === '-') {
+    editingValue.value = '';
+  } else {
+    editingValue.value = item.value;
+  }
 
   await nextTick();
   const editor = document.querySelector<HTMLElement>(

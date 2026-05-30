@@ -1,4 +1,4 @@
-import { createApp, defineComponent, h, nextTick } from 'vue';
+import { createApp, h, nextTick } from 'vue';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -30,55 +30,62 @@ vi.mock('@vben/stores', () => ({
 }));
 
 vi.mock('element-plus', () => {
-  const ElTabs = defineComponent({
-    emits: ['update:modelValue'],
-    props: ['modelValue'],
-    setup(props, { emit, slots }) {
-      return () =>
-        h('div', [
-          h(
-            'button',
-            {
-              'data-testid': 'applications-tab',
-              type: 'button',
-              onClick: () => emit('update:modelValue', 'applications'),
-            },
-            '申请管理',
-          ),
-          h(
-            'button',
-            {
-              'data-testid': 'registration-tab',
-              type: 'button',
-              onClick: () => emit('update:modelValue', 'registration'),
-            },
-            '标本登记',
-          ),
-          h('div', { 'data-active-tab': props.modelValue }, slots.default?.()),
-        ]);
-    },
-  });
-  const ElTabPane = defineComponent({
-    props: ['label', 'name'],
-    setup(_, { slots }) {
-      return () => h('section', slots.default?.());
-    },
-  });
+  const ElTabs = ((props: Record<string, unknown>, { emit, slots }: any) =>
+    h('div', [
+      h(
+        'button',
+        {
+          'data-testid': 'applications-tab',
+          type: 'button',
+          onClick: () => emit('update:modelValue', 'applications'),
+        },
+        '????',
+      ),
+      h(
+        'button',
+        {
+          'data-testid': 'registration-tab',
+          type: 'button',
+          onClick: () => emit('update:modelValue', 'registration'),
+        },
+        '????',
+      ),
+      h('div', { 'data-active-tab': props.modelValue }, slots.default?.()),
+    ])) as unknown;
+  const ElTabPane = ((_: Record<string, unknown>, { slots }: any) =>
+    h('section', slots.default?.())) as unknown;
   return { ElTabPane, ElTabs };
 });
 
 vi.mock('./ApplicationListView.vue', () => ({
   default: {
     props: ['embedded'],
-    template: '<div data-testid="application-list" :data-embedded="embedded" />',
+    setup(props: { embedded?: boolean }) {
+      return () =>
+        h('div', {
+          'data-embedded': props.embedded,
+          'data-testid': 'application-list',
+        });
+    },
   },
 }));
 
 vi.mock('./SpecimenManagementView.vue', () => ({
   default: {
     props: ['embedded', 'registrationApplicationId', 'registrationTriggerKey'],
-    template:
-      '<div data-testid="specimen-management" :data-embedded="embedded" :data-application-id="registrationApplicationId" :data-trigger-key="registrationTriggerKey" />',
+    setup(props: {
+      embedded?: boolean;
+      registrationApplicationId?: string;
+      registrationTriggerKey?: number;
+    }) {
+      return () =>
+        h('div', {
+          'data-application-id': props.registrationApplicationId,
+          'data-embedded': props.embedded,
+          'data-testid': 'specimen-management',
+          'data-trigger-key': props.registrationTriggerKey,
+        });
+    },
   },
 }));
 
@@ -97,18 +104,22 @@ describe('SubmissionRegistrationView', () => {
   it('renders both tabs without an outer page title', async () => {
     const root = document.createElement('div');
     document.body.append(root);
-    const app = createApp({
-      render: () => h(SubmissionRegistrationView),
-    });
+    const app = createApp(SubmissionRegistrationView);
 
     app.mount(root);
     await nextTick();
 
-    expect(root.querySelector('[data-testid="applications-tab"]')).not.toBeNull();
-    expect(root.querySelector('[data-testid="registration-tab"]')).not.toBeNull();
-    expect(root.querySelector('[data-testid="application-list"]')?.hasAttribute('data-embedded')).toBe(
-      true,
-    );
+    expect(
+      root.querySelector('[data-testid="applications-tab"]'),
+    ).not.toBeNull();
+    expect(
+      root.querySelector('[data-testid="registration-tab"]'),
+    ).not.toBeNull();
+    expect(
+      root
+        .querySelector('[data-testid="application-list"]')
+        ?.hasAttribute('data-embedded'),
+    ).toBe(true);
     expect(root.querySelector('h1')).toBeNull();
 
     app.unmount();
@@ -122,17 +133,19 @@ describe('SubmissionRegistrationView', () => {
 
     const root = document.createElement('div');
     document.body.append(root);
-    const app = createApp({
-      render: () => h(SubmissionRegistrationView),
-    });
+    const app = createApp(SubmissionRegistrationView);
 
     app.mount(root);
     await nextTick();
 
-    expect(root.querySelector('[data-active-tab="registration"]')).not.toBeNull();
-    const specimenManagement = root.querySelector('[data-testid="specimen-management"]');
-    expect(specimenManagement?.getAttribute('data-application-id')).toBe('APP-EMBEDDED');
-    expect(specimenManagement?.getAttribute('data-trigger-key')).toBe('1');
+    expect(
+      root.querySelector('[data-active-tab="registration"]'),
+    ).not.toBeNull();
+    const specimenManagement = root.querySelector<HTMLElement>(
+      '[data-testid="specimen-management"]',
+    );
+    expect(specimenManagement?.dataset.applicationId).toBe('APP-EMBEDDED');
+    expect(specimenManagement?.dataset.triggerKey).toBe('1');
 
     app.unmount();
   });

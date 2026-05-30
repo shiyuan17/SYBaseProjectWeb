@@ -67,7 +67,9 @@ const form = reactive({
   terminalCode: '',
 });
 
-const currentUserName = computed(() => userStore.userInfo?.realName?.trim() ?? '');
+const currentUserName = computed(
+  () => userStore.userInfo?.realName?.trim() ?? '',
+);
 const currentUserId = computed(() => userStore.userInfo?.userId?.trim() ?? '');
 
 function resetForm() {
@@ -80,7 +82,9 @@ function resetForm() {
 }
 
 async function ensureReferenceOptionsLoaded() {
-  workflowReferenceOptions.value = await loadWorkflowReferenceOptionsSafely({ enabled: true });
+  workflowReferenceOptions.value = await loadWorkflowReferenceOptionsSafely({
+    enabled: true,
+  });
 }
 
 watch(
@@ -130,7 +134,11 @@ function submit() {
     return;
   }
   if (!form.fixationLiquidType.trim()) {
-    ElMessage.warning(props.action === 'start' ? '请选择固定液类型' : '请补齐固定液类型后再完成固定');
+    ElMessage.warning(
+      props.action === 'start'
+        ? '请选择固定液类型'
+        : '请补齐固定液类型后再完成固定',
+    );
     return;
   }
 
@@ -215,7 +223,10 @@ function submit() {
                 />
               </ElFormItem>
               <ElFormItem label="终端编码">
-                <ElInput v-model="form.terminalCode" placeholder="工作站或扫码设备编号" />
+                <ElInput
+                  v-model="form.terminalCode"
+                  placeholder="工作站或扫码设备编号"
+                />
               </ElFormItem>
             </div>
             <ElFormItem label="备注">

@@ -8,29 +8,22 @@ import type {
   ApplicationPage,
   ApplicationUpdateRequest,
   DirectSpecimenReceiptRequest,
-  DuplicateApplicationCheckResult,
   DuplicateApplicationCheckQuery,
+  DuplicateApplicationCheckResult,
   FixationResult,
   ImportClinicalApplicationRequest,
   LabelPrintRetryRequest,
   LabelPrintRetryResult,
   LatestSpecimenRegistrationResult,
-  SpecimenCheckInRequest,
   PendingSpecimenItem,
   PendingSpecimenPage,
   PendingSpecimenQuery,
-  SpecimenRemovalConfirmRequest,
-  SpecimenRemovalConfirmResult,
-  SpecimenRemovalQuickConfirmRequest,
-  SpecimenRemovalItem,
-  SpecimenRemovalPage,
-  SpecimenRemovalQuery,
-  SpecimenRemovalSummary,
   PendingTransportOrderItem,
   PendingTransportOrderPage,
   PendingTransportOrderQuery,
   RegistrationSnapshotView,
   SpecimenBarcodeBindingRequest,
+  SpecimenCheckInRequest,
   SpecimenConfirmRequest,
   SpecimenFixationRequest,
   SpecimenManagementListItem,
@@ -41,9 +34,16 @@ import type {
   SpecimenReceiptResult,
   SpecimenRegisterRequest,
   SpecimenRegisterResult,
+  SpecimenRemovalConfirmRequest,
+  SpecimenRemovalConfirmResult,
+  SpecimenRemovalItem,
+  SpecimenRemovalPage,
+  SpecimenRemovalQuery,
+  SpecimenRemovalQuickConfirmRequest,
+  SpecimenRemovalSummary,
   SpecimenTrackingSummary,
-  SpecimenVerificationRequest,
   SpecimenVerificationRecord,
+  SpecimenVerificationRequest,
   TrackingEventView,
   TrackingQueryView,
   TransportOrderCreateRequest,
@@ -64,9 +64,9 @@ type RawApplication = Omit<ApplicationDetailView, 'recentEvents' | 'specimens'>;
 type RawSpecimen = {
   applicationId: string;
   barcode: string;
-  checkInStatus?: null | string;
   checkedInAt?: null | string;
   checkedInByName?: null | string;
+  checkInStatus?: null | string;
   clinicalSymptom: null | string;
   collectionMode: null | string;
   containerCount: null | number;
@@ -92,6 +92,8 @@ type RawSpecimen = {
   specimenCount: null | number;
   specimenName: string;
   specimenNo: string;
+  specimenRemovalAt?: null | string;
+  specimenRemovalOperatorName?: null | string;
   specimenSite: null | string;
   specimenStatus: null | string;
   specimenType: null | string;
@@ -152,10 +154,12 @@ type MockState = {
 };
 
 const applicationsSeed = applicationsSeedRaw as RawApplication[];
-const registrationBatchesSeed = registrationBatchesSeedRaw as RawRegistrationBatch[];
+const registrationBatchesSeed =
+  registrationBatchesSeedRaw as RawRegistrationBatch[];
 const specimensSeed = specimensSeedRaw as RawSpecimen[];
 const transportOrdersSeed = transportOrdersSeedRaw as RawTransportOrder[];
-const verificationRecordsSeed = verificationRecordsSeedRaw as RawVerificationRecord[];
+const verificationRecordsSeed =
+  verificationRecordsSeedRaw as RawVerificationRecord[];
 const workflowEventsSeed = workflowEventsSeedRaw as RawWorkflowEvent[];
 
 let state = createInitialState();
@@ -174,47 +178,57 @@ function createInitialState(): MockState {
   };
 }
 
+function isPresent<T>(value: null | T | undefined): value is T {
+  return value != null;
+}
+
 function cloneSeed<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value)) as T;
+  return structuredClone(value);
 }
 
 function normalizeSeedSpecimen(
   specimen: RawSpecimen,
   transportOrders: RawTransportOrder[],
 ): RawSpecimen {
-  const transportOrder = transportOrders.find((item) => item.specimenIds.includes(specimen.id));
+  const transportOrder = transportOrders.find((item) =>
+    item.specimenIds.includes(specimen.id),
+  );
   const specimenConfirmedAt =
-    specimen.specimenConfirmedAt
-    ?? (transportOrder ? transportOrder.createdAt : null);
+    specimen.specimenConfirmedAt ??
+    (transportOrder ? transportOrder.createdAt : null);
   const derivedVerificationStatus =
-    specimen.verificationStatus
-    ?? (specimen.fixationStatus || specimenConfirmedAt || transportOrder
+    specimen.verificationStatus ??
+    (specimen.fixationStatus || specimenConfirmedAt || transportOrder
       ? 'VERIFIED'
       : 'UNVERIFIED');
   const verificationCompletedAt =
-    specimen.verificationCompletedAt
-    ?? (derivedVerificationStatus === 'VERIFIED'
-      ? specimen.fixationStartedAt ?? specimenConfirmedAt ?? specimen.registeredAt
+    specimen.verificationCompletedAt ??
+    (derivedVerificationStatus === 'VERIFIED'
+      ? (specimen.fixationStartedAt ??
+        specimenConfirmedAt ??
+        specimen.registeredAt)
       : null);
   const verificationStartedAt =
-    specimen.verificationStartedAt
-    ?? (derivedVerificationStatus === 'VERIFYING'
+    specimen.verificationStartedAt ??
+    (derivedVerificationStatus === 'VERIFYING'
       ? specimen.registeredAt
       : verificationCompletedAt);
   const derivedCheckInStatus =
-    specimen.checkInStatus
-    ?? (transportOrder || specimen.receiptStatus || specimen.specimenStatus === 'IN_TRANSIT'
+    specimen.checkInStatus ??
+    (transportOrder ||
+    specimen.receiptStatus ||
+    specimen.specimenStatus === 'IN_TRANSIT'
       ? 'CHECKED_IN'
       : 'NOT_CHECKED_IN');
   const checkedInAt =
-    specimen.checkedInAt
-    ?? (derivedCheckInStatus === 'CHECKED_IN'
-      ? transportOrder?.createdAt ?? specimenConfirmedAt ?? null
+    specimen.checkedInAt ??
+    (derivedCheckInStatus === 'CHECKED_IN'
+      ? (transportOrder?.createdAt ?? specimenConfirmedAt ?? null)
       : null);
   const checkedInByName =
-    specimen.checkedInByName
-    ?? (derivedCheckInStatus === 'CHECKED_IN'
-      ? transportOrder?.handoverUserName ?? null
+    specimen.checkedInByName ??
+    (derivedCheckInStatus === 'CHECKED_IN'
+      ? (transportOrder?.handoverUserName ?? null)
       : null);
 
   return {
@@ -283,11 +297,14 @@ function paginateItems<T>(items: T[], page: number, size: number) {
 }
 
 function createNumericId(prefix: string, values: string[]) {
-  const maxValue = values.reduce((maxValue, currentValue) => {
+  let maxValue = 0;
+
+  for (const currentValue of values) {
     const match = currentValue.match(/(\d+)(?!.*\d)/);
     const numericValue = match ? Number.parseInt(match[1] ?? '0', 10) : 0;
-    return Math.max(maxValue, numericValue);
-  }, 0);
+    maxValue = Math.max(maxValue, numericValue);
+  }
+
   return `${prefix}-${String(maxValue + 1).padStart(3, '0')}`;
 }
 
@@ -297,7 +314,9 @@ function createTimestamp() {
 
 function getApplicationById(applicationId: string) {
   const normalizedApplicationId = normalizeText(applicationId);
-  const application = state.applications.find((item) => item.id === normalizedApplicationId);
+  const application = state.applications.find(
+    (item) => item.id === normalizedApplicationId,
+  );
   if (!application) {
     throw new Error(`未找到申请单: ${applicationId}`);
   }
@@ -310,10 +329,11 @@ function getSpecimensByApplicationId(applicationId: string) {
 
 function resolveSpecimenByIdentifier(identifier: string) {
   const normalizedIdentifier = normalizeText(identifier);
-  const specimen = state.specimens.find((item) =>
-    item.barcode === normalizedIdentifier
-    || item.id === normalizedIdentifier
-    || item.specimenNo === normalizedIdentifier,
+  const specimen = state.specimens.find(
+    (item) =>
+      item.barcode === normalizedIdentifier ||
+      item.id === normalizedIdentifier ||
+      item.specimenNo === normalizedIdentifier,
   );
   if (!specimen) {
     throw new Error(`未找到标本: ${identifier}`);
@@ -323,7 +343,9 @@ function resolveSpecimenByIdentifier(identifier: string) {
 
 function resolveSpecimenByBarcode(barcode: string) {
   const normalizedBarcode = normalizeText(barcode);
-  const specimen = state.specimens.find((item) => item.barcode === normalizedBarcode);
+  const specimen = state.specimens.find(
+    (item) => item.barcode === normalizedBarcode,
+  );
   if (!specimen) {
     throw new Error('未找到对应标本');
   }
@@ -332,7 +354,9 @@ function resolveSpecimenByBarcode(barcode: string) {
 
 function resolveSpecimensBySpecimenNo(specimenNo: string) {
   const normalizedSpecimenNo = normalizeText(specimenNo);
-  return state.specimens.filter((item) => item.specimenNo === normalizedSpecimenNo);
+  return state.specimens.filter(
+    (item) => item.specimenNo === normalizedSpecimenNo,
+  );
 }
 
 function applySpecimenRemovalConfirmation(
@@ -372,7 +396,9 @@ function applySpecimenRemovalConfirmation(
 
 function findTransportOrderById(transportOrderId: string) {
   const normalizedTransportOrderId = normalizeText(transportOrderId);
-  const order = state.transportOrders.find((item) => item.id === normalizedTransportOrderId);
+  const order = state.transportOrders.find(
+    (item) => item.id === normalizedTransportOrderId,
+  );
   if (!order) {
     throw new Error(`未找到转运单: ${transportOrderId}`);
   }
@@ -381,19 +407,22 @@ function findTransportOrderById(transportOrderId: string) {
 
 function getTransportOrderBySpecimenId(specimenId: string) {
   return (
-    state.transportOrders.find((item) => item.specimenIds.includes(specimenId) && item.status !== 'CANCELLED')
-    ?? null
+    state.transportOrders.find(
+      (item) =>
+        item.specimenIds.includes(specimenId) && item.status !== 'CANCELLED',
+    ) ?? null
   );
 }
 
 function hasStartedDownstreamWorkflow(applicationId: string) {
   const specimens = getSpecimensByApplicationId(applicationId);
-  return specimens.some((item) =>
-    item.fixationStatus !== 'PENDING'
-    || item.specimenStatus !== 'REGISTERED'
-    || Boolean(item.specimenConfirmedAt)
-    || Boolean(item.checkInStatus && item.checkInStatus !== 'NOT_CHECKED_IN')
-    || Boolean(getTransportOrderBySpecimenId(item.id)),
+  return specimens.some(
+    (item) =>
+      item.fixationStatus !== 'PENDING' ||
+      item.specimenStatus !== 'REGISTERED' ||
+      Boolean(item.specimenConfirmedAt) ||
+      Boolean(item.checkInStatus && item.checkInStatus !== 'NOT_CHECKED_IN') ||
+      Boolean(getTransportOrderBySpecimenId(item.id)),
   );
 }
 
@@ -447,7 +476,10 @@ function appendVerificationRecord(payload: Omit<RawVerificationRecord, 'id'>) {
 }
 
 function resolveSpecimenAbnormalType(specimen: RawSpecimen): null | string {
-  if (specimen.receiptStatus === 'REJECTED' || specimen.receiptStatus === 'RETURNED') {
+  if (
+    specimen.receiptStatus === 'REJECTED' ||
+    specimen.receiptStatus === 'RETURNED'
+  ) {
     return specimen.receiptStatus;
   }
   if (specimen.qualityCheckResult === 'FAILED') {
@@ -489,7 +521,9 @@ function assertSpecimenNotInReceiptTerminalState(
   actionName: string,
 ) {
   if (isSpecimenInReceiptTerminalState(specimen)) {
-    throw new Error(`标本 ${specimen.barcode || specimen.specimenNo} 已进入接收结果，不能继续${actionName}`);
+    throw new Error(
+      `标本 ${specimen.barcode || specimen.specimenNo} 已进入接收结果，不能继续${actionName}`,
+    );
   }
 }
 
@@ -501,7 +535,9 @@ function isSpecimenCheckedIn(specimen: RawSpecimen) {
   return resolveSpecimenCheckInStatus(specimen) === 'CHECKED_IN';
 }
 
-function mapSpecimenTrackingSummary(specimen: RawSpecimen): SpecimenTrackingSummary {
+function mapSpecimenTrackingSummary(
+  specimen: RawSpecimen,
+): SpecimenTrackingSummary {
   return {
     abnormalReason: specimen.receiptReason ?? specimen.receiptRemarks ?? null,
     abnormalType: resolveSpecimenAbnormalType(specimen),
@@ -538,7 +574,9 @@ function mapSpecimenTrackingSummary(specimen: RawSpecimen): SpecimenTrackingSumm
   };
 }
 
-function mapSpecimenManagementItem(specimen: RawSpecimen): SpecimenManagementListItem {
+function mapSpecimenManagementItem(
+  specimen: RawSpecimen,
+): SpecimenManagementListItem {
   const application = getApplicationById(specimen.applicationId);
   return {
     abnormalFlag: isSpecimenAbnormal(specimen),
@@ -582,7 +620,6 @@ function mapSpecimenManagementItem(specimen: RawSpecimen): SpecimenManagementLis
 
 function mapSpecimenRemovalItem(specimen: RawSpecimen): SpecimenRemovalItem {
   const application = getApplicationById(specimen.applicationId);
-  const workbenchRecord = state.applications.find((item) => item.id === specimen.applicationId);
   return {
     abnormalFlag: isSpecimenAbnormal(specimen),
     applicationId: application.id,
@@ -649,7 +686,10 @@ function mapPendingSpecimenItem(specimen: RawSpecimen): PendingSpecimenItem {
 }
 
 function resolveSpecimenRecentNode(specimen: RawSpecimen) {
-  if (specimen.receiptStatus === 'REJECTED' || specimen.receiptStatus === 'RETURNED') {
+  if (
+    specimen.receiptStatus === 'REJECTED' ||
+    specimen.receiptStatus === 'RETURNED'
+  ) {
     return specimen.receiptStatus;
   }
   if (specimen.receiptStatus === 'RECEIVED') {
@@ -680,11 +720,24 @@ function resolveSpecimenRecentNode(specimen: RawSpecimen) {
 }
 
 function buildReceiptAbnormalSummary(specimens: RawSpecimen[]) {
-  const rejectedCount = specimens.filter((item) => item.receiptStatus === 'REJECTED').length;
-  const returnedCount = specimens.filter((item) => item.receiptStatus === 'RETURNED').length;
-  const qualityFailedCount = specimens.filter((item) => item.qualityCheckResult === 'FAILED').length;
-  const unreceivedCount = specimens.filter((item) => item.receiptStatus !== 'RECEIVED').length;
-  if (rejectedCount === 0 && returnedCount === 0 && qualityFailedCount === 0 && unreceivedCount === 0) {
+  const rejectedCount = specimens.filter(
+    (item) => item.receiptStatus === 'REJECTED',
+  ).length;
+  const returnedCount = specimens.filter(
+    (item) => item.receiptStatus === 'RETURNED',
+  ).length;
+  const qualityFailedCount = specimens.filter(
+    (item) => item.qualityCheckResult === 'FAILED',
+  ).length;
+  const unreceivedCount = specimens.filter(
+    (item) => item.receiptStatus !== 'RECEIVED',
+  ).length;
+  if (
+    rejectedCount === 0 &&
+    returnedCount === 0 &&
+    qualityFailedCount === 0 &&
+    unreceivedCount === 0
+  ) {
     return null;
   }
   return `拒收 ${rejectedCount}，退回 ${returnedCount}，质控失败 ${qualityFailedCount}，未接收 ${unreceivedCount}`;
@@ -693,10 +746,16 @@ function buildReceiptAbnormalSummary(specimens: RawSpecimen[]) {
 function buildTransportOrderBatchMetrics(order: RawTransportOrder) {
   const specimens = order.specimenIds
     .map((specimenId) => state.specimens.find((item) => item.id === specimenId))
-    .filter((item): item is RawSpecimen => Boolean(item));
-  const reminderCount = specimens.filter((item) => isSpecimenAbnormal(item)).length;
-  const unreceivedCount = specimens.filter((item) => item.receiptStatus !== 'RECEIVED').length;
-  const batchAbnormalFlag = specimens.some((item) => isSpecimenAbnormal(item)) || order.status === 'PARTIALLY_RECEIVED';
+    .filter(isPresent);
+  const reminderCount = specimens.filter((item) =>
+    isSpecimenAbnormal(item),
+  ).length;
+  const unreceivedCount = specimens.filter(
+    (item) => item.receiptStatus !== 'RECEIVED',
+  ).length;
+  const batchAbnormalFlag =
+    specimens.some((item) => isSpecimenAbnormal(item)) ||
+    order.status === 'PARTIALLY_RECEIVED';
 
   return {
     batchAbnormalFlag,
@@ -718,12 +777,17 @@ function mapTransportOrderView(order: RawTransportOrder): TransportOrderView {
   };
 }
 
-function mapPendingTransportOrderItem(order: RawTransportOrder): PendingTransportOrderItem {
+function mapPendingTransportOrderItem(
+  order: RawTransportOrder,
+): PendingTransportOrderItem {
   const application = getApplicationById(order.applicationId);
   const batchMetrics = buildTransportOrderBatchMetrics(order);
   const specimenBarcodes = order.specimenIds
-    .map((specimenId) => state.specimens.find((item) => item.id === specimenId)?.barcode ?? '')
-    .filter(Boolean);
+    .map(
+      (specimenId) =>
+        state.specimens.find((item) => item.id === specimenId)?.barcode ?? '',
+    )
+    .filter(isPresent);
 
   return {
     applicationId: application.id,
@@ -771,19 +835,35 @@ function resolveApplicationCurrentNode(specimens: RawSpecimen[]) {
   if (specimens.some((item) => item.specimenConfirmedAt)) {
     return 'CONFIRMATION';
   }
-  if (specimens.some((item) => item.fixationStatus === 'COMPLETED' || item.fixationStatus === 'FIXING')) {
+  if (
+    specimens.some(
+      (item) =>
+        item.fixationStatus === 'COMPLETED' || item.fixationStatus === 'FIXING',
+    )
+  ) {
     return 'FIXATION';
   }
-  if (specimens.some((item) => resolveSpecimenVerificationStatus(item) === 'VERIFIED')) {
+  if (
+    specimens.some(
+      (item) => resolveSpecimenVerificationStatus(item) === 'VERIFIED',
+    )
+  ) {
     return 'VERIFICATION';
   }
-  if (specimens.some((item) => resolveSpecimenVerificationStatus(item) === 'VERIFYING')) {
+  if (
+    specimens.some(
+      (item) => resolveSpecimenVerificationStatus(item) === 'VERIFYING',
+    )
+  ) {
     return 'VERIFICATION';
   }
   return 'REGISTERED';
 }
 
-function resolveApplicationStatus(application: RawApplication, specimens: RawSpecimen[]) {
+function resolveApplicationStatus(
+  application: RawApplication,
+  specimens: RawSpecimen[],
+) {
   if (application.status === 'VOIDED') {
     return 'VOIDED';
   }
@@ -802,7 +882,12 @@ function resolveApplicationStatus(application: RawApplication, specimens: RawSpe
   if (specimens.some((item) => getTransportOrderBySpecimenId(item.id))) {
     return 'IN_TRANSIT';
   }
-  if (specimens.some((item) => item.fixationStatus === 'COMPLETED' || item.fixationStatus === 'FIXING')) {
+  if (
+    specimens.some(
+      (item) =>
+        item.fixationStatus === 'COMPLETED' || item.fixationStatus === 'FIXING',
+    )
+  ) {
     return 'SUBMITTED';
   }
   return 'SUBMITTED';
@@ -816,10 +901,13 @@ function updateApplicationFromSpecimens(applicationId: string) {
   application.updatedAt = createTimestamp();
 }
 
-function mapApplicationListItem(application: RawApplication): ApplicationListItem {
+function mapApplicationListItem(
+  application: RawApplication,
+): ApplicationListItem {
   const specimens = getSpecimensByApplicationId(application.id);
-  const latestRegisteredSpecimen = [...specimens]
-    .sort((left, right) => compareNullableDateDesc(left.registeredAt, right.registeredAt))[0];
+  const latestRegisteredSpecimen = specimens.toSorted((left, right) =>
+    compareNullableDateDesc(left.registeredAt, right.registeredAt),
+  )[0];
   const operationState = resolveApplicationOperationState(application);
 
   return {
@@ -829,7 +917,10 @@ function mapApplicationListItem(application: RawApplication): ApplicationListIte
     applicationNo: application.applicationNo,
     applicationType: application.applicationType,
     createdAt: application.createdAt,
-    currentNode: application.status === 'VOIDED' ? 'VOIDED' : resolveApplicationCurrentNode(specimens),
+    currentNode:
+      application.status === 'VOIDED'
+        ? 'VOIDED'
+        : resolveApplicationCurrentNode(specimens),
     deletable: operationState.deletable,
     editable: operationState.editable,
     id: application.id,
@@ -855,27 +946,38 @@ function mapApplicationListItem(application: RawApplication): ApplicationListIte
 function getApplicationEvents(applicationId: string) {
   return state.workflowEvents
     .filter((item) => item.applicationId === applicationId)
-    .sort((left, right) => compareNullableDateDesc(left.eventTime, right.eventTime));
+    .toSorted((left, right) =>
+      compareNullableDateDesc(left.eventTime, right.eventTime),
+    );
 }
 
-function mapApplicationTrackingView(application: RawApplication): TrackingQueryView {
-  const specimens = getSpecimensByApplicationId(application.id)
-    .sort((left, right) => compareNullableDateDesc(left.registeredAt, right.registeredAt));
-  const fixationCompletedAt = [...specimens]
-    .map((item) => item.fixationCompletedAt)
-    .filter(Boolean)
-    .sort(compareNullableDateDesc)[0] ?? null;
-  const specimenConfirmedAt = [...specimens]
-    .map((item) => item.specimenConfirmedAt)
-    .filter(Boolean)
-    .sort(compareNullableDateDesc)[0] ?? null;
+function mapApplicationTrackingView(
+  application: RawApplication,
+): TrackingQueryView {
+  const specimens = getSpecimensByApplicationId(application.id).toSorted(
+    (left, right) =>
+      compareNullableDateDesc(left.registeredAt, right.registeredAt),
+  );
+  const fixationCompletedAt =
+    specimens
+      .map((item) => item.fixationCompletedAt)
+      .filter(isPresent)
+      .toSorted(compareNullableDateDesc)[0] ?? null;
+  const specimenConfirmedAt =
+    specimens
+      .map((item) => item.specimenConfirmedAt)
+      .filter(isPresent)
+      .toSorted(compareNullableDateDesc)[0] ?? null;
   const recentEvents = getApplicationEvents(application.id);
   const operationState = resolveApplicationOperationState(application);
 
   return {
     ...application,
     abnormalFlag: specimens.some((item) => isSpecimenAbnormal(item)),
-    currentNode: application.status === 'VOIDED' ? 'VOIDED' : resolveApplicationCurrentNode(specimens),
+    currentNode:
+      application.status === 'VOIDED'
+        ? 'VOIDED'
+        : resolveApplicationCurrentNode(specimens),
     deletable: operationState.deletable,
     editable: operationState.editable,
     fixationCompletedAt,
@@ -886,21 +988,29 @@ function mapApplicationTrackingView(application: RawApplication): TrackingQueryV
     reportIssued: application.reportIssued ?? false,
     reportStatus: application.reportStatus ?? null,
     specimenConfirmedAt,
-    specimens: specimens.map(mapSpecimenTrackingSummary),
+    specimens: specimens.map((item) => mapSpecimenTrackingSummary(item)),
     status: resolveApplicationStatus(application, specimens),
-    unreceivedCount: specimens.filter((item) => item.receiptStatus !== 'RECEIVED').length,
+    unreceivedCount: specimens.filter(
+      (item) => item.receiptStatus !== 'RECEIVED',
+    ).length,
     updatedAt: application.updatedAt,
     voided: operationState.voided,
   };
 }
 
 function getLatestRegistrationBatch(applicationId: string) {
-  return [...state.registrationBatches]
-    .filter((item) => item.applicationId === applicationId)
-    .sort((left, right) => compareNullableDateDesc(left.createdAt, right.createdAt))[0] ?? null;
+  return (
+    state.registrationBatches
+      .filter((item) => item.applicationId === applicationId)
+      .toSorted((left, right) =>
+        compareNullableDateDesc(left.createdAt, right.createdAt),
+      )[0] ?? null
+  );
 }
 
-function getLatestRegistrationResultInternal(applicationId: string): LatestSpecimenRegistrationResult {
+function getLatestRegistrationResultInternal(
+  applicationId: string,
+): LatestSpecimenRegistrationResult {
   const batch = getLatestRegistrationBatch(applicationId);
   if (!batch) {
     return {
@@ -914,8 +1024,8 @@ function getLatestRegistrationResultInternal(applicationId: string): LatestSpeci
   }
   const specimens = batch.specimenIds
     .map((specimenId) => state.specimens.find((item) => item.id === specimenId))
-    .filter((item): item is RawSpecimen => Boolean(item))
-    .map(mapSpecimenTrackingSummary);
+    .filter(isPresent)
+    .map((item) => mapSpecimenTrackingSummary(item));
   return {
     applicationId,
     labelPrintBatchNo: batch.labelPrintBatchNo,
@@ -929,10 +1039,16 @@ function getLatestRegistrationResultInternal(applicationId: string): LatestSpeci
 function refreshTransportOrderStatus(order: RawTransportOrder) {
   const specimens = order.specimenIds
     .map((specimenId) => state.specimens.find((item) => item.id === specimenId))
-    .filter((item): item is RawSpecimen => Boolean(item));
-  const allReceived = specimens.length > 0 && specimens.every((item) => item.receiptStatus === 'RECEIVED');
-  const hasProcessed = specimens.some((item) => normalizeText(item.receiptStatus));
-  const hasPending = specimens.some((item) => !normalizeText(item.receiptStatus));
+    .filter(isPresent);
+  const allReceived =
+    specimens.length > 0 &&
+    specimens.every((item) => item.receiptStatus === 'RECEIVED');
+  const hasProcessed = specimens.some((item) =>
+    normalizeText(item.receiptStatus),
+  );
+  const hasPending = specimens.some(
+    (item) => !normalizeText(item.receiptStatus),
+  );
 
   if (allReceived) {
     order.status = 'COMPLETED';
@@ -946,20 +1062,20 @@ function refreshTransportOrderStatus(order: RawTransportOrder) {
 function createReceiptResult(applicationId: string): SpecimenReceiptResult {
   const application = getApplicationById(applicationId);
   const specimens = getSpecimensByApplicationId(applicationId);
-  const relatedOrders = state.transportOrders.filter((item) => item.applicationId === applicationId);
-  const batchMetrics = relatedOrders.reduce(
-    (result, order) => {
-      const currentMetrics = buildTransportOrderBatchMetrics(order);
-      return {
-        batchAbnormalFlag: result.batchAbnormalFlag || currentMetrics.batchAbnormalFlag,
-        reminderCount: result.reminderCount + currentMetrics.reminderCount,
-      };
-    },
-    {
-      batchAbnormalFlag: false,
-      reminderCount: 0,
-    },
+  const relatedOrders = state.transportOrders.filter(
+    (item) => item.applicationId === applicationId,
   );
+  const batchMetrics = {
+    batchAbnormalFlag: false,
+    reminderCount: 0,
+  };
+
+  for (const order of relatedOrders) {
+    const currentMetrics = buildTransportOrderBatchMetrics(order);
+    batchMetrics.batchAbnormalFlag =
+      batchMetrics.batchAbnormalFlag || currentMetrics.batchAbnormalFlag;
+    batchMetrics.reminderCount += currentMetrics.reminderCount;
+  }
   updateApplicationFromSpecimens(applicationId);
 
   return {
@@ -967,9 +1083,12 @@ function createReceiptResult(applicationId: string): SpecimenReceiptResult {
     caseId: `CASE-${application.applicationNo.slice(-4)}`,
     pathologyNo: `PA-${application.applicationNo.slice(-4)}`,
     receiptAbnormalSummary: buildReceiptAbnormalSummary(specimens),
-    receiptStatus: resolveApplicationStatus(application, specimens) ?? 'SUBMITTED',
+    receiptStatus:
+      resolveApplicationStatus(application, specimens) ?? 'SUBMITTED',
     reminderCount: batchMetrics.reminderCount,
-    unreceivedCount: specimens.filter((item) => item.receiptStatus !== 'RECEIVED').length,
+    unreceivedCount: specimens.filter(
+      (item) => item.receiptStatus !== 'RECEIVED',
+    ).length,
   };
 }
 
@@ -996,8 +1115,9 @@ export async function createApplicationMock(
     'APP',
     state.applications.map((item) => item.id),
   );
-  const applicationNo = normalizeText(data.applicationNo)
-    || `M2-${now.slice(0, 10).replaceAll('-', '')}-${String(state.applications.length + 1).padStart(3, '0')}`;
+  const applicationNo =
+    normalizeText(data.applicationNo) ||
+    `M2-${now.slice(0, 10).replaceAll('-', '')}-${String(state.applications.length + 1).padStart(3, '0')}`;
   state.applications.unshift({
     abnormalFlag: false,
     applicationDate: data.applicationDate ?? now.slice(0, 10),
@@ -1049,20 +1169,25 @@ export async function updateApplicationMock(
   const application = getApplicationById(applicationId);
   const operationState = resolveApplicationOperationState(application);
   if (!operationState.editable) {
-    throw new Error(operationState.operationDisabledReason ?? '申请单当前状态不可编辑');
+    throw new Error(
+      operationState.operationDisabledReason ?? '申请单当前状态不可编辑',
+    );
   }
-  const applicationNo = normalizeText(data.applicationNo) || application.applicationNo;
-  const conflict = state.applications.find((item) =>
-    item.id !== application.id
-    && item.status !== 'VOIDED'
-    && item.applicationNo === applicationNo,
+  const applicationNo =
+    normalizeText(data.applicationNo) || application.applicationNo;
+  const conflict = state.applications.find(
+    (item) =>
+      item.id !== application.id &&
+      item.status !== 'VOIDED' &&
+      item.applicationNo === applicationNo,
   );
   if (conflict) {
     throw new Error('申请单号已存在');
   }
   Object.assign(application, {
     applicationDate: data.applicationDate ?? application.applicationDate,
-    applicationFormStatus: data.applicationFormStatus ?? application.applicationFormStatus,
+    applicationFormStatus:
+      data.applicationFormStatus ?? application.applicationFormStatus,
     applicationNo,
     applicationType: data.applicationType,
     clinicalDiagnosis: data.clinicalDiagnosis,
@@ -1094,14 +1219,22 @@ export async function deleteApplicationMock(
   const application = getApplicationById(applicationId);
   const operationState = resolveApplicationOperationState(application);
   if (!operationState.deletable) {
-    throw new Error(operationState.operationDisabledReason ?? '申请单当前状态不可作废');
+    throw new Error(
+      operationState.operationDisabledReason ?? '申请单当前状态不可作废',
+    );
   }
   application.status = 'VOIDED';
   application.currentNode = 'VOIDED';
   application.updatedAt = createTimestamp();
-  state.specimens = state.specimens.filter((item) => item.applicationId !== application.id);
-  state.registrationBatches = state.registrationBatches.filter((item) => item.applicationId !== application.id);
-  state.workflowEvents = state.workflowEvents.filter((item) => item.applicationId !== application.id);
+  state.specimens = state.specimens.filter(
+    (item) => item.applicationId !== application.id,
+  );
+  state.registrationBatches = state.registrationBatches.filter(
+    (item) => item.applicationId !== application.id,
+  );
+  state.workflowEvents = state.workflowEvents.filter(
+    (item) => item.applicationId !== application.id,
+  );
   return { id: application.id };
 }
 
@@ -1110,18 +1243,24 @@ export async function listApplicationsMock(
 ): Promise<ApplicationPage> {
   const formStatus = normalizeText(params.applicationFormStatus);
   const filtered = state.applications
-    .filter((item) =>
-      (formStatus === 'VOIDED'
-        ? item.status === 'VOIDED'
-        : item.status !== 'VOIDED' && (!formStatus || item.applicationFormStatus === formStatus))
-      && (!normalizeText(params.applicationType) || item.applicationType === params.applicationType)
-      && includesText(item.applicationNo, params.applicationNo)
-      && includesText(item.patientName, params.patientName)
-      && (!normalizeText(params.submittingDepartmentId) || item.submittingDepartmentId === params.submittingDepartmentId)
-      && withinDateRange(item.applicationDate, params.dateFrom, params.dateTo)
+    .filter(
+      (item) =>
+        (formStatus === 'VOIDED'
+          ? item.status === 'VOIDED'
+          : item.status !== 'VOIDED' &&
+            (!formStatus || item.applicationFormStatus === formStatus)) &&
+        (!normalizeText(params.applicationType) ||
+          item.applicationType === params.applicationType) &&
+        includesText(item.applicationNo, params.applicationNo) &&
+        includesText(item.patientName, params.patientName) &&
+        (!normalizeText(params.submittingDepartmentId) ||
+          item.submittingDepartmentId === params.submittingDepartmentId) &&
+        withinDateRange(item.applicationDate, params.dateFrom, params.dateTo),
     )
-    .sort((left, right) => compareNullableDateDesc(left.updatedAt, right.updatedAt))
-    .map(mapApplicationListItem);
+    .toSorted((left, right) =>
+      compareNullableDateDesc(left.updatedAt, right.updatedAt),
+    )
+    .map((item) => mapApplicationListItem(item));
 
   return paginateItems(filtered, params.page, params.size);
 }
@@ -1133,25 +1272,36 @@ export async function duplicateCheckApplicationsMock(
     .filter((application) => application.status !== 'VOIDED')
     .map((application) => {
       const matchedBy = [
-        params.externalOrderNo && normalizeText(application.externalOrderNo) === normalizeText(params.externalOrderNo)
+        params.externalOrderNo &&
+        normalizeText(application.externalOrderNo) ===
+          normalizeText(params.externalOrderNo)
           ? 'externalOrderNo'
           : '',
-        params.patientId && normalizeText(application.patientId) === normalizeText(params.patientId)
+        params.patientId &&
+        normalizeText(application.patientId) === normalizeText(params.patientId)
           ? 'patientId'
           : '',
-        params.patientName && normalizeText(application.patientName) === normalizeText(params.patientName)
+        params.patientName &&
+        normalizeText(application.patientName) ===
+          normalizeText(params.patientName)
           ? 'patientName'
           : '',
-        params.specimenSite && normalizeText(application.specimenSite) === normalizeText(params.specimenSite)
+        params.specimenSite &&
+        normalizeText(application.specimenSite) ===
+          normalizeText(params.specimenSite)
           ? 'specimenSite'
           : '',
-        params.applicationDate && normalizeText(application.applicationDate) === normalizeText(params.applicationDate)
+        params.applicationDate &&
+        normalizeText(application.applicationDate) ===
+          normalizeText(params.applicationDate)
           ? 'applicationDate'
           : '',
-        params.applicationType && normalizeText(application.applicationType) === normalizeText(params.applicationType)
+        params.applicationType &&
+        normalizeText(application.applicationType) ===
+          normalizeText(params.applicationType)
           ? 'applicationType'
           : '',
-      ].filter(Boolean);
+      ].filter(isPresent);
 
       if (matchedBy.length === 0) {
         return null;
@@ -1168,11 +1318,20 @@ export async function duplicateCheckApplicationsMock(
         status: application.status,
       };
     })
-    .filter((item): item is NonNullable<typeof item> => Boolean(item));
+    .filter(isPresent);
+
+  let suggestedAction: 'ALLOW' | 'BLOCK' | 'CONFIRM';
+  if (items.length === 0) {
+    suggestedAction = 'ALLOW';
+  } else if (items.length === 1) {
+    suggestedAction = 'CONFIRM';
+  } else {
+    suggestedAction = 'BLOCK';
+  }
 
   return {
     items,
-    suggestedAction: items.length === 0 ? 'ALLOW' : items.length === 1 ? 'CONFIRM' : 'BLOCK',
+    suggestedAction,
   };
 }
 
@@ -1231,15 +1390,20 @@ export async function registerSpecimensMock(
       'SPEC',
       state.specimens.map((specimen) => specimen.id),
     );
-    const barcode = normalizeText(item.barcode) || `BC-${application.id.slice(-3)}-${String(index + 1).padStart(2, '0')}-${state.specimens.length + index + 1}`;
-    const overriddenSpecimenNo = normalizeText((item as { specimenNo?: string }).specimenNo);
+    const barcode =
+      normalizeText(item.barcode) ||
+      `BC-${application.id.slice(-3)}-${String(index + 1).padStart(2, '0')}-${state.specimens.length + index + 1}`;
+    const overriddenSpecimenNo = normalizeText(
+      (item as { specimenNo?: string }).specimenNo,
+    );
     const specimen: RawSpecimen = {
       applicationId: application.id,
       barcode,
       checkInStatus: 'NOT_CHECKED_IN',
       checkedInAt: null,
       checkedInByName: null,
-      clinicalSymptom: item.clinicalSymptom ?? application.clinicalSymptom ?? null,
+      clinicalSymptom:
+        item.clinicalSymptom ?? application.clinicalSymptom ?? null,
       collectionMode: item.collectionMode ?? data.collectionScene ?? null,
       containerCount: item.containerCount,
       containerName: item.containerName,
@@ -1261,8 +1425,9 @@ export async function registerSpecimensMock(
       specimenConfirmedAt: null,
       specimenCount: item.specimenCount,
       specimenName: item.specimenNameStandardized,
-      specimenNo: overriddenSpecimenNo
-        || `SP-${application.id.slice(-3)}-${String(getSpecimensByApplicationId(application.id).length + index + 1).padStart(2, '0')}`,
+      specimenNo:
+        overriddenSpecimenNo ||
+        `SP-${application.id.slice(-3)}-${String(getSpecimensByApplicationId(application.id).length + index + 1).padStart(2, '0')}`,
       specimenSite: item.specimenSite ?? application.specimenSite ?? null,
       specimenStatus: 'REGISTERED',
       specimenType: item.specimenType ?? null,
@@ -1310,7 +1475,7 @@ export async function registerSpecimensMock(
     labelPrintBatchNo,
     labelPrintMessage: '标签打印成功',
     labelPrintSuccess: true,
-    specimens: createdSpecimens.map(mapSpecimenTrackingSummary),
+    specimens: createdSpecimens.map((item) => mapSpecimenTrackingSummary(item)),
   };
 }
 
@@ -1326,7 +1491,6 @@ export async function retryLabelPrintMock(
   }
 
   let successCount = 0;
-  let failedCount = 0;
   const eventTime = createTimestamp();
 
   batch.specimenIds.forEach((specimenId) => {
@@ -1352,6 +1516,7 @@ export async function retryLabelPrintMock(
       specimenNo: specimen.specimenNo,
     });
   });
+  const failedCount = batch.specimenIds.length - successCount;
 
   batch.labelPrintSuccess = failedCount === 0;
   batch.labelPrintMessage = failedCount === 0 ? '标签补打成功' : '存在补打失败';
@@ -1385,28 +1550,44 @@ export async function listSpecimensMock(
     .filter((item) => {
       const application = getApplicationById(item.applicationId);
       const keyword = normalizeText(params.keyword);
-      const matchesKeyword = !keyword
-        || includesText(application.applicationNo, keyword)
-        || includesText(application.patientName, keyword)
-        || includesText(item.specimenNo, keyword)
-        || includesText(item.barcode, keyword)
-        || includesText(item.specimenName, keyword);
+      const matchesKeyword =
+        !keyword ||
+        includesText(application.applicationNo, keyword) ||
+        includesText(application.patientName, keyword) ||
+        includesText(item.specimenNo, keyword) ||
+        includesText(item.barcode, keyword) ||
+        includesText(item.specimenName, keyword);
 
-      return matchesKeyword
-        && (!normalizeText(params.applicationNo) || application.applicationNo === params.applicationNo)
-        && (!normalizeText(params.departmentId) || application.submittingDepartmentId === params.departmentId)
-        && (!normalizeText(params.labelPrintStatus) || item.labelPrintStatus === params.labelPrintStatus)
-        && (!normalizeText(params.specimenStatus) || item.specimenStatus === params.specimenStatus)
-        && (params.abnormalFlag === undefined || isSpecimenAbnormal(item) === params.abnormalFlag)
-        && withinDateRange(item.registeredAt, params.dateFrom, params.dateTo);
+      return (
+        matchesKeyword &&
+        (!normalizeText(params.applicationNo) ||
+          application.applicationNo === params.applicationNo) &&
+        (!normalizeText(params.departmentId) ||
+          application.submittingDepartmentId === params.departmentId) &&
+        (!normalizeText(params.labelPrintStatus) ||
+          item.labelPrintStatus === params.labelPrintStatus) &&
+        (!normalizeText(params.specimenStatus) ||
+          item.specimenStatus === params.specimenStatus) &&
+        (params.abnormalFlag === undefined ||
+          isSpecimenAbnormal(item) === params.abnormalFlag) &&
+        withinDateRange(item.registeredAt, params.dateFrom, params.dateTo)
+      );
     })
-    .sort((left, right) => compareNullableDateDesc(left.latestTrackingAt, right.latestTrackingAt))
-    .map(mapSpecimenManagementItem);
+    .toSorted((left, right) =>
+      compareNullableDateDesc(left.latestTrackingAt, right.latestTrackingAt),
+    )
+    .map((item) => mapSpecimenManagementItem(item));
 
   const summary: SpecimenManagementListSummary = {
     abnormalCount: filteredItems.filter((item) => item.abnormalFlag).length,
-    labelPrintedCount: filteredItems.filter((item) => item.labelPrintStatus === 'SUCCESS').length,
-    pendingLabelCount: filteredItems.filter((item) => item.labelPrintStatus === 'PENDING' || item.labelPrintStatus === 'FAILED').length,
+    labelPrintedCount: filteredItems.filter(
+      (item) => item.labelPrintStatus === 'SUCCESS',
+    ).length,
+    pendingLabelCount: filteredItems.filter(
+      (item) =>
+        item.labelPrintStatus === 'PENDING' ||
+        item.labelPrintStatus === 'FAILED',
+    ).length,
     totalCount: filteredItems.length,
   };
 
@@ -1423,22 +1604,30 @@ export async function listPendingFixationsMock(
     .filter((item) => {
       const application = getApplicationById(item.applicationId);
       const hasTransportOrder = Boolean(getTransportOrderBySpecimenId(item.id));
-      return !hasTransportOrder
-        && !isSpecimenInReceiptTerminalState(item)
-        && (!normalizeText(params.applicationId)
-          || application.id === params.applicationId
-          || application.applicationNo === params.applicationId)
-        && (!normalizeText(params.specimenNo) || item.specimenNo === params.specimenNo)
-        && (!normalizeText(params.departmentId) || application.submittingDepartmentId === params.departmentId)
-        && (!normalizeText(params.fixationStatus) || item.fixationStatus === params.fixationStatus)
-        && (!normalizeText(params.verificationStatus)
-          || resolveSpecimenVerificationStatus(item) === params.verificationStatus)
-        && (!normalizeText(params.checkInStatus)
-          || resolveSpecimenCheckInStatus(item) === params.checkInStatus)
-        && withinDateRange(item.registeredAt, params.dateFrom, params.dateTo);
+      return (
+        !hasTransportOrder &&
+        !isSpecimenInReceiptTerminalState(item) &&
+        (!normalizeText(params.applicationId) ||
+          application.id === params.applicationId ||
+          application.applicationNo === params.applicationId) &&
+        (!normalizeText(params.specimenNo) ||
+          item.specimenNo === params.specimenNo) &&
+        (!normalizeText(params.departmentId) ||
+          application.submittingDepartmentId === params.departmentId) &&
+        (!normalizeText(params.fixationStatus) ||
+          item.fixationStatus === params.fixationStatus) &&
+        (!normalizeText(params.verificationStatus) ||
+          resolveSpecimenVerificationStatus(item) ===
+            params.verificationStatus) &&
+        (!normalizeText(params.checkInStatus) ||
+          resolveSpecimenCheckInStatus(item) === params.checkInStatus) &&
+        withinDateRange(item.registeredAt, params.dateFrom, params.dateTo)
+      );
     })
-    .sort((left, right) => compareNullableDateDesc(left.registeredAt, right.registeredAt))
-    .map(mapPendingSpecimenItem);
+    .toSorted((left, right) =>
+      compareNullableDateDesc(left.registeredAt, right.registeredAt),
+    )
+    .map((item) => mapPendingSpecimenItem(item));
 
   return paginateItems(filteredItems, params.page, params.size);
 }
@@ -1544,7 +1733,8 @@ export async function startFixationMock(
   const eventTime = createTimestamp();
   specimen.fixationStatus = 'FIXING';
   specimen.fixationStartedAt = eventTime;
-  specimen.fixationLiquidType = data.fixationLiquidType ?? specimen.fixationLiquidType;
+  specimen.fixationLiquidType =
+    data.fixationLiquidType ?? specimen.fixationLiquidType;
   specimen.specimenStatus = 'FIXING';
   specimen.latestTrackingAt = eventTime;
   appendWorkflowEvent({
@@ -1595,14 +1785,18 @@ export async function completeFixationMock(
   if (specimen.fixationStatus === 'COMPLETED') {
     throw new Error(`标本 ${specimen.barcode} 已完成固定`);
   }
-  if (specimen.fixationStatus !== 'FIXING' && specimen.fixationStatus !== 'PENDING') {
+  if (
+    specimen.fixationStatus !== 'FIXING' &&
+    specimen.fixationStatus !== 'PENDING'
+  ) {
     throw new Error(`标本 ${specimen.barcode} 当前状态不允许完成固定`);
   }
   const eventTime = createTimestamp();
   specimen.fixationStatus = 'COMPLETED';
   specimen.fixationStartedAt = specimen.fixationStartedAt ?? eventTime;
   specimen.fixationCompletedAt = eventTime;
-  specimen.fixationLiquidType = data.fixationLiquidType ?? specimen.fixationLiquidType;
+  specimen.fixationLiquidType =
+    data.fixationLiquidType ?? specimen.fixationLiquidType;
   specimen.fixationOperatorName = data.operatorName;
   specimen.fixationOperatorUserId = data.operatorUserId ?? null;
   specimen.specimenStatus = 'FIXED';
@@ -1651,32 +1845,42 @@ export async function listPendingSpecimenRemovalsMock(
     .filter((item) => {
       const application = getApplicationById(item.applicationId);
       const keyword = normalizeText(params.keyword);
-      const matchesKeyword = !keyword
-        || includesText(application.applicationNo, keyword)
-        || includesText(application.patientName, keyword)
-        || includesText(item.specimenNo, keyword)
-        || includesText(item.barcode, keyword)
-        || includesText(item.specimenName, keyword);
+      const matchesKeyword =
+        !keyword ||
+        includesText(application.applicationNo, keyword) ||
+        includesText(application.patientName, keyword) ||
+        includesText(item.specimenNo, keyword) ||
+        includesText(item.barcode, keyword) ||
+        includesText(item.specimenName, keyword);
 
-      return matchesKeyword
-        && (!normalizeText(params.applicationNo) || application.applicationNo === params.applicationNo)
-        && (!normalizeText(params.departmentId) || application.submittingDepartmentId === params.departmentId)
-        && (!normalizeText(params.specimenStatus) || item.specimenStatus === params.specimenStatus)
-        && (params.abnormalFlag === undefined || isSpecimenAbnormal(item) === params.abnormalFlag)
-        && withinDateRange(item.registeredAt, params.dateFrom, params.dateTo);
+      return (
+        matchesKeyword &&
+        (!normalizeText(params.applicationNo) ||
+          application.applicationNo === params.applicationNo) &&
+        (!normalizeText(params.departmentId) ||
+          application.submittingDepartmentId === params.departmentId) &&
+        (!normalizeText(params.specimenStatus) ||
+          item.specimenStatus === params.specimenStatus) &&
+        (params.abnormalFlag === undefined ||
+          isSpecimenAbnormal(item) === params.abnormalFlag) &&
+        withinDateRange(item.registeredAt, params.dateFrom, params.dateTo)
+      );
     })
-    .sort((left, right) =>
+    .toSorted((left, right) =>
       compareNullableDateDesc(
         left.specimenRemovalAt ?? left.registeredAt,
         right.specimenRemovalAt ?? right.registeredAt,
       ),
     )
-    .map(mapSpecimenRemovalItem);
+    .map((item) => mapSpecimenRemovalItem(item));
 
   const summary: SpecimenRemovalSummary = {
     abnormalCount: filteredItems.filter((item) => item.abnormalFlag).length,
-    confirmedCount: filteredItems.filter((item) => Boolean(item.specimenRemovalAt)).length,
-    pendingCount: filteredItems.filter((item) => !item.specimenRemovalAt).length,
+    confirmedCount: filteredItems.filter((item) =>
+      Boolean(item.specimenRemovalAt),
+    ).length,
+    pendingCount: filteredItems.filter((item) => !item.specimenRemovalAt)
+      .length,
     totalCount: filteredItems.length,
   };
 
@@ -1689,14 +1893,20 @@ export async function listPendingSpecimenRemovalsMock(
 export async function confirmSpecimenRemovalMock(
   data: SpecimenRemovalConfirmRequest,
 ): Promise<SpecimenRemovalConfirmResult> {
-  return applySpecimenRemovalConfirmation(resolveSpecimenByBarcode(data.specimenBarcode), data);
+  return applySpecimenRemovalConfirmation(
+    resolveSpecimenByBarcode(data.specimenBarcode),
+    data,
+  );
 }
 
 export async function confirmSpecimenRemovalByIdentifierMock(
   data: SpecimenRemovalQuickConfirmRequest,
 ): Promise<SpecimenRemovalConfirmResult> {
   if (data.identifierType === 'BARCODE') {
-    return applySpecimenRemovalConfirmation(resolveSpecimenByBarcode(data.identifier), data);
+    return applySpecimenRemovalConfirmation(
+      resolveSpecimenByBarcode(data.identifier),
+      data,
+    );
   }
   const matchedSpecimens = resolveSpecimensBySpecimenNo(data.identifier);
   if (matchedSpecimens.length === 0) {
@@ -1705,7 +1915,11 @@ export async function confirmSpecimenRemovalByIdentifierMock(
   if (matchedSpecimens.length > 1) {
     throw new Error('标本流水号对应多条记录，无法自动确认');
   }
-  return applySpecimenRemovalConfirmation(matchedSpecimens[0], data);
+  const matchedSpecimen = matchedSpecimens[0];
+  if (!matchedSpecimen) {
+    throw new Error('未找到对应标本');
+  }
+  return applySpecimenRemovalConfirmation(matchedSpecimen, data);
 }
 
 export async function listPendingTransportOrdersMock(
@@ -1714,22 +1928,30 @@ export async function listPendingTransportOrdersMock(
   const filteredItems = state.transportOrders
     .filter((item) => {
       const application = getApplicationById(item.applicationId);
-      const matchesSpecimenNo = !normalizeText(params.specimenNo)
-        || item.specimenIds
-          .map((specimenId) => state.specimens.find((specimen) => specimen.id === specimenId))
+      const matchesSpecimenNo =
+        !normalizeText(params.specimenNo) ||
+        item.specimenIds
+          .map((specimenId) =>
+            state.specimens.find((specimen) => specimen.id === specimenId),
+          )
           .some((specimen) => specimen?.specimenNo === params.specimenNo);
-      return item.status !== 'COMPLETED'
-        && item.status !== 'CANCELLED'
-        && (!normalizeText(params.status) || item.status === params.status)
-        && (!normalizeText(params.applicationId)
-          || application.id === params.applicationId
-          || application.applicationNo === params.applicationId)
-        && matchesSpecimenNo
-        && (!normalizeText(params.departmentId) || application.submittingDepartmentId === params.departmentId)
-        && withinDateRange(item.createdAt, params.dateFrom, params.dateTo);
+      return (
+        item.status !== 'COMPLETED' &&
+        item.status !== 'CANCELLED' &&
+        (!normalizeText(params.status) || item.status === params.status) &&
+        (!normalizeText(params.applicationId) ||
+          application.id === params.applicationId ||
+          application.applicationNo === params.applicationId) &&
+        matchesSpecimenNo &&
+        (!normalizeText(params.departmentId) ||
+          application.submittingDepartmentId === params.departmentId) &&
+        withinDateRange(item.createdAt, params.dateFrom, params.dateTo)
+      );
     })
-    .sort((left, right) => compareNullableDateDesc(left.createdAt, right.createdAt))
-    .map(mapPendingTransportOrderItem);
+    .toSorted((left, right) =>
+      compareNullableDateDesc(left.createdAt, right.createdAt),
+    )
+    .map((item) => mapPendingTransportOrderItem(item));
 
   return paginateItems(filteredItems, params.page, params.size);
 }
@@ -1888,20 +2110,28 @@ export async function listPendingReceiptsMock(
     .filter((item) => {
       const application = getApplicationById(item.applicationId);
       const order = getTransportOrderBySpecimenId(item.id);
-      if (!order || !['HANDED_OVER', 'PARTIALLY_RECEIVED'].includes(order.status)) {
+      if (
+        !order ||
+        !['HANDED_OVER', 'PARTIALLY_RECEIVED'].includes(order.status)
+      ) {
         return false;
       }
       if (normalizeText(item.receiptStatus)) {
         return false;
       }
-      return (!normalizeText(params.applicationId)
-          || application.id === params.applicationId
-          || application.applicationNo === params.applicationId)
-        && (!normalizeText(params.departmentId) || application.submittingDepartmentId === params.departmentId)
-        && withinDateRange(order.createdAt, params.dateFrom, params.dateTo);
+      return (
+        (!normalizeText(params.applicationId) ||
+          application.id === params.applicationId ||
+          application.applicationNo === params.applicationId) &&
+        (!normalizeText(params.departmentId) ||
+          application.submittingDepartmentId === params.departmentId) &&
+        withinDateRange(order.createdAt, params.dateFrom, params.dateTo)
+      );
     })
-    .sort((left, right) => compareNullableDateDesc(left.latestTrackingAt, right.latestTrackingAt))
-    .map(mapPendingSpecimenItem);
+    .toSorted((left, right) =>
+      compareNullableDateDesc(left.latestTrackingAt, right.latestTrackingAt),
+    )
+    .map((item) => mapPendingSpecimenItem(item));
 
   return paginateItems(filteredItems, params.page, params.size);
 }
@@ -1915,7 +2145,9 @@ export async function receiveSpecimensMock(
   data.items.forEach((item) => {
     const specimen = resolveSpecimenByIdentifier(item.specimenBarcode);
     if (!order.specimenIds.includes(specimen.id)) {
-      throw new Error(`标本 ${item.specimenBarcode} 不属于转运单 ${order.transportOrderNo}`);
+      throw new Error(
+        `标本 ${item.specimenBarcode} 不属于转运单 ${order.transportOrderNo}`,
+      );
     }
     specimen.containerCount = item.containerCount ?? specimen.containerCount;
     specimen.qualityCheckResult = item.qualityCheckResult;
@@ -1924,28 +2156,35 @@ export async function receiveSpecimensMock(
     specimen.receiptReason = item.reason ?? null;
     specimen.receiptRemarks = item.remarks ?? null;
     specimen.latestTrackingAt = eventTime;
-    specimen.specimenStatus = item.receiptStatus === 'RECEIVED' ? 'RECEIVED' : item.receiptStatus;
+    specimen.specimenStatus =
+      item.receiptStatus === 'RECEIVED' ? 'RECEIVED' : item.receiptStatus;
     appendWorkflowEvent({
       applicationId: specimen.applicationId,
-      eventContent: item.receiptStatus === 'RECEIVED' ? '标本接收完成' : '标本接收异常',
+      eventContent:
+        item.receiptStatus === 'RECEIVED' ? '标本接收完成' : '标本接收异常',
       eventStatus: item.receiptStatus,
       eventTime,
       eventType: item.receiptStatus,
-      nodeCode: item.receiptStatus === 'RECEIVED' ? 'RECEPTION' : 'PARTIALLY_RECEIVED',
+      nodeCode:
+        item.receiptStatus === 'RECEIVED' ? 'RECEPTION' : 'PARTIALLY_RECEIVED',
       operatorName: data.receivedByName,
       sourceTerminal: data.terminalCode ?? null,
       specimenBarcode: specimen.barcode,
       specimenId: specimen.id,
       specimenNo: specimen.specimenNo,
     });
-    if (item.qualityCheckResult === 'FAILED' || item.receiptStatus !== 'RECEIVED') {
+    if (
+      item.qualityCheckResult === 'FAILED' ||
+      item.receiptStatus !== 'RECEIVED'
+    ) {
       appendVerificationRecord({
         applicationId: specimen.applicationId,
         barcode: specimen.barcode,
         operatorName: data.receivedByName,
         operatorUserId: data.receivedByUserId ?? null,
         remarks: item.reason ?? item.remarks ?? '接收异常核对',
-        result: item.qualityCheckResult === 'FAILED' ? 'FAILED' : item.receiptStatus,
+        result:
+          item.qualityCheckResult === 'FAILED' ? 'FAILED' : item.receiptStatus,
         specimenId: specimen.id,
         terminalCode: data.terminalCode ?? null,
         verificationType: 'RECEIPT_CHECK',
@@ -1974,7 +2213,8 @@ export async function directReceiveSpecimensMock(
     specimen.receiptReason = item.reason ?? null;
     specimen.receiptRemarks = item.remarks ?? null;
     specimen.latestTrackingAt = eventTime;
-    specimen.specimenStatus = item.receiptStatus === 'RECEIVED' ? 'RECEIVED' : item.receiptStatus;
+    specimen.specimenStatus =
+      item.receiptStatus === 'RECEIVED' ? 'RECEIVED' : item.receiptStatus;
     touchedApplications.add(specimen.applicationId);
     appendWorkflowEvent({
       applicationId: specimen.applicationId,
@@ -1982,7 +2222,8 @@ export async function directReceiveSpecimensMock(
       eventStatus: item.receiptStatus,
       eventTime,
       eventType: 'DIRECT_RECEIVE',
-      nodeCode: item.receiptStatus === 'RECEIVED' ? 'RECEPTION' : 'PARTIALLY_RECEIVED',
+      nodeCode:
+        item.receiptStatus === 'RECEIVED' ? 'RECEPTION' : 'PARTIALLY_RECEIVED',
       operatorName: data.receivedByName ?? '系统接收',
       sourceTerminal: data.terminalCode ?? null,
       specimenBarcode: specimen.barcode,
@@ -1998,7 +2239,7 @@ export async function directReceiveSpecimensMock(
 
   state.transportOrders
     .filter((item) => item.applicationId === applicationId)
-    .forEach(refreshTransportOrderStatus);
+    .forEach((item) => refreshTransportOrderStatus(item));
   updateApplicationFromSpecimens(applicationId);
   return createReceiptResult(applicationId);
 }
@@ -2011,7 +2252,9 @@ export async function bindSpecimenBarcodeMock(
   assertSpecimenNotInReceiptTerminalState(specimen, '绑定条码');
   const eventTime = createTimestamp();
   const previousBarcode = specimen.barcode;
-  specimen.previousBarcodes = previousBarcode ? [...specimen.previousBarcodes, previousBarcode] : [...specimen.previousBarcodes];
+  specimen.previousBarcodes = previousBarcode
+    ? [...specimen.previousBarcodes, previousBarcode]
+    : [...specimen.previousBarcodes];
   specimen.barcode = data.targetBarcode.trim();
   specimen.latestTrackingAt = eventTime;
   appendWorkflowEvent({
@@ -2184,7 +2427,9 @@ export async function listSpecimenVerificationRecordsMock(
   const specimen = resolveSpecimenByIdentifier(identifier);
   return state.verificationRecords
     .filter((item) => item.specimenId === specimen.id)
-    .sort((left, right) => compareNullableDateDesc(left.verifiedAt, right.verifiedAt))
+    .toSorted((left, right) =>
+      compareNullableDateDesc(left.verifiedAt, right.verifiedAt),
+    )
     .map((item) => ({
       applicationId: item.applicationId,
       barcode: item.barcode,

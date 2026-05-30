@@ -1,17 +1,34 @@
-import { createApp, computed, defineComponent, h, inject, nextTick, provide } from 'vue';
+import { createApp, h, nextTick } from 'vue';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const tableRowKey = Symbol('table-row');
-const tabsContextKey = Symbol('tabs-context');
+import {
+  createButtonStub,
+  createDescriptionsItemStub,
+  createDialogStub,
+  createInputStub,
+  createOptionStub,
+  createPassthroughStub,
+  createSelectStub,
+  createTableColumnStub,
+  createTableStub,
+  createTabPaneStub,
+  createTabsStub,
+  createTagStub,
+  createTimelineItemStub,
+} from '../test-utils/component-stubs';
 
-const { mockAccessStore, mockGetApplicationTracking, mockListApplications } = vi.hoisted(() => ({
-  mockAccessStore: {
-    accessCodes: ['PERM_APPLICATION_DETAIL_QUERY'] as string[],
-  },
-  mockGetApplicationTracking: vi.fn(),
-  mockListApplications: vi.fn(),
-}));
+const tableRowKey = vi.hoisted(() => Symbol('table-row'));
+const tabsContextKey = vi.hoisted(() => Symbol('tabs-context'));
+
+const { mockAccessStore, mockGetApplicationTracking, mockListApplications } =
+  vi.hoisted(() => ({
+    mockAccessStore: {
+      accessCodes: ['PERM_APPLICATION_DETAIL_QUERY'] as string[],
+    },
+    mockGetApplicationTracking: vi.fn(),
+    mockListApplications: vi.fn(),
+  }));
 
 vi.mock('@vben/stores', () => ({
   useAccessStore: () => mockAccessStore,
@@ -38,207 +55,27 @@ vi.mock('../api/specimen-workflow-service', () => ({
 }));
 
 vi.mock('element-plus', () => {
-  const passthrough = (tag = 'div') =>
-    defineComponent({
-      props: ['description', 'label', 'modelValue', 'title'],
-      setup(props, { slots }) {
-        return () =>
-          h(tag, [
-            props.title ? h('div', props.title) : null,
-            props.label ? h('span', props.label) : null,
-            props.description ? h('div', props.description) : null,
-            slots.default?.(),
-          ]);
-      },
-    });
-
-  const ElButton = defineComponent({
-    emits: ['click'],
-    setup(_, { emit, slots }) {
-      return () =>
-        h(
-          'button',
-          {
-            type: 'button',
-            onClick: (event: MouseEvent) => emit('click', event),
-          },
-          slots.default?.(),
-        );
-    },
-  });
-
-  const ElInput = defineComponent({
-    emits: ['update:modelValue'],
-    props: ['modelValue', 'placeholder'],
-    setup(props, { emit }) {
-      return () =>
-        h('input', {
-          placeholder: props.placeholder,
-          value: props.modelValue,
-          onInput: (event: Event) =>
-            emit('update:modelValue', (event.target as HTMLInputElement).value),
-        });
-    },
-  });
-
-  const ElSelect = defineComponent({
-    emits: ['update:modelValue'],
-    props: ['modelValue'],
-    setup(props, { emit, slots }) {
-      return () =>
-        h(
-          'select',
-          {
-            value: props.modelValue,
-            onChange: (event: Event) =>
-              emit('update:modelValue', (event.target as HTMLSelectElement).value),
-          },
-          slots.default?.(),
-        );
-    },
-  });
-
-  const ElOption = defineComponent({
-    props: ['label', 'value'],
-    setup(props) {
-      return () => h('option', { value: props.value }, props.label);
-    },
-  });
-
-  const ElDialog = defineComponent({
-    props: ['modelValue', 'title'],
-    setup(props, { slots }) {
-      return () =>
-        props.modelValue
-          ? h('section', [h('h3', props.title), slots.default?.()])
-          : null;
-    },
-  });
-
-  const ElDescriptions = passthrough('div');
-  const ElDescriptionsItem = defineComponent({
-    props: ['label'],
-    setup(props, { slots }) {
-      return () => h('div', [h('strong', `${props.label}:`), slots.default?.()]);
-    },
-  });
-
-  const ElTimeline = passthrough('ul');
-  const ElTimelineItem = defineComponent({
-    props: ['timestamp'],
-    setup(props, { slots }) {
-      return () => h('li', [props.timestamp ? h('span', props.timestamp) : null, slots.default?.()]);
-    },
-  });
-
-  const ElTabs = defineComponent({
-    emits: ['update:modelValue'],
-    props: ['modelValue'],
-    setup(props, { emit, slots }) {
-      const activeName = computed(() => String(props.modelValue ?? ''));
-      provide(tabsContextKey, {
-        activeName,
-        selectTab: (name: string) => emit('update:modelValue', name),
-      });
-      return () => h('div', { 'data-active-tab': activeName.value }, slots.default?.());
-    },
-  });
-
-  const ElTabPane = defineComponent({
-    props: ['label', 'name'],
-    setup(props, { slots }) {
-      const tabsContext = inject<{
-        activeName: ReturnType<typeof computed<string>>;
-        selectTab: (name: string) => void;
-      } | null>(tabsContextKey, null);
-
-      return () => {
-        const name = String(props.name ?? '');
-        const isActive = tabsContext?.activeName.value === name;
-        return h('section', [
-          h(
-            'button',
-            {
-              'data-tab-name': name,
-              type: 'button',
-              onClick: () => tabsContext?.selectTab(name),
-            },
-            props.label,
-          ),
-          isActive ? h('div', { 'data-tab-panel': name }, slots.default?.()) : null,
-        ]);
-      };
-    },
-  });
-
-  const RowProvider = defineComponent({
-    props: {
-      row: {
-        required: true,
-        type: Object,
-      },
-    },
-    setup(props, { slots }) {
-      provide(tableRowKey, props.row);
-      return () => h('div', slots.default?.());
-    },
-  });
-
-  const ElTable = defineComponent({
-    props: {
-      data: {
-        default: () => [],
-        type: Array,
-      },
-    },
-    setup(props, { slots }) {
-      return () =>
-        h(
-          'div',
-          (props.data as unknown[]).map((row, index) =>
-            h(RowProvider, { key: index, row: row as Record<string, unknown> }, () =>
-              slots.default?.(),
-            ),
-          ),
-        );
-    },
-  });
-
-  const ElTableColumn = defineComponent({
-    props: ['label', 'prop'],
-    setup(props, { slots }) {
-      return () => {
-        const row = inject<Record<string, unknown> | null>(tableRowKey, null);
-        const value = props.prop && row ? row[props.prop] : undefined;
-        return h('div', [
-          props.label ? h('span', props.label) : null,
-          slots.default ? slots.default({ row }) : value == null ? null : h('span', String(value)),
-        ]);
-      };
-    },
-  });
-
   return {
-    ElAlert: passthrough(),
-    ElButton,
-    ElDatePicker: passthrough(),
-    ElDescriptions,
-    ElDescriptionsItem,
-    ElDialog,
-    ElEmpty: passthrough(),
-    ElForm: passthrough('form'),
-    ElFormItem: passthrough(),
-    ElInput,
-    ElOption,
-    ElPagination: passthrough(),
-    ElSelect,
-    ElTabPane,
-    ElTable,
-    ElTableColumn,
-    ElTabs,
-    ElTag: passthrough('span'),
-    ElTimeline,
-    ElTimelineItem,
+    ElAlert: createPassthroughStub(),
+    ElButton: createButtonStub(),
+    ElDatePicker: createPassthroughStub(),
+    ElDescriptions: createPassthroughStub('div'),
+    ElDescriptionsItem: createDescriptionsItemStub(),
+    ElDialog: createDialogStub(),
+    ElEmpty: createPassthroughStub(),
+    ElForm: createPassthroughStub('form'),
+    ElFormItem: createPassthroughStub(),
+    ElInput: createInputStub(),
+    ElOption: createOptionStub(),
+    ElPagination: createPassthroughStub(),
+    ElSelect: createSelectStub(),
+    ElTabPane: createTabPaneStub(tabsContextKey),
+    ElTable: createTableStub(tableRowKey),
+    ElTableColumn: createTableColumnStub(tableRowKey),
+    ElTabs: createTabsStub(tabsContextKey),
+    ElTag: createTagStub(),
+    ElTimeline: createPassthroughStub('ul'),
+    ElTimelineItem: createTimelineItemStub(),
   };
 });
 
@@ -445,7 +282,7 @@ describe('TrackingApplicationListView', () => {
     const { app, root } = await mountView();
 
     expect(mockListApplications).toHaveBeenCalledTimes(1);
-    const buttonTexts = Array.from(root.querySelectorAll('button')).map((button) =>
+    const buttonTexts = [...root.querySelectorAll('button')].map((button) =>
       button.textContent?.trim(),
     );
     expect(buttonTexts).toContain('详情');
@@ -471,11 +308,18 @@ describe('TrackingApplicationListView', () => {
     });
 
     expect(mockGetApplicationTracking).toHaveBeenCalledWith('APP-TRACK-001');
-    expect(root.querySelector('[data-tab-name="overall"]')?.textContent).toBe('总时间线');
-    expect(root.querySelector('[data-tab-name="SPEC-001"]')?.textContent).toBe('SP-001');
-    expect(root.querySelector('[data-tab-name="SPEC-002"]')?.textContent).toBe('SP-002');
-    expect(root.querySelector('[data-tab-name="SPEC-003"]')?.textContent).toBe('SP-003');
-    expect(root.textContent).toContain('异常明细');
+    expect(root.querySelector('[data-tab-name="overall"]')?.textContent).toBe(
+      '总时间线',
+    );
+    expect(root.querySelector('[data-tab-name="SPEC-001"]')?.textContent).toBe(
+      'SP-001',
+    );
+    expect(root.querySelector('[data-tab-name="SPEC-002"]')?.textContent).toBe(
+      'SP-002',
+    );
+    expect(root.querySelector('[data-tab-name="SPEC-003"]')?.textContent).toBe(
+      'SP-003',
+    );
     expect(root.textContent).toContain('异常类型：已拒收');
     expect(root.textContent).toContain('质控结果：不合格');
     expect(root.textContent).toContain('问题代码：CONTAINER_DAMAGE');
@@ -508,7 +352,9 @@ describe('TrackingApplicationListView', () => {
       triggerKey: 1,
     });
 
-    const specimenTab = root.querySelector<HTMLButtonElement>('[data-tab-name="SPEC-001"]');
+    const specimenTab = root.querySelector<HTMLButtonElement>(
+      '[data-tab-name="SPEC-001"]',
+    );
     specimenTab?.click();
     await flushAll();
 
@@ -538,12 +384,18 @@ describe('TrackingApplicationListView', () => {
       triggerKey: 1,
     });
 
-    const emptySpecimenTab = root.querySelector<HTMLButtonElement>('[data-tab-name="SPEC-003"]');
+    const emptySpecimenTab = root.querySelector<HTMLButtonElement>(
+      '[data-tab-name="SPEC-003"]',
+    );
     emptySpecimenTab?.click();
     await flushAll();
 
-    const emptySpecimenPanel = root.querySelector('[data-tab-panel="SPEC-003"]');
-    expect(emptySpecimenPanel?.textContent ?? '').toContain('该标本暂无追踪事件');
+    const emptySpecimenPanel = root.querySelector(
+      '[data-tab-panel="SPEC-003"]',
+    );
+    expect(emptySpecimenPanel?.textContent ?? '').toContain(
+      '该标本暂无追踪事件',
+    );
 
     app.unmount();
   });

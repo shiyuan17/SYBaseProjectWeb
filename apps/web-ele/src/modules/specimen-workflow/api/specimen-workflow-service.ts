@@ -1,45 +1,45 @@
 import type {
-  ApplicationListItem,
-  ApplicationListQuery,
-  ApplicationPage,
-  ApplicationFormReprintRequest,
   ApplicationCreateRequest,
   ApplicationCreateResult,
   ApplicationDetailView,
+  ApplicationFormReprintRequest,
+  ApplicationListItem,
+  ApplicationListQuery,
+  ApplicationPage,
   ApplicationUpdateRequest,
+  DirectSpecimenReceiptRequest,
   DuplicateApplicationCheckQuery,
   DuplicateApplicationCheckResult,
-  SpecimenCheckInRequest,
-  DirectSpecimenReceiptRequest,
   FixationResult,
   ImportClinicalApplicationRequest,
-  LatestSpecimenRegistrationResult,
   LabelPrintRetryRequest,
   LabelPrintRetryResult,
+  LatestSpecimenRegistrationResult,
   PendingSpecimenPage,
   PendingSpecimenQuery,
   PendingTransportOrderPage,
   PendingTransportOrderQuery,
+  SpecimenBarcodeBindingRequest,
+  SpecimenCheckInRequest,
+  SpecimenConfirmRequest,
+  SpecimenFixationRequest,
   SpecimenManagementListPage,
   SpecimenManagementListQuery,
   SpecimenManagementListSummary,
-  SpecimenRemovalConfirmRequest,
-  SpecimenRemovalConfirmResult,
-  SpecimenRemovalQuickConfirmRequest,
-  SpecimenRemovalItem,
-  SpecimenRemovalPage,
-  SpecimenRemovalQuery,
-  SpecimenRemovalSummary,
-  SpecimenBarcodeBindingRequest,
-  SpecimenConfirmRequest,
-  SpecimenFixationRequest,
   SpecimenReceiptRequest,
   SpecimenReceiptResult,
   SpecimenRegisterRequest,
   SpecimenRegisterResult,
+  SpecimenRemovalConfirmRequest,
+  SpecimenRemovalConfirmResult,
+  SpecimenRemovalItem,
+  SpecimenRemovalPage,
+  SpecimenRemovalQuery,
+  SpecimenRemovalQuickConfirmRequest,
+  SpecimenRemovalSummary,
   SpecimenTrackingSummary,
-  SpecimenVerificationRequest,
   SpecimenVerificationRecord,
+  SpecimenVerificationRequest,
   TrackingEventView,
   TrackingQueryView,
   TransportOrderCreateRequest,
@@ -47,14 +47,17 @@ import type {
   TransportOrderOperatorRequest,
   TransportOrderView,
 } from '../types/specimen-workflow';
+
+import { requestClient } from '#/api/request';
+
 import {
   bindSpecimenBarcodeMock,
   checkInSpecimenMock,
   completeFixationMock,
   completeSpecimenVerificationMock,
-  confirmSpecimenRemovalMock,
-  confirmSpecimenRemovalByIdentifierMock,
   confirmSpecimenMock,
+  confirmSpecimenRemovalByIdentifierMock,
+  confirmSpecimenRemovalMock,
   createApplicationMock,
   createTransportOrderMock,
   deleteApplicationMock,
@@ -69,29 +72,27 @@ import {
   importClinicalApplicationMock,
   listApplicationsMock,
   listPendingFixationsMock,
-  listPendingSpecimenRemovalsMock,
   listPendingReceiptsMock,
+  listPendingSpecimenRemovalsMock,
   listPendingTransportOrdersMock,
-  listSpecimenVerificationRecordsMock,
   listSpecimensMock,
+  listSpecimenVerificationRecordsMock,
   lookupApplicationForRegistrationMock,
   printTransportOrderMock,
+  rebindSpecimenBarcodeMock,
   receiveSpecimensMock,
   registerSpecimensMock,
-  rebindSpecimenBarcodeMock,
   reprintApplicationFormMock,
   resetMockState as resetSpecimenWorkflowMockState,
   retryLabelPrintMock,
-  startSpecimenVerificationMock,
   startFixationMock,
+  startSpecimenVerificationMock,
   updateApplicationMock,
 } from './specimen-workflow-mock';
 
-import { requestClient } from '#/api/request';
-
 const USE_SPECIMEN_WORKFLOW_MOCK =
-  import.meta.env.MODE === 'test'
-  || import.meta.env.VITE_SPECIMEN_WORKFLOW_MOCK === 'true';
+  import.meta.env.MODE === 'test' ||
+  import.meta.env.VITE_SPECIMEN_WORKFLOW_MOCK === 'true';
 
 type ApplicationDetailResponse = Omit<
   ApplicationDetailView,
@@ -148,7 +149,9 @@ export function mapApplicationDetailResponse(
     reportIssued: response.reportIssued ?? false,
     reportStatus: response.reportStatus ?? null,
     specimenConfirmedAt: response.specimenConfirmedAt ?? null,
-    specimens: (response.specimens ?? []).map(mapSpecimenTrackingSummary),
+    specimens: (response.specimens ?? []).map((item) =>
+      mapSpecimenTrackingSummary(item),
+    ),
     unreceivedCount: response.unreceivedCount ?? 0,
     voided: response.voided ?? response.status === 'VOIDED',
   };
@@ -294,7 +297,9 @@ export function mapRegistrationResultResponse(
 ): SpecimenRegisterResult {
   return {
     ...response,
-    specimens: (response.specimens ?? []).map(mapSpecimenTrackingSummary),
+    specimens: (response.specimens ?? []).map((item) =>
+      mapSpecimenTrackingSummary(item),
+    ),
   };
 }
 
@@ -305,7 +310,8 @@ export function mapLatestRegistrationResultResponse(
     ...response,
     registrationSnapshot: response.registrationSnapshot
       ? {
-          collectionScene: response.registrationSnapshot.collectionScene ?? null,
+          collectionScene:
+            response.registrationSnapshot.collectionScene ?? null,
           operatorName: response.registrationSnapshot.operatorName ?? null,
           operatorUserId: response.registrationSnapshot.operatorUserId ?? null,
           printerCode: response.registrationSnapshot.printerCode ?? null,
@@ -313,7 +319,9 @@ export function mapLatestRegistrationResultResponse(
           terminalCode: response.registrationSnapshot.terminalCode ?? null,
         }
       : null,
-    specimens: (response.specimens ?? []).map(mapSpecimenTrackingSummary),
+    specimens: (response.specimens ?? []).map((item) =>
+      mapSpecimenTrackingSummary(item),
+    ),
   };
 }
 
@@ -379,9 +387,12 @@ export async function listApplications(params: ApplicationListQuery) {
   if (USE_SPECIMEN_WORKFLOW_MOCK) {
     return listApplicationsMock(params);
   }
-  const response = await requestClient.get<ApplicationPageResponse>('/v1/applications', {
-    params,
-  });
+  const response = await requestClient.get<ApplicationPageResponse>(
+    '/v1/applications',
+    {
+      params,
+    },
+  );
   return mapApplicationPageResponse(response);
 }
 
@@ -429,7 +440,9 @@ export async function getApplicationTracking(applicationId: string) {
   return mapApplicationDetailResponse(response);
 }
 
-export async function getApplicationTrackingByApplicationNo(applicationNo: string) {
+export async function getApplicationTrackingByApplicationNo(
+  applicationNo: string,
+) {
   if (USE_SPECIMEN_WORKFLOW_MOCK) {
     return getApplicationTrackingByApplicationNoMock(applicationNo);
   }
@@ -458,7 +471,10 @@ export async function registerSpecimens(data: SpecimenRegisterRequest) {
   return mapRegistrationResultResponse(response);
 }
 
-export async function retryLabelPrint(batchNo: string, data: LabelPrintRetryRequest) {
+export async function retryLabelPrint(
+  batchNo: string,
+  data: LabelPrintRetryRequest,
+) {
   if (USE_SPECIMEN_WORKFLOW_MOCK) {
     return retryLabelPrintMock(batchNo, data);
   }
@@ -482,9 +498,12 @@ export async function lookupApplicationForRegistration(applicationNo: string) {
   if (USE_SPECIMEN_WORKFLOW_MOCK) {
     return lookupApplicationForRegistrationMock(applicationNo);
   }
-  return requestClient.get<ApplicationListItem>('/v1/specimens/applications/lookup', {
-    params: { applicationNo },
-  });
+  return requestClient.get<ApplicationListItem>(
+    '/v1/specimens/applications/lookup',
+    {
+      params: { applicationNo },
+    },
+  );
 }
 
 export async function listSpecimens(params: SpecimenManagementListQuery) {
@@ -511,7 +530,9 @@ export async function listPendingFixations(params: PendingSpecimenQuery) {
   return mapPendingSpecimenPageResponse(response);
 }
 
-export async function startSpecimenVerification(data: SpecimenVerificationRequest) {
+export async function startSpecimenVerification(
+  data: SpecimenVerificationRequest,
+) {
   if (USE_SPECIMEN_WORKFLOW_MOCK) {
     return startSpecimenVerificationMock(data);
   }
@@ -537,17 +558,25 @@ export async function startFixation(data: SpecimenFixationRequest) {
   if (USE_SPECIMEN_WORKFLOW_MOCK) {
     return startFixationMock(data);
   }
-  return requestClient.post<FixationResult>('/v1/specimen-fixations/start', data);
+  return requestClient.post<FixationResult>(
+    '/v1/specimen-fixations/start',
+    data,
+  );
 }
 
 export async function completeFixation(data: SpecimenFixationRequest) {
   if (USE_SPECIMEN_WORKFLOW_MOCK) {
     return completeFixationMock(data);
   }
-  return requestClient.post<FixationResult>('/v1/specimen-fixations/complete', data);
+  return requestClient.post<FixationResult>(
+    '/v1/specimen-fixations/complete',
+    data,
+  );
 }
 
-export async function listPendingSpecimenRemovals(params: SpecimenRemovalQuery) {
+export async function listPendingSpecimenRemovals(
+  params: SpecimenRemovalQuery,
+) {
   if (USE_SPECIMEN_WORKFLOW_MOCK) {
     return listPendingSpecimenRemovalsMock(params);
   }
@@ -558,14 +587,21 @@ export async function listPendingSpecimenRemovals(params: SpecimenRemovalQuery) 
   return mapSpecimenRemovalPageResponse(response);
 }
 
-export async function confirmSpecimenRemoval(data: SpecimenRemovalConfirmRequest) {
+export async function confirmSpecimenRemoval(
+  data: SpecimenRemovalConfirmRequest,
+) {
   if (USE_SPECIMEN_WORKFLOW_MOCK) {
     return confirmSpecimenRemovalMock(data);
   }
-  return requestClient.post<SpecimenRemovalConfirmResult>('/v1/specimen-removals/confirm', data);
+  return requestClient.post<SpecimenRemovalConfirmResult>(
+    '/v1/specimen-removals/confirm',
+    data,
+  );
 }
 
-export async function confirmSpecimenRemovalByIdentifier(data: SpecimenRemovalQuickConfirmRequest) {
+export async function confirmSpecimenRemovalByIdentifier(
+  data: SpecimenRemovalQuickConfirmRequest,
+) {
   if (USE_SPECIMEN_WORKFLOW_MOCK) {
     return confirmSpecimenRemovalByIdentifierMock(data);
   }
@@ -582,7 +618,9 @@ export async function exportSpecimenRemovals(params: SpecimenRemovalQuery) {
   });
 }
 
-export async function listPendingTransportOrders(params: PendingTransportOrderQuery) {
+export async function listPendingTransportOrders(
+  params: PendingTransportOrderQuery,
+) {
   if (USE_SPECIMEN_WORKFLOW_MOCK) {
     return listPendingTransportOrdersMock(params);
   }
@@ -653,7 +691,9 @@ export async function receiveSpecimens(data: SpecimenReceiptRequest) {
   };
 }
 
-export async function directReceiveSpecimens(data: DirectSpecimenReceiptRequest) {
+export async function directReceiveSpecimens(
+  data: DirectSpecimenReceiptRequest,
+) {
   if (USE_SPECIMEN_WORKFLOW_MOCK) {
     return directReceiveSpecimensMock(data);
   }

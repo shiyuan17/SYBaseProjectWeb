@@ -12,7 +12,12 @@ async function safeGet(
     expect(response.ok(), failureMessage).toBeTruthy();
     return response;
   } catch (error) {
-    throw new Error(`${label} 失败: ${failureMessage}\n原始错误: ${String(error)}`);
+    throw new Error(
+      `${label} 失败: ${failureMessage}\n原始错误: ${String(error)}`,
+      {
+        cause: error,
+      },
+    );
   }
 }
 
@@ -42,6 +47,7 @@ test('preflight: local m2 linked services are reachable', async () => {
     } catch (error) {
       throw new Error(
         `auth-center 登录接口不可用，请确认服务已启动。当前地址: ${e2eEnv.authBaseURL}/api/v1/auth/login\n原始错误: ${String(error)}`,
+        { cause: error },
       );
     }
     expect(
@@ -69,12 +75,20 @@ test('preflight: local m2 linked services are reachable', async () => {
           password: e2eEnv.password,
         },
       });
-      expect(receiveAuthResponse.ok(), '接收岗账号登录失败，无法校验病理接收待办接口。').toBeTruthy();
+      expect(
+        receiveAuthResponse.ok(),
+        '接收岗账号登录失败，无法校验病理接收待办接口。',
+      ).toBeTruthy();
       const receiveAuthPayload = await receiveAuthResponse.json();
-      expect(receiveAuthPayload?.code, '接收岗登录返回格式异常。').toBe('SUCCESS');
+      expect(receiveAuthPayload?.code, '接收岗登录返回格式异常。').toBe(
+        'SUCCESS',
+      );
       receiptToken = receiveAuthPayload?.data?.accessToken;
     } catch (error) {
-      throw new Error(`接收岗账号登录失败，无法校验 bl-center。原始错误: ${String(error)}`);
+      throw new Error(
+        `接收岗账号登录失败，无法校验 bl-center。原始错误: ${String(error)}`,
+        { cause: error },
+      );
     }
 
     const blClient = await request.newContext({

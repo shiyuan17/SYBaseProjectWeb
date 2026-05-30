@@ -82,12 +82,14 @@ const AUTHORIZATION_PANELS: Array<{
   label: string;
 }> = [
   {
-    description: '选择角色可进入的页面入口菜单，并决定哪些业务页面会出现在导航中。',
+    description:
+      '选择角色可进入的页面入口菜单，并决定哪些业务页面会出现在导航中。',
     key: 'menus',
     label: '页面入口',
   },
   {
-    description: '为已选页面配置附加操作权限，基础访问权限会随页面入口自动获得。',
+    description:
+      '为已选页面配置附加操作权限，基础访问权限会随页面入口自动获得。',
     key: 'permissions',
     label: '页面操作',
   },
@@ -119,13 +121,25 @@ const menuTreeDefaultCheckedKeys = ref<string[]>([]);
 const menuTreeReloadKey = ref(0);
 
 const activeRoleId = ref('');
-const activeRole = computed(() =>
-  roles.value.find((item) => item.id === activeRoleId.value) ?? null,
+const activeRole = computed(
+  () => roles.value.find((item) => item.id === activeRoleId.value) ?? null,
 );
-const activeAuthorizationPanelMeta = computed<(typeof AUTHORIZATION_PANELS)[number]>(
+
+function resolveDefaultAuthorizationPanel() {
+  const firstPanel = AUTHORIZATION_PANELS[0];
+  if (!firstPanel) {
+    throw new Error('缺少默认授权面板配置');
+  }
+  return firstPanel;
+}
+
+const activeAuthorizationPanelMeta = computed<
+  (typeof AUTHORIZATION_PANELS)[number]
+>(
   () =>
-    AUTHORIZATION_PANELS.find((panel) => panel.key === activeAuthorizationPanel.value)
-    ?? AUTHORIZATION_PANELS[0]!,
+    AUTHORIZATION_PANELS.find(
+      (panel) => panel.key === activeAuthorizationPanel.value,
+    ) ?? resolveDefaultAuthorizationPanel(),
 );
 const permissionGroups = computed(() =>
   buildRoleAuthorizationPermissionGroups(
@@ -211,13 +225,14 @@ async function loadRolesData() {
   loading.value = true;
   pageError.value = '';
   try {
-    const [roleList, menuList, permissionList, topicList, statList] = await Promise.all([
-      listRoles(),
-      listMenus(),
-      listPermissions(),
-      listMessageTopics(),
-      listStatCategories(),
-    ]);
+    const [roleList, menuList, permissionList, topicList, statList] =
+      await Promise.all([
+        listRoles(),
+        listMenus(),
+        listPermissions(),
+        listMessageTopics(),
+        listStatCategories(),
+      ]);
     roles.value = roleList;
     menus.value = menuList;
     permissions.value = permissionList;
@@ -225,7 +240,9 @@ async function loadRolesData() {
     statCategories.value = statList;
 
     const firstRole = roleList[0];
-    const hasActiveRole = roleList.some((item) => item.id === activeRoleId.value);
+    const hasActiveRole = roleList.some(
+      (item) => item.id === activeRoleId.value,
+    );
     if (!hasActiveRole) {
       activeRoleId.value = firstRole?.id ?? '';
     }
@@ -366,7 +383,10 @@ onMounted(loadInitialData);
       @retry="loadInitialData"
     />
     <div class="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-      <SystemSectionCard title="角色列表" description="创建、维护角色，并切换右侧授权配置。">
+      <SystemSectionCard
+        title="角色列表"
+        description="创建、维护角色，并切换右侧授权配置。"
+      >
         <template #extra>
           <ElButton
             v-access:code="M1_PERMISSION_CODES.SYSTEM_ROLE_CREATE"
@@ -505,7 +525,9 @@ onMounted(loadInitialData);
                       :key="group.menu.id"
                       class="rounded-2xl border border-border/60 bg-background p-4"
                     >
-                      <div class="flex flex-wrap items-start justify-between gap-2">
+                      <div
+                        class="flex flex-wrap items-start justify-between gap-2"
+                      >
                         <div class="space-y-1">
                           <div class="font-medium text-foreground">
                             {{ group.menu.menuName }}
@@ -514,7 +536,9 @@ onMounted(loadInitialData);
                             {{ group.menu.menuCode }}
                           </div>
                         </div>
-                        <div class="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">
+                        <div
+                          class="rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground"
+                        >
                           附加权限 {{ group.manualPermissions.length }}
                         </div>
                       </div>
@@ -598,11 +622,7 @@ onMounted(loadInitialData);
                   </ElCheckbox>
                 </ElCheckboxGroup>
 
-                <ElTable
-                  v-else
-                  :data="statCategories"
-                  border
-                >
+                <ElTable v-else :data="statCategories" border>
                   <ElTableColumn label="统计分类" min-width="220">
                     <template #default="scope">
                       <template v-if="scope?.row">
@@ -637,7 +657,11 @@ onMounted(loadInitialData);
                   <ElTableColumn label="当前说明" min-width="160">
                     <template #default="scope">
                       <template v-if="scope?.row">
-                        {{ formatStatScopeLabel(authState.statScopes[scope.row.id]) }}
+                        {{
+                          formatStatScopeLabel(
+                            authState.statScopes[scope.row.id],
+                          )
+                        }}
                       </template>
                     </template>
                   </ElTableColumn>
@@ -660,10 +684,16 @@ onMounted(loadInitialData);
           <ElInput v-model="roleForm.roleName" placeholder="请输入角色名称" />
         </ElFormItem>
         <ElFormItem label="角色类型">
-          <ElInput v-model="roleForm.roleType" placeholder="例如 ROLE_PATHOLOGY_ADMIN" />
+          <ElInput
+            v-model="roleForm.roleType"
+            placeholder="例如 ROLE_PATHOLOGY_ADMIN"
+          />
         </ElFormItem>
         <ElFormItem label="数据范围">
-          <ElInput v-model="roleForm.dataScope" placeholder="例如 ALL / DEPARTMENT" />
+          <ElInput
+            v-model="roleForm.dataScope"
+            placeholder="例如 ALL / DEPARTMENT"
+          />
         </ElFormItem>
         <ElFormItem label="备注">
           <ElInput
@@ -680,7 +710,11 @@ onMounted(loadInitialData);
 
       <template #footer>
         <ElButton @click="roleDialogVisible = false">取消</ElButton>
-        <ElButton :loading="submitLoading" type="primary" @click="submitRoleForm">
+        <ElButton
+          :loading="submitLoading"
+          type="primary"
+          @click="submitRoleForm"
+        >
           保存
         </ElButton>
       </template>

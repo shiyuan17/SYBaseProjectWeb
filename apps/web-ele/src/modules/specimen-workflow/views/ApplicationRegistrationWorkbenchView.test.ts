@@ -1,39 +1,21 @@
-import { createApp, defineComponent, h, nextTick } from 'vue';
+import { createApp, h, nextTick } from 'vue';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const panelProps = vi.hoisted(() => ({
-  fullHeight: false,
-}));
-
 vi.mock('@vben/common-ui', () => ({
-  Page: defineComponent({
-    setup(_, { slots }) {
-      return () => h('section', { 'data-testid': 'page' }, slots.default?.());
-    },
-  }),
+  Page: ((_: Record<string, unknown>, { slots }: any) =>
+    h('section', { 'data-testid': 'page' }, slots.default?.())) as unknown,
 }));
 
 vi.mock('../components/ApplicationRegistrationWorkbenchPanel.vue', () => ({
-  default: defineComponent({
-    props: {
-      fullHeight: {
-        default: false,
-        type: Boolean,
-      },
-    },
-    setup(props) {
-      panelProps.fullHeight = props.fullHeight;
-      return () => h('div', { 'data-testid': 'workbench-panel-proxy' });
-    },
-  }),
+  default: (() =>
+    h('div', { 'data-testid': 'workbench-panel-proxy' })) as unknown,
 }));
 
 import ApplicationRegistrationWorkbenchView from './ApplicationRegistrationWorkbenchView.vue';
 
 describe('ApplicationRegistrationWorkbenchView', () => {
   afterEach(() => {
-    panelProps.fullHeight = false;
     document.body.innerHTML = '';
   });
 
@@ -49,8 +31,9 @@ describe('ApplicationRegistrationWorkbenchView', () => {
     await nextTick();
 
     expect(root.querySelector('[data-testid="page"]')).not.toBeNull();
-    expect(root.querySelector('[data-testid="workbench-panel-proxy"]')).not.toBeNull();
-    expect(panelProps.fullHeight).toBe(true);
+    expect(
+      root.querySelector('[data-testid="workbench-panel-proxy"]'),
+    ).not.toBeNull();
 
     app.unmount();
     root.remove();

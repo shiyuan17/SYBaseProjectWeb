@@ -1,8 +1,12 @@
+import type { Browser, Page } from 'playwright/test';
+
+import type { E2ERole } from './env';
+
 import fs from 'node:fs';
 
-import { expect, type Browser, type Page } from 'playwright/test';
+import { expect } from 'playwright/test';
 
-import { e2eEnv, getRoleConfig, getStorageStatePath, type E2ERole } from './env';
+import { e2eEnv, getRoleConfig, getStorageStatePath } from './env';
 
 async function solveSliderCaptcha(page: Page) {
   const handle = page.locator('[name="captcha-action"]').first();
@@ -27,13 +31,18 @@ async function solveSliderCaptcha(page: Page) {
   await expect(page.getByText('验证通过')).toBeVisible({ timeout: 10_000 });
 }
 
-export async function loginAndSaveStorageState(browser: Browser, role: E2ERole) {
+export async function loginAndSaveStorageState(
+  browser: Browser,
+  role: E2ERole,
+) {
   const roleConfig = getRoleConfig(role);
   const context = await browser.newContext();
   const page = await context.newPage();
 
   try {
-    await page.goto(`${e2eEnv.baseURL}/auth/login`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`${e2eEnv.baseURL}/auth/login`, {
+      waitUntil: 'domcontentloaded',
+    });
     await expect(page.getByLabel('login')).toBeVisible();
 
     await page.getByPlaceholder('请输入用户名').fill(roleConfig.username);
@@ -43,8 +52,8 @@ export async function loginAndSaveStorageState(browser: Browser, role: E2ERole) 
     const [loginResponse] = await Promise.all([
       page.waitForResponse(
         (response) =>
-          response.request().method() === 'POST'
-          && response.url().includes('/api/v1/auth/login'),
+          response.request().method() === 'POST' &&
+          response.url().includes('/api/v1/auth/login'),
       ),
       page.getByLabel('login').click(),
     ]);

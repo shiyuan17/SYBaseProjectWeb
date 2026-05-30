@@ -1,8 +1,22 @@
-import { createApp, defineComponent, h, inject, nextTick, provide } from 'vue';
+import { createApp, h, nextTick } from 'vue';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-const tableRowKey = Symbol('table-row');
+import {
+  createButtonStub,
+  createDescriptionsItemStub,
+  createDialogStub,
+  createInputStub,
+  createOptionStub,
+  createPassthroughStub,
+  createSelectStub,
+  createTableColumnStub,
+  createTableStub,
+  createTagStub,
+  createTimelineItemStub,
+} from '../test-utils/component-stubs';
+
+const tableRowKey = vi.hoisted(() => Symbol('table-row'));
 
 const {
   mockAccessStore,
@@ -47,165 +61,25 @@ vi.mock('../api/specimen-workflow-service', () => ({
 }));
 
 vi.mock('element-plus', () => {
-  const passthrough = (tag = 'div') =>
-    defineComponent({
-      props: ['description', 'label', 'modelValue', 'title'],
-      setup(props, { slots }) {
-        return () =>
-          h(tag, [
-            props.title ? h('div', props.title) : null,
-            props.label ? h('span', props.label) : null,
-            props.description ? h('div', props.description) : null,
-            slots.default?.(),
-          ]);
-      },
-    });
-
-  const ElButton = defineComponent({
-    emits: ['click'],
-    setup(_, { emit, slots }) {
-      return () =>
-        h(
-          'button',
-          {
-            type: 'button',
-            onClick: (event: MouseEvent) => emit('click', event),
-          },
-          slots.default?.(),
-        );
-    },
-  });
-
-  const ElInput = defineComponent({
-    emits: ['update:modelValue'],
-    props: ['modelValue', 'placeholder'],
-    setup(props, { emit }) {
-      return () =>
-        h('input', {
-          placeholder: props.placeholder,
-          value: props.modelValue,
-          onInput: (event: Event) =>
-            emit('update:modelValue', (event.target as HTMLInputElement).value),
-        });
-    },
-  });
-
-  const ElSelect = defineComponent({
-    emits: ['update:modelValue'],
-    props: ['modelValue'],
-    setup(props, { emit, slots }) {
-      return () =>
-        h(
-          'select',
-          {
-            value: props.modelValue,
-            onChange: (event: Event) =>
-              emit('update:modelValue', (event.target as HTMLSelectElement).value),
-          },
-          slots.default?.(),
-        );
-    },
-  });
-
-  const ElOption = defineComponent({
-    props: ['label', 'value'],
-    setup(props) {
-      return () => h('option', { value: props.value }, props.label);
-    },
-  });
-
-  const ElDialog = defineComponent({
-    props: ['modelValue', 'title'],
-    setup(props, { slots }) {
-      return () =>
-        props.modelValue
-          ? h('section', [h('h3', props.title), slots.default?.()])
-          : null;
-    },
-  });
-
-  const ElDescriptions = passthrough('div');
-  const ElDescriptionsItem = defineComponent({
-    props: ['label'],
-    setup(props, { slots }) {
-      return () => h('div', [h('strong', `${props.label}:`), slots.default?.()]);
-    },
-  });
-
-  const ElTimeline = passthrough('ul');
-  const ElTimelineItem = defineComponent({
-    props: ['timestamp'],
-    setup(props, { slots }) {
-      return () => h('li', [props.timestamp ? h('span', props.timestamp) : null, slots.default?.()]);
-    },
-  });
-
-  const RowProvider = defineComponent({
-    props: {
-      row: {
-        required: true,
-        type: Object,
-      },
-    },
-    setup(props, { slots }) {
-      provide(tableRowKey, props.row);
-      return () => h('div', slots.default?.());
-    },
-  });
-
-  const ElTable = defineComponent({
-    props: {
-      data: {
-        default: () => [],
-        type: Array,
-      },
-    },
-    setup(props, { slots }) {
-      return () =>
-        h(
-          'div',
-          (props.data as unknown[]).map((row, index) =>
-            h(RowProvider, { key: index, row: row as Record<string, unknown> }, () =>
-              slots.default?.(),
-            ),
-          ),
-        );
-    },
-  });
-
-  const ElTableColumn = defineComponent({
-    props: ['label', 'prop'],
-    setup(props, { slots }) {
-      return () => {
-        const row = inject<Record<string, unknown> | null>(tableRowKey, null);
-        const value = props.prop && row ? row[props.prop] : undefined;
-        return h('div', [
-          props.label ? h('span', props.label) : null,
-          slots.default ? slots.default({ row }) : value == null ? null : h('span', String(value)),
-        ]);
-      };
-    },
-  });
-
   return {
-    ElAlert: passthrough(),
-    ElButton,
-    ElDatePicker: passthrough(),
-    ElDescriptions,
-    ElDescriptionsItem,
-    ElDialog,
-    ElEmpty: passthrough(),
-    ElForm: passthrough('form'),
-    ElFormItem: passthrough(),
-    ElInput,
-    ElOption,
-    ElPagination: passthrough(),
-    ElSelect,
-    ElTable,
-    ElTableColumn,
-    ElTag: passthrough('span'),
-    ElTimeline,
-    ElTimelineItem,
+    ElAlert: createPassthroughStub(),
+    ElButton: createButtonStub(),
+    ElDatePicker: createPassthroughStub(),
+    ElDescriptions: createPassthroughStub('div'),
+    ElDescriptionsItem: createDescriptionsItemStub(),
+    ElDialog: createDialogStub(),
+    ElEmpty: createPassthroughStub(),
+    ElForm: createPassthroughStub('form'),
+    ElFormItem: createPassthroughStub(),
+    ElInput: createInputStub(),
+    ElOption: createOptionStub(),
+    ElPagination: createPassthroughStub(),
+    ElSelect: createSelectStub(),
+    ElTable: createTableStub(tableRowKey),
+    ElTableColumn: createTableColumnStub(tableRowKey),
+    ElTag: createTagStub(),
+    ElTimeline: createPassthroughStub('ul'),
+    ElTimelineItem: createTimelineItemStub(),
   };
 });
 
@@ -328,6 +202,10 @@ async function mountView(props?: Record<string, unknown>) {
   const app = createApp({
     render: () => h(TrackingSpecimenListView, props ?? {}),
   });
+  app.directive('loading', {
+    mounted() {},
+    updated() {},
+  });
   app.mount(root);
   await flushAll();
   return { app, root };
@@ -366,7 +244,7 @@ describe('TrackingSpecimenListView', () => {
       triggerKey: 1,
     });
 
-    const buttonTexts = Array.from(root.querySelectorAll('button')).map((button) =>
+    const buttonTexts = [...root.querySelectorAll('button')].map((button) =>
       button.textContent?.trim(),
     );
     expect(buttonTexts).toContain('详情');
@@ -411,7 +289,9 @@ describe('TrackingSpecimenListView', () => {
       }),
     );
     expect(mockGetApplicationDetail).toHaveBeenCalledWith('APP-TRACK-001');
-    expect(mockGetLatestRegistrationResult).toHaveBeenCalledWith('APP-TRACK-001');
+    expect(mockGetLatestRegistrationResult).toHaveBeenCalledWith(
+      'APP-TRACK-001',
+    );
     expect(root.textContent).toContain('标本基础信息');
     expect(root.textContent).toContain('所属申请单信息');
     expect(root.textContent).toContain('最近流程节点');

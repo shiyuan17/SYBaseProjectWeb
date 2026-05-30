@@ -1,4 +1,4 @@
-import { createApp, h, nextTick, watch } from 'vue';
+import { createApp, nextTick, watch } from 'vue';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -339,9 +339,7 @@ describe('SpecimenManagementView', () => {
     const root = document.createElement('div');
     document.body.append(root);
 
-    const app = createApp({
-      render: () => h(SpecimenManagementView),
-    });
+    const app = createApp(SpecimenManagementView);
 
     app.mount(root);
     await nextTick();
@@ -382,9 +380,7 @@ describe('SpecimenManagementView', () => {
     const root = document.createElement('div');
     document.body.append(root);
 
-    const app = createApp({
-      render: () => h(SpecimenManagementView),
-    });
+    const app = createApp(SpecimenManagementView);
 
     app.mount(root);
     await nextTick();
@@ -422,9 +418,7 @@ describe('SpecimenManagementView', () => {
     const root = document.createElement('div');
     document.body.append(root);
 
-    const app = createApp({
-      render: () => h(SpecimenManagementView),
-    });
+    const app = createApp(SpecimenManagementView);
 
     app.mount(root);
     await nextTick();

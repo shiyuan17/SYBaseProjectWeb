@@ -132,7 +132,8 @@ vi.mock('../components/WorkflowSectionCard.vue', () => ({
 }));
 
 vi.mock('element-plus', async () => {
-  const actual = await vi.importActual<typeof import('element-plus')>('element-plus');
+  const actual =
+    await vi.importActual<typeof import('element-plus')>('element-plus');
   return {
     ...actual,
     ElMessage: { success: messageSuccessMock, warning: messageWarningMock },
@@ -188,8 +189,12 @@ describe('FixationVerifyView', () => {
       }),
     );
 
-    const firstCall = listPendingSpecimenRemovalsMock.mock.calls[0]?.[0] as Record<string, unknown>;
-    expect(firstCall).not.toHaveProperty('verificationStatus');
+    const firstCall = listPendingSpecimenRemovalsMock.mock.calls.at(0);
+    expect(firstCall).toBeDefined();
+    const query = firstCall?.at(0);
+
+    expect(query).toBeDefined();
+    expect(query).not.toHaveProperty('verificationStatus');
 
     app.unmount();
   });
@@ -198,8 +203,8 @@ describe('FixationVerifyView', () => {
     const { app, container } = mountView();
     await flushView();
 
-    const confirmButtons = [...container.querySelectorAll('button')].filter((button) =>
-      button.textContent?.includes('离体确认'),
+    const confirmButtons = [...container.querySelectorAll('button')].filter(
+      (button) => button.textContent?.includes('离体确认'),
     );
 
     expect(container.textContent).toContain('离体确认');
@@ -224,18 +229,22 @@ describe('FixationVerifyView', () => {
     const { app, container } = mountView();
     await flushView();
 
-    const confirmButtons = [...container.querySelectorAll('button')].filter((button) =>
-      button.textContent?.includes('离体确认'),
+    const confirmButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('离体确认'),
     );
 
-    confirmButtons[0]?.click();
+    confirmButton?.click();
     await flushView();
 
-    expect(confirmMock).toHaveBeenCalledWith('确认该标本已离体吗？', '离体确认', {
-      cancelButtonText: '取消',
-      confirmButtonText: '确认',
-      type: 'warning',
-    });
+    expect(confirmMock).toHaveBeenCalledWith(
+      '确认该标本已离体吗？',
+      '离体确认',
+      {
+        cancelButtonText: '取消',
+        confirmButtonText: '确认',
+        type: 'warning',
+      },
+    );
     expect(confirmSpecimenRemovalMock).toHaveBeenCalledWith({
       operatorName: 'Test User',
       operatorUserId: 'USER-001',
@@ -258,7 +267,9 @@ describe('FixationVerifyView', () => {
 
     barcodeInput!.value = 'SP-PENDING';
     barcodeInput!.dispatchEvent(new Event('input', { bubbles: true }));
-    barcodeInput!.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: 'Enter' }));
+    barcodeInput!.dispatchEvent(
+      new KeyboardEvent('keyup', { bubbles: true, key: 'Enter' }),
+    );
     await flushView();
 
     expect(confirmSpecimenRemovalByIdentifierMock).toHaveBeenCalledWith({
@@ -269,7 +280,9 @@ describe('FixationVerifyView', () => {
       remarks: '离体确认',
     });
     expect(listPendingSpecimenRemovalsMock).toHaveBeenCalledTimes(2);
-    expect(messageSuccessMock).toHaveBeenCalledWith('条码 SP-PENDING 已完成离体确认');
+    expect(messageSuccessMock).toHaveBeenCalledWith(
+      '条码 SP-PENDING 已完成离体确认',
+    );
     expect(barcodeInput!.value).toBe('');
 
     app.unmount();
@@ -286,7 +299,9 @@ describe('FixationVerifyView', () => {
 
     specimenNoInput!.value = 'SP202605230001';
     specimenNoInput!.dispatchEvent(new Event('input', { bubbles: true }));
-    specimenNoInput!.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: 'Enter' }));
+    specimenNoInput!.dispatchEvent(
+      new KeyboardEvent('keyup', { bubbles: true, key: 'Enter' }),
+    );
     await flushView();
 
     expect(confirmSpecimenRemovalByIdentifierMock).toHaveBeenCalledWith({
@@ -296,7 +311,9 @@ describe('FixationVerifyView', () => {
       operatorUserId: 'USER-001',
       remarks: '离体确认',
     });
-    expect(messageSuccessMock).toHaveBeenCalledWith('\u6807\u672c\u6d41\u6c34\u53f7 SP202605230001 \u5df2\u5b8c\u6210\u79bb\u4f53\u786e\u8ba4');
+    expect(messageSuccessMock).toHaveBeenCalledWith(
+      '\u6807\u672C\u6D41\u6C34\u53F7 SP202605230001 \u5DF2\u5B8C\u6210\u79BB\u4F53\u786E\u8BA4',
+    );
     expect(specimenNoInput!.value).toBe('');
 
     app.unmount();
@@ -316,7 +333,9 @@ describe('FixationVerifyView', () => {
 
     specimenNoInput!.value = 'SP-DUPLICATE';
     specimenNoInput!.dispatchEvent(new Event('input', { bubbles: true }));
-    specimenNoInput!.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: 'Enter' }));
+    specimenNoInput!.dispatchEvent(
+      new KeyboardEvent('keyup', { bubbles: true, key: 'Enter' }),
+    );
     await flushView();
 
     expect(confirmSpecimenRemovalByIdentifierMock).toHaveBeenCalledWith({
@@ -327,7 +346,9 @@ describe('FixationVerifyView', () => {
       remarks: '离体确认',
     });
     expect(specimenNoInput!.value).toBe('SP-DUPLICATE');
-    expect(container.textContent).toContain('标本流水号对应多条记录，无法自动确认');
+    expect(container.textContent).toContain(
+      '标本流水号对应多条记录，无法自动确认',
+    );
 
     app.unmount();
   });

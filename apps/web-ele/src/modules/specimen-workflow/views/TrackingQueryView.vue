@@ -12,9 +12,9 @@ import {
   ElEmpty,
   ElOption,
   ElSelect,
-  ElTabPane,
   ElTable,
   ElTableColumn,
+  ElTabPane,
   ElTabs,
   ElTag,
 } from 'element-plus';
@@ -26,7 +26,6 @@ import {
 } from '../api/specimen-workflow-service';
 import { M2_PERMISSION_CODES } from '../constants';
 import { formatDateTime, formatNullable } from '../utils/format';
-
 import TrackingApplicationListView from './TrackingApplicationListView.vue';
 import TrackingSpecimenListView from './TrackingSpecimenListView.vue';
 
@@ -51,7 +50,9 @@ const specimenTriggerKey = ref(0);
 const verificationLoading = ref(false);
 const verificationError = ref('');
 const verificationRecords = ref<SpecimenVerificationRecord[]>([]);
-const verificationSpecimenOptions = ref<Array<{ barcode: string; label: string }>>([]);
+const verificationSpecimenOptions = ref<
+  Array<{ barcode: string; label: string }>
+>([]);
 const selectedVerificationBarcode = ref('');
 const correctionContextText = computed(() => {
   if (barcode.value) {
@@ -94,10 +95,12 @@ async function loadVerificationRecordsByBarcode(targetBarcode: string) {
   verificationLoading.value = true;
   verificationError.value = '';
   try {
-    verificationRecords.value = await listSpecimenVerificationRecords(normalizedBarcode);
+    verificationRecords.value =
+      await listSpecimenVerificationRecords(normalizedBarcode);
   } catch (error) {
     verificationRecords.value = [];
-    verificationError.value = error instanceof Error ? error.message : '加载核对记录失败';
+    verificationError.value =
+      error instanceof Error ? error.message : '加载核对记录失败';
   } finally {
     verificationLoading.value = false;
   }
@@ -122,21 +125,27 @@ async function buildVerificationContextFromBarcode(targetBarcode: string) {
       label: `${specimen.specimenNo || specimen.barcode} / ${specimen.specimenName}`,
     }));
     selectedVerificationBarcode.value =
-      verificationSpecimenOptions.value.find((item) => item.barcode === normalizedBarcode)?.barcode
-      ?? verificationSpecimenOptions.value[0]?.barcode
-      ?? normalizedBarcode;
+      verificationSpecimenOptions.value.find(
+        (item) => item.barcode === normalizedBarcode,
+      )?.barcode ??
+      verificationSpecimenOptions.value[0]?.barcode ??
+      normalizedBarcode;
     await loadVerificationRecordsByBarcode(selectedVerificationBarcode.value);
   } catch (error) {
     verificationSpecimenOptions.value = [];
     selectedVerificationBarcode.value = normalizedBarcode;
     verificationRecords.value = [];
-    verificationError.value = error instanceof Error ? error.message : '加载核对记录失败';
+    verificationError.value =
+      error instanceof Error ? error.message : '加载核对记录失败';
     verificationLoading.value = false;
   }
 }
 
-async function buildVerificationContextFromApplication(targetApplicationId: string) {
-  const normalizedApplicationId = normalizeQueryValue(targetApplicationId).trim();
+async function buildVerificationContextFromApplication(
+  targetApplicationId: string,
+) {
+  const normalizedApplicationId =
+    normalizeQueryValue(targetApplicationId).trim();
   if (!normalizedApplicationId) {
     verificationSpecimenOptions.value = [];
     selectedVerificationBarcode.value = '';
@@ -153,13 +162,15 @@ async function buildVerificationContextFromApplication(targetApplicationId: stri
       barcode: specimen.barcode,
       label: `${specimen.specimenNo || specimen.barcode} / ${specimen.specimenName}`,
     }));
-    selectedVerificationBarcode.value = verificationSpecimenOptions.value[0]?.barcode ?? '';
+    selectedVerificationBarcode.value =
+      verificationSpecimenOptions.value[0]?.barcode ?? '';
     await loadVerificationRecordsByBarcode(selectedVerificationBarcode.value);
   } catch (error) {
     verificationSpecimenOptions.value = [];
     selectedVerificationBarcode.value = '';
     verificationRecords.value = [];
-    verificationError.value = error instanceof Error ? error.message : '加载核对记录失败';
+    verificationError.value =
+      error instanceof Error ? error.message : '加载核对记录失败';
     verificationLoading.value = false;
   }
 }
@@ -179,7 +190,8 @@ watch(
     ] as const,
   ([applicationIdQuery, barcodeQuery]) => {
     const normalizedBarcode = normalizeQueryValue(barcodeQuery).trim();
-    const normalizedApplicationId = normalizeQueryValue(applicationIdQuery).trim();
+    const normalizedApplicationId =
+      normalizeQueryValue(applicationIdQuery).trim();
 
     if (normalizedBarcode) {
       activeTab.value = resolveAvailableTab('specimens');
@@ -236,11 +248,7 @@ watch(
             :trigger-key="applicationTriggerKey"
           />
         </ElTabPane>
-        <ElTabPane
-          v-if="canViewSpecimens"
-          label="标本列表"
-          name="specimens"
-        >
+        <ElTabPane v-if="canViewSpecimens" label="标本列表" name="specimens">
           <TrackingSpecimenListView
             :initial-barcode="barcode"
             :trigger-key="specimenTriggerKey"
@@ -254,8 +262,12 @@ watch(
       >
         <section class="rounded-lg border border-border bg-card p-4 shadow-sm">
           <div class="flex flex-col gap-3">
-            <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-              <div class="text-base font-semibold text-foreground">核对记录视图</div>
+            <div
+              class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between"
+            >
+              <div class="text-base font-semibold text-foreground">
+                核对记录视图
+              </div>
               <ElSelect
                 v-if="verificationSpecimenOptions.length > 0"
                 v-model="selectedVerificationBarcode"
@@ -273,7 +285,8 @@ watch(
             </div>
 
             <div class="text-sm leading-6 text-muted-foreground">
-              当前按申请单或条码上下文直接展示 mock 核对记录；后续切真实接口时，页面结构与承接位保持不变。
+              当前按申请单或条码上下文直接展示 mock
+              核对记录；后续切真实接口时，页面结构与承接位保持不变。
             </div>
 
             <div
@@ -290,8 +303,16 @@ watch(
               border
               size="small"
             >
-              <ElTableColumn label="核对类型" min-width="150" prop="verificationType" />
-              <ElTableColumn label="核对人" min-width="120" prop="operatorName" />
+              <ElTableColumn
+                label="核对类型"
+                min-width="150"
+                prop="verificationType"
+              />
+              <ElTableColumn
+                label="核对人"
+                min-width="120"
+                prop="operatorName"
+              />
               <ElTableColumn label="核对时间" min-width="180">
                 <template #default="{ row }">
                   {{ formatDateTime(row.verifiedAt) }}
@@ -299,7 +320,9 @@ watch(
               </ElTableColumn>
               <ElTableColumn label="结果" min-width="120">
                 <template #default="{ row }">
-                  <ElTag :type="row.result === 'SUCCESS' ? 'success' : 'danger'">
+                  <ElTag
+                    :type="row.result === 'SUCCESS' ? 'success' : 'danger'"
+                  >
                     {{ row.result }}
                   </ElTag>
                 </template>
@@ -313,18 +336,30 @@ watch(
 
             <ElEmpty
               v-else
-              :description="verificationLoading ? '核对记录加载中' : '当前上下文暂无核对记录'"
+              :description="
+                verificationLoading
+                  ? '核对记录加载中'
+                  : '当前上下文暂无核对记录'
+              "
             />
           </div>
 
           <div class="mt-2 text-xs text-muted-foreground">
             当前建议：
-            {{ activeTab === 'applications' ? '先从申请单视图确认全流程节点，再切换到标本视图查看单条标本事件。' : '当前已处于标本追踪视图，可直接按条码或异常标记回查最近事件。' }}
+            {{
+              activeTab === 'applications'
+                ? '先从申请单视图确认全流程节点，再切换到标本视图查看单条标本事件。'
+                : '当前已处于标本追踪视图，可直接按条码或异常标记回查最近事件。'
+            }}
           </div>
         </section>
 
-        <section class="rounded-lg border border-warning/30 bg-warning/10 p-4 shadow-sm">
-          <div class="text-base font-semibold text-foreground">异常修正入口说明</div>
+        <section
+          class="rounded-lg border border-warning/30 bg-warning/10 p-4 shadow-sm"
+        >
+          <div class="text-base font-semibold text-foreground">
+            异常修正入口说明
+          </div>
           <div class="mt-2 text-sm leading-6 text-muted-foreground">
             {{ correctionContextText }}
           </div>

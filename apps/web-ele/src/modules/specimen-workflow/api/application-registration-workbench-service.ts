@@ -1,10 +1,34 @@
 import type {
   ApplicationRegistrationWorkbenchRecord,
+  OperatingBuildingOption,
+  OperatingRoomOption,
   SaveApplicationRegistrationWorkbenchRequest,
+  SpecimenDictionaryEntryOption,
+  SpecimenDictionaryGroup,
+  SpecimenPackageOption,
   WorkbenchLookupQuery,
 } from '../types/application-registration-workbench';
 
 import { requestClient } from '#/api/request';
+
+import {
+  listCommonSpecimenOptions as listCommonSpecimenOptionsMock,
+  listOperatingBuildingOptions as listOperatingBuildingOptionsMock,
+  listOperatingRoomOptions as listOperatingRoomOptionsMock,
+  listSpecimenDictionaryEntryOptions as listSpecimenDictionaryEntryOptionsMock,
+  listSpecimenDictionaryGroups as listSpecimenDictionaryGroupsMock,
+  listSpecimenPackageOptions as listSpecimenPackageOptionsMock,
+  lookupApplicationRegistrationWorkbenchRecord as lookupApplicationRegistrationWorkbenchRecordMock,
+  saveApplicationRegistrationWorkbenchMock,
+} from './application-registration-workbench-mock';
+
+const USE_APPLICATION_REGISTRATION_WORKBENCH_MOCK =
+  import.meta.env.MODE === 'test' ||
+  import.meta.env.VITE_SPECIMEN_WORKFLOW_MOCK === 'true';
+
+function isPresent<T>(value: null | T | undefined): value is T {
+  return value != null;
+}
 
 function normalizeRecord(
   record: ApplicationRegistrationWorkbenchRecord,
@@ -35,13 +59,10 @@ function normalizeRecord(
         hysterectomy:
           record.gynecologyInfo?.specialConditions?.hysterectomy ?? false,
         iud: record.gynecologyInfo?.specialConditions?.iud ?? false,
-        lactation:
-          record.gynecologyInfo?.specialConditions?.lactation ?? false,
-        menopause:
-          record.gynecologyInfo?.specialConditions?.menopause ?? false,
+        lactation: record.gynecologyInfo?.specialConditions?.lactation ?? false,
+        menopause: record.gynecologyInfo?.specialConditions?.menopause ?? false,
         other: record.gynecologyInfo?.specialConditions?.other ?? '',
-        pregnancy:
-          record.gynecologyInfo?.specialConditions?.pregnancy ?? false,
+        pregnancy: record.gynecologyInfo?.specialConditions?.pregnancy ?? false,
         radiotherapy:
           record.gynecologyInfo?.specialConditions?.radiotherapy ?? false,
       },
@@ -95,20 +116,26 @@ function normalizeRecord(
 export async function lookupApplicationRegistrationWorkbenchRecord(
   query: WorkbenchLookupQuery,
 ) {
+  if (USE_APPLICATION_REGISTRATION_WORKBENCH_MOCK) {
+    return lookupApplicationRegistrationWorkbenchRecordMock(query);
+  }
+
   try {
-    const response = await requestClient.get<ApplicationRegistrationWorkbenchRecord>(
-      '/v1/application-registration-workbench/lookup',
-      {
-        params: {
-          queryType: query.queryType,
-          keyword: query.keyword.trim(),
+    const response =
+      await requestClient.get<ApplicationRegistrationWorkbenchRecord>(
+        '/v1/application-registration-workbench/lookup',
+        {
+          params: {
+            queryType: query.queryType,
+            keyword: query.keyword.trim(),
+          },
         },
-      },
-    );
+      );
 
     return normalizeRecord(response);
   } catch (error) {
-    const status = (error as { response?: { status?: number } }).response?.status;
+    const status = (error as { response?: { status?: number } }).response
+      ?.status;
     if (status === 404) {
       return null;
     }
@@ -120,10 +147,57 @@ export async function saveApplicationRegistrationWorkbench(
   applicationId: string,
   payload: SaveApplicationRegistrationWorkbenchRequest,
 ) {
-  const response = await requestClient.post<ApplicationRegistrationWorkbenchRecord>(
-    `/v1/application-registration-workbench/${applicationId}/save`,
-    payload,
-  );
+  if (USE_APPLICATION_REGISTRATION_WORKBENCH_MOCK) {
+    return saveApplicationRegistrationWorkbenchMock(applicationId, payload);
+  }
+
+  const response =
+    await requestClient.post<ApplicationRegistrationWorkbenchRecord>(
+      `/v1/application-registration-workbench/${applicationId}/save`,
+      payload,
+    );
 
   return normalizeRecord(response);
+}
+
+// 当前字典/参考选项仍由本地适配层提供，页面只依赖 service 边界。
+export async function listOperatingBuildingOptions(): Promise<
+  OperatingBuildingOption[]
+> {
+  return listOperatingBuildingOptionsMock();
+}
+
+export async function listOperatingRoomOptions(
+  buildingId: string,
+): Promise<OperatingRoomOption[]> {
+  return listOperatingRoomOptionsMock(buildingId);
+}
+
+export async function listSpecimenDictionaryGroups(
+  keyword = '',
+): Promise<SpecimenDictionaryGroup[]> {
+  const groups = await listSpecimenDictionaryGroupsMock(keyword);
+  return groups.filter(isPresent).map((group) => ({
+    ...group,
+    subParts: group.subParts.filter(isPresent),
+  }));
+}
+
+export async function listSpecimenDictionaryEntryOptions(
+  keyword = '',
+): Promise<SpecimenDictionaryEntryOption[]> {
+  return listSpecimenDictionaryEntryOptionsMock(keyword);
+}
+
+export async function listCommonSpecimenOptions(): Promise<
+  SpecimenDictionaryEntryOption[]
+> {
+  return listCommonSpecimenOptionsMock();
+}
+
+export async function listSpecimenPackageOptions(
+  keyword = '',
+  departmentName = '',
+): Promise<SpecimenPackageOption[]> {
+  return listSpecimenPackageOptionsMock(keyword, departmentName);
 }
