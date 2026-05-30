@@ -71,3 +71,7 @@ tests/e2e/.auth/
 .repomix/
 data/state_store.db/
 data/stream_store/
+.playwright-cli/
+artifacts/
+repomix-output.xml
+temp-eslint.json
