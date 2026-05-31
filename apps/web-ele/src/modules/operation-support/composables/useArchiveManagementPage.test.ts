@@ -251,23 +251,23 @@ describe('useArchiveManagementPage', () => {
       throw new Error('composable state not initialized');
     }
 
-    expect(state.canViewArchivePage.value).toBe(true);
-    expect(state.cabinets.value).toHaveLength(1);
-    expect(state.records.value).toHaveLength(1);
-    expect(state.pendingLoans.value).toHaveLength(1);
-    expect(state.positionRows.value).toHaveLength(4);
-    expect(state.positionSummary.value).toEqual({
+    expect(state.capabilities.canViewArchivePage).toBe(true);
+    expect(state.cabinetWorkspace.cabinets).toHaveLength(1);
+    expect(state.recordWorkspace.records).toHaveLength(1);
+    expect(state.loanWorkspace.pendingLoans).toHaveLength(1);
+    expect(state.cabinetWorkspace.positionRows).toHaveLength(4);
+    expect(state.cabinetWorkspace.positionSummary).toEqual({
       available: 1,
       disabled: 0,
       occupied: 3,
       total: 4,
     });
-    expect(state.selectedPositionLabel.value).toBe('未选择柜位');
+    expect(state.cabinetWorkspace.selectedPositionLabel).toBe('未选择柜位');
 
-    state.selectPosition(state.positionRows.value[0]!);
+    state.cabinetWorkspace.selectPosition(state.cabinetWorkspace.positionRows[0]!);
 
-    expect(state.selectedPositionCode.value).toBe('CAB-01-L1-S1');
-    expect(state.selectedPositionLabel.value).toBe('CAB-01-L1-S1');
+    expect(state.cabinetWorkspace.selectedPositionCode).toBe('CAB-01-L1-S1');
+    expect(state.cabinetWorkspace.selectedPositionLabel).toBe('CAB-01-L1-S1');
     expect(messageSuccessMock).toHaveBeenCalledWith('已选择柜位 CAB-01-L1-S1');
     expect(mockListArchiveCabinets).toHaveBeenCalledTimes(1);
     expect(mockListAvailableArchivePositions).toHaveBeenCalledWith({
@@ -296,29 +296,31 @@ describe('useArchiveManagementPage', () => {
       throw new Error('composable state not initialized');
     }
 
-    const cabinet = state.cabinets.value[0];
-    const loan = state.pendingLoans.value[0];
+    const cabinet = state.cabinetWorkspace.cabinets[0];
+    const loan = state.loanWorkspace.pendingLoans[0];
 
     expect(cabinet).toBeTruthy();
     expect(loan).toBeTruthy();
 
-    state.openEditCabinetDialog(cabinet!);
-    expect(state.cabinetDialogVisible.value).toBe(true);
-    expect(state.cabinetDialogMode.value).toBe('edit');
-    expect(state.cabinetForm.cabinetCode).toBe('CAB-01');
-    expect(state.cabinetForm.locationDescription).toBe('B1 走廊');
-    expect(state.cabinetForm.operatorName).toBe('归档员甲');
+    state.cabinetWorkspace.openEditCabinetDialog(cabinet!);
+    expect(state.cabinetWorkspace.cabinetDialogVisible).toBe(true);
+    expect(state.cabinetWorkspace.cabinetDialogMode).toBe('edit');
+    expect(state.cabinetWorkspace.cabinetForm.cabinetCode).toBe('CAB-01');
+    expect(state.cabinetWorkspace.cabinetForm.locationDescription).toBe(
+      'B1 走廊',
+    );
+    expect(state.cabinetWorkspace.cabinetForm.operatorName).toBe('归档员甲');
 
-    state.openCreateCabinetDialog();
-    expect(state.cabinetDialogMode.value).toBe('create');
-    expect(state.cabinetForm.cabinetCode).toBe('');
-    expect(state.cabinetForm.operatorName).toBe('归档员甲');
+    state.cabinetWorkspace.openCreateCabinetDialog();
+    expect(state.cabinetWorkspace.cabinetDialogMode).toBe('create');
+    expect(state.cabinetWorkspace.cabinetForm.cabinetCode).toBe('');
+    expect(state.cabinetWorkspace.cabinetForm.operatorName).toBe('归档员甲');
 
-    state.openReturnDialog(loan!);
-    expect(state.returnDialogVisible.value).toBe(true);
-    expect(state.returningLoan.value?.loanId).toBe('LOAN-1');
-    expect(state.returnForm.operatorName).toBe('归档员甲');
-    expect(state.selectedReturnPositionDescription.value).toContain(
+    state.loanWorkspace.openReturnDialog(loan!);
+    expect(state.loanWorkspace.returnDialogVisible).toBe(true);
+    expect(state.loanWorkspace.returningLoan?.loanId).toBe('LOAN-1');
+    expect(state.loanWorkspace.returnForm.operatorName).toBe('归档员甲');
+    expect(state.loanWorkspace.selectedReturnPositionDescription).toContain(
       '默认归还到原始归档柜位',
     );
 
@@ -334,22 +336,22 @@ describe('useArchiveManagementPage', () => {
       throw new Error('composable state not initialized');
     }
 
-    const position = state.positionRows.value[0];
+    const position = state.cabinetWorkspace.positionRows[0];
 
     expect(position?.selectable).toBe(true);
 
-    state.selectPosition(position!);
+    state.cabinetWorkspace.selectPosition(position!);
     messageSuccessMock.mockClear();
 
     mockListAvailableArchivePositions.mockClear();
     mockListPendingMaterialLoans.mockClear();
     mockSearchArchiveRecords.mockClear();
 
-    state.archiveForm.caseId = ' CASE-1 ';
-    state.archiveForm.fileName = ' scan.pdf ';
-    state.archiveForm.remarks = ' 已归档 ';
+    state.archiveWorkspace.archiveForm.caseId = ' CASE-1 ';
+    state.archiveWorkspace.archiveForm.fileName = ' scan.pdf ';
+    state.archiveWorkspace.archiveForm.remarks = ' 已归档 ';
 
-    await state.submitArchive();
+    await state.archiveWorkspace.submitArchive();
 
     expect(mockArchiveApplicationForm).toHaveBeenCalledWith({
       archivePositionId: 'POSITION-1',
@@ -365,8 +367,8 @@ describe('useArchiveManagementPage', () => {
     expect(mockListAvailableArchivePositions).toHaveBeenCalledTimes(1);
     expect(mockSearchArchiveRecords).toHaveBeenCalledTimes(1);
     expect(mockListPendingMaterialLoans).toHaveBeenCalledTimes(1);
-    expect(state.archiveForm.caseId).toBe('');
-    expect(state.archiveForm.operatorName).toBe('归档员甲');
+    expect(state.archiveWorkspace.archiveForm.caseId).toBe('');
+    expect(state.archiveWorkspace.archiveForm.operatorName).toBe('归档员甲');
 
     wrapper.destroy();
   });
@@ -380,12 +382,12 @@ describe('useArchiveManagementPage', () => {
       throw new Error('composable state not initialized');
     }
 
-    const cabinet = state.cabinets.value[0];
+    const cabinet = state.cabinetWorkspace.cabinets[0];
 
     mockListArchiveCabinets.mockClear();
     mockListAvailableArchivePositions.mockClear();
 
-    await state.toggleCabinetStatus(cabinet!);
+    await state.cabinetWorkspace.toggleCabinetStatus(cabinet!);
 
     expect(mockUpdateArchiveCabinet).toHaveBeenCalledWith('CABINET-1', {
       cabinetName: '一号归档柜',

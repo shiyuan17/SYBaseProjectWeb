@@ -18,70 +18,19 @@ import {
 } from '../utils/format';
 
 const {
-  archiveForm,
-  archivePermissionWarning,
-  archiveSubmitButtonText,
-  cabinetCapacityPreview,
-  cabinetDialogMode,
-  cabinetDialogVisible,
-  cabinetError,
-  cabinetForm,
-  cabinetPositionRulePreview,
-  cabinets,
-  canCreateCabinet,
-  canCreateLoan,
-  canQueryCabinets,
-  canQueryLoans,
-  canQueryRecords,
-  canReturnLoan,
-  canSubmitArchive,
-  canUpdateCabinet,
-  canViewArchivePage,
-  clearSelectedPosition,
-  getArchiveStatusTagType,
-  getCabinetStatusTagType,
-  getLoanStatusTagType,
-  getPositionStatusTagType,
-  getToggleCabinetActionLabel,
-  isEditingCabinet,
-  loadLoans,
-  loadPositions,
-  loadRecords,
-  loanError,
-  loanFilters,
-  loanForm,
-  loading,
-  openCreateCabinetDialog,
-  openEditCabinetDialog,
-  openReturnDialog,
-  pendingLoans,
-  positionError,
-  positionFilters,
-  positionRows,
-  positionSummary,
-  recordError,
-  recordFilters,
-  records,
-  returnDialogVisible,
-  returnForm,
-  returningLoan,
-  selectedPosition,
-  selectedPositionCode,
-  selectedPositionLabel,
-  selectedReturnPositionDescription,
-  selectPosition,
-  submitArchive,
-  submitCabinet,
-  submitLoan,
-  submitReturn,
-  submitting,
-  toggleCabinetStatus,
+  archiveWorkspace,
+  cabinetWorkspace,
+  capabilities,
+  display,
+  loanWorkspace,
+  pageState,
+  recordWorkspace,
 } = useArchiveManagementPage();
 </script>
 
 <template>
   <div
-    v-if="!canViewArchivePage"
+    v-if="!capabilities.canViewArchivePage"
     class="flex min-h-[360px] items-center justify-center"
   >
     <Fallback status="403" />
@@ -119,16 +68,24 @@ const {
       >
         <template #extra>
           <ElButton
-            :disabled="!canCreateCabinet"
-            :title="canCreateCabinet ? undefined : '当前账号缺少归档柜新增权限'"
+            :disabled="!capabilities.canCreateCabinet"
+            :title="
+              capabilities.canCreateCabinet
+                ? undefined
+                : '当前账号缺少归档柜新增权限'
+            "
             type="primary"
-            @click="openCreateCabinetDialog"
+            @click="cabinetWorkspace.openCreateCabinetDialog"
           >
             新增归档柜
           </ElButton>
         </template>
 
-        <ElAlert v-if="!canQueryCabinets" :closable="false" type="warning">
+        <ElAlert
+          v-if="!capabilities.canQueryCabinets"
+          :closable="false"
+          type="warning"
+        >
           <template #title>
             当前账号缺少归档柜查询权限，无法查看归档柜与柜位工作站。
           </template>
@@ -136,16 +93,18 @@ const {
 
         <template v-else>
           <ElAlert
-            v-if="cabinetError"
+            v-if="cabinetWorkspace.cabinetError"
             :closable="false"
             class="mb-4"
-            :title="cabinetError"
+            :title="cabinetWorkspace.cabinetError"
             show-icon
             type="error"
           />
 
           <ElAlert
-            v-if="!canCreateCabinet || !canUpdateCabinet"
+            v-if="
+              !capabilities.canCreateCabinet || !capabilities.canUpdateCabinet
+            "
             :closable="false"
             class="mb-4"
             type="warning"
@@ -154,13 +113,27 @@ const {
               当前账号具备归档柜查询权限，但部分维护能力受限。
             </template>
             <template #default>
-              <span v-if="!canCreateCabinet">未授权新增归档柜。</span>
-              <span v-if="!canCreateCabinet && !canUpdateCabinet"> </span>
-              <span v-if="!canUpdateCabinet">未授权更新或启停归档柜。</span>
+              <span v-if="!capabilities.canCreateCabinet"
+                >未授权新增归档柜。</span
+              >
+              <span
+                v-if="
+                  !capabilities.canCreateCabinet &&
+                  !capabilities.canUpdateCabinet
+                "
+              >
+              </span>
+              <span v-if="!capabilities.canUpdateCabinet"
+                >未授权更新或启停归档柜。</span
+              >
             </template>
           </ElAlert>
 
-          <ElTable v-loading="loading.cabinets" :data="cabinets" border>
+          <ElTable
+            v-loading="cabinetWorkspace.loading.cabinets"
+            :data="cabinetWorkspace.cabinets"
+            border
+          >
             <ElTableColumn
               label="归档柜编号"
               min-width="150"
@@ -184,7 +157,7 @@ const {
             </ElTableColumn>
             <ElTableColumn label="状态" min-width="100">
               <template #default="{ row }">
-                <ElTag :type="getCabinetStatusTagType(row.cabinetStatus)">
+                <ElTag :type="display.getCabinetStatusTagType(row.cabinetStatus)">
                   {{ formatArchiveCabinetStatus(row.cabinetStatus) }}
                 </ElTag>
               </template>
@@ -203,20 +176,20 @@ const {
               <template #default="{ row }">
                 <div class="flex items-center gap-2">
                   <ElButton
-                    :disabled="!canUpdateCabinet"
+                    :disabled="!capabilities.canUpdateCabinet"
                     link
                     type="primary"
-                    @click="openEditCabinetDialog(row)"
+                    @click="cabinetWorkspace.openEditCabinetDialog(row)"
                   >
                     编辑
                   </ElButton>
                   <ElButton
-                    :disabled="!canUpdateCabinet"
+                    :disabled="!capabilities.canUpdateCabinet"
                     link
                     type="primary"
-                    @click="toggleCabinetStatus(row)"
+                    @click="cabinetWorkspace.toggleCabinetStatus(row)"
                   >
-                    {{ getToggleCabinetActionLabel(row.cabinetStatus) }}
+                    {{ display.getToggleCabinetActionLabel(row.cabinetStatus) }}
                   </ElButton>
                 </div>
               </template>
@@ -226,80 +199,84 @@ const {
       </OperationSectionCard>
 
       <ArchivePositionWorkbenchPanel
-        v-model:cabinet-id="positionFilters.cabinetId"
-        v-model:cabinet-type="positionFilters.cabinetType"
-        :cabinets="cabinets"
-        :can-query-cabinets="canQueryCabinets"
-        :get-position-status-tag-type="getPositionStatusTagType"
-        :loading="loading.positions"
-        :position-error="positionError"
-        :position-rows="positionRows"
-        :position-summary="positionSummary"
-        :selected-position="selectedPosition"
-        :selected-position-code="selectedPositionCode"
-        :selected-position-label="selectedPositionLabel"
-        @clear-selected-position="clearSelectedPosition"
-        @load-positions="loadPositions"
-        @select-position="selectPosition"
+        v-model:cabinet-id="cabinetWorkspace.positionFilters.cabinetId"
+        v-model:cabinet-type="cabinetWorkspace.positionFilters.cabinetType"
+        :cabinets="cabinetWorkspace.cabinets"
+        :can-query-cabinets="capabilities.canQueryCabinets"
+        :get-position-status-tag-type="display.getPositionStatusTagType"
+        :loading="cabinetWorkspace.loading.positions"
+        :position-error="cabinetWorkspace.positionError"
+        :position-rows="cabinetWorkspace.positionRows"
+        :position-summary="cabinetWorkspace.positionSummary"
+        :selected-position="cabinetWorkspace.selectedPosition"
+        :selected-position-code="cabinetWorkspace.selectedPositionCode"
+        :selected-position-label="cabinetWorkspace.selectedPositionLabel"
+        @clear-selected-position="cabinetWorkspace.clearSelectedPosition"
+        @load-positions="cabinetWorkspace.loadPositions"
+        @select-position="cabinetWorkspace.selectPosition"
       />
 
       <ArchiveSubmissionPanel
-        v-model:archive-form="archiveForm"
-        :archive-permission-warning="archivePermissionWarning"
-        :archive-submit-button-text="archiveSubmitButtonText"
-        :can-submit-archive="canSubmitArchive"
-        :selected-position-label="selectedPositionLabel"
-        :submitting="submitting"
-        @submit-archive="submitArchive"
+        v-model:archive-form="archiveWorkspace.archiveForm"
+        :archive-permission-warning="archiveWorkspace.archivePermissionWarning"
+        :archive-submit-button-text="archiveWorkspace.archiveSubmitButtonText"
+        :can-submit-archive="archiveWorkspace.canSubmitArchive"
+        :selected-position-label="cabinetWorkspace.selectedPositionLabel"
+        :submitting="pageState.submitting"
+        @submit-archive="archiveWorkspace.submitArchive"
       />
 
       <ArchiveRecordQueryPanel
-        v-model:record-filters="recordFilters"
-        :can-query-records="canQueryRecords"
-        :get-archive-status-tag-type="getArchiveStatusTagType"
-        :get-loan-status-tag-type="getLoanStatusTagType"
-        :loading="loading.records"
-        :record-error="recordError"
-        :records="records"
-        @load-records="loadRecords"
+        v-model:record-filters="recordWorkspace.recordFilters"
+        :can-query-records="capabilities.canQueryRecords"
+        :get-archive-status-tag-type="display.getArchiveStatusTagType"
+        :get-loan-status-tag-type="display.getLoanStatusTagType"
+        :loading="recordWorkspace.loading"
+        :record-error="recordWorkspace.recordError"
+        :records="recordWorkspace.records"
+        @load-records="recordWorkspace.loadRecords"
       />
 
       <ArchiveLoanWorkbenchPanel
-        v-model:loan-filters="loanFilters"
-        v-model:loan-form="loanForm"
-        :can-create-loan="canCreateLoan"
-        :can-query-loans="canQueryLoans"
-        :can-return-loan="canReturnLoan"
-        :get-loan-status-tag-type="getLoanStatusTagType"
-        :loading="loading.loans"
-        :loan-error="loanError"
-        :pending-loans="pendingLoans"
-        :submitting="submitting"
-        @load-loans="loadLoans"
-        @open-return-dialog="openReturnDialog"
-        @submit-loan="submitLoan"
+        v-model:loan-filters="loanWorkspace.loanFilters"
+        v-model:loan-form="loanWorkspace.loanForm"
+        :can-create-loan="capabilities.canCreateLoan"
+        :can-query-loans="capabilities.canQueryLoans"
+        :can-return-loan="capabilities.canReturnLoan"
+        :get-loan-status-tag-type="display.getLoanStatusTagType"
+        :loading="loanWorkspace.loading"
+        :loan-error="loanWorkspace.loanError"
+        :pending-loans="loanWorkspace.pendingLoans"
+        :submitting="pageState.submitting"
+        @load-loans="loanWorkspace.loadLoans"
+        @open-return-dialog="loanWorkspace.openReturnDialog"
+        @submit-loan="loanWorkspace.submitLoan"
       />
     </div>
 
     <ArchiveCabinetDialog
-      v-model="cabinetDialogVisible"
-      v-model:cabinet-form="cabinetForm"
-      :cabinet-capacity-preview="cabinetCapacityPreview"
-      :cabinet-dialog-mode="cabinetDialogMode"
-      :cabinet-position-rule-preview="cabinetPositionRulePreview"
-      :is-editing-cabinet="isEditingCabinet"
-      :submitting="submitting"
-      @submit="submitCabinet"
+      v-model="cabinetWorkspace.cabinetDialogVisible"
+      v-model:cabinet-form="cabinetWorkspace.cabinetForm"
+      :cabinet-capacity-preview="cabinetWorkspace.cabinetCapacityPreview"
+      :cabinet-dialog-mode="cabinetWorkspace.cabinetDialogMode"
+      :cabinet-position-rule-preview="
+        cabinetWorkspace.cabinetPositionRulePreview
+      "
+      :is-editing-cabinet="cabinetWorkspace.isEditingCabinet"
+      :submitting="pageState.submitting"
+      @submit="cabinetWorkspace.submitCabinet"
     />
 
     <ArchiveReturnDialog
-      v-model="returnDialogVisible"
-      v-model:return-form="returnForm"
-      :returning-loan="returningLoan"
-      :selected-position-label="selectedPositionLabel"
-      :selected-return-position-description="selectedReturnPositionDescription"
-      :submitting="submitting"
-      @submit="submitReturn"
+      v-model="loanWorkspace.returnDialogVisible"
+      v-model:return-form="loanWorkspace.returnForm"
+      :returning-loan="loanWorkspace.returningLoan"
+      :selected-position-label="cabinetWorkspace.selectedPositionLabel"
+      :selected-return-position-description="
+        loanWorkspace.selectedReturnPositionDescription
+      "
+      :submitting="pageState.submitting"
+      @submit="loanWorkspace.submitReturn"
     />
   </Page>
 </template>
