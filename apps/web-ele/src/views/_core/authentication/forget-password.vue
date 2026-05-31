@@ -11,6 +11,10 @@ defineOptions({ name: 'ForgetPassword' });
 
 const loading = ref(false);
 
+interface ForgetPasswordFormValues {
+  email: string;
+}
+
 const formSchema = computed((): VbenFormSchema[] => {
   return [
     {
@@ -29,7 +33,8 @@ const formSchema = computed((): VbenFormSchema[] => {
 });
 
 function handleSubmit(value: Recordable<any>) {
-  void value;
+  const formValues = value as ForgetPasswordFormValues;
+  void formValues;
 }
 </script>
 

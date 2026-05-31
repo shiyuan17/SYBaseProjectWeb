@@ -1,9 +1,5 @@
 <script setup lang="ts">
-import type { ApplicationDetailView } from '../types/specimen-workflow';
-
-import { computed, reactive, ref, watch } from 'vue';
-
-import { useUserStore } from '@vben/stores';
+import { toRef } from 'vue';
 
 import {
   ElAlert,
@@ -12,7 +8,6 @@ import {
   ElForm,
   ElFormItem,
   ElInput,
-  ElMessage,
   ElOption,
   ElSelect,
 } from 'element-plus';
@@ -20,11 +15,7 @@ import {
 import DepartmentSelect from '#/modules/system-management/components/DepartmentSelect.vue';
 import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
 
-import {
-  createTransportOrder,
-  getApplicationDetail,
-} from '../api/specimen-workflow-service';
-import { getWorkflowPageErrorMessage } from '../utils/error';
+import { useTransportOrderCreateDialog } from '../composables/useTransportOrderCreateDialog';
 
 const props = withDefaults(
   defineProps<{
@@ -43,269 +34,32 @@ const emit = defineEmits<{
   'update:modelValue': [value: boolean];
 }>();
 
-const userStore = useUserStore();
-
-const pageError = ref('');
-const createLoading = ref(false);
-const applicationDetail = ref<ApplicationDetailView | null>(null);
-
-const dialogVisible = computed({
-  get: () => props.modelValue,
-  set: (value: boolean) => emit('update:modelValue', value),
+const {
+  createForm,
+  createLoading,
+  dialogVisible,
+  eligibleSpecimens,
+  formatSpecimenOptionLabel,
+  handleDialogClosed,
+  handleHandoverDepartmentChange,
+  handleHandoverUserChange,
+  handleReceiverDepartmentChange,
+  loadApplicationContext,
+  pageError,
+  resolveSpecimenClinicalSymptom,
+  resolveSpecimenCollectionMode,
+  resolveSpecimenName,
+  resolveSpecimenSite,
+  resolveSpecimenType,
+  submitCreate,
+  visibleApplicationNo,
+} = useTransportOrderCreateDialog({
+  initialApplicationId: toRef(props, 'initialApplicationId'),
+  initialApplicationNo: toRef(props, 'initialApplicationNo'),
+  modelValue: toRef(props, 'modelValue'),
+  onCreated: () => emit('created'),
+  updateModelValue: (value) => emit('update:modelValue', value),
 });
-
-const visibleApplicationNo = computed(() => {
-  const applicationId = createForm.applicationId.trim();
-  const detail = applicationDetail.value;
-
-  if (detail?.id?.trim() === applicationId) {
-    return detail.applicationNo?.trim() ?? '';
-  }
-
-  if (props.initialApplicationId.trim() === applicationId) {
-    return props.initialApplicationNo.trim();
-  }
-
-  return '';
-});
-
-const createForm = reactive({
-  applicationId: '',
-  handoverDepartmentId: '',
-  handoverDepartmentName: '',
-  handoverUserId: userStore.userInfo?.userId ?? '',
-  handoverUserName: userStore.userInfo?.realName ?? '',
-  receiverDepartmentId: '',
-  receiverDepartmentName: '',
-  remarks: '',
-  selectedSpecimenBarcodes: [] as string[],
-  specimenBarcodesText: '',
-  terminalCode: '',
-});
-
-function splitSpecimenBarcodes(value: string) {
-  return [
-    ...new Set(
-      value
-        .split(/[\s,，；;]+/)
-        .map((item) => item.trim())
-        .filter(Boolean),
-    ),
-  ];
-}
-
-const mergedSpecimenBarcodes = computed(() => {
-  const selected = createForm.selectedSpecimenBarcodes;
-  const manual = splitSpecimenBarcodes(createForm.specimenBarcodesText);
-  return [...new Set([...selected, ...manual])];
-});
-
-const eligibleSpecimens = computed(() =>
-  (applicationDetail.value?.specimens ?? []).filter(
-    (item) =>
-      item.verificationStatus === 'VERIFIED' &&
-      item.fixationStatus === 'COMPLETED' &&
-      Boolean(item.specimenConfirmedAt) &&
-      item.checkInStatus === 'CHECKED_IN',
-  ),
-);
-
-function clearApplicationContext() {
-  applicationDetail.value = null;
-  createForm.selectedSpecimenBarcodes = [];
-  pageError.value = '';
-}
-
-function resetCreateForm() {
-  Object.assign(createForm, {
-    applicationId: props.initialApplicationId.trim(),
-    handoverDepartmentId: '',
-    handoverDepartmentName: '',
-    handoverUserId: userStore.userInfo?.userId ?? '',
-    handoverUserName: userStore.userInfo?.realName ?? '',
-    receiverDepartmentId: '',
-    receiverDepartmentName: '',
-    remarks: '',
-    selectedSpecimenBarcodes: [],
-    specimenBarcodesText: '',
-    terminalCode: '',
-  });
-  clearApplicationContext();
-}
-
-async function loadApplicationContext(showEmptyWarning = false) {
-  const applicationId = createForm.applicationId.trim();
-  if (!applicationId) {
-    clearApplicationContext();
-    if (showEmptyWarning) {
-      ElMessage.warning('请先输入申请单编号');
-    }
-    return;
-  }
-
-  if (applicationDetail.value?.id?.trim() === applicationId) {
-    return;
-  }
-
-  pageError.value = '';
-  try {
-    const detail = await getApplicationDetail(applicationId);
-    if (createForm.applicationId.trim() !== applicationId) {
-      return;
-    }
-    applicationDetail.value = detail;
-    createForm.selectedSpecimenBarcodes = detail.specimens
-      .filter(
-        (item) =>
-          item.verificationStatus === 'VERIFIED' &&
-          item.fixationStatus === 'COMPLETED' &&
-          Boolean(item.specimenConfirmedAt) &&
-          item.checkInStatus === 'CHECKED_IN',
-      )
-      .map((item) => item.barcode)
-      .filter(Boolean);
-  } catch (error) {
-    if (createForm.applicationId.trim() === applicationId) {
-      clearApplicationContext();
-      pageError.value = getWorkflowPageErrorMessage(error);
-    }
-  }
-}
-
-function resolveSpecimenName(
-  specimen: ApplicationDetailView['specimens'][number],
-) {
-  return specimen.specimenName?.trim() || '未命名标本';
-}
-
-function resolveSpecimenType(
-  specimen: ApplicationDetailView['specimens'][number],
-) {
-  return specimen.specimenType?.trim() || '未填写';
-}
-
-function resolveSpecimenSite(
-  specimen: ApplicationDetailView['specimens'][number],
-) {
-  return (
-    specimen.specimenSite?.trim() ||
-    applicationDetail.value?.specimenSite?.trim() ||
-    '未填写'
-  );
-}
-
-function resolveSpecimenCollectionMode(
-  specimen: ApplicationDetailView['specimens'][number],
-) {
-  return specimen.collectionMode?.trim() || '未填写';
-}
-
-function resolveSpecimenClinicalSymptom(
-  specimen: ApplicationDetailView['specimens'][number],
-) {
-  return (
-    specimen.clinicalSymptom?.trim() ||
-    applicationDetail.value?.clinicalSymptom?.trim() ||
-    '未填写'
-  );
-}
-
-function formatSpecimenOptionLabel(
-  specimen: ApplicationDetailView['specimens'][number],
-) {
-  return [
-    resolveSpecimenName(specimen),
-    `类型:${resolveSpecimenType(specimen)}`,
-    `部位:${resolveSpecimenSite(specimen)}`,
-    `采集方式:${resolveSpecimenCollectionMode(specimen)}`,
-    `临床症状:${resolveSpecimenClinicalSymptom(specimen)}`,
-  ].join(' ｜ ');
-}
-
-async function submitCreate() {
-  const specimenBarcodes = mergedSpecimenBarcodes.value;
-  if (!createForm.applicationId.trim()) {
-    ElMessage.warning('请填写申请单编号');
-    return;
-  }
-  if (!createForm.handoverDepartmentId.trim()) {
-    ElMessage.warning('请选择交接科室');
-    return;
-  }
-  if (!createForm.handoverUserName.trim()) {
-    ElMessage.warning('请选择交接人');
-    return;
-  }
-  if (!createForm.receiverDepartmentId.trim()) {
-    ElMessage.warning('请选择接收科室');
-    return;
-  }
-  if (specimenBarcodes.length === 0) {
-    ElMessage.warning('请至少选择一条标本');
-    return;
-  }
-
-  createLoading.value = true;
-  pageError.value = '';
-  try {
-    await createTransportOrder({
-      applicationId: createForm.applicationId.trim(),
-      handoverDepartmentId: createForm.handoverDepartmentId.trim() || null,
-      handoverDepartmentName: createForm.handoverDepartmentName.trim(),
-      handoverUserId: createForm.handoverUserId.trim() || null,
-      handoverUserName: createForm.handoverUserName.trim(),
-      receiverDepartmentId: createForm.receiverDepartmentId.trim() || null,
-      receiverDepartmentName: createForm.receiverDepartmentName.trim(),
-      remarks: createForm.remarks.trim() || null,
-      specimenBarcodes,
-      terminalCode: createForm.terminalCode.trim() || null,
-    });
-    ElMessage.success('转运单创建成功');
-    emit('created');
-    dialogVisible.value = false;
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
-  } finally {
-    createLoading.value = false;
-  }
-}
-
-function handleDialogClosed() {
-  resetCreateForm();
-}
-
-function handleHandoverDepartmentChange(
-  department: null | { id: string; name: string },
-) {
-  createForm.handoverDepartmentId = department?.id ?? '';
-  createForm.handoverDepartmentName = department?.name ?? '';
-}
-
-function handleReceiverDepartmentChange(
-  department: null | { id: string; name: string },
-) {
-  createForm.receiverDepartmentId = department?.id ?? '';
-  createForm.receiverDepartmentName = department?.name ?? '';
-}
-
-function handleHandoverUserChange(user: null | { id: string; name: string }) {
-  createForm.handoverUserId = user?.id ?? '';
-  createForm.handoverUserName = user?.name ?? '';
-}
-
-watch(
-  () => [props.modelValue, props.initialApplicationId],
-  async ([visible]) => {
-    if (!visible) {
-      return;
-    }
-    resetCreateForm();
-    if (createForm.applicationId) {
-      await loadApplicationContext();
-    }
-  },
-  { immediate: true },
-);
 </script>
 
 <template>

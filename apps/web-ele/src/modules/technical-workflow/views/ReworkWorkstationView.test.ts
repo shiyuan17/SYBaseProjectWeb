@@ -171,19 +171,19 @@ vi.mock('element-plus', () => {
         tableRowsKey,
         () => [],
       );
+      const renderCellContent = (row: Record<string, unknown>) => {
+        if (slots.default) {
+          return slots.default({ row });
+        }
+        if (props.prop) {
+          return String(row[props.prop] ?? '');
+        }
+        return '';
+      };
       return () =>
         h('section', [
           h('strong', props.label),
-          ...getRows().map((row) =>
-            h(
-              'div',
-              slots.default
-                ? slots.default({ row })
-                : props.prop
-                  ? String(row[props.prop] ?? '')
-                  : '',
-            ),
-          ),
+          ...getRows().map((row) => h('div', renderCellContent(row))),
         ]);
     },
   });

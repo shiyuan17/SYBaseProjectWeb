@@ -4,6 +4,9 @@
   "language": "en,en-US",
   "allowCompoundWords": true,
   "words": [
+    "BBTC",
+    "IMMUNOHISTOCHEMISTRY",
+    "JWBL",
     "Metas",
     "REEMBED",
     "acmr",
@@ -61,6 +64,7 @@
     "sortablejs",
     "stainings",
     "styl",
+    "syadmin",
     "tabler",
     "taze",
     "tdesign",

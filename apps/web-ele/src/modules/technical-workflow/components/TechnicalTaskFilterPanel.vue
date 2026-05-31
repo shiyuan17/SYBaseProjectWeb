@@ -23,7 +23,7 @@ defineProps<{
   taskTypeOptions: ReadonlyArray<TechnicalTaskSelectOption>;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   reset: [];
   search: [];
 }>();
@@ -116,7 +116,7 @@ const filterState = defineModel<TechnicalTaskPoolFilters>('filterState', {
           clearable
           placeholder="责任人ID"
           style="width: 160px"
-          @keyup.enter="$emit('search')"
+          @keyup.enter="emit('search')"
         />
       </ElFormItem>
       <ElFormItem label="申请单号">
@@ -125,7 +125,7 @@ const filterState = defineModel<TechnicalTaskPoolFilters>('filterState', {
           clearable
           placeholder="申请单号"
           style="width: 180px"
-          @keyup.enter="$emit('search')"
+          @keyup.enter="emit('search')"
         />
       </ElFormItem>
       <ElFormItem label="病理号">
@@ -134,7 +134,7 @@ const filterState = defineModel<TechnicalTaskPoolFilters>('filterState', {
           clearable
           placeholder="病理号"
           style="width: 180px"
-          @keyup.enter="$emit('search')"
+          @keyup.enter="emit('search')"
         />
       </ElFormItem>
       <ElFormItem label="接收时间">
@@ -151,8 +151,8 @@ const filterState = defineModel<TechnicalTaskPoolFilters>('filterState', {
         <ElSwitch v-model="filterState.timedOutOnly" />
       </ElFormItem>
       <ElFormItem>
-        <ElButton type="primary" @click="$emit('search')">查询</ElButton>
-        <ElButton @click="$emit('reset')">重置</ElButton>
+        <ElButton type="primary" @click="emit('search')">查询</ElButton>
+        <ElButton @click="emit('reset')">重置</ElButton>
       </ElFormItem>
     </ElForm>
   </WorkflowSectionCard>

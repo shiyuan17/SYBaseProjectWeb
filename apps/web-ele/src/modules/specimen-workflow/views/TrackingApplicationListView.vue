@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type {
   ApplicationListItem,
+  ApplicationListQuery,
   SpecimenTrackingSummary,
   TrackingEventView,
   TrackingQueryView as WorkflowTrackingQueryView,
@@ -24,13 +25,6 @@ import {
   ElOption,
   ElPagination,
   ElSelect,
-  ElTable,
-  ElTableColumn,
-  ElTabPane,
-  ElTabs,
-  ElTag,
-  ElTimeline,
-  ElTimelineItem,
 } from 'element-plus';
 
 import DepartmentSelect from '#/modules/system-management/components/DepartmentSelect.vue';
@@ -39,6 +33,9 @@ import {
   getApplicationTracking,
   listApplications,
 } from '../api/specimen-workflow-service';
+import TrackingApplicationListTable from '../components/TrackingApplicationListTable.vue';
+import TrackingApplicationSpecimenTable from '../components/TrackingApplicationSpecimenTable.vue';
+import TrackingApplicationTimelineTabs from '../components/TrackingApplicationTimelineTabs.vue';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import {
   APPLICATION_FORM_STATUS_OPTIONS,
@@ -54,20 +51,19 @@ import {
   formatCurrentNode,
   formatDate,
   formatDateTime,
-  formatFixationStatus,
-  formatLabelPrintStatus,
   formatNullable,
   formatQualityCheckResult,
   formatReceiptStatus,
-  formatSpecimenStatus,
-  formatTrackingEventStatus,
-  formatTrackingEventType,
 } from '../utils/format';
 import { buildSpecimenAbnormalDetails } from '../utils/specimen-abnormal';
 import {
-  buildTrackingTimelineData,
-  getSpecimenTimelineLabel,
-} from '../utils/tracking-timeline';
+  buildInitialApplicationMatch,
+  buildSpecimenTimelineTabs,
+  buildTrackingApplicationListQuery,
+  resolveDetailRecentEvents,
+  resolveDetailSpecimens,
+} from '../utils/tracking-application-list';
+import { buildTrackingTimelineData } from '../utils/tracking-timeline';
 
 const props = withDefaults(
   defineProps<{
@@ -119,18 +115,9 @@ async function loadApplications() {
   loading.value = true;
   pageError.value = '';
   try {
-    const result = await listApplications({
-      applicationFormStatus: filters.applicationFormStatus || undefined,
-      applicationNo: filters.applicationNo.trim() || undefined,
-      applicationType: filters.applicationType || undefined,
-      dateFrom: filters.dateRange[0] || undefined,
-      dateTo: filters.dateRange[1] || undefined,
-      page: filters.page,
-      patientName: filters.patientName.trim() || undefined,
-      size: filters.size,
-      submittingDepartmentId:
-        filters.submittingDepartmentId.trim() || undefined,
-    });
+    const query: ApplicationListQuery =
+      buildTrackingApplicationListQuery(filters);
+    const result = await listApplications(query);
     items.value = result.items;
     total.value = result.total;
   } catch (error) {
@@ -185,12 +172,12 @@ function handleDepartmentChange(
   filters.submittingDepartmentId = department?.id ?? '';
 }
 
-const detailRecentEvents = computed<TrackingEventView[]>(
-  () => detailTracking.value?.recentEvents ?? [],
+const detailRecentEvents = computed<TrackingEventView[]>(() =>
+  resolveDetailRecentEvents(detailTracking.value),
 );
 
-const detailSpecimens = computed<SpecimenTrackingSummary[]>(
-  () => detailTracking.value?.specimens ?? [],
+const detailSpecimens = computed<SpecimenTrackingSummary[]>(() =>
+  resolveDetailSpecimens(detailTracking.value),
 );
 
 const detailAbnormalSpecimens = computed(() =>
@@ -202,31 +189,21 @@ const trackingTimelineData = computed(() =>
 );
 
 const specimenTimelineTabs = computed(() =>
-  detailSpecimens.value.map((specimen) => ({
-    events: trackingTimelineData.value.specimenTimelineMap[specimen.id] ?? [],
-    id: specimen.id,
-    label: getSpecimenTimelineLabel(specimen),
-  })),
+  buildSpecimenTimelineTabs(detailSpecimens.value, trackingTimelineData.value),
 );
-
-function formatAggregateContext(values: string[], multipleLabel: string) {
-  if (values.length === 0) {
-    return '-';
-  }
-  if (values.length === 1) {
-    return values[0];
-  }
-  return `${multipleLabel}（${values.join('、')}）`;
-}
 
 watch(
   () => [props.initialApplicationId, props.triggerKey] as const,
   ([applicationId]) => {
     void loadApplications();
-    if (!applicationId.trim()) {
+    const matchedApplicationId = buildInitialApplicationMatch(
+      applicationId,
+      items.value,
+    );
+    if (!matchedApplicationId) {
       return;
     }
-    void openDetailById(applicationId);
+    void openDetailById(matchedApplicationId);
   },
   { immediate: true },
 );
@@ -322,66 +299,11 @@ watch(
       title="申请单列表"
       description="列表展示申请单编号、申请单号、患者、流程节点和异常标记。"
     >
-      <ElTable v-loading="loading" :data="items" border>
-        <ElTableColumn label="申请单编号" min-width="220" prop="id" />
-        <ElTableColumn label="申请单号" min-width="160" prop="applicationNo" />
-        <ElTableColumn label="患者信息" min-width="180">
-          <template #default="{ row }">
-            {{ formatNullable(row.patientName) }} /
-            {{ formatNullable(row.patientGender) }} /
-            {{ formatNullable(row.patientAge) }}
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="送检科室" min-width="160">
-          <template #default="{ row }">
-            {{ formatNullable(row.submittingDepartmentName) }}
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="申请类型" min-width="120">
-          <template #default="{ row }">
-            {{ formatApplicationType(row.applicationType) }}
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="表单状态" min-width="120">
-          <template #default="{ row }">
-            {{ formatApplicationFormStatus(row.applicationFormStatus) }}
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="当前节点" min-width="120">
-          <template #default="{ row }">
-            {{ formatCurrentNode(row.currentNode) }}
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="申请人" min-width="120">
-          <template #default="{ row }">
-            {{ formatNullable(row.submittingDoctorName) }}
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="申请日期" min-width="120">
-          <template #default="{ row }">
-            {{ formatDate(row.applicationDate) }}
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="更新时间" min-width="180">
-          <template #default="{ row }">
-            {{ formatDateTime(row.updatedAt) }}
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="异常标记" min-width="110">
-          <template #default="{ row }">
-            <ElTag :type="row.abnormalFlag ? 'danger' : 'success'">
-              {{ row.abnormalFlag ? '有异常' : '正常' }}
-            </ElTag>
-          </template>
-        </ElTableColumn>
-        <ElTableColumn fixed="right" label="操作" min-width="120">
-          <template #default="{ row }">
-            <ElButton link type="primary" @click="openDetailById(row.id)">
-              详情
-            </ElButton>
-          </template>
-        </ElTableColumn>
-      </ElTable>
+      <TrackingApplicationListTable
+        :items="items"
+        :loading="loading"
+        @detail="openDetailById"
+      />
 
       <div v-if="!loading && total === 0" class="py-8">
         <ElEmpty description="暂无符合条件的申请单" />
@@ -516,155 +438,21 @@ watch(
           title="标本列表"
           description="展示当前申请单下标本摘要、状态和标签打印情况。"
         >
-          <ElTable :data="detailTracking?.specimens ?? []" border>
-            <ElTableColumn label="标本号" min-width="140" prop="specimenNo" />
-            <ElTableColumn label="条码" min-width="180" prop="barcode" />
-            <ElTableColumn
-              label="标本名称"
-              min-width="180"
-              prop="specimenName"
-            />
-            <ElTableColumn label="标本类型" min-width="140">
-              <template #default="{ row }">
-                {{ formatNullable(row.specimenType) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="标本部位" min-width="140">
-              <template #default="{ row }">
-                {{ formatNullable(row.specimenSite) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="流程状态" min-width="140">
-              <template #default="{ row }">
-                <ElTag
-                  :type="row.specimenStatus === 'RECEIVED' ? 'success' : 'info'"
-                >
-                  {{ formatSpecimenStatus(row.specimenStatus) }}
-                </ElTag>
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="固定状态" min-width="140">
-              <template #default="{ row }">
-                {{ formatFixationStatus(row.fixationStatus) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="标签状态" min-width="140">
-              <template #default="{ row }">
-                {{ formatLabelPrintStatus(row.labelPrintStatus) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="异常明细" min-width="320">
-              <template #default="{ row }">
-                <div class="flex flex-col gap-1 text-sm">
-                  <div>
-                    异常类型：{{
-                      formatReceiptStatus(
-                        row.receiptStatus ?? row.specimenStatus,
-                      )
-                    }}
-                  </div>
-                  <div>
-                    质控结果：{{
-                      formatQualityCheckResult(row.qualityCheckResult)
-                    }}
-                  </div>
-                  <div>
-                    问题代码：{{
-                      row.qualityIssueCodes?.length
-                        ? row.qualityIssueCodes.join('、')
-                        : '-'
-                    }}
-                  </div>
-                  <div>原因：{{ formatNullable(row.abnormalReason) }}</div>
-                </div>
-              </template>
-            </ElTableColumn>
-          </ElTable>
+          <TrackingApplicationSpecimenTable
+            :specimens="detailTracking?.specimens ?? []"
+          />
         </WorkflowSectionCard>
 
         <WorkflowSectionCard
           title="时间线事件"
           description="展示最近追踪事件、节点、状态与操作终端。"
         >
-          <ElTabs
-            v-if="detailRecentEvents.length > 0"
+          <TrackingApplicationTimelineTabs
             v-model="activeTimelineTab"
-          >
-            <ElTabPane label="总时间线" name="overall">
-              <ElTimeline>
-                <ElTimelineItem
-                  v-for="group in trackingTimelineData.overallTimelineGroups"
-                  :key="group.key"
-                  :timestamp="formatDateTime(group.eventTime)"
-                  placement="top"
-                >
-                  <div class="space-y-2">
-                    <div class="font-medium text-foreground">
-                      {{ formatTrackingEventType(group.eventType) }} /
-                      {{ formatTrackingEventStatus(group.eventStatus) }}
-                    </div>
-                    <div class="text-xs text-muted-foreground">
-                      节点: {{ formatNullable(group.nodeCode) }}，{{
-                        group.specimenCount > 0
-                          ? `涉及标本: ${group.specimenCount} 个`
-                          : '公共事件'
-                      }}
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                      <ElTag v-if="group.specimenCount === 0" type="info">
-                        公共事件
-                      </ElTag>
-                      <ElTag
-                        v-for="label in group.specimenLabels"
-                        :key="`${group.key}-${label}`"
-                        type="info"
-                      >
-                        {{ label }}
-                      </ElTag>
-                    </div>
-                    <div class="text-xs text-muted-foreground">
-                      操作人:
-                      {{
-                        formatAggregateContext(group.operatorNames, '多操作人')
-                      }}，终端:
-                      {{
-                        formatAggregateContext(group.sourceTerminals, '多终端')
-                      }}
-                    </div>
-                  </div>
-                </ElTimelineItem>
-              </ElTimeline>
-            </ElTabPane>
-            <ElTabPane
-              v-for="specimen in specimenTimelineTabs"
-              :key="specimen.id"
-              :label="specimen.label"
-              :name="specimen.id"
-            >
-              <ElTimeline v-if="specimen.events.length > 0">
-                <ElTimelineItem
-                  v-for="(event, index) in specimen.events"
-                  :key="`${specimen.id}-${event.eventTime}-${event.eventType}-${index}`"
-                  :timestamp="formatDateTime(event.eventTime)"
-                  placement="top"
-                >
-                  <div class="space-y-1">
-                    <div class="font-medium text-foreground">
-                      {{ formatTrackingEventType(event.eventType) }} /
-                      {{ formatTrackingEventStatus(event.eventStatus) }}
-                    </div>
-                    <div class="text-xs text-muted-foreground">
-                      节点: {{ formatNullable(event.nodeCode) }}，操作人:
-                      {{ formatNullable(event.operatorName) }}，终端:
-                      {{ formatNullable(event.sourceTerminal) }}
-                    </div>
-                  </div>
-                </ElTimelineItem>
-              </ElTimeline>
-              <ElEmpty v-else description="该标本暂无追踪事件" />
-            </ElTabPane>
-          </ElTabs>
-          <ElEmpty v-else description="暂无最近追踪事件" />
+            :detail-recent-events-count="detailRecentEvents.length"
+            :specimen-timeline-tabs="specimenTimelineTabs"
+            :tracking-timeline-data="trackingTimelineData"
+          />
         </WorkflowSectionCard>
 
         <WorkflowSectionCard

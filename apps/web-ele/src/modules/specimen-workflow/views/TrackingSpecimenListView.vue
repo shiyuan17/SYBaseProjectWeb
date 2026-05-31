@@ -1,16 +1,4 @@
-<script setup lang="ts">
-import type {
-  ApplicationDetailView,
-  LatestSpecimenRegistrationResult,
-  SpecimenManagementListItem,
-  SpecimenManagementListQuery,
-  SpecimenManagementListSummary,
-} from '../types/specimen-workflow';
-
-import { computed, reactive, ref, watch } from 'vue';
-
-import { useAccessStore } from '@vben/stores';
-
+﻿<script setup lang="ts">
 import {
   ElAlert,
   ElButton,
@@ -25,23 +13,16 @@ import {
   ElOption,
   ElPagination,
   ElSelect,
-  ElTable,
-  ElTableColumn,
-  ElTag,
   ElTimeline,
   ElTimelineItem,
 } from 'element-plus';
 
 import DepartmentSelect from '#/modules/system-management/components/DepartmentSelect.vue';
 
-import {
-  getApplicationDetail,
-  getLatestRegistrationResult,
-  listSpecimens,
-} from '../api/specimen-workflow-service';
+import TrackingSpecimenLatestRegistrationResult from '../components/TrackingSpecimenLatestRegistrationResult.vue';
+import TrackingSpecimenListTable from '../components/TrackingSpecimenListTable.vue';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
-import { DEFAULT_PAGE_SIZE, M2_PERMISSION_CODES } from '../constants';
-import { getWorkflowPageErrorMessage } from '../utils/error';
+import { useTrackingSpecimenListPage } from '../composables/useTrackingSpecimenListPage';
 import {
   formatCurrentNode,
   formatDateTime,
@@ -52,10 +33,7 @@ import {
   formatReceiptStatus,
   formatSpecimenStatus,
 } from '../utils/format';
-import { buildSpecimenAbnormalDetails } from '../utils/specimen-abnormal';
-
-type QuickFilterKey = 'ABNORMAL' | 'ALL' | 'PENDING_LABEL' | 'VERIFIED';
-type AbnormalFilterValue = '' | 'false' | 'true';
+import { formatContainerRatio } from '../utils/tracking-specimen-list';
 
 const props = withDefaults(
   defineProps<{
@@ -68,295 +46,32 @@ const props = withDefaults(
   },
 );
 
-const accessStore = useAccessStore();
-
-const canManageSpecimens = computed(() =>
-  accessStore.accessCodes.includes(M2_PERMISSION_CODES.SPECIMEN_REGISTER),
-);
-const canQueryApplicationDetail = computed(() =>
-  accessStore.accessCodes.includes(
-    M2_PERMISSION_CODES.APPLICATION_DETAIL_QUERY,
-  ),
-);
-
-const quickFilterOptions: Array<{ key: QuickFilterKey; label: string }> = [
-  { key: 'ALL', label: '全部' },
-  { key: 'PENDING_LABEL', label: '待贴签' },
-  { key: 'ABNORMAL', label: '异常' },
-  { key: 'VERIFIED', label: '已核验' },
-];
-
-const labelPrintStatusOptions = [
-  { label: '全部标签状态', value: '' },
-  { label: '待打印', value: 'PENDING' },
-  { label: '打印成功', value: 'SUCCESS' },
-  { label: '打印失败', value: 'FAILED' },
-] as const;
-
-const specimenStatusOptions = [
-  { label: '全部标本状态', value: '' },
-  { label: '已登记', value: 'REGISTERED' },
-  { label: '固定中', value: 'FIXING' },
-  { label: '固定完成', value: 'FIXED' },
-  { label: '转运中', value: 'IN_TRANSIT' },
-  { label: '已接收', value: 'RECEIVED' },
-  { label: '已拒收', value: 'REJECTED' },
-  { label: '已退回', value: 'RETURNED' },
-] as const;
-
-const abnormalFilterOptions = [
-  { label: '全部异常标记', value: '' },
-  { label: '异常', value: 'true' },
-  { label: '正常', value: 'false' },
-] as const;
-
-function createEmptySummary(): SpecimenManagementListSummary {
-  return {
-    abnormalCount: 0,
-    labelPrintedCount: 0,
-    pendingLabelCount: 0,
-    totalCount: 0,
-  };
-}
-
-const pageError = ref('');
-const listLoading = ref(false);
-const items = ref<SpecimenManagementListItem[]>([]);
-const summary = ref<SpecimenManagementListSummary>(createEmptySummary());
-const total = ref(0);
-const quickFilter = ref<QuickFilterKey>('ALL');
-
-const filters = reactive({
-  abnormalFlag: '' as AbnormalFilterValue,
-  dateRange: [] as string[],
-  departmentId: '',
-  keyword: '',
-  labelPrintStatus: '',
-  page: 1,
-  size: DEFAULT_PAGE_SIZE,
-  specimenStatus: '',
-});
-
-const detailVisible = ref(false);
-const detailLoading = ref(false);
-const detailRow = ref<null | SpecimenManagementListItem>(null);
-const detailApplicationDetail = ref<ApplicationDetailView | null>(null);
-const detailLatestRegisterResult = ref<LatestSpecimenRegistrationResult | null>(
-  null,
-);
-
-const detailTargetSpecimen = computed(() => {
-  const specimenId = detailRow.value?.specimenId;
-  if (!specimenId) {
-    return null;
-  }
-  return (
-    detailApplicationDetail.value?.specimens.find(
-      (specimen) => specimen.id === specimenId,
-    ) ??
-    detailLatestRegisterResult.value?.specimens.find(
-      (specimen) => specimen.id === specimenId,
-    ) ??
-    null
-  );
-});
-
-const detailAbnormalSpecimens = computed(() =>
-  detailTargetSpecimen.value
-    ? buildSpecimenAbnormalDetails([detailTargetSpecimen.value])
-    : [],
-);
-
-function resolveQuickFilterQuery(): Partial<
-  Pick<
-    SpecimenManagementListQuery,
-    'abnormalFlag' | 'labelPrintStatus' | 'specimenStatus'
-  >
-> {
-  if (quickFilter.value === 'ABNORMAL') {
-    return { abnormalFlag: true };
-  }
-  if (quickFilter.value === 'PENDING_LABEL') {
-    return { labelPrintStatus: 'PENDING' };
-  }
-  if (quickFilter.value === 'VERIFIED') {
-    return { specimenStatus: 'FIXED' };
-  }
-  return {};
-}
-
-function resolveExplicitAbnormalFlag() {
-  if (filters.abnormalFlag === 'true') {
-    return true;
-  }
-  if (filters.abnormalFlag === 'false') {
-    return false;
-  }
-  return undefined;
-}
-
-function buildListQuery(): SpecimenManagementListQuery {
-  const quickQuery = resolveQuickFilterQuery();
-  return {
-    abnormalFlag: resolveExplicitAbnormalFlag() ?? quickQuery.abnormalFlag,
-    dateFrom: filters.dateRange[0] || undefined,
-    dateTo: filters.dateRange[1] || undefined,
-    departmentId: filters.departmentId.trim() || undefined,
-    keyword: filters.keyword.trim() || undefined,
-    labelPrintStatus: filters.labelPrintStatus || quickQuery.labelPrintStatus,
-    page: filters.page,
-    size: filters.size,
-    specimenStatus:
-      filters.specimenStatus || quickQuery.specimenStatus || undefined,
-  };
-}
-
-function labelTagType(status?: null | string) {
-  if (status === 'SUCCESS') {
-    return 'success';
-  }
-  if (status === 'FAILED') {
-    return 'danger';
-  }
-  return 'info';
-}
-
-function specimenTagType(row: SpecimenManagementListItem) {
-  if (
-    row.abnormalFlag ||
-    row.specimenStatus === 'REJECTED' ||
-    row.specimenStatus === 'RETURNED'
-  ) {
-    return 'danger';
-  }
-  if (row.specimenStatus === 'RECEIVED' || row.specimenStatus === 'FIXED') {
-    return 'success';
-  }
-  if (row.specimenStatus === 'FIXING' || row.fixationStatus === 'FIXING') {
-    return 'warning';
-  }
-  return 'info';
-}
-
-async function loadSpecimens(): Promise<SpecimenManagementListItem[]> {
-  if (!canManageSpecimens.value) {
-    items.value = [];
-    total.value = 0;
-    summary.value = createEmptySummary();
-    return [];
-  }
-
-  listLoading.value = true;
-  pageError.value = '';
-  try {
-    const result = await listSpecimens(buildListQuery());
-    items.value = result.items;
-    total.value = result.total;
-    summary.value = result.summary;
-    return result.items;
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
-    items.value = [];
-    total.value = 0;
-    summary.value = createEmptySummary();
-    return [];
-  } finally {
-    listLoading.value = false;
-  }
-}
-
-async function openDetailDialog(row: SpecimenManagementListItem) {
-  detailVisible.value = true;
-  detailLoading.value = true;
-  detailRow.value = row;
-  detailApplicationDetail.value = null;
-  detailLatestRegisterResult.value = null;
-  pageError.value = '';
-  try {
-    const [applicationDetail, latestResult] = await Promise.all([
-      canQueryApplicationDetail.value
-        ? getApplicationDetail(row.applicationId)
-        : Promise.resolve(null),
-      getLatestRegistrationResult(row.applicationId).catch(() => null),
-    ]);
-    detailApplicationDetail.value = applicationDetail;
-    detailLatestRegisterResult.value = latestResult;
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
-    detailVisible.value = false;
-  } finally {
-    detailLoading.value = false;
-  }
-}
-
-async function applyInitialBarcode(barcode: string) {
-  const normalizedBarcode = barcode.trim();
-  if (!normalizedBarcode) {
-    await loadSpecimens();
-    return;
-  }
-
-  filters.keyword = normalizedBarcode;
-  filters.page = 1;
-  const rows = await loadSpecimens();
-  const targetRow = rows.find((item) => item.barcode === normalizedBarcode);
-  if (targetRow) {
-    await openDetailDialog(targetRow);
-  }
-}
-
-function handleSearch() {
-  filters.page = 1;
-  void loadSpecimens();
-}
-
-function handleReset() {
-  filters.abnormalFlag = '';
-  filters.dateRange = [];
-  filters.departmentId = '';
-  filters.keyword = '';
-  filters.labelPrintStatus = '';
-  filters.page = 1;
-  filters.size = DEFAULT_PAGE_SIZE;
-  filters.specimenStatus = '';
-  quickFilter.value = 'ALL';
-  void loadSpecimens();
-}
-
-function handleDepartmentChange(
-  department: null | { id: string; name: string },
-) {
-  filters.departmentId = department?.id ?? '';
-}
-
-function handleQuickFilterChange(nextQuickFilter: QuickFilterKey) {
-  quickFilter.value = nextQuickFilter;
-  filters.page = 1;
-  void loadSpecimens();
-}
-
-function handlePageChange(page: number) {
-  filters.page = page;
-  void loadSpecimens();
-}
-
-function handleSizeChange(size: number) {
-  filters.size = size;
-  filters.page = 1;
-  void loadSpecimens();
-}
-
-function formatContainerRatio(row: SpecimenManagementListItem) {
-  return `${row.containerCount ?? '-'} / ${row.specimenCount ?? '-'}`;
-}
-
-watch(
-  () => [props.initialBarcode, props.triggerKey] as const,
-  ([barcode]) => {
-    void applyInitialBarcode(barcode);
-  },
-  { immediate: true },
-);
+const {
+  abnormalFilterOptions,
+  detailAbnormalSpecimens,
+  detailApplicationDetail,
+  detailLatestRegisterResult,
+  detailLoading,
+  detailRow,
+  detailVisible,
+  filters,
+  handleDepartmentChange,
+  handlePageChange,
+  handleQuickFilterChange,
+  handleReset,
+  handleSearch,
+  handleSizeChange,
+  items,
+  labelPrintStatusOptions,
+  listLoading,
+  openDetailDialog,
+  pageError,
+  quickFilter,
+  quickFilterOptions,
+  specimenStatusOptions,
+  summary,
+  total,
+} = useTrackingSpecimenListPage(props);
 </script>
 
 <template>
@@ -499,63 +214,11 @@ watch(
       title="标本列表"
       description="列表展示标本编号、条码、关联申请单、患者、科室、登记时间、标签状态和异常标记。"
     >
-      <ElTable v-loading="listLoading" :data="items" border>
-        <ElTableColumn label="标本编号" min-width="150" prop="specimenNo" />
-        <ElTableColumn label="条码" min-width="180" prop="barcode" />
-        <ElTableColumn
-          label="关联申请单"
-          min-width="160"
-          prop="applicationNo"
-        />
-        <ElTableColumn label="患者姓名" min-width="120">
-          <template #default="{ row }">
-            {{ formatNullable(row.patientName) }}
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="送检科室" min-width="160">
-          <template #default="{ row }">
-            {{ formatNullable(row.submittingDepartmentName) }}
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="登记时间" min-width="180">
-          <template #default="{ row }">
-            {{ formatDateTime(row.registeredAt) }}
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="标签打印状态" min-width="150">
-          <template #default="{ row }">
-            <ElTag :type="labelTagType(row.labelPrintStatus)">
-              {{ formatLabelPrintStatus(row.labelPrintStatus) }}
-            </ElTag>
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="标本状态" min-width="150">
-          <template #default="{ row }">
-            <div class="flex flex-col items-start gap-2">
-              <ElTag :type="specimenTagType(row)">
-                {{ formatSpecimenStatus(row.specimenStatus) }}
-              </ElTag>
-              <span class="text-xs text-muted-foreground">
-                {{ formatFixationStatus(row.fixationStatus) }}
-              </span>
-            </div>
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="异常标记" min-width="110">
-          <template #default="{ row }">
-            <ElTag :type="row.abnormalFlag ? 'danger' : 'success'">
-              {{ row.abnormalFlag ? '有异常' : '正常' }}
-            </ElTag>
-          </template>
-        </ElTableColumn>
-        <ElTableColumn fixed="right" label="操作" min-width="120">
-          <template #default="{ row }">
-            <ElButton link type="primary" @click="openDetailDialog(row)">
-              详情
-            </ElButton>
-          </template>
-        </ElTableColumn>
-      </ElTable>
+      <TrackingSpecimenListTable
+        :items="items"
+        :loading="listLoading"
+        @detail="openDetailDialog"
+      />
 
       <div v-if="!listLoading && total === 0" class="py-8">
         <ElEmpty description="暂无符合条件的标本" />
@@ -734,95 +397,9 @@ watch(
           title="最近标签批次结果"
           description="展示当前申请单最近一次登记批次及其标本结果。"
         >
-          <template v-if="detailLatestRegisterResult?.labelPrintBatchNo">
-            <ElDescriptions :column="2" border>
-              <ElDescriptionsItem label="标签批次号">
-                {{ detailLatestRegisterResult.labelPrintBatchNo }}
-              </ElDescriptionsItem>
-              <ElDescriptionsItem label="打印结果">
-                <ElTag
-                  :type="
-                    detailLatestRegisterResult.labelPrintSuccess
-                      ? 'success'
-                      : 'warning'
-                  "
-                >
-                  {{
-                    detailLatestRegisterResult.labelPrintSuccess
-                      ? '成功'
-                      : '存在失败'
-                  }}
-                </ElTag>
-              </ElDescriptionsItem>
-              <ElDescriptionsItem :span="2" label="结果说明">
-                {{
-                  formatNullable(detailLatestRegisterResult.labelPrintMessage)
-                }}
-              </ElDescriptionsItem>
-            </ElDescriptions>
-
-            <ElTable
-              :data="detailLatestRegisterResult.specimens"
-              border
-              class="mt-4"
-            >
-              <ElTableColumn
-                label="标本编号"
-                min-width="140"
-                prop="specimenNo"
-              />
-              <ElTableColumn label="条码" min-width="180" prop="barcode" />
-              <ElTableColumn
-                label="标本名称"
-                min-width="180"
-                prop="specimenName"
-              />
-              <ElTableColumn label="容器名称" min-width="140">
-                <template #default="{ row }">
-                  {{ formatNullable(row.containerName) }}
-                </template>
-              </ElTableColumn>
-              <ElTableColumn label="容器数/标本数" min-width="140">
-                <template #default="{ row }">
-                  {{
-                    `${row.containerCount ?? '-'} / ${row.specimenCount ?? '-'}`
-                  }}
-                </template>
-              </ElTableColumn>
-              <ElTableColumn label="标签状态" min-width="120">
-                <template #default="{ row }">
-                  {{ formatLabelPrintStatus(row.labelPrintStatus) }}
-                </template>
-              </ElTableColumn>
-              <ElTableColumn label="异常明细" min-width="320">
-                <template #default="{ row }">
-                  <div class="flex flex-col gap-1 text-sm">
-                    <div>
-                      异常类型：{{
-                        formatReceiptStatus(
-                          row.receiptStatus ?? row.specimenStatus,
-                        )
-                      }}
-                    </div>
-                    <div>
-                      质控结果：{{
-                        formatQualityCheckResult(row.qualityCheckResult)
-                      }}
-                    </div>
-                    <div>
-                      问题代码：{{
-                        row.qualityIssueCodes?.length
-                          ? row.qualityIssueCodes.join('、')
-                          : '-'
-                      }}
-                    </div>
-                    <div>原因：{{ formatNullable(row.abnormalReason) }}</div>
-                  </div>
-                </template>
-              </ElTableColumn>
-            </ElTable>
-          </template>
-          <ElEmpty v-else description="暂无最近批次结果" />
+          <TrackingSpecimenLatestRegistrationResult
+            :result="detailLatestRegisterResult"
+          />
         </WorkflowSectionCard>
       </div>
     </ElDialog>

@@ -12,6 +12,11 @@ defineOptions({ name: 'CodeLogin' });
 const loading = ref(false);
 const CODE_LENGTH = 6;
 
+interface CodeLoginFormValues {
+  code: string;
+  phoneNumber: string;
+}
+
 const formSchema = computed((): VbenFormSchema[] => {
   return [
     {
@@ -59,7 +64,8 @@ const formSchema = computed((): VbenFormSchema[] => {
  * @param values 登录表单数据
  */
 async function handleLogin(values: Recordable<any>) {
-  void values;
+  const formValues = values as CodeLoginFormValues;
+  void formValues;
 }
 </script>
 

@@ -14,7 +14,7 @@ defineProps<{
   selectedCount: number;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   bulkClaim: [];
   bulkPriorityUpdate: [];
   bulkRelease: [];
@@ -51,10 +51,10 @@ const selectedCountClass = 'text-sm text-muted-foreground';
       >
         连续处理视图
       </ElButton>
-      <ElButton :loading="bulkLoading" @click="$emit('bulkClaim')">
+      <ElButton :loading="bulkLoading" @click="emit('bulkClaim')">
         批量认领
       </ElButton>
-      <ElButton :loading="bulkLoading" @click="$emit('bulkRelease')">
+      <ElButton :loading="bulkLoading" @click="emit('bulkRelease')">
         批量释放
       </ElButton>
       <ElSelect v-model="bulkPriority" style="width: 140px">
@@ -65,7 +65,7 @@ const selectedCountClass = 'text-sm text-muted-foreground';
           :value="option.value"
         />
       </ElSelect>
-      <ElButton :loading="bulkLoading" @click="$emit('bulkPriorityUpdate')">
+      <ElButton :loading="bulkLoading" @click="emit('bulkPriorityUpdate')">
         批量调优先级
       </ElButton>
       <span :class="selectedCountClass">已选 {{ selectedCount }} 条</span>

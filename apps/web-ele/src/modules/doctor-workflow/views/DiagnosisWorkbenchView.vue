@@ -61,6 +61,13 @@ import {
   matchesAllowedStatus,
   STARTABLE_TASK_STATUSES,
 } from '../utils/workbench';
+import {
+  buildCancelMedicalOrderRequest,
+  buildCreateMedicalOrderRequest,
+  createDiagnosticTaskActionDefaults,
+  createMedicalOrderDefaults,
+  validateMedicalOrderForm,
+} from '../utils/workbench-form';
 
 const route = useRoute();
 const router = useRouter();
@@ -75,11 +82,9 @@ const medicalOrderDialogVisible = ref(false);
 const workbench = ref<DiagnosticWorkbenchView | null>(null);
 const queryCaseId = ref('');
 
-const actionForm = reactive<DiagnosticTaskActionRequest>({
-  operatorName: '',
-  remarks: '',
-  terminalCode: '',
-});
+const actionForm = reactive<DiagnosticTaskActionRequest>(
+  createDiagnosticTaskActionDefaults(),
+);
 
 const caseId = computed(() => firstQueryParam(route.query.caseId));
 const currentTaskId = computed(() => firstQueryParam(route.query.taskId));
@@ -198,15 +203,9 @@ const taskActionHint = computed(
   () => acceptBlockedMessage.value || startBlockedMessage.value,
 );
 
-const medicalOrderForm = reactive<CreateMedicalOrderRequest>({
-  caseId: '',
-  operatorName: '',
-  operatorUserId: '',
-  orderContent: '',
-  orderType: '',
-  remarks: '',
-  terminalCode: '',
-});
+const medicalOrderForm = reactive<CreateMedicalOrderRequest>(
+  createMedicalOrderDefaults(),
+);
 
 function clearWorkbench() {
   pageError.value = '';
@@ -283,7 +282,7 @@ async function runTaskAction(
   }
 
   if (!task) {
-    ElMessage.warning('褰撳墠娌℃湁鍙搷浣滅殑璇婃柇浠诲姟');
+    ElMessage.warning('当前病例没有可操作的诊断任务');
     return;
   }
 
@@ -330,46 +329,28 @@ function openMedicalOrderDialog() {
     return;
   }
 
-  medicalOrderForm.caseId = caseId.value;
-  medicalOrderForm.operatorName =
-    currentUserName.value || actionForm.operatorName;
-  medicalOrderForm.operatorUserId = currentUserId.value;
-  medicalOrderForm.orderContent = '';
-  medicalOrderForm.orderType = '';
-  medicalOrderForm.remarks = '';
-  medicalOrderForm.terminalCode = actionForm.terminalCode;
+  Object.assign(
+    medicalOrderForm,
+    createMedicalOrderDefaults(
+      caseId.value,
+      currentUserName.value || actionForm.operatorName,
+      currentUserId.value,
+      actionForm.terminalCode,
+    ),
+  );
   medicalOrderDialogVisible.value = true;
 }
 
 async function submitMedicalOrder() {
-  if (!medicalOrderForm.caseId.trim()) {
-    ElMessage.warning('缺少病例 ID');
-    return;
-  }
-  if (!medicalOrderForm.operatorName.trim()) {
-    ElMessage.warning('请填写操作人姓名');
-    return;
-  }
-  if (!medicalOrderForm.orderType) {
-    ElMessage.warning('请选择医嘱类型');
-    return;
-  }
-  if (!medicalOrderForm.orderContent.trim()) {
-    ElMessage.warning('请填写医嘱内容');
+  const validationMessage = validateMedicalOrderForm(medicalOrderForm);
+  if (validationMessage) {
+    ElMessage.warning(validationMessage);
     return;
   }
 
   orderOperating.value = true;
   try {
-    await createMedicalOrder({
-      caseId: medicalOrderForm.caseId.trim(),
-      operatorName: medicalOrderForm.operatorName.trim(),
-      operatorUserId: medicalOrderForm.operatorUserId?.trim() || undefined,
-      orderContent: medicalOrderForm.orderContent.trim(),
-      orderType: medicalOrderForm.orderType,
-      remarks: medicalOrderForm.remarks?.trim() || undefined,
-      terminalCode: medicalOrderForm.terminalCode?.trim() || undefined,
-    });
+    await createMedicalOrder(buildCreateMedicalOrderRequest(medicalOrderForm));
     medicalOrderDialogVisible.value = false;
     ElMessage.success('病理医嘱已创建');
     await loadWorkbench();
@@ -398,12 +379,15 @@ async function runCancelMedicalOrder(order: MedicalOrderSummary) {
 
   orderOperating.value = true;
   try {
-    await cancelMedicalOrder(order.orderId, {
-      operatorName: operatorName.trim(),
-      operatorUserId: currentUserId.value || undefined,
-      remarks: '从诊断工作台取消医嘱',
-      terminalCode: actionForm.terminalCode?.trim() || undefined,
-    });
+    await cancelMedicalOrder(
+      order.orderId,
+      buildCancelMedicalOrderRequest({
+        operatorName,
+        operatorUserId: currentUserId.value,
+        remarks: '从诊断工作台取消医嘱',
+        terminalCode: actionForm.terminalCode,
+      }),
+    );
     ElMessage.success('病理医嘱已取消');
     await loadWorkbench();
   } catch (error) {

@@ -5,34 +5,21 @@ import type {
   WorkbenchSpecimenPrintContext,
 } from '../types/application-registration-workbench';
 
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 
 import {
   ElAutocomplete,
   ElButton,
   ElEmpty,
   ElInputNumber,
-  ElMessage,
   ElTable,
   ElTableColumn,
   ElTag,
 } from 'element-plus';
 
+import { useApplicationRegistrationSpecimenTable } from '../composables/useApplicationRegistrationSpecimenTable';
 import { formatSpecimenStatus } from '../utils/format';
-import {
-  buildSearchKeywords,
-  matchesSearchKeyword,
-} from '../utils/specimen-dictionary-search';
-import {
-  buildSpecimenBatchPrintDocument,
-  buildSpecimenPrintDocument,
-} from '../utils/specimen-print';
 import WorkflowSectionCard from './WorkflowSectionCard.vue';
-
-type SpecimenSiteOption = {
-  partName: string;
-  searchKeywords: string[];
-};
 
 const props = defineProps<{
   commonSpecimenOptions: SpecimenDictionaryEntryOption[];
@@ -49,305 +36,34 @@ const emit = defineEmits<{
   'update:items': [items: WorkbenchSpecimenItem[]];
 }>();
 
-const specimenSiteOptions = computed<SpecimenSiteOption[]>(() => {
-  const siteMap = new Map<string, SpecimenSiteOption>();
-
-  props.specimenEntryOptions.forEach((option) => {
-    if (!siteMap.has(option.partName)) {
-      siteMap.set(option.partName, {
-        partName: option.partName,
-        searchKeywords: buildSearchKeywords([
-          option.systemName,
-          option.partName,
-        ]),
-      });
-    }
-  });
-
-  return [...siteMap.values()];
+const {
+  getStatusTagType,
+  handleBatchPrint,
+  handleSelectionChange,
+  handleSpecimenNameBlur,
+  handleSpecimenNameInput,
+  handleSpecimenNameSelect,
+  handleSpecimenSiteBlur,
+  handleSpecimenSiteInput,
+  handleSpecimenSiteSelect,
+  printSpecimen,
+  querySpecimenEntryOptions,
+  querySpecimenSiteOptions,
+  removeItem,
+  selectedItemIds,
+  updateItem,
+} = useApplicationRegistrationSpecimenTable({
+  items: computed(() => props.items),
+  printContext: computed(() => props.printContext),
+  specimenEntryOptions: computed(() => props.specimenEntryOptions),
+  updateItems: (items) => emit('update:items', items),
 });
-
-const selectedItemIds = ref<string[]>([]);
-
-function getStatusTagType(status: string) {
-  switch (status.trim()) {
-    case 'CHECKED_IN':
-    case 'FIXED':
-    case 'FIXING':
-    case 'IN_TRANSIT':
-    case 'RECEIVED':
-    case 'REGISTERED':
-    case 'VERIFIED':
-    case 'VERIFYING': {
-      return 'primary';
-    }
-    case 'REJECTED':
-    case 'RETURNED': {
-      return 'warning';
-    }
-    case '新增': {
-      return 'info';
-    }
-    case '标本确认': {
-      return 'success';
-    }
-    case '离体': {
-      return 'warning';
-    }
-    default: {
-      return 'primary';
-    }
-  }
-}
-
-function updateItem(
-  itemId: string,
-  key: keyof WorkbenchSpecimenItem,
-  value: number | string,
-) {
-  emit(
-    'update:items',
-    props.items.map((item) =>
-      item.id === itemId
-        ? {
-            ...item,
-            [key]: value,
-          }
-        : item,
-    ),
-  );
-}
-
-function updateSpecimenItem(
-  itemId: string,
-  payload: Partial<
-    Pick<WorkbenchSpecimenItem, 'specimenName' | 'specimenSite'>
-  >,
-) {
-  emit(
-    'update:items',
-    props.items.map((item) =>
-      item.id === itemId
-        ? {
-            ...item,
-            ...payload,
-          }
-        : item,
-    ),
-  );
-}
-
-function removeItem(itemId: string) {
-  emit(
-    'update:items',
-    props.items.filter((item) => item.id !== itemId),
-  );
-}
-
-function filterSpecimenEntryOptions(keyword: string) {
-  if (!keyword.trim()) {
-    return props.specimenEntryOptions;
-  }
-
-  return props.specimenEntryOptions.filter((option) =>
-    matchesSearchKeyword(keyword, option.searchKeywords),
-  );
-}
-
-function filterSpecimenSiteOptions(keyword: string) {
-  if (!keyword.trim()) {
-    return specimenSiteOptions.value;
-  }
-
-  return specimenSiteOptions.value.filter((option) =>
-    matchesSearchKeyword(keyword, option.searchKeywords),
-  );
-}
-
-function querySpecimenEntryOptions(
-  keyword: string,
-  callback: (items: SpecimenDictionaryEntryOption[]) => void,
-) {
-  callback(filterSpecimenEntryOptions(keyword));
-}
-
-function querySpecimenSiteOptions(
-  keyword: string,
-  callback: (items: SpecimenSiteOption[]) => void,
-) {
-  callback(filterSpecimenSiteOptions(keyword));
-}
-
-function findMatchedSpecimenEntry(value: string) {
-  const normalizedValue = value.trim();
-  if (!normalizedValue) {
-    return null;
-  }
-
-  return (
-    props.specimenEntryOptions.find(
-      (option) => option.specimenName === normalizedValue,
-    ) ?? null
-  );
-}
-
-function findMatchedSpecimenSite(value: string) {
-  const normalizedValue = value.trim();
-  if (!normalizedValue) {
-    return null;
-  }
-
-  return (
-    specimenSiteOptions.value.find(
-      (option) => option.partName === normalizedValue,
-    ) ?? null
-  );
-}
-
-function handleSpecimenNameInput(itemId: string, value: number | string) {
-  updateItem(itemId, 'specimenName', String(value));
-}
-
-function handleSpecimenNameSelect(
-  itemId: string,
-  option: SpecimenDictionaryEntryOption,
-) {
-  updateSpecimenItem(itemId, {
-    specimenName: option.specimenName,
-    specimenSite: option.partName,
-  });
-}
-
-function handleSpecimenNameBlur(itemId: string, value: string) {
-  const normalizedValue = value.trim();
-  if (!normalizedValue) {
-    updateSpecimenItem(itemId, {
-      specimenName: '',
-    });
-    return;
-  }
-
-  const matchedOption = findMatchedSpecimenEntry(normalizedValue);
-  if (matchedOption) {
-    updateSpecimenItem(itemId, {
-      specimenName: matchedOption.specimenName,
-      specimenSite: matchedOption.partName,
-    });
-    return;
-  }
-
-  updateSpecimenItem(itemId, {
-    specimenName: normalizedValue,
-  });
-}
-
-function handleSpecimenSiteInput(itemId: string, value: number | string) {
-  updateItem(itemId, 'specimenSite', String(value));
-}
-
-function handleSpecimenSiteSelect(itemId: string, option: SpecimenSiteOption) {
-  updateSpecimenItem(itemId, {
-    specimenSite: option.partName,
-  });
-}
-
-function handleSpecimenSiteBlur(itemId: string, value: string) {
-  const normalizedValue = value.trim();
-  if (!normalizedValue) {
-    updateSpecimenItem(itemId, {
-      specimenSite: '',
-    });
-    return;
-  }
-
-  const matchedOption = findMatchedSpecimenSite(normalizedValue);
-  updateSpecimenItem(itemId, {
-    specimenSite: matchedOption?.partName ?? normalizedValue,
-  });
-}
 
 function appendCommonSpecimen(option: SpecimenDictionaryEntryOption) {
   emit('append', {
     specimenName: option.specimenName,
     specimenSite: option.partName,
   });
-}
-
-function openPrintWindow(documentHtml: string) {
-  const printWindow = window.open('', '_blank', 'width=960,height=760');
-  if (!printWindow) {
-    ElMessage.warning('打印窗口被浏览器拦截，请允许弹窗后重试');
-    return null;
-  }
-
-  printWindow.document.open();
-  printWindow.document.write(documentHtml);
-  printWindow.document.close();
-  return printWindow;
-}
-
-async function printSpecimen(item: WorkbenchSpecimenItem) {
-  if (!props.printContext) {
-    ElMessage.warning('当前缺少标签打印所需的患者上下文信息');
-    return;
-  }
-  if (!item.specimenNo) {
-    ElMessage.warning('请先保存登记后再打印标本标签');
-    return;
-  }
-
-  try {
-    const printDocument = buildSpecimenPrintDocument({
-      context: props.printContext,
-      item,
-    });
-    openPrintWindow(printDocument);
-  } catch (error) {
-    console.error(error);
-    ElMessage.error('标签打印内容生成失败，请稍后重试');
-  }
-}
-
-function handleSelectionChange(rows: WorkbenchSpecimenItem[]) {
-  selectedItemIds.value = rows.map((item) => item.id);
-}
-
-function handleBatchPrint() {
-  if (!props.printContext) {
-    ElMessage.warning('当前缺少标签打印所需的患者上下文信息');
-    return;
-  }
-
-  const selectedItems = props.items.filter((item) =>
-    selectedItemIds.value.includes(item.id),
-  );
-  if (selectedItems.length === 0) {
-    ElMessage.warning('请先勾选需要打印的标本');
-    return;
-  }
-  if (selectedItems.some((item) => !item.specimenNo)) {
-    ElMessage.warning('请先保存登记后再批量打印标本标签');
-    return;
-  }
-
-  try {
-    const printDocument = buildSpecimenBatchPrintDocument({
-      context: props.printContext,
-      items: selectedItems,
-    });
-    openPrintWindow(printDocument);
-  } catch (error) {
-    console.error(error);
-    ElMessage.error('批量打印内容生成失败，请稍后重试');
-  }
-}
-
-function normalizeSpecimenEntryOption(option: Record<string, unknown>) {
-  return option as unknown as SpecimenDictionaryEntryOption;
-}
-
-function normalizeSpecimenSiteOption(option: Record<string, unknown>) {
-  return option as unknown as SpecimenSiteOption;
 }
 </script>
 
@@ -411,12 +127,7 @@ function normalizeSpecimenSiteOption(option: Record<string, unknown>) {
                 placeholder="支持中文或拼音首字母"
                 value-key="specimenName"
                 @blur="handleSpecimenNameBlur(row.id, row.specimenName)"
-                @select="
-                  handleSpecimenNameSelect(
-                    row.id,
-                    normalizeSpecimenEntryOption($event),
-                  )
-                "
+                @select="handleSpecimenNameSelect(row.id, $event)"
                 @update:model-value="handleSpecimenNameInput(row.id, $event)"
               >
                 <template #default="{ item }">
@@ -440,12 +151,7 @@ function normalizeSpecimenSiteOption(option: Record<string, unknown>) {
                 placeholder="支持中文或拼音首字母"
                 value-key="partName"
                 @blur="handleSpecimenSiteBlur(row.id, row.specimenSite)"
-                @select="
-                  handleSpecimenSiteSelect(
-                    row.id,
-                    normalizeSpecimenSiteOption($event),
-                  )
-                "
+                @select="handleSpecimenSiteSelect(row.id, $event)"
                 @update:model-value="handleSpecimenSiteInput(row.id, $event)"
               />
             </template>

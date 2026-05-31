@@ -105,7 +105,7 @@ function handleInput(value: number | string) {
   emitValue(normalizedValue);
 }
 
-function handleSelect(option: Record<string, any>) {
+function handleSelect(option: Record<string, unknown>) {
   const normalizedOption = option as BodyPartOption;
   inputValue.value = normalizedOption.value;
   emitValue(normalizedOption.value);

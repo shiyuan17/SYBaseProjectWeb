@@ -36,6 +36,7 @@ const { listLoading, pageItems, query, total } = storeToRefs(notificationStore);
 const pageError = ref('');
 const keywordInput = ref('');
 const selectedIds = ref<string[]>([]);
+const totalCountClass = 'text-sm text-muted-foreground';
 
 const statusOptions = [
   { label: '全部', value: 'ALL' },
@@ -248,9 +249,7 @@ onMounted(async () => {
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
               <ElCheckbox v-model="allChecked">全选当前页</ElCheckbox>
-              <span class="text-sm text-muted-foreground"
-                >当前共 {{ total }} 条通知</span
-              >
+              <span :class="totalCountClass">当前共 {{ total }} 条通知</span>
             </div>
           </div>
         </template>

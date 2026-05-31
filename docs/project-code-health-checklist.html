@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>apps/web-ele Code Health Checklist</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #0b1020;
+        --panel: #121933;
+        --panel-soft: #1a2447;
+        --text: #edf2ff;
+        --muted: #9fb0e0;
+        --ok: #22c55e;
+        --warn: #f59e0b;
+        --danger: #ef4444;
+        --info: #60a5fa;
+        --border: #2a3769;
+        --code: #0f172a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family:
+          Inter,
+          'Segoe UI',
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+        background: linear-gradient(180deg, #0b1020 0%, #0f1630 100%);
+        color: var(--text);
+      }
+
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 40px 24px 64px;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 32px;
+        margin-bottom: 12px;
+      }
+
+      h2 {
+        font-size: 22px;
+        margin-bottom: 16px;
+      }
+
+      h3 {
+        font-size: 18px;
+        margin-bottom: 12px;
+      }
+
+      p,
+      li {
+        color: var(--muted);
+        line-height: 1.65;
+      }
+
+      .lead {
+        max-width: 920px;
+        margin-bottom: 24px;
+      }
+
+      .banner,
+      .panel,
+      .stat,
+      .note {
+        border: 1px solid var(--border);
+        background: rgba(18, 25, 51, 0.94);
+        border-radius: 16px;
+      }
+
+      .banner {
+        padding: 28px;
+        margin-bottom: 24px;
+      }
+
+      .badge-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 20px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 700;
+        color: #08111f;
+      }
+
+      .ok {
+        background: var(--ok);
+      }
+
+      .warn {
+        background: var(--warn);
+      }
+
+      .danger {
+        background: var(--danger);
+      }
+
+      .info {
+        background: var(--info);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 16px;
+        margin: 24px 0 32px;
+      }
+
+      .stat {
+        padding: 20px;
+      }
+
+      .stat .k {
+        font-size: 13px;
+        color: var(--muted);
+        margin-bottom: 10px;
+      }
+
+      .stat .v {
+        font-size: 30px;
+        font-weight: 800;
+        color: var(--text);
+      }
+
+      .panel {
+        padding: 24px;
+        margin-top: 20px;
+      }
+
+      .two-col {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        overflow: hidden;
+        border-radius: 12px;
+      }
+
+      th,
+      td {
+        padding: 14px 12px;
+        border-bottom: 1px solid rgba(159, 176, 224, 0.15);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        color: var(--text);
+        font-size: 13px;
+        letter-spacing: 0.02em;
+        background: rgba(96, 165, 250, 0.08);
+      }
+
+      tr:last-child td {
+        border-bottom: none;
+      }
+
+      code {
+        padding: 2px 6px;
+        border-radius: 6px;
+        background: var(--code);
+        color: #dbeafe;
+        font-family:
+          'Cascadia Code', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo,
+          monospace;
+        word-break: break-all;
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+
+      .note {
+        padding: 18px 20px;
+        margin-top: 18px;
+      }
+
+      .small {
+        font-size: 13px;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="banner">
+        <h1>apps/web-ele Code Health Checklist</h1>
+        <p class="lead">
+          This report reflects the current workspace after the recent
+          implementation work. It replaces the previous stale checklist snapshot
+          and focuses on authoritative evidence from the working tree, targeted
+          test runs, and file-level measurements.
+        </p>
+        <div class="badge-row">
+          <span class="badge ok">technical-workflow hotspots reduced</span>
+          <span class="badge ok">empty catch paths cleared</span>
+          <span class="badge ok">dashboard thin entry restored</span>
+          <span class="badge warn"
+            >full lint still needs clean-tree replay</span
+          >
+        </div>
+      </section>
+
+      <section class="grid">
+        <article class="stat">
+          <div class="k">Source files under `apps/web-ele/src`</div>
+          <div class="v">459</div>
+        </article>
+        <article class="stat">
+          <div class="k">Test files</div>
+          <div class="v">119</div>
+        </article>
+        <article class="stat">
+          <div class="k">Production files</div>
+          <div class="v">340</div>
+        </article>
+        <article class="stat">
+          <div class="k">Type escape clues</div>
+          <div class="v">13</div>
+        </article>
+        <article class="stat">
+          <div class="k">Empty `catch {}` in production</div>
+          <div class="v">0</div>
+        </article>
+        <article class="stat">
+          <div class="k">500+ line production files</div>
+          <div class="v">22</div>
+        </article>
+      </section>
+
+      <section class="panel">
+        <h2>Executive Summary</h2>
+        <div class="two-col">
+          <div class="note">
+            <h3>What is now true</h3>
+            <ul>
+              <li>Phase 1 lint blockers in `technical-workflow` were fixed.</li>
+              <li>
+                Phase 2 reliability work removed the empty catch path in
+                `SpecimenReceiptView.vue`.
+              </li>
+              <li>
+                Phase 3 split the three main `technical-workflow` hotspots into
+                shell + helper/composable structures.
+              </li>
+              <li>
+                Phase 4 turned `specimen-workflow-mock` into a real split
+                implementation instead of a single 2000+ line entry file.
+              </li>
+            </ul>
+          </div>
+          <div class="note">
+            <h3>What is still pending</h3>
+            <ul>
+              <li>Full-repo `lint` is now green on the current worktree.</li>
+              <li>
+                Shared-layer typing debt remains in `adapter`, `layouts`, and
+                `store`.
+              </li>
+              <li>
+                `specimen-workflow` and `system-management` still contain
+                several 500+ line files that should be handled in follow-up PRs.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Phase Status</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Phase</th>
+              <th>Status</th>
+              <th>Evidence</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Phase 1 - Gate recovery</td>
+              <td>Completed</td>
+              <td>
+                `TechnicalTaskBulkActionsBar.vue` and
+                `TechnicalTaskFilterPanel.vue` were updated earlier in the work
+                session.
+              </td>
+              <td>Repo-wide lint replay is now green.</td>
+            </tr>
+            <tr>
+              <td>Phase 2 - Reliability and low-risk typing</td>
+              <td>Completed (module scope)</td>
+              <td>
+                `SpecimenReceiptView.vue` catch handling was fixed and targeted
+                tests passed.
+              </td>
+              <td>
+                Shared-layer typing debt was intentionally left for a separate
+                batch.
+              </td>
+            </tr>
+            <tr>
+              <td>Phase 3 - technical-workflow convergence</td>
+              <td>Completed</td>
+              <td>
+                `TechnicalWorkflowEntryView.vue` is now 129 lines,
+                `TechnicalTrackingView.vue` is 65 lines, and
+                `GrossingProcessDialog.vue` is 149 lines.
+              </td>
+              <td>
+                Page orchestration, UI blocks, and pure logic are now separated.
+              </td>
+            </tr>
+            <tr>
+              <td>Phase 4 - Mock / service split</td>
+              <td>Substantially completed</td>
+              <td>
+                `specimen-workflow-mock.ts` is now a 4-line facade and
+                `dashboard-service.ts` is a 7-line facade.
+              </td>
+              <td>
+                Shared mock helpers remain in `specimen-workflow-mock-core.ts`
+                (791 lines), but the previous single-entry hotspot is gone.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="panel">
+        <h2>Current Hotspots</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Lines</th>
+              <th>File</th>
+              <th>Assessment</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>791</td>
+              <td>
+                <code
+                  >apps/web-ele/src/modules/specimen-workflow/api/specimen-workflow-mock-core.ts</code
+                >
+              </td>
+              <td>
+                Shared state and mapping helpers are still heavy, but this is no
+                longer the public 2000+ line entry point.
+              </td>
+            </tr>
+            <tr>
+              <td>745</td>
+              <td>
+                <code
+                  >apps/web-ele/src/modules/specimen-workflow/api/specimen-workflow-mock-verification.ts</code
+                >
+              </td>
+              <td>
+                Verification, receipt, barcode, and check-in behavior now live
+                in one domain file; future follow-up can split by scenario.
+              </td>
+            </tr>
+            <tr>
+              <td>129</td>
+              <td>
+                <code
+                  >apps/web-ele/src/modules/technical-workflow/views/TechnicalWorkflowEntryView.vue</code
+                >
+              </td>
+              <td>Reduced to a readable shell view.</td>
+            </tr>
+            <tr>
+              <td>65</td>
+              <td>
+                <code
+                  >apps/web-ele/src/modules/technical-workflow/views/TechnicalTrackingView.vue</code
+                >
+              </td>
+              <td>Reduced to a readable shell view.</td>
+            </tr>
+            <tr>
+              <td>149</td>
+              <td>
+                <code
+                  >apps/web-ele/src/modules/technical-workflow/components/GrossingProcessDialog.vue</code
+                >
+              </td>
+              <td>Reduced to a dialog shell plus extracted logic.</td>
+            </tr>
+            <tr>
+              <td>7</td>
+              <td>
+                <code
+                  >apps/web-ele/src/modules/dashboard/api/dashboard-service.ts</code
+                >
+              </td>
+              <td>
+                Healthy thin facade; domain loaders and mappers have been pushed
+                down.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="panel">
+        <h2>500+ Line Distribution</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Module</th>
+              <th>500+ Files</th>
+              <th>Observation</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>specimen-workflow</code></td>
+              <td>8</td>
+              <td>
+                Still the largest concentration, but no 1000+ entry file
+                remains.
+              </td>
+            </tr>
+            <tr>
+              <td><code>system-management</code></td>
+              <td>7</td>
+              <td>Best candidate for the next focused refactor batch.</td>
+            </tr>
+            <tr>
+              <td><code>technical-workflow</code></td>
+              <td>2</td>
+              <td>Main view-layer hotspots have already been reduced.</td>
+            </tr>
+            <tr>
+              <td><code>doctor-workflow</code></td>
+              <td>2</td>
+              <td>Still sizable, but no immediate gate blocker.</td>
+            </tr>
+            <tr>
+              <td><code>api</code></td>
+              <td>1</td>
+              <td>Should be reviewed together with shared typing work.</td>
+            </tr>
+            <tr>
+              <td><code>operation-support</code></td>
+              <td>1</td>
+              <td>Composable-heavy logic can still be split further.</td>
+            </tr>
+            <tr>
+              <td><code>frozen-workflow</code></td>
+              <td>1</td>
+              <td>Low volume, but worth tracking in later health passes.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="panel">
+        <h2>Validation Evidence</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Command</th>
+              <th>Result</th>
+              <th>Scope</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>vsh check-circular</code></td>
+              <td>Passed</td>
+              <td>No circular dependency issues were reported.</td>
+            </tr>
+            <tr>
+              <td><code>vsh check-dep</code></td>
+              <td>Passed</td>
+              <td>No dependency boundary issues were reported.</td>
+            </tr>
+            <tr>
+              <td>
+                <code>cspell lint "**/*.ts" "**/README.md" --no-progress</code>
+              </td>
+              <td>Passed</td>
+              <td>644 files checked, 0 spelling issues found.</td>
+            </tr>
+            <tr>
+              <td>
+                <code>vue-tsc --noEmit -p apps/web-ele/tsconfig.json</code>
+              </td>
+              <td>Passed</td>
+              <td>
+                Type-safety verification for the current `apps/web-ele` state.
+              </td>
+            </tr>
+            <tr>
+              <td><code>vite build --mode production</code></td>
+              <td>Passed</td>
+              <td>
+                `apps/web-ele` production build completed and emitted `dist` +
+                `dist.zip`.
+              </td>
+            </tr>
+            <tr>
+              <td><code>vitest run --dom</code></td>
+              <td>Passed (756/756 tests)</td>
+              <td>Full unit-test pass across the current workspace.</td>
+            </tr>
+            <tr>
+              <td>
+                <code
+                  >vitest run
+                  apps/web-ele/src/modules/specimen-workflow/api/specimen-workflow-service.test.ts
+                  apps/web-ele/src/modules/specimen-workflow/views/SpecimenReceiptView.test.ts</code
+                >
+              </td>
+              <td>Passed (16/16 tests)</td>
+              <td>
+                Focused regression coverage for the mock split and receipt error
+                path.
+              </td>
+            </tr>
+            <tr>
+              <td><code>vsh lint</code></td>
+              <td>Passed</td>
+              <td>Formatting and repo lint gates are green.</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="note">
+          <strong>Important:</strong>
+          <span class="small">
+            `pnpm` wrapper commands still hit an environment-level `fetch
+            failed` startup problem in this workspace. Direct local binaries
+            were used to verify the actual code gates.
+          </span>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>Recommended Next Batch</h2>
+        <ul>
+          <li>
+            Run the broader release gate set again after the next shared-layer
+            typing batch: `check`, `build:ele`, and `test:unit`.
+          </li>
+          <li>
+            Open a dedicated shared-layer typing PR for
+            `adapter/component/index.ts`, `adapter/vxe-table.ts`,
+            `layouts/basic.vue`, and `store/auth.ts`.
+          </li>
+          <li>
+            Continue file-size convergence in `system-management` and the
+            remaining large `specimen-workflow` modules.
+          </li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

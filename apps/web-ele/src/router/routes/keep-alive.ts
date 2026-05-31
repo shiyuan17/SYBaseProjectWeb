@@ -25,16 +25,13 @@ export function applyKeepAliveToTabRoutes<const TRoute extends RouteLike>(
     const children = route.children
       ? applyKeepAliveToTabRoutes(route.children)
       : route.children;
-    const meta = route.meta
-      ? {
-          ...route.meta,
-          ...(shouldKeepAlive(route)
-            ? { keepAlive: route.meta.keepAlive ?? true }
-            : {}),
-        }
-      : shouldKeepAlive(route)
-        ? { keepAlive: true }
-        : undefined;
+    let meta = route.meta ? { ...route.meta } : undefined;
+    if (shouldKeepAlive(route)) {
+      meta = {
+        ...meta,
+        keepAlive: route.meta?.keepAlive ?? true,
+      };
+    }
 
     return {
       ...route,

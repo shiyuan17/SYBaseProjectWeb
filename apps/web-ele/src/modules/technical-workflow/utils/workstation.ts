@@ -57,11 +57,12 @@ export function buildWorkstationQueueItems(
         nextTaskType && nextTaskType === task.taskType ? '下一工位待衔接' : '',
         task.remarks ? '有备注' : '',
       ]);
-      const alertLevel: WorkstationQueueItem['alertLevel'] = task.timedOut
-        ? 'danger'
-        : task.taskStatus === 'IN_PROGRESS'
-          ? 'warning'
-          : 'info';
+      let alertLevel: WorkstationQueueItem['alertLevel'] = 'info';
+      if (task.timedOut) {
+        alertLevel = 'danger';
+      } else if (task.taskStatus === 'IN_PROGRESS') {
+        alertLevel = 'warning';
+      }
 
       return {
         alertLevel,

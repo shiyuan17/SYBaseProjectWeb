@@ -25,7 +25,8 @@
 9. `docs/COMPATIBILITY_RULES.md`
 10. `docs/GIT_RULES.md`
 11. `docs/RELEASE.md`
-12. 任务涉及模块文档与现有源码
+12. `docs/AI-CODE-HEALTH.md`
+13. 任务涉及模块文档与现有源码
 
 ### 2. 规范映射表
 
@@ -41,6 +42,7 @@
 | 浏览器、国产环境、导出打印、字体与降级策略 | `docs/COMPATIBILITY_RULES.md` |
 | 分支、提交、PR、合并协作 | `docs/GIT_RULES.md` |
 | 环境、构建、发布与回滚 | `docs/RELEASE.md` |
+| AI 生成代码健康基线 | `docs/AI-CODE-HEALTH.md` |
 
 ### 3. 后端联动检查
 
@@ -158,3 +160,4 @@
 - [docs/COMPATIBILITY_RULES.md](./docs/COMPATIBILITY_RULES.md)
 - [docs/GIT_RULES.md](./docs/GIT_RULES.md)
 - [docs/RELEASE.md](./docs/RELEASE.md)
+- [docs/AI-CODE-HEALTH.md](./docs/AI-CODE-HEALTH.md)

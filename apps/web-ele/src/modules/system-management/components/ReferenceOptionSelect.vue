@@ -5,6 +5,11 @@ import { computed, ref, watch } from 'vue';
 
 import { ElAutocomplete } from 'element-plus';
 
+type ReferenceOptionSuggestion = {
+  label: string;
+  value: string;
+};
+
 const props = withDefaults(
   defineProps<{
     clearable?: boolean;
@@ -27,7 +32,7 @@ const emit = defineEmits<{
 
 const inputValue = ref('');
 
-const normalizedOptions = computed(() =>
+const normalizedOptions = computed<ReferenceOptionSuggestion[]>(() =>
   props.options.map((option) => ({
     label: option.label.trim(),
     value: option.value.trim(),
@@ -92,8 +97,8 @@ function handleInput(value: number | string) {
   emitValue(normalizedValue);
 }
 
-function handleSelect(option: Record<string, any>) {
-  const normalizedOption = option as WorkflowReferenceOption;
+function handleSelect(option: Record<string, unknown>) {
+  const normalizedOption = option as ReferenceOptionSuggestion;
   inputValue.value = normalizedOption.label;
   emitValue(normalizedOption.value);
 }

@@ -17,6 +17,9 @@ const emit = defineEmits<{
   open: [];
 }>();
 
+const actionArrowClass =
+  'text-base transition-transform duration-300 group-hover:translate-x-0.5';
+
 function handleOpen() {
   emit('open');
 }
@@ -113,11 +116,7 @@ const accentClasses = getAccentClasses(props.metric.accent);
         @click="handleOpen"
       >
         <span>{{ actionLabel }}</span>
-        <span
-          aria-hidden="true"
-          class="text-base transition-transform duration-300 group-hover:translate-x-0.5"
-          >→</span
-        >
+        <span aria-hidden="true" :class="actionArrowClass">→</span>
       </button>
     </div>
   </article>

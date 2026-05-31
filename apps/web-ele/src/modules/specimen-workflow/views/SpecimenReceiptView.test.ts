@@ -7,6 +7,7 @@ import SpecimenReceiptView from './SpecimenReceiptView.vue';
 const {
   directReceiveSpecimensMock,
   listPendingReceiptsMock,
+  messageWarningMock,
   receiveSpecimensMock,
   reprintApplicationFormMock,
 } = vi.hoisted(() => ({
@@ -17,6 +18,7 @@ const {
     size: 20,
     total: 0,
   })),
+  messageWarningMock: vi.fn(),
   receiveSpecimensMock: vi.fn(),
   reprintApplicationFormMock: vi.fn(),
 }));
@@ -64,7 +66,7 @@ vi.mock('element-plus', async () => {
     await vi.importActual<typeof import('element-plus')>('element-plus');
   return {
     ...actual,
-    ElMessage: { success: vi.fn(), warning: vi.fn() },
+    ElMessage: { success: vi.fn(), warning: messageWarningMock },
   };
 });
 
@@ -103,6 +105,61 @@ describe('SpecimenReceiptView', () => {
     await nextTick();
 
     expect(container.textContent).not.toContain('资源不存在');
+
+    app.unmount();
+  });
+
+  it('shows a warning when application form reprint fails', async () => {
+    reprintApplicationFormMock.mockRejectedValueOnce(new Error('打印服务异常'));
+    listPendingReceiptsMock.mockResolvedValueOnce({
+      items: [
+        {
+          applicationId: 'APP-001',
+          applicationNo: 'BL-001',
+          barcode: 'BC-001',
+          checkedInAt: null,
+          checkedInByName: null,
+          checkInStatus: 'NOT_CHECKED_IN',
+          latestTrackingAt: null,
+          pathologyNo: 'PATH-001',
+          qualityCheckResult: null,
+          qualityIssueCodes: [],
+          receiptReason: null,
+          receiptRemarks: null,
+          receiptStatus: 'PENDING',
+          specimenId: 'SPEC-001',
+          specimenName: '胃组织',
+          specimenNo: 'SP-001',
+          specimenStatus: 'IN_TRANSIT',
+          transportNo: 'TO-001',
+          transportOrderId: 'TO-ID-001',
+          transportStatus: 'PENDING',
+          submittedAt: '2026-05-31T10:00:00',
+          transportBatchAbnormalFlag: false,
+        },
+      ],
+      page: 1,
+      size: 20,
+      total: 1,
+    } as any);
+
+    const { app, container } = mountView();
+    await nextTick();
+    await Promise.resolve();
+    await nextTick();
+
+    const reprintButton = [...container.querySelectorAll('button')].find(
+      (item) => item.textContent?.includes('补打申请单'),
+    );
+    expect(reprintButton).toBeTruthy();
+
+    reprintButton?.dispatchEvent(new MouseEvent('click'));
+    await Promise.resolve();
+    await nextTick();
+
+    expect(messageWarningMock).toHaveBeenCalledWith(
+      '申请单补打印失败，请稍后重试',
+    );
 
     app.unmount();
   });

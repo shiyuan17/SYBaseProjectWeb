@@ -23,8 +23,6 @@ import {
   ElOption,
   ElPagination,
   ElSelect,
-  ElTable,
-  ElTableColumn,
   ElTag,
 } from 'element-plus';
 
@@ -36,6 +34,7 @@ import {
   listPendingTransportOrders,
   printTransportOrder,
 } from '../api/specimen-workflow-service';
+import TransportHandoverOrderTable from '../components/TransportHandoverOrderTable.vue';
 import TransportOrderCreateDialog from '../components/TransportOrderCreateDialog.vue';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { DEFAULT_PAGE_SIZE, TRANSPORT_STATUS_OPTIONS } from '../constants';
@@ -44,6 +43,15 @@ import {
   formatNullable,
   formatTransportStatus,
 } from '../utils/format';
+import {
+  buildPendingTransportOrderQuery,
+  buildPrintTransportOrderRequest,
+  buildTransportOrderHandoverRequest,
+  createDefaultTransportHandoverFormState,
+  createDefaultTransportPrintFormState,
+  normalizeRouteQueryValue,
+  resolveTargetTransportOrders,
+} from '../utils/transport-handover';
 
 withDefaults(
   defineProps<{
@@ -88,19 +96,20 @@ const createDialogApplicationNo = computed(() =>
 );
 
 const printDialogVisible = ref(false);
-const printForm = reactive({
-  operatorName: userStore.userInfo?.realName ?? '',
-  operatorUserId: userStore.userInfo?.userId ?? '',
-  terminalCode: '',
-});
+const printForm = reactive(
+  createDefaultTransportPrintFormState(
+    userStore.userInfo?.realName ?? '',
+    userStore.userInfo?.userId ?? '',
+  ),
+);
 
 const handoverDialogVisible = ref(false);
-const handoverForm = reactive({
-  receiverUserId: userStore.userInfo?.userId ?? '',
-  receiverUserName: userStore.userInfo?.realName ?? '',
-  remarks: '',
-  terminalCode: '',
-});
+const handoverForm = reactive(
+  createDefaultTransportHandoverFormState(
+    userStore.userInfo?.realName ?? '',
+    userStore.userInfo?.userId ?? '',
+  ),
+);
 
 const printDialogTitle = computed(() => {
   if (selectedRows.value.length > 1) {
@@ -120,29 +129,12 @@ const handoverDialogTitle = computed(() => {
     : '交接转运单';
 });
 
-function normalizeRouteQueryValue(value: unknown) {
-  if (typeof value === 'string') {
-    return value;
-  }
-  if (Array.isArray(value)) {
-    return typeof value[0] === 'string' ? value[0] : '';
-  }
-  return '';
-}
-
 async function loadOrders() {
   loading.value = true;
   try {
-    const result = await listPendingTransportOrders({
-      applicationId: filters.applicationId.trim() || undefined,
-      dateFrom: filters.dateRange[0] || undefined,
-      dateTo: filters.dateRange[1] || undefined,
-      departmentId: filters.departmentId.trim() || undefined,
-      page: filters.page,
-      size: filters.size,
-      specimenNo: filters.specimenNo.trim() || undefined,
-      status: filters.status || undefined,
-    });
+    const result = await listPendingTransportOrders(
+      buildPendingTransportOrderQuery(filters),
+    );
     orders.value = result.items;
     total.value = result.total;
   } catch (error) {
@@ -177,18 +169,25 @@ function openCreateDialog() {
 
 function openPrintDialog(order: PendingTransportOrderItem) {
   activeOrder.value = order;
-  printForm.operatorName = userStore.userInfo?.realName ?? '';
-  printForm.operatorUserId = userStore.userInfo?.userId ?? '';
-  printForm.terminalCode = '';
+  Object.assign(
+    printForm,
+    createDefaultTransportPrintFormState(
+      userStore.userInfo?.realName ?? '',
+      userStore.userInfo?.userId ?? '',
+    ),
+  );
   printDialogVisible.value = true;
 }
 
 function openHandoverDialog(order: PendingTransportOrderItem) {
   activeOrder.value = order;
-  handoverForm.receiverUserId = userStore.userInfo?.userId ?? '';
-  handoverForm.receiverUserName = userStore.userInfo?.realName ?? '';
-  handoverForm.remarks = '';
-  handoverForm.terminalCode = '';
+  Object.assign(
+    handoverForm,
+    createDefaultTransportHandoverFormState(
+      userStore.userInfo?.realName ?? '',
+      userStore.userInfo?.userId ?? '',
+    ),
+  );
   handoverDialogVisible.value = true;
 }
 
@@ -206,15 +205,11 @@ function openSelectedHandoverDialog() {
   }
 }
 
-function getTargetOrders() {
-  if (selectedRows.value.length > 0) {
-    return selectedRows.value;
-  }
-  return activeOrder.value ? [activeOrder.value] : [];
-}
-
 async function submitPrint() {
-  const targets = getTargetOrders();
+  const targets = resolveTargetTransportOrders(
+    selectedRows.value,
+    activeOrder.value,
+  );
   if (targets.length === 0) {
     return;
   }
@@ -226,11 +221,10 @@ async function submitPrint() {
   printLoading.value = true;
   try {
     for (const order of targets) {
-      latestOrder.value = await printTransportOrder(order.id, {
-        operatorName: printForm.operatorName.trim(),
-        operatorUserId: printForm.operatorUserId.trim() || null,
-        terminalCode: printForm.terminalCode.trim() || null,
-      });
+      latestOrder.value = await printTransportOrder(
+        order.id,
+        buildPrintTransportOrderRequest(printForm),
+      );
     }
     printDialogVisible.value = false;
     selectedRowKeys.value = [];
@@ -244,7 +238,10 @@ async function submitPrint() {
 }
 
 async function submitHandover() {
-  const targets = getTargetOrders();
+  const targets = resolveTargetTransportOrders(
+    selectedRows.value,
+    activeOrder.value,
+  );
   if (targets.length === 0) {
     return;
   }
@@ -256,12 +253,10 @@ async function submitHandover() {
   handoverLoading.value = true;
   try {
     for (const order of targets) {
-      latestOrder.value = await handoverTransportOrder(order.id, {
-        receiverUserId: handoverForm.receiverUserId.trim() || null,
-        receiverUserName: handoverForm.receiverUserName.trim(),
-        remarks: handoverForm.remarks.trim() || null,
-        terminalCode: handoverForm.terminalCode.trim() || null,
-      });
+      latestOrder.value = await handoverTransportOrder(
+        order.id,
+        buildTransportOrderHandoverRequest(handoverForm),
+      );
     }
     handoverDialogVisible.value = false;
     selectedRowKeys.value = [];
@@ -276,10 +271,6 @@ async function submitHandover() {
 
 function handleTransportOrderCreated() {
   void loadOrders();
-}
-
-function canHandover(order: PendingTransportOrderItem) {
-  return ['PENDING', 'PRINTED'].includes(order.status);
 }
 
 function handleFilterDepartmentChange(
@@ -436,89 +427,13 @@ watch(
             </ElButton>
           </div>
 
-          <ElTable
-            v-loading="loading"
-            :data="orders"
-            border
+          <TransportHandoverOrderTable
+            :loading="loading"
+            :orders="orders"
+            @handover="openHandoverDialog"
+            @print="openPrintDialog"
             @selection-change="handleSelectionChange"
-          >
-            <ElTableColumn type="selection" width="38" />
-            <ElTableColumn
-              label="转运单号"
-              min-width="160"
-              prop="transportOrderNo"
-            />
-            <ElTableColumn
-              label="申请单号"
-              min-width="150"
-              prop="applicationNo"
-            />
-            <ElTableColumn label="患者姓名" min-width="120">
-              <template #default="{ row }">
-                {{ formatNullable(row.patientName) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="交接科室" min-width="160">
-              <template #default="{ row }">
-                {{ formatNullable(row.handoverDepartmentName) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="接收科室" min-width="160">
-              <template #default="{ row }">
-                {{ formatNullable(row.receiverDepartmentName) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="状态" min-width="120">
-              <template #default="{ row }">
-                <ElTag
-                  :type="row.status === 'HANDED_OVER' ? 'success' : 'warning'"
-                >
-                  {{ formatTransportStatus(row.status) }}
-                </ElTag>
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="待转运时间" min-width="180">
-              <template #default="{ row }">
-                {{ formatDateTime(row.toBeTransportedAt) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="交接时间" min-width="180">
-              <template #default="{ row }">
-                {{ formatDateTime(row.handedOverAt) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="标本条码" min-width="220">
-              <template #default="{ row }">
-                <div class="flex flex-wrap gap-1">
-                  <ElTag
-                    v-for="barcode in row.specimenBarcodes"
-                    :key="barcode"
-                    effect="plain"
-                    type="info"
-                  >
-                    {{ barcode }}
-                  </ElTag>
-                </div>
-              </template>
-            </ElTableColumn>
-            <ElTableColumn fixed="right" label="操作" min-width="180">
-              <template #default="{ row }">
-                <div class="flex flex-wrap gap-2">
-                  <ElButton link type="primary" @click="openPrintDialog(row)">
-                    打印
-                  </ElButton>
-                  <ElButton
-                    :disabled="!canHandover(row)"
-                    link
-                    type="success"
-                    @click="openHandoverDialog(row)"
-                  >
-                    交接
-                  </ElButton>
-                </div>
-              </template>
-            </ElTableColumn>
-          </ElTable>
+          />
 
           <div class="mt-4 flex justify-end">
             <ElPagination

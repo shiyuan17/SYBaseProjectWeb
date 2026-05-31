@@ -11,6 +11,13 @@ defineOptions({ name: 'Register' });
 
 const loading = ref(false);
 
+interface RegisterFormValues {
+  agreePolicy: boolean;
+  confirmPassword: string;
+  password: string;
+  username: string;
+}
+
 const formSchema = computed((): VbenFormSchema[] => {
   return [
     {
@@ -82,7 +89,8 @@ const formSchema = computed((): VbenFormSchema[] => {
 });
 
 function handleSubmit(value: Recordable<any>) {
-  void value;
+  const formValues = value as RegisterFormValues;
+  void formValues;
 }
 </script>
 

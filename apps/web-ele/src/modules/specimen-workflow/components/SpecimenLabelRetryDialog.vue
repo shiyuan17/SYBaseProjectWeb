@@ -1,14 +1,10 @@
 <script setup lang="ts">
 import type {
-  ApplicationDetailView,
   LabelPrintRetryResult,
-  LatestSpecimenRegistrationResult,
   SpecimenRegisterResult,
 } from '../types/specimen-workflow';
 
-import { computed, reactive, ref, watch } from 'vue';
-
-import { useAccessStore, useUserStore } from '@vben/stores';
+import { toRef } from 'vue';
 
 import {
   ElAlert,
@@ -20,17 +16,10 @@ import {
   ElForm,
   ElFormItem,
   ElInput,
-  ElMessage,
   ElTag,
 } from 'element-plus';
 
-import {
-  getApplicationDetail,
-  getLatestRegistrationResult,
-  retryLabelPrint,
-} from '../api/specimen-workflow-service';
-import { M2_PERMISSION_CODES } from '../constants';
-import { getWorkflowPageErrorMessage } from '../utils/error';
+import { useSpecimenLabelRetryDialog } from '../composables/useSpecimenLabelRetryDialog';
 import { formatCurrentNode, formatNullable } from '../utils/format';
 
 const props = withDefaults(
@@ -56,172 +45,31 @@ const emit = defineEmits<{
   'update:modelValue': [boolean];
 }>();
 
-const accessStore = useAccessStore();
-const userStore = useUserStore();
-
-const accessCodeSet = computed(() => new Set(accessStore.accessCodes));
-const canQueryApplicationDetail = computed(() =>
-  accessCodeSet.value.has(M2_PERMISSION_CODES.APPLICATION_DETAIL_QUERY),
-);
-
-const currentUserName = computed(() => userStore.userInfo?.realName ?? '');
-const currentUserId = computed(() => userStore.userInfo?.userId ?? '');
-
-const dialogVisible = computed({
-  get: () => props.modelValue,
-  set: (value: boolean) => {
-    emit('update:modelValue', value);
-  },
+const {
+  applicationDetail,
+  canQueryApplicationDetail,
+  closeDialog,
+  currentApplicationId,
+  currentRetryResult,
+  detailStatusType,
+  dialogVisible,
+  hasFailedLabels,
+  latestRegisterResult,
+  loadingDetail,
+  loadingResult,
+  pageError,
+  refreshDialog,
+  retryForm,
+  retryingLabelPrint,
+  submitRetryLabelPrint,
+} = useSpecimenLabelRetryDialog({
+  applicationId: toRef(props, 'applicationId'),
+  modelValue: toRef(props, 'modelValue'),
+  onRetried: (payload) => emit('retried', payload),
+  registerResult: toRef(props, 'registerResult'),
+  retryResult: toRef(props, 'retryResult'),
+  updateModelValue: (value: boolean) => emit('update:modelValue', value),
 });
-
-const applicationDetail = ref<ApplicationDetailView | null>(null);
-const currentApplicationId = ref('');
-const latestRegisterResult = ref<
-  LatestSpecimenRegistrationResult | null | SpecimenRegisterResult
->(null);
-const currentRetryResult = ref<LabelPrintRetryResult | null>(null);
-const loadingDetail = ref(false);
-const loadingResult = ref(false);
-const pageError = ref('');
-const retryingLabelPrint = ref(false);
-
-const retryForm = reactive({
-  operatorName: currentUserName.value,
-  operatorUserId: currentUserId.value,
-  printerCode: '',
-  remarks: '',
-  terminalCode: '',
-});
-
-function resetRetryForm() {
-  Object.assign(retryForm, {
-    operatorName: currentUserName.value,
-    operatorUserId: currentUserId.value,
-    printerCode: '',
-    remarks: '',
-    terminalCode: '',
-  });
-}
-
-function resetDialogState() {
-  pageError.value = '';
-  applicationDetail.value = null;
-  currentApplicationId.value = props.applicationId.trim();
-  latestRegisterResult.value = props.registerResult;
-  currentRetryResult.value = props.retryResult ?? null;
-  resetRetryForm();
-}
-
-async function loadApplicationDetail() {
-  if (!currentApplicationId.value) {
-    return;
-  }
-  if (!canQueryApplicationDetail.value) {
-    return;
-  }
-
-  loadingDetail.value = true;
-  pageError.value = '';
-  try {
-    applicationDetail.value = await getApplicationDetail(
-      currentApplicationId.value,
-    );
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
-  } finally {
-    loadingDetail.value = false;
-  }
-}
-
-async function loadLatestRegisterResult() {
-  if (!currentApplicationId.value) {
-    return;
-  }
-  loadingResult.value = true;
-  try {
-    const result = await getLatestRegistrationResult(
-      currentApplicationId.value,
-    );
-    latestRegisterResult.value = result.labelPrintBatchNo
-      ? result
-      : props.registerResult;
-  } catch (error) {
-    if (!props.registerResult) {
-      pageError.value = getWorkflowPageErrorMessage(error);
-    }
-    latestRegisterResult.value = props.registerResult;
-  } finally {
-    loadingResult.value = false;
-  }
-}
-
-async function submitRetryLabelPrint() {
-  const batchNo = latestRegisterResult.value?.labelPrintBatchNo?.trim();
-  if (!batchNo) {
-    return;
-  }
-  if (!retryForm.operatorName.trim()) {
-    ElMessage.warning('当前登录人信息缺失');
-    return;
-  }
-  if (!retryForm.printerCode.trim()) {
-    ElMessage.warning('请填写打印机编码');
-    return;
-  }
-
-  retryingLabelPrint.value = true;
-  pageError.value = '';
-  try {
-    const result = await retryLabelPrint(batchNo, {
-      operatorName: retryForm.operatorName.trim(),
-      operatorUserId: retryForm.operatorUserId.trim() || null,
-      printerCode: retryForm.printerCode.trim(),
-      remarks: retryForm.remarks.trim() || null,
-      terminalCode: retryForm.terminalCode.trim() || null,
-    });
-    currentRetryResult.value = result;
-    emit('retried', {
-      applicationId: currentApplicationId.value,
-      retryResult: result,
-    });
-    ElMessage.success('标签补打请求已提交');
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
-  } finally {
-    retryingLabelPrint.value = false;
-  }
-}
-
-function closeDialog() {
-  dialogVisible.value = false;
-}
-
-const detailStatusType = computed(() =>
-  applicationDetail.value?.abnormalFlag ? 'danger' : 'success',
-);
-
-const hasFailedLabels = computed(
-  () =>
-    latestRegisterResult.value?.specimens.some(
-      (item) => item.labelPrintStatus === 'FAILED',
-    ) ?? false,
-);
-
-async function refreshDialog() {
-  await Promise.all([loadApplicationDetail(), loadLatestRegisterResult()]);
-}
-
-watch(
-  () => [props.applicationId, props.modelValue, props.retryResult],
-  async ([, visible]) => {
-    if (!visible) {
-      return;
-    }
-    resetDialogState();
-    await refreshDialog();
-  },
-  { immediate: true },
-);
 </script>
 
 <template>
