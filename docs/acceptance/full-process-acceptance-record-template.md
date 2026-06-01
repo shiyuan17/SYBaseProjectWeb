@@ -28,9 +28,9 @@
 
 关联材料：
 
-- 审查报告：`docs/full-process-audit-review.html`
-- 角色可达性清单：`docs/full-process-role-accessibility-checklist.md`
-- PR 说明：`docs/full-process-pr-description.md`
+- 审查报告：`docs/reviews/full-process-audit-review.html`
+- 角色可达性清单：`docs/acceptance/full-process-role-accessibility-checklist.md`
+- PR 说明：`docs/acceptance/full-process-pr-description.md`
 - 问题台账：`D:\Github\JW\SYBaseProject\docs\reports\phase1-issue-ledger-template-20260525.md`
 
 ## 3. 本地已验证基线

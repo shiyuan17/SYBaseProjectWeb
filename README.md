@@ -8,7 +8,7 @@
 - 为 AI 与人工协作提供同一套执行语境
 - 为后续脚手架、模块开发、接口联调和发布验收提供唯一规范来源
 
-当前工程保留 Vben monorepo 结构，目标应用为 `apps/web-ele`，本地 Mock 服务为 `apps/backend-mock`。项目文档仍以本仓库 `AGENTS.md` 与 `docs/` 下的规范为准。
+当前工程保留 Vben monorepo 结构，目标应用为 `apps/web-ele`，本地 Mock 服务为 `apps/backend-mock`。项目文档仍以本仓库 `AGENTS.md` 与 `docs/` 下的规范为准，文档导航入口见 [docs/README.md](./docs/README.md)。
 
 ## 技术栈
 
@@ -115,11 +115,12 @@ pnpm linear:pull
 
 开发环境默认保留 `apps/backend-mock`，`apps/web-ele/.env.development` 中 `VITE_NITRO_MOCK=true`，用于本地登录、菜单和基础页面联调。
 
-数据库联调与表结构资料统一归档在 [docs/database](/D:/Github/JW/SYBaseProjectWeb/docs/database)，当前已整理 [表信息整理.sql](/D:/Github/JW/SYBaseProjectWeb/docs/database/表信息整理.sql)。`scripts/` 目录只放可执行脚本，不放纯资料型 SQL。
+数据库联调与表结构资料统一归档在 [docs/reference/database/README.md](./docs/reference/database/README.md)。`scripts/` 目录只放可执行脚本，不放纯资料型 SQL。
 
 ## 规范文档索引
 
 - [AGENTS.md](./AGENTS.md)
+- [docs/README.md](./docs/README.md)
 - [docs/PROJECT_DIRECTORY.md](./docs/PROJECT_DIRECTORY.md)
 - [docs/CODING_RULES.md](./docs/CODING_RULES.md)
 - [docs/VUE_TS_RULES.md](./docs/VUE_TS_RULES.md)

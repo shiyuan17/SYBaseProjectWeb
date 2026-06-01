@@ -66,8 +66,8 @@
 
 - `apps/web-ele/src/api/core/menu-mapper.ts`
 - `apps/web-ele/src/api/core/menu.test.ts`
-- `docs/full-process-role-accessibility-checklist.md`
-- `docs/full-process-audit-review.html`
+- `docs/acceptance/full-process-role-accessibility-checklist.md`
+- `docs/reviews/full-process-audit-review.html`
 
 ## 用户影响
 
@@ -141,8 +141,8 @@ pnpm exec vitest run apps/web-ele/src/router/routes/modules/m6.test.ts apps/web-
 - `M4` 医嘱工作台截图
 - `M6` 入口页、集成任务页、收费页、历史页截图
 - 角色菜单可见性截图
-- 审查报告链接：`docs/full-process-audit-review.html`
-- 角色可达性清单：`docs/full-process-role-accessibility-checklist.md`
+- 审查报告链接：`docs/reviews/full-process-audit-review.html`
+- 角色可达性清单：`docs/acceptance/full-process-role-accessibility-checklist.md`
 
 ## 合并前检查
 

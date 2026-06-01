@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>临床送检对比分析 - SYBaseProjectWeb vs BlSysNew</title>
+    <style>
+      :root {
+        --bg: #f4f7fb;
+        --paper: rgba(255, 255, 255, 0.96);
+        --ink: #172033;
+        --muted: #5d6b7c;
+        --line: #dbe4ef;
+        --primary: #0f766e;
+        --primary-soft: #dcf5f1;
+        --blue: #2563eb;
+        --blue-soft: #e8f0ff;
+        --amber: #b45309;
+        --amber-soft: #fff1db;
+        --danger: #b42318;
+        --danger-soft: #ffe9e6;
+        --ok: #15803d;
+        --ok-soft: #e6f8ec;
+        --shadow: 0 18px 48px rgba(20, 34, 55, 0.1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(circle at top left, rgba(15, 118, 110, 0.12), transparent 28%),
+          radial-gradient(circle at top right, rgba(37, 99, 235, 0.1), transparent 24%),
+          linear-gradient(180deg, #edf3f9 0%, var(--bg) 42%, #f8fbfe 100%);
+        font-family: 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', Arial, sans-serif;
+        line-height: 1.7;
+      }
+
+      main {
+        width: min(1280px, calc(100% - 40px));
+        margin: 0 auto;
+        padding: 28px 0 56px;
+      }
+
+      .hero,
+      section {
+        border: 1px solid rgba(95, 123, 157, 0.18);
+        border-radius: 22px;
+        background: var(--paper);
+        box-shadow: var(--shadow);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.45fr) minmax(300px, 0.82fr);
+        gap: 22px;
+        padding: 30px;
+      }
+
+      .hero-side {
+        display: grid;
+        gap: 14px;
+      }
+
+      .metric {
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 16px 18px;
+        background: #f9fbfd;
+      }
+
+      .metric strong {
+        display: block;
+        font-size: 30px;
+        line-height: 1.1;
+      }
+
+      .metric span {
+        display: block;
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .eyebrow {
+        color: var(--primary);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3,
+      h4,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        margin-top: 12px;
+        font-size: clamp(30px, 4.6vw, 52px);
+        line-height: 1.2;
+      }
+
+      h2 {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 18px;
+        font-size: 26px;
+      }
+
+      h2::before {
+        display: inline-block;
+        width: 10px;
+        height: 28px;
+        border-radius: 999px;
+        background: var(--primary);
+        content: '';
+      }
+
+      h3 {
+        font-size: 18px;
+        line-height: 1.35;
+      }
+
+      h4 {
+        margin-bottom: 8px;
+        font-size: 14px;
+      }
+
+      p {
+        margin-top: 10px;
+        color: var(--muted);
+      }
+
+      section {
+        margin-top: 22px;
+        padding: 28px;
+      }
+
+      .lead {
+        max-width: 920px;
+        font-size: 16px;
+      }
+
+      .tag-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 18px;
+      }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 3px 10px;
+        border-radius: 999px;
+        background: var(--primary-soft);
+        color: var(--primary);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .tag.blue {
+        background: var(--blue-soft);
+        color: var(--blue);
+      }
+
+      .tag.warn {
+        background: var(--amber-soft);
+        color: var(--amber);
+      }
+
+      .tag.danger {
+        background: var(--danger-soft);
+        color: var(--danger);
+      }
+
+      .tag.ok {
+        background: var(--ok-soft);
+        color: var(--ok);
+      }
+
+      .grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      .grid-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .grid-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .card,
+      .lane,
+      .note,
+      .change-item {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: #fbfdff;
+        padding: 18px;
+      }
+
+      .note {
+        margin-top: 16px;
+      }
+
+      .note strong {
+        display: block;
+        margin-bottom: 6px;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        border-radius: 16px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 14px 16px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: #eaf2f8;
+        color: #31423f;
+        font-weight: 800;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      ul {
+        margin: 12px 0 0;
+        padding-left: 20px;
+      }
+
+      li {
+        margin: 6px 0;
+      }
+
+      .flow {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 12px;
+      }
+
+      .step {
+        position: relative;
+        min-height: 220px;
+        overflow: hidden;
+      }
+
+      .step::after {
+        position: absolute;
+        right: -18px;
+        bottom: -26px;
+        color: rgba(15, 118, 110, 0.08);
+        font-size: 96px;
+        font-weight: 800;
+        content: attr(data-no);
+      }
+
+      .step ul {
+        position: relative;
+        z-index: 1;
+      }
+
+      .bullet {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .footer {
+        margin-top: 18px;
+        color: var(--muted);
+        font-size: 13px;
+        text-align: center;
+      }
+
+      code {
+        padding: 0.15rem 0.35rem;
+        border-radius: 6px;
+        background: #eef4ff;
+        color: #1849a9;
+      }
+
+      @media (max-width: 960px) {
+        .hero,
+        .grid-2,
+        .grid-3,
+        .flow {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 640px) {
+        main {
+          width: min(100% - 24px, 1280px);
+          padding-top: 24px;
+        }
+
+        section,
+        .hero {
+          padding: 20px;
+          border-radius: 16px;
+        }
+
+        h1 {
+          font-size: 30px;
+        }
+
+        h2 {
+          font-size: 22px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header class="hero">
+        <div>
+          <div class="eyebrow">Clinical Submission Comparison</div>
+          <h1>临床送检对比分析</h1>
+          <p class="lead">
+            以当前仓库 `SYBaseProjectWeb` 的临床送检工作流为主线，对比旧项目 `BlSysNew`
+            的申请管理、标本接收、检查登记与新检查登记入口，重点说明流程组织、功能覆盖、操作方式和路由入口的差异。
+          </p>
+          <div class="tag-row">
+            <span class="tag ok">当前仓库：工作台化</span>
+            <span class="tag blue">旧项目：单页 CRUD</span>
+            <span class="tag">对比范围：主链 + 新登记</span>
+            <span class="tag warn">结论：当前仓库流程更完整</span>
+          </div>
+        </div>
+        <aside class="hero-side" aria-label="摘要">
+          <div class="metric">
+            <strong>4 + 4</strong>
+            <span>当前仓库 4 个主入口；旧项目 4 个可见入口（含新检查登记）。</span>
+          </div>
+          <div class="metric">
+            <strong>页签 / 抽屉</strong>
+            <span>当前仓库以上下文、页签、抽屉、兼容路由承接流程。</span>
+          </div>
+          <div class="metric">
+            <strong>表单 / 弹窗</strong>
+            <span>旧项目以单页表单、对话框和本地数据库直操作为主。</span>
+          </div>
+        </aside>
+      </header>
+
+      <section>
+        <h2>总览</h2>
+        <div class="grid grid-3">
+          <div class="card">
+            <h3>SYBaseProjectWeb</h3>
+            <p>将临床送检收敛为 `申请与登记`、`固定与转运`、`病理接收`、`追踪与异常` 四个连续工作台，并保留兼容路由。</p>
+          </div>
+          <div class="card">
+            <h3>BlSysNew</h3>
+            <p>以 `申请管理`、`标本接收`、`检查登记`、`新检查登记` 四个独立页面承载临床送检，操作更偏手工填表与本地 CRUD。</p>
+          </div>
+          <div class="card">
+            <h3>核心差异</h3>
+            <p>当前仓库强调上下文传递、追踪闭环和操作约束；旧项目强调快速录入、局部维护和即时结果回显。</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>流程结构对比</h2>
+        <div class="flow">
+          <article class="card step" data-no="01">
+            <span class="tag">申请与登记</span>
+            <h3>当前仓库</h3>
+            <ul>
+              <li>申请列表与登记工作台合并。</li>
+              <li>支持上下文带入、第三方导入、追踪跳转。</li>
+              <li>申请与标本在同一工作流中连续处理。</li>
+            </ul>
+          </article>
+          <article class="card step" data-no="02">
+            <span class="tag blue">固定与转运</span>
+            <h3>当前仓库</h3>
+            <ul>
+              <li>固定核对、条码绑定、标本确认、入库、转运拆成子页签。</li>
+              <li>固定和转运之间有明确状态约束。</li>
+              <li>旧入口通过兼容路由保留。</li>
+            </ul>
+          </article>
+          <article class="card step" data-no="03">
+            <span class="tag ok">病理接收</span>
+            <h3>当前仓库</h3>
+            <ul>
+              <li>支持待接收分组、转运单接收和条码直收。</li>
+              <li>接收结果、异常和补打印有明确承接位。</li>
+              <li>结果面板与接收表单分离。</li>
+            </ul>
+          </article>
+          <article class="card step" data-no="04">
+            <span class="tag warn">追踪与异常</span>
+            <h3>当前仓库</h3>
+            <ul>
+              <li>申请单和标本双视角追踪。</li>
+              <li>展示核对记录、异常说明和时间线。</li>
+              <li>把修正入口说明收敛到现有管理能力中。</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <h2>功能对比</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>维度</th>
+                <th>SYBaseProjectWeb</th>
+                <th>BlSysNew</th>
+                <th>结论</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>申请入口</td>
+                <td>申请管理与登记工作台联动，支持上下文带入和第三方导入。</td>
+                <td>申请管理为独立 CRUD 页，导入按钮仍是占位提示。</td>
+                <td>当前仓库更流程化，旧项目更偏录入型。</td>
+              </tr>
+              <tr>
+                <td>标本登记</td>
+                <td>围绕登记、贴签、核验、异常处理组织工作台。</td>
+                <td>检查登记页直接录入患者、申请、标本、质控与打印。</td>
+                <td>当前仓库更适合连续岗位协作。</td>
+              </tr>
+              <tr>
+                <td>固定 / 转运</td>
+                <td>独立子页签承接固定核对、条码绑定、确认、入库、转运。</td>
+                <td>没有独立固定/转运工作台，主要通过登记页里的固定情况字段承接。</td>
+                <td>这是最明显的流程差异点。</td>
+              </tr>
+              <tr>
+                <td>病理接收</td>
+                <td>支持分组接收、直收、补打和结果回显。</td>
+                <td>支持批量接收、单条接收、合格/不合格判定。</td>
+                <td>两边都有接收能力，但当前仓库承接更细。</td>
+              </tr>
+              <tr>
+                <td>追踪与异常</td>
+                <td>按申请单 / 条码追踪，并显式展示核对记录。</td>
+                <td>没有独立追踪页，更多依赖列表与详情。</td>
+                <td>当前仓库闭环更完整。</td>
+              </tr>
+              <tr>
+                <td>新检查登记</td>
+                <td>以兼容路由承接旧入口，不再作为主流程。</td>
+                <td>有独立 `新检查登记` 页面，支持更多快速查询与录入字段。</td>
+                <td>旧项目保留了双入口并行的过渡形态。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2>操作方式对比</h2>
+        <div class="grid grid-2">
+          <div class="card">
+            <h3>SYBaseProjectWeb</h3>
+            <ul>
+              <li>以工作台、页签、抽屉、结果面板组织流程。</li>
+              <li>通过路由 query 传递 `applicationId`、`barcode`、`tab` 等上下文。</li>
+              <li>按钮和入口按权限码显隐，保留隐藏兼容路由。</li>
+              <li>更强调“先定位上下文，再做动作”。</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>BlSysNew</h3>
+            <ul>
+              <li>以表格 + 弹窗 + 本地数据库操作为主。</li>
+              <li>申请管理、检查登记、标本接收各自独立完成。</li>
+              <li>HIS 查询、打印、批量接收更多是页面内按钮动作。</li>
+              <li>更强调“直接录入、直接提交、直接回显”。</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="note">
+          <strong>一句话概括</strong>
+          当前仓库更像“按岗位推进的流程工作站”，旧项目更像“按表单推进的业务录入系统”。
+        </div>
+      </section>
+
+      <section>
+        <h2>入口与路由对比</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>SYBaseProjectWeb</th>
+                <th>BlSysNew</th>
+                <th>说明</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>/workflow/submission-registration</code></td>
+                <td><code>/register/apply</code> + <code>/register/record</code> + <code>/register/new-record</code></td>
+                <td>当前仓库把申请和登记合并成工作台；旧项目保留多个独立入口。</td>
+              </tr>
+              <tr>
+                <td><code>/workflow/fixation-transport</code></td>
+                <td>无对应独立页面</td>
+                <td>当前仓库新增了完整的固定/转运承接；旧项目只在登记页保留固定情况字段。</td>
+              </tr>
+              <tr>
+                <td><code>/workflow/pathology-receipt</code></td>
+                <td><code>/register/receive</code></td>
+                <td>两边都存在接收能力，但当前仓库更强调分组接收与直收分流。</td>
+              </tr>
+              <tr>
+                <td><code>/workflow/tracking-exception</code></td>
+                <td>无对应独立页面</td>
+                <td>当前仓库把追踪与异常独立出来，旧项目主要靠列表和详情承接。</td>
+              </tr>
+              <tr>
+                <td>兼容路由</td>
+                <td>无明显兼容层</td>
+                <td>当前仓库保留了旧入口别名和 redirect，降低切换成本。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2>结论与建议</h2>
+        <div class="grid grid-3">
+          <div class="card">
+            <h3>当前仓库优势</h3>
+            <p>流程更完整，入口更统一，适合做临床送检主链路的标准化和追踪闭环。</p>
+          </div>
+          <div class="card">
+            <h3>旧项目特点</h3>
+            <p>页面更直接，上手快，适合作为轻量录入系统，但流程约束和追踪能力较弱。</p>
+          </div>
+          <div class="card">
+            <h3>建议</h3>
+            <p>若要迁移或对齐，优先保留旧系统的直观录入优势，同时补齐当前仓库的固定、转运、追踪闭环。</p>
+          </div>
+        </div>
+
+        <div class="note">
+          <strong>源文件依据</strong>
+          当前仓库主要参考 `apps/web-ele/src/modules/specimen-workflow/*` 与 `docs/M1_M2_WORKFLOW_IMPLEMENTATION_PLAN.md`；
+          旧项目主要参考 `src/router.js`、`src/views/register/*` 与 `docs/FEATURE_LIST.md`。
+        </div>
+      </section>
+
+      <p class="footer">本文件为对比分析文档，不修改任何业务接口、权限、路由或数据库。</p>
+    </main>
+  </body>
+</html>
