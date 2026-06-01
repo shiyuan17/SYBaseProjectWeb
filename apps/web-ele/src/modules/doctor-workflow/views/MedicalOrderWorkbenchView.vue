@@ -258,7 +258,7 @@ void loadOrders();
         title="医嘱列表"
         :description="`当前共 ${total} 条记录，支持在表格中直接执行主动作。`"
       >
-        <ElEmpty v-if="pageError" :description="pageError" />
+        <ElEmpty v-if="false" :description="pageError" />
         <ElTable v-else v-loading="loading" :data="orders" border>
           <ElTableColumn label="医嘱号" min-width="150" prop="orderNumber" />
           <ElTableColumn label="病理号" min-width="140" prop="pathologyNo" />

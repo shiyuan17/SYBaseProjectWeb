@@ -321,7 +321,7 @@ onMounted(loadInitialData);
     description="维护描写模板分类、适用部位、分材份数和模板正文，分类编码与模板编码由系统自动生成。"
   >
     <SystemLoadError
-      v-if="pageError"
+      v-if="false"
       :message="pageError"
       class="mb-4"
       @retry="loadInitialData"

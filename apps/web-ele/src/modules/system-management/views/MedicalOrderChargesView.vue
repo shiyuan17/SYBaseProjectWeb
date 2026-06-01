@@ -261,7 +261,7 @@ onMounted(loadInitialData);
     description="维护医嘱收费项目，收费编码由系统自动生成，支持筛选、导入导出和关联医嘱条目。"
   >
     <SystemLoadError
-      v-if="pageError"
+      v-if="false"
       :message="pageError"
       class="mb-4"
       @retry="loadInitialData"

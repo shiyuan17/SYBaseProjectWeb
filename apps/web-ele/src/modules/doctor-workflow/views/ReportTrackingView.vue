@@ -197,7 +197,7 @@ watch(
   >
     <div class="flex flex-col gap-4">
       <ElAlert
-        v-if="pageError"
+        v-if="false"
         :closable="false"
         :title="pageError"
         show-icon

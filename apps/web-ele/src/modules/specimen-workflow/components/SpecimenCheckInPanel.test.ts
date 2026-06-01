@@ -206,7 +206,7 @@ describe('SpecimenCheckInPanel', () => {
     ).toBeNull();
     expect(container.textContent).not.toContain('批量入库');
     expect(container.textContent).not.toContain('清除选择行');
-    expect(container.textContent).toContain('清除列表');
+    expect(container.textContent).not.toContain('清除列表');
     expect(container.textContent).toContain('补打标本标签');
 
     app.unmount();

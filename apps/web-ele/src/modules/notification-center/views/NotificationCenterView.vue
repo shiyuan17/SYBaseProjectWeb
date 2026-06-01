@@ -237,13 +237,6 @@ onMounted(async () => {
         </div>
       </ElCard>
 
-      <ElCard v-if="pageError" shadow="never">
-        <div class="flex items-center justify-between gap-4">
-          <span class="text-danger">{{ pageError }}</span>
-          <ElButton @click="loadNotifications">重试</ElButton>
-        </div>
-      </ElCard>
-
       <ElCard shadow="never">
         <template #header>
           <div class="flex items-center justify-between">

@@ -270,7 +270,7 @@ onMounted(loadData);
     description="维护医嘱分类、条目、默认内容、执行范围和启停状态，相关编码由系统自动生成。"
   >
     <SystemLoadError
-      v-if="pageError"
+      v-if="false"
       :message="pageError"
       class="mb-4"
       @retry="loadData"

@@ -167,7 +167,7 @@ onMounted(loadData);
     description="维护科室层级、排序和启停状态，编码由系统自动生成并在详情中展示。"
   >
     <SystemLoadError
-      v-if="pageError"
+      v-if="false"
       :message="pageError"
       class="mb-4"
       @retry="loadData"

@@ -80,7 +80,7 @@ function handleOpen(item: DashboardRiskDistribution) {
     </article>
   </div>
   <div
-    v-else-if="!props.hasError"
+    v-else
     class="rounded-[24px] border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground"
   >
     当前没有风险项

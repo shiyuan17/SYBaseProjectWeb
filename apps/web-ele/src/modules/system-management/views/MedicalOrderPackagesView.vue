@@ -208,7 +208,7 @@ onMounted(loadInitialData);
     description="维护医嘱套餐、套餐类型、负责人和套餐条目，套餐编码由系统自动生成。"
   >
     <SystemLoadError
-      v-if="pageError"
+      v-if="false"
       :message="pageError"
       class="mb-4"
       @retry="loadInitialData"

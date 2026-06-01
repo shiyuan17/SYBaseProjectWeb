@@ -288,7 +288,7 @@ onMounted(loadData);
     description="维护规范分类树与规范详情，支持新建分类、规范、启停与详情查看，相关编码由系统自动生成。"
   >
     <SystemLoadError
-      v-if="pageError"
+      v-if="false"
       :message="pageError"
       class="mb-4"
       @retry="loadData"

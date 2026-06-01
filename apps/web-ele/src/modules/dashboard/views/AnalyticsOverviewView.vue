@@ -27,8 +27,6 @@ const {
   dateRangeLabel,
   hasContent,
   loading,
-  loadPage,
-  pageError,
   visualSummary,
 } = useAnalyticsOverviewDashboard();
 
@@ -107,20 +105,10 @@ async function navigateTo(route?: string, query?: Record<string, string>) {
               >
                 进入正式统计分析
               </ElButton>
-              <ElButton v-if="pageError" type="danger" @click="loadPage">
-                重新加载
-              </ElButton>
             </div>
           </div>
 
-          <div
-            v-if="pageError"
-            class="rounded-3xl border border-danger/30 bg-danger/8 px-5 py-4 text-sm text-danger"
-          >
-            {{ pageError }}
-          </div>
-
-          <ElSkeleton v-else-if="loading" :rows="8" animated />
+          <ElSkeleton v-if="loading" :rows="8" animated />
 
           <div
             v-else-if="visualSummary.heroMetrics.length > 0"
@@ -148,12 +136,10 @@ async function navigateTo(route?: string, query?: Record<string, string>) {
           body-class="px-5 pb-5 pt-2"
         >
           <DashboardChartPanel
-            :error="pageError"
             :loading="loading"
             :option="qualityChartOption"
             empty-description="暂无质控百分比指标"
             height="280px"
-            @retry="loadPage"
           />
         </DashboardSectionCard>
 
@@ -164,12 +150,10 @@ async function navigateTo(route?: string, query?: Record<string, string>) {
           body-class="px-5 pb-5 pt-2"
         >
           <DashboardChartPanel
-            :error="pageError"
             :loading="loading"
             :option="workloadChartOption"
             empty-description="暂无工作量结构数据"
             height="280px"
-            @retry="loadPage"
           />
         </DashboardSectionCard>
 
@@ -192,12 +176,10 @@ async function navigateTo(route?: string, query?: Record<string, string>) {
           body-class="px-5 pb-5 pt-2"
         >
           <DashboardChartPanel
-            :error="pageError"
             :loading="loading"
             :option="riskChartOption"
             empty-description="暂无风险分布数据"
             height="280px"
-            @retry="loadPage"
           />
         </DashboardSectionCard>
       </section>
@@ -209,7 +191,6 @@ async function navigateTo(route?: string, query?: Record<string, string>) {
         body-class="px-5 pb-5 pt-2"
       >
         <DashboardRiskDistributionGrid
-          :has-error="Boolean(pageError)"
           :items="visualSummary.riskDistribution"
           :loading="loading"
           @open="navigateTo($event.route, $event.query)"
@@ -217,7 +198,7 @@ async function navigateTo(route?: string, query?: Record<string, string>) {
       </DashboardSectionCard>
 
       <div
-        v-if="!loading && !hasContent && !pageError"
+        v-if="!loading && !hasContent"
         class="rounded-[24px] border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground"
       >
         当前账号暂无可展示的分析数据

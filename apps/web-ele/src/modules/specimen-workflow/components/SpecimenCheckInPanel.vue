@@ -11,7 +11,6 @@ import {
 } from '../utils/format';
 const {
   actionLoading,
-  clearQueue,
   exportLoading,
   handleExport,
   handleManualCheckIn,
@@ -78,7 +77,6 @@ const {
       >
         标本入库
       </ElButton>
-      <ElButton @click="clearQueue">清除列表</ElButton>
       <ElButton :loading="retryLoading" @click="handleRetryLabelPrint">
         补打标本标签
       </ElButton>

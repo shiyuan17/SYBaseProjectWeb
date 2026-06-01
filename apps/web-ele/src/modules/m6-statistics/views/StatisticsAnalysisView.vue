@@ -297,11 +297,7 @@ onMounted(async () => {
         title="报表结果"
         description="当前结果完全以 M6 后端统计口径返回值为准。"
       >
-        <div v-if="pageError" class="flex items-center justify-between gap-4">
-          <span class="text-sm text-danger">{{ pageError }}</span>
-          <ElButton @click="handleQuery">重试</ElButton>
-        </div>
-        <ElSkeleton v-else-if="loading" :rows="8" animated />
+        <ElSkeleton v-if="loading" :rows="8" animated />
         <ElTable v-else-if="report?.rows?.length" :data="report.rows" border>
           <ElTableColumn
             label="指标编码"

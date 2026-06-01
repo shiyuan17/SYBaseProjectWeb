@@ -108,7 +108,7 @@ onMounted(loadData);
     description="维护业务编号前缀、日期格式、流水长度、重置策略和作用域。"
   >
     <SystemLoadError
-      v-if="pageError"
+      v-if="false"
       :message="pageError"
       class="mb-4"
       @retry="loadData"
