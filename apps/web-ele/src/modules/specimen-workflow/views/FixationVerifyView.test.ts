@@ -11,6 +11,7 @@ const {
   confirmSpecimenRemovalByIdentifierMock,
   confirmSpecimenRemovalMock,
   getApplicationDetailMock,
+  listOperatingBuildingOptionsMock,
   listSpecimensMock,
   listPendingSpecimenRemovalsMock,
   messageSuccessMock,
@@ -40,7 +41,7 @@ const {
       specimenRemovalOperatorName: null,
       specimenStatus: 'REGISTERED',
       specimenType: '常规',
-      surgeryName: '手术室2',
+      surgeryName: 'OR-102',
     },
     {
       abnormalFlag: false,
@@ -63,7 +64,7 @@ const {
       specimenRemovalOperatorName: null,
       specimenStatus: 'REGISTERED',
       specimenType: '常规',
-      surgeryName: '手术室2',
+      surgeryName: 'OR-102',
     },
   ];
 
@@ -108,6 +109,24 @@ const {
     getApplicationDetailMock: vi.fn(async () => ({
       applicationNo: 'AP-LOOKUP-001',
     })),
+    listOperatingBuildingOptionsMock: vi.fn(async () => [
+      {
+        buildingId: 'B001',
+        buildingName: '惠侨楼',
+        floors: 12,
+        location: '北区',
+        operatingRooms: [
+          {
+            buildingId: 'B001',
+            cleanLevel: '百级',
+            floor: 3,
+            roomId: 'OR-102',
+            roomName: '手术室 2',
+            roomType: '洁净手术室',
+          },
+        ],
+      },
+    ]),
     listSpecimensMock: vi.fn(async (params: Record<string, unknown> = {}) => {
       const keyword =
         typeof params.keyword === 'string' ? params.keyword.trim() : '';
@@ -268,6 +287,10 @@ vi.mock('../api/specimen-workflow-service', () => ({
   listPendingSpecimenRemovals: listPendingSpecimenRemovalsMock,
 }));
 
+vi.mock('../api/application-registration-workbench-service', () => ({
+  listOperatingBuildingOptions: listOperatingBuildingOptionsMock,
+}));
+
 function mountView() {
   const container = document.createElement('div');
   document.body.append(container);
@@ -287,6 +310,22 @@ async function flushView() {
   await nextTick();
 }
 
+async function waitForViewAssertion(assertion: () => void) {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    try {
+      assertion();
+      return;
+    } catch (error) {
+      lastError = error;
+      await flushView();
+    }
+  }
+
+  throw lastError;
+}
+
 describe('FixationVerifyView', () => {
   afterEach(() => {
     document.body.innerHTML = '';
@@ -297,7 +336,9 @@ describe('FixationVerifyView', () => {
 
   it('queries removal workbench data without verificationStatus by default', async () => {
     const { app } = mountView();
-    await flushView();
+    await waitForViewAssertion(() => {
+      expect(listPendingSpecimenRemovalsMock).toHaveBeenCalled();
+    });
 
     expect(listPendingSpecimenRemovalsMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -319,7 +360,9 @@ describe('FixationVerifyView', () => {
 
   it('renders removal-centric content and actions', async () => {
     const { app, container } = mountView();
-    await flushView();
+    await waitForViewAssertion(() => {
+      expect(container.textContent).toContain('手术室 2');
+    });
 
     const confirmButtons = [...container.querySelectorAll('button')].filter(
       (button) => button.textContent?.includes('离体确认'),
@@ -340,6 +383,8 @@ describe('FixationVerifyView', () => {
     expect(container.textContent).toContain('标本编号');
     expect(container.textContent).toContain('离体时间');
     expect(container.textContent).toContain('离体操作人');
+    expect(container.textContent).toContain('手术室 2');
+    expect(container.textContent).not.toContain('OR-102');
     expect(container.textContent).not.toContain('开始核对');
     expect(container.textContent).not.toContain('完成核对');
     expect(confirmButtons).toHaveLength(2);
@@ -349,7 +394,9 @@ describe('FixationVerifyView', () => {
 
   it('confirms removal and refreshes the list after submission', async () => {
     const { app, container } = mountView();
-    await flushView();
+    await waitForViewAssertion(() => {
+      expect(container.textContent).toContain('手术室 2');
+    });
 
     const confirmButton = [...container.querySelectorAll('button')].find(
       (button) => button.textContent?.includes('离体确认'),
@@ -615,7 +662,10 @@ describe('FixationVerifyView', () => {
   it('resolves legacy applicationId query into applicationNo before loading', async () => {
     mockRoute.query = { applicationId: 'APP-LOOKUP' };
     const { app } = mountView();
-    await flushView();
+    await waitForViewAssertion(() => {
+      expect(getApplicationDetailMock).toHaveBeenCalledWith('APP-LOOKUP');
+      expect(listPendingSpecimenRemovalsMock).toHaveBeenCalled();
+    });
 
     expect(getApplicationDetailMock).toHaveBeenCalledWith('APP-LOOKUP');
     expect(listPendingSpecimenRemovalsMock).toHaveBeenCalledWith(
