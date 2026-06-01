@@ -6,6 +6,7 @@ const {
   completeFixationMock,
   getApplicationDetailMock,
   listSpecimensMock,
+  listOperatingBuildingOptionsMock,
   loadWorkflowReferenceOptionsMock,
   lookupApplicationRegistrationWorkbenchRecordMock,
   successMock,
@@ -37,6 +38,32 @@ const {
         : '2026-05-26 08:10:00',
     specimens: [],
   })),
+  listOperatingBuildingOptionsMock: vi.fn(async () => [
+    {
+      buildingId: 'B001',
+      buildingName: '惠侨楼',
+      floors: 12,
+      location: '北区',
+      operatingRooms: [
+        {
+          buildingId: 'B001',
+          cleanLevel: '百级',
+          floor: 3,
+          roomId: 'OR-101',
+          roomName: '手术室 1',
+          roomType: '洁净手术室',
+        },
+        {
+          buildingId: 'B001',
+          cleanLevel: '百级',
+          floor: 3,
+          roomId: 'OR-102',
+          roomName: '手术室 2',
+          roomType: '洁净手术室',
+        },
+      ],
+    },
+  ]),
   listSpecimensMock: vi.fn(async ({ keyword }: { keyword?: string }) => {
     const rows = [
       {
@@ -172,7 +199,7 @@ const {
         fixativeType: null,
         fixationPerson: keyword === 'M2-001' ? '王护士' : '',
         fixationTime: null,
-        roomId: keyword === 'M2-001' ? '手术室1' : '手术室2',
+        roomId: keyword === 'M2-001' ? 'OR-101' : 'OR-102',
         surgeryName: keyword === 'M2-001' ? '乳腺切除术' : '肺叶切除术',
       },
     }),
@@ -216,6 +243,7 @@ vi.mock('#/modules/system-management/api/workflow-reference-service', () => ({
 }));
 
 vi.mock('../api/application-registration-workbench-service', () => ({
+  listOperatingBuildingOptions: listOperatingBuildingOptionsMock,
   lookupApplicationRegistrationWorkbenchRecord:
     lookupApplicationRegistrationWorkbenchRecordMock,
 }));
@@ -300,6 +328,7 @@ describe('useSpecimenFixationTimePanel', () => {
     expect(state.queueItems.value).toHaveLength(1);
     expect(state.queueItems.value[0]?.specimenName).toBe('肺组织');
     expect(state.queueItems.value[0]?.patientIdLabel).toBe('PAT-002');
+    expect(state.queueItems.value[0]?.surgeryName).toBe('手术室 2');
     expect(state.resolveFixationLiquidLabel('FORMALIN')).toBe(
       '10% 中性福尔马林',
     );

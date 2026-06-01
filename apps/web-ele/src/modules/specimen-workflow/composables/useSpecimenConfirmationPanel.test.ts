@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const {
   confirmSpecimenMock,
   getApplicationDetailMock,
+  listOperatingBuildingOptionsMock,
   listSpecimensMock,
   retryLabelPrintMock,
   successMock,
@@ -21,6 +22,32 @@ const {
     specimens: [],
     submittingDoctorName: applicationId === 'APP-001' ? '李医生' : '王医生',
   })),
+  listOperatingBuildingOptionsMock: vi.fn(async () => [
+    {
+      buildingId: 'B001',
+      buildingName: '惠侨楼',
+      floors: 12,
+      location: '北区',
+      operatingRooms: [
+        {
+          buildingId: 'B001',
+          cleanLevel: '百级',
+          floor: 3,
+          roomId: 'OR-101',
+          roomName: '手术室 1',
+          roomType: '洁净手术室',
+        },
+        {
+          buildingId: 'B001',
+          cleanLevel: '百级',
+          floor: 3,
+          roomId: 'OR-102',
+          roomName: '手术室 2',
+          roomType: '洁净手术室',
+        },
+      ],
+    },
+  ]),
   listSpecimensMock: vi.fn(async () => ({
     items: [
       {
@@ -147,7 +174,7 @@ const {
       fixativeType: null,
       fixationPerson: '',
       fixationTime: null,
-      roomId: keyword === 'M2-001' ? '手术室1' : '手术室2',
+      roomId: keyword === 'M2-001' ? 'OR-101' : 'OR-102',
       surgeryName: keyword === 'M2-001' ? '乳腺切除术' : '肺叶切除术',
     },
   })),
@@ -174,6 +201,7 @@ vi.mock('element-plus', () => ({
 }));
 
 vi.mock('../api/application-registration-workbench-service', () => ({
+  listOperatingBuildingOptions: listOperatingBuildingOptionsMock,
   lookupApplicationRegistrationWorkbenchRecord: workbenchLookupMock,
 }));
 
@@ -245,7 +273,10 @@ describe('useSpecimenConfirmationPanel', () => {
       throw new Error('composable state not initialized');
     }
 
-    expect(listSpecimensMock).toHaveBeenCalled();
+    await vi.waitFor(() => {
+      expect(listSpecimensMock).toHaveBeenCalled();
+      expect(state.pagedItems.value).toHaveLength(2);
+    });
     expect(state.operatorForm.operatorName).toBe('Test User');
     expect(state.operatorForm.operatorUserId).toBe('USER-001');
     expect(state.summary.value).toEqual({
@@ -253,6 +284,8 @@ describe('useSpecimenConfirmationPanel', () => {
       confirmedCount: 1,
       pendingCount: 1,
     });
+    expect(state.pagedItems.value[0]?.surgeryName).toBe('手术室 1');
+    expect(state.pagedItems.value[1]?.surgeryName).toBe('手术室 2');
 
     state.handleOperatorChange({
       id: 'USER-ALT',
@@ -281,6 +314,10 @@ describe('useSpecimenConfirmationPanel', () => {
     if (!state) {
       throw new Error('composable state not initialized');
     }
+
+    await vi.waitFor(() => {
+      expect(state.pagedItems.value).toHaveLength(2);
+    });
 
     state.handleSelectionChange(state.pagedItems.value);
     state.handleRetryLabel();
