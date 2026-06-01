@@ -15,6 +15,8 @@ import {
   normalizeGenderLabel,
 } from './specimen-confirmation';
 
+const roomNameById = new Map([['OR-102', '手术室 2']]);
+
 function createRecordFixture(): ApplicationRegistrationWorkbenchRecord {
   return {
     applicationId: 'APP-1122',
@@ -120,8 +122,9 @@ function createConfirmationRowFixture(
 ) {
   return enhanceRow(
     createRowFixture(overrides),
-    { patientGender: 'F', submittingDoctorName: '寮犲畯' },
+    { patientGender: 'F', submittingDoctorName: '张宏' },
     createRecordFixture(),
+    roomNameById,
   );
 }
 
@@ -153,9 +156,11 @@ describe('specimen confirmation helpers', () => {
       row,
       { patientGender: 'F', submittingDoctorName: '张宏' },
       record,
+      roomNameById,
     );
     expect(enhanced.patientGenderLabel).toBe('女');
     expect(enhanced.inpatientNo).toBe('ZY0001122');
+    expect(enhanced.surgeryName).toBe('手术室 2');
 
     const ensureWorkbenchRecord = vi.fn(async () => record);
     const ensureApplicationContext = vi.fn(async () => ({
@@ -170,10 +175,12 @@ describe('specimen confirmation helpers', () => {
         submittingDoctorName: '张宏',
       }),
       getWorkbenchRecord: () => record,
-    });
+    }, roomNameById);
 
     expect(rows[0]?.registrationOperatorName).toBe('张宏');
+    expect(rows[0]?.surgeryName).toBe('手术室 2');
     expect(buildExportHeaders()[0]).toBe('序号');
-    expect(buildExportRows(rows, '核验人')[0]?.[0]).toBe('1');
+    expect(buildExportRows(rows)[0]?.[0]).toBe('1');
+    expect(buildExportRows(rows)[0]?.[6]).toBe('手术室 2');
   });
 });
