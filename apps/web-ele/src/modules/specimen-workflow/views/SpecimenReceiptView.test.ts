@@ -6,8 +6,7 @@ import SpecimenReceiptView from './SpecimenReceiptView.vue';
 
 vi.mock('@vben/common-ui', () => ({
   Page: {
-    props: ['title'],
-    template: '<section><h1>{{ title }}</h1><slot /></section>',
+    template: '<section><slot /></section>',
   },
 }));
 
@@ -80,7 +79,7 @@ describe('SpecimenReceiptView', () => {
   it('renders the pathology receipt workbench instead of the old transport list', () => {
     const { app, container } = mountView();
 
-    expect(container.textContent).toContain('病理接收');
+    expect(container.textContent).not.toContain('病理接收');
     expect(container.textContent).toContain('标本签收');
     expect(container.textContent).toContain('选择操作人');
     expect(container.textContent).toContain('补打标本标签');

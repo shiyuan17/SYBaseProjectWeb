@@ -337,8 +337,8 @@ describe('useSpecimenReceiptWorkbench', () => {
     expect(state.queueItems.value).toHaveLength(2);
     expect(state.queueItems.value[0]?.patientIdLabel).toBe('PAT-002');
     expect(state.queueItems.value[1]?.inpatientNo).toBe('ZY-001');
-    expect(state.queueItems.value[0]?.surgeryName).toBe('手术室 2');
-    expect(state.queueItems.value[1]?.surgeryName).toBe('手术室 1');
+    expect(state.queueItems.value[0]?.surgeryName).toBe('惠侨楼 - 手术室 2');
+    expect(state.queueItems.value[1]?.surgeryName).toBe('惠侨楼 - 手术室 1');
 
     state.handleOperatorChange({
       id: 'USER-ALT',

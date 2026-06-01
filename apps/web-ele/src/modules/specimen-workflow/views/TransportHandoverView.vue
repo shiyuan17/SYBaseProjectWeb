@@ -39,6 +39,7 @@ import TransportHandoverOrderTable from '../components/TransportHandoverOrderTab
 import TransportOrderCreateDialog from '../components/TransportOrderCreateDialog.vue';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { DEFAULT_PAGE_SIZE, TRANSPORT_STATUS_OPTIONS } from '../constants';
+import { getWorkflowPageErrorMessage } from '../utils/error';
 import {
   formatDateTime,
   formatNullable,
@@ -68,6 +69,7 @@ withDefaults(
 const userStore = useUserStore();
 const route = useRoute();
 
+const pageError = ref('');
 const loading = ref(false);
 const printLoading = ref(false);
 const handoverLoading = ref(false);
@@ -143,6 +145,7 @@ const handoverDialogTitle = computed(() => {
 
 async function loadOrders(options: { autoSubmitQuickOutbound?: boolean } = {}) {
   loading.value = true;
+  pageError.value = '';
   try {
     const result = await listPendingTransportOrders(
       buildPendingTransportOrderQuery(filters),
@@ -162,7 +165,9 @@ async function loadOrders(options: { autoSubmitQuickOutbound?: boolean } = {}) {
     }
     return result;
   } catch (error) {
-    void error;
+    pageError.value = getWorkflowPageErrorMessage(error);
+    orders.value = [];
+    total.value = 0;
     return null;
   } finally {
     loading.value = false;
@@ -265,6 +270,7 @@ async function submitPrint() {
   }
 
   printLoading.value = true;
+  pageError.value = '';
   try {
     for (const order of targets) {
       latestOrder.value = await printTransportOrder(
@@ -277,7 +283,7 @@ async function submitPrint() {
     ElMessage.success('转运单打印成功');
     await loadOrders();
   } catch (error) {
-    void error;
+    pageError.value = getWorkflowPageErrorMessage(error);
   } finally {
     printLoading.value = false;
   }
@@ -297,6 +303,7 @@ async function submitHandover() {
   }
 
   handoverLoading.value = true;
+  pageError.value = '';
   try {
     for (const order of targets) {
       latestOrder.value = await handoverTransportOrder(
@@ -309,7 +316,7 @@ async function submitHandover() {
     ElMessage.success('转运交接成功');
     await loadOrders();
   } catch (error) {
-    void error;
+    pageError.value = getWorkflowPageErrorMessage(error);
   } finally {
     handoverLoading.value = false;
   }
@@ -345,6 +352,7 @@ async function submitQuickOutbound(order: PendingTransportOrderItem) {
   }
 
   handoverLoading.value = true;
+  pageError.value = '';
   try {
     latestOrder.value = await outboundTransportOrder(
       order.id,
@@ -355,7 +363,7 @@ async function submitQuickOutbound(order: PendingTransportOrderItem) {
     ElMessage.success('标本出库成功');
     await loadOrders();
   } catch (error) {
-    void error;
+    pageError.value = getWorkflowPageErrorMessage(error);
   } finally {
     handoverLoading.value = false;
   }
@@ -381,6 +389,14 @@ watch(
 <template>
   <Page :title="embedded ? '' : '固定与转运'">
     <div class="flex flex-col gap-4">
+      <ElAlert
+        v-if="pageError"
+        :closable="false"
+        :title="pageError"
+        type="error"
+        show-icon
+      />
+
       <WorkflowSectionCard
         v-if="latestOrder"
         title="最近操作结果"

@@ -158,6 +158,9 @@ describe('SpecimenConfirmationPanel', () => {
     expect(container.textContent).toContain('标本确认');
     expect(container.textContent).toContain('Test User');
     expect(container.textContent).toContain('Actual User');
+    expect(container.textContent).not.toContain('终端编号');
+    expect(container.textContent).not.toContain('清除选择行');
+    expect(container.textContent).not.toContain('清除列表');
 
     const confirmButtons = [...container.querySelectorAll('button')].filter(
       (button) => button.textContent?.trim() === '标本确认',

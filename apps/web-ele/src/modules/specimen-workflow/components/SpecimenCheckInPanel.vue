@@ -12,9 +12,7 @@ import {
 const {
   actionLoading,
   clearQueue,
-  clearSelection,
   exportLoading,
-  handleBatchCheckIn,
   handleExport,
   handleManualCheckIn,
   handleOperatorChange,
@@ -25,7 +23,6 @@ const {
   handleSelectionChange,
   loading,
   operatorForm,
-  pageError,
   pendingCount,
   queueItems,
   retryLoading,
@@ -36,13 +33,6 @@ const {
 
 <template>
   <div class="flex flex-col gap-4">
-    <div
-      v-if="pageError"
-      class="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger"
-    >
-      {{ pageError }}
-    </div>
-
     <div class="flex flex-wrap items-center gap-4 text-sm">
       <div class="font-semibold text-[color:#d6453d]">标本入库</div>
       <div>
@@ -81,16 +71,6 @@ const {
           @change="handleOperatorChange"
         />
       </div>
-      <ElInput
-        v-model="operatorForm.printerCode"
-        placeholder="打印机编号"
-        style="width: 140px"
-      />
-      <ElInput
-        v-model="operatorForm.terminalCode"
-        placeholder="终端编号"
-        style="width: 140px"
-      />
       <ElButton
         :loading="actionLoading"
         type="primary"
@@ -98,10 +78,6 @@ const {
       >
         标本入库
       </ElButton>
-      <ElButton :loading="retryLoading" @click="handleBatchCheckIn">
-        批量入库
-      </ElButton>
-      <ElButton @click="clearSelection">清除选择行</ElButton>
       <ElButton @click="clearQueue">清除列表</ElButton>
       <ElButton :loading="retryLoading" @click="handleRetryLabelPrint">
         补打标本标签

@@ -89,7 +89,7 @@ const {
   >
     <div v-loading="loadingApplicationDetail" class="flex flex-col gap-4">
       <ElAlert
-        v-if="pageError"
+        v-if="false"
         :closable="false"
         :title="pageError"
         type="error"

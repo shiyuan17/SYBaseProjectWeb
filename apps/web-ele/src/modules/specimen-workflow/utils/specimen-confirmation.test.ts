@@ -15,7 +15,10 @@ import {
   normalizeGenderLabel,
 } from './specimen-confirmation';
 
-const roomNameById = new Map([['OR-102', '手术室 2']]);
+const roomNameById = new Map([
+  ['OR-102', '惠侨楼 - 手术室 2'],
+  ['手术室 2', '惠侨楼 - 手术室 2'],
+]);
 
 function createRecordFixture(): ApplicationRegistrationWorkbenchRecord {
   return {
@@ -160,7 +163,7 @@ describe('specimen confirmation helpers', () => {
     );
     expect(enhanced.patientGenderLabel).toBe('女');
     expect(enhanced.inpatientNo).toBe('ZY0001122');
-    expect(enhanced.surgeryName).toBe('手术室 2');
+    expect(enhanced.surgeryName).toBe('惠侨楼 - 手术室 2');
 
     const ensureWorkbenchRecord = vi.fn(async () => record);
     const ensureApplicationContext = vi.fn(async () => ({
@@ -178,9 +181,9 @@ describe('specimen confirmation helpers', () => {
     }, roomNameById);
 
     expect(rows[0]?.registrationOperatorName).toBe('张宏');
-    expect(rows[0]?.surgeryName).toBe('手术室 2');
+    expect(rows[0]?.surgeryName).toBe('惠侨楼 - 手术室 2');
     expect(buildExportHeaders()[0]).toBe('序号');
     expect(buildExportRows(rows)[0]?.[0]).toBe('1');
-    expect(buildExportRows(rows)[0]?.[6]).toBe('手术室 2');
+    expect(buildExportRows(rows)[0]?.[6]).toBe('惠侨楼 - 手术室 2');
   });
 });

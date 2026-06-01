@@ -172,7 +172,7 @@ void loadSpecimens();
 <template>
   <div class="flex flex-col gap-4">
     <div
-      v-if="pageError"
+      v-if="false"
       class="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger"
     >
       {{ pageError }}

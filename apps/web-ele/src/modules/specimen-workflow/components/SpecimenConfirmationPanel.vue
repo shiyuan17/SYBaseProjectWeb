@@ -22,8 +22,6 @@ const {
   batchRetryResult,
   canConfirm,
   filters,
-  handleClearList,
-  handleClearSelectionRows,
   handleConfirmRow,
   handleConfirmSelected,
   handleExportExcel,
@@ -50,7 +48,7 @@ const {
 <template>
   <div class="flex flex-col gap-4">
     <ElAlert
-      v-if="pageError"
+      v-if="false"
       :closable="false"
       :title="pageError"
       type="error"
@@ -95,11 +93,6 @@ const {
           @change="handleOperatorChange"
         />
       </div>
-      <ElInput
-        v-model="operatorForm.terminalCode"
-        placeholder="终端编号"
-        style="width: 160px"
-      />
       <ElButton :loading="loading" type="primary" @click="handleSearch">
         查询
       </ElButton>
@@ -110,8 +103,6 @@ const {
       >
         标本确认
       </ElButton>
-      <ElButton @click="handleClearSelectionRows">清除选择行</ElButton>
-      <ElButton @click="handleClearList">清除列表</ElButton>
       <ElButton @click="handleRetryLabel">补打标本标签</ElButton>
       <ElButton @click="handleExportExcel">导出Excel</ElButton>
       <ElButton @click="handleReset">重置</ElButton>

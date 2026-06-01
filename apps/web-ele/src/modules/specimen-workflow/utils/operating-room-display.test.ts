@@ -39,8 +39,9 @@ describe('operating room display helpers', () => {
   it('builds a room id to room name map', () => {
     const roomNameById = buildOperatingRoomNameMap(buildingOptionsFixture);
 
-    expect(roomNameById.get('OR-101')).toBe('手术室 1');
-    expect(roomNameById.get('OR-102')).toBe('手术室 2');
+    expect(roomNameById.get('OR-101')).toBe('惠侨楼 - 手术室 1');
+    expect(roomNameById.get('OR-102')).toBe('惠侨楼 - 手术室 2');
+    expect(roomNameById.get('手术室 2')).toBe('惠侨楼 - 手术室 2');
   });
 
   it('resolves room ids to Chinese room names and falls back safely', () => {
@@ -52,7 +53,7 @@ describe('operating room display helpers', () => {
         'OR-102',
         '右侧胫骨感染病灶清创术',
       ),
-    ).toBe('手术室 2');
+    ).toBe('惠侨楼 - 手术室 2');
     expect(
       resolveOperatingRoomDisplayName(
         roomNameById,
@@ -73,10 +74,10 @@ describe('operating room display helpers', () => {
     const roomNameById = buildOperatingRoomNameMap(buildingOptionsFixture);
 
     expect(normalizeOperatingRoomDisplayValue(roomNameById, 'OR-102')).toBe(
-      '手术室 2',
+      '惠侨楼 - 手术室 2',
     );
     expect(normalizeOperatingRoomDisplayValue(roomNameById, '手术室 2')).toBe(
-      '手术室 2',
+      '惠侨楼 - 手术室 2',
     );
     expect(normalizeOperatingRoomDisplayValue(roomNameById, 'OR-999')).toBe(
       'OR-999',

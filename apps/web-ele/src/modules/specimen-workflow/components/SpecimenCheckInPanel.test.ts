@@ -194,33 +194,20 @@ describe('SpecimenCheckInPanel', () => {
     app.unmount();
   });
 
-  it('supports selection removal and batch print', async () => {
+  it('hides the removed top action elements', async () => {
     const { app, container } = mountView();
     await flush();
 
-    const input = container.querySelector(
-      'input[placeholder="标本id / 流水号 / 条码"]',
-    ) as HTMLInputElement;
-    input.value = 'SP-001';
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    input.dispatchEvent(
-      new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }),
-    );
-    await flush();
-
-    const printerInput = container.querySelector(
-      'input[placeholder="打印机编号"]',
-    ) as HTMLInputElement;
-    printerInput.value = 'PRN-01';
-    printerInput.dispatchEvent(new Event('input', { bubbles: true }));
-
-    const retryButton = [...container.querySelectorAll('button')].find(
-      (button) => button.textContent?.includes('补打标本标签'),
-    );
-    retryButton?.click();
-    await flush();
-
-    expect(retryLabelPrintMock).toHaveBeenCalled();
+    expect(
+      container.querySelector('input[placeholder="打印机编号"]'),
+    ).toBeNull();
+    expect(
+      container.querySelector('input[placeholder="终端编号"]'),
+    ).toBeNull();
+    expect(container.textContent).not.toContain('批量入库');
+    expect(container.textContent).not.toContain('清除选择行');
+    expect(container.textContent).toContain('清除列表');
+    expect(container.textContent).toContain('补打标本标签');
 
     app.unmount();
   });

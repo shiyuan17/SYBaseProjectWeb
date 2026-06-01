@@ -361,7 +361,7 @@ describe('FixationVerifyView', () => {
   it('renders removal-centric content and actions', async () => {
     const { app, container } = mountView();
     await waitForViewAssertion(() => {
-      expect(container.textContent).toContain('手术室 2');
+      expect(container.textContent).toContain('惠侨楼 - 手术室 2');
     });
 
     const confirmButtons = [...container.querySelectorAll('button')].filter(
@@ -383,7 +383,7 @@ describe('FixationVerifyView', () => {
     expect(container.textContent).toContain('标本编号');
     expect(container.textContent).toContain('离体时间');
     expect(container.textContent).toContain('离体操作人');
-    expect(container.textContent).toContain('手术室 2');
+    expect(container.textContent).toContain('惠侨楼 - 手术室 2');
     expect(container.textContent).not.toContain('OR-102');
     expect(container.textContent).not.toContain('开始核对');
     expect(container.textContent).not.toContain('完成核对');
@@ -395,7 +395,7 @@ describe('FixationVerifyView', () => {
   it('confirms removal and refreshes the list after submission', async () => {
     const { app, container } = mountView();
     await waitForViewAssertion(() => {
-      expect(container.textContent).toContain('手术室 2');
+      expect(container.textContent).toContain('惠侨楼 - 手术室 2');
     });
 
     const confirmButton = [...container.querySelectorAll('button')].find(

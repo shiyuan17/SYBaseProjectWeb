@@ -16,7 +16,10 @@ import {
   resolveUnavailableMessage,
 } from './specimen-fixation-time';
 
-const roomNameById = new Map([['OR-102', '手术室 2']]);
+const roomNameById = new Map([
+  ['OR-102', '惠侨楼 - 手术室 2'],
+  ['手术室 2', '惠侨楼 - 手术室 2'],
+]);
 
 function createRecordFixture(): ApplicationRegistrationWorkbenchRecord {
   return {
@@ -163,7 +166,7 @@ describe('specimen fixation time helpers', () => {
 
     expect(queueRow.patientGenderLabel).toBe('女');
     expect(queueRow.fixationOperatorName).toBe('周永强');
-    expect(queueRow.surgeryName).toBe('手术室 2');
+    expect(queueRow.surgeryName).toBe('惠侨楼 - 手术室 2');
     expect(buildExportHeaders()[0]).toBe('序号');
     expect(
       buildExportRows([queueRow], {

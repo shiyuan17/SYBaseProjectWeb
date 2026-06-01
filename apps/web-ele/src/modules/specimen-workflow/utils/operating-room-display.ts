@@ -6,6 +6,16 @@ function normalizeText(value?: null | string) {
   return value?.trim() ?? '';
 }
 
+function formatOperatingRoomDisplay(buildingName: string, roomName: string) {
+  if (!buildingName) {
+    return roomName;
+  }
+  if (!roomName) {
+    return buildingName;
+  }
+  return `${buildingName} - ${roomName}`;
+}
+
 let operatingRoomNameMapPromise: null | Promise<ReadonlyMap<string, string>> =
   null;
 
@@ -15,13 +25,19 @@ export function buildOperatingRoomNameMap(
   const roomNameById = new Map<string, string>();
 
   for (const building of buildingOptions) {
+    const buildingName = normalizeText(building.buildingName);
     for (const room of building.operatingRooms) {
       const roomId = normalizeText(room.roomId);
       const roomName = normalizeText(room.roomName);
-      if (!roomId || !roomName || roomNameById.has(roomId)) {
+      const displayValue = formatOperatingRoomDisplay(buildingName, roomName);
+
+      if (!roomId || !roomName || !displayValue || roomNameById.has(roomId)) {
         continue;
       }
-      roomNameById.set(roomId, roomName);
+      roomNameById.set(roomId, displayValue);
+      if (!roomNameById.has(roomName)) {
+        roomNameById.set(roomName, displayValue);
+      }
     }
   }
 

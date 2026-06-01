@@ -300,8 +300,8 @@ describe('useSpecimenConfirmationPanel', () => {
       confirmedCount: 1,
       pendingCount: 1,
     });
-    expect(state.pagedItems.value[0]?.surgeryName).toBe('手术室 1');
-    expect(state.pagedItems.value[1]?.surgeryName).toBe('手术室 2');
+    expect(state.pagedItems.value[0]?.surgeryName).toBe('惠侨楼 - 手术室 1');
+    expect(state.pagedItems.value[1]?.surgeryName).toBe('惠侨楼 - 手术室 2');
 
     state.handleOperatorChange({
       id: 'USER-ALT',

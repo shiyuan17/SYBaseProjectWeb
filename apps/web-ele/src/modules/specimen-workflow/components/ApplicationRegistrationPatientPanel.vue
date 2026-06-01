@@ -1,7 +1,7 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import type { ApplicationRegistrationWorkbenchRecord } from '../types/application-registration-workbench';
 
-import { toRef } from 'vue';
+import { computed, toRef } from 'vue';
 
 import {
   ElButton,
@@ -59,6 +59,8 @@ const {
   savePatientInfo: () => emit('save-patient-info'),
   updateRecord: (record) => emit('update:record', record),
 });
+
+const hasRecord = computed(() => props.record !== null);
 </script>
 
 <template>
@@ -71,7 +73,7 @@ const {
     :auto-height="!props.fullHeight"
     title="患者信息"
   >
-    <template v-if="props.record" #extra>
+    <template v-if="hasRecord" #extra>
       <div class="flex items-center gap-2">
         <ElButton size="small" @click="printApplicationForm">补打申请单</ElButton>
         <ElButton
@@ -86,7 +88,7 @@ const {
       </div>
     </template>
 
-    <template v-if="props.record">
+    <template v-if="hasRecord">
       <div class="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden pr-1">
         <div
           class="overflow-hidden rounded-lg border border-border/80 bg-card shadow-sm"

@@ -328,7 +328,7 @@ describe('useSpecimenFixationTimePanel', () => {
     expect(state.queueItems.value).toHaveLength(1);
     expect(state.queueItems.value[0]?.specimenName).toBe('肺组织');
     expect(state.queueItems.value[0]?.patientIdLabel).toBe('PAT-002');
-    expect(state.queueItems.value[0]?.surgeryName).toBe('手术室 2');
+    expect(state.queueItems.value[0]?.surgeryName).toBe('惠侨楼 - 手术室 2');
     expect(state.resolveFixationLiquidLabel('FORMALIN')).toBe(
       '10% 中性福尔马林',
     );
