@@ -254,6 +254,22 @@ async function flushComposable() {
   await nextTick();
 }
 
+async function waitForComposableAssertion(assertion: () => void) {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    try {
+      assertion();
+      return;
+    } catch (error) {
+      lastError = error;
+      await flushComposable();
+    }
+  }
+
+  throw lastError;
+}
+
 describe('useSpecimenConfirmationPanel', () => {
   beforeEach(() => {
     listSpecimensMock.mockClear();
@@ -273,7 +289,7 @@ describe('useSpecimenConfirmationPanel', () => {
       throw new Error('composable state not initialized');
     }
 
-    await vi.waitFor(() => {
+    await waitForComposableAssertion(() => {
       expect(listSpecimensMock).toHaveBeenCalled();
       expect(state.pagedItems.value).toHaveLength(2);
     });
@@ -315,7 +331,7 @@ describe('useSpecimenConfirmationPanel', () => {
       throw new Error('composable state not initialized');
     }
 
-    await vi.waitFor(() => {
+    await waitForComposableAssertion(() => {
       expect(state.pagedItems.value).toHaveLength(2);
     });
 
