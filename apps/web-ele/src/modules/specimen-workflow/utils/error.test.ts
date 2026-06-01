@@ -46,4 +46,20 @@ describe('getWorkflowPageErrorMessage', () => {
       getWorkflowPageErrorMessage(new Error('Specimen specimenNo not found')),
     ).toBe('未找到对应标本，请确认标本ID是否正确。');
   });
+
+  it('maps specimen workflow status conflicts to chinese prompts', () => {
+    expect(
+      getWorkflowPageErrorMessage(new Error('Specimen already checked in')),
+    ).toBe('标本已完成入库，无需重复操作。');
+    expect(
+      getWorkflowPageErrorMessage(
+        new Error('Specimen must be confirmed before check-in'),
+      ),
+    ).toBe('标本尚未完成标本确认，不能入库。');
+    expect(
+      getWorkflowPageErrorMessage(
+        new Error('Specimen already reached receipt terminal status'),
+      ),
+    ).toBe('标本已接收、拒收或退回，当前流程不可重复操作。');
+  });
 });

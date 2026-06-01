@@ -196,7 +196,7 @@ function mapSpecimenManagementItemToRemovalItem(
     abnormalFlag: item.abnormalFlag,
     applicationId: item.applicationId,
     applicationNo: item.applicationNo,
-    barcode: item.barcode,
+    barcode: item.barcode ?? '',
     confirmedAt: item.specimenRemovalAt ?? null,
     containerCount: item.containerCount,
     containerName: item.containerName,
@@ -225,11 +225,11 @@ function resolveQuickConfirmExactMatch(
   const normalizedIdentifier = identifier.trim();
   const exactMatches = items.filter(
     (item) =>
-      item.barcode.trim() === normalizedIdentifier ||
+      (item.barcode ?? '').trim() === normalizedIdentifier ||
       item.specimenNo.trim() === normalizedIdentifier,
   );
   const barcodeMatches = exactMatches.filter(
-    (item) => item.barcode.trim() === normalizedIdentifier,
+    (item) => (item.barcode ?? '').trim() === normalizedIdentifier,
   );
   const specimenNoMatches = exactMatches.filter(
     (item) => item.specimenNo.trim() === normalizedIdentifier,
@@ -244,17 +244,17 @@ function resolveQuickConfirmExactMatch(
   }
 
   if (hasBarcodeMatch && !hasSpecimenNoMatch && barcodeMatches.length === 1) {
-    matchedSpecimen = barcodeMatches[0];
+    matchedSpecimen = barcodeMatches[0] ?? null;
     resolvedIdentifierType = 'BARCODE';
   } else if (
     hasSpecimenNoMatch &&
     !hasBarcodeMatch &&
     specimenNoMatches.length === 1
   ) {
-    matchedSpecimen = specimenNoMatches[0];
+    matchedSpecimen = specimenNoMatches[0] ?? null;
     resolvedIdentifierType = 'SPECIMEN_NO';
   } else if (exactMatches.length === 1) {
-    matchedSpecimen = exactMatches[0];
+    matchedSpecimen = exactMatches[0] ?? null;
   }
 
   if (!matchedSpecimen) {
@@ -308,27 +308,30 @@ async function submitQuickConfirm() {
       normalizedValue,
     );
 
-    if (quickConfirmTarget.status === 'already_removed') {
-      ElMessage.warning(`标本ID ${normalizedValue} 已完成离体确认`);
-      return;
-    }
-    if (quickConfirmTarget.status === 'not_found') {
-      ElMessage.warning('未找到对应标本，请确认标本ID是否正确');
-      return;
-    }
-    if (quickConfirmTarget.status === 'multiple') {
+    if (quickConfirmTarget.status !== 'ready') {
+      if (quickConfirmTarget.status === 'already_removed') {
+        ElMessage.warning(`标本ID ${normalizedValue} 已完成离体确认`);
+        return;
+      }
+      if (quickConfirmTarget.status === 'not_found') {
+        ElMessage.warning('未找到对应标本，请确认标本ID是否正确');
+        return;
+      }
       ElMessage.warning('标本ID对应多条记录，无法自动确认');
       return;
     }
 
+    const readyTarget: Extract<QuickConfirmResolution, { status: 'ready' }> =
+      quickConfirmTarget;
+
     const result = await confirmSpecimenRemovalByIdentifier({
       identifier: normalizedValue,
-      identifierType: quickConfirmTarget.identifierType,
+      identifierType: readyTarget.identifierType,
       remarks: '离体确认',
     });
 
     const sourceRow = mapSpecimenManagementItemToRemovalItem(
-      quickConfirmTarget.matchedSpecimen,
+      readyTarget.matchedSpecimen,
     );
     upsertConfirmedRemovalItem({
       ...sourceRow,

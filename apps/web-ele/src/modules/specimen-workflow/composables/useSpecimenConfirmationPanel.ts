@@ -29,6 +29,7 @@ import {
   canRetryLabel,
   isVisibleInConfirmationScene,
   MAX_QUERY_SIZE,
+  resolveUnavailableMessage,
 } from '../utils/specimen-confirmation';
 import { loadOperatingRoomNameMapSafely } from '../utils/operating-room-display';
 
@@ -167,19 +168,23 @@ export function useSpecimenConfirmationPanel() {
     return operatingRoomNameMap.value;
   }
 
-  async function loadSpecimens() {
+  async function loadSpecimens(showEmptyWarning = false) {
     loading.value = true;
     pageError.value = '';
     try {
       const roomNameById = await ensureOperatingRoomNameMapLoaded();
+      const keyword = filters.keyword.trim();
       const result = await listSpecimens({
-        keyword: filters.keyword.trim() || undefined,
+        keyword: keyword || undefined,
         page: 1,
         size: MAX_QUERY_SIZE,
       });
       const visibleRows = result.items.filter((item) =>
         isVisibleInConfirmationScene(item),
       );
+      if (showEmptyWarning && keyword && visibleRows.length === 0) {
+        ElMessage.warning(resolveUnavailableMessage(result.items, keyword));
+      }
       const enhancedRows = await buildEnhancedRows(visibleRows, {
         ensureApplicationContext,
         ensureWorkbenchRecord,
@@ -289,7 +294,7 @@ export function useSpecimenConfirmationPanel() {
 
   function handleSearch() {
     filters.page = 1;
-    void loadSpecimens();
+    void loadSpecimens(true);
   }
 
   function handleReset() {

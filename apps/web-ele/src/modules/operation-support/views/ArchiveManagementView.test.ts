@@ -131,136 +131,153 @@ vi.mock('../composables/useArchiveManagementPage', () => ({
 import ArchiveManagementView from './ArchiveManagementView.vue';
 
 function createMockPageState() {
+  const openCreateCabinetDialog = vi.fn();
+
   return {
-    archiveForm: reactive({
-      caseId: '',
-      embeddingBoxId: '',
-      fileName: '',
-      fileUrl: '',
-      objectType: 'APPLICATION_FORM',
-      operatorName: '归档员甲',
-      operatorUserId: 'USER-1',
-      remarks: '',
-      slideId: '',
-      terminalCode: '',
-    }),
-    archivePermissionWarning: '',
-    archiveSubmitButtonText: '提交申请单归档',
-    cabinetCapacityPreview: 4,
-    cabinetDialogMode: ref<'create' | 'edit' | null>(null),
-    cabinetDialogVisible: ref(false),
-    cabinetError: '',
-    cabinetForm: reactive({
-      cabinetCode: '',
-      cabinetName: '',
-      cabinetStatus: 'ACTIVE',
-      cabinetType: 'STANDARD',
-      layerCount: 2,
-      locationDescription: '',
-      operatorName: '归档员甲',
-      operatorUserId: 'USER-1',
-      remarks: '',
-      slotCountPerLayer: 2,
-      terminalCode: '',
-    }),
-    cabinetPositionRulePreview: 'CAB-01-L1-S1',
-    cabinets: ref([
-      {
-        cabinetCode: 'CAB-01',
-        cabinetName: '一号归档柜',
+    archiveWorkspace: {
+      archiveForm: reactive({
+        caseId: '',
+        embeddingBoxId: '',
+        fileName: '',
+        fileUrl: '',
+        objectType: 'APPLICATION_FORM',
+        operatorName: '归档员甲',
+        operatorUserId: 'USER-1',
+        remarks: '',
+        slideId: '',
+        terminalCode: '',
+      }),
+      archivePermissionWarning: '',
+      archiveSubmitButtonText: '提交申请单归档',
+      canSubmitArchive: true,
+      submitArchive: vi.fn(),
+    },
+    cabinetWorkspace: {
+      cabinetCapacityPreview: 4,
+      cabinetDialogMode: ref<'create' | 'edit' | null>(null),
+      cabinetDialogVisible: ref(false),
+      cabinetError: '',
+      cabinetForm: reactive({
+        cabinetCode: '',
+        cabinetName: '',
         cabinetStatus: 'ACTIVE',
         cabinetType: 'STANDARD',
-        capacity: 4,
-        id: 'CABINET-1',
         layerCount: 2,
-        locationDescription: 'B1',
-        remarks: '可用',
+        locationDescription: '',
+        operatorName: '归档员甲',
+        operatorUserId: 'USER-1',
+        remarks: '',
         slotCountPerLayer: 2,
+        terminalCode: '',
+      }),
+      cabinetPositionRulePreview: 'CAB-01-L1-S1',
+      cabinets: [
+        {
+          cabinetCode: 'CAB-01',
+          cabinetName: '一号归档柜',
+          cabinetStatus: 'ACTIVE',
+          cabinetType: 'STANDARD',
+          capacity: 4,
+          id: 'CABINET-1',
+          layerCount: 2,
+          locationDescription: 'B1',
+          remarks: '可用',
+          slotCountPerLayer: 2,
+        },
+      ],
+      clearSelectedPosition: vi.fn(),
+      isEditingCabinet: false,
+      loadCabinets: vi.fn(),
+      loadPositions: vi.fn(),
+      loading: reactive({
+        cabinets: false,
+        positions: false,
+      }),
+      openCreateCabinetDialog,
+      openEditCabinetDialog: vi.fn(),
+      positionError: '',
+      positionFilters: reactive({
+        cabinetId: '',
+        cabinetType: '',
+      }),
+      positionRows: [],
+      positionSummary: {
+        available: 0,
+        disabled: 0,
+        occupied: 0,
+        total: 0,
       },
-    ]),
-    canCreateCabinet: true,
-    canCreateLoan: true,
-    canQueryCabinets: true,
-    canQueryLoans: true,
-    canQueryRecords: true,
-    canReturnLoan: true,
-    canSubmitArchive: true,
-    canUpdateCabinet: true,
-    canViewArchivePage: true,
-    clearSelectedPosition: vi.fn(),
-    getArchiveStatusTagType: vi.fn(() => 'success'),
-    getCabinetStatusTagType: vi.fn(() => 'success'),
-    getLoanStatusTagType: vi.fn(() => 'warning'),
-    getPositionStatusTagType: vi.fn(() => 'success'),
-    getToggleCabinetActionLabel: vi.fn(() => '停用'),
-    isEditingCabinet: ref(false),
-    loadLoans: vi.fn(),
-    loadPositions: vi.fn(),
-    loadRecords: vi.fn(),
-    loanError: '',
-    loanFilters: reactive({
-      keyword: '',
-      materialType: '',
-    }),
-    loanForm: reactive({
-      borrowPurpose: '',
-      borrowedByName: '',
-      borrowedByUserId: '',
-      materialId: '',
-      materialType: 'SLIDE',
-      operatorName: '归档员甲',
-      operatorUserId: 'USER-1',
-      remarks: '',
-      terminalCode: '',
-    }),
-    loading: reactive({
-      cabinets: false,
-      loans: false,
-      positions: false,
-      records: false,
-    }),
-    openCreateCabinetDialog: vi.fn(),
-    openEditCabinetDialog: vi.fn(),
-    openReturnDialog: vi.fn(),
-    pendingLoans: ref([]),
-    positionError: '',
-    positionFilters: reactive({
-      cabinetId: '',
-      cabinetType: '',
-    }),
-    positionRows: ref([]),
-    positionSummary: ref({
-      available: 0,
-      disabled: 0,
-      occupied: 0,
-      total: 0,
-    }),
-    recordError: '',
-    recordFilters: reactive({
-      caseId: '',
-      keyword: '',
-      objectType: '',
-    }),
-    records: ref([]),
-    returnDialogVisible: ref(false),
-    returnForm: reactive({
-      operatorName: '归档员甲',
-      operatorUserId: 'USER-1',
-      remarks: '',
-      terminalCode: '',
-    }),
-    returningLoan: ref(null),
-    selectedPosition: ref(null),
-    selectedPositionCode: ref(''),
-    selectedPositionLabel: ref('未选择柜位'),
-    selectedReturnPositionDescription: ref('默认归还到原始归档柜位'),
-    selectPosition: vi.fn(),
-    submitArchive: vi.fn(),
-    submitCabinet: vi.fn(),
-    submitLoan: vi.fn(),
-    submitReturn: vi.fn(),
-    submitting: ref(false),
-    toggleCabinetStatus: vi.fn(),
+      selectPosition: vi.fn(),
+      selectedPosition: null,
+      selectedPositionCode: '',
+      selectedPositionLabel: '未选择柜位',
+      submitCabinet: vi.fn(),
+      toggleCabinetStatus: vi.fn(),
+    },
+    capabilities: {
+      canCreateCabinet: true,
+      canCreateLoan: true,
+      canQueryCabinets: true,
+      canQueryLoans: true,
+      canQueryRecords: true,
+      canReturnLoan: true,
+      canUpdateCabinet: true,
+      canViewArchivePage: true,
+    },
+    display: {
+      getArchiveStatusTagType: vi.fn(() => 'success'),
+      getCabinetStatusTagType: vi.fn(() => 'success'),
+      getLoanStatusTagType: vi.fn(() => 'warning'),
+      getPositionStatusTagType: vi.fn(() => 'success'),
+      getToggleCabinetActionLabel: vi.fn(() => '停用'),
+    },
+    loanWorkspace: {
+      loadLoans: vi.fn(),
+      loading: false,
+      loanError: '',
+      loanFilters: reactive({
+        keyword: '',
+        materialType: '',
+      }),
+      loanForm: reactive({
+        borrowPurpose: '',
+        borrowedByName: '',
+        borrowedByUserId: '',
+        materialId: '',
+        materialType: 'SLIDE',
+        operatorName: '归档员甲',
+        operatorUserId: 'USER-1',
+        remarks: '',
+        terminalCode: '',
+      }),
+      openReturnDialog: vi.fn(),
+      pendingLoans: [],
+      returnDialogVisible: false,
+      returnForm: reactive({
+        operatorName: '归档员甲',
+        operatorUserId: 'USER-1',
+        remarks: '',
+        terminalCode: '',
+      }),
+      returningLoan: null,
+      selectedReturnPositionDescription: '默认归还到原始归档柜位',
+      submitLoan: vi.fn(),
+      submitReturn: vi.fn(),
+    },
+    pageState: {
+      submitting: false,
+    },
+    recordWorkspace: {
+      loadRecords: vi.fn(),
+      loading: false,
+      recordError: '',
+      recordFilters: reactive({
+        caseId: '',
+        keyword: '',
+        objectType: '',
+      }),
+      records: [],
+    },
   };
 }
 
@@ -272,6 +289,7 @@ function mountView() {
     render: () => h(ArchiveManagementView),
   });
 
+  app.directive('loading', {});
   app.mount(root);
 
   return {
@@ -292,7 +310,7 @@ describe('ArchiveManagementView', () => {
 
   it('shows fallback when user cannot access the archive page', () => {
     const state = createMockPageState();
-    state.canViewArchivePage = false;
+    state.capabilities.canViewArchivePage = false;
     mockUseArchiveManagementPage.mockReturnValue(state);
 
     const { app, root } = mountView();
@@ -330,7 +348,9 @@ describe('ArchiveManagementView', () => {
 
     createButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
-    expect(state.openCreateCabinetDialog).toHaveBeenCalledTimes(1);
+    expect(state.cabinetWorkspace.openCreateCabinetDialog).toHaveBeenCalledTimes(
+      1,
+    );
 
     app.unmount();
     root.remove();

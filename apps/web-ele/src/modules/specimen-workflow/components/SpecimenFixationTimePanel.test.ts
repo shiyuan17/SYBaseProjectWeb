@@ -80,6 +80,7 @@ const {
   downloadFileFromBlobMock,
   getApplicationDetailMock,
   listSpecimensMock,
+  listOperatingBuildingOptionsMock,
   lookupApplicationRegistrationWorkbenchRecordMock,
   loadWorkflowReferenceOptionsMock,
   completeFixationMock,
@@ -107,18 +108,18 @@ const {
         applicationId: 'APP-001',
         applicationNo: 'M2-001',
         barcode: 'BC-001',
-        fixationCompletedAt: '2026-05-26 09:00:00',
-        fixationStartedAt: '2026-05-26 08:30:00',
-        fixationStatus: 'COMPLETED',
+        fixationCompletedAt: null,
+        fixationStartedAt: null,
+        fixationStatus: 'PENDING',
         labelPrintBatchNo: 'LB-001',
         labelPrintStatus: 'FAILED',
-        latestTrackingAt: '2026-05-26 09:00:00',
+        latestTrackingAt: '2026-05-26 08:40:00',
         patientName: 'Alice',
         registeredAt: '2026-05-26 08:00:00',
         specimenId: 'SPEC-001',
         specimenName: '乳腺组织',
         specimenNo: 'SP-001',
-        specimenStatus: 'FIXED',
+        specimenStatus: 'REGISTERED',
         specimenType: '常规',
         verificationStatus: 'VERIFIED',
       },
@@ -156,10 +157,12 @@ const {
         labelPrintedCount: 0,
         pendingLabelCount: 0,
         totalCount: 0,
+        unboundCount: 0,
       },
       total: 1,
     };
   }),
+  listOperatingBuildingOptionsMock: vi.fn(async () => []),
   completeFixationMock: vi.fn(
     async (payload: {
       fixationLiquidType: string;
@@ -280,6 +283,7 @@ vi.mock('@vben/utils', () => ({
 }));
 
 vi.mock('../api/application-registration-workbench-service', () => ({
+  listOperatingBuildingOptions: listOperatingBuildingOptionsMock,
   lookupApplicationRegistrationWorkbenchRecord:
     lookupApplicationRegistrationWorkbenchRecordMock,
 }));
@@ -535,6 +539,7 @@ async function addRow(container: HTMLElement, value: string) {
   );
   await flushView();
   await flushView();
+  await flushView();
 }
 
 describe('SpecimenFixationTimePanel', () => {
@@ -613,6 +618,7 @@ describe('SpecimenFixationTimePanel', () => {
         labelPrintedCount: 0,
         pendingLabelCount: 0,
         totalCount: 1,
+        unboundCount: 0,
       },
       total: 1,
     });

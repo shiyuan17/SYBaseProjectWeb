@@ -74,6 +74,7 @@ describe('specimen management helpers', () => {
       labelPrintedCount: 0,
       pendingLabelCount: 0,
       totalCount: 0,
+      unboundCount: 0,
     });
     expect(createRetryFormDefaults('Alice', 'USER-1')).toEqual(
       expect.objectContaining({

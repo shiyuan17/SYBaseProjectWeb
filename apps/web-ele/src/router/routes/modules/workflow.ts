@@ -161,7 +161,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
           hideInMenu: true,
           hideInTab: true,
           icon: 'carbon:delivery',
-          title: '转运交接',
+          title: '标本出库',
         },
         name: 'TransportHandover',
         path: '/workflow/transport-handover',

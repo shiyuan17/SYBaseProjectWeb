@@ -4,6 +4,7 @@ import type {
   LatestSpecimenRegistrationResult,
   PendingSpecimenPage,
   PendingTransportOrderPage,
+  SpecimenOutboundPage,
   SpecimenManagementListPage,
   SpecimenManagementListSummary,
   SpecimenRegisterResult,
@@ -46,6 +47,7 @@ export type LatestRegistrationResultResponse = Omit<
 export type ApplicationPageResponse = ApplicationPage;
 export type PendingSpecimenPageResponse = PendingSpecimenPage;
 export type PendingTransportOrderPageResponse = PendingTransportOrderPage;
+export type SpecimenOutboundPageResponse = SpecimenOutboundPage;
 
 export type SpecimenManagementListPageResponse = Omit<
   SpecimenManagementListPage,
@@ -154,6 +156,27 @@ export function mapPendingTransportOrderPageResponse(
   };
 }
 
+export function mapSpecimenOutboundPageResponse(
+  response: SpecimenOutboundPageResponse,
+): SpecimenOutboundPage {
+  return {
+    ...response,
+    items: (response.items ?? []).map((item) => ({
+      ...item,
+      inpatientNo: item.inpatientNo ?? null,
+      outboundAt: item.outboundAt ?? null,
+      outboundUserName: item.outboundUserName ?? null,
+      patientGender: item.patientGender ?? null,
+      patientId: item.patientId ?? null,
+      patientName: item.patientName ?? null,
+      registeredAt: item.registeredAt ?? null,
+      registeredByName: item.registeredByName ?? null,
+      specimenStatus: item.specimenStatus ?? null,
+      surgeryName: item.surgeryName ?? null,
+    })),
+  };
+}
+
 export function mapSpecimenManagementListPageResponse(
   response: SpecimenManagementListPageResponse,
 ): SpecimenManagementListPage {
@@ -176,6 +199,12 @@ export function mapSpecimenManagementListPageResponse(
       specimenConfirmedByName: item.specimenConfirmedByName ?? null,
       specimenConfirmedByUserId: item.specimenConfirmedByUserId ?? null,
       specimenRemovalAt: item.specimenRemovalAt ?? null,
+      surgeryName: item.surgeryName ?? null,
+      roomId: item.roomId ?? null,
+      buildingId: item.buildingId ?? null,
+      patientId: item.patientId ?? null,
+      patientGender: item.patientGender ?? null,
+      registrationOperatorName: item.registrationOperatorName ?? null,
       verificationCompletedAt: item.verificationCompletedAt ?? null,
       verificationStartedAt: item.verificationStartedAt ?? null,
       verificationStatus: item.verificationStatus ?? null,
@@ -185,6 +214,7 @@ export function mapSpecimenManagementListPageResponse(
       labelPrintedCount: response.summary?.labelPrintedCount ?? 0,
       pendingLabelCount: response.summary?.pendingLabelCount ?? 0,
       totalCount: response.summary?.totalCount ?? 0,
+      unboundCount: response.summary?.unboundCount ?? 0,
     },
   };
 }

@@ -89,7 +89,7 @@ vi.mock('element-plus', () => {
           type: 'button',
           onClick: () => emit('update:modelValue', 'transport'),
         },
-        '转运/出库',
+        '标本出库',
       ),
       h('div', { 'data-active-tab': props.modelValue }, slots.default?.()),
     ])) as unknown;
@@ -183,7 +183,7 @@ describe('FixationTransportView', () => {
     expect(root.textContent).toContain('条码绑定');
     expect(root.textContent).toContain('标本确认');
     expect(root.textContent).toContain('标本入库');
-    expect(root.textContent).toContain('转运/出库');
+    expect(root.textContent).toContain('标本出库');
     expect(
       root.querySelector('[data-testid="fixation-time-panel"]'),
     ).not.toBeNull();

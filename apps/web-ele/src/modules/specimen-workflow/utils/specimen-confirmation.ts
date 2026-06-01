@@ -41,6 +41,10 @@ function formatValue(value: null | string | undefined) {
   return value?.trim() ?? '';
 }
 
+function normalizeText(value?: null | string) {
+  return value?.trim() ?? '';
+}
+
 export function normalizeGenderLabel(value: null | string | undefined) {
   const normalizedValue = value?.trim().toUpperCase();
   if (normalizedValue === 'F' || normalizedValue === '女') {
@@ -74,6 +78,51 @@ export function canRetryLabel(row: ConfirmationListRow) {
     Boolean(row.labelPrintBatchNo) &&
     ['FAILED', 'PENDING'].includes(row.labelPrintStatus ?? '')
   );
+}
+
+export function resolveExactMatches(
+  items: SpecimenManagementListItem[],
+  keyword: string,
+) {
+  const normalizedKeyword = normalizeText(keyword).toLowerCase();
+  return items.filter((item) =>
+    [item.specimenId, item.specimenNo, item.barcode].some(
+      (value) => normalizeText(value).toLowerCase() === normalizedKeyword,
+    ),
+  );
+}
+
+export function resolveUnavailableMessage(
+  items: SpecimenManagementListItem[],
+  keyword: string,
+) {
+  const exactMatches = resolveExactMatches(items, keyword);
+  const targetItems = exactMatches.length > 0 ? exactMatches : items;
+
+  if (
+    targetItems.some(
+      (item) => normalizeText(item.fixationStatus) !== 'COMPLETED',
+    )
+  ) {
+    return '标本尚未完成固定，不能进行标本确认';
+  }
+  if (
+    targetItems.some(
+      (item) => normalizeText(item.verificationStatus) !== 'VERIFIED',
+    )
+  ) {
+    return '标本尚未完成核对，不能进行标本确认';
+  }
+  if (
+    targetItems.some((item) => normalizeText(item.checkInStatus) === 'CHECKED_IN')
+  ) {
+    return '标本已完成入库，无需重复确认';
+  }
+  if (targetItems.some((item) => isReceiptLocked(item))) {
+    return '标本已接收、拒收或退回，不能进行标本确认';
+  }
+
+  return '未找到可确认的标本';
 }
 
 export function enhanceRow(

@@ -214,12 +214,15 @@ export interface DuplicateApplicationCheckResult {
 export interface SpecimenManagementListQuery {
   abnormalFlag?: boolean;
   applicationNo?: null | string;
+  barcodeBindingStatus?: null | string;
+  buildingId?: null | string;
   dateFrom?: null | string;
   dateTo?: null | string;
   departmentId?: null | string;
   keyword?: null | string;
   labelPrintStatus?: null | string;
   page: number;
+  roomId?: null | string;
   size: number;
   specimenStatus?: null | string;
 }
@@ -229,8 +232,9 @@ export interface SpecimenManagementListItem {
   abnormalType?: null | string;
   applicationId: string;
   applicationNo: string;
-  barcode: string;
+  barcode: null | string;
   barcodeBindingStatus?: null | string;
+  buildingId?: null | string;
   checkInStatus?: null | string;
   checkedInAt?: null | string;
   checkedInByName?: null | string;
@@ -245,9 +249,13 @@ export interface SpecimenManagementListItem {
   labelPrintBatchNo: null | string;
   labelPrintStatus: null | string;
   latestTrackingAt: null | string;
+  patientGender?: null | string;
+  patientId?: null | string;
   patientName: null | string;
   recentNode?: null | string;
   registeredAt: null | string;
+  registrationOperatorName?: null | string;
+  roomId?: null | string;
   specimenCount: null | number;
   specimenConfirmedAt?: null | string;
   specimenConfirmedByName?: null | string;
@@ -261,6 +269,7 @@ export interface SpecimenManagementListItem {
   specimenType: null | string;
   submittingDepartmentId: null | string;
   submittingDepartmentName: null | string;
+  surgeryName?: null | string;
   verificationCompletedAt?: null | string;
   verificationStartedAt?: null | string;
   verificationStatus?: null | string;
@@ -271,6 +280,7 @@ export interface SpecimenManagementListSummary {
   labelPrintedCount: number;
   pendingLabelCount: number;
   totalCount: number;
+  unboundCount: number;
 }
 
 export interface SpecimenRemovalQuery {
@@ -408,10 +418,13 @@ export interface LabelPrintRetryResult {
 }
 
 export interface SpecimenBarcodeBindingRequest {
-  operatorName: string;
-  operatorUserId?: null | string;
   remarks?: null | string;
   targetBarcode: string;
+  terminalCode?: null | string;
+}
+
+export interface SpecimenBarcodeUnbindRequest {
+  remarks?: null | string;
   terminalCode?: null | string;
 }
 
@@ -555,6 +568,17 @@ export interface TransportOrderOutboundRequest {
   terminalCode?: null | string;
 }
 
+export type SpecimenOutboundIdentifierType = 'SPECIMEN_NO';
+
+export interface QuickSpecimenOutboundRequest {
+  identifier: string;
+  identifierType: SpecimenOutboundIdentifierType;
+  outboundUserId?: null | string;
+  outboundUserName: string;
+  remarks?: null | string;
+  terminalCode?: null | string;
+}
+
 export interface TransportOrderView {
   applicationId: string;
   handedOverAt: null | string;
@@ -593,6 +617,39 @@ export interface PendingTransportOrderItem {
 
 export interface PendingTransportOrderPage {
   items: PendingTransportOrderItem[];
+  page: number;
+  size: number;
+  total: number;
+}
+
+export interface SpecimenOutboundListQuery {
+  applicationId?: null | string;
+  page: number;
+  size: number;
+  specimenNo?: null | string;
+}
+
+export interface SpecimenOutboundListItem {
+  applicationId: string;
+  applicationNo: string;
+  inpatientNo: null | string;
+  outboundAt: null | string;
+  outboundUserName: null | string;
+  patientGender: null | string;
+  patientId: null | string;
+  patientName: null | string;
+  registeredAt: null | string;
+  registeredByName: null | string;
+  specimenId: string;
+  specimenName: string;
+  specimenNo: string;
+  specimenStatus: null | string;
+  surgeryName: null | string;
+  transportOrderId: string;
+}
+
+export interface SpecimenOutboundPage {
+  items: SpecimenOutboundListItem[];
   page: number;
   size: number;
   total: number;

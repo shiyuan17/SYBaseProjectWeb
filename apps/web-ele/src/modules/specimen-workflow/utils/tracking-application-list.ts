@@ -10,14 +10,11 @@ import type { TrackingTimelineData } from './tracking-timeline';
 import { getSpecimenTimelineLabel } from './tracking-timeline';
 
 export type TrackingApplicationListFilters = {
-  applicationFormStatus: string;
   applicationNo: string;
-  applicationType: string;
   dateRange: string[];
   page: number;
   patientName: string;
   size: number;
-  submittingDepartmentId: string;
 };
 
 export type SpecimenTimelineTab = {
@@ -30,15 +27,12 @@ export function buildTrackingApplicationListQuery(
   filters: TrackingApplicationListFilters,
 ): ApplicationListQuery {
   return {
-    applicationFormStatus: filters.applicationFormStatus || undefined,
     applicationNo: filters.applicationNo.trim() || undefined,
-    applicationType: filters.applicationType || undefined,
     dateFrom: filters.dateRange[0] || undefined,
     dateTo: filters.dateRange[1] || undefined,
     page: filters.page,
     patientName: filters.patientName.trim() || undefined,
     size: filters.size,
-    submittingDepartmentId: filters.submittingDepartmentId.trim() || undefined,
   };
 }
 

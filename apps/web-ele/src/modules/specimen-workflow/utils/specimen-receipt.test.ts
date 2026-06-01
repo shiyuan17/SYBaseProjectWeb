@@ -8,10 +8,12 @@ import {
   buildPendingReceiptQuery,
   buildReceiptSubmissionRequest,
   buildTransportReceiptGroups,
+  countDerivedAbnormalReceiptItems,
   createDefaultReceiptFormState,
   createReceiptDraftItem,
   createReceiptDraftItemsFromGroup,
   formatGroupContainerNames,
+  isReceiptDraftDerivedAbnormal,
   normalizeReceiptItem,
   pickLatestTrackingAt,
   validateReceiptItems,
@@ -78,6 +80,20 @@ describe('specimen receipt helpers', () => {
         specimenBarcode: 'BC-1',
       }),
     );
+    expect(isReceiptDraftDerivedAbnormal(createReceiptDraftItem('BC-1'))).toBe(
+      false,
+    );
+    expect(
+      countDerivedAbnormalReceiptItems([
+        createReceiptDraftItem('BC-1'),
+        {
+          ...createReceiptDraftItem('BC-2'),
+          qualityCheckResult: 'FAILED',
+          qualityIssueCodes: ['CONTAINER_DAMAGE'],
+          reason: '容器破损',
+        },
+      ]),
+    ).toBe(1);
   });
 
   it('groups pending items by transport order and derives draft rows', () => {
@@ -202,6 +218,17 @@ describe('specimen receipt helpers', () => {
         },
       ]),
     ).toContain('问题代码');
+    expect(
+      validateReceiptItems([
+        {
+          ...createReceiptDraftItem('BC-1'),
+          qualityCheckResult: 'FAILED',
+          qualityIssueCodes: ['CONTAINER_DAMAGE'],
+          reason: '',
+          receiptStatus: 'RETURNED',
+        },
+      ]),
+    ).toContain('填写原因');
     expect(
       validateReceiptItems([
         {

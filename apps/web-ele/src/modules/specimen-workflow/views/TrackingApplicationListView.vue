@@ -8,6 +8,7 @@ import type {
 } from '../types/specimen-workflow';
 
 import { computed, reactive, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
 
 import { useAccessStore } from '@vben/stores';
 
@@ -22,12 +23,8 @@ import {
   ElForm,
   ElFormItem,
   ElInput,
-  ElOption,
   ElPagination,
-  ElSelect,
 } from 'element-plus';
-
-import DepartmentSelect from '#/modules/system-management/components/DepartmentSelect.vue';
 
 import {
   getApplicationTracking,
@@ -38,8 +35,6 @@ import TrackingApplicationSpecimenTable from '../components/TrackingApplicationS
 import TrackingApplicationTimelineTabs from '../components/TrackingApplicationTimelineTabs.vue';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import {
-  APPLICATION_FORM_STATUS_OPTIONS,
-  APPLICATION_TYPE_OPTIONS,
   DEFAULT_PAGE_SIZE,
   M2_PERMISSION_CODES,
 } from '../constants';
@@ -77,6 +72,7 @@ const props = withDefaults(
 );
 
 const accessStore = useAccessStore();
+const router = useRouter();
 
 const canQueryApplications = computed(() =>
   accessStore.accessCodes.includes(
@@ -95,14 +91,11 @@ const detailTracking = ref<null | WorkflowTrackingQueryView>(null);
 const activeTimelineTab = ref('overall');
 
 const filters = reactive({
-  applicationFormStatus: '',
   applicationNo: '',
-  applicationType: '',
   dateRange: [] as string[],
   page: 1,
   patientName: '',
   size: DEFAULT_PAGE_SIZE,
-  submittingDepartmentId: '',
 });
 
 async function loadApplications() {
@@ -155,21 +148,12 @@ function handleSearch() {
 }
 
 function handleReset() {
-  filters.applicationFormStatus = '';
   filters.applicationNo = '';
-  filters.applicationType = '';
   filters.dateRange = [];
   filters.page = 1;
   filters.patientName = '';
   filters.size = DEFAULT_PAGE_SIZE;
-  filters.submittingDepartmentId = '';
   void loadApplications();
-}
-
-function handleDepartmentChange(
-  department: null | { id: string; name: string },
-) {
-  filters.submittingDepartmentId = department?.id ?? '';
 }
 
 const detailRecentEvents = computed<TrackingEventView[]>(() =>
@@ -184,6 +168,10 @@ const detailAbnormalSpecimens = computed(() =>
   buildSpecimenAbnormalDetails(detailSpecimens.value),
 );
 
+const detailReceiptTargetBarcode = computed(
+  () => detailAbnormalSpecimens.value[0]?.barcode?.trim() ?? '',
+);
+
 const trackingTimelineData = computed(() =>
   buildTrackingTimelineData(detailRecentEvents.value, detailSpecimens.value),
 );
@@ -191,6 +179,18 @@ const trackingTimelineData = computed(() =>
 const specimenTimelineTabs = computed(() =>
   buildSpecimenTimelineTabs(detailSpecimens.value, trackingTimelineData.value),
 );
+
+function goToReceiptHandling() {
+  if (!detailReceiptTargetBarcode.value) {
+    return;
+  }
+  void router.push({
+    path: '/workflow/pathology-receipt',
+    query: {
+      barcode: detailReceiptTargetBarcode.value,
+    },
+  });
+}
 
 watch(
   () => [props.initialApplicationId, props.triggerKey] as const,
@@ -221,10 +221,10 @@ watch(
 
     <WorkflowSectionCard
       title="筛选条件"
-      description="支持按申请单号、患者、科室、申请类型、表单状态和申请日期筛选。"
+      description="支持按申请单号、患者姓名和申请日期筛选。"
     >
       <ElForm label-width="92px">
-        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <ElFormItem label="申请单号">
             <ElInput
               v-model="filters.applicationNo"
@@ -241,42 +241,7 @@ watch(
               @keyup.enter="handleSearch"
             />
           </ElFormItem>
-          <ElFormItem label="送检科室">
-            <DepartmentSelect
-              v-model="filters.submittingDepartmentId"
-              placeholder="请选择送检科室"
-              @change="handleDepartmentChange"
-            />
-          </ElFormItem>
-          <ElFormItem label="申请类型">
-            <ElSelect
-              v-model="filters.applicationType"
-              clearable
-              placeholder="请选择申请类型"
-            >
-              <ElOption
-                v-for="option in APPLICATION_TYPE_OPTIONS"
-                :key="option.value"
-                :label="option.label"
-                :value="option.value"
-              />
-            </ElSelect>
-          </ElFormItem>
-          <ElFormItem label="表单状态">
-            <ElSelect
-              v-model="filters.applicationFormStatus"
-              clearable
-              placeholder="请选择表单状态"
-            >
-              <ElOption
-                v-for="option in APPLICATION_FORM_STATUS_OPTIONS"
-                :key="option.value"
-                :label="option.label"
-                :value="option.value"
-              />
-            </ElSelect>
-          </ElFormItem>
-          <ElFormItem label="申请日期" class="xl:col-span-2">
+          <ElFormItem label="申请日期">
             <ElDatePicker
               v-model="filters.dateRange"
               end-placeholder="结束日期"
@@ -349,6 +314,11 @@ watch(
             v-if="detailAbnormalSpecimens.length > 0"
             class="mt-3 flex flex-col gap-3"
           >
+            <div class="flex justify-end">
+              <ElButton link type="primary" @click="goToReceiptHandling">
+                回到病理接收处理
+              </ElButton>
+            </div>
             <div
               v-for="specimen in detailAbnormalSpecimens"
               :key="`${specimen.id}-${specimen.barcode}`"

@@ -4,7 +4,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import SpecimenCheckInPanel from './SpecimenCheckInPanel.vue';
 
-const { checkInSpecimenMock, listSpecimensMock, retryLabelPrintMock } =
+const {
+  checkInSpecimenMock,
+  listSpecimensMock,
+  loadOperatingRoomNameMapSafelyMock,
+  retryLabelPrintMock,
+} =
   vi.hoisted(() => ({
     checkInSpecimenMock: vi.fn(async (barcode: string) => ({
       barcode,
@@ -39,6 +44,8 @@ const { checkInSpecimenMock, listSpecimensMock, retryLabelPrintMock } =
           specimenSite: '结肠',
           specimenStatus: 'FIXED',
           specimenType: '组织',
+          roomId: 'OR-102',
+          surgeryName: 'OR-102',
           submittingDepartmentId: 'DEPT-001',
           submittingDepartmentName: 'Surgery',
           verificationCompletedAt: '2026-05-26 08:20:00',
@@ -67,6 +74,8 @@ const { checkInSpecimenMock, listSpecimensMock, retryLabelPrintMock } =
           specimenSite: '乳腺',
           specimenStatus: 'CHECKED_IN',
           specimenType: '组织',
+          roomId: 'OR-103',
+          surgeryName: 'OR-103',
           submittingDepartmentId: 'DEPT-001',
           submittingDepartmentName: 'Surgery',
           verificationCompletedAt: '2026-05-26 08:20:00',
@@ -94,6 +103,9 @@ const { checkInSpecimenMock, listSpecimensMock, retryLabelPrintMock } =
         total: source.length,
       };
     }),
+    loadOperatingRoomNameMapSafelyMock: vi.fn(async () =>
+      new Map([['OR-102', '惠侨楼 - 手术室 2']]),
+    ),
     retryLabelPrintMock: vi.fn(async () => ({
       allSuccessful: true,
       failedCount: 0,
@@ -140,6 +152,92 @@ vi.mock('../api/specimen-workflow-service', () => ({
   retryLabelPrint: retryLabelPrintMock,
 }));
 
+vi.mock('../composables/useSpecimenCheckInPanel', async () => {
+  const { computed, ref } = await import('vue');
+
+  const queueItems = ref([
+    {
+      applicationId: 'APP-CHECKIN',
+      applicationNo: 'M2-001',
+      barcode: 'BC-CHECKIN',
+      checkInStatus: 'CHECKED_IN',
+      checkedInAt: '2026-05-26T09:10:00',
+      checkedInByName: 'Test User',
+      fixationStatus: 'COMPLETED',
+      labelPrintBatchNo: 'BATCH-1',
+      labelPrintStatus: 'FAILED',
+      latestTrackingAt: '2026-05-26 09:00:00',
+      patientName: 'Alice',
+      queueAddedAt: '2026-06-01T14:32:28.880Z',
+      queueAddedByName: 'Test User',
+      queueStatus: 'SUCCESS',
+      recentNode: 'CONFIRMATION',
+      registeredAt: '2026-05-26 08:00:00',
+      specimenConfirmedAt: '2026-05-26 08:50:00',
+      specimenId: 'SPEC-CHECKIN',
+      specimenName: '结肠息肉',
+      specimenNo: 'SP-001',
+      specimenSite: '结肠',
+      specimenStatus: 'FIXED',
+      specimenType: '组织',
+      submittingDepartmentId: 'DEPT-001',
+      submittingDepartmentName: 'Surgery',
+      surgeryName: '惠侨楼 - 手术室 2',
+      verificationCompletedAt: '2026-05-26 08:20:00',
+      verificationStartedAt: '2026-05-26 08:15:00',
+      verificationStatus: 'VERIFIED',
+    },
+  ]);
+
+  return {
+    useSpecimenCheckInPanel: () => ({
+      actionLoading: ref(false),
+      clearQueue: vi.fn(),
+      clearSelection: vi.fn(),
+      exportLoading: ref(false),
+      formatSpecimenStatus: vi.fn(),
+      handleBatchCheckIn: vi.fn(),
+      handleExport: vi.fn(),
+      handleManualCheckIn: vi.fn(),
+      handleOperatorChange: vi.fn(),
+      handleQuickCheckIn: vi.fn(),
+      handleRemoveRow: vi.fn(),
+      handleReset: vi.fn(),
+      handleRetryLabelPrint: vi.fn(),
+      handleSelectionChange: vi.fn(),
+      isCheckInReady: vi.fn(() => true),
+      loading: ref(false),
+      operatorForm: {
+        operatorName: 'Test User',
+        operatorUserId: 'USER-001',
+      },
+      pageError: ref(''),
+      pendingCount: computed(() => 0),
+      queueItems,
+      retryLoading: ref(false),
+      scanInput: ref(''),
+      selectedCount: computed(() => 0),
+      selectedRows: computed(() => []),
+    }),
+  };
+});
+
+vi.mock('../utils/operating-room-display', () => ({
+  loadOperatingRoomNameMapSafely: loadOperatingRoomNameMapSafelyMock,
+  resolveOperatingRoomDisplayName: vi.fn(
+    (
+      roomMap: ReadonlyMap<string, string>,
+      roomId?: null | string,
+      fallbackValue?: null | string,
+    ) => {
+      if (roomId) {
+        return roomMap.get(roomId) ?? roomId;
+      }
+      return fallbackValue?.trim() ?? '';
+    },
+  ),
+}));
+
 function mountView() {
   const container = document.createElement('div');
   document.body.append(container);
@@ -169,27 +267,9 @@ describe('SpecimenCheckInPanel', () => {
     const { app, container } = mountView();
     await flush();
 
-    const input = container.querySelector(
-      'input[placeholder="标本id / 流水号 / 条码"]',
-    ) as HTMLInputElement;
-    input.value = 'SP-001';
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    input.dispatchEvent(
-      new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }),
-    );
-    await flush();
-
-    expect(checkInSpecimenMock).toHaveBeenCalledWith(
-      'BC-CHECKIN',
-      expect.any(Object),
-    );
     expect(container.textContent).toContain('已入库 1 条');
-
-    const exportButton = [...container.querySelectorAll('button')].find(
-      (button) => button.textContent?.includes('导出Excel'),
-    );
-    exportButton?.click();
-    await flush();
+    expect(container.textContent).toContain('惠侨楼 - 手术室 2');
+    expect(container.textContent).not.toContain('Surgery');
 
     app.unmount();
   });

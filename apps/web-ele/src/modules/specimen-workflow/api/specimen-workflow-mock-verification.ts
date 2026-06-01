@@ -533,6 +533,7 @@ export async function bindSpecimenBarcodeMock(
   const specimen = resolveSpecimenByIdentifier(identifier);
   assertSpecimenNotInReceiptTerminalState(specimen, '绑定条码');
   const eventTime = createTimestamp();
+  const operator = resolveMockOperatorContext();
   const previousBarcode = specimen.barcode;
   specimen.previousBarcodes = previousBarcode
     ? [...specimen.previousBarcodes, previousBarcode]
@@ -546,7 +547,7 @@ export async function bindSpecimenBarcodeMock(
     eventTime,
     eventType: 'PRINTED',
     nodeCode: 'LABEL_PRINT',
-    operatorName: data.operatorName,
+    operatorName: operator.operatorName,
     sourceTerminal: data.terminalCode ?? null,
     specimenBarcode: specimen.barcode,
     specimenId: specimen.id,
@@ -555,8 +556,8 @@ export async function bindSpecimenBarcodeMock(
   appendVerificationRecord({
     applicationId: specimen.applicationId,
     barcode: specimen.barcode,
-    operatorName: data.operatorName,
-    operatorUserId: data.operatorUserId ?? null,
+    operatorName: operator.operatorName,
+    operatorUserId: operator.operatorUserId,
     remarks: data.remarks ?? null,
     result: 'SUCCESS',
     specimenId: specimen.id,
@@ -576,6 +577,7 @@ export async function rebindSpecimenBarcodeMock(
   assertSpecimenNotInReceiptTerminalState(specimen, '重绑条码');
   const oldBarcode = specimen.barcode;
   const eventTime = createTimestamp();
+  const operator = resolveMockOperatorContext();
   specimen.previousBarcodes = oldBarcode
     ? [...new Set([...specimen.previousBarcodes, oldBarcode])]
     : [...specimen.previousBarcodes];
@@ -588,7 +590,7 @@ export async function rebindSpecimenBarcodeMock(
     eventTime,
     eventType: 'RETRY',
     nodeCode: 'LABEL_PRINT',
-    operatorName: data.operatorName,
+    operatorName: operator.operatorName,
     sourceTerminal: data.terminalCode ?? null,
     specimenBarcode: specimen.barcode,
     specimenId: specimen.id,
@@ -597,13 +599,60 @@ export async function rebindSpecimenBarcodeMock(
   appendVerificationRecord({
     applicationId: specimen.applicationId,
     barcode: specimen.barcode,
-    operatorName: data.operatorName,
-    operatorUserId: data.operatorUserId ?? null,
+    operatorName: operator.operatorName,
+    operatorUserId: operator.operatorUserId,
     remarks: data.remarks ?? `旧条码 ${oldBarcode} 更正为 ${specimen.barcode}`,
     result: 'SUCCESS',
     specimenId: specimen.id,
     terminalCode: data.terminalCode ?? null,
     verificationType: 'BARCODE_REBIND',
+    verifiedAt: eventTime,
+  });
+  updateApplicationFromSpecimens(specimen.applicationId);
+  return mapSpecimenTrackingSummary(specimen);
+}
+
+export async function unbindSpecimenBarcodeMock(
+  identifier: string,
+  data: Pick<SpecimenBarcodeBindingRequest, 'remarks' | 'terminalCode'>,
+): Promise<SpecimenTrackingSummary> {
+  const specimen = resolveSpecimenByIdentifier(identifier);
+  assertSpecimenNotInReceiptTerminalState(specimen, '取消绑定条码');
+  if (!normalizeText(specimen.barcode)) {
+    throw new Error(`标本 ${specimen.specimenNo} 当前未绑定条码`);
+  }
+
+  const operator = resolveMockOperatorContext();
+  const oldBarcode = specimen.barcode;
+  const eventTime = createTimestamp();
+  specimen.previousBarcodes = oldBarcode
+    ? [...new Set([...specimen.previousBarcodes, oldBarcode])]
+    : [...specimen.previousBarcodes];
+  specimen.barcode = '';
+  specimen.latestTrackingAt = eventTime;
+  appendWorkflowEvent({
+    applicationId: specimen.applicationId,
+    eventContent: `取消条码绑定 ${oldBarcode}`,
+    eventStatus: 'SUCCESS',
+    eventTime,
+    eventType: 'UNBOUND',
+    nodeCode: 'LABEL_PRINT',
+    operatorName: operator.operatorName,
+    sourceTerminal: data.terminalCode ?? null,
+    specimenBarcode: oldBarcode,
+    specimenId: specimen.id,
+    specimenNo: specimen.specimenNo,
+  });
+  appendVerificationRecord({
+    applicationId: specimen.applicationId,
+    barcode: oldBarcode,
+    operatorName: operator.operatorName,
+    operatorUserId: operator.operatorUserId,
+    remarks: data.remarks ?? '取消条码绑定',
+    result: 'SUCCESS',
+    specimenId: specimen.id,
+    terminalCode: data.terminalCode ?? null,
+    verificationType: 'BARCODE_UNBIND',
     verifiedAt: eventTime,
   });
   updateApplicationFromSpecimens(specimen.applicationId);

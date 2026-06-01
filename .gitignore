@@ -75,3 +75,4 @@ data/stream_store/
 artifacts/
 repomix-output.xml
 temp-eslint.json
+linear-setting.json

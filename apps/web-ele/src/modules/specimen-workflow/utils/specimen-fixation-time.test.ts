@@ -132,6 +132,14 @@ describe('specimen fixation time helpers', () => {
     expect(
       isReceiptLocked(createRowFixture({ specimenStatus: 'RECEIVED' })),
     ).toBe(true);
+    expect(
+      isVisibleInFixationScene(
+        createRowFixture({
+          fixationStatus: 'COMPLETED',
+          specimenStatus: 'FIXED',
+        }),
+      ),
+    ).toBe(false);
   });
 
   it('resolves unavailable messages and exact matches', () => {
@@ -144,6 +152,17 @@ describe('specimen fixation time helpers', () => {
         'S-1',
       ),
     ).toContain('离体确认');
+    expect(
+      resolveUnavailableMessage(
+        [
+          createRowFixture({
+            fixationStatus: 'COMPLETED',
+            specimenStatus: 'FIXED',
+          }),
+        ],
+        'S-1',
+      ),
+    ).toBe('标本已完成固定，无需重复操作');
   });
 
   it('builds queue rows and export tables', () => {

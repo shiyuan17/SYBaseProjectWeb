@@ -5,22 +5,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   createAlertStub,
   createEmptyStub,
-  createOptionStub,
-  createSelectStub,
-  createTagStub,
 } from '../test-utils/component-stubs';
 
-const { mockAccessStore, mockRoute, mockWorkflowService } = vi.hoisted(() => ({
+const { mockAccessStore, mockRoute } = vi.hoisted(() => ({
   mockAccessStore: {
     accessCodes: [] as string[],
   },
   mockRoute: {
     query: {} as Record<string, string>,
-  },
-  mockWorkflowService: {
-    getApplicationTracking: vi.fn(),
-    getSpecimenTrackingByBarcode: vi.fn(),
-    listSpecimenVerificationRecords: vi.fn(),
   },
 }));
 
@@ -37,14 +29,6 @@ vi.mock('@vben/common-ui', () => ({
 
 vi.mock('@vben/stores', () => ({
   useAccessStore: () => mockAccessStore,
-}));
-
-vi.mock('../api/specimen-workflow-service', () => ({
-  getApplicationTracking: mockWorkflowService.getApplicationTracking,
-  getSpecimenTrackingByBarcode:
-    mockWorkflowService.getSpecimenTrackingByBarcode,
-  listSpecimenVerificationRecords:
-    mockWorkflowService.listSpecimenVerificationRecords,
 }));
 
 vi.mock('element-plus', () => {
@@ -79,22 +63,10 @@ vi.mock('element-plus', () => {
       },
       slots.default?.(),
     )) as unknown;
-  const ElTable = ((props: Record<string, unknown>, { slots }: any) =>
-    h('div', { 'data-testid': 'verification-table' }, [
-      JSON.stringify(props.data),
-      slots.default?.(),
-    ])) as unknown;
-  const ElTableColumn = ((_: Record<string, unknown>, { slots }: any) =>
-    h('div', slots.default?.({ row: {} }))) as unknown;
   return {
     ElAlert: createAlertStub(),
     ElEmpty: createEmptyStub(),
-    ElOption: createOptionStub(),
-    ElSelect: createSelectStub(),
     ElTabPane,
-    ElTable,
-    ElTableColumn,
-    ElTag: createTagStub(),
     ElTabs,
   };
 });
@@ -136,9 +108,6 @@ describe('TrackingQueryView', () => {
   afterEach(() => {
     mockAccessStore.accessCodes = [];
     mockRoute.query = {};
-    mockWorkflowService.getApplicationTracking.mockReset();
-    mockWorkflowService.getSpecimenTrackingByBarcode.mockReset();
-    mockWorkflowService.listSpecimenVerificationRecords.mockReset();
     document.body.innerHTML = '';
   });
 
@@ -160,6 +129,7 @@ describe('TrackingQueryView', () => {
       root.querySelector('[data-testid="applications-tab"]'),
     ).not.toBeNull();
     expect(root.querySelector('[data-testid="specimens-tab"]')).not.toBeNull();
+    expect(root.querySelector('h1')).toBeNull();
 
     app.unmount();
   });
@@ -188,17 +158,6 @@ describe('TrackingQueryView', () => {
       applicationId: 'APP-TRACK-001',
     };
 
-    mockWorkflowService.getApplicationTracking.mockResolvedValue({
-      specimens: [
-        {
-          barcode: 'BC-APP-001',
-          specimenName: '肺组织',
-          specimenNo: 'SP-APP-001',
-        },
-      ],
-    });
-    mockWorkflowService.listSpecimenVerificationRecords.mockResolvedValue([]);
-
     const { app, root } = await mountView();
 
     expect(
@@ -222,17 +181,6 @@ describe('TrackingQueryView', () => {
       barcode: 'BC-TRACK-001',
     };
 
-    mockWorkflowService.getSpecimenTrackingByBarcode.mockResolvedValue({
-      specimens: [
-        {
-          barcode: 'BC-TRACK-001',
-          specimenName: '胃组织',
-          specimenNo: 'SP-TRACK-001',
-        },
-      ],
-    });
-    mockWorkflowService.listSpecimenVerificationRecords.mockResolvedValue([]);
-
     const { app, root } = await mountView();
 
     expect(root.querySelector('[data-active-tab="specimens"]')).not.toBeNull();
@@ -245,7 +193,7 @@ describe('TrackingQueryView', () => {
     app.unmount();
   });
 
-  it('loads and renders verification records for the current barcode context', async () => {
+  it('does not render the removed verification and correction panels', async () => {
     mockAccessStore.accessCodes = [
       'PERM_APPLICATION_DETAIL_QUERY',
       'PERM_SPECIMEN_REGISTER',
@@ -253,38 +201,14 @@ describe('TrackingQueryView', () => {
     mockRoute.query = {
       barcode: 'BC-TRACK-001',
     };
-    mockWorkflowService.getSpecimenTrackingByBarcode.mockResolvedValue({
-      specimens: [
-        {
-          barcode: 'BC-TRACK-001',
-          specimenName: '胃组织',
-          specimenNo: 'SP-TRACK-001',
-        },
-      ],
-    });
-    mockWorkflowService.listSpecimenVerificationRecords.mockResolvedValue([
-      {
-        applicationId: 'APP-001',
-        barcode: 'BC-TRACK-001',
-        operatorName: '张三',
-        remarks: '完成标本确认',
-        result: 'SUCCESS',
-        specimenId: 'SPEC-001',
-        terminalCode: 'TERM-001',
-        verificationType: 'SPECIMEN_CONFIRM',
-        verifiedAt: '2026-05-26T11:25:00',
-      },
-    ]);
 
     const { app, root } = await mountView();
-    await nextTick();
 
+    expect(root.textContent).not.toContain('核对记录视图');
+    expect(root.textContent).not.toContain('异常修正入口说明');
     expect(
-      mockWorkflowService.listSpecimenVerificationRecords,
-    ).toHaveBeenCalledWith('BC-TRACK-001');
-    expect(root.textContent).toContain('核对记录视图');
-    expect(root.textContent).toContain('SPECIMEN_CONFIRM');
-    expect(root.textContent).toContain('完成标本确认');
+      root.querySelector('[data-testid="tracking-specimen-list"]'),
+    ).not.toBeNull();
 
     app.unmount();
   });

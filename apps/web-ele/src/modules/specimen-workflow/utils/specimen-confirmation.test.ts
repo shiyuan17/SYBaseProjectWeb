@@ -13,6 +13,7 @@ import {
   isReceiptLocked,
   isVisibleInConfirmationScene,
   normalizeGenderLabel,
+  resolveUnavailableMessage,
 } from './specimen-confirmation';
 
 const roomNameById = new Map([
@@ -150,6 +151,34 @@ describe('specimen confirmation helpers', () => {
       false,
     );
     expect(canRetryLabel(row)).toBe(true);
+  });
+
+  it('explains why a specimen cannot be confirmed', () => {
+    expect(
+      resolveUnavailableMessage(
+        [createRowFixture({ fixationStatus: 'PENDING' })],
+        'S-1',
+      ),
+    ).toBe('标本尚未完成固定，不能进行标本确认');
+    expect(
+      resolveUnavailableMessage(
+        [createRowFixture({ verificationStatus: 'PENDING' })],
+        'S-1',
+      ),
+    ).toBe('标本尚未完成核对，不能进行标本确认');
+    expect(
+      resolveUnavailableMessage(
+        [createRowFixture({ checkInStatus: 'CHECKED_IN' })],
+        'S-1',
+      ),
+    ).toBe('标本已完成入库，无需重复确认');
+    expect(
+      resolveUnavailableMessage(
+        [createRowFixture({ specimenStatus: 'RECEIVED' })],
+        'S-1',
+      ),
+    ).toBe('标本已接收、拒收或退回，不能进行标本确认');
+    expect(resolveUnavailableMessage([], 'S-404')).toBe('未找到可确认的标本');
   });
 
   it('enhances rows and exports tabular data', async () => {

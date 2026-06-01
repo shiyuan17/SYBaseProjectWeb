@@ -10,6 +10,7 @@ import {
   createInputStub,
   createOptionStub,
   createSelectStub,
+  createTagStub,
   createTableColumnStub,
   createTableStub,
 } from '../test-utils/component-stubs';
@@ -25,6 +26,7 @@ vi.mock('element-plus', () => {
     ElInputNumber: createInputNumberStub(),
     ElOption: createOptionStub(),
     ElSelect: createSelectStub(),
+    ElTag: createTagStub(),
     ElTable: createTableStub(tableRowContextKey),
     ElTableColumn: createTableColumnStub(tableRowContextKey),
   };
@@ -87,7 +89,27 @@ describe('SpecimenReceiptDraftTable', () => {
     const wrapper = await mountTable({ showContainerName: true });
 
     expect(wrapper.container.textContent).toContain('离心管');
+    expect(wrapper.container.textContent).toContain('正常接收');
     expect(wrapper.container.textContent).not.toContain('删除');
+
+    wrapper.unmount();
+  });
+
+  it('shows derived abnormal hint for failed rows', async () => {
+    const wrapper = await mountTable({
+      items: [
+        createDraftItem({
+          qualityCheckResult: 'FAILED',
+          qualityIssueCodes: ['CONTAINER_DAMAGE'],
+          reason: '容器破损',
+        }),
+      ],
+    });
+
+    expect(wrapper.container.textContent).toContain('自动标记异常');
+    expect(wrapper.container.textContent).toContain(
+      '拒收、退回或质控不合格提交后会自动进入异常标记。',
+    );
 
     wrapper.unmount();
   });

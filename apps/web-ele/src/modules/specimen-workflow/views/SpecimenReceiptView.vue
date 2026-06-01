@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import type { ReceiptWorkbenchRow } from '../utils/specimen-receipt-workbench';
 
+import { watch } from 'vue';
+import { useRoute } from 'vue-router';
+
 import {
   ElAlert,
   ElButton,
@@ -17,6 +20,7 @@ import { Page } from '@vben/common-ui';
 
 import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
 
+import SpecimenReceiptDirectDrawer from '../components/SpecimenReceiptDirectDrawer.vue';
 import { useSpecimenReceiptWorkbench } from '../composables/useSpecimenReceiptWorkbench';
 import { formatDateTime, formatNullable } from '../utils/format';
 import {
@@ -24,18 +28,27 @@ import {
   resolveReceiptWorkbenchStatusTagType,
 } from '../utils/specimen-receipt-workbench';
 
+const route = useRoute();
 const {
   batchRetryResult,
+  directReceiveDialogVisible,
+  directReceiveForm,
+  directReceiveItems,
+  directReceiveSubmitting,
   exportLoading,
+  handleAddDirectReceiveRow,
   handleClearList,
   handleClearSelectionRows,
+  handleDirectReceiveUserChange,
   handleExportExcel,
   handleOperatorChange,
   handleQueueSpecimen,
   handleReceiveSelected,
+  handleRemoveDirectReceiveRow,
   handleRetryLabel,
   handleSelectionChange,
   lookupLoading,
+  openDirectReceiveDrawer,
   operatorForm,
   pageError,
   queueItems,
@@ -47,8 +60,19 @@ const {
   retryTargetRows,
   scanInput,
   selectedCount,
+  submitDirectReceive,
   submitRetryLabel,
 } = useSpecimenReceiptWorkbench();
+
+function normalizeQueryValue(value: unknown) {
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return typeof value[0] === 'string' ? value[0] : '';
+  }
+  return '';
+}
 
 function resolveRowClassName({
   row,
@@ -63,6 +87,22 @@ function resolveRowClassName({
   }
   return '';
 }
+
+watch(
+  () => route.query.barcode,
+  (barcodeQuery) => {
+    const normalizedBarcode = normalizeQueryValue(barcodeQuery).trim();
+    if (
+      !normalizedBarcode ||
+      queueItems.value.some((item) => item.barcode === normalizedBarcode)
+    ) {
+      return;
+    }
+    scanInput.value = normalizedBarcode;
+    void handleQueueSpecimen();
+  },
+  { immediate: true },
+);
 </script>
 
 <template>
@@ -116,6 +156,7 @@ function resolveRowClassName({
         >
           标本签收
         </ElButton>
+        <ElButton @click="openDirectReceiveDrawer">异常接收</ElButton>
         <ElButton
           :disabled="selectedCount === 0"
           @click="handleClearSelectionRows"
@@ -213,6 +254,18 @@ function resolveRowClassName({
         </ElTableColumn>
       </ElTable>
     </div>
+
+    <SpecimenReceiptDirectDrawer
+      v-model="directReceiveDialogVisible"
+      v-model:form="directReceiveForm"
+      :items="directReceiveItems"
+      :submitting="directReceiveSubmitting"
+      @add-row="handleAddDirectReceiveRow"
+      @close="directReceiveDialogVisible = false"
+      @direct-receive-user-change="handleDirectReceiveUserChange"
+      @remove-row="handleRemoveDirectReceiveRow"
+      @submit="submitDirectReceive"
+    />
 
     <ElDialog
       v-model="retryDialogVisible"

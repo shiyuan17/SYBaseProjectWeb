@@ -99,25 +99,19 @@ describe('tracking application list helpers', () => {
   it('builds list query from filters', () => {
     expect(
       buildTrackingApplicationListQuery({
-        applicationFormStatus: 'CREATED',
         applicationNo: ' NO-1 ',
-        applicationType: 'NORMAL',
         dateRange: ['2026-05-01', '2026-05-31'],
         page: 2,
         patientName: ' 张三 ',
         size: 20,
-        submittingDepartmentId: ' DEPT-1 ',
       }),
     ).toEqual({
-      applicationFormStatus: 'CREATED',
       applicationNo: 'NO-1',
-      applicationType: 'NORMAL',
       dateFrom: '2026-05-01',
       dateTo: '2026-05-31',
       page: 2,
       patientName: '张三',
       size: 20,
-      submittingDepartmentId: 'DEPT-1',
     });
   });
 

@@ -85,7 +85,12 @@ export function isReceiptLocked(row: SpecimenManagementListItem) {
 }
 
 export function isVisibleInFixationScene(row: SpecimenManagementListItem) {
-  return row.verificationStatus === 'VERIFIED' && !isReceiptLocked(row);
+  return (
+    row.verificationStatus === 'VERIFIED' &&
+    !isReceiptLocked(row) &&
+    row.fixationStatus !== 'COMPLETED' &&
+    row.specimenStatus !== 'FIXED'
+  );
 }
 
 export function resolveExactMatches(
@@ -115,6 +120,14 @@ export function resolveUnavailableMessage(
   }
   if (targetItems.some((item) => isReceiptLocked(item))) {
     return '标本已接收、拒收或退回，不能完成固定';
+  }
+  if (
+    targetItems.some(
+      (item) =>
+        item.fixationStatus === 'COMPLETED' || item.specimenStatus === 'FIXED',
+    )
+  ) {
+    return '标本已完成固定，无需重复操作';
   }
   return '未找到可固定的标本';
 }

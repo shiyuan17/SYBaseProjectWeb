@@ -21,24 +21,28 @@ import {
 const tableRowKey = vi.hoisted(() => Symbol('table-row'));
 const tabsContextKey = vi.hoisted(() => Symbol('tabs-context'));
 
-const { mockAccessStore, mockGetApplicationTracking, mockListApplications } =
-  vi.hoisted(() => ({
+const {
+  mockAccessStore,
+  mockGetApplicationTracking,
+  mockListApplications,
+  mockPush,
+} = vi.hoisted(() => ({
     mockAccessStore: {
       accessCodes: ['PERM_APPLICATION_DETAIL_QUERY'] as string[],
     },
     mockGetApplicationTracking: vi.fn(),
     mockListApplications: vi.fn(),
+    mockPush: vi.fn(),
   }));
 
 vi.mock('@vben/stores', () => ({
   useAccessStore: () => mockAccessStore,
 }));
 
-vi.mock('#/modules/system-management/components/DepartmentSelect.vue', () => ({
-  default: {
-    props: ['modelValue', 'placeholder'],
-    template: '<div :data-placeholder="placeholder">{{ modelValue }}</div>',
-  },
+vi.mock('vue-router', () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
 }));
 
 vi.mock('../components/WorkflowSectionCard.vue', () => ({
@@ -267,6 +271,7 @@ describe('TrackingApplicationListView', () => {
     mockAccessStore.accessCodes = ['PERM_APPLICATION_DETAIL_QUERY'];
     mockListApplications.mockReset();
     mockGetApplicationTracking.mockReset();
+    mockPush.mockReset();
     document.body.innerHTML = '';
   });
 
@@ -289,6 +294,10 @@ describe('TrackingApplicationListView', () => {
     expect(buttonTexts).not.toContain('创建');
     expect(buttonTexts).not.toContain('登记标本');
     expect(buttonTexts).not.toContain('追踪与异常');
+    expect(root.textContent).not.toContain('送检科室');
+    expect(root.textContent).not.toContain('申请类型');
+    expect(root.textContent).not.toContain('表单状态');
+    expect(root.textContent).toContain('支持按申请单号、患者姓名和申请日期筛选。');
 
     app.unmount();
   });
@@ -320,6 +329,7 @@ describe('TrackingApplicationListView', () => {
     expect(root.querySelector('[data-tab-name="SPEC-003"]')?.textContent).toBe(
       'SP-003',
     );
+    expect(root.textContent).toContain('回到病理接收处理');
     expect(root.textContent).toContain('异常类型：已拒收');
     expect(root.textContent).toContain('质控结果：不合格');
     expect(root.textContent).toContain('问题代码：CONTAINER_DAMAGE');
@@ -334,6 +344,36 @@ describe('TrackingApplicationListView', () => {
     expect(overallText).toContain('SP-002');
     expect(overallText).toContain('公共事件');
     expect(overallText).toContain('打印转运单 / 成功');
+
+    app.unmount();
+  });
+
+  it('routes abnormal application details back to pathology receipt with barcode context', async () => {
+    mockListApplications.mockResolvedValue({
+      items: [buildApplicationRow()],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+    mockGetApplicationTracking.mockResolvedValue(buildTrackingDetail());
+
+    const { app, root } = await mountView({
+      initialApplicationId: 'APP-TRACK-001',
+      triggerKey: 1,
+    });
+
+    const receiptButton = [...root.querySelectorAll<HTMLButtonElement>('button')].find(
+      (button) => button.textContent?.includes('回到病理接收处理'),
+    );
+    receiptButton?.click();
+    await flushAll();
+
+    expect(mockPush).toHaveBeenCalledWith({
+      path: '/workflow/pathology-receipt',
+      query: {
+        barcode: 'BC-001',
+      },
+    });
 
     app.unmount();
   });

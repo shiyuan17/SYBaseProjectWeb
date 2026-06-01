@@ -63,6 +63,17 @@ export function createReceiptDraftItem(barcode = ''): ReceiptDraftItem {
   };
 }
 
+export function isReceiptDraftDerivedAbnormal(item: ReceiptDraftItem) {
+  return (
+    item.receiptStatus.trim() !== 'RECEIVED' ||
+    item.qualityCheckResult.trim() === 'FAILED'
+  );
+}
+
+export function countDerivedAbnormalReceiptItems(items: ReceiptDraftItem[]) {
+  return items.filter((item) => isReceiptDraftDerivedAbnormal(item)).length;
+}
+
 export function buildTransportReceiptGroups(
   pendingItems: PendingSpecimenItem[],
 ): TransportReceiptGroup[] {
@@ -187,6 +198,13 @@ export function validateReceiptItems(items: ReceiptDraftItem[]) {
     )
   ) {
     return '质控不合格时必须选择问题代码';
+  }
+  if (
+    items.some(
+      (item) => item.qualityCheckResult === 'FAILED' && !item.reason?.trim(),
+    )
+  ) {
+    return '质控不合格时必须填写原因';
   }
   if (
     items.some(

@@ -43,11 +43,20 @@ vi.mock('../api/application-registration-workbench-service', () => ({
 }));
 
 vi.mock('../api/specimen-workflow-service', () => ({
+  directReceiveSpecimens: vi.fn(),
   getApplicationDetail: vi.fn(),
   listPendingReceipts: vi.fn(),
   listSpecimens: vi.fn(),
   receiveSpecimens: vi.fn(),
   retryLabelPrint: vi.fn(),
+}));
+
+const mockRoute = {
+  query: {},
+};
+
+vi.mock('vue-router', () => ({
+  useRoute: () => mockRoute,
 }));
 
 vi.mock('@vben/utils', () => ({
@@ -81,6 +90,7 @@ describe('SpecimenReceiptView', () => {
 
     expect(container.textContent).not.toContain('病理接收');
     expect(container.textContent).toContain('标本签收');
+    expect(container.textContent).toContain('异常接收');
     expect(container.textContent).toContain('选择操作人');
     expect(container.textContent).toContain('补打标本标签');
     expect(container.textContent).toContain('导出Excel');

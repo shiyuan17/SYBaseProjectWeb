@@ -17,6 +17,7 @@ import { ElMessage } from 'element-plus';
 
 import { lookupApplicationRegistrationWorkbenchRecord } from '../api/application-registration-workbench-service';
 import {
+  directReceiveSpecimens,
   getApplicationDetail,
   listPendingReceipts,
   listSpecimens,
@@ -32,6 +33,13 @@ import {
   resolveReceiptWorkbenchExactMatches,
 } from '../utils/specimen-receipt-workbench';
 import { loadOperatingRoomNameMapSafely } from '../utils/operating-room-display';
+import {
+  buildDirectReceiptSubmissionRequest,
+  createDefaultReceiptFormState,
+  createReceiptDraftItem,
+  isReceiptDraftDerivedAbnormal,
+  validateReceiptItems,
+} from '../utils/specimen-receipt';
 
 export function useSpecimenReceiptWorkbench() {
   const userStore = useUserStore();
@@ -47,6 +55,11 @@ export function useSpecimenReceiptWorkbench() {
   const retryDialogVisible = ref(false);
   const retryTargetRows = ref<ReceiptWorkbenchRow[]>([]);
   const batchRetryResult = ref<LabelPrintRetryResult | null>(null);
+  const directReceiveDialogVisible = ref(false);
+  const directReceiveSubmitting = ref(false);
+  const directReceiveItems = ref([
+    createReceiptDraftItem(),
+  ]);
 
   const applicationContextCache = reactive(
     new Map<string, ReceiptWorkbenchApplicationContext | null>(),
@@ -68,6 +81,12 @@ export function useSpecimenReceiptWorkbench() {
     remarks: '',
     terminalCode: '',
   });
+  const directReceiveForm = reactive(
+    createDefaultReceiptFormState(
+      userStore.userInfo?.realName ?? '',
+      userStore.userInfo?.userId ?? '',
+    ),
+  );
 
   const selectedRows = computed(() =>
     queueItems.value.filter((item) => selectedRowKeys.value.includes(item.specimenId)),
@@ -91,6 +110,14 @@ export function useSpecimenReceiptWorkbench() {
   function handleOperatorChange(user: null | { id: string; name: string }) {
     operatorForm.operatorUserId = user?.id ?? '';
     operatorForm.operatorName = user?.name ?? '';
+  }
+
+  function syncDirectReceiveOperator() {
+    directReceiveForm.receivedByName =
+      operatorForm.operatorName.trim() || userStore.userInfo?.realName || '';
+    directReceiveForm.receivedByUserId =
+      operatorForm.operatorUserId.trim() || userStore.userInfo?.userId || '';
+    directReceiveForm.terminalCode = '';
   }
 
   function handleSelectionChange(rows: ReceiptWorkbenchRow[]) {
@@ -220,7 +247,7 @@ export function useSpecimenReceiptWorkbench() {
         pendingPage.items,
         matchedSpecimen.specimenId,
         matchedSpecimen.specimenNo,
-        matchedSpecimen.barcode,
+        matchedSpecimen.barcode ?? '',
       );
 
       if (!pendingItem) {
@@ -264,6 +291,106 @@ export function useSpecimenReceiptWorkbench() {
     return true;
   }
 
+  function buildDirectReceiveItemsFromRows(rows: ReceiptWorkbenchRow[]) {
+    return rows.map((row) => ({
+      ...createReceiptDraftItem(row.barcode ?? ''),
+      applicationNo: row.applicationNo,
+      containerCount: row.containerCount ?? 1,
+      containerName: row.containerName,
+      patientName: row.patientName,
+      specimenBarcode: row.barcode ?? '',
+    }));
+  }
+
+  function openDirectReceiveDrawer() {
+    const sourceRows = selectedRows.value.length > 0
+      ? selectedRows.value.filter((item) => item.queueStatus !== 'SUCCESS')
+      : queueItems.value.filter((item) => item.queueStatus !== 'SUCCESS');
+    directReceiveItems.value = sourceRows.length > 0
+      ? buildDirectReceiveItemsFromRows(sourceRows)
+      : [createReceiptDraftItem()];
+    syncDirectReceiveOperator();
+    directReceiveDialogVisible.value = true;
+  }
+
+  function handleDirectReceiveUserChange(
+    user: null | { id: string; name: string },
+  ) {
+    directReceiveForm.receivedByUserId = user?.id ?? '';
+    directReceiveForm.receivedByName = user?.name ?? '';
+  }
+
+  function handleAddDirectReceiveRow() {
+    directReceiveItems.value = [
+      ...directReceiveItems.value,
+      createReceiptDraftItem(),
+    ];
+  }
+
+  function handleRemoveDirectReceiveRow(key: number) {
+    directReceiveItems.value = directReceiveItems.value.filter(
+      (item) => item.key !== key,
+    );
+  }
+
+  async function submitDirectReceive() {
+    if (
+      !directReceiveForm.receivedByName.trim() ||
+      !directReceiveForm.receivedByUserId.trim()
+    ) {
+      ElMessage.warning('请选择接收人');
+      return;
+    }
+
+    const validationMessage = validateReceiptItems(directReceiveItems.value);
+    if (validationMessage) {
+      ElMessage.warning(validationMessage);
+      return;
+    }
+
+    directReceiveSubmitting.value = true;
+    pageError.value = '';
+    try {
+      await directReceiveSpecimens(
+        buildDirectReceiptSubmissionRequest(
+          directReceiveForm,
+          directReceiveItems.value,
+        ),
+      );
+      const receiptTime = new Date().toISOString();
+      const receiptItemsByBarcode = new Map(
+        directReceiveItems.value.map((item) => [item.specimenBarcode.trim(), item]),
+      );
+
+      queueItems.value = queueItems.value.map((row) => {
+        const matchedReceiptItem = receiptItemsByBarcode.get(
+          row.barcode?.trim() ?? '',
+        );
+        if (!matchedReceiptItem) {
+          return row;
+        }
+
+        return {
+          ...row,
+          abnormalFlag: isReceiptDraftDerivedAbnormal(matchedReceiptItem),
+          qualityCheckResult: matchedReceiptItem.qualityCheckResult.trim(),
+          qualityIssueCodes: matchedReceiptItem.qualityIssueCodes ?? [],
+          receivedAt: receiptTime,
+          receivedByName: directReceiveForm.receivedByName.trim(),
+          specimenStatus: matchedReceiptItem.receiptStatus.trim(),
+          queueStatus: 'SUCCESS',
+        };
+      });
+
+      directReceiveDialogVisible.value = false;
+      ElMessage.success('异常接收已提交');
+    } catch (error) {
+      pageError.value = getWorkflowPageErrorMessage(error);
+    } finally {
+      directReceiveSubmitting.value = false;
+    }
+  }
+
   async function handleReceiveSelected() {
     const targets = selectedRows.value.filter((item) => item.queueStatus !== 'SUCCESS');
     if (targets.length === 0) {
@@ -298,7 +425,7 @@ export function useSpecimenReceiptWorkbench() {
               containerCount: row.containerCount ?? 1,
               qualityCheckResult: 'PASSED',
               receiptStatus: 'RECEIVED',
-              specimenBarcode: row.barcode,
+              specimenBarcode: row.barcode ?? '',
             })),
             receivedByName: operatorForm.operatorName.trim(),
             receivedByUserId: operatorForm.operatorUserId.trim(),
@@ -461,16 +588,24 @@ export function useSpecimenReceiptWorkbench() {
 
   return {
     batchRetryResult,
+    directReceiveDialogVisible,
+    directReceiveForm,
+    directReceiveItems,
+    directReceiveSubmitting,
     exportLoading,
+    handleAddDirectReceiveRow,
     handleClearList,
     handleClearSelectionRows,
+    handleDirectReceiveUserChange,
     handleExportExcel,
     handleOperatorChange,
     handleQueueSpecimen,
     handleReceiveSelected,
+    handleRemoveDirectReceiveRow,
     handleRetryLabel,
     handleSelectionChange,
     lookupLoading,
+    openDirectReceiveDrawer,
     operatorForm,
     pageError,
     queueItems,
@@ -483,6 +618,7 @@ export function useSpecimenReceiptWorkbench() {
     scanInput,
     selectedCount,
     selectedRows,
+    submitDirectReceive,
     submitRetryLabel,
   };
 }

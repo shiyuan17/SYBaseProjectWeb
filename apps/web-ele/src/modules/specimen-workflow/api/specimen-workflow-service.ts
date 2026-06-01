@@ -38,13 +38,16 @@ export {
   rebindSpecimenBarcode,
   startFixation,
   startSpecimenVerification,
+  unbindSpecimenBarcode,
 } from './internal/specimen-workflow-specimen-management';
 
 export {
   createTransportOrder,
   handoverTransportOrder,
   listPendingTransportOrders,
+  listSpecimenOutbounds,
   outboundTransportOrder,
+  quickOutboundSpecimen,
   printTransportOrder,
 } from './internal/specimen-workflow-transport';
 

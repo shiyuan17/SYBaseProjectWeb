@@ -32,7 +32,6 @@ import {
   buildExportRows as buildFixationExportRows,
   buildQueueRow as buildFixationQueueRow,
   DEFAULT_FIXATION_LIQUID_TYPE,
-  isReceiptLocked as isReceiptLockedValue,
   isVisibleInFixationScene as isVisibleInFixationSceneValue,
   MAX_QUERY_SIZE,
   normalizeText as normalizeFixationText,
@@ -40,6 +39,7 @@ import {
   resolveExactMatches as resolveExactFixationMatches,
   resolveFixationLiquidLabel as resolveFixationLiquidLabelValue,
   resolveFixationTagType as resolveFixationTagTypeValue,
+  resolveUnavailableMessage as resolveFixationUnavailableMessage,
 } from '../utils/specimen-fixation-time';
 import { loadOperatingRoomNameMapSafely } from '../utils/operating-room-display';
 
@@ -111,10 +111,6 @@ export function useSpecimenFixationTimePanel() {
     return operatingRoomNameMap.value;
   }
 
-  function isReceiptLocked(row: SpecimenManagementListItem) {
-    return isReceiptLockedValue(row);
-  }
-
   function isVisibleInFixationScene(row: SpecimenManagementListItem) {
     return isVisibleInFixationSceneValue(row);
   }
@@ -130,19 +126,7 @@ export function useSpecimenFixationTimePanel() {
     items: SpecimenManagementListItem[],
     keyword: string,
   ) {
-    const exactMatches = resolveExactMatches(items, keyword);
-    const targetItems = exactMatches.length > 0 ? exactMatches : items;
-    if (
-      targetItems.some(
-        (item) => normalizeText(item.verificationStatus) !== 'VERIFIED',
-      )
-    ) {
-      return '标本尚未完成离体确认，请先完成离体确认后再固定';
-    }
-    if (targetItems.some((item) => isReceiptLocked(item))) {
-      return '标本已接收、拒收或退回，不能完成固定';
-    }
-    return '未找到可固定的标本';
+    return resolveFixationUnavailableMessage(items, keyword);
   }
 
   async function ensureWorkbenchRecord(applicationNo: string) {

@@ -26,7 +26,6 @@ import {
   getLatestRegistrationResultInternal,
   getMockState,
   getSpecimensByApplicationId,
-  isSpecimenAbnormal,
   mapApplicationListItem,
   mapSpecimenManagementItem,
   mapSpecimenTrackingSummary,
@@ -207,13 +206,14 @@ export async function listSpecimensMock(
   params: SpecimenManagementListQuery,
 ): Promise<SpecimenManagementListPage> {
   const filteredItems = getMockState()
-    .specimens.filter((item) => {
-      const application = getApplicationById(item.applicationId);
+    .specimens
+    .map((item) => mapSpecimenManagementItem(item))
+    .filter((item) => {
       const keyword = normalizeText(params.keyword);
       const matchesKeyword =
         !keyword ||
-        includesText(application.applicationNo, keyword) ||
-        includesText(application.patientName, keyword) ||
+        includesText(item.applicationNo, keyword) ||
+        includesText(item.patientName, keyword) ||
         includesText(item.specimenNo, keyword) ||
         includesText(item.barcode, keyword) ||
         includesText(item.specimenName, keyword);
@@ -221,22 +221,26 @@ export async function listSpecimensMock(
       return (
         matchesKeyword &&
         (!normalizeText(params.applicationNo) ||
-          application.applicationNo === params.applicationNo) &&
+          item.applicationNo === params.applicationNo) &&
         (!normalizeText(params.departmentId) ||
-          application.submittingDepartmentId === params.departmentId) &&
+          item.submittingDepartmentId === params.departmentId) &&
+        (!normalizeText(params.buildingId) ||
+          item.buildingId === params.buildingId) &&
+        (!normalizeText(params.roomId) || item.roomId === params.roomId) &&
+        (!normalizeText(params.barcodeBindingStatus) ||
+          item.barcodeBindingStatus === params.barcodeBindingStatus) &&
         (!normalizeText(params.labelPrintStatus) ||
           item.labelPrintStatus === params.labelPrintStatus) &&
         (!normalizeText(params.specimenStatus) ||
           item.specimenStatus === params.specimenStatus) &&
         (params.abnormalFlag === undefined ||
-          isSpecimenAbnormal(item) === params.abnormalFlag) &&
+          item.abnormalFlag === params.abnormalFlag) &&
         withinDateRange(item.registeredAt, params.dateFrom, params.dateTo)
       );
     })
     .toSorted((left, right) =>
       compareNullableDateDesc(left.latestTrackingAt, right.latestTrackingAt),
-    )
-    .map((item) => mapSpecimenManagementItem(item));
+    );
 
   const summary: SpecimenManagementListSummary = {
     abnormalCount: filteredItems.filter((item) => item.abnormalFlag).length,
@@ -249,6 +253,9 @@ export async function listSpecimensMock(
         item.labelPrintStatus === 'FAILED',
     ).length,
     totalCount: filteredItems.length,
+    unboundCount: filteredItems.filter(
+      (item) => item.barcodeBindingStatus !== 'BOUND',
+    ).length,
   };
 
   return {

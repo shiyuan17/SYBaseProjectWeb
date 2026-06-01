@@ -3,6 +3,7 @@ import type {
   PendingSpecimenPage,
   PendingSpecimenQuery,
   SpecimenBarcodeBindingRequest,
+  SpecimenBarcodeUnbindRequest,
   SpecimenCheckInRequest,
   SpecimenConfirmRequest,
   SpecimenFixationRequest,
@@ -35,6 +36,7 @@ import {
   rebindSpecimenBarcodeMock,
   startFixationMock,
   startSpecimenVerificationMock,
+  unbindSpecimenBarcodeMock,
   USE_SPECIMEN_WORKFLOW_MOCK,
 } from './specimen-workflow-mock-gateway';
 import {
@@ -163,28 +165,44 @@ export async function exportSpecimenRemovals(params: SpecimenRemovalQuery) {
 }
 
 export async function bindSpecimenBarcode(
-  barcode: string,
+  specimenId: string,
   data: SpecimenBarcodeBindingRequest,
 ) {
   if (USE_SPECIMEN_WORKFLOW_MOCK) {
-    return bindSpecimenBarcodeMock(barcode, data);
+    return bindSpecimenBarcodeMock(specimenId, data);
   }
   return requestClient.post<SpecimenTrackingSummary>(
-    `/v1/specimens/barcodes/${barcode}/bindings`,
+    `/v1/specimens/${specimenId}/barcode-binding`,
     data,
   );
 }
 
 export async function rebindSpecimenBarcode(
-  barcode: string,
+  specimenId: string,
   data: SpecimenBarcodeBindingRequest,
 ) {
   if (USE_SPECIMEN_WORKFLOW_MOCK) {
-    return rebindSpecimenBarcodeMock(barcode, data);
+    return rebindSpecimenBarcodeMock(specimenId, data);
   }
   return requestClient.put<SpecimenTrackingSummary>(
-    `/v1/specimens/barcodes/${barcode}/bindings`,
+    `/v1/specimens/${specimenId}/barcode-binding`,
     data,
+  );
+}
+
+export async function unbindSpecimenBarcode(
+  specimenId: string,
+  params: SpecimenBarcodeUnbindRequest = {},
+) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return unbindSpecimenBarcodeMock(specimenId, params);
+  }
+  return requestClient.request<SpecimenTrackingSummary>(
+    `/v1/specimens/${specimenId}/barcode-binding`,
+    {
+      method: 'DELETE',
+      params,
+    },
   );
 }
 

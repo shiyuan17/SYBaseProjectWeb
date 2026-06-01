@@ -4,10 +4,18 @@ import type {
   ReceiptOperatorForm,
 } from '../utils/specimen-receipt';
 
-import { ElButton, ElDrawer, ElForm, ElFormItem, ElInput } from 'element-plus';
+import {
+  ElAlert,
+  ElButton,
+  ElDrawer,
+  ElForm,
+  ElFormItem,
+  ElInput,
+} from 'element-plus';
 
 import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
 
+import { countDerivedAbnormalReceiptItems } from '../utils/specimen-receipt';
 import SpecimenReceiptDraftTable from './SpecimenReceiptDraftTable.vue';
 
 defineProps<{
@@ -36,7 +44,19 @@ const form = defineModel<ReceiptOperatorForm>('form', {
 </script>
 
 <template>
-  <ElDrawer v-model="visible" title="条码直收" size="52%">
+  <ElDrawer v-model="visible" title="异常接收" size="52%">
+    <ElAlert
+      class="mb-4"
+      :closable="false"
+      :title="
+        countDerivedAbnormalReceiptItems(items) > 0
+          ? `当前有 ${countDerivedAbnormalReceiptItems(items)} 条标本提交后会自动标记异常。`
+          : '选择拒收、退回或质控不合格后，系统会自动标记异常，无需单独设置异常状态。'
+      "
+      type="warning"
+      show-icon
+    />
+
     <ElForm label-width="96px">
       <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <ElFormItem label="接收人" required>
@@ -66,7 +86,7 @@ const form = defineModel<ReceiptOperatorForm>('form', {
     <div class="mt-4 flex justify-end gap-2">
       <ElButton @click="emit('close')">取消</ElButton>
       <ElButton :loading="submitting" type="primary" @click="emit('submit')">
-        提交直收
+        提交异常接收
       </ElButton>
     </div>
   </ElDrawer>

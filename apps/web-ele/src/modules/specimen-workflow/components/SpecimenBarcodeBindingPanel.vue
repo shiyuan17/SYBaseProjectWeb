@@ -1,252 +1,210 @@
 <script setup lang="ts">
-import type { SpecimenManagementListItem } from '../types/specimen-workflow';
-
-import { computed, reactive, ref } from 'vue';
-
-import { useUserStore } from '@vben/stores';
-
 import {
+  ElAlert,
   ElButton,
+  ElCheckbox,
+  ElDatePicker,
   ElDialog,
   ElForm,
   ElFormItem,
   ElInput,
-  ElMessage,
+  ElOption,
   ElPagination,
+  ElSelect,
   ElTable,
   ElTableColumn,
-  ElTag,
 } from 'element-plus';
 
-import {
-  bindSpecimenBarcode,
-  listSpecimens,
-  rebindSpecimenBarcode,
-} from '../api/specimen-workflow-service';
-import { DEFAULT_PAGE_SIZE } from '../constants';
-import { getWorkflowPageErrorMessage } from '../utils/error';
-import {
-  formatDateTime,
-  formatFixationStatus,
-  formatNullable,
-  formatSpecimenStatus,
-} from '../utils/format';
+import { useSpecimenBarcodeBindingPanel } from '../composables/useSpecimenBarcodeBindingPanel';
+import { formatDateTime, formatNullable } from '../utils/format';
 
-const MAX_QUERY_SIZE = 500;
-const RECEIPT_LOCKED_STATUSES = new Set(['RECEIVED', 'REJECTED', 'RETURNED']);
-
-const userStore = useUserStore();
-
-const loading = ref(false);
-const actionLoading = ref(false);
-const pageError = ref('');
-const eligibleItems = ref<SpecimenManagementListItem[]>([]);
-
-const filters = reactive({
-  keyword: '',
-  page: 1,
-  size: DEFAULT_PAGE_SIZE,
-});
-
-const pagedItems = computed(() => {
-  const startIndex = (filters.page - 1) * filters.size;
-  return eligibleItems.value.slice(startIndex, startIndex + filters.size);
-});
-
-const total = computed(() => eligibleItems.value.length);
-
-const dialogVisible = ref(false);
-const targetRow = ref<null | SpecimenManagementListItem>(null);
-const bindingForm = reactive({
-  operatorName: userStore.userInfo?.realName ?? '',
-  operatorUserId: userStore.userInfo?.userId ?? '',
-  remarks: '',
-  targetBarcode: '',
-  terminalCode: '',
-});
-
-const isRebinding = computed(() => Boolean(targetRow.value?.barcode?.trim()));
-
-function isReceiptLocked(row: SpecimenManagementListItem) {
-  return RECEIPT_LOCKED_STATUSES.has(row.specimenStatus ?? '');
-}
-
-function isVisibleInBindingScene(row: SpecimenManagementListItem) {
-  return !isReceiptLocked(row) && row.checkInStatus !== 'CHECKED_IN';
-}
-
-async function loadSpecimens() {
-  loading.value = true;
-  pageError.value = '';
-  try {
-    const result = await listSpecimens({
-      keyword: filters.keyword.trim() || undefined,
-      page: 1,
-      size: MAX_QUERY_SIZE,
-    });
-    eligibleItems.value = result.items.filter((item) =>
-      isVisibleInBindingScene(item),
-    );
-    if ((filters.page - 1) * filters.size >= eligibleItems.value.length) {
-      filters.page = 1;
-    }
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
-  } finally {
-    loading.value = false;
-  }
-}
-
-function handleSearch() {
-  filters.page = 1;
-  void loadSpecimens();
-}
-
-function handleReset() {
-  filters.keyword = '';
-  filters.page = 1;
-  filters.size = DEFAULT_PAGE_SIZE;
-  void loadSpecimens();
-}
-
-function openDialog(row: SpecimenManagementListItem) {
-  if (isReceiptLocked(row)) {
-    return;
-  }
-  targetRow.value = row;
-  bindingForm.operatorName = userStore.userInfo?.realName ?? '';
-  bindingForm.operatorUserId = userStore.userInfo?.userId ?? '';
-  bindingForm.remarks = '';
-  bindingForm.targetBarcode = row.barcode?.trim()
-    ? `${row.barcode.trim()}-NEW`
-    : '';
-  bindingForm.terminalCode = '';
-  dialogVisible.value = true;
-}
-
-async function submitBinding() {
-  const row = targetRow.value;
-  if (!row) {
-    return;
-  }
-  if (!bindingForm.operatorName.trim()) {
-    ElMessage.warning('缺少当前操作人信息');
-    return;
-  }
-  if (!bindingForm.targetBarcode.trim()) {
-    ElMessage.warning('请输入目标条码');
-    return;
-  }
-
-  actionLoading.value = true;
-  pageError.value = '';
-  try {
-    await (isRebinding.value
-      ? rebindSpecimenBarcode(row.barcode || row.specimenId, {
-          operatorName: bindingForm.operatorName.trim(),
-          operatorUserId: bindingForm.operatorUserId.trim() || null,
-          remarks: bindingForm.remarks.trim() || null,
-          targetBarcode: bindingForm.targetBarcode.trim(),
-          terminalCode: bindingForm.terminalCode.trim() || null,
-        })
-      : bindSpecimenBarcode(row.specimenId, {
-          operatorName: bindingForm.operatorName.trim(),
-          operatorUserId: bindingForm.operatorUserId.trim() || null,
-          remarks: bindingForm.remarks.trim() || null,
-          targetBarcode: bindingForm.targetBarcode.trim(),
-          terminalCode: bindingForm.terminalCode.trim() || null,
-        }));
-    ElMessage.success(isRebinding.value ? '条码重绑成功' : '条码绑定成功');
-    dialogVisible.value = false;
-    await loadSpecimens();
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
-  } finally {
-    actionLoading.value = false;
-  }
-}
-
-void loadSpecimens();
+const {
+  actionLoading,
+  batchRetryResult,
+  buildingOptions,
+  canBind,
+  canExportExcel,
+  canPreprint,
+  canRetryLabel,
+  canUnbind,
+  filters,
+  handleBindBarcode,
+  handleExportExcel,
+  handlePreprintBarcodes,
+  handleReset,
+  handleRetryLabel,
+  handleSearch,
+  handleSelectionChange,
+  handleUnbindBarcode,
+  loading,
+  pageError,
+  pagedItems,
+  resolveRoomLabel,
+  retryDialogVisible,
+  retryForm,
+  retrySubmitting,
+  retryTargetRows,
+  roomOptions,
+  submitRetryLabel,
+  summary,
+  targetBarcode,
+  total,
+} = useSpecimenBarcodeBindingPanel();
 </script>
 
 <template>
   <div class="flex flex-col gap-4">
-    <div
-      v-if="false"
-      class="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger"
-    >
-      {{ pageError }}
+    <ElAlert
+      v-if="pageError"
+      :closable="false"
+      :title="pageError"
+      type="error"
+      show-icon
+    />
+
+    <div class="flex flex-wrap items-center gap-4 text-sm">
+      <div class="font-semibold text-[color:#d6453d]">条码绑定</div>
+      <div>
+        全部
+        <span class="text-xl font-semibold text-primary">{{
+          summary.totalCount
+        }}</span>
+      </div>
+      <div>
+        未绑定
+        <span class="text-xl font-semibold text-danger">{{
+          summary.unboundCount
+        }}</span>
+      </div>
     </div>
 
-    <div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-      <div class="text-sm text-muted-foreground">
-        仅展示已登记、未入库且未进入接收结果的标本；已入库、已接收、已拒收、已退回标本不可再绑定或重绑条码。
-      </div>
-      <div class="flex flex-wrap items-center gap-2">
-        <ElInput
-          v-model="filters.keyword"
-          clearable
-          placeholder="申请单号 / 标本号 / 条码"
-          style="width: 240px"
-          @keyup.enter="handleSearch"
+    <div class="flex flex-wrap items-center gap-2">
+      <ElSelect
+        v-model="filters.buildingId"
+        clearable
+        placeholder="手术楼"
+        style="width: 160px"
+      >
+        <ElOption
+          v-for="building in buildingOptions"
+          :key="building.buildingId"
+          :label="building.buildingName"
+          :value="building.buildingId"
         />
-        <ElButton type="primary" @click="handleSearch">查询</ElButton>
-        <ElButton @click="handleReset">重置</ElButton>
-      </div>
+      </ElSelect>
+      <ElSelect
+        v-model="filters.roomId"
+        clearable
+        placeholder="手术间"
+        style="width: 220px"
+      >
+        <ElOption
+          v-for="room in roomOptions"
+          :key="room.roomId"
+          :label="resolveRoomLabel(room)"
+          :value="room.roomId"
+        />
+      </ElSelect>
+      <ElCheckbox v-model="filters.onlyUnbound">仅显示未绑定</ElCheckbox>
+      <ElDatePicker
+        v-model="filters.dateRange"
+        end-placeholder="结束日期"
+        start-placeholder="开始日期"
+        style="width: 280px"
+        type="daterange"
+        value-format="YYYY-MM-DD"
+      />
+      <ElButton :loading="loading" type="primary" @click="handleSearch">
+        查询
+      </ElButton>
+      <ElInput
+        v-model="targetBarcode"
+        clearable
+        placeholder="请输入目标条码"
+        style="width: 220px"
+      />
+      <ElButton
+        :disabled="!canBind"
+        :loading="actionLoading"
+        type="success"
+        @click="handleBindBarcode"
+      >
+        条码绑定
+      </ElButton>
+      <ElButton
+        :disabled="!canUnbind"
+        :loading="actionLoading"
+        @click="handleUnbindBarcode"
+      >
+        取消绑定
+      </ElButton>
+      <ElButton :disabled="!canRetryLabel" @click="handleRetryLabel">
+        补打标本标签
+      </ElButton>
+      <ElButton :disabled="!canExportExcel" @click="handleExportExcel">
+        导出 Excel
+      </ElButton>
+      <ElButton :disabled="!canPreprint" @click="handlePreprintBarcodes">
+        预打印条码
+      </ElButton>
+      <ElButton @click="handleReset">重置</ElButton>
     </div>
 
-    <ElTable v-loading="loading" :data="pagedItems" border max-height="420">
-      <ElTableColumn label="申请单号" min-width="150" prop="applicationNo" />
-      <ElTableColumn label="标本号" min-width="140" prop="specimenNo" />
-      <ElTableColumn label="当前条码" min-width="180">
+    <ElTable
+      v-loading="loading"
+      :data="pagedItems"
+      border
+      max-height="520"
+      row-key="specimenId"
+      @selection-change="handleSelectionChange"
+    >
+      <ElTableColumn type="selection" width="52" />
+      <ElTableColumn label="序" width="64">
+        <template #default="{ $index }">
+          {{ (filters.page - 1) * filters.size + $index + 1 }}
+        </template>
+      </ElTableColumn>
+      <ElTableColumn label="申请单" min-width="120" prop="applicationNo" />
+      <ElTableColumn label="标本编号" min-width="120" prop="specimenNo" />
+      <ElTableColumn label="性别" min-width="80">
+        <template #default="{ row }">
+          {{ formatNullable(row.patientGender) }}
+        </template>
+      </ElTableColumn>
+      <ElTableColumn label="手术间" min-width="160">
+        <template #default="{ row }">
+          {{ formatNullable(row.surgeryName) }}
+        </template>
+      </ElTableColumn>
+      <ElTableColumn label="标本名称" min-width="180" prop="specimenName" />
+      <ElTableColumn label="标本条码" min-width="160">
         <template #default="{ row }">
           {{ formatNullable(row.barcode) }}
         </template>
       </ElTableColumn>
-      <ElTableColumn label="标本信息" min-width="220">
+      <ElTableColumn label="类型" min-width="100">
         <template #default="{ row }">
-          <div class="flex flex-col gap-1 text-sm">
-            <span>{{ row.specimenName }}</span>
-            <span class="text-muted-foreground">{{
-              formatNullable(row.specimenSite)
-            }}</span>
-          </div>
+          {{ formatNullable(row.specimenType) }}
         </template>
       </ElTableColumn>
-      <ElTableColumn label="固定/状态" min-width="180">
+      <ElTableColumn label="添加时间" min-width="160">
         <template #default="{ row }">
-          <div class="flex flex-col gap-1 text-sm">
-            <span>{{ formatFixationStatus(row.fixationStatus) }}</span>
-            <span class="text-muted-foreground">{{
-              formatSpecimenStatus(row.specimenStatus)
-            }}</span>
-          </div>
+          {{ formatDateTime(row.registeredAt) }}
         </template>
       </ElTableColumn>
-      <ElTableColumn label="最近追踪" min-width="180">
+      <ElTableColumn label="添加人" min-width="120">
         <template #default="{ row }">
-          {{ formatDateTime(row.latestTrackingAt) }}
+          {{ formatNullable(row.registrationOperatorName) }}
         </template>
       </ElTableColumn>
-      <ElTableColumn label="绑定状态" min-width="120">
+      <ElTableColumn label="病人ID" min-width="140">
         <template #default="{ row }">
-          <ElTag
-            :type="row.barcodeBindingStatus === 'BOUND' ? 'success' : 'info'"
-          >
-            {{ row.barcodeBindingStatus === 'BOUND' ? '已绑定' : '未绑定' }}
-          </ElTag>
+          {{ formatNullable(row.patientId) }}
         </template>
       </ElTableColumn>
-      <ElTableColumn fixed="right" label="操作" width="120">
+      <ElTableColumn label="姓名" min-width="120">
         <template #default="{ row }">
-          <ElButton
-            link
-            :disabled="isReceiptLocked(row)"
-            type="primary"
-            @click="openDialog(row)"
-          >
-            {{ row.barcode?.trim() ? '重绑条码' : '绑定条码' }}
-          </ElButton>
+          {{ formatNullable(row.patientName) }}
         </template>
       </ElTableColumn>
     </ElTable>
@@ -264,49 +222,68 @@ void loadSpecimens();
   </div>
 
   <ElDialog
-    v-model="dialogVisible"
+    v-model="retryDialogVisible"
+    :close-on-click-modal="false"
     destroy-on-close
-    :title="isRebinding ? '条码重绑' : '条码绑定'"
-    width="560px"
+    title="补打标本标签"
+    width="760px"
   >
-    <template v-if="targetRow">
-      <ElForm label-width="96px">
-        <ElFormItem label="申请单号">
-          <div>{{ targetRow.applicationNo }}</div>
-        </ElFormItem>
-        <ElFormItem label="标本号">
-          <div>{{ targetRow.specimenNo }}</div>
-        </ElFormItem>
-        <ElFormItem label="当前条码">
-          <div>{{ formatNullable(targetRow.barcode) }}</div>
-        </ElFormItem>
-        <ElFormItem label="目标条码" required>
-          <ElInput
-            v-model="bindingForm.targetBarcode"
-            placeholder="请输入新条码"
-          />
-        </ElFormItem>
-        <ElFormItem label="终端编码">
-          <ElInput
-            v-model="bindingForm.terminalCode"
-            placeholder="工作站或扫码设备编号"
-          />
-        </ElFormItem>
-        <ElFormItem label="说明">
-          <ElInput v-model="bindingForm.remarks" placeholder="补充绑定说明" />
-        </ElFormItem>
-      </ElForm>
-    </template>
+    <div class="flex flex-col gap-4">
+      <section class="rounded-lg border border-border bg-card px-4 py-4 shadow-sm">
+        <div class="mb-4 text-base font-semibold text-foreground">补打范围</div>
+        <div class="grid gap-3 text-sm md:grid-cols-2">
+          <div>涉及标本数：{{ retryTargetRows.length }}</div>
+          <div>
+            标签批次号：{{ retryTargetRows[0]?.labelPrintBatchNo || '-' }}
+          </div>
+        </div>
+      </section>
+
+      <section class="rounded-lg border border-border bg-card px-4 py-4 shadow-sm">
+        <ElForm label-width="96px">
+          <div class="grid gap-4 md:grid-cols-2">
+            <ElFormItem label="操作人" required>
+              <ElInput :model-value="retryForm.operatorName" disabled />
+            </ElFormItem>
+            <ElFormItem label="打印机编号" required>
+              <ElInput
+                v-model="retryForm.printerCode"
+                placeholder="请输入打印机编号"
+              />
+            </ElFormItem>
+            <ElFormItem label="终端编号">
+              <ElInput v-model="retryForm.terminalCode" placeholder="可选" />
+            </ElFormItem>
+          </div>
+          <ElFormItem label="备注">
+            <ElInput v-model="retryForm.remarks" placeholder="补打说明" />
+          </ElFormItem>
+        </ElForm>
+      </section>
+
+      <section
+        v-if="batchRetryResult"
+        class="rounded-lg border border-border bg-card px-4 py-4 shadow-sm"
+      >
+        <div class="mb-4 text-base font-semibold text-foreground">补打结果</div>
+        <div class="grid gap-3 text-sm md:grid-cols-2">
+          <div>批次号：{{ batchRetryResult.labelPrintBatchNo }}</div>
+          <div>
+            结果：{{ batchRetryResult.allSuccessful ? '全部成功' : '部分成功' }}
+          </div>
+          <div>成功数：{{ batchRetryResult.successCount }}</div>
+          <div>失败数：{{ batchRetryResult.failedCount }}</div>
+          <div>重试数：{{ batchRetryResult.retriedCount }}</div>
+          <div>消息：{{ formatNullable(batchRetryResult.message) }}</div>
+        </div>
+      </section>
+    </div>
 
     <template #footer>
       <div class="flex justify-end gap-2">
-        <ElButton @click="dialogVisible = false">取消</ElButton>
-        <ElButton
-          :loading="actionLoading"
-          type="primary"
-          @click="submitBinding"
-        >
-          提交
+        <ElButton @click="retryDialogVisible = false">取消</ElButton>
+        <ElButton :loading="retrySubmitting" type="primary" @click="submitRetryLabel">
+          提交补打
         </ElButton>
       </div>
     </template>

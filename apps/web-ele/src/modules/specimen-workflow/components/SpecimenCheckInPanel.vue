@@ -106,7 +106,7 @@ const {
       </ElTableColumn>
       <ElTableColumn label="手术间" min-width="120">
         <template #default="{ row }">
-          {{ formatNullable(row.submittingDepartmentName) }}
+          {{ formatNullable(row.surgeryName) }}
         </template>
       </ElTableColumn>
       <ElTableColumn label="标本名称" min-width="140" prop="specimenName" />

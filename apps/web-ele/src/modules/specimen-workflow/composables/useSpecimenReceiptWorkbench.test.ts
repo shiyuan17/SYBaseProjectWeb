@@ -8,6 +8,7 @@ const {
   listOperatingBuildingOptionsMock,
   listPendingReceiptsMock,
   listSpecimensMock,
+  directReceiveSpecimensMock,
   receiveSpecimensMock,
   retryLabelPrintMock,
   successMock,
@@ -81,6 +82,10 @@ const {
       total: 1,
     }),
   ),
+  directReceiveSpecimensMock: vi.fn(async () => ({
+    receiptStatus: 'PARTIALLY_RECEIVED',
+    unreceivedCount: 1,
+  })),
   listSpecimensMock: vi.fn(async (params?: { keyword?: string }) => {
     const keyword = params?.keyword ?? '';
     const source = [
@@ -263,6 +268,7 @@ vi.mock('../api/application-registration-workbench-service', () => ({
 
 vi.mock('../api/specimen-workflow-service', () => ({
   getApplicationDetail: getApplicationDetailMock,
+  directReceiveSpecimens: directReceiveSpecimensMock,
   listPendingReceipts: listPendingReceiptsMock,
   listSpecimens: listSpecimensMock,
   receiveSpecimens: receiveSpecimensMock,
@@ -405,6 +411,54 @@ describe('useSpecimenReceiptWorkbench', () => {
       terminalCode: null,
     });
     expect(downloadFileFromBlobMock).toHaveBeenCalled();
+
+    wrapper.destroy();
+  });
+
+  it('submits abnormal direct receipt and updates queued row status', async () => {
+    const wrapper = mountComposable();
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    state.scanInput.value = 'SP-001';
+    await state.handleQueueSpecimen();
+    await flushComposable();
+
+    state.handleSelectionChange(state.queueItems.value);
+    state.openDirectReceiveDrawer();
+    expect(state.directReceiveDialogVisible.value).toBe(true);
+    expect(state.directReceiveItems.value[0]?.specimenBarcode).toBe('BC-001');
+
+    state.directReceiveItems.value[0] = {
+      ...state.directReceiveItems.value[0]!,
+      qualityCheckResult: 'FAILED',
+      qualityIssueCodes: ['CONTAINER_DAMAGE'],
+      reason: '容器破损',
+      receiptStatus: 'RETURNED',
+    };
+    await state.submitDirectReceive();
+    await flushComposable();
+
+    expect(directReceiveSpecimensMock).toHaveBeenCalledWith({
+      items: [
+        expect.objectContaining({
+          qualityCheckResult: 'FAILED',
+          qualityIssueCodes: ['CONTAINER_DAMAGE'],
+          reason: '容器破损',
+          receiptStatus: 'RETURNED',
+          specimenBarcode: 'BC-001',
+        }),
+      ],
+      receivedByName: 'Test User',
+      receivedByUserId: 'USER-001',
+      terminalCode: null,
+    });
+    expect(state.directReceiveDialogVisible.value).toBe(false);
+    expect(state.queueItems.value[0]?.queueStatus).toBe('SUCCESS');
+    expect(state.queueItems.value[0]?.specimenStatus).toBe('RETURNED');
+    expect(state.queueItems.value[0]?.abnormalFlag).toBe(true);
 
     wrapper.destroy();
   });

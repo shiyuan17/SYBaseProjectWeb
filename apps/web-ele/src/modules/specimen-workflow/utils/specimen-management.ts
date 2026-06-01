@@ -23,6 +23,7 @@ export function createEmptySummary(): SpecimenManagementListSummary {
     labelPrintedCount: 0,
     pendingLabelCount: 0,
     totalCount: 0,
+    unboundCount: 0,
   };
 }
 
@@ -294,14 +295,20 @@ export function buildRetryRowsFromLatestResult(
       applicationId,
       applicationNo: '',
       barcode: item.barcode,
+      barcodeBindingStatus: item.barcodeBindingStatus,
+      buildingId: null,
       containerCount: item.containerCount,
       containerName: item.containerName,
       fixationStatus: item.fixationStatus,
       labelPrintBatchNo: result.labelPrintBatchNo,
       labelPrintStatus: item.labelPrintStatus,
       latestTrackingAt: null,
+      patientGender: null,
+      patientId: null,
       patientName: null,
       registeredAt: null,
+      registrationOperatorName: null,
+      roomId: null,
       specimenCount: item.specimenCount,
       specimenId: item.id,
       specimenName: item.specimenName,
@@ -311,5 +318,6 @@ export function buildRetryRowsFromLatestResult(
       specimenType: item.specimenType,
       submittingDepartmentId: null,
       submittingDepartmentName: null,
+      surgeryName: null,
     }));
 }

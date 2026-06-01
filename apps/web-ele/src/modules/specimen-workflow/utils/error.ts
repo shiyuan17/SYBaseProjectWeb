@@ -17,6 +17,26 @@ function mapWorkflowEnglishErrorMessage(message: string) {
     return '该标本已完成离体确认，请勿重复操作。';
   }
 
+  if (message === 'Specimen already checked in') {
+    return '标本已完成入库，无需重复操作。';
+  }
+
+  if (message === 'Specimen already confirmed') {
+    return '标本已完成标本确认，无需重复操作。';
+  }
+
+  if (message === 'Specimen must be confirmed before check-in') {
+    return '标本尚未完成标本确认，不能入库。';
+  }
+
+  if (message === 'Specimen must complete fixation before confirmation') {
+    return '标本尚未完成固定，不能进行标本确认。';
+  }
+
+  if (message === 'Specimen already reached receipt terminal status') {
+    return '标本已接收、拒收或退回，当前流程不可重复操作。';
+  }
+
   if (
     message === 'Specimen barcode not found' ||
     message === 'Specimen specimenNo not found'

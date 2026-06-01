@@ -129,6 +129,7 @@ describe('tracking specimen list helpers', () => {
       labelPrintedCount: 0,
       pendingLabelCount: 0,
       totalCount: 0,
+      unboundCount: 0,
     });
     expect(resolveQuickFilterQuery('ABNORMAL')).toEqual({ abnormalFlag: true });
     expect(resolveQuickFilterQuery('PENDING_LABEL')).toEqual({
@@ -195,15 +196,18 @@ describe('tracking specimen list helpers', () => {
     expect(labelTagType('FAILED')).toBe('danger');
     expect(labelTagType('PENDING')).toBe('info');
 
-    expect(specimenTagType(createRow({ abnormalFlag: true }))).toBe('danger');
-    expect(specimenTagType(createRow({ specimenStatus: 'FIXED' }))).toBe(
+    expect(specimenTagType(createRow({ specimenStatus: 'REJECTED' }))).toBe(
+      'danger',
+    );
+    expect(specimenTagType(createRow({ specimenStatus: 'CHECKED_IN' }))).toBe(
       'success',
     );
-    expect(
-      specimenTagType(
-        createRow({ fixationStatus: 'FIXING', specimenStatus: 'REGISTERED' }),
-      ),
-    ).toBe('warning');
+    expect(specimenTagType(createRow({ specimenStatus: 'FIXED' }))).toBe(
+      'primary',
+    );
+    expect(specimenTagType(createRow({ specimenStatus: 'IN_TRANSIT' }))).toBe(
+      'warning',
+    );
     expect(specimenTagType(createRow())).toBe('info');
 
     expect(formatContainerRatio(createRow())).toBe('2 / 3');

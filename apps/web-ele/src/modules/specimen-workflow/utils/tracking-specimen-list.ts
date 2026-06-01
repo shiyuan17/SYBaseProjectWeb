@@ -27,6 +27,7 @@ export function createEmptySpecimenManagementSummary(): SpecimenManagementListSu
     labelPrintedCount: 0,
     pendingLabelCount: 0,
     totalCount: 0,
+    unboundCount: 0,
   };
 }
 
@@ -110,16 +111,28 @@ export function labelTagType(status?: null | string) {
 
 export function specimenTagType(row: SpecimenManagementListItem) {
   if (
-    row.abnormalFlag ||
     row.specimenStatus === 'REJECTED' ||
     row.specimenStatus === 'RETURNED'
   ) {
     return 'danger';
   }
-  if (row.specimenStatus === 'RECEIVED' || row.specimenStatus === 'FIXED') {
+  if (
+    row.specimenStatus === 'CHECKED_IN' ||
+    row.specimenStatus === 'RECEIVED'
+  ) {
     return 'success';
   }
-  if (row.specimenStatus === 'FIXING' || row.fixationStatus === 'FIXING') {
+  if (
+    row.specimenStatus === 'FIXED' ||
+    row.specimenStatus === 'VERIFIED'
+  ) {
+    return 'primary';
+  }
+  if (
+    row.specimenStatus === 'FIXING' ||
+    row.specimenStatus === 'IN_TRANSIT' ||
+    row.specimenStatus === 'VERIFYING'
+  ) {
     return 'warning';
   }
   return 'info';

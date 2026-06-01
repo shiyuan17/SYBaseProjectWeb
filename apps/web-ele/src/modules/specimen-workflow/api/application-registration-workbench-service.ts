@@ -23,10 +23,17 @@ import {
   saveApplicationRegistrationPatientInfoMock,
   saveApplicationRegistrationWorkbenchMock,
 } from './application-registration-workbench-mock';
+import { normalizeOperatingBuildingOptions } from './internal/application-registration-operating-options';
 
 const USE_APPLICATION_REGISTRATION_WORKBENCH_MOCK =
   import.meta.env.MODE === 'test' ||
   import.meta.env.VITE_SPECIMEN_WORKFLOW_MOCK === 'true';
+
+type OperatingOptionsResponse = {
+  buildings?: OperatingBuildingOption[];
+};
+
+let operatingOptionsPromise: null | Promise<OperatingBuildingOption[]> = null;
 
 function isPresent<T>(value: null | T | undefined): value is T {
   return value !== null && value !== undefined;
@@ -186,13 +193,40 @@ export async function saveApplicationRegistrationPatientInfo(
 export async function listOperatingBuildingOptions(): Promise<
   OperatingBuildingOption[]
 > {
-  return listOperatingBuildingOptionsMock();
+  if (USE_APPLICATION_REGISTRATION_WORKBENCH_MOCK) {
+    return listOperatingBuildingOptionsMock();
+  }
+  if (!operatingOptionsPromise) {
+    operatingOptionsPromise = requestClient
+      .get<OperatingOptionsResponse>(
+        '/v1/application-registration-workbench/operating-options',
+      )
+      .then((response) =>
+        normalizeOperatingBuildingOptions(response.buildings ?? []),
+      )
+      .catch((error) => {
+        operatingOptionsPromise = null;
+        throw error;
+      });
+  }
+  return operatingOptionsPromise;
 }
 
 export async function listOperatingRoomOptions(
   buildingId: string,
 ): Promise<OperatingRoomOption[]> {
-  return listOperatingRoomOptionsMock(buildingId);
+  if (USE_APPLICATION_REGISTRATION_WORKBENCH_MOCK) {
+    return listOperatingRoomOptionsMock(buildingId);
+  }
+  const normalizedBuildingId = buildingId.trim();
+  if (!normalizedBuildingId) {
+    return [];
+  }
+  const buildingOptions = await listOperatingBuildingOptions();
+  return (
+    buildingOptions.find((item) => item.buildingId === normalizedBuildingId)
+      ?.operatingRooms ?? []
+  );
 }
 
 export async function listSpecimenDictionaryGroups(

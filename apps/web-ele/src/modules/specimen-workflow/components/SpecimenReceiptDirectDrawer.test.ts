@@ -15,6 +15,7 @@ import {
 } from '../test-utils/component-stubs';
 
 vi.mock('element-plus', () => ({
+  ElAlert: createPassthroughStub(),
   ElButton: createButtonStub(),
   ElDrawer: createDialogStub(),
   ElForm: createPassthroughStub('form'),
@@ -118,7 +119,10 @@ describe('SpecimenReceiptDirectDrawer', () => {
   it('renders drawer content and actions', async () => {
     const wrapper = await mountDrawer();
 
-    expect(wrapper.container.textContent).toContain('条码直收');
+    expect(wrapper.container.textContent).toContain('异常接收');
+    expect(wrapper.container.textContent).toContain(
+      '系统会自动标记异常，无需单独设置异常状态。',
+    );
     expect(wrapper.container.textContent).toContain('新增条码');
     expect(wrapper.container.textContent).toContain('删除');
     expect(wrapper.container.textContent).toContain('1');
@@ -139,7 +143,9 @@ describe('SpecimenReceiptDirectDrawer', () => {
     buttons.find((button) => button.textContent?.includes('新增条码'))?.click();
     buttons.find((button) => button.textContent?.includes('删除'))?.click();
     buttons.find((button) => button.textContent?.includes('取消'))?.click();
-    buttons.find((button) => button.textContent?.includes('提交直收'))?.click();
+    buttons
+      .find((button) => button.textContent?.includes('提交异常接收'))
+      ?.click();
     await nextTick();
 
     expect(wrapper.directReceiveUserChangeMock).toHaveBeenCalledWith({

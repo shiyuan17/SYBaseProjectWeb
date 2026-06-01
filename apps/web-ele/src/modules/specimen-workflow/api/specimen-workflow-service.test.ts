@@ -19,6 +19,7 @@ import {
   listPendingFixations,
   listPendingReceipts,
   listPendingSpecimenRemovals,
+  listSpecimenOutbounds,
   listPendingTransportOrders,
   listSpecimens,
   listSpecimenVerificationRecords,
@@ -26,6 +27,7 @@ import {
   mapPendingSpecimenPageResponse,
   mapSpecimenRemovalPageResponse,
   outboundTransportOrder,
+  quickOutboundSpecimen,
   printTransportOrder,
   rebindSpecimenBarcode,
   receiveSpecimens,
@@ -35,6 +37,7 @@ import {
   retryLabelPrint,
   startFixation,
   startSpecimenVerification,
+  unbindSpecimenBarcode,
   updateApplication,
 } from './specimen-workflow-service';
 
@@ -272,6 +275,59 @@ describe('specimen-workflow-service mock flow', () => {
     expect(transportOrders.items[0]?.outboundUserName).toBe('出库员甲');
   });
 
+  it('auto-creates a transport order and outbounds immediately when specimen is checked in but has no order', async () => {
+    const registerResult = await registerSpecimens({
+      applicationId: 'APP-001',
+      items: [
+        {
+          containerCount: 1,
+          containerName: '福尔马林瓶',
+          specimenCount: 1,
+          specimenNameStandardized: '胃窦黏膜',
+        },
+      ],
+    });
+    const specimen = registerResult.specimens[0];
+    const barcode = specimen?.barcode ?? '';
+    const specimenNo = specimen?.specimenNo ?? '';
+
+    await startSpecimenVerification({ specimenBarcode: barcode });
+    await completeSpecimenVerification({ specimenBarcode: barcode });
+    await completeFixation({ specimenBarcode: barcode });
+    await confirmSpecimen(barcode, {
+      operatorName: '确认员丙',
+      operatorUserId: 'USER-CFM-03',
+    });
+    await checkInSpecimen(barcode, {
+      operatorName: '入库员丙',
+      operatorUserId: 'USER-CI-03',
+      specimenBarcode: barcode,
+    });
+
+    const outbound = await quickOutboundSpecimen({
+      identifier: specimenNo,
+      identifierType: 'SPECIMEN_NO',
+      outboundUserId: 'USER-OUT-02',
+      outboundUserName: '出库员乙',
+      remarks: '自动补建并出库',
+      terminalCode: 'TERM-OUT-QUICK-01',
+    });
+
+    expect(outbound.status).toBe('HANDED_OVER');
+    expect(outbound.outboundUserName).toBe('出库员乙');
+    expect(outbound.handedOverAt).toBeTruthy();
+
+    const outbounds = await listSpecimenOutbounds({
+      page: 1,
+      size: 20,
+      specimenNo,
+    });
+    expect(outbounds.items).toHaveLength(1);
+    expect(outbounds.items[0]?.transportOrderId).toBe(outbound.id);
+    expect(outbounds.items[0]?.outboundUserName).toBe('出库员乙');
+    expect(outbounds.items[0]?.outboundAt).toBeTruthy();
+  });
+
   it('enforces the new sequence gates before fixation, check-in, and transport creation', async () => {
     const registerResult = await registerSpecimens({
       applicationId: 'APP-001',
@@ -328,8 +384,6 @@ describe('specimen-workflow-service mock flow', () => {
 
   it('supports barcode bind/rebind and verification record query', async () => {
     const rebound = await rebindSpecimenBarcode('BC-004-01-R', {
-      operatorName: '护士甲',
-      operatorUserId: 'USR-004',
       remarks: '再次修正条码',
       targetBarcode: 'BC-004-01-R2',
       terminalCode: 'TERM-REG-03',
@@ -347,13 +401,17 @@ describe('specimen-workflow-service mock flow', () => {
     expect(records[0]?.verificationType).toBe('BARCODE_REBIND');
 
     const reboundAgain = await bindSpecimenBarcode('SPEC-004-1', {
-      operatorName: '护士乙',
-      operatorUserId: 'USR-005',
       remarks: '补充绑定记录',
       targetBarcode: 'BC-004-01-R3',
       terminalCode: 'TERM-REG-04',
     });
     expect(reboundAgain.barcode).toBe('BC-004-01-R3');
+
+    const unbound = await unbindSpecimenBarcode('SPEC-004-1', {
+      remarks: '恢复未绑定',
+      terminalCode: 'TERM-REG-05',
+    });
+    expect(unbound.barcodeBindingStatus).toBe('UNBOUND');
   });
 
   it('returns pending receipt batches and updates abnormal summary after receive', async () => {
@@ -395,8 +453,6 @@ describe('specimen-workflow-service mock flow', () => {
   it('blocks binding, confirmation, check-in, and transport creation after receipt terminal statuses', async () => {
     await expect(
       rebindSpecimenBarcode('BC-007-01', {
-        operatorName: '护士甲',
-        operatorUserId: 'USR-007',
         remarks: '异常后尝试重绑',
         targetBarcode: 'BC-007-01-R',
         terminalCode: 'TERM-007',

@@ -99,8 +99,43 @@ describe('TrackingSpecimenListTable', () => {
     expect(wrapper.container.textContent).toContain('SP-1');
     expect(wrapper.container.textContent).toContain('BC-1');
     expect(wrapper.container.textContent).toContain('检验科');
+    expect(wrapper.container.textContent).not.toContain('标签打印状态');
+    expect(wrapper.container.textContent).not.toContain('打印失败');
+    expect(wrapper.container.textContent).not.toContain('待固定');
+    expect(wrapper.container.textContent).not.toContain('已固定');
 
     wrapper.unmount();
+  });
+
+  it('uses different colors for different specimen statuses', async () => {
+    const container = document.createElement('div');
+    document.body.append(container);
+
+    const app = createApp({
+      render() {
+        return h(TrackingSpecimenListTable, {
+          items: [
+            createItem({ specimenNo: 'SP-1', specimenStatus: 'FIXED' }),
+            createItem({ specimenNo: 'SP-2', specimenStatus: 'IN_TRANSIT' }),
+          ],
+          loading: false,
+        });
+      },
+    });
+
+    app.directive('loading', {});
+    app.mount(container);
+    await nextTick();
+
+    const tags = [...container.querySelectorAll('[data-tag-type]')].map(
+      (node) => node.getAttribute('data-tag-type'),
+    );
+
+    expect(tags).toContain('primary');
+    expect(tags).toContain('warning');
+
+    app.unmount();
+    container.remove();
   });
 
   it('emits detail action', async () => {

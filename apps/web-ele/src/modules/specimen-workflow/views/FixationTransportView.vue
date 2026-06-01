@@ -117,7 +117,7 @@ watch(
         </ElTabPane>
         <ElTabPane
           v-if="canHandoverTransport"
-          label="转运/出库"
+          label="标本出库"
           name="transport"
         >
           <TransportHandoverView embedded />

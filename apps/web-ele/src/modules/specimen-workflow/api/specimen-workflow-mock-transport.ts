@@ -1,6 +1,9 @@
 import type {
   PendingTransportOrderPage,
   PendingTransportOrderQuery,
+  QuickSpecimenOutboundRequest,
+  SpecimenOutboundListQuery,
+  SpecimenOutboundPage,
   TransportOrderCreateRequest,
   TransportOrderHandoverRequest,
   TransportOrderOutboundRequest,
@@ -21,15 +24,18 @@ import {
   appendWorkflowEvent,
   assertSpecimenNotInReceiptTerminalState,
   findTransportOrderById,
+  getActiveTransportOrderBySpecimenId,
   getApplicationById,
   getMockState,
   getTransportOrderBySpecimenId,
   isSpecimenCheckedIn,
   mapPendingTransportOrderItem,
+  mapSpecimenOutboundItem,
   mapTransportOrderView,
   resetMockState,
   resolveMockOperatorContext,
   resolveSpecimenByIdentifier,
+  resolveSpecimensBySpecimenNo,
   updateApplicationFromSpecimens,
 } from './specimen-workflow-mock-core';
 
@@ -71,6 +77,47 @@ async function listPendingTransportOrdersMock(
   return paginateItems(filteredItems, params.page, params.size);
 }
 
+async function listSpecimenOutboundsMock(
+  params: SpecimenOutboundListQuery,
+): Promise<SpecimenOutboundPage> {
+  const filteredItems = getMockState()
+    .specimens.filter((item) => {
+      const application = getApplicationById(item.applicationId);
+      const order = getTransportOrderBySpecimenId(item.id);
+
+      return (
+        Boolean(order) &&
+        (!normalizeText(params.applicationId) ||
+          application.id === params.applicationId) &&
+        (!normalizeText(params.specimenNo) ||
+          item.specimenNo === params.specimenNo)
+      );
+    })
+    .toSorted((left, right) => {
+      const leftOrder = getTransportOrderBySpecimenId(left.id);
+      const rightOrder = getTransportOrderBySpecimenId(right.id);
+      const leftOutboundAt = leftOrder?.handedOverAt ?? null;
+      const rightOutboundAt = rightOrder?.handedOverAt ?? null;
+
+      if (!leftOutboundAt && rightOutboundAt) {
+        return -1;
+      }
+      if (leftOutboundAt && !rightOutboundAt) {
+        return 1;
+      }
+      if (!leftOutboundAt && !rightOutboundAt) {
+        return compareNullableDateDesc(
+          left.latestTrackingAt ?? left.registeredAt,
+          right.latestTrackingAt ?? right.registeredAt,
+        );
+      }
+      return compareNullableDateDesc(leftOutboundAt, rightOutboundAt);
+    })
+    .map((item) => mapSpecimenOutboundItem(item));
+
+  return paginateItems(filteredItems, params.page, params.size);
+}
+
 async function createTransportOrderMock(
   data: TransportOrderCreateRequest,
 ): Promise<TransportOrderView> {
@@ -91,7 +138,7 @@ async function createTransportOrderMock(
     if (!isSpecimenCheckedIn(specimen)) {
       throw new Error(`标本 ${barcode} 尚未完成标本入库`);
     }
-    if (getTransportOrderBySpecimenId(specimen.id)) {
+    if (getActiveTransportOrderBySpecimenId(specimen.id)) {
       throw new Error(`标本 ${barcode} 已存在转运单`);
     }
     specimen.specimenStatus = 'IN_TRANSIT';
@@ -273,10 +320,59 @@ async function outboundTransportOrderMock(
   return mapTransportOrderView(order);
 }
 
+async function quickOutboundSpecimenMock(
+  data: QuickSpecimenOutboundRequest,
+): Promise<TransportOrderView> {
+  const specimens = resolveSpecimensBySpecimenNo(data.identifier);
+  if (specimens.length === 0) {
+    throw new Error(`未找到标本: ${data.identifier}`);
+  }
+  if (specimens.length > 1) {
+    throw new Error(`标本流水号 ${data.identifier} 匹配到多条记录，无法自动出库`);
+  }
+
+  const [specimen] = specimens;
+  if (!specimen) {
+    throw new Error(`未找到标本: ${data.identifier}`);
+  }
+
+  const activeOrder = getActiveTransportOrderBySpecimenId(specimen.id);
+  if (activeOrder) {
+    return outboundTransportOrderMock(activeOrder.id, {
+      outboundUserId: data.outboundUserId,
+      outboundUserName: data.outboundUserName,
+      remarks: data.remarks,
+      terminalCode: data.terminalCode,
+    });
+  }
+
+  const application = getApplicationById(specimen.applicationId);
+  const createdOrder = await createTransportOrderMock({
+    applicationId: specimen.applicationId,
+    handoverDepartmentId: application.submittingDepartmentId ?? null,
+    handoverDepartmentName: application.submittingDepartmentName ?? '',
+    handoverUserId: null,
+    handoverUserName: specimen.checkedInByName || data.outboundUserName,
+    receiverDepartmentId: 'DEPT_PATH',
+    receiverDepartmentName: '病理科',
+    remarks: data.remarks ?? null,
+    specimenBarcodes: [specimen.barcode],
+    terminalCode: data.terminalCode ?? null,
+  });
+  return outboundTransportOrderMock(createdOrder.id, {
+    outboundUserId: data.outboundUserId,
+    outboundUserName: data.outboundUserName,
+    remarks: data.remarks,
+    terminalCode: data.terminalCode,
+  });
+}
+
 export {
   createTransportOrderMock,
   handoverTransportOrderMock,
   listPendingTransportOrdersMock,
+  listSpecimenOutboundsMock,
   outboundTransportOrderMock,
+  quickOutboundSpecimenMock,
   printTransportOrderMock,
 };

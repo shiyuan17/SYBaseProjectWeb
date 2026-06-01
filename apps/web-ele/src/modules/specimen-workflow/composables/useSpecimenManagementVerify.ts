@@ -114,7 +114,7 @@ export function useSpecimenManagementVerify(options: {
     verifyAction.value = action;
     verifyTargetRow.value = row;
     verifyDialogVisible.value = true;
-    verifyForm.specimenBarcode = row.barcode;
+    verifyForm.specimenBarcode = row.barcode ?? '';
     verifyForm.fixationLiquidType = '';
     verifyForm.remarks = '';
     verifyForm.terminalCode = '';

@@ -2,42 +2,43 @@ import { createApp, h, nextTick } from 'vue';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { createDialogStub } from '../test-utils/component-stubs';
 import TransportHandoverView from './TransportHandoverView.vue';
 
 const {
-  handoverTransportOrderMock,
-  listPendingTransportOrdersMock,
+  listSpecimenOutboundsMock,
+  loadOperatingRoomNameMapSafelyMock,
   outboundTransportOrderMock,
-  printTransportOrderMock,
+  quickOutboundSpecimenMock,
   warningMock,
 } = vi.hoisted(() => ({
-  handoverTransportOrderMock: vi.fn(),
-  listPendingTransportOrdersMock: vi.fn(async () => ({
+  listSpecimenOutboundsMock: vi.fn(async () => ({
     items: [
       {
         applicationId: 'APP-002',
         applicationNo: 'M2-20260526-002',
-        batchAbnormalFlag: false,
-        handedOverAt: null,
-        handoverDepartmentName: 'Surgery',
-        id: 'TO-002',
-        outboundUserId: null,
+        inpatientNo: 'ZY-002',
+        outboundAt: null,
         outboundUserName: null,
+        patientGender: '女',
+        patientId: 'PAT-002',
         patientName: 'Alice',
-        receiverDepartmentName: 'Pathology',
-        reminderCount: 0,
-        specimenBarcodes: ['BC-002-01'],
-        status: 'PRINTED',
-        toBeTransportedAt: '2026-05-26 10:00:00',
-        transportOrderNo: 'TR-20260526-002',
-        unreceivedCount: 1,
+        registeredAt: '2026-05-26 09:30:00',
+        registeredByName: '登记员甲',
+        specimenId: 'SP-002',
+        specimenName: '甲状腺组织',
+        specimenNo: 'SP-TR-001',
+        specimenStatus: 'CHECKED_IN',
+        surgeryName: 'OR-102',
+        transportOrderId: 'TO-002',
       },
     ],
     page: 1,
     size: 20,
     total: 1,
   })),
+  loadOperatingRoomNameMapSafelyMock: vi.fn(async () =>
+    new Map([['OR-102', '惠侨楼 - 手术室 2']]),
+  ),
   outboundTransportOrderMock: vi.fn(async () => ({
     applicationId: 'APP-002',
     handedOverAt: '2026-05-26 10:10:00',
@@ -50,7 +51,18 @@ const {
     toBeTransportedAt: '2026-05-26 10:00:00',
     transportOrderNo: 'TR-20260526-002',
   })),
-  printTransportOrderMock: vi.fn(),
+  quickOutboundSpecimenMock: vi.fn(async () => ({
+    applicationId: 'APP-002',
+    handedOverAt: '2026-05-26 10:12:00',
+    handoverUserName: '入库员甲',
+    id: 'TO-NEW-001',
+    outboundUserId: 'USER-001',
+    outboundUserName: 'Test User',
+    receiverUserName: null,
+    status: 'HANDED_OVER',
+    toBeTransportedAt: '2026-05-26 10:11:00',
+    transportOrderNo: 'TR-20260526-NEW',
+  })),
   warningMock: vi.fn(),
 }));
 
@@ -58,8 +70,14 @@ const { mockRoute } = vi.hoisted(() => ({
   mockRoute: {
     query: {
       applicationId: 'APP-002',
-      applicationNo: 'M2-20260526-002',
     } as Record<string, string>,
+  },
+}));
+
+const { mockUserInfo } = vi.hoisted(() => ({
+  mockUserInfo: {
+    realName: 'Test User',
+    userId: 'USER-001',
   },
 }));
 
@@ -76,18 +94,8 @@ vi.mock('@vben/common-ui', () => ({
 
 vi.mock('@vben/stores', () => ({
   useUserStore: () => ({
-    userInfo: {
-      realName: 'Test User',
-      userId: 'USER-001',
-    },
+    userInfo: mockUserInfo,
   }),
-}));
-
-vi.mock('#/modules/system-management/components/DepartmentSelect.vue', () => ({
-  default: {
-    props: ['modelValue', 'placeholder', 'selectedLabel'],
-    template: '<div />',
-  },
 }));
 
 vi.mock('#/modules/system-management/components/SystemUserSelect.vue', () => ({
@@ -102,15 +110,7 @@ vi.mock('../components/WorkflowSectionCard.vue', () => ({
   default: {
     props: ['title', 'description'],
     template:
-      '<section><h2>{{ title }}</h2><slot name="extra" /><p v-if="description">{{ description }}</p><slot /></section>',
-  },
-}));
-
-vi.mock('../components/TransportOrderCreateDialog.vue', () => ({
-  default: {
-    props: ['modelValue', 'initialApplicationId', 'initialApplicationNo'],
-    template:
-      '<div data-testid="transport-order-create-dialog" :data-open="String(modelValue)" :data-application-id="initialApplicationId" :data-application-no="initialApplicationNo" />',
+      '<section><h2>{{ title }}</h2><p v-if="description">{{ description }}</p><slot /></section>',
   },
 }));
 
@@ -119,16 +119,22 @@ vi.mock('element-plus', async () => {
     await vi.importActual<typeof import('element-plus')>('element-plus');
   return {
     ...actual,
-    ElDialog: createDialogStub(),
     ElMessage: { success: vi.fn(), warning: warningMock },
   };
 });
 
+vi.mock('../utils/operating-room-display', () => ({
+  loadOperatingRoomNameMapSafely: loadOperatingRoomNameMapSafelyMock,
+  normalizeOperatingRoomDisplayValue: vi.fn(
+    (roomMap: ReadonlyMap<string, string>, value?: null | string) =>
+      value ? roomMap.get(value) ?? value : '',
+  ),
+}));
+
 vi.mock('../api/specimen-workflow-service', () => ({
-  handoverTransportOrder: handoverTransportOrderMock,
-  listPendingTransportOrders: listPendingTransportOrdersMock,
+  listSpecimenOutbounds: listSpecimenOutboundsMock,
   outboundTransportOrder: outboundTransportOrderMock,
-  printTransportOrder: printTransportOrderMock,
+  quickOutboundSpecimen: quickOutboundSpecimenMock,
 }));
 
 function mountView() {
@@ -147,45 +153,68 @@ function mountView() {
 async function flush() {
   await nextTick();
   await Promise.resolve();
+  await Promise.resolve();
   await nextTick();
 }
 
 describe('TransportHandoverView', () => {
   afterEach(() => {
     document.body.innerHTML = '';
+    mockUserInfo.realName = 'Test User';
+    mockUserInfo.userId = 'USER-001';
     vi.clearAllMocks();
   });
 
-  it('renders the check-in style transport workspace and forwards route context', async () => {
+  it('renders the specimen outbound workspace, keeps hidden route filtering, and removes legacy controls', async () => {
     const { app, container } = mountView();
     await flush();
 
-    expect(container.textContent).toContain('转运/出库');
-    expect(container.textContent).toContain('批量打印');
-    expect(container.textContent).toContain('批量交接');
-    expect(container.textContent).toContain('创建转运单');
+    expect(container.textContent).toContain('标本出库');
     expect(container.textContent).toContain('选择出库人Test User');
-    expect(listPendingTransportOrdersMock).toHaveBeenCalledWith(
+    expect(listSpecimenOutboundsMock).toHaveBeenCalledWith(
       expect.objectContaining({ applicationId: 'APP-002' }),
     );
+    expect(container.textContent).toContain('惠侨楼 - 手术室 2');
+    expect(container.textContent).not.toContain('OR-102');
 
-    const createButton = [...container.querySelectorAll('button')].find(
-      (button) => button.textContent?.includes('创建转运单'),
-    );
-    createButton?.click();
-    await flush();
+    expect(container.textContent).not.toContain('请输入申请单号');
+    expect(container.textContent).not.toContain('送检科室');
+    expect(container.textContent).not.toContain('查询');
+    expect(container.textContent).not.toContain('重置');
+    expect(container.textContent).not.toContain('创建转运单');
+    expect(container.textContent).not.toContain('批量打印');
+    expect(container.textContent).not.toContain('批量交接');
+    expect(container.textContent).not.toContain('最近操作结果');
+    expect(container.textContent).not.toContain('转运单号');
+    expect(container.textContent).not.toContain('交接科室');
+    expect(container.textContent).not.toContain('接收科室');
+    expect(container.textContent).not.toContain('操作');
 
-    const dialog = container.querySelector<HTMLElement>(
-      '[data-testid="transport-order-create-dialog"]',
-    );
-    expect(dialog?.dataset.open).toBe('true');
-    expect(dialog?.dataset.applicationId).toBe('APP-002');
-    expect(dialog?.dataset.applicationNo).toBe('M2-20260526-002');
+    const expectedHeaders = [
+      '序号',
+      '申请单',
+      '标本编号',
+      '姓名',
+      '住院号',
+      '性别',
+      '手术间',
+      '标本名称',
+      '标本状态',
+      '添加时间',
+      '添加人',
+      '病人ID',
+      '出库时间',
+      '出库人',
+    ];
+    const headerTexts = [
+      ...container.querySelectorAll('thead th'),
+    ].map((element) => element.textContent?.replace(/\s+/g, '') ?? '');
+    expect(headerTexts).toEqual(expectedHeaders);
 
     app.unmount();
   });
 
-  it('submits outbound directly when specimen serial search matches one pending order', async () => {
+  it('submits outbound directly when specimen serial search matches one pending specimen', async () => {
     const { app, container } = mountView();
     await flush();
 
@@ -205,7 +234,7 @@ describe('TransportHandoverView', () => {
     );
     await flush();
 
-    expect(listPendingTransportOrdersMock).toHaveBeenCalledWith(
+    expect(listSpecimenOutboundsMock).toHaveBeenCalledWith(
       expect.objectContaining({ specimenNo: 'SP-TR-001' }),
     );
     expect(outboundTransportOrderMock).toHaveBeenCalledWith('TO-002', {
@@ -214,18 +243,17 @@ describe('TransportHandoverView', () => {
       remarks: null,
       terminalCode: null,
     });
-    expect(handoverTransportOrderMock).not.toHaveBeenCalled();
     expect(warningMock).not.toHaveBeenCalled();
 
     app.unmount();
   });
 
-  it('warns when no pending transport order matches the specimen serial number', async () => {
+  it('quick outbounds by specimen serial number when the list is empty', async () => {
     const { app, container } = mountView();
     await flush();
 
     vi.clearAllMocks();
-    listPendingTransportOrdersMock.mockResolvedValueOnce({
+    listSpecimenOutboundsMock.mockResolvedValueOnce({
       items: [],
       page: 1,
       size: 20,
@@ -246,59 +274,65 @@ describe('TransportHandoverView', () => {
     );
     await flush();
 
-    expect(listPendingTransportOrdersMock).toHaveBeenCalledWith(
+    expect(listSpecimenOutboundsMock).toHaveBeenCalledWith(
       expect.objectContaining({ specimenNo: 'SP-NOT-FOUND' }),
     );
-    expect(warningMock).toHaveBeenCalledWith(
-      '未找到待处理转运单，请检查标本流水号后重试。',
-    );
+    expect(quickOutboundSpecimenMock).toHaveBeenCalledWith({
+      identifier: 'SP-NOT-FOUND',
+      identifierType: 'SPECIMEN_NO',
+      outboundUserId: 'USER-001',
+      outboundUserName: 'Test User',
+      remarks: null,
+      terminalCode: null,
+    });
     expect(outboundTransportOrderMock).not.toHaveBeenCalled();
+    expect(warningMock).not.toHaveBeenCalled();
 
     app.unmount();
   });
 
-  it('does not auto-open handover when specimen serial search matches multiple orders', async () => {
+  it('only refreshes the list when specimen serial search matches multiple specimens', async () => {
     const { app, container } = mountView();
     await flush();
 
     vi.clearAllMocks();
-    listPendingTransportOrdersMock.mockResolvedValueOnce({
+    listSpecimenOutboundsMock.mockResolvedValueOnce({
       items: [
         {
           applicationId: 'APP-003',
           applicationNo: 'M2-20260526-003',
-          batchAbnormalFlag: false,
-          handedOverAt: null,
-          handoverDepartmentName: 'Surgery',
-          id: 'TO-003',
-          outboundUserId: null,
+          inpatientNo: 'ZY-003',
+          outboundAt: null,
           outboundUserName: null,
+          patientGender: '男',
+          patientId: 'PAT-003',
           patientName: 'Bob',
-          receiverDepartmentName: 'Pathology',
-          reminderCount: 0,
-          specimenBarcodes: ['BC-003-01'],
-          status: 'PRINTED',
-          toBeTransportedAt: '2026-05-26 11:00:00',
-          transportOrderNo: 'TR-20260526-003',
-          unreceivedCount: 1,
+          registeredAt: '2026-05-26 10:10:00',
+          registeredByName: '登记员乙',
+          specimenId: 'SP-003',
+          specimenName: '淋巴结',
+          specimenNo: 'SP-MULTI',
+          specimenStatus: 'CHECKED_IN',
+          surgeryName: '手术间2',
+          transportOrderId: 'TO-003',
         },
         {
           applicationId: 'APP-004',
           applicationNo: 'M2-20260526-004',
-          batchAbnormalFlag: false,
-          handedOverAt: null,
-          handoverDepartmentName: 'Surgery',
-          id: 'TO-004',
-          outboundUserId: null,
+          inpatientNo: 'ZY-004',
+          outboundAt: null,
           outboundUserName: null,
+          patientGender: '女',
+          patientId: 'PAT-004',
           patientName: 'Carol',
-          receiverDepartmentName: 'Pathology',
-          reminderCount: 0,
-          specimenBarcodes: ['BC-004-01'],
-          status: 'PRINTED',
-          toBeTransportedAt: '2026-05-26 12:00:00',
-          transportOrderNo: 'TR-20260526-004',
-          unreceivedCount: 1,
+          registeredAt: '2026-05-26 10:20:00',
+          registeredByName: '登记员丙',
+          specimenId: 'SP-004',
+          specimenName: '甲状旁腺',
+          specimenNo: 'SP-MULTI',
+          specimenStatus: 'CHECKED_IN',
+          surgeryName: '手术间3',
+          transportOrderId: 'TO-004',
         },
       ],
       page: 1,
@@ -320,7 +354,7 @@ describe('TransportHandoverView', () => {
     );
     await flush();
 
-    expect(listPendingTransportOrdersMock).toHaveBeenCalledWith(
+    expect(listSpecimenOutboundsMock).toHaveBeenCalledWith(
       expect.objectContaining({ specimenNo: 'SP-MULTI' }),
     );
     expect(outboundTransportOrderMock).not.toHaveBeenCalled();
@@ -329,15 +363,41 @@ describe('TransportHandoverView', () => {
     app.unmount();
   });
 
-  it('does not render a page-level error alert when the initial load fails', async () => {
-    listPendingTransportOrdersMock.mockRejectedValueOnce(
-      new Error('资源不存在'),
-    );
+  it('blocks direct and quick outbound when outbound operator is not selected', async () => {
+    mockUserInfo.realName = '';
+    mockUserInfo.userId = '';
 
     const { app, container } = mountView();
     await flush();
 
-    expect(container.textContent).not.toContain('资源不存在');
+    vi.clearAllMocks();
+    listSpecimenOutboundsMock.mockResolvedValueOnce({
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
+
+    const specimenNoInput = container.querySelector(
+      'input[placeholder="请输入标本流水号"]',
+    ) as HTMLInputElement | null;
+    specimenNoInput!.value = 'SP-NO-OPERATOR';
+    specimenNoInput!.dispatchEvent(new Event('input', { bubbles: true }));
+    specimenNoInput!.dispatchEvent(
+      new KeyboardEvent('keyup', {
+        bubbles: true,
+        code: 'Enter',
+        key: 'Enter',
+      }),
+    );
+    await flush();
+
+    expect(listSpecimenOutboundsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ specimenNo: 'SP-NO-OPERATOR' }),
+    );
+    expect(warningMock).toHaveBeenCalledWith('请选择出库人');
+    expect(outboundTransportOrderMock).not.toHaveBeenCalled();
+    expect(quickOutboundSpecimenMock).not.toHaveBeenCalled();
 
     app.unmount();
   });

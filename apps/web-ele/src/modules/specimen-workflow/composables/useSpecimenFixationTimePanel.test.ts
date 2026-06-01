@@ -350,16 +350,36 @@ describe('useSpecimenFixationTimePanel', () => {
       throw new Error('composable state not initialized');
     }
 
-    state.scanInput.value = 'SP-001';
+    state.scanInput.value = 'SP-002';
     await state.handleCompleteFixationByScan();
     await flushComposable();
 
-    state.scanInput.value = 'SP-001';
+    state.scanInput.value = 'SP-002';
     await state.handleCompleteFixationByScan();
     await flushComposable();
 
     expect(warningMock).toHaveBeenCalledWith('该标本已在当前列表中');
     expect(state.queueItems.value).toHaveLength(1);
+
+    wrapper.destroy();
+  });
+
+  it('blocks completed specimens before calling the fixation completion api', async () => {
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    state.scanInput.value = 'SP-001';
+    await state.handleCompleteFixationByScan();
+    await flushComposable();
+
+    expect(warningMock).toHaveBeenCalledWith('标本已完成固定，无需重复操作');
+    expect(completeFixationMock).not.toHaveBeenCalled();
+    expect(state.queueItems.value).toHaveLength(0);
 
     wrapper.destroy();
   });

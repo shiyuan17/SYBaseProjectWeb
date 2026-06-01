@@ -14,9 +14,17 @@ import {
 } from '../api/specimen-workflow-service';
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import { formatSpecimenStatus } from '../utils/format';
+import {
+  isCheckInReady as isCheckInReadyValue,
+  resolveExactMatches,
+  resolveUnavailableMessage,
+} from '../utils/specimen-check-in';
+import {
+  loadOperatingRoomNameMapSafely,
+  resolveOperatingRoomDisplayName,
+} from '../utils/operating-room-display';
 
 const MAX_QUERY_SIZE = 100;
-const RECEIPT_LOCKED_STATUSES = new Set(['RECEIVED', 'REJECTED', 'RETURNED']);
 const EXPORT_HEADERS = [
   '序',
   '申请单',
@@ -52,6 +60,7 @@ export function useSpecimenCheckInPanel() {
   const pageError = ref('');
   const scanInput = ref('');
   const queueItems = ref<CheckInQueueItem[]>([]);
+  const operatingRoomNameMap = ref<ReadonlyMap<string, string>>(new Map());
   const selectedRowKeys = ref<string[]>([]);
 
   const operatorForm = reactive({
@@ -75,20 +84,23 @@ export function useSpecimenCheckInPanel() {
       queueItems.value.filter((item) => item.queueStatus !== 'SUCCESS').length,
   );
 
-  function normalizeText(value?: null | string) {
-    return value?.trim() ?? '';
+  async function ensureOperatingRoomNameMapLoaded() {
+    if (operatingRoomNameMap.value.size > 0) {
+      return operatingRoomNameMap.value;
+    }
+
+    operatingRoomNameMap.value = await loadOperatingRoomNameMapSafely();
+    return operatingRoomNameMap.value;
   }
 
-  function isReceiptLocked(row: SpecimenManagementListItem) {
-    return RECEIPT_LOCKED_STATUSES.has(row.specimenStatus ?? '');
-  }
-
-  function isVisibleInCheckInScene(row: SpecimenManagementListItem) {
-    return (
-      row.verificationStatus === 'VERIFIED' &&
-      row.fixationStatus === 'COMPLETED' &&
-      Boolean(row.specimenConfirmedAt) &&
-      !isReceiptLocked(row)
+  function normalizeSurgeryName(
+    row: SpecimenManagementListItem,
+    roomNameById: ReadonlyMap<string, string>,
+  ) {
+    return resolveOperatingRoomDisplayName(
+      roomNameById,
+      row.roomId,
+      row.surgeryName,
     );
   }
 
@@ -102,11 +114,16 @@ export function useSpecimenCheckInPanel() {
     };
   }
 
-  function upsertQueueItem(row: SpecimenManagementListItem) {
+  async function upsertQueueItem(row: SpecimenManagementListItem) {
+    const roomNameById = await ensureOperatingRoomNameMapLoaded();
+    const normalizedRow = {
+      ...row,
+      surgeryName: normalizeSurgeryName(row, roomNameById),
+    };
     const index = queueItems.value.findIndex(
-      (item) => item.specimenId === row.specimenId,
+      (item) => item.specimenId === normalizedRow.specimenId,
     );
-    const nextRow = buildQueueItem(row);
+    const nextRow = buildQueueItem(normalizedRow);
     if (index !== -1) {
       const existingRow = queueItems.value[index];
       if (!existingRow) {
@@ -144,13 +161,7 @@ export function useSpecimenCheckInPanel() {
   }
 
   function isCheckInReady(row: SpecimenManagementListItem) {
-    return (
-      row.checkInStatus !== 'CHECKED_IN' &&
-      row.verificationStatus === 'VERIFIED' &&
-      row.fixationStatus === 'COMPLETED' &&
-      Boolean(row.specimenConfirmedAt) &&
-      !isReceiptLocked(row)
-    );
+    return isCheckInReadyValue(row);
   }
 
   async function loadMatchingSpecimens(keyword: string) {
@@ -160,19 +171,7 @@ export function useSpecimenCheckInPanel() {
       size: MAX_QUERY_SIZE,
     });
 
-    return result.items.filter((item) => isVisibleInCheckInScene(item));
-  }
-
-  function resolveExactMatch(
-    items: SpecimenManagementListItem[],
-    keyword: string,
-  ) {
-    const normalizedKeyword = normalizeText(keyword);
-    return items.filter((item) =>
-      [item.specimenId, item.specimenNo, item.barcode].some(
-        (value) => normalizeText(value) === normalizedKeyword,
-      ),
-    );
+    return result.items;
   }
 
   function buildCheckInPayload(row: SpecimenManagementListItem) {
@@ -180,7 +179,7 @@ export function useSpecimenCheckInPanel() {
       operatorName: operatorForm.operatorName.trim(),
       operatorUserId: operatorForm.operatorUserId.trim(),
       remarks: operatorForm.remarks.trim() || null,
-      specimenBarcode: row.barcode,
+      specimenBarcode: row.barcode ?? '',
       terminalCode: operatorForm.terminalCode.trim() || null,
     };
   }
@@ -203,11 +202,13 @@ export function useSpecimenCheckInPanel() {
       return;
     }
     if (!isCheckInReady(row)) {
-      ElMessage.warning('当前标本不满足入库条件');
+      ElMessage.warning(
+        resolveUnavailableMessage([row], row.barcode || row.specimenNo),
+      );
       return;
     }
 
-    const queueRow = upsertQueueItem(row);
+    const queueRow = await upsertQueueItem(row);
     queueRow.queueStatus = 'PENDING';
 
     actionLoading.value = true;
@@ -237,10 +238,10 @@ export function useSpecimenCheckInPanel() {
     loading.value = true;
     pageError.value = '';
     try {
-      const candidates = await loadMatchingSpecimens(keyword);
-      const exactMatches = resolveExactMatch(candidates, keyword);
+      const items = await loadMatchingSpecimens(keyword);
+      const exactMatches = resolveExactMatches(items, keyword);
       if (exactMatches.length === 0) {
-        ElMessage.warning('未找到可入库标本');
+        ElMessage.warning(resolveUnavailableMessage(items, keyword));
         return;
       }
       if (exactMatches.length > 1) {
@@ -253,7 +254,7 @@ export function useSpecimenCheckInPanel() {
         return;
       }
       if (!isCheckInReady(row)) {
-        ElMessage.warning('当前标本不满足入库条件');
+        ElMessage.warning(resolveUnavailableMessage(exactMatches, keyword));
         return;
       }
 
@@ -261,12 +262,12 @@ export function useSpecimenCheckInPanel() {
         (item) => item.specimenId === row.specimenId,
       );
       if (existingRow?.checkInStatus === 'CHECKED_IN') {
-        ElMessage.success('该标本已完成入库');
+        ElMessage.warning('标本已完成入库，无需重复操作');
         scanInput.value = '';
         return;
       }
 
-      upsertQueueItem(row);
+      await upsertQueueItem(row);
       await performCheckIn(row);
       scanInput.value = '';
     } catch (error) {
@@ -383,7 +384,7 @@ export function useSpecimenCheckInPanel() {
         resolveExportValue(row.patientName),
         '-',
         '-',
-        resolveExportValue(row.submittingDepartmentName),
+        resolveExportValue(row.surgeryName),
         resolveExportValue(row.specimenName),
         resolveExportValue(formatSpecimenStatus(row.specimenStatus)),
         resolveExportValue(row.specimenType),

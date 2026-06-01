@@ -9,6 +9,7 @@ import {
   ElSelect,
   ElTable,
   ElTableColumn,
+  ElTag,
 } from 'element-plus';
 
 import {
@@ -17,6 +18,7 @@ import {
   RECEIPT_STATUS_OPTIONS,
 } from '../constants';
 import { formatNullable } from '../utils/format';
+import { isReceiptDraftDerivedAbnormal } from '../utils/specimen-receipt';
 
 withDefaults(
   defineProps<{
@@ -113,6 +115,22 @@ const emit = defineEmits<{
     <ElTableColumn label="备注" min-width="180">
       <template #default="{ row }">
         <ElInput v-model="row.remarks" placeholder="补充说明" />
+      </template>
+    </ElTableColumn>
+    <ElTableColumn label="处理提示" min-width="220">
+      <template #default="{ row }">
+        <div class="flex flex-col items-start gap-2 text-sm">
+          <ElTag :type="isReceiptDraftDerivedAbnormal(row) ? 'danger' : 'success'">
+            {{ isReceiptDraftDerivedAbnormal(row) ? '自动标记异常' : '正常接收' }}
+          </ElTag>
+          <span class="text-muted-foreground">
+            {{
+              isReceiptDraftDerivedAbnormal(row)
+                ? '拒收、退回或质控不合格提交后会自动进入异常标记。'
+                : '无需单独设置异常状态。'
+            }}
+          </span>
+        </div>
       </template>
     </ElTableColumn>
     <ElTableColumn

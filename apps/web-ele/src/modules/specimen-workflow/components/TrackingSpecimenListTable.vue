@@ -5,12 +5,10 @@ import { ElButton, ElTable, ElTableColumn, ElTag } from 'element-plus';
 
 import {
   formatDateTime,
-  formatFixationStatus,
-  formatLabelPrintStatus,
   formatNullable,
   formatSpecimenStatus,
 } from '../utils/format';
-import { labelTagType, specimenTagType } from '../utils/tracking-specimen-list';
+import { specimenTagType } from '../utils/tracking-specimen-list';
 
 defineProps<{
   items: SpecimenManagementListItem[];
@@ -42,23 +40,11 @@ const emit = defineEmits<{
         {{ formatDateTime(row.registeredAt) }}
       </template>
     </ElTableColumn>
-    <ElTableColumn label="标签打印状态" min-width="150">
-      <template #default="{ row }">
-        <ElTag :type="labelTagType(row.labelPrintStatus)">
-          {{ formatLabelPrintStatus(row.labelPrintStatus) }}
-        </ElTag>
-      </template>
-    </ElTableColumn>
     <ElTableColumn label="标本状态" min-width="150">
       <template #default="{ row }">
-        <div class="flex flex-col items-start gap-2">
-          <ElTag :type="specimenTagType(row)">
-            {{ formatSpecimenStatus(row.specimenStatus) }}
-          </ElTag>
-          <span class="text-xs text-muted-foreground">
-            {{ formatFixationStatus(row.fixationStatus) }}
-          </span>
-        </div>
+        <ElTag :type="specimenTagType(row)">
+          {{ formatSpecimenStatus(row.specimenStatus) }}
+        </ElTag>
       </template>
     </ElTableColumn>
     <ElTableColumn label="异常标记" min-width="110">

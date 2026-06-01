@@ -23,6 +23,7 @@ const {
   mockGetApplicationDetail,
   mockGetLatestRegistrationResult,
   mockListSpecimens,
+  mockPush,
 } = vi.hoisted(() => ({
   mockAccessStore: {
     accessCodes: [
@@ -33,17 +34,17 @@ const {
   mockGetApplicationDetail: vi.fn(),
   mockGetLatestRegistrationResult: vi.fn(),
   mockListSpecimens: vi.fn(),
+  mockPush: vi.fn(),
 }));
 
 vi.mock('@vben/stores', () => ({
   useAccessStore: () => mockAccessStore,
 }));
 
-vi.mock('#/modules/system-management/components/DepartmentSelect.vue', () => ({
-  default: {
-    props: ['modelValue', 'placeholder'],
-    template: '<div :data-placeholder="placeholder">{{ modelValue }}</div>',
-  },
+vi.mock('vue-router', () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
 }));
 
 vi.mock('../components/WorkflowSectionCard.vue', () => ({
@@ -220,6 +221,7 @@ describe('TrackingSpecimenListView', () => {
     mockListSpecimens.mockReset();
     mockGetApplicationDetail.mockReset();
     mockGetLatestRegistrationResult.mockReset();
+    mockPush.mockReset();
     document.body.innerHTML = '';
   });
 
@@ -254,10 +256,76 @@ describe('TrackingSpecimenListView', () => {
     expect(buttonTexts).not.toContain('完成核验');
 
     expect(root.textContent).toContain('异常明细');
+    expect(root.textContent).toContain('回到病理接收处理');
     expect(root.textContent).toContain('异常类型：已拒收');
     expect(root.textContent).toContain('质控结果：不合格');
     expect(root.textContent).toContain('问题代码：CONTAINER_DAMAGE');
     expect(root.textContent).toContain('原因：容器破损');
+
+    app.unmount();
+  });
+
+  it('routes abnormal specimen details back to pathology receipt with barcode context', async () => {
+    mockListSpecimens.mockResolvedValue({
+      items: [buildSpecimenRow()],
+      page: 1,
+      size: 20,
+      summary: {
+        abnormalCount: 1,
+        labelPrintedCount: 0,
+        pendingLabelCount: 1,
+        totalCount: 1,
+      },
+      total: 1,
+    });
+    mockGetApplicationDetail.mockResolvedValue(buildApplicationDetail());
+    mockGetLatestRegistrationResult.mockResolvedValue(buildLatestResult());
+
+    const { app, root } = await mountView({
+      initialBarcode: 'BC-TRACK-001',
+      triggerKey: 1,
+    });
+
+    const receiptButton = [...root.querySelectorAll<HTMLButtonElement>('button')].find(
+      (button) => button.textContent?.includes('回到病理接收处理'),
+    );
+    receiptButton?.click();
+    await flushAll();
+
+    expect(mockPush).toHaveBeenCalledWith({
+      path: '/workflow/pathology-receipt',
+      query: {
+        barcode: 'BC-TRACK-001',
+      },
+    });
+
+    app.unmount();
+  });
+
+  it('hides the removed overview and marked filter fields', async () => {
+    mockListSpecimens.mockResolvedValue({
+      items: [buildSpecimenRow()],
+      page: 1,
+      size: 20,
+      summary: {
+        abnormalCount: 1,
+        labelPrintedCount: 0,
+        pendingLabelCount: 1,
+        totalCount: 1,
+      },
+      total: 1,
+    });
+
+    const { app, root } = await mountView();
+
+    expect(root.textContent).not.toContain('工作台概览');
+    expect(root.textContent).not.toContain('送检科室');
+    expect(root.textContent).not.toContain('登记日期');
+    expect(root.textContent).not.toContain('待贴签');
+    expect(root.textContent).not.toContain(
+      '支持按关键字、科室、状态、标签状态、异常标记和日期范围筛选。',
+    );
+    expect(root.textContent).toContain('支持按关键字、标本状态和异常标记筛选。');
 
     app.unmount();
   });

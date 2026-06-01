@@ -3,6 +3,7 @@ import type {
   LatestSpecimenRegistrationResult,
   PendingSpecimenItem,
   PendingTransportOrderItem,
+  SpecimenOutboundListItem,
   SpecimenManagementListItem,
   SpecimenReceiptResult,
   SpecimenRemovalConfirmRequest,
@@ -158,6 +159,17 @@ export function getTransportOrderBySpecimenId(specimenId: string) {
     state.transportOrders.find(
       (item) =>
         item.specimenIds.includes(specimenId) && item.status !== 'CANCELLED',
+    ) ?? null
+  );
+}
+
+export function getActiveTransportOrderBySpecimenId(specimenId: string) {
+  return (
+    state.transportOrders.find(
+      (item) =>
+        item.specimenIds.includes(specimenId) &&
+        item.status !== 'COMPLETED' &&
+        item.status !== 'CANCELLED',
     ) ?? null
   );
 }
@@ -335,6 +347,7 @@ export function mapSpecimenManagementItem(
     applicationNo: application.applicationNo,
     barcode: specimen.barcode,
     barcodeBindingStatus: resolveSpecimenBarcodeBindingStatus(specimen),
+    buildingId: null,
     checkInStatus: resolveSpecimenCheckInStatus(specimen),
     checkedInAt: specimen.checkedInAt ?? null,
     checkedInByName: specimen.checkedInByName ?? null,
@@ -349,9 +362,13 @@ export function mapSpecimenManagementItem(
     labelPrintBatchNo: specimen.labelPrintBatchNo,
     labelPrintStatus: specimen.labelPrintStatus,
     latestTrackingAt: specimen.latestTrackingAt,
+    patientGender: application.patientGender ?? null,
+    patientId: application.patientId ?? null,
     patientName: application.patientName,
     recentNode: resolveSpecimenRecentNode(specimen),
     registeredAt: specimen.registeredAt,
+    registrationOperatorName: null,
+    roomId: null,
     specimenConfirmedAt: specimen.specimenConfirmedAt,
     specimenConfirmedByName: specimen.specimenConfirmedByName ?? null,
     specimenConfirmedByUserId: specimen.specimenConfirmedByUserId ?? null,
@@ -364,6 +381,7 @@ export function mapSpecimenManagementItem(
     specimenType: specimen.specimenType,
     submittingDepartmentId: application.submittingDepartmentId,
     submittingDepartmentName: application.submittingDepartmentName,
+    surgeryName: application.submittingDepartmentName ?? null,
     verificationCompletedAt: specimen.verificationCompletedAt ?? null,
     verificationStartedAt: specimen.verificationStartedAt ?? null,
     verificationStatus: resolveSpecimenVerificationStatus(specimen),
@@ -396,6 +414,36 @@ export function mapSpecimenRemovalItem(
     specimenStatus: specimen.specimenStatus,
     specimenType: specimen.specimenType,
     surgeryName: application.submittingDepartmentName ?? null,
+  };
+}
+
+export function mapSpecimenOutboundItem(
+  specimen: RawSpecimen,
+): SpecimenOutboundListItem {
+  const application = getApplicationById(specimen.applicationId);
+  const order = getTransportOrderBySpecimenId(specimen.id);
+
+  if (!order) {
+    throw new Error(`标本 ${specimen.specimenNo} 未关联转运单`);
+  }
+
+  return {
+    applicationId: application.id,
+    applicationNo: application.applicationNo,
+    inpatientNo: normalizeText(application.applicationNo) || null,
+    outboundAt: order.handedOverAt,
+    outboundUserName: order.outboundUserName ?? null,
+    patientGender: application.patientGender ?? null,
+    patientId: application.patientId ?? null,
+    patientName: application.patientName,
+    registeredAt: specimen.registeredAt,
+    registeredByName: '系统导入',
+    specimenId: specimen.id,
+    specimenName: specimen.specimenName,
+    specimenNo: specimen.specimenNo,
+    specimenStatus: specimen.specimenStatus,
+    surgeryName: application.submittingDepartmentName ?? null,
+    transportOrderId: order.id,
   };
 }
 
