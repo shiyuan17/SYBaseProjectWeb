@@ -250,9 +250,12 @@ export interface SpecimenManagementListItem {
   registeredAt: null | string;
   specimenCount: null | number;
   specimenConfirmedAt?: null | string;
+  specimenConfirmedByName?: null | string;
+  specimenConfirmedByUserId?: null | string;
   specimenId: string;
   specimenName: string;
   specimenNo: string;
+  specimenRemovalAt?: null | string;
   specimenSite: null | string;
   specimenStatus: null | string;
   specimenType: null | string;
@@ -323,8 +326,6 @@ export interface SpecimenRemovalPage {
 }
 
 export interface SpecimenRemovalConfirmRequest {
-  operatorName: string;
-  operatorUserId?: null | string;
   remarks?: null | string;
   specimenBarcode: string;
   terminalCode?: null | string;
@@ -335,8 +336,6 @@ export type SpecimenRemovalIdentifierType = 'BARCODE' | 'SPECIMEN_NO';
 export interface SpecimenRemovalQuickConfirmRequest {
   identifier: string;
   identifierType: SpecimenRemovalIdentifierType;
-  operatorName: string;
-  operatorUserId?: null | string;
   remarks?: null | string;
   terminalCode?: null | string;
 }
@@ -372,8 +371,6 @@ export interface SpecimenRegisterRequest {
   applicationId: string;
   collectionScene?: null | string;
   items: SpecimenRegisterItemRequest[];
-  operatorName: string;
-  operatorUserId?: null | string;
   printerCode?: null | string;
   remarks?: null | string;
   terminalCode?: null | string;
@@ -396,8 +393,6 @@ export interface LatestSpecimenRegistrationResult {
 }
 
 export interface LabelPrintRetryRequest {
-  operatorName: string;
-  operatorUserId?: null | string;
   printerCode: string;
   remarks?: null | string;
   terminalCode?: null | string;
@@ -421,22 +416,20 @@ export interface SpecimenBarcodeBindingRequest {
 }
 
 export interface SpecimenVerificationRequest {
-  operatorName: string;
-  operatorUserId?: null | string;
   remarks?: null | string;
   specimenBarcode: string;
   terminalCode?: null | string;
 }
 
 export interface SpecimenConfirmRequest {
-  operatorName: string;
+  operatorName?: null | string;
   operatorUserId?: null | string;
   remarks?: null | string;
   terminalCode?: null | string;
 }
 
 export interface SpecimenCheckInRequest {
-  operatorName: string;
+  operatorName?: null | string;
   operatorUserId?: null | string;
   remarks?: null | string;
   specimenBarcode: string;
@@ -456,8 +449,6 @@ export interface SpecimenVerificationRecord {
 }
 
 export interface ApplicationFormReprintRequest {
-  operatorName: string;
-  operatorUserId?: null | string;
   remarks?: null | string;
   terminalCode?: null | string;
 }
@@ -518,8 +509,6 @@ export interface PendingSpecimenPage {
 
 export interface SpecimenFixationRequest {
   fixationLiquidType?: null | string;
-  operatorName: string;
-  operatorUserId?: null | string;
   remarks?: null | string;
   specimenBarcode: string;
   terminalCode?: null | string;
@@ -549,8 +538,6 @@ export interface TransportOrderCreateRequest {
 }
 
 export interface TransportOrderOperatorRequest {
-  operatorName: string;
-  operatorUserId?: null | string;
   terminalCode?: null | string;
 }
 
@@ -561,11 +548,20 @@ export interface TransportOrderHandoverRequest {
   terminalCode?: null | string;
 }
 
+export interface TransportOrderOutboundRequest {
+  outboundUserId?: null | string;
+  outboundUserName: string;
+  remarks?: null | string;
+  terminalCode?: null | string;
+}
+
 export interface TransportOrderView {
   applicationId: string;
   handedOverAt: null | string;
   handoverUserName: null | string;
   id: string;
+  outboundUserId?: null | string;
+  outboundUserName?: null | string;
   receiverUserName: null | string;
   status: string;
   toBeTransportedAt: null | string;
@@ -583,6 +579,8 @@ export interface PendingTransportOrderItem {
   handedOverAt: null | string;
   handoverDepartmentName: null | string;
   id: string;
+  outboundUserId?: null | string;
+  outboundUserName?: null | string;
   patientName: null | string;
   receiverDepartmentName: null | string;
   reminderCount?: number;

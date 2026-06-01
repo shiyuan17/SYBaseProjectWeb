@@ -30,7 +30,6 @@ const {
   handleOperatorChange,
   handleReset,
   handleRetryLabel,
-  handleRetryOperatorChange,
   handleSearch,
   handleSelectionChange,
   loading,
@@ -92,7 +91,7 @@ const {
         <SystemUserSelect
           v-model="operatorForm.operatorUserId"
           :selected-label="operatorForm.operatorName"
-          placeholder="选择操作人"
+          placeholder="选择确认人"
           @change="handleOperatorChange"
         />
       </div>
@@ -172,8 +171,8 @@ const {
         </template>
       </ElTableColumn>
       <ElTableColumn label="确认人" min-width="120">
-        <template #default>
-          {{ formatNullable(operatorForm.operatorName) }}
+        <template #default="{ row }">
+          {{ formatNullable(row.specimenConfirmedByName) }}
         </template>
       </ElTableColumn>
       <ElTableColumn label="添加时间" min-width="140">
@@ -238,12 +237,7 @@ const {
         <ElForm label-width="96px">
           <div class="grid gap-4 md:grid-cols-2">
             <ElFormItem label="操作人" required>
-              <SystemUserSelect
-                v-model="retryForm.operatorUserId"
-                :selected-label="retryForm.operatorName"
-                placeholder="请选择操作人"
-                @change="handleRetryOperatorChange"
-              />
+              <ElInput :model-value="retryForm.operatorName" disabled />
             </ElFormItem>
             <ElFormItem label="打印机编号" required>
               <ElInput

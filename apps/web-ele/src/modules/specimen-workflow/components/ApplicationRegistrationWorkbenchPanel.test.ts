@@ -2,6 +2,7 @@ import type {
   ApplicationRegistrationWorkbenchRecord,
   OperatingBuildingOption,
   OperatingRoomOption,
+  SaveApplicationRegistrationPatientInfoRequest,
   SaveApplicationRegistrationWorkbenchRequest,
   SpecimenDictionaryEntryOption,
   SpecimenDictionaryGroup,
@@ -44,16 +45,21 @@ type PatientPanelStubProps = {
   buildingLabel: string;
   record: ApplicationRegistrationWorkbenchRecord | null;
   roomLabel: string;
+  saveDisabled: boolean;
+  saving: boolean;
 };
 
 type SpecimenTableStubProps = {
-  commonSpecimenOptions: SpecimenDictionaryEntryOption[];
   items: ApplicationRegistrationWorkbenchRecord['specimenItems'];
   roomLabel: string;
 };
 
 type DictionaryPanelStubProps = {
+  activePartId: string;
+  activeSystemId: string;
+  departmentCommonSpecimenOptions: SpecimenDictionaryEntryOption[];
   dictionaryKeyword: string;
+  doctorCommonSpecimenOptions: SpecimenDictionaryEntryOption[];
   groups: SpecimenDictionaryGroup[];
 };
 
@@ -65,6 +71,7 @@ const {
   listSpecimenDictionaryGroupsMock,
   listSpecimenPackageOptionsMock,
   lookupApplicationRegistrationWorkbenchRecordMock,
+  saveApplicationRegistrationPatientInfoMock,
   saveApplicationRegistrationWorkbenchMock,
   messageSuccessMock,
   messageWarningMock,
@@ -87,6 +94,13 @@ const {
         keyword: string;
         queryType?: string;
       }) => Promise<ApplicationRegistrationWorkbenchRecord | null>
+    >(),
+  saveApplicationRegistrationPatientInfoMock:
+    vi.fn<
+      (
+        applicationId: string,
+        payload: SaveApplicationRegistrationPatientInfoRequest,
+      ) => Promise<ApplicationRegistrationWorkbenchRecord>
     >(),
   messageSuccessMock: vi.fn(),
   messageWarningMock: vi.fn(),
@@ -128,6 +142,8 @@ vi.mock('../api/application-registration-workbench-service', () => ({
   listSpecimenPackageOptions: listSpecimenPackageOptionsMock,
   lookupApplicationRegistrationWorkbenchRecord:
     lookupApplicationRegistrationWorkbenchRecordMock,
+  saveApplicationRegistrationPatientInfo:
+    saveApplicationRegistrationPatientInfoMock,
   saveApplicationRegistrationWorkbench:
     saveApplicationRegistrationWorkbenchMock,
 }));
@@ -240,8 +256,10 @@ vi.mock('./ApplicationRegistrationPatientPanel.vue', () => ({
       buildingLabel: { default: '', type: String },
       record: { default: null, type: Object },
       roomLabel: { default: '', type: String },
+      saveDisabled: { default: true, type: Boolean },
+      saving: { default: false, type: Boolean },
     },
-    emits: ['reprint-application-form', 'update:record'],
+    emits: ['reprint-application-form', 'save-patient-info', 'update:record'],
     setup(props: PatientPanelStubProps, { emit }: EmitContext) {
       return () =>
         h('div', { 'data-testid': 'patient-panel' }, [
@@ -256,10 +274,20 @@ vi.mock('./ApplicationRegistrationPatientPanel.vue', () => ({
                   props.roomLabel,
                 ].join('|')
               : 'EMPTY',
-          ),
-          h(
-            'button',
-            {
+            ),
+            h(
+              'button',
+              {
+                'data-testid': 'patient-save',
+                disabled: props.saveDisabled,
+                onClick: () => emit('save-patient-info'),
+                type: 'button',
+              },
+              props.saving ? '保存中' : '保存患者信息',
+            ),
+            h(
+              'button',
+              {
               'data-testid': 'patient-reprint',
               onClick: () => {
                 if (!props.record) {
@@ -299,11 +327,10 @@ vi.mock('./ApplicationRegistrationPatientPanel.vue', () => ({
 vi.mock('./ApplicationRegistrationSpecimenTable.vue', () => ({
   default: {
     props: {
-      commonSpecimenOptions: { default: () => [], type: Array },
       items: { default: () => [], type: Array },
       roomLabel: { default: '', type: String },
     },
-    emits: ['add-manual', 'append', 'select-package', 'update:items'],
+    emits: ['add-manual', 'select-package', 'update:items'],
     setup(props: SpecimenTableStubProps) {
       return () =>
         h('div', { 'data-testid': 'specimen-table' }, [
@@ -313,11 +340,6 @@ vi.mock('./ApplicationRegistrationSpecimenTable.vue', () => ({
             { 'data-testid': 'specimen-items' },
             JSON.stringify(props.items),
           ),
-          h(
-            'div',
-            { 'data-testid': 'common-specimens' },
-            JSON.stringify(props.commonSpecimenOptions),
-          ),
         ]);
     },
   },
@@ -326,17 +348,33 @@ vi.mock('./ApplicationRegistrationSpecimenTable.vue', () => ({
 vi.mock('./ApplicationRegistrationDictionaryPanel.vue', () => ({
   default: {
     props: {
+      activePartId: { default: '', type: String },
+      activeSystemId: { default: '', type: String },
+      departmentCommonSpecimenOptions: { default: () => [], type: Array },
       dictionaryKeyword: { default: '', type: String },
+      doctorCommonSpecimenOptions: { default: () => [], type: Array },
       groups: { default: () => [], type: Array },
     },
-    emits: ['append', 'update:dictionaryKeyword'],
+    emits: [
+      'append',
+      'select-part',
+      'select-system',
+      'update:dictionaryKeyword',
+    ],
     setup(props: DictionaryPanelStubProps, { emit }: EmitContext) {
       return () =>
         h('div', { 'data-testid': 'dictionary-panel' }, [
           h(
             'div',
-            { 'data-testid': 'dictionary-groups' },
-            JSON.stringify(props.groups),
+            { 'data-testid': 'dictionary-state' },
+            JSON.stringify({
+              activePartId: props.activePartId,
+              activeSystemId: props.activeSystemId,
+              departmentCommonSpecimenOptions:
+                props.departmentCommonSpecimenOptions,
+              doctorCommonSpecimenOptions: props.doctorCommonSpecimenOptions,
+              groups: props.groups,
+            }),
           ),
           h(
             'button',
@@ -430,20 +468,20 @@ const commonSpecimenOptionsFixture: SpecimenDictionaryEntryOption[] = [
     systemName: '乳腺及皮肤',
   },
   {
-    partId: 'P202',
-    partName: '乳腺',
-    searchKeywords: ['乳腺病灶切缘组织'],
-    specimenName: '乳腺病灶切缘组织',
-    systemId: 'SYS002',
-    systemName: '乳腺及皮肤',
+    partId: 'P301',
+    partName: '宫颈',
+    searchKeywords: ['宫颈活检组织'],
+    specimenName: '宫颈活检组织',
+    systemId: 'SYS003',
+    systemName: '妇科',
   },
   {
-    partId: 'P203',
-    partName: '皮肤',
-    searchKeywords: ['右乳周围皮肤组织'],
-    specimenName: '右乳周围皮肤组织',
-    systemId: 'SYS002',
-    systemName: '乳腺及皮肤',
+    partId: 'P101',
+    partName: '骨髓炎',
+    searchKeywords: ['右侧胫骨感染病灶'],
+    specimenName: '右侧胫骨感染病灶',
+    systemId: 'SYS001',
+    systemName: '骨、关节及软组织',
   },
 ];
 
@@ -603,6 +641,7 @@ function resetMocks() {
   listSpecimenDictionaryGroupsMock.mockReset();
   listSpecimenPackageOptionsMock.mockReset();
   lookupApplicationRegistrationWorkbenchRecordMock.mockReset();
+  saveApplicationRegistrationPatientInfoMock.mockReset();
   saveApplicationRegistrationWorkbenchMock.mockReset();
   messageSuccessMock.mockReset();
   messageWarningMock.mockReset();
@@ -622,6 +661,9 @@ function resetMocks() {
     specimenPackageOptionsFixture,
   );
   lookupApplicationRegistrationWorkbenchRecordMock.mockResolvedValue(
+    createRecordFixture(),
+  );
+  saveApplicationRegistrationPatientInfoMock.mockResolvedValue(
     createRecordFixture(),
   );
   saveApplicationRegistrationWorkbenchMock.mockResolvedValue(
@@ -737,17 +779,24 @@ describe('ApplicationRegistrationWorkbenchPanel', () => {
     });
     await wrapper.wait();
 
-    const dictionaryGroupsText =
-      wrapper.root.querySelector('[data-testid="dictionary-groups"]')
+    const dictionaryStateText =
+      wrapper.root.querySelector('[data-testid="dictionary-state"]')
         ?.textContent ?? '[]';
-    const dictionaryGroups = JSON.parse(
-      dictionaryGroupsText,
-    ) as SpecimenDictionaryGroup[];
+    const dictionaryState = JSON.parse(dictionaryStateText) as {
+      activePartId: string;
+      activeSystemId: string;
+      departmentCommonSpecimenOptions: SpecimenDictionaryEntryOption[];
+      doctorCommonSpecimenOptions: SpecimenDictionaryEntryOption[];
+      groups: SpecimenDictionaryGroup[];
+    };
 
-    expect(dictionaryGroupsText).not.toContain('右乳外上象限结节');
-    expect(dictionaryGroups[0]?.subParts[0]?.specimens).toEqual([
+    expect(dictionaryState.departmentCommonSpecimenOptions).toHaveLength(2);
+    expect(dictionaryState.doctorCommonSpecimenOptions).toHaveLength(1);
+    expect(dictionaryState.groups[0]?.subParts[0]?.specimens).toEqual([
       '右乳周围皮肤组织',
     ]);
+    expect(dictionaryState.activeSystemId).toBe('SYS002');
+    expect(dictionaryState.activePartId).toBe('P202');
 
     wrapper.unmount();
   });
@@ -759,22 +808,34 @@ describe('ApplicationRegistrationWorkbenchPanel', () => {
     });
     await wrapper.wait();
 
-    const commonSpecimensText =
-      wrapper.root.querySelector('[data-testid="common-specimens"]')
+    const dictionaryStateText =
+      wrapper.root.querySelector('[data-testid="dictionary-state"]')
         ?.textContent ?? '[]';
-    const commonSpecimens = JSON.parse(commonSpecimensText) as Array<{
-      partName: string;
-      specimenName: string;
-    }>;
+    const dictionaryState = JSON.parse(dictionaryStateText) as {
+      departmentCommonSpecimenOptions: Array<{
+        partName: string;
+        specimenName: string;
+      }>;
+      doctorCommonSpecimenOptions: Array<{
+        partName: string;
+        specimenName: string;
+      }>;
+    };
 
-    expect(commonSpecimens).toEqual([
+    expect(dictionaryState.departmentCommonSpecimenOptions).toEqual([
       expect.objectContaining({
         partName: '乳腺',
         specimenName: '右乳外上象限结节',
       }),
       expect.objectContaining({
-        partName: '皮肤',
-        specimenName: '右乳周围皮肤组织',
+        partName: '宫颈',
+        specimenName: '宫颈活检组织',
+      }),
+    ]);
+    expect(dictionaryState.doctorCommonSpecimenOptions).toEqual([
+      expect.objectContaining({
+        partName: '骨髓炎',
+        specimenName: '右侧胫骨感染病灶',
       }),
     ]);
 
@@ -843,6 +904,93 @@ describe('ApplicationRegistrationWorkbenchPanel', () => {
         ?.textContent ?? '';
     expect(specimenText).toContain('追加标本');
     expect(specimenText).toContain('宫颈');
+
+    wrapper.unmount();
+  });
+
+  it('saves patient info without calling the workbench registration save', async () => {
+    const patientInfoSavedRecord = {
+      ...createRecordFixture(),
+      patientInfo: {
+        ...createRecordFixture().patientInfo,
+        clinicalDiagnosis: '患者信息轻保存后的临床诊断',
+      },
+    };
+    saveApplicationRegistrationPatientInfoMock.mockResolvedValueOnce(
+      patientInfoSavedRecord,
+    );
+
+    const wrapper = await mountPanel({
+      lookupKeyword: '1124',
+      lookupTriggerKey: 1,
+    });
+    await wrapper.wait();
+
+    wrapper.root
+      .querySelector<HTMLButtonElement>(
+        '[data-testid="patient-update-diagnosis"]',
+      )!
+      .click();
+    await wrapper.wait();
+
+    wrapper.root
+      .querySelector<HTMLButtonElement>('[data-testid="patient-save"]')!
+      .click();
+    await wrapper.wait();
+
+    expect(saveApplicationRegistrationPatientInfoMock).toHaveBeenCalledTimes(1);
+    expect(saveApplicationRegistrationPatientInfoMock).toHaveBeenCalledWith(
+      'app-1124',
+      expect.objectContaining({
+        patientInfo: expect.objectContaining({
+          clinicalDiagnosis: '更新后的临床诊断',
+        }),
+      }),
+    );
+    expect(saveApplicationRegistrationWorkbenchMock).not.toHaveBeenCalled();
+    expect(messageSuccessMock).toHaveBeenCalledWith('患者信息保存成功');
+
+    wrapper.unmount();
+  });
+
+  it('allows patient info save even when no specimen rows are present', async () => {
+    const recordWithoutSpecimens = {
+      ...createRecordFixture(),
+      specimenItems: [],
+    };
+    lookupApplicationRegistrationWorkbenchRecordMock.mockResolvedValueOnce(
+      recordWithoutSpecimens,
+    );
+    saveApplicationRegistrationPatientInfoMock.mockResolvedValueOnce(
+      recordWithoutSpecimens,
+    );
+
+    const wrapper = await mountPanel({
+      lookupKeyword: '1124',
+      lookupTriggerKey: 1,
+    });
+    await wrapper.wait();
+
+    const patientSaveButton = wrapper.root.querySelector<HTMLButtonElement>(
+      '[data-testid="patient-save"]',
+    );
+
+    expect(patientSaveButton?.disabled).toBe(true);
+
+    wrapper.root
+      .querySelector<HTMLButtonElement>(
+        '[data-testid="patient-update-diagnosis"]',
+      )!
+      .click();
+    await wrapper.wait();
+
+    expect(patientSaveButton?.disabled).toBe(false);
+
+    patientSaveButton?.click();
+    await wrapper.wait();
+
+    expect(saveApplicationRegistrationPatientInfoMock).toHaveBeenCalledTimes(1);
+    expect(saveApplicationRegistrationWorkbenchMock).not.toHaveBeenCalled();
 
     wrapper.unmount();
   });

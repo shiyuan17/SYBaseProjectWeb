@@ -194,8 +194,8 @@ async function submitCreateRework() {
     ElMessage.warning('请先输入返工原因');
     return;
   }
-  if (!payload.operatorName) {
-    ElMessage.warning('请先选择操作人');
+  if (!operatorForm.operatorName.trim()) {
+    ElMessage.warning('请先确认当前登录人');
     return;
   }
 

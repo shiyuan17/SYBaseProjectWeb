@@ -13,7 +13,6 @@ import {
 } from 'element-plus';
 
 import ReferenceOptionSelect from '#/modules/system-management/components/ReferenceOptionSelect.vue';
-import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
 
 import { formatNullable } from '../utils/format';
 
@@ -48,10 +47,6 @@ function formatContainerRatio(row: SpecimenManagementListItem) {
   return `${row.containerCount ?? '-'} / ${row.specimenCount ?? '-'}`;
 }
 
-function handleOperatorChange(user: null | { id: string; name: string }) {
-  form.value.operatorUserId = user?.id ?? '';
-  form.value.operatorName = user?.name ?? '';
-}
 </script>
 
 <template>
@@ -84,12 +79,7 @@ function handleOperatorChange(user: null | { id: string; name: string }) {
         <ElForm label-width="96px">
           <div class="grid gap-4 md:grid-cols-2">
             <ElFormItem label="核验人" required>
-              <SystemUserSelect
-                v-model="form.operatorUserId"
-                :selected-label="form.operatorName"
-                placeholder="请选择核验人"
-                @change="handleOperatorChange"
-              />
+              <ElInput :model-value="form.operatorName" disabled />
             </ElFormItem>
             <ElFormItem label="固定液">
               <ReferenceOptionSelect

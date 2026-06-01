@@ -31,8 +31,28 @@ import { createInitialState } from './specimen-workflow-mock-state';
 
 let state: MockState = createInitialState();
 
+const DEFAULT_MOCK_OPERATOR_NAME = '当前登录用户';
+const DEFAULT_MOCK_OPERATOR_USER_ID = 'CURRENT-USER';
+
 export function getMockState(): MockState {
   return state;
+}
+
+export function resolveMockOperatorContext(
+  operator?: {
+    operatorName?: null | string;
+    operatorUserId?: null | string;
+  },
+) {
+  const operatorName =
+    normalizeText(operator?.operatorName) || DEFAULT_MOCK_OPERATOR_NAME;
+  const operatorUserId =
+    normalizeText(operator?.operatorUserId) || DEFAULT_MOCK_OPERATOR_USER_ID;
+
+  return {
+    operatorName,
+    operatorUserId,
+  };
 }
 
 function isPresent<T>(value: null | T | undefined): value is T {
@@ -88,14 +108,15 @@ export function resolveSpecimensBySpecimenNo(specimenNo: string) {
 
 export function applySpecimenRemovalConfirmation(
   specimen: RawSpecimen,
-  data: Pick<SpecimenRemovalConfirmRequest, 'operatorName' | 'terminalCode'>,
+  data: Pick<SpecimenRemovalConfirmRequest, 'remarks' | 'terminalCode'>,
 ): SpecimenRemovalConfirmResult {
   if (specimen.specimenRemovalAt) {
     throw new Error(`标本 ${specimen.barcode} 已完成离体确认`);
   }
   const eventTime = createTimestamp();
+  const { operatorName } = resolveMockOperatorContext();
   specimen.specimenRemovalAt = eventTime;
-  specimen.specimenRemovalOperatorName = data.operatorName;
+  specimen.specimenRemovalOperatorName = operatorName;
   specimen.verificationStatus = 'VERIFIED';
   specimen.verificationStartedAt ??= eventTime;
   specimen.verificationCompletedAt = eventTime;
@@ -107,7 +128,7 @@ export function applySpecimenRemovalConfirmation(
     eventTime,
     eventType: 'COMPLETED',
     nodeCode: 'REMOVAL',
-    operatorName: data.operatorName,
+    operatorName,
     sourceTerminal: data.terminalCode ?? null,
     specimenBarcode: specimen.barcode,
     specimenId: specimen.id,
@@ -115,7 +136,7 @@ export function applySpecimenRemovalConfirmation(
   });
   return {
     barcode: specimen.barcode,
-    operatorName: data.operatorName,
+    operatorName,
     specimenId: specimen.id,
     specimenRemovalAt: eventTime,
   };
@@ -332,6 +353,8 @@ export function mapSpecimenManagementItem(
     recentNode: resolveSpecimenRecentNode(specimen),
     registeredAt: specimen.registeredAt,
     specimenConfirmedAt: specimen.specimenConfirmedAt,
+    specimenConfirmedByName: specimen.specimenConfirmedByName ?? null,
+    specimenConfirmedByUserId: specimen.specimenConfirmedByUserId ?? null,
     specimenCount: specimen.specimenCount,
     specimenId: specimen.id,
     specimenName: specimen.specimenName,
@@ -505,6 +528,8 @@ export function mapTransportOrderView(
     handedOverAt: order.handedOverAt,
     handoverUserName: order.handoverUserName,
     id: order.id,
+    outboundUserId: order.outboundUserId ?? null,
+    outboundUserName: order.outboundUserName ?? null,
     receiverUserName: order.receiverUserName,
     status: order.status,
     toBeTransportedAt: order.toBeTransportedAt,
@@ -531,6 +556,8 @@ export function mapPendingTransportOrderItem(
     handedOverAt: order.handedOverAt,
     handoverDepartmentName: order.handoverDepartmentName,
     id: order.id,
+    outboundUserId: order.outboundUserId ?? null,
+    outboundUserName: order.outboundUserName ?? null,
     patientName: application.patientName,
     receiverDepartmentName: order.receiverDepartmentName,
     reminderCount: batchMetrics.reminderCount,

@@ -151,19 +151,14 @@ describe('specimen receipt helpers', () => {
 
     expect(
       buildPendingReceiptQuery({
-        applicationId: ' APP-1 ',
-        dateRange: ['2026-05-01', '2026-05-31'],
-        departmentId: ' DEPT-1 ',
+        specimenNo: ' SP-001 ',
         page: 2,
         size: 20,
       }),
     ).toEqual({
-      applicationId: 'APP-1',
-      dateFrom: '2026-05-01',
-      dateTo: '2026-05-31',
-      departmentId: 'DEPT-1',
       page: 2,
       size: 20,
+      specimenNo: 'SP-001',
     });
     expect(normalizeReceiptItem(items[0]!)).toEqual({
       containerCount: 1,
@@ -188,10 +183,8 @@ describe('specimen receipt helpers', () => {
       terminalCode: 'T-1',
     });
     expect(
-      buildApplicationFormReprintRequest(' 张三 ', ' U-1 ', ' T-1 ', 'TO-1'),
+      buildApplicationFormReprintRequest(' T-1 ', 'TO-1'),
     ).toEqual({
-      operatorName: '张三',
-      operatorUserId: 'U-1',
       remarks: '病理接收页补打印申请单，转运单：TO-1',
       terminalCode: 'T-1',
     });

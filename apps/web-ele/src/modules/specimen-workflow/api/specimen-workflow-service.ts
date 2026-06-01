@@ -44,6 +44,7 @@ export {
   createTransportOrder,
   handoverTransportOrder,
   listPendingTransportOrders,
+  outboundTransportOrder,
   printTransportOrder,
 } from './internal/specimen-workflow-transport';
 

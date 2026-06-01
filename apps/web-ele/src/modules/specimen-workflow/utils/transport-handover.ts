@@ -2,6 +2,7 @@ import type {
   PendingTransportOrderItem,
   PendingTransportOrderQuery,
   TransportOrderHandoverRequest,
+  TransportOrderOutboundRequest,
   TransportOrderOperatorRequest,
 } from '../types/specimen-workflow';
 
@@ -28,6 +29,13 @@ export type TransportHandoverForm = {
   terminalCode: string;
 };
 
+export type TransportOutboundForm = {
+  outboundUserId: string;
+  outboundUserName: string;
+  remarks: string;
+  terminalCode: string;
+};
+
 export function createDefaultTransportPrintFormState(
   operatorName: string,
   operatorUserId: string,
@@ -46,6 +54,18 @@ export function createDefaultTransportHandoverFormState(
   return {
     receiverUserId,
     receiverUserName,
+    remarks: '',
+    terminalCode: '',
+  };
+}
+
+export function createDefaultTransportOutboundFormState(
+  outboundUserName: string,
+  outboundUserId: string,
+): TransportOutboundForm {
+  return {
+    outboundUserId,
+    outboundUserName,
     remarks: '',
     terminalCode: '',
   };
@@ -114,12 +134,38 @@ export function canHandoverTransportOrder(order: PendingTransportOrderItem) {
   return ['PENDING', 'PRINTED'].includes(order.status);
 }
 
+export function resolveSpecimenNoQuickHandoverTarget(
+  orders: PendingTransportOrderItem[],
+  specimenNo: string,
+) {
+  if (specimenNo.trim() === '' || orders.length !== 1) {
+    return null;
+  }
+
+  const [matchedOrder] = orders;
+  return matchedOrder && canHandoverTransportOrder(matchedOrder)
+    ? matchedOrder
+    : null;
+}
+
+export function resolveSpecimenNoQuickOutboundTarget(
+  orders: PendingTransportOrderItem[],
+  specimenNo: string,
+) {
+  if (specimenNo.trim() === '' || orders.length !== 1) {
+    return null;
+  }
+
+  const [matchedOrder] = orders;
+  return matchedOrder && canHandoverTransportOrder(matchedOrder)
+    ? matchedOrder
+    : null;
+}
+
 export function buildPrintTransportOrderRequest(
   form: TransportPrintForm,
 ): TransportOrderOperatorRequest {
   return {
-    operatorName: form.operatorName.trim(),
-    operatorUserId: form.operatorUserId.trim() || null,
     terminalCode: form.terminalCode.trim() || null,
   };
 }
@@ -130,6 +176,17 @@ export function buildTransportOrderHandoverRequest(
   return {
     receiverUserId: form.receiverUserId.trim() || null,
     receiverUserName: form.receiverUserName.trim(),
+    remarks: form.remarks.trim() || null,
+    terminalCode: form.terminalCode.trim() || null,
+  };
+}
+
+export function buildTransportOrderOutboundRequest(
+  form: TransportOutboundForm,
+): TransportOrderOutboundRequest {
+  return {
+    outboundUserId: form.outboundUserId.trim() || null,
+    outboundUserName: form.outboundUserName.trim(),
     remarks: form.remarks.trim() || null,
     terminalCode: form.terminalCode.trim() || null,
   };

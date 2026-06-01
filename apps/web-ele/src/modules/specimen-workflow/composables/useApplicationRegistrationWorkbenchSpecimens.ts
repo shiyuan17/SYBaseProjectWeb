@@ -9,7 +9,7 @@ import type {
   WorkbenchSpecimenItem,
 } from '../types/application-registration-workbench';
 
-import { onMounted, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 
 import { ElMessage } from 'element-plus';
 
@@ -82,17 +82,38 @@ function filterCommonSpecimensFromDictionaryGroups(
     .filter((group) => group.subParts.length > 0);
 }
 
+function splitCommonSpecimenOptions(options: SpecimenDictionaryEntryOption[]) {
+  const midpoint = Math.ceil(options.length / 2);
+  return {
+    departmentCommonSpecimenOptions: options.slice(0, midpoint),
+    doctorCommonSpecimenOptions: options.slice(midpoint),
+  };
+}
+
 export function useApplicationRegistrationWorkbenchSpecimens(options: {
   currentRecord: Ref<ApplicationRegistrationWorkbenchRecord | null>;
   pageError: Ref<string>;
 }) {
+  let dictionaryRequestSequence = 0;
   const dictionaryKeyword = ref('');
+  const activeSystemId = ref('');
+  const activePartId = ref('');
   const dictionaryGroups = ref<SpecimenDictionaryGroup[]>([]);
-  const specimenEntryOptions = ref<SpecimenDictionaryEntryOption[]>([]);
   const commonSpecimenOptions = ref<SpecimenDictionaryEntryOption[]>([]);
+  const specimenEntryOptions = ref<SpecimenDictionaryEntryOption[]>([]);
   const specimenPackageOptions = ref<SpecimenPackageOption[]>([]);
   const specimenItems = ref<WorkbenchSpecimenItem[]>([]);
   const packageDialogVisible = ref(false);
+  const departmentCommonSpecimenOptions = computed(
+    () =>
+      splitCommonSpecimenOptions(commonSpecimenOptions.value)
+        .departmentCommonSpecimenOptions,
+  );
+  const doctorCommonSpecimenOptions = computed(
+    () =>
+      splitCommonSpecimenOptions(commonSpecimenOptions.value)
+        .doctorCommonSpecimenOptions,
+  );
 
   function replaceSpecimenItems(items: WorkbenchSpecimenItem[]) {
     specimenItems.value = cloneSpecimenItems(items);
@@ -100,6 +121,31 @@ export function useApplicationRegistrationWorkbenchSpecimens(options: {
 
   function clearSpecimenItems() {
     specimenItems.value = [];
+  }
+
+  function syncDictionarySelection(groups = dictionaryGroups.value) {
+    const [firstSystem] = groups;
+    if (!firstSystem) {
+      activeSystemId.value = '';
+      activePartId.value = '';
+      return;
+    }
+
+    const selectedSystem =
+      groups.find((group) => group.systemId === activeSystemId.value) ??
+      firstSystem;
+    activeSystemId.value = selectedSystem.systemId;
+
+    const [firstPart] = selectedSystem.subParts;
+    if (!firstPart) {
+      activePartId.value = '';
+      return;
+    }
+
+    const selectedPart =
+      selectedSystem.subParts.find((part) => part.partId === activePartId.value) ??
+      firstPart;
+    activePartId.value = selectedPart.partId;
   }
 
   function createSpecimenItem(
@@ -120,11 +166,17 @@ export function useApplicationRegistrationWorkbenchSpecimens(options: {
   }
 
   async function refreshDictionaryGroups() {
+    const requestSequence = ++dictionaryRequestSequence;
     const groups = await listSpecimenDictionaryGroups(dictionaryKeyword.value);
-    dictionaryGroups.value = filterCommonSpecimensFromDictionaryGroups(
-      groups,
-      commonSpecimenOptions.value,
-    );
+    if (requestSequence !== dictionaryRequestSequence) {
+      return;
+    }
+
+    dictionaryGroups.value = filterCommonSpecimensFromDictionaryGroups(groups, [
+      ...departmentCommonSpecimenOptions.value,
+      ...doctorCommonSpecimenOptions.value,
+    ]);
+    syncDictionarySelection(dictionaryGroups.value);
   }
 
   function createManualSpecimenItem(): WorkbenchSpecimenItem {
@@ -204,6 +256,22 @@ export function useApplicationRegistrationWorkbenchSpecimens(options: {
     ];
   }
 
+  function handleSelectDictionarySystem(systemId: string) {
+    const selectedSystem = dictionaryGroups.value.find(
+      (group) => group.systemId === systemId,
+    );
+    if (!selectedSystem) {
+      return;
+    }
+
+    activeSystemId.value = selectedSystem.systemId;
+    activePartId.value = selectedSystem.subParts[0]?.partId ?? '';
+  }
+
+  function handleSelectDictionaryPart(partId: string) {
+    activePartId.value = partId;
+  }
+
   onMounted(async () => {
     try {
       specimenEntryOptions.value = await listSpecimenDictionaryEntryOptions();
@@ -223,14 +291,19 @@ export function useApplicationRegistrationWorkbenchSpecimens(options: {
 
   return {
     clearSpecimenItems,
-    commonSpecimenOptions,
+    activePartId,
+    activeSystemId,
+    departmentCommonSpecimenOptions,
     dictionaryGroups,
     dictionaryKeyword,
+    doctorCommonSpecimenOptions,
     handleAddManualSpecimen,
     handleAppendPackageItems,
     handleAppendSpecimen,
     handleCreatePackage,
     handleOpenPackageDialog,
+    handleSelectDictionaryPart,
+    handleSelectDictionarySystem,
     packageDialogVisible,
     replaceSpecimenItems,
     specimenEntryOptions,

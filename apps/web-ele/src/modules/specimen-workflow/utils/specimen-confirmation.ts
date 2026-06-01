@@ -2,6 +2,7 @@ import type { ApplicationRegistrationWorkbenchRecord } from '../types/applicatio
 import type { SpecimenManagementListItem } from '../types/specimen-workflow';
 
 import { formatDateTime, formatNullable } from './format';
+import { resolveOperatingRoomDisplayName } from './operating-room-display';
 
 export type CachedApplicationContext = {
   patientGender: null | string;
@@ -79,6 +80,7 @@ export function enhanceRow(
   row: SpecimenManagementListItem,
   applicationContext: CachedApplicationContext | null,
   workbenchRecord: ApplicationRegistrationWorkbenchRecord | null,
+  roomNameById: ReadonlyMap<string, string> = new Map(),
 ): ConfirmationListRow {
   return {
     ...row,
@@ -92,15 +94,18 @@ export function enhanceRow(
       formatValue(workbenchRecord?.surgeryInfo.fixationPerson),
     registrationTime:
       row.registeredAt ?? workbenchRecord?.surgeryInfo.fixationTime ?? null,
-    surgeryName:
-      formatValue(workbenchRecord?.surgeryInfo.roomId) ||
-      formatValue(workbenchRecord?.surgeryInfo.surgeryName),
+    surgeryName: resolveOperatingRoomDisplayName(
+      roomNameById,
+      workbenchRecord?.surgeryInfo.roomId,
+      workbenchRecord?.surgeryInfo.surgeryName,
+    ),
   };
 }
 
 export async function buildEnhancedRows(
   items: SpecimenManagementListItem[],
   providers: ConfirmationEnhancementProviders,
+  roomNameById: ReadonlyMap<string, string> = new Map(),
 ) {
   const applicationNos = [
     ...new Set(items.map((item) => item.applicationNo?.trim()).filter(Boolean)),
@@ -126,6 +131,7 @@ export async function buildEnhancedRows(
       item,
       providers.getApplicationContext(applicationId) ?? null,
       providers.getWorkbenchRecord(applicationNo) ?? null,
+      roomNameById,
     );
   });
 }
@@ -151,7 +157,6 @@ export function buildExportHeaders() {
 
 export function buildExportRows(
   rows: ConfirmationListRow[],
-  operatorName: string,
 ) {
   return rows.map((row, index) => [
     String(index + 1),
@@ -165,7 +170,7 @@ export function buildExportRows(
     row.specimenConfirmedAt ? '标本确认' : '未确认',
     formatNullable(row.specimenType),
     formatDateTime(row.specimenConfirmedAt),
-    formatNullable(operatorName),
+    formatNullable(row.specimenConfirmedByName),
     formatDateTime(row.registrationTime),
     formatNullable(row.registrationOperatorName),
   ]);

@@ -20,10 +20,12 @@ defineProps<{
   canAccessFrozen: boolean;
   canAccessReceipt: boolean;
   canAccessRework: boolean;
+  canAccessSpecimenRegistration: boolean;
   canAccessTracking: boolean;
   currentWorkingBucket: null | WorkstationSummaryBucket;
   frozenReminder: PendingTechnicalTaskItem[];
   loading: boolean;
+  pendingSpecimenRegistrationCount: number;
   regularBuckets: WorkstationSummaryBucket[];
 }>();
 
@@ -32,6 +34,7 @@ const emit = defineEmits<{
   goToFrozen: [];
   goToPath: [path: string];
   goToRework: [task?: PendingTechnicalTaskItem];
+  goToSpecimenRegistration: [];
   goToTask: [task: PendingTechnicalTaskItem];
   goToTaskPool: [];
   goToTracking: [task?: PendingTechnicalTaskItem];
@@ -64,7 +67,7 @@ const emit = defineEmits<{
   <template v-if="canAccessAnyM3">
     <WorkflowSectionCard
       title="常规制片总览"
-      description="当前常规制片主链按任务池统一调度，支持从入口继续处理中任务或直接进入调度视图。"
+      description="当前常规制片主链改为接收后先登记、再进任务池和工位，任务池继续承担可选调度入口。"
     >
       <ElSkeleton v-if="loading" :rows="6" animated />
       <div v-else class="flex flex-col gap-4">
@@ -120,6 +123,24 @@ const emit = defineEmits<{
 
         <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <button
+            v-if="canAccessSpecimenRegistration"
+            class="rounded-2xl border border-border bg-card p-4 text-left transition-colors hover:border-primary"
+            type="button"
+            @click="emit('goToSpecimenRegistration')"
+          >
+            <div class="text-sm font-semibold text-foreground">
+              进入标本登记
+            </div>
+            <div class="mt-2 text-xs text-muted-foreground">
+              {{
+                pendingSpecimenRegistrationCount > 0
+                  ? `当前有 ${pendingSpecimenRegistrationCount} 条接收后待登记病例，建议优先处理。`
+                  : '当前没有待登记病例，可继续进入任务池或目标工位。'
+              }}
+            </div>
+          </button>
+
+          <button
             class="rounded-2xl border border-border bg-card p-4 text-left transition-colors hover:border-primary"
             type="button"
             @click="emit('goToCurrentWorkflow')"
@@ -145,8 +166,7 @@ const emit = defineEmits<{
               进入任务池调度
             </div>
             <div class="mt-2 text-xs text-muted-foreground">
-              任务池继续作为 M3
-              唯一统一调度入口，适合分派、释放和按病例连续处理。
+              任务池继续承担统一调度与病例连续查看，分派和认领保留，但不再作为后续处理的强制前置。
             </div>
           </button>
 

@@ -1,6 +1,7 @@
 import type {
   BatchOperatorRequest,
   CompleteDehydrationBatchRequest,
+  CompleteTechnicalSpecimenRegistrationRequest,
   CreateDehydrationBatchRequest,
   CreateReworkOrderRequest,
   DehydrationBatchResult,
@@ -11,6 +12,8 @@ import type {
   GrossingMediaAssetUploadResponse,
   GrossingResult,
   PendingTechnicalTaskPage,
+  PendingTechnicalSpecimenRegistrationPage,
+  PendingTechnicalSpecimenRegistrationQuery,
   PendingTechnicalTaskQuery,
   ReworkOrderResult,
   SlicingCompleteRequest,
@@ -23,12 +26,18 @@ import type {
   TechnicalTaskPriorityRequest,
   TechnicalTaskReleaseRequest,
   TechnicalTaskStartRequest,
+  CompleteTechnicalSpecimenRegistrationResult,
+  TechnicalSpecimenRegistrationDetail,
   TechnicalTrackingView,
 } from '../types/technical-workflow';
 
 import { requestClient } from '#/api/request';
 
 type PendingTechnicalTaskPageResponse = Partial<PendingTechnicalTaskPage>;
+type PendingTechnicalSpecimenRegistrationPageResponse =
+  Partial<PendingTechnicalSpecimenRegistrationPage>;
+type TechnicalSpecimenRegistrationDetailResponse =
+  Partial<TechnicalSpecimenRegistrationDetail>;
 type TechnicalTrackingResponse = Partial<TechnicalTrackingView>;
 
 export function mapPendingTechnicalTaskPageResponse(
@@ -60,6 +69,41 @@ export function mapTechnicalTrackingResponse(
   };
 }
 
+export function mapPendingTechnicalSpecimenRegistrationPageResponse(
+  response: PendingTechnicalSpecimenRegistrationPageResponse,
+): PendingTechnicalSpecimenRegistrationPage {
+  return {
+    items: response.items ?? [],
+    page: response.page ?? 1,
+    size: response.size ?? 20,
+    total: response.total ?? 0,
+  };
+}
+
+export function mapTechnicalSpecimenRegistrationDetailResponse(
+  response: TechnicalSpecimenRegistrationDetailResponse,
+): TechnicalSpecimenRegistrationDetail {
+  return {
+    applicationId: response.applicationId ?? '',
+    applicationNo: response.applicationNo ?? '',
+    applicationType: response.applicationType ?? null,
+    caseId: response.caseId ?? '',
+    checkItems: response.checkItems ?? [],
+    clinicalDiagnosis: response.clinicalDiagnosis ?? null,
+    inpatientNo: response.inpatientNo ?? null,
+    materials: response.materials ?? [],
+    pathologyNo: response.pathologyNo ?? null,
+    patientId: response.patientId ?? null,
+    patientName: response.patientName ?? null,
+    receivedAt: response.receivedAt ?? null,
+    registeredAt: response.registeredAt ?? null,
+    registeredByName: response.registeredByName ?? null,
+    registrationRemarks: response.registrationRemarks ?? null,
+    registrationStatus: response.registrationStatus ?? null,
+    submittingDepartmentName: response.submittingDepartmentName ?? null,
+  };
+}
+
 export async function listPendingTechnicalTasks(
   params: PendingTechnicalTaskQuery,
 ) {
@@ -75,6 +119,33 @@ export async function getTechnicalTracking(caseIdentifier: string) {
     `/v1/pathology-cases/${encodeURIComponent(caseIdentifier)}/technical-tracking`,
   );
   return mapTechnicalTrackingResponse(response);
+}
+
+export async function listPendingTechnicalSpecimenRegistrations(
+  params: PendingTechnicalSpecimenRegistrationQuery,
+) {
+  const response = await requestClient.get<PendingTechnicalSpecimenRegistrationPageResponse>(
+    '/v1/technical-specimen-registrations/pending',
+    { params },
+  );
+  return mapPendingTechnicalSpecimenRegistrationPageResponse(response);
+}
+
+export async function getTechnicalSpecimenRegistrationDetail(caseId: string) {
+  const response = await requestClient.get<TechnicalSpecimenRegistrationDetailResponse>(
+    `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}`,
+  );
+  return mapTechnicalSpecimenRegistrationDetailResponse(response);
+}
+
+export async function completeTechnicalSpecimenRegistration(
+  caseId: string,
+  data: CompleteTechnicalSpecimenRegistrationRequest,
+) {
+  return requestClient.post<CompleteTechnicalSpecimenRegistrationResult>(
+    `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/complete`,
+    data,
+  );
 }
 
 export async function assignTechnicalTask(

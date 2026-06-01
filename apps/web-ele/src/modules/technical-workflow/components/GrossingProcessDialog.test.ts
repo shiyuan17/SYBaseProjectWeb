@@ -748,8 +748,6 @@ describe('GrossingProcessDialog', () => {
     expect(mockCompleteGrossing).toHaveBeenCalledTimes(1);
     expect(mockCompleteGrossing).toHaveBeenCalledWith({
       caseId: 'CASE-001',
-      operatorName: '当前取材员',
-      operatorUserId: 'USER-001',
       remarks: null,
       specimens: [
         {

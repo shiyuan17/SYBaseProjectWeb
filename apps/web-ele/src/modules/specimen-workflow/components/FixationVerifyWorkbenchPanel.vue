@@ -2,73 +2,33 @@
 import type { SpecimenRemovalSummary } from '../types/specimen-workflow';
 
 import { ref } from 'vue';
-
-import {
-  ElButton,
-  ElDatePicker,
-  ElForm,
-  ElFormItem,
-  ElInput,
-} from 'element-plus';
-
-import DepartmentSelect from '#/modules/system-management/components/DepartmentSelect.vue';
-
-type QuickConfirmIdentifierType = 'BARCODE' | 'SPECIMEN_NO';
+import { ElInput } from 'element-plus';
 
 type QuickInputRef = InstanceType<typeof ElInput> & {
   input?: HTMLInputElement | null;
 };
 
-type FixationVerifyFiltersState = {
-  applicationNo: string;
-  dateRange: string[];
-  departmentId: string;
-  page: number;
-  size: number;
-};
-
 defineProps<{
   quickActionLoading: {
-    barcode: boolean;
-    specimenNo: boolean;
+    specimenId: boolean;
   };
   summary: SpecimenRemovalSummary;
 }>();
 
 const emit = defineEmits<{
-  (
-    event: 'departmentChange',
-    department: null | { id: string; name: string },
-  ): void;
-  (event: 'quickConfirm', identifierType: QuickConfirmIdentifierType): void;
-  (event: 'reset'): void;
-  (event: 'search'): void;
+  (event: 'quickConfirm'): void;
 }>();
 
-const barcodeQuickInput = defineModel<string>('barcodeQuickInput', {
-  required: true,
-});
-const specimenNoQuickInput = defineModel<string>('specimenNoQuickInput', {
-  required: true,
-});
-const filters = defineModel<FixationVerifyFiltersState>('filters', {
+const specimenIdQuickInput = defineModel<string>('specimenIdQuickInput', {
   required: true,
 });
 
-const barcodeQuickInputContainerRef = ref<HTMLDivElement | null>(null);
-const specimenNoQuickInputContainerRef = ref<HTMLDivElement | null>(null);
-const barcodeQuickInputRef = ref<null | QuickInputRef>(null);
-const specimenNoQuickInputRef = ref<null | QuickInputRef>(null);
+const specimenIdQuickInputContainerRef = ref<HTMLDivElement | null>(null);
+const specimenIdQuickInputRef = ref<null | QuickInputRef>(null);
 
-function focusQuickInput(identifierType: QuickConfirmIdentifierType) {
-  const inputRef =
-    identifierType === 'BARCODE'
-      ? barcodeQuickInputRef.value
-      : specimenNoQuickInputRef.value;
-  const containerRef =
-    identifierType === 'BARCODE'
-      ? barcodeQuickInputContainerRef.value
-      : specimenNoQuickInputContainerRef.value;
+function focusQuickInput() {
+  const inputRef = specimenIdQuickInputRef.value;
+  const containerRef = specimenIdQuickInputContainerRef.value;
   const nativeInput = containerRef?.querySelector('input');
   nativeInput?.focus();
   if (nativeInput !== document.activeElement) {
@@ -111,72 +71,21 @@ defineExpose({
   </div>
 
   <div
-    class="mb-4 grid gap-3 rounded-lg border border-[color:#dbe3f0] bg-[color:#f7f9fc] p-4 md:grid-cols-2"
+    class="mb-4 rounded-lg border border-[color:#dbe3f0] bg-[color:#f7f9fc] p-4"
   >
     <div
-      ref="barcodeQuickInputContainerRef"
-      v-loading="quickActionLoading.barcode"
+      ref="specimenIdQuickInputContainerRef"
+      v-loading="quickActionLoading.specimenId"
       class="flex items-center gap-3"
     >
-      <div class="min-w-20 text-sm font-medium text-[color:#1f2d3d]">
-        标本ID
-      </div>
+      <div class="min-w-20 text-sm font-medium text-[color:#1f2d3d]">标本ID</div>
       <ElInput
-        ref="barcodeQuickInputRef"
-        v-model="barcodeQuickInput"
+        ref="specimenIdQuickInputRef"
+        v-model="specimenIdQuickInput"
         clearable
         placeholder="请输入标本ID后按回车确认"
-        @keyup.enter="emit('quickConfirm', 'BARCODE')"
-      />
-    </div>
-    <div
-      ref="specimenNoQuickInputContainerRef"
-      v-loading="quickActionLoading.specimenNo"
-      class="flex items-center gap-3"
-    >
-      <div class="min-w-24 text-sm font-medium text-[color:#1f2d3d]">
-        标本流水号
-      </div>
-      <ElInput
-        ref="specimenNoQuickInputRef"
-        v-model="specimenNoQuickInput"
-        clearable
-        placeholder="请输入标本流水号后按回车确认"
-        @keyup.enter="emit('quickConfirm', 'SPECIMEN_NO')"
+        @keyup.enter="emit('quickConfirm')"
       />
     </div>
   </div>
-
-  <ElForm inline label-width="88px">
-    <ElFormItem label="申请单号">
-      <ElInput
-        v-model="filters.applicationNo"
-        clearable
-        placeholder="请输入申请单号"
-        style="width: 220px"
-        @keyup.enter="emit('search')"
-      />
-    </ElFormItem>
-    <ElFormItem label="送检科室">
-      <DepartmentSelect
-        v-model="filters.departmentId"
-        placeholder="请选择送检科室"
-        @change="emit('departmentChange', $event)"
-      />
-    </ElFormItem>
-    <ElFormItem label="登记日期">
-      <ElDatePicker
-        v-model="filters.dateRange"
-        end-placeholder="结束日期"
-        range-separator="至"
-        start-placeholder="开始日期"
-        type="daterange"
-        value-format="YYYY-MM-DD"
-      />
-    </ElFormItem>
-    <ElFormItem>
-      <ElButton type="primary" @click="emit('search')">查询</ElButton>
-      <ElButton @click="emit('reset')">重置</ElButton>
-    </ElFormItem>
-  </ElForm>
 </template>

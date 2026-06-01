@@ -257,7 +257,7 @@ async function submitAssignment() {
     return;
   }
   if (!assignmentForm.operatorName.trim()) {
-    ElMessage.warning('请填写操作人');
+    ElMessage.warning('请先确认当前登录人');
     return;
   }
 
@@ -267,8 +267,6 @@ async function submitAssignment() {
       assignedToName: assignmentForm.assignedToName.trim() || null,
       assignedToUserId: assignmentForm.assignedToUserId.trim() || null,
       expectedCompletedAt: assignmentForm.expectedCompletedAt || null,
-      operatorName: assignmentForm.operatorName.trim(),
-      operatorUserId: assignmentForm.operatorUserId.trim() || null,
       priority: assignmentForm.priority,
       productionRemarks: assignmentForm.productionRemarks.trim() || null,
       stationCode: assignmentForm.stationCode || null,
@@ -293,8 +291,6 @@ async function releaseAssignment(row: PendingTechnicalTaskItem) {
   }
   try {
     await releaseTechnicalTask(row.id, {
-      operatorName,
-      operatorUserId: userStore.userInfo?.userId ?? null,
       remarks: '任务池释放责任人',
     });
     ElMessage.success('任务已释放');
@@ -322,8 +318,6 @@ async function runBulkClaim() {
         claimTechnicalTask(row.id, {
           assignedToName: operatorName,
           assignedToUserId: operatorUserId,
-          operatorName,
-          operatorUserId,
           remarks: '任务池批量认领',
         }),
       ),
@@ -353,8 +347,6 @@ async function runBulkRelease() {
     await Promise.all(
       selectedRows.value.map((row) =>
         releaseTechnicalTask(row.id, {
-          operatorName,
-          operatorUserId: userStore.userInfo?.userId ?? null,
           remarks: '任务池批量释放责任人',
         }),
       ),
@@ -384,8 +376,6 @@ async function runBulkPriorityUpdate() {
     await Promise.all(
       selectedRows.value.map((row) =>
         updateTechnicalTaskPriority(row.id, {
-          operatorName,
-          operatorUserId: userStore.userInfo?.userId ?? null,
           priority: bulkPriority.value,
           productionRemarks: '任务池批量调整优先级',
         }),
@@ -426,8 +416,18 @@ void loadPendingData();
 </script>
 
 <template>
-  <Page title="任务池" description="生产任务调度、分派与时效监控。">
+  <Page
+    title="任务池"
+    description="登记完成后的生产任务调度、连续查看与时效监控，分派/认领保留为可选辅助能力。"
+  >
     <div class="flex flex-col gap-4">
+      <ElAlert
+        :closable="false"
+        title="任务可以直接进入后续工位处理，任务池继续保留分派、认领、释放和批量调度能力。"
+        type="info"
+        show-icon
+      />
+
       <ElAlert
         v-if="pageError"
         :closable="false"

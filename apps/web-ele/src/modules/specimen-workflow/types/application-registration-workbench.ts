@@ -171,3 +171,10 @@ export interface SaveApplicationRegistrationWorkbenchRequest {
   }>;
   surgeryInfo: WorkbenchSurgeryInfo;
 }
+
+export interface SaveApplicationRegistrationPatientInfoRequest {
+  contagiousSpecimen: WorkbenchContagiousSpecimen;
+  gynecologyInfo: WorkbenchGynecologyInfo;
+  patientInfo: WorkbenchPatientInfo;
+  surgeryInfo: WorkbenchSurgeryInfo;
+}

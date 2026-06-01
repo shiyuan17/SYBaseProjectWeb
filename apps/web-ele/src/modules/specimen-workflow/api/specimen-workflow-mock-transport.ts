@@ -3,6 +3,7 @@ import type {
   PendingTransportOrderQuery,
   TransportOrderCreateRequest,
   TransportOrderHandoverRequest,
+  TransportOrderOutboundRequest,
   TransportOrderOperatorRequest,
   TransportOrderView,
 } from '../types/specimen-workflow';
@@ -27,6 +28,7 @@ import {
   mapPendingTransportOrderItem,
   mapTransportOrderView,
   resetMockState,
+  resolveMockOperatorContext,
   resolveSpecimenByIdentifier,
   updateApplicationFromSpecimens,
 } from './specimen-workflow-mock-core';
@@ -109,6 +111,8 @@ async function createTransportOrderMock(
       'TO',
       getMockState().transportOrders.map((item) => item.id),
     ),
+    outboundUserId: null,
+    outboundUserName: null,
     printedAt: null,
     receiverDepartmentId: data.receiverDepartmentId ?? null,
     receiverDepartmentName: data.receiverDepartmentName,
@@ -155,6 +159,7 @@ async function printTransportOrderMock(
 ): Promise<TransportOrderView> {
   const order = findTransportOrderById(transportOrderId);
   const eventTime = createTimestamp();
+  const operator = resolveMockOperatorContext();
   order.status = 'PRINTED';
   order.printedAt = eventTime;
   order.terminalCode = data.terminalCode ?? order.terminalCode;
@@ -173,7 +178,7 @@ async function printTransportOrderMock(
       eventTime,
       eventType: 'ORDER_PRINTED',
       nodeCode: 'TRANSPORT',
-      operatorName: data.operatorName,
+      operatorName: operator.operatorName,
       sourceTerminal: data.terminalCode ?? null,
       specimenBarcode: specimen.barcode,
       specimenId: specimen.id,
@@ -190,8 +195,11 @@ async function handoverTransportOrderMock(
 ): Promise<TransportOrderView> {
   const order = findTransportOrderById(transportOrderId);
   const eventTime = createTimestamp();
+  const operator = resolveMockOperatorContext();
   order.status = 'HANDED_OVER';
   order.handedOverAt = eventTime;
+  order.outboundUserId = operator.operatorUserId;
+  order.outboundUserName = operator.operatorName;
   order.receiverUserId = data.receiverUserId ?? null;
   order.receiverUserName = data.receiverUserName;
   order.remarks = data.remarks ?? order.remarks;
@@ -211,7 +219,50 @@ async function handoverTransportOrderMock(
       eventTime,
       eventType: 'HANDED_OVER',
       nodeCode: 'TRANSPORT',
-      operatorName: data.receiverUserName,
+      operatorName: operator.operatorName,
+      sourceTerminal: data.terminalCode ?? null,
+      specimenBarcode: specimen.barcode,
+      specimenId: specimen.id,
+      specimenNo: specimen.specimenNo,
+    });
+  });
+  updateApplicationFromSpecimens(order.applicationId);
+  return mapTransportOrderView(order);
+}
+
+async function outboundTransportOrderMock(
+  transportOrderId: string,
+  data: TransportOrderOutboundRequest,
+): Promise<TransportOrderView> {
+  const order = findTransportOrderById(transportOrderId);
+  const eventTime = createTimestamp();
+  const operator = resolveMockOperatorContext({
+    operatorName: data.outboundUserName,
+    operatorUserId: data.outboundUserId,
+  });
+  order.status = 'HANDED_OVER';
+  order.handedOverAt = eventTime;
+  order.outboundUserId = operator.operatorUserId;
+  order.outboundUserName = operator.operatorName;
+  order.remarks = data.remarks ?? order.remarks;
+  order.terminalCode = data.terminalCode ?? order.terminalCode;
+  order.specimenIds.forEach((specimenId) => {
+    const specimen = getMockState().specimens.find(
+      (item) => item.id === specimenId,
+    );
+    if (!specimen) {
+      return;
+    }
+    specimen.latestTrackingAt = eventTime;
+    specimen.specimenStatus = 'IN_TRANSIT';
+    appendWorkflowEvent({
+      applicationId: order.applicationId,
+      eventContent: `标本出库 ${order.transportOrderNo}`,
+      eventStatus: 'SUCCESS',
+      eventTime,
+      eventType: 'HANDED_OVER',
+      nodeCode: 'TRANSPORT',
+      operatorName: operator.operatorName,
       sourceTerminal: data.terminalCode ?? null,
       specimenBarcode: specimen.barcode,
       specimenId: specimen.id,
@@ -226,5 +277,6 @@ export {
   createTransportOrderMock,
   handoverTransportOrderMock,
   listPendingTransportOrdersMock,
+  outboundTransportOrderMock,
   printTransportOrderMock,
 };

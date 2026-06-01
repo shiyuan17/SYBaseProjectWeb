@@ -117,6 +117,14 @@ vi.mock('@vben/utils', () => ({
   downloadFileFromBlob: vi.fn(),
 }));
 
+vi.mock('#/modules/system-management/components/SystemUserSelect.vue', () => ({
+  default: {
+    props: ['modelValue', 'placeholder', 'selectedLabel'],
+    template:
+      '<div data-testid="system-user-select">{{ placeholder }}{{ selectedLabel }}</div>',
+  },
+}));
+
 vi.mock('element-plus', async () => {
   const actual =
     await vi.importActual<typeof import('element-plus')>('element-plus');

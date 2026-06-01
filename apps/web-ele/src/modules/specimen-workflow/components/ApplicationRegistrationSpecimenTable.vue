@@ -22,7 +22,6 @@ import { formatSpecimenStatus } from '../utils/format';
 import WorkflowSectionCard from './WorkflowSectionCard.vue';
 
 const props = defineProps<{
-  commonSpecimenOptions: SpecimenDictionaryEntryOption[];
   items: WorkbenchSpecimenItem[];
   printContext: null | WorkbenchSpecimenPrintContext;
   roomLabel: string;
@@ -31,7 +30,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   addManual: [];
-  append: [payload: { specimenName: string; specimenSite: string }];
   selectPackage: [];
   'update:items': [items: WorkbenchSpecimenItem[]];
 }>();
@@ -58,13 +56,6 @@ const {
   specimenEntryOptions: computed(() => props.specimenEntryOptions),
   updateItems: (items) => emit('update:items', items),
 });
-
-function appendCommonSpecimen(option: SpecimenDictionaryEntryOption) {
-  emit('append', {
-    specimenName: option.specimenName,
-    specimenSite: option.partName,
-  });
-}
 </script>
 
 <template>
@@ -110,7 +101,7 @@ function appendCommonSpecimen(option: SpecimenDictionaryEntryOption) {
               {{ $index + 1 }}
             </template>
           </ElTableColumn>
-          <ElTableColumn label="流水号" min-width="120">
+          <ElTableColumn label="标本ID" min-width="120">
             <template #default="{ row }">
               <span class="text-muted-foreground">{{
                 row.specimenNo || '保存后生成'
@@ -209,35 +200,8 @@ function appendCommonSpecimen(option: SpecimenDictionaryEntryOption) {
 
       <div v-if="props.items.length === 0" class="py-5">
         <ElEmpty
-          description="暂无标本，请从下方字典、常用标本或套餐中快速追加"
+          description="暂无标本，请从下方字典或套餐中快速追加"
         />
-      </div>
-
-      <div
-        v-if="props.commonSpecimenOptions.length > 0"
-        class="mt-2 rounded-lg border border-border/70 bg-muted/10 px-2.5 py-2"
-      >
-        <div class="mb-1.5 flex items-center justify-between gap-3">
-          <div class="text-xs font-semibold text-foreground">常用标本</div>
-          <div class="text-[11px] text-muted-foreground">
-            支持快捷追加，也可在上方按中文或拼音首字母检索
-          </div>
-        </div>
-
-        <div class="flex flex-wrap gap-1.5">
-          <button
-            v-for="option in props.commonSpecimenOptions"
-            :key="`${option.partId}-${option.specimenName}`"
-            class="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs leading-5 text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100"
-            type="button"
-            @click="appendCommonSpecimen(option)"
-          >
-            <span>{{ option.specimenName }}</span>
-            <span class="text-[11px] text-emerald-600/80">{{
-              option.partName
-            }}</span>
-          </button>
-        </div>
       </div>
     </div>
   </WorkflowSectionCard>

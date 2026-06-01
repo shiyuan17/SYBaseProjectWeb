@@ -14,14 +14,13 @@ const {
   completeFixationMock: vi.fn(
     async (payload: {
       fixationLiquidType: string;
-      operatorName: string;
       specimenBarcode: string;
     }) => ({
       barcode: payload.specimenBarcode,
       fixationCompletedAt: '2026-05-26 10:00:00',
       fixationLiquidType: payload.fixationLiquidType,
       fixationStatus: 'COMPLETED',
-      operatorName: payload.operatorName,
+      operatorName: 'Test User',
       operatorUserId: 'USER-001',
       specimenId: 'SPEC-002',
     }),
@@ -306,8 +305,6 @@ describe('useSpecimenFixationTimePanel', () => {
     );
     expect(completeFixationMock).toHaveBeenCalledWith({
       fixationLiquidType: 'FORMALIN',
-      operatorName: 'Test User',
-      operatorUserId: 'USER-001',
       remarks: '扫码完成固定',
       specimenBarcode: 'BC-002',
     });

@@ -3,6 +3,7 @@ import type {
   PendingTransportOrderQuery,
   TransportOrderCreateRequest,
   TransportOrderHandoverRequest,
+  TransportOrderOutboundRequest,
   TransportOrderOperatorRequest,
   TransportOrderView,
 } from '../../types/specimen-workflow';
@@ -13,6 +14,7 @@ import {
   createTransportOrderMock,
   handoverTransportOrderMock,
   listPendingTransportOrdersMock,
+  outboundTransportOrderMock,
   printTransportOrderMock,
   USE_SPECIMEN_WORKFLOW_MOCK,
 } from './specimen-workflow-mock-gateway';
@@ -63,6 +65,19 @@ export async function handoverTransportOrder(
   }
   return requestClient.post<TransportOrderView>(
     `/v1/transport-orders/${transportOrderId}/handover`,
+    data,
+  );
+}
+
+export async function outboundTransportOrder(
+  transportOrderId: string,
+  data: TransportOrderOutboundRequest,
+) {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return outboundTransportOrderMock(transportOrderId, data);
+  }
+  return requestClient.post<TransportOrderView>(
+    `/v1/transport-orders/${transportOrderId}/outbound`,
     data,
   );
 }

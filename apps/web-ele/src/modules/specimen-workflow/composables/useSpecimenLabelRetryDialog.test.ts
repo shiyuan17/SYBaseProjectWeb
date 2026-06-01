@@ -322,8 +322,6 @@ describe('useSpecimenLabelRetryDialog', () => {
     await state.submitRetryLabelPrint();
 
     expect(retryLabelPrintMock).toHaveBeenCalledWith('BATCH-001', {
-      operatorName: '测试用户',
-      operatorUserId: 'USER-001',
       printerCode: 'PRINTER-01',
       remarks: '补打说明',
       terminalCode: 'TERM-01',

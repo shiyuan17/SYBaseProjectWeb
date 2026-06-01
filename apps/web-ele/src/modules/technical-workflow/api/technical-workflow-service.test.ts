@@ -8,6 +8,7 @@ import {
   assignTechnicalTask,
   claimTechnicalTask,
   completeDehydrationBatch,
+  completeTechnicalSpecimenRegistration,
   completeEmbedding,
   completeGrossing,
   completeSlicing,
@@ -16,8 +17,12 @@ import {
   createReworkOrder,
   executeReworkOrder,
   getTechnicalTracking,
+  getTechnicalSpecimenRegistrationDetail,
+  listPendingTechnicalSpecimenRegistrations,
   listPendingTechnicalTasks,
+  mapPendingTechnicalSpecimenRegistrationPageResponse,
   mapPendingTechnicalTaskPageResponse,
+  mapTechnicalSpecimenRegistrationDetailResponse,
   mapTechnicalTrackingResponse,
   releaseTechnicalTask,
   startDehydrationBatch,
@@ -76,6 +81,37 @@ describe('technical-workflow-service mappers', () => {
       technicalTasks: [],
     });
   });
+
+  it('normalizes pending specimen registration pagination', () => {
+    expect(mapPendingTechnicalSpecimenRegistrationPageResponse({})).toEqual({
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
+  });
+
+  it('normalizes specimen registration detail arrays', () => {
+    expect(mapTechnicalSpecimenRegistrationDetailResponse({})).toEqual({
+      applicationId: '',
+      applicationNo: '',
+      applicationType: null,
+      caseId: '',
+      checkItems: [],
+      clinicalDiagnosis: null,
+      inpatientNo: null,
+      materials: [],
+      pathologyNo: null,
+      patientId: null,
+      patientName: null,
+      receivedAt: null,
+      registeredAt: null,
+      registeredByName: null,
+      registrationRemarks: null,
+      registrationStatus: null,
+      submittingDepartmentName: null,
+    });
+  });
 });
 
 describe('technical-workflow-service requests', () => {
@@ -132,24 +168,66 @@ describe('technical-workflow-service requests', () => {
     );
   });
 
+  it('queries and completes technical specimen registrations with exact paths', async () => {
+    requestClientMock.get.mockResolvedValueOnce({
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
+    requestClientMock.get.mockResolvedValueOnce({
+      caseId: 'CASE-001',
+    });
+
+    await listPendingTechnicalSpecimenRegistrations({
+      keyword: 'BL-001',
+      page: 1,
+      size: 20,
+    });
+    await getTechnicalSpecimenRegistrationDetail('CASE-001');
+    await completeTechnicalSpecimenRegistration('CASE-001', {
+      remarks: '登记完成',
+      terminalCode: 'T-1',
+    });
+
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      1,
+      '/v1/technical-specimen-registrations/pending',
+      {
+        params: {
+          keyword: 'BL-001',
+          page: 1,
+          size: 20,
+        },
+      },
+    );
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      2,
+      '/v1/technical-specimen-registrations/CASE-001',
+    );
+    expect(requestClientMock.post).toHaveBeenCalledWith(
+      '/v1/technical-specimen-registrations/CASE-001/complete',
+      {
+        remarks: '登记完成',
+        terminalCode: 'T-1',
+      },
+    );
+  });
+
   it('posts task management endpoints with exact paths', async () => {
     await assignTechnicalTask('TASK/1', {
       assignedToName: '技师A',
-      operatorName: '调度员',
       priority: 'STAT',
       stationCode: 'GROSSING',
     });
     await claimTechnicalTask('TASK-2', {
       assignedToName: '技师B',
       assignedToUserId: 'USER-B',
-      operatorName: '技师B',
     });
     await releaseTechnicalTask('TASK-3', {
-      operatorName: '调度员',
       remarks: '释放',
     });
     await updateTechnicalTaskPriority('TASK-4', {
-      operatorName: '调度员',
       priority: 'PRIORITY',
     });
 
@@ -158,7 +236,6 @@ describe('technical-workflow-service requests', () => {
       '/v1/technical-tasks/TASK%2F1/assign',
       {
         assignedToName: '技师A',
-        operatorName: '调度员',
         priority: 'STAT',
         stationCode: 'GROSSING',
       },
@@ -169,14 +246,12 @@ describe('technical-workflow-service requests', () => {
       {
         assignedToName: '技师B',
         assignedToUserId: 'USER-B',
-        operatorName: '技师B',
       },
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       3,
       '/v1/technical-tasks/TASK-3/release',
       {
-        operatorName: '调度员',
         remarks: '释放',
       },
     );
@@ -184,7 +259,6 @@ describe('technical-workflow-service requests', () => {
       4,
       '/v1/technical-tasks/TASK-4/priority',
       {
-        operatorName: '调度员',
         priority: 'PRIORITY',
       },
     );
@@ -205,12 +279,10 @@ describe('technical-workflow-service requests', () => {
 
   it('posts grossing endpoints with exact paths', async () => {
     await startGrossing({
-      operatorName: '取材员',
       taskId: 'TASK-1',
     });
     await completeGrossing({
       caseId: 'CASE-1',
-      operatorName: '取材员',
       specimens: [
         {
           blocks: [{ blockDescription: 'A1' }],
@@ -225,7 +297,6 @@ describe('technical-workflow-service requests', () => {
       1,
       '/v1/grossings/start',
       {
-        operatorName: '取材员',
         taskId: 'TASK-1',
       },
     );
@@ -234,7 +305,6 @@ describe('technical-workflow-service requests', () => {
       '/v1/grossings/complete',
       {
         caseId: 'CASE-1',
-        operatorName: '取材员',
         specimens: [
           {
             blocks: [{ blockDescription: 'A1' }],
@@ -251,15 +321,11 @@ describe('technical-workflow-service requests', () => {
     await createDehydrationBatch({
       basketNo: 'B-001',
       caseId: 'CASE-1',
-      operatorName: '脱水员',
       samplingBlockIds: ['BLOCK-1'],
     });
-    await startDehydrationBatch('BATCH-1', {
-      operatorName: '脱水员',
-    });
+    await startDehydrationBatch('BATCH-1', {});
     await completeDehydrationBatch('BATCH-1', {
       mediaAssets: [{ fileName: '1.jpg', fileUrl: 'http://example.com/1.jpg' }],
-      operatorName: '脱水员',
     });
 
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
@@ -268,16 +334,13 @@ describe('technical-workflow-service requests', () => {
       {
         basketNo: 'B-001',
         caseId: 'CASE-1',
-        operatorName: '脱水员',
         samplingBlockIds: ['BLOCK-1'],
       },
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       2,
       '/v1/dehydration-batches/BATCH-1/start',
-      {
-        operatorName: '脱水员',
-      },
+      {},
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       3,
@@ -286,19 +349,16 @@ describe('technical-workflow-service requests', () => {
         mediaAssets: [
           { fileName: '1.jpg', fileUrl: 'http://example.com/1.jpg' },
         ],
-        operatorName: '脱水员',
       },
     );
   });
 
   it('posts embedding endpoints with exact paths', async () => {
     await startEmbedding({
-      operatorName: '包埋员',
       taskId: 'TASK-EMB',
     });
     await completeEmbedding({
       blockCount: 1,
-      operatorName: '包埋员',
       samplingBlockId: 'BLOCK-1',
       taskId: 'TASK-EMB',
     });
@@ -307,7 +367,6 @@ describe('technical-workflow-service requests', () => {
       1,
       '/v1/embeddings/start',
       {
-        operatorName: '包埋员',
         taskId: 'TASK-EMB',
       },
     );
@@ -316,7 +375,6 @@ describe('technical-workflow-service requests', () => {
       '/v1/embeddings/complete',
       {
         blockCount: 1,
-        operatorName: '包埋员',
         samplingBlockId: 'BLOCK-1',
         taskId: 'TASK-EMB',
       },
@@ -325,12 +383,10 @@ describe('technical-workflow-service requests', () => {
 
   it('posts slicing endpoints with exact paths', async () => {
     await startSlicing({
-      operatorName: '切片员',
       taskId: 'TASK-SLI',
     });
     await completeSlicing({
       embeddingBoxId: 'BOX-1',
-      operatorName: '切片员',
       slideCount: 2,
       taskId: 'TASK-SLI',
     });
@@ -339,7 +395,6 @@ describe('technical-workflow-service requests', () => {
       1,
       '/v1/slicings/start',
       {
-        operatorName: '切片员',
         taskId: 'TASK-SLI',
       },
     );
@@ -348,7 +403,6 @@ describe('technical-workflow-service requests', () => {
       '/v1/slicings/complete',
       {
         embeddingBoxId: 'BOX-1',
-        operatorName: '切片员',
         slideCount: 2,
         taskId: 'TASK-SLI',
       },
@@ -357,30 +411,24 @@ describe('technical-workflow-service requests', () => {
 
   it('posts staining and rework endpoints with exact paths', async () => {
     await startSlideStaining({
-      operatorName: '染色员',
       taskId: 'TASK-STN',
     });
     await completeSlideStaining({
-      operatorName: '染色员',
       slideId: 'SLIDE-1',
       stainingType: 'HE',
       taskId: 'TASK-STN',
     });
     await createReworkOrder({
       caseId: 'CASE-1',
-      operatorName: '返工员',
       reason: '颜色偏浅',
       reworkType: 'RESTAIN',
     });
-    await executeReworkOrder('RW-1', {
-      operatorName: '返工员',
-    });
+    await executeReworkOrder('RW-1', {});
 
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       1,
       '/v1/slide-stainings/start',
       {
-        operatorName: '染色员',
         taskId: 'TASK-STN',
       },
     );
@@ -388,7 +436,6 @@ describe('technical-workflow-service requests', () => {
       2,
       '/v1/slide-stainings/complete',
       {
-        operatorName: '染色员',
         slideId: 'SLIDE-1',
         stainingType: 'HE',
         taskId: 'TASK-STN',
@@ -399,7 +446,6 @@ describe('technical-workflow-service requests', () => {
       '/v1/rework-orders',
       {
         caseId: 'CASE-1',
-        operatorName: '返工员',
         reason: '颜色偏浅',
         reworkType: 'RESTAIN',
       },
@@ -407,9 +453,7 @@ describe('technical-workflow-service requests', () => {
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       4,
       '/v1/rework-orders/RW-1/execute',
-      {
-        operatorName: '返工员',
-      },
+      {},
     );
   });
 });

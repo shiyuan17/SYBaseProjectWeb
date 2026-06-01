@@ -191,6 +191,20 @@ describe('useSpecimenCheckInPanel', () => {
       throw new Error('composable state not initialized');
     }
 
+    expect(state.operatorForm.operatorName).toBe('Test User');
+    expect(state.operatorForm.operatorUserId).toBe('USER-001');
+    state.handleOperatorChange({
+      id: 'USER-ALT',
+      name: 'Alt User',
+    });
+    checkInSpecimenMock.mockResolvedValueOnce({
+      barcode: 'BC-CHECKIN',
+      checkInStatus: 'CHECKED_IN',
+      checkedInAt: '2026-05-26T09:10:00',
+      checkedInByName: '接口返回入库人',
+      id: 'SPEC-CHECKIN',
+      specimenNo: 'SP-001',
+    });
     state.scanInput.value = 'SP-001';
     await state.handleQuickCheckIn();
     await flushComposable();
@@ -198,11 +212,16 @@ describe('useSpecimenCheckInPanel', () => {
     expect(checkInSpecimenMock).toHaveBeenCalledWith(
       'BC-CHECKIN',
       expect.objectContaining({
-        operatorName: 'Test User',
+        operatorName: 'Alt User',
+        operatorUserId: 'USER-ALT',
+        remarks: null,
+        specimenBarcode: 'BC-CHECKIN',
+        terminalCode: null,
       }),
     );
     expect(state.queueItems.value).toHaveLength(1);
     expect(state.queueItems.value[0]?.checkInStatus).toBe('CHECKED_IN');
+    expect(state.queueItems.value[0]?.checkedInByName).toBe('接口返回入库人');
     expect(state.pendingCount.value).toBe(0);
 
     wrapper.destroy();

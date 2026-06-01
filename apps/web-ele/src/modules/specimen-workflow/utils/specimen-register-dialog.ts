@@ -158,8 +158,6 @@ export function buildRegisterSubmissionRequest(
     applicationId,
     collectionScene: form.collectionScene.trim() || null,
     items,
-    operatorName: form.operatorName.trim(),
-    operatorUserId: form.operatorUserId.trim() || null,
     printerCode: form.printerCode.trim() || null,
     remarks: form.remarks.trim() || null,
     terminalCode: form.terminalCode.trim() || null,

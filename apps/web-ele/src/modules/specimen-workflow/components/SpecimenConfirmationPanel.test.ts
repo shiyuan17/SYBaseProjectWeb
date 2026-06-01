@@ -6,7 +6,6 @@ import {
   createButtonStub,
   createDialogStub,
   createInputStub,
-  createModelTextStub,
   createPassthroughStub,
   createTableColumnStub,
   createTableStub,
@@ -25,7 +24,6 @@ const mockHandleExportExcel = vi.fn();
 const mockHandleOperatorChange = vi.fn();
 const mockHandleReset = vi.fn();
 const mockHandleRetryLabel = vi.fn();
-const mockHandleRetryOperatorChange = vi.fn();
 const mockHandleSearch = vi.fn();
 const mockHandleSelectionChange = vi.fn();
 const mockSubmitRetryLabel = vi.fn();
@@ -46,7 +44,11 @@ vi.mock('element-plus', () => ({
 }));
 
 vi.mock('#/modules/system-management/components/SystemUserSelect.vue', () => ({
-  default: createModelTextStub('data-testid'),
+  default: {
+    props: ['modelValue', 'placeholder', 'selectedLabel'],
+    template:
+      '<div data-testid="system-user-select">{{ placeholder }}{{ selectedLabel }}</div>',
+  },
 }));
 
 vi.mock('../composables/useSpecimenConfirmationPanel', () => ({
@@ -76,7 +78,8 @@ vi.mock('../composables/useSpecimenConfirmationPanel', () => ({
       specimenNo: 'SP-001',
       specimenName: '乳腺组织',
       patientName: 'Alice',
-      specimenConfirmedAt: null,
+      specimenConfirmedAt: '2026-05-26 10:00:00',
+      specimenConfirmedByName: 'Actual User',
       specimenType: '常规',
       registrationTime: '2026-05-26 08:00:00',
       registrationOperatorName: '李医生',
@@ -99,7 +102,6 @@ vi.mock('../composables/useSpecimenConfirmationPanel', () => ({
       handleOperatorChange: mockHandleOperatorChange,
       handleReset: mockHandleReset,
       handleRetryLabel: mockHandleRetryLabel,
-      handleRetryOperatorChange: mockHandleRetryOperatorChange,
       handleSearch: mockHandleSearch,
       handleSelectionChange: mockHandleSelectionChange,
       loading: ref(false),
@@ -155,6 +157,7 @@ describe('SpecimenConfirmationPanel', () => {
 
     expect(container.textContent).toContain('标本确认');
     expect(container.textContent).toContain('Test User');
+    expect(container.textContent).toContain('Actual User');
 
     const confirmButtons = [...container.querySelectorAll('button')].filter(
       (button) => button.textContent?.trim() === '标本确认',

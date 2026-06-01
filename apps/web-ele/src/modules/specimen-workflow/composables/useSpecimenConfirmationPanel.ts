@@ -30,8 +30,7 @@ import {
   isVisibleInConfirmationScene,
   MAX_QUERY_SIZE,
 } from '../utils/specimen-confirmation';
-
-type UserOption = null | { id: string; name: string };
+import { loadOperatingRoomNameMapSafely } from '../utils/operating-room-display';
 
 export function useSpecimenConfirmationPanel() {
   const userStore = useUserStore();
@@ -53,6 +52,7 @@ export function useSpecimenConfirmationPanel() {
   const applicationContextCache = reactive(
     new Map<string, CachedApplicationContext | null>(),
   );
+  const operatingRoomNameMap = ref<ReadonlyMap<string, string>>(new Map());
 
   const filters = reactive({
     keyword: '',
@@ -158,10 +158,20 @@ export function useSpecimenConfirmationPanel() {
     }
   }
 
+  async function ensureOperatingRoomNameMapLoaded() {
+    if (operatingRoomNameMap.value.size > 0) {
+      return operatingRoomNameMap.value;
+    }
+
+    operatingRoomNameMap.value = await loadOperatingRoomNameMapSafely();
+    return operatingRoomNameMap.value;
+  }
+
   async function loadSpecimens() {
     loading.value = true;
     pageError.value = '';
     try {
+      const roomNameById = await ensureOperatingRoomNameMapLoaded();
       const result = await listSpecimens({
         keyword: filters.keyword.trim() || undefined,
         page: 1,
@@ -177,7 +187,7 @@ export function useSpecimenConfirmationPanel() {
           applicationContextCache.get(applicationId) ?? null,
         getWorkbenchRecord: (applicationNo) =>
           workbenchRecordCache.get(applicationNo) ?? null,
-      });
+      }, roomNameById);
       applyRows(enhancedRows);
     } catch (error) {
       pageError.value = getWorkflowPageErrorMessage(error);
@@ -187,7 +197,10 @@ export function useSpecimenConfirmationPanel() {
   }
 
   function requireOperatorInfo() {
-    if (!operatorForm.operatorName.trim()) {
+    if (
+      !operatorForm.operatorName.trim() ||
+      !operatorForm.operatorUserId.trim()
+    ) {
       ElMessage.warning('请选择操作人');
       return false;
     }
@@ -197,10 +210,15 @@ export function useSpecimenConfirmationPanel() {
   function buildConfirmPayload() {
     return {
       operatorName: operatorForm.operatorName.trim(),
-      operatorUserId: operatorForm.operatorUserId.trim() || null,
+      operatorUserId: operatorForm.operatorUserId.trim(),
       remarks: operatorForm.remarks.trim() || null,
       terminalCode: operatorForm.terminalCode.trim() || null,
     };
+  }
+
+  function handleOperatorChange(user: null | { id: string; name: string }) {
+    operatorForm.operatorUserId = user?.id ?? '';
+    operatorForm.operatorName = user?.name ?? '';
   }
 
   async function confirmRows(rows: ConfirmationListRow[]) {
@@ -286,16 +304,6 @@ export function useSpecimenConfirmationPanel() {
 
   function handleSelectionChange(rows: ConfirmationListRow[]) {
     selectedRows.value = rows;
-  }
-
-  function handleOperatorChange(user: UserOption) {
-    operatorForm.operatorUserId = user?.id ?? '';
-    operatorForm.operatorName = user?.name ?? '';
-  }
-
-  function handleRetryOperatorChange(user: UserOption) {
-    retryForm.operatorUserId = user?.id ?? '';
-    retryForm.operatorName = user?.name ?? '';
   }
 
   function handleConfirmSelected() {
@@ -386,8 +394,6 @@ export function useSpecimenConfirmationPanel() {
     pageError.value = '';
     try {
       batchRetryResult.value = await retryLabelPrint(batchNo, {
-        operatorName: retryForm.operatorName.trim(),
-        operatorUserId: retryForm.operatorUserId.trim() || null,
         printerCode: retryForm.printerCode.trim(),
         remarks: retryForm.remarks.trim() || null,
         terminalCode: retryForm.terminalCode.trim() || null,
@@ -409,10 +415,7 @@ export function useSpecimenConfirmationPanel() {
 
     const tableRows = [
       buildExportHeaders(),
-      ...buildConfirmationExportRows(
-        workingRows.value,
-        operatorForm.operatorName,
-      ),
+      ...buildConfirmationExportRows(workingRows.value),
     ];
     const html = `
     <html>
@@ -457,7 +460,6 @@ export function useSpecimenConfirmationPanel() {
     handleOperatorChange,
     handleReset,
     handleRetryLabel,
-    handleRetryOperatorChange,
     handleSearch,
     handleSelectionChange,
     loadSpecimens,

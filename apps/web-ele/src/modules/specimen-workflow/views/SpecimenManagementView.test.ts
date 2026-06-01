@@ -349,8 +349,8 @@ describe('SpecimenManagementView', () => {
     expect(workbenchPanelProps.lookupKeyword).toBe('APP-ID');
     expect(workbenchPanelProps.lookupQueryType).toBe('AUTO');
     expect(workbenchPanelProps.lookupTriggerKey).toBe(1);
-    expect(document.body.textContent).toContain('工作台概览');
-    expect(document.body.textContent).toContain('标本列表');
+    expect(document.body.textContent).not.toContain('工作台概览');
+    expect(document.body.textContent).not.toContain('标本列表');
     expect(registerDialogProps.modelValue).toBe(false);
 
     app.unmount();

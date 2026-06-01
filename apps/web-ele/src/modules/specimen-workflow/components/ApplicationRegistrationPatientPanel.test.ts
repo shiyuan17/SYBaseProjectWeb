@@ -141,6 +141,7 @@ async function mountPanel(
     },
   );
   const reprintMock = vi.fn();
+  const savePatientInfoMock = vi.fn();
 
   const app = createApp({
     data() {
@@ -163,6 +164,7 @@ async function mountPanel(
         record: this.record,
         roomLabel: this.roomLabel,
         onReprintApplicationForm: reprintMock,
+        onSavePatientInfo: savePatientInfoMock,
         'onUpdate:record': this.handleRecordUpdate,
       });
     },
@@ -177,6 +179,7 @@ async function mountPanel(
     },
     root,
     reprintMock,
+    savePatientInfoMock,
     unmount() {
       app.unmount();
       root.remove();
@@ -313,6 +316,53 @@ describe('ApplicationRegistrationPatientPanel', () => {
     expect(printWindowState.html).toContain('申请单号');
     expect(printWindowState.html).toContain('1122');
     expect(wrapper.reprintMock).not.toHaveBeenCalled();
+
+    wrapper.unmount();
+  });
+
+  it('renders the patient save button after reprint and respects disabled state', async () => {
+    const wrapper = await mountPanel({ saveDisabled: true });
+
+    const buttons = [
+      ...wrapper.root.querySelectorAll<HTMLButtonElement>('button'),
+    ].filter((button) =>
+      ['保存', '补打申请单'].includes(button.textContent?.trim() ?? ''),
+    );
+
+    expect(buttons[0]?.textContent?.trim()).toBe('补打申请单');
+    expect(buttons[1]?.textContent?.trim()).toBe('保存');
+    expect(buttons[1]?.disabled).toBe(true);
+
+    wrapper.unmount();
+  });
+
+  it('commits the active editor before emitting patient save', async () => {
+    const wrapper = await mountPanel({ saveDisabled: false });
+
+    wrapper.root
+      .querySelector<HTMLButtonElement>(
+        '[data-testid="patient-edit-clinicalHistory"]',
+      )!
+      .click();
+    await flushPromises();
+
+    const textarea =
+      wrapper.root.querySelector<HTMLTextAreaElement>('textarea');
+    textarea!.value = '点击右上角保存前提交';
+    textarea!.dispatchEvent(new Event('input'));
+    await flushPromises();
+
+    const saveButton = [
+      ...wrapper.root.querySelectorAll<HTMLButtonElement>('button'),
+    ].find((button) => button.textContent?.trim() === '保存');
+    saveButton?.click();
+    await flushPromises();
+
+    expect(wrapper.updateRecordMock).toHaveBeenCalledTimes(1);
+    expect(wrapper.getLatestRecord().patientInfo.clinicalHistory).toBe(
+      '点击右上角保存前提交',
+    );
+    expect(wrapper.savePatientInfoMock).toHaveBeenCalledTimes(1);
 
     wrapper.unmount();
   });

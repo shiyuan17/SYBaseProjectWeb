@@ -266,8 +266,9 @@ export function useSpecimenRegisterDialog(
       );
       const registrationSnapshot = {
         collectionScene: request.collectionScene ?? null,
-        operatorName: request.operatorName,
-        operatorUserId: request.operatorUserId ?? null,
+        operatorName: registerForm.operatorName.trim() || currentUserName.value,
+        operatorUserId:
+          registerForm.operatorUserId.trim() || currentUserId.value || null,
         printerCode: request.printerCode ?? null,
         remarks: request.remarks ?? null,
         terminalCode: request.terminalCode ?? null,

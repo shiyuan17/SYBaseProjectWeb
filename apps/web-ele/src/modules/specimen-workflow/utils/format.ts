@@ -63,6 +63,7 @@ const currentNodeLabels = {
   PARTIALLY_RECEIVED: '部分接收',
   RECEIVED: '已接收',
   RECEPTION: '标本接收',
+  REMOVAL: '离体确认',
   REGISTERED: '已登记',
   REJECTED: '已拒收',
   SPECIMEN_COLLECTION: '标本登记',

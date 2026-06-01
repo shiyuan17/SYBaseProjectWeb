@@ -13,6 +13,7 @@ import {
   createTransportPrintDialogTitle,
   normalizeRouteQueryValue,
   resolveTargetTransportOrders,
+  resolveSpecimenNoQuickHandoverTarget,
 } from './transport-handover';
 
 function createOrder(
@@ -93,13 +94,11 @@ describe('transport handover helpers', () => {
     ).toBe(false);
     expect(
       buildPrintTransportOrderRequest({
-        operatorName: ' 张三 ',
-        operatorUserId: ' U-1 ',
+        operatorName: '张三',
+        operatorUserId: 'U-1',
         terminalCode: ' T-1 ',
       }),
     ).toEqual({
-      operatorName: '张三',
-      operatorUserId: 'U-1',
       terminalCode: 'T-1',
     });
     expect(
@@ -115,5 +114,24 @@ describe('transport handover helpers', () => {
       remarks: '备注',
       terminalCode: 'T-2',
     });
+  });
+
+  it('resolves the quick handover target only for a single handoverable match', () => {
+    expect(resolveSpecimenNoQuickHandoverTarget([], 'SP-001')).toBeNull();
+    expect(
+      resolveSpecimenNoQuickHandoverTarget([createOrder()], 'SP-001'),
+    ).toEqual(createOrder());
+    expect(
+      resolveSpecimenNoQuickHandoverTarget(
+        [createOrder(), createOrder({ id: 'TO-2' })],
+        'SP-001',
+      ),
+    ).toBeNull();
+    expect(
+      resolveSpecimenNoQuickHandoverTarget(
+        [createOrder({ status: 'HANDED_OVER' })],
+        'SP-001',
+      ),
+    ).toBeNull();
   });
 });

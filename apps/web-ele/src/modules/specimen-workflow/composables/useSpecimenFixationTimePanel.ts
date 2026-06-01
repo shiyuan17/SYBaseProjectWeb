@@ -41,6 +41,7 @@ import {
   resolveFixationLiquidLabel as resolveFixationLiquidLabelValue,
   resolveFixationTagType as resolveFixationTagTypeValue,
 } from '../utils/specimen-fixation-time';
+import { loadOperatingRoomNameMapSafely } from '../utils/operating-room-display';
 
 export function useSpecimenFixationTimePanel() {
   const userStore = useUserStore();
@@ -62,6 +63,7 @@ export function useSpecimenFixationTimePanel() {
   const applicationContextCache = reactive(
     new Map<string, CachedApplicationContext | null>(),
   );
+  const operatingRoomNameMap = ref<ReadonlyMap<string, string>>(new Map());
 
   const retryTargetRows = ref<FixationWorkbenchRow[]>([]);
   const retryForm = reactive({
@@ -98,6 +100,15 @@ export function useSpecimenFixationTimePanel() {
         workflowReferenceOptions.value.fixationLiquidTypes[0]?.value ??
         DEFAULT_FIXATION_LIQUID_TYPE;
     }
+  }
+
+  async function ensureOperatingRoomNameMapLoaded() {
+    if (operatingRoomNameMap.value.size > 0) {
+      return operatingRoomNameMap.value;
+    }
+
+    operatingRoomNameMap.value = await loadOperatingRoomNameMapSafely();
+    return operatingRoomNameMap.value;
   }
 
   function isReceiptLocked(row: SpecimenManagementListItem) {
@@ -184,6 +195,7 @@ export function useSpecimenFixationTimePanel() {
     row: SpecimenManagementListItem,
     applicationContext: CachedApplicationContext | null,
     workbenchRecord: ApplicationRegistrationWorkbenchRecord | null,
+    roomNameById: ReadonlyMap<string, string>,
   ): FixationWorkbenchRow {
     const queueAddedByName = normalizeText(userStore.userInfo?.realName) || '-';
     const queueAddedAt = new Date().toISOString();
@@ -195,6 +207,7 @@ export function useSpecimenFixationTimePanel() {
         queueAddedAt,
         queueAddedByName,
       },
+      roomNameById,
     );
     return {
       ...baseRow,
@@ -206,12 +219,18 @@ export function useSpecimenFixationTimePanel() {
   }
 
   async function buildEnrichedRow(row: SpecimenManagementListItem) {
+    const roomNameById = await ensureOperatingRoomNameMapLoaded();
     const [applicationContext, workbenchRecord] = await Promise.all([
       ensureApplicationContext(row.applicationId),
       ensureWorkbenchRecord(row.applicationNo),
     ]);
 
-    return buildQueueRow(row, applicationContext, workbenchRecord);
+    return buildQueueRow(
+      row,
+      applicationContext,
+      workbenchRecord,
+      roomNameById,
+    );
   }
 
   function handleSelectionChange(rows: FixationWorkbenchRow[]) {
@@ -246,7 +265,6 @@ export function useSpecimenFixationTimePanel() {
       return;
     }
     const operatorName = normalizeText(userStore.userInfo?.realName);
-    const operatorUserId = normalizeText(userStore.userInfo?.userId);
     const selectedFixationLiquidType = normalizeText(fixationLiquidType.value);
     if (!operatorName) {
       ElMessage.warning('缺少当前固定人信息');
@@ -296,8 +314,6 @@ export function useSpecimenFixationTimePanel() {
 
       const result = await completeFixation({
         fixationLiquidType: selectedFixationLiquidType,
-        operatorName,
-        operatorUserId: operatorUserId || null,
         remarks: '扫码完成固定',
         specimenBarcode: matchedRow.barcode || matchedRow.specimenNo,
       });
@@ -309,8 +325,7 @@ export function useSpecimenFixationTimePanel() {
         fixationLiquidType:
           result.fixationLiquidType ?? selectedFixationLiquidType,
         fixationOperatorName: result.operatorName ?? operatorName,
-        fixationOperatorUserId:
-          result.operatorUserId ?? (operatorUserId || null),
+        fixationOperatorUserId: result.operatorUserId ?? null,
         fixationStatus: result.fixationStatus,
         latestTrackingAt: completedAt,
         specimenStatus: 'FIXED',
@@ -403,8 +418,6 @@ export function useSpecimenFixationTimePanel() {
     pageError.value = '';
     try {
       batchRetryResult.value = await retryLabelPrint(batchNo, {
-        operatorName: normalizeText(retryForm.operatorName),
-        operatorUserId: normalizeText(retryForm.operatorUserId) || null,
         printerCode: normalizeText(retryForm.printerCode),
         remarks: normalizeText(retryForm.remarks) || null,
         terminalCode: normalizeText(retryForm.terminalCode) || null,

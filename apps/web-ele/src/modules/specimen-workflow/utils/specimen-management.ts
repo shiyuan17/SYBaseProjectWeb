@@ -194,15 +194,11 @@ export function specimenTagType(row: SpecimenManagementListItem) {
 }
 
 export function buildRetryLabelPrintRequest(form: {
-  operatorName: string;
-  operatorUserId: string;
   printerCode: string;
   remarks: string;
   terminalCode: string;
 }): LabelPrintRetryRequest {
   return {
-    operatorName: form.operatorName.trim(),
-    operatorUserId: form.operatorUserId.trim() || null,
     printerCode: form.printerCode.trim(),
     remarks: form.remarks.trim() || null,
     terminalCode: form.terminalCode.trim() || null,
@@ -211,16 +207,12 @@ export function buildRetryLabelPrintRequest(form: {
 
 export function buildSpecimenVerificationRequest(form: {
   fixationLiquidType: string;
-  operatorName: string;
-  operatorUserId: string;
   remarks: string;
   specimenBarcode: string;
   terminalCode: string;
 }): SpecimenFixationRequest {
   return {
     fixationLiquidType: form.fixationLiquidType.trim() || null,
-    operatorName: form.operatorName.trim(),
-    operatorUserId: form.operatorUserId.trim() || null,
     remarks: form.remarks.trim() || null,
     specimenBarcode: form.specimenBarcode.trim(),
     terminalCode: form.terminalCode.trim() || null,

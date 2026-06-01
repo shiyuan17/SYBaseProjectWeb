@@ -34,12 +34,14 @@ export interface TechnicalWorkflowEntryViewState {
   canAccessFrozen: boolean;
   canAccessReceipt: boolean;
   canAccessRework: boolean;
+  canAccessSpecimenRegistration: boolean;
   canAccessTracking: boolean;
   canAccessWorkflowEntry: boolean;
   currentWorkingBucket: null | WorkstationSummaryBucket;
   frozenReminder: PendingTechnicalTaskItem[];
   loading: boolean;
   pageError: string;
+  pendingSpecimenRegistrationCount: number;
   regularBuckets: WorkstationSummaryBucket[];
   riskCards: WorkflowRiskCard[];
   workflowLead: string;

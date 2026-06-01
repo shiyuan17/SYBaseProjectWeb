@@ -54,6 +54,19 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
       },
       {
         component: () =>
+          import(
+            '#/modules/technical-workflow/views/TechnicalSpecimenRegistrationView.vue'
+          ),
+        meta: {
+          authority: [M2_PERMISSION_CODES.SPECIMEN_RECEIVE],
+          icon: 'carbon:data-table',
+          title: '标本登记',
+        },
+        name: 'TechnicalSpecimenRegistration',
+        path: '/technical-workflow/specimen-registration',
+      },
+      {
+        component: () =>
           import('#/modules/technical-workflow/views/TechnicalTasksView.vue'),
         meta: {
           authority: [M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY],

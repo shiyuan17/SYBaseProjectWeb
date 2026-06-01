@@ -16,6 +16,9 @@ describe('technical workflow routes', () => {
     const receiptRoute = workflowRoot?.children?.find(
       (route) => route.name === 'PathologyReceipt',
     );
+    const specimenRegistrationRoute = workflowRoot?.children?.find(
+      (route) => route.name === 'TechnicalSpecimenRegistration',
+    );
     const frozenRoute = workflowRoot?.children?.find(
       (route) => route.name === 'FrozenWorkstation',
     );
@@ -30,6 +33,13 @@ describe('technical workflow routes', () => {
     expect(receiptRoute?.path).toBe('/workflow/pathology-receipt');
     expect(receiptRoute?.meta?.keepAlive).toBe(true);
     expect(receiptRoute?.meta?.authority).toEqual([
+      M2_PERMISSION_CODES.SPECIMEN_RECEIVE,
+    ]);
+    expect(specimenRegistrationRoute?.path).toBe(
+      '/technical-workflow/specimen-registration',
+    );
+    expect(specimenRegistrationRoute?.meta?.keepAlive).toBe(true);
+    expect(specimenRegistrationRoute?.meta?.authority).toEqual([
       M2_PERMISSION_CODES.SPECIMEN_RECEIVE,
     ]);
     expect(tasksRoute?.meta?.keepAlive).toBe(true);

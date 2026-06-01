@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ElButton, ElInput, ElTable, ElTableColumn, ElTag } from 'element-plus';
 
+import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
+
 import { useSpecimenCheckInPanel } from '../composables/useSpecimenCheckInPanel';
 import {
   formatCheckInStatus,
@@ -15,6 +17,7 @@ const {
   handleBatchCheckIn,
   handleExport,
   handleManualCheckIn,
+  handleOperatorChange,
   handleQuickCheckIn,
   handleRemoveRow,
   handleReset,
@@ -70,11 +73,14 @@ const {
         style="width: 260px"
         @keyup.enter="handleQuickCheckIn"
       />
-      <ElInput
-        v-model="operatorForm.operatorName"
-        placeholder="选择操作人"
-        style="width: 160px"
-      />
+      <div class="w-[180px]">
+        <SystemUserSelect
+          v-model="operatorForm.operatorUserId"
+          :selected-label="operatorForm.operatorName"
+          placeholder="选择入库人"
+          @change="handleOperatorChange"
+        />
+      </div>
       <ElInput
         v-model="operatorForm.printerCode"
         placeholder="打印机编号"

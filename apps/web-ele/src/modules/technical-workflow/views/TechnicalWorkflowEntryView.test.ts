@@ -4,11 +4,17 @@ import { createApp, defineComponent, h, nextTick } from 'vue';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockAccessStore, mockListPendingTechnicalTasks, mockRouter } =
+const {
+  mockAccessStore,
+  mockListPendingTechnicalSpecimenRegistrations,
+  mockListPendingTechnicalTasks,
+  mockRouter,
+} =
   vi.hoisted(() => ({
     mockAccessStore: {
       accessCodes: [] as string[],
     },
+    mockListPendingTechnicalSpecimenRegistrations: vi.fn(),
     mockListPendingTechnicalTasks: vi.fn(),
     mockRouter: {
       push: vi.fn(),
@@ -50,6 +56,8 @@ vi.mock('#/modules/specimen-workflow/constants', () => ({
 }));
 
 vi.mock('../api/technical-workflow-service', () => ({
+  listPendingTechnicalSpecimenRegistrations:
+    mockListPendingTechnicalSpecimenRegistrations,
   listPendingTechnicalTasks: mockListPendingTechnicalTasks,
 }));
 
@@ -184,9 +192,16 @@ describe('TechnicalWorkflowEntryView', () => {
       size: 200,
       total: 2,
     });
+    mockListPendingTechnicalSpecimenRegistrations.mockResolvedValue({
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
   });
 
   afterEach(() => {
+    mockListPendingTechnicalSpecimenRegistrations.mockReset();
     mockListPendingTechnicalTasks.mockReset();
     mockRouter.push.mockReset();
     document.body.innerHTML = '';
@@ -212,7 +227,8 @@ describe('TechnicalWorkflowEntryView', () => {
     expect(document.body.textContent).toContain('模块概览');
     expect(document.body.textContent).toContain('核心功能地图');
     expect(document.body.textContent).toContain('典型工作流程');
-    expect(document.body.textContent).toContain('步骤 3: 取材描写');
+    expect(document.body.textContent).toContain('步骤 2: 标本登记');
+    expect(document.body.textContent).toContain('步骤 4: 取材描写');
     expect(document.body.textContent).toContain('切片破损需重切');
 
     app.unmount();
@@ -233,6 +249,52 @@ describe('TechnicalWorkflowEntryView', () => {
     });
     expect(mockRouter.push).toHaveBeenCalledWith({
       path: '/technical-workflow/tasks',
+      query: undefined,
+    });
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('prefers specimen registration when pending cases exist', async () => {
+    mockListPendingTechnicalSpecimenRegistrations.mockResolvedValue({
+      items: [
+        {
+          applicationId: 'APP-1',
+          applicationNo: 'APP-20260601-001',
+          applicationType: 'ROUTINE',
+          caseId: 'CASE-1',
+          checkItem: 'HE',
+          inpatientNo: 'INP-1',
+          pathologyNo: 'BL-20260601-001',
+          patientId: 'P-001',
+          patientName: '患者甲',
+          receivedAt: '2026-06-01T08:00:00',
+          registeredAt: null,
+          registeredByName: null,
+          registrationStatus: 'PENDING',
+          submittingDepartmentName: '病理科',
+        },
+      ],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+
+    const { app, root } = mountView();
+    await flushView();
+    await flushView();
+
+    expect(document.body.textContent).toContain('接收后待登记病例');
+    const continueButton = [...document.querySelectorAll('button')].find(
+      (item) => item.textContent?.includes('继续当前工位处理中任务'),
+    ) as HTMLButtonElement | undefined;
+    expect(continueButton).toBeTruthy();
+    continueButton?.click();
+    await flushView();
+
+    expect(mockRouter.push).toHaveBeenCalledWith({
+      path: '/technical-workflow/specimen-registration',
       query: undefined,
     });
 

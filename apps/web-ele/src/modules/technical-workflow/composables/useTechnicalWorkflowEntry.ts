@@ -7,7 +7,10 @@ import { useAccessStore } from '@vben/stores';
 
 import { M2_PERMISSION_CODES } from '#/modules/specimen-workflow/constants';
 
-import { listPendingTechnicalTasks } from '../api/technical-workflow-service';
+import {
+  listPendingTechnicalSpecimenRegistrations,
+  listPendingTechnicalTasks,
+} from '../api/technical-workflow-service';
 import {
   M3_WORKFLOW_ROUTE_ITEMS,
   TECHNICAL_WORKFLOW_ROUTE_META,
@@ -33,11 +36,18 @@ export function useTechnicalWorkflowEntry() {
   const loading = ref(false);
   const pageError = ref('');
   const pendingItems = ref<PendingTechnicalTaskItem[]>([]);
+  const pendingSpecimenRegistrationCount = ref(0);
 
   const accessCodes = computed(() => new Set(accessStore.accessCodes));
 
   const canAccessReceipt = computed(() =>
     accessCodes.value.has(M2_PERMISSION_CODES.SPECIMEN_RECEIVE),
+  );
+
+  const canAccessSpecimenRegistration = computed(() =>
+    accessCodes.value.has(
+      TECHNICAL_WORKFLOW_ROUTE_META.SPECIMEN_REGISTRATION.authorityCode,
+    ),
   );
 
   const canAccessAnyM3 = computed(() =>
@@ -135,26 +145,41 @@ export function useTechnicalWorkflowEntry() {
     );
 
     if (!canAccessAnyM3.value) {
-      return '当前账号仅开通病理接收入口，可先从接收页进入并等待后续技术权限开通。';
+      return canAccessSpecimenRegistration.value
+        ? '当前账号可处理病理接收与接收后标本登记流程，可先完成登记再进入后续技术工位。'
+        : '当前账号仅开通病理接收入口，可先从接收页进入并等待后续技术权限开通。';
+    }
+
+    if (pendingSpecimenRegistrationCount.value > 0) {
+      return `当前有 ${pendingSpecimenRegistrationCount.value} 条接收后待登记病例，建议先完成标本登记，再进入任务池或取材工位。`;
     }
 
     if (regularTaskCount === 0) {
-      return '当前没有常规制片待办，适合直接从任务池、冰冻工作台或技术追踪进入目标页面。';
+      return '当前没有常规制片待办，适合先查看标本登记、任务池、冰冻工作台或技术追踪。';
     }
 
-    return `当前常规制片主链共有 ${regularTaskCount} 条待处理/处理中任务，建议先从任务池确认分派，再进入目标工位连续推进。`;
+    return `当前常规制片主链共有 ${regularTaskCount} 条待处理/处理中任务，任务池仍可用于调度，但不再要求先额外分派才能继续处理。`;
   });
 
   async function loadDashboard() {
     loading.value = true;
     pageError.value = '';
     try {
-      const result = await listPendingTechnicalTasks({
-        page: 1,
-        size: 200,
-        timedOutOnly: false,
-      });
-      pendingItems.value = result.items;
+      const [taskResult, registrationResult] = await Promise.all([
+        listPendingTechnicalTasks({
+          page: 1,
+          size: 200,
+          timedOutOnly: false,
+        }),
+        canAccessSpecimenRegistration.value
+          ? listPendingTechnicalSpecimenRegistrations({
+              page: 1,
+              size: 20,
+            })
+          : Promise.resolve({ items: [], page: 1, size: 20, total: 0 }),
+      ]);
+      pendingItems.value = taskResult.items;
+      pendingSpecimenRegistrationCount.value = registrationResult.total;
     } catch (error) {
       pageError.value = getWorkflowPageErrorMessage(error);
     } finally {
@@ -175,12 +200,14 @@ export function useTechnicalWorkflowEntry() {
     canAccessFrozen,
     canAccessReceipt,
     canAccessRework,
+    canAccessSpecimenRegistration,
     canAccessTracking,
     canAccessWorkflowEntry,
     currentWorkingBucket,
     frozenReminder,
     loading,
     pageError,
+    pendingSpecimenRegistrationCount,
     regularBuckets,
     riskCards,
     workflowLead,

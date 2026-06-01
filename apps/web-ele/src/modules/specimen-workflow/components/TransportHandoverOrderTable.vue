@@ -64,6 +64,11 @@ const emit = defineEmits<{
         {{ formatDateTime(row.handedOverAt) }}
       </template>
     </ElTableColumn>
+    <ElTableColumn label="出库人" min-width="120">
+      <template #default="{ row }">
+        {{ formatNullable(row.outboundUserName) }}
+      </template>
+    </ElTableColumn>
     <ElTableColumn label="标本条码" min-width="220">
       <template #default="{ row }">
         <div class="flex flex-wrap gap-1">

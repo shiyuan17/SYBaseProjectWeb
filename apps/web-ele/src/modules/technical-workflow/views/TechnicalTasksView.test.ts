@@ -405,6 +405,7 @@ describe('TechnicalTasksView', () => {
     const { app, root } = mountView();
     await flushView();
 
+    expect(document.body.textContent).toContain('分派/认领保留为可选辅助能力');
     findButton('分派').click();
     await nextTick();
 
@@ -435,7 +436,6 @@ describe('TechnicalTasksView', () => {
       expect.objectContaining({
         assignedToName: '新技师',
         assignedToUserId: 'USER-TECH-2',
-        operatorName: '调度员',
       }),
     );
 

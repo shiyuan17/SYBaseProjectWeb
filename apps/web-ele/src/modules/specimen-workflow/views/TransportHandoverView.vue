@@ -32,6 +32,7 @@ import SystemUserSelect from '#/modules/system-management/components/SystemUserS
 import {
   handoverTransportOrder,
   listPendingTransportOrders,
+  outboundTransportOrder,
   printTransportOrder,
 } from '../api/specimen-workflow-service';
 import TransportHandoverOrderTable from '../components/TransportHandoverOrderTable.vue';
@@ -47,9 +48,12 @@ import {
   buildPendingTransportOrderQuery,
   buildPrintTransportOrderRequest,
   buildTransportOrderHandoverRequest,
+  buildTransportOrderOutboundRequest,
   createDefaultTransportHandoverFormState,
+  createDefaultTransportOutboundFormState,
   createDefaultTransportPrintFormState,
   normalizeRouteQueryValue,
+  resolveSpecimenNoQuickOutboundTarget,
   resolveTargetTransportOrders,
 } from '../utils/transport-handover';
 
@@ -110,6 +114,14 @@ const handoverForm = reactive(
     userStore.userInfo?.userId ?? '',
   ),
 );
+const outboundForm = reactive(
+  createDefaultTransportOutboundFormState(
+    userStore.userInfo?.realName ?? '',
+    userStore.userInfo?.userId ?? '',
+  ),
+);
+const quickSearchEmptyResultMessage =
+  '未找到待处理转运单，请检查标本流水号后重试。';
 
 const printDialogTitle = computed(() => {
   if (selectedRows.value.length > 1) {
@@ -129,7 +141,7 @@ const handoverDialogTitle = computed(() => {
     : '交接转运单';
 });
 
-async function loadOrders() {
+async function loadOrders(options: { autoSubmitQuickOutbound?: boolean } = {}) {
   loading.value = true;
   try {
     const result = await listPendingTransportOrders(
@@ -137,16 +149,43 @@ async function loadOrders() {
     );
     orders.value = result.items;
     total.value = result.total;
+    if (options.autoSubmitQuickOutbound) {
+      const quickOutboundTarget = resolveSpecimenNoQuickOutboundTarget(
+        result.items,
+        filters.specimenNo,
+      );
+      if (quickOutboundTarget) {
+        await submitQuickOutbound(quickOutboundTarget);
+      } else if (filters.specimenNo.trim() && result.items.length === 0) {
+        ElMessage.warning(quickSearchEmptyResultMessage);
+      }
+    }
+    return result;
   } catch (error) {
     void error;
+    return null;
   } finally {
     loading.value = false;
   }
 }
 
+function resetSearchInteractionState() {
+  selectedRowKeys.value = [];
+  activeOrder.value = null;
+  handoverDialogVisible.value = false;
+  printDialogVisible.value = false;
+}
+
 function handleSearch() {
+  resetSearchInteractionState();
   filters.page = 1;
   void loadOrders();
+}
+
+function handleSpecimenNoQuickSearch() {
+  resetSearchInteractionState();
+  filters.page = 1;
+  void loadOrders({ autoSubmitQuickOutbound: true });
 }
 
 function handleReset() {
@@ -158,7 +197,14 @@ function handleReset() {
   filters.specimenNo = '';
   filters.status = '';
   routeApplicationNo.value = '';
-  selectedRowKeys.value = [];
+  Object.assign(
+    outboundForm,
+    createDefaultTransportOutboundFormState(
+      userStore.userInfo?.realName ?? '',
+      userStore.userInfo?.userId ?? '',
+    ),
+  );
+  resetSearchInteractionState();
   latestOrder.value = null;
   void loadOrders();
 }
@@ -279,14 +325,40 @@ function handleFilterDepartmentChange(
   filters.departmentId = department?.id ?? '';
 }
 
-function handlePrintUserChange(user: null | { id: string; name: string }) {
-  printForm.operatorUserId = user?.id ?? '';
-  printForm.operatorName = user?.name ?? '';
-}
-
 function handleReceiverUserChange(user: null | { id: string; name: string }) {
   handoverForm.receiverUserId = user?.id ?? '';
   handoverForm.receiverUserName = user?.name ?? '';
+}
+
+function handleOutboundUserChange(user: null | { id: string; name: string }) {
+  outboundForm.outboundUserId = user?.id ?? '';
+  outboundForm.outboundUserName = user?.name ?? '';
+}
+
+async function submitQuickOutbound(order: PendingTransportOrderItem) {
+  if (
+    !outboundForm.outboundUserId.trim() ||
+    !outboundForm.outboundUserName.trim()
+  ) {
+    ElMessage.warning('请选择出库人');
+    return;
+  }
+
+  handoverLoading.value = true;
+  try {
+    latestOrder.value = await outboundTransportOrder(
+      order.id,
+      buildTransportOrderOutboundRequest(outboundForm),
+    );
+    selectedRowKeys.value = [];
+    filters.specimenNo = '';
+    ElMessage.success('标本出库成功');
+    await loadOrders();
+  } catch (error) {
+    void error;
+  } finally {
+    handoverLoading.value = false;
+  }
 }
 
 function handleSelectionChange(rows: PendingTransportOrderItem[]) {
@@ -312,7 +384,7 @@ watch(
       <WorkflowSectionCard
         v-if="latestOrder"
         title="最近操作结果"
-        description="展示最近一次打印或交接后的转运单摘要。"
+        description="展示最近一次打印、出库或交接后的转运单摘要。"
       >
         <ElDescriptions :column="2" border>
           <ElDescriptionsItem label="转运单号">
@@ -333,13 +405,16 @@ watch(
           <ElDescriptionsItem label="交接人">
             {{ formatNullable(latestOrder.handoverUserName) }}
           </ElDescriptionsItem>
+          <ElDescriptionsItem label="出库人">
+            {{ formatNullable(latestOrder.outboundUserName) }}
+          </ElDescriptionsItem>
           <ElDescriptionsItem label="接收人">
             {{ formatNullable(latestOrder.receiverUserName) }}
           </ElDescriptionsItem>
           <ElDescriptionsItem label="待转运时间">
             {{ formatDateTime(latestOrder.toBeTransportedAt) }}
           </ElDescriptionsItem>
-          <ElDescriptionsItem label="交接完成时间">
+          <ElDescriptionsItem label="出库时间">
             {{ formatDateTime(latestOrder.handedOverAt) }}
           </ElDescriptionsItem>
         </ElDescriptions>
@@ -376,8 +451,16 @@ watch(
               clearable
               placeholder="请输入标本流水号"
               style="width: 220px"
-              @keyup.enter="handleSearch"
+              @keyup.enter="handleSpecimenNoQuickSearch"
             />
+            <div class="w-[180px]">
+              <SystemUserSelect
+                v-model="outboundForm.outboundUserId"
+                :selected-label="outboundForm.outboundUserName"
+                placeholder="选择出库人"
+                @change="handleOutboundUserChange"
+              />
+            </div>
             <div class="w-[180px]">
               <DepartmentSelect
                 v-model="filters.departmentId"
@@ -465,12 +548,7 @@ watch(
     >
       <ElForm label-width="96px">
         <ElFormItem label="操作人" required>
-          <SystemUserSelect
-            v-model="printForm.operatorUserId"
-            :selected-label="printForm.operatorName"
-            placeholder="请选择打印操作人"
-            @change="handlePrintUserChange"
-          />
+          <ElInput :model-value="printForm.operatorName" disabled />
         </ElFormItem>
         <ElFormItem label="终端编码">
           <ElInput

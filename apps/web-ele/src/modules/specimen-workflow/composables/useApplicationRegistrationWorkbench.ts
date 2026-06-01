@@ -2,6 +2,7 @@ import type {
   ApplicationRegistrationWorkbenchRecord,
   OperatingBuildingOption,
   OperatingRoomOption,
+  SaveApplicationRegistrationPatientInfoRequest,
   SaveApplicationRegistrationWorkbenchRequest,
   WorkbenchLookupType,
 } from '../types/application-registration-workbench';
@@ -15,6 +16,7 @@ import {
   listOperatingBuildingOptions,
   listOperatingRoomOptions,
   lookupApplicationRegistrationWorkbenchRecord,
+  saveApplicationRegistrationPatientInfo,
   saveApplicationRegistrationWorkbench,
 } from '../api/application-registration-workbench-service';
 import { getLatestRegistrationResult } from '../api/specimen-workflow-service';
@@ -52,6 +54,32 @@ function cloneRecord(
   };
 }
 
+function buildPatientInfoSavePayload(
+  record: ApplicationRegistrationWorkbenchRecord,
+  buildingId: string,
+  roomId: string,
+): SaveApplicationRegistrationPatientInfoRequest {
+  return {
+    contagiousSpecimen: { ...record.contagiousSpecimen },
+    gynecologyInfo: {
+      ...record.gynecologyInfo,
+      specialConditions: { ...record.gynecologyInfo.specialConditions },
+    },
+    patientInfo: { ...record.patientInfo },
+    surgeryInfo: {
+      ...record.surgeryInfo,
+      buildingId,
+      roomId,
+    },
+  };
+}
+
+function serializePatientInfoPayload(
+  payload: SaveApplicationRegistrationPatientInfoRequest,
+) {
+  return JSON.stringify(payload);
+}
+
 function getLookupEmptyDescription(type: WorkbenchLookupType) {
   if (type === 'APPLICATION_NO') {
     return '请输入申请单号查询';
@@ -77,6 +105,7 @@ export function useApplicationRegistrationWorkbench(
 ) {
   const loading = ref(false);
   const saving = ref(false);
+  const savingPatientInfo = ref(false);
   const loadingLatestRegistration = ref(false);
   const pageError = ref('');
   const searchType = ref<WorkbenchLookupType>(
@@ -94,17 +123,23 @@ export function useApplicationRegistrationWorkbench(
   const latestRegistrationResult = ref<LatestSpecimenRegistrationResult | null>(
     null,
   );
+  const patientInfoBaseline = ref('');
 
   const {
+    activePartId,
+    activeSystemId,
     clearSpecimenItems,
-    commonSpecimenOptions,
+    departmentCommonSpecimenOptions,
     dictionaryGroups,
     dictionaryKeyword,
+    doctorCommonSpecimenOptions,
     handleAddManualSpecimen,
     handleAppendPackageItems,
     handleAppendSpecimen,
     handleCreatePackage,
     handleOpenPackageDialog,
+    handleSelectDictionaryPart,
+    handleSelectDictionarySystem,
     packageDialogVisible,
     replaceSpecimenItems,
     specimenEntryOptions,
@@ -138,6 +173,31 @@ export function useApplicationRegistrationWorkbench(
       specimenItems.value.length === 0,
   );
 
+  const patientInfoDirty = computed(() => {
+    if (!currentRecord.value) {
+      return false;
+    }
+
+    return (
+      serializePatientInfoPayload(
+        buildPatientInfoSavePayload(
+          currentRecord.value,
+          selectedBuildingId.value,
+          selectedRoomId.value,
+        ),
+      ) !== patientInfoBaseline.value
+    );
+  });
+
+  const patientInfoSaveDisabled = computed(
+    () =>
+      loading.value ||
+      saving.value ||
+      savingPatientInfo.value ||
+      !currentRecord.value ||
+      !patientInfoDirty.value,
+  );
+
   function clearWorkbenchState(
     description = getLookupEmptyDescription(searchType.value),
   ) {
@@ -147,6 +207,7 @@ export function useApplicationRegistrationWorkbench(
     selectedRoomId.value = '';
     roomOptions.value = [];
     latestRegistrationResult.value = null;
+    patientInfoBaseline.value = '';
     emptyDescription.value = description;
   }
 
@@ -167,6 +228,32 @@ export function useApplicationRegistrationWorkbench(
     }
 
     currentRecord.value = updater(currentRecord.value);
+  }
+
+  function syncSelectedRoomValuesToCurrentRecord() {
+    updateCurrentRecord((record) => ({
+      ...record,
+      surgeryInfo: {
+        ...record.surgeryInfo,
+        buildingId: selectedBuildingId.value,
+        roomId: selectedRoomId.value,
+      },
+    }));
+  }
+
+  function resetPatientInfoBaseline() {
+    if (!currentRecord.value) {
+      patientInfoBaseline.value = '';
+      return;
+    }
+
+    patientInfoBaseline.value = serializePatientInfoPayload(
+      buildPatientInfoSavePayload(
+        currentRecord.value,
+        selectedBuildingId.value,
+        selectedRoomId.value,
+      ),
+    );
   }
 
   async function refreshRoomOptions(buildingId: string, preferredRoomId = '') {
@@ -211,14 +298,8 @@ export function useApplicationRegistrationWorkbench(
       record.surgeryInfo.buildingId ?? '',
       record.surgeryInfo.roomId ?? '',
     );
-    updateCurrentRecord((current) => ({
-      ...current,
-      surgeryInfo: {
-        ...current.surgeryInfo,
-        buildingId: selectedBuildingId.value,
-        roomId: selectedRoomId.value,
-      },
-    }));
+    syncSelectedRoomValuesToCurrentRecord();
+    resetPatientInfoBaseline();
     await loadLatestRegistration(record.applicationId);
     return record;
   }
@@ -261,25 +342,12 @@ export function useApplicationRegistrationWorkbench(
   async function handleBuildingChange(value: string) {
     selectedBuildingId.value = value;
     await refreshRoomOptions(value);
-    updateCurrentRecord((record) => ({
-      ...record,
-      surgeryInfo: {
-        ...record.surgeryInfo,
-        buildingId: value,
-        roomId: selectedRoomId.value,
-      },
-    }));
+    syncSelectedRoomValuesToCurrentRecord();
   }
 
   function handleRoomChange(value: string) {
     selectedRoomId.value = value;
-    updateCurrentRecord((record) => ({
-      ...record,
-      surgeryInfo: {
-        ...record.surgeryInfo,
-        roomId: value,
-      },
-    }));
+    syncSelectedRoomValuesToCurrentRecord();
   }
 
   function handleRecordChange(
@@ -302,28 +370,53 @@ export function useApplicationRegistrationWorkbench(
     }
 
     return {
-      contagiousSpecimen: { ...currentRecord.value.contagiousSpecimen },
-      gynecologyInfo: {
-        ...currentRecord.value.gynecologyInfo,
-        specialConditions: {
-          ...currentRecord.value.gynecologyInfo.specialConditions,
-        },
-      },
-      patientInfo: {
-        ...currentRecord.value.patientInfo,
-      },
+      ...buildPatientInfoSavePayload(
+        currentRecord.value,
+        selectedBuildingId.value,
+        selectedRoomId.value,
+      ),
       specimenItems: specimenItems.value.map((item) => ({
         quantity: item.quantity,
         specimenName: item.specimenName.trim(),
         specimenSite: item.specimenSite.trim(),
         status: item.status,
       })),
-      surgeryInfo: {
-        ...currentRecord.value.surgeryInfo,
-        buildingId: selectedBuildingId.value,
-        roomId: selectedRoomId.value,
-      },
     };
+  }
+
+  async function handleSavePatientInfo() {
+    if (!currentRecord.value) {
+      return null;
+    }
+
+    const payload = buildPatientInfoSavePayload(
+      currentRecord.value,
+      selectedBuildingId.value,
+      selectedRoomId.value,
+    );
+
+    savingPatientInfo.value = true;
+    pageError.value = '';
+    try {
+      const savedRecord = await saveApplicationRegistrationPatientInfo(
+        currentRecord.value.applicationId,
+        payload,
+      );
+      syncWorkbenchRecord(savedRecord);
+      await refreshRoomOptions(
+        savedRecord.surgeryInfo.buildingId ?? '',
+        savedRecord.surgeryInfo.roomId ?? '',
+      );
+      syncSelectedRoomValuesToCurrentRecord();
+      resetPatientInfoBaseline();
+      ElMessage.success('患者信息保存成功');
+      return currentRecord.value;
+    } catch (error) {
+      pageError.value = getWorkflowPageErrorMessage(error);
+      return null;
+    } finally {
+      savingPatientInfo.value = false;
+    }
   }
 
   async function handleSave() {
@@ -378,22 +471,28 @@ export function useApplicationRegistrationWorkbench(
   });
 
   return {
+    activePartId,
+    activeSystemId,
     buildingOptions,
     canRenderWorkbench,
-    commonSpecimenOptions,
     currentRecord,
+    departmentCommonSpecimenOptions,
     dictionaryGroups,
     dictionaryKeyword,
+    doctorCommonSpecimenOptions,
     emptyDescription,
     handleAddManualSpecimen,
     handleAppendPackageItems,
     handleAppendSpecimen,
     handleBuildingChange,
     handleCreatePackage,
+    handleDictionaryPartChange: handleSelectDictionaryPart,
+    handleDictionarySystemChange: handleSelectDictionarySystem,
     handleOpenPackageDialog,
     handleRecordChange,
     handleRoomChange,
     handleSave,
+    handleSavePatientInfo,
     handleSearch,
     handleSearchTypeChange,
     latestRegistrationResult,
@@ -401,9 +500,11 @@ export function useApplicationRegistrationWorkbench(
     loadingLatestRegistration,
     packageDialogVisible,
     pageError,
+    patientInfoSaveDisabled,
     roomOptions,
     saveDisabled,
     saving,
+    savingPatientInfo,
     searchKeyword,
     searchType,
     selectedBuilding,

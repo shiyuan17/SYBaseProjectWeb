@@ -173,8 +173,6 @@ export function useSpecimenLabelRetryDialog(options: {
     pageError.value = '';
     try {
       const result = await retryLabelPrint(batchNo, {
-        operatorName: retryForm.operatorName.trim(),
-        operatorUserId: retryForm.operatorUserId.trim() || null,
         printerCode: retryForm.printerCode.trim(),
         remarks: retryForm.remarks.trim() || null,
         terminalCode: retryForm.terminalCode.trim() || null,

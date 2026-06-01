@@ -26,8 +26,6 @@ export function normalizeTechnicalOperatorPayload(
   form: TechnicalOperatorFormValue,
 ) {
   return {
-    operatorName: form.operatorName.trim(),
-    operatorUserId: form.operatorUserId.trim() || null,
     remarks: form.remarks.trim() || null,
     terminalCode: form.terminalCode.trim() || null,
   };

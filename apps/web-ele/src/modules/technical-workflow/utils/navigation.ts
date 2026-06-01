@@ -97,6 +97,13 @@ export function useTechnicalWorkflowNavigation(router: Router) {
     return pushToPath(TECHNICAL_WORKFLOW_ROUTE_META.TASKS.path, query);
   }
 
+  function goToSpecimenRegistration(query?: TechnicalWorkflowDeepLinkQuery) {
+    return pushToPath(
+      TECHNICAL_WORKFLOW_ROUTE_META.SPECIMEN_REGISTRATION.path,
+      query,
+    );
+  }
+
   function goToFrozen(query?: TechnicalWorkflowDeepLinkQuery) {
     return pushToPath(TECHNICAL_WORKFLOW_ROUTE_META.FROZEN.path, query);
   }
@@ -120,6 +127,7 @@ export function useTechnicalWorkflowNavigation(router: Router) {
     goToFrozen,
     goToPath: pushToPath,
     goToRework,
+    goToSpecimenRegistration,
     goToTask,
     goToTaskType,
     goToTasks,

@@ -149,6 +149,80 @@ export interface PendingTechnicalTaskPage {
   total: number;
 }
 
+export interface PendingTechnicalSpecimenRegistrationQuery {
+  keyword?: null | string;
+  page: number;
+  size: number;
+}
+
+export interface PendingTechnicalSpecimenRegistrationItem {
+  applicationId: string;
+  applicationNo: string;
+  applicationType: null | string;
+  caseId: string;
+  checkItem: null | string;
+  inpatientNo: null | string;
+  pathologyNo: null | string;
+  patientId: null | string;
+  patientName: null | string;
+  receivedAt: null | string;
+  registeredAt: null | string;
+  registeredByName: null | string;
+  registrationStatus: null | string;
+  submittingDepartmentName: null | string;
+}
+
+export interface PendingTechnicalSpecimenRegistrationPage {
+  items: PendingTechnicalSpecimenRegistrationItem[];
+  page: number;
+  size: number;
+  total: number;
+}
+
+export interface TechnicalSpecimenRegistrationMaterial {
+  sequenceNo: number;
+  sourcePart: null | string;
+  specimenName: null | string;
+  specimenType: null | string;
+}
+
+export interface TechnicalSpecimenRegistrationCheckItem {
+  name: null | string;
+  sequenceNo: number;
+}
+
+export interface TechnicalSpecimenRegistrationDetail {
+  applicationId: string;
+  applicationNo: string;
+  applicationType: null | string;
+  caseId: string;
+  checkItems: TechnicalSpecimenRegistrationCheckItem[];
+  clinicalDiagnosis: null | string;
+  inpatientNo: null | string;
+  materials: TechnicalSpecimenRegistrationMaterial[];
+  pathologyNo: null | string;
+  patientId: null | string;
+  patientName: null | string;
+  receivedAt: null | string;
+  registeredAt: null | string;
+  registeredByName: null | string;
+  registrationRemarks: null | string;
+  registrationStatus: null | string;
+  submittingDepartmentName: null | string;
+}
+
+export interface CompleteTechnicalSpecimenRegistrationRequest {
+  remarks?: null | string;
+  terminalCode?: null | string;
+}
+
+export interface CompleteTechnicalSpecimenRegistrationResult {
+  caseId: string;
+  grossingTaskCreated: boolean;
+  pathologyNo: null | string;
+  registrationStatus: null | string;
+}
+
 export interface TechnicalTrackingSpecimenSummary {
   barcode: null | string;
   specimenId: string;
@@ -227,8 +301,6 @@ export interface TechnicalTrackingView {
 }
 
 export interface TechnicalTaskStartRequest {
-  operatorName: string;
-  operatorUserId?: null | string;
   remarks?: null | string;
   taskId: string;
   terminalCode?: null | string;
@@ -238,8 +310,6 @@ export interface TechnicalTaskAssignRequest {
   assignedToName?: null | string;
   assignedToUserId?: null | string;
   expectedCompletedAt?: null | string;
-  operatorName: string;
-  operatorUserId?: null | string;
   priority?: null | string;
   productionRemarks?: null | string;
   stationCode?: null | string;
@@ -250,8 +320,6 @@ export interface TechnicalTaskAssignRequest {
 export interface TechnicalTaskClaimRequest {
   assignedToName: string;
   assignedToUserId: string;
-  operatorName: string;
-  operatorUserId?: null | string;
   remarks?: null | string;
   stationCode?: null | string;
   stationName?: null | string;
@@ -259,15 +327,11 @@ export interface TechnicalTaskClaimRequest {
 }
 
 export interface TechnicalTaskReleaseRequest {
-  operatorName: string;
-  operatorUserId?: null | string;
   remarks?: null | string;
   terminalCode?: null | string;
 }
 
 export interface TechnicalTaskPriorityRequest {
-  operatorName: string;
-  operatorUserId?: null | string;
   priority: string;
   productionRemarks?: null | string;
   terminalCode?: null | string;
@@ -314,8 +378,6 @@ export interface GrossingSpecimenItemRequest {
 
 export interface GrossingCompleteRequest {
   caseId: string;
-  operatorName: string;
-  operatorUserId?: null | string;
   remarks?: null | string;
   specimens: GrossingSpecimenItemRequest[];
   taskId: string;
@@ -333,16 +395,12 @@ export interface CreateDehydrationBatchRequest {
   basketNo: string;
   caseId: string;
   deviceNo?: null | string;
-  operatorName: string;
-  operatorUserId?: null | string;
   remarks?: null | string;
   samplingBlockIds: string[];
   terminalCode?: null | string;
 }
 
 export interface BatchOperatorRequest {
-  operatorName: string;
-  operatorUserId?: null | string;
   remarks?: null | string;
   terminalCode?: null | string;
 }
@@ -363,8 +421,6 @@ export interface EmbeddingCompleteRequest {
   deviceCode?: null | string;
   embeddingBoxNo?: null | string;
   evaluationLevel?: null | string;
-  operatorName: string;
-  operatorUserId?: null | string;
   remarks?: null | string;
   samplingBlockId: string;
   samplingEvaluation?: null | string;
@@ -385,8 +441,6 @@ export interface EmbeddingResult {
 export interface SlicingCompleteRequest {
   deviceCode?: null | string;
   embeddingBoxId: string;
-  operatorName: string;
-  operatorUserId?: null | string;
   qualityIssue?: null | string;
   remarks?: null | string;
   slideCount: number;
@@ -404,8 +458,6 @@ export interface SlicingResult {
 }
 
 export interface SlideStainingCompleteRequest {
-  operatorName: string;
-  operatorUserId?: null | string;
   qualityIssue?: null | string;
   remarks?: null | string;
   slideId: string;
@@ -423,8 +475,6 @@ export interface SlideStainingResult {
 export interface CreateReworkOrderRequest {
   caseId: string;
   embeddingBoxId?: null | string;
-  operatorName: string;
-  operatorUserId?: null | string;
   qcType?: null | string;
   reason: string;
   remarks?: null | string;
@@ -436,8 +486,6 @@ export interface CreateReworkOrderRequest {
 }
 
 export interface ExecuteReworkOrderRequest {
-  operatorName: string;
-  operatorUserId?: null | string;
   remarks?: null | string;
   terminalCode?: null | string;
 }

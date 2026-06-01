@@ -2,6 +2,7 @@ import type { ApplicationRegistrationWorkbenchRecord } from '../types/applicatio
 import type { SpecimenManagementListItem } from '../types/specimen-workflow';
 
 import { formatDateTime, formatFixationStatus, formatNullable } from './format';
+import { resolveOperatingRoomDisplayName } from './operating-room-display';
 
 export type CachedApplicationContext = {
   patientGender: null | string;
@@ -123,6 +124,7 @@ export function buildQueueRow(
   applicationContext: CachedApplicationContext | null,
   workbenchRecord: ApplicationRegistrationWorkbenchRecord | null,
   queueContext: FixationQueueContext,
+  roomNameById: ReadonlyMap<string, string> = new Map(),
 ): FixationWorkbenchRow {
   return {
     ...row,
@@ -137,9 +139,11 @@ export function buildQueueRow(
     patientIdLabel: normalizeText(applicationContext?.patientId),
     queueAddedAt: queueContext.queueAddedAt,
     queueAddedByName: normalizeText(queueContext.queueAddedByName) || '-',
-    surgeryName:
-      normalizeText(workbenchRecord?.surgeryInfo.roomId) ||
-      normalizeText(workbenchRecord?.surgeryInfo.surgeryName),
+    surgeryName: resolveOperatingRoomDisplayName(
+      roomNameById,
+      workbenchRecord?.surgeryInfo.roomId,
+      workbenchRecord?.surgeryInfo.surgeryName,
+    ),
   };
 }
 

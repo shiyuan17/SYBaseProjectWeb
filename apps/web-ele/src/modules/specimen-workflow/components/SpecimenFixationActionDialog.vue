@@ -25,7 +25,6 @@ import {
   loadWorkflowReferenceOptionsSafely,
 } from '#/modules/system-management/api/workflow-reference-service';
 import ReferenceOptionSelect from '#/modules/system-management/components/ReferenceOptionSelect.vue';
-import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
 
 import { formatDate, formatDateTime, formatNullable } from '../utils/format';
 
@@ -110,11 +109,6 @@ watch(
   },
 );
 
-function handleOperatorChange(user: null | { id: string; name: string }) {
-  form.operatorUserId = user?.id ?? '';
-  form.operatorName = user?.name ?? '';
-}
-
 function getDialogTitle() {
   return props.action === 'start' ? '开始固定' : '完成固定';
 }
@@ -144,8 +138,6 @@ function submit() {
 
   emit('submit', {
     fixationLiquidType: form.fixationLiquidType.trim(),
-    operatorName: form.operatorName.trim(),
-    operatorUserId: form.operatorUserId.trim() || null,
     remarks: form.remarks.trim() || null,
     specimenBarcode,
     terminalCode: form.terminalCode.trim() || null,
@@ -208,12 +200,7 @@ function submit() {
           <ElForm label-width="96px">
             <div class="grid gap-4 md:grid-cols-2">
               <ElFormItem label="操作人" required>
-                <SystemUserSelect
-                  v-model="form.operatorUserId"
-                  :selected-label="form.operatorName"
-                  placeholder="请选择操作人"
-                  @change="handleOperatorChange"
-                />
+                <ElInput :model-value="form.operatorName" disabled />
               </ElFormItem>
               <ElFormItem label="固定液类型" required>
                 <ReferenceOptionSelect

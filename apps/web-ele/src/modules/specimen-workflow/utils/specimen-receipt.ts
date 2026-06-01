@@ -15,11 +15,9 @@ export type ReceiptDraftItem = SpecimenReceiptItemRequest & {
 };
 
 export type ReceiptFilters = {
-  applicationId: string;
-  dateRange: string[];
-  departmentId: string;
   page: number;
   size: number;
+  specimenNo: string;
 };
 
 export type ReceiptOperatorForm = {
@@ -117,12 +115,9 @@ export function buildPendingReceiptQuery(
   filters: ReceiptFilters,
 ): PendingSpecimenQuery {
   return {
-    applicationId: filters.applicationId.trim() || undefined,
-    dateFrom: filters.dateRange[0] || undefined,
-    dateTo: filters.dateRange[1] || undefined,
-    departmentId: filters.departmentId.trim() || undefined,
     page: filters.page,
     size: filters.size,
+    specimenNo: filters.specimenNo.trim() || undefined,
   };
 }
 
@@ -247,14 +242,10 @@ export function buildDirectReceiptSubmissionRequest(
 }
 
 export function buildApplicationFormReprintRequest(
-  operatorName: string,
-  operatorUserId: string,
   terminalCode: string,
   transportOrderId: string,
 ): ApplicationFormReprintRequest {
   return {
-    operatorName: operatorName.trim(),
-    operatorUserId: operatorUserId.trim() || null,
     remarks: `病理接收页补打印申请单，转运单：${transportOrderId}`,
     terminalCode: terminalCode.trim() || null,
   };

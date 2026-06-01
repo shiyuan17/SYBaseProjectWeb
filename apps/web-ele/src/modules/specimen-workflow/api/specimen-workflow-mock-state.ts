@@ -45,6 +45,8 @@ export type RawSpecimen = {
   receiptStatus: null | string;
   registeredAt: null | string;
   specimenConfirmedAt: null | string;
+  specimenConfirmedByName?: null | string;
+  specimenConfirmedByUserId?: null | string;
   specimenCount: null | number;
   specimenName: string;
   specimenNo: string;
@@ -67,6 +69,8 @@ export type RawTransportOrder = {
   handoverUserId: null | string;
   handoverUserName: null | string;
   id: string;
+  outboundUserId?: null | string;
+  outboundUserName?: null | string;
   printedAt: null | string;
   receiverDepartmentId: null | string;
   receiverDepartmentName: null | string;
@@ -175,6 +179,8 @@ function normalizeSeedSpecimen(
     fixationOperatorName: specimen.fixationOperatorName ?? null,
     fixationOperatorUserId: specimen.fixationOperatorUserId ?? null,
     specimenConfirmedAt,
+    specimenConfirmedByName: specimen.specimenConfirmedByName ?? null,
+    specimenConfirmedByUserId: specimen.specimenConfirmedByUserId ?? null,
     verificationCompletedAt,
     verificationStartedAt,
     verificationStatus: derivedVerificationStatus,

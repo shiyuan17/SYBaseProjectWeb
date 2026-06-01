@@ -2,6 +2,7 @@ import type {
   ApplicationRegistrationWorkbenchRecord,
   OperatingBuildingOption,
   OperatingRoomOption,
+  SaveApplicationRegistrationPatientInfoRequest,
   SaveApplicationRegistrationWorkbenchRequest,
   SpecimenDictionaryEntryOption,
   SpecimenDictionaryGroup,
@@ -19,6 +20,7 @@ import {
   listSpecimenDictionaryGroups as listSpecimenDictionaryGroupsMock,
   listSpecimenPackageOptions as listSpecimenPackageOptionsMock,
   lookupApplicationRegistrationWorkbenchRecord as lookupApplicationRegistrationWorkbenchRecordMock,
+  saveApplicationRegistrationPatientInfoMock,
   saveApplicationRegistrationWorkbenchMock,
 } from './application-registration-workbench-mock';
 
@@ -155,6 +157,26 @@ export async function saveApplicationRegistrationWorkbench(
     await requestClient.post<ApplicationRegistrationWorkbenchRecord>(
       `/v1/application-registration-workbench/${applicationId}/save`,
       payload,
+    );
+
+  return normalizeRecord(response);
+}
+
+export async function saveApplicationRegistrationPatientInfo(
+  applicationId: string,
+  payload: SaveApplicationRegistrationPatientInfoRequest,
+) {
+  if (USE_APPLICATION_REGISTRATION_WORKBENCH_MOCK) {
+    return saveApplicationRegistrationPatientInfoMock(applicationId, payload);
+  }
+
+  const response =
+    await requestClient.request<ApplicationRegistrationWorkbenchRecord>(
+      `/v1/application-registration-workbench/${applicationId}/patient-info`,
+      {
+        data: payload,
+        method: 'PATCH',
+      },
     );
 
   return normalizeRecord(response);

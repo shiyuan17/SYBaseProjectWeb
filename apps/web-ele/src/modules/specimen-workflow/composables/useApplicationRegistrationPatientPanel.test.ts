@@ -96,6 +96,7 @@ function createHarness() {
     createRecordFixture(),
   );
   const roomLabel = ref('手术室 2');
+  const savePatientInfoMock = vi.fn();
   const updateRecordMock = vi.fn(
     (nextRecord: ApplicationRegistrationWorkbenchRecord) => {
       record.value = nextRecord;
@@ -110,6 +111,7 @@ function createHarness() {
         buildingLabel,
         record,
         roomLabel,
+        savePatientInfo: savePatientInfoMock,
         updateRecord: updateRecordMock,
       });
 
@@ -120,6 +122,7 @@ function createHarness() {
   return {
     Harness,
     record,
+    savePatientInfoMock,
     updateRecordMock,
     getState: () => state,
   };
@@ -183,6 +186,36 @@ describe('useApplicationRegistrationPatientPanel', () => {
 
     await state.beginEditing(contagiousHiv);
     expect(state.editingValue.value).toBe('false');
+
+    wrapper.destroy();
+  });
+
+  it('commits the active editor before saving patient info', async () => {
+    const wrapper = mountComposable();
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    const clinicalHistory = state.sections.value
+      .find((section) => section.key === 'application')
+      ?.items.find((item) => item.key === 'clinicalHistory');
+
+    if (!clinicalHistory) {
+      throw new Error('expected clinical history item not found');
+    }
+
+    await state.beginEditing(clinicalHistory);
+    state.editingValue.value = '保存前提交的病史';
+
+    await state.savePatientInfo();
+
+    expect(wrapper.updateRecordMock).toHaveBeenCalledTimes(1);
+    expect(wrapper.record.value?.patientInfo.clinicalHistory).toBe(
+      '保存前提交的病史',
+    );
+    expect(wrapper.savePatientInfoMock).toHaveBeenCalledTimes(1);
+    expect(state.activeEditorKey.value).toBe('');
 
     wrapper.destroy();
   });

@@ -178,15 +178,23 @@ export function useSpecimenCheckInPanel() {
   function buildCheckInPayload(row: SpecimenManagementListItem) {
     return {
       operatorName: operatorForm.operatorName.trim(),
-      operatorUserId: operatorForm.operatorUserId.trim() || null,
+      operatorUserId: operatorForm.operatorUserId.trim(),
       remarks: operatorForm.remarks.trim() || null,
       specimenBarcode: row.barcode,
       terminalCode: operatorForm.terminalCode.trim() || null,
     };
   }
 
+  function handleOperatorChange(user: null | { id: string; name: string }) {
+    operatorForm.operatorUserId = user?.id ?? '';
+    operatorForm.operatorName = user?.name ?? '';
+  }
+
   async function performCheckIn(row: SpecimenManagementListItem) {
-    if (!operatorForm.operatorName.trim()) {
+    if (
+      !operatorForm.operatorName.trim() ||
+      !operatorForm.operatorUserId.trim()
+    ) {
       ElMessage.warning('缺少当前操作人信息');
       return;
     }
@@ -205,10 +213,11 @@ export function useSpecimenCheckInPanel() {
     actionLoading.value = true;
     pageError.value = '';
     try {
-      await checkInSpecimen(row.barcode, buildCheckInPayload(row));
+      const result = await checkInSpecimen(row.barcode, buildCheckInPayload(row));
       queueRow.checkInStatus = 'CHECKED_IN';
-      queueRow.checkedInAt = new Date().toISOString();
-      queueRow.checkedInByName = operatorForm.operatorName.trim();
+      queueRow.checkedInAt = result.checkedInAt ?? new Date().toISOString();
+      queueRow.checkedInByName =
+        result.checkedInByName ?? operatorForm.operatorName.trim();
       queueRow.queueStatus = 'SUCCESS';
       ElMessage.success('标本入库成功');
     } catch (error) {
@@ -283,6 +292,11 @@ export function useSpecimenCheckInPanel() {
     scanInput.value = '';
     clearQueue();
     pageError.value = '';
+    operatorForm.operatorName = userStore.userInfo?.realName ?? '';
+    operatorForm.operatorUserId = userStore.userInfo?.userId ?? '';
+    operatorForm.remarks = '';
+    operatorForm.terminalCode = '';
+    operatorForm.printerCode = '';
   }
 
   function canBatchOperate(row: CheckInQueueItem) {
@@ -340,8 +354,6 @@ export function useSpecimenCheckInPanel() {
     pageError.value = '';
     try {
       await retryLabelPrint(batchNos[0] || '', {
-        operatorName: operatorForm.operatorName.trim(),
-        operatorUserId: operatorForm.operatorUserId.trim() || null,
         printerCode: operatorForm.printerCode.trim(),
         remarks: operatorForm.remarks.trim() || null,
         terminalCode: operatorForm.terminalCode.trim() || null,
@@ -408,6 +420,7 @@ export function useSpecimenCheckInPanel() {
     handleBatchCheckIn,
     handleExport,
     handleManualCheckIn,
+    handleOperatorChange,
     handleQuickCheckIn,
     handleRemoveRow,
     handleReset,

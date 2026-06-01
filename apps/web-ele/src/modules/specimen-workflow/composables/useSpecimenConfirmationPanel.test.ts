@@ -56,6 +56,8 @@ const {
         patientName: 'Bob',
         registeredAt: '2026-05-26 08:10:00',
         specimenConfirmedAt: '2026-05-26 09:20:00',
+        specimenConfirmedByName: '实际确认人',
+        specimenConfirmedByUserId: 'USER-REAL',
         specimenId: 'SPEC-002',
         specimenName: '肺组织',
         specimenNo: 'SP-002',
@@ -244,19 +246,25 @@ describe('useSpecimenConfirmationPanel', () => {
     }
 
     expect(listSpecimensMock).toHaveBeenCalled();
+    expect(state.operatorForm.operatorName).toBe('Test User');
+    expect(state.operatorForm.operatorUserId).toBe('USER-001');
     expect(state.summary.value).toEqual({
       allCount: 2,
       confirmedCount: 1,
       pendingCount: 1,
     });
 
+    state.handleOperatorChange({
+      id: 'USER-ALT',
+      name: 'Alt User',
+    });
     state.filters.keyword = 'SP-001';
     await state.tryQuickConfirmByKeyword();
     await flushComposable();
 
     expect(confirmSpecimenMock).toHaveBeenCalledWith('BC-001', {
-      operatorName: 'Test User',
-      operatorUserId: 'USER-001',
+      operatorName: 'Alt User',
+      operatorUserId: 'USER-ALT',
       remarks: null,
       terminalCode: null,
     });
@@ -283,8 +291,6 @@ describe('useSpecimenConfirmationPanel', () => {
     await flushComposable();
 
     expect(retryLabelPrintMock).toHaveBeenCalledWith('LB-001', {
-      operatorName: 'Test User',
-      operatorUserId: 'USER-001',
       printerCode: 'PRN-01',
       remarks: null,
       terminalCode: null,

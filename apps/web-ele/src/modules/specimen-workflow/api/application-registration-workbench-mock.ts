@@ -2,6 +2,7 @@ import type {
   ApplicationRegistrationWorkbenchRecord,
   OperatingBuildingOption,
   OperatingRoomOption,
+  SaveApplicationRegistrationPatientInfoRequest,
   SaveApplicationRegistrationWorkbenchRequest,
   SpecimenDictionaryEntryOption,
   SpecimenDictionaryGroup,
@@ -499,6 +500,44 @@ export async function saveApplicationRegistrationWorkbenchMock(
       specimenSite: item.specimenSite,
       status: item.status,
     })),
+    surgeryInfo: { ...payload.surgeryInfo },
+  };
+
+  if (recordIndex === -1) {
+    workbenchRecords = [...workbenchRecords, nextRecord];
+  } else {
+    workbenchRecords[recordIndex] = nextRecord;
+  }
+
+  return cloneWorkbenchRecord(nextRecord);
+}
+
+export async function saveApplicationRegistrationPatientInfoMock(
+  applicationId: string,
+  payload: SaveApplicationRegistrationPatientInfoRequest,
+) {
+  const normalizedApplicationId = applicationId.trim();
+  const recordIndex = workbenchRecords.findIndex(
+    (item) =>
+      item.applicationId === normalizedApplicationId ||
+      item.patientInfo.applicationNo === normalizedApplicationId ||
+      item.patientInfo.inpatientNo === normalizedApplicationId,
+  );
+  const currentRecord =
+    recordIndex === -1 ? null : workbenchRecords[recordIndex];
+
+  const nextRecord: ApplicationRegistrationWorkbenchRecord = {
+    applicationId:
+      currentRecord?.applicationId ??
+      normalizedApplicationId ??
+      payload.patientInfo.applicationNo,
+    contagiousSpecimen: { ...payload.contagiousSpecimen },
+    gynecologyInfo: {
+      ...payload.gynecologyInfo,
+      specialConditions: { ...payload.gynecologyInfo.specialConditions },
+    },
+    patientInfo: { ...payload.patientInfo },
+    specimenItems: currentRecord?.specimenItems.map((item) => ({ ...item })) ?? [],
     surgeryInfo: { ...payload.surgeryInfo },
   };
 

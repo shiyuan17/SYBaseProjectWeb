@@ -251,6 +251,17 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
       routeName: 'TechnicalWorkflowRoot',
     },
     {
+      component: '/modules/technical-workflow/views/TechnicalSpecimenRegistrationView',
+      componentAliases: ['TechnicalSpecimenRegistration'],
+      menuCodes: ['M3_SPECIMEN_REGISTRATION'],
+      path: '/technical-workflow/specimen-registration',
+      pathAliases: [
+        '/technical-workflow/specimen-registration',
+        '/api/v1/technical-specimen-registrations/pending',
+      ],
+      routeName: 'TechnicalSpecimenRegistration',
+    },
+    {
       component: '/modules/technical-workflow/views/TechnicalTasksView',
       componentAliases: ['TechnicalTasks'],
       menuCodes: ['M3_TASKS'],

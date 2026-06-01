@@ -287,8 +287,6 @@ describe('useSpecimenManagementVerify', () => {
 
     expect(mockStartFixation).toHaveBeenCalledWith({
       fixationLiquidType: 'FORMALIN',
-      operatorName: '测试用户',
-      operatorUserId: 'USER-001',
       remarks: '需要立即处理',
       specimenBarcode: 'BC-001',
       terminalCode: 'TERM-01',

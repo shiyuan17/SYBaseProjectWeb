@@ -68,7 +68,6 @@ function createSpecimenItem(status: string): WorkbenchSpecimenItem {
 
 function createProps(items: WorkbenchSpecimenItem[]) {
   return {
-    commonSpecimenOptions: [] as SpecimenDictionaryEntryOption[],
     items,
     printContext: null as null | WorkbenchSpecimenPrintContext,
     roomLabel: 'A01',
@@ -155,7 +154,7 @@ describe('ApplicationRegistrationSpecimenTable', () => {
     );
     expect(table?.dataset.height).toBe('');
     expect(wrapper.container.textContent).toContain(
-      '暂无标本，请从下方字典、常用标本或套餐中快速追加',
+      '暂无标本，请从下方字典或套餐中快速追加',
     );
 
     wrapper.unmount();
@@ -164,6 +163,11 @@ describe('ApplicationRegistrationSpecimenTable', () => {
   it('shows print action text instead of preview', () => {
     const wrapper = renderComponent([createSpecimenItem('FIXED')]);
 
+    const columnLabels = [
+      ...wrapper.container.querySelectorAll<HTMLElement>('[data-column-label]'),
+    ].map((node) => node.dataset.columnLabel);
+
+    expect(columnLabels).toContain('标本ID');
     expect(wrapper.container.textContent).toContain('打印');
     expect(wrapper.container.textContent).not.toContain('预览');
 

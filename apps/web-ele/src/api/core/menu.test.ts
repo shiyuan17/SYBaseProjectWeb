@@ -268,6 +268,20 @@ describe('mapMenuViewsToRoutes', () => {
         visible: true,
       },
       {
+        componentName: 'TechnicalSpecimenRegistration',
+        enabled: true,
+        icon: 'table',
+        id: 'MENU_M3_SPECIMEN_REGISTRATION',
+        menuCode: 'M3_SPECIMEN_REGISTRATION',
+        menuName: '标本登记',
+        menuType: 'MENU',
+        parentId: 'MENU_M3_WORKFLOW',
+        path: '/api/v1/technical-specimen-registrations/pending',
+        permissionPrefix: 'm2:receipt',
+        sortOrder: 121,
+        visible: true,
+      },
+      {
         componentName: 'TechnicalTasks',
         enabled: true,
         icon: 'task',
@@ -278,7 +292,7 @@ describe('mapMenuViewsToRoutes', () => {
         parentId: 'MENU_M3_WORKFLOW',
         path: '/api/v1/technical-tasks/pending',
         permissionPrefix: 'm3:tasks',
-        sortOrder: 121,
+        sortOrder: 122,
         visible: true,
       },
       {
@@ -323,6 +337,13 @@ describe('mapMenuViewsToRoutes', () => {
             }),
             name: 'PathologyReceipt',
             path: '/workflow/pathology-receipt',
+          }),
+          expect.objectContaining({
+            meta: expect.objectContaining({
+              keepAlive: true,
+            }),
+            name: 'TechnicalSpecimenRegistration',
+            path: '/technical-workflow/specimen-registration',
           }),
           expect.objectContaining({
             meta: expect.objectContaining({

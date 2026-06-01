@@ -120,7 +120,7 @@ function syncStationName(stationCode: string) {
         />
       </ElFormItem>
       <ElFormItem label="操作人">
-        <ElInput v-model="form.operatorName" clearable />
+        <ElInput v-model="form.operatorName" disabled placeholder="当前登录人" />
       </ElFormItem>
     </ElForm>
 

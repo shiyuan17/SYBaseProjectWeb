@@ -52,6 +52,7 @@ import {
   resolveSpecimenCheckInStatus,
   resolveSpecimensBySpecimenNo,
   resolveSpecimenVerificationStatus,
+  resolveMockOperatorContext,
   updateApplicationFromSpecimens,
 } from './specimen-workflow-mock-core';
 
@@ -100,6 +101,7 @@ export async function startSpecimenVerificationMock(
   }
 
   const eventTime = createTimestamp();
+  const operator = resolveMockOperatorContext();
   specimen.verificationStatus = 'VERIFYING';
   specimen.verificationStartedAt = eventTime;
   specimen.latestTrackingAt = eventTime;
@@ -111,7 +113,7 @@ export async function startSpecimenVerificationMock(
     eventTime,
     eventType: 'VERIFYING',
     nodeCode: 'VERIFICATION',
-    operatorName: data.operatorName,
+    operatorName: operator.operatorName,
     sourceTerminal: data.terminalCode ?? null,
     specimenBarcode: specimen.barcode,
     specimenId: specimen.id,
@@ -120,8 +122,8 @@ export async function startSpecimenVerificationMock(
   appendVerificationRecord({
     applicationId: specimen.applicationId,
     barcode: specimen.barcode,
-    operatorName: data.operatorName,
-    operatorUserId: data.operatorUserId ?? null,
+    operatorName: operator.operatorName,
+    operatorUserId: operator.operatorUserId,
     remarks: data.remarks ?? '开始核对',
     result: 'SUCCESS',
     specimenId: specimen.id,
@@ -143,6 +145,7 @@ export async function completeSpecimenVerificationMock(
   }
 
   const eventTime = createTimestamp();
+  const operator = resolveMockOperatorContext();
   specimen.verificationStatus = 'VERIFIED';
   specimen.verificationStartedAt = specimen.verificationStartedAt ?? eventTime;
   specimen.verificationCompletedAt = eventTime;
@@ -155,7 +158,7 @@ export async function completeSpecimenVerificationMock(
     eventTime,
     eventType: 'VERIFIED',
     nodeCode: 'VERIFICATION',
-    operatorName: data.operatorName,
+    operatorName: operator.operatorName,
     sourceTerminal: data.terminalCode ?? null,
     specimenBarcode: specimen.barcode,
     specimenId: specimen.id,
@@ -164,8 +167,8 @@ export async function completeSpecimenVerificationMock(
   appendVerificationRecord({
     applicationId: specimen.applicationId,
     barcode: specimen.barcode,
-    operatorName: data.operatorName,
-    operatorUserId: data.operatorUserId ?? null,
+    operatorName: operator.operatorName,
+    operatorUserId: operator.operatorUserId,
     remarks: data.remarks ?? '完成核对',
     result: 'SUCCESS',
     specimenId: specimen.id,
@@ -189,6 +192,7 @@ export async function startFixationMock(
     throw new Error(`标本 ${specimen.barcode} 当前状态不允许开始固定`);
   }
   const eventTime = createTimestamp();
+  const operator = resolveMockOperatorContext();
   specimen.fixationStatus = 'FIXING';
   specimen.fixationStartedAt = eventTime;
   specimen.fixationLiquidType =
@@ -202,7 +206,7 @@ export async function startFixationMock(
     eventTime,
     eventType: 'STARTED',
     nodeCode: 'FIXATION',
-    operatorName: data.operatorName,
+    operatorName: operator.operatorName,
     sourceTerminal: data.terminalCode ?? null,
     specimenBarcode: specimen.barcode,
     specimenId: specimen.id,
@@ -211,8 +215,8 @@ export async function startFixationMock(
   appendVerificationRecord({
     applicationId: specimen.applicationId,
     barcode: specimen.barcode,
-    operatorName: data.operatorName,
-    operatorUserId: data.operatorUserId ?? null,
+    operatorName: operator.operatorName,
+    operatorUserId: operator.operatorUserId,
     remarks: data.remarks ?? '开始固定',
     result: 'SUCCESS',
     specimenId: specimen.id,
@@ -225,8 +229,8 @@ export async function startFixationMock(
     barcode: specimen.barcode,
     fixationCompletedAt: specimen.fixationCompletedAt,
     fixationLiquidType: specimen.fixationLiquidType,
-    operatorName: data.operatorName,
-    operatorUserId: data.operatorUserId ?? null,
+    operatorName: operator.operatorName,
+    operatorUserId: operator.operatorUserId,
     fixationStatus: specimen.fixationStatus ?? 'FIXING',
     specimenId: specimen.id,
   };
@@ -250,13 +254,14 @@ export async function completeFixationMock(
     throw new Error(`标本 ${specimen.barcode} 当前状态不允许完成固定`);
   }
   const eventTime = createTimestamp();
+  const operator = resolveMockOperatorContext();
   specimen.fixationStatus = 'COMPLETED';
   specimen.fixationStartedAt = specimen.fixationStartedAt ?? eventTime;
   specimen.fixationCompletedAt = eventTime;
   specimen.fixationLiquidType =
     data.fixationLiquidType ?? specimen.fixationLiquidType;
-  specimen.fixationOperatorName = data.operatorName;
-  specimen.fixationOperatorUserId = data.operatorUserId ?? null;
+  specimen.fixationOperatorName = operator.operatorName;
+  specimen.fixationOperatorUserId = operator.operatorUserId;
   specimen.specimenStatus = 'FIXED';
   specimen.latestTrackingAt = eventTime;
   appendWorkflowEvent({
@@ -266,7 +271,7 @@ export async function completeFixationMock(
     eventTime,
     eventType: 'COMPLETED',
     nodeCode: 'FIXATION',
-    operatorName: data.operatorName,
+    operatorName: operator.operatorName,
     sourceTerminal: data.terminalCode ?? null,
     specimenBarcode: specimen.barcode,
     specimenId: specimen.id,
@@ -275,8 +280,8 @@ export async function completeFixationMock(
   appendVerificationRecord({
     applicationId: specimen.applicationId,
     barcode: specimen.barcode,
-    operatorName: data.operatorName,
-    operatorUserId: data.operatorUserId ?? null,
+    operatorName: operator.operatorName,
+    operatorUserId: operator.operatorUserId,
     remarks: data.remarks ?? '固定完成',
     result: 'SUCCESS',
     specimenId: specimen.id,
@@ -618,7 +623,10 @@ export async function confirmSpecimenMock(
     throw new Error(`标本 ${specimen.barcode} 已完成确认`);
   }
   const eventTime = createTimestamp();
+  const operator = resolveMockOperatorContext(data);
   specimen.specimenConfirmedAt = eventTime;
+  specimen.specimenConfirmedByName = operator.operatorName;
+  specimen.specimenConfirmedByUserId = operator.operatorUserId;
   specimen.latestTrackingAt = eventTime;
   specimen.specimenStatus = 'VERIFIED';
   appendWorkflowEvent({
@@ -628,7 +636,7 @@ export async function confirmSpecimenMock(
     eventTime,
     eventType: 'COMPLETED',
     nodeCode: 'CONFIRMATION',
-    operatorName: data.operatorName,
+    operatorName: operator.operatorName,
     sourceTerminal: data.terminalCode ?? null,
     specimenBarcode: specimen.barcode,
     specimenId: specimen.id,
@@ -637,8 +645,8 @@ export async function confirmSpecimenMock(
   appendVerificationRecord({
     applicationId: specimen.applicationId,
     barcode: specimen.barcode,
-    operatorName: data.operatorName,
-    operatorUserId: data.operatorUserId ?? null,
+    operatorName: operator.operatorName,
+    operatorUserId: operator.operatorUserId,
     remarks: data.remarks ?? null,
     result: 'SUCCESS',
     specimenId: specimen.id,
@@ -664,9 +672,10 @@ export async function checkInSpecimenMock(
   }
 
   const eventTime = createTimestamp();
+  const operator = resolveMockOperatorContext(data);
   specimen.checkInStatus = 'CHECKED_IN';
   specimen.checkedInAt = eventTime;
-  specimen.checkedInByName = data.operatorName;
+  specimen.checkedInByName = operator.operatorName;
   specimen.latestTrackingAt = eventTime;
   specimen.specimenStatus = 'CHECKED_IN';
   appendWorkflowEvent({
@@ -676,7 +685,7 @@ export async function checkInSpecimenMock(
     eventTime,
     eventType: 'CHECKED_IN',
     nodeCode: 'CHECK_IN',
-    operatorName: data.operatorName,
+    operatorName: operator.operatorName,
     sourceTerminal: data.terminalCode ?? null,
     specimenBarcode: specimen.barcode,
     specimenId: specimen.id,
@@ -685,8 +694,8 @@ export async function checkInSpecimenMock(
   appendVerificationRecord({
     applicationId: specimen.applicationId,
     barcode: specimen.barcode,
-    operatorName: data.operatorName,
-    operatorUserId: data.operatorUserId ?? null,
+    operatorName: operator.operatorName,
+    operatorUserId: operator.operatorUserId,
     remarks: data.remarks ?? '执行标本入库',
     result: 'SUCCESS',
     specimenId: specimen.id,
@@ -726,6 +735,7 @@ export async function reprintApplicationFormMock(
 ) {
   const application = getApplicationById(applicationId);
   const eventTime = createTimestamp();
+  const operator = resolveMockOperatorContext();
   application.updatedAt = eventTime;
   const event = appendWorkflowEvent({
     applicationId: application.id,
@@ -734,7 +744,7 @@ export async function reprintApplicationFormMock(
     eventTime,
     eventType: 'PRINTED',
     nodeCode: application.currentNode,
-    operatorName: data.operatorName,
+    operatorName: operator.operatorName,
     sourceTerminal: data.terminalCode ?? null,
     specimenBarcode: null,
     specimenId: null,

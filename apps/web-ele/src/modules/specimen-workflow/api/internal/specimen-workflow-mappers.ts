@@ -146,6 +146,8 @@ export function mapPendingTransportOrderPageResponse(
     items: (response.items ?? []).map((item) => ({
       ...item,
       batchAbnormalFlag: item.batchAbnormalFlag ?? false,
+      outboundUserId: item.outboundUserId ?? null,
+      outboundUserName: item.outboundUserName ?? null,
       reminderCount: item.reminderCount ?? 0,
       unreceivedCount: item.unreceivedCount ?? 0,
     })),
@@ -171,6 +173,9 @@ export function mapSpecimenManagementListPageResponse(
       fixationStartedAt: item.fixationStartedAt ?? null,
       recentNode: item.recentNode ?? null,
       specimenConfirmedAt: item.specimenConfirmedAt ?? null,
+      specimenConfirmedByName: item.specimenConfirmedByName ?? null,
+      specimenConfirmedByUserId: item.specimenConfirmedByUserId ?? null,
+      specimenRemovalAt: item.specimenRemovalAt ?? null,
       verificationCompletedAt: item.verificationCompletedAt ?? null,
       verificationStartedAt: item.verificationStartedAt ?? null,
       verificationStatus: item.verificationStatus ?? null,

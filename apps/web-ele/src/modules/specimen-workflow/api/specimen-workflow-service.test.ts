@@ -25,6 +25,7 @@ import {
   lookupApplicationForRegistration,
   mapPendingSpecimenPageResponse,
   mapSpecimenRemovalPageResponse,
+  outboundTransportOrder,
   printTransportOrder,
   rebindSpecimenBarcode,
   receiveSpecimens,
@@ -128,8 +129,6 @@ describe('specimen-workflow-service mock flow', () => {
           specimenNameStandardized: '胃窦黏膜',
         },
       ],
-      operatorName: '登记员甲',
-      operatorUserId: 'USR-REG-01',
       printerCode: 'PRN-NEW',
       remarks: '补登记',
       terminalCode: 'TERM-NEW',
@@ -140,43 +139,35 @@ describe('specimen-workflow-service mock flow', () => {
     expect(registerResult.specimens[0]?.verificationStatus).toBe('UNVERIFIED');
 
     await startSpecimenVerification({
-      operatorName: '核对员甲',
-      operatorUserId: 'USR-VRF-01',
       specimenBarcode: barcode,
       terminalCode: 'TERM-VRF-01',
     });
 
     await completeSpecimenVerification({
-      operatorName: '核对员甲',
-      operatorUserId: 'USR-VRF-01',
       specimenBarcode: barcode,
       terminalCode: 'TERM-VRF-01',
     });
 
     await startFixation({
-      operatorName: '固定员甲',
-      operatorUserId: 'USR-FIX-01',
       specimenBarcode: barcode,
       terminalCode: 'TERM-FIX-01',
     });
 
     await completeFixation({
-      operatorName: '固定员甲',
-      operatorUserId: 'USR-FIX-01',
       specimenBarcode: barcode,
       terminalCode: 'TERM-FIX-01',
     });
 
     await confirmSpecimen(barcode, {
       operatorName: '确认员甲',
-      operatorUserId: 'USR-CFM-01',
+      operatorUserId: 'USER-CFM-01',
       remarks: '转运前确认',
       terminalCode: 'TERM-CFM-01',
     });
 
     await checkInSpecimen(barcode, {
       operatorName: '入库员甲',
-      operatorUserId: 'USR-CI-01',
+      operatorUserId: 'USER-CI-01',
       remarks: '入库完成',
       specimenBarcode: barcode,
       terminalCode: 'TERM-CI-01',
@@ -188,6 +179,14 @@ describe('specimen-workflow-service mock flow', () => {
     expect(detail.specimens[0]?.fixationStatus).toBe('COMPLETED');
     expect(detail.specimens[0]?.specimenConfirmedAt).toBeTruthy();
     expect(detail.specimens[0]?.checkInStatus).toBe('CHECKED_IN');
+
+    const confirmedList = await listSpecimens({
+      keyword: barcode,
+      page: 1,
+      size: 20,
+    });
+    expect(confirmedList.items[0]?.specimenConfirmedByName).toBe('确认员甲');
+    expect(confirmedList.items[0]?.checkedInByName).toBe('入库员甲');
 
     const order = await createTransportOrder({
       applicationId: 'APP-001',
@@ -203,8 +202,6 @@ describe('specimen-workflow-service mock flow', () => {
     expect(order.status).toBe('PENDING');
 
     const printedOrder = await printTransportOrder(order.id, {
-      operatorName: '李医生',
-      operatorUserId: 'DOC-001',
       terminalCode: 'TERM-TR-NEW',
     });
     expect(printedOrder.status).toBe('PRINTED');
@@ -215,6 +212,64 @@ describe('specimen-workflow-service mock flow', () => {
       terminalCode: 'TERM-TR-NEW',
     });
     expect(handedOrder.status).toBe('HANDED_OVER');
+    expect(handedOrder.outboundUserName).toBe('当前登录用户');
+  });
+
+  it('supports direct outbound by selected outbound operator in mock mode', async () => {
+    const registerResult = await registerSpecimens({
+      applicationId: 'APP-001',
+      items: [
+        {
+          containerCount: 1,
+          containerName: '福尔马林瓶',
+          specimenCount: 1,
+          specimenNameStandardized: '胃窦黏膜',
+        },
+      ],
+    });
+    const specimen = registerResult.specimens[0];
+    const barcode = specimen?.barcode ?? '';
+    const specimenNo = specimen?.specimenNo ?? '';
+
+    await startSpecimenVerification({ specimenBarcode: barcode });
+    await completeSpecimenVerification({ specimenBarcode: barcode });
+    await completeFixation({ specimenBarcode: barcode });
+    await confirmSpecimen(barcode, {
+      operatorName: '确认员乙',
+      operatorUserId: 'USER-CFM-02',
+    });
+    await checkInSpecimen(barcode, {
+      operatorName: '入库员乙',
+      operatorUserId: 'USER-CI-02',
+      specimenBarcode: barcode,
+    });
+
+    const order = await createTransportOrder({
+      applicationId: 'APP-001',
+      handoverDepartmentName: '外科',
+      handoverUserName: '李医生',
+      receiverDepartmentName: '病理科',
+      specimenBarcodes: [barcode],
+    });
+    await printTransportOrder(order.id, {});
+
+    const outbound = await outboundTransportOrder(order.id, {
+      outboundUserId: 'USER-OUT-01',
+      outboundUserName: '出库员甲',
+      remarks: '扫码直接出库',
+      terminalCode: 'TERM-OUT-01',
+    });
+
+    expect(outbound.status).toBe('HANDED_OVER');
+    expect(outbound.outboundUserName).toBe('出库员甲');
+    expect(outbound.handedOverAt).toBeTruthy();
+
+    const transportOrders = await listPendingTransportOrders({
+      page: 1,
+      size: 20,
+      specimenNo,
+    });
+    expect(transportOrders.items[0]?.outboundUserName).toBe('出库员甲');
   });
 
   it('enforces the new sequence gates before fixation, check-in, and transport creation', async () => {
@@ -228,43 +283,35 @@ describe('specimen-workflow-service mock flow', () => {
           specimenNameStandardized: '胃体黏膜',
         },
       ],
-      operatorName: '登记员乙',
     });
     const barcode = registerResult.specimens[0]?.barcode ?? '';
 
     await expect(
       startFixation({
-        operatorName: '固定员甲',
         specimenBarcode: barcode,
       }),
     ).rejects.toThrow('尚未完成核对');
 
     await startSpecimenVerification({
-      operatorName: '核对员甲',
       specimenBarcode: barcode,
     });
     await completeSpecimenVerification({
-      operatorName: '核对员甲',
       specimenBarcode: barcode,
     });
     await startFixation({
-      operatorName: '固定员甲',
       specimenBarcode: barcode,
     });
     await completeFixation({
-      operatorName: '固定员甲',
       specimenBarcode: barcode,
     });
 
     await expect(
       checkInSpecimen(barcode, {
-        operatorName: '入库员甲',
         specimenBarcode: barcode,
       }),
     ).rejects.toThrow('需在确认后才能入库');
 
     await confirmSpecimen(barcode, {
-      operatorName: '确认员甲',
       terminalCode: 'TERM-CFM-02',
     });
 
@@ -358,8 +405,6 @@ describe('specimen-workflow-service mock flow', () => {
 
     await expect(
       confirmSpecimen('BC-008-01', {
-        operatorName: '确认员甲',
-        operatorUserId: 'USR-CFM-02',
         remarks: '异常后尝试确认',
         terminalCode: 'TERM-CFM-02',
       }),
@@ -367,8 +412,6 @@ describe('specimen-workflow-service mock flow', () => {
 
     await expect(
       checkInSpecimen('BC-008-01', {
-        operatorName: '入库员甲',
-        operatorUserId: 'USR-CI-02',
         specimenBarcode: 'BC-008-01',
         terminalCode: 'TERM-CI-02',
       }),
@@ -398,16 +441,12 @@ describe('specimen-workflow-service mock flow', () => {
     expect(latest.labelPrintSuccess).toBe(false);
 
     const retryResult = await retryLabelPrint(latest.labelPrintBatchNo ?? '', {
-      operatorName: '打印员甲',
-      operatorUserId: 'USR-PRN-01',
       printerCode: 'PRN-007',
       terminalCode: 'TERM-PRN-01',
     });
     expect(retryResult.allSuccessful).toBe(true);
 
     const reprintEvent = await reprintApplicationForm('APP-006', {
-      operatorName: '接收员甲',
-      operatorUserId: 'USR-PA-01',
       remarks: '病理接收页补打',
       terminalCode: 'TERM-REC-01',
     });
@@ -541,8 +580,6 @@ describe('specimen-workflow-service mock flow', () => {
     const byBarcode = await confirmSpecimenRemovalByIdentifier({
       identifier: quickConfirmBarcode,
       identifierType: 'BARCODE',
-      operatorName: 'quick-user',
-      operatorUserId: 'USER-QUICK',
       remarks: '离体确认',
     });
     expect(byBarcode.barcode).toBe(quickConfirmBarcode);
@@ -557,7 +594,6 @@ describe('specimen-workflow-service mock flow', () => {
       confirmSpecimenRemovalByIdentifier({
         identifier: quickConfirmBarcode,
         identifierType: 'BARCODE',
-        operatorName: 'quick-user',
       }),
     ).rejects.toThrow('已完成离体确认');
 
@@ -575,7 +611,6 @@ describe('specimen-workflow-service mock flow', () => {
           specimenType: 'ROUTINE',
         },
       ],
-      operatorName: 'nurse-a',
       printerCode: 'P-01',
     });
     const specimenNo = registerResult.specimens[0]?.specimenNo ?? '';
@@ -583,21 +618,17 @@ describe('specimen-workflow-service mock flow', () => {
     const bySpecimenNo = await confirmSpecimenRemovalByIdentifier({
       identifier: specimenNo,
       identifierType: 'SPECIMEN_NO',
-      operatorName: 'quick-user',
-      operatorUserId: 'USER-QUICK',
     });
     expect(bySpecimenNo.barcode).toBe('BC-REMOVAL-QUICK-001');
     const directFixation = await completeFixation({
       fixationLiquidType: 'FORMALIN',
-      operatorName: 'quick-user',
-      operatorUserId: 'USER-QUICK',
       specimenBarcode: bySpecimenNo.barcode,
     });
     expect(directFixation).toMatchObject({
       barcode: bySpecimenNo.barcode,
       fixationLiquidType: 'FORMALIN',
       fixationStatus: 'COMPLETED',
-      operatorName: 'quick-user',
+      operatorName: expect.any(String),
     });
     expect(directFixation.fixationCompletedAt).toBeTruthy();
     const fixedSpecimens = await listSpecimens({
@@ -607,7 +638,7 @@ describe('specimen-workflow-service mock flow', () => {
     });
     expect(fixedSpecimens.items[0]).toMatchObject({
       fixationLiquidType: 'FORMALIN',
-      fixationOperatorName: 'quick-user',
+      fixationOperatorName: '当前登录用户',
       fixationStatus: 'COMPLETED',
       specimenStatus: 'FIXED',
     });
@@ -628,7 +659,6 @@ describe('specimen-workflow-service mock flow', () => {
           specimenType: 'ROUTINE',
         },
       ],
-      operatorName: 'nurse-a',
       printerCode: 'P-01',
     });
     const targetSpecimenNo = registerResult.specimens[0]?.specimenNo ?? '';
@@ -648,7 +678,6 @@ describe('specimen-workflow-service mock flow', () => {
           specimenType: 'ROUTINE',
         } as any,
       ],
-      operatorName: 'nurse-a',
       printerCode: 'P-01',
     });
 
@@ -656,7 +685,6 @@ describe('specimen-workflow-service mock flow', () => {
       confirmSpecimenRemovalByIdentifier({
         identifier: targetSpecimenNo,
         identifierType: 'SPECIMEN_NO',
-        operatorName: 'quick-user',
       }),
     ).rejects.toThrow('标本流水号对应多条记录，无法自动确认');
 
@@ -664,7 +692,6 @@ describe('specimen-workflow-service mock flow', () => {
       confirmSpecimenRemovalByIdentifier({
         identifier: 'NOT-FOUND',
         identifierType: 'BARCODE',
-        operatorName: 'quick-user',
       }),
     ).rejects.toThrow('未找到对应标本');
   });

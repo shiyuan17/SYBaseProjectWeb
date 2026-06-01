@@ -20,14 +20,24 @@ import {
 import ApplicationRegistrationEditableField from './ApplicationRegistrationEditableField.vue';
 import WorkflowSectionCard from './WorkflowSectionCard.vue';
 
-const props = defineProps<{
-  buildingLabel: string;
-  fullHeight?: boolean;
-  record: ApplicationRegistrationWorkbenchRecord | null;
-  roomLabel: string;
-}>();
+const props = withDefaults(
+  defineProps<{
+    buildingLabel: string;
+    fullHeight?: boolean;
+    record: ApplicationRegistrationWorkbenchRecord | null;
+    roomLabel: string;
+    saveDisabled?: boolean;
+    saving?: boolean;
+  }>(),
+  {
+    fullHeight: false,
+    saveDisabled: true,
+    saving: false,
+  },
+);
 
 const emit = defineEmits<{
+  (event: 'save-patient-info'): void;
   (event: 'update:record', value: ApplicationRegistrationWorkbenchRecord): void;
 }>();
 
@@ -38,6 +48,7 @@ const {
   editingValue,
   handleValueDoubleClick,
   printApplicationForm,
+  savePatientInfo,
   saveEditing,
   sections,
   summaryItems,
@@ -45,6 +56,7 @@ const {
   buildingLabel: toRef(props, 'buildingLabel'),
   record: toRef(props, 'record'),
   roomLabel: toRef(props, 'roomLabel'),
+  savePatientInfo: () => emit('save-patient-info'),
   updateRecord: (record) => emit('update:record', record),
 });
 </script>
@@ -60,7 +72,18 @@ const {
     title="患者信息"
   >
     <template v-if="props.record" #extra>
-      <ElButton size="small" @click="printApplicationForm">补打申请单</ElButton>
+      <div class="flex items-center gap-2">
+        <ElButton size="small" @click="printApplicationForm">补打申请单</ElButton>
+        <ElButton
+          :disabled="props.saveDisabled"
+          :loading="props.saving"
+          size="small"
+          type="primary"
+          @click="savePatientInfo"
+        >
+          保存
+        </ElButton>
+      </div>
     </template>
 
     <template v-if="props.record">

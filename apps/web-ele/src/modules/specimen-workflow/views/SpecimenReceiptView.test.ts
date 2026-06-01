@@ -1,32 +1,13 @@
-import { createApp, h, nextTick } from 'vue';
+import { createApp, h } from 'vue';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import SpecimenReceiptView from './SpecimenReceiptView.vue';
 
-const {
-  directReceiveSpecimensMock,
-  listPendingReceiptsMock,
-  messageWarningMock,
-  receiveSpecimensMock,
-  reprintApplicationFormMock,
-} = vi.hoisted(() => ({
-  directReceiveSpecimensMock: vi.fn(),
-  listPendingReceiptsMock: vi.fn(async () => ({
-    items: [],
-    page: 1,
-    size: 20,
-    total: 0,
-  })),
-  messageWarningMock: vi.fn(),
-  receiveSpecimensMock: vi.fn(),
-  reprintApplicationFormMock: vi.fn(),
-}));
-
 vi.mock('@vben/common-ui', () => ({
   Page: {
     props: ['title'],
-    template: '<section><h1 v-if="title">{{ title }}</h1><slot /></section>',
+    template: '<section><h1>{{ title }}</h1><slot /></section>',
   },
 }));
 
@@ -39,25 +20,10 @@ vi.mock('@vben/stores', () => ({
   }),
 }));
 
-vi.mock('#/modules/system-management/components/DepartmentSelect.vue', () => ({
-  default: {
-    props: ['modelValue', 'placeholder', 'selectedLabel'],
-    template: '<div />',
-  },
-}));
-
 vi.mock('#/modules/system-management/components/SystemUserSelect.vue', () => ({
   default: {
     props: ['modelValue', 'placeholder', 'selectedLabel'],
-    template: '<div />',
-  },
-}));
-
-vi.mock('../components/WorkflowSectionCard.vue', () => ({
-  default: {
-    props: ['title', 'description'],
-    template:
-      '<section><h2>{{ title }}</h2><slot name="extra" /><p v-if="description">{{ description }}</p><slot /></section>',
+    template: '<div>{{ placeholder }}</div>',
   },
 }));
 
@@ -66,15 +32,27 @@ vi.mock('element-plus', async () => {
     await vi.importActual<typeof import('element-plus')>('element-plus');
   return {
     ...actual,
-    ElMessage: { success: vi.fn(), warning: messageWarningMock },
+    ElMessage: {
+      success: vi.fn(),
+      warning: vi.fn(),
+    },
   };
 });
 
+vi.mock('../api/application-registration-workbench-service', () => ({
+  lookupApplicationRegistrationWorkbenchRecord: vi.fn(),
+}));
+
 vi.mock('../api/specimen-workflow-service', () => ({
-  directReceiveSpecimens: directReceiveSpecimensMock,
-  listPendingReceipts: listPendingReceiptsMock,
-  receiveSpecimens: receiveSpecimensMock,
-  reprintApplicationForm: reprintApplicationFormMock,
+  getApplicationDetail: vi.fn(),
+  listPendingReceipts: vi.fn(),
+  listSpecimens: vi.fn(),
+  receiveSpecimens: vi.fn(),
+  retryLabelPrint: vi.fn(),
+}));
+
+vi.mock('@vben/utils', () => ({
+  downloadFileFromBlob: vi.fn(),
 }));
 
 function mountView() {
@@ -87,7 +65,10 @@ function mountView() {
   app.directive('loading', {});
   app.mount(container);
 
-  return { app, container };
+  return {
+    app,
+    container,
+  };
 }
 
 describe('SpecimenReceiptView', () => {
@@ -96,70 +77,16 @@ describe('SpecimenReceiptView', () => {
     vi.clearAllMocks();
   });
 
-  it('does not render a page-level error alert when the initial load fails', async () => {
-    listPendingReceiptsMock.mockRejectedValueOnce(new Error('资源不存在'));
-
+  it('renders the pathology receipt workbench instead of the old transport list', () => {
     const { app, container } = mountView();
-    await nextTick();
-    await Promise.resolve();
-    await nextTick();
 
-    expect(container.textContent).not.toContain('资源不存在');
-
-    app.unmount();
-  });
-
-  it('shows a warning when application form reprint fails', async () => {
-    reprintApplicationFormMock.mockRejectedValueOnce(new Error('打印服务异常'));
-    listPendingReceiptsMock.mockResolvedValueOnce({
-      items: [
-        {
-          applicationId: 'APP-001',
-          applicationNo: 'BL-001',
-          barcode: 'BC-001',
-          checkedInAt: null,
-          checkedInByName: null,
-          checkInStatus: 'NOT_CHECKED_IN',
-          latestTrackingAt: null,
-          pathologyNo: 'PATH-001',
-          qualityCheckResult: null,
-          qualityIssueCodes: [],
-          receiptReason: null,
-          receiptRemarks: null,
-          receiptStatus: 'PENDING',
-          specimenId: 'SPEC-001',
-          specimenName: '胃组织',
-          specimenNo: 'SP-001',
-          specimenStatus: 'IN_TRANSIT',
-          transportNo: 'TO-001',
-          transportOrderId: 'TO-ID-001',
-          transportStatus: 'PENDING',
-          submittedAt: '2026-05-31T10:00:00',
-          transportBatchAbnormalFlag: false,
-        },
-      ],
-      page: 1,
-      size: 20,
-      total: 1,
-    } as any);
-
-    const { app, container } = mountView();
-    await nextTick();
-    await Promise.resolve();
-    await nextTick();
-
-    const reprintButton = [...container.querySelectorAll('button')].find(
-      (item) => item.textContent?.includes('补打申请单'),
-    );
-    expect(reprintButton).toBeTruthy();
-
-    reprintButton?.dispatchEvent(new MouseEvent('click'));
-    await Promise.resolve();
-    await nextTick();
-
-    expect(messageWarningMock).toHaveBeenCalledWith(
-      '申请单补打印失败，请稍后重试',
-    );
+    expect(container.textContent).toContain('病理接收');
+    expect(container.textContent).toContain('标本签收');
+    expect(container.textContent).toContain('选择操作人');
+    expect(container.textContent).toContain('补打标本标签');
+    expect(container.textContent).toContain('导出Excel');
+    expect(container.textContent).not.toContain('待接收转运单');
+    expect(container.textContent).not.toContain('条码直收');
 
     app.unmount();
   });

@@ -30,6 +30,7 @@ import {
   mapApplicationListItem,
   mapSpecimenManagementItem,
   mapSpecimenTrackingSummary,
+  resolveMockOperatorContext,
   resolveApplicationForLookup,
   updateApplicationFromSpecimens,
 } from './specimen-workflow-mock-core';
@@ -39,6 +40,7 @@ export async function registerSpecimensMock(
 ): Promise<SpecimenRegisterResult> {
   const application = getApplicationById(data.applicationId);
   const createdAt = createTimestamp();
+  const operator = resolveMockOperatorContext();
   const labelPrintBatchNo = `LB-${String(getMockState().registrationBatches.length + 1).padStart(3, '0')}`;
   const createdSpecimens = data.items.map((item, index) => {
     const specimenId = createNumericId(
@@ -98,7 +100,7 @@ export async function registerSpecimensMock(
       eventTime: createdAt,
       eventType: 'REGISTERED',
       nodeCode: 'SPECIMEN_COLLECTION',
-      operatorName: data.operatorName,
+      operatorName: operator.operatorName,
       sourceTerminal: data.terminalCode ?? null,
       specimenBarcode: specimen.barcode,
       specimenId: specimen.id,
@@ -115,8 +117,8 @@ export async function registerSpecimensMock(
     labelPrintSuccess: true,
     registrationSnapshot: {
       collectionScene: data.collectionScene ?? null,
-      operatorName: data.operatorName,
-      operatorUserId: data.operatorUserId ?? null,
+      operatorName: operator.operatorName,
+      operatorUserId: operator.operatorUserId,
       printerCode: data.printerCode ?? null,
       remarks: data.remarks ?? null,
       terminalCode: data.terminalCode ?? null,
@@ -147,6 +149,7 @@ export async function retryLabelPrintMock(
 
   let successCount = 0;
   const eventTime = createTimestamp();
+  const operator = resolveMockOperatorContext();
 
   batch.specimenIds.forEach((specimenId) => {
     const specimen = getMockState().specimens.find(
@@ -166,7 +169,7 @@ export async function retryLabelPrintMock(
       eventTime,
       eventType: 'RETRY',
       nodeCode: 'LABEL_PRINT',
-      operatorName: data.operatorName,
+      operatorName: operator.operatorName,
       sourceTerminal: data.terminalCode ?? null,
       specimenBarcode: specimen.barcode,
       specimenId: specimen.id,

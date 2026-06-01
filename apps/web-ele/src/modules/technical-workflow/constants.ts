@@ -3,6 +3,8 @@ import type {
   TechnicalWorkflowRouteMeta,
 } from './types/technical-workflow';
 
+import { M2_PERMISSION_CODES } from '#/modules/specimen-workflow/constants';
+
 export const M3_PERMISSION_CODES = {
   DEHYDRATION: 'PERM_M3_DEHYDRATION',
   EMBEDDING: 'PERM_M3_EMBEDDING',
@@ -25,6 +27,7 @@ export const TECHNICAL_WORKFLOW_ROUTE_META: Record<
   | 'FROZEN'
   | 'GROSSING'
   | 'REWORK'
+  | 'SPECIMEN_REGISTRATION'
   | 'SLICING'
   | 'STAINING'
   | 'TASKS'
@@ -89,6 +92,16 @@ export const TECHNICAL_WORKFLOW_ROUTE_META: Record<
     name: 'ReworkWorkstation',
     path: '/technical-workflow/rework',
     title: '返工工作站',
+  },
+  SPECIMEN_REGISTRATION: {
+    authorityCode: M2_PERMISSION_CODES.SPECIMEN_RECEIVE,
+    chain: REGULAR_CHAIN,
+    icon: 'carbon:data-table',
+    isVisibleInMenu: true,
+    key: 'SPECIMEN_REGISTRATION',
+    name: 'TechnicalSpecimenRegistration',
+    path: '/technical-workflow/specimen-registration',
+    title: '标本登记',
   },
   SLICING: {
     authorityCode: M3_PERMISSION_CODES.SLICING,

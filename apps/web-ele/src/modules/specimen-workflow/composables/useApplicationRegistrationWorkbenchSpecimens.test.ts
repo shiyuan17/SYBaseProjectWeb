@@ -195,6 +195,14 @@ describe('useApplicationRegistrationWorkbenchSpecimens', () => {
         systemId: 'S-1',
         systemName: '消化',
       },
+      {
+        partId: 'P-2',
+        partName: '肠系膜',
+        searchKeywords: ['肠系膜组织'],
+        specimenName: '肠系膜组织',
+        systemId: 'S-1',
+        systemName: '消化',
+      },
     ] satisfies SpecimenDictionaryEntryOption[]);
     mockListSpecimenDictionaryEntryOptions.mockResolvedValue([]);
     mockListSpecimenDictionaryGroups.mockResolvedValue([
@@ -245,10 +253,74 @@ describe('useApplicationRegistrationWorkbenchSpecimens', () => {
       2,
       '请先查询申请单后再选择套餐',
     );
-    expect(state.commonSpecimenOptions.value).toHaveLength(1);
+    expect(state.departmentCommonSpecimenOptions.value).toEqual([
+      expect.objectContaining({
+        partName: '胃',
+        specimenName: '胃组织',
+      }),
+    ]);
+    expect(state.doctorCommonSpecimenOptions.value).toEqual([
+      expect.objectContaining({
+        partName: '肠系膜',
+        specimenName: '肠系膜组织',
+      }),
+    ]);
     expect(state.dictionaryGroups.value[0]?.subParts[0]?.specimens).toEqual([
       '胃切缘',
     ]);
+    expect(state.activeSystemId.value).toBe('S-1');
+    expect(state.activePartId.value).toBe('P-1');
+
+    wrapper.destroy();
+  });
+
+  it('resets dictionary selection when the filtered result no longer contains the active system or part', async () => {
+    mockListSpecimenDictionaryGroups.mockImplementation(async (keyword = '') => {
+      if (keyword.trim() === '宫颈') {
+        return [
+          {
+            subParts: [
+              {
+                partId: 'P-3',
+                partName: '宫颈',
+                specimens: ['宫颈活检组织'],
+              },
+            ],
+            systemId: 'S-2',
+            systemName: '妇科',
+          },
+        ];
+      }
+
+      return [
+        {
+          subParts: [
+            {
+              partId: 'P-1',
+              partName: '胃',
+              specimens: ['胃组织', '胃切缘'],
+            },
+          ],
+          systemId: 'S-1',
+          systemName: '消化',
+        },
+      ];
+    });
+
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    state.dictionaryKeyword.value = '宫颈';
+    await flushComposable();
+
+    expect(state.activeSystemId.value).toBe('S-2');
+    expect(state.activePartId.value).toBe('P-3');
+    expect(state.dictionaryGroups.value[0]?.systemName).toBe('妇科');
 
     wrapper.destroy();
   });

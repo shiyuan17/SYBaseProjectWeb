@@ -29,11 +29,13 @@ const {
   canAccessFrozen,
   canAccessReceipt,
   canAccessRework,
+  canAccessSpecimenRegistration,
   canAccessTracking,
   canAccessWorkflowEntry,
   currentWorkingBucket,
   frozenReminder,
   loading,
+  pendingSpecimenRegistrationCount,
   pageError,
   regularBuckets,
   riskCards,
@@ -41,6 +43,9 @@ const {
 } = useTechnicalWorkflowEntry();
 
 function goToCurrentWorkflow() {
+  if (pendingSpecimenRegistrationCount.value > 0 && canAccessSpecimenRegistration.value) {
+    return navigation.goToSpecimenRegistration();
+  }
   if (!currentWorkingBucket.value) {
     return navigation.goToTasks();
   }
@@ -52,6 +57,10 @@ function goToCurrentWorkflow() {
 
 function goToTaskPool() {
   return navigation.goToTasks({ mode: 'queue' });
+}
+
+function goToSpecimenRegistration() {
+  return navigation.goToSpecimenRegistration();
 }
 
 function goToAbnormalTask(task: PendingTechnicalTaskItem) {
@@ -129,15 +138,18 @@ function goToReworkEntry() {
         :can-access-frozen="canAccessFrozen"
         :can-access-receipt="canAccessReceipt"
         :can-access-rework="canAccessRework"
+        :can-access-specimen-registration="canAccessSpecimenRegistration"
         :can-access-tracking="canAccessTracking"
         :current-working-bucket="currentWorkingBucket"
         :frozen-reminder="frozenReminder"
         :loading="loading"
+        :pending-specimen-registration-count="pendingSpecimenRegistrationCount"
         :regular-buckets="regularBuckets"
         @go-to-current-workflow="goToCurrentWorkflow"
         @go-to-frozen="navigation.goToFrozen"
         @go-to-path="navigation.goToPath"
         @go-to-rework="goToReworkEntry"
+        @go-to-specimen-registration="goToSpecimenRegistration"
         @go-to-task="goToAbnormalTask"
         @go-to-task-pool="goToTaskPool"
         @go-to-tracking="goToTrackingDetail"

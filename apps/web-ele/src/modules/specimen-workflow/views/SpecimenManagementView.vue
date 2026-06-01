@@ -5,13 +5,10 @@ import { ElAlert } from 'element-plus';
 
 import ApplicationRegistrationWorkbenchPanel from '../components/ApplicationRegistrationWorkbenchPanel.vue';
 import SpecimenManagementDetailDrawer from '../components/SpecimenManagementDetailDrawer.vue';
-import SpecimenManagementListPanel from '../components/SpecimenManagementListPanel.vue';
-import SpecimenManagementOverviewPanel from '../components/SpecimenManagementOverviewPanel.vue';
 import SpecimenManagementResultDialog from '../components/SpecimenManagementResultDialog.vue';
 import SpecimenManagementRetryDialog from '../components/SpecimenManagementRetryDialog.vue';
 import SpecimenManagementVerifyDialog from '../components/SpecimenManagementVerifyDialog.vue';
 import SpecimenRegisterDialog from '../components/SpecimenRegisterDialog.vue';
-import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { useSpecimenManagementPage } from '../composables/useSpecimenManagementPage';
 
 const props = withDefaults(
@@ -28,15 +25,11 @@ const props = withDefaults(
 );
 
 const page = useSpecimenManagementPage(props);
-
-const filters = page.filters;
 const retryForm = page.retryForm;
 const verifyForm = page.verifyForm;
 
 const {
-  abnormalFilterOptions,
   canManageSpecimens,
-  canVerifyFixation,
   currentRetryResult,
   detailApplicationDetail,
   detailDrawerVisible,
@@ -44,29 +37,13 @@ const {
   detailLoading,
   detailRow,
   goToTracking,
-  handleBulkRetry,
-  handleDepartmentChange,
-  handlePageChange,
-  handleQuickFilterChange,
   handleRegisterSuccess,
-  handleReset,
-  handleRowRetry,
-  handleSearch,
-  handleSelectionChange,
-  handleSizeChange,
   handleWorkbenchReprintApplicationForm,
   handleWorkbenchSaved,
-  items,
-  labelPrintStatusOptions,
   latestRegisterApplicationId,
   latestRegisterResult,
-  listLoading,
-  openDetailDrawer,
   openRetryDialogFromLatestResult,
-  openVerifyDialog,
   pageError,
-  quickFilter,
-  quickFilterOptions,
   registerDialogApplicationId,
   registerDialogVisible,
   resultDialogVisible,
@@ -75,12 +52,8 @@ const {
   retrySelectionCount,
   retrySourceLabel,
   retrySubmitting,
-  selectedRows,
-  specimenStatusOptions,
   submitRetry,
   submitVerify,
-  summary,
-  total,
   verifyAction,
   verifyDialogVisible,
   verifySubmitting,
@@ -111,39 +84,6 @@ const {
           :lookup-trigger-key="workbenchLookupTriggerKey"
           @reprint-application-form="handleWorkbenchReprintApplicationForm"
           @save-workbench="handleWorkbenchSaved"
-        />
-
-        <WorkflowSectionCard
-          title="工作台概览"
-          description="围绕登记、贴签、核验和异常处理组织当前工作台。"
-        >
-          <SpecimenManagementOverviewPanel :summary="summary" />
-        </WorkflowSectionCard>
-
-        <SpecimenManagementListPanel
-          v-model:filters="filters"
-          v-model:quick-filter="quickFilter"
-          :abnormal-filter-options="abnormalFilterOptions"
-          :can-verify-fixation="canVerifyFixation"
-          :items="items"
-          :label-print-status-options="labelPrintStatusOptions"
-          :list-loading="listLoading"
-          :quick-filter-options="quickFilterOptions"
-          :selected-rows-count="selectedRows.length"
-          :specimen-status-options="specimenStatusOptions"
-          :total="total"
-          @bulk-retry="handleBulkRetry"
-          @department-change="handleDepartmentChange"
-          @detail="openDetailDrawer"
-          @go-to-tracking="goToTracking"
-          @page-change="handlePageChange"
-          @quick-filter-change="handleQuickFilterChange"
-          @reset="handleReset"
-          @row-retry="handleRowRetry"
-          @search="handleSearch"
-          @selection-change="handleSelectionChange"
-          @size-change="handleSizeChange"
-          @verify="openVerifyDialog"
         />
       </template>
     </div>

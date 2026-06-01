@@ -18,6 +18,7 @@ export function useApplicationRegistrationPatientPanel(options: {
   buildingLabel: Ref<string>;
   record: Ref<ApplicationRegistrationWorkbenchRecord | null>;
   roomLabel: Ref<string>;
+  savePatientInfo: () => Promise<void> | void;
   updateRecord: (record: ApplicationRegistrationWorkbenchRecord) => void;
 }) {
   const activeEditorKey = ref('');
@@ -82,6 +83,37 @@ export function useApplicationRegistrationPatientPanel(options: {
     void beginEditing(item);
   }
 
+  function findWorkbenchItemByKey(key: string) {
+    const summaryItem = summaryItems.value.find((item) => item.key === key);
+    if (summaryItem) {
+      return summaryItem;
+    }
+
+    for (const section of sections.value) {
+      const matchedItem = section.items.find((item) => item.key === key);
+      if (matchedItem) {
+        return matchedItem;
+      }
+    }
+
+    return null;
+  }
+
+  async function savePatientInfo() {
+    if (!options.record.value) {
+      return;
+    }
+
+    if (activeEditorKey.value) {
+      const activeItem = findWorkbenchItemByKey(activeEditorKey.value);
+      if (activeItem) {
+        saveEditing(activeItem);
+      }
+    }
+
+    await options.savePatientInfo();
+  }
+
   function openPrintWindow(documentHtml: string) {
     const printWindow = window.open('', '_blank', 'width=960,height=760');
     if (!printWindow) {
@@ -120,6 +152,7 @@ export function useApplicationRegistrationPatientPanel(options: {
     editingValue,
     handleValueDoubleClick,
     printApplicationForm,
+    savePatientInfo,
     saveEditing,
     sections,
     summaryItems,

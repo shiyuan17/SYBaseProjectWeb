@@ -12,16 +12,36 @@ type WorkflowApiErrorLike = {
   };
 };
 
+function mapWorkflowEnglishErrorMessage(message: string) {
+  if (message === 'Specimen already confirmed for removal') {
+    return '该标本已完成离体确认，请勿重复操作。';
+  }
+
+  if (
+    message === 'Specimen barcode not found' ||
+    message === 'Specimen specimenNo not found'
+  ) {
+    return '未找到对应标本，请确认标本ID是否正确。';
+  }
+
+  if (message === 'Specimen number matches multiple records') {
+    return '标本ID对应多条记录，无法自动确认。';
+  }
+
+  return message;
+}
+
 export function getWorkflowPageErrorMessage(error: unknown) {
   const apiError = error as WorkflowApiErrorLike;
   const status = apiError.response?.status;
   const code = apiError.response?.data?.code || apiError.code || '';
-  const responseMessage =
+  const rawResponseMessage =
     apiError.response?.data?.error ||
     apiError.response?.data?.message ||
     apiError.error ||
     apiError.message ||
     '';
+  const responseMessage = mapWorkflowEnglishErrorMessage(rawResponseMessage);
 
   if (status === 401) {
     return '登录状态已失效，请重新登录后再继续操作。';

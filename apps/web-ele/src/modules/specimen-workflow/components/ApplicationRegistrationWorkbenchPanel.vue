@@ -43,30 +43,38 @@ const emit = defineEmits<{
 }>();
 
 const {
+  activePartId,
+  activeSystemId,
   buildingOptions,
   canRenderWorkbench,
-  commonSpecimenOptions,
   currentRecord,
+  departmentCommonSpecimenOptions,
   dictionaryGroups,
   dictionaryKeyword,
+  doctorCommonSpecimenOptions,
   emptyDescription,
   handleAddManualSpecimen,
   handleAppendPackageItems,
   handleAppendSpecimen,
   handleBuildingChange,
   handleCreatePackage,
+  handleDictionaryPartChange,
+  handleDictionarySystemChange,
   handleOpenPackageDialog,
   handleRecordChange,
   handleRoomChange,
   handleSave,
+  handleSavePatientInfo,
   handleSearch,
   handleSearchTypeChange,
   loading,
   packageDialogVisible,
   pageError,
+  patientInfoSaveDisabled,
   roomOptions,
   saveDisabled,
   saving,
+  savingPatientInfo,
   searchKeyword,
   searchType,
   selectedBuilding,
@@ -182,15 +190,17 @@ function emitReprintApplicationForm(applicationId: string) {
             :building-label="selectedBuilding?.buildingName ?? ''"
             :record="currentRecord"
             :room-label="selectedRoom?.roomName ?? ''"
+            :save-disabled="patientInfoSaveDisabled"
+            :saving="savingPatientInfo"
             class="max-h-full"
             @reprint-application-form="emitReprintApplicationForm"
+            @save-patient-info="handleSavePatientInfo"
             @update:record="handleRecordChange"
           />
         </div>
 
         <div class="flex min-h-0 flex-col gap-3 overflow-y-auto pr-1 xl:h-full">
           <ApplicationRegistrationSpecimenTable
-            :common-specimen-options="commonSpecimenOptions"
             :items="specimenItems"
             :print-context="
               currentRecord
@@ -207,16 +217,23 @@ function emitReprintApplicationForm(applicationId: string) {
             :room-label="selectedRoom?.roomName ?? ''"
             :specimen-entry-options="specimenEntryOptions"
             @add-manual="handleAddManualSpecimen"
-            @append="handleAppendSpecimen"
             @select-package="handleOpenPackageDialog"
             @update:items="specimenItems = $event"
           />
 
           <ApplicationRegistrationDictionaryPanel
+            :active-part-id="activePartId"
+            :active-system-id="activeSystemId"
+            :department-common-specimen-options="
+              departmentCommonSpecimenOptions
+            "
             :dictionary-keyword="dictionaryKeyword"
+            :doctor-common-specimen-options="doctorCommonSpecimenOptions"
             :groups="dictionaryGroups"
             class="shrink-0"
             @append="handleAppendSpecimen"
+            @select-part="handleDictionaryPartChange"
+            @select-system="handleDictionarySystemChange"
             @update:dictionary-keyword="dictionaryKeyword = $event"
           />
         </div>

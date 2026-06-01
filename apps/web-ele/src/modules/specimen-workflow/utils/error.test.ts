@@ -32,4 +32,18 @@ describe('getWorkflowPageErrorMessage', () => {
   it('falls back to error.message when present', () => {
     expect(getWorkflowPageErrorMessage(new Error('网络超时'))).toBe('网络超时');
   });
+
+  it('maps duplicate removal confirmation to a chinese message', () => {
+    expect(
+      getWorkflowPageErrorMessage(
+        new Error('Specimen already confirmed for removal'),
+      ),
+    ).toBe('该标本已完成离体确认，请勿重复操作。');
+  });
+
+  it('maps specimen not found messages to a chinese prompt', () => {
+    expect(
+      getWorkflowPageErrorMessage(new Error('Specimen specimenNo not found')),
+    ).toBe('未找到对应标本，请确认标本ID是否正确。');
+  });
 });

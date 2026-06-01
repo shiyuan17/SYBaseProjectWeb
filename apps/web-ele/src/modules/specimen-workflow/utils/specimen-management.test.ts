@@ -133,15 +133,11 @@ describe('specimen management helpers', () => {
 
     expect(
       buildRetryLabelPrintRequest({
-        operatorName: ' Alice ',
-        operatorUserId: ' ',
         printerCode: ' PR-1 ',
         remarks: ' Retry ',
         terminalCode: ' TERM-1 ',
       }),
     ).toEqual({
-      operatorName: 'Alice',
-      operatorUserId: null,
       printerCode: 'PR-1',
       remarks: 'Retry',
       terminalCode: 'TERM-1',
@@ -150,16 +146,12 @@ describe('specimen management helpers', () => {
     expect(
       buildSpecimenVerificationRequest({
         fixationLiquidType: ' 10% formalin ',
-        operatorName: ' Alice ',
-        operatorUserId: ' USER-1 ',
         remarks: ' Verify ',
         specimenBarcode: ' BC-1 ',
         terminalCode: ' TERM-1 ',
       }),
     ).toEqual({
       fixationLiquidType: '10% formalin',
-      operatorName: 'Alice',
-      operatorUserId: 'USER-1',
       remarks: 'Verify',
       specimenBarcode: 'BC-1',
       terminalCode: 'TERM-1',

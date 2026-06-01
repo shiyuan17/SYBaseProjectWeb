@@ -195,8 +195,6 @@ describe('useSpecimenManagementRetry', () => {
     await state.submitRetry();
 
     expect(mockRetryLabelPrint).toHaveBeenCalledWith('BATCH-001', {
-      operatorName: '测试用户',
-      operatorUserId: 'USER-001',
       printerCode: 'PRINTER-1',
       remarks: null,
       terminalCode: null,

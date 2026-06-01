@@ -195,6 +195,12 @@ describe('ApplicationManageDialog', () => {
     expect(root.textContent).not.toContain('送检医生');
     expect(root.textContent).not.toContain('送检部位');
     expect(root.textContent).not.toContain('离体时间');
+    expect(
+      root.querySelector('input[placeholder="请选择申请日期"]'),
+    ).not.toBeNull();
+    expect(
+      root.querySelector('input[placeholder="请选择送检日期"]'),
+    ).not.toBeNull();
 
     const saveButton = [...root.querySelectorAll('button')].find(
       (button) => button.textContent?.trim() === '保存',

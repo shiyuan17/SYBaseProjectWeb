@@ -4,7 +4,7 @@ import type {
   RouteLocationNormalizedLoadedGeneric,
 } from 'vue-router';
 
-import { computed } from 'vue';
+import { computed, unref } from 'vue';
 
 import { preferences, usePreferences } from '@vben/preferences';
 
@@ -67,7 +67,7 @@ export function useLayoutHook() {
    * 获取路由过渡动画
    * @param _route
    */
-  function getTransitionName(_route: RouteLocationNormalizedLoaded) {
+  function getTransitionName(route: RouteLocationNormalizedLoaded) {
     // 如果偏好设置未设置，则不使用动画
     const { tabbar, transition } = preferences;
     const transitionName = transition.name;
@@ -76,18 +76,15 @@ export function useLayoutHook() {
     }
 
     // 标签页未启用或者未开启缓存，则使用全局配置动画
-    if (!tabbar.enable || !keepAlive) {
+    if (!tabbar.enable || !unref(keepAlive)) {
       return transitionName;
     }
 
-    // 如果页面已经加载过，则不使用动画
-    // if (route.meta.loaded) {
-    //   return;
-    // }
     // 已经打开且已经加载过的页面不使用动画
-    // const inTabs = getCachedTabs.value.includes(route.name as string);
+    if (route.meta.loaded) {
+      return;
+    }
 
-    // return inTabs && route.meta.loaded ? undefined : transitionName;
     return transitionName;
   }
 
