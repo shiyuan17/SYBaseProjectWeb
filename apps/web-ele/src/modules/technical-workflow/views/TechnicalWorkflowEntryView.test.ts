@@ -224,6 +224,7 @@ describe('TechnicalWorkflowEntryView', () => {
     const { app, root } = mountView();
     await flushView();
 
+    expect(document.body.textContent).toContain('制片生产入口');
     expect(document.body.textContent).toContain('模块概览');
     expect(document.body.textContent).toContain('核心功能地图');
     expect(document.body.textContent).toContain('典型工作流程');
@@ -297,6 +298,18 @@ describe('TechnicalWorkflowEntryView', () => {
       path: '/technical-workflow/specimen-registration',
       query: undefined,
     });
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('renders the page title block text', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    expect(document.body.textContent).toContain(
+      '围绕常规制片主链、冰冻工作台和异常闭环组织入口，让 M3 从任务调度到返工追踪保持连续。',
+    );
 
     app.unmount();
     root.remove();

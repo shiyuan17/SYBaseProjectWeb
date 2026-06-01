@@ -11,7 +11,6 @@ import { computed, reactive, ref, watch } from 'vue';
 import { useUserStore } from '@vben/stores';
 
 import {
-  ElAlert,
   ElButton,
   ElDescriptions,
   ElDescriptionsItem,
@@ -28,6 +27,8 @@ import {
   createDehydrationBatch,
   getTechnicalTracking,
 } from '../api/technical-workflow-service';
+import { reportInlineErrorDisabled } from '#/utils/error-feedback';
+
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import {
   formatCaseStatus,
@@ -124,6 +125,7 @@ async function loadTracking() {
     }
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
   } finally {
     trackingLoading.value = false;
   }
@@ -164,6 +166,7 @@ async function submitCreateBatch() {
     dialogVisible.value = false;
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
   } finally {
     submitting.value = false;
   }
@@ -193,13 +196,6 @@ watch(
     @closed="resetDialogState"
   >
     <div class="flex flex-col gap-4">
-      <ElAlert
-        v-if="pageError"
-        :closable="false"
-        :title="pageError"
-        type="error"
-        show-icon
-      />
 
       <ElDescriptions :column="3" border>
         <ElDescriptionsItem label="任务号">

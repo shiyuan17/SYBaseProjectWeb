@@ -2,42 +2,40 @@
 import type {
   DehydrationBatchResult,
   PendingTechnicalTaskItem,
-  TechnicalTrackingView as TechnicalTrackingViewModel,
 } from '../types/technical-workflow';
 
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
 
 import {
-  ElAlert,
+  ElBadge,
   ElButton,
   ElForm,
   ElFormItem,
   ElInput,
   ElMessage,
   ElPagination,
+  ElTable,
+  ElTableColumn,
+  ElTag,
 } from 'element-plus';
 
-import {
-  getTechnicalTracking,
-  listPendingTechnicalTasks,
-} from '../api/technical-workflow-service';
+import { listPendingTechnicalTasks } from '../api/technical-workflow-service';
 import DehydrationBatchOperationDialog from '../components/DehydrationBatchOperationDialog.vue';
 import DehydrationCreateBatchDialog from '../components/DehydrationCreateBatchDialog.vue';
-import TechnicalCaseContextPanel from '../components/TechnicalCaseContextPanel.vue';
-import TechnicalTaskQueuePanel from '../components/TechnicalTaskQueuePanel.vue';
-import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
-import WorkstationTaskFocusPanel from '../components/WorkstationTaskFocusPanel.vue';
 import { DEFAULT_PAGE_SIZE } from '../constants';
-import { getWorkflowPageErrorMessage } from '../utils/error';
-import { formatBatchStatus } from '../utils/format';
-import { useTechnicalWorkflowNavigation } from '../utils/navigation';
 import {
-  buildWorkstationCaseContext,
-  buildWorkstationQueueItems,
-} from '../utils/workstation';
+  buildDehydrationWorkbenchStats,
+  getDehydrationTaskOperator,
+  getDehydrationTaskRemark,
+} from '../utils/dehydration-workbench';
+import { reportInlineErrorDisabled } from '#/utils/error-feedback';
+
+import { getWorkflowPageErrorMessage } from '../utils/error';
+import { formatBatchStatus, formatDateTime, formatTaskStatus } from '../utils/format';
+import { useTechnicalWorkflowNavigation } from '../utils/navigation';
 
 const route = useRoute();
 const router = useRouter();
@@ -45,16 +43,13 @@ const navigation = useTechnicalWorkflowNavigation(router);
 
 const pageError = ref('');
 const loading = ref(false);
-const trackingLoading = ref(false);
 const pendingItems = ref<PendingTechnicalTaskItem[]>([]);
-const selectedTask = ref<null | PendingTechnicalTaskItem>(null);
 const total = ref(0);
+const selectedTaskId = ref('');
 const createDialogVisible = ref(false);
 const batchDialogVisible = ref(false);
 const initialBatchId = ref('');
-const trackingResult = ref<null | TechnicalTrackingViewModel>(null);
 const latestBatchResult = ref<DehydrationBatchResult | null>(null);
-const pendingAutoCreateTaskId = ref('');
 
 const filters = reactive({
   page: 1,
@@ -72,42 +67,34 @@ const currentQuery = computed(() => ({
   timedOutOnly: filters.timedOutOnly,
 }));
 
-const queueItems = computed(() =>
-  buildWorkstationQueueItems(pendingItems.value, 'DEHYDRATION'),
+const selectedTask = computed(
+  () =>
+    pendingItems.value.find((item) => item.id === selectedTaskId.value) ?? null,
 );
-const caseContext = computed(() =>
-  trackingResult.value
-    ? buildWorkstationCaseContext(trackingResult.value, 'DEHYDRATION')
-    : null,
+const stats = computed(() => buildDehydrationWorkbenchStats(pendingItems.value));
+const timedOutCount = computed(
+  () => pendingItems.value.filter((item) => item.timedOut).length,
 );
 
-async function loadTrackingForTask(task: null | PendingTechnicalTaskItem) {
-  if (!task?.caseId) {
-    trackingResult.value = null;
-    return;
+function getStatusTagType(task: PendingTechnicalTaskItem) {
+  if (task.timedOut) {
+    return 'danger';
   }
-  trackingLoading.value = true;
-  try {
-    trackingResult.value = await getTechnicalTracking(task.caseId);
-  } catch (error) {
-    trackingResult.value = null;
-    pageError.value = getWorkflowPageErrorMessage(error);
-  } finally {
-    trackingLoading.value = false;
+  if (task.taskStatus === 'IN_PROGRESS') {
+    return 'warning';
   }
+  if (task.taskStatus === 'COMPLETED') {
+    return 'success';
+  }
+  return 'info';
 }
 
-function selectTask(taskId: string, openCreate = false) {
-  const matchedTask =
-    pendingItems.value.find((item) => item.id === taskId) ?? null;
-  if (!matchedTask) {
-    return;
-  }
-  selectedTask.value = matchedTask;
-  if (openCreate) {
-    pendingAutoCreateTaskId.value = matchedTask.id;
-    createDialogVisible.value = true;
-  }
+function syncSelectedTask(preferredTaskId?: string) {
+  const nextTaskId =
+    preferredTaskId && pendingItems.value.some((item) => item.id === preferredTaskId)
+      ? preferredTaskId
+      : pendingItems.value[0]?.id || '';
+  selectedTaskId.value = nextTaskId;
 }
 
 async function loadPendingData() {
@@ -120,46 +107,83 @@ async function loadPendingData() {
 
     const deepLinkedTaskId =
       typeof route.query.taskId === 'string' ? route.query.taskId : '';
-    const preferredTaskId =
-      pendingAutoCreateTaskId.value ||
-      deepLinkedTaskId ||
-      selectedTask.value?.id ||
-      result.items[0]?.id;
-    if (preferredTaskId) {
-      selectTask(
-        preferredTaskId,
-        Boolean(pendingAutoCreateTaskId.value || deepLinkedTaskId),
-      );
-    } else {
-      selectedTask.value = null;
-    }
+    syncSelectedTask(deepLinkedTaskId || selectedTaskId.value || result.items[0]?.id);
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
   } finally {
     loading.value = false;
   }
 }
 
-function openCreateDialog() {
-  if (!selectedTask.value) {
-    ElMessage.warning('请先从左侧队列选择任务');
-    return;
+function handleSelectionChange(rows: PendingTechnicalTaskItem[]) {
+  if (rows.length > 0) {
+    selectedTaskId.value = rows.at(-1)?.id ?? selectedTaskId.value;
   }
-  selectTask(selectedTask.value.id, true);
 }
 
-function openBatchOperationDialog(batchId = initialBatchId.value) {
-  initialBatchId.value = batchId;
+function handleCurrentChange(task: null | PendingTechnicalTaskItem) {
+  if (task?.id) {
+    selectedTaskId.value = task.id;
+  }
+}
+
+function handleSearch() {
+  filters.page = 1;
+  void loadPendingData();
+}
+
+function toggleTimedOutOnly() {
+  filters.timedOutOnly = !filters.timedOutOnly;
+  filters.page = 1;
+  void loadPendingData();
+}
+
+function ensureSelectedTask(actionLabel: string) {
+  if (selectedTask.value) {
+    return selectedTask.value;
+  }
+  ElMessage.warning(`请先选择需要${actionLabel}的蜡块任务`);
+  return null;
+}
+
+function openCreateDialog(task = selectedTask.value) {
+  const nextTask = task ?? ensureSelectedTask('创建批次');
+  if (!nextTask) {
+    return;
+  }
+  selectedTaskId.value = nextTask.id;
+  createDialogVisible.value = true;
+}
+
+function openBatchOperationDialog(task = selectedTask.value) {
+  const nextTask = task ?? ensureSelectedTask('执行脱水');
+  if (!nextTask) {
+    return;
+  }
+  selectedTaskId.value = nextTask.id;
   batchDialogVisible.value = true;
+}
+
+function openTracking(task = selectedTask.value) {
+  const nextTask = task ?? ensureSelectedTask('查看轨迹');
+  if (!nextTask) {
+    return;
+  }
+  void navigation.goToTracking({
+    caseId: nextTask.caseId,
+    objectId: nextTask.objectId ?? undefined,
+    objectType: nextTask.objectType ?? undefined,
+    pathologyNo: nextTask.pathologyNo ?? undefined,
+    taskId: nextTask.id,
+  });
 }
 
 async function handleBatchCreated(result: DehydrationBatchResult) {
   createDialogVisible.value = false;
   latestBatchResult.value = result;
   initialBatchId.value = result.batchId;
-  pendingAutoCreateTaskId.value = '';
   await loadPendingData();
-  batchDialogVisible.value = true;
 }
 
 async function handleBatchOperationSubmitted(result: DehydrationBatchResult) {
@@ -169,111 +193,176 @@ async function handleBatchOperationSubmitted(result: DehydrationBatchResult) {
   await loadPendingData();
 }
 
-watch(selectedTask, (task) => {
-  void loadTrackingForTask(task);
-});
-
 void loadPendingData();
 </script>
 
 <template>
-  <Page
-    title="脱水工作站"
-    description="把待脱水对象、当前批次操作和病例概览放回同一屏里，减少对象维度与批次维度来回切换。"
-  >
+  <Page>
     <div class="flex flex-col gap-4">
-      <ElAlert
-        v-if="pageError"
-        :closable="false"
-        :title="pageError"
-        type="error"
-        show-icon
-      />
 
-      <div class="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)_360px]">
-        <TechnicalTaskQueuePanel
-          :items="queueItems"
-          :loading="loading"
-          :selected-task-id="selectedTask?.id ?? ''"
-          title="待脱水任务"
-          description="默认按异常、待处理和病例维度排序，优先让同一病例蜡块批量入筐。"
-          @select="selectTask"
-        >
-          <template #filters>
-            <ElForm label-width="56px">
-              <ElFormItem label="病理号">
-                <ElInput
-                  v-model="filters.pathologyNo"
-                  clearable
-                  placeholder="病理号 / 蜡块号"
-                  @keyup.enter="loadPendingData"
-                />
-              </ElFormItem>
-            </ElForm>
-          </template>
-          <template #extra>
-            <ElButton
-              :type="filters.timedOutOnly ? 'danger' : 'default'"
-              @click="
-                filters.timedOutOnly = !filters.timedOutOnly;
-                loadPendingData();
-              "
-            >
-              {{ filters.timedOutOnly ? '仅异常' : '全部任务' }}
+      <section class="rounded-lg border border-border bg-card">
+        <div class="flex flex-col gap-3 border-b border-border px-4 py-3">
+          <div class="flex flex-wrap items-center gap-2">
+            <ElButton size="small" type="primary" @click="openCreateDialog()">
+              执行脱水
             </ElButton>
-          </template>
-        </TechnicalTaskQueuePanel>
+            <ElButton size="small" @click="openBatchOperationDialog()">
+              开始脱水
+            </ElButton>
+            <ElButton size="small" @click="openBatchOperationDialog()">
+              脱水完成
+            </ElButton>
+            <ElButton size="small" @click="openTracking()">脱水追踪</ElButton>
 
-        <WorkflowSectionCard
-          title="当前批次操作区"
-          description="当前先保留稳定弹窗能力，但入口统一收敛到批次工作站中区。"
-        >
-          <WorkstationTaskFocusPanel
-            action-title="创建脱水批次、对象入筐并完成批次"
-            :next-flow-label="caseContext?.nextFlowLabel"
-            object-title="脱水批次 + 脱水筐 + 待处理取材块"
-            reminder-title="批次状态、对象数量和异常登记"
-            :task="selectedTask"
-          >
-            <div class="mt-4 flex flex-wrap gap-3">
-              <ElButton type="primary" @click="openCreateDialog">
-                创建当前批次
+            <div class="ml-auto flex flex-wrap items-center gap-2">
+              <ElForm inline @submit.prevent>
+                <ElFormItem class="mb-0" label="病理号">
+                  <ElInput
+                    v-model="filters.pathologyNo"
+                    clearable
+                    placeholder="请输入病理号"
+                    @keyup.enter="handleSearch"
+                  />
+                </ElFormItem>
+              </ElForm>
+              <ElButton size="small" type="primary" @click="handleSearch">
+                查询
               </ElButton>
-              <ElButton @click="openBatchOperationDialog()">
-                开始 / 完成批次
-              </ElButton>
-              <ElButton
-                @click="
-                  navigation.goToTracking({
-                    caseId: selectedTask?.caseId ?? undefined,
-                  })
-                "
-              >
-                查看生产轨迹
-              </ElButton>
+              <ElBadge :value="timedOutCount" :hidden="timedOutCount === 0">
+                <ElButton
+                  :type="filters.timedOutOnly ? 'danger' : 'default'"
+                  size="small"
+                  @click="toggleTimedOutOnly"
+                >
+                  {{ filters.timedOutOnly ? '仅异常任务' : '异常任务' }}
+                </ElButton>
+              </ElBadge>
             </div>
+          </div>
 
-            <ElAlert
-              v-if="latestBatchResult"
-              class="mt-4"
-              :closable="false"
-              :title="`当前批次：${latestBatchResult.batchNo} / ${formatBatchStatus(latestBatchResult.batchStatus)}`"
-              type="success"
-              show-icon
+          <div class="flex flex-wrap items-center gap-5 text-sm">
+            <div
+              v-for="item in stats"
+              :key="item.label"
+              class="flex items-baseline gap-1 text-foreground"
             >
-              <template #default>
-                本批次已关联
-                {{ latestBatchResult.taskCount }}
-                个对象，可继续开始脱水或在完成后补充附件占位。
-              </template>
-            </ElAlert>
+              <span class="text-muted-foreground">{{ item.label }}</span>
+              <span
+                :class="{
+                  'text-danger': item.tone === 'danger',
+                  'text-primary': item.tone === 'info',
+                  'text-success': item.tone === 'success',
+                  'text-warning': item.tone === 'warning',
+                }"
+                class="text-3xl font-semibold leading-none"
+              >
+                {{ item.value }}
+              </span>
+            </div>
 
             <div
-              class="mt-4 rounded-lg border border-dashed border-border px-4 py-3 text-sm text-muted-foreground"
+              v-if="selectedTask"
+              class="ml-auto text-sm text-muted-foreground"
             >
-              一期先把“待脱水对象”与“当前批次”放回同一视图，后续可继续补扫码连续入筐、同病例一键全选和真实批次看板。
+              当前选择：
+              {{ selectedTask.pathologyNo || '-' }} /
+              {{ selectedTask.samplingBlockCode || selectedTask.objectId || '-' }}
             </div>
-          </WorkstationTaskFocusPanel>
+          </div>
+        </div>
+
+        <ElAlert
+          v-if="latestBatchResult"
+          class="mx-4 mt-4"
+          :closable="false"
+          :title="`当前批次：${latestBatchResult.batchNo}`"
+          type="success"
+          show-icon
+        >
+          <template #default>
+            状态：{{ formatBatchStatus(latestBatchResult.batchStatus) }}，已关联
+            {{ latestBatchResult.taskCount }} 个蜡块任务。
+          </template>
+        </ElAlert>
+
+        <div class="px-4 pb-4 pt-4">
+          <ElTable
+            v-loading="loading"
+            :data="pendingItems"
+            border
+            current-row-key="id"
+            highlight-current-row
+            row-key="id"
+            @current-change="handleCurrentChange"
+            @selection-change="handleSelectionChange"
+          >
+            <ElTableColumn type="selection" width="44" />
+            <ElTableColumn label="序" width="60">
+              <template #default="{ $index }">
+                {{ (filters.page - 1) * filters.size + $index + 1 }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="病理号" min-width="140">
+              <template #default="{ row }">
+                {{ row.pathologyNo || '-' }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="蜡块号" min-width="120">
+              <template #default="{ row }">
+                {{ row.samplingBlockCode || row.objectId || '-' }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="蜡块名称" min-width="180">
+              <template #default="{ row }">
+                {{ row.samplingBlockDescription || '-' }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="备注" min-width="180">
+              <template #default="{ row }">
+                {{ getDehydrationTaskRemark(row) || '-' }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="取材操作" min-width="120">
+              <template #default="{ row }">
+                {{ row.sampledByName || '-' }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="取材时间" min-width="180">
+              <template #default="{ row }">
+                {{ formatDateTime(row.sampledAt) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="操作人" min-width="120">
+              <template #default="{ row }">
+                {{ getDehydrationTaskOperator(row) || '-' }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="脱水完成时间" min-width="180">
+              <template #default="{ row }">
+                {{ formatDateTime(row.completedAt) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="状态" min-width="110">
+              <template #default="{ row }">
+                <ElTag :type="getStatusTagType(row)">
+                  {{ formatTaskStatus(row.taskStatus) }}
+                </ElTag>
+              </template>
+            </ElTableColumn>
+            <ElTableColumn fixed="right" label="操作" min-width="190">
+              <template #default="{ row }">
+                <div class="flex flex-wrap gap-2">
+                  <ElButton link type="primary" @click="openCreateDialog(row)">
+                    创建批次
+                  </ElButton>
+                  <ElButton link type="success" @click="openBatchOperationDialog(row)">
+                    批次操作
+                  </ElButton>
+                  <ElButton link @click="openTracking(row)">轨迹</ElButton>
+                </div>
+              </template>
+            </ElTableColumn>
+          </ElTable>
 
           <div class="mt-4 flex justify-end">
             <ElPagination
@@ -286,13 +375,8 @@ void loadPendingData();
               @change="loadPendingData"
             />
           </div>
-        </WorkflowSectionCard>
-
-        <TechnicalCaseContextPanel
-          :context="caseContext"
-          :loading="trackingLoading"
-        />
-      </div>
+        </div>
+      </section>
     </div>
 
     <DehydrationCreateBatchDialog

@@ -1,7 +1,11 @@
 import type { TechnicalTrackingView } from '../types/technical-workflow';
 
 import { computed, ref, watch } from 'vue';
+
+import { ElMessage } from 'element-plus';
 import { useRoute } from 'vue-router';
+
+import { reportInlineErrorDisabled } from '#/utils/error-feedback';
 
 import { getTechnicalTracking } from '../api/technical-workflow-service';
 import { getWorkflowPageErrorMessage } from '../utils/error';
@@ -86,6 +90,7 @@ export function useTechnicalTracking() {
     if (!normalizedCaseId) {
       pageError.value = '请输入病例ID、病理号或对象ID';
       trackingResult.value = null;
+      ElMessage.warning(pageError.value);
       return;
     }
 
@@ -109,6 +114,7 @@ export function useTechnicalTracking() {
     } catch (error) {
       trackingResult.value = null;
       pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
     } finally {
       loading.value = false;
     }

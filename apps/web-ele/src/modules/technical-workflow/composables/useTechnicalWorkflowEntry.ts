@@ -5,6 +5,8 @@ import { computed, onMounted, ref } from 'vue';
 
 import { useAccessStore } from '@vben/stores';
 
+import { reportInlineErrorDisabled } from '#/utils/error-feedback';
+
 import { M2_PERMISSION_CODES } from '#/modules/specimen-workflow/constants';
 
 import {
@@ -182,6 +184,7 @@ export function useTechnicalWorkflowEntry() {
       pendingSpecimenRegistrationCount.value = registrationResult.total;
     } catch (error) {
       pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
     } finally {
       loading.value = false;
     }

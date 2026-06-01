@@ -10,7 +10,6 @@ import { useRoute, useRouter } from 'vue-router';
 import { Page } from '@vben/common-ui';
 
 import {
-  ElAlert,
   ElButton,
   ElForm,
   ElFormItem,
@@ -31,6 +30,8 @@ import TechnicalTaskStartDialog from '../components/TechnicalTaskStartDialog.vue
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import WorkstationTaskFocusPanel from '../components/WorkstationTaskFocusPanel.vue';
 import { DEFAULT_PAGE_SIZE } from '../constants';
+import { reportInlineErrorDisabled } from '#/utils/error-feedback';
+
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import { useTechnicalWorkflowNavigation } from '../utils/navigation';
 import {
@@ -97,6 +98,7 @@ async function loadTrackingForTask(task: null | PendingTechnicalTaskItem) {
   } catch (error) {
     trackingResult.value = null;
     pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
   } finally {
     trackingLoading.value = false;
   }
@@ -148,6 +150,7 @@ async function loadPendingData() {
     }
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
   } finally {
     loading.value = false;
   }
@@ -183,18 +186,8 @@ void loadPendingData();
 </script>
 
 <template>
-  <Page
-    title="染色出片"
-    description="让玻片信息、异常提醒和染色处理入口同屏停留，减少技师在任务池与追踪页之间来回切换。"
-  >
+  <Page>
     <div class="flex flex-col gap-4">
-      <ElAlert
-        v-if="pageError"
-        :closable="false"
-        :title="pageError"
-        type="error"
-        show-icon
-      />
 
       <div class="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)_360px]">
         <TechnicalTaskQueuePanel

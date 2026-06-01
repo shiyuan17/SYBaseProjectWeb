@@ -10,7 +10,6 @@ import { computed, reactive, ref, watch } from 'vue';
 import { useUserStore } from '@vben/stores';
 
 import {
-  ElAlert,
   ElButton,
   ElDialog,
   ElForm,
@@ -23,6 +22,8 @@ import {
   completeDehydrationBatch,
   startDehydrationBatch,
 } from '../api/technical-workflow-service';
+import { reportInlineErrorDisabled } from '#/utils/error-feedback';
+
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import { formatBatchStatus } from '../utils/format';
 import {
@@ -116,6 +117,7 @@ async function submitStartBatch() {
     emit('submitted', lastBatchResult.value);
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
   } finally {
     submitting.value = false;
   }
@@ -152,6 +154,7 @@ async function submitCompleteBatch() {
     dialogVisible.value = false;
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
   } finally {
     submitting.value = false;
   }
@@ -177,13 +180,6 @@ watch(
     @closed="resetDialogState"
   >
     <div class="flex flex-col gap-4">
-      <ElAlert
-        v-if="pageError"
-        :closable="false"
-        :title="pageError"
-        type="error"
-        show-icon
-      />
 
       <ElForm label-width="96px">
         <TechnicalOperatorFields

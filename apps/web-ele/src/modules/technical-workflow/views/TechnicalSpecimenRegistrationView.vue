@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type {
   PendingTechnicalSpecimenRegistrationItem,
-  TechnicalSpecimenRegistrationDetail,
+  SaveTechnicalSpecimenRegistrationMaterialItem,
+  TechnicalSpecimenRegistrationWorkspace,
 } from '../types/technical-workflow';
 
 import { computed, onMounted, reactive, ref } from 'vue';
@@ -9,22 +10,21 @@ import { useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
 
-import {
-  ElAlert,
-  ElButton,
-  ElEmpty,
-  ElInput,
-  ElMessage,
-  ElPagination,
-  ElTable,
-  ElTableColumn,
-} from 'element-plus';
+import { ElMessage } from 'element-plus';
+
+import { reportInlineErrorDisabled } from '#/utils/error-feedback';
 
 import {
   completeTechnicalSpecimenRegistration,
-  getTechnicalSpecimenRegistrationDetail,
+  deleteTechnicalSpecimenRegistrationMediaAsset,
+  getTechnicalSpecimenRegistrationWorkspace,
   listPendingTechnicalSpecimenRegistrations,
+  saveTechnicalSpecimenRegistrationMaterials,
+  uploadTechnicalSpecimenRegistrationMediaAsset,
 } from '../api/technical-workflow-service';
+import TechnicalSpecimenRegistrationMediaPanel from '../components/specimen-registration/TechnicalSpecimenRegistrationMediaPanel.vue';
+import TechnicalSpecimenRegistrationPendingListPanel from '../components/specimen-registration/TechnicalSpecimenRegistrationPendingListPanel.vue';
+import TechnicalSpecimenRegistrationWorkspacePanel from '../components/specimen-registration/TechnicalSpecimenRegistrationWorkspacePanel.vue';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import { useTechnicalWorkflowNavigation } from '../utils/navigation';
@@ -32,34 +32,34 @@ import { useTechnicalWorkflowNavigation } from '../utils/navigation';
 const router = useRouter();
 const navigation = useTechnicalWorkflowNavigation(router);
 
-const loading = ref(false);
-const detailLoading = ref(false);
+const pendingLoading = ref(false);
+const workspaceLoading = ref(false);
+const materialSaving = ref(false);
+const mediaUploading = ref(false);
+const mediaDeleting = ref(false);
 const submitting = ref(false);
 const pageError = ref('');
-const detailError = ref('');
+const workspaceError = ref('');
 const pendingItems = ref<PendingTechnicalSpecimenRegistrationItem[]>([]);
 const total = ref(0);
 const selectedCaseId = ref('');
-const detail = ref<null | TechnicalSpecimenRegistrationDetail>(null);
+const workspace = ref<null | TechnicalSpecimenRegistrationWorkspace>(null);
 const completionRemarks = ref('');
+const activeMediaAssetId = ref('');
 
 const filters = reactive({
   keyword: '',
   page: 1,
+  receivedFrom: '',
+  receivedTo: '',
   size: DEFAULT_PAGE_SIZE,
 });
-
-const selectedRow = computed(
-  () =>
-    pendingItems.value.find((item) => item.caseId === selectedCaseId.value) ??
-    null,
-);
 
 const currentPageModel = computed({
   get: () => filters.page,
   set: (page: number) => {
     filters.page = page;
-    void loadPendingData();
+    void loadPendingData(selectedCaseId.value);
   },
 });
 
@@ -68,17 +68,28 @@ const pageSizeModel = computed({
   set: (size: number) => {
     filters.size = size;
     filters.page = 1;
-    void loadPendingData();
+    void loadPendingData(selectedCaseId.value);
   },
 });
 
+function syncWorkspace(nextWorkspace: null | TechnicalSpecimenRegistrationWorkspace) {
+  workspace.value = nextWorkspace;
+  const nextActiveAssetId =
+    nextWorkspace?.mediaAssets.some((item) => item.assetId === activeMediaAssetId.value)
+      ? activeMediaAssetId.value
+      : nextWorkspace?.mediaAssets[0]?.assetId ?? '';
+  activeMediaAssetId.value = nextActiveAssetId;
+}
+
 async function loadPendingData(preferredCaseId?: string) {
-  loading.value = true;
+  pendingLoading.value = true;
   pageError.value = '';
   try {
     const result = await listPendingTechnicalSpecimenRegistrations({
       keyword: filters.keyword.trim() || undefined,
       page: filters.page,
+      receivedFrom: filters.receivedFrom || undefined,
+      receivedTo: filters.receivedTo || undefined,
       size: filters.size,
     });
     pendingItems.value = result.items;
@@ -93,35 +104,38 @@ async function loadPendingData(preferredCaseId?: string) {
     completionRemarks.value = '';
 
     if (nextSelectedCaseId) {
-      await loadDetail(nextSelectedCaseId);
+      await loadWorkspace(nextSelectedCaseId);
     } else {
-      detail.value = null;
-      detailError.value = '';
+      syncWorkspace(null);
+      workspaceError.value = '';
     }
   } catch (error) {
     pendingItems.value = [];
     total.value = 0;
-    detail.value = null;
+    syncWorkspace(null);
     pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
   } finally {
-    loading.value = false;
+    pendingLoading.value = false;
   }
 }
 
-async function loadDetail(caseId: string) {
+async function loadWorkspace(caseId: string) {
   if (!caseId.trim()) {
-    detail.value = null;
+    syncWorkspace(null);
     return;
   }
-  detailLoading.value = true;
-  detailError.value = '';
+  workspaceLoading.value = true;
+  workspaceError.value = '';
   try {
-    detail.value = await getTechnicalSpecimenRegistrationDetail(caseId);
+    const result = await getTechnicalSpecimenRegistrationWorkspace(caseId);
+    syncWorkspace(result);
   } catch (error) {
-    detail.value = null;
-    detailError.value = getWorkflowPageErrorMessage(error);
+    syncWorkspace(null);
+    workspaceError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
   } finally {
-    detailLoading.value = false;
+    workspaceLoading.value = false;
   }
 }
 
@@ -130,13 +144,72 @@ function handleSearch() {
   void loadPendingData(selectedCaseId.value);
 }
 
-function handleRowClick(row: PendingTechnicalSpecimenRegistrationItem) {
+function handleRowSelect(row: PendingTechnicalSpecimenRegistrationItem) {
   if (row.caseId === selectedCaseId.value) {
     return;
   }
   selectedCaseId.value = row.caseId;
   completionRemarks.value = '';
-  void loadDetail(row.caseId);
+  void loadWorkspace(row.caseId);
+}
+
+async function handleSaveMaterials(
+  materials: SaveTechnicalSpecimenRegistrationMaterialItem[],
+) {
+  const currentCaseId = selectedCaseId.value.trim();
+  if (!currentCaseId) {
+    ElMessage.warning('请先选择待登记病例');
+    return;
+  }
+  materialSaving.value = true;
+  try {
+    const result = await saveTechnicalSpecimenRegistrationMaterials(currentCaseId, {
+      materials,
+      terminalCode: 'T-M3-SPEC-REG',
+    });
+    syncWorkspace(result);
+    ElMessage.success('材料修改已保存');
+  } catch (error) {
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
+  } finally {
+    materialSaving.value = false;
+  }
+}
+
+async function handleUploadMediaAsset(file: File) {
+  const currentCaseId = selectedCaseId.value.trim();
+  if (!currentCaseId) {
+    ElMessage.warning('请先选择待登记病例');
+    return;
+  }
+  mediaUploading.value = true;
+  try {
+    await uploadTechnicalSpecimenRegistrationMediaAsset(currentCaseId, file);
+    await loadWorkspace(currentCaseId);
+    ElMessage.success('图片已导入');
+  } catch (error) {
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
+  } finally {
+    mediaUploading.value = false;
+  }
+}
+
+async function handleDeleteMediaAsset(assetId: string) {
+  const currentCaseId = selectedCaseId.value.trim();
+  if (!currentCaseId) {
+    ElMessage.warning('请先选择待登记病例');
+    return;
+  }
+  mediaDeleting.value = true;
+  try {
+    await deleteTechnicalSpecimenRegistrationMediaAsset(currentCaseId, assetId);
+    await loadWorkspace(currentCaseId);
+    ElMessage.success('图片已删除');
+  } catch (error) {
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
+  } finally {
+    mediaDeleting.value = false;
+  }
 }
 
 async function handleCompleteRegistration() {
@@ -158,7 +231,7 @@ async function handleCompleteRegistration() {
       pathologyNo: result.pathologyNo ?? undefined,
     });
   } catch (error) {
-    ElMessage.error(getWorkflowPageErrorMessage(error));
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
   } finally {
     submitting.value = false;
   }
@@ -170,195 +243,49 @@ onMounted(() => {
 </script>
 
 <template>
-  <Page
-    title="标本登记"
-    description="承接病理接收后的技术登记关卡，登记完成后才进入任务池与取材流程。"
-  >
-    <div class="flex flex-col gap-3">
-      <ElAlert
-        :closable="false"
-        title="首版按接收后流程关卡实现，保留参考图的台账布局，只开放查询、详情查看和完成登记。"
-        type="info"
-        show-icon
-      />
+  <Page>
+    <div class="flex flex-col gap-4">
+      <div class="grid gap-4 2xl:grid-cols-[360px_minmax(0,1.55fr)_minmax(320px,0.9fr)] xl:grid-cols-[320px_minmax(0,1.4fr)_minmax(280px,0.9fr)]">
+        <TechnicalSpecimenRegistrationPendingListPanel
+          v-model:keyword="filters.keyword"
+          v-model:page="currentPageModel"
+          v-model:received-from="filters.receivedFrom"
+          v-model:received-to="filters.receivedTo"
+          v-model:size="pageSizeModel"
+          :items="pendingItems"
+          :loading="pendingLoading"
+          :selected-case-id="selectedCaseId"
+          :total="total"
+          @search="handleSearch"
+          @select="handleRowSelect"
+        />
 
-      <ElAlert
-        v-if="pageError"
-        :closable="false"
-        :title="pageError"
-        type="error"
-        show-icon
-      />
+        <TechnicalSpecimenRegistrationWorkspacePanel
+          v-model:completion-remarks="completionRemarks"
+          :loading="workspaceLoading"
+          :material-saving="materialSaving"
+          :submitting="submitting"
+          :workspace="workspace"
+          @complete="handleCompleteRegistration"
+          @save-materials="handleSaveMaterials"
+        />
 
-      <section class="rounded-md border border-slate-300 bg-slate-100 p-2">
-        <div class="flex flex-wrap items-center gap-2">
-          <ElInput
-            v-model="filters.keyword"
-            class="!w-[260px]"
-            clearable
-            placeholder="病人ID/病理号/姓名"
-            @keyup.enter="handleSearch"
-          />
-          <ElButton type="primary" @click="handleSearch">查询</ElButton>
-          <ElButton disabled>更多</ElButton>
-          <span class="text-xs text-slate-500">
-            首版仅开放查询与完成登记，删除、打印、前后天等旧动作暂不开放。
-          </span>
-        </div>
-      </section>
-
-      <div class="grid gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <section class="flex min-h-[720px] flex-col rounded-md border border-slate-400 bg-white">
-          <div class="border-b border-slate-300 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">
-            接收后待登记台账
-          </div>
-          <div class="flex-1 overflow-hidden">
-            <ElTable
-              v-loading="loading"
-              :data="pendingItems"
-              border
-              class="h-full"
-              highlight-current-row
-              row-key="caseId"
-              @row-click="handleRowClick"
-            >
-              <ElTableColumn label="序" type="index" width="56" />
-              <ElTableColumn label="病理检查号" min-width="156" prop="pathologyNo" />
-              <ElTableColumn label="病人" min-width="110" prop="patientName" />
-              <ElTableColumn label="病人ID" min-width="130" prop="patientId" />
-              <ElTableColumn label="住院号" min-width="120" prop="inpatientNo" />
-              <ElTableColumn label="送检类型" min-width="110" prop="applicationType" />
-              <ElTableColumn
-                label="申请科室"
-                min-width="140"
-                prop="submittingDepartmentName"
-              />
-              <ElTableColumn label="检查项目" min-width="180" prop="checkItem" />
-              <ElTableColumn label="登记人" min-width="110" prop="registeredByName" />
-              <ElTableColumn label="状态" min-width="110" prop="registrationStatus" />
-              <ElTableColumn label="申请单号" min-width="150" prop="applicationNo" />
-            </ElTable>
-          </div>
-          <div class="flex items-center justify-between border-t border-slate-300 bg-slate-100 px-3 py-2 text-xs text-slate-600">
-            <span>
-              {{
-                `${currentPageModel}/${Math.max(
-                  Math.ceil(total / Math.max(pageSizeModel, 1)),
-                  1,
-                )} 共${total}条记录`
-              }}
-            </span>
-            <ElPagination
-              v-model:current-page="currentPageModel"
-              v-model:page-size="pageSizeModel"
-              :background="true"
-              :page-sizes="[20, 50, 100]"
-              :pager-count="5"
-              :small="true"
-              :total="total"
-              layout="sizes, prev, pager, next"
-            />
-          </div>
-        </section>
-
-        <section class="flex min-h-[720px] flex-col gap-3">
-          <div class="rounded-md border border-slate-400 bg-white">
-            <div class="border-b border-slate-300 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">
-              送检材料
-            </div>
-            <div class="min-h-[195px] p-2">
-              <ElAlert
-                v-if="detailError"
-                :closable="false"
-                :title="detailError"
-                type="error"
-                show-icon
-              />
-              <ElTable
-                v-else-if="detail"
-                v-loading="detailLoading"
-                :data="detail.materials"
-                border
-                size="small"
-              >
-                <ElTableColumn label="序" prop="sequenceNo" width="48" />
-                <ElTableColumn label="标本类型" min-width="92" prop="specimenType" />
-                <ElTableColumn label="名称" min-width="110" prop="specimenName" />
-                <ElTableColumn label="来源部位" min-width="110" prop="sourcePart" />
-              </ElTable>
-              <ElEmpty v-else description="暂无送检材料" :image-size="48" />
-            </div>
-          </div>
-
-          <div class="rounded-md border border-slate-400 bg-white">
-            <div class="border-b border-slate-300 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">
-              临床诊断
-            </div>
-            <div class="min-h-[220px] p-3 text-sm text-slate-700">
-              <template v-if="detail">
-                <div class="mb-2 space-y-1 text-xs text-slate-500">
-                  <div>病理号：{{ detail.pathologyNo || '-' }}</div>
-                  <div>患者：{{ detail.patientName || '-' }}</div>
-                  <div>申请科室：{{ detail.submittingDepartmentName || '-' }}</div>
-                </div>
-                <div class="whitespace-pre-wrap rounded border border-slate-200 bg-slate-50 p-3 leading-6">
-                  {{ detail.clinicalDiagnosis || '暂无临床诊断' }}
-                </div>
-              </template>
-              <ElEmpty v-else description="请选择左侧病例" :image-size="48" />
-            </div>
-          </div>
-
-          <div class="flex flex-1 flex-col rounded-md border border-slate-400 bg-white">
-            <div class="border-b border-slate-300 bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">
-              检查项目
-            </div>
-            <div class="flex flex-1 flex-col gap-3 p-2">
-              <ElTable
-                v-if="detail"
-                v-loading="detailLoading"
-                :data="detail.checkItems"
-                border
-                size="small"
-              >
-                <ElTableColumn label="序" prop="sequenceNo" width="48" />
-                <ElTableColumn label="检查项目" min-width="220" prop="name" />
-              </ElTable>
-              <ElEmpty
-                v-else
-                class="flex-1"
-                description="暂无检查项目"
-                :image-size="48"
-              />
-
-              <ElInput
-                v-model="completionRemarks"
-                :rows="3"
-                placeholder="登记备注（选填）"
-                type="textarea"
-              />
-
-              <div class="flex items-center justify-between gap-2 text-xs text-slate-500">
-                <span>
-                  {{
-                    detail
-                      ? `状态：${detail.registrationStatus || '待登记'} / 接收时间：${detail.receivedAt || '-'}`
-                      : '登记完成后将自动进入任务池与取材流程。'
-                  }}
-                </span>
-                <ElButton
-                  :disabled="!selectedRow"
-                  :loading="submitting"
-                  type="primary"
-                  @click="handleCompleteRegistration"
-                >
-                  完成登记
-                </ElButton>
-              </div>
-            </div>
-          </div>
-        </section>
+        <TechnicalSpecimenRegistrationMediaPanel
+          :active-asset-id="activeMediaAssetId"
+          :can-delete="workspace?.actionFlags.canDeleteMediaAssets ?? false"
+          :can-upload="workspace?.actionFlags.canUploadMediaAssets ?? false"
+          :deleting="mediaDeleting"
+          :media-assets="workspace?.mediaAssets ?? []"
+          :uploading="mediaUploading"
+          @delete="handleDeleteMediaAsset"
+          @select="activeMediaAssetId = $event"
+          @upload="handleUploadMediaAsset"
+        />
       </div>
+
+      <p class="text-xs text-slate-500">
+        当前保留阶段动作：保存材料修改、导入图片、删除图片、完成登记；病理检查号仅展示接收阶段已生成编号。
+      </p>
     </div>
   </Page>
 </template>

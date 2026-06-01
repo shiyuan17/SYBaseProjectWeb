@@ -11,7 +11,6 @@ import { useRoute, useRouter } from 'vue-router';
 import { Page } from '@vben/common-ui';
 
 import {
-  ElAlert,
   ElButton,
   ElDescriptions,
   ElDescriptionsItem,
@@ -30,6 +29,8 @@ import ReworkExecuteDialog from '../components/ReworkExecuteDialog.vue';
 import TechnicalCaseContextPanel from '../components/TechnicalCaseContextPanel.vue';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { TASK_TYPE_TITLE_MAP } from '../constants';
+import { reportInlineErrorDisabled } from '#/utils/error-feedback';
+
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import {
   formatDateTime,
@@ -136,6 +137,7 @@ async function loadTracking() {
     }
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
   } finally {
     trackingLoading.value = false;
   }
@@ -203,18 +205,8 @@ if (queryForm.caseId) {
 </script>
 
 <template>
-  <Page
-    title="返工工作站"
-    description="将返工从独立补录页面前移为异常处理中心，病例概览、返工创建与回流动作同屏完成。"
-  >
+  <Page>
     <div class="flex flex-col gap-4">
-      <ElAlert
-        v-if="pageError"
-        :closable="false"
-        :title="pageError"
-        type="error"
-        show-icon
-      />
 
       <div class="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)_360px]">
         <WorkflowSectionCard

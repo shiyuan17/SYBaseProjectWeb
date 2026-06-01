@@ -5,7 +5,6 @@ import { useRouter } from 'vue-router';
 
 import { Fallback, Page } from '@vben/common-ui';
 
-import { ElAlert } from 'element-plus';
 
 import TechnicalWorkflowGuideSection from '../components/TechnicalWorkflowGuideSection.vue';
 import TechnicalWorkflowHeroSection from '../components/TechnicalWorkflowHeroSection.vue';
@@ -36,7 +35,6 @@ const {
   frozenReminder,
   loading,
   pendingSpecimenRegistrationCount,
-  pageError,
   regularBuckets,
   riskCards,
   workflowLead,
@@ -113,13 +111,6 @@ function goToReworkEntry() {
         :risk-cards="riskCards"
       />
 
-      <ElAlert
-        v-if="pageError"
-        :closable="false"
-        :title="pageError"
-        type="error"
-        show-icon
-      />
 
       <TechnicalWorkflowGuideSection
         :current-working-bucket="currentWorkingBucket"

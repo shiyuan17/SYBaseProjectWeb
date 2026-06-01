@@ -10,7 +10,6 @@ import { computed, reactive, ref, watch } from 'vue';
 import { useUserStore } from '@vben/stores';
 
 import {
-  ElAlert,
   ElButton,
   ElDialog,
   ElForm,
@@ -21,6 +20,8 @@ import {
 } from 'element-plus';
 
 import { executeReworkOrder } from '../api/technical-workflow-service';
+import { reportInlineErrorDisabled } from '#/utils/error-feedback';
+
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import {
   assignTechnicalOperatorForm,
@@ -92,6 +93,7 @@ async function submitExecuteRework() {
     dialogVisible.value = false;
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
   } finally {
     submitting.value = false;
   }
@@ -117,13 +119,6 @@ watch(
     @closed="resetDialogState"
   >
     <div class="flex flex-col gap-4">
-      <ElAlert
-        v-if="pageError"
-        :closable="false"
-        :title="pageError"
-        type="error"
-        show-icon
-      />
 
       <ElForm label-width="96px">
         <TechnicalOperatorFields

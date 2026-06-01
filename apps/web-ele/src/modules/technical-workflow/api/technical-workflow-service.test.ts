@@ -15,13 +15,20 @@ import {
   completeSlideStaining,
   createDehydrationBatch,
   createReworkOrder,
+  createSlideQcEvaluation,
   executeReworkOrder,
+  getEmbeddingWorkstationSummary,
+  getGrossingWorkbenchContext,
+  getSlicingWorkbench,
   getTechnicalTracking,
   getTechnicalSpecimenRegistrationDetail,
   listPendingTechnicalSpecimenRegistrations,
   listPendingTechnicalTasks,
+  mapEmbeddingWorkstationSummaryResponse,
+  mapGrossingWorkbenchContextResponse,
   mapPendingTechnicalSpecimenRegistrationPageResponse,
   mapPendingTechnicalTaskPageResponse,
+  mapSlicingWorkbenchResponse,
   mapTechnicalSpecimenRegistrationDetailResponse,
   mapTechnicalTrackingResponse,
   releaseTechnicalTask,
@@ -35,19 +42,28 @@ import {
 
 vi.mock('#/api/request', () => ({
   requestClient: {
+    delete: vi.fn(),
     get: vi.fn(),
     post: vi.fn(),
+    put: vi.fn(),
+    upload: vi.fn(),
   },
 }));
 
 const requestClientMock = requestClient as unknown as {
+  delete: Mock;
   get: Mock;
   post: Mock;
+  put: Mock;
+  upload: Mock;
 };
 
 beforeEach(() => {
+  requestClientMock.delete.mockReset();
   requestClientMock.get.mockReset();
   requestClientMock.post.mockReset();
+  requestClientMock.put.mockReset();
+  requestClientMock.upload.mockReset();
 });
 
 describe('technical-workflow-service mappers', () => {
@@ -72,6 +88,8 @@ describe('technical-workflow-service mappers', () => {
       caseId: 'CASE-001',
       caseStatus: 'GROSSING_PENDING',
       embeddingBoxes: [],
+      embeddingEvaluationRecords: [],
+      embeddingRecords: [],
       events: [],
       pathologyNo: 'BL-001',
       qcEvaluations: [],
@@ -79,6 +97,101 @@ describe('technical-workflow-service mappers', () => {
       slides: [],
       specimens: [],
       technicalTasks: [],
+    });
+  });
+
+  it('normalizes grossing workbench context payload', () => {
+    expect(mapGrossingWorkbenchContextResponse({})).toEqual({
+      caseSummary: {
+        applicationId: '',
+        applicationNo: '',
+        applicationType: null,
+        caseId: '',
+        caseStatus: null,
+        inpatientNo: null,
+        pathologyNo: null,
+        patientId: null,
+        patientName: null,
+        submittingDepartmentName: null,
+      },
+      checkItems: [],
+      clinicalDiagnosis: null,
+      clinicalHistory: null,
+      contextSummary: null,
+      mediaAssets: [],
+      relatedExaminations: null,
+      task: {
+        objectId: null,
+        objectType: null,
+        taskId: '',
+        taskStatus: null,
+      },
+      tracking: {
+        blocks: [],
+        caseId: '',
+        caseStatus: null,
+        embeddingBoxes: [],
+        embeddingEvaluationRecords: [],
+        embeddingRecords: [],
+        events: [],
+        pathologyNo: null,
+        qcEvaluations: [],
+        reworks: [],
+        slides: [],
+        specimens: [],
+        technicalTasks: [],
+      },
+    });
+  });
+
+  it('normalizes slicing workbench payload', () => {
+    expect(
+      mapSlicingWorkbenchResponse({
+        pendingList: [{ caseId: 'CASE-1', taskId: 'TASK-1' }],
+        stats: { overdueCount: 2, pendingTodayCount: 3 },
+      }),
+    ).toEqual({
+      completedPage: 1,
+      completedSize: 20,
+      completedTodayList: [],
+      completedTotal: 0,
+      pendingList: [
+        {
+          caseId: 'CASE-1',
+          completedAt: null,
+          embeddingBoxId: '',
+          embeddingClearRemark: null,
+          embeddingEvaluation: null,
+          embeddingOperatorName: null,
+          grossingEvaluation: null,
+          pathologyNo: null,
+          patientId: null,
+          patientName: null,
+          selectable: false,
+          shiftRemark: null,
+          slideId: null,
+          slideNo: null,
+          sliceNotice: null,
+          slicingOperatorName: null,
+          slicingRemark: null,
+          specimenId: null,
+          specimenName: null,
+          taskId: 'TASK-1',
+          taskStatus: null,
+          timedOut: false,
+        },
+      ],
+      pendingPage: 1,
+      pendingSize: 20,
+      pendingTotal: 0,
+      stats: {
+        completedDeptTodayCount: 0,
+        completedMineTodayCount: 0,
+        overdueCount: 2,
+        pendingPrintCount: 0,
+        pendingTodayCount: 3,
+        pendingTomorrowCount: 0,
+      },
     });
   });
 
@@ -112,6 +225,16 @@ describe('technical-workflow-service mappers', () => {
       submittingDepartmentName: null,
     });
   });
+
+  it('normalizes embedding workstation summary arrays', () => {
+    expect(mapEmbeddingWorkstationSummaryResponse({})).toEqual({
+      completedCount: 0,
+      completedRecords: [],
+      pendingCount: 0,
+      pendingTasks: [],
+      workDate: null,
+    });
+  });
 });
 
 describe('technical-workflow-service requests', () => {
@@ -124,6 +247,7 @@ describe('technical-workflow-service requests', () => {
     });
 
     await listPendingTechnicalTasks({
+      keyword: 'P-001',
       page: 1,
       pathologyNo: 'BL-001',
       size: 20,
@@ -137,6 +261,7 @@ describe('technical-workflow-service requests', () => {
       '/v1/technical-tasks/pending',
       {
         params: {
+          keyword: 'P-001',
           page: 1,
           pathologyNo: 'BL-001',
           size: 20,
@@ -165,6 +290,33 @@ describe('technical-workflow-service requests', () => {
 
     expect(requestClientMock.get).toHaveBeenCalledWith(
       '/v1/pathology-cases/CASE-001/technical-tracking',
+    );
+  });
+
+  it('queries embedding workstation summary with optional work date', async () => {
+    requestClientMock.get.mockResolvedValue({
+      completedCount: 1,
+      pendingCount: 2,
+      workDate: '2026-06-01',
+    });
+
+    await expect(
+      getEmbeddingWorkstationSummary('2026-06-01'),
+    ).resolves.toEqual({
+      completedCount: 1,
+      completedRecords: [],
+      pendingCount: 2,
+      pendingTasks: [],
+      workDate: '2026-06-01',
+    });
+
+    expect(requestClientMock.get).toHaveBeenCalledWith(
+      '/v1/embeddings/workstation-summary',
+      {
+        params: {
+          workDate: '2026-06-01',
+        },
+      },
     );
   });
 
@@ -278,6 +430,16 @@ describe('technical-workflow-service requests', () => {
   });
 
   it('posts grossing endpoints with exact paths', async () => {
+    requestClientMock.get.mockResolvedValueOnce({
+      caseSummary: {
+        caseId: 'CASE-1',
+      },
+      tracking: {
+        caseId: 'CASE-1',
+      },
+    });
+
+    await getGrossingWorkbenchContext('TASK/1');
     await startGrossing({
       taskId: 'TASK-1',
     });
@@ -293,6 +455,9 @@ describe('technical-workflow-service requests', () => {
       taskId: 'TASK-1',
     });
 
+    expect(requestClientMock.get).toHaveBeenCalledWith(
+      '/v1/grossings/TASK%2F1/context',
+    );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       1,
       '/v1/grossings/start',
@@ -405,6 +570,62 @@ describe('technical-workflow-service requests', () => {
         embeddingBoxId: 'BOX-1',
         slideCount: 2,
         taskId: 'TASK-SLI',
+      },
+    );
+  });
+
+  it('queries slicing workbench with dedicated aggregate params', async () => {
+    requestClientMock.get.mockResolvedValue({
+      completedTodayList: [],
+      pendingList: [],
+      stats: {},
+    });
+
+    await getSlicingWorkbench({
+      completedPage: 2,
+      completedSize: 10,
+      keyword: 'BL-001',
+      overdueOnly: true,
+      pendingPage: 1,
+      pendingSize: 20,
+      pendingTodayOnly: true,
+    });
+
+    expect(requestClientMock.get).toHaveBeenCalledWith(
+      '/v1/slicings/workbench',
+      {
+        params: {
+          completedPage: 2,
+          completedSize: 10,
+          keyword: 'BL-001',
+          overdueOnly: true,
+          pendingPage: 1,
+          pendingSize: 20,
+          pendingTodayOnly: true,
+        },
+      },
+    );
+  });
+
+  it('posts slide qc evaluation endpoint with exact path', async () => {
+    await createSlideQcEvaluation({
+      caseId: 'CASE-1',
+      evaluationResult: 'UNQUALIFIED',
+      issueDescription: '切片有折痕',
+      qcType: 'HE',
+      slideId: 'SLIDE-1',
+      specimenId: 'SPEC-1',
+    });
+
+    expect(requestClientMock.post).toHaveBeenCalledWith(
+      '/v1/slide-qc-evaluations',
+      {
+        caseId: 'CASE-1',
+        evaluationResult: 'UNQUALIFIED',
+        issueDescription: '切片有折痕',
+        qcType: 'HE',
+        slideId: 'SLIDE-1',
+        specimenId: 'SPEC-1',
       },
     );
   });

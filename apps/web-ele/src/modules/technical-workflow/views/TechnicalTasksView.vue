@@ -14,7 +14,7 @@ import { useRouter } from 'vue-router';
 import { Page } from '@vben/common-ui';
 import { useUserStore } from '@vben/stores';
 
-import { ElAlert, ElMessage } from 'element-plus';
+import { ElMessage } from 'element-plus';
 
 import {
   assignTechnicalTask,
@@ -35,6 +35,8 @@ import {
   TECHNICAL_TASK_STATUS_OPTIONS,
   TECHNICAL_TASK_TYPE_OPTIONS,
 } from '../constants';
+import { reportInlineErrorDisabled } from '#/utils/error-feedback';
+
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import { useTechnicalWorkflowNavigation } from '../utils/navigation';
 
@@ -205,6 +207,7 @@ async function loadPendingData() {
     total.value = result.total;
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
   } finally {
     loading.value = false;
   }
@@ -277,7 +280,7 @@ async function submitAssignment() {
     assignmentDialogVisible.value = false;
     await loadPendingData();
   } catch (error) {
-    ElMessage.error(getWorkflowPageErrorMessage(error));
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
   } finally {
     submittingAssignment.value = false;
   }
@@ -296,7 +299,7 @@ async function releaseAssignment(row: PendingTechnicalTaskItem) {
     ElMessage.success('任务已释放');
     await loadPendingData();
   } catch (error) {
-    ElMessage.error(getWorkflowPageErrorMessage(error));
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
   }
 }
 
@@ -326,7 +329,7 @@ async function runBulkClaim() {
     selectedTaskIds.value = [];
     await loadPendingData();
   } catch (error) {
-    ElMessage.error(getWorkflowPageErrorMessage(error));
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
   } finally {
     bulkLoading.value = false;
   }
@@ -355,7 +358,7 @@ async function runBulkRelease() {
     selectedTaskIds.value = [];
     await loadPendingData();
   } catch (error) {
-    ElMessage.error(getWorkflowPageErrorMessage(error));
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
   } finally {
     bulkLoading.value = false;
   }
@@ -385,7 +388,7 @@ async function runBulkPriorityUpdate() {
     selectedTaskIds.value = [];
     await loadPendingData();
   } catch (error) {
-    ElMessage.error(getWorkflowPageErrorMessage(error));
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
   } finally {
     bulkLoading.value = false;
   }
@@ -416,26 +419,8 @@ void loadPendingData();
 </script>
 
 <template>
-  <Page
-    title="任务池"
-    description="登记完成后的生产任务调度、连续查看与时效监控，分派/认领保留为可选辅助能力。"
-  >
+  <Page>
     <div class="flex flex-col gap-4">
-      <ElAlert
-        :closable="false"
-        title="任务可以直接进入后续工位处理，任务池继续保留分派、认领、释放和批量调度能力。"
-        type="info"
-        show-icon
-      />
-
-      <ElAlert
-        v-if="pageError"
-        :closable="false"
-        :title="pageError"
-        type="error"
-        show-icon
-      />
-
       <TechnicalTaskStatsGrid :items="taskStats" />
 
       <TechnicalTaskFilterPanel

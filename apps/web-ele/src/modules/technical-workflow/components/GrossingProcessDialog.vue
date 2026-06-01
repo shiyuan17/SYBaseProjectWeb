@@ -2,7 +2,6 @@
 import type { PendingTechnicalTaskItem } from '../types/technical-workflow';
 
 import {
-  ElAlert,
   ElButton,
   ElDescriptions,
   ElDescriptionsItem,
@@ -46,7 +45,6 @@ const {
   labelClass,
   loadTracking,
   operatorForm,
-  pageError,
   removeBlock,
   removeMediaAsset,
   removeSpecimen,
@@ -72,13 +70,6 @@ const {
     @closed="resetDialogState"
   >
     <div class="flex max-h-[70vh] flex-col gap-4 overflow-y-auto pr-1">
-      <ElAlert
-        v-if="pageError"
-        :closable="false"
-        :title="pageError"
-        type="error"
-        show-icon
-      />
 
       <ElDescriptions :column="3" border>
         <ElDescriptionsItem label="任务号">

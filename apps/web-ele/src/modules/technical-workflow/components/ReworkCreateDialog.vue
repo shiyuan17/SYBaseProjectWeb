@@ -10,7 +10,6 @@ import { computed, reactive, ref, watch } from 'vue';
 import { useUserStore } from '@vben/stores';
 
 import {
-  ElAlert,
   ElButton,
   ElDescriptions,
   ElDescriptionsItem,
@@ -25,6 +24,8 @@ import {
 
 import { createReworkOrder } from '../api/technical-workflow-service';
 import { QC_TYPE_OPTIONS, REWORK_TYPE_OPTIONS } from '../constants';
+import { reportInlineErrorDisabled } from '#/utils/error-feedback';
+
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import { formatNullable } from '../utils/format';
 import {
@@ -218,6 +219,7 @@ async function submitCreateRework() {
     dialogVisible.value = false;
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
   } finally {
     submitting.value = false;
   }
@@ -253,13 +255,6 @@ watch(
     @closed="resetDialogState"
   >
     <div class="flex flex-col gap-4">
-      <ElAlert
-        v-if="pageError"
-        :closable="false"
-        :title="pageError"
-        type="error"
-        show-icon
-      />
 
       <ElDescriptions :column="2" border>
         <ElDescriptionsItem label="病例编号">

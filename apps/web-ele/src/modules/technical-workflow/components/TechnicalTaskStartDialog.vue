@@ -10,7 +10,6 @@ import { computed, reactive, ref, watch } from 'vue';
 import { useUserStore } from '@vben/stores';
 
 import {
-  ElAlert,
   ElButton,
   ElDescriptions,
   ElDescriptionsItem,
@@ -18,6 +17,8 @@ import {
   ElForm,
   ElMessage,
 } from 'element-plus';
+
+import { reportInlineErrorDisabled } from '#/utils/error-feedback';
 
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import { formatNullable, formatObjectType } from '../utils/format';
@@ -100,6 +101,7 @@ async function submitStart() {
     dialogVisible.value = false;
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
   } finally {
     submitting.value = false;
   }
@@ -125,13 +127,6 @@ watch(
     @closed="resetDialogState"
   >
     <div class="flex flex-col gap-4">
-      <ElAlert
-        v-if="pageError"
-        :closable="false"
-        :title="pageError"
-        type="error"
-        show-icon
-      />
 
       <ElDescriptions :column="2" border>
         <ElDescriptionsItem label="任务号">

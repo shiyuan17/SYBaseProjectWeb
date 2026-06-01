@@ -5,13 +5,14 @@ import type {
 } from '#/modules/frozen-workflow/types/frozen-workflow';
 
 import { computed, reactive, ref, watch } from 'vue';
+
+import { reportInlineErrorDisabled } from '#/utils/error-feedback';
 import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
 import { useUserStore } from '@vben/stores';
 
 import {
-  ElAlert,
   ElButton,
   ElDescriptions,
   ElDescriptionsItem,
@@ -122,6 +123,9 @@ async function loadWorkbench() {
   } catch (error) {
     pageError.value =
       error instanceof Error ? error.message : '冰冻工作台加载失败';
+    reportInlineErrorDisabled(error, (currentError) =>
+      currentError instanceof Error ? currentError.message : '冰冻工作台加载失败',
+    );
   } finally {
     loading.value = false;
   }
@@ -138,6 +142,9 @@ async function loadDetail(sessionId: string) {
     selectedDetail.value = null;
     pageError.value =
       error instanceof Error ? error.message : '冰冻会话加载失败';
+    reportInlineErrorDisabled(error, (currentError) =>
+      currentError instanceof Error ? currentError.message : '冰冻会话加载失败',
+    );
   }
 }
 
@@ -173,7 +180,9 @@ async function runCurrentAction() {
     await loadWorkbench();
     await loadDetail(selectedDetail.value.id);
   } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : '操作失败');
+    reportInlineErrorDisabled(error, (currentError) =>
+      currentError instanceof Error ? currentError.message : '操作失败',
+    );
   } finally {
     actionLoading.value = false;
   }
@@ -213,19 +222,8 @@ void loadWorkbench();
 </script>
 
 <template>
-  <Page
-    title="冰冻工作台"
-    description="承接术中冰冻的接收、取材、切片、提醒与交接班，先以统一 mock 会话跑通技术侧流程。"
-  >
+  <Page>
     <div class="flex flex-col gap-4">
-      <ElAlert
-        v-if="pageError"
-        :closable="false"
-        :title="pageError"
-        show-icon
-        type="error"
-      />
-
       <WorkflowSectionCard
         title="超时提醒"
         description="对应旧系统的冰冻提醒看板，先聚合显示当前待办和超时等级。"

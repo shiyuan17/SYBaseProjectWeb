@@ -405,7 +405,12 @@ describe('TechnicalTasksView', () => {
     const { app, root } = mountView();
     await flushView();
 
-    expect(document.body.textContent).toContain('分派/认领保留为可选辅助能力');
+    expect(document.body.textContent).not.toContain(
+      '登记完成后的生产任务调度、连续查看与时效监控，分派/认领保留为可选辅助能力。',
+    );
+    expect(document.body.textContent).not.toContain(
+      '任务可以直接进入后续工位处理，任务池继续保留分派、认领、释放和批量调度能力。',
+    );
     findButton('分派').click();
     await nextTick();
 

@@ -2,6 +2,7 @@ export interface PendingTechnicalTaskQuery {
   applicationNo?: null | string;
   createdFrom?: null | string;
   createdTo?: null | string;
+  keyword?: null | string;
   objectType?: null | string;
   page: number;
   pathologyNo?: null | string;
@@ -70,6 +71,8 @@ export interface PendingTechnicalTaskItem {
   objectId: null | string;
   objectType: null | string;
   pathologyNo: null | string;
+  sampledAt?: null | string;
+  sampledByName?: null | string;
   payload: null | string;
   assignedToName?: null | string;
   assignedToUserId?: null | string;
@@ -78,6 +81,8 @@ export interface PendingTechnicalTaskItem {
   remarks: null | string;
   productionRemarks?: null | string;
   receivedAt?: null | string;
+  samplingBlockCode?: null | string;
+  samplingBlockDescription?: null | string;
   stationCode?: null | string;
   stationName?: null | string;
   specimenId: null | string;
@@ -152,6 +157,8 @@ export interface PendingTechnicalTaskPage {
 export interface PendingTechnicalSpecimenRegistrationQuery {
   keyword?: null | string;
   page: number;
+  receivedFrom?: null | string;
+  receivedTo?: null | string;
   size: number;
 }
 
@@ -180,6 +187,7 @@ export interface PendingTechnicalSpecimenRegistrationPage {
 }
 
 export interface TechnicalSpecimenRegistrationMaterial {
+  specimenId: null | string;
   sequenceNo: number;
   sourcePart: null | string;
   specimenName: null | string;
@@ -211,6 +219,73 @@ export interface TechnicalSpecimenRegistrationDetail {
   submittingDepartmentName: null | string;
 }
 
+export interface TechnicalSpecimenRegistrationBasicInfo {
+  applicationNo: null | string;
+  applicationType: null | string;
+  fixationTime: null | string;
+  inpatientNo: null | string;
+  pathologyNo: null | string;
+  patientAge: null | string;
+  patientGender: null | string;
+  patientId: null | string;
+  patientName: null | string;
+  registrationStatus: null | string;
+  specimenRemovalTime: null | string;
+  submissionDate: null | string;
+  submittingDepartmentName: null | string;
+  submittingDoctorName: null | string;
+}
+
+export interface TechnicalSpecimenRegistrationDetailSections {
+  clinicalExaminationAndSurgeryFindings: null | string;
+  clinicalSubmissionRequirements: null | string;
+  externalPathologyDiagnosis: null | string;
+  historySummary: null | string;
+  infectiousAndPastHistorySummary: null | string;
+  labAndImagingExaminations: null | string;
+}
+
+export interface TechnicalSpecimenRegistrationMediaAsset {
+  assetId: string;
+  capturedAt: null | string;
+  fileName: null | string;
+  fileUrl: string;
+}
+
+export interface TechnicalSpecimenRegistrationActionFlags {
+  canCompleteRegistration: boolean;
+  canDeleteMediaAssets: boolean;
+  canSaveMaterials: boolean;
+  canUploadMediaAssets: boolean;
+}
+
+export interface TechnicalSpecimenRegistrationWorkspace {
+  actionFlags: TechnicalSpecimenRegistrationActionFlags;
+  basicInfo: TechnicalSpecimenRegistrationBasicInfo;
+  checkItems: TechnicalSpecimenRegistrationCheckItem[];
+  detailSections: TechnicalSpecimenRegistrationDetailSections;
+  materials: TechnicalSpecimenRegistrationMaterial[];
+  mediaAssets: TechnicalSpecimenRegistrationMediaAsset[];
+  pendingSummary: PendingTechnicalSpecimenRegistrationItem;
+}
+
+export interface SaveTechnicalSpecimenRegistrationMaterialItem {
+  sourcePart?: null | string;
+  specimenId?: null | string;
+  specimenName?: null | string;
+  specimenType?: null | string;
+}
+
+export interface SaveTechnicalSpecimenRegistrationMaterialsRequest {
+  materials: SaveTechnicalSpecimenRegistrationMaterialItem[];
+  terminalCode?: null | string;
+}
+
+export interface DeleteTechnicalSpecimenRegistrationMediaAssetResult {
+  assetId: string;
+  deleted: boolean;
+}
+
 export interface CompleteTechnicalSpecimenRegistrationRequest {
   remarks?: null | string;
   terminalCode?: null | string;
@@ -236,6 +311,8 @@ export interface TechnicalTrackingBlockSummary {
   blockId: string;
   description: null | string;
   embeddingBoxNo: null | string;
+  grossDescription?: null | string;
+  specimenName?: null | string;
   specimenId: string;
 }
 
@@ -245,6 +322,47 @@ export interface TechnicalTrackingEmbeddingBoxSummary {
   sliceNotice: null | string;
   slideCount: number;
   specimenId: string;
+}
+
+export interface TechnicalTrackingEmbeddingRecordSummary {
+  embeddingBoxId: string;
+  embeddingBoxNo: null | string;
+  embeddingId: string;
+  embeddingRemarks: null | string;
+  embeddedByName: null | string;
+  endedAt: null | string;
+  evaluationLevel: null | string;
+  grossDescription: null | string;
+  pathologyNo: null | string;
+  sampledAt: null | string;
+  sampledByName: null | string;
+  samplingBlockCode: null | string;
+  samplingBlockDescription: null | string;
+  samplingBlockId: string;
+  samplingEvaluation: null | string;
+  sliceNotice: null | string;
+  specimenId: string;
+  specimenName: null | string;
+  startedAt: null | string;
+  taskId: string;
+  taskStatus: null | string;
+  caseId: string;
+}
+
+export interface TechnicalTrackingEmbeddingEvaluationRecordSummary {
+  caseId: string;
+  embeddingBoxNo: null | string;
+  embeddingId: string;
+  embeddingRemarks: null | string;
+  embeddedByName: null | string;
+  endedAt: null | string;
+  evaluationLevel: null | string;
+  pathologyNo: null | string;
+  samplingBlockCode: null | string;
+  samplingBlockId: string;
+  samplingEvaluation: null | string;
+  specimenId: string;
+  specimenName: null | string;
 }
 
 export interface TechnicalTrackingSlideSummary {
@@ -291,6 +409,8 @@ export interface TechnicalTrackingView {
   caseId: string;
   caseStatus: null | string;
   embeddingBoxes: TechnicalTrackingEmbeddingBoxSummary[];
+  embeddingEvaluationRecords?: TechnicalTrackingEmbeddingEvaluationRecordSummary[];
+  embeddingRecords?: TechnicalTrackingEmbeddingRecordSummary[];
   events: TechnicalTrackingEventSummary[];
   pathologyNo: null | string;
   qcEvaluations: TechnicalTrackingQcEvaluationSummary[];
@@ -298,6 +418,47 @@ export interface TechnicalTrackingView {
   slides: TechnicalTrackingSlideSummary[];
   specimens: TechnicalTrackingSpecimenSummary[];
   technicalTasks: PendingTechnicalTaskItem[];
+}
+
+export interface GrossingWorkbenchTaskSummary {
+  objectId: null | string;
+  objectType: null | string;
+  taskId: string;
+  taskStatus: null | string;
+}
+
+export interface GrossingWorkbenchCaseSummary {
+  applicationId: string;
+  applicationNo: string;
+  applicationType: null | string;
+  caseId: string;
+  caseStatus: null | string;
+  inpatientNo: null | string;
+  pathologyNo: null | string;
+  patientId: null | string;
+  patientName: null | string;
+  submittingDepartmentName: null | string;
+}
+
+export interface GrossingWorkbenchMediaAsset {
+  assetId: string;
+  capturedAt: null | string;
+  capturedByName: null | string;
+  fileName: null | string;
+  fileUrl: string;
+  specimenId: null | string;
+}
+
+export interface GrossingWorkbenchContext {
+  caseSummary: GrossingWorkbenchCaseSummary;
+  checkItems: TechnicalSpecimenRegistrationCheckItem[];
+  clinicalDiagnosis: null | string;
+  clinicalHistory: null | string;
+  contextSummary: null | string;
+  mediaAssets: GrossingWorkbenchMediaAsset[];
+  relatedExaminations: null | string;
+  task: GrossingWorkbenchTaskSummary;
+  tracking: TechnicalTrackingView;
 }
 
 export interface TechnicalTaskStartRequest {
@@ -457,6 +618,81 @@ export interface SlicingResult {
   taskId: string;
 }
 
+export interface SlicingWorkbenchQuery {
+  completedPage: number;
+  completedSize: number;
+  keyword?: null | string;
+  overdueOnly?: boolean;
+  pendingPage: number;
+  pendingSize: number;
+  pendingTodayOnly?: boolean;
+}
+
+export interface SlicingWorkbenchStats {
+  completedDeptTodayCount: number;
+  completedMineTodayCount: number;
+  overdueCount: number;
+  pendingPrintCount: number;
+  pendingTodayCount: number;
+  pendingTomorrowCount: number;
+}
+
+export interface SlicingWorkbenchRow {
+  caseId: string;
+  completedAt?: null | string;
+  embeddingBoxId: string;
+  embeddingClearRemark?: null | string;
+  embeddingEvaluation?: null | string;
+  embeddingOperatorName?: null | string;
+  grossingEvaluation?: null | string;
+  pathologyNo?: null | string;
+  patientId?: null | string;
+  patientName?: null | string;
+  selectable: boolean;
+  shiftRemark?: null | string;
+  slideId?: null | string;
+  slideNo?: null | string;
+  sliceNotice?: null | string;
+  slicingOperatorName?: null | string;
+  slicingRemark?: null | string;
+  specimenId?: null | string;
+  specimenName?: null | string;
+  taskId: string;
+  taskStatus?: null | string;
+  timedOut: boolean;
+}
+
+export interface SlicingWorkbenchView {
+  completedPage: number;
+  completedSize: number;
+  completedTodayList: SlicingWorkbenchRow[];
+  completedTotal: number;
+  pendingList: SlicingWorkbenchRow[];
+  pendingPage: number;
+  pendingSize: number;
+  pendingTotal: number;
+  stats: SlicingWorkbenchStats;
+}
+
+export interface CreateSlideQcEvaluationRequest {
+  caseId: string;
+  evaluationResult: string;
+  improvementSuggestion?: null | string;
+  issueDescription?: null | string;
+  qcType: string;
+  remarks?: null | string;
+  slideId: string;
+  specimenId: string;
+  terminalCode?: null | string;
+}
+
+export interface SlideQcEvaluationResult {
+  evaluationResult: null | string;
+  qcEvaluationId: string;
+  qualityStatus: null | string;
+  slideId: string;
+}
+
 export interface SlideStainingCompleteRequest {
   qualityIssue?: null | string;
   remarks?: null | string;
@@ -545,6 +781,14 @@ export interface WorkstationCaseContext {
   recentEvents: TechnicalTrackingEventSummary[];
   slideCount: number;
   specimenCount: number;
+}
+
+export interface EmbeddingWorkstationSummary {
+  completedCount: number;
+  completedRecords: TechnicalTrackingEmbeddingRecordSummary[];
+  pendingCount: number;
+  pendingTasks: PendingTechnicalTaskItem[];
+  workDate: null | string;
 }
 
 export interface WorkstationQueueItem {

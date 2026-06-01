@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Page } from '@vben/common-ui';
 
-import { ElAlert } from 'element-plus';
 
 import TechnicalTrackingDetailsSection from '../components/TechnicalTrackingDetailsSection.vue';
 import TechnicalTrackingQueryPanel from '../components/TechnicalTrackingQueryPanel.vue';
@@ -19,7 +18,6 @@ const {
   handleReset,
   loadTracking,
   loading,
-  pageError,
   selectedNode,
   selectedNodeId,
   trackingResult,
@@ -29,18 +27,8 @@ const {
 </script>
 
 <template>
-  <Page
-    title="技术追踪"
-    description="按病例维度查看对象树、流程时间线、任务返工与质控异常。"
-  >
+  <Page>
     <div class="flex flex-col gap-4">
-      <ElAlert
-        v-if="pageError"
-        :closable="false"
-        :title="pageError"
-        type="error"
-        show-icon
-      />
 
       <TechnicalTrackingQueryPanel
         :case-id="caseId"
