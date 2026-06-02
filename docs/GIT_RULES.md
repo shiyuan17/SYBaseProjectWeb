@@ -103,6 +103,21 @@ git worktree remove ../SYBaseProjectWeb-worktrees/ENG-123
 git branch -d feature/ENG-123-user-management
 ```
 
+### 7. 自动化护栏（lefthook）
+
+仓库已通过 `lefthook.yml` 提供机器强制护栏，提交流程会自动触发，不依赖手工自觉：
+
+- `pre-commit`：对暂存文件自动执行 `oxfmt` 格式化 + `oxlint --fix` + `eslint --fix`（`.vue/.js/.ts` 等）+ `stylelint --fix`（样式文件），格式化结果会回写
+- `commit-msg`：`commitlint` 校验提交信息，不符合 Conventional Commits 直接拦截
+- `post-merge`：自动执行 `pnpm install`，保持依赖与合并结果一致
+
+护栏边界与责任分担：
+
+- **lefthook 只覆盖格式化、lint 与提交信息**，不覆盖类型检查、单元测试与构建
+- 因此 `pnpm check:type`、`pnpm test:unit`、`pnpm build` 等仍属开发者 / Agent 的交付前必跑项（见 `CODING_RULES.md` 标准验证命令），不得因"hook 已通过"就跳过
+- 禁止使用 `--no-verify` 等方式绕过护栏；确有特殊情况必须说明原因并人工确认
+- 涉及红区文件（权限模型、登录态、全局拦截器、构建配置、发布脚本）的改动，除护栏外仍须执行「6. 必须升级人工确认的场景」中的人工确认（见 `AGENTS.md`）
+
 ## 推荐实践
 
 - 保持分支短生命周期，尽量小步提交、频繁同步 `develop`
@@ -127,6 +142,7 @@ git branch -d feature/ENG-123-user-management
 - [ ] PR 描述包含目的、影响、验证和风险
 - [ ] UI 或联调类变更已附截图、录屏或接口说明
 - [ ] Review、构建、冲突处理已完成
+- [ ] 未使用 `--no-verify` 绕过 lefthook 护栏；hook 未覆盖的类型检查 / 测试 / 构建已另行执行
 - [ ] `release/*` 与 `hotfix/*` 的回合并路径已执行
 
 ## 关联文档
