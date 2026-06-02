@@ -9,6 +9,7 @@ import type {
 import type { RoleView } from '#/modules/system-management/types/system-management';
 
 import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
 import { useUserStore } from '@vben/stores';
@@ -46,6 +47,7 @@ import {
 } from '../utils/report-query';
 
 const userStore = useUserStore();
+const route = useRoute();
 
 const loading = ref(false);
 const exportLoading = ref(false);
@@ -86,6 +88,13 @@ const roleOptions = computed(() =>
 );
 
 const categoryOptions = computed(() => [...M6_STAT_CATEGORY_TABS]);
+const pageTitle = computed(() => String(route.meta.title || '统计分析'));
+const pageDescription = computed(() =>
+  String(
+    route.meta.description ||
+      '面向质控、运营和工作量的正式统计报表入口，支持按模板或单指标查询并导出 CSV。',
+  ),
+);
 
 function downloadBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob);
@@ -191,10 +200,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <Page
-    title="统计分析"
-    description="面向质控、运营和工作量的正式统计报表入口，支持按模板或单指标查询并导出 CSV。"
-  >
+  <Page :title="pageTitle" :description="pageDescription">
     <div class="flex flex-col gap-4">
       <DashboardSectionCard
         title="统计分类"

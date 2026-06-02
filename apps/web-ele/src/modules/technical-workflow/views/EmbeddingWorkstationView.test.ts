@@ -14,6 +14,7 @@ const {
   mockRoute,
   mockRouter,
   mockStartEmbedding,
+  mockUpdateEmbeddingQualityReview,
   mockUserStore,
 } = vi.hoisted(() => ({
   messageSuccess: vi.fn(),
@@ -29,6 +30,7 @@ const {
     push: vi.fn(),
   },
   mockStartEmbedding: vi.fn(),
+  mockUpdateEmbeddingQualityReview: vi.fn(),
   mockUserStore: {
     userInfo: {
       realName: '包埋技师',
@@ -64,6 +66,30 @@ vi.mock('../api/technical-workflow-service', () => ({
   getTechnicalTracking: mockGetTechnicalTracking,
   listPendingTechnicalTasks: mockListPendingTechnicalTasks,
   startEmbedding: mockStartEmbedding,
+  updateEmbeddingQualityReview: mockUpdateEmbeddingQualityReview,
+}));
+
+vi.mock('../components/EmbeddingQualityReviewDialog.vue', () => ({
+  default: defineComponent({
+    props: ['modelValue', 'row'],
+    emits: ['submitted', 'update:modelValue'],
+    setup(props, { emit }) {
+      return () =>
+        props.modelValue
+          ? h('section', { 'data-testid': 'quality-review-dialog' }, [
+              h('div', props.row?.embeddingId ?? ''),
+              h(
+                'button',
+                {
+                  type: 'button',
+                  onClick: () => emit('submitted'),
+                },
+                '保存评价',
+              ),
+            ])
+          : null;
+    },
+  }),
 }));
 
 vi.mock('../components/EmbeddingWorkstationProcessPanel.vue', () => ({
@@ -170,6 +196,34 @@ vi.mock('element-plus', () => {
     },
   });
 
+  const ElOption = defineComponent({
+    props: ['label', 'value'],
+    setup(props) {
+      return () => h('option', { value: props.value }, props.label);
+    },
+  });
+
+  const ElSelect = defineComponent({
+    props: ['modelValue', 'placeholder'],
+    emits: ['change', 'update:modelValue'],
+    setup(props, { emit, slots }) {
+      return () =>
+        h(
+          'select',
+          {
+            'aria-label': props.placeholder,
+            value: props.modelValue,
+            onChange: (event: Event) => {
+              const value = (event.target as HTMLSelectElement).value;
+              emit('update:modelValue', value);
+              emit('change', value);
+            },
+          },
+          slots.default?.(),
+        );
+    },
+  });
+
   const ElTag = defineComponent({
     setup(_, { slots }) {
       return () => h('span', slots.default?.());
@@ -186,6 +240,8 @@ vi.mock('element-plus', () => {
       success: messageSuccess,
       warning: messageWarning,
     },
+    ElOption,
+    ElSelect,
     ElTag,
   };
 });
@@ -409,6 +465,11 @@ describe('EmbeddingWorkstationView', () => {
       markingSuccess: true,
       taskId: 'TASK-1',
     });
+    mockUpdateEmbeddingQualityReview.mockResolvedValue({
+      record: {},
+      reworkStatus: null,
+      reworkType: null,
+    });
   });
 
   afterEach(() => {
@@ -421,6 +482,7 @@ describe('EmbeddingWorkstationView', () => {
     mockListPendingTechnicalTasks.mockReset();
     mockRouter.push.mockReset();
     mockStartEmbedding.mockReset();
+    mockUpdateEmbeddingQualityReview.mockReset();
   });
 
   it('renders summary cards and pending list', async () => {
@@ -484,6 +546,34 @@ describe('EmbeddingWorkstationView', () => {
     await flushView();
     expect(document.body.textContent).toContain('汇总备注');
     expect(document.body.textContent).toContain('当日待处理任务');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('edits completed embedding slice notice and opens quality review dialog', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    expect(document.body.textContent).toContain('已包埋蜡块列表');
+
+    const sliceNoticeSelect = document.querySelector(
+      'select[aria-label="切片备注"]',
+    ) as HTMLSelectElement;
+    expect(sliceNoticeSelect).toBeTruthy();
+    sliceNoticeSelect.value = '皮肤';
+    sliceNoticeSelect.dispatchEvent(new Event('change'));
+    await flushView();
+
+    expect(mockUpdateEmbeddingQualityReview).toHaveBeenCalledWith('EMB-A1', {
+      evaluationLevel: 'QUALIFIED',
+      samplingEvaluation: 'A1-评价',
+      sliceNotice: '皮肤',
+    });
+
+    findButton('评价').click();
+    await flushView();
+    expect(document.body.textContent).toContain('保存评价');
 
     app.unmount();
     root.remove();

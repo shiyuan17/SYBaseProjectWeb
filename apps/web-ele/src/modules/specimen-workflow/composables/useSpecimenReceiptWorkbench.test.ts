@@ -351,6 +351,13 @@ describe('useSpecimenReceiptWorkbench', () => {
       name: 'Alt User',
     });
     state.handleSelectionChange(state.queueItems.value);
+    state.openReceiveDialog();
+    expect(state.receiveDialogVisible.value).toBe(true);
+    state.receiveForm.logisticsStaffName = '物流员甲';
+    state.handleReceiveUserChange({
+      id: 'USER-ALT',
+      name: 'Alt User',
+    });
     await state.handleReceiveSelected();
     await flushComposable();
 
@@ -360,21 +367,29 @@ describe('useSpecimenReceiptWorkbench', () => {
         {
           containerCount: 1,
           qualityCheckResult: 'PASSED',
+          qualityIssueCodes: null,
+          reason: null,
           receiptStatus: 'RECEIVED',
+          remarks: null,
           specimenBarcode: 'BC-002',
         },
         {
           containerCount: 1,
           qualityCheckResult: 'PASSED',
+          qualityIssueCodes: null,
+          reason: null,
           receiptStatus: 'RECEIVED',
+          remarks: null,
           specimenBarcode: 'BC-001',
         },
       ],
+      logisticsStaffName: '物流员甲',
       receivedByName: 'Alt User',
       receivedByUserId: 'USER-ALT',
       terminalCode: null,
       transportOrderId: 'TO-001',
     });
+    expect(state.receiveDialogVisible.value).toBe(false);
     expect(state.queueItems.value.every((item) => item.queueStatus === 'SUCCESS')).toBe(
       true,
     );

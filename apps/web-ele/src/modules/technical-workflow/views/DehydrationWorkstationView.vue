@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type {
-  DehydrationBatchResult,
   PendingTechnicalTaskItem,
 } from '../types/technical-workflow';
 
@@ -22,9 +21,11 @@ import {
   ElTag,
 } from 'element-plus';
 
-import { listPendingTechnicalTasks } from '../api/technical-workflow-service';
-import DehydrationBatchOperationDialog from '../components/DehydrationBatchOperationDialog.vue';
-import DehydrationCreateBatchDialog from '../components/DehydrationCreateBatchDialog.vue';
+import {
+  completeDehydration,
+  listPendingTechnicalTasks,
+  startDehydration,
+} from '../api/technical-workflow-service';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 import {
   buildDehydrationWorkbenchStats,
@@ -34,7 +35,7 @@ import {
 import { reportInlineErrorDisabled } from '#/utils/error-feedback';
 
 import { getWorkflowPageErrorMessage } from '../utils/error';
-import { formatBatchStatus, formatDateTime, formatTaskStatus } from '../utils/format';
+import { formatDateTime, formatTaskStatus } from '../utils/format';
 import { useTechnicalWorkflowNavigation } from '../utils/navigation';
 
 const route = useRoute();
@@ -43,13 +44,11 @@ const navigation = useTechnicalWorkflowNavigation(router);
 
 const pageError = ref('');
 const loading = ref(false);
+const startLoading = ref(false);
+const completeLoading = ref(false);
 const pendingItems = ref<PendingTechnicalTaskItem[]>([]);
 const total = ref(0);
 const selectedTaskId = ref('');
-const createDialogVisible = ref(false);
-const batchDialogVisible = ref(false);
-const initialBatchId = ref('');
-const latestBatchResult = ref<DehydrationBatchResult | null>(null);
 
 const filters = reactive({
   page: 1,
@@ -147,24 +146,6 @@ function ensureSelectedTask(actionLabel: string) {
   return null;
 }
 
-function openCreateDialog(task = selectedTask.value) {
-  const nextTask = task ?? ensureSelectedTask('创建批次');
-  if (!nextTask) {
-    return;
-  }
-  selectedTaskId.value = nextTask.id;
-  createDialogVisible.value = true;
-}
-
-function openBatchOperationDialog(task = selectedTask.value) {
-  const nextTask = task ?? ensureSelectedTask('执行脱水');
-  if (!nextTask) {
-    return;
-  }
-  selectedTaskId.value = nextTask.id;
-  batchDialogVisible.value = true;
-}
-
 function openTracking(task = selectedTask.value) {
   const nextTask = task ?? ensureSelectedTask('查看轨迹');
   if (!nextTask) {
@@ -179,18 +160,56 @@ function openTracking(task = selectedTask.value) {
   });
 }
 
-async function handleBatchCreated(result: DehydrationBatchResult) {
-  createDialogVisible.value = false;
-  latestBatchResult.value = result;
-  initialBatchId.value = result.batchId;
-  await loadPendingData();
+async function handleStartDehydration() {
+  const task = ensureSelectedTask('开始脱水');
+  if (!task) {
+    return;
+  }
+  if (task.taskStatus !== 'PENDING') {
+    ElMessage.warning('仅待处理任务可以开始脱水');
+    return;
+  }
+
+  startLoading.value = true;
+  pageError.value = '';
+  try {
+    await startDehydration({
+      taskId: task.id,
+    });
+    ElMessage.success(`任务 ${task.id} 已开始脱水`);
+    await loadPendingData();
+  } catch (error) {
+    pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
+  } finally {
+    startLoading.value = false;
+  }
 }
 
-async function handleBatchOperationSubmitted(result: DehydrationBatchResult) {
-  batchDialogVisible.value = false;
-  latestBatchResult.value = result;
-  initialBatchId.value = result.batchId;
-  await loadPendingData();
+async function handleCompleteDehydration() {
+  const task = ensureSelectedTask('完成脱水');
+  if (!task) {
+    return;
+  }
+  if (task.taskStatus !== 'IN_PROGRESS') {
+    ElMessage.warning('请先开始脱水');
+    return;
+  }
+
+  completeLoading.value = true;
+  pageError.value = '';
+  try {
+    await completeDehydration({
+      taskId: task.id,
+    });
+    ElMessage.success(`任务 ${task.id} 已完成脱水`);
+    await loadPendingData();
+  } catch (error) {
+    pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
+  } finally {
+    completeLoading.value = false;
+  }
 }
 
 void loadPendingData();
@@ -203,40 +222,48 @@ void loadPendingData();
       <section class="rounded-lg border border-border bg-card">
         <div class="flex flex-col gap-3 border-b border-border px-4 py-3">
           <div class="flex flex-wrap items-center gap-2">
-            <ElButton size="small" type="primary" @click="openCreateDialog()">
-              执行脱水
-            </ElButton>
-            <ElButton size="small" @click="openBatchOperationDialog()">
+            <ElButton
+              :loading="startLoading"
+              size="small"
+              type="primary"
+              @click="handleStartDehydration"
+            >
               开始脱水
             </ElButton>
-            <ElButton size="small" @click="openBatchOperationDialog()">
+            <ElButton
+              :loading="completeLoading"
+              size="small"
+              @click="handleCompleteDehydration"
+            >
               脱水完成
             </ElButton>
             <ElButton size="small" @click="openTracking()">脱水追踪</ElButton>
 
-            <div class="ml-auto flex flex-wrap items-center gap-2">
-              <ElForm inline @submit.prevent>
+            <div class="ml-auto">
+              <ElForm inline size="small" @submit.prevent="handleSearch">
                 <ElFormItem class="mb-0" label="病理号">
                   <ElInput
                     v-model="filters.pathologyNo"
+                    class="w-48"
                     clearable
                     placeholder="请输入病理号"
                     @keyup.enter="handleSearch"
                   />
                 </ElFormItem>
+                <ElFormItem class="mb-0">
+                  <ElButton native-type="submit" type="primary">查询</ElButton>
+                </ElFormItem>
+                <ElFormItem class="mb-0">
+                  <ElBadge :value="timedOutCount" :hidden="timedOutCount === 0">
+                    <ElButton
+                      :type="filters.timedOutOnly ? 'danger' : 'default'"
+                      @click="toggleTimedOutOnly"
+                    >
+                      {{ filters.timedOutOnly ? '仅异常任务' : '异常任务' }}
+                    </ElButton>
+                  </ElBadge>
+                </ElFormItem>
               </ElForm>
-              <ElButton size="small" type="primary" @click="handleSearch">
-                查询
-              </ElButton>
-              <ElBadge :value="timedOutCount" :hidden="timedOutCount === 0">
-                <ElButton
-                  :type="filters.timedOutOnly ? 'danger' : 'default'"
-                  size="small"
-                  @click="toggleTimedOutOnly"
-                >
-                  {{ filters.timedOutOnly ? '仅异常任务' : '异常任务' }}
-                </ElButton>
-              </ElBadge>
             </div>
           </div>
 
@@ -259,31 +286,8 @@ void loadPendingData();
                 {{ item.value }}
               </span>
             </div>
-
-            <div
-              v-if="selectedTask"
-              class="ml-auto text-sm text-muted-foreground"
-            >
-              当前选择：
-              {{ selectedTask.pathologyNo || '-' }} /
-              {{ selectedTask.samplingBlockCode || selectedTask.objectId || '-' }}
-            </div>
           </div>
         </div>
-
-        <ElAlert
-          v-if="latestBatchResult"
-          class="mx-4 mt-4"
-          :closable="false"
-          :title="`当前批次：${latestBatchResult.batchNo}`"
-          type="success"
-          show-icon
-        >
-          <template #default>
-            状态：{{ formatBatchStatus(latestBatchResult.batchStatus) }}，已关联
-            {{ latestBatchResult.taskCount }} 个蜡块任务。
-          </template>
-        </ElAlert>
 
         <div class="px-4 pb-4 pt-4">
           <ElTable
@@ -337,6 +341,11 @@ void loadPendingData();
                 {{ getDehydrationTaskOperator(row) || '-' }}
               </template>
             </ElTableColumn>
+            <ElTableColumn label="脱水开始时间" min-width="180">
+              <template #default="{ row }">
+                {{ formatDateTime(row.startedAt) }}
+              </template>
+            </ElTableColumn>
             <ElTableColumn label="脱水完成时间" min-width="180">
               <template #default="{ row }">
                 {{ formatDateTime(row.completedAt) }}
@@ -347,19 +356,6 @@ void loadPendingData();
                 <ElTag :type="getStatusTagType(row)">
                   {{ formatTaskStatus(row.taskStatus) }}
                 </ElTag>
-              </template>
-            </ElTableColumn>
-            <ElTableColumn fixed="right" label="操作" min-width="190">
-              <template #default="{ row }">
-                <div class="flex flex-wrap gap-2">
-                  <ElButton link type="primary" @click="openCreateDialog(row)">
-                    创建批次
-                  </ElButton>
-                  <ElButton link type="success" @click="openBatchOperationDialog(row)">
-                    批次操作
-                  </ElButton>
-                  <ElButton link @click="openTracking(row)">轨迹</ElButton>
-                </div>
               </template>
             </ElTableColumn>
           </ElTable>
@@ -378,17 +374,5 @@ void loadPendingData();
         </div>
       </section>
     </div>
-
-    <DehydrationCreateBatchDialog
-      v-model="createDialogVisible"
-      :task="selectedTask"
-      @created="handleBatchCreated"
-    />
-
-    <DehydrationBatchOperationDialog
-      v-model="batchDialogVisible"
-      :initial-batch-id="initialBatchId"
-      @submitted="handleBatchOperationSubmitted"
-    />
   </Page>
 </template>

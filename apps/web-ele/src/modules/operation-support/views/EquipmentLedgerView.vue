@@ -9,11 +9,25 @@ import type {
 } from '../utils/equipment-ledger';
 
 import { computed, reactive, ref } from 'vue';
+import { useRoute } from 'vue-router';
 
 import { Fallback, Page } from '@vben/common-ui';
 import { useAccessStore, useUserStore } from '@vben/stores';
 
-import { ElAlert, ElMessage } from 'element-plus';
+import {
+  ElAlert,
+  ElButton,
+  ElForm,
+  ElFormItem,
+  ElInput,
+  ElMessage,
+  ElOption,
+  ElSelect,
+  ElTable,
+  ElTableColumn,
+  ElTag,
+  ElDrawer,
+} from 'element-plus';
 
 import { getEquipmentLedgerCapabilities } from '../access';
 import {
@@ -24,10 +38,13 @@ import {
   listEquipmentWarnings,
   updateEquipmentRecord,
 } from '../api/operation-support-service';
-import EquipmentCatalogPanel from '../components/EquipmentCatalogPanel.vue';
+import {
+  EQUIPMENT_STATUS_OPTIONS,
+} from '../constants';
 import EquipmentDetailPanel from '../components/EquipmentDetailPanel.vue';
 import EquipmentDialog from '../components/EquipmentDialog.vue';
 import EquipmentWarningPanel from '../components/EquipmentWarningPanel.vue';
+import { getOperationSupportPageErrorMessage } from '../utils/error';
 import {
   buildCreateEquipmentRecordRequest,
   buildCreateMaintenanceLogRequest,
@@ -41,10 +58,15 @@ import {
   validateEquipmentForm,
   validateMaintenanceLogForm,
 } from '../utils/equipment-ledger';
-import { getOperationSupportPageErrorMessage } from '../utils/error';
+import {
+  formatEquipmentCategory,
+  formatEquipmentStatus,
+  formatNullable,
+} from '../utils/format';
 
 const accessStore = useAccessStore();
 const userStore = useUserStore();
+const route = useRoute();
 
 const capabilities = computed(() =>
   getEquipmentLedgerCapabilities(accessStore.accessCodes),
@@ -65,6 +87,9 @@ const selectedEquipment = ref<EquipmentRecordView | null>(null);
 const logs = ref(awaitSafeLogs());
 const warnings = ref<EquipmentWarningView[]>([]);
 const editingEquipment = ref<EquipmentRecordView | null>(null);
+const equipmentDetailDrawerVisible = ref(false);
+const equipmentWarningDrawerVisible = ref(false);
+
 const equipmentDialogVisible = computed({
   get: () => editingEquipment.value !== null,
   set: (visible: boolean) => {
@@ -91,8 +116,14 @@ const logForm = reactive<MaintenanceLogFormState>(
   createMaintenanceLogFormDefaults(getDefaultOperatorName()),
 );
 
-const getWarningTagType = getEquipmentWarningTagType;
 const isEditingEquipment = computed(() => Boolean(editingEquipment.value?.id));
+const pageTitle = computed(() => String(route.meta.title || '设备台账'));
+const pageDescription = computed(() =>
+  String(
+    route.meta.description ||
+      '维护设备台账、保养记录，并跟踪 DUE_SOON 与 OVERDUE 预警。',
+  ),
+);
 
 function getDefaultOperatorName() {
   return currentOperatorName.value;
@@ -109,29 +140,6 @@ function resetLogForm() {
   Object.assign(
     logForm,
     createMaintenanceLogFormDefaults(getDefaultOperatorName()),
-  );
-}
-
-function openCreateEquipmentDialog() {
-  if (!capabilities.value.canCreateEquipment) {
-    ElMessage.warning('当前账号没有设备档案维护权限');
-    return;
-  }
-
-  editingEquipment.value = createDraftEquipmentRecordView();
-  resetEquipmentForm();
-}
-
-function openEditEquipmentDialog(row: EquipmentRecordView) {
-  if (!capabilities.value.canUpdateEquipment) {
-    ElMessage.warning('当前账号没有设备档案维护权限');
-    return;
-  }
-
-  editingEquipment.value = row;
-  Object.assign(
-    equipmentForm,
-    createEquipmentFormStateFromRow(row, getDefaultOperatorName()),
   );
 }
 
@@ -202,11 +210,55 @@ async function selectEquipment(row: EquipmentRecordView | null) {
   }
 }
 
-function scrollToEquipmentDetail() {
-  document.querySelector('#equipment-detail')?.scrollIntoView({
+function scrollToEquipmentTable() {
+  document.querySelector('#equipment-main-table')?.scrollIntoView({
     behavior: 'smooth',
     block: 'start',
   });
+}
+
+function openCreateEquipmentDialog() {
+  if (!capabilities.value.canCreateEquipment) {
+    ElMessage.warning('当前账号没有设备档案维护权限');
+    return;
+  }
+
+  editingEquipment.value = createDraftEquipmentRecordView();
+  resetEquipmentForm();
+}
+
+function openEditEquipmentDialog(row: EquipmentRecordView) {
+  if (!capabilities.value.canUpdateEquipment) {
+    ElMessage.warning('当前账号没有设备档案维护权限');
+    return;
+  }
+
+  editingEquipment.value = row;
+  Object.assign(
+    equipmentForm,
+    createEquipmentFormStateFromRow(row, getDefaultOperatorName()),
+  );
+}
+
+function openEditSelectedEquipmentDialog() {
+  if (!selectedEquipment.value) {
+    return;
+  }
+
+  openEditEquipmentDialog(selectedEquipment.value);
+}
+
+async function openEquipmentDetailDrawer() {
+  if (!selectedEquipment.value) {
+    return;
+  }
+
+  equipmentDetailDrawerVisible.value = true;
+  await selectEquipment(selectedEquipment.value);
+}
+
+function openEquipmentWarningDrawer() {
+  equipmentWarningDrawerVisible.value = true;
 }
 
 async function navigateToEquipmentDetail(warning: EquipmentWarningView) {
@@ -227,8 +279,9 @@ async function navigateToEquipmentDetail(warning: EquipmentWarningView) {
     return;
   }
 
+  equipmentWarningDrawerVisible.value = false;
   await selectEquipment(matchedEquipment);
-  scrollToEquipmentDetail();
+  scrollToEquipmentTable();
   ElMessage.success(`已定位到设备 ${warning.equipmentCode}`);
 }
 
@@ -302,6 +355,13 @@ async function submitMaintenanceLog() {
   }
 }
 
+async function refreshEquipmentPage() {
+  await Promise.all([loadEquipmentRecords(), loadWarnings()]);
+  if (selectedEquipment.value) {
+    await selectEquipment(selectedEquipment.value);
+  }
+}
+
 async function initializePage() {
   const tasks: Promise<void>[] = [];
 
@@ -328,58 +388,194 @@ void initializePage();
   </div>
   <Page
     v-else
-    title="设备台账"
-    description="维护设备台账、保养记录，并跟踪 DUE_SOON 与 OVERDUE 预警。"
+    :title="pageTitle"
+    :description="pageDescription"
   >
     <div class="flex flex-col gap-4">
       <ElAlert
-        v-if="false"
+        v-if="pageError"
         :closable="false"
         :title="pageError"
         show-icon
         type="error"
       />
 
-      <EquipmentCatalogPanel
-        v-model:equipment-filters="equipmentFilters"
-        :can-create-equipment="capabilities.canCreateEquipment"
-        :can-query-equipment="capabilities.canQueryEquipment"
-        :can-update-equipment="capabilities.canUpdateEquipment"
-        :equipment-records="equipmentRecords"
-        :get-equipment-status-tag-type="getEquipmentStatusTagType"
-        :loading="loading.equipment"
-        @load-equipment-records="loadEquipmentRecords"
-        @open-create-equipment-dialog="openCreateEquipmentDialog"
-        @open-edit-equipment-dialog="openEditEquipmentDialog"
-        @select-equipment="selectEquipment"
-      />
+      <section class="rounded-lg border border-border bg-card shadow-sm">
+        <div class="border-b border-border px-4 py-3">
+          <ElForm class="flex flex-wrap items-end gap-x-4 gap-y-3" inline>
+            <ElFormItem label="关键字" label-width="72px">
+              <ElInput
+                v-model="equipmentFilters.keyword"
+                clearable
+                placeholder="编码/名称"
+                style="width: 220px"
+                @keyup.enter="loadEquipmentRecords"
+              />
+            </ElFormItem>
+            <ElFormItem label="状态" label-width="56px">
+              <ElSelect
+                v-model="equipmentFilters.equipmentStatus"
+                clearable
+                placeholder="全部"
+                style="width: 160px"
+              >
+                <ElOption
+                  v-for="option in EQUIPMENT_STATUS_OPTIONS"
+                  :key="option.value"
+                  :label="option.label"
+                  :value="option.value"
+                />
+              </ElSelect>
+            </ElFormItem>
+            <ElFormItem>
+              <ElButton
+                :disabled="!capabilities.canQueryEquipment"
+                :loading="loading.equipment"
+                type="primary"
+                @click="loadEquipmentRecords"
+              >
+                查询
+              </ElButton>
+            </ElFormItem>
+          </ElForm>
+        </div>
 
+        <div class="flex flex-wrap gap-2 border-b border-border px-4 py-3">
+          <ElButton
+            :disabled="!capabilities.canQueryEquipment"
+            :loading="loading.equipment || loading.warnings"
+            @click="refreshEquipmentPage"
+          >
+            刷新
+          </ElButton>
+          <ElButton
+            v-if="capabilities.canCreateEquipment"
+            type="primary"
+            @click="openCreateEquipmentDialog"
+          >
+            新增设备
+          </ElButton>
+          <ElButton
+            v-if="capabilities.canUpdateEquipment"
+            :disabled="!selectedEquipment"
+            @click="openEditSelectedEquipmentDialog"
+          >
+            编辑设备
+          </ElButton>
+          <ElButton
+            v-if="capabilities.canQueryEquipment"
+            :disabled="!selectedEquipment"
+            @click="openEquipmentDetailDrawer"
+          >
+            设备详情/保养
+          </ElButton>
+          <ElButton
+            v-if="capabilities.canQueryWarnings"
+            @click="openEquipmentWarningDrawer"
+          >
+            设备预警
+          </ElButton>
+        </div>
+
+        <div class="px-4 py-4">
+          <ElAlert
+            v-if="!capabilities.canQueryEquipment"
+            :closable="false"
+            title="当前账号没有设备档案查询权限，仅可使用已开放的维护或预警能力。"
+            type="warning"
+          />
+          <ElTable
+            v-else
+            id="equipment-main-table"
+            v-loading="loading.equipment"
+            :data="equipmentRecords"
+            border
+            highlight-current-row
+            @current-change="selectEquipment"
+          >
+            <ElTableColumn label="设备编码" min-width="140" prop="equipmentCode" />
+            <ElTableColumn label="设备名称" min-width="180" prop="equipmentName" />
+            <ElTableColumn label="类别" min-width="120">
+              <template #default="{ row }">
+                {{ formatEquipmentCategory(row.equipmentCategory) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="型号" min-width="120">
+              <template #default="{ row }">
+                {{ formatNullable(row.modelNo) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="状态" min-width="110">
+              <template #default="{ row }">
+                <ElTag :type="getEquipmentStatusTagType(row.equipmentStatus)">
+                  {{ formatEquipmentStatus(row.equipmentStatus) }}
+                </ElTag>
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="启用日期" min-width="160">
+              <template #default="{ row }">
+                {{ formatNullable(row.enabledAt) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="下次保养" min-width="160">
+              <template #default="{ row }">
+                {{ formatNullable(row.nextMaintenanceAt) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="存放位置" min-width="160">
+              <template #default="{ row }">
+                {{ formatNullable(row.locationDescription) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="备注" min-width="180">
+              <template #default="{ row }">
+                {{ formatNullable(row.remarks) }}
+              </template>
+            </ElTableColumn>
+          </ElTable>
+        </div>
+      </section>
+    </div>
+
+    <ElDrawer
+      v-model="equipmentDetailDrawerVisible"
+      :size="920"
+      title="设备详情与保养"
+    >
       <EquipmentDetailPanel
-        v-model:log-form="logForm"
+        :log-form="logForm"
         :can-create-maintenance-log="capabilities.canCreateMaintenanceLog"
         :loading="loading.logs"
         :logs="logs"
         :selected-equipment="selectedEquipment"
         :submitting="submitting"
+        @update:log-form="Object.assign(logForm, $event)"
         @submit-maintenance-log="submitMaintenanceLog"
       />
+    </ElDrawer>
 
+    <ElDrawer
+      v-model="equipmentWarningDrawerVisible"
+      :size="860"
+      title="设备预警"
+    >
       <EquipmentWarningPanel
         :can-query-equipment="capabilities.canQueryEquipment"
         :can-query-warnings="capabilities.canQueryWarnings"
-        :get-warning-tag-type="getWarningTagType"
+        :get-warning-tag-type="getEquipmentWarningTagType"
         :loading="loading.warnings"
         :warnings="warnings"
         @load-warnings="loadWarnings"
         @navigate-to-equipment-detail="navigateToEquipmentDetail"
       />
-    </div>
+    </ElDrawer>
 
     <EquipmentDialog
       v-model="equipmentDialogVisible"
-      v-model:equipment-form="equipmentForm"
+      :equipment-form="equipmentForm"
       :is-editing-equipment="isEditingEquipment"
       :submitting="submitting"
+      @update:equipment-form="Object.assign(equipmentForm, $event)"
       @submit="submitEquipment"
     />
   </Page>

@@ -4,6 +4,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { M5_PERMISSION_CODES } from '../constants';
 
+vi.mock('element-plus/theme-chalk/base.css', () => ({}));
+vi.mock('vue-router', () => ({
+  useRoute: () => ({
+    meta: {
+      description: '试剂页面描述',
+      title: '试剂耗材管理',
+    },
+  }),
+}));
+
 const {
   messageErrorMock,
   messageSuccessMock,
@@ -82,13 +92,15 @@ vi.mock('element-plus', () => {
   });
 
   const ElButton = defineComponent({
+    props: ['disabled'],
     emits: ['click'],
-    setup(_, { attrs, emit, slots }) {
+    setup(props, { attrs, emit, slots }) {
       return () =>
         h(
           'button',
           {
             ...attrs,
+            disabled: props.disabled,
             type: 'button',
             onClick: (event: MouseEvent) => emit('click', event),
           },
@@ -125,10 +137,34 @@ vi.mock('element-plus', () => {
     },
   });
 
+  const ElDrawer = defineComponent({
+    props: ['modelValue', 'title'],
+    emits: ['update:modelValue'],
+    setup(props, { slots }) {
+      return () =>
+        props.modelValue ? h('section', [h('h2', props.title), slots.default?.()]) : null;
+    },
+  });
+
   const ElTable = defineComponent({
+    props: ['data'],
     emits: ['current-change'],
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.());
+    setup(props, { slots, emit }) {
+      return () =>
+        h('div', [
+          props.data?.map((row: { batchNo?: string; id: string }) =>
+            h(
+              'button',
+              {
+                type: 'button',
+                'data-row-id': row.id,
+                onClick: () => emit('current-change', row),
+              },
+              row.batchNo ?? row.id,
+            ),
+          ),
+          slots.default?.(),
+        ]);
     },
   });
 
@@ -150,6 +186,7 @@ vi.mock('element-plus', () => {
     ElDescriptions,
     ElDescriptionsItem,
     ElDialog,
+    ElDrawer,
     ElForm: createModelComponent('form'),
     ElFormItem: createModelComponent('div'),
     ElInput: createModelComponent('input'),
@@ -173,6 +210,76 @@ vi.mock('element-plus', () => {
   };
 });
 
+vi.mock('../components/ReagentCatalogPanel.vue', () => ({
+  default: defineComponent({
+    emits: ['openCreateReagentDialog'],
+    setup(_, { emit }) {
+      return () =>
+        h('div', [
+          'reagent-catalog-panel',
+          h(
+            'button',
+            {
+              type: 'button',
+              onClick: () => emit('openCreateReagentDialog'),
+            },
+            '目录新增试剂',
+          ),
+        ]);
+    },
+  }),
+}));
+
+vi.mock('../components/ReagentStockDetailPanel.vue', () => ({
+  default: defineComponent({
+    setup() {
+      return () => h('div', 'reagent-stock-detail-panel');
+    },
+  }),
+}));
+
+vi.mock('../components/ReagentWarningPanel.vue', () => ({
+  default: defineComponent({
+    props: ['warnings'],
+    emits: ['navigateToStockDetail'],
+    setup(props, { emit }) {
+      return () =>
+        h('div', [
+          'reagent-warning-panel',
+          props.warnings?.map((warning: { batchNo: string; stockId: string }) =>
+            h(
+              'button',
+              {
+                type: 'button',
+                onClick: () => emit('navigateToStockDetail', warning),
+              },
+              `定位-${warning.batchNo}`,
+            ),
+          ),
+        ]);
+    },
+  }),
+}));
+
+vi.mock('../components/ReagentDialog.vue', () => ({
+  default: defineComponent({
+    props: ['modelValue'],
+    setup(props) {
+      return () => (props.modelValue ? h('div', 'reagent-dialog') : null);
+    },
+  }),
+}));
+
+vi.mock('../components/ReagentStockDialog.vue', () => ({
+  default: defineComponent({
+    props: ['modelValue'],
+    setup(props) {
+      return () =>
+        props.modelValue ? h('div', 'reagent-stock-dialog') : null;
+    },
+  }),
+}));
+
 vi.mock('../api/operation-support-service', () => ({
   createReagent: mockCreateReagent,
   createReagentStock: mockCreateReagentStock,
@@ -192,6 +299,7 @@ function mountView() {
   const app = createApp({
     render: () => h(ReagentLedgerView),
   });
+  app.directive('loading', {});
 
   app.mount(root);
 
@@ -205,6 +313,12 @@ async function flushView() {
   await nextTick();
   await Promise.resolve();
   await nextTick();
+}
+
+function findButton(label: string) {
+  return [...document.querySelectorAll('button')].find(
+    (button) => button.textContent?.trim() === label,
+  ) as HTMLButtonElement | undefined;
 }
 
 describe('ReagentLedgerView', () => {
@@ -298,32 +412,89 @@ describe('ReagentLedgerView', () => {
     root.remove();
   });
 
-  it('renders main reagent sections and opens create dialog from catalog panel', async () => {
+  it('renders toolbar actions and keeps selected-row actions disabled before selection', async () => {
     const { app, root } = mountView();
     await flushView();
 
-    expect(document.body.textContent).toContain('试剂台账');
-    expect(document.body.textContent).toContain('试剂基础信息');
-    expect(document.body.textContent).toContain('试剂库存批次');
-    expect(document.body.textContent).toContain('批次详情');
-    expect(document.body.textContent).toContain('试剂预警');
-    expect(document.body.textContent).toContain('新增试剂');
-    expect(document.body.textContent).toContain('新增库存');
+    expect(document.body.textContent).toContain('试剂耗材管理');
     expect(mockListReagents).toHaveBeenCalledTimes(1);
     expect(mockListReagentStocks).toHaveBeenCalledTimes(1);
     expect(mockListReagentWarnings).toHaveBeenCalledTimes(1);
 
-    const createReagentButton = [...document.querySelectorAll('button')].find(
-      (button) => button.textContent?.trim() === '新增试剂',
-    );
-    expect(createReagentButton).toBeTruthy();
+    expect(findButton('试剂目录')).toBeTruthy();
+    expect(findButton('新增试剂')).toBeTruthy();
+    expect(findButton('新增库存')).toBeTruthy();
+    expect(findButton('编辑试剂')?.disabled).toBe(true);
+    expect(findButton('编辑库存')?.disabled).toBe(true);
+    expect(findButton('批次详情')?.disabled).toBe(true);
 
-    createReagentButton?.dispatchEvent(
+    app.unmount();
+    root.remove();
+  });
+
+  it('opens create reagent dialog from toolbar', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    findButton('新增试剂')?.dispatchEvent(
       new MouseEvent('click', { bubbles: true }),
     );
     await flushView();
 
-    expect(document.body.textContent).toContain('试剂维护');
+    expect(document.body.textContent).toContain('reagent-dialog');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('opens reagent catalog drawer and stock detail after selecting a row', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    findButton('试剂目录')?.dispatchEvent(
+      new MouseEvent('click', { bubbles: true }),
+    );
+    await flushView();
+    expect(document.body.textContent).toContain('reagent-catalog-panel');
+
+    document
+      .querySelector('[data-row-id="STOCK-1"]')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushView();
+
+    expect(findButton('编辑试剂')?.disabled).toBe(false);
+    expect(findButton('编辑库存')?.disabled).toBe(false);
+    expect(findButton('批次详情')?.disabled).toBe(false);
+
+    findButton('批次详情')?.dispatchEvent(
+      new MouseEvent('click', { bubbles: true }),
+    );
+    await flushView();
+
+    expect(document.body.textContent).toContain('reagent-stock-detail-panel');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('navigates from warning drawer back to the stock list selection', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    findButton('库存预警')?.dispatchEvent(
+      new MouseEvent('click', { bubbles: true }),
+    );
+    await flushView();
+
+    expect(document.body.textContent).toContain('reagent-warning-panel');
+
+    [...document.querySelectorAll('button')]
+      .find((button) => button.textContent?.includes('定位-BATCH-1'))
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushView();
+
+    expect(messageSuccessMock).toHaveBeenCalledWith('已定位到批次 BATCH-1');
+    expect(mockListReagentStocks).toHaveBeenCalledTimes(2);
 
     app.unmount();
     root.remove();

@@ -62,7 +62,7 @@ export async function loadAnalyticsOverview(
       description: '本月病例量',
       id: 'kpi-case-volume',
       query: { category: 'OPERATION' },
-      route: '/m6/statistics',
+      route: '/m6/custom-analysis',
       title: indicatorNameMap.get('OP_CASE_VOLUME') ?? '病例量',
       unit: getMetric(operation.rows, 'OP_CASE_VOLUME')?.metricUnit ?? 'COUNT',
       value: getMetric(operation.rows, 'OP_CASE_VOLUME')?.metricValue ?? '0',
@@ -71,7 +71,7 @@ export async function loadAnalyticsOverview(
       description: '本月收费金额',
       id: 'kpi-billing',
       query: { category: 'OPERATION' },
-      route: '/m6/statistics',
+      route: '/m6/custom-analysis',
       title: indicatorNameMap.get('OP_BILLING_AMOUNT') ?? '收费金额',
       unit: 'CNY',
       value: formatCurrency(
@@ -81,7 +81,7 @@ export async function loadAnalyticsOverview(
     {
       description: '试剂库存预警总数',
       id: 'kpi-reagent-warning',
-      route: '/operation-support/reagents',
+      route: '/operation-resources/reagents',
       title: '试剂预警数',
       unit: 'COUNT',
       value: String(reagents.length),
@@ -90,7 +90,7 @@ export async function loadAnalyticsOverview(
       description: '绩效工作量',
       id: 'kpi-workload',
       query: { category: 'WORKLOAD' },
-      route: '/m6/statistics',
+      route: '/m6/custom-analysis',
       title: indicatorNameMap.get('OP_PERFORMANCE_WORKLOAD') ?? '绩效工作量',
       unit:
         getMetric(operation.rows, 'OP_PERFORMANCE_WORKLOAD')?.metricUnit ??
@@ -103,7 +103,7 @@ export async function loadAnalyticsOverview(
       description: '标本固定合格率',
       id: 'kpi-fixation-rate',
       query: { category: 'QUALITY' },
-      route: '/m6/statistics',
+      route: '/m6/custom-analysis',
       title:
         indicatorNameMap.get('QC_SPECIMEN_FIXATION_RATE') ?? '标本固定合格率',
       unit: 'PERCENT',
@@ -115,7 +115,7 @@ export async function loadAnalyticsOverview(
       description: '临床病理符合率',
       id: 'kpi-clinical-match',
       query: { category: 'QUALITY' },
-      route: '/m6/statistics',
+      route: '/m6/custom-analysis',
       title: indicatorNameMap.get('QC_CLINICAL_MATCH_RATE') ?? '临床病理符合率',
       unit: 'PERCENT',
       value:
@@ -126,7 +126,7 @@ export async function loadAnalyticsOverview(
       description: '诊断及时率',
       id: 'kpi-diagnosis-timeliness',
       query: { category: 'QUALITY' },
-      route: '/m6/statistics',
+      route: '/m6/custom-analysis',
       title:
         indicatorNameMap.get('QC_DIAGNOSIS_TIMELINESS_RATE') ?? '诊断及时率',
       unit: 'PERCENT',
@@ -138,7 +138,7 @@ export async function loadAnalyticsOverview(
       description: '技术与取材质控异常数',
       id: 'kpi-technical-qc',
       query: { category: 'QUALITY' },
-      route: '/m6/statistics',
+      route: '/m6/custom-analysis',
       title: '技术/取材质控异常数',
       unit: 'COUNT',
       value: String(
@@ -176,7 +176,7 @@ export async function loadAnalyticsOverview(
       count: reagents.length,
       description: '低库存与近效期试剂',
       id: 'risk-reagent',
-      route: '/operation-support/reagents',
+      route: '/operation-resources/reagents',
       severity: reagents.length > 0 ? 'danger' : 'info',
       title: '试剂预警',
     },
@@ -184,7 +184,7 @@ export async function loadAnalyticsOverview(
       count: equipment.length,
       description: '到期与逾期维护设备',
       id: 'risk-equipment',
-      route: '/operation-support/equipment',
+      route: '/operation-resources/equipment',
       severity: equipment.length > 0 ? 'danger' : 'info',
       title: '设备预警',
     },

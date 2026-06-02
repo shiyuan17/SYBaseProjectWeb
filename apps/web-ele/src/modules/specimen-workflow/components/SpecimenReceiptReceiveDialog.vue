@@ -1,15 +1,11 @@
 <script setup lang="ts">
 import type {
-  ReceiptDraftItem,
-  ReceiptOperatorForm,
-  TransportReceiptGroup,
+  ReceiptConfirmForm,
+  ReceiptConfirmSummary,
 } from '../utils/specimen-receipt';
 
 import {
-  ElAlert,
   ElButton,
-  ElDescriptions,
-  ElDescriptionsItem,
   ElDialog,
   ElForm,
   ElFormItem,
@@ -18,13 +14,9 @@ import {
 
 import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
 
-import { formatNullable } from '../utils/format';
-import SpecimenReceiptDraftTable from './SpecimenReceiptDraftTable.vue';
-
 defineProps<{
-  items: ReceiptDraftItem[];
-  selectedGroup: null | TransportReceiptGroup;
   submitting: boolean;
+  summary: ReceiptConfirmSummary;
 }>();
 
 const emit = defineEmits<{
@@ -37,7 +29,7 @@ const visible = defineModel<boolean>({
   required: true,
 });
 
-const form = defineModel<ReceiptOperatorForm>('form', {
+const form = defineModel<ReceiptConfirmForm>('form', {
   required: true,
 });
 </script>
@@ -45,70 +37,50 @@ const form = defineModel<ReceiptOperatorForm>('form', {
 <template>
   <ElDialog
     v-model="visible"
+    :close-on-click-modal="false"
     destroy-on-close
-    title="接收标本"
-    width="78%"
+    title="标本签收"
+    width="720px"
     @closed="emit('close')"
   >
-    <template v-if="selectedGroup">
-      <ElDescriptions :column="2" border class="mb-4">
-        <ElDescriptionsItem label="转运单号">
-          {{ selectedGroup.transportOrderId }}
-        </ElDescriptionsItem>
-        <ElDescriptionsItem label="申请单号">
-          {{ selectedGroup.applicationNo }}
-        </ElDescriptionsItem>
-        <ElDescriptionsItem label="患者姓名">
-          {{ formatNullable(selectedGroup.patientName) }}
-        </ElDescriptionsItem>
-        <ElDescriptionsItem label="待接收标本数">
-          {{ selectedGroup.items.length }}
-        </ElDescriptionsItem>
-        <ElDescriptionsItem label="未接收数量">
-          {{ selectedGroup.unreceivedCount }}
-        </ElDescriptionsItem>
-        <ElDescriptionsItem label="批次提醒">
-          {{ selectedGroup.reminderCount }}
-        </ElDescriptionsItem>
-      </ElDescriptions>
-
-      <ElAlert
-        v-if="selectedGroup.batchAbnormalFlag"
-        class="mb-4"
-        :closable="false"
-        title="当前批次含异常标记，请重点核对容器数量、质控问题和拒收/退回原因。"
-        type="warning"
-        show-icon
-      />
-
-      <ElForm label-width="96px">
-        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <ElFormItem label="接收人" required>
-            <SystemUserSelect
-              v-model="form.receivedByUserId"
-              :selected-label="form.receivedByName"
-              placeholder="请选择接收人"
-              @change="emit('receiveUserChange', $event)"
-            />
-          </ElFormItem>
-          <ElFormItem label="终端编码">
-            <ElInput v-model="form.terminalCode" placeholder="工作站终端编码" />
-          </ElFormItem>
+    <div class="flex flex-col gap-4">
+      <section class="rounded-lg border border-border bg-card px-4 py-4 shadow-sm">
+        <div class="mb-3 text-base font-semibold text-foreground">提示信息</div>
+        <div class="text-lg font-semibold text-danger">
+          当批扫码共涉及 {{ summary.applicationCount }} 个申请单，{{
+            summary.patientCount
+          }} 个病人，{{ summary.specimenCount }} 个标本。
         </div>
-      </ElForm>
+      </section>
 
-      <SpecimenReceiptDraftTable
-        :items="items"
-        :max-height="420"
-        show-container-name
-      />
-    </template>
+      <section class="rounded-lg border border-border bg-card px-4 py-4 shadow-sm">
+        <ElForm label-width="96px">
+          <div class="grid gap-4">
+            <ElFormItem label="物流人员" required>
+              <ElInput
+                v-model="form.logisticsStaffName"
+                maxlength="100"
+                placeholder="请输入物流人员名称"
+              />
+            </ElFormItem>
+            <ElFormItem label="签收人员" required>
+              <SystemUserSelect
+                v-model="form.receivedByUserId"
+                :selected-label="form.receivedByName"
+                placeholder="请选择签收人员"
+                @change="emit('receiveUserChange', $event)"
+              />
+            </ElFormItem>
+          </div>
+        </ElForm>
+      </section>
+    </div>
 
     <template #footer>
       <div class="flex justify-end gap-2">
         <ElButton @click="emit('close')">取消</ElButton>
         <ElButton :loading="submitting" type="primary" @click="emit('submit')">
-          提交接收
+          确认
         </ElButton>
       </div>
     </template>

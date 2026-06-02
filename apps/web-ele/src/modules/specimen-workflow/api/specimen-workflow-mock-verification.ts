@@ -434,6 +434,7 @@ export async function receiveSpecimensMock(
     specimen.containerCount = item.containerCount ?? specimen.containerCount;
     specimen.qualityCheckResult = item.qualityCheckResult;
     specimen.qualityIssueCodes = [...(item.qualityIssueCodes ?? [])];
+    specimen.receiptLogisticsStaffName = data.logisticsStaffName;
     specimen.receiptStatus = item.receiptStatus;
     specimen.receiptReason = item.reason ?? null;
     specimen.receiptRemarks = item.remarks ?? null;

@@ -1,0 +1,355 @@
+<script setup lang="ts">
+import type {
+  TechnicalWorkbenchAction,
+  TechnicalWorkbenchColumn,
+  TechnicalWorkbenchDayTab,
+  TechnicalWorkbenchFilterConfig,
+  TechnicalWorkbenchPageConfig,
+  TechnicalWorkbenchRow,
+} from '../types/technical-workbench';
+
+import { computed, reactive, ref, watch } from 'vue';
+
+import { Page } from '@vben/common-ui';
+
+import {
+  ElButton,
+  ElCheckbox,
+  ElEmpty,
+  ElInput,
+  ElMessage,
+  ElTable,
+  ElTableColumn,
+} from 'element-plus';
+
+const props = defineProps<{
+  config: TechnicalWorkbenchPageConfig;
+}>();
+
+const searchKeyword = ref('');
+const currentPage = ref(1);
+const goToPage = ref('1');
+const selectedRows = ref<TechnicalWorkbenchRow[]>([]);
+const activeWorkday = ref(props.config.defaultWorkday);
+
+const filterState = reactive<Record<string, boolean>>(
+  Object.fromEntries((props.config.filters ?? []).map((filter) => [filter.id, false])),
+);
+
+const pageSize = props.config.defaultPageSize;
+
+const selectedFilterGroups = computed(() => {
+  const groups = new Map<string, TechnicalWorkbenchFilterConfig[]>();
+
+  for (const filter of props.config.filters ?? []) {
+    if (!filterState[filter.id]) {
+      continue;
+    }
+    const groupKey = filter.group ?? filter.id;
+    const matchedGroup = groups.get(groupKey) ?? [];
+    matchedGroup.push(filter);
+    groups.set(groupKey, matchedGroup);
+  }
+
+  return [...groups.values()];
+});
+
+const filteredRows = computed(() => {
+  const normalizedKeyword = searchKeyword.value.trim().toLowerCase();
+
+  return props.config.rows.filter((row) => {
+    const matchesKeyword =
+      !normalizedKeyword ||
+      row.searchableText.toLowerCase().includes(normalizedKeyword);
+
+    if (!matchesKeyword) {
+      return false;
+    }
+
+    if (row.workday && row.workday !== activeWorkday.value) {
+      return false;
+    }
+
+    return selectedFilterGroups.value.every((group) =>
+      group.some((filter) => filter.predicate(row)),
+    );
+  });
+});
+
+const pageCount = computed(() =>
+  Math.max(1, Math.ceil(filteredRows.value.length / pageSize)),
+);
+
+const pagedRows = computed(() => {
+  const start = (currentPage.value - 1) * pageSize;
+  return filteredRows.value.slice(start, start + pageSize);
+});
+
+const metrics = computed(() =>
+  (props.config.metrics ?? []).map((metric) => ({
+    ...metric,
+    displayValue: metric.value(filteredRows.value),
+  })),
+);
+
+watch(filteredRows, () => {
+  if (currentPage.value > pageCount.value) {
+    currentPage.value = pageCount.value;
+  }
+  goToPage.value = String(currentPage.value);
+  selectedRows.value = [];
+});
+
+watch(currentPage, (value) => {
+  goToPage.value = String(value);
+});
+
+function formatCellValue(
+  column: TechnicalWorkbenchColumn,
+  row: TechnicalWorkbenchRow,
+  rowIndex: number,
+) {
+  if (column.formatter) {
+    return column.formatter(row, rowIndex);
+  }
+
+  const cellValue = row[column.key];
+  return cellValue === undefined || cellValue === null || cellValue === ''
+    ? '-'
+    : String(cellValue);
+}
+
+function isActionDisabled(action: TechnicalWorkbenchAction) {
+  return action.requiresSelection && selectedRows.value.length === 0;
+}
+
+function handleToolbarAction(action: TechnicalWorkbenchAction) {
+  if (isActionDisabled(action)) {
+    return;
+  }
+
+  ElMessage.info(`${action.label}功能待接入`);
+}
+
+function handleSearch() {
+  currentPage.value = 1;
+}
+
+function selectWorkday(dayTab: TechnicalWorkbenchDayTab) {
+  activeWorkday.value = dayTab.value;
+  currentPage.value = 1;
+}
+
+function goToFirstPage() {
+  currentPage.value = 1;
+}
+
+function goToPreviousPage() {
+  currentPage.value = Math.max(1, currentPage.value - 1);
+}
+
+function goToNextPage() {
+  currentPage.value = Math.min(pageCount.value, currentPage.value + 1);
+}
+
+function goToLastPage() {
+  currentPage.value = pageCount.value;
+}
+
+function submitGoToPage() {
+  const parsedPage = Number(goToPage.value);
+
+  if (!Number.isFinite(parsedPage) || parsedPage < 1) {
+    goToPage.value = String(currentPage.value);
+    return;
+  }
+
+  currentPage.value = Math.min(pageCount.value, Math.floor(parsedPage));
+}
+</script>
+
+<template>
+  <Page :title="config.title" :description="config.description">
+    <div class="flex flex-col gap-3">
+      <section class="rounded-lg border border-slate-300 bg-slate-50 p-3">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div class="flex flex-1 flex-col gap-2">
+            <div
+              v-for="(group, groupIndex) in config.toolbarGroups"
+              :key="`toolbar-group-${groupIndex}`"
+              class="flex flex-wrap gap-1.5"
+            >
+              <ElButton
+                v-for="action in group"
+                :key="action.id"
+                :disabled="isActionDisabled(action)"
+                :type="action.tone === 'primary' ? 'primary' : undefined"
+                class="!mx-0 !h-8 !rounded-sm !border-slate-300 !px-3 !text-xs"
+                @click="handleToolbarAction(action)"
+              >
+                <span>{{ action.label }}</span>
+                <span v-if="action.hotkey" class="ml-1 text-[11px] text-slate-500">
+                  ({{ action.hotkey }})
+                </span>
+              </ElButton>
+            </div>
+          </div>
+
+          <div
+            v-if="metrics.length > 0"
+            class="flex flex-wrap items-center justify-end gap-3 text-sm"
+          >
+            <div
+              v-for="metric in metrics"
+              :key="metric.id"
+              class="rounded border border-slate-200 bg-white px-3 py-1"
+            >
+              <span class="text-slate-500">{{ metric.label }}:</span>
+              <span
+                class="ml-1 font-semibold"
+                :class="{
+                  'text-emerald-600': metric.tone === 'success',
+                  'text-rose-600': metric.tone === 'danger',
+                  'text-sky-600': metric.tone === 'info',
+                  'text-amber-600': metric.tone === 'warning',
+                }"
+              >
+                {{ metric.displayValue }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="rounded-lg border border-slate-300 bg-white p-3">
+        <div class="flex flex-wrap items-center gap-2">
+          <ElInput
+            v-model="searchKeyword"
+            :placeholder="config.searchPlaceholder"
+            class="w-[220px]"
+            @keyup.enter="handleSearch"
+          />
+          <ElButton
+            type="primary"
+            class="!h-8 !rounded-sm !px-4 !text-xs"
+            @click="handleSearch"
+          >
+            查询
+          </ElButton>
+          <ElButton
+            v-for="action in config.queryActions ?? []"
+            :key="action.id"
+            :disabled="isActionDisabled(action)"
+            class="!h-8 !rounded-sm !px-3 !text-xs"
+            @click="handleToolbarAction(action)"
+          >
+            <span>{{ action.label }}</span>
+            <span v-if="action.hotkey" class="ml-1 text-[11px] text-slate-500">
+              ({{ action.hotkey }})
+            </span>
+          </ElButton>
+
+          <div v-if="config.dayTabs?.length" class="flex flex-wrap gap-1 pl-2">
+            <ElButton
+              v-for="dayTab in config.dayTabs"
+              :key="dayTab.value"
+              :type="activeWorkday === dayTab.value ? 'primary' : undefined"
+              class="!h-8 !rounded-sm !px-3 !text-xs"
+              @click="selectWorkday(dayTab)"
+            >
+              {{ dayTab.label }}
+            </ElButton>
+          </div>
+        </div>
+
+        <div
+          v-if="config.filters?.length"
+          class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-dashed border-slate-200 pt-3 text-sm text-slate-600"
+        >
+          <ElCheckbox
+            v-for="filter in config.filters"
+            :key="filter.id"
+            v-model="filterState[filter.id]"
+          >
+            {{ filter.label }}
+          </ElCheckbox>
+        </div>
+      </section>
+
+      <section class="overflow-hidden rounded-lg border border-slate-300 bg-white">
+        <ElTable
+          :data="pagedRows"
+          border
+          size="small"
+          @selection-change="selectedRows = $event"
+        >
+          <ElTableColumn type="selection" width="44" />
+          <ElTableColumn
+            v-for="column in config.columns"
+            :key="column.key"
+            :align="column.align"
+            :label="column.label"
+            :min-width="column.minWidth"
+            :width="column.width"
+          >
+            <template #default="{ row, $index }">
+              <span class="text-xs text-slate-700">
+                {{
+                  formatCellValue(
+                    column,
+                    row,
+                    (currentPage - 1) * pageSize + Number($index),
+                  )
+                }}
+              </span>
+            </template>
+          </ElTableColumn>
+        </ElTable>
+
+        <ElEmpty
+          v-if="filteredRows.length === 0"
+          :description="config.emptyText"
+          class="py-8"
+        />
+
+        <div
+          class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600"
+        >
+          <div>
+            第 {{ currentPage }} / {{ pageCount }} 页 共 {{ filteredRows.length }} 条记录
+            每页 {{ pageSize }} 条
+            <span v-if="selectedRows.length > 0" class="ml-2 text-sky-600">
+              已选 {{ selectedRows.length }} 条
+            </span>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-1">
+            <ElButton class="!h-7 !rounded-sm !px-2 !text-xs" @click="goToFirstPage">
+              首页
+            </ElButton>
+            <ElButton
+              class="!h-7 !rounded-sm !px-2 !text-xs"
+              @click="goToPreviousPage"
+            >
+              上页
+            </ElButton>
+            <ElButton class="!h-7 !rounded-sm !px-2 !text-xs" @click="goToNextPage">
+              下页
+            </ElButton>
+            <ElButton class="!h-7 !rounded-sm !px-2 !text-xs" @click="goToLastPage">
+              尾页
+            </ElButton>
+            <ElInput
+              v-model="goToPage"
+              class="w-14"
+              @keyup.enter="submitGoToPage"
+            />
+            <ElButton class="!h-7 !rounded-sm !px-2 !text-xs" @click="submitGoToPage">
+              Go
+            </ElButton>
+          </div>
+        </div>
+      </section>
+    </div>
+  </Page>
+</template>

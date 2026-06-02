@@ -1,4 +1,5 @@
 import type { Mock } from 'vitest';
+import type { TechnicalSpecimenRegistrationMaterial } from '../types/technical-workflow';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -6,8 +7,10 @@ import { requestClient } from '#/api/request';
 
 import {
   assignTechnicalTask,
+  cancelTechnicalSpecimenRegistrationMaterialVerification,
   claimTechnicalTask,
   completeDehydrationBatch,
+  completeDehydration,
   completeTechnicalSpecimenRegistration,
   completeEmbedding,
   completeGrossing,
@@ -31,16 +34,20 @@ import {
   mapPendingTechnicalTaskPageResponse,
   mapSlicingWorkbenchResponse,
   mapTechnicalSpecimenRegistrationDetailResponse,
+  mapTechnicalSpecimenRegistrationWorkspaceResponse,
   mapTechnicalTrackingResponse,
   releaseTechnicalTask,
   saveTechnicalSpecimenRegistrationApplicationWorkbenchPatientInfo,
   saveTechnicalSpecimenRegistrationDetailSections,
   startDehydrationBatch,
+  startDehydration,
   startEmbedding,
   startGrossing,
   startSlicing,
   startSlideStaining,
+  updateEmbeddingQualityReview,
   updateTechnicalTaskPriority,
+  verifyTechnicalSpecimenRegistrationMaterial,
 } from './technical-workflow-service';
 
 vi.mock('#/api/request', () => ({
@@ -230,6 +237,70 @@ describe('technical-workflow-service mappers', () => {
       registrationStatus: null,
       submittingDepartmentName: null,
     });
+  });
+
+  it('normalizes specimen registration material defaults and extended fields', () => {
+    const materials: Partial<TechnicalSpecimenRegistrationMaterial>[] = [
+      {
+        sequenceNo: 1,
+        sourcePart: '左甲状腺',
+        specimenBarcode: 'BC-1',
+        specimenId: 'SP-1',
+        specimenName: '组织块',
+      },
+      {
+        evaluationItems: ['密封不严'],
+        frozen: true,
+        sequenceNo: 2,
+        sourcePart: '右甲状腺',
+        specimenBarcode: 'BC-2',
+        specimenId: 'SP-2',
+        specimenName: '细胞样本',
+        specimenSize: '大标本',
+        specimenType: '细胞学',
+        tissueCount: 3,
+        verificationCompletedAt: '2026-06-02T11:30:00',
+        verificationStatus: 'VERIFIED',
+        verifiedByName: 'Receiver A',
+      },
+    ];
+
+    expect(
+      mapTechnicalSpecimenRegistrationWorkspaceResponse({
+        materials: materials as TechnicalSpecimenRegistrationMaterial[],
+      }).materials,
+    ).toEqual([
+      {
+        evaluationItems: [],
+        frozen: false,
+        sequenceNo: 1,
+        sourcePart: '左甲状腺',
+        specimenBarcode: 'BC-1',
+        specimenId: 'SP-1',
+        specimenName: '组织块',
+        specimenSize: '小标本',
+        specimenType: '活体',
+        tissueCount: 1,
+        verificationCompletedAt: null,
+        verificationStatus: 'UNVERIFIED',
+        verifiedByName: null,
+      },
+      {
+        evaluationItems: ['密封不严'],
+        frozen: true,
+        sequenceNo: 2,
+        sourcePart: '右甲状腺',
+        specimenBarcode: 'BC-2',
+        specimenId: 'SP-2',
+        specimenName: '细胞样本',
+        specimenSize: '大标本',
+        specimenType: '细胞学',
+        tissueCount: 3,
+        verificationCompletedAt: '2026-06-02T11:30:00',
+        verificationStatus: 'VERIFIED',
+        verifiedByName: 'Receiver A',
+      },
+    ]);
   });
 
   it('normalizes embedding workstation summary arrays', () => {
@@ -622,6 +693,15 @@ describe('technical-workflow-service requests', () => {
       specimens: [
         {
           blocks: [{ blockDescription: 'A1' }],
+          embeddingBoxes: [
+            {
+              boxName: '包埋盒 1',
+              embeddingBoxNo: 'A1',
+              embeddingRemarks: '骨髓',
+              sequenceNo: 1,
+              status: 'CONFIRMED',
+            },
+          ],
           specimenId: 'SPEC-1',
           specimenType: 'ROUTINE',
         },
@@ -647,6 +727,15 @@ describe('technical-workflow-service requests', () => {
         specimens: [
           {
             blocks: [{ blockDescription: 'A1' }],
+            embeddingBoxes: [
+              {
+                boxName: '包埋盒 1',
+                embeddingBoxNo: 'A1',
+                embeddingRemarks: '骨髓',
+                sequenceNo: 1,
+                status: 'CONFIRMED',
+              },
+            ],
             specimenId: 'SPEC-1',
             specimenType: 'ROUTINE',
           },
@@ -692,6 +781,59 @@ describe('technical-workflow-service requests', () => {
     );
   });
 
+  it('posts task-level dehydration endpoints with exact paths', async () => {
+    await startDehydration({
+      taskId: 'TASK-DEHYDRATION-1',
+      terminalCode: 'TERM-1',
+    });
+    await completeDehydration({
+      remarks: '脱水完成',
+      taskId: 'TASK-DEHYDRATION-1',
+    });
+
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      1,
+      '/v1/dehydrations/start',
+      {
+        taskId: 'TASK-DEHYDRATION-1',
+        terminalCode: 'TERM-1',
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      2,
+      '/v1/dehydrations/complete',
+      {
+        remarks: '脱水完成',
+        taskId: 'TASK-DEHYDRATION-1',
+      },
+    );
+  });
+
+  it('posts specimen registration material verification endpoints with exact paths', async () => {
+    requestClientMock.post.mockResolvedValue({
+      actionFlags: {},
+      materials: [],
+    });
+
+    await verifyTechnicalSpecimenRegistrationMaterial('CASE-1', 'SP-1', {
+      terminalCode: 'T-M3-SPEC-REG',
+    });
+    await cancelTechnicalSpecimenRegistrationMaterialVerification('CASE-1', 'SP-1', {
+      terminalCode: 'T-M3-SPEC-REG',
+    });
+
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      1,
+      '/v1/technical-specimen-registrations/CASE-1/materials/SP-1/verify',
+      { terminalCode: 'T-M3-SPEC-REG' },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      2,
+      '/v1/technical-specimen-registrations/CASE-1/materials/SP-1/cancel-verification',
+      { terminalCode: 'T-M3-SPEC-REG' },
+    );
+  });
+
   it('posts embedding endpoints with exact paths', async () => {
     await startEmbedding({
       taskId: 'TASK-EMB',
@@ -716,6 +858,44 @@ describe('technical-workflow-service requests', () => {
         blockCount: 1,
         samplingBlockId: 'BLOCK-1',
         taskId: 'TASK-EMB',
+      },
+    );
+  });
+
+  it('patches embedding quality review with exact path and payload', async () => {
+    requestClientMock.request.mockResolvedValue({
+      record: {
+        embeddingId: 'EMB-1',
+      },
+      reworkStatus: 'COMPLETED',
+      reworkType: 'REGROSSING',
+    });
+
+    await updateEmbeddingQualityReview('EMB 1', {
+      evaluationLevel: 'UNQUALIFIED',
+      notifiedGrossingOperator: true,
+      samplingEvaluation: '取材评价调整',
+      sliceNotice: '皮肤',
+      terminalCode: 'T-EMB',
+      treatmentAction: 'REGROSSING',
+      treatmentRemark: '重新取材',
+      unqualifiedReasons: ['组织过厚'],
+    });
+
+    expect(requestClientMock.request).toHaveBeenCalledWith(
+      '/v1/embeddings/EMB%201/quality-review',
+      {
+        data: {
+          evaluationLevel: 'UNQUALIFIED',
+          notifiedGrossingOperator: true,
+          samplingEvaluation: '取材评价调整',
+          sliceNotice: '皮肤',
+          terminalCode: 'T-EMB',
+          treatmentAction: 'REGROSSING',
+          treatmentRemark: '重新取材',
+          unqualifiedReasons: ['组织过厚'],
+        },
+        method: 'PATCH',
       },
     );
   });

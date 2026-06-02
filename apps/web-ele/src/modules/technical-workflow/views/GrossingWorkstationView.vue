@@ -1,40 +1,106 @@
 <script setup lang="ts">
-import type { PendingTechnicalTaskItem } from '../types/technical-workflow';
+import type {
+  PendingTechnicalTaskItem,
+  WorkstationQueueItem,
+} from '../types/technical-workflow';
 
 import { computed, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Ellipsis,
+  RotateCw,
+  Search,
+} from '@vben/icons';
 
 import {
   ElAlert,
+  ElBadge,
   ElButton,
+  ElCheckbox,
+  ElDrawer,
   ElEmpty,
   ElForm,
-  ElFormItem,
   ElInput,
   ElLink,
   ElMessage,
   ElPagination,
   ElTabPane,
   ElTabs,
+  ElTable,
+  ElTableColumn,
   ElTag,
+  ElTooltip,
 } from 'element-plus';
 
 import {
   listPendingTechnicalTasks,
   startGrossing,
 } from '../api/technical-workflow-service';
+import GrossingEmbeddingBoxTable from '../components/GrossingEmbeddingBoxTable.vue';
 import GrossingSpecimenTabs from '../components/GrossingSpecimenTabs.vue';
 import TechnicalOperatorFields from '../components/TechnicalOperatorFields.vue';
-import TechnicalTaskQueuePanel from '../components/TechnicalTaskQueuePanel.vue';
-import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { useGrossingWorkbench } from '../composables/useGrossingWorkbench';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
-import { formatCaseStatus, formatNullable, formatTaskStatus } from '../utils/format';
+import {
+  formatCaseStatus,
+  formatDateTime,
+  formatNullable,
+  formatTaskStatus,
+  formatTaskType,
+} from '../utils/format';
 import { useTechnicalWorkflowNavigation } from '../utils/navigation';
 import { buildWorkstationQueueItems } from '../utils/workstation';
+
+type GrossingTaskPayload = Record<string, unknown>;
+
+interface GrossingTaskTableRow {
+  alertLevel: WorkstationQueueItem['alertLevel'];
+  applicationNo: string;
+  blockPrintSummary: string;
+  checkNo: string;
+  clinicalDiagnosis: string;
+  freezeReminder: string;
+  grossDescription: string;
+  inspectionGroup: string;
+  inpatientNo: string;
+  patientId: string;
+  patientName: string;
+  receiverName: string;
+  requestDepartment: string;
+  requestOrganization: string;
+  rowIndex: number;
+  statusText: string;
+  task: PendingTechnicalTaskItem;
+  typeText: string;
+}
+
+interface CapturedImageItem {
+  fileUrl: string;
+  key: string;
+  meta: string;
+  sourceLabel: string;
+  title: string;
+}
+
+const DISABLED_TOOLBAR_ACTIONS = [
+  { icon: Download, label: '导出Excel' },
+  { icon: undefined, label: '标本回收' },
+  { icon: undefined, label: '修改检查组' },
+  { icon: undefined, label: '特检医嘱' },
+  { icon: undefined, label: '蜡块未收发标记' },
+  { icon: undefined, label: '蜡块批量打印' },
+] as const;
+
+const DISABLED_DATE_ACTIONS = [
+  { icon: ChevronLeft, label: '前1天' },
+  { icon: ChevronRight, label: '后1天' },
+] as const;
 
 const route = useRoute();
 const router = useRouter();
@@ -46,18 +112,19 @@ const actionLoading = ref(false);
 const pendingItems = ref<PendingTechnicalTaskItem[]>([]);
 const selectedTask = ref<null | PendingTechnicalTaskItem>(null);
 const total = ref(0);
+const moreDrawerVisible = ref(false);
 
 const filters = reactive({
-  page: 1,
-  pathologyNo:
+  keyword:
     typeof route.query.pathologyNo === 'string' ? route.query.pathologyNo : '',
+  page: 1,
   size: DEFAULT_PAGE_SIZE,
   timedOutOnly: route.query.mode === 'exception',
 });
 
 const currentQuery = computed(() => ({
+  keyword: filters.keyword.trim() || undefined,
   page: filters.page,
-  pathologyNo: filters.pathologyNo.trim() || undefined,
   size: filters.size,
   taskType: 'GROSSING',
   timedOutOnly: filters.timedOutOnly,
@@ -65,6 +132,7 @@ const currentQuery = computed(() => ({
 
 const workbench = useGrossingWorkbench({
   onSubmitted: async () => {
+    moreDrawerVisible.value = false;
     await loadPendingData();
   },
 });
@@ -84,53 +152,264 @@ const nextTask = computed(() =>
     ? pendingItems.value[selectedIndex.value + 1]
     : null,
 );
-const summaryItems = computed(() => {
-  const context = workbench.workbenchContext.value;
-  const tracking = workbench.trackingResult.value;
-  if (!context || !tracking) {
-    return [];
-  }
-  return [
-    {
-      label: '病理号',
-      value: formatNullable(context.caseSummary.pathologyNo),
-    },
-    {
-      label: '病例状态',
-      value: formatCaseStatus(context.caseSummary.caseStatus),
-    },
-    {
-      label: '申请科室',
-      value: formatNullable(context.caseSummary.submittingDepartmentName),
-    },
-    {
-      label: '标本数',
-      value: String(tracking.specimens.length),
-    },
-    {
-      label: '蜡块数',
-      value: String(tracking.blocks.length),
-    },
-    {
-      label: '历史影像',
-      value: String(context.mediaAssets.length),
-    },
-  ];
-});
 const currentPageError = computed(
   () => queueError.value || workbench.pageError.value,
 );
-const activeSpecimenSummary = computed(() => {
-  const specimen = workbench.activeSpecimen.value;
-  if (!specimen) {
-    return '';
+const selectedCaseSummary = computed(
+  () => workbench.workbenchContext.value?.caseSummary ?? null,
+);
+const selectedPathologyNo = computed(() =>
+  formatNullable(
+    selectedCaseSummary.value?.pathologyNo ?? selectedTask.value?.pathologyNo,
+  ),
+);
+const selectedTaskFacts = computed(() => [
+  {
+    label: '病人',
+    value: formatNullable(selectedCaseSummary.value?.patientName),
+  },
+  {
+    label: '住院号',
+    value: formatNullable(selectedCaseSummary.value?.inpatientNo),
+  },
+  {
+    label: '申请科室',
+    value: formatNullable(selectedCaseSummary.value?.submittingDepartmentName),
+  },
+  {
+    label: '病例状态',
+    value: formatCaseStatus(selectedCaseSummary.value?.caseStatus),
+  },
+]);
+const descriptionPreview = computed(() =>
+  formatNullable(workbench.workbenchContext.value?.contextSummary),
+);
+const diagnosisPreview = computed(() =>
+  formatNullable(workbench.workbenchContext.value?.clinicalDiagnosis),
+);
+const capturedImageItems = computed<CapturedImageItem[]>(() => [
+  ...workbench.enteredMediaAssets.value.map((asset) => ({
+    fileUrl: asset.fileUrl,
+    key: `current-${asset.specimenIndex}-${asset.assetIndex}-${asset.fileUrl || asset.fileName}`,
+    meta: `${asset.specimenId} / 当前录入`,
+    sourceLabel: '当前',
+    title: asset.fileName || '当前录入影像',
+  })),
+  ...(workbench.workbenchContext.value?.mediaAssets ?? []).map((asset) => ({
+    fileUrl: asset.fileUrl,
+    key: `history-${asset.assetId}`,
+    meta: [
+      formatDateTime(asset.capturedAt),
+      asset.capturedByName?.trim() || '',
+    ]
+      .filter((item) => item && item !== '-')
+      .join(' / '),
+    sourceLabel: '历史',
+    title: asset.fileName || '历史影像',
+  })),
+]);
+const grossingTaskRows = computed(() =>
+  queueItems.value.map((item, index) => createGrossingTaskRow(item, index)),
+);
+const totalPageCount = computed(() =>
+  Math.max(Math.ceil(total.value / filters.size), 1),
+);
+
+function parseGrossingTaskPayload(payload: null | string): GrossingTaskPayload {
+  const rawPayload = payload?.trim();
+  if (!rawPayload) {
+    return {};
   }
-  return [
-    specimen.specimenId?.trim() || '未命名标本',
-    specimen.specimenType?.trim() || '未设置类型',
-    specimen.sizeText?.trim() || '未填写大小',
-  ].join(' / ');
-});
+
+  try {
+    const parsedPayload = JSON.parse(rawPayload);
+    return parsedPayload && typeof parsedPayload === 'object'
+      ? (parsedPayload as GrossingTaskPayload)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function readPayloadText(payload: GrossingTaskPayload, keys: string[]) {
+  for (const key of keys) {
+    const value = payload[key];
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return String(value);
+    }
+  }
+  return '';
+}
+
+function firstTextValue(
+  ...values: Array<null | string | undefined>
+): null | string {
+  return values.find((item) => item?.trim()) ?? null;
+}
+
+function createGrossingTaskRow(
+  item: WorkstationQueueItem,
+  index: number,
+): GrossingTaskTableRow {
+  const task = item.task;
+  const payload = parseGrossingTaskPayload(task.payload);
+  const isSelected = selectedTask.value?.id === task.id;
+  const context = isSelected ? workbench.workbenchContext.value : null;
+  const caseSummary = context?.caseSummary;
+  const tracking = isSelected ? workbench.trackingResult.value : null;
+  const activeSpecimen = isSelected ? workbench.activeSpecimen.value : null;
+  const blockTotal =
+    readPayloadText(payload, [
+      'blockCount',
+      'blockTotal',
+      'samplingBlockCount',
+    ]) || (tracking ? String(tracking.blocks.length) : '');
+  const printedBlockCount = readPayloadText(payload, [
+    'blockPrintCount',
+    'printedBlockCount',
+    'printedCount',
+  ]);
+  const deadlineText = task.deadlineAt
+    ? formatDateTime(task.deadlineAt)
+    : readPayloadText(payload, ['deadlineAt', 'freezeDeadlineAt']);
+
+  return {
+    alertLevel: item.alertLevel,
+    applicationNo: formatNullable(
+      firstTextValue(
+        task.applicationNo,
+        caseSummary?.applicationNo,
+        readPayloadText(payload, ['applicationNo', 'requestNo']),
+      ),
+    ),
+    blockPrintSummary: formatNullable(
+      blockTotal
+        ? `${blockTotal}/${printedBlockCount || '-'}`
+        : readPayloadText(payload, ['blockPrintSummary']),
+    ),
+    checkNo: formatNullable(
+      firstTextValue(
+        task.pathologyNo,
+        readPayloadText(payload, ['checkNo', 'inspectionNo', 'pathologyNo']),
+        task.applicationNo,
+        task.id,
+      ),
+    ),
+    clinicalDiagnosis: formatNullable(
+      firstTextValue(
+        context?.clinicalDiagnosis,
+        readPayloadText(payload, [
+          'clinicalDiagnosis',
+          'diagnosis',
+          'pathologyDiagnosis',
+        ]),
+      ),
+    ),
+    freezeReminder: task.timedOut ? '超时' : formatNullable(deadlineText),
+    grossDescription: formatNullable(
+      firstTextValue(
+        activeSpecimen?.grossDescription,
+        readPayloadText(payload, [
+          'grossDescription',
+          'grossFinding',
+          'macroscopicDescription',
+        ]),
+        task.productionRemarks,
+        task.remarks,
+      ),
+    ),
+    inspectionGroup: formatNullable(
+      firstTextValue(
+        task.stationName,
+        task.currentNode,
+        readPayloadText(payload, ['checkGroupName', 'inspectionGroup']),
+      ),
+    ),
+    inpatientNo: formatNullable(
+      firstTextValue(
+        caseSummary?.inpatientNo,
+        readPayloadText(payload, ['hospitalizationNo', 'inpatientNo']),
+      ),
+    ),
+    patientId: formatNullable(
+      firstTextValue(
+        caseSummary?.patientId,
+        readPayloadText(payload, ['patientId', 'patientNo']),
+      ),
+    ),
+    patientName: formatNullable(
+      firstTextValue(
+        caseSummary?.patientName,
+        readPayloadText(payload, ['name', 'patient', 'patientName']),
+      ),
+    ),
+    receiverName: formatNullable(
+      firstTextValue(
+        task.assignedToName,
+        readPayloadText(payload, ['receiverName', 'receivedByName']),
+      ),
+    ),
+    requestDepartment: formatNullable(
+      firstTextValue(
+        caseSummary?.submittingDepartmentName,
+        readPayloadText(payload, [
+          'applicationDepartmentName',
+          'applyDept',
+          'submittingDepartmentName',
+        ]),
+      ),
+    ),
+    requestOrganization: formatNullable(
+      firstTextValue(
+        readPayloadText(payload, [
+          'applyingInstitution',
+          'institutionName',
+          'requestOrganization',
+          'submittingOrganization',
+        ]),
+        caseSummary?.applicationType,
+      ),
+    ),
+    rowIndex: (filters.page - 1) * filters.size + index + 1,
+    statusText: formatGrossingTaskStatus(task.taskStatus),
+    task,
+    typeText:
+      task.taskType?.trim()
+        ? formatTaskType(task.taskType)
+        : formatNullable(readPayloadText(payload, ['applicationType', 'type'])),
+  };
+}
+
+function getGrossingTableRowKey(row: GrossingTaskTableRow) {
+  return row.task.id;
+}
+
+function getTaskStatusTagType(taskStatus?: null | string) {
+  if (taskStatus === 'IN_PROGRESS') {
+    return 'warning';
+  }
+  if (taskStatus === 'COMPLETED') {
+    return 'success';
+  }
+  return 'info';
+}
+
+function formatGrossingTaskStatus(taskStatus?: null | string) {
+  return taskStatus === 'COMPLETED' ? '描写完成' : formatTaskStatus(taskStatus);
+}
+
+function getRowStatusTagType(alertLevel: WorkstationQueueItem['alertLevel']) {
+  if (alertLevel === 'danger') {
+    return 'danger';
+  }
+  if (alertLevel === 'warning') {
+    return 'warning';
+  }
+  return 'info';
+}
 
 async function selectTask(taskId: string) {
   const matchedTask =
@@ -180,9 +459,32 @@ async function loadPendingData(preferredTaskId?: string) {
   }
 }
 
+async function handleQuery() {
+  filters.page = 1;
+  await loadPendingData();
+}
+
+async function handleRefresh() {
+  await loadPendingData(selectedTask.value?.id);
+}
+
+async function toggleTimedOutOnly() {
+  filters.timedOutOnly = !filters.timedOutOnly;
+  filters.page = 1;
+  await loadPendingData();
+}
+
+function openMoreDrawer() {
+  if (!selectedTask.value) {
+    ElMessage.warning('请先从左侧列表选择任务');
+    return;
+  }
+  moreDrawerVisible.value = true;
+}
+
 async function handleStartOrContinue() {
   if (!selectedTask.value) {
-    ElMessage.warning('请先从左侧队列选择任务');
+    ElMessage.warning('请先从左侧列表选择任务');
     return;
   }
 
@@ -214,7 +516,7 @@ void loadPendingData();
 
 <template>
   <Page>
-    <div class="flex flex-col gap-4">
+    <div class="flex h-[calc(100vh-112px)] min-h-[560px] flex-col gap-2 overflow-hidden text-foreground">
       <ElAlert
         v-if="currentPageError"
         :closable="false"
@@ -223,400 +525,508 @@ void loadPendingData();
         show-icon
       />
 
-      <div class="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-        <div class="flex min-h-0 flex-col gap-4">
-          <TechnicalTaskQueuePanel
-            :items="queueItems"
+      <section class="rounded-md border border-border bg-card p-2">
+        <div class="flex flex-wrap items-center gap-1.5">
+          <ElButton
+            aria-label="刷新"
+            :icon="RotateCw"
             :loading="loading"
-            :selected-task-id="selectedTask?.id ?? ''"
-            title="待取材任务"
-            description="左侧只负责筛选和切换任务，右侧常驻工作台始终承接当前病例的取材录入。"
-            @select="(taskId) => void selectTask(taskId)"
+            size="small"
+            title="刷新"
+            @click="void handleRefresh()"
+          />
+          <ElButton
+            :loading="actionLoading"
+            size="small"
+            type="primary"
+            @click="void handleStartOrContinue()"
           >
-            <template #filters>
-              <ElForm label-width="56px">
-                <ElFormItem label="病理号">
-                  <ElInput
-                    v-model="filters.pathologyNo"
-                    clearable
-                    placeholder="病理号/对象号"
-                    @keyup.enter="void loadPendingData()"
-                  />
-                </ElFormItem>
-              </ElForm>
-            </template>
-            <template #extra>
-              <ElButton
-                :type="filters.timedOutOnly ? 'danger' : 'default'"
-                @click="
-                  filters.timedOutOnly = !filters.timedOutOnly;
-                  void loadPendingData();
-                "
-              >
-                {{ filters.timedOutOnly ? '仅异常' : '全部任务' }}
-              </ElButton>
-            </template>
-          </TechnicalTaskQueuePanel>
+            取材
+          </ElButton>
 
-          <WorkflowSectionCard title="队列翻页">
+          <div class="flex min-w-0 flex-1 items-center gap-1.5 sm:flex-none">
+            <ElInput
+              v-model="filters.keyword"
+              class="w-full sm:w-56"
+              clearable
+              placeholder="病人ID / 病理号 / 姓名"
+              size="small"
+              @keyup.enter="void handleQuery()"
+            />
+            <ElButton
+              :icon="Search"
+              :loading="loading"
+              size="small"
+              @click="void handleQuery()"
+            >
+              查询
+            </ElButton>
+          </div>
+
+          <ElButton :icon="Ellipsis" size="small" @click="openMoreDrawer">
+            更多
+          </ElButton>
+
+          <ElTooltip
+            v-for="action in DISABLED_DATE_ACTIONS"
+            :key="action.label"
+            content="暂未接入日期筛选"
+            placement="top"
+          >
+            <span class="inline-flex">
+              <ElButton :icon="action.icon" disabled size="small">
+                {{ action.label }}
+              </ElButton>
+            </span>
+          </ElTooltip>
+
+          <ElBadge :max="999" :value="total" class="mr-2">
+            <ElButton size="small" @click="void handleRefresh()">
+              取材任务
+            </ElButton>
+          </ElBadge>
+
+          <ElButton
+            :type="filters.timedOutOnly ? 'danger' : 'default'"
+            size="small"
+            @click="void toggleTimedOutOnly()"
+          >
+            延迟固定
+          </ElButton>
+        </div>
+
+        <div class="mt-2 flex flex-wrap items-center gap-1.5 border-t border-border pt-2">
+          <ElTooltip
+            v-for="action in DISABLED_TOOLBAR_ACTIONS"
+            :key="action.label"
+            content="暂未接入"
+            placement="top"
+          >
+            <span class="inline-flex">
+              <ElButton :icon="action.icon" disabled size="small">
+                {{ action.label }}
+              </ElButton>
+            </span>
+          </ElTooltip>
+        </div>
+      </section>
+
+      <section class="grid min-h-0 flex-1 grid-cols-1 items-stretch gap-2 overflow-hidden xl:grid-cols-[minmax(0,1fr)_500px] 2xl:grid-cols-[minmax(0,1fr)_560px]">
+        <article class="flex min-w-0 flex-col overflow-hidden rounded-md border border-border bg-card">
+          <div class="min-h-0 flex-1 overflow-hidden">
+            <ElTable
+              v-loading="loading"
+              border
+              :current-row-key="selectedTask?.id"
+              :data="grossingTaskRows"
+              :row-key="getGrossingTableRowKey"
+              highlight-current-row
+              size="small"
+              table-layout="fixed"
+              @row-click="(row) => void selectTask(row.task.id)"
+            >
+              <ElTableColumn fixed="left" label="" width="44">
+                <template #default="{ row }">
+                  <ElCheckbox
+                    :aria-label="`选择任务 ${row.checkNo}`"
+                    :model-value="row.task.id === selectedTask?.id"
+                    @change="() => void selectTask(row.task.id)"
+                    @click.stop
+                  />
+                </template>
+              </ElTableColumn>
+              <ElTableColumn fixed="left" label="序" width="52">
+                <template #default="{ row }">
+                  {{ row.rowIndex }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="检查号" min-width="130" show-overflow-tooltip>
+                <template #default="{ row }">
+                  {{ row.checkNo }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="病人" min-width="110" show-overflow-tooltip>
+                <template #default="{ row }">
+                  {{ row.patientName }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="类型" min-width="96" show-overflow-tooltip>
+                <template #default="{ row }">
+                  {{ row.typeText }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="接收人" min-width="110" show-overflow-tooltip>
+                <template #default="{ row }">
+                  {{ row.receiverName }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn
+                label="冰冻超时/剩余提醒"
+                min-width="150"
+                show-overflow-tooltip
+              >
+                <template #default="{ row }">
+                  {{ row.freezeReminder }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="状态" min-width="96">
+                <template #default="{ row }">
+                  <ElTag
+                    :type="getRowStatusTagType(row.alertLevel)"
+                    effect="plain"
+                    size="small"
+                  >
+                    {{ row.statusText }}
+                  </ElTag>
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="住院号" min-width="120" show-overflow-tooltip>
+                <template #default="{ row }">
+                  {{ row.inpatientNo }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="病人ID" min-width="120" show-overflow-tooltip>
+                <template #default="{ row }">
+                  {{ row.patientId }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="申请科室" min-width="120" show-overflow-tooltip>
+                <template #default="{ row }">
+                  {{ row.requestDepartment }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="检查组" min-width="120" show-overflow-tooltip>
+                <template #default="{ row }">
+                  {{ row.inspectionGroup }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="肉眼所见" min-width="180" show-overflow-tooltip>
+                <template #default="{ row }">
+                  {{ row.grossDescription }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="病理诊断" min-width="180" show-overflow-tooltip>
+                <template #default="{ row }">
+                  {{ row.clinicalDiagnosis }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="申请单号" min-width="140" show-overflow-tooltip>
+                <template #default="{ row }">
+                  {{ row.applicationNo }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="申请机构" min-width="140" show-overflow-tooltip>
+                <template #default="{ row }">
+                  {{ row.requestOrganization }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="蜡块总数/打印数" min-width="140">
+                <template #default="{ row }">
+                  {{ row.blockPrintSummary }}
+                </template>
+              </ElTableColumn>
+            </ElTable>
+          </div>
+
+          <footer class="flex min-h-10 flex-wrap items-center justify-between gap-3 border-t border-border bg-muted/30 px-3 py-2">
+            <span class="shrink-0 text-xs text-muted-foreground">
+              {{ filters.page }} / {{ totalPageCount }} 共
+              {{ total }} 条记录
+            </span>
             <ElPagination
               v-model:current-page="filters.page"
               v-model:page-size="filters.size"
               :page-sizes="[10, 20, 50, 100]"
               :total="total"
               background
-              layout="total, sizes, prev, pager, next"
+              layout="sizes, prev, pager, next, jumper"
+              size="small"
               @change="void loadPendingData()"
             />
-          </WorkflowSectionCard>
-        </div>
+          </footer>
+        </article>
 
-        <div class="flex flex-col gap-4">
-          <WorkflowSectionCard
-            title="取材描写工作台"
-            description="将开始取材、标本编辑、描述区和上下文收敛到单页工作台，不再依赖弹窗进入主录入。"
-          >
-            <template #extra>
-              <ElTag
-                :type="selectedTask?.taskStatus === 'IN_PROGRESS' ? 'warning' : 'info'"
-              >
-                {{ formatTaskStatus(selectedTask?.taskStatus) }}
-              </ElTag>
-            </template>
-
-            <template v-if="selectedTask">
-              <div class="flex flex-col gap-4">
-                <div
-                  class="flex flex-col gap-3 rounded-xl border border-border bg-muted/20 px-4 py-4 lg:flex-row lg:items-start lg:justify-between"
-                >
-                  <div class="space-y-2">
-                    <div class="text-lg font-semibold text-foreground">
-                      {{ formatNullable(selectedTask.pathologyNo) }}
-                    </div>
-                    <div class="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                      <span>任务号 {{ selectedTask.id }}</span>
-                      <span>病例 {{ selectedTask.caseId }}</span>
-                      <span>对象 {{ formatNullable(selectedTask.objectId) }}</span>
-                    </div>
-                    <div class="text-sm text-muted-foreground">
-                      {{
-                        selectedTask.taskStatus === 'PENDING'
-                          ? '先开始取材，再在下方完成常驻录入。'
-                          : '当前任务已处于处理中，可直接继续完善标本与取材描述。'
-                      }}
-                    </div>
-                  </div>
-                  <div class="flex flex-wrap gap-2">
-                    <ElButton
-                      :loading="actionLoading"
-                      type="primary"
-                      @click="void handleStartOrContinue()"
-                    >
-                      {{
-                        selectedTask.taskStatus === 'PENDING'
-                          ? '开始取材'
-                          : '继续取材'
-                      }}
-                    </ElButton>
-                    <ElButton
-                      :loading="workbench.contextLoading.value"
-                      @click="void workbench.loadWorkbenchContext()"
-                    >
-                      刷新上下文
-                    </ElButton>
-                    <ElButton
-                      @click="
-                        navigation.goToTracking({
-                          caseId: selectedTask.caseId,
-                        })
-                      "
-                    >
-                      查看轨迹
-                    </ElButton>
-                    <ElButton
-                      :disabled="!previousTask"
-                      @click="void selectAdjacentTask(-1)"
-                    >
-                      上一例
-                    </ElButton>
-                    <ElButton
-                      :disabled="!nextTask"
-                      @click="void selectAdjacentTask(1)"
-                    >
-                      下一例
-                    </ElButton>
-                  </div>
+        <aside class="flex min-h-0 min-w-0 flex-col overflow-y-auto rounded-md border border-border bg-card">
+          <template v-if="selectedTask">
+            <header class="flex flex-wrap items-start justify-between gap-2 border-b border-border bg-muted/30 px-3 py-2">
+              <div class="min-w-0">
+                <div class="truncate text-sm font-semibold text-foreground">
+                  {{ selectedPathologyNo }}
                 </div>
-
-                <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  <article
-                    v-for="item in summaryItems"
+                <div class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                  <span
+                    v-for="item in selectedTaskFacts"
                     :key="item.label"
-                    class="rounded-lg border border-border bg-card px-4 py-3"
                   >
-                    <div class="text-xs text-muted-foreground">
-                      {{ item.label }}
-                    </div>
-                    <div class="mt-1 text-sm font-semibold text-foreground">
-                      {{ item.value }}
-                    </div>
-                  </article>
-                </div>
-
-                <ElForm label-width="96px">
-                  <TechnicalOperatorFields
-                    :form="workbench.operatorForm"
-                    remarks-placeholder="必要时补充本次取材说明"
-                    terminal-placeholder="取材终端编码"
-                  />
-                </ElForm>
-
-                <div class="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_360px]">
-                  <WorkflowSectionCard
-                    title="标本主从编辑区"
-                    description="保留现有稳定的标本、蜡块和影像录入能力，并将其放入工作台主编辑区。"
-                  >
-                    <div class="mb-4 flex flex-wrap gap-2">
-                      <button
-                        v-for="(specimenMeta, specimenIndex) in workbench.specimenTabMetas.value"
-                        :key="specimenMeta.key"
-                        class="rounded-full border px-3 py-1.5 text-sm transition-colors"
-                        :class="
-                          workbench.activeSpecimenKey.value === specimenMeta.key
-                            ? 'border-primary bg-primary/10 text-primary'
-                            : 'border-border bg-card text-muted-foreground'
-                        "
-                        type="button"
-                        @click="workbench.activeSpecimenKey.value = specimenMeta.key"
-                      >
-                        {{ workbench.getSpecimenTabLabel(specimenIndex) }}
-                      </button>
-                    </div>
-
-                    <GrossingSpecimenTabs
-                      v-model:active-specimen-key="workbench.activeSpecimenKey.value"
-                      :before-grossing-image-upload="
-                        workbench.beforeGrossingImageUpload
-                      "
-                      :body-part-tree-options="
-                        workbench.bodyPartTreeOptions.value
-                      "
-                      :complete-form="workbench.completeForm"
-                      :create-grossing-image-upload-request="
-                        workbench.createGrossingImageUploadRequest
-                      "
-                      :get-specimen-tab-label="workbench.getSpecimenTabLabel"
-                      :grossing-image-accept="workbench.grossingImageAccept"
-                      :is-specimen-uploading="workbench.isSpecimenUploading"
-                      :label-class="workbench.labelClass"
-                      :sampling-template-tree-options="
-                        workbench.samplingTemplateTreeOptions.value
-                      "
-                      :specimen-tab-metas="workbench.specimenTabMetas.value"
-                      :workflow-reference-options="
-                        workbench.workflowReferenceOptions.value
-                      "
-                      @add-block="workbench.addBlock"
-                      @add-media-asset="workbench.addMediaAsset"
-                      @add-specimen="workbench.addSpecimen"
-                      @remove-block="workbench.removeBlock"
-                      @remove-media-asset="workbench.removeMediaAsset"
-                      @remove-specimen="workbench.removeSpecimen"
-                    />
-                  </WorkflowSectionCard>
-
-                  <WorkflowSectionCard
-                    title="描述区"
-                    description="右侧描述区固定承接大体描写、临床病史和相关检查，减少在多个页面来回切换。"
-                  >
-                    <ElTabs v-model="workbench.descriptionTab.value">
-                      <ElTabPane label="大体描写" name="grossDescription">
-                        <div class="space-y-3">
-                          <div class="rounded-lg border border-border bg-muted/20 p-3 text-sm text-muted-foreground">
-                            {{ activeSpecimenSummary || '选中标本后在这里聚焦录入当前描写。' }}
-                          </div>
-                          <ElInput
-                            v-if="workbench.activeSpecimen.value"
-                            v-model="
-                              workbench.activeSpecimen.value.grossDescription
-                            "
-                            :rows="16"
-                            placeholder="请输入当前标本的大体描写"
-                            type="textarea"
-                          />
-                          <ElEmpty
-                            v-else
-                            description="当前没有可编辑的标本描写"
-                          />
-                        </div>
-                      </ElTabPane>
-
-                      <ElTabPane label="临床病史" name="clinicalHistory">
-                        <div
-                          class="min-h-[360px] whitespace-pre-wrap rounded-lg border border-border bg-muted/10 p-4 text-sm leading-7 text-foreground"
-                        >
-                          {{
-                            workbench.workbenchContext.value?.clinicalHistory ||
-                            '当前病例暂无临床病史上下文'
-                          }}
-                        </div>
-                      </ElTabPane>
-
-                      <ElTabPane
-                        label="相关检查"
-                        name="relatedExaminations"
-                      >
-                        <div class="space-y-4">
-                          <div
-                            class="min-h-[220px] whitespace-pre-wrap rounded-lg border border-border bg-muted/10 p-4 text-sm leading-7 text-foreground"
-                          >
-                            {{
-                              workbench.workbenchContext.value
-                                ?.relatedExaminations || '当前病例暂无检查摘要'
-                            }}
-                          </div>
-                          <div class="flex flex-wrap gap-2">
-                            <ElTag
-                              v-for="item in workbench.workbenchContext.value?.checkItems ?? []"
-                              :key="`${item.sequenceNo}-${item.name}`"
-                              effect="plain"
-                            >
-                              {{ item.name }}
-                            </ElTag>
-                          </div>
-                        </div>
-                      </ElTabPane>
-                    </ElTabs>
-                  </WorkflowSectionCard>
-                </div>
-
-                <div class="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_380px]">
-                  <WorkflowSectionCard
-                    title="临床诊断 / 上下文摘要"
-                    description="诊断区只读承接临床上下文，不在技术组页面新增可编辑病理诊断录入。"
-                  >
-                    <div class="grid gap-4 xl:grid-cols-2">
-                      <div class="rounded-lg border border-border bg-muted/10 p-4">
-                        <div class="text-xs text-muted-foreground">
-                          临床诊断
-                        </div>
-                        <div class="mt-2 whitespace-pre-wrap text-sm leading-7 text-foreground">
-                          {{
-                            workbench.workbenchContext.value
-                              ?.clinicalDiagnosis || '暂无临床诊断'
-                          }}
-                        </div>
-                      </div>
-                      <div class="rounded-lg border border-border bg-muted/10 p-4">
-                        <div class="text-xs text-muted-foreground">
-                          上下文摘要
-                        </div>
-                        <div class="mt-2 whitespace-pre-wrap text-sm leading-7 text-foreground">
-                          {{
-                            workbench.workbenchContext.value?.contextSummary ||
-                            '暂无可展示的上下文摘要'
-                          }}
-                        </div>
-                      </div>
-                    </div>
-                  </WorkflowSectionCard>
-
-                  <WorkflowSectionCard
-                    title="已采图像"
-                    description="当前录入影像与历史采图并排承接，上传和手工补录仍沿用现有能力。"
-                  >
-                    <div class="space-y-4">
-                      <section>
-                        <div class="mb-2 text-xs text-muted-foreground">
-                          当前录入
-                        </div>
-                        <div
-                          v-if="workbench.enteredMediaAssets.value.length"
-                          class="grid gap-3"
-                        >
-                          <article
-                            v-for="asset in workbench.enteredMediaAssets.value"
-                            :key="`${asset.specimenIndex}-${asset.assetIndex}-${asset.fileUrl}`"
-                            class="rounded-lg border border-border p-3"
-                          >
-                            <div class="text-sm font-medium text-foreground">
-                              {{ asset.specimenId }}
-                            </div>
-                            <div class="mt-1 text-xs text-muted-foreground">
-                              {{ asset.fileName || '未命名影像' }}
-                            </div>
-                            <ElLink
-                              v-if="asset.fileUrl"
-                              :href="asset.fileUrl"
-                              class="mt-2"
-                              target="_blank"
-                              type="primary"
-                            >
-                              查看影像
-                            </ElLink>
-                          </article>
-                        </div>
-                        <ElEmpty v-else description="当前还没有录入影像" />
-                      </section>
-
-                      <section>
-                        <div class="mb-2 text-xs text-muted-foreground">
-                          历史采图
-                        </div>
-                        <div
-                          v-if="workbench.workbenchContext.value?.mediaAssets.length"
-                          class="grid gap-3"
-                        >
-                          <article
-                            v-for="asset in workbench.workbenchContext.value.mediaAssets"
-                            :key="asset.assetId"
-                            class="rounded-lg border border-border p-3"
-                          >
-                            <div class="text-sm font-medium text-foreground">
-                              {{ asset.fileName || '历史影像' }}
-                            </div>
-                            <div class="mt-1 text-xs text-muted-foreground">
-                              {{ formatNullable(asset.capturedAt) }}
-                              {{ asset.capturedByName ? ` / ${asset.capturedByName}` : '' }}
-                            </div>
-                            <ElLink
-                              :href="asset.fileUrl"
-                              class="mt-2"
-                              target="_blank"
-                              type="primary"
-                            >
-                              查看影像
-                            </ElLink>
-                          </article>
-                        </div>
-                        <ElEmpty v-else description="当前没有历史采图记录" />
-                      </section>
-                    </div>
-                  </WorkflowSectionCard>
-                </div>
-
-                <div class="flex justify-end gap-2">
-                  <ElButton
-                    :loading="workbench.contextLoading.value"
-                    @click="void workbench.loadWorkbenchContext()"
-                  >
-                    重新加载
-                  </ElButton>
-                  <ElButton
-                    :loading="workbench.submitting.value"
-                    type="primary"
-                    @click="void workbench.submitGrossing()"
-                  >
-                    完成取材
-                  </ElButton>
+                    {{ item.label }}：{{ item.value }}
+                  </span>
                 </div>
               </div>
-            </template>
+              <div class="flex shrink-0 flex-wrap items-center gap-1.5">
+                <ElTag
+                  :type="getTaskStatusTagType(selectedTask.taskStatus)"
+                  effect="plain"
+                  size="small"
+                >
+                  {{ formatGrossingTaskStatus(selectedTask.taskStatus) }}
+                </ElTag>
+                <ElButton
+                  :loading="workbench.submitting.value"
+                  size="small"
+                  type="primary"
+                  @click="void workbench.submitGrossing()"
+                >
+                  取材完成
+                </ElButton>
+                <ElButton
+                  :disabled="!previousTask"
+                  :icon="ChevronLeft"
+                  size="small"
+                  @click="void selectAdjacentTask(-1)"
+                >
+                  上一例
+                </ElButton>
+                <ElButton
+                  :disabled="!nextTask"
+                  :icon="ChevronRight"
+                  size="small"
+                  @click="void selectAdjacentTask(1)"
+                >
+                  下一例
+                </ElButton>
+              </div>
+            </header>
 
-            <ElEmpty v-else description="请先从左侧队列选择任务，右侧将自动展开取材工作台" />
-          </WorkflowSectionCard>
-        </div>
-      </div>
+            <section class="border-b border-border">
+              <ElTabs
+                v-model="workbench.descriptionTab.value"
+                class="px-3 pb-3"
+              >
+                <ElTabPane label="大体描写" name="grossDescription">
+                  <div class="min-h-80 pt-2">
+                    <div class="flex min-h-8 items-center justify-between gap-2 border-b border-border pb-2">
+                      <span class="text-xs font-semibold text-foreground">
+                        大体描写
+                      </span>
+                      <div class="inline-flex items-center gap-1.5">
+                        <ElTooltip content="随完成取材一并提交" placement="top">
+                          <span class="inline-flex">
+                            <ElButton disabled size="small">保存描述</ElButton>
+                          </span>
+                        </ElTooltip>
+                        <ElTooltip content="暂未接入独立暂存" placement="top">
+                          <span class="inline-flex">
+                            <ElButton disabled size="small">暂存</ElButton>
+                          </span>
+                        </ElTooltip>
+                      </div>
+                    </div>
+
+                    <GrossingEmbeddingBoxTable
+                      :embedding-remark-options="
+                        workbench.workflowReferenceOptions.value
+                          .embeddingRemarks
+                      "
+                      :specimen="workbench.activeSpecimen.value"
+                      @add-embedding-boxes="workbench.addEmbeddingBoxes"
+                      @remove-embedding-box="workbench.removeEmbeddingBox"
+                    />
+
+                    <ElInput
+                      v-if="workbench.activeSpecimen.value"
+                      v-model="workbench.activeSpecimen.value.grossDescription"
+                      :rows="12"
+                      placeholder="请输入当前标本的大体描写"
+                      type="textarea"
+                    />
+                    <ElEmpty
+                      v-else
+                      description="当前没有可编辑的标本描写"
+                    />
+                  </div>
+                </ElTabPane>
+
+                <ElTabPane label="临床病史" name="clinicalHistory">
+                  <div class="min-h-80 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-background p-3 text-sm leading-7 text-foreground">
+                    {{
+                      workbench.workbenchContext.value?.clinicalHistory ||
+                      '当前病例暂无临床病史上下文'
+                    }}
+                  </div>
+                </ElTabPane>
+
+                <ElTabPane label="相关检查" name="relatedExaminations">
+                  <div class="min-h-80 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-background p-3 text-sm leading-7 text-foreground">
+                    {{
+                      workbench.workbenchContext.value?.relatedExaminations ||
+                      '当前病例暂无检查摘要'
+                    }}
+                    <div
+                      v-if="workbench.workbenchContext.value?.checkItems.length"
+                      class="mt-3 flex flex-wrap gap-1.5 border-t border-border pt-3"
+                    >
+                      <ElTag
+                        v-for="item in workbench.workbenchContext.value.checkItems"
+                        :key="`${item.sequenceNo}-${item.name}`"
+                        effect="plain"
+                        size="small"
+                      >
+                        {{ item.name }}
+                      </ElTag>
+                    </div>
+                  </div>
+                </ElTabPane>
+              </ElTabs>
+            </section>
+
+            <section class="border-b border-border">
+              <header class="flex min-h-8 items-center border-b border-border bg-muted/30 px-3 text-xs font-semibold text-foreground">
+                描述
+              </header>
+              <div class="max-h-40 min-h-24 overflow-auto whitespace-pre-wrap bg-card p-3 text-sm leading-6 text-foreground">
+                {{ descriptionPreview }}
+              </div>
+            </section>
+
+            <section class="border-b border-border">
+              <header class="flex min-h-8 items-center border-b border-border bg-muted/30 px-3 text-xs font-semibold text-foreground">
+                诊断
+              </header>
+              <div class="max-h-40 min-h-24 overflow-auto whitespace-pre-wrap bg-card p-3 text-sm leading-6 text-foreground">
+                {{ diagnosisPreview }}
+              </div>
+            </section>
+
+            <section class="flex flex-1 flex-col">
+              <header class="flex min-h-8 items-center border-b border-border bg-muted/30 px-3 text-xs font-semibold text-foreground">
+                已采图像
+              </header>
+              <div class="min-h-40 flex-1 overflow-auto bg-card p-3 text-sm leading-6 text-foreground">
+                <div
+                  v-if="capturedImageItems.length"
+                  class="grid gap-2"
+                >
+                  <article
+                    v-for="asset in capturedImageItems"
+                    :key="asset.key"
+                    class="flex items-center justify-between gap-2 rounded-md border border-border bg-background p-2"
+                  >
+                    <div class="flex min-w-0 items-center gap-2">
+                      <ElTag effect="plain" size="small">
+                        {{ asset.sourceLabel }}
+                      </ElTag>
+                      <div class="min-w-0">
+                        <div class="truncate text-xs font-medium text-foreground">
+                          {{ asset.title }}
+                        </div>
+                        <div class="mt-0.5 truncate text-xs text-muted-foreground">
+                          {{ asset.meta || '-' }}
+                        </div>
+                      </div>
+                    </div>
+                    <ElLink
+                      v-if="asset.fileUrl"
+                      :href="asset.fileUrl"
+                      target="_blank"
+                      type="primary"
+                    >
+                      查看
+                    </ElLink>
+                  </article>
+                </div>
+                <ElEmpty v-else description="当前没有采图记录" />
+              </div>
+            </section>
+          </template>
+
+          <div v-else class="grid min-h-96 flex-1 place-items-center">
+            <ElEmpty description="请先选择取材任务" />
+          </div>
+        </aside>
+      </section>
     </div>
+
+    <ElDrawer
+      v-model="moreDrawerVisible"
+      :close-on-click-modal="false"
+      :title="`更多取材操作 - ${selectedPathologyNo}`"
+      size="74%"
+    >
+      <div class="flex flex-col gap-4 pb-16">
+        <section class="overflow-hidden rounded-md border border-border bg-card">
+          <header class="border-b border-border bg-muted/30 px-3 py-2 text-sm font-semibold text-foreground">
+            操作信息
+          </header>
+          <div class="p-3">
+            <ElForm label-width="96px">
+              <TechnicalOperatorFields
+                :form="workbench.operatorForm"
+                remarks-placeholder="必要时补充本次取材说明"
+                terminal-placeholder="取材终端编码"
+              />
+            </ElForm>
+          </div>
+        </section>
+
+        <section class="overflow-hidden rounded-md border border-border bg-card">
+          <header class="border-b border-border bg-muted/30 px-3 py-2 text-sm font-semibold text-foreground">
+            标本 / 蜡块 / 影像编辑
+          </header>
+          <div class="p-3">
+            <GrossingSpecimenTabs
+              v-model:active-specimen-key="workbench.activeSpecimenKey.value"
+              :before-grossing-image-upload="workbench.beforeGrossingImageUpload"
+              :body-part-tree-options="workbench.bodyPartTreeOptions.value"
+              :complete-form="workbench.completeForm"
+              :create-grossing-image-upload-request="
+                workbench.createGrossingImageUploadRequest
+              "
+              :get-specimen-tab-label="workbench.getSpecimenTabLabel"
+              :grossing-image-accept="workbench.grossingImageAccept"
+              :is-specimen-uploading="workbench.isSpecimenUploading"
+              :label-class="workbench.labelClass"
+              :sampling-template-tree-options="
+                workbench.samplingTemplateTreeOptions.value
+              "
+              :specimen-tab-metas="workbench.specimenTabMetas.value"
+              :workflow-reference-options="
+                workbench.workflowReferenceOptions.value
+              "
+              @add-block="workbench.addBlock"
+              @add-media-asset="workbench.addMediaAsset"
+              @add-specimen="workbench.addSpecimen"
+              @remove-block="workbench.removeBlock"
+              @remove-media-asset="workbench.removeMediaAsset"
+              @remove-specimen="workbench.removeSpecimen"
+            />
+          </div>
+        </section>
+
+        <footer class="sticky bottom-0 flex justify-end gap-2 border-t border-border bg-background/95 py-3">
+          <ElButton
+            :loading="workbench.contextLoading.value"
+            @click="void workbench.loadWorkbenchContext()"
+          >
+            重新加载
+          </ElButton>
+          <ElButton
+            @click="
+              navigation.goToTracking({
+                caseId: selectedTask?.caseId ?? undefined,
+              })
+            "
+          >
+            查看轨迹
+          </ElButton>
+          <ElButton
+            :loading="workbench.submitting.value"
+            type="primary"
+            @click="void workbench.submitGrossing()"
+          >
+            完成取材
+          </ElButton>
+        </footer>
+      </div>
+    </ElDrawer>
   </Page>
 </template>

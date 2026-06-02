@@ -148,8 +148,8 @@ export function useTechnicalWorkflowEntry() {
 
     if (!canAccessAnyM3.value) {
       return canAccessSpecimenRegistration.value
-        ? '当前账号可处理病理接收与接收后标本登记流程，可先完成登记再进入后续技术工位。'
-        : '当前账号仅开通病理接收入口，可先从接收页进入并等待后续技术权限开通。';
+        ? '当前账号可处理标本接收与接收后标本登记流程，可先完成登记再进入后续技术工位。'
+        : '当前账号仅开通标本接收入口，可先从接收页进入并等待后续技术权限开通。';
     }
 
     if (pendingSpecimenRegistrationCount.value > 0) {

@@ -535,14 +535,14 @@ describe('doctor workflow view visibility', () => {
     wrapper.unmount();
   });
 
-  it('shows guidance instead of missing-case error on empty workbench route', async () => {
+  it('shows queue-first guidance instead of missing-case error on empty workbench route', async () => {
     mockAccessStore.accessCodes = [M4_PERMISSION_CODES.WORKBENCH_QUERY];
 
     const wrapper = await mountView(DiagnosisWorkbenchView);
 
     expect(getDiagnosticWorkbenchMock).not.toHaveBeenCalled();
-    expect(wrapper.text()).toContain('病例查询');
-    expect(wrapper.text()).toContain('请输入病例 ID');
+    expect(wrapper.text()).toContain('诊断病例队列');
+    expect(wrapper.text()).toContain('请先从左侧选择一个病例');
     expect(wrapper.text()).not.toContain('缺少病例 ID');
   });
 

@@ -20,7 +20,9 @@ const {
     specimenNo: 'SP-001',
   })),
   downloadFileFromBlobMock: vi.fn(),
-  listSpecimensMock: vi.fn(async (params?: { keyword?: string }) => {
+  listSpecimensMock: vi.fn(
+    async (params?: { applicationNo?: string; keyword?: string }) => {
+    const applicationNo = params?.applicationNo ?? '';
     const keyword = params?.keyword ?? '';
     const source = [
       {
@@ -51,6 +53,36 @@ const {
         submittingDepartmentName: 'Surgery',
         verificationCompletedAt: '2026-05-26 08:20:00',
         verificationStartedAt: '2026-05-26 08:15:00',
+        verificationStatus: 'VERIFIED',
+      },
+      {
+        abnormalFlag: false,
+        applicationId: 'APP-CHECKIN',
+        applicationNo: 'M2-001',
+        barcode: 'BC-CHECKIN-SIBLING',
+        checkInStatus: 'NOT_CHECKED_IN',
+        checkedInAt: null,
+        checkedInByName: null,
+        fixationStatus: 'COMPLETED',
+        labelPrintBatchNo: 'BATCH-1',
+        labelPrintStatus: 'SUCCESS',
+        latestTrackingAt: '2026-05-26 09:05:00',
+        patientName: 'Alice',
+        recentNode: 'CONFIRMATION',
+        registeredAt: '2026-05-26 08:02:00',
+        specimenConfirmedAt: '2026-05-26 08:55:00',
+        specimenId: 'SPEC-CHECKIN-SIBLING',
+        specimenName: '乙状结肠息肉',
+        specimenNo: 'SP-001-2',
+        specimenSite: '结肠',
+        specimenStatus: 'FIXED',
+        specimenType: '组织',
+        roomId: 'OR-102',
+        surgeryName: 'OR-102',
+        submittingDepartmentId: 'DEPT-001',
+        submittingDepartmentName: 'Surgery',
+        verificationCompletedAt: '2026-05-26 08:25:00',
+        verificationStartedAt: '2026-05-26 08:18:00',
         verificationStatus: 'VERIFIED',
       },
       {
@@ -143,16 +175,79 @@ const {
         verificationStartedAt: '2026-05-26 08:20:00',
         verificationStatus: 'VERIFIED',
       },
+      {
+        abnormalFlag: false,
+        applicationId: 'APP-PARTIAL-CHECKIN',
+        applicationNo: 'M2-005',
+        barcode: 'BC-PARTIAL-READY',
+        checkInStatus: 'NOT_CHECKED_IN',
+        checkedInAt: null,
+        checkedInByName: null,
+        fixationStatus: 'COMPLETED',
+        labelPrintBatchNo: 'BATCH-4',
+        labelPrintStatus: 'SUCCESS',
+        latestTrackingAt: '2026-05-26 09:20:00',
+        patientName: 'Eve',
+        recentNode: 'CONFIRMATION',
+        registeredAt: '2026-05-26 08:12:00',
+        specimenConfirmedAt: '2026-05-26 08:42:00',
+        specimenId: 'SPEC-PARTIAL-READY',
+        specimenName: '阑尾组织',
+        specimenNo: 'SP-005',
+        specimenSite: '阑尾',
+        specimenStatus: 'FIXED',
+        specimenType: '组织',
+        roomId: 'OR-106',
+        surgeryName: 'OR-106',
+        submittingDepartmentId: 'DEPT-001',
+        submittingDepartmentName: 'Surgery',
+        verificationCompletedAt: '2026-05-26 08:32:00',
+        verificationStartedAt: '2026-05-26 08:22:00',
+        verificationStatus: 'VERIFIED',
+      },
+      {
+        abnormalFlag: false,
+        applicationId: 'APP-PARTIAL-CHECKIN',
+        applicationNo: 'M2-005',
+        barcode: 'BC-PARTIAL-BLOCKED',
+        checkInStatus: 'NOT_CHECKED_IN',
+        checkedInAt: null,
+        checkedInByName: null,
+        fixationStatus: 'COMPLETED',
+        labelPrintBatchNo: 'BATCH-4',
+        labelPrintStatus: 'SUCCESS',
+        latestTrackingAt: '2026-05-26 09:21:00',
+        patientName: 'Eve',
+        recentNode: 'VERIFICATION',
+        registeredAt: '2026-05-26 08:13:00',
+        specimenConfirmedAt: null,
+        specimenId: 'SPEC-PARTIAL-BLOCKED',
+        specimenName: '盲肠组织',
+        specimenNo: 'SP-005-2',
+        specimenSite: '盲肠',
+        specimenStatus: 'FIXED',
+        specimenType: '组织',
+        roomId: 'OR-106',
+        surgeryName: 'OR-106',
+        submittingDepartmentId: 'DEPT-001',
+        submittingDepartmentName: 'Surgery',
+        verificationCompletedAt: '2026-05-26 08:33:00',
+        verificationStartedAt: '2026-05-26 08:23:00',
+        verificationStatus: 'VERIFIED',
+      },
     ];
 
     return {
-      items: source.filter(
-        (item) =>
+      items: source.filter((item) => {
+        const matchesKeyword =
           !keyword ||
           item.specimenNo.includes(keyword) ||
           item.specimenId.includes(keyword) ||
-          item.barcode.includes(keyword),
-      ),
+          item.barcode.includes(keyword);
+        const matchesApplicationNo =
+          !applicationNo || item.applicationNo === applicationNo;
+        return matchesKeyword && matchesApplicationNo;
+      }),
       page: 1,
       size: 100,
       summary: {
@@ -161,9 +256,9 @@ const {
         pendingLabelCount: 0,
         totalCount: 2,
       },
-        total: source.length,
-      };
-    }),
+      total: source.length,
+    };
+  }),
   loadOperatingRoomNameMapSafelyMock: vi.fn(async () =>
     new Map([['OR-102', '惠侨楼 - 手术室 2']]),
   ),
@@ -372,7 +467,26 @@ describe('useSpecimenCheckInPanel', () => {
 
     expect(checkInSpecimenMock).not.toHaveBeenCalled();
     expect(warningMock).toHaveBeenCalledWith(
-      '标本尚未完成标本确认，不能入库',
+      '当前申请单下仍有标本未完成核对、固定或标本确认，不能入库',
+    );
+
+    wrapper.destroy();
+  });
+
+  it('warns when another specimen in the same application is not ready', async () => {
+    const wrapper = mountComposable();
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    state.scanInput.value = 'SP-005';
+    await state.handleQuickCheckIn();
+    await flushComposable();
+
+    expect(checkInSpecimenMock).not.toHaveBeenCalled();
+    expect(warningMock).toHaveBeenCalledWith(
+      '当前申请单下仍有标本未完成核对、固定或标本确认，不能入库',
     );
 
     wrapper.destroy();

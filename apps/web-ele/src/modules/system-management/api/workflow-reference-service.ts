@@ -43,6 +43,15 @@ function createDefaultWorkflowReferenceOptions(): WorkflowReferenceOptionsRespon
       { label: '质硬', value: '质硬' },
       { label: '坏死', value: '坏死' },
     ],
+    embeddingRemarks: [
+      { label: '骨髓', value: '骨髓' },
+      { label: '皮肤组织', value: '皮肤组织' },
+      { label: '脱钙', value: '脱钙' },
+      { label: '粘膜活检', value: '粘膜活检' },
+      { label: '补取', value: '补取' },
+      { label: '前列腺穿刺', value: '前列腺穿刺' },
+      { label: '其他', value: '其他' },
+    ],
     fixationLiquidTypes: [
       { label: '10% 中性福尔马林', value: 'FORMALIN' },
       { label: '酒精', value: 'ETHANOL' },
@@ -94,6 +103,7 @@ export function createEmptyWorkflowReferenceOptions(): WorkflowReferenceOptionsR
     collectionModes: [],
     containerNames: [],
     cutSurfaceFeatures: [],
+    embeddingRemarks: [],
     fixationLiquidTypes: [],
     marginMarkings: [],
     specimenImageSizes: [],
@@ -121,6 +131,10 @@ export function mapWorkflowReferenceOptionsResponse(
     cutSurfaceFeatures: withDefaultOptions(
       normalizeReferenceOptions(response?.cutSurfaceFeatures),
       defaults.cutSurfaceFeatures,
+    ),
+    embeddingRemarks: withDefaultOptions(
+      normalizeReferenceOptions(response?.embeddingRemarks),
+      defaults.embeddingRemarks,
     ),
     fixationLiquidTypes: withDefaultOptions(
       normalizeReferenceOptions(response?.fixationLiquidTypes),

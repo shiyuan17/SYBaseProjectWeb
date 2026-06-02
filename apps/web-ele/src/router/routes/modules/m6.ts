@@ -1,19 +1,11 @@
 import type { RouteRecordRaw } from 'vue-router';
 
 import {
-  M6_BILLING_PAGE_AUTHORITIES,
-  M6_HISTORY_PAGE_AUTHORITIES,
-  M6_INTEGRATION_PAGE_AUTHORITIES,
   M6_STATISTICS_PAGE_AUTHORITIES,
 } from '#/modules/m6-management/constants';
 import { applyKeepAliveToTabRoutes } from '#/router/routes/keep-alive';
 
-const M6_AUTHORITIES = [
-  ...M6_INTEGRATION_PAGE_AUTHORITIES,
-  ...M6_BILLING_PAGE_AUTHORITIES,
-  ...M6_HISTORY_PAGE_AUTHORITIES,
-  ...M6_STATISTICS_PAGE_AUTHORITIES,
-];
+const M6_AUTHORITIES = [...M6_STATISTICS_PAGE_AUTHORITIES];
 
 const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
   {
@@ -21,7 +13,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
       authority: M6_AUTHORITIES,
       icon: 'carbon:data-base',
       order: 190,
-      title: '集成与统计',
+      title: '数据统计与分析',
     },
     name: 'M6Root',
     path: '/m6',
@@ -35,54 +27,47 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
           hideInBreadcrumb: true,
           hideInMenu: true,
           hideInTab: true,
-          title: 'M6 入口',
+          title: '数据统计入口',
         },
         name: 'M6Entry',
         path: '/m6/entry',
       },
       {
         component: () =>
-          import('#/modules/m6-management/views/IntegrationManagementView.vue'),
+          import('#/views/_core/fallback/MenuPlaceholderView.vue'),
         meta: {
-          authority: [...M6_INTEGRATION_PAGE_AUTHORITIES],
-          icon: 'carbon:connect',
-          title: '集成任务',
+          authority: [...M6_STATISTICS_PAGE_AUTHORITIES],
+          description: '当前页面暂未接入质控指标统计相关业务功能。',
+          icon: 'carbon:chart-line',
+          title: '质控指标统计',
         },
-        name: 'IntegrationManagement',
-        path: '/m6/integration',
+        name: 'QualityIndicatorStatistics',
+        path: '/m6/quality-indicators',
       },
       {
         component: () =>
-          import('#/modules/m6-management/views/BillingManagementView.vue'),
+          import('#/views/_core/fallback/MenuPlaceholderView.vue'),
         meta: {
-          authority: [...M6_BILLING_PAGE_AUTHORITIES],
-          icon: 'carbon:currency',
-          title: '收费管理',
+          authority: [...M6_STATISTICS_PAGE_AUTHORITIES],
+          description: '当前页面暂未接入管理指标统计相关业务功能。',
+          icon: 'carbon:chart-column',
+          title: '管理指标统计',
         },
-        name: 'BillingManagement',
-        path: '/m6/billing',
-      },
-      {
-        component: () =>
-          import('#/modules/m6-management/views/HistoricalReportsView.vue'),
-        meta: {
-          authority: [...M6_HISTORY_PAGE_AUTHORITIES],
-          icon: 'carbon:document',
-          title: '历史报告',
-        },
-        name: 'HistoricalReports',
-        path: '/m6/history',
+        name: 'ManagementIndicatorStatistics',
+        path: '/m6/management-indicators',
       },
       {
         component: () =>
           import('#/modules/m6-statistics/views/StatisticsAnalysisView.vue'),
         meta: {
           authority: [...M6_STATISTICS_PAGE_AUTHORITIES],
+          description:
+            '面向自定义统计分析场景的正式报表入口，支持按模板或单指标查询并导出 CSV。',
           icon: 'carbon:chart-line',
-          title: '统计分析',
+          title: '自定义统计分析',
         },
-        name: 'StatisticsAnalysis',
-        path: '/m6/statistics',
+        name: 'CustomStatisticsAnalysis',
+        path: '/m6/custom-analysis',
       },
     ],
   },

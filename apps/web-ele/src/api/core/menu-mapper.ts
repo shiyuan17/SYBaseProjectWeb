@@ -91,6 +91,7 @@ function convertMenuNode(
   const route: RouteRecordStringComponent<string> = {
     component: definition.component,
     meta: {
+      hideInMenu: definition.hideInMenu || undefined,
       icon: node.icon || undefined,
       order: node.sortOrder,
       title: definition.canonicalTitle ?? node.menuName,

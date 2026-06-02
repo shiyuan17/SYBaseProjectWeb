@@ -77,7 +77,7 @@ test('preflight: local m2 linked services are reachable', async () => {
       });
       expect(
         receiveAuthResponse.ok(),
-        '接收岗账号登录失败，无法校验病理接收待办接口。',
+        '接收岗账号登录失败，无法校验标本接收待办接口。',
       ).toBeTruthy();
       const receiveAuthPayload = await receiveAuthResponse.json();
       expect(receiveAuthPayload?.code, '接收岗登录返回格式异常。').toBe(

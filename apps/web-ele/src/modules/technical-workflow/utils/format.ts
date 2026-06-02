@@ -68,6 +68,12 @@ const specimenStatusLabels = {
   REJECTED: '已拒收',
   RETURNED: '已退回',
 } satisfies Record<string, string>;
+const specimenRegistrationStatusLabels = {
+  COMPLETED: '已登记',
+  PENDING: '待登记',
+  REGISTERED: '已登记',
+  SAVED: '已保存',
+} satisfies Record<string, string>;
 const slideStatusLabels = {
   PENDING: '待染色',
   STAINED: '已染色',
@@ -105,6 +111,10 @@ export function formatNullable(value?: null | string) {
   return value && value.trim() ? value : '-';
 }
 
+export function formatPendingPathologyNo(value?: null | string) {
+  return value && value.trim() ? value : '待生成';
+}
+
 export function formatTaskType(value?: null | string) {
   return formatMappedValue(value, taskTypeLabels);
 }
@@ -131,6 +141,17 @@ export function formatBatchStatus(value?: null | string) {
 
 export function formatSpecimenStatus(value?: null | string) {
   return formatMappedValue(value, specimenStatusLabels);
+}
+
+export function formatSpecimenRegistrationStatus(value?: null | string) {
+  const formattedValue = formatMappedValue(
+    value,
+    specimenRegistrationStatusLabels,
+  );
+  if (formattedValue !== value?.trim()) {
+    return formattedValue;
+  }
+  return /^[A-Z_]+$/.test(formattedValue) ? '未知状态' : formattedValue;
 }
 
 export function formatSlideStatus(value?: null | string) {

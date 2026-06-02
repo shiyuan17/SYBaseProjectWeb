@@ -9,7 +9,7 @@ import { TECHNICAL_WORKFLOW_ROUTE_META } from '../constants';
 export const workflowOverviewCards: WorkflowOverviewCard[] = [
   {
     description:
-      '承接病理接收后的实验室内部生产流程，是技术组从病例进入到玻片产出的统一工作区。',
+      '承接标本接收后的实验室内部生产流程，是技术组从病例进入到玻片产出的统一工作区。',
     title: '业务定位',
   },
   {
@@ -27,7 +27,7 @@ export const workflowOverviewCards: WorkflowOverviewCard[] = [
 export const workflowMapCards: WorkflowMapCard[] = [
   {
     items: [
-      '病理接收沿用原有页面与权限，不改变既有菜单地址。',
+      '标本接收沿用原有页面与权限，不改变既有菜单地址。',
       '接收后先进入标本登记，登记完成后才进入任务池或目标工位。',
       '技术追踪按病例回看对象树、时间线和异常闭环。',
     ],
@@ -61,11 +61,11 @@ export const workflowMapCards: WorkflowMapCard[] = [
 
 export const workflowSteps: WorkflowChainStep[] = [
   {
-    actionLabel: '打开病理接收',
+    actionLabel: '打开标本接收',
     description: '接收岗完成病例接收、拒收和明细核对，让病例进入技术链起点。',
     helperText: '当前仍沿用原页面和原权限，不改变外部跳转地址。',
     routePath: '/workflow/pathology-receipt',
-    title: '步骤 1: 病理接收',
+    title: '步骤 1: 标本接收',
   },
   {
     actionLabel: '进入标本登记',

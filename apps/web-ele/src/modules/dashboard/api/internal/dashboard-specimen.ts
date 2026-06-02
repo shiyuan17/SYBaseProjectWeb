@@ -90,7 +90,7 @@ export async function loadSpecimenDomainData(
       title: item.specimenNo || item.barcode,
     })),
     ...receipts.items.slice(0, 3).map((item: PendingSpecimenItem) => ({
-      description: `申请单 ${item.applicationNo} 尚未完成病理接收`,
+      description: `申请单 ${item.applicationNo} 尚未完成标本接收`,
       id: `receipt-${item.specimenId}`,
       route: '/workflow/pathology-receipt',
       severity: 'warning' as const,

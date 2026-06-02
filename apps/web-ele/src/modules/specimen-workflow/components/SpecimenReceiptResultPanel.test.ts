@@ -71,7 +71,6 @@ describe('SpecimenReceiptResultPanel', () => {
 
     expect(wrapper.container.textContent).toContain('接收结果');
     expect(wrapper.container.textContent).toContain('CASE-001');
-    expect(wrapper.container.textContent).toContain('PATH-001');
     expect(wrapper.container.textContent).toContain('PARTIAL');
     expect(wrapper.container.textContent).toContain('容器数量不一致');
     expect(wrapper.container.textContent).toContain('是');

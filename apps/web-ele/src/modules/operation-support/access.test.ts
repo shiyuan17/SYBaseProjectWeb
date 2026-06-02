@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   canViewArchivePage,
   getEquipmentLedgerCapabilities,
+  getOperationResourceEntryPath,
   getOperationSupportEntryPath,
   getReagentLedgerCapabilities,
 } from './access';
@@ -19,6 +20,7 @@ describe('operation support access helpers', () => {
     expect(getOperationSupportEntryPath(archiveCodes)).toBe(
       '/operation-support/archive',
     );
+    expect(getOperationResourceEntryPath(archiveCodes)).toBeNull();
     expect(canViewArchivePage(archiveCodes)).toBe(true);
 
     const reagentCapabilities = getReagentLedgerCapabilities(archiveCodes);
@@ -47,8 +49,9 @@ describe('operation support access helpers', () => {
       M5_PERMISSION_CODES.EQUIPMENT_WARNING_QUERY,
     ];
 
-    expect(getOperationSupportEntryPath(reagentDeviceCodes)).toBe(
-      '/operation-support/reagents',
+    expect(getOperationSupportEntryPath(reagentDeviceCodes)).toBeNull();
+    expect(getOperationResourceEntryPath(reagentDeviceCodes)).toBe(
+      '/operation-resources/equipment',
     );
 
     const reagentCapabilities =
@@ -70,18 +73,20 @@ describe('operation support access helpers', () => {
 
   it('allows warning-only entry into the matching workstation', () => {
     expect(
-      getOperationSupportEntryPath([M5_PERMISSION_CODES.REAGENT_WARNING_QUERY]),
-    ).toBe('/operation-support/reagents');
+      getOperationResourceEntryPath([
+        M5_PERMISSION_CODES.REAGENT_WARNING_QUERY,
+      ]),
+    ).toBe('/operation-resources/reagents');
     expect(
       getReagentLedgerCapabilities([M5_PERMISSION_CODES.REAGENT_WARNING_QUERY])
         .canViewPage,
     ).toBe(true);
 
     expect(
-      getOperationSupportEntryPath([
+      getOperationResourceEntryPath([
         M5_PERMISSION_CODES.EQUIPMENT_WARNING_QUERY,
       ]),
-    ).toBe('/operation-support/equipment');
+    ).toBe('/operation-resources/equipment');
     expect(
       getEquipmentLedgerCapabilities([
         M5_PERMISSION_CODES.EQUIPMENT_WARNING_QUERY,

@@ -8,12 +8,17 @@ import {
   formatNullable,
   formatSpecimenStatus,
 } from '../utils/format';
+import { canSelectSpecimenOutboundRow } from '../utils/transport-handover';
 
 defineProps<{
   items: SpecimenOutboundListItem[];
   loading: boolean;
   page: number;
   size: number;
+}>();
+
+const emit = defineEmits<{
+  selectionChange: [rows: SpecimenOutboundListItem[]];
 }>();
 
 function resolveSpecimenStatusTagType(status?: null | string) {
@@ -35,7 +40,18 @@ function resolveSpecimenStatusTagType(status?: null | string) {
 </script>
 
 <template>
-  <ElTable v-loading="loading" :data="items" border row-key="specimenId">
+  <ElTable
+    v-loading="loading"
+    :data="items"
+    border
+    row-key="specimenId"
+    @selection-change="emit('selectionChange', $event)"
+  >
+    <ElTableColumn
+      :selectable="canSelectSpecimenOutboundRow"
+      type="selection"
+      width="48"
+    />
     <ElTableColumn label="序号" width="72">
       <template #default="{ $index }">
         {{ (page - 1) * size + $index + 1 }}

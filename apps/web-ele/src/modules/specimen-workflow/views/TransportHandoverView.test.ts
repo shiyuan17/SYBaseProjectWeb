@@ -191,6 +191,7 @@ describe('TransportHandoverView', () => {
     expect(container.textContent).not.toContain('操作');
 
     const expectedHeaders = [
+      '',
       '序号',
       '申请单',
       '标本编号',

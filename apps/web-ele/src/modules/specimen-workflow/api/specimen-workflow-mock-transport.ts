@@ -84,9 +84,11 @@ async function listSpecimenOutboundsMock(
     .specimens.filter((item) => {
       const application = getApplicationById(item.applicationId);
       const order = getTransportOrderBySpecimenId(item.id);
+      const isCheckedInCandidate =
+        item.specimenStatus === 'CHECKED_IN' && isSpecimenCheckedIn(item);
 
       return (
-        Boolean(order) &&
+        (Boolean(order) || isCheckedInCandidate) &&
         (!normalizeText(params.applicationId) ||
           application.id === params.applicationId) &&
         (!normalizeText(params.specimenNo) ||
@@ -141,7 +143,6 @@ async function createTransportOrderMock(
     if (getActiveTransportOrderBySpecimenId(specimen.id)) {
       throw new Error(`标本 ${barcode} 已存在转运单`);
     }
-    specimen.specimenStatus = 'IN_TRANSIT';
     specimen.latestTrackingAt = eventTime;
     return specimen.id;
   });

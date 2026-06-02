@@ -3,9 +3,6 @@ import { hasAuthority } from '@vben/utils';
 import { describe, expect, it } from 'vitest';
 
 import {
-  M6_BILLING_PAGE_AUTHORITIES,
-  M6_HISTORY_PAGE_AUTHORITIES,
-  M6_INTEGRATION_PAGE_AUTHORITIES,
   M6_PERMISSION_CODES,
   M6_STATISTICS_PAGE_AUTHORITIES,
 } from '#/modules/m6-management/constants';
@@ -25,74 +22,43 @@ describe('m6 routes', () => {
     const entryRoute = m6Root?.children?.find(
       (route) => route.name === 'M6Entry',
     );
-    const integrationRoute = m6Root?.children?.find(
-      (route) => route.name === 'IntegrationManagement',
+    const qualityRoute = m6Root?.children?.find(
+      (route) => route.name === 'QualityIndicatorStatistics',
     );
-    const billingRoute = m6Root?.children?.find(
-      (route) => route.name === 'BillingManagement',
-    );
-    const historyRoute = m6Root?.children?.find(
-      (route) => route.name === 'HistoricalReports',
+    const managementRoute = m6Root?.children?.find(
+      (route) => route.name === 'ManagementIndicatorStatistics',
     );
     const statisticsRoute = m6Root?.children?.find(
-      (route) => route.name === 'StatisticsAnalysis',
+      (route) => route.name === 'CustomStatisticsAnalysis',
     );
 
     expect(m6Root?.path).toBe('/m6');
     expect(m6Root?.redirect).toBe('/m6/entry');
     expect(entryRoute?.path).toBe('/m6/entry');
     expect(entryRoute?.meta?.keepAlive).toBeUndefined();
-    expect(integrationRoute?.path).toBe('/m6/integration');
-    expect(integrationRoute?.meta?.keepAlive).toBe(true);
-    expect(billingRoute?.path).toBe('/m6/billing');
-    expect(billingRoute?.meta?.keepAlive).toBe(true);
-    expect(historyRoute?.path).toBe('/m6/history');
-    expect(historyRoute?.meta?.keepAlive).toBe(true);
-    expect(statisticsRoute?.path).toBe('/m6/statistics');
+    expect(qualityRoute?.path).toBe('/m6/quality-indicators');
+    expect(qualityRoute?.meta?.keepAlive).toBe(true);
+    expect(managementRoute?.path).toBe('/m6/management-indicators');
+    expect(managementRoute?.meta?.keepAlive).toBe(true);
+    expect(statisticsRoute?.path).toBe('/m6/custom-analysis');
     expect(statisticsRoute?.meta?.keepAlive).toBe(true);
-    expect(integrationRoute?.meta?.authority).toEqual([
-      ...M6_INTEGRATION_PAGE_AUTHORITIES,
+    expect(qualityRoute?.meta?.authority).toEqual([
+      ...M6_STATISTICS_PAGE_AUTHORITIES,
     ]);
-    expect(billingRoute?.meta?.authority).toEqual([
-      ...M6_BILLING_PAGE_AUTHORITIES,
-    ]);
-    expect(historyRoute?.meta?.authority).toEqual([
-      ...M6_HISTORY_PAGE_AUTHORITIES,
+    expect(managementRoute?.meta?.authority).toEqual([
+      ...M6_STATISTICS_PAGE_AUTHORITIES,
     ]);
     expect(statisticsRoute?.meta?.authority).toEqual([
       ...M6_STATISTICS_PAGE_AUTHORITIES,
     ]);
   });
 
-  it('shows integration page for integration permissions', () => {
-    const routeNames = getM6ChildRouteNames([
-      M6_PERMISSION_CODES.INTEGRATION_TASK_QUERY,
-    ]);
+  it('shows all statistics menu pages when statistics permissions exist', () => {
+    const routeNames = getM6ChildRouteNames([M6_PERMISSION_CODES.STAT_REPORT_QUERY]);
 
     expect(routeNames).toContain('M6Entry');
-    expect(routeNames).toContain('IntegrationManagement');
-    expect(routeNames).not.toContain('BillingManagement');
-    expect(routeNames).not.toContain('HistoricalReports');
-  });
-
-  it('shows billing page for receipt and reconcile permissions', () => {
-    const routeNames = getM6ChildRouteNames([
-      M6_PERMISSION_CODES.BILLING_RECEIPT,
-      M6_PERMISSION_CODES.BILLING_RECONCILE,
-    ]);
-
-    expect(routeNames).toContain('M6Entry');
-    expect(routeNames).toContain('BillingManagement');
-    expect(routeNames).not.toContain('IntegrationManagement');
-  });
-
-  it('shows history page for import-only permissions', () => {
-    const routeNames = getM6ChildRouteNames([
-      M6_PERMISSION_CODES.HISTORY_IMPORT,
-    ]);
-
-    expect(routeNames).toContain('M6Entry');
-    expect(routeNames).toContain('HistoricalReports');
-    expect(routeNames).not.toContain('StatisticsAnalysis');
+    expect(routeNames).toContain('QualityIndicatorStatistics');
+    expect(routeNames).toContain('ManagementIndicatorStatistics');
+    expect(routeNames).toContain('CustomStatisticsAnalysis');
   });
 });

@@ -29,12 +29,26 @@ function mapWorkflowEnglishErrorMessage(message: string) {
     return '标本尚未完成标本确认，不能入库。';
   }
 
+  if (
+    message ===
+    'All specimens of the application must complete verification, fixation, and confirmation before check-in'
+  ) {
+    return '当前申请单下仍有标本未完成核对、固定或标本确认，不能入库。';
+  }
+
   if (message === 'Specimen must complete fixation before confirmation') {
     return '标本尚未完成固定，不能进行标本确认。';
   }
 
   if (message === 'Specimen already reached receipt terminal status') {
     return '标本已接收、拒收或退回，当前流程不可重复操作。';
+  }
+
+  if (
+    message ===
+    'All specimens of the application must be checked in before transport'
+  ) {
+    return '当前申请单下所有标本都完成入库后，才能执行转运。';
   }
 
   if (

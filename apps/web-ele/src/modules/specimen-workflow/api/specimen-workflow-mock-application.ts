@@ -3,6 +3,7 @@ import type {
   ApplicationCreateResult,
   ApplicationDetailView,
   ApplicationListQuery,
+  ApplicationPatientLookupResult,
   ApplicationPage,
   ApplicationUpdateRequest,
   DuplicateApplicationCheckQuery,
@@ -64,6 +65,7 @@ export async function createApplicationMock(
     patientAge: data.patientAge ?? null,
     patientGender: data.patientGender ?? null,
     patientId: data.patientId ?? null,
+    patientIdentifier: data.patientId ?? null,
     patientCheckStatus: 'UNKNOWN',
     patientName: data.patientName ?? null,
     remarks: data.remarks ?? null,
@@ -123,6 +125,7 @@ export async function updateApplicationMock(
     patientAge: data.patientAge ?? null,
     patientGender: data.patientGender ?? null,
     patientId: data.patientId ?? null,
+    patientIdentifier: data.patientId ?? null,
     patientName: data.patientName ?? null,
     remarks: data.remarks ?? null,
     sourceHospitalId: data.sourceHospitalId ?? null,
@@ -260,6 +263,34 @@ export async function duplicateCheckApplicationsMock(
   return {
     items,
     suggestedAction,
+  };
+}
+
+export async function lookupApplicationPatientByIdentifierMock(
+  identifier: string,
+): Promise<ApplicationPatientLookupResult | null> {
+  const normalizedIdentifier = normalizeText(identifier);
+  if (!normalizedIdentifier) {
+    return null;
+  }
+  const matchedApplication = getMockState().applications.find((application) => {
+    const patientIdentifier =
+      normalizeText(application.patientIdentifier) ||
+      normalizeText(application.patientId);
+    return patientIdentifier === normalizedIdentifier;
+  });
+  const patientId = normalizeText(matchedApplication?.patientId);
+  if (!matchedApplication || !patientId) {
+    return null;
+  }
+  return {
+    patientAge: matchedApplication.patientAge ?? null,
+    patientGender: matchedApplication.patientGender ?? null,
+    patientId,
+    patientIdentifier:
+      normalizeText(matchedApplication.patientIdentifier) ||
+      patientId,
+    patientName: matchedApplication.patientName ?? null,
   };
 }
 

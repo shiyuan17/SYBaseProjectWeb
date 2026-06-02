@@ -1,10 +1,14 @@
-import type { PendingTransportOrderItem } from '../types/specimen-workflow';
+import type {
+  PendingTransportOrderItem,
+  SpecimenOutboundListItem,
+} from '../types/specimen-workflow';
 
 import { describe, expect, it } from 'vitest';
 
 import {
   buildPendingTransportOrderQuery,
   buildPrintTransportOrderRequest,
+  canSelectSpecimenOutboundRow,
   buildTransportOrderHandoverRequest,
   canHandoverTransportOrder,
   createDefaultTransportHandoverFormState,
@@ -12,8 +16,10 @@ import {
   createTransportHandoverDialogTitle,
   createTransportPrintDialogTitle,
   normalizeRouteQueryValue,
+  resolveTransportSelectionValidationMessage,
   resolveTargetTransportOrders,
   resolveSpecimenNoQuickHandoverTarget,
+  splitTransportRowsByTransportOrder,
 } from './transport-handover';
 
 function createOrder(
@@ -31,6 +37,33 @@ function createOrder(
     status: 'PRINTED',
     toBeTransportedAt: '2026-05-31 10:00:00',
     transportOrderNo: 'TR-001',
+    ...overrides,
+  };
+}
+
+function createOutboundRow(
+  overrides: Partial<SpecimenOutboundListItem> = {},
+): SpecimenOutboundListItem {
+  return {
+    applicationId: 'APP-1',
+    applicationNo: 'NO-1',
+    barcode: 'BC-1',
+    inpatientNo: 'ZY-1',
+    outboundAt: null,
+    outboundUserName: null,
+    patientGender: '女',
+    patientId: 'PAT-1',
+    patientName: '张三',
+    registeredAt: '2026-05-31 09:00:00',
+    registeredByName: '登记员',
+    specimenId: 'SP-1',
+    specimenName: '甲状腺组织',
+    specimenNo: 'SP-NO-1',
+    specimenStatus: 'CHECKED_IN',
+    submittingDepartmentId: 'D-1',
+    submittingDepartmentName: '外科',
+    surgeryName: '手术间A',
+    transportOrderId: null,
     ...overrides,
   };
 }
@@ -133,5 +166,61 @@ describe('transport handover helpers', () => {
         'SP-001',
       ),
     ).toBeNull();
+  });
+
+  it('validates outbound transfer selection and splits rows by transport order', () => {
+    expect(canSelectSpecimenOutboundRow(createOutboundRow())).toBe(true);
+    expect(
+      canSelectSpecimenOutboundRow(
+        createOutboundRow({ outboundAt: '2026-05-31 10:00:00' }),
+      ),
+    ).toBe(false);
+    expect(
+      canSelectSpecimenOutboundRow(
+        createOutboundRow({ specimenStatus: 'RECEIVED' }),
+      ),
+    ).toBe(false);
+
+    expect(resolveTransportSelectionValidationMessage([])).toBe(
+      '请先选择需要转运的标本',
+    );
+    expect(
+      resolveTransportSelectionValidationMessage([
+        createOutboundRow(),
+        createOutboundRow({ applicationId: 'APP-2', specimenId: 'SP-2' }),
+      ]),
+    ).toBe('仅支持同一申请单内的标本一起转运');
+    expect(
+      resolveTransportSelectionValidationMessage([
+        createOutboundRow({ outboundAt: '2026-05-31 10:00:00' }),
+      ]),
+    ).toBe('仅可转运未出库且未到接收终态的标本');
+    expect(
+      resolveTransportSelectionValidationMessage([
+        createOutboundRow(),
+        createOutboundRow({ specimenId: 'SP-2', specimenNo: 'SP-NO-2' }),
+      ]),
+    ).toBeNull();
+
+    expect(
+      splitTransportRowsByTransportOrder([
+        createOutboundRow({ transportOrderId: 'TO-1' }),
+        createOutboundRow({
+          specimenId: 'SP-2',
+          specimenNo: 'SP-NO-2',
+          transportOrderId: 'TO-1',
+        }),
+        createOutboundRow({
+          specimenId: 'SP-3',
+          specimenNo: 'SP-NO-3',
+          transportOrderId: null,
+        }),
+      ]),
+    ).toEqual({
+      existingTransportOrderIds: ['TO-1'],
+      rowsWithoutTransportOrder: [
+        expect.objectContaining({ specimenId: 'SP-3' }),
+      ],
+    });
   });
 });

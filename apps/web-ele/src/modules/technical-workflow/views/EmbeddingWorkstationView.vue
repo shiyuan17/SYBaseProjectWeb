@@ -2,6 +2,7 @@
 import type {
   EmbeddingWorkstationSummary,
   PendingTechnicalTaskItem,
+  TechnicalTrackingEmbeddingRecordSummary,
   TechnicalTrackingView as TechnicalTrackingViewModel,
 } from '../types/technical-workflow';
 
@@ -18,6 +19,8 @@ import {
   ElEmpty,
   ElInput,
   ElMessage,
+  ElOption,
+  ElSelect,
   ElTag,
 } from 'element-plus';
 
@@ -27,7 +30,9 @@ import {
   getTechnicalTracking,
   listPendingTechnicalTasks,
   startEmbedding,
+  updateEmbeddingQualityReview,
 } from '../api/technical-workflow-service';
+import EmbeddingQualityReviewDialog from '../components/EmbeddingQualityReviewDialog.vue';
 import EmbeddingWorkstationProcessPanel from '../components/EmbeddingWorkstationProcessPanel.vue';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 import { reportInlineErrorDisabled } from '#/utils/error-feedback';
@@ -56,6 +61,8 @@ interface EvaluationDrawerRow {
   time: null | string;
   title: string;
 }
+
+const SLICE_NOTICE_OPTIONS = ['骨组织', '皮肤', '粘膜活检', '小活检', '其他'] as const;
 
 function createEmptySummary(): EmbeddingWorkstationSummary {
   return {
@@ -93,6 +100,10 @@ const activeProcessingTaskId = ref('');
 const historyDrawerVisible = ref(false);
 const evaluationDrawerVisible = ref(false);
 const taskDrawerVisible = ref(false);
+const qualityReviewDialogVisible = ref(false);
+const selectedQualityReviewRecord =
+  ref<null | TechnicalTrackingEmbeddingRecordSummary>(null);
+const savingReviewIds = ref<string[]>([]);
 
 const filters = reactive({
   keyword:
@@ -114,6 +125,8 @@ const completeForm = reactive({
   samplingEvaluation: '',
   sliceNotice: '',
 });
+
+const sliceNoticeDrafts = reactive<Record<string, string>>({});
 
 const selectedTask = computed(
   () => pendingItems.value.find((item) => item.id === selectedTaskId.value) ?? null,
@@ -323,6 +336,10 @@ async function refreshWorkstation(preferredTaskId?: string) {
   await Promise.all([loadSummary(), loadPendingData(preferredTaskId)]);
 }
 
+async function refreshCurrentCaseData() {
+  await Promise.all([loadSummary(), loadTrackingForTask(selectedTask.value)]);
+}
+
 function selectTask(taskId: string) {
   if (taskId === selectedTaskId.value) {
     return;
@@ -423,6 +440,52 @@ function handleClearCurrent() {
   clearCurrentSelection();
 }
 
+function isSavingReview(embeddingId: string) {
+  return savingReviewIds.value.includes(embeddingId);
+}
+
+function setSavingReview(embeddingId: string, saving: boolean) {
+  savingReviewIds.value = saving
+    ? [...new Set([...savingReviewIds.value, embeddingId])]
+    : savingReviewIds.value.filter((item) => item !== embeddingId);
+}
+
+async function handleSliceNoticeSave(
+  row: TechnicalTrackingEmbeddingRecordSummary,
+) {
+  const nextSliceNotice = (sliceNoticeDrafts[row.embeddingId] ?? '').trim();
+  const currentSliceNotice = row.sliceNotice ?? '';
+  if (nextSliceNotice === currentSliceNotice) {
+    return;
+  }
+
+  setSavingReview(row.embeddingId, true);
+  try {
+    await updateEmbeddingQualityReview(row.embeddingId, {
+      evaluationLevel: row.evaluationLevel,
+      samplingEvaluation: row.samplingEvaluation,
+      sliceNotice: nextSliceNotice || null,
+    });
+    ElMessage.success('切片备注已保存');
+    await refreshCurrentCaseData();
+  } catch (error) {
+    sliceNoticeDrafts[row.embeddingId] = currentSliceNotice;
+    pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
+  } finally {
+    setSavingReview(row.embeddingId, false);
+  }
+}
+
+function openQualityReviewDialog(row: TechnicalTrackingEmbeddingRecordSummary) {
+  selectedQualityReviewRecord.value = row;
+  qualityReviewDialogVisible.value = true;
+}
+
+async function handleQualityReviewSubmitted() {
+  await refreshCurrentCaseData();
+}
+
 function handleMore() {
   if (!selectedTask.value) {
     ElMessage.warning('请先选择任务后再查看更多信息');
@@ -451,6 +514,22 @@ watch(selectedTaskId, async () => {
   resetPanelState(task);
   await loadTrackingForTask(task);
 });
+
+watch(
+  currentCaseEmbeddingRecords,
+  (records) => {
+    const recordIds = new Set(records.map((item) => item.embeddingId));
+    Object.keys(sliceNoticeDrafts).forEach((embeddingId) => {
+      if (!recordIds.has(embeddingId)) {
+        delete sliceNoticeDrafts[embeddingId];
+      }
+    });
+    records.forEach((item) => {
+      sliceNoticeDrafts[item.embeddingId] = item.sliceNotice ?? '';
+    });
+  },
+  { immediate: true },
+);
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeyDown);
@@ -633,9 +712,9 @@ onBeforeUnmount(() => {
           <article class="rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div class="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
               <div>
-                <h2 class="text-base font-semibold text-slate-900">当前病例已包埋记录</h2>
+                <h2 class="text-base font-semibold text-slate-900">已包埋蜡块列表</h2>
                 <p class="mt-1 text-sm text-slate-500">
-                  右下区域固定展示当前病例的已处理记录，便于连续核对备注与评价。
+                  固定展示当前病例已处理蜡块，可调整切片备注与取材评价。
                 </p>
               </div>
               <div v-if="trackingLoading" class="text-sm text-slate-400">加载中...</div>
@@ -664,8 +743,48 @@ onBeforeUnmount(() => {
                     <td class="px-4 py-3">{{ formatNullable(item.pathologyNo) }}</td>
                     <td class="px-4 py-3">{{ formatNullable(item.samplingBlockCode) }}</td>
                     <td class="px-4 py-3">{{ formatNullable(item.embeddingRemarks) }}</td>
-                    <td class="px-4 py-3">{{ formatNullable(item.sliceNotice) }}</td>
-                    <td class="px-4 py-3">{{ formatNullable(item.samplingEvaluation) }}</td>
+                    <td class="min-w-[220px] px-4 py-3">
+                      <div class="flex items-center gap-2">
+                        <ElSelect
+                          v-model="sliceNoticeDrafts[item.embeddingId]"
+                          allow-create
+                          clearable
+                          default-first-option
+                          filterable
+                          placeholder="切片备注"
+                          size="small"
+                          @blur="handleSliceNoticeSave(item)"
+                          @change="handleSliceNoticeSave(item)"
+                        >
+                          <ElOption
+                            v-for="option in SLICE_NOTICE_OPTIONS"
+                            :key="option"
+                            :label="option"
+                            :value="option"
+                          />
+                        </ElSelect>
+                        <ElButton
+                          :loading="isSavingReview(item.embeddingId)"
+                          size="small"
+                          @click="handleSliceNoticeSave(item)"
+                        >
+                          保存
+                        </ElButton>
+                      </div>
+                    </td>
+                    <td class="min-w-[220px] px-4 py-3">
+                      <div class="flex items-center gap-2">
+                        <span class="line-clamp-2 flex-1">
+                          {{ formatNullable(item.samplingEvaluation) }}
+                        </span>
+                        <ElButton
+                          size="small"
+                          @click="openQualityReviewDialog(item)"
+                        >
+                          评价
+                        </ElButton>
+                      </div>
+                    </td>
                     <td class="px-4 py-3">
                       {{ formatNullable(item.sampledByName) }} /
                       {{ formatDateTime(item.sampledAt) }}
@@ -826,5 +945,11 @@ onBeforeUnmount(() => {
         </section>
       </div>
     </ElDrawer>
+
+    <EmbeddingQualityReviewDialog
+      v-model="qualityReviewDialogVisible"
+      :row="selectedQualityReviewRecord"
+      @submitted="handleQualityReviewSubmitted"
+    />
   </Page>
 </template>

@@ -13,8 +13,10 @@ import type {
   DeleteTechnicalSpecimenRegistrationMediaAssetResult,
   DehydrationBatchResult,
   EmbeddingCompleteRequest,
-  EmbeddingWorkstationSummary,
+  EmbeddingQualityReviewRequest,
+  EmbeddingQualityReviewResult,
   EmbeddingResult,
+  EmbeddingWorkstationSummary,
   ExecuteReworkOrderRequest,
   GrossingCompleteRequest,
   GrossingWorkbenchContext,
@@ -44,6 +46,7 @@ import type {
   TechnicalTaskStartRequest,
   CompleteTechnicalSpecimenRegistrationResult,
   TechnicalSpecimenRegistrationDetail,
+  TechnicalSpecimenRegistrationMaterialVerificationRequest,
   TechnicalSpecimenRegistrationWorkspace,
   TechnicalTrackingView,
 } from '../types/technical-workflow';
@@ -73,6 +76,11 @@ type GrossingWorkbenchContextResponse = Partial<
 > & {
   tracking?: Partial<TechnicalTrackingView>;
 };
+
+const DEFAULT_TECHNICAL_SPECIMEN_TYPE = '活体';
+const DEFAULT_TECHNICAL_SPECIMEN_SIZE = '小标本';
+const DEFAULT_TECHNICAL_TISSUE_COUNT = 1;
+const DEFAULT_TECHNICAL_VERIFICATION_STATUS = 'UNVERIFIED';
 
 function mapApplicationRegistrationWorkbenchRecordResponse(
   response: ApplicationRegistrationWorkbenchRecordResponse,
@@ -314,11 +322,20 @@ export function mapTechnicalSpecimenRegistrationDetailResponse(
     clinicalDiagnosis: response.clinicalDiagnosis ?? null,
     inpatientNo: response.inpatientNo ?? null,
     materials: (response.materials ?? []).map((item) => ({
+      evaluationItems: item.evaluationItems ?? [],
+      frozen: item.frozen ?? false,
       sequenceNo: item.sequenceNo ?? 0,
       sourcePart: item.sourcePart ?? null,
+      specimenBarcode: item.specimenBarcode ?? null,
       specimenId: item.specimenId ?? null,
+      specimenSize: item.specimenSize ?? DEFAULT_TECHNICAL_SPECIMEN_SIZE,
       specimenName: item.specimenName ?? null,
-      specimenType: item.specimenType ?? null,
+      specimenType: item.specimenType ?? DEFAULT_TECHNICAL_SPECIMEN_TYPE,
+      tissueCount: item.tissueCount ?? DEFAULT_TECHNICAL_TISSUE_COUNT,
+      verificationCompletedAt: item.verificationCompletedAt ?? null,
+      verificationStatus:
+        item.verificationStatus ?? DEFAULT_TECHNICAL_VERIFICATION_STATUS,
+      verifiedByName: item.verifiedByName ?? null,
     })),
     pathologyNo: response.pathologyNo ?? null,
     patientId: response.patientId ?? null,
@@ -379,11 +396,20 @@ export function mapTechnicalSpecimenRegistrationWorkspaceResponse(
         response.detailSections?.labAndImagingExaminations ?? null,
     },
     materials: (response.materials ?? []).map((item) => ({
+      evaluationItems: item.evaluationItems ?? [],
+      frozen: item.frozen ?? false,
       sequenceNo: item.sequenceNo ?? 0,
       sourcePart: item.sourcePart ?? null,
+      specimenBarcode: item.specimenBarcode ?? null,
       specimenId: item.specimenId ?? null,
+      specimenSize: item.specimenSize ?? DEFAULT_TECHNICAL_SPECIMEN_SIZE,
       specimenName: item.specimenName ?? null,
-      specimenType: item.specimenType ?? null,
+      specimenType: item.specimenType ?? DEFAULT_TECHNICAL_SPECIMEN_TYPE,
+      tissueCount: item.tissueCount ?? DEFAULT_TECHNICAL_TISSUE_COUNT,
+      verificationCompletedAt: item.verificationCompletedAt ?? null,
+      verificationStatus:
+        item.verificationStatus ?? DEFAULT_TECHNICAL_VERIFICATION_STATUS,
+      verifiedByName: item.verifiedByName ?? null,
     })),
     mediaAssets: (response.mediaAssets ?? []).map((item) => ({
       assetId: item.assetId ?? '',
@@ -489,6 +515,30 @@ export async function saveTechnicalSpecimenRegistrationMaterials(
 ) {
   const response = await requestClient.put<TechnicalSpecimenRegistrationWorkspaceResponse>(
     `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/materials`,
+    data,
+  );
+  return mapTechnicalSpecimenRegistrationWorkspaceResponse(response);
+}
+
+export async function verifyTechnicalSpecimenRegistrationMaterial(
+  caseId: string,
+  specimenId: string,
+  data: TechnicalSpecimenRegistrationMaterialVerificationRequest,
+) {
+  const response = await requestClient.post<TechnicalSpecimenRegistrationWorkspaceResponse>(
+    `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/materials/${encodeURIComponent(specimenId)}/verify`,
+    data,
+  );
+  return mapTechnicalSpecimenRegistrationWorkspaceResponse(response);
+}
+
+export async function cancelTechnicalSpecimenRegistrationMaterialVerification(
+  caseId: string,
+  specimenId: string,
+  data: TechnicalSpecimenRegistrationMaterialVerificationRequest,
+) {
+  const response = await requestClient.post<TechnicalSpecimenRegistrationWorkspaceResponse>(
+    `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/materials/${encodeURIComponent(specimenId)}/cancel-verification`,
     data,
   );
   return mapTechnicalSpecimenRegistrationWorkspaceResponse(response);
@@ -628,12 +678,36 @@ export async function completeDehydrationBatch(
   );
 }
 
+export async function startDehydration(data: TechnicalTaskStartRequest) {
+  return requestClient.post<TaskOperationResult>('/v1/dehydrations/start', data);
+}
+
+export async function completeDehydration(data: TechnicalTaskStartRequest) {
+  return requestClient.post<TaskOperationResult>(
+    '/v1/dehydrations/complete',
+    data,
+  );
+}
+
 export async function startEmbedding(data: TechnicalTaskStartRequest) {
   return requestClient.post<TaskOperationResult>('/v1/embeddings/start', data);
 }
 
 export async function completeEmbedding(data: EmbeddingCompleteRequest) {
   return requestClient.post<EmbeddingResult>('/v1/embeddings/complete', data);
+}
+
+export async function updateEmbeddingQualityReview(
+  embeddingId: string,
+  data: EmbeddingQualityReviewRequest,
+) {
+  return requestClient.request<EmbeddingQualityReviewResult>(
+    `/v1/embeddings/${encodeURIComponent(embeddingId)}/quality-review`,
+    {
+      data,
+      method: 'PATCH',
+    },
+  );
 }
 
 export async function startSlicing(data: TechnicalTaskStartRequest) {

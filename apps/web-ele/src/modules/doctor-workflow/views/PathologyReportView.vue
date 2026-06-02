@@ -436,7 +436,7 @@ watch(
       <WorkflowSectionCard title="报告上下文">
         <ElEmpty
           v-if="!caseId"
-          description="请输入病例 ID 查询报告上下文，或从诊断工作台、报告追踪页进入。"
+          description="请输入病例 ID 查询报告上下文，或从诊断平台工作站、报告追踪页进入。"
         />
         <ElDescriptions v-else :column="4" border>
           <ElDescriptionsItem label="病例ID">

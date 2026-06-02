@@ -10,11 +10,25 @@ import type {
 } from '../utils/reagent-ledger';
 
 import { computed, reactive, ref } from 'vue';
+import { useRoute } from 'vue-router';
 
 import { Fallback, Page } from '@vben/common-ui';
 import { useAccessStore, useUserStore } from '@vben/stores';
 
-import { ElAlert, ElMessage } from 'element-plus';
+import {
+  ElAlert,
+  ElButton,
+  ElDrawer,
+  ElForm,
+  ElFormItem,
+  ElInput,
+  ElMessage,
+  ElOption,
+  ElSelect,
+  ElTable,
+  ElTableColumn,
+  ElTag,
+} from 'element-plus';
 
 import { getReagentLedgerCapabilities } from '../access';
 import {
@@ -26,11 +40,11 @@ import {
   updateReagent,
   updateReagentStock,
 } from '../api/operation-support-service';
+import { REAGENT_STOCK_STATUS_OPTIONS } from '../constants';
 import ReagentCatalogPanel from '../components/ReagentCatalogPanel.vue';
 import ReagentDialog from '../components/ReagentDialog.vue';
 import ReagentStockDetailPanel from '../components/ReagentStockDetailPanel.vue';
 import ReagentStockDialog from '../components/ReagentStockDialog.vue';
-import ReagentStockPanel from '../components/ReagentStockPanel.vue';
 import ReagentWarningPanel from '../components/ReagentWarningPanel.vue';
 import { getOperationSupportPageErrorMessage } from '../utils/error';
 import {
@@ -49,9 +63,11 @@ import {
   validateReagentForm,
   validateReagentStockForm,
 } from '../utils/reagent-ledger';
+import { formatNullable, formatReagentStockStatus } from '../utils/format';
 
 const accessStore = useAccessStore();
 const userStore = useUserStore();
+const route = useRoute();
 
 const capabilities = computed(() =>
   getReagentLedgerCapabilities(accessStore.accessCodes),
@@ -74,6 +90,11 @@ const selectedReagent = ref<null | ReagentView>(null);
 const selectedStock = ref<null | ReagentStockView>(null);
 const editingReagent = ref<null | ReagentView>(null);
 const editingStock = ref<null | ReagentStockView>(null);
+
+const reagentCatalogDrawerVisible = ref(false);
+const stockDetailDrawerVisible = ref(false);
+const warningDrawerVisible = ref(false);
+
 const reagentDialogVisible = computed({
   get: () => editingReagent.value !== null,
   set: (visible: boolean) => {
@@ -114,7 +135,13 @@ const stockForm = reactive<ReagentStockFormState>(
   createReagentStockFormDefaults(getDefaultOperatorName()),
 );
 
-const getWarningTagType = getReagentWarningTagType;
+const pageTitle = computed(() => String(route.meta.title || '试剂台账'));
+const pageDescription = computed(() =>
+  String(
+    route.meta.description ||
+      '维护试剂基础信息、库存批次，并跟踪低库存与近效期预警。',
+  ),
+);
 
 function getDefaultOperatorName() {
   return currentOperatorName.value;
@@ -132,6 +159,46 @@ function resetStockForm() {
     stockForm,
     createReagentStockFormDefaults(getDefaultOperatorName()),
   );
+}
+
+function syncSelectedReagent() {
+  if (!selectedReagent.value) {
+    return;
+  }
+
+  selectedReagent.value =
+    reagents.value.find((item) => item.id === selectedReagent.value?.id) ??
+    null;
+}
+
+function syncSelectedStock() {
+  if (!selectedStock.value) {
+    return;
+  }
+
+  const nextSelectedStock =
+    stocks.value.find((item) => item.id === selectedStock.value?.id) ?? null;
+  selectedStock.value = nextSelectedStock;
+  if (nextSelectedStock) {
+    selectedReagent.value =
+      reagents.value.find((item) => item.id === nextSelectedStock.reagentId) ??
+      selectedReagent.value;
+  }
+}
+
+function setSelectedStock(row: null | ReagentStockView) {
+  selectedStock.value = row;
+  if (!row) {
+    return;
+  }
+
+  selectedReagent.value =
+    reagents.value.find((item) => item.id === row.reagentId) ??
+    selectedReagent.value;
+}
+
+function setSelectedReagent(row: null | ReagentView) {
+  selectedReagent.value = row;
 }
 
 function openCreateReagentDialog() {
@@ -180,48 +247,49 @@ function openEditStockDialog(row: ReagentStockView) {
   );
 }
 
-function syncSelectedReagent() {
-  if (!selectedReagent.value) {
-    return;
-  }
-
-  selectedReagent.value =
-    reagents.value.find((item) => item.id === selectedReagent.value?.id) ??
-    null;
-}
-
-function syncSelectedStock() {
+function openEditSelectedReagentDialog() {
   if (!selectedStock.value) {
     return;
   }
 
-  const nextSelectedStock =
-    stocks.value.find((item) => item.id === selectedStock.value?.id) ?? null;
-  selectedStock.value = nextSelectedStock;
-  if (nextSelectedStock) {
-    selectedReagent.value =
-      reagents.value.find((item) => item.id === nextSelectedStock.reagentId) ??
-      selectedReagent.value;
-  }
-}
+  const targetReagent =
+    reagents.value.find((item) => item.id === selectedStock.value?.reagentId) ??
+    selectedReagent.value;
 
-function setSelectedStock(row: null | ReagentStockView) {
-  selectedStock.value = row;
-  if (!row) {
+  if (!targetReagent) {
+    ElMessage.warning('未找到当前批次对应的试剂基础信息');
     return;
   }
 
-  selectedReagent.value =
-    reagents.value.find((item) => item.id === row.reagentId) ??
-    selectedReagent.value;
+  openEditReagentDialog(targetReagent);
 }
 
-function setSelectedReagent(row: null | ReagentView) {
-  selectedReagent.value = row;
+function openEditSelectedStockDialog() {
+  if (!selectedStock.value) {
+    return;
+  }
+
+  openEditStockDialog(selectedStock.value);
 }
 
-function scrollToStockDetail() {
-  document.querySelector('#reagent-stock-detail')?.scrollIntoView({
+function openReagentCatalogDrawer() {
+  reagentCatalogDrawerVisible.value = true;
+}
+
+function openStockDetailDrawer() {
+  if (!selectedStock.value) {
+    return;
+  }
+
+  stockDetailDrawerVisible.value = true;
+}
+
+function openWarningDrawer() {
+  warningDrawerVisible.value = true;
+}
+
+function scrollToStockTable() {
+  document.querySelector('#reagent-stock-table')?.scrollIntoView({
     behavior: 'smooth',
     block: 'start',
   });
@@ -303,8 +371,9 @@ async function navigateToStockDetail(warning: ReagentWarningView) {
     return;
   }
 
+  warningDrawerVisible.value = false;
   setSelectedStock(matchedStock);
-  scrollToStockDetail();
+  scrollToStockTable();
   ElMessage.success(`已定位到批次 ${warning.batchNo}`);
 }
 
@@ -378,6 +447,10 @@ async function submitStock() {
   }
 }
 
+async function refreshReagentPage() {
+  await Promise.all([loadReagents(), loadStocks(), loadWarnings()]);
+}
+
 async function initializePage() {
   const tasks: Promise<void>[] = [];
 
@@ -406,18 +479,190 @@ void initializePage();
   </div>
   <Page
     v-else
-    title="试剂台账"
-    description="维护试剂基础信息、库存批次，并跟踪低库存与近效期预警。"
+    :title="pageTitle"
+    :description="pageDescription"
   >
     <div class="flex flex-col gap-4">
       <ElAlert
-        v-if="false"
+        v-if="pageError"
         :closable="false"
         :title="pageError"
         show-icon
         type="error"
       />
 
+      <section class="rounded-lg border border-border bg-card shadow-sm">
+        <div class="border-b border-border px-4 py-3">
+          <ElForm class="flex flex-wrap items-end gap-x-4 gap-y-3" inline>
+            <ElFormItem label="关键字" label-width="72px">
+              <ElInput
+                v-model="stockFilters.keyword"
+                clearable
+                placeholder="试剂/批号"
+                style="width: 220px"
+                @keyup.enter="loadStocks"
+              />
+            </ElFormItem>
+            <ElFormItem label="库存状态" label-width="72px">
+              <ElSelect
+                v-model="stockFilters.stockStatus"
+                clearable
+                placeholder="全部"
+                style="width: 160px"
+              >
+                <ElOption
+                  v-for="option in REAGENT_STOCK_STATUS_OPTIONS"
+                  :key="option.value"
+                  :label="option.label"
+                  :value="option.value"
+                />
+              </ElSelect>
+            </ElFormItem>
+            <ElFormItem>
+              <ElButton
+                :disabled="!capabilities.canQueryStocks"
+                :loading="loading.stocks"
+                type="primary"
+                @click="loadStocks"
+              >
+                查询
+              </ElButton>
+            </ElFormItem>
+          </ElForm>
+        </div>
+
+        <div class="flex flex-wrap gap-2 border-b border-border px-4 py-3">
+          <ElButton
+            :disabled="!capabilities.canQueryStocks"
+            :loading="loading.reagents || loading.stocks || loading.warnings"
+            @click="refreshReagentPage"
+          >
+            刷新
+          </ElButton>
+          <ElButton
+            v-if="capabilities.canQueryReagents"
+            @click="openReagentCatalogDrawer"
+          >
+            试剂目录
+          </ElButton>
+          <ElButton
+            v-if="capabilities.canCreateReagent"
+            type="primary"
+            @click="openCreateReagentDialog"
+          >
+            新增试剂
+          </ElButton>
+          <ElButton
+            v-if="capabilities.canUpdateReagent"
+            :disabled="!selectedStock"
+            @click="openEditSelectedReagentDialog"
+          >
+            编辑试剂
+          </ElButton>
+          <ElButton
+            v-if="capabilities.canManageStocks"
+            type="primary"
+            plain
+            @click="openCreateStockDialog"
+          >
+            新增库存
+          </ElButton>
+          <ElButton
+            v-if="capabilities.canManageStocks"
+            :disabled="!selectedStock"
+            @click="openEditSelectedStockDialog"
+          >
+            编辑库存
+          </ElButton>
+          <ElButton
+            v-if="capabilities.canQueryStocks"
+            :disabled="!selectedStock"
+            @click="openStockDetailDrawer"
+          >
+            批次详情
+          </ElButton>
+          <ElButton
+            v-if="capabilities.canQueryWarnings"
+            @click="openWarningDrawer"
+          >
+            库存预警
+          </ElButton>
+        </div>
+
+        <div class="px-4 py-4">
+          <ElAlert
+            v-if="!capabilities.canQueryStocks"
+            :closable="false"
+            title="当前账号没有库存批次查询权限，仅可使用已开放的库存维护能力。"
+            type="warning"
+          />
+          <ElTable
+            v-else
+            id="reagent-stock-table"
+            v-loading="loading.stocks"
+            :data="stocks"
+            border
+            highlight-current-row
+            @current-change="setSelectedStock"
+          >
+            <ElTableColumn label="试剂编码" min-width="120">
+              <template #default="{ row }">
+                {{ formatNullable(row.reagentCode) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="试剂名称" min-width="180">
+              <template #default="{ row }">
+                {{ formatNullable(row.reagentName) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="批号" min-width="140" prop="batchNo" />
+            <ElTableColumn label="库存数量" min-width="110">
+              <template #default="{ row }">
+                {{ formatNullable(row.stockQuantity) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="库存状态" min-width="110">
+              <template #default="{ row }">
+                <ElTag :type="getStockStatusTagType(row.stockStatus)">
+                  {{ formatReagentStockStatus(row.stockStatus) }}
+                </ElTag>
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="有效期" min-width="130">
+              <template #default="{ row }">
+                {{ formatNullable(row.expiryDate) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="低库存阈值" min-width="120">
+              <template #default="{ row }">
+                {{ formatNullable(row.lowStockThreshold) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="近效期天数" min-width="120">
+              <template #default="{ row }">
+                {{ formatNullable(row.nearExpiryDays) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="存放位置" min-width="160">
+              <template #default="{ row }">
+                {{ formatNullable(row.storageLocation) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="备注" min-width="180">
+              <template #default="{ row }">
+                {{ formatNullable(row.remarks) }}
+              </template>
+            </ElTableColumn>
+          </ElTable>
+        </div>
+      </section>
+    </div>
+
+    <ElDrawer
+      v-model="reagentCatalogDrawerVisible"
+      :size="920"
+      title="试剂目录"
+    >
       <ReagentCatalogPanel
         :reagent-filters="reagentFilters"
         :can-create-reagent="capabilities.canCreateReagent"
@@ -429,51 +674,53 @@ void initializePage();
         @open-create-reagent-dialog="openCreateReagentDialog"
         @open-edit-reagent-dialog="openEditReagentDialog"
         @set-selected-reagent="setSelectedReagent"
+        @update:reagent-filters="Object.assign(reagentFilters, $event)"
       />
+    </ElDrawer>
 
-      <ReagentStockPanel
-        :stock-filters="stockFilters"
-        :can-manage-stocks="capabilities.canManageStocks"
-        :can-query-stocks="capabilities.canQueryStocks"
-        :get-stock-status-tag-type="getStockStatusTagType"
-        :loading="loading.stocks"
-        :stocks="stocks"
-        @load-stocks="loadStocks"
-        @open-create-stock-dialog="openCreateStockDialog"
-        @open-edit-stock-dialog="openEditStockDialog"
-        @set-selected-stock="setSelectedStock"
-      />
-
+    <ElDrawer
+      v-model="stockDetailDrawerVisible"
+      :size="760"
+      title="批次详情"
+    >
       <ReagentStockDetailPanel
         :selected-reagent="selectedReagent"
         :selected-stock="selectedStock"
       />
+    </ElDrawer>
 
+    <ElDrawer
+      v-model="warningDrawerVisible"
+      :size="860"
+      title="库存预警"
+    >
       <ReagentWarningPanel
         :can-query-stocks="capabilities.canQueryStocks"
         :can-query-warnings="capabilities.canQueryWarnings"
-        :get-warning-tag-type="getWarningTagType"
+        :get-warning-tag-type="getReagentWarningTagType"
         :loading="loading.warnings"
         :warnings="warnings"
         @load-warnings="loadWarnings"
         @navigate-to-stock-detail="navigateToStockDetail"
       />
-    </div>
+    </ElDrawer>
 
     <ReagentDialog
       v-model="reagentDialogVisible"
-      v-model:reagent-form="reagentForm"
+      :reagent-form="reagentForm"
       :is-editing-reagent="isEditingReagent"
       :submitting="submitting"
+      @update:reagent-form="Object.assign(reagentForm, $event)"
       @submit="submitReagent"
     />
 
     <ReagentStockDialog
       v-model="stockDialogVisible"
-      v-model:stock-form="stockForm"
+      :stock-form="stockForm"
       :is-editing-stock="isEditingStock"
       :reagents="reagents"
       :submitting="submitting"
+      @update:stock-form="Object.assign(stockForm, $event)"
       @submit="submitStock"
     />
   </Page>

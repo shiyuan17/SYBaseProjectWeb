@@ -65,6 +65,7 @@ const {
   editableApplicationFormStatusOptions,
   handleClinicalSymptomSuggestionChange,
   handleDuplicateCheck,
+  handlePatientIdentifierLookup,
   hasDialogCapability,
   importForm,
   importingClinicalApplication,
@@ -135,6 +136,8 @@ const {
                   <ElInput
                     v-model="createForm.patientId"
                     placeholder="患者编号 / 门诊号 / 住院号"
+                    @blur="handlePatientIdentifierLookup"
+                    @keyup.enter="handlePatientIdentifierLookup"
                   />
                 </ElFormItem>
                 <ElFormItem label="患者姓名">

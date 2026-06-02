@@ -53,6 +53,20 @@ describe('specimen check-in helpers', () => {
   it('explains why a specimen cannot be checked in', () => {
     expect(
       resolveUnavailableMessage(
+        [
+          createRowFixture(),
+          createRowFixture({
+            barcode: 'BC-2',
+            specimenId: 'SPEC-2',
+            specimenNo: 'SP-2',
+            specimenConfirmedAt: null,
+          }),
+        ],
+        'SP-1',
+      ),
+    ).toBe('当前申请单下仍有标本未完成核对、固定或标本确认，不能入库');
+    expect(
+      resolveUnavailableMessage(
         [createRowFixture({ checkInStatus: 'CHECKED_IN' })],
         'SP-1',
       ),
@@ -62,19 +76,19 @@ describe('specimen check-in helpers', () => {
         [createRowFixture({ specimenConfirmedAt: null })],
         'SP-1',
       ),
-    ).toBe('标本尚未完成标本确认，不能入库');
+    ).toBe('当前申请单下仍有标本未完成核对、固定或标本确认，不能入库');
     expect(
       resolveUnavailableMessage(
         [createRowFixture({ fixationStatus: 'PENDING' })],
         'SP-1',
       ),
-    ).toBe('标本尚未完成固定，不能入库');
+    ).toBe('当前申请单下仍有标本未完成核对、固定或标本确认，不能入库');
     expect(
       resolveUnavailableMessage(
         [createRowFixture({ verificationStatus: 'PENDING' })],
         'SP-1',
       ),
-    ).toBe('标本尚未完成核对，不能入库');
+    ).toBe('当前申请单下仍有标本未完成核对、固定或标本确认，不能入库');
     expect(
       resolveUnavailableMessage(
         [createRowFixture({ specimenStatus: 'RECEIVED' })],

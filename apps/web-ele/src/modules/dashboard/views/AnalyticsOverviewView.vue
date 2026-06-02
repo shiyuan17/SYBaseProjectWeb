@@ -101,9 +101,9 @@ async function navigateTo(route?: string, query?: Record<string, string>) {
               <ElButton
                 class="!border-border !bg-background/85 !text-foreground hover:!border-primary/40 hover:!bg-primary/5"
                 plain
-                @click="navigateTo('/m6/statistics')"
+                @click="navigateTo('/m6/custom-analysis')"
               >
-                进入正式统计分析
+                进入自定义统计分析
               </ElButton>
             </div>
           </div>

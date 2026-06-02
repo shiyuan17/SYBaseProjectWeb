@@ -187,11 +187,19 @@ export interface PendingTechnicalSpecimenRegistrationPage {
 }
 
 export interface TechnicalSpecimenRegistrationMaterial {
+  evaluationItems: string[];
+  frozen: boolean;
+  specimenBarcode: null | string;
   specimenId: null | string;
   sequenceNo: number;
   sourcePart: null | string;
+  specimenSize: null | string;
   specimenName: null | string;
   specimenType: null | string;
+  tissueCount: number;
+  verificationCompletedAt: null | string;
+  verificationStatus: null | string;
+  verifiedByName: null | string;
 }
 
 export interface TechnicalSpecimenRegistrationCheckItem {
@@ -271,10 +279,14 @@ export interface TechnicalSpecimenRegistrationWorkspace {
 }
 
 export interface SaveTechnicalSpecimenRegistrationMaterialItem {
+  evaluationItems?: string[];
+  frozen?: boolean;
   sourcePart?: null | string;
   specimenId?: null | string;
+  specimenSize?: null | string;
   specimenName?: null | string;
   specimenType?: null | string;
+  tissueCount?: number;
 }
 
 export interface SaveTechnicalSpecimenRegistrationMaterialsRequest {
@@ -290,6 +302,11 @@ export interface SaveTechnicalSpecimenRegistrationDetailSectionsRequest {
 export interface DeleteTechnicalSpecimenRegistrationMediaAssetResult {
   assetId: string;
   deleted: boolean;
+}
+
+export interface TechnicalSpecimenRegistrationMaterialVerificationRequest {
+  remarks?: null | string;
+  terminalCode?: null | string;
 }
 
 export interface CompleteTechnicalSpecimenRegistrationRequest {
@@ -529,11 +546,22 @@ export interface GrossingBlockItemRequest {
   specialRequirement?: null | string;
 }
 
+export type GrossingEmbeddingBoxStatus = 'CONFIRMED' | 'PENDING';
+
+export interface GrossingEmbeddingBoxItemRequest {
+  boxName?: null | string;
+  embeddingBoxNo: string;
+  embeddingRemarks?: null | string;
+  sequenceNo: number;
+  status: GrossingEmbeddingBoxStatus;
+}
+
 export interface GrossingSpecimenItemRequest {
   blocks: GrossingBlockItemRequest[];
   blockCount?: null | number;
   bodyPartId?: null | string;
   cutSurfaceFeature?: null | string;
+  embeddingBoxes?: GrossingEmbeddingBoxItemRequest[];
   grossDescription?: null | string;
   marginMarking?: null | string;
   mediaAssets?: MediaAssetItem[];
@@ -603,6 +631,24 @@ export interface EmbeddingResult {
   markingMessage: null | string;
   markingSuccess: boolean;
   taskId: string;
+}
+
+export interface EmbeddingQualityReviewRequest {
+  evaluationLevel?: null | string;
+  notifiedGrossingOperator?: boolean;
+  remarks?: null | string;
+  samplingEvaluation?: null | string;
+  sliceNotice?: null | string;
+  terminalCode?: null | string;
+  treatmentAction?: null | 'OTHER' | 'REGROSSING';
+  treatmentRemark?: null | string;
+  unqualifiedReasons?: string[];
+}
+
+export interface EmbeddingQualityReviewResult {
+  record: TechnicalTrackingEmbeddingRecordSummary;
+  reworkStatus: null | string;
+  reworkType: null | string;
 }
 
 export interface SlicingCompleteRequest {

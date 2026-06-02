@@ -20,9 +20,6 @@ export async function loadQualityDomainData(
       M6_PERMISSION_CODES.STAT_INDICATOR_QUERY,
       M6_PERMISSION_CODES.STAT_REPORT_QUERY,
       M6_PERMISSION_CODES.STAT_REPORT_EXPORT,
-      M6_PERMISSION_CODES.INTEGRATION_TASK_QUERY,
-      M6_PERMISSION_CODES.HISTORY_QUERY,
-      M6_PERMISSION_CODES.BILLING_QUERY,
     ])
   ) {
     return null;
@@ -42,25 +39,25 @@ export async function loadQualityDomainData(
     {
       description: '本月质控统计查询入口',
       id: 'quality-statistics',
-      route: '/m6/statistics',
-      title: '质控统计',
+      route: '/m6/quality-indicators',
+      title: '质控指标统计',
       tone: 'info',
       value:
         metricMap.get('QC_DIAGNOSIS_TIMELINESS_RATE')?.metricValue ?? '0.00',
     },
     {
-      description: '集成任务与外围系统联动',
-      id: 'quality-integration',
-      route: '/m6/integration',
-      title: '集成任务',
+      description: '查看运营和工作量相关指标',
+      id: 'quality-management',
+      route: '/m6/management-indicators',
+      title: '管理指标统计',
       tone: 'info',
       value: '入口',
     },
     {
-      description: '历史报告与运营查询',
-      id: 'quality-history',
-      route: '/m6/history',
-      title: '历史报告',
+      description: '进入正式统计分析与导出页面',
+      id: 'quality-custom',
+      route: '/m6/custom-analysis',
+      title: '自定义统计分析',
       tone: 'info',
       value: '入口',
     },
@@ -70,32 +67,32 @@ export async function loadQualityDomainData(
     {
       description: '查看正式统计报表与导出结果',
       id: 'quality-alert-stat',
-      route: '/m6/statistics',
+      route: '/m6/custom-analysis',
       severity: 'info',
-      source: '统计分析',
-      title: '进入统计分析',
+      source: '数据统计与分析',
+      title: '进入自定义统计分析',
     },
   ];
 
   const quickEntries: DashboardQuickEntry[] = [
     {
-      description: '统计分析入口',
+      description: '查看质控指标统计入口',
       highlight: true,
       id: 'quality-entry-1',
-      route: '/m6/statistics',
-      title: '统计分析',
+      route: '/m6/quality-indicators',
+      title: '质控指标统计',
     },
     {
-      description: '查看集成任务轨迹与补偿状态',
+      description: '查看管理指标统计入口',
       id: 'quality-entry-2',
-      route: '/m6/integration',
-      title: '集成任务',
+      route: '/m6/management-indicators',
+      title: '管理指标统计',
     },
     {
-      description: '查看历史报告导入任务与入库结果',
+      description: '进入正式统计分析与导出',
       id: 'quality-entry-3',
-      route: '/m6/history',
-      title: '历史报告',
+      route: '/m6/custom-analysis',
+      title: '自定义统计分析',
     },
   ];
 
@@ -104,6 +101,6 @@ export async function loadQualityDomainData(
     cards,
     id: 'quality',
     quickEntries,
-    title: '质控与管理',
+    title: '数据统计与分析',
   };
 }

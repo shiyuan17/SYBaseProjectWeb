@@ -40,6 +40,7 @@ export type RawSpecimen = {
   previousBarcodes: string[];
   qualityCheckResult: null | string;
   qualityIssueCodes: string[];
+  receiptLogisticsStaffName?: null | string;
   receiptReason: null | string;
   receiptRemarks: null | string;
   receiptStatus: null | string;

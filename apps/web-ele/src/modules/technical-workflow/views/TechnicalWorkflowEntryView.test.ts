@@ -240,7 +240,7 @@ describe('TechnicalWorkflowEntryView', () => {
     const { app, root } = mountView();
     await flushView();
 
-    findButton('打开病理接收').click();
+    findButton('打开标本接收').click();
     findButton('进入任务池').click();
     await flushView();
 

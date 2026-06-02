@@ -14,14 +14,11 @@ defineProps<{
 <template>
   <WorkflowSectionCard
     title="接收结果"
-    description="展示接收后的病例号、病理号、整体签收状态、未签收数量与异常摘要。"
+    description="展示接收后的病例号、整体签收状态、未签收数量与异常摘要。"
   >
     <ElDescriptions :column="2" border>
       <ElDescriptionsItem label="病例编号">
         {{ formatNullable(result.caseId) }}
-      </ElDescriptionsItem>
-      <ElDescriptionsItem label="病理号">
-        {{ formatNullable(result.pathologyNo) }}
       </ElDescriptionsItem>
       <ElDescriptionsItem label="接收状态">
         {{ result.receiptStatus }}

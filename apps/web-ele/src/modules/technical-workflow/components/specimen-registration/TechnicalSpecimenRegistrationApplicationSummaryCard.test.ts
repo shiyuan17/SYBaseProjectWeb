@@ -155,7 +155,7 @@ describe('TechnicalSpecimenRegistrationApplicationSummaryCard', () => {
     document.body.innerHTML = '';
   });
 
-  it('lists all receive checklist types and previews the pathology no by selected type', async () => {
+  it('lists compact receive checklist types and emits the selected type', async () => {
     const root = document.createElement('div');
     document.body.append(root);
     const selectedApplicationType = ref('ROUTINE');
@@ -178,7 +178,7 @@ describe('TechnicalSpecimenRegistrationApplicationSummaryCard', () => {
 
     expect(root.textContent).toContain('补充报告');
     expect(root.textContent).toContain('肝穿');
-    expect(root.textContent).toContain('BL202606010007');
+    expect(root.textContent).not.toContain('BL202606010007');
 
     root
       .querySelector<HTMLButtonElement>(
@@ -187,8 +187,12 @@ describe('TechnicalSpecimenRegistrationApplicationSummaryCard', () => {
       ?.click();
     await flushView();
 
-    expect(root.textContent).toContain('MS2600007');
-    expect(root.textContent).toContain('默认生成');
+    expect(
+      root.querySelector<HTMLButtonElement>(
+        '[data-testid="application-type-SUPPLEMENTAL_REPORT"]',
+      )?.getAttribute('aria-pressed'),
+    ).toBe('true');
+    expect(root.textContent).not.toContain('默认生成');
 
     app.unmount();
     root.remove();

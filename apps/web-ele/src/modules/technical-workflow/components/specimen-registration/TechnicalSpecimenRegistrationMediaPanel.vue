@@ -9,6 +9,7 @@ const props = defineProps<{
   activeAssetId: string;
   canDelete: boolean;
   canUpload: boolean;
+  collapsed?: boolean;
   deleting?: boolean;
   mediaAssets: TechnicalSpecimenRegistrationMediaAsset[];
   uploading?: boolean;
@@ -44,77 +45,95 @@ function handleFileChange(event: Event) {
 </script>
 
 <template>
-  <section class="flex min-h-[480px] flex-1 flex-col rounded-2xl border border-slate-200 bg-white shadow-sm">
-    <div class="border-b border-slate-200 px-4 py-4">
-      <div class="text-base font-semibold text-slate-900">图片区</div>
-      <p class="mt-1 text-xs text-slate-500">
-        仅支持本地图片导入、预览和删除，不包含设备拍照能力。
-      </p>
-      <div class="mt-4 flex flex-wrap gap-2">
-        <ElButton
-          :disabled="!canUpload"
-          :loading="uploading"
-          type="primary"
-          @click="openFileDialog"
-        >
-          导入图片
-        </ElButton>
-        <ElButton
-          :disabled="!activeAsset || !canDelete"
-          :loading="deleting"
-          @click="activeAsset && emit('delete', activeAsset.assetId)"
-        >
-          删除图片
-        </ElButton>
-      </div>
-      <input
-        ref="fileInputRef"
-        accept="image/*"
-        class="hidden"
-        type="file"
-        @change="handleFileChange"
-      />
-    </div>
+  <section class="flex min-h-[480px] flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <input
+      ref="fileInputRef"
+      accept="image/*"
+      class="hidden"
+      type="file"
+      @change="handleFileChange"
+    />
 
-    <div class="flex-1 px-4 py-4">
-      <template v-if="mediaAssets.length > 0">
-        <div class="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-          <img
-            v-if="activeAsset"
-            :alt="activeAsset.fileName || '登记图片'"
-            :src="activeAsset.fileUrl"
-            class="h-[360px] w-full object-contain"
-          />
-        </div>
-        <div class="mt-4 grid gap-3 sm:grid-cols-2">
-          <button
-            v-for="asset in mediaAssets"
-            :key="asset.assetId"
-            :class="[
-              'overflow-hidden rounded-2xl border p-2 text-left transition',
-              asset.assetId === activeAsset?.assetId
-                ? 'border-sky-500 bg-sky-50'
-                : 'border-slate-200 bg-white hover:border-slate-300',
-            ]"
-            :data-testid="`media-asset-${asset.assetId}`"
-            type="button"
-            @click="emit('select', asset.assetId)"
+    <button
+      v-if="collapsed"
+      aria-label="展开图片区"
+      class="flex min-h-[480px] w-full flex-1 flex-col items-center justify-start gap-4 px-3 py-5 text-center transition hover:bg-slate-50"
+      type="button"
+    >
+      <span class="text-sm font-semibold text-slate-900">图片区</span>
+      <span class="rounded-full bg-slate-100 px-2 py-1 text-[11px] text-slate-500">
+        {{ mediaAssets.length }} 张
+      </span>
+      <span class="w-full truncate text-xs text-slate-400">
+        {{ activeAsset?.fileName || '暂无登记图片' }}
+      </span>
+    </button>
+
+    <template v-else>
+      <div class="border-b border-slate-200 px-4 py-4">
+        <div class="text-base font-semibold text-slate-900">图片区</div>
+        <p class="mt-1 text-xs text-slate-500">
+          仅支持本地图片导入、预览和删除，不包含设备拍照能力。
+        </p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <ElButton
+            :disabled="!canUpload"
+            :loading="uploading"
+            type="primary"
+            @click="openFileDialog"
           >
-            <img
-              :alt="asset.fileName || '登记缩略图'"
-              :src="asset.fileUrl"
-              class="h-24 w-full rounded-xl object-cover"
-            />
-            <div class="mt-2 text-xs text-slate-600">
-              <div class="truncate">{{ asset.fileName || '-' }}</div>
-              <div class="mt-1">{{ asset.capturedAt || '-' }}</div>
-            </div>
-          </button>
+            导入图片
+          </ElButton>
+          <ElButton
+            :disabled="!activeAsset || !canDelete"
+            :loading="deleting"
+            @click="activeAsset && emit('delete', activeAsset.assetId)"
+          >
+            删除图片
+          </ElButton>
         </div>
-      </template>
-      <div v-else class="flex h-full items-center justify-center">
-        <ElEmpty description="暂无登记图片" />
       </div>
-    </div>
+
+      <div class="flex-1 px-4 py-4">
+        <template v-if="mediaAssets.length > 0">
+          <div class="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+            <img
+              v-if="activeAsset"
+              :alt="activeAsset.fileName || '登记图片'"
+              :src="activeAsset.fileUrl"
+              class="h-[360px] w-full object-contain"
+            />
+          </div>
+          <div class="mt-4 grid gap-3 sm:grid-cols-2">
+            <button
+              v-for="asset in mediaAssets"
+              :key="asset.assetId"
+              :class="[
+                'overflow-hidden rounded-2xl border p-2 text-left transition',
+                asset.assetId === activeAsset?.assetId
+                  ? 'border-sky-500 bg-sky-50'
+                  : 'border-slate-200 bg-white hover:border-slate-300',
+              ]"
+              :data-testid="`media-asset-${asset.assetId}`"
+              type="button"
+              @click="emit('select', asset.assetId)"
+            >
+              <img
+                :alt="asset.fileName || '登记缩略图'"
+                :src="asset.fileUrl"
+                class="h-24 w-full rounded-xl object-cover"
+              />
+              <div class="mt-2 text-xs text-slate-600">
+                <div class="truncate">{{ asset.fileName || '-' }}</div>
+                <div class="mt-1">{{ asset.capturedAt || '-' }}</div>
+              </div>
+            </button>
+          </div>
+        </template>
+        <div v-else class="flex h-full items-center justify-center">
+          <ElEmpty description="暂无登记图片" />
+        </div>
+      </div>
+    </template>
   </section>
 </template>

@@ -52,18 +52,26 @@ export const M5_EQUIPMENT_PAGE_AUTHORITIES = [
   M5_PERMISSION_CODES.EQUIPMENT_WARNING_QUERY,
 ] as const;
 
-export const M5_OPERATION_ROUTE_ITEMS = [
+export const M5_RESOURCE_PAGE_AUTHORITIES = [
+  ...M5_EQUIPMENT_PAGE_AUTHORITIES,
+  ...M5_REAGENT_PAGE_AUTHORITIES,
+] as const;
+
+export const M5_ARCHIVE_ROUTE_ITEMS = [
   {
     codes: M5_ARCHIVE_PAGE_AUTHORITIES,
     path: '/operation-support/archive',
   },
-  {
-    codes: M5_REAGENT_PAGE_AUTHORITIES,
-    path: '/operation-support/reagents',
-  },
+];
+
+export const M5_RESOURCE_ROUTE_ITEMS = [
   {
     codes: M5_EQUIPMENT_PAGE_AUTHORITIES,
-    path: '/operation-support/equipment',
+    path: '/operation-resources/equipment',
+  },
+  {
+    codes: M5_REAGENT_PAGE_AUTHORITIES,
+    path: '/operation-resources/reagents',
   },
 ] as const;
 

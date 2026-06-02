@@ -21,6 +21,7 @@ import { Page } from '@vben/common-ui';
 import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
 
 import SpecimenReceiptDirectDrawer from '../components/SpecimenReceiptDirectDrawer.vue';
+import SpecimenReceiptReceiveDialog from '../components/SpecimenReceiptReceiveDialog.vue';
 import { useSpecimenReceiptWorkbench } from '../composables/useSpecimenReceiptWorkbench';
 import { formatDateTime, formatNullable } from '../utils/format';
 import {
@@ -31,6 +32,7 @@ import {
 const route = useRoute();
 const {
   batchRetryResult,
+  closeReceiveDialog,
   directReceiveDialogVisible,
   directReceiveForm,
   directReceiveItems,
@@ -42,16 +44,21 @@ const {
   handleExportExcel,
   handleOperatorChange,
   handleQueueSpecimen,
+  handleReceiveUserChange,
   handleReceiveSelected,
   handleRemoveDirectReceiveRow,
   handleRetryLabel,
   handleSelectionChange,
   lookupLoading,
+  openReceiveDialog,
   openDirectReceiveDrawer,
   operatorForm,
   pageError,
   queueItems,
+  receiveDialogVisible,
+  receiveForm,
   receiveLoading,
+  receiveSummary,
   receivedCount,
   retryDialogVisible,
   retryForm,
@@ -151,7 +158,7 @@ watch(
           :disabled="selectedCount === 0"
           :loading="receiveLoading"
           type="primary"
-          @click="handleReceiveSelected"
+          @click="openReceiveDialog"
         >
           标本签收
         </ElButton>
@@ -263,6 +270,16 @@ watch(
       @direct-receive-user-change="handleDirectReceiveUserChange"
       @remove-row="handleRemoveDirectReceiveRow"
       @submit="submitDirectReceive"
+    />
+
+    <SpecimenReceiptReceiveDialog
+      v-model="receiveDialogVisible"
+      v-model:form="receiveForm"
+      :submitting="receiveLoading"
+      :summary="receiveSummary"
+      @close="closeReceiveDialog"
+      @receive-user-change="handleReceiveUserChange"
+      @submit="handleReceiveSelected"
     />
 
     <ElDialog

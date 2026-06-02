@@ -207,6 +207,26 @@ describe('ApplicationListView', () => {
     app.unmount();
   });
 
+  it('renders current node labels in Chinese for backend node codes', async () => {
+    mockListApplications.mockResolvedValue({
+      items: [
+        buildApplicationRow({
+          currentNode: 'SPECIMEN_REGISTRATION',
+        }),
+      ],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+
+    const { app, root } = await mountView();
+
+    expect(root.textContent).toContain('标本登记');
+    expect(root.textContent).not.toContain('SPECIMEN_REGISTRATION');
+
+    app.unmount();
+  });
+
   it('disables edit and delete actions with backend reason', async () => {
     mockListApplications.mockResolvedValue({
       items: [

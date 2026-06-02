@@ -26,6 +26,18 @@ export type ReceiptOperatorForm = {
   terminalCode: string;
 };
 
+export type ReceiptConfirmForm = {
+  logisticsStaffName: string;
+  receivedByName: string;
+  receivedByUserId: string;
+};
+
+export type ReceiptConfirmSummary = {
+  applicationCount: number;
+  patientCount: number;
+  specimenCount: number;
+};
+
 export type TransportReceiptGroup = {
   applicationId: string;
   applicationNo: string;
@@ -47,6 +59,17 @@ export function createDefaultReceiptFormState(
     receivedByName,
     receivedByUserId,
     terminalCode: '',
+  };
+}
+
+export function createDefaultReceiptConfirmFormState(
+  receivedByName: string,
+  receivedByUserId: string,
+): ReceiptConfirmForm {
+  return {
+    logisticsStaffName: '',
+    receivedByName,
+    receivedByUserId,
   };
 }
 
@@ -235,14 +258,15 @@ export function normalizeReceiptItem(
 
 export function buildReceiptSubmissionRequest(
   transportOrderId: string,
-  form: ReceiptOperatorForm,
+  form: ReceiptConfirmForm,
   items: ReceiptDraftItem[],
 ): SpecimenReceiptRequest {
   return {
     items: items.map((item) => normalizeReceiptItem(item)),
+    logisticsStaffName: form.logisticsStaffName.trim(),
     receivedByName: form.receivedByName.trim(),
     receivedByUserId: form.receivedByUserId.trim() || null,
-    terminalCode: form.terminalCode.trim() || null,
+    terminalCode: null,
     transportOrderId,
   };
 }
@@ -264,7 +288,7 @@ export function buildApplicationFormReprintRequest(
   transportOrderId: string,
 ): ApplicationFormReprintRequest {
   return {
-    remarks: `病理接收页补打印申请单，转运单：${transportOrderId}`,
+    remarks: `标本接收页补打印申请单，转运单：${transportOrderId}`,
     terminalCode: terminalCode.trim() || null,
   };
 }

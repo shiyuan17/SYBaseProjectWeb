@@ -9,6 +9,7 @@ import {
   buildReceiptSubmissionRequest,
   buildTransportReceiptGroups,
   countDerivedAbnormalReceiptItems,
+  createDefaultReceiptConfirmFormState,
   createDefaultReceiptFormState,
   createReceiptDraftItem,
   createReceiptDraftItemsFromGroup,
@@ -70,6 +71,11 @@ describe('specimen receipt helpers', () => {
       receivedByName: '张三',
       receivedByUserId: 'U-1',
       terminalCode: '',
+    });
+    expect(createDefaultReceiptConfirmFormState('张三', 'U-1')).toEqual({
+      logisticsStaffName: '',
+      receivedByName: '张三',
+      receivedByUserId: 'U-1',
     });
     expect(createReceiptDraftItem('BC-1')).toEqual(
       expect.objectContaining({
@@ -155,6 +161,11 @@ describe('specimen receipt helpers', () => {
       receivedByUserId: ' U-1 ',
       terminalCode: ' T-1 ',
     };
+    const receiveForm = {
+      logisticsStaffName: ' 物流员甲 ',
+      receivedByName: ' 张三 ',
+      receivedByUserId: ' U-1 ',
+    };
     const items = [
       {
         ...createReceiptDraftItem(' BC-1 '),
@@ -185,11 +196,12 @@ describe('specimen receipt helpers', () => {
       remarks: '备注',
       specimenBarcode: 'BC-1',
     });
-    expect(buildReceiptSubmissionRequest('TO-1', form, items)).toEqual({
+    expect(buildReceiptSubmissionRequest('TO-1', receiveForm, items)).toEqual({
       items: [normalizeReceiptItem(items[0]!)],
+      logisticsStaffName: '物流员甲',
       receivedByName: '张三',
       receivedByUserId: 'U-1',
-      terminalCode: 'T-1',
+      terminalCode: null,
       transportOrderId: 'TO-1',
     });
     expect(buildDirectReceiptSubmissionRequest(form, items)).toEqual({
@@ -201,7 +213,7 @@ describe('specimen receipt helpers', () => {
     expect(
       buildApplicationFormReprintRequest(' T-1 ', 'TO-1'),
     ).toEqual({
-      remarks: '病理接收页补打印申请单，转运单：TO-1',
+      remarks: '标本接收页补打印申请单，转运单：TO-1',
       terminalCode: 'T-1',
     });
   });

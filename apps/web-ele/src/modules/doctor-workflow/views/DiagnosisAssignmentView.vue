@@ -220,7 +220,7 @@ void loadPendingData();
 <template>
   <Page
     title="诊断分片工作站"
-    description="查询待处理诊断任务，完成责任医生、初诊医生和审核医生分派，并保留病例深链进入诊断工作台。"
+    description="查询待处理诊断任务，完成责任医生、初诊医生和审核医生分派，并保留病例深链进入诊断平台工作站。"
   >
     <div class="flex flex-col gap-4">
       <ElAlert

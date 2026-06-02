@@ -47,7 +47,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         meta: {
           authority: [M2_PERMISSION_CODES.SPECIMEN_RECEIVE],
           icon: 'carbon:archive',
-          title: '病理接收',
+          title: '标本接收',
         },
         name: 'PathologyReceipt',
         path: '/workflow/pathology-receipt',
@@ -60,7 +60,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         meta: {
           authority: [M2_PERMISSION_CODES.SPECIMEN_RECEIVE],
           icon: 'carbon:data-table',
-          title: '标本登记',
+          title: '登记接收工作站',
         },
         name: 'TechnicalSpecimenRegistration',
         path: '/technical-workflow/specimen-registration',
@@ -70,6 +70,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
           import('#/modules/technical-workflow/views/TechnicalTasksView.vue'),
         meta: {
           authority: [M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY],
+          hideInMenu: true,
           icon: 'carbon:task',
           title: '任务池',
         },
@@ -81,6 +82,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
           import('#/modules/technical-workflow/views/FrozenWorkstationView.vue'),
         meta: {
           authority: [M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY],
+          hideInMenu: true,
           icon: 'carbon:snowflake',
           title: '冰冻工作台',
         },
@@ -93,7 +95,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         meta: {
           authority: [M3_PERMISSION_CODES.GROSSING],
           icon: 'carbon:scan',
-          title: '取材描写',
+          title: '取材描写工作站',
         },
         name: 'GrossingWorkstation',
         path: '/technical-workflow/grossing',
@@ -137,10 +139,75 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         meta: {
           authority: [M3_PERMISSION_CODES.STAINING],
           icon: 'carbon:color-palette',
-          title: '染色出片',
+          title: '染色出片工作站',
         },
         name: 'StainingWorkstation',
         path: '/technical-workflow/staining',
+      },
+      {
+        component: () =>
+          import(
+            '#/modules/technical-workflow/views/RoutineOrderWorkstationView.vue'
+          ),
+        meta: {
+          authority: [M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY],
+          icon: 'carbon:document-tasks',
+          title: '常规医嘱工作站',
+        },
+        name: 'RoutineOrderWorkstation',
+        path: '/technical-workflow/routine-orders',
+      },
+      {
+        component: () =>
+          import(
+            '#/modules/technical-workflow/views/SpecialOrderWorkstationView.vue'
+          ),
+        meta: {
+          authority: [M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY],
+          icon: 'carbon:document-requirements',
+          title: '特检医嘱工作站',
+        },
+        name: 'SpecialOrderWorkstation',
+        path: '/technical-workflow/special-orders',
+      },
+      {
+        component: () =>
+          import(
+            '#/modules/technical-workflow/views/IhcWorkstationView.vue'
+          ),
+        meta: {
+          authority: [M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY],
+          icon: 'carbon:chemistry',
+          title: '免疫组化工作站',
+        },
+        name: 'IhcWorkstation',
+        path: '/technical-workflow/ihc',
+      },
+      {
+        component: () =>
+          import(
+            '#/modules/technical-workflow/views/CytologyWorkstationView.vue'
+          ),
+        meta: {
+          authority: [M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY],
+          icon: 'carbon:microscope',
+          title: '细胞学工作站',
+        },
+        name: 'CytologyWorkstation',
+        path: '/technical-workflow/cytology',
+      },
+      {
+        component: () =>
+          import(
+            '#/modules/technical-workflow/views/LiquidCytologyWorkstationView.vue'
+          ),
+        meta: {
+          authority: [M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY],
+          icon: 'lucide:droplets',
+          title: '液基细胞学工作站',
+        },
+        name: 'LiquidCytologyWorkstation',
+        path: '/technical-workflow/liquid-cytology',
       },
       {
         component: () =>

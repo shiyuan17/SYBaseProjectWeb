@@ -160,13 +160,26 @@ export function useSpecimenCheckInPanel() {
     selectedRowKeys.value = [];
   }
 
-  function isCheckInReady(row: SpecimenManagementListItem) {
-    return isCheckInReadyValue(row);
+  function isCheckInReady(
+    row: SpecimenManagementListItem,
+    applicationRows?: SpecimenManagementListItem[],
+  ) {
+    return isCheckInReadyValue(row, applicationRows);
   }
 
   async function loadMatchingSpecimens(keyword: string) {
     const result = await listSpecimens({
       keyword,
+      page: 1,
+      size: MAX_QUERY_SIZE,
+    });
+
+    return result.items;
+  }
+
+  async function loadApplicationSpecimens(applicationNo: string) {
+    const result = await listSpecimens({
+      applicationNo,
       page: 1,
       size: MAX_QUERY_SIZE,
     });
@@ -189,7 +202,10 @@ export function useSpecimenCheckInPanel() {
     operatorForm.operatorName = user?.name ?? '';
   }
 
-  async function performCheckIn(row: SpecimenManagementListItem) {
+  async function performCheckIn(
+    row: SpecimenManagementListItem,
+    applicationRows?: SpecimenManagementListItem[],
+  ) {
     if (
       !operatorForm.operatorName.trim() ||
       !operatorForm.operatorUserId.trim()
@@ -201,9 +217,14 @@ export function useSpecimenCheckInPanel() {
       ElMessage.warning('当前标本缺少条码，无法入库');
       return;
     }
-    if (!isCheckInReady(row)) {
+    const resolvedApplicationRows =
+      applicationRows ?? (await loadApplicationSpecimens(row.applicationNo));
+    if (!isCheckInReady(row, resolvedApplicationRows)) {
       ElMessage.warning(
-        resolveUnavailableMessage([row], row.barcode || row.specimenNo),
+        resolveUnavailableMessage(
+          resolvedApplicationRows,
+          row.barcode || row.specimenNo,
+        ),
       );
       return;
     }
@@ -253,8 +274,9 @@ export function useSpecimenCheckInPanel() {
       if (!row) {
         return;
       }
-      if (!isCheckInReady(row)) {
-        ElMessage.warning(resolveUnavailableMessage(exactMatches, keyword));
+      const applicationRows = await loadApplicationSpecimens(row.applicationNo);
+      if (!isCheckInReady(row, applicationRows)) {
+        ElMessage.warning(resolveUnavailableMessage(applicationRows, keyword));
         return;
       }
 
@@ -268,7 +290,7 @@ export function useSpecimenCheckInPanel() {
       }
 
       await upsertQueueItem(row);
-      await performCheckIn(row);
+      await performCheckIn(row, applicationRows);
       scanInput.value = '';
     } catch (error) {
       pageError.value = getWorkflowPageErrorMessage(error);

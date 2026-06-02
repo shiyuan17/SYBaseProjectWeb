@@ -35,6 +35,8 @@ import {
 import { loadOperatingRoomNameMapSafely } from '../utils/operating-room-display';
 import {
   buildDirectReceiptSubmissionRequest,
+  buildReceiptSubmissionRequest,
+  createDefaultReceiptConfirmFormState,
   createDefaultReceiptFormState,
   createReceiptDraftItem,
   isReceiptDraftDerivedAbnormal,
@@ -49,6 +51,8 @@ export function useSpecimenReceiptWorkbench() {
   const exportLoading = ref(false);
   const lookupLoading = ref(false);
   const pageError = ref('');
+  const receiveDialogVisible = ref(false);
+  const receiveTargetRows = ref<ReceiptWorkbenchRow[]>([]);
   const queueItems = ref<ReceiptWorkbenchRow[]>([]);
   const scanInput = ref('');
   const selectedRowKeys = ref<string[]>([]);
@@ -87,10 +91,39 @@ export function useSpecimenReceiptWorkbench() {
       userStore.userInfo?.userId ?? '',
     ),
   );
+  const receiveForm = reactive(
+    createDefaultReceiptConfirmFormState(
+      userStore.userInfo?.realName ?? '',
+      userStore.userInfo?.userId ?? '',
+    ),
+  );
 
   const selectedRows = computed(() =>
     queueItems.value.filter((item) => selectedRowKeys.value.includes(item.specimenId)),
   );
+  const receiveSummary = computed(() => {
+    const applicationKeys = new Set<string>();
+    const patientKeys = new Set<string>();
+
+    for (const row of receiveTargetRows.value) {
+      const applicationKey = row.applicationId.trim() || row.applicationNo.trim();
+      if (applicationKey) {
+        applicationKeys.add(applicationKey);
+      }
+
+      const patientKey =
+        row.patientIdLabel.trim() || row.patientName?.trim() || row.applicationId.trim();
+      if (patientKey) {
+        patientKeys.add(patientKey);
+      }
+    }
+
+    return {
+      applicationCount: applicationKeys.size,
+      patientCount: patientKeys.size,
+      specimenCount: receiveTargetRows.value.length,
+    };
+  });
 
   const selectedCount = computed(() => selectedRows.value.length);
   const receivedCount = computed(
@@ -110,6 +143,19 @@ export function useSpecimenReceiptWorkbench() {
   function handleOperatorChange(user: null | { id: string; name: string }) {
     operatorForm.operatorUserId = user?.id ?? '';
     operatorForm.operatorName = user?.name ?? '';
+  }
+
+  function syncReceiveOperator() {
+    receiveForm.logisticsStaffName = '';
+    receiveForm.receivedByName =
+      operatorForm.operatorName.trim() || userStore.userInfo?.realName || '';
+    receiveForm.receivedByUserId =
+      operatorForm.operatorUserId.trim() || userStore.userInfo?.userId || '';
+  }
+
+  function handleReceiveUserChange(user: null | { id: string; name: string }) {
+    receiveForm.receivedByUserId = user?.id ?? '';
+    receiveForm.receivedByName = user?.name ?? '';
   }
 
   function syncDirectReceiveOperator() {
@@ -255,7 +301,7 @@ export function useSpecimenReceiptWorkbench() {
         return;
       }
       if (!pendingItem.transportOrderId?.trim()) {
-        ElMessage.warning('当前标本尚未关联转运单，不能在病理接收页签收');
+        ElMessage.warning('当前标本尚未关联转运单，不能在标本接收页签收');
         return;
       }
 
@@ -291,6 +337,18 @@ export function useSpecimenReceiptWorkbench() {
     return true;
   }
 
+  function requireReceiveForm() {
+    if (!receiveForm.logisticsStaffName.trim()) {
+      ElMessage.warning('请输入物流人员');
+      return false;
+    }
+    if (!receiveForm.receivedByName.trim() || !receiveForm.receivedByUserId.trim()) {
+      ElMessage.warning('请选择签收人员');
+      return false;
+    }
+    return true;
+  }
+
   function buildDirectReceiveItemsFromRows(rows: ReceiptWorkbenchRow[]) {
     return rows.map((row) => ({
       ...createReceiptDraftItem(row.barcode ?? ''),
@@ -311,6 +369,27 @@ export function useSpecimenReceiptWorkbench() {
       : [createReceiptDraftItem()];
     syncDirectReceiveOperator();
     directReceiveDialogVisible.value = true;
+  }
+
+  function closeReceiveDialog() {
+    receiveDialogVisible.value = false;
+    receiveTargetRows.value = [];
+  }
+
+  function openReceiveDialog() {
+    const targets = selectedRows.value.filter((item) => item.queueStatus !== 'SUCCESS');
+    if (targets.length === 0) {
+      ElMessage.warning('请先选择待签收标本');
+      return;
+    }
+
+    if (!requireOperator()) {
+      return;
+    }
+
+    syncReceiveOperator();
+    receiveTargetRows.value = targets;
+    receiveDialogVisible.value = true;
   }
 
   function handleDirectReceiveUserChange(
@@ -385,12 +464,12 @@ export function useSpecimenReceiptWorkbench() {
   }
 
   async function handleReceiveSelected() {
-    const targets = selectedRows.value.filter((item) => item.queueStatus !== 'SUCCESS');
+    const targets = receiveTargetRows.value.filter((item) => item.queueStatus !== 'SUCCESS');
     if (targets.length === 0) {
       ElMessage.warning('请先选择待签收标本');
       return;
     }
-    if (!requireOperator()) {
+    if (!requireReceiveForm()) {
       return;
     }
 
@@ -413,24 +492,22 @@ export function useSpecimenReceiptWorkbench() {
     try {
       for (const [transportOrderId, rows] of groupedRows.entries()) {
         try {
-          await receiveSpecimens({
-            items: rows.map((row) => ({
-              containerCount: row.containerCount ?? 1,
-              qualityCheckResult: 'PASSED',
-              receiptStatus: 'RECEIVED',
-              specimenBarcode: row.barcode ?? '',
-            })),
-            receivedByName: operatorForm.operatorName.trim(),
-            receivedByUserId: operatorForm.operatorUserId.trim(),
-            terminalCode: null,
-            transportOrderId,
-          });
+          await receiveSpecimens(
+            buildReceiptSubmissionRequest(
+              transportOrderId,
+              receiveForm,
+              rows.map((row) => ({
+                ...createReceiptDraftItem(row.barcode ?? ''),
+                containerCount: row.containerCount ?? 1,
+              })),
+            ),
+          );
 
           const receivedAt = new Date().toISOString();
           for (const row of rows) {
             row.queueStatus = 'SUCCESS';
             row.receivedAt = receivedAt;
-            row.receivedByName = operatorForm.operatorName.trim();
+            row.receivedByName = receiveForm.receivedByName.trim();
             row.specimenStatus = 'RECEIVED';
           }
           successGroups += 1;
@@ -444,8 +521,10 @@ export function useSpecimenReceiptWorkbench() {
       }
 
       if (successGroups > 0 && failureGroups === 0) {
+        closeReceiveDialog();
         ElMessage.success('标本签收成功');
       } else if (successGroups > 0) {
+        closeReceiveDialog();
         ElMessage.warning('部分标本签收失败，请检查提示后重试');
       }
     } finally {
@@ -568,7 +647,7 @@ export function useSpecimenReceiptWorkbench() {
         type: 'application/vnd.ms-excel;charset=utf-8',
       });
       downloadFileFromBlob({
-        fileName: `病理接收-${new Date().toISOString().slice(0, 10)}.xls`,
+        fileName: `标本接收-${new Date().toISOString().slice(0, 10)}.xls`,
         source: blob,
       });
       ElMessage.success('导出成功');
@@ -581,6 +660,7 @@ export function useSpecimenReceiptWorkbench() {
 
   return {
     batchRetryResult,
+    closeReceiveDialog,
     directReceiveDialogVisible,
     directReceiveForm,
     directReceiveItems,
@@ -592,16 +672,22 @@ export function useSpecimenReceiptWorkbench() {
     handleExportExcel,
     handleOperatorChange,
     handleQueueSpecimen,
+    handleReceiveUserChange,
     handleReceiveSelected,
     handleRemoveDirectReceiveRow,
     handleRetryLabel,
     handleSelectionChange,
     lookupLoading,
+    openReceiveDialog,
     openDirectReceiveDrawer,
     operatorForm,
     pageError,
     queueItems,
+    receiveDialogVisible,
+    receiveForm,
     receiveLoading,
+    receiveSummary,
+    receiveTargetRows,
     receivedCount,
     retryDialogVisible,
     retryForm,

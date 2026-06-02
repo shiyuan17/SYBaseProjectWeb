@@ -74,6 +74,7 @@ export async function registerSpecimensMock(
       previousBarcodes: [],
       qualityCheckResult: null,
       qualityIssueCodes: [],
+      receiptLogisticsStaffName: null,
       receiptReason: null,
       receiptRemarks: null,
       receiptStatus: null,

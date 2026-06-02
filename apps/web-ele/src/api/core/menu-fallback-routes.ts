@@ -204,7 +204,7 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
           component: '/modules/specimen-workflow/views/SpecimenReceiptView',
           meta: {
             icon: 'carbon:archive',
-            title: '病理接收',
+            title: '标本接收',
           },
           name: 'PathologyReceipt',
           path: '/workflow/pathology-receipt',
@@ -319,7 +319,7 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
           component: '/modules/specimen-workflow/views/SpecimenReceiptView',
           meta: {
             icon: 'carbon:archive',
-            title: '病理接收',
+            title: '标本接收',
           },
           name: 'PathologyReceipt',
           path: '/workflow/pathology-receipt',
@@ -329,14 +329,16 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
             '/modules/technical-workflow/views/TechnicalSpecimenRegistrationView',
           meta: {
             icon: 'carbon:data-table',
-            title: '标本登记',
+            title: '登记接收工作站',
           },
           name: 'TechnicalSpecimenRegistration',
           path: '/technical-workflow/specimen-registration',
         },
         {
-          component: '/modules/technical-workflow/views/TechnicalTasksView',
+          component:
+            '/modules/technical-workflow/views/TechnicalTasksView',
           meta: {
+            hideInMenu: true,
             icon: 'carbon:task',
             title: '任务池',
           },
@@ -346,6 +348,7 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
         {
           component: '/modules/technical-workflow/views/FrozenWorkstationView',
           meta: {
+            hideInMenu: true,
             icon: 'carbon:snowflake',
             title: '冰冻工作台',
           },
@@ -357,7 +360,7 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
             '/modules/technical-workflow/views/GrossingWorkstationView',
           meta: {
             icon: 'carbon:scan',
-            title: '取材描写',
+            title: '取材描写工作站',
           },
           name: 'GrossingWorkstation',
           path: '/technical-workflow/grossing',
@@ -396,10 +399,60 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
             '/modules/technical-workflow/views/StainingWorkstationView',
           meta: {
             icon: 'carbon:color-palette',
-            title: '染色出片',
+            title: '染色出片工作站',
           },
           name: 'StainingWorkstation',
           path: '/technical-workflow/staining',
+        },
+        {
+          component:
+            '/modules/technical-workflow/views/RoutineOrderWorkstationView',
+          meta: {
+            icon: 'carbon:document-tasks',
+            title: '常规医嘱工作站',
+          },
+          name: 'RoutineOrderWorkstation',
+          path: '/technical-workflow/routine-orders',
+        },
+        {
+          component:
+            '/modules/technical-workflow/views/SpecialOrderWorkstationView',
+          meta: {
+            icon: 'carbon:document-requirements',
+            title: '特检医嘱工作站',
+          },
+          name: 'SpecialOrderWorkstation',
+          path: '/technical-workflow/special-orders',
+        },
+        {
+          component:
+            '/modules/technical-workflow/views/IhcWorkstationView',
+          meta: {
+            icon: 'carbon:chemistry',
+            title: '免疫组化工作站',
+          },
+          name: 'IhcWorkstation',
+          path: '/technical-workflow/ihc',
+        },
+        {
+          component:
+            '/modules/technical-workflow/views/CytologyWorkstationView',
+          meta: {
+            icon: 'carbon:microscope',
+            title: '细胞学工作站',
+          },
+          name: 'CytologyWorkstation',
+          path: '/technical-workflow/cytology',
+        },
+        {
+          component:
+            '/modules/technical-workflow/views/LiquidCytologyWorkstationView',
+          meta: {
+            icon: 'lucide:droplets',
+            title: '液基细胞学工作站',
+          },
+          name: 'LiquidCytologyWorkstation',
+          path: '/technical-workflow/liquid-cytology',
         },
         {
           component: '/modules/technical-workflow/views/ReworkWorkstationView',
@@ -445,7 +498,7 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
           component: '/modules/doctor-workflow/views/DiagnosisWorkbenchView',
           meta: {
             icon: 'carbon:workspace',
-            title: '诊断工作台',
+            title: '诊断平台工作站',
           },
           name: 'DiagnosisWorkbench',
           path: '/doctor-workflow/workbench',
@@ -503,7 +556,7 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
       meta: {
         icon: 'carbon:archive',
         order: 160,
-        title: '归档运营管理',
+        title: '归档与借记',
       },
       name: 'OperationSupportRoot',
       path: '/operation-support',
@@ -519,22 +572,62 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
           path: '/operation-support/archive',
         },
         {
-          component: '/modules/operation-support/views/ReagentLedgerView',
+          component: '/views/_core/fallback/MenuPlaceholderView',
           meta: {
-            icon: 'carbon:chemistry',
-            title: '试剂台账',
+            icon: 'carbon:bookmark',
+            title: '借记管理',
           },
-          name: 'ReagentLedger',
-          path: '/operation-support/reagents',
+          name: 'BorrowManagement',
+          path: '/operation-support/borrow',
         },
+      ],
+    },
+    {
+      component: 'BasicLayout',
+      meta: {
+        icon: 'carbon:tool-kit',
+        order: 170,
+        title: '设备及试剂管理',
+      },
+      name: 'OperationResourceRoot',
+      path: '/operation-resources',
+      redirect: '/operation-resources/equipment',
+      children: [
         {
           component: '/modules/operation-support/views/EquipmentLedgerView',
           meta: {
             icon: 'carbon:tools',
-            title: '设备台账',
+            title: '仪器设备管理',
           },
-          name: 'EquipmentLedger',
-          path: '/operation-support/equipment',
+          name: 'EquipmentManagement',
+          path: '/operation-resources/equipment',
+        },
+        {
+          component: '/modules/operation-support/views/ReagentLedgerView',
+          meta: {
+            icon: 'carbon:chemistry',
+            title: '试剂耗材管理',
+          },
+          name: 'ReagentConsumableManagement',
+          path: '/operation-resources/reagents',
+        },
+        {
+          component: '/views/_core/fallback/MenuPlaceholderView',
+          meta: {
+            icon: 'carbon:warning-alt',
+            title: '危化品管理',
+          },
+          name: 'HazardousChemicalsManagement',
+          path: '/operation-resources/hazardous-chemicals',
+        },
+        {
+          component: '/views/_core/fallback/MenuPlaceholderView',
+          meta: {
+            icon: 'carbon:trash-can',
+            title: '医疗废物管理',
+          },
+          name: 'MedicalWasteManagement',
+          path: '/operation-resources/medical-waste',
         },
       ],
     },
@@ -543,7 +636,7 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
       meta: {
         icon: 'carbon:data-base',
         order: 190,
-        title: '集成与统计',
+        title: '数据统计与分析',
       },
       name: 'M6Root',
       path: '/m6',
@@ -555,46 +648,37 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
             hideInBreadcrumb: true,
             hideInMenu: true,
             hideInTab: true,
-            title: 'M6 入口',
+            title: '数据统计入口',
           },
           name: 'M6Entry',
           path: '/m6/entry',
         },
         {
-          component: '/modules/m6-management/views/IntegrationManagementView',
+          component: '/views/_core/fallback/MenuPlaceholderView',
           meta: {
-            icon: 'carbon:connect',
-            title: '集成任务',
+            icon: 'carbon:chart-line',
+            title: '质控指标统计',
           },
-          name: 'IntegrationManagement',
-          path: '/m6/integration',
+          name: 'QualityIndicatorStatistics',
+          path: '/m6/quality-indicators',
         },
         {
-          component: '/modules/m6-management/views/BillingManagementView',
+          component: '/views/_core/fallback/MenuPlaceholderView',
           meta: {
-            icon: 'carbon:currency',
-            title: '收费管理',
+            icon: 'carbon:chart-column',
+            title: '管理指标统计',
           },
-          name: 'BillingManagement',
-          path: '/m6/billing',
-        },
-        {
-          component: '/modules/m6-management/views/HistoricalReportsView',
-          meta: {
-            icon: 'carbon:document',
-            title: '历史报告',
-          },
-          name: 'HistoricalReports',
-          path: '/m6/history',
+          name: 'ManagementIndicatorStatistics',
+          path: '/m6/management-indicators',
         },
         {
           component: '/modules/m6-statistics/views/StatisticsAnalysisView',
           meta: {
             icon: 'carbon:chart-line',
-            title: '统计分析',
+            title: '自定义统计分析',
           },
-          name: 'StatisticsAnalysis',
-          path: '/m6/statistics',
+          name: 'CustomStatisticsAnalysis',
+          path: '/m6/custom-analysis',
         },
       ],
     },

@@ -9,6 +9,7 @@ import { useUserStore } from '@vben/stores';
 
 import {
   ElAlert,
+  ElButton,
   ElInput,
   ElMessage,
   ElPagination,
@@ -17,6 +18,7 @@ import {
 import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
 
 import {
+  createTransportOrder,
   listSpecimenOutbounds,
   outboundTransportOrder,
   quickOutboundSpecimen,
@@ -31,9 +33,15 @@ import {
 } from '../utils/operating-room-display';
 import {
   buildTransportOrderOutboundRequest,
+  canSelectSpecimenOutboundRow,
   createDefaultTransportOutboundFormState,
   normalizeRouteQueryValue,
+  resolveTransportSelectionValidationMessage,
+  splitTransportRowsByTransportOrder,
 } from '../utils/transport-handover';
+
+const PATHOLOGY_DEPARTMENT_ID = 'DEPT_PATH';
+const PATHOLOGY_DEPARTMENT_NAME = '病理科';
 
 withDefaults(
   defineProps<{
@@ -52,6 +60,7 @@ const loading = ref(false);
 const outboundLoading = ref(false);
 const items = ref<SpecimenOutboundListItem[]>([]);
 const operatingRoomNameMap = ref<ReadonlyMap<string, string>>(new Map());
+const selectedRows = ref<SpecimenOutboundListItem[]>([]);
 const total = ref(0);
 
 const filters = reactive({
@@ -113,7 +122,11 @@ async function maybeSubmitQuickOutbound(records: SpecimenOutboundListItem[]) {
   if (!matchedRecord) {
     return;
   }
-  if (!matchedRecord.transportOrderId || matchedRecord.outboundAt) {
+  if (matchedRecord.outboundAt) {
+    return;
+  }
+  if (!matchedRecord.transportOrderId) {
+    await submitQuickOutboundBySpecimenNo(matchedRecord.specimenNo);
     return;
   }
 
@@ -127,6 +140,7 @@ async function loadOutbounds(options: { autoSubmitQuickOutbound?: boolean } = {}
     await ensureOperatingRoomNameMapLoaded();
     const result = await listSpecimenOutbounds(buildListQuery());
     items.value = normalizeOutboundItems(result.items);
+    selectedRows.value = [];
     total.value = result.total;
     if (options.autoSubmitQuickOutbound) {
       await maybeSubmitQuickOutbound(items.value);
@@ -135,6 +149,7 @@ async function loadOutbounds(options: { autoSubmitQuickOutbound?: boolean } = {}
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
     items.value = [];
+    selectedRows.value = [];
     total.value = 0;
     return null;
   } finally {
@@ -151,6 +166,10 @@ function handlePageChange() {
   void loadOutbounds();
 }
 
+function handleSelectionChange(rows: SpecimenOutboundListItem[]) {
+  selectedRows.value = rows;
+}
+
 function handleOutboundUserChange(user: null | { id: string; name: string }) {
   outboundForm.outboundUserId = user?.id ?? '';
   outboundForm.outboundUserName = user?.name ?? '';
@@ -158,6 +177,10 @@ function handleOutboundUserChange(user: null | { id: string; name: string }) {
 
 async function submitQuickOutbound(record: SpecimenOutboundListItem) {
   if (!ensureOutboundOperatorSelected()) {
+    return;
+  }
+  if (!record.transportOrderId) {
+    await submitQuickOutboundBySpecimenNo(record.specimenNo);
     return;
   }
 
@@ -212,6 +235,74 @@ async function submitQuickOutboundBySpecimenNo(specimenNo: string) {
   }
 }
 
+async function handleBatchTransport() {
+  if (!ensureOutboundOperatorSelected()) {
+    return;
+  }
+
+  const validationMessage = resolveTransportSelectionValidationMessage(
+    selectedRows.value,
+  );
+  if (validationMessage) {
+    ElMessage.warning(validationMessage);
+    return;
+  }
+
+  const { existingTransportOrderIds, rowsWithoutTransportOrder } =
+    splitTransportRowsByTransportOrder(selectedRows.value);
+  const nextTransportOrderIds = [...existingTransportOrderIds];
+
+  outboundLoading.value = true;
+  pageError.value = '';
+  try {
+    if (rowsWithoutTransportOrder.length > 0) {
+      const [referenceRow] = rowsWithoutTransportOrder;
+      const specimenBarcodes = rowsWithoutTransportOrder
+        .map((row) => row.barcode?.trim() ?? '')
+        .filter(Boolean);
+
+      if (
+        !referenceRow ||
+        specimenBarcodes.length !== rowsWithoutTransportOrder.length
+      ) {
+        ElMessage.warning('所选标本缺少条码，无法转运');
+        return;
+      }
+
+      const createdOrder = await createTransportOrder({
+        applicationId: referenceRow.applicationId,
+        handoverDepartmentId:
+          referenceRow.submittingDepartmentId?.trim() || null,
+        handoverDepartmentName:
+          referenceRow.submittingDepartmentName?.trim() || '-',
+        handoverUserId: outboundForm.outboundUserId.trim() || null,
+        handoverUserName: outboundForm.outboundUserName.trim(),
+        receiverDepartmentId: PATHOLOGY_DEPARTMENT_ID,
+        receiverDepartmentName: PATHOLOGY_DEPARTMENT_NAME,
+        remarks: outboundForm.remarks.trim() || null,
+        specimenBarcodes,
+        terminalCode: outboundForm.terminalCode.trim() || null,
+      });
+      nextTransportOrderIds.push(createdOrder.id);
+    }
+
+    for (const transportOrderId of nextTransportOrderIds) {
+      await outboundTransportOrder(
+        transportOrderId,
+        buildTransportOrderOutboundRequest(outboundForm),
+      );
+    }
+
+    selectedRows.value = [];
+    ElMessage.success('标本转运成功');
+    await loadOutbounds();
+  } catch (error) {
+    pageError.value = getWorkflowPageErrorMessage(error);
+  } finally {
+    outboundLoading.value = false;
+  }
+}
+
 watch(
   () => route.query.applicationId,
   (applicationIdValue) => {
@@ -243,6 +334,12 @@ watch(
                 total
               }}</span>
             </div>
+            <div>
+              已选
+              <span class="text-xl font-semibold text-primary">{{
+                selectedRows.length
+              }}</span>
+            </div>
           </div>
 
           <div class="flex flex-wrap items-center gap-2">
@@ -261,11 +358,21 @@ watch(
                 @change="handleOutboundUserChange"
               />
             </div>
+            <ElButton
+              :disabled="
+                selectedRows.length === 0 ||
+                selectedRows.some((row) => !canSelectSpecimenOutboundRow(row))
+              "
+              type="primary"
+              @click="handleBatchTransport"
+            >
+              转运
+            </ElButton>
             <div
               v-if="outboundLoading"
               class="text-sm text-[color:var(--el-color-primary)]"
             >
-              正在执行出库...
+              正在执行转运...
             </div>
           </div>
 
@@ -274,6 +381,7 @@ watch(
             :loading="loading"
             :page="filters.page"
             :size="filters.size"
+            @selection-change="handleSelectionChange"
           />
 
           <div class="mt-4 flex justify-end">

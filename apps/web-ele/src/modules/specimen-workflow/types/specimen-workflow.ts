@@ -28,6 +28,14 @@ export interface ApplicationCreateResult {
   id: string;
 }
 
+export interface ApplicationPatientLookupResult {
+  patientAge: null | string;
+  patientGender: null | string;
+  patientId: string;
+  patientIdentifier: string;
+  patientName: null | string;
+}
+
 export type ApplicationUpdateRequest = ApplicationCreateRequest;
 
 export interface ImportClinicalApplicationRequest {
@@ -111,6 +119,7 @@ export interface ApplicationDetailView {
   patientAge: null | string;
   patientGender: null | string;
   patientId: null | string;
+  patientIdentifier?: null | string;
   patientCheckStatus?: null | string;
   patientName: null | string;
   recentEvents: TrackingEventView[];
@@ -632,6 +641,7 @@ export interface SpecimenOutboundListQuery {
 export interface SpecimenOutboundListItem {
   applicationId: string;
   applicationNo: string;
+  barcode: null | string;
   inpatientNo: null | string;
   outboundAt: null | string;
   outboundUserName: null | string;
@@ -644,8 +654,10 @@ export interface SpecimenOutboundListItem {
   specimenName: string;
   specimenNo: string;
   specimenStatus: null | string;
+  submittingDepartmentId: null | string;
+  submittingDepartmentName: null | string;
   surgeryName: null | string;
-  transportOrderId: string;
+  transportOrderId: null | string;
 }
 
 export interface SpecimenOutboundPage {
@@ -667,6 +679,7 @@ export interface SpecimenReceiptItemRequest {
 
 export interface SpecimenReceiptRequest {
   items: SpecimenReceiptItemRequest[];
+  logisticsStaffName: string;
   receivedByName: string;
   receivedByUserId?: null | string;
   terminalCode?: null | string;

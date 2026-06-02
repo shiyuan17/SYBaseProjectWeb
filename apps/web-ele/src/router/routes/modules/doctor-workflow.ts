@@ -75,7 +75,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         meta: {
           authority: [M4_PERMISSION_CODES.WORKBENCH_QUERY],
           icon: 'carbon:workspace',
-          title: '诊断工作台',
+          title: '诊断平台工作站',
         },
         name: 'DiagnosisWorkbench',
         path: '/doctor-workflow/workbench',

@@ -156,7 +156,7 @@ export function findTransportOrderById(transportOrderId: string) {
 
 export function getTransportOrderBySpecimenId(specimenId: string) {
   return (
-    state.transportOrders.find(
+    [...state.transportOrders].reverse().find(
       (item) =>
         item.specimenIds.includes(specimenId) && item.status !== 'CANCELLED',
     ) ?? null
@@ -423,16 +423,13 @@ export function mapSpecimenOutboundItem(
   const application = getApplicationById(specimen.applicationId);
   const order = getTransportOrderBySpecimenId(specimen.id);
 
-  if (!order) {
-    throw new Error(`标本 ${specimen.specimenNo} 未关联转运单`);
-  }
-
   return {
     applicationId: application.id,
     applicationNo: application.applicationNo,
+    barcode: specimen.barcode,
     inpatientNo: normalizeText(application.applicationNo) || null,
-    outboundAt: order.handedOverAt,
-    outboundUserName: order.outboundUserName ?? null,
+    outboundAt: order?.handedOverAt ?? null,
+    outboundUserName: order?.outboundUserName ?? null,
     patientGender: application.patientGender ?? null,
     patientId: application.patientId ?? null,
     patientName: application.patientName,
@@ -442,8 +439,10 @@ export function mapSpecimenOutboundItem(
     specimenName: specimen.specimenName,
     specimenNo: specimen.specimenNo,
     specimenStatus: specimen.specimenStatus,
+    submittingDepartmentId: application.submittingDepartmentId,
+    submittingDepartmentName: application.submittingDepartmentName,
     surgeryName: application.submittingDepartmentName ?? null,
-    transportOrderId: order.id,
+    transportOrderId: order?.id ?? null,
   };
 }
 
@@ -791,6 +790,10 @@ export function mapApplicationTrackingView(
     deletable: operationState.deletable,
     editable: operationState.editable,
     fixationCompletedAt,
+    patientIdentifier:
+      normalizeText(application.patientIdentifier) ||
+      normalizeText(application.patientId) ||
+      null,
     patientCheckStatus: application.patientCheckStatus ?? 'UNKNOWN',
     operationDisabledReason: operationState.operationDisabledReason,
     receiptAbnormalSummary: buildReceiptAbnormalSummary(specimens),
@@ -893,7 +896,7 @@ export function createReceiptResult(
   return {
     batchAbnormalFlag: batchMetrics.batchAbnormalFlag,
     caseId: `CASE-${application.applicationNo.slice(-4)}`,
-    pathologyNo: `PA-${application.applicationNo.slice(-4)}`,
+    pathologyNo: null,
     receiptAbnormalSummary: buildReceiptAbnormalSummary(specimens),
     receiptStatus:
       resolveApplicationStatus(application, specimens) ?? 'SUBMITTED',

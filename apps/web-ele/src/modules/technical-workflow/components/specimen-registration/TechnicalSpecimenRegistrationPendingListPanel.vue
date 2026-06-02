@@ -3,9 +3,24 @@ import type { PendingTechnicalSpecimenRegistrationItem } from '../../types/techn
 
 import { computed } from 'vue';
 
-import { ElButton, ElInput, ElPagination } from 'element-plus';
+import {
+  ElButton,
+  ElDatePicker,
+  ElInput,
+  ElOption,
+  ElPagination,
+  ElSelect,
+} from 'element-plus';
+
+import { APPLICATION_TYPE_OPTIONS } from '#/modules/specimen-workflow/constants';
+
+import {
+  formatPendingPathologyNo,
+  formatSpecimenRegistrationStatus,
+} from '../../utils/format';
 
 const props = defineProps<{
+  applicationType: string;
   items: PendingTechnicalSpecimenRegistrationItem[];
   keyword: string;
   loading?: boolean;
@@ -20,6 +35,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   search: [];
   select: [row: PendingTechnicalSpecimenRegistrationItem];
+  'update:applicationType': [value: string];
   'update:keyword': [value: string];
   'update:page': [value: number];
   'update:receivedFrom': [value: string];
@@ -36,6 +52,23 @@ const currentSize = computed({
   get: () => props.size,
   set: (value: number) => emit('update:size', value),
 });
+
+const currentApplicationType = computed({
+  get: () => props.applicationType,
+  set: (value: string) => emit('update:applicationType', value),
+});
+
+const receivedDateRange = computed({
+  get(): string[] {
+    return props.receivedFrom || props.receivedTo
+      ? [props.receivedFrom, props.receivedTo]
+      : [];
+  },
+  set(value: string[]) {
+    emit('update:receivedFrom', value[0] ?? '');
+    emit('update:receivedTo', value[1] ?? '');
+  },
+});
 </script>
 
 <template>
@@ -46,26 +79,36 @@ const currentSize = computed({
         按接收日期和关键字筛选，选择病例后刷新中间登记工作区。
       </p>
       <div class="mt-4 grid gap-2">
-        <div class="grid gap-2 md:grid-cols-2">
-          <label class="text-xs text-slate-500">
-            <span class="mb-1 block">接收开始日期</span>
-            <input
-              :value="receivedFrom"
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-              type="date"
-              @input="emit('update:receivedFrom', ($event.target as HTMLInputElement).value)"
+        <label class="text-xs text-slate-500">
+          <span class="mb-1 block">接收日期</span>
+          <ElDatePicker
+            v-model="receivedDateRange"
+            end-placeholder="结束日期"
+            range-separator="至"
+            start-placeholder="开始日期"
+            style="width: 100%"
+            type="daterange"
+            value-format="YYYY-MM-DD"
+          />
+        </label>
+        <label class="text-xs text-slate-500">
+          <span class="mb-1 block">送检类型</span>
+          <ElSelect
+            v-model="currentApplicationType"
+            clearable
+            data-testid="application-type-filter"
+            placeholder="全部送检类型"
+            style="width: 100%"
+          >
+            <ElOption label="全部送检类型" value="" />
+            <ElOption
+              v-for="item in APPLICATION_TYPE_OPTIONS"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
             />
-          </label>
-          <label class="text-xs text-slate-500">
-            <span class="mb-1 block">接收结束日期</span>
-            <input
-              :value="receivedTo"
-              class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-              type="date"
-              @input="emit('update:receivedTo', ($event.target as HTMLInputElement).value)"
-            />
-          </label>
-        </div>
+          </ElSelect>
+        </label>
         <div class="flex gap-2">
           <ElInput
             :model-value="keyword"
@@ -105,22 +148,15 @@ const currentSize = computed({
         <div class="flex items-start justify-between gap-3">
           <div>
             <div class="text-sm font-semibold text-slate-900">
-              {{ item.pathologyNo || '-' }}
+              {{ formatPendingPathologyNo(item.pathologyNo) }}
             </div>
             <div class="mt-1 text-xs text-slate-500">
-              {{ item.patientName || '-' }} / {{ item.patientId || '-' }}
+              {{ item.patientName || '-' }}
             </div>
           </div>
           <span class="rounded-full bg-white px-2 py-1 text-[11px] text-slate-500">
-            {{ item.registrationStatus || '-' }}
+            {{ formatSpecimenRegistrationStatus(item.registrationStatus) }}
           </span>
-        </div>
-        <div class="mt-3 grid gap-1 text-xs text-slate-500">
-          <div>住院号：{{ item.inpatientNo || '-' }}</div>
-          <div>送检类型：{{ item.applicationType || '-' }}</div>
-          <div>申请科室：{{ item.submittingDepartmentName || '-' }}</div>
-          <div>检查项目：{{ item.checkItem || '-' }}</div>
-          <div>接收时间：{{ item.receivedAt || '-' }}</div>
         </div>
       </button>
     </div>

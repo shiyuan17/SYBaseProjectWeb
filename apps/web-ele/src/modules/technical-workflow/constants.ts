@@ -25,10 +25,15 @@ export const TECHNICAL_WORKFLOW_ROUTE_META: Record<
   | 'EMBEDDING'
   | 'ENTRY'
   | 'FROZEN'
+  | 'CYTOLOGY'
   | 'GROSSING'
+  | 'IHC'
+  | 'LIQUID_CYTOLOGY'
   | 'REWORK'
+  | 'ROUTINE_ORDER'
   | 'SPECIMEN_REGISTRATION'
   | 'SLICING'
+  | 'SPECIAL_ORDER'
   | 'STAINING'
   | 'TASKS'
   | 'TRACKING',
@@ -81,7 +86,7 @@ export const TECHNICAL_WORKFLOW_ROUTE_META: Record<
     key: 'GROSSING',
     name: 'GrossingWorkstation',
     path: '/technical-workflow/grossing',
-    title: '取材描写',
+    title: '取材描写工作站',
   },
   REWORK: {
     authorityCode: M3_PERMISSION_CODES.REWORK,
@@ -101,7 +106,7 @@ export const TECHNICAL_WORKFLOW_ROUTE_META: Record<
     key: 'SPECIMEN_REGISTRATION',
     name: 'TechnicalSpecimenRegistration',
     path: '/technical-workflow/specimen-registration',
-    title: '标本登记',
+    title: '登记接收工作站',
   },
   SLICING: {
     authorityCode: M3_PERMISSION_CODES.SLICING,
@@ -121,7 +126,57 @@ export const TECHNICAL_WORKFLOW_ROUTE_META: Record<
     key: 'STAINING',
     name: 'StainingWorkstation',
     path: '/technical-workflow/staining',
-    title: '染色出片',
+    title: '染色出片工作站',
+  },
+  ROUTINE_ORDER: {
+    authorityCode: M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY,
+    chain: REGULAR_CHAIN,
+    icon: 'carbon:document-tasks',
+    isVisibleInMenu: true,
+    key: 'ROUTINE_ORDER',
+    name: 'RoutineOrderWorkstation',
+    path: '/technical-workflow/routine-orders',
+    title: '常规医嘱工作站',
+  },
+  SPECIAL_ORDER: {
+    authorityCode: M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY,
+    chain: REGULAR_CHAIN,
+    icon: 'carbon:document-requirements',
+    isVisibleInMenu: true,
+    key: 'SPECIAL_ORDER',
+    name: 'SpecialOrderWorkstation',
+    path: '/technical-workflow/special-orders',
+    title: '特检医嘱工作站',
+  },
+  IHC: {
+    authorityCode: M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY,
+    chain: REGULAR_CHAIN,
+    icon: 'carbon:chemistry',
+    isVisibleInMenu: true,
+    key: 'IHC',
+    name: 'IhcWorkstation',
+    path: '/technical-workflow/ihc',
+    title: '免疫组化工作站',
+  },
+  CYTOLOGY: {
+    authorityCode: M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY,
+    chain: REGULAR_CHAIN,
+    icon: 'carbon:microscope',
+    isVisibleInMenu: true,
+    key: 'CYTOLOGY',
+    name: 'CytologyWorkstation',
+    path: '/technical-workflow/cytology',
+    title: '细胞学工作站',
+  },
+  LIQUID_CYTOLOGY: {
+    authorityCode: M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY,
+    chain: REGULAR_CHAIN,
+    icon: 'lucide:droplets',
+    isVisibleInMenu: true,
+    key: 'LIQUID_CYTOLOGY',
+    name: 'LiquidCytologyWorkstation',
+    path: '/technical-workflow/liquid-cytology',
+    title: '液基细胞学工作站',
   },
   TASKS: {
     authorityCode: M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY,

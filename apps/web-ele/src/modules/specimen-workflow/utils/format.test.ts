@@ -5,7 +5,10 @@ import { formatCurrentNode } from './format';
 describe('format', () => {
   it('formats known current node values to Chinese labels', () => {
     expect(formatCurrentNode('REMOVAL')).toBe('离体确认');
+    expect(formatCurrentNode('SPECIMEN_REGISTER')).toBe('标本登记');
+    expect(formatCurrentNode('SPECIMEN_REGISTRATION')).toBe('标本登记');
     expect(formatCurrentNode('SUBMITTED')).toBe('已提交');
+    expect(formatCurrentNode('TRANSPORT_HANDOVER')).toBe('转运交接');
   });
 
   it('returns a dash for empty current node values', () => {

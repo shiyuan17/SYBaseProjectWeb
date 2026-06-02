@@ -3,6 +3,7 @@ import type {
   ApplicationCreateResult,
   ApplicationDetailView,
   ApplicationListQuery,
+  ApplicationPatientLookupResult,
   ApplicationPage,
   ApplicationUpdateRequest,
   DuplicateApplicationCheckQuery,
@@ -17,6 +18,7 @@ import {
   deleteApplicationMock,
   duplicateCheckApplicationsMock,
   getApplicationDetailMock,
+  lookupApplicationPatientByIdentifierMock,
   importClinicalApplicationMock,
   listApplicationsMock,
   updateApplicationMock,
@@ -86,6 +88,29 @@ export async function duplicateCheckApplications(
     '/v1/applications/duplicate-check',
     { params },
   );
+}
+
+export async function lookupApplicationPatientByIdentifier(
+  identifier: string,
+): Promise<ApplicationPatientLookupResult | null> {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return lookupApplicationPatientByIdentifierMock(identifier);
+  }
+  try {
+    return await requestClient.get<ApplicationPatientLookupResult>(
+      '/v1/applications/patient-lookup',
+      {
+        params: { identifier: identifier.trim() },
+      },
+    );
+  } catch (error) {
+    const status = (error as { response?: { status?: number } }).response
+      ?.status;
+    if (status === 404) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 export async function importClinicalApplication(

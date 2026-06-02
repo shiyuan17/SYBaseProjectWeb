@@ -1,6 +1,7 @@
 import type {
   PendingTransportOrderItem,
   PendingTransportOrderQuery,
+  SpecimenOutboundListItem,
   TransportOrderHandoverRequest,
   TransportOrderOutboundRequest,
   TransportOrderOperatorRequest,
@@ -132,6 +133,49 @@ export function resolveTargetTransportOrders(
 
 export function canHandoverTransportOrder(order: PendingTransportOrderItem) {
   return ['PENDING', 'PRINTED'].includes(order.status);
+}
+
+export function canSelectSpecimenOutboundRow(row: SpecimenOutboundListItem) {
+  return (
+    !row.outboundAt &&
+    !['RECEIVED', 'REJECTED', 'RETURNED'].includes(row.specimenStatus ?? '')
+  );
+}
+
+export function resolveTransportSelectionValidationMessage(
+  rows: SpecimenOutboundListItem[],
+) {
+  if (rows.length === 0) {
+    return '请先选择需要转运的标本';
+  }
+
+  const applicationIds = new Set(rows.map((row) => row.applicationId));
+  if (applicationIds.size > 1) {
+    return '仅支持同一申请单内的标本一起转运';
+  }
+
+  if (rows.some((row) => !canSelectSpecimenOutboundRow(row))) {
+    return '仅可转运未出库且未到接收终态的标本';
+  }
+
+  return null;
+}
+
+export function splitTransportRowsByTransportOrder(
+  rows: SpecimenOutboundListItem[],
+) {
+  const existingTransportOrderIds = [
+    ...new Set(
+      rows
+        .map((row) => row.transportOrderId?.trim())
+        .filter((value): value is string => Boolean(value)),
+    ),
+  ];
+
+  return {
+    existingTransportOrderIds,
+    rowsWithoutTransportOrder: rows.filter((row) => !row.transportOrderId),
+  };
 }
 
 export function resolveSpecimenNoQuickHandoverTarget(

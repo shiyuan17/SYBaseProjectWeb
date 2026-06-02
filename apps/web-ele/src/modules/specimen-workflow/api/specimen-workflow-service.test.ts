@@ -23,6 +23,7 @@ import {
   listPendingTransportOrders,
   listSpecimens,
   listSpecimenVerificationRecords,
+  lookupApplicationPatientByIdentifier,
   lookupApplicationForRegistration,
   mapPendingSpecimenPageResponse,
   mapSpecimenRemovalPageResponse,
@@ -59,6 +60,18 @@ describe('specimen-workflow-service mock flow', () => {
     expect(detail.specimens).toHaveLength(2);
     expect(detail.receiptAbnormalSummary).toContain('退回');
     expect(detail.unreceivedCount).toBe(2);
+  });
+
+  it('looks up patient info by identifier in mock mode', async () => {
+    const patient = await lookupApplicationPatientByIdentifier('P-001');
+
+    expect(patient).toEqual({
+      patientAge: expect.any(String),
+      patientGender: expect.any(String),
+      patientId: 'P-001',
+      patientIdentifier: 'P-001',
+      patientName: expect.any(String),
+    });
   });
 
   it('updates and logically deletes applications before downstream starts', async () => {
@@ -435,6 +448,7 @@ describe('specimen-workflow-service mock flow', () => {
           specimenBarcode: 'BC-006-01',
         },
       ],
+      logisticsStaffName: '物流员甲',
       receivedByName: '接收员甲',
       receivedByUserId: 'USR-PA-01',
       terminalCode: 'TERM-REC-01',
@@ -503,7 +517,7 @@ describe('specimen-workflow-service mock flow', () => {
     expect(retryResult.allSuccessful).toBe(true);
 
     const reprintEvent = await reprintApplicationForm('APP-006', {
-      remarks: '病理接收页补打',
+      remarks: '标本接收页补打',
       terminalCode: 'TERM-REC-01',
     });
     expect(reprintEvent.eventContent).toBe('补打印申请单');

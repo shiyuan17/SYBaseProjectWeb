@@ -18,6 +18,7 @@ const {
   mockCreateApplication,
   mockDuplicateCheckApplications,
   mockGetApplicationDetail,
+  mockLookupApplicationPatientByIdentifier,
   mockUpdateApplication,
   mockUserStore,
 } = vi.hoisted(() => ({
@@ -30,6 +31,7 @@ const {
   mockCreateApplication: vi.fn(),
   mockDuplicateCheckApplications: vi.fn(),
   mockGetApplicationDetail: vi.fn(),
+  mockLookupApplicationPatientByIdentifier: vi.fn(),
   mockUpdateApplication: vi.fn(),
   mockUserStore: {
     userInfo: {
@@ -72,6 +74,7 @@ vi.mock('../api/specimen-workflow-service', () => ({
   duplicateCheckApplications: mockDuplicateCheckApplications,
   getApplicationDetail: mockGetApplicationDetail,
   importClinicalApplication: vi.fn(),
+  lookupApplicationPatientByIdentifier: mockLookupApplicationPatientByIdentifier,
   updateApplication: mockUpdateApplication,
 }));
 
@@ -122,6 +125,7 @@ function buildApplicationDetail() {
     patientAge: '45',
     patientGender: 'M',
     patientId: 'PAT-001',
+    patientIdentifier: 'PATIENT-NO-001',
     patientName: '张三',
     recentEvents: [],
     remarks: null,
@@ -174,6 +178,7 @@ describe('ApplicationManageDialog', () => {
     mockCreateApplication.mockReset();
     mockDuplicateCheckApplications.mockReset();
     mockGetApplicationDetail.mockReset();
+    mockLookupApplicationPatientByIdentifier.mockReset();
     mockUpdateApplication.mockReset();
     document.body.innerHTML = '';
   });
@@ -201,6 +206,13 @@ describe('ApplicationManageDialog', () => {
     expect(
       root.querySelector('input[placeholder="请选择送检日期"]'),
     ).not.toBeNull();
+    expect(
+      (
+        root.querySelector(
+          'input[placeholder="患者编号 / 门诊号 / 住院号"]',
+        ) as HTMLInputElement | null
+      )?.value,
+    ).toBe('PATIENT-NO-001');
 
     const saveButton = [...root.querySelectorAll('button')].find(
       (button) => button.textContent?.trim() === '保存',

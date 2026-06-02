@@ -5,6 +5,7 @@ export {
   getApplicationDetail,
   importClinicalApplication,
   listApplications,
+  lookupApplicationPatientByIdentifier,
   updateApplication,
 } from './internal/specimen-workflow-application';
 

@@ -53,9 +53,9 @@ const emit = defineEmits<{
     <div class="border-b border-slate-200 px-5 py-4">
       <div class="flex items-start justify-between gap-3">
         <div>
-          <h3 class="text-base font-semibold text-slate-900">包埋处理区</h3>
+          <h3 class="text-base font-semibold text-slate-900">蜡块信息</h3>
           <p class="mt-1 text-sm text-slate-500">
-            同屏确认蜡块来源、切片提示和评价信息，减少反复弹窗切换。
+            核对蜡块来源、切片提示和包埋完成信息。
           </p>
         </div>
         <ElTag :type="active ? 'success' : 'info'">

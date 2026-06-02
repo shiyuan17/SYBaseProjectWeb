@@ -329,7 +329,7 @@ describe('TrackingApplicationListView', () => {
     expect(root.querySelector('[data-tab-name="SPEC-003"]')?.textContent).toBe(
       'SP-003',
     );
-    expect(root.textContent).toContain('回到病理接收处理');
+    expect(root.textContent).toContain('回到标本接收处理');
     expect(root.textContent).toContain('异常类型：已拒收');
     expect(root.textContent).toContain('质控结果：不合格');
     expect(root.textContent).toContain('问题代码：CONTAINER_DAMAGE');
@@ -363,7 +363,7 @@ describe('TrackingApplicationListView', () => {
     });
 
     const receiptButton = [...root.querySelectorAll<HTMLButtonElement>('button')].find(
-      (button) => button.textContent?.includes('回到病理接收处理'),
+      (button) => button.textContent?.includes('回到标本接收处理'),
     );
     receiptButton?.click();
     await flushAll();
