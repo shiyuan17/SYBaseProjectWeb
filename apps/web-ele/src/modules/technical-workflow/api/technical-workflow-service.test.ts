@@ -20,6 +20,7 @@ import {
   getEmbeddingWorkstationSummary,
   getGrossingWorkbenchContext,
   getSlicingWorkbench,
+  getTechnicalSpecimenRegistrationApplicationWorkbench,
   getTechnicalTracking,
   getTechnicalSpecimenRegistrationDetail,
   listPendingTechnicalSpecimenRegistrations,
@@ -32,6 +33,8 @@ import {
   mapTechnicalSpecimenRegistrationDetailResponse,
   mapTechnicalTrackingResponse,
   releaseTechnicalTask,
+  saveTechnicalSpecimenRegistrationApplicationWorkbenchPatientInfo,
+  saveTechnicalSpecimenRegistrationDetailSections,
   startDehydrationBatch,
   startEmbedding,
   startGrossing,
@@ -46,6 +49,7 @@ vi.mock('#/api/request', () => ({
     get: vi.fn(),
     post: vi.fn(),
     put: vi.fn(),
+    request: vi.fn(),
     upload: vi.fn(),
   },
 }));
@@ -55,6 +59,7 @@ const requestClientMock = requestClient as unknown as {
   get: Mock;
   post: Mock;
   put: Mock;
+  request: Mock;
   upload: Mock;
 };
 
@@ -63,6 +68,7 @@ beforeEach(() => {
   requestClientMock.get.mockReset();
   requestClientMock.post.mockReset();
   requestClientMock.put.mockReset();
+  requestClientMock.request.mockReset();
   requestClientMock.upload.mockReset();
 });
 
@@ -362,6 +368,174 @@ describe('technical-workflow-service requests', () => {
       {
         remarks: '登记完成',
         terminalCode: 'T-1',
+      },
+    );
+  });
+
+  it('patches technical specimen registration detail sections with exact path', async () => {
+    requestClientMock.request.mockResolvedValue({
+      actionFlags: {
+        canCompleteRegistration: true,
+        canDeleteMediaAssets: true,
+        canSaveDetailSections: true,
+        canSaveMaterials: true,
+        canUploadMediaAssets: true,
+      },
+      detailSections: {
+        clinicalExaminationAndSurgeryFindings: '临床检查',
+        clinicalSubmissionRequirements: '送检要求',
+        externalPathologyDiagnosis: null,
+        historySummary: '病史摘要',
+        infectiousAndPastHistorySummary: '既往信息',
+        labAndImagingExaminations: '检验检查',
+      },
+    });
+
+    await saveTechnicalSpecimenRegistrationDetailSections('CASE-001', {
+      detailSections: {
+        clinicalExaminationAndSurgeryFindings: '临床检查',
+        clinicalSubmissionRequirements: '送检要求',
+        externalPathologyDiagnosis: null,
+        historySummary: '病史摘要',
+        infectiousAndPastHistorySummary: '既往信息',
+        labAndImagingExaminations: '检验检查',
+      },
+      terminalCode: 'T-1',
+    });
+
+    expect(requestClientMock.request).toHaveBeenCalledWith(
+      '/v1/technical-specimen-registrations/CASE-001/detail-sections',
+      {
+        data: {
+          detailSections: {
+            clinicalExaminationAndSurgeryFindings: '临床检查',
+            clinicalSubmissionRequirements: '送检要求',
+            externalPathologyDiagnosis: null,
+            historySummary: '病史摘要',
+            infectiousAndPastHistorySummary: '既往信息',
+            labAndImagingExaminations: '检验检查',
+          },
+          terminalCode: 'T-1',
+        },
+        method: 'PATCH',
+      },
+    );
+  });
+
+  it('queries and saves the receive-scoped application workbench with exact paths', async () => {
+    requestClientMock.get.mockResolvedValueOnce({
+      applicationId: 'APP-001',
+      patientInfo: {
+        applicationNo: 'APP-001',
+        patientName: '患者甲',
+      },
+    });
+    requestClientMock.request.mockResolvedValueOnce({
+      applicationId: 'APP-001',
+      patientInfo: {
+        applicationNo: 'APP-001',
+        clinicalDiagnosis: '更新后的诊断',
+        patientName: '患者甲',
+      },
+    });
+
+    await expect(
+      getTechnicalSpecimenRegistrationApplicationWorkbench('CASE-001'),
+    ).resolves.toMatchObject({
+      applicationId: 'APP-001',
+      patientInfo: {
+        applicationNo: 'APP-001',
+        patientName: '患者甲',
+      },
+    });
+
+    await expect(
+      saveTechnicalSpecimenRegistrationApplicationWorkbenchPatientInfo(
+        'CASE-001',
+        {
+          contagiousSpecimen: {
+            hepatitis: false,
+            hiv: false,
+            isolation: false,
+            syphilis: false,
+            tuberculosis: false,
+          },
+          gynecologyInfo: {
+            additionalNotes: '',
+            hpvResult: '',
+            lastMenstrualPeriod: '',
+            menopause: false,
+            previousCytology: '',
+            previousTreatment: '',
+            specialConditions: {
+              abnormalBleeding: false,
+              birthControl: false,
+              hormoneReplacement: false,
+              hysterectomy: false,
+              iud: false,
+              lactation: false,
+              menopause: false,
+              other: '',
+              pregnancy: false,
+              radiotherapy: false,
+            },
+          },
+          patientInfo: {
+            age: '',
+            applicationDate: '',
+            applicationNo: 'APP-001',
+            applyDept: '',
+            applyDoctor: '',
+            bedNo: '',
+            checkItem: '',
+            clinicalDiagnosis: '更新后的诊断',
+            clinicalHistory: '',
+            deliveryRequirement: '',
+            endoscopyDiagnosis: '',
+            frozenReminder: false,
+            gender: '',
+            idNo: '',
+            imagingResult: '',
+            inpatientNo: '',
+            patientName: '患者甲',
+            patientVerified: false,
+            phone: '',
+            registrationStatus: '',
+            remark: '',
+            specimenType: '',
+            wardName: '',
+          },
+          surgeryInfo: {
+            buildingId: '',
+            clinicalFindings: '',
+            fixativeType: '',
+            fixationPerson: '',
+            fixationTime: '',
+            roomId: '',
+            specimenRemovalTime: '',
+            surgeryName: '',
+          },
+        },
+      ),
+    ).resolves.toMatchObject({
+      applicationId: 'APP-001',
+      patientInfo: {
+        clinicalDiagnosis: '更新后的诊断',
+      },
+    });
+
+    expect(requestClientMock.get).toHaveBeenCalledWith(
+      '/v1/technical-specimen-registrations/CASE-001/application-workbench',
+    );
+    expect(requestClientMock.request).toHaveBeenCalledWith(
+      '/v1/technical-specimen-registrations/CASE-001/application-workbench/patient-info',
+      {
+        data: expect.objectContaining({
+          patientInfo: expect.objectContaining({
+            clinicalDiagnosis: '更新后的诊断',
+          }),
+        }),
+        method: 'PATCH',
       },
     );
   });

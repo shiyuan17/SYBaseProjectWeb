@@ -36,7 +36,6 @@ const {
   directReceiveItems,
   directReceiveSubmitting,
   exportLoading,
-  handleAddDirectReceiveRow,
   handleClearList,
   handleClearSelectionRows,
   handleDirectReceiveUserChange,
@@ -260,7 +259,6 @@ watch(
       v-model:form="directReceiveForm"
       :items="directReceiveItems"
       :submitting="directReceiveSubmitting"
-      @add-row="handleAddDirectReceiveRow"
       @close="directReceiveDialogVisible = false"
       @direct-receive-user-change="handleDirectReceiveUserChange"
       @remove-row="handleRemoveDirectReceiveRow"

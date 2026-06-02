@@ -1,15 +1,58 @@
 <script setup lang="ts">
 import type {
   SaveTechnicalSpecimenRegistrationMaterialItem,
+  TechnicalSpecimenRegistrationDetailSections,
   TechnicalSpecimenRegistrationWorkspace,
 } from '../../types/technical-workflow';
 
-import { reactive, watch } from 'vue';
+import { nextTick, ref, watch } from 'vue';
 
 import { ElButton, ElEmpty } from 'element-plus';
 
+import TechnicalSpecimenRegistrationEditableSectionCard from './TechnicalSpecimenRegistrationEditableSectionCard.vue';
+
+type DetailSectionKey = keyof TechnicalSpecimenRegistrationDetailSections;
+
+const DETAIL_SECTION_ITEMS: Array<{
+  key: DetailSectionKey;
+  title: string;
+  valueTestId: string;
+}> = [
+  {
+    key: 'historySummary',
+    title: '病史摘要',
+    valueTestId: 'historySummary',
+  },
+  {
+    key: 'clinicalExaminationAndSurgeryFindings',
+    title: '临床检查及手术所见',
+    valueTestId: 'clinicalExaminationAndSurgeryFindings',
+  },
+  {
+    key: 'labAndImagingExaminations',
+    title: '检验和影像检查',
+    valueTestId: 'labAndImagingExaminations',
+  },
+  {
+    key: 'clinicalSubmissionRequirements',
+    title: '临床送检要求',
+    valueTestId: 'clinicalSubmissionRequirements',
+  },
+  {
+    key: 'infectiousAndPastHistorySummary',
+    title: '传染/既往信息摘要',
+    valueTestId: 'infectiousAndPastHistorySummary',
+  },
+  {
+    key: 'externalPathologyDiagnosis',
+    title: '外院病理诊断',
+    valueTestId: 'externalPathologyDiagnosis',
+  },
+];
+
 const props = defineProps<{
   completionRemarks: string;
+  detailSectionSaving?: boolean;
   loading?: boolean;
   materialSaving?: boolean;
   submitting?: boolean;
@@ -18,45 +61,66 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   complete: [];
+  'save-detail-sections': [detailSections: TechnicalSpecimenRegistrationDetailSections];
   'save-materials': [materials: SaveTechnicalSpecimenRegistrationMaterialItem[]];
   'update:completionRemarks': [value: string];
 }>();
 
-const editableMaterials = reactive<SaveTechnicalSpecimenRegistrationMaterialItem[]>([]);
+const editableMaterials = ref<SaveTechnicalSpecimenRegistrationMaterialItem[]>([]);
+const activeDetailSectionKey = ref<'' | DetailSectionKey>('');
+const editingDetailSectionValue = ref('');
 
 watch(
   () => props.workspace?.materials,
   (materials) => {
-    editableMaterials.splice(0, editableMaterials.length);
-    for (const material of materials ?? []) {
-      editableMaterials.push({
-        sourcePart: material.sourcePart,
-        specimenId: material.specimenId,
-        specimenName: material.specimenName,
-        specimenType: material.specimenType,
-      });
-    }
+    editableMaterials.value = (materials ?? []).map((material) => ({
+      sourcePart: material.sourcePart,
+      specimenId: material.specimenId,
+      specimenName: material.specimenName,
+      specimenType: material.specimenType,
+    }));
   },
   { immediate: true },
 );
 
+watch(
+  () => props.workspace?.detailSections,
+  () => {
+    cancelEditingDetailSection();
+  },
+);
+
+function fieldValue(value: null | string | undefined) {
+  return value?.trim() ? value : '-';
+}
+
+function normalizeDetailSectionValue(value: string) {
+  const normalizedValue = value.trim();
+  return normalizedValue ? normalizedValue : null;
+}
+
 function addMaterialRow() {
-  editableMaterials.push({
-    sourcePart: '',
-    specimenId: null,
-    specimenName: '',
-    specimenType: '',
-  });
+  editableMaterials.value = [
+    ...editableMaterials.value,
+    {
+      sourcePart: '',
+      specimenId: null,
+      specimenName: '',
+      specimenType: '',
+    },
+  ];
 }
 
 function removeMaterialRow(index: number) {
-  editableMaterials.splice(index, 1);
+  editableMaterials.value = editableMaterials.value.filter(
+    (_item, currentIndex) => currentIndex !== index,
+  );
 }
 
 function saveMaterials() {
   emit(
     'save-materials',
-    editableMaterials.map((item) => ({
+    editableMaterials.value.map((item) => ({
       sourcePart: item.sourcePart ?? null,
       specimenId: item.specimenId ?? null,
       specimenName: item.specimenName ?? null,
@@ -65,8 +129,42 @@ function saveMaterials() {
   );
 }
 
-function fieldValue(value: null | string | undefined) {
-  return value?.trim() ? value : '-';
+function beginEditingDetailSection(key: DetailSectionKey) {
+  if (!props.workspace?.actionFlags.canSaveDetailSections) {
+    return;
+  }
+
+  const currentValue = props.workspace.detailSections[key];
+  activeDetailSectionKey.value = key;
+  editingDetailSectionValue.value = currentValue ?? '';
+  void nextTick(() => {
+    const textarea = document.querySelector<HTMLTextAreaElement>(
+      `[data-editor-key="${key}"] textarea`,
+    );
+    textarea?.focus();
+    textarea?.setSelectionRange(
+      textarea.value.length,
+      textarea.value.length,
+    );
+  });
+}
+
+function cancelEditingDetailSection() {
+  activeDetailSectionKey.value = '';
+  editingDetailSectionValue.value = '';
+}
+
+function saveDetailSection() {
+  if (!props.workspace || !activeDetailSectionKey.value) {
+    return;
+  }
+
+  const key = activeDetailSectionKey.value;
+  const nextDetailSections: TechnicalSpecimenRegistrationDetailSections = {
+    ...props.workspace.detailSections,
+    [key]: normalizeDetailSectionValue(editingDetailSectionValue.value),
+  };
+  emit('save-detail-sections', nextDetailSections);
 }
 </script>
 
@@ -113,42 +211,24 @@ function fieldValue(value: null | string | undefined) {
         </div>
 
         <div class="grid gap-3 xl:grid-cols-2">
-          <article class="rounded-2xl border border-slate-200 p-4">
-            <h3 class="text-sm font-semibold text-slate-900">病史摘要</h3>
-            <p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">
-              {{ fieldValue(workspace.detailSections.historySummary) }}
-            </p>
-          </article>
-          <article class="rounded-2xl border border-slate-200 p-4">
-            <h3 class="text-sm font-semibold text-slate-900">临床检查及手术所见</h3>
-            <p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">
-              {{ fieldValue(workspace.detailSections.clinicalExaminationAndSurgeryFindings) }}
-            </p>
-          </article>
-          <article class="rounded-2xl border border-slate-200 p-4">
-            <h3 class="text-sm font-semibold text-slate-900">检验和影像检查</h3>
-            <p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">
-              {{ fieldValue(workspace.detailSections.labAndImagingExaminations) }}
-            </p>
-          </article>
-          <article class="rounded-2xl border border-slate-200 p-4">
-            <h3 class="text-sm font-semibold text-slate-900">临床送检要求</h3>
-            <p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">
-              {{ fieldValue(workspace.detailSections.clinicalSubmissionRequirements) }}
-            </p>
-          </article>
-          <article class="rounded-2xl border border-slate-200 p-4">
-            <h3 class="text-sm font-semibold text-slate-900">传染/既往信息摘要</h3>
-            <p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">
-              {{ fieldValue(workspace.detailSections.infectiousAndPastHistorySummary) }}
-            </p>
-          </article>
-          <article class="rounded-2xl border border-slate-200 p-4">
-            <h3 class="text-sm font-semibold text-slate-900">外院病理诊断</h3>
-            <p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">
-              {{ fieldValue(workspace.detailSections.externalPathologyDiagnosis) }}
-            </p>
-          </article>
+          <TechnicalSpecimenRegistrationEditableSectionCard
+            v-for="item in DETAIL_SECTION_ITEMS"
+            :key="item.key"
+            :can-edit="workspace.actionFlags.canSaveDetailSections"
+            :editing-value="
+              activeDetailSectionKey === item.key ? editingDetailSectionValue : ''
+            "
+            :is-editing="activeDetailSectionKey === item.key"
+            :saving="detailSectionSaving"
+            :title="item.title"
+            :value="fieldValue(workspace.detailSections[item.key])"
+            :value-test-id="item.valueTestId"
+            @activate="beginEditingDetailSection(item.key)"
+            @cancel="cancelEditingDetailSection"
+            @edit="beginEditingDetailSection(item.key)"
+            @save="saveDetailSection"
+            @update:editingValue="editingDetailSectionValue = $event"
+          />
         </div>
 
         <article class="rounded-2xl border border-slate-200 p-4">

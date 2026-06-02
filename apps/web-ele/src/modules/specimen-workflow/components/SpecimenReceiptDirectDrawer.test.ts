@@ -10,17 +10,15 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   createButtonStub,
   createDialogStub,
-  createInputStub,
   createPassthroughStub,
 } from '../test-utils/component-stubs';
 
 vi.mock('element-plus', () => ({
-  ElAlert: createPassthroughStub(),
   ElButton: createButtonStub(),
   ElDrawer: createDialogStub(),
   ElForm: createPassthroughStub('form'),
   ElFormItem: createPassthroughStub(),
-  ElInput: createInputStub(),
+  ElTag: createPassthroughStub(),
 }));
 
 vi.mock('#/modules/system-management/components/SystemUserSelect.vue', () => ({
@@ -62,7 +60,6 @@ function createDraftItem(
 async function mountDrawer() {
   const container = document.createElement('div');
   document.body.append(container);
-  const addRowMock = vi.fn();
   const closeMock = vi.fn();
   const directReceiveUserChangeMock = vi.fn();
   const removeRowMock = vi.fn();
@@ -84,7 +81,6 @@ async function mountDrawer() {
         'onUpdate:modelValue': (value: boolean) => {
           visible.value = value;
         },
-        onAddRow: addRowMock,
         onClose: closeMock,
         onDirectReceiveUserChange: directReceiveUserChangeMock,
         onRemoveRow: removeRowMock,
@@ -97,7 +93,6 @@ async function mountDrawer() {
   await nextTick();
 
   return {
-    addRowMock,
     closeMock,
     container,
     directReceiveUserChangeMock,
@@ -120,10 +115,11 @@ describe('SpecimenReceiptDirectDrawer', () => {
     const wrapper = await mountDrawer();
 
     expect(wrapper.container.textContent).toContain('异常接收');
+    expect(wrapper.container.textContent).toContain('待提交 1 条');
     expect(wrapper.container.textContent).toContain(
-      '系统会自动标记异常，无需单独设置异常状态。',
+      '拒收、退回或质控不合格提交后会自动标记异常',
     );
-    expect(wrapper.container.textContent).toContain('新增条码');
+    expect(wrapper.container.textContent).toContain('接收明细');
     expect(wrapper.container.textContent).toContain('删除');
     expect(wrapper.container.textContent).toContain('1');
 
@@ -140,7 +136,6 @@ describe('SpecimenReceiptDirectDrawer', () => {
     buttons
       .find((button) => button.textContent?.includes('选择接收人'))
       ?.click();
-    buttons.find((button) => button.textContent?.includes('新增条码'))?.click();
     buttons.find((button) => button.textContent?.includes('删除'))?.click();
     buttons.find((button) => button.textContent?.includes('取消'))?.click();
     buttons
@@ -152,7 +147,6 @@ describe('SpecimenReceiptDirectDrawer', () => {
       id: 'USER-3',
       name: '王护士',
     });
-    expect(wrapper.addRowMock).toHaveBeenCalledTimes(1);
     expect(wrapper.removeRowMock).toHaveBeenCalledWith(1);
     expect(wrapper.closeMock).toHaveBeenCalledTimes(1);
     expect(wrapper.submitMock).toHaveBeenCalledTimes(1);

@@ -24,9 +24,10 @@
 8. `docs/API_RULES.md`
 9. `docs/COMPATIBILITY_RULES.md`
 10. `docs/GIT_RULES.md`
-11. `docs/RELEASE.md`
-12. `docs/AI-CODE-HEALTH.md`
-13. 任务涉及模块文档与现有源码
+11. `docs/LINEAR_TASK.md`（仅当任务来源于 Linear issue 时）
+12. `docs/RELEASE.md`
+13. `docs/AI-CODE-HEALTH.md`
+14. 任务涉及模块文档与现有源码
 
 ### 2. 规范映射表
 
@@ -41,6 +42,7 @@
 | Element Plus、TailwindCSS、ECharts、交互与视觉一致性 | `docs/UI_RULES.md` |
 | 浏览器、国产环境、导出打印、字体与降级策略 | `docs/COMPATIBILITY_RULES.md` |
 | 分支、提交、PR、合并协作 | `docs/GIT_RULES.md` |
+| Linear issue 开工与任务起始信息准备 | `docs/LINEAR_TASK.md` |
 | 环境、构建、发布与回滚 | `docs/RELEASE.md` |
 | AI 生成代码健康基线 | `docs/AI-CODE-HEALTH.md` |
 
@@ -62,6 +64,8 @@
 - 风险等级: [低 / 中 / 高]
 - 关键假设: [默认采用的前提]
 ```
+
+- 若任务明确来源于 Linear issue，开始前应参考 `docs/LINEAR_TASK.md` 准备任务起始信息；非 Linear 任务不强制套用该模板。
 
 ### 5. 文件操作边界
 
@@ -159,5 +163,6 @@
 - [docs/UI_RULES.md](./docs/UI_RULES.md)
 - [docs/COMPATIBILITY_RULES.md](./docs/COMPATIBILITY_RULES.md)
 - [docs/GIT_RULES.md](./docs/GIT_RULES.md)
+- [docs/LINEAR_TASK.md](./docs/LINEAR_TASK.md)
 - [docs/RELEASE.md](./docs/RELEASE.md)
 - [docs/AI-CODE-HEALTH.md](./docs/AI-CODE-HEALTH.md)

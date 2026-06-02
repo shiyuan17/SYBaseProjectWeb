@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ApplicationRegistrationWorkbenchRecord } from '../types/application-registration-workbench';
+import type { WorkbenchInfoItem } from '../utils/application-registration-patient-panel';
 
 import { computed, toRef } from 'vue';
 
@@ -17,22 +18,33 @@ import {
   getSectionItemSpan,
   getSummaryItemValueClass,
 } from '../utils/application-registration-patient-panel';
+import ApplicationRegistrationDirectEditableField from './ApplicationRegistrationDirectEditableField.vue';
 import ApplicationRegistrationEditableField from './ApplicationRegistrationEditableField.vue';
 import WorkflowSectionCard from './WorkflowSectionCard.vue';
 
 const props = withDefaults(
   defineProps<{
     buildingLabel: string;
+    compact?: boolean;
+    editMode?: 'direct' | 'triggered';
     fullHeight?: boolean;
     record: ApplicationRegistrationWorkbenchRecord | null;
     roomLabel: string;
     saveDisabled?: boolean;
     saving?: boolean;
+    showReprintAction?: boolean;
+    showSaveAction?: boolean;
+    title?: string;
   }>(),
   {
+    compact: false,
+    editMode: 'triggered',
     fullHeight: false,
     saveDisabled: true,
     saving: false,
+    showReprintAction: true,
+    showSaveAction: true,
+    title: '患者信息',
   },
 );
 
@@ -61,22 +73,42 @@ const {
 });
 
 const hasRecord = computed(() => props.record !== null);
+const isDirectEditMode = computed(() => props.editMode === 'direct');
+
+function handleDirectFieldUpdate(item: WorkbenchInfoItem, value: string) {
+  if (!props.record || !item.writeBack) {
+    return;
+  }
+  emit('update:record', item.writeBack(props.record, value));
+}
 </script>
 
 <template>
   <WorkflowSectionCard
     :class="
-      props.fullHeight
-        ? 'min-h-[420px] max-h-full overflow-hidden'
-        : 'max-h-full overflow-hidden'
+      [
+        props.compact ? 'patient-panel--compact' : '',
+        props.fullHeight
+          ? props.compact
+            ? 'min-h-0 max-h-full overflow-hidden'
+            : 'min-h-[420px] max-h-full overflow-hidden'
+          : 'max-h-full overflow-hidden',
+      ]
     "
     :auto-height="!props.fullHeight"
-    title="患者信息"
+    :title="props.title"
   >
     <template v-if="hasRecord" #extra>
       <div class="flex items-center gap-2">
-        <ElButton size="small" @click="printApplicationForm">补打申请单</ElButton>
         <ElButton
+          v-if="props.showReprintAction"
+          size="small"
+          @click="printApplicationForm"
+        >
+          补打申请单
+        </ElButton>
+        <ElButton
+          v-if="props.showSaveAction"
           :disabled="props.saveDisabled"
           :loading="props.saving"
           size="small"
@@ -105,7 +137,14 @@ const hasRecord = computed(() => props.record !== null);
               :label="item.label"
               :span="item.span ?? 1"
             >
+              <ApplicationRegistrationDirectEditableField
+                v-if="isDirectEditMode"
+                :item="item"
+                :value-class="getSummaryItemValueClass(item)"
+                @update="handleDirectFieldUpdate"
+              />
               <ApplicationRegistrationEditableField
+                v-else
                 v-model:editing-value="editingValue"
                 :is-editing="activeEditorKey === item.key"
                 :item="item"
@@ -143,7 +182,13 @@ const hasRecord = computed(() => props.record !== null);
                 :label="item.label"
                 :span="getSectionItemSpan(item)"
               >
+                <ApplicationRegistrationDirectEditableField
+                  v-if="isDirectEditMode"
+                  :item="item"
+                  @update="handleDirectFieldUpdate"
+                />
                 <ApplicationRegistrationEditableField
+                  v-else
                   v-model:editing-value="editingValue"
                   :is-editing="activeEditorKey === item.key"
                   :item="item"

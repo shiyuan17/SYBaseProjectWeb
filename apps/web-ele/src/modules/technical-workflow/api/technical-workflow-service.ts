@@ -1,4 +1,9 @@
 import type {
+  ApplicationRegistrationWorkbenchRecord,
+  SaveApplicationRegistrationPatientInfoRequest,
+} from '#/modules/specimen-workflow/types/application-registration-workbench';
+
+import type {
   BatchOperatorRequest,
   CompleteDehydrationBatchRequest,
   CompleteTechnicalSpecimenRegistrationRequest,
@@ -20,6 +25,7 @@ import type {
   PendingTechnicalSpecimenRegistrationQuery,
   PendingTechnicalTaskQuery,
   ReworkOrderResult,
+  SaveTechnicalSpecimenRegistrationDetailSectionsRequest,
   SaveTechnicalSpecimenRegistrationMaterialsRequest,
   SlicingCompleteRequest,
   SlicingWorkbenchQuery,
@@ -51,6 +57,8 @@ type TechnicalSpecimenRegistrationDetailResponse =
   Partial<TechnicalSpecimenRegistrationDetail>;
 type TechnicalSpecimenRegistrationWorkspaceResponse =
   Partial<TechnicalSpecimenRegistrationWorkspace>;
+type ApplicationRegistrationWorkbenchRecordResponse =
+  Partial<ApplicationRegistrationWorkbenchRecord>;
 type TechnicalTrackingResponse = Partial<TechnicalTrackingView>;
 type EmbeddingWorkstationSummaryResponse = Partial<EmbeddingWorkstationSummary>;
 type SlicingWorkbenchResponse = Partial<
@@ -65,6 +73,93 @@ type GrossingWorkbenchContextResponse = Partial<
 > & {
   tracking?: Partial<TechnicalTrackingView>;
 };
+
+function mapApplicationRegistrationWorkbenchRecordResponse(
+  response: ApplicationRegistrationWorkbenchRecordResponse,
+): ApplicationRegistrationWorkbenchRecord {
+  return {
+    applicationId: response.applicationId ?? '',
+    contagiousSpecimen: {
+      hepatitis: response.contagiousSpecimen?.hepatitis ?? false,
+      hiv: response.contagiousSpecimen?.hiv ?? false,
+      isolation: response.contagiousSpecimen?.isolation ?? false,
+      syphilis: response.contagiousSpecimen?.syphilis ?? false,
+      tuberculosis: response.contagiousSpecimen?.tuberculosis ?? false,
+    },
+    gynecologyInfo: {
+      additionalNotes: response.gynecologyInfo?.additionalNotes ?? '',
+      hpvResult: response.gynecologyInfo?.hpvResult ?? '',
+      lastMenstrualPeriod: response.gynecologyInfo?.lastMenstrualPeriod ?? '',
+      menopause: response.gynecologyInfo?.menopause ?? false,
+      previousCytology: response.gynecologyInfo?.previousCytology ?? '',
+      previousTreatment: response.gynecologyInfo?.previousTreatment ?? '',
+      specialConditions: {
+        abnormalBleeding:
+          response.gynecologyInfo?.specialConditions?.abnormalBleeding ?? false,
+        birthControl:
+          response.gynecologyInfo?.specialConditions?.birthControl ?? false,
+        hormoneReplacement:
+          response.gynecologyInfo?.specialConditions?.hormoneReplacement ??
+          false,
+        hysterectomy:
+          response.gynecologyInfo?.specialConditions?.hysterectomy ?? false,
+        iud: response.gynecologyInfo?.specialConditions?.iud ?? false,
+        lactation:
+          response.gynecologyInfo?.specialConditions?.lactation ?? false,
+        menopause:
+          response.gynecologyInfo?.specialConditions?.menopause ?? false,
+        other: response.gynecologyInfo?.specialConditions?.other ?? '',
+        pregnancy:
+          response.gynecologyInfo?.specialConditions?.pregnancy ?? false,
+        radiotherapy:
+          response.gynecologyInfo?.specialConditions?.radiotherapy ?? false,
+      },
+    },
+    patientInfo: {
+      age: response.patientInfo?.age ?? '',
+      applicationDate: response.patientInfo?.applicationDate ?? '',
+      applicationNo: response.patientInfo?.applicationNo ?? '',
+      applyDept: response.patientInfo?.applyDept ?? '',
+      applyDoctor: response.patientInfo?.applyDoctor ?? '',
+      bedNo: response.patientInfo?.bedNo ?? '',
+      checkItem: response.patientInfo?.checkItem ?? '',
+      clinicalDiagnosis: response.patientInfo?.clinicalDiagnosis ?? '',
+      clinicalHistory: response.patientInfo?.clinicalHistory ?? '',
+      deliveryRequirement: response.patientInfo?.deliveryRequirement ?? '',
+      endoscopyDiagnosis: response.patientInfo?.endoscopyDiagnosis ?? '',
+      frozenReminder: response.patientInfo?.frozenReminder ?? false,
+      gender: response.patientInfo?.gender ?? '',
+      idNo: response.patientInfo?.idNo ?? '',
+      imagingResult: response.patientInfo?.imagingResult ?? '',
+      inpatientNo: response.patientInfo?.inpatientNo ?? '',
+      patientName: response.patientInfo?.patientName ?? '',
+      patientVerified: response.patientInfo?.patientVerified ?? false,
+      phone: response.patientInfo?.phone ?? '',
+      registrationStatus: response.patientInfo?.registrationStatus ?? '',
+      remark: response.patientInfo?.remark ?? '',
+      specimenType: response.patientInfo?.specimenType ?? '',
+      wardName: response.patientInfo?.wardName ?? '',
+    },
+    specimenItems: (response.specimenItems ?? []).map((item) => ({
+      id: item.id ?? '',
+      quantity: item.quantity ?? 0,
+      specimenName: item.specimenName ?? '',
+      specimenNo: item.specimenNo ?? '',
+      specimenSite: item.specimenSite ?? '',
+      status: item.status ?? '',
+    })),
+    surgeryInfo: {
+      buildingId: response.surgeryInfo?.buildingId ?? '',
+      clinicalFindings: response.surgeryInfo?.clinicalFindings ?? '',
+      fixativeType: response.surgeryInfo?.fixativeType ?? '',
+      fixationPerson: response.surgeryInfo?.fixationPerson ?? '',
+      fixationTime: response.surgeryInfo?.fixationTime ?? '',
+      roomId: response.surgeryInfo?.roomId ?? '',
+      specimenRemovalTime: response.surgeryInfo?.specimenRemovalTime ?? '',
+      surgeryName: response.surgeryInfo?.surgeryName ?? '',
+    },
+  };
+}
 
 export function mapPendingTechnicalTaskPageResponse(
   response: PendingTechnicalTaskPageResponse,
@@ -246,6 +341,8 @@ export function mapTechnicalSpecimenRegistrationWorkspaceResponse(
         response.actionFlags?.canCompleteRegistration ?? false,
       canDeleteMediaAssets:
         response.actionFlags?.canDeleteMediaAssets ?? false,
+      canSaveDetailSections:
+        response.actionFlags?.canSaveDetailSections ?? false,
       canSaveMaterials: response.actionFlags?.canSaveMaterials ?? false,
       canUploadMediaAssets:
         response.actionFlags?.canUploadMediaAssets ?? false,
@@ -362,6 +459,30 @@ export async function getTechnicalSpecimenRegistrationWorkspace(caseId: string) 
   return mapTechnicalSpecimenRegistrationWorkspaceResponse(response);
 }
 
+export async function getTechnicalSpecimenRegistrationApplicationWorkbench(
+  caseId: string,
+) {
+  const response = await requestClient.get<ApplicationRegistrationWorkbenchRecordResponse>(
+    `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/application-workbench`,
+  );
+  return mapApplicationRegistrationWorkbenchRecordResponse(response);
+}
+
+export async function saveTechnicalSpecimenRegistrationApplicationWorkbenchPatientInfo(
+  caseId: string,
+  data: SaveApplicationRegistrationPatientInfoRequest,
+) {
+  const response =
+    await requestClient.request<ApplicationRegistrationWorkbenchRecordResponse>(
+      `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/application-workbench/patient-info`,
+      {
+        data,
+        method: 'PATCH',
+      },
+    );
+  return mapApplicationRegistrationWorkbenchRecordResponse(response);
+}
+
 export async function saveTechnicalSpecimenRegistrationMaterials(
   caseId: string,
   data: SaveTechnicalSpecimenRegistrationMaterialsRequest,
@@ -369,6 +490,20 @@ export async function saveTechnicalSpecimenRegistrationMaterials(
   const response = await requestClient.put<TechnicalSpecimenRegistrationWorkspaceResponse>(
     `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/materials`,
     data,
+  );
+  return mapTechnicalSpecimenRegistrationWorkspaceResponse(response);
+}
+
+export async function saveTechnicalSpecimenRegistrationDetailSections(
+  caseId: string,
+  data: SaveTechnicalSpecimenRegistrationDetailSectionsRequest,
+) {
+  const response = await requestClient.request<TechnicalSpecimenRegistrationWorkspaceResponse>(
+    `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/detail-sections`,
+    {
+      data,
+      method: 'PATCH',
+    },
   );
   return mapTechnicalSpecimenRegistrationWorkspaceResponse(response);
 }

@@ -1,3 +1,5 @@
+import type { ApplicationRegistrationWorkbenchRecord } from '#/modules/specimen-workflow/types/application-registration-workbench';
+
 import type {
   PendingTechnicalSpecimenRegistrationItem,
   TechnicalSpecimenRegistrationWorkspace,
@@ -13,10 +15,13 @@ const {
   messageWarning,
   mockCompleteTechnicalSpecimenRegistration,
   mockDeleteTechnicalSpecimenRegistrationMediaAsset,
+  mockGetTechnicalSpecimenRegistrationApplicationWorkbench,
   mockGetTechnicalSpecimenRegistrationWorkspace,
   mockGoToTasks,
   mockListPendingTechnicalSpecimenRegistrations,
   mockRouter,
+  mockSaveTechnicalSpecimenRegistrationDetailSections,
+  mockSaveTechnicalSpecimenRegistrationApplicationWorkbenchPatientInfo,
   mockSaveTechnicalSpecimenRegistrationMaterials,
   mockUploadTechnicalSpecimenRegistrationMediaAsset,
 } = vi.hoisted(() => ({
@@ -25,12 +30,16 @@ const {
   messageWarning: vi.fn(),
   mockCompleteTechnicalSpecimenRegistration: vi.fn(),
   mockDeleteTechnicalSpecimenRegistrationMediaAsset: vi.fn(),
+  mockGetTechnicalSpecimenRegistrationApplicationWorkbench: vi.fn(),
   mockGetTechnicalSpecimenRegistrationWorkspace: vi.fn(),
   mockGoToTasks: vi.fn(),
   mockListPendingTechnicalSpecimenRegistrations: vi.fn(),
   mockRouter: {
     push: vi.fn(),
   },
+  mockSaveTechnicalSpecimenRegistrationApplicationWorkbenchPatientInfo:
+    vi.fn(),
+  mockSaveTechnicalSpecimenRegistrationDetailSections: vi.fn(),
   mockSaveTechnicalSpecimenRegistrationMaterials: vi.fn(),
   mockUploadTechnicalSpecimenRegistrationMediaAsset: vi.fn(),
 }));
@@ -53,15 +62,32 @@ vi.mock('@vben/common-ui', () => ({
   }),
 }));
 
+vi.mock('@vben/icons', async () => {
+  const { h } = await import('vue');
+
+  const createIcon = (name: string) =>
+    (() => h('span', { 'aria-hidden': 'true', 'data-icon': name })) as unknown;
+
+  return {
+    UserRoundPen: createIcon('UserRoundPen'),
+  };
+});
+
 vi.mock('../api/technical-workflow-service', () => ({
   completeTechnicalSpecimenRegistration:
     mockCompleteTechnicalSpecimenRegistration,
   deleteTechnicalSpecimenRegistrationMediaAsset:
     mockDeleteTechnicalSpecimenRegistrationMediaAsset,
+  getTechnicalSpecimenRegistrationApplicationWorkbench:
+    mockGetTechnicalSpecimenRegistrationApplicationWorkbench,
   getTechnicalSpecimenRegistrationWorkspace:
     mockGetTechnicalSpecimenRegistrationWorkspace,
   listPendingTechnicalSpecimenRegistrations:
     mockListPendingTechnicalSpecimenRegistrations,
+  saveTechnicalSpecimenRegistrationApplicationWorkbenchPatientInfo:
+    mockSaveTechnicalSpecimenRegistrationApplicationWorkbenchPatientInfo,
+  saveTechnicalSpecimenRegistrationDetailSections:
+    mockSaveTechnicalSpecimenRegistrationDetailSections,
   saveTechnicalSpecimenRegistrationMaterials:
     mockSaveTechnicalSpecimenRegistrationMaterials,
   uploadTechnicalSpecimenRegistrationMediaAsset:
@@ -142,6 +168,90 @@ vi.mock('element-plus', () => {
   };
 });
 
+vi.mock(
+  '../components/specimen-registration/TechnicalSpecimenRegistrationApplicationSummaryCard.vue',
+  () => ({
+    default: defineComponent({
+      props: ['error', 'loading', 'record', 'workspace'],
+      emits: ['edit'],
+      setup(props, { emit }) {
+        return () =>
+          h('section', { 'data-testid': 'application-summary-card' }, [
+            h(
+              'div',
+              [
+                props.record?.patientInfo?.applicationNo,
+                props.workspace?.basicInfo?.pathologyNo,
+                props.record?.patientInfo?.patientName,
+              ]
+                .filter(Boolean)
+                .join('|'),
+            ),
+            h(
+              'button',
+              {
+                'data-testid': 'open-application-drawer',
+                onClick: () => emit('edit'),
+                type: 'button',
+              },
+              '编辑申请',
+            ),
+          ]);
+      },
+    }),
+  }),
+);
+
+vi.mock(
+  '../components/specimen-registration/TechnicalSpecimenRegistrationApplicationDrawer.vue',
+  () => ({
+    default: defineComponent({
+      props: ['error', 'loading', 'modelValue', 'pathologyNo', 'record', 'saving'],
+      emits: ['save', 'update:modelValue', 'update:record'],
+      setup(props, { emit }) {
+        return () =>
+          props.modelValue
+            ? h('section', { 'data-testid': 'application-drawer' }, [
+                h(
+                  'div',
+                  props.record?.patientInfo?.clinicalDiagnosis ?? 'EMPTY',
+                ),
+                h(
+                  'button',
+                  {
+                    'data-testid': 'drawer-update-record',
+                    onClick: () => {
+                      if (!props.record) {
+                        return;
+                      }
+                      emit('update:record', {
+                        ...props.record,
+                        patientInfo: {
+                          ...props.record.patientInfo,
+                          clinicalDiagnosis: '抽屉更新后的临床诊断',
+                        },
+                      });
+                    },
+                    type: 'button',
+                  },
+                  '更新申请记录',
+                ),
+                h(
+                  'button',
+                  {
+                    'data-testid': 'drawer-save-record',
+                    onClick: () => emit('save'),
+                    type: 'button',
+                  },
+                  '保存申请信息',
+                ),
+              ])
+            : null;
+      },
+    }),
+  }),
+);
+
 import TechnicalSpecimenRegistrationView from './TechnicalSpecimenRegistrationView.vue';
 
 function createPendingItem(
@@ -173,6 +283,7 @@ function createWorkspace(
     actionFlags: {
       canCompleteRegistration: true,
       canDeleteMediaAssets: true,
+      canSaveDetailSections: true,
       canSaveMaterials: true,
       canUploadMediaAssets: true,
     },
@@ -194,12 +305,12 @@ function createWorkspace(
     },
     checkItems: [{ name: 'HE', sequenceNo: 1 }],
     detailSections: {
-      clinicalExaminationAndSurgeryFindings: '手术所见',
-      clinicalSubmissionRequirements: '常规送检',
+      clinicalExaminationAndSurgeryFindings: '默认临床检查及手术所见',
+      clinicalSubmissionRequirements: '默认临床送检要求',
       externalPathologyDiagnosis: null,
-      historySummary: '病史摘要',
-      infectiousAndPastHistorySummary: '无',
-      labAndImagingExaminations: '影像检查',
+      historySummary: '默认病史摘要内容',
+      infectiousAndPastHistorySummary: '默认传染/既往信息摘要',
+      labAndImagingExaminations: '默认检验和影像检查',
     },
     materials: [
       {
@@ -212,6 +323,78 @@ function createWorkspace(
     ],
     mediaAssets: [],
     pendingSummary: createPendingItem(),
+    ...overrides,
+  };
+}
+
+function createApplicationWorkbenchRecord(
+  overrides: Partial<ApplicationRegistrationWorkbenchRecord> = {},
+): ApplicationRegistrationWorkbenchRecord {
+  return {
+    applicationId: 'APP-1',
+    contagiousSpecimen: {
+      hepatitis: false,
+      hiv: false,
+      isolation: false,
+      syphilis: false,
+      tuberculosis: false,
+    },
+    gynecologyInfo: {
+      additionalNotes: '',
+      hpvResult: '',
+      lastMenstrualPeriod: '',
+      menopause: false,
+      previousCytology: '',
+      previousTreatment: '',
+      specialConditions: {
+        abnormalBleeding: false,
+        birthControl: false,
+        hormoneReplacement: false,
+        hysterectomy: false,
+        iud: false,
+        lactation: false,
+        menopause: false,
+        other: '',
+        pregnancy: false,
+        radiotherapy: false,
+      },
+    },
+    patientInfo: {
+      age: '34',
+      applicationDate: '2026-06-01T08:00:00',
+      applicationNo: 'APP-20260601-001',
+      applyDept: '病理科',
+      applyDoctor: '医生甲',
+      bedNo: '',
+      checkItem: 'HE',
+      clinicalDiagnosis: '初始临床诊断',
+      clinicalHistory: '',
+      deliveryRequirement: '',
+      endoscopyDiagnosis: '',
+      frozenReminder: false,
+      gender: '女',
+      idNo: 'ID-001',
+      imagingResult: '',
+      inpatientNo: 'INP-1',
+      patientName: '患者甲',
+      patientVerified: false,
+      phone: '',
+      registrationStatus: 'PENDING',
+      remark: '',
+      specimenType: 'ROUTINE',
+      wardName: '',
+    },
+    specimenItems: [],
+    surgeryInfo: {
+      buildingId: 'BLDG-1',
+      clinicalFindings: '',
+      fixativeType: '',
+      fixationPerson: '',
+      fixationTime: '2026-06-01T09:00:00',
+      roomId: 'OR-01',
+      specimenRemovalTime: '2026-06-01T07:30:00',
+      surgeryName: '',
+    },
     ...overrides,
   };
 }
@@ -244,6 +427,7 @@ function mountView() {
 
 describe('TechnicalSpecimenRegistrationView', () => {
   let workspaceByCaseId: Record<string, TechnicalSpecimenRegistrationWorkspace>;
+  let workbenchByCaseId: Record<string, ApplicationRegistrationWorkbenchRecord>;
 
   beforeEach(() => {
     workspaceByCaseId = {
@@ -269,6 +453,19 @@ describe('TechnicalSpecimenRegistrationView', () => {
         }),
       }),
     };
+    workbenchByCaseId = {
+      'CASE-1': createApplicationWorkbenchRecord(),
+      'CASE-2': createApplicationWorkbenchRecord({
+        applicationId: 'APP-2',
+        patientInfo: {
+          ...createApplicationWorkbenchRecord().patientInfo,
+          applicationNo: 'APP-20260601-002',
+          clinicalDiagnosis: '患者乙临床诊断',
+          inpatientNo: 'INP-2',
+          patientName: '患者乙',
+        },
+      }),
+    };
 
     mockListPendingTechnicalSpecimenRegistrations.mockResolvedValue({
       items: [
@@ -288,6 +485,44 @@ describe('TechnicalSpecimenRegistrationView', () => {
     });
     mockGetTechnicalSpecimenRegistrationWorkspace.mockImplementation(
       async (caseId: string) => workspaceByCaseId[caseId],
+    );
+    mockGetTechnicalSpecimenRegistrationApplicationWorkbench.mockImplementation(
+      async (caseId: string) => workbenchByCaseId[caseId],
+    );
+    mockSaveTechnicalSpecimenRegistrationDetailSections.mockImplementation(
+      async (
+        _caseId: string,
+        data: {
+          detailSections: TechnicalSpecimenRegistrationWorkspace['detailSections'];
+        },
+      ) => {
+        const currentWorkspace = workspaceByCaseId['CASE-1']!;
+        const fallbackDetailSections = createWorkspace().detailSections;
+        const nextWorkspace = {
+          ...currentWorkspace,
+          detailSections: {
+            clinicalExaminationAndSurgeryFindings:
+              data.detailSections.clinicalExaminationAndSurgeryFindings ??
+              fallbackDetailSections.clinicalExaminationAndSurgeryFindings,
+            clinicalSubmissionRequirements:
+              data.detailSections.clinicalSubmissionRequirements ??
+              fallbackDetailSections.clinicalSubmissionRequirements,
+            externalPathologyDiagnosis:
+              data.detailSections.externalPathologyDiagnosis ?? null,
+            historySummary:
+              data.detailSections.historySummary ??
+              fallbackDetailSections.historySummary,
+            infectiousAndPastHistorySummary:
+              data.detailSections.infectiousAndPastHistorySummary ??
+              fallbackDetailSections.infectiousAndPastHistorySummary,
+            labAndImagingExaminations:
+              data.detailSections.labAndImagingExaminations ??
+              fallbackDetailSections.labAndImagingExaminations,
+          },
+        } satisfies TechnicalSpecimenRegistrationWorkspace;
+        workspaceByCaseId['CASE-1'] = nextWorkspace;
+        return nextWorkspace;
+      },
     );
     mockSaveTechnicalSpecimenRegistrationMaterials.mockImplementation(
       async (_caseId: string, data: { materials: TechnicalSpecimenRegistrationWorkspace['materials'] }) => {
@@ -339,16 +574,33 @@ describe('TechnicalSpecimenRegistrationView', () => {
       pathologyNo: 'BL-20260601-001',
       registrationStatus: 'COMPLETED',
     });
+    mockSaveTechnicalSpecimenRegistrationApplicationWorkbenchPatientInfo.mockImplementation(
+      async (_caseId: string, data: { patientInfo: { clinicalDiagnosis: string } }) => {
+        const currentRecord = workbenchByCaseId['CASE-1']!;
+        const nextRecord = {
+          ...currentRecord,
+          patientInfo: {
+            ...currentRecord.patientInfo,
+            ...data.patientInfo,
+          },
+        } satisfies ApplicationRegistrationWorkbenchRecord;
+        workbenchByCaseId['CASE-1'] = nextRecord;
+        return nextRecord;
+      },
+    );
     mockGoToTasks.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
     mockCompleteTechnicalSpecimenRegistration.mockReset();
     mockDeleteTechnicalSpecimenRegistrationMediaAsset.mockReset();
+    mockGetTechnicalSpecimenRegistrationApplicationWorkbench.mockReset();
     mockGetTechnicalSpecimenRegistrationWorkspace.mockReset();
     mockGoToTasks.mockReset();
     mockListPendingTechnicalSpecimenRegistrations.mockReset();
     mockRouter.push.mockReset();
+    mockSaveTechnicalSpecimenRegistrationApplicationWorkbenchPatientInfo.mockReset();
+    mockSaveTechnicalSpecimenRegistrationDetailSections.mockReset();
     mockSaveTechnicalSpecimenRegistrationMaterials.mockReset();
     mockUploadTechnicalSpecimenRegistrationMediaAsset.mockReset();
     messageError.mockReset();
@@ -363,7 +615,7 @@ describe('TechnicalSpecimenRegistrationView', () => {
 
     expect(document.body.textContent).toContain('接收列表');
     expect(document.body.textContent).toContain('登记工作区');
-    expect(document.body.textContent).toContain('图片区');
+    expect(document.body.textContent).toContain('APP-20260601-001');
     expect(mockListPendingTechnicalSpecimenRegistrations).toHaveBeenCalledWith({
       keyword: undefined,
       page: 1,
@@ -374,6 +626,9 @@ describe('TechnicalSpecimenRegistrationView', () => {
     expect(mockGetTechnicalSpecimenRegistrationWorkspace).toHaveBeenCalledWith(
       'CASE-1',
     );
+    expect(
+      mockGetTechnicalSpecimenRegistrationApplicationWorkbench,
+    ).toHaveBeenCalledWith('CASE-1');
 
     app.unmount();
     root.remove();
@@ -391,7 +646,140 @@ describe('TechnicalSpecimenRegistrationView', () => {
     expect(mockGetTechnicalSpecimenRegistrationWorkspace).toHaveBeenCalledWith(
       'CASE-2',
     );
+    expect(
+      mockGetTechnicalSpecimenRegistrationApplicationWorkbench,
+    ).toHaveBeenCalledWith('CASE-2');
     expect(document.body.textContent).toContain('患者乙');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('shows the hover edit button and saves an edited detail section', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    document
+      .querySelector<HTMLButtonElement>(
+        '[data-testid="detail-section-edit-historySummary"]',
+      )
+      ?.click();
+    await flushView();
+
+    const textarea = document.querySelector<HTMLTextAreaElement>(
+      '[data-testid="detail-section-input-historySummary"]',
+    );
+    expect(textarea).toBeTruthy();
+    textarea!.value = '更新后的病史摘要';
+    textarea!.dispatchEvent(new Event('input'));
+    await flushView();
+
+    document
+      .querySelector<HTMLButtonElement>(
+        '[data-testid="detail-section-save-historySummary"]',
+      )
+      ?.click();
+    await flushView();
+
+    expect(
+      mockSaveTechnicalSpecimenRegistrationDetailSections,
+    ).toHaveBeenCalledWith('CASE-1', {
+      detailSections: {
+        clinicalExaminationAndSurgeryFindings: '默认临床检查及手术所见',
+        clinicalSubmissionRequirements: '默认临床送检要求',
+        externalPathologyDiagnosis: null,
+        historySummary: '更新后的病史摘要',
+        infectiousAndPastHistorySummary: '默认传染/既往信息摘要',
+        labAndImagingExaminations: '默认检验和影像检查',
+      },
+      terminalCode: 'T-M3-SPEC-REG',
+    });
+    expect(document.body.textContent).toContain('更新后的病史摘要');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('supports entering detail section editing through double click', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    document
+      .querySelector<HTMLElement>(
+        '[data-testid="detail-section-value-historySummary"]',
+      )
+      ?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    await flushView();
+
+    const textarea = document.querySelector<HTMLTextAreaElement>(
+      '[data-testid="detail-section-input-historySummary"]',
+    );
+    expect(textarea).toBeTruthy();
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('falls back to the original value when saving an empty detail section', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    document
+      .querySelector<HTMLButtonElement>(
+        '[data-testid="detail-section-edit-historySummary"]',
+      )
+      ?.click();
+    await flushView();
+
+    const textarea = document.querySelector<HTMLTextAreaElement>(
+      '[data-testid="detail-section-input-historySummary"]',
+    );
+    expect(textarea).toBeTruthy();
+    textarea!.value = '   ';
+    textarea!.dispatchEvent(new Event('input'));
+    await flushView();
+
+    document
+      .querySelector<HTMLButtonElement>(
+        '[data-testid="detail-section-save-historySummary"]',
+      )
+      ?.click();
+    await flushView();
+
+    expect(document.body.textContent).toContain('默认病史摘要内容');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('hides detail section editing when the workspace is not editable', async () => {
+    workspaceByCaseId['CASE-1'] = createWorkspace({
+      actionFlags: {
+        canCompleteRegistration: false,
+        canDeleteMediaAssets: true,
+        canSaveDetailSections: false,
+        canSaveMaterials: false,
+        canUploadMediaAssets: true,
+      },
+    });
+
+    const { app, root } = mountView();
+    await flushView();
+
+    expect(
+      document.querySelector('[data-testid="detail-section-edit-historySummary"]'),
+    ).toBeNull();
+
+    document
+      .querySelector<HTMLElement>(
+        '[data-testid="detail-section-value-historySummary"]',
+      )
+      ?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    await flushView();
+
+    expect(
+      document.querySelector('[data-testid="detail-section-input-historySummary"]'),
+    ).toBeNull();
 
     app.unmount();
     root.remove();
@@ -459,6 +847,49 @@ describe('TechnicalSpecimenRegistrationView', () => {
     expect(
       mockDeleteTechnicalSpecimenRegistrationMediaAsset,
     ).toHaveBeenCalledWith('CASE-1', 'ASSET-UPLOADED');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('opens the application drawer and saves updated application info', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    document
+      .querySelector<HTMLButtonElement>('[data-testid="open-application-drawer"]')
+      ?.click();
+    await flushView();
+
+    expect(
+      document.querySelector('[data-testid="application-drawer"]'),
+    ).toBeTruthy();
+
+    document
+      .querySelector<HTMLButtonElement>('[data-testid="drawer-update-record"]')
+      ?.click();
+    await flushView();
+
+    document
+      .querySelector<HTMLButtonElement>('[data-testid="drawer-save-record"]')
+      ?.click();
+    await flushView();
+    await flushView();
+
+    expect(
+      mockSaveTechnicalSpecimenRegistrationApplicationWorkbenchPatientInfo,
+    ).toHaveBeenCalledWith(
+      'CASE-1',
+      expect.objectContaining({
+        patientInfo: expect.objectContaining({
+          clinicalDiagnosis: '抽屉更新后的临床诊断',
+        }),
+      }),
+    );
+    expect(mockGetTechnicalSpecimenRegistrationWorkspace).toHaveBeenCalledTimes(
+      2,
+    );
+    expect(messageSuccess).toHaveBeenCalledWith('申请信息已保存');
 
     app.unmount();
     root.remove();

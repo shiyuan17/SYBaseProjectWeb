@@ -320,13 +320,6 @@ export function useSpecimenReceiptWorkbench() {
     directReceiveForm.receivedByName = user?.name ?? '';
   }
 
-  function handleAddDirectReceiveRow() {
-    directReceiveItems.value = [
-      ...directReceiveItems.value,
-      createReceiptDraftItem(),
-    ];
-  }
-
   function handleRemoveDirectReceiveRow(key: number) {
     directReceiveItems.value = directReceiveItems.value.filter(
       (item) => item.key !== key,
@@ -593,7 +586,6 @@ export function useSpecimenReceiptWorkbench() {
     directReceiveItems,
     directReceiveSubmitting,
     exportLoading,
-    handleAddDirectReceiveRow,
     handleClearList,
     handleClearSelectionRows,
     handleDirectReceiveUserChange,

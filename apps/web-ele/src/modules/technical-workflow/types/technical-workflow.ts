@@ -255,6 +255,7 @@ export interface TechnicalSpecimenRegistrationMediaAsset {
 export interface TechnicalSpecimenRegistrationActionFlags {
   canCompleteRegistration: boolean;
   canDeleteMediaAssets: boolean;
+  canSaveDetailSections: boolean;
   canSaveMaterials: boolean;
   canUploadMediaAssets: boolean;
 }
@@ -278,6 +279,11 @@ export interface SaveTechnicalSpecimenRegistrationMaterialItem {
 
 export interface SaveTechnicalSpecimenRegistrationMaterialsRequest {
   materials: SaveTechnicalSpecimenRegistrationMaterialItem[];
+  terminalCode?: null | string;
+}
+
+export interface SaveTechnicalSpecimenRegistrationDetailSectionsRequest {
+  detailSections: TechnicalSpecimenRegistrationDetailSections;
   terminalCode?: null | string;
 }
 

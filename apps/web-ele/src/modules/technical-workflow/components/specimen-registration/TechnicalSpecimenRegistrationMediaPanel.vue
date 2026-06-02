@@ -44,7 +44,7 @@ function handleFileChange(event: Event) {
 </script>
 
 <template>
-  <section class="flex min-h-[760px] flex-col rounded-2xl border border-slate-200 bg-white shadow-sm">
+  <section class="flex min-h-[480px] flex-1 flex-col rounded-2xl border border-slate-200 bg-white shadow-sm">
     <div class="border-b border-slate-200 px-4 py-4">
       <div class="text-base font-semibold text-slate-900">图片区</div>
       <p class="mt-1 text-xs text-slate-500">

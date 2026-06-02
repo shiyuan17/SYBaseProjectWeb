@@ -130,6 +130,7 @@ pnpm linear:pull
 - [docs/UI_RULES.md](./docs/UI_RULES.md)
 - [docs/COMPATIBILITY_RULES.md](./docs/COMPATIBILITY_RULES.md)
 - [docs/GIT_RULES.md](./docs/GIT_RULES.md)
+- [docs/LINEAR_TASK.md](./docs/LINEAR_TASK.md)
 - [docs/RELEASE.md](./docs/RELEASE.md)
 
 ## 后续工程建议顺序

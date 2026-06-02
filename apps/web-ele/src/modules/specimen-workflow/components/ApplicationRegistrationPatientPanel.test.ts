@@ -336,6 +336,58 @@ describe('ApplicationRegistrationPatientPanel', () => {
     wrapper.unmount();
   });
 
+  it('can hide the reprint action in compact drawer scenarios', async () => {
+    const wrapper = await mountPanel({
+      saveDisabled: false,
+      showReprintAction: false,
+      title: '申请信息',
+    });
+
+    const buttonTexts = [
+      ...wrapper.root.querySelectorAll<HTMLButtonElement>('button'),
+    ].map((button) => button.textContent?.trim() ?? '');
+
+    expect(buttonTexts).toContain('保存');
+    expect(buttonTexts).not.toContain('补打申请单');
+    expect(wrapper.root.textContent).toContain('申请信息');
+
+    wrapper.unmount();
+  });
+
+  it('renders direct editable fields for drawer editing', async () => {
+    const wrapper = await mountPanel({
+      editMode: 'direct',
+      saveDisabled: false,
+      showReprintAction: false,
+      showSaveAction: false,
+      title: '申请信息',
+    });
+
+    expect(
+      wrapper.root.querySelector('[data-testid="patient-edit-checkItem"]'),
+    ).toBeNull();
+    expect(
+      [...wrapper.root.querySelectorAll<HTMLButtonElement>('button')].map(
+        (button) => button.textContent?.trim() ?? '',
+      ),
+    ).not.toContain('保存');
+
+    const input = wrapper.root.querySelector<HTMLInputElement>(
+      '[data-testid="patient-direct-input-checkItem"]',
+    );
+    expect(input).not.toBeNull();
+    input!.value = '直接编辑后的检查项目';
+    input!.dispatchEvent(new Event('input'));
+    await flushPromises();
+
+    expect(wrapper.updateRecordMock).toHaveBeenCalledTimes(1);
+    expect(wrapper.getLatestRecord().patientInfo.checkItem).toBe(
+      '直接编辑后的检查项目',
+    );
+
+    wrapper.unmount();
+  });
+
   it('commits the active editor before emitting patient save', async () => {
     const wrapper = await mountPanel({ saveDisabled: false });
 
