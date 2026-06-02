@@ -646,6 +646,80 @@ shouldCallFunctionTwice();
 
 ---
 
+# 九补、前端语境示例（Vue 3 + TS）
+
+本规范示例偏服务端语境，下面补充本仓库（Vue 3 + Element Plus 管理台）常见场景的等价落地，技术细则仍以 `VUE_TS_RULES.md`、`STATE_RULES.md`、`API_RULES.md` 为准。
+
+## 组合式函数：单一职责 + 显式加载/错误状态
+
+### 正例
+
+```ts
+function useUserList() {
+  const loading = ref(false);
+  const error = ref<string | null>(null);
+  const rows = ref<UserTableRow[]>([]);
+
+  async function load(query: UserListQuery) {
+    loading.value = true;
+    error.value = null;
+    try {
+      const dto = await fetchUserList(query);
+      rows.value = dto.items.map(toUserTableRow);
+    } catch (e) {
+      error.value = resolveErrorMessage(e);
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  return { loading, error, rows, load };
+}
+```
+
+### 反例
+
+```ts
+function useUser() {
+  const data = ref<any>(null); // any + 模糊命名
+  async function go() {
+    data.value = (await api.get('/user/list')).data; // 直接透传后端结构，无加载/错误态
+  }
+  return { data, go };
+}
+```
+
+## ViewModel 转换：不让组件长期依赖后端原始结构
+
+### 正例
+
+```ts
+function toUserTableRow(dto: UserDTO): UserTableRow {
+  return {
+    id: dto.id,
+    name: dto.userName,
+    isEnabled: dto.status === 1,
+    createdAt: formatDateTime(dto.gmtCreate),
+  };
+}
+```
+
+## 组件：无副作用、可销毁
+
+### 正例
+
+```ts
+const chart = shallowRef<EChartsType | null>(null);
+onMounted(() => {
+  chart.value = echarts.init(containerRef.value!);
+});
+onBeforeUnmount(() => {
+  chart.value?.dispose(); // 释放实例与监听，避免切页残留
+});
+```
+
+---
+
 # 十、AI 健康度自检清单
 
 提交代码前必须自检。

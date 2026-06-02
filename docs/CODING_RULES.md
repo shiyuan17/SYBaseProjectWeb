@@ -54,6 +54,21 @@
 - 测试至少覆盖正常路径、边界条件、失败分支
 - 提交前必须完成自检，确认无明显重复、无死代码、无调试残留
 
+标准验证命令（统一使用 `pnpm`，按改动范围选择最小有效集）：
+
+| 场景 | 命令 | 说明 |
+| --- | --- | --- |
+| 代码规范 | `pnpm lint` | ESLint / oxlint 等统一校验 |
+| 类型检查 | `pnpm check:type` | `vue-tsc` 类型检查（等价 `turbo run typecheck`） |
+| 拼写检查 | `pnpm check:cspell` | cspell 校验 |
+| 综合静态检查 | `pnpm check` | 循环依赖 + 依赖 + 类型 + 拼写一次性执行 |
+| 单元测试 | `pnpm test:unit` | Vitest（`--dom`），逻辑/工具/组件 |
+| 端到端测试 | `pnpm test:e2e` | Playwright，关键链路回归 |
+| 构建 | `pnpm build` | 产物构建，发布前必过 |
+
+- 仅改文档时可只跑 `pnpm check:cspell`；改逻辑/组件时至少跑 `pnpm lint` + `pnpm check:type` + 相关 `pnpm test:unit`
+- 交付时在「验证结果」中写明实际执行的命令与结论，未执行项必须标注为未验证
+
 ## 推荐实践
 
 - 优先通过类型、枚举、常量和映射表达规则，而不是靠注释约束
