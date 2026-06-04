@@ -140,7 +140,9 @@ vi.mock('element-plus', () => {
     emits: ['update:modelValue'],
     setup(props, { slots }) {
       return () =>
-        props.modelValue ? h('section', [h('h2', props.title), slots.default?.()]) : null;
+        props.modelValue
+          ? h('section', [h('h2', props.title), slots.default?.()])
+          : null;
     },
   });
 
@@ -234,15 +236,16 @@ vi.mock('../components/EquipmentWarningPanel.vue', () => ({
       return () =>
         h('div', [
           'equipment-warning-panel',
-          props.warnings?.map((warning: { equipmentCode: string; equipmentId: string }) =>
-            h(
-              'button',
-              {
-                type: 'button',
-                onClick: () => emit('navigateToEquipmentDetail', warning),
-              },
-              `定位-${warning.equipmentCode}`,
-            ),
+          props.warnings?.map(
+            (warning: { equipmentCode: string; equipmentId: string }) =>
+              h(
+                'button',
+                {
+                  type: 'button',
+                  onClick: () => emit('navigateToEquipmentDetail', warning),
+                },
+                `定位-${warning.equipmentCode}`,
+              ),
           ),
         ]);
     },

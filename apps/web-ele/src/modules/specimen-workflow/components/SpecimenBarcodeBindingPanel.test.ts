@@ -180,14 +180,14 @@ describe('SpecimenBarcodeBindingPanel', () => {
     ).not.toBeNull();
     expect(container.textContent).toContain('李护士');
 
-    const bindButton = [...container.querySelectorAll('button')].find((button) =>
-      button.textContent?.includes('条码绑定'),
+    const bindButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('条码绑定'),
     );
     const exportButton = [...container.querySelectorAll('button')].find(
       (button) => button.textContent?.includes('导出 Excel'),
     );
-    const printButton = [...container.querySelectorAll('button')].find((button) =>
-      button.textContent?.includes('预打印条码'),
+    const printButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('预打印条码'),
     );
 
     bindButton?.click();

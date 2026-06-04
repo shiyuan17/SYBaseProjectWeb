@@ -71,10 +71,17 @@ const {
   const mockRemovalRows = createMockRemovalRows();
 
   const resetMockRemovalRows = () => {
-    mockRemovalRows.splice(0, mockRemovalRows.length, ...createMockRemovalRows());
+    mockRemovalRows.splice(
+      0,
+      mockRemovalRows.length,
+      ...createMockRemovalRows(),
+    );
   };
 
-  const confirmRemoval = (identifier: string, lookup: 'barcode' | 'identifier') => {
+  const confirmRemoval = (
+    identifier: string,
+    lookup: 'barcode' | 'identifier',
+  ) => {
     const targetRow = mockRemovalRows.find((row) =>
       lookup === 'barcode'
         ? row.barcode === identifier
@@ -189,42 +196,44 @@ const {
         total: items.length,
       };
     }),
-    listPendingSpecimenRemovalsMock: vi.fn(async (params: Record<string, unknown> = {}) => {
-      const applicationNo =
-        typeof params.applicationNo === 'string' ? params.applicationNo : '';
-      const keyword =
-        typeof params.keyword === 'string' ? params.keyword.trim() : '';
-      const items = mockRemovalRows
-        .filter((row) => !row.specimenRemovalAt)
-        .filter((row) => {
-          if (applicationNo && row.applicationNo !== applicationNo) {
-            return false;
-          }
-          if (!keyword) {
-            return true;
-          }
-          return [
-            row.applicationNo,
-            row.barcode,
-            row.patientName,
-            row.specimenName,
-            row.specimenNo,
-          ].some((value) => String(value ?? '').includes(keyword));
-        });
+    listPendingSpecimenRemovalsMock: vi.fn(
+      async (params: Record<string, unknown> = {}) => {
+        const applicationNo =
+          typeof params.applicationNo === 'string' ? params.applicationNo : '';
+        const keyword =
+          typeof params.keyword === 'string' ? params.keyword.trim() : '';
+        const items = mockRemovalRows
+          .filter((row) => !row.specimenRemovalAt)
+          .filter((row) => {
+            if (applicationNo && row.applicationNo !== applicationNo) {
+              return false;
+            }
+            if (!keyword) {
+              return true;
+            }
+            return [
+              row.applicationNo,
+              row.barcode,
+              row.patientName,
+              row.specimenName,
+              row.specimenNo,
+            ].some((value) => String(value ?? '').includes(keyword));
+          });
 
-      return {
-        items,
-        page: 1,
-        size: 20,
-        summary: {
-          abnormalCount: 0,
-          confirmedCount: 0,
-          pendingCount: items.length,
-          totalCount: items.length,
-        },
-        total: items.length,
-      };
-    }),
+        return {
+          items,
+          page: 1,
+          size: 20,
+          summary: {
+            abnormalCount: 0,
+            confirmedCount: 0,
+            pendingCount: items.length,
+            totalCount: items.length,
+          },
+          total: items.length,
+        };
+      },
+    ),
     messageSuccessMock: vi.fn(),
     messageWarningMock: vi.fn(),
     mockRoute: {
@@ -323,7 +332,7 @@ async function waitForViewAssertion(assertion: () => void) {
     }
   }
 
-  throw lastError;
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
 
 describe('FixationVerifyView', () => {
@@ -418,7 +427,12 @@ describe('FixationVerifyView', () => {
       remarks: '离体确认',
       specimenBarcode: 'SP-PENDING',
     });
-    expect(listPendingSpecimenRemovalsMock).toHaveBeenCalledTimes(2);
+    expect(listPendingSpecimenRemovalsMock).toHaveBeenCalledTimes(1);
+    expect(listSpecimensMock).toHaveBeenLastCalledWith({
+      applicationNo: 'AP202605230001',
+      page: 1,
+      size: 500,
+    });
     expect(container.textContent).toContain('SP202605230001');
     expect(container.textContent).toContain('SP202605230002');
     expect(container.textContent).toContain('Test User');
@@ -447,12 +461,12 @@ describe('FixationVerifyView', () => {
       identifierType: 'SPECIMEN_NO',
       remarks: '离体确认',
     });
-    expect(listPendingSpecimenRemovalsMock).toHaveBeenCalledTimes(2);
-    expect(listPendingSpecimenRemovalsMock).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        applicationNo: 'AP202605230001',
-      }),
-    );
+    expect(listPendingSpecimenRemovalsMock).toHaveBeenCalledTimes(1);
+    expect(listSpecimensMock).toHaveBeenLastCalledWith({
+      applicationNo: 'AP202605230001',
+      page: 1,
+      size: 500,
+    });
     expect(messageSuccessMock).toHaveBeenCalledWith(
       '标本ID SP202605230001 已完成离体确认',
     );
@@ -531,60 +545,136 @@ describe('FixationVerifyView', () => {
       remarks: '离体确认',
     });
     expect(specimenIdInput!.value).toBe('SP-DUPLICATE');
-    expect(container.textContent).toContain(
-      '标本ID对应多条记录，无法自动确认',
-    );
+    expect(container.textContent).toContain('标本ID对应多条记录，无法自动确认');
 
     app.unmount();
   });
 
   it('does not submit quick confirm when specimen is already removed', async () => {
     confirmSpecimenRemovalByIdentifierMock.mockClear();
-    listSpecimensMock.mockResolvedValueOnce({
-      items: [
-        {
-          abnormalFlag: false,
-          applicationId: 'APP-REMOVED',
-          applicationNo: 'AP202606010006',
-          barcode: 'BC-REMOVED',
-          checkInStatus: null,
-          checkedInAt: null,
-          checkedInByName: null,
-          containerCount: 1,
-          containerName: '福尔马林瓶',
-          fixationStatus: 'PENDING',
-          labelPrintBatchNo: null,
-          labelPrintStatus: 'SUCCESS',
-          latestTrackingAt: '2026-06-01 13:52:01',
-          patientName: 'Alice',
-          recentNode: null,
-          registeredAt: '2026-06-01 13:40:00',
-          specimenConfirmedAt: '2026-06-01T13:45:00',
-          specimenCount: 1,
-          specimenId: 'SPEC-REMOVED',
-          specimenName: '腹部皮肤活检',
-          specimenNo: 'SP20260601006',
-          specimenRemovalAt: '2026-06-01T13:50:00',
-          specimenSite: null,
-          specimenStatus: 'REGISTERED',
-          specimenType: '常规',
-          submittingDepartmentId: null,
-          submittingDepartmentName: null,
-          verificationCompletedAt: null,
-          verificationStartedAt: null,
-          verificationStatus: null,
+    listSpecimensMock
+      .mockResolvedValueOnce({
+        items: [
+          {
+            abnormalFlag: false,
+            applicationId: 'APP-REMOVED',
+            applicationNo: 'AP202606010006',
+            barcode: 'BC-REMOVED',
+            checkInStatus: null,
+            checkedInAt: null,
+            checkedInByName: null,
+            containerCount: 1,
+            containerName: '福尔马林瓶',
+            fixationStatus: 'PENDING',
+            labelPrintBatchNo: null,
+            labelPrintStatus: 'SUCCESS',
+            latestTrackingAt: '2026-06-01 13:52:01',
+            patientName: 'Alice',
+            recentNode: null,
+            registeredAt: '2026-06-01 13:40:00',
+            specimenConfirmedAt: '2026-06-01T13:45:00',
+            specimenCount: 1,
+            specimenId: 'SPEC-REMOVED',
+            specimenName: '腹部皮肤活检',
+            specimenNo: 'SP20260601006',
+            specimenRemovalAt: '2026-06-01T13:50:00',
+            specimenSite: null,
+            specimenStatus: 'REGISTERED',
+            specimenType: '常规',
+            submittingDepartmentId: null,
+            submittingDepartmentName: null,
+            verificationCompletedAt: null,
+            verificationStartedAt: null,
+            verificationStatus: null,
+          },
+        ],
+        page: 1,
+        size: 100,
+        summary: {
+          abnormalCount: 0,
+          labelPrintedCount: 1,
+          pendingLabelCount: 0,
+          totalCount: 1,
         },
-      ],
-      page: 1,
-      size: 100,
-      summary: {
-        abnormalCount: 0,
-        labelPrintedCount: 1,
-        pendingLabelCount: 0,
-        totalCount: 1,
-      },
-      total: 1,
-    } as any);
+        total: 1,
+      } as any)
+      .mockResolvedValueOnce({
+        items: [
+          {
+            abnormalFlag: false,
+            applicationId: 'APP-REMOVED',
+            applicationNo: 'AP202606010006',
+            barcode: 'BC-REMOVED',
+            checkInStatus: null,
+            checkedInAt: null,
+            checkedInByName: null,
+            containerCount: 1,
+            containerName: '福尔马林瓶',
+            fixationStatus: 'PENDING',
+            labelPrintBatchNo: null,
+            labelPrintStatus: 'SUCCESS',
+            latestTrackingAt: '2026-06-01 13:52:01',
+            patientName: 'Alice',
+            recentNode: null,
+            registeredAt: '2026-06-01 13:40:00',
+            specimenConfirmedAt: '2026-06-01T13:45:00',
+            specimenCount: 1,
+            specimenId: 'SPEC-REMOVED',
+            specimenName: '腹部皮肤活检',
+            specimenNo: 'SP20260601006',
+            specimenRemovalAt: '2026-06-01T13:50:00',
+            specimenSite: null,
+            specimenStatus: 'REGISTERED',
+            specimenType: '常规',
+            submittingDepartmentId: null,
+            submittingDepartmentName: null,
+            verificationCompletedAt: null,
+            verificationStartedAt: null,
+            verificationStatus: null,
+          },
+          {
+            abnormalFlag: false,
+            applicationId: 'APP-REMOVED',
+            applicationNo: 'AP202606010006',
+            barcode: 'BC-REMOVED-SIBLING',
+            checkInStatus: null,
+            checkedInAt: null,
+            checkedInByName: null,
+            containerCount: 1,
+            containerName: '福尔马林瓶',
+            fixationStatus: 'PENDING',
+            labelPrintBatchNo: null,
+            labelPrintStatus: 'SUCCESS',
+            latestTrackingAt: '2026-06-01 13:53:01',
+            patientName: 'Alice',
+            recentNode: null,
+            registeredAt: '2026-06-01 13:41:00',
+            specimenConfirmedAt: '2026-06-01T13:46:00',
+            specimenCount: 1,
+            specimenId: 'SPEC-REMOVED-SIBLING',
+            specimenName: '胃窦黏膜',
+            specimenNo: 'SP20260601007',
+            specimenRemovalAt: null,
+            specimenSite: null,
+            specimenStatus: 'REGISTERED',
+            specimenType: '常规',
+            submittingDepartmentId: null,
+            submittingDepartmentName: null,
+            verificationCompletedAt: null,
+            verificationStartedAt: null,
+            verificationStatus: null,
+          },
+        ],
+        page: 1,
+        size: 500,
+        summary: {
+          abnormalCount: 0,
+          labelPrintedCount: 2,
+          pendingLabelCount: 0,
+          totalCount: 2,
+        },
+        total: 2,
+      } as any);
 
     const { app, container } = mountView();
     await flushView();
@@ -599,18 +689,26 @@ describe('FixationVerifyView', () => {
     specimenIdInput!.dispatchEvent(
       new KeyboardEvent('keyup', { bubbles: true, key: 'Enter' }),
     );
-    await flushView();
+    await waitForViewAssertion(() => {
+      expect(listSpecimensMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          keyword: 'SP20260601006',
+        }),
+      );
+      expect(confirmSpecimenRemovalByIdentifierMock).not.toHaveBeenCalled();
+      expect(listSpecimensMock).toHaveBeenLastCalledWith({
+        applicationNo: 'AP202606010006',
+        page: 1,
+        size: 500,
+      });
+      expect(messageWarningMock).toHaveBeenCalledWith(
+        '标本ID SP20260601006 已完成离体确认',
+      );
+    });
 
-    expect(listSpecimensMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        keyword: 'SP20260601006',
-      }),
-    );
-    expect(confirmSpecimenRemovalByIdentifierMock).not.toHaveBeenCalled();
-    expect(messageWarningMock).toHaveBeenCalledWith(
-      '标本ID SP20260601006 已完成离体确认',
-    );
     expect(specimenIdInput!.value).toBe('SP20260601006');
+    expect(container.textContent).toContain('SP20260601006');
+    expect(container.textContent).toContain('SP20260601007');
 
     app.unmount();
   });
@@ -664,15 +762,15 @@ describe('FixationVerifyView', () => {
     const { app } = mountView();
     await waitForViewAssertion(() => {
       expect(getApplicationDetailMock).toHaveBeenCalledWith('APP-LOOKUP');
-      expect(listPendingSpecimenRemovalsMock).toHaveBeenCalled();
+      expect(listSpecimensMock).toHaveBeenCalled();
     });
 
     expect(getApplicationDetailMock).toHaveBeenCalledWith('APP-LOOKUP');
-    expect(listPendingSpecimenRemovalsMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        applicationNo: 'AP-LOOKUP-001',
-      }),
-    );
+    expect(listSpecimensMock).toHaveBeenCalledWith({
+      applicationNo: 'AP-LOOKUP-001',
+      page: 1,
+      size: 500,
+    });
 
     app.unmount();
   });

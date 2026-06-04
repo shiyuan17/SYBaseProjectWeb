@@ -8,17 +8,20 @@ import { describe, expect, it } from 'vitest';
 import {
   buildPendingTransportOrderQuery,
   buildPrintTransportOrderRequest,
-  canSelectSpecimenOutboundRow,
   buildTransportOrderHandoverRequest,
   canHandoverTransportOrder,
+  canSelectSpecimenOutboundRow,
   createDefaultTransportHandoverFormState,
   createDefaultTransportPrintFormState,
   createTransportHandoverDialogTitle,
   createTransportPrintDialogTitle,
+  enhanceSpecimenOutboundItem,
   normalizeRouteQueryValue,
-  resolveTransportSelectionValidationMessage,
-  resolveTargetTransportOrders,
+  resolveExactSpecimenOutboundMatches,
   resolveSpecimenNoQuickHandoverTarget,
+  resolveSpecimenOutboundReadiness,
+  resolveTargetTransportOrders,
+  resolveTransportSelectionValidationMessage,
   splitTransportRowsByTransportOrder,
 } from './transport-handover';
 
@@ -48,6 +51,8 @@ function createOutboundRow(
     applicationId: 'APP-1',
     applicationNo: 'NO-1',
     barcode: 'BC-1',
+    checkInStatus: 'CHECKED_IN',
+    fixationStatus: 'COMPLETED',
     inpatientNo: 'ZY-1',
     outboundAt: null,
     outboundUserName: null,
@@ -56,6 +61,7 @@ function createOutboundRow(
     patientName: '张三',
     registeredAt: '2026-05-31 09:00:00',
     registeredByName: '登记员',
+    specimenConfirmedAt: '2026-05-31 08:40:00',
     specimenId: 'SP-1',
     specimenName: '甲状腺组织',
     specimenNo: 'SP-NO-1',
@@ -194,7 +200,7 @@ describe('transport handover helpers', () => {
       resolveTransportSelectionValidationMessage([
         createOutboundRow({ outboundAt: '2026-05-31 10:00:00' }),
       ]),
-    ).toBe('仅可转运未出库且未到接收终态的标本');
+    ).toBe('标本已完成出库，无需重复操作');
     expect(
       resolveTransportSelectionValidationMessage([
         createOutboundRow(),
@@ -222,5 +228,79 @@ describe('transport handover helpers', () => {
         expect.objectContaining({ specimenId: 'SP-3' }),
       ],
     });
+  });
+
+  it('derives current-specimen outbound readiness and display status', () => {
+    expect(resolveSpecimenOutboundReadiness(createOutboundRow())).toMatchObject(
+      {
+        blockingStep: null,
+        canOutbound: true,
+        displayStatus: '待出库',
+      },
+    );
+    expect(
+      resolveSpecimenOutboundReadiness(
+        createOutboundRow({ checkInStatus: 'NOT_CHECKED_IN' }),
+      ),
+    ).toMatchObject({
+      blockingStep: 'CHECKED_IN',
+      canOutbound: false,
+      displayStatus: '待入库',
+      reason: '标本 SP-NO-1 尚未完成入库，不能出库',
+    });
+    expect(
+      resolveSpecimenOutboundReadiness(
+        createOutboundRow({ fixationStatus: 'PENDING', checkInStatus: null }),
+      ),
+    ).toMatchObject({
+      blockingStep: 'FIXATION',
+      displayStatus: '待固定',
+    });
+    expect(
+      resolveSpecimenOutboundReadiness(
+        createOutboundRow({
+          checkInStatus: 'NOT_CHECKED_IN',
+          specimenConfirmedAt: null,
+        }),
+      ),
+    ).toMatchObject({
+      blockingStep: 'CONFIRMATION',
+      displayStatus: '待标本确认',
+    });
+    expect(
+      resolveSpecimenOutboundReadiness(
+        createOutboundRow({ specimenStatus: 'RECEIVED' }),
+      ),
+    ).toMatchObject({
+      blockingStep: 'RECEIPT_TERMINAL',
+      displayStatus: '已接收',
+    });
+    expect(
+      resolveSpecimenOutboundReadiness(
+        createOutboundRow({
+          outboundAt: '2026-05-31 10:00:00',
+          specimenStatus: 'IN_TRANSIT',
+        }),
+      ),
+    ).toMatchObject({
+      blockingStep: 'OUTBOUNDED',
+      displayStatus: '已出库',
+    });
+
+    expect(enhanceSpecimenOutboundItem(createOutboundRow())).toMatchObject({
+      canOutbound: true,
+      displayOutboundStatus: '待出库',
+      outboundDisabledReason: null,
+      outboundStatusTagType: 'info',
+    });
+    expect(
+      resolveExactSpecimenOutboundMatches(
+        [
+          createOutboundRow(),
+          createOutboundRow({ specimenId: 'SP-2', specimenNo: 'SP-NO-2' }),
+        ],
+        ' SP-NO-2 ',
+      ),
+    ).toEqual([expect.objectContaining({ specimenId: 'SP-2' })]);
   });
 });

@@ -7,9 +7,9 @@ import {
   ElDescriptions,
   ElDescriptionsItem,
   ElEmpty,
-  ElTabPane,
   ElTable,
   ElTableColumn,
+  ElTabPane,
   ElTabs,
   ElTag,
 } from 'element-plus';
@@ -29,23 +29,44 @@ const props = defineProps<{
   workbench: DiagnosticWorkbenchView | null;
 }>();
 
-const activeTab = ref('diagnosis');
+const activeTab = ref('report-overview');
 
 watch(
   () => props.workbench?.caseId,
   () => {
-    activeTab.value = 'diagnosis';
+    activeTab.value = 'report-overview';
   },
 );
 </script>
 
 <template>
   <section class="rounded-lg border border-border bg-card shadow-sm">
-    <header class="border-b border-border px-4 py-3">
-      <h3 class="text-sm font-semibold text-foreground">诊断工作区</h3>
-      <p class="mt-1 text-xs text-muted-foreground">
-        右侧聚合展示当前病例的诊断摘要、材料信息、医嘱与流程痕迹。
-      </p>
+    <header
+      class="flex flex-col gap-2 border-b border-border px-4 py-3 lg:flex-row lg:items-center lg:justify-between"
+    >
+      <div>
+        <h3 class="text-sm font-semibold text-foreground">诊断资料区</h3>
+        <p class="mt-1 text-xs text-muted-foreground">
+          以报告书写为中心汇总临床资料、材料切片、流程痕迹、会诊修订与医嘱收费。
+        </p>
+      </div>
+      <div
+        v-if="workbench"
+        class="flex flex-wrap gap-2 text-xs text-muted-foreground"
+      >
+        <span class="rounded-full bg-muted px-2 py-1">
+          标本 {{ workbench.specimens.length }}
+        </span>
+        <span class="rounded-full bg-muted px-2 py-1">
+          蜡块 {{ workbench.blocks.length }}
+        </span>
+        <span class="rounded-full bg-muted px-2 py-1">
+          玻片 {{ workbench.slides.length }}
+        </span>
+        <span class="rounded-full bg-muted px-2 py-1">
+          医嘱 {{ workbench.medicalOrders.length }}
+        </span>
+      </div>
     </header>
 
     <div class="px-4 py-3">
@@ -57,55 +78,253 @@ watch(
         class="diagnosis-workbench-tabs"
         data-testid="diagnosis-workbench-tabs"
       >
-        <ElTabPane label="诊断" name="diagnosis">
-          <div class="grid gap-3 lg:grid-cols-2">
+        <ElTabPane label="报告概览" name="report-overview">
+          <div class="grid gap-3 xl:grid-cols-[260px_minmax(0,1fr)]">
             <article class="rounded-md border border-border bg-background p-3">
               <h4 class="text-sm font-medium text-foreground">报告状态</h4>
-              <div class="mt-2 text-sm text-muted-foreground">
-                当前报告状态：{{
-                  formatReportStatus(workbench.currentReport?.reportStatus)
-                }}
-              </div>
-              <div class="mt-1 text-sm text-muted-foreground">
-                报告号：{{ formatNullable(workbench.currentReport?.reportNo) }}
-              </div>
-              <div class="mt-1 text-sm text-muted-foreground">
-                版本：v{{ workbench.currentReport?.versionNo ?? 1 }}
+              <div class="mt-3 space-y-2 text-sm">
+                <div class="flex justify-between gap-3">
+                  <span class="text-muted-foreground">报告号</span>
+                  <span class="font-medium text-foreground">
+                    {{ formatNullable(workbench.currentReport?.reportNo) }}
+                  </span>
+                </div>
+                <div class="flex justify-between gap-3">
+                  <span class="text-muted-foreground">当前状态</span>
+                  <span class="font-medium text-foreground">
+                    {{
+                      formatReportStatus(workbench.currentReport?.reportStatus)
+                    }}
+                  </span>
+                </div>
+                <div class="flex justify-between gap-3">
+                  <span class="text-muted-foreground">版本</span>
+                  <span class="font-medium text-foreground">
+                    v{{ workbench.currentReport?.versionNo ?? 1 }}
+                  </span>
+                </div>
+                <div class="flex justify-between gap-3">
+                  <span class="text-muted-foreground">审核医生</span>
+                  <span class="font-medium text-foreground">
+                    {{ formatNullable(workbench.currentReport?.reviewerName) }}
+                  </span>
+                </div>
+                <div class="flex justify-between gap-3">
+                  <span class="text-muted-foreground">签发医生</span>
+                  <span class="font-medium text-foreground">
+                    {{ formatNullable(workbench.currentReport?.signedByName) }}
+                  </span>
+                </div>
               </div>
             </article>
 
-            <article class="rounded-md border border-border bg-background p-3">
-              <h4 class="text-sm font-medium text-foreground">临床与诊断摘要</h4>
-              <div class="mt-2 text-sm text-muted-foreground">临床诊断</div>
-              <div class="mt-1 whitespace-pre-wrap text-sm text-foreground">
-                {{ formatNullable(workbench.clinicalDiagnosis) }}
-              </div>
-              <div class="mt-3 text-sm text-muted-foreground">当前最终诊断</div>
-              <div class="mt-1 whitespace-pre-wrap text-sm text-foreground">
-                {{ formatNullable(workbench.currentReport?.finalDiagnosis) }}
-              </div>
-            </article>
+            <div class="grid gap-3 lg:grid-cols-3">
+              <article
+                class="rounded-md border border-border bg-background p-3"
+              >
+                <h4 class="text-sm font-medium text-foreground">大体所见</h4>
+                <div
+                  class="mt-2 max-h-44 overflow-auto whitespace-pre-wrap text-sm text-foreground"
+                >
+                  {{ formatNullable(workbench.currentReport?.grossExam) }}
+                </div>
+              </article>
+              <article
+                class="rounded-md border border-border bg-background p-3"
+              >
+                <h4 class="text-sm font-medium text-foreground">镜检所见</h4>
+                <div
+                  class="mt-2 max-h-44 overflow-auto whitespace-pre-wrap text-sm text-foreground"
+                >
+                  {{ formatNullable(workbench.currentReport?.microscopicExam) }}
+                </div>
+              </article>
+              <article
+                class="rounded-md border border-border bg-background p-3"
+              >
+                <h4 class="text-sm font-medium text-foreground">诊断结果</h4>
+                <div
+                  class="mt-2 max-h-44 overflow-auto whitespace-pre-wrap text-sm font-medium text-foreground"
+                >
+                  {{ formatNullable(workbench.currentReport?.finalDiagnosis) }}
+                </div>
+              </article>
+            </div>
           </div>
+        </ElTabPane>
 
-          <div class="mt-3 grid gap-3 lg:grid-cols-2">
-            <article class="rounded-md border border-border bg-background p-3">
-              <h4 class="text-sm font-medium text-foreground">大体所见预览</h4>
-              <div class="mt-2 whitespace-pre-wrap text-sm text-foreground">
-                {{ formatNullable(workbench.currentReport?.grossExam) }}
-              </div>
-            </article>
+        <ElTabPane label="临床资料" name="clinical">
+          <div class="grid gap-3 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <ElDescriptions :column="2" border size="small">
+              <ElDescriptionsItem label="申请单号">
+                {{ formatNullable(workbench.applicationNo) }}
+              </ElDescriptionsItem>
+              <ElDescriptionsItem label="病理号">
+                {{ formatNullable(workbench.pathologyNo) }}
+              </ElDescriptionsItem>
+              <ElDescriptionsItem label="患者姓名">
+                {{ formatNullable(workbench.patientName) }}
+              </ElDescriptionsItem>
+              <ElDescriptionsItem label="病例状态">
+                {{ formatNullable(workbench.caseStatus) }}
+              </ElDescriptionsItem>
+              <ElDescriptionsItem label="送检科室">
+                {{ formatNullable(workbench.submittingDepartmentName) }}
+              </ElDescriptionsItem>
+              <ElDescriptionsItem label="送检医生">
+                {{ formatNullable(workbench.submittingDoctorName) }}
+              </ElDescriptionsItem>
+              <ElDescriptionsItem :span="2" label="临床诊断">
+                <div class="whitespace-pre-wrap">
+                  {{ formatNullable(workbench.clinicalDiagnosis) }}
+                </div>
+              </ElDescriptionsItem>
+              <ElDescriptionsItem :span="2" label="申请单影像">
+                <a
+                  v-if="workbench.applicationFormImageUrl"
+                  :href="workbench.applicationFormImageUrl"
+                  class="text-primary hover:underline"
+                  rel="noreferrer noopener"
+                  target="_blank"
+                >
+                  查看归档影像
+                </a>
+                <span v-else>
+                  {{ formatNullable(workbench.applicationFormImageUrl) }}
+                </span>
+              </ElDescriptionsItem>
+            </ElDescriptions>
 
             <article class="rounded-md border border-border bg-background p-3">
-              <h4 class="text-sm font-medium text-foreground">镜检所见预览</h4>
-              <div class="mt-2 whitespace-pre-wrap text-sm text-foreground">
-                {{ formatNullable(workbench.currentReport?.microscopicExam) }}
+              <h4 class="text-sm font-medium text-foreground">申请单归档</h4>
+              <div class="mt-3 space-y-2 text-sm">
+                <div class="flex justify-between gap-3">
+                  <span class="text-muted-foreground">归档状态</span>
+                  <span class="font-medium text-foreground">
+                    {{ formatNullable(workbench.applicationFormArchiveStatus) }}
+                  </span>
+                </div>
+                <div class="flex justify-between gap-3">
+                  <span class="text-muted-foreground">归档位置</span>
+                  <span class="font-medium text-foreground">
+                    {{
+                      formatNullable(workbench.applicationFormArchiveLocation)
+                    }}
+                  </span>
+                </div>
               </div>
             </article>
           </div>
         </ElTabPane>
 
-        <ElTabPane label="进度" name="progress">
-          <div class="grid gap-3 xl:grid-cols-2">
+        <ElTabPane label="材料与切片" name="materials">
+          <div class="grid gap-3 xl:grid-cols-3">
+            <article class="rounded-md border border-border bg-background p-3">
+              <h4 class="text-sm font-medium text-foreground">
+                标本 {{ workbench.specimens.length }}
+              </h4>
+              <ElTable
+                :data="workbench.specimens"
+                border
+                class="mt-3"
+                size="small"
+              >
+                <ElTableColumn
+                  label="标本号"
+                  min-width="120"
+                  prop="specimenNo"
+                />
+                <ElTableColumn label="条码" min-width="130" prop="barcode" />
+                <ElTableColumn
+                  label="标本名称"
+                  min-width="160"
+                  prop="specimenName"
+                />
+                <ElTableColumn
+                  label="状态"
+                  min-width="110"
+                  prop="specimenStatus"
+                />
+                <template #empty>
+                  <ElEmpty description="暂无标本记录" />
+                </template>
+              </ElTable>
+            </article>
+
+            <article class="rounded-md border border-border bg-background p-3">
+              <h4 class="text-sm font-medium text-foreground">
+                蜡块 {{ workbench.blocks.length }}
+              </h4>
+              <ElTable
+                :data="workbench.blocks"
+                border
+                class="mt-3"
+                size="small"
+              >
+                <ElTableColumn
+                  label="蜡块号"
+                  min-width="120"
+                  prop="blockCode"
+                />
+                <ElTableColumn
+                  label="包埋盒"
+                  min-width="130"
+                  prop="embeddingBoxNo"
+                />
+                <ElTableColumn
+                  label="说明"
+                  min-width="160"
+                  prop="description"
+                />
+                <ElTableColumn
+                  label="归档位置"
+                  min-width="140"
+                  prop="archiveLocation"
+                />
+                <ElTableColumn label="借阅" min-width="100" prop="loanStatus" />
+                <template #empty>
+                  <ElEmpty description="暂无蜡块记录" />
+                </template>
+              </ElTable>
+            </article>
+
+            <article class="rounded-md border border-border bg-background p-3">
+              <h4 class="text-sm font-medium text-foreground">
+                玻片 {{ workbench.slides.length }}
+              </h4>
+              <ElTable
+                :data="workbench.slides"
+                border
+                class="mt-3"
+                size="small"
+              >
+                <ElTableColumn label="玻片号" min-width="120" prop="slideNo" />
+                <ElTableColumn
+                  label="状态"
+                  min-width="110"
+                  prop="slideStatus"
+                />
+                <ElTableColumn
+                  label="质控"
+                  min-width="110"
+                  prop="qualityStatus"
+                />
+                <ElTableColumn
+                  label="归档位置"
+                  min-width="140"
+                  prop="archiveLocation"
+                />
+                <ElTableColumn label="借阅" min-width="100" prop="loanStatus" />
+                <template #empty>
+                  <ElEmpty description="暂无玻片记录" />
+                </template>
+              </ElTable>
+            </article>
+          </div>
+        </ElTabPane>
+
+        <ElTabPane label="流程痕迹" name="workflow-traces">
+          <div class="grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
             <article class="rounded-md border border-border bg-background p-3">
               <h4 class="text-sm font-medium text-foreground">诊断任务链</h4>
               <ElTable
@@ -130,11 +349,26 @@ watch(
                     </ElTag>
                   </template>
                 </ElTableColumn>
+                <ElTableColumn
+                  label="责任医生"
+                  min-width="120"
+                  prop="diagnosisDoctorName"
+                />
+                <ElTableColumn
+                  label="初诊医生"
+                  min-width="120"
+                  prop="primaryDoctorName"
+                />
+                <template #empty>
+                  <ElEmpty description="暂无诊断任务" />
+                </template>
               </ElTable>
             </article>
 
             <article class="rounded-md border border-border bg-background p-3">
-              <h4 class="text-sm font-medium text-foreground">报告痕迹</h4>
+              <h4 class="text-sm font-medium text-foreground">
+                报告痕迹 / 事件链
+              </h4>
               <ElTable
                 :data="workbench.recentEvents"
                 border
@@ -143,61 +377,138 @@ watch(
               >
                 <ElTableColumn label="节点" min-width="120" prop="nodeCode" />
                 <ElTableColumn label="事件" min-width="120" prop="eventType" />
-                <ElTableColumn label="状态" min-width="100" prop="eventStatus" />
+                <ElTableColumn
+                  label="状态"
+                  min-width="100"
+                  prop="eventStatus"
+                />
+                <ElTableColumn
+                  label="操作人"
+                  min-width="120"
+                  prop="operatorName"
+                />
                 <ElTableColumn label="时间" min-width="160">
                   <template #default="{ row }">
                     {{ formatDateTime(row.eventTime) }}
                   </template>
                 </ElTableColumn>
+                <ElTableColumn
+                  label="内容"
+                  min-width="220"
+                  prop="eventContent"
+                />
+                <template #empty>
+                  <ElEmpty description="暂无流程痕迹" />
+                </template>
               </ElTable>
             </article>
           </div>
         </ElTabPane>
 
-        <ElTabPane label="大体所见" name="gross-exam">
-          <article class="rounded-md border border-border bg-background p-3">
-            <div class="whitespace-pre-wrap text-sm text-foreground">
-              {{ formatNullable(workbench.currentReport?.grossExam) }}
-            </div>
-          </article>
+        <ElTabPane label="会诊与修订" name="consultation-revision">
+          <div class="grid gap-3 xl:grid-cols-2">
+            <article class="rounded-md border border-border bg-background p-3">
+              <h4 class="text-sm font-medium text-foreground">
+                科内会诊 {{ workbench.consultations.length }}
+              </h4>
+              <ElTable
+                :data="workbench.consultations"
+                border
+                class="mt-3"
+                size="small"
+              >
+                <ElTableColumn
+                  label="会诊ID"
+                  min-width="150"
+                  prop="consultationId"
+                />
+                <ElTableColumn
+                  label="类型"
+                  min-width="110"
+                  prop="consultationType"
+                />
+                <ElTableColumn label="状态" min-width="110" prop="status" />
+                <ElTableColumn
+                  label="发起人"
+                  min-width="120"
+                  prop="requestedByName"
+                />
+                <ElTableColumn label="主持人" min-width="120" prop="hostName" />
+                <ElTableColumn
+                  label="参与数"
+                  min-width="90"
+                  prop="participantCount"
+                />
+                <ElTableColumn
+                  label="会诊意见"
+                  min-width="220"
+                  prop="opinion"
+                />
+                <template #empty>
+                  <ElEmpty description="暂无会诊记录" />
+                </template>
+              </ElTable>
+            </article>
+
+            <article class="rounded-md border border-border bg-background p-3">
+              <h4 class="text-sm font-medium text-foreground">
+                报告修订 {{ workbench.revisions.length }}
+              </h4>
+              <ElTable
+                :data="workbench.revisions"
+                border
+                class="mt-3"
+                size="small"
+              >
+                <ElTableColumn
+                  label="申请号"
+                  min-width="150"
+                  prop="requestId"
+                />
+                <ElTableColumn
+                  label="状态"
+                  min-width="110"
+                  prop="requestStatus"
+                />
+                <ElTableColumn
+                  label="当前版本"
+                  min-width="100"
+                  prop="currentVersionNo"
+                />
+                <ElTableColumn
+                  label="批准版本"
+                  min-width="100"
+                  prop="approvedVersionNo"
+                />
+                <ElTableColumn
+                  label="申请人"
+                  min-width="120"
+                  prop="requestedByName"
+                />
+                <ElTableColumn
+                  label="审核人"
+                  min-width="120"
+                  prop="reviewedByName"
+                />
+                <ElTableColumn
+                  label="修订原因"
+                  min-width="220"
+                  prop="requestReason"
+                />
+                <ElTableColumn
+                  label="驳回原因"
+                  min-width="220"
+                  prop="rejectReason"
+                />
+                <template #empty>
+                  <ElEmpty description="暂无修订记录" />
+                </template>
+              </ElTable>
+            </article>
+          </div>
         </ElTabPane>
 
-        <ElTabPane label="镜检所见" name="microscopic-exam">
-          <article class="rounded-md border border-border bg-background p-3">
-            <div class="whitespace-pre-wrap text-sm text-foreground">
-              {{ formatNullable(workbench.currentReport?.microscopicExam) }}
-            </div>
-          </article>
-        </ElTabPane>
-
-        <ElTabPane label="标本" name="specimens">
-          <ElTable :data="workbench.specimens" border size="small">
-            <ElTableColumn label="标本号" min-width="140" prop="specimenNo" />
-            <ElTableColumn label="条码" min-width="140" prop="barcode" />
-            <ElTableColumn label="标本名称" min-width="180" prop="specimenName" />
-            <ElTableColumn label="状态" min-width="120" prop="specimenStatus" />
-          </ElTable>
-        </ElTabPane>
-
-        <ElTabPane label="蜡块" name="blocks">
-          <ElTable :data="workbench.blocks" border size="small">
-            <ElTableColumn label="蜡块号" min-width="140" prop="blockCode" />
-            <ElTableColumn label="包埋盒" min-width="140" prop="embeddingBoxNo" />
-            <ElTableColumn label="归档位置" min-width="160" prop="archiveLocation" />
-            <ElTableColumn label="借阅状态" min-width="120" prop="loanStatus" />
-          </ElTable>
-        </ElTabPane>
-
-        <ElTabPane label="玻片" name="slides">
-          <ElTable :data="workbench.slides" border size="small">
-            <ElTableColumn label="玻片号" min-width="140" prop="slideNo" />
-            <ElTableColumn label="状态" min-width="120" prop="slideStatus" />
-            <ElTableColumn label="质控" min-width="120" prop="qualityStatus" />
-            <ElTableColumn label="归档位置" min-width="160" prop="archiveLocation" />
-          </ElTable>
-        </ElTabPane>
-
-        <ElTabPane label="特检医嘱" name="medical-orders">
+        <ElTabPane label="特检医嘱/收费" name="medical-orders">
           <ElTable :data="workbench.medicalOrders" border size="small">
             <ElTableColumn label="医嘱号" min-width="150" prop="orderNumber" />
             <ElTableColumn label="类型" min-width="120">
@@ -210,41 +521,28 @@ watch(
                 {{ formatMedicalOrderStatus(row.status) }}
               </template>
             </ElTableColumn>
-            <ElTableColumn label="内容" min-width="220" prop="orderContent" />
+            <ElTableColumn
+              label="收费状态"
+              min-width="120"
+              prop="billingStatus"
+            />
+            <ElTableColumn
+              label="执行范围"
+              min-width="140"
+              prop="executionScope"
+            />
             <ElTableColumn label="开嘱医生" min-width="140" prop="doctorName" />
-          </ElTable>
-        </ElTabPane>
-
-        <ElTabPane label="报告痕迹" name="report-traces">
-          <ElDescriptions :column="2" border>
-            <ElDescriptionsItem label="报告号">
-              {{ formatNullable(workbench.currentReport?.reportNo) }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="当前状态">
-              {{ formatReportStatus(workbench.currentReport?.reportStatus) }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="送检科室">
-              {{ formatNullable(workbench.submittingDepartmentName) }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="送检医生">
-              {{ formatNullable(workbench.submittingDoctorName) }}
-            </ElDescriptionsItem>
-          </ElDescriptions>
-
-          <ElTable
-            :data="workbench.recentEvents"
-            border
-            class="mt-3"
-            size="small"
-          >
-            <ElTableColumn label="节点" min-width="120" prop="nodeCode" />
-            <ElTableColumn label="事件" min-width="120" prop="eventType" />
-            <ElTableColumn label="时间" min-width="160">
+            <ElTableColumn label="执行人" min-width="140" prop="executorName" />
+            <ElTableColumn label="医嘱时间" min-width="160">
               <template #default="{ row }">
-                {{ formatDateTime(row.eventTime) }}
+                {{ formatDateTime(row.orderDate) }}
               </template>
             </ElTableColumn>
-            <ElTableColumn label="内容" min-width="220" prop="eventContent" />
+            <ElTableColumn label="内容" min-width="240" prop="orderContent" />
+            <ElTableColumn label="备注" min-width="180" prop="remarks" />
+            <template #empty>
+              <ElEmpty description="暂无特检医嘱或收费记录" />
+            </template>
           </ElTable>
         </ElTabPane>
       </ElTabs>

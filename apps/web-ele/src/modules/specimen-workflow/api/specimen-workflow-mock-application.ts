@@ -3,8 +3,8 @@ import type {
   ApplicationCreateResult,
   ApplicationDetailView,
   ApplicationListQuery,
-  ApplicationPatientLookupResult,
   ApplicationPage,
+  ApplicationPatientLookupResult,
   ApplicationUpdateRequest,
   DuplicateApplicationCheckQuery,
   DuplicateApplicationCheckResult,
@@ -288,8 +288,7 @@ export async function lookupApplicationPatientByIdentifierMock(
     patientGender: matchedApplication.patientGender ?? null,
     patientId,
     patientIdentifier:
-      normalizeText(matchedApplication.patientIdentifier) ||
-      patientId,
+      normalizeText(matchedApplication.patientIdentifier) || patientId,
     patientName: matchedApplication.patientName ?? null,
   };
 }

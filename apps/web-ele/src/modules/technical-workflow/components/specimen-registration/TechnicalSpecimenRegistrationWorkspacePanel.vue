@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import type { ApplicationRegistrationWorkbenchRecord } from '#/modules/specimen-workflow/types/application-registration-workbench';
-import type { ApplicationDetailView } from '#/modules/specimen-workflow/types/specimen-workflow';
-
 import type {
   SaveTechnicalSpecimenRegistrationMaterialItem,
   TechnicalSpecimenRegistrationDetailSections,
@@ -9,20 +6,52 @@ import type {
   TechnicalSpecimenRegistrationWorkspace,
 } from '../../types/technical-workflow';
 
+import type { ApplicationRegistrationWorkbenchRecord } from '#/modules/specimen-workflow/types/application-registration-workbench';
+import type { ApplicationDetailView } from '#/modules/specimen-workflow/types/specimen-workflow';
+
 import { computed, nextTick, ref, watch } from 'vue';
 
 import { ElButton, ElEmpty } from 'element-plus';
 
+import { APPLICATION_TYPE_OPTIONS } from '#/modules/specimen-workflow/constants';
 import { formatApplicationType } from '#/modules/specimen-workflow/utils/format';
 
 import {
   formatPendingPathologyNo,
   formatSpecimenRegistrationStatus,
 } from '../../utils/format';
+import {
+  isTechnicalRegistrationConsultationApplicationType,
+  resolveTechnicalRegistrationApplicationType,
+} from '../../utils/specimen-registration-application';
 import TechnicalSpecimenRegistrationEditableSectionCard from './TechnicalSpecimenRegistrationEditableSectionCard.vue';
 
 type DetailSectionKey = keyof TechnicalSpecimenRegistrationDetailSections;
 
+const props = defineProps<{
+  consultationApplicationDetail?: ApplicationDetailView | null;
+  consultationContextLoading?: boolean;
+  consultationWorkbench?: ApplicationRegistrationWorkbenchRecord | null;
+  detailSectionSaving?: boolean;
+  loading?: boolean;
+  materialSaving?: boolean;
+  materialVerificationSaving?: boolean;
+  selectedApplicationType?: null | string;
+  submitting?: boolean;
+  workspace: null | TechnicalSpecimenRegistrationWorkspace;
+}>();
+const emit = defineEmits<{
+  cancelMaterialVerification: [specimenId: string];
+  complete: [];
+  printMaterialLabel: [material: EditableMaterial];
+  saveConsultationItem: [payload: ConsultationItemSavePayload];
+  saveDetailSections: [
+    detailSections: TechnicalSpecimenRegistrationDetailSections,
+  ];
+  saveMaterials: [materials: SaveTechnicalSpecimenRegistrationMaterialItem[]];
+  'update:selectedApplicationType': [value: string];
+  verifyMaterial: [specimenId: string];
+}>();
 const DETAIL_SECTION_ITEMS: Array<{
   key: DetailSectionKey;
   title: string;
@@ -59,11 +88,6 @@ const DETAIL_SECTION_ITEMS: Array<{
     valueTestId: 'externalPathologyDiagnosis',
   },
 ];
-const CONSULTATION_APPLICATION_TYPES = new Set([
-  'CONSULTATION',
-  'CYTOLOGY_CONSULTATION',
-  'DIFFICULT_CONSULTATION',
-]);
 const CONSULTATION_MATERIAL_TYPE_OPTIONS = [
   'EBER',
   'HE',
@@ -84,15 +108,15 @@ const DEFAULT_EVALUATION_ITEMS = [
   '切面质量低',
 ];
 
-type EditableMaterial = SaveTechnicalSpecimenRegistrationMaterialItem &
-  Pick<
-    TechnicalSpecimenRegistrationMaterial,
-    | 'sequenceNo'
-    | 'specimenBarcode'
-    | 'verificationCompletedAt'
-    | 'verificationStatus'
-    | 'verifiedByName'
-  >;
+type EditableMaterial = Pick<
+  TechnicalSpecimenRegistrationMaterial,
+  | 'sequenceNo'
+  | 'specimenBarcode'
+  | 'verificationCompletedAt'
+  | 'verificationStatus'
+  | 'verifiedByName'
+> &
+  SaveTechnicalSpecimenRegistrationMaterialItem;
 
 type ConsultationTab = 'consultation' | 'routine';
 
@@ -110,28 +134,6 @@ type ConsultationItemSavePayload = {
   consultationFields: ConsultationFormValue;
   materials: SaveTechnicalSpecimenRegistrationMaterialItem[];
 };
-
-const props = defineProps<{
-  consultationApplicationDetail?: ApplicationDetailView | null;
-  consultationContextLoading?: boolean;
-  consultationWorkbench?: ApplicationRegistrationWorkbenchRecord | null;
-  detailSectionSaving?: boolean;
-  loading?: boolean;
-  materialSaving?: boolean;
-  materialVerificationSaving?: boolean;
-  submitting?: boolean;
-  workspace: null | TechnicalSpecimenRegistrationWorkspace;
-}>();
-
-const emit = defineEmits<{
-  'cancel-material-verification': [specimenId: string];
-  complete: [];
-  'print-material-label': [material: EditableMaterial];
-  'save-consultation-item': [payload: ConsultationItemSavePayload];
-  'save-detail-sections': [detailSections: TechnicalSpecimenRegistrationDetailSections];
-  'save-materials': [materials: SaveTechnicalSpecimenRegistrationMaterialItem[]];
-  'verify-material': [specimenId: string];
-}>();
 
 const editableMaterials = ref<EditableMaterial[]>([]);
 const activeSpecimenTab = ref<ConsultationTab>('routine');
@@ -152,11 +154,19 @@ const customEvaluationText = ref('');
 const activeDetailSectionKey = ref<'' | DetailSectionKey>('');
 const editingDetailSectionValue = ref('');
 
-const isConsultationCase = computed(() =>
-  CONSULTATION_APPLICATION_TYPES.has(
-    props.workspace?.basicInfo.applicationType?.trim() ?? '',
+const registrationApplicationType = computed(() =>
+  resolveTechnicalRegistrationApplicationType(
+    props.selectedApplicationType?.trim() ||
+      props.workspace?.basicInfo.applicationType?.trim() ||
+      '',
   ),
 );
+const isConsultationCase = computed(() =>
+  isTechnicalRegistrationConsultationApplicationType(
+    registrationApplicationType.value,
+  ),
+);
+const registrationTypeOptions = APPLICATION_TYPE_OPTIONS;
 const selectedMaterial = computed(
   () => editableMaterials.value[selectedMaterialIndex.value] ?? null,
 );
@@ -187,13 +197,12 @@ watch(
 );
 
 watch(
-  () => props.workspace?.basicInfo.applicationType,
+  () => registrationApplicationType.value,
   (applicationType) => {
-    activeSpecimenTab.value = CONSULTATION_APPLICATION_TYPES.has(
-      applicationType?.trim() ?? '',
-    )
-      ? 'consultation'
-      : 'routine';
+    activeSpecimenTab.value =
+      isTechnicalRegistrationConsultationApplicationType(applicationType)
+        ? 'consultation'
+        : 'routine';
     consultationDialogVisible.value = false;
     consultationEditingIndex.value = null;
   },
@@ -208,12 +217,12 @@ watch(
 );
 
 function fieldValue(value: null | string | undefined) {
-  return value?.trim() ? value : '-';
+  return value?.trim() || '-';
 }
 
 function normalizeDetailSectionValue(value: string) {
   const normalizedValue = value.trim();
-  return normalizedValue ? normalizedValue : null;
+  return normalizedValue || null;
 }
 
 function normalizeTissueCount(value: null | number | undefined) {
@@ -307,8 +316,8 @@ function removeMaterialRow(index: number) {
 
 function saveMaterials() {
   emit(
-    'save-materials',
-    editableMaterials.value.map(mapEditableMaterialToSaveItem),
+    'saveMaterials',
+    editableMaterials.value.map((item) => mapEditableMaterialToSaveItem(item)),
   );
 }
 
@@ -340,7 +349,7 @@ function printSelectedMaterialLabel() {
   if (!selectedMaterial.value?.specimenId) {
     return;
   }
-  emit('print-material-label', selectedMaterial.value);
+  emit('printMaterialLabel', selectedMaterial.value);
 }
 
 function verifySelectedMaterial() {
@@ -348,7 +357,7 @@ function verifySelectedMaterial() {
   if (!specimenId) {
     return;
   }
-  emit('verify-material', specimenId);
+  emit('verifyMaterial', specimenId);
 }
 
 function cancelSelectedMaterialVerification() {
@@ -356,7 +365,7 @@ function cancelSelectedMaterialVerification() {
   if (!specimenId) {
     return;
   }
-  emit('cancel-material-verification', specimenId);
+  emit('cancelMaterialVerification', specimenId);
 }
 
 function openEvaluationDialog() {
@@ -379,9 +388,9 @@ function toggleEvaluationItem(item: string, checked: boolean) {
 }
 
 function isEvaluationItemChecked(item: string) {
-  return normalizeEvaluationItems(selectedMaterial.value?.evaluationItems).includes(
-    item,
-  );
+  return normalizeEvaluationItems(
+    selectedMaterial.value?.evaluationItems,
+  ).includes(item);
 }
 
 function addCustomEvaluationItem() {
@@ -452,7 +461,7 @@ function saveConsultationItem() {
     return;
   }
 
-  const nextMaterials = editableMaterials.value.slice();
+  const nextMaterials = [...editableMaterials.value];
   const nextMaterial: EditableMaterial = {
     ...baseMaterial,
     sourcePart: trimOrEmpty(consultationForm.value.sourcePart),
@@ -466,7 +475,7 @@ function saveConsultationItem() {
     nextMaterials.splice(consultationEditingIndex.value, 1, nextMaterial);
   }
 
-  emit('save-consultation-item', {
+  emit('saveConsultationItem', {
     consultationFields: {
       ...consultationForm.value,
       clinicalDiagnosis,
@@ -479,7 +488,7 @@ function saveConsultationItem() {
       sourceHospitalName: consultationForm.value.sourceHospitalName.trim(),
       sourcePart: consultationForm.value.sourcePart.trim(),
     },
-    materials: nextMaterials.map(mapEditableMaterialToSaveItem),
+    materials: nextMaterials.map((item) => mapEditableMaterialToSaveItem(item)),
   });
   consultationDialogVisible.value = false;
 }
@@ -497,10 +506,7 @@ function beginEditingDetailSection(key: DetailSectionKey) {
       `[data-editor-key="${key}"] textarea`,
     );
     textarea?.focus();
-    textarea?.setSelectionRange(
-      textarea.value.length,
-      textarea.value.length,
-    );
+    textarea?.setSelectionRange(textarea.value.length, textarea.value.length);
   });
 }
 
@@ -519,20 +525,36 @@ function saveDetailSection() {
     ...props.workspace.detailSections,
     [key]: normalizeDetailSectionValue(editingDetailSectionValue.value),
   };
-  emit('save-detail-sections', nextDetailSections);
+  emit('saveDetailSections', nextDetailSections);
+}
+
+function selectRegistrationApplicationType(value: string) {
+  emit(
+    'update:selectedApplicationType',
+    resolveTechnicalRegistrationApplicationType(value),
+  );
 }
 </script>
 
 <template>
-  <section class="min-h-[760px] rounded-2xl border border-slate-200 bg-white shadow-sm">
+  <section
+    class="min-h-[760px] rounded-2xl border border-slate-200 bg-white shadow-sm"
+  >
     <template v-if="workspace">
       <div class="border-b border-slate-200 px-5 py-4">
         <div class="flex items-center justify-between gap-3">
           <div>
             <div class="text-base font-semibold text-slate-900">登记工作区</div>
             <p class="mt-1 text-xs text-slate-500">
-              病理号 {{ formatPendingPathologyNo(workspace.basicInfo.pathologyNo) }}，当前状态
-              {{ formatSpecimenRegistrationStatus(workspace.basicInfo.registrationStatus) }}
+              病理号
+              {{
+                formatPendingPathologyNo(workspace.basicInfo.pathologyNo)
+              }}，当前状态
+              {{
+                formatSpecimenRegistrationStatus(
+                  workspace.basicInfo.registrationStatus,
+                )
+              }}
             </p>
           </div>
           <ElButton
@@ -550,19 +572,39 @@ function saveDetailSection() {
         正在加载工作台...
       </div>
       <div v-else class="space-y-3 px-5 py-5">
-        <div class="grid gap-3 rounded-2xl bg-slate-50 p-4 text-sm md:grid-cols-2 xl:grid-cols-3">
+        <div
+          class="grid gap-3 rounded-2xl bg-slate-50 p-4 text-sm md:grid-cols-2 xl:grid-cols-3"
+        >
           <div>患者姓名：{{ fieldValue(workspace.basicInfo.patientName) }}</div>
           <div>性别：{{ fieldValue(workspace.basicInfo.patientGender) }}</div>
           <div>年龄：{{ fieldValue(workspace.basicInfo.patientAge) }}</div>
           <div>患者 ID：{{ fieldValue(workspace.basicInfo.patientId) }}</div>
           <div>住院号：{{ fieldValue(workspace.basicInfo.inpatientNo) }}</div>
-          <div>申请单号：{{ fieldValue(workspace.basicInfo.applicationNo) }}</div>
-          <div>申请科室：{{ fieldValue(workspace.basicInfo.submittingDepartmentName) }}</div>
-          <div>申请医生：{{ fieldValue(workspace.basicInfo.submittingDoctorName) }}</div>
-          <div>送检日期：{{ fieldValue(workspace.basicInfo.submissionDate) }}</div>
-          <div>离体时间：{{ fieldValue(workspace.basicInfo.specimenRemovalTime) }}</div>
-          <div>固定时间：{{ fieldValue(workspace.basicInfo.fixationTime) }}</div>
-          <div>送检类型：{{ formatApplicationType(workspace.basicInfo.applicationType) }}</div>
+          <div>
+            申请单号：{{ fieldValue(workspace.basicInfo.applicationNo) }}
+          </div>
+          <div>
+            申请科室：{{
+              fieldValue(workspace.basicInfo.submittingDepartmentName)
+            }}
+          </div>
+          <div>
+            申请医生：{{ fieldValue(workspace.basicInfo.submittingDoctorName) }}
+          </div>
+          <div>
+            送检日期：{{ fieldValue(workspace.basicInfo.submissionDate) }}
+          </div>
+          <div>
+            离体时间：{{ fieldValue(workspace.basicInfo.specimenRemovalTime) }}
+          </div>
+          <div>
+            固定时间：{{ fieldValue(workspace.basicInfo.fixationTime) }}
+          </div>
+          <div>
+            送检类型：{{
+              formatApplicationType(workspace.basicInfo.applicationType)
+            }}
+          </div>
         </div>
 
         <div class="grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
@@ -571,7 +613,9 @@ function saveDetailSection() {
             :key="item.key"
             :can-edit="workspace.actionFlags.canSaveDetailSections"
             :editing-value="
-              activeDetailSectionKey === item.key ? editingDetailSectionValue : ''
+              activeDetailSectionKey === item.key
+                ? editingDetailSectionValue
+                : ''
             "
             :is-editing="activeDetailSectionKey === item.key"
             :saving="detailSectionSaving"
@@ -582,42 +626,37 @@ function saveDetailSection() {
             @cancel="cancelEditingDetailSection"
             @edit="beginEditingDetailSection(item.key)"
             @save="saveDetailSection"
-            @update:editingValue="editingDetailSectionValue = $event"
+            @update:editing-value="editingDetailSectionValue = $event"
           />
         </div>
 
         <article class="rounded-2xl border border-slate-200 p-4">
+          <div class="mb-3">
+            <div class="mb-2 text-xs font-semibold text-slate-500">
+              送检类型
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button
+                v-for="item in registrationTypeOptions"
+                :key="item.value"
+                :aria-pressed="item.value === registrationApplicationType"
+                class="rounded-full border px-3 py-1 text-xs font-medium leading-5 transition"
+                :class="[
+                  item.value === registrationApplicationType
+                    ? 'border-sky-500 bg-sky-500 text-white shadow-sm'
+                    : 'border-slate-200 bg-white text-slate-500 hover:border-sky-200 hover:text-sky-600',
+                ]"
+                :data-testid="`registration-application-type-${item.value}`"
+                type="button"
+                @click="selectRegistrationApplicationType(item.value)"
+              >
+                {{ item.label }}
+              </button>
+            </div>
+          </div>
           <div class="flex items-center justify-between gap-3">
             <div class="min-w-0">
-              <h3 class="text-sm font-semibold text-slate-900">标本表</h3>
-              <div class="mt-2 flex flex-wrap gap-2">
-                <button
-                  :class="[
-                    'rounded-full border px-3 py-1 text-xs font-medium transition',
-                    activeSpecimenTab === 'routine'
-                      ? 'border-sky-500 bg-sky-500 text-white'
-                      : 'border-slate-200 bg-white text-slate-500 hover:border-sky-200 hover:text-sky-600',
-                  ]"
-                  data-testid="specimen-tab-routine"
-                  type="button"
-                  @click="activeSpecimenTab = 'routine'"
-                >
-                  常规
-                </button>
-                <button
-                  :class="[
-                    'rounded-full border px-3 py-1 text-xs font-medium transition',
-                    activeSpecimenTab === 'consultation'
-                      ? 'border-sky-500 bg-sky-500 text-white'
-                      : 'border-slate-200 bg-white text-slate-500 hover:border-sky-200 hover:text-sky-600',
-                  ]"
-                  data-testid="specimen-tab-consultation"
-                  type="button"
-                  @click="activeSpecimenTab = 'consultation'"
-                >
-                  会诊
-                </button>
-              </div>
+              <h3 class="text-sm font-semibold text-slate-900">送检标本</h3>
             </div>
             <div
               v-if="activeSpecimenTab === 'consultation'"
@@ -683,7 +722,7 @@ function saveDetailSection() {
             v-if="activeSpecimenTab === 'consultation' && !isConsultationCase"
             class="mt-4 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500"
           >
-            当前病例不是会诊类型，请切换到常规 tab 查看标本列表。
+            当前送检类型不是会诊类，请切换为会诊类送检类型后查看该列表。
           </div>
           <div
             v-else-if="activeSpecimenTab === 'consultation'"
@@ -708,7 +747,9 @@ function saveDetailSection() {
                   :key="material.specimenId || `consultation-${index}`"
                   :data-testid="`consultation-material-row-${index}`"
                 >
-                  <td class="border-b border-slate-100 px-3 py-3">{{ index + 1 }}</td>
+                  <td class="border-b border-slate-100 px-3 py-3">
+                    {{ index + 1 }}
+                  </td>
                   <td class="border-b border-slate-100 px-3 py-3">
                     {{ fieldValue(material.specimenName) }}
                   </td>
@@ -718,9 +759,13 @@ function saveDetailSection() {
                   <td class="border-b border-slate-100 px-3 py-3">
                     <span
                       class="rounded-full px-2 py-0.5 text-xs font-medium"
-                      :class="verificationStatusClass(material.verificationStatus)"
+                      :class="
+                        verificationStatusClass(material.verificationStatus)
+                      "
                     >
-                      {{ formatVerificationStatus(material.verificationStatus) }}
+                      {{
+                        formatVerificationStatus(material.verificationStatus)
+                      }}
                     </span>
                   </td>
                   <td class="border-b border-slate-100 px-3 py-3">
@@ -739,7 +784,9 @@ function saveDetailSection() {
                           material.verificationStatus === 'VERIFIED'
                         "
                         type="button"
-                        @click="emit('verify-material', material.specimenId || '')"
+                        @click="
+                          emit('verifyMaterial', material.specimenId || '')
+                        "
                       >
                         核对
                       </button>
@@ -792,7 +839,9 @@ function saveDetailSection() {
                       type="radio"
                     />
                   </td>
-                  <td class="border-b border-slate-100 px-3 py-3">{{ index + 1 }}</td>
+                  <td class="border-b border-slate-100 px-3 py-3">
+                    {{ index + 1 }}
+                  </td>
                   <td class="border-b border-slate-100 px-3 py-3">
                     <input
                       v-model="material.specimenName"
@@ -845,7 +894,9 @@ function saveDetailSection() {
                     </select>
                   </td>
                   <td class="border-b border-slate-100 px-3 py-3">
-                    <label class="inline-flex items-center gap-2 text-slate-600">
+                    <label
+                      class="inline-flex items-center gap-2 text-slate-600"
+                    >
                       <input v-model="material.frozen" type="checkbox" />
                       <span>{{ material.frozen ? '是' : '否' }}</span>
                     </label>
@@ -854,13 +905,19 @@ function saveDetailSection() {
                     <div class="flex min-w-[130px] flex-col items-start gap-1">
                       <span
                         class="rounded-full px-2 py-0.5 text-xs font-medium"
-                        :class="verificationStatusClass(material.verificationStatus)"
+                        :class="
+                          verificationStatusClass(material.verificationStatus)
+                        "
                       >
-                        {{ formatVerificationStatus(material.verificationStatus) }}
+                        {{
+                          formatVerificationStatus(material.verificationStatus)
+                        }}
                       </span>
                     </div>
                   </td>
-                  <td class="border-b border-slate-100 px-3 py-3 text-slate-600">
+                  <td
+                    class="border-b border-slate-100 px-3 py-3 text-slate-600"
+                  >
                     <span v-if="material.evaluationItems?.length">
                       {{ material.evaluationItems.join('、') }}
                     </span>
@@ -890,7 +947,11 @@ function saveDetailSection() {
             <div class="flex items-start justify-between gap-4">
               <div>
                 <h3 class="text-base font-semibold text-slate-900">
-                  {{ consultationEditingIndex === null ? '新增会诊项' : '编辑会诊项' }}
+                  {{
+                    consultationEditingIndex === null
+                      ? '新增会诊项'
+                      : '编辑会诊项'
+                  }}
                 </h3>
                 <p class="mt-1 text-xs text-slate-500">
                   会诊项使用紧凑列表展示，详细信息集中在弹窗中维护。
@@ -976,7 +1037,7 @@ function saveDetailSection() {
                   class="min-h-[96px] w-full rounded-lg border border-slate-200 px-3 py-2"
                   data-testid="consultation-clinical-diagnosis"
                   placeholder="请输入临床诊断"
-                />
+                ></textarea>
               </label>
             </div>
 
@@ -1074,7 +1135,10 @@ function saveDetailSection() {
 
         <article class="rounded-2xl border border-slate-200 p-4">
           <h3 class="text-sm font-semibold text-slate-900">检查列表</h3>
-          <div v-if="workspace.checkItems.length > 0" class="mt-4 overflow-x-auto">
+          <div
+            v-if="workspace.checkItems.length > 0"
+            class="mt-4 overflow-x-auto"
+          >
             <table class="min-w-full border-separate border-spacing-0 text-sm">
               <thead>
                 <tr class="text-left text-slate-500">
@@ -1093,10 +1157,14 @@ function saveDetailSection() {
                     {{ item.sequenceNo || index + 1 }}
                   </td>
                   <td class="border-b border-slate-100 px-3 py-3">
-                    {{ formatPendingPathologyNo(workspace.basicInfo.pathologyNo) }}
+                    {{
+                      formatPendingPathologyNo(workspace.basicInfo.pathologyNo)
+                    }}
                   </td>
                   <td class="border-b border-slate-100 px-3 py-3">
-                    {{ formatApplicationType(workspace.basicInfo.applicationType) }}
+                    {{
+                      formatApplicationType(workspace.basicInfo.applicationType)
+                    }}
                   </td>
                   <td class="border-b border-slate-100 px-3 py-3">
                     {{ fieldValue(item.name) }}

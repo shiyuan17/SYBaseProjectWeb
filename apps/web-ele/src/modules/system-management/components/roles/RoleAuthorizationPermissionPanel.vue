@@ -1,16 +1,35 @@
 <script setup lang="ts">
+import { computed } from 'vue';
+
 import { ElCheckbox, ElCheckboxGroup, ElEmpty } from 'element-plus';
 
-defineProps<{
+const props = defineProps<{
   authState: {
     permissionIds: string[];
   };
   permissionGroups: Array<{
-    entryPermissions: Array<{ id: string; permissionCode: string; permissionName: string }>;
-    manualPermissions: Array<{ id: string; permissionCode: string; permissionName: string }>;
+    entryPermissions: Array<{
+      id: string;
+      permissionCode: string;
+      permissionName: string;
+    }>;
+    manualPermissions: Array<{
+      id: string;
+      permissionCode: string;
+      permissionName: string;
+    }>;
     menu: { id: string; menuCode: string; menuName: string };
   }>;
 }>();
+
+const emit = defineEmits<{
+  'update:permissionIds': [value: string[]];
+}>();
+
+const permissionIdsModel = computed({
+  get: () => props.authState.permissionIds,
+  set: (value: string[]) => emit('update:permissionIds', value),
+});
 </script>
 
 <template>
@@ -19,7 +38,7 @@ defineProps<{
       v-if="permissionGroups.length === 0"
       description="请先勾选页面入口菜单后，再配置页面内操作权限"
     />
-    <ElCheckboxGroup v-else v-model="authState.permissionIds" class="grid gap-4">
+    <ElCheckboxGroup v-else v-model="permissionIdsModel" class="grid gap-4">
       <div
         v-for="group in permissionGroups"
         :key="group.menu.id"
@@ -65,7 +84,9 @@ defineProps<{
         </div>
 
         <div class="mt-4">
-          <div class="text-xs font-medium text-foreground">可配置的附加权限</div>
+          <div class="text-xs font-medium text-foreground">
+            可配置的附加权限
+          </div>
           <div
             v-if="group.manualPermissions.length === 0"
             class="mt-3 rounded-xl border border-dashed border-border/60 px-4 py-6 text-sm text-muted-foreground"

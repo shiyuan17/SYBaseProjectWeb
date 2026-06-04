@@ -10,6 +10,8 @@ import {
   ElOption,
   ElPagination,
   ElSelect,
+  ElTabPane,
+  ElTabs,
 } from 'element-plus';
 
 import { APPLICATION_TYPE_OPTIONS } from '#/modules/specimen-workflow/constants';
@@ -19,7 +21,10 @@ import {
   formatSpecimenRegistrationStatus,
 } from '../../utils/format';
 
+type TechnicalSpecimenRegistrationListTab = 'received' | 'registered';
+
 const props = defineProps<{
+  activeTab: TechnicalSpecimenRegistrationListTab;
   applicationType: string;
   items: PendingTechnicalSpecimenRegistrationItem[];
   keyword: string;
@@ -35,6 +40,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   search: [];
   select: [row: PendingTechnicalSpecimenRegistrationItem];
+  'update:activeTab': [value: TechnicalSpecimenRegistrationListTab];
   'update:applicationType': [value: string];
   'update:keyword': [value: string];
   'update:page': [value: number];
@@ -58,6 +64,28 @@ const currentApplicationType = computed({
   set: (value: string) => emit('update:applicationType', value),
 });
 
+const currentListTab = computed({
+  get: () => props.activeTab,
+  set: (value: TechnicalSpecimenRegistrationListTab) =>
+    emit('update:activeTab', value),
+});
+
+const isRegisteredTab = computed(() => currentListTab.value === 'registered');
+
+const listDescription = computed(() =>
+  isRegisteredTab.value
+    ? '查看当前筛选条件下已登记病例，选择病例后刷新中间登记工作区。'
+    : '按接收日期和关键字筛选，选择病例后刷新中间登记工作区。',
+);
+
+const loadingText = computed(() =>
+  isRegisteredTab.value ? '正在加载已登记病例...' : '正在加载待登记病例...',
+);
+
+const emptyText = computed(() =>
+  isRegisteredTab.value ? '暂无已登记病例' : '暂无待登记病例',
+);
+
 const receivedDateRange = computed({
   get(): string[] {
     return props.receivedFrom || props.receivedTo
@@ -72,11 +100,24 @@ const receivedDateRange = computed({
 </script>
 
 <template>
-  <section class="flex min-h-[760px] flex-col rounded-2xl border border-slate-200 bg-white shadow-sm">
+  <section
+    class="flex min-h-[760px] flex-col rounded-2xl border border-slate-200 bg-white shadow-sm"
+  >
     <div class="border-b border-slate-200 px-4 py-4">
-      <div class="text-base font-semibold text-slate-900">接收列表</div>
+      <ElTabs v-model="currentListTab" :stretch="true" class="mb-1">
+        <ElTabPane
+          data-testid="registration-list-tab-received"
+          label="接收列表"
+          name="received"
+        />
+        <ElTabPane
+          data-testid="registration-list-tab-registered"
+          label="已登记列表"
+          name="registered"
+        />
+      </ElTabs>
       <p class="mt-1 text-xs text-slate-500">
-        按接收日期和关键字筛选，选择病例后刷新中间登记工作区。
+        {{ listDescription }}
       </p>
       <div class="mt-4 grid gap-2">
         <label class="text-xs text-slate-500">
@@ -127,21 +168,24 @@ const receivedDateRange = computed({
         v-if="loading"
         class="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500"
       >
-        正在加载待登记病例...
+        {{ loadingText }}
       </div>
-      <div v-else-if="items.length === 0" class="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500">
-        暂无待登记病例
+      <div
+        v-else-if="items.length === 0"
+        class="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500"
+      >
+        {{ emptyText }}
       </div>
       <button
         v-for="item in items"
         :key="item.caseId"
         :data-testid="`specimen-row-${item.caseId}`"
         :class="[
-          'mb-3 w-full rounded-2xl border px-4 py-4 text-left transition',
           item.caseId === selectedCaseId
             ? 'border-sky-500 bg-sky-50 shadow-sm'
             : 'border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-white',
         ]"
+        class="mb-3 w-full rounded-2xl border px-4 py-4 text-left transition"
         type="button"
         @click="emit('select', item)"
       >
@@ -154,7 +198,9 @@ const receivedDateRange = computed({
               {{ item.patientName || '-' }}
             </div>
           </div>
-          <span class="rounded-full bg-white px-2 py-1 text-[11px] text-slate-500">
+          <span
+            class="rounded-full bg-white px-2 py-1 text-[11px] text-slate-500"
+          >
             {{ formatSpecimenRegistrationStatus(item.registrationStatus) }}
           </span>
         </div>

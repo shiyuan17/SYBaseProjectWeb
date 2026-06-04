@@ -54,7 +54,8 @@ vi.mock('../api/specimen-workflow-service', () => ({
   duplicateCheckApplications: mockDuplicateCheckApplications,
   getApplicationDetail: mockGetApplicationDetail,
   importClinicalApplication: mockImportClinicalApplication,
-  lookupApplicationPatientByIdentifier: mockLookupApplicationPatientByIdentifier,
+  lookupApplicationPatientByIdentifier:
+    mockLookupApplicationPatientByIdentifier,
   updateApplication: mockUpdateApplication,
 }));
 

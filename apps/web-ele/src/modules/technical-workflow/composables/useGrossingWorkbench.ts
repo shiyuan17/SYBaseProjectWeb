@@ -57,7 +57,60 @@ export type GrossingDescriptionTab =
   | 'relatedExaminations';
 
 interface UseGrossingWorkbenchOptions {
-  onSubmitted?: () => void | Promise<void>;
+  onSubmitted?: () => Promise<void> | void;
+}
+
+type GrossingEmbeddingBoxPrefix = string;
+
+interface GrossingSpecimenTabMeta {
+  key: string;
+  specimenName: string;
+  trackingLabel: string;
+}
+
+export interface GrossingEmbeddingBoxTableRow {
+  box: GrossingEmbeddingBoxItemRequest;
+  boxIndex: number;
+  specimenIndex: number;
+  specimenName: string;
+}
+
+function createSpecimenPrefix(index: number) {
+  let current = Math.max(index, 0);
+  let prefix = '';
+  do {
+    prefix = String.fromCodePoint(65 + (current % 26)) + prefix;
+    current = Math.floor(current / 26) - 1;
+  } while (current >= 0);
+  return prefix;
+}
+
+function getEmbeddingBoxPrefixRank(prefix: string) {
+  const normalizedPrefix = prefix.trim().toUpperCase();
+  let rank = 0;
+  for (const character of normalizedPrefix) {
+    const characterCode = character.codePointAt(0) ?? 0;
+    if (characterCode < 65 || characterCode > 90) {
+      return Number.MAX_SAFE_INTEGER;
+    }
+    rank = rank * 26 + characterCode - 64;
+  }
+  return rank || Number.MAX_SAFE_INTEGER;
+}
+
+function parseGeneratedEmbeddingBoxNo(embeddingBoxNo: string) {
+  const match = embeddingBoxNo.trim().match(/^([A-Z]+)(\d+)$/i);
+  if (!match) {
+    return null;
+  }
+  const [, rawPrefix, rawSequence] = match;
+  if (!rawPrefix || !rawSequence) {
+    return null;
+  }
+  return {
+    prefix: rawPrefix.toUpperCase() as GrossingEmbeddingBoxPrefix,
+    sequence: Number(rawSequence),
+  };
 }
 
 export function useGrossingWorkbench(
@@ -71,9 +124,10 @@ export function useGrossingWorkbench(
   const selectLoading = ref(false);
   const initialized = ref(false);
   const currentTask = ref<null | PendingTechnicalTaskItem>(null);
-  const workbenchContext = ref<null | GrossingWorkbenchContext>(null);
+  const workbenchContext = ref<GrossingWorkbenchContext | null>(null);
   const trackingResult = ref<null | TechnicalTrackingViewModel>(null);
   const activeSpecimenKey = ref('');
+  const selectedEmbeddingBoxSpecimenKey = ref('');
   const descriptionTab = ref<GrossingDescriptionTab>('grossDescription');
   const uploadingSpecimenKeys = ref<string[]>([]);
   const bodyPartTreeOptions = ref<BodyPartNode[]>([]);
@@ -143,14 +197,14 @@ export function useGrossingWorkbench(
     specimens: [createEmptySpecimen()],
     taskId: '',
   });
-  const specimenTabMetas = ref<Array<{ key: string; trackingLabel: string }>>(
-    [],
-  );
+  const specimenTabMetas = ref<GrossingSpecimenTabMeta[]>([]);
 
   const currentTaskContext = computed(() => ({
     caseId: completeForm.caseId || currentTask.value?.caseId || '',
     objectId:
-      workbenchContext.value?.task.objectId ?? currentTask.value?.objectId ?? '',
+      workbenchContext.value?.task.objectId ??
+      currentTask.value?.objectId ??
+      '',
     objectType:
       workbenchContext.value?.task.objectType ??
       currentTask.value?.objectType ??
@@ -172,6 +226,42 @@ export function useGrossingWorkbench(
     () => completeForm.specimens[activeSpecimenIndex.value] ?? null,
   );
 
+  const activeSpecimenPrefix = computed(() =>
+    getSpecimenPrefix(activeSpecimenIndex.value),
+  );
+
+  const activeSpecimenName = computed(() =>
+    getSpecimenDisplayName(activeSpecimenIndex.value),
+  );
+
+  const specimenNameOptions = computed(() =>
+    specimenTabMetas.value.map((item, index) => ({
+      label: getSpecimenDisplayName(index),
+      value: item.key,
+    })),
+  );
+
+  const selectedEmbeddingBoxSpecimenIndex = computed(() =>
+    specimenTabMetas.value.findIndex(
+      (item) => item.key === selectedEmbeddingBoxSpecimenKey.value,
+    ),
+  );
+
+  const selectedEmbeddingBoxSpecimenPrefix = computed(() =>
+    getSpecimenPrefix(selectedEmbeddingBoxSpecimenIndex.value),
+  );
+
+  const embeddingBoxRows = computed<GrossingEmbeddingBoxTableRow[]>(() =>
+    completeForm.specimens.flatMap((specimen, specimenIndex) =>
+      (specimen.embeddingBoxes ?? []).map((box, boxIndex) => ({
+        box,
+        boxIndex,
+        specimenIndex,
+        specimenName: getSpecimenDisplayName(specimenIndex),
+      })),
+    ),
+  );
+
   const enteredMediaAssets = computed(() =>
     completeForm.specimens.flatMap((specimen, specimenIndex) =>
       (specimen.mediaAssets ?? []).map((asset, assetIndex) => ({
@@ -183,9 +273,10 @@ export function useGrossingWorkbench(
     ),
   );
 
-  function createSpecimenTabMeta(trackingLabel = '') {
+  function createSpecimenTabMeta(trackingLabel = '', specimenName = '') {
     return {
       key: `specimen-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      specimenName,
       trackingLabel,
     };
   }
@@ -197,16 +288,34 @@ export function useGrossingWorkbench(
   function syncSpecimenTabs(
     specimens: GrossingSpecimenItemRequest[],
     trackingLabels: string[] = [],
+    specimenNames: string[] = [],
   ) {
     completeForm.specimens = specimens;
     specimenTabMetas.value = specimens.map((_, index) =>
-      createSpecimenTabMeta(trackingLabels[index] ?? ''),
+      createSpecimenTabMeta(
+        trackingLabels[index] ?? '',
+        specimenNames[index] ?? '',
+      ),
     );
     activateSpecimenAt(0);
+    selectedEmbeddingBoxSpecimenKey.value =
+      specimenTabMetas.value[0]?.key ?? '';
   }
 
   function getSpecimenTrackingLabel(index: number) {
     return specimenTabMetas.value[index]?.trackingLabel?.trim() ?? '';
+  }
+
+  function getSpecimenPrefix(index: number) {
+    return createSpecimenPrefix(Math.max(index, 0));
+  }
+
+  function getSpecimenDisplayName(index: number) {
+    if (index < 0) {
+      return '';
+    }
+    const specimenName = specimenTabMetas.value[index]?.specimenName?.trim();
+    return specimenName || getSpecimenPrefix(index);
   }
 
   function getSpecimenTabLabel(index: number) {
@@ -230,14 +339,16 @@ export function useGrossingWorkbench(
     syncSpecimenTabs([createEmptySpecimen()]);
   }
 
-  function seedSpecimensFromTracking(tracking: null | TechnicalTrackingViewModel) {
+  function seedSpecimensFromTracking(
+    tracking: null | TechnicalTrackingViewModel,
+  ) {
     if (!tracking || tracking.specimens.length === 0) {
       syncSpecimenTabs([createEmptySpecimen()]);
       return;
     }
 
     syncSpecimenTabs(
-      tracking.specimens.map((item) => {
+      tracking.specimens.map((item, itemIndex) => {
         const specimenBlocks = tracking.blocks.filter(
           (block) => block.specimenId === item.specimenId,
         );
@@ -253,7 +364,8 @@ export function useGrossingWorkbench(
           embeddingBoxes: Array.from({ length: blockCount }, (_, index) =>
             createEmbeddingBox(
               index + 1,
-              specimenBlocks[index]?.embeddingBoxNo?.trim() || `A${index + 1}`,
+              specimenBlocks[index]?.embeddingBoxNo?.trim() ||
+                `${getSpecimenPrefix(itemIndex)}${index + 1}`,
             ),
           ),
           grossDescription: '',
@@ -266,6 +378,7 @@ export function useGrossingWorkbench(
         };
       }),
       tracking.specimens.map((item) => item.specimenNo?.trim() || ''),
+      tracking.specimens.map((item) => item.specimenName?.trim() || ''),
     );
   }
 
@@ -347,7 +460,13 @@ export function useGrossingWorkbench(
   }
 
   function addSpecimen() {
-    completeForm.specimens.push(createEmptySpecimen());
+    const specimenIndex = completeForm.specimens.length;
+    completeForm.specimens.push({
+      ...createEmptySpecimen(),
+      embeddingBoxes: [
+        createEmbeddingBox(1, `${getSpecimenPrefix(specimenIndex)}1`),
+      ],
+    });
     specimenTabMetas.value.push(createSpecimenTabMeta());
     activateSpecimenAt(completeForm.specimens.length - 1);
   }
@@ -371,6 +490,14 @@ export function useGrossingWorkbench(
     completeForm.specimens.splice(index, 1);
     specimenTabMetas.value.splice(index, 1);
     activateSpecimenAt(nextActiveIndex);
+    if (
+      !specimenTabMetas.value.some(
+        (item) => item.key === selectedEmbeddingBoxSpecimenKey.value,
+      )
+    ) {
+      selectedEmbeddingBoxSpecimenKey.value =
+        specimenTabMetas.value[nextActiveIndex]?.key ?? '';
+    }
   }
 
   function addBlock(specimenIndex: number) {
@@ -383,13 +510,11 @@ export function useGrossingWorkbench(
     specimen.embeddingBoxes.push(
       createEmbeddingBox(
         specimen.embeddingBoxes.length + 1,
-        getNextEmbeddingBoxNo(specimen),
+        getNextEmbeddingBoxNo(specimen, getSpecimenPrefix(specimenIndex)),
       ),
     );
-    specimen.blockCount = Math.max(
-      specimen.blockCount ?? 0,
-      specimen.blocks.length,
-    );
+    sortEmbeddingBoxPairs(specimen);
+    syncSpecimenBlockCount(specimen);
   }
 
   function removeBlock(specimenIndex: number, blockIndex: number) {
@@ -404,22 +529,64 @@ export function useGrossingWorkbench(
     }
     blocks.splice(blockIndex, 1);
     specimen.embeddingBoxes?.splice(blockIndex, 1);
-    resequenceEmbeddingBoxes(specimen.embeddingBoxes);
-    specimen.blockCount = Math.max(
-      specimen.blockCount ?? 0,
-      specimen.blocks.length,
-    );
+    sortEmbeddingBoxPairs(specimen);
+    syncSpecimenBlockCount(specimen);
   }
 
-  function getNextEmbeddingBoxNo(specimen: GrossingSpecimenItemRequest) {
-    const maxSequence = (specimen.embeddingBoxes ?? []).reduce((max, box) => {
-      const match = box.embeddingBoxNo.trim().match(/^A(\d+)$/i);
-      if (!match) {
-        return max;
+  function getNextEmbeddingBoxNo(
+    specimen: GrossingSpecimenItemRequest,
+    prefix: GrossingEmbeddingBoxPrefix,
+  ) {
+    const usedSequences = new Set<number>();
+    for (const box of specimen.embeddingBoxes ?? []) {
+      const parsedBoxNo = parseGeneratedEmbeddingBoxNo(box.embeddingBoxNo);
+      if (
+        parsedBoxNo?.prefix === prefix &&
+        Number.isSafeInteger(parsedBoxNo.sequence) &&
+        parsedBoxNo.sequence > 0
+      ) {
+        usedSequences.add(parsedBoxNo.sequence);
       }
-      return Math.max(max, Number(match[1]));
-    }, 0);
-    return `A${maxSequence + 1}`;
+    }
+    let nextSequence = 1;
+    while (usedSequences.has(nextSequence)) {
+      nextSequence += 1;
+    }
+    return `${prefix}${nextSequence}`;
+  }
+
+  function compareEmbeddingBoxPairs(
+    left: {
+      box: GrossingEmbeddingBoxItemRequest;
+      originalIndex: number;
+    },
+    right: {
+      box: GrossingEmbeddingBoxItemRequest;
+      originalIndex: number;
+    },
+  ) {
+    const leftParsed = parseGeneratedEmbeddingBoxNo(left.box.embeddingBoxNo);
+    const rightParsed = parseGeneratedEmbeddingBoxNo(right.box.embeddingBoxNo);
+
+    if (leftParsed && rightParsed) {
+      const prefixDiff =
+        getEmbeddingBoxPrefixRank(leftParsed.prefix) -
+        getEmbeddingBoxPrefixRank(rightParsed.prefix);
+      if (prefixDiff !== 0) {
+        return prefixDiff;
+      }
+      return (
+        leftParsed.sequence - rightParsed.sequence ||
+        left.originalIndex - right.originalIndex
+      );
+    }
+    if (leftParsed) {
+      return -1;
+    }
+    if (rightParsed) {
+      return 1;
+    }
+    return left.originalIndex - right.originalIndex;
   }
 
   function resequenceEmbeddingBoxes(
@@ -431,8 +598,36 @@ export function useGrossingWorkbench(
     });
   }
 
-  function addEmbeddingBoxes(count: number) {
-    const specimen = activeSpecimen.value;
+  function sortEmbeddingBoxPairs(specimen: GrossingSpecimenItemRequest) {
+    const embeddingBoxes = specimen.embeddingBoxes;
+    if (!embeddingBoxes?.length) {
+      return;
+    }
+
+    const pairs = embeddingBoxes.map((box, index) => ({
+      block: specimen.blocks[index] ?? createEmptyBlock(),
+      box,
+      originalIndex: index,
+    }));
+    pairs.sort(compareEmbeddingBoxPairs);
+    specimen.embeddingBoxes = pairs.map((pair) => pair.box);
+    specimen.blocks = pairs.map((pair) => pair.block);
+    resequenceEmbeddingBoxes(specimen.embeddingBoxes);
+  }
+
+  function syncSpecimenBlockCount(specimen: GrossingSpecimenItemRequest) {
+    specimen.blockCount = Math.max(
+      specimen.blockCount ?? 0,
+      specimen.blocks.length,
+    );
+  }
+
+  function addEmbeddingBoxes(
+    count: number,
+    prefix: GrossingEmbeddingBoxPrefix = selectedEmbeddingBoxSpecimenPrefix.value,
+    specimenIndex = selectedEmbeddingBoxSpecimenIndex.value,
+  ) {
+    const specimen = completeForm.specimens[specimenIndex];
     if (!specimen) {
       ElMessage.warning('请先选择可编辑标本');
       return;
@@ -441,18 +636,22 @@ export function useGrossingWorkbench(
     for (let index = 0; index < count; index++) {
       const nextSequenceNo = specimen.embeddingBoxes.length + 1;
       specimen.embeddingBoxes.push(
-        createEmbeddingBox(nextSequenceNo, getNextEmbeddingBoxNo(specimen)),
+        createEmbeddingBox(
+          nextSequenceNo,
+          getNextEmbeddingBoxNo(specimen, prefix),
+        ),
       );
       specimen.blocks.push(createEmptyBlock());
     }
-    specimen.blockCount = Math.max(
-      specimen.blockCount ?? 0,
-      specimen.blocks.length,
-    );
+    sortEmbeddingBoxPairs(specimen);
+    syncSpecimenBlockCount(specimen);
   }
 
-  function removeEmbeddingBox(index: number) {
-    const specimen = activeSpecimen.value;
+  function removeEmbeddingBox(
+    index: number,
+    specimenIndex = activeSpecimenIndex.value,
+  ) {
+    const specimen = completeForm.specimens[specimenIndex];
     if (!specimen?.embeddingBoxes) {
       return;
     }
@@ -464,11 +663,8 @@ export function useGrossingWorkbench(
     if (specimen.blocks.length > 1) {
       specimen.blocks.splice(index, 1);
     }
-    resequenceEmbeddingBoxes(specimen.embeddingBoxes);
-    specimen.blockCount = Math.max(
-      specimen.blockCount ?? 0,
-      specimen.blocks.length,
-    );
+    sortEmbeddingBoxPairs(specimen);
+    syncSpecimenBlockCount(specimen);
   }
 
   function addMediaAsset(specimenIndex: number) {
@@ -604,17 +800,8 @@ export function useGrossingWorkbench(
       ElMessage.warning('请补齐标本编号和标本类型');
       return;
     }
-    if (
-      normalizedSpecimens.some((item) =>
-        item.blocks.every(
-          (block) =>
-            !block.blockDescription &&
-            !block.blockSite &&
-            !block.specialRequirement,
-        ),
-      )
-    ) {
-      ElMessage.warning('每个标本至少需要一条有效的蜡块明细');
+    if (normalizedSpecimens.some((item) => item.blocks.length === 0)) {
+      ElMessage.warning('每个标本至少需要一个蜡块明细');
       return;
     }
     if (
@@ -658,6 +845,8 @@ export function useGrossingWorkbench(
 
   return {
     activeSpecimen,
+    activeSpecimenName,
+    activeSpecimenPrefix,
     activeSpecimenKey,
     addBlock,
     addEmbeddingBoxes,
@@ -671,8 +860,11 @@ export function useGrossingWorkbench(
     currentTask,
     currentTaskContext,
     descriptionTab,
+    embeddingBoxRows,
     ensureSelectOptionsLoaded,
     enteredMediaAssets,
+    getSpecimenDisplayName,
+    getSpecimenPrefix,
     getSpecimenTabLabel,
     grossingImageAccept,
     initializeWorkbench,
@@ -688,6 +880,9 @@ export function useGrossingWorkbench(
     resetWorkbenchState,
     samplingTemplateTreeOptions,
     selectLoading,
+    selectedEmbeddingBoxSpecimenKey,
+    selectedEmbeddingBoxSpecimenPrefix,
+    specimenNameOptions,
     specimenTabMetas,
     submitGrossing,
     submitting,

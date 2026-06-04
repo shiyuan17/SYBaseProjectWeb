@@ -34,10 +34,7 @@ import TrackingApplicationListTable from '../components/TrackingApplicationListT
 import TrackingApplicationSpecimenTable from '../components/TrackingApplicationSpecimenTable.vue';
 import TrackingApplicationTimelineTabs from '../components/TrackingApplicationTimelineTabs.vue';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
-import {
-  DEFAULT_PAGE_SIZE,
-  M2_PERMISSION_CODES,
-} from '../constants';
+import { DEFAULT_PAGE_SIZE, M2_PERMISSION_CODES } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import {
   formatApplicationFormStatus,
@@ -212,7 +209,7 @@ watch(
 <template>
   <div class="flex flex-col gap-4">
     <ElAlert
-      v-if="false"
+      v-if="pageError"
       :closable="false"
       :title="pageError"
       type="error"

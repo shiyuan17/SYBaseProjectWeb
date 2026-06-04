@@ -49,7 +49,7 @@ const props = withDefaults(
 );
 
 const emit = defineEmits<{
-  (event: 'save-patient-info'): void;
+  (event: 'savePatientInfo'): void;
   (event: 'update:record', value: ApplicationRegistrationWorkbenchRecord): void;
 }>();
 
@@ -68,7 +68,7 @@ const {
   buildingLabel: toRef(props, 'buildingLabel'),
   record: toRef(props, 'record'),
   roomLabel: toRef(props, 'roomLabel'),
-  savePatientInfo: () => emit('save-patient-info'),
+  savePatientInfo: () => emit('savePatientInfo'),
   updateRecord: (record) => emit('update:record', record),
 });
 
@@ -85,16 +85,14 @@ function handleDirectFieldUpdate(item: WorkbenchInfoItem, value: string) {
 
 <template>
   <WorkflowSectionCard
-    :class="
-      [
-        props.compact ? 'patient-panel--compact' : '',
-        props.fullHeight
-          ? props.compact
-            ? 'min-h-0 max-h-full overflow-hidden'
-            : 'min-h-[420px] max-h-full overflow-hidden'
-          : 'max-h-full overflow-hidden',
-      ]
-    "
+    :class="[
+      props.compact ? 'patient-panel--compact' : '',
+      props.fullHeight
+        ? props.compact
+          ? 'min-h-0 max-h-full overflow-hidden'
+          : 'min-h-[420px] max-h-full overflow-hidden'
+        : 'max-h-full overflow-hidden',
+    ]"
     :auto-height="!props.fullHeight"
     :title="props.title"
   >

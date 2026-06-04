@@ -5,6 +5,8 @@ const workspaceRoot = process.cwd();
 const settingsPath = path.join(workspaceRoot, 'linear-setting.json');
 const mode = process.argv[2] ?? 'sync';
 const showJson = process.argv.includes('--json');
+const DEFAULT_LINEAR_TEAM_NAME = 'Sidney';
+const DEFAULT_LABEL_COLOR = '#0f766e';
 
 function readMultiValueOption(flag) {
   const values = [];
@@ -48,6 +50,12 @@ function ensureString(value, label) {
     fail(`Expected ${label} to be a non-empty string.`);
   }
   return value.trim();
+}
+
+function optionalString(value) {
+  return typeof value === 'string' && value.trim() !== ''
+    ? value.trim()
+    : undefined;
 }
 
 function normalizeLabelName(value) {
@@ -143,9 +151,21 @@ async function loadSettings() {
 
   const token = await resolveLinearToken();
   const apiUrl = ensureString(settings['linear-api-url'], 'linear-api-url');
-  const team = settings['linear-team'];
-  const project = settings['linear-project'];
-  const labels = ensureArray(settings['linear-labels'], 'linear-labels');
+  const team = isObject(settings['linear-team']) ? settings['linear-team'] : {};
+  const project = isObject(settings['linear-project'])
+    ? settings['linear-project']
+    : {};
+  const labels = Array.isArray(settings['linear-labels'])
+    ? settings['linear-labels']
+    : [
+        {
+          color: DEFAULT_LABEL_COLOR,
+          name: ensureString(
+            settings['linear-backend-label'],
+            'linear-backend-label',
+          ),
+        },
+      ];
   const plan = ensureArray(settings['linear-plan'], 'linear-plan');
 
   return {
@@ -153,14 +173,19 @@ async function loadSettings() {
     token,
     apiUrl,
     team: {
-      id: ensureString(team?.id, 'linear-team.id'),
-      key: ensureString(team?.key, 'linear-team.key'),
-      name: ensureString(team?.name, 'linear-team.name'),
+      id: optionalString(team?.id),
+      key: optionalString(team?.key),
+      name:
+        optionalString(team?.name) ||
+        optionalString(settings['linear-team-name']) ||
+        DEFAULT_LINEAR_TEAM_NAME,
     },
     project: {
-      id: ensureString(project?.id, 'linear-project.id'),
-      name: ensureString(project?.name, 'linear-project.name'),
-      slugId: ensureString(project?.slugId, 'linear-project.slugId'),
+      id: optionalString(project?.id),
+      name:
+        optionalString(project?.name) ||
+        ensureString(settings['linear-project-name'], 'linear-project-name'),
+      slugId: optionalString(project?.slugId),
     },
     labels: labels.map((label, index) => ({
       id: typeof label?.id === 'string' ? label.id : undefined,
@@ -339,7 +364,76 @@ async function ensureLabel(settings, labelInput, teamLabelsByName) {
   return created;
 }
 
+async function resolveRegisterIdentity(settings) {
+  if (settings.team.id && settings.project.id && settings.project.slugId) {
+    return false;
+  }
+
+  const data = await requestLinear(
+    settings,
+    graphqlDocument`
+      query LinearRegisterIdentity {
+        teams(first: 250) {
+          nodes {
+            id
+            key
+            name
+          }
+        }
+        projects(first: 250) {
+          nodes {
+            id
+            name
+            slugId
+            url
+          }
+        }
+      }
+    `,
+  );
+
+  const expectedTeamName = settings.team.name.toLowerCase();
+  const team = (data.teams?.nodes ?? []).find(
+    (item) =>
+      item.id === settings.team.id ||
+      item.key?.toLowerCase() === settings.team.key?.toLowerCase() ||
+      item.name?.toLowerCase() === expectedTeamName,
+  );
+  if (!team?.id) {
+    fail(`Linear team not found by name/key: ${settings.team.name}`);
+  }
+
+  const expectedProjectName = settings.project.name.toLowerCase();
+  const project = (data.projects?.nodes ?? []).find(
+    (item) =>
+      item.id === settings.project.id ||
+      item.slugId === settings.project.slugId ||
+      item.name?.toLowerCase() === expectedProjectName,
+  );
+  if (!project?.id) {
+    fail(`Linear project not found by name/slug: ${settings.project.name}`);
+  }
+
+  settings.team = {
+    id: team.id,
+    key: team.key,
+    name: team.name,
+  };
+  settings.project = {
+    id: project.id,
+    name: project.name,
+    slugId: project.slugId,
+  };
+  settings.raw['linear-team'] = settings.team;
+  settings.raw['linear-project'] = settings.project;
+  settings.raw['linear-labels'] =
+    settings.raw['linear-labels'] ?? settings.labels;
+
+  return true;
+}
+
 async function ensureRegister(settings) {
+  const identityChanged = await resolveRegisterIdentity(settings);
   const context = await requestLinear(
     settings,
     graphqlDocument`
@@ -427,6 +521,8 @@ async function ensureRegister(settings) {
   }
 
   if (labelChanged) {
+    await saveSettings(settings);
+  } else if (identityChanged) {
     await saveSettings(settings);
   }
 

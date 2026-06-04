@@ -4,15 +4,25 @@ import type {
   WorkstationQueueItem,
 } from '../types/technical-workflow';
 
-import { computed, reactive, ref } from 'vue';
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
+  watch,
+} from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
 import {
+  BookOpenText,
+  Camera,
   ChevronLeft,
   ChevronRight,
   Download,
   Ellipsis,
+  ImagePlus,
   RotateCw,
   Search,
 } from '@vben/icons';
@@ -29,10 +39,10 @@ import {
   ElLink,
   ElMessage,
   ElPagination,
-  ElTabPane,
-  ElTabs,
   ElTable,
   ElTableColumn,
+  ElTabPane,
+  ElTabs,
   ElTag,
   ElTooltip,
 } from 'element-plus';
@@ -67,13 +77,9 @@ interface GrossingTaskTableRow {
   clinicalDiagnosis: string;
   freezeReminder: string;
   grossDescription: string;
-  inspectionGroup: string;
-  inpatientNo: string;
-  patientId: string;
   patientName: string;
   receiverName: string;
   requestDepartment: string;
-  requestOrganization: string;
   rowIndex: number;
   statusText: string;
   task: PendingTechnicalTaskItem;
@@ -87,6 +93,108 @@ interface CapturedImageItem {
   sourceLabel: string;
   title: string;
 }
+
+interface GrossingDescriptionTemplate {
+  content: string;
+  id: string;
+  keywords: string[];
+  system: string;
+  tissueName: string;
+}
+
+interface GrossingTemplateGroup {
+  system: string;
+  templates: GrossingDescriptionTemplate[];
+}
+
+const CLINICAL_HISTORY_FIELDS = [
+  {
+    key: 'historySummary',
+    label: '病史摘要',
+    placeholder: '请输入病史摘要',
+    rows: 3,
+  },
+  {
+    key: 'clinicalExamination',
+    label: '临床检查',
+    placeholder: '请输入临床检查',
+    rows: 3,
+  },
+  {
+    key: 'laboratoryExamination',
+    label: '检验',
+    placeholder: '请输入检验',
+    rows: 3,
+  },
+  {
+    key: 'imagingExamination',
+    label: '影像检查',
+    placeholder: '请输入影像检查',
+    rows: 3,
+  },
+] as const;
+
+type ClinicalHistoryFieldKey = (typeof CLINICAL_HISTORY_FIELDS)[number]['key'];
+type ClinicalHistoryForm = Record<ClinicalHistoryFieldKey, string>;
+
+const COMMON_GROSSING_COPY_TEXTS = ['cm', 'cm*cm', 'cm*cm*cm'] as const;
+
+const GROSSING_DESCRIPTION_TEMPLATES: GrossingDescriptionTemplate[] = [
+  {
+    content: '送检：灰褐色条索状组织一条，长约cm，直径约0.2cm，全取1盒。',
+    id: 'hematopoietic-bone-marrow',
+    keywords: ['骨髓', '骨髓组织', '条索'],
+    system: '淋巴造血系统',
+    tissueName: '骨髓',
+  },
+  {
+    content: '送检：灰红色肾组织数条，合计约cm，质软，全取1盒。',
+    id: 'urinary-kidney',
+    keywords: ['肾', '肾组织', '泌尿'],
+    system: '泌尿系统',
+    tissueName: '肾组织',
+  },
+  {
+    content:
+      '送检：胃组织数块，灰白灰红色，大小约cm*cm*cm，黏膜面未见明确溃疡，全取1盒。',
+    id: 'digestive-stomach',
+    keywords: ['胃', '胃体', '胃窦'],
+    system: '消化系统',
+    tissueName: '胃体',
+  },
+  {
+    content:
+      '送检：肠组织数块，灰白灰红色，大小约cm*cm*cm，切面灰白，质中，全取1盒。',
+    id: 'digestive-intestine',
+    keywords: ['肠', '结肠', '直肠'],
+    system: '消化系统',
+    tissueName: '结肠',
+  },
+  {
+    content:
+      '送检：肺组织一块，灰白灰红色，大小约cm*cm*cm，切面实性，质中，全取1盒。',
+    id: 'respiratory-lung',
+    keywords: ['肺', '肺叶', '肺组织'],
+    system: '呼吸系统',
+    tissueName: '肺组织',
+  },
+  {
+    content:
+      '送检：甲状腺组织一块，灰红色，大小约cm*cm*cm，切面见结节样区，质中，全取1盒。',
+    id: 'endocrine-thyroid',
+    keywords: ['甲状腺', '甲状腺叶', '结节'],
+    system: '内分泌系统',
+    tissueName: '甲状腺',
+  },
+  {
+    content:
+      '送检：输卵管组织一段，灰白灰红色，长约cm，直径约cm，切面管腔可见，全取1盒。',
+    id: 'female-fallopian-tube',
+    keywords: ['输卵管', '女性生殖'],
+    system: '女性生殖系统',
+    tissueName: '侧部分输卵管',
+  },
+];
 
 const DISABLED_TOOLBAR_ACTIONS = [
   { icon: Download, label: '导出Excel' },
@@ -113,6 +221,13 @@ const pendingItems = ref<PendingTechnicalTaskItem[]>([]);
 const selectedTask = ref<null | PendingTechnicalTaskItem>(null);
 const total = ref(0);
 const moreDrawerVisible = ref(false);
+const templateDrawerVisible = ref(false);
+const templateSearchKeyword = ref('');
+const selectedTemplateId = ref(GROSSING_DESCRIPTION_TEMPLATES[0]?.id ?? '');
+const appendTemplateAfterApply = ref(true);
+const closeTemplateDrawerAfterApply = ref(true);
+const countdownNow = ref(Date.now());
+let freezeReminderTimer: number | undefined;
 
 const filters = reactive({
   keyword:
@@ -136,21 +251,15 @@ const workbench = useGrossingWorkbench({
     await loadPendingData();
   },
 });
+const clinicalHistoryForm = reactive<ClinicalHistoryForm>({
+  clinicalExamination: '',
+  historySummary: '',
+  imagingExamination: '',
+  laboratoryExamination: '',
+});
 
 const queueItems = computed(() =>
   buildWorkstationQueueItems(pendingItems.value, 'GROSSING'),
-);
-const selectedIndex = computed(() =>
-  pendingItems.value.findIndex((item) => item.id === selectedTask.value?.id),
-);
-const previousTask = computed(() =>
-  selectedIndex.value > 0 ? pendingItems.value[selectedIndex.value - 1] : null,
-);
-const nextTask = computed(() =>
-  selectedIndex.value >= 0 &&
-  selectedIndex.value < pendingItems.value.length - 1
-    ? pendingItems.value[selectedIndex.value + 1]
-    : null,
 );
 const currentPageError = computed(
   () => queueError.value || workbench.pageError.value,
@@ -163,11 +272,10 @@ const selectedPathologyNo = computed(() =>
     selectedCaseSummary.value?.pathologyNo ?? selectedTask.value?.pathologyNo,
   ),
 );
+const selectedPatientName = computed(() =>
+  formatNullable(selectedCaseSummary.value?.patientName),
+);
 const selectedTaskFacts = computed(() => [
-  {
-    label: '病人',
-    value: formatNullable(selectedCaseSummary.value?.patientName),
-  },
   {
     label: '住院号',
     value: formatNullable(selectedCaseSummary.value?.inpatientNo),
@@ -181,11 +289,32 @@ const selectedTaskFacts = computed(() => [
     value: formatCaseStatus(selectedCaseSummary.value?.caseStatus),
   },
 ]);
-const descriptionPreview = computed(() =>
-  formatNullable(workbench.workbenchContext.value?.contextSummary),
+const editableDescription = ref('');
+const editableDiagnosis = ref('');
+
+watch(
+  () => workbench.workbenchContext.value?.contextSummary,
+  (value) => {
+    editableDescription.value = value ?? '';
+  },
+  { immediate: true },
 );
-const diagnosisPreview = computed(() =>
-  formatNullable(workbench.workbenchContext.value?.clinicalDiagnosis),
+watch(
+  () => workbench.workbenchContext.value?.clinicalDiagnosis,
+  (value) => {
+    editableDiagnosis.value = value ?? '';
+  },
+  { immediate: true },
+);
+watch(
+  () => workbench.workbenchContext.value,
+  (context) => {
+    clinicalHistoryForm.historySummary = context?.clinicalHistory ?? '';
+    clinicalHistoryForm.clinicalExamination = '';
+    clinicalHistoryForm.laboratoryExamination = '';
+    clinicalHistoryForm.imagingExamination = context?.relatedExaminations ?? '';
+  },
+  { immediate: true },
 );
 const capturedImageItems = computed<CapturedImageItem[]>(() => [
   ...workbench.enteredMediaAssets.value.map((asset) => ({
@@ -198,10 +327,7 @@ const capturedImageItems = computed<CapturedImageItem[]>(() => [
   ...(workbench.workbenchContext.value?.mediaAssets ?? []).map((asset) => ({
     fileUrl: asset.fileUrl,
     key: `history-${asset.assetId}`,
-    meta: [
-      formatDateTime(asset.capturedAt),
-      asset.capturedByName?.trim() || '',
-    ]
+    meta: [formatDateTime(asset.capturedAt), asset.capturedByName?.trim() || '']
       .filter((item) => item && item !== '-')
       .join(' / '),
     sourceLabel: '历史',
@@ -214,6 +340,102 @@ const grossingTaskRows = computed(() =>
 const totalPageCount = computed(() =>
   Math.max(Math.ceil(total.value / filters.size), 1),
 );
+const selectedGrossingTemplate = computed(
+  () =>
+    GROSSING_DESCRIPTION_TEMPLATES.find(
+      (item) => item.id === selectedTemplateId.value,
+    ) ?? GROSSING_DESCRIPTION_TEMPLATES[0],
+);
+const visibleGrossingTemplates = computed(() => {
+  const keyword = templateSearchKeyword.value.trim().toLowerCase();
+  if (!keyword) {
+    return GROSSING_DESCRIPTION_TEMPLATES;
+  }
+  return GROSSING_DESCRIPTION_TEMPLATES.filter((template) =>
+    [
+      template.system,
+      template.tissueName,
+      template.content,
+      ...template.keywords,
+    ].some((item) => item.toLowerCase().includes(keyword)),
+  );
+});
+const grossingTemplateGroups = computed<GrossingTemplateGroup[]>(() => {
+  const groups = new Map<string, GrossingDescriptionTemplate[]>();
+  for (const template of visibleGrossingTemplates.value) {
+    const templates = groups.get(template.system) ?? [];
+    templates.push(template);
+    groups.set(template.system, templates);
+  }
+  return [...groups.entries()].map(([system, templates]) => ({
+    system,
+    templates,
+  }));
+});
+const activeTemplateSpecimenName = computed(
+  () => workbench.activeSpecimenName.value || '当前标本',
+);
+const activeSpecimenIndex = computed(() =>
+  workbench.specimenTabMetas.value.findIndex(
+    (item) => item.key === workbench.activeSpecimenKey.value,
+  ),
+);
+
+function parseDateTimeTimestamp(value: null | string | undefined) {
+  const rawValue = value?.trim();
+  if (!rawValue) {
+    return null;
+  }
+
+  const localDateTimeMatch = rawValue.match(
+    /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/,
+  );
+  if (localDateTimeMatch) {
+    const [, year, month, day, hour, minute, second = '0'] = localDateTimeMatch;
+    const timestamp = new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute),
+      Number(second),
+    ).getTime();
+    return Number.isNaN(timestamp) ? null : timestamp;
+  }
+
+  const timestamp = Date.parse(rawValue);
+  return Number.isNaN(timestamp) ? null : timestamp;
+}
+
+function formatDuration(milliseconds: number) {
+  const totalSeconds = Math.floor(Math.abs(milliseconds) / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  const paddedMinutes = String(minutes).padStart(2, '0');
+  const paddedSeconds = String(seconds).padStart(2, '0');
+  return `${hours}:${paddedMinutes}:${paddedSeconds}`;
+}
+
+function formatFreezeCountdown(
+  task: PendingTechnicalTaskItem,
+  payload: GrossingTaskPayload,
+) {
+  const deadlineTimestamp = parseDateTimeTimestamp(
+    firstTextValue(
+      task.deadlineAt,
+      readPayloadText(payload, ['deadlineAt', 'freezeDeadlineAt']),
+    ),
+  );
+  if (!deadlineTimestamp) {
+    return task.timedOut ? '已超时' : '-';
+  }
+
+  const diff = deadlineTimestamp - countdownNow.value;
+  return diff > 0
+    ? `剩余 ${formatDuration(diff)}`
+    : `已超时 ${formatDuration(diff)}`;
+}
 
 function parseGrossingTaskPayload(payload: null | string): GrossingTaskPayload {
   const rawPayload = payload?.trim();
@@ -272,9 +494,6 @@ function createGrossingTaskRow(
     'printedBlockCount',
     'printedCount',
   ]);
-  const deadlineText = task.deadlineAt
-    ? formatDateTime(task.deadlineAt)
-    : readPayloadText(payload, ['deadlineAt', 'freezeDeadlineAt']);
 
   return {
     alertLevel: item.alertLevel,
@@ -308,7 +527,7 @@ function createGrossingTaskRow(
         ]),
       ),
     ),
-    freezeReminder: task.timedOut ? '超时' : formatNullable(deadlineText),
+    freezeReminder: formatFreezeCountdown(task, payload),
     grossDescription: formatNullable(
       firstTextValue(
         activeSpecimen?.grossDescription,
@@ -321,28 +540,10 @@ function createGrossingTaskRow(
         task.remarks,
       ),
     ),
-    inspectionGroup: formatNullable(
-      firstTextValue(
-        task.stationName,
-        task.currentNode,
-        readPayloadText(payload, ['checkGroupName', 'inspectionGroup']),
-      ),
-    ),
-    inpatientNo: formatNullable(
-      firstTextValue(
-        caseSummary?.inpatientNo,
-        readPayloadText(payload, ['hospitalizationNo', 'inpatientNo']),
-      ),
-    ),
-    patientId: formatNullable(
-      firstTextValue(
-        caseSummary?.patientId,
-        readPayloadText(payload, ['patientId', 'patientNo']),
-      ),
-    ),
     patientName: formatNullable(
       firstTextValue(
         caseSummary?.patientName,
+        task.patientName,
         readPayloadText(payload, ['name', 'patient', 'patientName']),
       ),
     ),
@@ -362,24 +563,12 @@ function createGrossingTaskRow(
         ]),
       ),
     ),
-    requestOrganization: formatNullable(
-      firstTextValue(
-        readPayloadText(payload, [
-          'applyingInstitution',
-          'institutionName',
-          'requestOrganization',
-          'submittingOrganization',
-        ]),
-        caseSummary?.applicationType,
-      ),
-    ),
     rowIndex: (filters.page - 1) * filters.size + index + 1,
     statusText: formatGrossingTaskStatus(task.taskStatus),
     task,
-    typeText:
-      task.taskType?.trim()
-        ? formatTaskType(task.taskType)
-        : formatNullable(readPayloadText(payload, ['applicationType', 'type'])),
+    typeText: task.taskType?.trim()
+      ? formatTaskType(task.taskType)
+      : formatNullable(readPayloadText(payload, ['applicationType', 'type'])),
   };
 }
 
@@ -416,14 +605,6 @@ async function selectTask(taskId: string) {
     pendingItems.value.find((item) => item.id === taskId) ?? null;
   selectedTask.value = matchedTask;
   await workbench.initializeWorkbench(matchedTask);
-}
-
-async function selectAdjacentTask(offset: -1 | 1) {
-  const targetTask = offset < 0 ? previousTask.value : nextTask.value;
-  if (!targetTask) {
-    return;
-  }
-  await selectTask(targetTask.id);
 }
 
 async function loadPendingData(preferredTaskId?: string) {
@@ -482,6 +663,116 @@ function openMoreDrawer() {
   moreDrawerVisible.value = true;
 }
 
+function handleCaptureGrossingImage() {
+  if (!workbench.activeSpecimen.value) {
+    ElMessage.warning('请先选择可编辑标本');
+    return;
+  }
+  ElMessage.warning('拍照设备暂未接入，请先通过导入图片补充已采图像');
+}
+
+function handleImportGrossingImage() {
+  const specimenIndex = activeSpecimenIndex.value;
+  if (
+    !selectedTask.value ||
+    !workbench.activeSpecimen.value ||
+    specimenIndex < 0
+  ) {
+    ElMessage.warning('请先从左侧列表选择任务和可编辑标本');
+    return;
+  }
+
+  workbench.addMediaAsset(specimenIndex);
+  moreDrawerVisible.value = true;
+  ElMessage.success('已添加图片导入项，请在标本影像区上传图片');
+}
+
+function isTemplateMatchedToActiveSpecimen(
+  template: GrossingDescriptionTemplate,
+) {
+  const specimenName = workbench.activeSpecimenName.value.toLowerCase();
+  return template.keywords.some((keyword) =>
+    specimenName.includes(keyword.toLowerCase()),
+  );
+}
+
+function openGrossingTemplateDrawer() {
+  if (!selectedTask.value) {
+    ElMessage.warning('请先从左侧列表选择任务');
+    return;
+  }
+  if (!workbench.activeSpecimen.value) {
+    ElMessage.warning('请先选择可编辑标本');
+    return;
+  }
+  const matchedTemplate = GROSSING_DESCRIPTION_TEMPLATES.find((template) =>
+    isTemplateMatchedToActiveSpecimen(template),
+  );
+  selectedTemplateId.value =
+    matchedTemplate?.id ?? GROSSING_DESCRIPTION_TEMPLATES[0]?.id ?? '';
+  templateDrawerVisible.value = true;
+}
+
+function selectGrossingTemplate(template: GrossingDescriptionTemplate) {
+  selectedTemplateId.value = template.id;
+}
+
+function selectTemplateSpecimen(specimenKey: string) {
+  workbench.activeSpecimenKey.value = specimenKey;
+  workbench.selectedEmbeddingBoxSpecimenKey.value = specimenKey;
+}
+
+function appendTextToActiveGrossingDescription(text: string) {
+  const specimen = workbench.activeSpecimen.value;
+  if (!specimen) {
+    ElMessage.warning('请先选择可编辑标本');
+    return false;
+  }
+
+  const currentDescription = specimen.grossDescription?.trim() ?? '';
+  specimen.grossDescription = currentDescription
+    ? `${currentDescription}\n${text}`
+    : text;
+  return true;
+}
+
+function copyGrossingTemplateText(text: string) {
+  const appended = appendTextToActiveGrossingDescription(text);
+  if (appended) {
+    ElMessage.success(`已追加 ${text}`);
+  }
+}
+
+function applySelectedGrossingTemplate() {
+  const template = selectedGrossingTemplate.value;
+  const specimen = workbench.activeSpecimen.value;
+  if (!template || !specimen) {
+    ElMessage.warning('请先选择可编辑标本和取材模板');
+    return;
+  }
+
+  if (appendTemplateAfterApply.value) {
+    const currentDescription = specimen.grossDescription?.trim() ?? '';
+    specimen.grossDescription = currentDescription
+      ? `${currentDescription}\n${template.content}`
+      : template.content;
+  } else {
+    specimen.grossDescription = template.content;
+  }
+
+  ElMessage.success(
+    appendTemplateAfterApply.value ? '已追加取材模板' : '已替换为取材模板',
+  );
+  if (closeTemplateDrawerAfterApply.value) {
+    templateDrawerVisible.value = false;
+  }
+}
+
+function applyGrossingTemplateWithMode(append: boolean) {
+  appendTemplateAfterApply.value = append;
+  applySelectedGrossingTemplate();
+}
+
 async function handleStartOrContinue() {
   if (!selectedTask.value) {
     ElMessage.warning('请先从左侧列表选择任务');
@@ -511,12 +802,26 @@ async function handleStartOrContinue() {
   }
 }
 
+onMounted(() => {
+  freezeReminderTimer = window.setInterval(() => {
+    countdownNow.value = Date.now();
+  }, 1000);
+});
+
+onBeforeUnmount(() => {
+  if (freezeReminderTimer !== undefined) {
+    window.clearInterval(freezeReminderTimer);
+  }
+});
+
 void loadPendingData();
 </script>
 
 <template>
   <Page>
-    <div class="flex h-[calc(100vh-112px)] min-h-[560px] flex-col gap-2 overflow-hidden text-foreground">
+    <div
+      class="flex h-[calc(100vh-112px)] min-h-[560px] flex-col gap-2 overflow-hidden text-foreground"
+    >
       <ElAlert
         v-if="currentPageError"
         :closable="false"
@@ -595,7 +900,9 @@ void loadPendingData();
           </ElButton>
         </div>
 
-        <div class="mt-2 flex flex-wrap items-center gap-1.5 border-t border-border pt-2">
+        <div
+          class="mt-2 flex flex-wrap items-center gap-1.5 border-t border-border pt-2"
+        >
           <ElTooltip
             v-for="action in DISABLED_TOOLBAR_ACTIONS"
             :key="action.label"
@@ -611,8 +918,12 @@ void loadPendingData();
         </div>
       </section>
 
-      <section class="grid min-h-0 flex-1 grid-cols-1 items-stretch gap-2 overflow-hidden xl:grid-cols-[minmax(0,1fr)_500px] 2xl:grid-cols-[minmax(0,1fr)_560px]">
-        <article class="flex min-w-0 flex-col overflow-hidden rounded-md border border-border bg-card">
+      <section
+        class="grid min-h-0 flex-1 grid-cols-1 items-stretch gap-2 overflow-hidden xl:grid-cols-[minmax(0,1fr)_500px] 2xl:grid-cols-[minmax(0,1fr)_560px]"
+      >
+        <article
+          class="flex min-w-0 flex-col overflow-hidden rounded-md border border-border bg-card"
+        >
           <div class="min-h-0 flex-1 overflow-hidden">
             <ElTable
               v-loading="loading"
@@ -640,7 +951,11 @@ void loadPendingData();
                   {{ row.rowIndex }}
                 </template>
               </ElTableColumn>
-              <ElTableColumn label="检查号" min-width="130" show-overflow-tooltip>
+              <ElTableColumn
+                label="检查号"
+                min-width="130"
+                show-overflow-tooltip
+              >
                 <template #default="{ row }">
                   {{ row.checkNo }}
                 </template>
@@ -655,7 +970,11 @@ void loadPendingData();
                   {{ row.typeText }}
                 </template>
               </ElTableColumn>
-              <ElTableColumn label="接收人" min-width="110" show-overflow-tooltip>
+              <ElTableColumn
+                label="接收人"
+                min-width="110"
+                show-overflow-tooltip
+              >
                 <template #default="{ row }">
                   {{ row.receiverName }}
                 </template>
@@ -680,44 +999,40 @@ void loadPendingData();
                   </ElTag>
                 </template>
               </ElTableColumn>
-              <ElTableColumn label="住院号" min-width="120" show-overflow-tooltip>
-                <template #default="{ row }">
-                  {{ row.inpatientNo }}
-                </template>
-              </ElTableColumn>
-              <ElTableColumn label="病人ID" min-width="120" show-overflow-tooltip>
-                <template #default="{ row }">
-                  {{ row.patientId }}
-                </template>
-              </ElTableColumn>
-              <ElTableColumn label="申请科室" min-width="120" show-overflow-tooltip>
+              <ElTableColumn
+                label="申请科室"
+                min-width="120"
+                show-overflow-tooltip
+              >
                 <template #default="{ row }">
                   {{ row.requestDepartment }}
                 </template>
               </ElTableColumn>
-              <ElTableColumn label="检查组" min-width="120" show-overflow-tooltip>
-                <template #default="{ row }">
-                  {{ row.inspectionGroup }}
-                </template>
-              </ElTableColumn>
-              <ElTableColumn label="肉眼所见" min-width="180" show-overflow-tooltip>
+              <ElTableColumn
+                label="肉眼所见"
+                min-width="180"
+                show-overflow-tooltip
+              >
                 <template #default="{ row }">
                   {{ row.grossDescription }}
                 </template>
               </ElTableColumn>
-              <ElTableColumn label="病理诊断" min-width="180" show-overflow-tooltip>
+              <ElTableColumn
+                label="病理诊断"
+                min-width="180"
+                show-overflow-tooltip
+              >
                 <template #default="{ row }">
                   {{ row.clinicalDiagnosis }}
                 </template>
               </ElTableColumn>
-              <ElTableColumn label="申请单号" min-width="140" show-overflow-tooltip>
+              <ElTableColumn
+                label="申请单号"
+                min-width="140"
+                show-overflow-tooltip
+              >
                 <template #default="{ row }">
                   {{ row.applicationNo }}
-                </template>
-              </ElTableColumn>
-              <ElTableColumn label="申请机构" min-width="140" show-overflow-tooltip>
-                <template #default="{ row }">
-                  {{ row.requestOrganization }}
                 </template>
               </ElTableColumn>
               <ElTableColumn label="蜡块总数/打印数" min-width="140">
@@ -728,10 +1043,11 @@ void loadPendingData();
             </ElTable>
           </div>
 
-          <footer class="flex min-h-10 flex-wrap items-center justify-between gap-3 border-t border-border bg-muted/30 px-3 py-2">
+          <footer
+            class="flex min-h-10 flex-wrap items-center justify-between gap-3 border-t border-border bg-muted/30 px-3 py-2"
+          >
             <span class="shrink-0 text-xs text-muted-foreground">
-              {{ filters.page }} / {{ totalPageCount }} 共
-              {{ total }} 条记录
+              {{ filters.page }} / {{ totalPageCount }} 共 {{ total }} 条记录
             </span>
             <ElPagination
               v-model:current-page="filters.page"
@@ -746,18 +1062,24 @@ void loadPendingData();
           </footer>
         </article>
 
-        <aside class="flex min-h-0 min-w-0 flex-col overflow-y-auto rounded-md border border-border bg-card">
+        <aside
+          class="flex min-h-0 min-w-0 flex-col overflow-y-auto rounded-md border border-border bg-card"
+        >
           <template v-if="selectedTask">
-            <header class="flex flex-wrap items-start justify-between gap-2 border-b border-border bg-muted/30 px-3 py-2">
+            <header
+              class="flex flex-wrap items-start justify-between gap-2 border-b border-border bg-muted/30 px-3 py-2"
+            >
               <div class="min-w-0">
-                <div class="truncate text-sm font-semibold text-foreground">
-                  {{ selectedPathologyNo }}
+                <div
+                  class="flex flex-wrap gap-x-4 gap-y-1 text-sm font-semibold text-foreground"
+                >
+                  <span>病人: {{ selectedPatientName }}</span>
+                  <span>病理号: {{ selectedPathologyNo }}</span>
                 </div>
-                <div class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                  <span
-                    v-for="item in selectedTaskFacts"
-                    :key="item.label"
-                  >
+                <div
+                  class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground"
+                >
+                  <span v-for="item in selectedTaskFacts" :key="item.label">
                     {{ item.label }}：{{ item.value }}
                   </span>
                 </div>
@@ -778,24 +1100,24 @@ void loadPendingData();
                 >
                   取材完成
                 </ElButton>
-                <ElButton
-                  :disabled="!previousTask"
-                  :icon="ChevronLeft"
-                  size="small"
-                  @click="void selectAdjacentTask(-1)"
-                >
-                  上一例
-                </ElButton>
-                <ElButton
-                  :disabled="!nextTask"
-                  :icon="ChevronRight"
-                  size="small"
-                  @click="void selectAdjacentTask(1)"
-                >
-                  下一例
-                </ElButton>
               </div>
             </header>
+
+            <GrossingEmbeddingBoxTable
+              v-model:selected-specimen-key="
+                workbench.selectedEmbeddingBoxSpecimenKey.value
+              "
+              :can-add-embedding-box="
+                workbench.specimenNameOptions.value.length > 0
+              "
+              :embedding-box-rows="workbench.embeddingBoxRows.value"
+              :embedding-remark-options="
+                workbench.workflowReferenceOptions.value.embeddingRemarks
+              "
+              :specimen-options="workbench.specimenNameOptions.value"
+              @add-embedding-boxes="workbench.addEmbeddingBoxes"
+              @remove-embedding-box="workbench.removeEmbeddingBox"
+            />
 
             <section class="border-b border-border">
               <ElTabs
@@ -803,11 +1125,32 @@ void loadPendingData();
                 class="px-3 pb-3"
               >
                 <ElTabPane label="大体描写" name="grossDescription">
-                  <div class="min-h-80 pt-2">
-                    <div class="flex min-h-8 items-center justify-between gap-2 border-b border-border pb-2">
-                      <span class="text-xs font-semibold text-foreground">
-                        大体描写
-                      </span>
+                  <div class="pt-2">
+                    <div
+                      class="flex min-h-8 flex-wrap items-center justify-between gap-2 border-b border-border pb-2"
+                    >
+                      <div class="min-w-0">
+                        <div class="flex items-center gap-1.5">
+                          <span class="text-xs font-semibold text-foreground">
+                            大体描写
+                          </span>
+                          <ElTooltip content="打开取材模板" placement="top">
+                            <ElButton
+                              aria-label="打开取材模板"
+                              :icon="BookOpenText"
+                              circle
+                              size="small"
+                              title="取材模板"
+                              @click="openGrossingTemplateDrawer"
+                            />
+                          </ElTooltip>
+                        </div>
+                        <p
+                          class="mt-0.5 truncate text-xs text-muted-foreground"
+                        >
+                          {{ activeTemplateSpecimenName }}
+                        </p>
+                      </div>
                       <div class="inline-flex items-center gap-1.5">
                         <ElTooltip content="随完成取材一并提交" placement="top">
                           <span class="inline-flex">
@@ -822,41 +1165,41 @@ void loadPendingData();
                       </div>
                     </div>
 
-                    <GrossingEmbeddingBoxTable
-                      :embedding-remark-options="
-                        workbench.workflowReferenceOptions.value
-                          .embeddingRemarks
-                      "
-                      :specimen="workbench.activeSpecimen.value"
-                      @add-embedding-boxes="workbench.addEmbeddingBoxes"
-                      @remove-embedding-box="workbench.removeEmbeddingBox"
-                    />
-
                     <ElInput
                       v-if="workbench.activeSpecimen.value"
                       v-model="workbench.activeSpecimen.value.grossDescription"
-                      :rows="12"
+                      :rows="6"
                       placeholder="请输入当前标本的大体描写"
                       type="textarea"
                     />
-                    <ElEmpty
-                      v-else
-                      description="当前没有可编辑的标本描写"
-                    />
+                    <ElEmpty v-else description="当前没有可编辑的标本描写" />
                   </div>
                 </ElTabPane>
 
                 <ElTabPane label="临床病史" name="clinicalHistory">
-                  <div class="min-h-80 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-background p-3 text-sm leading-7 text-foreground">
-                    {{
-                      workbench.workbenchContext.value?.clinicalHistory ||
-                      '当前病例暂无临床病史上下文'
-                    }}
+                  <div class="grid gap-3 pt-2">
+                    <label
+                      v-for="field in CLINICAL_HISTORY_FIELDS"
+                      :key="field.key"
+                      class="grid gap-1.5"
+                    >
+                      <span class="text-xs font-semibold text-foreground">
+                        {{ field.label }}
+                      </span>
+                      <ElInput
+                        v-model="clinicalHistoryForm[field.key]"
+                        :placeholder="field.placeholder"
+                        :rows="field.rows"
+                        type="textarea"
+                      />
+                    </label>
                   </div>
                 </ElTabPane>
 
                 <ElTabPane label="相关检查" name="relatedExaminations">
-                  <div class="min-h-80 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-background p-3 text-sm leading-7 text-foreground">
+                  <div
+                    class="min-h-80 overflow-auto whitespace-pre-wrap rounded-md border border-border bg-background p-3 text-sm leading-7 text-foreground"
+                  >
                     {{
                       workbench.workbenchContext.value?.relatedExaminations ||
                       '当前病例暂无检查摘要'
@@ -866,7 +1209,8 @@ void loadPendingData();
                       class="mt-3 flex flex-wrap gap-1.5 border-t border-border pt-3"
                     >
                       <ElTag
-                        v-for="item in workbench.workbenchContext.value.checkItems"
+                        v-for="item in workbench.workbenchContext.value
+                          .checkItems"
                         :key="`${item.sequenceNo}-${item.name}`"
                         effect="plain"
                         size="small"
@@ -879,64 +1223,109 @@ void loadPendingData();
               </ElTabs>
             </section>
 
-            <section class="border-b border-border">
-              <header class="flex min-h-8 items-center border-b border-border bg-muted/30 px-3 text-xs font-semibold text-foreground">
-                描述
-              </header>
-              <div class="max-h-40 min-h-24 overflow-auto whitespace-pre-wrap bg-card p-3 text-sm leading-6 text-foreground">
-                {{ descriptionPreview }}
-              </div>
-            </section>
-
-            <section class="border-b border-border">
-              <header class="flex min-h-8 items-center border-b border-border bg-muted/30 px-3 text-xs font-semibold text-foreground">
-                诊断
-              </header>
-              <div class="max-h-40 min-h-24 overflow-auto whitespace-pre-wrap bg-card p-3 text-sm leading-6 text-foreground">
-                {{ diagnosisPreview }}
-              </div>
-            </section>
-
-            <section class="flex flex-1 flex-col">
-              <header class="flex min-h-8 items-center border-b border-border bg-muted/30 px-3 text-xs font-semibold text-foreground">
-                已采图像
-              </header>
-              <div class="min-h-40 flex-1 overflow-auto bg-card p-3 text-sm leading-6 text-foreground">
-                <div
-                  v-if="capturedImageItems.length"
-                  class="grid gap-2"
+            <template
+              v-if="workbench.descriptionTab.value !== 'clinicalHistory'"
+            >
+              <section class="border-b border-border">
+                <header
+                  class="flex min-h-8 items-center border-b border-border bg-muted/30 px-3 text-xs font-semibold text-foreground"
                 >
-                  <article
-                    v-for="asset in capturedImageItems"
-                    :key="asset.key"
-                    class="flex items-center justify-between gap-2 rounded-md border border-border bg-background p-2"
-                  >
-                    <div class="flex min-w-0 items-center gap-2">
-                      <ElTag effect="plain" size="small">
-                        {{ asset.sourceLabel }}
-                      </ElTag>
-                      <div class="min-w-0">
-                        <div class="truncate text-xs font-medium text-foreground">
-                          {{ asset.title }}
-                        </div>
-                        <div class="mt-0.5 truncate text-xs text-muted-foreground">
-                          {{ asset.meta || '-' }}
+                  描述
+                </header>
+                <div class="bg-card p-3">
+                  <ElInput
+                    v-model="editableDescription"
+                    :rows="4"
+                    placeholder="请输入病例描述"
+                    type="textarea"
+                  />
+                </div>
+              </section>
+
+              <section class="border-b border-border">
+                <header
+                  class="flex min-h-8 items-center border-b border-border bg-muted/30 px-3 text-xs font-semibold text-foreground"
+                >
+                  诊断
+                </header>
+                <div class="bg-card p-3">
+                  <ElInput
+                    v-model="editableDiagnosis"
+                    :rows="3"
+                    placeholder="请输入临床诊断"
+                    type="textarea"
+                  />
+                </div>
+              </section>
+
+              <section class="flex flex-1 flex-col">
+                <header
+                  class="flex min-h-8 items-center justify-between gap-2 border-b border-border bg-muted/30 px-3 text-xs font-semibold text-foreground"
+                >
+                  <span>已采图像</span>
+                  <div class="inline-flex items-center gap-1">
+                    <ElTooltip content="拍照" placement="top">
+                      <ElButton
+                        aria-label="拍照"
+                        :icon="Camera"
+                        circle
+                        size="small"
+                        title="拍照"
+                        @click="handleCaptureGrossingImage"
+                      />
+                    </ElTooltip>
+                    <ElTooltip content="导入图片" placement="top">
+                      <ElButton
+                        aria-label="导入图片"
+                        :icon="ImagePlus"
+                        circle
+                        size="small"
+                        title="导入图片"
+                        @click="handleImportGrossingImage"
+                      />
+                    </ElTooltip>
+                  </div>
+                </header>
+                <div
+                  class="min-h-40 flex-1 overflow-auto bg-card p-3 text-sm leading-6 text-foreground"
+                >
+                  <div v-if="capturedImageItems.length > 0" class="grid gap-2">
+                    <article
+                      v-for="asset in capturedImageItems"
+                      :key="asset.key"
+                      class="flex items-center justify-between gap-2 rounded-md border border-border bg-background p-2"
+                    >
+                      <div class="flex min-w-0 items-center gap-2">
+                        <ElTag effect="plain" size="small">
+                          {{ asset.sourceLabel }}
+                        </ElTag>
+                        <div class="min-w-0">
+                          <div
+                            class="truncate text-xs font-medium text-foreground"
+                          >
+                            {{ asset.title }}
+                          </div>
+                          <div
+                            class="mt-0.5 truncate text-xs text-muted-foreground"
+                          >
+                            {{ asset.meta || '-' }}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <ElLink
-                      v-if="asset.fileUrl"
-                      :href="asset.fileUrl"
-                      target="_blank"
-                      type="primary"
-                    >
-                      查看
-                    </ElLink>
-                  </article>
+                      <ElLink
+                        v-if="asset.fileUrl"
+                        :href="asset.fileUrl"
+                        target="_blank"
+                        type="primary"
+                      >
+                        查看
+                      </ElLink>
+                    </article>
+                  </div>
+                  <ElEmpty v-else description="当前没有采图记录" />
                 </div>
-                <ElEmpty v-else description="当前没有采图记录" />
-              </div>
-            </section>
+              </section>
+            </template>
           </template>
 
           <div v-else class="grid min-h-96 flex-1 place-items-center">
@@ -947,14 +1336,168 @@ void loadPendingData();
     </div>
 
     <ElDrawer
+      v-model="templateDrawerVisible"
+      :close-on-click-modal="false"
+      direction="btt"
+      :title="`选择取材模板 - ${activeTemplateSpecimenName}`"
+      size="48%"
+    >
+      <div class="flex h-full min-h-0 flex-col gap-3 pb-3">
+        <header
+          class="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3"
+        >
+          <div class="flex min-w-[260px] flex-1 flex-wrap items-center gap-1.5">
+            <span class="text-xs font-semibold text-foreground">
+              复制常用字符:
+            </span>
+            <ElButton
+              v-for="item in COMMON_GROSSING_COPY_TEXTS"
+              :key="item"
+              size="small"
+              @click="copyGrossingTemplateText(item)"
+            >
+              {{ item }}
+            </ElButton>
+            <ElInput
+              v-model="templateSearchKeyword"
+              class="min-w-[220px] flex-1"
+              placeholder="输入标本名称或模板关键词"
+            />
+          </div>
+          <div class="flex shrink-0 flex-wrap items-center gap-3">
+            <ElCheckbox v-model="closeTemplateDrawerAfterApply">
+              操作后关闭
+            </ElCheckbox>
+            <ElCheckbox v-model="appendTemplateAfterApply">追加</ElCheckbox>
+            <ElCheckbox :model-value="true" disabled>智能匹配</ElCheckbox>
+          </div>
+        </header>
+
+        <div
+          class="grid min-h-0 flex-1 grid-cols-1 overflow-hidden rounded-md border border-border md:grid-cols-[220px_minmax(0,1fr)]"
+        >
+          <aside
+            class="border-b border-border bg-muted/20 md:border-b-0 md:border-r"
+          >
+            <div
+              class="border-b border-border bg-muted/30 px-3 py-2 text-xs font-semibold text-foreground"
+            >
+              标本名称
+            </div>
+            <div class="grid max-h-40 overflow-auto md:max-h-none">
+              <button
+                v-for="item in workbench.specimenNameOptions.value"
+                :key="item.value"
+                class="flex items-center justify-between border-b border-border px-3 py-2 text-left text-sm transition-colors hover:bg-background"
+                :class="
+                  item.value === workbench.activeSpecimenKey.value
+                    ? 'bg-background font-semibold text-primary'
+                    : 'text-foreground'
+                "
+                type="button"
+                @click="selectTemplateSpecimen(item.value)"
+              >
+                <span class="truncate">{{ item.label }}</span>
+                <ElTag
+                  v-if="item.value === workbench.activeSpecimenKey.value"
+                  effect="plain"
+                  size="small"
+                  type="primary"
+                >
+                  当前
+                </ElTag>
+              </button>
+            </div>
+          </aside>
+
+          <main class="min-h-0 overflow-auto bg-card p-3">
+            <div v-if="grossingTemplateGroups.length > 0" class="grid gap-3">
+              <section
+                v-for="group in grossingTemplateGroups"
+                :key="group.system"
+                class="grid gap-2"
+              >
+                <div
+                  class="flex items-center gap-2 text-xs font-semibold text-muted-foreground"
+                >
+                  <span>{{ group.system }}</span>
+                  <span class="h-px flex-1 bg-border"></span>
+                </div>
+                <div class="grid gap-2 lg:grid-cols-2">
+                  <button
+                    v-for="template in group.templates"
+                    :key="template.id"
+                    class="rounded-md border p-3 text-left transition-colors hover:border-primary hover:bg-muted/30"
+                    :class="
+                      template.id === selectedTemplateId
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border bg-background'
+                    "
+                    type="button"
+                    @click="selectGrossingTemplate(template)"
+                  >
+                    <div
+                      class="flex items-start justify-between gap-2 text-sm font-semibold text-foreground"
+                    >
+                      <span>{{ template.tissueName }}</span>
+                      <ElTag
+                        v-if="isTemplateMatchedToActiveSpecimen(template)"
+                        effect="plain"
+                        size="small"
+                        type="success"
+                      >
+                        推荐
+                      </ElTag>
+                    </div>
+                    <p
+                      class="mt-2 line-clamp-2 text-xs leading-5 text-muted-foreground"
+                    >
+                      {{ template.content }}
+                    </p>
+                  </button>
+                </div>
+              </section>
+            </div>
+            <ElEmpty v-else description="未找到匹配的取材模板" />
+          </main>
+        </div>
+
+        <footer class="flex flex-wrap items-center justify-between gap-3">
+          <div
+            class="min-w-0 flex-1 truncate text-xs text-muted-foreground"
+            :title="selectedGrossingTemplate?.content"
+          >
+            当前模板：{{ selectedGrossingTemplate?.tissueName || '-' }} /
+            {{ selectedGrossingTemplate?.content || '请选择模板' }}
+          </div>
+          <div class="flex shrink-0 gap-2">
+            <ElButton @click="applyGrossingTemplateWithMode(false)">
+              替换当前
+            </ElButton>
+            <ElButton
+              type="primary"
+              @click="applyGrossingTemplateWithMode(true)"
+            >
+              追加模板
+            </ElButton>
+          </div>
+        </footer>
+      </div>
+    </ElDrawer>
+
+    <ElDrawer
       v-model="moreDrawerVisible"
       :close-on-click-modal="false"
       :title="`更多取材操作 - ${selectedPathologyNo}`"
       size="74%"
     >
       <div class="flex flex-col gap-4 pb-16">
-        <section class="overflow-hidden rounded-md border border-border bg-card">
-          <header class="border-b border-border bg-muted/30 px-3 py-2 text-sm font-semibold text-foreground">
+        <section
+          class="overflow-hidden rounded-md border border-border bg-card"
+        >
+          <header
+            class="border-b border-border bg-muted/30 px-3 py-2 text-sm font-semibold text-foreground"
+          >
             操作信息
           </header>
           <div class="p-3">
@@ -968,14 +1511,20 @@ void loadPendingData();
           </div>
         </section>
 
-        <section class="overflow-hidden rounded-md border border-border bg-card">
-          <header class="border-b border-border bg-muted/30 px-3 py-2 text-sm font-semibold text-foreground">
+        <section
+          class="overflow-hidden rounded-md border border-border bg-card"
+        >
+          <header
+            class="border-b border-border bg-muted/30 px-3 py-2 text-sm font-semibold text-foreground"
+          >
             标本 / 蜡块 / 影像编辑
           </header>
           <div class="p-3">
             <GrossingSpecimenTabs
               v-model:active-specimen-key="workbench.activeSpecimenKey.value"
-              :before-grossing-image-upload="workbench.beforeGrossingImageUpload"
+              :before-grossing-image-upload="
+                workbench.beforeGrossingImageUpload
+              "
               :body-part-tree-options="workbench.bodyPartTreeOptions.value"
               :complete-form="workbench.completeForm"
               :create-grossing-image-upload-request="
@@ -1002,7 +1551,9 @@ void loadPendingData();
           </div>
         </section>
 
-        <footer class="sticky bottom-0 flex justify-end gap-2 border-t border-border bg-background/95 py-3">
+        <footer
+          class="sticky bottom-0 flex justify-end gap-2 border-t border-border bg-background/95 py-3"
+        >
           <ElButton
             :loading="workbench.contextLoading.value"
             @click="void workbench.loadWorkbenchContext()"

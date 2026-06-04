@@ -1,21 +1,29 @@
 <script setup lang="ts">
 import type { MessageTopicView } from '../../types/system-management';
 
+import { computed } from 'vue';
+
 import { ElCheckbox, ElCheckboxGroup } from 'element-plus';
 
-defineProps<{
+const props = defineProps<{
   authState: {
     topicIds: string[];
   };
   topics: MessageTopicView[];
 }>();
+
+const emit = defineEmits<{
+  'update:topicIds': [value: string[]];
+}>();
+
+const topicIdsModel = computed({
+  get: () => props.authState.topicIds,
+  set: (value: string[]) => emit('update:topicIds', value),
+});
 </script>
 
 <template>
-  <ElCheckboxGroup
-    v-model="authState.topicIds"
-    class="grid gap-3 lg:grid-cols-2"
-  >
+  <ElCheckboxGroup v-model="topicIdsModel" class="grid gap-3 lg:grid-cols-2">
     <ElCheckbox
       v-for="topic in topics"
       :key="topic.id"

@@ -286,9 +286,9 @@ describe('TrackingSpecimenListView', () => {
       triggerKey: 1,
     });
 
-    const receiptButton = [...root.querySelectorAll<HTMLButtonElement>('button')].find(
-      (button) => button.textContent?.includes('回到标本接收处理'),
-    );
+    const receiptButton = [
+      ...root.querySelectorAll<HTMLButtonElement>('button'),
+    ].find((button) => button.textContent?.includes('回到标本接收处理'));
     receiptButton?.click();
     await flushAll();
 
@@ -325,7 +325,9 @@ describe('TrackingSpecimenListView', () => {
     expect(root.textContent).not.toContain(
       '支持按关键字、科室、状态、标签状态、异常标记和日期范围筛选。',
     );
-    expect(root.textContent).toContain('支持按关键字、标本状态和异常标记筛选。');
+    expect(root.textContent).toContain(
+      '支持按关键字、标本状态和异常标记筛选。',
+    );
 
     app.unmount();
   });
@@ -365,6 +367,16 @@ describe('TrackingSpecimenListView', () => {
     expect(root.textContent).toContain('最近流程节点');
     expect(root.textContent).toContain('最近标签批次结果');
     expect(root.textContent).not.toContain('去追踪与异常');
+
+    app.unmount();
+  });
+
+  it('shows the page error when loading the tracking specimen list fails', async () => {
+    mockListSpecimens.mockRejectedValue(new Error('标本追踪列表加载失败'));
+
+    const { app, root } = await mountView();
+
+    expect(root.textContent).toContain('标本追踪列表加载失败');
 
     app.unmount();
   });

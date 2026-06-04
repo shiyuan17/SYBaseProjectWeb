@@ -53,7 +53,8 @@ export function buildDiagnosisWorkbenchQueueStats(
   items: PendingDiagnosticTaskItem[],
 ): DiagnosisWorkbenchQueueStats {
   return {
-    acceptedCount: items.filter((item) => item.taskStatus === 'ACCEPTED').length,
+    acceptedCount: items.filter((item) => item.taskStatus === 'ACCEPTED')
+      .length,
     completedCount: items.filter((item) => item.taskStatus === 'COMPLETED')
       .length,
     currentPageCount: items.length,
@@ -120,16 +121,18 @@ export function buildDiagnosticProgressNodes(
       state: resolveTaskProgressState(selectedTask?.taskStatus ?? ''),
     },
     {
-      description:
-        workbench.currentReport?.reportId
-          ? `${formatNullable(workbench.currentReport.reportNo)} · v${workbench.currentReport.versionNo ?? 1}`
-          : '尚未创建报告',
+      description: workbench.currentReport?.reportId
+        ? `${formatNullable(workbench.currentReport.reportNo)} · v${workbench.currentReport.versionNo ?? 1}`
+        : '尚未创建报告',
       id: 'report-status',
       label: '报告编写与流转',
       state: resolveReportProgressState(reportStatus),
     },
     {
-      description: buildCollaborationDescription(workbench, pendingMedicalOrderCount),
+      description: buildCollaborationDescription(
+        workbench,
+        pendingMedicalOrderCount,
+      ),
       id: 'collaboration',
       label: '协同与闭环',
       state:

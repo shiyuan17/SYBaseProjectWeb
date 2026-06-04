@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { TechnicalOperatorFormValue } from '../types/technical-workflow';
 
+import { computed } from 'vue';
+
 import { ElFormItem, ElInput } from 'element-plus';
 
 const props = withDefaults(
@@ -14,6 +16,23 @@ const props = withDefaults(
     terminalPlaceholder: '请输入终端编码',
   },
 );
+
+const emit = defineEmits<{
+  'update:form': [value: TechnicalOperatorFormValue];
+}>();
+
+function createFormModel<Key extends keyof TechnicalOperatorFormValue>(
+  key: Key,
+) {
+  return computed({
+    get: () => props.form[key],
+    set: (value: TechnicalOperatorFormValue[Key]) =>
+      emit('update:form', { ...props.form, [key]: value }),
+  });
+}
+
+const terminalCodeModel = createFormModel('terminalCode');
+const remarksModel = createFormModel('remarks');
 </script>
 
 <template>
@@ -26,13 +45,10 @@ const props = withDefaults(
       />
     </ElFormItem>
     <ElFormItem label="终端编码">
-      <ElInput
-        v-model="props.form.terminalCode"
-        :placeholder="terminalPlaceholder"
-      />
+      <ElInput v-model="terminalCodeModel" :placeholder="terminalPlaceholder" />
     </ElFormItem>
     <ElFormItem label="备注">
-      <ElInput v-model="props.form.remarks" :placeholder="remarksPlaceholder" />
+      <ElInput v-model="remarksModel" :placeholder="remarksPlaceholder" />
     </ElFormItem>
   </div>
 </template>

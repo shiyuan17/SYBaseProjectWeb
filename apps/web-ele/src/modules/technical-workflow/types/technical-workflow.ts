@@ -63,6 +63,8 @@ export interface TechnicalWorkflowRouteMeta {
 export interface PendingTechnicalTaskItem {
   applicationId: string;
   applicationNo: string;
+  patientId?: null | string;
+  patientName?: null | string;
   caseId: string;
   completedAt: null | string;
   createdAt: null | string;
@@ -154,11 +156,15 @@ export interface PendingTechnicalTaskPage {
   total: number;
 }
 
+export type TechnicalSpecimenRegistrationStatus = 'COMPLETED' | 'PENDING';
+
 export interface PendingTechnicalSpecimenRegistrationQuery {
+  applicationType?: null | string;
   keyword?: null | string;
   page: number;
   receivedFrom?: null | string;
   receivedTo?: null | string;
+  registrationStatus?: TechnicalSpecimenRegistrationStatus;
   size: number;
 }
 
@@ -310,6 +316,7 @@ export interface TechnicalSpecimenRegistrationMaterialVerificationRequest {
 }
 
 export interface CompleteTechnicalSpecimenRegistrationRequest {
+  applicationType?: null | string;
   remarks?: null | string;
   terminalCode?: null | string;
 }
@@ -640,7 +647,7 @@ export interface EmbeddingQualityReviewRequest {
   samplingEvaluation?: null | string;
   sliceNotice?: null | string;
   terminalCode?: null | string;
-  treatmentAction?: null | 'OTHER' | 'REGROSSING';
+  treatmentAction?: 'OTHER' | 'REGROSSING' | null;
   treatmentRemark?: null | string;
   unqualifiedReasons?: string[];
 }

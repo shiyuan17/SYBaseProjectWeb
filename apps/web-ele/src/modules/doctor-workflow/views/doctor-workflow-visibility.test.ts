@@ -679,9 +679,9 @@ describe('doctor workflow view visibility', () => {
     const wrapper = await mountView(DiagnosisWorkbenchView);
 
     expect(wrapper.buttonTexts()).toContain('新增医嘱');
-    expect(wrapper.buttonTexts()).toContain('进入医嘱工作台');
+    expect(wrapper.buttonTexts()).toContain('医嘱工作台');
 
-    wrapper.clickButton('进入医嘱工作台');
+    wrapper.clickButton('医嘱工作台');
     await flushAsyncWork();
 
     expect(mockRouter.push).toHaveBeenCalledWith({

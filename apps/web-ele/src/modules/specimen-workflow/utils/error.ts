@@ -12,7 +12,7 @@ type WorkflowApiErrorLike = {
   };
 };
 
-function mapWorkflowEnglishErrorMessage(message: string) {
+export function mapWorkflowEnglishErrorMessage(message: string) {
   if (message === 'Specimen already confirmed for removal') {
     return '该标本已完成离体确认，请勿重复操作。';
   }
@@ -27,6 +27,14 @@ function mapWorkflowEnglishErrorMessage(message: string) {
 
   if (message === 'Specimen must be confirmed before check-in') {
     return '标本尚未完成标本确认，不能入库。';
+  }
+
+  if (message === 'Specimen must complete verification before check-in') {
+    return '标本尚未完成核对，不能入库。';
+  }
+
+  if (message === 'Specimen must complete fixation before check-in') {
+    return '标本尚未完成固定，不能入库。';
   }
 
   if (
@@ -44,11 +52,8 @@ function mapWorkflowEnglishErrorMessage(message: string) {
     return '标本已接收、拒收或退回，当前流程不可重复操作。';
   }
 
-  if (
-    message ===
-    'All specimens of the application must be checked in before transport'
-  ) {
-    return '当前申请单下所有标本都完成入库后，才能执行转运。';
+  if (message === 'Specimen already outbound') {
+    return '标本已完成出库，无需重复操作。';
   }
 
   if (

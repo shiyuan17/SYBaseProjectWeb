@@ -11,6 +11,11 @@ interface PathologyNoRule {
 const DEFAULT_APPLICATION_TYPE = 'ROUTINE';
 const DEFAULT_REFERENCE_DATE = '2026-01-01';
 const DEFAULT_SEQUENCE_VALUE = 1;
+export const TECHNICAL_REGISTRATION_CONSULTATION_APPLICATION_TYPES = [
+  'CONSULTATION',
+  'CYTOLOGY_CONSULTATION',
+  'DIFFICULT_CONSULTATION',
+] as const;
 const DEFAULT_PATHOLOGY_NO_RULE: PathologyNoRule = {
   datePattern: 'YYYYMMDD',
   prefix: 'BL',
@@ -22,12 +27,20 @@ const pathologyNoRules: Record<string, PathologyNoRule> = {
   CYTOLOGY: { datePattern: 'YY', prefix: 'XB', sequenceLength: 5 },
   CYTOLOGY_CONSULTATION: { datePattern: 'YY', prefix: 'XH', sequenceLength: 5 },
   CYTOLOGY_SMEAR: { datePattern: 'YY', prefix: 'GP', sequenceLength: 5 },
-  DIFFICULT_CONSULTATION: { datePattern: 'YY', prefix: 'YN', sequenceLength: 5 },
+  DIFFICULT_CONSULTATION: {
+    datePattern: 'YY',
+    prefix: 'YN',
+    sequenceLength: 5,
+  },
   ELECTRON_MICROSCOPY: { datePattern: 'YY', prefix: 'EM', sequenceLength: 5 },
   FISH: { datePattern: 'YY', prefix: 'FISH', sequenceLength: 5 },
   FROZEN: { datePattern: 'YYYYMMDD', prefix: 'BD', sequenceLength: 4 },
   GENE_TEST: { datePattern: 'YY', prefix: 'JY', sequenceLength: 5 },
-  GYNECOLOGY_LBC_CYTOLOGY: { datePattern: 'YY', prefix: 'FY', sequenceLength: 5 },
+  GYNECOLOGY_LBC_CYTOLOGY: {
+    datePattern: 'YY',
+    prefix: 'FY',
+    sequenceLength: 5,
+  },
   GYNECOLOGY_LBC_DNA: { datePattern: 'YY', prefix: 'FD', sequenceLength: 5 },
   GYNECOLOGY_LBC_HPV: { datePattern: 'YY', prefix: 'FH', sequenceLength: 5 },
   HPV: { datePattern: 'YY', prefix: 'HPV', sequenceLength: 5 },
@@ -36,7 +49,11 @@ const pathologyNoRules: Record<string, PathologyNoRule> = {
   LIVER_BIOPSY: { datePattern: 'YY', prefix: 'GC', sequenceLength: 5 },
   MOLECULAR_PATHOLOGY: { datePattern: 'YY', prefix: 'FZ', sequenceLength: 5 },
   NGS: { datePattern: 'YY', prefix: 'NGS', sequenceLength: 5 },
-  NON_GYNECOLOGY_LBC_CYTOLOGY: { datePattern: 'YY', prefix: 'NF', sequenceLength: 5 },
+  NON_GYNECOLOGY_LBC_CYTOLOGY: {
+    datePattern: 'YY',
+    prefix: 'NF',
+    sequenceLength: 5,
+  },
   PUNCTURE_BIOPSY: { datePattern: 'YY', prefix: 'CC', sequenceLength: 5 },
   RAPID: { datePattern: 'YY', prefix: 'KS', sequenceLength: 5 },
   RESEARCH: { datePattern: 'YY', prefix: 'KY', sequenceLength: 5 },
@@ -70,13 +87,13 @@ function resolveRule(value?: null | string) {
 }
 
 function escapeRegExp(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return value.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 }
 
 function matchesPathologyNoRule(value: string, rule: PathologyNoRule) {
   const dateLength = rule.datePattern === 'YY' ? 2 : 8;
   const pattern = new RegExp(
-    `^${escapeRegExp(rule.prefix)}\\d{${dateLength}}\\d{${rule.sequenceLength}}$`,
+    String.raw`^${escapeRegExp(rule.prefix)}\d{${dateLength}}\d{${rule.sequenceLength}}$`,
     'i',
   );
   return pattern.test(value.trim());
@@ -106,9 +123,7 @@ function resolveSequence(existingPathologyNo: null | string | undefined) {
     return DEFAULT_SEQUENCE_VALUE;
   }
 
-  const routineMatched = /^[A-Z]+(?:\d{8})(\d{4})$/.exec(
-    normalizedPathologyNo,
-  );
+  const routineMatched = /^[A-Z]+(?:\d{8})(\d{4})$/.exec(normalizedPathologyNo);
   const shortMatched = /^[A-Z]+(?:\d{2})(\d{5})$/.exec(normalizedPathologyNo);
   const fallbackMatched = /(\d{1,5})$/.exec(normalizedPathologyNo);
   const sequenceText =
@@ -123,6 +138,16 @@ export function resolveTechnicalRegistrationApplicationType(
   value?: null | string,
 ) {
   return normalizeApplicationType(value);
+}
+
+export function isTechnicalRegistrationConsultationApplicationType(
+  value?: null | string,
+) {
+  return TECHNICAL_REGISTRATION_CONSULTATION_APPLICATION_TYPES.includes(
+    resolveTechnicalRegistrationApplicationType(
+      value,
+    ) as (typeof TECHNICAL_REGISTRATION_CONSULTATION_APPLICATION_TYPES)[number],
+  );
 }
 
 export function resolveTechnicalRegistrationPathologyNo(params: {

@@ -120,8 +120,12 @@ const emit = defineEmits<{
     <ElTableColumn label="处理提示" min-width="220">
       <template #default="{ row }">
         <div class="flex flex-col items-start gap-2 text-sm">
-          <ElTag :type="isReceiptDraftDerivedAbnormal(row) ? 'danger' : 'success'">
-            {{ isReceiptDraftDerivedAbnormal(row) ? '自动标记异常' : '正常接收' }}
+          <ElTag
+            :type="isReceiptDraftDerivedAbnormal(row) ? 'danger' : 'success'"
+          >
+            {{
+              isReceiptDraftDerivedAbnormal(row) ? '自动标记异常' : '正常接收'
+            }}
           </ElTag>
           <span class="text-muted-foreground">
             {{

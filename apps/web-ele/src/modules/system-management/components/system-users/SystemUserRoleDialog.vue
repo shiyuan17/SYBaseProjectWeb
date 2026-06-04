@@ -1,6 +1,16 @@
 <script setup lang="ts">
-import { ElButton, ElCheckbox, ElCheckboxGroup, ElDialog, ElForm, ElFormItem, ElOption, ElSelect } from 'element-plus';
 import { computed } from 'vue';
+
+import {
+  ElButton,
+  ElCheckbox,
+  ElCheckboxGroup,
+  ElDialog,
+  ElForm,
+  ElFormItem,
+  ElOption,
+  ElSelect,
+} from 'element-plus';
 
 const props = defineProps<{
   activeUserName: string;

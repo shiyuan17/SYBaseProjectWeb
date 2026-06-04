@@ -1,20 +1,20 @@
 <script setup lang="ts">
+import type {
+  PendingTechnicalSpecimenRegistrationItem,
+  SaveTechnicalSpecimenRegistrationMaterialItem,
+  TechnicalSpecimenRegistrationDetailSections,
+  TechnicalSpecimenRegistrationMaterial,
+  TechnicalSpecimenRegistrationStatus,
+  TechnicalSpecimenRegistrationWorkspace,
+} from '../types/technical-workflow';
+
 import type { ApplicationRegistrationWorkbenchRecord } from '#/modules/specimen-workflow/types/application-registration-workbench';
 import type {
   ApplicationDetailView,
   ApplicationUpdateRequest,
 } from '#/modules/specimen-workflow/types/specimen-workflow';
 
-import type {
-  PendingTechnicalSpecimenRegistrationItem,
-  TechnicalSpecimenRegistrationMaterial,
-  TechnicalSpecimenRegistrationDetailSections,
-  SaveTechnicalSpecimenRegistrationMaterialItem,
-  TechnicalSpecimenRegistrationWorkspace,
-} from '../types/technical-workflow';
-
 import { computed, onMounted, reactive, ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
 
@@ -32,7 +32,7 @@ import {
   deleteTechnicalSpecimenRegistrationMediaAsset,
   getTechnicalSpecimenRegistrationApplicationWorkbench,
   getTechnicalSpecimenRegistrationWorkspace,
-  listPendingTechnicalSpecimenRegistrations,
+  listTechnicalSpecimenRegistrations,
   saveTechnicalSpecimenRegistrationApplicationWorkbenchPatientInfo,
   saveTechnicalSpecimenRegistrationDetailSections,
   saveTechnicalSpecimenRegistrationMaterials,
@@ -44,10 +44,12 @@ import TechnicalSpecimenRegistrationPendingListPanel from '../components/specime
 import TechnicalSpecimenRegistrationWorkspacePanel from '../components/specimen-registration/TechnicalSpecimenRegistrationWorkspacePanel.vue';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
-import { useTechnicalWorkflowNavigation } from '../utils/navigation';
+import {
+  isTechnicalRegistrationConsultationApplicationType,
+  resolveTechnicalRegistrationApplicationType,
+} from '../utils/specimen-registration-application';
 
-const router = useRouter();
-const navigation = useTechnicalWorkflowNavigation(router);
+type RegistrationListTab = 'received' | 'registered';
 
 const pendingLoading = ref(false);
 const workspaceLoading = ref(false);
@@ -63,19 +65,14 @@ const workspaceError = ref('');
 const pendingItems = ref<PendingTechnicalSpecimenRegistrationItem[]>([]);
 const total = ref(0);
 const selectedCaseId = ref('');
-const consultationApplicationDetail = ref<null | ApplicationDetailView>(null);
-const consultationWorkbench = ref<null | ApplicationRegistrationWorkbenchRecord>(
-  null,
-);
+const consultationApplicationDetail = ref<ApplicationDetailView | null>(null);
+const consultationWorkbench =
+  ref<ApplicationRegistrationWorkbenchRecord | null>(null);
 const workspace = ref<null | TechnicalSpecimenRegistrationWorkspace>(null);
+const activeRegistrationListTab = ref<RegistrationListTab>('received');
+const selectedRegistrationApplicationType = ref('');
 const activeMediaAssetId = ref('');
 const mediaPanelExpanded = ref(false);
-
-const CONSULTATION_APPLICATION_TYPES = new Set([
-  'CONSULTATION',
-  'CYTOLOGY_CONSULTATION',
-  'DIFFICULT_CONSULTATION',
-]);
 
 const filters = reactive({
   applicationType: '',
@@ -103,37 +100,45 @@ const pageSizeModel = computed({
   },
 });
 
-const visiblePendingItems = computed(() => {
-  const applicationType = filters.applicationType.trim();
-  if (!applicationType) {
-    return pendingItems.value;
+const visiblePendingItems = computed(() => pendingItems.value);
+
+const registrationGridClass = computed(() => {
+  if (mediaPanelExpanded.value) {
+    return 'xl:grid-cols-[320px_minmax(0,1fr)_minmax(360px,0.9fr)] 2xl:grid-cols-[360px_minmax(0,1fr)_minmax(420px,0.9fr)]';
   }
-  return pendingItems.value.filter(
-    (item) => item.applicationType?.trim() === applicationType,
-  );
+  return 'xl:grid-cols-[320px_minmax(0,1fr)_96px] 2xl:grid-cols-[360px_minmax(0,1fr)_96px]';
 });
 
-const registrationGridClass = computed(() =>
-  mediaPanelExpanded.value
-    ? 'xl:grid-cols-[320px_minmax(0,1fr)_minmax(360px,0.9fr)] 2xl:grid-cols-[360px_minmax(0,1fr)_minmax(420px,0.9fr)]'
-    : 'xl:grid-cols-[320px_minmax(0,1fr)_96px] 2xl:grid-cols-[360px_minmax(0,1fr)_96px]',
-);
-
 function isConsultationApplicationType(value: null | string | undefined) {
-  return CONSULTATION_APPLICATION_TYPES.has(value?.trim() ?? '');
+  return isTechnicalRegistrationConsultationApplicationType(value);
 }
 
 function trimOrNull(value: null | string | undefined) {
   const normalizedValue = value?.trim();
-  return normalizedValue ? normalizedValue : null;
+  return normalizedValue || null;
 }
 
-function syncWorkspace(nextWorkspace: null | TechnicalSpecimenRegistrationWorkspace) {
+function resolveRegistrationListStatus(): TechnicalSpecimenRegistrationStatus {
+  return activeRegistrationListTab.value === 'registered'
+    ? 'COMPLETED'
+    : 'PENDING';
+}
+
+function syncWorkspace(
+  nextWorkspace: null | TechnicalSpecimenRegistrationWorkspace,
+) {
   workspace.value = nextWorkspace;
-  const nextActiveAssetId =
-    nextWorkspace?.mediaAssets.some((item) => item.assetId === activeMediaAssetId.value)
-      ? activeMediaAssetId.value
-      : nextWorkspace?.mediaAssets[0]?.assetId ?? '';
+  if (nextWorkspace && !selectedRegistrationApplicationType.value.trim()) {
+    selectedRegistrationApplicationType.value =
+      resolveTechnicalRegistrationApplicationType(
+        nextWorkspace.basicInfo.applicationType,
+      );
+  }
+  const nextActiveAssetId = nextWorkspace?.mediaAssets.some(
+    (item) => item.assetId === activeMediaAssetId.value,
+  )
+    ? activeMediaAssetId.value
+    : (nextWorkspace?.mediaAssets[0]?.assetId ?? '');
   activeMediaAssetId.value = nextActiveAssetId;
 }
 
@@ -161,12 +166,14 @@ async function loadConsultationContext(
 
   consultationContextLoading.value = true;
   try {
-    const [applicationDetailResult, workbenchResult] = await Promise.allSettled([
-      getApplicationDetail(applicationId),
-      getTechnicalSpecimenRegistrationApplicationWorkbench(
-        currentWorkspace.pendingSummary.caseId,
-      ),
-    ]);
+    const [applicationDetailResult, workbenchResult] = await Promise.allSettled(
+      [
+        getApplicationDetail(applicationId),
+        getTechnicalSpecimenRegistrationApplicationWorkbench(
+          currentWorkspace.pendingSummary.caseId,
+        ),
+      ],
+    );
 
     consultationApplicationDetail.value =
       applicationDetailResult.status === 'fulfilled'
@@ -205,7 +212,8 @@ function createFallbackApplicationUpdateRequest(
       currentWorkspace.basicInfo.patientAge ?? detail?.patientAge ?? null,
     patientGender:
       currentWorkspace.basicInfo.patientGender ?? detail?.patientGender ?? null,
-    patientId: currentWorkspace.basicInfo.patientId ?? detail?.patientId ?? null,
+    patientId:
+      currentWorkspace.basicInfo.patientId ?? detail?.patientId ?? null,
     patientName:
       currentWorkspace.basicInfo.patientName ?? detail?.patientName ?? null,
     remarks: detail?.remarks ?? null,
@@ -218,7 +226,9 @@ function createFallbackApplicationUpdateRequest(
     specimenSite: trimOrNull(fields.sourcePart),
     status: detail?.status ?? null,
     submissionDate:
-      currentWorkspace.basicInfo.submissionDate ?? detail?.submissionDate ?? null,
+      currentWorkspace.basicInfo.submissionDate ??
+      detail?.submissionDate ??
+      null,
     submittingDepartmentId: detail?.submittingDepartmentId ?? null,
     submittingDepartmentName:
       currentWorkspace.basicInfo.submittingDepartmentName ??
@@ -372,12 +382,14 @@ function buildMaterialLabelPrintDocument(
         window.focus();
         window.print();
       });
-    <\/script>
+    </scr${'ipt'}>
   </body>
 </html>`;
 }
 
-function handlePrintMaterialLabel(material: Partial<TechnicalSpecimenRegistrationMaterial>) {
+function handlePrintMaterialLabel(
+  material: Partial<TechnicalSpecimenRegistrationMaterial>,
+) {
   if (!workspace.value) {
     ElMessage.warning('请先选择待登记病例');
     return;
@@ -388,7 +400,9 @@ function handlePrintMaterialLabel(material: Partial<TechnicalSpecimenRegistratio
     return;
   }
   printWindow.document.open();
-  printWindow.document.write(buildMaterialLabelPrintDocument(workspace.value, material));
+  printWindow.document.write(
+    buildMaterialLabelPrintDocument(workspace.value, material),
+  );
   printWindow.document.close();
 }
 
@@ -404,7 +418,10 @@ function handleMediaFocusOut(event: FocusEvent) {
   const nextTarget = event.relatedTarget;
   if (nextTarget instanceof Node) {
     const currentTarget = event.currentTarget;
-    if (currentTarget instanceof HTMLElement && currentTarget.contains(nextTarget)) {
+    if (
+      currentTarget instanceof HTMLElement &&
+      currentTarget.contains(nextTarget)
+    ) {
       return;
     }
   }
@@ -414,6 +431,7 @@ function handleMediaFocusOut(event: FocusEvent) {
 function clearSelectedCaseContext() {
   syncWorkspace(null);
   clearConsultationContext();
+  selectedRegistrationApplicationType.value = '';
   workspaceError.value = '';
 }
 
@@ -425,7 +443,7 @@ async function syncVisibleSelection(
     preferredCaseId &&
     visiblePendingItems.value.some((item) => item.caseId === preferredCaseId)
       ? preferredCaseId
-      : visiblePendingItems.value[0]?.caseId ?? '';
+      : (visiblePendingItems.value[0]?.caseId ?? '');
 
   if (!nextSelectedCaseId) {
     selectedCaseId.value = '';
@@ -438,6 +456,9 @@ async function syncVisibleSelection(
     return;
   }
 
+  if (selectedCaseChanged) {
+    selectedRegistrationApplicationType.value = '';
+  }
   selectedCaseId.value = nextSelectedCaseId;
   await loadWorkspace(nextSelectedCaseId);
 }
@@ -446,11 +467,13 @@ async function loadPendingData(preferredCaseId?: string) {
   pendingLoading.value = true;
   pageError.value = '';
   try {
-    const result = await listPendingTechnicalSpecimenRegistrations({
+    const result = await listTechnicalSpecimenRegistrations({
+      applicationType: filters.applicationType.trim() || undefined,
       keyword: filters.keyword.trim() || undefined,
       page: filters.page,
       receivedFrom: filters.receivedFrom || undefined,
       receivedTo: filters.receivedTo || undefined,
+      registrationStatus: resolveRegistrationListStatus(),
       size: filters.size,
     });
     pendingItems.value = result.items;
@@ -498,6 +521,7 @@ function handleRowSelect(row: PendingTechnicalSpecimenRegistrationItem) {
   if (row.caseId === selectedCaseId.value) {
     return;
   }
+  selectedRegistrationApplicationType.value = '';
   selectedCaseId.value = row.caseId;
   void loadWorkspace(row.caseId);
 }
@@ -512,10 +536,13 @@ async function handleSaveMaterials(
   }
   materialSaving.value = true;
   try {
-    const result = await saveTechnicalSpecimenRegistrationMaterials(currentCaseId, {
-      materials,
-      terminalCode: 'T-M3-SPEC-REG',
-    });
+    const result = await saveTechnicalSpecimenRegistrationMaterials(
+      currentCaseId,
+      {
+        materials,
+        terminalCode: 'T-M3-SPEC-REG',
+      },
+    );
     syncWorkspace(result);
     ElMessage.success('标本修改已保存');
   } catch (error) {
@@ -579,10 +606,13 @@ async function handleSaveConsultationItem(payload: {
       ),
     );
 
-    const result = await saveTechnicalSpecimenRegistrationMaterials(currentCaseId, {
-      materials: payload.materials,
-      terminalCode: 'T-M3-SPEC-REG',
-    });
+    const result = await saveTechnicalSpecimenRegistrationMaterials(
+      currentCaseId,
+      {
+        materials: payload.materials,
+        terminalCode: 'T-M3-SPEC-REG',
+      },
+    );
 
     consultationWorkbench.value = updatedWorkbench;
     consultationApplicationDetail.value = consultationApplicationDetail.value
@@ -637,11 +667,12 @@ async function handleCancelMaterialVerification(specimenId: string) {
   }
   materialVerificationSaving.value = true;
   try {
-    const result = await cancelTechnicalSpecimenRegistrationMaterialVerification(
-      currentCaseId,
-      specimenId,
-      { terminalCode: 'T-M3-SPEC-REG' },
-    );
+    const result =
+      await cancelTechnicalSpecimenRegistrationMaterialVerification(
+        currentCaseId,
+        specimenId,
+        { terminalCode: 'T-M3-SPEC-REG' },
+      );
     syncWorkspace(result);
     ElMessage.success('标本核对已取消');
   } catch (error) {
@@ -721,15 +752,15 @@ async function handleCompleteRegistration() {
   }
   submitting.value = true;
   try {
-    const result = await completeTechnicalSpecimenRegistration(currentCaseId, {
+    await completeTechnicalSpecimenRegistration(currentCaseId, {
+      applicationType:
+        resolveTechnicalRegistrationApplicationType(
+          selectedRegistrationApplicationType.value,
+        ) || undefined,
       terminalCode: 'T-M3-SPEC-REG',
     });
     ElMessage.success('标本登记完成，已进入取材前置队列');
     await loadPendingData();
-    await navigation.goToTasks({
-      mode: 'queue',
-      pathologyNo: result.pathologyNo ?? undefined,
-    });
   } catch (error) {
     reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
   } finally {
@@ -744,9 +775,15 @@ onMounted(() => {
 watch(
   () => filters.applicationType,
   () => {
-    void syncVisibleSelection(selectedCaseId.value);
+    filters.page = 1;
+    void loadPendingData(selectedCaseId.value);
   },
 );
+
+watch(activeRegistrationListTab, () => {
+  filters.page = 1;
+  void loadPendingData();
+});
 </script>
 
 <template>
@@ -757,6 +794,7 @@ watch(
         :class="registrationGridClass"
       >
         <TechnicalSpecimenRegistrationPendingListPanel
+          v-model:active-tab="activeRegistrationListTab"
           v-model:application-type="filters.applicationType"
           v-model:keyword="filters.keyword"
           v-model:page="currentPageModel"
@@ -779,6 +817,7 @@ watch(
           :loading="workspaceLoading"
           :material-saving="materialSaving"
           :material-verification-saving="materialVerificationSaving"
+          :selected-application-type="selectedRegistrationApplicationType"
           :submitting="submitting"
           :workspace="workspace"
           @cancel-material-verification="handleCancelMaterialVerification"
@@ -787,6 +826,9 @@ watch(
           @save-consultation-item="handleSaveConsultationItem"
           @save-detail-sections="handleSaveDetailSections"
           @save-materials="handleSaveMaterials"
+          @update:selected-application-type="
+            selectedRegistrationApplicationType = $event
+          "
           @verify-material="handleVerifyMaterial"
         />
 

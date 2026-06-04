@@ -348,9 +348,9 @@ describe('ArchiveManagementView', () => {
 
     createButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
-    expect(state.cabinetWorkspace.openCreateCabinetDialog).toHaveBeenCalledTimes(
-      1,
-    );
+    expect(
+      state.cabinetWorkspace.openCreateCabinetDialog,
+    ).toHaveBeenCalledTimes(1);
 
     app.unmount();
     root.remove();

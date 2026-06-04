@@ -4,6 +4,7 @@ import type {
   SpecimenRemovalItem,
   SpecimenRemovalSummary,
 } from '../types/specimen-workflow';
+import type { RemovalDisplayRow } from '../utils/specimen-removal-display';
 
 import { computed, nextTick, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
@@ -28,6 +29,11 @@ import {
   loadOperatingRoomNameMapSafely,
   normalizeOperatingRoomDisplayValue,
 } from '../utils/operating-room-display';
+import {
+  canConfirmRemoval as canConfirmRemovalValue,
+  mapSpecimenManagementItemToRemovalDisplayRow,
+  toRemovalDisplayRow,
+} from '../utils/specimen-removal-display';
 
 withDefaults(
   defineProps<{
@@ -49,7 +55,11 @@ type QuickConfirmResolution =
       status: 'ready';
     }
   | {
-      status: 'already_removed' | 'multiple' | 'not_found';
+      matchedSpecimen: SpecimenManagementListItem;
+      status: 'already_removed';
+    }
+  | {
+      status: 'multiple' | 'not_found';
     };
 
 const emptySummary: SpecimenRemovalSummary = {
@@ -64,19 +74,20 @@ const loading = ref(false);
 const actionLoading = ref(false);
 const workbenchPanelRef = ref<FixationVerifyWorkbenchPanelRef | null>(null);
 const specimenIdQuickInput = ref('');
-const pendingItemsSource = ref<SpecimenRemovalItem[]>([]);
-const pendingItems = ref<SpecimenRemovalItem[]>([]);
+const pendingItemsSource = ref<RemovalDisplayRow[]>([]);
+const pendingItems = ref<RemovalDisplayRow[]>([]);
 const summary = ref<SpecimenRemovalSummary>({ ...emptySummary });
 const total = ref(0);
 const operatingRoomNameMap = ref<ReadonlyMap<string, string>>(new Map());
 const confirmedRemovalItemCache = reactive(
-  new Map<string, SpecimenRemovalItem>(),
+  new Map<string, RemovalDisplayRow>(),
 );
 const quickActionLoading = reactive({
   specimenId: false,
 });
 
 let routeSyncToken = 0;
+const APPLICATION_EXPANSION_SIZE = 500;
 
 const filters = reactive({
   applicationNo: '',
@@ -100,15 +111,15 @@ function normalizeRouteQueryValue(value: unknown) {
   return '';
 }
 
-function canConfirmRemoval(row: SpecimenRemovalItem) {
-  return !row.specimenRemovalAt;
+function canConfirmRemoval(row: RemovalDisplayRow) {
+  return canConfirmRemovalValue(row);
 }
 
-function formatRemovalStatus(row: SpecimenRemovalItem) {
+function formatRemovalStatus(row: RemovalDisplayRow) {
   return row.specimenRemovalAt ? '离体' : '未设置';
 }
 
-function buildSummary(rows: SpecimenRemovalItem[]): SpecimenRemovalSummary {
+function buildSummary(rows: RemovalDisplayRow[]): SpecimenRemovalSummary {
   return {
     abnormalCount: rows.filter((item) => item.abnormalFlag).length,
     confirmedCount: rows.filter((item) => Boolean(item.specimenRemovalAt))
@@ -118,9 +129,9 @@ function buildSummary(rows: SpecimenRemovalItem[]): SpecimenRemovalSummary {
   };
 }
 
-function normalizeRemovalItem(row: SpecimenRemovalItem): SpecimenRemovalItem {
+function normalizeRemovalItem(row: SpecimenRemovalItem): RemovalDisplayRow {
   return {
-    ...row,
+    ...toRemovalDisplayRow(row),
     surgeryName: normalizeOperatingRoomDisplayValue(
       operatingRoomNameMap.value,
       row.surgeryName,
@@ -137,7 +148,19 @@ async function ensureOperatingRoomNameMapLoaded() {
   return operatingRoomNameMap.value;
 }
 
-function mergeConfirmedRemovalItems(rows: SpecimenRemovalItem[]) {
+function normalizeApplicationRemovalItem(
+  row: SpecimenManagementListItem,
+): RemovalDisplayRow {
+  return {
+    ...mapSpecimenManagementItemToRemovalDisplayRow(row),
+    surgeryName: normalizeOperatingRoomDisplayValue(
+      operatingRoomNameMap.value,
+      row.surgeryName,
+    ),
+  };
+}
+
+function mergeConfirmedRemovalItems(rows: RemovalDisplayRow[]) {
   const rowsBySpecimenId = new Set(rows.map((item) => item.specimenId));
   const mergedRows = rows.map(
     (item) => confirmedRemovalItemCache.get(item.specimenId) ?? item,
@@ -157,14 +180,14 @@ function mergeConfirmedRemovalItems(rows: SpecimenRemovalItem[]) {
   return mergedRows;
 }
 
-function syncVisibleRemovalItems(rows: SpecimenRemovalItem[]) {
+function syncVisibleRemovalItems(rows: RemovalDisplayRow[]) {
   pendingItemsSource.value = rows;
   pendingItems.value = mergeConfirmedRemovalItems(rows);
   summary.value = buildSummary(pendingItems.value);
   total.value = pendingItems.value.length;
 }
 
-function upsertConfirmedRemovalItem(item: SpecimenRemovalItem) {
+function upsertConfirmedRemovalItem(item: RemovalDisplayRow) {
   confirmedRemovalItemCache.set(item.specimenId, item);
   pendingItems.value = mergeConfirmedRemovalItems(pendingItemsSource.value);
   summary.value = buildSummary(pendingItems.value);
@@ -176,8 +199,24 @@ async function loadPendingData() {
   pageError.value = '';
   try {
     await ensureOperatingRoomNameMapLoaded();
+    const applicationNo = filters.applicationNo.trim();
+
+    if (applicationNo) {
+      const result = await listSpecimens({
+        applicationNo,
+        page: 1,
+        size: APPLICATION_EXPANSION_SIZE,
+      });
+      syncVisibleRemovalItems(
+        result.items.map((item) => normalizeApplicationRemovalItem(item)),
+      );
+      return;
+    }
+
     const result = await listPendingSpecimenRemovals(currentQuery.value);
-    syncVisibleRemovalItems(result.items.map((item) => normalizeRemovalItem(item)));
+    syncVisibleRemovalItems(
+      result.items.map((item) => normalizeRemovalItem(item)),
+    );
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
     pendingItemsSource.value = [];
@@ -187,34 +226,6 @@ async function loadPendingData() {
   } finally {
     loading.value = false;
   }
-}
-
-function mapSpecimenManagementItemToRemovalItem(
-  item: SpecimenManagementListItem,
-): SpecimenRemovalItem {
-  return {
-    abnormalFlag: item.abnormalFlag,
-    applicationId: item.applicationId,
-    applicationNo: item.applicationNo,
-    barcode: item.barcode ?? '',
-    confirmedAt: item.specimenRemovalAt ?? null,
-    containerCount: item.containerCount,
-    containerName: item.containerName,
-    inpatientNo: null,
-    latestTrackingAt: item.latestTrackingAt,
-    patientGender: null,
-    patientName: item.patientName,
-    registeredAt: item.registeredAt,
-    registeredByName: null,
-    specimenId: item.specimenId,
-    specimenName: item.specimenName,
-    specimenNo: item.specimenNo,
-    specimenRemovalAt: item.specimenRemovalAt ?? null,
-    specimenRemovalOperatorName: null,
-    specimenStatus: item.specimenStatus,
-    specimenType: item.specimenType,
-    surgeryName: null,
-  };
 }
 
 function resolveQuickConfirmExactMatch(
@@ -261,7 +272,10 @@ function resolveQuickConfirmExactMatch(
     return { status: 'multiple' };
   }
   if (matchedSpecimen.specimenRemovalAt) {
-    return { status: 'already_removed' };
+    return {
+      matchedSpecimen,
+      status: 'already_removed',
+    };
   }
 
   return {
@@ -292,6 +306,22 @@ function focusQuickInput() {
   workbenchPanelRef.value?.focusQuickInput();
 }
 
+async function syncQuickConfirmApplicationSpecimens(
+  matchedSpecimen: SpecimenManagementListItem,
+) {
+  const applicationNo = matchedSpecimen.applicationNo.trim();
+
+  if (!applicationNo) {
+    return;
+  }
+
+  if (filters.applicationNo.trim() !== applicationNo) {
+    filters.applicationNo = applicationNo;
+  }
+
+  await loadPendingData();
+}
+
 async function submitQuickConfirm() {
   const normalizedValue = specimenIdQuickInput.value.trim();
 
@@ -310,6 +340,9 @@ async function submitQuickConfirm() {
 
     if (quickConfirmTarget.status !== 'ready') {
       if (quickConfirmTarget.status === 'already_removed') {
+        await syncQuickConfirmApplicationSpecimens(
+          quickConfirmTarget.matchedSpecimen,
+        );
         ElMessage.warning(`标本ID ${normalizedValue} 已完成离体确认`);
         return;
       }
@@ -330,15 +363,17 @@ async function submitQuickConfirm() {
       remarks: '离体确认',
     });
 
-    const sourceRow = mapSpecimenManagementItemToRemovalItem(
+    const sourceRow = normalizeApplicationRemovalItem(
       readyTarget.matchedSpecimen,
     );
-    upsertConfirmedRemovalItem({
-      ...sourceRow,
-      confirmedAt: result.specimenRemovalAt,
-      specimenRemovalAt: result.specimenRemovalAt,
-      specimenRemovalOperatorName: result.operatorName,
-    });
+    upsertConfirmedRemovalItem(
+      toRemovalDisplayRow({
+        ...sourceRow,
+        confirmedAt: result.specimenRemovalAt,
+        specimenRemovalAt: result.specimenRemovalAt,
+        specimenRemovalOperatorName: result.operatorName,
+      }),
+    );
     if (
       sourceRow.applicationNo &&
       filters.applicationNo.trim() !== sourceRow.applicationNo
@@ -348,7 +383,7 @@ async function submitQuickConfirm() {
 
     specimenIdQuickInput.value = '';
     ElMessage.success(`标本ID ${normalizedValue} 已完成离体确认`);
-    await loadPendingData();
+    await syncQuickConfirmApplicationSpecimens(readyTarget.matchedSpecimen);
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
   } finally {
@@ -358,7 +393,7 @@ async function submitQuickConfirm() {
   }
 }
 
-async function submitConfirmRemoval(row: SpecimenRemovalItem) {
+async function submitConfirmRemoval(row: RemovalDisplayRow) {
   const specimenBarcode = row.barcode.trim();
 
   if (!specimenBarcode) {
@@ -383,12 +418,14 @@ async function submitConfirmRemoval(row: SpecimenRemovalItem) {
       remarks: '离体确认',
       specimenBarcode,
     });
-    upsertConfirmedRemovalItem({
-      ...row,
-      confirmedAt: result.specimenRemovalAt,
-      specimenRemovalAt: result.specimenRemovalAt,
-      specimenRemovalOperatorName: result.operatorName,
-    });
+    upsertConfirmedRemovalItem(
+      toRemovalDisplayRow({
+        ...row,
+        confirmedAt: result.specimenRemovalAt,
+        specimenRemovalAt: result.specimenRemovalAt,
+        specimenRemovalOperatorName: result.operatorName,
+      }),
+    );
     if (
       row.applicationNo &&
       filters.applicationNo.trim() !== row.applicationNo

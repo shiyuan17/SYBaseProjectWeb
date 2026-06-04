@@ -39,14 +39,38 @@ vi.mock('element-plus', async () => {
 });
 
 vi.mock('../api/application-registration-workbench-service', () => ({
+  listOperatingBuildingOptions: vi.fn(async () => []),
   lookupApplicationRegistrationWorkbenchRecord: vi.fn(),
 }));
 
 vi.mock('../api/specimen-workflow-service', () => ({
   directReceiveSpecimens: vi.fn(),
-  getApplicationDetail: vi.fn(),
-  listPendingReceipts: vi.fn(),
-  listSpecimens: vi.fn(),
+  getApplicationDetail: vi.fn(async (applicationId: string) => ({
+    id: applicationId,
+    patientGender: null,
+    patientId: null,
+    recentEvents: [],
+    specimens: [],
+  })),
+  listPendingReceipts: vi.fn(async () => ({
+    items: [],
+    page: 1,
+    size: 500,
+    total: 0,
+  })),
+  listSpecimens: vi.fn(async () => ({
+    items: [],
+    page: 1,
+    size: 500,
+    summary: {
+      abnormalCount: 0,
+      labelPrintedCount: 0,
+      pendingLabelCount: 0,
+      totalCount: 0,
+      unboundCount: 0,
+    },
+    total: 0,
+  })),
   receiveSpecimens: vi.fn(),
   retryLabelPrint: vi.fn(),
 }));

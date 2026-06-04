@@ -19,9 +19,9 @@ import {
   ElMessage,
 } from 'element-plus';
 
-import { completeSlideStaining } from '../api/technical-workflow-service';
 import { reportInlineErrorDisabled } from '#/utils/error-feedback';
 
+import { completeSlideStaining } from '../api/technical-workflow-service';
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import {
   formatCaseStatus,
@@ -145,7 +145,6 @@ watch(
     @closed="resetDialogState"
   >
     <div class="flex flex-col gap-4">
-
       <ElDescriptions :column="2" border>
         <ElDescriptionsItem label="任务号">
           {{ formatNullable(currentTaskContext.taskId) }}

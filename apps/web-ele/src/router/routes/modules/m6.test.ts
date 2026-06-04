@@ -54,7 +54,9 @@ describe('m6 routes', () => {
   });
 
   it('shows all statistics menu pages when statistics permissions exist', () => {
-    const routeNames = getM6ChildRouteNames([M6_PERMISSION_CODES.STAT_REPORT_QUERY]);
+    const routeNames = getM6ChildRouteNames([
+      M6_PERMISSION_CODES.STAT_REPORT_QUERY,
+    ]);
 
     expect(routeNames).toContain('M6Entry');
     expect(routeNames).toContain('QualityIndicatorStatistics');

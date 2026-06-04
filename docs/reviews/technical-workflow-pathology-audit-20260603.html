@@ -1,0 +1,921 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>制片管理流程与标准病理系统对照审查报告</title>
+    <style>
+      :root {
+        --bg: #eef4f8;
+        --paper: rgba(255, 255, 255, 0.98);
+        --ink: #1c2836;
+        --muted: #5d6d7d;
+        --line: #d8e3ed;
+        --primary: #0f766e;
+        --primary-soft: #def7f3;
+        --blue: #1d4ed8;
+        --blue-soft: #e7efff;
+        --amber: #b45309;
+        --amber-soft: #fff2de;
+        --danger: #b42318;
+        --danger-soft: #ffe7e3;
+        --ok: #15803d;
+        --ok-soft: #e8f6eb;
+        --slate: #475569;
+        --shadow: 0 20px 52px rgba(15, 23, 42, 0.1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background:
+          radial-gradient(
+            circle at top left,
+            rgba(15, 118, 110, 0.14),
+            transparent 28%
+          ),
+          radial-gradient(
+            circle at top right,
+            rgba(29, 78, 216, 0.1),
+            transparent 24%
+          ),
+          linear-gradient(180deg, #edf3f8 0%, #f5f8fb 45%, #fbfdff 100%);
+        font-family:
+          'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', Arial, sans-serif;
+        line-height: 1.7;
+      }
+
+      main {
+        width: min(1340px, calc(100% - 40px));
+        margin: 0 auto;
+        padding: 28px 0 56px;
+      }
+
+      .hero,
+      section {
+        border: 1px solid rgba(92, 119, 148, 0.18);
+        border-radius: 24px;
+        background: var(--paper);
+        box-shadow: var(--shadow);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.85fr);
+        gap: 22px;
+        padding: 32px;
+      }
+
+      .eyebrow {
+        color: var(--primary);
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3,
+      h4,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        margin-top: 12px;
+        font-size: clamp(30px, 4.3vw, 48px);
+        line-height: 1.18;
+      }
+
+      h2 {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 18px;
+        font-size: 26px;
+      }
+
+      h2::before {
+        width: 10px;
+        height: 28px;
+        border-radius: 999px;
+        background: var(--primary);
+        content: '';
+      }
+
+      h3 {
+        font-size: 18px;
+        line-height: 1.35;
+      }
+
+      h4 {
+        margin-bottom: 6px;
+        font-size: 14px;
+      }
+
+      p {
+        margin-top: 10px;
+        color: var(--muted);
+      }
+
+      section {
+        margin-top: 22px;
+        padding: 28px;
+      }
+
+      .lead {
+        max-width: 920px;
+        font-size: 16px;
+      }
+
+      .hero-side {
+        display: grid;
+        gap: 14px;
+      }
+
+      .metric {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 16px 18px;
+        background: #fbfdff;
+      }
+
+      .metric strong {
+        display: block;
+        font-size: 30px;
+        line-height: 1.1;
+      }
+
+      .metric span {
+        display: block;
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .tag-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 18px;
+      }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        min-height: 30px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .tag.primary {
+        background: var(--primary-soft);
+        color: var(--primary);
+      }
+
+      .tag.blue {
+        background: var(--blue-soft);
+        color: var(--blue);
+      }
+
+      .tag.warn {
+        background: var(--amber-soft);
+        color: var(--amber);
+      }
+
+      .tag.danger {
+        background: var(--danger-soft);
+        color: var(--danger);
+      }
+
+      .tag.ok {
+        background: var(--ok-soft);
+        color: var(--ok);
+      }
+
+      .grid {
+        display: grid;
+        gap: 16px;
+      }
+
+      .grid-2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .grid-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .card,
+      .callout,
+      .flow-node,
+      .finding {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        background: #fbfdff;
+      }
+
+      .card,
+      .callout,
+      .finding {
+        padding: 18px;
+      }
+
+      .callout {
+        background: linear-gradient(180deg, #fbfffe 0%, #f6fbfa 100%);
+      }
+
+      .flow {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .flow-node {
+        position: relative;
+        padding: 18px;
+      }
+
+      .flow-node::after {
+        position: absolute;
+        top: 50%;
+        right: -12px;
+        width: 24px;
+        height: 2px;
+        background: rgba(15, 118, 110, 0.4);
+        content: '';
+      }
+
+      .flow-node:nth-child(4n)::after,
+      .flow-node:last-child::after {
+        display: none;
+      }
+
+      .mono {
+        font-family: 'Consolas', 'SFMono-Regular', monospace;
+        font-size: 13px;
+      }
+
+      .finding {
+        display: grid;
+        gap: 10px;
+      }
+
+      .severity {
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        min-height: 28px;
+        padding: 2px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .severity.high {
+        background: var(--danger-soft);
+        color: var(--danger);
+      }
+
+      .severity.medium {
+        background: var(--amber-soft);
+        color: var(--amber);
+      }
+
+      .severity.low {
+        background: var(--blue-soft);
+        color: var(--blue);
+      }
+
+      ul {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--muted);
+      }
+
+      li + li {
+        margin-top: 6px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        overflow: hidden;
+        border-radius: 16px;
+        border: 1px solid var(--line);
+      }
+
+      th,
+      td {
+        padding: 14px 12px;
+        text-align: left;
+        vertical-align: top;
+        border-bottom: 1px solid var(--line);
+      }
+
+      th {
+        background: #f4f8fb;
+        color: var(--slate);
+        font-size: 13px;
+      }
+
+      tr:last-child td {
+        border-bottom: none;
+      }
+
+      .small {
+        font-size: 13px;
+      }
+
+      .summary-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .summary-item {
+        padding: 14px 16px;
+        border-radius: 16px;
+        border: 1px solid var(--line);
+        background: #fbfdff;
+      }
+
+      .phase {
+        border-left: 4px solid var(--primary);
+        padding-left: 16px;
+      }
+
+      .footer-note {
+        margin-top: 16px;
+        font-size: 13px;
+      }
+
+      @media (max-width: 1080px) {
+        .hero,
+        .grid-2,
+        .grid-3,
+        .flow {
+          grid-template-columns: 1fr;
+        }
+
+        .flow-node::after {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="hero">
+        <div>
+          <div class="eyebrow">Pathology Workflow Audit</div>
+          <h1>制片管理流程与标准病理系统对照审查报告</h1>
+          <p class="lead">
+            本报告基于当前前端仓库
+            <span class="mono">SYBaseProjectWeb</span> 与同级后端仓库
+            <span class="mono">SYBaseProject</span>
+            的实际代码状态形成，聚焦“制片管理流程是否已经具备标准病理系统可用性”。结论是：主链已经基本打通，但关键工作站仍存在统计口径失真、占位动作未闭环、追踪可见性不足、患者核对信息缺失等问题，距离“可审计、可质控、可规模上线”的标准病理技术流程仍有明显差距。
+          </p>
+          <div class="tag-row">
+            <span class="tag primary">审查日期 2026-06-03</span>
+            <span class="tag blue">范围: 前端 + 后端</span>
+            <span class="tag warn">重点: 制片主链 / 任务池 / 追踪</span>
+            <span class="tag danger">结论: 可演示, 未达稳态上线</span>
+          </div>
+        </div>
+        <div class="hero-side">
+          <div class="metric">
+            <strong>主链已存在</strong>
+            <span
+              >接收 -> 技术登记 -> 取材 -> 脱水 -> 包埋 -> 切片 -> 染色 ->
+              诊断移交</span
+            >
+          </div>
+          <div class="metric">
+            <strong>4 项高优先级</strong>
+            <span
+              >统计口径、工作站闭环、筛选分页一致性、错误可见性需要优先修正</span
+            >
+          </div>
+          <div class="metric">
+            <strong>建议 4 阶段推进</strong>
+            <span
+              >先统一口径与高风险节点，再补站点闭环，再做质控与归档增强</span
+            >
+          </div>
+        </div>
+      </div>
+
+      <section>
+        <h2>审查范围与方法</h2>
+        <div class="grid grid-2">
+          <div class="card">
+            <h3>纳入范围</h3>
+            <ul>
+              <li>
+                前端模块：<span class="mono">specimen-workflow</span>、<span
+                  class="mono"
+                  >technical-workflow</span
+                >、<span class="mono">doctor-workflow</span>
+              </li>
+              <li>
+                后端接口：技术登记、任务池、取材、脱水、包埋、切片、染色、诊断、报告追踪
+              </li>
+              <li>
+                内部基线：后端规划文档
+                <span class="mono">病理全流程系统里程碑规划.md</span> 的 M3/M4
+                目标
+              </li>
+              <li>对照基线：通用病理系统主链、异常分支闭环、追溯与质控要求</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>审查口径</h3>
+            <ul>
+              <li>
+                不是只看页面是否存在，而是看前后端是否真的形成一致的数据流和可操作闭环
+              </li>
+              <li>
+                优先关注病理现场高风险点：患者核对、玻片追踪、统计可信度、异常返工、审计留痕
+              </li>
+              <li>
+                结论以代码现状为准，不替代真实医院
+                SOP、条码设备和现场角色权限联调
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>现状总判断</h2>
+        <div class="callout">
+          <h3>总体判断</h3>
+          <p>
+            当前系统不是“完全没有制片流程”，而是“主干流程已搭起，但关键节点还停留在半成品状态”。前端路由和工作站已经覆盖技术组全链路，后端也具备从染色完成自动移交诊断的闭环逻辑，说明系统架构方向是对的；但如果以标准病理系统要求衡量，当前仍缺少稳定的口径定义、完整的异常分支、可靠的患者与玻片核对信息，以及对错误和追踪结果的充分暴露。
+          </p>
+        </div>
+        <div class="flow" style="margin-top: 18px">
+          <div class="flow-node">
+            <h3>1. 接收 / 技术登记</h3>
+            <p>
+              前端已有技术标本登记页，后端已有待登记、工作台、核对、完成接口。
+            </p>
+          </div>
+          <div class="flow-node">
+            <h3>2. 任务池 / 工位流转</h3>
+            <p>
+              任务池统一承接取材、脱水、包埋、切片、染色等任务，方向符合标准生产线设计。
+            </p>
+          </div>
+          <div class="flow-node">
+            <h3>3. 染色完成</h3>
+            <p>
+              后端在无剩余染色任务时可把病例推进到
+              <span class="mono">DIAGNOSIS_PENDING</span>。
+            </p>
+          </div>
+          <div class="flow-node">
+            <h3>4. 医生承接</h3>
+            <p>
+              前端医生工作台与报告追踪页存在，后端提供聚合视图接口，闭环已经具备骨架。
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>关键证据</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>证据点</th>
+              <th>观察结果</th>
+              <th>结论含义</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <span class="mono"
+                  >apps/web-ele/src/router/routes/modules/technical-workflow.ts</span
+                >
+              </td>
+              <td>
+                前端路由完整覆盖接收、技术登记、任务池、取材、脱水、包埋、切片、染色及追踪。
+              </td>
+              <td>主链设计意图明确，不是零散页面。</td>
+            </tr>
+            <tr>
+              <td><span class="mono">workflow-entry-content.ts</span></td>
+              <td>
+                流程说明明确写出“接收后进入技术登记，再经任务池/取材/制片/染色，最后进入医生流程”。
+              </td>
+              <td>产品意图与页面结构一致，可作为现状设计基线。</td>
+            </tr>
+            <tr>
+              <td>
+                <span class="mono"
+                  >TechnicalSpecimenRegistrationController.java</span
+                >
+              </td>
+              <td>
+                后端已提供待登记、工作区、核对、材料、明细分段、媒体、完成登记等接口。
+              </td>
+              <td>技术登记不是纯前端占位，已有实际服务层支撑。</td>
+            </tr>
+            <tr>
+              <td>
+                <span class="mono"
+                  >TechnicalProcessingWorkflowService.java:386-416</span
+                >
+              </td>
+              <td>
+                染色完成后，如无剩余任务，后端会更新病例状态为
+                <span class="mono">DIAGNOSIS_PENDING</span> 并自动创建诊断任务。
+              </td>
+              <td>技术流程到医生流程的主闭环已经打通。</td>
+            </tr>
+            <tr>
+              <td>
+                <span class="mono">PathologyCaseDiagnosticController.java</span>
+              </td>
+              <td>后端已经提供病例诊断工作台与报告追踪聚合接口。</td>
+              <td>下游诊断和报告追踪具备统一聚合入口。</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>问题清单</h2>
+        <div class="grid grid-2">
+          <article class="finding">
+            <span class="severity high">高优先级</span>
+            <h3>技术登记筛选与分页口径不一致</h3>
+            <p>
+              前端在
+              <span class="mono"
+                >TechnicalSpecimenRegistrationView.vue:105-112</span
+              >
+              用 <span class="mono">visiblePendingItems</span> 本地过滤
+              <span class="mono">applicationType</span>，但请求
+              <span class="mono">463-469</span>
+              没有把这个字段传给后端，随后又直接把后端
+              <span class="mono">result.total</span> 赋给列表总数
+              <span class="mono">470-471</span>。
+            </p>
+            <ul>
+              <li>风险：总数、分页、当前页展示结果不一致。</li>
+              <li>
+                病理影响：技师看到的待办量和实际可处理量不一致，容易导致漏处理或误判排班压力。
+              </li>
+            </ul>
+          </article>
+
+          <article class="finding">
+            <span class="severity high">高优先级</span>
+            <h3>染色工作站统计口径不可信</h3>
+            <p>
+              <span class="mono">StainingWorkstationView.vue:164-186</span>
+              中“当日应切总数”直接等于
+              <span class="mono">total</span>，“未出片”也直接等于
+              <span class="mono">total</span
+              >，“已出片”却来自当前追踪结果的玻片计数。与此同时，
+              <span class="mono">stainingType</span> 虽然有筛选控件
+              <span class="mono">113, 430-436</span>，但未见进入后端查询。
+            </p>
+            <ul>
+              <li>
+                风险：统计卡片不是同一时间范围、同一数据集、同一业务口径。
+              </li>
+              <li>
+                病理影响：班组长和质控人员会基于错误指标做生产判断，属于管理级高风险缺陷。
+              </li>
+            </ul>
+          </article>
+
+          <article class="finding">
+            <span class="severity high">高优先级</span>
+            <h3>切片工作站关键异常动作仍是占位</h3>
+            <p>
+              <span class="mono">SlicingWorkstationView.vue:85-89</span>
+              明确存在 <span class="mono">LEGACY_PLACEHOLDER_ACTIONS</span>，
+              包含重打玻片、重新分片、重补台片、终止等关键动作；
+              <span class="mono">605-610</span> 的提示为“待补后端能力”，
+              <span class="mono">736-740</span> 还显示“取消完成仅保留占位”。
+            </p>
+            <ul>
+              <li>
+                风险：异常分支无法系统内闭环，只能依赖线下口头或纸面补救。
+              </li>
+              <li>
+                病理影响：重切、重打、终止等本应是病理技术流程的核心受控动作，缺失后审计链会断裂。
+              </li>
+            </ul>
+          </article>
+
+          <article class="finding">
+            <span class="severity high">高优先级</span>
+            <h3>报告追踪错误被静默隐藏</h3>
+            <p>
+              <span class="mono">ReportTrackingView.vue:56, 85-90</span>
+              已维护 <span class="mono">pageError</span>，但
+              <span class="mono">199-205</span> 的错误告警组件被写成
+              <span class="mono">v-if="false"</span>。
+            </p>
+            <ul>
+              <li>风险：追踪查询失败时，页面无法提供稳定错误反馈。</li>
+              <li>
+                病理影响：报告追踪本来就是问题排查入口，静默失败会拖慢诊断与客服协同。
+              </li>
+            </ul>
+          </article>
+
+          <article class="finding">
+            <span class="severity medium">中优先级</span>
+            <h3>取材工作站仍有多处显性未接入</h3>
+            <p>
+              <span class="mono">GrossingWorkstationView.vue:571</span>
+              写明“暂未接入日期筛选”，<span class="mono">602</span>
+              写明“暂未接入”，
+              <span class="mono">867-869</span> 写明“暂未接入独立暂存”。
+            </p>
+            <ul>
+              <li>风险：取材工位的检索、暂存和辅助动作不完整。</li>
+              <li>
+                病理影响：取材是上游高风险节点，任何临时动作如果不留痕，后续包埋与切片追踪都会受影响。
+              </li>
+            </ul>
+          </article>
+
+          <article class="finding">
+            <span class="severity medium">中优先级</span>
+            <h3>染色工作站缺少患者关键信息</h3>
+            <p>
+              <span class="mono"
+                >StainingWorkstationView.vue:123-124, 142-143</span
+              >
+              将 <span class="mono">patientId</span> 和
+              <span class="mono">patientName</span> 直接写成
+              <span class="mono">'-'</span>。
+            </p>
+            <ul>
+              <li>风险：玻片出片前的人员核对维度不足。</li>
+              <li>
+                病理影响：标准病理系统通常要求患者、病理号、玻片号至少形成双重或三重核对，本页当前做不到。
+              </li>
+            </ul>
+          </article>
+
+          <article class="finding">
+            <span class="severity medium">中优先级</span>
+            <h3>技术登记存在合成回退，可能掩盖真实数据缺口</h3>
+            <p>
+              后端
+              <span class="mono"
+                >TechnicalSpecimenRegistrationService.java:551, 569</span
+              >
+              在缺少真实登记记录时会走
+              <span class="mono">createSyntheticRegistration</span>。
+            </p>
+            <ul>
+              <li>正面作用：兼容旧数据和迁移期病例。</li>
+              <li>
+                风险：前台看起来“有登记记录”，底层却未必存在完整登记实体和操作历史。
+              </li>
+              <li>病理影响：审计、追责、数据修复和稽核时很容易误判完成度。</li>
+            </ul>
+          </article>
+
+          <article class="finding">
+            <span class="severity low">低优先级</span>
+            <h3>登记默认术语尚未标准化</h3>
+            <p>
+              <span class="mono"
+                >TechnicalSpecimenRegistrationService.java:35-38</span
+              >
+              存在默认值 <span class="mono">SURGERY</span>、
+              <span class="mono">OPERATING_ROOM</span>、
+              <span class="mono">Specimen Bottle</span>、
+              <span class="mono">FORMALIN</span>。
+            </p>
+            <ul>
+              <li>
+                风险：术语和院内字典不一致时，前后端展示、报表分组和培训资料会出现偏差。
+              </li>
+              <li>
+                病理影响：不是马上阻断流程的问题，但会影响标准化交付与后续多院区复制。
+              </li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <h2>与标准病理系统对照</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>标准病理系统基线</th>
+              <th>当前现状</th>
+              <th>差距判断</th>
+              <th>建议方向</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                接收后先做技术登记与标本核对，病例、标本、蜡块、玻片链路可追溯
+              </td>
+              <td>
+                技术登记接口齐全，但前端筛选分页口径不一致；后端还有合成登记回退
+              </td>
+              <td>主功能存在，审计可信度不足</td>
+              <td>把筛选下推后端；对合成登记打显式标记并补迁移审计报表</td>
+            </tr>
+            <tr>
+              <td>任务池统一驱动工位流转，统计与待办应来自同一业务口径</td>
+              <td>
+                技术任务池已存在，但部分工位页面仍用本地过滤或混合计算统计
+              </td>
+              <td>架构方向正确，执行口径失稳</td>
+              <td>定义统一查询 DTO、统一统计 API、统一状态字典</td>
+            </tr>
+            <tr>
+              <td>
+                取材、切片、染色要支持异常返工、终止、撤回、取消完成等受控动作
+              </td>
+              <td>切片和取材仍存在明显占位按钮和未接入动作</td>
+              <td>异常闭环不达标</td>
+              <td>先补高频异常动作，再补日志、审批和回退原因编码</td>
+            </tr>
+            <tr>
+              <td>染色与出片节点必须具备患者、病理号、玻片号等核对信息</td>
+              <td>染色页患者信息直接为 <span class="mono">-</span></td>
+              <td>安全核对能力不足</td>
+              <td>补患者基础信息透传，并增加扫码核对或双人确认入口</td>
+            </tr>
+            <tr>
+              <td>追踪页是运维与质控入口，错误必须可见</td>
+              <td>报告追踪页维护了错误状态，但 UI 被硬编码隐藏</td>
+              <td>运维可见性不达标</td>
+              <td>
+                恢复错误展示，并补区分“查无病例 / 接口失败 / 权限不足”的反馈文案
+              </td>
+            </tr>
+            <tr>
+              <td>质控、归档、报告版本与技术事件需形成连续时间线</td>
+              <td>
+                医生工作台和追踪接口已聚合部分数据，但技术侧统计和异常支线不完整
+              </td>
+              <td>已具备基础框架，尚未进入稳态质控阶段</td>
+              <td>把技术质控、返工、追踪事件统一并入病例级时间线</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>前后端对齐建议</h2>
+        <div class="grid grid-3">
+          <div class="summary-item">
+            <h3>1. 统一查询口径</h3>
+            <p>
+              所有工作站的筛选项必须在请求参数、分页总数、统计卡片和导出结果中使用同一口径，避免前端本地二次过滤制造“假总数”。
+            </p>
+          </div>
+          <div class="summary-item">
+            <h3>2. 统一状态与异常编码</h3>
+            <p>
+              重切、重打、取消完成、终止、独立暂存、返工原因、超时原因都应有后端状态机和审计事件，而不是仅停留在按钮文案。
+            </p>
+          </div>
+          <div class="summary-item">
+            <h3>3. 统一追踪时间线</h3>
+            <p>
+              技术事件、诊断事件、医嘱事件、质控事件和报告版本变更要能在同一病例维度串起来，避免“技术端看一套、医生端看一套”。
+            </p>
+          </div>
+          <div class="summary-item">
+            <h3>4. 统一质控指标</h3>
+            <p>
+              当日应切、已切、未出片、已出片、超时、返工等指标先做定义表，再决定前后端实现；禁止页面直接用零散字段拼统计。
+            </p>
+          </div>
+          <div class="summary-item">
+            <h3>5. 统一患者核对模型</h3>
+            <p>
+              染色、出片、诊断接收都应展示患者姓名、病理号、标本号/蜡块号/玻片号等关键信息，必要时接扫码核对。
+            </p>
+          </div>
+          <div class="summary-item">
+            <h3>6. 统一术语字典</h3>
+            <p>
+              采样场景、固定液、容器、申请类型、标本类型等术语要使用院内主数据字典，不建议长期保留英文硬编码默认值。
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>分段执行计划建议</h2>
+        <div class="summary-list">
+          <div class="summary-item phase">
+            <h3>Phase 0: 口径冻结与风险清单确认（3-5 个工作日）</h3>
+            <ul>
+              <li>
+                冻结技术流程主数据：任务状态、异常动作、统计指标、申请类型、患者核对字段。
+              </li>
+              <li>
+                梳理现有页面与后端接口的参数矩阵，标出哪些筛选未下推后端。
+              </li>
+              <li>输出一版“技术流程指标字典”和“异常动作编码表”。</li>
+            </ul>
+          </div>
+
+          <div class="summary-item phase">
+            <h3>Phase 1: 高风险闭环修正（1-2 周）</h3>
+            <ul>
+              <li>修正技术登记分页与筛选不一致问题。</li>
+              <li>重构染色统计口径，改为单一后端统计接口或统一聚合查询。</li>
+              <li>恢复报告追踪错误可见性，细分错误场景。</li>
+              <li>
+                补足染色页患者核对字段，至少形成病理号 + 患者 + 玻片号核对。
+              </li>
+            </ul>
+          </div>
+
+          <div class="summary-item phase">
+            <h3>Phase 2: 工位异常动作补齐（2-4 周）</h3>
+            <ul>
+              <li>
+                优先补切片站的重打玻片、重新分片、重补台片、取消完成、终止。
+              </li>
+              <li>补取材站的暂存、日期筛选、关键辅助动作。</li>
+              <li>
+                确保所有异常动作都有：权限、原因、事件记录、回退后的状态定义。
+              </li>
+            </ul>
+          </div>
+
+          <div class="summary-item phase">
+            <h3>Phase 3: 质控与追踪增强（2-3 周）</h3>
+            <ul>
+              <li>把技术质控、返工记录、超时记录纳入统一病例级时间线。</li>
+              <li>
+                对合成登记增加显式标识和稽核报表，推动旧数据清理或迁移补录。
+              </li>
+              <li>统一前后端术语字典与默认值，收口为院内主数据配置。</li>
+            </ul>
+          </div>
+
+          <div class="summary-item phase">
+            <h3>Phase 4: 试运行验收（1-2 周）</h3>
+            <ul>
+              <li>按技师、医生、管理员三类角色做端到端演练。</li>
+              <li>验证主链、异常返工、追踪查询、统计报表和审计导出。</li>
+              <li>形成上线前验收表，确认哪些节点仍需人工 SOP 补位。</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>建议验收标准</h2>
+        <div class="grid grid-2">
+          <div class="card">
+            <h3>必须达成</h3>
+            <ul>
+              <li>任一筛选条件下，待办列表、分页总数、统计卡片结果一致。</li>
+              <li>
+                重切、重打、终止、取消完成等高频异常动作可在系统内闭环并留痕。
+              </li>
+              <li>染色和出片节点可展示完整核对字段。</li>
+              <li>报告追踪出现失败时，用户能明确看到原因并继续排查。</li>
+            </ul>
+          </div>
+          <div class="card">
+            <h3>建议达成</h3>
+            <ul>
+              <li>合成登记病例可被筛出并单独审计。</li>
+              <li>统计指标在前后端共用统一定义文档。</li>
+              <li>技术事件与医生事件能以病例为单位串联展示。</li>
+              <li>默认术语全部改为字典驱动或院内可配置。</li>
+            </ul>
+          </div>
+        </div>
+        <p class="footer-note">
+          备注：本报告认定“当前制片管理流程不是不可用，而是尚未达到标准病理系统稳态要求”。如果下一步只允许做最小改动，建议优先执行
+          Phase 1；如果目标是支撑真实科室试运行，则至少应完成 Phase 2。
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

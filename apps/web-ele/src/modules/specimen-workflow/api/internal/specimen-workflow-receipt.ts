@@ -5,20 +5,20 @@ import type {
   SpecimenReceiptRequest,
   SpecimenReceiptResult,
 } from '../../types/specimen-workflow';
+import type { PendingSpecimenPageResponse } from './specimen-workflow-mappers';
 
 import { requestClient } from '#/api/request';
 
+import {
+  mapPendingSpecimenPageResponse,
+  mapSpecimenReceiptResult,
+} from './specimen-workflow-mappers';
 import {
   directReceiveSpecimensMock,
   listPendingReceiptsMock,
   receiveSpecimensMock,
   USE_SPECIMEN_WORKFLOW_MOCK,
 } from './specimen-workflow-mock-gateway';
-import {
-  type PendingSpecimenPageResponse,
-  mapPendingSpecimenPageResponse,
-  mapSpecimenReceiptResult,
-} from './specimen-workflow-mappers';
 
 export async function listPendingReceipts(
   params: PendingSpecimenQuery,

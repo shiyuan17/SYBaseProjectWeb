@@ -7,8 +7,8 @@ import type {
 import {
   ElAlert,
   ElButton,
-  ElDialog,
   ElDatePicker,
+  ElDialog,
   ElEmpty,
   ElForm,
   ElFormItem,
@@ -90,7 +90,7 @@ const {
   >
     <div v-loading="loadingApplicationDetail" class="flex flex-col gap-4">
       <ElAlert
-        v-if="false"
+        v-if="pageError"
         :closable="false"
         :title="pageError"
         type="error"

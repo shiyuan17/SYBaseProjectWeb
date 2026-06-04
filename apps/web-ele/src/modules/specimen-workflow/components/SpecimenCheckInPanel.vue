@@ -4,17 +4,15 @@ import { ElButton, ElInput, ElTable, ElTableColumn, ElTag } from 'element-plus';
 import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
 
 import { useSpecimenCheckInPanel } from '../composables/useSpecimenCheckInPanel';
-import {
-  formatCheckInStatus,
-  formatDateTime,
-  formatNullable,
-} from '../utils/format';
+import { formatDateTime, formatNullable } from '../utils/format';
 const {
   actionLoading,
   exportLoading,
+  formatSpecimenStatus,
   handleExport,
   handleManualCheckIn,
   handleOperatorChange,
+  handlePrimaryCheckIn,
   handleQuickCheckIn,
   handleRemoveRow,
   handleReset,
@@ -71,9 +69,9 @@ const {
         />
       </div>
       <ElButton
-        :loading="actionLoading"
+        :loading="actionLoading || retryLoading"
         type="primary"
-        @click="handleQuickCheckIn"
+        @click="handlePrimaryCheckIn"
       >
         标本入库
       </ElButton>
@@ -112,8 +110,13 @@ const {
       <ElTableColumn label="标本名称" min-width="140" prop="specimenName" />
       <ElTableColumn label="标本状态" min-width="120">
         <template #default="{ row }">
-          <ElTag :type="row.queueStatus === 'SUCCESS' ? 'success' : 'warning'">
-            {{ formatCheckInStatus(row.checkInStatus) }}
+          {{ formatSpecimenStatus(row.specimenStatus) }}
+        </template>
+      </ElTableColumn>
+      <ElTableColumn label="入库状态" min-width="120">
+        <template #default="{ row }">
+          <ElTag :type="row.checkInStatusTagType">
+            {{ row.displayCheckInStatus }}
           </ElTag>
         </template>
       </ElTableColumn>
@@ -143,7 +146,8 @@ const {
           <div class="flex items-center gap-2">
             <ElButton
               link
-              :disabled="row.queueStatus === 'SUCCESS'"
+              :disabled="row.queueStatus === 'SUCCESS' || !row.canCheckIn"
+              :title="row.canCheckIn ? '' : row.checkInDisabledReason || ''"
               type="primary"
               @click="handleManualCheckIn(row)"
             >

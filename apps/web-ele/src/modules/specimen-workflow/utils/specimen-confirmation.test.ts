@@ -13,6 +13,8 @@ import {
   isReceiptLocked,
   isVisibleInConfirmationScene,
   normalizeGenderLabel,
+  resolveConfirmActionDisabledReason,
+  resolveConfirmationSceneMismatchReason,
   resolveUnavailableMessage,
 } from './specimen-confirmation';
 
@@ -151,6 +153,17 @@ describe('specimen confirmation helpers', () => {
       false,
     );
     expect(canRetryLabel(row)).toBe(true);
+    expect(
+      resolveConfirmActionDisabledReason({
+        ...row,
+        specimenConfirmedAt: '2026-05-27',
+      }),
+    ).toBe('标本已确认');
+    expect(
+      resolveConfirmationSceneMismatchReason(
+        createRowFixture({ verificationStatus: 'PENDING' }),
+      ),
+    ).toBe('标本尚未完成核对，不能进行标本确认');
   });
 
   it('explains why a specimen cannot be confirmed', () => {
@@ -193,21 +206,27 @@ describe('specimen confirmation helpers', () => {
     expect(enhanced.patientGenderLabel).toBe('女');
     expect(enhanced.inpatientNo).toBe('ZY0001122');
     expect(enhanced.surgeryName).toBe('惠侨楼 - 手术室 2');
+    expect(enhanced.sceneMatched).toBe(true);
+    expect(enhanced.actionDisabledReason).toBe(null);
 
     const ensureWorkbenchRecord = vi.fn(async () => record);
     const ensureApplicationContext = vi.fn(async () => ({
       patientGender: 'F',
       submittingDoctorName: '张宏',
     }));
-    const rows = await buildEnhancedRows([row], {
-      ensureApplicationContext,
-      ensureWorkbenchRecord,
-      getApplicationContext: () => ({
-        patientGender: 'F',
-        submittingDoctorName: '张宏',
-      }),
-      getWorkbenchRecord: () => record,
-    }, roomNameById);
+    const rows = await buildEnhancedRows(
+      [row],
+      {
+        ensureApplicationContext,
+        ensureWorkbenchRecord,
+        getApplicationContext: () => ({
+          patientGender: 'F',
+          submittingDoctorName: '张宏',
+        }),
+        getWorkbenchRecord: () => record,
+      },
+      roomNameById,
+    );
 
     expect(rows[0]?.registrationOperatorName).toBe('张宏');
     expect(rows[0]?.surgeryName).toBe('惠侨楼 - 手术室 2');

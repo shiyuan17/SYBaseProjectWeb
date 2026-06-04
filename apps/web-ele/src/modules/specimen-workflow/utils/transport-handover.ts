@@ -3,8 +3,8 @@ import type {
   PendingTransportOrderQuery,
   SpecimenOutboundListItem,
   TransportOrderHandoverRequest,
-  TransportOrderOutboundRequest,
   TransportOrderOperatorRequest,
+  TransportOrderOutboundRequest,
 } from '../types/specimen-workflow';
 
 export type TransportHandoverFilters = {
@@ -35,6 +35,32 @@ export type TransportOutboundForm = {
   outboundUserName: string;
   remarks: string;
   terminalCode: string;
+};
+
+const RECEIPT_TERMINAL_STATUSES = new Set(['RECEIVED', 'REJECTED', 'RETURNED']);
+const CHECKED_IN_STATUS = 'CHECKED_IN';
+const COMPLETED_FIXATION_STATUS = 'COMPLETED';
+
+export type OutboundBlockingStep =
+  | 'CHECKED_IN'
+  | 'CONFIRMATION'
+  | 'FIXATION'
+  | 'OUTBOUNDED'
+  | 'RECEIPT_TERMINAL';
+
+export type SpecimenOutboundReadiness = {
+  blockingStep: null | OutboundBlockingStep;
+  canOutbound: boolean;
+  displayStatus: string;
+  reason: null | string;
+  tagType: 'info' | 'primary' | 'success' | 'warning';
+};
+
+export type SpecimenOutboundDisplayItem = SpecimenOutboundListItem & {
+  canOutbound: boolean;
+  displayOutboundStatus: string;
+  outboundDisabledReason: null | string;
+  outboundStatusTagType: 'info' | 'primary' | 'success' | 'warning';
 };
 
 export function createDefaultTransportPrintFormState(
@@ -135,11 +161,159 @@ export function canHandoverTransportOrder(order: PendingTransportOrderItem) {
   return ['PENDING', 'PRINTED'].includes(order.status);
 }
 
-export function canSelectSpecimenOutboundRow(row: SpecimenOutboundListItem) {
+function normalizeText(value?: null | string) {
+  return value?.trim() ?? '';
+}
+
+function isReceiptTerminalStatus(status?: null | string) {
+  return RECEIPT_TERMINAL_STATUSES.has(normalizeText(status));
+}
+
+function isOutbound(row: SpecimenOutboundListItem) {
   return (
-    !row.outboundAt &&
-    !['RECEIVED', 'REJECTED', 'RETURNED'].includes(row.specimenStatus ?? '')
+    Boolean(row.outboundAt) ||
+    normalizeText(row.specimenStatus) === 'IN_TRANSIT'
   );
+}
+
+function resolveDisplaySpecimenNo(row: SpecimenOutboundListItem) {
+  return (
+    normalizeText(row.specimenNo) ||
+    normalizeText(row.barcode) ||
+    normalizeText(row.specimenId) ||
+    '当前标本'
+  );
+}
+
+function resolveBlockingStatusLabel(
+  row: SpecimenOutboundListItem,
+  blockingStep: OutboundBlockingStep,
+) {
+  if (blockingStep === 'OUTBOUNDED') {
+    return '已出库';
+  }
+  if (blockingStep === 'RECEIPT_TERMINAL') {
+    if (row.specimenStatus === 'RECEIVED') {
+      return '已接收';
+    }
+    if (row.specimenStatus === 'REJECTED') {
+      return '已拒收';
+    }
+    if (row.specimenStatus === 'RETURNED') {
+      return '已退回';
+    }
+    return '流程已结束';
+  }
+  if (blockingStep === 'FIXATION') {
+    return '待固定';
+  }
+  if (blockingStep === 'CONFIRMATION') {
+    return '待标本确认';
+  }
+  return '待入库';
+}
+
+function buildOutboundBlockReason(
+  row: SpecimenOutboundListItem,
+  blockingStep: OutboundBlockingStep,
+) {
+  const specimenNo = resolveDisplaySpecimenNo(row);
+  if (blockingStep === 'OUTBOUNDED') {
+    return '标本已完成出库，无需重复操作';
+  }
+  if (blockingStep === 'RECEIPT_TERMINAL') {
+    return `标本 ${specimenNo} 已接收、拒收或退回，不能再出库`;
+  }
+  if (blockingStep === 'FIXATION') {
+    return `标本 ${specimenNo} 尚未完成固定，不能出库`;
+  }
+  if (blockingStep === 'CONFIRMATION') {
+    return `标本 ${specimenNo} 尚未完成标本确认，不能出库`;
+  }
+  return `标本 ${specimenNo} 尚未完成入库，不能出库`;
+}
+
+function resolveOutboundBlockingStep(
+  row: SpecimenOutboundListItem,
+): null | OutboundBlockingStep {
+  if (isReceiptTerminalStatus(row.specimenStatus)) {
+    return 'RECEIPT_TERMINAL';
+  }
+  if (isOutbound(row)) {
+    return 'OUTBOUNDED';
+  }
+  if (normalizeText(row.fixationStatus) !== COMPLETED_FIXATION_STATUS) {
+    return 'FIXATION';
+  }
+  if (!row.specimenConfirmedAt) {
+    return 'CONFIRMATION';
+  }
+  if (normalizeText(row.checkInStatus) !== CHECKED_IN_STATUS) {
+    return 'CHECKED_IN';
+  }
+  return null;
+}
+
+export function resolveSpecimenOutboundReadiness(
+  row: SpecimenOutboundListItem,
+): SpecimenOutboundReadiness {
+  const blockingStep = resolveOutboundBlockingStep(row);
+  if (!blockingStep) {
+    return {
+      blockingStep: null,
+      canOutbound: true,
+      displayStatus: '待出库',
+      reason: null,
+      tagType: 'info',
+    };
+  }
+
+  return {
+    blockingStep,
+    canOutbound: false,
+    displayStatus: resolveBlockingStatusLabel(row, blockingStep),
+    reason: buildOutboundBlockReason(row, blockingStep),
+    tagType: resolveOutboundTagType(blockingStep),
+  };
+}
+
+export function enhanceSpecimenOutboundItem(
+  row: SpecimenOutboundListItem,
+): SpecimenOutboundDisplayItem {
+  const readiness = resolveSpecimenOutboundReadiness(row);
+  return {
+    ...row,
+    canOutbound: readiness.canOutbound,
+    displayOutboundStatus: readiness.displayStatus,
+    outboundDisabledReason: readiness.reason,
+    outboundStatusTagType: readiness.tagType,
+  };
+}
+
+export function resolveExactSpecimenOutboundMatches<
+  T extends SpecimenOutboundListItem,
+>(rows: T[], specimenNo: string) {
+  const normalizedSpecimenNo = normalizeText(specimenNo).toLowerCase();
+  return rows.filter(
+    (row) =>
+      normalizeText(row.specimenNo).toLowerCase() === normalizedSpecimenNo,
+  );
+}
+
+function resolveOutboundTagType(
+  blockingStep: OutboundBlockingStep,
+): 'info' | 'primary' | 'success' | 'warning' {
+  if (blockingStep === 'OUTBOUNDED') {
+    return 'success';
+  }
+  if (blockingStep === 'RECEIPT_TERMINAL') {
+    return 'primary';
+  }
+  return 'warning';
+}
+
+export function canSelectSpecimenOutboundRow(row: SpecimenOutboundListItem) {
+  return resolveSpecimenOutboundReadiness(row).canOutbound;
 }
 
 export function resolveTransportSelectionValidationMessage(
@@ -154,8 +328,9 @@ export function resolveTransportSelectionValidationMessage(
     return '仅支持同一申请单内的标本一起转运';
   }
 
-  if (rows.some((row) => !canSelectSpecimenOutboundRow(row))) {
-    return '仅可转运未出库且未到接收终态的标本';
+  const blockedRow = rows.find((row) => !canSelectSpecimenOutboundRow(row));
+  if (blockedRow) {
+    return resolveSpecimenOutboundReadiness(blockedRow).reason;
   }
 
   return null;
@@ -168,7 +343,7 @@ export function splitTransportRowsByTransportOrder(
     ...new Set(
       rows
         .map((row) => row.transportOrderId?.trim())
-        .filter((value): value is string => Boolean(value)),
+        .filter(Boolean) as string[],
     ),
   ];
 

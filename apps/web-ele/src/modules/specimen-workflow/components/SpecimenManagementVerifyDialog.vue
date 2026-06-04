@@ -46,7 +46,6 @@ const form = defineModel<VerifyFormModel>('form', { required: true });
 function formatContainerRatio(row: SpecimenManagementListItem) {
   return `${row.containerCount ?? '-'} / ${row.specimenCount ?? '-'}`;
 }
-
 </script>
 
 <template>

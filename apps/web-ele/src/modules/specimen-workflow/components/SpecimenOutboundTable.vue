@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { SpecimenOutboundListItem } from '../types/specimen-workflow';
+import type { SpecimenOutboundDisplayItem } from '../utils/transport-handover';
 
 import { ElTable, ElTableColumn, ElTag } from 'element-plus';
 
@@ -11,23 +11,23 @@ import {
 import { canSelectSpecimenOutboundRow } from '../utils/transport-handover';
 
 defineProps<{
-  items: SpecimenOutboundListItem[];
+  items: SpecimenOutboundDisplayItem[];
   loading: boolean;
   page: number;
   size: number;
 }>();
 
 const emit = defineEmits<{
-  selectionChange: [rows: SpecimenOutboundListItem[]];
+  selectionChange: [rows: SpecimenOutboundDisplayItem[]];
 }>();
 
 function resolveSpecimenStatusTagType(status?: null | string) {
   switch (status) {
-    case 'IN_TRANSIT': {
-      return 'success';
-    }
     case 'CHECKED_IN': {
       return 'warning';
+    }
+    case 'IN_TRANSIT': {
+      return 'success';
     }
     case 'RECEIVED': {
       return 'primary';
@@ -88,6 +88,16 @@ function resolveSpecimenStatusTagType(status?: null | string) {
       <template #default="{ row }">
         <ElTag :type="resolveSpecimenStatusTagType(row.specimenStatus)">
           {{ formatSpecimenStatus(row.specimenStatus) }}
+        </ElTag>
+      </template>
+    </ElTableColumn>
+    <ElTableColumn label="出库状态" min-width="120">
+      <template #default="{ row }">
+        <ElTag
+          :title="row.outboundDisabledReason || undefined"
+          :type="row.outboundStatusTagType"
+        >
+          {{ row.displayOutboundStatus }}
         </ElTag>
       </template>
     </ElTableColumn>

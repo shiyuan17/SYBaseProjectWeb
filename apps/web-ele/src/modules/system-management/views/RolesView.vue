@@ -92,6 +92,13 @@ const {
           :stat-scope-options="STAT_SCOPE_OPTIONS"
           :topics="topics"
           @menu-check="handleMenuCheck"
+          @update:permission-ids="authState.permissionIds = $event"
+          @update:stat-scope="
+            (categoryId, value) => {
+              authState.statScopes[categoryId] = value;
+            }
+          "
+          @update:topic-ids="authState.topicIds = $event"
         />
       </div>
     </div>
@@ -102,6 +109,7 @@ const {
       :role-form="roleForm"
       :submit-loading="submitLoading"
       @submit="submitRoleForm"
+      @update:role-form="Object.assign(roleForm, $event)"
     />
   </Page>
 </template>

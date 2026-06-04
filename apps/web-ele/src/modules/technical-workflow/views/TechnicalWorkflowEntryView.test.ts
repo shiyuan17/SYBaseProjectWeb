@@ -9,17 +9,16 @@ const {
   mockListPendingTechnicalSpecimenRegistrations,
   mockListPendingTechnicalTasks,
   mockRouter,
-} =
-  vi.hoisted(() => ({
-    mockAccessStore: {
-      accessCodes: [] as string[],
-    },
-    mockListPendingTechnicalSpecimenRegistrations: vi.fn(),
-    mockListPendingTechnicalTasks: vi.fn(),
-    mockRouter: {
-      push: vi.fn(),
-    },
-  }));
+} = vi.hoisted(() => ({
+  mockAccessStore: {
+    accessCodes: [] as string[],
+  },
+  mockListPendingTechnicalSpecimenRegistrations: vi.fn(),
+  mockListPendingTechnicalTasks: vi.fn(),
+  mockRouter: {
+    push: vi.fn(),
+  },
+}));
 
 vi.mock('vue-router', () => ({
   useRouter: () => mockRouter,

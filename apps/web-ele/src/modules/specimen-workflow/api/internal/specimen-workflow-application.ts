@@ -3,33 +3,35 @@ import type {
   ApplicationCreateResult,
   ApplicationDetailView,
   ApplicationListQuery,
-  ApplicationPatientLookupResult,
   ApplicationPage,
+  ApplicationPatientLookupResult,
   ApplicationUpdateRequest,
   DuplicateApplicationCheckQuery,
   DuplicateApplicationCheckResult,
   ImportClinicalApplicationRequest,
 } from '../../types/specimen-workflow';
+import type {
+  ApplicationDetailResponse,
+  ApplicationPageResponse,
+} from './specimen-workflow-mappers';
 
 import { requestClient } from '#/api/request';
 
+import {
+  mapApplicationDetailResponse,
+  mapApplicationPageResponse,
+} from './specimen-workflow-mappers';
 import {
   createApplicationMock,
   deleteApplicationMock,
   duplicateCheckApplicationsMock,
   getApplicationDetailMock,
-  lookupApplicationPatientByIdentifierMock,
   importClinicalApplicationMock,
   listApplicationsMock,
+  lookupApplicationPatientByIdentifierMock,
   updateApplicationMock,
   USE_SPECIMEN_WORKFLOW_MOCK,
 } from './specimen-workflow-mock-gateway';
-import {
-  type ApplicationDetailResponse,
-  type ApplicationPageResponse,
-  mapApplicationDetailResponse,
-  mapApplicationPageResponse,
-} from './specimen-workflow-mappers';
 
 export async function createApplication(data: ApplicationCreateRequest) {
   if (USE_SPECIMEN_WORKFLOW_MOCK) {

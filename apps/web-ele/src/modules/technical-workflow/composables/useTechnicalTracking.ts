@@ -1,9 +1,9 @@
 import type { TechnicalTrackingView } from '../types/technical-workflow';
 
 import { computed, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 
 import { ElMessage } from 'element-plus';
-import { useRoute } from 'vue-router';
 
 import { reportInlineErrorDisabled } from '#/utils/error-feedback';
 
@@ -114,7 +114,7 @@ export function useTechnicalTracking() {
     } catch (error) {
       trackingResult.value = null;
       pageError.value = getWorkflowPageErrorMessage(error);
-    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
+      reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
     } finally {
       loading.value = false;
     }

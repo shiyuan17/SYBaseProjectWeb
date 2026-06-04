@@ -1,4 +1,5 @@
 import type { SpecimenRemovalItem } from '../types/specimen-workflow';
+import type { RemovalDisplayRow } from '../utils/specimen-removal-display';
 
 import { createApp, h, nextTick } from 'vue';
 
@@ -10,6 +11,7 @@ import {
   createTableStub,
   createTagStub,
 } from '../test-utils/component-stubs';
+import { toRemovalDisplayRow } from '../utils/specimen-removal-display';
 
 const tableRowKey = vi.hoisted(() => Symbol('fixation-verify-table-row'));
 
@@ -24,8 +26,8 @@ import FixationVerifyTable from './FixationVerifyTable.vue';
 
 function createRow(
   overrides: Partial<SpecimenRemovalItem> = {},
-): SpecimenRemovalItem {
-  return {
+): RemovalDisplayRow {
+  return toRemovalDisplayRow({
     abnormalFlag: false,
     applicationId: 'APP-1',
     applicationNo: 'AP-001',
@@ -48,10 +50,10 @@ function createRow(
     specimenType: '常规',
     surgeryName: '手术室1',
     ...overrides,
-  };
+  });
 }
 
-async function mountTable(items: SpecimenRemovalItem[]) {
+async function mountTable(items: RemovalDisplayRow[]) {
   const container = document.createElement('div');
   document.body.append(container);
   const confirmRemovalMock = vi.fn();
@@ -60,8 +62,8 @@ async function mountTable(items: SpecimenRemovalItem[]) {
     render() {
       return h(FixationVerifyTable, {
         actionLoading: false,
-        canConfirmRemoval: (row: SpecimenRemovalItem) => !row.specimenRemovalAt,
-        formatRemovalStatus: (row: SpecimenRemovalItem) =>
+        canConfirmRemoval: (row: RemovalDisplayRow) => !row.specimenRemovalAt,
+        formatRemovalStatus: (row: RemovalDisplayRow) =>
           row.specimenRemovalAt ? '离体' : '未设置',
         items,
         loading: false,
@@ -118,8 +120,10 @@ describe('FixationVerifyTable', () => {
     ]);
 
     expect(wrapper.container.textContent).toContain('离体');
-    expect(wrapper.container.textContent).not.toContain('离体确认');
-    expect(wrapper.container.textContent).toContain('-');
+    expect(wrapper.container.textContent).toContain('离体确认');
+    expect(
+      wrapper.container.querySelector<HTMLButtonElement>('button')?.disabled,
+    ).toBe(true);
 
     wrapper.unmount();
   });

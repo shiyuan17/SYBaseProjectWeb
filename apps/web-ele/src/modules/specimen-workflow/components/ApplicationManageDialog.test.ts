@@ -74,7 +74,8 @@ vi.mock('../api/specimen-workflow-service', () => ({
   duplicateCheckApplications: mockDuplicateCheckApplications,
   getApplicationDetail: mockGetApplicationDetail,
   importClinicalApplication: vi.fn(),
-  lookupApplicationPatientByIdentifier: mockLookupApplicationPatientByIdentifier,
+  lookupApplicationPatientByIdentifier:
+    mockLookupApplicationPatientByIdentifier,
   updateApplication: mockUpdateApplication,
 }));
 
@@ -240,6 +241,16 @@ describe('ApplicationManageDialog', () => {
     expect(mockUpdateApplication.mock.calls[0]?.[1]).not.toHaveProperty(
       'submittingDoctorName',
     );
+
+    app.unmount();
+  });
+
+  it('shows the page error when loading application detail fails', async () => {
+    mockGetApplicationDetail.mockRejectedValue(new Error('申请单详情加载失败'));
+
+    const { app, root } = await mountDialog();
+
+    expect(root.textContent).toContain('申请单详情加载失败');
 
     app.unmount();
   });

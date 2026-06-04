@@ -46,7 +46,11 @@ export interface MenuTreeCheckState {
   checkedKeys?: unknown;
 }
 
-export type AuthorizationPanelKey = 'menus' | 'permissions' | 'stats' | 'topics';
+export type AuthorizationPanelKey =
+  | 'menus'
+  | 'permissions'
+  | 'stats'
+  | 'topics';
 
 export type RoleFormState = {
   dataScope: string;
@@ -58,17 +62,21 @@ export type RoleFormState = {
   roleType: string;
 };
 
-export const AUTHORIZATION_PANELS: Array<{
+type AuthorizationPanelMeta = {
   description: string;
   key: AuthorizationPanelKey;
   label: string;
-}> = [
-  {
-    description:
-      '选择角色可进入的页面入口菜单，并决定哪些业务页面会出现在导航中。',
-    key: 'menus',
-    label: '页面入口',
-  },
+};
+
+const DEFAULT_AUTHORIZATION_PANEL: AuthorizationPanelMeta = {
+  description:
+    '选择角色可进入的页面入口菜单，并决定哪些业务页面会出现在导航中。',
+  key: 'menus',
+  label: '页面入口',
+};
+
+export const AUTHORIZATION_PANELS: AuthorizationPanelMeta[] = [
+  DEFAULT_AUTHORIZATION_PANEL,
   {
     description:
       '为已选页面配置附加操作权限，基础访问权限会随页面入口自动获得。',
@@ -119,7 +127,7 @@ export function useRolesPage() {
     () =>
       AUTHORIZATION_PANELS.find(
         (panel) => panel.key === activeAuthorizationPanel.value,
-      ) ?? AUTHORIZATION_PANELS[0]!,
+      ) ?? DEFAULT_AUTHORIZATION_PANEL,
   );
 
   const roleDialogVisible = ref(false);

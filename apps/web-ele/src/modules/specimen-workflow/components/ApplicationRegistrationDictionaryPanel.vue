@@ -21,9 +21,9 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   append: [payload: { specimenName: string; specimenSite: string }];
+  selectPart: [partId: string];
+  selectSystem: [systemId: string];
   'update:dictionaryKeyword': [value: string];
-  'select-part': [partId: string];
-  'select-system': [systemId: string];
 }>();
 
 const selectedSystem = computed(() => {
@@ -154,7 +154,7 @@ function appendSpecimen(specimenName: string, specimenSite: string) {
                       : 'bg-sky-500 text-white hover:bg-sky-400'
                   "
                   type="button"
-                  @click="emit('select-system', system.systemId)"
+                  @click="emit('selectSystem', system.systemId)"
                 >
                   {{ system.systemName }}
                 </button>
@@ -177,7 +177,7 @@ function appendSpecimen(specimenName: string, specimenSite: string) {
                       : 'bg-cyan-400 text-white hover:bg-cyan-300'
                   "
                   type="button"
-                  @click="emit('select-part', part.partId)"
+                  @click="emit('selectPart', part.partId)"
                 >
                   {{ part.partName }}
                 </button>
@@ -202,18 +202,12 @@ function appendSpecimen(specimenName: string, specimenSite: string) {
                   {{ specimen }}
                 </button>
               </div>
-              <ElEmpty
-                v-else
-                description="请选择左侧系统与部位"
-              />
+              <ElEmpty v-else description="请选择左侧系统与部位" />
             </div>
           </div>
         </ElScrollbar>
       </template>
-      <ElEmpty
-        v-else
-        description="未找到匹配的标本词条"
-      />
+      <ElEmpty v-else description="未找到匹配的标本词条" />
     </div>
   </WorkflowSectionCard>
 </template>

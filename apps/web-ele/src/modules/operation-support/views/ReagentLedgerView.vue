@@ -40,13 +40,14 @@ import {
   updateReagent,
   updateReagentStock,
 } from '../api/operation-support-service';
-import { REAGENT_STOCK_STATUS_OPTIONS } from '../constants';
 import ReagentCatalogPanel from '../components/ReagentCatalogPanel.vue';
 import ReagentDialog from '../components/ReagentDialog.vue';
 import ReagentStockDetailPanel from '../components/ReagentStockDetailPanel.vue';
 import ReagentStockDialog from '../components/ReagentStockDialog.vue';
 import ReagentWarningPanel from '../components/ReagentWarningPanel.vue';
+import { REAGENT_STOCK_STATUS_OPTIONS } from '../constants';
 import { getOperationSupportPageErrorMessage } from '../utils/error';
+import { formatNullable, formatReagentStockStatus } from '../utils/format';
 import {
   buildCreateReagentRequest,
   buildCreateReagentStockRequest,
@@ -63,7 +64,6 @@ import {
   validateReagentForm,
   validateReagentStockForm,
 } from '../utils/reagent-ledger';
-import { formatNullable, formatReagentStockStatus } from '../utils/format';
 
 const accessStore = useAccessStore();
 const userStore = useUserStore();
@@ -477,11 +477,7 @@ void initializePage();
   >
     <Fallback status="403" />
   </div>
-  <Page
-    v-else
-    :title="pageTitle"
-    :description="pageDescription"
-  >
+  <Page v-else :title="pageTitle" :description="pageDescription">
     <div class="flex flex-col gap-4">
       <ElAlert
         v-if="pageError"
@@ -678,22 +674,14 @@ void initializePage();
       />
     </ElDrawer>
 
-    <ElDrawer
-      v-model="stockDetailDrawerVisible"
-      :size="760"
-      title="批次详情"
-    >
+    <ElDrawer v-model="stockDetailDrawerVisible" :size="760" title="批次详情">
       <ReagentStockDetailPanel
         :selected-reagent="selectedReagent"
         :selected-stock="selectedStock"
       />
     </ElDrawer>
 
-    <ElDrawer
-      v-model="warningDrawerVisible"
-      :size="860"
-      title="库存预警"
-    >
+    <ElDrawer v-model="warningDrawerVisible" :size="860" title="库存预警">
       <ReagentWarningPanel
         :can-query-stocks="capabilities.canQueryStocks"
         :can-query-warnings="capabilities.canQueryWarnings"

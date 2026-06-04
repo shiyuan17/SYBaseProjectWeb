@@ -1,8 +1,6 @@
 import type { RouteRecordRaw } from 'vue-router';
 
-import {
-  M6_STATISTICS_PAGE_AUTHORITIES,
-} from '#/modules/m6-management/constants';
+import { M6_STATISTICS_PAGE_AUTHORITIES } from '#/modules/m6-management/constants';
 import { applyKeepAliveToTabRoutes } from '#/router/routes/keep-alive';
 
 const M6_AUTHORITIES = [...M6_STATISTICS_PAGE_AUTHORITIES];

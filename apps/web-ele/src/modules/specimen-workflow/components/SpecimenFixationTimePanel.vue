@@ -26,6 +26,7 @@ const {
   getSpecimenRemovalTime,
   handleClearList,
   handleClearSelectionRows,
+  handleConfirmFixation,
   handleCompleteFixationByScan,
   handleExportExcel,
   handleRetryLabel,
@@ -49,7 +50,7 @@ const {
 <template>
   <div class="flex flex-col gap-4">
     <ElAlert
-      v-if="false"
+      v-if="pageError"
       :closable="false"
       :title="pageError"
       type="error"
@@ -76,7 +77,7 @@ const {
       <ElInput
         v-model="scanInput"
         clearable
-        placeholder="流水号 / 标本ID"
+        placeholder="请输入标本号"
         style="width: 260px"
         @keyup.enter="handleCompleteFixationByScan"
       />
@@ -86,6 +87,20 @@ const {
         placeholder="请选择固定液类型"
         style="width: 220px"
       />
+      <ElButton
+        :loading="loading"
+        type="primary"
+        @click="handleCompleteFixationByScan"
+      >
+        查询
+      </ElButton>
+      <ElButton
+        :loading="loading"
+        type="success"
+        @click="handleConfirmFixation"
+      >
+        确认固定
+      </ElButton>
       <ElButton @click="handleClearSelectionRows">清除选择行</ElButton>
       <ElButton @click="handleClearList">清除列表</ElButton>
       <ElButton @click="handleRetryLabel">补打标本标签</ElButton>

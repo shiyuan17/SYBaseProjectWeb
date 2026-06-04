@@ -2,6 +2,7 @@
 import type { SpecimenRemovalSummary } from '../types/specimen-workflow';
 
 import { ref } from 'vue';
+
 import { ElInput } from 'element-plus';
 
 type QuickInputRef = InstanceType<typeof ElInput> & {
@@ -78,7 +79,9 @@ defineExpose({
       v-loading="quickActionLoading.specimenId"
       class="flex items-center gap-3"
     >
-      <div class="min-w-20 text-sm font-medium text-[color:#1f2d3d]">标本ID</div>
+      <div class="min-w-20 text-sm font-medium text-[color:#1f2d3d]">
+        标本ID
+      </div>
       <ElInput
         ref="specimenIdQuickInputRef"
         v-model="specimenIdQuickInput"

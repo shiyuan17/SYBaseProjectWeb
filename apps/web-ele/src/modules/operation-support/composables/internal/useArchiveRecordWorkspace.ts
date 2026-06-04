@@ -1,9 +1,7 @@
 import type { ArchiveRecordView } from '../../types/operation-support';
-import type {
-  ArchiveManagementCapabilities,
-} from './archive-management-shared';
+import type { ArchiveManagementCapabilities } from './archive-management-shared';
 
-import { ref, reactive } from 'vue';
+import { reactive, ref } from 'vue';
 
 import { searchArchiveRecords } from '../../api/operation-support-service';
 import { getOperationSupportPageErrorMessage } from '../../utils/error';

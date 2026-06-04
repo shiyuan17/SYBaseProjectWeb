@@ -267,7 +267,7 @@ async function waitForComposableAssertion(assertion: () => void) {
     }
   }
 
-  throw lastError;
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
 
 describe('useSpecimenConfirmationPanel', () => {
@@ -318,6 +318,278 @@ describe('useSpecimenConfirmationPanel', () => {
       terminalCode: null,
     });
     expect(state.filters.keyword).toBe('');
+    expect(listSpecimensMock).toHaveBeenLastCalledWith({
+      applicationNo: 'M2-001',
+      page: 1,
+      size: 500,
+    });
+
+    wrapper.destroy();
+  });
+
+  it('expands the whole application before warning when the matched specimen is already confirmed', async () => {
+    const wrapper = mountComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    await waitForComposableAssertion(() => {
+      expect(state.pagedItems.value).toHaveLength(2);
+      expect(
+        state.pagedItems.value.some((row) => row.specimenId === 'SPEC-002'),
+      ).toBe(true);
+    });
+
+    listSpecimensMock.mockClear();
+    listSpecimensMock.mockImplementation(async () => ({
+      items: [
+        {
+          abnormalFlag: false,
+          applicationId: 'APP-002',
+          applicationNo: 'M2-002',
+          barcode: 'BC-002',
+          checkInStatus: 'NOT_CHECKED_IN',
+          fixationStatus: 'COMPLETED',
+          labelPrintBatchNo: 'LB-001',
+          labelPrintStatus: 'PENDING',
+          latestTrackingAt: '2026-05-26 09:30:00',
+          patientName: 'Bob',
+          registeredAt: '2026-05-26 08:10:00',
+          specimenConfirmedAt: '2026-05-26 09:20:00',
+          specimenConfirmedByName: '实际确认人',
+          specimenConfirmedByUserId: 'USER-REAL',
+          specimenId: 'SPEC-002',
+          specimenName: '肺组织',
+          specimenNo: 'SP-002',
+          specimenStatus: 'FIXED',
+          specimenType: '冰冻',
+          verificationStatus: 'VERIFIED',
+        },
+        {
+          abnormalFlag: false,
+          applicationId: 'APP-002',
+          applicationNo: 'M2-002',
+          barcode: 'BC-002-SIBLING',
+          checkInStatus: 'NOT_CHECKED_IN',
+          fixationStatus: 'COMPLETED',
+          labelPrintBatchNo: 'LB-002',
+          labelPrintStatus: 'SUCCESS',
+          latestTrackingAt: '2026-05-26 09:35:00',
+          patientName: 'Bob',
+          registeredAt: '2026-05-26 08:15:00',
+          specimenConfirmedAt: null,
+          specimenId: 'SPEC-022',
+          specimenName: '纵隔淋巴结',
+          specimenNo: 'SP-022',
+          specimenStatus: 'FIXED',
+          specimenType: '常规',
+          verificationStatus: 'VERIFIED',
+        },
+      ],
+      page: 1,
+      size: 500,
+      summary: {
+        abnormalCount: 0,
+        labelPrintedCount: 0,
+        pendingLabelCount: 0,
+        totalCount: 2,
+      },
+      total: 2,
+    }));
+
+    state.filters.keyword = 'SP-002';
+    await state.tryQuickConfirmByKeyword();
+    await waitForComposableAssertion(() => {
+      expect(listSpecimensMock).toHaveBeenLastCalledWith({
+        applicationNo: 'M2-002',
+        page: 1,
+        size: 500,
+      });
+    });
+    await waitForComposableAssertion(() => {
+      expect(state.pagedItems.value.map((row) => row.specimenId)).toEqual([
+        'SPEC-002',
+        'SPEC-022',
+      ]);
+    });
+    await waitForComposableAssertion(() => {
+      expect(warningMock).toHaveBeenCalledWith('标本已确认');
+    });
+    expect(confirmSpecimenMock).not.toHaveBeenCalled();
+    expect(state.filters.keyword).toBe('');
+
+    wrapper.destroy();
+  });
+
+  it('expands to the whole application after a single exact match search', async () => {
+    listSpecimensMock
+      .mockImplementationOnce(async () => ({
+        items: [
+          {
+            abnormalFlag: false,
+            applicationId: 'APP-001',
+            applicationNo: 'M2-001',
+            barcode: 'BC-001',
+            checkInStatus: 'NOT_CHECKED_IN',
+            fixationStatus: 'COMPLETED',
+            labelPrintBatchNo: 'LB-001',
+            labelPrintStatus: 'FAILED',
+            latestTrackingAt: '2026-05-26 09:00:00',
+            patientName: 'Alice',
+            registeredAt: '2026-05-26 08:00:00',
+            specimenConfirmedAt: null,
+            specimenId: 'SPEC-001',
+            specimenName: '乳腺组织',
+            specimenNo: 'SP-001',
+            specimenStatus: 'FIXED',
+            specimenType: '常规',
+            verificationStatus: 'VERIFIED',
+          },
+          {
+            abnormalFlag: false,
+            applicationId: 'APP-002',
+            applicationNo: 'M2-002',
+            barcode: 'BC-002',
+            checkInStatus: 'NOT_CHECKED_IN',
+            fixationStatus: 'COMPLETED',
+            labelPrintBatchNo: 'LB-001',
+            labelPrintStatus: 'PENDING',
+            latestTrackingAt: '2026-05-26 09:30:00',
+            patientName: 'Bob',
+            registeredAt: '2026-05-26 08:10:00',
+            specimenConfirmedAt: '2026-05-26 09:20:00',
+            specimenConfirmedByName: '实际确认人',
+            specimenConfirmedByUserId: 'USER-REAL',
+            specimenId: 'SPEC-002',
+            specimenName: '肺组织',
+            specimenNo: 'SP-002',
+            specimenStatus: 'FIXED',
+            specimenType: '冰冻',
+            verificationStatus: 'VERIFIED',
+          },
+        ],
+        page: 1,
+        size: 500,
+        summary: {
+          abnormalCount: 0,
+          labelPrintedCount: 0,
+          pendingLabelCount: 0,
+          totalCount: 2,
+        },
+        total: 2,
+      }))
+      .mockImplementationOnce(async () => ({
+        items: [
+          {
+            abnormalFlag: false,
+            applicationId: 'APP-001',
+            applicationNo: 'M2-001',
+            barcode: 'BC-001',
+            checkInStatus: 'NOT_CHECKED_IN',
+            fixationStatus: 'COMPLETED',
+            labelPrintBatchNo: 'LB-001',
+            labelPrintStatus: 'FAILED',
+            latestTrackingAt: '2026-05-26 09:00:00',
+            patientName: 'Alice',
+            registeredAt: '2026-05-26 08:00:00',
+            specimenConfirmedAt: null,
+            specimenId: 'SPEC-001',
+            specimenName: '乳腺组织',
+            specimenNo: 'SP-001',
+            specimenStatus: 'FIXED',
+            specimenType: '常规',
+            verificationStatus: 'VERIFIED',
+          },
+        ],
+        page: 1,
+        size: 500,
+        summary: {
+          abnormalCount: 0,
+          labelPrintedCount: 0,
+          pendingLabelCount: 0,
+          totalCount: 1,
+        },
+        total: 1,
+      }))
+      .mockImplementationOnce(async () => ({
+        items: [
+          {
+            abnormalFlag: false,
+            applicationId: 'APP-001',
+            applicationNo: 'M2-001',
+            barcode: 'BC-001',
+            checkInStatus: 'NOT_CHECKED_IN',
+            fixationStatus: 'COMPLETED',
+            labelPrintBatchNo: 'LB-001',
+            labelPrintStatus: 'FAILED',
+            latestTrackingAt: '2026-05-26 09:00:00',
+            patientName: 'Alice',
+            registeredAt: '2026-05-26 08:00:00',
+            specimenConfirmedAt: null,
+            specimenId: 'SPEC-001',
+            specimenName: '乳腺组织',
+            specimenNo: 'SP-001',
+            specimenStatus: 'FIXED',
+            specimenType: '常规',
+            verificationStatus: 'VERIFIED',
+          },
+          {
+            abnormalFlag: false,
+            applicationId: 'APP-001',
+            applicationNo: 'M2-001',
+            barcode: 'BC-001-SIBLING',
+            checkInStatus: 'CHECKED_IN',
+            fixationStatus: 'COMPLETED',
+            labelPrintBatchNo: 'LB-001',
+            labelPrintStatus: 'SUCCESS',
+            latestTrackingAt: '2026-05-26 09:10:00',
+            patientName: 'Alice',
+            registeredAt: '2026-05-26 08:05:00',
+            specimenConfirmedAt: null,
+            specimenId: 'SPEC-003',
+            specimenName: '淋巴结',
+            specimenNo: 'SP-003',
+            specimenStatus: 'FIXED',
+            specimenType: '常规',
+            verificationStatus: 'VERIFIED',
+          },
+        ],
+        page: 1,
+        size: 500,
+        summary: {
+          abnormalCount: 0,
+          labelPrintedCount: 0,
+          pendingLabelCount: 0,
+          totalCount: 2,
+        },
+        total: 2,
+      }));
+
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    state.filters.keyword = 'SP-001';
+    state.handleSearch();
+    await waitForComposableAssertion(() => {
+      expect(listSpecimensMock).toHaveBeenLastCalledWith({
+        applicationNo: 'M2-001',
+        page: 1,
+        size: 500,
+      });
+      expect(state.pagedItems.value).toHaveLength(2);
+    });
+
+    expect(state.pagedItems.value[1]?.sceneMatched).toBe(false);
+    expect(state.pagedItems.value[1]?.actionDisabledReason).toBe(
+      '标本已完成入库，无需重复确认',
+    );
 
     wrapper.destroy();
   });
@@ -352,7 +624,7 @@ describe('useSpecimenConfirmationPanel', () => {
     wrapper.destroy();
   });
 
-  it('warns when search results are outside the confirmation scope', async () => {
+  it('keeps sibling rows visible but disabled when expanded rows are outside the confirmation scope', async () => {
     const wrapper = mountComposable();
     await flushComposable();
 
@@ -361,52 +633,145 @@ describe('useSpecimenConfirmationPanel', () => {
       throw new Error('composable state not initialized');
     }
 
-    listSpecimensMock.mockResolvedValueOnce({
-      items: [
-        {
-          abnormalFlag: false,
-          applicationId: 'APP-003',
-          applicationNo: 'M2-003',
-          barcode: 'BC-003',
-          checkInStatus: 'NOT_CHECKED_IN',
-          fixationStatus: 'PENDING',
-          labelPrintBatchNo: 'LB-003',
-          labelPrintStatus: 'SUCCESS',
-          latestTrackingAt: '2026-05-26 09:40:00',
-          patientName: 'Carol',
-          registeredAt: '2026-05-26 08:20:00',
-          specimenConfirmedAt: null,
-          specimenId: 'SPEC-003',
-          specimenName: '胃组织',
-          specimenNo: 'SP-003',
-          specimenStatus: 'REGISTERED',
-          specimenType: '常规',
-          verificationStatus: 'PENDING',
+    const outsideSceneRow = {
+      abnormalFlag: false,
+      applicationId: 'APP-003',
+      applicationNo: 'M2-003',
+      barcode: 'BC-003',
+      checkInStatus: 'NOT_CHECKED_IN',
+      fixationStatus: 'PENDING',
+      labelPrintBatchNo: 'LB-003',
+      labelPrintStatus: 'SUCCESS',
+      latestTrackingAt: '2026-05-26 09:40:00',
+      patientName: 'Carol',
+      registeredAt: '2026-05-26 08:20:00',
+      specimenConfirmedAt: null,
+      specimenId: 'SPEC-003',
+      specimenName: '胃组织',
+      specimenNo: 'SP-003',
+      specimenStatus: 'REGISTERED',
+      specimenType: '常规',
+      verificationStatus: 'PENDING',
+    };
+    listSpecimensMock
+      .mockResolvedValueOnce({
+        items: [outsideSceneRow],
+        page: 1,
+        size: 500,
+        summary: {
+          abnormalCount: 0,
+          labelPrintedCount: 1,
+          pendingLabelCount: 0,
+          totalCount: 1,
         },
-      ],
-      page: 1,
-      size: 500,
-      summary: {
-        abnormalCount: 0,
-        labelPrintedCount: 1,
-        pendingLabelCount: 0,
-        totalCount: 1,
-      },
-      total: 1,
-    });
+        total: 1,
+      })
+      .mockResolvedValueOnce({
+        items: [outsideSceneRow],
+        page: 1,
+        size: 500,
+        summary: {
+          abnormalCount: 0,
+          labelPrintedCount: 1,
+          pendingLabelCount: 0,
+          totalCount: 1,
+        },
+        total: 1,
+      });
 
     state.filters.keyword = 'SP-003';
     state.handleSearch();
     await waitForComposableAssertion(() => {
-      expect(listSpecimensMock).toHaveBeenLastCalledWith(
+      expect(listSpecimensMock).toHaveBeenCalledWith(
         expect.objectContaining({
           keyword: 'SP-003',
         }),
       );
-      expect(warningMock).toHaveBeenCalledWith(
-        '标本尚未完成固定，不能进行标本确认',
-      );
+      expect(listSpecimensMock).toHaveBeenLastCalledWith({
+        applicationNo: 'M2-003',
+        page: 1,
+        size: 500,
+      });
+      expect(state.pagedItems.value).toHaveLength(1);
     });
+    expect(state.pagedItems.value[0]?.sceneMatched).toBe(false);
+    expect(state.pagedItems.value[0]?.actionDisabledReason).toBe(
+      '标本尚未完成固定，不能进行标本确认',
+    );
+    expect(warningMock).not.toHaveBeenCalled();
+
+    wrapper.destroy();
+  });
+
+  it('shows the real scene reason when selected rows are not confirmable', async () => {
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    const outsideSceneRow = {
+      abnormalFlag: false,
+      applicationId: 'APP-003',
+      applicationNo: 'M2-003',
+      barcode: 'BC-003',
+      checkInStatus: 'NOT_CHECKED_IN',
+      fixationStatus: 'PENDING',
+      labelPrintBatchNo: 'LB-003',
+      labelPrintStatus: 'SUCCESS',
+      latestTrackingAt: '2026-05-26 09:40:00',
+      patientName: 'Carol',
+      registeredAt: '2026-05-26 08:20:00',
+      specimenConfirmedAt: null,
+      specimenId: 'SPEC-003',
+      specimenName: '胃组织',
+      specimenNo: 'SP-003',
+      specimenStatus: 'REGISTERED',
+      specimenType: '常规',
+      verificationStatus: 'PENDING',
+    };
+    listSpecimensMock
+      .mockResolvedValueOnce({
+        items: [outsideSceneRow],
+        page: 1,
+        size: 500,
+        summary: {
+          abnormalCount: 0,
+          labelPrintedCount: 1,
+          pendingLabelCount: 0,
+          totalCount: 1,
+        },
+        total: 1,
+      })
+      .mockResolvedValueOnce({
+        items: [outsideSceneRow],
+        page: 1,
+        size: 500,
+        summary: {
+          abnormalCount: 0,
+          labelPrintedCount: 1,
+          pendingLabelCount: 0,
+          totalCount: 1,
+        },
+        total: 1,
+      });
+
+    state.filters.keyword = 'SP-003';
+    state.handleSearch();
+    await waitForComposableAssertion(() => {
+      expect(state.pagedItems.value).toHaveLength(1);
+    });
+
+    state.handleSelectionChange(state.pagedItems.value);
+    state.handleConfirmSelected();
+    await flushComposable();
+
+    expect(warningMock).toHaveBeenCalledWith(
+      '标本尚未完成固定，不能进行标本确认',
+    );
+    expect(confirmSpecimenMock).not.toHaveBeenCalled();
 
     wrapper.destroy();
   });

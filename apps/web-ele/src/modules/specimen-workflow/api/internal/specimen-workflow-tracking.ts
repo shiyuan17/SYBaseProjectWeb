@@ -1,17 +1,15 @@
 import type { ApplicationDetailView } from '../../types/specimen-workflow';
+import type { TrackingQueryResponse } from './specimen-workflow-mappers';
 
 import { requestClient } from '#/api/request';
 
+import { mapApplicationDetailResponse } from './specimen-workflow-mappers';
 import {
   getApplicationTrackingByApplicationNoMock,
   getApplicationTrackingMock,
   getSpecimenTrackingByBarcodeMock,
   USE_SPECIMEN_WORKFLOW_MOCK,
 } from './specimen-workflow-mock-gateway';
-import {
-  type TrackingQueryResponse,
-  mapApplicationDetailResponse,
-} from './specimen-workflow-mappers';
 import { lookupApplicationForRegistration } from './specimen-workflow-registration';
 
 export async function getApplicationTracking(

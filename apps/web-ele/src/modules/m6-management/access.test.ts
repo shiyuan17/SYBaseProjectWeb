@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  canViewStatisticsPage,
-  getM6EntryPath,
-} from './access';
+import { canViewStatisticsPage, getM6EntryPath } from './access';
 import { M6_PERMISSION_CODES } from './constants';
 
 describe('m6 access helpers', () => {

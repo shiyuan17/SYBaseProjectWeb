@@ -2,6 +2,7 @@ import type { ApplicationRegistrationWorkbenchRecord } from '../types/applicatio
 import type {
   LabelPrintRetryResult,
   PendingSpecimenItem,
+  SpecimenManagementListItem,
 } from '../types/specimen-workflow';
 import type {
   ReceiptWorkbenchApplicationContext,
@@ -25,13 +26,6 @@ import {
   retryLabelPrint,
 } from '../api/specimen-workflow-service';
 import { getWorkflowPageErrorMessage } from '../utils/error';
-import {
-  buildReceiptWorkbenchExportHeaders,
-  buildReceiptWorkbenchExportRows,
-  createReceiptWorkbenchRow,
-  RECEIPT_WORKBENCH_MAX_QUERY_SIZE,
-  resolveReceiptWorkbenchExactMatches,
-} from '../utils/specimen-receipt-workbench';
 import { loadOperatingRoomNameMapSafely } from '../utils/operating-room-display';
 import {
   buildDirectReceiptSubmissionRequest,
@@ -42,6 +36,14 @@ import {
   isReceiptDraftDerivedAbnormal,
   validateReceiptItems,
 } from '../utils/specimen-receipt';
+import {
+  buildReceiptWorkbenchExportHeaders,
+  buildReceiptWorkbenchExportRows,
+  createReceiptWorkbenchRow,
+  isReceiptWorkbenchRowReceivable,
+  RECEIPT_WORKBENCH_MAX_QUERY_SIZE,
+  resolveReceiptWorkbenchExactMatches,
+} from '../utils/specimen-receipt-workbench';
 
 export function useSpecimenReceiptWorkbench() {
   const userStore = useUserStore();
@@ -61,12 +63,10 @@ export function useSpecimenReceiptWorkbench() {
   const batchRetryResult = ref<LabelPrintRetryResult | null>(null);
   const directReceiveDialogVisible = ref(false);
   const directReceiveSubmitting = ref(false);
-  const directReceiveItems = ref([
-    createReceiptDraftItem(),
-  ]);
+  const directReceiveItems = ref([createReceiptDraftItem()]);
 
   const applicationContextCache = reactive(
-    new Map<string, ReceiptWorkbenchApplicationContext | null>(),
+    new Map<string, null | ReceiptWorkbenchApplicationContext>(),
   );
   const workbenchRecordCache = reactive(
     new Map<string, ApplicationRegistrationWorkbenchRecord | null>(),
@@ -99,20 +99,28 @@ export function useSpecimenReceiptWorkbench() {
   );
 
   const selectedRows = computed(() =>
-    queueItems.value.filter((item) => selectedRowKeys.value.includes(item.specimenId)),
+    queueItems.value.filter((item) =>
+      selectedRowKeys.value.includes(item.specimenId),
+    ),
+  );
+  const selectedReceivableRows = computed(() =>
+    selectedRows.value.filter((item) => isReceiptWorkbenchRowReceivable(item)),
   );
   const receiveSummary = computed(() => {
     const applicationKeys = new Set<string>();
     const patientKeys = new Set<string>();
 
     for (const row of receiveTargetRows.value) {
-      const applicationKey = row.applicationId.trim() || row.applicationNo.trim();
+      const applicationKey =
+        row.applicationId.trim() || row.applicationNo.trim();
       if (applicationKey) {
         applicationKeys.add(applicationKey);
       }
 
       const patientKey =
-        row.patientIdLabel.trim() || row.patientName?.trim() || row.applicationId.trim();
+        row.patientIdLabel.trim() ||
+        row.patientName?.trim() ||
+        row.applicationId.trim();
       if (patientKey) {
         patientKeys.add(patientKey);
       }
@@ -125,9 +133,11 @@ export function useSpecimenReceiptWorkbench() {
     };
   });
 
-  const selectedCount = computed(() => selectedRows.value.length);
+  const selectedCount = computed(() => selectedReceivableRows.value.length);
+  const selectedRowCount = computed(() => selectedRows.value.length);
   const receivedCount = computed(
-    () => queueItems.value.filter((item) => item.queueStatus === 'SUCCESS').length,
+    () =>
+      queueItems.value.filter((item) => item.queueStatus === 'SUCCESS').length,
   );
 
   function syncRetryOperator() {
@@ -168,6 +178,22 @@ export function useSpecimenReceiptWorkbench() {
 
   function handleSelectionChange(rows: ReceiptWorkbenchRow[]) {
     selectedRowKeys.value = rows.map((item) => item.specimenId);
+  }
+
+  function resolvePendingItemBySpecimenId(
+    items: PendingSpecimenItem[],
+    specimen: SpecimenManagementListItem,
+  ) {
+    return (
+      items.find((item) => item.specimenId === specimen.specimenId) ??
+      resolveExactPendingItem(
+        items,
+        specimen.specimenId,
+        specimen.specimenNo,
+        specimen.barcode ?? '',
+      ) ??
+      null
+    );
   }
 
   async function ensureOperatingRoomNameMapLoaded() {
@@ -244,6 +270,130 @@ export function useSpecimenReceiptWorkbench() {
     );
   }
 
+  function createSpecimenItemFromPending(
+    pending: PendingSpecimenItem,
+  ): SpecimenManagementListItem {
+    return {
+      abnormalFlag: pending.abnormalFlag,
+      abnormalType: pending.abnormalType ?? null,
+      applicationId: pending.applicationId,
+      applicationNo: pending.applicationNo,
+      barcode: pending.barcode,
+      checkInStatus: pending.checkInStatus ?? null,
+      checkedInAt: pending.checkedInAt ?? null,
+      checkedInByName: pending.checkedInByName ?? null,
+      containerCount: pending.containerCount,
+      containerName: pending.containerName,
+      fixationCompletedAt: pending.fixationCompletedAt ?? null,
+      fixationLiquidType: pending.fixationLiquidType ?? null,
+      fixationOperatorName: pending.fixationOperatorName ?? null,
+      fixationOperatorUserId: pending.fixationOperatorUserId ?? null,
+      fixationStartedAt: pending.fixationStartedAt ?? null,
+      fixationStatus: pending.fixationStatus,
+      labelPrintBatchNo: null,
+      labelPrintStatus: null,
+      latestTrackingAt: pending.latestTrackingAt,
+      patientName: pending.patientName,
+      registeredAt: pending.registeredAt,
+      specimenConfirmedAt: pending.specimenConfirmedAt ?? null,
+      specimenCount: pending.containerCount,
+      specimenId: pending.specimenId,
+      specimenName: '',
+      specimenNo: pending.specimenNo,
+      specimenSite: null,
+      specimenStatus: pending.specimenStatus,
+      specimenType: null,
+      submittingDepartmentId: pending.submittingDepartmentId,
+      submittingDepartmentName: pending.submittingDepartmentName,
+      verificationCompletedAt: pending.verificationCompletedAt ?? null,
+      verificationStartedAt: pending.verificationStartedAt ?? null,
+      verificationStatus: pending.verificationStatus ?? null,
+    };
+  }
+
+  function resolveSpecimenItemByPending(
+    items: SpecimenManagementListItem[],
+    pending: PendingSpecimenItem,
+  ) {
+    const normalizedSpecimenId = pending.specimenId.trim().toUpperCase();
+    const normalizedSpecimenNo = pending.specimenNo.trim().toUpperCase();
+    const normalizedBarcode = pending.barcode.trim().toUpperCase();
+
+    return (
+      items.find((item) =>
+        [item.specimenId, item.specimenNo, item.barcode ?? ''].some(
+          (value) =>
+            value.trim().toUpperCase() === normalizedSpecimenId ||
+            value.trim().toUpperCase() === normalizedSpecimenNo ||
+            value.trim().toUpperCase() === normalizedBarcode,
+        ),
+      ) ?? createSpecimenItemFromPending(pending)
+    );
+  }
+
+  async function loadPendingReceiptRows() {
+    lookupLoading.value = true;
+    pageError.value = '';
+    try {
+      const pendingPage = await listPendingReceipts({
+        page: 1,
+        size: RECEIPT_WORKBENCH_MAX_QUERY_SIZE,
+      });
+      const applicationNos = [
+        ...new Set(
+          pendingPage.items
+            .map((item) => item.applicationNo.trim())
+            .filter(Boolean),
+        ),
+      ];
+      const applicationSpecimensByNo = new Map<
+        string,
+        SpecimenManagementListItem[]
+      >();
+
+      await Promise.all(
+        applicationNos.map(async (applicationNo) => {
+          const specimenPage = await listSpecimens({
+            applicationNo,
+            page: 1,
+            size: RECEIPT_WORKBENCH_MAX_QUERY_SIZE,
+          });
+          applicationSpecimensByNo.set(applicationNo, specimenPage.items);
+        }),
+      );
+
+      const roomNameById = await ensureOperatingRoomNameMapLoaded();
+      const queueAddedByName =
+        operatorForm.operatorName.trim() || userStore.userInfo?.realName || '';
+      const rows = await Promise.all(
+        pendingPage.items.map(async (pending) => {
+          const applicationSpecimens =
+            applicationSpecimensByNo.get(pending.applicationNo.trim()) ?? [];
+          const [applicationContext, workbenchRecord] = await Promise.all([
+            ensureApplicationContext(pending.applicationId),
+            ensureWorkbenchRecord(pending.applicationNo),
+          ]);
+
+          return createReceiptWorkbenchRow(
+            resolveSpecimenItemByPending(applicationSpecimens, pending),
+            pending,
+            applicationContext,
+            workbenchRecord,
+            queueAddedByName,
+            roomNameById,
+          );
+        }),
+      );
+
+      queueItems.value = rows;
+      selectedRowKeys.value = [];
+    } catch (error) {
+      pageError.value = getWorkflowPageErrorMessage(error);
+    } finally {
+      lookupLoading.value = false;
+    }
+  }
+
   async function handleQueueSpecimen() {
     const keyword = scanInput.value.trim();
     if (!keyword) {
@@ -277,50 +427,48 @@ export function useSpecimenReceiptWorkbench() {
         return;
       }
 
-      if (
-        queueItems.value.some((item) => item.specimenId === matchedSpecimen.specimenId)
-      ) {
-        ElMessage.warning('该标本已在当前列表中');
-        return;
-      }
-
-      const pendingPage = await listPendingReceipts({
-        page: 1,
-        size: RECEIPT_WORKBENCH_MAX_QUERY_SIZE,
-        specimenNo: matchedSpecimen.specimenNo,
-      });
-      const pendingItem = resolveExactPendingItem(
-        pendingPage.items,
-        matchedSpecimen.specimenId,
-        matchedSpecimen.specimenNo,
-        matchedSpecimen.barcode ?? '',
-      );
-
-      if (!pendingItem) {
-        ElMessage.warning('当前标本不在待签收范围');
-        return;
-      }
-      if (!pendingItem.transportOrderId?.trim()) {
-        ElMessage.warning('当前标本尚未关联转运单，不能在标本接收页签收');
-        return;
-      }
-
-      const [applicationContext, workbenchRecord] = await Promise.all([
+      const [
+        applicationSpecimensPage,
+        pendingPage,
+        applicationContext,
+        workbenchRecord,
+      ] = await Promise.all([
+        listSpecimens({
+          applicationNo: matchedSpecimen.applicationNo,
+          page: 1,
+          size: RECEIPT_WORKBENCH_MAX_QUERY_SIZE,
+        }),
+        listPendingReceipts({
+          applicationId: matchedSpecimen.applicationId,
+          page: 1,
+          size: RECEIPT_WORKBENCH_MAX_QUERY_SIZE,
+        }),
         ensureApplicationContext(matchedSpecimen.applicationId),
         ensureWorkbenchRecord(matchedSpecimen.applicationNo),
       ]);
       const roomNameById = await ensureOperatingRoomNameMapLoaded();
-
-      queueItems.value.unshift(
+      const queueAddedByName =
+        operatorForm.operatorName.trim() || userStore.userInfo?.realName || '';
+      const applicationSpecimens = applicationSpecimensPage.items.filter(
+        (item) => item.applicationNo === matchedSpecimen.applicationNo,
+      );
+      const queuedRows = applicationSpecimens.map((item) =>
         createReceiptWorkbenchRow(
-          matchedSpecimen,
-          pendingItem,
+          item,
+          resolvePendingItemBySpecimenId(pendingPage.items, item),
           applicationContext,
           workbenchRecord,
-          operatorForm.operatorName.trim() || userStore.userInfo?.realName || '',
+          queueAddedByName,
           roomNameById,
         ),
       );
+
+      if (queuedRows.length === 0) {
+        ElMessage.warning('当前申请单暂无标本列表');
+      }
+
+      queueItems.value = queuedRows;
+      selectedRowKeys.value = [];
       scanInput.value = '';
     } catch (error) {
       pageError.value = getWorkflowPageErrorMessage(error);
@@ -330,7 +478,10 @@ export function useSpecimenReceiptWorkbench() {
   }
 
   function requireOperator() {
-    if (!operatorForm.operatorName.trim() || !operatorForm.operatorUserId.trim()) {
+    if (
+      !operatorForm.operatorName.trim() ||
+      !operatorForm.operatorUserId.trim()
+    ) {
       ElMessage.warning('请选择操作人');
       return false;
     }
@@ -342,7 +493,10 @@ export function useSpecimenReceiptWorkbench() {
       ElMessage.warning('请输入物流人员');
       return false;
     }
-    if (!receiveForm.receivedByName.trim() || !receiveForm.receivedByUserId.trim()) {
+    if (
+      !receiveForm.receivedByName.trim() ||
+      !receiveForm.receivedByUserId.trim()
+    ) {
       ElMessage.warning('请选择签收人员');
       return false;
     }
@@ -361,12 +515,18 @@ export function useSpecimenReceiptWorkbench() {
   }
 
   function openDirectReceiveDrawer() {
-    const sourceRows = selectedRows.value.length > 0
-      ? selectedRows.value.filter((item) => item.queueStatus !== 'SUCCESS')
-      : queueItems.value.filter((item) => item.queueStatus !== 'SUCCESS');
-    directReceiveItems.value = sourceRows.length > 0
-      ? buildDirectReceiveItemsFromRows(sourceRows)
-      : [createReceiptDraftItem()];
+    const sourceRows =
+      selectedRows.value.length > 0
+        ? selectedRows.value.filter((item) =>
+            isReceiptWorkbenchRowReceivable(item),
+          )
+        : queueItems.value.filter((item) =>
+            isReceiptWorkbenchRowReceivable(item),
+          );
+    directReceiveItems.value =
+      sourceRows.length > 0
+        ? buildDirectReceiveItemsFromRows(sourceRows)
+        : [createReceiptDraftItem()];
     syncDirectReceiveOperator();
     directReceiveDialogVisible.value = true;
   }
@@ -377,7 +537,9 @@ export function useSpecimenReceiptWorkbench() {
   }
 
   function openReceiveDialog() {
-    const targets = selectedRows.value.filter((item) => item.queueStatus !== 'SUCCESS');
+    const targets = selectedRows.value.filter((item) =>
+      isReceiptWorkbenchRowReceivable(item),
+    );
     if (targets.length === 0) {
       ElMessage.warning('请先选择待签收标本');
       return;
@@ -431,7 +593,10 @@ export function useSpecimenReceiptWorkbench() {
       );
       const receiptTime = new Date().toISOString();
       const receiptItemsByBarcode = new Map(
-        directReceiveItems.value.map((item) => [item.specimenBarcode.trim(), item]),
+        directReceiveItems.value.map((item) => [
+          item.specimenBarcode.trim(),
+          item,
+        ]),
       );
 
       queueItems.value = queueItems.value.map((row) => {
@@ -445,6 +610,7 @@ export function useSpecimenReceiptWorkbench() {
         return {
           ...row,
           abnormalFlag: isReceiptDraftDerivedAbnormal(matchedReceiptItem),
+          canReceive: false,
           qualityCheckResult: matchedReceiptItem.qualityCheckResult.trim(),
           qualityIssueCodes: matchedReceiptItem.qualityIssueCodes ?? [],
           receivedAt: receiptTime,
@@ -464,7 +630,9 @@ export function useSpecimenReceiptWorkbench() {
   }
 
   async function handleReceiveSelected() {
-    const targets = receiveTargetRows.value.filter((item) => item.queueStatus !== 'SUCCESS');
+    const targets = receiveTargetRows.value.filter((item) =>
+      isReceiptWorkbenchRowReceivable(item),
+    );
     if (targets.length === 0) {
       ElMessage.warning('请先选择待签收标本');
       return;
@@ -505,6 +673,7 @@ export function useSpecimenReceiptWorkbench() {
 
           const receivedAt = new Date().toISOString();
           for (const row of rows) {
+            row.canReceive = false;
             row.queueStatus = 'SUCCESS';
             row.receivedAt = receivedAt;
             row.receivedByName = receiveForm.receivedByName.trim();
@@ -559,7 +728,13 @@ export function useSpecimenReceiptWorkbench() {
   }
 
   function resolveRetryTargets() {
-    return selectedRows.value.length > 0 ? selectedRows.value : queueItems.value;
+    return selectedRows.value.length > 0
+      ? selectedRows.value.filter((item) =>
+          isReceiptWorkbenchRowReceivable(item),
+        )
+      : queueItems.value.filter((item) =>
+          isReceiptWorkbenchRowReceivable(item),
+        );
   }
 
   function handleRetryLabel() {
@@ -570,7 +745,9 @@ export function useSpecimenReceiptWorkbench() {
     }
 
     const batchNos = [
-      ...new Set(targets.map((item) => item.labelPrintBatchNo?.trim()).filter(Boolean)),
+      ...new Set(
+        targets.map((item) => item.labelPrintBatchNo?.trim()).filter(Boolean),
+      ),
     ];
 
     if (batchNos.length === 0) {
@@ -677,6 +854,7 @@ export function useSpecimenReceiptWorkbench() {
     handleRemoveDirectReceiveRow,
     handleRetryLabel,
     handleSelectionChange,
+    loadPendingReceiptRows,
     lookupLoading,
     openReceiveDialog,
     openDirectReceiveDrawer,
@@ -695,6 +873,7 @@ export function useSpecimenReceiptWorkbench() {
     retryTargetRows,
     scanInput,
     selectedCount,
+    selectedRowCount,
     selectedRows,
     submitDirectReceive,
     submitRetryLabel,

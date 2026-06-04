@@ -210,9 +210,7 @@ describe('specimen receipt helpers', () => {
       receivedByUserId: 'U-1',
       terminalCode: 'T-1',
     });
-    expect(
-      buildApplicationFormReprintRequest(' T-1 ', 'TO-1'),
-    ).toEqual({
+    expect(buildApplicationFormReprintRequest(' T-1 ', 'TO-1')).toEqual({
       remarks: '标本接收页补打印申请单，转运单：TO-1',
       terminalCode: 'T-1',
     });

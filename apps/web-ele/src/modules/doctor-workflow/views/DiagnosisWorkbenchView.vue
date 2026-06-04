@@ -102,11 +102,12 @@ const medicalOrderForm = reactive<CreateMedicalOrderRequest>(
 );
 
 const routeCaseId = computed(() => firstQueryParam(route.query.caseId));
-const routePathologyNo = computed(() => firstQueryParam(route.query.pathologyNo));
+const routePathologyNo = computed(() =>
+  firstQueryParam(route.query.pathologyNo),
+);
 const routeTaskId = computed(() => firstQueryParam(route.query.taskId));
 const routeQueryKey = computed(
-  () =>
-    `${routeCaseId.value}|${routePathologyNo.value}|${routeTaskId.value}`,
+  () => `${routeCaseId.value}|${routePathologyNo.value}|${routeTaskId.value}`,
 );
 const currentQuery = computed(() => ({
   page: filters.page,
@@ -180,9 +181,9 @@ const isAssignedToCurrentUser = computed(() => {
 
   return Boolean(
     task &&
-      userId &&
-      (userId === task.diagnosisDoctorUserId ||
-        userId === task.primaryDoctorUserId),
+    userId &&
+    (userId === task.diagnosisDoctorUserId ||
+      userId === task.primaryDoctorUserId),
   );
 });
 
@@ -292,10 +293,12 @@ async function selectQueueTask(
   }
 }
 
-async function loadQueue(options: {
-  forceDetailReload?: boolean;
-  preserveRouteSelection?: boolean;
-} = {}) {
+async function loadQueue(
+  options: {
+    forceDetailReload?: boolean;
+    preserveRouteSelection?: boolean;
+  } = {},
+) {
   queueLoading.value = true;
   pageError.value = '';
 
@@ -553,7 +556,7 @@ watch(
     title="诊断平台工作站"
     description="按病例聚合展示诊断所需上下文，承载接单、开始诊断和报告编辑入口。"
   >
-    <div class="flex flex-col gap-3">
+    <div class="flex flex-col gap-2">
       <ElAlert
         v-if="pageError"
         :closable="false"
@@ -577,13 +580,13 @@ watch(
       />
 
       <div
-        class="grid min-h-0 gap-3 xl:grid-cols-[minmax(540px,1.05fr)_minmax(0,1.35fr)]"
+        class="grid min-h-0 gap-3 xl:grid-cols-[minmax(430px,0.82fr)_minmax(0,1.48fr)]"
       >
         <DiagnosisWorkbenchQueueTable
           :items="pendingItems"
           :loading="queueLoading"
           :selected-task-id="selectedTaskId"
-          class="min-h-[420px] xl:h-[calc(100vh-320px)]"
+          class="min-h-[360px] xl:h-[calc(100vh-270px)]"
           @select="selectQueueTask"
         />
 
@@ -604,7 +607,7 @@ watch(
           :selected-task-assignee-label="selectedTaskAssigneeLabel"
           :task-action-hint="taskActionHint"
           :workbench="workbench"
-          class="min-h-[420px]"
+          class="min-h-[360px]"
           @accept="runTaskAction('accept')"
           @cancel-medical-order="runCancelMedicalOrder"
           @open-medical-order-dialog="openMedicalOrderDialog"

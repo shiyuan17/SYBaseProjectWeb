@@ -253,7 +253,8 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
     },
     {
       canonicalTitle: '登记接收工作站',
-      component: '/modules/technical-workflow/views/TechnicalSpecimenRegistrationView',
+      component:
+        '/modules/technical-workflow/views/TechnicalSpecimenRegistrationView',
       componentAliases: ['TechnicalSpecimenRegistration'],
       menuCodes: ['M3_SPECIMEN_REGISTRATION'],
       path: '/technical-workflow/specimen-registration',
@@ -265,7 +266,8 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
     },
     {
       canonicalTitle: '常规医嘱工作站',
-      component: '/modules/technical-workflow/views/RoutineOrderWorkstationView',
+      component:
+        '/modules/technical-workflow/views/RoutineOrderWorkstationView',
       componentAliases: ['RoutineOrderWorkstation'],
       menuCodes: ['M3_ROUTINE_ORDER'],
       path: '/technical-workflow/routine-orders',
@@ -274,7 +276,8 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
     },
     {
       canonicalTitle: '特检医嘱工作站',
-      component: '/modules/technical-workflow/views/SpecialOrderWorkstationView',
+      component:
+        '/modules/technical-workflow/views/SpecialOrderWorkstationView',
       componentAliases: ['SpecialOrderWorkstation'],
       menuCodes: ['M3_SPECIAL_ORDER'],
       path: '/technical-workflow/special-orders',
@@ -301,7 +304,8 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
     },
     {
       canonicalTitle: '液基细胞学工作站',
-      component: '/modules/technical-workflow/views/LiquidCytologyWorkstationView',
+      component:
+        '/modules/technical-workflow/views/LiquidCytologyWorkstationView',
       componentAliases: ['LiquidCytologyWorkstation'],
       menuCodes: ['M3_LIQUID_CYTOLOGY'],
       path: '/technical-workflow/liquid-cytology',

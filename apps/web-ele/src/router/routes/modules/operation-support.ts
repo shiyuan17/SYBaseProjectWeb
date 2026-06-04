@@ -3,8 +3,8 @@ import type { RouteRecordRaw } from 'vue-router';
 import {
   M5_ARCHIVE_PAGE_AUTHORITIES,
   M5_EQUIPMENT_PAGE_AUTHORITIES,
-  M5_RESOURCE_PAGE_AUTHORITIES,
   M5_REAGENT_PAGE_AUTHORITIES,
+  M5_RESOURCE_PAGE_AUTHORITIES,
 } from '#/modules/operation-support/constants';
 import { applyKeepAliveToTabRoutes } from '#/router/routes/keep-alive';
 
@@ -77,9 +77,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
     children: [
       {
         component: () =>
-          import(
-            '#/modules/operation-support/views/OperationResourceEntryView.vue'
-          ),
+          import('#/modules/operation-support/views/OperationResourceEntryView.vue'),
         meta: {
           authority: RESOURCE_AUTHORITIES,
           hideInBreadcrumb: true,

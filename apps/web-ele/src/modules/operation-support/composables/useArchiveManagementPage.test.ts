@@ -264,7 +264,9 @@ describe('useArchiveManagementPage', () => {
     });
     expect(state.cabinetWorkspace.selectedPositionLabel).toBe('未选择柜位');
 
-    state.cabinetWorkspace.selectPosition(state.cabinetWorkspace.positionRows[0]!);
+    state.cabinetWorkspace.selectPosition(
+      state.cabinetWorkspace.positionRows[0]!,
+    );
 
     expect(state.cabinetWorkspace.selectedPositionCode).toBe('CAB-01-L1-S1');
     expect(state.cabinetWorkspace.selectedPositionLabel).toBe('CAB-01-L1-S1');

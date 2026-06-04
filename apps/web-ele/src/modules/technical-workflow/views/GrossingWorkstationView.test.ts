@@ -23,9 +23,7 @@ import {
   createTagStub,
 } from '#/modules/specimen-workflow/test-utils/component-stubs';
 
-const tabsContextKey = vi.hoisted(() =>
-  Symbol('grossing-workstation-tabs'),
-);
+const tabsContextKey = vi.hoisted(() => Symbol('grossing-workstation-tabs'));
 const tableRowContextKey = vi.hoisted(() =>
   Symbol('grossing-workstation-table-row'),
 );
@@ -69,6 +67,7 @@ const descriptionTab = ref<
   'clinicalHistory' | 'grossDescription' | 'relatedExaminations'
 >('grossDescription');
 const activeSpecimenKey = ref('specimen-1');
+const selectedEmbeddingBoxSpecimenKey = ref('specimen-1');
 const completeForm = reactive({
   caseId: 'CASE-001',
   specimens: [
@@ -111,7 +110,13 @@ const completeForm = reactive({
 const specimenTabMetas = ref([
   {
     key: 'specimen-1',
+    specimenName: '骨髓',
     trackingLabel: 'SP-001',
+  },
+  {
+    key: 'specimen-2',
+    specimenName: '皮肤组织',
+    trackingLabel: 'SP-002',
   },
 ]);
 const currentTask = ref(null);
@@ -214,10 +219,9 @@ mockInitializeWorkbench.mockImplementation(async (task) => {
       caseId: task?.caseId ?? '',
       inpatientNo: payload.inpatientNo ?? 'ZY-001',
       pathologyNo: task?.pathologyNo ?? '',
-      patientId: payload.patientId ?? 'P-001',
-      patientName: payload.patientName ?? '患者甲',
-      submittingDepartmentName:
-        payload.submittingDepartmentName ?? '手术室',
+      patientId: task?.patientId ?? payload.patientId ?? 'P-001',
+      patientName: task?.patientName ?? payload.patientName ?? '患者甲',
+      submittingDepartmentName: payload.submittingDepartmentName ?? '手术室',
     },
     task: {
       ...workbenchContext.value.task,
@@ -235,6 +239,7 @@ mockInitializeWorkbench.mockImplementation(async (task) => {
 
 const workbenchState = {
   activeSpecimen: computed(() => completeForm.specimens[0]),
+  activeSpecimenName: computed(() => '骨髓'),
   activeSpecimenKey,
   addBlock: vi.fn(),
   addEmbeddingBoxes: vi.fn(),
@@ -254,8 +259,23 @@ const workbenchState = {
     taskId: completeForm.taskId,
   })),
   descriptionTab,
+  embeddingBoxRows: computed(() =>
+    completeForm.specimens.flatMap((specimen, specimenIndex) =>
+      (specimen.embeddingBoxes ?? []).map((box, boxIndex) => ({
+        box,
+        boxIndex,
+        specimenIndex,
+        specimenName: specimenTabMetas.value[specimenIndex]?.specimenName ?? '',
+      })),
+    ),
+  ),
   ensureSelectOptionsLoaded: vi.fn(),
   enteredMediaAssets,
+  getSpecimenDisplayName: vi.fn(
+    (index: number) =>
+      specimenTabMetas.value[index]?.specimenName || `标本 ${index + 1}`,
+  ),
+  getSpecimenPrefix: vi.fn((index: number) => (index === 0 ? 'A' : 'B')),
   getSpecimenTabLabel: vi.fn(() => 'SP-001'),
   grossingImageAccept: 'image/jpeg',
   initializeWorkbench: mockInitializeWorkbench,
@@ -276,6 +296,16 @@ const workbenchState = {
   resetWorkbenchState: mockResetWorkbenchState,
   samplingTemplateTreeOptions: ref([]),
   selectLoading: ref(false),
+  selectedEmbeddingBoxSpecimenKey,
+  selectedEmbeddingBoxSpecimenPrefix: computed(() =>
+    selectedEmbeddingBoxSpecimenKey.value === 'specimen-2' ? 'B' : 'A',
+  ),
+  specimenNameOptions: computed(() =>
+    specimenTabMetas.value.map((item) => ({
+      label: item.specimenName,
+      value: item.key,
+    })),
+  ),
   specimenTabMetas,
   submitGrossing: mockSubmitGrossing,
   submitting: ref(false),
@@ -346,12 +376,37 @@ vi.mock('../components/GrossingSpecimenTabs.vue', () => ({
 
 vi.mock('../components/GrossingEmbeddingBoxTable.vue', () => ({
   default: defineComponent({
-    emits: ['addEmbeddingBoxes', 'removeEmbeddingBox'],
-    props: ['specimen'],
+    props: [
+      'canAddEmbeddingBox',
+      'embeddingBoxRows',
+      'selectedSpecimenKey',
+      'specimenOptions',
+    ],
+    emits: [
+      'addEmbeddingBoxes',
+      'removeEmbeddingBox',
+      'update:selectedSpecimenKey',
+    ],
     setup(props, { emit }) {
       return () =>
         h('section', { 'data-component': 'grossing-embedding-box-table' }, [
-          `grossing-embedding-box-table:${props.specimen?.embeddingBoxes?.[0]?.embeddingBoxNo ?? '-'}`,
+          `grossing-embedding-box-table:${props.embeddingBoxRows?.[0]?.box?.embeddingBoxNo ?? '-'}`,
+          h(
+            'select',
+            {
+              'aria-label': '标本名称',
+              value: props.selectedSpecimenKey,
+              onChange: (event: Event) =>
+                emit(
+                  'update:selectedSpecimenKey',
+                  (event.target as HTMLSelectElement).value,
+                ),
+            },
+            (props.specimenOptions ?? []).map(
+              (option: { label: string; value: string }) =>
+                h('option', { value: option.value }, option.label),
+            ),
+          ),
           h(
             'button',
             {
@@ -364,7 +419,7 @@ vi.mock('../components/GrossingEmbeddingBoxTable.vue', () => ({
             'button',
             {
               type: 'button',
-              onClick: () => emit('removeEmbeddingBox', 0),
+              onClick: () => emit('removeEmbeddingBox', 0, 0),
             },
             '删除包埋盒',
           ),
@@ -386,9 +441,9 @@ vi.mock('element-plus', () => {
   });
 
   const ElCheckbox = defineComponent({
-    emits: ['change', 'update:modelValue'],
     inheritAttrs: false,
     props: ['disabled', 'modelValue'],
+    emits: ['change', 'update:modelValue'],
     setup(props, { attrs, emit }) {
       return () =>
         h('input', {
@@ -456,8 +511,11 @@ function createTask(
   id: string,
   pathologyNo: string,
   status = 'PENDING',
+  overrides: Record<string, unknown> = {},
 ) {
   const isPrimaryTask = id === 'TASK-001';
+  const patientId = isPrimaryTask ? 'P-001' : 'P-002';
+  const patientName = isPrimaryTask ? '患者甲' : '患者乙';
   return {
     applicationId: isPrimaryTask ? 'APP-001' : 'APP-002',
     applicationNo: isPrimaryTask ? 'APP-001' : 'APP-002',
@@ -473,11 +531,11 @@ function createTask(
     objectId: isPrimaryTask ? 'CASE-001' : 'CASE-002',
     objectType: 'CASE',
     pathologyNo,
+    patientId,
+    patientName,
     payload: JSON.stringify({
       blockCount: isPrimaryTask ? 1 : 2,
       inpatientNo: isPrimaryTask ? 'ZY-001' : 'ZY-002',
-      patientId: isPrimaryTask ? 'P-001' : 'P-002',
-      patientName: isPrimaryTask ? '患者甲' : '患者乙',
       printedBlockCount: 0,
       submittingDepartmentName: isPrimaryTask ? '手术室' : '消化内科',
     }),
@@ -497,6 +555,7 @@ function createTask(
     taskType: 'GROSSING',
     timedOut: false,
     timeoutRuleCode: null,
+    ...overrides,
   };
 }
 
@@ -510,8 +569,10 @@ async function flushAll() {
 async function mountView() {
   descriptionTab.value = 'grossDescription';
   activeSpecimenKey.value = 'specimen-1';
+  selectedEmbeddingBoxSpecimenKey.value = 'specimen-1';
   completeForm.caseId = 'CASE-001';
   completeForm.taskId = 'TASK-001';
+  completeForm.specimens[0]!.grossDescription = '甲状腺左叶灰白结节，质中。';
   currentTask.value = null;
   mockSubmitGrossing.mockResolvedValue(undefined);
   mockStartGrossing.mockResolvedValue({
@@ -556,7 +617,10 @@ function selectTaskCheckbox(root: HTMLElement, checkNo: string) {
   checkbox.click();
 }
 
-function setInputValue(input: HTMLInputElement, value: string) {
+function setInputValue(
+  input: HTMLInputElement | HTMLTextAreaElement,
+  value: string,
+) {
   input.value = value;
   input.dispatchEvent(new Event('input'));
 }
@@ -564,6 +628,7 @@ function setInputValue(input: HTMLInputElement, value: string) {
 describe('GrossingWorkstationView', () => {
   afterEach(() => {
     document.body.innerHTML = '';
+    vi.useRealTimers();
     mockInitializeWorkbench.mockClear();
     mockListPendingTechnicalTasks.mockReset();
     mockLoadWorkbenchContext.mockClear();
@@ -588,6 +653,10 @@ describe('GrossingWorkstationView', () => {
     );
     expect(root.textContent).toContain('BL-001');
     expect(root.textContent).toContain('患者乙');
+    expect(root.querySelector('[data-column-label="检查组"]')).toBeNull();
+    expect(root.querySelector('[data-column-label="申请机构"]')).toBeNull();
+    expect(root.querySelector('[data-column-label="住院号"]')).toBeNull();
+    expect(root.querySelector('[data-column-label="病人ID"]')).toBeNull();
     expect(root.textContent).not.toContain('(国家)冰冻提醒');
     expect(root.textContent).not.toContain('Pacs流水号');
     expect(root.textContent).not.toContain('SP-001 / ROUTINE / 1.5x1.0x0.8cm');
@@ -602,6 +671,44 @@ describe('GrossingWorkstationView', () => {
     );
 
     app.unmount();
+  });
+
+  it('renders frozen reminder as a live countdown', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-03T18:00:00'));
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [
+        createTask('TASK-001', 'BL-001', 'PENDING', {
+          deadlineAt: '2026-06-03T18:30:05',
+        }),
+        createTask('TASK-002', 'BL-002', 'PENDING', {
+          deadlineAt: '2026-06-03T17:59:30',
+          timedOut: true,
+        }),
+      ],
+      page: 1,
+      size: 20,
+      total: 2,
+    });
+
+    const root = document.createElement('div');
+    document.body.append(root);
+    const app = createApp(GrossingWorkstationView);
+    app.directive('loading', {});
+    app.mount(root);
+    await flushAll();
+
+    expect(root.textContent).toContain('剩余 0:30:05');
+    expect(root.textContent).toContain('已超时 0:00:30');
+
+    await vi.advanceTimersByTimeAsync(1000);
+    await flushAll();
+
+    expect(root.textContent).toContain('剩余 0:30:04');
+    expect(root.textContent).toContain('已超时 0:00:31');
+
+    app.unmount();
+    vi.useRealTimers();
   });
 
   it('queries and starts grossing from the compact toolbar', async () => {
@@ -637,45 +744,164 @@ describe('GrossingWorkstationView', () => {
     app.unmount();
   });
 
-  it('navigates previous and next tasks using the right panel controls', async () => {
+  it('does not render previous and next task controls in the right panel', async () => {
     const { app, root } = await mountView();
 
-    findButton(root, '下一例').click();
-    await flushAll();
-
-    expect(mockInitializeWorkbench).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        id: 'TASK-002',
-      }),
-    );
-
-    findButton(root, '上一例').click();
-    await flushAll();
-
-    expect(mockInitializeWorkbench).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        id: 'TASK-001',
-      }),
-    );
+    expect(root.textContent).not.toContain('上一例');
+    expect(root.textContent).not.toContain('下一例');
 
     app.unmount();
   });
 
-  it('switches context tabs and keeps current plus historical images visible', async () => {
+  it('switches context tabs and hides annotation content in clinical history', async () => {
     const { app, root } = await mountView();
 
+    expect(root.textContent).toContain('病人: 患者甲');
+    expect(root.textContent).toContain('病理号: BL-001');
     expect(root.textContent).toContain('history-1.jpg');
     expect(root.textContent).toContain('current-1.jpg');
 
     findButton(root, '临床病史').click();
     await flushAll();
-    expect(root.textContent).toContain('甲状腺结节病史，近一个月增大。');
+
+    expect(
+      root.querySelector('textarea[placeholder="请输入病例描述"]'),
+    ).toBeNull();
+    expect(
+      root.querySelector('textarea[placeholder="请输入临床诊断"]'),
+    ).toBeNull();
+    expect(root.textContent).not.toContain('已采图像');
+    expect(root.textContent).not.toContain('history-1.jpg');
+    expect(root.textContent).not.toContain('current-1.jpg');
+
+    const historySummaryInput = root.querySelector<HTMLTextAreaElement>(
+      'textarea[placeholder="请输入病史摘要"]',
+    );
+    const clinicalExaminationInput = root.querySelector<HTMLTextAreaElement>(
+      'textarea[placeholder="请输入临床检查"]',
+    );
+    const laboratoryExaminationInput = root.querySelector<HTMLTextAreaElement>(
+      'textarea[placeholder="请输入检验"]',
+    );
+    const imagingExaminationInput = root.querySelector<HTMLTextAreaElement>(
+      'textarea[placeholder="请输入影像检查"]',
+    );
+
+    expect(root.textContent).toContain('病史摘要');
+    expect(root.textContent).toContain('临床检查');
+    expect(root.textContent).toContain('检验');
+    expect(root.textContent).toContain('影像检查');
+    expect(historySummaryInput).toBeTruthy();
+    expect(clinicalExaminationInput).toBeTruthy();
+    expect(laboratoryExaminationInput).toBeTruthy();
+    expect(imagingExaminationInput).toBeTruthy();
+    expect(historySummaryInput!.value).toBe('甲状腺结节病史，近一个月增大。');
+    expect(clinicalExaminationInput!.value).toBe('');
+    expect(laboratoryExaminationInput!.value).toBe('');
+    expect(imagingExaminationInput!.value).toBe(
+      '影像检查: 超声提示甲状腺左叶低回声结节',
+    );
+
+    setInputValue(historySummaryInput!, '病史摘要可编辑');
+    setInputValue(clinicalExaminationInput!, '临床检查可编辑');
+    setInputValue(laboratoryExaminationInput!, '检验可编辑');
+    setInputValue(imagingExaminationInput!, '影像检查可编辑');
+    await flushAll();
+
+    expect(historySummaryInput!.value).toBe('病史摘要可编辑');
+    expect(clinicalExaminationInput!.value).toBe('临床检查可编辑');
+    expect(laboratoryExaminationInput!.value).toBe('检验可编辑');
+    expect(imagingExaminationInput!.value).toBe('影像检查可编辑');
 
     findButton(root, '相关检查').click();
     await flushAll();
-    expect(root.textContent).toContain('影像检查: 超声提示甲状腺左叶低回声结节');
+    expect(root.textContent).toContain(
+      '影像检查: 超声提示甲状腺左叶低回声结节',
+    );
     expect(root.textContent).toContain('术中病理');
     expect(root.textContent).toContain('免疫组化复核');
+
+    app.unmount();
+  });
+
+  it('keeps gross description compact and makes description and diagnosis editable', async () => {
+    const { app, root } = await mountView();
+
+    const grossDescriptionInput = root.querySelector<HTMLTextAreaElement>(
+      'textarea[placeholder="请输入当前标本的大体描写"]',
+    );
+    const descriptionInput = root.querySelector<HTMLTextAreaElement>(
+      'textarea[placeholder="请输入病例描述"]',
+    );
+    const diagnosisInput = root.querySelector<HTMLTextAreaElement>(
+      'textarea[placeholder="请输入临床诊断"]',
+    );
+
+    expect(grossDescriptionInput).toBeTruthy();
+    expect(grossDescriptionInput!.getAttribute('rows')).toBe('6');
+    expect(descriptionInput).toBeTruthy();
+    expect(descriptionInput!.value).toContain('术中见甲状腺左叶结节样病灶');
+    expect(diagnosisInput).toBeTruthy();
+    expect(diagnosisInput!.value).toBe('Papillary thyroid carcinoma');
+
+    setInputValue(descriptionInput!, '可编辑病例描述');
+    setInputValue(diagnosisInput!, '可编辑临床诊断');
+    await flushAll();
+
+    expect(descriptionInput!.value).toBe('可编辑病例描述');
+    expect(diagnosisInput!.value).toBe('可编辑临床诊断');
+    app.unmount();
+  });
+
+  it('opens the grossing template drawer and appends a selected template', async () => {
+    const { app, root } = await mountView();
+
+    const grossDescriptionInput = root.querySelector<HTMLTextAreaElement>(
+      'textarea[placeholder="请输入当前标本的大体描写"]',
+    );
+    expect(grossDescriptionInput).toBeTruthy();
+    expect(grossDescriptionInput!.value).toBe('甲状腺左叶灰白结节，质中。');
+
+    root
+      .querySelector<HTMLButtonElement>('button[aria-label="打开取材模板"]')!
+      .click();
+    await flushAll();
+
+    expect(root.textContent).toContain('选择取材模板 - 骨髓');
+    expect(root.textContent).toContain('淋巴造血系统');
+    expect(root.textContent).toContain('骨髓');
+
+    findButton(root, '追加模板').click();
+    await flushAll();
+
+    expect(mockMessageSuccess).toHaveBeenCalledWith('已追加取材模板');
+    expect(grossDescriptionInput!.value).toContain('甲状腺左叶灰白结节');
+    expect(grossDescriptionInput!.value).toContain('灰褐色条索状组织一条');
+    expect(root.textContent).not.toContain('选择取材模板 - 骨髓');
+
+    app.unmount();
+  });
+
+  it('renders captured image action icons and opens import editor', async () => {
+    const { app, root } = await mountView();
+
+    root.querySelector<HTMLButtonElement>('button[aria-label="拍照"]')!.click();
+    await flushAll();
+
+    expect(mockMessageWarning).toHaveBeenCalledWith(
+      '拍照设备暂未接入，请先通过导入图片补充已采图像',
+    );
+
+    root
+      .querySelector<HTMLButtonElement>('button[aria-label="导入图片"]')!
+      .click();
+    await flushAll();
+
+    expect(workbenchState.addMediaAsset).toHaveBeenCalledWith(0);
+    expect(mockMessageSuccess).toHaveBeenCalledWith(
+      '已添加图片导入项，请在标本影像区上传图片',
+    );
+    expect(root.textContent).toContain('标本 / 蜡块 / 影像编辑');
 
     app.unmount();
   });
@@ -701,7 +927,28 @@ describe('GrossingWorkstationView', () => {
   it('renders embedding boxes and submits from the right panel', async () => {
     const { app, root } = await mountView();
 
+    const embeddingBoxSection = root.querySelector<HTMLElement>(
+      '[data-component="grossing-embedding-box-table"]',
+    );
+    const tabsSection = root.querySelector<HTMLElement>('[data-active-tab]');
+    expect(embeddingBoxSection).toBeTruthy();
+    expect(tabsSection).toBeTruthy();
+    expect(
+      embeddingBoxSection!.compareDocumentPosition(tabsSection!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(tabsSection!.contains(embeddingBoxSection)).toBe(false);
     expect(root.textContent).toContain('grossing-embedding-box-table:A1');
+
+    const specimenNameSelect = root.querySelector<HTMLSelectElement>(
+      'select[aria-label="标本名称"]',
+    );
+    expect(specimenNameSelect).toBeTruthy();
+    specimenNameSelect!.value = 'specimen-2';
+    specimenNameSelect!.dispatchEvent(new Event('change'));
+    await flushAll();
+    expect(selectedEmbeddingBoxSpecimenKey.value).toBe('specimen-2');
+    expect(activeSpecimenKey.value).toBe('specimen-1');
 
     findButton(root, '添加包埋盒1').click();
     await flushAll();
@@ -709,7 +956,7 @@ describe('GrossingWorkstationView', () => {
 
     findButton(root, '删除包埋盒').click();
     await flushAll();
-    expect(workbenchState.removeEmbeddingBox).toHaveBeenCalledWith(0);
+    expect(workbenchState.removeEmbeddingBox).toHaveBeenCalledWith(0, 0);
 
     findButton(root, '取材完成').click();
     await flushAll();

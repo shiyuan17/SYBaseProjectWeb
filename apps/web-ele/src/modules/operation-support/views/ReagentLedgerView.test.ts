@@ -142,7 +142,9 @@ vi.mock('element-plus', () => {
     emits: ['update:modelValue'],
     setup(props, { slots }) {
       return () =>
-        props.modelValue ? h('section', [h('h2', props.title), slots.default?.()]) : null;
+        props.modelValue
+          ? h('section', [h('h2', props.title), slots.default?.()])
+          : null;
     },
   });
 
@@ -274,8 +276,7 @@ vi.mock('../components/ReagentStockDialog.vue', () => ({
   default: defineComponent({
     props: ['modelValue'],
     setup(props) {
-      return () =>
-        props.modelValue ? h('div', 'reagent-stock-dialog') : null;
+      return () => (props.modelValue ? h('div', 'reagent-stock-dialog') : null);
     },
   }),
 }));

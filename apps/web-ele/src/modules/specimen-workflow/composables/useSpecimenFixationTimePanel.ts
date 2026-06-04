@@ -28,6 +28,8 @@ import {
   retryLabelPrint,
 } from '../api/specimen-workflow-service';
 import { getWorkflowPageErrorMessage } from '../utils/error';
+import { loadOperatingRoomNameMapSafely } from '../utils/operating-room-display';
+import { loadSpecimensWithApplicationExpansion } from '../utils/specimen-application-expansion';
 import {
   buildExportRows as buildFixationExportRows,
   buildQueueRow as buildFixationQueueRow,
@@ -36,12 +38,10 @@ import {
   MAX_QUERY_SIZE,
   normalizeText as normalizeFixationText,
   normalizeGenderLabel,
-  resolveExactMatches as resolveExactFixationMatches,
   resolveFixationLiquidLabel as resolveFixationLiquidLabelValue,
   resolveFixationTagType as resolveFixationTagTypeValue,
   resolveUnavailableMessage as resolveFixationUnavailableMessage,
 } from '../utils/specimen-fixation-time';
-import { loadOperatingRoomNameMapSafely } from '../utils/operating-room-display';
 
 export function useSpecimenFixationTimePanel() {
   const userStore = useUserStore();
@@ -115,18 +115,26 @@ export function useSpecimenFixationTimePanel() {
     return isVisibleInFixationSceneValue(row);
   }
 
-  function resolveExactMatches(
-    items: SpecimenManagementListItem[],
-    keyword: string,
-  ) {
-    return resolveExactFixationMatches(items, keyword);
-  }
-
   function resolveUnavailableMessage(
     items: SpecimenManagementListItem[],
     keyword: string,
   ) {
     return resolveFixationUnavailableMessage(items, keyword);
+  }
+
+  function resolveExactSpecimenNoMatches(
+    items: SpecimenManagementListItem[],
+    keyword: string,
+  ) {
+    const normalizedKeyword = normalizeText(keyword).toLowerCase();
+    if (!normalizedKeyword) {
+      return [];
+    }
+
+    return items.filter(
+      (item) =>
+        normalizeText(item.specimenNo).toLowerCase() === normalizedKeyword,
+    );
   }
 
   async function ensureWorkbenchRecord(applicationNo: string) {
@@ -221,6 +229,11 @@ export function useSpecimenFixationTimePanel() {
     selectedRows.value = rows;
   }
 
+  function replaceQueueRows(rows: FixationWorkbenchRow[]) {
+    queueItems.value = rows;
+    selectedRows.value = [];
+  }
+
   function removeRows(specimenIds: string[]) {
     const targetSet = new Set(specimenIds);
     queueItems.value = queueItems.value.filter(
@@ -245,9 +258,81 @@ export function useSpecimenFixationTimePanel() {
   async function handleCompleteFixationByScan() {
     const keyword = normalizeText(scanInput.value);
     if (!keyword) {
-      ElMessage.warning('请输入流水号或标本ID');
+      ElMessage.warning('请输入标本号');
       return;
     }
+
+    loading.value = true;
+    pageError.value = '';
+    try {
+      const queryResult = await loadSpecimensWithApplicationExpansion({
+        keyword,
+        listSpecimens,
+        maxQuerySize: MAX_QUERY_SIZE,
+      });
+      const exactMatches = resolveExactSpecimenNoMatches(
+        queryResult.initialItems,
+        keyword,
+      );
+
+      if (exactMatches.length === 0) {
+        ElMessage.warning(
+          resolveUnavailableMessage(queryResult.initialItems, keyword),
+        );
+        return;
+      }
+
+      if (exactMatches.length > 1) {
+        ElMessage.warning('匹配到多条标本，请输入更精确的标本号');
+        return;
+      }
+
+      const [matchedRow] = exactMatches;
+      if (!matchedRow) {
+        return;
+      }
+
+      const applicationRows =
+        queryResult.mode === 'expanded' && queryResult.items.length > 0
+          ? queryResult.items
+          : [matchedRow];
+      const queueRows = await Promise.all(
+        applicationRows.map((row) => buildEnrichedRow(row)),
+      );
+
+      const matchedSpecimenCompleted =
+        matchedRow.fixationStatus === 'COMPLETED' ||
+        matchedRow.specimenStatus === 'FIXED';
+
+      if (matchedSpecimenCompleted) {
+        replaceQueueRows(queueRows);
+        scanInput.value = '';
+        ElMessage.warning('标本已完成固定，无需重复操作');
+        return;
+      }
+
+      if (!isVisibleInFixationScene(matchedRow)) {
+        ElMessage.warning(
+          resolveUnavailableMessage(queryResult.initialItems, keyword),
+        );
+        return;
+      }
+
+      replaceQueueRows(queueRows);
+      scanInput.value = '';
+    } catch (error) {
+      pageError.value = getWorkflowPageErrorMessage(error);
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  async function handleConfirmFixation() {
+    if (selectedRows.value.length === 0) {
+      ElMessage.warning('请先勾选需要固定的标本');
+      return;
+    }
+
     const operatorName = normalizeText(userStore.userInfo?.realName);
     const selectedFixationLiquidType = normalizeText(fixationLiquidType.value);
     if (!operatorName) {
@@ -259,69 +344,73 @@ export function useSpecimenFixationTimePanel() {
       return;
     }
 
+    const invalidRow = selectedRows.value.find(
+      (row) => !normalizeText(row.barcode) || !isVisibleInFixationScene(row),
+    );
+    if (invalidRow) {
+      if (!normalizeText(invalidRow.barcode)) {
+        ElMessage.warning('选中标本缺少条码，不能完成固定，请重新选择');
+        return;
+      }
+      ElMessage.warning(
+        `${resolveUnavailableMessage([invalidRow], invalidRow.specimenNo)}，请重新选择`,
+      );
+      return;
+    }
+
     loading.value = true;
     pageError.value = '';
+    let successCount = 0;
+    const failureMessages: string[] = [];
+
     try {
-      const listResult = await listSpecimens({
-        keyword,
-        page: 1,
-        size: MAX_QUERY_SIZE,
-      });
-      const visibleRows = listResult.items.filter((item) =>
-        isVisibleInFixationScene(item),
-      );
-      const exactMatches = resolveExactMatches(visibleRows, keyword);
-      const candidates = exactMatches.length > 0 ? exactMatches : visibleRows;
-
-      if (candidates.length === 0) {
-        ElMessage.warning(resolveUnavailableMessage(listResult.items, keyword));
-        return;
+      for (const row of selectedRows.value) {
+        try {
+          const result = await completeFixation({
+            fixationLiquidType: selectedFixationLiquidType,
+            remarks: '手动确认固定',
+            specimenBarcode: normalizeText(row.barcode),
+          });
+          const completedAt =
+            result.fixationCompletedAt ?? new Date().toISOString();
+          upsertQueueRow({
+            ...row,
+            barcode: result.barcode || row.barcode,
+            fixationCompletedAt: completedAt,
+            fixationLiquidType:
+              result.fixationLiquidType ?? selectedFixationLiquidType,
+            fixationOperatorName: result.operatorName ?? operatorName,
+            fixationOperatorUserId: result.operatorUserId ?? null,
+            fixationStatus: result.fixationStatus,
+            fixationTime: completedAt,
+            latestTrackingAt: completedAt,
+            specimenStatus: 'FIXED',
+          });
+          successCount += 1;
+        } catch (error) {
+          failureMessages.push(
+            `${row.specimenNo}: ${getWorkflowPageErrorMessage(error)}`,
+          );
+        }
       }
-      if (candidates.length > 1) {
-        ElMessage.warning('匹配到多条标本，请输入更精确的流水号或标本ID');
-        return;
-      }
-
-      const [matchedRow] = candidates;
-      if (!matchedRow) {
-        return;
-      }
-
-      const existingRow = queueItems.value.find(
-        (item) => item.specimenId === matchedRow.specimenId,
-      );
-      if (existingRow) {
-        ElMessage.warning('该标本已在当前列表中');
-        scanInput.value = '';
-        return;
-      }
-
-      const result = await completeFixation({
-        fixationLiquidType: selectedFixationLiquidType,
-        remarks: '扫码完成固定',
-        specimenBarcode: matchedRow.barcode || matchedRow.specimenNo,
-      });
-      const completedAt =
-        result.fixationCompletedAt ?? new Date().toISOString();
-      const nextRow = await buildEnrichedRow({
-        ...matchedRow,
-        fixationCompletedAt: completedAt,
-        fixationLiquidType:
-          result.fixationLiquidType ?? selectedFixationLiquidType,
-        fixationOperatorName: result.operatorName ?? operatorName,
-        fixationOperatorUserId: result.operatorUserId ?? null,
-        fixationStatus: result.fixationStatus,
-        latestTrackingAt: completedAt,
-        specimenStatus: 'FIXED',
-      });
-      upsertQueueRow(nextRow);
-      scanInput.value = '';
-      ElMessage.success(`条码 ${matchedRow.barcode || keyword} 已完成固定`);
-    } catch (error) {
-      pageError.value = getWorkflowPageErrorMessage(error);
     } finally {
+      selectedRows.value = [];
       loading.value = false;
     }
+
+    if (failureMessages.length === 0) {
+      ElMessage.success(`已完成 ${successCount} 条标本固定`);
+      return;
+    }
+
+    if (successCount > 0) {
+      ElMessage.warning(
+        `已完成 ${successCount} 条标本固定，${failureMessages.length} 条失败：${failureMessages.join('；')}`,
+      );
+      return;
+    }
+
+    pageError.value = failureMessages.join('；');
   }
 
   function handleClearSelectionRows() {
@@ -497,6 +586,7 @@ export function useSpecimenFixationTimePanel() {
     getSpecimenRemovalTime,
     handleClearList,
     handleClearSelectionRows,
+    handleConfirmFixation,
     handleCompleteFixationByScan,
     handleExportExcel,
     handleRetryLabel,

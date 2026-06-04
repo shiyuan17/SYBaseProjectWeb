@@ -510,6 +510,7 @@ export interface PendingSpecimenItem {
   patientName: null | string;
   registeredAt: null | string;
   reminderCount?: number;
+  specimenConfirmedAt?: null | string;
   specimenId: string;
   specimenNo: string;
   specimenStatus: null | string;
@@ -642,6 +643,8 @@ export interface SpecimenOutboundListItem {
   applicationId: string;
   applicationNo: string;
   barcode: null | string;
+  checkInStatus?: null | string;
+  fixationStatus?: null | string;
   inpatientNo: null | string;
   outboundAt: null | string;
   outboundUserName: null | string;
@@ -650,6 +653,7 @@ export interface SpecimenOutboundListItem {
   patientName: null | string;
   registeredAt: null | string;
   registeredByName: null | string;
+  specimenConfirmedAt?: null | string;
   specimenId: string;
   specimenName: string;
   specimenNo: string;

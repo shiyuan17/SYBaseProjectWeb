@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { GrossingSpecimenItemRequest } from '../types/technical-workflow';
+import type { GrossingEmbeddingBoxTableRow } from '../composables/useGrossingWorkbench';
 
 import type { WorkflowReferenceOption } from '#/modules/system-management/types/workflow-reference';
 
@@ -7,25 +7,27 @@ import {
   ElButton,
   ElEmpty,
   ElInput,
-  ElMessageBox,
   ElOption,
   ElSelect,
   ElTable,
   ElTableColumn,
-  ElTag,
   ElTooltip,
 } from 'element-plus';
 
 import ReferenceOptionSelect from '#/modules/system-management/components/ReferenceOptionSelect.vue';
 
 defineProps<{
+  canAddEmbeddingBox: boolean;
+  embeddingBoxRows: GrossingEmbeddingBoxTableRow[];
   embeddingRemarkOptions: WorkflowReferenceOption[];
-  specimen: GrossingSpecimenItemRequest | null;
+  selectedSpecimenKey: string;
+  specimenOptions: Array<{ label: string; value: string }>;
 }>();
 
 const emit = defineEmits<{
   addEmbeddingBoxes: [count: number];
-  removeEmbeddingBox: [index: number];
+  removeEmbeddingBox: [boxIndex: number, specimenIndex: number];
+  'update:selectedSpecimenKey': [value: string];
 }>();
 
 const statusOptions = [
@@ -33,21 +35,12 @@ const statusOptions = [
   { label: '已确认', value: 'CONFIRMED' },
 ] as const;
 
-function formatEmbeddingBoxStatus(status: null | string | undefined) {
-  return status === 'CONFIRMED' ? '已确认' : '待确认';
+function handleRemoveEmbeddingBox(row: GrossingEmbeddingBoxTableRow) {
+  emit('removeEmbeddingBox', row.boxIndex, row.specimenIndex);
 }
 
-function getEmbeddingBoxStatusTagType(status: null | string | undefined) {
-  return status === 'CONFIRMED' ? 'success' : 'warning';
-}
-
-async function handleRemoveEmbeddingBox(index: number) {
-  await ElMessageBox.confirm('确认删除该包埋盒吗？', '删除包埋盒', {
-    confirmButtonText: '删除',
-    cancelButtonText: '取消',
-    type: 'warning',
-  });
-  emit('removeEmbeddingBox', index);
+function handleSelectedSpecimenKeyChange(value: number | string) {
+  emit('update:selectedSpecimenKey', String(value));
 }
 </script>
 
@@ -56,12 +49,28 @@ async function handleRemoveEmbeddingBox(index: number) {
     <header
       class="flex min-h-9 flex-wrap items-center justify-between gap-2 border-b border-border bg-muted/30 px-3 py-2"
     >
-      <span class="text-xs font-semibold text-foreground">包埋盒</span>
+      <div class="inline-flex flex-wrap items-center gap-2">
+        <span class="text-xs font-semibold text-foreground">包埋盒</span>
+        <ElSelect
+          :model-value="selectedSpecimenKey"
+          aria-label="标本名称"
+          class="w-32"
+          size="small"
+          @update:model-value="handleSelectedSpecimenKeyChange"
+        >
+          <ElOption
+            v-for="option in specimenOptions"
+            :key="option.value"
+            :label="option.label"
+            :value="option.value"
+          />
+        </ElSelect>
+      </div>
       <div class="inline-flex items-center gap-1">
         <ElTooltip content="添加 1 个包埋盒" placement="top">
           <span class="inline-flex">
             <ElButton
-              :disabled="!specimen"
+              :disabled="!canAddEmbeddingBox"
               size="small"
               @click="emit('addEmbeddingBoxes', 1)"
             >
@@ -72,7 +81,7 @@ async function handleRemoveEmbeddingBox(index: number) {
         <ElTooltip content="添加 2 个包埋盒" placement="top">
           <span class="inline-flex">
             <ElButton
-              :disabled="!specimen"
+              :disabled="!canAddEmbeddingBox"
               size="small"
               @click="emit('addEmbeddingBoxes', 2)"
             >
@@ -83,7 +92,7 @@ async function handleRemoveEmbeddingBox(index: number) {
         <ElTooltip content="添加 5 个包埋盒" placement="top">
           <span class="inline-flex">
             <ElButton
-              :disabled="!specimen"
+              :disabled="!canAddEmbeddingBox"
               size="small"
               @click="emit('addEmbeddingBoxes', 5)"
             >
@@ -94,35 +103,42 @@ async function handleRemoveEmbeddingBox(index: number) {
       </div>
     </header>
 
-    <div v-if="specimen" class="overflow-x-auto">
+    <div v-if="canAddEmbeddingBox" class="overflow-x-auto">
       <ElTable
-        v-if="specimen.embeddingBoxes?.length"
-        :data="specimen.embeddingBoxes"
+        v-if="embeddingBoxRows.length > 0"
+        :data="embeddingBoxRows"
         size="small"
         table-layout="fixed"
       >
         <ElTableColumn label="序号" width="64">
-          <template #default="{ row, $index }">
-            {{ row.sequenceNo || $index + 1 }}
+          <template #default="{ $index }">
+            {{ $index + 1 }}
+          </template>
+        </ElTableColumn>
+        <ElTableColumn label="标本名称" min-width="120" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ row.specimenName || '-' }}
           </template>
         </ElTableColumn>
         <ElTableColumn label="盒名称" min-width="120">
           <template #default="{ row }">
-            <ElInput v-model="row.boxName" placeholder="盒名称" size="small" />
-          </template>
-        </ElTableColumn>
-        <ElTableColumn label="盒号" min-width="110">
-          <template #default="{ row }">
             <ElInput
-              v-model="row.embeddingBoxNo"
-              placeholder="A1"
+              v-model="row.box.boxName"
+              placeholder="盒名称"
               size="small"
             />
           </template>
         </ElTableColumn>
+        <ElTableColumn label="盒号" min-width="110">
+          <template #default="{ row }">
+            <span class="text-sm font-medium text-foreground">
+              {{ row.box.embeddingBoxNo || '-' }}
+            </span>
+          </template>
+        </ElTableColumn>
         <ElTableColumn label="状态" min-width="110">
           <template #default="{ row }">
-            <ElSelect v-model="row.status" size="small">
+            <ElSelect v-model="row.box.status" size="small">
               <ElOption
                 v-for="option in statusOptions"
                 :key="option.value"
@@ -135,19 +151,19 @@ async function handleRemoveEmbeddingBox(index: number) {
         <ElTableColumn label="包埋备注" min-width="160">
           <template #default="{ row }">
             <ReferenceOptionSelect
-              v-model="row.embeddingRemarks"
+              v-model="row.box.embeddingRemarks"
               :options="embeddingRemarkOptions"
               placeholder="请选择或输入包埋备注"
             />
           </template>
         </ElTableColumn>
-        <ElTableColumn label="操作" width="80">
-          <template #default="{ $index }">
+        <ElTableColumn fixed="right" label="操作" width="80">
+          <template #default="{ row }">
             <ElButton
               link
               size="small"
               type="danger"
-              @click="void handleRemoveEmbeddingBox($index)"
+              @click="handleRemoveEmbeddingBox(row)"
             >
               删除
             </ElButton>
@@ -158,21 +174,5 @@ async function handleRemoveEmbeddingBox(index: number) {
     </div>
 
     <ElEmpty v-else description="当前没有可编辑标本" />
-
-    <footer
-      v-if="specimen?.embeddingBoxes?.length"
-      class="flex flex-wrap gap-1 border-t border-border px-3 py-2 text-xs text-muted-foreground"
-    >
-      <ElTag
-        v-for="box in specimen.embeddingBoxes"
-        :key="`${box.sequenceNo}-${box.embeddingBoxNo}`"
-        :type="getEmbeddingBoxStatusTagType(box.status)"
-        effect="plain"
-        size="small"
-      >
-        {{ box.embeddingBoxNo || '未填盒号' }} /
-        {{ formatEmbeddingBoxStatus(box.status) }}
-      </ElTag>
-    </footer>
   </section>
 </template>

@@ -1,12 +1,12 @@
-import type { ApplicationRegistrationWorkbenchRecord } from '#/modules/specimen-workflow/types/application-registration-workbench';
-import type { ApplicationDetailView } from '#/modules/specimen-workflow/types/specimen-workflow';
-
 import type {
   PendingTechnicalSpecimenRegistrationItem,
   TechnicalSpecimenRegistrationWorkspace,
 } from '../types/technical-workflow';
 
-import { createApp, defineComponent, h, nextTick } from 'vue';
+import type { ApplicationRegistrationWorkbenchRecord } from '#/modules/specimen-workflow/types/application-registration-workbench';
+import type { ApplicationDetailView } from '#/modules/specimen-workflow/types/specimen-workflow';
+
+import { createApp, defineComponent, h, inject, nextTick, provide } from 'vue';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -92,7 +92,7 @@ vi.mock('../api/technical-workflow-service', () => ({
     mockGetTechnicalSpecimenRegistrationApplicationWorkbench,
   getTechnicalSpecimenRegistrationWorkspace:
     mockGetTechnicalSpecimenRegistrationWorkspace,
-  listPendingTechnicalSpecimenRegistrations:
+  listTechnicalSpecimenRegistrations:
     mockListPendingTechnicalSpecimenRegistrations,
   saveTechnicalSpecimenRegistrationApplicationWorkbenchPatientInfo:
     mockSaveTechnicalSpecimenRegistrationApplicationWorkbenchPatientInfo,
@@ -118,6 +118,8 @@ vi.mock('../utils/navigation', () => ({
 }));
 
 vi.mock('element-plus', () => {
+  const tabsContextKey = Symbol('technical-registration-tabs');
+
   const ElAlert = defineComponent({
     props: ['title'],
     setup(props) {
@@ -149,12 +151,7 @@ vi.mock('element-plus', () => {
   });
 
   const ElDatePicker = defineComponent({
-    props: [
-      'endPlaceholder',
-      'modelValue',
-      'startPlaceholder',
-      'type',
-    ],
+    props: ['endPlaceholder', 'modelValue', 'startPlaceholder', 'type'],
     emits: ['update:modelValue'],
     setup(props, { emit }) {
       return () =>
@@ -184,10 +181,7 @@ vi.mock('element-plus', () => {
           placeholder: props.placeholder,
           value: props.modelValue,
           onInput: (event: Event) =>
-            emit(
-              'update:modelValue',
-              (event.target as HTMLInputElement).value,
-            ),
+            emit('update:modelValue', (event.target as HTMLInputElement).value),
         });
     },
   });
@@ -227,6 +221,41 @@ vi.mock('element-plus', () => {
     },
   });
 
+  const ElTabs = defineComponent({
+    props: ['modelValue', 'stretch'],
+    emits: ['update:modelValue'],
+    setup(props, { attrs, emit, slots }) {
+      provide(tabsContextKey, {
+        activeName: () => props.modelValue,
+        select: (value: string) => emit('update:modelValue', value),
+      });
+      return () => h('div', { ...attrs, role: 'tablist' }, slots.default?.());
+    },
+  });
+
+  const ElTabPane = defineComponent({
+    props: ['label', 'name'],
+    setup(props, { attrs }) {
+      const tabs = inject<{
+        activeName: () => unknown;
+        select: (value: string) => void;
+      }>(tabsContextKey);
+      return () =>
+        h(
+          'button',
+          {
+            ...attrs,
+            'aria-selected':
+              tabs?.activeName() === props.name ? 'true' : 'false',
+            role: 'tab',
+            type: 'button',
+            onClick: () => tabs?.select(String(props.name)),
+          },
+          String(props.label),
+        );
+    },
+  });
+
   return {
     ElAlert,
     ElButton,
@@ -241,6 +270,8 @@ vi.mock('element-plus', () => {
     ElOption,
     ElPagination,
     ElSelect,
+    ElTabPane,
+    ElTabs,
   };
 });
 
@@ -256,7 +287,7 @@ function createPendingItem(
     caseId: 'CASE-1',
     checkItem: 'HE',
     inpatientNo: 'INP-1',
-    pathologyNo: 'BL-20260601-001',
+    pathologyNo: null,
     patientId: 'P-001',
     patientName: '患者甲',
     receivedAt: '2026-06-01T08:00:00',
@@ -284,7 +315,7 @@ function createWorkspace(
       applicationType: 'ROUTINE',
       fixationTime: '2026-06-01T09:00:00',
       inpatientNo: 'INP-1',
-      pathologyNo: 'BL-20260601-001',
+      pathologyNo: null,
       patientAge: '34',
       patientGender: '女',
       patientId: 'P-001',
@@ -483,7 +514,6 @@ describe('TechnicalSpecimenRegistrationView', () => {
           ...createWorkspace().basicInfo,
           applicationNo: 'APP-20260601-002',
           applicationType: 'FROZEN',
-          pathologyNo: 'BL-20260601-002',
           patientName: '患者乙',
         },
         mediaAssets: [
@@ -498,7 +528,6 @@ describe('TechnicalSpecimenRegistrationView', () => {
           applicationNo: 'APP-20260601-002',
           applicationType: 'FROZEN',
           caseId: 'CASE-2',
-          pathologyNo: 'BL-20260601-002',
           patientName: '患者乙',
         }),
       }),
@@ -507,7 +536,6 @@ describe('TechnicalSpecimenRegistrationView', () => {
           ...createWorkspace().basicInfo,
           applicationNo: 'APP-20260601-003',
           applicationType: 'CONSULTATION',
-          pathologyNo: 'HZ2600001',
           patientAge: '45',
           patientGender: '男',
           patientId: 'P-003',
@@ -521,7 +549,6 @@ describe('TechnicalSpecimenRegistrationView', () => {
           applicationNo: 'APP-20260601-003',
           applicationType: 'CONSULTATION',
           caseId: 'CASE-3',
-          pathologyNo: 'HZ2600001',
           patientId: 'P-003',
           patientName: '患者丙',
           submittingDepartmentName: '会诊科室',
@@ -539,13 +566,11 @@ describe('TechnicalSpecimenRegistrationView', () => {
       items: [
         createPendingItem({
           caseId: 'CASE-1',
-          pathologyNo: 'BL-20260601-001',
         }),
         createPendingItem({
           applicationNo: 'APP-20260601-002',
           applicationType: 'FROZEN',
           caseId: 'CASE-2',
-          pathologyNo: 'BL-20260601-002',
           patientName: '患者乙',
         }),
         createPendingItem({
@@ -553,7 +578,6 @@ describe('TechnicalSpecimenRegistrationView', () => {
           applicationNo: 'APP-20260601-003',
           applicationType: 'CONSULTATION',
           caseId: 'CASE-3',
-          pathologyNo: 'HZ2600001',
           patientId: 'P-003',
           patientName: '患者丙',
           submittingDepartmentName: '会诊科室',
@@ -610,7 +634,9 @@ describe('TechnicalSpecimenRegistrationView', () => {
     mockSaveTechnicalSpecimenRegistrationMaterials.mockImplementation(
       async (
         caseId: string,
-        data: { materials: TechnicalSpecimenRegistrationWorkspace['materials'] },
+        data: {
+          materials: TechnicalSpecimenRegistrationWorkspace['materials'];
+        },
       ) => {
         const currentWorkspace = workspaceByCaseId[caseId]!;
         const nextWorkspace = {
@@ -763,13 +789,16 @@ describe('TechnicalSpecimenRegistrationView', () => {
     await flushView();
 
     expect(document.body.textContent).toContain('接收列表');
+    expect(document.body.textContent).toContain('已登记列表');
     expect(document.body.textContent).toContain('登记工作区');
     expect(document.body.textContent).toContain('APP-20260601-001');
     expect(mockListPendingTechnicalSpecimenRegistrations).toHaveBeenCalledWith({
+      applicationType: undefined,
       keyword: undefined,
       page: 1,
       receivedFrom: undefined,
       receivedTo: undefined,
+      registrationStatus: 'PENDING',
       size: 20,
     });
     expect(mockGetTechnicalSpecimenRegistrationWorkspace).toHaveBeenCalledWith(
@@ -778,6 +807,111 @@ describe('TechnicalSpecimenRegistrationView', () => {
     expect(document.body.textContent).toContain('图片区');
     expect(document.body.textContent).not.toContain('申请核对区');
     expect(document.body.textContent).not.toContain('编辑申请');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('switches between receive and registered list tabs', async () => {
+    const registeredItem = createPendingItem({
+      applicationNo: 'APP-20260601-004',
+      caseId: 'CASE-4',
+      pathologyNo: 'BL-20260601-004',
+      patientId: 'P-004',
+      patientName: '患者丁',
+      registeredAt: '2026-06-01T10:00:00',
+      registeredByName: '登记员甲',
+      registrationStatus: 'COMPLETED',
+    });
+    workspaceByCaseId['CASE-4'] = createWorkspace({
+      actionFlags: {
+        canCompleteRegistration: false,
+        canDeleteMediaAssets: false,
+        canSaveDetailSections: false,
+        canSaveMaterials: false,
+        canUploadMediaAssets: false,
+      },
+      basicInfo: {
+        ...createWorkspace().basicInfo,
+        applicationNo: 'APP-20260601-004',
+        pathologyNo: 'BL-20260601-004',
+        patientId: 'P-004',
+        patientName: '患者丁',
+        registrationStatus: 'COMPLETED',
+      },
+      pendingSummary: registeredItem,
+    });
+    mockListPendingTechnicalSpecimenRegistrations.mockResolvedValueOnce({
+      items: [
+        createPendingItem({
+          caseId: 'CASE-1',
+        }),
+      ],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+    mockListPendingTechnicalSpecimenRegistrations.mockResolvedValueOnce({
+      items: [registeredItem],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+
+    const { app, root } = mountView();
+    await flushView();
+
+    expect(
+      document.querySelector('[data-testid="specimen-row-CASE-1"]'),
+    ).toBeTruthy();
+    expect(
+      document.querySelector('[data-testid="specimen-row-CASE-4"]'),
+    ).toBeNull();
+    expect(
+      mockListPendingTechnicalSpecimenRegistrations,
+    ).toHaveBeenLastCalledWith({
+      applicationType: undefined,
+      keyword: undefined,
+      page: 1,
+      receivedFrom: undefined,
+      receivedTo: undefined,
+      registrationStatus: 'PENDING',
+      size: 20,
+    });
+
+    document
+      .querySelector<HTMLButtonElement>(
+        '[data-testid="registration-list-tab-registered"]',
+      )
+      ?.click();
+    await flushView();
+    await flushView();
+
+    const registeredRow = document.querySelector<HTMLButtonElement>(
+      '[data-testid="specimen-row-CASE-4"]',
+    );
+    expect(registeredRow).toBeTruthy();
+    expect(registeredRow?.textContent).toContain('BL-20260601-004');
+    expect(registeredRow?.textContent).toContain('患者丁');
+    expect(registeredRow?.textContent).toContain('已登记');
+    expect(
+      document.querySelector('[data-testid="specimen-row-CASE-1"]'),
+    ).toBeNull();
+    expect(
+      mockListPendingTechnicalSpecimenRegistrations,
+    ).toHaveBeenLastCalledWith({
+      applicationType: undefined,
+      keyword: undefined,
+      page: 1,
+      receivedFrom: undefined,
+      receivedTo: undefined,
+      registrationStatus: 'COMPLETED',
+      size: 20,
+    });
+    expect(
+      mockGetTechnicalSpecimenRegistrationWorkspace,
+    ).toHaveBeenLastCalledWith('CASE-4');
+    expect(document.body.textContent).toContain('当前状态 已登记');
 
     app.unmount();
     root.remove();
@@ -809,7 +943,8 @@ describe('TechnicalSpecimenRegistrationView', () => {
       '[data-testid="specimen-row-CASE-1"]',
     );
     expect(row).toBeTruthy();
-    expect(row!.textContent).toContain('BL-20260601-001');
+    expect(row!.textContent).toContain('待生成');
+    expect(row!.textContent).not.toContain('BL-20260601-001');
     expect(row!.textContent).toContain('患者甲');
     expect(row!.textContent).toContain('待登记');
     expect(row!.textContent).not.toContain('PENDING');
@@ -874,7 +1009,7 @@ describe('TechnicalSpecimenRegistrationView', () => {
     const { app, root } = mountView();
     await flushView();
 
-    expect(document.body.textContent).toContain('标本表');
+    expect(document.body.textContent).toContain('送检标本');
     expect(document.body.textContent).not.toContain(
       '支持在技术登记阶段调整标本名称、类型、数量、来源部位、大小和冰冻标记，并记录标本评价。',
     );
@@ -890,9 +1025,111 @@ describe('TechnicalSpecimenRegistrationView', () => {
     root.remove();
   });
 
-  it('filters the current receive page by application type without changing API params', async () => {
+  it('renders all registration application types and switches to consultation list for consultation types', async () => {
     const { app, root } = mountView();
     await flushView();
+
+    expect(
+      document.querySelector(
+        '[data-testid="registration-application-type-ROUTINE"]',
+      ),
+    ).toBeTruthy();
+    expect(
+      document.querySelector(
+        '[data-testid="registration-application-type-CONSULTATION"]',
+      ),
+    ).toBeTruthy();
+    expect(
+      document.querySelector(
+        '[data-testid="registration-application-type-LIVER_BIOPSY"]',
+      ),
+    ).toBeTruthy();
+
+    document
+      .querySelector<HTMLButtonElement>(
+        '[data-testid="registration-application-type-CONSULTATION"]',
+      )
+      ?.click();
+    await flushView();
+
+    expect(
+      document.querySelector('[data-testid="consultation-material-table"]'),
+    ).toBeTruthy();
+    expect(
+      document.querySelector('[data-testid="specimen-material-table"]'),
+    ).toBeNull();
+
+    document
+      .querySelector<HTMLButtonElement>(
+        '[data-testid="registration-application-type-FROZEN"]',
+      )
+      ?.click();
+    await flushView();
+
+    expect(
+      document.querySelector('[data-testid="specimen-material-table"]'),
+    ).toBeTruthy();
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('resets the selected registration application type when switching cases', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    document
+      .querySelector<HTMLButtonElement>(
+        '[data-testid="registration-application-type-CONSULTATION"]',
+      )
+      ?.click();
+    await flushView();
+
+    expect(
+      document.querySelector('[data-testid="consultation-material-table"]'),
+    ).toBeTruthy();
+
+    document
+      .querySelector<HTMLButtonElement>('[data-testid="specimen-row-CASE-2"]')
+      ?.click();
+    await flushView();
+    await flushView();
+
+    expect(
+      document.querySelector('[data-testid="consultation-material-table"]'),
+    ).toBeNull();
+    expect(
+      document.querySelector('[data-testid="specimen-material-table"]'),
+    ).toBeTruthy();
+    expect(
+      document
+        .querySelector<HTMLButtonElement>(
+          '[data-testid="registration-application-type-FROZEN"]',
+        )
+        ?.getAttribute('aria-pressed'),
+    ).toBe('true');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('queries pending registrations by application type so pagination matches the filtered list', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    mockListPendingTechnicalSpecimenRegistrations.mockResolvedValueOnce({
+      items: [
+        createPendingItem({
+          applicationNo: 'APP-20260601-002',
+          applicationType: 'FROZEN',
+          caseId: 'CASE-2',
+          patientName: '患者乙',
+        }),
+      ],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
 
     const filter = document.querySelector<HTMLSelectElement>(
       '[data-testid="application-type-filter"]',
@@ -908,12 +1145,27 @@ describe('TechnicalSpecimenRegistrationView', () => {
     expect(
       document.querySelector('[data-testid="specimen-row-CASE-2"]'),
     ).toBeTruthy();
-    expect(mockGetTechnicalSpecimenRegistrationWorkspace).toHaveBeenLastCalledWith(
-      'CASE-2',
-    );
     expect(
-      mockListPendingTechnicalSpecimenRegistrations.mock.calls[0]?.[0],
-    ).not.toHaveProperty('applicationType');
+      mockGetTechnicalSpecimenRegistrationWorkspace,
+    ).toHaveBeenLastCalledWith('CASE-2');
+    expect(
+      mockListPendingTechnicalSpecimenRegistrations,
+    ).toHaveBeenLastCalledWith({
+      applicationType: 'FROZEN',
+      keyword: undefined,
+      page: 1,
+      receivedFrom: undefined,
+      receivedTo: undefined,
+      registrationStatus: 'PENDING',
+      size: 20,
+    });
+
+    mockListPendingTechnicalSpecimenRegistrations.mockResolvedValueOnce({
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
 
     filter!.value = 'IHC';
     filter!.dispatchEvent(new Event('change'));
@@ -921,6 +1173,17 @@ describe('TechnicalSpecimenRegistrationView', () => {
 
     expect(document.body.textContent).toContain('暂无待登记病例');
     expect(document.body.textContent).toContain('请选择左侧病例');
+    expect(
+      mockListPendingTechnicalSpecimenRegistrations,
+    ).toHaveBeenLastCalledWith({
+      applicationType: 'IHC',
+      keyword: undefined,
+      page: 1,
+      receivedFrom: undefined,
+      receivedTo: undefined,
+      registrationStatus: 'PENDING',
+      size: 20,
+    });
 
     app.unmount();
     root.remove();
@@ -1053,7 +1316,9 @@ describe('TechnicalSpecimenRegistrationView', () => {
     await flushView();
 
     expect(
-      document.querySelector('[data-testid="detail-section-edit-historySummary"]'),
+      document.querySelector(
+        '[data-testid="detail-section-edit-historySummary"]',
+      ),
     ).toBeNull();
 
     document
@@ -1064,7 +1329,9 @@ describe('TechnicalSpecimenRegistrationView', () => {
     await flushView();
 
     expect(
-      document.querySelector('[data-testid="detail-section-input-historySummary"]'),
+      document.querySelector(
+        '[data-testid="detail-section-input-historySummary"]',
+      ),
     ).toBeNull();
 
     app.unmount();
@@ -1180,7 +1447,9 @@ describe('TechnicalSpecimenRegistrationView', () => {
     findButton('新增标本').click();
     await flushView();
 
-    const newRow = document.querySelector<HTMLElement>('[data-testid="material-row-1"]');
+    const newRow = document.querySelector<HTMLElement>(
+      '[data-testid="material-row-1"]',
+    );
     expect(newRow).toBeTruthy();
     expect(newRow?.textContent).toContain('未核对');
 
@@ -1199,7 +1468,7 @@ describe('TechnicalSpecimenRegistrationView', () => {
     await flushView();
 
     const consultationTab = document.querySelector<HTMLButtonElement>(
-      '[data-testid="specimen-tab-consultation"]',
+      '[data-testid="registration-application-type-CONSULTATION"]',
     );
     expect(consultationTab).toBeTruthy();
     consultationTab?.click();
@@ -1318,11 +1587,9 @@ describe('TechnicalSpecimenRegistrationView', () => {
     findButton('标本核对').click();
     await flushView();
 
-    expect(mockVerifyTechnicalSpecimenRegistrationMaterial).toHaveBeenCalledWith(
-      'CASE-1',
-      'SP-1',
-      { terminalCode: 'T-M3-SPEC-REG' },
-    );
+    expect(
+      mockVerifyTechnicalSpecimenRegistrationMaterial,
+    ).toHaveBeenCalledWith('CASE-1', 'SP-1', { terminalCode: 'T-M3-SPEC-REG' });
     expect(document.body.textContent).toContain('已核对');
     expect(document.body.textContent).not.toContain('2026-06-02 11:30');
     expect(document.body.textContent).not.toContain('Receiver A');
@@ -1357,7 +1624,8 @@ describe('TechnicalSpecimenRegistrationView', () => {
       ?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
     await flushView();
 
-    const fileInput = document.querySelector<HTMLInputElement>('input[type="file"]');
+    const fileInput =
+      document.querySelector<HTMLInputElement>('input[type="file"]');
     expect(fileInput).toBeTruthy();
     const file = new File(['image'], 'upload.jpg', { type: 'image/jpeg' });
     Object.defineProperty(fileInput!, 'files', {
@@ -1368,10 +1636,9 @@ describe('TechnicalSpecimenRegistrationView', () => {
     await flushView();
     await flushView();
 
-    expect(mockUploadTechnicalSpecimenRegistrationMediaAsset).toHaveBeenCalledWith(
-      'CASE-1',
-      file,
-    );
+    expect(
+      mockUploadTechnicalSpecimenRegistrationMediaAsset,
+    ).toHaveBeenCalledWith('CASE-1', file);
     expect(document.body.textContent).toContain('upload.jpg');
 
     findButton('删除图片').click();
@@ -1394,26 +1661,26 @@ describe('TechnicalSpecimenRegistrationView', () => {
       '[data-testid="media-panel-shell"]',
     );
     expect(mediaShell).toBeTruthy();
-    expect(mediaShell?.getAttribute('data-expanded')).toBe('false');
+    expect(mediaShell?.dataset.expanded).toBe('false');
     expect(mediaShell?.textContent).toContain('暂无登记图片');
     expect(mediaShell?.textContent).not.toContain('导入图片');
 
     mediaShell!.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
     await flushView();
 
-    expect(mediaShell?.getAttribute('data-expanded')).toBe('true');
+    expect(mediaShell?.dataset.expanded).toBe('true');
     expect(mediaShell?.textContent).toContain('导入图片');
 
     mediaShell!.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
     await flushView();
 
-    expect(mediaShell?.getAttribute('data-expanded')).toBe('false');
+    expect(mediaShell?.dataset.expanded).toBe('false');
 
     app.unmount();
     root.remove();
   });
 
-  it('completes registration and jumps to task pool', async () => {
+  it('completes registration and stays on the registration workstation', async () => {
     const { app, root } = mountView();
     await flushView();
 
@@ -1429,13 +1696,11 @@ describe('TechnicalSpecimenRegistrationView', () => {
     expect(mockCompleteTechnicalSpecimenRegistration).toHaveBeenCalledWith(
       'CASE-1',
       {
+        applicationType: 'ROUTINE',
         terminalCode: 'T-M3-SPEC-REG',
       },
     );
-    expect(mockGoToTasks).toHaveBeenCalledWith({
-      mode: 'queue',
-      pathologyNo: 'BL-20260601-001',
-    });
+    expect(mockGoToTasks).not.toHaveBeenCalled();
 
     app.unmount();
     root.remove();

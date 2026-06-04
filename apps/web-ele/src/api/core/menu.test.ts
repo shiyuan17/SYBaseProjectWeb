@@ -15,8 +15,8 @@ import {
 import {
   M5_ARCHIVE_PAGE_AUTHORITIES,
   M5_EQUIPMENT_PAGE_AUTHORITIES,
-  M5_RESOURCE_PAGE_AUTHORITIES,
   M5_REAGENT_PAGE_AUTHORITIES,
+  M5_RESOURCE_PAGE_AUTHORITIES,
 } from '#/modules/operation-support/constants';
 import { M2_PERMISSION_CODES } from '#/modules/specimen-workflow/constants';
 import { M1_PERMISSION_CODES } from '#/modules/system-management/constants';
@@ -482,8 +482,7 @@ describe('mapMenuViewsToRoutes', () => {
             path: '/technical-workflow/special-orders',
           }),
           expect.objectContaining({
-            component:
-              '/modules/technical-workflow/views/IhcWorkstationView',
+            component: '/modules/technical-workflow/views/IhcWorkstationView',
             meta: expect.objectContaining({
               keepAlive: true,
               title: '免疫组化工作站',
@@ -749,62 +748,62 @@ describe('mapMenuViewsToRoutes', () => {
 
     expect(routes).toEqual(
       expect.arrayContaining([
-      expect.objectContaining({
-        name: 'OperationSupportRoot',
-        path: '/operation-support',
-        redirect: '/operation-support/archive',
-        children: [
-          expect.objectContaining({
-            meta: expect.objectContaining({
-              keepAlive: true,
+        expect.objectContaining({
+          name: 'OperationSupportRoot',
+          path: '/operation-support',
+          redirect: '/operation-support/archive',
+          children: [
+            expect.objectContaining({
+              meta: expect.objectContaining({
+                keepAlive: true,
+              }),
+              name: 'ArchiveManagement',
+              path: '/operation-support/archive',
             }),
-            name: 'ArchiveManagement',
-            path: '/operation-support/archive',
-          }),
-          expect.objectContaining({
-            meta: expect.objectContaining({
-              keepAlive: true,
+            expect.objectContaining({
+              meta: expect.objectContaining({
+                keepAlive: true,
+              }),
+              name: 'BorrowManagement',
+              path: '/operation-support/borrow',
             }),
-            name: 'BorrowManagement',
-            path: '/operation-support/borrow',
-          }),
-        ],
-      }),
-      expect.objectContaining({
-        name: 'OperationResourceRoot',
-        path: '/operation-resources',
-        redirect: '/operation-resources/equipment',
-        children: expect.arrayContaining([
-          expect.objectContaining({
-            meta: expect.objectContaining({
-              keepAlive: true,
+          ],
+        }),
+        expect.objectContaining({
+          name: 'OperationResourceRoot',
+          path: '/operation-resources',
+          redirect: '/operation-resources/equipment',
+          children: expect.arrayContaining([
+            expect.objectContaining({
+              meta: expect.objectContaining({
+                keepAlive: true,
+              }),
+              name: 'EquipmentManagement',
+              path: '/operation-resources/equipment',
             }),
-            name: 'EquipmentManagement',
-            path: '/operation-resources/equipment',
-          }),
-          expect.objectContaining({
-            meta: expect.objectContaining({
-              keepAlive: true,
+            expect.objectContaining({
+              meta: expect.objectContaining({
+                keepAlive: true,
+              }),
+              name: 'ReagentConsumableManagement',
+              path: '/operation-resources/reagents',
             }),
-            name: 'ReagentConsumableManagement',
-            path: '/operation-resources/reagents',
-          }),
-          expect.objectContaining({
-            meta: expect.objectContaining({
-              keepAlive: true,
+            expect.objectContaining({
+              meta: expect.objectContaining({
+                keepAlive: true,
+              }),
+              name: 'HazardousChemicalsManagement',
+              path: '/operation-resources/hazardous-chemicals',
             }),
-            name: 'HazardousChemicalsManagement',
-            path: '/operation-resources/hazardous-chemicals',
-          }),
-          expect.objectContaining({
-            meta: expect.objectContaining({
-              keepAlive: true,
+            expect.objectContaining({
+              meta: expect.objectContaining({
+                keepAlive: true,
+              }),
+              name: 'MedicalWasteManagement',
+              path: '/operation-resources/medical-waste',
             }),
-            name: 'MedicalWasteManagement',
-            path: '/operation-resources/medical-waste',
-          }),
-        ]),
-      }),
+          ]),
+        }),
       ]),
     );
   });
@@ -1278,7 +1277,9 @@ describe('m6 route access', () => {
     expect(statisticsRoute?.meta?.authority).toEqual([
       ...M6_STATISTICS_PAGE_AUTHORITIES,
     ]);
-    expect(m6Root?.meta?.authority).toContain(M6_PERMISSION_CODES.STAT_REPORT_QUERY);
+    expect(m6Root?.meta?.authority).toContain(
+      M6_PERMISSION_CODES.STAT_REPORT_QUERY,
+    );
     expect(m6Root?.meta?.authority).not.toContain(
       M6_PERMISSION_CODES.BILLING_RECONCILE,
     );

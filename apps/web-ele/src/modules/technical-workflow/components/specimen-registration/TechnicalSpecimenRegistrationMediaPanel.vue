@@ -45,7 +45,9 @@ function handleFileChange(event: Event) {
 </script>
 
 <template>
-  <section class="flex min-h-[480px] flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+  <section
+    class="flex min-h-[480px] flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+  >
     <input
       ref="fileInputRef"
       accept="image/*"
@@ -61,7 +63,9 @@ function handleFileChange(event: Event) {
       type="button"
     >
       <span class="text-sm font-semibold text-slate-900">图片区</span>
-      <span class="rounded-full bg-slate-100 px-2 py-1 text-[11px] text-slate-500">
+      <span
+        class="rounded-full bg-slate-100 px-2 py-1 text-[11px] text-slate-500"
+      >
         {{ mediaAssets.length }} 张
       </span>
       <span class="w-full truncate text-xs text-slate-400">
@@ -96,7 +100,9 @@ function handleFileChange(event: Event) {
 
       <div class="flex-1 px-4 py-4">
         <template v-if="mediaAssets.length > 0">
-          <div class="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+          <div
+            class="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
+          >
             <img
               v-if="activeAsset"
               :alt="activeAsset.fileName || '登记图片'"
@@ -108,8 +114,8 @@ function handleFileChange(event: Event) {
             <button
               v-for="asset in mediaAssets"
               :key="asset.assetId"
+              class="overflow-hidden rounded-2xl border p-2 text-left transition"
               :class="[
-                'overflow-hidden rounded-2xl border p-2 text-left transition',
                 asset.assetId === activeAsset?.assetId
                   ? 'border-sky-500 bg-sky-50'
                   : 'border-slate-200 bg-white hover:border-slate-300',

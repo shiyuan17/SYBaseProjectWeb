@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type {
   PendingTechnicalTaskItem,
+  TechnicalTrackingSlideSummary,
   TechnicalTrackingView as TechnicalTrackingViewModel,
 } from '../types/technical-workflow';
 
@@ -27,9 +28,10 @@ import {
   ElSelect,
   ElTable,
   ElTableColumn,
-  ElTag,
   ElTooltip,
 } from 'element-plus';
+
+import { reportInlineErrorDisabled } from '#/utils/error-feedback';
 
 import {
   getTechnicalTracking,
@@ -38,10 +40,9 @@ import {
 } from '../api/technical-workflow-service';
 import StainingProcessDialog from '../components/StainingProcessDialog.vue';
 import TechnicalTaskStartDialog from '../components/TechnicalTaskStartDialog.vue';
-import { reportInlineErrorDisabled } from '#/utils/error-feedback';
-
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import {
+  formatDateTime,
   formatNullable,
   formatObjectType,
   formatQualityStatus,
@@ -65,8 +66,8 @@ interface StainingTaskRow {
   patientName: string;
   slideNo: string;
   slideType: string;
-  sliceOperation: string;
-  stainingOperation: string;
+  sliceOperation: OperationInfo;
+  stainingOperation: OperationInfo;
   task: PendingTechnicalTaskItem;
 }
 
@@ -79,8 +80,14 @@ interface CompletedSlideRow {
   slideNo: string;
   slideStatus: null | string;
   slideType: string;
-  sliceOperation: string;
-  stainingOperation: string;
+  sliceOperation: OperationInfo;
+  stainingOperation: OperationInfo;
+}
+
+interface OperationInfo {
+  fallback: string;
+  operatedAt: string;
+  operatorName: string;
 }
 
 const STAINING_TYPE_OPTIONS = [
@@ -120,73 +127,93 @@ const pendingRows = computed<StainingTaskRow[]>(() =>
   pendingItems.value.map((task, index) => ({
     index: index + 1,
     pathologyNo: formatNullable(task.pathologyNo),
-    patientId: '-',
-    patientName: '-',
-    sliceOperation: formatNullable(task.sampledByName ?? task.assignedToName),
+    patientId: formatNullable(task.patientId),
+    patientName: formatNullable(task.patientName),
     slideNo: formatNullable(task.objectId),
     slideType: formatObjectType(task.objectType),
-    stainingOperation: formatTaskStatus(task.taskStatus),
+    sliceOperation: buildOperationInfo({
+      fallback: formatNullable(task.sampledByName),
+      operatedAt: task.sampledAt,
+      operatorName: task.sampledByName,
+    }),
+    stainingOperation: buildOperationInfo({
+      fallback: formatTaskStatus(task.taskStatus),
+      operatedAt: task.completedAt ?? task.startedAt,
+      operatorName: task.assignedToName,
+    }),
     task,
   })),
 );
 
-const selectedPendingRow = computed(
-  () => selectedPendingRows.value[0] ?? null,
-);
-const selectedTask = computed(
-  () => selectedPendingRow.value?.task ?? null,
-);
+const selectedPendingRow = computed(() => selectedPendingRows.value[0] ?? null);
+const selectedTask = computed(() => selectedPendingRow.value?.task ?? null);
 
 const completedRows = computed<CompletedSlideRow[]>(() =>
-  (trackingResult.value?.slides ?? []).map((slide, index) => ({
-    index: index + 1,
-    pathologyNo: formatNullable(
-      trackingResult.value?.pathologyNo ?? selectedTask.value?.pathologyNo,
-    ),
-    patientId: '-',
-    patientName: '-',
-    slideId: slide.slideId,
-    slideNo: formatNullable(slide.slideNo),
-    slideStatus: slide.slideStatus,
-    slideType: formatObjectType('SLIDE'),
-    sliceOperation: formatQualityStatus(slide.qualityStatus),
-    stainingOperation: formatSlideStatus(slide.slideStatus),
-  })),
+  (trackingResult.value?.slides ?? []).map((slide, index) => {
+    const slicingTask = findSlideTechnicalTask(slide, 'SLICING');
+    const stainingTask = findSlideTechnicalTask(slide, 'STAINING');
+
+    return {
+      index: index + 1,
+      pathologyNo: formatNullable(
+        trackingResult.value?.pathologyNo ?? selectedTask.value?.pathologyNo,
+      ),
+      patientId: formatNullable(selectedTask.value?.patientId),
+      patientName: formatNullable(selectedTask.value?.patientName),
+      slideId: slide.slideId,
+      slideNo: formatNullable(slide.slideNo),
+      slideStatus: slide.slideStatus,
+      slideType: formatObjectType('SLIDE'),
+      sliceOperation: buildOperationInfo({
+        fallback: formatQualityStatus(slide.qualityStatus),
+        operatedAt: slicingTask?.completedAt ?? slicingTask?.startedAt,
+        operatorName: slicingTask?.assignedToName,
+      }),
+      stainingOperation: buildOperationInfo({
+        fallback: formatSlideStatus(slide.slideStatus),
+        operatedAt: stainingTask?.completedAt ?? stainingTask?.startedAt,
+        operatorName: stainingTask?.assignedToName,
+      }),
+    };
+  }),
 );
 
 const visiblePendingRows = computed(() => pendingRows.value);
 const overdueCount = computed(
   () => pendingRows.value.filter((row) => row.task.timedOut).length,
 );
-const stainedCount = computed(
-  () =>
-    completedRows.value.filter((row) => row.slideStatus === 'STAINED').length,
-);
 const selectedCompletedCount = computed(
   () => selectedCompletedRows.value.length,
+);
+const stainingInProgressCount = computed(
+  () =>
+    pendingRows.value.filter((row) => row.task.taskStatus === 'IN_PROGRESS')
+      .length,
+);
+const pendingStartCount = computed(
+  () =>
+    pendingRows.value.filter((row) => row.task.taskStatus === 'PENDING').length,
 );
 const pendingStats = computed(() => [
   {
     accent: 'sky',
-    label: '当日应切总数',
+    label: '待染色总数',
     value: total.value,
   },
   {
     accent: 'emerald',
-    label: '已切',
-    value: pendingRows.value.filter(
-      (row) => row.task.taskStatus === 'IN_PROGRESS',
-    ).length,
+    label: '染色中',
+    value: stainingInProgressCount.value,
   },
   {
     accent: 'amber',
-    label: '未出片',
-    value: total.value,
+    label: '待开始',
+    value: pendingStartCount.value,
   },
   {
     accent: 'rose',
-    label: '已出片',
-    value: stainedCount.value,
+    label: '超时风险',
+    value: overdueCount.value,
   },
 ]);
 
@@ -203,6 +230,55 @@ const canProcessSelectedTask = computed(
 const canStartSelectedTask = computed(
   () => selectedTask.value?.taskStatus === 'PENDING',
 );
+
+function buildOperationInfo(options: {
+  fallback?: null | string;
+  operatedAt?: null | string;
+  operatorName?: null | string;
+}): OperationInfo {
+  return {
+    fallback: formatNullable(options.fallback),
+    operatedAt: formatDateTime(options.operatedAt),
+    operatorName: formatNullable(options.operatorName),
+  };
+}
+
+function hasOperationDetail(operation: OperationInfo) {
+  return operation.operatorName !== '-' || operation.operatedAt !== '-';
+}
+
+function getOperationTitle(operation: OperationInfo) {
+  return operation.operatorName === '-'
+    ? operation.fallback
+    : operation.operatorName;
+}
+
+function shouldShowOperationTime(operation: OperationInfo) {
+  return operation.operatedAt !== '-';
+}
+
+function findSlideTechnicalTask(
+  slide: TechnicalTrackingSlideSummary,
+  taskType: 'SLICING' | 'STAINING',
+) {
+  const tasks =
+    trackingResult.value?.technicalTasks.filter(
+      (task) => task.taskType === taskType,
+    ) ?? [];
+  const relatedObjectIds = new Set(
+    [
+      slide.slideId,
+      slide.slideNo,
+      slide.embeddingBoxId,
+      slide.specimenId,
+    ].filter(Boolean),
+  );
+
+  return (
+    tasks.find((task) => relatedObjectIds.has(task.objectId?.trim() ?? '')) ??
+    (tasks.length === 1 ? tasks[0] : null)
+  );
+}
 
 function selectPendingRow(row: null | StainingTaskRow, openProcess = false) {
   if (!row) {
@@ -281,7 +357,11 @@ async function loadPendingData(options?: {
       if (matchedRow) {
         selectPendingRow(
           matchedRow,
-          Boolean(options?.openProcess || pendingAutoProcessTaskId.value || deepLinkedTaskId),
+          Boolean(
+            options?.openProcess ||
+            pendingAutoProcessTaskId.value ||
+            deepLinkedTaskId,
+          ),
         );
       } else {
         selectPendingRow(null);
@@ -427,14 +507,21 @@ onBeforeUnmount(() => {
                 placeholder="病人ID/病理号"
                 @keyup.enter="handleQuery"
               />
-              <ElSelect v-model="filters.stainingType">
-                <ElOption
-                  v-for="option in STAINING_TYPE_OPTIONS"
-                  :key="option.value"
-                  :label="option.label"
-                  :value="option.value"
-                />
-              </ElSelect>
+              <ElTooltip
+                content="染色类型筛选待后端分类口径确认"
+                placement="top"
+              >
+                <span class="inline-flex">
+                  <ElSelect v-model="filters.stainingType" disabled>
+                    <ElOption
+                      v-for="option in STAINING_TYPE_OPTIONS"
+                      :key="option.value"
+                      :label="option.label"
+                      :value="option.value"
+                    />
+                  </ElSelect>
+                </span>
+              </ElTooltip>
               <ElButton :loading="loading" @click="handleQuery">查询</ElButton>
               <ElButton @click="openMoreActions">更多</ElButton>
             </div>
@@ -485,7 +572,10 @@ onBeforeUnmount(() => {
               </p>
             </div>
             <div class="legacy-panel__meta">
-              <span>当前页 {{ filters.page }} / {{ Math.max(1, Math.ceil(total / filters.size)) }}</span>
+              <span>
+                当前页 {{ filters.page }} /
+                {{ Math.max(1, Math.ceil(total / filters.size)) }}
+              </span>
               <span>可选任务 {{ visiblePendingRows.length }}</span>
             </div>
           </header>
@@ -504,73 +594,79 @@ onBeforeUnmount(() => {
               @row-click="handlePendingRowClick"
               @selection-change="handlePendingSelectionChange"
             >
-              <ElTableColumn
-                type="selection"
-                width="42"
-              />
-              <ElTableColumn
-                label="序"
-                type="index"
-                width="52"
-              />
-              <ElTableColumn
-                label="玻片编号"
-                min-width="140"
-              >
+              <ElTableColumn type="selection" width="42" />
+              <ElTableColumn label="序" type="index" width="52" />
+              <ElTableColumn label="玻片编号" min-width="140">
                 <template #default="{ row }">
                   {{ row.slideNo }}
                 </template>
               </ElTableColumn>
-              <ElTableColumn
-                label="玻片类型"
-                min-width="120"
-              >
+              <ElTableColumn label="玻片类型" min-width="120">
                 <template #default="{ row }">
                   {{ row.slideType }}
                 </template>
               </ElTableColumn>
-              <ElTableColumn
-                label="病理号"
-                min-width="140"
-              >
+              <ElTableColumn label="病理号" min-width="140">
                 <template #default="{ row }">
                   {{ row.pathologyNo }}
                 </template>
               </ElTableColumn>
-              <ElTableColumn
-                label="病人"
-                min-width="120"
-              >
+              <ElTableColumn label="病人" min-width="120">
                 <template #default="{ row }">
                   {{ row.patientName }}
                 </template>
               </ElTableColumn>
-              <ElTableColumn
-                label="主班备注"
-                min-width="180"
-              >
+              <ElTableColumn label="主班备注" min-width="180">
                 <template #default="{ row }">
-                  {{ formatNullable(row.task.productionRemarks ?? row.task.remarks) }}
+                  {{
+                    formatNullable(
+                      row.task.productionRemarks ?? row.task.remarks,
+                    )
+                  }}
                 </template>
               </ElTableColumn>
-              <ElTableColumn
-                label="切片操作"
-                min-width="120"
-              >
+              <ElTableColumn label="切片操作" min-width="120">
                 <template #default="{ row }">
-                  {{ row.sliceOperation }}
-                </template>
-              </ElTableColumn>
-              <ElTableColumn
-                label="出片操作"
-                min-width="120"
-              >
-                <template #default="{ row }">
-                  <ElTag
-                    :type="row.task.taskStatus === 'IN_PROGRESS' ? 'warning' : 'info'"
+                  <div
+                    class="legacy-operation-cell"
+                    :class="{
+                      'legacy-operation-cell--muted': !hasOperationDetail(
+                        row.sliceOperation,
+                      ),
+                    }"
                   >
-                    {{ row.stainingOperation }}
-                  </ElTag>
+                    <div class="legacy-operation-cell__operator">
+                      {{ getOperationTitle(row.sliceOperation) }}
+                    </div>
+                    <div
+                      v-if="shouldShowOperationTime(row.sliceOperation)"
+                      class="legacy-operation-cell__time"
+                    >
+                      {{ row.sliceOperation.operatedAt }}
+                    </div>
+                  </div>
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="出片操作" min-width="120">
+                <template #default="{ row }">
+                  <div
+                    class="legacy-operation-cell"
+                    :class="{
+                      'legacy-operation-cell--muted': !hasOperationDetail(
+                        row.stainingOperation,
+                      ),
+                    }"
+                  >
+                    <div class="legacy-operation-cell__operator">
+                      {{ getOperationTitle(row.stainingOperation) }}
+                    </div>
+                    <div
+                      v-if="shouldShowOperationTime(row.stainingOperation)"
+                      class="legacy-operation-cell__time"
+                    >
+                      {{ row.stainingOperation.operatedAt }}
+                    </div>
+                  </div>
                 </template>
               </ElTableColumn>
             </ElTable>
@@ -590,7 +686,10 @@ onBeforeUnmount(() => {
           </div>
         </section>
 
-        <section v-loading="trackingLoading" class="legacy-panel legacy-panel--right">
+        <section
+          v-loading="trackingLoading"
+          class="legacy-panel legacy-panel--right"
+        >
           <header class="legacy-panel__header legacy-panel__header--right">
             <div>
               <h3 class="legacy-panel__title">已完成出片</h3>
@@ -599,7 +698,14 @@ onBeforeUnmount(() => {
               </p>
             </div>
             <div class="legacy-panel__meta legacy-panel__meta--right">
-              <span>当前病例 {{ formatNullable(trackingResult?.pathologyNo ?? selectedTask?.pathologyNo) }}</span>
+              <span>
+                当前病例
+                {{
+                  formatNullable(
+                    trackingResult?.pathologyNo ?? selectedTask?.pathologyNo,
+                  )
+                }}
+              </span>
               <span>本次清零后扫码数（{{ selectedCompletedCount }}）</span>
             </div>
           </header>
@@ -610,7 +716,10 @@ onBeforeUnmount(() => {
             <ElButton disabled>校验</ElButton>
           </div>
 
-          <div v-if="visibleCompletedRows.length > 0" class="legacy-table-shell">
+          <div
+            v-if="visibleCompletedRows.length > 0"
+            class="legacy-table-shell"
+          >
             <ElTable
               border
               :data="visibleCompletedRows"
@@ -618,65 +727,70 @@ onBeforeUnmount(() => {
               table-layout="fixed"
               @selection-change="handleCompletedSelectionChange"
             >
-              <ElTableColumn
-                type="selection"
-                width="42"
-              />
-              <ElTableColumn
-                label="序"
-                type="index"
-                width="52"
-              />
-              <ElTableColumn
-                label="玻片编号"
-                min-width="140"
-              >
+              <ElTableColumn type="selection" width="42" />
+              <ElTableColumn label="序" type="index" width="52" />
+              <ElTableColumn label="玻片编号" min-width="140">
                 <template #default="{ row }">
                   {{ row.slideNo }}
                 </template>
               </ElTableColumn>
-              <ElTableColumn
-                label="玻片类型"
-                min-width="120"
-              >
+              <ElTableColumn label="玻片类型" min-width="120">
                 <template #default="{ row }">
                   {{ row.slideType }}
                 </template>
               </ElTableColumn>
-              <ElTableColumn
-                label="病理号"
-                min-width="140"
-              >
+              <ElTableColumn label="病理号" min-width="140">
                 <template #default="{ row }">
                   {{ row.pathologyNo }}
                 </template>
               </ElTableColumn>
-              <ElTableColumn
-                label="病人"
-                min-width="120"
-              >
+              <ElTableColumn label="病人" min-width="120">
                 <template #default="{ row }">
                   {{ row.patientName }}
                 </template>
               </ElTableColumn>
-              <ElTableColumn
-                label="切片操作"
-                min-width="120"
-              >
+              <ElTableColumn label="切片操作" min-width="120">
                 <template #default="{ row }">
-                  {{ row.sliceOperation }}
+                  <div
+                    class="legacy-operation-cell"
+                    :class="{
+                      'legacy-operation-cell--muted': !hasOperationDetail(
+                        row.sliceOperation,
+                      ),
+                    }"
+                  >
+                    <div class="legacy-operation-cell__operator">
+                      {{ getOperationTitle(row.sliceOperation) }}
+                    </div>
+                    <div
+                      v-if="shouldShowOperationTime(row.sliceOperation)"
+                      class="legacy-operation-cell__time"
+                    >
+                      {{ row.sliceOperation.operatedAt }}
+                    </div>
+                  </div>
                 </template>
               </ElTableColumn>
-              <ElTableColumn
-                label="出片操作"
-                min-width="120"
-              >
+              <ElTableColumn label="出片操作" min-width="120">
                 <template #default="{ row }">
-                  <ElTag
-                    :type="row.slideStatus === 'STAINED' ? 'success' : 'info'"
+                  <div
+                    class="legacy-operation-cell"
+                    :class="{
+                      'legacy-operation-cell--muted': !hasOperationDetail(
+                        row.stainingOperation,
+                      ),
+                    }"
                   >
-                    {{ row.stainingOperation }}
-                  </ElTag>
+                    <div class="legacy-operation-cell__operator">
+                      {{ getOperationTitle(row.stainingOperation) }}
+                    </div>
+                    <div
+                      v-if="shouldShowOperationTime(row.stainingOperation)"
+                      class="legacy-operation-cell__time"
+                    >
+                      {{ row.stainingOperation.operatedAt }}
+                    </div>
+                  </div>
                 </template>
               </ElTableColumn>
             </ElTable>
@@ -701,7 +815,9 @@ onBeforeUnmount(() => {
     <TechnicalTaskStartDialog
       v-model="startDialogVisible"
       confirm-text="开始染色"
-      :submit-action="(taskId, payload) => startSlideStaining({ ...payload, taskId })"
+      :submit-action="
+        (taskId, payload) => startSlideStaining({ ...payload, taskId })
+      "
       :success-message="(task) => `任务 ${task.id} 已开始染色`"
       :task="selectedTask"
       terminal-placeholder="染色终端编码"
@@ -720,9 +836,9 @@ onBeforeUnmount(() => {
 <style scoped>
 .legacy-staining-workbench {
   display: flex;
-  min-height: calc(100vh - 220px);
   flex-direction: column;
   gap: 16px;
+  min-height: calc(100vh - 220px);
 }
 
 .legacy-header,
@@ -820,8 +936,8 @@ onBeforeUnmount(() => {
 
 .legacy-action-row {
   display: flex;
-  justify-content: space-between;
   gap: 12px;
+  justify-content: space-between;
   padding-top: 14px;
   margin-top: 14px;
   border-top: 1px solid #e2e8f0;
@@ -838,13 +954,13 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   min-width: 20px;
-  margin-left: 6px;
   padding: 0 6px;
+  margin-left: 6px;
+  font-size: 12px;
+  line-height: 18px;
   color: #fff;
   background: #ef4444;
   border-radius: 999px;
-  font-size: 12px;
-  line-height: 18px;
 }
 
 .legacy-grid {
@@ -855,19 +971,19 @@ onBeforeUnmount(() => {
 
 .legacy-panel {
   display: flex;
-  min-width: 0;
   flex-direction: column;
+  min-width: 0;
   overflow: hidden;
 }
 
 .legacy-panel--right {
-  background: linear-gradient(180deg, #fbfdff 0%, #ffffff 100%);
+  background: linear-gradient(180deg, #fbfdff 0%, #fff 100%);
 }
 
 .legacy-panel__header {
   display: flex;
-  justify-content: space-between;
   gap: 12px;
+  justify-content: space-between;
   padding: 14px 16px 12px;
   background: linear-gradient(180deg, #f8fbff 0%, #eef4fa 100%);
   border-bottom: 1px solid #d8e4ef;
@@ -886,19 +1002,19 @@ onBeforeUnmount(() => {
 
 .legacy-panel__subtitle {
   margin: 4px 0 0;
-  color: #64748b;
   font-size: 12px;
   line-height: 18px;
+  color: #64748b;
 }
 
 .legacy-panel__meta {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
   gap: 6px;
-  color: #475569;
+  align-items: flex-end;
   font-size: 12px;
   line-height: 18px;
+  color: #475569;
   white-space: nowrap;
 }
 
@@ -915,6 +1031,29 @@ onBeforeUnmount(() => {
 
 .legacy-table-shell {
   min-height: 0;
+}
+
+.legacy-operation-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 20px;
+  color: #0f172a;
+  white-space: normal;
+}
+
+.legacy-operation-cell--muted {
+  color: #64748b;
+}
+
+.legacy-operation-cell__operator {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.legacy-operation-cell__time {
+  font-size: 13px;
+  color: #0f172a;
 }
 
 .legacy-panel :deep(.el-table) {

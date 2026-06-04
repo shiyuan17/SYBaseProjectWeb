@@ -5,7 +5,6 @@ import { useRouter } from 'vue-router';
 
 import { Fallback, Page } from '@vben/common-ui';
 
-
 import TechnicalWorkflowGuideSection from '../components/TechnicalWorkflowGuideSection.vue';
 import TechnicalWorkflowHeroSection from '../components/TechnicalWorkflowHeroSection.vue';
 import TechnicalWorkflowWorkspaceSection from '../components/TechnicalWorkflowWorkspaceSection.vue';
@@ -41,7 +40,10 @@ const {
 } = useTechnicalWorkflowEntry();
 
 function goToCurrentWorkflow() {
-  if (pendingSpecimenRegistrationCount.value > 0 && canAccessSpecimenRegistration.value) {
+  if (
+    pendingSpecimenRegistrationCount.value > 0 &&
+    canAccessSpecimenRegistration.value
+  ) {
     return navigation.goToSpecimenRegistration();
   }
   if (!currentWorkingBucket.value) {
@@ -110,7 +112,6 @@ function goToReworkEntry() {
         :badge-class="badgeClass"
         :risk-cards="riskCards"
       />
-
 
       <TechnicalWorkflowGuideSection
         :current-working-bucket="currentWorkingBucket"

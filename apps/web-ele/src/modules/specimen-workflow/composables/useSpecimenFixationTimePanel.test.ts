@@ -64,66 +64,112 @@ const {
       ],
     },
   ]),
-  listSpecimensMock: vi.fn(async ({ keyword }: { keyword?: string }) => {
-    const rows = [
-      {
-        abnormalFlag: false,
-        applicationId: 'APP-001',
-        applicationNo: 'M2-001',
-        barcode: 'BC-001',
-        fixationCompletedAt: '2026-05-26 09:00:00',
-        fixationStartedAt: '2026-05-26 08:30:00',
-        fixationStatus: 'COMPLETED',
-        labelPrintBatchNo: 'LB-001',
-        labelPrintStatus: 'FAILED',
-        latestTrackingAt: '2026-05-26 09:00:00',
-        patientName: 'Alice',
-        registeredAt: '2026-05-26 08:00:00',
-        specimenId: 'SPEC-001',
-        specimenName: '乳腺组织',
-        specimenNo: 'SP-001',
-        specimenStatus: 'FIXED',
-        specimenType: '常规',
-        verificationStatus: 'VERIFIED',
-      },
-      {
-        abnormalFlag: false,
-        applicationId: 'APP-002',
-        applicationNo: 'M2-002',
-        barcode: 'BC-002',
-        fixationCompletedAt: null,
-        fixationStartedAt: null,
-        fixationStatus: 'PENDING',
-        labelPrintBatchNo: 'LB-002',
-        labelPrintStatus: 'SUCCESS',
-        latestTrackingAt: '2026-05-26 09:20:00',
-        patientName: 'Bob',
-        registeredAt: '2026-05-26 08:20:00',
-        specimenId: 'SPEC-002',
-        specimenName: '肺组织',
-        specimenNo: 'SP-002',
-        specimenStatus: 'REGISTERED',
-        specimenType: '冰冻',
-        verificationStatus: 'VERIFIED',
-      },
-    ];
-    return {
-      items: rows.filter((item) =>
-        [item.barcode, item.specimenId, item.specimenNo].includes(
-          keyword ?? '',
+  listSpecimensMock: vi.fn(
+    async ({
+      applicationNo,
+      keyword,
+    }: {
+      applicationNo?: string;
+      keyword?: string;
+    }) => {
+      const rows = [
+        {
+          abnormalFlag: false,
+          applicationId: 'APP-001',
+          applicationNo: 'M2-001',
+          barcode: 'BC-001',
+          fixationCompletedAt: '2026-05-26 09:00:00',
+          fixationStartedAt: '2026-05-26 08:30:00',
+          fixationStatus: 'COMPLETED',
+          labelPrintBatchNo: 'LB-001',
+          labelPrintStatus: 'FAILED',
+          latestTrackingAt: '2026-05-26 09:00:00',
+          patientName: 'Alice',
+          registeredAt: '2026-05-26 08:00:00',
+          specimenId: 'SPEC-001',
+          specimenName: '乳腺组织',
+          specimenNo: 'SP-001',
+          specimenStatus: 'FIXED',
+          specimenType: '常规',
+          verificationStatus: 'VERIFIED',
+        },
+        {
+          abnormalFlag: false,
+          applicationId: 'APP-002',
+          applicationNo: 'M2-002',
+          barcode: 'BC-002',
+          fixationCompletedAt: null,
+          fixationStartedAt: null,
+          fixationStatus: 'PENDING',
+          labelPrintBatchNo: 'LB-002',
+          labelPrintStatus: 'SUCCESS',
+          latestTrackingAt: '2026-05-26 09:20:00',
+          patientName: 'Bob',
+          registeredAt: '2026-05-26 08:20:00',
+          specimenId: 'SPEC-002',
+          specimenName: '肺组织',
+          specimenNo: 'SP-002',
+          specimenStatus: 'REGISTERED',
+          specimenType: '冰冻',
+          verificationStatus: 'VERIFIED',
+        },
+        {
+          abnormalFlag: false,
+          applicationId: 'APP-002',
+          applicationNo: 'M2-002',
+          barcode: 'BC-003',
+          fixationCompletedAt: null,
+          fixationStartedAt: null,
+          fixationStatus: 'PENDING',
+          labelPrintBatchNo: 'LB-002',
+          labelPrintStatus: 'SUCCESS',
+          latestTrackingAt: '2026-05-26 09:25:00',
+          patientName: 'Bob',
+          registeredAt: '2026-05-26 08:25:00',
+          specimenId: 'SPEC-003',
+          specimenName: '纵隔淋巴结',
+          specimenNo: 'SP-003',
+          specimenStatus: 'REGISTERED',
+          specimenType: '常规',
+          verificationStatus: 'VERIFIED',
+        },
+      ];
+      if (applicationNo) {
+        const applicationRows = rows.filter(
+          (item) => item.applicationNo === applicationNo,
+        );
+        return {
+          items: applicationRows,
+          page: 1,
+          size: 100,
+          summary: {
+            abnormalCount: 0,
+            labelPrintedCount: 0,
+            pendingLabelCount: 0,
+            totalCount: applicationRows.length,
+          },
+          total: applicationRows.length,
+        };
+      }
+
+      return {
+        items: rows.filter((item) =>
+          [item.barcode, item.specimenId, item.specimenNo].includes(
+            keyword ?? '',
+          ),
         ),
-      ),
-      page: 1,
-      size: 100,
-      summary: {
-        abnormalCount: 0,
-        labelPrintedCount: 0,
-        pendingLabelCount: 0,
-        totalCount: 0,
-      },
-      total: 1,
-    };
-  }),
+        page: 1,
+        size: 100,
+        summary: {
+          abnormalCount: 0,
+          labelPrintedCount: 0,
+          pendingLabelCount: 0,
+          totalCount: 0,
+        },
+        total: 1,
+      };
+    },
+  ),
   loadWorkflowReferenceOptionsMock: vi.fn(async () => ({
     clinicalSymptoms: [],
     collectionModes: [],
@@ -307,7 +353,7 @@ describe('useSpecimenFixationTimePanel', () => {
     vi.clearAllMocks();
   });
 
-  it('loads default fixation liquid options and completes fixation by scan', async () => {
+  it('loads default fixation liquid options and queries application rows by specimenNo', async () => {
     const wrapper = mountComposable();
     await flushComposable();
 
@@ -325,23 +371,22 @@ describe('useSpecimenFixationTimePanel', () => {
     await state.handleCompleteFixationByScan();
     await flushComposable();
 
-    expect(state.queueItems.value).toHaveLength(1);
+    expect(state.queueItems.value).toHaveLength(2);
     expect(state.queueItems.value[0]?.specimenName).toBe('肺组织');
     expect(state.queueItems.value[0]?.patientIdLabel).toBe('PAT-002');
     expect(state.queueItems.value[0]?.surgeryName).toBe('惠侨楼 - 手术室 2');
+    expect(state.queueItems.value[0]?.fixationStatus).toBe('PENDING');
+    expect(state.queueItems.value[1]?.specimenName).toBe('纵隔淋巴结');
+    expect(state.queueItems.value[1]?.fixationStatus).toBe('PENDING');
     expect(state.resolveFixationLiquidLabel('FORMALIN')).toBe(
       '10% 中性福尔马林',
     );
-    expect(completeFixationMock).toHaveBeenCalledWith({
-      fixationLiquidType: 'FORMALIN',
-      remarks: '扫码完成固定',
-      specimenBarcode: 'BC-002',
-    });
+    expect(completeFixationMock).not.toHaveBeenCalled();
 
     wrapper.destroy();
   });
 
-  it('prevents duplicate queue rows', async () => {
+  it('replaces queue rows when querying another specimenNo', async () => {
     const wrapper = mountComposable();
     await flushComposable();
 
@@ -354,17 +399,19 @@ describe('useSpecimenFixationTimePanel', () => {
     await state.handleCompleteFixationByScan();
     await flushComposable();
 
-    state.scanInput.value = 'SP-002';
+    expect(state.queueItems.value).toHaveLength(2);
+
+    state.scanInput.value = 'SP-001';
     await state.handleCompleteFixationByScan();
     await flushComposable();
 
-    expect(warningMock).toHaveBeenCalledWith('该标本已在当前列表中');
     expect(state.queueItems.value).toHaveLength(1);
+    expect(state.queueItems.value[0]?.specimenNo).toBe('SP-001');
 
     wrapper.destroy();
   });
 
-  it('blocks completed specimens before calling the fixation completion api', async () => {
+  it('shows completed specimen rows and blocks repeated fixation', async () => {
     const wrapper = mountComposable();
     await flushComposable();
 
@@ -379,7 +426,60 @@ describe('useSpecimenFixationTimePanel', () => {
 
     expect(warningMock).toHaveBeenCalledWith('标本已完成固定，无需重复操作');
     expect(completeFixationMock).not.toHaveBeenCalled();
-    expect(state.queueItems.value).toHaveLength(0);
+    expect(state.queueItems.value).toHaveLength(1);
+    expect(state.queueItems.value[0]?.specimenNo).toBe('SP-001');
+
+    wrapper.destroy();
+  });
+
+  it('confirms fixation only for selected rows', async () => {
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    state.scanInput.value = 'SP-002';
+    await state.handleCompleteFixationByScan();
+    await flushComposable();
+
+    state.handleSelectionChange([state.queueItems.value[0]!]);
+    await state.handleConfirmFixation();
+    await flushComposable();
+
+    expect(completeFixationMock).toHaveBeenCalledTimes(1);
+    expect(completeFixationMock).toHaveBeenCalledWith({
+      fixationLiquidType: 'FORMALIN',
+      remarks: '手动确认固定',
+      specimenBarcode: 'BC-002',
+    });
+    expect(state.queueItems.value[0]?.fixationStatus).toBe('COMPLETED');
+    expect(state.queueItems.value[1]?.fixationStatus).toBe('PENDING');
+    expect(successMock).toHaveBeenCalledWith('已完成 1 条标本固定');
+
+    wrapper.destroy();
+  });
+
+  it('warns when confirming fixation without selected rows', async () => {
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    state.scanInput.value = 'SP-002';
+    await state.handleCompleteFixationByScan();
+    await flushComposable();
+
+    await state.handleConfirmFixation();
+    await flushComposable();
+
+    expect(completeFixationMock).not.toHaveBeenCalled();
+    expect(warningMock).toHaveBeenCalledWith('请先勾选需要固定的标本');
 
     wrapper.destroy();
   });

@@ -10,9 +10,9 @@ import {
   createInputStub,
   createOptionStub,
   createSelectStub,
-  createTagStub,
   createTableColumnStub,
   createTableStub,
+  createTagStub,
 } from '../test-utils/component-stubs';
 
 const tableRowContextKey = vi.hoisted(() =>

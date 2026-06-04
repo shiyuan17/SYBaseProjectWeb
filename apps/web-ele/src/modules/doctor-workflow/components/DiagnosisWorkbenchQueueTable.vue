@@ -29,12 +29,12 @@ const emit = defineEmits<{
     class="flex min-h-0 flex-col rounded-lg border border-border bg-card shadow-sm"
   >
     <header
-      class="flex items-center justify-between border-b border-border px-4 py-3"
+      class="flex items-center justify-between border-b border-border px-3 py-2"
     >
       <div>
         <h3 class="text-sm font-semibold text-foreground">诊断队列</h3>
         <p class="mt-1 text-xs text-muted-foreground">
-          左侧队列仅展示当前待处理诊断任务列表，不扩展接口外字段。
+          当前筛选条件下的待处理任务，点击即可切换右侧病例。
         </p>
       </div>
     </header>
@@ -45,7 +45,7 @@ const emit = defineEmits<{
       data-testid="diagnosis-workbench-queue"
     >
       <div
-        class="grid min-w-[780px] grid-cols-[130px_88px_90px_120px_120px_120px] gap-0 border-b border-border bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground"
+        class="grid min-w-[620px] grid-cols-[118px_80px_86px_104px_112px_112px] gap-0 border-b border-border bg-muted/40 px-3 py-2 text-xs font-medium text-muted-foreground"
       >
         <div>病理号</div>
         <div>患者</div>
@@ -60,7 +60,7 @@ const emit = defineEmits<{
           v-for="item in items"
           :key="item.id"
           :data-testid="`diagnosis-workbench-queue-row-${item.id}`"
-          class="grid min-w-[780px] grid-cols-[130px_88px_90px_120px_120px_120px] items-center gap-0 border-b border-border/70 px-4 py-2 text-left transition hover:bg-primary/5"
+          class="grid min-w-[620px] grid-cols-[118px_80px_86px_104px_112px_112px] items-center gap-0 border-b border-border/70 px-3 py-2 text-left transition hover:bg-primary/5"
           :class="
             item.id === selectedTaskId
               ? 'bg-primary/10 shadow-[inset_3px_0_0_0_var(--el-color-primary)]'
@@ -69,13 +69,13 @@ const emit = defineEmits<{
           type="button"
           @click="emit('select', item)"
         >
-          <div class="truncate text-sm font-medium text-foreground">
+          <div class="truncate text-xs font-semibold text-foreground">
             {{ formatNullable(item.pathologyNo) }}
           </div>
-          <div class="truncate text-sm text-foreground">
+          <div class="truncate text-xs text-foreground">
             {{ formatNullable(item.patientName) }}
           </div>
-          <div class="text-sm">
+          <div class="text-xs">
             <ElTag
               :type="getDiagnosisTaskTypeTagType(item.taskType)"
               effect="plain"
@@ -84,7 +84,7 @@ const emit = defineEmits<{
               {{ formatDiagnosticTaskType(item.taskType) }}
             </ElTag>
           </div>
-          <div class="text-sm">
+          <div class="text-xs">
             <ElTag
               :type="getDiagnosisTaskStatusTagType(item.taskStatus)"
               size="small"
@@ -92,10 +92,10 @@ const emit = defineEmits<{
               {{ formatDiagnosticTaskStatus(item.taskStatus) }}
             </ElTag>
           </div>
-          <div class="truncate text-sm text-foreground">
+          <div class="truncate text-xs text-foreground">
             {{ formatNullable(item.diagnosisDoctorName) }}
           </div>
-          <div class="truncate text-sm text-foreground">
+          <div class="truncate text-xs text-foreground">
             {{ formatNullable(item.primaryDoctorName) }}
           </div>
         </button>

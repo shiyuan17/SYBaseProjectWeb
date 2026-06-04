@@ -47,4 +47,3 @@ export function getDehydrationTaskRemark(task: PendingTechnicalTaskItem) {
 export function getDehydrationTaskOperator(task: PendingTechnicalTaskItem) {
   return task.assignedToName || '';
 }
-

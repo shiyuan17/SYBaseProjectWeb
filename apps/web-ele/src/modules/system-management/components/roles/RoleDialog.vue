@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { RoleFormState } from '../../composables/useRolesPage';
 
+import { computed } from 'vue';
+
 import {
   ElButton,
   ElDialog,
@@ -9,7 +11,6 @@ import {
   ElInput,
   ElSwitch,
 } from 'element-plus';
-import { computed } from 'vue';
 
 const props = defineProps<{
   mode: 'create' | 'edit';
@@ -21,12 +22,27 @@ const props = defineProps<{
 const emit = defineEmits<{
   submit: [];
   'update:modelValue': [value: boolean];
+  'update:roleForm': [value: RoleFormState];
 }>();
 
 const dialogVisible = computed({
   get: () => props.modelValue,
   set: (value: boolean) => emit('update:modelValue', value),
 });
+
+function createRoleFormModel<Key extends keyof RoleFormState>(key: Key) {
+  return computed({
+    get: () => props.roleForm[key],
+    set: (value: RoleFormState[Key]) =>
+      emit('update:roleForm', { ...props.roleForm, [key]: value }),
+  });
+}
+
+const roleNameModel = createRoleFormModel('roleName');
+const roleTypeModel = createRoleFormModel('roleType');
+const dataScopeModel = createRoleFormModel('dataScope');
+const remarksModel = createRoleFormModel('remarks');
+const enabledModel = createRoleFormModel('enabled');
 </script>
 
 <template>
@@ -37,30 +53,27 @@ const dialogVisible = computed({
   >
     <ElForm label-width="96px">
       <ElFormItem label="角色名称" required>
-        <ElInput v-model="roleForm.roleName" placeholder="请输入角色名称" />
+        <ElInput v-model="roleNameModel" placeholder="请输入角色名称" />
       </ElFormItem>
       <ElFormItem label="角色类型">
         <ElInput
-          v-model="roleForm.roleType"
+          v-model="roleTypeModel"
           placeholder="例如 ROLE_PATHOLOGY_ADMIN"
         />
       </ElFormItem>
       <ElFormItem label="数据范围">
-        <ElInput
-          v-model="roleForm.dataScope"
-          placeholder="例如 ALL / DEPARTMENT"
-        />
+        <ElInput v-model="dataScopeModel" placeholder="例如 ALL / DEPARTMENT" />
       </ElFormItem>
       <ElFormItem label="备注">
         <ElInput
-          v-model="roleForm.remarks"
+          v-model="remarksModel"
           maxlength="500"
           placeholder="请输入备注"
           type="textarea"
         />
       </ElFormItem>
       <ElFormItem label="状态">
-        <ElSwitch v-model="roleForm.enabled" />
+        <ElSwitch v-model="enabledModel" />
       </ElFormItem>
     </ElForm>
 

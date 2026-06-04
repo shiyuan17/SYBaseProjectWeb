@@ -29,8 +29,8 @@ import {
   mapApplicationListItem,
   mapSpecimenManagementItem,
   mapSpecimenTrackingSummary,
-  resolveMockOperatorContext,
   resolveApplicationForLookup,
+  resolveMockOperatorContext,
   updateApplicationFromSpecimens,
 } from './specimen-workflow-mock-core';
 
@@ -207,12 +207,12 @@ export async function listSpecimensMock(
   params: SpecimenManagementListQuery,
 ): Promise<SpecimenManagementListPage> {
   const filteredItems = getMockState()
-    .specimens
-    .map((item) => mapSpecimenManagementItem(item))
+    .specimens.map((item) => mapSpecimenManagementItem(item))
     .filter((item) => {
       const keyword = normalizeText(params.keyword);
       const matchesKeyword =
         !keyword ||
+        includesText(item.specimenId, keyword) ||
         includesText(item.applicationNo, keyword) ||
         includesText(item.patientName, keyword) ||
         includesText(item.specimenNo, keyword) ||

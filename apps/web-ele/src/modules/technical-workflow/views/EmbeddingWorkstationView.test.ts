@@ -1,6 +1,6 @@
 import type { PendingTechnicalTaskItem } from '../types/technical-workflow';
 
-import { createApp, defineComponent, h, nextTick } from 'vue';
+import { createApp, defineComponent, h, KeepAlive, nextTick, ref } from 'vue';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -92,50 +92,6 @@ vi.mock('../components/EmbeddingQualityReviewDialog.vue', () => ({
   }),
 }));
 
-vi.mock('../components/EmbeddingWorkstationProcessPanel.vue', () => ({
-  default: defineComponent({
-    props: ['active', 'canComplete', 'selectedBlock', 'selectedTask'],
-    emits: ['cancel', 'complete'],
-    setup(props, { emit }) {
-      return () =>
-        h('section', { 'data-testid': 'process-panel' }, [
-          h('div', { 'data-testid': 'panel-task-id' }, props.selectedTask?.id ?? ''),
-          h(
-            'div',
-            { 'data-testid': 'panel-block-code' },
-            props.selectedBlock?.blockCode ?? '',
-          ),
-          h(
-            'div',
-            { 'data-testid': 'panel-active' },
-            String(props.active),
-          ),
-          h(
-            'div',
-            { 'data-testid': 'panel-can-complete' },
-            String(props.canComplete),
-          ),
-          h(
-            'button',
-            {
-              type: 'button',
-              onClick: () => emit('cancel'),
-            },
-            '取消包埋',
-          ),
-          h(
-            'button',
-            {
-              type: 'button',
-              onClick: () => emit('complete'),
-            },
-            '确认包埋完成(F9)',
-          ),
-        ]);
-    },
-  }),
-}));
-
 vi.mock('element-plus', () => {
   const ElAlert = defineComponent({
     props: ['title'],
@@ -159,6 +115,26 @@ vi.mock('element-plus', () => {
           },
           slots.default?.(),
         );
+    },
+  });
+
+  const ElCheckbox = defineComponent({
+    props: ['indeterminate', 'modelValue'],
+    emits: ['update:modelValue'],
+    setup(props, { attrs, emit }) {
+      return () =>
+        h('input', {
+          ...attrs,
+          'aria-checked': props.indeterminate ? 'mixed' : props.modelValue,
+          checked: props.modelValue,
+          type: 'checkbox',
+          onClick: (event: MouseEvent) => event.stopPropagation(),
+          onChange: (event: Event) =>
+            emit(
+              'update:modelValue',
+              (event.target as HTMLInputElement).checked,
+            ),
+        });
     },
   });
 
@@ -233,6 +209,7 @@ vi.mock('element-plus', () => {
   return {
     ElAlert,
     ElButton,
+    ElCheckbox,
     ElDrawer,
     ElEmpty,
     ElInput,
@@ -279,7 +256,11 @@ function createPendingTask(
   };
 }
 
-function createTracking(caseId: string, blockCode: string, embeddingRemarks: string) {
+function createTracking(
+  caseId: string,
+  blockCode: string,
+  embeddingRemarks: string,
+) {
   return {
     blocks: [
       {
@@ -388,12 +369,43 @@ function mountView() {
   return { app, root };
 }
 
+function mountKeepAliveView() {
+  const root = document.createElement('div');
+  document.body.append(root);
+  const visible = ref(true);
+
+  const app = createApp({
+    render: () =>
+      h(KeepAlive, null, {
+        default: () =>
+          visible.value
+            ? h(EmbeddingWorkstationView, { key: 'embedding-workstation' })
+            : h('div', { key: 'placeholder' }, 'hidden'),
+      }),
+  });
+
+  app.mount(root);
+  return {
+    app,
+    root,
+    setVisible: (nextVisible: boolean) => {
+      visible.value = nextVisible;
+    },
+  };
+}
+
 function findButton(text: string) {
   const button = [...document.querySelectorAll('button')].find(
     (item) => item.textContent?.trim() === text,
   );
   expect(button).toBeTruthy();
   return button as HTMLButtonElement;
+}
+
+function queryButton(text: string) {
+  return [...document.querySelectorAll('button')].find(
+    (item) => item.textContent?.trim() === text,
+  );
 }
 
 describe('EmbeddingWorkstationView', () => {
@@ -495,12 +507,45 @@ describe('EmbeddingWorkstationView', () => {
     expect(document.body.textContent).toContain('3');
     expect(document.body.textContent).toContain('BL-001');
     expect(document.body.textContent).toContain('任务备注-1');
+    expect(document.body.textContent).not.toContain(
+      '按病理号和病人ID筛选当前待处理包埋任务。',
+    );
+    expect(document.body.textContent).not.toContain(
+      '展示当日已包埋蜡块，可调整切片备注并核对大体所见。',
+    );
+    expect(findButton('确认包埋完成')).toBeTruthy();
+
+    const buttonLabels = [...document.querySelectorAll('button')].map((item) =>
+      item.textContent?.trim(),
+    );
+    const taskButtonIndex = buttonLabels.indexOf('包埋任务');
+    expect(buttonLabels.indexOf('包埋历史')).toBeGreaterThan(taskButtonIndex);
+    expect(buttonLabels.indexOf('评价记录')).toBeGreaterThan(taskButtonIndex);
 
     app.unmount();
     root.remove();
   });
 
-  it('updates right-side selection and clears current state', async () => {
+  it('refreshes workstation data when the cached tab is reactivated', async () => {
+    const { app, root, setVisible } = mountKeepAliveView();
+    await flushView();
+
+    expect(mockGetEmbeddingWorkstationSummary).toHaveBeenCalledTimes(1);
+    expect(mockListPendingTechnicalTasks).toHaveBeenCalledTimes(1);
+
+    setVisible(false);
+    await flushView();
+    setVisible(true);
+    await flushView();
+
+    expect(mockGetEmbeddingWorkstationSummary).toHaveBeenCalledTimes(2);
+    expect(mockListPendingTechnicalTasks).toHaveBeenCalledTimes(2);
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('updates left-side selection and clears current state', async () => {
     const { app, root } = mountView();
     await flushView();
 
@@ -509,21 +554,59 @@ describe('EmbeddingWorkstationView', () => {
     (rows[1] as HTMLTableRowElement).click();
     await flushView();
 
-    expect(
-      document.querySelector('[data-testid="panel-task-id"]')?.textContent,
-    ).toBe('TASK-2');
-    expect(
-      document.querySelector('[data-testid="panel-block-code"]')?.textContent,
-    ).toBe('B2');
+    findButton('包埋历史').click();
+    await flushView();
     expect(document.body.textContent).toContain('病例2包埋备注');
+    expect(document.body.textContent).toContain('汇总备注');
 
     findButton('确认清零').click();
     await flushView();
 
-    expect(
-      document.querySelector('[data-testid="panel-task-id"]')?.textContent,
-    ).toBe('');
-    expect(document.body.textContent).toContain('当前病例暂无已包埋记录');
+    expect(document.body.textContent).toContain('汇总备注');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('supports checkbox selection on pending and completed lists', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    const selectAllPending = document.querySelector<HTMLInputElement>(
+      'input[aria-label="选择全部待包埋任务"]',
+    );
+    const pendingB2 = document.querySelector<HTMLInputElement>(
+      'input[aria-label="选择待包埋任务 B2"]',
+    );
+    const selectAllCompleted = document.querySelector<HTMLInputElement>(
+      'input[aria-label="选择全部已包埋蜡块"]',
+    );
+    const completedX1 = document.querySelector<HTMLInputElement>(
+      'input[aria-label="选择已包埋蜡块 X1"]',
+    );
+
+    expect(selectAllPending).toBeTruthy();
+    expect(pendingB2).toBeTruthy();
+    expect(selectAllCompleted).toBeTruthy();
+    expect(completedX1).toBeTruthy();
+
+    pendingB2!.click();
+    await flushView();
+    expect(pendingB2!.checked).toBe(true);
+    expect(selectAllPending!.getAttribute('aria-checked')).toBe('mixed');
+
+    findButton('包埋历史').click();
+    await flushView();
+    expect(document.body.textContent).toContain('病例1包埋备注');
+
+    selectAllPending!.click();
+    await flushView();
+    expect(selectAllPending!.checked).toBe(true);
+
+    selectAllCompleted!.click();
+    await flushView();
+    expect(selectAllCompleted!.checked).toBe(true);
+    expect(completedX1!.checked).toBe(true);
 
     app.unmount();
     root.remove();
@@ -556,6 +639,13 @@ describe('EmbeddingWorkstationView', () => {
     await flushView();
 
     expect(document.body.textContent).toContain('已包埋蜡块列表');
+    expect(document.body.textContent).toContain('汇总蜡块');
+    expect(findButton('确认包埋完成')).toBeTruthy();
+    expect(queryButton('保存')).toBeUndefined();
+    expect(
+      document.querySelector<HTMLInputElement>('input[placeholder="大体所见"]')
+        ?.value,
+    ).toBe('汇总大体所见');
 
     const sliceNoticeSelect = document.querySelector(
       'select[aria-label="切片备注"]',
@@ -565,9 +655,9 @@ describe('EmbeddingWorkstationView', () => {
     sliceNoticeSelect.dispatchEvent(new Event('change'));
     await flushView();
 
-    expect(mockUpdateEmbeddingQualityReview).toHaveBeenCalledWith('EMB-A1', {
+    expect(mockUpdateEmbeddingQualityReview).toHaveBeenCalledWith('EMB-X1', {
       evaluationLevel: 'QUALIFIED',
-      samplingEvaluation: 'A1-评价',
+      samplingEvaluation: '汇总评价',
       sliceNotice: '皮肤',
     });
 
@@ -579,7 +669,7 @@ describe('EmbeddingWorkstationView', () => {
     root.remove();
   });
 
-  it('keeps start and complete embedding on the existing API chain', async () => {
+  it('starts and completes selected embedding from the top action', async () => {
     const { app, root } = mountView();
     await flushView();
 
@@ -591,20 +681,78 @@ describe('EmbeddingWorkstationView', () => {
       taskId: 'TASK-1',
       terminalCode: null,
     });
-
-    findButton('确认包埋完成(F9)').click();
-    await flushView();
-
     expect(mockCompleteEmbedding).toHaveBeenCalledWith(
       expect.objectContaining({
         blockCount: 1,
+        evaluationLevel: 'QUALIFIED',
         remarks: null,
         samplingBlockId: 'BLOCK-1',
+        samplingEvaluation: '合格',
         taskId: 'TASK-1',
         terminalCode: null,
       }),
     );
+    expect(mockGetEmbeddingWorkstationSummary).toHaveBeenCalledTimes(2);
+    expect(mockListPendingTechnicalTasks).toHaveBeenCalledTimes(2);
     expect(messageSuccess).toHaveBeenCalled();
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('starts and completes selected embedding from the completed-list action', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    findButton('确认包埋完成').click();
+    await flushView();
+
+    expect(mockStartEmbedding).toHaveBeenCalledWith({
+      remarks: null,
+      taskId: 'TASK-1',
+      terminalCode: null,
+    });
+    expect(mockCompleteEmbedding).toHaveBeenCalledWith(
+      expect.objectContaining({
+        evaluationLevel: 'QUALIFIED',
+        samplingBlockId: 'BLOCK-1',
+        samplingEvaluation: '合格',
+        taskId: 'TASK-1',
+      }),
+    );
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('completes an in-progress selected embedding without starting it again', async () => {
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [
+        createPendingTask({
+          startedAt: '2026-06-01T09:00:00',
+          taskStatus: 'IN_PROGRESS',
+        }),
+      ],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+
+    const { app, root } = mountView();
+    await flushView();
+
+    findButton('确认包埋完成').click();
+    await flushView();
+
+    expect(mockStartEmbedding).not.toHaveBeenCalled();
+    expect(mockCompleteEmbedding).toHaveBeenCalledWith(
+      expect.objectContaining({
+        evaluationLevel: 'QUALIFIED',
+        samplingBlockId: 'BLOCK-1',
+        samplingEvaluation: '合格',
+        taskId: 'TASK-1',
+      }),
+    );
 
     app.unmount();
     root.remove();

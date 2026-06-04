@@ -15,6 +15,7 @@ import {
 const { rowContextKey } = vi.hoisted(() => ({
   rowContextKey: Symbol('row-context'),
 }));
+const pageErrorTextMock = { value: '' };
 
 const mockHandleClearList = vi.fn();
 const mockHandleClearSelectionRows = vi.fn();
@@ -106,7 +107,7 @@ vi.mock('../composables/useSpecimenConfirmationPanel', () => ({
       handleSelectionChange: mockHandleSelectionChange,
       loading: ref(false),
       operatorForm,
-      pageError: ref(''),
+      pageError: ref(pageErrorTextMock.value),
       pagedItems: ref([row]),
       retryDialogVisible: ref(false),
       retryForm,
@@ -148,6 +149,7 @@ async function flush() {
 describe('SpecimenConfirmationPanel', () => {
   afterEach(() => {
     document.body.innerHTML = '';
+    pageErrorTextMock.value = '';
     vi.clearAllMocks();
   });
 
@@ -172,6 +174,18 @@ describe('SpecimenConfirmationPanel', () => {
       expect.objectContaining({
         specimenId: 'SPEC-001',
       }),
+    );
+
+    app.unmount();
+  });
+
+  it('shows the translated business error when pageError exists', async () => {
+    pageErrorTextMock.value = '标本尚未完成固定，不能进行标本确认。';
+    const { app, container } = mountView();
+    await flush();
+
+    expect(container.textContent).toContain(
+      '标本尚未完成固定，不能进行标本确认。',
     );
 
     app.unmount();

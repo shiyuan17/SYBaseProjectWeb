@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { SpecimenRemovalItem } from '../types/specimen-workflow';
+import type { RemovalDisplayRow } from '../utils/specimen-removal-display';
 
 import { ElButton, ElTable, ElTableColumn, ElTag } from 'element-plus';
 
@@ -7,16 +7,16 @@ import { formatDateTime, formatNullable } from '../utils/format';
 
 defineProps<{
   actionLoading: boolean;
-  canConfirmRemoval: (row: SpecimenRemovalItem) => boolean;
-  formatRemovalStatus: (row: SpecimenRemovalItem) => string;
-  items: SpecimenRemovalItem[];
+  canConfirmRemoval: (row: RemovalDisplayRow) => boolean;
+  formatRemovalStatus: (row: RemovalDisplayRow) => string;
+  items: RemovalDisplayRow[];
   loading: boolean;
   page: number;
   size: number;
 }>();
 
 const emit = defineEmits<{
-  confirmRemoval: [row: SpecimenRemovalItem];
+  confirmRemoval: [row: RemovalDisplayRow];
 }>();
 </script>
 
@@ -90,15 +90,15 @@ const emit = defineEmits<{
       <template #default="{ row }">
         <div class="flex min-h-8 items-center">
           <ElButton
-            v-if="canConfirmRemoval(row)"
             :loading="actionLoading"
+            :disabled="!canConfirmRemoval(row)"
+            :title="row.actionDisabledReason ?? ''"
             link
             type="primary"
             @click="emit('confirmRemoval', row)"
           >
             离体确认
           </ElButton>
-          <span v-else class="text-muted-foreground">-</span>
         </div>
       </template>
     </ElTableColumn>

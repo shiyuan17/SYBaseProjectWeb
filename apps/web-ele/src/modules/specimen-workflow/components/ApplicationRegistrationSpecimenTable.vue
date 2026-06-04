@@ -199,9 +199,7 @@ const {
       </div>
 
       <div v-if="props.items.length === 0" class="py-5">
-        <ElEmpty
-          description="暂无标本，请从下方字典或套餐中快速追加"
-        />
+        <ElEmpty description="暂无标本，请从下方字典或套餐中快速追加" />
       </div>
     </div>
   </WorkflowSectionCard>

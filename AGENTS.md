@@ -12,16 +12,16 @@
 
 统一使用 `pnpm`（Node 与 pnpm 版本约束见根 `package.json` 的 `engines`）。常用命令如下，完整验证策略见 `docs/CODING_RULES.md` 的「标准验证命令」：
 
-| 用途 | 命令 |
-| --- | --- |
-| 安装依赖 | `pnpm install` |
-| 启动开发（web-ele） | `pnpm dev:ele` |
-| 代码规范 | `pnpm lint` |
-| 类型检查 | `pnpm check:type` |
-| 综合静态检查（循环依赖 + 依赖 + 类型 + 拼写） | `pnpm check` |
-| 单元测试 | `pnpm test:unit` |
-| 端到端测试 | `pnpm test:e2e` |
-| 构建 | `pnpm build` |
+| 用途                                          | 命令              |
+| --------------------------------------------- | ----------------- |
+| 安装依赖                                      | `pnpm install`    |
+| 启动开发（web-ele）                           | `pnpm dev:ele`    |
+| 代码规范                                      | `pnpm lint`       |
+| 类型检查                                      | `pnpm check:type` |
+| 综合静态检查（循环依赖 + 依赖 + 类型 + 拼写） | `pnpm check`      |
+| 单元测试                                      | `pnpm test:unit`  |
+| 端到端测试                                    | `pnpm test:e2e`   |
+| 构建                                          | `pnpm build`      |
 
 > 改动逻辑或组件时，交付前至少运行 `pnpm lint` + `pnpm check:type` + 相关 `pnpm test:unit`，并在交付说明中回填结论。
 

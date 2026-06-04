@@ -20,14 +20,24 @@ import {
   ElSelect,
 } from 'element-plus';
 
+import { reportInlineErrorDisabled } from '#/utils/error-feedback';
+
 import {
   createReworkOrder,
   createSlideQcEvaluation,
 } from '../api/technical-workflow-service';
-import { reportInlineErrorDisabled } from '#/utils/error-feedback';
-
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import { formatNullable } from '../utils/format';
+
+const props = defineProps<{
+  modelValue: boolean;
+  row: null | SlicingWorkbenchRow;
+}>();
+
+const emit = defineEmits<{
+  submitted: [];
+  'update:modelValue': [value: boolean];
+}>();
 
 const QC_EVALUATION_RESULT_OPTIONS = [
   { label: '合格', value: 'QUALIFIED' },
@@ -40,16 +50,6 @@ const QC_REWORK_TYPE_OPTIONS = [
   { label: '重切', value: 'RESLICE' },
   { label: '重新取材', value: 'REGROSSING' },
 ] as const;
-
-const props = defineProps<{
-  modelValue: boolean;
-  row: null | SlicingWorkbenchRow;
-}>();
-
-const emit = defineEmits<{
-  submitted: [];
-  'update:modelValue': [value: boolean];
-}>();
 
 const dialogVisible = computed({
   get: () => props.modelValue,
@@ -221,15 +221,8 @@ watch(
               />
             </ElSelect>
           </ElFormItem>
-          <ElFormItem
-            v-if="requiresRework"
-            label="返工类型"
-            required
-          >
-            <ElSelect
-              v-model="form.reworkType"
-              placeholder="请选择返工类型"
-            >
+          <ElFormItem v-if="requiresRework" label="返工类型" required>
+            <ElSelect v-model="form.reworkType" placeholder="请选择返工类型">
               <ElOption
                 v-for="option in QC_REWORK_TYPE_OPTIONS"
                 :key="option.value"

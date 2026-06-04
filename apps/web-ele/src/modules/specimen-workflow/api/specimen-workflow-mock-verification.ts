@@ -47,12 +47,12 @@ import {
   mapSpecimenRemovalItem,
   mapSpecimenTrackingSummary,
   refreshTransportOrderStatus,
+  resolveMockOperatorContext,
   resolveSpecimenByBarcode,
   resolveSpecimenByIdentifier,
   resolveSpecimenCheckInStatus,
   resolveSpecimensBySpecimenNo,
   resolveSpecimenVerificationStatus,
-  resolveMockOperatorContext,
   updateApplicationFromSpecimens,
 } from './specimen-workflow-mock-core';
 

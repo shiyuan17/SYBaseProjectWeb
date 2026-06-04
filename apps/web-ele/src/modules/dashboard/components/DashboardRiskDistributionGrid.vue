@@ -5,7 +5,7 @@ import { ElButton, ElSkeleton } from 'element-plus';
 
 import { getVisualToneClasses } from '../utils/dashboard-visualization';
 
-const props = withDefaults(
+withDefaults(
   defineProps<{
     hasError?: boolean;
     items: DashboardRiskDistribution[];

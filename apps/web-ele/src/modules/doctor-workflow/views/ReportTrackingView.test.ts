@@ -110,4 +110,25 @@ describe('ReportTrackingView', () => {
 
     wrapper.unmount();
   });
+
+  it('shows page error when report tracking query fails', async () => {
+    mockRoute.query = { caseId: 'CASE-MISSING' };
+    getReportTrackingMock.mockRejectedValue({
+      response: {
+        data: {
+          code: 'RESOURCE_NOT_FOUND',
+          message: '未找到报告追踪病例',
+        },
+        status: 404,
+      },
+    });
+
+    const wrapper = await mountView();
+    await flush();
+
+    expect(getReportTrackingMock).toHaveBeenCalledWith('CASE-MISSING');
+    expect(wrapper.root.textContent).toContain('未找到报告追踪病例');
+
+    wrapper.unmount();
+  });
 });

@@ -6,6 +6,7 @@ import { computed } from 'vue';
 import { ElAlert, ElButton, ElDrawer, ElEmpty } from 'element-plus';
 
 import ApplicationRegistrationPatientPanel from '#/modules/specimen-workflow/components/ApplicationRegistrationPatientPanel.vue';
+
 import { formatPendingPathologyNo } from '../../utils/format';
 
 const props = defineProps<{
@@ -42,7 +43,10 @@ const visible = computed({
         <div>
           <div class="text-lg font-semibold text-slate-900">编辑申请</div>
           <p class="mt-1 text-sm text-slate-500">
-            当前病例 {{ formatPendingPathologyNo(pathologyNo) }}，在这里补充患者、传染、手术与妇科信息。
+            当前病例
+            {{
+              formatPendingPathologyNo(pathologyNo)
+            }}，在这里补充患者、传染、手术与妇科信息。
           </p>
         </div>
         <div class="flex shrink-0 items-center gap-2">

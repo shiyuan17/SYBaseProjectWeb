@@ -89,6 +89,21 @@ vi.mock('element-plus', () => {
     },
   });
 
+  const ElPagination = defineComponent({
+    props: ['currentPage', 'pageSize', 'total'],
+    emits: ['update:currentPage', 'update:pageSize'],
+    setup(props) {
+      return () =>
+        h(
+          'div',
+          {
+            'data-testid': 'pagination',
+          },
+          `total:${props.total};page:${props.currentPage};size:${props.pageSize}`,
+        );
+    },
+  });
+
   const ElTable = defineComponent({
     props: ['data'],
     emits: ['selection-change'],
@@ -121,7 +136,9 @@ vi.mock('element-plus', () => {
       return () =>
         h('div', [
           props.label ? h('span', props.label) : null,
-          ...getRows().flatMap((row, index) => slots.default?.({ row, $index: index }) ?? []),
+          ...getRows().flatMap(
+            (row, index) => slots.default?.({ row, $index: index }) ?? [],
+          ),
         ]);
     },
   });
@@ -134,6 +151,7 @@ vi.mock('element-plus', () => {
     ElMessage: {
       info: messageInfo,
     },
+    ElPagination,
     ElTable,
     ElTableColumn,
   };
@@ -162,37 +180,26 @@ describe('technical order workstation views', () => {
   });
 
   it.each([
-    [
-      RoutineOrderWorkstationView,
-      '常规医嘱工作站',
-      '确认',
-      '原病理号',
-    ],
-    [
-      SpecialOrderWorkstationView,
-      '特检医嘱工作站',
-      '确认',
-      '项目类型',
-    ],
+    [RoutineOrderWorkstationView, '常规医嘱工作站', '确认', '原病理号'],
+    [SpecialOrderWorkstationView, '特检医嘱工作站', '确认', '项目类型'],
     [IhcWorkstationView, '免疫组化工作站', '染色', '分配设备'],
     [CytologyWorkstationView, '细胞学工作站', '生成蜡块', '送检类型'],
-    [
-      LiquidCytologyWorkstationView,
-      '液基细胞学工作站',
-      '打印玻片',
-      '流程状态',
-    ],
-  ])('renders %s shell content', async (component, title, actionLabel, columnLabel) => {
-    const wrapper = renderView(component);
+    [LiquidCytologyWorkstationView, '液基细胞学工作站', '打印玻片', '流程状态'],
+  ])(
+    'renders %s shell content without page header block',
+    async (component, title, actionLabel, columnLabel) => {
+      const wrapper = renderView(component);
 
-    expect(wrapper.root.textContent).toContain(title);
-    expect(wrapper.root.textContent).toContain(actionLabel);
-    expect(wrapper.root.textContent).toContain(columnLabel);
-    expect(wrapper.root.textContent).toContain('首页');
-    expect(wrapper.root.textContent).toContain('共');
+      expect(wrapper.root.textContent).not.toContain(title);
+      expect(wrapper.root.textContent).toContain(actionLabel);
+      expect(wrapper.root.textContent).toContain(columnLabel);
+      expect(
+        wrapper.root.querySelector('[data-testid="pagination"]'),
+      ).not.toBeNull();
 
-    wrapper.unmount();
-  });
+      wrapper.unmount();
+    },
+  );
 
   it('filters local rows by search keyword and restores them when cleared', async () => {
     const wrapper = renderView(RoutineOrderWorkstationView);
@@ -226,7 +233,7 @@ describe('technical order workstation views', () => {
   it('keeps selection actions disabled until a row is selected and then shows placeholder feedback', async () => {
     const wrapper = renderView(RoutineOrderWorkstationView);
 
-    const confirmButton = Array.from(wrapper.root.querySelectorAll('button')).find(
+    const confirmButton = [...wrapper.root.querySelectorAll('button')].find(
       (button) => button.textContent?.includes('确认'),
     ) as HTMLButtonElement | undefined;
 
@@ -254,11 +261,14 @@ describe('technical order workstation views', () => {
   it('updates the summary when switching workday tabs and toggling checkbox filters', async () => {
     const wrapper = renderView(RoutineOrderWorkstationView);
 
-    expect(wrapper.root.textContent).toContain('共 3 条记录');
+    expect(
+      wrapper.root.querySelectorAll('[data-testid^="select-row-"]'),
+    ).toHaveLength(3);
+    expect(wrapper.root.textContent).toContain('total:3');
 
-    const rapidCheckbox = Array.from(wrapper.root.querySelectorAll('label')).find(
-      (label) => label.textContent?.includes('快速切片'),
-    )?.querySelector('input') as HTMLInputElement | null;
+    const rapidCheckbox = [...wrapper.root.querySelectorAll('label')]
+      .find((label) => label.textContent?.includes('快速切片'))
+      ?.querySelector('input') as HTMLInputElement | null;
 
     expect(rapidCheckbox).not.toBeNull();
 
@@ -266,20 +276,24 @@ describe('technical order workstation views', () => {
     rapidCheckbox!.dispatchEvent(new Event('change'));
     await nextTick();
 
-    expect(wrapper.root.textContent).toContain('共 1 条记录');
+    expect(
+      wrapper.root.querySelectorAll('[data-testid^="select-row-"]'),
+    ).toHaveLength(1);
+    expect(wrapper.root.textContent).toContain('total:1');
 
-    const previousDayButton = Array.from(
-      wrapper.root.querySelectorAll('button'),
-    ).find((button) => button.textContent?.includes('前1天')) as
-      | HTMLButtonElement
-      | undefined;
+    const previousDayButton = [...wrapper.root.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('前1天'),
+    ) as HTMLButtonElement | undefined;
 
     expect(previousDayButton).toBeDefined();
 
     previousDayButton?.click();
     await nextTick();
 
-    expect(wrapper.root.textContent).toContain('共 0 条记录');
+    expect(
+      wrapper.root.querySelectorAll('[data-testid^="select-row-"]'),
+    ).toHaveLength(0);
+    expect(wrapper.root.textContent).toContain('total:0');
 
     wrapper.unmount();
   });

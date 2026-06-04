@@ -1,6 +1,47 @@
 {
   "linear-token": "",
   "linear-api-url": "https://api.linear.app/graphql",
+  "linear-team-name": "Sidney",
   "linear-project-name": "JWBL",
-  "linear-backend-label": "frontend"
+  "linear-backend-label": "frontend",
+  "linear-labels": [
+    {
+      "name": "frontend",
+      "description": "Frontend workflow and UI tasks",
+      "color": "#0f766e"
+    }
+  ],
+  "linear-sync": {
+    "default-labels": ["frontend"]
+  },
+  "linear-plan": [
+    {
+      "phase": "Phase 1",
+      "domain": "technical-workflow",
+      "title": "修正技术标本登记申请类型筛选与分页口径",
+      "description": "背景：技术标本登记页当前在前端本地过滤 applicationType，但分页 total 来自后端原始查询，导致筛选结果、当前页和总数不一致。\n\n验收标准：\n- 前端查询参数包含 applicationType，清空筛选后恢复全量查询。\n- 后端 /api/v1/technical-specimen-registrations/pending 支持 applicationType 可选过滤。\n- 切换申请类型后，列表项、分页总数、当前选中病例保持一致。\n- 补充前端查询参数测试和后端待登记筛选测试。\n\n非目标：不重构技术登记工作台，不改变登记完成逻辑。",
+      "labels": ["frontend"]
+    },
+    {
+      "phase": "Phase 1",
+      "domain": "technical-workflow",
+      "title": "修正染色工作站统计与患者核对信息",
+      "description": "背景：染色工作站统计卡片存在不同来源混算，患者字段当前显示为占位符，不利于出片核对。\n\n验收标准：\n- 统计卡片使用同一待办/完成数据口径，不再出现未出片直接等于 total、已出片来自当前追踪病例的混算。\n- 技术任务待办响应增加可选 patientId/patientName，前端类型同步扩展并保留稳定兜底。\n- 染色待办列表展示患者姓名或稳定占位，查询和分页口径不被本地二次筛选破坏。\n- 补充前端染色页统计与患者字段测试。\n\n非目标：不补设备扫码、打印、完整染色类型后端分类统计。",
+      "labels": ["frontend"]
+    },
+    {
+      "phase": "Phase 1",
+      "domain": "technical-workflow",
+      "title": "收口切片工作站占位动作以保障主流程可用",
+      "description": "背景：切片工作站仍展示重打玻片、重新分片、重补台片、终止、取消完成等待补后端能力按钮，用户点击后无法闭环。\n\n验收标准：\n- 主页面不再展示待补后端能力的主要操作按钮。\n- 保留已接入的开始、完成、质控、追踪等主流程能力。\n- 对未接入异常动作不做伪实现，后续作为独立返工/异常闭环任务处理。\n- 补充页面测试，确保死按钮文案不再出现。\n\n非目标：不实现重切、重打、终止、取消完成的后端状态机。",
+      "labels": ["frontend"]
+    },
+    {
+      "phase": "Phase 1",
+      "domain": "doctor-workflow",
+      "title": "恢复报告追踪错误展示以支撑制片到诊断闭环",
+      "description": "背景：报告追踪页维护了 pageError，但错误提示组件被 v-if=false 硬编码隐藏，导致追踪失败时用户无反馈。\n\n验收标准：\n- ReportTrackingView 基于 pageError 展示错误提示。\n- 查询失败时页面展示错误，重置或清空查询后错误消失。\n- 补充报告追踪页失败与重置测试。\n\n非目标：不调整报告追踪接口协议，不重构医生工作台。",
+      "labels": ["frontend"]
+    }
+  ]
 }

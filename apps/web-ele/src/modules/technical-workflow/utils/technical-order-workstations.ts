@@ -6,7 +6,7 @@ import type {
 function buildSearchableText(row: Record<string, unknown>) {
   return Object.values(row)
     .filter((value) => value !== null && value !== undefined)
-    .map((value) => String(value))
+    .map(String)
     .join(' ')
     .toLowerCase();
 }
@@ -371,7 +371,8 @@ export const ROUTINE_ORDER_WORKSTATION_CONFIG: TechnicalWorkbenchPageConfig = {
   ],
   defaultPageSize: 30,
   defaultWorkday: 'today',
-  description: '按照旧工作站的操作顺序整理常规医嘱列表，保留高密度工具栏与单表格主视图。',
+  description:
+    '按照旧工作站的操作顺序整理常规医嘱列表，保留高密度工具栏与单表格主视图。',
   dayTabs: [
     { label: '前1天', value: 'previous' },
     { label: '今天', value: 'today' },
@@ -398,16 +399,37 @@ export const ROUTINE_ORDER_WORKSTATION_CONFIG: TechnicalWorkbenchPageConfig = {
   ],
   rows: ROUTINE_ORDER_ROWS,
   searchPlaceholder: '病理号/病人ID/原病理号',
+  showPageHeader: false,
   title: '常规医嘱工作站',
   toolbarGroups: [
     [
-      { hotkey: 'F8', id: 'routine-confirm', label: '确认', requiresSelection: true, tone: 'primary' },
+      {
+        hotkey: 'F8',
+        id: 'routine-confirm',
+        label: '确认',
+        requiresSelection: true,
+        tone: 'primary',
+      },
       { id: 'routine-print-slide', label: '打印玻片', requiresSelection: true },
-      { hotkey: 'F9', id: 'routine-release', label: '出片', requiresSelection: true },
-      { id: 'routine-stop', label: '终止', requiresSelection: true, tone: 'danger' },
+      {
+        hotkey: 'F9',
+        id: 'routine-release',
+        label: '出片',
+        requiresSelection: true,
+      },
+      {
+        id: 'routine-stop',
+        label: '终止',
+        requiresSelection: true,
+        tone: 'danger',
+      },
     ],
     [
-      { id: 'routine-print-label', label: '打印申请单标签', requiresSelection: true },
+      {
+        id: 'routine-print-label',
+        label: '打印申请单标签',
+        requiresSelection: true,
+      },
       { id: 'routine-merge', label: '相同项目合片' },
       { id: 'routine-unmerge', label: '取消合片' },
       { id: 'routine-export', label: '导出Excel' },
@@ -440,7 +462,8 @@ export const SPECIAL_ORDER_WORKSTATION_CONFIG: TechnicalWorkbenchPageConfig = {
   ],
   defaultPageSize: 100,
   defaultWorkday: 'today',
-  description: '延续常规医嘱页的信息密度，但突出项目类型、确认操作和撤销提醒等特检字段。',
+  description:
+    '延续常规医嘱页的信息密度，但突出项目类型、确认操作和撤销提醒等特检字段。',
   dayTabs: [
     { label: '前1天', value: 'previous' },
     { label: '今天', value: 'today' },
@@ -454,17 +477,38 @@ export const SPECIAL_ORDER_WORKSTATION_CONFIG: TechnicalWorkbenchPageConfig = {
   ],
   rows: SPECIAL_ORDER_ROWS,
   searchPlaceholder: '病理号/病人ID/病人',
+  showPageHeader: false,
   title: '特检医嘱工作站',
   toolbarGroups: [
     [
-      { hotkey: 'F8', id: 'special-confirm', label: '确认', requiresSelection: true, tone: 'primary' },
+      {
+        hotkey: 'F8',
+        id: 'special-confirm',
+        label: '确认',
+        requiresSelection: true,
+        tone: 'primary',
+      },
       { id: 'special-print-label', label: '打印标签', requiresSelection: true },
-      { hotkey: 'F9', id: 'special-release', label: '出片', requiresSelection: true },
-      { id: 'special-stop', label: '终止', requiresSelection: true, tone: 'danger' },
+      {
+        hotkey: 'F9',
+        id: 'special-release',
+        label: '出片',
+        requiresSelection: true,
+      },
+      {
+        id: 'special-stop',
+        label: '终止',
+        requiresSelection: true,
+        tone: 'danger',
+      },
     ],
     [
       { id: 'special-export', label: '导出Excel' },
-      { id: 'special-change-block', label: '改蜡块号', requiresSelection: true },
+      {
+        id: 'special-change-block',
+        label: '改蜡块号',
+        requiresSelection: true,
+      },
       { id: 'special-qc', label: '质控评价' },
     ],
   ],
@@ -493,7 +537,8 @@ export const IHC_WORKSTATION_CONFIG: TechnicalWorkbenchPageConfig = {
   ],
   defaultPageSize: 100,
   defaultWorkday: 'today',
-  description: '保留 Roche / Dako 入口和待确认计数，用统一 Web 骨架承载上机、染色与出片动作。',
+  description:
+    '保留 Roche / Dako 入口和待确认计数，用统一 Web 骨架承载上机、染色与出片动作。',
   dayTabs: [
     { label: '今天', value: 'today' },
     { label: '前1天', value: 'previous' },
@@ -523,12 +568,18 @@ export const IHC_WORKSTATION_CONFIG: TechnicalWorkbenchPageConfig = {
   ],
   rows: IHC_ROWS,
   searchPlaceholder: '病理号/检查项/病人',
+  showPageHeader: false,
   title: '免疫组化工作站',
   toolbarGroups: [
     [
       { id: 'ihc-roche', label: 'Roche标签' },
       { id: 'ihc-dako', label: 'Dako标签' },
-      { id: 'ihc-confirm', label: '确认', requiresSelection: true, tone: 'primary' },
+      {
+        id: 'ihc-confirm',
+        label: '确认',
+        requiresSelection: true,
+        tone: 'primary',
+      },
       { id: 'ihc-stain', label: '染色', requiresSelection: true },
       { id: 'ihc-release', label: '出片', requiresSelection: true },
     ],
@@ -559,7 +610,8 @@ export const CYTOLOGY_WORKSTATION_CONFIG: TechnicalWorkbenchPageConfig = {
   ],
   defaultPageSize: 100,
   defaultWorkday: 'today',
-  description: '围绕细胞学送检流转组织页面，保留生成蜡块、打印蜡块和延迟固定等传统入口。',
+  description:
+    '围绕细胞学送检流转组织页面，保留生成蜡块、打印蜡块和延迟固定等传统入口。',
   dayTabs: [
     { label: '前1天', value: 'previous' },
     { label: '今天', value: 'today' },
@@ -567,7 +619,11 @@ export const CYTOLOGY_WORKSTATION_CONFIG: TechnicalWorkbenchPageConfig = {
   ],
   emptyText: '当前日期暂无细胞学任务',
   queryActions: [
-    { id: 'cytology-generate-block', label: '生成蜡块', requiresSelection: true },
+    {
+      id: 'cytology-generate-block',
+      label: '生成蜡块',
+      requiresSelection: true,
+    },
     { id: 'cytology-print-block', label: '打印蜡块', requiresSelection: true },
     { id: 'cytology-pending-slide', label: '待打印玻片列表(0)' },
     { id: 'cytology-delay-fixation', label: '延迟固定' },
@@ -575,51 +631,75 @@ export const CYTOLOGY_WORKSTATION_CONFIG: TechnicalWorkbenchPageConfig = {
   ],
   rows: CYTOLOGY_ROWS,
   searchPlaceholder: '病人ID/病理号',
+  showPageHeader: false,
   title: '细胞学工作站',
   toolbarGroups: [
     [
       { id: 'cytology-qc', label: '质控评价' },
       { id: 'cytology-green-doctor', label: '特检医嘱' },
-      { id: 'cytology-release', label: '出片', requiresSelection: true, tone: 'primary' },
+      {
+        id: 'cytology-release',
+        label: '出片',
+        requiresSelection: true,
+        tone: 'primary',
+      },
     ],
   ],
 };
 
-export const LIQUID_CYTOLOGY_WORKSTATION_CONFIG: TechnicalWorkbenchPageConfig = {
-  columns: [
-    {
-      formatter: (_, rowIndex) => String(rowIndex + 1),
-      key: 'rowIndex',
-      label: '序',
-      width: 56,
-    },
-    { key: 'pathologyNo', label: '病理号', minWidth: 132 },
-    { key: 'patientName', label: '病人', minWidth: 90 },
-    { key: 'printedSlides', label: '已打玻片', minWidth: 96, align: 'center' },
-    { key: 'flowStatus', label: '流程状态', minWidth: 100 },
-    { key: 'patientId', label: '病人ID', minWidth: 100 },
-    { key: 'submitDept', label: '送检科室', minWidth: 120 },
-    { key: 'receiverName', label: '接收人', minWidth: 90 },
-    { key: 'releaseUser', label: '出片人', minWidth: 90 },
-  ],
-  defaultPageSize: 100,
-  defaultWorkday: 'today',
-  description: '保持液基细胞学页面的极简工具栏，只突出出片、打印玻片和过期任务入口。',
-  dayTabs: [
-    { label: '前1天', value: 'previous' },
-    { label: '今天', value: 'today' },
-    { label: '后1天', value: 'next' },
-  ],
-  emptyText: '当前日期暂无液基细胞学任务',
-  queryActions: [{ id: 'liquid-cytology-overdue', label: '过期任务' }],
-  rows: LIQUID_CYTOLOGY_ROWS,
-  searchPlaceholder: '病人ID/病理号',
-  title: '液基细胞学工作站',
-  toolbarGroups: [
-    [
-      { id: 'liquid-cytology-release', label: '出片', requiresSelection: true, tone: 'primary' },
-      { hotkey: 'F8', id: 'liquid-cytology-print-slide', label: '打印玻片', requiresSelection: true },
-      { id: 'liquid-cytology-qc', label: '质控评价' },
+export const LIQUID_CYTOLOGY_WORKSTATION_CONFIG: TechnicalWorkbenchPageConfig =
+  {
+    columns: [
+      {
+        formatter: (_, rowIndex) => String(rowIndex + 1),
+        key: 'rowIndex',
+        label: '序',
+        width: 56,
+      },
+      { key: 'pathologyNo', label: '病理号', minWidth: 132 },
+      { key: 'patientName', label: '病人', minWidth: 90 },
+      {
+        key: 'printedSlides',
+        label: '已打玻片',
+        minWidth: 96,
+        align: 'center',
+      },
+      { key: 'flowStatus', label: '流程状态', minWidth: 100 },
+      { key: 'patientId', label: '病人ID', minWidth: 100 },
+      { key: 'submitDept', label: '送检科室', minWidth: 120 },
+      { key: 'receiverName', label: '接收人', minWidth: 90 },
+      { key: 'releaseUser', label: '出片人', minWidth: 90 },
     ],
-  ],
-};
+    defaultPageSize: 100,
+    defaultWorkday: 'today',
+    description:
+      '保持液基细胞学页面的极简工具栏，只突出出片、打印玻片和过期任务入口。',
+    dayTabs: [
+      { label: '前1天', value: 'previous' },
+      { label: '今天', value: 'today' },
+      { label: '后1天', value: 'next' },
+    ],
+    emptyText: '当前日期暂无液基细胞学任务',
+    queryActions: [{ id: 'liquid-cytology-overdue', label: '过期任务' }],
+    rows: LIQUID_CYTOLOGY_ROWS,
+    searchPlaceholder: '病人ID/病理号',
+    showPageHeader: false,
+    title: '液基细胞学工作站',
+    toolbarGroups: [
+      [
+        {
+          id: 'liquid-cytology-release',
+          label: '出片',
+          requiresSelection: true,
+          tone: 'primary',
+        },
+        {
+          hotkey: 'F8',
+          id: 'liquid-cytology-print-slide',
+          label: '打印玻片',
+          requiresSelection: true,
+        },
+        { id: 'liquid-cytology-qc', label: '质控评价' },
+      ],
+    ],
+  };

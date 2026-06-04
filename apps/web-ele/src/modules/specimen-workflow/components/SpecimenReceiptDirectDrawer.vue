@@ -6,13 +6,7 @@ import type {
 
 import { computed } from 'vue';
 
-import {
-  ElButton,
-  ElDrawer,
-  ElForm,
-  ElFormItem,
-  ElTag,
-} from 'element-plus';
+import { ElButton, ElDrawer, ElForm, ElFormItem, ElTag } from 'element-plus';
 
 import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
 
@@ -75,9 +69,18 @@ const derivedAbnormalCount = computed(() =>
         <div
           class="flex flex-wrap items-center justify-start gap-3 border-border lg:justify-end lg:border-l lg:pl-4"
         >
-          <ElTag effect="plain" type="info">待提交 {{ draftItemCount }} 条</ElTag>
-          <ElTag :type="derivedAbnormalCount > 0 ? 'danger' : 'success'" effect="light">
-            {{ derivedAbnormalCount > 0 ? `自动异常 ${derivedAbnormalCount} 条` : '当前均为正常接收' }}
+          <ElTag effect="plain" type="info">
+            待提交 {{ draftItemCount }} 条
+          </ElTag>
+          <ElTag
+            :type="derivedAbnormalCount > 0 ? 'danger' : 'success'"
+            effect="light"
+          >
+            {{
+              derivedAbnormalCount > 0
+                ? `自动异常 ${derivedAbnormalCount} 条`
+                : '当前均为正常接收'
+            }}
           </ElTag>
           <span class="text-sm text-muted-foreground">
             拒收、退回或质控不合格提交后会自动标记异常

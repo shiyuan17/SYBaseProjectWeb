@@ -22,10 +22,10 @@ import {
   ElSelect,
 } from 'element-plus';
 
-import { createReworkOrder } from '../api/technical-workflow-service';
-import { QC_TYPE_OPTIONS, REWORK_TYPE_OPTIONS } from '../constants';
 import { reportInlineErrorDisabled } from '#/utils/error-feedback';
 
+import { createReworkOrder } from '../api/technical-workflow-service';
+import { QC_TYPE_OPTIONS, REWORK_TYPE_OPTIONS } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import { formatNullable } from '../utils/format';
 import {
@@ -255,7 +255,6 @@ watch(
     @closed="resetDialogState"
   >
     <div class="flex flex-col gap-4">
-
       <ElDescriptions :column="2" border>
         <ElDescriptionsItem label="病例编号">
           {{ formatNullable(caseId) }}

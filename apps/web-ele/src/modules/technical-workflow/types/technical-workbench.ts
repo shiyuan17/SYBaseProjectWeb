@@ -55,6 +55,7 @@ export interface TechnicalWorkbenchPageConfig {
   queryActions?: TechnicalWorkbenchAction[];
   rows: TechnicalWorkbenchRow[];
   searchPlaceholder: string;
+  showPageHeader?: boolean;
   title: string;
   toolbarGroups: TechnicalWorkbenchAction[][];
 }

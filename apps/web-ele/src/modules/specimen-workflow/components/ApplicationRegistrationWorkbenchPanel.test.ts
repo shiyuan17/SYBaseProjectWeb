@@ -274,20 +274,20 @@ vi.mock('./ApplicationRegistrationPatientPanel.vue', () => ({
                   props.roomLabel,
                 ].join('|')
               : 'EMPTY',
-            ),
-            h(
-              'button',
-              {
-                'data-testid': 'patient-save',
-                disabled: props.saveDisabled,
-                onClick: () => emit('save-patient-info'),
-                type: 'button',
-              },
-              props.saving ? '保存中' : '保存患者信息',
-            ),
-            h(
-              'button',
-              {
+          ),
+          h(
+            'button',
+            {
+              'data-testid': 'patient-save',
+              disabled: props.saveDisabled,
+              onClick: () => emit('save-patient-info'),
+              type: 'button',
+            },
+            props.saving ? '保存中' : '保存患者信息',
+          ),
+          h(
+            'button',
+            {
               'data-testid': 'patient-reprint',
               onClick: () => {
                 if (!props.record) {

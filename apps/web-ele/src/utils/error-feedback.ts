@@ -30,9 +30,9 @@ export function isRequestLikeError(error: unknown) {
 
   return Boolean(
     requestLikeError.isAxiosError ||
-      requestLikeError.response ||
-      requestLikeError.request ||
-      requestLikeError.config,
+    requestLikeError.response ||
+    requestLikeError.request ||
+    requestLikeError.config,
   );
 }
 
@@ -44,7 +44,9 @@ export function reportInlineErrorDisabled(
     return;
   }
 
-  const message = formatMessage ? formatMessage(error).trim() : resolveErrorMessage(error);
+  const message = formatMessage
+    ? formatMessage(error).trim()
+    : resolveErrorMessage(error);
 
   if (!message) {
     return;

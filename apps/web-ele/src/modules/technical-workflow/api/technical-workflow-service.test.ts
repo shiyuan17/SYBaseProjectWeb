@@ -1,4 +1,5 @@
 import type { Mock } from 'vitest';
+
 import type { TechnicalSpecimenRegistrationMaterial } from '../types/technical-workflow';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -9,13 +10,13 @@ import {
   assignTechnicalTask,
   cancelTechnicalSpecimenRegistrationMaterialVerification,
   claimTechnicalTask,
-  completeDehydrationBatch,
   completeDehydration,
-  completeTechnicalSpecimenRegistration,
+  completeDehydrationBatch,
   completeEmbedding,
   completeGrossing,
   completeSlicing,
   completeSlideStaining,
+  completeTechnicalSpecimenRegistration,
   createDehydrationBatch,
   createReworkOrder,
   createSlideQcEvaluation,
@@ -24,10 +25,11 @@ import {
   getGrossingWorkbenchContext,
   getSlicingWorkbench,
   getTechnicalSpecimenRegistrationApplicationWorkbench,
-  getTechnicalTracking,
   getTechnicalSpecimenRegistrationDetail,
+  getTechnicalTracking,
   listPendingTechnicalSpecimenRegistrations,
   listPendingTechnicalTasks,
+  listTechnicalSpecimenRegistrations,
   mapEmbeddingWorkstationSummaryResponse,
   mapGrossingWorkbenchContextResponse,
   mapPendingTechnicalSpecimenRegistrationPageResponse,
@@ -39,8 +41,8 @@ import {
   releaseTechnicalTask,
   saveTechnicalSpecimenRegistrationApplicationWorkbenchPatientInfo,
   saveTechnicalSpecimenRegistrationDetailSections,
-  startDehydrationBatch,
   startDehydration,
+  startDehydrationBatch,
   startEmbedding,
   startGrossing,
   startSlicing,
@@ -377,15 +379,15 @@ describe('technical-workflow-service requests', () => {
       workDate: '2026-06-01',
     });
 
-    await expect(
-      getEmbeddingWorkstationSummary('2026-06-01'),
-    ).resolves.toEqual({
-      completedCount: 1,
-      completedRecords: [],
-      pendingCount: 2,
-      pendingTasks: [],
-      workDate: '2026-06-01',
-    });
+    await expect(getEmbeddingWorkstationSummary('2026-06-01')).resolves.toEqual(
+      {
+        completedCount: 1,
+        completedRecords: [],
+        pendingCount: 2,
+        pendingTasks: [],
+        workDate: '2026-06-01',
+      },
+    );
 
     expect(requestClientMock.get).toHaveBeenCalledWith(
       '/v1/embeddings/workstation-summary',
@@ -415,6 +417,7 @@ describe('technical-workflow-service requests', () => {
     });
     await getTechnicalSpecimenRegistrationDetail('CASE-001');
     await completeTechnicalSpecimenRegistration('CASE-001', {
+      applicationType: 'CONSULTATION',
       remarks: '登记完成',
       terminalCode: 'T-1',
     });
@@ -437,8 +440,43 @@ describe('technical-workflow-service requests', () => {
     expect(requestClientMock.post).toHaveBeenCalledWith(
       '/v1/technical-specimen-registrations/CASE-001/complete',
       {
+        applicationType: 'CONSULTATION',
         remarks: '登记完成',
         terminalCode: 'T-1',
+      },
+    );
+  });
+
+  it('queries technical specimen registrations by registration status', async () => {
+    requestClientMock.get.mockResolvedValueOnce({
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
+
+    await listTechnicalSpecimenRegistrations({
+      applicationType: 'ROUTINE',
+      keyword: 'BL-001',
+      page: 1,
+      receivedFrom: '2026-06-01',
+      receivedTo: '2026-06-03',
+      registrationStatus: 'COMPLETED',
+      size: 20,
+    });
+
+    expect(requestClientMock.get).toHaveBeenCalledWith(
+      '/v1/technical-specimen-registrations',
+      {
+        params: {
+          applicationType: 'ROUTINE',
+          keyword: 'BL-001',
+          page: 1,
+          receivedFrom: '2026-06-01',
+          receivedTo: '2026-06-03',
+          registrationStatus: 'COMPLETED',
+          size: 20,
+        },
       },
     );
   });
@@ -818,9 +856,13 @@ describe('technical-workflow-service requests', () => {
     await verifyTechnicalSpecimenRegistrationMaterial('CASE-1', 'SP-1', {
       terminalCode: 'T-M3-SPEC-REG',
     });
-    await cancelTechnicalSpecimenRegistrationMaterialVerification('CASE-1', 'SP-1', {
-      terminalCode: 'T-M3-SPEC-REG',
-    });
+    await cancelTechnicalSpecimenRegistrationMaterialVerification(
+      'CASE-1',
+      'SP-1',
+      {
+        terminalCode: 'T-M3-SPEC-REG',
+      },
+    );
 
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       1,

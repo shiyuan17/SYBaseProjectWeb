@@ -1,6 +1,6 @@
-import type { ApplicationRegistrationWorkbenchRecord } from '#/modules/specimen-workflow/types/application-registration-workbench';
-
 import type { TechnicalSpecimenRegistrationWorkspace } from '../../types/technical-workflow';
+
+import type { ApplicationRegistrationWorkbenchRecord } from '#/modules/specimen-workflow/types/application-registration-workbench';
 
 import { createApp, h, nextTick, ref } from 'vue';
 
@@ -188,11 +188,42 @@ describe('TechnicalSpecimenRegistrationApplicationSummaryCard', () => {
     await flushView();
 
     expect(
-      root.querySelector<HTMLButtonElement>(
-        '[data-testid="application-type-SUPPLEMENTAL_REPORT"]',
-      )?.getAttribute('aria-pressed'),
+      root
+        .querySelector<HTMLButtonElement>(
+          '[data-testid="application-type-SUPPLEMENTAL_REPORT"]',
+        )
+        ?.getAttribute('aria-pressed'),
     ).toBe('true');
     expect(root.textContent).not.toContain('默认生成');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('prefers the selected registration application type over workspace defaults', async () => {
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    const app = createApp({
+      render() {
+        return h(TechnicalSpecimenRegistrationApplicationSummaryCard, {
+          record: createRecord(),
+          selectedApplicationType: 'CONSULTATION',
+          workspace: createWorkspace(),
+        });
+      },
+    });
+
+    app.mount(root);
+    await flushView();
+
+    expect(
+      root
+        .querySelector<HTMLButtonElement>(
+          '[data-testid="application-type-CONSULTATION"]',
+        )
+        ?.getAttribute('aria-pressed'),
+    ).toBe('true');
 
     app.unmount();
     root.remove();

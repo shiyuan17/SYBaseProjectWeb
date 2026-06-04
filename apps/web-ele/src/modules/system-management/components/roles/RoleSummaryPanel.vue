@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import type { RoleView } from '../../types/system-management';
 
-import { ElButton, ElDescriptions, ElDescriptionsItem, ElEmpty } from 'element-plus';
+import {
+  ElButton,
+  ElDescriptions,
+  ElDescriptionsItem,
+  ElEmpty,
+} from 'element-plus';
 
 import { M1_PERMISSION_CODES } from '../../constants';
 import { formatDateTime, formatNullable } from '../../utils/format';

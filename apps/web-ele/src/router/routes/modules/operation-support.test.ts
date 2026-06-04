@@ -4,8 +4,8 @@ import {
   M5_ARCHIVE_PAGE_AUTHORITIES,
   M5_EQUIPMENT_PAGE_AUTHORITIES,
   M5_PERMISSION_CODES,
-  M5_RESOURCE_PAGE_AUTHORITIES,
   M5_REAGENT_PAGE_AUTHORITIES,
+  M5_RESOURCE_PAGE_AUTHORITIES,
 } from '#/modules/operation-support/constants';
 
 import operationSupportRoutes from './operation-support';

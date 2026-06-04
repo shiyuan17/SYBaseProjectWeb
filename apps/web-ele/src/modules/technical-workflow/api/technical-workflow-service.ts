@@ -1,17 +1,13 @@
 import type {
-  ApplicationRegistrationWorkbenchRecord,
-  SaveApplicationRegistrationPatientInfoRequest,
-} from '#/modules/specimen-workflow/types/application-registration-workbench';
-
-import type {
   BatchOperatorRequest,
   CompleteDehydrationBatchRequest,
   CompleteTechnicalSpecimenRegistrationRequest,
+  CompleteTechnicalSpecimenRegistrationResult,
   CreateDehydrationBatchRequest,
   CreateReworkOrderRequest,
   CreateSlideQcEvaluationRequest,
-  DeleteTechnicalSpecimenRegistrationMediaAssetResult,
   DehydrationBatchResult,
+  DeleteTechnicalSpecimenRegistrationMediaAssetResult,
   EmbeddingCompleteRequest,
   EmbeddingQualityReviewRequest,
   EmbeddingQualityReviewResult,
@@ -19,37 +15,41 @@ import type {
   EmbeddingWorkstationSummary,
   ExecuteReworkOrderRequest,
   GrossingCompleteRequest,
-  GrossingWorkbenchContext,
   GrossingMediaAssetUploadResponse,
   GrossingResult,
-  PendingTechnicalTaskPage,
+  GrossingWorkbenchContext,
   PendingTechnicalSpecimenRegistrationPage,
   PendingTechnicalSpecimenRegistrationQuery,
+  PendingTechnicalTaskPage,
   PendingTechnicalTaskQuery,
   ReworkOrderResult,
   SaveTechnicalSpecimenRegistrationDetailSectionsRequest,
   SaveTechnicalSpecimenRegistrationMaterialsRequest,
   SlicingCompleteRequest,
+  SlicingResult,
   SlicingWorkbenchQuery,
   SlicingWorkbenchRow,
   SlicingWorkbenchStats,
   SlicingWorkbenchView,
-  SlicingResult,
   SlideQcEvaluationResult,
   SlideStainingCompleteRequest,
   SlideStainingResult,
   TaskOperationResult,
+  TechnicalSpecimenRegistrationDetail,
+  TechnicalSpecimenRegistrationMaterialVerificationRequest,
+  TechnicalSpecimenRegistrationWorkspace,
   TechnicalTaskAssignRequest,
   TechnicalTaskClaimRequest,
   TechnicalTaskPriorityRequest,
   TechnicalTaskReleaseRequest,
   TechnicalTaskStartRequest,
-  CompleteTechnicalSpecimenRegistrationResult,
-  TechnicalSpecimenRegistrationDetail,
-  TechnicalSpecimenRegistrationMaterialVerificationRequest,
-  TechnicalSpecimenRegistrationWorkspace,
   TechnicalTrackingView,
 } from '../types/technical-workflow';
+
+import type {
+  ApplicationRegistrationWorkbenchRecord,
+  SaveApplicationRegistrationPatientInfoRequest,
+} from '#/modules/specimen-workflow/types/application-registration-workbench';
 
 import { requestClient } from '#/api/request';
 
@@ -235,11 +235,13 @@ export function mapSlicingWorkbenchResponse(
   return {
     completedPage: response.completedPage ?? 1,
     completedSize: response.completedSize ?? 20,
-    completedTodayList: (response.completedTodayList ?? []).map(
-      mapSlicingWorkbenchRow,
+    completedTodayList: (response.completedTodayList ?? []).map((row) =>
+      mapSlicingWorkbenchRow(row),
     ),
     completedTotal: response.completedTotal ?? 0,
-    pendingList: (response.pendingList ?? []).map(mapSlicingWorkbenchRow),
+    pendingList: (response.pendingList ?? []).map((row) =>
+      mapSlicingWorkbenchRow(row),
+    ),
     pendingPage: response.pendingPage ?? 1,
     pendingSize: response.pendingSize ?? 20,
     pendingTotal: response.pendingTotal ?? 0,
@@ -356,13 +358,11 @@ export function mapTechnicalSpecimenRegistrationWorkspaceResponse(
     actionFlags: {
       canCompleteRegistration:
         response.actionFlags?.canCompleteRegistration ?? false,
-      canDeleteMediaAssets:
-        response.actionFlags?.canDeleteMediaAssets ?? false,
+      canDeleteMediaAssets: response.actionFlags?.canDeleteMediaAssets ?? false,
       canSaveDetailSections:
         response.actionFlags?.canSaveDetailSections ?? false,
       canSaveMaterials: response.actionFlags?.canSaveMaterials ?? false,
-      canUploadMediaAssets:
-        response.actionFlags?.canUploadMediaAssets ?? false,
+      canUploadMediaAssets: response.actionFlags?.canUploadMediaAssets ?? false,
     },
     basicInfo: {
       applicationNo: response.basicInfo?.applicationNo ?? null,
@@ -464,33 +464,50 @@ export async function getEmbeddingWorkstationSummary(workDate?: string) {
 export async function listPendingTechnicalSpecimenRegistrations(
   params: PendingTechnicalSpecimenRegistrationQuery,
 ) {
-  const response = await requestClient.get<PendingTechnicalSpecimenRegistrationPageResponse>(
-    '/v1/technical-specimen-registrations/pending',
-    { params },
-  );
+  const response =
+    await requestClient.get<PendingTechnicalSpecimenRegistrationPageResponse>(
+      '/v1/technical-specimen-registrations/pending',
+      { params },
+    );
+  return mapPendingTechnicalSpecimenRegistrationPageResponse(response);
+}
+
+export async function listTechnicalSpecimenRegistrations(
+  params: PendingTechnicalSpecimenRegistrationQuery,
+) {
+  const response =
+    await requestClient.get<PendingTechnicalSpecimenRegistrationPageResponse>(
+      '/v1/technical-specimen-registrations',
+      { params },
+    );
   return mapPendingTechnicalSpecimenRegistrationPageResponse(response);
 }
 
 export async function getTechnicalSpecimenRegistrationDetail(caseId: string) {
-  const response = await requestClient.get<TechnicalSpecimenRegistrationDetailResponse>(
-    `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}`,
-  );
+  const response =
+    await requestClient.get<TechnicalSpecimenRegistrationDetailResponse>(
+      `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}`,
+    );
   return mapTechnicalSpecimenRegistrationDetailResponse(response);
 }
 
-export async function getTechnicalSpecimenRegistrationWorkspace(caseId: string) {
-  const response = await requestClient.get<TechnicalSpecimenRegistrationWorkspaceResponse>(
-    `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/workspace`,
-  );
+export async function getTechnicalSpecimenRegistrationWorkspace(
+  caseId: string,
+) {
+  const response =
+    await requestClient.get<TechnicalSpecimenRegistrationWorkspaceResponse>(
+      `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/workspace`,
+    );
   return mapTechnicalSpecimenRegistrationWorkspaceResponse(response);
 }
 
 export async function getTechnicalSpecimenRegistrationApplicationWorkbench(
   caseId: string,
 ) {
-  const response = await requestClient.get<ApplicationRegistrationWorkbenchRecordResponse>(
-    `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/application-workbench`,
-  );
+  const response =
+    await requestClient.get<ApplicationRegistrationWorkbenchRecordResponse>(
+      `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/application-workbench`,
+    );
   return mapApplicationRegistrationWorkbenchRecordResponse(response);
 }
 
@@ -513,10 +530,11 @@ export async function saveTechnicalSpecimenRegistrationMaterials(
   caseId: string,
   data: SaveTechnicalSpecimenRegistrationMaterialsRequest,
 ) {
-  const response = await requestClient.put<TechnicalSpecimenRegistrationWorkspaceResponse>(
-    `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/materials`,
-    data,
-  );
+  const response =
+    await requestClient.put<TechnicalSpecimenRegistrationWorkspaceResponse>(
+      `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/materials`,
+      data,
+    );
   return mapTechnicalSpecimenRegistrationWorkspaceResponse(response);
 }
 
@@ -525,10 +543,11 @@ export async function verifyTechnicalSpecimenRegistrationMaterial(
   specimenId: string,
   data: TechnicalSpecimenRegistrationMaterialVerificationRequest,
 ) {
-  const response = await requestClient.post<TechnicalSpecimenRegistrationWorkspaceResponse>(
-    `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/materials/${encodeURIComponent(specimenId)}/verify`,
-    data,
-  );
+  const response =
+    await requestClient.post<TechnicalSpecimenRegistrationWorkspaceResponse>(
+      `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/materials/${encodeURIComponent(specimenId)}/verify`,
+      data,
+    );
   return mapTechnicalSpecimenRegistrationWorkspaceResponse(response);
 }
 
@@ -537,10 +556,11 @@ export async function cancelTechnicalSpecimenRegistrationMaterialVerification(
   specimenId: string,
   data: TechnicalSpecimenRegistrationMaterialVerificationRequest,
 ) {
-  const response = await requestClient.post<TechnicalSpecimenRegistrationWorkspaceResponse>(
-    `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/materials/${encodeURIComponent(specimenId)}/cancel-verification`,
-    data,
-  );
+  const response =
+    await requestClient.post<TechnicalSpecimenRegistrationWorkspaceResponse>(
+      `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/materials/${encodeURIComponent(specimenId)}/cancel-verification`,
+      data,
+    );
   return mapTechnicalSpecimenRegistrationWorkspaceResponse(response);
 }
 
@@ -548,13 +568,14 @@ export async function saveTechnicalSpecimenRegistrationDetailSections(
   caseId: string,
   data: SaveTechnicalSpecimenRegistrationDetailSectionsRequest,
 ) {
-  const response = await requestClient.request<TechnicalSpecimenRegistrationWorkspaceResponse>(
-    `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/detail-sections`,
-    {
-      data,
-      method: 'PATCH',
-    },
-  );
+  const response =
+    await requestClient.request<TechnicalSpecimenRegistrationWorkspaceResponse>(
+      `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/detail-sections`,
+      {
+        data,
+        method: 'PATCH',
+      },
+    );
   return mapTechnicalSpecimenRegistrationWorkspaceResponse(response);
 }
 
@@ -562,7 +583,9 @@ export async function uploadTechnicalSpecimenRegistrationMediaAsset(
   caseId: string,
   file: File,
 ) {
-  return requestClient.upload<TechnicalSpecimenRegistrationWorkspace['mediaAssets'][number]>(
+  return requestClient.upload<
+    TechnicalSpecimenRegistrationWorkspace['mediaAssets'][number]
+  >(
     `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/media-assets`,
     { file },
   );
@@ -679,7 +702,10 @@ export async function completeDehydrationBatch(
 }
 
 export async function startDehydration(data: TechnicalTaskStartRequest) {
-  return requestClient.post<TaskOperationResult>('/v1/dehydrations/start', data);
+  return requestClient.post<TaskOperationResult>(
+    '/v1/dehydrations/start',
+    data,
+  );
 }
 
 export async function completeDehydration(data: TechnicalTaskStartRequest) {

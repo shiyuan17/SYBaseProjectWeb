@@ -180,7 +180,7 @@ describe('workstation utilities', () => {
           pending: 1,
           taskType: 'GROSSING',
           timedOut: 0,
-          title: '取材描写',
+          title: '取材描写工作站',
         }),
         expect.objectContaining({
           pending: 1,

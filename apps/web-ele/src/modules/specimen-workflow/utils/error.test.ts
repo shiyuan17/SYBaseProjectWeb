@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { getWorkflowPageErrorMessage } from './error';
+import {
+  getWorkflowPageErrorMessage,
+  mapWorkflowEnglishErrorMessage,
+} from './error';
 
 describe('getWorkflowPageErrorMessage', () => {
   it('prefers flat error payload messages', () => {
@@ -53,6 +56,16 @@ describe('getWorkflowPageErrorMessage', () => {
     ).toBe('标本已完成入库，无需重复操作。');
     expect(
       getWorkflowPageErrorMessage(
+        new Error('Specimen must complete verification before check-in'),
+      ),
+    ).toBe('标本尚未完成核对，不能入库。');
+    expect(
+      getWorkflowPageErrorMessage(
+        new Error('Specimen must complete fixation before check-in'),
+      ),
+    ).toBe('标本尚未完成固定，不能入库。');
+    expect(
+      getWorkflowPageErrorMessage(
         new Error('Specimen must be confirmed before check-in'),
       ),
     ).toBe('标本尚未完成标本确认，不能入库。');
@@ -61,5 +74,13 @@ describe('getWorkflowPageErrorMessage', () => {
         new Error('Specimen already reached receipt terminal status'),
       ),
     ).toBe('标本已接收、拒收或退回，当前流程不可重复操作。');
+  });
+
+  it('maps application-wide check-in blocking errors to a chinese prompt', () => {
+    expect(
+      mapWorkflowEnglishErrorMessage(
+        'All specimens of the application must complete verification, fixation, and confirmation before check-in',
+      ),
+    ).toBe('当前申请单下仍有标本未完成核对、固定或标本确认，不能入库。');
   });
 });

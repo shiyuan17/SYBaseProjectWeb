@@ -335,8 +335,7 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
           path: '/technical-workflow/specimen-registration',
         },
         {
-          component:
-            '/modules/technical-workflow/views/TechnicalTasksView',
+          component: '/modules/technical-workflow/views/TechnicalTasksView',
           meta: {
             hideInMenu: true,
             icon: 'carbon:task',
@@ -425,8 +424,7 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
           path: '/technical-workflow/special-orders',
         },
         {
-          component:
-            '/modules/technical-workflow/views/IhcWorkstationView',
+          component: '/modules/technical-workflow/views/IhcWorkstationView',
           meta: {
             icon: 'carbon:chemistry',
             title: '免疫组化工作站',

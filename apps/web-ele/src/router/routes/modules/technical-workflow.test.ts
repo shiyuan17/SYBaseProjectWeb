@@ -86,9 +86,7 @@ describe('technical workflow routes', () => {
     expect(ihcRoute?.meta?.authority).toEqual([
       M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY,
     ]);
-    expect(ihcRoute?.component?.toString()).toContain(
-      'IhcWorkstationView.vue',
-    );
+    expect(ihcRoute?.component?.toString()).toContain('IhcWorkstationView.vue');
     expect(cytologyRoute?.path).toBe('/technical-workflow/cytology');
     expect(cytologyRoute?.meta?.title).toBe('细胞学工作站');
     expect(cytologyRoute?.meta?.authority).toEqual([
@@ -128,7 +126,9 @@ describe('technical workflow routes', () => {
     expect(stainingRoute?.meta?.authority).toEqual([
       M3_PERMISSION_CODES.STAINING,
     ]);
-    const routeNames = (workflowRoot?.children ?? []).map((route) => route.name);
+    const routeNames = (workflowRoot?.children ?? []).map(
+      (route) => route.name,
+    );
     expect(routeNames.indexOf('StainingWorkstation')).toBeLessThan(
       routeNames.indexOf('RoutineOrderWorkstation'),
     );

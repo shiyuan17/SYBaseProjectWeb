@@ -143,8 +143,9 @@ export function useApplicationRegistrationWorkbenchSpecimens(options: {
     }
 
     const selectedPart =
-      selectedSystem.subParts.find((part) => part.partId === activePartId.value) ??
-      firstPart;
+      selectedSystem.subParts.find(
+        (part) => part.partId === activePartId.value,
+      ) ?? firstPart;
     activePartId.value = selectedPart.partId;
   }
 

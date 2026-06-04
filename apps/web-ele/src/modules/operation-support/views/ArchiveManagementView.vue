@@ -113,19 +113,20 @@ const {
               当前账号具备归档柜查询权限，但部分维护能力受限。
             </template>
             <template #default>
-              <span v-if="!capabilities.canCreateCabinet"
-                >未授权新增归档柜。</span
-              >
+              <span v-if="!capabilities.canCreateCabinet">
+                未授权新增归档柜。
+              </span>
               <span
                 v-if="
                   !capabilities.canCreateCabinet &&
                   !capabilities.canUpdateCabinet
                 "
               >
+                &nbsp;
               </span>
-              <span v-if="!capabilities.canUpdateCabinet"
-                >未授权更新或启停归档柜。</span
-              >
+              <span v-if="!capabilities.canUpdateCabinet">
+                未授权更新或启停归档柜。
+              </span>
             </template>
           </ElAlert>
 
@@ -157,7 +158,9 @@ const {
             </ElTableColumn>
             <ElTableColumn label="状态" min-width="100">
               <template #default="{ row }">
-                <ElTag :type="display.getCabinetStatusTagType(row.cabinetStatus)">
+                <ElTag
+                  :type="display.getCabinetStatusTagType(row.cabinetStatus)"
+                >
                   {{ formatArchiveCabinetStatus(row.cabinetStatus) }}
                 </ElTag>
               </template>

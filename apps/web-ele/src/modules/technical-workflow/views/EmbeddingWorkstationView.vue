@@ -6,7 +6,15 @@ import type {
   TechnicalTrackingView as TechnicalTrackingViewModel,
 } from '../types/technical-workflow';
 
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import {
+  computed,
+  onActivated,
+  onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
+  watch,
+} from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
@@ -15,6 +23,7 @@ import { useUserStore } from '@vben/stores';
 import {
   ElAlert,
   ElButton,
+  ElCheckbox,
   ElDrawer,
   ElEmpty,
   ElInput,
@@ -23,6 +32,8 @@ import {
   ElSelect,
   ElTag,
 } from 'element-plus';
+
+import { reportInlineErrorDisabled } from '#/utils/error-feedback';
 
 import {
   completeEmbedding,
@@ -33,10 +44,7 @@ import {
   updateEmbeddingQualityReview,
 } from '../api/technical-workflow-service';
 import EmbeddingQualityReviewDialog from '../components/EmbeddingQualityReviewDialog.vue';
-import EmbeddingWorkstationProcessPanel from '../components/EmbeddingWorkstationProcessPanel.vue';
 import { DEFAULT_PAGE_SIZE } from '../constants';
-import { reportInlineErrorDisabled } from '#/utils/error-feedback';
-
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import {
   formatDateTime,
@@ -62,7 +70,15 @@ interface EvaluationDrawerRow {
   title: string;
 }
 
-const SLICE_NOTICE_OPTIONS = ['骨组织', '皮肤', '粘膜活检', '小活检', '其他'] as const;
+const SLICE_NOTICE_OPTIONS = [
+  '骨组织',
+  '皮肤',
+  '粘膜活检',
+  '小活检',
+  '其他',
+] as const;
+const DEFAULT_EMBEDDING_EVALUATION_LEVEL = 'QUALIFIED';
+const DEFAULT_SAMPLING_EVALUATION = '合格';
 
 function createEmptySummary(): EmbeddingWorkstationSummary {
   return {
@@ -83,10 +99,10 @@ const pageError = ref('');
 const loading = ref(false);
 const summaryLoading = ref(false);
 const trackingLoading = ref(false);
-const startLoading = ref(false);
 const completeLoading = ref(false);
 
-const workstationSummary = ref<EmbeddingWorkstationSummary>(createEmptySummary());
+const workstationSummary =
+  ref<EmbeddingWorkstationSummary>(createEmptySummary());
 const pendingItems = ref<PendingTechnicalTaskItem[]>([]);
 const trackingResult = ref<null | TechnicalTrackingViewModel>(null);
 const total = ref(0);
@@ -104,6 +120,9 @@ const qualityReviewDialogVisible = ref(false);
 const selectedQualityReviewRecord =
   ref<null | TechnicalTrackingEmbeddingRecordSummary>(null);
 const savingReviewIds = ref<string[]>([]);
+const selectedCompletedEmbeddingId = ref('');
+const selectedCompletedEmbeddingIds = ref<string[]>([]);
+const selectedPendingTaskIds = ref<string[]>([]);
 
 const filters = reactive({
   keyword:
@@ -111,6 +130,7 @@ const filters = reactive({
   page: 1,
   size: DEFAULT_PAGE_SIZE,
 });
+let skipNextActivationRefresh = true;
 
 const operatorForm = reactive(
   createTechnicalOperatorDefaults(userStore.userInfo ?? undefined),
@@ -120,44 +140,69 @@ const completeForm = reactive({
   blockCount: 1,
   deviceCode: '',
   embeddingBoxNo: '',
-  evaluationLevel: '',
+  evaluationLevel: DEFAULT_EMBEDDING_EVALUATION_LEVEL,
   samplingBlockId: '',
-  samplingEvaluation: '',
+  samplingEvaluation: DEFAULT_SAMPLING_EVALUATION,
   sliceNotice: '',
 });
 
 const sliceNoticeDrafts = reactive<Record<string, string>>({});
 
 const selectedTask = computed(
-  () => pendingItems.value.find((item) => item.id === selectedTaskId.value) ?? null,
+  () =>
+    pendingItems.value.find((item) => item.id === selectedTaskId.value) ?? null,
 );
-
-const selectedBlock = computed(() => {
-  if (!selectedTask.value || !trackingResult.value) {
-    return null;
-  }
-  const blockId =
-    selectedTask.value.objectType === 'SAMPLING_BLOCK'
-      ? selectedTask.value.objectId
-      : null;
-  const matchedBlock =
-    trackingResult.value.blocks.find((item) => item.blockId === blockId) ??
-    trackingResult.value.blocks.find(
-      (item) => item.blockCode === selectedTask.value?.samplingBlockCode,
-    );
-  if (!matchedBlock) {
-    return null;
-  }
-  return {
-    blockCode: matchedBlock.blockCode ?? null,
-    blockDescription: matchedBlock.description ?? null,
-    grossDescription: matchedBlock.grossDescription ?? null,
-    specimenName: matchedBlock.specimenName ?? null,
-  };
-});
 
 const currentCaseEmbeddingRecords = computed(
   () => trackingResult.value?.embeddingRecords ?? [],
+);
+
+const completedEmbeddingRecords = computed(
+  () => workstationSummary.value.completedRecords,
+);
+
+const pendingItemIds = computed(() =>
+  pendingItems.value.map((item) => item.id),
+);
+
+const completedEmbeddingRecordIds = computed(() =>
+  completedEmbeddingRecords.value.map((item) => item.embeddingId),
+);
+
+const isAllPendingItemsSelected = computed(
+  () =>
+    pendingItemIds.value.length > 0 &&
+    pendingItemIds.value.every((itemId) =>
+      selectedPendingTaskIds.value.includes(itemId),
+    ),
+);
+
+const isPendingSelectionIndeterminate = computed(
+  () =>
+    selectedPendingTaskIds.value.length > 0 && !isAllPendingItemsSelected.value,
+);
+
+const isAllCompletedEmbeddingRecordsSelected = computed(
+  () =>
+    completedEmbeddingRecordIds.value.length > 0 &&
+    completedEmbeddingRecordIds.value.every((embeddingId) =>
+      selectedCompletedEmbeddingIds.value.includes(embeddingId),
+    ),
+);
+
+const isCompletedEmbeddingSelectionIndeterminate = computed(
+  () =>
+    selectedCompletedEmbeddingIds.value.length > 0 &&
+    !isAllCompletedEmbeddingRecordsSelected.value,
+);
+
+const selectedCompletedEmbeddingRecord = computed(
+  () =>
+    completedEmbeddingRecords.value.find(
+      (item) => item.embeddingId === selectedCompletedEmbeddingId.value,
+    ) ??
+    completedEmbeddingRecords.value[0] ??
+    null,
 );
 
 const evaluationDrawerRows = computed<EvaluationDrawerRow[]>(() => {
@@ -207,30 +252,25 @@ const evaluationDrawerRows = computed<EvaluationDrawerRow[]>(() => {
     });
   });
 
-  return rows.sort((left, right) => {
+  return rows.toSorted((left, right) => {
     const leftTime = left.time ? new Date(left.time).getTime() : 0;
     const rightTime = right.time ? new Date(right.time).getTime() : 0;
     return rightTime - leftTime;
   });
 });
 
-const canCompleteCurrentTask = computed(
-  () =>
-    Boolean(
-      selectedTask.value &&
-        activeProcessingTaskId.value === selectedTask.value.id &&
-        completeForm.samplingBlockId.trim(),
-    ),
+const canCompleteSelectedTask = computed(() =>
+  Boolean(selectedTask.value && completeForm.samplingBlockId.trim()),
 );
 
 function resetCompleteForm(task: null | PendingTechnicalTaskItem) {
   completeForm.blockCount = 1;
   completeForm.deviceCode = '';
   completeForm.embeddingBoxNo = '';
-  completeForm.evaluationLevel = '';
+  completeForm.evaluationLevel = DEFAULT_EMBEDDING_EVALUATION_LEVEL;
   completeForm.samplingBlockId =
     task?.objectType === 'SAMPLING_BLOCK' ? (task.objectId ?? '') : '';
-  completeForm.samplingEvaluation = '';
+  completeForm.samplingEvaluation = DEFAULT_SAMPLING_EVALUATION;
   completeForm.sliceNotice = '';
 }
 
@@ -275,7 +315,9 @@ function resolvePreferredTaskId(
     preferredTaskId,
     deepLinkedTaskId.value,
     selectedTaskId.value,
-  ].filter((item): item is string => Boolean(item));
+  ].filter(
+    (item): item is string => typeof item === 'string' && item.length > 0,
+  );
   for (const candidate of candidates) {
     if (items.some((item) => item.id === candidate)) {
       return candidate;
@@ -340,6 +382,10 @@ async function refreshCurrentCaseData() {
   await Promise.all([loadSummary(), loadTrackingForTask(selectedTask.value)]);
 }
 
+async function refreshCompletedRecords() {
+  await loadSummary();
+}
+
 function selectTask(taskId: string) {
   if (taskId === selectedTaskId.value) {
     return;
@@ -347,51 +393,52 @@ function selectTask(taskId: string) {
   selectedTaskId.value = taskId;
 }
 
-async function handleSearch() {
-  filters.page = 1;
-  await loadPendingData();
+function selectCompletedEmbedding(embeddingId: string) {
+  selectedCompletedEmbeddingId.value = embeddingId;
 }
 
-async function handleStartEmbedding() {
-  const task = selectedTask.value;
-  if (!task) {
-    ElMessage.warning('请先选择待包埋任务');
-    return;
-  }
-  if (!operatorForm.operatorName.trim()) {
-    ElMessage.warning('请先确认当前登录人');
-    return;
-  }
-  if (task.taskStatus !== 'PENDING') {
-    activeProcessingTaskId.value = task.id;
-    return;
-  }
+function togglePendingTaskSelection(
+  taskId: string,
+  selected: boolean | number | string,
+) {
+  const nextSelected = Boolean(selected);
+  selectedPendingTaskIds.value = nextSelected
+    ? [...new Set([...selectedPendingTaskIds.value, taskId])]
+    : selectedPendingTaskIds.value.filter((item) => item !== taskId);
+}
 
-  startLoading.value = true;
-  try {
-    await startEmbedding({
-      ...normalizeTechnicalOperatorPayload(operatorForm),
-      taskId: task.id,
-    });
-    ElMessage.success(`任务 ${task.id} 已开始包埋`);
-    activeProcessingTaskId.value = task.id;
-    await refreshWorkstation(task.id);
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
-    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
-  } finally {
-    startLoading.value = false;
-  }
+function toggleAllPendingTaskSelections(selected: boolean | number | string) {
+  selectedPendingTaskIds.value = selected ? [...pendingItemIds.value] : [];
+}
+
+function toggleCompletedEmbeddingSelection(
+  embeddingId: string,
+  selected: boolean | number | string,
+) {
+  selectedCompletedEmbeddingIds.value = selected
+    ? [...new Set([...selectedCompletedEmbeddingIds.value, embeddingId])]
+    : selectedCompletedEmbeddingIds.value.filter(
+        (item) => item !== embeddingId,
+      );
+}
+
+function toggleAllCompletedEmbeddingSelections(
+  selected: boolean | number | string,
+) {
+  selectedCompletedEmbeddingIds.value = selected
+    ? [...completedEmbeddingRecordIds.value]
+    : [];
+}
+
+async function handleSearch() {
+  filters.page = 1;
+  await refreshWorkstation();
 }
 
 async function handleCompleteEmbedding() {
   const task = selectedTask.value;
   if (!task) {
     ElMessage.warning('请先选择待包埋任务');
-    return;
-  }
-  if (activeProcessingTaskId.value !== task.id) {
-    ElMessage.warning('请先点击“确认包埋”进入当前处理态');
     return;
   }
   if (!operatorForm.operatorName.trim()) {
@@ -405,14 +452,33 @@ async function handleCompleteEmbedding() {
 
   completeLoading.value = true;
   try {
+    if (
+      task.taskStatus === 'PENDING' &&
+      activeProcessingTaskId.value !== task.id
+    ) {
+      await startEmbedding({
+        ...normalizeTechnicalOperatorPayload(operatorForm),
+        taskId: task.id,
+      });
+      activeProcessingTaskId.value = task.id;
+    } else if (
+      task.taskStatus !== 'IN_PROGRESS' &&
+      activeProcessingTaskId.value !== task.id
+    ) {
+      ElMessage.warning('当前任务状态不支持完成包埋');
+      return;
+    }
+
     const result = await completeEmbedding({
       ...normalizeTechnicalOperatorPayload(operatorForm),
       blockCount: completeForm.blockCount,
       deviceCode: completeForm.deviceCode.trim() || null,
       embeddingBoxNo: completeForm.embeddingBoxNo.trim() || null,
-      evaluationLevel: completeForm.evaluationLevel || null,
+      evaluationLevel:
+        completeForm.evaluationLevel || DEFAULT_EMBEDDING_EVALUATION_LEVEL,
       samplingBlockId: completeForm.samplingBlockId.trim(),
-      samplingEvaluation: completeForm.samplingEvaluation.trim() || null,
+      samplingEvaluation:
+        completeForm.samplingEvaluation.trim() || DEFAULT_SAMPLING_EVALUATION,
       sliceNotice: completeForm.sliceNotice.trim() || null,
       taskId: task.id,
     });
@@ -429,11 +495,6 @@ async function handleCompleteEmbedding() {
   } finally {
     completeLoading.value = false;
   }
-}
-
-function handleCancelEmbedding() {
-  activeProcessingTaskId.value = '';
-  resetPanelState(selectedTask.value);
 }
 
 function handleClearCurrent() {
@@ -467,7 +528,7 @@ async function handleSliceNoticeSave(
       sliceNotice: nextSliceNotice || null,
     });
     ElMessage.success('切片备注已保存');
-    await refreshCurrentCaseData();
+    await refreshCompletedRecords();
   } catch (error) {
     sliceNoticeDrafts[row.embeddingId] = currentSliceNotice;
     pageError.value = getWorkflowPageErrorMessage(error);
@@ -503,20 +564,21 @@ function handleKeyDown(event: KeyboardEvent) {
     return;
   }
   event.preventDefault();
-  if (canCompleteCurrentTask.value && !completeLoading.value) {
+  if (canCompleteSelectedTask.value && !completeLoading.value) {
     void handleCompleteEmbedding();
   }
 }
 
 watch(selectedTaskId, async () => {
   const task = selectedTask.value;
-  activeProcessingTaskId.value = task?.taskStatus === 'IN_PROGRESS' ? task.id : '';
+  activeProcessingTaskId.value =
+    task?.taskStatus === 'IN_PROGRESS' ? task.id : '';
   resetPanelState(task);
   await loadTrackingForTask(task);
 });
 
 watch(
-  currentCaseEmbeddingRecords,
+  completedEmbeddingRecords,
   (records) => {
     const recordIds = new Set(records.map((item) => item.embeddingId));
     Object.keys(sliceNoticeDrafts).forEach((embeddingId) => {
@@ -531,8 +593,47 @@ watch(
   { immediate: true },
 );
 
+watch(
+  completedEmbeddingRecords,
+  (records) => {
+    if (
+      selectedCompletedEmbeddingId.value &&
+      records.some(
+        (item) => item.embeddingId === selectedCompletedEmbeddingId.value,
+      )
+    ) {
+      return;
+    }
+    selectedCompletedEmbeddingId.value = records[0]?.embeddingId ?? '';
+  },
+  { immediate: true },
+);
+
+watch(pendingItems, (items) => {
+  const itemIds = new Set(items.map((item) => item.id));
+  selectedPendingTaskIds.value = selectedPendingTaskIds.value.filter((itemId) =>
+    itemIds.has(itemId),
+  );
+});
+
+watch(completedEmbeddingRecords, (records) => {
+  const recordIds = new Set(records.map((item) => item.embeddingId));
+  selectedCompletedEmbeddingIds.value =
+    selectedCompletedEmbeddingIds.value.filter((embeddingId) =>
+      recordIds.has(embeddingId),
+    );
+});
+
 onMounted(() => {
   window.addEventListener('keydown', handleKeyDown);
+  void refreshWorkstation(selectedTaskId.value || undefined);
+});
+
+onActivated(() => {
+  if (skipNextActivationRefresh) {
+    skipNextActivationRefresh = false;
+    return;
+  }
   void refreshWorkstation(selectedTaskId.value || undefined);
 });
 
@@ -553,50 +654,37 @@ onBeforeUnmount(() => {
         <template #default>{{ pageError }}</template>
       </ElAlert>
 
-      <section class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto]">
-        <div class="grid gap-4 sm:grid-cols-2">
-          <article class="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
-            <div class="text-sm text-slate-500">待包埋数</div>
-            <div class="mt-2 text-3xl font-semibold text-slate-900">
-              {{ summaryLoading ? '--' : workstationSummary.pendingCount }}
-            </div>
-            <div class="mt-2 text-xs text-slate-400">
-              统计范围：{{ workstationSummary.workDate || '服务端当日' }}
-            </div>
-          </article>
-          <article class="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
-            <div class="text-sm text-slate-500">已包埋数</div>
-            <div class="mt-2 text-3xl font-semibold text-emerald-600">
-              {{ summaryLoading ? '--' : workstationSummary.completedCount }}
-            </div>
-            <div class="mt-2 text-xs text-slate-400">
-              当日已完成记录实时汇总
-            </div>
-          </article>
-        </div>
-
-        <div class="flex flex-wrap items-start justify-end gap-3">
-          <ElButton
-            :disabled="!selectedTask"
-            @click="historyDrawerVisible = true"
-          >
-            包埋历史
-          </ElButton>
-          <ElButton
-            :disabled="!selectedTask"
-            @click="evaluationDrawerVisible = true"
-          >
-            评价记录
-          </ElButton>
-        </div>
+      <section class="grid max-w-[560px] gap-3 sm:grid-cols-2">
+        <article
+          class="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+        >
+          <div class="text-xs text-slate-500">待包埋数</div>
+          <div class="mt-1 text-2xl font-semibold text-slate-900">
+            {{ summaryLoading ? '--' : workstationSummary.pendingCount }}
+          </div>
+          <div class="mt-1 text-xs text-slate-400">
+            统计范围：{{ workstationSummary.workDate || '服务端当日' }}
+          </div>
+        </article>
+        <article
+          class="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+        >
+          <div class="text-xs text-slate-500">已包埋数</div>
+          <div class="mt-1 text-2xl font-semibold text-emerald-600">
+            {{ summaryLoading ? '--' : workstationSummary.completedCount }}
+          </div>
+          <div class="mt-1 text-xs text-slate-400">当日已完成记录实时汇总</div>
+        </article>
       </section>
 
-      <section class="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+      <section
+        class="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+      >
         <ElButton
-          :disabled="!selectedTask"
-          :loading="startLoading"
+          :disabled="!canCompleteSelectedTask || completeLoading"
+          :loading="completeLoading"
           type="primary"
-          @click="handleStartEmbedding"
+          @click="handleCompleteEmbedding"
         >
           确认包埋
         </ElButton>
@@ -611,16 +699,31 @@ onBeforeUnmount(() => {
         <ElButton @click="handleMore">更多</ElButton>
         <ElButton @click="handleClearCurrent">确认清零</ElButton>
         <ElButton @click="taskDrawerVisible = true">包埋任务</ElButton>
+        <ElButton
+          :disabled="!selectedTask"
+          @click="historyDrawerVisible = true"
+        >
+          包埋历史
+        </ElButton>
+        <ElButton
+          :disabled="!selectedTask"
+          @click="evaluationDrawerVisible = true"
+        >
+          评价记录
+        </ElButton>
       </section>
 
-      <section class="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(420px,0.9fr)]">
-        <article class="rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div class="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
+      <section
+        class="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(420px,0.9fr)]"
+      >
+        <article
+          class="min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm"
+        >
+          <div
+            class="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4"
+          >
             <div>
               <h2 class="text-base font-semibold text-slate-900">待包埋列表</h2>
-              <p class="mt-1 text-sm text-slate-500">
-                按病理号和病人ID筛选当前待处理包埋任务。
-              </p>
             </div>
             <div class="text-sm text-slate-500">共 {{ total }} 条</div>
           </div>
@@ -629,6 +732,15 @@ onBeforeUnmount(() => {
             <table class="min-w-full text-left text-sm">
               <thead class="bg-slate-50 text-slate-500">
                 <tr>
+                  <th class="w-12 px-4 py-3">
+                    <ElCheckbox
+                      :indeterminate="isPendingSelectionIndeterminate"
+                      :model-value="isAllPendingItemsSelected"
+                      aria-label="选择全部待包埋任务"
+                      @click.stop
+                      @update:model-value="toggleAllPendingTaskSelections"
+                    />
+                  </th>
                   <th class="px-4 py-3">病理号</th>
                   <th class="px-4 py-3">蜡块号</th>
                   <th class="px-4 py-3">备注</th>
@@ -637,7 +749,7 @@ onBeforeUnmount(() => {
                   <th class="px-4 py-3">状态</th>
                 </tr>
               </thead>
-              <tbody v-if="pendingItems.length">
+              <tbody v-if="pendingItems.length > 0">
                 <tr
                   v-for="item in pendingItems"
                   :key="item.id"
@@ -649,16 +761,37 @@ onBeforeUnmount(() => {
                   class="cursor-pointer border-t border-slate-100 text-slate-700"
                   @click="selectTask(item.id)"
                 >
-                  <td class="px-4 py-3">{{ formatNullable(item.pathologyNo) }}</td>
-                  <td class="px-4 py-3">{{ formatNullable(item.samplingBlockCode) }}</td>
+                  <td class="px-4 py-3">
+                    <ElCheckbox
+                      :model-value="selectedPendingTaskIds.includes(item.id)"
+                      :aria-label="`选择待包埋任务 ${formatNullable(item.samplingBlockCode)}`"
+                      @click.stop
+                      @update:model-value="
+                        (selected) =>
+                          togglePendingTaskSelection(item.id, selected)
+                      "
+                    />
+                  </td>
+                  <td class="px-4 py-3">
+                    {{ formatNullable(item.pathologyNo) }}
+                  </td>
+                  <td class="px-4 py-3">
+                    {{ formatNullable(item.samplingBlockCode) }}
+                  </td>
                   <td class="px-4 py-3">{{ formatNullable(item.remarks) }}</td>
                   <td class="px-4 py-3">
                     {{ formatNullable(item.sampledByName) }} /
                     {{ formatDateTime(item.sampledAt) }}
                   </td>
-                  <td class="px-4 py-3">{{ formatNullable(item.productionRemarks) }}</td>
                   <td class="px-4 py-3">
-                    <ElTag :type="item.taskStatus === 'IN_PROGRESS' ? 'success' : 'info'">
+                    {{ formatNullable(item.productionRemarks) }}
+                  </td>
+                  <td class="px-4 py-3">
+                    <ElTag
+                      :type="
+                        item.taskStatus === 'IN_PROGRESS' ? 'success' : 'info'
+                      "
+                    >
                       {{ formatTaskStatus(item.taskStatus) }}
                     </ElTag>
                   </td>
@@ -666,12 +799,14 @@ onBeforeUnmount(() => {
               </tbody>
             </table>
 
-            <div v-if="!pendingItems.length && !loading" class="p-8">
+            <div v-if="pendingItems.length === 0 && !loading" class="p-8">
               <ElEmpty description="当前没有待包埋任务" />
             </div>
           </div>
 
-          <div class="flex items-center justify-between border-t border-slate-200 px-5 py-3 text-sm text-slate-500">
+          <div
+            class="flex items-center justify-between border-t border-slate-200 px-5 py-3 text-sm text-slate-500"
+          >
             <span>第 {{ filters.page }} 页 / 每页 {{ filters.size }} 条</span>
             <div class="flex gap-2">
               <ElButton
@@ -696,61 +831,186 @@ onBeforeUnmount(() => {
           </div>
         </article>
 
-        <div class="grid min-h-0 gap-4">
-          <EmbeddingWorkstationProcessPanel
-            :active="selectedTask ? activeProcessingTaskId === selectedTask.id : false"
-            :can-complete="canCompleteCurrentTask"
-            :complete-loading="completeLoading"
-            :form="completeForm"
-            :operator-form="operatorForm"
-            :selected-block="selectedBlock"
-            :selected-task="selectedTask"
-            @cancel="handleCancelEmbedding"
-            @complete="handleCompleteEmbedding"
-          />
-
-          <article class="rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div class="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
-              <div>
-                <h2 class="text-base font-semibold text-slate-900">已包埋蜡块列表</h2>
-                <p class="mt-1 text-sm text-slate-500">
-                  固定展示当前病例已处理蜡块，可调整切片备注与取材评价。
-                </p>
+        <div class="grid min-h-0 min-w-0 gap-4">
+          <article
+            class="min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm"
+          >
+            <div
+              class="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4"
+            >
+              <div class="min-w-0">
+                <h2 class="text-base font-semibold text-slate-900">
+                  已包埋蜡块列表
+                </h2>
               </div>
-              <div v-if="trackingLoading" class="text-sm text-slate-400">加载中...</div>
+              <div class="flex shrink-0 items-center gap-3">
+                <div v-if="summaryLoading" class="text-sm text-slate-400">
+                  加载中...
+                </div>
+                <ElButton
+                  class="shrink-0"
+                  :disabled="!canCompleteSelectedTask || completeLoading"
+                  :loading="completeLoading"
+                  type="primary"
+                  @click="handleCompleteEmbedding"
+                >
+                  确认包埋完成
+                </ElButton>
+              </div>
             </div>
 
-            <div v-if="currentCaseEmbeddingRecords.length" class="overflow-auto">
-              <table class="min-w-full text-left text-sm">
+            <div class="border-b border-slate-200 bg-slate-50/70 px-5 py-4">
+              <div
+                class="grid gap-3 xl:grid-cols-[minmax(21rem,28rem)_minmax(0,1fr)]"
+              >
+                <div
+                  class="grid gap-3 rounded-lg border border-slate-200 bg-white p-3 sm:grid-cols-2 xl:grid-cols-3"
+                >
+                  <div>
+                    <div class="text-xs text-slate-500">蜡块号</div>
+                    <div class="mt-1 text-sm font-medium text-slate-900">
+                      {{
+                        formatNullable(
+                          selectedCompletedEmbeddingRecord?.samplingBlockCode,
+                        )
+                      }}
+                    </div>
+                  </div>
+                  <div>
+                    <div class="text-xs text-slate-500">蜡块名称</div>
+                    <div class="mt-1 text-sm text-slate-700">
+                      {{
+                        formatNullable(
+                          selectedCompletedEmbeddingRecord?.samplingBlockDescription,
+                        )
+                      }}
+                    </div>
+                  </div>
+                  <div>
+                    <div class="text-xs text-slate-500">标本名称</div>
+                    <div class="mt-1 text-sm text-slate-700">
+                      {{
+                        formatNullable(
+                          selectedCompletedEmbeddingRecord?.specimenName,
+                        )
+                      }}
+                    </div>
+                  </div>
+                </div>
+
+                <div class="rounded-lg border border-slate-200 bg-white p-3">
+                  <div class="mb-2 text-xs text-slate-500">大体所见</div>
+                  <ElInput
+                    :model-value="
+                      selectedCompletedEmbeddingRecord?.grossDescription ?? ''
+                    "
+                    :rows="3"
+                    class="embedding-gross-description"
+                    placeholder="大体所见"
+                    readonly
+                    type="textarea"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div
+              v-if="completedEmbeddingRecords.length > 0"
+              class="overflow-x-auto"
+            >
+              <table class="min-w-[1220px] text-left text-sm">
                 <thead class="bg-slate-50 text-slate-500">
                   <tr>
-                    <th class="px-4 py-3">病理号</th>
-                    <th class="px-4 py-3">蜡块号</th>
-                    <th class="px-4 py-3">包埋备注</th>
-                    <th class="px-4 py-3">切片备注</th>
-                    <th class="px-4 py-3">取材评价</th>
-                    <th class="px-4 py-3">取材操作</th>
-                    <th class="px-4 py-3">包埋操作</th>
-                    <th class="px-4 py-3">状态</th>
+                    <th class="w-12 px-4 py-3">
+                      <ElCheckbox
+                        :indeterminate="
+                          isCompletedEmbeddingSelectionIndeterminate
+                        "
+                        :model-value="isAllCompletedEmbeddingRecordsSelected"
+                        aria-label="选择全部已包埋蜡块"
+                        @click.stop
+                        @update:model-value="
+                          toggleAllCompletedEmbeddingSelections
+                        "
+                      />
+                    </th>
+                    <th class="px-4 py-3 font-medium whitespace-nowrap">
+                      病理号
+                    </th>
+                    <th class="px-4 py-3 font-medium whitespace-nowrap">
+                      蜡块号
+                    </th>
+                    <th class="px-4 py-3 font-medium whitespace-nowrap">
+                      包埋备注
+                    </th>
+                    <th class="px-4 py-3 font-medium whitespace-nowrap">
+                      切片备注
+                    </th>
+                    <th class="px-4 py-3 font-medium whitespace-nowrap">
+                      取材评价
+                    </th>
+                    <th class="px-4 py-3 font-medium whitespace-nowrap">
+                      取材操作
+                    </th>
+                    <th class="px-4 py-3 font-medium whitespace-nowrap">
+                      包埋操作
+                    </th>
+                    <th class="px-4 py-3 font-medium whitespace-nowrap">
+                      状态
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr
-                    v-for="item in currentCaseEmbeddingRecords"
+                    v-for="item in completedEmbeddingRecords"
                     :key="item.embeddingId"
-                    class="border-t border-slate-100 text-slate-700"
+                    :class="
+                      item.embeddingId === selectedCompletedEmbeddingId
+                        ? 'bg-sky-50'
+                        : 'hover:bg-slate-50'
+                    "
+                    class="cursor-pointer border-t border-slate-100 text-slate-700"
+                    @click="selectCompletedEmbedding(item.embeddingId)"
                   >
-                    <td class="px-4 py-3">{{ formatNullable(item.pathologyNo) }}</td>
-                    <td class="px-4 py-3">{{ formatNullable(item.samplingBlockCode) }}</td>
-                    <td class="px-4 py-3">{{ formatNullable(item.embeddingRemarks) }}</td>
-                    <td class="min-w-[220px] px-4 py-3">
+                    <td class="px-4 py-3 align-top">
+                      <ElCheckbox
+                        :model-value="
+                          selectedCompletedEmbeddingIds.includes(
+                            item.embeddingId,
+                          )
+                        "
+                        :aria-label="`选择已包埋蜡块 ${formatNullable(item.samplingBlockCode)}`"
+                        @click.stop
+                        @update:model-value="
+                          (selected) =>
+                            toggleCompletedEmbeddingSelection(
+                              item.embeddingId,
+                              selected,
+                            )
+                        "
+                      />
+                    </td>
+                    <td class="px-4 py-3 align-top whitespace-nowrap">
+                      {{ formatNullable(item.pathologyNo) }}
+                    </td>
+                    <td class="px-4 py-3 align-top whitespace-nowrap">
+                      {{ formatNullable(item.samplingBlockCode) }}
+                    </td>
+                    <td class="min-w-[180px] px-4 py-3 align-top">
+                      <span class="block break-words leading-6 text-slate-600">
+                        {{ formatNullable(item.embeddingRemarks) }}
+                      </span>
+                    </td>
+                    <td class="min-w-[240px] px-4 py-3 align-top">
                       <div class="flex items-center gap-2">
                         <ElSelect
                           v-model="sliceNoticeDrafts[item.embeddingId]"
+                          class="min-w-0 flex-1"
                           allow-create
                           clearable
                           default-first-option
                           filterable
+                          :loading="isSavingReview(item.embeddingId)"
                           placeholder="切片备注"
                           size="small"
                           @blur="handleSliceNoticeSave(item)"
@@ -763,18 +1023,11 @@ onBeforeUnmount(() => {
                             :value="option"
                           />
                         </ElSelect>
-                        <ElButton
-                          :loading="isSavingReview(item.embeddingId)"
-                          size="small"
-                          @click="handleSliceNoticeSave(item)"
-                        >
-                          保存
-                        </ElButton>
                       </div>
                     </td>
-                    <td class="min-w-[220px] px-4 py-3">
-                      <div class="flex items-center gap-2">
-                        <span class="line-clamp-2 flex-1">
+                    <td class="min-w-[260px] px-4 py-3 align-top">
+                      <div class="flex items-start gap-2">
+                        <span class="line-clamp-2 flex-1 break-words leading-6">
                           {{ formatNullable(item.samplingEvaluation) }}
                         </span>
                         <ElButton
@@ -785,21 +1038,35 @@ onBeforeUnmount(() => {
                         </ElButton>
                       </div>
                     </td>
-                    <td class="px-4 py-3">
-                      {{ formatNullable(item.sampledByName) }} /
-                      {{ formatDateTime(item.sampledAt) }}
+                    <td
+                      class="min-w-[180px] px-4 py-3 align-top text-slate-600"
+                    >
+                      <div class="leading-6">
+                        {{ formatNullable(item.sampledByName) }}
+                      </div>
+                      <div class="text-xs text-slate-500">
+                        {{ formatDateTime(item.sampledAt) }}
+                      </div>
                     </td>
-                    <td class="px-4 py-3">
-                      {{ formatNullable(item.embeddedByName) }} /
-                      {{ formatDateTime(item.endedAt) }}
+                    <td
+                      class="min-w-[180px] px-4 py-3 align-top text-slate-600"
+                    >
+                      <div class="leading-6">
+                        {{ formatNullable(item.embeddedByName) }}
+                      </div>
+                      <div class="text-xs text-slate-500">
+                        {{ formatDateTime(item.endedAt) }}
+                      </div>
                     </td>
-                    <td class="px-4 py-3">{{ formatTaskStatus(item.taskStatus) }}</td>
+                    <td class="px-4 py-3 align-top whitespace-nowrap">
+                      {{ formatTaskStatus(item.taskStatus) }}
+                    </td>
                   </tr>
                 </tbody>
               </table>
             </div>
             <div v-else class="p-8">
-              <ElEmpty description="当前病例暂无已包埋记录" />
+              <ElEmpty description="当前没有已包埋记录" />
             </div>
           </article>
         </div>
@@ -807,7 +1074,7 @@ onBeforeUnmount(() => {
     </div>
 
     <ElDrawer v-model="historyDrawerVisible" size="55%" title="包埋历史">
-      <div v-if="currentCaseEmbeddingRecords.length" class="overflow-auto">
+      <div v-if="currentCaseEmbeddingRecords.length > 0" class="overflow-auto">
         <table class="min-w-full text-left text-sm">
           <thead class="bg-slate-50 text-slate-500">
             <tr>
@@ -825,9 +1092,15 @@ onBeforeUnmount(() => {
               class="border-t border-slate-100"
             >
               <td class="px-4 py-3">{{ formatNullable(item.pathologyNo) }}</td>
-              <td class="px-4 py-3">{{ formatNullable(item.samplingBlockCode) }}</td>
-              <td class="px-4 py-3">{{ formatNullable(item.samplingBlockDescription) }}</td>
-              <td class="px-4 py-3">{{ formatNullable(item.embeddingRemarks) }}</td>
+              <td class="px-4 py-3">
+                {{ formatNullable(item.samplingBlockCode) }}
+              </td>
+              <td class="px-4 py-3">
+                {{ formatNullable(item.samplingBlockDescription) }}
+              </td>
+              <td class="px-4 py-3">
+                {{ formatNullable(item.embeddingRemarks) }}
+              </td>
               <td class="px-4 py-3">
                 {{ formatNullable(item.embeddedByName) }} /
                 {{ formatDateTime(item.endedAt) }}
@@ -840,7 +1113,7 @@ onBeforeUnmount(() => {
     </ElDrawer>
 
     <ElDrawer v-model="evaluationDrawerVisible" size="52%" title="评价记录">
-      <div v-if="evaluationDrawerRows.length" class="flex flex-col gap-3">
+      <div v-if="evaluationDrawerRows.length > 0" class="flex flex-col gap-3">
         <article
           v-for="(item, index) in evaluationDrawerRows"
           :key="`${item.category}-${item.title}-${index}`"
@@ -851,7 +1124,9 @@ onBeforeUnmount(() => {
               <div class="text-sm font-semibold text-slate-900">
                 {{ item.category }} / {{ item.title }}
               </div>
-              <div class="mt-1 text-sm text-slate-500">{{ item.description }}</div>
+              <div class="mt-1 text-sm text-slate-500">
+                {{ item.description }}
+              </div>
             </div>
             <div class="text-right text-xs text-slate-400">
               <div>{{ item.status }}</div>
@@ -868,12 +1143,17 @@ onBeforeUnmount(() => {
       <div class="grid gap-6">
         <section>
           <div class="mb-3 flex items-center justify-between">
-            <h3 class="text-base font-semibold text-slate-900">当日待处理任务</h3>
+            <h3 class="text-base font-semibold text-slate-900">
+              当日待处理任务
+            </h3>
             <span class="text-sm text-slate-500">
               {{ workstationSummary.pendingCount }} 条
             </span>
           </div>
-          <div v-if="workstationSummary.pendingTasks.length" class="overflow-auto">
+          <div
+            v-if="workstationSummary.pendingTasks.length > 0"
+            class="overflow-auto"
+          >
             <table class="min-w-full text-left text-sm">
               <thead class="bg-slate-50 text-slate-500">
                 <tr>
@@ -890,14 +1170,20 @@ onBeforeUnmount(() => {
                   :key="item.id"
                   class="border-t border-slate-100"
                 >
-                  <td class="px-4 py-3">{{ formatNullable(item.pathologyNo) }}</td>
-                  <td class="px-4 py-3">{{ formatNullable(item.samplingBlockCode) }}</td>
+                  <td class="px-4 py-3">
+                    {{ formatNullable(item.pathologyNo) }}
+                  </td>
+                  <td class="px-4 py-3">
+                    {{ formatNullable(item.samplingBlockCode) }}
+                  </td>
                   <td class="px-4 py-3">{{ formatNullable(item.remarks) }}</td>
                   <td class="px-4 py-3">
                     {{ formatNullable(item.sampledByName) }} /
                     {{ formatDateTime(item.sampledAt) }}
                   </td>
-                  <td class="px-4 py-3">{{ formatTaskStatus(item.taskStatus) }}</td>
+                  <td class="px-4 py-3">
+                    {{ formatTaskStatus(item.taskStatus) }}
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -907,12 +1193,17 @@ onBeforeUnmount(() => {
 
         <section>
           <div class="mb-3 flex items-center justify-between">
-            <h3 class="text-base font-semibold text-slate-900">当日已处理记录</h3>
+            <h3 class="text-base font-semibold text-slate-900">
+              当日已处理记录
+            </h3>
             <span class="text-sm text-slate-500">
               {{ workstationSummary.completedCount }} 条
             </span>
           </div>
-          <div v-if="workstationSummary.completedRecords.length" class="overflow-auto">
+          <div
+            v-if="workstationSummary.completedRecords.length > 0"
+            class="overflow-auto"
+          >
             <table class="min-w-full text-left text-sm">
               <thead class="bg-slate-50 text-slate-500">
                 <tr>
@@ -929,10 +1220,18 @@ onBeforeUnmount(() => {
                   :key="item.embeddingId"
                   class="border-t border-slate-100"
                 >
-                  <td class="px-4 py-3">{{ formatNullable(item.pathologyNo) }}</td>
-                  <td class="px-4 py-3">{{ formatNullable(item.samplingBlockCode) }}</td>
-                  <td class="px-4 py-3">{{ formatNullable(item.embeddingRemarks) }}</td>
-                  <td class="px-4 py-3">{{ formatNullable(item.samplingEvaluation) }}</td>
+                  <td class="px-4 py-3">
+                    {{ formatNullable(item.pathologyNo) }}
+                  </td>
+                  <td class="px-4 py-3">
+                    {{ formatNullable(item.samplingBlockCode) }}
+                  </td>
+                  <td class="px-4 py-3">
+                    {{ formatNullable(item.embeddingRemarks) }}
+                  </td>
+                  <td class="px-4 py-3">
+                    {{ formatNullable(item.samplingEvaluation) }}
+                  </td>
                   <td class="px-4 py-3">
                     {{ formatNullable(item.embeddedByName) }} /
                     {{ formatDateTime(item.endedAt) }}

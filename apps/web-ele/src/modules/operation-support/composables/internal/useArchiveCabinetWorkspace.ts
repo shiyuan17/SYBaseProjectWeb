@@ -316,7 +316,8 @@ export function useArchiveCabinetWorkspace(
           cabinet.cabinetStatus === 'DISABLED' ? 'ACTIVE' : 'DISABLED',
         locationDescription: cabinet.locationDescription ?? undefined,
         operatorName: operatorContext.currentOperatorName.value,
-        operatorUserId: operatorContext.currentOperatorUserId.value || undefined,
+        operatorUserId:
+          operatorContext.currentOperatorUserId.value || undefined,
         remarks: cabinet.remarks ?? undefined,
       });
 

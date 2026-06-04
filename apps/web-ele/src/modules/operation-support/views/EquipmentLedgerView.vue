@@ -17,6 +17,7 @@ import { useAccessStore, useUserStore } from '@vben/stores';
 import {
   ElAlert,
   ElButton,
+  ElDrawer,
   ElForm,
   ElFormItem,
   ElInput,
@@ -26,7 +27,6 @@ import {
   ElTable,
   ElTableColumn,
   ElTag,
-  ElDrawer,
 } from 'element-plus';
 
 import { getEquipmentLedgerCapabilities } from '../access';
@@ -38,13 +38,10 @@ import {
   listEquipmentWarnings,
   updateEquipmentRecord,
 } from '../api/operation-support-service';
-import {
-  EQUIPMENT_STATUS_OPTIONS,
-} from '../constants';
 import EquipmentDetailPanel from '../components/EquipmentDetailPanel.vue';
 import EquipmentDialog from '../components/EquipmentDialog.vue';
 import EquipmentWarningPanel from '../components/EquipmentWarningPanel.vue';
-import { getOperationSupportPageErrorMessage } from '../utils/error';
+import { EQUIPMENT_STATUS_OPTIONS } from '../constants';
 import {
   buildCreateEquipmentRecordRequest,
   buildCreateMaintenanceLogRequest,
@@ -58,6 +55,7 @@ import {
   validateEquipmentForm,
   validateMaintenanceLogForm,
 } from '../utils/equipment-ledger';
+import { getOperationSupportPageErrorMessage } from '../utils/error';
 import {
   formatEquipmentCategory,
   formatEquipmentStatus,
@@ -386,11 +384,7 @@ void initializePage();
   >
     <Fallback status="403" />
   </div>
-  <Page
-    v-else
-    :title="pageTitle"
-    :description="pageDescription"
-  >
+  <Page v-else :title="pageTitle" :description="pageDescription">
     <div class="flex flex-col gap-4">
       <ElAlert
         v-if="pageError"
@@ -493,8 +487,16 @@ void initializePage();
             highlight-current-row
             @current-change="selectEquipment"
           >
-            <ElTableColumn label="设备编码" min-width="140" prop="equipmentCode" />
-            <ElTableColumn label="设备名称" min-width="180" prop="equipmentName" />
+            <ElTableColumn
+              label="设备编码"
+              min-width="140"
+              prop="equipmentCode"
+            />
+            <ElTableColumn
+              label="设备名称"
+              min-width="180"
+              prop="equipmentName"
+            />
             <ElTableColumn label="类别" min-width="120">
               <template #default="{ row }">
                 {{ formatEquipmentCategory(row.equipmentCategory) }}

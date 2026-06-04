@@ -21,6 +21,8 @@ import {
 } from '../api/specimen-workflow-service';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
+import { loadOperatingRoomNameMapSafely } from '../utils/operating-room-display';
+import { loadSpecimensWithApplicationExpansion } from '../utils/specimen-application-expansion';
 import {
   buildExportRows as buildConfirmationExportRows,
   buildEnhancedRows,
@@ -29,9 +31,9 @@ import {
   canRetryLabel,
   isVisibleInConfirmationScene,
   MAX_QUERY_SIZE,
+  resolveConfirmActionDisabledReason,
   resolveUnavailableMessage,
 } from '../utils/specimen-confirmation';
-import { loadOperatingRoomNameMapSafely } from '../utils/operating-room-display';
 
 export function useSpecimenConfirmationPanel() {
   const userStore = useUserStore();
@@ -46,6 +48,7 @@ export function useSpecimenConfirmationPanel() {
   const retryDialogVisible = ref(false);
   const retryTargetRows = ref<ConfirmationListRow[]>([]);
   const batchRetryResult = ref<LabelPrintRetryResult | null>(null);
+  const expandedApplicationNo = ref('');
 
   const workbenchRecordCache = reactive(
     new Map<string, ApplicationRegistrationWorkbenchRecord | null>(),
@@ -174,31 +177,74 @@ export function useSpecimenConfirmationPanel() {
     try {
       const roomNameById = await ensureOperatingRoomNameMapLoaded();
       const keyword = filters.keyword.trim();
-      const result = await listSpecimens({
-        keyword: keyword || undefined,
-        page: 1,
-        size: MAX_QUERY_SIZE,
+      const queryResult = await loadSpecimensWithApplicationExpansion({
+        keyword,
+        listSpecimens,
+        maxQuerySize: MAX_QUERY_SIZE,
       });
-      const visibleRows = result.items.filter((item) =>
-        isVisibleInConfirmationScene(item),
-      );
-      if (showEmptyWarning && keyword && visibleRows.length === 0) {
-        ElMessage.warning(resolveUnavailableMessage(result.items, keyword));
+      const sourceRows =
+        queryResult.mode === 'expanded'
+          ? queryResult.items
+          : queryResult.items.filter((item) =>
+              isVisibleInConfirmationScene(item),
+            );
+
+      expandedApplicationNo.value =
+        queryResult.mode === 'expanded'
+          ? (queryResult.applicationNo ?? '')
+          : '';
+
+      if (showEmptyWarning && keyword && sourceRows.length === 0) {
+        ElMessage.warning(
+          resolveUnavailableMessage(queryResult.initialItems, keyword),
+        );
       }
-      const enhancedRows = await buildEnhancedRows(visibleRows, {
-        ensureApplicationContext,
-        ensureWorkbenchRecord,
-        getApplicationContext: (applicationId) =>
-          applicationContextCache.get(applicationId) ?? null,
-        getWorkbenchRecord: (applicationNo) =>
-          workbenchRecordCache.get(applicationNo) ?? null,
-      }, roomNameById);
+      const enhancedRows = await buildEnhancedRows(
+        sourceRows,
+        {
+          ensureApplicationContext,
+          ensureWorkbenchRecord,
+          getApplicationContext: (applicationId) =>
+            applicationContextCache.get(applicationId) ?? null,
+          getWorkbenchRecord: (applicationNo) =>
+            workbenchRecordCache.get(applicationNo) ?? null,
+        },
+        roomNameById,
+      );
       applyRows(enhancedRows);
     } catch (error) {
       pageError.value = getWorkflowPageErrorMessage(error);
     } finally {
       loading.value = false;
     }
+  }
+
+  async function loadExpandedApplicationRows(applicationNo: string) {
+    const normalizedApplicationNo = applicationNo.trim();
+    if (!normalizedApplicationNo) {
+      return;
+    }
+
+    const roomNameById = await ensureOperatingRoomNameMapLoaded();
+    const expandedResult = await listSpecimens({
+      applicationNo: normalizedApplicationNo,
+      page: 1,
+      size: MAX_QUERY_SIZE,
+    });
+    const enhancedRows = await buildEnhancedRows(
+      expandedResult.items,
+      {
+        ensureApplicationContext,
+        ensureWorkbenchRecord,
+        getApplicationContext: (applicationId) =>
+          applicationContextCache.get(applicationId) ?? null,
+        getWorkbenchRecord: (applicationNo) =>
+          workbenchRecordCache.get(applicationNo) ?? null,
+      },
+      roomNameById,
+    );
+    expandedApplicationNo.value = normalizedApplicationNo;
+    applyRows(enhancedRows);
   }
 
   function requireOperatorInfo() {
@@ -237,7 +283,10 @@ export function useSpecimenConfirmationPanel() {
 
     const pendingRows = rows.filter((row) => canConfirm(row));
     if (pendingRows.length === 0) {
-      ElMessage.warning('当前所选标本均已确认');
+      const firstDisabledReason = rows
+        .map((row) => resolveConfirmActionDisabledReason(row))
+        .find(Boolean);
+      ElMessage.warning(firstDisabledReason ?? '当前所选标本均已确认');
       return;
     }
 
@@ -251,7 +300,9 @@ export function useSpecimenConfirmationPanel() {
         ),
       );
       ElMessage.success(`已完成 ${pendingRows.length} 条标本确认`);
-      await loadSpecimens();
+      await (expandedApplicationNo.value
+        ? loadExpandedApplicationRows(expandedApplicationNo.value)
+        : loadSpecimens());
     } catch (error) {
       pageError.value = getWorkflowPageErrorMessage(error);
     } finally {
@@ -277,9 +328,26 @@ export function useSpecimenConfirmationPanel() {
       );
     });
 
-    if (matchedRows.length === 1) {
+    const [matchedRow] = matchedRows;
+    if (matchedRows.length === 1 && matchedRow) {
+      const matchedApplicationNo = matchedRow.applicationNo.trim();
       filters.keyword = '';
-      await confirmRows(matchedRows);
+      if (matchedApplicationNo) {
+        await loadExpandedApplicationRows(matchedApplicationNo);
+      }
+
+      const currentMatchedRow =
+        allRows.value.find((row) => row.specimenId === matchedRow.specimenId) ??
+        matchedRow;
+
+      if (currentMatchedRow && canConfirm(currentMatchedRow)) {
+        await confirmRows([currentMatchedRow]);
+        return;
+      }
+
+      ElMessage.warning(
+        resolveConfirmActionDisabledReason(currentMatchedRow) ?? '标本已确认',
+      );
       return;
     }
 

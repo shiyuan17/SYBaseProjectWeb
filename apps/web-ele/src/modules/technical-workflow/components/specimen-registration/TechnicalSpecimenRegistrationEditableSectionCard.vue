@@ -20,10 +20,7 @@ const emit = defineEmits<{
 }>();
 
 function handleInput(event: Event) {
-  emit(
-    'update:editingValue',
-    (event.target as HTMLTextAreaElement).value,
-  );
+  emit('update:editingValue', (event.target as HTMLTextAreaElement).value);
 }
 </script>
 
@@ -47,8 +44,14 @@ function handleInput(event: Event) {
       <UserRoundPen aria-hidden="true" class="h-3 w-3" />
     </button>
 
-    <div v-if="props.isEditing" :data-editor-key="props.valueTestId" class="mt-2.5">
-      <h3 class="pr-8 text-sm font-semibold text-slate-900">{{ props.title }}</h3>
+    <div
+      v-if="props.isEditing"
+      :data-editor-key="props.valueTestId"
+      class="mt-2.5"
+    >
+      <h3 class="pr-8 text-sm font-semibold text-slate-900">
+        {{ props.title }}
+      </h3>
       <textarea
         :value="props.editingValue"
         class="min-h-[96px] w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm leading-5.5 text-slate-700 outline-none transition focus:border-sky-400"
@@ -57,7 +60,7 @@ function handleInput(event: Event) {
         @input="handleInput"
         @keydown.ctrl.enter.prevent="emit('save')"
         @keyup.esc="emit('cancel')"
-      />
+      ></textarea>
       <div class="mt-2.5 flex items-center justify-end gap-2">
         <button
           class="rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-600 transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
@@ -85,7 +88,9 @@ function handleInput(event: Event) {
       :class="props.canEdit ? 'cursor-text' : ''"
       @dblclick="props.canEdit ? emit('activate') : undefined"
     >
-      <h3 class="shrink-0 text-sm font-semibold text-slate-900">{{ props.title }}</h3>
+      <h3 class="shrink-0 text-sm font-semibold text-slate-900">
+        {{ props.title }}
+      </h3>
       <p
         :data-testid="`detail-section-value-${props.valueTestId}`"
         :title="props.value"

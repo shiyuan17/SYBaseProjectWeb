@@ -128,7 +128,7 @@ describe('TrackingSpecimenListTable', () => {
     await nextTick();
 
     const tags = [...container.querySelectorAll('[data-tag-type]')].map(
-      (node) => node.getAttribute('data-tag-type'),
+      (node) => (node as HTMLElement).dataset.tagType,
     );
 
     expect(tags).toContain('primary');

@@ -226,6 +226,12 @@ vi.mock('element-plus', () => {
     props: ['label', 'type'],
     setup(props, { slots }) {
       const getRows = inject<() => unknown[]>(tableRowsKey, () => []);
+      const renderFallbackCell = (index: number) => {
+        if (props.type === 'index') {
+          return String(index + 1);
+        }
+        return '';
+      };
       return () =>
         h('section', [
           props.label ? h('strong', props.label) : null,
@@ -234,9 +240,7 @@ vi.mock('element-plus', () => {
               'div',
               slots.default
                 ? slots.default({ $index: index, row })
-                : props.type === 'index'
-                  ? String(index + 1)
-                  : '',
+                : renderFallbackCell(index),
             ),
           ),
         ]);
@@ -289,6 +293,8 @@ function createTask(
     objectId: 'SLIDE-1',
     objectType: 'SLIDE',
     pathologyNo: 'BL-001',
+    patientId: 'P-001',
+    patientName: '患者甲',
     payload: null,
     productionRemarks: '主班备注',
     remarks: '染色备注',
@@ -325,7 +331,28 @@ function createTracking(): TechnicalTrackingView {
       },
     ],
     specimens: [],
-    technicalTasks: [],
+    technicalTasks: [
+      createTask({
+        assignedToName: '周永坚',
+        completedAt: '2026-06-03T16:35:50',
+        id: 'TASK-SLICING',
+        objectId: 'BOX-1',
+        objectType: 'EMBEDDING_BOX',
+        startedAt: '2026-06-03T16:30:00',
+        taskStatus: 'COMPLETED',
+        taskType: 'SLICING',
+      }),
+      createTask({
+        assignedToName: '周永坚',
+        completedAt: '2026-06-03T16:38:32',
+        id: 'TASK-STAINING',
+        objectId: 'SLIDE-1',
+        objectType: 'SLIDE',
+        startedAt: '2026-06-03T16:36:00',
+        taskStatus: 'COMPLETED',
+        taskType: 'STAINING',
+      }),
+    ],
   };
 }
 
@@ -377,7 +404,7 @@ describe('StainingWorkstationView', () => {
     mockStartSlideStaining.mockReset();
   });
 
-  it('renders legacy workstation controls and placeholder actions', async () => {
+  it('renders workstation controls, same-source stats, and patient identity', async () => {
     const { app, root } = mountView();
     await flushView();
 
@@ -388,6 +415,14 @@ describe('StainingWorkstationView', () => {
     expect(document.body.textContent).toContain('待出片列表');
     expect(document.body.textContent).toContain('已完成出片');
     expect(document.body.textContent).toContain('SLIDE-001');
+    expect(document.body.textContent).toContain('患者甲');
+    expect(document.body.textContent).toContain('待染色总数');
+    expect(document.body.textContent).toContain('待开始');
+    expect(document.body.textContent).toContain('超时风险');
+    expect(document.body.textContent).not.toContain('未出片');
+    expect(document.body.textContent).toContain('周永坚');
+    expect(document.body.textContent).toContain('2026-06-03 16:35:50');
+    expect(document.body.textContent).toContain('2026-06-03 16:38:32');
     expect(findButton('扫码清零').disabled).toBe(true);
     expect(findButton('打印清零码').disabled).toBe(true);
 

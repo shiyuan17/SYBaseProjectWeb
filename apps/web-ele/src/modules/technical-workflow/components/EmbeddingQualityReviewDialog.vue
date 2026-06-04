@@ -19,11 +19,21 @@ import {
   ElRadioGroup,
 } from 'element-plus';
 
-import { updateEmbeddingQualityReview } from '../api/technical-workflow-service';
 import { reportInlineErrorDisabled } from '#/utils/error-feedback';
 
+import { updateEmbeddingQualityReview } from '../api/technical-workflow-service';
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import { formatNullable } from '../utils/format';
+
+const props = defineProps<{
+  modelValue: boolean;
+  row: null | TechnicalTrackingEmbeddingRecordSummary;
+}>();
+
+const emit = defineEmits<{
+  submitted: [];
+  'update:modelValue': [value: boolean];
+}>();
 
 const EVALUATION_OPTIONS = [
   { label: '优秀', value: 'EXCELLENT' },
@@ -38,16 +48,6 @@ const UNQUALIFIED_REASON_OPTIONS = [
   '有钉子',
   '其他原因',
 ] as const;
-
-const props = defineProps<{
-  modelValue: boolean;
-  row: null | TechnicalTrackingEmbeddingRecordSummary;
-}>();
-
-const emit = defineEmits<{
-  submitted: [];
-  'update:modelValue': [value: boolean];
-}>();
 
 const dialogVisible = computed({
   get: () => props.modelValue,
@@ -203,10 +203,7 @@ watch(
                 {{ reason }}
               </ElCheckbox>
             </ElCheckboxGroup>
-            <ElInput
-              v-model="form.customReason"
-              placeholder="其他原因说明"
-            />
+            <ElInput v-model="form.customReason" placeholder="其他原因说明" />
           </div>
         </ElFormItem>
 
@@ -216,10 +213,7 @@ watch(
               <ElRadio label="REGROSSING">重新取材</ElRadio>
               <ElRadio label="OTHER">其他</ElRadio>
             </ElRadioGroup>
-            <ElInput
-              v-model="form.treatmentRemark"
-              placeholder="处理说明"
-            />
+            <ElInput v-model="form.treatmentRemark" placeholder="处理说明" />
           </div>
         </ElFormItem>
 
@@ -233,7 +227,11 @@ watch(
 
     <template #footer>
       <ElButton @click="dialogVisible = false">取消</ElButton>
-      <ElButton :loading="submitting" type="primary" @click="submitQualityReview">
+      <ElButton
+        :loading="submitting"
+        type="primary"
+        @click="submitQualityReview"
+      >
         保存评价
       </ElButton>
     </template>

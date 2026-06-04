@@ -21,19 +21,19 @@ const FROZEN_CHAIN: TechnicalWorkflowChainType = 'FROZEN';
 const EXCEPTION_CHAIN: TechnicalWorkflowChainType = 'EXCEPTION';
 
 export const TECHNICAL_WORKFLOW_ROUTE_META: Record<
+  | 'CYTOLOGY'
   | 'DEHYDRATION'
   | 'EMBEDDING'
   | 'ENTRY'
   | 'FROZEN'
-  | 'CYTOLOGY'
   | 'GROSSING'
   | 'IHC'
   | 'LIQUID_CYTOLOGY'
   | 'REWORK'
   | 'ROUTINE_ORDER'
-  | 'SPECIMEN_REGISTRATION'
   | 'SLICING'
   | 'SPECIAL_ORDER'
+  | 'SPECIMEN_REGISTRATION'
   | 'STAINING'
   | 'TASKS'
   | 'TRACKING',
@@ -239,6 +239,15 @@ export const TECHNICAL_OBJECT_TYPE_OPTIONS = [
   { label: '包埋盒', value: 'EMBEDDING_BOX' },
   { label: '玻片', value: 'SLIDE' },
 ] as const;
+
+export const GROSSING_EMBEDDING_BOX_PREFIX_OPTIONS = [
+  { label: 'A', value: 'A' },
+  { label: 'B', value: 'B' },
+  { label: 'C', value: 'C' },
+] as const;
+
+export type GrossingEmbeddingBoxPrefix =
+  (typeof GROSSING_EMBEDDING_BOX_PREFIX_OPTIONS)[number]['value'];
 
 export const REWORK_TYPE_OPTIONS = [
   { label: '重染', value: 'RESTAIN' },

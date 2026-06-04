@@ -10,10 +10,15 @@ export {
 } from './internal/specimen-workflow-application';
 
 export {
-  getApplicationTracking,
-  getApplicationTrackingByApplicationNo,
-  getSpecimenTrackingByBarcode,
-} from './internal/specimen-workflow-tracking';
+  mapPendingSpecimenPageResponse,
+  mapSpecimenRemovalPageResponse,
+} from './internal/specimen-workflow-mappers';
+
+export {
+  directReceiveSpecimens,
+  listPendingReceipts,
+  receiveSpecimens,
+} from './internal/specimen-workflow-receipt';
 
 export {
   getLatestRegistrationResult,
@@ -43,24 +48,19 @@ export {
 } from './internal/specimen-workflow-specimen-management';
 
 export {
+  getApplicationTracking,
+  getApplicationTrackingByApplicationNo,
+  getSpecimenTrackingByBarcode,
+} from './internal/specimen-workflow-tracking';
+
+export {
   createTransportOrder,
   handoverTransportOrder,
   listPendingTransportOrders,
   listSpecimenOutbounds,
   outboundTransportOrder,
-  quickOutboundSpecimen,
   printTransportOrder,
+  quickOutboundSpecimen,
 } from './internal/specimen-workflow-transport';
-
-export {
-  directReceiveSpecimens,
-  listPendingReceipts,
-  receiveSpecimens,
-} from './internal/specimen-workflow-receipt';
-
-export {
-  mapPendingSpecimenPageResponse,
-  mapSpecimenRemovalPageResponse,
-} from './internal/specimen-workflow-mappers';
 
 export { resetMockState } from './specimen-workflow-service.mock';

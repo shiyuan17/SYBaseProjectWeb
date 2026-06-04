@@ -1,21 +1,26 @@
 import type { TechnicalTrackingEmbeddingRecordSummary } from '../types/technical-workflow';
 
-import { createApp, defineComponent, h, inject, nextTick, provide, ref } from 'vue';
+import {
+  createApp,
+  defineComponent,
+  h,
+  inject,
+  nextTick,
+  provide,
+  ref,
+} from 'vue';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const radioGroupKey = Symbol('radio-group');
 const checkboxGroupKey = Symbol('checkbox-group');
 
-const {
-  messageSuccess,
-  messageWarning,
-  mockUpdateEmbeddingQualityReview,
-} = vi.hoisted(() => ({
-  messageSuccess: vi.fn(),
-  messageWarning: vi.fn(),
-  mockUpdateEmbeddingQualityReview: vi.fn(),
-}));
+const { messageSuccess, messageWarning, mockUpdateEmbeddingQualityReview } =
+  vi.hoisted(() => ({
+    messageSuccess: vi.fn(),
+    messageWarning: vi.fn(),
+    mockUpdateEmbeddingQualityReview: vi.fn(),
+  }));
 
 vi.mock('../api/technical-workflow-service', () => ({
   updateEmbeddingQualityReview: mockUpdateEmbeddingQualityReview,
@@ -27,7 +32,7 @@ vi.mock('#/utils/error-feedback', () => ({
 
 vi.mock('element-plus', () => {
   function slotText(slots: { default?: () => unknown[] }) {
-    const first = slots.default?.()[0] as { children?: unknown } | undefined;
+    const first = slots.default?.()[0] as undefined | { children?: unknown };
     return typeof first?.children === 'string' ? first.children : '';
   }
 

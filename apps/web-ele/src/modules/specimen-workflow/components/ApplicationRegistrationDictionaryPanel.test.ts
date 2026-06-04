@@ -1,4 +1,7 @@
-import type { SpecimenDictionaryEntryOption, SpecimenDictionaryGroup } from '../types/application-registration-workbench';
+import type {
+  SpecimenDictionaryEntryOption,
+  SpecimenDictionaryGroup,
+} from '../types/application-registration-workbench';
 
 import { createApp, defineComponent, h, nextTick, ref } from 'vue';
 
@@ -192,7 +195,10 @@ describe('ApplicationRegistrationDictionaryPanel', () => {
     input!.value = '胃';
     input!.dispatchEvent(new Event('input'));
 
-    expect(wrapper.emitMock).toHaveBeenCalledWith('update:dictionaryKeyword', '胃');
+    expect(wrapper.emitMock).toHaveBeenCalledWith(
+      'update:dictionaryKeyword',
+      '胃',
+    );
 
     wrapper.unmount();
   });

@@ -6,29 +6,31 @@ import type {
   SpecimenOutboundPage,
   TransportOrderCreateRequest,
   TransportOrderHandoverRequest,
-  TransportOrderOutboundRequest,
   TransportOrderOperatorRequest,
+  TransportOrderOutboundRequest,
   TransportOrderView,
 } from '../../types/specimen-workflow';
+import type {
+  PendingTransportOrderPageResponse,
+  SpecimenOutboundPageResponse,
+} from './specimen-workflow-mappers';
 
 import { requestClient } from '#/api/request';
 
+import {
+  mapPendingTransportOrderPageResponse,
+  mapSpecimenOutboundPageResponse,
+} from './specimen-workflow-mappers';
 import {
   createTransportOrderMock,
   handoverTransportOrderMock,
   listPendingTransportOrdersMock,
   listSpecimenOutboundsMock,
   outboundTransportOrderMock,
-  quickOutboundSpecimenMock,
   printTransportOrderMock,
+  quickOutboundSpecimenMock,
   USE_SPECIMEN_WORKFLOW_MOCK,
 } from './specimen-workflow-mock-gateway';
-import {
-  type PendingTransportOrderPageResponse,
-  type SpecimenOutboundPageResponse,
-  mapPendingTransportOrderPageResponse,
-  mapSpecimenOutboundPageResponse,
-} from './specimen-workflow-mappers';
 
 export async function listPendingTransportOrders(
   params: PendingTransportOrderQuery,
@@ -102,7 +104,9 @@ export async function outboundTransportOrder(
   );
 }
 
-export async function quickOutboundSpecimen(data: QuickSpecimenOutboundRequest) {
+export async function quickOutboundSpecimen(
+  data: QuickSpecimenOutboundRequest,
+) {
   if (USE_SPECIMEN_WORKFLOW_MOCK) {
     return quickOutboundSpecimenMock(data);
   }

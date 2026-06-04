@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { ApplicationRegistrationWorkbenchRecord } from '#/modules/specimen-workflow/types/application-registration-workbench';
-
 import type { TechnicalSpecimenRegistrationWorkspace } from '../../types/technical-workflow';
+
+import type { ApplicationRegistrationWorkbenchRecord } from '#/modules/specimen-workflow/types/application-registration-workbench';
 
 import { computed } from 'vue';
 
@@ -10,9 +10,7 @@ import { ElAlert, ElButton, ElEmpty } from 'element-plus';
 import { APPLICATION_TYPE_OPTIONS } from '#/modules/specimen-workflow/constants';
 import { formatApplicationType } from '#/modules/specimen-workflow/utils/format';
 
-import {
-  resolveTechnicalRegistrationApplicationType,
-} from '../../utils/specimen-registration-application';
+import { resolveTechnicalRegistrationApplicationType } from '../../utils/specimen-registration-application';
 
 const props = defineProps<{
   error?: string;
@@ -30,14 +28,13 @@ const emit = defineEmits<{
 const hasContext = computed(
   () => props.record !== null || props.workspace !== null,
 );
-const currentApplicationType = computed(
-  () =>
-    resolveTechnicalRegistrationApplicationType(
-      props.selectedApplicationType?.trim() ||
-        props.record?.patientInfo.specimenType?.trim() ||
-        props.workspace?.basicInfo.applicationType?.trim() ||
-        '',
-    ),
+const currentApplicationType = computed(() =>
+  resolveTechnicalRegistrationApplicationType(
+    props.selectedApplicationType?.trim() ||
+      props.record?.patientInfo.specimenType?.trim() ||
+      props.workspace?.basicInfo.applicationType?.trim() ||
+      '',
+  ),
 );
 
 const typeOptions = computed(() => {
@@ -62,7 +59,6 @@ function selectApplicationType(value: string) {
   }
   emit('update:applicationType', value);
 }
-
 </script>
 
 <template>
@@ -88,12 +84,7 @@ function selectApplicationType(value: string) {
     </div>
 
     <div class="space-y-4 px-4 py-4">
-      <ElAlert
-        v-if="error"
-        :closable="false"
-        :title="error"
-        type="error"
-      />
+      <ElAlert v-if="error" :closable="false" :title="error" type="error" />
 
       <div
         v-if="loading"
@@ -105,9 +96,7 @@ function selectApplicationType(value: string) {
       <template v-else-if="hasContext">
         <article class="rounded-lg border border-slate-200 bg-slate-50 p-3">
           <div class="mb-2 flex items-center justify-between gap-3">
-            <div class="text-xs font-semibold text-slate-500">
-              送检类型
-            </div>
+            <div class="text-xs font-semibold text-slate-500">送检类型</div>
             <div class="text-[11px] text-slate-400">
               {{ typeOptions.length }} 类
             </div>
@@ -117,8 +106,8 @@ function selectApplicationType(value: string) {
               v-for="item in typeOptions"
               :key="item.value"
               :aria-pressed="item.value === currentApplicationType"
+              class="rounded-full border px-3 py-1 text-xs font-medium leading-5 transition"
               :class="[
-                'rounded-full border px-3 py-1 text-xs font-medium leading-5 transition',
                 item.value === currentApplicationType
                   ? item.value === 'SUPPLEMENTAL_REPORT'
                     ? 'border-rose-500 bg-rose-500 text-white shadow-sm'

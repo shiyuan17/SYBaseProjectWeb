@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Page } from '@vben/common-ui';
 
-
 import TechnicalTrackingDetailsSection from '../components/TechnicalTrackingDetailsSection.vue';
 import TechnicalTrackingQueryPanel from '../components/TechnicalTrackingQueryPanel.vue';
 import TechnicalTrackingSummaryTables from '../components/TechnicalTrackingSummaryTables.vue';
@@ -29,7 +28,6 @@ const {
 <template>
   <Page>
     <div class="flex flex-col gap-4">
-
       <TechnicalTrackingQueryPanel
         :case-id="caseId"
         :loading="loading"

@@ -4,13 +4,7 @@ import type {
   ReceiptConfirmSummary,
 } from '../utils/specimen-receipt';
 
-import {
-  ElButton,
-  ElDialog,
-  ElForm,
-  ElFormItem,
-  ElInput,
-} from 'element-plus';
+import { ElButton, ElDialog, ElForm, ElFormItem, ElInput } from 'element-plus';
 
 import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
 
@@ -44,16 +38,21 @@ const form = defineModel<ReceiptConfirmForm>('form', {
     @closed="emit('close')"
   >
     <div class="flex flex-col gap-4">
-      <section class="rounded-lg border border-border bg-card px-4 py-4 shadow-sm">
+      <section
+        class="rounded-lg border border-border bg-card px-4 py-4 shadow-sm"
+      >
         <div class="mb-3 text-base font-semibold text-foreground">提示信息</div>
         <div class="text-lg font-semibold text-danger">
           当批扫码共涉及 {{ summary.applicationCount }} 个申请单，{{
             summary.patientCount
-          }} 个病人，{{ summary.specimenCount }} 个标本。
+          }}
+          个病人，{{ summary.specimenCount }} 个标本。
         </div>
       </section>
 
-      <section class="rounded-lg border border-border bg-card px-4 py-4 shadow-sm">
+      <section
+        class="rounded-lg border border-border bg-card px-4 py-4 shadow-sm"
+      >
         <ElForm label-width="96px">
           <div class="grid gap-4">
             <ElFormItem label="物流人员" required>

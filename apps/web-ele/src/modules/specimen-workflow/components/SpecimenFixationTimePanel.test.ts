@@ -101,67 +101,96 @@ const {
         : '2026-05-26 08:10:00',
     specimens: [],
   })),
-  listSpecimensMock: vi.fn(async ({ keyword }: { keyword?: string }) => {
-    const rows = [
-      {
-        abnormalFlag: false,
-        applicationId: 'APP-001',
-        applicationNo: 'M2-001',
-        barcode: 'BC-001',
-        fixationCompletedAt: null,
-        fixationStartedAt: null,
-        fixationStatus: 'PENDING',
-        labelPrintBatchNo: 'LB-001',
-        labelPrintStatus: 'FAILED',
-        latestTrackingAt: '2026-05-26 08:40:00',
-        patientName: 'Alice',
-        registeredAt: '2026-05-26 08:00:00',
-        specimenId: 'SPEC-001',
-        specimenName: '乳腺组织',
-        specimenNo: 'SP-001',
-        specimenStatus: 'REGISTERED',
-        specimenType: '常规',
-        verificationStatus: 'VERIFIED',
-      },
-      {
-        abnormalFlag: false,
-        applicationId: 'APP-002',
-        applicationNo: 'M2-002',
-        barcode: 'BC-002',
-        fixationCompletedAt: null,
-        fixationStartedAt: null,
-        fixationStatus: 'PENDING',
-        labelPrintBatchNo: 'LB-002',
-        labelPrintStatus: 'SUCCESS',
-        latestTrackingAt: '2026-05-26 09:20:00',
-        patientName: 'Bob',
-        registeredAt: '2026-05-26 08:20:00',
-        specimenId: 'SPEC-002',
-        specimenName: '肺组织',
-        specimenNo: 'SP-002',
-        specimenStatus: 'REGISTERED',
-        specimenType: '冰冻',
-        verificationStatus: 'VERIFIED',
-      },
-    ];
-    return {
-      items: rows.filter((item) =>
-        [item.barcode, item.specimenId, item.specimenNo].includes(
-          keyword ?? '',
-        ),
-      ),
-      page: 1,
-      size: 100,
-      summary: {
-        abnormalCount: 0,
-        labelPrintedCount: 0,
-        pendingLabelCount: 0,
-        totalCount: 0,
-        unboundCount: 0,
-      },
-      total: 1,
-    };
-  }),
+  listSpecimensMock: vi.fn(
+    async ({
+      applicationNo,
+      keyword,
+    }: {
+      applicationNo?: string;
+      keyword?: string;
+    }) => {
+      const rows = [
+        {
+          abnormalFlag: false,
+          applicationId: 'APP-001',
+          applicationNo: 'M2-001',
+          barcode: 'BC-001',
+          fixationCompletedAt: null,
+          fixationStartedAt: null,
+          fixationStatus: 'PENDING',
+          labelPrintBatchNo: 'LB-001',
+          labelPrintStatus: 'FAILED',
+          latestTrackingAt: '2026-05-26 08:40:00',
+          patientName: 'Alice',
+          registeredAt: '2026-05-26 08:00:00',
+          specimenId: 'SPEC-001',
+          specimenName: '乳腺组织',
+          specimenNo: 'SP-001',
+          specimenStatus: 'REGISTERED',
+          specimenType: '常规',
+          verificationStatus: 'VERIFIED',
+        },
+        {
+          abnormalFlag: false,
+          applicationId: 'APP-002',
+          applicationNo: 'M2-002',
+          barcode: 'BC-002',
+          fixationCompletedAt: null,
+          fixationStartedAt: null,
+          fixationStatus: 'PENDING',
+          labelPrintBatchNo: 'LB-002',
+          labelPrintStatus: 'SUCCESS',
+          latestTrackingAt: '2026-05-26 09:20:00',
+          patientName: 'Bob',
+          registeredAt: '2026-05-26 08:20:00',
+          specimenId: 'SPEC-002',
+          specimenName: '肺组织',
+          specimenNo: 'SP-002',
+          specimenStatus: 'REGISTERED',
+          specimenType: '冰冻',
+          verificationStatus: 'VERIFIED',
+        },
+        {
+          abnormalFlag: false,
+          applicationId: 'APP-002',
+          applicationNo: 'M2-002',
+          barcode: 'BC-003',
+          fixationCompletedAt: null,
+          fixationStartedAt: null,
+          fixationStatus: 'PENDING',
+          labelPrintBatchNo: 'LB-002',
+          labelPrintStatus: 'SUCCESS',
+          latestTrackingAt: '2026-05-26 09:25:00',
+          patientName: 'Bob',
+          registeredAt: '2026-05-26 08:25:00',
+          specimenId: 'SPEC-003',
+          specimenName: '纵隔淋巴结',
+          specimenNo: 'SP-003',
+          specimenStatus: 'REGISTERED',
+          specimenType: '常规',
+          verificationStatus: 'VERIFIED',
+        },
+      ];
+      const matchedRows = applicationNo
+        ? rows.filter((item) => item.applicationNo === applicationNo)
+        : rows.filter(
+            (item) => item.specimenNo === keyword || item.barcode === keyword,
+          );
+      return {
+        items: matchedRows,
+        page: 1,
+        size: 100,
+        summary: {
+          abnormalCount: 0,
+          labelPrintedCount: 0,
+          pendingLabelCount: 0,
+          totalCount: matchedRows.length,
+          unboundCount: 0,
+        },
+        total: matchedRows.length,
+      };
+    },
+  ),
   listOperatingBuildingOptionsMock: vi.fn(async () => []),
   completeFixationMock: vi.fn(
     async (payload: {
@@ -527,18 +556,36 @@ async function flushView() {
   await nextTick();
 }
 
-async function addRow(container: HTMLElement, value: string) {
+async function querySpecimen(container: HTMLElement, value: string) {
   const input = container.querySelector(
-    'input[placeholder="流水号 / 标本ID"]',
+    'input[placeholder="请输入标本号"]',
   ) as HTMLInputElement;
   input.value = value;
   input.dispatchEvent(new Event('input', { bubbles: true }));
   await flushView();
-  input.dispatchEvent(
-    new KeyboardEvent('keyup', { bubbles: true, key: 'Enter' }),
+  await clickActionButton(container, '查询');
+  await flushView();
+  await flushView();
+  await flushView();
+}
+
+async function selectRow(container: HTMLElement, index: number) {
+  const checkbox = container.querySelector(
+    `input[data-selection-index="${index}"]`,
+  ) as HTMLInputElement | null;
+  if (!checkbox) {
+    return;
+  }
+  checkbox.checked = true;
+  checkbox.dispatchEvent(new Event('click', { bubbles: true }));
+  await flushView();
+}
+
+async function clickActionButton(container: HTMLElement, text: string) {
+  const button = [...container.querySelectorAll('button')].find((item) =>
+    item.textContent?.includes(text),
   );
-  await flushView();
-  await flushView();
+  button?.click();
   await flushView();
 }
 
@@ -548,7 +595,7 @@ describe('SpecimenFixationTimePanel', () => {
     vi.clearAllMocks();
   });
 
-  it('completes fixation by scan and renders the fixed fields', async () => {
+  it('queries by specimenNo and renders the application rows without completing fixation', async () => {
     const { app, container } = mountView();
 
     await flushView();
@@ -557,32 +604,32 @@ describe('SpecimenFixationTimePanel', () => {
     ) as HTMLSelectElement | null;
     expect(fixationLiquidSelect?.value).toBe('FORMALIN');
 
-    await addRow(container, 'SP-002');
+    await querySpecimen(container, 'SP-002');
 
     expect(container.textContent).toContain('固定时间');
     expect(container.textContent).toContain('固定人');
     expect(container.textContent).toContain('固定液类型');
     expect(container.textContent).toContain('病人ID');
     expect(container.textContent).toContain('肺组织');
-    expect(container.textContent).toContain('10% 中性福尔马林');
-    expect(container.textContent).toContain('Test User');
     expect(container.textContent).toContain('PAT-002');
-    expect(completeFixationMock).toHaveBeenCalledWith({
-      fixationLiquidType: 'FORMALIN',
-      remarks: '扫码完成固定',
-      specimenBarcode: 'BC-002',
-    });
+    expect(container.textContent).toContain('纵隔淋巴结');
+    expect(completeFixationMock).not.toHaveBeenCalled();
 
     app.unmount();
   });
 
-  it('prevents duplicate queue items', async () => {
+  it('replaces the current list when querying another specimenNo', async () => {
     const { app, container } = mountView();
 
-    await addRow(container, 'SP-001');
-    await addRow(container, 'SP-001');
+    await querySpecimen(container, 'SP-002');
+    expect(container.textContent).toContain('肺组织');
+    expect(container.textContent).toContain('纵隔淋巴结');
 
-    expect(warningMock).toHaveBeenCalledWith('该标本已在当前列表中');
+    await querySpecimen(container, 'SP-001');
+
+    expect(container.textContent).toContain('乳腺组织');
+    expect(container.textContent).not.toContain('肺组织');
+    expect(container.textContent).not.toContain('纵隔淋巴结');
 
     app.unmount();
   });
@@ -624,7 +671,7 @@ describe('SpecimenFixationTimePanel', () => {
     });
     const { app, container } = mountView();
 
-    await addRow(container, 'SP-003');
+    await querySpecimen(container, 'SP-003');
 
     expect(warningMock).toHaveBeenCalledWith(
       '标本尚未完成离体确认，请先完成离体确认后再固定',
@@ -637,14 +684,9 @@ describe('SpecimenFixationTimePanel', () => {
   it('clears selected rows and then clears the full list', async () => {
     const { app, container } = mountView();
 
-    await addRow(container, 'SP-001');
-    await addRow(container, 'SP-002');
+    await querySpecimen(container, 'SP-002');
 
-    const selectionCheckbox = container.querySelector(
-      'input[data-selection-index="1"]',
-    ) as HTMLInputElement | null;
-    selectionCheckbox?.click();
-    await flushView();
+    await selectRow(container, 1);
 
     const clearSelectedButton = [...container.querySelectorAll('button')].find(
       (button) => button.textContent?.includes('清除选择行'),
@@ -652,7 +694,8 @@ describe('SpecimenFixationTimePanel', () => {
     clearSelectedButton?.click();
     await flushView();
 
-    expect(container.textContent).not.toContain('乳腺组织');
+    expect(container.textContent).not.toContain('纵隔淋巴结');
+    expect(container.textContent).toContain('肺组织');
     expect(successMock).toHaveBeenCalledWith('已清除选择行');
 
     const clearListButton = [...container.querySelectorAll('button')].find(
@@ -670,7 +713,7 @@ describe('SpecimenFixationTimePanel', () => {
   it('submits retry label for queue rows', async () => {
     const { app, container } = mountView();
 
-    await addRow(container, 'SP-001');
+    await querySpecimen(container, 'SP-001');
 
     const retryButton = [...container.querySelectorAll('button')].find(
       (button) => button.textContent?.includes('补打标本标签'),
@@ -702,7 +745,7 @@ describe('SpecimenFixationTimePanel', () => {
   it('exports queue rows as excel', async () => {
     const { app, container } = mountView();
 
-    await addRow(container, 'SP-001');
+    await querySpecimen(container, 'SP-001');
 
     const exportButton = [...container.querySelectorAll('button')].find(
       (button) => button.textContent?.includes('导出Excel'),
@@ -712,6 +755,39 @@ describe('SpecimenFixationTimePanel', () => {
 
     expect(downloadFileFromBlobMock).toHaveBeenCalled();
     expect(successMock).toHaveBeenCalledWith('导出成功');
+
+    app.unmount();
+  });
+
+  it('confirms fixation only for selected rows', async () => {
+    const { app, container } = mountView();
+
+    await querySpecimen(container, 'SP-002');
+
+    await selectRow(container, 0);
+
+    await clickActionButton(container, '确认固定');
+
+    expect(completeFixationMock).toHaveBeenCalledTimes(1);
+    expect(completeFixationMock).toHaveBeenCalledWith({
+      fixationLiquidType: 'FORMALIN',
+      remarks: '手动确认固定',
+      specimenBarcode: 'BC-002',
+    });
+    expect(container.textContent).toContain('Test User');
+    expect(successMock).toHaveBeenCalledWith('已完成 1 条标本固定');
+
+    app.unmount();
+  });
+
+  it('warns when confirming fixation without a selection', async () => {
+    const { app, container } = mountView();
+
+    await querySpecimen(container, 'SP-002');
+    await clickActionButton(container, '确认固定');
+
+    expect(completeFixationMock).not.toHaveBeenCalled();
+    expect(warningMock).toHaveBeenCalledWith('请先勾选需要固定的标本');
 
     app.unmount();
   });

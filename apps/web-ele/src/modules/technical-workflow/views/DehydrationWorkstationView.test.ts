@@ -75,8 +75,8 @@ vi.mock('element-plus', () => {
   });
 
   const ElButton = defineComponent({
-    emits: ['click'],
     props: ['disabled', 'loading', 'type'],
+    emits: ['click'],
     setup(props, { attrs, emit, slots }) {
       return () =>
         h(
@@ -93,8 +93,8 @@ vi.mock('element-plus', () => {
   });
 
   const ElInput = defineComponent({
-    emits: ['keyup', 'update:modelValue'],
     props: ['modelValue', 'placeholder'],
+    emits: ['keyup', 'update:modelValue'],
     setup(props, { emit }) {
       return () =>
         h('input', {
@@ -115,8 +115,8 @@ vi.mock('element-plus', () => {
   });
 
   const ElTable = defineComponent({
-    emits: ['current-change', 'selection-change'],
     props: ['data'],
+    emits: ['current-change', 'selection-change'],
     setup(props, { emit, slots }) {
       provide(tableRowsKey, () => props.data ?? []);
       return () =>
@@ -148,23 +148,15 @@ vi.mock('element-plus', () => {
         () => [],
       );
       return () =>
-        h(
-          'section',
-          { 'data-column-label': props.label ?? props.type ?? '' },
-          [
-            props.label ? h('strong', String(props.label)) : null,
-            ...getRows().map((row, index) =>
-              h(
-                'div',
-                slots.default
-                  ? slots.default({ $index: index, row })
-                  : props.type === 'selection'
-                    ? ''
-                    : '',
-              ),
-            ),
-          ],
-        );
+        h('section', { 'data-column-label': props.label ?? props.type ?? '' }, [
+          props.label ? h('strong', String(props.label)) : null,
+          ...getRows().map((row, index) => {
+            const cellContent = slots.default
+              ? slots.default({ $index: index, row })
+              : '';
+            return h('div', cellContent);
+          }),
+        ]);
     },
   });
 
@@ -283,9 +275,7 @@ describe('DehydrationWorkstationView', () => {
     expect(document.body.textContent).not.toContain('执行脱水');
     expect(document.body.textContent).not.toContain('创建批次');
     expect(document.body.textContent).not.toContain('批次操作');
-    expect(
-      document.querySelector('[data-column-label="操作"]'),
-    ).toBeFalsy();
+    expect(document.querySelector('[data-column-label="操作"]')).toBeFalsy();
 
     app.unmount();
   });

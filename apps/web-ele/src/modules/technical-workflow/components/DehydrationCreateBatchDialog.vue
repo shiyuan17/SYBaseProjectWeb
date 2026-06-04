@@ -23,12 +23,12 @@ import {
   ElSelect,
 } from 'element-plus';
 
+import { reportInlineErrorDisabled } from '#/utils/error-feedback';
+
 import {
   createDehydrationBatch,
   getTechnicalTracking,
 } from '../api/technical-workflow-service';
-import { reportInlineErrorDisabled } from '#/utils/error-feedback';
-
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import {
   formatCaseStatus,
@@ -196,7 +196,6 @@ watch(
     @closed="resetDialogState"
   >
     <div class="flex flex-col gap-4">
-
       <ElDescriptions :column="3" border>
         <ElDescriptionsItem label="任务号">
           {{ formatNullable(currentTaskContext.taskId) }}

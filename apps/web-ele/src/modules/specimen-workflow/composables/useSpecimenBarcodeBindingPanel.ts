@@ -29,12 +29,12 @@ import {
 } from '../api/specimen-workflow-service';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
+import { formatDateTime, formatNullable } from '../utils/format';
 import {
   buildOperatingRoomNameMap,
   resolveOperatingRoomDisplayName,
 } from '../utils/operating-room-display';
 import { buildSpecimenBatchPrintDocument } from '../utils/specimen-print';
-import { formatDateTime, formatNullable } from '../utils/format';
 
 const MAX_QUERY_SIZE = 500;
 
@@ -141,12 +141,14 @@ export function useSpecimenBarcodeBindingPanel() {
   const total = computed(() => allRows.value.length);
 
   const selectedSingleRow = computed(() =>
-    selectedRows.value.length === 1 ? selectedRows.value[0] ?? null : null,
+    selectedRows.value.length === 1 ? (selectedRows.value[0] ?? null) : null,
   );
 
   const canBind = computed(() => {
     const row = selectedSingleRow.value;
-    return Boolean(row && !isBoundRow(row) && normalizeText(targetBarcode.value));
+    return Boolean(
+      row && !isBoundRow(row) && normalizeText(targetBarcode.value),
+    );
   });
 
   const canUnbind = computed(() => {
@@ -169,7 +171,7 @@ export function useSpecimenBarcodeBindingPanel() {
       selectedRows.value.every(
         (row) => normalizeText(row.labelPrintBatchNo) === batchNos[0],
       )
-      ? batchNos[0] ?? ''
+      ? (batchNos[0] ?? '')
       : '';
   });
 
@@ -502,7 +504,9 @@ export function useSpecimenBarcodeBindingPanel() {
     };
   }
 
-  function buildPrintItem(row: SpecimenManagementListItem): WorkbenchSpecimenItem {
+  function buildPrintItem(
+    row: SpecimenManagementListItem,
+  ): WorkbenchSpecimenItem {
     return {
       id: row.specimenId,
       quantity: row.specimenCount ?? 1,

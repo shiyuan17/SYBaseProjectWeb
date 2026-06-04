@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { SpecimenOutboundListItem } from '../types/specimen-workflow';
+import type { SpecimenOutboundDisplayItem } from '../utils/transport-handover';
 
 import { reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
@@ -33,15 +34,13 @@ import {
 } from '../utils/operating-room-display';
 import {
   buildTransportOrderOutboundRequest,
-  canSelectSpecimenOutboundRow,
   createDefaultTransportOutboundFormState,
+  enhanceSpecimenOutboundItem,
   normalizeRouteQueryValue,
+  resolveExactSpecimenOutboundMatches,
   resolveTransportSelectionValidationMessage,
   splitTransportRowsByTransportOrder,
 } from '../utils/transport-handover';
-
-const PATHOLOGY_DEPARTMENT_ID = 'DEPT_PATH';
-const PATHOLOGY_DEPARTMENT_NAME = '病理科';
 
 withDefaults(
   defineProps<{
@@ -52,15 +51,18 @@ withDefaults(
   },
 );
 
+const PATHOLOGY_DEPARTMENT_ID = 'DEPT_PATH';
+const PATHOLOGY_DEPARTMENT_NAME = '病理科';
+
 const route = useRoute();
 const userStore = useUserStore();
 
 const pageError = ref('');
 const loading = ref(false);
 const outboundLoading = ref(false);
-const items = ref<SpecimenOutboundListItem[]>([]);
+const items = ref<SpecimenOutboundDisplayItem[]>([]);
 const operatingRoomNameMap = ref<ReadonlyMap<string, string>>(new Map());
-const selectedRows = ref<SpecimenOutboundListItem[]>([]);
+const selectedRows = ref<SpecimenOutboundDisplayItem[]>([]);
 const total = ref(0);
 
 const filters = reactive({
@@ -105,7 +107,9 @@ async function ensureOperatingRoomNameMapLoaded() {
   return operatingRoomNameMap.value;
 }
 
-async function maybeSubmitQuickOutbound(records: SpecimenOutboundListItem[]) {
+async function maybeSubmitQuickOutbound(
+  records: SpecimenOutboundDisplayItem[],
+) {
   const specimenNo = filters.specimenNo.trim();
   if (!specimenNo) {
     return;
@@ -114,15 +118,19 @@ async function maybeSubmitQuickOutbound(records: SpecimenOutboundListItem[]) {
     await submitQuickOutboundBySpecimenNo(specimenNo);
     return;
   }
-  if (records.length !== 1) {
+  const exactMatches = resolveExactSpecimenOutboundMatches(records, specimenNo);
+  if (exactMatches.length !== 1) {
     return;
   }
 
-  const matchedRecord = records[0];
+  const matchedRecord = exactMatches[0];
   if (!matchedRecord) {
     return;
   }
-  if (matchedRecord.outboundAt) {
+  if (!matchedRecord.canOutbound) {
+    ElMessage.warning(
+      matchedRecord.outboundDisabledReason || '当前标本暂不能出库',
+    );
     return;
   }
   if (!matchedRecord.transportOrderId) {
@@ -133,13 +141,17 @@ async function maybeSubmitQuickOutbound(records: SpecimenOutboundListItem[]) {
   await submitQuickOutbound(matchedRecord);
 }
 
-async function loadOutbounds(options: { autoSubmitQuickOutbound?: boolean } = {}) {
+async function loadOutbounds(
+  options: { autoSubmitQuickOutbound?: boolean } = {},
+) {
   loading.value = true;
   pageError.value = '';
   try {
     await ensureOperatingRoomNameMapLoaded();
     const result = await listSpecimenOutbounds(buildListQuery());
-    items.value = normalizeOutboundItems(result.items);
+    items.value = normalizeOutboundItems(result.items).map((record) =>
+      enhanceSpecimenOutboundItem(record),
+    );
     selectedRows.value = [];
     total.value = result.total;
     if (options.autoSubmitQuickOutbound) {
@@ -166,7 +178,7 @@ function handlePageChange() {
   void loadOutbounds();
 }
 
-function handleSelectionChange(rows: SpecimenOutboundListItem[]) {
+function handleSelectionChange(rows: SpecimenOutboundDisplayItem[]) {
   selectedRows.value = rows;
 }
 
@@ -175,7 +187,7 @@ function handleOutboundUserChange(user: null | { id: string; name: string }) {
   outboundForm.outboundUserName = user?.name ?? '';
 }
 
-async function submitQuickOutbound(record: SpecimenOutboundListItem) {
+async function submitQuickOutbound(record: SpecimenOutboundDisplayItem) {
   if (!ensureOutboundOperatorSelected()) {
     return;
   }
@@ -324,7 +336,6 @@ watch(
         type="error"
         show-icon
       />
-
       <WorkflowSectionCard title="标本出库">
         <div class="flex flex-col gap-4">
           <div class="flex flex-wrap items-center gap-4 text-sm">
@@ -361,7 +372,7 @@ watch(
             <ElButton
               :disabled="
                 selectedRows.length === 0 ||
-                selectedRows.some((row) => !canSelectSpecimenOutboundRow(row))
+                selectedRows.some((row) => !row.canOutbound)
               "
               type="primary"
               @click="handleBatchTransport"

@@ -537,7 +537,8 @@ export async function saveApplicationRegistrationPatientInfoMock(
       specialConditions: { ...payload.gynecologyInfo.specialConditions },
     },
     patientInfo: { ...payload.patientInfo },
-    specimenItems: currentRecord?.specimenItems.map((item) => ({ ...item })) ?? [],
+    specimenItems:
+      currentRecord?.specimenItems.map((item) => ({ ...item })) ?? [],
     surgeryInfo: { ...payload.surgeryInfo },
   };
 

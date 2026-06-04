@@ -22,8 +22,9 @@ import {
   ElTable,
   ElTableColumn,
   ElTag,
-  ElTooltip,
 } from 'element-plus';
+
+import { reportInlineErrorDisabled } from '#/utils/error-feedback';
 
 import {
   getSlicingWorkbench,
@@ -35,8 +36,13 @@ import SlicingQcEvaluationDialog from '../components/SlicingQcEvaluationDialog.v
 import TechnicalTaskStartDialog from '../components/TechnicalTaskStartDialog.vue';
 import TechnicalTrackingDetailsSection from '../components/TechnicalTrackingDetailsSection.vue';
 import TechnicalTrackingSummaryTables from '../components/TechnicalTrackingSummaryTables.vue';
-import { reportInlineErrorDisabled } from '#/utils/error-feedback';
-
+import { getWorkflowPageErrorMessage } from '../utils/error';
+import {
+  formatDateTime,
+  formatEventStatus,
+  formatNullable,
+  formatTaskStatus,
+} from '../utils/format';
 import {
   buildTrackingTreeData,
   buildWorkflowTimelineSteps,
@@ -45,13 +51,6 @@ import {
   filterTrackingTasks,
   resolveSelectedTrackingNodeId,
 } from '../utils/tracking';
-import {
-  formatDateTime,
-  formatEventStatus,
-  formatNullable,
-  formatTaskStatus,
-} from '../utils/format';
-import { getWorkflowPageErrorMessage } from '../utils/error';
 import { buildWorkstationCaseContext } from '../utils/workstation';
 
 interface SelectableTableInstance {
@@ -81,15 +80,6 @@ const EMPTY_WORKBENCH: SlicingWorkbenchView = {
     pendingTomorrowCount: 0,
   },
 };
-
-const LEGACY_PLACEHOLDER_ACTIONS = [
-  '重打玻片',
-  '重新分片',
-  '重补台片',
-  '终止',
-  '手术预约',
-  '确认清零',
-] as const;
 
 const pageError = ref('');
 const loading = ref(false);
@@ -188,8 +178,8 @@ const canCompleteSlicing = computed(() => {
   const row = selectedPendingRow.value;
   return Boolean(
     row &&
-      row.selectable &&
-      ['IN_PROGRESS', 'PENDING'].includes(row.taskStatus ?? ''),
+    row.selectable &&
+    ['IN_PROGRESS', 'PENDING'].includes(row.taskStatus ?? ''),
   );
 });
 const canOpenTrackingDrawer = computed(
@@ -461,7 +451,8 @@ async function loadTrackingDrawerForRow(
   try {
     const trackingResult = await getTechnicalTracking(row.caseId);
     trackingDrawerResult.value = trackingResult;
-    trackingDrawerActiveTab.value = mode === 'history' ? 'timeline' : 'abnormal';
+    trackingDrawerActiveTab.value =
+      mode === 'history' ? 'timeline' : 'abnormal';
     trackingDrawerSelectedNodeId.value = resolveSelectedTrackingNodeId(
       {
         objectId: getTrackingObjectId(row),
@@ -514,11 +505,7 @@ async function handleQcSubmitted() {
   await refreshTrackingDrawer();
 }
 
-function pendingRowClassName({
-  row,
-}: {
-  row: SlicingWorkbenchRow;
-}) {
+function pendingRowClassName({ row }: { row: SlicingWorkbenchRow }) {
   return row.timedOut ? 'is-overdue-row' : '';
 }
 
@@ -526,10 +513,7 @@ void loadWorkbench();
 </script>
 
 <template>
-  <Page
-    title="切片工作站"
-    description="参照旧站结构重排为顶部统计查询、左右双表和上下工具栏，保留本轮已打通的核心切片能力。"
-  >
+  <Page>
     <div class="legacy-slicing-workbench flex flex-col gap-4">
       <ElAlert
         v-if="pageError"
@@ -604,14 +588,6 @@ void loadWorkbench();
           >
             质控评价
           </ElButton>
-          <ElTooltip
-            v-for="label in LEGACY_PLACEHOLDER_ACTIONS"
-            :key="label"
-            content="待补后端能力"
-            placement="top"
-          >
-            <ElButton disabled>{{ label }}</ElButton>
-          </ElTooltip>
         </div>
 
         <div class="legacy-action-bar__right">
@@ -621,9 +597,7 @@ void loadWorkbench();
           >
             只看今天待切
           </ElCheckbox>
-          <span class="legacy-selection-tip">
-            可用操作要求恰好选中 1 行
-          </span>
+          <span class="legacy-selection-tip"> 可用操作要求恰好选中 1 行 </span>
         </div>
       </section>
 
@@ -738,12 +712,9 @@ void loadWorkbench();
             <div>
               <h3 class="legacy-panel__title">今日已完成</h3>
               <p class="legacy-panel__subtitle">
-                用于补录质控评价、查看异常记录，本轮取消完成仅保留占位。
+                用于查看今日完成切片和异常记录。
               </p>
             </div>
-            <ElTooltip content="待补后端能力" placement="top">
-              <ElButton disabled>取消完成</ElButton>
-            </ElTooltip>
           </header>
 
           <ElTable
@@ -877,7 +848,9 @@ void loadWorkbench();
             :workflow-timeline-steps="trackingDrawerTimelineSteps"
             @node-click="handleTrackingNodeClick"
           />
-          <TechnicalTrackingSummaryTables :tracking-result="trackingDrawerResult" />
+          <TechnicalTrackingSummaryTables
+            :tracking-result="trackingDrawerResult"
+          />
         </template>
 
         <div
@@ -899,7 +872,7 @@ void loadWorkbench();
 .legacy-header,
 .legacy-action-bar,
 .legacy-panel {
-  background: #ffffff;
+  background: #fff;
   border: 1px solid #d8e4ef;
   box-shadow: 0 8px 24px rgb(15 23 42 / 6%);
 }

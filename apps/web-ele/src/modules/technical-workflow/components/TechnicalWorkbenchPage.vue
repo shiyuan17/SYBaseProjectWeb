@@ -18,6 +18,7 @@ import {
   ElEmpty,
   ElInput,
   ElMessage,
+  ElPagination,
   ElTable,
   ElTableColumn,
 } from 'element-plus';
@@ -28,15 +29,27 @@ const props = defineProps<{
 
 const searchKeyword = ref('');
 const currentPage = ref(1);
-const goToPage = ref('1');
+const pageSize = ref(props.config.defaultPageSize);
 const selectedRows = ref<TechnicalWorkbenchRow[]>([]);
 const activeWorkday = ref(props.config.defaultWorkday);
-
-const filterState = reactive<Record<string, boolean>>(
-  Object.fromEntries((props.config.filters ?? []).map((filter) => [filter.id, false])),
+const pageTitle = computed(() =>
+  props.config.showPageHeader === false ? undefined : props.config.title,
+);
+const pageDescription = computed(() =>
+  props.config.showPageHeader === false ? undefined : props.config.description,
 );
 
-const pageSize = props.config.defaultPageSize;
+const filterState = reactive<Record<string, boolean>>(
+  Object.fromEntries(
+    (props.config.filters ?? []).map((filter) => [filter.id, false]),
+  ),
+);
+
+const paginationPageSizes = computed(() =>
+  [...new Set([10, 20, 30, 50, 100, pageSize.value])].toSorted(
+    (left, right) => left - right,
+  ),
+);
 
 const selectedFilterGroups = computed(() => {
   const groups = new Map<string, TechnicalWorkbenchFilterConfig[]>();
@@ -77,12 +90,12 @@ const filteredRows = computed(() => {
 });
 
 const pageCount = computed(() =>
-  Math.max(1, Math.ceil(filteredRows.value.length / pageSize)),
+  Math.max(1, Math.ceil(filteredRows.value.length / pageSize.value)),
 );
 
 const pagedRows = computed(() => {
-  const start = (currentPage.value - 1) * pageSize;
-  return filteredRows.value.slice(start, start + pageSize);
+  const start = (currentPage.value - 1) * pageSize.value;
+  return filteredRows.value.slice(start, start + pageSize.value);
 });
 
 const metrics = computed(() =>
@@ -96,12 +109,12 @@ watch(filteredRows, () => {
   if (currentPage.value > pageCount.value) {
     currentPage.value = pageCount.value;
   }
-  goToPage.value = String(currentPage.value);
   selectedRows.value = [];
 });
 
-watch(currentPage, (value) => {
-  goToPage.value = String(value);
+watch(pageSize, () => {
+  currentPage.value = 1;
+  selectedRows.value = [];
 });
 
 function formatCellValue(
@@ -139,37 +152,10 @@ function selectWorkday(dayTab: TechnicalWorkbenchDayTab) {
   activeWorkday.value = dayTab.value;
   currentPage.value = 1;
 }
-
-function goToFirstPage() {
-  currentPage.value = 1;
-}
-
-function goToPreviousPage() {
-  currentPage.value = Math.max(1, currentPage.value - 1);
-}
-
-function goToNextPage() {
-  currentPage.value = Math.min(pageCount.value, currentPage.value + 1);
-}
-
-function goToLastPage() {
-  currentPage.value = pageCount.value;
-}
-
-function submitGoToPage() {
-  const parsedPage = Number(goToPage.value);
-
-  if (!Number.isFinite(parsedPage) || parsedPage < 1) {
-    goToPage.value = String(currentPage.value);
-    return;
-  }
-
-  currentPage.value = Math.min(pageCount.value, Math.floor(parsedPage));
-}
 </script>
 
 <template>
-  <Page :title="config.title" :description="config.description">
+  <Page :title="pageTitle" :description="pageDescription">
     <div class="flex flex-col gap-3">
       <section class="rounded-lg border border-slate-300 bg-slate-50 p-3">
         <div class="flex flex-wrap items-start justify-between gap-3">
@@ -188,7 +174,10 @@ function submitGoToPage() {
                 @click="handleToolbarAction(action)"
               >
                 <span>{{ action.label }}</span>
-                <span v-if="action.hotkey" class="ml-1 text-[11px] text-slate-500">
+                <span
+                  v-if="action.hotkey"
+                  class="ml-1 text-[11px] text-slate-500"
+                >
                   ({{ action.hotkey }})
                 </span>
               </ElButton>
@@ -276,7 +265,9 @@ function submitGoToPage() {
         </div>
       </section>
 
-      <section class="overflow-hidden rounded-lg border border-slate-300 bg-white">
+      <section
+        class="overflow-hidden rounded-lg border border-slate-300 bg-white"
+      >
         <ElTable
           :data="pagedRows"
           border
@@ -313,41 +304,16 @@ function submitGoToPage() {
         />
 
         <div
-          class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600"
+          class="flex justify-end border-t border-slate-200 bg-white px-3 py-3"
         >
-          <div>
-            第 {{ currentPage }} / {{ pageCount }} 页 共 {{ filteredRows.length }} 条记录
-            每页 {{ pageSize }} 条
-            <span v-if="selectedRows.length > 0" class="ml-2 text-sky-600">
-              已选 {{ selectedRows.length }} 条
-            </span>
-          </div>
-
-          <div class="flex flex-wrap items-center gap-1">
-            <ElButton class="!h-7 !rounded-sm !px-2 !text-xs" @click="goToFirstPage">
-              首页
-            </ElButton>
-            <ElButton
-              class="!h-7 !rounded-sm !px-2 !text-xs"
-              @click="goToPreviousPage"
-            >
-              上页
-            </ElButton>
-            <ElButton class="!h-7 !rounded-sm !px-2 !text-xs" @click="goToNextPage">
-              下页
-            </ElButton>
-            <ElButton class="!h-7 !rounded-sm !px-2 !text-xs" @click="goToLastPage">
-              尾页
-            </ElButton>
-            <ElInput
-              v-model="goToPage"
-              class="w-14"
-              @keyup.enter="submitGoToPage"
-            />
-            <ElButton class="!h-7 !rounded-sm !px-2 !text-xs" @click="submitGoToPage">
-              Go
-            </ElButton>
-          </div>
+          <ElPagination
+            v-model:current-page="currentPage"
+            v-model:page-size="pageSize"
+            :page-sizes="paginationPageSizes"
+            :total="filteredRows.length"
+            background
+            layout="total, sizes, prev, pager, next, jumper"
+          />
         </div>
       </section>
     </div>

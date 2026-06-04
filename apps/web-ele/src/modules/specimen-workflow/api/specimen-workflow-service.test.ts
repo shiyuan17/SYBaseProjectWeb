@@ -19,17 +19,17 @@ import {
   listPendingFixations,
   listPendingReceipts,
   listPendingSpecimenRemovals,
-  listSpecimenOutbounds,
   listPendingTransportOrders,
+  listSpecimenOutbounds,
   listSpecimens,
   listSpecimenVerificationRecords,
-  lookupApplicationPatientByIdentifier,
   lookupApplicationForRegistration,
+  lookupApplicationPatientByIdentifier,
   mapPendingSpecimenPageResponse,
   mapSpecimenRemovalPageResponse,
   outboundTransportOrder,
-  quickOutboundSpecimen,
   printTransportOrder,
+  quickOutboundSpecimen,
   rebindSpecimenBarcode,
   receiveSpecimens,
   registerSpecimens,
@@ -203,6 +203,15 @@ describe('specimen-workflow-service mock flow', () => {
     });
     expect(confirmedList.items[0]?.specimenConfirmedByName).toBe('确认员甲');
     expect(confirmedList.items[0]?.checkedInByName).toBe('入库员甲');
+
+    const specimenId = confirmedList.items[0]?.specimenId ?? '';
+    expect(specimenId).toBeTruthy();
+    const specimenIdList = await listSpecimens({
+      keyword: specimenId,
+      page: 1,
+      size: 20,
+    });
+    expect(specimenIdList.items[0]?.specimenId).toBe(specimenId);
 
     const order = await createTransportOrder({
       applicationId: 'APP-001',

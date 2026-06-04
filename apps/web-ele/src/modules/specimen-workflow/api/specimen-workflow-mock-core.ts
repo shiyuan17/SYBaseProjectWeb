@@ -3,8 +3,8 @@ import type {
   LatestSpecimenRegistrationResult,
   PendingSpecimenItem,
   PendingTransportOrderItem,
-  SpecimenOutboundListItem,
   SpecimenManagementListItem,
+  SpecimenOutboundListItem,
   SpecimenReceiptResult,
   SpecimenRemovalConfirmRequest,
   SpecimenRemovalConfirmResult,
@@ -39,12 +39,10 @@ export function getMockState(): MockState {
   return state;
 }
 
-export function resolveMockOperatorContext(
-  operator?: {
-    operatorName?: null | string;
-    operatorUserId?: null | string;
-  },
-) {
+export function resolveMockOperatorContext(operator?: {
+  operatorName?: null | string;
+  operatorUserId?: null | string;
+}) {
   const operatorName =
     normalizeText(operator?.operatorName) || DEFAULT_MOCK_OPERATOR_NAME;
   const operatorUserId =
@@ -156,10 +154,12 @@ export function findTransportOrderById(transportOrderId: string) {
 
 export function getTransportOrderBySpecimenId(specimenId: string) {
   return (
-    [...state.transportOrders].reverse().find(
-      (item) =>
-        item.specimenIds.includes(specimenId) && item.status !== 'CANCELLED',
-    ) ?? null
+    state.transportOrders
+      .toReversed()
+      .find(
+        (item) =>
+          item.specimenIds.includes(specimenId) && item.status !== 'CANCELLED',
+      ) ?? null
   );
 }
 
@@ -427,6 +427,8 @@ export function mapSpecimenOutboundItem(
     applicationId: application.id,
     applicationNo: application.applicationNo,
     barcode: specimen.barcode,
+    checkInStatus: resolveSpecimenCheckInStatus(specimen),
+    fixationStatus: specimen.fixationStatus,
     inpatientNo: normalizeText(application.applicationNo) || null,
     outboundAt: order?.handedOverAt ?? null,
     outboundUserName: order?.outboundUserName ?? null,
@@ -435,6 +437,7 @@ export function mapSpecimenOutboundItem(
     patientName: application.patientName,
     registeredAt: specimen.registeredAt,
     registeredByName: '系统导入',
+    specimenConfirmedAt: specimen.specimenConfirmedAt ?? null,
     specimenId: specimen.id,
     specimenName: specimen.specimenName,
     specimenNo: specimen.specimenNo,

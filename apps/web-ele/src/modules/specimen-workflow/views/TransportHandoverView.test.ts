@@ -16,6 +16,8 @@ const {
       {
         applicationId: 'APP-002',
         applicationNo: 'M2-20260526-002',
+        checkInStatus: 'CHECKED_IN',
+        fixationStatus: 'COMPLETED',
         inpatientNo: 'ZY-002',
         outboundAt: null,
         outboundUserName: null,
@@ -24,6 +26,7 @@ const {
         patientName: 'Alice',
         registeredAt: '2026-05-26 09:30:00',
         registeredByName: '登记员甲',
+        specimenConfirmedAt: '2026-05-26 09:10:00',
         specimenId: 'SP-002',
         specimenName: '甲状腺组织',
         specimenNo: 'SP-TR-001',
@@ -31,13 +34,34 @@ const {
         surgeryName: 'OR-102',
         transportOrderId: 'TO-002',
       },
+      {
+        applicationId: 'APP-002',
+        applicationNo: 'M2-20260526-002',
+        checkInStatus: 'NOT_CHECKED_IN',
+        fixationStatus: 'COMPLETED',
+        inpatientNo: 'ZY-002',
+        outboundAt: null,
+        outboundUserName: null,
+        patientGender: '女',
+        patientId: 'PAT-002',
+        patientName: 'Alice',
+        registeredAt: '2026-05-26 09:35:00',
+        registeredByName: '登记员甲',
+        specimenConfirmedAt: '2026-05-26 09:12:00',
+        specimenId: 'SP-002-2',
+        specimenName: '甲状腺峡部组织',
+        specimenNo: 'SP-TR-002',
+        specimenStatus: 'FIXED',
+        surgeryName: 'OR-102',
+        transportOrderId: null,
+      },
     ],
     page: 1,
     size: 20,
-    total: 1,
+    total: 2,
   })),
-  loadOperatingRoomNameMapSafelyMock: vi.fn(async () =>
-    new Map([['OR-102', '惠侨楼 - 手术室 2']]),
+  loadOperatingRoomNameMapSafelyMock: vi.fn(
+    async () => new Map([['OR-102', '惠侨楼 - 手术室 2']]),
   ),
   outboundTransportOrderMock: vi.fn(async () => ({
     applicationId: 'APP-002',
@@ -127,7 +151,7 @@ vi.mock('../utils/operating-room-display', () => ({
   loadOperatingRoomNameMapSafely: loadOperatingRoomNameMapSafelyMock,
   normalizeOperatingRoomDisplayValue: vi.fn(
     (roomMap: ReadonlyMap<string, string>, value?: null | string) =>
-      value ? roomMap.get(value) ?? value : '',
+      value ? (roomMap.get(value) ?? value) : '',
   ),
 }));
 
@@ -201,25 +225,75 @@ describe('TransportHandoverView', () => {
       '手术间',
       '标本名称',
       '标本状态',
+      '出库状态',
       '添加时间',
       '添加人',
       '病人ID',
       '出库时间',
       '出库人',
     ];
-    const headerTexts = [
-      ...container.querySelectorAll('thead th'),
-    ].map((element) => element.textContent?.replace(/\s+/g, '') ?? '');
+    const headerTexts = [...container.querySelectorAll('thead th')].map(
+      (element) => element.textContent?.replaceAll(/\s+/g, '') ?? '',
+    );
     expect(headerTexts).toEqual(expectedHeaders);
 
     app.unmount();
   });
 
-  it('submits outbound directly when specimen serial search matches one pending specimen', async () => {
+  it('loads the full application and still auto-outbounds the matched specimen when scanning', async () => {
     const { app, container } = mountView();
     await flush();
 
     vi.clearAllMocks();
+    listSpecimenOutboundsMock.mockResolvedValueOnce({
+      items: [
+        {
+          applicationId: 'APP-002',
+          applicationNo: 'M2-20260526-002',
+          checkInStatus: 'CHECKED_IN',
+          fixationStatus: 'COMPLETED',
+          inpatientNo: 'ZY-002',
+          outboundAt: null,
+          outboundUserName: null,
+          patientGender: '女',
+          patientId: 'PAT-002',
+          patientName: 'Alice',
+          registeredAt: '2026-05-26 09:30:00',
+          registeredByName: '登记员甲',
+          specimenConfirmedAt: '2026-05-26 09:10:00',
+          specimenId: 'SP-002',
+          specimenName: '甲状腺组织',
+          specimenNo: 'SP-TR-001',
+          specimenStatus: 'CHECKED_IN',
+          surgeryName: 'OR-102',
+          transportOrderId: 'TO-002',
+        },
+        {
+          applicationId: 'APP-002',
+          applicationNo: 'M2-20260526-002',
+          checkInStatus: 'NOT_CHECKED_IN',
+          fixationStatus: 'COMPLETED',
+          inpatientNo: 'ZY-002',
+          outboundAt: null,
+          outboundUserName: null,
+          patientGender: '女',
+          patientId: 'PAT-002',
+          patientName: 'Alice',
+          registeredAt: '2026-05-26 09:35:00',
+          registeredByName: '登记员甲',
+          specimenConfirmedAt: '2026-05-26 09:12:00',
+          specimenId: 'SP-002-2',
+          specimenName: '甲状腺峡部组织',
+          specimenNo: 'SP-TR-002',
+          specimenStatus: 'FIXED',
+          surgeryName: 'OR-102',
+          transportOrderId: null,
+        },
+      ],
+      page: 1,
+      size: 20,
+      total: 2,
+    });
 
     const specimenNoInput = container.querySelector(
       'input[placeholder="请输入标本流水号"]',
@@ -245,6 +319,84 @@ describe('TransportHandoverView', () => {
       terminalCode: null,
     });
     expect(warningMock).not.toHaveBeenCalled();
+
+    app.unmount();
+  });
+
+  it('shows the matched specimen reason when the scanned specimen is not outbound-ready', async () => {
+    const { app, container } = mountView();
+    await flush();
+
+    vi.clearAllMocks();
+    listSpecimenOutboundsMock.mockResolvedValueOnce({
+      items: [
+        {
+          applicationId: 'APP-002',
+          applicationNo: 'M2-20260526-002',
+          checkInStatus: 'NOT_CHECKED_IN',
+          fixationStatus: 'COMPLETED',
+          inpatientNo: 'ZY-002',
+          outboundAt: null,
+          outboundUserName: null,
+          patientGender: '女',
+          patientId: 'PAT-002',
+          patientName: 'Alice',
+          registeredAt: '2026-05-26 09:35:00',
+          registeredByName: '登记员甲',
+          specimenConfirmedAt: '2026-05-26 09:12:00',
+          specimenId: 'SP-002-2',
+          specimenName: '甲状腺峡部组织',
+          specimenNo: 'SP-TR-002',
+          specimenStatus: 'FIXED',
+          surgeryName: 'OR-102',
+          transportOrderId: null,
+        },
+        {
+          applicationId: 'APP-002',
+          applicationNo: 'M2-20260526-002',
+          checkInStatus: 'CHECKED_IN',
+          fixationStatus: 'COMPLETED',
+          inpatientNo: 'ZY-002',
+          outboundAt: null,
+          outboundUserName: null,
+          patientGender: '女',
+          patientId: 'PAT-002',
+          patientName: 'Alice',
+          registeredAt: '2026-05-26 09:30:00',
+          registeredByName: '登记员甲',
+          specimenConfirmedAt: '2026-05-26 09:10:00',
+          specimenId: 'SP-002',
+          specimenName: '甲状腺组织',
+          specimenNo: 'SP-TR-001',
+          specimenStatus: 'CHECKED_IN',
+          surgeryName: 'OR-102',
+          transportOrderId: 'TO-002',
+        },
+      ],
+      page: 1,
+      size: 20,
+      total: 2,
+    });
+
+    const specimenNoInput = container.querySelector(
+      'input[placeholder="请输入标本流水号"]',
+    ) as HTMLInputElement | null;
+    specimenNoInput!.value = 'SP-TR-002';
+    specimenNoInput!.dispatchEvent(new Event('input', { bubbles: true }));
+    specimenNoInput!.dispatchEvent(
+      new KeyboardEvent('keyup', {
+        bubbles: true,
+        code: 'Enter',
+        key: 'Enter',
+      }),
+    );
+    await flush();
+
+    expect(outboundTransportOrderMock).not.toHaveBeenCalled();
+    expect(quickOutboundSpecimenMock).not.toHaveBeenCalled();
+    expect(warningMock).toHaveBeenCalledWith(
+      '标本 SP-TR-002 尚未完成入库，不能出库',
+    );
 
     app.unmount();
   });
@@ -302,6 +454,8 @@ describe('TransportHandoverView', () => {
         {
           applicationId: 'APP-003',
           applicationNo: 'M2-20260526-003',
+          checkInStatus: 'CHECKED_IN',
+          fixationStatus: 'COMPLETED',
           inpatientNo: 'ZY-003',
           outboundAt: null,
           outboundUserName: null,
@@ -310,6 +464,7 @@ describe('TransportHandoverView', () => {
           patientName: 'Bob',
           registeredAt: '2026-05-26 10:10:00',
           registeredByName: '登记员乙',
+          specimenConfirmedAt: '2026-05-26 09:50:00',
           specimenId: 'SP-003',
           specimenName: '淋巴结',
           specimenNo: 'SP-MULTI',
@@ -320,6 +475,8 @@ describe('TransportHandoverView', () => {
         {
           applicationId: 'APP-004',
           applicationNo: 'M2-20260526-004',
+          checkInStatus: 'CHECKED_IN',
+          fixationStatus: 'COMPLETED',
           inpatientNo: 'ZY-004',
           outboundAt: null,
           outboundUserName: null,
@@ -328,6 +485,7 @@ describe('TransportHandoverView', () => {
           patientName: 'Carol',
           registeredAt: '2026-05-26 10:20:00',
           registeredByName: '登记员丙',
+          specimenConfirmedAt: '2026-05-26 10:00:00',
           specimenId: 'SP-004',
           specimenName: '甲状旁腺',
           specimenNo: 'SP-MULTI',

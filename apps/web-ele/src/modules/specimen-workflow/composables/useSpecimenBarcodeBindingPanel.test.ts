@@ -299,7 +299,7 @@ async function waitForComposableAssertion(assertion: () => void) {
     }
   }
 
-  throw lastError;
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
 
 describe('useSpecimenBarcodeBindingPanel', () => {

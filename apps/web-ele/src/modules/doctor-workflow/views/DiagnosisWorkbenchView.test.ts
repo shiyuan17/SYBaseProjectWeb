@@ -129,12 +129,38 @@ const queueFixture = {
 
 const workbenchFixtureByCaseId: Record<string, DiagnosticWorkbenchView> = {
   'CASE-001': {
+    applicationFormArchiveLocation: 'A柜-01-02',
+    applicationFormArchiveStatus: 'ARCHIVED',
+    applicationFormImageUrl: '/archives/APP-001.jpg',
     applicationNo: 'APP-001',
-    blocks: [],
+    blocks: [
+      {
+        archiveLocation: '蜡块柜-B1',
+        archiveStatus: 'ARCHIVED',
+        blockCode: 'A1',
+        blockId: 'BLOCK-001',
+        description: '胃窦组织',
+        embeddingBoxNo: 'BOX-001',
+        loanStatus: 'IN_LIBRARY',
+        specimenId: 'SPEC-001',
+      },
+    ],
     caseId: 'CASE-001',
     caseStatus: 'IN_DIAGNOSIS',
     clinicalDiagnosis: '临床诊断一',
-    consultations: [],
+    consultations: [
+      {
+        completedAt: '2026-06-01 12:30:00',
+        consultationId: 'CONS-001',
+        consultationType: 'INTERNAL',
+        hostName: '主持医生',
+        opinion: '建议补充免疫组化后签发',
+        participantCount: 2,
+        requestedAt: '2026-06-01 10:20:00',
+        requestedByName: '当前医生',
+        status: 'COMPLETED',
+      },
+    ],
     currentReport: {
       finalDiagnosis: '最终诊断一',
       grossExam: '大体所见一',
@@ -145,8 +171,28 @@ const workbenchFixtureByCaseId: Record<string, DiagnosticWorkbenchView> = {
       versionNo: 1,
     },
     diagnosticTasks: [queueFixture.items[0]!],
-    hasPendingRevision: false,
-    medicalOrders: [],
+    hasPendingRevision: true,
+    medicalOrders: [
+      {
+        acceptedAt: '2026-06-01 10:30:00',
+        applicationNo: 'APP-001',
+        billingStatus: 'CHARGED',
+        caseId: 'CASE-001',
+        completedAt: null,
+        doctorName: '当前医生',
+        executionScope: 'A1',
+        executorName: '技师甲',
+        orderContent: '免疫组化 CK',
+        orderDate: '2026-06-01 10:10:00',
+        orderId: 'ORDER-001',
+        orderNumber: 'MO-001',
+        orderType: 'IMMUNOHISTOCHEMISTRY',
+        pathologyNo: 'PATH-001',
+        patientName: '张三',
+        remarks: '优先处理',
+        status: 'PENDING',
+      },
+    ],
     pathologyNo: 'PATH-001',
     patientName: '张三',
     recentEvents: [
@@ -159,9 +205,43 @@ const workbenchFixtureByCaseId: Record<string, DiagnosticWorkbenchView> = {
         operatorName: '当前医生',
       },
     ],
-    revisions: [],
-    slides: [],
-    specimens: [],
+    revisions: [
+      {
+        approvedVersionNo: null,
+        currentVersionNo: 1,
+        rejectReason: null,
+        reportId: 'REPORT-001',
+        requestId: 'REV-001',
+        requestedAt: '2026-06-01 13:00:00',
+        requestedByName: '当前医生',
+        requestReason: '补充诊断描述',
+        requestStatus: 'PENDING',
+        reviewedAt: null,
+        reviewedByName: null,
+      },
+    ],
+    slides: [
+      {
+        archiveLocation: '玻片柜-S1',
+        archiveStatus: 'ARCHIVED',
+        embeddingBoxId: 'BOX-001',
+        loanStatus: 'IN_LIBRARY',
+        qualityStatus: 'QUALIFIED',
+        slideId: 'SLIDE-001',
+        slideNo: 'SLIDE-001',
+        slideStatus: 'READY',
+        specimenId: 'SPEC-001',
+      },
+    ],
+    specimens: [
+      {
+        barcode: 'BC-001',
+        specimenId: 'SPEC-001',
+        specimenName: '胃窦活检组织',
+        specimenNo: 'SP-001',
+        specimenStatus: 'RECEIVED',
+      },
+    ],
     submittingDepartmentName: '消化内科',
     submittingDoctorName: '送检医生甲',
   },
@@ -217,7 +297,9 @@ function resetTestState() {
 
   listPendingDiagnosticTasksMock.mockResolvedValue(queueFixture);
   getDiagnosticWorkbenchMock.mockImplementation(async (caseId) => {
-    return workbenchFixtureByCaseId[caseId] ?? workbenchFixtureByCaseId['CASE-001']!;
+    return (
+      workbenchFixtureByCaseId[caseId] ?? workbenchFixtureByCaseId['CASE-001']!
+    );
   });
   acceptDiagnosticTaskMock.mockResolvedValue({});
   cancelMedicalOrderMock.mockResolvedValue({});
@@ -330,9 +412,27 @@ describe('DiagnosisWorkbenchView', () => {
 
     const wrapper = await mountView();
 
+    expect(wrapper.text()).toContain('报告概览');
     expect(wrapper.text()).toContain('大体所见一');
     expect(wrapper.text()).toContain('镜检所见一');
-    expect(wrapper.text()).toContain('报告痕迹');
+    expect(wrapper.text()).toContain('流程痕迹');
+
+    wrapper.unmount();
+  });
+
+  it('renders supplemented modules from existing workbench fields', async () => {
+    const wrapper = await mountView();
+
+    expect(wrapper.text()).toContain('申请单归档');
+    expect(wrapper.text()).toContain('A柜-01-02');
+    expect(wrapper.text()).toContain('胃窦活检组织');
+    expect(wrapper.text()).toContain('SLIDE-001');
+    expect(wrapper.text()).toContain('科内会诊');
+    expect(wrapper.text()).toContain('CONS-001');
+    expect(wrapper.text()).toContain('报告修订');
+    expect(wrapper.text()).toContain('补充诊断描述');
+    expect(wrapper.text()).toContain('CHARGED');
+    expect(wrapper.text()).toContain('免疫组化 CK');
 
     wrapper.unmount();
   });

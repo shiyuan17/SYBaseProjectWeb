@@ -1,20 +1,16 @@
 <script setup lang="ts">
 import type { SystemUser } from '../../types/system-management';
 
-import {
-  ElButton,
-  ElPagination,
-  ElTable,
-  ElTableColumn,
-} from 'element-plus';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
+
+import { ElButton, ElPagination, ElTable, ElTableColumn } from 'element-plus';
 
 import { M1_PERMISSION_CODES } from '../../constants';
 import { formatDateTime, formatNullable } from '../../utils/format';
 import SystemSectionCard from '../SystemSectionCard.vue';
 import SystemStatusTag from '../SystemStatusTag.vue';
 
-defineProps<{
+const props = defineProps<{
   exportLoading: boolean;
   filters: {
     page: number;
@@ -37,6 +33,7 @@ const emit = defineEmits<{
   reload: [];
   roles: [user: SystemUser];
   toggleEnabled: [user: SystemUser];
+  'update:filters': [value: { page: number; size: number }];
 }>();
 
 const importInputRef = ref<HTMLInputElement>();
@@ -44,6 +41,18 @@ const importInputRef = ref<HTMLInputElement>();
 function triggerImport() {
   importInputRef.value?.click();
 }
+
+const currentPageModel = computed({
+  get: () => props.filters.page,
+  set: (value: number) =>
+    emit('update:filters', { ...props.filters, page: value }),
+});
+
+const pageSizeModel = computed({
+  get: () => props.filters.size,
+  set: (value: number) =>
+    emit('update:filters', { ...props.filters, size: value }),
+});
 </script>
 
 <template>
@@ -154,8 +163,8 @@ function triggerImport() {
 
     <div class="mt-4 flex justify-end">
       <ElPagination
-        v-model:current-page="filters.page"
-        v-model:page-size="filters.size"
+        v-model:current-page="currentPageModel"
+        v-model:page-size="pageSizeModel"
         :page-sizes="[10, 20, 50, 100]"
         :total="total"
         background

@@ -12,6 +12,7 @@ import { useAccessStore } from '@vben/stores';
 
 import { ElMessage } from 'element-plus';
 
+import { mapWorkflowEnglishErrorMessage } from '#/modules/specimen-workflow/utils/error';
 import { useAuthStore } from '#/store';
 
 const { apiURL } = useAppConfig(import.meta.env, import.meta.env.PROD);
@@ -84,7 +85,7 @@ function createRequestClient(
     errorMessageResponseInterceptor((msg: string, error) => {
       const responseData = error?.response?.data ?? {};
       const errorMessage = responseData?.error ?? responseData?.message ?? '';
-      ElMessage.error(errorMessage || msg);
+      ElMessage.error(mapWorkflowEnglishErrorMessage(errorMessage || msg));
     }),
   );
 

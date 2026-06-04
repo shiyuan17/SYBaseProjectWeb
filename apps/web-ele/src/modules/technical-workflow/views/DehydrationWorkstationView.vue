@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import type {
-  PendingTechnicalTaskItem,
-} from '../types/technical-workflow';
+import type { PendingTechnicalTaskItem } from '../types/technical-workflow';
 
 import { computed, reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -21,6 +19,8 @@ import {
   ElTag,
 } from 'element-plus';
 
+import { reportInlineErrorDisabled } from '#/utils/error-feedback';
+
 import {
   completeDehydration,
   listPendingTechnicalTasks,
@@ -32,8 +32,6 @@ import {
   getDehydrationTaskOperator,
   getDehydrationTaskRemark,
 } from '../utils/dehydration-workbench';
-import { reportInlineErrorDisabled } from '#/utils/error-feedback';
-
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import { formatDateTime, formatTaskStatus } from '../utils/format';
 import { useTechnicalWorkflowNavigation } from '../utils/navigation';
@@ -70,7 +68,9 @@ const selectedTask = computed(
   () =>
     pendingItems.value.find((item) => item.id === selectedTaskId.value) ?? null,
 );
-const stats = computed(() => buildDehydrationWorkbenchStats(pendingItems.value));
+const stats = computed(() =>
+  buildDehydrationWorkbenchStats(pendingItems.value),
+);
 const timedOutCount = computed(
   () => pendingItems.value.filter((item) => item.timedOut).length,
 );
@@ -90,7 +90,8 @@ function getStatusTagType(task: PendingTechnicalTaskItem) {
 
 function syncSelectedTask(preferredTaskId?: string) {
   const nextTaskId =
-    preferredTaskId && pendingItems.value.some((item) => item.id === preferredTaskId)
+    preferredTaskId &&
+    pendingItems.value.some((item) => item.id === preferredTaskId)
       ? preferredTaskId
       : pendingItems.value[0]?.id || '';
   selectedTaskId.value = nextTaskId;
@@ -106,7 +107,9 @@ async function loadPendingData() {
 
     const deepLinkedTaskId =
       typeof route.query.taskId === 'string' ? route.query.taskId : '';
-    syncSelectedTask(deepLinkedTaskId || selectedTaskId.value || result.items[0]?.id);
+    syncSelectedTask(
+      deepLinkedTaskId || selectedTaskId.value || result.items[0]?.id,
+    );
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
     reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
@@ -218,55 +221,8 @@ void loadPendingData();
 <template>
   <Page>
     <div class="flex flex-col gap-4">
-
       <section class="rounded-lg border border-border bg-card">
-        <div class="flex flex-col gap-3 border-b border-border px-4 py-3">
-          <div class="flex flex-wrap items-center gap-2">
-            <ElButton
-              :loading="startLoading"
-              size="small"
-              type="primary"
-              @click="handleStartDehydration"
-            >
-              开始脱水
-            </ElButton>
-            <ElButton
-              :loading="completeLoading"
-              size="small"
-              @click="handleCompleteDehydration"
-            >
-              脱水完成
-            </ElButton>
-            <ElButton size="small" @click="openTracking()">脱水追踪</ElButton>
-
-            <div class="ml-auto">
-              <ElForm inline size="small" @submit.prevent="handleSearch">
-                <ElFormItem class="mb-0" label="病理号">
-                  <ElInput
-                    v-model="filters.pathologyNo"
-                    class="w-48"
-                    clearable
-                    placeholder="请输入病理号"
-                    @keyup.enter="handleSearch"
-                  />
-                </ElFormItem>
-                <ElFormItem class="mb-0">
-                  <ElButton native-type="submit" type="primary">查询</ElButton>
-                </ElFormItem>
-                <ElFormItem class="mb-0">
-                  <ElBadge :value="timedOutCount" :hidden="timedOutCount === 0">
-                    <ElButton
-                      :type="filters.timedOutOnly ? 'danger' : 'default'"
-                      @click="toggleTimedOutOnly"
-                    >
-                      {{ filters.timedOutOnly ? '仅异常任务' : '异常任务' }}
-                    </ElButton>
-                  </ElBadge>
-                </ElFormItem>
-              </ElForm>
-            </div>
-          </div>
-
+        <div class="flex flex-col gap-4 border-b border-border px-4 py-3">
           <div class="flex flex-wrap items-center gap-5 text-sm">
             <div
               v-for="item in stats"
@@ -286,6 +242,61 @@ void loadPendingData();
                 {{ item.value }}
               </span>
             </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3">
+            <ElForm
+              class="dehydration-toolbar-form shrink-0"
+              inline
+              size="small"
+              @submit.prevent="handleSearch"
+            >
+              <ElFormItem class="mb-0" label="病理号">
+                <ElInput
+                  v-model="filters.pathologyNo"
+                  class="w-48"
+                  clearable
+                  placeholder="请输入病理号"
+                  @keyup.enter="handleSearch"
+                />
+              </ElFormItem>
+              <ElFormItem class="mb-0">
+                <ElButton native-type="submit" type="primary">查询</ElButton>
+              </ElFormItem>
+            </ElForm>
+
+            <div class="flex flex-wrap items-center gap-2">
+              <ElButton
+                :loading="startLoading"
+                size="small"
+                type="primary"
+                @click="handleStartDehydration"
+              >
+                开始脱水
+              </ElButton>
+              <ElButton
+                :loading="completeLoading"
+                size="small"
+                @click="handleCompleteDehydration"
+              >
+                脱水完成
+              </ElButton>
+              <ElButton size="small" @click="openTracking()">脱水追踪</ElButton>
+            </div>
+
+            <ElBadge
+              :value="timedOutCount"
+              :hidden="timedOutCount === 0"
+              class="ml-auto"
+            >
+              <ElButton
+                :type="filters.timedOutOnly ? 'danger' : 'default'"
+                size="small"
+                @click="toggleTimedOutOnly"
+              >
+                {{ filters.timedOutOnly ? '仅异常任务' : '异常任务' }}
+              </ElButton>
+            </ElBadge>
           </div>
         </div>
 
@@ -376,3 +387,13 @@ void loadPendingData();
     </div>
   </Page>
 </template>
+
+<style scoped>
+.dehydration-toolbar-form :deep(.el-form-item) {
+  margin-bottom: 0;
+}
+
+.dehydration-toolbar-form :deep(.el-form-item__content) {
+  align-items: center;
+}
+</style>

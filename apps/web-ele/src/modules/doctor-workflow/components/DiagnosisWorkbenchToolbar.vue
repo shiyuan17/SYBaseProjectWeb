@@ -70,49 +70,51 @@ const summaryCards = computed(() => [
 </script>
 
 <template>
-  <section class="rounded-lg border border-border bg-card px-4 py-3 shadow-sm">
-    <div class="flex flex-col gap-3">
-      <div
-        class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between"
-      >
+  <section class="rounded-lg border border-border bg-card px-3 py-2 shadow-sm">
+    <div
+      class="flex flex-col gap-2 2xl:flex-row 2xl:items-center 2xl:justify-between"
+    >
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
         <div>
-          <h2 class="text-base font-semibold text-foreground">
-            诊断病例队列
-          </h2>
-          <p class="mt-1 text-sm text-muted-foreground">
-            贴近旧工作站的高密度视图，只展示当前接口能稳定支撑的诊断队列字段。
+          <h2 class="text-sm font-semibold text-foreground">诊断病例队列</h2>
+          <p class="mt-0.5 text-xs text-muted-foreground">
+            以病理号、类型和状态快速定位当前诊断任务。
           </p>
         </div>
 
-        <div class="grid grid-cols-2 gap-2 md:grid-cols-4">
-          <article
+        <div class="flex flex-wrap gap-2">
+          <span
             v-for="card in summaryCards"
             :key="card.label"
-            class="rounded-md border border-border bg-background px-3 py-2"
+            class="inline-flex items-center gap-1 rounded-full border border-border bg-background px-2.5 py-1 text-xs text-muted-foreground"
           >
-            <div class="text-xs text-muted-foreground">{{ card.label }}</div>
-            <div class="mt-1 text-lg font-semibold text-foreground">
-              {{ card.value }}
-            </div>
-          </article>
+            {{ card.label }}
+            <strong class="text-sm text-foreground">{{ card.value }}</strong>
+          </span>
         </div>
       </div>
 
       <ElForm
-        class="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(220px,1.2fr)_180px_180px_auto]"
+        class="grid gap-2 md:grid-cols-2 xl:grid-cols-[220px_150px_150px_auto]"
         label-position="top"
       >
         <ElFormItem class="mb-0" label="病理号">
           <ElInput
             v-model="keywordModel"
             clearable
-            placeholder="输入病理号筛选当前诊断队列"
+            placeholder="病理号"
+            size="small"
             @keyup.enter="emit('search')"
           />
         </ElFormItem>
 
         <ElFormItem class="mb-0" label="任务类型">
-          <ElSelect v-model="taskTypeModel" clearable placeholder="全部类型">
+          <ElSelect
+            v-model="taskTypeModel"
+            clearable
+            placeholder="全部类型"
+            size="small"
+          >
             <ElOption
               v-for="option in DIAGNOSTIC_TASK_TYPE_OPTIONS"
               :key="option.value"
@@ -127,6 +129,7 @@ const summaryCards = computed(() => [
             v-model="taskStatusModel"
             clearable
             placeholder="全部状态"
+            size="small"
           >
             <ElOption
               v-for="option in DIAGNOSTIC_TASK_STATUS_OPTIONS"
@@ -139,11 +142,22 @@ const summaryCards = computed(() => [
 
         <ElFormItem class="mb-0" label="操作">
           <div class="flex flex-wrap gap-2">
-            <ElButton :loading="loading" type="primary" @click="emit('search')">
+            <ElButton
+              :loading="loading"
+              size="small"
+              type="primary"
+              @click="emit('search')"
+            >
               查询
             </ElButton>
-            <ElButton @click="emit('reset')">重置</ElButton>
-            <ElButton :loading="loading" text type="primary" @click="emit('refresh')">
+            <ElButton size="small" @click="emit('reset')">重置</ElButton>
+            <ElButton
+              :loading="loading"
+              size="small"
+              text
+              type="primary"
+              @click="emit('refresh')"
+            >
               刷新
             </ElButton>
           </div>

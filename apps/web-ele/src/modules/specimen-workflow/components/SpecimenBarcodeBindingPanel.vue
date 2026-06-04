@@ -229,7 +229,9 @@ const {
     width="760px"
   >
     <div class="flex flex-col gap-4">
-      <section class="rounded-lg border border-border bg-card px-4 py-4 shadow-sm">
+      <section
+        class="rounded-lg border border-border bg-card px-4 py-4 shadow-sm"
+      >
         <div class="mb-4 text-base font-semibold text-foreground">补打范围</div>
         <div class="grid gap-3 text-sm md:grid-cols-2">
           <div>涉及标本数：{{ retryTargetRows.length }}</div>
@@ -239,7 +241,9 @@ const {
         </div>
       </section>
 
-      <section class="rounded-lg border border-border bg-card px-4 py-4 shadow-sm">
+      <section
+        class="rounded-lg border border-border bg-card px-4 py-4 shadow-sm"
+      >
         <ElForm label-width="96px">
           <div class="grid gap-4 md:grid-cols-2">
             <ElFormItem label="操作人" required>
@@ -282,7 +286,11 @@ const {
     <template #footer>
       <div class="flex justify-end gap-2">
         <ElButton @click="retryDialogVisible = false">取消</ElButton>
-        <ElButton :loading="retrySubmitting" type="primary" @click="submitRetryLabel">
+        <ElButton
+          :loading="retrySubmitting"
+          type="primary"
+          @click="submitRetryLabel"
+        >
           提交补打
         </ElButton>
       </div>
