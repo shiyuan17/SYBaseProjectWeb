@@ -4,12 +4,17 @@ import { createApp, defineComponent, h, nextTick } from 'vue';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockGetSlicingWorkbench, mockGetTechnicalTracking, mockStartSlicing } =
-  vi.hoisted(() => ({
-    mockGetSlicingWorkbench: vi.fn(),
-    mockGetTechnicalTracking: vi.fn(),
-    mockStartSlicing: vi.fn(),
-  }));
+const {
+  mockGetSlicingWorkbench,
+  mockGetTechnicalTracking,
+  mockStartSlicing,
+  mockUpdateTechnicalTaskRemarks,
+} = vi.hoisted(() => ({
+  mockGetSlicingWorkbench: vi.fn(),
+  mockGetTechnicalTracking: vi.fn(),
+  mockStartSlicing: vi.fn(),
+  mockUpdateTechnicalTaskRemarks: vi.fn(),
+}));
 
 vi.mock('@vben/common-ui', () => ({
   Page: defineComponent({
@@ -33,6 +38,15 @@ vi.mock('../api/technical-workflow-service', () => ({
   getSlicingWorkbench: mockGetSlicingWorkbench,
   getTechnicalTracking: mockGetTechnicalTracking,
   startSlicing: mockStartSlicing,
+  updateTechnicalTaskRemarks: mockUpdateTechnicalTaskRemarks,
+}));
+
+vi.mock('../components/EmbeddingQualityReviewDialog.vue', () => ({
+  default: defineComponent({
+    setup() {
+      return () => null;
+    },
+  }),
 }));
 
 vi.mock('../components/SlicingProcessDialog.vue', () => ({
@@ -105,7 +119,9 @@ vi.mock('element-plus', () => {
       success: vi.fn(),
       warning: vi.fn(),
     },
+    ElOption: simple('option'),
     ElPagination: simple('nav'),
+    ElSelect: simple('select'),
     ElTable: defineComponent({
       props: ['data'],
       setup(props, { slots }) {

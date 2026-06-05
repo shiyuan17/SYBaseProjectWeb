@@ -3,6 +3,7 @@ import type {
   PendingTechnicalTaskItem,
   SlicingWorkbenchRow,
   SlicingWorkbenchView,
+  TechnicalTrackingEmbeddingRecordSummary,
   TechnicalTrackingView as TechnicalTrackingViewModel,
 } from '../types/technical-workflow';
 import type { TrackingTab } from '../utils/tracking';
@@ -10,6 +11,7 @@ import type { TrackingTab } from '../utils/tracking';
 import { computed, nextTick, reactive, ref } from 'vue';
 
 import { Page } from '@vben/common-ui';
+import { UserRoundPen } from '@vben/icons';
 
 import {
   ElAlert,
@@ -18,7 +20,9 @@ import {
   ElDrawer,
   ElInput,
   ElMessage,
+  ElOption,
   ElPagination,
+  ElSelect,
   ElTable,
   ElTableColumn,
   ElTag,
@@ -30,7 +34,9 @@ import {
   getSlicingWorkbench,
   getTechnicalTracking,
   startSlicing,
+  updateTechnicalTaskRemarks,
 } from '../api/technical-workflow-service';
+import EmbeddingQualityReviewDialog from '../components/EmbeddingQualityReviewDialog.vue';
 import SlicingProcessDialog from '../components/SlicingProcessDialog.vue';
 import SlicingQcEvaluationDialog from '../components/SlicingQcEvaluationDialog.vue';
 import TechnicalTaskStartDialog from '../components/TechnicalTaskStartDialog.vue';
@@ -39,6 +45,7 @@ import TechnicalTrackingSummaryTables from '../components/TechnicalTrackingSumma
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import {
   formatDateTime,
+  formatEmbeddingEvaluationLevel,
   formatEventStatus,
   formatNullable,
   formatTaskStatus,
@@ -61,6 +68,8 @@ interface SelectableTableInstance {
     ignoreSelectable?: boolean,
   ) => void;
 }
+
+const SHIFT_REMARK_OPTIONS = ['未包埋', '包埋未完成', '其他'] as const;
 
 const EMPTY_WORKBENCH: SlicingWorkbenchView = {
   completedPage: 1,
@@ -103,7 +112,12 @@ const selectedCompletedRows = ref<SlicingWorkbenchRow[]>([]);
 const startDialogVisible = ref(false);
 const processDialogVisible = ref(false);
 const qcDialogVisible = ref(false);
+const embeddingQualityReviewDialogVisible = ref(false);
 const pendingAutoProcessTaskId = ref('');
+const selectedEmbeddingQualityReviewRecord =
+  ref<null | TechnicalTrackingEmbeddingRecordSummary>(null);
+const embeddingQualityReviewLoadingTaskIds = ref<string[]>([]);
+const savingShiftRemarkTaskIds = ref<string[]>([]);
 
 const trackingDrawerVisible = ref(false);
 const trackingDrawerLoading = ref(false);
@@ -286,6 +300,51 @@ function getPendingRemark(row: SlicingWorkbenchRow) {
   return row.slicingRemark ?? row.sliceNotice ?? null;
 }
 
+function isSavingShiftRemark(row: SlicingWorkbenchRow) {
+  return savingShiftRemarkTaskIds.value.includes(row.taskId);
+}
+
+function setSavingShiftRemark(taskId: string, saving: boolean) {
+  savingShiftRemarkTaskIds.value = saving
+    ? [...new Set([...savingShiftRemarkTaskIds.value, taskId])]
+    : savingShiftRemarkTaskIds.value.filter((item) => item !== taskId);
+}
+
+function isLoadingEmbeddingQualityReview(row: SlicingWorkbenchRow) {
+  return embeddingQualityReviewLoadingTaskIds.value.includes(row.taskId);
+}
+
+function setLoadingEmbeddingQualityReview(taskId: string, loading: boolean) {
+  embeddingQualityReviewLoadingTaskIds.value = loading
+    ? [...new Set([...embeddingQualityReviewLoadingTaskIds.value, taskId])]
+    : embeddingQualityReviewLoadingTaskIds.value.filter(
+        (item) => item !== taskId,
+      );
+}
+
+function applyShiftRemarkUpdate(taskId: string, shiftRemark: null | string) {
+  workbench.value = {
+    ...workbench.value,
+    pendingList: workbench.value.pendingList.map((item) =>
+      item.taskId === taskId ? { ...item, shiftRemark } : item,
+    ),
+    completedTodayList: workbench.value.completedTodayList.map((item) =>
+      item.taskId === taskId ? { ...item, shiftRemark } : item,
+    ),
+  };
+}
+
+async function resolveTaskRemarks(row: SlicingWorkbenchRow) {
+  const trackingResult = await getTechnicalTracking(row.caseId);
+  const matchedTask = trackingResult.technicalTasks.find(
+    (item) => item.id === row.taskId,
+  );
+  if (!matchedTask) {
+    throw new Error('未找到当前切片任务备注');
+  }
+  return matchedTask.remarks ?? null;
+}
+
 function getTrackingObjectId(row: SlicingWorkbenchRow) {
   return row.slideId || row.embeddingBoxId || row.specimenId || row.caseId;
 }
@@ -438,6 +497,66 @@ async function handleProcessSubmitted() {
   await loadWorkbench();
 }
 
+async function handleShiftRemarkSave(
+  row: SlicingWorkbenchRow,
+  value: boolean | number | string,
+) {
+  const nextShiftRemark = String(value).trim();
+  const currentShiftRemark = row.shiftRemark ?? '';
+  if (nextShiftRemark === currentShiftRemark) {
+    return;
+  }
+
+  setSavingShiftRemark(row.taskId, true);
+  try {
+    const remarks = await resolveTaskRemarks(row);
+    await updateTechnicalTaskRemarks(row.taskId, {
+      productionRemarks: nextShiftRemark || null,
+      remarks: remarks?.trim() || null,
+    });
+    applyShiftRemarkUpdate(row.taskId, nextShiftRemark || null);
+    ElMessage.success('主班备注已保存');
+  } catch (error) {
+    pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
+  } finally {
+    setSavingShiftRemark(row.taskId, false);
+  }
+}
+
+async function openEmbeddingQualityReview(row: SlicingWorkbenchRow) {
+  if (!row.embeddingBoxId) {
+    ElMessage.warning('当前缺少可评价的包埋盒记录');
+    return;
+  }
+
+  setLoadingEmbeddingQualityReview(row.taskId, true);
+  try {
+    const trackingResult = await getTechnicalTracking(row.caseId);
+    const matchedRecord =
+      trackingResult.embeddingRecords?.find(
+        (item) => item.embeddingBoxId === row.embeddingBoxId,
+      ) ??
+      trackingResult.embeddingRecords?.find(
+        (item) =>
+          item.specimenId === row.specimenId &&
+          item.pathologyNo === row.pathologyNo,
+      ) ??
+      null;
+    if (!matchedRecord) {
+      ElMessage.warning('未找到对应的包埋评价记录');
+      return;
+    }
+    selectedEmbeddingQualityReviewRecord.value = matchedRecord;
+    embeddingQualityReviewDialogVisible.value = true;
+  } catch (error) {
+    pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
+  } finally {
+    setLoadingEmbeddingQualityReview(row.taskId, false);
+  }
+}
+
 async function loadTrackingDrawerForRow(
   row: SlicingWorkbenchRow,
   mode: 'evaluation' | 'history',
@@ -501,6 +620,11 @@ async function refreshTrackingDrawer() {
 
 async function handleQcSubmitted() {
   qcDialogVisible.value = false;
+  await loadWorkbench();
+  await refreshTrackingDrawer();
+}
+
+async function handleEmbeddingQualityReviewSubmitted() {
   await loadWorkbench();
   await refreshTrackingDrawer();
 }
@@ -669,12 +793,42 @@ void loadWorkbench();
             </ElTableColumn>
             <ElTableColumn label="主班备注" min-width="160">
               <template #default="{ row }">
-                {{ formatNullable(row.shiftRemark) }}
+                <ElSelect
+                  :model-value="row.shiftRemark ?? ''"
+                  clearable
+                  :loading="isSavingShiftRemark(row)"
+                  placeholder="主班备注"
+                  size="small"
+                  @change="(value) => handleShiftRemarkSave(row, value ?? '')"
+                >
+                  <ElOption
+                    v-for="option in SHIFT_REMARK_OPTIONS"
+                    :key="option"
+                    :label="option"
+                    :value="option"
+                  />
+                </ElSelect>
               </template>
             </ElTableColumn>
             <ElTableColumn label="包埋评价" min-width="120">
               <template #default="{ row }">
-                {{ formatNullable(row.embeddingEvaluation) }}
+                <div class="legacy-editable-cell">
+                  <span class="legacy-editable-cell__content">
+                    {{
+                      formatEmbeddingEvaluationLevel(row.embeddingEvaluation)
+                    }}
+                  </span>
+                  <ElButton
+                    aria-label="编辑包埋评价"
+                    :icon="UserRoundPen"
+                    :loading="isLoadingEmbeddingQualityReview(row)"
+                    circle
+                    size="small"
+                    text
+                    title="编辑包埋评价"
+                    @click.stop="openEmbeddingQualityReview(row)"
+                  />
+                </div>
               </template>
             </ElTableColumn>
             <ElTableColumn label="包埋操作" min-width="140">
@@ -778,7 +932,7 @@ void loadWorkbench();
             </ElTableColumn>
             <ElTableColumn label="包埋评价" min-width="120">
               <template #default="{ row }">
-                {{ formatNullable(row.embeddingEvaluation) }}
+                {{ formatEmbeddingEvaluationLevel(row.embeddingEvaluation) }}
               </template>
             </ElTableColumn>
             <ElTableColumn label="所属标本" min-width="180">
@@ -827,6 +981,13 @@ void loadWorkbench();
       @submitted="handleQcSubmitted"
     />
 
+    <EmbeddingQualityReviewDialog
+      v-model="embeddingQualityReviewDialogVisible"
+      :row="selectedEmbeddingQualityReviewRecord"
+      title="包埋评价"
+      @submitted="handleEmbeddingQualityReviewSubmitted"
+    />
+
     <ElDrawer
       v-model="trackingDrawerVisible"
       :close-on-click-modal="false"
@@ -872,9 +1033,9 @@ void loadWorkbench();
 .legacy-header,
 .legacy-action-bar,
 .legacy-panel {
-  background: #fff;
-  border: 1px solid #d8e4ef;
-  box-shadow: 0 8px 24px rgb(15 23 42 / 6%);
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 8px 24px hsl(var(--foreground) / 6%);
 }
 
 .legacy-header {
@@ -890,50 +1051,50 @@ void loadWorkbench();
 .legacy-stat-card {
   min-height: 90px;
   padding: 14px 16px;
-  color: #0f172a;
-  background: linear-gradient(135deg, #f8fbff 0%, #eef5fb 100%);
-  border: 1px solid #d7e7f4;
+  color: hsl(var(--foreground));
+  background: hsl(var(--accent) / 70%);
+  border: 1px solid hsl(var(--border));
 }
 
 .legacy-stat-card[data-accent='amber'] {
-  background: linear-gradient(135deg, #fff9eb 0%, #ffeec3 100%);
-  border-color: #f3d38f;
+  background: hsl(var(--warning) / 14%);
+  border-color: hsl(var(--warning) / 34%);
 }
 
 .legacy-stat-card[data-accent='cyan'] {
-  background: linear-gradient(135deg, #f0fbff 0%, #dff4fb 100%);
-  border-color: #bee5f0;
+  background: hsl(var(--primary) / 10%);
+  border-color: hsl(var(--primary) / 24%);
 }
 
 .legacy-stat-card[data-accent='emerald'] {
-  background: linear-gradient(135deg, #f2fff9 0%, #ddf7ea 100%);
-  border-color: #b9e7cf;
+  background: hsl(var(--success) / 12%);
+  border-color: hsl(var(--success) / 32%);
 }
 
 .legacy-stat-card[data-accent='rose'] {
-  background: linear-gradient(135deg, #fff5f5 0%, #ffe1e1 100%);
-  border-color: #f5b4b4;
+  background: hsl(var(--destructive) / 12%);
+  border-color: hsl(var(--destructive) / 30%);
 }
 
 .legacy-stat-card[data-accent='sky'] {
-  background: linear-gradient(135deg, #f2f7ff 0%, #dcecff 100%);
-  border-color: #bdd6ff;
+  background: hsl(var(--primary) / 12%);
+  border-color: hsl(var(--primary) / 28%);
 }
 
 .legacy-stat-card[data-accent='slate'] {
-  background: linear-gradient(135deg, #f8fafc 0%, #eef2f7 100%);
-  border-color: #d6dfeb;
+  background: hsl(var(--muted) / 70%);
+  border-color: hsl(var(--border));
 }
 
 .legacy-stat-card[data-accent='teal'] {
-  background: linear-gradient(135deg, #effdfc 0%, #d7f5f2 100%);
-  border-color: #b3e8e1;
+  background: hsl(var(--success) / 10%);
+  border-color: hsl(var(--success) / 28%);
 }
 
 .legacy-stat-card__label {
   font-size: 13px;
   line-height: 20px;
-  color: #475569;
+  color: hsl(var(--muted-foreground));
 }
 
 .legacy-stat-card__value {
@@ -950,7 +1111,7 @@ void loadWorkbench();
   justify-content: space-between;
   padding-top: 16px;
   margin-top: 16px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid hsl(var(--border));
 }
 
 .legacy-query-bar__search {
@@ -964,7 +1125,7 @@ void loadWorkbench();
 .legacy-query-bar__label {
   font-size: 13px;
   font-weight: 600;
-  color: #1e293b;
+  color: hsl(var(--foreground));
 }
 
 .legacy-query-bar__actions {
@@ -991,7 +1152,7 @@ void loadWorkbench();
 
 .legacy-selection-tip {
   font-size: 12px;
-  color: #64748b;
+  color: hsl(var(--muted-foreground));
 }
 
 .legacy-panels {
@@ -1013,42 +1174,42 @@ void loadWorkbench();
   align-items: flex-start;
   justify-content: space-between;
   padding: 14px 16px 12px;
-  background: linear-gradient(180deg, #f8fbff 0%, #eef4fa 100%);
-  border-bottom: 1px solid #d8e4ef;
+  background: hsl(var(--accent) / 70%);
+  border-bottom: 1px solid hsl(var(--border));
 }
 
 .legacy-panel__header--right {
-  background: linear-gradient(180deg, #f9fcfb 0%, #edf7f4 100%);
+  background: hsl(var(--success) / 10%);
 }
 
 .legacy-panel__title {
   margin: 0;
   font-size: 16px;
   font-weight: 700;
-  color: #0f172a;
+  color: hsl(var(--foreground));
 }
 
 .legacy-panel__subtitle {
   margin: 4px 0 0;
   font-size: 12px;
   line-height: 18px;
-  color: #64748b;
+  color: hsl(var(--muted-foreground));
 }
 
 .legacy-panel :deep(.el-table) {
-  --el-table-header-bg-color: #f6f9fc;
-  --el-table-row-hover-bg-color: #f8fbff;
+  --el-table-header-bg-color: hsl(var(--accent));
+  --el-table-row-hover-bg-color: hsl(var(--accent-hover));
 }
 
 .legacy-panel :deep(.is-overdue-row > td) {
-  background: #fff7ed;
+  background: hsl(var(--warning) / 12%);
 }
 
 .legacy-panel__footer {
   display: flex;
   justify-content: flex-end;
   padding: 12px 16px 16px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid hsl(var(--border));
 }
 
 @media (max-width: 1600px) {

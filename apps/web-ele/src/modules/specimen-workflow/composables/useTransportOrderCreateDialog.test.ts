@@ -7,11 +7,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 const createTransportOrderMock = vi.hoisted(() => vi.fn());
 const getApplicationDetailMock = vi.hoisted(() => vi.fn());
 const successMock = vi.hoisted(() => vi.fn());
+const verifyOperatorMock = vi.hoisted(() => vi.fn(async () => 'TOKEN-VERIFY'));
 const warningMock = vi.hoisted(() => vi.fn());
 
 vi.mock('@vben/stores', () => ({
   useUserStore: () => ({
     userInfo: {
+      loginName: 'test-user',
       realName: 'Test User',
       userId: 'USER-001',
     },
@@ -28,6 +30,12 @@ vi.mock('element-plus', () => ({
 vi.mock('../api/specimen-workflow-service', () => ({
   createTransportOrder: createTransportOrderMock,
   getApplicationDetail: getApplicationDetailMock,
+}));
+
+vi.mock('./useOperatorVerificationPrompt', () => ({
+  useOperatorVerificationPrompt: () => ({
+    verifyOperator: verifyOperatorMock,
+  }),
 }));
 
 import { useTransportOrderCreateDialog } from './useTransportOrderCreateDialog';
@@ -159,6 +167,8 @@ describe('useTransportOrderCreateDialog', () => {
     createTransportOrderMock.mockReset();
     getApplicationDetailMock.mockReset();
     successMock.mockReset();
+    verifyOperatorMock.mockReset();
+    verifyOperatorMock.mockResolvedValue('TOKEN-VERIFY');
     warningMock.mockReset();
     document.body.innerHTML = '';
   });
@@ -205,6 +215,7 @@ describe('useTransportOrderCreateDialog', () => {
 
     state.createForm.handoverDepartmentId = 'DEP-HO';
     state.createForm.handoverDepartmentName = '交接科室';
+    state.createForm.handoverLoginName = 'test-user';
     state.createForm.receiverDepartmentId = 'DEP-RE';
     state.createForm.receiverDepartmentName = '接收科室';
     state.createForm.terminalCode = 'TERM-01';
@@ -212,11 +223,17 @@ describe('useTransportOrderCreateDialog', () => {
 
     await state.submitCreate();
 
+    expect(verifyOperatorMock).toHaveBeenCalledWith({
+      id: 'USER-001',
+      loginName: 'test-user',
+      name: 'Test User',
+    });
     expect(createTransportOrderMock).toHaveBeenCalledWith(
       expect.objectContaining({
         applicationId: 'APP-002',
         handoverDepartmentId: 'DEP-HO',
         handoverUserId: 'USER-001',
+        operatorVerificationToken: 'TOKEN-VERIFY',
         receiverDepartmentId: 'DEP-RE',
         specimenBarcodes: ['BC-001'],
         terminalCode: 'TERM-01',
@@ -247,6 +264,7 @@ describe('useTransportOrderCreateDialog', () => {
     state.createForm.applicationId = 'APP-002';
     state.createForm.handoverDepartmentId = 'DEP-HO';
     state.createForm.handoverDepartmentName = '交接科室';
+    state.createForm.handoverLoginName = 'test-user';
     state.createForm.receiverDepartmentId = 'DEP-RE';
     state.createForm.receiverDepartmentName = '接收科室';
     state.createForm.selectedSpecimenBarcodes = [];

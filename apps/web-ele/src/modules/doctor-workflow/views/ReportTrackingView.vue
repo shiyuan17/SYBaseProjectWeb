@@ -58,6 +58,11 @@ const tracking = ref<null | ReportTrackingView>(null);
 const queryCaseIdentifier = ref('');
 
 const caseId = computed(() => firstQueryParam(route.query.caseId));
+const isCurrentTrackingRoute = computed(
+  () =>
+    route.name === 'ReportTracking' ||
+    route.path === '/doctor-workflow/tracking',
+);
 const currentUserId = computed(() => userStore.userInfo?.userId ?? '');
 const currentUserName = computed(() => userStore.userInfo?.realName ?? '');
 const canOpenReport = computed(() => {
@@ -176,8 +181,12 @@ async function runCancelMedicalOrder(order: MedicalOrderSummary) {
 }
 
 watch(
-  caseId,
-  (value) => {
+  [isCurrentTrackingRoute, caseId],
+  ([isActive, value]) => {
+    if (!isActive) {
+      return;
+    }
+
     queryCaseIdentifier.value = value;
     if (!value) {
       pageError.value = '';

@@ -9,7 +9,11 @@ import type {
   DiagnosticTaskActionRequest,
   DiagnosticWorkbenchView,
   MedicalOrderActionRequest,
+  MedicalOrderCategoryNode,
   MedicalOrderOperationResult,
+  MedicalOrderPackagePageQuery,
+  MedicalOrderPackageView,
+  MedicalOrderPagedResult,
   PathologyReportDraft,
   PathologyReportOperationResult,
   PendingDiagnosticTaskPage,
@@ -27,6 +31,9 @@ import { requestClient } from '#/api/request';
 
 type PendingDiagnosticTaskPageResponse = Partial<PendingDiagnosticTaskPage>;
 type PendingMedicalOrderPageResponse = Partial<PendingMedicalOrderPage>;
+type MedicalOrderPackagePageResponse = Partial<
+  MedicalOrderPagedResult<MedicalOrderPackageView>
+>;
 type DiagnosticWorkbenchResponse = Partial<DiagnosticWorkbenchView>;
 type ReportTrackingResponse = Partial<ReportTrackingView>;
 
@@ -52,6 +59,19 @@ export function mapPendingMedicalOrderPageResponse(
   };
 }
 
+export function mapMedicalOrderPackagePageResponse(
+  response: MedicalOrderPackagePageResponse,
+  fallbackPage = 1,
+  fallbackSize = 20,
+): MedicalOrderPagedResult<MedicalOrderPackageView> {
+  return {
+    items: response.items ?? [],
+    page: response.page ?? fallbackPage,
+    size: response.size ?? fallbackSize,
+    total: response.total ?? 0,
+  };
+}
+
 export function mapDiagnosticWorkbenchResponse(
   response: DiagnosticWorkbenchResponse,
 ): DiagnosticWorkbenchView {
@@ -61,18 +81,44 @@ export function mapDiagnosticWorkbenchResponse(
     applicationFormArchiveStatus: response.applicationFormArchiveStatus ?? null,
     applicationFormImageUrl: response.applicationFormImageUrl ?? null,
     applicationNo: response.applicationNo ?? null,
+    applicationOrder: response.applicationOrder ?? null,
+    applicationType: response.applicationType ?? null,
+    bedNo: response.bedNo ?? null,
     blocks: response.blocks ?? [],
     caseId: response.caseId ?? '',
     caseStatus: response.caseStatus ?? null,
+    chargeItems: response.chargeItems ?? [],
+    checkItem: response.checkItem ?? null,
     clinicalDiagnosis: response.clinicalDiagnosis ?? null,
+    clinicalExaminationAndSurgeryFindings:
+      response.clinicalExaminationAndSurgeryFindings ?? null,
+    clinicalHistory: response.clinicalHistory ?? null,
+    clinicalSubmissionRequirements:
+      response.clinicalSubmissionRequirements ?? null,
     consultations: response.consultations ?? [],
     currentReport: response.currentReport ?? null,
+    deliveredAt: response.deliveredAt ?? null,
+    detachedAt: response.detachedAt ?? null,
+    fixedAt: response.fixedAt ?? null,
     diagnosticTasks: response.diagnosticTasks ?? [],
     hasPendingRevision: response.hasPendingRevision ?? false,
+    historicalPathologies: response.historicalPathologies ?? [],
+    infectiousAndPastHistorySummary:
+      response.infectiousAndPastHistorySummary ?? null,
+    infectiousSource: response.infectiousSource ?? null,
+    inpatientNo: response.inpatientNo ?? null,
     medicalOrders: response.medicalOrders ?? [],
+    outpatientNo: response.outpatientNo ?? null,
+    patientAge: response.patientAge ?? null,
+    patientGender: response.patientGender ?? null,
+    patientId: response.patientId ?? null,
     pathologyNo: response.pathologyNo ?? null,
+    pacsExaminations: response.pacsExaminations ?? [],
+    phone: response.phone ?? null,
     patientName: response.patientName ?? null,
     recentEvents: response.recentEvents ?? [],
+    remarkSections: response.remarkSections ?? [],
+    reportTraces: response.reportTraces ?? [],
     revisions: response.revisions ?? [],
     slides: response.slides ?? [],
     specimens: response.specimens ?? [],
@@ -125,6 +171,24 @@ export async function listPendingMedicalOrders(
     { params },
   );
   return mapPendingMedicalOrderPageResponse(response);
+}
+
+export async function listMedicalOrderDicts() {
+  return (
+    (await requestClient.get<MedicalOrderCategoryNode[]>(
+      '/v1/medical-order-dicts',
+    )) ?? []
+  );
+}
+
+export async function listMedicalOrderPackagesPage(
+  params: MedicalOrderPackagePageQuery,
+) {
+  const response = await requestClient.get<MedicalOrderPackagePageResponse>(
+    '/v1/medical-order-packages/page',
+    { params },
+  );
+  return mapMedicalOrderPackagePageResponse(response, params.page, params.size);
 }
 
 export async function assignDiagnosticTask(

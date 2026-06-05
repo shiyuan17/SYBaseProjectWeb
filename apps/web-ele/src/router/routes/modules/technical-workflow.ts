@@ -47,7 +47,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         meta: {
           authority: [M2_PERMISSION_CODES.SPECIMEN_RECEIVE],
           icon: 'carbon:archive',
-          title: '标本接收',
+          title: '标本接收工作台',
         },
         name: 'PathologyReceipt',
         path: '/workflow/pathology-receipt',

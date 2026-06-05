@@ -31,7 +31,7 @@ const {
 <template>
   <div class="flex flex-col gap-4">
     <div class="flex flex-wrap items-center gap-4 text-sm">
-      <div class="font-semibold text-[color:#d6453d]">标本入库</div>
+      <div class="font-semibold text-danger">标本入库</div>
       <div>
         全部
         <span class="text-xl font-semibold text-primary">{{

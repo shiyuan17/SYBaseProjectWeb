@@ -416,7 +416,7 @@ describe('mapMenuViewsToRoutes', () => {
           expect.objectContaining({
             meta: expect.objectContaining({
               keepAlive: true,
-              title: '标本接收',
+              title: '标本接收工作台',
             }),
             name: 'PathologyReceipt',
             path: '/workflow/pathology-receipt',
@@ -588,6 +588,20 @@ describe('mapMenuViewsToRoutes', () => {
         sortOrder: 134,
         visible: true,
       },
+      {
+        componentName: 'MedicalOrderWorkbench',
+        enabled: true,
+        icon: 'orders',
+        id: 'MENU_M4_MEDICAL_ORDER',
+        menuCode: 'M4_MEDICAL_ORDER',
+        menuName: '病理医嘱执行',
+        menuType: 'MENU',
+        parentId: 'MENU_M4_WORKFLOW',
+        path: '/api/v1/medical-orders/pending',
+        permissionPrefix: 'm4:medical-order',
+        sortOrder: 135,
+        visible: true,
+      },
     ]);
 
     expect(routes).toEqual([
@@ -624,6 +638,16 @@ describe('mapMenuViewsToRoutes', () => {
             }),
             name: 'FrozenReport',
             path: '/doctor-workflow/frozen-report',
+          }),
+          expect.objectContaining({
+            component:
+              '/modules/doctor-workflow/views/MedicalOrderWorkbenchView',
+            meta: expect.objectContaining({
+              keepAlive: true,
+              title: '病理医嘱执行',
+            }),
+            name: 'MedicalOrderWorkbench',
+            path: '/doctor-workflow/medical-orders',
           }),
         ],
       }),

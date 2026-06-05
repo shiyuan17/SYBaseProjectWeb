@@ -42,6 +42,7 @@ import type {
   TechnicalTaskClaimRequest,
   TechnicalTaskPriorityRequest,
   TechnicalTaskReleaseRequest,
+  TechnicalTaskRemarksRequest,
   TechnicalTaskStartRequest,
   TechnicalTrackingView,
 } from '../types/technical-workflow';
@@ -288,7 +289,12 @@ export function mapGrossingWorkbenchContextResponse(
     checkItems: response.checkItems ?? [],
     clinicalDiagnosis: response.clinicalDiagnosis ?? null,
     clinicalHistory: response.clinicalHistory ?? null,
+    clinicalSubmissionRequirements:
+      response.clinicalSubmissionRequirements ?? null,
     contextSummary: response.contextSummary ?? null,
+    externalPathologyDiagnosis: response.externalPathologyDiagnosis ?? null,
+    infectiousAndPastHistorySummary:
+      response.infectiousAndPastHistorySummary ?? null,
     mediaAssets: response.mediaAssets ?? [],
     relatedExaminations: response.relatedExaminations ?? null,
     task: {
@@ -647,6 +653,19 @@ export async function updateTechnicalTaskPriority(
   return requestClient.post<PendingTechnicalTaskPage['items'][number]>(
     `/v1/technical-tasks/${encodeURIComponent(taskId)}/priority`,
     data,
+  );
+}
+
+export async function updateTechnicalTaskRemarks(
+  taskId: string,
+  data: TechnicalTaskRemarksRequest,
+) {
+  return requestClient.request<PendingTechnicalTaskPage['items'][number]>(
+    `/v1/technical-tasks/${encodeURIComponent(taskId)}/remarks`,
+    {
+      data,
+      method: 'PATCH',
+    },
   );
 }
 

@@ -1,26 +1,35 @@
-import type {
-  DiagnosticWorkbenchView,
-  PendingDiagnosticTaskItem,
-} from '../types/doctor-workflow';
-
-import {
-  formatDiagnosticTaskStatus,
-  formatDiagnosticTaskType,
-  formatNullable,
-} from './format';
+import type { PendingDiagnosticTaskItem } from '../types/doctor-workflow';
 
 export interface DiagnosisWorkbenchQueueStats {
   acceptedCount: number;
+  assignedCount: number;
+  consultationCount: number;
   completedCount: number;
   currentPageCount: number;
+  frozenCount: number;
   inProgressCount: number;
+  primaryCount: number;
+  reviewCount: number;
+  unsignedReportCount: number;
 }
 
-export interface DiagnosisWorkbenchProgressNode {
-  description: string;
-  id: string;
+export type DiagnosisWorkbenchQueueQuickFilter =
+  | 'ALL'
+  | 'ASSIGNED'
+  | 'COMPLETED'
+  | 'CONSULTATION'
+  | 'FROZEN'
+  | 'IN_PROGRESS'
+  | 'PRIMARY'
+  | 'REVIEW'
+  | 'UNSIGNED_REPORT';
+
+export interface DiagnosisWorkbenchQuickFilterOption {
+  count: number;
+  key: DiagnosisWorkbenchQueueQuickFilter;
   label: string;
-  state: 'active' | 'done' | 'pending' | 'warning';
+  taskStatus?: string;
+  taskType?: string;
 }
 
 export function resolveWorkbenchSelection(
@@ -55,12 +64,110 @@ export function buildDiagnosisWorkbenchQueueStats(
   return {
     acceptedCount: items.filter((item) => item.taskStatus === 'ACCEPTED')
       .length,
+    assignedCount: items.filter((item) => item.taskStatus === 'ASSIGNED')
+      .length,
+    consultationCount: items.filter((item) => item.taskType === 'CONSULTATION')
+      .length,
     completedCount: items.filter((item) => item.taskStatus === 'COMPLETED')
       .length,
     currentPageCount: items.length,
+    frozenCount: items.filter((item) => item.taskType === 'FROZEN').length,
     inProgressCount: items.filter((item) => item.taskStatus === 'IN_PROGRESS')
       .length,
+    primaryCount: items.filter((item) => item.taskType === 'PRIMARY').length,
+    reviewCount: items.filter((item) => item.taskType === 'REVIEW').length,
+    unsignedReportCount: items.filter(
+      (item) =>
+        item.reportStatus !== 'SIGNED' &&
+        item.reportStatus !== 'PUBLISHED' &&
+        item.taskStatus !== 'COMPLETED',
+    ).length,
   };
+}
+
+export function buildDiagnosisWorkbenchQuickFilterOptions(
+  stats: DiagnosisWorkbenchQueueStats,
+): DiagnosisWorkbenchQuickFilterOption[] {
+  return [
+    {
+      count: stats.unsignedReportCount,
+      key: 'UNSIGNED_REPORT',
+      label: '未签发报告',
+    },
+    {
+      count: stats.primaryCount,
+      key: 'PRIMARY',
+      label: '我的初步',
+      taskType: 'PRIMARY',
+    },
+    {
+      count: stats.assignedCount,
+      key: 'ASSIGNED',
+      label: '未接单',
+      taskStatus: 'ASSIGNED',
+    },
+    {
+      count: stats.inProgressCount,
+      key: 'IN_PROGRESS',
+      label: '诊断中',
+      taskStatus: 'IN_PROGRESS',
+    },
+    {
+      count: stats.completedCount,
+      key: 'COMPLETED',
+      label: '已完成',
+      taskStatus: 'COMPLETED',
+    },
+    {
+      count: stats.reviewCount,
+      key: 'REVIEW',
+      label: '我的复诊',
+      taskType: 'REVIEW',
+    },
+    {
+      count: stats.frozenCount,
+      key: 'FROZEN',
+      label: '冰冻',
+      taskType: 'FROZEN',
+    },
+    {
+      count: stats.consultationCount,
+      key: 'CONSULTATION',
+      label: '科内会诊',
+      taskType: 'CONSULTATION',
+    },
+  ];
+}
+
+export function filterDiagnosisWorkbenchQueueItems(
+  items: PendingDiagnosticTaskItem[],
+  quickFilter: DiagnosisWorkbenchQueueQuickFilter,
+  assignedRange: string[],
+) {
+  return items.filter((item) => {
+    if (!matchesAssignedRange(item, assignedRange)) {
+      return false;
+    }
+
+    if (quickFilter === 'ALL') {
+      return true;
+    }
+    if (quickFilter === 'UNSIGNED_REPORT') {
+      return (
+        item.reportStatus !== 'SIGNED' &&
+        item.reportStatus !== 'PUBLISHED' &&
+        item.taskStatus !== 'COMPLETED'
+      );
+    }
+    if (
+      quickFilter === 'ASSIGNED' ||
+      quickFilter === 'COMPLETED' ||
+      quickFilter === 'IN_PROGRESS'
+    ) {
+      return item.taskStatus === quickFilter;
+    }
+    return item.taskType === quickFilter;
+  });
 }
 
 export function getDiagnosisTaskStatusTagType(status?: null | string) {
@@ -92,102 +199,19 @@ export function getDiagnosisTaskTypeTagType(taskType?: null | string) {
   return 'info';
 }
 
-export function buildDiagnosticProgressNodes(
-  workbench: DiagnosticWorkbenchView | null,
-  selectedTask: null | PendingDiagnosticTaskItem,
-): DiagnosisWorkbenchProgressNode[] {
-  if (!workbench) {
-    return [];
-  }
-
-  const reportStatus = workbench.currentReport?.reportStatus ?? '';
-  const pendingMedicalOrderCount = workbench.medicalOrders.filter(
-    (item) => item.status === 'PENDING',
-  ).length;
-
-  return [
-    {
-      description: `${formatNullable(workbench.applicationNo)} / ${formatNullable(workbench.patientName)}`,
-      id: 'case-context',
-      label: '病例进入工作台',
-      state: 'done',
-    },
-    {
-      description: selectedTask
-        ? `${formatDiagnosticTaskType(selectedTask.taskType)} · ${formatDiagnosticTaskStatus(selectedTask.taskStatus)}`
-        : '当前没有可用诊断任务',
-      id: 'task-status',
-      label: '诊断任务流转',
-      state: resolveTaskProgressState(selectedTask?.taskStatus ?? ''),
-    },
-    {
-      description: workbench.currentReport?.reportId
-        ? `${formatNullable(workbench.currentReport.reportNo)} · v${workbench.currentReport.versionNo ?? 1}`
-        : '尚未创建报告',
-      id: 'report-status',
-      label: '报告编写与流转',
-      state: resolveReportProgressState(reportStatus),
-    },
-    {
-      description: buildCollaborationDescription(
-        workbench,
-        pendingMedicalOrderCount,
-      ),
-      id: 'collaboration',
-      label: '协同与闭环',
-      state:
-        workbench.hasPendingRevision || pendingMedicalOrderCount > 0
-          ? 'warning'
-          : 'done',
-    },
-  ];
-}
-
-function resolveTaskProgressState(taskStatus: string) {
-  if (taskStatus === 'COMPLETED') {
-    return 'done';
-  }
-  if (taskStatus === 'IN_PROGRESS' || taskStatus === 'ACCEPTED') {
-    return 'active';
-  }
-  if (taskStatus === 'ASSIGNED') {
-    return 'pending';
-  }
-  if (taskStatus === 'CANCELLED') {
-    return 'warning';
-  }
-  return 'pending';
-}
-
-function resolveReportProgressState(reportStatus: string) {
-  if (reportStatus === 'PUBLISHED' || reportStatus === 'SIGNED') {
-    return 'done';
-  }
-  if (reportStatus === 'SUBMITTED' || reportStatus === 'REVIEWED') {
-    return 'active';
-  }
-  if (reportStatus === 'DRAFT') {
-    return 'pending';
-  }
-  return 'pending';
-}
-
-function buildCollaborationDescription(
-  workbench: DiagnosticWorkbenchView,
-  pendingMedicalOrderCount: number,
+function matchesAssignedRange(
+  item: PendingDiagnosticTaskItem,
+  assignedRange: string[],
 ) {
-  const segments = [
-    `修订 ${workbench.revisions.length}`,
-    `会诊 ${workbench.consultations.length}`,
-    `医嘱 ${workbench.medicalOrders.length}`,
-  ];
-
-  if (pendingMedicalOrderCount > 0) {
-    segments.push(`待处理医嘱 ${pendingMedicalOrderCount}`);
-  }
-  if (workbench.hasPendingRevision) {
-    segments.push('存在待修订');
+  if (assignedRange.length < 2) {
+    return true;
   }
 
-  return segments.join(' · ');
+  const [start, end] = assignedRange;
+  if (!start || !end || !item.assignedAt) {
+    return true;
+  }
+
+  const assignedAt = item.assignedAt.slice(0, 10);
+  return assignedAt >= start && assignedAt <= end;
 }

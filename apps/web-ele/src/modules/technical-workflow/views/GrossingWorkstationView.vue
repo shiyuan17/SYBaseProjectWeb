@@ -17,12 +17,10 @@ import { useRoute, useRouter } from 'vue-router';
 import { Page } from '@vben/common-ui';
 import {
   BookOpenText,
-  Camera,
   ChevronLeft,
   ChevronRight,
   Download,
   Ellipsis,
-  ImagePlus,
   RotateCw,
   Search,
 } from '@vben/icons';
@@ -36,7 +34,6 @@ import {
   ElEmpty,
   ElForm,
   ElInput,
-  ElLink,
   ElMessage,
   ElPagination,
   ElTable,
@@ -46,6 +43,8 @@ import {
   ElTag,
   ElTooltip,
 } from 'element-plus';
+
+import WorkbenchCapturedImagePanel from '#/modules/shared/components/WorkbenchCapturedImagePanel.vue';
 
 import {
   listPendingTechnicalTasks,
@@ -118,6 +117,24 @@ const CLINICAL_HISTORY_FIELDS = [
     key: 'clinicalExamination',
     label: '临床检查',
     placeholder: '请输入临床检查',
+    rows: 3,
+  },
+  {
+    key: 'clinicalSubmissionRequirements',
+    label: '临床送检要求',
+    placeholder: '请输入临床送检要求',
+    rows: 3,
+  },
+  {
+    key: 'infectiousAndPastHistorySummary',
+    label: '传染病史和过往病史',
+    placeholder: '请输入传染病史和过往病史',
+    rows: 3,
+  },
+  {
+    key: 'externalPathologyDiagnosis',
+    label: '外院病理诊断',
+    placeholder: '请输入外院病理诊断',
     rows: 3,
   },
   {
@@ -253,8 +270,11 @@ const workbench = useGrossingWorkbench({
 });
 const clinicalHistoryForm = reactive<ClinicalHistoryForm>({
   clinicalExamination: '',
+  clinicalSubmissionRequirements: '',
+  externalPathologyDiagnosis: '',
   historySummary: '',
   imagingExamination: '',
+  infectiousAndPastHistorySummary: '',
   laboratoryExamination: '',
 });
 
@@ -289,28 +309,17 @@ const selectedTaskFacts = computed(() => [
     value: formatCaseStatus(selectedCaseSummary.value?.caseStatus),
   },
 ]);
-const editableDescription = ref('');
-const editableDiagnosis = ref('');
-
-watch(
-  () => workbench.workbenchContext.value?.contextSummary,
-  (value) => {
-    editableDescription.value = value ?? '';
-  },
-  { immediate: true },
-);
-watch(
-  () => workbench.workbenchContext.value?.clinicalDiagnosis,
-  (value) => {
-    editableDiagnosis.value = value ?? '';
-  },
-  { immediate: true },
-);
 watch(
   () => workbench.workbenchContext.value,
   (context) => {
     clinicalHistoryForm.historySummary = context?.clinicalHistory ?? '';
     clinicalHistoryForm.clinicalExamination = '';
+    clinicalHistoryForm.clinicalSubmissionRequirements =
+      context?.clinicalSubmissionRequirements ?? '';
+    clinicalHistoryForm.infectiousAndPastHistorySummary =
+      context?.infectiousAndPastHistorySummary ?? '';
+    clinicalHistoryForm.externalPathologyDiagnosis =
+      context?.externalPathologyDiagnosis ?? '';
     clinicalHistoryForm.laboratoryExamination = '';
     clinicalHistoryForm.imagingExamination = context?.relatedExaminations ?? '';
   },
@@ -379,6 +388,12 @@ const activeSpecimenIndex = computed(() =>
   workbench.specimenTabMetas.value.findIndex(
     (item) => item.key === workbench.activeSpecimenKey.value,
   ),
+);
+const canEditCapturedImages = computed(
+  () =>
+    Boolean(selectedTask.value) &&
+    Boolean(workbench.activeSpecimen.value) &&
+    activeSpecimenIndex.value >= 0,
 );
 
 function parseDateTimeTimestamp(value: null | string | undefined) {
@@ -663,28 +678,21 @@ function openMoreDrawer() {
   moreDrawerVisible.value = true;
 }
 
-function handleCaptureGrossingImage() {
-  if (!workbench.activeSpecimen.value) {
-    ElMessage.warning('请先选择可编辑标本');
-    return;
+async function uploadGrossingImage(file: File) {
+  const specimenIndex = activeSpecimenIndex.value;
+  if (!canEditCapturedImages.value || specimenIndex < 0) {
+    ElMessage.warning('请先从左侧列表选择任务和可编辑标本');
+    return false;
   }
-  ElMessage.warning('拍照设备暂未接入，请先通过导入图片补充已采图像');
+  return workbench.uploadGrossingImageFile(specimenIndex, file);
 }
 
-function handleImportGrossingImage() {
-  const specimenIndex = activeSpecimenIndex.value;
-  if (
-    !selectedTask.value ||
-    !workbench.activeSpecimen.value ||
-    specimenIndex < 0
-  ) {
-    ElMessage.warning('请先从左侧列表选择任务和可编辑标本');
+function handleSaveGrossingDescription() {
+  if (!workbench.activeSpecimen.value) {
+    ElMessage.warning('当前没有可保存的大体描写');
     return;
   }
-
-  workbench.addMediaAsset(specimenIndex);
-  moreDrawerVisible.value = true;
-  ElMessage.success('已添加图片导入项，请在标本影像区上传图片');
+  ElMessage.success('大体描写已保存，取材完成时将一并提交');
 }
 
 function isTemplateMatchedToActiveSpecimen(
@@ -919,7 +927,7 @@ void loadPendingData();
       </section>
 
       <section
-        class="grid min-h-0 flex-1 grid-cols-1 items-stretch gap-2 overflow-hidden xl:grid-cols-[minmax(0,1fr)_500px] 2xl:grid-cols-[minmax(0,1fr)_560px]"
+        class="grid min-h-0 flex-1 grid-cols-1 items-stretch gap-2 overflow-hidden xl:grid-cols-[minmax(0,1fr)_700px] 2xl:grid-cols-[minmax(0,1fr)_760px]"
       >
         <article
           class="flex min-w-0 flex-col overflow-hidden rounded-md border border-border bg-card"
@@ -1119,50 +1127,36 @@ void loadPendingData();
               @remove-embedding-box="workbench.removeEmbeddingBox"
             />
 
-            <section class="border-b border-border">
+            <section class="relative border-b border-border">
+              <div
+                v-if="workbench.descriptionTab.value === 'grossDescription'"
+                class="absolute right-3 top-2 z-10"
+              >
+                <ElButton
+                  :disabled="!workbench.activeSpecimen.value"
+                  size="small"
+                  type="primary"
+                  @click="handleSaveGrossingDescription"
+                >
+                  保存
+                </ElButton>
+              </div>
               <ElTabs
                 v-model="workbench.descriptionTab.value"
-                class="px-3 pb-3"
+                class="px-3 pb-3 pr-20"
               >
                 <ElTabPane label="大体描写" name="grossDescription">
-                  <div class="pt-2">
-                    <div
-                      class="flex min-h-8 flex-wrap items-center justify-between gap-2 border-b border-border pb-2"
-                    >
-                      <div class="min-w-0">
-                        <div class="flex items-center gap-1.5">
-                          <span class="text-xs font-semibold text-foreground">
-                            大体描写
-                          </span>
-                          <ElTooltip content="打开取材模板" placement="top">
-                            <ElButton
-                              aria-label="打开取材模板"
-                              :icon="BookOpenText"
-                              circle
-                              size="small"
-                              title="取材模板"
-                              @click="openGrossingTemplateDrawer"
-                            />
-                          </ElTooltip>
-                        </div>
-                        <p
-                          class="mt-0.5 truncate text-xs text-muted-foreground"
-                        >
-                          {{ activeTemplateSpecimenName }}
-                        </p>
-                      </div>
-                      <div class="inline-flex items-center gap-1.5">
-                        <ElTooltip content="随完成取材一并提交" placement="top">
-                          <span class="inline-flex">
-                            <ElButton disabled size="small">保存描述</ElButton>
-                          </span>
-                        </ElTooltip>
-                        <ElTooltip content="暂未接入独立暂存" placement="top">
-                          <span class="inline-flex">
-                            <ElButton disabled size="small">暂存</ElButton>
-                          </span>
-                        </ElTooltip>
-                      </div>
+                  <div class="grid gap-2 pt-2">
+                    <div class="flex justify-end">
+                      <ElButton
+                        aria-label="打开取材模板"
+                        :icon="BookOpenText"
+                        size="small"
+                        title="取材模板"
+                        @click="openGrossingTemplateDrawer"
+                      >
+                        取材模板
+                      </ElButton>
                     </div>
 
                     <ElInput
@@ -1226,105 +1220,13 @@ void loadPendingData();
             <template
               v-if="workbench.descriptionTab.value !== 'clinicalHistory'"
             >
-              <section class="border-b border-border">
-                <header
-                  class="flex min-h-8 items-center border-b border-border bg-muted/30 px-3 text-xs font-semibold text-foreground"
-                >
-                  描述
-                </header>
-                <div class="bg-card p-3">
-                  <ElInput
-                    v-model="editableDescription"
-                    :rows="4"
-                    placeholder="请输入病例描述"
-                    type="textarea"
-                  />
-                </div>
-              </section>
-
-              <section class="border-b border-border">
-                <header
-                  class="flex min-h-8 items-center border-b border-border bg-muted/30 px-3 text-xs font-semibold text-foreground"
-                >
-                  诊断
-                </header>
-                <div class="bg-card p-3">
-                  <ElInput
-                    v-model="editableDiagnosis"
-                    :rows="3"
-                    placeholder="请输入临床诊断"
-                    type="textarea"
-                  />
-                </div>
-              </section>
-
-              <section class="flex flex-1 flex-col">
-                <header
-                  class="flex min-h-8 items-center justify-between gap-2 border-b border-border bg-muted/30 px-3 text-xs font-semibold text-foreground"
-                >
-                  <span>已采图像</span>
-                  <div class="inline-flex items-center gap-1">
-                    <ElTooltip content="拍照" placement="top">
-                      <ElButton
-                        aria-label="拍照"
-                        :icon="Camera"
-                        circle
-                        size="small"
-                        title="拍照"
-                        @click="handleCaptureGrossingImage"
-                      />
-                    </ElTooltip>
-                    <ElTooltip content="导入图片" placement="top">
-                      <ElButton
-                        aria-label="导入图片"
-                        :icon="ImagePlus"
-                        circle
-                        size="small"
-                        title="导入图片"
-                        @click="handleImportGrossingImage"
-                      />
-                    </ElTooltip>
-                  </div>
-                </header>
-                <div
-                  class="min-h-40 flex-1 overflow-auto bg-card p-3 text-sm leading-6 text-foreground"
-                >
-                  <div v-if="capturedImageItems.length > 0" class="grid gap-2">
-                    <article
-                      v-for="asset in capturedImageItems"
-                      :key="asset.key"
-                      class="flex items-center justify-between gap-2 rounded-md border border-border bg-background p-2"
-                    >
-                      <div class="flex min-w-0 items-center gap-2">
-                        <ElTag effect="plain" size="small">
-                          {{ asset.sourceLabel }}
-                        </ElTag>
-                        <div class="min-w-0">
-                          <div
-                            class="truncate text-xs font-medium text-foreground"
-                          >
-                            {{ asset.title }}
-                          </div>
-                          <div
-                            class="mt-0.5 truncate text-xs text-muted-foreground"
-                          >
-                            {{ asset.meta || '-' }}
-                          </div>
-                        </div>
-                      </div>
-                      <ElLink
-                        v-if="asset.fileUrl"
-                        :href="asset.fileUrl"
-                        target="_blank"
-                        type="primary"
-                      >
-                        查看
-                      </ElLink>
-                    </article>
-                  </div>
-                  <ElEmpty v-else description="当前没有采图记录" />
-                </div>
-              </section>
+              <WorkbenchCapturedImagePanel
+                :accept="workbench.grossingImageAccept"
+                :can-edit="canEditCapturedImages"
+                disabled-text="请先从左侧列表选择任务和可编辑标本"
+                :items="capturedImageItems"
+                :upload-image-file="uploadGrossingImage"
+              />
             </template>
           </template>
 

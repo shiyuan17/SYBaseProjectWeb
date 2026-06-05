@@ -41,8 +41,8 @@ const visible = computed({
     <template #header>
       <div class="flex w-full items-start justify-between gap-4">
         <div>
-          <div class="text-lg font-semibold text-slate-900">编辑申请</div>
-          <p class="mt-1 text-sm text-slate-500">
+          <div class="text-lg font-semibold text-foreground">编辑申请</div>
+          <p class="mt-1 text-sm text-muted-foreground">
             当前病例
             {{
               formatPendingPathologyNo(pathologyNo)
@@ -63,7 +63,7 @@ const visible = computed({
       </div>
     </template>
 
-    <div class="flex h-full min-h-0 flex-col bg-slate-50">
+    <div class="flex h-full min-h-0 flex-col bg-accent">
       <div class="flex min-h-0 flex-1 flex-col overflow-hidden p-4">
         <ElAlert
           v-if="error"
@@ -75,7 +75,7 @@ const visible = computed({
 
         <div
           v-if="loading"
-          class="flex flex-1 items-center justify-center rounded-lg bg-white text-sm text-slate-500 shadow-sm"
+          class="flex flex-1 items-center justify-center rounded-lg bg-card text-sm text-muted-foreground shadow-sm"
         >
           正在加载申请编辑信息...
         </div>
@@ -99,7 +99,7 @@ const visible = computed({
 
         <div
           v-else
-          class="flex flex-1 items-center justify-center rounded-lg bg-white shadow-sm"
+          class="flex flex-1 items-center justify-center rounded-lg bg-card shadow-sm"
         >
           <ElEmpty description="暂无可编辑的申请信息" />
         </div>

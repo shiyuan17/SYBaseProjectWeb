@@ -183,6 +183,7 @@ const {
 vi.mock('@vben/stores', () => ({
   useUserStore: () => ({
     userInfo: {
+      loginName: 'test-user',
       realName: 'Test User',
       userId: 'USER-001',
     },
@@ -210,6 +211,12 @@ vi.mock('../api/specimen-workflow-service', () => ({
   getApplicationDetail: getApplicationDetailMock,
   listSpecimens: listSpecimensMock,
   retryLabelPrint: retryLabelPrintMock,
+}));
+
+vi.mock('./useOperatorVerificationPrompt', () => ({
+  useOperatorVerificationPrompt: () => ({
+    verifyOperator: vi.fn(async () => 'TOKEN-VERIFY'),
+  }),
 }));
 
 import { useSpecimenConfirmationPanel } from './useSpecimenConfirmationPanel';
@@ -305,15 +312,25 @@ describe('useSpecimenConfirmationPanel', () => {
 
     state.handleOperatorChange({
       id: 'USER-ALT',
+      loginName: 'alt-user',
       name: 'Alt User',
     });
     state.filters.keyword = 'SP-001';
     await state.tryQuickConfirmByKeyword();
     await flushComposable();
 
+    expect(confirmSpecimenMock).not.toHaveBeenCalled();
+    expect(state.resolveConfirmationStatus(state.pagedItems.value[0]!)).toBe(
+      '确认未保存',
+    );
+
+    state.handleConfirmSelected();
+    await flushComposable();
+
     expect(confirmSpecimenMock).toHaveBeenCalledWith('BC-001', {
       operatorName: 'Alt User',
       operatorUserId: 'USER-ALT',
+      operatorVerificationToken: 'TOKEN-VERIFY',
       remarks: null,
       terminalCode: null,
     });

@@ -31,7 +31,7 @@ const props = withDefaults(
 );
 
 const emit = defineEmits<{
-  change: [user: null | { id: string; name: string }];
+  change: [user: null | { id: string; loginName: string; name: string }];
   'update:modelValue': [value: string];
 }>();
 
@@ -89,6 +89,7 @@ function handleChange(value: string) {
     option
       ? {
           id: option.id,
+          loginName: option.loginName,
           name: option.name,
         }
       : null,

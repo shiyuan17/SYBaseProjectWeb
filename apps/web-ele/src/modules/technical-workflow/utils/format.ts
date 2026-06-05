@@ -88,6 +88,11 @@ const evaluationResultLabels = {
   REWORK_REQUIRED: '需返工',
   UNQUALIFIED: '不合格',
 } satisfies Record<string, string>;
+const embeddingEvaluationLevelLabels = {
+  EXCELLENT: '优秀',
+  QUALIFIED: '合格',
+  UNQUALIFIED: '不合格',
+} satisfies Record<string, string>;
 const eventTypeLabels = {
   COMPLETE: '完成',
   CREATE: '创建',
@@ -168,6 +173,17 @@ export function formatQcType(value?: null | string) {
 
 export function formatEvaluationResult(value?: null | string) {
   return formatMappedValue(value, evaluationResultLabels);
+}
+
+export function formatEmbeddingEvaluationLevel(value?: null | string) {
+  const formattedValue = formatMappedValue(
+    value,
+    embeddingEvaluationLevelLabels,
+  );
+  if (formattedValue !== value?.trim()) {
+    return formattedValue;
+  }
+  return /^[A-Z_]+$/.test(formattedValue) ? '未知评价' : formattedValue;
 }
 
 export function formatReworkType(value?: null | string) {

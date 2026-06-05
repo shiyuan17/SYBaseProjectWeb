@@ -28,6 +28,7 @@ import { formatNullable } from '../utils/format';
 const props = defineProps<{
   modelValue: boolean;
   row: null | TechnicalTrackingEmbeddingRecordSummary;
+  title?: string;
 }>();
 
 const emit = defineEmits<{
@@ -53,6 +54,7 @@ const dialogVisible = computed({
   get: () => props.modelValue,
   set: (value: boolean) => emit('update:modelValue', value),
 });
+const dialogTitle = computed(() => props.title ?? '取材评价');
 
 const pageError = ref('');
 const submitting = ref(false);
@@ -146,7 +148,7 @@ watch(
     v-model="dialogVisible"
     :close-on-click-modal="false"
     destroy-on-close
-    title="取材评价"
+    :title="dialogTitle"
     width="760px"
     @closed="resetDialogState"
   >

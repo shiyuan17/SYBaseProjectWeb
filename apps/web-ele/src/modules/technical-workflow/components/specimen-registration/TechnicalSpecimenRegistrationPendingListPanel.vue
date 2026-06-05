@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PendingTechnicalSpecimenRegistrationItem } from '../../types/technical-workflow';
 
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 import {
   ElButton,
@@ -9,6 +9,8 @@ import {
   ElInput,
   ElOption,
   ElPagination,
+  ElRadio,
+  ElRadioGroup,
   ElSelect,
   ElTabPane,
   ElTabs,
@@ -49,6 +51,28 @@ const emit = defineEmits<{
   'update:size': [value: number];
 }>();
 
+const SENDING_UNIT_OPTIONS = [
+  '南海人民医院凯普送检中心',
+  '南方医院',
+  '南方医院肾病中心',
+  '南方诊断中心',
+  '南方医院增城分院',
+] as const;
+
+const PATIENT_SOURCE_FILTER_OPTIONS = [
+  { label: '全部', value: 'ALL' },
+  { label: '门诊', value: 'OUTPATIENT' },
+  { label: '住院', value: 'INPATIENT' },
+  { label: '体检', value: 'CHECKUP' },
+] as const;
+
+const PERIOD_FILTER_OPTIONS = [
+  { label: '周', value: 'WEEK' },
+  { label: '月', value: 'MONTH' },
+  { label: '季', value: 'QUARTER' },
+  { label: '年', value: 'YEAR' },
+] as const;
+
 const currentPage = computed({
   get: () => props.page,
   set: (value: number) => emit('update:page', value),
@@ -72,12 +96,6 @@ const currentListTab = computed({
 
 const isRegisteredTab = computed(() => currentListTab.value === 'registered');
 
-const listDescription = computed(() =>
-  isRegisteredTab.value
-    ? '查看当前筛选条件下已登记病例，选择病例后刷新中间登记工作区。'
-    : '按接收日期和关键字筛选，选择病例后刷新中间登记工作区。',
-);
-
 const loadingText = computed(() =>
   isRegisteredTab.value ? '正在加载已登记病例...' : '正在加载待登记病例...',
 );
@@ -97,13 +115,21 @@ const receivedDateRange = computed({
     emit('update:receivedTo', value[1] ?? '');
   },
 });
+
+const displaySendingUnit = ref<(typeof SENDING_UNIT_OPTIONS)[number]>(
+  SENDING_UNIT_OPTIONS[0],
+);
+const displayPatientSourceFilter =
+  ref<(typeof PATIENT_SOURCE_FILTER_OPTIONS)[number]['value']>('ALL');
+const displayPeriodFilter =
+  ref<(typeof PERIOD_FILTER_OPTIONS)[number]['value']>('MONTH');
 </script>
 
 <template>
   <section
-    class="flex min-h-[760px] flex-col rounded-2xl border border-slate-200 bg-white shadow-sm"
+    class="flex min-h-[760px] flex-col rounded-2xl border border-border bg-card shadow-sm"
   >
-    <div class="border-b border-slate-200 px-4 py-4">
+    <div class="border-b border-border px-4 py-4">
       <ElTabs v-model="currentListTab" :stretch="true" class="mb-1">
         <ElTabPane
           data-testid="registration-list-tab-received"
@@ -116,11 +142,8 @@ const receivedDateRange = computed({
           name="registered"
         />
       </ElTabs>
-      <p class="mt-1 text-xs text-slate-500">
-        {{ listDescription }}
-      </p>
       <div class="mt-4 grid gap-2">
-        <label class="text-xs text-slate-500">
+        <label class="text-xs text-muted-foreground">
           <span class="mb-1 block">接收日期</span>
           <ElDatePicker
             v-model="receivedDateRange"
@@ -132,7 +155,51 @@ const receivedDateRange = computed({
             value-format="YYYY-MM-DD"
           />
         </label>
-        <label class="text-xs text-slate-500">
+        <label class="text-xs text-muted-foreground">
+          <span class="mb-1 block">送检单位</span>
+          <ElSelect
+            v-model="displaySendingUnit"
+            data-testid="sending-unit-display-filter"
+            style="width: 100%"
+          >
+            <ElOption
+              v-for="item in SENDING_UNIT_OPTIONS"
+              :key="item"
+              :label="item"
+              :value="item"
+            />
+          </ElSelect>
+        </label>
+        <div class="grid gap-2 text-xs text-muted-foreground">
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <ElRadioGroup
+              v-model="displayPatientSourceFilter"
+              data-testid="patient-source-display-filter"
+              class="flex flex-wrap gap-x-2 gap-y-1"
+            >
+              <ElRadio
+                v-for="item in PATIENT_SOURCE_FILTER_OPTIONS"
+                :key="item.value"
+                :label="item.value"
+              >
+                {{ item.label }}
+              </ElRadio>
+            </ElRadioGroup>
+            <ElSelect
+              v-model="displayPeriodFilter"
+              data-testid="period-display-filter"
+              style="width: 64px"
+            >
+              <ElOption
+                v-for="item in PERIOD_FILTER_OPTIONS"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </ElSelect>
+          </div>
+        </div>
+        <label class="text-xs text-muted-foreground">
           <span class="mb-1 block">送检类型</span>
           <ElSelect
             v-model="currentApplicationType"
@@ -166,13 +233,13 @@ const receivedDateRange = computed({
     <div class="flex-1 overflow-y-auto px-3 py-3">
       <div
         v-if="loading"
-        class="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500"
+        class="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground"
       >
         {{ loadingText }}
       </div>
       <div
         v-else-if="items.length === 0"
-        class="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500"
+        class="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground"
       >
         {{ emptyText }}
       </div>
@@ -182,8 +249,8 @@ const receivedDateRange = computed({
         :data-testid="`specimen-row-${item.caseId}`"
         :class="[
           item.caseId === selectedCaseId
-            ? 'border-sky-500 bg-sky-50 shadow-sm'
-            : 'border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-white',
+            ? 'border-sky-500 bg-primary/10 shadow-sm'
+            : 'border-border bg-accent hover:border-border hover:bg-card',
         ]"
         class="mb-3 w-full rounded-2xl border px-4 py-4 text-left transition"
         type="button"
@@ -191,15 +258,15 @@ const receivedDateRange = computed({
       >
         <div class="flex items-start justify-between gap-3">
           <div>
-            <div class="text-sm font-semibold text-slate-900">
+            <div class="text-sm font-semibold text-foreground">
               {{ formatPendingPathologyNo(item.pathologyNo) }}
             </div>
-            <div class="mt-1 text-xs text-slate-500">
+            <div class="mt-1 text-xs text-muted-foreground">
               {{ item.patientName || '-' }}
             </div>
           </div>
           <span
-            class="rounded-full bg-white px-2 py-1 text-[11px] text-slate-500"
+            class="rounded-full bg-card px-2 py-1 text-[11px] text-muted-foreground"
           >
             {{ formatSpecimenRegistrationStatus(item.registrationStatus) }}
           </span>
@@ -207,7 +274,7 @@ const receivedDateRange = computed({
       </button>
     </div>
 
-    <div class="border-t border-slate-200 px-3 py-3">
+    <div class="border-t border-border px-3 py-3">
       <ElPagination
         v-model:current-page="currentPage"
         v-model:page-size="currentSize"

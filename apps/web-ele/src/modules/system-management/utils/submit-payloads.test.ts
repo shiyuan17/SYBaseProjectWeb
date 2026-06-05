@@ -462,4 +462,25 @@ describe('submit payload builders', () => {
       ),
     ).toMatchObject({ categoryCode: null });
   });
+
+  it('keeps medical order dictionary selected code values in submit payloads', () => {
+    expect(
+      buildMedicalOrderItemSubmitPayload(
+        {
+          categoryId: 'ODC_ROUTINE',
+          defaultContent: 'HE 染色',
+          enabled: true,
+          executionScope: 'TECHNICIAN',
+          orderItemName: 'HE 染色',
+          orderType: 'ROUTINE',
+          sortOrder: 10,
+        },
+        'create',
+      ),
+    ).toMatchObject({
+      categoryId: 'ODC_ROUTINE',
+      executionScope: 'TECHNICIAN',
+      orderType: 'ROUTINE',
+    });
+  });
 });

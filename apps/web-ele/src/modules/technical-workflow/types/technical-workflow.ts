@@ -484,7 +484,10 @@ export interface GrossingWorkbenchContext {
   checkItems: TechnicalSpecimenRegistrationCheckItem[];
   clinicalDiagnosis: null | string;
   clinicalHistory: null | string;
+  clinicalSubmissionRequirements: null | string;
   contextSummary: null | string;
+  externalPathologyDiagnosis: null | string;
+  infectiousAndPastHistorySummary: null | string;
   mediaAssets: GrossingWorkbenchMediaAsset[];
   relatedExaminations: null | string;
   task: GrossingWorkbenchTaskSummary;
@@ -525,6 +528,12 @@ export interface TechnicalTaskReleaseRequest {
 export interface TechnicalTaskPriorityRequest {
   priority: string;
   productionRemarks?: null | string;
+  terminalCode?: null | string;
+}
+
+export interface TechnicalTaskRemarksRequest {
+  productionRemarks?: null | string;
+  remarks?: null | string;
   terminalCode?: null | string;
 }
 

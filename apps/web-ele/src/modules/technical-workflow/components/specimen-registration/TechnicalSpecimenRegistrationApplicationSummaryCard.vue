@@ -62,12 +62,12 @@ function selectApplicationType(value: string) {
 </script>
 
 <template>
-  <section class="rounded-lg border border-slate-200 bg-white shadow-sm">
-    <div class="border-b border-slate-200 px-4 py-4">
+  <section class="rounded-lg border border-border bg-card shadow-sm">
+    <div class="border-b border-border px-4 py-4">
       <div class="flex items-start justify-between gap-3">
         <div>
-          <div class="text-base font-semibold text-slate-900">申请核对区</div>
-          <p class="mt-1 text-xs text-slate-500">
+          <div class="text-base font-semibold text-foreground">申请核对区</div>
+          <p class="mt-1 text-xs text-muted-foreground">
             对照当前申请信息进行技术登记核对，可在抽屉中补充患者与手术相关字段。
           </p>
         </div>
@@ -88,16 +88,18 @@ function selectApplicationType(value: string) {
 
       <div
         v-if="loading"
-        class="rounded-lg bg-slate-50 px-4 py-6 text-sm text-slate-500"
+        class="rounded-lg bg-accent px-4 py-6 text-sm text-muted-foreground"
       >
         正在加载申请核对信息...
       </div>
 
       <template v-else-if="hasContext">
-        <article class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+        <article class="rounded-lg border border-border bg-accent p-3">
           <div class="mb-2 flex items-center justify-between gap-3">
-            <div class="text-xs font-semibold text-slate-500">送检类型</div>
-            <div class="text-[11px] text-slate-400">
+            <div class="text-xs font-semibold text-muted-foreground">
+              送检类型
+            </div>
+            <div class="text-[11px] text-muted-foreground/70">
               {{ typeOptions.length }} 类
             </div>
           </div>
@@ -111,10 +113,10 @@ function selectApplicationType(value: string) {
                 item.value === currentApplicationType
                   ? item.value === 'SUPPLEMENTAL_REPORT'
                     ? 'border-rose-500 bg-rose-500 text-white shadow-sm'
-                    : 'border-sky-500 bg-sky-500 text-white shadow-sm'
+                    : 'border-sky-500 bg-primary/100 text-white shadow-sm'
                   : item.value === 'SUPPLEMENTAL_REPORT'
-                    ? 'border-rose-100 bg-white text-rose-500 hover:border-rose-200'
-                    : 'border-slate-200 bg-white text-slate-500 hover:border-sky-200 hover:text-sky-600',
+                    ? 'border-rose-100 bg-card text-rose-500 hover:border-rose-200'
+                    : 'border-border bg-card text-muted-foreground hover:border-sky-200 hover:text-sky-600',
               ]"
               :data-testid="`application-type-${item.value}`"
               type="button"

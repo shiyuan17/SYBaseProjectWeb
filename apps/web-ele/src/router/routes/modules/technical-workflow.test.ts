@@ -50,7 +50,7 @@ describe('technical workflow routes', () => {
     );
     expect(receiptRoute?.path).toBe('/workflow/pathology-receipt');
     expect(receiptRoute?.meta?.keepAlive).toBe(true);
-    expect(receiptRoute?.meta?.title).toBe('标本接收');
+    expect(receiptRoute?.meta?.title).toBe('标本接收工作台');
     expect(receiptRoute?.meta?.authority).toEqual([
       M2_PERMISSION_CODES.SPECIMEN_RECEIVE,
     ]);

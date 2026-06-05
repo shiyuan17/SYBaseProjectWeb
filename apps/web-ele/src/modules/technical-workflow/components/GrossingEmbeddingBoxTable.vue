@@ -49,13 +49,15 @@ function handleSelectedSpecimenKeyChange(value: number | string) {
     <header
       class="flex min-h-9 flex-wrap items-center justify-between gap-2 border-b border-border bg-muted/30 px-3 py-2"
     >
-      <div class="inline-flex flex-wrap items-center gap-2">
-        <span class="text-xs font-semibold text-foreground">包埋盒</span>
+      <div class="inline-flex flex-nowrap items-center gap-2">
+        <span class="shrink-0 text-sm font-semibold text-foreground">
+          包埋盒
+        </span>
         <ElSelect
           :model-value="selectedSpecimenKey"
           aria-label="标本名称"
-          class="w-32"
-          size="small"
+          class="w-44"
+          popper-class="grossing-specimen-select-popper"
           @update:model-value="handleSelectedSpecimenKeyChange"
         >
           <ElOption
@@ -176,3 +178,15 @@ function handleSelectedSpecimenKeyChange(value: number | string) {
     <ElEmpty v-else description="当前没有可编辑标本" />
   </section>
 </template>
+
+<style scoped>
+:global(.grossing-specimen-select-popper) {
+  min-width: 176px;
+}
+
+:global(.grossing-specimen-select-popper .el-select-dropdown__item) {
+  height: 36px;
+  font-size: 14px;
+  line-height: 36px;
+}
+</style>

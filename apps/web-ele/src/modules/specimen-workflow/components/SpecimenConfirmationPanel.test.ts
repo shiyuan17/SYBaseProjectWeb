@@ -30,6 +30,7 @@ const mockHandleSelectionChange = vi.fn();
 const mockSubmitRetryLabel = vi.fn();
 const mockTryQuickConfirmByKeyword = vi.fn();
 const mockCanConfirm = vi.fn(() => true);
+const mockResolveConfirmationStatus = vi.fn(() => '已确认');
 
 vi.mock('element-plus', () => ({
   ElAlert: createPassthroughStub(),
@@ -113,6 +114,7 @@ vi.mock('../composables/useSpecimenConfirmationPanel', () => ({
       retryForm,
       retrySubmitting: ref(false),
       retryTargetRows: ref([row]),
+      resolveConfirmationStatus: mockResolveConfirmationStatus,
       submitRetryLabel: mockSubmitRetryLabel,
       summary: ref({
         allCount: 1,

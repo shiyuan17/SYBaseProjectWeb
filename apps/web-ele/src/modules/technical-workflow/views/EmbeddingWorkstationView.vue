@@ -18,6 +18,7 @@ import {
 import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
+import { Check, UserRoundPen, X } from '@vben/icons';
 import { useUserStore } from '@vben/stores';
 
 import {
@@ -28,6 +29,7 @@ import {
   ElEmpty,
   ElInput,
   ElMessage,
+  ElMessageBox,
   ElOption,
   ElSelect,
   ElTag,
@@ -42,6 +44,7 @@ import {
   listPendingTechnicalTasks,
   startEmbedding,
   updateEmbeddingQualityReview,
+  updateTechnicalTaskRemarks,
 } from '../api/technical-workflow-service';
 import EmbeddingQualityReviewDialog from '../components/EmbeddingQualityReviewDialog.vue';
 import { DEFAULT_PAGE_SIZE } from '../constants';
@@ -70,6 +73,8 @@ interface EvaluationDrawerRow {
   title: string;
 }
 
+type PendingRemarksField = 'productionRemarks' | 'remarks';
+
 const SLICE_NOTICE_OPTIONS = [
   '骨组织',
   '皮肤',
@@ -77,6 +82,7 @@ const SLICE_NOTICE_OPTIONS = [
   '小活检',
   '其他',
 ] as const;
+const SHIFT_REMARK_OPTIONS = ['未脱钙', '脱钙未完成', '其他'] as const;
 const DEFAULT_EMBEDDING_EVALUATION_LEVEL = 'QUALIFIED';
 const DEFAULT_SAMPLING_EVALUATION = '合格';
 
@@ -120,6 +126,7 @@ const qualityReviewDialogVisible = ref(false);
 const selectedQualityReviewRecord =
   ref<null | TechnicalTrackingEmbeddingRecordSummary>(null);
 const savingReviewIds = ref<string[]>([]);
+const savingPendingRemarksTaskIds = ref<string[]>([]);
 const selectedCompletedEmbeddingId = ref('');
 const selectedCompletedEmbeddingIds = ref<string[]>([]);
 const selectedPendingTaskIds = ref<string[]>([]);
@@ -147,6 +154,17 @@ const completeForm = reactive({
 });
 
 const sliceNoticeDrafts = reactive<Record<string, string>>({});
+const pendingRemarksEditor = reactive<{
+  field: null | PendingRemarksField;
+  productionRemarks: string;
+  remarks: string;
+  taskId: string;
+}>({
+  field: null,
+  productionRemarks: '',
+  remarks: '',
+  taskId: '',
+});
 
 const selectedTask = computed(
   () =>
@@ -430,6 +448,87 @@ function toggleAllCompletedEmbeddingSelections(
     : [];
 }
 
+function isPendingRemarksEditing(
+  item: PendingTechnicalTaskItem,
+  field: PendingRemarksField,
+) {
+  return (
+    pendingRemarksEditor.taskId === item.id &&
+    pendingRemarksEditor.field === field
+  );
+}
+
+function isSavingPendingRemarks(taskId: string) {
+  return savingPendingRemarksTaskIds.value.includes(taskId);
+}
+
+function setSavingPendingRemarks(taskId: string, saving: boolean) {
+  savingPendingRemarksTaskIds.value = saving
+    ? [...new Set([...savingPendingRemarksTaskIds.value, taskId])]
+    : savingPendingRemarksTaskIds.value.filter((item) => item !== taskId);
+}
+
+function beginPendingRemarksEdit(
+  item: PendingTechnicalTaskItem,
+  field: PendingRemarksField,
+) {
+  selectTask(item.id);
+  pendingRemarksEditor.taskId = item.id;
+  pendingRemarksEditor.field = field;
+  pendingRemarksEditor.remarks = item.remarks ?? '';
+  pendingRemarksEditor.productionRemarks = item.productionRemarks ?? '';
+}
+
+function cancelPendingRemarksEdit() {
+  pendingRemarksEditor.taskId = '';
+  pendingRemarksEditor.field = null;
+  pendingRemarksEditor.remarks = '';
+  pendingRemarksEditor.productionRemarks = '';
+}
+
+function applyPendingTaskUpdate(nextTask: PendingTechnicalTaskItem) {
+  pendingItems.value = pendingItems.value.map((item) =>
+    item.id === nextTask.id ? { ...item, ...nextTask } : item,
+  );
+  workstationSummary.value = {
+    ...workstationSummary.value,
+    pendingTasks: workstationSummary.value.pendingTasks.map((item) =>
+      item.id === nextTask.id ? { ...item, ...nextTask } : item,
+    ),
+  };
+}
+
+async function handlePendingRemarksSave(item: PendingTechnicalTaskItem) {
+  const nextRemarks = pendingRemarksEditor.remarks.trim();
+  const nextProductionRemarks = pendingRemarksEditor.productionRemarks.trim();
+  const currentRemarks = item.remarks ?? '';
+  const currentProductionRemarks = item.productionRemarks ?? '';
+
+  if (
+    nextRemarks === currentRemarks &&
+    nextProductionRemarks === currentProductionRemarks
+  ) {
+    cancelPendingRemarksEdit();
+    return;
+  }
+
+  setSavingPendingRemarks(item.id, true);
+  try {
+    const nextTask = await updateTechnicalTaskRemarks(item.id, {
+      productionRemarks: nextProductionRemarks || null,
+      remarks: nextRemarks || null,
+    });
+    applyPendingTaskUpdate(nextTask);
+    ElMessage.success('任务备注已保存');
+    cancelPendingRemarksEdit();
+  } catch (error) {
+    pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
+  } finally {
+    setSavingPendingRemarks(item.id, false);
+  }
+}
+
 async function handleSearch() {
   filters.page = 1;
   await refreshWorkstation();
@@ -497,7 +596,26 @@ async function handleCompleteEmbedding() {
   }
 }
 
-function handleClearCurrent() {
+async function handleClearCurrent() {
+  if (
+    total.value > 0 ||
+    pendingItems.value.length > 0 ||
+    workstationSummary.value.pendingCount > 0 ||
+    workstationSummary.value.pendingTasks.length > 0
+  ) {
+    ElMessage.warning('还有待处理的数据');
+    return;
+  }
+
+  try {
+    await ElMessageBox.confirm('确认今日包埋工作已完成了吗？', '确认清零', {
+      cancelButtonText: '取消',
+      confirmButtonText: '确定',
+      type: 'info',
+    });
+  } catch {
+    return;
+  }
   clearCurrentSelection();
 }
 
@@ -656,29 +774,31 @@ onBeforeUnmount(() => {
 
       <section class="grid max-w-[560px] gap-3 sm:grid-cols-2">
         <article
-          class="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+          class="rounded-xl border border-border bg-card px-4 py-3 shadow-sm"
         >
-          <div class="text-xs text-slate-500">待包埋数</div>
-          <div class="mt-1 text-2xl font-semibold text-slate-900">
+          <div class="text-xs text-muted-foreground">待包埋数</div>
+          <div class="mt-1 text-2xl font-semibold text-foreground">
             {{ summaryLoading ? '--' : workstationSummary.pendingCount }}
           </div>
-          <div class="mt-1 text-xs text-slate-400">
+          <div class="mt-1 text-xs text-muted-foreground/70">
             统计范围：{{ workstationSummary.workDate || '服务端当日' }}
           </div>
         </article>
         <article
-          class="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+          class="rounded-xl border border-border bg-card px-4 py-3 shadow-sm"
         >
-          <div class="text-xs text-slate-500">已包埋数</div>
+          <div class="text-xs text-muted-foreground">已包埋数</div>
           <div class="mt-1 text-2xl font-semibold text-emerald-600">
             {{ summaryLoading ? '--' : workstationSummary.completedCount }}
           </div>
-          <div class="mt-1 text-xs text-slate-400">当日已完成记录实时汇总</div>
+          <div class="mt-1 text-xs text-muted-foreground/70">
+            当日已完成记录实时汇总
+          </div>
         </article>
       </section>
 
       <section
-        class="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+        class="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-sm"
       >
         <ElButton
           :disabled="!canCompleteSelectedTask || completeLoading"
@@ -717,20 +837,22 @@ onBeforeUnmount(() => {
         class="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(420px,0.9fr)]"
       >
         <article
-          class="min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm"
+          class="min-w-0 rounded-2xl border border-border bg-card shadow-sm"
         >
           <div
-            class="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4"
+            class="flex items-center justify-between gap-3 border-b border-border px-5 py-4"
           >
             <div>
-              <h2 class="text-base font-semibold text-slate-900">待包埋列表</h2>
+              <h2 class="text-base font-semibold text-foreground">
+                待包埋列表
+              </h2>
             </div>
-            <div class="text-sm text-slate-500">共 {{ total }} 条</div>
+            <div class="text-sm text-muted-foreground">共 {{ total }} 条</div>
           </div>
 
           <div class="overflow-auto">
             <table class="min-w-full text-left text-sm">
-              <thead class="bg-slate-50 text-slate-500">
+              <thead class="bg-accent text-muted-foreground">
                 <tr>
                   <th class="w-12 px-4 py-3">
                     <ElCheckbox
@@ -755,10 +877,10 @@ onBeforeUnmount(() => {
                   :key="item.id"
                   :class="
                     item.id === selectedTaskId
-                      ? 'bg-sky-50'
-                      : 'hover:bg-slate-50'
+                      ? 'bg-primary/10'
+                      : 'hover:bg-accent'
                   "
-                  class="cursor-pointer border-t border-slate-100 text-slate-700"
+                  class="cursor-pointer border-t border-border text-foreground"
                   @click="selectTask(item.id)"
                 >
                   <td class="px-4 py-3">
@@ -778,13 +900,121 @@ onBeforeUnmount(() => {
                   <td class="px-4 py-3">
                     {{ formatNullable(item.samplingBlockCode) }}
                   </td>
-                  <td class="px-4 py-3">{{ formatNullable(item.remarks) }}</td>
+                  <td class="min-w-[150px] px-4 py-3">
+                    <div
+                      v-if="isPendingRemarksEditing(item, 'remarks')"
+                      class="flex items-center gap-1"
+                      @click.stop
+                    >
+                      <ElInput
+                        v-model="pendingRemarksEditor.remarks"
+                        class="min-w-0 flex-1"
+                        placeholder="备注"
+                        size="small"
+                        @keyup.enter="handlePendingRemarksSave(item)"
+                        @keyup.esc="cancelPendingRemarksEdit"
+                      />
+                      <ElButton
+                        aria-label="保存备注"
+                        :disabled="isSavingPendingRemarks(item.id)"
+                        :icon="Check"
+                        circle
+                        size="small"
+                        type="primary"
+                        @click="handlePendingRemarksSave(item)"
+                      />
+                      <ElButton
+                        aria-label="取消备注编辑"
+                        :disabled="isSavingPendingRemarks(item.id)"
+                        :icon="X"
+                        circle
+                        size="small"
+                        @click="cancelPendingRemarksEdit"
+                      />
+                    </div>
+                    <div
+                      v-else
+                      class="group/inline-edit flex min-h-6 items-center gap-2"
+                      @dblclick.stop="beginPendingRemarksEdit(item, 'remarks')"
+                    >
+                      <span class="min-w-0 flex-1 break-words">
+                        {{ formatNullable(item.remarks) }}
+                      </span>
+                      <ElButton
+                        aria-label="编辑备注"
+                        :icon="UserRoundPen"
+                        circle
+                        size="small"
+                        text
+                        title="编辑备注"
+                        @click.stop="beginPendingRemarksEdit(item, 'remarks')"
+                      />
+                    </div>
+                  </td>
                   <td class="px-4 py-3">
                     {{ formatNullable(item.sampledByName) }} /
                     {{ formatDateTime(item.sampledAt) }}
                   </td>
-                  <td class="px-4 py-3">
-                    {{ formatNullable(item.productionRemarks) }}
+                  <td class="min-w-[190px] px-4 py-3">
+                    <div
+                      v-if="isPendingRemarksEditing(item, 'productionRemarks')"
+                      class="flex items-center gap-1"
+                      @click.stop
+                    >
+                      <ElSelect
+                        v-model="pendingRemarksEditor.productionRemarks"
+                        class="min-w-0 flex-1"
+                        clearable
+                        placeholder="主班备注"
+                        size="small"
+                      >
+                        <ElOption
+                          v-for="option in SHIFT_REMARK_OPTIONS"
+                          :key="option"
+                          :label="option"
+                          :value="option"
+                        />
+                      </ElSelect>
+                      <ElButton
+                        aria-label="保存主班备注"
+                        :disabled="isSavingPendingRemarks(item.id)"
+                        :icon="Check"
+                        circle
+                        size="small"
+                        type="primary"
+                        @click="handlePendingRemarksSave(item)"
+                      />
+                      <ElButton
+                        aria-label="取消主班备注编辑"
+                        :disabled="isSavingPendingRemarks(item.id)"
+                        :icon="X"
+                        circle
+                        size="small"
+                        @click="cancelPendingRemarksEdit"
+                      />
+                    </div>
+                    <div
+                      v-else
+                      class="group/inline-edit flex min-h-6 items-center gap-2"
+                      @dblclick.stop="
+                        beginPendingRemarksEdit(item, 'productionRemarks')
+                      "
+                    >
+                      <span class="min-w-0 flex-1 break-words">
+                        {{ formatNullable(item.productionRemarks) }}
+                      </span>
+                      <ElButton
+                        aria-label="编辑主班备注"
+                        :icon="UserRoundPen"
+                        circle
+                        size="small"
+                        text
+                        title="编辑主班备注"
+                        @click.stop="
+                          beginPendingRemarksEdit(item, 'productionRemarks')
+                        "
+                      />
+                    </div>
                   </td>
                   <td class="px-4 py-3">
                     <ElTag
@@ -805,7 +1035,7 @@ onBeforeUnmount(() => {
           </div>
 
           <div
-            class="flex items-center justify-between border-t border-slate-200 px-5 py-3 text-sm text-slate-500"
+            class="flex items-center justify-between border-t border-border px-5 py-3 text-sm text-muted-foreground"
           >
             <span>第 {{ filters.page }} 页 / 每页 {{ filters.size }} 条</span>
             <div class="flex gap-2">
@@ -833,18 +1063,21 @@ onBeforeUnmount(() => {
 
         <div class="grid min-h-0 min-w-0 gap-4">
           <article
-            class="min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm"
+            class="min-w-0 rounded-2xl border border-border bg-card shadow-sm"
           >
             <div
-              class="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4"
+              class="flex items-center justify-between gap-3 border-b border-border px-5 py-4"
             >
               <div class="min-w-0">
-                <h2 class="text-base font-semibold text-slate-900">
+                <h2 class="text-base font-semibold text-foreground">
                   已包埋蜡块列表
                 </h2>
               </div>
               <div class="flex shrink-0 items-center gap-3">
-                <div v-if="summaryLoading" class="text-sm text-slate-400">
+                <div
+                  v-if="summaryLoading"
+                  class="text-sm text-muted-foreground/70"
+                >
                   加载中...
                 </div>
                 <ElButton
@@ -859,16 +1092,16 @@ onBeforeUnmount(() => {
               </div>
             </div>
 
-            <div class="border-b border-slate-200 bg-slate-50/70 px-5 py-4">
+            <div class="border-b border-border bg-accent/60 px-5 py-4">
               <div
                 class="grid gap-3 xl:grid-cols-[minmax(21rem,28rem)_minmax(0,1fr)]"
               >
                 <div
-                  class="grid gap-3 rounded-lg border border-slate-200 bg-white p-3 sm:grid-cols-2 xl:grid-cols-3"
+                  class="grid gap-3 rounded-lg border border-border bg-card p-3 sm:grid-cols-2 xl:grid-cols-3"
                 >
                   <div>
-                    <div class="text-xs text-slate-500">蜡块号</div>
-                    <div class="mt-1 text-sm font-medium text-slate-900">
+                    <div class="text-xs text-muted-foreground">蜡块号</div>
+                    <div class="mt-1 text-sm font-medium text-foreground">
                       {{
                         formatNullable(
                           selectedCompletedEmbeddingRecord?.samplingBlockCode,
@@ -877,8 +1110,8 @@ onBeforeUnmount(() => {
                     </div>
                   </div>
                   <div>
-                    <div class="text-xs text-slate-500">蜡块名称</div>
-                    <div class="mt-1 text-sm text-slate-700">
+                    <div class="text-xs text-muted-foreground">蜡块名称</div>
+                    <div class="mt-1 text-sm text-foreground">
                       {{
                         formatNullable(
                           selectedCompletedEmbeddingRecord?.samplingBlockDescription,
@@ -887,8 +1120,8 @@ onBeforeUnmount(() => {
                     </div>
                   </div>
                   <div>
-                    <div class="text-xs text-slate-500">标本名称</div>
-                    <div class="mt-1 text-sm text-slate-700">
+                    <div class="text-xs text-muted-foreground">标本名称</div>
+                    <div class="mt-1 text-sm text-foreground">
                       {{
                         formatNullable(
                           selectedCompletedEmbeddingRecord?.specimenName,
@@ -898,8 +1131,8 @@ onBeforeUnmount(() => {
                   </div>
                 </div>
 
-                <div class="rounded-lg border border-slate-200 bg-white p-3">
-                  <div class="mb-2 text-xs text-slate-500">大体所见</div>
+                <div class="rounded-lg border border-border bg-card p-3">
+                  <div class="mb-2 text-xs text-muted-foreground">大体所见</div>
                   <ElInput
                     :model-value="
                       selectedCompletedEmbeddingRecord?.grossDescription ?? ''
@@ -919,7 +1152,7 @@ onBeforeUnmount(() => {
               class="overflow-x-auto"
             >
               <table class="min-w-[1220px] text-left text-sm">
-                <thead class="bg-slate-50 text-slate-500">
+                <thead class="bg-accent text-muted-foreground">
                   <tr>
                     <th class="w-12 px-4 py-3">
                       <ElCheckbox
@@ -966,10 +1199,10 @@ onBeforeUnmount(() => {
                     :key="item.embeddingId"
                     :class="
                       item.embeddingId === selectedCompletedEmbeddingId
-                        ? 'bg-sky-50'
-                        : 'hover:bg-slate-50'
+                        ? 'bg-primary/10'
+                        : 'hover:bg-accent'
                     "
-                    class="cursor-pointer border-t border-slate-100 text-slate-700"
+                    class="cursor-pointer border-t border-border text-foreground"
                     @click="selectCompletedEmbedding(item.embeddingId)"
                   >
                     <td class="px-4 py-3 align-top">
@@ -997,7 +1230,9 @@ onBeforeUnmount(() => {
                       {{ formatNullable(item.samplingBlockCode) }}
                     </td>
                     <td class="min-w-[180px] px-4 py-3 align-top">
-                      <span class="block break-words leading-6 text-slate-600">
+                      <span
+                        class="block break-words leading-6 text-muted-foreground"
+                      >
                         {{ formatNullable(item.embeddingRemarks) }}
                       </span>
                     </td>
@@ -1025,36 +1260,42 @@ onBeforeUnmount(() => {
                         </ElSelect>
                       </div>
                     </td>
-                    <td class="min-w-[260px] px-4 py-3 align-top">
+                    <td
+                      class="min-w-[220px] px-4 py-3 align-top"
+                      @dblclick.stop="openQualityReviewDialog(item)"
+                    >
                       <div class="flex items-start gap-2">
                         <span class="line-clamp-2 flex-1 break-words leading-6">
                           {{ formatNullable(item.samplingEvaluation) }}
                         </span>
                         <ElButton
+                          aria-label="编辑取材评价"
+                          :icon="UserRoundPen"
+                          circle
                           size="small"
-                          @click="openQualityReviewDialog(item)"
-                        >
-                          评价
-                        </ElButton>
+                          text
+                          title="编辑取材评价"
+                          @click.stop="openQualityReviewDialog(item)"
+                        />
                       </div>
                     </td>
                     <td
-                      class="min-w-[180px] px-4 py-3 align-top text-slate-600"
+                      class="min-w-[180px] px-4 py-3 align-top text-muted-foreground"
                     >
                       <div class="leading-6">
                         {{ formatNullable(item.sampledByName) }}
                       </div>
-                      <div class="text-xs text-slate-500">
+                      <div class="text-xs text-muted-foreground">
                         {{ formatDateTime(item.sampledAt) }}
                       </div>
                     </td>
                     <td
-                      class="min-w-[180px] px-4 py-3 align-top text-slate-600"
+                      class="min-w-[180px] px-4 py-3 align-top text-muted-foreground"
                     >
                       <div class="leading-6">
                         {{ formatNullable(item.embeddedByName) }}
                       </div>
-                      <div class="text-xs text-slate-500">
+                      <div class="text-xs text-muted-foreground">
                         {{ formatDateTime(item.endedAt) }}
                       </div>
                     </td>
@@ -1076,7 +1317,7 @@ onBeforeUnmount(() => {
     <ElDrawer v-model="historyDrawerVisible" size="55%" title="包埋历史">
       <div v-if="currentCaseEmbeddingRecords.length > 0" class="overflow-auto">
         <table class="min-w-full text-left text-sm">
-          <thead class="bg-slate-50 text-slate-500">
+          <thead class="bg-accent text-muted-foreground">
             <tr>
               <th class="px-4 py-3">病理号</th>
               <th class="px-4 py-3">蜡块号</th>
@@ -1089,7 +1330,7 @@ onBeforeUnmount(() => {
             <tr
               v-for="item in currentCaseEmbeddingRecords"
               :key="item.embeddingId"
-              class="border-t border-slate-100"
+              class="border-t border-border"
             >
               <td class="px-4 py-3">{{ formatNullable(item.pathologyNo) }}</td>
               <td class="px-4 py-3">
@@ -1117,18 +1358,18 @@ onBeforeUnmount(() => {
         <article
           v-for="(item, index) in evaluationDrawerRows"
           :key="`${item.category}-${item.title}-${index}`"
-          class="rounded-xl border border-slate-200 bg-white p-4"
+          class="rounded-xl border border-border bg-card p-4"
         >
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div class="text-sm font-semibold text-slate-900">
+              <div class="text-sm font-semibold text-foreground">
                 {{ item.category }} / {{ item.title }}
               </div>
-              <div class="mt-1 text-sm text-slate-500">
+              <div class="mt-1 text-sm text-muted-foreground">
                 {{ item.description }}
               </div>
             </div>
-            <div class="text-right text-xs text-slate-400">
+            <div class="text-right text-xs text-muted-foreground/70">
               <div>{{ item.status }}</div>
               <div>{{ item.operator }}</div>
               <div>{{ formatDateTime(item.time) }}</div>
@@ -1143,10 +1384,10 @@ onBeforeUnmount(() => {
       <div class="grid gap-6">
         <section>
           <div class="mb-3 flex items-center justify-between">
-            <h3 class="text-base font-semibold text-slate-900">
+            <h3 class="text-base font-semibold text-foreground">
               当日待处理任务
             </h3>
-            <span class="text-sm text-slate-500">
+            <span class="text-sm text-muted-foreground">
               {{ workstationSummary.pendingCount }} 条
             </span>
           </div>
@@ -1155,7 +1396,7 @@ onBeforeUnmount(() => {
             class="overflow-auto"
           >
             <table class="min-w-full text-left text-sm">
-              <thead class="bg-slate-50 text-slate-500">
+              <thead class="bg-accent text-muted-foreground">
                 <tr>
                   <th class="px-4 py-3">病理号</th>
                   <th class="px-4 py-3">蜡块号</th>
@@ -1168,7 +1409,7 @@ onBeforeUnmount(() => {
                 <tr
                   v-for="item in workstationSummary.pendingTasks"
                   :key="item.id"
-                  class="border-t border-slate-100"
+                  class="border-t border-border"
                 >
                   <td class="px-4 py-3">
                     {{ formatNullable(item.pathologyNo) }}
@@ -1193,10 +1434,10 @@ onBeforeUnmount(() => {
 
         <section>
           <div class="mb-3 flex items-center justify-between">
-            <h3 class="text-base font-semibold text-slate-900">
+            <h3 class="text-base font-semibold text-foreground">
               当日已处理记录
             </h3>
-            <span class="text-sm text-slate-500">
+            <span class="text-sm text-muted-foreground">
               {{ workstationSummary.completedCount }} 条
             </span>
           </div>
@@ -1205,7 +1446,7 @@ onBeforeUnmount(() => {
             class="overflow-auto"
           >
             <table class="min-w-full text-left text-sm">
-              <thead class="bg-slate-50 text-slate-500">
+              <thead class="bg-accent text-muted-foreground">
                 <tr>
                   <th class="px-4 py-3">病理号</th>
                   <th class="px-4 py-3">蜡块号</th>
@@ -1218,7 +1459,7 @@ onBeforeUnmount(() => {
                 <tr
                   v-for="item in workstationSummary.completedRecords"
                   :key="item.embeddingId"
-                  class="border-t border-slate-100"
+                  class="border-t border-border"
                 >
                   <td class="px-4 py-3">
                     {{ formatNullable(item.pathologyNo) }}

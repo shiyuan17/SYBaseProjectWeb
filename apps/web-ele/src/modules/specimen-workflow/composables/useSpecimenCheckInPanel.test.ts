@@ -338,6 +338,7 @@ const {
 vi.mock('@vben/stores', () => ({
   useUserStore: () => ({
     userInfo: {
+      loginName: 'test-user',
       realName: 'Test User',
       userId: 'USER-001',
     },
@@ -359,6 +360,12 @@ vi.mock('../api/specimen-workflow-service', () => ({
   checkInSpecimen: checkInSpecimenMock,
   listSpecimens: listSpecimensMock,
   retryLabelPrint: retryLabelPrintMock,
+}));
+
+vi.mock('./useOperatorVerificationPrompt', () => ({
+  useOperatorVerificationPrompt: () => ({
+    verifyOperator: vi.fn(async () => 'TOKEN-VERIFY'),
+  }),
 }));
 
 vi.mock('../utils/operating-room-display', () => ({
@@ -435,6 +442,7 @@ describe('useSpecimenCheckInPanel', () => {
     expect(state.operatorForm.operatorUserId).toBe('USER-001');
     state.handleOperatorChange({
       id: 'USER-ALT',
+      loginName: 'alt-user',
       name: 'Alt User',
     });
     checkInSpecimenMock.mockResolvedValueOnce({
@@ -449,14 +457,42 @@ describe('useSpecimenCheckInPanel', () => {
     await state.handleQuickCheckIn();
     await flushComposable();
 
+    expect(checkInSpecimenMock).not.toHaveBeenCalled();
+    expect(state.queueItems.value).toHaveLength(2);
+    expect(
+      state.queueItems.value.some(
+        (item) =>
+          item.specimenId === 'SPEC-CHECKIN' &&
+          item.displayCheckInStatus === '入库未保存',
+      ),
+    ).toBe(true);
+    expect(
+      state.queueItems.value.some(
+        (item) => item.specimenId === 'SPEC-CHECKIN-SIBLING',
+      ),
+    ).toBe(true);
+
+    await state.handlePrimaryCheckIn();
+    await flushComposable();
+
     expect(checkInSpecimenMock).toHaveBeenCalledWith(
       'BC-CHECKIN',
       expect.objectContaining({
         operatorName: 'Alt User',
         operatorUserId: 'USER-ALT',
+        operatorVerificationToken: 'TOKEN-VERIFY',
         remarks: null,
         specimenBarcode: 'BC-CHECKIN',
         terminalCode: null,
+      }),
+    );
+    expect(checkInSpecimenMock).toHaveBeenCalledWith(
+      'BC-CHECKIN-SIBLING',
+      expect.objectContaining({
+        operatorName: 'Alt User',
+        operatorUserId: 'USER-ALT',
+        operatorVerificationToken: 'TOKEN-VERIFY',
+        specimenBarcode: 'BC-CHECKIN-SIBLING',
       }),
     );
     expect(state.queueItems.value).toHaveLength(2);
@@ -469,12 +505,7 @@ describe('useSpecimenCheckInPanel', () => {
           item.surgeryName === '惠侨楼 - 手术室 2',
       ),
     ).toBe(true);
-    expect(
-      state.queueItems.value.some(
-        (item) => item.specimenId === 'SPEC-CHECKIN-SIBLING',
-      ),
-    ).toBe(true);
-    expect(state.pendingCount.value).toBe(1);
+    expect(state.pendingCount.value).toBe(0);
 
     wrapper.destroy();
   });
@@ -489,27 +520,25 @@ describe('useSpecimenCheckInPanel', () => {
     state.scanInput.value = 'SP-001';
     await state.handleQuickCheckIn();
     await flushComposable();
-    expect(checkInSpecimenMock).toHaveBeenCalledWith(
-      'BC-CHECKIN',
-      expect.any(Object),
-    );
+    expect(checkInSpecimenMock).not.toHaveBeenCalled();
 
-    const siblingRow = state.queueItems.value.find(
-      (item) => item.specimenId === 'SPEC-CHECKIN-SIBLING',
+    const queuedRow = state.queueItems.value.find(
+      (item) => item.specimenId === 'SPEC-CHECKIN',
     );
-    if (!siblingRow) {
-      throw new Error('sibling queue row not initialized');
+    if (!queuedRow) {
+      throw new Error('queue row not initialized');
     }
 
     state.scanInput.value = '';
-    state.handleSelectionChange([siblingRow]);
+    state.handleSelectionChange([queuedRow]);
     await state.handlePrimaryCheckIn();
     await flushComposable();
 
     expect(checkInSpecimenMock).toHaveBeenCalledWith(
-      'BC-CHECKIN-SIBLING',
+      'BC-CHECKIN',
       expect.objectContaining({
-        specimenBarcode: 'BC-CHECKIN-SIBLING',
+        operatorVerificationToken: 'TOKEN-VERIFY',
+        specimenBarcode: 'BC-CHECKIN',
       }),
     );
 
@@ -526,27 +555,14 @@ describe('useSpecimenCheckInPanel', () => {
     await state.handlePrimaryCheckIn();
     expect(warningMock).toHaveBeenCalledWith('请先选择需要入库的标本');
 
-    state.scanInput.value = 'SP-001';
+    state.scanInput.value = 'SP-002';
     await state.handleQuickCheckIn();
     await flushComposable();
 
-    const checkedInRow = state.queueItems.value.find(
-      (item) => item.specimenId === 'SPEC-CHECKIN',
-    );
-    if (!checkedInRow) {
-      throw new Error('checked-in queue row not initialized');
-    }
-
-    vi.clearAllMocks();
-    state.scanInput.value = '';
-    state.handleSelectionChange([checkedInRow]);
-    await state.handlePrimaryCheckIn();
-    await flushComposable();
-
     expect(checkInSpecimenMock).not.toHaveBeenCalled();
-    expect(warningMock).toHaveBeenCalledWith(
-      '所选标本已完成入库，无需重复操作',
-    );
+    expect(state.queueItems.value).toHaveLength(1);
+    expect(state.queueItems.value[0]?.specimenId).toBe('SPEC-DONE');
+    expect(warningMock).toHaveBeenCalledWith('标本已完成入库，无需重复操作');
 
     wrapper.destroy();
   });
@@ -593,6 +609,8 @@ describe('useSpecimenCheckInPanel', () => {
     await flushComposable();
 
     expect(checkInSpecimenMock).not.toHaveBeenCalled();
+    expect(state.queueItems.value).toHaveLength(1);
+    expect(state.queueItems.value[0]?.specimenId).toBe('SPEC-DONE');
     expect(warningMock).toHaveBeenCalledWith('标本已完成入库，无需重复操作');
 
     wrapper.destroy();
@@ -610,6 +628,8 @@ describe('useSpecimenCheckInPanel', () => {
     await flushComposable();
 
     expect(checkInSpecimenMock).not.toHaveBeenCalled();
+    expect(state.queueItems.value).toHaveLength(1);
+    expect(state.queueItems.value[0]?.specimenId).toBe('SPEC-UNCONFIRMED');
     expect(warningMock).toHaveBeenCalledWith(
       '标本 SP-003 尚未完成标本确认，不能入库',
     );
@@ -628,9 +648,20 @@ describe('useSpecimenCheckInPanel', () => {
     await state.handleQuickCheckIn();
     await flushComposable();
 
+    expect(state.queueItems.value).toHaveLength(2);
+    expect(
+      state.queueItems.value.find(
+        (item) => item.specimenId === 'SPEC-PARTIAL-BLOCKED',
+      )?.canCheckIn,
+    ).toBe(false);
+    expect(checkInSpecimenMock).not.toHaveBeenCalled();
+    await state.handlePrimaryCheckIn();
+    await flushComposable();
+
     expect(checkInSpecimenMock).toHaveBeenCalledWith(
       'BC-PARTIAL-READY',
       expect.objectContaining({
+        operatorVerificationToken: 'TOKEN-VERIFY',
         specimenBarcode: 'BC-PARTIAL-READY',
       }),
     );
@@ -652,17 +683,23 @@ describe('useSpecimenCheckInPanel', () => {
     await state.handleQuickCheckIn();
     await flushComposable();
 
-    expect(checkInSpecimenMock).toHaveBeenCalledWith(
-      'BC-SIBLING-READY',
-      expect.objectContaining({
-        specimenBarcode: 'BC-SIBLING-READY',
-      }),
-    );
+    expect(state.queueItems.value).toHaveLength(2);
     expect(
       state.queueItems.value.find(
         (item) => item.specimenId === 'SPEC-SIBLING-RECEIVED',
       )?.displayCheckInStatus,
     ).toBe('已接收');
+    expect(checkInSpecimenMock).not.toHaveBeenCalled();
+    await state.handlePrimaryCheckIn();
+    await flushComposable();
+
+    expect(checkInSpecimenMock).toHaveBeenCalledWith(
+      'BC-SIBLING-READY',
+      expect.objectContaining({
+        operatorVerificationToken: 'TOKEN-VERIFY',
+        specimenBarcode: 'BC-SIBLING-READY',
+      }),
+    );
 
     wrapper.destroy();
   });
@@ -679,6 +716,8 @@ describe('useSpecimenCheckInPanel', () => {
     await flushComposable();
 
     expect(checkInSpecimenMock).not.toHaveBeenCalled();
+    expect(state.queueItems.value).toHaveLength(1);
+    expect(state.queueItems.value[0]?.specimenId).toBe('SPEC-RECEIVED');
     expect(warningMock).toHaveBeenCalledWith(
       '标本已接收、拒收或退回，不能再入库',
     );
@@ -723,6 +762,11 @@ describe('useSpecimenCheckInPanel', () => {
     state.scanInput.value = 'SP-001';
     await expect(state.handleQuickCheckIn()).resolves.toBeUndefined();
     await flushComposable();
+    expect(checkInSpecimenMock).not.toHaveBeenCalled();
+    successMock.mockClear();
+
+    await state.handlePrimaryCheckIn();
+    await flushComposable();
 
     expect(state.pageError.value).toBe('');
     expect(state.queueItems.value).toHaveLength(2);
@@ -730,7 +774,12 @@ describe('useSpecimenCheckInPanel', () => {
       state.queueItems.value.find((item) => item.specimenId === 'SPEC-CHECKIN')
         ?.queueStatus,
     ).toBe('FAILED');
-    expect(successMock).not.toHaveBeenCalled();
+    expect(
+      state.queueItems.value.find(
+        (item) => item.specimenId === 'SPEC-CHECKIN-SIBLING',
+      )?.queueStatus,
+    ).toBe('SUCCESS');
+    expect(successMock).toHaveBeenCalledWith('标本入库成功');
 
     wrapper.destroy();
   });

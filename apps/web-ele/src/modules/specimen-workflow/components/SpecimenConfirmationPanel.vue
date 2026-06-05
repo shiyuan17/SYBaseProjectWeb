@@ -38,6 +38,7 @@ const {
   retryForm,
   retrySubmitting,
   retryTargetRows,
+  resolveConfirmationStatus,
   submitRetryLabel,
   summary,
   total,
@@ -56,7 +57,7 @@ const {
     />
 
     <div class="flex flex-wrap items-center gap-4 text-sm">
-      <div class="font-semibold text-[color:#d6453d]">标本确认</div>
+      <div class="font-semibold text-danger">标本确认</div>
       <div>
         全部
         <span class="text-xl font-semibold text-primary">{{
@@ -146,8 +147,16 @@ const {
       <ElTableColumn label="标本名称" min-width="180" prop="specimenName" />
       <ElTableColumn label="标本状态" min-width="120">
         <template #default="{ row }">
-          <ElTag :type="row.specimenConfirmedAt ? 'success' : 'danger'">
-            {{ row.specimenConfirmedAt ? '标本确认' : '未确认' }}
+          <ElTag
+            :type="
+              row.specimenConfirmedAt
+                ? 'success'
+                : resolveConfirmationStatus(row) === '确认未保存'
+                  ? 'warning'
+                  : 'danger'
+            "
+          >
+            {{ resolveConfirmationStatus(row) }}
           </ElTag>
         </template>
       </ElTableColumn>

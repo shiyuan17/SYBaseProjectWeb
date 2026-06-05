@@ -217,7 +217,7 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
       routeName: 'FixationTransport',
     },
     {
-      canonicalTitle: '标本接收',
+      canonicalTitle: '标本接收工作台',
       component: '/modules/specimen-workflow/views/SpecimenReceiptView',
       componentAliases: ['PathologyReceipt', 'SpecimenReceipt'],
       menuCodes: ['M2_RECEIPT'],
@@ -454,6 +454,18 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
         '/api/v1/pathology-cases/{id}/report-tracking',
       ],
       routeName: 'ReportTracking',
+    },
+    {
+      component: '/modules/doctor-workflow/views/MedicalOrderWorkbenchView',
+      componentAliases: ['MedicalOrderWorkbench', 'MedicalOrders'],
+      menuCodes: ['M4_MEDICAL_ORDER', 'M4_MEDICAL_ORDERS'],
+      path: '/doctor-workflow/medical-orders',
+      pathAliases: [
+        '/doctor-workflow/medical-orders',
+        '/api/v1/medical-orders/pending',
+        '/api/v1/medical-orders',
+      ],
+      routeName: 'MedicalOrderWorkbench',
     },
     {
       component: '/modules/doctor-workflow/views/ReportRevisionView',

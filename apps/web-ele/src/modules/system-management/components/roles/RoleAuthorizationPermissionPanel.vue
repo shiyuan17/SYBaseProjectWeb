@@ -71,7 +71,7 @@ const permissionIdsModel = computed({
             <div
               v-for="permission in group.entryPermissions"
               :key="permission.id"
-              class="rounded-xl bg-white/90 px-3 py-3 ring-1 ring-emerald-200/70"
+              class="rounded-xl bg-card/90 px-3 py-3 ring-1 ring-emerald-200/70"
             >
               <div class="font-medium text-foreground">
                 {{ permission.permissionName }}

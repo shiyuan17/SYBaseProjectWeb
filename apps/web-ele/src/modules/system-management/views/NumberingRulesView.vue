@@ -30,7 +30,13 @@ import SystemSectionCard from '../components/SystemSectionCard.vue';
 import SystemStatusTag from '../components/SystemStatusTag.vue';
 import { M1_PERMISSION_CODES } from '../constants';
 import { getSystemPageErrorMessage } from '../utils/error';
-import { formatDateTime, formatNullable } from '../utils/format';
+import {
+  formatDateTime,
+  formatNullable,
+  formatNumberingRuleBizType,
+  formatNumberingRuleResetPolicy,
+  formatNumberingRuleScopeType,
+} from '../utils/format';
 
 const loading = ref(false);
 const submitLoading = ref(false);
@@ -119,7 +125,11 @@ onMounted(loadData);
     >
       <ElTable v-loading="loading" :data="items" border>
         <ElTableColumn label="规则编码" min-width="140" prop="ruleCode" />
-        <ElTableColumn label="业务类型" min-width="140" prop="bizType" />
+        <ElTableColumn label="业务类型" min-width="140">
+          <template #default="scope">
+            {{ formatNumberingRuleBizType(scope?.row?.bizType) }}
+          </template>
+        </ElTableColumn>
         <ElTableColumn label="前缀" min-width="120">
           <template #default="scope">
             {{ formatNullable(scope?.row?.prefixPattern) }}
@@ -131,8 +141,16 @@ onMounted(loadData);
           </template>
         </ElTableColumn>
         <ElTableColumn label="流水长度" width="100" prop="seqLength" />
-        <ElTableColumn label="重置策略" min-width="120" prop="resetPolicy" />
-        <ElTableColumn label="作用域" min-width="120" prop="scopeType" />
+        <ElTableColumn label="重置策略" min-width="120">
+          <template #default="scope">
+            {{ formatNumberingRuleResetPolicy(scope?.row?.resetPolicy) }}
+          </template>
+        </ElTableColumn>
+        <ElTableColumn label="作用域" min-width="120">
+          <template #default="scope">
+            {{ formatNumberingRuleScopeType(scope?.row?.scopeType) }}
+          </template>
+        </ElTableColumn>
         <ElTableColumn label="状态" width="90">
           <template #default="scope">
             <SystemStatusTag v-if="scope?.row" :enabled="scope.row.enabled" />

@@ -5,19 +5,26 @@ import type {
 
 import { createApp, defineComponent, h, nextTick } from 'vue';
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   acceptDiagnosticTaskMock,
   cancelMedicalOrderMock,
   createMedicalOrderMock,
   getDiagnosticWorkbenchMock,
+  listMedicalOrderDictsMock,
+  listMedicalOrderPackagesPageMock,
   listPendingDiagnosticTasksMock,
   mockAccessStore,
   mockRoute,
   mockRouter,
   mockUserStore,
   startDiagnosticTaskMock,
+  createObjectUrlMock,
+  messageErrorMock,
+  messageInfoMock,
+  revokeObjectUrlMock,
+  windowOpenMock,
 } = vi.hoisted(() => ({
   acceptDiagnosticTaskMock:
     vi.fn<(taskId: string, data: unknown) => Promise<unknown>>(),
@@ -26,12 +33,17 @@ const {
   createMedicalOrderMock: vi.fn<(data: unknown) => Promise<unknown>>(),
   getDiagnosticWorkbenchMock:
     vi.fn<(caseId: string) => Promise<DiagnosticWorkbenchView>>(),
+  listMedicalOrderDictsMock: vi.fn<() => Promise<unknown[]>>(),
+  listMedicalOrderPackagesPageMock:
+    vi.fn<(query: unknown) => Promise<unknown>>(),
   listPendingDiagnosticTasksMock:
     vi.fn<(query: unknown) => Promise<PendingDiagnosticTaskPage>>(),
   mockAccessStore: {
     accessCodes: ['PERM_M4_WORKBENCH_QUERY'],
   },
   mockRoute: {
+    name: 'DiagnosisWorkbench',
+    path: '/doctor-workflow/workbench',
     query: {} as Record<string, string | undefined>,
   },
   mockRouter: {
@@ -46,6 +58,11 @@ const {
   },
   startDiagnosticTaskMock:
     vi.fn<(taskId: string, data: unknown) => Promise<unknown>>(),
+  createObjectUrlMock: vi.fn(),
+  messageErrorMock: vi.fn(),
+  messageInfoMock: vi.fn(),
+  revokeObjectUrlMock: vi.fn(),
+  windowOpenMock: vi.fn(),
 }));
 
 vi.mock('vue-router', () => ({
@@ -80,11 +97,26 @@ vi.mock('@vben/stores', () => ({
   useUserStore: () => mockUserStore,
 }));
 
+vi.mock('element-plus', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('element-plus')>();
+  return {
+    ...actual,
+    ElMessage: {
+      error: messageErrorMock,
+      info: messageInfoMock,
+      success: vi.fn(),
+      warning: vi.fn(),
+    },
+  };
+});
+
 vi.mock('../api/doctor-workflow-service', () => ({
   acceptDiagnosticTask: acceptDiagnosticTaskMock,
   cancelMedicalOrder: cancelMedicalOrderMock,
   createMedicalOrder: createMedicalOrderMock,
   getDiagnosticWorkbench: getDiagnosticWorkbenchMock,
+  listMedicalOrderDicts: listMedicalOrderDictsMock,
+  listMedicalOrderPackagesPage: listMedicalOrderPackagesPageMock,
   listPendingDiagnosticTasks: listPendingDiagnosticTasksMock,
   startDiagnosticTask: startDiagnosticTaskMock,
 }));
@@ -127,12 +159,129 @@ const queueFixture = {
   total: 2,
 } satisfies PendingDiagnosticTaskPage;
 
+const medicalOrderDictFixture = [
+  {
+    categoryCode: 'IHC',
+    categoryName: '免疫组化',
+    children: [],
+    enabled: true,
+    id: 'CAT-001',
+    items: [
+      {
+        categoryId: 'CAT-001',
+        defaultContent: '补做特殊染色',
+        enabled: true,
+        executionScope: 'BLOCK',
+        id: 'ITEM-001',
+        orderItemCode: 'SS-001',
+        orderItemName: '特殊染色',
+        orderType: 'SPECIAL_STAIN',
+        sortOrder: 1,
+      },
+      {
+        categoryId: 'CAT-001',
+        defaultContent: '补做免疫组化 CK',
+        enabled: true,
+        executionScope: 'BLOCK',
+        id: 'ITEM-002',
+        orderItemCode: 'IHC-CK',
+        orderItemName: '免疫组化 CK',
+        orderType: 'IMMUNOHISTOCHEMISTRY',
+        sortOrder: 2,
+      },
+      {
+        categoryId: 'CAT-001',
+        defaultContent: '1p19q(Fish)',
+        enabled: true,
+        executionScope: 'BLOCK',
+        id: 'ITEM-003',
+        orderItemCode: 'FISH-1P19Q',
+        orderItemName: '1p19q(Fish)',
+        orderType: 'FISH',
+        sortOrder: 3,
+      },
+      {
+        categoryId: 'CAT-001',
+        defaultContent: 'C1q免疫荧光',
+        enabled: true,
+        executionScope: 'BLOCK',
+        id: 'ITEM-004',
+        orderItemCode: 'IF-C1Q',
+        orderItemName: 'C1q免疫荧光',
+        orderType: 'IMMUNE_FLUORESCENCE',
+        sortOrder: 4,
+      },
+    ],
+    parentId: null,
+    sortOrder: 1,
+  },
+];
+
+const medicalOrderPackagePageFixture = {
+  items: [
+    {
+      enabled: true,
+      id: 'PKG-001',
+      items: [
+        {
+          id: 'PKG-ITEM-001',
+          orderItemCode: 'SS-001',
+          orderItemId: 'ITEM-001',
+          orderItemName: '特殊染色',
+          packageId: 'PKG-001',
+          remarks: null,
+          sortOrder: 1,
+        },
+        {
+          id: 'PKG-ITEM-002',
+          orderItemCode: 'IHC-CK',
+          orderItemId: 'ITEM-002',
+          orderItemName: '免疫组化 CK',
+          packageId: 'PKG-001',
+          remarks: null,
+          sortOrder: 2,
+        },
+      ],
+      ownerUserId: null,
+      packageCode: 'PKG-IHC',
+      packageName: '免疫组化套餐',
+      packageType: 'IHC',
+      remarks: null,
+    },
+    {
+      enabled: true,
+      id: 'PKG-002',
+      items: [
+        {
+          id: 'PKG-ITEM-003',
+          orderItemCode: 'FISH-1P19Q',
+          orderItemId: 'ITEM-003',
+          orderItemName: '1p19q(Fish)',
+          packageId: 'PKG-002',
+          remarks: null,
+          sortOrder: 1,
+        },
+      ],
+      ownerUserId: null,
+      packageCode: 'PKG-FISH',
+      packageName: 'Fish套餐',
+      packageType: 'FISH',
+      remarks: null,
+    },
+  ],
+  page: 1,
+  size: 100,
+  total: 1,
+};
+
 const workbenchFixtureByCaseId: Record<string, DiagnosticWorkbenchView> = {
   'CASE-001': {
     applicationFormArchiveLocation: 'A柜-01-02',
     applicationFormArchiveStatus: 'ARCHIVED',
     applicationFormImageUrl: '/archives/APP-001.jpg',
     applicationNo: 'APP-001',
+    applicationType: 'ROUTINE',
+    bedNo: '',
     blocks: [
       {
         archiveLocation: '蜡块柜-B1',
@@ -140,14 +289,31 @@ const workbenchFixtureByCaseId: Record<string, DiagnosticWorkbenchView> = {
         blockCode: 'A1',
         blockId: 'BLOCK-001',
         description: '胃窦组织',
+        embeddingDoctorName: '包埋医生甲',
         embeddingBoxNo: 'BOX-001',
+        grossingDoctorName: '取材医生甲',
         loanStatus: 'IN_LIBRARY',
+        remarks: '蜡块备注',
         specimenId: 'SPEC-001',
+        specimenName: '胃窦活检组织',
+        tissueName: '胃窦组织',
+        usageStatus: '未使用',
       },
     ],
     caseId: 'CASE-001',
     caseStatus: 'IN_DIAGNOSIS',
-    clinicalDiagnosis: '临床诊断一',
+    chargeItems: [
+      {
+        chargedAt: '2026-06-01 11:00:00',
+        chargedByName: '收费员甲',
+        itemName: '免疫组化 CK',
+      },
+    ],
+    checkItem: '切片检查与诊断',
+    clinicalDiagnosis: '1:糖尿病伴肾并发症',
+    clinicalExaminationAndSurgeryFindings: '',
+    clinicalHistory: '',
+    clinicalSubmissionRequirements: '',
     consultations: [
       {
         completedAt: '2026-06-01 12:30:00',
@@ -170,13 +336,29 @@ const workbenchFixtureByCaseId: Record<string, DiagnosticWorkbenchView> = {
       reportStatus: 'DRAFT',
       versionNo: 1,
     },
+    deliveredAt: '2026-05-26 10:20:00',
+    detachedAt: '',
     diagnosticTasks: [queueFixture.items[0]!],
+    fixedAt: '',
     hasPendingRevision: true,
+    historicalPathologies: [
+      {
+        age: '30岁',
+        diagnosis: '历史诊断',
+        examinationNo: 'F2600039',
+        inpatientNo: 'IP-001',
+        reportTime: '2026-05-14 11:40:00',
+        submissionType: '冰冻病理',
+      },
+    ],
+    infectiousAndPastHistorySummary: '',
+    infectiousSource: '',
+    inpatientNo: '02237380',
     medicalOrders: [
       {
         acceptedAt: '2026-06-01 10:30:00',
         applicationNo: 'APP-001',
-        billingStatus: 'CHARGED',
+        billingStatus: 'PENDING',
         caseId: 'CASE-001',
         completedAt: null,
         doctorName: '当前医生',
@@ -190,11 +372,26 @@ const workbenchFixtureByCaseId: Record<string, DiagnosticWorkbenchView> = {
         pathologyNo: 'PATH-001',
         patientName: '张三',
         remarks: '优先处理',
-        status: 'PENDING',
+        status: 'IN_PROGRESS',
       },
     ],
-    pathologyNo: 'PATH-001',
-    patientName: '张三',
+    outpatientNo: '',
+    patientAge: '30岁1月',
+    patientGender: '女',
+    patientId: '34734663',
+    pathologyNo: 'F2600036',
+    patientName: '范渊旭',
+    pacsExaminations: [
+      {
+        examinationNo: 'NPA250003',
+        imagingDescription: '胸部影像描述',
+        imagingDiagnosis: '影像诊断',
+        reportStatus: '未写',
+        reportTime: '2026-05-14 12:00:00',
+        submissionType: '化验',
+      },
+    ],
+    phone: '18170000000',
     recentEvents: [
       {
         eventContent: '已完成接单',
@@ -203,6 +400,28 @@ const workbenchFixtureByCaseId: Record<string, DiagnosticWorkbenchView> = {
         eventType: 'TASK_ACCEPTED',
         nodeCode: 'DIAGNOSIS',
         operatorName: '当前医生',
+      },
+    ],
+    remarkSections: [
+      {
+        content: '申请备注内容',
+        sectionKey: 'APPLICATION',
+        title: '申请备注',
+      },
+      {
+        content: '医嘱备注内容',
+        relatedNo: 'F2600036-1',
+        sectionKey: 'MEDICAL_ORDER',
+        title: '医嘱备注',
+      },
+    ],
+    reportTraces: [
+      {
+        diagnosisInfo: '诊断信息',
+        reportDoctorName: '报告医师甲',
+        reportStatus: 'DRAFT',
+        reportTime: '2026-06-01 10:20:00',
+        sequenceNo: 1,
       },
     ],
     revisions: [
@@ -225,11 +444,19 @@ const workbenchFixtureByCaseId: Record<string, DiagnosticWorkbenchView> = {
         archiveLocation: '玻片柜-S1',
         archiveStatus: 'ARCHIVED',
         embeddingBoxId: 'BOX-001',
+        blockCode: 'A1',
+        diagnosisRemark: '诊断备注',
+        evaluation: '优秀',
+        examinationItem: 'HE',
         loanStatus: 'IN_LIBRARY',
+        pathologyNo: 'F2600036',
         qualityStatus: 'QUALIFIED',
+        slicedAt: '2026-06-01 08:30:00',
+        slicedByName: '切片人甲',
         slideId: 'SLIDE-001',
         slideNo: 'SLIDE-001',
         slideStatus: 'READY',
+        slideType: 'HE',
         specimenId: 'SPEC-001',
       },
     ],
@@ -250,6 +477,7 @@ const workbenchFixtureByCaseId: Record<string, DiagnosticWorkbenchView> = {
     blocks: [],
     caseId: 'CASE-002',
     caseStatus: 'REPORTING',
+    chargeItems: [],
     clinicalDiagnosis: '临床诊断二',
     consultations: [],
     currentReport: {
@@ -263,7 +491,9 @@ const workbenchFixtureByCaseId: Record<string, DiagnosticWorkbenchView> = {
     },
     diagnosticTasks: [queueFixture.items[1]!],
     hasPendingRevision: true,
+    historicalPathologies: [],
     medicalOrders: [],
+    pacsExaminations: [],
     pathologyNo: 'PATH-002',
     patientName: '李四',
     recentEvents: [
@@ -276,6 +506,8 @@ const workbenchFixtureByCaseId: Record<string, DiagnosticWorkbenchView> = {
         operatorName: '当前医生',
       },
     ],
+    remarkSections: [],
+    reportTraces: [],
     revisions: [],
     slides: [],
     specimens: [],
@@ -285,6 +517,8 @@ const workbenchFixtureByCaseId: Record<string, DiagnosticWorkbenchView> = {
 };
 
 function resetTestState() {
+  mockRoute.name = 'DiagnosisWorkbench';
+  mockRoute.path = '/doctor-workflow/workbench';
   mockRoute.query = {};
   mockRouter.push.mockReset();
   mockRouter.replace.mockReset();
@@ -292,10 +526,31 @@ function resetTestState() {
   cancelMedicalOrderMock.mockReset();
   createMedicalOrderMock.mockReset();
   getDiagnosticWorkbenchMock.mockReset();
+  listMedicalOrderDictsMock.mockReset();
+  listMedicalOrderPackagesPageMock.mockReset();
   listPendingDiagnosticTasksMock.mockReset();
   startDiagnosticTaskMock.mockReset();
+  createObjectUrlMock.mockReset();
+  createObjectUrlMock.mockReturnValue('blob:diagnosis-capture');
+  messageErrorMock.mockReset();
+  messageInfoMock.mockReset();
+  revokeObjectUrlMock.mockReset();
+  Object.defineProperty(URL, 'createObjectURL', {
+    configurable: true,
+    value: createObjectUrlMock,
+  });
+  Object.defineProperty(URL, 'revokeObjectURL', {
+    configurable: true,
+    value: revokeObjectUrlMock,
+  });
+  windowOpenMock.mockReset();
+  vi.stubGlobal('open', windowOpenMock);
 
   listPendingDiagnosticTasksMock.mockResolvedValue(queueFixture);
+  listMedicalOrderDictsMock.mockResolvedValue(medicalOrderDictFixture);
+  listMedicalOrderPackagesPageMock.mockResolvedValue(
+    medicalOrderPackagePageFixture,
+  );
   getDiagnosticWorkbenchMock.mockImplementation(async (caseId) => {
     return (
       workbenchFixtureByCaseId[caseId] ?? workbenchFixtureByCaseId['CASE-001']!
@@ -349,15 +604,70 @@ async function mountView() {
   };
 }
 
+function findButton(text: string) {
+  const button = [
+    ...document.querySelectorAll<HTMLButtonElement>('button'),
+  ].find((item) => item.textContent?.includes(text));
+  if (!button) {
+    throw new Error(`Missing button: ${text}`);
+  }
+  return button;
+}
+
+function findButtonByLabel(label: string) {
+  const button = document.querySelector<HTMLButtonElement>(
+    `button[aria-label="${label}"]`,
+  );
+  if (!button) {
+    throw new Error(`Missing button label: ${label}`);
+  }
+  return button;
+}
+
+function findByTestId<T extends HTMLElement = HTMLElement>(testId: string) {
+  const element = document.querySelector<T>(`[data-testid="${testId}"]`);
+  if (!element) {
+    throw new Error(`Missing test id: ${testId}`);
+  }
+  return element;
+}
+
+function getOrderPaneText() {
+  return (
+    document.querySelector(
+      '[data-testid="diagnosis-workbench-medical-order-pane"]',
+    )?.textContent ?? ''
+  );
+}
+
 describe('DiagnosisWorkbenchView', () => {
   beforeEach(() => {
     resetTestState();
+  });
+
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('does not load or redirect when kept alive under another route', async () => {
+    mockRoute.name = 'PathologyReport';
+    mockRoute.path = '/doctor-workflow/report';
+
+    const wrapper = await mountView();
+
+    expect(listPendingDiagnosticTasksMock).not.toHaveBeenCalled();
+    expect(getDiagnosticWorkbenchMock).not.toHaveBeenCalled();
+    expect(mockRouter.replace).not.toHaveBeenCalled();
+
+    wrapper.unmount();
   });
 
   it('selects the first queue item and loads its workbench when route query is empty', async () => {
     const wrapper = await mountView();
 
     expect(listPendingDiagnosticTasksMock).toHaveBeenCalledWith({
+      assignedFrom: expect.any(String),
+      assignedTo: expect.any(String),
       page: 1,
       pathologyNo: undefined,
       size: 20,
@@ -404,7 +714,7 @@ describe('DiagnosisWorkbenchView', () => {
     wrapper.unmount();
   });
 
-  it('renders gross and microscopic report summaries inside detail tabs', async () => {
+  it('renders the fixed diagnostic material tabs and removes old tab labels', async () => {
     mockRoute.query = {
       caseId: 'CASE-001',
       taskId: 'TASK-001',
@@ -412,27 +722,593 @@ describe('DiagnosisWorkbenchView', () => {
 
     const wrapper = await mountView();
 
-    expect(wrapper.text()).toContain('报告概览');
-    expect(wrapper.text()).toContain('大体所见一');
-    expect(wrapper.text()).toContain('镜检所见一');
-    expect(wrapper.text()).toContain('流程痕迹');
+    expect(wrapper.text()).toContain('患者信息');
+    expect(wrapper.text()).toContain('历史病理');
+    expect(wrapper.text()).toContain('PACS检查');
+    expect(wrapper.text()).toContain('报告痕迹');
+    expect(wrapper.text()).toContain('蜡块');
+    expect(wrapper.text()).toContain('切片');
+    expect(wrapper.text()).toContain('备注');
+    expect(wrapper.text()).toContain('收费项目');
+    expect(wrapper.text()).not.toContain('临床资料');
+    expect(wrapper.text()).not.toContain('报告概览');
+    expect(wrapper.text()).not.toContain('流程痕迹');
+    expect(wrapper.text()).not.toContain('材料与切片');
+    expect(wrapper.text()).not.toContain('会诊与修订');
+    expect(wrapper.text()).not.toContain('特检医嘱/收费');
 
     wrapper.unmount();
   });
 
-  it('renders supplemented modules from existing workbench fields', async () => {
+  it('renders diagnostic material tables from workbench fields', async () => {
     const wrapper = await mountView();
 
-    expect(wrapper.text()).toContain('申请单归档');
-    expect(wrapper.text()).toContain('A柜-01-02');
+    expect(wrapper.text()).toContain('患者信息');
+    expect(wrapper.text()).toContain('报告预览编辑');
+    expect(wrapper.text()).not.toContain('病例上下文');
+    expect(wrapper.text()).not.toContain('病例进入工作台');
+    expect(wrapper.text()).not.toContain('诊断任务流转');
+    expect(wrapper.text()).not.toContain('报告编写与流转');
+    expect(wrapper.text()).not.toContain('协同与闭环');
+    expect(wrapper.text()).toContain('门诊号');
+    expect(wrapper.text()).toContain('F2600036');
+    expect(wrapper.text()).toContain('范渊旭,女,30岁1月');
+    expect(wrapper.text()).toContain('切片检查与诊断');
+    expect(wrapper.text()).toContain('1:糖尿病伴肾并发症');
+    expect(wrapper.text()).not.toContain(
+      '当前病例、报告状态与诊断操作集中在同一区域',
+    );
+    expect(wrapper.text()).not.toContain('HIS病历浏览');
+    expect(wrapper.text()).not.toContain('PACS影像检查');
+    expect(wrapper.text()).not.toContain('东软电子病历');
+    expect(wrapper.text()).not.toContain('检验报告');
+    expect(wrapper.text()).toContain('年龄');
+    expect(wrapper.text()).toContain('住院号');
+    expect(wrapper.text()).toContain('检查号');
+    expect(wrapper.text()).toContain('送检类型');
+    expect(wrapper.text()).toContain('影像诊断');
+    expect(wrapper.text()).toContain('报告医师');
+    expect(wrapper.text()).toContain('诊断信息');
     expect(wrapper.text()).toContain('胃窦活检组织');
-    expect(wrapper.text()).toContain('SLIDE-001');
-    expect(wrapper.text()).toContain('科内会诊');
-    expect(wrapper.text()).toContain('CONS-001');
-    expect(wrapper.text()).toContain('报告修订');
-    expect(wrapper.text()).toContain('补充诊断描述');
-    expect(wrapper.text()).toContain('CHARGED');
+    expect(wrapper.text()).toContain('蜡块使用情况');
+    expect(wrapper.text()).toContain('2026-06-01 08:30:00');
+    expect(wrapper.text()).toContain('切片人');
+    expect(wrapper.text()).toContain('申请备注');
+    expect(wrapper.text()).toContain('医嘱备注【F2600036-1】');
     expect(wrapper.text()).toContain('免疫组化 CK');
+    expect(wrapper.text()).toContain('收费员甲');
+
+    wrapper.unmount();
+  });
+
+  it('renders editable report preview content in the middle pane', async () => {
+    const wrapper = await mountView();
+    const phoneEditor =
+      document.querySelector<HTMLInputElement>('#report-meta-phone');
+    const patientNameEditor = document.querySelector<HTMLInputElement>(
+      '#report-meta-patientName',
+    );
+    const grossEditor = document.querySelector<HTMLTextAreaElement>(
+      '[data-testid="diagnosis-report-gross-editor"]',
+    );
+    const microscopicEditor = document.querySelector<HTMLTextAreaElement>(
+      '[data-testid="diagnosis-report-microscopic-editor"]',
+    );
+    const diagnosisEditor = document.querySelector<HTMLTextAreaElement>(
+      '[data-testid="diagnosis-report-diagnosis-editor"]',
+    );
+
+    expect(
+      document.querySelector('[data-testid="diagnosis-report-paper"]'),
+    ).toBeTruthy();
+    expect(phoneEditor?.value).toBe('18170000000');
+    expect(patientNameEditor?.value).toBe('范渊旭');
+    expect(grossEditor?.value).toBe('大体所见一');
+    expect(microscopicEditor?.value).toBe('镜检所见一');
+    expect(diagnosisEditor?.value).toBe('最终诊断一');
+
+    patientNameEditor!.value = '编辑后的姓名';
+    patientNameEditor!.dispatchEvent(new Event('input'));
+    diagnosisEditor!.value = '编辑后的诊断';
+    diagnosisEditor!.dispatchEvent(new Event('input'));
+    await flushAsyncWork();
+
+    expect(patientNameEditor?.value).toBe('编辑后的姓名');
+    expect(diagnosisEditor?.value).toBe('编辑后的诊断');
+
+    wrapper.unmount();
+  });
+
+  it('switches the report preview template from the style dropdown', async () => {
+    const wrapper = await mountView();
+    const reportStyleSelect = document.querySelector<HTMLElement>(
+      '[data-testid="report-style-select"]',
+    );
+
+    expect(reportStyleSelect).toBeTruthy();
+    expect(document.body.textContent).toContain('默认模板');
+    expect(document.body.textContent).toContain('病理检查报告单');
+
+    const selectReportStyle = async (label: string) => {
+      reportStyleSelect!.click();
+      await flushAsyncWork();
+
+      const option = [
+        ...document.body.querySelectorAll<HTMLElement>(
+          '.el-select-dropdown__item',
+        ),
+      ].find((item) => item.textContent?.includes(label));
+      expect(option).toBeTruthy();
+
+      option!.click();
+      await flushAsyncWork();
+    };
+
+    const reportStyleAssertions = [
+      ['南海人民医院STR报告', 'STR位点'],
+      ['妇科液基细胞学【佛中】', 'TBS分类:'],
+      ['细胞DNA定量分析', 'DNA意见:'],
+      ['市八鼻咽癌检测报告', 'EBV-DNA:'],
+      ['胃癌根治标本病理报告', '病理要点:'],
+      ['肿瘤组织起源基因检测报告单', '组织起源预测:'],
+      ['肠癌KRAS、NRAS、BRAF、PIK3CA、POLE基因检测（PCR法）', '基因检测结果'],
+      ['膀胱癌V1', '分期要点:'],
+    ] as const;
+
+    for (const [styleLabel, templateMarker] of reportStyleAssertions) {
+      await selectReportStyle(styleLabel);
+      expect(document.body.textContent).toContain(styleLabel);
+      expect(document.body.textContent).toContain(templateMarker);
+    }
+
+    wrapper.unmount();
+  });
+
+  it('opens report template drawer and appends a selected diagnosis template', async () => {
+    const wrapper = await mountView();
+    const diagnosisEditor = document.querySelector<HTMLTextAreaElement>(
+      '[data-testid="diagnosis-report-diagnosis-editor"]',
+    );
+    const openTemplateButton = document.querySelector<HTMLElement>(
+      '[data-testid="open-final-diagnosis-template"]',
+    );
+
+    expect(openTemplateButton).toBeTruthy();
+    openTemplateButton!.click();
+    await flushAsyncWork();
+
+    expect(document.body.textContent).toContain('病理诊断模板');
+    const gastritisTemplate = [
+      ...document.body.querySelectorAll<HTMLElement>(
+        '.report-template-tree-node',
+      ),
+    ].find((item) => item.textContent?.includes('慢性浅表性胃炎'));
+    expect(gastritisTemplate).toBeTruthy();
+
+    gastritisTemplate!.click();
+    await flushAsyncWork();
+
+    const appendButton = document.querySelector<HTMLElement>(
+      '[data-testid="append-report-template"]',
+    );
+    expect(appendButton).toBeTruthy();
+    appendButton!.click();
+    await flushAsyncWork();
+
+    expect(diagnosisEditor?.value).toContain('最终诊断一');
+    expect(diagnosisEditor?.value).toContain('慢性浅表性胃炎');
+
+    wrapper.unmount();
+  });
+
+  it('appends a report template by double-clicking the template item', async () => {
+    const wrapper = await mountView();
+    const diagnosisEditor = document.querySelector<HTMLTextAreaElement>(
+      '[data-testid="diagnosis-report-diagnosis-editor"]',
+    );
+    const openTemplateButton = document.querySelector<HTMLElement>(
+      '[data-testid="open-final-diagnosis-template"]',
+    );
+
+    expect(openTemplateButton).toBeTruthy();
+    openTemplateButton!.click();
+    await flushAsyncWork();
+
+    const gastritisTemplate = [
+      ...document.body.querySelectorAll<HTMLElement>(
+        '.report-template-tree-node',
+      ),
+    ].find((item) => item.textContent?.includes('慢性浅表性胃炎'));
+    expect(gastritisTemplate).toBeTruthy();
+
+    gastritisTemplate!.dispatchEvent(
+      new MouseEvent('dblclick', { bubbles: true }),
+    );
+    await flushAsyncWork();
+
+    expect(diagnosisEditor?.value).toContain('最终诊断一');
+    expect(diagnosisEditor?.value).toContain('慢性浅表性胃炎');
+
+    wrapper.unmount();
+  });
+
+  it('switches the material pane to capture mode and imports diagnosis images', async () => {
+    const wrapper = await mountView();
+
+    findButton('采图').click();
+    await flushAsyncWork();
+
+    expect(wrapper.text()).toContain('采图区');
+    expect(wrapper.text()).toContain('已采图像');
+    expect(wrapper.text()).toContain('摄像头预览');
+
+    const fileInput =
+      document.querySelector<HTMLInputElement>('input[type="file"]');
+    expect(fileInput).toBeTruthy();
+
+    const file = new File(['image-bytes'], 'diagnosis-upload.jpg', {
+      type: 'image/jpeg',
+    });
+    Object.defineProperty(fileInput!, 'files', {
+      configurable: true,
+      value: [file],
+    });
+    fileInput!.dispatchEvent(new Event('change'));
+    await flushAsyncWork();
+
+    expect(createObjectUrlMock).toHaveBeenCalledWith(file);
+    expect(wrapper.text()).toContain('diagnosis-upload.jpg');
+    expect(wrapper.text()).toContain('当前诊断');
+
+    findButtonByLabel('关闭采图区').click();
+    await flushAsyncWork();
+
+    expect(wrapper.text()).toContain('诊断材料区');
+    expect(wrapper.text()).toContain('患者信息');
+
+    findButton('采图').click();
+    await flushAsyncWork();
+    expect(wrapper.text()).toContain('采图区');
+
+    findButton('采图').click();
+    await flushAsyncWork();
+    expect(wrapper.text()).toContain('诊断材料区');
+    expect(wrapper.text()).not.toContain('采图区');
+
+    wrapper.unmount();
+  });
+
+  it('switches the material pane to medical order mode from the queue action', async () => {
+    const wrapper = await mountView();
+
+    expect(wrapper.text()).not.toContain('特检医嘱');
+
+    findButton('医嘱').click();
+    await flushAsyncWork();
+
+    expect(mockRouter.push).not.toHaveBeenCalled();
+    const orderPane = document.querySelector(
+      '[data-testid="diagnosis-workbench-medical-order-pane"]',
+    );
+    expect(orderPane).toBeTruthy();
+    const orderPaneText = orderPane?.textContent ?? '';
+    expect(orderPaneText).toContain('医嘱区');
+    expect(orderPaneText).not.toContain('病理号: F2600036');
+    expect(orderPaneText).toContain('A1 胃窦组织');
+    expect(orderPaneText).toContain('医嘱项目: 未收费');
+    expect(orderPaneText).toContain('医嘱项目待选列表');
+    expect(orderPaneText).toContain('执行收费');
+    expect(orderPaneText).toContain('收费管理');
+    expect(orderPaneText).toContain('执行中');
+    expect(orderPaneText).toContain('待收费');
+    expect(orderPaneText).not.toContain('IN_PROGRESS');
+    expect(orderPaneText).not.toContain('PENDING');
+    expect(orderPaneText).toContain('特殊染色');
+    expect(orderPaneText).toContain('免疫组化套餐');
+
+    wrapper.unmount();
+  });
+
+  it('filters medical order candidates by template group', async () => {
+    const wrapper = await mountView();
+
+    findButton('医嘱').click();
+    await flushAsyncWork();
+
+    expect(getOrderPaneText()).toContain('特殊染色');
+    expect(getOrderPaneText()).toContain('免疫组化套餐');
+    expect(getOrderPaneText()).not.toContain('1p19q(Fish)');
+
+    findByTestId('medical-order-template-group-FISH').click();
+    await flushAsyncWork();
+
+    expect(getOrderPaneText()).toContain('1p19q(Fish)');
+    expect(getOrderPaneText()).toContain('Fish套餐');
+    expect(getOrderPaneText()).not.toContain('特殊染色');
+
+    findByTestId('medical-order-template-group-FLUORESCENCE').click();
+    await flushAsyncWork();
+
+    expect(getOrderPaneText()).toContain('C1q免疫荧光');
+    expect(getOrderPaneText()).not.toContain('1p19q(Fish)');
+
+    wrapper.unmount();
+  });
+
+  it('keeps medical order group and letter filters mutually exclusive', async () => {
+    const wrapper = await mountView();
+
+    findButton('医嘱').click();
+    await flushAsyncWork();
+
+    findByTestId('medical-order-template-group-FISH').click();
+    await flushAsyncWork();
+    findByTestId('medical-order-letter-F').click();
+    await flushAsyncWork();
+
+    const keywordRoot = findByTestId('medical-order-candidate-keyword');
+    const keywordInput =
+      keywordRoot instanceof HTMLInputElement
+        ? keywordRoot
+        : keywordRoot.querySelector<HTMLInputElement>('input');
+    expect(keywordInput).toBeTruthy();
+    keywordInput!.value = '套餐';
+    keywordInput!.dispatchEvent(new Event('input'));
+    await flushAsyncWork();
+
+    expect(getOrderPaneText()).toContain('Fish套餐');
+    expect(getOrderPaneText()).not.toContain('1p19q(Fish)');
+    expect(getOrderPaneText()).not.toContain('C1q免疫荧光');
+
+    findByTestId('medical-order-clear-filters').click();
+    await flushAsyncWork();
+
+    expect(getOrderPaneText()).toContain('Fish套餐');
+    expect(getOrderPaneText()).toContain('1p19q(Fish)');
+    expect(getOrderPaneText()).toContain('特殊染色');
+    expect(getOrderPaneText()).toContain('C1q免疫荧光');
+
+    wrapper.unmount();
+  });
+
+  it('shows fallback medical order candidates when backend dictionaries are sparse', async () => {
+    const wrapper = await mountView();
+
+    findButton('医嘱').click();
+    await flushAsyncWork();
+
+    findByTestId('medical-order-template-group-GENE').click();
+    await flushAsyncWork();
+    expect(getOrderPaneText()).toContain('EGFR基因突变检测');
+
+    findByTestId('medical-order-template-group-ALPHA_BETA').click();
+    await flushAsyncWork();
+    expect(getOrderPaneText()).toContain('TCR α/β检测');
+
+    findByTestId('medical-order-template-group-FROZEN').click();
+    await flushAsyncWork();
+    expect(getOrderPaneText()).toContain('快速切片');
+
+    findByTestId('medical-order-template-group-BORROW').click();
+    await flushAsyncWork();
+    expect(getOrderPaneText()).toContain('借阅切片');
+
+    wrapper.unmount();
+  });
+
+  it('adds selected medical order candidates in batch', async () => {
+    mockAccessStore.accessCodes = [
+      'PERM_M4_WORKBENCH_QUERY',
+      'PERM_M4_MEDICAL_ORDER_CREATE',
+    ];
+    const wrapper = await mountView();
+
+    findButton('医嘱').click();
+    await flushAsyncWork();
+
+    findByTestId('medical-order-candidate-item-ITEM-001')
+      .querySelector<HTMLButtonElement>('button')
+      ?.click();
+    findByTestId('medical-order-candidate-package-PKG-001')
+      .querySelector<HTMLButtonElement>('button')
+      ?.click();
+    await flushAsyncWork();
+
+    findButton('添加选中').click();
+    await flushAsyncWork();
+    findButton('提交医嘱').click();
+    await flushAsyncWork();
+
+    expect(createMedicalOrderMock).toHaveBeenCalledTimes(3);
+    expect(createMedicalOrderMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        orderContent: '补做特殊染色（蜡块: A1 胃窦组织）',
+        orderType: 'SPECIAL_STAIN',
+      }),
+    );
+    expect(createMedicalOrderMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        orderContent: '补做免疫组化 CK（蜡块: A1 胃窦组织）',
+        orderType: 'IMMUNOHISTOCHEMISTRY',
+      }),
+    );
+    expect(createMedicalOrderMock).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({
+        orderContent: '补做特殊染色（蜡块: A1 胃窦组织）',
+        orderType: 'SPECIAL_STAIN',
+      }),
+    );
+
+    wrapper.unmount();
+  });
+
+  it('creates a medical order from a selected order item and refreshes the workbench', async () => {
+    mockAccessStore.accessCodes = [
+      'PERM_M4_WORKBENCH_QUERY',
+      'PERM_M4_MEDICAL_ORDER_CREATE',
+    ];
+    const wrapper = await mountView();
+
+    findButton('医嘱').click();
+    await flushAsyncWork();
+
+    const orderItemButton = [...document.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('【特殊染色】'),
+    ) as HTMLElement;
+    expect(orderItemButton).toBeTruthy();
+    orderItemButton.dispatchEvent(
+      new MouseEvent('dblclick', { bubbles: true }),
+    );
+    await flushAsyncWork();
+
+    findButton('提交医嘱').click();
+    await flushAsyncWork();
+
+    expect(createMedicalOrderMock).toHaveBeenCalledWith({
+      caseId: 'CASE-001',
+      operatorName: '当前医生',
+      operatorUserId: 'USER-CURRENT',
+      orderContent: '补做特殊染色（蜡块: A1 胃窦组织）',
+      orderType: 'SPECIAL_STAIN',
+      remarks: undefined,
+    });
+    expect(getDiagnosticWorkbenchMock).toHaveBeenLastCalledWith('CASE-001');
+
+    wrapper.unmount();
+  });
+
+  it('creates one medical order per package item', async () => {
+    mockAccessStore.accessCodes = [
+      'PERM_M4_WORKBENCH_QUERY',
+      'PERM_M4_MEDICAL_ORDER_CREATE',
+    ];
+    const wrapper = await mountView();
+
+    findButton('医嘱').click();
+    await flushAsyncWork();
+
+    const packageButton = [...document.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('【免疫组化套餐2项】'),
+    ) as HTMLElement;
+    expect(packageButton).toBeTruthy();
+    packageButton.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    await flushAsyncWork();
+
+    findButton('提交医嘱').click();
+    await flushAsyncWork();
+
+    expect(createMedicalOrderMock).toHaveBeenCalledTimes(2);
+    expect(createMedicalOrderMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        orderContent: '补做特殊染色（蜡块: A1 胃窦组织）',
+        orderType: 'SPECIAL_STAIN',
+      }),
+    );
+    expect(createMedicalOrderMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        orderContent: '补做免疫组化 CK（蜡块: A1 胃窦组织）',
+        orderType: 'IMMUNOHISTOCHEMISTRY',
+      }),
+    );
+
+    wrapper.unmount();
+  });
+
+  it('opens charge management dialog from the medical order pane', async () => {
+    const wrapper = await mountView();
+
+    findButton('医嘱').click();
+    await flushAsyncWork();
+
+    findButton('收费管理').click();
+    await flushAsyncWork();
+
+    expect(document.body.textContent).toContain('收费管理');
+    expect(document.body.textContent).toContain('病理号:');
+    expect(document.body.textContent).toContain('F2600036-A1');
+    expect(document.body.textContent).toContain('确认完成收费');
+    expect(document.body.textContent).toContain('确认病人出院');
+    expect(document.body.textContent).toContain('重新执行收费');
+
+    findButton('执行收费').click();
+    await flushAsyncWork();
+
+    expect(wrapper.text()).toContain('执行收费');
+
+    wrapper.unmount();
+  });
+
+  it('writes the edited report document when printing', async () => {
+    const printMock = vi.fn();
+    const focusMock = vi.fn();
+    const documentOpenMock = vi.fn();
+    const documentWriteMock = vi.fn();
+    const documentCloseMock = vi.fn();
+    windowOpenMock.mockReturnValue({
+      document: {
+        close: documentCloseMock,
+        open: documentOpenMock,
+        write: documentWriteMock,
+      },
+      focus: focusMock,
+      print: printMock,
+    } as unknown as Window);
+    const wrapper = await mountView();
+    const patientNameEditor = document.querySelector<HTMLInputElement>(
+      '#report-meta-patientName',
+    );
+    const diagnosisEditor = document.querySelector<HTMLTextAreaElement>(
+      '[data-testid="diagnosis-report-diagnosis-editor"]',
+    );
+
+    patientNameEditor!.value = '打印中的姓名';
+    patientNameEditor!.dispatchEvent(new Event('input'));
+    diagnosisEditor!.value = '打印中的诊断';
+    diagnosisEditor!.dispatchEvent(new Event('input'));
+    await flushAsyncWork();
+
+    (
+      [...document.querySelectorAll('button')].find(
+        (button) => button.textContent?.trim() === '打印',
+      ) as HTMLElement
+    ).click();
+    await flushAsyncWork();
+
+    expect(windowOpenMock).toHaveBeenCalledWith('', '_blank');
+    expect(documentOpenMock).toHaveBeenCalled();
+    expect(documentWriteMock).toHaveBeenCalledWith(
+      expect.stringContaining('打印中的诊断'),
+    );
+    expect(documentWriteMock).toHaveBeenCalledWith(
+      expect.stringContaining('打印中的姓名'),
+    );
+    expect(documentWriteMock).toHaveBeenCalledWith(
+      expect.not.stringContaining('#dddddd'),
+    );
+    expect(documentCloseMock).toHaveBeenCalled();
+    expect(focusMock).toHaveBeenCalled();
+    expect(printMock).toHaveBeenCalled();
+
+    wrapper.unmount();
+  });
+
+  it('keeps remarks editable and shows placeholder save feedback', async () => {
+    const wrapper = await mountView();
+    const saveButton = [...document.querySelectorAll('button')].find((button) =>
+      button.textContent?.includes('保存'),
+    ) as HTMLElement;
+
+    saveButton.click();
+    await flushAsyncWork();
+
+    expect(messageInfoMock).toHaveBeenCalledWith(
+      '当前仅支持前端编辑，暂未接入保存接口',
+    );
 
     wrapper.unmount();
   });

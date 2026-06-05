@@ -11,6 +11,8 @@ const { mockAccessStore, mockRoute, mockRouter, getReportTrackingMock } =
       accessCodes: [] as string[],
     },
     mockRoute: {
+      name: 'ReportTracking',
+      path: '/doctor-workflow/tracking',
       query: {} as Record<string, string | undefined>,
     },
     mockRouter: {
@@ -94,6 +96,8 @@ async function mountView() {
 describe('ReportTrackingView', () => {
   beforeEach(() => {
     mockAccessStore.accessCodes = [M4_PERMISSION_CODES.REPORT_TRACKING_QUERY];
+    mockRoute.name = 'ReportTracking';
+    mockRoute.path = '/doctor-workflow/tracking';
     mockRoute.query = {};
     mockRouter.push.mockReset();
     mockRouter.replace.mockReset();

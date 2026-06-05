@@ -157,7 +157,7 @@ function selectWorkday(dayTab: TechnicalWorkbenchDayTab) {
 <template>
   <Page :title="pageTitle" :description="pageDescription">
     <div class="flex flex-col gap-3">
-      <section class="rounded-lg border border-slate-300 bg-slate-50 p-3">
+      <section class="rounded-lg border border-border bg-accent p-3">
         <div class="flex flex-wrap items-start justify-between gap-3">
           <div class="flex flex-1 flex-col gap-2">
             <div
@@ -170,13 +170,13 @@ function selectWorkday(dayTab: TechnicalWorkbenchDayTab) {
                 :key="action.id"
                 :disabled="isActionDisabled(action)"
                 :type="action.tone === 'primary' ? 'primary' : undefined"
-                class="!mx-0 !h-8 !rounded-sm !border-slate-300 !px-3 !text-xs"
+                class="!mx-0 !h-8 !rounded-sm !border-border !px-3 !text-xs"
                 @click="handleToolbarAction(action)"
               >
                 <span>{{ action.label }}</span>
                 <span
                   v-if="action.hotkey"
-                  class="ml-1 text-[11px] text-slate-500"
+                  class="ml-1 text-[11px] text-muted-foreground"
                 >
                   ({{ action.hotkey }})
                 </span>
@@ -191,9 +191,9 @@ function selectWorkday(dayTab: TechnicalWorkbenchDayTab) {
             <div
               v-for="metric in metrics"
               :key="metric.id"
-              class="rounded border border-slate-200 bg-white px-3 py-1"
+              class="rounded border border-border bg-card px-3 py-1"
             >
-              <span class="text-slate-500">{{ metric.label }}:</span>
+              <span class="text-muted-foreground">{{ metric.label }}:</span>
               <span
                 class="ml-1 font-semibold"
                 :class="{
@@ -210,7 +210,7 @@ function selectWorkday(dayTab: TechnicalWorkbenchDayTab) {
         </div>
       </section>
 
-      <section class="rounded-lg border border-slate-300 bg-white p-3">
+      <section class="rounded-lg border border-border bg-card p-3">
         <div class="flex flex-wrap items-center gap-2">
           <ElInput
             v-model="searchKeyword"
@@ -233,7 +233,10 @@ function selectWorkday(dayTab: TechnicalWorkbenchDayTab) {
             @click="handleToolbarAction(action)"
           >
             <span>{{ action.label }}</span>
-            <span v-if="action.hotkey" class="ml-1 text-[11px] text-slate-500">
+            <span
+              v-if="action.hotkey"
+              class="ml-1 text-[11px] text-muted-foreground"
+            >
               ({{ action.hotkey }})
             </span>
           </ElButton>
@@ -253,7 +256,7 @@ function selectWorkday(dayTab: TechnicalWorkbenchDayTab) {
 
         <div
           v-if="config.filters?.length"
-          class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-dashed border-slate-200 pt-3 text-sm text-slate-600"
+          class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-dashed border-border pt-3 text-sm text-muted-foreground"
         >
           <ElCheckbox
             v-for="filter in config.filters"
@@ -265,9 +268,7 @@ function selectWorkday(dayTab: TechnicalWorkbenchDayTab) {
         </div>
       </section>
 
-      <section
-        class="overflow-hidden rounded-lg border border-slate-300 bg-white"
-      >
+      <section class="overflow-hidden rounded-lg border border-border bg-card">
         <ElTable
           :data="pagedRows"
           border
@@ -284,7 +285,7 @@ function selectWorkday(dayTab: TechnicalWorkbenchDayTab) {
             :width="column.width"
           >
             <template #default="{ row, $index }">
-              <span class="text-xs text-slate-700">
+              <span class="text-xs text-foreground">
                 {{
                   formatCellValue(
                     column,
@@ -303,9 +304,7 @@ function selectWorkday(dayTab: TechnicalWorkbenchDayTab) {
           class="py-8"
         />
 
-        <div
-          class="flex justify-end border-t border-slate-200 bg-white px-3 py-3"
-        >
+        <div class="flex justify-end border-t border-border bg-card px-3 py-3">
           <ElPagination
             v-model:current-page="currentPage"
             v-model:page-size="pageSize"

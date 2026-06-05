@@ -145,7 +145,10 @@ const workbenchContext = ref({
   ],
   clinicalDiagnosis: 'Papillary thyroid carcinoma',
   clinicalHistory: '甲状腺结节病史，近一个月增大。',
+  clinicalSubmissionRequirements: '术中立即送检，优先取材。',
   contextSummary: '术中见甲状腺左叶结节样病灶。\n\n立即送检。',
+  externalPathologyDiagnosis: '外院提示甲状腺乳头状癌。',
+  infectiousAndPastHistorySummary: '乙肝病史，甲状腺结节手术史。',
   mediaAssets: [
     {
       assetId: 'MED-001',
@@ -310,6 +313,7 @@ const workbenchState = {
   submitGrossing: mockSubmitGrossing,
   submitting: ref(false),
   trackingResult,
+  uploadGrossingImageFile: vi.fn().mockResolvedValue(true),
   workflowReferenceOptions: ref({
     clinicalSymptoms: [],
     collectionModes: [],
@@ -474,10 +478,40 @@ vi.mock('element-plus', () => {
     },
   });
 
-  const ElLink = defineComponent({
-    props: ['href'],
+  const ElImage = defineComponent({
+    props: ['alt', 'initialIndex', 'previewSrcList', 'src'],
     setup(props, { slots }) {
-      return () => h('a', { href: props.href }, slots.default?.());
+      return () =>
+        props.src
+          ? h('img', {
+              alt: props.alt,
+              'data-initial-index': props.initialIndex,
+              'data-preview-src-list': Array.isArray(props.previewSrcList)
+                ? props.previewSrcList.join(',')
+                : '',
+              src: props.src,
+            })
+          : slots.error?.();
+    },
+  });
+
+  const ElSwitch = defineComponent({
+    props: ['disabled', 'modelValue'],
+    emits: ['update:modelValue'],
+    setup(props, { emit }) {
+      return () =>
+        h('input', {
+          'aria-label': '预览开关',
+          checked: props.modelValue,
+          disabled: props.disabled,
+          role: 'switch',
+          type: 'checkbox',
+          onChange: (event: Event) =>
+            emit(
+              'update:modelValue',
+              (event.target as HTMLInputElement).checked,
+            ),
+        });
     },
   });
 
@@ -489,13 +523,14 @@ vi.mock('element-plus', () => {
     ElDrawer,
     ElEmpty: createEmptyStub(),
     ElForm: createPassthroughStub('form'),
+    ElImage,
     ElInput: createInputStub(),
-    ElLink,
     ElMessage: {
       success: mockMessageSuccess,
       warning: mockMessageWarning,
     },
     ElPagination: createPassthroughStub(),
+    ElSwitch,
     ElTabPane: createTabPaneStub(tabsContextKey),
     ElTabs: createTabsStub(tabsContextKey),
     ElTable: createTableStub(tableRowContextKey),
@@ -640,6 +675,7 @@ describe('GrossingWorkstationView', () => {
     mockSubmitGrossing.mockReset();
     workbenchState.addEmbeddingBoxes.mockClear();
     workbenchState.removeEmbeddingBox.mockClear();
+    workbenchState.uploadGrossingImageFile.mockClear();
   });
 
   it('loads the legacy table and switches the selected task', async () => {
@@ -783,20 +819,47 @@ describe('GrossingWorkstationView', () => {
     const laboratoryExaminationInput = root.querySelector<HTMLTextAreaElement>(
       'textarea[placeholder="请输入检验"]',
     );
+    const clinicalSubmissionRequirementsInput =
+      root.querySelector<HTMLTextAreaElement>(
+        'textarea[placeholder="请输入临床送检要求"]',
+      );
+    const infectiousAndPastHistorySummaryInput =
+      root.querySelector<HTMLTextAreaElement>(
+        'textarea[placeholder="请输入传染病史和过往病史"]',
+      );
+    const externalPathologyDiagnosisInput =
+      root.querySelector<HTMLTextAreaElement>(
+        'textarea[placeholder="请输入外院病理诊断"]',
+      );
     const imagingExaminationInput = root.querySelector<HTMLTextAreaElement>(
       'textarea[placeholder="请输入影像检查"]',
     );
 
     expect(root.textContent).toContain('病史摘要');
     expect(root.textContent).toContain('临床检查');
+    expect(root.textContent).toContain('临床送检要求');
+    expect(root.textContent).toContain('传染病史和过往病史');
+    expect(root.textContent).toContain('外院病理诊断');
     expect(root.textContent).toContain('检验');
     expect(root.textContent).toContain('影像检查');
     expect(historySummaryInput).toBeTruthy();
     expect(clinicalExaminationInput).toBeTruthy();
+    expect(clinicalSubmissionRequirementsInput).toBeTruthy();
+    expect(infectiousAndPastHistorySummaryInput).toBeTruthy();
+    expect(externalPathologyDiagnosisInput).toBeTruthy();
     expect(laboratoryExaminationInput).toBeTruthy();
     expect(imagingExaminationInput).toBeTruthy();
     expect(historySummaryInput!.value).toBe('甲状腺结节病史，近一个月增大。');
     expect(clinicalExaminationInput!.value).toBe('');
+    expect(clinicalSubmissionRequirementsInput!.value).toBe(
+      '术中立即送检，优先取材。',
+    );
+    expect(infectiousAndPastHistorySummaryInput!.value).toBe(
+      '乙肝病史，甲状腺结节手术史。',
+    );
+    expect(externalPathologyDiagnosisInput!.value).toBe(
+      '外院提示甲状腺乳头状癌。',
+    );
     expect(laboratoryExaminationInput!.value).toBe('');
     expect(imagingExaminationInput!.value).toBe(
       '影像检查: 超声提示甲状腺左叶低回声结节',
@@ -804,12 +867,18 @@ describe('GrossingWorkstationView', () => {
 
     setInputValue(historySummaryInput!, '病史摘要可编辑');
     setInputValue(clinicalExaminationInput!, '临床检查可编辑');
+    setInputValue(clinicalSubmissionRequirementsInput!, '送检要求可编辑');
+    setInputValue(infectiousAndPastHistorySummaryInput!, '传染既往可编辑');
+    setInputValue(externalPathologyDiagnosisInput!, '外院诊断可编辑');
     setInputValue(laboratoryExaminationInput!, '检验可编辑');
     setInputValue(imagingExaminationInput!, '影像检查可编辑');
     await flushAll();
 
     expect(historySummaryInput!.value).toBe('病史摘要可编辑');
     expect(clinicalExaminationInput!.value).toBe('临床检查可编辑');
+    expect(clinicalSubmissionRequirementsInput!.value).toBe('送检要求可编辑');
+    expect(infectiousAndPastHistorySummaryInput!.value).toBe('传染既往可编辑');
+    expect(externalPathologyDiagnosisInput!.value).toBe('外院诊断可编辑');
     expect(laboratoryExaminationInput!.value).toBe('检验可编辑');
     expect(imagingExaminationInput!.value).toBe('影像检查可编辑');
 
@@ -824,7 +893,7 @@ describe('GrossingWorkstationView', () => {
     app.unmount();
   });
 
-  it('keeps gross description compact and makes description and diagnosis editable', async () => {
+  it('keeps gross description compact and exposes the new save and labeled actions', async () => {
     const { app, root } = await mountView();
 
     const grossDescriptionInput = root.querySelector<HTMLTextAreaElement>(
@@ -839,17 +908,21 @@ describe('GrossingWorkstationView', () => {
 
     expect(grossDescriptionInput).toBeTruthy();
     expect(grossDescriptionInput!.getAttribute('rows')).toBe('6');
-    expect(descriptionInput).toBeTruthy();
-    expect(descriptionInput!.value).toContain('术中见甲状腺左叶结节样病灶');
-    expect(diagnosisInput).toBeTruthy();
-    expect(diagnosisInput!.value).toBe('Papillary thyroid carcinoma');
+    expect(descriptionInput).toBeNull();
+    expect(diagnosisInput).toBeNull();
+    expect(root.textContent).not.toContain('保存描述');
+    expect(root.textContent).not.toContain('暂存');
+    expect(root.textContent).toContain('取材模板');
+    expect(root.textContent).toContain('拍照');
+    expect(root.textContent).toContain('导入图片');
+    expect(root.textContent).toContain('已采图像');
 
-    setInputValue(descriptionInput!, '可编辑病例描述');
-    setInputValue(diagnosisInput!, '可编辑临床诊断');
+    findButton(root, '保存').click();
     await flushAll();
 
-    expect(descriptionInput!.value).toBe('可编辑病例描述');
-    expect(diagnosisInput!.value).toBe('可编辑临床诊断');
+    expect(mockMessageSuccess).toHaveBeenCalledWith(
+      '大体描写已保存，取材完成时将一并提交',
+    );
     app.unmount();
   });
 
@@ -862,9 +935,7 @@ describe('GrossingWorkstationView', () => {
     expect(grossDescriptionInput).toBeTruthy();
     expect(grossDescriptionInput!.value).toBe('甲状腺左叶灰白结节，质中。');
 
-    root
-      .querySelector<HTMLButtonElement>('button[aria-label="打开取材模板"]')!
-      .click();
+    findButton(root, '取材模板').click();
     await flushAll();
 
     expect(root.textContent).toContain('选择取材模板 - 骨髓');
@@ -882,26 +953,62 @@ describe('GrossingWorkstationView', () => {
     app.unmount();
   });
 
-  it('renders captured image action icons and opens import editor', async () => {
+  it('renders captured image actions and imports files into the current specimen', async () => {
     const { app, root } = await mountView();
 
-    root.querySelector<HTMLButtonElement>('button[aria-label="拍照"]')!.click();
+    findButton(root, '导入图片').click();
     await flushAll();
 
-    expect(mockMessageWarning).toHaveBeenCalledWith(
-      '拍照设备暂未接入，请先通过导入图片补充已采图像',
+    const fileInput = root.querySelector<HTMLInputElement>(
+      'input[type="file"][accept="image/jpeg"]',
     );
+    expect(fileInput).toBeTruthy();
 
-    root
-      .querySelector<HTMLButtonElement>('button[aria-label="导入图片"]')!
-      .click();
+    const file = new File(['image-bytes'], 'grossing-upload.jpg', {
+      type: 'image/jpeg',
+    });
+    Object.defineProperty(fileInput!, 'files', {
+      configurable: true,
+      value: [file],
+    });
+    fileInput!.dispatchEvent(new Event('change'));
     await flushAll();
 
-    expect(workbenchState.addMediaAsset).toHaveBeenCalledWith(0);
-    expect(mockMessageSuccess).toHaveBeenCalledWith(
-      '已添加图片导入项，请在标本影像区上传图片',
+    expect(workbenchState.uploadGrossingImageFile).toHaveBeenCalledWith(
+      0,
+      file,
     );
-    expect(root.textContent).toContain('标本 / 蜡块 / 影像编辑');
+    expect(root.textContent).toContain('摄像头预览');
+    expect(root.querySelectorAll('img').length).toBeGreaterThan(0);
+    expect(root.textContent).toContain('current-1.jpg');
+    expect(root.textContent).toContain('history-1.jpg');
+
+    app.unmount();
+  });
+
+  it('shows camera unsupported text after enabling preview switch without mediaDevices', async () => {
+    const originalMediaDevices = navigator.mediaDevices;
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: undefined,
+    });
+
+    const { app, root } = await mountView();
+
+    const previewSwitch = root.querySelector<HTMLInputElement>(
+      'input[role="switch"]',
+    );
+    expect(previewSwitch).toBeTruthy();
+    previewSwitch!.checked = true;
+    previewSwitch!.dispatchEvent(new Event('change'));
+    await flushAll();
+
+    expect(root.textContent).toContain('当前浏览器不支持摄像头拍照');
+
+    Object.defineProperty(navigator, 'mediaDevices', {
+      configurable: true,
+      value: originalMediaDevices,
+    });
 
     app.unmount();
   });

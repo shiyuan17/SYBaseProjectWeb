@@ -259,11 +259,11 @@ describe('system-management-service requests', () => {
 
     await service.createRole({
       enabled: true,
-      roleName: 'Pathology Admin',
+      roleName: '病理科管理员',
     } as never);
     await service.updateRole('ROLE-1', {
       remarks: 'updated',
-      roleName: 'Pathology Admin',
+      roleName: '病理科管理员',
     } as never);
     await service.deleteRole('ROLE-1');
     await service.updateRoleAuthorization('ROLE-1', {
@@ -291,12 +291,12 @@ describe('system-management-service requests', () => {
     expect(requestClientMock.get).toHaveBeenNthCalledWith(7, '/v1/body-parts');
     expect(requestClientMock.post).toHaveBeenCalledWith('/v1/roles', {
       enabled: true,
-      roleName: 'Pathology Admin',
+      roleName: '病理科管理员',
     });
     expect(requestClientMock.request).toHaveBeenCalledWith('/v1/roles/ROLE-1', {
       data: {
         remarks: 'updated',
-        roleName: 'Pathology Admin',
+        roleName: '病理科管理员',
       },
       method: 'PATCH',
     });

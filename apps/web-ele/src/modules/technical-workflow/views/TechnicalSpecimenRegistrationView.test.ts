@@ -77,6 +77,10 @@ vi.mock('@vben/icons', async () => {
     (() => h('span', { 'aria-hidden': 'true', 'data-icon': name })) as unknown;
 
   return {
+    Camera: createIcon('Camera'),
+    ImagePlus: createIcon('ImagePlus'),
+    Square: createIcon('Square'),
+    X: createIcon('X'),
     UserRoundPen: createIcon('UserRoundPen'),
   };
 });
@@ -186,6 +190,23 @@ vi.mock('element-plus', () => {
     },
   });
 
+  const ElImage = defineComponent({
+    props: ['alt', 'initialIndex', 'previewSrcList', 'src'],
+    setup(props, { slots }) {
+      return () =>
+        props.src
+          ? h('img', {
+              alt: props.alt,
+              'data-initial-index': props.initialIndex,
+              'data-preview-src-list': Array.isArray(props.previewSrcList)
+                ? props.previewSrcList.join(',')
+                : '',
+              src: props.src,
+            })
+          : slots.error?.();
+    },
+  });
+
   const ElOption = defineComponent({
     props: ['label', 'value'],
     setup(props) {
@@ -196,6 +217,39 @@ vi.mock('element-plus', () => {
   const ElPagination = defineComponent({
     setup() {
       return () => h('nav');
+    },
+  });
+
+  const ElRadioGroup = defineComponent({
+    props: ['modelValue'],
+    emits: ['update:modelValue'],
+    setup(props, { attrs, emit, slots }) {
+      provide('technical-registration-radio-group', {
+        modelValue: () => props.modelValue,
+        update: (value: string) => emit('update:modelValue', value),
+      });
+      return () =>
+        h('div', { ...attrs, role: 'radiogroup' }, slots.default?.());
+    },
+  });
+
+  const ElRadio = defineComponent({
+    props: ['label'],
+    setup(props, { slots }) {
+      const radioGroup = inject<{
+        modelValue: () => unknown;
+        update: (value: string) => void;
+      }>('technical-registration-radio-group');
+      return () =>
+        h('label', [
+          h('input', {
+            checked: radioGroup?.modelValue() === props.label,
+            type: 'radio',
+            value: props.label,
+            onChange: () => radioGroup?.update(String(props.label)),
+          }),
+          slots.default?.() ?? String(props.label),
+        ]);
     },
   });
 
@@ -218,6 +272,26 @@ vi.mock('element-plus', () => {
           },
           slots.default?.(),
         );
+    },
+  });
+
+  const ElSwitch = defineComponent({
+    props: ['disabled', 'modelValue'],
+    emits: ['update:modelValue'],
+    setup(props, { emit }) {
+      return () =>
+        h('input', {
+          'aria-label': '预览开关',
+          checked: props.modelValue,
+          disabled: props.disabled,
+          role: 'switch',
+          type: 'checkbox',
+          onChange: (event: Event) =>
+            emit(
+              'update:modelValue',
+              (event.target as HTMLInputElement).checked,
+            ),
+        });
     },
   });
 
@@ -261,6 +335,7 @@ vi.mock('element-plus', () => {
     ElButton,
     ElDatePicker,
     ElEmpty,
+    ElImage,
     ElInput,
     ElMessage: {
       error: messageError,
@@ -269,7 +344,10 @@ vi.mock('element-plus', () => {
     },
     ElOption,
     ElPagination,
+    ElRadio,
+    ElRadioGroup,
     ElSelect,
+    ElSwitch,
     ElTabPane,
     ElTabs,
   };
@@ -496,6 +574,113 @@ function mountView() {
 
   app.mount(root);
   return { app, root };
+}
+
+function installCameraTestDoubles() {
+  const stopTrack = vi.fn();
+  const getUserMedia = vi.fn(async () => {
+    return {
+      getTracks: () => [{ stop: stopTrack }],
+    } as unknown as MediaStream;
+  });
+  const play = vi
+    .spyOn(HTMLMediaElement.prototype, 'play')
+    .mockResolvedValue(undefined);
+  const drawImage = vi.fn();
+  const getContext = vi
+    .spyOn(HTMLCanvasElement.prototype, 'getContext')
+    .mockReturnValue({
+      drawImage,
+    } as unknown as CanvasRenderingContext2D);
+  const toBlob = vi
+    .spyOn(HTMLCanvasElement.prototype, 'toBlob')
+    .mockImplementation((callback: BlobCallback, type?: string): void => {
+      callback(new Blob(['camera-image'], { type: type ?? 'image/jpeg' }));
+    });
+  const videoWidthDescriptor = Object.getOwnPropertyDescriptor(
+    HTMLVideoElement.prototype,
+    'videoWidth',
+  );
+  const videoHeightDescriptor = Object.getOwnPropertyDescriptor(
+    HTMLVideoElement.prototype,
+    'videoHeight',
+  );
+  const srcObjectDescriptor = Object.getOwnPropertyDescriptor(
+    HTMLMediaElement.prototype,
+    'srcObject',
+  );
+  const mediaDevicesDescriptor = Object.getOwnPropertyDescriptor(
+    navigator,
+    'mediaDevices',
+  );
+
+  let currentSrcObject: MediaProvider | null = null;
+  Object.defineProperty(HTMLMediaElement.prototype, 'srcObject', {
+    configurable: true,
+    get: () => currentSrcObject,
+    set: (value) => {
+      currentSrcObject = value;
+    },
+  });
+  Object.defineProperty(HTMLVideoElement.prototype, 'videoWidth', {
+    configurable: true,
+    get: () => 1280,
+  });
+  Object.defineProperty(HTMLVideoElement.prototype, 'videoHeight', {
+    configurable: true,
+    get: () => 720,
+  });
+  Object.defineProperty(navigator, 'mediaDevices', {
+    configurable: true,
+    value: { getUserMedia },
+  });
+
+  return {
+    drawImage,
+    getUserMedia,
+    restore: () => {
+      if (mediaDevicesDescriptor) {
+        Object.defineProperty(
+          navigator,
+          'mediaDevices',
+          mediaDevicesDescriptor,
+        );
+      } else {
+        Reflect.deleteProperty(navigator, 'mediaDevices');
+      }
+      getContext.mockRestore();
+      play.mockRestore();
+      toBlob.mockRestore();
+      if (videoWidthDescriptor) {
+        Object.defineProperty(
+          HTMLVideoElement.prototype,
+          'videoWidth',
+          videoWidthDescriptor,
+        );
+      } else {
+        Reflect.deleteProperty(HTMLVideoElement.prototype, 'videoWidth');
+      }
+      if (videoHeightDescriptor) {
+        Object.defineProperty(
+          HTMLVideoElement.prototype,
+          'videoHeight',
+          videoHeightDescriptor,
+        );
+      } else {
+        Reflect.deleteProperty(HTMLVideoElement.prototype, 'videoHeight');
+      }
+      if (srcObjectDescriptor) {
+        Object.defineProperty(
+          HTMLMediaElement.prototype,
+          'srcObject',
+          srcObjectDescriptor,
+        );
+      } else {
+        Reflect.deleteProperty(HTMLMediaElement.prototype, 'srcObject');
+      }
+    },
+    stopTrack,
+  };
 }
 
 describe('TechnicalSpecimenRegistrationView', () => {
@@ -791,6 +976,20 @@ describe('TechnicalSpecimenRegistrationView', () => {
     expect(document.body.textContent).toContain('接收列表');
     expect(document.body.textContent).toContain('已登记列表');
     expect(document.body.textContent).toContain('登记工作区');
+    expect(document.body.textContent).not.toContain(
+      '按接收日期和关键字筛选，选择病例后刷新中间登记工作区。',
+    );
+    expect(document.body.textContent).toContain('送检单位');
+    expect(document.body.textContent).toContain('南海人民医院凯普送检中心');
+    expect(document.body.textContent).toContain('南方医院增城分院');
+    expect(document.body.textContent).toContain('全部');
+    expect(document.body.textContent).toContain('门诊');
+    expect(document.body.textContent).toContain('住院');
+    expect(document.body.textContent).toContain('体检');
+    expect(document.body.textContent).toContain('周');
+    expect(document.body.textContent).toContain('月');
+    expect(document.body.textContent).toContain('季');
+    expect(document.body.textContent).toContain('年');
     expect(document.body.textContent).toContain('APP-20260601-001');
     expect(mockListPendingTechnicalSpecimenRegistrations).toHaveBeenCalledWith({
       applicationType: undefined,
@@ -807,6 +1006,49 @@ describe('TechnicalSpecimenRegistrationView', () => {
     expect(document.body.textContent).toContain('图片区');
     expect(document.body.textContent).not.toContain('申请核对区');
     expect(document.body.textContent).not.toContain('编辑申请');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('keeps new display-only filters out of pending registration queries', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    const queryCount =
+      mockListPendingTechnicalSpecimenRegistrations.mock.calls.length;
+
+    const sendingUnitSelect = document.querySelector<HTMLSelectElement>(
+      '[data-testid="sending-unit-display-filter"]',
+    );
+    const periodSelect = document.querySelector<HTMLSelectElement>(
+      '[data-testid="period-display-filter"]',
+    );
+    const outpatientRadio = document.querySelector<HTMLInputElement>(
+      '[data-testid="patient-source-display-filter"] input[value="OUTPATIENT"]',
+    );
+
+    sendingUnitSelect!.value = '南方医院';
+    sendingUnitSelect!.dispatchEvent(new Event('change'));
+    periodSelect!.value = 'YEAR';
+    periodSelect!.dispatchEvent(new Event('change'));
+    outpatientRadio!.click();
+    await nextTick();
+
+    expect(mockListPendingTechnicalSpecimenRegistrations).toHaveBeenCalledTimes(
+      queryCount,
+    );
+    expect(
+      mockListPendingTechnicalSpecimenRegistrations,
+    ).toHaveBeenLastCalledWith({
+      applicationType: undefined,
+      keyword: undefined,
+      page: 1,
+      receivedFrom: undefined,
+      receivedTo: undefined,
+      registrationStatus: 'PENDING',
+      size: 20,
+    });
 
     app.unmount();
     root.remove();
@@ -1641,43 +1883,147 @@ describe('TechnicalSpecimenRegistrationView', () => {
     ).toHaveBeenCalledWith('CASE-1', file);
     expect(document.body.textContent).toContain('upload.jpg');
 
-    findButton('删除图片').click();
+    document
+      .querySelector<HTMLButtonElement>(
+        'button[aria-label="删除图片 upload.jpg"]',
+      )
+      ?.click();
     await flushView();
     await flushView();
 
     expect(
       mockDeleteTechnicalSpecimenRegistrationMediaAsset,
     ).toHaveBeenCalledWith('CASE-1', 'ASSET-UPLOADED');
+    expect(
+      document.querySelector<HTMLElement>('[data-testid="media-panel-shell"]')
+        ?.dataset.expanded,
+    ).toBe('true');
 
     app.unmount();
     root.remove();
   });
 
-  it('collapses the media panel by default and expands it on hover', async () => {
+  it('captures a camera frame and uploads it from the right-side media panel', async () => {
+    const cameraDoubles = installCameraTestDoubles();
     const { app, root } = mountView();
-    await flushView();
+    try {
+      await flushView();
 
-    const mediaShell = document.querySelector<HTMLElement>(
-      '[data-testid="media-panel-shell"]',
-    );
-    expect(mediaShell).toBeTruthy();
-    expect(mediaShell?.dataset.expanded).toBe('false');
-    expect(mediaShell?.textContent).toContain('暂无登记图片');
-    expect(mediaShell?.textContent).not.toContain('导入图片');
+      const mediaShell = document.querySelector<HTMLElement>(
+        '[data-testid="media-panel-shell"]',
+      );
+      expect(mediaShell).toBeTruthy();
 
-    mediaShell!.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-    await flushView();
+      document
+        .querySelector<HTMLElement>('[data-testid="media-panel-shell"]')
+        ?.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+      await flushView();
 
-    expect(mediaShell?.dataset.expanded).toBe('true');
-    expect(mediaShell?.textContent).toContain('导入图片');
+      expect(cameraDoubles.getUserMedia).toHaveBeenCalledWith({
+        audio: false,
+        video: {
+          facingMode: 'environment',
+        },
+      });
+      expect(document.body.textContent).toContain('摄像头画面');
+      expect(document.body.textContent).toContain('预览中');
 
-    mediaShell!.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
-    await flushView();
+      vi.useFakeTimers();
+      mediaShell!.dispatchEvent(
+        new MouseEvent('mouseleave', { bubbles: true }),
+      );
+      await flushView();
 
-    expect(mediaShell?.dataset.expanded).toBe('false');
+      findButton('拍照').click();
+      await flushView();
+      await flushView();
 
-    app.unmount();
-    root.remove();
+      const uploadedFile =
+        mockUploadTechnicalSpecimenRegistrationMediaAsset.mock.calls.at(
+          -1,
+        )?.[1];
+      expect(cameraDoubles.drawImage).toHaveBeenCalled();
+      expect(uploadedFile).toBeInstanceOf(File);
+      expect((uploadedFile as File).name).toMatch(
+        /^registration-camera-.*\.jpg$/,
+      );
+      expect((uploadedFile as File).type).toBe('image/jpeg');
+      expect(cameraDoubles.stopTrack).not.toHaveBeenCalled();
+      expect(mediaShell?.dataset.expanded).toBe('true');
+
+      await vi.advanceTimersByTimeAsync(1500);
+      await flushView();
+      expect(mediaShell?.dataset.expanded).toBe('true');
+      vi.useRealTimers();
+
+      const previewSwitch = document.querySelector<HTMLInputElement>(
+        'input[role="switch"][aria-label="预览开关"]',
+      );
+      expect(previewSwitch).toBeTruthy();
+      expect(previewSwitch!.checked).toBe(true);
+      previewSwitch!.checked = false;
+      previewSwitch!.dispatchEvent(new Event('change'));
+      await flushView();
+
+      expect(cameraDoubles.stopTrack).toHaveBeenCalled();
+      expect(document.body.textContent).toContain('已关闭');
+    } finally {
+      vi.useRealTimers();
+      app.unmount();
+      root.remove();
+      cameraDoubles.restore();
+    }
+  });
+
+  it('collapses the media panel after a delay and keeps the workbench grid stable', async () => {
+    const { app, root } = mountView();
+    try {
+      await flushView();
+
+      const mediaShell = document.querySelector<HTMLElement>(
+        '[data-testid="media-panel-shell"]',
+      );
+      const registrationGrid = document.querySelector<HTMLElement>(
+        '[data-testid="registration-workbench-grid"]',
+      );
+      expect(mediaShell).toBeTruthy();
+      expect(registrationGrid).toBeTruthy();
+      const collapsedGridClassName = registrationGrid!.className;
+      expect(mediaShell?.dataset.expanded).toBe('false');
+      expect(mediaShell?.textContent).toContain('暂无登记图片');
+      expect(mediaShell?.textContent).not.toContain('导入图片');
+
+      vi.useFakeTimers();
+
+      mediaShell!.dispatchEvent(
+        new MouseEvent('mouseenter', { bubbles: true }),
+      );
+      await flushView();
+
+      expect(mediaShell?.dataset.expanded).toBe('true');
+      expect(registrationGrid?.className).toBe(collapsedGridClassName);
+      expect(mediaShell?.textContent).toContain('导入图片');
+
+      mediaShell!.dispatchEvent(
+        new MouseEvent('mouseleave', { bubbles: true }),
+      );
+      await flushView();
+      expect(mediaShell?.dataset.expanded).toBe('true');
+
+      await vi.advanceTimersByTimeAsync(1499);
+      await flushView();
+      expect(mediaShell?.dataset.expanded).toBe('true');
+
+      await vi.advanceTimersByTimeAsync(1);
+      await flushView();
+
+      expect(mediaShell?.dataset.expanded).toBe('false');
+      expect(registrationGrid?.className).toBe(collapsedGridClassName);
+    } finally {
+      vi.useRealTimers();
+      app.unmount();
+      root.remove();
+    }
   });
 
   it('completes registration and stays on the registration workstation', async () => {

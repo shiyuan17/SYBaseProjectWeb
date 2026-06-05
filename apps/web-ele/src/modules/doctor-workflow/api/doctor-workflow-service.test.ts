@@ -19,9 +19,12 @@ import {
   createReportRevisionRequest,
   getDiagnosticWorkbench,
   getReportTracking,
+  listMedicalOrderDicts,
+  listMedicalOrderPackagesPage,
   listPendingDiagnosticTasks,
   listPendingMedicalOrders,
   mapDiagnosticWorkbenchResponse,
+  mapMedicalOrderPackagePageResponse,
   mapPendingDiagnosticTaskPageResponse,
   mapPendingMedicalOrderPageResponse,
   mapReportTrackingResponse,
@@ -71,6 +74,15 @@ describe('doctor-workflow-service mappers', () => {
     });
   });
 
+  it('normalizes medical order package pagination', () => {
+    expect(mapMedicalOrderPackagePageResponse({}, 2, 50)).toEqual({
+      items: [],
+      page: 2,
+      size: 50,
+      total: 0,
+    });
+  });
+
   it('normalizes diagnostic workbench arrays and nullable report', () => {
     expect(
       mapDiagnosticWorkbenchResponse({
@@ -80,16 +92,78 @@ describe('doctor-workflow-service mappers', () => {
     ).toMatchObject({
       blocks: [],
       caseId: 'CASE-001',
+      chargeItems: [],
       consultations: [],
       currentReport: null,
       diagnosticTasks: [],
       hasPendingRevision: false,
+      historicalPathologies: [],
       medicalOrders: [],
+      pacsExaminations: [],
       pathologyNo: 'BL-001',
       recentEvents: [],
+      remarkSections: [],
+      reportTraces: [],
       revisions: [],
       slides: [],
       specimens: [],
+    });
+  });
+
+  it('preserves diagnostic workbench material tabs extension fields', () => {
+    expect(
+      mapDiagnosticWorkbenchResponse({
+        caseId: 'CASE-001',
+        chargeItems: [
+          {
+            chargedAt: '2026-06-01 11:00:00',
+            chargedByName: '收费员甲',
+            itemName: '免疫组化 CK',
+          },
+        ],
+        historicalPathologies: [
+          {
+            age: '30岁',
+            diagnosis: '历史诊断',
+            examinationNo: 'F2600039',
+            inpatientNo: 'IP-001',
+            reportTime: '2026-05-14 11:40:00',
+            submissionType: '冰冻病理',
+          },
+        ],
+        pacsExaminations: [
+          {
+            examinationNo: 'NPA250003',
+            imagingDescription: '影像描述',
+            imagingDiagnosis: '影像诊断',
+            reportStatus: '未写',
+            reportTime: '2026-05-14 12:00:00',
+            submissionType: '化验',
+          },
+        ],
+        remarkSections: [
+          {
+            content: '申请备注',
+            sectionKey: 'APPLICATION',
+            title: '申请备注',
+          },
+        ],
+        reportTraces: [
+          {
+            diagnosisInfo: '诊断信息',
+            reportDoctorName: '报告医生',
+            reportStatus: 'DRAFT',
+            reportTime: '2026-06-01 10:20:00',
+            sequenceNo: 1,
+          },
+        ],
+      }),
+    ).toMatchObject({
+      chargeItems: [{ itemName: '免疫组化 CK' }],
+      historicalPathologies: [{ examinationNo: 'F2600039' }],
+      pacsExaminations: [{ examinationNo: 'NPA250003' }],
+      remarkSections: [{ sectionKey: 'APPLICATION' }],
+      reportTraces: [{ sequenceNo: 1 }],
     });
   });
 
@@ -169,11 +243,53 @@ describe('doctor-workflow-service requests', () => {
     );
   });
 
+  it('queries medical order dictionaries and packages with backend paths', async () => {
+    requestClientMock.get.mockResolvedValueOnce([]).mockResolvedValueOnce({
+      items: [],
+      page: 1,
+      size: 100,
+      total: 0,
+    });
+
+    await expect(listMedicalOrderDicts()).resolves.toEqual([]);
+    await expect(
+      listMedicalOrderPackagesPage({
+        enabled: true,
+        keyword: '免疫',
+        packageType: 'IHC',
+        page: 1,
+        size: 100,
+      }),
+    ).resolves.toEqual({
+      items: [],
+      page: 1,
+      size: 100,
+      total: 0,
+    });
+
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      1,
+      '/v1/medical-order-dicts',
+    );
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      2,
+      '/v1/medical-order-packages/page',
+      {
+        params: {
+          enabled: true,
+          keyword: '免疫',
+          packageType: 'IHC',
+          page: 1,
+          size: 100,
+        },
+      },
+    );
+  });
+
   it('posts diagnostic task action endpoints with exact paths', async () => {
     await assignDiagnosticTask('TASK-1', {
       diagnosisDoctorName: '责任医生',
       diagnosisDoctorUserId: 'DOC-1',
-      operatorName: '分派员',
       primaryDoctorName: '初诊医生',
       primaryDoctorUserId: 'DOC-2',
       reviewerName: '审核医生',
@@ -188,7 +304,6 @@ describe('doctor-workflow-service requests', () => {
       {
         diagnosisDoctorName: '责任医生',
         diagnosisDoctorUserId: 'DOC-1',
-        operatorName: '分派员',
         primaryDoctorName: '初诊医生',
         primaryDoctorUserId: 'DOC-2',
         reviewerName: '审核医生',

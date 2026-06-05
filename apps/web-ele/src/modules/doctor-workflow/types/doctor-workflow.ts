@@ -5,16 +5,20 @@ export interface DiagnosticTaskActionRequest {
   terminalCode?: string;
 }
 
-export interface AssignDiagnosticTaskRequest extends DiagnosticTaskActionRequest {
+export interface AssignDiagnosticTaskRequest {
   diagnosisDoctorName: string;
   diagnosisDoctorUserId: string;
   primaryDoctorName: string;
   primaryDoctorUserId: string;
+  remarks?: string;
   reviewerName: string;
   reviewerUserId: string;
+  terminalCode?: string;
 }
 
 export interface PendingDiagnosticTaskQuery {
+  assignedFrom?: string;
+  assignedTo?: string;
   page: number;
   pathologyNo?: string;
   size: number;
@@ -26,19 +30,27 @@ export interface PendingDiagnosticTaskItem {
   acceptedAt?: null | string;
   applicationId?: null | string;
   applicationNo?: null | string;
+  applicationType?: null | string;
   assignedAt?: null | string;
+  blockCount?: null | number;
   caseId: string;
+  checkItem?: null | string;
   completedAt?: null | string;
   diagnosisDoctorName?: null | string;
   diagnosisDoctorUserId?: null | string;
   id: string;
   pathologyNo?: null | string;
+  patientId?: null | string;
   patientName?: null | string;
   primaryDoctorName?: null | string;
   primaryDoctorUserId?: null | string;
+  reportPrintedAt?: null | string;
+  reportStatus?: null | string;
   remarks?: null | string;
   reviewerName?: null | string;
   reviewerUserId?: null | string;
+  specimenName?: null | string;
+  submittingDepartmentName?: null | string;
   taskStatus?: null | string;
   taskType?: null | string;
 }
@@ -64,20 +76,34 @@ export interface BlockSummary {
   blockCode?: null | string;
   blockId: string;
   description?: null | string;
+  embeddingDoctorName?: null | string;
   embeddingBoxNo?: null | string;
+  grossingDoctorName?: null | string;
   loanStatus?: null | string;
+  remarks?: null | string;
   specimenId?: null | string;
+  specimenName?: null | string;
+  tissueName?: null | string;
+  usageStatus?: null | string;
 }
 
 export interface SlideSummary {
   archiveLocation?: null | string;
   archiveStatus?: null | string;
+  blockCode?: null | string;
+  diagnosisRemark?: null | string;
   embeddingBoxId?: null | string;
+  evaluation?: null | string;
+  examinationItem?: null | string;
   loanStatus?: null | string;
+  pathologyNo?: null | string;
   qualityStatus?: null | string;
+  slicedAt?: null | string;
+  slicedByName?: null | string;
   slideId: string;
   slideNo?: null | string;
   slideStatus?: null | string;
+  slideType?: null | string;
   specimenId?: null | string;
 }
 
@@ -162,6 +188,65 @@ export interface PendingMedicalOrderPage {
   total: number;
 }
 
+export interface MedicalOrderPagedResult<T> {
+  items: T[];
+  page: number;
+  size: number;
+  total: number;
+}
+
+export interface MedicalOrderItemView {
+  categoryId: string;
+  defaultContent?: null | string;
+  enabled: boolean;
+  executionScope?: null | string;
+  id: string;
+  orderItemCode?: null | string;
+  orderItemName: string;
+  orderType?: null | string;
+  sortOrder: number;
+}
+
+export interface MedicalOrderCategoryNode {
+  categoryCode?: null | string;
+  categoryName: string;
+  children: MedicalOrderCategoryNode[];
+  enabled: boolean;
+  id: string;
+  items: MedicalOrderItemView[];
+  parentId?: null | string;
+  sortOrder: number;
+}
+
+export interface MedicalOrderPackageItemView {
+  id: string;
+  orderItemCode?: null | string;
+  orderItemId: string;
+  orderItemName: string;
+  packageId: string;
+  remarks?: null | string;
+  sortOrder: number;
+}
+
+export interface MedicalOrderPackageView {
+  enabled: boolean;
+  id: string;
+  items: MedicalOrderPackageItemView[];
+  ownerUserId?: null | string;
+  packageCode?: null | string;
+  packageName: string;
+  packageType?: null | string;
+  remarks?: null | string;
+}
+
+export interface MedicalOrderPackagePageQuery {
+  enabled?: boolean;
+  keyword?: null | string;
+  packageType?: null | string;
+  page: number;
+  size: number;
+}
+
 export interface ConsultationSummary {
   completedAt?: null | string;
   consultationId: string;
@@ -174,23 +259,85 @@ export interface ConsultationSummary {
   status?: null | string;
 }
 
+export interface HistoricalPathologySummary {
+  age?: null | string;
+  diagnosis?: null | string;
+  examinationNo?: null | string;
+  inpatientNo?: null | string;
+  reportTime?: null | string;
+  submissionType?: null | string;
+}
+
+export interface PacsExaminationSummary {
+  examinationNo?: null | string;
+  imagingDescription?: null | string;
+  imagingDiagnosis?: null | string;
+  reportStatus?: null | string;
+  reportTime?: null | string;
+  submissionType?: null | string;
+}
+
+export interface ReportTraceSummary {
+  diagnosisInfo?: null | string;
+  reportDoctorName?: null | string;
+  reportStatus?: null | string;
+  reportTime?: null | string;
+  sequenceNo: number;
+}
+
+export interface RemarkSectionSummary {
+  content?: null | string;
+  relatedNo?: null | string;
+  sectionKey: string;
+  title: string;
+}
+
+export interface ChargeItemSummary {
+  chargedAt?: null | string;
+  chargedByName?: null | string;
+  itemName?: null | string;
+}
+
 export interface DiagnosticWorkbenchView {
   applicationFormArchiveLocation?: null | string;
   applicationFormArchiveStatus?: null | string;
   applicationFormImageUrl?: null | string;
   applicationNo?: null | string;
+  applicationOrder?: null | string;
+  applicationType?: null | string;
+  bedNo?: null | string;
   blocks: BlockSummary[];
   caseId: string;
   caseStatus?: null | string;
+  checkItem?: null | string;
   clinicalDiagnosis?: null | string;
+  clinicalExaminationAndSurgeryFindings?: null | string;
+  clinicalHistory?: null | string;
+  clinicalSubmissionRequirements?: null | string;
   consultations: ConsultationSummary[];
   currentReport: CurrentReportSummary | null;
+  deliveredAt?: null | string;
+  detachedAt?: null | string;
+  fixedAt?: null | string;
   diagnosticTasks: PendingDiagnosticTaskItem[];
+  chargeItems: ChargeItemSummary[];
   hasPendingRevision: boolean;
+  historicalPathologies: HistoricalPathologySummary[];
+  infectiousAndPastHistorySummary?: null | string;
+  infectiousSource?: null | string;
+  inpatientNo?: null | string;
   medicalOrders: MedicalOrderSummary[];
+  outpatientNo?: null | string;
+  patientAge?: null | string;
+  patientGender?: null | string;
+  patientId?: null | string;
   pathologyNo?: null | string;
+  phone?: null | string;
   patientName?: null | string;
+  pacsExaminations: PacsExaminationSummary[];
   recentEvents: EventSummary[];
+  remarkSections: RemarkSectionSummary[];
+  reportTraces: ReportTraceSummary[];
   revisions: RevisionRequestSummary[];
   slides: SlideSummary[];
   specimens: SpecimenSummary[];

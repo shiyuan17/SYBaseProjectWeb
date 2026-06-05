@@ -126,7 +126,7 @@ onMounted(() => {
       />
 
       <div class="flex flex-wrap items-center gap-4 text-sm">
-        <div class="font-semibold text-[color:#d6453d]">标本签收</div>
+        <div class="font-semibold text-danger">标本签收</div>
         <div>
           全部
           <span class="text-xl font-semibold text-primary">{{
@@ -388,6 +388,6 @@ onMounted(() => {
 }
 
 :deep(.receipt-failed-row td) {
-  background: #fff7ed !important;
+  background: hsl(var(--warning) / 12%) !important;
 }
 </style>

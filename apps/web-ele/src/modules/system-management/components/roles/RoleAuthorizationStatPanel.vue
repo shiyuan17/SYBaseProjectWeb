@@ -26,9 +26,6 @@ const emit = defineEmits<{
             <span class="font-medium text-foreground">
               {{ scope.row.statName }}
             </span>
-            <span class="text-xs text-muted-foreground">
-              {{ scope.row.statCode }}
-            </span>
           </div>
         </template>
       </template>

@@ -204,7 +204,7 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
           component: '/modules/specimen-workflow/views/SpecimenReceiptView',
           meta: {
             icon: 'carbon:archive',
-            title: '标本接收',
+            title: '标本接收工作台',
           },
           name: 'PathologyReceipt',
           path: '/workflow/pathology-receipt',
@@ -285,7 +285,7 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
             hideInBreadcrumb: true,
             hideInMenu: true,
             hideInTab: true,
-            title: '标本接收',
+            title: '标本接收工作台',
           },
           name: 'SpecimenReceipt',
           path: '/workflow/specimen-receipt',
@@ -319,7 +319,7 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
           component: '/modules/specimen-workflow/views/SpecimenReceiptView',
           meta: {
             icon: 'carbon:archive',
-            title: '标本接收',
+            title: '标本接收工作台',
           },
           name: 'PathologyReceipt',
           path: '/workflow/pathology-receipt',
@@ -527,6 +527,15 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
           },
           name: 'ReportTracking',
           path: '/doctor-workflow/tracking',
+        },
+        {
+          component: '/modules/doctor-workflow/views/MedicalOrderWorkbenchView',
+          meta: {
+            icon: 'carbon:task-approved',
+            title: '病理医嘱执行',
+          },
+          name: 'MedicalOrderWorkbench',
+          path: '/doctor-workflow/medical-orders',
         },
         {
           component: '/modules/doctor-workflow/views/ReportRevisionView',

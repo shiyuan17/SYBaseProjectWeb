@@ -26,6 +26,8 @@ import {
   listPendingTechnicalTasks,
   startDehydration,
 } from '../api/technical-workflow-service';
+import DehydrationBatchOperationDialog from '../components/DehydrationBatchOperationDialog.vue';
+import DehydrationCreateBatchDialog from '../components/DehydrationCreateBatchDialog.vue';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 import {
   buildDehydrationWorkbenchStats,
@@ -47,6 +49,10 @@ const completeLoading = ref(false);
 const pendingItems = ref<PendingTechnicalTaskItem[]>([]);
 const total = ref(0);
 const selectedTaskId = ref('');
+const selectedRows = ref<PendingTechnicalTaskItem[]>([]);
+const createBatchDialogVisible = ref(false);
+const batchOperationDialogVisible = ref(false);
+const latestBatchId = ref('');
 
 const filters = reactive({
   page: 1,
@@ -68,6 +74,15 @@ const selectedTask = computed(
   () =>
     pendingItems.value.find((item) => item.id === selectedTaskId.value) ?? null,
 );
+const createBatchTasks = computed(() => {
+  if (selectedRows.value.length > 0) {
+    return selectedRows.value;
+  }
+  if (selectedTask.value) {
+    return [selectedTask.value];
+  }
+  return [];
+});
 const stats = computed(() =>
   buildDehydrationWorkbenchStats(pendingItems.value),
 );
@@ -103,6 +118,7 @@ async function loadPendingData() {
   try {
     const result = await listPendingTechnicalTasks(currentQuery.value);
     pendingItems.value = result.items;
+    selectedRows.value = [];
     total.value = result.total;
 
     const deepLinkedTaskId =
@@ -119,6 +135,7 @@ async function loadPendingData() {
 }
 
 function handleSelectionChange(rows: PendingTechnicalTaskItem[]) {
+  selectedRows.value = rows;
   if (rows.length > 0) {
     selectedTaskId.value = rows.at(-1)?.id ?? selectedTaskId.value;
   }
@@ -161,6 +178,37 @@ function openTracking(task = selectedTask.value) {
     pathologyNo: nextTask.pathologyNo ?? undefined,
     taskId: nextTask.id,
   });
+}
+
+function openCreateBatchDialog() {
+  const tasks = createBatchTasks.value;
+  if (tasks.length === 0) {
+    ensureSelectedTask('创建脱水批次');
+    return;
+  }
+
+  const caseIds = new Set(tasks.map((item) => item.caseId).filter(Boolean));
+  if (caseIds.size > 1) {
+    ElMessage.warning('创建脱水批次仅支持选择同一病例的蜡块任务');
+    return;
+  }
+
+  createBatchDialogVisible.value = true;
+}
+
+function openBatchOperationDialog() {
+  batchOperationDialogVisible.value = true;
+}
+
+function handleBatchCreated(result: { batchId: string }) {
+  latestBatchId.value = result.batchId;
+  batchOperationDialogVisible.value = true;
+  void loadPendingData();
+}
+
+function handleBatchSubmitted(result: { batchId: string }) {
+  latestBatchId.value = result.batchId;
+  void loadPendingData();
 }
 
 async function handleStartDehydration() {
@@ -267,9 +315,18 @@ void loadPendingData();
 
             <div class="flex flex-wrap items-center gap-2">
               <ElButton
-                :loading="startLoading"
                 size="small"
                 type="primary"
+                @click="openCreateBatchDialog"
+              >
+                创建批次
+              </ElButton>
+              <ElButton size="small" @click="openBatchOperationDialog">
+                批次操作
+              </ElButton>
+              <ElButton
+                :loading="startLoading"
+                size="small"
                 @click="handleStartDehydration"
               >
                 开始脱水
@@ -385,6 +442,18 @@ void loadPendingData();
         </div>
       </section>
     </div>
+
+    <DehydrationCreateBatchDialog
+      v-model="createBatchDialogVisible"
+      :task="selectedTask"
+      :tasks="createBatchTasks"
+      @created="handleBatchCreated"
+    />
+    <DehydrationBatchOperationDialog
+      v-model="batchOperationDialogVisible"
+      :initial-batch-id="latestBatchId"
+      @submitted="handleBatchSubmitted"
+    />
   </Page>
 </template>
 

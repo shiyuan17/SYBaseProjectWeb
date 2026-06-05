@@ -6,12 +6,14 @@ const {
   mockMessageSuccess,
   mockMessageWarning,
   mockOnSubmitted,
+  mockUploadGrossingMediaAsset,
 } = vi.hoisted(() => ({
   mockCompleteGrossing: vi.fn(),
   mockGetGrossingWorkbenchContext: vi.fn(),
   mockMessageSuccess: vi.fn(),
   mockMessageWarning: vi.fn(),
   mockOnSubmitted: vi.fn(),
+  mockUploadGrossingMediaAsset: vi.fn(),
 }));
 
 vi.mock('@vben/stores', () => ({
@@ -53,7 +55,7 @@ vi.mock('#/modules/system-management/api/workflow-reference-service', () => ({
 vi.mock('../api/technical-workflow-service', () => ({
   completeGrossing: mockCompleteGrossing,
   getGrossingWorkbenchContext: mockGetGrossingWorkbenchContext,
-  uploadGrossingMediaAsset: vi.fn(),
+  uploadGrossingMediaAsset: mockUploadGrossingMediaAsset,
 }));
 
 import { useGrossingWorkbench } from './useGrossingWorkbench';
@@ -65,6 +67,7 @@ describe('useGrossingWorkbench', () => {
     mockMessageSuccess.mockClear();
     mockMessageWarning.mockClear();
     mockOnSubmitted.mockClear();
+    mockUploadGrossingMediaAsset.mockReset();
   });
 
   it('submits embedding boxes as confirmed with the grossing payload', async () => {
@@ -345,5 +348,51 @@ describe('useGrossingWorkbench', () => {
     expect(specimen.embeddingBoxes?.map((box) => box.sequenceNo)).toEqual([
       1, 2, 3,
     ]);
+  });
+
+  it('uploads grossing images directly to the selected specimen', async () => {
+    mockUploadGrossingMediaAsset.mockResolvedValue({
+      contentType: 'image/jpeg',
+      fileName: 'grossing-camera.jpg',
+      fileUrl: 'https://example.com/grossing-camera.jpg',
+      size: 1024,
+    });
+
+    const workbench = useGrossingWorkbench();
+    workbench.resetWorkbenchState();
+    const specimen = workbench.completeForm.specimens[0]!;
+    specimen.specimenId = 'SPEC-1';
+    const file = new File(['image-bytes'], 'grossing-camera.jpg', {
+      type: 'image/jpeg',
+    });
+
+    await expect(workbench.uploadGrossingImageFile(0, file)).resolves.toBe(
+      true,
+    );
+
+    expect(mockUploadGrossingMediaAsset).toHaveBeenCalledWith(file);
+    expect(specimen.mediaAssets).toEqual([
+      {
+        fileName: 'grossing-camera.jpg',
+        fileUrl: 'https://example.com/grossing-camera.jpg',
+      },
+    ]);
+    expect(mockMessageSuccess).toHaveBeenCalledWith('标本摄影像上传成功');
+  });
+
+  it('rejects unsupported grossing image formats before upload', async () => {
+    const workbench = useGrossingWorkbench();
+    const file = new File(['image-bytes'], 'grossing-camera.gif', {
+      type: 'image/gif',
+    });
+
+    await expect(workbench.uploadGrossingImageFile(0, file)).resolves.toBe(
+      false,
+    );
+
+    expect(mockUploadGrossingMediaAsset).not.toHaveBeenCalled();
+    expect(mockMessageWarning).toHaveBeenCalledWith(
+      '仅支持 JPG、PNG、WEBP、BMP 格式的标本摄影像',
+    );
   });
 });

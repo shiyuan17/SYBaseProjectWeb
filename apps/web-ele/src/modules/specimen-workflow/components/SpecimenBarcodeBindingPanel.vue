@@ -63,7 +63,7 @@ const {
     />
 
     <div class="flex flex-wrap items-center gap-4 text-sm">
-      <div class="font-semibold text-[color:#d6453d]">条码绑定</div>
+      <div class="font-semibold text-danger">条码绑定</div>
       <div>
         全部
         <span class="text-xl font-semibold text-primary">{{

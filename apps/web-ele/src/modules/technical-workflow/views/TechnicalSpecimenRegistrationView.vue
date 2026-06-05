@@ -14,7 +14,14 @@ import type {
   ApplicationUpdateRequest,
 } from '#/modules/specimen-workflow/types/specimen-workflow';
 
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
+  watch,
+} from 'vue';
 
 import { Page } from '@vben/common-ui';
 
@@ -74,6 +81,8 @@ const selectedRegistrationApplicationType = ref('');
 const activeMediaAssetId = ref('');
 const mediaPanelExpanded = ref(false);
 
+let mediaPanelCollapseTimer: null | ReturnType<typeof setTimeout> = null;
+
 const filters = reactive({
   applicationType: '',
   keyword: '',
@@ -102,12 +111,16 @@ const pageSizeModel = computed({
 
 const visiblePendingItems = computed(() => pendingItems.value);
 
-const registrationGridClass = computed(() => {
-  if (mediaPanelExpanded.value) {
-    return 'xl:grid-cols-[320px_minmax(0,1fr)_minmax(360px,0.9fr)] 2xl:grid-cols-[360px_minmax(0,1fr)_minmax(420px,0.9fr)]';
+const registrationGridClass =
+  'xl:grid-cols-[320px_minmax(0,1fr)_96px] 2xl:grid-cols-[360px_minmax(0,1fr)_96px]';
+
+function clearMediaPanelCollapseTimer() {
+  if (!mediaPanelCollapseTimer) {
+    return;
   }
-  return 'xl:grid-cols-[320px_minmax(0,1fr)_96px] 2xl:grid-cols-[360px_minmax(0,1fr)_96px]';
-});
+  clearTimeout(mediaPanelCollapseTimer);
+  mediaPanelCollapseTimer = null;
+}
 
 function isConsultationApplicationType(value: null | string | undefined) {
   return isTechnicalRegistrationConsultationApplicationType(value);
@@ -407,11 +420,16 @@ function handlePrintMaterialLabel(
 }
 
 function expandMediaPanel() {
+  clearMediaPanelCollapseTimer();
   mediaPanelExpanded.value = true;
 }
 
-function collapseMediaPanel() {
-  mediaPanelExpanded.value = false;
+function scheduleMediaPanelCollapse() {
+  clearMediaPanelCollapseTimer();
+  mediaPanelCollapseTimer = setTimeout(() => {
+    mediaPanelExpanded.value = false;
+    mediaPanelCollapseTimer = null;
+  }, 1500);
 }
 
 function handleMediaFocusOut(event: FocusEvent) {
@@ -425,7 +443,7 @@ function handleMediaFocusOut(event: FocusEvent) {
       return;
     }
   }
-  collapseMediaPanel();
+  scheduleMediaPanelCollapse();
 }
 
 function clearSelectedCaseContext() {
@@ -714,10 +732,14 @@ async function handleUploadMediaAsset(file: File) {
     ElMessage.warning('请先选择待登记病例');
     return;
   }
+  clearMediaPanelCollapseTimer();
+  mediaPanelExpanded.value = true;
   mediaUploading.value = true;
   try {
     await uploadTechnicalSpecimenRegistrationMediaAsset(currentCaseId, file);
     await loadWorkspace(currentCaseId);
+    clearMediaPanelCollapseTimer();
+    mediaPanelExpanded.value = true;
     ElMessage.success('图片已导入');
   } catch (error) {
     reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
@@ -736,6 +758,8 @@ async function handleDeleteMediaAsset(assetId: string) {
   try {
     await deleteTechnicalSpecimenRegistrationMediaAsset(currentCaseId, assetId);
     await loadWorkspace(currentCaseId);
+    clearMediaPanelCollapseTimer();
+    mediaPanelExpanded.value = true;
     ElMessage.success('图片已删除');
   } catch (error) {
     reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
@@ -772,6 +796,10 @@ onMounted(() => {
   void loadPendingData();
 });
 
+onBeforeUnmount(() => {
+  clearMediaPanelCollapseTimer();
+});
+
 watch(
   () => filters.applicationType,
   () => {
@@ -792,6 +820,7 @@ watch(activeRegistrationListTab, () => {
       <div
         class="grid gap-4 transition-[grid-template-columns] duration-300 ease-in-out"
         :class="registrationGridClass"
+        data-testid="registration-workbench-grid"
       >
         <TechnicalSpecimenRegistrationPendingListPanel
           v-model:active-tab="activeRegistrationListTab"
@@ -833,31 +862,40 @@ watch(activeRegistrationListTab, () => {
         />
 
         <div
-          class="flex min-h-[760px] min-w-0 flex-col gap-4 overflow-hidden transition-[width] duration-300"
+          class="relative z-10 min-h-[760px] min-w-0 overflow-visible"
           data-testid="media-panel-shell"
           :data-expanded="mediaPanelExpanded ? 'true' : 'false'"
           @focusin="expandMediaPanel"
           @focusout="handleMediaFocusOut"
           @mouseenter="expandMediaPanel"
-          @mouseleave="collapseMediaPanel"
+          @mouseleave="scheduleMediaPanelCollapse"
         >
-          <TechnicalSpecimenRegistrationMediaPanel
-            :active-asset-id="activeMediaAssetId"
-            :can-delete="workspace?.actionFlags.canDeleteMediaAssets ?? false"
-            :can-upload="workspace?.actionFlags.canUploadMediaAssets ?? false"
-            :collapsed="!mediaPanelExpanded"
-            :deleting="mediaDeleting"
-            :media-assets="workspace?.mediaAssets ?? []"
-            :uploading="mediaUploading"
-            @delete="handleDeleteMediaAsset"
-            @select="activeMediaAssetId = $event"
-            @upload="handleUploadMediaAsset"
-          />
+          <div
+            class="absolute right-0 top-0 z-20 flex min-h-[760px] transition-[width] duration-300"
+            :class="
+              mediaPanelExpanded
+                ? 'w-full xl:w-[660px] 2xl:w-[720px]'
+                : 'w-full xl:w-24'
+            "
+          >
+            <TechnicalSpecimenRegistrationMediaPanel
+              :active-asset-id="activeMediaAssetId"
+              :can-delete="workspace?.actionFlags.canDeleteMediaAssets ?? false"
+              :can-upload="workspace?.actionFlags.canUploadMediaAssets ?? false"
+              :collapsed="!mediaPanelExpanded"
+              :deleting="mediaDeleting"
+              :media-assets="workspace?.mediaAssets ?? []"
+              :uploading="mediaUploading"
+              @delete="handleDeleteMediaAsset"
+              @select="activeMediaAssetId = $event"
+              @upload="handleUploadMediaAsset"
+            />
+          </div>
         </div>
       </div>
 
-      <p class="text-xs text-slate-500">
-        当前保留阶段动作：保存摘要、保存标本修改、导入图片、删除图片、完成登记；病理检查号仅展示接收阶段已生成编号。
+      <p class="text-xs text-muted-foreground">
+        当前保留阶段动作：保存摘要、保存标本修改、导入图片、拍照、删除图片、完成登记；病理检查号仅展示接收阶段已生成编号。
       </p>
     </div>
   </Page>

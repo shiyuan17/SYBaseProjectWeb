@@ -444,6 +444,7 @@ export interface SpecimenVerificationRequest {
 }
 
 export interface SpecimenConfirmRequest {
+  operatorVerificationToken?: string;
   operatorName?: null | string;
   operatorUserId?: null | string;
   remarks?: null | string;
@@ -451,6 +452,7 @@ export interface SpecimenConfirmRequest {
 }
 
 export interface SpecimenCheckInRequest {
+  operatorVerificationToken?: string;
   operatorName?: null | string;
   operatorUserId?: null | string;
   remarks?: null | string;
@@ -468,6 +470,21 @@ export interface SpecimenVerificationRecord {
   terminalCode: null | string;
   verificationType: string;
   verifiedAt: string;
+}
+
+export interface OperatorVerificationRequest {
+  loginName: string;
+  operatorName: string;
+  operatorUserId: string;
+  password: string;
+}
+
+export interface OperatorVerificationResponse {
+  expiresAt: string;
+  loginName: string;
+  operatorName: string;
+  operatorUserId: string;
+  operatorVerificationToken: string;
 }
 
 export interface ApplicationFormReprintRequest {
@@ -553,6 +570,7 @@ export interface TransportOrderCreateRequest {
   handoverDepartmentName: string;
   handoverUserId?: null | string;
   handoverUserName: string;
+  operatorVerificationToken?: string;
   receiverDepartmentId?: null | string;
   receiverDepartmentName: string;
   remarks?: null | string;
@@ -572,6 +590,7 @@ export interface TransportOrderHandoverRequest {
 }
 
 export interface TransportOrderOutboundRequest {
+  operatorVerificationToken?: string;
   outboundUserId?: null | string;
   outboundUserName: string;
   remarks?: null | string;
@@ -583,6 +602,7 @@ export type SpecimenOutboundIdentifierType = 'SPECIMEN_NO';
 export interface QuickSpecimenOutboundRequest {
   identifier: string;
   identifierType: SpecimenOutboundIdentifierType;
+  operatorVerificationToken?: string;
   outboundUserId?: null | string;
   outboundUserName: string;
   remarks?: null | string;

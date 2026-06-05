@@ -49,6 +49,7 @@ import {
   startSlideStaining,
   updateEmbeddingQualityReview,
   updateTechnicalTaskPriority,
+  updateTechnicalTaskRemarks,
   verifyTechnicalSpecimenRegistrationMaterial,
 } from './technical-workflow-service';
 
@@ -132,7 +133,10 @@ describe('technical-workflow-service mappers', () => {
       checkItems: [],
       clinicalDiagnosis: null,
       clinicalHistory: null,
+      clinicalSubmissionRequirements: null,
       contextSummary: null,
+      externalPathologyDiagnosis: null,
+      infectiousAndPastHistorySummary: null,
       mediaAssets: [],
       relatedExaminations: null,
       task: {
@@ -665,6 +669,10 @@ describe('technical-workflow-service requests', () => {
     await updateTechnicalTaskPriority('TASK-4', {
       priority: 'PRIORITY',
     });
+    await updateTechnicalTaskRemarks('TASK-5', {
+      productionRemarks: '未脱钙',
+      remarks: '复核备注',
+    });
 
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       1,
@@ -695,6 +703,16 @@ describe('technical-workflow-service requests', () => {
       '/v1/technical-tasks/TASK-4/priority',
       {
         priority: 'PRIORITY',
+      },
+    );
+    expect(requestClientMock.request).toHaveBeenCalledWith(
+      '/v1/technical-tasks/TASK-5/remarks',
+      {
+        data: {
+          productionRemarks: '未脱钙',
+          remarks: '复核备注',
+        },
+        method: 'PATCH',
       },
     );
   });

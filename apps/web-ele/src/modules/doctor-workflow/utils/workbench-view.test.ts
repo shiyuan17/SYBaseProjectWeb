@@ -1,13 +1,10 @@
-import type {
-  DiagnosticWorkbenchView,
-  PendingDiagnosticTaskItem,
-} from '../types/doctor-workflow';
+import type { PendingDiagnosticTaskItem } from '../types/doctor-workflow';
 
 import { describe, expect, it } from 'vitest';
 
 import {
   buildDiagnosisWorkbenchQueueStats,
-  buildDiagnosticProgressNodes,
+  filterDiagnosisWorkbenchQueueItems,
   getDiagnosisTaskStatusTagType,
   resolveWorkbenchSelection,
 } from './workbench-view';
@@ -28,40 +25,6 @@ function createTask(
     reviewerUserId: 'USER-REVIEW',
     taskStatus: 'ASSIGNED',
     taskType: 'PRIMARY',
-    ...overrides,
-  };
-}
-
-function createWorkbench(
-  overrides: Partial<DiagnosticWorkbenchView> = {},
-): DiagnosticWorkbenchView {
-  return {
-    applicationNo: 'APP-001',
-    blocks: [],
-    caseId: 'CASE-001',
-    caseStatus: 'IN_DIAGNOSIS',
-    clinicalDiagnosis: '临床诊断',
-    consultations: [],
-    currentReport: {
-      finalDiagnosis: '最终诊断',
-      grossExam: '大体所见',
-      microscopicExam: '镜检所见',
-      reportId: 'REPORT-001',
-      reportNo: 'RPT-001',
-      reportStatus: 'DRAFT',
-      versionNo: 1,
-    },
-    diagnosticTasks: [createTask()],
-    hasPendingRevision: false,
-    medicalOrders: [],
-    pathologyNo: 'PATH-001',
-    patientName: '张三',
-    recentEvents: [],
-    revisions: [],
-    slides: [],
-    specimens: [],
-    submittingDepartmentName: '消化内科',
-    submittingDoctorName: '送检医生',
     ...overrides,
   };
 }
@@ -95,41 +58,55 @@ describe('doctor workflow workbench view helpers', () => {
 
     expect(stats).toEqual({
       acceptedCount: 1,
+      assignedCount: 1,
+      consultationCount: 0,
       completedCount: 1,
       currentPageCount: 4,
+      frozenCount: 0,
       inProgressCount: 1,
+      primaryCount: 4,
+      reviewCount: 0,
+      unsignedReportCount: 3,
     });
+  });
+
+  it('filters queue items by quick filter and assigned date range', () => {
+    const items = [
+      createTask({
+        assignedAt: '2026-04-04 09:00:00',
+        id: 'TASK-001',
+        taskStatus: 'ASSIGNED',
+      }),
+      createTask({
+        assignedAt: '2026-06-04 09:00:00',
+        id: 'TASK-002',
+        taskStatus: 'IN_PROGRESS',
+      }),
+      createTask({
+        assignedAt: '2026-06-05 09:00:00',
+        id: 'TASK-003',
+        reportStatus: 'SIGNED',
+        taskStatus: 'COMPLETED',
+      }),
+    ];
+
+    expect(
+      filterDiagnosisWorkbenchQueueItems(items, 'IN_PROGRESS', [
+        '2026-04-04',
+        '2026-06-04',
+      ]).map((item) => item.id),
+    ).toEqual(['TASK-002']);
+    expect(
+      filterDiagnosisWorkbenchQueueItems(items, 'UNSIGNED_REPORT', [
+        '2026-04-04',
+        '2026-06-04',
+      ]).map((item) => item.id),
+    ).toEqual(['TASK-001', 'TASK-002']);
   });
 
   it('maps diagnostic task status to stable tag types', () => {
     expect(getDiagnosisTaskStatusTagType('ASSIGNED')).toBe('primary');
     expect(getDiagnosisTaskStatusTagType('IN_PROGRESS')).toBe('warning');
     expect(getDiagnosisTaskStatusTagType('COMPLETED')).toBe('success');
-  });
-
-  it('builds progress nodes from selected task and report status', () => {
-    const workbench = createWorkbench({
-      hasPendingRevision: true,
-      medicalOrders: [
-        {
-          orderId: 'ORDER-001',
-          status: 'PENDING',
-        },
-      ],
-    });
-
-    const nodes = buildDiagnosticProgressNodes(
-      workbench,
-      createTask({ taskStatus: 'IN_PROGRESS' }),
-    );
-
-    expect(nodes.map((item) => item.label)).toEqual([
-      '病例进入工作台',
-      '诊断任务流转',
-      '报告编写与流转',
-      '协同与闭环',
-    ]);
-    expect(nodes[1]?.state).toBe('active');
-    expect(nodes[3]?.state).toBe('warning');
   });
 });

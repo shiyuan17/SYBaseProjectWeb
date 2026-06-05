@@ -35,9 +35,6 @@ const topicIdsModel = computed({
         <span class="font-medium text-foreground">
           {{ topic.topicName }}
         </span>
-        <span class="text-xs text-muted-foreground">
-          {{ topic.topicCode }}
-        </span>
       </div>
     </ElCheckbox>
   </ElCheckboxGroup>

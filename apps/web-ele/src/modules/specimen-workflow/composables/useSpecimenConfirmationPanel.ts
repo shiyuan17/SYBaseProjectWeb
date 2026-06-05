@@ -34,15 +34,18 @@ import {
   resolveConfirmActionDisabledReason,
   resolveUnavailableMessage,
 } from '../utils/specimen-confirmation';
+import { useOperatorVerificationPrompt } from './useOperatorVerificationPrompt';
 
 export function useSpecimenConfirmationPanel() {
   const userStore = useUserStore();
+  const { verifyOperator } = useOperatorVerificationPrompt();
 
   const loading = ref(false);
   const actionLoading = ref(false);
   const retrySubmitting = ref(false);
   const pageError = ref('');
   const selectedRows = ref<ConfirmationListRow[]>([]);
+  const pendingConfirmationIds = ref<string[]>([]);
   const allRows = ref<ConfirmationListRow[]>([]);
   const workingRows = ref<ConfirmationListRow[]>([]);
   const retryDialogVisible = ref(false);
@@ -65,6 +68,9 @@ export function useSpecimenConfirmationPanel() {
   });
 
   const operatorForm = reactive({
+    loginName:
+      (userStore.userInfo as undefined | { loginName?: string })?.loginName ??
+      '',
     operatorName: userStore.userInfo?.realName ?? '',
     operatorUserId: userStore.userInfo?.userId ?? '',
     remarks: '',
@@ -99,6 +105,9 @@ export function useSpecimenConfirmationPanel() {
   });
 
   function syncOperatorFromCurrentUser() {
+    operatorForm.loginName =
+      (userStore.userInfo as undefined | { loginName?: string })?.loginName ??
+      '';
     operatorForm.operatorName = userStore.userInfo?.realName ?? '';
     operatorForm.operatorUserId = userStore.userInfo?.userId ?? '';
   }
@@ -247,29 +256,66 @@ export function useSpecimenConfirmationPanel() {
     applyRows(enhancedRows);
   }
 
-  function requireOperatorInfo() {
+  function resolveSelectedOperator() {
     if (
       !operatorForm.operatorName.trim() ||
-      !operatorForm.operatorUserId.trim()
+      !operatorForm.operatorUserId.trim() ||
+      !operatorForm.loginName.trim()
     ) {
       ElMessage.warning('请选择操作人');
-      return false;
+      return null;
     }
-    return true;
+    return {
+      id: operatorForm.operatorUserId.trim(),
+      loginName: operatorForm.loginName.trim(),
+      name: operatorForm.operatorName.trim(),
+    };
   }
 
-  function buildConfirmPayload() {
+  function buildConfirmPayload(operatorVerificationToken: string) {
     return {
       operatorName: operatorForm.operatorName.trim(),
       operatorUserId: operatorForm.operatorUserId.trim(),
+      operatorVerificationToken,
       remarks: operatorForm.remarks.trim() || null,
       terminalCode: operatorForm.terminalCode.trim() || null,
     };
   }
 
-  function handleOperatorChange(user: null | { id: string; name: string }) {
+  function handleOperatorChange(
+    user: null | { id: string; loginName?: string; name: string },
+  ) {
     operatorForm.operatorUserId = user?.id ?? '';
     operatorForm.operatorName = user?.name ?? '';
+    operatorForm.loginName = user?.loginName ?? '';
+  }
+
+  function isConfirmationUnsaved(row: ConfirmationListRow) {
+    return pendingConfirmationIds.value.includes(row.specimenId);
+  }
+
+  function markConfirmationUnsaved(row: ConfirmationListRow) {
+    if (pendingConfirmationIds.value.includes(row.specimenId)) {
+      return;
+    }
+    pendingConfirmationIds.value = [
+      row.specimenId,
+      ...pendingConfirmationIds.value,
+    ];
+  }
+
+  function clearConfirmationUnsaved(rows: ConfirmationListRow[]) {
+    const confirmedIds = new Set(rows.map((row) => row.specimenId));
+    pendingConfirmationIds.value = pendingConfirmationIds.value.filter(
+      (id) => !confirmedIds.has(id),
+    );
+  }
+
+  function resolveConfirmationStatus(row: ConfirmationListRow) {
+    if (row.specimenConfirmedAt) {
+      return '标本确认';
+    }
+    return isConfirmationUnsaved(row) ? '确认未保存' : '未确认';
   }
 
   async function confirmRows(rows: ConfirmationListRow[]) {
@@ -277,7 +323,8 @@ export function useSpecimenConfirmationPanel() {
       ElMessage.warning('请先选择需要确认的标本');
       return;
     }
-    if (!requireOperatorInfo()) {
+    const selectedOperator = resolveSelectedOperator();
+    if (!selectedOperator) {
       return;
     }
 
@@ -293,12 +340,17 @@ export function useSpecimenConfirmationPanel() {
     actionLoading.value = true;
     pageError.value = '';
     try {
-      const payload = buildConfirmPayload();
+      const operatorVerificationToken = await verifyOperator(selectedOperator);
+      if (!operatorVerificationToken) {
+        return;
+      }
+      const payload = buildConfirmPayload(operatorVerificationToken);
       await Promise.all(
         pendingRows.map((row) =>
           confirmSpecimen(row.barcode || row.specimenId, payload),
         ),
       );
+      clearConfirmationUnsaved(pendingRows);
       ElMessage.success(`已完成 ${pendingRows.length} 条标本确认`);
       await (expandedApplicationNo.value
         ? loadExpandedApplicationRows(expandedApplicationNo.value)
@@ -314,9 +366,6 @@ export function useSpecimenConfirmationPanel() {
     const keyword = filters.keyword.trim();
     if (!keyword) {
       handleSearch();
-      return;
-    }
-    if (!requireOperatorInfo()) {
       return;
     }
 
@@ -341,7 +390,8 @@ export function useSpecimenConfirmationPanel() {
         matchedRow;
 
       if (currentMatchedRow && canConfirm(currentMatchedRow)) {
-        await confirmRows([currentMatchedRow]);
+        markConfirmationUnsaved(currentMatchedRow);
+        ElMessage.success('已加入确认未保存');
         return;
       }
 
@@ -357,7 +407,17 @@ export function useSpecimenConfirmationPanel() {
       return;
     }
 
-    handleSearch();
+    await loadSpecimens(true);
+    const refreshedMatchedRow = allRows.value.find((row) =>
+      [row.applicationNo, row.specimenNo, row.barcode].some(
+        (value) => value?.trim().toLowerCase() === normalizedKeyword,
+      ),
+    );
+    if (refreshedMatchedRow && canConfirm(refreshedMatchedRow)) {
+      markConfirmationUnsaved(refreshedMatchedRow);
+      filters.keyword = '';
+      ElMessage.success('已加入确认未保存');
+    }
   }
 
   function handleSearch() {
@@ -371,6 +431,7 @@ export function useSpecimenConfirmationPanel() {
     filters.size = DEFAULT_PAGE_SIZE;
     operatorForm.remarks = '';
     operatorForm.terminalCode = '';
+    pendingConfirmationIds.value = [];
     syncOperatorFromCurrentUser();
     void loadSpecimens();
   }
@@ -380,7 +441,11 @@ export function useSpecimenConfirmationPanel() {
   }
 
   function handleConfirmSelected() {
-    void confirmRows(selectedRows.value);
+    const targetRows =
+      selectedRows.value.length > 0
+        ? selectedRows.value
+        : workingRows.value.filter((row) => isConfirmationUnsaved(row));
+    void confirmRows(targetRows);
   }
 
   function handleConfirmRow(row: ConfirmationListRow) {
@@ -540,6 +605,7 @@ export function useSpecimenConfirmationPanel() {
     operatorForm,
     pageError,
     pagedItems,
+    resolveConfirmationStatus,
     retryDialogVisible,
     retryForm,
     retrySubmitting,

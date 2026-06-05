@@ -338,7 +338,7 @@ function verificationStatusClass(status: null | string | undefined) {
   if (status === 'VERIFYING') {
     return 'bg-amber-50 text-amber-700';
   }
-  return 'bg-slate-100 text-slate-500';
+  return 'bg-accent text-muted-foreground';
 }
 
 function selectedSpecimenId() {
@@ -538,14 +538,16 @@ function selectRegistrationApplicationType(value: string) {
 
 <template>
   <section
-    class="min-h-[760px] rounded-2xl border border-slate-200 bg-white shadow-sm"
+    class="min-h-[760px] rounded-2xl border border-border bg-card shadow-sm"
   >
     <template v-if="workspace">
-      <div class="border-b border-slate-200 px-5 py-4">
+      <div class="border-b border-border px-5 py-4">
         <div class="flex items-center justify-between gap-3">
           <div>
-            <div class="text-base font-semibold text-slate-900">登记工作区</div>
-            <p class="mt-1 text-xs text-slate-500">
+            <div class="text-base font-semibold text-foreground">
+              登记工作区
+            </div>
+            <p class="mt-1 text-xs text-muted-foreground">
               病理号
               {{
                 formatPendingPathologyNo(workspace.basicInfo.pathologyNo)
@@ -568,12 +570,15 @@ function selectRegistrationApplicationType(value: string) {
         </div>
       </div>
 
-      <div v-if="loading" class="px-5 py-10 text-center text-sm text-slate-500">
+      <div
+        v-if="loading"
+        class="px-5 py-10 text-center text-sm text-muted-foreground"
+      >
         正在加载工作台...
       </div>
       <div v-else class="space-y-3 px-5 py-5">
         <div
-          class="grid gap-3 rounded-2xl bg-slate-50 p-4 text-sm md:grid-cols-2 xl:grid-cols-3"
+          class="grid gap-3 rounded-2xl bg-accent p-4 text-sm md:grid-cols-2 xl:grid-cols-3"
         >
           <div>患者姓名：{{ fieldValue(workspace.basicInfo.patientName) }}</div>
           <div>性别：{{ fieldValue(workspace.basicInfo.patientGender) }}</div>
@@ -630,9 +635,9 @@ function selectRegistrationApplicationType(value: string) {
           />
         </div>
 
-        <article class="rounded-2xl border border-slate-200 p-4">
+        <article class="rounded-2xl border border-border p-4">
           <div class="mb-3">
-            <div class="mb-2 text-xs font-semibold text-slate-500">
+            <div class="mb-2 text-xs font-semibold text-muted-foreground">
               送检类型
             </div>
             <div class="flex flex-wrap gap-2">
@@ -643,8 +648,8 @@ function selectRegistrationApplicationType(value: string) {
                 class="rounded-full border px-3 py-1 text-xs font-medium leading-5 transition"
                 :class="[
                   item.value === registrationApplicationType
-                    ? 'border-sky-500 bg-sky-500 text-white shadow-sm'
-                    : 'border-slate-200 bg-white text-slate-500 hover:border-sky-200 hover:text-sky-600',
+                    ? 'border-sky-500 bg-primary/100 text-white shadow-sm'
+                    : 'border-border bg-card text-muted-foreground hover:border-sky-200 hover:text-sky-600',
                 ]"
                 :data-testid="`registration-application-type-${item.value}`"
                 type="button"
@@ -656,7 +661,7 @@ function selectRegistrationApplicationType(value: string) {
           </div>
           <div class="flex items-center justify-between gap-3">
             <div class="min-w-0">
-              <h3 class="text-sm font-semibold text-slate-900">送检标本</h3>
+              <h3 class="text-sm font-semibold text-foreground">送检标本</h3>
             </div>
             <div
               v-if="activeSpecimenTab === 'consultation'"
@@ -720,7 +725,7 @@ function selectRegistrationApplicationType(value: string) {
           </div>
           <div
             v-if="activeSpecimenTab === 'consultation' && !isConsultationCase"
-            class="mt-4 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-500"
+            class="mt-4 rounded-xl border border-dashed border-border bg-accent px-4 py-6 text-sm text-muted-foreground"
           >
             当前送检类型不是会诊类，请切换为会诊类送检类型后查看该列表。
           </div>
@@ -733,12 +738,12 @@ function selectRegistrationApplicationType(value: string) {
               data-testid="consultation-material-table"
             >
               <thead>
-                <tr class="text-left text-slate-500">
-                  <th class="border-b border-slate-200 px-3 py-2">序号</th>
-                  <th class="border-b border-slate-200 px-3 py-2">材料类型</th>
-                  <th class="border-b border-slate-200 px-3 py-2">数量</th>
-                  <th class="border-b border-slate-200 px-3 py-2">核对状态</th>
-                  <th class="border-b border-slate-200 px-3 py-2">操作</th>
+                <tr class="text-left text-muted-foreground">
+                  <th class="border-b border-border px-3 py-2">序号</th>
+                  <th class="border-b border-border px-3 py-2">材料类型</th>
+                  <th class="border-b border-border px-3 py-2">数量</th>
+                  <th class="border-b border-border px-3 py-2">核对状态</th>
+                  <th class="border-b border-border px-3 py-2">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -747,16 +752,16 @@ function selectRegistrationApplicationType(value: string) {
                   :key="material.specimenId || `consultation-${index}`"
                   :data-testid="`consultation-material-row-${index}`"
                 >
-                  <td class="border-b border-slate-100 px-3 py-3">
+                  <td class="border-b border-border px-3 py-3">
                     {{ index + 1 }}
                   </td>
-                  <td class="border-b border-slate-100 px-3 py-3">
+                  <td class="border-b border-border px-3 py-3">
                     {{ fieldValue(material.specimenName) }}
                   </td>
-                  <td class="border-b border-slate-100 px-3 py-3">
+                  <td class="border-b border-border px-3 py-3">
                     {{ normalizeTissueCount(material.tissueCount) }}
                   </td>
-                  <td class="border-b border-slate-100 px-3 py-3">
+                  <td class="border-b border-border px-3 py-3">
                     <span
                       class="rounded-full px-2 py-0.5 text-xs font-medium"
                       :class="
@@ -768,7 +773,7 @@ function selectRegistrationApplicationType(value: string) {
                       }}
                     </span>
                   </td>
-                  <td class="border-b border-slate-100 px-3 py-3">
+                  <td class="border-b border-border px-3 py-3">
                     <div class="flex flex-wrap gap-2">
                       <button
                         class="text-sm text-sky-600"
@@ -778,7 +783,7 @@ function selectRegistrationApplicationType(value: string) {
                         编辑
                       </button>
                       <button
-                        class="text-sm text-emerald-600 disabled:cursor-not-allowed disabled:text-slate-300"
+                        class="text-sm text-emerald-600 disabled:cursor-not-allowed disabled:text-muted-foreground/50"
                         :disabled="
                           !material.specimenId ||
                           material.verificationStatus === 'VERIFIED'
@@ -795,7 +800,7 @@ function selectRegistrationApplicationType(value: string) {
                 </tr>
                 <tr v-if="editableMaterials.length === 0">
                   <td
-                    class="px-3 py-8 text-center text-sm text-slate-400"
+                    class="px-3 py-8 text-center text-sm text-muted-foreground/70"
                     colspan="5"
                   >
                     暂无会诊项
@@ -810,18 +815,18 @@ function selectRegistrationApplicationType(value: string) {
               data-testid="specimen-material-table"
             >
               <thead>
-                <tr class="text-left text-slate-500">
-                  <th class="border-b border-slate-200 px-3 py-2">选择</th>
-                  <th class="border-b border-slate-200 px-3 py-2">序号</th>
-                  <th class="border-b border-slate-200 px-3 py-2">标本名称</th>
-                  <th class="border-b border-slate-200 px-3 py-2">类型</th>
-                  <th class="border-b border-slate-200 px-3 py-2">组织数量</th>
-                  <th class="border-b border-slate-200 px-3 py-2">来源部位</th>
-                  <th class="border-b border-slate-200 px-3 py-2">标本大小</th>
-                  <th class="border-b border-slate-200 px-3 py-2">是否冰冻</th>
-                  <th class="border-b border-slate-200 px-3 py-2">核对状态</th>
-                  <th class="border-b border-slate-200 px-3 py-2">评价</th>
-                  <th class="border-b border-slate-200 px-3 py-2">操作</th>
+                <tr class="text-left text-muted-foreground">
+                  <th class="border-b border-border px-3 py-2">选择</th>
+                  <th class="border-b border-border px-3 py-2">序号</th>
+                  <th class="border-b border-border px-3 py-2">标本名称</th>
+                  <th class="border-b border-border px-3 py-2">类型</th>
+                  <th class="border-b border-border px-3 py-2">组织数量</th>
+                  <th class="border-b border-border px-3 py-2">来源部位</th>
+                  <th class="border-b border-border px-3 py-2">标本大小</th>
+                  <th class="border-b border-border px-3 py-2">是否冰冻</th>
+                  <th class="border-b border-border px-3 py-2">核对状态</th>
+                  <th class="border-b border-border px-3 py-2">评价</th>
+                  <th class="border-b border-border px-3 py-2">操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -830,7 +835,7 @@ function selectRegistrationApplicationType(value: string) {
                   :key="material.specimenId || `new-${index}`"
                   :data-testid="`material-row-${index}`"
                 >
-                  <td class="border-b border-slate-100 px-3 py-3">
+                  <td class="border-b border-border px-3 py-3">
                     <input
                       v-model="selectedMaterialIndex"
                       :aria-label="`选择第 ${index + 1} 个标本`"
@@ -839,20 +844,20 @@ function selectRegistrationApplicationType(value: string) {
                       type="radio"
                     />
                   </td>
-                  <td class="border-b border-slate-100 px-3 py-3">
+                  <td class="border-b border-border px-3 py-3">
                     {{ index + 1 }}
                   </td>
-                  <td class="border-b border-slate-100 px-3 py-3">
+                  <td class="border-b border-border px-3 py-3">
                     <input
                       v-model="material.specimenName"
-                      class="min-w-[150px] rounded-lg border border-slate-200 px-3 py-2"
+                      class="min-w-[150px] rounded-lg border border-border px-3 py-2"
                       placeholder="标本名称"
                     />
                   </td>
-                  <td class="border-b border-slate-100 px-3 py-3">
+                  <td class="border-b border-border px-3 py-3">
                     <select
                       v-model="material.specimenType"
-                      class="min-w-[110px] rounded-lg border border-slate-200 px-3 py-2"
+                      class="min-w-[110px] rounded-lg border border-border px-3 py-2"
                     >
                       <option
                         v-for="option in SPECIMEN_TYPE_OPTIONS"
@@ -863,26 +868,26 @@ function selectRegistrationApplicationType(value: string) {
                       </option>
                     </select>
                   </td>
-                  <td class="border-b border-slate-100 px-3 py-3">
+                  <td class="border-b border-border px-3 py-3">
                     <input
                       v-model.number="material.tissueCount"
-                      class="w-24 rounded-lg border border-slate-200 px-3 py-2"
+                      class="w-24 rounded-lg border border-border px-3 py-2"
                       min="1"
                       placeholder="1"
                       type="number"
                     />
                   </td>
-                  <td class="border-b border-slate-100 px-3 py-3">
+                  <td class="border-b border-border px-3 py-3">
                     <input
                       v-model="material.sourcePart"
-                      class="min-w-[140px] rounded-lg border border-slate-200 px-3 py-2"
+                      class="min-w-[140px] rounded-lg border border-border px-3 py-2"
                       placeholder="来源部位"
                     />
                   </td>
-                  <td class="border-b border-slate-100 px-3 py-3">
+                  <td class="border-b border-border px-3 py-3">
                     <select
                       v-model="material.specimenSize"
-                      class="min-w-[110px] rounded-lg border border-slate-200 px-3 py-2"
+                      class="min-w-[110px] rounded-lg border border-border px-3 py-2"
                     >
                       <option
                         v-for="option in SPECIMEN_SIZE_OPTIONS"
@@ -893,15 +898,15 @@ function selectRegistrationApplicationType(value: string) {
                       </option>
                     </select>
                   </td>
-                  <td class="border-b border-slate-100 px-3 py-3">
+                  <td class="border-b border-border px-3 py-3">
                     <label
-                      class="inline-flex items-center gap-2 text-slate-600"
+                      class="inline-flex items-center gap-2 text-muted-foreground"
                     >
                       <input v-model="material.frozen" type="checkbox" />
                       <span>{{ material.frozen ? '是' : '否' }}</span>
                     </label>
                   </td>
-                  <td class="border-b border-slate-100 px-3 py-3">
+                  <td class="border-b border-border px-3 py-3">
                     <div class="flex min-w-[130px] flex-col items-start gap-1">
                       <span
                         class="rounded-full px-2 py-0.5 text-xs font-medium"
@@ -916,14 +921,14 @@ function selectRegistrationApplicationType(value: string) {
                     </div>
                   </td>
                   <td
-                    class="border-b border-slate-100 px-3 py-3 text-slate-600"
+                    class="border-b border-border px-3 py-3 text-muted-foreground"
                   >
                     <span v-if="material.evaluationItems?.length">
                       {{ material.evaluationItems.join('、') }}
                     </span>
-                    <span v-else class="text-slate-400">未评价</span>
+                    <span v-else class="text-muted-foreground/70">未评价</span>
                   </td>
-                  <td class="border-b border-slate-100 px-3 py-3">
+                  <td class="border-b border-border px-3 py-3">
                     <button
                       class="text-sm text-rose-500"
                       type="button"
@@ -943,22 +948,22 @@ function selectRegistrationApplicationType(value: string) {
           class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4"
           data-testid="consultation-item-dialog"
         >
-          <div class="w-full max-w-[680px] rounded-xl bg-white p-5 shadow-xl">
+          <div class="w-full max-w-[680px] rounded-xl bg-card p-5 shadow-xl">
             <div class="flex items-start justify-between gap-4">
               <div>
-                <h3 class="text-base font-semibold text-slate-900">
+                <h3 class="text-base font-semibold text-foreground">
                   {{
                     consultationEditingIndex === null
                       ? '新增会诊项'
                       : '编辑会诊项'
                   }}
                 </h3>
-                <p class="mt-1 text-xs text-slate-500">
+                <p class="mt-1 text-xs text-muted-foreground">
                   会诊项使用紧凑列表展示，详细信息集中在弹窗中维护。
                 </p>
               </div>
               <button
-                class="text-sm text-slate-500"
+                class="text-sm text-muted-foreground"
                 type="button"
                 @click="consultationDialogVisible = false"
               >
@@ -967,11 +972,11 @@ function selectRegistrationApplicationType(value: string) {
             </div>
 
             <div class="mt-4 grid gap-3 md:grid-cols-2">
-              <label class="text-sm text-slate-600">
+              <label class="text-sm text-muted-foreground">
                 <span class="mb-1 block">材料类型</span>
                 <select
                   v-model="consultationForm.materialType"
-                  class="w-full rounded-lg border border-slate-200 px-3 py-2"
+                  class="w-full rounded-lg border border-border px-3 py-2"
                   data-testid="consultation-material-type"
                 >
                   <option value="">请选择材料类型</option>
@@ -984,57 +989,57 @@ function selectRegistrationApplicationType(value: string) {
                   </option>
                 </select>
               </label>
-              <label class="text-sm text-slate-600">
+              <label class="text-sm text-muted-foreground">
                 <span class="mb-1 block">材料数量</span>
                 <input
                   v-model.number="consultationForm.quantity"
-                  class="w-full rounded-lg border border-slate-200 px-3 py-2"
+                  class="w-full rounded-lg border border-border px-3 py-2"
                   data-testid="consultation-quantity"
                   min="1"
                   type="number"
                 />
               </label>
-              <label class="text-sm text-slate-600">
+              <label class="text-sm text-muted-foreground">
                 <span class="mb-1 block">来源部位</span>
                 <input
                   v-model="consultationForm.sourcePart"
-                  class="w-full rounded-lg border border-slate-200 px-3 py-2"
+                  class="w-full rounded-lg border border-border px-3 py-2"
                   data-testid="consultation-source-part"
                   placeholder="请输入来源部位"
                 />
               </label>
-              <label class="text-sm text-slate-600">
+              <label class="text-sm text-muted-foreground">
                 <span class="mb-1 block">来源医院</span>
                 <input
                   v-model="consultationForm.sourceHospitalName"
-                  class="w-full rounded-lg border border-slate-200 px-3 py-2"
+                  class="w-full rounded-lg border border-border px-3 py-2"
                   data-testid="consultation-source-hospital"
                   placeholder="请输入来源医院"
                 />
               </label>
-              <label class="text-sm text-slate-600">
+              <label class="text-sm text-muted-foreground">
                 <span class="mb-1 block">外院会诊 ID</span>
                 <input
                   v-model="consultationForm.externalConsultationId"
-                  class="w-full rounded-lg border border-slate-200 px-3 py-2"
+                  class="w-full rounded-lg border border-border px-3 py-2"
                   data-testid="consultation-external-id"
                   placeholder="请输入外院会诊 ID"
                 />
               </label>
-              <label class="text-sm text-slate-600">
+              <label class="text-sm text-muted-foreground">
                 <span class="mb-1 block">会诊要求</span>
                 <input
                   v-model="consultationForm.consultationRequirement"
-                  class="w-full rounded-lg border border-slate-200 px-3 py-2"
+                  class="w-full rounded-lg border border-border px-3 py-2"
                   data-testid="consultation-requirement"
                   placeholder="请输入会诊要求"
                 />
               </label>
-              <label class="text-sm text-slate-600 md:col-span-2">
+              <label class="text-sm text-muted-foreground md:col-span-2">
                 <span class="mb-1 block">临床诊断</span>
                 <textarea
                   v-model="consultationForm.clinicalDiagnosis"
-                  class="min-h-[96px] w-full rounded-lg border border-slate-200 px-3 py-2"
+                  class="min-h-[96px] w-full rounded-lg border border-border px-3 py-2"
                   data-testid="consultation-clinical-diagnosis"
                   placeholder="请输入临床诊断"
                 ></textarea>
@@ -1065,16 +1070,18 @@ function selectRegistrationApplicationType(value: string) {
           class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/35 px-4"
           data-testid="material-evaluation-dialog"
         >
-          <div class="w-full max-w-[560px] rounded-xl bg-white p-5 shadow-xl">
+          <div class="w-full max-w-[560px] rounded-xl bg-card p-5 shadow-xl">
             <div class="flex items-start justify-between gap-4">
               <div>
-                <h3 class="text-base font-semibold text-slate-900">标本评价</h3>
-                <p class="mt-1 text-xs text-slate-500">
+                <h3 class="text-base font-semibold text-foreground">
+                  标本评价
+                </h3>
+                <p class="mt-1 text-xs text-muted-foreground">
                   {{ selectedMaterial.specimenName || '未命名标本' }}
                 </p>
               </div>
               <button
-                class="text-sm text-slate-500"
+                class="text-sm text-muted-foreground"
                 type="button"
                 @click="evaluationDialogVisible = false"
               >
@@ -1085,7 +1092,7 @@ function selectRegistrationApplicationType(value: string) {
               <label
                 v-for="item in DEFAULT_EVALUATION_ITEMS"
                 :key="item"
-                class="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700"
+                class="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm text-foreground"
               >
                 <input
                   :checked="isEvaluationItemChecked(item)"
@@ -1104,7 +1111,7 @@ function selectRegistrationApplicationType(value: string) {
             <div class="mt-4 flex gap-2">
               <input
                 v-model="customEvaluationText"
-                class="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                class="min-w-0 flex-1 rounded-lg border border-border px-3 py-2 text-sm"
                 data-testid="custom-evaluation-input"
                 placeholder="添加自定义评价项"
                 @keydown.enter.prevent="addCustomEvaluationItem"
@@ -1118,7 +1125,7 @@ function selectRegistrationApplicationType(value: string) {
               <button
                 v-for="item in selectedMaterial.evaluationItems"
                 :key="item"
-                class="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700"
+                class="rounded-full bg-accent px-3 py-1 text-xs text-foreground"
                 type="button"
                 @click="removeEvaluationItem(item)"
               >
@@ -1133,19 +1140,19 @@ function selectRegistrationApplicationType(value: string) {
           </div>
         </div>
 
-        <article class="rounded-2xl border border-slate-200 p-4">
-          <h3 class="text-sm font-semibold text-slate-900">检查列表</h3>
+        <article class="rounded-2xl border border-border p-4">
+          <h3 class="text-sm font-semibold text-foreground">检查列表</h3>
           <div
             v-if="workspace.checkItems.length > 0"
             class="mt-4 overflow-x-auto"
           >
             <table class="min-w-full border-separate border-spacing-0 text-sm">
               <thead>
-                <tr class="text-left text-slate-500">
-                  <th class="border-b border-slate-200 px-3 py-2">序号</th>
-                  <th class="border-b border-slate-200 px-3 py-2">病理号</th>
-                  <th class="border-b border-slate-200 px-3 py-2">类型</th>
-                  <th class="border-b border-slate-200 px-3 py-2">检查项目</th>
+                <tr class="text-left text-muted-foreground">
+                  <th class="border-b border-border px-3 py-2">序号</th>
+                  <th class="border-b border-border px-3 py-2">病理号</th>
+                  <th class="border-b border-border px-3 py-2">类型</th>
+                  <th class="border-b border-border px-3 py-2">检查项目</th>
                 </tr>
               </thead>
               <tbody>
@@ -1153,20 +1160,20 @@ function selectRegistrationApplicationType(value: string) {
                   v-for="(item, index) in workspace.checkItems"
                   :key="`${item.sequenceNo}-${item.name}`"
                 >
-                  <td class="border-b border-slate-100 px-3 py-3">
+                  <td class="border-b border-border px-3 py-3">
                     {{ item.sequenceNo || index + 1 }}
                   </td>
-                  <td class="border-b border-slate-100 px-3 py-3">
+                  <td class="border-b border-border px-3 py-3">
                     {{
                       formatPendingPathologyNo(workspace.basicInfo.pathologyNo)
                     }}
                   </td>
-                  <td class="border-b border-slate-100 px-3 py-3">
+                  <td class="border-b border-border px-3 py-3">
                     {{
                       formatApplicationType(workspace.basicInfo.applicationType)
                     }}
                   </td>
-                  <td class="border-b border-slate-100 px-3 py-3">
+                  <td class="border-b border-border px-3 py-3">
                     {{ fieldValue(item.name) }}
                   </td>
                 </tr>
@@ -1183,3 +1190,17 @@ function selectRegistrationApplicationType(value: string) {
     </div>
   </section>
 </template>
+
+<style scoped>
+:where(input:not([type='checkbox']):not([type='radio']), select, textarea) {
+  color: hsl(var(--foreground));
+  background: hsl(var(--input-background));
+}
+
+:where(
+  input:not([type='checkbox']):not([type='radio']),
+  textarea
+)::placeholder {
+  color: hsl(var(--muted-foreground));
+}
+</style>

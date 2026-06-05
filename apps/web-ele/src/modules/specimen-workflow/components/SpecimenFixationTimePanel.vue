@@ -58,7 +58,7 @@ const {
     />
 
     <div class="flex flex-wrap items-center gap-3 text-sm">
-      <div class="font-semibold text-[color:#d6453d]">设置固定时间</div>
+      <div class="font-semibold text-danger">设置固定时间</div>
       <div>
         全部
         <span class="text-xl font-semibold text-primary">{{

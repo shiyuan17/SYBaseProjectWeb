@@ -1,3 +1,5 @@
+export { verifyOperatorCredential } from './internal/operator-verification';
+
 export {
   createApplication,
   deleteApplication,

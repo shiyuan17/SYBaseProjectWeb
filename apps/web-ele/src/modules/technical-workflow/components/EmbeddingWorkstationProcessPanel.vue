@@ -70,13 +70,13 @@ const samplingEvaluationModel = createFormModel('samplingEvaluation');
 
 <template>
   <section
-    class="flex h-full flex-col rounded-2xl border border-slate-200 bg-white"
+    class="flex h-full flex-col rounded-2xl border border-border bg-card"
   >
-    <div class="border-b border-slate-200 px-5 py-4">
+    <div class="border-b border-border px-5 py-4">
       <div class="flex items-start justify-between gap-3">
         <div>
-          <h3 class="text-base font-semibold text-slate-900">蜡块信息</h3>
-          <p class="mt-1 text-sm text-slate-500">
+          <h3 class="text-base font-semibold text-foreground">蜡块信息</h3>
+          <p class="mt-1 text-sm text-muted-foreground">
             核对蜡块来源、切片提示和包埋完成信息。
           </p>
         </div>
@@ -87,24 +87,24 @@ const samplingEvaluationModel = createFormModel('samplingEvaluation');
     </div>
 
     <div v-if="selectedTask" class="flex flex-1 flex-col gap-4 p-5">
-      <div class="grid gap-3 rounded-xl bg-slate-50 p-4 md:grid-cols-2">
+      <div class="grid gap-3 rounded-xl bg-accent p-4 md:grid-cols-2">
         <div>
-          <div class="text-xs text-slate-500">当前任务</div>
-          <div class="mt-1 text-sm font-medium text-slate-900">
+          <div class="text-xs text-muted-foreground">当前任务</div>
+          <div class="mt-1 text-sm font-medium text-foreground">
             {{ selectedTask.pathologyNo || '--' }}
           </div>
         </div>
         <div>
-          <div class="text-xs text-slate-500">蜡块号</div>
-          <div class="mt-1 text-sm font-medium text-slate-900">
+          <div class="text-xs text-muted-foreground">蜡块号</div>
+          <div class="mt-1 text-sm font-medium text-foreground">
             {{
               selectedBlock?.blockCode || selectedTask.samplingBlockCode || '--'
             }}
           </div>
         </div>
         <div>
-          <div class="text-xs text-slate-500">蜡块名称</div>
-          <div class="mt-1 text-sm text-slate-700">
+          <div class="text-xs text-muted-foreground">蜡块名称</div>
+          <div class="mt-1 text-sm text-foreground">
             {{
               selectedBlock?.blockDescription ||
               selectedTask.samplingBlockDescription ||
@@ -113,15 +113,15 @@ const samplingEvaluationModel = createFormModel('samplingEvaluation');
           </div>
         </div>
         <div>
-          <div class="text-xs text-slate-500">标本名称</div>
-          <div class="mt-1 text-sm text-slate-700">
+          <div class="text-xs text-muted-foreground">标本名称</div>
+          <div class="mt-1 text-sm text-foreground">
             {{ selectedBlock?.specimenName || '--' }}
           </div>
         </div>
         <div class="md:col-span-2">
-          <div class="text-xs text-slate-500">大体所见</div>
+          <div class="text-xs text-muted-foreground">大体所见</div>
           <div
-            class="mt-1 min-h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700"
+            class="mt-1 min-h-10 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground"
           >
             {{ selectedBlock?.grossDescription || '--' }}
           </div>
@@ -180,7 +180,7 @@ const samplingEvaluationModel = createFormModel('samplingEvaluation');
       </ElForm>
 
       <div
-        class="mt-auto flex flex-wrap justify-end gap-3 border-t border-slate-200 pt-4"
+        class="mt-auto flex flex-wrap justify-end gap-3 border-t border-border pt-4"
       >
         <ElButton :disabled="!active" @click="emit('cancel')">
           取消包埋

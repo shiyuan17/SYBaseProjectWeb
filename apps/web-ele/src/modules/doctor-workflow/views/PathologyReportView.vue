@@ -58,6 +58,11 @@ const queryReportId = ref('');
 const caseId = computed(() => firstQueryParam(route.query.caseId));
 const taskId = computed(() => firstQueryParam(route.query.taskId));
 const reportIdFromRoute = computed(() => firstQueryParam(route.query.reportId));
+const isCurrentReportRoute = computed(
+  () =>
+    route.name === 'PathologyReport' ||
+    route.path === '/doctor-workflow/report',
+);
 const accessCodeSet = computed(() => new Set(accessStore.accessCodes));
 const canCreateDraft = computed(() =>
   accessCodeSet.value.has(M4_PERMISSION_CODES.REPORT_CREATE),
@@ -358,8 +363,12 @@ async function rejectReport() {
 }
 
 watch(
-  [caseId, taskId, reportIdFromRoute],
-  ([currentCaseId, currentTaskId, currentReportId]) => {
+  [isCurrentReportRoute, caseId, taskId, reportIdFromRoute],
+  ([isActive, currentCaseId, currentTaskId, currentReportId]) => {
+    if (!isActive) {
+      return;
+    }
+
     queryCaseId.value = currentCaseId;
     queryTaskId.value = currentTaskId;
     queryReportId.value = currentReportId;

@@ -22,10 +22,10 @@ import {
   createTransportOrder,
   listSpecimenOutbounds,
   outboundTransportOrder,
-  quickOutboundSpecimen,
 } from '../api/specimen-workflow-service';
 import SpecimenOutboundTable from '../components/SpecimenOutboundTable.vue';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
+import { useOperatorVerificationPrompt } from '../composables/useOperatorVerificationPrompt';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import {
@@ -56,12 +56,14 @@ const PATHOLOGY_DEPARTMENT_NAME = '病理科';
 
 const route = useRoute();
 const userStore = useUserStore();
+const { verifyOperator } = useOperatorVerificationPrompt();
 
 const pageError = ref('');
 const loading = ref(false);
 const outboundLoading = ref(false);
 const items = ref<SpecimenOutboundDisplayItem[]>([]);
 const operatingRoomNameMap = ref<ReadonlyMap<string, string>>(new Map());
+const pendingOutboundIds = ref<string[]>([]);
 const selectedRows = ref<SpecimenOutboundDisplayItem[]>([]);
 const total = ref(0);
 
@@ -76,6 +78,7 @@ const outboundForm = reactive(
   createDefaultTransportOutboundFormState(
     userStore.userInfo?.realName ?? '',
     userStore.userInfo?.userId ?? '',
+    (userStore.userInfo as undefined | { loginName?: string })?.loginName ?? '',
   ),
 );
 
@@ -98,6 +101,17 @@ function normalizeOutboundItems(records: SpecimenOutboundListItem[]) {
   }));
 }
 
+function applyDraftOutboundStatus(record: SpecimenOutboundDisplayItem) {
+  if (!pendingOutboundIds.value.includes(record.specimenId)) {
+    return record;
+  }
+  return {
+    ...record,
+    displayOutboundStatus: '出库未保存',
+    outboundStatusTagType: 'warning' as const,
+  };
+}
+
 async function ensureOperatingRoomNameMapLoaded() {
   if (operatingRoomNameMap.value.size > 0) {
     return operatingRoomNameMap.value;
@@ -107,15 +121,13 @@ async function ensureOperatingRoomNameMapLoaded() {
   return operatingRoomNameMap.value;
 }
 
-async function maybeSubmitQuickOutbound(
-  records: SpecimenOutboundDisplayItem[],
-) {
+function maybeMarkQuickOutbound(records: SpecimenOutboundDisplayItem[]) {
   const specimenNo = filters.specimenNo.trim();
   if (!specimenNo) {
     return;
   }
   if (records.length === 0) {
-    await submitQuickOutboundBySpecimenNo(specimenNo);
+    ElMessage.warning(`未找到可出库标本：${specimenNo}`);
     return;
   }
   const exactMatches = resolveExactSpecimenOutboundMatches(records, specimenNo);
@@ -133,12 +145,15 @@ async function maybeSubmitQuickOutbound(
     );
     return;
   }
-  if (!matchedRecord.transportOrderId) {
-    await submitQuickOutboundBySpecimenNo(matchedRecord.specimenNo);
-    return;
+  if (!pendingOutboundIds.value.includes(matchedRecord.specimenId)) {
+    pendingOutboundIds.value = [
+      matchedRecord.specimenId,
+      ...pendingOutboundIds.value,
+    ];
   }
-
-  await submitQuickOutbound(matchedRecord);
+  items.value = items.value.map((item) => applyDraftOutboundStatus(item));
+  filters.specimenNo = '';
+  ElMessage.success('已加入出库未保存');
 }
 
 async function loadOutbounds(
@@ -150,12 +165,12 @@ async function loadOutbounds(
     await ensureOperatingRoomNameMapLoaded();
     const result = await listSpecimenOutbounds(buildListQuery());
     items.value = normalizeOutboundItems(result.items).map((record) =>
-      enhanceSpecimenOutboundItem(record),
+      applyDraftOutboundStatus(enhanceSpecimenOutboundItem(record)),
     );
     selectedRows.value = [];
     total.value = result.total;
     if (options.autoSubmitQuickOutbound) {
-      await maybeSubmitQuickOutbound(items.value);
+      maybeMarkQuickOutbound(items.value);
     }
     return result;
   } catch (error) {
@@ -182,86 +197,56 @@ function handleSelectionChange(rows: SpecimenOutboundDisplayItem[]) {
   selectedRows.value = rows;
 }
 
-function handleOutboundUserChange(user: null | { id: string; name: string }) {
+function handleOutboundUserChange(
+  user: null | { id: string; loginName?: string; name: string },
+) {
   outboundForm.outboundUserId = user?.id ?? '';
   outboundForm.outboundUserName = user?.name ?? '';
+  outboundForm.loginName = user?.loginName ?? '';
 }
 
-async function submitQuickOutbound(record: SpecimenOutboundDisplayItem) {
-  if (!ensureOutboundOperatorSelected()) {
-    return;
-  }
-  if (!record.transportOrderId) {
-    await submitQuickOutboundBySpecimenNo(record.specimenNo);
-    return;
-  }
-
-  outboundLoading.value = true;
-  pageError.value = '';
-  try {
-    await outboundTransportOrder(
-      record.transportOrderId,
-      buildTransportOrderOutboundRequest(outboundForm),
-    );
-    filters.specimenNo = '';
-    ElMessage.success('标本出库成功');
-    await loadOutbounds();
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
-  } finally {
-    outboundLoading.value = false;
-  }
-}
-
-function ensureOutboundOperatorSelected() {
+function resolveSelectedOutboundOperator() {
   if (
     !outboundForm.outboundUserId.trim() ||
-    !outboundForm.outboundUserName.trim()
+    !outboundForm.outboundUserName.trim() ||
+    !outboundForm.loginName.trim()
   ) {
     ElMessage.warning('请选择出库人');
-    return false;
+    return null;
   }
-  return true;
-}
-
-async function submitQuickOutboundBySpecimenNo(specimenNo: string) {
-  if (!ensureOutboundOperatorSelected()) {
-    return;
-  }
-
-  outboundLoading.value = true;
-  pageError.value = '';
-  try {
-    await quickOutboundSpecimen({
-      identifier: specimenNo,
-      identifierType: 'SPECIMEN_NO',
-      ...buildTransportOrderOutboundRequest(outboundForm),
-    });
-    filters.specimenNo = '';
-    ElMessage.success('标本出库成功');
-    await loadOutbounds();
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
-  } finally {
-    outboundLoading.value = false;
-  }
+  return {
+    id: outboundForm.outboundUserId.trim(),
+    loginName: outboundForm.loginName.trim(),
+    name: outboundForm.outboundUserName.trim(),
+  };
 }
 
 async function handleBatchTransport() {
-  if (!ensureOutboundOperatorSelected()) {
-    return;
-  }
+  const targetRows =
+    selectedRows.value.length > 0
+      ? selectedRows.value
+      : items.value.filter((row) =>
+          pendingOutboundIds.value.includes(row.specimenId),
+        );
 
-  const validationMessage = resolveTransportSelectionValidationMessage(
-    selectedRows.value,
-  );
+  const validationMessage =
+    resolveTransportSelectionValidationMessage(targetRows);
   if (validationMessage) {
     ElMessage.warning(validationMessage);
     return;
   }
 
+  const selectedOperator = resolveSelectedOutboundOperator();
+  if (!selectedOperator) {
+    return;
+  }
+  const operatorVerificationToken = await verifyOperator(selectedOperator);
+  if (!operatorVerificationToken) {
+    return;
+  }
+
   const { existingTransportOrderIds, rowsWithoutTransportOrder } =
-    splitTransportRowsByTransportOrder(selectedRows.value);
+    splitTransportRowsByTransportOrder(targetRows);
   const nextTransportOrderIds = [...existingTransportOrderIds];
 
   outboundLoading.value = true;
@@ -291,6 +276,7 @@ async function handleBatchTransport() {
         handoverUserName: outboundForm.outboundUserName.trim(),
         receiverDepartmentId: PATHOLOGY_DEPARTMENT_ID,
         receiverDepartmentName: PATHOLOGY_DEPARTMENT_NAME,
+        operatorVerificationToken,
         remarks: outboundForm.remarks.trim() || null,
         specimenBarcodes,
         terminalCode: outboundForm.terminalCode.trim() || null,
@@ -299,12 +285,16 @@ async function handleBatchTransport() {
     }
 
     for (const transportOrderId of nextTransportOrderIds) {
-      await outboundTransportOrder(
-        transportOrderId,
-        buildTransportOrderOutboundRequest(outboundForm),
-      );
+      await outboundTransportOrder(transportOrderId, {
+        ...buildTransportOrderOutboundRequest(outboundForm),
+        operatorVerificationToken,
+      });
     }
 
+    const submittedIds = new Set(targetRows.map((row) => row.specimenId));
+    pendingOutboundIds.value = pendingOutboundIds.value.filter(
+      (id) => !submittedIds.has(id),
+    );
     selectedRows.value = [];
     ElMessage.success('标本转运成功');
     await loadOutbounds();
@@ -371,8 +361,9 @@ watch(
             </div>
             <ElButton
               :disabled="
-                selectedRows.length === 0 ||
-                selectedRows.some((row) => !row.canOutbound)
+                selectedRows.length > 0
+                  ? selectedRows.some((row) => !row.canOutbound)
+                  : pendingOutboundIds.length === 0
               "
               type="primary"
               @click="handleBatchTransport"

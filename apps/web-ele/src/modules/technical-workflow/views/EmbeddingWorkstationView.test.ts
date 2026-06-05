@@ -10,11 +10,13 @@ const {
   mockCompleteEmbedding,
   mockGetEmbeddingWorkstationSummary,
   mockGetTechnicalTracking,
+  mockMessageBoxConfirm,
   mockListPendingTechnicalTasks,
   mockRoute,
   mockRouter,
   mockStartEmbedding,
   mockUpdateEmbeddingQualityReview,
+  mockUpdateTechnicalTaskRemarks,
   mockUserStore,
 } = vi.hoisted(() => ({
   messageSuccess: vi.fn(),
@@ -22,6 +24,7 @@ const {
   mockCompleteEmbedding: vi.fn(),
   mockGetEmbeddingWorkstationSummary: vi.fn(),
   mockGetTechnicalTracking: vi.fn(),
+  mockMessageBoxConfirm: vi.fn(),
   mockListPendingTechnicalTasks: vi.fn(),
   mockRoute: {
     query: {},
@@ -31,6 +34,7 @@ const {
   },
   mockStartEmbedding: vi.fn(),
   mockUpdateEmbeddingQualityReview: vi.fn(),
+  mockUpdateTechnicalTaskRemarks: vi.fn(),
   mockUserStore: {
     userInfo: {
       realName: '包埋技师',
@@ -56,6 +60,21 @@ vi.mock('@vben/stores', () => ({
   useUserStore: () => mockUserStore,
 }));
 
+vi.mock('@vben/icons', () => {
+  const createIcon = (name: string) =>
+    defineComponent({
+      setup() {
+        return () => h('span', { 'data-icon': name });
+      },
+    });
+
+  return {
+    Check: createIcon('Check'),
+    UserRoundPen: createIcon('UserRoundPen'),
+    X: createIcon('X'),
+  };
+});
+
 vi.mock('#/utils/error-feedback', () => ({
   reportInlineErrorDisabled: vi.fn(),
 }));
@@ -67,6 +86,7 @@ vi.mock('../api/technical-workflow-service', () => ({
   listPendingTechnicalTasks: mockListPendingTechnicalTasks,
   startEmbedding: mockStartEmbedding,
   updateEmbeddingQualityReview: mockUpdateEmbeddingQualityReview,
+  updateTechnicalTaskRemarks: mockUpdateTechnicalTaskRemarks,
 }));
 
 vi.mock('../components/EmbeddingQualityReviewDialog.vue', () => ({
@@ -216,6 +236,9 @@ vi.mock('element-plus', () => {
     ElMessage: {
       success: messageSuccess,
       warning: messageWarning,
+    },
+    ElMessageBox: {
+      confirm: mockMessageBoxConfirm,
     },
     ElOption,
     ElSelect,
@@ -477,11 +500,22 @@ describe('EmbeddingWorkstationView', () => {
       markingSuccess: true,
       taskId: 'TASK-1',
     });
+    mockMessageBoxConfirm.mockResolvedValue('confirm');
     mockUpdateEmbeddingQualityReview.mockResolvedValue({
       record: {},
       reworkStatus: null,
       reworkType: null,
     });
+    mockUpdateTechnicalTaskRemarks.mockImplementation(
+      async (
+        taskId: string,
+        data: { productionRemarks?: null | string; remarks?: null | string },
+      ) => ({
+        ...createPendingTask({ id: taskId }),
+        productionRemarks: data.productionRemarks,
+        remarks: data.remarks,
+      }),
+    );
   });
 
   afterEach(() => {
@@ -491,10 +525,12 @@ describe('EmbeddingWorkstationView', () => {
     mockCompleteEmbedding.mockReset();
     mockGetEmbeddingWorkstationSummary.mockReset();
     mockGetTechnicalTracking.mockReset();
+    mockMessageBoxConfirm.mockReset();
     mockListPendingTechnicalTasks.mockReset();
     mockRouter.push.mockReset();
     mockStartEmbedding.mockReset();
     mockUpdateEmbeddingQualityReview.mockReset();
+    mockUpdateTechnicalTaskRemarks.mockReset();
   });
 
   it('renders summary cards and pending list', async () => {
@@ -545,7 +581,7 @@ describe('EmbeddingWorkstationView', () => {
     root.remove();
   });
 
-  it('updates left-side selection and clears current state', async () => {
+  it('warns and keeps current state when clearing with pending tasks', async () => {
     const { app, root } = mountView();
     await flushView();
 
@@ -562,7 +598,45 @@ describe('EmbeddingWorkstationView', () => {
     findButton('确认清零').click();
     await flushView();
 
-    expect(document.body.textContent).toContain('汇总备注');
+    expect(messageWarning).toHaveBeenCalledWith('还有待处理的数据');
+    expect(mockMessageBoxConfirm).not.toHaveBeenCalled();
+    expect(document.body.textContent).toContain('病例2包埋备注');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('confirms clearing when the pending list is empty', async () => {
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
+    mockGetEmbeddingWorkstationSummary.mockResolvedValue({
+      completedCount: 3,
+      completedRecords: [],
+      pendingCount: 0,
+      pendingTasks: [],
+      workDate: '2026-06-01',
+    });
+
+    const { app, root } = mountView();
+    await flushView();
+
+    findButton('确认清零').click();
+    await flushView();
+
+    expect(messageWarning).not.toHaveBeenCalledWith('还有待处理的数据');
+    expect(mockMessageBoxConfirm).toHaveBeenCalledWith(
+      '确认今日包埋工作已完成了吗？',
+      '确认清零',
+      {
+        cancelButtonText: '取消',
+        confirmButtonText: '确定',
+        type: 'info',
+      },
+    );
 
     app.unmount();
     root.remove();
@@ -607,6 +681,60 @@ describe('EmbeddingWorkstationView', () => {
     await flushView();
     expect(selectAllCompleted!.checked).toBe(true);
     expect(completedX1!.checked).toBe(true);
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('edits pending task remarks and shift remarks inline', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    document
+      .querySelector<HTMLButtonElement>('button[aria-label="编辑备注"]')!
+      .click();
+    await flushView();
+
+    const remarksInput = document.querySelector<HTMLInputElement>(
+      'input[placeholder="备注"]',
+    );
+    expect(remarksInput).toBeTruthy();
+    remarksInput!.value = '复核备注';
+    remarksInput!.dispatchEvent(new Event('input'));
+    await flushView();
+
+    document
+      .querySelector<HTMLButtonElement>('button[aria-label="保存备注"]')!
+      .click();
+    await flushView();
+
+    expect(mockUpdateTechnicalTaskRemarks).toHaveBeenCalledWith('TASK-1', {
+      productionRemarks: '主班备注-1',
+      remarks: '复核备注',
+    });
+
+    document
+      .querySelector<HTMLButtonElement>('button[aria-label="编辑主班备注"]')!
+      .click();
+    await flushView();
+
+    const shiftRemarkSelect = document.querySelector<HTMLSelectElement>(
+      'select[aria-label="主班备注"]',
+    );
+    expect(shiftRemarkSelect).toBeTruthy();
+    shiftRemarkSelect!.value = '未脱钙';
+    shiftRemarkSelect!.dispatchEvent(new Event('change'));
+    await flushView();
+
+    document
+      .querySelector<HTMLButtonElement>('button[aria-label="保存主班备注"]')!
+      .click();
+    await flushView();
+
+    expect(mockUpdateTechnicalTaskRemarks).toHaveBeenLastCalledWith('TASK-1', {
+      productionRemarks: '未脱钙',
+      remarks: '复核备注',
+    });
 
     app.unmount();
     root.remove();
@@ -661,7 +789,9 @@ describe('EmbeddingWorkstationView', () => {
       sliceNotice: '皮肤',
     });
 
-    findButton('评价').click();
+    document
+      .querySelector<HTMLButtonElement>('button[aria-label="编辑取材评价"]')!
+      .click();
     await flushView();
     expect(document.body.textContent).toContain('保存评价');
 

@@ -3,6 +3,7 @@ import type { UploadProps, UploadRequestOptions } from 'element-plus';
 import type {
   GrossingBlockItemRequest,
   GrossingEmbeddingBoxItemRequest,
+  GrossingMediaAssetUploadResponse,
   GrossingSpecimenItemRequest,
   GrossingWorkbenchContext,
   MediaAssetItem,
@@ -697,6 +698,10 @@ export function useGrossingWorkbench(
   }
 
   const beforeGrossingImageUpload: UploadProps['beforeUpload'] = (file) => {
+    return validateGrossingImageFile(file);
+  };
+
+  function validateGrossingImageFile(file: File) {
     if (!grossingImageTypes.has(file.type)) {
       ElMessage.warning('仅支持 JPG、PNG、WEBP、BMP 格式的标本摄影像');
       return false;
@@ -706,7 +711,7 @@ export function useGrossingWorkbench(
       return false;
     }
     return true;
-  };
+  }
 
   function createGrossingUploadError(
     error: unknown,
@@ -723,22 +728,46 @@ export function useGrossingWorkbench(
     return uploadError;
   }
 
+  async function performGrossingImageUpload(
+    specimenIndex: number,
+    file: File,
+  ): Promise<GrossingMediaAssetUploadResponse> {
+    setSpecimenUploading(specimenIndex, true);
+    try {
+      const result = await uploadGrossingMediaAsset(file);
+      completeForm.specimens[specimenIndex]?.mediaAssets?.push({
+        fileName: result.fileName,
+        fileUrl: result.fileUrl,
+      });
+      ElMessage.success('标本摄影像上传成功');
+      return result;
+    } finally {
+      setSpecimenUploading(specimenIndex, false);
+    }
+  }
+
+  async function uploadGrossingImageFile(specimenIndex: number, file: File) {
+    if (!validateGrossingImageFile(file)) {
+      return false;
+    }
+    try {
+      await performGrossingImageUpload(specimenIndex, file);
+      return true;
+    } catch (error) {
+      ElMessage.warning(getWorkflowPageErrorMessage(error));
+      return false;
+    }
+  }
+
   function createGrossingImageUploadRequest(specimenIndex: number) {
     return async (uploadOptions: UploadRequestOptions) => {
-      setSpecimenUploading(specimenIndex, true);
       try {
-        const result = await uploadGrossingMediaAsset(uploadOptions.file);
-        completeForm.specimens[specimenIndex]?.mediaAssets?.push({
-          fileName: result.fileName,
-          fileUrl: result.fileUrl,
-        });
+        const file = uploadOptions.file as File;
+        const result = await performGrossingImageUpload(specimenIndex, file);
         uploadOptions.onSuccess(result);
-        ElMessage.success('标本摄影像上传成功');
       } catch (error) {
         uploadOptions.onError(createGrossingUploadError(error, uploadOptions));
         ElMessage.warning(getWorkflowPageErrorMessage(error));
-      } finally {
-        setSpecimenUploading(specimenIndex, false);
       }
     };
   }
@@ -887,6 +916,7 @@ export function useGrossingWorkbench(
     submitGrossing,
     submitting,
     trackingResult,
+    uploadGrossingImageFile,
     workflowReferenceOptions,
     workbenchContext,
   };

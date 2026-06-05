@@ -31,6 +31,7 @@ export type TransportHandoverForm = {
 };
 
 export type TransportOutboundForm = {
+  loginName: string;
   outboundUserId: string;
   outboundUserName: string;
   remarks: string;
@@ -89,8 +90,10 @@ export function createDefaultTransportHandoverFormState(
 export function createDefaultTransportOutboundFormState(
   outboundUserName: string,
   outboundUserId: string,
+  loginName: string = '',
 ): TransportOutboundForm {
   return {
+    loginName,
     outboundUserId,
     outboundUserName,
     remarks: '',

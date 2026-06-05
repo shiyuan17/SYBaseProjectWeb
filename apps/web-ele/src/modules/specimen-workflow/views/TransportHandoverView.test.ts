@@ -9,6 +9,7 @@ const {
   loadOperatingRoomNameMapSafelyMock,
   outboundTransportOrderMock,
   quickOutboundSpecimenMock,
+  verifyOperatorMock,
   warningMock,
 } = vi.hoisted(() => ({
   listSpecimenOutboundsMock: vi.fn(async () => ({
@@ -87,6 +88,7 @@ const {
     toBeTransportedAt: '2026-05-26 10:11:00',
     transportOrderNo: 'TR-20260526-NEW',
   })),
+  verifyOperatorMock: vi.fn(async () => 'TOKEN-VERIFY'),
   warningMock: vi.fn(),
 }));
 
@@ -100,6 +102,7 @@ const { mockRoute } = vi.hoisted(() => ({
 
 const { mockUserInfo } = vi.hoisted(() => ({
   mockUserInfo: {
+    loginName: 'test-user',
     realName: 'Test User',
     userId: 'USER-001',
   },
@@ -161,6 +164,12 @@ vi.mock('../api/specimen-workflow-service', () => ({
   quickOutboundSpecimen: quickOutboundSpecimenMock,
 }));
 
+vi.mock('../composables/useOperatorVerificationPrompt', () => ({
+  useOperatorVerificationPrompt: () => ({
+    verifyOperator: verifyOperatorMock,
+  }),
+}));
+
 function mountView() {
   const container = document.createElement('div');
   document.body.append(container);
@@ -184,6 +193,7 @@ async function flush() {
 describe('TransportHandoverView', () => {
   afterEach(() => {
     document.body.innerHTML = '';
+    mockUserInfo.loginName = 'test-user';
     mockUserInfo.realName = 'Test User';
     mockUserInfo.userId = 'USER-001';
     vi.clearAllMocks();
@@ -240,7 +250,7 @@ describe('TransportHandoverView', () => {
     app.unmount();
   });
 
-  it('loads the full application and still auto-outbounds the matched specimen when scanning', async () => {
+  it('marks the matched specimen as unsaved on scan and submits after clicking transport', async () => {
     const { app, container } = mountView();
     await flush();
 
@@ -312,13 +322,30 @@ describe('TransportHandoverView', () => {
     expect(listSpecimenOutboundsMock).toHaveBeenCalledWith(
       expect.objectContaining({ specimenNo: 'SP-TR-001' }),
     );
+    expect(container.textContent).toContain('出库未保存');
+    expect(outboundTransportOrderMock).not.toHaveBeenCalled();
+    expect(quickOutboundSpecimenMock).not.toHaveBeenCalled();
+    expect(warningMock).not.toHaveBeenCalled();
+
+    const transportButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('转运'),
+    ) as HTMLButtonElement | undefined;
+    expect(transportButton?.disabled).toBe(false);
+    transportButton!.click();
+    await flush();
+
+    expect(verifyOperatorMock).toHaveBeenCalledWith({
+      id: 'USER-001',
+      loginName: 'test-user',
+      name: 'Test User',
+    });
     expect(outboundTransportOrderMock).toHaveBeenCalledWith('TO-002', {
+      operatorVerificationToken: 'TOKEN-VERIFY',
       outboundUserId: 'USER-001',
       outboundUserName: 'Test User',
       remarks: null,
       terminalCode: null,
     });
-    expect(warningMock).not.toHaveBeenCalled();
 
     app.unmount();
   });
@@ -401,7 +428,7 @@ describe('TransportHandoverView', () => {
     app.unmount();
   });
 
-  it('quick outbounds by specimen serial number when the list is empty', async () => {
+  it('warns and does not quick outbound when the list is empty', async () => {
     const { app, container } = mountView();
     await flush();
 
@@ -430,16 +457,9 @@ describe('TransportHandoverView', () => {
     expect(listSpecimenOutboundsMock).toHaveBeenCalledWith(
       expect.objectContaining({ specimenNo: 'SP-NOT-FOUND' }),
     );
-    expect(quickOutboundSpecimenMock).toHaveBeenCalledWith({
-      identifier: 'SP-NOT-FOUND',
-      identifierType: 'SPECIMEN_NO',
-      outboundUserId: 'USER-001',
-      outboundUserName: 'Test User',
-      remarks: null,
-      terminalCode: null,
-    });
+    expect(quickOutboundSpecimenMock).not.toHaveBeenCalled();
     expect(outboundTransportOrderMock).not.toHaveBeenCalled();
-    expect(warningMock).not.toHaveBeenCalled();
+    expect(warningMock).toHaveBeenCalledWith('未找到可出库标本：SP-NOT-FOUND');
 
     app.unmount();
   });
@@ -522,7 +542,8 @@ describe('TransportHandoverView', () => {
     app.unmount();
   });
 
-  it('blocks direct and quick outbound when outbound operator is not selected', async () => {
+  it('blocks transport when outbound operator is not selected', async () => {
+    mockUserInfo.loginName = '';
     mockUserInfo.realName = '';
     mockUserInfo.userId = '';
 
@@ -531,10 +552,32 @@ describe('TransportHandoverView', () => {
 
     vi.clearAllMocks();
     listSpecimenOutboundsMock.mockResolvedValueOnce({
-      items: [],
+      items: [
+        {
+          applicationId: 'APP-002',
+          applicationNo: 'M2-20260526-002',
+          checkInStatus: 'CHECKED_IN',
+          fixationStatus: 'COMPLETED',
+          inpatientNo: 'ZY-002',
+          outboundAt: null,
+          outboundUserName: null,
+          patientGender: '女',
+          patientId: 'PAT-002',
+          patientName: 'Alice',
+          registeredAt: '2026-05-26 09:30:00',
+          registeredByName: '登记员甲',
+          specimenConfirmedAt: '2026-05-26 09:10:00',
+          specimenId: 'SP-002',
+          specimenName: '甲状腺组织',
+          specimenNo: 'SP-NO-OPERATOR',
+          specimenStatus: 'CHECKED_IN',
+          surgeryName: 'OR-102',
+          transportOrderId: 'TO-002',
+        },
+      ],
       page: 1,
       size: 20,
-      total: 0,
+      total: 1,
     });
 
     const specimenNoInput = container.querySelector(
@@ -554,9 +597,17 @@ describe('TransportHandoverView', () => {
     expect(listSpecimenOutboundsMock).toHaveBeenCalledWith(
       expect.objectContaining({ specimenNo: 'SP-NO-OPERATOR' }),
     );
+    const transportButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('转运'),
+    ) as HTMLButtonElement | undefined;
+    expect(transportButton?.disabled).toBe(false);
+    transportButton!.click();
+    await flush();
+
     expect(warningMock).toHaveBeenCalledWith('请选择出库人');
     expect(outboundTransportOrderMock).not.toHaveBeenCalled();
     expect(quickOutboundSpecimenMock).not.toHaveBeenCalled();
+    expect(verifyOperatorMock).not.toHaveBeenCalled();
 
     app.unmount();
   });

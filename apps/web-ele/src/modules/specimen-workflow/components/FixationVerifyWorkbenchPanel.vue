@@ -50,7 +50,7 @@ defineExpose({
 
 <template>
   <div class="mb-4 flex flex-wrap items-center gap-4 text-sm">
-    <div class="font-semibold text-[color:#d6453d]">设置离体时间</div>
+    <div class="font-semibold text-danger">设置离体时间</div>
     <div>
       全部
       <span class="text-xl font-semibold text-primary">{{
@@ -71,17 +71,13 @@ defineExpose({
     </div>
   </div>
 
-  <div
-    class="mb-4 rounded-lg border border-[color:#dbe3f0] bg-[color:#f7f9fc] p-4"
-  >
+  <div class="mb-4 rounded-lg border border-border bg-accent p-4">
     <div
       ref="specimenIdQuickInputContainerRef"
       v-loading="quickActionLoading.specimenId"
       class="flex items-center gap-3"
     >
-      <div class="min-w-20 text-sm font-medium text-[color:#1f2d3d]">
-        标本ID
-      </div>
+      <div class="min-w-20 text-sm font-medium text-foreground">标本ID</div>
       <ElInput
         ref="specimenIdQuickInputRef"
         v-model="specimenIdQuickInput"

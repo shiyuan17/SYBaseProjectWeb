@@ -843,9 +843,9 @@ onBeforeUnmount(() => {
 
 .legacy-header,
 .legacy-panel {
-  background: #fff;
-  border: 1px solid #d8e4ef;
-  box-shadow: 0 8px 24px rgb(15 23 42 / 6%);
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 8px 24px hsl(var(--foreground) / 6%);
 }
 
 .legacy-header {
@@ -896,35 +896,35 @@ onBeforeUnmount(() => {
 .legacy-stat-card {
   min-height: 84px;
   padding: 12px 14px;
-  color: #0f172a;
-  background: linear-gradient(135deg, #f8fbff 0%, #eef5fb 100%);
-  border: 1px solid #d7e7f4;
+  color: hsl(var(--foreground));
+  background: hsl(var(--accent) / 70%);
+  border: 1px solid hsl(var(--border));
 }
 
 .legacy-stat-card[data-accent='amber'] {
-  background: linear-gradient(135deg, #fff9eb 0%, #ffeec3 100%);
-  border-color: #f3d38f;
+  background: hsl(var(--warning) / 14%);
+  border-color: hsl(var(--warning) / 34%);
 }
 
 .legacy-stat-card[data-accent='emerald'] {
-  background: linear-gradient(135deg, #f2fff9 0%, #ddf7ea 100%);
-  border-color: #b9e7cf;
+  background: hsl(var(--success) / 12%);
+  border-color: hsl(var(--success) / 32%);
 }
 
 .legacy-stat-card[data-accent='rose'] {
-  background: linear-gradient(135deg, #fff5f5 0%, #ffe1e1 100%);
-  border-color: #f5b4b4;
+  background: hsl(var(--destructive) / 12%);
+  border-color: hsl(var(--destructive) / 30%);
 }
 
 .legacy-stat-card[data-accent='sky'] {
-  background: linear-gradient(135deg, #f2f7ff 0%, #dcecff 100%);
-  border-color: #bdd6ff;
+  background: hsl(var(--primary) / 12%);
+  border-color: hsl(var(--primary) / 28%);
 }
 
 .legacy-stat-card__label {
   font-size: 12px;
   line-height: 18px;
-  color: #475569;
+  color: hsl(var(--muted-foreground));
 }
 
 .legacy-stat-card__value {
@@ -940,7 +940,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   padding-top: 14px;
   margin-top: 14px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid hsl(var(--border));
 }
 
 .legacy-action-row__left {
@@ -977,7 +977,7 @@ onBeforeUnmount(() => {
 }
 
 .legacy-panel--right {
-  background: linear-gradient(180deg, #fbfdff 0%, #fff 100%);
+  background: hsl(var(--card));
 }
 
 .legacy-panel__header {
@@ -985,26 +985,26 @@ onBeforeUnmount(() => {
   gap: 12px;
   justify-content: space-between;
   padding: 14px 16px 12px;
-  background: linear-gradient(180deg, #f8fbff 0%, #eef4fa 100%);
-  border-bottom: 1px solid #d8e4ef;
+  background: hsl(var(--accent) / 70%);
+  border-bottom: 1px solid hsl(var(--border));
 }
 
 .legacy-panel__header--right {
-  background: linear-gradient(180deg, #f9fcfb 0%, #edf7f4 100%);
+  background: hsl(var(--success) / 10%);
 }
 
 .legacy-panel__title {
   margin: 0;
   font-size: 16px;
   font-weight: 700;
-  color: #0f172a;
+  color: hsl(var(--foreground));
 }
 
 .legacy-panel__subtitle {
   margin: 4px 0 0;
   font-size: 12px;
   line-height: 18px;
-  color: #64748b;
+  color: hsl(var(--muted-foreground));
 }
 
 .legacy-panel__meta {
@@ -1014,7 +1014,7 @@ onBeforeUnmount(() => {
   align-items: flex-end;
   font-size: 12px;
   line-height: 18px;
-  color: #475569;
+  color: hsl(var(--muted-foreground));
   white-space: nowrap;
 }
 
@@ -1038,12 +1038,12 @@ onBeforeUnmount(() => {
   flex-direction: column;
   gap: 2px;
   line-height: 20px;
-  color: #0f172a;
+  color: hsl(var(--foreground));
   white-space: normal;
 }
 
 .legacy-operation-cell--muted {
-  color: #64748b;
+  color: hsl(var(--muted-foreground));
 }
 
 .legacy-operation-cell__operator {
@@ -1053,23 +1053,23 @@ onBeforeUnmount(() => {
 
 .legacy-operation-cell__time {
   font-size: 13px;
-  color: #0f172a;
+  color: hsl(var(--foreground));
 }
 
 .legacy-panel :deep(.el-table) {
-  --el-table-header-bg-color: #f6f9fc;
-  --el-table-row-hover-bg-color: #f8fbff;
+  --el-table-header-bg-color: hsl(var(--accent));
+  --el-table-row-hover-bg-color: hsl(var(--accent-hover));
 }
 
 .legacy-panel :deep(.is-overdue-row > td) {
-  background: #fff7ed;
+  background: hsl(var(--warning) / 12%);
 }
 
 .legacy-panel__footer {
   display: flex;
   justify-content: flex-end;
   padding: 12px 16px 16px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid hsl(var(--border));
 }
 
 @media (max-width: 1440px) {
