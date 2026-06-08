@@ -57,7 +57,7 @@ pre-commit:
       glob: '*.{js,jsx,ts,tsx}'
     lint-style:
       run: pnpm oxfmt {staged_files} && pnpm stylelint --fix --allow-empty-input {staged_files}
-      glob: '*.{scss,less,styl,html,vue,css}'
+      glob: '*.{scss,less,styl,html,css}'
     lint-package:
       run: pnpm oxfmt {staged_files}
       glob: 'package.json'
@@ -74,3 +74,12 @@ commit-msg:
   commands:
     commitlint:
       run: pnpm exec commitlint --edit $1
+
+pre-push:
+  commands:
+    check-type:
+      run: pnpm check:type
+    check-circular:
+      run: pnpm check:circular
+    test-unit:
+      run: pnpm test:unit

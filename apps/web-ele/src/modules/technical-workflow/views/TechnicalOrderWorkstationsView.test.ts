@@ -1,7 +1,10 @@
+import type { PendingMedicalOrderPage } from '../../doctor-workflow/types/doctor-workflow';
+
 import { createApp, defineComponent, h, inject, nextTick, provide } from 'vue';
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { listPendingMedicalOrders } from '../../doctor-workflow/api/doctor-workflow-service';
 import CytologyWorkstationView from './CytologyWorkstationView.vue';
 import IhcWorkstationView from './IhcWorkstationView.vue';
 import LiquidCytologyWorkstationView from './LiquidCytologyWorkstationView.vue';
@@ -12,6 +15,10 @@ const tableRowsKey = Symbol('technical-order-workstation-table-rows');
 
 const { messageInfo } = vi.hoisted(() => ({
   messageInfo: vi.fn(),
+}));
+
+vi.mock('../../doctor-workflow/api/doctor-workflow-service', () => ({
+  listPendingMedicalOrders: vi.fn(),
 }));
 
 vi.mock('@vben/common-ui', () => ({
@@ -29,8 +36,19 @@ vi.mock('@vben/common-ui', () => ({
 }));
 
 vi.mock('element-plus', () => {
+  const ElAlert = defineComponent({
+    props: ['title'],
+    setup(props, { slots }) {
+      return () =>
+        h('div', { role: 'alert' }, [
+          slots.title?.() ?? props.title,
+          slots.default?.(),
+        ]);
+    },
+  });
+
   const ElButton = defineComponent({
-    props: ['disabled'],
+    props: ['disabled', 'link', 'type'],
     emits: ['click'],
     setup(props, { attrs, emit, slots }) {
       return () =>
@@ -89,29 +107,79 @@ vi.mock('element-plus', () => {
     },
   });
 
+  const ElOption = defineComponent({
+    props: ['label', 'value'],
+    setup(props) {
+      return () =>
+        h('option', { value: props.value }, props.label ?? props.value);
+    },
+  });
+
   const ElPagination = defineComponent({
     props: ['currentPage', 'pageSize', 'total'],
     emits: ['update:currentPage', 'update:pageSize'],
-    setup(props) {
+    setup(props, { emit }) {
       return () =>
         h(
           'div',
           {
             'data-testid': 'pagination',
           },
-          `total:${props.total};page:${props.currentPage};size:${props.pageSize}`,
+          [
+            `total:${props.total};page:${props.currentPage};size:${props.pageSize}`,
+            h(
+              'button',
+              {
+                'data-testid': 'next-page',
+                type: 'button',
+                onClick: () =>
+                  emit('update:currentPage', Number(props.currentPage) + 1),
+              },
+              'next',
+            ),
+            h(
+              'button',
+              {
+                'data-testid': 'page-size-50',
+                type: 'button',
+                onClick: () => emit('update:pageSize', 50),
+              },
+              'size50',
+            ),
+          ],
+        );
+    },
+  });
+
+  const ElSelect = defineComponent({
+    props: ['modelValue'],
+    emits: ['update:modelValue'],
+    setup(props, { emit, slots }) {
+      return () =>
+        h(
+          'select',
+          {
+            value: props.modelValue,
+            onChange: (event: Event) =>
+              emit(
+                'update:modelValue',
+                (event.target as HTMLSelectElement).value,
+              ),
+          },
+          slots.default?.(),
         );
     },
   });
 
   const ElTable = defineComponent({
-    props: ['data'],
+    props: ['data', 'loading'],
     emits: ['selection-change'],
     setup(props, { emit, slots }) {
       provide(tableRowsKey, () => props.data ?? []);
 
       return () =>
-        h('section', [
+        h('section', { 'data-loading': props.loading ? 'true' : 'false' }, [
+          props.loading ? h('span', '加载中') : null,
           slots.default?.(),
           ...(props.data ?? []).map((row: any) =>
             h(
@@ -144,6 +212,7 @@ vi.mock('element-plus', () => {
   });
 
   return {
+    ElAlert,
     ElButton,
     ElCheckbox,
     ElEmpty,
@@ -151,11 +220,43 @@ vi.mock('element-plus', () => {
     ElMessage: {
       info: messageInfo,
     },
+    ElOption,
     ElPagination,
+    ElSelect,
     ElTable,
     ElTableColumn,
   };
 });
+
+const listPendingMedicalOrdersMock = vi.mocked(listPendingMedicalOrders);
+
+function createPendingMedicalOrderPage(
+  orderCategoryCode = 'IHC',
+): PendingMedicalOrderPage {
+  return {
+    items: [
+      {
+        caseId: 'CASE-001',
+        doctorName: '张医生',
+        orderCategoryCode,
+        orderCategoryName: '免疫组化',
+        orderContent: 'CK（蜡块: A1）',
+        orderDate: '2026-06-05 09:12:30',
+        orderId: `ORDER-${orderCategoryCode}`,
+        orderItemName: 'CK',
+        orderNumber: 'MO-001',
+        orderType: orderCategoryCode,
+        pathologyNo: `BL-${orderCategoryCode}`,
+        patientName: '王女士',
+        remarks: '加做',
+        status: 'PENDING',
+      },
+    ],
+    page: 1,
+    size: 20,
+    total: 1,
+  };
+}
 
 function renderView(component: object) {
   const root = document.createElement('div');
@@ -173,80 +274,191 @@ function renderView(component: object) {
   };
 }
 
+async function flushAsyncUpdates() {
+  await nextTick();
+  await Promise.resolve();
+  await nextTick();
+}
+
 describe('technical order workstation views', () => {
+  beforeEach(() => {
+    listPendingMedicalOrdersMock.mockResolvedValue(
+      createPendingMedicalOrderPage(),
+    );
+  });
+
   afterEach(() => {
     document.body.innerHTML = '';
     messageInfo.mockReset();
+    listPendingMedicalOrdersMock.mockReset();
   });
 
   it.each([
-    [RoutineOrderWorkstationView, '常规医嘱工作站', '确认', '原病理号'],
-    [SpecialOrderWorkstationView, '特检医嘱工作站', '确认', '项目类型'],
-    [IhcWorkstationView, '免疫组化工作站', '染色', '分配设备'],
-    [CytologyWorkstationView, '细胞学工作站', '生成蜡块', '送检类型'],
-    [LiquidCytologyWorkstationView, '液基细胞学工作站', '打印玻片', '流程状态'],
+    [
+      RoutineOrderWorkstationView,
+      '常规医嘱工作站',
+      '确认',
+      '原病理号',
+      'EXAM,CGRS,BLOCK,QP',
+    ],
+    [SpecialOrderWorkstationView, '特检医嘱工作站', '确认', '项目类型', 'TSRS'],
+    [IhcWorkstationView, '免疫组化工作站', '染色', '分配设备', 'IHC'],
+    [
+      CytologyWorkstationView,
+      '细胞学工作站',
+      '生成蜡块',
+      '送检类型',
+      'CYTOLOGY',
+    ],
+    [
+      LiquidCytologyWorkstationView,
+      '液基细胞学工作站',
+      '打印玻片',
+      '流程状态',
+      'LIQUID_CYTOLOGY',
+    ],
   ])(
-    'renders %s shell content without page header block',
-    async (component, title, actionLabel, columnLabel) => {
+    'loads %s real medical orders with fixed category code',
+    async (component, title, actionLabel, columnLabel, orderCategoryCode) => {
+      listPendingMedicalOrdersMock.mockResolvedValueOnce(
+        createPendingMedicalOrderPage(orderCategoryCode),
+      );
+
       const wrapper = renderView(component);
+      await flushAsyncUpdates();
 
       expect(wrapper.root.textContent).not.toContain(title);
       expect(wrapper.root.textContent).toContain(actionLabel);
       expect(wrapper.root.textContent).toContain(columnLabel);
-      expect(
-        wrapper.root.querySelector('[data-testid="pagination"]'),
-      ).not.toBeNull();
+      expect(wrapper.root.textContent).toContain(`BL-${orderCategoryCode}`);
+      expect(listPendingMedicalOrdersMock).toHaveBeenCalledWith({
+        orderCategoryCode,
+        page: 1,
+        pathologyNo: undefined,
+        size: orderCategoryCode === 'EXAM,CGRS,BLOCK,QP' ? 30 : 100,
+        status: undefined,
+      });
 
       wrapper.unmount();
     },
   );
 
-  it('filters local rows by search keyword and restores them when cleared', async () => {
+  it('searches remote rows by pathology number', async () => {
     const wrapper = renderView(RoutineOrderWorkstationView);
-
-    expect(wrapper.root.textContent).toContain('王淑琴');
-    expect(wrapper.root.textContent).toContain('李美荣');
+    await flushAsyncUpdates();
 
     const input = wrapper.root.querySelector(
-      'input[placeholder="病理号/病人ID/原病理号"]',
+      'input[placeholder="请输入病理号"]',
     ) as HTMLInputElement | null;
-
     expect(input).not.toBeNull();
 
-    input!.value = '李美荣';
+    listPendingMedicalOrdersMock.mockResolvedValueOnce({
+      items: [],
+      page: 1,
+      size: 30,
+      total: 0,
+    });
+    input!.value = 'BL-202606050001';
     input!.dispatchEvent(new Event('input'));
     await nextTick();
 
-    expect(wrapper.root.textContent).toContain('李美荣');
-    expect(wrapper.root.textContent).not.toContain('王淑琴');
+    const queryButton = [...wrapper.root.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('查询'),
+    );
+    queryButton?.click();
+    await flushAsyncUpdates();
 
-    input!.value = '';
-    input!.dispatchEvent(new Event('input'));
-    await nextTick();
-
-    expect(wrapper.root.textContent).toContain('王淑琴');
-    expect(wrapper.root.textContent).toContain('李美荣');
+    expect(listPendingMedicalOrdersMock).toHaveBeenLastCalledWith({
+      orderCategoryCode: 'EXAM,CGRS,BLOCK,QP',
+      page: 1,
+      pathologyNo: 'BL-202606050001',
+      size: 30,
+      status: undefined,
+    });
+    expect(wrapper.root.textContent).toContain('暂无待处理常规医嘱数据');
 
     wrapper.unmount();
   });
 
-  it('keeps selection actions disabled until a row is selected and then shows placeholder feedback', async () => {
-    const wrapper = renderView(RoutineOrderWorkstationView);
+  it('reloads remote rows when status or pagination changes', async () => {
+    const wrapper = renderView(IhcWorkstationView);
+    await flushAsyncUpdates();
+
+    listPendingMedicalOrdersMock.mockResolvedValue({
+      items: [],
+      page: 2,
+      size: 100,
+      total: 101,
+    });
+    const statusSelect = wrapper.root.querySelector(
+      'select',
+    ) as HTMLSelectElement | null;
+    expect(statusSelect).not.toBeNull();
+
+    statusSelect!.value = 'PENDING';
+    statusSelect!.dispatchEvent(new Event('change'));
+    await flushAsyncUpdates();
+
+    expect(listPendingMedicalOrdersMock).toHaveBeenLastCalledWith({
+      orderCategoryCode: 'IHC',
+      page: 1,
+      pathologyNo: undefined,
+      size: 100,
+      status: 'PENDING',
+    });
+
+    wrapper.root
+      .querySelector<HTMLButtonElement>('[data-testid="next-page"]')
+      ?.click();
+    await flushAsyncUpdates();
+
+    expect(listPendingMedicalOrdersMock).toHaveBeenLastCalledWith({
+      orderCategoryCode: 'IHC',
+      page: 2,
+      pathologyNo: undefined,
+      size: 100,
+      status: 'PENDING',
+    });
+
+    wrapper.unmount();
+  });
+
+  it('shows failure state and retries loading medical orders', async () => {
+    listPendingMedicalOrdersMock.mockRejectedValueOnce(new Error('接口异常'));
+
+    const wrapper = renderView(SpecialOrderWorkstationView);
+    await flushAsyncUpdates();
+
+    expect(wrapper.root.textContent).toContain('接口异常');
+
+    listPendingMedicalOrdersMock.mockResolvedValueOnce(
+      createPendingMedicalOrderPage('TSRS'),
+    );
+    const retryButton = [...wrapper.root.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('重试'),
+    );
+    retryButton?.click();
+    await flushAsyncUpdates();
+
+    expect(wrapper.root.textContent).toContain('BL-TSRS');
+    expect(listPendingMedicalOrdersMock).toHaveBeenCalledTimes(2);
+
+    wrapper.unmount();
+  });
+
+  it('keeps selection actions disabled until a remote row is selected', async () => {
+    const wrapper = renderView(IhcWorkstationView);
+    await flushAsyncUpdates();
 
     const confirmButton = [...wrapper.root.querySelectorAll('button')].find(
       (button) => button.textContent?.includes('确认'),
     ) as HTMLButtonElement | undefined;
-
     expect(confirmButton).toBeDefined();
     expect(confirmButton?.disabled).toBe(true);
 
-    const rowSelector = wrapper.root.querySelector(
-      '[data-testid="select-row-routine-1"]',
-    ) as HTMLButtonElement | null;
-
-    expect(rowSelector).not.toBeNull();
-
-    rowSelector!.click();
+    wrapper.root
+      .querySelector<HTMLButtonElement>('[data-testid="select-row-ORDER-IHC"]')
+      ?.click();
     await nextTick();
 
     expect(confirmButton?.disabled).toBe(false);
@@ -254,46 +466,6 @@ describe('technical order workstation views', () => {
     confirmButton?.click();
 
     expect(messageInfo).toHaveBeenCalledWith('确认功能待接入');
-
-    wrapper.unmount();
-  });
-
-  it('updates the summary when switching workday tabs and toggling checkbox filters', async () => {
-    const wrapper = renderView(RoutineOrderWorkstationView);
-
-    expect(
-      wrapper.root.querySelectorAll('[data-testid^="select-row-"]'),
-    ).toHaveLength(3);
-    expect(wrapper.root.textContent).toContain('total:3');
-
-    const rapidCheckbox = [...wrapper.root.querySelectorAll('label')]
-      .find((label) => label.textContent?.includes('快速切片'))
-      ?.querySelector('input') as HTMLInputElement | null;
-
-    expect(rapidCheckbox).not.toBeNull();
-
-    rapidCheckbox!.checked = true;
-    rapidCheckbox!.dispatchEvent(new Event('change'));
-    await nextTick();
-
-    expect(
-      wrapper.root.querySelectorAll('[data-testid^="select-row-"]'),
-    ).toHaveLength(1);
-    expect(wrapper.root.textContent).toContain('total:1');
-
-    const previousDayButton = [...wrapper.root.querySelectorAll('button')].find(
-      (button) => button.textContent?.includes('前1天'),
-    ) as HTMLButtonElement | undefined;
-
-    expect(previousDayButton).toBeDefined();
-
-    previousDayButton?.click();
-    await nextTick();
-
-    expect(
-      wrapper.root.querySelectorAll('[data-testid^="select-row-"]'),
-    ).toHaveLength(0);
-    expect(wrapper.root.textContent).toContain('total:0');
 
     wrapper.unmount();
   });

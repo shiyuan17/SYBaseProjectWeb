@@ -38,14 +38,41 @@ export interface TechnicalWorkbenchMetric {
   value: (rows: TechnicalWorkbenchRow[]) => number | string;
 }
 
+export interface TechnicalWorkbenchDataSourceQuery {
+  page: number;
+  pathologyNo?: string;
+  size: number;
+  status?: string;
+}
+
+export interface TechnicalWorkbenchDataSourceResult {
+  page: number;
+  rows: TechnicalWorkbenchRow[];
+  size: number;
+  total: number;
+}
+
+export interface TechnicalWorkbenchDataSource {
+  load: (
+    query: TechnicalWorkbenchDataSourceQuery,
+  ) => Promise<TechnicalWorkbenchDataSourceResult>;
+}
+
 export interface TechnicalWorkbenchDayTab {
   label: string;
   value: TechnicalWorkbenchDayValue;
 }
 
+export interface TechnicalWorkbenchStatusOption {
+  label: string;
+  value: string;
+}
+
 export interface TechnicalWorkbenchPageConfig {
   columns: TechnicalWorkbenchColumn[];
+  dataSource?: TechnicalWorkbenchDataSource;
   defaultPageSize: number;
+  defaultStatus?: string;
   defaultWorkday: TechnicalWorkbenchDayValue;
   description: string;
   dayTabs?: TechnicalWorkbenchDayTab[];
@@ -53,9 +80,10 @@ export interface TechnicalWorkbenchPageConfig {
   filters?: TechnicalWorkbenchFilterConfig[];
   metrics?: TechnicalWorkbenchMetric[];
   queryActions?: TechnicalWorkbenchAction[];
-  rows: TechnicalWorkbenchRow[];
+  rows?: TechnicalWorkbenchRow[];
   searchPlaceholder: string;
   showPageHeader?: boolean;
+  statusOptions?: TechnicalWorkbenchStatusOption[];
   title: string;
   toolbarGroups: TechnicalWorkbenchAction[][];
 }

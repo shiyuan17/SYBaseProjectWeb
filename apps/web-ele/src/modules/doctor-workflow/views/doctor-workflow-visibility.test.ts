@@ -709,6 +709,7 @@ describe('doctor workflow view visibility', () => {
     expect(wrapper.text()).toContain('诊断病例队列');
     expect(wrapper.text()).toContain('请先从左侧选择一个病例');
     expect(wrapper.text()).not.toContain('缺少病例 ID');
+    wrapper.unmount();
   });
 
   it('hides quick operation actions from diagnosis workbench case context', async () => {
@@ -868,9 +869,14 @@ describe('doctor workflow view visibility', () => {
     expect(cancelMedicalOrderMock).toHaveBeenCalledWith(
       'ORDER-003',
       expect.objectContaining({
-        operatorName: mockUserStore.userInfo.realName,
-        operatorUserId: mockUserStore.userInfo.userId,
+        remarks: '从报告追踪页取消医嘱',
       }),
+    );
+    expect(cancelMedicalOrderMock.mock.calls[0]?.[1]).not.toHaveProperty(
+      'operatorName',
+    );
+    expect(cancelMedicalOrderMock.mock.calls[0]?.[1]).not.toHaveProperty(
+      'operatorUserId',
     );
     wrapper.unmount();
   });
@@ -898,9 +904,15 @@ describe('doctor workflow view visibility', () => {
     expect(acceptMedicalOrderMock).toHaveBeenCalledWith(
       'ORDER-001',
       expect.objectContaining({
-        operatorName: mockUserStore.userInfo.realName,
-        operatorUserId: mockUserStore.userInfo.userId,
+        remarks: undefined,
+        terminalCode: undefined,
       }),
+    );
+    expect(acceptMedicalOrderMock.mock.calls[0]?.[1]).not.toHaveProperty(
+      'operatorName',
+    );
+    expect(acceptMedicalOrderMock.mock.calls[0]?.[1]).not.toHaveProperty(
+      'operatorUserId',
     );
     wrapper.unmount();
   });
@@ -927,9 +939,15 @@ describe('doctor workflow view visibility', () => {
     expect(completeMedicalOrderMock).toHaveBeenCalledWith(
       'ORDER-002',
       expect.objectContaining({
-        operatorName: mockUserStore.userInfo.realName,
-        operatorUserId: mockUserStore.userInfo.userId,
+        remarks: undefined,
+        terminalCode: undefined,
       }),
+    );
+    expect(completeMedicalOrderMock.mock.calls[0]?.[1]).not.toHaveProperty(
+      'operatorName',
+    );
+    expect(completeMedicalOrderMock.mock.calls[0]?.[1]).not.toHaveProperty(
+      'operatorUserId',
     );
     wrapper.unmount();
   });
@@ -956,9 +974,15 @@ describe('doctor workflow view visibility', () => {
     expect(cancelMedicalOrderMock).toHaveBeenCalledWith(
       'ORDER-001',
       expect.objectContaining({
-        operatorName: mockUserStore.userInfo.realName,
-        operatorUserId: mockUserStore.userInfo.userId,
+        remarks: undefined,
+        terminalCode: undefined,
       }),
+    );
+    expect(cancelMedicalOrderMock.mock.calls[0]?.[1]).not.toHaveProperty(
+      'operatorName',
+    );
+    expect(cancelMedicalOrderMock.mock.calls[0]?.[1]).not.toHaveProperty(
+      'operatorUserId',
     );
     wrapper.unmount();
   });

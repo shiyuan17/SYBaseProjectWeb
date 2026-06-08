@@ -10,7 +10,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const {
   acceptDiagnosticTaskMock,
   cancelMedicalOrderMock,
+  confirmMedicalOrderBillingMock,
   createMedicalOrderMock,
+  executeMedicalOrderBillingMock,
   getDiagnosticWorkbenchMock,
   listMedicalOrderDictsMock,
   listMedicalOrderPackagesPageMock,
@@ -23,6 +25,8 @@ const {
   createObjectUrlMock,
   messageErrorMock,
   messageInfoMock,
+  messageSuccessMock,
+  messageWarningMock,
   revokeObjectUrlMock,
   windowOpenMock,
 } = vi.hoisted(() => ({
@@ -30,7 +34,9 @@ const {
     vi.fn<(taskId: string, data: unknown) => Promise<unknown>>(),
   cancelMedicalOrderMock:
     vi.fn<(orderId: string, data: unknown) => Promise<unknown>>(),
+  confirmMedicalOrderBillingMock: vi.fn<(data: unknown) => Promise<unknown>>(),
   createMedicalOrderMock: vi.fn<(data: unknown) => Promise<unknown>>(),
+  executeMedicalOrderBillingMock: vi.fn<(data: unknown) => Promise<unknown>>(),
   getDiagnosticWorkbenchMock:
     vi.fn<(caseId: string) => Promise<DiagnosticWorkbenchView>>(),
   listMedicalOrderDictsMock: vi.fn<() => Promise<unknown[]>>(),
@@ -61,6 +67,8 @@ const {
   createObjectUrlMock: vi.fn(),
   messageErrorMock: vi.fn(),
   messageInfoMock: vi.fn(),
+  messageSuccessMock: vi.fn(),
+  messageWarningMock: vi.fn(),
   revokeObjectUrlMock: vi.fn(),
   windowOpenMock: vi.fn(),
 }));
@@ -104,8 +112,8 @@ vi.mock('element-plus', async (importOriginal) => {
     ElMessage: {
       error: messageErrorMock,
       info: messageInfoMock,
-      success: vi.fn(),
-      warning: vi.fn(),
+      success: messageSuccessMock,
+      warning: messageWarningMock,
     },
   };
 });
@@ -113,7 +121,9 @@ vi.mock('element-plus', async (importOriginal) => {
 vi.mock('../api/doctor-workflow-service', () => ({
   acceptDiagnosticTask: acceptDiagnosticTaskMock,
   cancelMedicalOrder: cancelMedicalOrderMock,
+  confirmMedicalOrderBilling: confirmMedicalOrderBillingMock,
   createMedicalOrder: createMedicalOrderMock,
+  executeMedicalOrderBilling: executeMedicalOrderBillingMock,
   getDiagnosticWorkbench: getDiagnosticWorkbenchMock,
   listMedicalOrderDicts: listMedicalOrderDictsMock,
   listMedicalOrderPackagesPage: listMedicalOrderPackagesPageMock,
@@ -161,8 +171,8 @@ const queueFixture = {
 
 const medicalOrderDictFixture = [
   {
-    categoryCode: 'IHC',
-    categoryName: '免疫组化',
+    categoryCode: 'TSRS',
+    categoryName: '特殊染色',
     children: [],
     enabled: true,
     id: 'CAT-001',
@@ -178,8 +188,19 @@ const medicalOrderDictFixture = [
         orderType: 'SPECIAL_STAIN',
         sortOrder: 1,
       },
+    ],
+    parentId: null,
+    sortOrder: 1,
+  },
+  {
+    categoryCode: 'IHC',
+    categoryName: '免疫组化',
+    children: [],
+    enabled: true,
+    id: 'CAT-002',
+    items: [
       {
-        categoryId: 'CAT-001',
+        categoryId: 'CAT-002',
         defaultContent: '补做免疫组化 CK',
         enabled: true,
         executionScope: 'BLOCK',
@@ -190,7 +211,29 @@ const medicalOrderDictFixture = [
         sortOrder: 2,
       },
       {
-        categoryId: 'CAT-001',
+        categoryId: 'CAT-002',
+        defaultContent: 'Ki-67',
+        enabled: true,
+        executionScope: 'BLOCK',
+        id: 'ITEM-005',
+        orderItemCode: 'IHC-KI67',
+        orderItemName: 'Ki-67',
+        orderType: 'IMMUNOHISTOCHEMISTRY',
+        sortOrder: 3,
+      },
+    ],
+    parentId: null,
+    sortOrder: 2,
+  },
+  {
+    categoryCode: 'FISH',
+    categoryName: 'Fish',
+    children: [],
+    enabled: true,
+    id: 'CAT-003',
+    items: [
+      {
+        categoryId: 'CAT-003',
         defaultContent: '1p19q(Fish)',
         enabled: true,
         executionScope: 'BLOCK',
@@ -200,8 +243,19 @@ const medicalOrderDictFixture = [
         orderType: 'FISH',
         sortOrder: 3,
       },
+    ],
+    parentId: null,
+    sortOrder: 3,
+  },
+  {
+    categoryCode: 'MYYG',
+    categoryName: '免疫荧光',
+    children: [],
+    enabled: true,
+    id: 'CAT-004',
+    items: [
       {
-        categoryId: 'CAT-001',
+        categoryId: 'CAT-004',
         defaultContent: 'C1q免疫荧光',
         enabled: true,
         executionScope: 'BLOCK',
@@ -213,7 +267,29 @@ const medicalOrderDictFixture = [
       },
     ],
     parentId: null,
-    sortOrder: 1,
+    sortOrder: 4,
+  },
+  {
+    categoryCode: 'DNA',
+    categoryName: '基因检测',
+    children: [],
+    enabled: true,
+    id: 'CAT-005',
+    items: [
+      {
+        categoryId: 'CAT-005',
+        defaultContent: 'EGFR基因突变',
+        enabled: true,
+        executionScope: 'BLOCK',
+        id: 'ITEM-006',
+        orderItemCode: 'DNA-EGFR',
+        orderItemName: 'EGFR基因突变',
+        orderType: 'GENE',
+        sortOrder: 1,
+      },
+    ],
+    parentId: null,
+    sortOrder: 5,
   },
 ];
 
@@ -266,6 +342,26 @@ const medicalOrderPackagePageFixture = {
       packageCode: 'PKG-FISH',
       packageName: 'Fish套餐',
       packageType: 'FISH',
+      remarks: null,
+    },
+    {
+      enabled: true,
+      id: 'PKG-003',
+      items: [
+        {
+          id: 'PKG-ITEM-004',
+          orderItemCode: 'UNKNOWN-001',
+          orderItemId: 'ITEM-UNKNOWN',
+          orderItemName: '未入字典项目',
+          packageId: 'PKG-003',
+          remarks: null,
+          sortOrder: 1,
+        },
+      ],
+      ownerUserId: null,
+      packageCode: 'PKG-UNKNOWN',
+      packageName: '未入字典套餐',
+      packageType: 'UNKNOWN',
       remarks: null,
     },
   ],
@@ -524,7 +620,9 @@ function resetTestState() {
   mockRouter.replace.mockReset();
   acceptDiagnosticTaskMock.mockReset();
   cancelMedicalOrderMock.mockReset();
+  confirmMedicalOrderBillingMock.mockReset();
   createMedicalOrderMock.mockReset();
+  executeMedicalOrderBillingMock.mockReset();
   getDiagnosticWorkbenchMock.mockReset();
   listMedicalOrderDictsMock.mockReset();
   listMedicalOrderPackagesPageMock.mockReset();
@@ -534,6 +632,8 @@ function resetTestState() {
   createObjectUrlMock.mockReturnValue('blob:diagnosis-capture');
   messageErrorMock.mockReset();
   messageInfoMock.mockReset();
+  messageSuccessMock.mockReset();
+  messageWarningMock.mockReset();
   revokeObjectUrlMock.mockReset();
   Object.defineProperty(URL, 'createObjectURL', {
     configurable: true,
@@ -558,7 +658,19 @@ function resetTestState() {
   });
   acceptDiagnosticTaskMock.mockResolvedValue({});
   cancelMedicalOrderMock.mockResolvedValue({});
+  confirmMedicalOrderBillingMock.mockResolvedValue({
+    failureCount: 0,
+    items: [{ billingStatus: 'SUCCESS', orderId: 'ORDER-001' }],
+    successCount: 1,
+    totalCount: 1,
+  });
   createMedicalOrderMock.mockResolvedValue({});
+  executeMedicalOrderBillingMock.mockResolvedValue({
+    failureCount: 0,
+    items: [{ billingStatus: 'SUCCESS', orderId: 'ORDER-001' }],
+    successCount: 1,
+    totalCount: 1,
+  });
   startDiagnosticTaskMock.mockResolvedValue({});
 }
 
@@ -1009,24 +1121,36 @@ describe('DiagnosisWorkbenchView', () => {
     wrapper.unmount();
   });
 
-  it('filters medical order candidates by template group', async () => {
+  it('filters medical order candidates by dictionary category', async () => {
     const wrapper = await mountView();
 
     findButton('医嘱').click();
     await flushAsyncWork();
 
+    expect(getOrderPaneText()).toContain('免疫组化');
+    expect(getOrderPaneText()).toContain('Fish');
+    expect(getOrderPaneText()).toContain('基因检测');
     expect(getOrderPaneText()).toContain('特殊染色');
     expect(getOrderPaneText()).toContain('免疫组化套餐');
-    expect(getOrderPaneText()).not.toContain('1p19q(Fish)');
+    expect(getOrderPaneText()).toContain('Ki-67');
+    expect(getOrderPaneText()).toContain('EGFR基因突变');
+    expect(() =>
+      findByTestId('medical-order-template-group-ALPHA_BETA'),
+    ).toThrow();
 
     findByTestId('medical-order-template-group-FISH').click();
     await flushAsyncWork();
 
     expect(getOrderPaneText()).toContain('1p19q(Fish)');
     expect(getOrderPaneText()).toContain('Fish套餐');
-    expect(getOrderPaneText()).not.toContain('特殊染色');
+    expect(() =>
+      findByTestId('medical-order-candidate-item-ITEM-001'),
+    ).toThrow();
+    expect(() =>
+      findByTestId('medical-order-candidate-item-ITEM-005'),
+    ).toThrow();
 
-    findByTestId('medical-order-template-group-FLUORESCENCE').click();
+    findByTestId('medical-order-template-group-MYYG').click();
     await flushAsyncWork();
 
     expect(getOrderPaneText()).toContain('C1q免疫荧光');
@@ -1071,27 +1195,35 @@ describe('DiagnosisWorkbenchView', () => {
     wrapper.unmount();
   });
 
-  it('shows fallback medical order candidates when backend dictionaries are sparse', async () => {
+  it('does not show fallback medical order candidates outside dictionaries', async () => {
     const wrapper = await mountView();
 
     findButton('医嘱').click();
     await flushAsyncWork();
 
-    findByTestId('medical-order-template-group-GENE').click();
+    findByTestId('medical-order-template-group-DNA').click();
     await flushAsyncWork();
-    expect(getOrderPaneText()).toContain('EGFR基因突变检测');
 
-    findByTestId('medical-order-template-group-ALPHA_BETA').click();
-    await flushAsyncWork();
-    expect(getOrderPaneText()).toContain('TCR α/β检测');
+    expect(getOrderPaneText()).toContain('EGFR基因突变');
+    expect(getOrderPaneText()).not.toContain('TCR α/β检测');
+    expect(getOrderPaneText()).not.toContain('快速切片');
+    expect(getOrderPaneText()).not.toContain('借阅切片');
+    expect(getOrderPaneText()).not.toContain('未入字典套餐');
 
-    findByTestId('medical-order-template-group-FROZEN').click();
-    await flushAsyncWork();
-    expect(getOrderPaneText()).toContain('快速切片');
+    wrapper.unmount();
+  });
 
-    findByTestId('medical-order-template-group-BORROW').click();
+  it('shows an empty state when medical order dictionaries are empty', async () => {
+    listMedicalOrderDictsMock.mockResolvedValueOnce([]);
+    const wrapper = await mountView();
+
+    findButton('医嘱').click();
     await flushAsyncWork();
-    expect(getOrderPaneText()).toContain('借阅切片');
+
+    expect(getOrderPaneText()).toContain('暂无符合条件的医嘱项目');
+    expect(getOrderPaneText()).not.toContain('EGFR基因突变');
+    expect(getOrderPaneText()).not.toContain('快速切片');
+    expect(getOrderPaneText()).not.toContain('未入字典套餐');
 
     wrapper.unmount();
   });
@@ -1169,12 +1301,17 @@ describe('DiagnosisWorkbenchView', () => {
 
     expect(createMedicalOrderMock).toHaveBeenCalledWith({
       caseId: 'CASE-001',
-      operatorName: '当前医生',
-      operatorUserId: 'USER-CURRENT',
       orderContent: '补做特殊染色（蜡块: A1 胃窦组织）',
+      orderItemId: 'ITEM-001',
       orderType: 'SPECIAL_STAIN',
       remarks: undefined,
     });
+    expect(createMedicalOrderMock.mock.calls[0]?.[0]).not.toHaveProperty(
+      'operatorName',
+    );
+    expect(createMedicalOrderMock.mock.calls[0]?.[0]).not.toHaveProperty(
+      'operatorUserId',
+    );
     expect(getDiagnosticWorkbenchMock).toHaveBeenLastCalledWith('CASE-001');
 
     wrapper.unmount();
@@ -1235,10 +1372,130 @@ describe('DiagnosisWorkbenchView', () => {
     expect(document.body.textContent).toContain('确认病人出院');
     expect(document.body.textContent).toContain('重新执行收费');
 
+    wrapper.unmount();
+  });
+
+  it('shows why submitting medical orders is disabled before adding drafts', async () => {
+    mockAccessStore.accessCodes = [
+      'PERM_M4_WORKBENCH_QUERY',
+      'PERM_M4_MEDICAL_ORDER_CREATE',
+    ];
+    const wrapper = await mountView();
+
+    findButton('医嘱').click();
+    await flushAsyncWork();
+
+    expect(getOrderPaneText()).toContain('请先从下方待选列表添加医嘱草稿');
+
+    wrapper.unmount();
+  });
+
+  it('executes billing for all uncharged medical orders and refreshes status', async () => {
+    mockAccessStore.accessCodes = [
+      'PERM_M4_WORKBENCH_QUERY',
+      'PERM_M4_MEDICAL_ORDER_CREATE',
+    ];
+    const initialWorkbench = workbenchFixtureByCaseId['CASE-001']!;
+    const chargedWorkbench: DiagnosticWorkbenchView = {
+      ...initialWorkbench,
+      medicalOrders: initialWorkbench.medicalOrders.map((item) => ({
+        ...item,
+        billingStatus: 'SUCCESS',
+      })),
+    };
+    getDiagnosticWorkbenchMock
+      .mockResolvedValueOnce(initialWorkbench)
+      .mockResolvedValueOnce(chargedWorkbench);
+    const wrapper = await mountView();
+
+    findButton('医嘱').click();
+    await flushAsyncWork();
     findButton('执行收费').click();
     await flushAsyncWork();
 
-    expect(wrapper.text()).toContain('执行收费');
+    expect(executeMedicalOrderBillingMock).toHaveBeenCalledWith({
+      caseId: 'CASE-001',
+      orderIds: undefined,
+      remarks: '执行收费',
+    });
+    expect(getDiagnosticWorkbenchMock).toHaveBeenLastCalledWith('CASE-001');
+    expect(getOrderPaneText()).toContain('未收费 (0) 已收费 (1)');
+    expect(getOrderPaneText()).toContain('已收费');
+
+    wrapper.unmount();
+  });
+
+  it('executes billing only for selected persisted medical orders', async () => {
+    mockAccessStore.accessCodes = [
+      'PERM_M4_WORKBENCH_QUERY',
+      'PERM_M4_MEDICAL_ORDER_CREATE',
+    ];
+    const initialWorkbench = workbenchFixtureByCaseId['CASE-001']!;
+    getDiagnosticWorkbenchMock.mockResolvedValueOnce({
+      ...initialWorkbench,
+      medicalOrders: [
+        initialWorkbench.medicalOrders[0]!,
+        {
+          ...initialWorkbench.medicalOrders[0]!,
+          orderContent: '特殊染色 PAS',
+          orderId: 'ORDER-002',
+          orderNumber: 'MO-002',
+        },
+      ],
+    });
+    const wrapper = await mountView();
+
+    findButton('医嘱').click();
+    await flushAsyncWork();
+    document
+      .querySelector<HTMLElement>(
+        '.medical-order-table .el-table__body .el-checkbox',
+      )
+      ?.click();
+    await flushAsyncWork();
+    findButton('执行收费').click();
+    await flushAsyncWork();
+
+    expect(executeMedicalOrderBillingMock).toHaveBeenCalledWith({
+      caseId: 'CASE-001',
+      orderIds: ['ORDER-001'],
+      remarks: '执行收费',
+    });
+
+    wrapper.unmount();
+  });
+
+  it('confirms billing completion from charge manager and refreshes status', async () => {
+    mockAccessStore.accessCodes = [
+      'PERM_M4_WORKBENCH_QUERY',
+      'PERM_M4_MEDICAL_ORDER_CREATE',
+    ];
+    const initialWorkbench = workbenchFixtureByCaseId['CASE-001']!;
+    const chargedWorkbench: DiagnosticWorkbenchView = {
+      ...initialWorkbench,
+      medicalOrders: initialWorkbench.medicalOrders.map((item) => ({
+        ...item,
+        billingStatus: 'SUCCESS',
+      })),
+    };
+    getDiagnosticWorkbenchMock
+      .mockResolvedValueOnce(initialWorkbench)
+      .mockResolvedValueOnce(chargedWorkbench);
+    const wrapper = await mountView();
+
+    findButton('医嘱').click();
+    await flushAsyncWork();
+    findButton('收费管理').click();
+    await flushAsyncWork();
+    findButton('确认完成收费').click();
+    await flushAsyncWork();
+
+    expect(confirmMedicalOrderBillingMock).toHaveBeenCalledWith({
+      caseId: 'CASE-001',
+      orderIds: undefined,
+      remarks: '确认完成收费',
+    });
+    expect(getOrderPaneText()).toContain('未收费 (0) 已收费 (1)');
 
     wrapper.unmount();
   });

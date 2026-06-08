@@ -160,7 +160,13 @@ export interface MedicalOrderSummary {
   executionScope?: null | string;
   orderContent?: null | string;
   orderDate?: null | string;
+  orderCategoryCode?: null | string;
+  orderCategoryId?: null | string;
+  orderCategoryName?: null | string;
   orderId: string;
+  orderItemCode?: null | string;
+  orderItemId?: null | string;
+  orderItemName?: null | string;
   orderNumber?: null | string;
   orderType?: null | string;
   pathologyNo?: null | string;
@@ -170,6 +176,7 @@ export interface MedicalOrderSummary {
 }
 
 export interface PendingMedicalOrderQuery {
+  orderCategoryCode?: string;
   page: number;
   pathologyNo?: string;
   size: number;
@@ -387,17 +394,14 @@ export interface PathologyReportDraft extends DiagnosticTaskActionRequest {
 
 export interface CreateMedicalOrderRequest {
   caseId: string;
-  operatorName: string;
-  operatorUserId?: string;
   orderContent: string;
+  orderItemId?: string;
   orderType: string;
   remarks?: string;
   terminalCode?: string;
 }
 
 export interface MedicalOrderActionRequest {
-  operatorName: string;
-  operatorUserId?: string;
   remarks?: string;
   terminalCode?: string;
 }
@@ -407,6 +411,27 @@ export interface MedicalOrderOperationResult {
   orderId: string;
   orderNumber?: null | string;
   status?: null | string;
+}
+
+export interface MedicalOrderBillingRequest {
+  caseId: string;
+  orderIds?: string[];
+  remarks?: string;
+  terminalCode?: string;
+}
+
+export interface MedicalOrderBillingItemResult {
+  billingRecordId?: null | string;
+  billingStatus?: null | string;
+  message?: null | string;
+  orderId: string;
+}
+
+export interface MedicalOrderBillingResult {
+  failureCount: number;
+  items: MedicalOrderBillingItemResult[];
+  successCount: number;
+  totalCount: number;
 }
 
 export type SavePathologyReportDraftRequest = Omit<

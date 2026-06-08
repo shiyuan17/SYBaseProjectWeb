@@ -4,10 +4,10 @@ import type {
   PendingMedicalOrderItem,
 } from '../types/doctor-workflow';
 
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, reactive, ref } from 'vue';
 
 import { Page } from '@vben/common-ui';
-import { useAccessStore, useUserStore } from '@vben/stores';
+import { useAccessStore } from '@vben/stores';
 
 import {
   ElButton,
@@ -39,7 +39,6 @@ import {
 } from '../utils/format';
 
 const accessStore = useAccessStore();
-const userStore = useUserStore();
 
 const loading = ref(false);
 const operating = ref(false);
@@ -53,15 +52,11 @@ const queryForm = reactive({
 });
 
 const actionForm = reactive<MedicalOrderActionRequest>({
-  operatorName: '',
-  operatorUserId: '',
   remarks: '',
   terminalCode: '',
 });
 
 const accessCodeSet = computed(() => new Set(accessStore.accessCodes));
-const currentUserId = computed(() => userStore.userInfo?.userId ?? '');
-const currentUserName = computed(() => userStore.userInfo?.realName ?? '');
 const canAccept = computed(() =>
   accessCodeSet.value.has(M4_PERMISSION_CODES.MEDICAL_ORDER_ACCEPT),
 );
@@ -113,27 +108,13 @@ async function loadOrders() {
   }
 }
 
-function ensureOperator() {
-  if (!actionForm.operatorName.trim()) {
-    ElMessage.warning('请填写操作人姓名');
-    return false;
-  }
-  return true;
-}
-
 async function runOrderAction(
   action: 'accept' | 'cancel' | 'complete',
   row: PendingMedicalOrderItem,
 ) {
-  if (!ensureOperator()) {
-    return;
-  }
-
   operating.value = true;
   try {
     const payload: MedicalOrderActionRequest = {
-      operatorName: actionForm.operatorName.trim(),
-      operatorUserId: actionForm.operatorUserId?.trim() || undefined,
       remarks: actionForm.remarks?.trim() || undefined,
       terminalCode: actionForm.terminalCode?.trim() || undefined,
     };
@@ -160,19 +141,6 @@ function handleReset() {
   queryForm.status = '';
   void loadOrders();
 }
-
-watch(
-  [currentUserId, currentUserName],
-  ([userId, userName]) => {
-    if (!actionForm.operatorUserId && userId) {
-      actionForm.operatorUserId = userId;
-    }
-    if (!actionForm.operatorName && userName) {
-      actionForm.operatorName = userName;
-    }
-  },
-  { immediate: true },
-);
 
 void loadOrders();
 </script>
@@ -222,16 +190,9 @@ void loadOrders();
 
       <WorkflowSectionCard
         title="执行操作"
-        description="接收、完成和取消医嘱会使用统一操作人信息。"
+        description="接收、完成和取消医嘱会使用当前登录账号。"
       >
         <ElForm inline label-width="80px">
-          <ElFormItem label="操作人">
-            <ElInput
-              v-model="actionForm.operatorName"
-              placeholder="请输入操作人姓名"
-              style="width: 220px"
-            />
-          </ElFormItem>
           <ElFormItem label="终端">
             <ElInput
               v-model="actionForm.terminalCode"

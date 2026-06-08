@@ -13,10 +13,12 @@ import {
   commentConsultationParticipant,
   completeConsultation,
   completeMedicalOrder,
+  confirmMedicalOrderBilling,
   createConsultation,
   createMedicalOrder,
   createPathologyReport,
   createReportRevisionRequest,
+  executeMedicalOrderBilling,
   getDiagnosticWorkbench,
   getReportTracking,
   listMedicalOrderDicts,
@@ -24,6 +26,7 @@ import {
   listPendingDiagnosticTasks,
   listPendingMedicalOrders,
   mapDiagnosticWorkbenchResponse,
+  mapMedicalOrderBillingResponse,
   mapMedicalOrderPackagePageResponse,
   mapPendingDiagnosticTaskPageResponse,
   mapPendingMedicalOrderPageResponse,
@@ -66,8 +69,36 @@ describe('doctor-workflow-service mappers', () => {
   });
 
   it('normalizes pending medical order pagination', () => {
-    expect(mapPendingMedicalOrderPageResponse({})).toEqual({
-      items: [],
+    expect(
+      mapPendingMedicalOrderPageResponse({
+        items: [
+          {
+            caseId: 'CASE-001',
+            orderCategoryCode: 'IHC',
+            orderCategoryId: 'CAT-IHC',
+            orderCategoryName: '免疫组化',
+            orderContent: 'CK',
+            orderId: 'ORDER-001',
+            orderItemCode: 'CK',
+            orderItemId: 'ITEM-CK',
+            orderItemName: 'CK',
+          },
+        ],
+      }),
+    ).toEqual({
+      items: [
+        {
+          caseId: 'CASE-001',
+          orderCategoryCode: 'IHC',
+          orderCategoryId: 'CAT-IHC',
+          orderCategoryName: '免疫组化',
+          orderContent: 'CK',
+          orderId: 'ORDER-001',
+          orderItemCode: 'CK',
+          orderItemId: 'ITEM-CK',
+          orderItemName: 'CK',
+        },
+      ],
       page: 1,
       size: 20,
       total: 0,
@@ -80,6 +111,35 @@ describe('doctor-workflow-service mappers', () => {
       page: 2,
       size: 50,
       total: 0,
+    });
+  });
+
+  it('normalizes medical order billing results', () => {
+    expect(
+      mapMedicalOrderBillingResponse({
+        items: [
+          {
+            billingRecordId: 'BR-001',
+            billingStatus: 'SUCCESS',
+            message: 'done',
+            orderId: 'ORDER-001',
+          },
+        ],
+        successCount: 1,
+        totalCount: 1,
+      }),
+    ).toEqual({
+      failureCount: 0,
+      items: [
+        {
+          billingRecordId: 'BR-001',
+          billingStatus: 'SUCCESS',
+          message: 'done',
+          orderId: 'ORDER-001',
+        },
+      ],
+      successCount: 1,
+      totalCount: 1,
     });
   });
 
@@ -224,6 +284,7 @@ describe('doctor-workflow-service requests', () => {
     });
 
     await listPendingMedicalOrders({
+      orderCategoryCode: 'IHC',
       page: 1,
       pathologyNo: 'BL-001',
       size: 20,
@@ -234,6 +295,7 @@ describe('doctor-workflow-service requests', () => {
       '/v1/medical-orders/pending',
       {
         params: {
+          orderCategoryCode: 'IHC',
           page: 1,
           pathologyNo: 'BL-001',
           size: 20,
@@ -325,38 +387,74 @@ describe('doctor-workflow-service requests', () => {
   it('posts medical order endpoints with exact paths', async () => {
     await createMedicalOrder({
       caseId: 'CASE-1',
-      operatorName: '诊断医生',
       orderContent: '补做特殊染色',
+      orderItemId: 'ITEM-TSRS-PAS',
       orderType: 'SPECIAL_STAIN',
     });
-    await acceptMedicalOrder('ORDER-1', { operatorName: '执行岗' });
-    await completeMedicalOrder('ORDER-1', { operatorName: '执行岗' });
-    await cancelMedicalOrder('ORDER-1', { operatorName: '诊断医生' });
+    await acceptMedicalOrder('ORDER-1', { terminalCode: 'TERM-1' });
+    await completeMedicalOrder('ORDER-1', { remarks: '已完成' });
+    await cancelMedicalOrder('ORDER-1', { remarks: '诊断医生取消' });
 
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       1,
       '/v1/medical-orders',
       {
         caseId: 'CASE-1',
-        operatorName: '诊断医生',
         orderContent: '补做特殊染色',
+        orderItemId: 'ITEM-TSRS-PAS',
         orderType: 'SPECIAL_STAIN',
       },
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       2,
       '/v1/medical-orders/ORDER-1/accept',
-      { operatorName: '执行岗' },
+      { terminalCode: 'TERM-1' },
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       3,
       '/v1/medical-orders/ORDER-1/complete',
-      { operatorName: '执行岗' },
+      { remarks: '已完成' },
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       4,
       '/v1/medical-orders/ORDER-1/cancel',
-      { operatorName: '诊断医生' },
+      { remarks: '诊断医生取消' },
+    );
+  });
+
+  it('posts medical order billing endpoints with exact paths', async () => {
+    requestClientMock.post.mockResolvedValue({
+      items: [{ billingStatus: 'SUCCESS', orderId: 'ORDER-1' }],
+      successCount: 1,
+      totalCount: 1,
+    });
+
+    await executeMedicalOrderBilling({
+      caseId: 'CASE-1',
+      orderIds: ['ORDER-1'],
+      remarks: '执行收费',
+    });
+    await confirmMedicalOrderBilling({
+      caseId: 'CASE-1',
+      remarks: '确认完成收费',
+    });
+
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      1,
+      '/v1/medical-orders/billing/execute',
+      {
+        caseId: 'CASE-1',
+        orderIds: ['ORDER-1'],
+        remarks: '执行收费',
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      2,
+      '/v1/medical-orders/billing/confirm',
+      {
+        caseId: 'CASE-1',
+        remarks: '确认完成收费',
+      },
     );
   });
 

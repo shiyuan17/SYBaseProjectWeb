@@ -17,7 +17,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "build": "cross-env NODE_OPTIONS=--max-old-space-size=8192 turbo build",
+    "build": "node ./scripts/run-with-log.mjs .logs/build.log cross-env NODE_OPTIONS=--max-old-space-size=8192 turbo build",
     "build:ele": "pnpm run build --filter=@vben/web-ele",
     "check": "pnpm run check:circular && pnpm run check:dep && pnpm run check:type && pnpm check:cspell",
     "check:circular": "vsh check-circular",
@@ -26,7 +26,7 @@
     "check:type": "turbo run typecheck",
     "clean": "node ./scripts/clean.mjs",
     "dev": "turbo-run dev",
-    "dev:ele": "pnpm -F @vben/web-ele run dev",
+    "dev:ele": "node ./scripts/run-with-log.mjs .logs/frontend.log pnpm -F @vben/web-ele run dev",
     "lint": "vsh lint",
     "linear:pull": "node ./scripts/linear-sync.mjs pull",
     "linear:register": "node ./scripts/linear-sync.mjs register",
@@ -38,7 +38,7 @@
     "test:system-management:backend": "node ./scripts/test-system-management.mjs backend",
     "test:system-management:frontend": "node ./scripts/test-system-management.mjs frontend",
     "test:e2e": "playwright test -c playwright.config.ts",
-    "test:unit": "vitest run --dom"
+    "test:unit": "node ./scripts/run-with-log.mjs .logs/test.log vitest run --dom"
   },
   "devDependencies": {
     "@changesets/changelog-github": "catalog:",

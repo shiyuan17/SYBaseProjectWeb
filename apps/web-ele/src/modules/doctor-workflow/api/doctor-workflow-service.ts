@@ -9,6 +9,9 @@ import type {
   DiagnosticTaskActionRequest,
   DiagnosticWorkbenchView,
   MedicalOrderActionRequest,
+  MedicalOrderBillingItemResult,
+  MedicalOrderBillingRequest,
+  MedicalOrderBillingResult,
   MedicalOrderCategoryNode,
   MedicalOrderOperationResult,
   MedicalOrderPackagePageQuery,
@@ -34,6 +37,7 @@ type PendingMedicalOrderPageResponse = Partial<PendingMedicalOrderPage>;
 type MedicalOrderPackagePageResponse = Partial<
   MedicalOrderPagedResult<MedicalOrderPackageView>
 >;
+type MedicalOrderBillingResultResponse = Partial<MedicalOrderBillingResult>;
 type DiagnosticWorkbenchResponse = Partial<DiagnosticWorkbenchView>;
 type ReportTrackingResponse = Partial<ReportTrackingView>;
 
@@ -69,6 +73,30 @@ export function mapMedicalOrderPackagePageResponse(
     page: response.page ?? fallbackPage,
     size: response.size ?? fallbackSize,
     total: response.total ?? 0,
+  };
+}
+
+export function mapMedicalOrderBillingResponse(
+  response: MedicalOrderBillingResultResponse,
+): MedicalOrderBillingResult {
+  return {
+    failureCount: response.failureCount ?? 0,
+    items: Array.isArray(response.items)
+      ? response.items.map((item) => mapMedicalOrderBillingItem(item))
+      : [],
+    successCount: response.successCount ?? 0,
+    totalCount: response.totalCount ?? 0,
+  };
+}
+
+function mapMedicalOrderBillingItem(
+  item: Partial<MedicalOrderBillingItemResult>,
+): MedicalOrderBillingItemResult {
+  return {
+    billingRecordId: item.billingRecordId ?? null,
+    billingStatus: item.billingStatus ?? null,
+    message: item.message ?? null,
+    orderId: item.orderId ?? '',
   };
 }
 
@@ -256,6 +284,26 @@ export async function cancelMedicalOrder(
     `/v1/medical-orders/${orderId}/cancel`,
     data,
   );
+}
+
+export async function executeMedicalOrderBilling(
+  data: MedicalOrderBillingRequest,
+) {
+  const response = await requestClient.post<MedicalOrderBillingResultResponse>(
+    '/v1/medical-orders/billing/execute',
+    data,
+  );
+  return mapMedicalOrderBillingResponse(response ?? {});
+}
+
+export async function confirmMedicalOrderBilling(
+  data: MedicalOrderBillingRequest,
+) {
+  const response = await requestClient.post<MedicalOrderBillingResultResponse>(
+    '/v1/medical-orders/billing/confirm',
+    data,
+  );
+  return mapMedicalOrderBillingResponse(response ?? {});
 }
 
 export async function getDiagnosticWorkbench(caseId: string) {

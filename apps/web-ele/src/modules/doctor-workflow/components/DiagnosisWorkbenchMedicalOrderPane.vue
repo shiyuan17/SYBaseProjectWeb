@@ -27,7 +27,9 @@ import {
 } from 'element-plus';
 
 import {
+  confirmMedicalOrderBilling,
   createMedicalOrder,
+  executeMedicalOrderBilling,
   listMedicalOrderDicts,
   listMedicalOrderPackagesPage,
 } from '../api/doctor-workflow-service';
@@ -50,10 +52,12 @@ interface DraftMedicalOrderItem {
 }
 
 interface MedicalOrderTableRow {
+  billingStatus?: null | string;
   doctorName: string;
   draftIndex?: number;
   key: string;
   orderContent: string;
+  orderId?: string;
   orderTime: string;
   remarks: string;
   removable: boolean;
@@ -72,17 +76,11 @@ interface QuickTemplateRow {
   typeLabel: string;
 }
 
-interface MedicalOrderGroupMatcher {
-  keywords: string[];
-  orderTypes: string[];
-}
-
-interface FallbackMedicalOrderItemSeed {
-  defaultContent?: string;
-  group: (typeof templateGroups)[number]['value'];
-  name: string;
-  orderItemCode: string;
-  orderType: string;
+interface MedicalOrderCategoryFilter {
+  id: string;
+  itemIds: Set<string>;
+  label: string;
+  testValue: string;
 }
 
 const props = defineProps<{
@@ -97,411 +95,20 @@ const emit = defineEmits<{
 const accessStore = useAccessStore();
 const userStore = useUserStore();
 
-const templateGroups = [
-  { label: '特染', value: 'SPECIAL_STAIN' },
-  { label: 'Fish', value: 'FISH' },
-  { label: '基因', value: 'GENE' },
-  { label: '荧光', value: 'FLUORESCENCE' },
-  { label: 'α/β', value: 'ALPHA_BETA' },
-  { label: '切片', value: 'SLICE' },
-  { label: '垂体', value: 'PITUITARY' },
-  { label: '快切', value: 'FROZEN' },
-  { label: '借阅', value: 'BORROW' },
-] as const;
 const letterFilters = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'];
-const templateGroupMatchers: Record<string, MedicalOrderGroupMatcher> = {
-  ALPHA_BETA: {
-    keywords: ['α/β', 'α', 'β', 'alpha', 'beta', 'tcr'],
-    orderTypes: ['ALPHA_BETA', 'ALPHA', 'BETA', 'TCR'],
-  },
-  BORROW: {
-    keywords: ['借阅', '外借', '归档借阅', 'borrow', 'loan'],
-    orderTypes: ['BORROW', 'LOAN', 'ARCHIVE_LOAN'],
-  },
-  FISH: {
-    keywords: ['fish', '荧光原位杂交'],
-    orderTypes: ['FISH'],
-  },
-  FLUORESCENCE: {
-    keywords: ['荧光', '英光', '免疫荧光', 'fluorescence', 'if'],
-    orderTypes: ['FLUORESCENCE', 'IMMUNE_FLUORESCENCE', 'IMMUNOFLUORESCENCE'],
-  },
-  FROZEN: {
-    keywords: ['快切', '快速切片', '冰冻', 'frozen'],
-    orderTypes: ['FROZEN', 'FROZEN_SECTION'],
-  },
-  GENE: {
-    keywords: ['基因', '分子', 'gene', 'molecular'],
-    orderTypes: ['GENE', 'GENE_TEST', 'MOLECULAR', 'MOLECULAR_TEST'],
-  },
-  PITUITARY: {
-    keywords: ['垂体', 'pituitary'],
-    orderTypes: ['PITUITARY'],
-  },
-  SLICE: {
-    keywords: ['切片', '白片', '深切', 'slice', 'section'],
-    orderTypes: ['SLICE', 'SLICING', 'SECTION', 'DEEPER_CUT'],
-  },
-  SPECIAL_STAIN: {
-    keywords: ['特染', '特殊染色', 'special stain', 'special_stain'],
-    orderTypes: ['SPECIAL_STAIN', 'SPECIAL_STAINING'],
-  },
-};
-const fallbackMedicalOrderCategories: MedicalOrderCategoryNode[] =
-  templateGroups.map((group, index) => ({
-    categoryCode: group.value,
-    categoryName: group.label,
-    children: [],
-    enabled: true,
-    id: `FALLBACK_CATEGORY_${group.value}`,
-    items: [],
-    parentId: null,
-    sortOrder: index + 1,
-  }));
-const fallbackMedicalOrderItemSeeds: FallbackMedicalOrderItemSeed[] = [
-  {
-    group: 'SPECIAL_STAIN',
-    name: 'AB(Alcian blue)染色(pH2.5)',
-    orderItemCode: 'SS-AB-PH25',
-    orderType: 'SPECIAL_STAIN',
-  },
-  {
-    group: 'SPECIAL_STAIN',
-    name: 'AB(pH2.5)-PAS染色',
-    orderItemCode: 'SS-AB-PAS',
-    orderType: 'SPECIAL_STAIN',
-  },
-  {
-    group: 'SPECIAL_STAIN',
-    name: 'D-PAS',
-    orderItemCode: 'SS-D-PAS',
-    orderType: 'SPECIAL_STAIN',
-  },
-  {
-    group: 'SPECIAL_STAIN',
-    name: 'GMS',
-    orderItemCode: 'SS-GMS',
-    orderType: 'SPECIAL_STAIN',
-  },
-  {
-    group: 'SPECIAL_STAIN',
-    name: 'Masson改良三色染色法',
-    orderItemCode: 'SS-MASSON',
-    orderType: 'SPECIAL_STAIN',
-  },
-  {
-    group: 'SPECIAL_STAIN',
-    name: 'PAS染色',
-    orderItemCode: 'SS-PAS',
-    orderType: 'SPECIAL_STAIN',
-  },
-  {
-    group: 'SPECIAL_STAIN',
-    name: 'W-S染色(Warthin-Starry)',
-    orderItemCode: 'SS-WS',
-    orderType: 'SPECIAL_STAIN',
-  },
-  {
-    group: 'SPECIAL_STAIN',
-    name: '弹力纤维染色(醛品红法)',
-    orderItemCode: 'SS-ELASTIC',
-    orderType: 'SPECIAL_STAIN',
-  },
-  {
-    group: 'SPECIAL_STAIN',
-    name: '淀粉样蛋白(刚果红)染色',
-    orderItemCode: 'SS-CONGO-RED',
-    orderType: 'SPECIAL_STAIN',
-  },
-  {
-    group: 'SPECIAL_STAIN',
-    name: '革兰氏染色(GRAM)',
-    orderItemCode: 'SS-GRAM',
-    orderType: 'SPECIAL_STAIN',
-  },
-  {
-    group: 'SPECIAL_STAIN',
-    name: '抗酸染色(AAS)',
-    orderItemCode: 'SS-AAS',
-    orderType: 'SPECIAL_STAIN',
-  },
-  {
-    group: 'SPECIAL_STAIN',
-    name: '六胺银染色(GMS)',
-    orderItemCode: 'SS-METHENAMINE-SILVER',
-    orderType: 'SPECIAL_STAIN',
-  },
-  {
-    group: 'FISH',
-    name: '1p19q(Fish)',
-    orderItemCode: 'FISH-1P19Q',
-    orderType: 'FISH',
-  },
-  {
-    group: 'FISH',
-    name: 'BCL-2(Fish)',
-    orderItemCode: 'FISH-BCL2',
-    orderType: 'FISH',
-  },
-  {
-    group: 'FISH',
-    name: 'BCL-6(Fish)',
-    orderItemCode: 'FISH-BCL6',
-    orderType: 'FISH',
-  },
-  {
-    group: 'FISH',
-    name: 'Her-2(Fish)',
-    orderItemCode: 'FISH-HER2',
-    orderType: 'FISH',
-  },
-  {
-    group: 'FISH',
-    name: 'Her2基因扩增检测(Fish)',
-    orderItemCode: 'FISH-HER2-AMP',
-    orderType: 'FISH',
-  },
-  {
-    group: 'FISH',
-    name: 'IgH-BCL2(Fish)',
-    orderItemCode: 'FISH-IGH-BCL2',
-    orderType: 'FISH',
-  },
-  {
-    group: 'FISH',
-    name: 'MYC(Fish)',
-    orderItemCode: 'FISH-MYC',
-    orderType: 'FISH',
-  },
-  {
-    group: 'FISH',
-    name: 'SS18(Fish)',
-    orderItemCode: 'FISH-SS18',
-    orderType: 'FISH',
-  },
-  {
-    group: 'GENE',
-    name: 'EGFR基因突变检测',
-    orderItemCode: 'GENE-EGFR',
-    orderType: 'GENE',
-  },
-  {
-    group: 'GENE',
-    name: 'KRAS基因突变检测',
-    orderItemCode: 'GENE-KRAS',
-    orderType: 'GENE',
-  },
-  {
-    group: 'GENE',
-    name: 'NRAS基因突变检测',
-    orderItemCode: 'GENE-NRAS',
-    orderType: 'GENE',
-  },
-  {
-    group: 'GENE',
-    name: 'BRAF基因突变检测',
-    orderItemCode: 'GENE-BRAF',
-    orderType: 'GENE',
-  },
-  {
-    group: 'GENE',
-    name: 'PIK3CA基因突变检测',
-    orderItemCode: 'GENE-PIK3CA',
-    orderType: 'GENE',
-  },
-  {
-    group: 'GENE',
-    name: 'MSI微卫星不稳定检测',
-    orderItemCode: 'GENE-MSI',
-    orderType: 'GENE',
-  },
-  {
-    group: 'GENE',
-    name: 'NTRK融合基因检测',
-    orderItemCode: 'GENE-NTRK',
-    orderType: 'GENE',
-  },
-  {
-    group: 'FLUORESCENCE',
-    name: 'C1q免疫荧光',
-    orderItemCode: 'IF-C1Q',
-    orderType: 'IMMUNE_FLUORESCENCE',
-  },
-  {
-    group: 'FLUORESCENCE',
-    name: 'C3免疫荧光',
-    orderItemCode: 'IF-C3',
-    orderType: 'IMMUNE_FLUORESCENCE',
-  },
-  {
-    group: 'FLUORESCENCE',
-    name: 'C4免疫荧光',
-    orderItemCode: 'IF-C4',
-    orderType: 'IMMUNE_FLUORESCENCE',
-  },
-  {
-    group: 'FLUORESCENCE',
-    name: 'Fib免疫荧光',
-    orderItemCode: 'IF-FIB',
-    orderType: 'IMMUNE_FLUORESCENCE',
-  },
-  {
-    group: 'FLUORESCENCE',
-    name: 'IgA免疫荧光',
-    orderItemCode: 'IF-IGA',
-    orderType: 'IMMUNE_FLUORESCENCE',
-  },
-  {
-    group: 'FLUORESCENCE',
-    name: 'IgG免疫荧光',
-    orderItemCode: 'IF-IGG',
-    orderType: 'IMMUNE_FLUORESCENCE',
-  },
-  {
-    group: 'FLUORESCENCE',
-    name: 'IgM免疫荧光',
-    orderItemCode: 'IF-IGM',
-    orderType: 'IMMUNE_FLUORESCENCE',
-  },
-  {
-    group: 'FLUORESCENCE',
-    name: 'SBCD',
-    orderItemCode: 'IF-SBCD',
-    orderType: 'IMMUNE_FLUORESCENCE',
-  },
-  {
-    group: 'FLUORESCENCE',
-    name: '结构免疫荧光',
-    orderItemCode: 'IF-STRUCTURE',
-    orderType: 'IMMUNE_FLUORESCENCE',
-  },
-  {
-    group: 'ALPHA_BETA',
-    name: 'TCR α/β检测',
-    orderItemCode: 'AB-TCR',
-    orderType: 'ALPHA_BETA',
-  },
-  {
-    group: 'ALPHA_BETA',
-    name: 'TCR β基因重排检测',
-    orderItemCode: 'AB-TCR-BETA',
-    orderType: 'ALPHA_BETA',
-  },
-  {
-    group: 'ALPHA_BETA',
-    name: 'TCR γ基因重排检测',
-    orderItemCode: 'AB-TCR-GAMMA',
-    orderType: 'ALPHA_BETA',
-  },
-  {
-    group: 'SLICE',
-    name: '白片',
-    orderItemCode: 'SLICE-BLANK',
-    orderType: 'SLICE',
-  },
-  {
-    group: 'SLICE',
-    name: '深切',
-    orderItemCode: 'SLICE-DEEPER-CUT',
-    orderType: 'SLICE',
-  },
-  {
-    group: 'SLICE',
-    name: '连续切片',
-    orderItemCode: 'SLICE-SERIAL',
-    orderType: 'SLICE',
-  },
-  {
-    group: 'SLICE',
-    name: '重切片',
-    orderItemCode: 'SLICE-RECUT',
-    orderType: 'SLICE',
-  },
-  {
-    group: 'PITUITARY',
-    name: '垂体PRL',
-    orderItemCode: 'PITUITARY-PRL',
-    orderType: 'PITUITARY',
-  },
-  {
-    group: 'PITUITARY',
-    name: '垂体GH',
-    orderItemCode: 'PITUITARY-GH',
-    orderType: 'PITUITARY',
-  },
-  {
-    group: 'PITUITARY',
-    name: '垂体ACTH',
-    orderItemCode: 'PITUITARY-ACTH',
-    orderType: 'PITUITARY',
-  },
-  {
-    group: 'PITUITARY',
-    name: '垂体TSH',
-    orderItemCode: 'PITUITARY-TSH',
-    orderType: 'PITUITARY',
-  },
-  {
-    group: 'FROZEN',
-    name: '快速切片',
-    orderItemCode: 'FROZEN-SECTION',
-    orderType: 'FROZEN',
-  },
-  {
-    group: 'FROZEN',
-    name: '冰冻切片',
-    orderItemCode: 'FROZEN-SLICE',
-    orderType: 'FROZEN',
-  },
-  {
-    group: 'FROZEN',
-    name: '术中快速病理',
-    orderItemCode: 'FROZEN-INTRAOPERATIVE',
-    orderType: 'FROZEN',
-  },
-  {
-    group: 'BORROW',
-    name: '借阅切片',
-    orderItemCode: 'BORROW-SLIDE',
-    orderType: 'BORROW',
-  },
-  {
-    group: 'BORROW',
-    name: '借阅蜡块',
-    orderItemCode: 'BORROW-BLOCK',
-    orderType: 'BORROW',
-  },
-  {
-    group: 'BORROW',
-    name: '借阅申请单',
-    orderItemCode: 'BORROW-APPLICATION',
-    orderType: 'BORROW',
-  },
-];
-const fallbackMedicalOrderItems = fallbackMedicalOrderItemSeeds.map(
-  (item, index): MedicalOrderItemView => ({
-    categoryId: `FALLBACK_CATEGORY_${item.group}`,
-    defaultContent: item.defaultContent ?? item.name,
-    enabled: true,
-    executionScope: 'BLOCK',
-    id: `FALLBACK_ITEM_${item.orderItemCode}`,
-    orderItemCode: item.orderItemCode,
-    orderItemName: item.name,
-    orderType: item.orderType,
-    sortOrder: index + 1,
-  }),
-);
 
 const candidatesLoading = ref(false);
 const submitLoading = ref(false);
+const chargeLoading = ref(false);
 const chargeDialogVisible = ref(false);
 const candidateError = ref('');
 const selectedBlockId = ref('');
 const keyword = ref('');
-const activeTemplateGroup = ref('SPECIAL_STAIN');
+const activeCategoryId = ref('');
 const selectedLetter = ref('');
 const chargeActionStatus = ref('');
 const selectedCandidateKeys = ref(new Set<string>());
+const selectedMedicalOrderIds = ref(new Set<string>());
 const dictTree = ref<MedicalOrderCategoryNode[]>([]);
 const packages = ref<MedicalOrderPackageView[]>([]);
 const draftItems = reactive<DraftMedicalOrderItem[]>([]);
@@ -521,9 +128,7 @@ const currentDoctorName = computed(
 const sourceOrderItems = computed(() =>
   flattenMedicalOrderItems(dictTree.value).filter((item) => item.enabled),
 );
-const orderItems = computed(() =>
-  mergeFallbackOrderItems(sourceOrderItems.value, fallbackMedicalOrderItems),
-);
+const orderItems = computed(() => sourceOrderItems.value);
 const orderItemMap = computed(() => {
   const map = new Map<string, MedicalOrderItemView>();
   for (const item of orderItems.value) {
@@ -537,33 +142,67 @@ const medicalOrderCategoryMap = computed(() => {
     map.set(node.id, node);
     node.children.forEach((childNode) => visit(childNode));
   };
-  fallbackMedicalOrderCategories.forEach((node) => visit(node));
   dictTree.value.forEach((node) => visit(node));
   return map;
 });
+const categoryFilters = computed(() =>
+  buildCategoryFilters(dictTree.value).filter(
+    (categoryFilter) => categoryFilter.itemIds.size > 0,
+  ),
+);
+const activeCategoryItemIds = computed(() => {
+  if (!activeCategoryId.value) {
+    return null;
+  }
+  return (
+    categoryFilters.value.find((item) => item.id === activeCategoryId.value)
+      ?.itemIds ?? null
+  );
+});
+const existingMedicalOrders = computed(
+  () => props.workbench?.medicalOrders ?? [],
+);
+const chargeableMedicalOrders = computed(() =>
+  existingMedicalOrders.value.filter(
+    (item) => !isChargedStatus(item.billingStatus),
+  ),
+);
+const selectedChargeableMedicalOrderIds = computed(() => {
+  const chargeableIds = new Set(
+    chargeableMedicalOrders.value.map((item) => item.orderId),
+  );
+  return [...selectedMedicalOrderIds.value].filter((orderId) =>
+    chargeableIds.has(orderId),
+  );
+});
+const targetBillingOrderIds = computed(() =>
+  selectedChargeableMedicalOrderIds.value.length > 0
+    ? selectedChargeableMedicalOrderIds.value
+    : chargeableMedicalOrders.value.map((item) => item.orderId),
+);
 const paidMedicalOrderCount = computed(
   () =>
-    props.workbench?.medicalOrders.filter((item) =>
+    existingMedicalOrders.value.filter((item) =>
       isChargedStatus(item.billingStatus),
-    ).length ?? 0,
+    ).length,
 );
 const unpaidMedicalOrderCount = computed(
-  () =>
-    (props.workbench?.medicalOrders.length ?? 0) - paidMedicalOrderCount.value,
+  () => existingMedicalOrders.value.length - paidMedicalOrderCount.value,
 );
 const medicalOrderRows = computed<MedicalOrderTableRow[]>(() => {
-  const existingRows =
-    props.workbench?.medicalOrders.map((item, index) => ({
-      doctorName: formatNullable(item.doctorName),
-      key: item.orderId,
-      orderContent: formatNullable(item.orderContent),
-      orderTime: formatDateTime(item.orderDate),
-      remarks: formatNullable(item.remarks),
-      removable: false,
-      resultLabel: formatBillingStatus(item.billingStatus),
-      sequenceNo: index + 1,
-      statusLabel: formatOrderStatus(item.status),
-    })) ?? [];
+  const existingRows = existingMedicalOrders.value.map((item, index) => ({
+    billingStatus: item.billingStatus,
+    doctorName: formatNullable(item.doctorName),
+    key: item.orderId,
+    orderContent: formatNullable(item.orderContent),
+    orderId: item.orderId,
+    orderTime: formatDateTime(item.orderDate),
+    remarks: formatNullable(item.remarks),
+    removable: false,
+    resultLabel: formatBillingStatus(item.billingStatus),
+    sequenceNo: index + 1,
+    statusLabel: formatOrderStatus(item.status),
+  }));
   const draftRows = draftItems.map((item, index) => ({
     doctorName: currentDoctorName.value,
     draftIndex: index,
@@ -581,40 +220,43 @@ const medicalOrderRows = computed<MedicalOrderTableRow[]>(() => {
 const allQuickTemplateRows = computed<QuickTemplateRow[]>(() => {
   const packageRows = packages.value
     .filter((item) => item.enabled)
-    .filter((item) => matchesTemplateGroup(item))
-    .map((item) => {
-      const packageOrderItems = item.items.flatMap((packageItem) => {
-        const orderItem = orderItemMap.value.get(packageItem.orderItemId);
-        return orderItem ? [orderItem] : [];
-      });
-      const packageItemNames = item.items
+    .flatMap((item) => {
+      const packageOrderItems = getPackageEnabledOrderItems(item).filter(
+        (orderItem) => matchesActiveCategory(orderItem),
+      );
+      if (packageOrderItems.length === 0) {
+        return [];
+      }
+      const packageItemNames = packageOrderItems
         .map((packageItem) => packageItem.orderItemName)
         .join(' ');
-      const packageItemCodes = item.items
+      const packageItemCodes = packageOrderItems
         .map((packageItem) => packageItem.orderItemCode)
         .join(' ');
-      return {
-        action: () => addPackageItems(item),
-        count: item.items.length,
-        key: `package-${item.id}`,
-        letterValues: [item.packageCode, item.packageName, packageItemCodes],
-        searchValues: [
-          item.packageCode,
-          item.packageName,
-          item.packageType,
-          item.remarks,
-          packageItemNames,
-          packageOrderItems
-            .map((orderItem) => orderItem.defaultContent)
-            .join(' '),
-        ],
-        title: item.packageName,
-        typeLabel: formatNullable(item.packageType),
-      };
+      return [
+        {
+          action: () => addPackageItems(item),
+          count: packageOrderItems.length,
+          key: `package-${item.id}`,
+          letterValues: [item.packageCode, item.packageName, packageItemCodes],
+          searchValues: [
+            item.packageCode,
+            item.packageName,
+            item.packageType,
+            item.remarks,
+            packageItemNames,
+            packageOrderItems
+              .map((orderItem) => orderItem.defaultContent)
+              .join(' '),
+          ],
+          title: item.packageName,
+          typeLabel: formatNullable(item.packageType),
+        },
+      ];
     });
 
   const itemRows = orderItems.value
-    .filter((item) => matchesOrderItemTemplateGroup(item))
+    .filter((item) => matchesActiveCategory(item))
     .map((item) => {
       const category = medicalOrderCategoryMap.value.get(item.categoryId);
       return {
@@ -654,14 +296,40 @@ const selectedQuickTemplateRows = computed(() =>
     selectedCandidateKeys.value.has(item.key),
   ),
 );
-const canSubmit = computed(
-  () =>
-    Boolean(props.workbench?.caseId) &&
-    Boolean(selectedBlock.value) &&
-    canCreateMedicalOrder.value &&
-    draftItems.length > 0 &&
-    !submitLoading.value,
-);
+const submitDisabledReason = computed(() => {
+  if (submitLoading.value) {
+    return '医嘱提交中';
+  }
+  if (!props.workbench?.caseId) {
+    return '请先选择病例';
+  }
+  if (!selectedBlock.value) {
+    return '请先选择蜡块';
+  }
+  if (!canCreateMedicalOrder.value) {
+    return '当前账号没有创建医嘱权限';
+  }
+  if (draftItems.length === 0) {
+    return '请先从下方待选列表添加医嘱草稿';
+  }
+  return '';
+});
+const canSubmit = computed(() => !submitDisabledReason.value);
+const chargeDisabledReason = computed(() => {
+  if (chargeLoading.value) {
+    return '收费处理中';
+  }
+  if (!props.workbench?.caseId) {
+    return '请先选择病例';
+  }
+  if (!canCreateMedicalOrder.value) {
+    return '当前账号没有医嘱收费权限';
+  }
+  if (targetBillingOrderIds.value.length === 0) {
+    return '当前没有可收费医嘱';
+  }
+  return '';
+});
 const chargePathologyLabel = computed(() => {
   const pathologyNo = props.workbench?.pathologyNo?.trim();
   if (!pathologyNo) {
@@ -676,6 +344,7 @@ watch(
   () => {
     draftItems.splice(0);
     chargeActionStatus.value = '';
+    selectedMedicalOrderIds.value = new Set();
   },
 );
 
@@ -701,44 +370,12 @@ function flattenMedicalOrderItems(nodes: MedicalOrderCategoryNode[]) {
   const items: MedicalOrderItemView[] = [];
   const visit = (node: MedicalOrderCategoryNode) => {
     if (node.enabled) {
-      items.push(...node.items);
+      items.push(...node.items.filter((item) => item.enabled));
     }
     node.children.forEach((childNode) => visit(childNode));
   };
   nodes.forEach((node) => visit(node));
   return items;
-}
-
-function mergeFallbackOrderItems(
-  sourceItems: MedicalOrderItemView[],
-  fallbackItems: MedicalOrderItemView[],
-) {
-  const knownKeys = new Set<string>();
-  const addKnownKeys = (item: MedicalOrderItemView) => {
-    const code = normalizeCode(item.orderItemCode);
-    if (code) {
-      knownKeys.add(`code:${code}`);
-    }
-    knownKeys.add(`name:${normalizeSearchText(item.orderItemName)}`);
-  };
-  for (const item of sourceItems) {
-    addKnownKeys(item);
-  }
-
-  const mergedItems = [...sourceItems];
-  for (const item of fallbackItems) {
-    const code = normalizeCode(item.orderItemCode);
-    const name = normalizeSearchText(item.orderItemName);
-    if (
-      (code && knownKeys.has(`code:${code}`)) ||
-      knownKeys.has(`name:${name}`)
-    ) {
-      continue;
-    }
-    mergedItems.push(item);
-    addKnownKeys(item);
-  }
-  return mergedItems;
 }
 
 function matchesKeyword(
@@ -760,95 +397,50 @@ function matchesLetter(values: Array<null | string | undefined>) {
   );
 }
 
-function matchesTemplateGroup(row: MedicalOrderPackageView) {
-  const packageOrderItems = row.items.flatMap((item) => {
+function buildCategoryFilters(nodes: MedicalOrderCategoryNode[]) {
+  const categoryFilterItems: MedicalOrderCategoryFilter[] = [];
+  const collectItemIds = (node: MedicalOrderCategoryNode) => {
+    const itemIds = new Set<string>();
+    if (node.enabled) {
+      node.items
+        .filter((item) => item.enabled)
+        .forEach((item) => itemIds.add(item.id));
+    }
+    node.children.forEach((childNode) => {
+      collectItemIds(childNode).forEach((itemId) => itemIds.add(itemId));
+    });
+    return itemIds;
+  };
+  const visit = (node: MedicalOrderCategoryNode) => {
+    if (node.enabled) {
+      categoryFilterItems.push({
+        id: node.id,
+        itemIds: collectItemIds(node),
+        label: node.categoryName,
+        testValue: node.categoryCode?.trim() || node.id,
+      });
+    }
+    node.children.forEach((childNode) => visit(childNode));
+  };
+  nodes.forEach((node) => visit(node));
+  return categoryFilterItems;
+}
+
+function matchesActiveCategory(item: MedicalOrderItemView) {
+  return activeCategoryItemIds.value?.has(item.id) ?? true;
+}
+
+function getPackageEnabledOrderItems(row: MedicalOrderPackageView) {
+  return row.items.flatMap((item) => {
     const orderItem = orderItemMap.value.get(item.orderItemId);
-    return orderItem ? [orderItem] : [];
+    return orderItem?.enabled ? [orderItem] : [];
   });
-  return matchesActiveTemplateGroup(
-    [
-      row.packageCode,
-      row.packageType,
-      ...packageOrderItems.map((item) => item.orderItemCode),
-      ...packageOrderItems.map((item) => item.orderType),
-      ...packageOrderItems.map(
-        (item) =>
-          medicalOrderCategoryMap.value.get(item.categoryId)?.categoryCode,
-      ),
-    ],
-    [
-      row.packageName,
-      row.remarks,
-      row.items.map((item) => item.orderItemName).join(' '),
-      packageOrderItems.map((item) => item.defaultContent).join(' '),
-      packageOrderItems
-        .map(
-          (item) =>
-            medicalOrderCategoryMap.value.get(item.categoryId)?.categoryName,
-        )
-        .join(' '),
-    ],
-  );
-}
-
-function matchesOrderItemTemplateGroup(row: MedicalOrderItemView) {
-  const category = medicalOrderCategoryMap.value.get(row.categoryId);
-  return matchesActiveTemplateGroup(
-    [row.orderItemCode, row.orderType, category?.categoryCode],
-    [
-      row.orderItemName,
-      row.defaultContent,
-      row.executionScope,
-      category?.categoryName,
-    ],
-  );
-}
-
-function matchesActiveTemplateGroup(
-  classifierValues: Array<null | string | undefined>,
-  textValues: Array<null | string | undefined>,
-) {
-  const matcher = templateGroupMatchers[activeTemplateGroup.value];
-  if (!matcher) {
-    return true;
-  }
-  const normalizedOrderTypes = new Set(
-    matcher.orderTypes.map((item) => normalizeCode(item)),
-  );
-  if (
-    classifierValues.some((item) =>
-      normalizedOrderTypes.has(normalizeCode(item)),
-    )
-  ) {
-    return true;
-  }
-  const normalizedKeywords = matcher.keywords.map((item) =>
-    normalizeSearchText(item),
-  );
-  return textValues.some((item) => {
-    const normalizedValue = normalizeSearchText(item);
-    return normalizedKeywords.some(
-      (keywordValue) =>
-        keywordValue.length > 0 && normalizedValue.includes(keywordValue),
-    );
-  });
-}
-
-function normalizeCode(value?: null | string) {
-  return (
-    value
-      ?.trim()
-      .replaceAll(/[\s-]+/g, '_')
-      .toUpperCase() ?? ''
-  );
-}
-
-function normalizeSearchText(value?: null | string) {
-  return value?.trim().toLowerCase() ?? '';
 }
 
 function isChargedStatus(value?: null | string) {
-  return ['CHARGED', 'PAID', 'SETTLED'].includes(value?.trim() ?? '');
+  return ['BILLED', 'CHARGED', 'PAID', 'SETTLED', 'SUCCESS'].includes(
+    value?.trim().toUpperCase() ?? '',
+  );
 }
 
 function formatBillingStatus(value?: null | string) {
@@ -861,6 +453,7 @@ function formatBillingStatus(value?: null | string) {
     PENDING: '待收费',
     REFUNDED: '已退费',
     SETTLED: '已收费',
+    SUCCESS: '已收费',
     UNPAID: '未收费',
     UNBILLED: '未收费',
     UNCHARGED: '未收费',
@@ -945,22 +538,9 @@ function addOrderItem(item: MedicalOrderItemView, sourceName = '快捷模板') {
 }
 
 function addPackageItems(row: MedicalOrderPackageView) {
-  const enabledPackageItems = row.items
-    .map(
-      (item) =>
-        orderItemMap.value.get(item.orderItemId) ?? {
-          categoryId: '',
-          defaultContent: null,
-          enabled: row.enabled,
-          executionScope: null,
-          id: item.orderItemId,
-          orderItemCode: item.orderItemCode,
-          orderItemName: item.orderItemName,
-          orderType: null,
-          sortOrder: item.sortOrder,
-        },
-    )
-    .filter((item) => item.enabled);
+  const enabledPackageItems = getPackageEnabledOrderItems(row).filter((item) =>
+    matchesActiveCategory(item),
+  );
 
   if (enabledPackageItems.length === 0) {
     ElMessage.warning('当前套餐没有可加入的启用条目');
@@ -985,15 +565,15 @@ function undoLastDraftItem() {
   draftItems.splice(-1, 1);
 }
 
-function selectTemplateGroup(value: string) {
-  activeTemplateGroup.value = value;
+function selectCategoryFilter(value: string) {
+  activeCategoryId.value = value;
   selectedLetter.value = '';
   selectedCandidateKeys.value = new Set();
 }
 
 function selectLetter(value: string) {
   selectedLetter.value = selectedLetter.value === value ? '' : value;
-  activeTemplateGroup.value = '';
+  activeCategoryId.value = '';
   selectedCandidateKeys.value = new Set();
 }
 
@@ -1044,13 +624,74 @@ function handleCandidateKeywordKeydown(event: Event | KeyboardEvent) {
   }
 }
 
-function executeCharge() {
-  if (!props.workbench) {
-    ElMessage.warning('请先从左侧选择病例');
+function handleMedicalOrderSelectionChange(rows: MedicalOrderTableRow[]) {
+  selectedMedicalOrderIds.value = new Set(
+    rows.flatMap((row) =>
+      isMedicalOrderRowSelectable(row) && row.orderId ? [row.orderId] : [],
+    ),
+  );
+}
+
+function isMedicalOrderRowSelectable(row: MedicalOrderTableRow) {
+  return Boolean(row.orderId) && !isChargedStatus(row.billingStatus);
+}
+
+async function executeCharge() {
+  await runMedicalOrderBilling('execute', '执行收费');
+}
+
+async function confirmChargeCompletion() {
+  await runMedicalOrderBilling('confirm', '确认完成收费');
+}
+
+async function runMedicalOrderBilling(
+  action: 'confirm' | 'execute',
+  successLabel: string,
+) {
+  const caseId = props.workbench?.caseId;
+  if (!caseId) {
+    ElMessage.warning('请先选择病例');
     return;
   }
-  chargeActionStatus.value = '已触发执行收费';
-  ElMessage.success('执行收费已触发');
+  if (!canCreateMedicalOrder.value) {
+    ElMessage.warning('当前账号没有医嘱收费权限');
+    return;
+  }
+  const targetOrderIds = targetBillingOrderIds.value;
+  if (targetOrderIds.length === 0) {
+    ElMessage.warning('当前没有可收费医嘱');
+    return;
+  }
+
+  chargeLoading.value = true;
+  try {
+    const payload = {
+      caseId,
+      orderIds:
+        selectedChargeableMedicalOrderIds.value.length > 0
+          ? selectedChargeableMedicalOrderIds.value
+          : undefined,
+      remarks: successLabel,
+    };
+    const result =
+      action === 'execute'
+        ? await executeMedicalOrderBilling(payload)
+        : await confirmMedicalOrderBilling(payload);
+    const statusText = `${successLabel}：成功 ${result.successCount} 条，失败 ${result.failureCount} 条`;
+    chargeActionStatus.value = statusText;
+    if (result.failureCount > 0) {
+      ElMessage.warning(statusText);
+    } else {
+      ElMessage.success(statusText);
+    }
+    emit('refresh');
+  } catch (error) {
+    const message = getDoctorWorkflowPageErrorMessage(error);
+    chargeActionStatus.value = message;
+    ElMessage.error(message);
+  } finally {
+    chargeLoading.value = false;
+  }
 }
 
 function openChargeManager() {
@@ -1106,14 +747,11 @@ async function submitDraftOrders() {
 
   submitLoading.value = true;
   try {
-    const operatorName = currentDoctorName.value;
-    const operatorUserId = userStore.userInfo?.userId;
     for (const item of draftItems) {
       await createMedicalOrder({
         caseId,
-        operatorName,
-        operatorUserId,
         orderContent: item.orderContent,
+        orderItemId: item.orderItemId,
         orderType: item.orderType,
         remarks: item.remarks.trim() || undefined,
       });
@@ -1157,7 +795,10 @@ onMounted(loadCandidates);
         </div>
         <ElButton
           class="m-0 w-[88px]"
+          :disabled="Boolean(chargeDisabledReason)"
+          :loading="chargeLoading"
           size="small"
+          :title="chargeDisabledReason || '执行收费'"
           type="success"
           @click="executeCharge"
         >
@@ -1189,15 +830,24 @@ onMounted(loadCandidates);
                 paidMedicalOrderCount
               }})
             </h4>
-            <ElButton
-              :disabled="!canSubmit"
-              :loading="submitLoading"
-              size="small"
-              type="primary"
-              @click="submitDraftOrders"
-            >
-              提交医嘱
-            </ElButton>
+            <div class="flex flex-wrap items-center justify-end gap-2">
+              <span
+                v-if="submitDisabledReason"
+                class="text-xs text-muted-foreground"
+              >
+                {{ submitDisabledReason }}
+              </span>
+              <ElButton
+                :disabled="!canSubmit"
+                :loading="submitLoading"
+                size="small"
+                :title="submitDisabledReason || '提交医嘱'"
+                type="primary"
+                @click="submitDraftOrders"
+              >
+                提交医嘱
+              </ElButton>
+            </div>
           </div>
           <ElAlert
             v-if="!canCreateMedicalOrder"
@@ -1211,8 +861,13 @@ onMounted(loadCandidates);
             border
             class="medical-order-table"
             size="small"
+            @selection-change="handleMedicalOrderSelectionChange"
           >
-            <ElTableColumn type="selection" width="42" />
+            <ElTableColumn
+              :selectable="isMedicalOrderRowSelectable"
+              type="selection"
+              width="42"
+            />
             <ElTableColumn label="序" width="52">
               <template #default="{ row }">
                 {{ row.sequenceNo }}
@@ -1272,19 +927,19 @@ onMounted(loadCandidates);
           <div class="border-b border-border px-3 py-2">
             <div class="flex flex-wrap gap-1">
               <button
-                v-for="group in templateGroups"
-                :key="group.value"
+                v-for="categoryFilter in categoryFilters"
+                :key="categoryFilter.id"
                 class="h-7 border border-border bg-background px-2 text-xs text-foreground hover:border-primary"
                 :class="
-                  activeTemplateGroup === group.value
+                  activeCategoryId === categoryFilter.id
                     ? 'border-primary bg-primary/10 text-primary'
                     : ''
                 "
-                :data-testid="`medical-order-template-group-${group.value}`"
+                :data-testid="`medical-order-template-group-${categoryFilter.testValue}`"
                 type="button"
-                @click="selectTemplateGroup(group.value)"
+                @click="selectCategoryFilter(categoryFilter.id)"
               >
-                {{ group.label }}
+                {{ categoryFilter.label }}
               </button>
             </div>
             <div class="mt-2 flex flex-wrap gap-1">
@@ -1415,9 +1070,12 @@ onMounted(loadCandidates);
         </div>
         <div class="mt-6 grid grid-cols-2 gap-4">
           <ElButton
+            :disabled="Boolean(chargeDisabledReason)"
+            :loading="chargeLoading"
             size="large"
+            :title="chargeDisabledReason || '确认完成收费'"
             type="primary"
-            @click="setChargeActionStatus('确认完成收费')"
+            @click="confirmChargeCompletion"
           >
             确认完成收费
           </ElButton>
@@ -1425,9 +1083,12 @@ onMounted(loadCandidates);
             确认病人出院
           </ElButton>
           <ElButton
+            :disabled="Boolean(chargeDisabledReason)"
+            :loading="chargeLoading"
             size="large"
+            :title="chargeDisabledReason || '重新执行收费'"
             type="danger"
-            @click="setChargeActionStatus('重新执行收费')"
+            @click="runMedicalOrderBilling('execute', '重新执行收费')"
           >
             重新执行收费
           </ElButton>

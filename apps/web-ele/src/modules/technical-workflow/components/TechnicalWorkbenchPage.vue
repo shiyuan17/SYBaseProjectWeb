@@ -8,17 +8,20 @@ import type {
   TechnicalWorkbenchRow,
 } from '../types/technical-workbench';
 
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 
 import { Page } from '@vben/common-ui';
 
 import {
+  ElAlert,
   ElButton,
   ElCheckbox,
   ElEmpty,
   ElInput,
   ElMessage,
+  ElOption,
   ElPagination,
+  ElSelect,
   ElTable,
   ElTableColumn,
 } from 'element-plus';
@@ -32,12 +35,19 @@ const currentPage = ref(1);
 const pageSize = ref(props.config.defaultPageSize);
 const selectedRows = ref<TechnicalWorkbenchRow[]>([]);
 const activeWorkday = ref(props.config.defaultWorkday);
+const activeStatus = ref(props.config.defaultStatus ?? '');
+const remoteRows = ref<TechnicalWorkbenchRow[]>([]);
+const remoteTotal = ref(0);
+const loading = ref(false);
+const errorMessage = ref('');
+let remoteRequestSequence = 0;
 const pageTitle = computed(() =>
   props.config.showPageHeader === false ? undefined : props.config.title,
 );
 const pageDescription = computed(() =>
   props.config.showPageHeader === false ? undefined : props.config.description,
 );
+const hasRemoteDataSource = computed(() => Boolean(props.config.dataSource));
 
 const filterState = reactive<Record<string, boolean>>(
   Object.fromEntries(
@@ -70,7 +80,7 @@ const selectedFilterGroups = computed(() => {
 const filteredRows = computed(() => {
   const normalizedKeyword = searchKeyword.value.trim().toLowerCase();
 
-  return props.config.rows.filter((row) => {
+  return (props.config.rows ?? []).filter((row) => {
     const matchesKeyword =
       !normalizedKeyword ||
       row.searchableText.toLowerCase().includes(normalizedKeyword);
@@ -89,8 +99,16 @@ const filteredRows = computed(() => {
   });
 });
 
+const displayRows = computed(() =>
+  hasRemoteDataSource.value ? remoteRows.value : pagedRows.value,
+);
+
+const totalCount = computed(() =>
+  hasRemoteDataSource.value ? remoteTotal.value : filteredRows.value.length,
+);
+
 const pageCount = computed(() =>
-  Math.max(1, Math.ceil(filteredRows.value.length / pageSize.value)),
+  Math.max(1, Math.ceil(totalCount.value / pageSize.value)),
 );
 
 const pagedRows = computed(() => {
@@ -101,7 +119,9 @@ const pagedRows = computed(() => {
 const metrics = computed(() =>
   (props.config.metrics ?? []).map((metric) => ({
     ...metric,
-    displayValue: metric.value(filteredRows.value),
+    displayValue: metric.value(
+      hasRemoteDataSource.value ? remoteRows.value : filteredRows.value,
+    ),
   })),
 );
 
@@ -115,7 +135,37 @@ watch(filteredRows, () => {
 watch(pageSize, () => {
   currentPage.value = 1;
   selectedRows.value = [];
+  if (hasRemoteDataSource.value) {
+    void loadRemoteRows();
+  }
 });
+
+watch(currentPage, () => {
+  selectedRows.value = [];
+  if (hasRemoteDataSource.value) {
+    void loadRemoteRows();
+  }
+});
+
+watch(activeStatus, () => {
+  restartRemoteQuery();
+});
+
+watch(
+  () => props.config,
+  (config) => {
+    pageSize.value = config.defaultPageSize;
+    currentPage.value = 1;
+    activeWorkday.value = config.defaultWorkday;
+    activeStatus.value = config.defaultStatus ?? '';
+    remoteRows.value = [];
+    remoteTotal.value = 0;
+    selectedRows.value = [];
+    if (config.dataSource) {
+      void loadRemoteRows();
+    }
+  },
+);
 
 function formatCellValue(
   column: TechnicalWorkbenchColumn,
@@ -145,6 +195,11 @@ function handleToolbarAction(action: TechnicalWorkbenchAction) {
 }
 
 function handleSearch() {
+  if (hasRemoteDataSource.value) {
+    restartRemoteQuery();
+    return;
+  }
+
   currentPage.value = 1;
 }
 
@@ -152,6 +207,66 @@ function selectWorkday(dayTab: TechnicalWorkbenchDayTab) {
   activeWorkday.value = dayTab.value;
   currentPage.value = 1;
 }
+
+function restartRemoteQuery() {
+  if (!hasRemoteDataSource.value) {
+    return;
+  }
+  selectedRows.value = [];
+  if (currentPage.value === 1) {
+    void loadRemoteRows();
+    return;
+  }
+  currentPage.value = 1;
+}
+
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  return '医嘱数据加载失败，请稍后重试';
+}
+
+async function loadRemoteRows() {
+  const dataSource = props.config.dataSource;
+  if (!dataSource) {
+    return;
+  }
+
+  const requestId = ++remoteRequestSequence;
+  loading.value = true;
+  errorMessage.value = '';
+  try {
+    const result = await dataSource.load({
+      page: currentPage.value,
+      pathologyNo: searchKeyword.value.trim() || undefined,
+      size: pageSize.value,
+      status: activeStatus.value || undefined,
+    });
+    if (requestId !== remoteRequestSequence) {
+      return;
+    }
+    remoteRows.value = result.rows;
+    remoteTotal.value = result.total;
+  } catch (error) {
+    if (requestId !== remoteRequestSequence) {
+      return;
+    }
+    errorMessage.value = getErrorMessage(error);
+    remoteRows.value = [];
+    remoteTotal.value = 0;
+  } finally {
+    if (requestId === remoteRequestSequence) {
+      loading.value = false;
+    }
+  }
+}
+
+onMounted(() => {
+  if (hasRemoteDataSource.value) {
+    void loadRemoteRows();
+  }
+});
 </script>
 
 <template>
@@ -218,6 +333,20 @@ function selectWorkday(dayTab: TechnicalWorkbenchDayTab) {
             class="w-[220px]"
             @keyup.enter="handleSearch"
           />
+          <ElSelect
+            v-if="config.statusOptions?.length"
+            v-model="activeStatus"
+            class="w-[150px]"
+            placeholder="医嘱状态"
+          >
+            <ElOption label="全部状态" value="" />
+            <ElOption
+              v-for="statusOption in config.statusOptions"
+              :key="statusOption.value"
+              :label="statusOption.label"
+              :value="statusOption.value"
+            />
+          </ElSelect>
           <ElButton
             type="primary"
             class="!h-8 !rounded-sm !px-4 !text-xs"
@@ -269,8 +398,23 @@ function selectWorkday(dayTab: TechnicalWorkbenchDayTab) {
       </section>
 
       <section class="overflow-hidden rounded-lg border border-border bg-card">
+        <ElAlert
+          v-if="errorMessage"
+          :closable="false"
+          class="m-3"
+          show-icon
+          type="error"
+        >
+          <template #title>
+            <span>{{ errorMessage }}</span>
+            <ElButton link type="primary" @click="loadRemoteRows">
+              重试
+            </ElButton>
+          </template>
+        </ElAlert>
         <ElTable
-          :data="pagedRows"
+          v-loading="loading"
+          :data="displayRows"
           border
           size="small"
           @selection-change="selectedRows = $event"
@@ -299,7 +443,7 @@ function selectWorkday(dayTab: TechnicalWorkbenchDayTab) {
         </ElTable>
 
         <ElEmpty
-          v-if="filteredRows.length === 0"
+          v-if="!loading && !errorMessage && displayRows.length === 0"
           :description="config.emptyText"
           class="py-8"
         />
@@ -309,7 +453,7 @@ function selectWorkday(dayTab: TechnicalWorkbenchDayTab) {
             v-model:current-page="currentPage"
             v-model:page-size="pageSize"
             :page-sizes="paginationPageSizes"
-            :total="filteredRows.length"
+            :total="totalCount"
             background
             layout="total, sizes, prev, pager, next, jumper"
           />

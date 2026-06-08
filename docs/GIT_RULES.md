@@ -109,14 +109,27 @@ git branch -d feature/ENG-123-user-management
 
 - `pre-commit`：对暂存文件自动执行 `oxfmt` 格式化 + `oxlint --fix` + `eslint --fix`（`.vue/.js/.ts` 等）+ `stylelint --fix`（样式文件），格式化结果会回写
 - `commit-msg`：`commitlint` 校验提交信息，不符合 Conventional Commits 直接拦截
+- `pre-push`：执行 `pnpm check:type` + `pnpm check:circular` + `pnpm test:unit`，在推送前拦截类型、循环依赖与单元测试风险
 - `post-merge`：自动执行 `pnpm install`，保持依赖与合并结果一致
 
 护栏边界与责任分担：
 
-- **lefthook 只覆盖格式化、lint 与提交信息**，不覆盖类型检查、单元测试与构建
-- 因此 `pnpm check:type`、`pnpm test:unit`、`pnpm build` 等仍属开发者 / Agent 的交付前必跑项（见 `CODING_RULES.md` 标准验证命令），不得因"hook 已通过"就跳过
+- **lefthook 覆盖格式化、lint、提交信息、推送前中等检查**，不覆盖完整构建、端到端测试与目标环境验收
+- 因此 `pnpm build`、`pnpm test:e2e`、联调验证等仍属开发者 / Agent 的交付前必跑项（见 `CODING_RULES.md` 标准验证命令），不得因"hook 已通过"就跳过
 - 禁止使用 `--no-verify` 等方式绕过护栏；确有特殊情况必须说明原因并人工确认
 - 涉及红区文件（权限模型、登录态、全局拦截器、构建配置、发布脚本）的改动，除护栏外仍须执行「6. 必须升级人工确认的场景」中的人工确认（见 `AGENTS.md`）
+
+### 8. 动态审查路由与红队审查
+
+PR 必须根据任务类型选择对应审查路径，不得所有任务套用同一套 AI 流程：
+
+- UI 任务：执行 UI Review，重点检查交互、布局、截图/录屏、兼容性
+- 接口任务：执行 API Review，重点检查请求/响应契约、错误模型、分页与后端字段映射
+- 数据库任务：执行 DB Review，重点检查迁移、回滚、兼容性与数据安全
+- 权限、患者信息、报告信息：执行 Security Review，重点检查越权、泄露、脱敏与审计
+- 大文件重构、共享契约、跨层边界：执行 Architecture Review，重点检查模块边界和影响面
+- 生产问题：执行 Execution Driven Debug，必须先读日志、复现问题、确认修复与回滚路径
+- 高风险变更：执行 Red Team Review，主动攻击代码并证明是否存在绕过、数据破坏、错误吞噬或回滚缺口
 
 ## 推荐实践
 
@@ -140,9 +153,10 @@ git branch -d feature/ENG-123-user-management
 - [ ] 提交信息符合 Conventional Commits
 - [ ] 任务合并后已清理对应 worktree 与已合并分支
 - [ ] PR 描述包含目的、影响、验证和风险
+- [ ] PR 已按任务类型选择动态审查路由，高风险变更已执行 Red Team Review
 - [ ] UI 或联调类变更已附截图、录屏或接口说明
 - [ ] Review、构建、冲突处理已完成
-- [ ] 未使用 `--no-verify` 绕过 lefthook 护栏；hook 未覆盖的类型检查 / 测试 / 构建已另行执行
+- [ ] 未使用 `--no-verify` 绕过 lefthook 护栏；hook 未覆盖的构建 / 端到端 / 联调验收已另行执行
 - [ ] `release/*` 与 `hotfix/*` 的回合并路径已执行
 
 ## 关联文档

@@ -25,6 +25,16 @@
 
 > 改动逻辑或组件时，交付前至少运行 `pnpm lint` + `pnpm check:type` + 相关 `pnpm test:unit`，并在交付说明中回填结论。
 
+## 日志读取规则
+
+- 后端日志固定输出到 `.logs/backend.log`
+- 前端开发日志固定输出到 `.logs/frontend.log`
+- 构建日志固定输出到 `.logs/build.log`
+- 测试日志固定输出到 `.logs/test.log`
+- `pnpm dev:ele`、`pnpm build`、`pnpm test:unit` 默认会追加写入上述对应日志，并保留控制台输出
+- AI 排查问题时，必须先读取 `.logs/` 下最近日志，再修改代码
+- 修改后必须重新运行对应命令，并把新错误继续写入日志
+
 ## 强制规则
 
 ### 1. 必读顺序

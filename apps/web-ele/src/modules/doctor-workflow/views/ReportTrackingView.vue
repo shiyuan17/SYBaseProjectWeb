@@ -8,7 +8,7 @@ import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
-import { useAccessStore, useUserStore } from '@vben/stores';
+import { useAccessStore } from '@vben/stores';
 
 import {
   ElAlert,
@@ -49,7 +49,6 @@ import { firstQueryParam } from '../utils/route';
 const route = useRoute();
 const router = useRouter();
 const accessStore = useAccessStore();
-const userStore = useUserStore();
 
 const loading = ref(false);
 const operating = ref(false);
@@ -63,8 +62,6 @@ const isCurrentTrackingRoute = computed(
     route.name === 'ReportTracking' ||
     route.path === '/doctor-workflow/tracking',
 );
-const currentUserId = computed(() => userStore.userInfo?.userId ?? '');
-const currentUserName = computed(() => userStore.userInfo?.realName ?? '');
 const canOpenReport = computed(() => {
   const accessCodeSet = new Set(accessStore.accessCodes);
   return M4_REPORT_PAGE_AUTHORITIES.some((code) => accessCodeSet.has(code));
@@ -159,16 +156,10 @@ async function runCancelMedicalOrder(order: MedicalOrderSummary) {
     ElMessage.warning('仅待处理医嘱可取消');
     return;
   }
-  if (!currentUserName.value.trim()) {
-    ElMessage.warning('当前登录账号缺少姓名信息，无法执行取消。');
-    return;
-  }
 
   operating.value = true;
   try {
     await cancelMedicalOrder(order.orderId, {
-      operatorName: currentUserName.value.trim(),
-      operatorUserId: currentUserId.value || undefined,
       remarks: '从报告追踪页取消医嘱',
     });
     ElMessage.success('病理医嘱已取消');
