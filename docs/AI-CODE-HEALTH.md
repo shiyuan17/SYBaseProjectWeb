@@ -415,7 +415,9 @@ type CreateOrderResult
 
 ## 4.5 Schema 优先
 
-优先使用：
+> 本仓库未默认引入 Zod / Joi 等运行时 schema 校验库；本节为通用建议，落地以仓库实际依赖与 `API_RULES.md`、`VUE_TS_RULES.md` 的类型/转换约定为准，不要为套用本节而擅自引入新依赖（属红区，须人工确认）。
+
+在已采用 schema 校验的场景，优先使用：
 
 - Zod
 - Joi

@@ -53,15 +53,41 @@ describe('medical-order-workstation mapper', () => {
 
     expect(row).toMatchObject({
       blockNo: '-',
+      chargeStatus: '-',
       checkItem: 'CK',
       confirmedStatus: '已确认',
-      doctorTime: '2026-06-05 09:12',
+      doctorTime: '2026-06-05 09:12:30',
       originalPathologyNo: '-',
       patientName: '王女士',
       pathologyNo: 'BL-202606050001',
       releaseStatus: '已确认',
     });
     expect(row.searchableText).toContain('bl-202606050001');
+  });
+
+  it('keeps charged HE staining orders visible in routine rows', () => {
+    const row = mapMedicalOrderToTechnicalWorkbenchRow(
+      createOrder({
+        billingStatus: 'SUCCESS',
+        orderCategoryCode: 'ROUTINE',
+        orderCategoryName: '常规医嘱',
+        orderContent: 'HE染色（蜡块: A1）',
+        orderItemCode: 'HE',
+        orderItemName: 'HE染色',
+        orderType: 'ROUTINE',
+      }),
+      'routine',
+    );
+
+    expect(row).toMatchObject({
+      chargeStatus: '已收费',
+      checkItem: 'HE染色',
+      confirmedStatus: '待确认',
+      orderType: '常规医嘱',
+      sliceMode: '常规医嘱',
+    });
+    expect(row.searchableText).toContain('已收费');
+    expect(row.searchableText).toContain('he染色');
   });
 
   it('maps special medical orders to confirmation and release columns', () => {
@@ -158,6 +184,44 @@ describe('medical-order-workstation mapper', () => {
       pathologyNo: 'BL-001',
       size: 50,
       status: 'PENDING',
+    });
+  });
+
+  it('includes legacy routine category code in routine workstation queries', async () => {
+    listPendingMedicalOrdersMock.mockResolvedValue({
+      items: [
+        createOrder({
+          orderCategoryCode: 'ROUTINE',
+          orderCategoryName: '常规医嘱',
+          orderItemCode: 'HE',
+          orderItemName: 'HE染色',
+        }),
+      ],
+      page: 1,
+      size: 30,
+      total: 1,
+    });
+
+    const dataSource = createMedicalOrderWorkstationDataSource(
+      TECHNICAL_ORDER_CATEGORY_CODES.routine,
+      'routine',
+    );
+
+    await expect(
+      dataSource.load({
+        page: 1,
+        size: 30,
+      }),
+    ).resolves.toMatchObject({
+      rows: [{ checkItem: 'HE染色', orderType: '常规医嘱' }],
+      total: 1,
+    });
+    expect(listPendingMedicalOrdersMock).toHaveBeenCalledWith({
+      orderCategoryCode: 'ROUTINE,EXAM,CGRS,BLOCK,QP',
+      page: 1,
+      pathologyNo: undefined,
+      size: 30,
+      status: undefined,
     });
   });
 });

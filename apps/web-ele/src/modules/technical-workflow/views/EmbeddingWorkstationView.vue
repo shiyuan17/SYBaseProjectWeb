@@ -171,6 +171,12 @@ const selectedTask = computed(
     pendingItems.value.find((item) => item.id === selectedTaskId.value) ?? null,
 );
 
+const selectedPendingTasks = computed(() =>
+  pendingItems.value.filter((item) =>
+    selectedPendingTaskIds.value.includes(item.id),
+  ),
+);
+
 const currentCaseEmbeddingRecords = computed(
   () => trackingResult.value?.embeddingRecords ?? [],
 );
@@ -277,9 +283,14 @@ const evaluationDrawerRows = computed<EvaluationDrawerRow[]>(() => {
   });
 });
 
-const canCompleteSelectedTask = computed(() =>
-  Boolean(selectedTask.value && completeForm.samplingBlockId.trim()),
-);
+const canCompleteSelectedTask = computed(() => {
+  if (selectedPendingTasks.value.length > 0) {
+    return selectedPendingTasks.value.every(
+      (item) => getSamplingBlockIdFromTask(item).length > 0,
+    );
+  }
+  return Boolean(selectedTask.value && completeForm.samplingBlockId.trim());
+});
 
 function resetCompleteForm(task: null | PendingTechnicalTaskItem) {
   completeForm.blockCount = 1;
@@ -290,6 +301,30 @@ function resetCompleteForm(task: null | PendingTechnicalTaskItem) {
     task?.objectType === 'SAMPLING_BLOCK' ? (task.objectId ?? '') : '';
   completeForm.samplingEvaluation = DEFAULT_SAMPLING_EVALUATION;
   completeForm.sliceNotice = '';
+}
+
+function getSamplingBlockIdFromTask(task: PendingTechnicalTaskItem) {
+  return task.objectType === 'SAMPLING_BLOCK'
+    ? (task.objectId ?? '').trim()
+    : '';
+}
+
+function resolveEmbeddingActionTasks() {
+  if (selectedPendingTasks.value.length > 0) {
+    return {
+      tasks: selectedPendingTasks.value,
+      usePanelForm: false,
+    };
+  }
+  const task = selectedTask.value;
+  if (!task) {
+    ElMessage.warning('请先选择待包埋任务');
+    return null;
+  }
+  return {
+    tasks: [task],
+    usePanelForm: true,
+  };
 }
 
 function resetOperatorForm() {
@@ -534,63 +569,120 @@ async function handleSearch() {
   await refreshWorkstation();
 }
 
+async function completeEmbeddingTask(
+  task: PendingTechnicalTaskItem,
+  usePanelForm: boolean,
+) {
+  if (
+    task.taskStatus === 'PENDING' &&
+    activeProcessingTaskId.value !== task.id
+  ) {
+    await startEmbedding({
+      ...normalizeTechnicalOperatorPayload(operatorForm),
+      taskId: task.id,
+    });
+    activeProcessingTaskId.value = task.id;
+  } else if (
+    task.taskStatus !== 'IN_PROGRESS' &&
+    activeProcessingTaskId.value !== task.id
+  ) {
+    throw new Error('当前任务状态不支持完成包埋');
+  }
+
+  const samplingBlockId = usePanelForm
+    ? completeForm.samplingBlockId.trim()
+    : getSamplingBlockIdFromTask(task);
+  return completeEmbedding({
+    ...normalizeTechnicalOperatorPayload(operatorForm),
+    blockCount: completeForm.blockCount,
+    deviceCode: completeForm.deviceCode.trim() || null,
+    embeddingBoxNo: usePanelForm
+      ? completeForm.embeddingBoxNo.trim() || null
+      : null,
+    evaluationLevel:
+      completeForm.evaluationLevel || DEFAULT_EMBEDDING_EVALUATION_LEVEL,
+    samplingBlockId,
+    samplingEvaluation:
+      completeForm.samplingEvaluation.trim() || DEFAULT_SAMPLING_EVALUATION,
+    sliceNotice: completeForm.sliceNotice.trim() || null,
+    taskId: task.id,
+  });
+}
+
 async function handleCompleteEmbedding() {
-  const task = selectedTask.value;
-  if (!task) {
-    ElMessage.warning('请先选择待包埋任务');
+  const actionTasks = resolveEmbeddingActionTasks();
+  if (!actionTasks) {
     return;
   }
   if (!operatorForm.operatorName.trim()) {
     ElMessage.warning('请先确认当前登录人');
     return;
   }
-  if (!completeForm.samplingBlockId.trim()) {
+  if (
+    actionTasks.tasks.some((task) =>
+      actionTasks.usePanelForm
+        ? !completeForm.samplingBlockId.trim()
+        : !getSamplingBlockIdFromTask(task),
+    )
+  ) {
     ElMessage.warning('当前缺少取材块编号');
+    return;
+  }
+  if (
+    actionTasks.tasks.some(
+      (task) =>
+        task.taskStatus !== 'PENDING' &&
+        task.taskStatus !== 'IN_PROGRESS' &&
+        activeProcessingTaskId.value !== task.id,
+    )
+  ) {
+    ElMessage.warning('当前任务状态不支持完成包埋');
     return;
   }
 
   completeLoading.value = true;
   try {
-    if (
-      task.taskStatus === 'PENDING' &&
-      activeProcessingTaskId.value !== task.id
-    ) {
-      await startEmbedding({
-        ...normalizeTechnicalOperatorPayload(operatorForm),
-        taskId: task.id,
-      });
-      activeProcessingTaskId.value = task.id;
-    } else if (
-      task.taskStatus !== 'IN_PROGRESS' &&
-      activeProcessingTaskId.value !== task.id
-    ) {
-      ElMessage.warning('当前任务状态不支持完成包埋');
-      return;
+    const results = await Promise.allSettled(
+      actionTasks.tasks.map((task) =>
+        completeEmbeddingTask(task, actionTasks.usePanelForm),
+      ),
+    );
+    const failedResults = results.filter(
+      (result): result is PromiseRejectedResult => result.status === 'rejected',
+    );
+    const succeededCount = results.length - failedResults.length;
+
+    if (failedResults.length === 0) {
+      const firstResult = results[0];
+      const embeddingResult =
+        firstResult?.status === 'fulfilled' ? firstResult.value : null;
+      let successMessage = `已完成包埋 ${actionTasks.tasks.length} 条任务`;
+      if (actionTasks.tasks.length === 1 && embeddingResult) {
+        successMessage = embeddingResult.markingSuccess
+          ? `包埋完成，包埋盒 ${embeddingResult.embeddingBoxId} 打号成功`
+          : `包埋完成，打号结果：${formatNullable(
+              embeddingResult.markingMessage,
+            )}`;
+      }
+      ElMessage.success(successMessage);
+    } else {
+      const firstFailure = failedResults[0];
+      if (firstFailure) {
+        pageError.value = getWorkflowPageErrorMessage(firstFailure.reason);
+        reportInlineErrorDisabled(
+          firstFailure.reason,
+          getWorkflowPageErrorMessage,
+        );
+      }
+      ElMessage.warning(
+        succeededCount > 0
+          ? `已完成包埋 ${succeededCount} 条任务，${failedResults.length} 条失败`
+          : '包埋完成失败，请重试',
+      );
     }
 
-    const result = await completeEmbedding({
-      ...normalizeTechnicalOperatorPayload(operatorForm),
-      blockCount: completeForm.blockCount,
-      deviceCode: completeForm.deviceCode.trim() || null,
-      embeddingBoxNo: completeForm.embeddingBoxNo.trim() || null,
-      evaluationLevel:
-        completeForm.evaluationLevel || DEFAULT_EMBEDDING_EVALUATION_LEVEL,
-      samplingBlockId: completeForm.samplingBlockId.trim(),
-      samplingEvaluation:
-        completeForm.samplingEvaluation.trim() || DEFAULT_SAMPLING_EVALUATION,
-      sliceNotice: completeForm.sliceNotice.trim() || null,
-      taskId: task.id,
-    });
-    ElMessage.success(
-      result.markingSuccess
-        ? `包埋完成，包埋盒 ${result.embeddingBoxId} 打号成功`
-        : `包埋完成，打号结果：${formatNullable(result.markingMessage)}`,
-    );
     activeProcessingTaskId.value = '';
     await refreshWorkstation();
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
-    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
   } finally {
     completeLoading.value = false;
   }

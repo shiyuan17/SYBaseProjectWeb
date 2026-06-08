@@ -830,6 +830,55 @@ describe('EmbeddingWorkstationView', () => {
     root.remove();
   });
 
+  it('starts and completes all selected pending embeddings from the top action', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    document
+      .querySelector<HTMLInputElement>(
+        'input[aria-label="选择全部待包埋任务"]',
+      )!
+      .click();
+    await flushView();
+    findButton('确认包埋').click();
+    await flushView();
+
+    expect(mockStartEmbedding).toHaveBeenCalledTimes(2);
+    expect(mockStartEmbedding).toHaveBeenNthCalledWith(1, {
+      remarks: null,
+      taskId: 'TASK-1',
+      terminalCode: null,
+    });
+    expect(mockStartEmbedding).toHaveBeenNthCalledWith(2, {
+      remarks: null,
+      taskId: 'TASK-2',
+      terminalCode: null,
+    });
+    expect(mockCompleteEmbedding).toHaveBeenCalledTimes(2);
+    expect(mockCompleteEmbedding).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        embeddingBoxNo: null,
+        samplingBlockId: 'BLOCK-1',
+        taskId: 'TASK-1',
+      }),
+    );
+    expect(mockCompleteEmbedding).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        embeddingBoxNo: null,
+        samplingBlockId: 'BLOCK-B2',
+        taskId: 'TASK-2',
+      }),
+    );
+    expect(messageSuccess).toHaveBeenCalledWith('已完成包埋 2 条任务');
+    expect(mockGetEmbeddingWorkstationSummary).toHaveBeenCalledTimes(2);
+    expect(mockListPendingTechnicalTasks).toHaveBeenCalledTimes(2);
+
+    app.unmount();
+    root.remove();
+  });
+
   it('starts and completes selected embedding from the completed-list action', async () => {
     const { app, root } = mountView();
     await flushView();

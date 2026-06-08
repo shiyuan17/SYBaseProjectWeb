@@ -60,6 +60,11 @@ interface AssignmentDoctorRow extends AssignmentDoctor {
   reviewerSliceCount: number;
 }
 
+interface AssignmentDoctorField {
+  name: string;
+  userId: string;
+}
+
 interface BatchAssignResult {
   failed: number;
   skipped: number;
@@ -220,30 +225,28 @@ function selectDoctor(row: AssignmentDoctorRow) {
 }
 
 function hasAssignee(userId?: null | string, name?: null | string) {
-  return Boolean(userId && name);
+  return Boolean(userId?.trim() && name?.trim());
 }
 
-function getMissingRequiredDoctorFields(
-  task: PendingDiagnosticTaskItem,
-  role: BatchAssignRole,
-) {
-  const missingFields: string[] = [];
-  if (!hasAssignee(task.diagnosisDoctorUserId, task.diagnosisDoctorName)) {
-    missingFields.push('责任医生');
-  }
-  if (
-    role === 'reviewer' &&
-    !hasAssignee(task.primaryDoctorUserId, task.primaryDoctorName)
-  ) {
-    missingFields.push('初诊医生');
-  }
-  if (
-    role === 'primary' &&
-    !hasAssignee(task.reviewerUserId, task.reviewerName)
-  ) {
-    missingFields.push('审核医生');
-  }
-  return missingFields;
+function createSelectedDoctorField(
+  doctor: AssignmentDoctorRow,
+): AssignmentDoctorField | null {
+  const userId = doctor.id.trim();
+  const name = doctor.name.trim();
+  return userId && name ? { name, userId } : null;
+}
+
+function resolveDoctorField(
+  userId: null | string | undefined,
+  name: null | string | undefined,
+  fallback: AssignmentDoctorField,
+): AssignmentDoctorField {
+  return hasAssignee(userId, name)
+    ? {
+        name: name?.trim() ?? '',
+        userId: userId?.trim() ?? '',
+      }
+    : fallback;
 }
 
 function buildBatchAssignPayload(
@@ -251,21 +254,40 @@ function buildBatchAssignPayload(
   role: BatchAssignRole,
   doctor: AssignmentDoctorRow,
 ): AssignDiagnosticTaskRequest | null {
-  if (getMissingRequiredDoctorFields(task, role).length > 0) {
+  const selectedDoctorField = createSelectedDoctorField(doctor);
+  if (!selectedDoctorField) {
     return null;
   }
+  const diagnosisDoctor = resolveDoctorField(
+    task.diagnosisDoctorUserId,
+    task.diagnosisDoctorName,
+    selectedDoctorField,
+  );
+  const primaryDoctor =
+    role === 'primary'
+      ? selectedDoctorField
+      : resolveDoctorField(
+          task.primaryDoctorUserId,
+          task.primaryDoctorName,
+          selectedDoctorField,
+        );
+  const reviewerDoctor =
+    role === 'reviewer'
+      ? selectedDoctorField
+      : resolveDoctorField(
+          task.reviewerUserId,
+          task.reviewerName,
+          selectedDoctorField,
+        );
 
   return {
-    diagnosisDoctorName: task.diagnosisDoctorName ?? '',
-    diagnosisDoctorUserId: task.diagnosisDoctorUserId ?? '',
-    primaryDoctorName:
-      role === 'primary' ? doctor.name : (task.primaryDoctorName ?? ''),
-    primaryDoctorUserId:
-      role === 'primary' ? doctor.id : (task.primaryDoctorUserId ?? ''),
+    diagnosisDoctorName: diagnosisDoctor.name,
+    diagnosisDoctorUserId: diagnosisDoctor.userId,
+    primaryDoctorName: primaryDoctor.name,
+    primaryDoctorUserId: primaryDoctor.userId,
     remarks: task.remarks ?? '',
-    reviewerName: role === 'reviewer' ? doctor.name : (task.reviewerName ?? ''),
-    reviewerUserId:
-      role === 'reviewer' ? doctor.id : (task.reviewerUserId ?? ''),
+    reviewerName: reviewerDoctor.name,
+    reviewerUserId: reviewerDoctor.userId,
     terminalCode: '',
   };
 }

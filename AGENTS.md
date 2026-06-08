@@ -55,10 +55,13 @@
 8. `docs/API_RULES.md`
 9. `docs/COMPATIBILITY_RULES.md`
 10. `docs/GIT_RULES.md`
-11. `docs/LINEAR_TASK.md`（仅当任务来源于 Linear issue 时）
-12. `docs/RELEASE.md`
-13. `docs/AI-CODE-HEALTH.md`
-14. 任务涉及模块文档与现有源码
+11. `docs/DYNAMIC_WORKFLOW_RULES.md`
+12. `docs/LINEAR_TASK.md`（仅当任务来源于 Linear issue 时）
+13. `docs/RELEASE.md`
+14. `docs/AI-CODE-HEALTH.md`
+15. 任务涉及模块文档与现有源码
+
+- **续接历史任务 / 接手脏工作区**：先读根目录 `PROJECT_STATE.md`、`DECISIONS.md`、`KNOWN_BUGS.md`，再结合 `git status`、agentmemory 技能与任务相关规范恢复上下文。
 
 > 无论走哪一档，涉及红区或「6. 必须升级人工确认的场景」时，相关专项文档均为必读。
 
@@ -75,6 +78,8 @@
 | Element Plus、TailwindCSS、ECharts、交互与视觉一致性 | `docs/UI_RULES.md` |
 | 浏览器、国产环境、导出打印、字体与降级策略 | `docs/COMPATIBILITY_RULES.md` |
 | 分支、提交、PR、合并协作 | `docs/GIT_RULES.md` |
+| 任务类型路由、专家 Agent、动态测试/模拟、Red Team | `docs/DYNAMIC_WORKFLOW_RULES.md` |
+| 续接历史任务、交付前记忆层更新（状态/债务/缺陷/决策/架构） | `PROJECT_STATE.md`、`TECH_DEBT.md`、`KNOWN_BUGS.md`、`DECISIONS.md`、`ARCHITECTURE.md` |
 | Linear issue 开工与任务起始信息准备 | `docs/LINEAR_TASK.md` |
 | 环境、构建、发布与回滚 | `docs/RELEASE.md` |
 | AI 生成代码健康基线 | `docs/AI-CODE-HEALTH.md` |
@@ -134,6 +139,7 @@
 - 变更摘要：做了什么、为什么这样做
 - 影响说明：是否涉及配置、接口、兼容性、主题、路由或状态
 - 验证结果：已执行的检查、构建、测试或未验证项
+- AI Memory Update：本次更新了哪些记忆文件、哪些未更新及原因、是否存在跨仓引用
 - 风险提示：需要人工跟进的事项
 
 执行后验证是强制回路，不得只声称完成：
@@ -156,19 +162,47 @@
 - 建议下一步:
 ```
 
-- 续接历史任务前，可借助会话记忆恢复上下文：查阅 `agent-transcripts/` 历史会话，或使用 `handoff` / `recall` / `session-history` 等 skill，再结合本仓库当前 `git status` 与 `commit-context` 还原"上次进行到哪里"，避免重复探索或丢失关键决策
+- 续接历史任务前，先读取 `PROJECT_STATE.md`、`DECISIONS.md`、`KNOWN_BUGS.md`，再借助会话记忆恢复上下文：查阅 `agent-transcripts/` 历史会话，或使用 `handoff` / `recall` / `session-history` 等 skill，并结合本仓库当前 `git status` 与 `commit-context` 还原"上次进行到哪里"，避免重复探索或丢失关键决策
 
-### 8. 语言与提交约束
+### 8. AI Memory Update
+
+根目录五类记忆文件是仓内长期上下文层，不替代 agentmemory、PR 描述、测试报告或 ADR：
+
+- `PROJECT_STATE.md`：当前阶段、活跃任务、最新验证状态、跨仓依赖、交接重点
+- `TECH_DEBT.md`：技术债台账，记录 ID、严重度、来源、影响、建议动作、状态
+- `KNOWN_BUGS.md`：已知问题台账，记录 ID、复现方式、影响范围、临时规避、验证状态
+- `DECISIONS.md`：决策日志，记录日期、上下文、选项、决策、理由、影响、回看条件
+- `ARCHITECTURE.md`：稳定架构快照，记录模块边界、核心依赖、跨仓接口、当前约束和禁止事项
+
+交付前 AI 必须检查本次任务是否产生以下变化，并按需更新对应记忆文件：
+
+- 项目阶段、活跃任务、验证基线或交接重点变化：更新 `PROJECT_STATE.md`
+- 发现或解决持久技术债：追加或更新 `TECH_DEBT.md`
+- 发现、复现或修复已知 bug：追加或更新 `KNOWN_BUGS.md`
+- 做出影响后续协作的技术或流程决策：追加 `DECISIONS.md`
+- 改变稳定模块边界、跨仓接口、共享约束或禁止事项：更新 `ARCHITECTURE.md`
+
+更新规则：
+
+- 按需更新，不写"无变化"流水账；未更新的文件只在交付摘要和 PR Workflow Packet 中说明原因
+- `PROJECT_STATE.md` 可覆盖当前状态，保持短小、最新
+- `TECH_DEBT.md`、`KNOWN_BUGS.md`、`DECISIONS.md` 采用台账式追加或更新状态，不删除历史项
+- `ARCHITECTURE.md` 只记录稳定架构事实和边界约束，不记录临时实现细节
+- 跨仓事项必须双向引用：前端记忆文件引用后端路径/验证，后端记忆文件引用前端路径/验证
+- PR 中必须填写 Memory Update Packet，并引用相关记忆项 ID，例如 `TD-20260608-001`、`BUG-20260608-001`、`DEC-20260608-001`
+
+### 9. 语言与提交约束
 
 - 与用户沟通：默认使用用户当前语言
 - 代码注释与文档：遵循模块既有语言风格，无现存风格时优先中文
+- 记忆层与模板例外：根目录五类记忆文件（`PROJECT_STATE.md`、`TECH_DEBT.md`、`KNOWN_BUGS.md`、`DECISIONS.md`、`ARCHITECTURE.md`）及 `.github` PR/Issue 模板沿用其现有英文结构（表头、字段名）；条目正文语言跟随来源语境（如复现步骤、后端核对说明可用中文），不强制翻译为中文
 - 文本类文件编码：新增或修改源码、脚本、配置、文档时，默认使用 `UTF-8`，并与仓库 `.editorconfig` 中的 `charset=utf-8` 保持一致，默认采用 `UTF-8（无 BOM）`
 - 乱码与错码处理：发现乱码或疑似错码时，必须先确认原文件编码和当前工具的解码方式，再进行修改，不得在未确认前直接批量转码或覆盖保存
 - Git 提交信息：遵循 `docs/GIT_RULES.md` 中的 Conventional Commits
 - 发布说明：遵循 `docs/RELEASE.md` 中的版本与验收要求
 - 工程命令示例：统一使用 `pnpm`
 
-### 9. 与工具规则的关系
+### 10. 与工具规则的关系
 
 - 仓库内 `.cursor/rules/*`（如 `codegraph.mdc`）等属于 IDE / AI 工具的执行辅助规则，用于提升检索与编码效率
 - 工具规则不改变本协作规范的约束力：协作边界、风险分区、升级确认、交付与交接要求一律以 `AGENTS.md` 体系与 `docs/` 专项规范为准
@@ -181,7 +215,7 @@
 - **避免重复探索**：codegraph 已是预建索引，不要把它能直接回答的问题再委派给额外的文件阅读子任务
 - 索引存在约 1 秒写入延迟，刚改完文件不要立即查询；codegraph 结果用于结构导航，正确性仍以类型检查、测试与 lint 为准
 
-### 10. 多 Agent 与子 Agent 协作
+### 11. 多 Agent 与子 Agent 协作
 
 针对大型或可并行任务，推荐按"探索 → 规划 → 并行执行 → 汇总核验"组织协作：
 
@@ -213,6 +247,7 @@
 - [ ] 已输出任务确认和关键假设
 - [ ] 已识别本次改动属于绿区、黄区还是红区
 - [ ] 新增或修改的文本类文件编码符合 `UTF-8` 约定，乱码风险已检查
+- [ ] 已检查五类 AI 记忆文件，并按需更新或说明未更新原因
 - [ ] 涉及高风险变更时已人工确认
 - [ ] 交付内容包含变更摘要、验证结果和风险提示
 - [ ] 如需交接，已附带完整移交摘要
@@ -220,6 +255,11 @@
 ## 关联文档
 
 - [README.md](./README.md)
+- [PROJECT_STATE.md](./PROJECT_STATE.md)
+- [TECH_DEBT.md](./TECH_DEBT.md)
+- [KNOWN_BUGS.md](./KNOWN_BUGS.md)
+- [DECISIONS.md](./DECISIONS.md)
+- [ARCHITECTURE.md](./ARCHITECTURE.md)
 - [docs/PROJECT_DIRECTORY.md](./docs/PROJECT_DIRECTORY.md)
 - [docs/CODING_RULES.md](./docs/CODING_RULES.md)
 - [docs/VUE_TS_RULES.md](./docs/VUE_TS_RULES.md)
@@ -229,6 +269,7 @@
 - [docs/UI_RULES.md](./docs/UI_RULES.md)
 - [docs/COMPATIBILITY_RULES.md](./docs/COMPATIBILITY_RULES.md)
 - [docs/GIT_RULES.md](./docs/GIT_RULES.md)
+- [docs/DYNAMIC_WORKFLOW_RULES.md](./docs/DYNAMIC_WORKFLOW_RULES.md)
 - [docs/LINEAR_TASK.md](./docs/LINEAR_TASK.md)
 - [docs/RELEASE.md](./docs/RELEASE.md)
 - [docs/AI-CODE-HEALTH.md](./docs/AI-CODE-HEALTH.md)

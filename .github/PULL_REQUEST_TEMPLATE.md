@@ -1,4 +1,4 @@
-# PR Review
+# PR Workflow Packet
 
 ## Summary
 
@@ -7,29 +7,62 @@
 - Validation:
 - Risks:
 
-## Dynamic Workflow Router
+## Dynamic Workflow
 
-Select the primary review workflow that matches this task. Red Team Review is required for every high-risk change and must not be replaced by another workflow.
+Choose one primary Workflow and add required modifiers. See `docs/DYNAMIC_WORKFLOW_RULES.md`.
 
-- [ ] UI Review: UI, interaction, layout, visual regression, screenshots or recordings
-- [ ] API Review: request/response contract, error model, pagination, backend field mapping
-- [ ] DB Review: schema, migration, seed data, rollback, data compatibility
-- [ ] Security Review: permissions, authentication, patient data, report data, sensitive logs
-- [ ] Architecture Review: shared contracts, route/store/request boundaries, large-file refactor
-- [ ] Execution Driven Debug: production issue, log-first diagnosis, reproduction, rollback path
-- [ ] Red Team Review: adversarial review for bypasses, data loss, broken assumptions, rollback gaps
+- Primary Workflow: `UI / API / DB / Security / Architecture / Production Debug / Workflow-Infra`
+- Trigger signals:
+- Expert Agent(s):
+- Required modifiers: `Security / DB / Red Team / Backend Cross-check / Browser Verification`
 
-## Red Team Review
+## Dynamic Tests
 
-- [ ] Tried to prove the change can bypass permission or route guards.
-- [ ] Tried to prove patient/report/business data can be leaked, corrupted, duplicated, or lost.
-- [ ] Tried to prove error handling hides failures or makes recovery ambiguous.
-- [ ] Tried to prove rollback or fallback steps are missing.
-- [ ] Documented any rejected attack path or remaining residual risk.
+- Required test commands:
+- Actual results:
+- Unverified items and reasons:
 
-## Workflow Evidence
+## Dynamic Simulation
 
-- [ ] Relevant `AGENTS.md` and scoped rules were read.
-- [ ] Required backend/frontend cross-checks were completed, if the change crosses repos.
-- [ ] Required validation commands are listed with real results.
-- [ ] Unverified items are explicitly marked with reasons.
+- Roles / permissions:
+- Browser / viewport:
+- API payloads / failure responses:
+- Empty / loading / error / retry states:
+- Logs / replay artifacts, if production debug:
+
+## Dynamic Security
+
+- [ ] Not applicable
+- [ ] Permission, patient, report, login, audit, export, or sensitive-log impact checked
+- Evidence:
+
+## Dynamic Database
+
+- [ ] Not applicable
+- [ ] Backend migration, seed, SQL, compatibility, or rollback impact checked
+- Backend evidence:
+
+## Red Team
+
+- [ ] Tried to prove the change can bypass route/menu/API permission checks.
+- [ ] Tried to prove patient/report/business data can leak, corrupt, duplicate, or disappear.
+- [ ] Tried to prove errors are swallowed or users see misleading success.
+- [ ] Tried to prove rollback, fallback, or target-environment validation is missing.
+- Attack result:
+- Residual risk:
+
+## Cross-Repo Evidence
+
+- Frontend evidence:
+- Backend evidence:
+- Linked PR/MR:
+
+## Memory Update Packet
+
+Required before merge. Update memory files only when the task changes durable context; list skipped files with reasons.
+
+- Updated memory files:
+- Not updated memory files and reasons:
+- Related memory IDs: `TD-* / BUG-* / DEC-*`
+- Cross-repo memory references:
+- Residual risk / follow-up owner:

@@ -148,11 +148,9 @@ const selectedWorkbenchRow = computed(() => {
   return selectedPendingRow.value ?? selectedCompletedRow.value;
 });
 
-const currentPendingTask = computed<null | PendingTechnicalTaskItem>(() => {
-  const row = selectedPendingRow.value;
-  if (!row) {
-    return null;
-  }
+function buildPendingTaskFromRow(
+  row: SlicingWorkbenchRow,
+): PendingTechnicalTaskItem {
   return {
     applicationId: row.caseId,
     applicationNo: row.pathologyNo ?? '',
@@ -186,22 +184,39 @@ const currentPendingTask = computed<null | PendingTechnicalTaskItem>(() => {
     timedOut: row.timedOut,
     timeoutRuleCode: null,
   };
-});
+}
+
+const selectedPendingTasks = computed(() =>
+  selectedPendingRows.value.map((row) => buildPendingTaskFromRow(row)),
+);
+
+const currentPendingTask = computed<null | PendingTechnicalTaskItem>(() =>
+  selectedPendingTasks.value.length === 1
+    ? (selectedPendingTasks.value[0] ?? null)
+    : null,
+);
 
 const canCompleteSlicing = computed(() => {
-  const row = selectedPendingRow.value;
-  return Boolean(
-    row &&
-    row.selectable &&
-    ['IN_PROGRESS', 'PENDING'].includes(row.taskStatus ?? ''),
+  return (
+    selectedPendingRows.value.length > 0 &&
+    selectedPendingRows.value.every(
+      (row) =>
+        row.selectable &&
+        ['IN_PROGRESS', 'PENDING'].includes(row.taskStatus ?? '') &&
+        Boolean(row.embeddingBoxId),
+    )
   );
 });
 const canOpenTrackingDrawer = computed(
   () => selectedWorkbenchRowCount.value === 1,
 );
 const canCreateQcEvaluation = computed(() => {
-  const row = selectedCompletedRow.value;
-  return Boolean(row && row.selectable && row.slideId);
+  return (
+    selectedCompletedRows.value.length > 0 &&
+    selectedCompletedRows.value.every(
+      (row) => row.selectable && Boolean(row.slideId),
+    )
+  );
 });
 
 const statCards = computed(() => [
@@ -360,22 +375,6 @@ function showSingleSelectionWarning(message: string) {
   ElMessage.warning(message);
 }
 
-function requireSelectedPendingRow() {
-  if (selectedPendingRows.value.length !== 1) {
-    showSingleSelectionWarning('请在待切列表中恰好勾选 1 行');
-    return null;
-  }
-  return selectedPendingRows.value[0];
-}
-
-function requireSelectedCompletedRow() {
-  if (selectedCompletedRows.value.length !== 1) {
-    showSingleSelectionWarning('请在今日已完成列表中恰好勾选 1 行');
-    return null;
-  }
-  return selectedCompletedRows.value[0];
-}
-
 function requireSelectedWorkbenchRow() {
   if (selectedWorkbenchRowCount.value !== 1 || !selectedWorkbenchRow.value) {
     showSingleSelectionWarning('请在左右列表中恰好勾选 1 行');
@@ -465,20 +464,22 @@ function handleCompletedSelectionChange(rows: SlicingWorkbenchRow[]) {
 }
 
 function openCompleteSlicing() {
-  const row = requireSelectedPendingRow();
-  if (!row) {
+  const rows = selectedPendingRows.value;
+  if (rows.length === 0) {
+    showSingleSelectionWarning('请在待切列表中至少勾选 1 行');
     return;
   }
-  if (row.taskStatus === 'PENDING') {
+  if (!canCompleteSlicing.value) {
+    ElMessage.warning('当前勾选任务状态不支持完成切片');
+    return;
+  }
+  const row = rows[0];
+  if (rows.length === 1 && row?.taskStatus === 'PENDING') {
     pendingAutoProcessTaskId.value = row.taskId;
     startDialogVisible.value = true;
     return;
   }
-  if (row.taskStatus === 'IN_PROGRESS') {
-    processDialogVisible.value = true;
-    return;
-  }
-  ElMessage.warning('当前任务状态不支持完成切片');
+  processDialogVisible.value = true;
 }
 
 async function handleStartSubmitted() {
@@ -597,8 +598,12 @@ async function openTrackingDrawer(mode: 'evaluation' | 'history') {
 }
 
 function openQcEvaluation() {
-  const row = requireSelectedCompletedRow();
-  if (!row || !row.slideId) {
+  if (selectedCompletedRows.value.length === 0) {
+    showSingleSelectionWarning('请在今日已完成列表中至少勾选 1 行');
+    return;
+  }
+  if (!canCreateQcEvaluation.value) {
+    ElMessage.warning('当前勾选记录中存在不可评价的切片');
     return;
   }
   qcDialogVisible.value = true;
@@ -721,7 +726,9 @@ void loadWorkbench();
           >
             只看今天待切
           </ElCheckbox>
-          <span class="legacy-selection-tip"> 可用操作要求恰好选中 1 行 </span>
+          <span class="legacy-selection-tip">
+            完成切片和质控评价支持同表多选，历史与评价记录需单选
+          </span>
         </div>
       </section>
 
@@ -972,12 +979,14 @@ void loadWorkbench();
     <SlicingProcessDialog
       v-model="processDialogVisible"
       :task="currentPendingTask"
+      :tasks="selectedPendingTasks"
       @submitted="handleProcessSubmitted"
     />
 
     <SlicingQcEvaluationDialog
       v-model="qcDialogVisible"
       :row="selectedCompletedRow"
+      :rows="selectedCompletedRows"
       @submitted="handleQcSubmitted"
     />
 

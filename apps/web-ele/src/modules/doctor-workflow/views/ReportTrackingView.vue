@@ -344,6 +344,11 @@ watch(
             <ElTable :data="tracking.medicalOrders" border>
               <ElTableColumn label="医嘱号" prop="orderNumber" />
               <ElTableColumn label="内容" prop="orderContent" />
+              <ElTableColumn label="医嘱时间" min-width="180">
+                <template #default="{ row }">
+                  {{ formatDateTime(row.orderDate) }}
+                </template>
+              </ElTableColumn>
               <ElTableColumn label="状态">
                 <template #default="{ row }">
                   {{ formatMedicalOrderStatus(row.status) }}

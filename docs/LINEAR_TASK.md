@@ -2,6 +2,20 @@
 
 > 从某个 Linear issue 开工时，复制本模板填写，作为本次任务的起始提示。
 
+## 0. Linear 同步命令（计划与 issue 维护）
+
+仓库提供以下命令同步本地计划与 Linear，配置来源为根目录 `linear-setting.json`：
+
+| 命令 | 作用 |
+| --- | --- |
+| `pnpm linear:register` | 在 Linear 注册/校验项目与标签 |
+| `pnpm linear:sync` | 按 `linear-setting.json` 的 `plan` 创建或更新对应 issue（本地计划 → Linear） |
+| `pnpm linear:pull` | 回拉与计划标题匹配的 issue 标识与状态（Linear → 本地核对） |
+
+- 单个 issue 开工前，可先 `pnpm linear:pull` 核对该 issue 当前状态与标识，再按下方模板准备起始信息。
+- 调整计划条目（新增/改标题/改标签）后，用 `pnpm linear:sync` 回写，避免本地 `plan` 与 Linear 漂移。
+- `linear-setting.json` 含访问凭证或环境相关配置时属红区，改动前按 `AGENTS.md` 第 6 节人工确认。
+
 ## 1. 任务来源
 
 - Linear issue：`<ENG-123>` —— `<标题>`

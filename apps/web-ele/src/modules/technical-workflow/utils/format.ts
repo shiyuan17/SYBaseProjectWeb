@@ -75,11 +75,13 @@ const specimenRegistrationStatusLabels = {
   SAVED: '已保存',
 } satisfies Record<string, string>;
 const slideStatusLabels = {
+  CREATED: '待染色',
   PENDING: '待染色',
   STAINED: '已染色',
 } satisfies Record<string, string>;
 const qualityStatusLabels = {
   CREATED: '待质控',
+  PENDING: '待质控',
   QUALIFIED: '合格',
   UNQUALIFIED: '不合格',
 } satisfies Record<string, string>;

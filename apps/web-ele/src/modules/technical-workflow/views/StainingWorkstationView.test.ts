@@ -430,6 +430,34 @@ describe('StainingWorkstationView', () => {
     root.remove();
   });
 
+  it('formats completed slide operation fallback statuses in Chinese', async () => {
+    mockGetTechnicalTracking.mockResolvedValue({
+      ...createTracking(),
+      slides: [
+        {
+          embeddingBoxId: 'BOX-1',
+          qualityStatus: 'CREATED',
+          slideId: 'SLIDE-1',
+          slideNo: 'SLIDE-001',
+          slideStatus: 'PENDING',
+          specimenId: 'SPEC-1',
+        },
+      ],
+      technicalTasks: [],
+    });
+
+    const { app, root } = mountView();
+    await flushView();
+
+    expect(document.body.textContent).toContain('待质控');
+    expect(document.body.textContent).toContain('待染色');
+    expect(document.body.textContent).not.toContain('CREATED');
+    expect(document.body.textContent).not.toContain('PENDING');
+
+    app.unmount();
+    root.remove();
+  });
+
   it('queries staining tasks with keyword and overdue mode', async () => {
     mockRoute.query = {
       mode: 'exception',

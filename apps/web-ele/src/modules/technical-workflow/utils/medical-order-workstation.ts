@@ -18,7 +18,7 @@ export const TECHNICAL_ORDER_CATEGORY_CODES = {
   cytology: 'CYTOLOGY',
   ihc: 'IHC',
   liquidCytology: 'LIQUID_CYTOLOGY',
-  routine: 'EXAM,CGRS,BLOCK,QP',
+  routine: 'ROUTINE,EXAM,CGRS,BLOCK,QP',
   special: 'TSRS',
 } as const;
 
@@ -37,9 +37,15 @@ function formatOrderDate(value?: null | string) {
   if (!normalizedValue) {
     return EMPTY_CELL;
   }
-  return normalizedValue.length > 16
-    ? normalizedValue.slice(0, 16)
-    : normalizedValue;
+  const [datePart = '', timePart = ''] = normalizedValue
+    .replace('T', ' ')
+    .split(' ');
+  const normalizedTimePart =
+    timePart.match(/^\d{2}:\d{2}(?::\d{2})?/)?.[0] ?? '';
+  if (!datePart || !normalizedTimePart) {
+    return normalizedValue;
+  }
+  return `${datePart} ${normalizedTimePart.slice(0, 8).padEnd(8, ':00')}`;
 }
 
 function formatOrderStatus(value?: null | string) {
@@ -51,6 +57,28 @@ function formatOrderStatus(value?: null | string) {
     IN_PROGRESS: '已确认',
     PENDING: '待确认',
     PROCESSING: '处理中',
+  };
+  const normalizedValue = value?.trim().toUpperCase();
+  if (!normalizedValue) {
+    return EMPTY_CELL;
+  }
+  return labels[normalizedValue] ?? valueOrDash(value);
+}
+
+function formatBillingStatus(value?: null | string) {
+  const labels: Record<string, string> = {
+    BILLED: '已计费',
+    CHARGED: '已收费',
+    CHARGING: '收费中',
+    FAILED: '收费失败',
+    PAID: '已收费',
+    PENDING: '待收费',
+    REFUNDED: '已退费',
+    SETTLED: '已收费',
+    SUCCESS: '已收费',
+    UNBILLED: '未收费',
+    UNCHARGED: '未收费',
+    UNPAID: '未收费',
   };
   const normalizedValue = value?.trim().toUpperCase();
   if (!normalizedValue) {
@@ -91,6 +119,7 @@ function createBaseRow(order: PendingMedicalOrderItem) {
   const statusLabel = formatOrderStatus(order.status);
   return {
     checkItem: getItemName(order),
+    chargeStatus: formatBillingStatus(order.billingStatus),
     doctorTime: formatOrderDate(order.orderDate),
     doctorUser: valueOrDash(order.doctorName),
     id: order.orderId,

@@ -60,13 +60,13 @@
 | --- | --- | --- |
 | 代码规范 | `pnpm lint` | ESLint / oxlint 等统一校验 |
 | 类型检查 | `pnpm check:type` | `vue-tsc` 类型检查（等价 `turbo run typecheck`） |
-| 拼写检查 | `pnpm check:cspell` | cspell 校验 |
+| 拼写检查 | `pnpm check:cspell` | cspell 校验（扫描 `**/*.{ts,tsx,vue}` 与 `**/README.md`，不覆盖其他 `*.md`） |
 | 综合静态检查 | `pnpm check` | 循环依赖 + 依赖 + 类型 + 拼写一次性执行 |
 | 单元测试 | `pnpm test:unit` | Vitest（`--dom`），逻辑/工具/组件 |
 | 端到端测试 | `pnpm test:e2e` | Playwright，关键链路回归 |
 | 构建 | `pnpm build` | 产物构建，发布前必过 |
 
-- 仅改文档时可只跑 `pnpm check:cspell`；改逻辑/组件时至少跑 `pnpm lint` + `pnpm check:type` + 相关 `pnpm test:unit`
+- `pnpm check:cspell` 扫描 `**/*.{ts,tsx,vue}` 与 `**/README.md`，仍不覆盖其他 `*.md`（如 `docs/` 规范、根目录记忆文件）；改这些文件时需自行核对拼写。改逻辑/组件时至少跑 `pnpm lint` + `pnpm check:type` + 相关 `pnpm test:unit`
 - 交付时在「验证结果」中写明实际执行的命令与结论，未执行项必须标注为未验证
 
 ## 推荐实践

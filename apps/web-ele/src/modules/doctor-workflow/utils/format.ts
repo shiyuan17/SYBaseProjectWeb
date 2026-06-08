@@ -73,7 +73,19 @@ export function formatNullable(value?: null | number | string) {
 }
 
 export function formatDateTime(value?: null | string) {
-  return formatNullable(value);
+  const normalizedValue = value?.trim();
+  if (!normalizedValue) {
+    return EMPTY_TEXT;
+  }
+  const [datePart = '', timePart = ''] = normalizedValue
+    .replace('T', ' ')
+    .split(' ');
+  const normalizedTimePart =
+    timePart.match(/^\d{2}:\d{2}(?::\d{2})?/)?.[0] ?? '';
+  if (!datePart || !normalizedTimePart) {
+    return normalizedValue;
+  }
+  return `${datePart} ${normalizedTimePart.slice(0, 8).padEnd(8, ':00')}`;
 }
 
 export function formatDiagnosticTaskStatus(value?: null | string) {

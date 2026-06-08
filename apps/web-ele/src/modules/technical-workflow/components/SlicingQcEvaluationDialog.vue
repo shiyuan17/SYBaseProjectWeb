@@ -32,6 +32,7 @@ import { formatNullable } from '../utils/format';
 const props = defineProps<{
   modelValue: boolean;
   row: null | SlicingWorkbenchRow;
+  rows?: SlicingWorkbenchRow[];
 }>();
 
 const emit = defineEmits<{
@@ -73,6 +74,15 @@ const requiresRework = computed(() =>
   ['REWORK_REQUIRED', 'UNQUALIFIED'].includes(form.evaluationResult),
 );
 
+const actionRows = computed(() => {
+  if (props.rows && props.rows.length > 0) {
+    return props.rows;
+  }
+  return props.row ? [props.row] : [];
+});
+
+const isBatchMode = computed(() => actionRows.value.length > 1);
+
 function resetDialogState() {
   pageError.value = '';
   form.evaluationResult = 'QUALIFIED';
@@ -84,67 +94,104 @@ function resetDialogState() {
   form.terminalCode = '';
 }
 
-function buildQcPayload(): CreateSlideQcEvaluationRequest | null {
-  if (!props.row?.caseId || !props.row.slideId || !props.row.specimenId) {
+function buildQcPayload(
+  row: SlicingWorkbenchRow,
+): CreateSlideQcEvaluationRequest | null {
+  if (!row.caseId || !row.slideId || !row.specimenId) {
     ElMessage.warning('当前缺少可评价的切片记录');
     return null;
   }
   return {
-    caseId: props.row.caseId,
+    caseId: row.caseId,
     evaluationResult: form.evaluationResult,
     improvementSuggestion: form.improvementSuggestion.trim() || null,
     issueDescription: form.issueDescription.trim() || null,
     qcType: form.qcType,
     remarks: form.remarks.trim() || null,
-    slideId: props.row.slideId,
-    specimenId: props.row.specimenId,
+    slideId: row.slideId,
+    specimenId: row.specimenId,
     terminalCode: form.terminalCode.trim() || null,
   };
 }
 
+async function submitRowEvaluation(row: SlicingWorkbenchRow) {
+  const qcPayload = buildQcPayload(row);
+  if (!qcPayload) {
+    throw new Error('当前缺少可评价的切片记录');
+  }
+
+  await createSlideQcEvaluation(qcPayload);
+
+  if (!requiresRework.value) {
+    return;
+  }
+
+  await createReworkOrder({
+    caseId: row.caseId,
+    embeddingBoxId: form.reworkType === 'RESLICE' ? row.embeddingBoxId : null,
+    qcType: form.qcType,
+    reason:
+      form.issueDescription.trim() || `切片质控结果为 ${form.evaluationResult}`,
+    remarks: form.remarks.trim() || null,
+    reworkType: form.reworkType,
+    slideId: form.reworkType === 'RESTAIN' ? row.slideId : null,
+    specimenId: row.specimenId ?? null,
+    terminalCode: form.terminalCode.trim() || null,
+  });
+}
+
 async function submitEvaluation() {
-  const row = props.row;
-  const qcPayload = buildQcPayload();
-  if (!row || !qcPayload) {
+  const rows = actionRows.value;
+  if (rows.length === 0) {
+    ElMessage.warning('当前缺少可评价的切片记录');
     return;
   }
   if (requiresRework.value && !form.issueDescription.trim()) {
     ElMessage.warning('异常评价时请补充问题描述');
     return;
   }
+  if (rows.some((item) => !item.caseId || !item.slideId || !item.specimenId)) {
+    ElMessage.warning('当前勾选记录中存在不可评价的切片');
+    return;
+  }
 
   submitting.value = true;
   pageError.value = '';
   try {
-    await createSlideQcEvaluation(qcPayload);
+    const results = await Promise.allSettled(
+      rows.map((item) => submitRowEvaluation(item)),
+    );
+    const failedResults = results.filter(
+      (result): result is PromiseRejectedResult => result.status === 'rejected',
+    );
+    const succeededCount = results.length - failedResults.length;
 
-    if (requiresRework.value) {
-      try {
-        await createReworkOrder({
-          caseId: row.caseId,
-          embeddingBoxId:
-            form.reworkType === 'RESLICE' ? row.embeddingBoxId : null,
-          qcType: form.qcType,
-          reason:
-            form.issueDescription.trim() ||
-            `切片质控结果为 ${form.evaluationResult}`,
-          remarks: form.remarks.trim() || null,
-          reworkType: form.reworkType,
-          slideId: form.reworkType === 'RESTAIN' ? row.slideId : null,
-          specimenId: row.specimenId ?? null,
-          terminalCode: form.terminalCode.trim() || null,
-        });
-        ElMessage.success('质控评价与返工单已创建');
-      } catch (error) {
-        pageError.value = getWorkflowPageErrorMessage(error);
-        reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
-        ElMessage.warning('质控评价已提交，返工单创建失败，请稍后补录');
-        emit('submitted');
-        dialogVisible.value = false;
+    if (failedResults.length === 0) {
+      let successMessage = '质控评价提交成功';
+      if (requiresRework.value) {
+        successMessage = '质控评价与返工单已创建';
+      }
+      if (rows.length > 1) {
+        successMessage = `${successMessage} ${rows.length} 条`;
+      }
+      ElMessage.success(successMessage);
+    } else {
+      const firstFailure = failedResults[0];
+      if (firstFailure) {
+        pageError.value = getWorkflowPageErrorMessage(firstFailure.reason);
+        reportInlineErrorDisabled(
+          firstFailure.reason,
+          getWorkflowPageErrorMessage,
+        );
+      }
+      ElMessage.warning(
+        succeededCount > 0
+          ? `已提交质控评价 ${succeededCount} 条，${failedResults.length} 条失败`
+          : '质控评价提交失败，请重试',
+      );
+      if (succeededCount === 0) {
         return;
       }
-    } else {
-      ElMessage.success('质控评价提交成功');
     }
 
     emit('submitted');
@@ -185,6 +232,9 @@ watch(
       />
 
       <ElDescriptions :column="2" border>
+        <ElDescriptionsItem v-if="isBatchMode" label="批量玻片">
+          {{ actionRows.length }} 张
+        </ElDescriptionsItem>
         <ElDescriptionsItem label="病理号">
           {{ formatNullable(row?.pathologyNo) }}
         </ElDescriptionsItem>

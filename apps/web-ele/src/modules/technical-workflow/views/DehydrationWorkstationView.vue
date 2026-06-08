@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { Ref } from 'vue';
+
 import type { PendingTechnicalTaskItem } from '../types/technical-workflow';
 
 import { computed, reactive, ref } from 'vue';
@@ -166,6 +168,71 @@ function ensureSelectedTask(actionLabel: string) {
   return null;
 }
 
+function ensureActionTasks(actionLabel: string) {
+  if (selectedRows.value.length > 0) {
+    return selectedRows.value;
+  }
+  const task = ensureSelectedTask(actionLabel);
+  return task ? [task] : null;
+}
+
+async function runDehydrationTaskAction(options: {
+  actionLabel: string;
+  batchSuccessMessage: string;
+  invalidStatusMessage: string;
+  loadingRef: Ref<boolean>;
+  requiredStatus: PendingTechnicalTaskItem['taskStatus'];
+  runAction: (taskId: string) => Promise<unknown>;
+  singleSuccessMessage: (taskId: string) => string;
+}) {
+  const tasks = ensureActionTasks(options.actionLabel);
+  if (!tasks) {
+    return;
+  }
+  if (tasks.some((task) => task.taskStatus !== options.requiredStatus)) {
+    ElMessage.warning(options.invalidStatusMessage);
+    return;
+  }
+
+  options.loadingRef.value = true;
+  pageError.value = '';
+  try {
+    const results = await Promise.allSettled(
+      tasks.map((task) => options.runAction(task.id)),
+    );
+    const failedResults = results.filter(
+      (result): result is PromiseRejectedResult => result.status === 'rejected',
+    );
+    const succeededCount = results.length - failedResults.length;
+
+    if (failedResults.length === 0) {
+      const firstTask = tasks[0];
+      ElMessage.success(
+        tasks.length === 1 && firstTask
+          ? options.singleSuccessMessage(firstTask.id)
+          : options.batchSuccessMessage,
+      );
+    } else {
+      const firstFailure = failedResults[0];
+      if (firstFailure) {
+        pageError.value = getWorkflowPageErrorMessage(firstFailure.reason);
+        reportInlineErrorDisabled(
+          firstFailure.reason,
+          getWorkflowPageErrorMessage,
+        );
+      }
+      ElMessage.warning(
+        succeededCount > 0
+          ? `已成功${options.actionLabel} ${succeededCount} 条任务，${failedResults.length} 条失败`
+          : `${options.actionLabel}失败，请重试`,
+      );
+    }
+    await loadPendingData();
+  } finally {
+    options.loadingRef.value = false;
+  }
+}
+
 function openTracking(task = selectedTask.value) {
   const nextTask = task ?? ensureSelectedTask('查看轨迹');
   if (!nextTask) {
@@ -212,55 +279,27 @@ function handleBatchSubmitted(result: { batchId: string }) {
 }
 
 async function handleStartDehydration() {
-  const task = ensureSelectedTask('开始脱水');
-  if (!task) {
-    return;
-  }
-  if (task.taskStatus !== 'PENDING') {
-    ElMessage.warning('仅待处理任务可以开始脱水');
-    return;
-  }
-
-  startLoading.value = true;
-  pageError.value = '';
-  try {
-    await startDehydration({
-      taskId: task.id,
-    });
-    ElMessage.success(`任务 ${task.id} 已开始脱水`);
-    await loadPendingData();
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
-    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
-  } finally {
-    startLoading.value = false;
-  }
+  await runDehydrationTaskAction({
+    actionLabel: '开始脱水',
+    batchSuccessMessage: `已开始脱水 ${selectedRows.value.length} 条任务`,
+    invalidStatusMessage: '仅待处理任务可以开始脱水',
+    loadingRef: startLoading,
+    requiredStatus: 'PENDING',
+    runAction: (taskId) => startDehydration({ taskId }),
+    singleSuccessMessage: (taskId) => `任务 ${taskId} 已开始脱水`,
+  });
 }
 
 async function handleCompleteDehydration() {
-  const task = ensureSelectedTask('完成脱水');
-  if (!task) {
-    return;
-  }
-  if (task.taskStatus !== 'IN_PROGRESS') {
-    ElMessage.warning('请先开始脱水');
-    return;
-  }
-
-  completeLoading.value = true;
-  pageError.value = '';
-  try {
-    await completeDehydration({
-      taskId: task.id,
-    });
-    ElMessage.success(`任务 ${task.id} 已完成脱水`);
-    await loadPendingData();
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
-    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
-  } finally {
-    completeLoading.value = false;
-  }
+  await runDehydrationTaskAction({
+    actionLabel: '完成脱水',
+    batchSuccessMessage: `已完成脱水 ${selectedRows.value.length} 条任务`,
+    invalidStatusMessage: '请先开始脱水',
+    loadingRef: completeLoading,
+    requiredStatus: 'IN_PROGRESS',
+    runAction: (taskId) => completeDehydration({ taskId }),
+    singleSuccessMessage: (taskId) => `任务 ${taskId} 已完成脱水`,
+  });
 }
 
 void loadPendingData();

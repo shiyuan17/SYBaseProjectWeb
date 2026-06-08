@@ -668,16 +668,12 @@ describe('doctor workflow view visibility', () => {
     wrapper.unmount();
   });
 
-  it('skips batch slice submit when required assign fields are missing', async () => {
+  it('fills required assign fields from selected doctor when task has no doctors', async () => {
     listPendingDiagnosticTasksMock.mockResolvedValue({
       items: [
         {
           caseId: 'CASE-001',
-          diagnosisDoctorName: '责任医生甲',
-          diagnosisDoctorUserId: 'DOC-DIAG',
           id: 'TASK-001',
-          primaryDoctorName: '既有初诊医生',
-          primaryDoctorUserId: 'DOC-OLD-PRIMARY',
           taskStatus: 'PENDING',
           taskType: 'PRIMARY',
         },
@@ -695,8 +691,18 @@ describe('doctor workflow view visibility', () => {
     wrapper.clickButton('初步分片');
     await flushAsyncWork();
 
-    expect(assignDiagnosticTaskMock).not.toHaveBeenCalled();
-    expect(listPendingDiagnosticTasksMock).toHaveBeenCalledTimes(1);
+    expect(assignDiagnosticTaskMock).toHaveBeenCalledWith(
+      'TASK-001',
+      expect.objectContaining({
+        diagnosisDoctorName: '初诊医生乙',
+        diagnosisDoctorUserId: 'DOC-PRIMARY',
+        primaryDoctorName: '初诊医生乙',
+        primaryDoctorUserId: 'DOC-PRIMARY',
+        reviewerName: '初诊医生乙',
+        reviewerUserId: 'DOC-PRIMARY',
+      }),
+    );
+    expect(listPendingDiagnosticTasksMock).toHaveBeenCalledTimes(2);
     wrapper.unmount();
   });
 
@@ -842,6 +848,7 @@ describe('doctor workflow view visibility', () => {
       medicalOrders: [
         {
           orderId: 'ORDER-003',
+          orderDate: '2026-05-26T10:15:30',
           orderNumber: 'MO-003',
           orderType: 'SPECIAL_STAIN',
           pathologyNo: 'PATH-001',
@@ -853,6 +860,8 @@ describe('doctor workflow view visibility', () => {
     const wrapper = await mountView(ReportTrackingView);
 
     expect(wrapper.buttonTexts()).toContain('进入医嘱工作台');
+    expect(wrapper.text()).toContain('医嘱时间');
+    expect(wrapper.text()).toContain('2026-05-26 10:15:30');
     wrapper.clickButton('进入医嘱工作台');
     await flushAsyncWork();
 
@@ -895,6 +904,7 @@ describe('doctor workflow view visibility', () => {
       size: 50,
       status: undefined,
     });
+    expect(wrapper.text()).toContain('2026-05-26 09:00:00');
     expect(wrapper.buttonTexts()).toContain('接收');
     expect(wrapper.isButtonDisabled('接收')).toBe(false);
 

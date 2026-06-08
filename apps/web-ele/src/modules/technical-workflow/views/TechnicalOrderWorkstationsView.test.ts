@@ -299,7 +299,7 @@ describe('technical order workstation views', () => {
       '常规医嘱工作站',
       '确认',
       '原病理号',
-      'EXAM,CGRS,BLOCK,QP',
+      'ROUTINE,EXAM,CGRS,BLOCK,QP',
     ],
     [SpecialOrderWorkstationView, '特检医嘱工作站', '确认', '项目类型', 'TSRS'],
     [IhcWorkstationView, '免疫组化工作站', '染色', '分配设备', 'IHC'],
@@ -331,17 +331,64 @@ describe('technical order workstation views', () => {
       expect(wrapper.root.textContent).toContain(actionLabel);
       expect(wrapper.root.textContent).toContain(columnLabel);
       expect(wrapper.root.textContent).toContain(`BL-${orderCategoryCode}`);
+      if (orderCategoryCode === 'ROUTINE,EXAM,CGRS,BLOCK,QP') {
+        expect(wrapper.root.textContent).toContain('收费状态');
+      }
       expect(listPendingMedicalOrdersMock).toHaveBeenCalledWith({
         orderCategoryCode,
         page: 1,
         pathologyNo: undefined,
-        size: orderCategoryCode === 'EXAM,CGRS,BLOCK,QP' ? 30 : 100,
+        size: orderCategoryCode === 'ROUTINE,EXAM,CGRS,BLOCK,QP' ? 30 : 100,
         status: undefined,
       });
 
       wrapper.unmount();
     },
   );
+
+  it('shows charged HE staining orders in routine workstation results', async () => {
+    listPendingMedicalOrdersMock.mockResolvedValueOnce({
+      items: [
+        {
+          billingStatus: 'SUCCESS',
+          caseId: 'CASE-HE',
+          doctorName: '石医生',
+          orderCategoryCode: 'ROUTINE',
+          orderCategoryName: '常规医嘱',
+          orderContent: 'HE染色（蜡块: A1）',
+          orderDate: '2026-06-08T00:00:00',
+          orderId: 'ORDER-HE-CHARGED',
+          orderItemCode: 'HE',
+          orderItemName: 'HE染色',
+          orderNumber: 'MO-HE-001',
+          orderType: 'ROUTINE',
+          pathologyNo: 'BL20260608003',
+          patientName: '测试患者',
+          remarks: null,
+          status: 'PENDING',
+        },
+      ],
+      page: 1,
+      size: 30,
+      total: 1,
+    });
+
+    const wrapper = renderView(RoutineOrderWorkstationView);
+    await flushAsyncUpdates();
+
+    expect(wrapper.root.textContent).toContain('HE染色');
+    expect(wrapper.root.textContent).toContain('已收费');
+    expect(wrapper.root.textContent).toContain('2026-06-08 00:00:00');
+    expect(listPendingMedicalOrdersMock).toHaveBeenCalledWith({
+      orderCategoryCode: 'ROUTINE,EXAM,CGRS,BLOCK,QP',
+      page: 1,
+      pathologyNo: undefined,
+      size: 30,
+      status: undefined,
+    });
+
+    wrapper.unmount();
+  });
 
   it('searches remote rows by pathology number', async () => {
     const wrapper = renderView(RoutineOrderWorkstationView);
@@ -369,7 +416,7 @@ describe('technical order workstation views', () => {
     await flushAsyncUpdates();
 
     expect(listPendingMedicalOrdersMock).toHaveBeenLastCalledWith({
-      orderCategoryCode: 'EXAM,CGRS,BLOCK,QP',
+      orderCategoryCode: 'ROUTINE,EXAM,CGRS,BLOCK,QP',
       page: 1,
       pathologyNo: 'BL-202606050001',
       size: 30,

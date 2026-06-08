@@ -140,7 +140,6 @@ describe('useGrossingWorkbench', () => {
     workbench.completeForm.caseId = 'CASE-BOX';
     workbench.completeForm.taskId = 'TASK-BOX';
     specimen.specimenId = 'SPEC-BOX';
-    specimen.embeddingBoxes![0]!.embeddingBoxNo = 'A1';
     workbench.addEmbeddingBoxes(2, 'A');
 
     await workbench.submitGrossing();
@@ -171,9 +170,9 @@ describe('useGrossingWorkbench', () => {
               },
             ],
             embeddingBoxes: [
-              expect.objectContaining({ embeddingBoxNo: 'A1' }),
-              expect.objectContaining({ embeddingBoxNo: 'A2' }),
-              expect.objectContaining({ embeddingBoxNo: 'A3' }),
+              expect.objectContaining({ embeddingBoxNo: 'BX-CASE-A1' }),
+              expect.objectContaining({ embeddingBoxNo: 'BX-CASE-A2' }),
+              expect.objectContaining({ embeddingBoxNo: 'BX-CASE-A3' }),
             ],
             specimenId: 'SPEC-BOX',
           }),
@@ -190,27 +189,27 @@ describe('useGrossingWorkbench', () => {
 
     workbench.addEmbeddingBoxes(3, 'A');
     expect(specimen.embeddingBoxes?.map((box) => box.embeddingBoxNo)).toEqual([
-      'A1',
-      'A2',
-      'A3',
-      'A4',
+      'BX-CASE-A1',
+      'BX-CASE-A2',
+      'BX-CASE-A3',
+      'BX-CASE-A4',
     ]);
 
     workbench.removeEmbeddingBox(1);
     workbench.removeEmbeddingBox(1);
     expect(specimen.embeddingBoxes?.map((box) => box.embeddingBoxNo)).toEqual([
-      'A1',
-      'A4',
+      'BX-CASE-A1',
+      'BX-CASE-A4',
     ]);
 
     workbench.addEmbeddingBoxes(3, 'A');
 
     expect(specimen.embeddingBoxes?.map((box) => box.embeddingBoxNo)).toEqual([
-      'A1',
-      'A2',
-      'A3',
-      'A4',
-      'A5',
+      'BX-CASE-A1',
+      'BX-CASE-A2',
+      'BX-CASE-A3',
+      'BX-CASE-A4',
+      'BX-CASE-A5',
     ]);
     expect(specimen.blocks).toHaveLength(5);
   });
@@ -246,13 +245,13 @@ describe('useGrossingWorkbench', () => {
     ]);
     expect(
       workbench.completeForm.specimens[0]?.embeddingBoxes?.[0]?.embeddingBoxNo,
-    ).toBe('A1');
+    ).toBe('BX-CASE-A1');
     workbench.addEmbeddingBoxes(1);
     expect(
       workbench.completeForm.specimens[0]?.embeddingBoxes?.map(
         (box) => box.embeddingBoxNo,
       ),
-    ).toEqual(['A1', 'A2']);
+    ).toEqual(['BX-CASE-A1', 'BX-CASE-A2']);
 
     workbench.selectedEmbeddingBoxSpecimenKey.value =
       workbench.specimenTabMetas.value[1]!.key;
@@ -263,23 +262,23 @@ describe('useGrossingWorkbench', () => {
     );
     expect(
       workbench.completeForm.specimens[1]?.embeddingBoxes?.[0]?.embeddingBoxNo,
-    ).toBe('B1');
+    ).toBe('BX-CASE-B1');
     workbench.addEmbeddingBoxes(1);
     expect(
       workbench.completeForm.specimens[1]?.embeddingBoxes?.map(
         (box) => box.embeddingBoxNo,
       ),
-    ).toEqual(['B1', 'B2']);
+    ).toEqual(['BX-CASE-B1', 'BX-CASE-B2']);
     expect(
       workbench.embeddingBoxRows.value.map((row) => ({
         boxNo: row.box.embeddingBoxNo,
         specimenName: row.specimenName,
       })),
     ).toEqual([
-      { boxNo: 'A1', specimenName: '胃组织' },
-      { boxNo: 'A2', specimenName: '胃组织' },
-      { boxNo: 'B1', specimenName: '肠组织' },
-      { boxNo: 'B2', specimenName: '肠组织' },
+      { boxNo: 'BX-CASE-A1', specimenName: '胃组织' },
+      { boxNo: 'BX-CASE-A2', specimenName: '胃组织' },
+      { boxNo: 'BX-CASE-B1', specimenName: '肠组织' },
+      { boxNo: 'BX-CASE-B2', specimenName: '肠组织' },
     ]);
   });
 
@@ -324,10 +323,10 @@ describe('useGrossingWorkbench', () => {
     workbench.addEmbeddingBoxes(1, 'A');
 
     expect(specimen.embeddingBoxes?.map((box) => box.embeddingBoxNo)).toEqual([
-      'A1',
-      'A2',
-      'B1',
-      'C1',
+      'BX-CASE-A1',
+      'BX-CASE-A2',
+      'BX-CASE-B1',
+      'BX-CASE-C1',
     ]);
     expect(specimen.blocks).toHaveLength(4);
   });
@@ -341,13 +340,47 @@ describe('useGrossingWorkbench', () => {
     workbench.removeEmbeddingBox(1);
 
     expect(specimen.embeddingBoxes?.map((box) => box.embeddingBoxNo)).toEqual([
-      'A1',
-      'A3',
-      'A4',
+      'BX-CASE-A1',
+      'BX-CASE-A3',
+      'BX-CASE-A4',
     ]);
     expect(specimen.embeddingBoxes?.map((box) => box.sequenceNo)).toEqual([
       1, 2, 3,
     ]);
+  });
+
+  it('ignores tracked embedding box numbers when seeding a new grossing submission', async () => {
+    mockGetGrossingWorkbenchContext.mockResolvedValue({
+      tracking: {
+        blocks: [
+          {
+            blockCode: 'BLK-1',
+            blockId: 'BLOCK-1',
+            description: '旧蜡块',
+            embeddingBoxNo: 'A1',
+            grossDescription: null,
+            specimenId: 'SPEC-1',
+            specimenName: '胃组织',
+          },
+        ],
+        specimens: [
+          {
+            specimenId: 'SPEC-1',
+            specimenName: '胃组织',
+            specimenNo: 'SP-1',
+          },
+        ],
+      },
+    });
+
+    const workbench = useGrossingWorkbench();
+    workbench.completeForm.taskId = 'TASK-1';
+
+    await workbench.loadWorkbenchContext();
+
+    expect(
+      workbench.completeForm.specimens[0]?.embeddingBoxes?.[0]?.embeddingBoxNo,
+    ).toBe('BX-CASE-A1');
   });
 
   it('uploads grossing images directly to the selected specimen', async () => {

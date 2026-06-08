@@ -62,6 +62,9 @@ interface UseGrossingWorkbenchOptions {
 }
 
 type GrossingEmbeddingBoxPrefix = string;
+const GENERATED_EMBEDDING_BOX_NO_PREFIX = 'BX';
+const GENERATED_EMBEDDING_BOX_NO_SCOPE_FALLBACK = 'CASE';
+const MAX_EMBEDDING_BOX_NO_LENGTH = 64;
 
 interface GrossingSpecimenTabMeta {
   key: string;
@@ -99,12 +102,47 @@ function getEmbeddingBoxPrefixRank(prefix: string) {
   return rank || Number.MAX_SAFE_INTEGER;
 }
 
+function normalizeEmbeddingBoxScope(scope: null | string | undefined) {
+  const normalizedScope = (scope ?? '')
+    .trim()
+    .toUpperCase()
+    .replaceAll(/[^A-Z0-9]+/g, '-')
+    .replaceAll(/^-+|-+$/g, '');
+  return normalizedScope || GENERATED_EMBEDDING_BOX_NO_SCOPE_FALLBACK;
+}
+
+function buildGeneratedEmbeddingBoxNo(
+  scope: string,
+  prefix: GrossingEmbeddingBoxPrefix,
+  sequenceNo: number,
+) {
+  const suffix = `${prefix.toUpperCase()}${sequenceNo}`;
+  const normalizedScope = normalizeEmbeddingBoxScope(scope);
+  const maxScopeLength = Math.max(
+    1,
+    MAX_EMBEDDING_BOX_NO_LENGTH -
+      GENERATED_EMBEDDING_BOX_NO_PREFIX.length -
+      suffix.length -
+      2,
+  );
+  const truncatedScope =
+    normalizedScope.slice(0, maxScopeLength).replaceAll(/-+$/g, '') ||
+    GENERATED_EMBEDDING_BOX_NO_SCOPE_FALLBACK;
+
+  return `${GENERATED_EMBEDDING_BOX_NO_PREFIX}-${truncatedScope}-${suffix}`;
+}
+
 function parseGeneratedEmbeddingBoxNo(embeddingBoxNo: string) {
-  const match = embeddingBoxNo.trim().match(/^([A-Z]+)(\d+)$/i);
+  const normalizedValue = embeddingBoxNo.trim().toUpperCase();
+  const scopedMatch = normalizedValue.match(/^BX-(.+)-([A-Z]+)(\d+)$/);
+  const legacyMatch =
+    scopedMatch === null ? normalizedValue.match(/^([A-Z]+)(\d+)$/) : null;
+  const match = scopedMatch ?? legacyMatch;
   if (!match) {
     return null;
   }
-  const [, rawPrefix, rawSequence] = match;
+  const rawPrefix = scopedMatch ? scopedMatch[2] : match[1];
+  const rawSequence = scopedMatch ? scopedMatch[3] : match[2];
   if (!rawPrefix || !rawSequence) {
     return null;
   }
@@ -158,7 +196,11 @@ export function useGrossingWorkbench(
 
   function createEmbeddingBox(
     sequenceNo: number,
-    embeddingBoxNo = `A${sequenceNo}`,
+    embeddingBoxNo = buildGeneratedEmbeddingBoxNo(
+      GENERATED_EMBEDDING_BOX_NO_SCOPE_FALLBACK,
+      'A',
+      sequenceNo,
+    ),
   ): GrossingEmbeddingBoxItemRequest {
     return {
       boxName: `包埋盒 ${sequenceNo}`,
@@ -176,13 +218,30 @@ export function useGrossingWorkbench(
     };
   }
 
-  function createEmptySpecimen(): GrossingSpecimenItemRequest {
+  function getResolvedEmbeddingBoxScope() {
+    return normalizeEmbeddingBoxScope(
+      workbenchContext.value?.caseSummary?.pathologyNo ??
+        currentTask.value?.pathologyNo ??
+        currentTask.value?.caseId,
+    );
+  }
+
+  function createEmptySpecimen(specimenIndex = 0): GrossingSpecimenItemRequest {
     return {
       blocks: [createEmptyBlock()],
       blockCount: 1,
       bodyPartId: '',
       cutSurfaceFeature: '',
-      embeddingBoxes: [createEmbeddingBox(1)],
+      embeddingBoxes: [
+        createEmbeddingBox(
+          1,
+          buildGeneratedEmbeddingBoxNo(
+            getResolvedEmbeddingBoxScope(),
+            getSpecimenPrefix(specimenIndex),
+            1,
+          ),
+        ),
+      ],
       grossDescription: '',
       marginMarking: '',
       mediaAssets: [],
@@ -365,8 +424,11 @@ export function useGrossingWorkbench(
           embeddingBoxes: Array.from({ length: blockCount }, (_, index) =>
             createEmbeddingBox(
               index + 1,
-              specimenBlocks[index]?.embeddingBoxNo?.trim() ||
-                `${getSpecimenPrefix(itemIndex)}${index + 1}`,
+              buildGeneratedEmbeddingBoxNo(
+                getResolvedEmbeddingBoxScope(),
+                getSpecimenPrefix(itemIndex),
+                index + 1,
+              ),
             ),
           ),
           grossDescription: '',
@@ -462,12 +524,7 @@ export function useGrossingWorkbench(
 
   function addSpecimen() {
     const specimenIndex = completeForm.specimens.length;
-    completeForm.specimens.push({
-      ...createEmptySpecimen(),
-      embeddingBoxes: [
-        createEmbeddingBox(1, `${getSpecimenPrefix(specimenIndex)}1`),
-      ],
-    });
+    completeForm.specimens.push(createEmptySpecimen(specimenIndex));
     specimenTabMetas.value.push(createSpecimenTabMeta());
     activateSpecimenAt(completeForm.specimens.length - 1);
   }
@@ -553,7 +610,11 @@ export function useGrossingWorkbench(
     while (usedSequences.has(nextSequence)) {
       nextSequence += 1;
     }
-    return `${prefix}${nextSequence}`;
+    return buildGeneratedEmbeddingBoxNo(
+      getResolvedEmbeddingBoxScope(),
+      prefix,
+      nextSequence,
+    );
   }
 
   function compareEmbeddingBoxPairs(
