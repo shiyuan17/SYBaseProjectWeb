@@ -106,7 +106,7 @@ export const TECHNICAL_WORKFLOW_ROUTE_META: Record<
     key: 'SPECIMEN_REGISTRATION',
     name: 'TechnicalSpecimenRegistration',
     path: '/technical-workflow/specimen-registration',
-    title: '登记接收工作站',
+    title: '检查登记',
   },
   SLICING: {
     authorityCode: M3_PERMISSION_CODES.SLICING,

@@ -53,7 +53,9 @@ import { DEFAULT_PAGE_SIZE } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import {
   isTechnicalRegistrationConsultationApplicationType,
+  isTechnicalRegistrationPathologyNoPreview,
   resolveTechnicalRegistrationApplicationType,
+  resolveTechnicalRegistrationPathologyNo,
 } from '../utils/specimen-registration-application';
 
 type RegistrationListTab = 'received' | 'registered';
@@ -78,6 +80,9 @@ const consultationWorkbench =
 const workspace = ref<null | TechnicalSpecimenRegistrationWorkspace>(null);
 const activeRegistrationListTab = ref<RegistrationListTab>('received');
 const selectedRegistrationApplicationType = ref('');
+const pathologyNoDraft = ref('');
+const pathologyNoDraftTouched = ref(false);
+const pathologyNoDraftCaseId = ref('');
 const activeMediaAssetId = ref('');
 const mediaPanelExpanded = ref(false);
 
@@ -137,15 +142,84 @@ function resolveRegistrationListStatus(): TechnicalSpecimenRegistrationStatus {
     : 'PENDING';
 }
 
+function clearPathologyNoDraft() {
+  pathologyNoDraft.value = '';
+  pathologyNoDraftTouched.value = false;
+  pathologyNoDraftCaseId.value = '';
+}
+
+function resolveWorkspaceApplicationType(
+  currentWorkspace: TechnicalSpecimenRegistrationWorkspace,
+  applicationType?: null | string,
+) {
+  return resolveTechnicalRegistrationApplicationType(
+    applicationType?.trim() || currentWorkspace.basicInfo.applicationType,
+  );
+}
+
+function createPathologyNoDraft(
+  currentWorkspace: TechnicalSpecimenRegistrationWorkspace,
+  applicationType: string,
+) {
+  const existingPathologyNo = currentWorkspace.basicInfo.pathologyNo;
+  if (
+    existingPathologyNo?.trim() &&
+    !isTechnicalRegistrationPathologyNoPreview({
+      applicationType,
+      existingPathologyNo,
+    })
+  ) {
+    return existingPathologyNo.trim();
+  }
+
+  return resolveTechnicalRegistrationPathologyNo({
+    applicationType,
+    existingPathologyNo,
+    referenceDate: currentWorkspace.basicInfo.submissionDate,
+  });
+}
+
+function syncPathologyNoDraft(
+  currentWorkspace: TechnicalSpecimenRegistrationWorkspace,
+  applicationType: string,
+  options: { force?: boolean } = {},
+) {
+  const caseId = currentWorkspace.pendingSummary.caseId.trim();
+  const selectedCaseChanged = caseId !== pathologyNoDraftCaseId.value;
+  if (selectedCaseChanged) {
+    pathologyNoDraftTouched.value = false;
+  }
+  pathologyNoDraftCaseId.value = caseId;
+
+  if (options.force || selectedCaseChanged || !pathologyNoDraftTouched.value) {
+    pathologyNoDraft.value = createPathologyNoDraft(
+      currentWorkspace,
+      applicationType,
+    );
+  }
+}
+
 function syncWorkspace(
   nextWorkspace: null | TechnicalSpecimenRegistrationWorkspace,
 ) {
   workspace.value = nextWorkspace;
+  if (!nextWorkspace) {
+    clearPathologyNoDraft();
+  }
   if (nextWorkspace && !selectedRegistrationApplicationType.value.trim()) {
     selectedRegistrationApplicationType.value =
       resolveTechnicalRegistrationApplicationType(
         nextWorkspace.basicInfo.applicationType,
       );
+  }
+  if (nextWorkspace) {
+    syncPathologyNoDraft(
+      nextWorkspace,
+      resolveWorkspaceApplicationType(
+        nextWorkspace,
+        selectedRegistrationApplicationType.value,
+      ),
+    );
   }
   const nextActiveAssetId = nextWorkspace?.mediaAssets.some(
     (item) => item.assetId === activeMediaAssetId.value,
@@ -160,28 +234,26 @@ function clearConsultationContext() {
   consultationWorkbench.value = null;
 }
 
-async function loadConsultationContext(
+async function loadApplicationContext(
   currentWorkspace: null | TechnicalSpecimenRegistrationWorkspace,
 ) {
-  if (
-    !currentWorkspace ||
-    !isConsultationApplicationType(currentWorkspace.basicInfo.applicationType)
-  ) {
+  if (!currentWorkspace) {
     clearConsultationContext();
     return;
   }
 
   const applicationId = currentWorkspace.pendingSummary.applicationId?.trim();
-  if (!applicationId) {
-    clearConsultationContext();
-    return;
-  }
+  const shouldLoadApplicationDetail =
+    applicationId &&
+    isConsultationApplicationType(currentWorkspace.basicInfo.applicationType);
 
   consultationContextLoading.value = true;
   try {
     const [applicationDetailResult, workbenchResult] = await Promise.allSettled(
       [
-        getApplicationDetail(applicationId),
+        shouldLoadApplicationDetail
+          ? getApplicationDetail(applicationId)
+          : Promise.resolve(null),
         getTechnicalSpecimenRegistrationApplicationWorkbench(
           currentWorkspace.pendingSummary.caseId,
         ),
@@ -450,6 +522,7 @@ function clearSelectedCaseContext() {
   syncWorkspace(null);
   clearConsultationContext();
   selectedRegistrationApplicationType.value = '';
+  clearPathologyNoDraft();
   workspaceError.value = '';
 }
 
@@ -476,6 +549,7 @@ async function syncVisibleSelection(
 
   if (selectedCaseChanged) {
     selectedRegistrationApplicationType.value = '';
+    clearPathologyNoDraft();
   }
   selectedCaseId.value = nextSelectedCaseId;
   await loadWorkspace(nextSelectedCaseId);
@@ -519,7 +593,8 @@ async function loadWorkspace(caseId: string) {
   try {
     const result = await getTechnicalSpecimenRegistrationWorkspace(caseId);
     syncWorkspace(result);
-    await loadConsultationContext(result);
+    workspaceLoading.value = false;
+    await loadApplicationContext(result);
   } catch (error) {
     syncWorkspace(null);
     clearConsultationContext();
@@ -540,8 +615,27 @@ function handleRowSelect(row: PendingTechnicalSpecimenRegistrationItem) {
     return;
   }
   selectedRegistrationApplicationType.value = '';
+  clearPathologyNoDraft();
   selectedCaseId.value = row.caseId;
   void loadWorkspace(row.caseId);
+}
+
+function handleSelectedRegistrationApplicationTypeUpdate(value: string) {
+  const nextApplicationType =
+    resolveTechnicalRegistrationApplicationType(value);
+  selectedRegistrationApplicationType.value = nextApplicationType;
+  pathologyNoDraftTouched.value = false;
+  if (workspace.value) {
+    syncPathologyNoDraft(workspace.value, nextApplicationType, {
+      force: true,
+    });
+  }
+}
+
+function handlePathologyNoDraftUpdate(value: string) {
+  pathologyNoDraft.value = value;
+  pathologyNoDraftTouched.value = true;
+  pathologyNoDraftCaseId.value = workspace.value?.pendingSummary.caseId ?? '';
 }
 
 async function handleSaveMaterials(
@@ -781,6 +875,7 @@ async function handleCompleteRegistration() {
         resolveTechnicalRegistrationApplicationType(
           selectedRegistrationApplicationType.value,
         ) || undefined,
+      pathologyNo: pathologyNoDraft.value.trim() || undefined,
       terminalCode: 'T-M3-SPEC-REG',
     });
     ElMessage.success('标本登记完成，已进入取材前置队列');
@@ -846,6 +941,7 @@ watch(activeRegistrationListTab, () => {
           :loading="workspaceLoading"
           :material-saving="materialSaving"
           :material-verification-saving="materialVerificationSaving"
+          :pathology-no-draft="pathologyNoDraft"
           :selected-application-type="selectedRegistrationApplicationType"
           :submitting="submitting"
           :workspace="workspace"
@@ -855,8 +951,9 @@ watch(activeRegistrationListTab, () => {
           @save-consultation-item="handleSaveConsultationItem"
           @save-detail-sections="handleSaveDetailSections"
           @save-materials="handleSaveMaterials"
+          @update:pathology-no-draft="handlePathologyNoDraftUpdate"
           @update:selected-application-type="
-            selectedRegistrationApplicationType = $event
+            handleSelectedRegistrationApplicationTypeUpdate
           "
           @verify-material="handleVerifyMaterial"
         />

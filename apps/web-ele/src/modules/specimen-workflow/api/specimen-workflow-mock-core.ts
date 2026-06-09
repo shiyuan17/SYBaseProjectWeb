@@ -134,7 +134,7 @@ export function applySpecimenRemovalConfirmation(
     specimenNo: specimen.specimenNo,
   });
   return {
-    barcode: specimen.barcode,
+    barcode: specimen.barcode ?? '',
     operatorName,
     specimenId: specimen.id,
     specimenRemovalAt: eventTime,
@@ -396,7 +396,7 @@ export function mapSpecimenRemovalItem(
     abnormalFlag: isSpecimenAbnormal(specimen),
     applicationId: application.id,
     applicationNo: application.applicationNo,
-    barcode: specimen.barcode,
+    barcode: specimen.barcode ?? '',
     confirmedAt: specimen.specimenRemovalAt ?? null,
     containerCount: specimen.containerCount,
     containerName: specimen.containerName,
@@ -426,7 +426,7 @@ export function mapSpecimenOutboundItem(
   return {
     applicationId: application.id,
     applicationNo: application.applicationNo,
-    barcode: specimen.barcode,
+    barcode: specimen.barcode ?? '',
     checkInStatus: resolveSpecimenCheckInStatus(specimen),
     fixationStatus: specimen.fixationStatus,
     inpatientNo: normalizeText(application.applicationNo) || null,
@@ -462,7 +462,7 @@ export function mapPendingSpecimenItem(
     applicationId: application.id,
     applicationNo: application.applicationNo,
     batchAbnormalFlag: batchMetrics?.batchAbnormalFlag ?? false,
-    barcode: specimen.barcode,
+    barcode: specimen.barcode ?? '',
     checkInStatus: resolveSpecimenCheckInStatus(specimen),
     checkedInAt: specimen.checkedInAt ?? null,
     checkedInByName: specimen.checkedInByName ?? null,

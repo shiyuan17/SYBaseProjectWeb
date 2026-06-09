@@ -136,7 +136,9 @@ import SlicingQcEvaluationDialog from './SlicingQcEvaluationDialog.vue';
 
 function createRow(overrides: Partial<SlicingWorkbenchRow> = {}) {
   return {
+    applicationType: 'ROUTINE',
     caseId: 'CASE-1',
+    combinedSlide: false,
     completedAt: '2026-06-01T10:00:00',
     embeddingBoxId: 'BOX-1',
     pathologyNo: 'BL-001',
@@ -145,10 +147,12 @@ function createRow(overrides: Partial<SlicingWorkbenchRow> = {}) {
     selectable: true,
     slideId: 'SLIDE-1',
     slideNo: 'S-001',
+    slidePrintStatus: 'PRINTED',
     specimenId: 'SPEC-1',
     taskId: 'TASK-1',
     taskStatus: 'COMPLETED',
     timedOut: false,
+    printedSlideCount: 1,
     ...overrides,
   } satisfies SlicingWorkbenchRow;
 }

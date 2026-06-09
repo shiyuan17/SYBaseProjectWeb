@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ReceiptWorkbenchRow } from '../utils/specimen-receipt-workbench';
 
-import { onMounted, watch } from 'vue';
+import { watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
@@ -29,6 +29,12 @@ import {
   resolveReceiptWorkbenchStatusLabel,
   resolveReceiptWorkbenchStatusTagType,
 } from '../utils/specimen-receipt-workbench';
+import {
+  resolveReceiptWorkflowRowTone,
+  resolveSpecimenWorkflowRowClassName,
+} from '../utils/specimen-workflow-row-tone';
+
+import '../styles/specimen-workflow-row-tone.css';
 
 const route = useRoute();
 const {
@@ -50,7 +56,6 @@ const {
   handleRemoveDirectReceiveRow,
   handleRetryLabel,
   handleSelectionChange,
-  loadPendingReceiptRows,
   lookupLoading,
   openReceiveDialog,
   openDirectReceiveDrawer,
@@ -84,13 +89,9 @@ function normalizeQueryValue(value: unknown) {
 }
 
 function resolveRowClassName({ row }: { row: ReceiptWorkbenchRow }) {
-  if (row.queueStatus === 'SUCCESS') {
-    return 'receipt-success-row';
-  }
-  if (row.queueStatus === 'FAILED') {
-    return 'receipt-failed-row';
-  }
-  return '';
+  return resolveSpecimenWorkflowRowClassName(
+    resolveReceiptWorkflowRowTone(row),
+  );
 }
 
 watch(
@@ -108,10 +109,6 @@ watch(
   },
   { immediate: true },
 );
-
-onMounted(() => {
-  void loadPendingReceiptRows();
-});
 </script>
 
 <template>
@@ -374,20 +371,3 @@ onMounted(() => {
     </ElDialog>
   </Page>
 </template>
-
-<style scoped>
-:deep(.receipt-success-row td) {
-  color: #fff;
-  background: #0f8a14 !important;
-}
-
-:deep(.receipt-success-row .el-tag) {
-  --el-tag-bg-color: #fff;
-  --el-tag-border-color: #fff;
-  --el-tag-text-color: #0f8a14;
-}
-
-:deep(.receipt-failed-row td) {
-  background: hsl(var(--warning) / 12%) !important;
-}
-</style>

@@ -33,13 +33,13 @@ describe('workflow routes', () => {
 
     expect(workflowRoot?.path).toBe('/workflow');
     expect(visibleRoutes?.map((route) => route.name)).toEqual([
-      'SubmissionRegistration',
       'ApplicationRegistrationWorkbench',
       'FixationTransport',
       'TrackingException',
     ]);
     expect(submissionRoute?.path).toBe('/workflow/submission-registration');
     expect(submissionRoute?.meta?.title).toBe('申请与登记');
+    expect(submissionRoute?.meta?.hideInMenu).toBe(true);
     expect(submissionRoute?.meta?.keepAlive).toBe(true);
     expect(submissionRoute?.meta?.authority).toEqual([
       M2_PERMISSION_CODES.APPLICATION_DETAIL_QUERY,
@@ -50,7 +50,7 @@ describe('workflow routes', () => {
     expect(workbenchRoute?.path).toBe(
       '/workflow/application-registration-workbench',
     );
-    expect(workbenchRoute?.meta?.title).toBe('申请登记工作台');
+    expect(workbenchRoute?.meta?.title).toBe('标本采集');
     expect(workbenchRoute?.meta?.keepAlive).toBe(true);
     expect(workbenchRoute?.meta?.authority).toEqual([
       M2_PERMISSION_CODES.APPLICATION_DETAIL_QUERY,

@@ -121,7 +121,7 @@ export async function startSpecimenVerificationMock(
   });
   appendVerificationRecord({
     applicationId: specimen.applicationId,
-    barcode: specimen.barcode,
+    barcode: normalizeText(specimen.barcode),
     operatorName: operator.operatorName,
     operatorUserId: operator.operatorUserId,
     remarks: data.remarks ?? '开始核对',
@@ -166,7 +166,7 @@ export async function completeSpecimenVerificationMock(
   });
   appendVerificationRecord({
     applicationId: specimen.applicationId,
-    barcode: specimen.barcode,
+    barcode: normalizeText(specimen.barcode),
     operatorName: operator.operatorName,
     operatorUserId: operator.operatorUserId,
     remarks: data.remarks ?? '完成核对',
@@ -214,7 +214,7 @@ export async function startFixationMock(
   });
   appendVerificationRecord({
     applicationId: specimen.applicationId,
-    barcode: specimen.barcode,
+    barcode: normalizeText(specimen.barcode),
     operatorName: operator.operatorName,
     operatorUserId: operator.operatorUserId,
     remarks: data.remarks ?? '开始固定',
@@ -226,7 +226,7 @@ export async function startFixationMock(
   });
   updateApplicationFromSpecimens(specimen.applicationId);
   return {
-    barcode: specimen.barcode,
+    barcode: normalizeText(specimen.barcode),
     fixationCompletedAt: specimen.fixationCompletedAt,
     fixationLiquidType: specimen.fixationLiquidType,
     operatorName: operator.operatorName,
@@ -279,7 +279,7 @@ export async function completeFixationMock(
   });
   appendVerificationRecord({
     applicationId: specimen.applicationId,
-    barcode: specimen.barcode,
+    barcode: normalizeText(specimen.barcode),
     operatorName: operator.operatorName,
     operatorUserId: operator.operatorUserId,
     remarks: data.remarks ?? '固定完成',
@@ -291,7 +291,7 @@ export async function completeFixationMock(
   });
   updateApplicationFromSpecimens(specimen.applicationId);
   return {
-    barcode: specimen.barcode,
+    barcode: normalizeText(specimen.barcode),
     fixationCompletedAt: specimen.fixationCompletedAt,
     fixationLiquidType: specimen.fixationLiquidType,
     operatorName: specimen.fixationOperatorName,
@@ -462,7 +462,7 @@ export async function receiveSpecimensMock(
     ) {
       appendVerificationRecord({
         applicationId: specimen.applicationId,
-        barcode: specimen.barcode,
+        barcode: normalizeText(specimen.barcode),
         operatorName: data.receivedByName,
         operatorUserId: data.receivedByUserId ?? null,
         remarks: item.reason ?? item.remarks ?? '接收异常核对',
@@ -556,7 +556,7 @@ export async function bindSpecimenBarcodeMock(
   });
   appendVerificationRecord({
     applicationId: specimen.applicationId,
-    barcode: specimen.barcode,
+    barcode: normalizeText(specimen.barcode),
     operatorName: operator.operatorName,
     operatorUserId: operator.operatorUserId,
     remarks: data.remarks ?? null,
@@ -576,7 +576,7 @@ export async function rebindSpecimenBarcodeMock(
 ): Promise<SpecimenTrackingSummary> {
   const specimen = resolveSpecimenByIdentifier(identifier);
   assertSpecimenNotInReceiptTerminalState(specimen, '重绑条码');
-  const oldBarcode = specimen.barcode;
+  const oldBarcode = normalizeText(specimen.barcode);
   const eventTime = createTimestamp();
   const operator = resolveMockOperatorContext();
   specimen.previousBarcodes = oldBarcode
@@ -599,7 +599,7 @@ export async function rebindSpecimenBarcodeMock(
   });
   appendVerificationRecord({
     applicationId: specimen.applicationId,
-    barcode: specimen.barcode,
+    barcode: normalizeText(specimen.barcode),
     operatorName: operator.operatorName,
     operatorUserId: operator.operatorUserId,
     remarks: data.remarks ?? `旧条码 ${oldBarcode} 更正为 ${specimen.barcode}`,
@@ -624,7 +624,7 @@ export async function unbindSpecimenBarcodeMock(
   }
 
   const operator = resolveMockOperatorContext();
-  const oldBarcode = specimen.barcode;
+  const oldBarcode = normalizeText(specimen.barcode);
   const eventTime = createTimestamp();
   specimen.previousBarcodes = oldBarcode
     ? [...new Set([...specimen.previousBarcodes, oldBarcode])]
@@ -694,7 +694,7 @@ export async function confirmSpecimenMock(
   });
   appendVerificationRecord({
     applicationId: specimen.applicationId,
-    barcode: specimen.barcode,
+    barcode: normalizeText(specimen.barcode),
     operatorName: operator.operatorName,
     operatorUserId: operator.operatorUserId,
     remarks: data.remarks ?? null,
@@ -743,7 +743,7 @@ export async function checkInSpecimenMock(
   });
   appendVerificationRecord({
     applicationId: specimen.applicationId,
-    barcode: specimen.barcode,
+    barcode: normalizeText(specimen.barcode),
     operatorName: operator.operatorName,
     operatorUserId: operator.operatorUserId,
     remarks: data.remarks ?? '执行标本入库',

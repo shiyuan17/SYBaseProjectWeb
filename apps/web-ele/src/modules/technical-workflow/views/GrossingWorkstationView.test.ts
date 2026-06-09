@@ -35,6 +35,7 @@ const {
   mockMessageSuccess,
   mockMessageWarning,
   mockNavigation,
+  mockRoute,
   mockResetWorkbenchState,
   mockStartGrossing,
   mockSubmitGrossing,
@@ -47,6 +48,9 @@ const {
   const mockNavigation = {
     goToTracking: vi.fn(),
   };
+  const mockRoute = {
+    query: {} as Record<string, string>,
+  };
   const mockResetWorkbenchState = vi.fn();
   const mockStartGrossing = vi.fn();
   const mockSubmitGrossing = vi.fn();
@@ -57,6 +61,7 @@ const {
     mockMessageSuccess,
     mockMessageWarning,
     mockNavigation,
+    mockRoute,
     mockResetWorkbenchState,
     mockStartGrossing,
     mockSubmitGrossing,
@@ -329,9 +334,7 @@ const workbenchState = {
 };
 
 vi.mock('vue-router', () => ({
-  useRoute: () => ({
-    query: {},
-  }),
+  useRoute: () => mockRoute,
   useRouter: () => ({}),
 }));
 
@@ -601,7 +604,8 @@ async function flushAll() {
   await nextTick();
 }
 
-async function mountView() {
+async function mountView(query?: Record<string, string>) {
+  mockRoute.query = query ?? { pathologyNo: 'BL-001' };
   descriptionTab.value = 'grossDescription';
   activeSpecimenKey.value = 'specimen-1';
   selectedEmbeddingBoxSpecimenKey.value = 'specimen-1';
@@ -617,7 +621,10 @@ async function mountView() {
     taskStatus: 'IN_PROGRESS',
   });
   mockListPendingTechnicalTasks.mockResolvedValue({
-    items: [createTask('TASK-001', 'BL-001'), createTask('TASK-002', 'BL-002')],
+    items: [
+      createTask('TASK-001', 'BL-001', 'IN_PROGRESS'),
+      createTask('TASK-002', 'BL-002', 'IN_PROGRESS'),
+    ],
     page: 1,
     size: 20,
     total: 2,
@@ -678,10 +685,26 @@ describe('GrossingWorkstationView', () => {
     workbenchState.uploadGrossingImageFile.mockClear();
   });
 
+  it('keeps the ordinary entry empty until the user queries', async () => {
+    const { app } = await mountView({});
+
+    expect(mockListPendingTechnicalTasks).not.toHaveBeenCalled();
+    expect(mockInitializeWorkbench).not.toHaveBeenCalled();
+
+    app.unmount();
+  });
+
   it('loads the legacy table and switches the selected task', async () => {
     const { app, root } = await mountView();
 
     expect(mockListPendingTechnicalTasks).toHaveBeenCalledTimes(1);
+    expect(mockListPendingTechnicalTasks).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        includeAllStatuses: true,
+        keyword: 'BL-001',
+        taskType: 'GROSSING',
+      }),
+    );
     expect(mockInitializeWorkbench).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'TASK-001',
@@ -750,6 +773,15 @@ describe('GrossingWorkstationView', () => {
   it('queries and starts grossing from the compact toolbar', async () => {
     const { app, root } = await mountView();
     mockListPendingTechnicalTasks.mockClear();
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [
+        createTask('TASK-001', 'BL-001'),
+        createTask('TASK-002', 'BL-002'),
+      ],
+      page: 1,
+      size: 20,
+      total: 2,
+    });
 
     const input = root.querySelector<HTMLInputElement>(
       'input[placeholder="病人ID / 病理号 / 姓名"]',
@@ -761,6 +793,7 @@ describe('GrossingWorkstationView', () => {
 
     expect(mockListPendingTechnicalTasks).toHaveBeenLastCalledWith(
       expect.objectContaining({
+        includeAllStatuses: true,
         keyword: 'BL-002',
         page: 1,
         taskType: 'GROSSING',
@@ -776,6 +809,46 @@ describe('GrossingWorkstationView', () => {
         terminalCode: 'TG-01',
       }),
     );
+
+    app.unmount();
+  });
+
+  it('shows historical task data status without loading inactive workbench on enter query', async () => {
+    const { app, root } = await mountView({});
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [createTask('TASK-009', 'BD202606080002', 'COMPLETED')],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+
+    const input = root.querySelector<HTMLInputElement>(
+      'input[placeholder="病人ID / 病理号 / 姓名"]',
+    );
+    expect(input).toBeTruthy();
+    setInputValue(input!, 'BD202606080002');
+    input!.dispatchEvent(
+      new KeyboardEvent('keyup', { bubbles: true, key: 'Enter' }),
+    );
+    await flushAll();
+
+    expect(mockListPendingTechnicalTasks).toHaveBeenCalledWith(
+      expect.objectContaining({
+        includeAllStatuses: true,
+        keyword: 'BD202606080002',
+        taskType: 'GROSSING',
+      }),
+    );
+    expect(mockInitializeWorkbench).not.toHaveBeenCalled();
+    expect(mockResetWorkbenchState).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: 'TASK-009',
+        taskStatus: 'COMPLETED',
+      }),
+    );
+    expect(root.querySelector('[data-column-label="数据状态"]')).toBeTruthy();
+    expect(root.textContent).toContain('描写完成');
+    expect(root.textContent).not.toContain('技术任务未处于激活状态');
 
     app.unmount();
   });
@@ -926,7 +999,7 @@ describe('GrossingWorkstationView', () => {
     app.unmount();
   });
 
-  it('opens the grossing template drawer and appends a selected template', async () => {
+  it('keeps the grossing template panel on the right and appends a selected template', async () => {
     const { app, root } = await mountView();
 
     const grossDescriptionInput = root.querySelector<HTMLTextAreaElement>(
@@ -934,13 +1007,13 @@ describe('GrossingWorkstationView', () => {
     );
     expect(grossDescriptionInput).toBeTruthy();
     expect(grossDescriptionInput!.value).toBe('甲状腺左叶灰白结节，质中。');
+    expect(root.querySelector('[data-testid="drawer"]')).toBeNull();
+    expect(root.textContent).toContain('当前标本：骨髓');
+    expect(root.textContent).toContain('淋巴造血系统');
+    expect(root.textContent).toContain('骨髓');
 
     findButton(root, '取材模板').click();
     await flushAll();
-
-    expect(root.textContent).toContain('选择取材模板 - 骨髓');
-    expect(root.textContent).toContain('淋巴造血系统');
-    expect(root.textContent).toContain('骨髓');
 
     findButton(root, '追加模板').click();
     await flushAll();
@@ -948,7 +1021,35 @@ describe('GrossingWorkstationView', () => {
     expect(mockMessageSuccess).toHaveBeenCalledWith('已追加取材模板');
     expect(grossDescriptionInput!.value).toContain('甲状腺左叶灰白结节');
     expect(grossDescriptionInput!.value).toContain('灰褐色条索状组织一条');
-    expect(root.textContent).not.toContain('选择取材模板 - 骨髓');
+    expect(root.textContent).toContain('取材模板');
+
+    app.unmount();
+  });
+
+  it('appends a grossing template directly when double-clicking the template card', async () => {
+    const { app, root } = await mountView();
+
+    const grossDescriptionInput = root.querySelector<HTMLTextAreaElement>(
+      'textarea[placeholder="请输入当前标本的大体描写"]',
+    );
+    expect(grossDescriptionInput).toBeTruthy();
+
+    const appendCheckbox = root.querySelector<HTMLInputElement>(
+      'input[type="checkbox"]:not([disabled])',
+    );
+    expect(appendCheckbox).toBeTruthy();
+    appendCheckbox!.click();
+    await flushAll();
+    expect(appendCheckbox!.checked).toBe(false);
+
+    findButton(root, '灰褐色条索状组织一条').dispatchEvent(
+      new MouseEvent('dblclick', { bubbles: true }),
+    );
+    await flushAll();
+
+    expect(mockMessageSuccess).toHaveBeenCalledWith('已追加取材模板');
+    expect(grossDescriptionInput!.value).toContain('甲状腺左叶灰白结节');
+    expect(grossDescriptionInput!.value).toContain('灰褐色条索状组织一条');
 
     app.unmount();
   });

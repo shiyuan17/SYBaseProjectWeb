@@ -108,8 +108,30 @@ function applyDraftOutboundStatus(record: SpecimenOutboundDisplayItem) {
   return {
     ...record,
     displayOutboundStatus: '出库未保存',
+    outboundDraft: true,
     outboundStatusTagType: 'warning' as const,
   };
+}
+
+function mergeOutboundRowsBySpecimenId(
+  currentRows: SpecimenOutboundDisplayItem[],
+  incomingRows: SpecimenOutboundDisplayItem[],
+) {
+  const nextRows = [...currentRows];
+  for (const row of incomingRows) {
+    const existingIndex = nextRows.findIndex(
+      (item) => item.specimenId === row.specimenId,
+    );
+    if (existingIndex === -1) {
+      nextRows.push(row);
+      continue;
+    }
+    nextRows.splice(existingIndex, 1, {
+      ...nextRows[existingIndex],
+      ...row,
+    });
+  }
+  return nextRows;
 }
 
 async function ensureOperatingRoomNameMapLoaded() {
@@ -159,18 +181,31 @@ function maybeMarkQuickOutbound(records: SpecimenOutboundDisplayItem[]) {
 async function loadOutbounds(
   options: { autoSubmitQuickOutbound?: boolean } = {},
 ) {
+  const hasExplicitCondition =
+    Boolean(filters.applicationId.trim()) || Boolean(filters.specimenNo.trim());
+  if (!hasExplicitCondition) {
+    items.value = [];
+    selectedRows.value = [];
+    pendingOutboundIds.value = [];
+    total.value = 0;
+    return null;
+  }
+
   loading.value = true;
   pageError.value = '';
   try {
     await ensureOperatingRoomNameMapLoaded();
     const result = await listSpecimenOutbounds(buildListQuery());
-    items.value = normalizeOutboundItems(result.items).map((record) =>
+    const incomingItems = normalizeOutboundItems(result.items).map((record) =>
       applyDraftOutboundStatus(enhanceSpecimenOutboundItem(record)),
     );
+    items.value = mergeOutboundRowsBySpecimenId(items.value, incomingItems).map(
+      (item) => applyDraftOutboundStatus(item),
+    );
     selectedRows.value = [];
-    total.value = result.total;
+    total.value = items.value.length;
     if (options.autoSubmitQuickOutbound) {
-      maybeMarkQuickOutbound(items.value);
+      maybeMarkQuickOutbound(incomingItems);
     }
     return result;
   } catch (error) {
@@ -187,6 +222,14 @@ async function loadOutbounds(
 function handleSpecimenNoQuickSearch() {
   filters.page = 1;
   void loadOutbounds({ autoSubmitQuickOutbound: true });
+}
+
+function handleClearList() {
+  items.value = [];
+  selectedRows.value = [];
+  pendingOutboundIds.value = [];
+  total.value = 0;
+  ElMessage.success('列表已清空');
 }
 
 function handlePageChange() {
@@ -208,10 +251,9 @@ function handleOutboundUserChange(
 function resolveSelectedOutboundOperator() {
   if (
     !outboundForm.outboundUserId.trim() ||
-    !outboundForm.outboundUserName.trim() ||
-    !outboundForm.loginName.trim()
+    !outboundForm.outboundUserName.trim()
   ) {
-    ElMessage.warning('请选择出库人');
+    ElMessage.warning('请选择操作人');
     return null;
   }
   return {
@@ -219,6 +261,21 @@ function resolveSelectedOutboundOperator() {
     loginName: outboundForm.loginName.trim(),
     name: outboundForm.outboundUserName.trim(),
   };
+}
+
+function isCurrentOutboundUserSelected() {
+  return outboundForm.outboundUserId.trim() === userStore.userInfo?.userId;
+}
+
+async function resolveOutboundOperatorVerificationToken(selectedOperator: {
+  id: string;
+  loginName: string;
+  name: string;
+}) {
+  if (isCurrentOutboundUserSelected()) {
+    return undefined;
+  }
+  return verifyOperator(selectedOperator);
 }
 
 async function handleBatchTransport() {
@@ -240,8 +297,9 @@ async function handleBatchTransport() {
   if (!selectedOperator) {
     return;
   }
-  const operatorVerificationToken = await verifyOperator(selectedOperator);
-  if (!operatorVerificationToken) {
+  const operatorVerificationToken =
+    await resolveOutboundOperatorVerificationToken(selectedOperator);
+  if (!operatorVerificationToken && !isCurrentOutboundUserSelected()) {
     return;
   }
 
@@ -276,7 +334,7 @@ async function handleBatchTransport() {
         handoverUserName: outboundForm.outboundUserName.trim(),
         receiverDepartmentId: PATHOLOGY_DEPARTMENT_ID,
         receiverDepartmentName: PATHOLOGY_DEPARTMENT_NAME,
-        operatorVerificationToken,
+        ...(operatorVerificationToken ? { operatorVerificationToken } : {}),
         remarks: outboundForm.remarks.trim() || null,
         specimenBarcodes,
         terminalCode: outboundForm.terminalCode.trim() || null,
@@ -287,7 +345,7 @@ async function handleBatchTransport() {
     for (const transportOrderId of nextTransportOrderIds) {
       await outboundTransportOrder(transportOrderId, {
         ...buildTransportOrderOutboundRequest(outboundForm),
-        operatorVerificationToken,
+        ...(operatorVerificationToken ? { operatorVerificationToken } : {}),
       });
     }
 
@@ -310,7 +368,9 @@ watch(
   (applicationIdValue) => {
     filters.applicationId = normalizeRouteQueryValue(applicationIdValue).trim();
     filters.page = 1;
-    void loadOutbounds();
+    if (filters.applicationId) {
+      void loadOutbounds();
+    }
   },
   { immediate: true },
 );
@@ -370,6 +430,7 @@ watch(
             >
               转运
             </ElButton>
+            <ElButton @click="handleClearList">清除列表</ElButton>
             <div
               v-if="outboundLoading"
               class="text-sm text-[color:var(--el-color-primary)]"

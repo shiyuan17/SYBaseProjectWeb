@@ -2,6 +2,7 @@ import { createApp, h } from 'vue';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { listPendingReceipts } from '../api/specimen-workflow-service';
 import SpecimenReceiptView from './SpecimenReceiptView.vue';
 
 vi.mock('@vben/common-ui', () => ({
@@ -106,6 +107,7 @@ function mountView() {
 describe('SpecimenReceiptView', () => {
   afterEach(() => {
     document.body.innerHTML = '';
+    mockRoute.query = {};
     vi.clearAllMocks();
   });
 
@@ -120,6 +122,7 @@ describe('SpecimenReceiptView', () => {
     expect(container.textContent).toContain('导出Excel');
     expect(container.textContent).not.toContain('待接收转运单');
     expect(container.textContent).not.toContain('条码直收');
+    expect(listPendingReceipts).not.toHaveBeenCalled();
 
     app.unmount();
   });

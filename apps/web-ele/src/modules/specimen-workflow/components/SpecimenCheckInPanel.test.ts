@@ -2,11 +2,22 @@ import { createApp, h, nextTick } from 'vue';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import SpecimenCheckInPanel from './SpecimenCheckInPanel.vue';
+import {
+  createButtonStub,
+  createInputStub,
+  createTableColumnStub,
+  createTableStub,
+  createTagStub,
+} from '../test-utils/component-stubs';
+
+const { rowContextKey } = vi.hoisted(() => ({
+  rowContextKey: Symbol('row-context'),
+}));
 
 const {
   checkInSpecimenMock,
   handlePrimaryCheckInMock,
+  clearQueueMock,
   listSpecimensMock,
   loadOperatingRoomNameMapSafelyMock,
   pageErrorTextMock,
@@ -108,6 +119,7 @@ const {
     async () => new Map([['OR-102', '惠侨楼 - 手术室 2']]),
   ),
   handlePrimaryCheckInMock: vi.fn(),
+  clearQueueMock: vi.fn(),
   pageErrorTextMock: { value: '' },
   retryLabelPrintMock: vi.fn(async () => ({
     allSuccessful: true,
@@ -145,7 +157,12 @@ vi.mock('element-plus', async () => {
     await vi.importActual<typeof import('element-plus')>('element-plus');
   return {
     ...actual,
+    ElButton: createButtonStub(),
+    ElInput: createInputStub(),
     ElMessage: { success: vi.fn(), warning: vi.fn() },
+    ElTable: createTableStub(rowContextKey),
+    ElTableColumn: createTableColumnStub(rowContextKey),
+    ElTag: createTagStub(),
   };
 });
 
@@ -174,6 +191,7 @@ vi.mock('../composables/useSpecimenCheckInPanel', async () => {
       queueAddedAt: '2026-06-01T14:32:28.880Z',
       queueAddedByName: 'Test User',
       queueStatus: 'SUCCESS',
+      checkInDraft: false,
       checkInDisabledReason: '标本已完成入库，无需重复操作',
       checkInStatusTagType: 'success',
       displayCheckInStatus: '已入库',
@@ -209,6 +227,7 @@ vi.mock('../composables/useSpecimenCheckInPanel', async () => {
       queueAddedAt: '2026-06-01T14:33:28.880Z',
       queueAddedByName: 'Test User',
       queueStatus: 'PENDING',
+      checkInDraft: false,
       checkInDisabledReason: null,
       checkInStatusTagType: 'info',
       displayCheckInStatus: '待入库',
@@ -230,6 +249,42 @@ vi.mock('../composables/useSpecimenCheckInPanel', async () => {
       verificationStatus: 'VERIFIED',
     },
     {
+      applicationId: 'APP-CHECKIN',
+      applicationNo: 'M2-001',
+      barcode: 'BC-CHECKIN-UNSAVED',
+      checkInStatus: 'NOT_CHECKED_IN',
+      checkedInAt: null,
+      checkedInByName: null,
+      fixationStatus: 'COMPLETED',
+      labelPrintBatchNo: 'BATCH-1',
+      labelPrintStatus: 'SUCCESS',
+      latestTrackingAt: '2026-05-26 09:06:00',
+      patientName: 'Alice',
+      queueAddedAt: '2026-06-01T14:33:58.880Z',
+      queueAddedByName: 'Test User',
+      queueStatus: 'PENDING',
+      checkInDraft: true,
+      checkInDisabledReason: null,
+      checkInStatusTagType: 'warning',
+      displayCheckInStatus: '入库未保存',
+      canCheckIn: true,
+      recentNode: 'CONFIRMATION',
+      registeredAt: '2026-05-26 08:03:00',
+      specimenConfirmedAt: '2026-05-26 08:56:00',
+      specimenId: 'SPEC-CHECKIN-UNSAVED',
+      specimenName: '直肠息肉',
+      specimenNo: 'SP-001-3',
+      specimenSite: '直肠',
+      specimenStatus: 'FIXED',
+      specimenType: '组织',
+      submittingDepartmentId: 'DEPT-001',
+      submittingDepartmentName: 'Surgery',
+      surgeryName: '惠侨楼 - 手术室 2',
+      verificationCompletedAt: '2026-05-26 08:26:00',
+      verificationStartedAt: '2026-05-26 08:19:00',
+      verificationStatus: 'VERIFIED',
+    },
+    {
       applicationId: 'APP-RECEIVED',
       applicationNo: 'M2-003',
       barcode: 'BC-RECEIVED',
@@ -244,8 +299,9 @@ vi.mock('../composables/useSpecimenCheckInPanel', async () => {
       queueAddedAt: '2026-06-01T14:34:28.880Z',
       queueAddedByName: 'Test User',
       queueStatus: 'SUCCESS',
+      checkInDraft: false,
       checkInDisabledReason: '标本已接收、拒收或退回，不能再入库',
-      checkInStatusTagType: 'warning',
+      checkInStatusTagType: 'danger',
       displayCheckInStatus: '已接收',
       canCheckIn: false,
       recentNode: 'RECEIPT',
@@ -269,7 +325,7 @@ vi.mock('../composables/useSpecimenCheckInPanel', async () => {
   return {
     useSpecimenCheckInPanel: () => ({
       actionLoading: ref(false),
-      clearQueue: vi.fn(),
+      clearQueue: clearQueueMock,
       clearSelection: vi.fn(),
       exportLoading: ref(false),
       formatSpecimenStatus: vi.fn((status?: null | string) => {
@@ -327,6 +383,8 @@ vi.mock('../utils/operating-room-display', () => ({
   ),
 }));
 
+import SpecimenCheckInPanel from './SpecimenCheckInPanel.vue';
+
 function mountView() {
   const container = document.createElement('div');
   document.body.append(container);
@@ -366,6 +424,23 @@ describe('SpecimenCheckInPanel', () => {
     expect(container.textContent).toContain('SP-001-2');
     expect(container.textContent).toContain('已接收');
     expect(container.textContent).not.toContain('Surgery');
+    expect(
+      container.querySelector('.specimen-workflow-row--completed'),
+    ).not.toBeNull();
+    expect(
+      container.querySelector('.specimen-workflow-row--draft'),
+    ).not.toBeNull();
+    const checkInStatusTagTypes = [
+      ...container.querySelectorAll(
+        '[data-column-label="入库状态"] [data-tag-type]',
+      ),
+    ].map((node) => (node as HTMLElement).dataset.tagType);
+    expect(checkInStatusTagTypes).toEqual([
+      'success',
+      'info',
+      'warning',
+      'danger',
+    ]);
 
     app.unmount();
   });
@@ -404,7 +479,7 @@ describe('SpecimenCheckInPanel', () => {
     app.unmount();
   });
 
-  it('hides the removed top action elements', async () => {
+  it('hides removed top action elements and renders clear list', async () => {
     const { app, container } = mountView();
     await flush();
 
@@ -414,8 +489,16 @@ describe('SpecimenCheckInPanel', () => {
     expect(container.querySelector('input[placeholder="终端编号"]')).toBeNull();
     expect(container.textContent).not.toContain('批量入库');
     expect(container.textContent).not.toContain('清除选择行');
-    expect(container.textContent).not.toContain('清除列表');
+    expect(container.textContent).toContain('清除列表');
     expect(container.textContent).toContain('补打标本标签');
+
+    const clearListButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('清除列表'),
+    );
+    clearListButton?.click();
+    await flush();
+
+    expect(clearQueueMock).toHaveBeenCalledTimes(1);
 
     app.unmount();
   });

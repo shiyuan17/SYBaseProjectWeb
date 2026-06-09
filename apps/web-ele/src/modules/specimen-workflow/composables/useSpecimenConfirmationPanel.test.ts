@@ -277,6 +277,18 @@ async function waitForComposableAssertion(assertion: () => void) {
   throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
 
+async function loadRowsByKeyword(
+  state: ReturnType<typeof useSpecimenConfirmationPanel>,
+  keyword = 'SP-001',
+) {
+  state.filters.keyword = keyword;
+  state.handleSearch();
+  await waitForComposableAssertion(() => {
+    expect(listSpecimensMock).toHaveBeenCalled();
+    expect(state.pagedItems.value.length).toBeGreaterThan(0);
+  });
+}
+
 describe('useSpecimenConfirmationPanel', () => {
   beforeEach(() => {
     listSpecimensMock.mockClear();
@@ -296,10 +308,10 @@ describe('useSpecimenConfirmationPanel', () => {
       throw new Error('composable state not initialized');
     }
 
-    await waitForComposableAssertion(() => {
-      expect(listSpecimensMock).toHaveBeenCalled();
-      expect(state.pagedItems.value).toHaveLength(2);
-    });
+    expect(listSpecimensMock).not.toHaveBeenCalled();
+    expect(state.pagedItems.value).toHaveLength(0);
+    await loadRowsByKeyword(state);
+    expect(state.pagedItems.value).toHaveLength(2);
     expect(state.operatorForm.operatorName).toBe('Test User');
     expect(state.operatorForm.operatorUserId).toBe('USER-001');
     expect(state.summary.value).toEqual({
@@ -352,14 +364,6 @@ describe('useSpecimenConfirmationPanel', () => {
       throw new Error('composable state not initialized');
     }
 
-    await waitForComposableAssertion(() => {
-      expect(state.pagedItems.value).toHaveLength(2);
-      expect(
-        state.pagedItems.value.some((row) => row.specimenId === 'SPEC-002'),
-      ).toBe(true);
-    });
-
-    listSpecimensMock.mockClear();
     listSpecimensMock.mockImplementation(async () => ({
       items: [
         {
@@ -519,39 +523,6 @@ describe('useSpecimenConfirmationPanel', () => {
             specimenType: '常规',
             verificationStatus: 'VERIFIED',
           },
-        ],
-        page: 1,
-        size: 500,
-        summary: {
-          abnormalCount: 0,
-          labelPrintedCount: 0,
-          pendingLabelCount: 0,
-          totalCount: 1,
-        },
-        total: 1,
-      }))
-      .mockImplementationOnce(async () => ({
-        items: [
-          {
-            abnormalFlag: false,
-            applicationId: 'APP-001',
-            applicationNo: 'M2-001',
-            barcode: 'BC-001',
-            checkInStatus: 'NOT_CHECKED_IN',
-            fixationStatus: 'COMPLETED',
-            labelPrintBatchNo: 'LB-001',
-            labelPrintStatus: 'FAILED',
-            latestTrackingAt: '2026-05-26 09:00:00',
-            patientName: 'Alice',
-            registeredAt: '2026-05-26 08:00:00',
-            specimenConfirmedAt: null,
-            specimenId: 'SPEC-001',
-            specimenName: '乳腺组织',
-            specimenNo: 'SP-001',
-            specimenStatus: 'FIXED',
-            specimenType: '常规',
-            verificationStatus: 'VERIFIED',
-          },
           {
             abnormalFlag: false,
             applicationId: 'APP-001',
@@ -579,9 +550,9 @@ describe('useSpecimenConfirmationPanel', () => {
           abnormalCount: 0,
           labelPrintedCount: 0,
           pendingLabelCount: 0,
-          totalCount: 2,
+          totalCount: 1,
         },
-        total: 2,
+        total: 1,
       }));
 
     const wrapper = mountComposable();
@@ -620,9 +591,7 @@ describe('useSpecimenConfirmationPanel', () => {
       throw new Error('composable state not initialized');
     }
 
-    await waitForComposableAssertion(() => {
-      expect(state.pagedItems.value).toHaveLength(2);
-    });
+    await loadRowsByKeyword(state);
 
     state.handleSelectionChange(state.pagedItems.value);
     state.handleRetryLabel();
@@ -641,9 +610,27 @@ describe('useSpecimenConfirmationPanel', () => {
     wrapper.destroy();
   });
 
+  it('clears queried rows on reset without loading default data', async () => {
+    const wrapper = mountComposable();
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    await loadRowsByKeyword(state);
+    listSpecimensMock.mockClear();
+
+    state.handleReset();
+
+    expect(state.filters.keyword).toBe('');
+    expect(state.pagedItems.value).toHaveLength(0);
+    expect(listSpecimensMock).not.toHaveBeenCalled();
+
+    wrapper.destroy();
+  });
+
   it('keeps sibling rows visible but disabled when expanded rows are outside the confirmation scope', async () => {
     const wrapper = mountComposable();
-    await flushComposable();
 
     const state = wrapper.getState();
     if (!state) {
@@ -722,7 +709,6 @@ describe('useSpecimenConfirmationPanel', () => {
 
   it('shows the real scene reason when selected rows are not confirmable', async () => {
     const wrapper = mountComposable();
-    await flushComposable();
 
     const state = wrapper.getState();
     if (!state) {

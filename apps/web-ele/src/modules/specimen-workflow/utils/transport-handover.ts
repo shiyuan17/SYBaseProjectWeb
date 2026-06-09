@@ -61,6 +61,7 @@ export type SpecimenOutboundDisplayItem = SpecimenOutboundListItem & {
   canOutbound: boolean;
   displayOutboundStatus: string;
   outboundDisabledReason: null | string;
+  outboundDraft: boolean;
   outboundStatusTagType: 'info' | 'primary' | 'success' | 'warning';
 };
 
@@ -289,6 +290,7 @@ export function enhanceSpecimenOutboundItem(
     canOutbound: readiness.canOutbound,
     displayOutboundStatus: readiness.displayStatus,
     outboundDisabledReason: readiness.reason,
+    outboundDraft: false,
     outboundStatusTagType: readiness.tagType,
   };
 }

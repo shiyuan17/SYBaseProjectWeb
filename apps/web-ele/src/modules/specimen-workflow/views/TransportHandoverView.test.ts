@@ -193,10 +193,25 @@ async function flush() {
 describe('TransportHandoverView', () => {
   afterEach(() => {
     document.body.innerHTML = '';
+    mockRoute.query = {
+      applicationId: 'APP-002',
+    };
     mockUserInfo.loginName = 'test-user';
     mockUserInfo.realName = 'Test User';
     mockUserInfo.userId = 'USER-001';
     vi.clearAllMocks();
+  });
+
+  it('keeps the outbound list empty when no route context is provided', async () => {
+    mockRoute.query = {};
+
+    const { app, container } = mountView();
+    await flush();
+
+    expect(listSpecimenOutboundsMock).not.toHaveBeenCalled();
+    expect(container.textContent).toMatch(/全部\s*0/);
+
+    app.unmount();
   });
 
   it('renders the specimen outbound workspace, keeps hidden route filtering, and removes legacy controls', async () => {
@@ -219,6 +234,7 @@ describe('TransportHandoverView', () => {
     expect(container.textContent).not.toContain('批量打印');
     expect(container.textContent).not.toContain('批量交接');
     expect(container.textContent).not.toContain('最近操作结果');
+    expect(container.textContent).toContain('清除列表');
     expect(container.textContent).not.toContain('转运单号');
     expect(container.textContent).not.toContain('交接科室');
     expect(container.textContent).not.toContain('接收科室');
@@ -246,6 +262,68 @@ describe('TransportHandoverView', () => {
       (element) => element.textContent?.replaceAll(/\s+/g, '') ?? '',
     );
     expect(headerTexts).toEqual(expectedHeaders);
+
+    app.unmount();
+  });
+
+  it('displays already transported specimens while keeping them non-operable', async () => {
+    listSpecimenOutboundsMock.mockResolvedValueOnce({
+      items: [
+        {
+          applicationId: 'APP-002',
+          applicationNo: 'M2-20260526-002',
+          checkInStatus: 'CHECKED_IN',
+          fixationStatus: 'COMPLETED',
+          inpatientNo: 'ZY-002',
+          outboundAt: null,
+          outboundUserName: null,
+          patientGender: '女',
+          patientId: 'PAT-002',
+          patientName: 'Alice',
+          registeredAt: '2026-05-26 09:30:00',
+          registeredByName: '登记员甲',
+          specimenConfirmedAt: '2026-05-26 09:10:00',
+          specimenId: 'SP-002',
+          specimenName: '甲状腺组织',
+          specimenNo: 'SP-TR-001',
+          specimenStatus: 'CHECKED_IN',
+          surgeryName: 'OR-102',
+          transportOrderId: 'TO-002',
+        },
+        {
+          applicationId: 'APP-002',
+          applicationNo: 'M2-20260526-002',
+          checkInStatus: 'CHECKED_IN',
+          fixationStatus: 'COMPLETED',
+          inpatientNo: 'ZY-002',
+          outboundAt: null,
+          outboundUserName: null,
+          patientGender: '女',
+          patientId: 'PAT-002',
+          patientName: 'Alice',
+          registeredAt: '2026-05-26 09:35:00',
+          registeredByName: '登记员甲',
+          specimenConfirmedAt: '2026-05-26 09:12:00',
+          specimenId: 'SP-002-2',
+          specimenName: '甲状腺峡部组织',
+          specimenNo: 'SP-TR-002',
+          specimenStatus: 'IN_TRANSIT',
+          surgeryName: 'OR-102',
+          transportOrderId: 'TO-002',
+        },
+      ],
+      page: 1,
+      size: 20,
+      total: 2,
+    });
+
+    const { app, container } = mountView();
+    await flush();
+
+    expect(container.textContent).toMatch(/全部\s*2/);
+    expect(container.textContent).toContain('SP-TR-001');
+    expect(container.textContent).toContain('SP-TR-002');
+    expect(container.textContent).toContain('已出库');
 
     app.unmount();
   });
@@ -334,18 +412,21 @@ describe('TransportHandoverView', () => {
     transportButton!.click();
     await flush();
 
-    expect(verifyOperatorMock).toHaveBeenCalledWith({
-      id: 'USER-001',
-      loginName: 'test-user',
-      name: 'Test User',
-    });
+    expect(verifyOperatorMock).not.toHaveBeenCalled();
     expect(outboundTransportOrderMock).toHaveBeenCalledWith('TO-002', {
-      operatorVerificationToken: 'TOKEN-VERIFY',
       outboundUserId: 'USER-001',
       outboundUserName: 'Test User',
       remarks: null,
       terminalCode: null,
     });
+
+    const clearListButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('清除列表'),
+    );
+    clearListButton?.click();
+    await flush();
+
+    expect(container.textContent).not.toContain('SP-TR-001');
 
     app.unmount();
   });
@@ -604,7 +685,7 @@ describe('TransportHandoverView', () => {
     transportButton!.click();
     await flush();
 
-    expect(warningMock).toHaveBeenCalledWith('请选择出库人');
+    expect(warningMock).toHaveBeenCalledWith('请选择操作人');
     expect(outboundTransportOrderMock).not.toHaveBeenCalled();
     expect(quickOutboundSpecimenMock).not.toHaveBeenCalled();
     expect(verifyOperatorMock).not.toHaveBeenCalled();

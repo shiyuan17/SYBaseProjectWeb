@@ -129,7 +129,12 @@ const pendingRows = computed<StainingTaskRow[]>(() =>
     pathologyNo: formatNullable(task.pathologyNo),
     patientId: formatNullable(task.patientId),
     patientName: formatNullable(task.patientName),
-    slideNo: formatNullable(task.objectId),
+    slideNo: formatNullable(
+      task.objectDisplayNo ??
+        task.samplingBlockCode ??
+        task.samplingBlockDescription ??
+        task.objectId,
+    ),
     slideType: formatObjectType(task.objectType),
     sliceOperation: buildOperationInfo({
       fallback: formatNullable(task.sampledByName),
@@ -185,35 +190,21 @@ const overdueCount = computed(
 const selectedCompletedCount = computed(
   () => selectedCompletedRows.value.length,
 );
-const stainingInProgressCount = computed(
-  () =>
-    pendingRows.value.filter((row) => row.task.taskStatus === 'IN_PROGRESS')
-      .length,
-);
-const pendingStartCount = computed(
-  () =>
-    pendingRows.value.filter((row) => row.task.taskStatus === 'PENDING').length,
-);
 const pendingStats = computed(() => [
   {
     accent: 'sky',
-    label: '待染色总数',
+    label: '待染色',
     value: total.value,
   },
   {
-    accent: 'emerald',
-    label: '染色中',
-    value: stainingInProgressCount.value,
-  },
-  {
-    accent: 'amber',
-    label: '待开始',
-    value: pendingStartCount.value,
-  },
-  {
     accent: 'rose',
-    label: '超时风险',
+    label: '超时',
     value: overdueCount.value,
+  },
+  {
+    accent: 'emerald',
+    label: '完成',
+    value: completedRows.value.length,
   },
 ]);
 
@@ -889,7 +880,7 @@ onBeforeUnmount(() => {
 
 .legacy-stat-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 

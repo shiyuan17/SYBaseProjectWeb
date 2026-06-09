@@ -19,12 +19,16 @@ import {
   ElCheckbox,
   ElDrawer,
   ElInput,
+  ElInputNumber,
   ElMessage,
   ElOption,
   ElPagination,
   ElSelect,
+  ElSwitch,
   ElTable,
   ElTableColumn,
+  ElTabPane,
+  ElTabs,
   ElTag,
 } from 'element-plus';
 
@@ -33,6 +37,7 @@ import { reportInlineErrorDisabled } from '#/utils/error-feedback';
 import {
   getSlicingWorkbench,
   getTechnicalTracking,
+  printSlicingSlides,
   startSlicing,
   updateTechnicalTaskRemarks,
 } from '../api/technical-workflow-service';
@@ -77,8 +82,12 @@ const EMPTY_WORKBENCH: SlicingWorkbenchView = {
   completedTodayList: [],
   completedTotal: 0,
   pendingList: [],
+  pendingPrintList: [],
+  pendingPrintTotal: 0,
   pendingPage: 1,
   pendingSize: 20,
+  pendingSliceList: [],
+  pendingSliceTotal: 0,
   pendingTotal: 0,
   stats: {
     completedDeptTodayCount: 0,
@@ -94,7 +103,9 @@ const pageError = ref('');
 const loading = ref(false);
 
 const workbench = ref<SlicingWorkbenchView>(EMPTY_WORKBENCH);
+const activeTab = ref<'print' | 'slice'>('print');
 const filters = reactive({
+  applicationType: '',
   completedPage: 1,
   completedSize: 20,
   keyword: '',
@@ -103,6 +114,13 @@ const filters = reactive({
   pendingSize: 20,
   pendingTodayOnly: false,
 });
+const printForm = reactive({
+  mergeAdjacent: false,
+  printerCode: '',
+  remarks: '',
+  sourceSlideCount: 1,
+});
+const printing = ref(false);
 
 const pendingTableRef = ref<null | SelectableTableInstance>(null);
 const completedTableRef = ref<null | SelectableTableInstance>(null);
@@ -205,6 +223,15 @@ const canCompleteSlicing = computed(() => {
         ['IN_PROGRESS', 'PENDING'].includes(row.taskStatus ?? '') &&
         Boolean(row.embeddingBoxId),
     )
+  );
+});
+const canPrintSlides = computed(() => {
+  return (
+    activeTab.value === 'print' &&
+    selectedPendingRows.value.length === 1 &&
+    Boolean(selectedPendingRows.value[0]?.embeddingBoxId) &&
+    printForm.sourceSlideCount >= 1 &&
+    !printing.value
   );
 });
 const canOpenTrackingDrawer = computed(
@@ -315,6 +342,12 @@ function getPendingRemark(row: SlicingWorkbenchRow) {
   return row.slicingRemark ?? row.sliceNotice ?? null;
 }
 
+function getPendingDataSource() {
+  return activeTab.value === 'print'
+    ? workbench.value.pendingPrintList
+    : workbench.value.pendingSliceList;
+}
+
 function isSavingShiftRemark(row: SlicingWorkbenchRow) {
   return savingShiftRemarkTaskIds.value.includes(row.taskId);
 }
@@ -391,6 +424,7 @@ async function loadWorkbench(options?: {
   pageError.value = '';
   try {
     workbench.value = await getSlicingWorkbench({
+      applicationType: filters.applicationType || undefined,
       completedPage: filters.completedPage,
       completedSize: filters.completedSize,
       keyword: filters.keyword.trim() || undefined,
@@ -404,7 +438,7 @@ async function loadWorkbench(options?: {
 
     if (options?.reopenPendingTaskId) {
       await nextTick();
-      const matchedRow = workbench.value.pendingList.find(
+      const matchedRow = workbench.value.pendingSliceList.find(
         (item) => item.taskId === options.reopenPendingTaskId,
       );
       if (matchedRow) {
@@ -428,6 +462,12 @@ async function handleQuery() {
   await loadWorkbench();
 }
 
+async function handleApplicationTypeChange() {
+  filters.pendingPage = 1;
+  filters.completedPage = 1;
+  await loadWorkbench();
+}
+
 async function toggleOverdueOnly() {
   filters.overdueOnly = !filters.overdueOnly;
   filters.pendingPage = 1;
@@ -441,6 +481,10 @@ async function handlePendingTodayOnlyChange() {
 
 async function handlePendingPaginationChange() {
   await loadWorkbench();
+}
+
+function handleTabChange() {
+  clearAllSelections();
 }
 
 async function handleCompletedPaginationChange() {
@@ -480,6 +524,41 @@ function openCompleteSlicing() {
     return;
   }
   processDialogVisible.value = true;
+}
+
+async function handlePrintSlides() {
+  const row = selectedPendingRow.value;
+  if (!row) {
+    ElMessage.warning('请在玻片打印列表中勾选 1 行');
+    return;
+  }
+  if (!row.embeddingBoxId) {
+    ElMessage.warning('当前任务缺少包埋盒编号');
+    return;
+  }
+
+  printing.value = true;
+  pageError.value = '';
+  try {
+    const result = await printSlicingSlides({
+      embeddingBoxId: row.embeddingBoxId,
+      mergeAdjacent: printForm.mergeAdjacent,
+      printerCode: printForm.printerCode.trim() || null,
+      remarks: printForm.remarks.trim() || null,
+      sourceSlideCount: printForm.sourceSlideCount,
+      taskId: row.taskId,
+    });
+    ElMessage.success(
+      `玻片打印完成，已生成 ${result.printedSlideCount} 张玻片`,
+    );
+    activeTab.value = 'slice';
+    await loadWorkbench();
+  } catch (error) {
+    pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
+  } finally {
+    printing.value = false;
+  }
 }
 
 async function handleStartSubmitted() {
@@ -674,6 +753,19 @@ void loadWorkbench();
               @keyup.enter="handleQuery"
             />
           </div>
+          <div class="legacy-query-bar__filter">
+            <span class="legacy-query-bar__label">类型</span>
+            <ElSelect
+              v-model="filters.applicationType"
+              class="legacy-application-type-select"
+              placeholder="全部"
+              @change="handleApplicationTypeChange"
+            >
+              <ElOption label="全部" value="" />
+              <ElOption label="常规" value="ROUTINE" />
+              <ElOption label="冰冻" value="FROZEN" />
+            </ElSelect>
+          </div>
           <div class="legacy-query-bar__actions">
             <ElButton :loading="loading" type="primary" @click="handleQuery">
               查询
@@ -702,7 +794,42 @@ void loadWorkbench();
       </section>
 
       <section class="legacy-action-bar">
-        <div class="legacy-action-bar__left">
+        <div v-if="activeTab === 'print'" class="legacy-action-bar__left">
+          <div class="legacy-print-controls">
+            <span class="legacy-query-bar__label">玻片数量</span>
+            <ElInputNumber
+              v-model="printForm.sourceSlideCount"
+              :min="1"
+              class="legacy-print-count"
+            />
+            <ElSwitch
+              v-model="printForm.mergeAdjacent"
+              active-text="近邻合并"
+              inactive-text="不合并"
+            />
+            <ElInput
+              v-model="printForm.printerCode"
+              class="legacy-printer-input"
+              clearable
+              placeholder="打印机编码"
+            />
+            <ElInput
+              v-model="printForm.remarks"
+              class="legacy-printer-input"
+              clearable
+              placeholder="打印备注"
+            />
+          </div>
+          <ElButton
+            :disabled="!canPrintSlides"
+            :loading="printing"
+            type="primary"
+            @click="handlePrintSlides"
+          >
+            完成玻片打印
+          </ElButton>
+        </div>
+        <div v-else class="legacy-action-bar__left">
           <ElButton
             :disabled="!canCompleteSlicing"
             type="primary"
@@ -727,7 +854,7 @@ void loadWorkbench();
             只看今天待切
           </ElCheckbox>
           <span class="legacy-selection-tip">
-            完成切片和质控评价支持同表多选，历史与评价记录需单选
+            玻片打印需单选；完成切片和质控评价支持同表多选，历史与评价记录需单选
           </span>
         </div>
       </section>
@@ -736,18 +863,39 @@ void loadWorkbench();
         <article class="legacy-panel">
           <header class="legacy-panel__header">
             <div>
-              <h3 class="legacy-panel__title">待切列表</h3>
+              <h3 class="legacy-panel__title">
+                {{ activeTab === 'print' ? '玻片打印' : '切片' }}
+              </h3>
               <p class="legacy-panel__subtitle">
-                优先承接今天待切与过期任务，完成切片后右侧列表会立即刷新。
+                {{
+                  activeTab === 'print'
+                    ? '先完成玻片打印，再进入切片处理。近邻合并按同包埋盒顺序两两合并，奇数尾张保留。'
+                    : '只展示已完成玻片打印的待切任务，完成切片后右侧列表会立即刷新。'
+                }}
               </p>
             </div>
           </header>
+
+          <ElTabs
+            v-model="activeTab"
+            class="legacy-slicing-tabs"
+            @tab-change="handleTabChange"
+          >
+            <ElTabPane
+              :label="`玻片打印(${workbench.pendingPrintTotal})`"
+              name="print"
+            />
+            <ElTabPane
+              :label="`切片(${workbench.pendingSliceTotal})`"
+              name="slice"
+            />
+          </ElTabs>
 
           <ElTable
             ref="pendingTableRef"
             v-loading="loading"
             border
-            :data="workbench.pendingList"
+            :data="getPendingDataSource()"
             :row-class-name="pendingRowClassName"
             :row-key="pendingRowKey"
             table-layout="fixed"
@@ -781,6 +929,28 @@ void loadWorkbench();
             <ElTableColumn label="玻片号" min-width="140">
               <template #default="{ row }">
                 {{ formatNullable(row.slideNo) }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="打印状态" min-width="120">
+              <template #default="{ row }">
+                <ElTag
+                  size="small"
+                  :type="
+                    row.slidePrintStatus === 'PRINTED' ? 'success' : 'warning'
+                  "
+                >
+                  {{ row.slidePrintStatus === 'PRINTED' ? '已打印' : '待打印' }}
+                </ElTag>
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="已打印数" min-width="100">
+              <template #default="{ row }">
+                {{ row.printedSlideCount }}
+              </template>
+            </ElTableColumn>
+            <ElTableColumn label="合并" min-width="100">
+              <template #default="{ row }">
+                {{ row.combinedSlide ? '已合并' : '未合并' }}
               </template>
             </ElTableColumn>
             <ElTableColumn label="取材评价" min-width="120">
@@ -860,7 +1030,11 @@ void loadWorkbench();
               v-model:current-page="filters.pendingPage"
               v-model:page-size="filters.pendingSize"
               :page-sizes="[10, 20, 50, 100]"
-              :total="workbench.pendingTotal"
+              :total="
+                activeTab === 'print'
+                  ? workbench.pendingPrintTotal
+                  : workbench.pendingSliceTotal
+              "
               background
               layout="total, sizes, prev, pager, next"
               @change="handlePendingPaginationChange"
@@ -1131,6 +1305,16 @@ void loadWorkbench();
   min-width: 0;
 }
 
+.legacy-query-bar__filter {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.legacy-application-type-select {
+  width: 120px;
+}
+
 .legacy-query-bar__label {
   font-size: 13px;
   font-weight: 600;
@@ -1157,6 +1341,21 @@ void loadWorkbench();
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
+}
+
+.legacy-print-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.legacy-print-count {
+  width: 120px;
+}
+
+.legacy-printer-input {
+  width: 160px;
 }
 
 .legacy-selection-tip {
@@ -1210,6 +1409,11 @@ void loadWorkbench();
   --el-table-row-hover-bg-color: hsl(var(--accent-hover));
 }
 
+.legacy-slicing-tabs {
+  padding: 0 16px;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
 .legacy-panel :deep(.is-overdue-row > td) {
   background: hsl(var(--warning) / 12%);
 }
@@ -1241,6 +1445,7 @@ void loadWorkbench();
   }
 
   .legacy-query-bar__actions,
+  .legacy-query-bar__filter,
   .legacy-action-bar__left,
   .legacy-action-bar__right {
     justify-content: flex-start;

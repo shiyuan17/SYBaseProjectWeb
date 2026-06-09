@@ -386,7 +386,7 @@ void loadPendingData();
               <ElSelect
                 v-model="filters.taskType"
                 clearable
-                class="w-44"
+                class="w-44 min-w-[176px] flex-none"
                 placeholder="全部类型"
               >
                 <ElOption
@@ -401,7 +401,7 @@ void loadPendingData();
               <ElSelect
                 v-model="filters.taskStatus"
                 clearable
-                class="w-44"
+                class="w-44 min-w-[176px] flex-none"
                 placeholder="全部状态"
               >
                 <ElOption

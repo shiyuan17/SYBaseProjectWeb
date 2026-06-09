@@ -101,8 +101,10 @@ function convertMenuNode(
   };
 
   if (children.length > 0) {
+    const firstVisibleChild =
+      children.find((child) => !child.meta?.hideInMenu) ?? children[0];
     route.children = children;
-    route.redirect = children[0]?.path;
+    route.redirect = firstVisibleChild?.path;
   }
 
   return route;

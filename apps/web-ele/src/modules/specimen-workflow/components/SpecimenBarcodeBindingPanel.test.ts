@@ -20,6 +20,7 @@ const { rowContextKey } = vi.hoisted(() => ({
 const mockHandleBindBarcode = vi.fn();
 const mockHandleExportExcel = vi.fn();
 const mockHandlePreprintBarcodes = vi.fn();
+const mockHandlePrintBoundBarcodes = vi.fn();
 const mockHandleReset = vi.fn();
 const mockHandleRetryLabel = vi.fn();
 const mockHandleSearch = vi.fn();
@@ -48,7 +49,7 @@ vi.mock('../composables/useSpecimenBarcodeBindingPanel', () => ({
     const filters = reactive({
       buildingId: 'B001',
       dateRange: ['2026-05-20', '2026-05-21'],
-      onlyUnbound: true,
+      onlyUnbound: false,
       page: 1,
       roomId: 'OR-101',
       size: 10,
@@ -90,6 +91,7 @@ vi.mock('../composables/useSpecimenBarcodeBindingPanel', () => ({
       ]),
       canBind: ref(true),
       canExportExcel: ref(true),
+      canPrintBoundBarcodes: ref(true),
       canPreprint: ref(true),
       canRetryLabel: ref(true),
       canUnbind: ref(false),
@@ -97,6 +99,7 @@ vi.mock('../composables/useSpecimenBarcodeBindingPanel', () => ({
       handleBindBarcode: mockHandleBindBarcode,
       handleExportExcel: mockHandleExportExcel,
       handlePreprintBarcodes: mockHandlePreprintBarcodes,
+      handlePrintBoundBarcodes: mockHandlePrintBoundBarcodes,
       handleReset: mockHandleReset,
       handleRetryLabel: mockHandleRetryLabel,
       handleSearch: mockHandleSearch,
@@ -173,11 +176,20 @@ describe('SpecimenBarcodeBindingPanel', () => {
     expect(container.textContent).toContain('条码绑定');
     expect(container.textContent).toContain('取消绑定');
     expect(container.textContent).toContain('补打标本标签');
+    expect(container.textContent).toContain('打印');
     expect(container.textContent).toContain('导出 Excel');
     expect(container.textContent).toContain('预打印条码');
     expect(
       container.querySelector('[data-column-label="病人ID"]'),
     ).not.toBeNull();
+    const columnLabels = [
+      ...container.querySelectorAll('[data-column-label]'),
+    ].map((column) => (column as HTMLElement).dataset.columnLabel);
+    expect(columnLabels.slice(2, 5)).toEqual([
+      '申请单',
+      '标本编号',
+      '标本条码',
+    ]);
     expect(container.textContent).toContain('李护士');
 
     const bindButton = [...container.querySelectorAll('button')].find(
@@ -186,17 +198,22 @@ describe('SpecimenBarcodeBindingPanel', () => {
     const exportButton = [...container.querySelectorAll('button')].find(
       (button) => button.textContent?.includes('导出 Excel'),
     );
+    const boundPrintButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent?.trim() === '打印',
+    );
     const printButton = [...container.querySelectorAll('button')].find(
       (button) => button.textContent?.includes('预打印条码'),
     );
 
     bindButton?.click();
     exportButton?.click();
+    boundPrintButton?.click();
     printButton?.click();
     await flush();
 
     expect(mockHandleBindBarcode).toHaveBeenCalledTimes(1);
     expect(mockHandleExportExcel).toHaveBeenCalledTimes(1);
+    expect(mockHandlePrintBoundBarcodes).toHaveBeenCalledTimes(1);
     expect(mockHandlePreprintBarcodes).toHaveBeenCalledTimes(1);
 
     app.unmount();

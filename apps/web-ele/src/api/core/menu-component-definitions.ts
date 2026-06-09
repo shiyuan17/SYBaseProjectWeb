@@ -174,6 +174,7 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
         'SpecimenManagement',
         'SubmissionRegistration',
       ],
+      hideInMenu: true,
       menuCodes: ['M2_APPLICATION_LIST', 'M2_CLINICAL'],
       path: '/workflow/submission-registration',
       pathAliases: [
@@ -188,7 +189,7 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
       routeName: 'SubmissionRegistration',
     },
     {
-      canonicalTitle: '申请登记工作台',
+      canonicalTitle: '标本采集',
       component:
         '/modules/specimen-workflow/views/ApplicationRegistrationWorkbenchView',
       componentAliases: ['ApplicationRegistrationWorkbench'],
@@ -252,7 +253,7 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
       routeName: 'TechnicalWorkflowRoot',
     },
     {
-      canonicalTitle: '登记接收工作站',
+      canonicalTitle: '检查登记',
       component:
         '/modules/technical-workflow/views/TechnicalSpecimenRegistrationView',
       componentAliases: ['TechnicalSpecimenRegistration'],

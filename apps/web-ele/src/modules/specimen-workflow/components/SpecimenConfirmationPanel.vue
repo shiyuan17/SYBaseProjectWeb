@@ -16,6 +16,12 @@ import SystemUserSelect from '#/modules/system-management/components/SystemUserS
 
 import { useSpecimenConfirmationPanel } from '../composables/useSpecimenConfirmationPanel';
 import { formatDateTime, formatNullable } from '../utils/format';
+import {
+  resolveConfirmationWorkflowRowTone,
+  resolveSpecimenWorkflowRowClassName,
+} from '../utils/specimen-workflow-row-tone';
+
+import '../styles/specimen-workflow-row-tone.css';
 
 const {
   actionLoading,
@@ -24,6 +30,8 @@ const {
   filters,
   handleConfirmRow,
   handleConfirmSelected,
+  handleClearList,
+  handleClearSelectionRows,
   handleExportExcel,
   handleOperatorChange,
   handleReset,
@@ -34,6 +42,7 @@ const {
   operatorForm,
   pageError,
   pagedItems,
+  isConfirmationUnsaved,
   retryDialogVisible,
   retryForm,
   retrySubmitting,
@@ -44,6 +53,19 @@ const {
   total,
   tryQuickConfirmByKeyword,
 } = useSpecimenConfirmationPanel();
+
+function resolveRowClassName({
+  row,
+}: {
+  row: (typeof pagedItems.value)[number];
+}) {
+  return resolveSpecimenWorkflowRowClassName(
+    resolveConfirmationWorkflowRowTone(row, {
+      canConfirm: canConfirm(row),
+      isDraft: isConfirmationUnsaved(row),
+    }),
+  );
+}
 </script>
 
 <template>
@@ -104,6 +126,8 @@ const {
       >
         标本确认
       </ElButton>
+      <ElButton @click="handleClearSelectionRows">清除选择行</ElButton>
+      <ElButton @click="handleClearList">清除列表</ElButton>
       <ElButton @click="handleRetryLabel">补打标本标签</ElButton>
       <ElButton @click="handleExportExcel">导出Excel</ElButton>
       <ElButton @click="handleReset">重置</ElButton>
@@ -112,6 +136,7 @@ const {
     <ElTable
       v-loading="loading"
       :data="pagedItems"
+      :row-class-name="resolveRowClassName"
       border
       max-height="520"
       @selection-change="handleSelectionChange"

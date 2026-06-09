@@ -343,34 +343,22 @@ describe('FixationVerifyView', () => {
     vi.clearAllMocks();
   });
 
-  it('queries removal workbench data without verificationStatus by default', async () => {
-    const { app } = mountView();
-    await waitForViewAssertion(() => {
-      expect(listPendingSpecimenRemovalsMock).toHaveBeenCalled();
-    });
+  it('keeps the removal workbench empty by default', async () => {
+    const { app, container } = mountView();
+    await flushView();
 
-    expect(listPendingSpecimenRemovalsMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        applicationNo: undefined,
-        page: 1,
-        size: 20,
-      }),
-    );
-
-    const firstCall = listPendingSpecimenRemovalsMock.mock.calls.at(0);
-    expect(firstCall).toBeDefined();
-    const query = firstCall?.at(0);
-
-    expect(query).toBeDefined();
-    expect(query).not.toHaveProperty('verificationStatus');
+    expect(listPendingSpecimenRemovalsMock).not.toHaveBeenCalled();
+    expect(listSpecimensMock).not.toHaveBeenCalled();
+    expect(container.textContent).toMatch(/全部\s*0/);
 
     app.unmount();
   });
 
   it('renders removal-centric content and actions', async () => {
+    mockRoute.query = { applicationNo: 'AP202605230001' };
     const { app, container } = mountView();
     await waitForViewAssertion(() => {
-      expect(container.textContent).toContain('惠侨楼 - 手术室 2');
+      expect(container.textContent).toContain('SP202605230001');
     });
 
     const confirmButtons = [...container.querySelectorAll('button')].filter(
@@ -389,11 +377,10 @@ describe('FixationVerifyView', () => {
     expect(container.textContent).not.toContain('登记日期');
     expect(container.textContent).not.toContain('查询');
     expect(container.textContent).not.toContain('重置');
+    expect(container.textContent).toContain('清除列表');
     expect(container.textContent).toContain('标本编号');
     expect(container.textContent).toContain('离体时间');
     expect(container.textContent).toContain('离体操作人');
-    expect(container.textContent).toContain('惠侨楼 - 手术室 2');
-    expect(container.textContent).not.toContain('OR-102');
     expect(container.textContent).not.toContain('开始核对');
     expect(container.textContent).not.toContain('完成核对');
     expect(confirmButtons).toHaveLength(2);
@@ -402,9 +389,10 @@ describe('FixationVerifyView', () => {
   });
 
   it('confirms removal and refreshes the list after submission', async () => {
+    mockRoute.query = { applicationNo: 'AP202605230001' };
     const { app, container } = mountView();
     await waitForViewAssertion(() => {
-      expect(container.textContent).toContain('惠侨楼 - 手术室 2');
+      expect(container.textContent).toContain('SP202605230001');
     });
 
     const confirmButton = [...container.querySelectorAll('button')].find(
@@ -427,8 +415,8 @@ describe('FixationVerifyView', () => {
       remarks: '离体确认',
       specimenBarcode: 'SP-PENDING',
     });
-    expect(listPendingSpecimenRemovalsMock).toHaveBeenCalledTimes(1);
-    expect(listSpecimensMock).toHaveBeenLastCalledWith({
+    expect(listPendingSpecimenRemovalsMock).not.toHaveBeenCalled();
+    expect(listSpecimensMock).toHaveBeenCalledWith({
       applicationNo: 'AP202605230001',
       page: 1,
       size: 500,
@@ -461,16 +449,25 @@ describe('FixationVerifyView', () => {
       identifierType: 'SPECIMEN_NO',
       remarks: '离体确认',
     });
-    expect(listPendingSpecimenRemovalsMock).toHaveBeenCalledTimes(1);
-    expect(listSpecimensMock).toHaveBeenLastCalledWith({
-      applicationNo: 'AP202605230001',
-      page: 1,
-      size: 500,
+    await waitForViewAssertion(() => {
+      expect(listSpecimensMock).toHaveBeenCalledWith({
+        applicationNo: 'AP202605230001',
+        page: 1,
+        size: 500,
+      });
     });
     expect(messageSuccessMock).toHaveBeenCalledWith(
       '标本ID SP202605230001 已完成离体确认',
     );
     expect(specimenIdInput!.value).toBe('');
+
+    const clearListButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('清除列表'),
+    );
+    clearListButton?.click();
+    await flushView();
+
+    expect(container.textContent).not.toContain('SP202605230001');
 
     app.unmount();
   });

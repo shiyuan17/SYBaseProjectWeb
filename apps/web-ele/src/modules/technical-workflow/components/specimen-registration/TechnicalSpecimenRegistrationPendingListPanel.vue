@@ -17,6 +17,7 @@ import {
 } from 'element-plus';
 
 import { APPLICATION_TYPE_OPTIONS } from '#/modules/specimen-workflow/constants';
+import { formatApplicationType } from '#/modules/specimen-workflow/utils/format';
 
 import {
   formatPendingPathologyNo,
@@ -123,6 +124,14 @@ const displayPatientSourceFilter =
   ref<(typeof PATIENT_SOURCE_FILTER_OPTIONS)[number]['value']>('ALL');
 const displayPeriodFilter =
   ref<(typeof PERIOD_FILTER_OPTIONS)[number]['value']>('MONTH');
+
+function fieldValue(value: null | string | undefined) {
+  return value?.trim() || '-';
+}
+
+function typeLabel(value: null | string | undefined) {
+  return formatApplicationType(value);
+}
 </script>
 
 <template>
@@ -263,6 +272,17 @@ const displayPeriodFilter =
             </div>
             <div class="mt-1 text-xs text-muted-foreground">
               {{ item.patientName || '-' }}
+            </div>
+            <div
+              class="mt-2 grid gap-x-3 gap-y-1 text-xs text-muted-foreground sm:grid-cols-2"
+            >
+              <span>性别：{{ fieldValue(item.patientGender) }}</span>
+              <span>年龄：{{ fieldValue(item.patientAge) }}</span>
+              <span>类型：{{ typeLabel(item.applicationType) }}</span>
+              <span>申请单号：{{ fieldValue(item.applicationNo) }}</span>
+              <span class="sm:col-span-2">
+                送检科室：{{ fieldValue(item.submittingDepartmentName) }}
+              </span>
             </div>
           </div>
           <span

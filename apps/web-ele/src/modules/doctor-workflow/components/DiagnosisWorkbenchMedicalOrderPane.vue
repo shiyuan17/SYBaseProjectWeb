@@ -83,10 +83,17 @@ interface MedicalOrderCategoryFilter {
   testValue: string;
 }
 
-const props = defineProps<{
-  loading?: boolean;
-  workbench: DiagnosticWorkbenchView | null;
-}>();
+const props = withDefaults(
+  defineProps<{
+    embedded?: boolean;
+    loading?: boolean;
+    workbench: DiagnosticWorkbenchView | null;
+  }>(),
+  {
+    embedded: false,
+    loading: false,
+  },
+);
 
 const emit = defineEmits<{
   refresh: [];
@@ -194,7 +201,7 @@ const medicalOrderRows = computed<MedicalOrderTableRow[]>(() => {
     billingStatus: item.billingStatus,
     doctorName: formatNullable(item.doctorName),
     key: item.orderId,
-    orderContent: formatNullable(item.orderContent),
+    orderContent: formatMedicalOrderContent(item.orderContent),
     orderId: item.orderId,
     orderTime: formatDateTime(item.orderDate),
     remarks: formatNullable(item.remarks),
@@ -489,21 +496,40 @@ function formatUnknownEnum(value: string, fallback: string) {
 function getBlockLabel(block: BlockSummary) {
   return [
     getBlockCodeLabel(block.blockCode),
-    block.description ?? block.tissueName ?? block.specimenName,
+    getBlockTextLabel(
+      block.description ?? block.tissueName ?? block.specimenName,
+    ),
   ]
     .filter((value): value is string => Boolean(value?.trim()))
     .join(' ');
 }
 
 function getBlockCodeLabel(value?: null | string) {
+  return getBlockTextLabel(value);
+}
+
+function getBlockTextLabel(value?: null | string) {
   const blockCode = value?.trim();
   const pathologyNo = props.workbench?.pathologyNo?.trim();
   if (!blockCode || !pathologyNo) {
     return blockCode ?? '';
   }
-  return blockCode.replace(
-    new RegExp(`^${escapeRegExp(pathologyNo)}[-_]?`),
-    '',
+  return blockCode
+    .replace(new RegExp(`^${escapeRegExp(pathologyNo)}[-_]?`), '')
+    .trim();
+}
+
+function formatMedicalOrderContent(value?: null | string) {
+  const content = formatNullable(value);
+  if (content === '-') {
+    return content;
+  }
+  return content.replaceAll(
+    /([（(]蜡块[:：]\s*)([^）)]*)([）)])/g,
+    (_match, prefix: string, blockLabel: string, suffix: string) => {
+      const cleanedBlockLabel = getBlockTextLabel(blockLabel);
+      return cleanedBlockLabel ? `${prefix}${cleanedBlockLabel}${suffix}` : '';
+    },
   );
 }
 
@@ -769,7 +795,12 @@ onMounted(loadCandidates);
 
 <template>
   <section
-    class="flex min-h-[360px] flex-col rounded-lg border border-border bg-card shadow-sm xl:h-[calc(100vh-270px)]"
+    class="flex min-h-[360px] flex-col bg-card"
+    :class="
+      embedded
+        ? 'h-full'
+        : 'rounded-lg border border-border shadow-sm xl:h-[calc(100vh-270px)]'
+    "
     data-testid="diagnosis-workbench-medical-order-pane"
   >
     <header

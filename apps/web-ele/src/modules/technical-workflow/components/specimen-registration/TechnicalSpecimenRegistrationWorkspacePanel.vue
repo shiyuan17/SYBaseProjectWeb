@@ -14,6 +14,10 @@ import { computed, nextTick, ref, watch } from 'vue';
 import { ElButton, ElEmpty } from 'element-plus';
 
 import { APPLICATION_TYPE_OPTIONS } from '#/modules/specimen-workflow/constants';
+import {
+  buildSections,
+  buildSummaryItems,
+} from '#/modules/specimen-workflow/utils/application-registration-patient-panel';
 import { formatApplicationType } from '#/modules/specimen-workflow/utils/format';
 
 import {
@@ -36,6 +40,7 @@ const props = defineProps<{
   loading?: boolean;
   materialSaving?: boolean;
   materialVerificationSaving?: boolean;
+  pathologyNoDraft?: null | string;
   selectedApplicationType?: null | string;
   submitting?: boolean;
   workspace: null | TechnicalSpecimenRegistrationWorkspace;
@@ -49,6 +54,7 @@ const emit = defineEmits<{
     detailSections: TechnicalSpecimenRegistrationDetailSections,
   ];
   saveMaterials: [materials: SaveTechnicalSpecimenRegistrationMaterialItem[]];
+  'update:pathologyNoDraft': [value: string];
   'update:selectedApplicationType': [value: string];
   verifyMaterial: [specimenId: string];
 }>();
@@ -169,6 +175,23 @@ const isConsultationCase = computed(() =>
 const registrationTypeOptions = APPLICATION_TYPE_OPTIONS;
 const selectedMaterial = computed(
   () => editableMaterials.value[selectedMaterialIndex.value] ?? null,
+);
+const applicationSummaryItems = computed(() =>
+  props.consultationWorkbench
+    ? buildSummaryItems(props.consultationWorkbench)
+    : [],
+);
+const applicationSections = computed(() =>
+  props.consultationWorkbench
+    ? buildSections(props.consultationWorkbench, {
+        buildingLabel: props.consultationWorkbench.surgeryInfo.buildingId || '',
+        roomLabel: props.consultationWorkbench.surgeryInfo.roomId || '',
+      })
+    : [],
+);
+const displayedPathologyNo = computed(
+  () =>
+    props.pathologyNoDraft?.trim() || props.workspace?.basicInfo.pathologyNo,
 );
 
 watch(
@@ -534,6 +557,10 @@ function selectRegistrationApplicationType(value: string) {
     resolveTechnicalRegistrationApplicationType(value),
   );
 }
+
+function updatePathologyNoDraft(event: Event) {
+  emit('update:pathologyNoDraft', (event.target as HTMLInputElement).value);
+}
 </script>
 
 <template>
@@ -549,9 +576,7 @@ function selectRegistrationApplicationType(value: string) {
             </div>
             <p class="mt-1 text-xs text-muted-foreground">
               病理号
-              {{
-                formatPendingPathologyNo(workspace.basicInfo.pathologyNo)
-              }}，当前状态
+              {{ formatPendingPathologyNo(displayedPathologyNo) }}，当前状态
               {{
                 formatSpecimenRegistrationStatus(
                   workspace.basicInfo.registrationStatus,
@@ -577,40 +602,111 @@ function selectRegistrationApplicationType(value: string) {
         正在加载工作台...
       </div>
       <div v-else class="space-y-3 px-5 py-5">
-        <div
-          class="grid gap-3 rounded-2xl bg-accent p-4 text-sm md:grid-cols-2 xl:grid-cols-3"
+        <article
+          class="rounded-2xl border border-border bg-accent/70 p-4"
+          data-testid="registration-application-full-info"
         >
-          <div>患者姓名：{{ fieldValue(workspace.basicInfo.patientName) }}</div>
-          <div>性别：{{ fieldValue(workspace.basicInfo.patientGender) }}</div>
-          <div>年龄：{{ fieldValue(workspace.basicInfo.patientAge) }}</div>
-          <div>患者 ID：{{ fieldValue(workspace.basicInfo.patientId) }}</div>
-          <div>住院号：{{ fieldValue(workspace.basicInfo.inpatientNo) }}</div>
-          <div>
-            申请单号：{{ fieldValue(workspace.basicInfo.applicationNo) }}
+          <div class="mb-3 flex items-center justify-between gap-3">
+            <h3 class="text-sm font-semibold text-foreground">申请完整信息</h3>
+            <span class="text-xs text-muted-foreground">
+              {{
+                props.consultationContextLoading
+                  ? '正在加载...'
+                  : props.consultationWorkbench
+                    ? '已加载'
+                    : '基础信息'
+              }}
+            </span>
           </div>
-          <div>
-            申请科室：{{
-              fieldValue(workspace.basicInfo.submittingDepartmentName)
-            }}
+
+          <div
+            v-if="props.consultationContextLoading"
+            class="rounded-xl border border-dashed border-border bg-card px-4 py-6 text-center text-sm text-muted-foreground"
+          >
+            正在加载患者、申请、手术与妇科信息...
           </div>
-          <div>
-            申请医生：{{ fieldValue(workspace.basicInfo.submittingDoctorName) }}
+
+          <template v-else-if="props.consultationWorkbench">
+            <div
+              class="grid gap-2 rounded-xl bg-card p-3 text-sm md:grid-cols-2 xl:grid-cols-3"
+            >
+              <div
+                v-for="item in applicationSummaryItems"
+                :key="item.key"
+                :class="item.span === 3 ? 'xl:col-span-3' : ''"
+              >
+                <span class="text-muted-foreground">{{ item.label }}：</span>
+                <span class="text-foreground">{{ item.value }}</span>
+              </div>
+            </div>
+
+            <div class="mt-3 grid gap-3 2xl:grid-cols-2">
+              <section
+                v-for="section in applicationSections"
+                :key="section.key"
+                class="rounded-xl border border-border bg-card p-3"
+              >
+                <h4 class="mb-2 text-sm font-semibold text-foreground">
+                  {{ section.title }}
+                </h4>
+                <div class="grid gap-2 text-sm md:grid-cols-2 xl:grid-cols-3">
+                  <div
+                    v-for="item in section.items"
+                    :key="item.key"
+                    :class="
+                      item.span === 3 ? 'md:col-span-2 xl:col-span-3' : ''
+                    "
+                  >
+                    <span>{{ item.label }}：</span>
+                    <span class="text-foreground">{{ item.value }}</span>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </template>
+
+          <div
+            v-else
+            class="grid gap-3 rounded-xl bg-card p-3 text-sm md:grid-cols-2 xl:grid-cols-3"
+          >
+            <div>
+              患者姓名：{{ fieldValue(workspace.basicInfo.patientName) }}
+            </div>
+            <div>性别：{{ fieldValue(workspace.basicInfo.patientGender) }}</div>
+            <div>年龄：{{ fieldValue(workspace.basicInfo.patientAge) }}</div>
+            <div>患者 ID：{{ fieldValue(workspace.basicInfo.patientId) }}</div>
+            <div>住院号：{{ fieldValue(workspace.basicInfo.inpatientNo) }}</div>
+            <div>
+              申请单号：{{ fieldValue(workspace.basicInfo.applicationNo) }}
+            </div>
+            <div>
+              申请科室：{{
+                fieldValue(workspace.basicInfo.submittingDepartmentName)
+              }}
+            </div>
+            <div>
+              申请医生：{{
+                fieldValue(workspace.basicInfo.submittingDoctorName)
+              }}
+            </div>
+            <div>
+              送检日期：{{ fieldValue(workspace.basicInfo.submissionDate) }}
+            </div>
+            <div>
+              离体时间：{{
+                fieldValue(workspace.basicInfo.specimenRemovalTime)
+              }}
+            </div>
+            <div>
+              固定时间：{{ fieldValue(workspace.basicInfo.fixationTime) }}
+            </div>
+            <div>
+              送检类型：{{
+                formatApplicationType(workspace.basicInfo.applicationType)
+              }}
+            </div>
           </div>
-          <div>
-            送检日期：{{ fieldValue(workspace.basicInfo.submissionDate) }}
-          </div>
-          <div>
-            离体时间：{{ fieldValue(workspace.basicInfo.specimenRemovalTime) }}
-          </div>
-          <div>
-            固定时间：{{ fieldValue(workspace.basicInfo.fixationTime) }}
-          </div>
-          <div>
-            送检类型：{{
-              formatApplicationType(workspace.basicInfo.applicationType)
-            }}
-          </div>
-        </div>
+        </article>
 
         <div class="grid gap-2 md:grid-cols-2 2xl:grid-cols-3">
           <TechnicalSpecimenRegistrationEditableSectionCard
@@ -660,8 +756,23 @@ function selectRegistrationApplicationType(value: string) {
             </div>
           </div>
           <div class="flex items-center justify-between gap-3">
-            <div class="min-w-0">
+            <div class="flex min-w-0 flex-wrap items-center gap-3">
               <h3 class="text-sm font-semibold text-foreground">送检标本</h3>
+              <label
+                class="flex items-center gap-2 text-xs text-muted-foreground"
+              >
+                <span class="shrink-0">病理号</span>
+                <input
+                  class="h-8 w-[180px] rounded-lg border border-border px-3 text-sm"
+                  data-testid="registration-pathology-no-input"
+                  :disabled="
+                    !workspace.actionFlags.canCompleteRegistration || submitting
+                  "
+                  placeholder="病理号"
+                  :value="pathologyNoDraft ?? ''"
+                  @input="updatePathologyNoDraft"
+                />
+              </label>
             </div>
             <div
               v-if="activeSpecimenTab === 'consultation'"

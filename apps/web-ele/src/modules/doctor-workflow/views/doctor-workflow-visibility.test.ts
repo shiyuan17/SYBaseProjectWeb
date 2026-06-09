@@ -491,6 +491,7 @@ async function mountView(component: object) {
       expect(button).toBeTruthy();
       return button?.hasAttribute('disabled') ?? false;
     },
+    root,
     text: () => root.textContent ?? '',
     unmount: () => {
       app.unmount();
@@ -539,6 +540,21 @@ describe('doctor workflow view visibility', () => {
     expect(assignableWrapper.buttonTexts()).toContain('签发分片');
     expect(assignableWrapper.isButtonDisabled('初步分片')).toBe(true);
     assignableWrapper.unmount();
+  });
+
+  it('keeps assignment filter selects wide enough to show selected text', async () => {
+    const wrapper = await mountView(DiagnosisAssignmentView);
+
+    const filterSelects = [
+      ...wrapper.root.querySelectorAll<HTMLElement>('.el-select'),
+    ].filter((item) => item.classList.contains('min-w-[176px]'));
+
+    expect(filterSelects).toHaveLength(2);
+    for (const item of filterSelects) {
+      expect(item.classList.contains('flex-none')).toBe(true);
+    }
+
+    wrapper.unmount();
   });
 
   it('renders assignment application type and specimen without English fallbacks', async () => {

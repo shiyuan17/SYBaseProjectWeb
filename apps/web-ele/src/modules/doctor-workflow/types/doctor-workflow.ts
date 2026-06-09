@@ -125,6 +125,30 @@ export interface CurrentReportSummary {
   versionNo?: null | number;
 }
 
+export interface DiagnosticReportPrintPreviewField {
+  class?: string;
+  label: string;
+  value: string;
+}
+
+export interface DiagnosticReportPrintPreviewSection {
+  label: string;
+  minHeight: number;
+  value: string;
+}
+
+export interface DiagnosticReportPrintPreview {
+  accentColor: string;
+  deliveredAt: string;
+  footerFields: DiagnosticReportPrintPreviewField[];
+  hospitalName: string;
+  metaFields: DiagnosticReportPrintPreviewField[];
+  note: string;
+  reportNo: string;
+  reportTitle: string;
+  sections: DiagnosticReportPrintPreviewSection[];
+}
+
 export interface EventSummary {
   eventContent?: null | string;
   eventStatus?: null | string;

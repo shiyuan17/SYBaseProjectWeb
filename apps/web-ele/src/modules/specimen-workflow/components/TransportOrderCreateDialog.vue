@@ -140,7 +140,7 @@ const {
               v-for="specimen in eligibleSpecimens"
               :key="specimen.id"
               :label="formatSpecimenOptionLabel(specimen)"
-              :value="specimen.barcode"
+              :value="specimen.barcode ?? ''"
             >
               <div class="flex flex-col gap-1 py-1">
                 <span

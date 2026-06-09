@@ -133,6 +133,8 @@ function createWorkspace(): TechnicalSpecimenRegistrationWorkspace {
       checkItem: 'HE',
       inpatientNo: 'INP-1',
       pathologyNo: 'BL202606010007',
+      patientAge: '34',
+      patientGender: '女',
       patientId: 'P-1',
       patientName: '患者甲',
       receivedAt: '2026-06-01T08:30:00',

@@ -9,6 +9,7 @@ const {
   listOperatingBuildingOptionsMock,
   loadWorkflowReferenceOptionsMock,
   lookupApplicationRegistrationWorkbenchRecordMock,
+  startFixationMock,
   successMock,
   warningMock,
 } = vi.hoisted(() => ({
@@ -21,6 +22,20 @@ const {
       fixationCompletedAt: '2026-05-26 10:00:00',
       fixationLiquidType: payload.fixationLiquidType,
       fixationStatus: 'COMPLETED',
+      operatorName: 'Test User',
+      operatorUserId: 'USER-001',
+      specimenId: 'SPEC-002',
+    }),
+  ),
+  startFixationMock: vi.fn(
+    async (payload: {
+      fixationLiquidType?: null | string;
+      specimenBarcode: string;
+    }) => ({
+      barcode: payload.specimenBarcode,
+      fixationCompletedAt: null,
+      fixationLiquidType: payload.fixationLiquidType,
+      fixationStatus: 'FIXING',
       operatorName: 'Test User',
       operatorUserId: 'USER-001',
       specimenId: 'SPEC-002',
@@ -299,6 +314,7 @@ vi.mock('../api/specimen-workflow-service', () => ({
   getApplicationDetail: getApplicationDetailMock,
   listSpecimens: listSpecimensMock,
   retryLabelPrint: vi.fn(),
+  startFixation: startFixationMock,
 }));
 
 import { useSpecimenFixationTimePanel } from './useSpecimenFixationTimePanel';
@@ -353,7 +369,7 @@ describe('useSpecimenFixationTimePanel', () => {
     vi.clearAllMocks();
   });
 
-  it('loads default fixation liquid options and queries application rows by specimenNo', async () => {
+  it('loads default fixation liquid options and starts fixation by specimenNo', async () => {
     const wrapper = mountComposable();
     await flushComposable();
 
@@ -375,18 +391,24 @@ describe('useSpecimenFixationTimePanel', () => {
     expect(state.queueItems.value[0]?.specimenName).toBe('肺组织');
     expect(state.queueItems.value[0]?.patientIdLabel).toBe('PAT-002');
     expect(state.queueItems.value[0]?.surgeryName).toBe('惠侨楼 - 手术室 2');
-    expect(state.queueItems.value[0]?.fixationStatus).toBe('PENDING');
+    expect(state.queueItems.value[0]?.fixationStatus).toBe('FIXING');
+    expect(state.queueItems.value[0]?.specimenStatus).toBe('FIXING');
     expect(state.queueItems.value[1]?.specimenName).toBe('纵隔淋巴结');
     expect(state.queueItems.value[1]?.fixationStatus).toBe('PENDING');
     expect(state.resolveFixationLiquidLabel('FORMALIN')).toBe(
       '10% 中性福尔马林',
     );
+    expect(startFixationMock).toHaveBeenCalledWith({
+      fixationLiquidType: 'FORMALIN',
+      remarks: '扫码开始固定',
+      specimenBarcode: 'BC-002',
+    });
     expect(completeFixationMock).not.toHaveBeenCalled();
 
     wrapper.destroy();
   });
 
-  it('replaces queue rows when querying another specimenNo', async () => {
+  it('appends queue rows and avoids duplicate rows by specimen id', async () => {
     const wrapper = mountComposable();
     await flushComposable();
 
@@ -405,8 +427,18 @@ describe('useSpecimenFixationTimePanel', () => {
     await state.handleCompleteFixationByScan();
     await flushComposable();
 
-    expect(state.queueItems.value).toHaveLength(1);
-    expect(state.queueItems.value[0]?.specimenNo).toBe('SP-001');
+    expect(state.queueItems.value).toHaveLength(3);
+    expect(state.queueItems.value.map((item) => item.specimenNo)).toEqual([
+      'SP-002',
+      'SP-003',
+      'SP-001',
+    ]);
+
+    state.scanInput.value = 'SP-002';
+    await state.handleCompleteFixationByScan();
+    await flushComposable();
+
+    expect(state.queueItems.value).toHaveLength(3);
 
     wrapper.destroy();
   });
@@ -425,6 +457,7 @@ describe('useSpecimenFixationTimePanel', () => {
     await flushComposable();
 
     expect(warningMock).toHaveBeenCalledWith('标本已完成固定，无需重复操作');
+    expect(startFixationMock).not.toHaveBeenCalled();
     expect(completeFixationMock).not.toHaveBeenCalled();
     expect(state.queueItems.value).toHaveLength(1);
     expect(state.queueItems.value[0]?.specimenNo).toBe('SP-001');
@@ -444,6 +477,8 @@ describe('useSpecimenFixationTimePanel', () => {
     state.scanInput.value = 'SP-002';
     await state.handleCompleteFixationByScan();
     await flushComposable();
+
+    expect(state.queueItems.value[0]?.fixationStatus).toBe('FIXING');
 
     state.handleSelectionChange([state.queueItems.value[0]!]);
     await state.handleConfirmFixation();

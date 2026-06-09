@@ -16,7 +16,6 @@ import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
 import {
-  BookOpenText,
   ChevronLeft,
   ChevronRight,
   Download,
@@ -74,6 +73,7 @@ interface GrossingTaskTableRow {
   blockPrintSummary: string;
   checkNo: string;
   clinicalDiagnosis: string;
+  dataStatusText: string;
   freezeReminder: string;
   grossDescription: string;
   patientName: string;
@@ -238,11 +238,9 @@ const pendingItems = ref<PendingTechnicalTaskItem[]>([]);
 const selectedTask = ref<null | PendingTechnicalTaskItem>(null);
 const total = ref(0);
 const moreDrawerVisible = ref(false);
-const templateDrawerVisible = ref(false);
 const templateSearchKeyword = ref('');
 const selectedTemplateId = ref(GROSSING_DESCRIPTION_TEMPLATES[0]?.id ?? '');
 const appendTemplateAfterApply = ref(true);
-const closeTemplateDrawerAfterApply = ref(true);
 const countdownNow = ref(Date.now());
 let freezeReminderTimer: number | undefined;
 
@@ -254,10 +252,24 @@ const filters = reactive({
   timedOutOnly: route.query.mode === 'exception',
 });
 
+const routeTaskId = computed(() =>
+  typeof route.query.taskId === 'string' ? route.query.taskId : '',
+);
+const shouldIncludeAllStatuses = computed(
+  () => Boolean(filters.keyword.trim()) || Boolean(routeTaskId.value),
+);
+const shouldInitialLoad = computed(
+  () =>
+    Boolean(filters.keyword.trim()) ||
+    Boolean(routeTaskId.value) ||
+    filters.timedOutOnly,
+);
 const currentQuery = computed(() => ({
+  includeAllStatuses: shouldIncludeAllStatuses.value || undefined,
   keyword: filters.keyword.trim() || undefined,
   page: filters.page,
   size: filters.size,
+  taskId: routeTaskId.value || undefined,
   taskType: 'GROSSING',
   timedOutOnly: filters.timedOutOnly,
 }));
@@ -293,7 +305,9 @@ const selectedPathologyNo = computed(() =>
   ),
 );
 const selectedPatientName = computed(() =>
-  formatNullable(selectedCaseSummary.value?.patientName),
+  formatNullable(
+    selectedCaseSummary.value?.patientName ?? selectedTask.value?.patientName,
+  ),
 );
 const selectedTaskFacts = computed(() => [
   {
@@ -392,6 +406,7 @@ const activeSpecimenIndex = computed(() =>
 const canEditCapturedImages = computed(
   () =>
     Boolean(selectedTask.value) &&
+    canOperateGrossingTask(selectedTask.value) &&
     Boolean(workbench.activeSpecimen.value) &&
     activeSpecimenIndex.value >= 0,
 );
@@ -542,6 +557,7 @@ function createGrossingTaskRow(
         ]),
       ),
     ),
+    dataStatusText: formatGrossingTaskStatus(task.taskStatus),
     freezeReminder: formatFreezeCountdown(task, payload),
     grossDescription: formatNullable(
       firstTextValue(
@@ -619,6 +635,10 @@ async function selectTask(taskId: string) {
   const matchedTask =
     pendingItems.value.find((item) => item.id === taskId) ?? null;
   selectedTask.value = matchedTask;
+  if (matchedTask && !canOperateGrossingTask(matchedTask)) {
+    workbench.resetWorkbenchState(matchedTask);
+    return;
+  }
   await workbench.initializeWorkbench(matchedTask);
 }
 
@@ -630,8 +650,7 @@ async function loadPendingData(preferredTaskId?: string) {
     pendingItems.value = result.items;
     total.value = result.total;
 
-    const deepLinkedTaskId =
-      typeof route.query.taskId === 'string' ? route.query.taskId : '';
+    const deepLinkedTaskId = routeTaskId.value;
     const fallbackTaskId =
       preferredTaskId || deepLinkedTaskId || selectedTask.value?.id || '';
     const nextTaskId =
@@ -657,10 +676,24 @@ async function loadPendingData(preferredTaskId?: string) {
 
 async function handleQuery() {
   filters.page = 1;
+  if (!filters.keyword.trim()) {
+    pendingItems.value = [];
+    total.value = 0;
+    selectedTask.value = null;
+    workbench.resetWorkbenchState(null);
+    return;
+  }
   await loadPendingData();
 }
 
 async function handleRefresh() {
+  if (!shouldInitialLoad.value) {
+    pendingItems.value = [];
+    total.value = 0;
+    selectedTask.value = null;
+    workbench.resetWorkbenchState(null);
+    return;
+  }
   await loadPendingData(selectedTask.value?.id);
 }
 
@@ -676,6 +709,10 @@ function openMoreDrawer() {
     return;
   }
   moreDrawerVisible.value = true;
+}
+
+function canOperateGrossingTask(task: null | PendingTechnicalTaskItem) {
+  return task?.taskStatus === 'IN_PROGRESS';
 }
 
 async function uploadGrossingImage(file: File) {
@@ -704,7 +741,7 @@ function isTemplateMatchedToActiveSpecimen(
   );
 }
 
-function openGrossingTemplateDrawer() {
+function focusGrossingTemplatePanel() {
   if (!selectedTask.value) {
     ElMessage.warning('请先从左侧列表选择任务');
     return;
@@ -718,7 +755,6 @@ function openGrossingTemplateDrawer() {
   );
   selectedTemplateId.value =
     matchedTemplate?.id ?? GROSSING_DESCRIPTION_TEMPLATES[0]?.id ?? '';
-  templateDrawerVisible.value = true;
 }
 
 function selectGrossingTemplate(template: GrossingDescriptionTemplate) {
@@ -771,9 +807,6 @@ function applySelectedGrossingTemplate() {
   ElMessage.success(
     appendTemplateAfterApply.value ? '已追加取材模板' : '已替换为取材模板',
   );
-  if (closeTemplateDrawerAfterApply.value) {
-    templateDrawerVisible.value = false;
-  }
 }
 
 function applyGrossingTemplateWithMode(append: boolean) {
@@ -781,9 +814,19 @@ function applyGrossingTemplateWithMode(append: boolean) {
   applySelectedGrossingTemplate();
 }
 
+function appendGrossingTemplateDirectly(template: GrossingDescriptionTemplate) {
+  selectedTemplateId.value = template.id;
+  applyGrossingTemplateWithMode(true);
+}
+
 async function handleStartOrContinue() {
   if (!selectedTask.value) {
     ElMessage.warning('请先从左侧列表选择任务');
+    return;
+  }
+
+  if (selectedTask.value.taskStatus === 'COMPLETED') {
+    ElMessage.warning('已完成取材任务不能重复开始或完成');
     return;
   }
 
@@ -822,7 +865,9 @@ onBeforeUnmount(() => {
   }
 });
 
-void loadPendingData();
+if (shouldInitialLoad.value) {
+  void loadPendingData();
+}
 </script>
 
 <template>
@@ -849,6 +894,7 @@ void loadPendingData();
             @click="void handleRefresh()"
           />
           <ElButton
+            :disabled="selectedTask?.taskStatus === 'COMPLETED'"
             :loading="actionLoading"
             size="small"
             type="primary"
@@ -927,7 +973,7 @@ void loadPendingData();
       </section>
 
       <section
-        class="grid min-h-0 flex-1 grid-cols-1 items-stretch gap-2 overflow-hidden xl:grid-cols-[minmax(0,1fr)_700px] 2xl:grid-cols-[minmax(0,1fr)_760px]"
+        class="grid min-h-0 flex-1 grid-cols-1 items-stretch gap-2 overflow-hidden xl:grid-cols-[minmax(0,3fr)_minmax(0,4.5fr)_minmax(260px,2.5fr)]"
       >
         <article
           class="flex min-w-0 flex-col overflow-hidden rounded-md border border-border bg-card"
@@ -966,6 +1012,17 @@ void loadPendingData();
               >
                 <template #default="{ row }">
                   {{ row.checkNo }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="数据状态" min-width="96">
+                <template #default="{ row }">
+                  <ElTag
+                    :type="getTaskStatusTagType(row.task.taskStatus)"
+                    effect="plain"
+                    size="small"
+                  >
+                    {{ row.dataStatusText }}
+                  </ElTag>
                 </template>
               </ElTableColumn>
               <ElTableColumn label="病人" min-width="110" show-overflow-tooltip>
@@ -1101,6 +1158,7 @@ void loadPendingData();
                   {{ formatGrossingTaskStatus(selectedTask.taskStatus) }}
                 </ElTag>
                 <ElButton
+                  :disabled="!canOperateGrossingTask(selectedTask)"
                   :loading="workbench.submitting.value"
                   size="small"
                   type="primary"
@@ -1116,6 +1174,7 @@ void loadPendingData();
                 workbench.selectedEmbeddingBoxSpecimenKey.value
               "
               :can-add-embedding-box="
+                canOperateGrossingTask(selectedTask) &&
                 workbench.specimenNameOptions.value.length > 0
               "
               :embedding-box-rows="workbench.embeddingBoxRows.value"
@@ -1130,7 +1189,7 @@ void loadPendingData();
             <section class="relative border-b border-border">
               <div
                 v-if="workbench.descriptionTab.value === 'grossDescription'"
-                class="absolute right-3 top-2 z-10"
+                class="absolute right-3 top-2 z-10 flex items-center gap-2"
               >
                 <ElButton
                   :disabled="!workbench.activeSpecimen.value"
@@ -1140,25 +1199,21 @@ void loadPendingData();
                 >
                   保存
                 </ElButton>
+                <ElButton
+                  :disabled="!workbench.activeSpecimen.value"
+                  size="small"
+                  title="取材模板"
+                  @click="focusGrossingTemplatePanel"
+                >
+                  取材模板
+                </ElButton>
               </div>
               <ElTabs
                 v-model="workbench.descriptionTab.value"
-                class="px-3 pb-3 pr-20"
+                class="px-3 pb-3 pr-36"
               >
                 <ElTabPane label="大体描写" name="grossDescription">
                   <div class="grid gap-2 pt-2">
-                    <div class="flex justify-end">
-                      <ElButton
-                        aria-label="打开取材模板"
-                        :icon="BookOpenText"
-                        size="small"
-                        title="取材模板"
-                        @click="openGrossingTemplateDrawer"
-                      >
-                        取材模板
-                      </ElButton>
-                    </div>
-
                     <ElInput
                       v-if="workbench.activeSpecimen.value"
                       v-model="workbench.activeSpecimen.value.grossDescription"
@@ -1234,158 +1289,161 @@ void loadPendingData();
             <ElEmpty description="请先选择取材任务" />
           </div>
         </aside>
+
+        <aside
+          class="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-md border border-border bg-card"
+        >
+          <header
+            class="flex items-start justify-between gap-2 border-b border-border bg-muted/30 px-3 py-2"
+          >
+            <div class="min-w-0">
+              <h3 class="text-sm font-semibold text-foreground">取材模板</h3>
+              <p class="mt-0.5 truncate text-xs text-muted-foreground">
+                当前标本：{{ activeTemplateSpecimenName }}
+              </p>
+            </div>
+            <ElTag effect="plain" size="small" type="primary">模板</ElTag>
+          </header>
+
+          <template v-if="selectedTask">
+            <section class="grid gap-2 border-b border-border p-3">
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span class="text-xs font-semibold text-foreground">
+                  常用:
+                </span>
+                <ElButton
+                  v-for="item in COMMON_GROSSING_COPY_TEXTS"
+                  :key="item"
+                  size="small"
+                  @click="copyGrossingTemplateText(item)"
+                >
+                  {{ item }}
+                </ElButton>
+              </div>
+              <ElInput
+                v-model="templateSearchKeyword"
+                placeholder="输入标本名称或模板关键词"
+              />
+              <div class="flex flex-wrap items-center gap-3">
+                <ElCheckbox v-model="appendTemplateAfterApply">
+                  追加
+                </ElCheckbox>
+                <ElCheckbox :model-value="true" disabled>智能匹配</ElCheckbox>
+              </div>
+            </section>
+
+            <section class="border-b border-border bg-muted/20">
+              <div
+                class="border-b border-border bg-muted/30 px-3 py-2 text-xs font-semibold text-foreground"
+              >
+                标本名称
+              </div>
+              <div class="grid max-h-36 overflow-auto">
+                <button
+                  v-for="item in workbench.specimenNameOptions.value"
+                  :key="item.value"
+                  class="flex items-center justify-between gap-2 border-b border-border px-3 py-2 text-left text-sm transition-colors hover:bg-background"
+                  :class="
+                    item.value === workbench.activeSpecimenKey.value
+                      ? 'bg-background font-semibold text-primary'
+                      : 'text-foreground'
+                  "
+                  type="button"
+                  @click="selectTemplateSpecimen(item.value)"
+                >
+                  <span class="truncate">{{ item.label }}</span>
+                  <ElTag
+                    v-if="item.value === workbench.activeSpecimenKey.value"
+                    effect="plain"
+                    size="small"
+                    type="primary"
+                  >
+                    当前
+                  </ElTag>
+                </button>
+              </div>
+            </section>
+
+            <main class="min-h-0 flex-1 overflow-auto p-3">
+              <div v-if="grossingTemplateGroups.length > 0" class="grid gap-3">
+                <section
+                  v-for="group in grossingTemplateGroups"
+                  :key="group.system"
+                  class="grid gap-2"
+                >
+                  <div
+                    class="flex items-center gap-2 text-xs font-semibold text-muted-foreground"
+                  >
+                    <span>{{ group.system }}</span>
+                    <span class="h-px flex-1 bg-border"></span>
+                  </div>
+                  <div class="grid gap-2">
+                    <button
+                      v-for="template in group.templates"
+                      :key="template.id"
+                      class="rounded-md border p-3 text-left transition-colors hover:border-primary hover:bg-muted/30"
+                      :class="
+                        template.id === selectedTemplateId
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border bg-background'
+                      "
+                      type="button"
+                      @click="selectGrossingTemplate(template)"
+                      @dblclick.stop="appendGrossingTemplateDirectly(template)"
+                    >
+                      <div
+                        class="flex items-start justify-between gap-2 text-sm font-semibold text-foreground"
+                      >
+                        <span>{{ template.tissueName }}</span>
+                        <ElTag
+                          v-if="isTemplateMatchedToActiveSpecimen(template)"
+                          effect="plain"
+                          size="small"
+                          type="success"
+                        >
+                          推荐
+                        </ElTag>
+                      </div>
+                      <p
+                        class="mt-2 line-clamp-3 text-xs leading-5 text-muted-foreground"
+                      >
+                        {{ template.content }}
+                      </p>
+                    </button>
+                  </div>
+                </section>
+              </div>
+              <ElEmpty v-else description="未找到匹配的取材模板" />
+            </main>
+
+            <footer class="grid gap-2 border-t border-border p-3">
+              <div
+                class="min-w-0 truncate text-xs text-muted-foreground"
+                :title="selectedGrossingTemplate?.content"
+              >
+                当前模板：{{ selectedGrossingTemplate?.tissueName || '-' }} /
+                {{ selectedGrossingTemplate?.content || '请选择模板' }}
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <ElButton @click="applyGrossingTemplateWithMode(false)">
+                  替换当前
+                </ElButton>
+                <ElButton
+                  type="primary"
+                  @click="applyGrossingTemplateWithMode(true)"
+                >
+                  追加模板
+                </ElButton>
+              </div>
+            </footer>
+          </template>
+
+          <div v-else class="grid min-h-96 flex-1 place-items-center">
+            <ElEmpty description="请先选择取材任务后使用模板" />
+          </div>
+        </aside>
       </section>
     </div>
-
-    <ElDrawer
-      v-model="templateDrawerVisible"
-      :close-on-click-modal="false"
-      direction="btt"
-      :title="`选择取材模板 - ${activeTemplateSpecimenName}`"
-      size="48%"
-    >
-      <div class="flex h-full min-h-0 flex-col gap-3 pb-3">
-        <header
-          class="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3"
-        >
-          <div class="flex min-w-[260px] flex-1 flex-wrap items-center gap-1.5">
-            <span class="text-xs font-semibold text-foreground">
-              复制常用字符:
-            </span>
-            <ElButton
-              v-for="item in COMMON_GROSSING_COPY_TEXTS"
-              :key="item"
-              size="small"
-              @click="copyGrossingTemplateText(item)"
-            >
-              {{ item }}
-            </ElButton>
-            <ElInput
-              v-model="templateSearchKeyword"
-              class="min-w-[220px] flex-1"
-              placeholder="输入标本名称或模板关键词"
-            />
-          </div>
-          <div class="flex shrink-0 flex-wrap items-center gap-3">
-            <ElCheckbox v-model="closeTemplateDrawerAfterApply">
-              操作后关闭
-            </ElCheckbox>
-            <ElCheckbox v-model="appendTemplateAfterApply">追加</ElCheckbox>
-            <ElCheckbox :model-value="true" disabled>智能匹配</ElCheckbox>
-          </div>
-        </header>
-
-        <div
-          class="grid min-h-0 flex-1 grid-cols-1 overflow-hidden rounded-md border border-border md:grid-cols-[220px_minmax(0,1fr)]"
-        >
-          <aside
-            class="border-b border-border bg-muted/20 md:border-b-0 md:border-r"
-          >
-            <div
-              class="border-b border-border bg-muted/30 px-3 py-2 text-xs font-semibold text-foreground"
-            >
-              标本名称
-            </div>
-            <div class="grid max-h-40 overflow-auto md:max-h-none">
-              <button
-                v-for="item in workbench.specimenNameOptions.value"
-                :key="item.value"
-                class="flex items-center justify-between border-b border-border px-3 py-2 text-left text-sm transition-colors hover:bg-background"
-                :class="
-                  item.value === workbench.activeSpecimenKey.value
-                    ? 'bg-background font-semibold text-primary'
-                    : 'text-foreground'
-                "
-                type="button"
-                @click="selectTemplateSpecimen(item.value)"
-              >
-                <span class="truncate">{{ item.label }}</span>
-                <ElTag
-                  v-if="item.value === workbench.activeSpecimenKey.value"
-                  effect="plain"
-                  size="small"
-                  type="primary"
-                >
-                  当前
-                </ElTag>
-              </button>
-            </div>
-          </aside>
-
-          <main class="min-h-0 overflow-auto bg-card p-3">
-            <div v-if="grossingTemplateGroups.length > 0" class="grid gap-3">
-              <section
-                v-for="group in grossingTemplateGroups"
-                :key="group.system"
-                class="grid gap-2"
-              >
-                <div
-                  class="flex items-center gap-2 text-xs font-semibold text-muted-foreground"
-                >
-                  <span>{{ group.system }}</span>
-                  <span class="h-px flex-1 bg-border"></span>
-                </div>
-                <div class="grid gap-2 lg:grid-cols-2">
-                  <button
-                    v-for="template in group.templates"
-                    :key="template.id"
-                    class="rounded-md border p-3 text-left transition-colors hover:border-primary hover:bg-muted/30"
-                    :class="
-                      template.id === selectedTemplateId
-                        ? 'border-primary bg-primary/5'
-                        : 'border-border bg-background'
-                    "
-                    type="button"
-                    @click="selectGrossingTemplate(template)"
-                  >
-                    <div
-                      class="flex items-start justify-between gap-2 text-sm font-semibold text-foreground"
-                    >
-                      <span>{{ template.tissueName }}</span>
-                      <ElTag
-                        v-if="isTemplateMatchedToActiveSpecimen(template)"
-                        effect="plain"
-                        size="small"
-                        type="success"
-                      >
-                        推荐
-                      </ElTag>
-                    </div>
-                    <p
-                      class="mt-2 line-clamp-2 text-xs leading-5 text-muted-foreground"
-                    >
-                      {{ template.content }}
-                    </p>
-                  </button>
-                </div>
-              </section>
-            </div>
-            <ElEmpty v-else description="未找到匹配的取材模板" />
-          </main>
-        </div>
-
-        <footer class="flex flex-wrap items-center justify-between gap-3">
-          <div
-            class="min-w-0 flex-1 truncate text-xs text-muted-foreground"
-            :title="selectedGrossingTemplate?.content"
-          >
-            当前模板：{{ selectedGrossingTemplate?.tissueName || '-' }} /
-            {{ selectedGrossingTemplate?.content || '请选择模板' }}
-          </div>
-          <div class="flex shrink-0 gap-2">
-            <ElButton @click="applyGrossingTemplateWithMode(false)">
-              替换当前
-            </ElButton>
-            <ElButton
-              type="primary"
-              @click="applyGrossingTemplateWithMode(true)"
-            >
-              追加模板
-            </ElButton>
-          </div>
-        </footer>
-      </div>
-    </ElDrawer>
 
     <ElDrawer
       v-model="moreDrawerVisible"
@@ -1472,6 +1530,7 @@ void loadPendingData();
             查看轨迹
           </ElButton>
           <ElButton
+            :disabled="!canOperateGrossingTask(selectedTask)"
             :loading="workbench.submitting.value"
             type="primary"
             @click="void workbench.submitGrossing()"

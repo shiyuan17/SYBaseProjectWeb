@@ -65,7 +65,6 @@ const completeForm = reactive({
   deviceCode: '',
   embeddingBoxId: '',
   qualityIssue: '',
-  slideCount: 1,
   sliceCountPerSlide: 1,
   sliceThickness: '',
   taskId: '',
@@ -97,7 +96,6 @@ function resetDialogState() {
       ? (props.task.objectId ?? '')
       : '';
   completeForm.qualityIssue = '';
-  completeForm.slideCount = 1;
   completeForm.sliceCountPerSlide = 1;
   completeForm.sliceThickness = '';
   completeForm.taskId = props.task?.id ?? '';
@@ -135,7 +133,6 @@ async function completeSlicingTask(
     deviceCode: completeForm.deviceCode.trim() || null,
     embeddingBoxId,
     qualityIssue: completeForm.qualityIssue.trim() || null,
-    slideCount: completeForm.slideCount,
     sliceCountPerSlide: completeForm.sliceCountPerSlide,
     sliceThickness: completeForm.sliceThickness.trim() || null,
     taskId: task.id,
@@ -190,7 +187,7 @@ async function submitSlicing() {
         firstResult?.status === 'fulfilled' ? firstResult.value : null;
       ElMessage.success(
         tasks.length === 1 && slicingResult
-          ? `切片完成，已生成 ${slicingResult.slideIds.length} 张玻片`
+          ? `切片完成，已处理 ${slicingResult.slideIds.length} 张已打印玻片`
           : `已完成切片 ${tasks.length} 条任务`,
       );
     } else {
@@ -273,13 +270,6 @@ watch(
                 isBatchMode ? '批量时按各任务包埋盒带入' : '由当前任务带入'
               "
               readonly
-            />
-          </ElFormItem>
-          <ElFormItem label="玻片数量" required>
-            <ElInputNumber
-              v-model="completeForm.slideCount"
-              :min="1"
-              class="w-full"
             />
           </ElFormItem>
           <ElFormItem label="每片切片数">

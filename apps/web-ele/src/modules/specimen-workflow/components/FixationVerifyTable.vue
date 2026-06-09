@@ -4,6 +4,12 @@ import type { RemovalDisplayRow } from '../utils/specimen-removal-display';
 import { ElButton, ElTable, ElTableColumn, ElTag } from 'element-plus';
 
 import { formatDateTime, formatNullable } from '../utils/format';
+import {
+  resolveRemovalWorkflowRowTone,
+  resolveSpecimenWorkflowRowClassName,
+} from '../utils/specimen-workflow-row-tone';
+
+import '../styles/specimen-workflow-row-tone.css';
 
 defineProps<{
   actionLoading: boolean;
@@ -18,10 +24,21 @@ defineProps<{
 const emit = defineEmits<{
   confirmRemoval: [row: RemovalDisplayRow];
 }>();
+
+function resolveRowClassName({ row }: { row: RemovalDisplayRow }) {
+  return resolveSpecimenWorkflowRowClassName(
+    resolveRemovalWorkflowRowTone(row),
+  );
+}
 </script>
 
 <template>
-  <ElTable v-loading="loading" :data="items" border>
+  <ElTable
+    v-loading="loading"
+    :data="items"
+    :row-class-name="resolveRowClassName"
+    border
+  >
     <ElTableColumn label="序号" width="72">
       <template #default="{ $index }">
         {{ (page - 1) * size + $index + 1 }}

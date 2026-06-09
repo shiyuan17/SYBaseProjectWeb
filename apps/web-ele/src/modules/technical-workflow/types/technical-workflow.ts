@@ -2,6 +2,7 @@ export interface PendingTechnicalTaskQuery {
   applicationNo?: null | string;
   createdFrom?: null | string;
   createdTo?: null | string;
+  includeAllStatuses?: boolean;
   keyword?: null | string;
   objectType?: null | string;
   page: number;
@@ -11,6 +12,7 @@ export interface PendingTechnicalTaskQuery {
   priority?: null | string;
   size: number;
   taskStatus?: null | string;
+  taskId?: null | string;
   taskType?: null | string;
   timedOutOnly?: boolean;
 }
@@ -70,6 +72,7 @@ export interface PendingTechnicalTaskItem {
   createdAt: null | string;
   deadlineAt: null | string;
   id: string;
+  objectDisplayNo?: null | string;
   objectId: null | string;
   objectType: null | string;
   pathologyNo: null | string;
@@ -176,6 +179,8 @@ export interface PendingTechnicalSpecimenRegistrationItem {
   checkItem: null | string;
   inpatientNo: null | string;
   pathologyNo: null | string;
+  patientAge: null | string;
+  patientGender: null | string;
   patientId: null | string;
   patientName: null | string;
   receivedAt: null | string;
@@ -317,6 +322,7 @@ export interface TechnicalSpecimenRegistrationMaterialVerificationRequest {
 
 export interface CompleteTechnicalSpecimenRegistrationRequest {
   applicationType?: null | string;
+  pathologyNo?: null | string;
   remarks?: null | string;
   terminalCode?: null | string;
 }
@@ -672,7 +678,6 @@ export interface SlicingCompleteRequest {
   embeddingBoxId: string;
   qualityIssue?: null | string;
   remarks?: null | string;
-  slideCount: number;
   sliceCountPerSlide?: null | number;
   sliceThickness?: null | string;
   taskId: string;
@@ -687,6 +692,7 @@ export interface SlicingResult {
 }
 
 export interface SlicingWorkbenchQuery {
+  applicationType?: null | string;
   completedPage: number;
   completedSize: number;
   keyword?: null | string;
@@ -694,6 +700,25 @@ export interface SlicingWorkbenchQuery {
   pendingPage: number;
   pendingSize: number;
   pendingTodayOnly?: boolean;
+}
+
+export interface SlicingSlidePrintRequest {
+  embeddingBoxId: string;
+  mergeAdjacent: boolean;
+  printerCode?: null | string;
+  remarks?: null | string;
+  sourceSlideCount: number;
+  taskId: string;
+  terminalCode?: null | string;
+}
+
+export interface SlicingSlidePrintResult {
+  merged: boolean;
+  printedSlideCount: number;
+  slideIds: string[];
+  slideNos: string[];
+  slicingId: string;
+  taskId: string;
 }
 
 export interface SlicingWorkbenchStats {
@@ -706,7 +731,9 @@ export interface SlicingWorkbenchStats {
 }
 
 export interface SlicingWorkbenchRow {
+  applicationType?: null | string;
   caseId: string;
+  combinedSlide: boolean;
   completedAt?: null | string;
   embeddingBoxId: string;
   embeddingClearRemark?: null | string;
@@ -720,6 +747,7 @@ export interface SlicingWorkbenchRow {
   shiftRemark?: null | string;
   slideId?: null | string;
   slideNo?: null | string;
+  slidePrintStatus?: null | string;
   sliceNotice?: null | string;
   slicingOperatorName?: null | string;
   slicingRemark?: null | string;
@@ -728,6 +756,7 @@ export interface SlicingWorkbenchRow {
   taskId: string;
   taskStatus?: null | string;
   timedOut: boolean;
+  printedSlideCount: number;
 }
 
 export interface SlicingWorkbenchView {
@@ -736,8 +765,12 @@ export interface SlicingWorkbenchView {
   completedTodayList: SlicingWorkbenchRow[];
   completedTotal: number;
   pendingList: SlicingWorkbenchRow[];
+  pendingPrintList: SlicingWorkbenchRow[];
+  pendingPrintTotal: number;
   pendingPage: number;
   pendingSize: number;
+  pendingSliceList: SlicingWorkbenchRow[];
+  pendingSliceTotal: number;
   pendingTotal: number;
   stats: SlicingWorkbenchStats;
 }

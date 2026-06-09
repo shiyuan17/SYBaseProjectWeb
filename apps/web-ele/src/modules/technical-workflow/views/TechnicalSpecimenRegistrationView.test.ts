@@ -366,6 +366,8 @@ function createPendingItem(
     checkItem: 'HE',
     inpatientNo: 'INP-1',
     pathologyNo: null,
+    patientAge: '34',
+    patientGender: '女',
     patientId: 'P-001',
     patientName: '患者甲',
     receivedAt: '2026-06-01T08:00:00',
@@ -554,6 +556,8 @@ async function flushView() {
   await nextTick();
   await Promise.resolve();
   await nextTick();
+  await Promise.resolve();
+  await nextTick();
 }
 
 function findButton(text: string) {
@@ -562,6 +566,14 @@ function findButton(text: string) {
   );
   expect(button).toBeTruthy();
   return button as HTMLButtonElement;
+}
+
+function findPathologyNoInput() {
+  const input = document.querySelector<HTMLInputElement>(
+    '[data-testid="registration-pathology-no-input"]',
+  );
+  expect(input).toBeTruthy();
+  return input as HTMLInputElement;
 }
 
 function mountView() {
@@ -744,6 +756,33 @@ describe('TechnicalSpecimenRegistrationView', () => {
       'APP-3': createConsultationApplicationDetail(),
     };
     consultationWorkbenchByCaseId = {
+      'CASE-1': createConsultationWorkbench({
+        patientInfo: {
+          ...createConsultationWorkbench().patientInfo,
+          age: '34',
+          applicationNo: 'APP-20260601-001',
+          applyDept: '病理科',
+          applyDoctor: '医生甲',
+          clinicalHistory: '常规病史',
+          gender: '女',
+          patientName: '患者甲',
+          specimenType: 'ROUTINE',
+        },
+        surgeryInfo: {
+          ...createConsultationWorkbench().surgeryInfo,
+          clinicalFindings: '术中见胃窦病灶',
+          surgeryName: '胃镜活检',
+        },
+      }),
+      'CASE-2': createConsultationWorkbench({
+        patientInfo: {
+          ...createConsultationWorkbench().patientInfo,
+          age: '36',
+          applicationNo: 'APP-20260601-002',
+          patientName: '患者乙',
+          specimenType: 'FROZEN',
+        },
+      }),
       'CASE-3': createConsultationWorkbench(),
     };
 
@@ -991,6 +1030,10 @@ describe('TechnicalSpecimenRegistrationView', () => {
     expect(document.body.textContent).toContain('季');
     expect(document.body.textContent).toContain('年');
     expect(document.body.textContent).toContain('APP-20260601-001');
+    expect(document.body.textContent).toContain('申请完整信息');
+    expect(document.body.textContent).toContain('手术信息');
+    expect(document.body.textContent).toContain('妇科信息');
+    expect(document.body.textContent).toContain('胃镜活检');
     expect(mockListPendingTechnicalSpecimenRegistrations).toHaveBeenCalledWith({
       applicationType: undefined,
       keyword: undefined,
@@ -1003,9 +1046,10 @@ describe('TechnicalSpecimenRegistrationView', () => {
     expect(mockGetTechnicalSpecimenRegistrationWorkspace).toHaveBeenCalledWith(
       'CASE-1',
     );
+    expect(
+      mockGetTechnicalSpecimenRegistrationApplicationWorkbench,
+    ).toHaveBeenCalledWith('CASE-1');
     expect(document.body.textContent).toContain('图片区');
-    expect(document.body.textContent).not.toContain('申请核对区');
-    expect(document.body.textContent).not.toContain('编辑申请');
 
     app.unmount();
     root.remove();
@@ -1228,7 +1272,10 @@ describe('TechnicalSpecimenRegistrationView', () => {
       '[data-testid="specimen-row-CASE-1"]',
     );
     expect(row?.textContent).toContain('待生成');
-    expect(document.body.textContent).toContain('病理号 待生成');
+    expect(findPathologyNoInput().value).toMatch(/^BL/);
+    expect(document.body.textContent).toContain(
+      `病理号 ${findPathologyNoInput().value}`,
+    );
 
     app.unmount();
     root.remove();
@@ -1262,6 +1309,21 @@ describe('TechnicalSpecimenRegistrationView', () => {
     expect(table).toBeTruthy();
     expect(table?.className).toContain('min-w-');
     expect(table?.className).toContain('whitespace-nowrap');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('shows the pathology number draft input beside submitted specimens', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    const pathologyNoInput = findPathologyNoInput();
+    expect(pathologyNoInput.disabled).toBe(false);
+    expect(pathologyNoInput.value).toMatch(/^BL/);
+    expect(document.body.textContent).toContain(
+      `病理号 ${pathologyNoInput.value}`,
+    );
 
     app.unmount();
     root.remove();
@@ -1316,6 +1378,34 @@ describe('TechnicalSpecimenRegistrationView', () => {
     root.remove();
   });
 
+  it('updates pathology number preview when switching registration application types', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    expect(findPathologyNoInput().value).toMatch(/^BL/);
+
+    document
+      .querySelector<HTMLButtonElement>(
+        '[data-testid="registration-application-type-FROZEN"]',
+      )
+      ?.click();
+    await flushView();
+
+    expect(findPathologyNoInput().value).toMatch(/^BD/);
+
+    document
+      .querySelector<HTMLButtonElement>(
+        '[data-testid="registration-application-type-CONSULTATION"]',
+      )
+      ?.click();
+    await flushView();
+
+    expect(findPathologyNoInput().value).toMatch(/^HZ/);
+
+    app.unmount();
+    root.remove();
+  });
+
   it('resets the selected registration application type when switching cases', async () => {
     const { app, root } = mountView();
     await flushView();
@@ -1350,6 +1440,28 @@ describe('TechnicalSpecimenRegistrationView', () => {
         )
         ?.getAttribute('aria-pressed'),
     ).toBe('true');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('resets pathology number draft when switching cases', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    const pathologyNoInput = findPathologyNoInput();
+    pathologyNoInput.value = 'BL202606080099';
+    pathologyNoInput.dispatchEvent(new Event('input'));
+    await flushView();
+
+    document
+      .querySelector<HTMLButtonElement>('[data-testid="specimen-row-CASE-2"]')
+      ?.click();
+    await flushView();
+    await flushView();
+
+    expect(findPathologyNoInput().value).not.toBe('BL202606080099');
+    expect(findPathologyNoInput().value).toMatch(/^BD/);
 
     app.unmount();
     root.remove();
@@ -2035,6 +2147,11 @@ describe('TechnicalSpecimenRegistrationView', () => {
     );
     expect(remarksInput).toBeNull();
 
+    const pathologyNoInput = findPathologyNoInput();
+    pathologyNoInput.value = 'BL202606080099';
+    pathologyNoInput.dispatchEvent(new Event('input'));
+    await flushView();
+
     findButton('完成登记').click();
     await flushView();
     await flushView();
@@ -2043,6 +2160,7 @@ describe('TechnicalSpecimenRegistrationView', () => {
       'CASE-1',
       {
         applicationType: 'ROUTINE',
+        pathologyNo: 'BL202606080099',
         terminalCode: 'T-M3-SPEC-REG',
       },
     );

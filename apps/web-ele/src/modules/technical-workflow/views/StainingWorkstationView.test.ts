@@ -87,6 +87,7 @@ vi.mock('../components/StainingProcessDialog.vue', () => ({
           ? h('section', { 'data-testid': 'process-dialog' }, [
               h('h2', '染色处理'),
               h('div', props.task?.id ?? ''),
+              h('div', props.task?.objectId ?? ''),
               h(
                 'button',
                 {
@@ -290,7 +291,8 @@ function createTask(
     createdAt: '2026-06-01T08:00:00',
     deadlineAt: null,
     id: 'TASK-1',
-    objectId: 'SLIDE-1',
+    objectDisplayNo: 'A1',
+    objectId: 'SLD-3aa4f9b-2427-413d-bf12-080de1c4a43d',
     objectType: 'SLIDE',
     pathologyNo: 'BL-001',
     patientId: 'P-001',
@@ -414,17 +416,62 @@ describe('StainingWorkstationView', () => {
     ).toBeTruthy();
     expect(document.body.textContent).toContain('待出片列表');
     expect(document.body.textContent).toContain('已完成出片');
+    expect(document.body.textContent).toContain('A1');
     expect(document.body.textContent).toContain('SLIDE-001');
+    expect(document.body.textContent).not.toContain(
+      'SLD-3aa4f9b-2427-413d-bf12-080de1c4a43d',
+    );
     expect(document.body.textContent).toContain('患者甲');
-    expect(document.body.textContent).toContain('待染色总数');
-    expect(document.body.textContent).toContain('待开始');
-    expect(document.body.textContent).toContain('超时风险');
+    expect(
+      [...document.querySelectorAll('.legacy-stat-card__label')].map((item) =>
+        item.textContent?.trim(),
+      ),
+    ).toEqual(['待染色', '超时', '完成']);
+    expect(
+      [...document.querySelectorAll('.legacy-stat-card__value')].map((item) =>
+        item.textContent?.trim(),
+      ),
+    ).toEqual(['1', '0', '1']);
+    expect(document.body.textContent).not.toContain('待染色总数');
+    expect(document.body.textContent).not.toContain('染色中');
+    expect(document.body.textContent).not.toContain('待开始');
+    expect(document.body.textContent).not.toContain('超时风险');
     expect(document.body.textContent).not.toContain('未出片');
     expect(document.body.textContent).toContain('周永坚');
     expect(document.body.textContent).toContain('2026-06-03 16:35:50');
     expect(document.body.textContent).toContain('2026-06-03 16:38:32');
     expect(findButton('扫码清零').disabled).toBe(true);
     expect(findButton('打印清零码').disabled).toBe(true);
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('keeps slide object id for staining actions while displaying block number', async () => {
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [
+        createTask({
+          objectDisplayNo: 'A2',
+          objectId: 'SLD-action-slide-id',
+          taskStatus: 'IN_PROGRESS',
+        }),
+      ],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+
+    const { app, root } = mountView();
+    await flushView();
+
+    expect(document.body.textContent).toContain('A2');
+    expect(document.body.textContent).not.toContain('SLD-action-slide-id');
+
+    findButton('染色出片(F9)').click();
+    await flushView();
+
+    expect(document.body.textContent).toContain('染色处理');
+    expect(document.body.textContent).toContain('SLD-action-slide-id');
 
     app.unmount();
     root.remove();

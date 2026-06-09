@@ -24,6 +24,7 @@ const {
   buildingOptions,
   canBind,
   canExportExcel,
+  canPrintBoundBarcodes,
   canPreprint,
   canRetryLabel,
   canUnbind,
@@ -31,6 +32,7 @@ const {
   handleBindBarcode,
   handleExportExcel,
   handlePreprintBarcodes,
+  handlePrintBoundBarcodes,
   handleReset,
   handleRetryLabel,
   handleSearch,
@@ -141,6 +143,12 @@ const {
       <ElButton :disabled="!canRetryLabel" @click="handleRetryLabel">
         补打标本标签
       </ElButton>
+      <ElButton
+        :disabled="!canPrintBoundBarcodes"
+        @click="handlePrintBoundBarcodes"
+      >
+        打印
+      </ElButton>
       <ElButton :disabled="!canExportExcel" @click="handleExportExcel">
         导出 Excel
       </ElButton>
@@ -166,6 +174,11 @@ const {
       </ElTableColumn>
       <ElTableColumn label="申请单" min-width="120" prop="applicationNo" />
       <ElTableColumn label="标本编号" min-width="120" prop="specimenNo" />
+      <ElTableColumn label="标本条码" min-width="160">
+        <template #default="{ row }">
+          {{ formatNullable(row.barcode) }}
+        </template>
+      </ElTableColumn>
       <ElTableColumn label="性别" min-width="80">
         <template #default="{ row }">
           {{ formatNullable(row.patientGender) }}
@@ -177,11 +190,6 @@ const {
         </template>
       </ElTableColumn>
       <ElTableColumn label="标本名称" min-width="180" prop="specimenName" />
-      <ElTableColumn label="标本条码" min-width="160">
-        <template #default="{ row }">
-          {{ formatNullable(row.barcode) }}
-        </template>
-      </ElTableColumn>
       <ElTableColumn label="类型" min-width="100">
         <template #default="{ row }">
           {{ formatNullable(row.specimenType) }}

@@ -293,6 +293,7 @@ function mapSpecimenTrackingSummary(
     ...specimen,
     abnormalReason: specimen.abnormalReason ?? null,
     abnormalType: specimen.abnormalType ?? null,
+    barcode: specimen.barcode ?? null,
     barcodeBindingStatus: specimen.barcodeBindingStatus ?? null,
     checkInStatus: specimen.checkInStatus ?? null,
     checkedInAt: specimen.checkedInAt ?? null,

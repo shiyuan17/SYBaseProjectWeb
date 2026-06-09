@@ -105,6 +105,7 @@ export interface WorkbenchGynecologyInfo {
 }
 
 export interface WorkbenchSpecimenItem {
+  barcode?: string;
   id: string;
   quantity: number;
   specimenName: string;

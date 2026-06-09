@@ -99,6 +99,9 @@ describe('FixationVerifyTable', () => {
 
     expect(wrapper.container.textContent).toContain('AP-001');
     expect(wrapper.container.textContent).toContain('离体确认');
+    expect(
+      wrapper.container.querySelector('.specimen-workflow-row--actionable'),
+    ).not.toBeNull();
 
     wrapper.container.querySelector<HTMLButtonElement>('button')?.click();
     await nextTick();
@@ -121,6 +124,9 @@ describe('FixationVerifyTable', () => {
 
     expect(wrapper.container.textContent).toContain('离体');
     expect(wrapper.container.textContent).toContain('离体确认');
+    expect(
+      wrapper.container.querySelector('.specimen-workflow-row--completed'),
+    ).not.toBeNull();
     expect(
       wrapper.container.querySelector<HTMLButtonElement>('button')?.disabled,
     ).toBe(true);

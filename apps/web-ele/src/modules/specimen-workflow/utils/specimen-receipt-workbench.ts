@@ -63,13 +63,19 @@ export function resolveReceiptWorkbenchExactMatches(
 }
 
 function resolveHistoricalReceiptStatus(specimen: SpecimenManagementListItem) {
-  return (
+  const receiptStatus =
     (
       specimen as SpecimenManagementListItem & {
         receiptStatus?: null | string;
       }
-    ).receiptStatus ?? null
-  );
+    ).receiptStatus ?? null;
+  if (normalizeText(receiptStatus)) {
+    return receiptStatus;
+  }
+
+  return normalizeText(specimen.specimenStatus).toUpperCase() === 'RECEIVED'
+    ? 'RECEIVED'
+    : null;
 }
 
 function resolveReceiptWorkbenchQueueStatus(

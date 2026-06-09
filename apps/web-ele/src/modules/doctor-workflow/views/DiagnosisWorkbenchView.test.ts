@@ -726,14 +726,10 @@ function findButton(text: string) {
   return button;
 }
 
-function findButtonByLabel(label: string) {
-  const button = document.querySelector<HTMLButtonElement>(
-    `button[aria-label="${label}"]`,
+function getButtonTexts() {
+  return [...document.querySelectorAll<HTMLButtonElement>('button')].map(
+    (button) => button.textContent?.trim() ?? '',
   );
-  if (!button) {
-    throw new Error(`Missing button label: ${label}`);
-  }
-  return button;
 }
 
 function findByTestId<T extends HTMLElement = HTMLElement>(testId: string) {
@@ -742,6 +738,17 @@ function findByTestId<T extends HTMLElement = HTMLElement>(testId: string) {
     throw new Error(`Missing test id: ${testId}`);
   }
   return element;
+}
+
+async function clickMaterialTab(label: string) {
+  const tab = [
+    ...document.querySelectorAll<HTMLElement>('.el-tabs__item, [role="tab"]'),
+  ].find((item) => item.textContent?.includes(label));
+  if (!tab) {
+    throw new Error(`Missing material tab: ${label}`);
+  }
+  tab.click();
+  await flushAsyncWork();
 }
 
 function getOrderPaneText() {
@@ -835,6 +842,8 @@ describe('DiagnosisWorkbenchView', () => {
     const wrapper = await mountView();
 
     expect(wrapper.text()).toContain('患者信息');
+    expect(wrapper.text()).toContain('医嘱信息');
+    expect(wrapper.text()).toContain('实时预览打印');
     expect(wrapper.text()).toContain('历史病理');
     expect(wrapper.text()).toContain('PACS检查');
     expect(wrapper.text()).toContain('报告痕迹');
@@ -848,6 +857,38 @@ describe('DiagnosisWorkbenchView', () => {
     expect(wrapper.text()).not.toContain('材料与切片');
     expect(wrapper.text()).not.toContain('会诊与修订');
     expect(wrapper.text()).not.toContain('特检医嘱/收费');
+    expect(getButtonTexts()).not.toContain('采图');
+    expect(getButtonTexts()).not.toContain('医嘱');
+    expect(findByTestId('diagnosis-workbench-resizer-left')).toBeTruthy();
+    expect(findByTestId('diagnosis-workbench-resizer-right')).toBeTruthy();
+
+    wrapper.unmount();
+  });
+
+  it('renders live print preview tab from the editable report draft', async () => {
+    const wrapper = await mountView();
+    const patientNameEditor = document.querySelector<HTMLInputElement>(
+      '#report-meta-patientName',
+    );
+    const diagnosisEditor = document.querySelector<HTMLTextAreaElement>(
+      '[data-testid="diagnosis-report-diagnosis-editor"]',
+    );
+
+    patientNameEditor!.value = '实时预览姓名';
+    patientNameEditor!.dispatchEvent(new Event('input'));
+    diagnosisEditor!.value = '实时预览诊断';
+    diagnosisEditor!.dispatchEvent(new Event('input'));
+    await flushAsyncWork();
+
+    await clickMaterialTab('实时预览打印');
+
+    const preview = document.querySelector(
+      '[data-testid="diagnosis-workbench-live-print-preview"]',
+    );
+    expect(preview).toBeTruthy();
+    expect(preview?.textContent).toContain('南方医科大学南方医院病理科');
+    expect(preview?.textContent).toContain('实时预览姓名');
+    expect(preview?.textContent).toContain('实时预览诊断');
 
     wrapper.unmount();
   });
@@ -1044,11 +1085,11 @@ describe('DiagnosisWorkbenchView', () => {
     wrapper.unmount();
   });
 
-  it('switches the material pane to capture mode and imports diagnosis images', async () => {
+  it('renders diagnosis capture under patient info and imports diagnosis images', async () => {
     const wrapper = await mountView();
 
-    findButton('采图').click();
-    await flushAsyncWork();
+    expect(getButtonTexts()).not.toContain('采图');
+    await clickMaterialTab('患者信息');
 
     expect(wrapper.text()).toContain('采图区');
     expect(wrapper.text()).toContain('已采图像');
@@ -1072,32 +1113,13 @@ describe('DiagnosisWorkbenchView', () => {
     expect(wrapper.text()).toContain('diagnosis-upload.jpg');
     expect(wrapper.text()).toContain('当前诊断');
 
-    findButtonByLabel('关闭采图区').click();
-    await flushAsyncWork();
-
-    expect(wrapper.text()).toContain('诊断材料区');
-    expect(wrapper.text()).toContain('患者信息');
-
-    findButton('采图').click();
-    await flushAsyncWork();
-    expect(wrapper.text()).toContain('采图区');
-
-    findButton('采图').click();
-    await flushAsyncWork();
-    expect(wrapper.text()).toContain('诊断材料区');
-    expect(wrapper.text()).not.toContain('采图区');
-
     wrapper.unmount();
   });
 
-  it('switches the material pane to medical order mode from the queue action', async () => {
+  it('renders medical order as the first diagnostic material tab', async () => {
     const wrapper = await mountView();
 
-    expect(wrapper.text()).not.toContain('特检医嘱');
-
-    findButton('医嘱').click();
-    await flushAsyncWork();
-
+    expect(getButtonTexts()).not.toContain('医嘱');
     expect(mockRouter.push).not.toHaveBeenCalled();
     const orderPane = document.querySelector(
       '[data-testid="diagnosis-workbench-medical-order-pane"]',
@@ -1123,9 +1145,6 @@ describe('DiagnosisWorkbenchView', () => {
 
   it('filters medical order candidates by dictionary category', async () => {
     const wrapper = await mountView();
-
-    findButton('医嘱').click();
-    await flushAsyncWork();
 
     expect(getOrderPaneText()).toContain('免疫组化');
     expect(getOrderPaneText()).toContain('Fish');
@@ -1162,9 +1181,6 @@ describe('DiagnosisWorkbenchView', () => {
   it('keeps medical order group and letter filters mutually exclusive', async () => {
     const wrapper = await mountView();
 
-    findButton('医嘱').click();
-    await flushAsyncWork();
-
     findByTestId('medical-order-template-group-FISH').click();
     await flushAsyncWork();
     findByTestId('medical-order-letter-F').click();
@@ -1198,9 +1214,6 @@ describe('DiagnosisWorkbenchView', () => {
   it('does not show fallback medical order candidates outside dictionaries', async () => {
     const wrapper = await mountView();
 
-    findButton('医嘱').click();
-    await flushAsyncWork();
-
     findByTestId('medical-order-template-group-DNA').click();
     await flushAsyncWork();
 
@@ -1217,9 +1230,6 @@ describe('DiagnosisWorkbenchView', () => {
     listMedicalOrderDictsMock.mockResolvedValueOnce([]);
     const wrapper = await mountView();
 
-    findButton('医嘱').click();
-    await flushAsyncWork();
-
     expect(getOrderPaneText()).toContain('暂无符合条件的医嘱项目');
     expect(getOrderPaneText()).not.toContain('EGFR基因突变');
     expect(getOrderPaneText()).not.toContain('快速切片');
@@ -1234,9 +1244,6 @@ describe('DiagnosisWorkbenchView', () => {
       'PERM_M4_MEDICAL_ORDER_CREATE',
     ];
     const wrapper = await mountView();
-
-    findButton('医嘱').click();
-    await flushAsyncWork();
 
     findByTestId('medical-order-candidate-item-ITEM-001')
       .querySelector<HTMLButtonElement>('button')
@@ -1277,15 +1284,44 @@ describe('DiagnosisWorkbenchView', () => {
     wrapper.unmount();
   });
 
+  it('hides pathology number in medical order block dropdown and item list', async () => {
+    mockAccessStore.accessCodes = [
+      'PERM_M4_WORKBENCH_QUERY',
+      'PERM_M4_MEDICAL_ORDER_CREATE',
+    ];
+    const initialWorkbench = workbenchFixtureByCaseId['CASE-001']!;
+    getDiagnosticWorkbenchMock.mockResolvedValueOnce({
+      ...initialWorkbench,
+      blocks: [
+        {
+          ...initialWorkbench.blocks[0]!,
+          blockCode: 'F2600036-A1',
+          description: 'F2600036 胃窦组织',
+        },
+      ],
+      medicalOrders: [
+        {
+          ...initialWorkbench.medicalOrders[0]!,
+          orderContent: 'HE 染色（蜡块: F2600036-A1 胃窦组织）',
+        },
+      ],
+    });
+    const wrapper = await mountView();
+
+    const orderPaneText = getOrderPaneText();
+    expect(orderPaneText).toContain('A1 胃窦组织');
+    expect(orderPaneText).toContain('HE 染色（蜡块: A1 胃窦组织）');
+    expect(orderPaneText).not.toContain('F2600036');
+
+    wrapper.unmount();
+  });
+
   it('creates a medical order from a selected order item and refreshes the workbench', async () => {
     mockAccessStore.accessCodes = [
       'PERM_M4_WORKBENCH_QUERY',
       'PERM_M4_MEDICAL_ORDER_CREATE',
     ];
     const wrapper = await mountView();
-
-    findButton('医嘱').click();
-    await flushAsyncWork();
 
     const orderItemButton = [...document.querySelectorAll('button')].find(
       (button) => button.textContent?.includes('【特殊染色】'),
@@ -1324,9 +1360,6 @@ describe('DiagnosisWorkbenchView', () => {
     ];
     const wrapper = await mountView();
 
-    findButton('医嘱').click();
-    await flushAsyncWork();
-
     const packageButton = [...document.querySelectorAll('button')].find(
       (button) => button.textContent?.includes('【免疫组化套餐2项】'),
     ) as HTMLElement;
@@ -1359,9 +1392,6 @@ describe('DiagnosisWorkbenchView', () => {
   it('opens charge management dialog from the medical order pane', async () => {
     const wrapper = await mountView();
 
-    findButton('医嘱').click();
-    await flushAsyncWork();
-
     findButton('收费管理').click();
     await flushAsyncWork();
 
@@ -1381,9 +1411,6 @@ describe('DiagnosisWorkbenchView', () => {
       'PERM_M4_MEDICAL_ORDER_CREATE',
     ];
     const wrapper = await mountView();
-
-    findButton('医嘱').click();
-    await flushAsyncWork();
 
     expect(getOrderPaneText()).toContain('请先从下方待选列表添加医嘱草稿');
 
@@ -1408,8 +1435,6 @@ describe('DiagnosisWorkbenchView', () => {
       .mockResolvedValueOnce(chargedWorkbench);
     const wrapper = await mountView();
 
-    findButton('医嘱').click();
-    await flushAsyncWork();
     findButton('执行收费').click();
     await flushAsyncWork();
 
@@ -1445,8 +1470,6 @@ describe('DiagnosisWorkbenchView', () => {
     });
     const wrapper = await mountView();
 
-    findButton('医嘱').click();
-    await flushAsyncWork();
     document
       .querySelector<HTMLElement>(
         '.medical-order-table .el-table__body .el-checkbox',
@@ -1483,8 +1506,6 @@ describe('DiagnosisWorkbenchView', () => {
       .mockResolvedValueOnce(chargedWorkbench);
     const wrapper = await mountView();
 
-    findButton('医嘱').click();
-    await flushAsyncWork();
     findButton('收费管理').click();
     await flushAsyncWork();
     findButton('确认完成收费').click();

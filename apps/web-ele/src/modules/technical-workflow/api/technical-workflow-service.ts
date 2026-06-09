@@ -18,6 +18,7 @@ import type {
   GrossingMediaAssetUploadResponse,
   GrossingResult,
   GrossingWorkbenchContext,
+  PendingTechnicalSpecimenRegistrationItem,
   PendingTechnicalSpecimenRegistrationPage,
   PendingTechnicalSpecimenRegistrationQuery,
   PendingTechnicalTaskPage,
@@ -27,6 +28,8 @@ import type {
   SaveTechnicalSpecimenRegistrationMaterialsRequest,
   SlicingCompleteRequest,
   SlicingResult,
+  SlicingSlidePrintRequest,
+  SlicingSlidePrintResult,
   SlicingWorkbenchQuery,
   SlicingWorkbenchRow,
   SlicingWorkbenchStats,
@@ -70,6 +73,8 @@ type SlicingWorkbenchResponse = Partial<
 > & {
   completedTodayList?: Array<Partial<SlicingWorkbenchRow>>;
   pendingList?: Array<Partial<SlicingWorkbenchRow>>;
+  pendingPrintList?: Array<Partial<SlicingWorkbenchRow>>;
+  pendingSliceList?: Array<Partial<SlicingWorkbenchRow>>;
   stats?: Partial<SlicingWorkbenchStats>;
 };
 type GrossingWorkbenchContextResponse = Partial<
@@ -205,7 +210,9 @@ function mapSlicingWorkbenchRow(
   response: Partial<SlicingWorkbenchRow>,
 ): SlicingWorkbenchRow {
   return {
+    applicationType: response.applicationType ?? null,
     caseId: response.caseId ?? '',
+    combinedSlide: response.combinedSlide ?? false,
     completedAt: response.completedAt ?? null,
     embeddingBoxId: response.embeddingBoxId ?? '',
     embeddingClearRemark: response.embeddingClearRemark ?? null,
@@ -219,6 +226,7 @@ function mapSlicingWorkbenchRow(
     shiftRemark: response.shiftRemark ?? null,
     slideId: response.slideId ?? null,
     slideNo: response.slideNo ?? null,
+    slidePrintStatus: response.slidePrintStatus ?? null,
     sliceNotice: response.sliceNotice ?? null,
     slicingOperatorName: response.slicingOperatorName ?? null,
     slicingRemark: response.slicingRemark ?? null,
@@ -227,6 +235,7 @@ function mapSlicingWorkbenchRow(
     taskId: response.taskId ?? '',
     taskStatus: response.taskStatus ?? null,
     timedOut: response.timedOut ?? false,
+    printedSlideCount: response.printedSlideCount ?? 0,
   };
 }
 
@@ -243,8 +252,18 @@ export function mapSlicingWorkbenchResponse(
     pendingList: (response.pendingList ?? []).map((row) =>
       mapSlicingWorkbenchRow(row),
     ),
+    pendingPrintList: (
+      response.pendingPrintList ??
+      response.pendingList ??
+      []
+    ).map((row) => mapSlicingWorkbenchRow(row)),
+    pendingPrintTotal: response.pendingPrintTotal ?? response.pendingTotal ?? 0,
     pendingPage: response.pendingPage ?? 1,
     pendingSize: response.pendingSize ?? 20,
+    pendingSliceList: (response.pendingSliceList ?? []).map((row) =>
+      mapSlicingWorkbenchRow(row),
+    ),
+    pendingSliceTotal: response.pendingSliceTotal ?? 0,
     pendingTotal: response.pendingTotal ?? 0,
     stats: {
       completedDeptTodayCount: response.stats?.completedDeptTodayCount ?? 0,
@@ -311,10 +330,35 @@ export function mapPendingTechnicalSpecimenRegistrationPageResponse(
   response: PendingTechnicalSpecimenRegistrationPageResponse,
 ): PendingTechnicalSpecimenRegistrationPage {
   return {
-    items: response.items ?? [],
+    items: (response.items ?? []).map((item) =>
+      mapPendingTechnicalSpecimenRegistrationItem(item),
+    ),
     page: response.page ?? 1,
     size: response.size ?? 20,
     total: response.total ?? 0,
+  };
+}
+
+function mapPendingTechnicalSpecimenRegistrationItem(
+  response: Partial<PendingTechnicalSpecimenRegistrationItem>,
+): PendingTechnicalSpecimenRegistrationItem {
+  return {
+    applicationId: response.applicationId ?? '',
+    applicationNo: response.applicationNo ?? '',
+    applicationType: response.applicationType ?? null,
+    caseId: response.caseId ?? '',
+    checkItem: response.checkItem ?? null,
+    inpatientNo: response.inpatientNo ?? null,
+    pathologyNo: response.pathologyNo ?? null,
+    patientAge: response.patientAge ?? null,
+    patientGender: response.patientGender ?? null,
+    patientId: response.patientId ?? null,
+    patientName: response.patientName ?? null,
+    receivedAt: response.receivedAt ?? null,
+    registeredAt: response.registeredAt ?? null,
+    registeredByName: response.registeredByName ?? null,
+    registrationStatus: response.registrationStatus ?? null,
+    submittingDepartmentName: response.submittingDepartmentName ?? null,
   };
 }
 
@@ -423,22 +467,26 @@ export function mapTechnicalSpecimenRegistrationWorkspaceResponse(
       fileName: item.fileName ?? null,
       fileUrl: item.fileUrl ?? '',
     })),
-    pendingSummary: response.pendingSummary ?? {
-      applicationId: '',
-      applicationNo: '',
-      applicationType: null,
-      caseId: '',
-      checkItem: null,
-      inpatientNo: null,
-      pathologyNo: null,
-      patientId: null,
-      patientName: null,
-      receivedAt: null,
-      registeredAt: null,
-      registeredByName: null,
-      registrationStatus: null,
-      submittingDepartmentName: null,
-    },
+    pendingSummary: response.pendingSummary
+      ? mapPendingTechnicalSpecimenRegistrationItem(response.pendingSummary)
+      : {
+          applicationId: '',
+          applicationNo: '',
+          applicationType: null,
+          caseId: '',
+          checkItem: null,
+          inpatientNo: null,
+          pathologyNo: null,
+          patientAge: null,
+          patientGender: null,
+          patientId: null,
+          patientName: null,
+          receivedAt: null,
+          registeredAt: null,
+          registeredByName: null,
+          registrationStatus: null,
+          submittingDepartmentName: null,
+        },
   };
 }
 
@@ -761,6 +809,13 @@ export async function startSlicing(data: TechnicalTaskStartRequest) {
 
 export async function completeSlicing(data: SlicingCompleteRequest) {
   return requestClient.post<SlicingResult>('/v1/slicings/complete', data);
+}
+
+export async function printSlicingSlides(data: SlicingSlidePrintRequest) {
+  return requestClient.post<SlicingSlidePrintResult>(
+    '/v1/slicings/slide-print',
+    data,
+  );
 }
 
 export async function getSlicingWorkbench(params: SlicingWorkbenchQuery) {

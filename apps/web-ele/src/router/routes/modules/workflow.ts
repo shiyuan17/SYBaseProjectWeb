@@ -63,6 +63,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
           import('#/modules/specimen-workflow/views/SubmissionRegistrationView.vue'),
         meta: {
           authority: SUBMISSION_WORKBENCH_AUTHORITIES,
+          hideInMenu: true,
           icon: 'carbon:list-boxes',
           title: '申请与登记',
         },
@@ -75,7 +76,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         meta: {
           authority: SUBMISSION_WORKBENCH_AUTHORITIES,
           icon: 'carbon:workspace',
-          title: '申请登记工作台',
+          title: '标本采集',
         },
         name: 'ApplicationRegistrationWorkbench',
         path: '/workflow/application-registration-workbench',

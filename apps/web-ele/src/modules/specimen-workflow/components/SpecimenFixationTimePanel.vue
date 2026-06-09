@@ -19,6 +19,12 @@ import {
   formatFixationStatus,
   formatNullable,
 } from '../utils/format';
+import {
+  resolveFixationWorkflowRowTone,
+  resolveSpecimenWorkflowRowClassName,
+} from '../utils/specimen-workflow-row-tone';
+
+import '../styles/specimen-workflow-row-tone.css';
 
 const {
   batchRetryResult,
@@ -45,6 +51,16 @@ const {
   submitRetryLabel,
   workflowReferenceOptions,
 } = useSpecimenFixationTimePanel();
+
+function resolveRowClassName({
+  row,
+}: {
+  row: (typeof queueItems.value)[number];
+}) {
+  return resolveSpecimenWorkflowRowClassName(
+    resolveFixationWorkflowRowTone(row),
+  );
+}
 </script>
 
 <template>
@@ -77,7 +93,7 @@ const {
       <ElInput
         v-model="scanInput"
         clearable
-        placeholder="请输入标本号"
+        placeholder="请输入标本号或条码"
         style="width: 260px"
         @keyup.enter="handleCompleteFixationByScan"
       />
@@ -110,6 +126,7 @@ const {
     <ElTable
       v-loading="loading"
       :data="queueItems"
+      :row-class-name="resolveRowClassName"
       border
       row-key="specimenId"
       @selection-change="handleSelectionChange"

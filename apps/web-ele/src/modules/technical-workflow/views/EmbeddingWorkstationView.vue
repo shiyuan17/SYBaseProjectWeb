@@ -569,6 +569,10 @@ async function handleSearch() {
   await refreshWorkstation();
 }
 
+function resolveEmbeddingCompletionRemarks(task: PendingTechnicalTaskItem) {
+  return task.remarks?.trim() || operatorForm.remarks.trim() || null;
+}
+
 async function completeEmbeddingTask(
   task: PendingTechnicalTaskItem,
   usePanelForm: boolean,
@@ -592,8 +596,9 @@ async function completeEmbeddingTask(
   const samplingBlockId = usePanelForm
     ? completeForm.samplingBlockId.trim()
     : getSamplingBlockIdFromTask(task);
+  const operatorPayload = normalizeTechnicalOperatorPayload(operatorForm);
   return completeEmbedding({
-    ...normalizeTechnicalOperatorPayload(operatorForm),
+    ...operatorPayload,
     blockCount: completeForm.blockCount,
     deviceCode: completeForm.deviceCode.trim() || null,
     embeddingBoxNo: usePanelForm
@@ -605,6 +610,7 @@ async function completeEmbeddingTask(
     samplingEvaluation:
       completeForm.samplingEvaluation.trim() || DEFAULT_SAMPLING_EVALUATION,
     sliceNotice: completeForm.sliceNotice.trim() || null,
+    remarks: resolveEmbeddingCompletionRemarks(task),
     taskId: task.id,
   });
 }

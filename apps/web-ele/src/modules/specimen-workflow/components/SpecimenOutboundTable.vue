@@ -8,7 +8,13 @@ import {
   formatNullable,
   formatSpecimenStatus,
 } from '../utils/format';
+import {
+  resolveOutboundWorkflowRowTone,
+  resolveSpecimenWorkflowRowClassName,
+} from '../utils/specimen-workflow-row-tone';
 import { canSelectSpecimenOutboundRow } from '../utils/transport-handover';
+
+import '../styles/specimen-workflow-row-tone.css';
 
 defineProps<{
   items: SpecimenOutboundDisplayItem[];
@@ -37,12 +43,19 @@ function resolveSpecimenStatusTagType(status?: null | string) {
     }
   }
 }
+
+function resolveRowClassName({ row }: { row: SpecimenOutboundDisplayItem }) {
+  return resolveSpecimenWorkflowRowClassName(
+    resolveOutboundWorkflowRowTone(row),
+  );
+}
 </script>
 
 <template>
   <ElTable
     v-loading="loading"
     :data="items"
+    :row-class-name="resolveRowClassName"
     border
     row-key="specimenId"
     @selection-change="emit('selectionChange', $event)"

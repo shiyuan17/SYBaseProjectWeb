@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import type { DiagnosticWorkbenchView } from '../types/doctor-workflow';
+import type {
+  DiagnosticReportPrintPreview,
+  DiagnosticWorkbenchView,
+} from '../types/doctor-workflow';
 
 import { computed, reactive, ref, watch } from 'vue';
 
@@ -124,6 +127,10 @@ type StructuredReportTemplateConfig = {
 const props = defineProps<{
   loading: boolean;
   workbench: DiagnosticWorkbenchView | null;
+}>();
+
+const emit = defineEmits<{
+  previewChange: [preview: DiagnosticReportPrintPreview | null];
 }>();
 
 const printPreviewVisible = defineModel<boolean>('printPreviewVisible', {
@@ -755,6 +762,8 @@ const reportTemplateTreeProps = {
   label: 'label',
 };
 const templateStageOptions = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII'];
+const reportPrintNote =
+  '注：该报告附加手写签名后有效。送检医生对本诊断有疑问，请立即与本科有关医师联系。';
 
 function draftValue(value?: null | string) {
   return formatNullable(value);
@@ -849,6 +858,59 @@ watch(
       props.workbench?.currentReport?.microscopicExam ?? '';
     reportDraft.finalDiagnosis =
       props.workbench?.currentReport?.finalDiagnosis ?? '';
+  },
+  { immediate: true },
+);
+
+const printPreviewSnapshot = computed<DiagnosticReportPrintPreview | null>(
+  () => {
+    if (!props.workbench) {
+      return null;
+    }
+
+    const reportStyle = activeReportStyle.value;
+    return {
+      accentColor: reportStyle.accentColor,
+      deliveredAt: reportDraft.deliveredAt,
+      footerFields: [
+        { label: '审核医师:', value: reviewDoctorLabel.value },
+        { label: '诊断医师:', value: diagnosisDoctorLabel.value },
+        { label: '报告日期:', value: reportDateLabel.value },
+      ],
+      hospitalName: reportStyle.hospitalName,
+      metaFields: reportMetaFields.map((field) => ({
+        class: field.class,
+        label: field.label,
+        value: reportDraft[field.model],
+      })),
+      note: reportPrintNote,
+      reportNo: reportDraft.reportNo,
+      reportTitle: reportStyle.reportTitle,
+      sections: [
+        {
+          label: reportStyle.sectionLabels.grossExam,
+          minHeight: 82,
+          value: reportDraft.grossExam,
+        },
+        {
+          label: reportStyle.sectionLabels.microscopicExam,
+          minHeight: 160,
+          value: reportDraft.microscopicExam,
+        },
+        {
+          label: reportStyle.sectionLabels.finalDiagnosis,
+          minHeight: 92,
+          value: reportDraft.finalDiagnosis,
+        },
+      ],
+    };
+  },
+);
+
+watch(
+  printPreviewSnapshot,
+  (snapshot) => {
+    emit('previewChange', snapshot);
   },
   { immediate: true },
 );
@@ -1381,7 +1443,7 @@ function buildReportPrintDocument() {
         ${buildPrintField('诊断医师:', diagnosisDoctorLabel.value)}
         ${buildPrintField('报告日期:', reportDateLabel.value)}
       </footer>
-      <div class="note">注：该报告附加手写签名后有效。送检医生对本诊断有疑问，请立即与本科有关医师联系。</div>
+      <div class="note">${escapeHtml(reportPrintNote)}</div>
     </article>
   </body>
 </html>`;

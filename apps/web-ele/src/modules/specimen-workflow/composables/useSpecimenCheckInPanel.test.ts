@@ -431,7 +431,7 @@ describe('useSpecimenCheckInPanel', () => {
     vi.clearAllMocks();
   });
 
-  it('supports quick check-in and queue state updates', async () => {
+  it('marks the matched specimen as check-in unsaved after quick check-in', async () => {
     const wrapper = mountComposable();
     const state = wrapper.getState();
     if (!state) {
@@ -454,6 +454,7 @@ describe('useSpecimenCheckInPanel', () => {
       specimenNo: 'SP-001',
     });
     state.scanInput.value = 'SP-001';
+    state.scanInput.value = 'SP-001';
     await state.handleQuickCheckIn();
     await flushComposable();
 
@@ -463,14 +464,24 @@ describe('useSpecimenCheckInPanel', () => {
       state.queueItems.value.some(
         (item) =>
           item.specimenId === 'SPEC-CHECKIN' &&
-          item.displayCheckInStatus === '入库未保存',
+          item.displayCheckInStatus === '入库未保存' &&
+          item.checkInStatusTagType === 'warning',
       ),
     ).toBe(true);
     expect(
       state.queueItems.value.some(
-        (item) => item.specimenId === 'SPEC-CHECKIN-SIBLING',
+        (item) =>
+          item.specimenId === 'SPEC-CHECKIN-SIBLING' &&
+          item.displayCheckInStatus === '待入库' &&
+          item.checkInStatusTagType === 'info',
       ),
     ).toBe(true);
+    expect(successMock).toHaveBeenCalledWith('已加入入库未保存');
+
+    await state.handleQuickCheckIn();
+    await flushComposable();
+
+    expect(state.queueItems.value).toHaveLength(2);
 
     await state.handlePrimaryCheckIn();
     await flushComposable();
@@ -486,14 +497,9 @@ describe('useSpecimenCheckInPanel', () => {
         terminalCode: null,
       }),
     );
-    expect(checkInSpecimenMock).toHaveBeenCalledWith(
+    expect(checkInSpecimenMock).not.toHaveBeenCalledWith(
       'BC-CHECKIN-SIBLING',
-      expect.objectContaining({
-        operatorName: 'Alt User',
-        operatorUserId: 'USER-ALT',
-        operatorVerificationToken: 'TOKEN-VERIFY',
-        specimenBarcode: 'BC-CHECKIN-SIBLING',
-      }),
+      expect.anything(),
     );
     expect(state.queueItems.value).toHaveLength(2);
     expect(
@@ -505,7 +511,83 @@ describe('useSpecimenCheckInPanel', () => {
           item.surgeryName === '惠侨楼 - 手术室 2',
       ),
     ).toBe(true);
-    expect(state.pendingCount.value).toBe(0);
+    expect(state.pendingCount.value).toBe(1);
+
+    wrapper.destroy();
+  });
+
+  it('marks the second specimen when its specimen number is scanned', async () => {
+    const wrapper = mountComposable();
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    state.scanInput.value = 'SP-001-2';
+    await state.handleQuickCheckIn();
+    await flushComposable();
+
+    expect(state.queueItems.value).toHaveLength(2);
+    expect(
+      state.queueItems.value.find((item) => item.specimenId === 'SPEC-CHECKIN')
+        ?.displayCheckInStatus,
+    ).toBe('待入库');
+    expect(
+      state.queueItems.value.find((item) => item.specimenId === 'SPEC-CHECKIN')
+        ?.checkInStatusTagType,
+    ).toBe('info');
+    expect(
+      state.queueItems.value.find(
+        (item) => item.specimenId === 'SPEC-CHECKIN-SIBLING',
+      )?.displayCheckInStatus,
+    ).toBe('入库未保存');
+    expect(
+      state.queueItems.value.find(
+        (item) => item.specimenId === 'SPEC-CHECKIN-SIBLING',
+      )?.checkInStatusTagType,
+    ).toBe('warning');
+
+    await state.handleQuickCheckIn();
+    await flushComposable();
+
+    expect(state.queueItems.value).toHaveLength(2);
+
+    wrapper.destroy();
+  });
+
+  it('keeps previously scanned specimens unsaved when another specimen is scanned', async () => {
+    const wrapper = mountComposable();
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    state.scanInput.value = 'SP-001';
+    await state.handleQuickCheckIn();
+    await flushComposable();
+    state.scanInput.value = 'SP-001-2';
+    await state.handleQuickCheckIn();
+    await flushComposable();
+
+    expect(state.queueItems.value).toHaveLength(2);
+    expect(
+      state.queueItems.value.find((item) => item.specimenId === 'SPEC-CHECKIN')
+        ?.displayCheckInStatus,
+    ).toBe('入库未保存');
+    expect(
+      state.queueItems.value.find((item) => item.specimenId === 'SPEC-CHECKIN')
+        ?.checkInStatusTagType,
+    ).toBe('warning');
+    expect(
+      state.queueItems.value.find(
+        (item) => item.specimenId === 'SPEC-CHECKIN-SIBLING',
+      )?.displayCheckInStatus,
+    ).toBe('入库未保存');
+    expect(
+      state.queueItems.value.find(
+        (item) => item.specimenId === 'SPEC-CHECKIN-SIBLING',
+      )?.checkInStatusTagType,
+    ).toBe('warning');
 
     wrapper.destroy();
   });
@@ -537,10 +619,37 @@ describe('useSpecimenCheckInPanel', () => {
     expect(checkInSpecimenMock).toHaveBeenCalledWith(
       'BC-CHECKIN',
       expect.objectContaining({
-        operatorVerificationToken: 'TOKEN-VERIFY',
         specimenBarcode: 'BC-CHECKIN',
       }),
     );
+
+    wrapper.destroy();
+  });
+
+  it('clears the queue without resetting the selected operator', async () => {
+    const wrapper = mountComposable();
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    state.handleOperatorChange({
+      id: 'USER-ALT',
+      loginName: 'alt-user',
+      name: 'Alt User',
+    });
+    state.scanInput.value = 'SP-001';
+    await state.handleQuickCheckIn();
+    await flushComposable();
+
+    expect(state.queueItems.value).toHaveLength(2);
+
+    state.clearQueue();
+
+    expect(state.queueItems.value).toHaveLength(0);
+    expect(state.operatorForm.operatorName).toBe('Alt User');
+    expect(state.operatorForm.operatorUserId).toBe('USER-ALT');
+    expect(state.operatorForm.loginName).toBe('alt-user');
 
     wrapper.destroy();
   });
@@ -616,6 +725,78 @@ describe('useSpecimenCheckInPanel', () => {
     wrapper.destroy();
   });
 
+  it('lets backend checked-in state override a local unsaved row', async () => {
+    const wrapper = mountComposable();
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    state.scanInput.value = 'SP-001';
+    await state.handleQuickCheckIn();
+    await flushComposable();
+
+    const checkedInPage = {
+      items: [
+        {
+          abnormalFlag: false,
+          applicationId: 'APP-CHECKIN',
+          applicationNo: 'M2-001',
+          barcode: 'BC-CHECKIN',
+          checkInStatus: 'CHECKED_IN',
+          checkedInAt: '2026-05-26 09:30:00',
+          checkedInByName: 'Backend User',
+          fixationStatus: 'COMPLETED',
+          labelPrintBatchNo: 'BATCH-1',
+          labelPrintStatus: 'SUCCESS',
+          latestTrackingAt: '2026-05-26 09:30:00',
+          patientName: 'Alice',
+          recentNode: 'CHECK_IN',
+          registeredAt: '2026-05-26 08:00:00',
+          specimenConfirmedAt: '2026-05-26 08:50:00',
+          specimenId: 'SPEC-CHECKIN',
+          specimenName: '结肠息肉',
+          specimenNo: 'SP-001',
+          specimenSite: '结肠',
+          specimenStatus: 'CHECKED_IN',
+          specimenType: '组织',
+          roomId: 'OR-102',
+          surgeryName: 'OR-102',
+          submittingDepartmentId: 'DEPT-001',
+          submittingDepartmentName: 'Surgery',
+          verificationCompletedAt: '2026-05-26 08:20:00',
+          verificationStartedAt: '2026-05-26 08:15:00',
+          verificationStatus: 'VERIFIED',
+        },
+      ],
+      page: 1,
+      size: 100,
+      summary: {
+        abnormalCount: 0,
+        labelPrintedCount: 1,
+        pendingLabelCount: 0,
+        totalCount: 1,
+      },
+      total: 1,
+    };
+    listSpecimensMock
+      .mockResolvedValueOnce(checkedInPage)
+      .mockResolvedValueOnce(checkedInPage);
+
+    state.scanInput.value = 'SP-001';
+    await state.handleQuickCheckIn();
+    await flushComposable();
+
+    const refreshedRow = state.queueItems.value.find(
+      (item) => item.specimenId === 'SPEC-CHECKIN',
+    );
+    expect(refreshedRow?.checkInDraft).toBe(false);
+    expect(refreshedRow?.displayCheckInStatus).toBe('已入库');
+    expect(refreshedRow?.checkInStatusTagType).toBe('success');
+
+    wrapper.destroy();
+  });
+
   it('warns when the specimen is not confirmed yet', async () => {
     const wrapper = mountComposable();
     const state = wrapper.getState();
@@ -661,7 +842,6 @@ describe('useSpecimenCheckInPanel', () => {
     expect(checkInSpecimenMock).toHaveBeenCalledWith(
       'BC-PARTIAL-READY',
       expect.objectContaining({
-        operatorVerificationToken: 'TOKEN-VERIFY',
         specimenBarcode: 'BC-PARTIAL-READY',
       }),
     );
@@ -696,7 +876,6 @@ describe('useSpecimenCheckInPanel', () => {
     expect(checkInSpecimenMock).toHaveBeenCalledWith(
       'BC-SIBLING-READY',
       expect.objectContaining({
-        operatorVerificationToken: 'TOKEN-VERIFY',
         specimenBarcode: 'BC-SIBLING-READY',
       }),
     );
@@ -718,6 +897,7 @@ describe('useSpecimenCheckInPanel', () => {
     expect(checkInSpecimenMock).not.toHaveBeenCalled();
     expect(state.queueItems.value).toHaveLength(1);
     expect(state.queueItems.value[0]?.specimenId).toBe('SPEC-RECEIVED');
+    expect(state.queueItems.value[0]?.checkInStatusTagType).toBe('danger');
     expect(warningMock).toHaveBeenCalledWith(
       '标本已接收、拒收或退回，不能再入库',
     );
@@ -778,8 +958,8 @@ describe('useSpecimenCheckInPanel', () => {
       state.queueItems.value.find(
         (item) => item.specimenId === 'SPEC-CHECKIN-SIBLING',
       )?.queueStatus,
-    ).toBe('SUCCESS');
-    expect(successMock).toHaveBeenCalledWith('标本入库成功');
+    ).toBe('PENDING');
+    expect(successMock).not.toHaveBeenCalledWith('标本入库成功');
 
     wrapper.destroy();
   });

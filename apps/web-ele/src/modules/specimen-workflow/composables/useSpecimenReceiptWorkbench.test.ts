@@ -191,7 +191,6 @@ const {
           labelPrintStatus: 'SUCCESS',
           latestTrackingAt: '2026-06-01T09:02:00',
           patientName: 'Alice',
-          receiptStatus: 'RECEIVED',
           registeredAt: '2026-06-01T08:05:00',
           specimenConfirmedAt: '2026-06-01T08:31:00',
           specimenId: 'SPEC-002',

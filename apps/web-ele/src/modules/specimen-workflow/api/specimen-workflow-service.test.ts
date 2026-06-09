@@ -139,6 +139,7 @@ describe('specimen-workflow-service mock flow', () => {
       collectionScene: '病房',
       items: [
         {
+          barcode: 'BC-MOCK-FLOW-001',
           containerCount: 1,
           containerName: '福尔马林瓶',
           specimenCount: 1,
@@ -240,11 +241,49 @@ describe('specimen-workflow-service mock flow', () => {
     expect(handedOrder.outboundUserName).toBe('当前登录用户');
   });
 
+  it('keeps mock registrations unbound until barcode binding', async () => {
+    const registerResult = await registerSpecimens({
+      applicationId: 'APP-001',
+      items: [
+        {
+          containerCount: 1,
+          containerName: '福尔马林瓶',
+          specimenCount: 1,
+          specimenNameStandardized: '胃窦黏膜',
+        },
+      ],
+    });
+
+    const specimen = registerResult.specimens[0];
+    expect(registerResult.labelPrintSuccess).toBe(false);
+    expect(specimen?.barcode).toBeNull();
+    expect(specimen?.barcodeBindingStatus).toBe('UNBOUND');
+    expect(specimen?.labelPrintStatus).toBe('PENDING');
+
+    const specimenId = specimen?.id ?? '';
+    const bound = await bindSpecimenBarcode(specimenId, {
+      targetBarcode: 'BC-MOCK-BIND-001',
+    });
+    expect(bound.barcode).toBe('BC-MOCK-BIND-001');
+    expect(bound.barcodeBindingStatus).toBe('BOUND');
+
+    const list = await listSpecimens({
+      keyword: 'BC-MOCK-BIND-001',
+      page: 1,
+      size: 20,
+    });
+    expect(list.items[0]).toMatchObject({
+      barcode: 'BC-MOCK-BIND-001',
+      barcodeBindingStatus: 'BOUND',
+    });
+  });
+
   it('supports direct outbound by selected outbound operator in mock mode', async () => {
     const registerResult = await registerSpecimens({
       applicationId: 'APP-001',
       items: [
         {
+          barcode: 'BC-MOCK-OUTBOUND-001',
           containerCount: 1,
           containerName: '福尔马林瓶',
           specimenCount: 1,
@@ -302,6 +341,7 @@ describe('specimen-workflow-service mock flow', () => {
       applicationId: 'APP-001',
       items: [
         {
+          barcode: 'BC-MOCK-QUICK-OUT-001',
           containerCount: 1,
           containerName: '福尔马林瓶',
           specimenCount: 1,
@@ -355,6 +395,7 @@ describe('specimen-workflow-service mock flow', () => {
       applicationId: 'APP-001',
       items: [
         {
+          barcode: 'BC-MOCK-GATE-001',
           containerCount: 1,
           containerName: '福尔马林瓶',
           specimenCount: 1,

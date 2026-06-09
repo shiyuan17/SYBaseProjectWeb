@@ -40,6 +40,15 @@ vi.mock('element-plus', () => {
       h(
         'button',
         {
+          'data-testid': 'binding-tab',
+          type: 'button',
+          onClick: () => emit('update:modelValue', 'binding'),
+        },
+        '条码绑定',
+      ),
+      h(
+        'button',
+        {
           'data-testid': 'verification-tab',
           type: 'button',
           onClick: () => emit('update:modelValue', 'verification'),
@@ -54,15 +63,6 @@ vi.mock('element-plus', () => {
           onClick: () => emit('update:modelValue', 'fixation'),
         },
         '标本固定',
-      ),
-      h(
-        'button',
-        {
-          'data-testid': 'binding-tab',
-          type: 'button',
-          onClick: () => emit('update:modelValue', 'binding'),
-        },
-        '条码绑定',
       ),
       h(
         'button',
@@ -185,6 +185,9 @@ describe('FixationTransportView', () => {
     expect(root.textContent).toContain('标本入库');
     expect(root.textContent).toContain('标本出库');
     expect(
+      root.querySelector<HTMLElement>('[data-active-tab]')?.dataset.activeTab,
+    ).toBe('verification');
+    expect(
       root.querySelector('[data-testid="fixation-time-panel"]'),
     ).not.toBeNull();
     expect(
@@ -196,6 +199,21 @@ describe('FixationTransportView', () => {
     expect(
       root.querySelector('[data-testid="specimen-check-in-panel"]'),
     ).not.toBeNull();
+
+    app.unmount();
+  });
+
+  it('defaults to the barcode binding tab when no legacy query is present', async () => {
+    const root = document.createElement('div');
+    document.body.append(root);
+    const app = createApp(FixationTransportView);
+
+    app.mount(root);
+    await nextTick();
+
+    expect(
+      root.querySelector<HTMLElement>('[data-active-tab]')?.dataset.activeTab,
+    ).toBe('binding');
 
     app.unmount();
   });

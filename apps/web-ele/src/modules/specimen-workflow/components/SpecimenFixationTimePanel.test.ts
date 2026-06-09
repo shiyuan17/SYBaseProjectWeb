@@ -1,3 +1,8 @@
+import type {
+  SpecimenManagementListItem,
+  SpecimenManagementListPage,
+} from '../types/specimen-workflow';
+
 import {
   computed,
   type ComputedRef,
@@ -64,6 +69,10 @@ type InputProps = {
 
 type TableProps = {
   data: Record<string, unknown>[];
+  rowClassName?: (context: {
+    row: Record<string, unknown>;
+    rowIndex: number;
+  }) => string;
 };
 
 type TableColumnProps = {
@@ -85,6 +94,7 @@ const {
   loadWorkflowReferenceOptionsMock,
   completeFixationMock,
   retryLabelPrintMock,
+  startFixationMock,
   successMock,
   warningMock,
 } = vi.hoisted(() => ({
@@ -108,7 +118,7 @@ const {
     }: {
       applicationNo?: string;
       keyword?: string;
-    }) => {
+    }): Promise<SpecimenManagementListPage> => {
       const rows = [
         {
           abnormalFlag: false,
@@ -170,7 +180,7 @@ const {
           specimenType: '常规',
           verificationStatus: 'VERIFIED',
         },
-      ];
+      ] as SpecimenManagementListItem[];
       const matchedRows = applicationNo
         ? rows.filter((item) => item.applicationNo === applicationNo)
         : rows.filter(
@@ -201,6 +211,20 @@ const {
       fixationCompletedAt: '2026-05-26 10:00:00',
       fixationLiquidType: payload.fixationLiquidType,
       fixationStatus: 'COMPLETED',
+      operatorName: 'Test User',
+      operatorUserId: 'USER-001',
+      specimenId: 'SPEC-002',
+    }),
+  ),
+  startFixationMock: vi.fn(
+    async (payload: {
+      fixationLiquidType?: null | string;
+      specimenBarcode: string;
+    }) => ({
+      barcode: payload.specimenBarcode,
+      fixationCompletedAt: null,
+      fixationLiquidType: payload.fixationLiquidType,
+      fixationStatus: 'FIXING',
       operatorName: 'Test User',
       operatorUserId: 'USER-001',
       specimenId: 'SPEC-002',
@@ -322,6 +346,7 @@ vi.mock('../api/specimen-workflow-service', () => ({
   completeFixation: completeFixationMock,
   listSpecimens: listSpecimensMock,
   retryLabelPrint: retryLabelPrintMock,
+  startFixation: startFixationMock,
 }));
 
 vi.mock('#/modules/system-management/api/workflow-reference-service', () => ({
@@ -460,6 +485,7 @@ vi.mock('element-plus', () => ({
   ElTable: {
     props: {
       data: { default: () => [], type: Array },
+      rowClassName: { default: undefined, type: Function },
     },
     emits: ['selection-change'],
     setup(props: TableProps, { emit, slots }: EmitSlotContext) {
@@ -477,7 +503,16 @@ vi.mock('element-plus', () => ({
         },
         selectedIndexes,
       });
-      return () => h('div', { 'data-testid': 'table' }, slots.default?.());
+      return () =>
+        h('div', { 'data-testid': 'table' }, [
+          ...(props.data as Record<string, unknown>[]).map((row, rowIndex) =>
+            h('div', {
+              class: props.rowClassName?.({ row, rowIndex }) ?? '',
+              'data-testid': 'table-row',
+            }),
+          ),
+          slots.default?.(),
+        ]);
     },
   },
   ElTableColumn: {
@@ -558,7 +593,7 @@ async function flushView() {
 
 async function querySpecimen(container: HTMLElement, value: string) {
   const input = container.querySelector(
-    'input[placeholder="请输入标本号"]',
+    'input[placeholder="请输入标本号或条码"]',
   ) as HTMLInputElement;
   input.value = value;
   input.dispatchEvent(new Event('input', { bubbles: true }));
@@ -595,7 +630,7 @@ describe('SpecimenFixationTimePanel', () => {
     vi.clearAllMocks();
   });
 
-  it('queries by specimenNo and renders the application rows without completing fixation', async () => {
+  it('starts fixation by specimenNo and renders the application rows without completing fixation', async () => {
     const { app, container } = mountView();
 
     await flushView();
@@ -611,14 +646,26 @@ describe('SpecimenFixationTimePanel', () => {
     expect(container.textContent).toContain('固定液类型');
     expect(container.textContent).toContain('病人ID');
     expect(container.textContent).toContain('肺组织');
+    expect(container.textContent).toContain('固定中');
     expect(container.textContent).toContain('PAT-002');
     expect(container.textContent).toContain('纵隔淋巴结');
+    expect(
+      container.querySelector('.specimen-workflow-row--in-progress'),
+    ).not.toBeNull();
+    expect(
+      container.querySelector('.specimen-workflow-row--actionable'),
+    ).not.toBeNull();
+    expect(startFixationMock).toHaveBeenCalledWith({
+      fixationLiquidType: 'FORMALIN',
+      remarks: '扫码开始固定',
+      specimenBarcode: 'BC-002',
+    });
     expect(completeFixationMock).not.toHaveBeenCalled();
 
     app.unmount();
   });
 
-  it('replaces the current list when querying another specimenNo', async () => {
+  it('appends query results and avoids duplicate rows by specimen id', async () => {
     const { app, container } = mountView();
 
     await querySpecimen(container, 'SP-002');
@@ -628,8 +675,70 @@ describe('SpecimenFixationTimePanel', () => {
     await querySpecimen(container, 'SP-001');
 
     expect(container.textContent).toContain('乳腺组织');
-    expect(container.textContent).not.toContain('肺组织');
-    expect(container.textContent).not.toContain('纵隔淋巴结');
+    expect(container.textContent).toContain('肺组织');
+    expect(container.textContent).toContain('纵隔淋巴结');
+
+    await querySpecimen(container, 'SP-002');
+
+    const tableText = container.textContent ?? '';
+    expect(tableText.match(/肺组织/g)).toHaveLength(1);
+    expect(tableText.match(/纵隔淋巴结/g)).toHaveLength(1);
+    expect(startFixationMock).toHaveBeenCalledTimes(2);
+
+    app.unmount();
+  });
+
+  it('renders completed fixation rows with completed tone', async () => {
+    listSpecimensMock.mockResolvedValueOnce({
+      items: [
+        {
+          abnormalFlag: false,
+          applicationId: 'APP-004',
+          applicationNo: 'M2-004',
+          barcode: 'BC-004',
+          containerCount: 1,
+          containerName: '福尔马林瓶',
+          fixationCompletedAt: '2026-05-26 10:00:00',
+          fixationStartedAt: '2026-05-26 09:30:00',
+          fixationStatus: 'COMPLETED',
+          labelPrintBatchNo: 'LB-004',
+          labelPrintStatus: 'SUCCESS',
+          latestTrackingAt: '2026-05-26 10:00:00',
+          patientName: 'Dave',
+          registeredAt: '2026-05-26 08:30:00',
+          specimenId: 'SPEC-004',
+          specimenCount: 1,
+          specimenName: '肝组织',
+          specimenNo: 'SP-004',
+          specimenSite: '肝脏',
+          specimenStatus: 'FIXED',
+          specimenType: '常规',
+          submittingDepartmentId: 'DEP-004',
+          submittingDepartmentName: '外科',
+          verificationStatus: 'VERIFIED',
+        },
+      ],
+      page: 1,
+      size: 100,
+      summary: {
+        abnormalCount: 0,
+        labelPrintedCount: 0,
+        pendingLabelCount: 0,
+        totalCount: 1,
+        unboundCount: 0,
+      },
+      total: 1,
+    });
+    const { app, container } = mountView();
+
+    await querySpecimen(container, 'SP-004');
+
+    expect(container.textContent).toContain('肝组织');
+    expect(container.textContent).toContain('已固定');
+    expect(startFixationMock).not.toHaveBeenCalled();
+    expect(
+      container.querySelector('.specimen-workflow-row--completed'),
+    ).not.toBeNull();
 
     app.unmount();
   });
@@ -642,6 +751,8 @@ describe('SpecimenFixationTimePanel', () => {
           applicationId: 'APP-003',
           applicationNo: 'M2-003',
           barcode: 'BC-003',
+          containerCount: 1,
+          containerName: '福尔马林瓶',
           fixationCompletedAt: null,
           fixationStartedAt: null,
           fixationStatus: 'PENDING',
@@ -651,10 +762,14 @@ describe('SpecimenFixationTimePanel', () => {
           patientName: 'Carol',
           registeredAt: '2026-05-26 08:30:00',
           specimenId: 'SPEC-003',
+          specimenCount: 1,
           specimenName: '胃组织',
           specimenNo: 'SP-003',
+          specimenSite: '胃部',
           specimenStatus: 'REGISTERED',
           specimenType: '常规',
+          submittingDepartmentId: 'DEP-003',
+          submittingDepartmentName: '外科',
           verificationStatus: 'UNVERIFIED',
         },
       ],
@@ -676,7 +791,12 @@ describe('SpecimenFixationTimePanel', () => {
     expect(warningMock).toHaveBeenCalledWith(
       '标本尚未完成离体确认，请先完成离体确认后再固定',
     );
-    expect(container.textContent).not.toContain('胃组织');
+    expect(startFixationMock).not.toHaveBeenCalled();
+    expect(container.textContent).toContain('胃组织');
+    expect(container.textContent).toContain('待固定');
+    expect(
+      container.querySelector('.specimen-workflow-row--blocked'),
+    ).not.toBeNull();
 
     app.unmount();
   });

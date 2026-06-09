@@ -30,7 +30,8 @@ const mockHandleSelectionChange = vi.fn();
 const mockSubmitRetryLabel = vi.fn();
 const mockTryQuickConfirmByKeyword = vi.fn();
 const mockCanConfirm = vi.fn(() => true);
-const mockResolveConfirmationStatus = vi.fn(() => '已确认');
+const mockIsConfirmationUnsaved = vi.fn(() => false);
+const mockResolveConfirmationStatus = vi.fn(() => '标本确认');
 
 vi.mock('element-plus', () => ({
   ElAlert: createPassthroughStub(),
@@ -110,6 +111,7 @@ vi.mock('../composables/useSpecimenConfirmationPanel', () => ({
       operatorForm,
       pageError: ref(pageErrorTextMock.value),
       pagedItems: ref([row]),
+      isConfirmationUnsaved: mockIsConfirmationUnsaved,
       retryDialogVisible: ref(false),
       retryForm,
       retrySubmitting: ref(false),
@@ -162,9 +164,12 @@ describe('SpecimenConfirmationPanel', () => {
     expect(container.textContent).toContain('标本确认');
     expect(container.textContent).toContain('Test User');
     expect(container.textContent).toContain('Actual User');
+    expect(
+      container.querySelector('.specimen-workflow-row--completed'),
+    ).not.toBeNull();
     expect(container.textContent).not.toContain('终端编号');
-    expect(container.textContent).not.toContain('清除选择行');
-    expect(container.textContent).not.toContain('清除列表');
+    expect(container.textContent).toContain('清除选择行');
+    expect(container.textContent).toContain('清除列表');
 
     const confirmButtons = [...container.querySelectorAll('button')].filter(
       (button) => button.textContent?.trim() === '标本确认',
@@ -177,6 +182,14 @@ describe('SpecimenConfirmationPanel', () => {
         specimenId: 'SPEC-001',
       }),
     );
+
+    const clearListButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('清除列表'),
+    );
+    clearListButton?.click();
+    await flush();
+
+    expect(mockHandleClearList).toHaveBeenCalledTimes(1);
 
     app.unmount();
   });

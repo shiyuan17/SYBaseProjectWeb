@@ -58,7 +58,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         meta: {
           authority: [M2_PERMISSION_CODES.SPECIMEN_RECEIVE],
           icon: 'carbon:data-table',
-          title: '登记接收工作站',
+          title: '检查登记',
         },
         name: 'TechnicalSpecimenRegistration',
         path: '/technical-workflow/specimen-registration',

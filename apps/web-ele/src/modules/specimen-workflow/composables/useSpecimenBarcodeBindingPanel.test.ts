@@ -313,7 +313,7 @@ describe('useSpecimenBarcodeBindingPanel', () => {
     vi.clearAllMocks();
   });
 
-  it('loads default unbound rows and supports bind/unbind workflow rules', async () => {
+  it('loads all rows by default and supports bind/unbind workflow rules', async () => {
     const wrapper = mountComposable();
     await flushComposable();
 
@@ -325,7 +325,7 @@ describe('useSpecimenBarcodeBindingPanel', () => {
     await waitForComposableAssertion(() => {
       expect(listOperatingBuildingOptionsMock).toHaveBeenCalled();
       expect(listSpecimensMock).toHaveBeenCalledWith({
-        barcodeBindingStatus: 'UNBOUND',
+        barcodeBindingStatus: undefined,
         buildingId: undefined,
         dateFrom: undefined,
         dateTo: undefined,
@@ -333,14 +333,14 @@ describe('useSpecimenBarcodeBindingPanel', () => {
         roomId: undefined,
         size: 500,
       });
-      expect(state.pagedItems.value).toHaveLength(1);
+      expect(state.pagedItems.value).toHaveLength(2);
     });
 
-    expect(state.summary.value.totalCount).toBe(1);
+    expect(state.summary.value.totalCount).toBe(2);
     expect(state.summary.value.unboundCount).toBe(1);
     expect(state.canBind.value).toBe(false);
 
-    state.filters.onlyUnbound = false;
+    state.filters.onlyUnbound = true;
     state.filters.buildingId = 'B001';
     state.filters.roomId = 'OR-101';
     state.filters.dateRange = ['2026-05-20', '2026-05-21'];
@@ -348,7 +348,7 @@ describe('useSpecimenBarcodeBindingPanel', () => {
     await flushComposable();
 
     expect(listSpecimensMock).toHaveBeenLastCalledWith({
-      barcodeBindingStatus: undefined,
+      barcodeBindingStatus: 'UNBOUND',
       buildingId: 'B001',
       dateFrom: '2026-05-20',
       dateTo: '2026-05-21',
@@ -357,9 +357,9 @@ describe('useSpecimenBarcodeBindingPanel', () => {
       size: 500,
     });
 
-    const [unboundRow, boundRow] = state.allRows.value;
-    if (!unboundRow || !boundRow) {
-      throw new Error('expected test rows to load');
+    const [unboundRow] = state.allRows.value;
+    if (!unboundRow) {
+      throw new Error('expected an unbound test row to load');
     }
 
     state.handleSelectionChange([unboundRow]);
@@ -375,6 +375,21 @@ describe('useSpecimenBarcodeBindingPanel', () => {
       terminalCode: null,
     });
     expect(state.targetBarcode.value).toBe('');
+
+    state.filters.onlyUnbound = false;
+    state.handleSearch();
+    await flushComposable();
+
+    await waitForComposableAssertion(() => {
+      expect(state.allRows.value).toHaveLength(2);
+    });
+
+    const boundRow = state.allRows.value.find(
+      (row) => row.barcodeBindingStatus === 'BOUND',
+    );
+    if (!boundRow) {
+      throw new Error('expected a bound test row to load');
+    }
 
     state.handleSelectionChange([boundRow]);
     expect(state.canUnbind.value).toBe(true);
@@ -424,6 +439,14 @@ describe('useSpecimenBarcodeBindingPanel', () => {
 
     state.handleExportExcel();
     expect(downloadFileFromBlobMock).toHaveBeenCalledTimes(1);
+    const exportSource = downloadFileFromBlobMock.mock.calls[0]?.[0]?.source;
+    if (!(exportSource instanceof Blob)) {
+      throw new TypeError('expected export source to be a Blob');
+    }
+    const exportHtml = await exportSource.text();
+    expect(exportHtml).toContain(
+      '<td>申请单</td><td>标本编号</td><td>标本条码</td><td>性别</td>',
+    );
 
     state.handleSelectionChange(state.allRows.value);
     await state.handlePreprintBarcodes();
@@ -432,6 +455,88 @@ describe('useSpecimenBarcodeBindingPanel', () => {
     expect(buildSpecimenBatchPrintDocumentMock).toHaveBeenCalledTimes(2);
     expect(windowOpenMock).toHaveBeenCalledTimes(2);
     expect(workbenchLookupMock).toHaveBeenCalledTimes(2);
+
+    wrapper.destroy();
+  });
+
+  it('prints only selected bound barcode labels', async () => {
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    state.filters.onlyUnbound = false;
+    state.handleSearch();
+    await flushComposable();
+
+    await waitForComposableAssertion(() => {
+      expect(state.allRows.value).toHaveLength(2);
+    });
+
+    const [unboundRow, boundRow] = state.allRows.value;
+    if (!unboundRow || !boundRow) {
+      throw new Error('expected test rows to load');
+    }
+
+    state.handleSelectionChange([unboundRow]);
+    expect(state.canPrintBoundBarcodes.value).toBe(false);
+
+    await state.handlePrintBoundBarcodes();
+    expect(warningMock).toHaveBeenCalledWith(
+      '仅支持打印已绑定且存在条码的标本',
+    );
+    expect(buildSpecimenBatchPrintDocumentMock).not.toHaveBeenCalled();
+
+    buildSpecimenBatchPrintDocumentMock.mockClear();
+    windowOpenMock.mockClear();
+    workbenchLookupMock.mockClear();
+
+    const anotherBoundRow = {
+      ...boundRow,
+      applicationId: 'APP-003',
+      applicationNo: 'M2-003',
+      barcode: 'BC-003',
+      specimenId: 'SPEC-003',
+      specimenNo: 'SP-003',
+    };
+
+    state.handleSelectionChange([boundRow, anotherBoundRow]);
+    expect(state.canPrintBoundBarcodes.value).toBe(true);
+
+    await state.handlePrintBoundBarcodes();
+    await flushComposable();
+
+    expect(buildSpecimenBatchPrintDocumentMock).toHaveBeenCalledTimes(2);
+    expect(buildSpecimenBatchPrintDocumentMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        items: [
+          expect.objectContaining({
+            barcode: 'BC-002',
+            id: 'SPEC-002',
+            specimenNo: 'SP-002',
+          }),
+        ],
+      }),
+    );
+    expect(buildSpecimenBatchPrintDocumentMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        items: [
+          expect.objectContaining({
+            barcode: 'BC-003',
+            id: 'SPEC-003',
+            specimenNo: 'SP-003',
+          }),
+        ],
+      }),
+    );
+    expect(workbenchLookupMock).toHaveBeenCalledTimes(2);
+    expect(windowOpenMock).toHaveBeenCalledTimes(2);
+    expect(successMock).toHaveBeenCalledWith('已打开条码打印窗口');
 
     wrapper.destroy();
   });

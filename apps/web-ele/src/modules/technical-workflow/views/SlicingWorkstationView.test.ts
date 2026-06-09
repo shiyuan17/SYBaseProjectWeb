@@ -115,6 +115,7 @@ vi.mock('element-plus', () => {
     ElCheckbox: simple('label'),
     ElDrawer: simple('section'),
     ElInput: simple('input'),
+    ElInputNumber: simple('input'),
     ElMessage: {
       success: vi.fn(),
       warning: vi.fn(),
@@ -122,6 +123,9 @@ vi.mock('element-plus', () => {
     ElOption: simple('option'),
     ElPagination: simple('nav'),
     ElSelect: simple('select'),
+    ElSwitch: simple('label'),
+    ElTabPane: simple('section'),
+    ElTabs: simple('section'),
     ElTable: defineComponent({
       props: ['data'],
       setup(props, { slots }) {
@@ -163,7 +167,9 @@ function createWorkbench(): SlicingWorkbenchView {
     completedTotal: 0,
     pendingList: [
       {
+        applicationType: 'ROUTINE',
         caseId: 'CASE-1',
+        combinedSlide: false,
         completedAt: null,
         embeddingBoxId: 'BOX-1',
         embeddingClearRemark: null,
@@ -177,6 +183,7 @@ function createWorkbench(): SlicingWorkbenchView {
         shiftRemark: null,
         slideId: 'SLIDE-1',
         slideNo: 'SLIDE-001',
+        slidePrintStatus: 'PENDING',
         sliceNotice: null,
         slicingOperatorName: null,
         slicingRemark: null,
@@ -185,10 +192,44 @@ function createWorkbench(): SlicingWorkbenchView {
         taskId: 'TASK-1',
         taskStatus: 'PENDING',
         timedOut: false,
+        printedSlideCount: 0,
       },
     ],
+    pendingPrintList: [
+      {
+        applicationType: 'ROUTINE',
+        caseId: 'CASE-1',
+        combinedSlide: false,
+        completedAt: null,
+        embeddingBoxId: 'BOX-1',
+        embeddingClearRemark: null,
+        embeddingEvaluation: null,
+        embeddingOperatorName: null,
+        grossingEvaluation: null,
+        pathologyNo: 'BL-001',
+        patientId: 'P-001',
+        patientName: '患者甲',
+        selectable: true,
+        shiftRemark: null,
+        slideId: null,
+        slideNo: null,
+        slidePrintStatus: 'PENDING',
+        sliceNotice: null,
+        slicingOperatorName: null,
+        slicingRemark: null,
+        specimenId: 'SPEC-1',
+        specimenName: '胃窦',
+        taskId: 'TASK-1',
+        taskStatus: 'PENDING',
+        timedOut: false,
+        printedSlideCount: 0,
+      },
+    ],
+    pendingPrintTotal: 1,
     pendingPage: 1,
     pendingSize: 20,
+    pendingSliceList: [],
+    pendingSliceTotal: 0,
     pendingTotal: 1,
     stats: {
       completedDeptTodayCount: 0,
@@ -246,6 +287,8 @@ describe('SlicingWorkstationView', () => {
     await flushView();
 
     expect(document.body.textContent).toContain('完成切片');
+    expect(document.body.textContent).toContain('玻片打印');
+    expect(document.body.textContent).toContain('完成玻片打印');
     expect(document.body.textContent).toContain('质控评价');
     expect(document.body.textContent).toContain('今日已完成');
     expect(document.body.textContent).not.toContain(

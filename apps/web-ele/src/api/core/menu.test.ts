@@ -156,7 +156,7 @@ describe('mapMenuViewsToRoutes', () => {
         icon: 'workspace',
         id: 'MENU_M2_CLINICAL_WORKBENCH',
         menuCode: 'M2_CLINICAL_WORKBENCH',
-        menuName: '申请登记工作台',
+        menuName: '标本采集',
         menuType: 'MENU',
         parentId: 'MENU_M2_WORKFLOW',
         path: '/workflow/application-registration-workbench',
@@ -198,10 +198,11 @@ describe('mapMenuViewsToRoutes', () => {
       expect.objectContaining({
         name: 'WorkflowRoot',
         path: '/workflow',
-        redirect: '/workflow/submission-registration',
+        redirect: '/workflow/application-registration-workbench',
         children: [
           expect.objectContaining({
             meta: expect.objectContaining({
+              hideInMenu: true,
               keepAlive: true,
             }),
             name: 'SubmissionRegistration',
@@ -212,6 +213,7 @@ describe('mapMenuViewsToRoutes', () => {
               '/modules/specimen-workflow/views/ApplicationRegistrationWorkbenchView',
             meta: expect.objectContaining({
               keepAlive: true,
+              title: '标本采集',
             }),
             name: 'ApplicationRegistrationWorkbench',
             path: '/workflow/application-registration-workbench',
@@ -424,7 +426,7 @@ describe('mapMenuViewsToRoutes', () => {
           expect.objectContaining({
             meta: expect.objectContaining({
               keepAlive: true,
-              title: '登记接收工作站',
+              title: '检查登记',
             }),
             name: 'TechnicalSpecimenRegistration',
             path: '/technical-workflow/specimen-registration',

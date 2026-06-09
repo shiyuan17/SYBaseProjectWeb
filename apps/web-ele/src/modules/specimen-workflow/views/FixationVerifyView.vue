@@ -1,23 +1,27 @@
 <script setup lang="ts">
 import type {
   SpecimenManagementListItem,
-  SpecimenRemovalItem,
   SpecimenRemovalSummary,
 } from '../types/specimen-workflow';
 import type { RemovalDisplayRow } from '../utils/specimen-removal-display';
 
-import { computed, nextTick, reactive, ref, watch } from 'vue';
+import { nextTick, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
 
-import { ElAlert, ElMessage, ElMessageBox, ElPagination } from 'element-plus';
+import {
+  ElAlert,
+  ElButton,
+  ElMessage,
+  ElMessageBox,
+  ElPagination,
+} from 'element-plus';
 
 import {
   confirmSpecimenRemoval,
   confirmSpecimenRemovalByIdentifier,
   getApplicationDetail,
-  listPendingSpecimenRemovals,
   listSpecimens,
 } from '../api/specimen-workflow-service';
 import FixationVerifyTable from '../components/FixationVerifyTable.vue';
@@ -95,12 +99,6 @@ const filters = reactive({
   size: DEFAULT_PAGE_SIZE,
 });
 
-const currentQuery = computed(() => ({
-  applicationNo: filters.applicationNo.trim() || undefined,
-  page: filters.page,
-  size: filters.size,
-}));
-
 function normalizeRouteQueryValue(value: unknown) {
   if (typeof value === 'string') {
     return value;
@@ -126,16 +124,6 @@ function buildSummary(rows: RemovalDisplayRow[]): SpecimenRemovalSummary {
       .length,
     pendingCount: rows.filter((item) => !item.specimenRemovalAt).length,
     totalCount: rows.length,
-  };
-}
-
-function normalizeRemovalItem(row: SpecimenRemovalItem): RemovalDisplayRow {
-  return {
-    ...toRemovalDisplayRow(row),
-    surgeryName: normalizeOperatingRoomDisplayValue(
-      operatingRoomNameMap.value,
-      row.surgeryName,
-    ),
   };
 }
 
@@ -180,11 +168,44 @@ function mergeConfirmedRemovalItems(rows: RemovalDisplayRow[]) {
   return mergedRows;
 }
 
+function mergeRemovalRowsBySpecimenId(
+  currentRows: RemovalDisplayRow[],
+  incomingRows: RemovalDisplayRow[],
+) {
+  const nextRows = [...currentRows];
+  for (const row of incomingRows) {
+    const existingIndex = nextRows.findIndex(
+      (item) => item.specimenId === row.specimenId,
+    );
+    if (existingIndex === -1) {
+      nextRows.push(row);
+      continue;
+    }
+    nextRows.splice(existingIndex, 1, {
+      ...nextRows[existingIndex],
+      ...row,
+    });
+  }
+  return nextRows;
+}
+
 function syncVisibleRemovalItems(rows: RemovalDisplayRow[]) {
-  pendingItemsSource.value = rows;
-  pendingItems.value = mergeConfirmedRemovalItems(rows);
+  pendingItemsSource.value = mergeRemovalRowsBySpecimenId(
+    pendingItemsSource.value,
+    rows,
+  );
+  pendingItems.value = mergeConfirmedRemovalItems(pendingItemsSource.value);
   summary.value = buildSummary(pendingItems.value);
   total.value = pendingItems.value.length;
+}
+
+function clearVisibleRemovalItems() {
+  pendingItemsSource.value = [];
+  pendingItems.value = [];
+  summary.value = { ...emptySummary };
+  total.value = 0;
+  confirmedRemovalItemCache.clear();
+  ElMessage.success('列表已清空');
 }
 
 function upsertConfirmedRemovalItem(item: RemovalDisplayRow) {
@@ -195,27 +216,26 @@ function upsertConfirmedRemovalItem(item: RemovalDisplayRow) {
 }
 
 async function loadPendingData() {
+  const applicationNo = filters.applicationNo.trim();
+  if (!applicationNo) {
+    pendingItemsSource.value = [];
+    pendingItems.value = [];
+    summary.value = { ...emptySummary };
+    total.value = 0;
+    return;
+  }
+
   loading.value = true;
   pageError.value = '';
   try {
     await ensureOperatingRoomNameMapLoaded();
-    const applicationNo = filters.applicationNo.trim();
-
-    if (applicationNo) {
-      const result = await listSpecimens({
-        applicationNo,
-        page: 1,
-        size: APPLICATION_EXPANSION_SIZE,
-      });
-      syncVisibleRemovalItems(
-        result.items.map((item) => normalizeApplicationRemovalItem(item)),
-      );
-      return;
-    }
-
-    const result = await listPendingSpecimenRemovals(currentQuery.value);
+    const result = await listSpecimens({
+      applicationNo,
+      page: 1,
+      size: APPLICATION_EXPANSION_SIZE,
+    });
     syncVisibleRemovalItems(
-      result.items.map((item) => normalizeRemovalItem(item)),
+      result.items.map((item) => normalizeApplicationRemovalItem(item)),
     );
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
@@ -315,10 +335,7 @@ async function syncQuickConfirmApplicationSpecimens(
     return;
   }
 
-  if (filters.applicationNo.trim() !== applicationNo) {
-    filters.applicationNo = applicationNo;
-  }
-
+  filters.applicationNo = applicationNo;
   await loadPendingData();
 }
 
@@ -374,13 +391,6 @@ async function submitQuickConfirm() {
         specimenRemovalOperatorName: result.operatorName,
       }),
     );
-    if (
-      sourceRow.applicationNo &&
-      filters.applicationNo.trim() !== sourceRow.applicationNo
-    ) {
-      filters.applicationNo = sourceRow.applicationNo;
-    }
-
     specimenIdQuickInput.value = '';
     ElMessage.success(`标本ID ${normalizedValue} 已完成离体确认`);
     await syncQuickConfirmApplicationSpecimens(readyTarget.matchedSpecimen);
@@ -426,17 +436,9 @@ async function submitConfirmRemoval(row: RemovalDisplayRow) {
         specimenRemovalOperatorName: result.operatorName,
       }),
     );
-    if (
-      row.applicationNo &&
-      filters.applicationNo.trim() !== row.applicationNo
-    ) {
-      filters.applicationNo = row.applicationNo;
-      await loadPendingData();
-    } else {
-      pendingItems.value = mergeConfirmedRemovalItems(pendingItemsSource.value);
-      summary.value = buildSummary(pendingItems.value);
-      total.value = pendingItems.value.length;
-    }
+    pendingItems.value = mergeConfirmedRemovalItems(pendingItemsSource.value);
+    summary.value = buildSummary(pendingItems.value);
+    total.value = pendingItems.value.length;
     ElMessage.success(`条码 ${specimenBarcode} 已完成离体确认`);
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
@@ -468,6 +470,12 @@ async function syncApplicationNoFromRoute() {
   }
 
   if (currentToken !== routeSyncToken) {
+    return;
+  }
+
+  if (!resolvedApplicationNo) {
+    filters.applicationNo = '';
+    filters.page = 1;
     return;
   }
 
@@ -519,7 +527,8 @@ watch(
           @confirm-removal="submitConfirmRemoval"
         />
 
-        <div class="mt-4 flex justify-end">
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
+          <ElButton @click="clearVisibleRemovalItems">清除列表</ElButton>
           <ElPagination
             v-model:current-page="filters.page"
             v-model:page-size="filters.size"

@@ -5,7 +5,7 @@ import type {
   ConfirmationListRow,
 } from '../utils/specimen-confirmation';
 
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 
 import { useUserStore } from '@vben/stores';
 import { downloadFileFromBlob } from '@vben/utils';
@@ -29,7 +29,6 @@ import {
   buildExportHeaders,
   canConfirm,
   canRetryLabel,
-  isVisibleInConfirmationScene,
   MAX_QUERY_SIZE,
   resolveConfirmActionDisabledReason,
   resolveUnavailableMessage,
@@ -163,10 +162,25 @@ export function useSpecimenConfirmationPanel() {
   }
 
   function applyRows(rows: ConfirmationListRow[]) {
-    allRows.value = rows;
-    workingRows.value = rows;
+    const nextRows = [...allRows.value];
+    for (const row of rows) {
+      const existingIndex = nextRows.findIndex(
+        (item) => item.specimenId === row.specimenId,
+      );
+      if (existingIndex === -1) {
+        nextRows.push(row);
+        continue;
+      }
+      nextRows.splice(existingIndex, 1, {
+        ...nextRows[existingIndex],
+        ...row,
+      });
+    }
+
+    allRows.value = nextRows;
+    workingRows.value = nextRows;
     selectedRows.value = [];
-    if ((filters.page - 1) * filters.size >= rows.length) {
+    if ((filters.page - 1) * filters.size >= nextRows.length) {
       filters.page = 1;
     }
   }
@@ -181,22 +195,26 @@ export function useSpecimenConfirmationPanel() {
   }
 
   async function loadSpecimens(showEmptyWarning = false) {
+    const keyword = filters.keyword.trim();
+    if (!keyword) {
+      allRows.value = [];
+      workingRows.value = [];
+      selectedRows.value = [];
+      pendingConfirmationIds.value = [];
+      expandedApplicationNo.value = '';
+      return;
+    }
+
     loading.value = true;
     pageError.value = '';
     try {
       const roomNameById = await ensureOperatingRoomNameMapLoaded();
-      const keyword = filters.keyword.trim();
       const queryResult = await loadSpecimensWithApplicationExpansion({
         keyword,
         listSpecimens,
         maxQuerySize: MAX_QUERY_SIZE,
       });
-      const sourceRows =
-        queryResult.mode === 'expanded'
-          ? queryResult.items
-          : queryResult.items.filter((item) =>
-              isVisibleInConfirmationScene(item),
-            );
+      const sourceRows = queryResult.items;
 
       expandedApplicationNo.value =
         queryResult.mode === 'expanded'
@@ -417,6 +435,13 @@ export function useSpecimenConfirmationPanel() {
       markConfirmationUnsaved(refreshedMatchedRow);
       filters.keyword = '';
       ElMessage.success('已加入确认未保存');
+      return;
+    }
+    if (refreshedMatchedRow) {
+      filters.keyword = '';
+      ElMessage.warning(
+        resolveConfirmActionDisabledReason(refreshedMatchedRow) ?? '标本已确认',
+      );
     }
   }
 
@@ -433,7 +458,10 @@ export function useSpecimenConfirmationPanel() {
     operatorForm.terminalCode = '';
     pendingConfirmationIds.value = [];
     syncOperatorFromCurrentUser();
-    void loadSpecimens();
+    allRows.value = [];
+    workingRows.value = [];
+    selectedRows.value = [];
+    expandedApplicationNo.value = '';
   }
 
   function handleSelectionChange(rows: ConfirmationListRow[]) {
@@ -461,16 +489,25 @@ export function useSpecimenConfirmationPanel() {
       return;
     }
 
+    allRows.value = allRows.value.filter(
+      (item) => !selectedSpecimenIds.has(item.specimenId),
+    );
     workingRows.value = workingRows.value.filter(
       (item) => !selectedSpecimenIds.has(item.specimenId),
+    );
+    pendingConfirmationIds.value = pendingConfirmationIds.value.filter(
+      (id) => !selectedSpecimenIds.has(id),
     );
     selectedRows.value = [];
     ElMessage.success('已清除选择行');
   }
 
   function handleClearList() {
+    allRows.value = [];
     workingRows.value = [];
     selectedRows.value = [];
+    pendingConfirmationIds.value = [];
+    expandedApplicationNo.value = '';
     filters.page = 1;
     ElMessage.success('列表已清空');
   }
@@ -581,10 +618,6 @@ export function useSpecimenConfirmationPanel() {
     ElMessage.success('导出成功');
   }
 
-  onMounted(() => {
-    void loadSpecimens();
-  });
-
   return {
     actionLoading,
     batchRetryResult,
@@ -605,6 +638,7 @@ export function useSpecimenConfirmationPanel() {
     operatorForm,
     pageError,
     pagedItems,
+    isConfirmationUnsaved,
     resolveConfirmationStatus,
     retryDialogVisible,
     retryForm,

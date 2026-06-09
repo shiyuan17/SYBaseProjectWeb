@@ -93,7 +93,8 @@ export function useTransportOrderCreateDialog(options: {
       specimen.verificationStatus === 'VERIFIED' &&
       specimen.fixationStatus === 'COMPLETED' &&
       Boolean(specimen.specimenConfirmedAt) &&
-      specimen.checkInStatus === 'CHECKED_IN'
+      specimen.checkInStatus === 'CHECKED_IN' &&
+      Boolean(specimen.barcode?.trim())
     );
   }
 
@@ -153,7 +154,7 @@ export function useTransportOrderCreateDialog(options: {
       createForm.selectedSpecimenBarcodes = detail.specimens
         .filter((item) => isEligibleSpecimen(item))
         .map((item) => item.barcode)
-        .filter((barcode) => barcode.length > 0);
+        .filter((barcode): barcode is string => Boolean(barcode?.trim()));
     } catch (error) {
       if (createForm.applicationId.trim() === applicationId) {
         clearApplicationContext();

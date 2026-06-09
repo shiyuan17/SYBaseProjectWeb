@@ -9,6 +9,11 @@ describe('format', () => {
     expect(formatCurrentNode('SPECIMEN_REGISTRATION')).toBe('标本登记');
     expect(formatCurrentNode('SUBMITTED')).toBe('已提交');
     expect(formatCurrentNode('TRANSPORT_HANDOVER')).toBe('转运交接');
+    expect(formatCurrentNode('GROSSING')).toBe('取材');
+    expect(formatCurrentNode('SLICING')).toBe('切片');
+    expect(formatCurrentNode('DIAGNOSIS_ASSIGN')).toBe('诊断分配');
+    expect(formatCurrentNode('MEDICAL_ORDER_CREATE')).toBe('医嘱开立');
+    expect(formatCurrentNode('REPORT_PUBLISHED')).toBe('报告发布');
   });
 
   it('returns a dash for empty current node values', () => {

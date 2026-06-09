@@ -98,7 +98,7 @@ export function useSpecimenBarcodeBindingPanel() {
   const filters = reactive({
     buildingId: '',
     dateRange: [] as string[],
-    onlyUnbound: true,
+    onlyUnbound: false,
     page: 1,
     roomId: '',
     size: DEFAULT_PAGE_SIZE,
@@ -180,6 +180,13 @@ export function useSpecimenBarcodeBindingPanel() {
   );
 
   const canPreprint = computed(() => selectedRows.value.length > 0);
+  const canPrintBoundBarcodes = computed(
+    () =>
+      selectedRows.value.length > 0 &&
+      selectedRows.value.every(
+        (row) => isBoundRow(row) && normalizeText(row.barcode),
+      ),
+  );
   const canExportExcel = computed(() => allRows.value.length > 0);
 
   watch(
@@ -250,7 +257,7 @@ export function useSpecimenBarcodeBindingPanel() {
   function handleReset() {
     filters.buildingId = '';
     filters.dateRange = [];
-    filters.onlyUnbound = true;
+    filters.onlyUnbound = false;
     filters.page = 1;
     filters.roomId = '';
     filters.size = DEFAULT_PAGE_SIZE;
@@ -375,10 +382,10 @@ export function useSpecimenBarcodeBindingPanel() {
       String(index + 1),
       row.applicationNo,
       row.specimenNo,
+      formatNullable(row.barcode),
       formatNullable(normalizeGenderLabel(row.patientGender) || null),
       formatNullable(row.surgeryName),
       row.specimenName,
-      formatNullable(row.barcode),
       formatNullable(row.specimenType),
       formatDateTime(row.registeredAt),
       formatNullable(row.registrationOperatorName),
@@ -397,10 +404,10 @@ export function useSpecimenBarcodeBindingPanel() {
       '序',
       '申请单',
       '标本编号',
+      '标本条码',
       '性别',
       '手术间',
       '标本名称',
-      '标本条码',
       '类型',
       '添加时间',
       '添加人',
@@ -506,8 +513,14 @@ export function useSpecimenBarcodeBindingPanel() {
 
   function buildPrintItem(
     row: SpecimenManagementListItem,
+    options?: { includeBarcode: boolean },
   ): WorkbenchSpecimenItem {
+    const includeBarcode = options?.includeBarcode ?? false;
+
     return {
+      barcode: includeBarcode
+        ? normalizeText(row.barcode) || undefined
+        : undefined,
       id: row.specimenId,
       quantity: row.specimenCount ?? 1,
       specimenName: row.specimenName,
@@ -515,6 +528,36 @@ export function useSpecimenBarcodeBindingPanel() {
       specimenSite: normalizeText(row.specimenSite),
       status: row.specimenStatus ?? '',
     };
+  }
+
+  async function printRowsByApplication(
+    rowsToPrint: SpecimenManagementListItem[],
+    options: { includeBarcode: boolean },
+    successMessage: string,
+  ) {
+    const groupedRows = new Map<string, SpecimenManagementListItem[]>();
+    for (const row of rowsToPrint) {
+      const rows = groupedRows.get(row.applicationNo) ?? [];
+      rows.push(row);
+      groupedRows.set(row.applicationNo, rows);
+    }
+
+    for (const rows of groupedRows.values()) {
+      const sampleRow = rows[0];
+      if (!sampleRow) {
+        continue;
+      }
+      const record = await ensureWorkbenchRecord(sampleRow.applicationNo);
+      const documentHtml = buildSpecimenBatchPrintDocument({
+        context: buildPrintContext(sampleRow, record),
+        items: rows.map((row) => buildPrintItem(row, options)),
+      });
+      if (!openPrintWindow(documentHtml)) {
+        return;
+      }
+    }
+
+    ElMessage.success(successMessage);
   }
 
   async function handlePreprintBarcodes() {
@@ -525,29 +568,33 @@ export function useSpecimenBarcodeBindingPanel() {
 
     pageError.value = '';
     try {
-      const groupedRows = new Map<string, SpecimenManagementListItem[]>();
-      for (const row of selectedRows.value) {
-        const rows = groupedRows.get(row.applicationNo) ?? [];
-        rows.push(row);
-        groupedRows.set(row.applicationNo, rows);
-      }
+      await printRowsByApplication(
+        selectedRows.value,
+        { includeBarcode: false },
+        '已打开预打印窗口',
+      );
+    } catch (error) {
+      pageError.value = getWorkflowPageErrorMessage(error);
+    }
+  }
 
-      for (const rows of groupedRows.values()) {
-        const sampleRow = rows[0];
-        if (!sampleRow) {
-          continue;
-        }
-        const record = await ensureWorkbenchRecord(sampleRow.applicationNo);
-        const documentHtml = buildSpecimenBatchPrintDocument({
-          context: buildPrintContext(sampleRow, record),
-          items: rows.map((row) => buildPrintItem(row)),
-        });
-        if (!openPrintWindow(documentHtml)) {
-          return;
-        }
-      }
+  async function handlePrintBoundBarcodes() {
+    if (selectedRows.value.length === 0) {
+      ElMessage.warning('请先勾选需要打印的已绑定标本');
+      return;
+    }
+    if (!canPrintBoundBarcodes.value) {
+      ElMessage.warning('仅支持打印已绑定且存在条码的标本');
+      return;
+    }
 
-      ElMessage.success('已打开预打印窗口');
+    pageError.value = '';
+    try {
+      await printRowsByApplication(
+        selectedRows.value,
+        { includeBarcode: true },
+        '已打开条码打印窗口',
+      );
     } catch (error) {
       pageError.value = getWorkflowPageErrorMessage(error);
     }
@@ -571,6 +618,7 @@ export function useSpecimenBarcodeBindingPanel() {
     buildingOptions,
     canBind,
     canExportExcel,
+    canPrintBoundBarcodes,
     canPreprint,
     canRetryLabel,
     canUnbind,
@@ -578,6 +626,7 @@ export function useSpecimenBarcodeBindingPanel() {
     handleBindBarcode,
     handleExportExcel,
     handlePreprintBarcodes,
+    handlePrintBoundBarcodes,
     handleReset,
     handleRetryLabel,
     handleSearch,

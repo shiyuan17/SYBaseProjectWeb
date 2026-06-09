@@ -175,6 +175,7 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
           component:
             '/modules/specimen-workflow/views/SubmissionRegistrationView',
           meta: {
+            hideInMenu: true,
             icon: 'carbon:list-boxes',
             title: '申请与登记',
           },
@@ -186,7 +187,7 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
             '/modules/specimen-workflow/views/ApplicationRegistrationWorkbenchView',
           meta: {
             icon: 'carbon:workspace',
-            title: '申请登记工作台',
+            title: '标本采集',
           },
           name: 'ApplicationRegistrationWorkbench',
           path: '/workflow/application-registration-workbench',
@@ -329,7 +330,7 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
             '/modules/technical-workflow/views/TechnicalSpecimenRegistrationView',
           meta: {
             icon: 'carbon:data-table',
-            title: '登记接收工作站',
+            title: '检查登记',
           },
           name: 'TechnicalSpecimenRegistration',
           path: '/technical-workflow/specimen-registration',

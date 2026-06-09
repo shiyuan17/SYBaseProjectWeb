@@ -58,7 +58,7 @@ describe('technical workflow routes', () => {
       '/technical-workflow/specimen-registration',
     );
     expect(specimenRegistrationRoute?.meta?.keepAlive).toBe(true);
-    expect(specimenRegistrationRoute?.meta?.title).toBe('登记接收工作站');
+    expect(specimenRegistrationRoute?.meta?.title).toBe('检查登记');
     expect(specimenRegistrationRoute?.meta?.authority).toEqual([
       M2_PERMISSION_CODES.SPECIMEN_RECEIVE,
     ]);

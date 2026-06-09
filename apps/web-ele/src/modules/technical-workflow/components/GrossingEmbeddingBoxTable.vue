@@ -42,6 +42,15 @@ function handleRemoveEmbeddingBox(row: GrossingEmbeddingBoxTableRow) {
 function handleSelectedSpecimenKeyChange(value: number | string) {
   emit('update:selectedSpecimenKey', String(value));
 }
+
+function formatEmbeddingBoxNo(embeddingBoxNo: string) {
+  const normalizedValue = embeddingBoxNo.trim();
+  if (!normalizedValue) {
+    return '-';
+  }
+  const suffixMatch = normalizedValue.match(/([A-Za-z]+\d+)$/);
+  return suffixMatch?.[1]?.toUpperCase() ?? normalizedValue;
+}
 </script>
 
 <template>
@@ -51,12 +60,12 @@ function handleSelectedSpecimenKeyChange(value: number | string) {
     >
       <div class="inline-flex flex-nowrap items-center gap-2">
         <span class="shrink-0 text-sm font-semibold text-foreground">
-          包埋盒
+          标本名称
         </span>
         <ElSelect
           :model-value="selectedSpecimenKey"
           aria-label="标本名称"
-          class="w-44"
+          class="w-72 min-w-[288px] flex-none"
           popper-class="grossing-specimen-select-popper"
           @update:model-value="handleSelectedSpecimenKeyChange"
         >
@@ -131,16 +140,24 @@ function handleSelectedSpecimenKeyChange(value: number | string) {
             />
           </template>
         </ElTableColumn>
-        <ElTableColumn label="盒号" min-width="110">
+        <ElTableColumn label="盒号" min-width="72" width="80">
           <template #default="{ row }">
-            <span class="text-sm font-medium text-foreground">
-              {{ row.box.embeddingBoxNo || '-' }}
+            <span
+              class="text-sm font-medium text-foreground"
+              :title="row.box.embeddingBoxNo || '-'"
+            >
+              {{ formatEmbeddingBoxNo(row.box.embeddingBoxNo) }}
             </span>
           </template>
         </ElTableColumn>
-        <ElTableColumn label="状态" min-width="110">
+        <ElTableColumn label="状态" min-width="132">
           <template #default="{ row }">
-            <ElSelect v-model="row.box.status" size="small">
+            <ElSelect
+              v-model="row.box.status"
+              class="w-full"
+              popper-class="grossing-status-select-popper"
+              size="small"
+            >
               <ElOption
                 v-for="option in statusOptions"
                 :key="option.value"
@@ -150,7 +167,7 @@ function handleSelectedSpecimenKeyChange(value: number | string) {
             </ElSelect>
           </template>
         </ElTableColumn>
-        <ElTableColumn label="包埋备注" min-width="160">
+        <ElTableColumn label="包埋备注" min-width="240">
           <template #default="{ row }">
             <ReferenceOptionSelect
               v-model="row.box.embeddingRemarks"
@@ -181,12 +198,24 @@ function handleSelectedSpecimenKeyChange(value: number | string) {
 
 <style scoped>
 :global(.grossing-specimen-select-popper) {
-  min-width: 176px;
+  min-width: 288px;
 }
 
 :global(.grossing-specimen-select-popper .el-select-dropdown__item) {
-  height: 36px;
+  height: auto;
+  min-height: 36px;
+  padding-top: 8px;
+  padding-bottom: 8px;
   font-size: 14px;
-  line-height: 36px;
+  line-height: 20px;
+  white-space: normal;
+}
+
+:global(.grossing-status-select-popper) {
+  min-width: 132px;
+}
+
+:global(.grossing-status-select-popper .el-select-dropdown__item) {
+  font-size: 14px;
 }
 </style>

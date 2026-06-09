@@ -38,6 +38,7 @@ import {
   mapTechnicalSpecimenRegistrationDetailResponse,
   mapTechnicalSpecimenRegistrationWorkspaceResponse,
   mapTechnicalTrackingResponse,
+  printSlicingSlides,
   releaseTechnicalTask,
   saveTechnicalSpecimenRegistrationApplicationWorkbenchPatientInfo,
   saveTechnicalSpecimenRegistrationDetailSections,
@@ -176,7 +177,9 @@ describe('technical-workflow-service mappers', () => {
       completedTotal: 0,
       pendingList: [
         {
+          applicationType: null,
           caseId: 'CASE-1',
+          combinedSlide: false,
           completedAt: null,
           embeddingBoxId: '',
           embeddingClearRemark: null,
@@ -190,6 +193,7 @@ describe('technical-workflow-service mappers', () => {
           shiftRemark: null,
           slideId: null,
           slideNo: null,
+          slidePrintStatus: null,
           sliceNotice: null,
           slicingOperatorName: null,
           slicingRemark: null,
@@ -198,10 +202,44 @@ describe('technical-workflow-service mappers', () => {
           taskId: 'TASK-1',
           taskStatus: null,
           timedOut: false,
+          printedSlideCount: 0,
         },
       ],
+      pendingPrintList: [
+        {
+          applicationType: null,
+          caseId: 'CASE-1',
+          combinedSlide: false,
+          completedAt: null,
+          embeddingBoxId: '',
+          embeddingClearRemark: null,
+          embeddingEvaluation: null,
+          embeddingOperatorName: null,
+          grossingEvaluation: null,
+          pathologyNo: null,
+          patientId: null,
+          patientName: null,
+          selectable: false,
+          shiftRemark: null,
+          slideId: null,
+          slideNo: null,
+          slidePrintStatus: null,
+          sliceNotice: null,
+          slicingOperatorName: null,
+          slicingRemark: null,
+          specimenId: null,
+          specimenName: null,
+          taskId: 'TASK-1',
+          taskStatus: null,
+          timedOut: false,
+          printedSlideCount: 0,
+        },
+      ],
+      pendingPrintTotal: 0,
       pendingPage: 1,
       pendingSize: 20,
+      pendingSliceList: [],
+      pendingSliceTotal: 0,
       pendingTotal: 0,
       stats: {
         completedDeptTodayCount: 0,
@@ -966,7 +1004,12 @@ describe('technical-workflow-service requests', () => {
     });
     await completeSlicing({
       embeddingBoxId: 'BOX-1',
-      slideCount: 2,
+      taskId: 'TASK-SLI',
+    });
+    await printSlicingSlides({
+      embeddingBoxId: 'BOX-1',
+      mergeAdjacent: true,
+      sourceSlideCount: 4,
       taskId: 'TASK-SLI',
     });
 
@@ -982,7 +1025,16 @@ describe('technical-workflow-service requests', () => {
       '/v1/slicings/complete',
       {
         embeddingBoxId: 'BOX-1',
-        slideCount: 2,
+        taskId: 'TASK-SLI',
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      3,
+      '/v1/slicings/slide-print',
+      {
+        embeddingBoxId: 'BOX-1',
+        mergeAdjacent: true,
+        sourceSlideCount: 4,
         taskId: 'TASK-SLI',
       },
     );
@@ -998,6 +1050,7 @@ describe('technical-workflow-service requests', () => {
     await getSlicingWorkbench({
       completedPage: 2,
       completedSize: 10,
+      applicationType: 'ROUTINE',
       keyword: 'BL-001',
       overdueOnly: true,
       pendingPage: 1,
@@ -1011,6 +1064,7 @@ describe('technical-workflow-service requests', () => {
         params: {
           completedPage: 2,
           completedSize: 10,
+          applicationType: 'ROUTINE',
           keyword: 'BL-001',
           overdueOnly: true,
           pendingPage: 1,

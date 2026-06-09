@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import type { PendingDiagnosticTaskItem } from '../types/doctor-workflow';
 
-import { Camera, InspectionPanel } from '@vben/icons';
-
-import { ElButton, ElEmpty, ElTag } from 'element-plus';
+import { ElEmpty, ElTag } from 'element-plus';
 
 import {
   formatDiagnosticTaskStatus,
@@ -16,16 +14,12 @@ import {
 } from '../utils/workbench-view';
 
 defineProps<{
-  captureActive?: boolean;
   items: PendingDiagnosticTaskItem[];
   loading: boolean;
-  medicalOrderActive?: boolean;
   selectedTaskId: string;
 }>();
 
 const emit = defineEmits<{
-  openCapture: [];
-  openMedicalOrder: [];
   select: [task: PendingDiagnosticTaskItem];
 }>();
 </script>
@@ -39,24 +33,6 @@ const emit = defineEmits<{
     >
       <div>
         <h3 class="text-sm font-semibold text-foreground">诊断队列</h3>
-      </div>
-      <div class="flex shrink-0 items-center gap-2">
-        <ElButton
-          :icon="Camera"
-          size="small"
-          :type="captureActive ? 'primary' : 'default'"
-          @click="emit('openCapture')"
-        >
-          采图
-        </ElButton>
-        <ElButton
-          :icon="InspectionPanel"
-          size="small"
-          :type="medicalOrderActive ? 'primary' : 'default'"
-          @click="emit('openMedicalOrder')"
-        >
-          医嘱
-        </ElButton>
       </div>
     </header>
 

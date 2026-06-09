@@ -65,6 +65,10 @@ function buildSpecimenQrCodeValue(
   context: WorkbenchSpecimenPrintContext,
   item: WorkbenchSpecimenItem,
 ) {
+  if (item.barcode) {
+    return item.barcode;
+  }
+
   return JSON.stringify({
     applyDept: context.applyDept,
     idNo: context.idNo,
@@ -87,7 +91,7 @@ function buildSpecimenLabelMarkup(
   return `
     <section class="label">
       <div class="top">
-        <div class="id-no">${escapeHtml(context.idNo || item.specimenNo)}</div>
+        <div class="id-no">${escapeHtml(item.barcode || context.idNo || item.specimenNo)}</div>
         <img alt="二维码" class="qr" src="${qrCodeImageUrl}" />
       </div>
       <div class="line">${escapeHtml(context.applyDept || '-')}</div>

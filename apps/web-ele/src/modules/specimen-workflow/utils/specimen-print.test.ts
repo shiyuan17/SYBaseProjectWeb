@@ -74,6 +74,32 @@ describe('buildSpecimenPrintDocument', () => {
     expect(documentHtml).toContain('sheet-break');
   });
 
+  it('uses bound specimen barcode as the printable qrcode value', () => {
+    const documentHtml = buildSpecimenPrintDocument({
+      context: {
+        applyDept: '急诊科',
+        gender: '女',
+        idNo: '34734663',
+        patientName: '潘姐',
+        roomLabel: '手术室2',
+        surgeryTime: '2026-05-27 11:02:00',
+      },
+      item: {
+        barcode: 'BC-BOUND-001',
+        id: 'item-1',
+        quantity: 1,
+        specimenName: '右侧胫骨感染病灶',
+        specimenNo: '22498',
+        specimenSite: '骨髓炎',
+        status: '标本确认',
+      },
+    });
+
+    expect(documentHtml).toContain('BC-BOUND-001');
+    expect(documentHtml).toContain(encodeURIComponent('BC-BOUND-001'));
+    expect(documentHtml).not.toContain(encodeURIComponent('34734663'));
+  });
+
   it('renders application form reprint fields and qrcode', () => {
     const documentHtml = buildApplicationFormPrintDocument({
       applicationId: 'APP-001',

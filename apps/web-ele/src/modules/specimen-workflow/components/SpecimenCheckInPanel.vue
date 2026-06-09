@@ -5,8 +5,16 @@ import SystemUserSelect from '#/modules/system-management/components/SystemUserS
 
 import { useSpecimenCheckInPanel } from '../composables/useSpecimenCheckInPanel';
 import { formatDateTime, formatNullable } from '../utils/format';
+import {
+  resolveCheckInWorkflowRowTone,
+  resolveSpecimenWorkflowRowClassName,
+} from '../utils/specimen-workflow-row-tone';
+
+import '../styles/specimen-workflow-row-tone.css';
+
 const {
   actionLoading,
+  clearQueue,
   exportLoading,
   formatSpecimenStatus,
   handleExport,
@@ -26,6 +34,16 @@ const {
   scanInput,
   selectedCount,
 } = useSpecimenCheckInPanel();
+
+function resolveRowClassName({
+  row,
+}: {
+  row: (typeof queueItems.value)[number];
+}) {
+  return resolveSpecimenWorkflowRowClassName(
+    resolveCheckInWorkflowRowTone(row),
+  );
+}
 </script>
 
 <template>
@@ -78,6 +96,7 @@ const {
       <ElButton :loading="retryLoading" @click="handleRetryLabelPrint">
         补打标本标签
       </ElButton>
+      <ElButton @click="clearQueue">清除列表</ElButton>
       <ElButton @click="handleReset">重置</ElButton>
       <ElButton :loading="exportLoading" @click="handleExport">
         导出Excel
@@ -87,6 +106,7 @@ const {
     <ElTable
       v-loading="loading"
       :data="queueItems"
+      :row-class-name="resolveRowClassName"
       border
       row-key="specimenId"
       @selection-change="handleSelectionChange"

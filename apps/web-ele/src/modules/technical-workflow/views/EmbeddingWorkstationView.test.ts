@@ -10,6 +10,7 @@ const {
   mockCompleteEmbedding,
   mockGetEmbeddingWorkstationSummary,
   mockGetTechnicalTracking,
+  mockInitialOperatorRemarks,
   mockMessageBoxConfirm,
   mockListPendingTechnicalTasks,
   mockRoute,
@@ -24,6 +25,9 @@ const {
   mockCompleteEmbedding: vi.fn(),
   mockGetEmbeddingWorkstationSummary: vi.fn(),
   mockGetTechnicalTracking: vi.fn(),
+  mockInitialOperatorRemarks: {
+    value: '',
+  },
   mockMessageBoxConfirm: vi.fn(),
   mockListPendingTechnicalTasks: vi.fn(),
   mockRoute: {
@@ -87,6 +91,41 @@ vi.mock('../api/technical-workflow-service', () => ({
   startEmbedding: mockStartEmbedding,
   updateEmbeddingQualityReview: mockUpdateEmbeddingQualityReview,
   updateTechnicalTaskRemarks: mockUpdateTechnicalTaskRemarks,
+}));
+
+vi.mock('../utils/operator-form', () => ({
+  assignTechnicalOperatorForm: (
+    target: {
+      operatorName: string;
+      operatorUserId: string;
+      remarks: string;
+      terminalCode: string;
+    },
+    userInfo?: { realName?: null | string; userId?: null | string },
+  ) => {
+    Object.assign(target, {
+      operatorName: userInfo?.realName ?? '',
+      operatorUserId: userInfo?.userId ?? '',
+      remarks: mockInitialOperatorRemarks.value,
+      terminalCode: '',
+    });
+  },
+  createTechnicalOperatorDefaults: (userInfo?: {
+    realName?: null | string;
+    userId?: null | string;
+  }) => ({
+    operatorName: userInfo?.realName ?? '',
+    operatorUserId: userInfo?.userId ?? '',
+    remarks: mockInitialOperatorRemarks.value,
+    terminalCode: '',
+  }),
+  normalizeTechnicalOperatorPayload: (form: {
+    remarks: string;
+    terminalCode: string;
+  }) => ({
+    remarks: form.remarks.trim() || null,
+    terminalCode: form.terminalCode.trim() || null,
+  }),
 }));
 
 vi.mock('../components/EmbeddingQualityReviewDialog.vue', () => ({
@@ -433,6 +472,7 @@ function queryButton(text: string) {
 
 describe('EmbeddingWorkstationView', () => {
   beforeEach(() => {
+    mockInitialOperatorRemarks.value = '';
     mockRoute.query = {};
     mockListPendingTechnicalTasks.mockResolvedValue({
       items: [
@@ -815,7 +855,7 @@ describe('EmbeddingWorkstationView', () => {
       expect.objectContaining({
         blockCount: 1,
         evaluationLevel: 'QUALIFIED',
-        remarks: null,
+        remarks: '任务备注-1',
         samplingBlockId: 'BLOCK-1',
         samplingEvaluation: '合格',
         taskId: 'TASK-1',
@@ -859,6 +899,7 @@ describe('EmbeddingWorkstationView', () => {
       1,
       expect.objectContaining({
         embeddingBoxNo: null,
+        remarks: '任务备注-1',
         samplingBlockId: 'BLOCK-1',
         taskId: 'TASK-1',
       }),
@@ -867,6 +908,7 @@ describe('EmbeddingWorkstationView', () => {
       2,
       expect.objectContaining({
         embeddingBoxNo: null,
+        remarks: '任务备注-2',
         samplingBlockId: 'BLOCK-B2',
         taskId: 'TASK-2',
       }),
@@ -894,6 +936,7 @@ describe('EmbeddingWorkstationView', () => {
     expect(mockCompleteEmbedding).toHaveBeenCalledWith(
       expect.objectContaining({
         evaluationLevel: 'QUALIFIED',
+        remarks: '任务备注-1',
         samplingBlockId: 'BLOCK-1',
         samplingEvaluation: '合格',
         taskId: 'TASK-1',
@@ -927,8 +970,36 @@ describe('EmbeddingWorkstationView', () => {
     expect(mockCompleteEmbedding).toHaveBeenCalledWith(
       expect.objectContaining({
         evaluationLevel: 'QUALIFIED',
+        remarks: '任务备注-1',
         samplingBlockId: 'BLOCK-1',
         samplingEvaluation: '合格',
+        taskId: 'TASK-1',
+      }),
+    );
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('falls back to operator remarks when the pending task has no remarks', async () => {
+    mockInitialOperatorRemarks.value = '右侧操作备注';
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [createPendingTask({ remarks: null })],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+
+    const { app, root } = mountView();
+    await flushView();
+
+    findButton('确认包埋完成').click();
+    await flushView();
+
+    expect(mockCompleteEmbedding).toHaveBeenCalledWith(
+      expect.objectContaining({
+        remarks: '右侧操作备注',
+        samplingBlockId: 'BLOCK-1',
         taskId: 'TASK-1',
       }),
     );

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type {
+  DiagnosticReportPrintPreview,
   DiagnosticWorkbenchView,
   RemarkSectionSummary,
 } from '../types/doctor-workflow';
@@ -27,10 +28,11 @@ import {
 } from '../utils/format';
 
 const props = defineProps<{
+  printPreview: DiagnosticReportPrintPreview | null;
   workbench: DiagnosticWorkbenchView | null;
 }>();
 
-const activeTab = ref('patient-info');
+const activeTab = ref('medical-orders');
 const editableRemarkSections = ref<RemarkSectionSummary[]>([]);
 const patientBrief = computed(() => {
   const workbench = props.workbench;
@@ -46,7 +48,7 @@ const patientBrief = computed(() => {
 watch(
   () => props.workbench?.caseId,
   () => {
-    activeTab.value = 'patient-info';
+    activeTab.value = 'medical-orders';
   },
 );
 
@@ -102,7 +104,7 @@ function saveRemarkSection() {
       </div>
     </header>
 
-    <div class="px-4 py-3">
+    <div class="min-h-0 px-4 py-3">
       <ElEmpty v-if="!workbench" description="请先从左侧选择一个病例" />
 
       <ElTabs
@@ -111,6 +113,10 @@ function saveRemarkSection() {
         class="diagnosis-workbench-tabs"
         data-testid="diagnosis-workbench-tabs"
       >
+        <ElTabPane label="医嘱信息" name="medical-orders">
+          <slot name="medical-orders"></slot>
+        </ElTabPane>
+
         <ElTabPane label="患者信息" name="patient-info">
           <div class="space-y-3">
             <ElDescriptions
@@ -223,6 +229,92 @@ function saveRemarkSection() {
                 {{ formatNullable(workbench.currentReport?.finalDiagnosis) }}
               </ElDescriptionsItem>
             </ElDescriptions>
+            <slot name="capture"></slot>
+          </div>
+        </ElTabPane>
+
+        <ElTabPane label="实时预览打印" name="live-print-preview">
+          <ElEmpty
+            v-if="!printPreview"
+            description="请先从左侧选择病例生成报告预览"
+          />
+          <div
+            v-else
+            class="diagnosis-print-preview-scroll"
+            data-testid="diagnosis-workbench-live-print-preview"
+          >
+            <article class="diagnosis-print-preview-sheet">
+              <header class="diagnosis-print-preview-header">
+                <div class="diagnosis-print-preview-time">
+                  {{ printPreview.deliveredAt }}
+                </div>
+                <div class="min-w-0">
+                  <div
+                    class="diagnosis-print-preview-hospital"
+                    :style="{ color: printPreview.accentColor }"
+                  >
+                    {{ printPreview.hospitalName }}
+                  </div>
+                  <div class="diagnosis-print-preview-title">
+                    {{ printPreview.reportTitle }}
+                  </div>
+                </div>
+                <div class="diagnosis-print-preview-no">
+                  {{ printPreview.reportNo }}
+                </div>
+              </header>
+
+              <section class="diagnosis-print-preview-meta">
+                <div
+                  v-for="field in printPreview.metaFields"
+                  :key="field.label"
+                  class="diagnosis-print-preview-field"
+                  :class="field.class"
+                >
+                  <span class="diagnosis-print-preview-label">
+                    {{ field.label }}
+                  </span>
+                  <span class="diagnosis-print-preview-value">
+                    {{ field.value }}
+                  </span>
+                </div>
+              </section>
+
+              <section
+                v-for="section in printPreview.sections"
+                :key="section.label"
+                class="diagnosis-print-preview-section"
+                :style="{ minHeight: `${section.minHeight}px` }"
+              >
+                <div
+                  class="diagnosis-print-preview-section-title"
+                  :style="{ color: printPreview.accentColor }"
+                >
+                  {{ section.label }}
+                </div>
+                <div class="diagnosis-print-preview-section-value">
+                  {{ section.value || ' ' }}
+                </div>
+              </section>
+
+              <footer class="diagnosis-print-preview-footer">
+                <div
+                  v-for="field in printPreview.footerFields"
+                  :key="field.label"
+                  class="diagnosis-print-preview-field"
+                >
+                  <span class="diagnosis-print-preview-label">
+                    {{ field.label }}
+                  </span>
+                  <span class="diagnosis-print-preview-value">
+                    {{ field.value }}
+                  </span>
+                </div>
+              </footer>
+              <div class="diagnosis-print-preview-note">
+                {{ printPreview.note }}
+              </div>
+            </article>
           </div>
         </ElTabPane>
 
@@ -489,5 +581,147 @@ function saveRemarkSection() {
   border: 0;
   border-radius: 0;
   box-shadow: none;
+}
+
+.diagnosis-print-preview-scroll {
+  min-height: 320px;
+  max-height: calc(100vh - 360px);
+  padding: 12px;
+  overflow: auto;
+  background: var(--el-fill-color-lighter);
+}
+
+.diagnosis-print-preview-sheet {
+  width: min(100%, 720px);
+  min-height: 840px;
+  padding: 48px 28px 28px;
+  margin: 0 auto;
+  font-family: SimSun, 'Microsoft YaHei', 'PingFang SC', sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
+  color: #111;
+  background: #fff;
+  border: 1px solid #111;
+  box-shadow: 0 8px 24px rgb(15 23 42 / 8%);
+}
+
+.diagnosis-print-preview-header {
+  display: grid;
+  grid-template-columns: minmax(96px, 0.7fr) minmax(0, 1fr) minmax(96px, 0.7fr);
+  gap: 8px;
+  align-items: end;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #111;
+}
+
+.diagnosis-print-preview-time,
+.diagnosis-print-preview-no,
+.diagnosis-print-preview-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.diagnosis-print-preview-hospital {
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.diagnosis-print-preview-title {
+  margin-top: 6px;
+  font-size: 20px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.diagnosis-print-preview-meta {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-bottom: 1px solid #111;
+}
+
+.diagnosis-print-preview-field {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px;
+  align-items: center;
+  min-width: 0;
+  min-height: 28px;
+  padding-right: 6px;
+}
+
+.diagnosis-print-preview-field.span-2 {
+  grid-column: span 2;
+}
+
+.diagnosis-print-preview-label,
+.diagnosis-print-preview-section-title {
+  font-weight: 700;
+}
+
+.diagnosis-print-preview-label {
+  white-space: nowrap;
+}
+
+.diagnosis-print-preview-section {
+  padding: 8px 0 10px;
+  border-bottom: 1px solid #111;
+}
+
+.diagnosis-print-preview-section-title {
+  margin-bottom: 8px;
+}
+
+.diagnosis-print-preview-section-value {
+  max-width: 100%;
+  word-break: normal;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.diagnosis-print-preview-footer {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.diagnosis-print-preview-note {
+  margin-top: 20px;
+  color: #008000;
+}
+
+.diagnosis-workbench-tabs :deep(.el-tabs__header) {
+  margin-bottom: 12px;
+}
+
+.diagnosis-workbench-tabs :deep(.el-tabs__nav-wrap) {
+  overflow: visible;
+}
+
+.diagnosis-workbench-tabs :deep(.el-tabs__nav-wrap::after) {
+  bottom: 0;
+}
+
+.diagnosis-workbench-tabs :deep(.el-tabs__nav-scroll) {
+  overflow: visible;
+}
+
+.diagnosis-workbench-tabs :deep(.el-tabs__nav) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  white-space: normal;
+}
+
+.diagnosis-workbench-tabs :deep(.el-tabs__active-bar) {
+  display: none;
+}
+
+.diagnosis-workbench-tabs :deep(.el-tabs__item) {
+  height: 32px;
+  padding: 0 4px;
 }
 </style>

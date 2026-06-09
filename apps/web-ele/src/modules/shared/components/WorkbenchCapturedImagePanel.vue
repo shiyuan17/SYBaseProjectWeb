@@ -47,6 +47,7 @@ const cameraCapturing = ref(false);
 const cameraReady = ref(false);
 const cameraError = ref('');
 let cameraStream: MediaStream | null = null;
+let cameraStartToken = 0;
 
 const previewSrcList = computed(() => props.items.map((item) => item.fileUrl));
 
@@ -97,7 +98,11 @@ function isCameraSupported() {
   return Boolean(navigator.mediaDevices?.getUserMedia);
 }
 
-function stopCameraStream() {
+function stopCameraStream(options: { invalidate?: boolean } = {}) {
+  if (options.invalidate !== false) {
+    cameraStartToken += 1;
+    cameraStarting.value = false;
+  }
   cameraStream?.getTracks().forEach((track) => track.stop());
   cameraStream = null;
   cameraReady.value = false;
@@ -107,6 +112,8 @@ function stopCameraStream() {
 }
 
 async function startCamera() {
+  const startToken = cameraStartToken + 1;
+  cameraStartToken = startToken;
   cameraStarting.value = true;
   cameraError.value = '';
   if (!isCameraSupported()) {
@@ -115,7 +122,7 @@ async function startCamera() {
     return;
   }
 
-  stopCameraStream();
+  stopCameraStream({ invalidate: false });
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: false,
@@ -123,18 +130,40 @@ async function startCamera() {
         facingMode: 'environment',
       },
     });
+    if (
+      cameraStartToken !== startToken ||
+      !cameraPreviewEnabled.value ||
+      !props.canEdit
+    ) {
+      stream.getTracks().forEach((track) => track.stop());
+      return;
+    }
     cameraStream = stream;
-    cameraReady.value = true;
     if (cameraVideoRef.value) {
       cameraVideoRef.value.srcObject = stream;
       await cameraVideoRef.value.play();
     }
+    if (
+      cameraStartToken !== startToken ||
+      !cameraPreviewEnabled.value ||
+      !props.canEdit
+    ) {
+      stopCameraStream({ invalidate: false });
+      return;
+    }
+    cameraReady.value = true;
   } catch {
-    cameraError.value = '无法打开摄像头，请检查浏览器权限或设备连接';
-    ElMessage.warning(cameraError.value);
-    stopCameraStream();
+    if (cameraStartToken === startToken) {
+      if (cameraPreviewEnabled.value) {
+        cameraError.value = '无法打开摄像头，请检查浏览器权限或设备连接';
+        ElMessage.warning(cameraError.value);
+      }
+      stopCameraStream({ invalidate: false });
+    }
   } finally {
-    cameraStarting.value = false;
+    if (cameraStartToken === startToken) {
+      cameraStarting.value = false;
+    }
   }
 }
 

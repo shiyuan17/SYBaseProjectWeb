@@ -64,10 +64,24 @@ const filters = reactive({
   timedOutOnly: route.query.mode === 'exception',
 });
 
+const routeTaskId = computed(() =>
+  typeof route.query.taskId === 'string' ? route.query.taskId : '',
+);
+const shouldIncludeAllStatuses = computed(
+  () => Boolean(filters.pathologyNo.trim()) || Boolean(routeTaskId.value),
+);
+const shouldInitialLoad = computed(
+  () =>
+    Boolean(filters.pathologyNo.trim()) ||
+    Boolean(routeTaskId.value) ||
+    filters.timedOutOnly,
+);
 const currentQuery = computed(() => ({
+  includeAllStatuses: shouldIncludeAllStatuses.value || undefined,
   page: filters.page,
   pathologyNo: filters.pathologyNo.trim() || undefined,
   size: filters.size,
+  taskId: routeTaskId.value || undefined,
   taskType: 'DEHYDRATION',
   timedOutOnly: filters.timedOutOnly,
 }));
@@ -114,6 +128,13 @@ function syncSelectedTask(preferredTaskId?: string) {
   selectedTaskId.value = nextTaskId;
 }
 
+function clearPendingData() {
+  pendingItems.value = [];
+  selectedRows.value = [];
+  selectedTaskId.value = '';
+  total.value = 0;
+}
+
 async function loadPendingData() {
   loading.value = true;
   pageError.value = '';
@@ -123,14 +144,15 @@ async function loadPendingData() {
     selectedRows.value = [];
     total.value = result.total;
 
-    const deepLinkedTaskId =
-      typeof route.query.taskId === 'string' ? route.query.taskId : '';
+    const deepLinkedTaskId = routeTaskId.value;
     syncSelectedTask(
       deepLinkedTaskId || selectedTaskId.value || result.items[0]?.id,
     );
+    return result.items;
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
     reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
+    return null;
   } finally {
     loading.value = false;
   }
@@ -149,9 +171,86 @@ function handleCurrentChange(task: null | PendingTechnicalTaskItem) {
   }
 }
 
+function isDehydrationTaskSelectable(task: PendingTechnicalTaskItem) {
+  return task.taskStatus === 'PENDING' || task.taskStatus === 'IN_PROGRESS';
+}
+
+function resolveDehydrationRowTone(task: PendingTechnicalTaskItem) {
+  if (task.timedOut) {
+    return 'failed';
+  }
+  if (task.taskStatus === 'PENDING') {
+    return 'actionable';
+  }
+  if (task.taskStatus === 'IN_PROGRESS') {
+    return 'in-progress';
+  }
+  if (task.taskStatus === 'COMPLETED') {
+    return 'completed';
+  }
+  return 'blocked';
+}
+
+function resolveDehydrationRowClassName({
+  row,
+}: {
+  row: PendingTechnicalTaskItem;
+}) {
+  return `dehydration-workflow-row--${resolveDehydrationRowTone(row)}`;
+}
+
 function handleSearch() {
   filters.page = 1;
+  if (!filters.pathologyNo.trim()) {
+    clearPendingData();
+    return;
+  }
   void loadPendingData();
+}
+
+async function startSingleDehydrationTask(task: PendingTechnicalTaskItem) {
+  if (task.taskStatus !== 'PENDING') {
+    ElMessage.warning('仅待处理任务可以开始脱水');
+    return;
+  }
+
+  startLoading.value = true;
+  pageError.value = '';
+  try {
+    await startDehydration({ taskId: task.id });
+    ElMessage.success(`任务 ${task.id} 已开始脱水`);
+    await loadPendingData();
+  } catch (error) {
+    pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
+    ElMessage.warning('开始脱水失败，请重试');
+  } finally {
+    startLoading.value = false;
+  }
+}
+
+async function handleScanEnter() {
+  filters.page = 1;
+  if (!filters.pathologyNo.trim()) {
+    clearPendingData();
+    return;
+  }
+
+  const loadedItems = await loadPendingData();
+  if (!loadedItems) {
+    return;
+  }
+
+  const currentTask =
+    selectedTask.value ??
+    loadedItems.find((item) => item.id === selectedTaskId.value) ??
+    loadedItems[0];
+  if (!currentTask) {
+    ElMessage.warning('未查询到可开始脱水的蜡块任务');
+    return;
+  }
+
+  await startSingleDehydrationTask(currentTask);
 }
 
 function toggleTimedOutOnly() {
@@ -302,7 +401,9 @@ async function handleCompleteDehydration() {
   });
 }
 
-void loadPendingData();
+if (shouldInitialLoad.value) {
+  void loadPendingData();
+}
 </script>
 
 <template>
@@ -344,7 +445,7 @@ void loadPendingData();
                   class="w-48"
                   clearable
                   placeholder="请输入病理号"
-                  @keyup.enter="handleSearch"
+                  @keydown.enter.prevent="handleScanEnter"
                 />
               </ElFormItem>
               <ElFormItem class="mb-0">
@@ -400,6 +501,7 @@ void loadPendingData();
           <ElTable
             v-loading="loading"
             :data="pendingItems"
+            :row-class-name="resolveDehydrationRowClassName"
             border
             current-row-key="id"
             highlight-current-row
@@ -407,7 +509,11 @@ void loadPendingData();
             @current-change="handleCurrentChange"
             @selection-change="handleSelectionChange"
           >
-            <ElTableColumn type="selection" width="44" />
+            <ElTableColumn
+              :selectable="isDehydrationTaskSelectable"
+              type="selection"
+              width="44"
+            />
             <ElTableColumn label="序" width="60">
               <template #default="{ $index }">
                 {{ (filters.page - 1) * filters.size + $index + 1 }}
@@ -503,5 +609,45 @@ void loadPendingData();
 
 .dehydration-toolbar-form :deep(.el-form-item__content) {
   align-items: center;
+}
+
+:deep(.dehydration-workflow-row--actionable > td) {
+  background: hsl(var(--primary) / 8%) !important;
+}
+
+:deep(.dehydration-workflow-row--in-progress > td) {
+  background: hsl(var(--warning) / 10%) !important;
+}
+
+:deep(.dehydration-workflow-row--completed > td) {
+  background: hsl(var(--success) / 12%) !important;
+}
+
+:deep(.dehydration-workflow-row--blocked > td) {
+  background: hsl(var(--muted) / 70%) !important;
+}
+
+:deep(.dehydration-workflow-row--failed > td) {
+  background: hsl(var(--destructive) / 12%) !important;
+}
+
+:deep(.dehydration-workflow-row--actionable > td:first-child) {
+  box-shadow: inset 3px 0 0 hsl(var(--primary));
+}
+
+:deep(.dehydration-workflow-row--in-progress > td:first-child) {
+  box-shadow: inset 3px 0 0 hsl(var(--warning));
+}
+
+:deep(.dehydration-workflow-row--completed > td:first-child) {
+  box-shadow: inset 3px 0 0 hsl(var(--success));
+}
+
+:deep(.dehydration-workflow-row--blocked > td:first-child) {
+  box-shadow: inset 3px 0 0 hsl(var(--border));
+}
+
+:deep(.dehydration-workflow-row--failed > td:first-child) {
+  box-shadow: inset 3px 0 0 hsl(var(--destructive));
 }
 </style>

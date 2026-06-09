@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type {
+  DiagnosticReportPrintPreview,
   DiagnosticWorkbenchView,
   PendingDiagnosticTaskItem,
 } from '../types/doctor-workflow';
@@ -9,9 +10,8 @@ import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
-import { X } from '@vben/icons';
 
-import { ElAlert, ElButton, ElMessage } from 'element-plus';
+import { ElAlert, ElMessage } from 'element-plus';
 
 import WorkbenchCapturedImagePanel from '#/modules/shared/components/WorkbenchCapturedImagePanel.vue';
 
@@ -33,7 +33,7 @@ import {
   resolveWorkbenchSelection,
 } from '../utils/workbench-view';
 
-type DiagnosisDetailMode = 'capture' | 'materials' | 'orders';
+type DiagnosisWorkbenchResizeHandle = 'left' | 'right';
 
 interface DiagnosisCapturedImageItem {
   fileUrl: string;
@@ -52,19 +52,25 @@ const detailLoading = ref(false);
 const pageError = ref('');
 const pendingItems = ref<PendingDiagnosticTaskItem[]>([]);
 const workbench = ref<DiagnosticWorkbenchView | null>(null);
+const reportPrintPreview = ref<DiagnosticReportPrintPreview | null>(null);
 const selectedCaseId = ref('');
 const selectedTaskId = ref('');
 const selfRouteQueryKey = ref('');
 const printPreviewVisible = ref(false);
 const activeQuickFilter = ref<DiagnosisWorkbenchQueueQuickFilter>('ALL');
 const assignedRange = ref<string[]>(createDefaultAssignedRange());
-const detailMode = ref<DiagnosisDetailMode>('materials');
 const diagnosisCapturedImagesByCaseId = reactive<
   Record<string, DiagnosisCapturedImageItem[]>
 >({});
 const diagnosisImageAccept = 'image/jpeg,image/png,image/webp,image/bmp';
 const diagnosisImageMaxSize = 20 * 1024 * 1024;
 const diagnosisImageTypes = new Set(diagnosisImageAccept.split(','));
+const workstationLayoutRef = ref<HTMLElement>();
+const paneWidths = reactive({
+  materials: 33,
+  queue: 26,
+  report: 41,
+});
 
 const filters = reactive({
   page: 1,
@@ -119,6 +125,9 @@ const selectedCapturedImages = computed(() =>
     : [],
 );
 const canCaptureDiagnosisImage = computed(() => Boolean(selectedCaseId.value));
+const workstationGridStyle = computed(() => ({
+  gridTemplateColumns: `${paneWidths.queue}fr 6px ${paneWidths.report}fr 6px ${paneWidths.materials}fr`,
+}));
 
 function validateDiagnosisImageFile(file: File) {
   if (!diagnosisImageTypes.has(file.type)) {
@@ -347,23 +356,85 @@ function handleRefresh() {
   void loadQueue({ forceDetailReload: Boolean(selectedCaseId.value) });
 }
 
-function handleOpenCapture() {
-  detailMode.value = detailMode.value === 'capture' ? 'materials' : 'capture';
-}
-
-function handleOpenMaterials() {
-  detailMode.value = 'materials';
-}
-
-function handleOpenMedicalOrder() {
-  detailMode.value = detailMode.value === 'orders' ? 'materials' : 'orders';
-}
-
 function refreshCurrentWorkbench() {
   if (!selectedCaseId.value) {
     return;
   }
   void loadWorkbench(selectedCaseId.value);
+}
+
+function handleReportPrintPreviewChange(
+  preview: DiagnosticReportPrintPreview | null,
+) {
+  reportPrintPreview.value = preview;
+}
+
+function applyPaneWidths(nextWidths: {
+  materials: number;
+  queue: number;
+  report: number;
+}) {
+  const minWidth = 18;
+  const total = nextWidths.queue + nextWidths.report + nextWidths.materials;
+  if (
+    total <= 0 ||
+    nextWidths.queue < minWidth ||
+    nextWidths.report < minWidth ||
+    nextWidths.materials < minWidth
+  ) {
+    return;
+  }
+
+  paneWidths.queue = nextWidths.queue;
+  paneWidths.report = nextWidths.report;
+  paneWidths.materials = nextWidths.materials;
+}
+
+function handleResizePointerDown(
+  handle: DiagnosisWorkbenchResizeHandle,
+  event: PointerEvent,
+) {
+  if (event.button !== 0) {
+    return;
+  }
+
+  const layoutElement = workstationLayoutRef.value;
+  if (!layoutElement) {
+    return;
+  }
+
+  event.preventDefault();
+  const startX = event.clientX;
+  const startWidths = { ...paneWidths };
+  const layoutWidth = layoutElement.getBoundingClientRect().width;
+
+  const handlePointerMove = (moveEvent: PointerEvent) => {
+    const deltaPercent = ((moveEvent.clientX - startX) / layoutWidth) * 100;
+    if (handle === 'left') {
+      applyPaneWidths({
+        ...startWidths,
+        queue: startWidths.queue + deltaPercent,
+        report: startWidths.report - deltaPercent,
+      });
+      return;
+    }
+
+    applyPaneWidths({
+      ...startWidths,
+      materials: startWidths.materials - deltaPercent,
+      report: startWidths.report + deltaPercent,
+    });
+  };
+
+  const stopResize = () => {
+    window.removeEventListener('pointermove', handlePointerMove);
+    window.removeEventListener('pointerup', stopResize);
+    window.removeEventListener('pointercancel', stopResize);
+  };
+
+  window.addEventListener('pointermove', handlePointerMove);
+  window.addEventListener('pointerup', stopResize, { once: true });
+  window.addEventListener('pointercancel', stopResize, { once: true });
 }
 
 watch(
@@ -424,70 +495,103 @@ onBeforeUnmount(() => {
       />
 
       <div
-        class="grid min-h-0 gap-3 xl:grid-cols-[minmax(360px,0.72fr)_minmax(520px,1.05fr)_minmax(460px,0.98fr)]"
+        ref="workstationLayoutRef"
+        class="diagnosis-workbench-layout grid min-h-0 gap-3 xl:items-stretch xl:gap-0"
+        :style="workstationGridStyle"
       >
         <DiagnosisWorkbenchQueueTable
-          :capture-active="detailMode === 'capture'"
           :items="visiblePendingItems"
           :loading="queueLoading"
-          :medical-order-active="detailMode === 'orders'"
           :selected-task-id="selectedTaskId"
-          class="min-h-[360px] xl:h-[calc(100vh-270px)]"
-          @open-capture="handleOpenCapture"
-          @open-medical-order="handleOpenMedicalOrder"
+          class="min-h-[360px] min-w-[320px] xl:h-[calc(100vh-270px)]"
           @select="selectQueueTask"
         />
+
+        <button
+          aria-label="调整诊断队列和报告预览编辑宽度"
+          class="diagnosis-workbench-resizer mx-1 hidden xl:block"
+          data-testid="diagnosis-workbench-resizer-left"
+          type="button"
+          @pointerdown="handleResizePointerDown('left', $event)"
+        ></button>
 
         <DiagnosisWorkbenchReportEditor
           v-model:print-preview-visible="printPreviewVisible"
           :loading="detailLoading"
           :workbench="workbench"
-          class="min-h-[360px] xl:h-[calc(100vh-270px)]"
+          class="min-h-[360px] min-w-[440px] xl:h-[calc(100vh-270px)]"
+          @preview-change="handleReportPrintPreviewChange"
         />
 
-        <section
-          v-if="detailMode === 'capture'"
-          class="flex min-h-[360px] flex-col rounded-lg border border-border bg-card shadow-sm xl:h-[calc(100vh-270px)]"
-        >
-          <header
-            class="flex items-center justify-between gap-3 border-b border-border px-4 py-3"
-          >
-            <div>
-              <h3 class="text-sm font-semibold text-foreground">采图区</h3>
-            </div>
-            <ElButton
-              aria-label="关闭采图区"
-              circle
-              :icon="X"
-              size="small"
-              title="关闭采图区"
-              @click="handleOpenMaterials"
-            />
-          </header>
-          <WorkbenchCapturedImagePanel
-            :accept="diagnosisImageAccept"
-            :can-edit="canCaptureDiagnosisImage"
-            disabled-text="请先从左侧选择病例"
-            empty-description="当前病例暂无诊断采图"
-            :items="selectedCapturedImages"
-            preview-hint="当前病例拍照实时预览"
-            :upload-image-file="uploadDiagnosisImage"
-          />
-        </section>
-
-        <DiagnosisWorkbenchMedicalOrderPane
-          v-else-if="detailMode === 'orders'"
-          :loading="detailLoading"
-          :workbench="workbench"
-          @refresh="refreshCurrentWorkbench"
-        />
+        <button
+          aria-label="调整报告预览编辑和诊断材料区宽度"
+          class="diagnosis-workbench-resizer mx-1 hidden xl:block"
+          data-testid="diagnosis-workbench-resizer-right"
+          type="button"
+          @pointerdown="handleResizePointerDown('right', $event)"
+        ></button>
 
         <DiagnosisWorkbenchDetailPane
-          v-else
+          :print-preview="reportPrintPreview"
           :workbench="workbench"
-          class="min-h-[360px] xl:h-[calc(100vh-270px)] xl:overflow-auto"
-        />
+          class="min-h-[360px] min-w-[380px] xl:h-[calc(100vh-270px)] xl:overflow-auto"
+        >
+          <template #medical-orders>
+            <DiagnosisWorkbenchMedicalOrderPane
+              embedded
+              :loading="detailLoading"
+              :workbench="workbench"
+              @refresh="refreshCurrentWorkbench"
+            />
+          </template>
+          <template #capture>
+            <section
+              class="diagnosis-capture-section flex min-h-[320px] flex-col border border-border bg-card"
+            >
+              <header
+                class="flex items-center justify-between gap-3 border-b border-border px-3 py-2"
+              >
+                <h3 class="text-sm font-semibold text-foreground">采图区</h3>
+              </header>
+              <WorkbenchCapturedImagePanel
+                :accept="diagnosisImageAccept"
+                :can-edit="canCaptureDiagnosisImage"
+                disabled-text="请先从左侧选择病例"
+                empty-description="当前病例暂无诊断采图"
+                :items="selectedCapturedImages"
+                preview-hint="当前病例拍照实时预览"
+                :upload-image-file="uploadDiagnosisImage"
+              />
+            </section>
+          </template>
+        </DiagnosisWorkbenchDetailPane>
       </div>
     </div>
   </Page>
 </template>
+
+<style scoped>
+.diagnosis-workbench-resizer {
+  min-height: 360px;
+  cursor: col-resize;
+  background: transparent;
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+}
+
+.diagnosis-workbench-resizer:hover,
+.diagnosis-workbench-resizer:focus-visible {
+  outline: none;
+  background: var(--el-color-primary-light-7);
+}
+
+.diagnosis-capture-section {
+  border-radius: 6px;
+}
+
+@media (width < 1280px) {
+  .diagnosis-workbench-layout {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+</style>

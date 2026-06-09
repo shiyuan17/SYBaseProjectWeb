@@ -386,7 +386,7 @@ async function quickOutboundSpecimenMock(
     receiverDepartmentId: 'DEPT_PATH',
     receiverDepartmentName: '病理科',
     remarks: data.remarks ?? null,
-    specimenBarcodes: [specimen.barcode],
+    specimenBarcodes: [normalizeText(specimen.barcode)],
     terminalCode: data.terminalCode ?? null,
   });
   return outboundTransportOrderMock(createdOrder.id, {

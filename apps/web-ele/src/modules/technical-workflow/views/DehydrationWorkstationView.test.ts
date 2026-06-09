@@ -139,7 +139,7 @@ vi.mock('element-plus', () => {
 
   const ElInput = defineComponent({
     props: ['modelValue', 'placeholder'],
-    emits: ['keyup', 'update:modelValue'],
+    emits: ['keydown', 'keyup', 'update:modelValue'],
     setup(props, { emit }) {
       return () =>
         h('input', {
@@ -147,6 +147,7 @@ vi.mock('element-plus', () => {
           value: props.modelValue,
           onInput: (event: Event) =>
             emit('update:modelValue', (event.target as HTMLInputElement).value),
+          onKeydown: (event: KeyboardEvent) => emit('keydown', event),
           onKeyup: (event: KeyboardEvent) => emit('keyup', event),
         });
     },
@@ -160,10 +161,16 @@ vi.mock('element-plus', () => {
   });
 
   const ElTable = defineComponent({
-    props: ['data'],
+    props: ['data', 'rowClassName'],
     emits: ['current-change', 'selection-change'],
     setup(props, { emit, slots }) {
       provide(tableRowsKey, () => props.data ?? []);
+      const resolveRowClassName = (row: PendingTechnicalTaskItem) => {
+        if (typeof props.rowClassName !== 'function') {
+          return '';
+        }
+        return props.rowClassName({ row });
+      };
       return () =>
         h('div', [
           slots.default?.(),
@@ -180,6 +187,7 @@ vi.mock('element-plus', () => {
             h(
               'button',
               {
+                class: resolveRowClassName(row),
                 'data-testid': 'task-row',
                 type: 'button',
                 onClick: () => {
@@ -285,7 +293,21 @@ function findButton(text: string) {
   return button as HTMLButtonElement;
 }
 
-function mountView() {
+function scanPathologyNo(pathologyNo: string) {
+  const input = document.querySelector<HTMLInputElement>(
+    'input[placeholder="请输入病理号"]',
+  );
+  expect(input).toBeTruthy();
+  input!.value = pathologyNo;
+  input!.dispatchEvent(new InputEvent('input', { bubbles: true }));
+  input!.dispatchEvent(
+    new KeyboardEvent('keydown', { bubbles: true, key: 'Enter' }),
+  );
+}
+
+function mountView(query?: Record<string, string>) {
+  query ??= { pathologyNo: 'BL-001' };
+  mockRoute.query = query;
   const root = document.createElement('div');
   document.body.append(root);
   const app = createApp(DehydrationWorkstationView);
@@ -317,10 +339,27 @@ describe('DehydrationWorkstationView', () => {
     mockStartDehydration.mockReset();
   });
 
+  it('keeps the ordinary entry empty until the user queries', async () => {
+    const { app } = mountView({});
+    await flushView();
+
+    expect(mockListPendingTechnicalTasks).not.toHaveBeenCalled();
+    expect(document.body.textContent).toContain('开始脱水');
+
+    app.unmount();
+  });
+
   it('renders task-level and batch dehydration controls without operation column', async () => {
     const { app } = mountView();
     await flushView();
 
+    expect(mockListPendingTechnicalTasks).toHaveBeenCalledWith(
+      expect.objectContaining({
+        includeAllStatuses: true,
+        pathologyNo: 'BL-001',
+        taskType: 'DEHYDRATION',
+      }),
+    );
     expect(document.body.textContent).toContain('创建批次');
     expect(document.body.textContent).toContain('批次操作');
     expect(document.body.textContent).toContain('开始脱水');
@@ -330,6 +369,48 @@ describe('DehydrationWorkstationView', () => {
     expect(document.body.textContent).toContain('脱水完成时间');
     expect(document.body.textContent).not.toContain('执行脱水');
     expect(document.querySelector('[data-column-label="操作"]')).toBeFalsy();
+
+    app.unmount();
+  });
+
+  it('applies row tone classes by dehydration task status', async () => {
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [
+        createTask({ id: 'TASK-PENDING', taskStatus: 'PENDING' }),
+        createTask({
+          id: 'TASK-IN-PROGRESS',
+          startedAt: '2026-06-01T10:00:00',
+          taskStatus: 'IN_PROGRESS',
+        }),
+        createTask({
+          completedAt: '2026-06-01T11:00:00',
+          id: 'TASK-COMPLETED',
+          taskStatus: 'COMPLETED',
+        }),
+        createTask({
+          id: 'TASK-TIMED-OUT',
+          taskStatus: 'PENDING',
+          timedOut: true,
+        }),
+      ],
+      page: 1,
+      size: 20,
+      total: 4,
+    });
+    const { app } = mountView();
+    await flushView();
+
+    const rows = [
+      ...document.querySelectorAll<HTMLButtonElement>(
+        '[data-testid="task-row"]',
+      ),
+    ];
+    expect(rows.map((row) => row.className)).toEqual([
+      'dehydration-workflow-row--actionable',
+      'dehydration-workflow-row--in-progress',
+      'dehydration-workflow-row--completed',
+      'dehydration-workflow-row--failed',
+    ]);
 
     app.unmount();
   });
@@ -415,6 +496,104 @@ describe('DehydrationWorkstationView', () => {
     });
     expect(mockMessageSuccess).toHaveBeenCalledWith('任务 TASK-1 已开始脱水');
     expect(mockListPendingTechnicalTasks).toHaveBeenCalledTimes(2);
+
+    app.unmount();
+  });
+
+  it('starts a single pending dehydration task after scanning pathology no', async () => {
+    const { app } = mountView({});
+    await flushView();
+
+    scanPathologyNo('BL-SCAN');
+    await flushView();
+
+    expect(mockListPendingTechnicalTasks).toHaveBeenCalledTimes(2);
+    expect(mockListPendingTechnicalTasks).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        includeAllStatuses: true,
+        pathologyNo: 'BL-SCAN',
+        taskType: 'DEHYDRATION',
+      }),
+    );
+    expect(mockStartDehydration).toHaveBeenCalledWith({
+      taskId: 'TASK-1',
+    });
+    expect(mockMessageSuccess).toHaveBeenCalledWith('任务 TASK-1 已开始脱水');
+
+    app.unmount();
+  });
+
+  it('starts the first current task after scanning a pathology no with multiple rows', async () => {
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [
+        createTask({ id: 'TASK-FIRST' }),
+        createTask({ id: 'TASK-SECOND', objectId: 'BLOCK-2' }),
+      ],
+      page: 1,
+      size: 20,
+      total: 2,
+    });
+    const { app } = mountView({});
+    await flushView();
+
+    scanPathologyNo('BL-MULTI');
+    await flushView();
+
+    expect(mockStartDehydration).toHaveBeenCalledTimes(1);
+    expect(mockStartDehydration).toHaveBeenCalledWith({
+      taskId: 'TASK-FIRST',
+    });
+    expect(mockMessageSuccess).toHaveBeenCalledWith(
+      '任务 TASK-FIRST 已开始脱水',
+    );
+
+    app.unmount();
+  });
+
+  it('queries completed dehydration history by scan and blocks repeat start', async () => {
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [
+        createTask({
+          completedAt: '2026-06-01T11:00:00',
+          id: 'TASK-DONE',
+          taskStatus: 'COMPLETED',
+        }),
+      ],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+    const { app } = mountView({});
+    await flushView();
+
+    scanPathologyNo('BL-DONE');
+    await flushView();
+
+    expect(mockListPendingTechnicalTasks).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        includeAllStatuses: true,
+        pathologyNo: 'BL-DONE',
+        taskType: 'DEHYDRATION',
+      }),
+    );
+    expect(document.body.textContent).toContain('已完成');
+    expect(mockStartDehydration).not.toHaveBeenCalled();
+    expect(mockMessageWarning).toHaveBeenCalledWith('仅待处理任务可以开始脱水');
+
+    app.unmount();
+  });
+
+  it('clears rows and skips start when scan input is blank', async () => {
+    const { app } = mountView();
+    await flushView();
+    mockListPendingTechnicalTasks.mockClear();
+
+    scanPathologyNo('   ');
+    await flushView();
+
+    expect(mockListPendingTechnicalTasks).not.toHaveBeenCalled();
+    expect(mockStartDehydration).not.toHaveBeenCalled();
 
     app.unmount();
   });

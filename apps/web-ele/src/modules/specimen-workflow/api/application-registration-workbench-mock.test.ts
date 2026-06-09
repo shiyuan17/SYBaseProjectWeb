@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
   listCommonSpecimenOptions,
@@ -8,10 +8,17 @@ import {
   listSpecimenDictionaryGroups,
   listSpecimenPackageOptions,
   lookupApplicationRegistrationWorkbenchRecord,
+  resetApplicationRegistrationWorkbenchMockState,
   saveApplicationRegistrationWorkbenchMock,
 } from './application-registration-workbench-mock';
+import { createApplication, resetMockState } from './specimen-workflow-service';
 
 describe('application registration workbench mock service', () => {
+  beforeEach(() => {
+    resetApplicationRegistrationWorkbenchMockState();
+    resetMockState();
+  });
+
   it('looks up the same record by application number and inpatient number', async () => {
     const byApplicationNo = await lookupApplicationRegistrationWorkbenchRecord({
       keyword: '1122',
@@ -97,6 +104,81 @@ describe('application registration workbench mock service', () => {
     expect(emergencyPackages.map((item) => item.packageName)).toEqual(
       expect.arrayContaining(['急诊清创送检套餐', '急诊创面皮肤活检套餐']),
     );
+  });
+
+  it('can look up a newly created application by application number', async () => {
+    await createApplication({
+      applicationDate: '2026-06-08',
+      applicationFormStatus: 'PENDING',
+      applicationNo: 'AUTO-MOCK-LOOKUP-001',
+      applicationType: 'ROUTINE',
+      clinicalDiagnosis: '自动创建待补充诊断',
+      patientId: 'AUTO-AUTO-MOCK-LOOKUP-001',
+      patientName: '自动生成患者-AUTO-MOCK-LOOKUP-001',
+      submissionDate: '2026-06-08',
+    });
+
+    const lookedUpRecord = await lookupApplicationRegistrationWorkbenchRecord({
+      keyword: 'AUTO-MOCK-LOOKUP-001',
+      queryType: 'APPLICATION_NO',
+    });
+
+    expect(lookedUpRecord).toMatchObject({
+      contagiousSpecimen: {
+        hepatitis: expect.any(Boolean),
+        hiv: expect.any(Boolean),
+        isolation: expect.any(Boolean),
+        syphilis: expect.any(Boolean),
+        tuberculosis: expect.any(Boolean),
+      },
+      gynecologyInfo: {
+        additionalNotes: expect.not.stringContaining('待补充'),
+        hpvResult: expect.any(String),
+        previousCytology: expect.not.stringContaining('待补充'),
+        previousTreatment: expect.not.stringContaining('待补充'),
+        specialConditions: {
+          abnormalBleeding: expect.any(Boolean),
+          birthControl: expect.any(Boolean),
+          hormoneReplacement: expect.any(Boolean),
+          hysterectomy: expect.any(Boolean),
+          iud: expect.any(Boolean),
+          lactation: expect.any(Boolean),
+          menopause: expect.any(Boolean),
+          other: expect.any(String),
+          pregnancy: expect.any(Boolean),
+          radiotherapy: expect.any(Boolean),
+        },
+      },
+      patientInfo: {
+        applicationNo: 'AUTO-MOCK-LOOKUP-001',
+        checkItem: expect.not.stringContaining('待补充'),
+        clinicalDiagnosis: expect.not.stringContaining('待补充'),
+        clinicalHistory: expect.not.stringContaining('待补充'),
+        gender: expect.stringMatching(/男|女/),
+        idNo: expect.stringMatching(/^ID\d{5}$/),
+        imagingResult: expect.not.stringContaining('待补充'),
+        inpatientNo: expect.stringMatching(/^ZY\d{5}$/),
+        patientName: expect.not.stringContaining('待补充'),
+        patientVerified: true,
+        phone: expect.stringMatching(/^138\d{8}$/),
+        specimenType: '常规',
+      },
+      specimenItems: [],
+      surgeryInfo: {
+        buildingId: expect.stringMatching(/^B\d{3}$/),
+        clinicalFindings: expect.not.stringContaining('待补充'),
+        fixativeType: '10%中性福尔马林',
+        fixationPerson: expect.not.stringContaining('待补充'),
+        fixationTime: expect.stringMatching(
+          /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/,
+        ),
+        roomId: expect.stringMatching(/^OR-\d{3}$/),
+        specimenRemovalTime: expect.stringMatching(
+          /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/,
+        ),
+        surgeryName: expect.not.stringContaining('待补充'),
+      },
+    });
   });
 
   it('persists saved workbench changes through the mock service boundary', async () => {

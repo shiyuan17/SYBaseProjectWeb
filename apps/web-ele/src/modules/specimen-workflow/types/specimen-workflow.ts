@@ -59,7 +59,7 @@ export interface TrackingEventView {
 export interface SpecimenTrackingSummary {
   abnormalReason: null | string;
   abnormalType?: null | string;
-  barcode: string;
+  barcode: null | string;
   barcodeBindingStatus?: null | string;
   checkInStatus?: null | string;
   checkedInAt?: null | string;
@@ -170,6 +170,7 @@ export interface ApplicationListItem {
   deletable: boolean;
   editable: boolean;
   id: string;
+  pathologyNo?: null | string;
   patientAge: null | string;
   patientGender: null | string;
   patientCheckStatus?: null | string;

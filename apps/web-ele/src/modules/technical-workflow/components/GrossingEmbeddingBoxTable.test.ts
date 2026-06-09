@@ -176,7 +176,7 @@ function mountTable() {
             {
               box: {
                 boxName: '包埋盒 1',
-                embeddingBoxNo: 'A1',
+                embeddingBoxNo: 'BX-BD202606080002-A1',
                 embeddingRemarks: '',
                 sequenceNo: 1,
                 status: 'PENDING',
@@ -222,11 +222,15 @@ describe('GrossingEmbeddingBoxTable', () => {
       'select[aria-label="标本名称"]',
     );
     expect(specimenSelect).toBeTruthy();
+    expect(specimenSelect!.className).toContain('min-w-[288px]');
+    expect(specimenSelect!.className).toContain('flex-none');
     expect(root.textContent).toContain('骨髓');
     expect(root.textContent).toContain('皮肤组织');
     expect(root.querySelector('select[aria-label="盒号"]')).toBeNull();
     expect(root.textContent).not.toContain('A1 / 待确认');
     expect(root.querySelector('input[placeholder="A1"]')).toBeNull();
+    expect(root.textContent).toContain('A1');
+    expect(root.textContent).not.toContain('BX-BD202606080002-A1');
 
     specimenSelect!.value = 'specimen-2';
     specimenSelect!.dispatchEvent(new Event('change'));
