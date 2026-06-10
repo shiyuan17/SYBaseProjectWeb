@@ -2,7 +2,6 @@ import type {
   ArchiveCabinetView,
   ArchivePositionView,
   ArchiveRecordView,
-  MaterialLoanView,
 } from '../types/operation-support';
 
 import { createApp, defineComponent, h, nextTick } from 'vue';
@@ -20,11 +19,8 @@ const {
   mockArchiveEmbeddingBox,
   mockArchiveSlide,
   mockCreateArchiveCabinet,
-  mockCreateMaterialLoan,
   mockListArchiveCabinets,
   mockListAvailableArchivePositions,
-  mockListPendingMaterialLoans,
-  mockReturnMaterialLoan,
   mockSearchArchiveRecords,
   mockUpdateArchiveCabinet,
   mockUserStore,
@@ -39,11 +35,8 @@ const {
   mockArchiveEmbeddingBox: vi.fn(),
   mockArchiveSlide: vi.fn(),
   mockCreateArchiveCabinet: vi.fn(),
-  mockCreateMaterialLoan: vi.fn(),
   mockListArchiveCabinets: vi.fn(),
   mockListAvailableArchivePositions: vi.fn(),
-  mockListPendingMaterialLoans: vi.fn(),
-  mockReturnMaterialLoan: vi.fn(),
   mockSearchArchiveRecords: vi.fn(),
   mockUpdateArchiveCabinet: vi.fn(),
   mockUserStore: {
@@ -72,11 +65,8 @@ vi.mock('../api/operation-support-service', () => ({
   archiveEmbeddingBox: mockArchiveEmbeddingBox,
   archiveSlide: mockArchiveSlide,
   createArchiveCabinet: mockCreateArchiveCabinet,
-  createMaterialLoan: mockCreateMaterialLoan,
   listArchiveCabinets: mockListArchiveCabinets,
   listAvailableArchivePositions: mockListAvailableArchivePositions,
-  listPendingMaterialLoans: mockListPendingMaterialLoans,
-  returnMaterialLoan: mockReturnMaterialLoan,
   searchArchiveRecords: mockSearchArchiveRecords,
   updateArchiveCabinet: mockUpdateArchiveCabinet,
 }));
@@ -122,19 +112,6 @@ function createRecord(
     caseId: 'CASE-1',
     objectId: 'OBJECT-1',
     objectType: 'APPLICATION_FORM',
-    ...overrides,
-  };
-}
-
-function createLoan(
-  overrides: Partial<MaterialLoanView> = {},
-): MaterialLoanView {
-  return {
-    caseId: 'CASE-1',
-    loanId: 'LOAN-1',
-    loanStatus: 'BORROWED',
-    materialId: 'SLIDE-1',
-    materialType: 'SLIDE',
     ...overrides,
   };
 }
@@ -187,15 +164,11 @@ describe('useArchiveManagementPage', () => {
       M5_PERMISSION_CODES.ARCHIVE_CABINET_UPDATE,
       M5_PERMISSION_CODES.APPLICATION_FORM_ARCHIVE,
       M5_PERMISSION_CODES.ARCHIVE_QUERY,
-      M5_PERMISSION_CODES.LOAN_CREATE,
-      M5_PERMISSION_CODES.LOAN_QUERY,
-      M5_PERMISSION_CODES.LOAN_RETURN,
     ];
 
     mockListArchiveCabinets.mockResolvedValue([createCabinet()]);
     mockListAvailableArchivePositions.mockResolvedValue([createPosition()]);
     mockSearchArchiveRecords.mockResolvedValue([createRecord()]);
-    mockListPendingMaterialLoans.mockResolvedValue([createLoan()]);
 
     mockArchiveApplicationForm.mockResolvedValue({
       archiveLocation: 'CAB-01-L1-S1',
@@ -207,10 +180,6 @@ describe('useArchiveManagementPage', () => {
     mockArchiveEmbeddingBox.mockResolvedValue({});
     mockArchiveSlide.mockResolvedValue({});
     mockCreateArchiveCabinet.mockResolvedValue(createCabinet());
-    mockCreateMaterialLoan.mockResolvedValue(createLoan());
-    mockReturnMaterialLoan.mockResolvedValue(
-      createLoan({ loanStatus: 'RETURNED' }),
-    );
     mockUpdateArchiveCabinet.mockResolvedValue(
       createCabinet({ cabinetStatus: 'DISABLED' }),
     );
@@ -225,11 +194,8 @@ describe('useArchiveManagementPage', () => {
     mockArchiveEmbeddingBox.mockReset();
     mockArchiveSlide.mockReset();
     mockCreateArchiveCabinet.mockReset();
-    mockCreateMaterialLoan.mockReset();
     mockListArchiveCabinets.mockReset();
     mockListAvailableArchivePositions.mockReset();
-    mockListPendingMaterialLoans.mockReset();
-    mockReturnMaterialLoan.mockReset();
     mockSearchArchiveRecords.mockReset();
     mockUpdateArchiveCabinet.mockReset();
 
@@ -254,7 +220,6 @@ describe('useArchiveManagementPage', () => {
     expect(state.capabilities.canViewArchivePage).toBe(true);
     expect(state.cabinetWorkspace.cabinets).toHaveLength(1);
     expect(state.recordWorkspace.records).toHaveLength(1);
-    expect(state.loanWorkspace.pendingLoans).toHaveLength(1);
     expect(state.cabinetWorkspace.positionRows).toHaveLength(4);
     expect(state.cabinetWorkspace.positionSummary).toEqual({
       available: 1,
@@ -281,15 +246,11 @@ describe('useArchiveManagementPage', () => {
       keyword: undefined,
       objectType: undefined,
     });
-    expect(mockListPendingMaterialLoans).toHaveBeenCalledWith({
-      keyword: undefined,
-      materialType: undefined,
-    });
 
     wrapper.destroy();
   });
 
-  it('maps cabinet and return dialog state from current rows', async () => {
+  it('maps cabinet dialog state from current rows', async () => {
     const wrapper = mountComposable();
     await flushComposable();
 
@@ -299,10 +260,8 @@ describe('useArchiveManagementPage', () => {
     }
 
     const cabinet = state.cabinetWorkspace.cabinets[0];
-    const loan = state.loanWorkspace.pendingLoans[0];
 
     expect(cabinet).toBeTruthy();
-    expect(loan).toBeTruthy();
 
     state.cabinetWorkspace.openEditCabinetDialog(cabinet!);
     expect(state.cabinetWorkspace.cabinetDialogVisible).toBe(true);
@@ -317,14 +276,6 @@ describe('useArchiveManagementPage', () => {
     expect(state.cabinetWorkspace.cabinetDialogMode).toBe('create');
     expect(state.cabinetWorkspace.cabinetForm.cabinetCode).toBe('');
     expect(state.cabinetWorkspace.cabinetForm.operatorName).toBe('归档员甲');
-
-    state.loanWorkspace.openReturnDialog(loan!);
-    expect(state.loanWorkspace.returnDialogVisible).toBe(true);
-    expect(state.loanWorkspace.returningLoan?.loanId).toBe('LOAN-1');
-    expect(state.loanWorkspace.returnForm.operatorName).toBe('归档员甲');
-    expect(state.loanWorkspace.selectedReturnPositionDescription).toContain(
-      '默认归还到原始归档柜位',
-    );
 
     wrapper.destroy();
   });
@@ -346,7 +297,6 @@ describe('useArchiveManagementPage', () => {
     messageSuccessMock.mockClear();
 
     mockListAvailableArchivePositions.mockClear();
-    mockListPendingMaterialLoans.mockClear();
     mockSearchArchiveRecords.mockClear();
 
     state.archiveWorkspace.archiveForm.caseId = ' CASE-1 ';
@@ -368,7 +318,6 @@ describe('useArchiveManagementPage', () => {
     expect(messageSuccessMock).toHaveBeenCalledWith('申请单归档已完成。');
     expect(mockListAvailableArchivePositions).toHaveBeenCalledTimes(1);
     expect(mockSearchArchiveRecords).toHaveBeenCalledTimes(1);
-    expect(mockListPendingMaterialLoans).toHaveBeenCalledTimes(1);
     expect(state.archiveWorkspace.archiveForm.caseId).toBe('');
     expect(state.archiveWorkspace.archiveForm.operatorName).toBe('归档员甲');
 

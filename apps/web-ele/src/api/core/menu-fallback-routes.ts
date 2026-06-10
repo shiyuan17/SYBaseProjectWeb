@@ -580,7 +580,7 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
           path: '/operation-support/archive',
         },
         {
-          component: '/views/_core/fallback/MenuPlaceholderView',
+          component: '/modules/operation-support/views/BorrowManagementView',
           meta: {
             icon: 'carbon:bookmark',
             title: '借记管理',

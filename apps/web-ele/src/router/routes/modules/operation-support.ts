@@ -2,13 +2,14 @@ import type { RouteRecordRaw } from 'vue-router';
 
 import {
   M5_ARCHIVE_PAGE_AUTHORITIES,
+  M5_BORROW_PAGE_AUTHORITIES,
   M5_EQUIPMENT_PAGE_AUTHORITIES,
+  M5_OPERATION_SUPPORT_AUTHORITIES,
   M5_REAGENT_PAGE_AUTHORITIES,
   M5_RESOURCE_PAGE_AUTHORITIES,
 } from '#/modules/operation-support/constants';
 import { applyKeepAliveToTabRoutes } from '#/router/routes/keep-alive';
 
-const ARCHIVE_BORROW_AUTHORITIES = [...M5_ARCHIVE_PAGE_AUTHORITIES];
 const RESOURCE_AUTHORITIES = [
   ...M5_REAGENT_PAGE_AUTHORITIES,
   ...M5_EQUIPMENT_PAGE_AUTHORITIES,
@@ -17,7 +18,7 @@ const RESOURCE_AUTHORITIES = [
 const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
   {
     meta: {
-      authority: ARCHIVE_BORROW_AUTHORITIES,
+      authority: [...M5_OPERATION_SUPPORT_AUTHORITIES],
       icon: 'carbon:archive',
       order: 160,
       title: '归档与借记',
@@ -30,7 +31,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         component: () =>
           import('#/modules/operation-support/views/OperationSupportEntryView.vue'),
         meta: {
-          authority: ARCHIVE_BORROW_AUTHORITIES,
+          authority: [...M5_OPERATION_SUPPORT_AUTHORITIES],
           hideInBreadcrumb: true,
           hideInMenu: true,
           hideInTab: true,
@@ -52,10 +53,9 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
       },
       {
         component: () =>
-          import('#/views/_core/fallback/MenuPlaceholderView.vue'),
+          import('#/modules/operation-support/views/BorrowManagementView.vue'),
         meta: {
-          authority: [...M5_ARCHIVE_PAGE_AUTHORITIES],
-          description: '当前页面暂未接入借记相关业务功能。',
+          authority: [...M5_BORROW_PAGE_AUTHORITIES],
           icon: 'carbon:bookmark',
           title: '借记管理',
         },

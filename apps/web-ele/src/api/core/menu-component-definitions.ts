@@ -507,7 +507,7 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
       routeName: 'ArchiveManagement',
     },
     {
-      component: '/views/_core/fallback/MenuPlaceholderView',
+      component: '/modules/operation-support/views/BorrowManagementView',
       componentAliases: ['BorrowManagement'],
       menuCodes: ['M5_BORROW'],
       path: '/operation-support/borrow',

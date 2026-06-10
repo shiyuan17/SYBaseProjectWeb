@@ -1,6 +1,7 @@
 import {
   M5_ARCHIVE_PAGE_AUTHORITIES,
   M5_ARCHIVE_ROUTE_ITEMS,
+  M5_BORROW_PAGE_AUTHORITIES,
   M5_EQUIPMENT_PAGE_AUTHORITIES,
   M5_PERMISSION_CODES,
   M5_REAGENT_PAGE_AUTHORITIES,
@@ -107,4 +108,32 @@ export function canViewArchivePage(accessCodes: string[]) {
     createAccessCodeSet(accessCodes),
     M5_ARCHIVE_PAGE_AUTHORITIES,
   );
+}
+
+export function canViewBorrowPage(accessCodes: string[]) {
+  return hasAnyPermission(
+    createAccessCodeSet(accessCodes),
+    M5_BORROW_PAGE_AUTHORITIES,
+  );
+}
+
+export function getBorrowManagementCapabilities(accessCodes: string[]) {
+  const accessCodeSet = createAccessCodeSet(accessCodes);
+
+  return {
+    canCreateLoan: hasPermission(
+      accessCodeSet,
+      M5_PERMISSION_CODES.LOAN_CREATE,
+    ),
+    canQueryCabinets: hasPermission(
+      accessCodeSet,
+      M5_PERMISSION_CODES.ARCHIVE_CABINET_QUERY,
+    ),
+    canQueryLoans: hasPermission(accessCodeSet, M5_PERMISSION_CODES.LOAN_QUERY),
+    canReturnLoan: hasPermission(
+      accessCodeSet,
+      M5_PERMISSION_CODES.LOAN_RETURN,
+    ),
+    canViewPage: hasAnyPermission(accessCodeSet, M5_BORROW_PAGE_AUTHORITIES),
+  };
 }

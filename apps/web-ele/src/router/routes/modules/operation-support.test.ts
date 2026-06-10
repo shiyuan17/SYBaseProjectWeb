@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   M5_ARCHIVE_PAGE_AUTHORITIES,
+  M5_BORROW_PAGE_AUTHORITIES,
   M5_EQUIPMENT_PAGE_AUTHORITIES,
+  M5_OPERATION_SUPPORT_AUTHORITIES,
   M5_PERMISSION_CODES,
   M5_REAGENT_PAGE_AUTHORITIES,
   M5_RESOURCE_PAGE_AUTHORITIES,
@@ -11,7 +13,7 @@ import {
 import operationSupportRoutes from './operation-support';
 
 describe('operation support routes', () => {
-  it('registers archive and borrow routes with archive authorities', () => {
+  it('registers archive and borrow routes with split authorities', () => {
     const operationRoot = operationSupportRoutes.find(
       (route) => route.name === 'OperationSupportRoot',
     );
@@ -33,11 +35,14 @@ describe('operation support routes', () => {
     expect(archiveRoute?.meta?.keepAlive).toBe(true);
     expect(borrowRoute?.path).toBe('/operation-support/borrow');
     expect(borrowRoute?.meta?.keepAlive).toBe(true);
+    expect(operationRoot?.meta?.authority).toEqual([
+      ...M5_OPERATION_SUPPORT_AUTHORITIES,
+    ]);
     expect(archiveRoute?.meta?.authority).toEqual([
       ...M5_ARCHIVE_PAGE_AUTHORITIES,
     ]);
     expect(borrowRoute?.meta?.authority).toEqual([
-      ...M5_ARCHIVE_PAGE_AUTHORITIES,
+      ...M5_BORROW_PAGE_AUTHORITIES,
     ]);
   });
 

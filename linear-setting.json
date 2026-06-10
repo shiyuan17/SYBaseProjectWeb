@@ -8,40 +8,61 @@
     {
       "name": "frontend",
       "description": "Frontend workflow and UI tasks",
-      "color": "#0f766e"
+      "color": "#0f766e",
+      "id": "d2b4703c-6f3c-4ae8-b8e6-2bcddb1b2baf"
     }
   ],
   "linear-sync": {
-    "default-labels": ["frontend"]
+    "default-labels": [
+      "frontend"
+    ]
   },
   "linear-plan": [
     {
       "phase": "Phase 1",
-      "domain": "technical-workflow",
-      "title": "修正技术标本登记申请类型筛选与分页口径",
-      "description": "背景：技术标本登记页当前在前端本地过滤 applicationType，但分页 total 来自后端原始查询，导致筛选结果、当前页和总数不一致。\n\n验收标准：\n- 前端查询参数包含 applicationType，清空筛选后恢复全量查询。\n- 后端 /api/v1/technical-specimen-registrations/pending 支持 applicationType 可选过滤。\n- 切换申请类型后，列表项、分页总数、当前选中病例保持一致。\n- 补充前端查询参数测试和后端待登记筛选测试。\n\n非目标：不重构技术登记工作台，不改变登记完成逻辑。",
-      "labels": ["frontend"]
+      "domain": "operation-support",
+      "title": "归档管理按旧系统入口重组为 tabs",
+      "description": "背景：旧系统将申请单归档、蜡块归档、玻片归档、归档柜和归档记录拆成多个入口，当前前端归档管理页仍是纵向工作台，现场用户迁移时不易对应旧入口。\n\n验收标准：\n- `/operation-support/archive` 使用 tabs 组织申请单归档、蜡块归档、玻片归档、归档柜/柜位、归档记录。\n- 申请单、蜡块、玻片归档继续复用现有 `/v1/archive/application-forms`、`/v1/archive/embedding-boxes`、`/v1/archive/slides` 契约。\n- UI 显示“蜡块”，接口值仍沿用 `EMBEDDING_BOX`，不新增后端契约。\n- 归档柜、柜位选择、归档记录查询能力不回退，无权限态正常展示。\n- 补充归档页组件测试。\n\n非目标：不实现标本归档、拍照归档管理、扫码、打印或导出。",
+      "labels": [
+        "frontend"
+      ]
     },
     {
       "phase": "Phase 1",
-      "domain": "technical-workflow",
-      "title": "修正染色工作站统计与患者核对信息",
-      "description": "背景：染色工作站统计卡片存在不同来源混算，患者字段当前显示为占位符，不利于出片核对。\n\n验收标准：\n- 统计卡片使用同一待办/完成数据口径，不再出现未出片直接等于 total、已出片来自当前追踪病例的混算。\n- 技术任务待办响应增加可选 patientId/patientName，前端类型同步扩展并保留稳定兜底。\n- 染色待办列表展示患者姓名或稳定占位，查询和分页口径不被本地二次筛选破坏。\n- 补充前端染色页统计与患者字段测试。\n\n非目标：不补设备扫码、打印、完整染色类型后端分类统计。",
-      "labels": ["frontend"]
+      "domain": "operation-support",
+      "title": "借记管理接入蜡块与玻片借出归还 tabs",
+      "description": "背景：`/operation-support/borrow` 当前仍是占位页，但后端已提供材料借出、待归还查询和归还接口，需要把旧系统借记入口迁移为真实工作台。\n\n验收标准：\n- `/operation-support/borrow` 不再展示占位页，页面标题保持“借记管理”。\n- 页面使用 tabs 组织玻片借记、蜡块借记、待归还/归还。\n- 玻片和蜡块借出复用 `POST /v1/material-loans`，待归还复用 `GET /v1/material-loans/pending`，归还复用 `POST /v1/material-loans/{id}/return`。\n- 按钮和字段使用“借出、归还、待归还”等动作文案。\n- 归还支持选择替代柜位；没有归档柜查询权限时给出明确提示。\n- 补充借记页组件与组合式函数测试。\n\n非目标：不实现借白片、扫码、打印、导出或设备外设接入。",
+      "labels": [
+        "frontend"
+      ]
     },
     {
       "phase": "Phase 1",
-      "domain": "technical-workflow",
-      "title": "收口切片工作站占位动作以保障主流程可用",
-      "description": "背景：切片工作站仍展示重打玻片、重新分片、重补台片、终止、取消完成等待补后端能力按钮，用户点击后无法闭环。\n\n验收标准：\n- 主页面不再展示待补后端能力的主要操作按钮。\n- 保留已接入的开始、完成、质控、追踪等主流程能力。\n- 对未接入异常动作不做伪实现，后续作为独立返工/异常闭环任务处理。\n- 补充页面测试，确保死按钮文案不再出现。\n\n非目标：不实现重切、重打、终止、取消完成的后端状态机。",
-      "labels": ["frontend"]
+      "domain": "operation-support",
+      "title": "拆分归档与借记入口权限及路由测试",
+      "description": "背景：归档管理与借记管理现在是两个真实菜单页，旧实现将借记页复用归档权限集合，可能导致只有借记权限的用户入口跳转错误。\n\n验收标准：\n- 归档页权限只包含归档柜、申请单归档、蜡块归档、玻片归档和归档记录查询相关权限。\n- 借记页权限只包含借出、归还、待归还查询相关权限。\n- `/operation-support/entry` 能按当前账号权限跳转到首个可访问页面；只有借记权限时进入 `/operation-support/borrow`。\n- 路由标题、菜单映射和 keep-alive 行为稳定。\n- 补充 access、route、menu mapper 相关测试。\n\n非目标：不修改全局权限模型、登录态、路由守卫或 Axios 拦截器。",
+      "labels": [
+        "frontend"
+      ]
     },
     {
       "phase": "Phase 1",
-      "domain": "doctor-workflow",
-      "title": "恢复报告追踪错误展示以支撑制片到诊断闭环",
-      "description": "背景：报告追踪页维护了 pageError，但错误提示组件被 v-if=false 硬编码隐藏，导致追踪失败时用户无反馈。\n\n验收标准：\n- ReportTrackingView 基于 pageError 展示错误提示。\n- 查询失败时页面展示错误，重置或清空查询后错误消失。\n- 补充报告追踪页失败与重置测试。\n\n非目标：不调整报告追踪接口协议，不重构医生工作台。",
-      "labels": ["frontend"]
+      "domain": "operation-support",
+      "title": "归档与借记旧系统缺口调研",
+      "description": "背景：截图中还包含标本归档、拍照归档管理、借白片、扫码、打印、导出等旧系统入口，但当前前后端公开契约未覆盖这些真实能力。\n\n验收标准：\n- 对标本归档、拍照归档管理、借白片、扫码、打印、导出形成前后端契约清单。\n- 明确每个缺口是否需要后端接口、数据库迁移、外设兼容或仅前端展示。\n- 输出后续 Linear 拆分建议和非目标说明。\n- 本任务不得把缺口混入本期归档/借记 tabs 实现。\n\n非目标：不直接实现新后端接口、DB 迁移、设备 SDK 或文件导出能力。",
+      "labels": [
+        "frontend"
+      ]
     }
-  ]
+  ],
+  "linear-team": {
+    "id": "ca0ba9fa-d4f0-45f8-8db7-878947b149ff",
+    "key": "SID",
+    "name": "Sidney"
+  },
+  "linear-project": {
+    "id": "62b8398e-7534-4b54-82b9-b3d042826d92",
+    "name": "JWBL",
+    "slugId": "e41404512a99"
+  }
 }

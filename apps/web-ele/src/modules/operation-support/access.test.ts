@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
   canViewArchivePage,
+  canViewBorrowPage,
+  getBorrowManagementCapabilities,
   getEquipmentLedgerCapabilities,
   getOperationResourceEntryPath,
   getOperationSupportEntryPath,
@@ -22,6 +24,7 @@ describe('operation support access helpers', () => {
     );
     expect(getOperationResourceEntryPath(archiveCodes)).toBeNull();
     expect(canViewArchivePage(archiveCodes)).toBe(true);
+    expect(canViewBorrowPage(archiveCodes)).toBe(false);
 
     const reagentCapabilities = getReagentLedgerCapabilities(archiveCodes);
     expect(reagentCapabilities.canViewPage).toBe(false);
@@ -32,6 +35,27 @@ describe('operation support access helpers', () => {
     expect(equipmentCapabilities.canViewPage).toBe(false);
     expect(equipmentCapabilities.canCreateEquipment).toBe(false);
     expect(equipmentCapabilities.canCreateMaintenanceLog).toBe(false);
+  });
+
+  it('routes borrow-only users to borrow entry and denies archive page access', () => {
+    const borrowCodes = [
+      M5_PERMISSION_CODES.LOAN_CREATE,
+      M5_PERMISSION_CODES.LOAN_QUERY,
+      M5_PERMISSION_CODES.LOAN_RETURN,
+    ];
+
+    expect(getOperationSupportEntryPath(borrowCodes)).toBe(
+      '/operation-support/borrow',
+    );
+    expect(canViewArchivePage(borrowCodes)).toBe(false);
+    expect(canViewBorrowPage(borrowCodes)).toBe(true);
+
+    const borrowCapabilities = getBorrowManagementCapabilities(borrowCodes);
+    expect(borrowCapabilities.canViewPage).toBe(true);
+    expect(borrowCapabilities.canCreateLoan).toBe(true);
+    expect(borrowCapabilities.canQueryLoans).toBe(true);
+    expect(borrowCapabilities.canReturnLoan).toBe(true);
+    expect(borrowCapabilities.canQueryCabinets).toBe(false);
   });
 
   it('grants reagent and equipment maintenance capabilities to reagent device manager permissions', () => {

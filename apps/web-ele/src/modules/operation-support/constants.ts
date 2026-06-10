@@ -30,9 +30,17 @@ export const M5_ARCHIVE_PAGE_AUTHORITIES = [
   M5_PERMISSION_CODES.EMBEDDING_BOX_ARCHIVE,
   M5_PERMISSION_CODES.SLIDE_ARCHIVE,
   M5_PERMISSION_CODES.ARCHIVE_QUERY,
+] as const;
+
+export const M5_BORROW_PAGE_AUTHORITIES = [
   M5_PERMISSION_CODES.LOAN_CREATE,
   M5_PERMISSION_CODES.LOAN_RETURN,
   M5_PERMISSION_CODES.LOAN_QUERY,
+] as const;
+
+export const M5_OPERATION_SUPPORT_AUTHORITIES = [
+  ...M5_ARCHIVE_PAGE_AUTHORITIES,
+  ...M5_BORROW_PAGE_AUTHORITIES,
 ] as const;
 
 export const M5_REAGENT_PAGE_AUTHORITIES = [
@@ -62,6 +70,10 @@ export const M5_ARCHIVE_ROUTE_ITEMS = [
     codes: M5_ARCHIVE_PAGE_AUTHORITIES,
     path: '/operation-support/archive',
   },
+  {
+    codes: M5_BORROW_PAGE_AUTHORITIES,
+    path: '/operation-support/borrow',
+  },
 ];
 
 export const M5_RESOURCE_ROUTE_ITEMS = [
@@ -89,12 +101,12 @@ export const ARCHIVE_CABINET_TYPE_OPTIONS = [
 
 export const ARCHIVE_OBJECT_TYPE_OPTIONS = [
   { label: '申请单', value: 'APPLICATION_FORM' },
-  { label: '包埋盒', value: 'EMBEDDING_BOX' },
+  { label: '蜡块', value: 'EMBEDDING_BOX' },
   { label: '玻片', value: 'SLIDE' },
 ] as const;
 
 export const MATERIAL_TYPE_OPTIONS = [
-  { label: '包埋盒', value: 'EMBEDDING_BOX' },
+  { label: '蜡块', value: 'EMBEDDING_BOX' },
   { label: '玻片', value: 'SLIDE' },
 ] as const;
 

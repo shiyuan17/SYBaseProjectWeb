@@ -14,6 +14,7 @@ import {
 } from '#/modules/m6-management/constants';
 import {
   M5_ARCHIVE_PAGE_AUTHORITIES,
+  M5_BORROW_PAGE_AUTHORITIES,
   M5_EQUIPMENT_PAGE_AUTHORITIES,
   M5_REAGENT_PAGE_AUTHORITIES,
   M5_RESOURCE_PAGE_AUTHORITIES,
@@ -1261,7 +1262,7 @@ describe('operation support route access', () => {
       ...M5_ARCHIVE_PAGE_AUTHORITIES,
     ]);
     expect(borrowRoute?.meta?.authority).toEqual([
-      ...M5_ARCHIVE_PAGE_AUTHORITIES,
+      ...M5_BORROW_PAGE_AUTHORITIES,
     ]);
     expect(reagentRoute?.meta?.authority).toEqual([
       ...M5_REAGENT_PAGE_AUTHORITIES,

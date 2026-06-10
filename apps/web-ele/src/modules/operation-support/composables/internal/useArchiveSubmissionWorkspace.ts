@@ -146,9 +146,11 @@ export function useArchiveSubmissionWorkspace(
   }
 
   function resetArchiveForm() {
+    const objectType = archiveForm.objectType;
     Object.assign(
       archiveForm,
       createArchiveFormDefaults(operatorContext.getCurrentOperatorDefaults()),
+      { objectType },
     );
   }
 

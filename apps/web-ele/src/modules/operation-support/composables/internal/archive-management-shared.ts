@@ -14,6 +14,7 @@ export interface ArchiveManagementCapabilities {
   canReturnLoan: ComputedRef<boolean>;
   canUpdateCabinet: ComputedRef<boolean>;
   canViewArchivePage: ComputedRef<boolean>;
+  canViewBorrowPage: ComputedRef<boolean>;
 }
 
 export interface ArchiveOperatorContext {

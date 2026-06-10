@@ -8,34 +8,22 @@ import {
   M5_PERMISSION_CODES,
 } from '../constants';
 import {
-  getArchiveStatusTagType,
-  getCabinetStatusTagType,
   getLoanStatusTagType,
   getPositionStatusTagType,
-  getToggleCabinetActionLabel,
 } from '../utils/archive-workbench';
 import { useArchiveCabinetWorkspace } from './internal/useArchiveCabinetWorkspace';
-import { useArchiveRecordWorkspace } from './internal/useArchiveRecordWorkspace';
-import { useArchiveSubmissionWorkspace } from './internal/useArchiveSubmissionWorkspace';
+import { useArchiveLoanWorkspace } from './internal/useArchiveLoanWorkspace';
 
-export function useArchiveManagementPage() {
+export function useBorrowManagementPage() {
   const accessStore = useAccessStore();
   const userStore = useUserStore();
 
   const accessCodeSet = computed(() => new Set(accessStore.accessCodes));
   const capabilities = {
-    canArchiveApplicationForm: computed(() =>
-      accessCodeSet.value.has(M5_PERMISSION_CODES.APPLICATION_FORM_ARCHIVE),
-    ),
-    canArchiveEmbeddingBox: computed(() =>
-      accessCodeSet.value.has(M5_PERMISSION_CODES.EMBEDDING_BOX_ARCHIVE),
-    ),
-    canArchiveSlide: computed(() =>
-      accessCodeSet.value.has(M5_PERMISSION_CODES.SLIDE_ARCHIVE),
-    ),
-    canCreateCabinet: computed(() =>
-      accessCodeSet.value.has(M5_PERMISSION_CODES.ARCHIVE_CABINET_CREATE),
-    ),
+    canArchiveApplicationForm: computed(() => false),
+    canArchiveEmbeddingBox: computed(() => false),
+    canArchiveSlide: computed(() => false),
+    canCreateCabinet: computed(() => false),
     canCreateLoan: computed(() =>
       accessCodeSet.value.has(M5_PERMISSION_CODES.LOAN_CREATE),
     ),
@@ -45,15 +33,11 @@ export function useArchiveManagementPage() {
     canQueryLoans: computed(() =>
       accessCodeSet.value.has(M5_PERMISSION_CODES.LOAN_QUERY),
     ),
-    canQueryRecords: computed(() =>
-      accessCodeSet.value.has(M5_PERMISSION_CODES.ARCHIVE_QUERY),
-    ),
+    canQueryRecords: computed(() => false),
     canReturnLoan: computed(() =>
       accessCodeSet.value.has(M5_PERMISSION_CODES.LOAN_RETURN),
     ),
-    canUpdateCabinet: computed(() =>
-      accessCodeSet.value.has(M5_PERMISSION_CODES.ARCHIVE_CABINET_UPDATE),
-    ),
+    canUpdateCabinet: computed(() => false),
     canViewArchivePage: computed(() =>
       M5_ARCHIVE_PAGE_AUTHORITIES.some((code) => accessCodeSet.value.has(code)),
     ),
@@ -86,23 +70,22 @@ export function useArchiveManagementPage() {
     mutationState,
     operatorContext,
   });
-  const recordWorkspaceState = useArchiveRecordWorkspace({ capabilities });
-  const archiveWorkspaceState = useArchiveSubmissionWorkspace({
+  const loanWorkspaceState = useArchiveLoanWorkspace({
     capabilities,
     mutationState,
     operatorContext,
-    refreshArchiveWorkspace,
+    refreshArchiveWorkspace: refreshBorrowWorkspace,
     selectedPosition: cabinetWorkspaceState.selectedPosition,
   });
 
-  async function refreshArchiveWorkspace() {
+  async function refreshBorrowWorkspace() {
     const tasks: Array<Promise<unknown>> = [];
 
     if (capabilities.canQueryCabinets.value) {
       tasks.push(cabinetWorkspaceState.loadPositions());
     }
-    if (capabilities.canQueryRecords.value) {
-      tasks.push(recordWorkspaceState.loadRecords());
+    if (capabilities.canQueryLoans.value) {
+      tasks.push(loanWorkspaceState.loadLoans());
     }
 
     if (tasks.length > 0) {
@@ -111,7 +94,7 @@ export function useArchiveManagementPage() {
   }
 
   async function initializePage() {
-    if (!capabilities.canViewArchivePage.value) {
+    if (!capabilities.canViewBorrowPage.value) {
       return;
     }
 
@@ -123,8 +106,8 @@ export function useArchiveManagementPage() {
         cabinetWorkspaceState.loadPositions(),
       );
     }
-    if (capabilities.canQueryRecords.value) {
-      tasks.push(recordWorkspaceState.loadRecords());
+    if (capabilities.canQueryLoans.value) {
+      tasks.push(loanWorkspaceState.loadLoans());
     }
 
     if (tasks.length > 0) {
@@ -135,17 +118,13 @@ export function useArchiveManagementPage() {
   void initializePage();
 
   return {
-    archiveWorkspace: reactive(archiveWorkspaceState),
     cabinetWorkspace: reactive(cabinetWorkspaceState),
     capabilities: reactive(capabilities),
     display: {
-      getArchiveStatusTagType,
-      getCabinetStatusTagType,
       getLoanStatusTagType,
       getPositionStatusTagType,
-      getToggleCabinetActionLabel,
     },
+    loanWorkspace: reactive(loanWorkspaceState),
     pageState: reactive(mutationState),
-    recordWorkspace: reactive(recordWorkspaceState),
   };
 }

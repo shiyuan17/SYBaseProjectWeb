@@ -27,13 +27,6 @@ vi.mock('@vben/common-ui', () => ({
 }));
 
 vi.mock('element-plus', () => {
-  const ElAlert = defineComponent({
-    props: ['title'],
-    setup(props, { slots }) {
-      return () => h('section', [props.title, slots.default?.()]);
-    },
-  });
-
   const ElButton = defineComponent({
     emits: ['click'],
     setup(_, { attrs, emit, slots }) {
@@ -62,6 +55,19 @@ vi.mock('element-plus', () => {
     },
   });
 
+  const ElTabs = defineComponent({
+    setup(_, { slots }) {
+      return () => h('div', slots.default?.());
+    },
+  });
+
+  const ElTabPane = defineComponent({
+    props: ['label'],
+    setup(props, { slots }) {
+      return () => h('section', [h('h3', props.label), slots.default?.()]);
+    },
+  });
+
   const ElTag = defineComponent({
     setup(_, { slots }) {
       return () => h('span', slots.default?.());
@@ -69,10 +75,11 @@ vi.mock('element-plus', () => {
   });
 
   return {
-    ElAlert,
     ElButton,
+    ElTabPane,
     ElTable,
     ElTableColumn,
+    ElTabs,
     ElTag,
   };
 });
@@ -114,14 +121,6 @@ vi.mock('../components/ArchiveSubmissionPanel.vue', () => ({
 
 vi.mock('../components/ArchiveRecordQueryPanel.vue', () => ({
   default: createMarkerComponent('archive-record-query-panel'),
-}));
-
-vi.mock('../components/ArchiveLoanWorkbenchPanel.vue', () => ({
-  default: createMarkerComponent('archive-loan-workbench-panel'),
-}));
-
-vi.mock('../components/ArchiveReturnDialog.vue', () => ({
-  default: createMarkerComponent('archive-return-dialog'),
 }));
 
 vi.mock('../composables/useArchiveManagementPage', () => ({
@@ -231,39 +230,6 @@ function createMockPageState() {
       getPositionStatusTagType: vi.fn(() => 'success'),
       getToggleCabinetActionLabel: vi.fn(() => '停用'),
     },
-    loanWorkspace: {
-      loadLoans: vi.fn(),
-      loading: false,
-      loanError: '',
-      loanFilters: reactive({
-        keyword: '',
-        materialType: '',
-      }),
-      loanForm: reactive({
-        borrowPurpose: '',
-        borrowedByName: '',
-        borrowedByUserId: '',
-        materialId: '',
-        materialType: 'SLIDE',
-        operatorName: '归档员甲',
-        operatorUserId: 'USER-1',
-        remarks: '',
-        terminalCode: '',
-      }),
-      openReturnDialog: vi.fn(),
-      pendingLoans: [],
-      returnDialogVisible: false,
-      returnForm: reactive({
-        operatorName: '归档员甲',
-        operatorUserId: 'USER-1',
-        remarks: '',
-        terminalCode: '',
-      }),
-      returningLoan: null,
-      selectedReturnPositionDescription: '默认归还到原始归档柜位',
-      submitLoan: vi.fn(),
-      submitReturn: vi.fn(),
-    },
     pageState: {
       submitting: false,
     },
@@ -328,18 +294,18 @@ describe('ArchiveManagementView', () => {
 
     const { app, root } = mountView();
 
-    expect(document.body.textContent).toContain('归档管理');
-    expect(document.body.textContent).toContain('医生工作台状态回流');
-    expect(document.body.textContent).toContain('柜位编码规则');
+    expect(document.body.textContent).toContain('申请单归档');
+    expect(document.body.textContent).toContain('蜡块归档');
+    expect(document.body.textContent).toContain('玻片归档');
+    expect(document.body.textContent).toContain('归档柜/柜位');
+    expect(document.body.textContent).toContain('归档记录');
     expect(document.body.textContent).toContain('归档柜工作站');
     expect(document.body.textContent).toContain(
       'archive-position-workbench-panel',
     );
     expect(document.body.textContent).toContain('archive-submission-panel');
     expect(document.body.textContent).toContain('archive-record-query-panel');
-    expect(document.body.textContent).toContain('archive-loan-workbench-panel');
     expect(document.body.textContent).toContain('archive-cabinet-dialog');
-    expect(document.body.textContent).toContain('archive-return-dialog');
 
     const createButton = [...document.querySelectorAll('button')].find(
       (button) => button.textContent?.trim() === '新增归档柜',
