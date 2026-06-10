@@ -66,6 +66,7 @@ async function navigateTo(route?: string, query?: Record<string, string>) {
 
 <template>
   <Page
+    :show-header="false"
     title="分析页"
     description="汇总病理全流程的核心指标、运营信号与风险数据。"
   >

@@ -157,6 +157,7 @@ async function reviewRevision(action: 'approve' | 'reject') {
 
 <template>
   <Page
+    :show-header="false"
     title="报告修订管理"
     description="对已签发或已发布报告发起修订申请，并完成审批通过或驳回。"
   >

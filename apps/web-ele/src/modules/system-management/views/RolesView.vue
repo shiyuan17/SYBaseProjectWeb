@@ -47,6 +47,7 @@ const {
 
 <template>
   <Page
+    :show-header="false"
     title="角色授权"
     description="维护角色基础信息，并按菜单、权限、消息主题和统计范围四个维度配置授权。角色编码由系统自动生成。"
   >

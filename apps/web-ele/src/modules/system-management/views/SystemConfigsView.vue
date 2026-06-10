@@ -256,6 +256,7 @@ onMounted(loadData);
 
 <template>
   <Page
+    :show-header="false"
     title="系统配置"
     description="维护配置分类树与配置项列表，分类编码由系统自动生成，支持创建分类、配置项，以及更新配置值。"
   >

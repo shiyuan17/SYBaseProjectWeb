@@ -1011,7 +1011,7 @@ if (shouldInitialLoad.value) {
 </script>
 
 <template>
-  <Page>
+  <Page :show-header="false">
     <div
       class="flex h-[calc(100vh-112px)] min-h-[560px] flex-col gap-2 overflow-hidden text-foreground"
     >

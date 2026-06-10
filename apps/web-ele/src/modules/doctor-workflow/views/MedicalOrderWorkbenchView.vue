@@ -147,6 +147,7 @@ void loadOrders();
 
 <template>
   <Page
+    :show-header="false"
     title="病理医嘱执行"
     description="面向医嘱执行岗和管理员的医嘱工作台，支持查询、接收、完成和取消待处理医嘱。"
   >

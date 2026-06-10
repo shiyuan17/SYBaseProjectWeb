@@ -205,7 +205,7 @@ if (queryForm.caseId) {
 </script>
 
 <template>
-  <Page>
+  <Page :show-header="false">
     <div class="flex flex-col gap-4">
       <div class="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)_360px]">
         <WorkflowSectionCard

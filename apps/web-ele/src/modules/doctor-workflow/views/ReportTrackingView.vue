@@ -192,6 +192,7 @@ watch(
 
 <template>
   <Page
+    :show-header="false"
     title="报告追踪"
     description="展示诊断任务链、报告版本链、事件链、修订链、会诊链与医嘱链。"
   >

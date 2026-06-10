@@ -200,7 +200,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <Page :title="pageTitle" :description="pageDescription">
+  <Page :show-header="false" :title="pageTitle" :description="pageDescription">
     <div class="flex flex-col gap-4">
       <DashboardSectionCard
         title="统计分类"

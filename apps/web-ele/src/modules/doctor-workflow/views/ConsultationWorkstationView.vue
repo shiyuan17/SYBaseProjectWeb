@@ -210,6 +210,7 @@ async function submitComplete() {
 
 <template>
   <Page
+    :show-header="false"
     title="科内会诊工作站"
     description="发起会诊、维护参与人、录入参与人意见并完成主持人总结。"
   >

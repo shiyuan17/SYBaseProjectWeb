@@ -910,7 +910,7 @@ watch(activeRegistrationListTab, () => {
 </script>
 
 <template>
-  <Page>
+  <Page :show-header="false">
     <div class="flex flex-col gap-4">
       <div
         class="grid gap-4 transition-[grid-template-columns] duration-300 ease-in-out"

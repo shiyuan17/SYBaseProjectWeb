@@ -223,7 +223,7 @@ void loadWorkbench();
 </script>
 
 <template>
-  <Page>
+  <Page :show-header="false">
     <div class="flex flex-col gap-4">
       <WorkflowSectionCard
         title="超时提醒"

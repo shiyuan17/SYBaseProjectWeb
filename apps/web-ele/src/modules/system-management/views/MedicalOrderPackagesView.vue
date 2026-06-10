@@ -204,6 +204,7 @@ onMounted(loadInitialData);
 
 <template>
   <Page
+    :show-header="false"
     title="医嘱套餐"
     description="维护医嘱套餐、套餐类型、负责人和套餐条目，套餐编码由系统自动生成。"
   >

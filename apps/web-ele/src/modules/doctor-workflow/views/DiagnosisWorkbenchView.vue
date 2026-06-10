@@ -548,7 +548,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <Page>
+  <Page :show-header="false">
     <div class="flex flex-col gap-2">
       <ElAlert
         v-if="pageError"

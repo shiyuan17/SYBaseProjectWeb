@@ -227,6 +227,7 @@ onMounted(() => {
 
 <template>
   <Page
+    :show-header="false"
     title="收费管理"
     description="查询收费记录，并执行重试、回执登记和时间窗对账。"
   >

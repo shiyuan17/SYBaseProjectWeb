@@ -286,6 +286,7 @@ onMounted(loadData);
 
 <template>
   <Page
+    :show-header="false"
     title="医嘱字典"
     description="维护医嘱分类、条目、默认内容、执行范围和启停状态，相关编码由系统自动生成。"
   >

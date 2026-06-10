@@ -81,7 +81,7 @@ watch(
 </script>
 
 <template>
-  <Page>
+  <Page :show-header="false">
     <div class="flex flex-col gap-4">
       <ElTabs v-model="activeTab">
         <ElTabPane v-if="canVerifyFixation" label="条码绑定" name="binding">

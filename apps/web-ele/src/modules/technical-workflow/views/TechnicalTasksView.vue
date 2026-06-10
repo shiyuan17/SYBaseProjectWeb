@@ -419,7 +419,7 @@ void loadPendingData();
 </script>
 
 <template>
-  <Page>
+  <Page :show-header="false">
     <div class="flex flex-col gap-4">
       <TechnicalTaskStatsGrid :items="taskStats" />
 

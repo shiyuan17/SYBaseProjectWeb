@@ -976,7 +976,7 @@ void loadWorkbench();
 </script>
 
 <template>
-  <Page>
+  <Page :show-header="false">
     <div class="legacy-slicing-workbench flex flex-col gap-4">
       <ElAlert
         v-if="pageError"

@@ -251,7 +251,7 @@ if (canQueryApplications.value) {
 </script>
 
 <template>
-  <Page :title="embedded ? undefined : '申请与登记'">
+  <Page :show-header="false" :title="embedded ? undefined : '申请与登记'">
     <div class="flex flex-col gap-4">
       <ElAlert
         v-if="pageError"

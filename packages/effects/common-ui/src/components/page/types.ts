@@ -1,6 +1,7 @@
 export interface PageProps {
   title?: string;
   description?: string;
+  showHeader?: boolean;
   contentClass?: string;
   /**
    * 根据content可见高度自适应

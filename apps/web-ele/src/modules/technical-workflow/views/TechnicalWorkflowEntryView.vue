@@ -103,6 +103,7 @@ function goToReworkEntry() {
   </div>
   <Page
     v-else
+    :show-header="false"
     title="制片生产入口"
     description="围绕常规制片主链、冰冻工作台和异常闭环组织入口，让 M3 从任务调度到返工追踪保持连续。"
   >

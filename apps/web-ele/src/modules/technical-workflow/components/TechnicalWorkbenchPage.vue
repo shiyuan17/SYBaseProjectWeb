@@ -270,7 +270,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <Page :title="pageTitle" :description="pageDescription">
+  <Page :show-header="false" :title="pageTitle" :description="pageDescription">
     <div class="flex flex-col gap-3">
       <section class="rounded-lg border border-border bg-accent p-3">
         <div class="flex flex-wrap items-start justify-between gap-3">

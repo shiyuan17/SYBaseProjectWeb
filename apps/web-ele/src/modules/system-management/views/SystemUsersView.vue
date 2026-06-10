@@ -58,6 +58,7 @@ const {
 
 <template>
   <Page
+    :show-header="false"
     title="系统用户"
     description="维护系统用户、角色分配、登录日志、导入导出与登录标签，用户编码和登录标签编码由系统自动生成。"
   >

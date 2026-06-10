@@ -165,6 +165,7 @@ onMounted(loadData);
 
 <template>
   <Page
+    :show-header="false"
     title="部位字典"
     description="维护部位层级、别名、排序和启停状态，编码由系统自动生成并在详情中展示。"
   >

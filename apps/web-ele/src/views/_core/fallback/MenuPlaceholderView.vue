@@ -13,7 +13,7 @@ const pageDescription = computed(() =>
 </script>
 
 <template>
-  <Page :title="pageTitle" :description="pageDescription">
+  <Page :show-header="false" :title="pageTitle" :description="pageDescription">
     <div
       class="rounded border border-dashed border-border bg-background px-6 py-10 text-center text-sm text-muted-foreground"
     >

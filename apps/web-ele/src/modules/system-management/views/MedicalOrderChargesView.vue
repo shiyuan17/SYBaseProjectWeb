@@ -257,6 +257,7 @@ onMounted(loadInitialData);
 
 <template>
   <Page
+    :show-header="false"
     title="医嘱收费"
     description="维护医嘱收费项目，收费编码由系统自动生成，支持筛选、导入导出和关联医嘱条目。"
   >

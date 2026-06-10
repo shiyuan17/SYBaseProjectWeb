@@ -477,7 +477,12 @@ void initializePage();
   >
     <Fallback status="403" />
   </div>
-  <Page v-else :title="pageTitle" :description="pageDescription">
+  <Page
+    v-else
+    :show-header="false"
+    :title="pageTitle"
+    :description="pageDescription"
+  >
     <div class="flex flex-col gap-4">
       <ElAlert
         v-if="pageError"

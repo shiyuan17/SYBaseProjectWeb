@@ -5,7 +5,11 @@ import ApplicationRegistrationWorkbenchPanel from '../components/ApplicationRegi
 </script>
 
 <template>
-  <Page auto-content-height content-class="overflow-hidden">
+  <Page
+    :show-header="false"
+    auto-content-height
+    content-class="overflow-hidden"
+  >
     <ApplicationRegistrationWorkbenchPanel full-height />
   </Page>
 </template>

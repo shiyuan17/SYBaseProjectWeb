@@ -459,7 +459,7 @@ if (shouldInitialLoad.value) {
 </script>
 
 <template>
-  <Page>
+  <Page :show-header="false">
     <div class="flex flex-col gap-4">
       <section class="rounded-lg border border-border bg-card">
         <div class="flex flex-col gap-4 border-b border-border px-4 py-3">

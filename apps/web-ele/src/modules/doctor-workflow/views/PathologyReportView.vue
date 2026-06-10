@@ -385,6 +385,7 @@ watch(
 
 <template>
   <Page
+    :show-header="false"
     title="报告编辑与流转"
     description="创建草稿、保存正文，并完成提交、审核、驳回、签发、发布闭环。"
   >

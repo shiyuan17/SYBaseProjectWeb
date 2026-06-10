@@ -110,6 +110,7 @@ onMounted(loadData);
 
 <template>
   <Page
+    :show-header="false"
     title="编号规则"
     description="维护业务编号前缀、日期格式、流水长度、重置策略和作用域。"
   >

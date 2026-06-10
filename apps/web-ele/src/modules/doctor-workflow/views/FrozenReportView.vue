@@ -272,6 +272,7 @@ void loadSessionList();
 
 <template>
   <Page
+    :show-header="false"
     title="冰冻快速报告"
     description="承接术中初步结果、电话回报、最终确认、冰石对比和剩余组织处理。"
   >

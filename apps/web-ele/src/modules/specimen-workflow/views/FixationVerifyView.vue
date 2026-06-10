@@ -501,7 +501,7 @@ watch(
 </script>
 
 <template>
-  <Page :title="embedded ? '' : '固定与转运'">
+  <Page :show-header="false" :title="embedded ? '' : '固定与转运'">
     <div class="flex flex-col gap-4">
       <ElAlert
         v-if="pageError"
