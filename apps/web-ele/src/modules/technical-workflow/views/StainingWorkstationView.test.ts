@@ -92,7 +92,12 @@ vi.mock('../components/StainingProcessDialog.vue', () => ({
                 'button',
                 {
                   type: 'button',
-                  onClick: () => emit('submitted'),
+                  onClick: () =>
+                    emit('submitted', {
+                      caseStatus: 'DIAGNOSIS_PENDING',
+                      slideId: props.task?.objectId ?? '',
+                      taskId: props.task?.id ?? '',
+                    }),
                 },
                 '提交出片',
               ),
@@ -312,7 +317,10 @@ function createTask(
   };
 }
 
-function createTracking(): TechnicalTrackingView {
+function createTracking(
+  overrides: Partial<TechnicalTrackingView> = {},
+): TechnicalTrackingView {
+  const slideId = overrides.slides?.[0]?.slideId ?? 'SLIDE-1';
   return {
     blocks: [],
     caseId: 'CASE-1',
@@ -326,7 +334,7 @@ function createTracking(): TechnicalTrackingView {
       {
         embeddingBoxId: 'BOX-1',
         qualityStatus: 'QUALIFIED',
-        slideId: 'SLIDE-1',
+        slideId,
         slideNo: 'SLIDE-001',
         slideStatus: 'STAINED',
         specimenId: 'SPEC-1',
@@ -348,13 +356,14 @@ function createTracking(): TechnicalTrackingView {
         assignedToName: '周永坚',
         completedAt: '2026-06-03T16:38:32',
         id: 'TASK-STAINING',
-        objectId: 'SLIDE-1',
+        objectId: slideId,
         objectType: 'SLIDE',
         startedAt: '2026-06-03T16:36:00',
         taskStatus: 'COMPLETED',
         taskType: 'STAINING',
       }),
     ],
+    ...overrides,
   };
 }
 
@@ -371,6 +380,20 @@ function findButton(text: string) {
   );
   expect(button).toBeTruthy();
   return button as HTMLButtonElement;
+}
+
+function findTableRow(text: string) {
+  const row = [...document.querySelectorAll('[data-testid="table-row"]')].find(
+    (item) => item.textContent?.trim() === text,
+  );
+  expect(row).toBeTruthy();
+  return row as HTMLButtonElement;
+}
+
+function hasTableRow(text: string) {
+  return [...document.querySelectorAll('[data-testid="table-row"]')].some(
+    (item) => item.textContent?.trim() === text,
+  );
 }
 
 function mountView() {
@@ -416,8 +439,9 @@ describe('StainingWorkstationView', () => {
     ).toBeTruthy();
     expect(document.body.textContent).toContain('待出片列表');
     expect(document.body.textContent).toContain('已完成出片');
+    expect(document.body.textContent).toContain('本次暂无已完成出片记录');
     expect(document.body.textContent).toContain('A1');
-    expect(document.body.textContent).toContain('SLIDE-001');
+    expect(document.body.textContent).not.toContain('SLIDE-001');
     expect(document.body.textContent).not.toContain(
       'SLD-3aa4f9b-2427-413d-bf12-080de1c4a43d',
     );
@@ -431,15 +455,13 @@ describe('StainingWorkstationView', () => {
       [...document.querySelectorAll('.legacy-stat-card__value')].map((item) =>
         item.textContent?.trim(),
       ),
-    ).toEqual(['1', '0', '1']);
+    ).toEqual(['1', '0', '0']);
     expect(document.body.textContent).not.toContain('待染色总数');
     expect(document.body.textContent).not.toContain('染色中');
     expect(document.body.textContent).not.toContain('待开始');
     expect(document.body.textContent).not.toContain('超时风险');
     expect(document.body.textContent).not.toContain('未出片');
-    expect(document.body.textContent).toContain('周永坚');
-    expect(document.body.textContent).toContain('2026-06-03 16:35:50');
-    expect(document.body.textContent).toContain('2026-06-03 16:38:32');
+    expect(mockGetTechnicalTracking).not.toHaveBeenCalled();
     expect(findButton('扫码清零').disabled).toBe(true);
     expect(findButton('打印清零码').disabled).toBe(true);
 
@@ -478,6 +500,12 @@ describe('StainingWorkstationView', () => {
   });
 
   it('formats completed slide operation fallback statuses in Chinese', async () => {
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [createTask({ objectId: 'SLIDE-1', taskStatus: 'IN_PROGRESS' })],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
     mockGetTechnicalTracking.mockResolvedValue({
       ...createTracking(),
       slides: [
@@ -496,10 +524,106 @@ describe('StainingWorkstationView', () => {
     const { app, root } = mountView();
     await flushView();
 
+    findButton('染色出片(F9)').click();
+    await flushView();
+    findButton('提交出片').click();
+    await flushView();
+
     expect(document.body.textContent).toContain('待质控');
     expect(document.body.textContent).toContain('待染色');
     expect(document.body.textContent).not.toContain('CREATED');
     expect(document.body.textContent).not.toContain('PENDING');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('keeps completed slides accumulated when switching pending tasks', async () => {
+    const firstTask = createTask({
+      id: 'TASK-1',
+      objectDisplayNo: 'SLIDE-001',
+      objectId: 'SLIDE-1',
+      taskStatus: 'IN_PROGRESS',
+    });
+    const secondTask = createTask({
+      caseId: 'CASE-2',
+      id: 'TASK-2',
+      objectDisplayNo: 'SLIDE-002',
+      objectId: 'SLIDE-2',
+      pathologyNo: 'BL-002',
+      patientId: 'P-002',
+      patientName: '患者乙',
+      taskStatus: 'IN_PROGRESS',
+    });
+
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [firstTask, secondTask],
+      page: 1,
+      size: 20,
+      total: 2,
+    });
+    mockGetTechnicalTracking.mockImplementation(async (caseId: string) =>
+      caseId === 'CASE-2'
+        ? createTracking({
+            caseId: 'CASE-2',
+            pathologyNo: 'BL-002',
+            slides: [
+              {
+                embeddingBoxId: 'BOX-2',
+                qualityStatus: 'QUALIFIED',
+                slideId: 'SLIDE-2',
+                slideNo: 'SLIDE-002',
+                slideStatus: 'STAINED',
+                specimenId: 'SPEC-2',
+              },
+            ],
+          })
+        : createTracking({
+            slides: [
+              {
+                embeddingBoxId: 'BOX-1',
+                qualityStatus: 'QUALIFIED',
+                slideId: 'SLIDE-1',
+                slideNo: 'SLIDE-001',
+                slideStatus: 'STAINED',
+                specimenId: 'SPEC-1',
+              },
+            ],
+          }),
+    );
+
+    const { app, root } = mountView();
+    await flushView();
+
+    findButton('染色出片(F9)').click();
+    await flushView();
+    findButton('提交出片').click();
+    await flushView();
+
+    expect(hasTableRow('SLIDE-1')).toBe(true);
+    expect(hasTableRow('SLIDE-2')).toBe(false);
+    expect(mockGetTechnicalTracking).toHaveBeenCalledTimes(1);
+
+    findTableRow('TASK-2').click();
+    await flushView();
+
+    expect(document.body.textContent).toContain('SLIDE-001');
+    expect(mockGetTechnicalTracking).toHaveBeenCalledTimes(1);
+
+    findButton('染色出片(F9)').click();
+    await flushView();
+    findButton('提交出片').click();
+    await flushView();
+
+    expect(hasTableRow('SLIDE-1')).toBe(true);
+    expect(hasTableRow('SLIDE-2')).toBe(true);
+    expect(document.body.textContent).toContain('BL-001');
+    expect(document.body.textContent).toContain('BL-002');
+    expect(
+      [...document.querySelectorAll('.legacy-stat-card__value')].map((item) =>
+        item.textContent?.trim(),
+      ),
+    ).toEqual(['2', '0', '2']);
 
     app.unmount();
     root.remove();

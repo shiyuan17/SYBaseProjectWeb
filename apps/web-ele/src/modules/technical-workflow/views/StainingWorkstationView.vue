@@ -1,18 +1,12 @@
 <script setup lang="ts">
 import type {
   PendingTechnicalTaskItem,
+  SlideStainingResult,
   TechnicalTrackingSlideSummary,
   TechnicalTrackingView as TechnicalTrackingViewModel,
 } from '../types/technical-workflow';
 
-import {
-  computed,
-  onBeforeUnmount,
-  onMounted,
-  reactive,
-  ref,
-  watch,
-} from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 import { useRoute } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
@@ -101,12 +95,12 @@ const route = useRoute();
 
 const pageError = ref('');
 const loading = ref(false);
-const trackingLoading = ref(false);
+const completedLoading = ref(false);
 const pendingItems = ref<PendingTechnicalTaskItem[]>([]);
+const completedRows = ref<CompletedSlideRow[]>([]);
 const total = ref(0);
 const selectedPendingRows = ref<StainingTaskRow[]>([]);
 const selectedCompletedRows = ref<CompletedSlideRow[]>([]);
-const trackingResult = ref<null | TechnicalTrackingViewModel>(null);
 const pendingTableRef = ref<null | TableInstance>(null);
 const startDialogVisible = ref(false);
 const processDialogVisible = ref(false);
@@ -152,36 +146,6 @@ const pendingRows = computed<StainingTaskRow[]>(() =>
 
 const selectedPendingRow = computed(() => selectedPendingRows.value[0] ?? null);
 const selectedTask = computed(() => selectedPendingRow.value?.task ?? null);
-
-const completedRows = computed<CompletedSlideRow[]>(() =>
-  (trackingResult.value?.slides ?? []).map((slide, index) => {
-    const slicingTask = findSlideTechnicalTask(slide, 'SLICING');
-    const stainingTask = findSlideTechnicalTask(slide, 'STAINING');
-
-    return {
-      index: index + 1,
-      pathologyNo: formatNullable(
-        trackingResult.value?.pathologyNo ?? selectedTask.value?.pathologyNo,
-      ),
-      patientId: formatNullable(selectedTask.value?.patientId),
-      patientName: formatNullable(selectedTask.value?.patientName),
-      slideId: slide.slideId,
-      slideNo: formatNullable(slide.slideNo),
-      slideStatus: slide.slideStatus,
-      slideType: formatObjectType('SLIDE'),
-      sliceOperation: buildOperationInfo({
-        fallback: formatQualityStatus(slide.qualityStatus),
-        operatedAt: slicingTask?.completedAt ?? slicingTask?.startedAt,
-        operatorName: slicingTask?.assignedToName,
-      }),
-      stainingOperation: buildOperationInfo({
-        fallback: formatSlideStatus(slide.slideStatus),
-        operatedAt: stainingTask?.completedAt ?? stainingTask?.startedAt,
-        operatorName: stainingTask?.assignedToName,
-      }),
-    };
-  }),
-);
 
 const visiblePendingRows = computed(() => pendingRows.value);
 const overdueCount = computed(
@@ -249,13 +213,13 @@ function shouldShowOperationTime(operation: OperationInfo) {
 }
 
 function findSlideTechnicalTask(
+  tracking: TechnicalTrackingViewModel,
   slide: TechnicalTrackingSlideSummary,
   taskType: 'SLICING' | 'STAINING',
 ) {
-  const tasks =
-    trackingResult.value?.technicalTasks.filter(
-      (task) => task.taskType === taskType,
-    ) ?? [];
+  const tasks = tracking.technicalTasks.filter(
+    (task) => task.taskType === taskType,
+  );
   const relatedObjectIds = new Set(
     [
       slide.slideId,
@@ -269,6 +233,100 @@ function findSlideTechnicalTask(
     tasks.find((task) => relatedObjectIds.has(task.objectId?.trim() ?? '')) ??
     (tasks.length === 1 ? tasks[0] : null)
   );
+}
+
+function buildCompletedRowsFromTracking(
+  tracking: TechnicalTrackingViewModel,
+  taskContext: PendingTechnicalTaskItem,
+): CompletedSlideRow[] {
+  return tracking.slides.map((slide, index) => {
+    const slicingTask = findSlideTechnicalTask(tracking, slide, 'SLICING');
+    const stainingTask = findSlideTechnicalTask(tracking, slide, 'STAINING');
+
+    return {
+      index: index + 1,
+      pathologyNo: formatNullable(
+        tracking.pathologyNo ?? taskContext.pathologyNo,
+      ),
+      patientId: formatNullable(taskContext.patientId),
+      patientName: formatNullable(taskContext.patientName),
+      slideId: slide.slideId,
+      slideNo: formatNullable(slide.slideNo),
+      slideStatus: slide.slideStatus,
+      slideType: formatObjectType('SLIDE'),
+      sliceOperation: buildOperationInfo({
+        fallback: formatQualityStatus(slide.qualityStatus),
+        operatedAt: slicingTask?.completedAt ?? slicingTask?.startedAt,
+        operatorName: slicingTask?.assignedToName,
+      }),
+      stainingOperation: buildOperationInfo({
+        fallback: formatSlideStatus(slide.slideStatus),
+        operatedAt: stainingTask?.completedAt ?? stainingTask?.startedAt,
+        operatorName: stainingTask?.assignedToName,
+      }),
+    };
+  });
+}
+
+function buildFallbackCompletedRow(
+  result: SlideStainingResult,
+  taskContext: PendingTechnicalTaskItem,
+): CompletedSlideRow {
+  return {
+    index: 1,
+    pathologyNo: formatNullable(taskContext.pathologyNo),
+    patientId: formatNullable(taskContext.patientId),
+    patientName: formatNullable(taskContext.patientName),
+    slideId: result.slideId || taskContext.objectId || result.taskId,
+    slideNo: formatNullable(
+      taskContext.objectDisplayNo ??
+        taskContext.samplingBlockCode ??
+        taskContext.samplingBlockDescription ??
+        taskContext.objectId,
+    ),
+    slideStatus: 'STAINED',
+    slideType: formatObjectType('SLIDE'),
+    sliceOperation: buildOperationInfo({
+      fallback: formatNullable(taskContext.sampledByName),
+      operatedAt: taskContext.sampledAt,
+      operatorName: taskContext.sampledByName,
+    }),
+    stainingOperation: buildOperationInfo({
+      fallback: formatSlideStatus('STAINED'),
+      operatedAt: taskContext.completedAt,
+      operatorName: taskContext.assignedToName,
+    }),
+  };
+}
+
+function upsertCompletedRow(row: CompletedSlideRow) {
+  completedRows.value = [
+    row,
+    ...completedRows.value.filter((item) => item.slideId !== row.slideId),
+  ].map((item, index) => ({ ...item, index: index + 1 }));
+  selectedCompletedRows.value = [];
+  filters.completedPage = 1;
+}
+
+async function appendCompletedResult(
+  result: SlideStainingResult,
+  taskContext: PendingTechnicalTaskItem,
+) {
+  completedLoading.value = true;
+  try {
+    const tracking = await getTechnicalTracking(taskContext.caseId);
+    const matchedRow =
+      buildCompletedRowsFromTracking(tracking, taskContext).find(
+        (row) => row.slideId === result.slideId,
+      ) ?? buildFallbackCompletedRow(result, taskContext);
+    upsertCompletedRow(matchedRow);
+  } catch (error) {
+    upsertCompletedRow(buildFallbackCompletedRow(result, taskContext));
+    pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
+  } finally {
+    completedLoading.value = false;
+  }
 }
 
 function selectPendingRow(row: null | StainingTaskRow, openProcess = false) {
@@ -290,26 +348,6 @@ function selectPendingRow(row: null | StainingTaskRow, openProcess = false) {
   }
   if (row.task.taskStatus === 'IN_PROGRESS') {
     processDialogVisible.value = true;
-  }
-}
-
-async function loadTrackingForTask(task: null | PendingTechnicalTaskItem) {
-  if (!task?.caseId) {
-    trackingResult.value = null;
-    return;
-  }
-
-  trackingLoading.value = true;
-  try {
-    trackingResult.value = await getTechnicalTracking(task.caseId);
-    selectedCompletedRows.value = [];
-    filters.completedPage = 1;
-  } catch (error) {
-    trackingResult.value = null;
-    pageError.value = getWorkflowPageErrorMessage(error);
-    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
-  } finally {
-    trackingLoading.value = false;
   }
 }
 
@@ -432,9 +470,13 @@ function handleStartSubmitted() {
   });
 }
 
-function handleProcessSubmitted() {
+async function handleProcessSubmitted(result: SlideStainingResult) {
+  const completedTask = selectedTask.value;
   processDialogVisible.value = false;
-  void loadPendingData();
+  if (completedTask) {
+    await appendCompletedResult(result, completedTask);
+  }
+  await loadPendingData();
 }
 
 function handlePendingPageChange() {
@@ -455,10 +497,6 @@ function handleGlobalKeydown(event: KeyboardEvent) {
   openPrimaryAction();
 }
 
-watch(selectedPendingRow, (task) => {
-  void loadTrackingForTask(task?.task ?? null);
-});
-
 onMounted(() => {
   window.addEventListener('keydown', handleGlobalKeydown);
   void loadPendingData();
@@ -470,7 +508,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <Page>
+  <Page :show-header="false">
     <div class="legacy-staining-workbench">
       <ElAlert
         v-if="pageError"
@@ -678,26 +716,19 @@ onBeforeUnmount(() => {
         </section>
 
         <section
-          v-loading="trackingLoading"
+          v-loading="completedLoading"
           class="legacy-panel legacy-panel--right"
         >
           <header class="legacy-panel__header legacy-panel__header--right">
             <div>
               <h3 class="legacy-panel__title">已完成出片</h3>
               <p class="legacy-panel__subtitle">
-                当前仅展示选中病例的追踪结果，完成后会同步回写病例状态。
+                展示本次页面连续完成的出片记录，切换待办不会清空。
               </p>
             </div>
             <div class="legacy-panel__meta legacy-panel__meta--right">
-              <span>
-                当前病例
-                {{
-                  formatNullable(
-                    trackingResult?.pathologyNo ?? selectedTask?.pathologyNo,
-                  )
-                }}
-              </span>
-              <span>本次清零后扫码数（{{ selectedCompletedCount }}）</span>
+              <span>本次完成 {{ completedRows.length }}</span>
+              <span>已选中（{{ selectedCompletedCount }}）</span>
             </div>
           </header>
 
@@ -786,7 +817,7 @@ onBeforeUnmount(() => {
               </ElTableColumn>
             </ElTable>
           </div>
-          <ElEmpty v-else description="当前病例暂无已完成出片记录" />
+          <ElEmpty v-else description="本次暂无已完成出片记录" />
 
           <div class="legacy-panel__footer">
             <ElPagination

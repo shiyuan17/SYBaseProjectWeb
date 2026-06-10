@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type {
   PendingTechnicalTaskItem,
+  SlideStainingResult,
   TechnicalOperatorFormValue,
 } from '../types/technical-workflow';
 
@@ -41,7 +42,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  submitted: [];
+  submitted: [result: SlideStainingResult];
   'update:modelValue': [value: boolean];
 }>();
 
@@ -115,7 +116,7 @@ async function submitStaining() {
     ElMessage.success(
       `染色完成，病例状态已更新为 ${formatCaseStatus(result.caseStatus)}`,
     );
-    emit('submitted');
+    emit('submitted', result);
     dialogVisible.value = false;
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
