@@ -4,12 +4,15 @@
 
 - Last updated: 2026-06-10
 - Repository: `SYBaseProjectWeb`
-- Current phase: M3 embedding confirmation rollback
-- Active focus: `EmbeddingWorkstationView` now exposes “取消包埋” before “确认包埋完成” for selected `EMBEDDING_CONFIRM_PENDING` rows; sibling backend `../SYBaseProject/bl-center` persists `POST /api/v1/embeddings/cancel` to return those tasks to `PENDING` / 待包埋.
+- Current phase: system management log management delivery
+- Active focus: `/system/logs` adds a single 系统管理 “日志管理” page with 登录日志 / 操作日志 tabs, backed by sibling backend `../SYBaseProject/bl-center` global log query/detail APIs and the new audit permissions `PERM_SYS_LOG_QUERY` / `PERM_SYS_LOG_DETAIL`.
 - Backend sibling repo: `../SYBaseProject` (parallel memory files confirmed present: PROJECT_STATE/ARCHITECTURE/DECISIONS/TECH_DEBT/KNOWN_BUGS)
 
 ## Active Work
 
+- System log management implemented on 2026-06-10: `apps/web-ele` adds `/system/logs` with 登录日志 and 操作日志 tabs, per-tab filters/pagination, detail drawer, real service methods for `/v1/system/logs/login` and `/v1/system/logs/operations`, static/backend-menu mappings for `SYS_LOG_MANAGEMENT`, and M1 permission constants `PERM_SYS_LOG_QUERY` / `PERM_SYS_LOG_DETAIL`. Sibling backend `../SYBaseProject/bl-center` owns the query/detail APIs, Flyway menu/permission/index seed, and cross-cutting operation audit.
+- M5 archive/borrow tab split completed on 2026-06-10: `/operation-support/archive` keeps only archive concerns and exposes tabs for `申请单归档`、`蜡块归档`、`玻片归档`、`归档柜/柜位`、`归档记录`; `/operation-support/borrow` is promoted from placeholder to a real page with `玻片借记`、`蜡块借记`、`待归还/归还`. Frontend permission helpers now split archive and borrow page visibility while preserving the existing global route guard and request layer. UI labels show “蜡块”, while API payloads still use `EMBEDDING_BOX` and `/v1/archive/embedding-boxes`. Linear sync created `SID-76` `SID-77` `SID-78` `SID-79` from `linear-setting.json`; `SID-79` is covered by `docs/plans/operation-support-archive-borrow-gap-analysis.md`.
+- Staining workstation completed-output accumulation fixed on 2026-06-10: `StainingProcessDialog` now emits the `SlideStainingResult` from `POST /api/v1/slide-stainings/complete`, and `StainingWorkstationView` uses that result plus the existing technical tracking endpoint to append or update the completed slide in a local current-page list keyed by `slideId`. The previous selected-pending-row watcher was removed so changing the left-side task selection no longer reloads and replaces the right-side completed list.
 - Embedding confirmation rollback implemented on 2026-06-10: `EmbeddingWorkstationView` adds the right-side “取消包埋” action before “确认包埋完成”, guards it to selected/current `EMBEDDING_CONFIRM_PENDING` rows, asks for confirmation, calls frontend `cancelEmbedding` (`POST /api/v1/embeddings/cancel`), and refreshes the pending/summary lists so the task returns to the left-side 待包埋 list. Final `COMPLETED` rows remain non-selectable for cancel. Sibling backend `../SYBaseProject/bl-center` only allows cancelling `EMBEDDING_CONFIRM_PENDING`, resets the technical task to `PENDING`, clears start/completion timestamps, records a workflow event, and leaves final embedding records/slicing tasks untouched.
 - Dehydration workstation tolerant batch actions fixed on 2026-06-09: `DehydrationWorkstationView` now lets `开始脱水` process only selected `PENDING` rows while skipping already started/completed rows, and lets `脱水完成` one-click advance selected `PENDING` rows through `startDehydration` then `completeDehydration` while directly completing `IN_PROGRESS` rows. Completed rows are skipped with summary feedback; the backend API contract is unchanged because sibling backend `../SYBaseProject/bl-center` still requires task-level dehydration completion to follow a start call.
 - Slicing workstation pending slide-print merge groups implemented on 2026-06-09: `SlicingWorkstationView` adds `两两合片` and `取消合片` before `打印玻片`, sends selected ordinary pending print task IDs to `POST /api/v1/slicings/slide-print-merge-groups`, cancels selected pending merged rows through `/cancel`, and prints merged rows through `/print`. Merged rows display `embeddingBoxNo` such as `A1+A2` with green highlighting while ordinary odd-tail rows remain unmerged. Sibling backend `../SYBaseProject/bl-center` persists merge groups, excludes grouped tasks from ordinary pending print rows, returns virtual `mergedPrintGroup` rows with `printGroupId` / `taskIds` / `embeddingBoxIds`, and rejects selections with no same-patient/same-case/same-prefix pair.
@@ -50,6 +53,20 @@
 
 ## Validation Baseline
 
+- Latest system log management validation in this thread:
+  - Frontend `pnpm lint`, `pnpm check:type`, `pnpm exec vitest run --config vitest.system-management.config.ts` (11 files, 43 tests), and `pnpm exec vitest run apps/web-ele/src/api/core/menu.test.ts` (16 tests) passed on 2026-06-10.
+  - Sibling backend `../SYBaseProject`: `.\mvnw.cmd -pl bl-center -am test "-Dtest=SystemManagementServiceTest,SystemManagementUserIntegrationTest,SystemManagementRoleAndMenuIntegrationTest,*Audit*" "-Dsurefire.failIfNoSpecifiedTests=false"` passed on 2026-06-10 (19 tests), and `.\mvnw.cmd -pl auth-center -am test "-Dtest=AuthControllerIntegrationTest" "-Dsurefire.failIfNoSpecifiedTests=false"` passed on 2026-06-10 (9 tests).
+  - Browser smoke reached `http://localhost:5777/system/logs` but unauthenticated access redirected to `/auth/login?redirect=%252Fsystem%252Flogs`; full authenticated tab/filter/detail verification remains blocked by slider captcha/session setup.
+- Latest M5 archive/borrow tab validation in this thread:
+  - Targeted Vitest for access, route, menu, archive page/composable, and borrow page/composable passed on 2026-06-10 (7 files, 33 tests).
+  - `pnpm lint`, `pnpm check:type`, and `pnpm test:unit` passed on 2026-06-10 (`pnpm test:unit`: 200 files, 1098 tests).
+  - `pnpm linear:sync` created `SID-76` through `SID-79`; `pnpm linear:pull` pulled the same 4 planned issues from JWBL.
+  - Browser verification with local `m1.archive` covered `/operation-support/archive` and `/operation-support/borrow`: archive tabs and borrow tabs loaded and switched successfully; no-permission browser login could not be completed because the in-app browser automation channel hit input/clipboard timeouts, but no-permission access is covered by unit tests.
+- Latest staining workstation validation in this thread:
+  - `pnpm test:unit -- --run apps/web-ele/src/modules/technical-workflow/views/StainingWorkstationView.test.ts`: passed on 2026-06-10 (1 file, 6 tests), covering initial empty completed list, completion append, and no replacement when switching pending rows.
+  - `pnpm lint`: passed on 2026-06-10.
+  - `pnpm check:type`: passed on 2026-06-10.
+  - Browser smoke reached `http://localhost:5777/technical-workflow/staining`, but unauthenticated access redirected to `/auth/login` with slider verification; authenticated visual verification was not completed.
 - Final frontend pre-push validation for this delivery on 2026-06-10: `pnpm lint` passed, `pnpm check:type` passed after resolving `TD-20260609-005`, `pnpm test:unit` passed (198 files, 1091 tests), `pnpm check:circular` passed, and `git diff --check` passed.
 - Latest embedding confirmation rollback validation in this thread:
   - Frontend `pnpm test:unit -- --run apps/web-ele/src/modules/technical-workflow/views/EmbeddingWorkstationView.test.ts apps/web-ele/src/modules/technical-workflow/api/technical-workflow-service.test.ts`: passed on 2026-06-10 (2 files, 43 tests), covering cancel button behavior, endpoint path, and no accidental final-record cancellation.
@@ -222,6 +239,7 @@
 ## Cross-Repo Dependencies
 
 - Backend governance and memory files live in sibling repo `../SYBaseProject`.
+- M5 archive/borrow frontend pages depend on existing sibling backend contracts only: application-form archive, `EMBEDDING_BOX`/蜡块 archive, slide archive, archive-cabinet/position query/update, archive-record search, and material-loan pending/create/return. No backend API, DB, auth, or global error-contract change was made for the tab split.
 - Backend `ApplicationPatientIdentityResolver` in `../SYBaseProject/bl-center` now normalizes display-style patient ages to leading digits when auto-creating patient registry rows, preventing DM numeric conversion failures from frontend application-number auto-create.
 - Backend application list response `GET /api/v1/applications` in `../SYBaseProject/bl-center` now exposes `items[].pathologyNo`, sourced from `pathology_cases.pathology_no`.
 - Backend technical registration list responses in `../SYBaseProject/bl-center` now include patient sex and age for this frontend display contract.
