@@ -45,6 +45,7 @@ export function useTransportOrderCreateDialog(options: {
     receiverDepartmentName: '',
     remarks: '',
     selectedSpecimenBarcodes: [] as string[],
+    selectedSpecimenIds: [] as string[],
     specimenBarcodesText: '',
     terminalCode: '',
   });
@@ -81,10 +82,21 @@ export function useTransportOrderCreateDialog(options: {
   }
 
   const mergedSpecimenBarcodes = computed(() => {
-    const selected = createForm.selectedSpecimenBarcodes;
+    const selectedSpecimenIdSet = new Set(createForm.selectedSpecimenIds);
+    const selected =
+      applicationDetail.value?.specimens
+        .filter((item) => selectedSpecimenIdSet.has(item.id))
+        .map((item) => item.barcode?.trim() ?? '')
+        .filter(Boolean) ?? createForm.selectedSpecimenBarcodes;
     const manual = splitSpecimenBarcodes(createForm.specimenBarcodesText);
     return [...new Set([...selected, ...manual])];
   });
+
+  const mergedSpecimenIds = computed(() => [
+    ...new Set(
+      createForm.selectedSpecimenIds.map((item) => item.trim()).filter(Boolean),
+    ),
+  ]);
 
   function isEligibleSpecimen(
     specimen: ApplicationDetailView['specimens'][number],
@@ -93,8 +105,7 @@ export function useTransportOrderCreateDialog(options: {
       specimen.verificationStatus === 'VERIFIED' &&
       specimen.fixationStatus === 'COMPLETED' &&
       Boolean(specimen.specimenConfirmedAt) &&
-      specimen.checkInStatus === 'CHECKED_IN' &&
-      Boolean(specimen.barcode?.trim())
+      specimen.checkInStatus === 'CHECKED_IN'
     );
   }
 
@@ -107,6 +118,7 @@ export function useTransportOrderCreateDialog(options: {
   function clearApplicationContext() {
     applicationDetail.value = null;
     createForm.selectedSpecimenBarcodes = [];
+    createForm.selectedSpecimenIds = [];
     pageError.value = '';
   }
 
@@ -124,6 +136,7 @@ export function useTransportOrderCreateDialog(options: {
       receiverDepartmentName: '',
       remarks: '',
       selectedSpecimenBarcodes: [],
+      selectedSpecimenIds: [],
       specimenBarcodesText: '',
       terminalCode: '',
     });
@@ -151,10 +164,14 @@ export function useTransportOrderCreateDialog(options: {
         return;
       }
       applicationDetail.value = detail;
+      createForm.selectedSpecimenIds = detail.specimens
+        .filter((item) => isEligibleSpecimen(item))
+        .map((item) => item.id)
+        .filter(Boolean);
       createForm.selectedSpecimenBarcodes = detail.specimens
         .filter((item) => isEligibleSpecimen(item))
-        .map((item) => item.barcode)
-        .filter((barcode): barcode is string => Boolean(barcode?.trim()));
+        .map((item) => item.barcode?.trim() ?? '')
+        .filter(Boolean);
     } catch (error) {
       if (createForm.applicationId.trim() === applicationId) {
         clearApplicationContext();
@@ -215,6 +232,7 @@ export function useTransportOrderCreateDialog(options: {
 
   async function submitCreate() {
     const specimenBarcodes = mergedSpecimenBarcodes.value;
+    const specimenIds = mergedSpecimenIds.value;
     if (!createForm.applicationId.trim()) {
       ElMessage.warning('请填写申请单编号');
       return;
@@ -235,7 +253,7 @@ export function useTransportOrderCreateDialog(options: {
       ElMessage.warning('请选择接收科室');
       return;
     }
-    if (specimenBarcodes.length === 0) {
+    if (specimenIds.length === 0 && specimenBarcodes.length === 0) {
       ElMessage.warning('请至少选择一条标本');
       return;
     }
@@ -262,6 +280,7 @@ export function useTransportOrderCreateDialog(options: {
         receiverDepartmentName: createForm.receiverDepartmentName.trim(),
         remarks: createForm.remarks.trim() || null,
         specimenBarcodes,
+        specimenIds,
         terminalCode: createForm.terminalCode.trim() || null,
       });
       ElMessage.success('转运单创建成功');
@@ -322,6 +341,7 @@ export function useTransportOrderCreateDialog(options: {
     handleReceiverDepartmentChange,
     loadApplicationContext,
     mergedSpecimenBarcodes,
+    mergedSpecimenIds,
     pageError,
     resolveSpecimenClinicalSymptom,
     resolveSpecimenCollectionMode,

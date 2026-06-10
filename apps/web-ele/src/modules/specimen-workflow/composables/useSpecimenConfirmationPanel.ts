@@ -365,7 +365,12 @@ export function useSpecimenConfirmationPanel() {
       const payload = buildConfirmPayload(operatorVerificationToken);
       await Promise.all(
         pendingRows.map((row) =>
-          confirmSpecimen(row.barcode || row.specimenId, payload),
+          confirmSpecimen(row.barcode || row.specimenId, {
+            ...payload,
+            specimenBarcode: row.barcode ?? null,
+            specimenId: row.specimenId,
+            specimenNo: row.specimenNo,
+          }),
         ),
       );
       clearConfirmationUnsaved(pendingRows);

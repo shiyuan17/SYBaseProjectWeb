@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type {
   PendingTechnicalTaskItem,
+  SlicingSlidePrintResult,
   SlicingWorkbenchRow,
   SlicingWorkbenchView,
   TechnicalTrackingEmbeddingRecordSummary,
@@ -16,15 +17,12 @@ import { UserRoundPen } from '@vben/icons';
 import {
   ElAlert,
   ElButton,
-  ElCheckbox,
   ElDrawer,
   ElInput,
-  ElInputNumber,
   ElMessage,
   ElOption,
   ElPagination,
   ElSelect,
-  ElSwitch,
   ElTable,
   ElTableColumn,
   ElTabPane,
@@ -35,8 +33,11 @@ import {
 import { reportInlineErrorDisabled } from '#/utils/error-feedback';
 
 import {
+  cancelSlicingSlidePrintMergeGroups,
+  createSlicingSlidePrintMergeGroups,
   getSlicingWorkbench,
   getTechnicalTracking,
+  printSlicingSlideMergeGroup,
   printSlicingSlides,
   startSlicing,
   updateTechnicalTaskRemarks,
@@ -76,6 +77,17 @@ interface SelectableTableInstance {
 
 const SHIFT_REMARK_OPTIONS = ['未包埋', '包埋未完成', '其他'] as const;
 
+const APPLICATION_TYPE_LABELS: Record<string, string> = {
+  CONSULTATION: '会诊',
+  FROZEN: '冰冻',
+  ROUTINE: '常规',
+};
+
+interface PrintedSlicingSlideBatchItem {
+  result: SlicingSlidePrintResult;
+  row: SlicingWorkbenchRow;
+}
+
 const EMPTY_WORKBENCH: SlicingWorkbenchView = {
   completedPage: 1,
   completedSize: 20,
@@ -114,13 +126,9 @@ const filters = reactive({
   pendingSize: 20,
   pendingTodayOnly: false,
 });
-const printForm = reactive({
-  mergeAdjacent: false,
-  printerCode: '',
-  remarks: '',
-  sourceSlideCount: 1,
-});
 const printing = ref(false);
+const mergingPrintGroups = ref(false);
+const cancelingPrintGroups = ref(false);
 
 const pendingTableRef = ref<null | SelectableTableInstance>(null);
 const completedTableRef = ref<null | SelectableTableInstance>(null);
@@ -225,12 +233,55 @@ const canCompleteSlicing = computed(() => {
     )
   );
 });
+
+function getRowTaskIds(row: SlicingWorkbenchRow) {
+  if (row.taskIds.length > 0) {
+    return row.taskIds;
+  }
+
+  return row.taskId ? [row.taskId] : [];
+}
+
+function getSelectedUniqueTaskIds(rows: SlicingWorkbenchRow[]) {
+  return [...new Set(rows.flatMap((row) => getRowTaskIds(row)))];
+}
+
+const canMergeSlides = computed(() => {
+  return (
+    activeTab.value === 'print' &&
+    selectedPendingRows.value.length >= 2 &&
+    selectedPendingRows.value.every(
+      (row) =>
+        row.selectable &&
+        !row.mergedPrintGroup &&
+        Boolean(row.embeddingBoxId) &&
+        getRowTaskIds(row).length > 0,
+    ) &&
+    !mergingPrintGroups.value
+  );
+});
+const canCancelMergedSlides = computed(() => {
+  return (
+    activeTab.value === 'print' &&
+    selectedPendingRows.value.length > 0 &&
+    selectedPendingRows.value.every(
+      (row) =>
+        row.selectable && row.mergedPrintGroup && Boolean(row.printGroupId),
+    ) &&
+    !cancelingPrintGroups.value
+  );
+});
 const canPrintSlides = computed(() => {
   return (
     activeTab.value === 'print' &&
-    selectedPendingRows.value.length === 1 &&
-    Boolean(selectedPendingRows.value[0]?.embeddingBoxId) &&
-    printForm.sourceSlideCount >= 1 &&
+    selectedPendingRows.value.length > 0 &&
+    selectedPendingRows.value.every(
+      (row) =>
+        row.selectable &&
+        (row.mergedPrintGroup
+          ? Boolean(row.printGroupId)
+          : Boolean(row.embeddingBoxId) && getRowTaskIds(row).length > 0),
+    ) &&
     !printing.value
   );
 });
@@ -331,7 +382,7 @@ function selectableWorkbenchRow(row: SlicingWorkbenchRow) {
 }
 
 function pendingRowKey(row: SlicingWorkbenchRow) {
-  return row.taskId;
+  return row.printGroupId ?? row.taskId;
 }
 
 function completedRowKey(row: SlicingWorkbenchRow) {
@@ -340,6 +391,121 @@ function completedRowKey(row: SlicingWorkbenchRow) {
 
 function getPendingRemark(row: SlicingWorkbenchRow) {
   return row.slicingRemark ?? row.sliceNotice ?? null;
+}
+
+function getEmbeddingRemarks(row: SlicingWorkbenchRow) {
+  return row.embeddingRemarks ?? row.embeddingClearRemark ?? null;
+}
+
+function formatApplicationTypeLabel(value?: null | string) {
+  if (!value) {
+    return '-';
+  }
+  return APPLICATION_TYPE_LABELS[value] ?? value;
+}
+
+function escapePrintText(value: null | number | string | undefined) {
+  return String(value ?? '-')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function buildPrintedSlicingSlideLabels(items: PrintedSlicingSlideBatchItem[]) {
+  return items.flatMap(({ result, row }) => {
+    const slideNos =
+      result.slideNos.length > 0 ? result.slideNos : [row.slideNo || '-'];
+    return slideNos.map((slideNo, index) => ({
+      embeddingBoxNo: row.embeddingBoxNo,
+      pathologyNo: row.pathologyNo,
+      patientId: row.patientId,
+      patientName: row.patientName,
+      slideNo,
+      specimenName: row.specimenName,
+      total: result.printedSlideCount || slideNos.length,
+      sequence: index + 1,
+    }));
+  });
+}
+
+function buildSlicingSlidePrintDocument(items: PrintedSlicingSlideBatchItem[]) {
+  const labels = buildPrintedSlicingSlideLabels(items);
+  return `<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>玻片打印</title>
+    <style>
+      @page { margin: 0; size: 72mm 42mm; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "SimHei", "Microsoft YaHei", sans-serif;
+        color: #111827;
+      }
+      .slide-label {
+        width: 72mm;
+        height: 42mm;
+        padding: 3mm;
+        display: grid;
+        grid-template-rows: auto auto auto auto 1fr;
+        gap: 1.1mm;
+        page-break-after: always;
+      }
+      .slide-label:last-child {
+        page-break-after: auto;
+      }
+      .primary {
+        font-size: 6mm;
+        font-weight: 700;
+        line-height: 1.1;
+        word-break: break-all;
+      }
+      .line {
+        font-size: 4mm;
+        line-height: 1.15;
+        word-break: break-word;
+      }
+      .name {
+        font-size: 5mm;
+        font-weight: 700;
+        line-height: 1.15;
+        word-break: break-word;
+      }
+    </style>
+  </head>
+  <body>
+    ${labels
+        .map(
+          (label) => `
+    <section class="slide-label">
+      <div class="primary">${escapePrintText(label.slideNo)}</div>
+      <div class="line">病理号：${escapePrintText(label.pathologyNo)}</div>
+      <div class="line">蜡块号：${escapePrintText(label.embeddingBoxNo)}</div>
+      <div class="line">患者：${escapePrintText(label.patientName)} / ${escapePrintText(label.patientId)}</div>
+      <div class="name">${escapePrintText(label.specimenName)} (${escapePrintText(label.sequence)}/${escapePrintText(label.total)})</div>
+    </section>`,
+        )
+        .join('')}
+    <script>
+      window.addEventListener('load', () => {
+        window.focus();
+        window.print();
+      });
+    </scr${'ipt'}>
+  </body>
+</html>`;
+}
+
+function writeSlicingSlidePrintDocument(
+  printWindow: Window,
+  items: PrintedSlicingSlideBatchItem[],
+) {
+  printWindow.document.open();
+  printWindow.document.write(buildSlicingSlidePrintDocument(items));
+  printWindow.document.close();
 }
 
 function getPendingDataSource() {
@@ -474,11 +640,6 @@ async function toggleOverdueOnly() {
   await loadWorkbench();
 }
 
-async function handlePendingTodayOnlyChange() {
-  filters.pendingPage = 1;
-  await loadWorkbench();
-}
-
 async function handlePendingPaginationChange() {
   await loadWorkbench();
 }
@@ -527,37 +688,126 @@ function openCompleteSlicing() {
 }
 
 async function handlePrintSlides() {
-  const row = selectedPendingRow.value;
-  if (!row) {
-    ElMessage.warning('请在玻片打印列表中勾选 1 行');
+  const rows = selectedPendingRows.value;
+  if (rows.length === 0) {
+    ElMessage.warning('请在玻片打印列表中至少勾选 1 行');
     return;
   }
-  if (!row.embeddingBoxId) {
-    ElMessage.warning('当前任务缺少包埋盒编号');
+  if (!canPrintSlides.value) {
+    ElMessage.warning('当前勾选任务缺少玻片打印必要信息，无法打印玻片');
+    return;
+  }
+
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) {
+    ElMessage.warning('打印窗口被浏览器拦截，请允许弹出窗口后重试');
     return;
   }
 
   printing.value = true;
   pageError.value = '';
   try {
-    const result = await printSlicingSlides({
-      embeddingBoxId: row.embeddingBoxId,
-      mergeAdjacent: printForm.mergeAdjacent,
-      printerCode: printForm.printerCode.trim() || null,
-      remarks: printForm.remarks.trim() || null,
-      sourceSlideCount: printForm.sourceSlideCount,
-      taskId: row.taskId,
-    });
-    ElMessage.success(
-      `玻片打印完成，已生成 ${result.printedSlideCount} 张玻片`,
+    const printedItems = await Promise.all(
+      rows.map(async (row) => ({
+        result:
+          row.mergedPrintGroup && row.printGroupId
+            ? await printSlicingSlideMergeGroup({
+                printGroupId: row.printGroupId,
+                printerCode: null,
+                remarks: null,
+                terminalCode: null,
+              })
+            : await printSlicingSlides({
+                embeddingBoxId: row.embeddingBoxId,
+                mergeAdjacent: false,
+                printerCode: null,
+                remarks: null,
+                sourceSlideCount: 1,
+                taskId: getRowTaskIds(row)[0] ?? row.taskId,
+              }),
+        row,
+      })),
     );
-    activeTab.value = 'slice';
+    writeSlicingSlidePrintDocument(printWindow, printedItems);
+    const printedSlideCount = printedItems.reduce(
+      (total, item) => total + item.result.printedSlideCount,
+      0,
+    );
+    ElMessage.success(`玻片打印完成，已生成 ${printedSlideCount} 张玻片`);
+    await loadWorkbench();
+  } catch (error) {
+    printWindow.close();
+    pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
+  } finally {
+    printing.value = false;
+  }
+}
+
+async function handleCreatePrintMergeGroups() {
+  const rows = selectedPendingRows.value;
+  if (rows.length === 0) {
+    ElMessage.warning('请在玻片打印列表中至少勾选 1 行未打印记录');
+    return;
+  }
+  if (!canMergeSlides.value) {
+    ElMessage.warning('当前勾选记录包含已合片行或缺少蜡块信息，无法两两合片');
+    return;
+  }
+
+  mergingPrintGroups.value = true;
+  pageError.value = '';
+  try {
+    const result = await createSlicingSlidePrintMergeGroups({
+      remarks: null,
+      taskIds: getSelectedUniqueTaskIds(rows),
+      terminalCode: null,
+    });
+    if (result.printGroupIds.length === 0) {
+      ElMessage.warning('当前勾选记录没有可两两合片的组合');
+    } else {
+      ElMessage.success(`已生成 ${result.printGroupIds.length} 个合片组`);
+    }
     await loadWorkbench();
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
     reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
   } finally {
-    printing.value = false;
+    mergingPrintGroups.value = false;
+  }
+}
+
+async function handleCancelPrintMergeGroups() {
+  const rows = selectedPendingRows.value;
+  if (rows.length === 0) {
+    ElMessage.warning('请在玻片打印列表中勾选需要取消的合片行');
+    return;
+  }
+  if (!canCancelMergedSlides.value) {
+    ElMessage.warning('取消合片只支持未打印合片行');
+    return;
+  }
+
+  cancelingPrintGroups.value = true;
+  pageError.value = '';
+  try {
+    const printGroupIds = [
+      ...new Set(
+        rows.flatMap((row) => (row.printGroupId ? [row.printGroupId] : [])),
+      ),
+    ];
+    const result = await cancelSlicingSlidePrintMergeGroups({
+      printGroupIds,
+      remarks: null,
+      terminalCode: null,
+    });
+    ElMessage.success(`已取消 ${result.printGroupIds.length} 个合片组`);
+    await loadWorkbench();
+  } catch (error) {
+    pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
+  } finally {
+    cancelingPrintGroups.value = false;
   }
 }
 
@@ -714,7 +964,12 @@ async function handleEmbeddingQualityReviewSubmitted() {
 }
 
 function pendingRowClassName({ row }: { row: SlicingWorkbenchRow }) {
-  return row.timedOut ? 'is-overdue-row' : '';
+  return [
+    row.timedOut ? 'is-overdue-row' : '',
+    row.mergedPrintGroup ? 'is-merged-print-group-row' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 }
 
 void loadWorkbench();
@@ -795,38 +1050,28 @@ void loadWorkbench();
 
       <section class="legacy-action-bar">
         <div v-if="activeTab === 'print'" class="legacy-action-bar__left">
-          <div class="legacy-print-controls">
-            <span class="legacy-query-bar__label">玻片数量</span>
-            <ElInputNumber
-              v-model="printForm.sourceSlideCount"
-              :min="1"
-              class="legacy-print-count"
-            />
-            <ElSwitch
-              v-model="printForm.mergeAdjacent"
-              active-text="近邻合并"
-              inactive-text="不合并"
-            />
-            <ElInput
-              v-model="printForm.printerCode"
-              class="legacy-printer-input"
-              clearable
-              placeholder="打印机编码"
-            />
-            <ElInput
-              v-model="printForm.remarks"
-              class="legacy-printer-input"
-              clearable
-              placeholder="打印备注"
-            />
-          </div>
+          <ElButton
+            :disabled="!canMergeSlides"
+            :loading="mergingPrintGroups"
+            type="success"
+            @click="handleCreatePrintMergeGroups"
+          >
+            两两合片
+          </ElButton>
+          <ElButton
+            :disabled="!canCancelMergedSlides"
+            :loading="cancelingPrintGroups"
+            @click="handleCancelPrintMergeGroups"
+          >
+            取消合片
+          </ElButton>
           <ElButton
             :disabled="!canPrintSlides"
             :loading="printing"
             type="primary"
             @click="handlePrintSlides"
           >
-            完成玻片打印
+            打印玻片
           </ElButton>
         </div>
         <div v-else class="legacy-action-bar__left">
@@ -845,18 +1090,6 @@ void loadWorkbench();
             质控评价
           </ElButton>
         </div>
-
-        <div class="legacy-action-bar__right">
-          <ElCheckbox
-            v-model="filters.pendingTodayOnly"
-            @change="handlePendingTodayOnlyChange"
-          >
-            只看今天待切
-          </ElCheckbox>
-          <span class="legacy-selection-tip">
-            玻片打印需单选；完成切片和质控评价支持同表多选，历史与评价记录需单选
-          </span>
-        </div>
       </section>
 
       <section class="legacy-panels">
@@ -866,12 +1099,8 @@ void loadWorkbench();
               <h3 class="legacy-panel__title">
                 {{ activeTab === 'print' ? '玻片打印' : '切片' }}
               </h3>
-              <p class="legacy-panel__subtitle">
-                {{
-                  activeTab === 'print'
-                    ? '先完成玻片打印，再进入切片处理。近邻合并按同包埋盒顺序两两合并，奇数尾张保留。'
-                    : '只展示已完成玻片打印的待切任务，完成切片后右侧列表会立即刷新。'
-                }}
+              <p v-if="activeTab === 'slice'" class="legacy-panel__subtitle">
+                只展示已完成玻片打印的待切任务，完成切片后右侧列表会立即刷新。
               </p>
             </div>
           </header>
@@ -906,123 +1135,198 @@ void loadWorkbench();
               width="46"
               :selectable="selectableWorkbenchRow"
             />
-            <ElTableColumn label="病人" min-width="120">
-              <template #default="{ row }">
-                <div class="font-medium text-foreground">
-                  {{ formatNullable(row.patientName) }}
-                </div>
-                <div class="mt-1 flex flex-wrap gap-2">
-                  <ElTag v-if="row.timedOut" size="small" type="danger">
-                    过期
-                  </ElTag>
-                  <ElTag size="small" type="info">
-                    {{ formatTaskStatus(row.taskStatus) }}
-                  </ElTag>
-                </div>
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="病理号" min-width="150">
-              <template #default="{ row }">
-                {{ formatNullable(row.pathologyNo) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="玻片号" min-width="140">
-              <template #default="{ row }">
-                {{ formatNullable(row.slideNo) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="打印状态" min-width="120">
-              <template #default="{ row }">
-                <ElTag
-                  size="small"
-                  :type="
-                    row.slidePrintStatus === 'PRINTED' ? 'success' : 'warning'
-                  "
-                >
-                  {{ row.slidePrintStatus === 'PRINTED' ? '已打印' : '待打印' }}
-                </ElTag>
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="已打印数" min-width="100">
-              <template #default="{ row }">
-                {{ row.printedSlideCount }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="合并" min-width="100">
-              <template #default="{ row }">
-                {{ row.combinedSlide ? '已合并' : '未合并' }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="取材评价" min-width="120">
-              <template #default="{ row }">
-                {{ formatNullable(row.grossingEvaluation) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="切片备注" min-width="180">
-              <template #default="{ row }">
-                {{ formatNullable(getPendingRemark(row)) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="包埋清零备注" min-width="180">
-              <template #default="{ row }">
-                {{ formatNullable(row.embeddingClearRemark) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="主班备注" min-width="160">
-              <template #default="{ row }">
-                <ElSelect
-                  :model-value="row.shiftRemark ?? ''"
-                  clearable
-                  :loading="isSavingShiftRemark(row)"
-                  placeholder="主班备注"
-                  size="small"
-                  @change="(value) => handleShiftRemarkSave(row, value ?? '')"
-                >
-                  <ElOption
-                    v-for="option in SHIFT_REMARK_OPTIONS"
-                    :key="option"
-                    :label="option"
-                    :value="option"
-                  />
-                </ElSelect>
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="包埋评价" min-width="120">
-              <template #default="{ row }">
-                <div class="legacy-editable-cell">
-                  <span class="legacy-editable-cell__content">
-                    {{
-                      formatEmbeddingEvaluationLevel(row.embeddingEvaluation)
-                    }}
+            <template v-if="activeTab === 'print'">
+              <ElTableColumn label="序" type="index" width="52" />
+              <ElTableColumn label="病人" min-width="120">
+                <template #default="{ row }">
+                  <div class="font-medium text-foreground">
+                    {{ formatNullable(row.patientName) }}
+                  </div>
+                  <div class="mt-1 flex flex-wrap gap-2">
+                    <ElTag v-if="row.timedOut" size="small" type="danger">
+                      过期
+                    </ElTag>
+                    <ElTag size="small" type="info">
+                      {{ formatTaskStatus(row.taskStatus) }}
+                    </ElTag>
+                  </div>
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="病人ID" min-width="130">
+                <template #default="{ row }">
+                  {{ formatNullable(row.patientId) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="病理号" min-width="150">
+                <template #default="{ row }">
+                  {{ formatNullable(row.pathologyNo) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="蜡块号" min-width="120">
+                <template #default="{ row }">
+                  <span
+                    :class="
+                      row.mergedPrintGroup
+                        ? 'legacy-merged-embedding-box-no'
+                        : ''
+                    "
+                  >
+                    {{ formatNullable(row.embeddingBoxNo) }}
                   </span>
-                  <ElButton
-                    aria-label="编辑包埋评价"
-                    :icon="UserRoundPen"
-                    :loading="isLoadingEmbeddingQualityReview(row)"
-                    circle
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="包埋备注" min-width="160">
+                <template #default="{ row }">
+                  {{ formatNullable(getEmbeddingRemarks(row)) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="切片备注" min-width="160">
+                <template #default="{ row }">
+                  {{ formatNullable(getPendingRemark(row)) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="所属标本" min-width="180">
+                <template #default="{ row }">
+                  {{ formatNullable(row.specimenName) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="送检类型" min-width="110">
+                <template #default="{ row }">
+                  {{ formatApplicationTypeLabel(row.applicationType) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="包埋操作" min-width="140">
+                <template #default="{ row }">
+                  {{ formatNullable(row.embeddingOperatorName) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="申请科室" min-width="140">
+                <template #default="{ row }">
+                  {{ formatNullable(row.submittingDepartmentName) }}
+                </template>
+              </ElTableColumn>
+            </template>
+            <template v-else>
+              <ElTableColumn label="病人" min-width="120">
+                <template #default="{ row }">
+                  <div class="font-medium text-foreground">
+                    {{ formatNullable(row.patientName) }}
+                  </div>
+                  <div class="mt-1 flex flex-wrap gap-2">
+                    <ElTag v-if="row.timedOut" size="small" type="danger">
+                      过期
+                    </ElTag>
+                    <ElTag size="small" type="info">
+                      {{ formatTaskStatus(row.taskStatus) }}
+                    </ElTag>
+                  </div>
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="病理号" min-width="150">
+                <template #default="{ row }">
+                  {{ formatNullable(row.pathologyNo) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="玻片号" min-width="140">
+                <template #default="{ row }">
+                  {{ formatNullable(row.slideNo) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="打印状态" min-width="120">
+                <template #default="{ row }">
+                  <ElTag
                     size="small"
-                    text
-                    title="编辑包埋评价"
-                    @click.stop="openEmbeddingQualityReview(row)"
-                  />
-                </div>
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="包埋操作" min-width="140">
-              <template #default="{ row }">
-                {{ formatNullable(row.embeddingOperatorName) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="所属标本" min-width="180">
-              <template #default="{ row }">
-                {{ formatNullable(row.specimenName) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="病人ID" min-width="160">
-              <template #default="{ row }">
-                {{ formatNullable(row.patientId) }}
-              </template>
-            </ElTableColumn>
+                    :type="
+                      row.slidePrintStatus === 'PRINTED' ? 'success' : 'warning'
+                    "
+                  >
+                    {{
+                      row.slidePrintStatus === 'PRINTED' ? '已打印' : '待打印'
+                    }}
+                  </ElTag>
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="已打印数" min-width="100">
+                <template #default="{ row }">
+                  {{ row.printedSlideCount }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="合并" min-width="100">
+                <template #default="{ row }">
+                  {{ row.combinedSlide ? '已合并' : '未合并' }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="取材评价" min-width="120">
+                <template #default="{ row }">
+                  {{ formatNullable(row.grossingEvaluation) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="切片备注" min-width="180">
+                <template #default="{ row }">
+                  {{ formatNullable(getPendingRemark(row)) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="包埋清零备注" min-width="180">
+                <template #default="{ row }">
+                  {{ formatNullable(row.embeddingClearRemark) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="主班备注" min-width="160">
+                <template #default="{ row }">
+                  <ElSelect
+                    :model-value="row.shiftRemark ?? ''"
+                    clearable
+                    :loading="isSavingShiftRemark(row)"
+                    placeholder="主班备注"
+                    size="small"
+                    @change="(value) => handleShiftRemarkSave(row, value ?? '')"
+                  >
+                    <ElOption
+                      v-for="option in SHIFT_REMARK_OPTIONS"
+                      :key="option"
+                      :label="option"
+                      :value="option"
+                    />
+                  </ElSelect>
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="包埋评价" min-width="120">
+                <template #default="{ row }">
+                  <div class="legacy-editable-cell">
+                    <span class="legacy-editable-cell__content">
+                      {{
+                        formatEmbeddingEvaluationLevel(row.embeddingEvaluation)
+                      }}
+                    </span>
+                    <ElButton
+                      aria-label="编辑包埋评价"
+                      :icon="UserRoundPen"
+                      :loading="isLoadingEmbeddingQualityReview(row)"
+                      circle
+                      size="small"
+                      text
+                      title="编辑包埋评价"
+                      @click.stop="openEmbeddingQualityReview(row)"
+                    />
+                  </div>
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="包埋操作" min-width="140">
+                <template #default="{ row }">
+                  {{ formatNullable(row.embeddingOperatorName) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="所属标本" min-width="180">
+                <template #default="{ row }">
+                  {{ formatNullable(row.specimenName) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="病人ID" min-width="160">
+                <template #default="{ row }">
+                  {{ formatNullable(row.patientId) }}
+                </template>
+              </ElTableColumn>
+            </template>
           </ElTable>
 
           <div class="legacy-panel__footer">
@@ -1335,32 +1639,11 @@ void loadWorkbench();
   padding: 12px 16px;
 }
 
-.legacy-action-bar__left,
-.legacy-action-bar__right {
+.legacy-action-bar__left {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
-}
-
-.legacy-print-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-}
-
-.legacy-print-count {
-  width: 120px;
-}
-
-.legacy-printer-input {
-  width: 160px;
-}
-
-.legacy-selection-tip {
-  font-size: 12px;
-  color: hsl(var(--muted-foreground));
 }
 
 .legacy-panels {
@@ -1418,6 +1701,22 @@ void loadWorkbench();
   background: hsl(var(--warning) / 12%);
 }
 
+.legacy-panel :deep(.is-merged-print-group-row > td) {
+  background: hsl(var(--success) / 8%);
+}
+
+.legacy-merged-embedding-box-no {
+  display: inline-flex;
+  max-width: 100%;
+  padding: 2px 8px;
+  font-weight: 700;
+  color: hsl(var(--success));
+  overflow-wrap: anywhere;
+  background: hsl(var(--success) / 12%);
+  border: 1px solid hsl(var(--success) / 28%);
+  border-radius: 4px;
+}
+
 .legacy-panel__footer {
   display: flex;
   justify-content: flex-end;
@@ -1446,8 +1745,7 @@ void loadWorkbench();
 
   .legacy-query-bar__actions,
   .legacy-query-bar__filter,
-  .legacy-action-bar__left,
-  .legacy-action-bar__right {
+  .legacy-action-bar__left {
     justify-content: flex-start;
   }
 

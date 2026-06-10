@@ -18,7 +18,7 @@ import {
 import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
-import { Check, UserRoundPen, X } from '@vben/icons';
+import { UserRoundPen } from '@vben/icons';
 import { useUserStore } from '@vben/stores';
 
 import {
@@ -38,6 +38,7 @@ import {
 import { reportInlineErrorDisabled } from '#/utils/error-feedback';
 
 import {
+  cancelEmbedding,
   completeEmbedding,
   getEmbeddingWorkstationSummary,
   getTechnicalTracking,
@@ -73,6 +74,22 @@ interface EvaluationDrawerRow {
   title: string;
 }
 
+type EmbeddingWorkstationRecordRow = TechnicalTrackingEmbeddingRecordSummary & {
+  pendingTask: null | PendingTechnicalTaskItem;
+  rowKind: 'completed' | 'completion-pending';
+};
+
+interface PendingCompletionDraft {
+  evaluationLevel: string;
+  samplingEvaluation: string;
+  sliceNotice: string;
+}
+
+interface EmbeddingQualityReviewDraftPayload {
+  evaluationLevel: string;
+  samplingEvaluation: string;
+}
+
 type PendingRemarksField = 'productionRemarks' | 'remarks';
 
 const SLICE_NOTICE_OPTIONS = [
@@ -106,6 +123,7 @@ const loading = ref(false);
 const summaryLoading = ref(false);
 const trackingLoading = ref(false);
 const completeLoading = ref(false);
+const cancelEmbeddingLoading = ref(false);
 
 const workstationSummary =
   ref<EmbeddingWorkstationSummary>(createEmptySummary());
@@ -123,8 +141,10 @@ const historyDrawerVisible = ref(false);
 const evaluationDrawerVisible = ref(false);
 const taskDrawerVisible = ref(false);
 const qualityReviewDialogVisible = ref(false);
-const selectedQualityReviewRecord =
-  ref<null | TechnicalTrackingEmbeddingRecordSummary>(null);
+const selectedQualityReviewRecord = ref<EmbeddingWorkstationRecordRow | null>(
+  null,
+);
+const qualityReviewDialogMode = ref<'draft' | 'persist'>('persist');
 const savingReviewIds = ref<string[]>([]);
 const savingPendingRemarksTaskIds = ref<string[]>([]);
 const selectedCompletedEmbeddingId = ref('');
@@ -154,6 +174,9 @@ const completeForm = reactive({
 });
 
 const sliceNoticeDrafts = reactive<Record<string, string>>({});
+const pendingCompletionDrafts = reactive<
+  Record<string, PendingCompletionDraft>
+>({});
 const pendingRemarksEditor = reactive<{
   field: null | PendingRemarksField;
   productionRemarks: string;
@@ -181,12 +204,31 @@ const currentCaseEmbeddingRecords = computed(
   () => trackingResult.value?.embeddingRecords ?? [],
 );
 
-const completedEmbeddingRecords = computed(
-  () => workstationSummary.value.completedRecords,
+const leftPendingItems = computed(() =>
+  pendingItems.value.filter((item) => !isEmbeddingCompletionPendingTask(item)),
+);
+
+const pendingCompletionTasks = computed(() =>
+  workstationSummary.value.pendingTasks.filter((item) =>
+    isEmbeddingCompletionPendingTask(item),
+  ),
+);
+
+const completedEmbeddingRecords = computed<EmbeddingWorkstationRecordRow[]>(
+  () => [
+    ...pendingCompletionTasks.value.map((item) =>
+      mapPendingTaskToEmbeddingRow(item),
+    ),
+    ...workstationSummary.value.completedRecords.map((item) => ({
+      ...item,
+      pendingTask: null,
+      rowKind: 'completed' as const,
+    })),
+  ],
 );
 
 const pendingItemIds = computed(() =>
-  pendingItems.value.map((item) => item.id),
+  leftPendingItems.value.map((item) => item.id),
 );
 
 const completedEmbeddingRecordIds = computed(() =>
@@ -228,6 +270,67 @@ const selectedCompletedEmbeddingRecord = computed(
     completedEmbeddingRecords.value[0] ??
     null,
 );
+
+const selectedCompletionPendingTasks = computed(() => {
+  const selectedRows = completedEmbeddingRecords.value.filter((item) =>
+    selectedCompletedEmbeddingIds.value.includes(item.embeddingId),
+  );
+  const selectedTasks = selectedRows
+    .map((item) => item.pendingTask)
+    .filter((item): item is PendingTechnicalTaskItem => item !== null);
+  if (selectedTasks.length > 0) {
+    return selectedTasks;
+  }
+  return selectedCompletedEmbeddingRecord.value?.pendingTask
+    ? [selectedCompletedEmbeddingRecord.value.pendingTask]
+    : [];
+});
+
+function isEmbeddingCompletionPendingTask(task: PendingTechnicalTaskItem) {
+  return (
+    task.taskStatus === 'EMBEDDING_CONFIRM_PENDING' ||
+    task.taskStatus === 'IN_PROGRESS'
+  );
+}
+
+function isEmbeddingReadyToComplete(task: PendingTechnicalTaskItem) {
+  return (
+    isEmbeddingCompletionPendingTask(task) ||
+    activeProcessingTaskId.value === task.id
+  );
+}
+
+function mapPendingTaskToEmbeddingRow(
+  task: PendingTechnicalTaskItem,
+): EmbeddingWorkstationRecordRow {
+  const draft = pendingCompletionDrafts[task.id];
+  return {
+    caseId: task.caseId,
+    embeddedByName: task.assignedToName ?? null,
+    embeddingBoxId: '',
+    embeddingBoxNo: null,
+    embeddingId: `TASK-${task.id}`,
+    embeddingRemarks: task.remarks,
+    endedAt: task.startedAt,
+    evaluationLevel: draft?.evaluationLevel ?? null,
+    grossDescription: null,
+    pathologyNo: task.pathologyNo,
+    pendingTask: task,
+    rowKind: 'completion-pending',
+    sampledAt: task.sampledAt ?? null,
+    sampledByName: task.sampledByName ?? null,
+    samplingBlockCode: task.samplingBlockCode ?? task.objectDisplayNo ?? null,
+    samplingBlockDescription: task.samplingBlockDescription ?? null,
+    samplingBlockId: task.objectId ?? '',
+    samplingEvaluation: draft?.samplingEvaluation ?? null,
+    sliceNotice: draft?.sliceNotice ?? null,
+    specimenId: task.specimenId ?? '',
+    specimenName: null,
+    startedAt: task.startedAt,
+    taskId: task.id,
+    taskStatus: task.taskStatus,
+  };
+}
 
 const evaluationDrawerRows = computed<EvaluationDrawerRow[]>(() => {
   if (!trackingResult.value) {
@@ -284,12 +387,31 @@ const evaluationDrawerRows = computed<EvaluationDrawerRow[]>(() => {
 });
 
 const canCompleteSelectedTask = computed(() => {
-  if (selectedPendingTasks.value.length > 0) {
-    return selectedPendingTasks.value.every(
-      (item) => getSamplingBlockIdFromTask(item).length > 0,
+  if (selectedCompletionPendingTasks.value.length > 0) {
+    return selectedCompletionPendingTasks.value.every(
+      (item) =>
+        getSamplingBlockIdFromTask(item).length > 0 &&
+        isEmbeddingReadyToComplete(item),
     );
   }
-  return Boolean(selectedTask.value && completeForm.samplingBlockId.trim());
+  return false;
+});
+
+const canCancelSelectedEmbedding = computed(
+  () =>
+    selectedCompletionPendingTasks.value.length > 0 &&
+    selectedCompletionPendingTasks.value.every(
+      (item) => item.taskStatus === 'EMBEDDING_CONFIRM_PENDING',
+    ),
+);
+
+const canConfirmSelectedTask = computed(() => {
+  if (selectedPendingTasks.value.length > 0) {
+    return selectedPendingTasks.value.every(
+      (item) => item.taskStatus === 'PENDING',
+    );
+  }
+  return selectedTask.value?.taskStatus === 'PENDING';
 });
 
 function resetCompleteForm(task: null | PendingTechnicalTaskItem) {
@@ -325,6 +447,28 @@ function resolveEmbeddingActionTasks() {
     tasks: [task],
     usePanelForm: true,
   };
+}
+
+function resolveEmbeddingCompletionActionTasks() {
+  if (selectedCompletionPendingTasks.value.length === 0) {
+    ElMessage.warning('请先选择包埋确认待完成任务');
+    return null;
+  }
+  return {
+    tasks: selectedCompletionPendingTasks.value,
+    usePanelForm: false,
+  };
+}
+
+function resolveEmbeddingCancelActionTasks() {
+  const tasks = selectedCompletionPendingTasks.value.filter(
+    (item) => item.taskStatus === 'EMBEDDING_CONFIRM_PENDING',
+  );
+  if (tasks.length === 0) {
+    ElMessage.warning('请先选择包埋确认待完成任务');
+    return null;
+  }
+  return { tasks };
 }
 
 function resetOperatorForm() {
@@ -398,6 +542,7 @@ async function loadPendingData(preferredTaskId?: string) {
       keyword: filters.keyword.trim() || undefined,
       page: filters.page,
       size: filters.size,
+      taskStatus: 'PENDING',
       taskType: 'EMBEDDING',
     });
     pendingItems.value = result.items;
@@ -493,6 +638,30 @@ function isPendingRemarksEditing(
   );
 }
 
+function getPendingRemarksDraft(
+  item: PendingTechnicalTaskItem,
+  field: PendingRemarksField,
+) {
+  if (!isPendingRemarksEditing(item, field)) {
+    return field === 'remarks'
+      ? (item.remarks ?? '')
+      : (item.productionRemarks ?? '');
+  }
+  return field === 'remarks'
+    ? pendingRemarksEditor.remarks
+    : pendingRemarksEditor.productionRemarks;
+}
+
+function getShiftRemarkOptions(item: PendingTechnicalTaskItem) {
+  const currentProductionRemarks = item.productionRemarks?.trim();
+  return currentProductionRemarks &&
+    !SHIFT_REMARK_OPTIONS.includes(
+      currentProductionRemarks as (typeof SHIFT_REMARK_OPTIONS)[number],
+    )
+    ? [currentProductionRemarks, ...SHIFT_REMARK_OPTIONS]
+    : [...SHIFT_REMARK_OPTIONS];
+}
+
 function isSavingPendingRemarks(taskId: string) {
   return savingPendingRemarksTaskIds.value.includes(taskId);
 }
@@ -512,6 +681,21 @@ function beginPendingRemarksEdit(
   pendingRemarksEditor.field = field;
   pendingRemarksEditor.remarks = item.remarks ?? '';
   pendingRemarksEditor.productionRemarks = item.productionRemarks ?? '';
+}
+
+function updatePendingRemarksDraft(
+  item: PendingTechnicalTaskItem,
+  field: PendingRemarksField,
+  value: string,
+) {
+  if (!isPendingRemarksEditing(item, field)) {
+    beginPendingRemarksEdit(item, field);
+  }
+  if (field === 'remarks') {
+    pendingRemarksEditor.remarks = value;
+    return;
+  }
+  pendingRemarksEditor.productionRemarks = value;
 }
 
 function cancelPendingRemarksEdit() {
@@ -564,6 +748,16 @@ async function handlePendingRemarksSave(item: PendingTechnicalTaskItem) {
   }
 }
 
+async function savePendingRemarksEdit(
+  item: PendingTechnicalTaskItem,
+  field: PendingRemarksField,
+) {
+  if (!isPendingRemarksEditing(item, field)) {
+    return;
+  }
+  await handlePendingRemarksSave(item);
+}
+
 async function handleSearch() {
   filters.page = 1;
   await refreshWorkstation();
@@ -573,23 +767,58 @@ function resolveEmbeddingCompletionRemarks(task: PendingTechnicalTaskItem) {
   return task.remarks?.trim() || operatorForm.remarks.trim() || null;
 }
 
+function getPendingCompletionDraft(taskId: string) {
+  return pendingCompletionDrafts[taskId];
+}
+
+function updatePendingCompletionDraft(
+  taskId: string,
+  value: Partial<PendingCompletionDraft>,
+) {
+  pendingCompletionDrafts[taskId] = {
+    evaluationLevel:
+      value.evaluationLevel ??
+      pendingCompletionDrafts[taskId]?.evaluationLevel ??
+      DEFAULT_EMBEDDING_EVALUATION_LEVEL,
+    samplingEvaluation:
+      value.samplingEvaluation ??
+      pendingCompletionDrafts[taskId]?.samplingEvaluation ??
+      '',
+    sliceNotice:
+      value.sliceNotice ?? pendingCompletionDrafts[taskId]?.sliceNotice ?? '',
+  };
+}
+
+function getEmbeddingRowSliceNotice(row: EmbeddingWorkstationRecordRow) {
+  if (row.pendingTask) {
+    return getPendingCompletionDraft(row.pendingTask.id)?.sliceNotice ?? '';
+  }
+  return sliceNoticeDrafts[row.embeddingId] ?? '';
+}
+
+function getCompletionEvaluationLevel(task: PendingTechnicalTaskItem) {
+  return (
+    getPendingCompletionDraft(task.id)?.evaluationLevel ||
+    DEFAULT_EMBEDDING_EVALUATION_LEVEL
+  );
+}
+
+function getCompletionSamplingEvaluation(task: PendingTechnicalTaskItem) {
+  return (
+    getPendingCompletionDraft(task.id)?.samplingEvaluation.trim() ||
+    DEFAULT_SAMPLING_EVALUATION
+  );
+}
+
+function getCompletionSliceNotice(task: PendingTechnicalTaskItem) {
+  return getPendingCompletionDraft(task.id)?.sliceNotice.trim() || null;
+}
+
 async function completeEmbeddingTask(
   task: PendingTechnicalTaskItem,
   usePanelForm: boolean,
 ) {
-  if (
-    task.taskStatus === 'PENDING' &&
-    activeProcessingTaskId.value !== task.id
-  ) {
-    await startEmbedding({
-      ...normalizeTechnicalOperatorPayload(operatorForm),
-      taskId: task.id,
-    });
-    activeProcessingTaskId.value = task.id;
-  } else if (
-    task.taskStatus !== 'IN_PROGRESS' &&
-    activeProcessingTaskId.value !== task.id
-  ) {
+  if (!isEmbeddingReadyToComplete(task)) {
     throw new Error('当前任务状态不支持完成包埋');
   }
 
@@ -604,19 +833,80 @@ async function completeEmbeddingTask(
     embeddingBoxNo: usePanelForm
       ? completeForm.embeddingBoxNo.trim() || null
       : null,
-    evaluationLevel:
-      completeForm.evaluationLevel || DEFAULT_EMBEDDING_EVALUATION_LEVEL,
+    evaluationLevel: usePanelForm
+      ? completeForm.evaluationLevel || DEFAULT_EMBEDDING_EVALUATION_LEVEL
+      : getCompletionEvaluationLevel(task),
     samplingBlockId,
-    samplingEvaluation:
-      completeForm.samplingEvaluation.trim() || DEFAULT_SAMPLING_EVALUATION,
-    sliceNotice: completeForm.sliceNotice.trim() || null,
+    samplingEvaluation: usePanelForm
+      ? completeForm.samplingEvaluation.trim() || DEFAULT_SAMPLING_EVALUATION
+      : getCompletionSamplingEvaluation(task),
+    sliceNotice: usePanelForm
+      ? completeForm.sliceNotice.trim() || null
+      : getCompletionSliceNotice(task),
     remarks: resolveEmbeddingCompletionRemarks(task),
     taskId: task.id,
   });
 }
 
-async function handleCompleteEmbedding() {
+async function handleConfirmEmbedding() {
   const actionTasks = resolveEmbeddingActionTasks();
+  if (!actionTasks) {
+    return;
+  }
+  if (!operatorForm.operatorName.trim()) {
+    ElMessage.warning('请先确认当前登录人');
+    return;
+  }
+  if (actionTasks.tasks.some((task) => task.taskStatus !== 'PENDING')) {
+    ElMessage.warning('当前任务状态不支持确认包埋');
+    return;
+  }
+
+  completeLoading.value = true;
+  try {
+    const results = await Promise.allSettled(
+      actionTasks.tasks.map((task) =>
+        startEmbedding({
+          ...normalizeTechnicalOperatorPayload(operatorForm),
+          taskId: task.id,
+        }),
+      ),
+    );
+    const failedResults = results.filter(
+      (result): result is PromiseRejectedResult => result.status === 'rejected',
+    );
+    const succeededCount = results.length - failedResults.length;
+
+    if (failedResults.length === 0) {
+      ElMessage.success(
+        actionTasks.tasks.length === 1
+          ? '已确认包埋，状态已更新为包埋确认待完成'
+          : `已确认包埋 ${actionTasks.tasks.length} 条任务，状态已更新为包埋确认待完成`,
+      );
+    } else {
+      const firstFailure = failedResults[0];
+      if (firstFailure) {
+        pageError.value = getWorkflowPageErrorMessage(firstFailure.reason);
+        reportInlineErrorDisabled(
+          firstFailure.reason,
+          getWorkflowPageErrorMessage,
+        );
+      }
+      ElMessage.warning(
+        succeededCount > 0
+          ? `已确认包埋 ${succeededCount} 条任务，${failedResults.length} 条失败`
+          : '确认包埋失败，请重试',
+      );
+    }
+
+    await refreshWorkstation();
+  } finally {
+    completeLoading.value = false;
+  }
+}
+
+async function handleCompleteEmbedding() {
+  const actionTasks = resolveEmbeddingCompletionActionTasks();
   if (!actionTasks) {
     return;
   }
@@ -634,14 +924,7 @@ async function handleCompleteEmbedding() {
     ElMessage.warning('当前缺少取材块编号');
     return;
   }
-  if (
-    actionTasks.tasks.some(
-      (task) =>
-        task.taskStatus !== 'PENDING' &&
-        task.taskStatus !== 'IN_PROGRESS' &&
-        activeProcessingTaskId.value !== task.id,
-    )
-  ) {
+  if (actionTasks.tasks.some((task) => !isEmbeddingReadyToComplete(task))) {
     ElMessage.warning('当前任务状态不支持完成包埋');
     return;
   }
@@ -691,6 +974,63 @@ async function handleCompleteEmbedding() {
     await refreshWorkstation();
   } finally {
     completeLoading.value = false;
+  }
+}
+
+async function handleCancelEmbedding() {
+  const actionTasks = resolveEmbeddingCancelActionTasks();
+  if (!actionTasks) {
+    return;
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `确定取消选中的 ${actionTasks.tasks.length} 条包埋确认待完成任务，并打回待包埋列表吗？`,
+      '取消包埋',
+      {
+        cancelButtonText: '取消',
+        confirmButtonText: '确定',
+        type: 'warning',
+      },
+    );
+  } catch {
+    return;
+  }
+
+  cancelEmbeddingLoading.value = true;
+  try {
+    const payload = normalizeTechnicalOperatorPayload(operatorForm);
+    const results = await Promise.allSettled(
+      actionTasks.tasks.map((task) =>
+        cancelEmbedding({
+          remarks: payload.remarks,
+          taskId: task.id,
+          terminalCode: payload.terminalCode,
+        }),
+      ),
+    );
+    const firstFailure = results.find(
+      (result): result is PromiseRejectedResult => result.status === 'rejected',
+    );
+    if (firstFailure) {
+      throw firstFailure.reason;
+    }
+    selectedCompletedEmbeddingIds.value =
+      selectedCompletedEmbeddingIds.value.filter(
+        (embeddingId) =>
+          !actionTasks.tasks.some((task) => embeddingId === `TASK-${task.id}`),
+      );
+    ElMessage.success(
+      actionTasks.tasks.length > 1
+        ? `已取消包埋 ${actionTasks.tasks.length} 条任务，并打回待包埋列表`
+        : '已取消包埋，任务已打回待包埋列表',
+    );
+    await refreshWorkstation();
+  } catch (error) {
+    pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
+  } finally {
+    cancelEmbeddingLoading.value = false;
   }
 }
 
@@ -754,13 +1094,44 @@ async function handleSliceNoticeSave(
   }
 }
 
-function openQualityReviewDialog(row: TechnicalTrackingEmbeddingRecordSummary) {
+function handleSliceNoticeChange(
+  row: EmbeddingWorkstationRecordRow,
+  value: unknown,
+) {
+  const nextValue = typeof value === 'string' ? value : String(value ?? '');
+  if (row.pendingTask) {
+    updatePendingCompletionDraft(row.pendingTask.id, {
+      sliceNotice: nextValue,
+    });
+    ElMessage.success('切片备注已暂存，确认包埋完成时提交');
+    return;
+  }
+  sliceNoticeDrafts[row.embeddingId] = nextValue;
+  void handleSliceNoticeSave(row);
+}
+
+function openQualityReviewDialog(row: EmbeddingWorkstationRecordRow) {
+  qualityReviewDialogMode.value = row.pendingTask ? 'draft' : 'persist';
   selectedQualityReviewRecord.value = row;
   qualityReviewDialogVisible.value = true;
 }
 
 async function handleQualityReviewSubmitted() {
   await refreshCurrentCaseData();
+}
+
+function handleQualityReviewDraftSubmitted(
+  value: EmbeddingQualityReviewDraftPayload,
+) {
+  const taskId = selectedQualityReviewRecord.value?.pendingTask?.id;
+  if (!taskId) {
+    return;
+  }
+  updatePendingCompletionDraft(taskId, {
+    evaluationLevel: value.evaluationLevel,
+    samplingEvaluation: value.samplingEvaluation,
+  });
+  ElMessage.success('取材评价已暂存，确认包埋完成时提交');
 }
 
 function handleMore() {
@@ -782,13 +1153,20 @@ function handleKeyDown(event: KeyboardEvent) {
   event.preventDefault();
   if (canCompleteSelectedTask.value && !completeLoading.value) {
     void handleCompleteEmbedding();
+    return;
+  }
+  if (canConfirmSelectedTask.value && !completeLoading.value) {
+    void handleConfirmEmbedding();
   }
 }
 
 watch(selectedTaskId, async () => {
   const task = selectedTask.value;
   activeProcessingTaskId.value =
-    task?.taskStatus === 'IN_PROGRESS' ? task.id : '';
+    task?.taskStatus === 'IN_PROGRESS' ||
+    task?.taskStatus === 'EMBEDDING_CONFIRM_PENDING'
+      ? task.id
+      : '';
   resetPanelState(task);
   await loadTrackingForTask(task);
 });
@@ -796,13 +1174,16 @@ watch(selectedTaskId, async () => {
 watch(
   completedEmbeddingRecords,
   (records) => {
-    const recordIds = new Set(records.map((item) => item.embeddingId));
+    const completedRecords = records.filter(
+      (item) => item.rowKind === 'completed',
+    );
+    const recordIds = new Set(completedRecords.map((item) => item.embeddingId));
     Object.keys(sliceNoticeDrafts).forEach((embeddingId) => {
       if (!recordIds.has(embeddingId)) {
         delete sliceNoticeDrafts[embeddingId];
       }
     });
-    records.forEach((item) => {
+    completedRecords.forEach((item) => {
       sliceNoticeDrafts[item.embeddingId] = item.sliceNotice ?? '';
     });
   },
@@ -838,6 +1219,15 @@ watch(completedEmbeddingRecords, (records) => {
     selectedCompletedEmbeddingIds.value.filter((embeddingId) =>
       recordIds.has(embeddingId),
     );
+});
+
+watch(pendingCompletionTasks, (tasks) => {
+  const taskIds = new Set(tasks.map((item) => item.id));
+  Object.keys(pendingCompletionDrafts).forEach((taskId) => {
+    if (!taskIds.has(taskId)) {
+      delete pendingCompletionDrafts[taskId];
+    }
+  });
 });
 
 onMounted(() => {
@@ -899,10 +1289,10 @@ onBeforeUnmount(() => {
         class="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-sm"
       >
         <ElButton
-          :disabled="!canCompleteSelectedTask || completeLoading"
+          :disabled="!canConfirmSelectedTask || completeLoading"
           :loading="completeLoading"
           type="primary"
-          @click="handleCompleteEmbedding"
+          @click="handleConfirmEmbedding"
         >
           确认包埋
         </ElButton>
@@ -969,9 +1359,9 @@ onBeforeUnmount(() => {
                   <th class="px-4 py-3">状态</th>
                 </tr>
               </thead>
-              <tbody v-if="pendingItems.length > 0">
+              <tbody v-if="leftPendingItems.length > 0">
                 <tr
-                  v-for="item in pendingItems"
+                  v-for="item in leftPendingItems"
                   :key="item.id"
                   :class="
                     item.id === selectedTaskId
@@ -998,126 +1388,71 @@ onBeforeUnmount(() => {
                   <td class="px-4 py-3">
                     {{ formatNullable(item.samplingBlockCode) }}
                   </td>
-                  <td class="min-w-[150px] px-4 py-3">
-                    <div
-                      v-if="isPendingRemarksEditing(item, 'remarks')"
-                      class="flex items-center gap-1"
-                      @click.stop
-                    >
-                      <ElInput
-                        v-model="pendingRemarksEditor.remarks"
-                        class="min-w-0 flex-1"
-                        placeholder="备注"
-                        size="small"
-                        @keyup.enter="handlePendingRemarksSave(item)"
-                        @keyup.esc="cancelPendingRemarksEdit"
-                      />
-                      <ElButton
-                        aria-label="保存备注"
-                        :disabled="isSavingPendingRemarks(item.id)"
-                        :icon="Check"
-                        circle
-                        size="small"
-                        type="primary"
-                        @click="handlePendingRemarksSave(item)"
-                      />
-                      <ElButton
-                        aria-label="取消备注编辑"
-                        :disabled="isSavingPendingRemarks(item.id)"
-                        :icon="X"
-                        circle
-                        size="small"
-                        @click="cancelPendingRemarksEdit"
-                      />
-                    </div>
-                    <div
-                      v-else
-                      class="group/inline-edit flex min-h-6 items-center gap-2"
-                      @dblclick.stop="beginPendingRemarksEdit(item, 'remarks')"
-                    >
-                      <span class="min-w-0 flex-1 break-words">
-                        {{ formatNullable(item.remarks) }}
-                      </span>
-                      <ElButton
-                        aria-label="编辑备注"
-                        :icon="UserRoundPen"
-                        circle
-                        size="small"
-                        text
-                        title="编辑备注"
-                        @click.stop="beginPendingRemarksEdit(item, 'remarks')"
-                      />
-                    </div>
+                  <td class="min-w-[150px] px-4 py-3" @click.stop>
+                    <ElInput
+                      :model-value="getPendingRemarksDraft(item, 'remarks')"
+                      aria-label="备注"
+                      class="min-w-0"
+                      :disabled="isSavingPendingRemarks(item.id)"
+                      placeholder="备注"
+                      size="small"
+                      @blur="savePendingRemarksEdit(item, 'remarks')"
+                      @focus="beginPendingRemarksEdit(item, 'remarks')"
+                      @keyup.enter="savePendingRemarksEdit(item, 'remarks')"
+                      @keyup.esc="cancelPendingRemarksEdit"
+                      @update:model-value="
+                        (value) =>
+                          updatePendingRemarksDraft(item, 'remarks', value)
+                      "
+                    />
                   </td>
                   <td class="px-4 py-3">
                     {{ formatNullable(item.sampledByName) }} /
                     {{ formatDateTime(item.sampledAt) }}
                   </td>
-                  <td class="min-w-[190px] px-4 py-3">
-                    <div
-                      v-if="isPendingRemarksEditing(item, 'productionRemarks')"
-                      class="flex items-center gap-1"
-                      @click.stop
-                    >
-                      <ElSelect
-                        v-model="pendingRemarksEditor.productionRemarks"
-                        class="min-w-0 flex-1"
-                        clearable
-                        placeholder="主班备注"
-                        size="small"
-                      >
-                        <ElOption
-                          v-for="option in SHIFT_REMARK_OPTIONS"
-                          :key="option"
-                          :label="option"
-                          :value="option"
-                        />
-                      </ElSelect>
-                      <ElButton
-                        aria-label="保存主班备注"
-                        :disabled="isSavingPendingRemarks(item.id)"
-                        :icon="Check"
-                        circle
-                        size="small"
-                        type="primary"
-                        @click="handlePendingRemarksSave(item)"
-                      />
-                      <ElButton
-                        aria-label="取消主班备注编辑"
-                        :disabled="isSavingPendingRemarks(item.id)"
-                        :icon="X"
-                        circle
-                        size="small"
-                        @click="cancelPendingRemarksEdit"
-                      />
-                    </div>
-                    <div
-                      v-else
-                      class="group/inline-edit flex min-h-6 items-center gap-2"
-                      @dblclick.stop="
+                  <td class="min-w-[190px] px-4 py-3" @click.stop>
+                    <ElSelect
+                      :model-value="
+                        getPendingRemarksDraft(item, 'productionRemarks')
+                      "
+                      aria-label="主班备注"
+                      class="min-w-0"
+                      clearable
+                      :disabled="isSavingPendingRemarks(item.id)"
+                      placeholder="主班备注"
+                      size="small"
+                      @change="
+                        savePendingRemarksEdit(item, 'productionRemarks')
+                      "
+                      @click="
                         beginPendingRemarksEdit(item, 'productionRemarks')
                       "
+                      @update:model-value="
+                        (value) =>
+                          updatePendingRemarksDraft(
+                            item,
+                            'productionRemarks',
+                            value,
+                          )
+                      "
                     >
-                      <span class="min-w-0 flex-1 break-words">
-                        {{ formatNullable(item.productionRemarks) }}
-                      </span>
-                      <ElButton
-                        aria-label="编辑主班备注"
-                        :icon="UserRoundPen"
-                        circle
-                        size="small"
-                        text
-                        title="编辑主班备注"
-                        @click.stop="
-                          beginPendingRemarksEdit(item, 'productionRemarks')
-                        "
+                      <ElOption value="" label="-" />
+                      <ElOption
+                        v-for="option in getShiftRemarkOptions(item)"
+                        :key="option"
+                        :label="option"
+                        :value="option"
                       />
-                    </div>
+                    </ElSelect>
                   </td>
                   <td class="px-4 py-3">
                     <ElTag
                       :type="
-                        item.taskStatus === 'IN_PROGRESS' ? 'success' : 'info'
+                        item.taskStatus === 'EMBEDDING_CONFIRM_PENDING'
+                          ? 'warning'
+                          : item.taskStatus === 'IN_PROGRESS'
+                            ? 'success'
+                            : 'info'
                       "
                     >
                       {{ formatTaskStatus(item.taskStatus) }}
@@ -1127,7 +1462,7 @@ onBeforeUnmount(() => {
               </tbody>
             </table>
 
-            <div v-if="pendingItems.length === 0 && !loading" class="p-8">
+            <div v-if="leftPendingItems.length === 0 && !loading" class="p-8">
               <ElEmpty description="当前没有待包埋任务" />
             </div>
           </div>
@@ -1180,7 +1515,24 @@ onBeforeUnmount(() => {
                 </div>
                 <ElButton
                   class="shrink-0"
-                  :disabled="!canCompleteSelectedTask || completeLoading"
+                  :disabled="
+                    !canCancelSelectedEmbedding ||
+                    cancelEmbeddingLoading ||
+                    completeLoading
+                  "
+                  :loading="cancelEmbeddingLoading"
+                  type="warning"
+                  @click="handleCancelEmbedding"
+                >
+                  取消包埋
+                </ElButton>
+                <ElButton
+                  class="shrink-0"
+                  :disabled="
+                    !canCompleteSelectedTask ||
+                    completeLoading ||
+                    cancelEmbeddingLoading
+                  "
                   :loading="completeLoading"
                   type="primary"
                   @click="handleCompleteEmbedding"
@@ -1286,7 +1638,9 @@ onBeforeUnmount(() => {
                     <th class="px-4 py-3 font-medium whitespace-nowrap">
                       包埋操作
                     </th>
-                    <th class="px-4 py-3 font-medium whitespace-nowrap">
+                    <th
+                      class="sticky right-0 z-20 border-l border-border bg-accent px-4 py-3 font-medium whitespace-nowrap"
+                    >
                       状态
                     </th>
                   </tr>
@@ -1300,7 +1654,7 @@ onBeforeUnmount(() => {
                         ? 'bg-primary/10'
                         : 'hover:bg-accent'
                     "
-                    class="cursor-pointer border-t border-border text-foreground"
+                    class="group cursor-pointer border-t border-border text-foreground"
                     @click="selectCompletedEmbedding(item.embeddingId)"
                   >
                     <td class="px-4 py-3 align-top">
@@ -1311,6 +1665,7 @@ onBeforeUnmount(() => {
                           )
                         "
                         :aria-label="`选择已包埋蜡块 ${formatNullable(item.samplingBlockCode)}`"
+                        :disabled="!item.pendingTask"
                         @click.stop
                         @update:model-value="
                           (selected) =>
@@ -1337,7 +1692,7 @@ onBeforeUnmount(() => {
                     <td class="min-w-[240px] px-4 py-3 align-top">
                       <div class="flex items-center gap-2">
                         <ElSelect
-                          v-model="sliceNoticeDrafts[item.embeddingId]"
+                          :model-value="getEmbeddingRowSliceNotice(item)"
                           class="min-w-0 flex-1"
                           allow-create
                           clearable
@@ -1346,8 +1701,13 @@ onBeforeUnmount(() => {
                           :loading="isSavingReview(item.embeddingId)"
                           placeholder="切片备注"
                           size="small"
-                          @blur="handleSliceNoticeSave(item)"
-                          @change="handleSliceNoticeSave(item)"
+                          @blur="
+                            item.rowKind === 'completed' &&
+                            handleSliceNoticeSave(item)
+                          "
+                          @change="
+                            (value) => handleSliceNoticeChange(item, value)
+                          "
                         >
                           <ElOption
                             v-for="option in SLICE_NOTICE_OPTIONS"
@@ -1397,8 +1757,25 @@ onBeforeUnmount(() => {
                         {{ formatDateTime(item.endedAt) }}
                       </div>
                     </td>
-                    <td class="px-4 py-3 align-top whitespace-nowrap">
-                      {{ formatTaskStatus(item.taskStatus) }}
+                    <td
+                      class="sticky right-0 z-10 border-l border-border px-4 py-3 align-top whitespace-nowrap"
+                      :class="
+                        item.embeddingId === selectedCompletedEmbeddingId
+                          ? 'bg-primary/10'
+                          : 'bg-card group-hover:bg-accent'
+                      "
+                    >
+                      <ElTag
+                        :type="
+                          item.taskStatus === 'EMBEDDING_CONFIRM_PENDING'
+                            ? 'warning'
+                            : item.taskStatus === 'IN_PROGRESS'
+                              ? 'success'
+                              : 'info'
+                        "
+                      >
+                        {{ formatTaskStatus(item.taskStatus) }}
+                      </ElTag>
                     </td>
                   </tr>
                 </tbody>
@@ -1586,7 +1963,9 @@ onBeforeUnmount(() => {
 
     <EmbeddingQualityReviewDialog
       v-model="qualityReviewDialogVisible"
+      :mode="qualityReviewDialogMode"
       :row="selectedQualityReviewRecord"
+      @draft-submitted="handleQualityReviewDraftSubmitted"
       @submitted="handleQualityReviewSubmitted"
     />
   </Page>

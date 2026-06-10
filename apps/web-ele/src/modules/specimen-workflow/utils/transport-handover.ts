@@ -297,11 +297,12 @@ export function enhanceSpecimenOutboundItem(
 
 export function resolveExactSpecimenOutboundMatches<
   T extends SpecimenOutboundListItem,
->(rows: T[], specimenNo: string) {
-  const normalizedSpecimenNo = normalizeText(specimenNo).toLowerCase();
+>(rows: T[], identifier: string) {
+  const normalizedIdentifier = normalizeText(identifier).toLowerCase();
   return rows.filter(
     (row) =>
-      normalizeText(row.specimenNo).toLowerCase() === normalizedSpecimenNo,
+      normalizeText(row.specimenNo).toLowerCase() === normalizedIdentifier ||
+      normalizeText(row.barcode).toLowerCase() === normalizedIdentifier,
   );
 }
 

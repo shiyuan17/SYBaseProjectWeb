@@ -66,6 +66,7 @@ import { useTechnicalWorkflowNavigation } from '../utils/navigation';
 import { buildWorkstationQueueItems } from '../utils/workstation';
 
 type GrossingTaskPayload = Record<string, unknown>;
+type GrossingWorkbenchResizeHandle = 'left' | 'right';
 
 interface GrossingTaskTableRow {
   alertLevel: WorkstationQueueItem['alertLevel'];
@@ -227,6 +228,14 @@ const DISABLED_DATE_ACTIONS = [
   { icon: ChevronRight, label: '后1天' },
 ] as const;
 
+const grossingWorkbenchPaneMinWidths = {
+  queue: 320,
+  template: 300,
+  workspace: 440,
+};
+const grossingWorkbenchResizerWidth = 10;
+const grossingWorkbenchResizeStep = 2;
+
 const route = useRoute();
 const router = useRouter();
 const navigation = useTechnicalWorkflowNavigation(router);
@@ -242,6 +251,12 @@ const templateSearchKeyword = ref('');
 const selectedTemplateId = ref(GROSSING_DESCRIPTION_TEMPLATES[0]?.id ?? '');
 const appendTemplateAfterApply = ref(true);
 const countdownNow = ref(Date.now());
+const grossingWorkstationLayoutRef = ref<HTMLElement>();
+const paneWidths = reactive({
+  queue: 30,
+  template: 25,
+  workspace: 45,
+});
 let freezeReminderTimer: number | undefined;
 
 const filters = reactive({
@@ -410,6 +425,9 @@ const canEditCapturedImages = computed(
     Boolean(workbench.activeSpecimen.value) &&
     activeSpecimenIndex.value >= 0,
 );
+const workstationGridStyle = computed(() => ({
+  gridTemplateColumns: `minmax(${grossingWorkbenchPaneMinWidths.queue}px, ${paneWidths.queue}fr) ${grossingWorkbenchResizerWidth}px minmax(${grossingWorkbenchPaneMinWidths.workspace}px, ${paneWidths.workspace}fr) ${grossingWorkbenchResizerWidth}px minmax(${grossingWorkbenchPaneMinWidths.template}px, ${paneWidths.template}fr)`,
+}));
 
 function parseDateTimeTimestamp(value: null | string | undefined) {
   const rawValue = value?.trim();
@@ -732,6 +750,128 @@ function handleSaveGrossingDescription() {
   ElMessage.success('大体描写已保存，取材完成时将一并提交');
 }
 
+function clampPaneWidth(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function normalizePaneWidth(value: number) {
+  return Number(value.toFixed(3));
+}
+
+function getPaneMinRatio(
+  layoutWidth: number,
+  pane: keyof typeof grossingWorkbenchPaneMinWidths,
+) {
+  return (
+    (grossingWorkbenchPaneMinWidths[pane] /
+      Math.max(layoutWidth - grossingWorkbenchResizerWidth * 2, 1)) *
+    100
+  );
+}
+
+function applyLeftResize(deltaPercent: number, layoutWidth: number) {
+  const queueMin = getPaneMinRatio(layoutWidth, 'queue');
+  const workspaceMin = getPaneMinRatio(layoutWidth, 'workspace');
+  const pairedWidth = paneWidths.queue + paneWidths.workspace;
+  const nextQueue = clampPaneWidth(
+    paneWidths.queue + deltaPercent,
+    queueMin,
+    pairedWidth - workspaceMin,
+  );
+
+  paneWidths.queue = normalizePaneWidth(nextQueue);
+  paneWidths.workspace = normalizePaneWidth(pairedWidth - nextQueue);
+}
+
+function applyRightResize(deltaPercent: number, layoutWidth: number) {
+  const templateMin = getPaneMinRatio(layoutWidth, 'template');
+  const workspaceMin = getPaneMinRatio(layoutWidth, 'workspace');
+  const pairedWidth = paneWidths.workspace + paneWidths.template;
+  const nextWorkspace = clampPaneWidth(
+    paneWidths.workspace + deltaPercent,
+    workspaceMin,
+    pairedWidth - templateMin,
+  );
+
+  paneWidths.workspace = normalizePaneWidth(nextWorkspace);
+  paneWidths.template = normalizePaneWidth(pairedWidth - nextWorkspace);
+}
+
+function resizeWorkbenchPane(
+  handle: GrossingWorkbenchResizeHandle,
+  deltaPercent: number,
+  layoutWidth: number,
+) {
+  if (handle === 'left') {
+    applyLeftResize(deltaPercent, layoutWidth);
+    return;
+  }
+
+  applyRightResize(deltaPercent, layoutWidth);
+}
+
+function handleResizePointerDown(
+  handle: GrossingWorkbenchResizeHandle,
+  event: PointerEvent,
+) {
+  if (event.button !== 0) {
+    return;
+  }
+
+  const layoutElement = grossingWorkstationLayoutRef.value;
+  if (!layoutElement) {
+    return;
+  }
+
+  event.preventDefault();
+  const startX = event.clientX;
+  const layoutWidth = layoutElement.getBoundingClientRect().width;
+  const startWidths = { ...paneWidths };
+
+  document.documentElement.classList.add('grossing-workbench-is-resizing');
+
+  const handlePointerMove = (moveEvent: PointerEvent) => {
+    const deltaPercent = ((moveEvent.clientX - startX) / layoutWidth) * 100;
+    paneWidths.queue = startWidths.queue;
+    paneWidths.workspace = startWidths.workspace;
+    paneWidths.template = startWidths.template;
+    resizeWorkbenchPane(handle, deltaPercent, layoutWidth);
+  };
+
+  const stopResize = () => {
+    document.documentElement.classList.remove('grossing-workbench-is-resizing');
+    window.removeEventListener('pointermove', handlePointerMove);
+    window.removeEventListener('pointerup', stopResize);
+    window.removeEventListener('pointercancel', stopResize);
+  };
+
+  window.addEventListener('pointermove', handlePointerMove);
+  window.addEventListener('pointerup', stopResize, { once: true });
+  window.addEventListener('pointercancel', stopResize, { once: true });
+}
+
+function handleResizeKeydown(
+  handle: GrossingWorkbenchResizeHandle,
+  event: KeyboardEvent,
+) {
+  if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') {
+    return;
+  }
+
+  const layoutElement = grossingWorkstationLayoutRef.value;
+  if (!layoutElement) {
+    return;
+  }
+
+  event.preventDefault();
+  const direction = event.key === 'ArrowRight' ? 1 : -1;
+  resizeWorkbenchPane(
+    handle,
+    direction * grossingWorkbenchResizeStep,
+    layoutElement.getBoundingClientRect().width,
+  );
+}
+
 function isTemplateMatchedToActiveSpecimen(
   template: GrossingDescriptionTemplate,
 ) {
@@ -973,7 +1113,10 @@ if (shouldInitialLoad.value) {
       </section>
 
       <section
-        class="grid min-h-0 flex-1 grid-cols-1 items-stretch gap-2 overflow-hidden xl:grid-cols-[minmax(0,3fr)_minmax(0,4.5fr)_minmax(260px,2.5fr)]"
+        ref="grossingWorkstationLayoutRef"
+        class="grossing-workbench-layout grid min-h-0 flex-1 grid-cols-1 items-stretch gap-2 overflow-hidden xl:gap-0"
+        data-testid="grossing-workbench-layout"
+        :style="workstationGridStyle"
       >
         <article
           class="flex min-w-0 flex-col overflow-hidden rounded-md border border-border bg-card"
@@ -1126,6 +1269,17 @@ if (shouldInitialLoad.value) {
             />
           </footer>
         </article>
+
+        <button
+          aria-label="调整取材任务列表和描写工作区宽度"
+          aria-orientation="vertical"
+          class="grossing-workbench-resizer hidden xl:block"
+          data-testid="grossing-workbench-resizer-left"
+          title="拖拽调整取材任务列表和描写工作区宽度"
+          type="button"
+          @keydown="handleResizeKeydown('left', $event)"
+          @pointerdown="handleResizePointerDown('left', $event)"
+        ></button>
 
         <aside
           class="flex min-h-0 min-w-0 flex-col overflow-y-auto rounded-md border border-border bg-card"
@@ -1280,6 +1434,7 @@ if (shouldInitialLoad.value) {
                 :can-edit="canEditCapturedImages"
                 disabled-text="请先从左侧列表选择任务和可编辑标本"
                 :items="capturedImageItems"
+                scroll-mode="external"
                 :upload-image-file="uploadGrossingImage"
               />
             </template>
@@ -1289,6 +1444,17 @@ if (shouldInitialLoad.value) {
             <ElEmpty description="请先选择取材任务" />
           </div>
         </aside>
+
+        <button
+          aria-label="调整描写工作区和取材模板宽度"
+          aria-orientation="vertical"
+          class="grossing-workbench-resizer hidden xl:block"
+          data-testid="grossing-workbench-resizer-right"
+          title="拖拽调整描写工作区和取材模板宽度"
+          type="button"
+          @keydown="handleResizeKeydown('right', $event)"
+          @pointerdown="handleResizePointerDown('right', $event)"
+        ></button>
 
         <aside
           class="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-md border border-border bg-card"
@@ -1542,3 +1708,54 @@ if (shouldInitialLoad.value) {
     </ElDrawer>
   </Page>
 </template>
+
+<style scoped>
+.grossing-workbench-resizer {
+  position: relative;
+  min-height: 360px;
+  cursor: col-resize;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  transition: background-color 0.15s ease;
+}
+
+.grossing-workbench-resizer::before {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 50%;
+  width: 2px;
+  content: '';
+  background: var(--el-border-color);
+  border-radius: 999px;
+  transform: translateX(-50%);
+  transition:
+    background-color 0.15s ease,
+    width 0.15s ease;
+}
+
+.grossing-workbench-resizer:hover,
+.grossing-workbench-resizer:focus-visible {
+  outline: none;
+  background: var(--el-color-primary-light-7);
+}
+
+.grossing-workbench-resizer:hover::before,
+.grossing-workbench-resizer:focus-visible::before {
+  width: 4px;
+  background: var(--el-color-primary);
+}
+
+:global(.grossing-workbench-is-resizing),
+:global(.grossing-workbench-is-resizing *) {
+  cursor: col-resize !important;
+  user-select: none;
+}
+
+@media (width < 1280px) {
+  .grossing-workbench-layout {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+</style>

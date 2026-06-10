@@ -865,6 +865,55 @@ describe('DiagnosisWorkbenchView', () => {
     wrapper.unmount();
   });
 
+  it('resizes workstation panes by dragging the split handles', async () => {
+    const wrapper = await mountView();
+    const layout = findByTestId('diagnosis-workbench-layout');
+    const getRectMock = vi.spyOn(layout, 'getBoundingClientRect');
+    getRectMock.mockReturnValue({
+      bottom: 600,
+      height: 600,
+      left: 0,
+      right: 1600,
+      toJSON: () => ({}),
+      top: 0,
+      width: 1600,
+      x: 0,
+      y: 0,
+    } as DOMRect);
+
+    findByTestId('diagnosis-workbench-resizer-left').dispatchEvent(
+      new MouseEvent('pointerdown', {
+        bubbles: true,
+        button: 0,
+        clientX: 500,
+      }),
+    );
+    window.dispatchEvent(new MouseEvent('pointermove', { clientX: 660 }));
+    window.dispatchEvent(new MouseEvent('pointerup'));
+    await flushAsyncWork();
+
+    expect(layout.style.gridTemplateColumns).toContain(
+      'minmax(260px, 34fr) 10px minmax(420px, 34fr)',
+    );
+
+    findByTestId('diagnosis-workbench-resizer-right').dispatchEvent(
+      new MouseEvent('pointerdown', {
+        bubbles: true,
+        button: 0,
+        clientX: 900,
+      }),
+    );
+    window.dispatchEvent(new MouseEvent('pointermove', { clientX: 1060 }));
+    window.dispatchEvent(new MouseEvent('pointerup'));
+    await flushAsyncWork();
+
+    expect(layout.style.gridTemplateColumns).toContain(
+      'minmax(420px, 44fr) 10px minmax(320px, 22fr)',
+    );
+
+    wrapper.unmount();
+  });
+
   it('renders live print preview tab from the editable report draft', async () => {
     const wrapper = await mountView();
     const patientNameEditor = document.querySelector<HTMLInputElement>(
@@ -1086,6 +1135,9 @@ describe('DiagnosisWorkbenchView', () => {
   });
 
   it('renders diagnosis capture under patient info and imports diagnosis images', async () => {
+    createObjectUrlMock.mockImplementation(
+      (file) => `blob:${(file as File).name}`,
+    );
     const wrapper = await mountView();
 
     expect(getButtonTexts()).not.toContain('采图');
@@ -1102,16 +1154,77 @@ describe('DiagnosisWorkbenchView', () => {
     const file = new File(['image-bytes'], 'diagnosis-upload.jpg', {
       type: 'image/jpeg',
     });
+    const secondFile = new File(['image-bytes-2'], 'diagnosis-second.jpg', {
+      type: 'image/jpeg',
+    });
     Object.defineProperty(fileInput!, 'files', {
       configurable: true,
-      value: [file],
+      value: [file, secondFile],
     });
     fileInput!.dispatchEvent(new Event('change'));
     await flushAsyncWork();
 
     expect(createObjectUrlMock).toHaveBeenCalledWith(file);
+    expect(createObjectUrlMock).toHaveBeenCalledWith(secondFile);
     expect(wrapper.text()).toContain('diagnosis-upload.jpg');
+    expect(wrapper.text()).toContain('diagnosis-second.jpg');
     expect(wrapper.text()).toContain('当前诊断');
+
+    const reportImageCanvas = document.querySelector<HTMLElement>(
+      '[data-testid="diagnosis-report-microscopic-image-canvas"]',
+    );
+    expect(reportImageCanvas).toBeTruthy();
+    const reportImage = reportImageCanvas!.querySelector<HTMLImageElement>(
+      'img[alt="diagnosis-upload.jpg"]',
+    );
+    expect(reportImage).toBeTruthy();
+    const secondReportImage =
+      reportImageCanvas!.querySelector<HTMLImageElement>(
+        'img[alt="diagnosis-second.jpg"]',
+      );
+    expect(secondReportImage).toBeTruthy();
+    expect(reportImage?.src).toContain('blob:diagnosis-upload.jpg');
+    expect(secondReportImage?.src).toContain('blob:diagnosis-second.jpg');
+    expect(secondReportImage?.style.left).toBe('12px');
+    expect(secondReportImage?.style.top).toBe('12px');
+    expect(reportImage?.style.left).toBe('124px');
+    expect(reportImage?.style.top).toBe('12px');
+
+    reportImage!.dispatchEvent(
+      new MouseEvent('pointerdown', {
+        bubbles: true,
+        button: 0,
+        clientX: 20,
+        clientY: 20,
+      }),
+    );
+    window.dispatchEvent(
+      new MouseEvent('pointermove', {
+        clientX: 62,
+        clientY: 48,
+      }),
+    );
+    window.dispatchEvent(new MouseEvent('pointerup'));
+    await flushAsyncWork();
+
+    expect(reportImage?.style.left).toBe('166px');
+    expect(reportImage?.style.top).toBe('40px');
+
+    const deleteButton = document.querySelector<HTMLButtonElement>(
+      '[aria-label="删除图片 diagnosis-upload.jpg"]',
+    );
+    expect(deleteButton).toBeTruthy();
+    deleteButton!.click();
+    await flushAsyncWork();
+
+    expect(revokeObjectUrlMock).toHaveBeenCalledWith(
+      'blob:diagnosis-upload.jpg',
+    );
+    expect(wrapper.text()).not.toContain('diagnosis-upload.jpg');
+    expect(
+      reportImageCanvas!.querySelector('img[alt="diagnosis-upload.jpg"]'),
+    ).toBeNull();
+    expect(wrapper.text()).toContain('diagnosis-second.jpg');
 
     wrapper.unmount();
   });
@@ -1548,6 +1661,16 @@ describe('DiagnosisWorkbenchView', () => {
     patientNameEditor!.dispatchEvent(new Event('input'));
     diagnosisEditor!.value = '打印中的诊断';
     diagnosisEditor!.dispatchEvent(new Event('input'));
+    const fileInput =
+      document.querySelector<HTMLInputElement>('input[type="file"]');
+    const file = new File(['image-bytes'], 'print-upload.jpg', {
+      type: 'image/jpeg',
+    });
+    Object.defineProperty(fileInput!, 'files', {
+      configurable: true,
+      value: [file],
+    });
+    fileInput!.dispatchEvent(new Event('change'));
     await flushAsyncWork();
 
     (
@@ -1564,6 +1687,9 @@ describe('DiagnosisWorkbenchView', () => {
     );
     expect(documentWriteMock).toHaveBeenCalledWith(
       expect.stringContaining('打印中的姓名'),
+    );
+    expect(documentWriteMock).toHaveBeenCalledWith(
+      expect.stringContaining('print-upload.jpg'),
     );
     expect(documentWriteMock).toHaveBeenCalledWith(
       expect.not.stringContaining('#dddddd'),

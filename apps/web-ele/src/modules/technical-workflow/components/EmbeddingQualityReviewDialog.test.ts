@@ -249,17 +249,23 @@ async function flushAll() {
   await nextTick();
 }
 
-function mountDialog(row = createRecord()) {
+function mountDialog(
+  row = createRecord(),
+  props: { mode?: 'draft' | 'persist' } = {},
+) {
   const root = document.createElement('div');
   document.body.append(root);
+  const draftSubmitted = vi.fn();
   const submitted = vi.fn();
   const app = createApp({
     setup() {
       const visible = ref(true);
       return () =>
         h(EmbeddingQualityReviewDialog, {
+          mode: props.mode,
           modelValue: visible.value,
           row,
+          onDraftSubmitted: draftSubmitted,
           'onUpdate:modelValue': (value: boolean) => {
             visible.value = value;
           },
@@ -268,7 +274,7 @@ function mountDialog(row = createRecord()) {
     },
   });
   app.mount(root);
-  return { app, root, submitted };
+  return { app, draftSubmitted, root, submitted };
 }
 
 function findButton(root: HTMLElement, text: string) {
@@ -339,6 +345,31 @@ describe('EmbeddingQualityReviewDialog', () => {
     });
     expect(messageSuccess).toHaveBeenCalledWith('取材评价已保存');
     expect(submitted).toHaveBeenCalledTimes(1);
+
+    app.unmount();
+  });
+
+  it('submits a draft review without calling the review API', async () => {
+    const { app, draftSubmitted, root, submitted } = mountDialog(
+      createRecord(),
+      { mode: 'draft' },
+    );
+    await flushAll();
+
+    toggleInput(root, 'UNQUALIFIED');
+    await flushAll();
+
+    expect(root.textContent).not.toContain('不合格原因');
+
+    findButton(root, '保存评价').click();
+    await flushAll();
+
+    expect(mockUpdateEmbeddingQualityReview).not.toHaveBeenCalled();
+    expect(draftSubmitted).toHaveBeenCalledWith({
+      evaluationLevel: 'UNQUALIFIED',
+      samplingEvaluation: '不合格',
+    });
+    expect(submitted).not.toHaveBeenCalled();
 
     app.unmount();
   });

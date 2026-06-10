@@ -7,11 +7,22 @@ import type {
   SpecimenReceiptRequest,
 } from '../types/specimen-workflow';
 
-export type ReceiptDraftItem = SpecimenReceiptItemRequest & {
+type ReceiptDraftIdentifiers = {
+  specimenId?: null | string;
+  specimenNo?: null | string;
+};
+
+export type ReceiptDraftItem = Omit<
+  SpecimenReceiptItemRequest,
+  'specimenBarcode' | 'specimenId' | 'specimenNo'
+> & {
   applicationNo?: string;
   containerName?: null | string;
   key: number;
   patientName?: null | string;
+  specimenBarcode: string;
+  specimenId: string;
+  specimenNo: string;
 };
 
 export type ReceiptFilters = {
@@ -51,6 +62,10 @@ export type TransportReceiptGroup = {
   unreceivedCount: number;
 };
 
+function normalizeText(value?: null | string) {
+  return value?.trim() ?? '';
+}
+
 export function createDefaultReceiptFormState(
   receivedByName: string,
   receivedByUserId: string,
@@ -73,7 +88,10 @@ export function createDefaultReceiptConfirmFormState(
   };
 }
 
-export function createReceiptDraftItem(barcode = ''): ReceiptDraftItem {
+export function createReceiptDraftItem(
+  barcode = '',
+  identifiers: ReceiptDraftIdentifiers = {},
+): ReceiptDraftItem {
   return {
     containerCount: 1,
     key: Date.now() + Math.floor(Math.random() * 1000),
@@ -83,6 +101,8 @@ export function createReceiptDraftItem(barcode = ''): ReceiptDraftItem {
     receiptStatus: 'RECEIVED',
     remarks: '',
     specimenBarcode: barcode,
+    specimenId: identifiers.specimenId ?? '',
+    specimenNo: identifiers.specimenNo ?? '',
   };
 }
 
@@ -110,7 +130,10 @@ export function buildTransportReceiptGroups(
     const existing = groupMap.get(item.transportOrderId);
     if (existing) {
       existing.items.push(item);
-      existing.barcodes.push(item.barcode);
+      const barcode = normalizeText(item.barcode);
+      if (barcode) {
+        existing.barcodes.push(barcode);
+      }
       existing.batchAbnormalFlag =
         existing.batchAbnormalFlag || Boolean(item.batchAbnormalFlag);
       existing.latestTrackingAt = pickLatestTrackingAt(
@@ -132,7 +155,9 @@ export function buildTransportReceiptGroups(
       applicationId: item.applicationId,
       applicationNo: item.applicationNo,
       batchAbnormalFlag: Boolean(item.batchAbnormalFlag),
-      barcodes: [item.barcode],
+      barcodes: normalizeText(item.barcode)
+        ? [normalizeText(item.barcode)]
+        : [],
       items: [item],
       latestTrackingAt: item.latestTrackingAt,
       patientName: item.patientName,
@@ -159,7 +184,10 @@ export function createReceiptDraftItemsFromGroup(
   group: TransportReceiptGroup,
 ): ReceiptDraftItem[] {
   return group.items.map((item) => ({
-    ...createReceiptDraftItem(item.barcode),
+    ...createReceiptDraftItem(item.barcode ?? '', {
+      specimenId: item.specimenId,
+      specimenNo: item.specimenNo,
+    }),
     applicationNo: item.applicationNo,
     containerCount: item.containerCount ?? 1,
     containerName: item.containerName,
@@ -188,12 +216,20 @@ export function pickLatestTrackingAt(
   return current || next;
 }
 
+function hasReceiptIdentifier(item: ReceiptDraftItem) {
+  return Boolean(
+    normalizeText(item.specimenId) ||
+    normalizeText(item.specimenBarcode) ||
+    normalizeText(item.specimenNo),
+  );
+}
+
 export function validateReceiptItems(items: ReceiptDraftItem[]) {
   if (items.length === 0) {
     return '当前没有可提交的标本明细';
   }
-  if (items.some((item) => !item.specimenBarcode.trim())) {
-    return '请完整填写标本条码';
+  if (items.some((item) => !hasReceiptIdentifier(item))) {
+    return '请完整填写标本标识';
   }
   if (items.some((item) => !item.receiptStatus.trim())) {
     return '请为每一条标本选择接收结果';
@@ -252,7 +288,9 @@ export function normalizeReceiptItem(
     reason: item.reason?.trim() || null,
     receiptStatus: item.receiptStatus.trim(),
     remarks: item.remarks?.trim() || null,
-    specimenBarcode: item.specimenBarcode.trim(),
+    specimenBarcode: normalizeText(item.specimenBarcode) || null,
+    specimenId: normalizeText(item.specimenId) || null,
+    specimenNo: normalizeText(item.specimenNo) || null,
   };
 }
 

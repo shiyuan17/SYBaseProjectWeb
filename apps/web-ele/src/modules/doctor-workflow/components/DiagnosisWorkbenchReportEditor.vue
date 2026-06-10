@@ -4,7 +4,7 @@ import type {
   DiagnosticWorkbenchView,
 } from '../types/doctor-workflow';
 
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, nextTick, reactive, ref, watch } from 'vue';
 
 import { BookOpenText, InspectionPanel, TextQuote } from '@vben/icons';
 
@@ -124,7 +124,19 @@ type StructuredReportTemplateConfig = {
   tables?: StructuredReportTableConfig[];
 };
 
+type ReportMicroscopicImageItem = {
+  fileUrl: string;
+  key: string;
+  title: string;
+};
+
+type ReportMicroscopicImageLayout = {
+  left: number;
+  top: number;
+};
+
 const props = defineProps<{
+  capturedImages: ReportMicroscopicImageItem[];
   loading: boolean;
   workbench: DiagnosticWorkbenchView | null;
 }>();
@@ -208,6 +220,17 @@ const structuredFieldValues = reactive<Record<string, string>>({});
 const structuredSectionValues = reactive<Record<string, string>>({});
 const structuredCheckboxValues = reactive<Record<string, string[]>>({});
 const structuredTableValues = reactive<Record<string, string>>({});
+const microscopicImageLayouts = reactive<
+  Record<string, ReportMicroscopicImageLayout>
+>({});
+const microscopicImageCanvasRef = ref<HTMLElement>();
+const manuallyPositionedMicroscopicImageKeys = ref(new Set<string>());
+const microscopicImageSize = {
+  gap: 16,
+  height: 72,
+  padding: 12,
+  width: 96,
+};
 
 const reportNo = computed(() => formatNullable(reportDraft.reportNo));
 const inspectionDate = computed(() =>
@@ -328,6 +351,7 @@ const activeReportStyle = computed(
       (style) => style.value === selectedReportStyleValue.value,
     ) ?? reportStyleOptions[0],
 );
+const microscopicReportImages = computed(() => props.capturedImages);
 const isDefaultReportTemplate = computed(
   () => activeReportStyle.value.templateType === 'default',
 );
@@ -893,6 +917,10 @@ const printPreviewSnapshot = computed<DiagnosticReportPrintPreview | null>(
           value: reportDraft.grossExam,
         },
         {
+          images: microscopicReportImages.value.map((image) => ({
+            ...image,
+            ...getMicroscopicImageLayout(image.key, 0),
+          })),
           label: reportStyle.sectionLabels.microscopicExam,
           minHeight: 160,
           value: reportDraft.microscopicExam,
@@ -914,6 +942,146 @@ watch(
   },
   { immediate: true },
 );
+
+watch(
+  microscopicReportImages,
+  async (images) => {
+    const activeKeys = new Set(images.map((image) => image.key));
+    await nextTick();
+    syncDefaultMicroscopicImageLayouts(images);
+
+    for (const key of Object.keys(microscopicImageLayouts)) {
+      if (!activeKeys.has(key)) {
+        delete microscopicImageLayouts[key];
+      }
+    }
+    for (const key of manuallyPositionedMicroscopicImageKeys.value) {
+      if (!activeKeys.has(key)) {
+        manuallyPositionedMicroscopicImageKeys.value.delete(key);
+      }
+    }
+  },
+  { immediate: true },
+);
+
+function createDefaultImageLayout(index: number): ReportMicroscopicImageLayout {
+  const canvasWidth =
+    microscopicImageCanvasRef.value?.getBoundingClientRect().width || 520;
+  const availableWidth = Math.max(
+    microscopicImageSize.width,
+    canvasWidth - microscopicImageSize.padding * 2,
+  );
+  const columnCount = Math.max(
+    1,
+    Math.floor(
+      (availableWidth + microscopicImageSize.gap) /
+        (microscopicImageSize.width + microscopicImageSize.gap),
+    ),
+  );
+  const columnIndex = index % columnCount;
+  const rowIndex = Math.floor(index / columnCount);
+
+  return {
+    left:
+      microscopicImageSize.padding +
+      columnIndex * (microscopicImageSize.width + microscopicImageSize.gap),
+    top:
+      microscopicImageSize.padding +
+      rowIndex * (microscopicImageSize.height + microscopicImageSize.gap),
+  };
+}
+
+function syncDefaultMicroscopicImageLayouts(
+  images: ReportMicroscopicImageItem[],
+) {
+  images.forEach((image, index) => {
+    if (!manuallyPositionedMicroscopicImageKeys.value.has(image.key)) {
+      microscopicImageLayouts[image.key] = createDefaultImageLayout(index);
+    }
+  });
+}
+
+function getMicroscopicImageLayout(
+  key: string,
+  index: number,
+): ReportMicroscopicImageLayout {
+  const layout = microscopicImageLayouts[key];
+  if (layout) {
+    return layout;
+  }
+
+  microscopicImageLayouts[key] = createDefaultImageLayout(index);
+  return microscopicImageLayouts[key];
+}
+
+function clampImagePosition(value: number, max: number) {
+  return Math.min(Math.max(value, 0), Math.max(max, 0));
+}
+
+function getMicroscopicImageStyle(key: string) {
+  const imageIndex = microscopicReportImages.value.findIndex(
+    (image) => image.key === key,
+  );
+  const layout = getMicroscopicImageLayout(key, Math.max(imageIndex, 0));
+  return {
+    left: `${layout.left}px`,
+    top: `${layout.top}px`,
+  };
+}
+
+function handleMicroscopicImagePointerDown(
+  imageKey: string,
+  event: PointerEvent,
+) {
+  if (event.button !== 0) {
+    return;
+  }
+
+  const canvasElement = microscopicImageCanvasRef.value;
+  if (!canvasElement) {
+    return;
+  }
+
+  event.preventDefault();
+  manuallyPositionedMicroscopicImageKeys.value.add(imageKey);
+  const targetElement = event.currentTarget as HTMLElement;
+  const canvasRect = canvasElement.getBoundingClientRect();
+  const imageRect = targetElement.getBoundingClientRect();
+  const canvasWidth = canvasRect.width || 520;
+  const canvasHeight = canvasRect.height || 160;
+  const imageWidth = imageRect.width || 96;
+  const imageHeight = imageRect.height || 72;
+  const startX = event.clientX;
+  const startY = event.clientY;
+  const imageIndex = microscopicReportImages.value.findIndex(
+    (image) => image.key === imageKey,
+  );
+  const startLayout = {
+    ...getMicroscopicImageLayout(imageKey, Math.max(imageIndex, 0)),
+  };
+
+  const handlePointerMove = (moveEvent: PointerEvent) => {
+    const layout = getMicroscopicImageLayout(imageKey, Math.max(imageIndex, 0));
+    layout.left = clampImagePosition(
+      startLayout.left + moveEvent.clientX - startX,
+      canvasWidth - imageWidth,
+    );
+    layout.top = clampImagePosition(
+      startLayout.top + moveEvent.clientY - startY,
+      canvasHeight - imageHeight,
+    );
+  };
+
+  const stopDragging = () => {
+    window.removeEventListener('pointermove', handlePointerMove);
+    window.removeEventListener('pointerup', stopDragging);
+    window.removeEventListener('pointercancel', stopDragging);
+  };
+
+  window.addEventListener('pointermove', handlePointerMove);
+  window.addEventListener('pointerup', stopDragging, { once: true });
+  window.addEventListener('pointercancel', stopDragging, { once: true });
+}
 
 function escapeHtml(value: string) {
   return value
@@ -938,6 +1106,50 @@ function buildPrintSection(label: string, value: string, minHeight: number) {
     <section class="report-section" style="min-height:${minHeight}px">
       <div class="section-title">${escapeHtml(label)}</div>
       <div class="section-value">${escapeHtml(value || ' ')}</div>
+    </section>
+  `;
+}
+
+function buildMicroscopicPrintImages() {
+  if (microscopicReportImages.value.length === 0) {
+    return '';
+  }
+
+  return `
+    <div class="section-image-stage">
+      ${microscopicReportImages.value
+          .map((image) => {
+            const imageIndex = microscopicReportImages.value.findIndex(
+              (item) => item.key === image.key,
+            );
+            const layout = getMicroscopicImageLayout(
+              image.key,
+              Math.max(imageIndex, 0),
+            );
+            return `
+            <img
+              alt="${escapeHtml(image.title)}"
+              class="section-image"
+              src="${escapeHtml(image.fileUrl)}"
+              style="left:${layout.left}px; top:${layout.top}px;"
+            />
+          `;
+          })
+          .join('')}
+    </div>
+  `;
+}
+
+function buildMicroscopicPrintSection(
+  label: string,
+  value: string,
+  minHeight: number,
+) {
+  return `
+    <section class="report-section" style="min-height:${minHeight}px">
+      <div class="section-title">${escapeHtml(label)}</div>
+      <div class="section-value">${escapeHtml(value || ' ')}</div>
+      ${buildMicroscopicPrintImages()}
     </section>
   `;
 }
@@ -1399,6 +1611,20 @@ function buildReportPrintDocument() {
         overflow-wrap: anywhere;
         word-break: break-word;
       }
+      .section-image-stage {
+        position: relative;
+        min-height: 42mm;
+        margin-top: 2mm;
+        border: 1px dashed #bdbdbd;
+      }
+      .section-image {
+        position: absolute;
+        width: 25mm;
+        height: 19mm;
+        object-fit: cover;
+        border: 1px solid #999999;
+        background: #ffffff;
+      }
       .footer {
         display: grid;
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1436,7 +1662,7 @@ function buildReportPrintDocument() {
             .join('')}
       </section>
       ${buildPrintSection(reportStyle.sectionLabels.grossExam, reportDraft.grossExam, 82)}
-      ${buildPrintSection(reportStyle.sectionLabels.microscopicExam, reportDraft.microscopicExam, 160)}
+      ${buildMicroscopicPrintSection(reportStyle.sectionLabels.microscopicExam, reportDraft.microscopicExam, 160)}
       ${buildPrintSection(reportStyle.sectionLabels.finalDiagnosis, reportDraft.finalDiagnosis, 92)}
       <footer class="footer">
         ${buildPrintField('审核医师:', reviewDoctorLabel.value)}
@@ -1617,6 +1843,25 @@ function handlePrint() {
               class="report-edit-textarea min-h-[126px]"
               data-testid="diagnosis-report-microscopic-editor"
             ></textarea>
+            <div
+              v-if="microscopicReportImages.length > 0"
+              ref="microscopicImageCanvasRef"
+              class="report-microscopic-image-canvas"
+              data-testid="diagnosis-report-microscopic-image-canvas"
+            >
+              <img
+                v-for="image in microscopicReportImages"
+                :key="image.key"
+                :alt="image.title"
+                class="report-microscopic-image"
+                :src="image.fileUrl"
+                :style="getMicroscopicImageStyle(image.key)"
+                :title="image.title"
+                @pointerdown="
+                  handleMicroscopicImagePointerDown(image.key, $event)
+                "
+              />
+            </div>
           </section>
 
           <section class="report-edit-section min-h-[112px]">
@@ -1927,6 +2172,20 @@ function handlePrint() {
             </div>
             <div class="min-h-[96px] p-2">
               {{ reportDraft.microscopicExam }}
+            </div>
+            <div
+              v-if="microscopicReportImages.length > 0"
+              class="report-microscopic-image-canvas is-preview"
+            >
+              <img
+                v-for="image in microscopicReportImages"
+                :key="image.key"
+                :alt="image.title"
+                class="report-microscopic-image"
+                :src="image.fileUrl"
+                :style="getMicroscopicImageStyle(image.key)"
+                :title="image.title"
+              />
             </div>
             <div
               class="mt-3 font-semibold"
@@ -2405,6 +2664,30 @@ function handlePrint() {
   outline: none;
   background: #ddd;
   border: 0;
+}
+
+.report-microscopic-image-canvas {
+  position: relative;
+  min-height: 160px;
+  margin-top: 8px;
+  overflow: hidden;
+  background: #f7f7f7;
+  border: 1px dashed #bdbdbd;
+}
+
+.report-microscopic-image-canvas.is-preview {
+  min-height: 160px;
+}
+
+.report-microscopic-image {
+  position: absolute;
+  width: 96px;
+  height: 72px;
+  cursor: move;
+  user-select: none;
+  object-fit: cover;
+  background: #fff;
+  border: 1px solid #999;
 }
 
 .report-template-tree-node {

@@ -205,7 +205,7 @@ const {
   completeFixationMock: vi.fn(
     async (payload: {
       fixationLiquidType: string;
-      specimenBarcode: string;
+      specimenBarcode?: null | string;
     }) => ({
       barcode: payload.specimenBarcode,
       fixationCompletedAt: '2026-05-26 10:00:00',
@@ -219,7 +219,7 @@ const {
   startFixationMock: vi.fn(
     async (payload: {
       fixationLiquidType?: null | string;
-      specimenBarcode: string;
+      specimenBarcode?: null | string;
     }) => ({
       barcode: payload.specimenBarcode,
       fixationCompletedAt: null,
@@ -659,6 +659,8 @@ describe('SpecimenFixationTimePanel', () => {
       fixationLiquidType: 'FORMALIN',
       remarks: '扫码开始固定',
       specimenBarcode: 'BC-002',
+      specimenId: 'SPEC-002',
+      specimenNo: 'SP-002',
     });
     expect(completeFixationMock).not.toHaveBeenCalled();
 
@@ -893,6 +895,8 @@ describe('SpecimenFixationTimePanel', () => {
       fixationLiquidType: 'FORMALIN',
       remarks: '手动确认固定',
       specimenBarcode: 'BC-002',
+      specimenId: 'SPEC-002',
+      specimenNo: 'SP-002',
     });
     expect(container.textContent).toContain('Test User');
     expect(successMock).toHaveBeenCalledWith('已完成 1 条标本固定');

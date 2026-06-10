@@ -63,6 +63,8 @@ const form = reactive({
   operatorUserId: '',
   remarks: '',
   specimenBarcode: '',
+  specimenId: '',
+  specimenNo: '',
   terminalCode: '',
 });
 
@@ -77,6 +79,8 @@ function resetForm() {
   form.operatorUserId = currentUserId.value;
   form.remarks = '';
   form.specimenBarcode = props.row?.barcode?.trim() ?? '';
+  form.specimenId = props.row?.specimenId?.trim() ?? '';
+  form.specimenNo = props.row?.specimenNo?.trim() ?? '';
   form.terminalCode = '';
 }
 
@@ -87,7 +91,14 @@ async function ensureReferenceOptionsLoaded() {
 }
 
 watch(
-  () => [dialogVisible.value, props.row?.barcode, props.action] as const,
+  () =>
+    [
+      dialogVisible.value,
+      props.row?.barcode,
+      props.row?.specimenId,
+      props.row?.specimenNo,
+      props.action,
+    ] as const,
   ([visible]) => {
     if (!visible) {
       return;
@@ -118,9 +129,12 @@ function getSubmitButtonText() {
 }
 
 function submit() {
-  const specimenBarcode = form.specimenBarcode.trim();
-  if (!specimenBarcode) {
-    ElMessage.warning('缺少标本条码');
+  const specimenIdentifier =
+    form.specimenId.trim() ||
+    form.specimenBarcode.trim() ||
+    form.specimenNo.trim();
+  if (!specimenIdentifier) {
+    ElMessage.warning('缺少标本标识');
     return;
   }
   if (!form.operatorName.trim()) {
@@ -139,7 +153,9 @@ function submit() {
   emit('submit', {
     fixationLiquidType: form.fixationLiquidType.trim(),
     remarks: form.remarks.trim() || null,
-    specimenBarcode,
+    specimenBarcode: form.specimenBarcode.trim() || null,
+    specimenId: form.specimenId.trim() || null,
+    specimenNo: form.specimenNo.trim() || null,
     terminalCode: form.terminalCode.trim() || null,
   });
 }

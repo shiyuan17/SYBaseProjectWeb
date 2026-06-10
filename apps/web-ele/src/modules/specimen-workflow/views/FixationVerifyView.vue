@@ -343,7 +343,7 @@ async function submitQuickConfirm() {
   const normalizedValue = specimenIdQuickInput.value.trim();
 
   if (!normalizedValue) {
-    ElMessage.warning('请先输入标本ID');
+    ElMessage.warning('请先输入标本条码/编号');
     return;
   }
 
@@ -360,14 +360,14 @@ async function submitQuickConfirm() {
         await syncQuickConfirmApplicationSpecimens(
           quickConfirmTarget.matchedSpecimen,
         );
-        ElMessage.warning(`标本ID ${normalizedValue} 已完成离体确认`);
+        ElMessage.warning(`标本 ${normalizedValue} 已完成离体确认`);
         return;
       }
       if (quickConfirmTarget.status === 'not_found') {
-        ElMessage.warning('未找到对应标本，请确认标本ID是否正确');
+        ElMessage.warning('未找到对应标本，请确认标本条码/编号是否正确');
         return;
       }
-      ElMessage.warning('标本ID对应多条记录，无法自动确认');
+      ElMessage.warning('标本条码/编号对应多条记录，无法自动确认');
       return;
     }
 
@@ -392,7 +392,7 @@ async function submitQuickConfirm() {
       }),
     );
     specimenIdQuickInput.value = '';
-    ElMessage.success(`标本ID ${normalizedValue} 已完成离体确认`);
+    ElMessage.success(`标本 ${normalizedValue} 已完成离体确认`);
     await syncQuickConfirmApplicationSpecimens(readyTarget.matchedSpecimen);
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
@@ -404,10 +404,11 @@ async function submitQuickConfirm() {
 }
 
 async function submitConfirmRemoval(row: RemovalDisplayRow) {
-  const specimenBarcode = row.barcode.trim();
+  const specimenBarcode = row.barcode?.trim() ?? '';
+  const specimenNo = row.specimenNo.trim();
 
-  if (!specimenBarcode) {
-    ElMessage.warning('请先录入或扫描标本条码');
+  if (!specimenBarcode && !specimenNo) {
+    ElMessage.warning('请先录入或扫描标本标识');
     return;
   }
 
@@ -424,10 +425,16 @@ async function submitConfirmRemoval(row: RemovalDisplayRow) {
   actionLoading.value = true;
   pageError.value = '';
   try {
-    const result = await confirmSpecimenRemoval({
-      remarks: '离体确认',
-      specimenBarcode,
-    });
+    const result = specimenBarcode
+      ? await confirmSpecimenRemoval({
+          remarks: '离体确认',
+          specimenBarcode,
+        })
+      : await confirmSpecimenRemovalByIdentifier({
+          identifier: specimenNo,
+          identifierType: 'SPECIMEN_NO',
+          remarks: '离体确认',
+        });
     upsertConfirmedRemovalItem(
       toRemovalDisplayRow({
         ...row,
@@ -439,7 +446,7 @@ async function submitConfirmRemoval(row: RemovalDisplayRow) {
     pendingItems.value = mergeConfirmedRemovalItems(pendingItemsSource.value);
     summary.value = buildSummary(pendingItems.value);
     total.value = pendingItems.value.length;
-    ElMessage.success(`条码 ${specimenBarcode} 已完成离体确认`);
+    ElMessage.success(`标本 ${specimenBarcode || specimenNo} 已完成离体确认`);
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
   } finally {
@@ -506,7 +513,7 @@ watch(
 
       <WorkflowSectionCard
         title="离体确认"
-        description="支持按标本ID回车快速确认，并可在列表中逐条完成离体确认。"
+        description="支持按标本条码/编号回车快速确认，并可在列表中逐条完成离体确认。"
       >
         <FixationVerifyWorkbenchPanel
           ref="workbenchPanelRef"

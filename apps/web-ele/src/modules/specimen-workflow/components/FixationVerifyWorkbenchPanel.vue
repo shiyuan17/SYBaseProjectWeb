@@ -77,12 +77,14 @@ defineExpose({
       v-loading="quickActionLoading.specimenId"
       class="flex items-center gap-3"
     >
-      <div class="min-w-20 text-sm font-medium text-foreground">标本ID</div>
+      <div class="min-w-28 text-sm font-medium text-foreground">
+        标本条码/编号
+      </div>
       <ElInput
         ref="specimenIdQuickInputRef"
         v-model="specimenIdQuickInput"
         clearable
-        placeholder="请输入标本ID后按回车确认"
+        placeholder="请输入标本条码/编号后按回车确认"
         @keyup.enter="emit('quickConfirm')"
       />
     </div>

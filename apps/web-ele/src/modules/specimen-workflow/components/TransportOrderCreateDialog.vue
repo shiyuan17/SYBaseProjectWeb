@@ -128,7 +128,7 @@ const {
         </div>
         <ElFormItem label="标本选择" required>
           <ElSelect
-            v-model="createForm.selectedSpecimenBarcodes"
+            v-model="createForm.selectedSpecimenIds"
             collapse-tags
             collapse-tags-tooltip
             filterable
@@ -140,7 +140,7 @@ const {
               v-for="specimen in eligibleSpecimens"
               :key="specimen.id"
               :label="formatSpecimenOptionLabel(specimen)"
-              :value="specimen.barcode ?? ''"
+              :value="specimen.id"
             >
               <div class="flex flex-col gap-1 py-1">
                 <span

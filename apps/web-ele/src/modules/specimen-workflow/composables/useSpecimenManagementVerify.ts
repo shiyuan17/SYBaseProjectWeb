@@ -34,6 +34,8 @@ type VerifyFormModel = {
   operatorUserId: string;
   remarks: string;
   specimenBarcode: string;
+  specimenId: string;
+  specimenNo: string;
   terminalCode: string;
 };
 
@@ -63,6 +65,8 @@ export function useSpecimenManagementVerify(options: {
     operatorUserId: '',
     remarks: '',
     specimenBarcode: '',
+    specimenId: '',
+    specimenNo: '',
     terminalCode: '',
   });
 
@@ -117,6 +121,8 @@ export function useSpecimenManagementVerify(options: {
     verifyForm.specimenBarcode = row.barcode ?? '';
     verifyForm.fixationLiquidType = '';
     verifyForm.remarks = '';
+    verifyForm.specimenId = row.specimenId;
+    verifyForm.specimenNo = row.specimenNo;
     verifyForm.terminalCode = '';
     workflowReferenceOptions.value = await loadWorkflowReferenceOptionsSafely({
       enabled: options.canQueryWorkflowReference.value,
@@ -124,9 +130,12 @@ export function useSpecimenManagementVerify(options: {
   }
 
   async function submitVerify() {
-    const barcode = verifyForm.specimenBarcode.trim();
-    if (!barcode) {
-      ElMessage.warning('缺少标本条码');
+    const identifier =
+      verifyForm.specimenBarcode.trim() ||
+      verifyForm.specimenNo.trim() ||
+      verifyForm.specimenId.trim();
+    if (!identifier) {
+      ElMessage.warning('缺少标本标识');
       return;
     }
     if (!verifyForm.operatorName.trim()) {
@@ -141,10 +150,10 @@ export function useSpecimenManagementVerify(options: {
 
       if (verifyAction.value === 'start') {
         await startFixation(payload);
-        ElMessage.success(`条码 ${barcode} 已开始核验`);
+        ElMessage.success(`标本 ${identifier} 已开始核验`);
       } else {
         await completeFixation(payload);
-        ElMessage.success(`条码 ${barcode} 已完成核验`);
+        ElMessage.success(`标本 ${identifier} 已完成核验`);
       }
 
       verifyDialogVisible.value = false;

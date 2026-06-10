@@ -117,7 +117,22 @@ git branch -d feature/ENG-123-user-management
 - **lefthook 覆盖格式化、lint、提交信息、推送前中等检查**，不覆盖完整构建、端到端测试与目标环境验收
 - 因此 `pnpm build`、`pnpm test:e2e`、联调验证等仍属开发者 / Agent 的交付前必跑项（见 `CODING_RULES.md` 标准验证命令），不得因"hook 已通过"就跳过
 - 禁止使用 `--no-verify` 等方式绕过护栏；确有特殊情况必须说明原因并人工确认
-- 涉及红区文件（权限模型、登录态、全局拦截器、构建配置、发布脚本）的改动，除护栏外仍须执行「6. 必须升级人工确认的场景」中的人工确认（见 `AGENTS.md`）
+- 涉及红区文件的改动（红区定义以 `AGENTS.md` 第 5 节「文件操作边界」为唯一来源），除护栏外仍须执行「6. 必须升级人工确认的场景」中的人工确认（见 `AGENTS.md`）
+
+门禁覆盖矩阵（明确"哪层拦哪些"，避免"hook 通过即安全"的误解）：
+
+| 校验项 | pre-commit | pre-push | CI（`frontend-quality.yml`） | 发布门禁（`RELEASE.md` §5） |
+| --- | --- | --- | --- | --- |
+| 格式化 / `eslint --fix`（暂存文件） | 是 | 否 | 否 | 否 |
+| `pnpm lint`（全量） | 否 | 否 | 是 | 是 |
+| `pnpm check:type` | 否 | 是 | 是 | 是 |
+| `pnpm check:circular` | 否 | 是 | 是 | 是 |
+| `pnpm test:unit` | 否 | 是 | 是 | 是 |
+| `pnpm build` / `build:ele` | 否 | 否 | 是 | 是 |
+| `pnpm check:cspell` / `check:dep` | 否 | 否 | 否 | 是（含于 `pnpm check`） |
+| `pnpm test:e2e` | 否 | 否 | 否 | 关键链路时 |
+
+> 注意：`cspell` 仅扫描 `**/*.{ts,tsx,vue}` 与 `**/README.md`，不覆盖 `docs/*.md` 规范与根目录记忆文件；这些文件的拼写与一致性须人工核对。Workflow Packet、Memory Update、Red Team、人工确认等治理项目前均无机器门禁，依赖交付者自觉执行。
 
 ### 8. 动态 Workflow 剧本与红队审查
 

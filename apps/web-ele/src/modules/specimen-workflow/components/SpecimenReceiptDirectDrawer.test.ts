@@ -53,6 +53,8 @@ function createDraftItem(
     receiptStatus: 'RECEIVED',
     remarks: '',
     specimenBarcode: 'BC-1',
+    specimenId: 'SPEC-1',
+    specimenNo: 'SP-1',
     ...overrides,
   };
 }

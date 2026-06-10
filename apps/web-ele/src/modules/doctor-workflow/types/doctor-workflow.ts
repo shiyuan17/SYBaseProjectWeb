@@ -132,9 +132,18 @@ export interface DiagnosticReportPrintPreviewField {
 }
 
 export interface DiagnosticReportPrintPreviewSection {
+  images?: DiagnosticReportPrintPreviewSectionImage[];
   label: string;
   minHeight: number;
   value: string;
+}
+
+export interface DiagnosticReportPrintPreviewSectionImage {
+  fileUrl: string;
+  key: string;
+  left: number;
+  title: string;
+  top: number;
 }
 
 export interface DiagnosticReportPrintPreview {

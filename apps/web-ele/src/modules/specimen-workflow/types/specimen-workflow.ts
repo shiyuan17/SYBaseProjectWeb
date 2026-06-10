@@ -449,6 +449,9 @@ export interface SpecimenConfirmRequest {
   operatorName?: null | string;
   operatorUserId?: null | string;
   remarks?: null | string;
+  specimenBarcode?: null | string;
+  specimenId?: null | string;
+  specimenNo?: null | string;
   terminalCode?: null | string;
 }
 
@@ -457,7 +460,9 @@ export interface SpecimenCheckInRequest {
   operatorName?: null | string;
   operatorUserId?: null | string;
   remarks?: null | string;
-  specimenBarcode: string;
+  specimenBarcode?: null | string;
+  specimenId?: null | string;
+  specimenNo?: null | string;
   terminalCode?: null | string;
 }
 
@@ -512,7 +517,7 @@ export interface PendingSpecimenItem {
   applicationId: string;
   applicationNo: string;
   batchAbnormalFlag?: boolean;
-  barcode: string;
+  barcode: null | string;
   checkInStatus?: null | string;
   checkedInAt?: null | string;
   checkedInByName?: null | string;
@@ -551,12 +556,14 @@ export interface PendingSpecimenPage {
 export interface SpecimenFixationRequest {
   fixationLiquidType?: null | string;
   remarks?: null | string;
-  specimenBarcode: string;
+  specimenBarcode?: null | string;
+  specimenId?: null | string;
+  specimenNo?: null | string;
   terminalCode?: null | string;
 }
 
 export interface FixationResult {
-  barcode: string;
+  barcode: null | string;
   fixationCompletedAt?: null | string;
   fixationLiquidType?: null | string;
   operatorName?: null | string;
@@ -575,7 +582,8 @@ export interface TransportOrderCreateRequest {
   receiverDepartmentId?: null | string;
   receiverDepartmentName: string;
   remarks?: null | string;
-  specimenBarcodes: string[];
+  specimenBarcodes?: string[];
+  specimenIds?: string[];
   terminalCode?: null | string;
 }
 
@@ -655,6 +663,7 @@ export interface PendingTransportOrderPage {
 
 export interface SpecimenOutboundListQuery {
   applicationId?: null | string;
+  identifier?: null | string;
   page: number;
   size: number;
   specimenNo?: null | string;
@@ -699,7 +708,9 @@ export interface SpecimenReceiptItemRequest {
   reason?: null | string;
   receiptStatus: string;
   remarks?: null | string;
-  specimenBarcode: string;
+  specimenBarcode?: null | string;
+  specimenId?: null | string;
+  specimenNo?: null | string;
 }
 
 export interface SpecimenReceiptRequest {

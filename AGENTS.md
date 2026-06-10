@@ -78,7 +78,7 @@
 | Element Plus、TailwindCSS、ECharts、交互与视觉一致性 | `docs/UI_RULES.md` |
 | 浏览器、国产环境、导出打印、字体与降级策略 | `docs/COMPATIBILITY_RULES.md` |
 | 分支、提交、PR、合并协作 | `docs/GIT_RULES.md` |
-| 任务类型路由、专家 Agent、动态测试/模拟、Red Team | `docs/DYNAMIC_WORKFLOW_RULES.md` |
+| 任何涉及 UI / 接口 / 数据库 / 权限 / 架构重构 / 生产问题 / 构建发布的实现类任务（选主 Workflow、专家 Agent、动态测试/模拟、Red Team） | `docs/DYNAMIC_WORKFLOW_RULES.md` |
 | 续接历史任务、交付前记忆层更新（状态/债务/缺陷/决策/架构） | `PROJECT_STATE.md`、`TECH_DEBT.md`、`KNOWN_BUGS.md`、`DECISIONS.md`、`ARCHITECTURE.md` |
 | Linear issue 开工与任务起始信息准备 | `docs/LINEAR_TASK.md` |
 | 环境、构建、发布与回滚 | `docs/RELEASE.md` |
@@ -98,11 +98,14 @@
 
 - 任务目标: [对需求的理解]
 - 影响范围: [计划修改的文件、模块或页面]
+- 主 Workflow: [UI / API / DB / Security / Architecture / Production Debug / Workflow-Infra 之一]
+- 强制修饰器: [Security / DB / Red Team / Backend Cross-check / Browser 验证（Browser Verification），按风险叠加，可为空]
 - 依赖检查: [涉及的组件、接口、浏览器能力、构建配置]
 - 风险等级: [低 / 中 / 高]
 - 关键假设: [默认采用的前提]
 ```
 
+- 主 Workflow 与修饰器的选择标准、触发条件、对应专家 Agent / 动态测试 / 动态模拟 / 红队问题，统一以 `docs/DYNAMIC_WORKFLOW_RULES.md` 为唯一来源；纯文档、闲聊或信息查询类任务可标注「主 Workflow: 不适用」并说明原因。
 - 若任务明确来源于 Linear issue，开始前应参考 `docs/LINEAR_TASK.md` 准备任务起始信息；非 Linear 任务不强制套用该模板。
 - **规格先行（硬约束）**：验收标准为空、缺失或存在歧义，且不同理解会改变页面行为 / 数据流 / 接口联调方式时，必须先澄清确认，不得凭推测直接进入编码（与「6. 必须升级人工确认的场景」中"无法确定业务规则"一致）。对中大型任务，应先与用户对齐验收标准与非目标，再动手实现。
 
@@ -138,6 +141,7 @@
 
 - 变更摘要：做了什么、为什么这样做
 - 影响说明：是否涉及配置、接口、兼容性、主题、路由或状态
+- Workflow Packet（精简版）：本次主 Workflow、实际叠加的修饰器、启用的专家 Agent、跑过的动态测试/模拟，以及高风险任务的红队结论；完整字段以 `docs/DYNAMIC_WORKFLOW_RULES.md` 和 PR 模板为准
 - 验证结果：已执行的检查、构建、测试或未验证项
 - AI Memory Update：本次更新了哪些记忆文件、哪些未更新及原因、是否存在跨仓引用
 - 风险提示：需要人工跟进的事项
@@ -195,7 +199,7 @@
 
 - 与用户沟通：默认使用用户当前语言
 - 代码注释与文档：遵循模块既有语言风格，无现存风格时优先中文
-- 记忆层与模板例外：根目录五类记忆文件（`PROJECT_STATE.md`、`TECH_DEBT.md`、`KNOWN_BUGS.md`、`DECISIONS.md`、`ARCHITECTURE.md`）及 `.github` PR/Issue 模板沿用其现有英文结构（表头、字段名）；条目正文语言跟随来源语境（如复现步骤、后端核对说明可用中文），不强制翻译为中文
+- 记忆层与模板例外：根目录五类记忆文件（`PROJECT_STATE.md`、`TECH_DEBT.md`、`KNOWN_BUGS.md`、`DECISIONS.md`、`ARCHITECTURE.md`）及 `.github` PR 模板沿用其现有英文结构（表头、字段名）；条目正文语言跟随来源语境（如复现步骤、后端核对说明可用中文），不强制翻译为中文
 - 文本类文件编码：新增或修改源码、脚本、配置、文档时，默认使用 `UTF-8`，并与仓库 `.editorconfig` 中的 `charset=utf-8` 保持一致，默认采用 `UTF-8（无 BOM）`
 - 乱码与错码处理：发现乱码或疑似错码时，必须先确认原文件编码和当前工具的解码方式，再进行修改，不得在未确认前直接批量转码或覆盖保存
 - Git 提交信息：遵循 `docs/GIT_RULES.md` 中的 Conventional Commits
@@ -245,7 +249,9 @@
 
 - [ ] 已阅读本文件及相关专项规范
 - [ ] 已输出任务确认和关键假设
+- [ ] 已选定主 Workflow 并叠加必要修饰器（依据 `docs/DYNAMIC_WORKFLOW_RULES.md`）
 - [ ] 已识别本次改动属于绿区、黄区还是红区
+- [ ] 高风险、跨层、权限/数据/报告或生产问题任务已执行 Red Team
 - [ ] 新增或修改的文本类文件编码符合 `UTF-8` 约定，乱码风险已检查
 - [ ] 已检查五类 AI 记忆文件，并按需更新或说明未更新原因
 - [ ] 涉及高风险变更时已人工确认

@@ -344,6 +344,9 @@ describe('useSpecimenConfirmationPanel', () => {
       operatorUserId: 'USER-ALT',
       operatorVerificationToken: 'TOKEN-VERIFY',
       remarks: null,
+      specimenBarcode: 'BC-001',
+      specimenId: 'SPEC-001',
+      specimenNo: 'SP-001',
       terminalCode: null,
     });
     expect(state.filters.keyword).toBe('');
@@ -442,6 +445,79 @@ describe('useSpecimenConfirmationPanel', () => {
     expect(state.filters.keyword).toBe('');
 
     wrapper.destroy();
+  });
+
+  it('confirms an unbound specimen by specimen id', async () => {
+    const unboundPage = {
+      items: [
+        {
+          abnormalFlag: false,
+          applicationId: 'APP-003',
+          applicationNo: 'M2-003',
+          barcode: null,
+          checkInStatus: 'NOT_CHECKED_IN',
+          fixationStatus: 'COMPLETED',
+          labelPrintBatchNo: 'LB-003',
+          labelPrintStatus: 'SUCCESS',
+          latestTrackingAt: '2026-05-26 09:40:00',
+          patientName: 'Carol',
+          registeredAt: '2026-05-26 08:20:00',
+          specimenConfirmedAt: null,
+          specimenId: 'SPEC-003',
+          specimenName: '胃组织',
+          specimenNo: 'SP-003',
+          specimenStatus: 'FIXED',
+          specimenType: '常规',
+          verificationStatus: 'VERIFIED',
+        },
+      ],
+      page: 1,
+      size: 500,
+      summary: {
+        abnormalCount: 0,
+        labelPrintedCount: 1,
+        pendingLabelCount: 0,
+        totalCount: 1,
+      },
+      total: 1,
+    };
+
+    await listSpecimensMock.withImplementation(
+      async () =>
+        unboundPage as unknown as Awaited<ReturnType<typeof listSpecimensMock>>,
+      async () => {
+        const wrapper = mountComposable();
+        await flushComposable();
+
+        const state = wrapper.getState();
+        if (!state) {
+          throw new Error('composable state not initialized');
+        }
+
+        state.filters.keyword = 'SP-003';
+        await state.loadSpecimens();
+        await waitForComposableAssertion(() => {
+          expect(state.pagedItems.value).toHaveLength(1);
+          expect(state.canConfirm(state.pagedItems.value[0]!)).toBe(true);
+        });
+        state.handleConfirmRow(state.pagedItems.value[0]!);
+
+        await waitForComposableAssertion(() => {
+          expect(confirmSpecimenMock).toHaveBeenCalledWith('SPEC-003', {
+            operatorName: 'Test User',
+            operatorUserId: 'USER-001',
+            operatorVerificationToken: 'TOKEN-VERIFY',
+            remarks: null,
+            specimenBarcode: null,
+            specimenId: 'SPEC-003',
+            specimenNo: 'SP-003',
+            terminalCode: null,
+          });
+        });
+
+        wrapper.destroy();
+      },
+    );
   });
 
   it('expands to the whole application after a single exact match search', async () => {

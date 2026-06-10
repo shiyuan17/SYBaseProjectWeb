@@ -581,6 +581,8 @@ describe('useSpecimenReceiptWorkbench', () => {
           receiptStatus: 'RECEIVED',
           remarks: null,
           specimenBarcode: 'BC-001',
+          specimenId: 'SPEC-001',
+          specimenNo: 'SP-001',
         },
       ],
       logisticsStaffName: '物流员甲',
@@ -594,6 +596,51 @@ describe('useSpecimenReceiptWorkbench', () => {
     expect(state.queueItems.value[0]?.receivedByName).toBe('Alt User');
     expect(state.queueItems.value[1]?.queueStatus).toBe('RECEIVED');
     expect(state.queueItems.value[1]?.receivedByName).toBe('');
+
+    wrapper.destroy();
+  });
+
+  it('submits receivable rows without barcode by specimen identifiers', async () => {
+    const wrapper = mountComposable();
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    state.scanInput.value = 'SP-001';
+    await state.handleQueueSpecimen();
+    await flushComposable();
+
+    state.queueItems.value[0] = {
+      ...state.queueItems.value[0]!,
+      barcode: null,
+    };
+    state.handleOperatorChange({
+      id: 'USER-ALT',
+      name: 'Alt User',
+    });
+    state.handleSelectionChange([state.queueItems.value[0]!]);
+    state.openReceiveDialog();
+    state.receiveForm.logisticsStaffName = '物流员甲';
+    state.handleReceiveUserChange({
+      id: 'USER-ALT',
+      name: 'Alt User',
+    });
+    await state.handleReceiveSelected();
+    await flushComposable();
+
+    expect(receiveSpecimensMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        items: [
+          expect.objectContaining({
+            specimenBarcode: null,
+            specimenId: 'SPEC-001',
+            specimenNo: 'SP-001',
+          }),
+        ],
+      }),
+    );
+    expect(state.queueItems.value[0]?.queueStatus).toBe('SUCCESS');
 
     wrapper.destroy();
   });
@@ -662,6 +709,8 @@ describe('useSpecimenReceiptWorkbench', () => {
           reason: '容器破损',
           receiptStatus: 'RETURNED',
           specimenBarcode: 'BC-001',
+          specimenId: 'SPEC-001',
+          specimenNo: 'SP-001',
         }),
       ],
       receivedByName: 'Test User',

@@ -28,6 +28,10 @@ import type {
   SaveTechnicalSpecimenRegistrationMaterialsRequest,
   SlicingCompleteRequest,
   SlicingResult,
+  SlicingSlidePrintMergeGroupCancelRequest,
+  SlicingSlidePrintMergeGroupPrintRequest,
+  SlicingSlidePrintMergeGroupRequest,
+  SlicingSlidePrintMergeGroupResult,
   SlicingSlidePrintRequest,
   SlicingSlidePrintResult,
   SlicingWorkbenchQuery,
@@ -215,13 +219,17 @@ function mapSlicingWorkbenchRow(
     combinedSlide: response.combinedSlide ?? false,
     completedAt: response.completedAt ?? null,
     embeddingBoxId: response.embeddingBoxId ?? '',
+    embeddingBoxIds: response.embeddingBoxIds ?? [],
+    embeddingBoxNo: response.embeddingBoxNo ?? null,
     embeddingClearRemark: response.embeddingClearRemark ?? null,
+    embeddingRemarks: response.embeddingRemarks ?? null,
     embeddingEvaluation: response.embeddingEvaluation ?? null,
     embeddingOperatorName: response.embeddingOperatorName ?? null,
     grossingEvaluation: response.grossingEvaluation ?? null,
     pathologyNo: response.pathologyNo ?? null,
     patientId: response.patientId ?? null,
     patientName: response.patientName ?? null,
+    printGroupId: response.printGroupId ?? null,
     selectable: response.selectable ?? false,
     shiftRemark: response.shiftRemark ?? null,
     slideId: response.slideId ?? null,
@@ -232,9 +240,12 @@ function mapSlicingWorkbenchRow(
     slicingRemark: response.slicingRemark ?? null,
     specimenId: response.specimenId ?? null,
     specimenName: response.specimenName ?? null,
+    submittingDepartmentName: response.submittingDepartmentName ?? null,
     taskId: response.taskId ?? '',
+    taskIds: response.taskIds ?? [],
     taskStatus: response.taskStatus ?? null,
     timedOut: response.timedOut ?? false,
+    mergedPrintGroup: response.mergedPrintGroup ?? false,
     printedSlideCount: response.printedSlideCount ?? 0,
   };
 }
@@ -786,6 +797,10 @@ export async function startEmbedding(data: TechnicalTaskStartRequest) {
   return requestClient.post<TaskOperationResult>('/v1/embeddings/start', data);
 }
 
+export async function cancelEmbedding(data: TechnicalTaskStartRequest) {
+  return requestClient.post<TaskOperationResult>('/v1/embeddings/cancel', data);
+}
+
 export async function completeEmbedding(data: EmbeddingCompleteRequest) {
   return requestClient.post<EmbeddingResult>('/v1/embeddings/complete', data);
 }
@@ -814,6 +829,33 @@ export async function completeSlicing(data: SlicingCompleteRequest) {
 export async function printSlicingSlides(data: SlicingSlidePrintRequest) {
   return requestClient.post<SlicingSlidePrintResult>(
     '/v1/slicings/slide-print',
+    data,
+  );
+}
+
+export async function createSlicingSlidePrintMergeGroups(
+  data: SlicingSlidePrintMergeGroupRequest,
+) {
+  return requestClient.post<SlicingSlidePrintMergeGroupResult>(
+    '/v1/slicings/slide-print-merge-groups',
+    data,
+  );
+}
+
+export async function cancelSlicingSlidePrintMergeGroups(
+  data: SlicingSlidePrintMergeGroupCancelRequest,
+) {
+  return requestClient.post<SlicingSlidePrintMergeGroupResult>(
+    '/v1/slicings/slide-print-merge-groups/cancel',
+    data,
+  );
+}
+
+export async function printSlicingSlideMergeGroup(
+  data: SlicingSlidePrintMergeGroupPrintRequest,
+) {
+  return requestClient.post<SlicingSlidePrintResult>(
+    '/v1/slicings/slide-print-merge-groups/print',
     data,
   );
 }

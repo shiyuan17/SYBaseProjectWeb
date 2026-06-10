@@ -406,10 +406,10 @@ describe('DehydrationWorkstationView', () => {
       ),
     ];
     expect(rows.map((row) => row.className)).toEqual([
-      'dehydration-workflow-row--actionable',
-      'dehydration-workflow-row--in-progress',
-      'dehydration-workflow-row--completed',
-      'dehydration-workflow-row--failed',
+      'specimen-workflow-row--actionable',
+      'specimen-workflow-row--in-progress',
+      'specimen-workflow-row--completed',
+      'specimen-workflow-row--failed',
     ]);
 
     app.unmount();
@@ -631,6 +631,49 @@ describe('DehydrationWorkstationView', () => {
     app.unmount();
   });
 
+  it('starts selected pending dehydration tasks while skipping already started and completed rows', async () => {
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [
+        createTask({ id: 'TASK-PENDING' }),
+        createTask({
+          id: 'TASK-IN-PROGRESS',
+          objectId: 'BLOCK-2',
+          startedAt: '2026-06-01T10:00:00',
+          taskStatus: 'IN_PROGRESS',
+        }),
+        createTask({
+          completedAt: '2026-06-01T11:00:00',
+          id: 'TASK-COMPLETED',
+          objectId: 'BLOCK-3',
+          taskStatus: 'COMPLETED',
+        }),
+      ],
+      page: 1,
+      size: 20,
+      total: 3,
+    });
+    const { app } = mountView();
+    await flushView();
+
+    document
+      .querySelector<HTMLButtonElement>('[data-testid="select-all"]')
+      ?.click();
+    await flushView();
+    findButton('开始脱水').click();
+    await flushView();
+
+    expect(mockStartDehydration).toHaveBeenCalledTimes(1);
+    expect(mockStartDehydration).toHaveBeenCalledWith({
+      taskId: 'TASK-PENDING',
+    });
+    expect(mockMessageSuccess).toHaveBeenCalledWith(
+      '已开始脱水 1 条任务，跳过 2 条',
+    );
+    expect(mockListPendingTechnicalTasks).toHaveBeenCalledTimes(2);
+
+    app.unmount();
+  });
+
   it('completes the selected in-progress dehydration task directly', async () => {
     mockListPendingTechnicalTasks.mockResolvedValue({
       items: [
@@ -654,6 +697,28 @@ describe('DehydrationWorkstationView', () => {
       taskId: 'TASK-2',
     });
     expect(mockMessageSuccess).toHaveBeenCalledWith('任务 TASK-2 已完成脱水');
+    expect(mockListPendingTechnicalTasks).toHaveBeenCalledTimes(2);
+
+    app.unmount();
+  });
+
+  it('starts and completes a selected pending dehydration task from the complete action', async () => {
+    const { app } = mountView();
+    await flushView();
+
+    findButton('脱水完成').click();
+    await flushView();
+
+    expect(mockStartDehydration).toHaveBeenCalledWith({
+      taskId: 'TASK-1',
+    });
+    expect(mockCompleteDehydration).toHaveBeenCalledWith({
+      taskId: 'TASK-1',
+    });
+    expect(mockStartDehydration.mock.invocationCallOrder[0]).toBeLessThan(
+      mockCompleteDehydration.mock.invocationCallOrder[0]!,
+    );
+    expect(mockMessageSuccess).toHaveBeenCalledWith('任务 TASK-1 已完成脱水');
     expect(mockListPendingTechnicalTasks).toHaveBeenCalledTimes(2);
 
     app.unmount();
@@ -701,15 +766,125 @@ describe('DehydrationWorkstationView', () => {
     app.unmount();
   });
 
-  it('warns when task status does not match direct action requirements', async () => {
+  it('completes selected pending and in-progress dehydration tasks while skipping completed rows', async () => {
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [
+        createTask({ id: 'TASK-PENDING' }),
+        createTask({
+          id: 'TASK-IN-PROGRESS',
+          objectId: 'BLOCK-2',
+          startedAt: '2026-06-01T10:00:00',
+          taskStatus: 'IN_PROGRESS',
+        }),
+        createTask({
+          completedAt: '2026-06-01T11:00:00',
+          id: 'TASK-COMPLETED',
+          objectId: 'BLOCK-3',
+          taskStatus: 'COMPLETED',
+        }),
+      ],
+      page: 1,
+      size: 20,
+      total: 3,
+    });
     const { app } = mountView();
     await flushView();
 
+    document
+      .querySelector<HTMLButtonElement>('[data-testid="select-all"]')
+      ?.click();
+    await flushView();
     findButton('脱水完成').click();
     await flushView();
 
+    expect(mockStartDehydration).toHaveBeenCalledTimes(1);
+    expect(mockStartDehydration).toHaveBeenCalledWith({
+      taskId: 'TASK-PENDING',
+    });
+    expect(mockCompleteDehydration).toHaveBeenCalledTimes(2);
+    expect(mockCompleteDehydration).toHaveBeenCalledWith({
+      taskId: 'TASK-PENDING',
+    });
+    expect(mockCompleteDehydration).toHaveBeenCalledWith({
+      taskId: 'TASK-IN-PROGRESS',
+    });
+    const pendingCompleteCallIndex =
+      mockCompleteDehydration.mock.calls.findIndex(
+        ([payload]) => payload.taskId === 'TASK-PENDING',
+      );
+    expect(mockStartDehydration.mock.invocationCallOrder[0]).toBeLessThan(
+      mockCompleteDehydration.mock.invocationCallOrder[
+        pendingCompleteCallIndex
+      ]!,
+    );
+    expect(mockMessageSuccess).toHaveBeenCalledWith(
+      '已完成脱水 2 条任务，跳过 1 条',
+    );
+    expect(mockListPendingTechnicalTasks).toHaveBeenCalledTimes(2);
+
+    app.unmount();
+  });
+
+  it('warns without duplicate dehydration calls when the selected row is already completed', async () => {
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [
+        createTask({
+          completedAt: '2026-06-01T11:00:00',
+          id: 'TASK-COMPLETED',
+          taskStatus: 'COMPLETED',
+        }),
+      ],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+    const { app } = mountView();
+    await flushView();
+
+    findButton('开始脱水').click();
+    await flushView();
+    findButton('脱水完成').click();
+    await flushView();
+
+    expect(mockStartDehydration).not.toHaveBeenCalled();
     expect(mockCompleteDehydration).not.toHaveBeenCalled();
-    expect(mockMessageWarning).toHaveBeenCalledWith('请先开始脱水');
+    expect(mockMessageWarning).toHaveBeenCalledWith('没有可开始脱水的任务');
+    expect(mockMessageWarning).toHaveBeenCalledWith('没有可完成脱水的任务');
+    expect(mockListPendingTechnicalTasks).toHaveBeenCalledTimes(1);
+
+    app.unmount();
+  });
+
+  it('reports partial failures while refreshing dehydration task actions', async () => {
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [
+        createTask({ id: 'TASK-1' }),
+        createTask({ id: 'TASK-2', objectId: 'BLOCK-2' }),
+      ],
+      page: 1,
+      size: 20,
+      total: 2,
+    });
+    mockStartDehydration.mockImplementation(({ taskId }) =>
+      taskId === 'TASK-1'
+        ? Promise.reject(new Error('start failed'))
+        : Promise.resolve({}),
+    );
+    const { app } = mountView();
+    await flushView();
+
+    document
+      .querySelector<HTMLButtonElement>('[data-testid="select-all"]')
+      ?.click();
+    await flushView();
+    findButton('开始脱水').click();
+    await flushView();
+
+    expect(mockStartDehydration).toHaveBeenCalledTimes(2);
+    expect(mockMessageWarning).toHaveBeenCalledWith(
+      '已开始脱水 1 条任务，1 条失败',
+    );
+    expect(mockListPendingTechnicalTasks).toHaveBeenCalledTimes(2);
 
     app.unmount();
   });

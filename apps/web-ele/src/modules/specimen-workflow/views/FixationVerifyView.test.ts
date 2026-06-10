@@ -370,7 +370,7 @@ describe('FixationVerifyView', () => {
     expect(container.textContent).toContain('全部');
     expect(container.textContent).toContain('已离体');
     expect(container.textContent).toContain('未设置');
-    expect(container.textContent).toContain('标本ID');
+    expect(container.textContent).toContain('标本条码/编号');
     expect(container.textContent).not.toContain('标本流水号');
     expect(container.textContent).not.toContain('申请单号');
     expect(container.textContent).not.toContain('送检科室');
@@ -428,12 +428,84 @@ describe('FixationVerifyView', () => {
     app.unmount();
   });
 
-  it('quick confirms by specimen id on enter and refocuses the input', async () => {
+  it('confirms removal by specimen number when table row has no barcode', async () => {
+    mockRoute.query = { applicationNo: 'AP202605230001' };
+    listSpecimensMock.mockResolvedValueOnce({
+      items: [
+        {
+          abnormalFlag: false,
+          applicationId: 'APP-PENDING',
+          applicationNo: 'AP202605230001',
+          barcode: null,
+          checkInStatus: null,
+          checkedInAt: null,
+          checkedInByName: null,
+          containerCount: 1,
+          containerName: '福尔马林瓶',
+          fixationStatus: 'PENDING',
+          labelPrintBatchNo: null,
+          labelPrintStatus: 'SUCCESS',
+          latestTrackingAt: '2026-05-23 12:44:44',
+          patientName: 'Alice',
+          recentNode: null,
+          registeredAt: '2026-05-23 12:44:44',
+          specimenConfirmedAt: null,
+          specimenCount: 1,
+          specimenId: 'SPEC-PENDING',
+          specimenName: '右股骨骨髓',
+          specimenNo: 'SP202605230001',
+          specimenRemovalAt: null,
+          specimenSite: null,
+          specimenStatus: 'REGISTERED',
+          specimenType: '常规',
+          submittingDepartmentId: null,
+          submittingDepartmentName: null,
+          verificationCompletedAt: null,
+          verificationStartedAt: null,
+          verificationStatus: null,
+        },
+      ],
+      page: 1,
+      size: 100,
+      summary: {
+        abnormalCount: 0,
+        labelPrintedCount: 1,
+        pendingLabelCount: 0,
+        totalCount: 1,
+      },
+      total: 1,
+    } as any);
+    const { app, container } = mountView();
+    await waitForViewAssertion(() => {
+      expect(container.textContent).toContain('SP202605230001');
+    });
+
+    const confirmButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('离体确认'),
+    );
+
+    confirmButton?.click();
+    await flushView();
+
+    expect(confirmSpecimenRemovalMock).not.toHaveBeenCalled();
+    expect(confirmSpecimenRemovalByIdentifierMock).toHaveBeenCalledWith({
+      identifier: 'SP202605230001',
+      identifierType: 'SPECIMEN_NO',
+      remarks: '离体确认',
+    });
+    expect(messageSuccessMock).toHaveBeenCalledWith(
+      '标本 SP202605230001 已完成离体确认',
+    );
+
+    app.unmount();
+  });
+
+  it('quick confirms by specimen number on enter and refocuses the input', async () => {
     const { app, container } = mountView();
     await flushView();
 
     const specimenIdInput = container.querySelector(
-      'input[placeholder="请输入标本ID后按回车确认"]',
+      'input[placeholder="请输入标本条码/编号后按回车确认"]',
     ) as HTMLInputElement | null;
     expect(specimenIdInput).not.toBeNull();
 
@@ -457,7 +529,7 @@ describe('FixationVerifyView', () => {
       });
     });
     expect(messageSuccessMock).toHaveBeenCalledWith(
-      '标本ID SP202605230001 已完成离体确认',
+      '标本 SP202605230001 已完成离体确认',
     );
     expect(specimenIdInput!.value).toBe('');
 
@@ -468,6 +540,35 @@ describe('FixationVerifyView', () => {
     await flushView();
 
     expect(container.textContent).not.toContain('SP202605230001');
+
+    app.unmount();
+  });
+
+  it('quick confirms by barcode on enter', async () => {
+    const { app, container } = mountView();
+    await flushView();
+
+    const specimenIdInput = container.querySelector(
+      'input[placeholder="请输入标本条码/编号后按回车确认"]',
+    ) as HTMLInputElement | null;
+    expect(specimenIdInput).not.toBeNull();
+
+    specimenIdInput!.value = 'SP-PENDING';
+    specimenIdInput!.dispatchEvent(new Event('input', { bubbles: true }));
+    specimenIdInput!.dispatchEvent(
+      new KeyboardEvent('keyup', { bubbles: true, key: 'Enter' }),
+    );
+    await flushView();
+
+    expect(confirmSpecimenRemovalByIdentifierMock).toHaveBeenCalledWith({
+      identifier: 'SP-PENDING',
+      identifierType: 'BARCODE',
+      remarks: '离体确认',
+    });
+    expect(messageSuccessMock).toHaveBeenCalledWith(
+      '标本 SP-PENDING 已完成离体确认',
+    );
+    expect(specimenIdInput!.value).toBe('');
 
     app.unmount();
   });
@@ -519,13 +620,13 @@ describe('FixationVerifyView', () => {
       total: 1,
     } as any);
     confirmSpecimenRemovalByIdentifierMock.mockRejectedValueOnce(
-      new Error('标本ID对应多条记录，无法自动确认'),
+      new Error('标本条码/编号对应多条记录，无法自动确认'),
     );
     const { app, container } = mountView();
     await flushView();
 
     const specimenIdInput = container.querySelector(
-      'input[placeholder="请输入标本ID后按回车确认"]',
+      'input[placeholder="请输入标本条码/编号后按回车确认"]',
     ) as HTMLInputElement | null;
     expect(specimenIdInput).not.toBeNull();
 
@@ -542,7 +643,9 @@ describe('FixationVerifyView', () => {
       remarks: '离体确认',
     });
     expect(specimenIdInput!.value).toBe('SP-DUPLICATE');
-    expect(container.textContent).toContain('标本ID对应多条记录，无法自动确认');
+    expect(container.textContent).toContain(
+      '标本条码/编号对应多条记录，无法自动确认',
+    );
 
     app.unmount();
   });
@@ -677,7 +780,7 @@ describe('FixationVerifyView', () => {
     await flushView();
 
     const specimenIdInput = container.querySelector(
-      'input[placeholder="请输入标本ID后按回车确认"]',
+      'input[placeholder="请输入标本条码/编号后按回车确认"]',
     ) as HTMLInputElement | null;
     expect(specimenIdInput).not.toBeNull();
 
@@ -699,7 +802,7 @@ describe('FixationVerifyView', () => {
         size: 500,
       });
       expect(messageWarningMock).toHaveBeenCalledWith(
-        '标本ID SP20260601006 已完成离体确认',
+        '标本 SP20260601006 已完成离体确认',
       );
     });
 
@@ -729,7 +832,7 @@ describe('FixationVerifyView', () => {
     await flushView();
 
     const specimenIdInput = container.querySelector(
-      'input[placeholder="请输入标本ID后按回车确认"]',
+      'input[placeholder="请输入标本条码/编号后按回车确认"]',
     ) as HTMLInputElement | null;
     expect(specimenIdInput).not.toBeNull();
 
@@ -747,7 +850,7 @@ describe('FixationVerifyView', () => {
     );
     expect(confirmSpecimenRemovalByIdentifierMock).not.toHaveBeenCalled();
     expect(messageWarningMock).toHaveBeenCalledWith(
-      '未找到对应标本，请确认标本ID是否正确',
+      '未找到对应标本，请确认标本条码/编号是否正确',
     );
     expect(specimenIdInput!.value).toBe('SP-NOT-FOUND');
 

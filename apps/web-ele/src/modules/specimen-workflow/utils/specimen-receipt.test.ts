@@ -84,6 +84,8 @@ describe('specimen receipt helpers', () => {
         qualityCheckResult: 'PASSED',
         receiptStatus: 'RECEIVED',
         specimenBarcode: 'BC-1',
+        specimenId: '',
+        specimenNo: '',
       }),
     );
     expect(isReceiptDraftDerivedAbnormal(createReceiptDraftItem('BC-1'))).toBe(
@@ -115,6 +117,7 @@ describe('specimen receipt helpers', () => {
         latestTrackingAt: '2026-05-31T10:00:00',
         reminderCount: 2,
         specimenId: 'SPEC-2',
+        specimenNo: 'SP-2',
       }),
       createPendingSpecimenItem({
         barcode: 'BC-3',
@@ -141,6 +144,8 @@ describe('specimen receipt helpers', () => {
         key: 2000,
         patientName: '张三',
         specimenBarcode: 'BC-1',
+        specimenId: 'SPEC-1',
+        specimenNo: 'SP-1',
       }),
       expect.objectContaining({
         applicationNo: 'NO-1',
@@ -148,6 +153,8 @@ describe('specimen receipt helpers', () => {
         key: 2000,
         patientName: '张三',
         specimenBarcode: 'BC-2',
+        specimenId: 'SPEC-2',
+        specimenNo: 'SP-2',
       }),
     ]);
     expect(pickLatestTrackingAt('2026-05-31T09:00:00', null)).toBe(
@@ -195,6 +202,8 @@ describe('specimen receipt helpers', () => {
       receiptStatus: 'REJECTED',
       remarks: '备注',
       specimenBarcode: 'BC-1',
+      specimenId: null,
+      specimenNo: null,
     });
     expect(buildReceiptSubmissionRequest('TO-1', receiveForm, items)).toEqual({
       items: [normalizeReceiptItem(items[0]!)],
@@ -242,12 +251,23 @@ describe('specimen receipt helpers', () => {
     expect(
       validateReceiptItems([
         {
-          ...createReceiptDraftItem('BC-1'),
+          ...createReceiptDraftItem('', {
+            specimenId: 'SPEC-1',
+            specimenNo: 'SP-1',
+          }),
           reason: '',
           receiptStatus: 'REJECTED',
         },
       ]),
     ).toContain('填写原因');
     expect(validateReceiptItems([createReceiptDraftItem('BC-1')])).toBe('');
+    expect(
+      validateReceiptItems([
+        createReceiptDraftItem('', {
+          specimenId: 'SPEC-1',
+          specimenNo: 'SP-1',
+        }),
+      ]),
+    ).toBe('');
   });
 });

@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import TransportHandoverView from './TransportHandoverView.vue';
 
 const {
+  createTransportOrderMock,
   listSpecimenOutboundsMock,
   loadOperatingRoomNameMapSafelyMock,
   outboundTransportOrderMock,
@@ -12,11 +13,24 @@ const {
   verifyOperatorMock,
   warningMock,
 } = vi.hoisted(() => ({
+  createTransportOrderMock: vi.fn(async () => ({
+    applicationId: 'APP-002',
+    handedOverAt: null,
+    handoverUserName: 'Test User',
+    id: 'TO-CREATED-001',
+    outboundUserId: null,
+    outboundUserName: null,
+    receiverUserName: null,
+    status: 'PENDING',
+    toBeTransportedAt: '2026-05-26 10:00:00',
+    transportOrderNo: 'TR-20260526-CREATED',
+  })),
   listSpecimenOutboundsMock: vi.fn(async () => ({
     items: [
       {
         applicationId: 'APP-002',
         applicationNo: 'M2-20260526-002',
+        barcode: 'BC-TR-001',
         checkInStatus: 'CHECKED_IN',
         fixationStatus: 'COMPLETED',
         inpatientNo: 'ZY-002',
@@ -38,6 +52,7 @@ const {
       {
         applicationId: 'APP-002',
         applicationNo: 'M2-20260526-002',
+        barcode: 'BC-TR-002',
         checkInStatus: 'NOT_CHECKED_IN',
         fixationStatus: 'COMPLETED',
         inpatientNo: 'ZY-002',
@@ -159,6 +174,7 @@ vi.mock('../utils/operating-room-display', () => ({
 }));
 
 vi.mock('../api/specimen-workflow-service', () => ({
+  createTransportOrder: createTransportOrderMock,
   listSpecimenOutbounds: listSpecimenOutboundsMock,
   outboundTransportOrder: outboundTransportOrderMock,
   quickOutboundSpecimen: quickOutboundSpecimenMock,
@@ -210,6 +226,108 @@ describe('TransportHandoverView', () => {
 
     expect(listSpecimenOutboundsMock).not.toHaveBeenCalled();
     expect(container.textContent).toMatch(/全部\s*0/);
+
+    app.unmount();
+  });
+
+  it('expands a scanned specimen identifier to its application specimens and only drafts the exact match', async () => {
+    mockRoute.query = {};
+    listSpecimenOutboundsMock.mockResolvedValueOnce({
+      items: [
+        {
+          applicationId: 'APP-002',
+          applicationNo: 'M2-20260526-002',
+          barcode: 'BC-TR-001',
+          checkInStatus: 'CHECKED_IN',
+          fixationStatus: 'COMPLETED',
+          inpatientNo: 'ZY-002',
+          outboundAt: null,
+          outboundUserName: null,
+          patientGender: '女',
+          patientId: 'PAT-002',
+          patientName: 'Alice',
+          registeredAt: '2026-05-26 09:30:00',
+          registeredByName: '登记员甲',
+          specimenConfirmedAt: '2026-05-26 09:10:00',
+          specimenId: 'SP-002',
+          specimenName: '甲状腺组织',
+          specimenNo: 'SP-TR-001',
+          specimenStatus: 'CHECKED_IN',
+          surgeryName: 'OR-102',
+          transportOrderId: 'TO-002',
+        },
+        {
+          applicationId: 'APP-002',
+          applicationNo: 'M2-20260526-002',
+          barcode: 'BC-TR-002',
+          checkInStatus: 'CHECKED_IN',
+          fixationStatus: 'COMPLETED',
+          inpatientNo: 'ZY-002',
+          outboundAt: null,
+          outboundUserName: null,
+          patientGender: '女',
+          patientId: 'PAT-002',
+          patientName: 'Alice',
+          registeredAt: '2026-05-26 09:35:00',
+          registeredByName: '登记员甲',
+          specimenConfirmedAt: '2026-05-26 09:12:00',
+          specimenId: 'SP-002-2',
+          specimenName: '甲状腺峡部组织',
+          specimenNo: 'SP-TR-002',
+          specimenStatus: 'CHECKED_IN',
+          surgeryName: 'OR-102',
+          transportOrderId: 'TO-SIBLING',
+        },
+      ],
+      page: 1,
+      size: 20,
+      total: 2,
+    });
+
+    const { app, container } = mountView();
+    await flush();
+
+    const specimenNoInput = container.querySelector(
+      'input[placeholder="请输入标本条码/编号"]',
+    ) as HTMLInputElement | null;
+    specimenNoInput!.value = 'BC-TR-001';
+    specimenNoInput!.dispatchEvent(new Event('input', { bubbles: true }));
+    specimenNoInput!.dispatchEvent(
+      new KeyboardEvent('keyup', {
+        bubbles: true,
+        code: 'Enter',
+        key: 'Enter',
+      }),
+    );
+    await flush();
+
+    expect(listSpecimenOutboundsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ identifier: 'BC-TR-001' }),
+    );
+    expect(container.textContent).toMatch(/全部\s*2/);
+    expect(container.textContent).toContain('SP-TR-001');
+    expect(container.textContent).toContain('SP-TR-002');
+    expect(container.textContent).toContain('出库未保存');
+    expect(container.textContent).toContain('待出库');
+
+    const transportButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('转运'),
+    ) as HTMLButtonElement | undefined;
+    expect(transportButton?.disabled).toBe(false);
+    transportButton!.click();
+    await flush();
+
+    expect(outboundTransportOrderMock).toHaveBeenCalledTimes(1);
+    expect(outboundTransportOrderMock).toHaveBeenCalledWith('TO-002', {
+      outboundUserId: 'USER-001',
+      outboundUserName: 'Test User',
+      remarks: null,
+      terminalCode: null,
+    });
+    expect(outboundTransportOrderMock).not.toHaveBeenCalledWith(
+      'TO-SIBLING',
+      expect.anything(),
+    );
 
     app.unmount();
   });
@@ -272,6 +390,7 @@ describe('TransportHandoverView', () => {
         {
           applicationId: 'APP-002',
           applicationNo: 'M2-20260526-002',
+          barcode: 'BC-TR-001',
           checkInStatus: 'CHECKED_IN',
           fixationStatus: 'COMPLETED',
           inpatientNo: 'ZY-002',
@@ -293,6 +412,7 @@ describe('TransportHandoverView', () => {
         {
           applicationId: 'APP-002',
           applicationNo: 'M2-20260526-002',
+          barcode: 'BC-TR-002',
           checkInStatus: 'CHECKED_IN',
           fixationStatus: 'COMPLETED',
           inpatientNo: 'ZY-002',
@@ -338,6 +458,7 @@ describe('TransportHandoverView', () => {
         {
           applicationId: 'APP-002',
           applicationNo: 'M2-20260526-002',
+          barcode: 'BC-TR-001',
           checkInStatus: 'CHECKED_IN',
           fixationStatus: 'COMPLETED',
           inpatientNo: 'ZY-002',
@@ -359,6 +480,7 @@ describe('TransportHandoverView', () => {
         {
           applicationId: 'APP-002',
           applicationNo: 'M2-20260526-002',
+          barcode: 'BC-TR-002',
           checkInStatus: 'NOT_CHECKED_IN',
           fixationStatus: 'COMPLETED',
           inpatientNo: 'ZY-002',
@@ -384,9 +506,9 @@ describe('TransportHandoverView', () => {
     });
 
     const specimenNoInput = container.querySelector(
-      'input[placeholder="请输入标本流水号"]',
+      'input[placeholder="请输入标本条码/编号"]',
     ) as HTMLInputElement | null;
-    specimenNoInput!.value = 'SP-TR-001';
+    specimenNoInput!.value = 'BC-TR-001';
     specimenNoInput!.dispatchEvent(new Event('input', { bubbles: true }));
     specimenNoInput!.dispatchEvent(
       new KeyboardEvent('keyup', {
@@ -398,7 +520,7 @@ describe('TransportHandoverView', () => {
     await flush();
 
     expect(listSpecimenOutboundsMock).toHaveBeenCalledWith(
-      expect.objectContaining({ specimenNo: 'SP-TR-001' }),
+      expect.objectContaining({ identifier: 'BC-TR-001' }),
     );
     expect(container.textContent).toContain('出库未保存');
     expect(outboundTransportOrderMock).not.toHaveBeenCalled();
@@ -419,6 +541,12 @@ describe('TransportHandoverView', () => {
       remarks: null,
       terminalCode: null,
     });
+    expect(container.textContent).toContain('SP-TR-001');
+    expect(container.textContent).toContain('SP-TR-002');
+    expect(container.textContent).toContain('已出库');
+    expect(container.textContent).not.toContain('出库未保存');
+    expect(container.textContent).toMatch(/已选\s*0/);
+    expect(transportButton!.disabled).toBe(true);
 
     const clearListButton = [...container.querySelectorAll('button')].find(
       (button) => button.textContent?.includes('清除列表'),
@@ -427,6 +555,84 @@ describe('TransportHandoverView', () => {
     await flush();
 
     expect(container.textContent).not.toContain('SP-TR-001');
+
+    app.unmount();
+  });
+
+  it('creates a transport order for an unbound specimen with specimen ids', async () => {
+    const { app, container } = mountView();
+    await flush();
+
+    vi.clearAllMocks();
+    listSpecimenOutboundsMock.mockResolvedValueOnce({
+      items: [
+        {
+          applicationId: 'APP-003',
+          applicationNo: 'M2-20260526-003',
+          barcode: null,
+          checkInStatus: 'CHECKED_IN',
+          fixationStatus: 'COMPLETED',
+          inpatientNo: 'ZY-003',
+          outboundAt: null,
+          outboundUserName: null,
+          patientGender: '女',
+          patientId: 'PAT-003',
+          patientName: 'Carol',
+          registeredAt: '2026-05-26 09:40:00',
+          registeredByName: '登记员乙',
+          specimenConfirmedAt: '2026-05-26 09:20:00',
+          specimenId: 'SP-UNBOUND-ID',
+          specimenName: '未绑定条码标本',
+          specimenNo: 'SP-UNBOUND',
+          specimenStatus: 'CHECKED_IN',
+          submittingDepartmentId: 'DEPT-SURGERY',
+          submittingDepartmentName: '外科',
+          surgeryName: 'OR-102',
+          transportOrderId: null,
+        },
+      ],
+      page: 1,
+      size: 20,
+      total: 1,
+    } as unknown as Awaited<ReturnType<typeof listSpecimenOutboundsMock>>);
+
+    const specimenNoInput = container.querySelector(
+      'input[placeholder="请输入标本条码/编号"]',
+    ) as HTMLInputElement | null;
+    specimenNoInput!.value = 'SP-UNBOUND';
+    specimenNoInput!.dispatchEvent(new Event('input', { bubbles: true }));
+    specimenNoInput!.dispatchEvent(
+      new KeyboardEvent('keyup', {
+        bubbles: true,
+        code: 'Enter',
+        key: 'Enter',
+      }),
+    );
+    await flush();
+
+    const transportButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('转运'),
+    ) as HTMLButtonElement | undefined;
+    expect(transportButton?.disabled).toBe(false);
+    transportButton!.click();
+    await flush();
+
+    expect(createTransportOrderMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        applicationId: 'APP-003',
+        specimenBarcodes: [],
+        specimenIds: ['SP-UNBOUND-ID'],
+      }),
+    );
+    expect(outboundTransportOrderMock).toHaveBeenCalledWith('TO-CREATED-001', {
+      outboundUserId: 'USER-001',
+      outboundUserName: 'Test User',
+      remarks: null,
+      terminalCode: null,
+    });
+    expect(warningMock).not.toHaveBeenCalledWith(
+      expect.stringContaining('缺少条码'),
+    );
 
     app.unmount();
   });
@@ -441,6 +647,7 @@ describe('TransportHandoverView', () => {
         {
           applicationId: 'APP-002',
           applicationNo: 'M2-20260526-002',
+          barcode: 'BC-TR-002',
           checkInStatus: 'NOT_CHECKED_IN',
           fixationStatus: 'COMPLETED',
           inpatientNo: 'ZY-002',
@@ -462,6 +669,7 @@ describe('TransportHandoverView', () => {
         {
           applicationId: 'APP-002',
           applicationNo: 'M2-20260526-002',
+          barcode: 'BC-TR-001',
           checkInStatus: 'CHECKED_IN',
           fixationStatus: 'COMPLETED',
           inpatientNo: 'ZY-002',
@@ -487,7 +695,7 @@ describe('TransportHandoverView', () => {
     });
 
     const specimenNoInput = container.querySelector(
-      'input[placeholder="请输入标本流水号"]',
+      'input[placeholder="请输入标本条码/编号"]',
     ) as HTMLInputElement | null;
     specimenNoInput!.value = 'SP-TR-002';
     specimenNoInput!.dispatchEvent(new Event('input', { bubbles: true }));
@@ -500,6 +708,9 @@ describe('TransportHandoverView', () => {
     );
     await flush();
 
+    expect(listSpecimenOutboundsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ identifier: 'SP-TR-002' }),
+    );
     expect(outboundTransportOrderMock).not.toHaveBeenCalled();
     expect(quickOutboundSpecimenMock).not.toHaveBeenCalled();
     expect(warningMock).toHaveBeenCalledWith(
@@ -522,7 +733,7 @@ describe('TransportHandoverView', () => {
     });
 
     const specimenNoInput = container.querySelector(
-      'input[placeholder="请输入标本流水号"]',
+      'input[placeholder="请输入标本条码/编号"]',
     ) as HTMLInputElement | null;
     specimenNoInput!.value = 'SP-NOT-FOUND';
     specimenNoInput!.dispatchEvent(new Event('input', { bubbles: true }));
@@ -536,7 +747,7 @@ describe('TransportHandoverView', () => {
     await flush();
 
     expect(listSpecimenOutboundsMock).toHaveBeenCalledWith(
-      expect.objectContaining({ specimenNo: 'SP-NOT-FOUND' }),
+      expect.objectContaining({ identifier: 'SP-NOT-FOUND' }),
     );
     expect(quickOutboundSpecimenMock).not.toHaveBeenCalled();
     expect(outboundTransportOrderMock).not.toHaveBeenCalled();
@@ -555,6 +766,7 @@ describe('TransportHandoverView', () => {
         {
           applicationId: 'APP-003',
           applicationNo: 'M2-20260526-003',
+          barcode: 'BC-MULTI-1',
           checkInStatus: 'CHECKED_IN',
           fixationStatus: 'COMPLETED',
           inpatientNo: 'ZY-003',
@@ -576,6 +788,7 @@ describe('TransportHandoverView', () => {
         {
           applicationId: 'APP-004',
           applicationNo: 'M2-20260526-004',
+          barcode: 'BC-MULTI-2',
           checkInStatus: 'CHECKED_IN',
           fixationStatus: 'COMPLETED',
           inpatientNo: 'ZY-004',
@@ -601,7 +814,7 @@ describe('TransportHandoverView', () => {
     });
 
     const specimenNoInput = container.querySelector(
-      'input[placeholder="请输入标本流水号"]',
+      'input[placeholder="请输入标本条码/编号"]',
     ) as HTMLInputElement | null;
     specimenNoInput!.value = 'SP-MULTI';
     specimenNoInput!.dispatchEvent(new Event('input', { bubbles: true }));
@@ -615,7 +828,7 @@ describe('TransportHandoverView', () => {
     await flush();
 
     expect(listSpecimenOutboundsMock).toHaveBeenCalledWith(
-      expect.objectContaining({ specimenNo: 'SP-MULTI' }),
+      expect.objectContaining({ identifier: 'SP-MULTI' }),
     );
     expect(outboundTransportOrderMock).not.toHaveBeenCalled();
     expect(warningMock).not.toHaveBeenCalled();
@@ -637,6 +850,7 @@ describe('TransportHandoverView', () => {
         {
           applicationId: 'APP-002',
           applicationNo: 'M2-20260526-002',
+          barcode: 'BC-NO-OPERATOR',
           checkInStatus: 'CHECKED_IN',
           fixationStatus: 'COMPLETED',
           inpatientNo: 'ZY-002',
@@ -662,7 +876,7 @@ describe('TransportHandoverView', () => {
     });
 
     const specimenNoInput = container.querySelector(
-      'input[placeholder="请输入标本流水号"]',
+      'input[placeholder="请输入标本条码/编号"]',
     ) as HTMLInputElement | null;
     specimenNoInput!.value = 'SP-NO-OPERATOR';
     specimenNoInput!.dispatchEvent(new Event('input', { bubbles: true }));
@@ -676,7 +890,7 @@ describe('TransportHandoverView', () => {
     await flush();
 
     expect(listSpecimenOutboundsMock).toHaveBeenCalledWith(
-      expect.objectContaining({ specimenNo: 'SP-NO-OPERATOR' }),
+      expect.objectContaining({ identifier: 'SP-NO-OPERATOR' }),
     );
     const transportButton = [...container.querySelectorAll('button')].find(
       (button) => button.textContent?.includes('转运'),

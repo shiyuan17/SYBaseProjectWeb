@@ -25,13 +25,22 @@ import { updateEmbeddingQualityReview } from '../api/technical-workflow-service'
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import { formatNullable } from '../utils/format';
 
+interface EmbeddingQualityReviewDraftPayload {
+  evaluationLevel: string;
+  samplingEvaluation: string;
+}
+
+type EmbeddingQualityReviewMode = 'draft' | 'persist';
+
 const props = defineProps<{
+  mode?: EmbeddingQualityReviewMode;
   modelValue: boolean;
   row: null | TechnicalTrackingEmbeddingRecordSummary;
   title?: string;
 }>();
 
 const emit = defineEmits<{
+  draftSubmitted: [value: EmbeddingQualityReviewDraftPayload];
   submitted: [];
   'update:modelValue': [value: boolean];
 }>();
@@ -59,6 +68,8 @@ const dialogTitle = computed(() => props.title ?? '取材评价');
 const pageError = ref('');
 const submitting = ref(false);
 
+const reviewMode = computed(() => props.mode ?? 'persist');
+const isPersistMode = computed(() => reviewMode.value === 'persist');
 const form = reactive({
   customReason: '',
   evaluationLevel: 'QUALIFIED',
@@ -95,6 +106,15 @@ async function submitQualityReview() {
     ElMessage.warning('请先选择已包埋蜡块');
     return;
   }
+  if (!isPersistMode.value) {
+    emit('draftSubmitted', {
+      evaluationLevel: form.evaluationLevel,
+      samplingEvaluation: getSamplingEvaluationText(),
+    });
+    dialogVisible.value = false;
+    return;
+  }
+
   const customReason = form.customReason.trim();
   const reasons = [...form.reasons, ...(customReason ? [customReason] : [])];
   if (isUnqualified.value && reasons.length === 0) {
@@ -134,7 +154,7 @@ async function submitQualityReview() {
 }
 
 watch(
-  () => [props.modelValue, props.row?.embeddingId],
+  () => [props.modelValue, props.row?.embeddingId, props.mode],
   ([visible]) => {
     if (visible) {
       resetDialogState();
@@ -194,7 +214,11 @@ watch(
           </ElRadioGroup>
         </ElFormItem>
 
-        <ElFormItem v-if="isUnqualified" label="不合格原因" required>
+        <ElFormItem
+          v-if="isPersistMode && isUnqualified"
+          label="不合格原因"
+          required
+        >
           <div class="flex flex-col gap-3">
             <ElCheckboxGroup v-model="form.reasons">
               <ElCheckbox
@@ -209,7 +233,7 @@ watch(
           </div>
         </ElFormItem>
 
-        <ElFormItem v-if="isUnqualified" label="处理措施">
+        <ElFormItem v-if="isPersistMode && isUnqualified" label="处理措施">
           <div class="flex flex-col gap-3">
             <ElRadioGroup v-model="form.treatmentAction">
               <ElRadio label="REGROSSING">重新取材</ElRadio>
@@ -219,7 +243,7 @@ watch(
           </div>
         </ElFormItem>
 
-        <ElFormItem v-if="isUnqualified" label="通知状态">
+        <ElFormItem v-if="isPersistMode && isUnqualified" label="通知状态">
           <ElCheckbox v-model="form.notifiedGrossingOperator">
             已通知取材人
           </ElCheckbox>

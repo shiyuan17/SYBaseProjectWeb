@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 
-import { Camera, ImagePlus } from '@vben/icons';
+import { Camera, ImagePlus, X } from '@vben/icons';
 
 import {
   ElButton,
@@ -25,16 +25,20 @@ const props = withDefaults(
   defineProps<{
     accept: string;
     canEdit: boolean;
+    deleteImage?: (key: string) => void;
     disabledText?: string;
     emptyDescription?: string;
     items: CapturedImageItem[];
     previewHint?: string;
+    scrollMode?: 'external' | 'internal';
     uploadImageFile: (file: File) => boolean | Promise<boolean>;
   }>(),
   {
+    deleteImage: undefined,
     disabledText: '请先选择可编辑标本',
     emptyDescription: '当前没有采图记录',
     previewHint: '当前标本拍照实时预览',
+    scrollMode: 'internal',
   },
 );
 
@@ -50,6 +54,17 @@ let cameraStream: MediaStream | null = null;
 let cameraStartToken = 0;
 
 const previewSrcList = computed(() => props.items.map((item) => item.fileUrl));
+const shouldUseExternalScroll = computed(() => props.scrollMode === 'external');
+const panelRootClass = computed(() =>
+  shouldUseExternalScroll.value
+    ? 'flex min-h-0 flex-none flex-col'
+    : 'flex min-h-0 flex-1 flex-col',
+);
+const panelBodyClass = computed(() =>
+  shouldUseExternalScroll.value
+    ? 'min-h-40 bg-card p-3 text-sm leading-6 text-foreground'
+    : 'min-h-40 flex-1 overflow-auto bg-card p-3 text-sm leading-6 text-foreground',
+);
 
 const cameraStatusText = computed(() => {
   if (!cameraPreviewEnabled.value) {
@@ -253,13 +268,21 @@ function handleImportImage() {
   imageFileInputRef.value?.click();
 }
 
+function handleDeleteImage(key: string) {
+  if (!props.canEdit) {
+    ElMessage.warning(props.disabledText);
+    return;
+  }
+  props.deleteImage?.(key);
+}
+
 onBeforeUnmount(() => {
   stopCameraStream();
 });
 </script>
 
 <template>
-  <section class="flex min-h-0 flex-1 flex-col">
+  <section data-testid="workbench-captured-image-panel" :class="panelRootClass">
     <input
       ref="imageFileInputRef"
       :accept="accept"
@@ -311,7 +334,8 @@ onBeforeUnmount(() => {
       </div>
     </header>
     <div
-      class="min-h-40 flex-1 overflow-auto bg-card p-3 text-sm leading-6 text-foreground"
+      data-testid="workbench-captured-image-panel-body"
+      :class="panelBodyClass"
     >
       <section class="mb-3 rounded-md border border-border bg-muted/20 p-3">
         <div class="mb-2 flex items-center justify-between gap-2">
@@ -347,8 +371,21 @@ onBeforeUnmount(() => {
         <article
           v-for="(asset, assetIndex) in items"
           :key="asset.key"
-          class="overflow-hidden rounded-md border border-border bg-background"
+          class="relative overflow-hidden rounded-md border border-border bg-background"
         >
+          <ElTooltip v-if="deleteImage" content="删除图片" placement="left">
+            <ElButton
+              :aria-label="`删除图片 ${asset.title}`"
+              circle
+              class="captured-image-delete-button"
+              :disabled="!canEdit"
+              :icon="X"
+              size="small"
+              data-testid="captured-image-delete-button"
+              type="danger"
+              @click.stop="handleDeleteImage(asset.key)"
+            />
+          </ElTooltip>
           <ElImage
             :alt="asset.title"
             :initial-index="assetIndex"
@@ -393,3 +430,13 @@ onBeforeUnmount(() => {
     </div>
   </section>
 </template>
+
+<style scoped>
+.captured-image-delete-button {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  opacity: 0.92;
+}
+</style>

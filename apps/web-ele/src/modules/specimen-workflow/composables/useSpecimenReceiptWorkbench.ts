@@ -317,7 +317,7 @@ export function useSpecimenReceiptWorkbench() {
   ) {
     const normalizedSpecimenId = pending.specimenId.trim().toUpperCase();
     const normalizedSpecimenNo = pending.specimenNo.trim().toUpperCase();
-    const normalizedBarcode = pending.barcode.trim().toUpperCase();
+    const normalizedBarcode = (pending.barcode ?? '').trim().toUpperCase();
 
     return (
       items.find((item) =>
@@ -505,13 +505,33 @@ export function useSpecimenReceiptWorkbench() {
 
   function buildDirectReceiveItemsFromRows(rows: ReceiptWorkbenchRow[]) {
     return rows.map((row) => ({
-      ...createReceiptDraftItem(row.barcode ?? ''),
+      ...createReceiptDraftItem(row.barcode ?? '', {
+        specimenId: row.specimenId,
+        specimenNo: row.specimenNo,
+      }),
       applicationNo: row.applicationNo,
       containerCount: row.containerCount ?? 1,
       containerName: row.containerName,
       patientName: row.patientName,
       specimenBarcode: row.barcode ?? '',
+      specimenId: row.specimenId,
+      specimenNo: row.specimenNo,
     }));
+  }
+
+  function collectReceiptItemKeys(item: {
+    barcode?: null | string;
+    specimenBarcode?: null | string;
+    specimenId?: null | string;
+    specimenNo?: null | string;
+  }) {
+    return [
+      item.specimenId,
+      item.specimenBarcode ?? item.barcode,
+      item.specimenNo,
+    ]
+      .map((value) => value?.trim())
+      .filter((value): value is string => value !== undefined && value !== '');
   }
 
   function openDirectReceiveDrawer() {
@@ -592,17 +612,16 @@ export function useSpecimenReceiptWorkbench() {
         ),
       );
       const receiptTime = new Date().toISOString();
-      const receiptItemsByBarcode = new Map(
-        directReceiveItems.value.map((item) => [
-          item.specimenBarcode.trim(),
-          item,
-        ]),
+      const receiptItemsByIdentifier = new Map(
+        directReceiveItems.value.flatMap((item) =>
+          collectReceiptItemKeys(item).map((key) => [key, item] as const),
+        ),
       );
 
       queueItems.value = queueItems.value.map((row) => {
-        const matchedReceiptItem = receiptItemsByBarcode.get(
-          row.barcode?.trim() ?? '',
-        );
+        const matchedReceiptItem = collectReceiptItemKeys(row)
+          .map((key) => receiptItemsByIdentifier.get(key))
+          .find(Boolean);
         if (!matchedReceiptItem) {
           return row;
         }
@@ -665,7 +684,10 @@ export function useSpecimenReceiptWorkbench() {
               transportOrderId,
               receiveForm,
               rows.map((row) => ({
-                ...createReceiptDraftItem(row.barcode ?? ''),
+                ...createReceiptDraftItem(row.barcode ?? '', {
+                  specimenId: row.specimenId,
+                  specimenNo: row.specimenNo,
+                }),
                 containerCount: row.containerCount ?? 1,
               })),
             ),

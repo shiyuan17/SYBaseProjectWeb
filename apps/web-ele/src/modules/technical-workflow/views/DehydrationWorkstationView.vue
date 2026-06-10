@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import type { Ref } from 'vue';
-
 import type { PendingTechnicalTaskItem } from '../types/technical-workflow';
 
 import { computed, reactive, ref } from 'vue';
@@ -21,6 +19,7 @@ import {
   ElTag,
 } from 'element-plus';
 
+import { resolveSpecimenWorkflowRowClassName } from '#/modules/specimen-workflow/utils/specimen-workflow-row-tone';
 import { reportInlineErrorDisabled } from '#/utils/error-feedback';
 
 import {
@@ -39,6 +38,8 @@ import {
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import { formatDateTime, formatTaskStatus } from '../utils/format';
 import { useTechnicalWorkflowNavigation } from '../utils/navigation';
+
+import '#/modules/specimen-workflow/styles/specimen-workflow-row-tone.css';
 
 const route = useRoute();
 const router = useRouter();
@@ -196,7 +197,7 @@ function resolveDehydrationRowClassName({
 }: {
   row: PendingTechnicalTaskItem;
 }) {
-  return `dehydration-workflow-row--${resolveDehydrationRowTone(row)}`;
+  return resolveSpecimenWorkflowRowClassName(resolveDehydrationRowTone(row));
 }
 
 function handleSearch() {
@@ -275,21 +276,71 @@ function ensureActionTasks(actionLabel: string) {
   return task ? [task] : null;
 }
 
+function showDehydrationActionFeedback(options: {
+  actionLabel: string;
+  failedCount: number;
+  noActionMessage: string;
+  singleSuccessMessage: (taskId: string) => string;
+  skippedCount: number;
+  succeededCount: number;
+  tasks: PendingTechnicalTaskItem[];
+}) {
+  if (options.succeededCount === 0) {
+    ElMessage.warning(
+      options.failedCount > 0
+        ? `${options.actionLabel}失败，请重试`
+        : options.noActionMessage,
+    );
+    return;
+  }
+
+  if (
+    options.tasks.length === 1 &&
+    options.failedCount === 0 &&
+    options.skippedCount === 0
+  ) {
+    const firstTask = options.tasks[0];
+    if (firstTask) {
+      ElMessage.success(options.singleSuccessMessage(firstTask.id));
+      return;
+    }
+  }
+
+  const summaryParts = [
+    `已${options.actionLabel} ${options.succeededCount} 条任务`,
+  ];
+  if (options.skippedCount > 0) {
+    summaryParts.push(`跳过 ${options.skippedCount} 条`);
+  }
+  if (options.failedCount > 0) {
+    summaryParts.push(`${options.failedCount} 条失败`);
+  }
+
+  const message = summaryParts.join('，');
+  if (options.failedCount > 0) {
+    ElMessage.warning(message);
+    return;
+  }
+  ElMessage.success(message);
+}
+
 async function runDehydrationTaskAction(options: {
   actionLabel: string;
-  batchSuccessMessage: string;
-  invalidStatusMessage: string;
-  loadingRef: Ref<boolean>;
-  requiredStatus: PendingTechnicalTaskItem['taskStatus'];
-  runAction: (taskId: string) => Promise<unknown>;
+  loadingRef: typeof startLoading;
+  noActionMessage: string;
+  runTask: (task: PendingTechnicalTaskItem) => Promise<unknown>;
+  shouldRunTask: (task: PendingTechnicalTaskItem) => boolean;
   singleSuccessMessage: (taskId: string) => string;
 }) {
   const tasks = ensureActionTasks(options.actionLabel);
   if (!tasks) {
     return;
   }
-  if (tasks.some((task) => task.taskStatus !== options.requiredStatus)) {
-    ElMessage.warning(options.invalidStatusMessage);
+
+  const actionableTasks = tasks.filter((task) => options.shouldRunTask(task));
+  const skippedCount = tasks.length - actionableTasks.length;
+  if (actionableTasks.length === 0) {
+    ElMessage.warning(options.noActionMessage);
     return;
   }
 
@@ -297,21 +348,14 @@ async function runDehydrationTaskAction(options: {
   pageError.value = '';
   try {
     const results = await Promise.allSettled(
-      tasks.map((task) => options.runAction(task.id)),
+      actionableTasks.map((task) => options.runTask(task)),
     );
     const failedResults = results.filter(
       (result): result is PromiseRejectedResult => result.status === 'rejected',
     );
     const succeededCount = results.length - failedResults.length;
 
-    if (failedResults.length === 0) {
-      const firstTask = tasks[0];
-      ElMessage.success(
-        tasks.length === 1 && firstTask
-          ? options.singleSuccessMessage(firstTask.id)
-          : options.batchSuccessMessage,
-      );
-    } else {
+    if (failedResults.length > 0) {
       const firstFailure = failedResults[0];
       if (firstFailure) {
         pageError.value = getWorkflowPageErrorMessage(firstFailure.reason);
@@ -320,12 +364,16 @@ async function runDehydrationTaskAction(options: {
           getWorkflowPageErrorMessage,
         );
       }
-      ElMessage.warning(
-        succeededCount > 0
-          ? `已成功${options.actionLabel} ${succeededCount} 条任务，${failedResults.length} 条失败`
-          : `${options.actionLabel}失败，请重试`,
-      );
     }
+    showDehydrationActionFeedback({
+      actionLabel: options.actionLabel,
+      failedCount: failedResults.length,
+      noActionMessage: options.noActionMessage,
+      singleSuccessMessage: options.singleSuccessMessage,
+      skippedCount,
+      succeededCount,
+      tasks,
+    });
     await loadPendingData();
   } finally {
     options.loadingRef.value = false;
@@ -380,11 +428,10 @@ function handleBatchSubmitted(result: { batchId: string }) {
 async function handleStartDehydration() {
   await runDehydrationTaskAction({
     actionLabel: '开始脱水',
-    batchSuccessMessage: `已开始脱水 ${selectedRows.value.length} 条任务`,
-    invalidStatusMessage: '仅待处理任务可以开始脱水',
     loadingRef: startLoading,
-    requiredStatus: 'PENDING',
-    runAction: (taskId) => startDehydration({ taskId }),
+    noActionMessage: '没有可开始脱水的任务',
+    runTask: (task) => startDehydration({ taskId: task.id }),
+    shouldRunTask: (task) => task.taskStatus === 'PENDING',
     singleSuccessMessage: (taskId) => `任务 ${taskId} 已开始脱水`,
   });
 }
@@ -392,11 +439,16 @@ async function handleStartDehydration() {
 async function handleCompleteDehydration() {
   await runDehydrationTaskAction({
     actionLabel: '完成脱水',
-    batchSuccessMessage: `已完成脱水 ${selectedRows.value.length} 条任务`,
-    invalidStatusMessage: '请先开始脱水',
     loadingRef: completeLoading,
-    requiredStatus: 'IN_PROGRESS',
-    runAction: (taskId) => completeDehydration({ taskId }),
+    noActionMessage: '没有可完成脱水的任务',
+    runTask: async (task) => {
+      if (task.taskStatus === 'PENDING') {
+        await startDehydration({ taskId: task.id });
+      }
+      await completeDehydration({ taskId: task.id });
+    },
+    shouldRunTask: (task) =>
+      task.taskStatus === 'PENDING' || task.taskStatus === 'IN_PROGRESS',
     singleSuccessMessage: (taskId) => `任务 ${taskId} 已完成脱水`,
   });
 }
@@ -609,45 +661,5 @@ if (shouldInitialLoad.value) {
 
 .dehydration-toolbar-form :deep(.el-form-item__content) {
   align-items: center;
-}
-
-:deep(.dehydration-workflow-row--actionable > td) {
-  background: hsl(var(--primary) / 8%) !important;
-}
-
-:deep(.dehydration-workflow-row--in-progress > td) {
-  background: hsl(var(--warning) / 10%) !important;
-}
-
-:deep(.dehydration-workflow-row--completed > td) {
-  background: hsl(var(--success) / 12%) !important;
-}
-
-:deep(.dehydration-workflow-row--blocked > td) {
-  background: hsl(var(--muted) / 70%) !important;
-}
-
-:deep(.dehydration-workflow-row--failed > td) {
-  background: hsl(var(--destructive) / 12%) !important;
-}
-
-:deep(.dehydration-workflow-row--actionable > td:first-child) {
-  box-shadow: inset 3px 0 0 hsl(var(--primary));
-}
-
-:deep(.dehydration-workflow-row--in-progress > td:first-child) {
-  box-shadow: inset 3px 0 0 hsl(var(--warning));
-}
-
-:deep(.dehydration-workflow-row--completed > td:first-child) {
-  box-shadow: inset 3px 0 0 hsl(var(--success));
-}
-
-:deep(.dehydration-workflow-row--blocked > td:first-child) {
-  box-shadow: inset 3px 0 0 hsl(var(--border));
-}
-
-:deep(.dehydration-workflow-row--failed > td:first-child) {
-  box-shadow: inset 3px 0 0 hsl(var(--destructive));
 }
 </style>

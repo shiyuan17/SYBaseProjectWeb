@@ -333,7 +333,9 @@ export function useSpecimenCheckInPanel() {
       operatorUserId: operatorForm.operatorUserId.trim(),
       ...(operatorVerificationToken ? { operatorVerificationToken } : {}),
       remarks: operatorForm.remarks.trim() || null,
-      specimenBarcode: row.barcode ?? '',
+      specimenBarcode: row.barcode ?? null,
+      specimenId: row.specimenId,
+      specimenNo: row.specimenNo,
       terminalCode: operatorForm.terminalCode.trim() || null,
     };
   }
@@ -381,10 +383,6 @@ export function useSpecimenCheckInPanel() {
     operatorVerificationToken?: string,
     applicationRows?: SpecimenManagementListItem[],
   ) {
-    if (!row.barcode) {
-      ElMessage.warning('当前标本缺少条码，无法入库');
-      return;
-    }
     const resolvedApplicationRows =
       applicationRows ?? (await loadApplicationSpecimens(row.applicationNo));
     if (!isCheckInReady(row, resolvedApplicationRows)) {
@@ -403,7 +401,7 @@ export function useSpecimenCheckInPanel() {
     actionLoading.value = true;
     try {
       const result = await checkInSpecimen(
-        row.barcode,
+        row.barcode || row.specimenId,
         buildCheckInPayload(row, operatorVerificationToken),
       );
       queueRow.checkInStatus = 'CHECKED_IN';

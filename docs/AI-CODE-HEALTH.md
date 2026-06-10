@@ -197,6 +197,8 @@ function markOrderPaid(order: Order): Order {
 | UI组件       | ≤ 100 行 |
 | 配置文件     | 不限制   |
 
+> 行数阈值为复杂度信号，不是硬门槛；组件拆分的具体口径以 `VUE_TS_RULES.md`（“超大 SFC 必须拆分”）为准。
+
 ---
 
 ### 禁止
@@ -356,6 +358,8 @@ unknown;
 ```
 
 或明确类型。
+
+> 本节为通用基线；前端 `any` 的具体口径以 `VUE_TS_RULES.md`（“避免滥用 `any`、`as unknown as` 等宽泛断言”）为准。
 
 ---
 

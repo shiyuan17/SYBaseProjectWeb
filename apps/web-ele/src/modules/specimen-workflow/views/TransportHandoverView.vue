@@ -69,9 +69,9 @@ const total = ref(0);
 
 const filters = reactive({
   applicationId: '',
+  identifier: '',
   page: 1,
   size: DEFAULT_PAGE_SIZE,
-  specimenNo: '',
 });
 
 const outboundForm = reactive(
@@ -85,9 +85,9 @@ const outboundForm = reactive(
 function buildListQuery() {
   return {
     applicationId: filters.applicationId.trim() || undefined,
+    identifier: filters.identifier.trim() || undefined,
     page: filters.page,
     size: filters.size,
-    specimenNo: filters.specimenNo.trim() || undefined,
   };
 }
 
@@ -111,6 +111,23 @@ function applyDraftOutboundStatus(record: SpecimenOutboundDisplayItem) {
     outboundDraft: true,
     outboundStatusTagType: 'warning' as const,
   };
+}
+
+function markSubmittedRowsAsOutbound(submittedIds: Set<string>) {
+  const outboundAt = new Date().toISOString();
+  items.value = items.value.map((item) => {
+    if (!submittedIds.has(item.specimenId)) {
+      return applyDraftOutboundStatus(item);
+    }
+    return enhanceSpecimenOutboundItem({
+      ...item,
+      outboundAt: item.outboundAt ?? outboundAt,
+      outboundUserName:
+        outboundForm.outboundUserName.trim() || item.outboundUserName,
+      specimenStatus: 'IN_TRANSIT',
+    });
+  });
+  total.value = items.value.length;
 }
 
 function mergeOutboundRowsBySpecimenId(
@@ -144,15 +161,15 @@ async function ensureOperatingRoomNameMapLoaded() {
 }
 
 function maybeMarkQuickOutbound(records: SpecimenOutboundDisplayItem[]) {
-  const specimenNo = filters.specimenNo.trim();
-  if (!specimenNo) {
+  const identifier = filters.identifier.trim();
+  if (!identifier) {
     return;
   }
   if (records.length === 0) {
-    ElMessage.warning(`未找到可出库标本：${specimenNo}`);
+    ElMessage.warning(`未找到可出库标本：${identifier}`);
     return;
   }
-  const exactMatches = resolveExactSpecimenOutboundMatches(records, specimenNo);
+  const exactMatches = resolveExactSpecimenOutboundMatches(records, identifier);
   if (exactMatches.length !== 1) {
     return;
   }
@@ -174,7 +191,7 @@ function maybeMarkQuickOutbound(records: SpecimenOutboundDisplayItem[]) {
     ];
   }
   items.value = items.value.map((item) => applyDraftOutboundStatus(item));
-  filters.specimenNo = '';
+  filters.identifier = '';
   ElMessage.success('已加入出库未保存');
 }
 
@@ -182,7 +199,7 @@ async function loadOutbounds(
   options: { autoSubmitQuickOutbound?: boolean } = {},
 ) {
   const hasExplicitCondition =
-    Boolean(filters.applicationId.trim()) || Boolean(filters.specimenNo.trim());
+    Boolean(filters.applicationId.trim()) || Boolean(filters.identifier.trim());
   if (!hasExplicitCondition) {
     items.value = [];
     selectedRows.value = [];
@@ -219,7 +236,7 @@ async function loadOutbounds(
   }
 }
 
-function handleSpecimenNoQuickSearch() {
+function handleIdentifierQuickSearch() {
   filters.page = 1;
   void loadOutbounds({ autoSubmitQuickOutbound: true });
 }
@@ -312,15 +329,18 @@ async function handleBatchTransport() {
   try {
     if (rowsWithoutTransportOrder.length > 0) {
       const [referenceRow] = rowsWithoutTransportOrder;
+      const specimenIds = rowsWithoutTransportOrder
+        .map((row) => row.specimenId.trim())
+        .filter(Boolean);
       const specimenBarcodes = rowsWithoutTransportOrder
         .map((row) => row.barcode?.trim() ?? '')
         .filter(Boolean);
 
       if (
         !referenceRow ||
-        specimenBarcodes.length !== rowsWithoutTransportOrder.length
+        specimenIds.length !== rowsWithoutTransportOrder.length
       ) {
-        ElMessage.warning('所选标本缺少条码，无法转运');
+        ElMessage.warning('所选标本缺少标本 ID，无法转运');
         return;
       }
 
@@ -337,6 +357,7 @@ async function handleBatchTransport() {
         ...(operatorVerificationToken ? { operatorVerificationToken } : {}),
         remarks: outboundForm.remarks.trim() || null,
         specimenBarcodes,
+        specimenIds,
         terminalCode: outboundForm.terminalCode.trim() || null,
       });
       nextTransportOrderIds.push(createdOrder.id);
@@ -353,9 +374,9 @@ async function handleBatchTransport() {
     pendingOutboundIds.value = pendingOutboundIds.value.filter(
       (id) => !submittedIds.has(id),
     );
+    markSubmittedRowsAsOutbound(submittedIds);
     selectedRows.value = [];
     ElMessage.success('标本转运成功');
-    await loadOutbounds();
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
   } finally {
@@ -405,11 +426,11 @@ watch(
 
           <div class="flex flex-wrap items-center gap-2">
             <ElInput
-              v-model="filters.specimenNo"
+              v-model="filters.identifier"
               clearable
-              placeholder="请输入标本流水号"
+              placeholder="请输入标本条码/编号"
               style="width: 220px"
-              @keyup.enter="handleSpecimenNoQuickSearch"
+              @keyup.enter="handleIdentifierQuickSearch"
             />
             <div class="w-[180px]">
               <SystemUserSelect

@@ -177,6 +177,36 @@ const {
         },
         {
           abnormalFlag: false,
+          applicationId: 'APP-UNBOUND-CHECKIN',
+          applicationNo: 'M2-007',
+          barcode: null,
+          checkInStatus: 'NOT_CHECKED_IN',
+          checkedInAt: null,
+          checkedInByName: null,
+          fixationStatus: 'COMPLETED',
+          labelPrintBatchNo: 'BATCH-7',
+          labelPrintStatus: 'SUCCESS',
+          latestTrackingAt: '2026-05-26 09:30:00',
+          patientName: 'Grace',
+          recentNode: 'CONFIRMATION',
+          registeredAt: '2026-05-26 08:18:00',
+          specimenConfirmedAt: '2026-05-26 08:48:00',
+          specimenId: 'SPEC-UNBOUND-CHECKIN',
+          specimenName: '未绑定条码组织',
+          specimenNo: 'SP-007',
+          specimenSite: '胃',
+          specimenStatus: 'FIXED',
+          specimenType: '组织',
+          roomId: 'OR-108',
+          surgeryName: 'OR-108',
+          submittingDepartmentId: 'DEPT-001',
+          submittingDepartmentName: 'Surgery',
+          verificationCompletedAt: '2026-05-26 08:38:00',
+          verificationStartedAt: '2026-05-26 08:28:00',
+          verificationStatus: 'VERIFIED',
+        },
+        {
+          abnormalFlag: false,
           applicationId: 'APP-PARTIAL-CHECKIN',
           applicationNo: 'M2-005',
           barcode: 'BC-PARTIAL-READY',
@@ -303,7 +333,7 @@ const {
             !keyword ||
             item.specimenNo.includes(keyword) ||
             item.specimenId.includes(keyword) ||
-            item.barcode.includes(keyword);
+            (item.barcode ?? '').includes(keyword);
           const matchesApplicationNo =
             !applicationNo || item.applicationNo === applicationNo;
           return matchesKeyword && matchesApplicationNo;
@@ -512,6 +542,38 @@ describe('useSpecimenCheckInPanel', () => {
       ),
     ).toBe(true);
     expect(state.pendingCount.value).toBe(1);
+
+    wrapper.destroy();
+  });
+
+  it('checks in an unbound specimen by specimen id', async () => {
+    const wrapper = mountComposable();
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    state.scanInput.value = 'SP-007';
+    await state.handleQuickCheckIn();
+    await flushComposable();
+
+    expect(state.queueItems.value).toHaveLength(1);
+    expect(state.queueItems.value[0]?.displayCheckInStatus).toBe('入库未保存');
+
+    await state.handlePrimaryCheckIn();
+    await flushComposable();
+
+    expect(checkInSpecimenMock).toHaveBeenCalledWith(
+      'SPEC-UNBOUND-CHECKIN',
+      expect.objectContaining({
+        specimenBarcode: null,
+        specimenId: 'SPEC-UNBOUND-CHECKIN',
+        specimenNo: 'SP-007',
+      }),
+    );
+    expect(warningMock).not.toHaveBeenCalledWith(
+      expect.stringContaining('缺少条码'),
+    );
 
     wrapper.destroy();
   });

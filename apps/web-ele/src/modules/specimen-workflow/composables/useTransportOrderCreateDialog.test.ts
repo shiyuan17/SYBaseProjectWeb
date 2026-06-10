@@ -67,6 +67,26 @@ function createApplicationDetail(): ApplicationDetailView {
     specimenType: '组织',
     verificationStatus: 'VERIFIED',
   } as ApplicationDetailView['specimens'][number];
+  const specimenThree = {
+    abnormalReason: null,
+    barcode: null,
+    checkInStatus: 'CHECKED_IN',
+    clinicalSymptom: '',
+    collectionMode: '手术',
+    containerCount: 1,
+    containerName: '标本瓶',
+    fixationStatus: 'COMPLETED',
+    id: 'SPEC-003',
+    labelPrintStatus: 'SUCCESS',
+    specimenConfirmedAt: '2026-05-21T09:50:00',
+    specimenCount: 1,
+    specimenName: '未绑定条码标本',
+    specimenNo: 'SP-003',
+    specimenSite: '',
+    specimenStatus: 'CHECKED_IN',
+    specimenType: '组织',
+    verificationStatus: 'VERIFIED',
+  } as ApplicationDetailView['specimens'][number];
 
   return {
     abnormalFlag: false,
@@ -93,7 +113,7 @@ function createApplicationDetail(): ApplicationDetailView {
     sourceHospitalName: '本院',
     specimenRemovalTime: '2026-05-21T09:30:00',
     specimenSite: '胃',
-    specimens: [specimenOne, specimenTwo],
+    specimens: [specimenOne, specimenTwo, specimenThree],
     status: 'SUBMITTED',
     submissionDate: '2026-05-21',
     submittingDepartmentId: 'DEP-1',
@@ -173,7 +193,7 @@ describe('useTransportOrderCreateDialog', () => {
     document.body.innerHTML = '';
   });
 
-  it('loads eligible specimens on open and merges selected/manual barcodes', async () => {
+  it('loads eligible specimens on open and merges selected ids with manual barcodes', async () => {
     getApplicationDetailMock.mockResolvedValue(createApplicationDetail());
 
     const wrapper = mountComposable();
@@ -186,8 +206,13 @@ describe('useTransportOrderCreateDialog', () => {
 
     expect(getApplicationDetailMock).toHaveBeenCalledWith('APP-002');
     expect(state.visibleApplicationNo.value).toBe('M2-20260526-002');
-    expect(state.eligibleSpecimens.value).toHaveLength(1);
+    expect(state.eligibleSpecimens.value).toHaveLength(2);
+    expect(state.createForm.selectedSpecimenIds).toEqual([
+      'SPEC-001',
+      'SPEC-003',
+    ]);
     expect(state.createForm.selectedSpecimenBarcodes).toEqual(['BC-001']);
+    expect(state.mergedSpecimenIds.value).toEqual(['SPEC-001', 'SPEC-003']);
 
     state.createForm.specimenBarcodesText = 'BC-001, BC-003\nBC-004';
     expect(state.mergedSpecimenBarcodes.value).toEqual([
@@ -236,6 +261,7 @@ describe('useTransportOrderCreateDialog', () => {
         operatorVerificationToken: 'TOKEN-VERIFY',
         receiverDepartmentId: 'DEP-RE',
         specimenBarcodes: ['BC-001'],
+        specimenIds: ['SPEC-001', 'SPEC-003'],
         terminalCode: 'TERM-01',
       }),
     );
@@ -267,7 +293,7 @@ describe('useTransportOrderCreateDialog', () => {
     state.createForm.handoverLoginName = 'test-user';
     state.createForm.receiverDepartmentId = 'DEP-RE';
     state.createForm.receiverDepartmentName = '接收科室';
-    state.createForm.selectedSpecimenBarcodes = [];
+    state.createForm.selectedSpecimenIds = [];
     state.createForm.specimenBarcodesText = '';
     await state.submitCreate();
     expect(warningMock).toHaveBeenCalledWith('请至少选择一条标本');

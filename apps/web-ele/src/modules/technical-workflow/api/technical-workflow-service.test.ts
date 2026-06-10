@@ -8,6 +8,8 @@ import { requestClient } from '#/api/request';
 
 import {
   assignTechnicalTask,
+  cancelEmbedding,
+  cancelSlicingSlidePrintMergeGroups,
   cancelTechnicalSpecimenRegistrationMaterialVerification,
   claimTechnicalTask,
   completeDehydration,
@@ -19,6 +21,7 @@ import {
   completeTechnicalSpecimenRegistration,
   createDehydrationBatch,
   createReworkOrder,
+  createSlicingSlidePrintMergeGroups,
   createSlideQcEvaluation,
   executeReworkOrder,
   getEmbeddingWorkstationSummary,
@@ -38,6 +41,7 @@ import {
   mapTechnicalSpecimenRegistrationDetailResponse,
   mapTechnicalSpecimenRegistrationWorkspaceResponse,
   mapTechnicalTrackingResponse,
+  printSlicingSlideMergeGroup,
   printSlicingSlides,
   releaseTechnicalTask,
   saveTechnicalSpecimenRegistrationApplicationWorkbenchPatientInfo,
@@ -182,13 +186,17 @@ describe('technical-workflow-service mappers', () => {
           combinedSlide: false,
           completedAt: null,
           embeddingBoxId: '',
+          embeddingBoxIds: [],
+          embeddingBoxNo: null,
           embeddingClearRemark: null,
+          embeddingRemarks: null,
           embeddingEvaluation: null,
           embeddingOperatorName: null,
           grossingEvaluation: null,
           pathologyNo: null,
           patientId: null,
           patientName: null,
+          printGroupId: null,
           selectable: false,
           shiftRemark: null,
           slideId: null,
@@ -199,9 +207,12 @@ describe('technical-workflow-service mappers', () => {
           slicingRemark: null,
           specimenId: null,
           specimenName: null,
+          submittingDepartmentName: null,
           taskId: 'TASK-1',
+          taskIds: [],
           taskStatus: null,
           timedOut: false,
+          mergedPrintGroup: false,
           printedSlideCount: 0,
         },
       ],
@@ -212,13 +223,17 @@ describe('technical-workflow-service mappers', () => {
           combinedSlide: false,
           completedAt: null,
           embeddingBoxId: '',
+          embeddingBoxIds: [],
+          embeddingBoxNo: null,
           embeddingClearRemark: null,
+          embeddingRemarks: null,
           embeddingEvaluation: null,
           embeddingOperatorName: null,
           grossingEvaluation: null,
           pathologyNo: null,
           patientId: null,
           patientName: null,
+          printGroupId: null,
           selectable: false,
           shiftRemark: null,
           slideId: null,
@@ -229,9 +244,12 @@ describe('technical-workflow-service mappers', () => {
           slicingRemark: null,
           specimenId: null,
           specimenName: null,
+          submittingDepartmentName: null,
           taskId: 'TASK-1',
+          taskIds: [],
           taskStatus: null,
           timedOut: false,
+          mergedPrintGroup: false,
           printedSlideCount: 0,
         },
       ],
@@ -249,6 +267,41 @@ describe('technical-workflow-service mappers', () => {
         pendingTodayCount: 3,
         pendingTomorrowCount: 0,
       },
+    });
+  });
+
+  it('maps slicing workbench print row embedding fields', () => {
+    expect(
+      mapSlicingWorkbenchResponse({
+        pendingPrintList: [
+          {
+            caseId: 'CASE-1',
+            combinedSlide: false,
+            embeddingBoxId: 'BOX-1',
+            embeddingBoxIds: ['BOX-1', 'BOX-2'],
+            embeddingBoxNo: 'A1',
+            embeddingRemarks: '包埋备注',
+            mergedPrintGroup: true,
+            printGroupId: 'GROUP-1',
+            printedSlideCount: 0,
+            selectable: true,
+            submittingDepartmentName: '急诊科',
+            taskId: 'TASK-1',
+            taskIds: ['TASK-1', 'TASK-2'],
+            timedOut: false,
+          },
+        ],
+      }).pendingPrintList[0],
+    ).toMatchObject({
+      embeddingBoxId: 'BOX-1',
+      embeddingBoxIds: ['BOX-1', 'BOX-2'],
+      embeddingBoxNo: 'A1',
+      embeddingRemarks: '包埋备注',
+      mergedPrintGroup: true,
+      printGroupId: 'GROUP-1',
+      submittingDepartmentName: '急诊科',
+      taskId: 'TASK-1',
+      taskIds: ['TASK-1', 'TASK-2'],
     });
   });
 
@@ -936,6 +989,9 @@ describe('technical-workflow-service requests', () => {
     await startEmbedding({
       taskId: 'TASK-EMB',
     });
+    await cancelEmbedding({
+      taskId: 'TASK-EMB',
+    });
     await completeEmbedding({
       blockCount: 1,
       samplingBlockId: 'BLOCK-1',
@@ -951,6 +1007,13 @@ describe('technical-workflow-service requests', () => {
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       2,
+      '/v1/embeddings/cancel',
+      {
+        taskId: 'TASK-EMB',
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      3,
       '/v1/embeddings/complete',
       {
         blockCount: 1,
@@ -1012,6 +1075,22 @@ describe('technical-workflow-service requests', () => {
       sourceSlideCount: 4,
       taskId: 'TASK-SLI',
     });
+    await createSlicingSlidePrintMergeGroups({
+      remarks: '两两合片',
+      taskIds: ['TASK-A1', 'TASK-A2'],
+      terminalCode: 'TERM-1',
+    });
+    await cancelSlicingSlidePrintMergeGroups({
+      printGroupIds: ['GROUP-1'],
+      remarks: '取消合片',
+      terminalCode: 'TERM-1',
+    });
+    await printSlicingSlideMergeGroup({
+      printGroupId: 'GROUP-1',
+      printerCode: 'PRINTER-1',
+      remarks: '打印合片',
+      terminalCode: 'TERM-1',
+    });
 
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       1,
@@ -1036,6 +1115,34 @@ describe('technical-workflow-service requests', () => {
         mergeAdjacent: true,
         sourceSlideCount: 4,
         taskId: 'TASK-SLI',
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      4,
+      '/v1/slicings/slide-print-merge-groups',
+      {
+        remarks: '两两合片',
+        taskIds: ['TASK-A1', 'TASK-A2'],
+        terminalCode: 'TERM-1',
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      5,
+      '/v1/slicings/slide-print-merge-groups/cancel',
+      {
+        printGroupIds: ['GROUP-1'],
+        remarks: '取消合片',
+        terminalCode: 'TERM-1',
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      6,
+      '/v1/slicings/slide-print-merge-groups/print',
+      {
+        printGroupId: 'GROUP-1',
+        printerCode: 'PRINTER-1',
+        remarks: '打印合片',
+        terminalCode: 'TERM-1',
       },
     );
   });

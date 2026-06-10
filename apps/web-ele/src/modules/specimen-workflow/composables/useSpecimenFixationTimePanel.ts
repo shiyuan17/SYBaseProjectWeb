@@ -365,16 +365,6 @@ export function useSpecimenFixationTimePanel() {
         return;
       }
 
-      if (!normalizeText(matchedRow.barcode)) {
-        const queueRows = await Promise.all(
-          contextRows.map((row) => buildEnrichedRow(row)),
-        );
-        appendQueueRows(queueRows);
-        scanInput.value = '';
-        ElMessage.warning('匹配标本缺少条码，不能开始固定');
-        return;
-      }
-
       if (
         matchedStatusRow.fixationStatus === 'FIXING' ||
         matchedStatusRow.specimenStatus === 'FIXING'
@@ -391,7 +381,9 @@ export function useSpecimenFixationTimePanel() {
       const startResult = await startFixation({
         fixationLiquidType: normalizeText(fixationLiquidType.value) || null,
         remarks: '扫码开始固定',
-        specimenBarcode: normalizeText(matchedRow.barcode),
+        specimenBarcode: normalizeText(matchedRow.barcode) || null,
+        specimenId: matchedRow.specimenId,
+        specimenNo: matchedRow.specimenNo,
       });
       const startedAt = new Date().toISOString();
       const startedRow = mergeStartedFixationRow(
@@ -432,13 +424,9 @@ export function useSpecimenFixationTimePanel() {
     }
 
     const invalidRow = selectedRows.value.find(
-      (row) => !normalizeText(row.barcode) || !isVisibleInFixationScene(row),
+      (row) => !isVisibleInFixationScene(row),
     );
     if (invalidRow) {
-      if (!normalizeText(invalidRow.barcode)) {
-        ElMessage.warning('选中标本缺少条码，不能完成固定，请重新选择');
-        return;
-      }
       ElMessage.warning(
         `${resolveUnavailableMessage([invalidRow], invalidRow.specimenNo)}，请重新选择`,
       );
@@ -456,7 +444,9 @@ export function useSpecimenFixationTimePanel() {
           const result = await completeFixation({
             fixationLiquidType: selectedFixationLiquidType,
             remarks: '手动确认固定',
-            specimenBarcode: normalizeText(row.barcode),
+            specimenBarcode: normalizeText(row.barcode) || null,
+            specimenId: row.specimenId,
+            specimenNo: row.specimenNo,
           });
           const completedAt =
             result.fixationCompletedAt ?? new Date().toISOString();

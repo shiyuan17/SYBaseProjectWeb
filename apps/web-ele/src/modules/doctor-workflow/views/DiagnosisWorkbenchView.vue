@@ -44,6 +44,14 @@ interface DiagnosisCapturedImageItem {
   title: string;
 }
 
+const diagnosisWorkbenchPaneMinWidths = {
+  materials: 320,
+  queue: 260,
+  report: 420,
+};
+const diagnosisWorkbenchResizerWidth = 10;
+const diagnosisWorkbenchResizeStep = 2;
+
 const route = useRoute();
 const router = useRouter();
 
@@ -67,9 +75,9 @@ const diagnosisImageMaxSize = 20 * 1024 * 1024;
 const diagnosisImageTypes = new Set(diagnosisImageAccept.split(','));
 const workstationLayoutRef = ref<HTMLElement>();
 const paneWidths = reactive({
-  materials: 33,
-  queue: 26,
-  report: 41,
+  materials: 32,
+  queue: 24,
+  report: 44,
 });
 
 const filters = reactive({
@@ -126,7 +134,7 @@ const selectedCapturedImages = computed(() =>
 );
 const canCaptureDiagnosisImage = computed(() => Boolean(selectedCaseId.value));
 const workstationGridStyle = computed(() => ({
-  gridTemplateColumns: `${paneWidths.queue}fr 6px ${paneWidths.report}fr 6px ${paneWidths.materials}fr`,
+  gridTemplateColumns: `minmax(${diagnosisWorkbenchPaneMinWidths.queue}px, ${paneWidths.queue}fr) ${diagnosisWorkbenchResizerWidth}px minmax(${diagnosisWorkbenchPaneMinWidths.report}px, ${paneWidths.report}fr) ${diagnosisWorkbenchResizerWidth}px minmax(${diagnosisWorkbenchPaneMinWidths.materials}px, ${paneWidths.materials}fr)`,
 }));
 
 function validateDiagnosisImageFile(file: File) {
@@ -171,6 +179,21 @@ async function uploadDiagnosisImage(file: File) {
   ];
   ElMessage.success('诊断采图已加入当前病例');
   return true;
+}
+
+function deleteDiagnosisImage(imageKey: string) {
+  const caseId = selectedCaseId.value.trim();
+  const images = caseId ? (diagnosisCapturedImagesByCaseId[caseId] ?? []) : [];
+  const targetImage = images.find((item) => item.key === imageKey);
+  if (!targetImage) {
+    return;
+  }
+
+  URL.revokeObjectURL(targetImage.objectUrl);
+  diagnosisCapturedImagesByCaseId[caseId] = images.filter(
+    (item) => item.key !== imageKey,
+  );
+  ElMessage.success('诊断采图已删除');
 }
 
 function revokeDiagnosisCaptureObjectUrls() {
@@ -369,25 +392,64 @@ function handleReportPrintPreviewChange(
   reportPrintPreview.value = preview;
 }
 
-function applyPaneWidths(nextWidths: {
-  materials: number;
-  queue: number;
-  report: number;
-}) {
-  const minWidth = 18;
-  const total = nextWidths.queue + nextWidths.report + nextWidths.materials;
-  if (
-    total <= 0 ||
-    nextWidths.queue < minWidth ||
-    nextWidths.report < minWidth ||
-    nextWidths.materials < minWidth
-  ) {
+function clampPaneWidth(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function normalizePaneWidth(value: number) {
+  return Number(value.toFixed(3));
+}
+
+function getPaneMinRatio(
+  layoutWidth: number,
+  pane: keyof typeof diagnosisWorkbenchPaneMinWidths,
+) {
+  return (
+    (diagnosisWorkbenchPaneMinWidths[pane] /
+      Math.max(layoutWidth - diagnosisWorkbenchResizerWidth * 2, 1)) *
+    100
+  );
+}
+
+function applyLeftResize(deltaPercent: number, layoutWidth: number) {
+  const queueMin = getPaneMinRatio(layoutWidth, 'queue');
+  const reportMin = getPaneMinRatio(layoutWidth, 'report');
+  const pairedWidth = paneWidths.queue + paneWidths.report;
+  const nextQueue = clampPaneWidth(
+    paneWidths.queue + deltaPercent,
+    queueMin,
+    pairedWidth - reportMin,
+  );
+
+  paneWidths.queue = normalizePaneWidth(nextQueue);
+  paneWidths.report = normalizePaneWidth(pairedWidth - nextQueue);
+}
+
+function applyRightResize(deltaPercent: number, layoutWidth: number) {
+  const materialsMin = getPaneMinRatio(layoutWidth, 'materials');
+  const reportMin = getPaneMinRatio(layoutWidth, 'report');
+  const pairedWidth = paneWidths.report + paneWidths.materials;
+  const nextReport = clampPaneWidth(
+    paneWidths.report + deltaPercent,
+    reportMin,
+    pairedWidth - materialsMin,
+  );
+
+  paneWidths.report = normalizePaneWidth(nextReport);
+  paneWidths.materials = normalizePaneWidth(pairedWidth - nextReport);
+}
+
+function resizeWorkbenchPane(
+  handle: DiagnosisWorkbenchResizeHandle,
+  deltaPercent: number,
+  layoutWidth: number,
+) {
+  if (handle === 'left') {
+    applyLeftResize(deltaPercent, layoutWidth);
     return;
   }
 
-  paneWidths.queue = nextWidths.queue;
-  paneWidths.report = nextWidths.report;
-  paneWidths.materials = nextWidths.materials;
+  applyRightResize(deltaPercent, layoutWidth);
 }
 
 function handleResizePointerDown(
@@ -405,28 +467,23 @@ function handleResizePointerDown(
 
   event.preventDefault();
   const startX = event.clientX;
-  const startWidths = { ...paneWidths };
   const layoutWidth = layoutElement.getBoundingClientRect().width;
+  const startWidths = { ...paneWidths };
+
+  document.documentElement.classList.add('diagnosis-workbench-is-resizing');
 
   const handlePointerMove = (moveEvent: PointerEvent) => {
     const deltaPercent = ((moveEvent.clientX - startX) / layoutWidth) * 100;
-    if (handle === 'left') {
-      applyPaneWidths({
-        ...startWidths,
-        queue: startWidths.queue + deltaPercent,
-        report: startWidths.report - deltaPercent,
-      });
-      return;
-    }
-
-    applyPaneWidths({
-      ...startWidths,
-      materials: startWidths.materials - deltaPercent,
-      report: startWidths.report + deltaPercent,
-    });
+    paneWidths.queue = startWidths.queue;
+    paneWidths.report = startWidths.report;
+    paneWidths.materials = startWidths.materials;
+    resizeWorkbenchPane(handle, deltaPercent, layoutWidth);
   };
 
   const stopResize = () => {
+    document.documentElement.classList.remove(
+      'diagnosis-workbench-is-resizing',
+    );
     window.removeEventListener('pointermove', handlePointerMove);
     window.removeEventListener('pointerup', stopResize);
     window.removeEventListener('pointercancel', stopResize);
@@ -435,6 +492,28 @@ function handleResizePointerDown(
   window.addEventListener('pointermove', handlePointerMove);
   window.addEventListener('pointerup', stopResize, { once: true });
   window.addEventListener('pointercancel', stopResize, { once: true });
+}
+
+function handleResizeKeydown(
+  handle: DiagnosisWorkbenchResizeHandle,
+  event: KeyboardEvent,
+) {
+  if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') {
+    return;
+  }
+
+  const layoutElement = workstationLayoutRef.value;
+  if (!layoutElement) {
+    return;
+  }
+
+  event.preventDefault();
+  const direction = event.key === 'ArrowRight' ? 1 : -1;
+  resizeWorkbenchPane(
+    handle,
+    direction * diagnosisWorkbenchResizeStep,
+    layoutElement.getBoundingClientRect().width,
+  );
 }
 
 watch(
@@ -497,44 +576,52 @@ onBeforeUnmount(() => {
       <div
         ref="workstationLayoutRef"
         class="diagnosis-workbench-layout grid min-h-0 gap-3 xl:items-stretch xl:gap-0"
+        data-testid="diagnosis-workbench-layout"
         :style="workstationGridStyle"
       >
         <DiagnosisWorkbenchQueueTable
           :items="visiblePendingItems"
           :loading="queueLoading"
           :selected-task-id="selectedTaskId"
-          class="min-h-[360px] min-w-[320px] xl:h-[calc(100vh-270px)]"
+          class="min-h-[360px] min-w-0 xl:h-[calc(100vh-270px)]"
           @select="selectQueueTask"
         />
 
         <button
           aria-label="调整诊断队列和报告预览编辑宽度"
-          class="diagnosis-workbench-resizer mx-1 hidden xl:block"
+          aria-orientation="vertical"
+          class="diagnosis-workbench-resizer hidden xl:block"
           data-testid="diagnosis-workbench-resizer-left"
+          title="拖拽调整诊断队列和报告预览编辑宽度"
           type="button"
+          @keydown="handleResizeKeydown('left', $event)"
           @pointerdown="handleResizePointerDown('left', $event)"
         ></button>
 
         <DiagnosisWorkbenchReportEditor
           v-model:print-preview-visible="printPreviewVisible"
+          :captured-images="selectedCapturedImages"
           :loading="detailLoading"
           :workbench="workbench"
-          class="min-h-[360px] min-w-[440px] xl:h-[calc(100vh-270px)]"
+          class="min-h-[360px] min-w-0 xl:h-[calc(100vh-270px)]"
           @preview-change="handleReportPrintPreviewChange"
         />
 
         <button
           aria-label="调整报告预览编辑和诊断材料区宽度"
-          class="diagnosis-workbench-resizer mx-1 hidden xl:block"
+          aria-orientation="vertical"
+          class="diagnosis-workbench-resizer hidden xl:block"
           data-testid="diagnosis-workbench-resizer-right"
+          title="拖拽调整报告预览编辑和诊断材料区宽度"
           type="button"
+          @keydown="handleResizeKeydown('right', $event)"
           @pointerdown="handleResizePointerDown('right', $event)"
         ></button>
 
         <DiagnosisWorkbenchDetailPane
           :print-preview="reportPrintPreview"
           :workbench="workbench"
-          class="min-h-[360px] min-w-[380px] xl:h-[calc(100vh-270px)] xl:overflow-auto"
+          class="min-h-[360px] min-w-0 xl:h-[calc(100vh-270px)] xl:overflow-auto"
         >
           <template #medical-orders>
             <DiagnosisWorkbenchMedicalOrderPane
@@ -560,6 +647,7 @@ onBeforeUnmount(() => {
                 empty-description="当前病例暂无诊断采图"
                 :items="selectedCapturedImages"
                 preview-hint="当前病例拍照实时预览"
+                :delete-image="deleteDiagnosisImage"
                 :upload-image-file="uploadDiagnosisImage"
               />
             </section>
@@ -572,17 +660,46 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .diagnosis-workbench-resizer {
+  position: relative;
   min-height: 360px;
   cursor: col-resize;
   background: transparent;
+  border: 0;
   border-radius: 4px;
   transition: background-color 0.15s ease;
+}
+
+.diagnosis-workbench-resizer::before {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 50%;
+  width: 2px;
+  content: '';
+  background: var(--el-border-color);
+  border-radius: 999px;
+  transform: translateX(-50%);
+  transition:
+    background-color 0.15s ease,
+    width 0.15s ease;
 }
 
 .diagnosis-workbench-resizer:hover,
 .diagnosis-workbench-resizer:focus-visible {
   outline: none;
   background: var(--el-color-primary-light-7);
+}
+
+.diagnosis-workbench-resizer:hover::before,
+.diagnosis-workbench-resizer:focus-visible::before {
+  width: 4px;
+  background: var(--el-color-primary);
+}
+
+:global(.diagnosis-workbench-is-resizing),
+:global(.diagnosis-workbench-is-resizing *) {
+  cursor: col-resize !important;
+  user-select: none;
 }
 
 .diagnosis-capture-section {

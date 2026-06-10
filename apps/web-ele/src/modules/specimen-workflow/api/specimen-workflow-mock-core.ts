@@ -105,6 +105,40 @@ export function resolveSpecimensBySpecimenNo(specimenNo: string) {
   );
 }
 
+export function resolveSpecimenByPreferredIdentifier(data: {
+  specimenBarcode?: null | string;
+  specimenId?: null | string;
+  specimenNo?: null | string;
+}) {
+  const specimenId = normalizeText(data.specimenId);
+  if (specimenId) {
+    return resolveSpecimenByIdentifier(specimenId);
+  }
+
+  const specimenBarcode = normalizeText(data.specimenBarcode);
+  if (specimenBarcode) {
+    return resolveSpecimenByIdentifier(specimenBarcode);
+  }
+
+  const specimenNo = normalizeText(data.specimenNo);
+  if (specimenNo) {
+    const matchedSpecimens = resolveSpecimensBySpecimenNo(specimenNo);
+    if (matchedSpecimens.length === 0) {
+      throw new Error(`未找到标本: ${specimenNo}`);
+    }
+    if (matchedSpecimens.length > 1) {
+      throw new Error(`标本流水号 ${specimenNo} 匹配到多条记录`);
+    }
+    const matchedSpecimen = matchedSpecimens[0];
+    if (!matchedSpecimen) {
+      throw new Error(`未找到标本: ${specimenNo}`);
+    }
+    return matchedSpecimen;
+  }
+
+  throw new Error('缺少标本 ID、条码或标本编号');
+}
+
 export function applySpecimenRemovalConfirmation(
   specimen: RawSpecimen,
   data: Pick<SpecimenRemovalConfirmRequest, 'remarks' | 'terminalCode'>,
@@ -303,7 +337,7 @@ export function mapSpecimenTrackingSummary(
   return {
     abnormalReason: specimen.receiptReason ?? specimen.receiptRemarks ?? null,
     abnormalType: resolveSpecimenAbnormalType(specimen),
-    barcode: specimen.barcode,
+    barcode: normalizeText(specimen.barcode) || null,
     barcodeBindingStatus: resolveSpecimenBarcodeBindingStatus(specimen),
     checkInStatus: resolveSpecimenCheckInStatus(specimen),
     checkedInAt: specimen.checkedInAt ?? null,
@@ -345,7 +379,7 @@ export function mapSpecimenManagementItem(
     abnormalType: resolveSpecimenAbnormalType(specimen),
     applicationId: application.id,
     applicationNo: application.applicationNo,
-    barcode: specimen.barcode,
+    barcode: specimen.barcode ?? '',
     barcodeBindingStatus: resolveSpecimenBarcodeBindingStatus(specimen),
     buildingId: null,
     checkInStatus: resolveSpecimenCheckInStatus(specimen),

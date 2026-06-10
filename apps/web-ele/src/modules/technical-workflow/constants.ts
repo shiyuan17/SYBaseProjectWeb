@@ -223,6 +223,7 @@ export const TECHNICAL_TASK_TYPE_OPTIONS = [
 export const TECHNICAL_TASK_STATUS_OPTIONS = [
   { label: '待处理', value: 'PENDING' },
   { label: '处理中', value: 'IN_PROGRESS' },
+  { label: '包埋确认待完成', value: 'EMBEDDING_CONFIRM_PENDING' },
   { label: '已完成', value: 'COMPLETED' },
 ] as const;
 

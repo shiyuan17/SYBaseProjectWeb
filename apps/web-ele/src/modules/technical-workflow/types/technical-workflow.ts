@@ -721,6 +721,29 @@ export interface SlicingSlidePrintResult {
   taskId: string;
 }
 
+export interface SlicingSlidePrintMergeGroupRequest {
+  remarks?: null | string;
+  taskIds: string[];
+  terminalCode?: null | string;
+}
+
+export interface SlicingSlidePrintMergeGroupCancelRequest {
+  printGroupIds: string[];
+  remarks?: null | string;
+  terminalCode?: null | string;
+}
+
+export interface SlicingSlidePrintMergeGroupPrintRequest {
+  printGroupId: string;
+  printerCode?: null | string;
+  remarks?: null | string;
+  terminalCode?: null | string;
+}
+
+export interface SlicingSlidePrintMergeGroupResult {
+  printGroupIds: string[];
+}
+
 export interface SlicingWorkbenchStats {
   completedDeptTodayCount: number;
   completedMineTodayCount: number;
@@ -736,13 +759,17 @@ export interface SlicingWorkbenchRow {
   combinedSlide: boolean;
   completedAt?: null | string;
   embeddingBoxId: string;
+  embeddingBoxIds: string[];
+  embeddingBoxNo?: null | string;
   embeddingClearRemark?: null | string;
+  embeddingRemarks?: null | string;
   embeddingEvaluation?: null | string;
   embeddingOperatorName?: null | string;
   grossingEvaluation?: null | string;
   pathologyNo?: null | string;
   patientId?: null | string;
   patientName?: null | string;
+  printGroupId?: null | string;
   selectable: boolean;
   shiftRemark?: null | string;
   slideId?: null | string;
@@ -753,9 +780,12 @@ export interface SlicingWorkbenchRow {
   slicingRemark?: null | string;
   specimenId?: null | string;
   specimenName?: null | string;
+  submittingDepartmentName?: null | string;
   taskId: string;
+  taskIds: string[];
   taskStatus?: null | string;
   timedOut: boolean;
+  mergedPrintGroup: boolean;
   printedSlideCount: number;
 }
 

@@ -302,5 +302,14 @@ describe('transport handover helpers', () => {
         ' SP-NO-2 ',
       ),
     ).toEqual([expect.objectContaining({ specimenId: 'SP-2' })]);
+    expect(
+      resolveExactSpecimenOutboundMatches(
+        [
+          createOutboundRow(),
+          createOutboundRow({ barcode: 'BC-2', specimenId: 'SP-2' }),
+        ],
+        ' BC-2 ',
+      ),
+    ).toEqual([expect.objectContaining({ specimenId: 'SP-2' })]);
   });
 });

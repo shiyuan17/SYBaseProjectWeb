@@ -16,7 +16,7 @@ const {
   completeFixationMock: vi.fn(
     async (payload: {
       fixationLiquidType: string;
-      specimenBarcode: string;
+      specimenBarcode?: null | string;
     }) => ({
       barcode: payload.specimenBarcode,
       fixationCompletedAt: '2026-05-26 10:00:00',
@@ -30,7 +30,7 @@ const {
   startFixationMock: vi.fn(
     async (payload: {
       fixationLiquidType?: null | string;
-      specimenBarcode: string;
+      specimenBarcode?: null | string;
     }) => ({
       barcode: payload.specimenBarcode,
       fixationCompletedAt: null,
@@ -402,8 +402,106 @@ describe('useSpecimenFixationTimePanel', () => {
       fixationLiquidType: 'FORMALIN',
       remarks: '扫码开始固定',
       specimenBarcode: 'BC-002',
+      specimenId: 'SPEC-002',
+      specimenNo: 'SP-002',
     });
     expect(completeFixationMock).not.toHaveBeenCalled();
+
+    wrapper.destroy();
+  });
+
+  it('starts and completes fixation for an unbound specimen by specimen id', async () => {
+    const unboundRow = {
+      abnormalFlag: false,
+      applicationId: 'APP-009',
+      applicationNo: 'M2-009',
+      barcode: null,
+      fixationCompletedAt: null,
+      fixationStartedAt: null,
+      fixationStatus: 'PENDING',
+      labelPrintBatchNo: 'LB-009',
+      labelPrintStatus: 'SUCCESS',
+      latestTrackingAt: '2026-05-26 10:20:00',
+      patientName: 'Nina',
+      registeredAt: '2026-05-26 10:00:00',
+      specimenId: 'SPEC-009',
+      specimenName: '未绑定条码组织',
+      specimenNo: 'SP-009',
+      specimenStatus: 'REGISTERED',
+      specimenType: '常规',
+      verificationStatus: 'VERIFIED',
+    };
+    const unboundPage = {
+      items: [unboundRow],
+      page: 1,
+      size: 100,
+      summary: {
+        abnormalCount: 0,
+        labelPrintedCount: 1,
+        pendingLabelCount: 0,
+        totalCount: 1,
+      },
+      total: 1,
+    };
+    listSpecimensMock
+      .mockResolvedValueOnce(
+        unboundPage as unknown as Awaited<ReturnType<typeof listSpecimensMock>>,
+      )
+      .mockResolvedValueOnce(
+        unboundPage as unknown as Awaited<ReturnType<typeof listSpecimensMock>>,
+      );
+    startFixationMock.mockResolvedValueOnce({
+      barcode: null,
+      fixationCompletedAt: null,
+      fixationLiquidType: 'FORMALIN',
+      fixationStatus: 'FIXING',
+      operatorName: 'Test User',
+      operatorUserId: 'USER-001',
+      specimenId: 'SPEC-009',
+    });
+    completeFixationMock.mockResolvedValueOnce({
+      barcode: null,
+      fixationCompletedAt: '2026-05-26 10:30:00',
+      fixationLiquidType: 'FORMALIN',
+      fixationStatus: 'COMPLETED',
+      operatorName: 'Test User',
+      operatorUserId: 'USER-001',
+      specimenId: 'SPEC-009',
+    });
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    state.scanInput.value = 'SP-009';
+    await state.handleCompleteFixationByScan();
+    await flushComposable();
+
+    expect(startFixationMock).toHaveBeenCalledWith({
+      fixationLiquidType: 'FORMALIN',
+      remarks: '扫码开始固定',
+      specimenBarcode: null,
+      specimenId: 'SPEC-009',
+      specimenNo: 'SP-009',
+    });
+    expect(warningMock).not.toHaveBeenCalledWith(
+      expect.stringContaining('缺少条码'),
+    );
+
+    state.handleSelectionChange([state.queueItems.value[0]!]);
+    await state.handleConfirmFixation();
+    await flushComposable();
+
+    expect(completeFixationMock).toHaveBeenCalledWith({
+      fixationLiquidType: 'FORMALIN',
+      remarks: '手动确认固定',
+      specimenBarcode: null,
+      specimenId: 'SPEC-009',
+      specimenNo: 'SP-009',
+    });
 
     wrapper.destroy();
   });
@@ -489,6 +587,8 @@ describe('useSpecimenFixationTimePanel', () => {
       fixationLiquidType: 'FORMALIN',
       remarks: '手动确认固定',
       specimenBarcode: 'BC-002',
+      specimenId: 'SPEC-002',
+      specimenNo: 'SP-002',
     });
     expect(state.queueItems.value[0]?.fixationStatus).toBe('COMPLETED');
     expect(state.queueItems.value[1]?.fixationStatus).toBe('PENDING');

@@ -295,6 +295,23 @@ function saveRemarkSection() {
                 <div class="diagnosis-print-preview-section-value">
                   {{ section.value || ' ' }}
                 </div>
+                <div
+                  v-if="section.images?.length"
+                  class="diagnosis-print-preview-image-stage"
+                >
+                  <img
+                    v-for="image in section.images"
+                    :key="image.key"
+                    :alt="image.title"
+                    class="diagnosis-print-preview-image"
+                    :src="image.fileUrl"
+                    :style="{
+                      left: `${image.left}px`,
+                      top: `${image.top}px`,
+                    }"
+                    :title="image.title"
+                  />
+                </div>
               </section>
 
               <footer class="diagnosis-print-preview-footer">
@@ -679,6 +696,22 @@ function saveRemarkSection() {
   word-break: normal;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
+}
+
+.diagnosis-print-preview-image-stage {
+  position: relative;
+  min-height: 160px;
+  margin-top: 8px;
+  border: 1px dashed #bdbdbd;
+}
+
+.diagnosis-print-preview-image {
+  position: absolute;
+  width: 96px;
+  height: 72px;
+  object-fit: cover;
+  background: #fff;
+  border: 1px solid #999;
 }
 
 .diagnosis-print-preview-footer {

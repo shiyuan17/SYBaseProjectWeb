@@ -14,13 +14,35 @@
 
 每个任务必须先选择一个主 Workflow，再按风险叠加强制修饰器：
 
-- 主 Workflow：UI、API、DB、Security、Architecture、Production Debug、Workflow/Infra 之一
+- 主 Workflow：UI、API、DB、Security、Architecture、Production Debug、Workflow-Infra 之一
 - Security 修饰器：涉及权限、患者信息、报告信息、登录态、脱敏、审计时必须叠加
 - DB 修饰器：涉及后端迁移、种子、SQL、数据兼容或回滚时必须叠加，并引用后端验证结果
 - Red Team 修饰器：高风险、跨层、生产问题、权限/数据/报告相关任务必须叠加
 - 跨仓任务：前端 PR 必须引用后端 MR/验证结果，后端 MR 必须引用前端 PR/验证结果
 
 PR 必须填写 Workflow Packet，说明为什么选择该 Workflow、启用哪些专家 Agent、跑了哪些动态测试和模拟、红队攻击结论是什么。
+
+## 触发信号速查表
+
+任务开始时先按"改动路径 / 需求信号"查下表选主 Workflow，再按命中行叠加必叠修饰器。一个任务可能命中多行：主 Workflow 取最贴近核心改动的一项，其余命中项作为修饰器叠加。判断有歧义或跨多类时，从严就高（优先叠加 Security / DB / Red Team）。
+
+| 改动路径 / 需求信号 | 主 Workflow | 必叠修饰器 |
+| --- | --- | --- |
+| `apps/web-ele/**` 页面、组件、布局、样式、`*.vue`、Element Plus / Tailwind / ECharts、视口与浏览器兼容 | UI | Browser 验证（Browser Verification） |
+| `**/api/**`、`*request*`、`*mapper*`、字段映射、错误码、分页协议、`*mock*`、后端联调 | API | Backend Cross-check（跨仓时） |
+| 依赖后端 `db/migration`、SQL、种子数据、历史数据兼容、回滚 | DB | DB、Backend Cross-check、Red Team |
+| 权限、登录态、菜单鉴权、路由守卫、患者信息、报告信息、敏感字段、导出、打印、下载、审计、日志脱敏 | Security | Security、Red Team |
+| 大文件重构、共享组件 / `stores` / 路由 / `request` 边界、跨模块复用、循环依赖、构建/工具链 | Architecture | Red Team（跨层时） |
+| 生产问题、线上故障、性能回退、用户现场阻塞、`.logs/` 中已有错误 | Production Debug | Red Team、Backend Cross-check（跨仓时） |
+| Git hooks、GitHub Actions、构建/日志脚本、包管理、环境变量、发布路径 | Workflow-Infra | Red Team（红区时） |
+| 纯文档、注释、闲聊或信息查询，不改运行时行为 | 不适用（标注原因即可） | 无 |
+
+修饰器叠加底线（与「总规则」一致）：
+
+- 涉及权限 / 患者信息 / 报告信息 / 登录态 / 脱敏 / 审计 → 必叠 Security
+- 涉及后端迁移 / 种子 / SQL / 数据兼容 / 回滚 → 必叠 DB，并引用后端验证结果
+- 高风险 / 跨层 / 生产问题 / 权限 / 数据 / 报告相关 → 必叠 Red Team
+- 需要对照后端 `SYBaseProject` 实现或验证 → 必叠 Backend Cross-check，并双向引用
 
 ## Workflow Packet
 
@@ -136,7 +158,7 @@ PR 中必须包含以下信息：
 专家 Agent：
 
 - DB/Migration Agent：检查迁移、回滚、幂等、旧数据兼容
-- Backend Cross-check Agent：对照后端 `docs/rules/DB_RULES.md` 与迁移脚本
+- Backend Cross-check Agent：对照后端 `SYBaseProject/docs/rules/DB_RULES.md` 与迁移脚本
 
 动态测试：
 
@@ -274,7 +296,7 @@ PR 中必须包含以下信息：
 - 已复现故障进入 `KNOWN_BUGS.md`，回滚或处置决策进入 `DECISIONS.md`
 - 当前阻塞、验证基线和交接重点更新 `PROJECT_STATE.md`
 
-## Workflow/Infra Workflow
+## Workflow-Infra Workflow
 
 触发条件：
 
@@ -282,7 +304,7 @@ PR 中必须包含以下信息：
 
 专家 Agent：
 
-- Workflow/Infra Agent：检查本地命令、CI、缓存、跨平台与发布风险
+- Workflow-Infra Agent：检查本地命令、CI、缓存、跨平台与发布风险
 
 动态测试：
 

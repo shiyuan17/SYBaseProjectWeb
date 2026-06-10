@@ -1026,6 +1026,61 @@ describe('GrossingWorkstationView', () => {
     app.unmount();
   });
 
+  it('renders resizable workbench columns and lets captured images scroll with the workspace', async () => {
+    const { app, root } = await mountView();
+
+    const layout = root.querySelector<HTMLElement>(
+      '[data-testid="grossing-workbench-layout"]',
+    );
+    const leftResizer = root.querySelector<HTMLButtonElement>(
+      '[data-testid="grossing-workbench-resizer-left"]',
+    );
+    const rightResizer = root.querySelector<HTMLButtonElement>(
+      '[data-testid="grossing-workbench-resizer-right"]',
+    );
+    const imagePanel = root.querySelector<HTMLElement>(
+      '[data-testid="workbench-captured-image-panel"]',
+    );
+    const imagePanelBody = root.querySelector<HTMLElement>(
+      '[data-testid="workbench-captured-image-panel-body"]',
+    );
+
+    expect(layout).toBeTruthy();
+    expect(leftResizer).toBeTruthy();
+    expect(rightResizer).toBeTruthy();
+    expect(layout!.style.gridTemplateColumns).toContain('30fr');
+    expect(layout!.style.gridTemplateColumns).toContain('45fr');
+    expect(layout!.style.gridTemplateColumns).toContain('25fr');
+    expect(imagePanel?.className).toContain('flex-none');
+    expect(imagePanelBody?.className).not.toContain('overflow-auto');
+
+    layout!.getBoundingClientRect = vi.fn(
+      () =>
+        ({
+          width: 2000,
+        }) as DOMRect,
+    );
+    leftResizer!.dispatchEvent(
+      new MouseEvent('pointerdown', {
+        bubbles: true,
+        button: 0,
+        clientX: 100,
+      }),
+    );
+    window.dispatchEvent(
+      new MouseEvent('pointermove', {
+        clientX: 200,
+      }),
+    );
+    window.dispatchEvent(new MouseEvent('pointerup'));
+    await flushAll();
+
+    expect(layout!.style.gridTemplateColumns).toContain('35fr');
+    expect(layout!.style.gridTemplateColumns).toContain('40fr');
+
+    app.unmount();
+  });
+
   it('appends a grossing template directly when double-clicking the template card', async () => {
     const { app, root } = await mountView();
 

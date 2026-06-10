@@ -62,9 +62,6 @@ interface UseGrossingWorkbenchOptions {
 }
 
 type GrossingEmbeddingBoxPrefix = string;
-const GENERATED_EMBEDDING_BOX_NO_PREFIX = 'BX';
-const GENERATED_EMBEDDING_BOX_NO_SCOPE_FALLBACK = 'CASE';
-const MAX_EMBEDDING_BOX_NO_LENGTH = 64;
 
 interface GrossingSpecimenTabMeta {
   key: string;
@@ -102,34 +99,11 @@ function getEmbeddingBoxPrefixRank(prefix: string) {
   return rank || Number.MAX_SAFE_INTEGER;
 }
 
-function normalizeEmbeddingBoxScope(scope: null | string | undefined) {
-  const normalizedScope = (scope ?? '')
-    .trim()
-    .toUpperCase()
-    .replaceAll(/[^A-Z0-9]+/g, '-')
-    .replaceAll(/^-+|-+$/g, '');
-  return normalizedScope || GENERATED_EMBEDDING_BOX_NO_SCOPE_FALLBACK;
-}
-
 function buildGeneratedEmbeddingBoxNo(
-  scope: string,
   prefix: GrossingEmbeddingBoxPrefix,
   sequenceNo: number,
 ) {
-  const suffix = `${prefix.toUpperCase()}${sequenceNo}`;
-  const normalizedScope = normalizeEmbeddingBoxScope(scope);
-  const maxScopeLength = Math.max(
-    1,
-    MAX_EMBEDDING_BOX_NO_LENGTH -
-      GENERATED_EMBEDDING_BOX_NO_PREFIX.length -
-      suffix.length -
-      2,
-  );
-  const truncatedScope =
-    normalizedScope.slice(0, maxScopeLength).replaceAll(/-+$/g, '') ||
-    GENERATED_EMBEDDING_BOX_NO_SCOPE_FALLBACK;
-
-  return `${GENERATED_EMBEDDING_BOX_NO_PREFIX}-${truncatedScope}-${suffix}`;
+  return `${prefix.toUpperCase()}${sequenceNo}`;
 }
 
 function parseGeneratedEmbeddingBoxNo(embeddingBoxNo: string) {
@@ -196,11 +170,7 @@ export function useGrossingWorkbench(
 
   function createEmbeddingBox(
     sequenceNo: number,
-    embeddingBoxNo = buildGeneratedEmbeddingBoxNo(
-      GENERATED_EMBEDDING_BOX_NO_SCOPE_FALLBACK,
-      'A',
-      sequenceNo,
-    ),
+    embeddingBoxNo = buildGeneratedEmbeddingBoxNo('A', sequenceNo),
   ): GrossingEmbeddingBoxItemRequest {
     return {
       boxName: `包埋盒 ${sequenceNo}`,
@@ -218,14 +188,6 @@ export function useGrossingWorkbench(
     };
   }
 
-  function getResolvedEmbeddingBoxScope() {
-    return normalizeEmbeddingBoxScope(
-      workbenchContext.value?.caseSummary?.pathologyNo ??
-        currentTask.value?.pathologyNo ??
-        currentTask.value?.caseId,
-    );
-  }
-
   function createEmptySpecimen(specimenIndex = 0): GrossingSpecimenItemRequest {
     return {
       blocks: [createEmptyBlock()],
@@ -235,11 +197,7 @@ export function useGrossingWorkbench(
       embeddingBoxes: [
         createEmbeddingBox(
           1,
-          buildGeneratedEmbeddingBoxNo(
-            getResolvedEmbeddingBoxScope(),
-            getSpecimenPrefix(specimenIndex),
-            1,
-          ),
+          buildGeneratedEmbeddingBoxNo(getSpecimenPrefix(specimenIndex), 1),
         ),
       ],
       grossDescription: '',
@@ -333,6 +291,37 @@ export function useGrossingWorkbench(
     ),
   );
 
+  function collectTrackedEmbeddingBoxNos() {
+    const trackedNos = new Set<string>();
+    const tracking = trackingResult.value;
+    tracking?.blocks?.forEach((block) => {
+      const normalizedNo = block.embeddingBoxNo?.trim().toUpperCase();
+      if (normalizedNo) {
+        trackedNos.add(normalizedNo);
+      }
+    });
+    tracking?.embeddingBoxes?.forEach((box) => {
+      const normalizedNo = box.embeddingBoxNo?.trim().toUpperCase();
+      if (normalizedNo) {
+        trackedNos.add(normalizedNo);
+      }
+    });
+    return trackedNos;
+  }
+
+  function collectCurrentEmbeddingBoxNos() {
+    const currentNos = new Set<string>();
+    completeForm.specimens.forEach((specimen) => {
+      specimen.embeddingBoxes?.forEach((box) => {
+        const normalizedNo = box.embeddingBoxNo?.trim().toUpperCase();
+        if (normalizedNo) {
+          currentNos.add(normalizedNo);
+        }
+      });
+    });
+    return currentNos;
+  }
+
   function createSpecimenTabMeta(trackingLabel = '', specimenName = '') {
     return {
       key: `specimen-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -407,12 +396,25 @@ export function useGrossingWorkbench(
       return;
     }
 
+    const seededEmbeddingBoxNos = new Set<string>();
     syncSpecimenTabs(
       tracking.specimens.map((item, itemIndex) => {
         const specimenBlocks = tracking.blocks.filter(
           (block) => block.specimenId === item.specimenId,
         );
         const blockCount = Math.max(specimenBlocks.length, 1);
+        const embeddingBoxes = Array.from(
+          { length: blockCount },
+          (_, index) => {
+            const embeddingBoxNo = getNextEmbeddingBoxNo(
+              getSpecimenPrefix(itemIndex),
+              seededEmbeddingBoxNos,
+              false,
+            );
+            seededEmbeddingBoxNos.add(embeddingBoxNo.toUpperCase());
+            return createEmbeddingBox(index + 1, embeddingBoxNo);
+          },
+        );
         return {
           blocks: Array.from({ length: blockCount }, (_, index) => ({
             ...createEmptyBlock(),
@@ -421,16 +423,7 @@ export function useGrossingWorkbench(
           blockCount,
           bodyPartId: '',
           cutSurfaceFeature: '',
-          embeddingBoxes: Array.from({ length: blockCount }, (_, index) =>
-            createEmbeddingBox(
-              index + 1,
-              buildGeneratedEmbeddingBoxNo(
-                getResolvedEmbeddingBoxScope(),
-                getSpecimenPrefix(itemIndex),
-                index + 1,
-              ),
-            ),
-          ),
+          embeddingBoxes,
           grossDescription: '',
           marginMarking: '',
           mediaAssets: [],
@@ -568,7 +561,7 @@ export function useGrossingWorkbench(
     specimen.embeddingBoxes.push(
       createEmbeddingBox(
         specimen.embeddingBoxes.length + 1,
-        getNextEmbeddingBoxNo(specimen, getSpecimenPrefix(specimenIndex)),
+        getNextEmbeddingBoxNo(getSpecimenPrefix(specimenIndex)),
       ),
     );
     sortEmbeddingBoxPairs(specimen);
@@ -592,12 +585,17 @@ export function useGrossingWorkbench(
   }
 
   function getNextEmbeddingBoxNo(
-    specimen: GrossingSpecimenItemRequest,
     prefix: GrossingEmbeddingBoxPrefix,
+    additionalEmbeddingBoxNos: Set<string> = new Set(),
+    includeCurrentForm = true,
   ) {
     const usedSequences = new Set<number>();
-    for (const box of specimen.embeddingBoxes ?? []) {
-      const parsedBoxNo = parseGeneratedEmbeddingBoxNo(box.embeddingBoxNo);
+    for (const boxNo of [
+      ...collectTrackedEmbeddingBoxNos(),
+      ...(includeCurrentForm ? collectCurrentEmbeddingBoxNos() : []),
+      ...additionalEmbeddingBoxNos,
+    ]) {
+      const parsedBoxNo = parseGeneratedEmbeddingBoxNo(boxNo);
       if (
         parsedBoxNo?.prefix === prefix &&
         Number.isSafeInteger(parsedBoxNo.sequence) &&
@@ -610,11 +608,7 @@ export function useGrossingWorkbench(
     while (usedSequences.has(nextSequence)) {
       nextSequence += 1;
     }
-    return buildGeneratedEmbeddingBoxNo(
-      getResolvedEmbeddingBoxScope(),
-      prefix,
-      nextSequence,
-    );
+    return buildGeneratedEmbeddingBoxNo(prefix, nextSequence);
   }
 
   function compareEmbeddingBoxPairs(
@@ -698,10 +692,7 @@ export function useGrossingWorkbench(
     for (let index = 0; index < count; index++) {
       const nextSequenceNo = specimen.embeddingBoxes.length + 1;
       specimen.embeddingBoxes.push(
-        createEmbeddingBox(
-          nextSequenceNo,
-          getNextEmbeddingBoxNo(specimen, prefix),
-        ),
+        createEmbeddingBox(nextSequenceNo, getNextEmbeddingBoxNo(prefix)),
       );
       specimen.blocks.push(createEmptyBlock());
     }

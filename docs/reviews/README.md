@@ -6,6 +6,7 @@
 
 ## 文档清单
 
+- [agents-spec-redteam-review.html](./agents-spec-redteam-review.html)
 - [clinical-submission-blsysnew-comparison.html](./clinical-submission-blsysnew-comparison.html)
 - [clinical-submission-legacy-gap-analysis.html](./clinical-submission-legacy-gap-analysis.html)
 - [clinical-submission-process.html](./clinical-submission-process.html)
