@@ -90,6 +90,20 @@ describe('mapMenuViewsToRoutes', () => {
         sortOrder: 30,
         visible: false,
       },
+      {
+        componentName: 'LogManagement',
+        enabled: true,
+        icon: 'carbon:document-audit',
+        id: 'MENU_SYS_LOG_MANAGEMENT',
+        menuCode: 'SYS_LOG_MANAGEMENT',
+        menuName: '日志管理',
+        menuType: 'MENU',
+        parentId: 'MENU_SYSTEM',
+        path: '/system/logs',
+        permissionPrefix: 'sys:log',
+        sortOrder: 40,
+        visible: true,
+      },
     ];
 
     const routes = mapMenuViewsToRoutes(menus);
@@ -117,6 +131,14 @@ describe('mapMenuViewsToRoutes', () => {
         }),
         name: 'MedicalOrderDicts',
         path: '/system/medical-order-dicts',
+      }),
+      expect.objectContaining({
+        component: '/modules/system-management/views/LogManagementView',
+        meta: expect.objectContaining({
+          keepAlive: true,
+        }),
+        name: 'LogManagement',
+        path: '/system/logs',
       }),
     ]);
   });
@@ -1079,15 +1101,20 @@ describe('system management route access', () => {
     const roleRoute = systemRoot?.children?.find(
       (route) => route.name === 'Roles',
     );
+    const logRoute = systemRoot?.children?.find(
+      (route) => route.name === 'LogManagement',
+    );
 
     expect(systemUserRoute?.component).toBeTypeOf('function');
     expect(roleRoute?.component).toBeTypeOf('function');
+    expect(logRoute?.component).toBeTypeOf('function');
     expect(systemUserRoute?.meta?.authority).toEqual([
       M1_PERMISSION_CODES.SYSTEM_USER_QUERY,
     ]);
     expect(roleRoute?.meta?.authority).toEqual([
       M1_PERMISSION_CODES.SYSTEM_ROLE_QUERY,
     ]);
+    expect(logRoute?.meta?.authority).toEqual([M1_PERMISSION_CODES.LOG_QUERY]);
   });
 
   it('does not use legacy system permission keys as page authorities', () => {
@@ -1105,6 +1132,7 @@ describe('system management route access', () => {
       expect.arrayContaining([
         M1_PERMISSION_CODES.ORDER_DICT_QUERY,
         M1_PERMISSION_CODES.ORDER_CHARGE_QUERY,
+        M1_PERMISSION_CODES.LOG_QUERY,
       ]),
     );
     expect(authorities).not.toContain('sys:medical-order-dict:query');

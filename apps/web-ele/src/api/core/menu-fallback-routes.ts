@@ -147,6 +147,15 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
           name: 'NumberingRules',
           path: '/system/numbering-rules',
         },
+        {
+          component: '/modules/system-management/views/LogManagementView',
+          meta: {
+            icon: 'carbon:document-audit',
+            title: '日志管理',
+          },
+          name: 'LogManagement',
+          path: '/system/logs',
+        },
       ],
     },
     {

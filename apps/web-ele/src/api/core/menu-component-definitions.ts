@@ -134,6 +134,22 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
       routeName: 'NumberingRules',
     },
     {
+      component: '/modules/system-management/views/LogManagementView',
+      componentAliases: [
+        'LogManagement',
+        'system/log/index',
+        'system/log-management/index',
+      ],
+      menuCodes: ['SYS_LOG_MANAGEMENT'],
+      path: '/system/logs',
+      pathAliases: [
+        '/system/logs',
+        '/api/v1/system/logs/login',
+        '/api/v1/system/logs/operations',
+      ],
+      routeName: 'LogManagement',
+    },
+    {
       component: 'BasicLayout',
       componentAliases: ['Dashboard'],
       menuCodes: ['DASHBOARD'],

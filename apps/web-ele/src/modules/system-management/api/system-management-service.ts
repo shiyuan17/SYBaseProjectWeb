@@ -21,10 +21,13 @@ import type {
   DepartmentNode,
   GuidelineCategoryNode,
   GuidelineDetailView,
+  LoginLogPageQuery,
   MedicalOrderCategoryNode,
   MenuView,
   MessageTopicView,
   NumberingRuleView,
+  OperationLog,
+  OperationLogPageQuery,
   PackagePageQuery,
   PackageView,
   PagedResult,
@@ -132,6 +135,30 @@ export async function listUserLoginLogs(
     },
   );
   return normalizePagedResult(result, page, size);
+}
+
+export async function listLoginLogs(params: LoginLogPageQuery) {
+  const result = await requestClient.get<PagedResult<UserLoginLog>>(
+    '/v1/system/logs/login',
+    { params },
+  );
+  return normalizePagedResult(result, params.page, params.size);
+}
+
+export async function getLoginLog(id: string) {
+  return requestClient.get<UserLoginLog>(`/v1/system/logs/login/${id}`);
+}
+
+export async function listOperationLogs(params: OperationLogPageQuery) {
+  const result = await requestClient.get<PagedResult<OperationLog>>(
+    '/v1/system/logs/operations',
+    { params },
+  );
+  return normalizePagedResult(result, params.page, params.size);
+}
+
+export async function getOperationLog(id: string) {
+  return requestClient.get<OperationLog>(`/v1/system/logs/operations/${id}`);
 }
 
 export async function importSystemUsers(file: File) {

@@ -149,6 +149,95 @@ describe('system-management-service requests', () => {
     );
   });
 
+  it('queries global login and operation logs with detail endpoints', async () => {
+    requestClientMock.get
+      .mockResolvedValueOnce({
+        items: [{ id: 'LOGIN-1', loginName: 'admin' }],
+        page: 1,
+        size: 20,
+        total: 1,
+      })
+      .mockResolvedValueOnce({ id: 'LOGIN-1', loginName: 'admin' })
+      .mockResolvedValueOnce({
+        items: [{ id: 'OP-1', operationName: 'query_operation_logs' }],
+        page: 2,
+        size: 50,
+        total: 1,
+      })
+      .mockResolvedValueOnce({
+        id: 'OP-1',
+        operationContent: 'password=***',
+        operationName: 'query_operation_logs',
+      });
+
+    await expect(
+      service.listLoginLogs({
+        loginName: 'admin',
+        page: 1,
+        result: 'SUCCESS',
+        size: 20,
+      }),
+    ).resolves.toEqual({
+      items: [{ id: 'LOGIN-1', loginName: 'admin' }],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+    await expect(service.getLoginLog('LOGIN-1')).resolves.toEqual({
+      id: 'LOGIN-1',
+      loginName: 'admin',
+    });
+    await expect(
+      service.listOperationLogs({
+        moduleCode: 'SYSTEM',
+        page: 2,
+        size: 50,
+      }),
+    ).resolves.toEqual({
+      items: [{ id: 'OP-1', operationName: 'query_operation_logs' }],
+      page: 2,
+      size: 50,
+      total: 1,
+    });
+    await expect(service.getOperationLog('OP-1')).resolves.toEqual({
+      id: 'OP-1',
+      operationContent: 'password=***',
+      operationName: 'query_operation_logs',
+    });
+
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      1,
+      '/v1/system/logs/login',
+      {
+        params: {
+          loginName: 'admin',
+          page: 1,
+          result: 'SUCCESS',
+          size: 20,
+        },
+      },
+    );
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      2,
+      '/v1/system/logs/login/LOGIN-1',
+    );
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      3,
+      '/v1/system/logs/operations',
+      {
+        params: {
+          moduleCode: 'SYSTEM',
+          page: 2,
+          size: 50,
+        },
+      },
+    );
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      4,
+      '/v1/system/logs/operations/OP-1',
+    );
+  });
+
   it('posts system user lifecycle, import-export, and print endpoints', async () => {
     const file = new File(['userCode,loginName\n'], 'system-users.csv', {
       type: 'text/csv',

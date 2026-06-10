@@ -44,7 +44,51 @@ export interface UserLoginLog {
   loginResult: string;
   logoutAt: null | string;
   remarks: null | string;
-  userId: string;
+  userId: null | string;
+}
+
+export interface LoginLogPageQuery {
+  clientDevice?: null | string;
+  endAt?: null | string;
+  ip?: null | string;
+  keyword?: null | string;
+  loginName?: null | string;
+  page: number;
+  result?: null | string;
+  size: number;
+  startAt?: null | string;
+  userId?: null | string;
+}
+
+export interface OperationLog {
+  businessId: null | string;
+  businessType: null | string;
+  failureReason: null | string;
+  id: string;
+  moduleCode: null | string;
+  operationAt: string;
+  operationContent: null | string;
+  operationName: string;
+  operationResult: string;
+  operatorIp: null | string;
+  operatorName: null | string;
+  operatorUserId: null | string;
+}
+
+export interface OperationLogPageQuery {
+  businessId?: null | string;
+  businessType?: null | string;
+  contentKeyword?: null | string;
+  endAt?: null | string;
+  ip?: null | string;
+  keyword?: null | string;
+  moduleCode?: null | string;
+  operationName?: null | string;
+  operatorKeyword?: null | string;
+  page: number;
+  result?: null | string;
+  size: number;
+  startAt?: null | string;
 }
 
 export interface RoleView {
