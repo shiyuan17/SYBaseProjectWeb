@@ -57,10 +57,10 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
       },
       {
         component: () =>
-          import('#/views/_core/fallback/MenuPlaceholderView.vue'),
+          import('#/modules/m6-statistics/views/ManagementIndicatorStatisticsView.vue'),
         meta: {
           authority: [...M6_STATISTICS_PAGE_AUTHORITIES],
-          description: '当前页面暂未接入管理指标统计相关业务功能。',
+          description: '展示业务量、收费、物资/试剂预警与人员工作量统计口径。',
           icon: 'carbon:chart-column',
           title: '管理指标统计',
         },

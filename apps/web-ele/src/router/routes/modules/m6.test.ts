@@ -47,6 +47,9 @@ describe('m6 routes', () => {
     );
     expect(qualityRoute?.meta?.keepAlive).toBe(true);
     expect(managementRoute?.path).toBe('/m6/management-indicators');
+    expect(String(managementRoute?.component)).toContain(
+      'ManagementIndicatorStatisticsView.vue',
+    );
     expect(managementRoute?.meta?.keepAlive).toBe(true);
     expect(statisticsRoute?.path).toBe('/m6/custom-analysis');
     expect(statisticsRoute?.meta?.keepAlive).toBe(true);
