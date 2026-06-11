@@ -64,10 +64,10 @@ const filters = reactive({
   departmentId: '',
   departmentName: '',
   indicatorCode: '',
-  operatorName: userStore.userInfo?.realName ?? '',
-  operatorUserId: userStore.userInfo?.userId ?? '',
   roleId: '',
   templateCode: '',
+  workloadUserId: userStore.userInfo?.userId ?? '',
+  workloadUserName: userStore.userInfo?.realName ?? '',
 });
 
 const availableTemplates = computed(() =>
@@ -171,8 +171,8 @@ function handleDepartmentChange(
 }
 
 function handleUserChange(user: null | { id: string; name: string }) {
-  filters.operatorUserId = user?.id ?? '';
-  filters.operatorName = user?.name ?? '';
+  filters.workloadUserId = user?.id ?? '';
+  filters.workloadUserName = user?.name ?? '';
 }
 
 function handleReset() {
@@ -180,10 +180,10 @@ function handleReset() {
   filters.departmentId = '';
   filters.departmentName = '';
   filters.indicatorCode = '';
-  filters.operatorName = userStore.userInfo?.realName ?? '';
-  filters.operatorUserId = userStore.userInfo?.userId ?? '';
   filters.roleId = '';
   filters.templateCode = '';
+  filters.workloadUserId = userStore.userInfo?.userId ?? '';
+  filters.workloadUserName = userStore.userInfo?.realName ?? '';
   report.value = null;
 }
 
@@ -281,8 +281,8 @@ onMounted(async () => {
           </ElFormItem>
           <ElFormItem label="人员">
             <SystemUserSelect
-              v-model="filters.operatorUserId"
-              :selected-label="filters.operatorName"
+              v-model="filters.workloadUserId"
+              :selected-label="filters.workloadUserName"
               placeholder="请选择人员"
               @change="handleUserChange"
             />

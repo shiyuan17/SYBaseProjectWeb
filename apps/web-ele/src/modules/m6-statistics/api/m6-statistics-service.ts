@@ -2,6 +2,7 @@ import type {
   StatIndicatorView,
   StatReportQuery,
   StatReportResult,
+  StatReportRow,
   StatReportTemplateView,
 } from '../types/m6-statistics';
 
@@ -40,6 +41,47 @@ function mapTemplate(
     templateName: item.templateName ?? '',
     templateType: (item.templateType ??
       'QUALITY') as StatReportTemplateView['templateType'],
+  };
+}
+
+function mapText(value: unknown) {
+  return value === null || value === undefined ? null : String(value);
+}
+
+function mapBreakdownItems(
+  items: Partial<StatReportRow>['breakdowns'],
+): StatReportRow['breakdowns'] {
+  return Array.isArray(items)
+    ? items.map((item) => ({
+        label: item?.label ?? '',
+        value: item?.value ?? '',
+      }))
+    : undefined;
+}
+
+function mapTrendPoints(
+  items: Partial<StatReportRow>['trendPoints'],
+): StatReportRow['trendPoints'] {
+  return Array.isArray(items)
+    ? items.map((item) => ({
+        label: item?.label ?? '',
+        value: item?.value ?? '',
+      }))
+    : undefined;
+}
+
+function mapStatReportRow(item: Partial<StatReportRow>): StatReportRow {
+  return {
+    breakdowns: mapBreakdownItems(item.breakdowns),
+    denominator: mapText(item.denominator),
+    indicatorCode: item.indicatorCode ?? '',
+    indicatorName: item.indicatorName ?? '',
+    metricStatus: item.metricStatus,
+    metricUnit: item.metricUnit ?? '',
+    metricValue: item.metricValue ?? '',
+    numerator: mapText(item.numerator),
+    sourceNote: mapText(item.sourceNote),
+    trendPoints: mapTrendPoints(item.trendPoints),
   };
 }
 
@@ -82,7 +124,9 @@ export async function queryStatReport(payload: StatReportQuery) {
   return {
     columns: response.columns ?? [],
     reportCode: response.reportCode ?? '',
-    rows: response.rows ?? [],
+    rows: Array.isArray(response.rows)
+      ? response.rows.map((item) => mapStatReportRow(item))
+      : [],
   } satisfies StatReportResult;
 }
 

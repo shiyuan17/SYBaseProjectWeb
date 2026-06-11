@@ -33,18 +33,35 @@ export interface StatReportQuery {
   departmentId?: null | string;
   from?: null | string;
   indicatorCode?: null | string;
-  operatorName?: null | string;
-  operatorUserId?: null | string;
   roleId?: null | string;
   templateCode?: null | string;
   to?: null | string;
+  workloadUserId?: null | string;
+}
+
+export type MetricStatus = 'AVAILABLE' | 'PARTIAL' | 'UNAVAILABLE';
+
+export interface StatReportBreakdown {
+  label: string;
+  value: string;
+}
+
+export interface StatReportTrendPoint {
+  label: string;
+  value: string;
 }
 
 export interface StatReportRow {
+  breakdowns?: StatReportBreakdown[];
+  denominator?: null | string;
   indicatorCode: string;
   indicatorName: string;
+  metricStatus?: MetricStatus;
   metricUnit: string;
   metricValue: string;
+  numerator?: null | string;
+  sourceNote?: null | string;
+  trendPoints?: StatReportTrendPoint[];
 }
 
 export interface StatReportResult {

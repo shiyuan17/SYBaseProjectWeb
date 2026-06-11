@@ -124,26 +124,59 @@ describe('m6-statistics-service', () => {
     const reportBlob = new Blob(['csv']);
 
     requestClientMock.post.mockResolvedValue({
+      columns: ['indicatorCode', 'indicatorName', 'metricStatus'],
       rows: [
         {
+          breakdowns: [
+            {
+              label: '已发布',
+              value: '49',
+            },
+          ],
+          denominator: '50',
           indicatorCode: 'QUALITY_RATE',
           indicatorName: 'Quality rate',
+          metricStatus: 'AVAILABLE',
           metricUnit: '%',
           metricValue: '98',
+          numerator: '49',
+          sourceNote: '来自真实报告数据',
+          trendPoints: [
+            {
+              label: '2026-05',
+              value: '98',
+            },
+          ],
         },
       ],
     });
     requestClientMock.download.mockResolvedValue(reportBlob);
 
     await expect(queryStatReport(payload)).resolves.toEqual({
-      columns: [],
+      columns: ['indicatorCode', 'indicatorName', 'metricStatus'],
       reportCode: '',
       rows: [
         {
+          breakdowns: [
+            {
+              label: '已发布',
+              value: '49',
+            },
+          ],
+          denominator: '50',
           indicatorCode: 'QUALITY_RATE',
           indicatorName: 'Quality rate',
+          metricStatus: 'AVAILABLE',
           metricUnit: '%',
           metricValue: '98',
+          numerator: '49',
+          sourceNote: '来自真实报告数据',
+          trendPoints: [
+            {
+              label: '2026-05',
+              value: '98',
+            },
+          ],
         },
       ],
     });

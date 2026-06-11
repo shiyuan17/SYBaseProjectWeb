@@ -4,12 +4,13 @@
 
 - Last updated: 2026-06-11
 - Repository: `SYBaseProjectWeb`
-- Current phase: M5 reagent inventory/template full-stack delivery
-- Active focus: `/operation-resources/reagents` is now a two-tab reagent workspace (`试剂库存` / `试剂模板`) backed by sibling backend `../SYBaseProject/bl-center` reagent template, stock batch, stock event, and CSV-compatible Excel import/export APIs. The implementation reuses existing M5 reagent permission codes and does not change auth, route guards, Axios interceptors, or the menu permission model.
+- Current phase: M6 statistics full-stack delivery
+- Active focus: `apps/web-ele/src/modules/m6-statistics` consumes sibling backend `../SYBaseProject/bl-center` statistics APIs. `POST /api/v1/stat-reports/query` now treats `workloadUserId` as the workload operator filter, accepts optional metric metadata (`metricStatus`, numerator/denominator, trend/breakdown arrays, source note), and keeps sparse legacy rows compatible. Missing or uncertain metrics must surface as `UNAVAILABLE` / `PARTIAL` instead of fabricated values; CSV export remains UTF-8 BOM CSV with legacy columns only.
 - Backend sibling repo: `../SYBaseProject` (parallel memory files confirmed present: PROJECT_STATE/ARCHITECTURE/DECISIONS/TECH_DEBT/KNOWN_BUGS)
 
 ## Active Work
 
+- M6 statistics contract alignment completed on 2026-06-11 for Linear `SID-81`: frontend statistic report filters now send `workloadUserId` instead of legacy `operatorUserId` / `operatorName`, and report row mapping tolerates both old sparse responses and extended metadata from sibling backend `../SYBaseProject/bl-center`. Backend `StatisticsService` returns metric status/source metadata for query responses, marks unconnected quality indicators as `UNAVAILABLE`, reports denominator-zero percentages as `PARTIAL`, and keeps `POST /api/v1/stat-reports/export` CSV-compatible with the old four-column shape.
 - M5 reagent inventory/template management completed on 2026-06-11: `/operation-resources/reagents` defaults to `试剂库存` and adds `试剂模板` as the second tab. The inventory tab supports inbound stock, test, consume, stock event detail, start/finish use, edit, refresh, UTF-8 BOM CSV export/import shown as “Excel”, and row-state action gating. The template tab supports keyword/type/status filters and template create/edit with reagent type, medical-order dictionary link, clone/dilution/use/threshold fields, and soft template status. Request bodies no longer send legacy reagent `operatorName` / `operatorUserId`; sibling backend resolves operators from the authenticated request.
 - System log management implemented on 2026-06-10: `apps/web-ele` adds `/system/logs` with 登录日志 and 操作日志 tabs, per-tab filters/pagination, detail drawer, real service methods for `/v1/system/logs/login` and `/v1/system/logs/operations`, static/backend-menu mappings for `SYS_LOG_MANAGEMENT`, and M1 permission constants `PERM_SYS_LOG_QUERY` / `PERM_SYS_LOG_DETAIL`. Sibling backend `../SYBaseProject/bl-center` owns the query/detail APIs, Flyway menu/permission/index seed, and cross-cutting operation audit.
 - M5 archive cabinet full-stack delivery completed on 2026-06-11: `/operation-support/archive` exposes dense list tabs for `申请单归档`、`蜡块归档`、`玻片归档` and a theme-consistent `归档柜列表` tree table (`ROOT -> 类型 -> 柜子 -> 号段`). The cabinet tab supports refresh, expand/collapse, type quick filtering, create, batch create, edit, enable/disable, and delete. Sibling backend `../SYBaseProject/bl-center` adds `POST /api/v1/archive-cabinets/batch` and `DELETE /api/v1/archive-cabinets/{id}` with `PERM_M5_ARCHIVE_CABINET_DELETE`; delete is allowed only when cabinet positions are empty and have no storage/loan references. `/operation-support/borrow` still exposes `蜡块借记`、`玻片借记` and `待归还/归还`, with no fake `借白片` entry.
@@ -54,6 +55,12 @@
 
 ## Validation Baseline
 
+- Latest M6 statistics contract validation in this thread:
+  - Frontend `pnpm test:unit -- --run apps/web-ele/src/modules/m6-statistics/api/m6-statistics-service.test.ts apps/web-ele/src/modules/m6-statistics/utils/report-query.test.ts` passed on 2026-06-11 (2 files, 5 tests), covering report metadata mapping and `workloadUserId` query payload construction.
+  - Frontend `pnpm check:type` passed on 2026-06-11.
+  - Frontend `pnpm lint` passed on 2026-06-11 after regenerating ignored workspace stub outputs with `pnpm -r run stub --if-present`.
+  - Frontend `git diff --check` passed on 2026-06-11.
+  - Sibling backend `../SYBaseProject`: `D:\Github\JW\SYBaseProject\mvnw.cmd -f D:\Github\JW\SYBaseProject-worktrees\SID-81\pom.xml -pl bl-center "-Dtest=M6StatisticsIntegrationTest,M6AuthorizationIntegrationTest" test` passed on 2026-06-11 (4 tests), covering extended report metadata, `UNAVAILABLE` quality metrics, CSV export compatibility, and M6 authorization.
 - Latest M5 reagent inventory/template validation in this thread:
   - Frontend `pnpm test:unit -- --run apps/web-ele/src/modules/operation-support` passed on 2026-06-11 (13 files, 63 tests), including reagent service, mapper/action validation, dual-tab view, toolbar action, template filter, and dialog coverage.
   - Frontend `pnpm check:type` passed on 2026-06-11.
@@ -246,6 +253,7 @@
 ## Cross-Repo Dependencies
 
 - Backend governance and memory files live in sibling repo `../SYBaseProject`.
+- M6 statistics frontend depends on sibling backend `../SYBaseProject/bl-center` `StatisticsService`: `POST /api/v1/stat-reports/query` may return metric metadata (`metricStatus`, `numerator`, `denominator`, `trendPoints`, `breakdowns`, `sourceNote`), while `POST /api/v1/stat-reports/export` intentionally remains UTF-8 BOM CSV with legacy `indicatorCode,indicatorName,metricValue,metricUnit` columns. Workload filters use `workloadUserId`; frontend must not reintroduce legacy statistic `operatorName` / `operatorUserId` payload fields.
 - M5 reagent management depends on sibling backend `../SYBaseProject/bl-center` migration `V86__extend_reagent_inventory_legacy_fields`: `reagents` is the reagent template table, `reagent_stocks` is the inventory batch table, and `reagent_stock_events` is the authoritative stock audit/event trail. Frontend `/operation-resources/reagents` calls `/api/v1/reagents`, `/api/v1/reagent-stocks`, stock action/event endpoints, and CSV-compatible Excel import/export while reusing existing M5 reagent permission codes.
 - M5 archive/borrow frontend pages depend on existing sibling backend contracts only: application-form archive, `EMBEDDING_BOX`/蜡块 archive, slide archive, archive-cabinet/position query/update, archive-record search, and material-loan pending/create/return. No backend API, DB, auth, or global error-contract change was made for the tab split.
 - Backend `ApplicationPatientIdentityResolver` in `../SYBaseProject/bl-center` now normalizes display-style patient ages to leading digits when auto-creating patient registry rows, preventing DM numeric conversion failures from frontend application-number auto-create.
