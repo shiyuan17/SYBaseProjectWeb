@@ -36,6 +36,9 @@ export function useArchiveManagementPage() {
     canCreateCabinet: computed(() =>
       accessCodeSet.value.has(M5_PERMISSION_CODES.ARCHIVE_CABINET_CREATE),
     ),
+    canDeleteCabinet: computed(() =>
+      accessCodeSet.value.has(M5_PERMISSION_CODES.ARCHIVE_CABINET_DELETE),
+    ),
     canCreateLoan: computed(() =>
       accessCodeSet.value.has(M5_PERMISSION_CODES.LOAN_CREATE),
     ),

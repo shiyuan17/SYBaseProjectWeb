@@ -27,6 +27,61 @@ vi.mock('@vben/common-ui', () => ({
 }));
 
 vi.mock('element-plus', () => {
+  const ElAlert = defineComponent({
+    props: ['title'],
+    setup(props, { slots }) {
+      return () => h('div', [props.title, slots.default?.()]);
+    },
+  });
+
+  const ElButton = defineComponent({
+    emits: ['click'],
+    setup(_, { attrs, emit, slots }) {
+      return () =>
+        h(
+          'button',
+          {
+            ...attrs,
+            type: 'button',
+            onClick: (event: MouseEvent) => emit('click', event),
+          },
+          slots.default?.(),
+        );
+    },
+  });
+
+  const ElForm = defineComponent({
+    setup(_, { attrs, slots }) {
+      return () => h('form', attrs, slots.default?.());
+    },
+  });
+
+  const ElFormItem = defineComponent({
+    props: ['label'],
+    setup(props, { slots }) {
+      return () => h('label', [props.label, slots.default?.()]);
+    },
+  });
+
+  const ElInput = defineComponent({
+    setup(_, { attrs }) {
+      return () => h('input', attrs);
+    },
+  });
+
+  const ElTable = defineComponent({
+    setup(_, { attrs, slots }) {
+      return () => h('div', attrs, slots.default?.());
+    },
+  });
+
+  const ElTableColumn = defineComponent({
+    props: ['label'],
+    setup(props) {
+      return () => h('span', props.label);
+    },
+  });
+
   const ElTabs = defineComponent({
     setup(_, { slots }) {
       return () => h('div', slots.default?.());
@@ -40,9 +95,23 @@ vi.mock('element-plus', () => {
     },
   });
 
+  const ElTag = defineComponent({
+    setup(_, { slots }) {
+      return () => h('span', slots.default?.());
+    },
+  });
+
   return {
+    ElAlert,
+    ElButton,
+    ElForm,
+    ElFormItem,
+    ElInput,
     ElTabPane,
+    ElTable,
+    ElTableColumn,
     ElTabs,
+    ElTag,
   };
 });
 
@@ -199,16 +268,37 @@ describe('BorrowManagementView', () => {
 
     const { app, root } = mountView();
 
-    expect(document.body.textContent).toContain('玻片借记');
     expect(document.body.textContent).toContain('蜡块借记');
+    expect(document.body.textContent).toContain('玻片借记');
     expect(document.body.textContent).toContain('待归还/归还');
+    expect(document.body.textContent).not.toContain('借白片');
+    expect(document.body.textContent).toContain('符合对比');
+    expect(document.body.textContent).toContain('最迟归还时间');
+    expect(document.body.textContent).toContain('归还操作人');
+    expect(document.body.textContent).toContain('借片人身份证');
     expect(document.body.textContent).toContain('archive-loan-create-panel');
     expect(document.body.textContent).toContain('archive-loan-pending-panel');
     expect(document.body.textContent).toContain(
       'archive-position-workbench-panel',
     );
     expect(document.body.textContent).toContain('archive-return-dialog');
-    expect(state.loanWorkspace.loanForm.materialType).toBe('SLIDE');
+    expect(document.body.innerHTML).not.toContain('legacy-toolbar');
+    expect(document.body.innerHTML).not.toContain('legacy-grid-table');
+    expect(document.body.innerHTML).not.toContain('legacy-status-cell');
+    expect(state.loanWorkspace.loanForm.materialType).toBe('EMBEDDING_BOX');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('shows permission warning when loan query is limited', () => {
+    const state = createMockPageState();
+    state.capabilities.canQueryLoans = false;
+    mockUseBorrowManagementPage.mockReturnValue(state);
+
+    const { app, root } = mountView();
+
+    expect(document.body.textContent).toContain('当前账号缺少借阅查询权限');
 
     app.unmount();
     root.remove();

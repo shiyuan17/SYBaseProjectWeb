@@ -23,13 +23,19 @@ function createReagent(overrides: Partial<ReagentView> = {}): ReagentView {
   return {
     defaultLowStockThreshold: '5',
     defaultNearExpiryDays: 30,
+    defaultStockThreshold: 5,
     enabled: true,
     id: 'REAGENT-1',
     manufacturer: 'Maker',
+    orderDictItemId: 'ODI_IHC_CK',
+    orderItemName: 'CK',
+    reagentType: 'IMMUNO_WORKING_SOLUTION',
     reagentCode: 'RG-1',
     reagentName: 'Hematoxylin',
+    stainCapacity: 100,
     remarks: 'Ready',
     specification: '500ml',
+    templateStatus: 'ENABLED',
     unit: 'bottle',
     ...overrides,
   };
@@ -42,14 +48,17 @@ function createStock(
     batchNo: 'BATCH-1',
     expiryDate: '2027-01-01',
     id: 'STOCK-1',
+    initialQuantity: '20',
     lowStockThreshold: '3',
     nearExpiryDays: 15,
+    remainingQuantity: '18',
     reagentCode: 'RG-1',
     reagentId: 'REAGENT-1',
     reagentName: 'Hematoxylin',
+    reagentType: 'IMMUNO_WORKING_SOLUTION',
     remarks: 'Cold',
     stockQuantity: '20',
-    stockStatus: 'ACTIVE',
+    stockStatus: 'IN_USE',
     storageLocation: 'A1',
     ...overrides,
   };
@@ -57,11 +66,10 @@ function createStock(
 
 describe('reagent ledger helpers', () => {
   it('creates default and draft reagent states', () => {
-    expect(createReagentFormDefaults('Alice')).toEqual(
+    expect(createReagentFormDefaults()).toEqual(
       expect.objectContaining({
-        enabled: true,
-        operatorName: 'Alice',
         reagentCode: '',
+        templateStatus: 'ENABLED',
       }),
     );
     expect(createDraftReagentView()).toEqual(
@@ -71,40 +79,40 @@ describe('reagent ledger helpers', () => {
         reagentCode: '',
       }),
     );
-    expect(createReagentStockFormDefaults('Alice')).toEqual(
+    expect(createReagentStockFormDefaults()).toEqual(
       expect.objectContaining({
-        operatorName: 'Alice',
-        stockStatus: 'ACTIVE',
+        stockStatus: 'IN_STOCK',
       }),
     );
     expect(createDraftReagentStockView()).toEqual(
       expect.objectContaining({
         batchNo: '',
         id: '',
-        stockStatus: 'ACTIVE',
+        stockStatus: 'IN_STOCK',
       }),
     );
   });
 
   it('maps existing rows into edit form states', () => {
-    expect(createReagentFormStateFromRow(createReagent(), 'Alice')).toEqual(
+    expect(createReagentFormStateFromRow(createReagent())).toEqual(
       expect.objectContaining({
         defaultLowStockThreshold: 5,
-        operatorName: 'Alice',
+        orderDictItemId: 'ODI_IHC_CK',
         reagentCode: 'RG-1',
+        reagentType: 'IMMUNO_WORKING_SOLUTION',
       }),
     );
-    expect(createReagentStockFormStateFromRow(createStock(), 'Alice')).toEqual(
+    expect(createReagentStockFormStateFromRow(createStock())).toEqual(
       expect.objectContaining({
+        initialQuantity: 20,
         lowStockThreshold: 3,
-        operatorName: 'Alice',
-        stockQuantity: 20,
+        remainingQuantity: 18,
       }),
     );
   });
 
   it('validates reagent and stock forms before submit', () => {
-    const reagentForm = createReagentFormDefaults('Alice');
+    const reagentForm = createReagentFormDefaults();
 
     expect(validateReagentForm(reagentForm, true)).toBeTruthy();
     Object.assign(reagentForm, {
@@ -115,24 +123,26 @@ describe('reagent ledger helpers', () => {
     reagentForm.defaultLowStockThreshold = -1;
     expect(validateReagentForm(reagentForm, true)).toBeTruthy();
 
-    const stockForm = createReagentStockFormDefaults('Alice');
+    const stockForm = createReagentStockFormDefaults();
     expect(validateReagentStockForm(stockForm, true)).toBeTruthy();
     Object.assign(stockForm, {
       batchNo: 'BATCH-1',
       reagentId: 'REAGENT-1',
     });
     expect(validateReagentStockForm(stockForm, true)).toBe('');
-    stockForm.stockQuantity = -1;
+    stockForm.remainingQuantity = -1;
     expect(validateReagentStockForm(stockForm, true)).toBeTruthy();
   });
 
-  it('builds create and update reagent requests with optional fields omitted', () => {
-    const form = createReagentFormDefaults('Alice');
+  it('builds create and update reagent requests without legacy operator fields', () => {
+    const form = createReagentFormDefaults();
     Object.assign(form, {
       defaultNearExpiryDays: 30,
       manufacturer: '',
+      orderDictItemId: 'ODI_IHC_CK',
       reagentCode: 'RG-1',
       reagentName: 'Hematoxylin',
+      reagentType: 'IMMUNO_WORKING_SOLUTION',
       remarks: 'Ready',
     });
 
@@ -141,7 +151,9 @@ describe('reagent ledger helpers', () => {
       defaultNearExpiryDays: 30,
       enabled: true,
       manufacturer: undefined,
-      operatorName: 'Alice',
+      orderDictItemId: 'ODI_IHC_CK',
+      reagentType: 'IMMUNO_WORKING_SOLUTION',
+      templateStatus: 'ENABLED',
       remarks: 'Ready',
       reagentCode: 'RG-1',
       reagentName: 'Hematoxylin',
@@ -150,44 +162,48 @@ describe('reagent ledger helpers', () => {
     });
     expect(buildUpdateReagentRequest(form)).toEqual(
       expect.not.objectContaining({
+        operatorName: 'Alice',
         reagentCode: 'RG-1',
       }),
     );
   });
 
   it('builds create and update stock requests with stable field sets', () => {
-    const form = createReagentStockFormDefaults('Alice');
+    const form = createReagentStockFormDefaults();
     Object.assign(form, {
       batchNo: 'BATCH-1',
       expiryDate: '2027-01-01',
+      initialQuantity: 20,
+      remainingQuantity: 18,
       reagentId: 'REAGENT-1',
-      stockQuantity: 20,
       storageLocation: '',
     });
 
     expect(buildCreateReagentStockRequest(form)).toEqual({
       batchNo: 'BATCH-1',
       expiryDate: '2027-01-01',
+      initialQuantity: 20,
       lowStockThreshold: undefined,
       nearExpiryDays: undefined,
-      operatorName: 'Alice',
       reagentId: 'REAGENT-1',
+      remainingQuantity: 18,
       remarks: undefined,
-      stockQuantity: 20,
-      stockStatus: 'ACTIVE',
+      stockStatus: 'IN_STOCK',
       storageLocation: undefined,
     });
     expect(buildUpdateReagentStockRequest(form)).toEqual(
       expect.not.objectContaining({
         batchNo: 'BATCH-1',
+        operatorName: 'Alice',
         reagentId: 'REAGENT-1',
       }),
     );
   });
 
   it('keeps tag type mappings stable', () => {
-    expect(getStockStatusTagType('ACTIVE')).toBe('success');
-    expect(getStockStatusTagType('EXPIRED')).toBe('danger');
+    expect(getStockStatusTagType('IN_STOCK')).toBe('info');
+    expect(getStockStatusTagType('IN_USE')).toBe('success');
+    expect(getStockStatusTagType('FINISHED')).toBe('danger');
     expect(getReagentWarningTagType('LOW_STOCK')).toBe('warning');
     expect(getReagentWarningTagType('NEAR_EXPIRY')).toBe('danger');
   });

@@ -19,11 +19,17 @@ const {
   messageSuccessMock,
   messageWarningMock,
   mockAccessStore,
+  mockConsumeReagentStock,
   mockCreateReagent,
   mockCreateReagentStock,
+  mockExportReagentStocks,
+  mockFinishUsingReagentStock,
+  mockImportReagentStocks,
   mockListReagents,
+  mockListReagentStockEvents,
   mockListReagentStocks,
-  mockListReagentWarnings,
+  mockStartUsingReagentStock,
+  mockTestReagentStock,
   mockUpdateReagent,
   mockUpdateReagentStock,
   mockUserStore,
@@ -34,11 +40,17 @@ const {
   mockAccessStore: {
     accessCodes: [] as string[],
   },
+  mockConsumeReagentStock: vi.fn(),
   mockCreateReagent: vi.fn(),
   mockCreateReagentStock: vi.fn(),
+  mockExportReagentStocks: vi.fn(),
+  mockFinishUsingReagentStock: vi.fn(),
+  mockImportReagentStocks: vi.fn(),
   mockListReagents: vi.fn(),
+  mockListReagentStockEvents: vi.fn(),
   mockListReagentStocks: vi.fn(),
-  mockListReagentWarnings: vi.fn(),
+  mockStartUsingReagentStock: vi.fn(),
+  mockTestReagentStock: vi.fn(),
   mockUpdateReagent: vi.fn(),
   mockUpdateReagentStock: vi.fn(),
   mockUserStore: {
@@ -66,6 +78,19 @@ vi.mock('@vben/common-ui', () => ({
         ]);
     },
   }),
+}));
+
+vi.mock('@vben/icons', () => ({
+  Download: 'Download',
+  FileText: 'FileText',
+  FlaskConical: 'FlaskConical',
+  PackagePlus: 'PackagePlus',
+  Play: 'Play',
+  Plus: 'Plus',
+  RefreshCw: 'RefreshCw',
+  Search: 'Search',
+  Square: 'Square',
+  Upload: 'Upload',
 }));
 
 vi.mock('@vben/stores', () => ({
@@ -109,19 +134,6 @@ vi.mock('element-plus', () => {
     },
   });
 
-  const ElDescriptions = defineComponent({
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.());
-    },
-  });
-
-  const ElDescriptionsItem = defineComponent({
-    props: ['label'],
-    setup(props, { slots }) {
-      return () => h('div', [`${props.label ?? ''}`, slots.default?.()]);
-    },
-  });
-
   const ElDialog = defineComponent({
     props: ['modelValue', 'title'],
     emits: ['update:modelValue'],
@@ -143,7 +155,7 @@ vi.mock('element-plus', () => {
     setup(props, { slots }) {
       return () =>
         props.modelValue
-          ? h('section', [h('h2', props.title), slots.default?.()])
+          ? h('aside', [h('h2', props.title), slots.default?.()])
           : null;
     },
   });
@@ -170,23 +182,38 @@ vi.mock('element-plus', () => {
     },
   });
 
-  const ElTableColumn = defineComponent({
-    setup() {
-      return () => null;
-    },
-  });
-
-  const ElTag = defineComponent({
-    setup(_, { slots }) {
-      return () => h('span', slots.default?.());
+  const ElTabs = defineComponent({
+    props: ['modelValue'],
+    emits: ['update:modelValue'],
+    setup(props, { emit, slots }) {
+      return () =>
+        h('div', [
+          h(
+            'button',
+            {
+              type: 'button',
+              onClick: () => emit('update:modelValue', 'STOCK'),
+            },
+            '试剂库存',
+          ),
+          h(
+            'button',
+            {
+              type: 'button',
+              onClick: () => emit('update:modelValue', 'TEMPLATE'),
+            },
+            '试剂模板',
+          ),
+          h('span', `active-${props.modelValue}`),
+          slots.default?.(),
+        ]);
     },
   });
 
   return {
     ElAlert,
     ElButton,
-    ElDescriptions,
-    ElDescriptionsItem,
+    ElDatePicker: createModelComponent('input'),
     ElDialog,
     ElDrawer,
     ElForm: createModelComponent('form'),
@@ -206,87 +233,43 @@ vi.mock('element-plus', () => {
     }),
     ElSelect: createModelComponent('select'),
     ElSwitch: createModelComponent('button'),
+    ElTabPane: defineComponent({
+      props: ['label', 'name'],
+      setup(props, { slots }) {
+        return () =>
+          h('section', [
+            `pane-${props.name}-${props.label}`,
+            slots.default?.(),
+          ]);
+      },
+    }),
     ElTable,
-    ElTableColumn,
-    ElTag,
+    ElTableColumn: defineComponent({
+      setup() {
+        return () => null;
+      },
+    }),
+    ElTabs,
+    ElTag: defineComponent({
+      setup(_, { slots }) {
+        return () => h('span', slots.default?.());
+      },
+    }),
   };
 });
 
-vi.mock('../components/ReagentCatalogPanel.vue', () => ({
-  default: defineComponent({
-    emits: ['openCreateReagentDialog'],
-    setup(_, { emit }) {
-      return () =>
-        h('div', [
-          'reagent-catalog-panel',
-          h(
-            'button',
-            {
-              type: 'button',
-              onClick: () => emit('openCreateReagentDialog'),
-            },
-            '目录新增试剂',
-          ),
-        ]);
-    },
-  }),
-}));
-
-vi.mock('../components/ReagentStockDetailPanel.vue', () => ({
-  default: defineComponent({
-    setup() {
-      return () => h('div', 'reagent-stock-detail-panel');
-    },
-  }),
-}));
-
-vi.mock('../components/ReagentWarningPanel.vue', () => ({
-  default: defineComponent({
-    props: ['warnings'],
-    emits: ['navigateToStockDetail'],
-    setup(props, { emit }) {
-      return () =>
-        h('div', [
-          'reagent-warning-panel',
-          props.warnings?.map((warning: { batchNo: string; stockId: string }) =>
-            h(
-              'button',
-              {
-                type: 'button',
-                onClick: () => emit('navigateToStockDetail', warning),
-              },
-              `定位-${warning.batchNo}`,
-            ),
-          ),
-        ]);
-    },
-  }),
-}));
-
-vi.mock('../components/ReagentDialog.vue', () => ({
-  default: defineComponent({
-    props: ['modelValue'],
-    setup(props) {
-      return () => (props.modelValue ? h('div', 'reagent-dialog') : null);
-    },
-  }),
-}));
-
-vi.mock('../components/ReagentStockDialog.vue', () => ({
-  default: defineComponent({
-    props: ['modelValue'],
-    setup(props) {
-      return () => (props.modelValue ? h('div', 'reagent-stock-dialog') : null);
-    },
-  }),
-}));
-
 vi.mock('../api/operation-support-service', () => ({
+  consumeReagentStock: mockConsumeReagentStock,
   createReagent: mockCreateReagent,
   createReagentStock: mockCreateReagentStock,
+  exportReagentStocks: mockExportReagentStocks,
+  finishUsingReagentStock: mockFinishUsingReagentStock,
+  importReagentStocks: mockImportReagentStocks,
   listReagents: mockListReagents,
+  listReagentStockEvents: mockListReagentStockEvents,
   listReagentStocks: mockListReagentStocks,
-  listReagentWarnings: mockListReagentWarnings,
+  startUsingReagentStock: mockStartUsingReagentStock,
+  testReagentStock: mockTestReagentStock,
   updateReagent: mockUpdateReagent,
   updateReagentStock: mockUpdateReagentStock,
 }));
@@ -335,16 +318,13 @@ describe('ReagentLedgerView', () => {
 
     mockListReagents.mockResolvedValue([
       {
-        defaultLowStockThreshold: 5,
-        defaultNearExpiryDays: 30,
         enabled: true,
         id: 'REAGENT-1',
-        manufacturer: 'Maker',
+        orderItemName: 'CK',
         reagentCode: 'RG-1',
-        reagentName: 'Hematoxylin',
-        remarks: 'Ready',
-        specification: '500ml',
-        unit: 'bottle',
+        reagentName: 'CK Working Solution',
+        reagentType: 'IMMUNO_WORKING_SOLUTION',
+        templateStatus: 'ENABLED',
       },
     ]);
     mockListReagentStocks.mockResolvedValue([
@@ -352,49 +332,53 @@ describe('ReagentLedgerView', () => {
         batchNo: 'BATCH-1',
         expiryDate: '2027-01-01',
         id: 'STOCK-1',
-        lowStockThreshold: 3,
-        nearExpiryDays: 15,
+        initialQuantity: 20,
+        orderItemName: 'CK',
         reagentCode: 'RG-1',
         reagentId: 'REAGENT-1',
-        reagentName: 'Hematoxylin',
-        remarks: 'Cold',
-        stockQuantity: 20,
-        stockStatus: 'ACTIVE',
-        storageLocation: 'A1',
+        reagentName: 'CK Working Solution',
+        reagentType: 'IMMUNO_WORKING_SOLUTION',
+        remainingQuantity: 18,
+        stockStatus: 'IN_USE',
       },
     ]);
-    mockListReagentWarnings.mockResolvedValue([
-      {
-        batchNo: 'BATCH-1',
-        expiryDate: '2027-01-01',
-        lowStockThreshold: 3,
-        nearExpiryDays: 15,
-        reagentCode: 'RG-1',
-        reagentName: 'Hematoxylin',
-        stockId: 'STOCK-1',
-        stockQuantity: 2,
-        warningType: 'LOW_STOCK',
-      },
-    ]);
-
+    mockListReagentStockEvents.mockResolvedValue([]);
     mockCreateReagent.mockResolvedValue(undefined);
     mockCreateReagentStock.mockResolvedValue(undefined);
     mockUpdateReagent.mockResolvedValue(undefined);
     mockUpdateReagentStock.mockResolvedValue(undefined);
+    mockStartUsingReagentStock.mockResolvedValue(undefined);
+    mockFinishUsingReagentStock.mockResolvedValue(undefined);
+    mockTestReagentStock.mockResolvedValue(undefined);
+    mockConsumeReagentStock.mockResolvedValue(undefined);
+    mockExportReagentStocks.mockResolvedValue(new Blob(['csv']));
+    mockImportReagentStocks.mockResolvedValue({
+      errors: [],
+      failureCount: 0,
+      successCount: 1,
+    });
   });
 
   afterEach(() => {
     mockAccessStore.accessCodes = [];
-    mockCreateReagent.mockReset();
-    mockCreateReagentStock.mockReset();
-    mockListReagents.mockReset();
-    mockListReagentStocks.mockReset();
-    mockListReagentWarnings.mockReset();
-    mockUpdateReagent.mockReset();
-    mockUpdateReagentStock.mockReset();
-    messageErrorMock.mockReset();
-    messageSuccessMock.mockReset();
-    messageWarningMock.mockReset();
+    [
+      mockConsumeReagentStock,
+      mockCreateReagent,
+      mockCreateReagentStock,
+      mockExportReagentStocks,
+      mockFinishUsingReagentStock,
+      mockImportReagentStocks,
+      mockListReagents,
+      mockListReagentStockEvents,
+      mockListReagentStocks,
+      mockStartUsingReagentStock,
+      mockTestReagentStock,
+      mockUpdateReagent,
+      mockUpdateReagentStock,
+      messageErrorMock,
+      messageSuccessMock,
+      messageWarningMock,
+    ].forEach((mock) => mock.mockReset());
     document.body.innerHTML = '';
   });
 
@@ -407,95 +391,67 @@ describe('ReagentLedgerView', () => {
     expect(document.body.textContent).toContain('fallback-403');
     expect(mockListReagents).not.toHaveBeenCalled();
     expect(mockListReagentStocks).not.toHaveBeenCalled();
-    expect(mockListReagentWarnings).not.toHaveBeenCalled();
 
     app.unmount();
     root.remove();
   });
 
-  it('renders toolbar actions and keeps selected-row actions disabled before selection', async () => {
+  it('renders stock and template tabs with default stock toolbar', async () => {
     const { app, root } = mountView();
     await flushView();
 
-    expect(document.body.textContent).toContain('试剂耗材管理');
+    expect(document.body.textContent).toContain('active-STOCK');
+    expect(document.body.textContent).toContain('试剂库存');
+    expect(document.body.textContent).toContain('试剂模板');
+    expect(findButton('试剂入库')).toBeTruthy();
+    expect(findButton('测试')?.disabled).toBe(true);
+    expect(findButton('消耗')?.disabled).toBe(true);
+    expect(findButton('消耗明细')?.disabled).toBe(true);
+    expect(findButton('导出Excel')).toBeTruthy();
+    expect(findButton('导入Excel')).toBeTruthy();
+    expect(findButton('新增试剂模板')).toBeTruthy();
+    expect(findButton('刷新')).toBeTruthy();
     expect(mockListReagents).toHaveBeenCalledTimes(1);
     expect(mockListReagentStocks).toHaveBeenCalledTimes(1);
-    expect(mockListReagentWarnings).toHaveBeenCalledTimes(1);
-
-    expect(findButton('试剂目录')).toBeTruthy();
-    expect(findButton('新增试剂')).toBeTruthy();
-    expect(findButton('新增库存')).toBeTruthy();
-    expect(findButton('编辑试剂')?.disabled).toBe(true);
-    expect(findButton('编辑库存')?.disabled).toBe(true);
-    expect(findButton('批次详情')?.disabled).toBe(true);
 
     app.unmount();
     root.remove();
   });
 
-  it('opens create reagent dialog from toolbar', async () => {
+  it('enables stock actions after selecting a row and starts using stock', async () => {
     const { app, root } = mountView();
     await flushView();
-
-    findButton('新增试剂')?.dispatchEvent(
-      new MouseEvent('click', { bubbles: true }),
-    );
-    await flushView();
-
-    expect(document.body.textContent).toContain('reagent-dialog');
-
-    app.unmount();
-    root.remove();
-  });
-
-  it('opens reagent catalog drawer and stock detail after selecting a row', async () => {
-    const { app, root } = mountView();
-    await flushView();
-
-    findButton('试剂目录')?.dispatchEvent(
-      new MouseEvent('click', { bubbles: true }),
-    );
-    await flushView();
-    expect(document.body.textContent).toContain('reagent-catalog-panel');
 
     document
       .querySelector('[data-row-id="STOCK-1"]')
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flushView();
 
-    expect(findButton('编辑试剂')?.disabled).toBe(false);
-    expect(findButton('编辑库存')?.disabled).toBe(false);
-    expect(findButton('批次详情')?.disabled).toBe(false);
-
-    findButton('批次详情')?.dispatchEvent(
+    expect(findButton('开始使用')?.disabled).toBe(false);
+    findButton('开始使用')?.dispatchEvent(
       new MouseEvent('click', { bubbles: true }),
     );
     await flushView();
 
-    expect(document.body.textContent).toContain('reagent-stock-detail-panel');
+    expect(mockStartUsingReagentStock).toHaveBeenCalledWith('STOCK-1', {
+      remarks: undefined,
+    });
+    expect(messageSuccessMock).toHaveBeenCalledWith('已开始使用');
 
     app.unmount();
     root.remove();
   });
 
-  it('navigates from warning drawer back to the stock list selection', async () => {
+  it('opens template dialog from template toolbar', async () => {
     const { app, root } = mountView();
     await flushView();
 
-    findButton('库存预警')?.dispatchEvent(
+    findButton('新增试剂模板')?.dispatchEvent(
       new MouseEvent('click', { bubbles: true }),
     );
     await flushView();
 
-    expect(document.body.textContent).toContain('reagent-warning-panel');
-
-    [...document.querySelectorAll('button')]
-      .find((button) => button.textContent?.includes('定位-BATCH-1'))
-      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    await flushView();
-
-    expect(messageSuccessMock).toHaveBeenCalledWith('已定位到批次 BATCH-1');
-    expect(mockListReagentStocks).toHaveBeenCalledTimes(2);
+    expect(document.body.textContent).toContain('试剂模板维护');
 
     app.unmount();
     root.remove();

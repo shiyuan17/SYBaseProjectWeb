@@ -27,6 +27,13 @@ vi.mock('@vben/common-ui', () => ({
 }));
 
 vi.mock('element-plus', () => {
+  const ElAlert = defineComponent({
+    props: ['title'],
+    setup(props, { slots }) {
+      return () => h('div', [props.title, slots.default?.()]);
+    },
+  });
+
   const ElButton = defineComponent({
     emits: ['click'],
     setup(_, { attrs, emit, slots }) {
@@ -43,15 +50,53 @@ vi.mock('element-plus', () => {
     },
   });
 
+  const ElForm = defineComponent({
+    setup(_, { attrs, slots }) {
+      return () => h('form', attrs, slots.default?.());
+    },
+  });
+
+  const ElFormItem = defineComponent({
+    props: ['label'],
+    setup(props, { slots }) {
+      return () => h('label', [props.label, slots.default?.()]);
+    },
+  });
+
+  const ElInput = defineComponent({
+    setup(_, { attrs }) {
+      return () => h('input', attrs);
+    },
+  });
+
+  const ElOption = defineComponent({
+    props: ['label'],
+    setup(props) {
+      return () => h('option', props.label);
+    },
+  });
+
+  const ElSelect = defineComponent({
+    setup(_, { attrs, slots }) {
+      return () => h('select', attrs, slots.default?.());
+    },
+  });
+
   const ElTable = defineComponent({
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.());
+    props: ['data'],
+    setup(props, { attrs, slots }) {
+      return () =>
+        h('div', attrs, [
+          slots.default?.(),
+          h('pre', JSON.stringify(props.data ?? [])),
+        ]);
     },
   });
 
   const ElTableColumn = defineComponent({
-    setup() {
-      return () => null;
+    props: ['label'],
+    setup(props) {
+      return () => h('span', props.label);
     },
   });
 
@@ -75,7 +120,13 @@ vi.mock('element-plus', () => {
   });
 
   return {
+    ElAlert,
     ElButton,
+    ElForm,
+    ElFormItem,
+    ElInput,
+    ElOption,
+    ElSelect,
     ElTabPane,
     ElTable,
     ElTableColumn,
@@ -111,6 +162,10 @@ vi.mock('../components/ArchiveCabinetDialog.vue', () => ({
   default: createMarkerComponent('archive-cabinet-dialog'),
 }));
 
+vi.mock('../components/BatchArchiveCabinetDialog.vue', () => ({
+  default: createMarkerComponent('batch-archive-cabinet-dialog'),
+}));
+
 vi.mock('../components/ArchivePositionWorkbenchPanel.vue', () => ({
   default: createMarkerComponent('archive-position-workbench-panel'),
 }));
@@ -131,6 +186,7 @@ import ArchiveManagementView from './ArchiveManagementView.vue';
 
 function createMockPageState() {
   const openCreateCabinetDialog = vi.fn();
+  const openBatchCreateCabinetDialog = vi.fn();
 
   return {
     archiveWorkspace: {
@@ -152,6 +208,22 @@ function createMockPageState() {
       submitArchive: vi.fn(),
     },
     cabinetWorkspace: {
+      batchCabinetDialogVisible: ref(false),
+      batchCabinetForm: reactive({
+        cabinetCodePrefix: '',
+        cabinetNamePrefix: '',
+        cabinetType: 'STANDARD',
+        count: 1,
+        layerCount: 1,
+        locationDescription: '',
+        numberWidth: 3,
+        operatorName: '归档员甲',
+        operatorUserId: 'USER-1',
+        remarks: '',
+        slotCountPerLayer: 10,
+        startNo: 1,
+        terminalCode: '',
+      }),
       cabinetCapacityPreview: 4,
       cabinetDialogMode: ref<'create' | 'edit' | null>(null),
       cabinetDialogVisible: ref(false),
@@ -193,6 +265,7 @@ function createMockPageState() {
         positions: false,
       }),
       openCreateCabinetDialog,
+      openBatchCreateCabinetDialog,
       openEditCabinetDialog: vi.fn(),
       positionError: '',
       positionFilters: reactive({
@@ -211,10 +284,13 @@ function createMockPageState() {
       selectedPositionCode: '',
       selectedPositionLabel: '未选择柜位',
       submitCabinet: vi.fn(),
+      submitBatchCabinets: vi.fn(),
+      deleteCabinet: vi.fn(),
       toggleCabinetStatus: vi.fn(),
     },
     capabilities: {
       canCreateCabinet: true,
+      canDeleteCabinet: true,
       canCreateLoan: true,
       canQueryCabinets: true,
       canQueryLoans: true,
@@ -297,18 +373,40 @@ describe('ArchiveManagementView', () => {
     expect(document.body.textContent).toContain('申请单归档');
     expect(document.body.textContent).toContain('蜡块归档');
     expect(document.body.textContent).toContain('玻片归档');
-    expect(document.body.textContent).toContain('归档柜/柜位');
-    expect(document.body.textContent).toContain('归档记录');
-    expect(document.body.textContent).toContain('归档柜工作站');
+    expect(document.body.textContent).toContain('归档柜列表');
+    expect(document.body.textContent).toContain('快速检索');
+    expect(document.body.textContent).toContain('不限类型');
+    expect(document.body.textContent).toContain('标准柜');
+    expect(document.body.textContent).toContain('展开/折叠');
+    expect(document.body.textContent).toContain('批量添加');
+    expect(document.body.textContent).toContain('ROOT');
+    expect(document.body.textContent).toContain('柜子类型');
+    expect(document.body.textContent).toContain('路径');
+    expect(document.body.textContent).toContain('层级');
+    expect(document.body.textContent).not.toContain('标本归档');
+    expect(document.body.textContent).not.toContain('借白片');
+    expect(document.body.textContent).not.toContain('标本柜');
+    expect(document.body.textContent).toContain('申请医生');
+    expect(document.body.textContent).toContain('申请时间');
+    expect(document.body.textContent).toContain('归档状态');
+    expect(document.body.textContent).toContain('归档路径');
+    expect(document.body.textContent).toContain('总容量');
+    expect(document.body.textContent).toContain('剩余容量');
     expect(document.body.textContent).toContain(
       'archive-position-workbench-panel',
     );
     expect(document.body.textContent).toContain('archive-submission-panel');
-    expect(document.body.textContent).toContain('archive-record-query-panel');
     expect(document.body.textContent).toContain('archive-cabinet-dialog');
+    expect(document.body.textContent).toContain('batch-archive-cabinet-dialog');
+    expect(document.body.innerHTML).not.toContain('legacy-toolbar');
+    expect(document.body.innerHTML).not.toContain('legacy-grid-table');
+    expect(document.body.innerHTML).not.toContain('legacy-status-cell');
+    expect(state.recordWorkspace.recordFilters.objectType).toBe(
+      'APPLICATION_FORM',
+    );
 
     const createButton = [...document.querySelectorAll('button')].find(
-      (button) => button.textContent?.trim() === '新增归档柜',
+      (button) => button.textContent?.trim() === '新增',
     );
     expect(createButton).toBeTruthy();
 
@@ -317,6 +415,32 @@ describe('ArchiveManagementView', () => {
     expect(
       state.cabinetWorkspace.openCreateCabinetDialog,
     ).toHaveBeenCalledTimes(1);
+
+    const batchButton = [...document.querySelectorAll('button')].find(
+      (button) => button.textContent?.trim() === '批量添加',
+    );
+    expect(batchButton).toBeTruthy();
+
+    batchButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(
+      state.cabinetWorkspace.openBatchCreateCabinetDialog,
+    ).toHaveBeenCalledTimes(1);
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('shows permission warnings for record and cabinet query limits', () => {
+    const state = createMockPageState();
+    state.capabilities.canQueryRecords = false;
+    state.capabilities.canQueryCabinets = false;
+    mockUseArchiveManagementPage.mockReturnValue(state);
+
+    const { app, root } = mountView();
+
+    expect(document.body.textContent).toContain('当前账号缺少归档记录查询权限');
+    expect(document.body.textContent).toContain('当前账号缺少归档柜查询权限');
 
     app.unmount();
     root.remove();

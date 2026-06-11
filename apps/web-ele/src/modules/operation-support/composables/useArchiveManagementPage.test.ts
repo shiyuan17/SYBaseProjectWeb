@@ -12,13 +12,16 @@ import { M5_PERMISSION_CODES } from '../constants';
 
 const {
   messageErrorMock,
+  messageBoxConfirmMock,
   messageSuccessMock,
   messageWarningMock,
   mockAccessStore,
   mockArchiveApplicationForm,
   mockArchiveEmbeddingBox,
   mockArchiveSlide,
+  mockBatchCreateArchiveCabinets,
   mockCreateArchiveCabinet,
+  mockDeleteArchiveCabinet,
   mockListArchiveCabinets,
   mockListAvailableArchivePositions,
   mockSearchArchiveRecords,
@@ -26,6 +29,7 @@ const {
   mockUserStore,
 } = vi.hoisted(() => ({
   messageErrorMock: vi.fn(),
+  messageBoxConfirmMock: vi.fn(),
   messageSuccessMock: vi.fn(),
   messageWarningMock: vi.fn(),
   mockAccessStore: {
@@ -34,7 +38,9 @@ const {
   mockArchiveApplicationForm: vi.fn(),
   mockArchiveEmbeddingBox: vi.fn(),
   mockArchiveSlide: vi.fn(),
+  mockBatchCreateArchiveCabinets: vi.fn(),
   mockCreateArchiveCabinet: vi.fn(),
+  mockDeleteArchiveCabinet: vi.fn(),
   mockListArchiveCabinets: vi.fn(),
   mockListAvailableArchivePositions: vi.fn(),
   mockSearchArchiveRecords: vi.fn(),
@@ -58,13 +64,18 @@ vi.mock('element-plus', () => ({
     success: messageSuccessMock,
     warning: messageWarningMock,
   },
+  ElMessageBox: {
+    confirm: messageBoxConfirmMock,
+  },
 }));
 
 vi.mock('../api/operation-support-service', () => ({
   archiveApplicationForm: mockArchiveApplicationForm,
   archiveEmbeddingBox: mockArchiveEmbeddingBox,
   archiveSlide: mockArchiveSlide,
+  batchCreateArchiveCabinets: mockBatchCreateArchiveCabinets,
   createArchiveCabinet: mockCreateArchiveCabinet,
+  deleteArchiveCabinet: mockDeleteArchiveCabinet,
   listArchiveCabinets: mockListArchiveCabinets,
   listAvailableArchivePositions: mockListAvailableArchivePositions,
   searchArchiveRecords: mockSearchArchiveRecords,
@@ -162,6 +173,7 @@ describe('useArchiveManagementPage', () => {
       M5_PERMISSION_CODES.ARCHIVE_CABINET_QUERY,
       M5_PERMISSION_CODES.ARCHIVE_CABINET_CREATE,
       M5_PERMISSION_CODES.ARCHIVE_CABINET_UPDATE,
+      M5_PERMISSION_CODES.ARCHIVE_CABINET_DELETE,
       M5_PERMISSION_CODES.APPLICATION_FORM_ARCHIVE,
       M5_PERMISSION_CODES.ARCHIVE_QUERY,
     ];
@@ -179,7 +191,13 @@ describe('useArchiveManagementPage', () => {
     });
     mockArchiveEmbeddingBox.mockResolvedValue({});
     mockArchiveSlide.mockResolvedValue({});
+    mockBatchCreateArchiveCabinets.mockResolvedValue([
+      createCabinet({ cabinetCode: 'CAB-B001', id: 'CABINET-B1' }),
+      createCabinet({ cabinetCode: 'CAB-B002', id: 'CABINET-B2' }),
+    ]);
     mockCreateArchiveCabinet.mockResolvedValue(createCabinet());
+    mockDeleteArchiveCabinet.mockResolvedValue(undefined);
+    messageBoxConfirmMock.mockResolvedValue('confirm');
     mockUpdateArchiveCabinet.mockResolvedValue(
       createCabinet({ cabinetStatus: 'DISABLED' }),
     );
@@ -187,13 +205,16 @@ describe('useArchiveManagementPage', () => {
 
   afterEach(() => {
     messageErrorMock.mockReset();
+    messageBoxConfirmMock.mockReset();
     messageSuccessMock.mockReset();
     messageWarningMock.mockReset();
 
     mockArchiveApplicationForm.mockReset();
     mockArchiveEmbeddingBox.mockReset();
     mockArchiveSlide.mockReset();
+    mockBatchCreateArchiveCabinets.mockReset();
     mockCreateArchiveCabinet.mockReset();
+    mockDeleteArchiveCabinet.mockReset();
     mockListArchiveCabinets.mockReset();
     mockListAvailableArchivePositions.mockReset();
     mockSearchArchiveRecords.mockReset();
@@ -349,6 +370,81 @@ describe('useArchiveManagementPage', () => {
       remarks: '可用',
     });
     expect(messageSuccessMock).toHaveBeenCalledWith('归档柜已停用。');
+    expect(mockListArchiveCabinets).toHaveBeenCalledTimes(1);
+    expect(mockListAvailableArchivePositions).toHaveBeenCalledTimes(1);
+
+    wrapper.destroy();
+  });
+
+  it('batch creates cabinets and refreshes cabinet data', async () => {
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    state.cabinetWorkspace.openBatchCreateCabinetDialog();
+    expect(state.cabinetWorkspace.batchCabinetDialogVisible).toBe(true);
+
+    Object.assign(state.cabinetWorkspace.batchCabinetForm, {
+      cabinetCodePrefix: ' CAB-B ',
+      cabinetNamePrefix: ' 批量柜 ',
+      count: 2,
+      layerCount: 1,
+      numberWidth: 3,
+      slotCountPerLayer: 10,
+      startNo: 1,
+    });
+
+    mockListArchiveCabinets.mockClear();
+    mockListAvailableArchivePositions.mockClear();
+
+    await state.cabinetWorkspace.submitBatchCabinets();
+
+    expect(mockBatchCreateArchiveCabinets).toHaveBeenCalledWith({
+      cabinetCodePrefix: 'CAB-B',
+      cabinetNamePrefix: '批量柜',
+      cabinetType: 'STANDARD',
+      count: 2,
+      layerCount: 1,
+      locationDescription: undefined,
+      numberWidth: 3,
+      operatorName: '归档员甲',
+      operatorUserId: 'USER-ARCHIVE-1',
+      remarks: undefined,
+      slotCountPerLayer: 10,
+      startNo: 1,
+      terminalCode: undefined,
+    });
+    expect(messageSuccessMock).toHaveBeenCalledWith('已批量新增 2 个归档柜。');
+    expect(state.cabinetWorkspace.batchCabinetDialogVisible).toBe(false);
+    expect(mockListArchiveCabinets).toHaveBeenCalledTimes(1);
+    expect(mockListAvailableArchivePositions).toHaveBeenCalledTimes(1);
+
+    wrapper.destroy();
+  });
+
+  it('confirms and deletes an empty archive cabinet', async () => {
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    const cabinet = state.cabinetWorkspace.cabinets[0];
+
+    mockListArchiveCabinets.mockClear();
+    mockListAvailableArchivePositions.mockClear();
+
+    await state.cabinetWorkspace.deleteCabinet(cabinet!);
+
+    expect(messageBoxConfirmMock).toHaveBeenCalled();
+    expect(mockDeleteArchiveCabinet).toHaveBeenCalledWith('CABINET-1');
+    expect(messageSuccessMock).toHaveBeenCalledWith('归档柜已删除。');
     expect(mockListArchiveCabinets).toHaveBeenCalledTimes(1);
     expect(mockListAvailableArchivePositions).toHaveBeenCalledTimes(1);
 

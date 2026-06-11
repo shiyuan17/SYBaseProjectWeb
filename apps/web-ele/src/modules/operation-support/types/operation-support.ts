@@ -33,6 +33,22 @@ export interface CreateArchiveCabinetRequest {
   terminalCode?: string;
 }
 
+export interface BatchCreateArchiveCabinetRequest {
+  cabinetCodePrefix: string;
+  cabinetNamePrefix?: string;
+  cabinetType: string;
+  count: number;
+  layerCount: number;
+  locationDescription?: string;
+  numberWidth: number;
+  operatorName: string;
+  operatorUserId?: string;
+  remarks?: string;
+  slotCountPerLayer: number;
+  startNo: number;
+  terminalCode?: string;
+}
+
 export interface UpdateArchiveCabinetRequest {
   cabinetName: string;
   cabinetStatus: string;
@@ -148,61 +164,116 @@ export interface MaterialLoanView {
 }
 
 export interface ReagentView {
+  applicationDilution?: null | string;
+  cloneNo?: null | string;
+  createdAt?: null | string;
+  createdByName?: null | string;
   defaultLowStockThreshold?: null | number | string;
   defaultNearExpiryDays?: null | number;
+  defaultStockThreshold?: null | number | string;
   enabled: boolean;
   id: string;
   manufacturer?: null | string;
+  orderDictItemId?: null | string;
+  orderItemName?: null | string;
+  reagentType?: null | string;
+  reagentUsage?: null | string;
+  recommendedDilution?: null | string;
   reagentCode: string;
   reagentName: string;
   remarks?: null | string;
   specification?: null | string;
+  stainCapacity?: null | number | string;
+  stainThreshold?: null | number | string;
+  templateStatus?: null | string;
   unit?: null | string;
+  updatedAt?: null | string;
+  updatedByName?: null | string;
+  validityDays?: null | number;
 }
 
 export interface CreateReagentRequest {
+  applicationDilution?: string;
+  cloneNo?: string;
   defaultLowStockThreshold?: number | string;
   defaultNearExpiryDays?: number;
+  defaultStockThreshold?: number | string;
   enabled: boolean;
   manufacturer?: string;
-  operatorName: string;
-  operatorUserId?: string;
+  orderDictItemId?: string;
+  reagentType?: string;
+  reagentUsage?: string;
+  recommendedDilution?: string;
   reagentCode: string;
   reagentName: string;
   remarks?: string;
   specification?: string;
+  stainCapacity?: number | string;
+  stainThreshold?: number | string;
+  templateStatus?: string;
   unit?: string;
+  validityDays?: number;
 }
 
 export type UpdateReagentRequest = Omit<CreateReagentRequest, 'reagentCode'>;
 
 export interface ReagentStockView {
+  applicationDilution?: null | string;
   batchNo: string;
+  createdAt?: null | string;
+  createdByName?: null | string;
   expiryDate?: null | string;
+  expiryReminderThreshold?: null | number;
+  finishedAt?: null | string;
   id: string;
+  inboundAt?: null | string;
+  initialQuantity?: null | number | string;
   lowStockThreshold?: null | number | string;
   nearExpiryDays?: null | number;
+  orderDictItemId?: null | string;
+  orderItemName?: null | string;
+  productionDate?: null | string;
   reagentCode?: null | string;
   reagentId: string;
   reagentName?: null | string;
+  reagentType?: null | string;
+  recommendedDilution?: null | string;
+  remainingQuantity?: null | number | string;
   remarks?: null | string;
+  stainCapacity?: null | number | string;
+  stainThreshold?: null | number | string;
+  startedAt?: null | string;
   stockQuantity?: null | number | string;
   stockStatus: string;
   storageLocation?: null | string;
+  testedAt?: null | string;
+  testReminderThreshold?: null | number;
+  updatedAt?: null | string;
+  updatedByName?: null | string;
+  validityDays?: null | number;
 }
 
 export interface CreateReagentStockRequest {
+  applicationDilution?: string;
   batchNo: string;
   expiryDate?: string;
+  expiryReminderThreshold?: number;
+  inboundAt?: string;
+  initialQuantity?: number | string;
   lowStockThreshold?: number | string;
   nearExpiryDays?: number;
-  operatorName: string;
-  operatorUserId?: string;
+  productionDate?: string;
   reagentId: string;
+  recommendedDilution?: string;
+  remainingQuantity?: number | string;
   remarks?: string;
+  stainCapacity?: number | string;
+  stainThreshold?: number | string;
   stockQuantity?: number | string;
   stockStatus: string;
   storageLocation?: string;
+  testReminderThreshold?: number;
+  validityDays?: number;
 }
 
 export type UpdateReagentStockRequest = Omit<
@@ -220,6 +291,36 @@ export interface ReagentWarningView {
   stockId: string;
   stockQuantity?: null | number | string;
   warningType: string;
+}
+
+export interface ReagentStockActionRequest {
+  quantity?: number | string;
+  remarks?: string;
+}
+
+export interface ReagentStockEventView {
+  eventType: string;
+  id: string;
+  occurredAt?: null | string;
+  operatorName?: null | string;
+  quantityAfter?: null | number | string;
+  quantityBefore?: null | number | string;
+  quantityDelta?: null | number | string;
+  remarks?: null | string;
+  stockId: string;
+}
+
+export interface ReagentStockImportError {
+  field: string;
+  message: string;
+  rejectedValue?: null | string;
+  rowNumber: number;
+}
+
+export interface ReagentStockImportResult {
+  errors: ReagentStockImportError[];
+  failureCount: number;
+  successCount: number;
 }
 
 export interface EquipmentRecordView {

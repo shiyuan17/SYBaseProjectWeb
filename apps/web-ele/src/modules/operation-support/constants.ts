@@ -1,6 +1,7 @@
 export const M5_PERMISSION_CODES = {
   APPLICATION_FORM_ARCHIVE: 'PERM_M5_APPLICATION_FORM_ARCHIVE',
   ARCHIVE_CABINET_CREATE: 'PERM_M5_ARCHIVE_CABINET_CREATE',
+  ARCHIVE_CABINET_DELETE: 'PERM_M5_ARCHIVE_CABINET_DELETE',
   ARCHIVE_CABINET_QUERY: 'PERM_M5_ARCHIVE_CABINET_QUERY',
   ARCHIVE_CABINET_UPDATE: 'PERM_M5_ARCHIVE_CABINET_UPDATE',
   ARCHIVE_QUERY: 'PERM_M5_ARCHIVE_QUERY',
@@ -26,6 +27,7 @@ export const M5_ARCHIVE_PAGE_AUTHORITIES = [
   M5_PERMISSION_CODES.ARCHIVE_CABINET_QUERY,
   M5_PERMISSION_CODES.ARCHIVE_CABINET_CREATE,
   M5_PERMISSION_CODES.ARCHIVE_CABINET_UPDATE,
+  M5_PERMISSION_CODES.ARCHIVE_CABINET_DELETE,
   M5_PERMISSION_CODES.APPLICATION_FORM_ARCHIVE,
   M5_PERMISSION_CODES.EMBEDDING_BOX_ARCHIVE,
   M5_PERMISSION_CODES.SLIDE_ARCHIVE,
@@ -131,11 +133,26 @@ export const REAGENT_ENABLED_OPTIONS = [
   { label: '停用', value: false },
 ] as const;
 
-export const REAGENT_STOCK_STATUS_OPTIONS = [
-  { label: '在用', value: 'ACTIVE' },
-  { label: '耗尽', value: 'DEPLETED' },
+export const REAGENT_TYPE_OPTIONS = [
+  { label: '免疫组化工作液', value: 'IMMUNO_WORKING_SOLUTION' },
+  { label: '免疫组化浓缩液', value: 'IMMUNO_CONCENTRATE' },
+  { label: '基因突变检测试剂', value: 'GENE_MUTATION_TEST' },
+  { label: '免疫组化稀释液', value: 'IMMUNO_DILUENT' },
+  { label: '特殊染色试剂', value: 'SPECIAL_STAIN' },
+] as const;
+
+export const REAGENT_TEMPLATE_STATUS_OPTIONS = [
+  { label: '启用', value: 'ENABLED' },
   { label: '停用', value: 'DISABLED' },
-  { label: '过期', value: 'EXPIRED' },
+  { label: '删除', value: 'DELETED' },
+] as const;
+
+export const REAGENT_STOCK_STATUS_OPTIONS = [
+  { label: '入库', value: 'IN_STOCK' },
+  { label: '已测试', value: 'TESTED' },
+  { label: '使用中', value: 'IN_USE' },
+  { label: '已用完', value: 'FINISHED' },
+  { label: '停用', value: 'DISABLED' },
 ] as const;
 
 export const EQUIPMENT_STATUS_OPTIONS = [

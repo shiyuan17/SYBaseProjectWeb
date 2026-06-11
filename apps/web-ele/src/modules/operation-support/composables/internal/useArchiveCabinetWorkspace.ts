@@ -12,19 +12,24 @@ import type {
 
 import { computed, reactive, ref, watch } from 'vue';
 
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 
 import {
+  batchCreateArchiveCabinets,
   createArchiveCabinet,
+  deleteArchiveCabinet,
   listArchiveCabinets,
   listAvailableArchivePositions,
   updateArchiveCabinet,
 } from '../../api/operation-support-service';
 import {
+  buildBatchCreateCabinetRequest,
   buildCreateCabinetRequest,
   buildUpdateCabinetRequest,
+  createBatchCabinetFormDefaults,
   createCabinetFormDefaults,
   createCabinetFormStateFromCabinet,
+  validateBatchCabinetForm as getBatchCabinetFormValidationMessage,
   validateCabinetForm as getCabinetFormValidationMessage,
 } from '../../utils/archive-forms';
 import {
@@ -57,6 +62,7 @@ export function useArchiveCabinetWorkspace(
   const selectedPositionCode = ref('');
   const editingCabinet = ref<ArchiveCabinetView | null>(null);
   const cabinetDialogMode = ref<'create' | 'edit' | null>(null);
+  const batchCabinetDialogVisible = ref(false);
 
   const cabinetDialogVisible = computed({
     get: () => cabinetDialogMode.value !== null,
@@ -70,6 +76,11 @@ export function useArchiveCabinetWorkspace(
 
   const cabinetForm = reactive<CabinetFormState>(
     createCabinetFormDefaults(operatorContext.getCurrentOperatorDefaults()),
+  );
+  const batchCabinetForm = reactive(
+    createBatchCabinetFormDefaults(
+      operatorContext.getCurrentOperatorDefaults(),
+    ),
   );
 
   const positionFilters = reactive({
@@ -186,11 +197,31 @@ export function useArchiveCabinetWorkspace(
     );
   }
 
+  function closeBatchCreateCabinetDialog() {
+    batchCabinetDialogVisible.value = false;
+    Object.assign(
+      batchCabinetForm,
+      createBatchCabinetFormDefaults(
+        operatorContext.getCurrentOperatorDefaults(),
+      ),
+    );
+  }
+
   function openCreateCabinetDialog() {
     cabinetDialogMode.value = 'create';
     editingCabinet.value = null;
     applyCabinetFormState(
       createCabinetFormDefaults(operatorContext.getCurrentOperatorDefaults()),
+    );
+  }
+
+  function openBatchCreateCabinetDialog() {
+    batchCabinetDialogVisible.value = true;
+    Object.assign(
+      batchCabinetForm,
+      createBatchCabinetFormDefaults(
+        operatorContext.getCurrentOperatorDefaults(),
+      ),
     );
   }
 
@@ -271,6 +302,16 @@ export function useArchiveCabinetWorkspace(
     return true;
   }
 
+  function validateBatchCabinetForm() {
+    const validationMessage =
+      getBatchCabinetFormValidationMessage(batchCabinetForm);
+    if (validationMessage) {
+      ElMessage.warning(validationMessage);
+      return false;
+    }
+    return true;
+  }
+
   async function submitCabinet() {
     if (!validateCabinetForm()) {
       return;
@@ -291,6 +332,55 @@ export function useArchiveCabinetWorkspace(
       }
 
       closeCabinetDialog();
+      await Promise.all([loadCabinets(), loadPositions()]);
+    } catch (error) {
+      ElMessage.error(getOperationSupportPageErrorMessage(error));
+    } finally {
+      mutationState.submitting.value = false;
+    }
+  }
+
+  async function submitBatchCabinets() {
+    if (!validateBatchCabinetForm()) {
+      return;
+    }
+
+    mutationState.submitting.value = true;
+
+    try {
+      const createdCabinets = await batchCreateArchiveCabinets(
+        buildBatchCreateCabinetRequest(batchCabinetForm),
+      );
+      ElMessage.success(`已批量新增 ${createdCabinets.length} 个归档柜。`);
+      closeBatchCreateCabinetDialog();
+      await Promise.all([loadCabinets(), loadPositions()]);
+    } catch (error) {
+      ElMessage.error(getOperationSupportPageErrorMessage(error));
+    } finally {
+      mutationState.submitting.value = false;
+    }
+  }
+
+  async function deleteCabinet(cabinet: ArchiveCabinetView) {
+    try {
+      await ElMessageBox.confirm(
+        `确认删除归档柜 ${cabinet.cabinetCode}？仅空柜允许删除。`,
+        '删除归档柜',
+        {
+          confirmButtonText: '删除',
+          cancelButtonText: '取消',
+          type: 'warning',
+        },
+      );
+    } catch {
+      return;
+    }
+
+    mutationState.submitting.value = true;
+
+    try {
+      await deleteArchiveCabinet(cabinet.id);
+      ElMessage.success('归档柜已删除。');
       await Promise.all([loadCabinets(), loadPositions()]);
     } catch (error) {
       ElMessage.error(getOperationSupportPageErrorMessage(error));
@@ -333,6 +423,8 @@ export function useArchiveCabinetWorkspace(
   }
 
   return {
+    batchCabinetDialogVisible,
+    batchCabinetForm,
     cabinetCapacityPreview,
     cabinetDialogMode,
     cabinetDialogVisible,
@@ -341,11 +433,13 @@ export function useArchiveCabinetWorkspace(
     cabinetPositionRulePreview,
     cabinets,
     clearSelectedPosition,
+    closeBatchCreateCabinetDialog,
     filteredCabinets,
     isEditingCabinet,
     loadCabinets,
     loadPositions,
     loading,
+    openBatchCreateCabinetDialog,
     openCreateCabinetDialog,
     openEditCabinetDialog,
     positionError,
@@ -357,6 +451,8 @@ export function useArchiveCabinetWorkspace(
     selectedPositionLabel,
     selectPosition,
     submitCabinet,
+    submitBatchCabinets,
+    deleteCabinet,
     toggleCabinetStatus,
   };
 }

@@ -8,12 +8,18 @@ import {
   archiveApplicationForm,
   archiveEmbeddingBox,
   archiveSlide,
+  batchCreateArchiveCabinets,
+  consumeReagentStock,
   createArchiveCabinet,
   createEquipmentMaintenanceLog,
   createEquipmentRecord,
   createMaterialLoan,
   createReagent,
   createReagentStock,
+  deleteArchiveCabinet,
+  exportReagentStocks,
+  finishUsingReagentStock,
+  importReagentStocks,
   listArchiveCabinets,
   listAvailableArchivePositions,
   listEquipmentMaintenanceLogs,
@@ -21,11 +27,14 @@ import {
   listEquipmentWarnings,
   listPendingMaterialLoans,
   listReagents,
+  listReagentStockEvents,
   listReagentStocks,
   listReagentWarnings,
   normalizeArrayResult,
   returnMaterialLoan,
   searchArchiveRecords,
+  startUsingReagentStock,
+  testReagentStock,
   updateArchiveCabinet,
   updateEquipmentRecord,
   updateReagent,
@@ -34,22 +43,28 @@ import {
 
 vi.mock('#/api/request', () => ({
   requestClient: {
+    download: vi.fn(),
     get: vi.fn(),
     post: vi.fn(),
     request: vi.fn(),
+    upload: vi.fn(),
   },
 }));
 
 const requestClientMock = requestClient as unknown as {
+  download: Mock;
   get: Mock;
   post: Mock;
   request: Mock;
+  upload: Mock;
 };
 
 beforeEach(() => {
+  requestClientMock.download.mockReset();
   requestClientMock.get.mockReset();
   requestClientMock.post.mockReset();
   requestClientMock.request.mockReset();
+  requestClientMock.upload.mockReset();
 });
 
 describe('operation-support-service mappers', () => {
@@ -99,6 +114,17 @@ describe('operation-support-service archive requests', () => {
       operatorName: '归档员',
       slotCountPerLayer: 2,
     });
+    await batchCreateArchiveCabinets({
+      cabinetCodePrefix: 'CAB-B',
+      cabinetNamePrefix: '批量柜',
+      cabinetType: 'STANDARD',
+      count: 2,
+      layerCount: 1,
+      numberWidth: 3,
+      operatorName: '归档员',
+      slotCountPerLayer: 10,
+      startNo: 1,
+    });
     await archiveApplicationForm({
       archivePositionId: 'POS-1',
       caseId: 'CASE-1',
@@ -136,6 +162,21 @@ describe('operation-support-service archive requests', () => {
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       2,
+      '/v1/archive-cabinets/batch',
+      {
+        cabinetCodePrefix: 'CAB-B',
+        cabinetNamePrefix: '批量柜',
+        cabinetType: 'STANDARD',
+        count: 2,
+        layerCount: 1,
+        numberWidth: 3,
+        operatorName: '归档员',
+        slotCountPerLayer: 10,
+        startNo: 1,
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      3,
       '/v1/archive/application-forms',
       {
         archivePositionId: 'POS-1',
@@ -144,7 +185,7 @@ describe('operation-support-service archive requests', () => {
       },
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
-      3,
+      4,
       '/v1/archive/embedding-boxes',
       {
         archivePositionId: 'POS-2',
@@ -153,7 +194,7 @@ describe('operation-support-service archive requests', () => {
       },
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
-      4,
+      5,
       '/v1/archive/slides',
       {
         archivePositionId: 'POS-3',
@@ -162,7 +203,7 @@ describe('operation-support-service archive requests', () => {
       },
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
-      5,
+      6,
       '/v1/material-loans',
       {
         borrowedByName: '医生',
@@ -172,7 +213,7 @@ describe('operation-support-service archive requests', () => {
       },
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
-      6,
+      7,
       '/v1/material-loans/LOAN-1/return',
       { operatorName: '归档员' },
     );
@@ -197,60 +238,103 @@ describe('operation-support-service archive requests', () => {
       },
     );
   });
+
+  it('deletes archive cabinets', async () => {
+    await deleteArchiveCabinet('CAB-1');
+
+    expect(requestClientMock.request).toHaveBeenCalledWith(
+      '/v1/archive-cabinets/CAB-1',
+      {
+        method: 'DELETE',
+      },
+    );
+  });
 });
 
 describe('operation-support-service reagent requests', () => {
   it('calls reagent endpoints with exact paths', async () => {
     requestClientMock.get.mockResolvedValue([]);
 
-    await listReagents({ enabled: true, keyword: 'RG' });
-    await listReagentStocks({ stockStatus: 'ACTIVE' });
+    await listReagents({
+      enabled: true,
+      keyword: 'RG',
+      reagentType: 'IMMUNO_WORKING_SOLUTION',
+      templateStatus: 'ENABLED',
+    });
+    await listReagentStocks({
+      dateFrom: '2026-03-11',
+      dateTo: '2026-06-12',
+      reagentType: 'IMMUNO_WORKING_SOLUTION',
+      stockStatus: 'IN_USE',
+    });
     await listReagentWarnings();
+    await listReagentStockEvents('STOCK-1');
 
     expect(requestClientMock.get).toHaveBeenNthCalledWith(1, '/v1/reagents', {
-      params: { enabled: true, keyword: 'RG' },
+      params: {
+        enabled: true,
+        keyword: 'RG',
+        reagentType: 'IMMUNO_WORKING_SOLUTION',
+        templateStatus: 'ENABLED',
+      },
     });
     expect(requestClientMock.get).toHaveBeenNthCalledWith(
       2,
       '/v1/reagent-stocks',
       {
-        params: { stockStatus: 'ACTIVE' },
+        params: {
+          dateFrom: '2026-03-11',
+          dateTo: '2026-06-12',
+          reagentType: 'IMMUNO_WORKING_SOLUTION',
+          stockStatus: 'IN_USE',
+        },
       },
     );
     expect(requestClientMock.get).toHaveBeenNthCalledWith(
       3,
       '/v1/reagent-stocks/warnings',
     );
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      4,
+      '/v1/reagent-stocks/STOCK-1/events',
+    );
   });
 
-  it('creates and patches reagents and stock batches', async () => {
+  it('creates and patches reagents and stock batches without legacy operator fields', async () => {
     await createReagent({
+      applicationDilution: '1:80',
       enabled: true,
-      operatorName: '试剂员',
+      orderDictItemId: 'ODI_IHC_CK',
       reagentCode: 'RG-1',
       reagentName: '试剂',
+      reagentType: 'IMMUNO_WORKING_SOLUTION',
+      templateStatus: 'ENABLED',
     });
     await updateReagent('RG-1', {
       enabled: false,
-      operatorName: '试剂员',
       reagentName: '试剂2',
+      templateStatus: 'DISABLED',
     });
     await createReagentStock({
       batchNo: 'B-1',
-      operatorName: '试剂员',
+      initialQuantity: 20,
       reagentId: 'RG-1',
-      stockStatus: 'ACTIVE',
+      remainingQuantity: 20,
+      stockStatus: 'IN_STOCK',
     });
     await updateReagentStock('STOCK-1', {
-      operatorName: '试剂员',
-      stockStatus: 'DEPLETED',
+      remainingQuantity: 0,
+      stockStatus: 'FINISHED',
     });
 
     expect(requestClientMock.post).toHaveBeenNthCalledWith(1, '/v1/reagents', {
+      applicationDilution: '1:80',
       enabled: true,
-      operatorName: '试剂员',
+      orderDictItemId: 'ODI_IHC_CK',
       reagentCode: 'RG-1',
       reagentName: '试剂',
+      reagentType: 'IMMUNO_WORKING_SOLUTION',
+      templateStatus: 'ENABLED',
     });
     expect(requestClientMock.request).toHaveBeenNthCalledWith(
       1,
@@ -258,8 +342,8 @@ describe('operation-support-service reagent requests', () => {
       {
         data: {
           enabled: false,
-          operatorName: '试剂员',
           reagentName: '试剂2',
+          templateStatus: 'DISABLED',
         },
         method: 'PATCH',
       },
@@ -269,9 +353,10 @@ describe('operation-support-service reagent requests', () => {
       '/v1/reagent-stocks',
       {
         batchNo: 'B-1',
-        operatorName: '试剂员',
+        initialQuantity: 20,
         reagentId: 'RG-1',
-        stockStatus: 'ACTIVE',
+        remainingQuantity: 20,
+        stockStatus: 'IN_STOCK',
       },
     );
     expect(requestClientMock.request).toHaveBeenNthCalledWith(
@@ -279,11 +364,54 @@ describe('operation-support-service reagent requests', () => {
       '/v1/reagent-stocks/STOCK-1',
       {
         data: {
-          operatorName: '试剂员',
-          stockStatus: 'DEPLETED',
+          remainingQuantity: 0,
+          stockStatus: 'FINISHED',
         },
         method: 'PATCH',
       },
+    );
+  });
+
+  it('calls reagent stock actions and csv exchange endpoints', async () => {
+    const file = new File(['csv'], 'stocks.csv', { type: 'text/csv' });
+
+    await testReagentStock('STOCK-1', { quantity: 1, remarks: '测试' });
+    await consumeReagentStock('STOCK-1', { quantity: 2, remarks: '消耗' });
+    await startUsingReagentStock('STOCK-1', { remarks: '开始' });
+    await finishUsingReagentStock('STOCK-1', { remarks: '结束' });
+    await exportReagentStocks({ keyword: 'RG' });
+    await importReagentStocks(file);
+
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      1,
+      '/v1/reagent-stocks/STOCK-1/test',
+      { quantity: 1, remarks: '测试' },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      2,
+      '/v1/reagent-stocks/STOCK-1/consume',
+      { quantity: 2, remarks: '消耗' },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      3,
+      '/v1/reagent-stocks/STOCK-1/start-use',
+      { remarks: '开始' },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      4,
+      '/v1/reagent-stocks/STOCK-1/finish-use',
+      { remarks: '结束' },
+    );
+    expect(requestClientMock.download).toHaveBeenCalledWith(
+      '/v1/reagent-stocks/export',
+      {
+        params: { keyword: 'RG' },
+        responseReturn: 'body',
+      },
+    );
+    expect(requestClientMock.upload).toHaveBeenCalledWith(
+      '/v1/reagent-stocks/import',
+      { file },
     );
   });
 });

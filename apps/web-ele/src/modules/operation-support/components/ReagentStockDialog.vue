@@ -32,8 +32,8 @@ const stockForm = defineModel<ReagentStockFormState>('stockForm', {
 </script>
 
 <template>
-  <ElDialog v-model="dialogVisible" title="库存批次维护" width="680px">
-    <ElForm label-width="120px">
+  <ElDialog v-model="dialogVisible" title="试剂入库" width="860px">
+    <ElForm class="grid grid-cols-1 gap-x-4 md:grid-cols-2" label-width="128px">
       <ElFormItem label="试剂" required>
         <ElSelect
           v-model="stockForm.reagentId"
@@ -51,8 +51,11 @@ const stockForm = defineModel<ReagentStockFormState>('stockForm', {
       <ElFormItem label="批号" required>
         <ElInput v-model="stockForm.batchNo" :disabled="props.isEditingStock" />
       </ElFormItem>
-      <ElFormItem label="数量">
-        <ElInputNumber v-model="stockForm.stockQuantity" :min="0" />
+      <ElFormItem label="初始数量">
+        <ElInputNumber v-model="stockForm.initialQuantity" :min="0" />
+      </ElFormItem>
+      <ElFormItem label="当前剩余量">
+        <ElInputNumber v-model="stockForm.remainingQuantity" :min="0" />
       </ElFormItem>
       <ElFormItem label="状态" required>
         <ElSelect v-model="stockForm.stockStatus">
@@ -63,6 +66,15 @@ const stockForm = defineModel<ReagentStockFormState>('stockForm', {
             :value="option.value"
           />
         </ElSelect>
+      </ElFormItem>
+      <ElFormItem label="生产日期">
+        <ElInput v-model="stockForm.productionDate" placeholder="YYYY-MM-DD" />
+      </ElFormItem>
+      <ElFormItem label="入库时间">
+        <ElInput
+          v-model="stockForm.inboundAt"
+          placeholder="YYYY-MM-DDTHH:mm:ss"
+        />
       </ElFormItem>
       <ElFormItem label="有效期">
         <ElInput v-model="stockForm.expiryDate" placeholder="YYYY-MM-DD" />
@@ -76,10 +88,28 @@ const stockForm = defineModel<ReagentStockFormState>('stockForm', {
       <ElFormItem label="近效期天数">
         <ElInputNumber v-model="stockForm.nearExpiryDays" :min="0" />
       </ElFormItem>
-      <ElFormItem label="操作人" required>
-        <ElInput v-model="stockForm.operatorName" />
+      <ElFormItem label="测试提醒阈值">
+        <ElInputNumber v-model="stockForm.testReminderThreshold" :min="0" />
       </ElFormItem>
-      <ElFormItem label="备注">
+      <ElFormItem label="过期提醒阈值">
+        <ElInputNumber v-model="stockForm.expiryReminderThreshold" :min="0" />
+      </ElFormItem>
+      <ElFormItem label="推荐稀释度">
+        <ElInput v-model="stockForm.recommendedDilution" />
+      </ElFormItem>
+      <ElFormItem label="应用稀释度">
+        <ElInput v-model="stockForm.applicationDilution" />
+      </ElFormItem>
+      <ElFormItem label="预计染色总量">
+        <ElInputNumber v-model="stockForm.stainCapacity" :min="0" />
+      </ElFormItem>
+      <ElFormItem label="染色阈值">
+        <ElInputNumber v-model="stockForm.stainThreshold" :min="0" />
+      </ElFormItem>
+      <ElFormItem label="有效期天数">
+        <ElInputNumber v-model="stockForm.validityDays" :min="0" />
+      </ElFormItem>
+      <ElFormItem class="md:col-span-2" label="备注">
         <ElInput v-model="stockForm.remarks" type="textarea" />
       </ElFormItem>
     </ElForm>

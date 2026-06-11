@@ -11,6 +11,8 @@ import {
   MATERIAL_LOAN_STATUS_OPTIONS,
   MATERIAL_TYPE_OPTIONS,
   REAGENT_STOCK_STATUS_OPTIONS,
+  REAGENT_TEMPLATE_STATUS_OPTIONS,
+  REAGENT_TYPE_OPTIONS,
 } from '../constants';
 
 function findOptionLabel(
@@ -58,6 +60,14 @@ export function formatMaterialLoanStatus(value?: null | string) {
 
 export function formatReagentStockStatus(value?: null | string) {
   return findOptionLabel(REAGENT_STOCK_STATUS_OPTIONS, value);
+}
+
+export function formatReagentType(value?: null | string) {
+  return findOptionLabel(REAGENT_TYPE_OPTIONS, value);
+}
+
+export function formatReagentTemplateStatus(value?: null | string) {
+  return findOptionLabel(REAGENT_TEMPLATE_STATUS_OPTIONS, value);
 }
 
 export function formatEquipmentStatus(value?: null | string) {

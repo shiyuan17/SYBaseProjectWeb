@@ -3,6 +3,7 @@ import type {
   ArchiveCabinetView,
   ArchiveEmbeddingBoxRequest,
   ArchiveSlideRequest,
+  BatchCreateArchiveCabinetRequest,
   CreateArchiveCabinetRequest,
   CreateMaterialLoanRequest,
   ReturnMaterialLoanRequest,
@@ -20,6 +21,22 @@ export type CabinetFormState = {
   operatorUserId: string;
   remarks: string;
   slotCountPerLayer: number;
+  terminalCode: string;
+};
+
+export type BatchCabinetFormState = {
+  cabinetCodePrefix: string;
+  cabinetNamePrefix: string;
+  cabinetType: string;
+  count: number;
+  layerCount: number;
+  locationDescription: string;
+  numberWidth: number;
+  operatorName: string;
+  operatorUserId: string;
+  remarks: string;
+  slotCountPerLayer: number;
+  startNo: number;
   terminalCode: string;
 };
 
@@ -78,6 +95,26 @@ export function createCabinetFormDefaults(
     operatorUserId: operator.operatorUserId,
     remarks: '',
     slotCountPerLayer: 10,
+    terminalCode: '',
+  };
+}
+
+export function createBatchCabinetFormDefaults(
+  operator: OperatorDefaults,
+): BatchCabinetFormState {
+  return {
+    cabinetCodePrefix: '',
+    cabinetNamePrefix: '',
+    cabinetType: 'STANDARD',
+    count: 1,
+    layerCount: 1,
+    locationDescription: '',
+    numberWidth: 3,
+    operatorName: operator.operatorName,
+    operatorUserId: operator.operatorUserId,
+    remarks: '',
+    slotCountPerLayer: 10,
+    startNo: 1,
     terminalCode: '',
   };
 }
@@ -157,6 +194,28 @@ export function validateCabinetForm(
   }
   if (mode === 'create' && !form.cabinetCode.trim()) {
     return '新增归档柜时必须填写归档柜编号。';
+  }
+  if (form.layerCount < 1 || form.slotCountPerLayer < 1) {
+    return '层数和每层柜位数必须大于 0。';
+  }
+  return '';
+}
+
+export function validateBatchCabinetForm(form: BatchCabinetFormState) {
+  if (!form.cabinetCodePrefix.trim()) {
+    return '请填写归档柜编号前缀。';
+  }
+  if (!form.operatorName.trim()) {
+    return '请填写操作人。';
+  }
+  if (form.startNo < 0) {
+    return '起始序号不能小于 0。';
+  }
+  if (form.count < 1 || form.count > 100) {
+    return '批量添加数量必须在 1 到 100 之间。';
+  }
+  if (form.numberWidth < 1 || form.numberWidth > 10) {
+    return '序号位数必须在 1 到 10 之间。';
   }
   if (form.layerCount < 1 || form.slotCountPerLayer < 1) {
     return '层数和每层柜位数必须大于 0。';
@@ -246,6 +305,26 @@ export function buildCreateCabinetRequest(
     operatorUserId: optionalText(form.operatorUserId),
     remarks: optionalText(form.remarks),
     slotCountPerLayer: form.slotCountPerLayer,
+    terminalCode: optionalText(form.terminalCode),
+  };
+}
+
+export function buildBatchCreateCabinetRequest(
+  form: BatchCabinetFormState,
+): BatchCreateArchiveCabinetRequest {
+  return {
+    cabinetCodePrefix: form.cabinetCodePrefix.trim(),
+    cabinetNamePrefix: optionalText(form.cabinetNamePrefix),
+    cabinetType: form.cabinetType,
+    count: form.count,
+    layerCount: form.layerCount,
+    locationDescription: optionalText(form.locationDescription),
+    numberWidth: form.numberWidth,
+    operatorName: form.operatorName.trim(),
+    operatorUserId: optionalText(form.operatorUserId),
+    remarks: optionalText(form.remarks),
+    slotCountPerLayer: form.slotCountPerLayer,
+    startNo: form.startNo,
     terminalCode: optionalText(form.terminalCode),
   };
 }

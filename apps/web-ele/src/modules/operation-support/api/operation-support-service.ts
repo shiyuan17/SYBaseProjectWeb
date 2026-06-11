@@ -6,6 +6,7 @@ import type {
   ArchivePositionView,
   ArchiveRecordView,
   ArchiveSlideRequest,
+  BatchCreateArchiveCabinetRequest,
   CreateArchiveCabinetRequest,
   CreateEquipmentMaintenanceLogRequest,
   CreateEquipmentRecordRequest,
@@ -17,6 +18,9 @@ import type {
   EquipmentWarningView,
   MaterialLoanQuery,
   MaterialLoanView,
+  ReagentStockActionRequest,
+  ReagentStockEventView,
+  ReagentStockImportResult,
   ReagentStockView,
   ReagentView,
   ReagentWarningView,
@@ -53,6 +57,17 @@ export async function createArchiveCabinet(data: CreateArchiveCabinetRequest) {
   return requestClient.post<ArchiveCabinetView>('/v1/archive-cabinets', data);
 }
 
+export async function batchCreateArchiveCabinets(
+  data: BatchCreateArchiveCabinetRequest,
+) {
+  return normalizeArrayResult(
+    await requestClient.post<ArchiveCabinetView[] | null>(
+      '/v1/archive-cabinets/batch',
+      data,
+    ),
+  );
+}
+
 export async function updateArchiveCabinet(
   cabinetId: string,
   data: UpdateArchiveCabinetRequest,
@@ -61,6 +76,12 @@ export async function updateArchiveCabinet(
     `/v1/archive-cabinets/${cabinetId}`,
     data,
   );
+}
+
+export async function deleteArchiveCabinet(cabinetId: string) {
+  return requestClient.request<unknown>(`/v1/archive-cabinets/${cabinetId}`, {
+    method: 'DELETE',
+  });
 }
 
 export async function listAvailableArchivePositions(params: {
@@ -132,6 +153,8 @@ export async function returnMaterialLoan(
 export async function listReagents(params: {
   enabled?: boolean;
   keyword?: string;
+  reagentType?: string;
+  templateStatus?: string;
 }) {
   return normalizeArrayResult(
     await requestClient.get<null | ReagentView[]>('/v1/reagents', { params }),
@@ -150,7 +173,10 @@ export async function updateReagent(
 }
 
 export async function listReagentStocks(params: {
+  dateFrom?: string;
+  dateTo?: string;
   keyword?: string;
+  reagentType?: string;
   stockStatus?: string;
 }) {
   return normalizeArrayResult(
@@ -169,6 +195,68 @@ export async function updateReagentStock(
   data: UpdateReagentStockRequest,
 ) {
   return requestPatch<ReagentStockView>(`/v1/reagent-stocks/${stockId}`, data);
+}
+
+export async function testReagentStock(
+  stockId: string,
+  data: ReagentStockActionRequest,
+) {
+  return requestClient.post<ReagentStockView>(
+    `/v1/reagent-stocks/${stockId}/test`,
+    data,
+  );
+}
+
+export async function consumeReagentStock(
+  stockId: string,
+  data: ReagentStockActionRequest,
+) {
+  return requestClient.post<ReagentStockView>(
+    `/v1/reagent-stocks/${stockId}/consume`,
+    data,
+  );
+}
+
+export async function startUsingReagentStock(
+  stockId: string,
+  data: ReagentStockActionRequest,
+) {
+  return requestClient.post<ReagentStockView>(
+    `/v1/reagent-stocks/${stockId}/start-use`,
+    data,
+  );
+}
+
+export async function finishUsingReagentStock(
+  stockId: string,
+  data: ReagentStockActionRequest,
+) {
+  return requestClient.post<ReagentStockView>(
+    `/v1/reagent-stocks/${stockId}/finish-use`,
+    data,
+  );
+}
+
+export async function listReagentStockEvents(stockId: string) {
+  return normalizeArrayResult(
+    await requestClient.get<null | ReagentStockEventView[]>(
+      `/v1/reagent-stocks/${stockId}/events`,
+    ),
+  );
+}
+
+export async function exportReagentStocks(params: Record<string, unknown>) {
+  return requestClient.download('/v1/reagent-stocks/export', {
+    params,
+    responseReturn: 'body',
+  });
+}
+
+export async function importReagentStocks(file: File) {
+  return requestClient.upload<ReagentStockImportResult>(
+    '/v1/reagent-stocks/import',
+    { file },
+  );
 }
 
 export async function listReagentWarnings() {

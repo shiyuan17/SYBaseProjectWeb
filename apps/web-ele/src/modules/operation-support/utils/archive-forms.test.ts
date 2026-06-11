@@ -6,16 +6,19 @@ import {
   buildArchiveApplicationFormRequest,
   buildArchiveEmbeddingBoxRequest,
   buildArchiveSlideRequest,
+  buildBatchCreateCabinetRequest,
   buildCreateCabinetRequest,
   buildCreateMaterialLoanRequest,
   buildReturnMaterialLoanRequest,
   buildUpdateCabinetRequest,
   createArchiveFormDefaults,
+  createBatchCabinetFormDefaults,
   createCabinetFormDefaults,
   createCabinetFormStateFromCabinet,
   createLoanFormDefaults,
   createReturnFormDefaults,
   validateArchiveForm,
+  validateBatchCabinetForm,
   validateCabinetForm,
   validateLoanForm,
   validateReturnForm,
@@ -50,6 +53,15 @@ describe('archive form helpers', () => {
         cabinetType: 'STANDARD',
         operatorName: 'Alice',
         slotCountPerLayer: 10,
+      }),
+    );
+    expect(createBatchCabinetFormDefaults(operator)).toEqual(
+      expect.objectContaining({
+        cabinetType: 'STANDARD',
+        count: 1,
+        numberWidth: 3,
+        operatorName: 'Alice',
+        startNo: 1,
       }),
     );
     expect(createArchiveFormDefaults(operator)).toEqual(
@@ -97,6 +109,18 @@ describe('archive form helpers', () => {
     cabinetForm.cabinetCode = ' CAB-01 ';
     cabinetForm.cabinetName = ' Cabinet 1 ';
     expect(validateCabinetForm(cabinetForm, 'create')).toBe('');
+
+    const batchForm = createBatchCabinetFormDefaults(operator);
+    expect(validateBatchCabinetForm(batchForm)).toBeTruthy();
+    Object.assign(batchForm, {
+      cabinetCodePrefix: ' CAB-B ',
+      cabinetNamePrefix: ' 批量柜 ',
+      count: 2,
+      layerCount: 1,
+      slotCountPerLayer: 10,
+      startNo: 1,
+    });
+    expect(validateBatchCabinetForm(batchForm)).toBe('');
 
     const archiveForm = createArchiveFormDefaults(operator);
 
@@ -171,6 +195,30 @@ describe('archive form helpers', () => {
         remarks: 'Ready',
       }),
     );
+
+    const batchForm = createBatchCabinetFormDefaults(operator);
+    Object.assign(batchForm, {
+      cabinetCodePrefix: ' CAB-B ',
+      cabinetNamePrefix: ' 批量柜 ',
+      locationDescription: ' 2F ',
+      remarks: ' ',
+      terminalCode: ' TERM-B ',
+    });
+    expect(buildBatchCreateCabinetRequest(batchForm)).toEqual({
+      cabinetCodePrefix: 'CAB-B',
+      cabinetNamePrefix: '批量柜',
+      cabinetType: 'STANDARD',
+      count: 1,
+      layerCount: 1,
+      locationDescription: '2F',
+      numberWidth: 3,
+      operatorName: 'Alice',
+      operatorUserId: 'USER-1',
+      remarks: undefined,
+      slotCountPerLayer: 10,
+      startNo: 1,
+      terminalCode: 'TERM-B',
+    });
   });
 
   it('builds archive, loan, and return requests without changing api contracts', () => {

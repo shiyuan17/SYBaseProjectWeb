@@ -6,6 +6,7 @@ import { Fallback, Page } from '@vben/common-ui';
 import { ElTabPane, ElTabs } from 'element-plus';
 
 import ArchiveLoanCreatePanel from '../components/ArchiveLoanCreatePanel.vue';
+import ArchiveLoanLegacyListPanel from '../components/ArchiveLoanLegacyListPanel.vue';
 import ArchiveLoanPendingPanel from '../components/ArchiveLoanPendingPanel.vue';
 import ArchivePositionWorkbenchPanel from '../components/ArchivePositionWorkbenchPanel.vue';
 import ArchiveReturnDialog from '../components/ArchiveReturnDialog.vue';
@@ -14,7 +15,7 @@ import { useBorrowManagementPage } from '../composables/useBorrowManagementPage'
 const { cabinetWorkspace, capabilities, display, loanWorkspace, pageState } =
   useBorrowManagementPage();
 
-const activeBorrowTab = ref('SLIDE');
+const activeBorrowTab = ref('EMBEDDING_BOX');
 const borrowMaterialTabs = new Set(['EMBEDDING_BOX', 'SLIDE']);
 
 watch(
@@ -39,24 +40,50 @@ watch(
   <Page v-else :show-header="false">
     <div class="flex flex-col gap-4">
       <ElTabs v-model="activeBorrowTab" class="operation-support-tabs">
-        <ElTabPane label="玻片借记" name="SLIDE">
-          <ArchiveLoanCreatePanel
-            v-model:loan-form="loanWorkspace.loanForm"
-            :can-create-loan="capabilities.canCreateLoan"
-            fixed-material-type="SLIDE"
-            :submitting="pageState.submitting"
-            @submit-loan="loanWorkspace.submitLoan"
-          />
+        <ElTabPane label="蜡块借记" name="EMBEDDING_BOX">
+          <div class="flex flex-col gap-4">
+            <ArchiveLoanLegacyListPanel
+              v-model:loan-filters="loanWorkspace.loanFilters"
+              :can-query-loans="capabilities.canQueryLoans"
+              :get-loan-status-tag-type="display.getLoanStatusTagType"
+              :loading="loanWorkspace.loading"
+              :loan-error="loanWorkspace.loanError"
+              material-type="EMBEDDING_BOX"
+              :pending-loans="loanWorkspace.pendingLoans"
+              title="蜡块借记列表"
+              @load-loans="loanWorkspace.loadLoans"
+            />
+            <ArchiveLoanCreatePanel
+              v-model:loan-form="loanWorkspace.loanForm"
+              :can-create-loan="capabilities.canCreateLoan"
+              fixed-material-type="EMBEDDING_BOX"
+              :submitting="pageState.submitting"
+              @submit-loan="loanWorkspace.submitLoan"
+            />
+          </div>
         </ElTabPane>
 
-        <ElTabPane label="蜡块借记" name="EMBEDDING_BOX">
-          <ArchiveLoanCreatePanel
-            v-model:loan-form="loanWorkspace.loanForm"
-            :can-create-loan="capabilities.canCreateLoan"
-            fixed-material-type="EMBEDDING_BOX"
-            :submitting="pageState.submitting"
-            @submit-loan="loanWorkspace.submitLoan"
-          />
+        <ElTabPane label="玻片借记" name="SLIDE">
+          <div class="flex flex-col gap-4">
+            <ArchiveLoanLegacyListPanel
+              v-model:loan-filters="loanWorkspace.loanFilters"
+              :can-query-loans="capabilities.canQueryLoans"
+              :get-loan-status-tag-type="display.getLoanStatusTagType"
+              :loading="loanWorkspace.loading"
+              :loan-error="loanWorkspace.loanError"
+              material-type="SLIDE"
+              :pending-loans="loanWorkspace.pendingLoans"
+              title="玻片借记列表"
+              @load-loans="loanWorkspace.loadLoans"
+            />
+            <ArchiveLoanCreatePanel
+              v-model:loan-form="loanWorkspace.loanForm"
+              :can-create-loan="capabilities.canCreateLoan"
+              fixed-material-type="SLIDE"
+              :submitting="pageState.submitting"
+              @submit-loan="loanWorkspace.submitLoan"
+            />
+          </div>
         </ElTabPane>
 
         <ElTabPane label="待归还/归还" name="PENDING">
