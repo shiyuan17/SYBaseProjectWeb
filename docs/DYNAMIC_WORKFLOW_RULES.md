@@ -22,6 +22,8 @@
 
 PR 必须填写 Workflow Packet，说明为什么选择该 Workflow、启用哪些专家 Agent、跑了哪些动态测试和模拟、红队攻击结论是什么。
 
+专家 Agent 可由人工角色、子 Agent 或已安装 Codex skill 承担；可选 skill 映射见 `docs/AGENT_SKILL_ROUTING.md`。该映射只补充执行方式，不改变本文对主 Workflow、强制修饰器、动态测试、Red Team 与 Memory Update 的要求。
+
 ## 触发信号速查表
 
 任务开始时先按"改动路径 / 需求信号"查下表选主 Workflow，再按命中行叠加必叠修饰器。一个任务可能命中多行：主 Workflow 取最贴近核心改动的一项，其余命中项作为修饰器叠加。判断有歧义或跨多类时，从严就高（优先叠加 Security / DB / Red Team）。

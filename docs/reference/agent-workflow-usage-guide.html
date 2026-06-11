@@ -1,0 +1,1854 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI 工作流使用教程</title>
+    <style>
+      :root {
+        --bg: #f4f7fb;
+        --paper: #fff;
+        --paper-soft: #f9fbff;
+        --ink: #182230;
+        --muted: #5c6878;
+        --line: #dbe4ef;
+        --line-strong: #b8c7da;
+        --primary: #255f85;
+        --primary-soft: #e7f2fb;
+        --primary-strong: #174766;
+        --teal: #28736c;
+        --teal-soft: #e2f5f1;
+        --green: #3f6b39;
+        --green-soft: #e6f3e4;
+        --gold: #8a6731;
+        --gold-soft: #f7ead1;
+        --red: #a84444;
+        --red-soft: #fbe7e7;
+        --purple: #684f91;
+        --purple-soft: #eee8fa;
+        --gray-soft: #edf1f6;
+        --shadow: 0 18px 42px rgb(24 34 48 / 8%);
+        --radius-lg: 18px;
+        --radius-md: 12px;
+        --radius-sm: 8px;
+        --content-width: 1480px;
+        --nav-width: 292px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        font:
+          15px/1.75 'Segoe UI',
+          'PingFang SC',
+          'Hiragino Sans GB',
+          'Microsoft YaHei',
+          Arial,
+          sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(
+            circle at top left,
+            rgb(37 95 133 / 12%),
+            transparent 28%
+          ),
+          radial-gradient(
+            circle at top right,
+            rgb(40 115 108 / 10%),
+            transparent 26%
+          ),
+          linear-gradient(180deg, #fbfdff 0%, var(--bg) 100%);
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      code {
+        padding: 2px 6px;
+        font-size: 0.94em;
+        color: var(--primary-strong);
+        overflow-wrap: anywhere;
+        background: rgb(37 95 133 / 9%);
+        border-radius: 7px;
+      }
+
+      pre {
+        margin: 0;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+      }
+
+      .layout {
+        max-width: var(--content-width);
+        padding: 30px 22px 82px;
+        margin: 0 auto;
+      }
+
+      .layout,
+      .hero-inner,
+      .content-shell,
+      .side-nav,
+      .main,
+      .section,
+      .grid,
+      .workflow-grid,
+      .compare,
+      .card,
+      .workflow-card,
+      .prompt,
+      .check-panel {
+        min-width: 0;
+      }
+
+      .hero {
+        overflow: hidden;
+        background:
+          linear-gradient(
+            135deg,
+            rgb(255 255 255 / 96%),
+            rgb(239 247 253 / 96%)
+          ),
+          var(--paper);
+        border: 1px solid rgb(37 95 133 / 16%);
+        border-radius: 30px;
+        box-shadow: var(--shadow);
+      }
+
+      .hero-inner {
+        display: grid;
+        grid-template-columns: minmax(0, 1.42fr) minmax(280px, 0.9fr);
+        gap: 28px;
+        padding: 36px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        padding: 6px 12px;
+        font-weight: 800;
+        color: var(--primary-strong);
+        letter-spacing: 0.04em;
+        background: var(--primary-soft);
+        border-radius: 999px;
+      }
+
+      h1,
+      h2,
+      h3,
+      h4 {
+        margin: 0;
+        line-height: 1.25;
+      }
+
+      h1 {
+        margin-top: 18px;
+        font-size: 42px;
+        font-weight: 850;
+      }
+
+      h2 {
+        font-size: 28px;
+        font-weight: 820;
+      }
+
+      h3 {
+        font-size: 20px;
+        font-weight: 800;
+      }
+
+      h4 {
+        font-size: 16px;
+        font-weight: 800;
+      }
+
+      p {
+        margin: 10px 0 0;
+      }
+
+      .hero p {
+        max-width: 820px;
+        font-size: 16px;
+        color: var(--muted);
+      }
+
+      .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 22px;
+      }
+
+      .pill-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 38px;
+        padding: 8px 14px;
+        font-weight: 800;
+        color: var(--primary-strong);
+        background: rgb(255 255 255 / 80%);
+        border: 1px solid var(--line);
+        border-radius: 999px;
+      }
+
+      .hero-panel {
+        display: grid;
+        gap: 12px;
+      }
+
+      .metric {
+        padding: 16px 18px;
+        background: rgb(255 255 255 / 74%);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+      }
+
+      .metric strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 12px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .metric span {
+        display: block;
+        font-size: 16px;
+        font-weight: 800;
+      }
+
+      .content-shell {
+        display: grid;
+        grid-template-columns: var(--nav-width) minmax(0, 1fr);
+        gap: 24px;
+        align-items: start;
+        margin-top: 26px;
+      }
+
+      .side-nav {
+        position: sticky;
+        top: 16px;
+        padding: 18px;
+        background: rgb(255 255 255 / 90%);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        box-shadow: 0 16px 30px rgb(24 34 48 / 6%);
+      }
+
+      .side-nav h2 {
+        margin-bottom: 12px;
+        font-size: 16px;
+      }
+
+      .side-nav a {
+        display: block;
+        padding: 9px 10px;
+        font-weight: 700;
+        color: var(--muted);
+        border-radius: 10px;
+      }
+
+      .side-nav a:hover {
+        color: var(--primary-strong);
+        background: var(--primary-soft);
+      }
+
+      .main {
+        display: grid;
+        gap: 22px;
+      }
+
+      .section {
+        padding: 28px;
+        background: rgb(255 255 255 / 92%);
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        box-shadow: 0 16px 30px rgb(24 34 48 / 5%);
+      }
+
+      .section-header {
+        display: flex;
+        gap: 14px;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 18px;
+      }
+
+      .section-header p {
+        max-width: 860px;
+        color: var(--muted);
+      }
+
+      .step-badge {
+        flex: 0 0 auto;
+        min-width: 72px;
+        padding: 8px 10px;
+        font-weight: 850;
+        color: var(--primary-strong);
+        text-align: center;
+        background: var(--primary-soft);
+        border-radius: 999px;
+      }
+
+      .grid {
+        display: grid;
+        gap: 14px;
+      }
+
+      .grid.two {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .grid.three {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .card {
+        padding: 18px;
+        background: var(--paper-soft);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+      }
+
+      .card p {
+        color: var(--muted);
+      }
+
+      .card ul,
+      .checklist,
+      .plain-list {
+        padding-left: 20px;
+        margin: 12px 0 0;
+      }
+
+      li {
+        margin: 7px 0;
+      }
+
+      .tag-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        min-height: 28px;
+        padding: 4px 9px;
+        font-size: 13px;
+        font-weight: 800;
+        color: var(--muted);
+        background: var(--gray-soft);
+        border-radius: 999px;
+      }
+
+      .tag.green {
+        color: var(--green);
+        background: var(--green-soft);
+      }
+
+      .tag.gold {
+        color: var(--gold);
+        background: var(--gold-soft);
+      }
+
+      .tag.red {
+        color: var(--red);
+        background: var(--red-soft);
+      }
+
+      .tag.purple {
+        color: var(--purple);
+        background: var(--purple-soft);
+      }
+
+      .tag.teal {
+        color: var(--teal);
+        background: var(--teal-soft);
+      }
+
+      .flow {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .flow-step {
+        position: relative;
+        min-height: 118px;
+        padding: 16px 14px;
+        background: linear-gradient(180deg, #fff, var(--paper-soft));
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+      }
+
+      .flow-step strong {
+        display: block;
+        color: var(--primary-strong);
+      }
+
+      .flow-step span {
+        display: block;
+        margin-top: 8px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .workflow-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .workflow-card {
+        display: grid;
+        gap: 12px;
+        padding: 18px;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-left: 6px solid var(--primary);
+        border-radius: var(--radius-lg);
+      }
+
+      .workflow-card.ui {
+        border-left-color: var(--teal);
+      }
+
+      .workflow-card.api {
+        border-left-color: var(--primary);
+      }
+
+      .workflow-card.db {
+        border-left-color: var(--gold);
+      }
+
+      .workflow-card.security {
+        border-left-color: var(--red);
+      }
+
+      .workflow-card.architecture {
+        border-left-color: var(--purple);
+      }
+
+      .workflow-card.debug {
+        border-left-color: #596579;
+      }
+
+      .workflow-card.infra {
+        border-left-color: #2f6b4f;
+      }
+
+      .workflow-card.docs {
+        border-left-color: #7a8797;
+      }
+
+      .workflow-card p {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .mini-label {
+        font-size: 12px;
+        font-weight: 850;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .prompt {
+        overflow: hidden;
+        background: #f8fbff;
+        border: 1px solid var(--line-strong);
+        border-radius: var(--radius-lg);
+      }
+
+      .prompt-title {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        font-weight: 850;
+        color: var(--primary-strong);
+        background: var(--primary-soft);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .prompt pre {
+        padding: 16px;
+        font-family: 'Cascadia Code', Consolas, SFMono-Regular, monospace;
+        font-size: 13px;
+        line-height: 1.65;
+        color: #263548;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+      }
+
+      table {
+        width: 100%;
+        min-width: 780px;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 13px 14px;
+        vertical-align: top;
+        text-align: left;
+        border-bottom: 1px solid var(--line);
+      }
+
+      th {
+        font-size: 13px;
+        font-weight: 850;
+        color: var(--primary-strong);
+        background: var(--paper-soft);
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      details {
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+      }
+
+      details + details {
+        margin-top: 10px;
+      }
+
+      summary {
+        padding: 14px 16px;
+        font-weight: 850;
+        color: var(--primary-strong);
+        cursor: pointer;
+      }
+
+      details[open] summary {
+        background: var(--paper-soft);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .details-body {
+        padding: 16px;
+      }
+
+      .compare {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+
+      .bad,
+      .good {
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+      }
+
+      .bad {
+        background: var(--red-soft);
+      }
+
+      .good {
+        background: var(--green-soft);
+      }
+
+      .bad h4 {
+        color: var(--red);
+      }
+
+      .good h4 {
+        color: var(--green);
+      }
+
+      .check-panel {
+        padding: 18px;
+        background: linear-gradient(180deg, #fff, var(--paper-soft));
+        border: 1px solid var(--line);
+        border-radius: var(--radius-lg);
+      }
+
+      .check-panel h3 {
+        margin-bottom: 10px;
+      }
+
+      .check-item {
+        display: grid;
+        grid-template-columns: 22px 1fr;
+        gap: 8px;
+        align-items: start;
+        margin-top: 9px;
+        color: var(--muted);
+      }
+
+      .box {
+        width: 16px;
+        height: 16px;
+        margin-top: 5px;
+        background: #fff;
+        border: 2px solid var(--line-strong);
+        border-radius: 4px;
+      }
+
+      .callout {
+        padding: 18px;
+        background: var(--gold-soft);
+        border: 1px solid rgb(138 103 49 / 30%);
+        border-radius: var(--radius-lg);
+      }
+
+      .callout strong {
+        color: var(--gold);
+      }
+
+      .page-footer {
+        padding: 22px;
+        margin-top: 26px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      @media (max-width: 1120px) {
+        .hero-inner,
+        .content-shell,
+        .grid.two,
+        .grid.three,
+        .workflow-grid,
+        .compare {
+          grid-template-columns: 1fr;
+        }
+
+        .side-nav {
+          position: static;
+        }
+
+        .flow {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 640px) {
+        .layout {
+          padding: 16px 12px 52px;
+        }
+
+        .hero-inner,
+        .section {
+          padding: 22px;
+        }
+
+        h1 {
+          font-size: 31px;
+        }
+
+        h2 {
+          font-size: 23px;
+        }
+
+        .section-header {
+          display: grid;
+        }
+
+        .flow {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media print {
+        body {
+          font-size: 12px;
+          color: #000;
+          background: #fff;
+        }
+
+        .layout {
+          max-width: none;
+          padding: 0;
+        }
+
+        .hero,
+        .section,
+        .card,
+        .workflow-card,
+        .check-panel,
+        .prompt,
+        .table-wrap,
+        details {
+          box-shadow: none;
+          break-inside: avoid;
+        }
+
+        .content-shell,
+        .hero-inner,
+        .grid.two,
+        .grid.three,
+        .workflow-grid,
+        .compare {
+          display: block;
+        }
+
+        .side-nav,
+        .hero-actions,
+        .page-footer {
+          display: none;
+          box-shadow: none;
+        }
+
+        .section,
+        .hero {
+          margin-bottom: 14px;
+          border-color: #aaa;
+          border-radius: 8px;
+        }
+
+        a {
+          text-decoration: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <header class="hero">
+        <div class="hero-inner">
+          <div>
+            <span class="eyebrow">给人工使用者的教程</span>
+            <h1>AI 工作流使用教程</h1>
+            <p>
+              这份文档教你如何把任务交代给
+              AI：先澄清目标和验收标准，再选择合适的 Workflow
+              和技能组合，执行中看风险，交付时看证据。它不是新的项目规范，
+              而是一份日常使用手册。
+            </p>
+            <div class="hero-actions" aria-label="页面目录快捷入口">
+              <a class="pill-link" href="#start">任务开始前</a>
+              <a class="pill-link" href="#workflow">选择 Workflow</a>
+              <a class="pill-link" href="#skills">搭配技能</a>
+              <a class="pill-link" href="#templates">任务模板</a>
+              <a class="pill-link" href="#linear">Linear 任务</a>
+              <a class="pill-link" href="#acceptance">验收交付</a>
+            </div>
+          </div>
+          <div class="hero-panel">
+            <div class="metric">
+              <strong>你负责</strong>
+              <span>目标、边界、验收标准、风险确认</span>
+            </div>
+            <div class="metric">
+              <strong>AI 负责</strong>
+              <span>探索、计划、实现、验证、交付说明</span>
+            </div>
+            <div class="metric">
+              <strong>核心原则</strong>
+              <span>先澄清，再执行；先验证，再交付</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div class="content-shell">
+        <nav class="side-nav" aria-label="章节目录">
+          <h2>教程目录</h2>
+          <a href="#need">一、什么时候需要工作流</a>
+          <a href="#start">二、任务开始前怎么澄清</a>
+          <a href="#workflow">三、不同任务怎么选 Workflow</a>
+          <a href="#skills">四、技能怎么搭配</a>
+          <a href="#templates">五、如何给 AI 下任务</a>
+          <a href="#during">六、执行中怎么检查</a>
+          <a href="#acceptance">七、交付时怎么验收</a>
+          <a href="#mistakes">八、常见错误</a>
+          <a href="#linear">九、Linear 与协作任务</a>
+          <a href="#cheatsheet">十、一页速查</a>
+        </nav>
+
+        <main class="main">
+          <section class="section" id="need">
+            <div class="section-header">
+              <div>
+                <h2>一、你什么时候需要这套工作流</h2>
+                <p>
+                  只要任务需要 AI
+                  读代码、改代码、写文档、排查问题或给出交付判断，
+                  就应该使用工作流。越是跨模块、跨仓、权限、生产问题，越不能只用一句
+                  “帮我改一下”开工。
+                </p>
+              </div>
+              <span class="step-badge">Step 1</span>
+            </div>
+
+            <div class="flow" aria-label="任务从启动到交付的简化流程">
+              <div class="flow-step">
+                <strong>1. 说清目标</strong>
+                <span>告诉 AI 你要解决什么问题，而不是只描述想改哪里。</span>
+              </div>
+              <div class="flow-step">
+                <strong>2. 给验收标准</strong>
+                <span>说明什么现象算完成，哪些行为不能改变。</span>
+              </div>
+              <div class="flow-step">
+                <strong>3. 判断风险</strong>
+                <span>识别是否涉及权限、接口、构建、生产问题或跨仓联动。</span>
+              </div>
+              <div class="flow-step">
+                <strong>4. 选 Workflow</strong>
+                <span>让 AI 声明主 Workflow、修饰器和关键假设。</span>
+              </div>
+              <div class="flow-step">
+                <strong>5. 配技能</strong>
+                <span>按任务类型选择少量有用 skill，不叠仪式感。</span>
+              </div>
+              <div class="flow-step">
+                <strong>6. 看证据</strong>
+                <span>交付时只接受真实验证结果和清楚风险说明。</span>
+              </div>
+            </div>
+
+            <div class="grid three" style="margin-top: 16px">
+              <div class="card">
+                <h3>小改动</h3>
+                <p>
+                  例如文案、局部样式、单个测试修复。仍要说清验收标准，但可以用轻量流程。
+                </p>
+                <div class="tag-row">
+                  <span class="tag green">低风险</span>
+                  <span class="tag">最小验证</span>
+                </div>
+              </div>
+              <div class="card">
+                <h3>中型功能</h3>
+                <p>
+                  例如新增页面、联调接口、调整状态流。先澄清和计划，再让 AI
+                  实现。
+                </p>
+                <div class="tag-row">
+                  <span class="tag gold">中风险</span>
+                  <span class="tag">需要计划</span>
+                </div>
+              </div>
+              <div class="card">
+                <h3>高风险任务</h3>
+                <p>
+                  权限、登录态、生产故障、构建发布、全局请求层等，必须先确认风险和边界。
+                </p>
+                <div class="tag-row">
+                  <span class="tag red">高风险</span>
+                  <span class="tag">先确认</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="start">
+            <div class="section-header">
+              <div>
+                <h2>二、任务开始前怎么让 AI 澄清</h2>
+                <p>
+                  好的任务开头会节省最多返工。你可以先要求 AI 使用任务澄清思路，
+                  把目标、范围、非目标、验收标准和风险讲清楚，再进入实现。
+                </p>
+              </div>
+              <span class="step-badge">Step 2</span>
+            </div>
+
+            <div class="callout">
+              <strong>默认话术：</strong>
+              先使用任务澄清 /
+              <code>brainstorming</code> 思路，确认目标、影响范围、
+              验收标准、非目标和风险后再动手。如果需求存在多种理解，先不要编码，先问我关键问题。
+            </div>
+
+            <div class="grid two" style="margin-top: 16px">
+              <div class="card">
+                <h3>什么时候用 <code>brainstorming</code></h3>
+                <ul>
+                  <li>你还没完全确定页面行为、数据流或验收标准。</li>
+                  <li>这个任务可能有 2 到 3 种实现方向。</li>
+                  <li>涉及 UI、接口、状态、路由或权限组合变更。</li>
+                  <li>你希望 AI 先提出方案，而不是直接改代码。</li>
+                </ul>
+              </div>
+              <div class="card">
+                <h3>
+                  什么时候用 <code>grill-me</code> /
+                  <code>grill-with-docs</code>
+                </h3>
+                <ul>
+                  <li>你已经有方案，但担心漏了风险。</li>
+                  <li>你希望 AI 追问你验收标准和边界。</li>
+                  <li>方案必须对照仓库规范、现有实现或历史决策。</li>
+                  <li>需求来自口头描述，需要被拆成可执行任务。</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="grid" style="margin-top: 16px">
+              <div class="prompt">
+                <div class="prompt-title">可复制提示词：小任务</div>
+                <pre>
+请先确认这个任务是否属于绿区小改。
+任务目标：[写清楚要改什么]
+验收标准：[写清楚看到什么算完成]
+请先输出任务确认、影响范围、主 Workflow 和验证方式。
+如果没有歧义，再直接做最小改动。</pre
+                >
+              </div>
+              <div class="prompt">
+                <div class="prompt-title">可复制提示词：中型功能</div>
+                <pre>
+先使用 brainstorming 思路做任务澄清，不要直接编码。
+请确认目标、非目标、影响范围、数据流、验收标准和风险。
+如果存在多种实现方式，请给出 2 到 3 个方案并推荐一个。
+确认后再进入实现计划和代码修改。</pre
+                >
+              </div>
+              <div class="prompt">
+                <div class="prompt-title">可复制提示词：高风险任务</div>
+                <pre>
+这个任务可能涉及红区或高风险。
+请先不要修改代码，先识别是否涉及权限、登录态、请求层、构建发布、患者/报告数据、跨仓接口或生产问题。
+请输出必须人工确认的点、推荐 Workflow、需要启用的 skill、验证证据清单。
+等我确认后再执行。</pre
+                >
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="workflow">
+            <div class="section-header">
+              <div>
+                <h2>三、做不同任务时怎么选 Workflow</h2>
+                <p>
+                  Workflow
+                  是任务的“打法”。你不需要记所有细节，只要能判断任务属于哪一类，
+                  然后要求 AI 按对应打法提供证据。
+                </p>
+              </div>
+              <span class="step-badge">Step 3</span>
+            </div>
+
+            <div class="workflow-grid">
+              <article class="workflow-card ui">
+                <h3>UI Workflow</h3>
+                <p>页面、组件、布局、交互、图表、移动端或浏览器兼容。</p>
+                <div>
+                  <span class="mini-label">你要先确认</span>
+                  <p>目标用户、页面状态、空态/加载/错误态、桌面和移动视口。</p>
+                </div>
+                <div>
+                  <span class="mini-label">要求 AI 做</span>
+                  <p>
+                    使用 UI 专项 skill，真实浏览器验证，给截图或浏览器检查结论。
+                  </p>
+                </div>
+              </article>
+
+              <article class="workflow-card api">
+                <h3>API Workflow</h3>
+                <p>请求模型、字段映射、分页、错误码、mock、联调。</p>
+                <div>
+                  <span class="mini-label">你要先确认</span>
+                  <p>字段含义、成功/失败响应、分页边界、是否需要后端核对。</p>
+                </div>
+                <div>
+                  <span class="mini-label">要求 AI 做</span>
+                  <p>使用 API 设计 skill，对照后端实现，覆盖成功和失败分支。</p>
+                </div>
+              </article>
+
+              <article class="workflow-card db">
+                <h3>DB Workflow</h3>
+                <p>后端迁移、种子、SQL、历史数据兼容、回滚。</p>
+                <div>
+                  <span class="mini-label">你要先确认</span>
+                  <p>目标环境、旧数据、新数据、回滚路径和后端验证证据。</p>
+                </div>
+                <div>
+                  <span class="mini-label">要求 AI 做</span>
+                  <p>前端只验证展示和接口兼容，数据库证据必须来自后端。</p>
+                </div>
+              </article>
+
+              <article class="workflow-card security">
+                <h3>Security Workflow</h3>
+                <p>权限、登录态、菜单鉴权、患者信息、报告信息、导出、审计。</p>
+                <div>
+                  <span class="mini-label">你要先确认</span>
+                  <p>角色、权限矩阵、敏感数据边界、是否涉及红区。</p>
+                </div>
+                <div>
+                  <span class="mini-label">要求 AI 做</span>
+                  <p>
+                    启用安全检查和 Red Team，验证低权限、未登录、直达 URL
+                    等场景。
+                  </p>
+                </div>
+              </article>
+
+              <article class="workflow-card architecture">
+                <h3>Architecture Workflow</h3>
+                <p>共享组件、store、路由、request 边界、跨模块复用、重构。</p>
+                <div>
+                  <span class="mini-label">你要先确认</span>
+                  <p>影响面、调用方、兼容要求、是否真的需要抽象。</p>
+                </div>
+                <div>
+                  <span class="mini-label">要求 AI 做</span>
+                  <p>优先查调用关系，先写计划，再改动；交付要说明兼容性。</p>
+                </div>
+              </article>
+
+              <article class="workflow-card debug">
+                <h3>Production Debug</h3>
+                <p>线上故障、现场阻塞、性能回退、日志里已有错误。</p>
+                <div>
+                  <span class="mini-label">你要先确认</span>
+                  <p>原始现象、发生时间、日志位置、可复现输入、回滚要求。</p>
+                </div>
+                <div>
+                  <span class="mini-label">要求 AI 做</span>
+                  <p>先读日志、先复现、建立反馈环，再做最小修复和回归验证。</p>
+                </div>
+              </article>
+
+              <article class="workflow-card infra">
+                <h3>Workflow-Infra</h3>
+                <p>CI、hook、构建脚本、包管理、环境变量、发布路径。</p>
+                <div>
+                  <span class="mini-label">你要先确认</span>
+                  <p>是否影响提交、推送、构建、发布或不同操作系统。</p>
+                </div>
+                <div>
+                  <span class="mini-label">要求 AI 做</span>
+                  <p>说明跨平台和回滚风险；涉及红区时先暂停确认。</p>
+                </div>
+              </article>
+
+              <article class="workflow-card docs">
+                <h3>纯文档任务</h3>
+                <p>教程、说明、注释、信息整理，不改变运行时行为。</p>
+                <div>
+                  <span class="mini-label">你要先确认</span>
+                  <p>受众、交付形式、是否需要导航入口、是否更新记忆层。</p>
+                </div>
+                <div>
+                  <span class="mini-label">要求 AI 做</span>
+                  <p>
+                    可标注 Workflow 不适用，但仍要验证格式、链接和交付边界。
+                  </p>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section class="section" id="skills">
+            <div class="section-header">
+              <div>
+                <h2>四、技能怎么搭配</h2>
+                <p>
+                  技能不是越多越好。人工使用时只需要记住一个搭配规则：
+                  一次任务最多选择 1 个流程 skill、1 个专项 skill、1 个验证
+                  skill。
+                </p>
+              </div>
+              <span class="step-badge">Step 4</span>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>任务状态</th>
+                    <th>建议技能</th>
+                    <th>你应该怎么要求 AI</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>需求不清</td>
+                    <td>
+                      <code>brainstorming</code> 或 <code>grill-with-docs</code>
+                    </td>
+                    <td>先问清目标、验收标准、非目标和风险，不要直接编码。</td>
+                  </tr>
+                  <tr>
+                    <td>需要实现</td>
+                    <td>
+                      <code>writing-plans</code>，必要时
+                      <code>test-driven-development</code>
+                    </td>
+                    <td>先写实现计划；新增逻辑或修 bug 时优先补测试。</td>
+                  </tr>
+                  <tr>
+                    <td>Bug / 故障</td>
+                    <td>
+                      <code>systematic-debugging</code> 或 <code>diagnose</code>
+                    </td>
+                    <td>先复现和读日志，再定位根因，最后验证原始问题消失。</td>
+                  </tr>
+                  <tr>
+                    <td>UI 页面</td>
+                    <td><code>frontend-ui-engineering</code> + Browser 验证</td>
+                    <td>检查真实渲染、响应式、长文本、空态、错误态和交互。</td>
+                  </tr>
+                  <tr>
+                    <td>API 联调</td>
+                    <td>
+                      <code>api-and-interface-design</code> + Backend
+                      Cross-check
+                    </td>
+                    <td>对照后端字段、错误码、分页和兼容分支。</td>
+                  </tr>
+                  <tr>
+                    <td>Linear issue</td>
+                    <td>
+                      <code>linear</code> + <code>using-git-worktrees</code>
+                    </td>
+                    <td>
+                      先核对 issue 状态、验收标准和关联资料，再为单个 issue
+                      使用独立 worktree。
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>安全权限</td>
+                    <td><code>security-and-hardening</code> + Red Team</td>
+                    <td>检查越权、敏感数据泄露、直达 URL、日志和导出。</td>
+                  </tr>
+                  <tr>
+                    <td>架构重构</td>
+                    <td>
+                      <code>code-simplification</code> 或
+                      <code>code-review-and-quality</code>
+                    </td>
+                    <td>先查影响面，避免浅封装和跨层耦合。</td>
+                  </tr>
+                  <tr>
+                    <td>交付前</td>
+                    <td><code>verification-before-completion</code></td>
+                    <td>要求 AI 用真实命令输出证明完成，不接受推测。</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="compare" style="margin-top: 16px">
+              <div class="bad">
+                <h4>不要这样用</h4>
+                <p>
+                  “把所有 skills 都用上，越严格越好。”这会让任务变慢，结论重复，
+                  也容易让 AI 忘记真正的验收标准。
+                </p>
+              </div>
+              <div class="good">
+                <h4>推荐这样用</h4>
+                <p>
+                  “这个是 UI 联调任务，请先澄清验收标准，用 UI 专项 skill，
+                  最后做浏览器验证并回填截图/结果。”
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="templates">
+            <div class="section-header">
+              <div>
+                <h2>五、用户如何给 AI 下任务</h2>
+                <p>
+                  下面这些模板可以直接复制给 AI。你只需要替换方括号里的内容，
+                  就能让任务从一开始就有目标、边界和验证要求。
+                </p>
+              </div>
+              <span class="step-badge">Step 5</span>
+            </div>
+
+            <details open>
+              <summary>日常小改模板</summary>
+              <div class="details-body">
+                <div class="prompt">
+                  <div class="prompt-title">复制给 AI</div>
+                  <pre>
+任务目标：[一句话说明要改什么]
+验收标准：[用户看到什么/测试通过什么算完成]
+影响范围：[页面、组件、文档或文件范围]
+请按绿区小改处理，先输出任务确认和验证方式。
+如果发现会影响共享组件、请求层、权限或构建配置，请先暂停说明风险。</pre
+                  >
+                </div>
+              </div>
+            </details>
+
+            <details>
+              <summary>Linear issue 模板</summary>
+              <div class="details-body">
+                <div class="prompt">
+                  <div class="prompt-title">复制给 AI</div>
+                  <pre>
+请按 Linear issue 任务启动。
+Issue：[编号和标题]
+背景和目标：[为什么要做，做到什么程度]
+验收标准：[逐条列出；如果 issue 里已经有，请先读取/核对]
+关联资料：[设计稿、后端说明、讨论结论，可为空]
+请先核对 issue 当前状态、描述、验收标准和关联资料。
+如果验收标准为空或有歧义，先问我，不要进入编码。
+请检查当前工作区是否有无关改动，并为这个 issue 使用独立 worktree。
+请输出任务确认、主 Workflow、skills 搭配、实施计划、验证计划和需要人工确认的风险。</pre
+                  >
+                </div>
+              </div>
+            </details>
+
+            <details>
+              <summary>UI 页面模板</summary>
+              <div class="details-body">
+                <div class="prompt">
+                  <div class="prompt-title">复制给 AI</div>
+                  <pre>
+这是 UI Workflow 任务。
+任务目标：[页面/组件要达到的效果]
+验收标准：[布局、状态、交互、文案、响应式要求]
+请先澄清空态、加载态、失败态、长文本和移动端处理。
+实现后请运行相关测试，并用浏览器验证真实渲染。</pre
+                  >
+                </div>
+              </div>
+            </details>
+
+            <details>
+              <summary>API 联调模板</summary>
+              <div class="details-body">
+                <div class="prompt">
+                  <div class="prompt-title">复制给 AI</div>
+                  <pre>
+这是 API Workflow 任务。
+任务目标：[要联调或调整的接口行为]
+验收标准：[字段、分页、错误、空数据、兼容要求]
+请先对照后端实现确认契约，不要只依据前端 mock 推断。
+实现后请覆盖成功、失败、空列表和边界分支，并说明后端核对结果。</pre
+                  >
+                </div>
+              </div>
+            </details>
+
+            <details>
+              <summary>Bug 排查模板</summary>
+              <div class="details-body">
+                <div class="prompt">
+                  <div class="prompt-title">复制给 AI</div>
+                  <pre>
+这是 Bug 排查任务，请使用 systematic-debugging / diagnose 思路。
+现象：[看到的错误或异常行为]
+复现步骤：[如何触发]
+期望行为：[应该发生什么]
+请先读取相关日志和现有测试，复现或构造反馈环，再定位根因。
+修复后请新增或更新回归验证，并说明原始问题如何被验证。</pre
+                  >
+                </div>
+              </div>
+            </details>
+
+            <details>
+              <summary>生产问题模板</summary>
+              <div class="details-body">
+                <div class="prompt">
+                  <div class="prompt-title">复制给 AI</div>
+                  <pre>
+这是 Production Debug 任务。
+故障时间/环境：[时间、环境、用户现场]
+影响范围：[哪些用户或业务被阻塞]
+已知日志/traceId：[如果有就写]
+请先读取最近日志，复现问题或建立最小反馈环。
+不要未复现就修；修复后请提供修复前后证据、回归测试和回滚风险。</pre
+                  >
+                </div>
+              </div>
+            </details>
+
+            <details>
+              <summary>权限 / 安全模板</summary>
+              <div class="details-body">
+                <div class="prompt">
+                  <div class="prompt-title">复制给 AI</div>
+                  <pre>
+这是 Security Workflow 任务。
+任务目标：[权限、登录态、敏感信息或审计需求]
+涉及角色：[管理员、普通用户、低权限用户等]
+敏感数据：[患者信息、报告信息、导出、日志等]
+请先识别是否属于红区，需要人工确认时暂停。
+实现后请执行 Red Team 检查，验证越权、直达 URL、错误提示、日志和导出风险。</pre
+                  >
+                </div>
+              </div>
+            </details>
+
+            <details>
+              <summary>架构重构模板</summary>
+              <div class="details-body">
+                <div class="prompt">
+                  <div class="prompt-title">复制给 AI</div>
+                  <pre>
+这是 Architecture Workflow 任务。
+重构目标：[为什么要改]
+必须保持不变：[外部接口、组件契约、页面行为、兼容逻辑]
+请先查调用关系和影响面，给出实施计划。
+不要为了抽象而抽象；不要删除测试或降级逻辑。
+交付时请说明影响面、兼容性、测试和剩余风险。</pre
+                  >
+                </div>
+              </div>
+            </details>
+
+            <details>
+              <summary>纯文档模板</summary>
+              <div class="details-body">
+                <div class="prompt">
+                  <div class="prompt-title">复制给 AI</div>
+                  <pre>
+这是纯文档任务，主 Workflow 可标注不适用。
+文档目标：[这份文档给谁看，解决什么问题]
+交付形式：[Markdown / HTML / 表格 / 指南]
+边界：[不改哪些文件，不添加哪些引用或链接]
+请只修改目标文档，交付时说明验证方式和是否需要 Memory Update。</pre
+                  >
+                </div>
+              </div>
+            </details>
+          </section>
+
+          <section class="section" id="during">
+            <div class="section-header">
+              <div>
+                <h2>六、执行过程中用户怎么检查</h2>
+                <p>
+                  AI 开始执行后，用户不需要盯每一行代码，但要盯关键行为：
+                  有没有先读上下文、有没有声明风险、有没有在红区停下来。
+                </p>
+              </div>
+              <span class="step-badge">Step 6</span>
+            </div>
+
+            <div class="grid two">
+              <div class="check-panel">
+                <h3>你应该看到 AI 做这些事</h3>
+                <div class="check-item">
+                  <span class="box"></span
+                  ><span>先读相关规范、现有实现、日志或后端代码。</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span
+                  ><span>输出任务确认、主 Workflow、风险等级和关键假设。</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span
+                  ><span
+                    >Linear 任务先核对 issue
+                    编号、标题、状态、验收标准和关联资料。</span
+                  >
+                </div>
+                <div class="check-item">
+                  <span class="box"></span
+                  ><span
+                    >说明影响范围，尤其是共享组件、状态、路由、请求层。</span
+                  >
+                </div>
+                <div class="check-item">
+                  <span class="box"></span
+                  ><span>遇到红区或不确定业务规则时主动暂停确认。</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span
+                  ><span>每隔一段时间说明正在查什么、学到了什么。</span>
+                </div>
+              </div>
+              <div class="check-panel">
+                <h3>你不应该放过这些信号</h3>
+                <div class="check-item">
+                  <span class="box"></span
+                  ><span>还没读日志就开始修生产问题。</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span
+                  ><span>API 任务只看前端 mock，不核对后端契约。</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span
+                  ><span>UI 任务没有浏览器验证或真实截图结论。</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span
+                  ><span>权限、登录态、拦截器、构建发布改动没有人工确认。</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span
+                  ><span
+                    >Linear 任务直接在主工作区开改，未使用独立 worktree。</span
+                  >
+                </div>
+                <div class="check-item">
+                  <span class="box"></span
+                  ><span>为了让检查通过而删除测试、降级或兼容逻辑。</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="acceptance">
+            <div class="section-header">
+              <div>
+                <h2>七、交付时用户怎么验收</h2>
+                <p>
+                  交付不是“代码改完”。你要看 AI
+                  是否交代清楚做了什么、影响了什么、 怎么验证、还有什么风险。
+                </p>
+              </div>
+              <span class="step-badge">Step 7</span>
+            </div>
+
+            <div class="grid two">
+              <div class="card">
+                <h3>交付必须包含</h3>
+                <ul>
+                  <li>变更摘要：做了什么，为什么这样做。</li>
+                  <li>影响说明：是否涉及接口、状态、路由、主题、兼容性。</li>
+                  <li>
+                    Workflow Packet：主 Workflow、修饰器、专家 Agent、动态测试。
+                  </li>
+                  <li>验证结果：真实执行的命令和结论。</li>
+                  <li>
+                    Linear 任务：说明 issue 对应分支、worktree、PR
+                    关联和剩余待办。
+                  </li>
+                  <li>Memory Update：更新了什么，未更新原因是什么。</li>
+                  <li>风险提示：还需要人工跟进什么。</li>
+                </ul>
+              </div>
+              <div class="card">
+                <h3>验证结果怎么读</h3>
+                <ul>
+                  <li>
+                    看到具体命令，例如 <code>pnpm lint</code>、<code
+                      >pnpm check:type</code
+                    >。
+                  </li>
+                  <li>看到通过、失败或未验证的明确结论。</li>
+                  <li>失败后应有修复和重跑记录。</li>
+                  <li>未运行的项必须说明原因，不能默认省略。</li>
+                  <li>高风险任务要看到 Red Team 或模拟场景结论。</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="compare" style="margin-top: 16px">
+              <div class="bad">
+                <h4>不应接受的交付</h4>
+                <p>
+                  “已优化，应该没问题。”这没有说明影响范围、验证命令、失败项、风险和记忆层。
+                  用户无法判断任务是否真的完成。
+                </p>
+              </div>
+              <div class="good">
+                <h4>可以接受的交付</h4>
+                <p>
+                  “新增了某页面教程 HTML；未改导航和运行时代码；`git diff
+                  --check` 通过； 浏览器桌面/移动视口检查通过；Memory Update
+                  未更新，因为未改变长期规则。”
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="mistakes">
+            <div class="section-header">
+              <div>
+                <h2>八、常见错误</h2>
+                <p>
+                  如果你在任务开头或验收时发现这些情况，直接让 AI
+                  回到对应步骤补齐。
+                </p>
+              </div>
+              <span class="step-badge">Step 8</span>
+            </div>
+
+            <div class="grid two">
+              <div class="card">
+                <h3>任务描述错误</h3>
+                <ul>
+                  <li>只说“帮我优化一下”，没有目标和验收标准。</li>
+                  <li>
+                    Linear 任务只给编号，没有标题、背景、验收标准或当前状态。
+                  </li>
+                  <li>没有说明哪些行为不能改变。</li>
+                  <li>把高风险任务当普通小改处理。</li>
+                  <li>没有说清楚是否要更新文档、测试或记忆层。</li>
+                </ul>
+              </div>
+              <div class="card">
+                <h3>执行过程错误</h3>
+                <ul>
+                  <li>UI 改动没有浏览器验证。</li>
+                  <li>API 改动没有对照后端。</li>
+                  <li>生产问题未读日志就修。</li>
+                  <li>权限、登录态、拦截器改动未人工确认。</li>
+                  <li>多个无关 Linear 任务共用同一个 worktree。</li>
+                </ul>
+              </div>
+              <div class="card">
+                <h3>技能使用错误</h3>
+                <ul>
+                  <li>一次任务堆太多 skills，导致流程比任务本身更重。</li>
+                  <li>同时使用两个同类 TDD 或调试流程。</li>
+                  <li>让外部 skill 覆盖项目已有规则。</li>
+                  <li>忘记交付前使用验证型 skill 检查证据。</li>
+                </ul>
+              </div>
+              <div class="card">
+                <h3>交付验收错误</h3>
+                <ul>
+                  <li>接受“应该可以”但没有真实命令输出。</li>
+                  <li>
+                    Linear 任务交付时没有说明 issue 状态、PR 关联和剩余待办。
+                  </li>
+                  <li>没有说明未验证项。</li>
+                  <li>高风险任务没有 Red Team 或角色模拟。</li>
+                  <li>长期决策、债务或缺陷没有检查 Memory Update。</li>
+                </ul>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="linear">
+            <div class="section-header">
+              <div>
+                <h2>九、Linear 与协作任务</h2>
+                <p>
+                  Linear 不是单独的开发
+                  Workflow，而是任务来源和协作载体。用户要做的事是把 issue
+                  信息、验收标准、工作区隔离和 PR 对齐讲清楚；AI 再根据内容选择
+                  UI、 API、Security、Architecture 或其他 Workflow。
+                </p>
+              </div>
+              <span class="step-badge">Step 9</span>
+            </div>
+
+            <div class="grid two">
+              <div class="card">
+                <h3>什么时候按 Linear 启动</h3>
+                <ul>
+                  <li>
+                    任务来自 Linear issue，或需要在 issue 中追踪状态、讨论、PR
+                    和验收。
+                  </li>
+                  <li>
+                    一个任务需要独立分支、独立验证记录，后续要进入 PR 评审。
+                  </li>
+                  <li>
+                    多个任务并行时，需要避免不同 issue 的改动混在同一个工作区。
+                  </li>
+                  <li>
+                    任务要交接给其他人，需要保留
+                    issue、分支、验证和剩余风险的对应关系。
+                  </li>
+                </ul>
+              </div>
+              <div class="card">
+                <h3>你需要先提供什么</h3>
+                <ul>
+                  <li>
+                    Issue 编号和标题，例如
+                    <code>ENG-123 用户管理列表筛选</code>。
+                  </li>
+                  <li>背景、目标和验收标准；没有验收标准时要让 AI 先澄清。</li>
+                  <li>
+                    关联资料，例如设计稿、接口说明、后端讨论结论或历史 PR。
+                  </li>
+                  <li>
+                    是否允许 AI 更新 issue 状态、评论、计划文档或 PR 描述。
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="prompt" style="margin-top: 16px">
+              <div class="prompt-title">Linear 启动提示词</div>
+              <pre>
+请按 Linear issue 任务启动。
+Issue：[编号和标题]
+请先读取/核对 issue 当前状态、描述、验收标准和关联资料。
+如果验收标准为空或有歧义，先问我，不要进入编码。
+请检查当前工作区是否有无关改动，并为这个 issue 使用独立 worktree。
+请根据验收标准选择主 Workflow 和必要 skills，不要因为来自 Linear 就跳过 UI/API/Security 判断。
+请输出任务确认、实施计划、验证计划、PR 对齐方式和需要人工确认的风险。</pre
+              >
+            </div>
+
+            <div class="table-wrap" style="margin-top: 16px">
+              <table>
+                <thead>
+                  <tr>
+                    <th>阶段</th>
+                    <th>用户要检查什么</th>
+                    <th>不满足时怎么要求 AI</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>启动</td>
+                    <td>
+                      AI 是否核对 issue 编号、标题、状态、验收标准和关联资料。
+                    </td>
+                    <td>“先补齐 issue 起始信息，再输出任务确认。”</td>
+                  </tr>
+                  <tr>
+                    <td>隔离</td>
+                    <td>
+                      AI 是否说明独立
+                      worktree、分支名和当前工作区是否有无关改动。
+                    </td>
+                    <td>
+                      “请先隔离工作区，不要在主工作区混改这个 Linear 任务。”
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>规划</td>
+                    <td>
+                      AI 是否从验收标准推导
+                      Workflow、skills、测试和风险，而不是只照 issue 标题做。
+                    </td>
+                    <td>“请把每条验收标准映射到实现步骤和验证方式。”</td>
+                  </tr>
+                  <tr>
+                    <td>执行</td>
+                    <td>
+                      AI 是否持续说明当前进度、遇到的风险、需要人工确认的红区。
+                    </td>
+                    <td>
+                      “请暂停编码，先说明风险、影响范围和需要我确认的点。”
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>交付</td>
+                    <td>
+                      AI 是否说明 issue 状态、PR
+                      关联、验证证据、剩余待办和未验证项。
+                    </td>
+                    <td>“请按 issue 验收标准逐条回填完成证据和剩余风险。”</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="compare" style="margin-top: 16px">
+              <div class="bad">
+                <h4>不应这样启动</h4>
+                <p>
+                  “做一下 ENG-123。”这会让 AI
+                  只按标题猜需求，也看不出是否要隔离工作区、
+                  是否有验收标准、是否需要更新 issue 或 PR。
+                </p>
+              </div>
+              <div class="good">
+                <h4>推荐这样启动</h4>
+                <p>
+                  “请按 Linear issue 启动
+                  ENG-123，先核对描述和验收标准；不清楚先问我。 为这个 issue
+                  使用独立 worktree，并把每条验收标准映射到验证方式。”
+                </p>
+              </div>
+            </div>
+
+            <div class="grid three" style="margin-top: 16px">
+              <div class="check-panel">
+                <h3>续接历史任务</h3>
+                <div class="check-item">
+                  <span class="box"></span
+                  ><span>先让 AI 读取 issue 最新状态和已有讨论。</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span
+                  ><span>要求 AI 检查当前分支、worktree、未提交改动。</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span
+                  ><span>让 AI 输出“已完成、进行中、待处理”。</span>
+                </div>
+              </div>
+              <div class="check-panel">
+                <h3>并行任务</h3>
+                <div class="check-item">
+                  <span class="box"></span
+                  ><span>一个 Linear issue 对应一个 worktree 和一个分支。</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span
+                  ><span>多个子 Agent 只能做互不依赖的子任务。</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span
+                  ><span>主 Agent 汇总后再统一验证和交付。</span>
+                </div>
+              </div>
+              <div class="check-panel">
+                <h3>PR 对齐</h3>
+                <div class="check-item">
+                  <span class="box"></span
+                  ><span>PR 说明要能对应 issue 目标和验收标准。</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span
+                  ><span>UI、接口、安全任务要附对应验证证据。</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span
+                  ><span>剩余风险、未验证项和 Memory Update 要写清。</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="section" id="cheatsheet">
+            <div class="section-header">
+              <div>
+                <h2>十、一页速查</h2>
+                <p>
+                  下面这张清单适合打印或在 PR
+                  前快速扫一遍。只要其中一项答不上来， 就让 AI
+                  回到对应步骤补证据。
+                </p>
+              </div>
+              <span class="step-badge">Check</span>
+            </div>
+
+            <div class="grid three">
+              <div class="check-panel">
+                <h3>任务开始前</h3>
+                <div class="check-item">
+                  <span class="box"></span><span>目标清楚吗？</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span><span>验收标准清楚吗？</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span
+                  ><span>Linear issue 编号、标题、状态清楚吗？</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span><span>影响范围清楚吗？</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span><span>非目标说清楚了吗？</span>
+                </div>
+              </div>
+              <div class="check-panel">
+                <h3>选择 Workflow</h3>
+                <div class="check-item">
+                  <span class="box"></span><span>主 Workflow 已声明？</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span><span>强制修饰器已声明？</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span><span>红区是否暂停确认？</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span><span>跨仓是否需要核对？</span>
+                </div>
+              </div>
+              <div class="check-panel">
+                <h3>选择 skills</h3>
+                <div class="check-item">
+                  <span class="box"></span><span>是否只选了必要 skill？</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span><span>需求不清是否先澄清？</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span><span>Bug 是否先诊断？</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span><span>交付前是否验证？</span>
+                </div>
+              </div>
+              <div class="check-panel">
+                <h3>执行中检查</h3>
+                <div class="check-item">
+                  <span class="box"></span><span>是否读了相关上下文？</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span
+                  ><span>Linear 任务是否在独立 worktree？</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span><span>是否说明正在查什么？</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span><span>是否避免无关重构？</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span><span>是否保留兼容逻辑？</span>
+                </div>
+              </div>
+              <div class="check-panel">
+                <h3>交付前检查</h3>
+                <div class="check-item">
+                  <span class="box"></span><span>变更摘要完整？</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span><span>验证命令真实执行？</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span><span>未验证项已说明？</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span><span>剩余风险已说明？</span>
+                </div>
+              </div>
+              <div class="check-panel">
+                <h3>PR 前检查</h3>
+                <div class="check-item">
+                  <span class="box"></span><span>Workflow Packet 有了吗？</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span
+                  ><span>PR 是否关联 Linear issue？</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span><span>Memory Update 说明了吗？</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span><span>截图/接口证据齐了吗？</span>
+                </div>
+                <div class="check-item">
+                  <span class="box"></span><span>风险事项有人跟进吗？</span>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+
+      <footer class="page-footer">
+        本页是人工使用者培训教程，用于帮助人更好地指挥 AI
+        执行工作流；它不替代项目既有协作规范。
+      </footer>
+    </div>
+  </body>
+</html>

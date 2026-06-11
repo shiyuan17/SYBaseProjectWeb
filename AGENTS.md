@@ -219,6 +219,8 @@
 - **避免重复探索**：codegraph 已是预建索引，不要把它能直接回答的问题再委派给额外的文件阅读子任务
 - 索引存在约 1 秒写入延迟，刚改完文件不要立即查询；codegraph 结果用于结构导航，正确性仍以类型检查、测试与 lint 为准
 
+外部 AI skills 的选用只作为专家 Agent / 执行方法补强，具体推荐组合见 `docs/AGENT_SKILL_ROUTING.md`；不得用外部 skill 覆盖本文件、`docs/DYNAMIC_WORKFLOW_RULES.md` 或专项规范中的强制要求。
+
 ### 11. 多 Agent 与子 Agent 协作
 
 针对大型或可并行任务，推荐按"探索 → 规划 → 并行执行 → 汇总核验"组织协作：
@@ -276,6 +278,7 @@
 - [docs/COMPATIBILITY_RULES.md](./docs/COMPATIBILITY_RULES.md)
 - [docs/GIT_RULES.md](./docs/GIT_RULES.md)
 - [docs/DYNAMIC_WORKFLOW_RULES.md](./docs/DYNAMIC_WORKFLOW_RULES.md)
+- [docs/AGENT_SKILL_ROUTING.md](./docs/AGENT_SKILL_ROUTING.md)
 - [docs/LINEAR_TASK.md](./docs/LINEAR_TASK.md)
 - [docs/RELEASE.md](./docs/RELEASE.md)
 - [docs/AI-CODE-HEALTH.md](./docs/AI-CODE-HEALTH.md)
