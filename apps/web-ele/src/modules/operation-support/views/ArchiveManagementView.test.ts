@@ -69,6 +69,18 @@ vi.mock('element-plus', () => {
     },
   });
 
+  const ElPagination = defineComponent({
+    props: ['currentPage', 'pageSize', 'total'],
+    emits: ['current-change', 'size-change'],
+    setup(props) {
+      return () =>
+        h(
+          'nav',
+          `pagination-${props.currentPage}-${props.pageSize}-${props.total}`,
+        );
+    },
+  });
+
   const ElOption = defineComponent({
     props: ['label'],
     setup(props) {
@@ -126,6 +138,7 @@ vi.mock('element-plus', () => {
     ElFormItem,
     ElInput,
     ElOption,
+    ElPagination,
     ElSelect,
     ElTabPane,
     ElTable,
@@ -187,6 +200,10 @@ import ArchiveManagementView from './ArchiveManagementView.vue';
 function createMockPageState() {
   const openCreateCabinetDialog = vi.fn();
   const openBatchCreateCabinetDialog = vi.fn();
+  const setActiveArchiveObjectType = vi.fn();
+  const queryArchiveObjects = vi.fn();
+  const setArchiveObjectPage = vi.fn();
+  const setArchiveObjectSize = vi.fn();
 
   return {
     archiveWorkspace: {
@@ -310,15 +327,82 @@ function createMockPageState() {
       submitting: false,
     },
     recordWorkspace: {
-      loadRecords: vi.fn(),
-      loading: false,
-      recordError: '',
-      recordFilters: reactive({
-        caseId: '',
-        keyword: '',
-        objectType: '',
+      activeObjectType: ref('APPLICATION_FORM'),
+      objectLists: reactive({
+        APPLICATION_FORM: {
+          error: '',
+          filters: {
+            keyword: '',
+            page: 1,
+            size: 20,
+          },
+          items: [
+            {
+              applicationNo: 'APP-001',
+              archiveLocation: 'CAB-01-L1-S1',
+              archiveStatus: 'IN_STORAGE',
+              archivedAt: '2026-06-11 10:00:00',
+              caseId: 'CASE-APP-1',
+              objectCode: 'APP-001',
+              objectId: 'CASE-APP-1',
+              objectType: 'APPLICATION_FORM',
+              pathologyNo: 'BL-2026-001',
+              patientName: '张三',
+              storedByName: '归档员甲',
+            },
+          ],
+          loading: false,
+          total: 1,
+        },
+        EMBEDDING_BOX: {
+          error: '',
+          filters: {
+            keyword: '',
+            page: 1,
+            size: 20,
+          },
+          items: [
+            {
+              archiveStatus: 'NOT_ARCHIVED',
+              caseId: 'CASE-BOX-1',
+              objectCode: 'A1',
+              objectId: 'BOX-1',
+              objectType: 'EMBEDDING_BOX',
+              pathologyNo: 'BL-2026-002',
+              patientName: '李四',
+            },
+          ],
+          loading: false,
+          total: 1,
+        },
+        SLIDE: {
+          error: '',
+          filters: {
+            keyword: '',
+            page: 1,
+            size: 20,
+          },
+          items: [
+            {
+              archiveStatus: 'IN_STORAGE',
+              borrowedByName: '医生乙',
+              caseId: 'CASE-SLIDE-1',
+              loanStatus: 'BORROWED',
+              objectCode: 'S1',
+              objectId: 'SLIDE-1',
+              objectType: 'SLIDE',
+              pathologyNo: 'BL-2026-003',
+              patientName: '王五',
+            },
+          ],
+          loading: false,
+          total: 1,
+        },
       }),
-      records: [],
+      queryArchiveObjects,
+      setActiveArchiveObjectType,
+      setArchiveObjectPage,
+      setArchiveObjectSize,
     },
   };
 }
@@ -373,6 +457,13 @@ describe('ArchiveManagementView', () => {
     expect(document.body.textContent).toContain('申请单归档');
     expect(document.body.textContent).toContain('蜡块归档');
     expect(document.body.textContent).toContain('玻片归档');
+    expect(document.body.textContent).toContain('申请单归档列表');
+    expect(document.body.textContent).toContain('蜡块归档列表');
+    expect(document.body.textContent).toContain('玻片归档列表');
+    expect(document.body.textContent).toContain('BL-2026-001');
+    expect(document.body.textContent).toContain('BL-2026-002');
+    expect(document.body.textContent).toContain('BL-2026-003');
+    expect(document.body.textContent).toContain('pagination-1-20-1');
     expect(document.body.textContent).toContain('归档柜列表');
     expect(document.body.textContent).toContain('快速检索');
     expect(document.body.textContent).toContain('不限类型');
@@ -401,8 +492,11 @@ describe('ArchiveManagementView', () => {
     expect(document.body.innerHTML).not.toContain('legacy-toolbar');
     expect(document.body.innerHTML).not.toContain('legacy-grid-table');
     expect(document.body.innerHTML).not.toContain('legacy-status-cell');
-    expect(state.recordWorkspace.recordFilters.objectType).toBe(
+    expect(
+      state.recordWorkspace.setActiveArchiveObjectType,
+    ).toHaveBeenCalledWith(
       'APPLICATION_FORM',
+      expect.objectContaining({ loadIfNeeded: true }),
     );
 
     const createButton = [...document.querySelectorAll('button')].find(

@@ -21,6 +21,7 @@ import {
   finishUsingReagentStock,
   importReagentStocks,
   listArchiveCabinets,
+  listArchiveObjects,
   listAvailableArchivePositions,
   listEquipmentMaintenanceLogs,
   listEquipmentRecords,
@@ -76,6 +77,79 @@ describe('operation-support-service mappers', () => {
 });
 
 describe('operation-support-service archive requests', () => {
+  it('lists archive objects with pagination params and normalizes empty pages', async () => {
+    requestClientMock.get
+      .mockResolvedValueOnce({
+        items: [
+          {
+            caseId: 'CASE-1',
+            objectId: 'SLIDE-1',
+            objectType: 'SLIDE',
+            pathologyNo: 'BL-2026-001',
+          },
+        ],
+        page: 2,
+        size: 10,
+        total: 1,
+      })
+      .mockResolvedValueOnce(null);
+
+    const page = await listArchiveObjects({
+      keyword: 'BL-2026',
+      objectType: 'SLIDE',
+      page: 2,
+      size: 10,
+    });
+    const emptyPage = await listArchiveObjects({
+      objectType: 'APPLICATION_FORM',
+      page: 1,
+      size: 20,
+    });
+
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      1,
+      '/v1/archive-objects',
+      {
+        params: {
+          keyword: 'BL-2026',
+          objectType: 'SLIDE',
+          page: 2,
+          size: 10,
+        },
+      },
+    );
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      2,
+      '/v1/archive-objects',
+      {
+        params: {
+          objectType: 'APPLICATION_FORM',
+          page: 1,
+          size: 20,
+        },
+      },
+    );
+    expect(page).toEqual({
+      items: [
+        {
+          caseId: 'CASE-1',
+          objectId: 'SLIDE-1',
+          objectType: 'SLIDE',
+          pathologyNo: 'BL-2026-001',
+        },
+      ],
+      page: 2,
+      size: 10,
+      total: 1,
+    });
+    expect(emptyPage).toEqual({
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
+  });
+
   it('calls archive cabinet and record endpoints with exact paths', async () => {
     requestClientMock.get.mockResolvedValue([]);
 

@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import type { ArchiveObjectType } from '../types/operation-support';
+
+import { ref, watch } from 'vue';
 
 import { Fallback, Page } from '@vben/common-ui';
 
@@ -22,8 +24,8 @@ const {
   recordWorkspace,
 } = useArchiveManagementPage();
 
-const activeArchiveTab = ref('APPLICATION_FORM');
-const archiveObjectTabs = new Set<string>([
+const activeArchiveTab = ref<'CABINET' | ArchiveObjectType>('APPLICATION_FORM');
+const archiveObjectTabs = new Set<ArchiveObjectType>([
   'APPLICATION_FORM',
   'EMBEDDING_BOX',
   'SLIDE',
@@ -35,14 +37,20 @@ const archiveObjectTabTitles = {
   SLIDE: '玻片归档列表',
 } as const;
 
-const archiveRecordRows = computed(() => recordWorkspace.records);
+function isArchiveObjectType(
+  objectType: 'CABINET' | ArchiveObjectType,
+): objectType is ArchiveObjectType {
+  return archiveObjectTabs.has(objectType as ArchiveObjectType);
+}
 
 watch(
   activeArchiveTab,
   (objectType) => {
-    if (archiveObjectTabs.has(objectType)) {
+    if (isArchiveObjectType(objectType)) {
       archiveWorkspace.archiveForm.objectType = objectType;
-      recordWorkspace.recordFilters.objectType = objectType;
+      void recordWorkspace.setActiveArchiveObjectType(objectType, {
+        loadIfNeeded: true,
+      });
     }
   },
   { immediate: true },
@@ -63,16 +71,29 @@ watch(
         <ElTabPane label="申请单归档" name="APPLICATION_FORM">
           <div class="flex flex-col gap-4">
             <ArchiveRecordLegacyListPanel
-              v-model:record-filters="recordWorkspace.recordFilters"
+              v-model:archive-object-filters="
+                recordWorkspace.objectLists.APPLICATION_FORM.filters
+              "
               :can-query-records="capabilities.canQueryRecords"
               :get-archive-status-tag-type="display.getArchiveStatusTagType"
               :get-loan-status-tag-type="display.getLoanStatusTagType"
-              :loading="recordWorkspace.loading"
+              :loading="recordWorkspace.objectLists.APPLICATION_FORM.loading"
               object-type="APPLICATION_FORM"
-              :record-error="recordWorkspace.recordError"
-              :records="archiveRecordRows"
+              :page="recordWorkspace.objectLists.APPLICATION_FORM.filters.page"
+              :record-error="recordWorkspace.objectLists.APPLICATION_FORM.error"
+              :records="recordWorkspace.objectLists.APPLICATION_FORM.items"
+              :size="recordWorkspace.objectLists.APPLICATION_FORM.filters.size"
               :title="archiveObjectTabTitles.APPLICATION_FORM"
-              @load-records="recordWorkspace.loadRecords"
+              :total="recordWorkspace.objectLists.APPLICATION_FORM.total"
+              @page-change="
+                (page) =>
+                  recordWorkspace.setArchiveObjectPage('APPLICATION_FORM', page)
+              "
+              @query="recordWorkspace.queryArchiveObjects('APPLICATION_FORM')"
+              @size-change="
+                (size) =>
+                  recordWorkspace.setArchiveObjectSize('APPLICATION_FORM', size)
+              "
             />
             <ArchiveSubmissionPanel
               v-model:archive-form="archiveWorkspace.archiveForm"
@@ -94,16 +115,29 @@ watch(
         <ElTabPane label="蜡块归档" name="EMBEDDING_BOX">
           <div class="flex flex-col gap-4">
             <ArchiveRecordLegacyListPanel
-              v-model:record-filters="recordWorkspace.recordFilters"
+              v-model:archive-object-filters="
+                recordWorkspace.objectLists.EMBEDDING_BOX.filters
+              "
               :can-query-records="capabilities.canQueryRecords"
               :get-archive-status-tag-type="display.getArchiveStatusTagType"
               :get-loan-status-tag-type="display.getLoanStatusTagType"
-              :loading="recordWorkspace.loading"
+              :loading="recordWorkspace.objectLists.EMBEDDING_BOX.loading"
               object-type="EMBEDDING_BOX"
-              :record-error="recordWorkspace.recordError"
-              :records="archiveRecordRows"
+              :page="recordWorkspace.objectLists.EMBEDDING_BOX.filters.page"
+              :record-error="recordWorkspace.objectLists.EMBEDDING_BOX.error"
+              :records="recordWorkspace.objectLists.EMBEDDING_BOX.items"
+              :size="recordWorkspace.objectLists.EMBEDDING_BOX.filters.size"
               :title="archiveObjectTabTitles.EMBEDDING_BOX"
-              @load-records="recordWorkspace.loadRecords"
+              :total="recordWorkspace.objectLists.EMBEDDING_BOX.total"
+              @page-change="
+                (page) =>
+                  recordWorkspace.setArchiveObjectPage('EMBEDDING_BOX', page)
+              "
+              @query="recordWorkspace.queryArchiveObjects('EMBEDDING_BOX')"
+              @size-change="
+                (size) =>
+                  recordWorkspace.setArchiveObjectSize('EMBEDDING_BOX', size)
+              "
             />
             <ArchiveSubmissionPanel
               v-model:archive-form="archiveWorkspace.archiveForm"
@@ -125,16 +159,27 @@ watch(
         <ElTabPane label="玻片归档" name="SLIDE">
           <div class="flex flex-col gap-4">
             <ArchiveRecordLegacyListPanel
-              v-model:record-filters="recordWorkspace.recordFilters"
+              v-model:archive-object-filters="
+                recordWorkspace.objectLists.SLIDE.filters
+              "
               :can-query-records="capabilities.canQueryRecords"
               :get-archive-status-tag-type="display.getArchiveStatusTagType"
               :get-loan-status-tag-type="display.getLoanStatusTagType"
-              :loading="recordWorkspace.loading"
+              :loading="recordWorkspace.objectLists.SLIDE.loading"
               object-type="SLIDE"
-              :record-error="recordWorkspace.recordError"
-              :records="archiveRecordRows"
+              :page="recordWorkspace.objectLists.SLIDE.filters.page"
+              :record-error="recordWorkspace.objectLists.SLIDE.error"
+              :records="recordWorkspace.objectLists.SLIDE.items"
+              :size="recordWorkspace.objectLists.SLIDE.filters.size"
               :title="archiveObjectTabTitles.SLIDE"
-              @load-records="recordWorkspace.loadRecords"
+              :total="recordWorkspace.objectLists.SLIDE.total"
+              @page-change="
+                (page) => recordWorkspace.setArchiveObjectPage('SLIDE', page)
+              "
+              @query="recordWorkspace.queryArchiveObjects('SLIDE')"
+              @size-change="
+                (size) => recordWorkspace.setArchiveObjectSize('SLIDE', size)
+              "
             />
             <ArchiveSubmissionPanel
               v-model:archive-form="archiveWorkspace.archiveForm"

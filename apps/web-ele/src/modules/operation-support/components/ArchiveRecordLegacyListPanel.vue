@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import type { ArchiveRecordView } from '../types/operation-support';
-
-import { computed } from 'vue';
+import type {
+  ArchiveObjectType,
+  ArchiveRecordView,
+} from '../types/operation-support';
 
 import {
   ElAlert,
@@ -9,6 +10,7 @@ import {
   ElForm,
   ElFormItem,
   ElInput,
+  ElPagination,
   ElTable,
   ElTableColumn,
   ElTag,
@@ -22,12 +24,12 @@ import {
 import OperationSectionCard from './OperationSectionCard.vue';
 
 type ArchiveRecordFiltersState = {
-  caseId: string;
   keyword: string;
-  objectType: string;
+  page: number;
+  size: number;
 };
 
-const props = defineProps<{
+defineProps<{
   canQueryRecords: boolean;
   getArchiveStatusTagType: (
     status?: null | string,
@@ -36,34 +38,37 @@ const props = defineProps<{
     status?: null | string,
   ) => 'danger' | 'info' | 'primary' | 'success' | 'warning';
   loading: boolean;
-  objectType: 'APPLICATION_FORM' | 'EMBEDDING_BOX' | 'SLIDE';
+  objectType: ArchiveObjectType;
+  page: number;
   recordError: string;
   records: ArchiveRecordView[];
+  size: number;
   title: string;
+  total: number;
 }>();
 
 const emit = defineEmits<{
-  (event: 'loadRecords'): void;
+  (event: 'pageChange', page: number): void;
+  (event: 'query'): void;
+  (event: 'sizeChange', size: number): void;
 }>();
 
-const recordFilters = defineModel<ArchiveRecordFiltersState>('recordFilters', {
-  required: true,
-});
-
-const visibleRecords = computed(() =>
-  props.records.filter((record) => record.objectType === props.objectType),
+const archiveObjectFilters = defineModel<ArchiveRecordFiltersState>(
+  'archiveObjectFilters',
+  {
+    required: true,
+  },
 );
 
 function queryRecords() {
-  recordFilters.value.objectType = props.objectType;
-  emit('loadRecords');
+  emit('query');
 }
 </script>
 
 <template>
   <OperationSectionCard
     :title="title"
-    description="按现有归档记录契约展示列表；截图中暂未返回的旧系统字段以 - 占位。"
+    description="按对象分页接口展示可查询对象；旧系统当前无契约字段继续以 - 占位。"
   >
     <ElAlert
       v-if="!canQueryRecords"
@@ -85,7 +90,7 @@ function queryRecords() {
     <ElForm class="mb-4" inline label-width="88px">
       <ElFormItem label="关键字">
         <ElInput
-          v-model="recordFilters.keyword"
+          v-model="archiveObjectFilters.keyword"
           clearable
           placeholder="病理号 / 病人姓名 / 病人ID"
           style="width: 240px"
@@ -111,7 +116,7 @@ function queryRecords() {
       v-loading="loading"
       border
       class="mt-4"
-      :data="visibleRecords"
+      :data="records"
       height="520"
       row-key="objectId"
     >
@@ -222,5 +227,18 @@ function queryRecords() {
         </template>
       </ElTableColumn>
     </ElTable>
+
+    <div class="mt-4 flex justify-end">
+      <ElPagination
+        :current-page="page"
+        :disabled="!canQueryRecords || loading"
+        layout="total, sizes, prev, pager, next, jumper"
+        :page-size="size"
+        :page-sizes="[10, 20, 50, 100]"
+        :total="total"
+        @current-change="(nextPage: number) => emit('pageChange', nextPage)"
+        @size-change="(nextSize: number) => emit('sizeChange', nextSize)"
+      />
+    </div>
   </OperationSectionCard>
 </template>

@@ -3,6 +3,8 @@ import type {
   ArchiveApplicationFormRequest,
   ArchiveCabinetView,
   ArchiveEmbeddingBoxRequest,
+  ArchiveObjectPage,
+  ArchiveObjectQuery,
   ArchivePositionView,
   ArchiveRecordView,
   ArchiveSlideRequest,
@@ -43,6 +45,18 @@ function requestPatch<T>(url: string, data?: unknown) {
 
 export function normalizeArrayResult<T>(value: null | T[] | undefined): T[] {
   return Array.isArray(value) ? value : [];
+}
+
+function normalizeArchiveObjectPage(
+  value: ArchiveObjectPage | null | Partial<ArchiveObjectPage> | undefined,
+  fallback: Required<Pick<ArchiveObjectQuery, 'objectType' | 'page' | 'size'>>,
+): ArchiveObjectPage {
+  return {
+    items: normalizeArrayResult(value?.items),
+    page: typeof value?.page === 'number' ? value.page : fallback.page,
+    size: typeof value?.size === 'number' ? value.size : fallback.size,
+    total: typeof value?.total === 'number' ? value.total : 0,
+  };
 }
 
 export async function listArchiveCabinets() {
@@ -123,6 +137,21 @@ export async function searchArchiveRecords(params: SearchArchiveRecordsQuery) {
       { params },
     ),
   );
+}
+
+export async function listArchiveObjects(params: ArchiveObjectQuery) {
+  const normalizedParams = {
+    ...params,
+    page: params.page ?? 1,
+    size: params.size ?? 20,
+  };
+
+  const page = await requestClient.get<ArchiveObjectPage | null>(
+    '/v1/archive-objects',
+    { params: normalizedParams },
+  );
+
+  return normalizeArchiveObjectPage(page, normalizedParams);
 }
 
 export async function listPendingMaterialLoans(params: MaterialLoanQuery) {

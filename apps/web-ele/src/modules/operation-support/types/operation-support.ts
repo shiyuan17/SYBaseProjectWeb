@@ -102,6 +102,15 @@ export interface SearchArchiveRecordsQuery {
   objectType?: string;
 }
 
+export type ArchiveObjectType = 'APPLICATION_FORM' | 'EMBEDDING_BOX' | 'SLIDE';
+
+export interface ArchiveObjectQuery {
+  keyword?: string;
+  objectType: ArchiveObjectType;
+  page?: number;
+  size?: number;
+}
+
 export interface ArchiveRecordView {
   applicationNo?: null | string;
   archiveLocation?: null | string;
@@ -117,6 +126,13 @@ export interface ArchiveRecordView {
   pathologyNo?: null | string;
   patientName?: null | string;
   storedByName?: null | string;
+}
+
+export interface ArchiveObjectPage {
+  items: ArchiveRecordView[];
+  page: number;
+  size: number;
+  total: number;
 }
 
 export interface MaterialLoanQuery {

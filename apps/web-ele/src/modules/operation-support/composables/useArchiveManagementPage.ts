@@ -105,7 +105,7 @@ export function useArchiveManagementPage() {
       tasks.push(cabinetWorkspaceState.loadPositions());
     }
     if (capabilities.canQueryRecords.value) {
-      tasks.push(recordWorkspaceState.loadRecords());
+      tasks.push(recordWorkspaceState.refreshCurrentArchiveObjects());
     }
 
     if (tasks.length > 0) {
@@ -127,7 +127,7 @@ export function useArchiveManagementPage() {
       );
     }
     if (capabilities.canQueryRecords.value) {
-      tasks.push(recordWorkspaceState.loadRecords());
+      tasks.push(recordWorkspaceState.refreshCurrentArchiveObjects());
     }
 
     if (tasks.length > 0) {

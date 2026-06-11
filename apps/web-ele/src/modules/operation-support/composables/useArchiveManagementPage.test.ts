@@ -23,6 +23,7 @@ const {
   mockCreateArchiveCabinet,
   mockDeleteArchiveCabinet,
   mockListArchiveCabinets,
+  mockListArchiveObjects,
   mockListAvailableArchivePositions,
   mockSearchArchiveRecords,
   mockUpdateArchiveCabinet,
@@ -42,6 +43,7 @@ const {
   mockCreateArchiveCabinet: vi.fn(),
   mockDeleteArchiveCabinet: vi.fn(),
   mockListArchiveCabinets: vi.fn(),
+  mockListArchiveObjects: vi.fn(),
   mockListAvailableArchivePositions: vi.fn(),
   mockSearchArchiveRecords: vi.fn(),
   mockUpdateArchiveCabinet: vi.fn(),
@@ -77,6 +79,7 @@ vi.mock('../api/operation-support-service', () => ({
   createArchiveCabinet: mockCreateArchiveCabinet,
   deleteArchiveCabinet: mockDeleteArchiveCabinet,
   listArchiveCabinets: mockListArchiveCabinets,
+  listArchiveObjects: mockListArchiveObjects,
   listAvailableArchivePositions: mockListAvailableArchivePositions,
   searchArchiveRecords: mockSearchArchiveRecords,
   updateArchiveCabinet: mockUpdateArchiveCabinet,
@@ -179,6 +182,27 @@ describe('useArchiveManagementPage', () => {
     ];
 
     mockListArchiveCabinets.mockResolvedValue([createCabinet()]);
+    mockListArchiveObjects.mockImplementation(
+      async ({
+        objectType,
+        page = 1,
+        size = 20,
+      }: {
+        objectType: string;
+        page?: number;
+        size?: number;
+      }) => ({
+        items: [
+          createRecord({
+            objectId: `${objectType}-OBJECT-1`,
+            objectType,
+          }),
+        ],
+        page,
+        size,
+        total: 1,
+      }),
+    );
     mockListAvailableArchivePositions.mockResolvedValue([createPosition()]);
     mockSearchArchiveRecords.mockResolvedValue([createRecord()]);
 
@@ -216,6 +240,7 @@ describe('useArchiveManagementPage', () => {
     mockCreateArchiveCabinet.mockReset();
     mockDeleteArchiveCabinet.mockReset();
     mockListArchiveCabinets.mockReset();
+    mockListArchiveObjects.mockReset();
     mockListAvailableArchivePositions.mockReset();
     mockSearchArchiveRecords.mockReset();
     mockUpdateArchiveCabinet.mockReset();
@@ -240,7 +265,13 @@ describe('useArchiveManagementPage', () => {
 
     expect(state.capabilities.canViewArchivePage).toBe(true);
     expect(state.cabinetWorkspace.cabinets).toHaveLength(1);
-    expect(state.recordWorkspace.records).toHaveLength(1);
+    expect(
+      state.recordWorkspace.objectLists.APPLICATION_FORM.items,
+    ).toHaveLength(1);
+    expect(state.recordWorkspace.objectLists.EMBEDDING_BOX.items).toHaveLength(
+      0,
+    );
+    expect(state.recordWorkspace.objectLists.SLIDE.items).toHaveLength(0);
     expect(state.cabinetWorkspace.positionRows).toHaveLength(4);
     expect(state.cabinetWorkspace.positionSummary).toEqual({
       available: 1,
@@ -262,11 +293,55 @@ describe('useArchiveManagementPage', () => {
       cabinetId: undefined,
       cabinetType: undefined,
     });
-    expect(mockSearchArchiveRecords).toHaveBeenCalledWith({
-      caseId: undefined,
+    expect(mockListArchiveObjects).toHaveBeenCalledWith({
       keyword: undefined,
-      objectType: undefined,
+      objectType: 'APPLICATION_FORM',
+      page: 1,
+      size: 20,
     });
+
+    wrapper.destroy();
+  });
+
+  it('keeps archive object list filters and pagination independent by tab', async () => {
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    mockListArchiveObjects.mockClear();
+
+    state.recordWorkspace.objectLists.APPLICATION_FORM.filters.keyword =
+      ' APP-001 ';
+    await state.recordWorkspace.queryArchiveObjects('APPLICATION_FORM');
+    state.recordWorkspace.objectLists.SLIDE.filters.keyword = ' S-001 ';
+    await state.recordWorkspace.setArchiveObjectPage('SLIDE', 3);
+
+    expect(mockListArchiveObjects).toHaveBeenNthCalledWith(1, {
+      keyword: 'APP-001',
+      objectType: 'APPLICATION_FORM',
+      page: 1,
+      size: 20,
+    });
+    expect(mockListArchiveObjects).toHaveBeenNthCalledWith(2, {
+      keyword: 'S-001',
+      objectType: 'SLIDE',
+      page: 3,
+      size: 20,
+    });
+    expect(
+      state.recordWorkspace.objectLists.APPLICATION_FORM.filters.keyword,
+    ).toBe(' APP-001 ');
+    expect(state.recordWorkspace.objectLists.SLIDE.filters.keyword).toBe(
+      ' S-001 ',
+    );
+    expect(
+      state.recordWorkspace.objectLists.APPLICATION_FORM.filters.page,
+    ).toBe(1);
+    expect(state.recordWorkspace.objectLists.SLIDE.filters.page).toBe(3);
 
     wrapper.destroy();
   });
@@ -318,7 +393,7 @@ describe('useArchiveManagementPage', () => {
     messageSuccessMock.mockClear();
 
     mockListAvailableArchivePositions.mockClear();
-    mockSearchArchiveRecords.mockClear();
+    mockListArchiveObjects.mockClear();
 
     state.archiveWorkspace.archiveForm.caseId = ' CASE-1 ';
     state.archiveWorkspace.archiveForm.fileName = ' scan.pdf ';
@@ -338,7 +413,12 @@ describe('useArchiveManagementPage', () => {
     });
     expect(messageSuccessMock).toHaveBeenCalledWith('申请单归档已完成。');
     expect(mockListAvailableArchivePositions).toHaveBeenCalledTimes(1);
-    expect(mockSearchArchiveRecords).toHaveBeenCalledTimes(1);
+    expect(mockListArchiveObjects).toHaveBeenCalledWith({
+      keyword: undefined,
+      objectType: 'APPLICATION_FORM',
+      page: 1,
+      size: 20,
+    });
     expect(state.archiveWorkspace.archiveForm.caseId).toBe('');
     expect(state.archiveWorkspace.archiveForm.operatorName).toBe('归档员甲');
 
