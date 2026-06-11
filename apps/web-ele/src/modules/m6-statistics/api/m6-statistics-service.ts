@@ -3,6 +3,9 @@ import type {
   StatDashboardQuery,
   StatDashboardResult,
   StatIndicatorView,
+  StatReportDetailItem,
+  StatReportDetailQuery,
+  StatReportDetailResult,
   StatReportQuery,
   StatReportResult,
   StatReportRow,
@@ -14,6 +17,14 @@ import { requestClient } from '#/api/request';
 type IndicatorListResponse = Partial<StatIndicatorView>[];
 type StatDashboardResponse = Partial<
   Record<keyof StatDashboardResult, Partial<StatDashboardCard>[]>
+>;
+type StatReportDetailResponse = Partial<
+  Omit<StatReportDetailResult, 'items' | 'reasonDistribution'> & {
+    items: Partial<StatReportDetailItem>[];
+    reasonDistribution: Partial<
+      StatReportDetailResult['reasonDistribution'][number]
+    >[];
+  }
 >;
 type StatReportResponse = Partial<StatReportResult>;
 type TemplateListResponse = Partial<StatReportTemplateView>[];
@@ -118,6 +129,32 @@ function mapDashboardCards(
     : [];
 }
 
+function mapStatReportDetailItem(
+  item: Partial<StatReportDetailItem>,
+): StatReportDetailItem {
+  return {
+    applicationNo: item.applicationNo ?? '',
+    detailType: (item.detailType ??
+      'REPORT_REVISION') as StatReportDetailItem['detailType'],
+    occurredAt: item.occurredAt ?? '',
+    pathologyNo: item.pathologyNo ?? '',
+    reason: item.reason ?? '',
+    sourceNote: mapText(item.sourceNote),
+    status: item.status ?? '',
+  };
+}
+
+function mapReasonDistribution(
+  items: StatReportDetailResponse['reasonDistribution'],
+): StatReportDetailResult['reasonDistribution'] {
+  return Array.isArray(items)
+    ? items.map((item) => ({
+        count: Number(item?.count ?? 0),
+        reason: item?.reason ?? '',
+      }))
+    : [];
+}
+
 export async function listStatIndicators(category?: null | string) {
   const response = await requestClient.get<IndicatorListResponse>(
     '/v1/stat-indicators',
@@ -177,8 +214,37 @@ export async function queryStatDashboard(payload: StatDashboardQuery = {}) {
   } satisfies StatDashboardResult;
 }
 
+export async function queryStatReportDetails(payload: StatReportDetailQuery) {
+  const response = await requestClient.post<StatReportDetailResponse>(
+    '/v1/stat-report-details/query',
+    payload,
+  );
+
+  return {
+    availabilityStatus: response.availabilityStatus ?? 'UNAVAILABLE',
+    detailType: (response.detailType ??
+      payload.detailType) as StatReportDetailResult['detailType'],
+    items: Array.isArray(response.items)
+      ? response.items.map((item) => mapStatReportDetailItem(item))
+      : [],
+    page: response.page ?? payload.page ?? 1,
+    reasonDistribution: mapReasonDistribution(response.reasonDistribution),
+    size: response.size ?? payload.size ?? 20,
+    sourceNote: mapText(response.sourceNote),
+    total: Number(response.total ?? 0),
+  } satisfies StatReportDetailResult;
+}
+
 export async function exportStatReport(payload: StatReportQuery) {
   return requestClient.download('/v1/stat-reports/export', {
+    data: payload,
+    method: 'POST',
+    responseReturn: 'body',
+  });
+}
+
+export async function exportStatReportDetails(payload: StatReportDetailQuery) {
+  return requestClient.download('/v1/stat-report-details/export', {
     data: payload,
     method: 'POST',
     responseReturn: 'body',

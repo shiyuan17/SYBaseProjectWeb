@@ -1,15 +1,19 @@
 import type { Mock } from 'vitest';
 
+import type { StatReportDetailQuery } from '../types/m6-statistics';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { requestClient } from '#/api/request';
 
 import {
   exportStatReport,
+  exportStatReportDetails,
   listStatIndicators,
   listStatReportTemplates,
   queryStatDashboard,
   queryStatReport,
+  queryStatReportDetails,
 } from './m6-statistics-service';
 
 vi.mock('#/api/request', () => ({
@@ -286,6 +290,76 @@ describe('m6-statistics-service', () => {
         departmentId: 'DEPT-1',
         from: '2026-01-01T00:00:00',
         to: '2026-12-31T23:59:59',
+      },
+    );
+  });
+
+  it('queries and exports statistic report details without patient-sensitive fields', async () => {
+    const payload: StatReportDetailQuery = {
+      detailType: 'REPORT_REVISION',
+      from: '2026-01-01T00:00:00',
+      page: 1,
+      size: 10,
+      to: '2026-12-31T23:59:59',
+    };
+    const detailBlob = new Blob(['detail csv']);
+
+    requestClientMock.post.mockResolvedValue({
+      availabilityStatus: 'AVAILABLE',
+      detailType: 'REPORT_REVISION',
+      items: [
+        {
+          applicationNo: 'APP-M6-001',
+          detailType: 'REPORT_REVISION',
+          occurredAt: '2026-06-01T10:00:00',
+          pathologyNo: 'BC-M6-001',
+          patientName: 'should be ignored',
+          reason: '诊断术语修正',
+          richTextContent: '<p>should be ignored</p>',
+          sourceNote: 'report_revision_requests',
+          status: 'PENDING',
+        },
+      ],
+      page: 1,
+      reasonDistribution: [{ count: 2, reason: '诊断术语修正' }],
+      size: 10,
+      sourceNote: 'report_revision_requests',
+      total: 2,
+    });
+    requestClientMock.download.mockResolvedValue(detailBlob);
+
+    await expect(queryStatReportDetails(payload)).resolves.toEqual({
+      availabilityStatus: 'AVAILABLE',
+      detailType: 'REPORT_REVISION',
+      items: [
+        {
+          applicationNo: 'APP-M6-001',
+          detailType: 'REPORT_REVISION',
+          occurredAt: '2026-06-01T10:00:00',
+          pathologyNo: 'BC-M6-001',
+          reason: '诊断术语修正',
+          sourceNote: 'report_revision_requests',
+          status: 'PENDING',
+        },
+      ],
+      page: 1,
+      reasonDistribution: [{ count: 2, reason: '诊断术语修正' }],
+      size: 10,
+      sourceNote: 'report_revision_requests',
+      total: 2,
+    });
+    await expect(exportStatReportDetails(payload)).resolves.toBe(detailBlob);
+
+    expect(requestClientMock.post).toHaveBeenCalledWith(
+      '/v1/stat-report-details/query',
+      payload,
+    );
+    expect(requestClientMock.download).toHaveBeenCalledWith(
+      '/v1/stat-report-details/export',
+      {
+        data: payload,
+        method: 'POST',
+        responseReturn: 'body',
       },
     );
   });

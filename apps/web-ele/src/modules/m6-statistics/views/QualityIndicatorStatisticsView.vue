@@ -2,6 +2,9 @@
 import type {
   MetricStatus,
   StatIndicatorView,
+  StatReportDetailQuery,
+  StatReportDetailResult,
+  StatReportDetailType,
   StatReportQuery,
   StatReportResult,
   StatReportRow,
@@ -15,11 +18,13 @@ import { Page } from '@vben/common-ui';
 import {
   ElButton,
   ElDatePicker,
+  ElDrawer,
   ElEmpty,
   ElForm,
   ElFormItem,
   ElMessage,
   ElOption,
+  ElPagination,
   ElSegmented,
   ElSelect,
   ElSkeleton,
@@ -33,8 +38,10 @@ import DepartmentSelect from '#/modules/system-management/components/DepartmentS
 
 import {
   exportStatReport,
+  exportStatReportDetails,
   listStatIndicators,
   queryStatReport,
+  queryStatReportDetails,
 } from '../api/m6-statistics-service';
 import { buildStatReportFileName } from '../utils/report-query';
 
@@ -44,9 +51,15 @@ const route = useRoute();
 
 const loading = ref(false);
 const exportLoading = ref(false);
+const detailDrawerVisible = ref(false);
+const detailExportLoading = ref(false);
+const detailLoading = ref(false);
 const pageError = ref('');
 const indicators = ref<StatIndicatorView[]>([]);
 const report = ref<null | StatReportResult>(null);
+const activeDetailType = ref<StatReportDetailType>('REPORT_REVISION');
+const activeDetailTitle = ref('报告修订明细');
+const detailResult = ref<null | StatReportDetailResult>(null);
 
 const filters = reactive({
   dateRange: buildDefaultDateRange('month'),
@@ -54,6 +67,11 @@ const filters = reactive({
   departmentName: '',
   indicatorCode: '',
   periodMode: 'month' as PeriodMode,
+});
+
+const detailPagination = reactive({
+  page: 1,
+  size: 10,
 });
 
 const periodOptions = [
@@ -180,6 +198,29 @@ function displayMetric(row: StatReportRow) {
     : row.metricValue;
 }
 
+function detailTypeLabel(detailType: StatReportDetailType) {
+  const labels: Record<StatReportDetailType, string> = {
+    CRITICAL_VALUE_REASON: '危急值原因',
+    FROZEN_TIMEOUT: '冰冻超时',
+    REPORT_REVISION: '报告修订',
+    UNQUALIFIED_SPECIMEN: '不合格标本',
+  };
+  return labels[detailType];
+}
+
+function resolveDetailType(row?: StatReportRow): StatReportDetailType {
+  if (row?.indicatorCode === 'QC_UNQUALIFIED_SPECIMEN_COUNT') {
+    return 'UNQUALIFIED_SPECIMEN';
+  }
+  if (row?.indicatorCode === 'QC_FROZEN_PARAFFIN_MATCH_RATE') {
+    return 'FROZEN_TIMEOUT';
+  }
+  if (row?.indicatorCode === 'QC_CRITICAL_VALUE_REASON_COUNT') {
+    return 'CRITICAL_VALUE_REASON';
+  }
+  return 'REPORT_REVISION';
+}
+
 function downloadBlob(blob: Blob, fileName: string) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -189,6 +230,10 @@ function downloadBlob(blob: Blob, fileName: string) {
   URL.revokeObjectURL(url);
 }
 
+function buildDetailFileName(detailType: StatReportDetailType) {
+  return `${detailType.toLowerCase()}-quality-detail.csv`;
+}
+
 function buildPayload(): StatReportQuery {
   const [from, to] = filters.dateRange;
   return {
@@ -196,6 +241,19 @@ function buildPayload(): StatReportQuery {
     departmentId: filters.departmentId || null,
     from: from || null,
     indicatorCode: filters.indicatorCode || null,
+    to: to || null,
+  };
+}
+
+function buildDetailPayload(): StatReportDetailQuery {
+  const [from, to] = filters.dateRange;
+  return {
+    departmentId: filters.departmentId || null,
+    detailType: activeDetailType.value,
+    from: from || null,
+    indicatorCode: filters.indicatorCode || null,
+    page: detailPagination.page,
+    size: detailPagination.size,
     to: to || null,
   };
 }
@@ -232,6 +290,56 @@ async function handleExport() {
     );
   } finally {
     exportLoading.value = false;
+  }
+}
+
+async function loadDetails() {
+  detailLoading.value = true;
+  try {
+    detailResult.value = await queryStatReportDetails(buildDetailPayload());
+  } catch (error) {
+    ElMessage.error(
+      error instanceof Error ? error.message : '明细查询失败，请稍后重试',
+    );
+    detailResult.value = null;
+  } finally {
+    detailLoading.value = false;
+  }
+}
+
+async function handleOpenDetails(row?: StatReportRow) {
+  activeDetailType.value = resolveDetailType(row);
+  activeDetailTitle.value = `${detailTypeLabel(activeDetailType.value)}明细`;
+  detailPagination.page = 1;
+  detailDrawerVisible.value = true;
+  await loadDetails();
+}
+
+async function handleDetailPageChange(page: number) {
+  detailPagination.page = page;
+  await loadDetails();
+}
+
+async function handleDetailSizeChange(size: number) {
+  detailPagination.size = size;
+  detailPagination.page = 1;
+  await loadDetails();
+}
+
+async function handleExportDetails() {
+  detailExportLoading.value = true;
+  try {
+    const result = await exportStatReportDetails(buildDetailPayload());
+    if (result instanceof Blob) {
+      downloadBlob(result, buildDetailFileName(activeDetailType.value));
+      ElMessage.success('明细导出成功');
+    }
+  } catch (error) {
+    ElMessage.error(
+      error instanceof Error ? error.message : '明细导出失败，请稍后重试',
+    );
+  } finally {
+    detailExportLoading.value = false;
   }
 }
 
@@ -397,9 +505,108 @@ onMounted(async () => {
             prop="sourceNote"
             show-overflow-tooltip
           />
+          <ElTableColumn fixed="right" label="操作" width="120">
+            <template #default="{ row }">
+              <ElButton link type="primary" @click="handleOpenDetails(row)">
+                查看明细
+              </ElButton>
+            </template>
+          </ElTableColumn>
         </ElTable>
         <ElEmpty v-else description="当前筛选条件下暂无质控统计结果" />
       </DashboardSectionCard>
+
+      <ElDrawer
+        v-model="detailDrawerVisible"
+        :title="`质控明细 - ${activeDetailTitle}`"
+        size="760px"
+      >
+        <div class="flex flex-col gap-4">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <div class="text-sm font-medium">原因分布</div>
+              <div class="text-xs text-muted-foreground">
+                {{ detailResult?.sourceNote || '等待明细查询结果' }}
+              </div>
+            </div>
+            <ElButton
+              :loading="detailExportLoading"
+              @click="handleExportDetails"
+            >
+              导出明细 CSV
+            </ElButton>
+          </div>
+
+          <div
+            v-if="detailResult?.reasonDistribution.length"
+            class="grid gap-2 md:grid-cols-2"
+          >
+            <div
+              v-for="item in detailResult.reasonDistribution"
+              :key="item.reason"
+              class="rounded border border-border px-3 py-2"
+            >
+              <div class="text-sm">{{ item.reason }}</div>
+              <div class="text-lg font-semibold">{{ item.count }}</div>
+            </div>
+          </div>
+          <ElEmpty
+            v-else-if="detailResult?.availabilityStatus === 'UNAVAILABLE'"
+            :description="detailResult.sourceNote || '明细数据源未接入'"
+          />
+          <ElEmpty v-else description="当前筛选条件下暂无原因分布" />
+
+          <ElSkeleton v-if="detailLoading" :rows="5" animated />
+          <template v-else>
+            <ElTable
+              v-if="detailResult?.items.length"
+              :data="detailResult.items"
+              border
+            >
+              <ElTableColumn
+                label="病理号"
+                min-width="160"
+                prop="pathologyNo"
+              />
+              <ElTableColumn
+                label="申请单号"
+                min-width="160"
+                prop="applicationNo"
+              />
+              <ElTableColumn
+                label="发生时间"
+                min-width="180"
+                prop="occurredAt"
+              />
+              <ElTableColumn
+                label="原因"
+                min-width="220"
+                prop="reason"
+                show-overflow-tooltip
+              />
+              <ElTableColumn label="状态" min-width="120" prop="status" />
+              <ElTableColumn
+                label="来源"
+                min-width="200"
+                prop="sourceNote"
+                show-overflow-tooltip
+              />
+            </ElTable>
+            <ElEmpty v-else description="当前筛选条件下暂无明细记录" />
+            <div class="flex justify-end">
+              <ElPagination
+                :current-page="detailPagination.page"
+                :page-size="detailPagination.size"
+                :page-sizes="[10, 20, 50]"
+                :total="detailResult?.total ?? 0"
+                layout="total, sizes, prev, pager, next"
+                @update:current-page="handleDetailPageChange"
+                @update:page-size="handleDetailSizeChange"
+              />
+            </div>
+          </template>
+        </div>
+      </ElDrawer>
     </div>
   </Page>
 </template>
