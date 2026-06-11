@@ -680,7 +680,8 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
           path: '/m6/dashboard',
         },
         {
-          component: '/views/_core/fallback/MenuPlaceholderView',
+          component:
+            '/modules/m6-statistics/views/QualityIndicatorStatisticsView',
           meta: {
             icon: 'carbon:chart-line',
             title: '质控指标统计',
@@ -689,7 +690,8 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
           path: '/m6/quality-indicators',
         },
         {
-          component: '/views/_core/fallback/MenuPlaceholderView',
+          component:
+            '/modules/m6-statistics/views/ManagementIndicatorStatisticsView',
           meta: {
             icon: 'carbon:chart-column',
             title: '管理指标统计',

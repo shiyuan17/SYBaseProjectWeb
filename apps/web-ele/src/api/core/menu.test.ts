@@ -946,7 +946,8 @@ describe('mapMenuViewsToRoutes', () => {
             path: '/m6/dashboard',
           }),
           expect.objectContaining({
-            component: '/views/_core/fallback/MenuPlaceholderView',
+            component:
+              '/modules/m6-statistics/views/QualityIndicatorStatisticsView',
             meta: expect.objectContaining({
               keepAlive: true,
             }),
@@ -954,7 +955,8 @@ describe('mapMenuViewsToRoutes', () => {
             path: '/m6/quality-indicators',
           }),
           expect.objectContaining({
-            component: '/views/_core/fallback/MenuPlaceholderView',
+            component:
+              '/modules/m6-statistics/views/ManagementIndicatorStatisticsView',
             meta: expect.objectContaining({
               keepAlive: true,
             }),

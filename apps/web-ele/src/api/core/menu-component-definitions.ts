@@ -595,7 +595,7 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
       routeName: 'M6StatisticsDashboard',
     },
     {
-      component: '/views/_core/fallback/MenuPlaceholderView',
+      component: '/modules/m6-statistics/views/QualityIndicatorStatisticsView',
       componentAliases: ['QualityIndicatorStatistics'],
       menuCodes: ['M6_QUALITY_INDICATORS'],
       path: '/m6/quality-indicators',
@@ -603,7 +603,8 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
       routeName: 'QualityIndicatorStatistics',
     },
     {
-      component: '/views/_core/fallback/MenuPlaceholderView',
+      component:
+        '/modules/m6-statistics/views/ManagementIndicatorStatisticsView',
       componentAliases: ['ManagementIndicatorStatistics'],
       menuCodes: ['M6_MANAGEMENT_INDICATORS'],
       path: '/m6/management-indicators',
