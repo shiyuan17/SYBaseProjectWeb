@@ -44,10 +44,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
       },
       {
         component: () =>
-          import('#/views/_core/fallback/MenuPlaceholderView.vue'),
+          import('#/modules/m6-statistics/views/QualityIndicatorStatisticsView.vue'),
         meta: {
           authority: [...M6_STATISTICS_PAGE_AUTHORITIES],
-          description: '当前页面暂未接入质控指标统计相关业务功能。',
+          description:
+            '展示三甲质控指标、质量安全控制指标与数据源接入口径状态。',
           icon: 'carbon:chart-line',
           title: '质控指标统计',
         },

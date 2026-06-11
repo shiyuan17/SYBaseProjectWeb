@@ -42,6 +42,9 @@ describe('m6 routes', () => {
     expect(dashboardRoute?.path).toBe('/m6/dashboard');
     expect(dashboardRoute?.meta?.keepAlive).toBe(true);
     expect(qualityRoute?.path).toBe('/m6/quality-indicators');
+    expect(String(qualityRoute?.component)).toContain(
+      'QualityIndicatorStatisticsView.vue',
+    );
     expect(qualityRoute?.meta?.keepAlive).toBe(true);
     expect(managementRoute?.path).toBe('/m6/management-indicators');
     expect(managementRoute?.meta?.keepAlive).toBe(true);
