@@ -41,11 +41,20 @@ Use this template when converting a local plan or specification into Linear issu
 - Risk Level: `<低 / 中 / 高>`
 - Human Confirmation Required: `<是 / 否；若是，说明触发点>`
 
+## Loop Packet
+
+- Loop Type: `<Task Intake / Implementation / Review / Triage>`
+- Stop Condition: `<可验证停止条件>`
+- Verification Command: `<本 issue 必跑命令；无则说明人工核对项>`
+- State Sink: `<PROJECT_STATE.md / TECH_DEBT.md / KNOWN_BUGS.md / DECISIONS.md / ARCHITECTURE.md / Linear>`
+- Escalation Condition: `<命中即暂停的条件>`
+
 ## Required Reading
 
 - `AGENTS.md`
 - `docs/LINEAR_TASK.md`
 - `docs/DYNAMIC_WORKFLOW_RULES.md`
+- `docs/LOOP_ENGINEERING_RULES.md`
 - `<按任务类型补充专项规范>`
 
 ## Stop Conditions

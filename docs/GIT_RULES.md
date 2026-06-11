@@ -176,7 +176,7 @@ git branch -d feature/ENG-123-user-management
 | `pnpm check:cspell` / `check:dep` | 否 | 否 | 否 | 是（含于 `pnpm check`） |
 | `pnpm test:e2e` | 否 | 否 | 否 | 关键链路时 |
 
-> 注意：`cspell` 仅扫描 `**/*.{ts,tsx,vue}` 与 `**/README.md`，不覆盖 `docs/*.md` 规范与根目录记忆文件；这些文件的拼写与一致性须人工核对。Workflow Packet、Memory Update、Red Team、人工确认等治理项目前均无机器门禁，依赖交付者自觉执行。
+> 注意：`pr-packet.yml` 只校验 PR 正文存在关键 Workflow Packet / Memory Update Packet 字段且非空，不判断内容质量。`cspell` 仅扫描 `**/*.{ts,tsx,vue}` 与 `**/README.md`，不覆盖 `docs/*.md` 规范与根目录记忆文件；这些文件的拼写与一致性仍须人工核对。Red Team 质量、人工确认是否真实完成等治理项仍依赖交付者和 reviewer 审查。
 
 ### 8. 动态 Workflow 剧本与红队审查
 
@@ -194,7 +194,7 @@ PR 合入前还必须填写 Memory Update Packet：
 
 - 记忆文件的职责与更新触发条件以 `AGENTS.md` 第 8 节「AI Memory Update」为唯一来源，交付前按其规则按需更新根目录五类记忆文件
 - PR 必须说明已更新文件、未更新文件及原因、相关记忆项 ID、跨仓引用和剩余风险
-- CI 与 hook 只负责机器门禁；动态 Workflow 和 AI Memory Update 负责任务级治理与长期上下文维护
+- `pr-packet.yml` 会拦截缺少关键 Packet 字段或字段为空的 PR；动态 Workflow 和 AI Memory Update 的内容质量仍由 reviewer 结合证据审查
 - 跨仓事项必须双向引用后端 `SYBaseProject` 的记忆项或验证证据
 
 ## 推荐实践
@@ -221,6 +221,7 @@ PR 合入前还必须填写 Memory Update Packet：
 - [ ] 任务合并后已清理对应 worktree 与已合并分支
 - [ ] PR 描述包含目的、影响、验证和风险
 - [ ] PR 已填写 Workflow Packet，高风险变更已执行 Red Team
+- [ ] 使用 Loop Engineering 执行的任务已填写 Loop Packet
 - [ ] PR 已填写 Memory Update Packet，并引用相关记忆项 ID 或说明未更新原因
 - [ ] UI 或联调类变更已附截图、录屏或接口说明
 - [ ] Review、构建、冲突处理已完成

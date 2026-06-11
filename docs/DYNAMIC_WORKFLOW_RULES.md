@@ -22,6 +22,8 @@
 
 PR 必须填写 Workflow Packet，说明为什么选择该 Workflow、启用哪些专家 Agent、跑了哪些动态测试和模拟、红队攻击结论是什么。
 
+若任务通过 Loop Engineering 方式执行，还必须填写 `docs/LOOP_ENGINEERING_RULES.md` 定义的 Loop Packet。Loop Packet 只描述本轮闭环如何运行、何时停止、状态写到哪里；不替代本文的 Workflow 分类、修饰器、动态测试、Red Team 或 Memory Update 要求。
+
 专家 Agent 可由人工角色、子 Agent 或已安装 Codex skill 承担；可选 skill 映射见 `docs/AGENT_SKILL_ROUTING.md`。该映射只补充执行方式，不改变本文对主 Workflow、强制修饰器、动态测试、Red Team 与 Memory Update 的要求。
 
 ## 触发信号速查表

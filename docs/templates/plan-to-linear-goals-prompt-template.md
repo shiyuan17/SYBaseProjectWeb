@@ -14,6 +14,7 @@ Use this prompt when a local plan needs to be split into Linear issues and Codex
 - `AGENTS.md`
 - `docs/LINEAR_TASK.md`
 - `docs/DYNAMIC_WORKFLOW_RULES.md`
+- `docs/LOOP_ENGINEERING_RULES.md`
 - `docs/templates/linear-issue-template.md`
 - `docs/templates/codex-goal-prompt-template.md`
 
@@ -30,7 +31,7 @@ Use this prompt when a local plan needs to be split into Linear issues and Codex
 
 ## 拆分要求
 
-- 每个 issue 必须有目标、验收标准、非目标、影响范围、Workflow Packet、停止条件和验证要求。
+- 每个 issue 必须有目标、验收标准、非目标、影响范围、Workflow Packet、Loop Packet、停止条件和验证要求。
 - 不要把大任务只粗略拆成“前端”和“后端”。
 - 涉及权限、菜单鉴权、接口契约、后端 migration/seed、统计口径、导出或敏感数据时，从严标注风险和停止条件。
 - 计划中不明确但会影响行为或接口联调的内容，必须作为待确认项，不得替用户做业务决策。

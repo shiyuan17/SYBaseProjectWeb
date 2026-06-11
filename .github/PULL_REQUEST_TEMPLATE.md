@@ -16,6 +16,16 @@ Choose one primary Workflow and add required modifiers. See `docs/DYNAMIC_WORKFL
 - Expert Agent(s):
 - Required modifiers: `Security / DB / Red Team / Backend Cross-check / Browser Verification`
 
+## Loop Packet
+
+Use this to describe how the task loop runs and stops. See `docs/LOOP_ENGINEERING_RULES.md`.
+
+- Loop Type: `Task Intake / Implementation / Review / Triage`
+- Stop Condition:
+- Verification Command:
+- State Sink: `PROJECT_STATE.md / TECH_DEBT.md / KNOWN_BUGS.md / DECISIONS.md / ARCHITECTURE.md / Linear`
+- Escalation Condition:
+
 ## Dynamic Tests
 
 - Required test commands:

@@ -56,10 +56,11 @@
 9. `docs/COMPATIBILITY_RULES.md`
 10. `docs/GIT_RULES.md`
 11. `docs/DYNAMIC_WORKFLOW_RULES.md`
-12. `docs/LINEAR_TASK.md`（仅当任务来源于 Linear issue 时）
-13. `docs/RELEASE.md`
-14. `docs/AI-CODE-HEALTH.md`
-15. 任务涉及模块文档与现有源码
+12. `docs/LOOP_ENGINEERING_RULES.md`
+13. `docs/LINEAR_TASK.md`（仅当任务来源于 Linear issue 时）
+14. `docs/RELEASE.md`
+15. `docs/AI-CODE-HEALTH.md`
+16. 任务涉及模块文档与现有源码
 
 - **续接历史任务 / 接手脏工作区**：先读根目录 `PROJECT_STATE.md`、`DECISIONS.md`、`KNOWN_BUGS.md`，再结合 `git status`、agentmemory 技能与任务相关规范恢复上下文。
 
@@ -79,6 +80,7 @@
 | 浏览器、国产环境、导出打印、字体与降级策略 | `docs/COMPATIBILITY_RULES.md` |
 | 分支、提交、PR、合并协作 | `docs/GIT_RULES.md` |
 | 任何涉及 UI / 接口 / 数据库 / 权限 / 架构重构 / 生产问题 / 构建发布的实现类任务（选主 Workflow、专家 Agent、动态测试/模拟、Red Team） | `docs/DYNAMIC_WORKFLOW_RULES.md` |
+| Loop Engineering、长期/定时/Goal/多 Agent 闭环、Triage 与 maker/checker 分离 | `docs/LOOP_ENGINEERING_RULES.md` |
 | 续接历史任务、交付前记忆层更新（状态/债务/缺陷/决策/架构） | `PROJECT_STATE.md`、`TECH_DEBT.md`、`KNOWN_BUGS.md`、`DECISIONS.md`、`ARCHITECTURE.md` |
 | Linear issue 开工与任务起始信息准备 | `docs/LINEAR_TASK.md` |
 | 环境、构建、发布与回滚 | `docs/RELEASE.md` |
@@ -280,6 +282,7 @@
 - [docs/COMPATIBILITY_RULES.md](./docs/COMPATIBILITY_RULES.md)
 - [docs/GIT_RULES.md](./docs/GIT_RULES.md)
 - [docs/DYNAMIC_WORKFLOW_RULES.md](./docs/DYNAMIC_WORKFLOW_RULES.md)
+- [docs/LOOP_ENGINEERING_RULES.md](./docs/LOOP_ENGINEERING_RULES.md)
 - [docs/AGENT_SKILL_ROUTING.md](./docs/AGENT_SKILL_ROUTING.md)
 - [docs/LINEAR_TASK.md](./docs/LINEAR_TASK.md)
 - [docs/RELEASE.md](./docs/RELEASE.md)
