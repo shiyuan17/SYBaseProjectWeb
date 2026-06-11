@@ -6,6 +6,7 @@ import {
   buildArchiveApplicationFormRequest,
   buildArchiveEmbeddingBoxRequest,
   buildArchiveSlideRequest,
+  buildArchiveSpecimenRequest,
   buildBatchCreateCabinetRequest,
   buildCreateCabinetRequest,
   buildCreateMaterialLoanRequest,
@@ -144,6 +145,29 @@ describe('archive form helpers', () => {
         permissionWarning: '',
       }),
     ).toBe('');
+
+    archiveForm.objectType = 'SPECIMEN';
+    archiveForm.caseId = '';
+    expect(
+      validateArchiveForm({
+        canArchiveObjectType: true,
+        canQueryCabinets: true,
+        form: archiveForm,
+        hasSelectedPosition: true,
+        permissionWarning: '',
+      }),
+    ).toBe('标本归档必须填写标本 ID。');
+
+    archiveForm.specimenId = 'SPECIMEN-1';
+    expect(
+      validateArchiveForm({
+        canArchiveObjectType: true,
+        canQueryCabinets: true,
+        form: archiveForm,
+        hasSelectedPosition: true,
+        permissionWarning: '',
+      }),
+    ).toBe('');
   });
 
   it('validates loan and return permissions before required fields', () => {
@@ -230,6 +254,7 @@ describe('archive form helpers', () => {
       fileUrl: ' ',
       remarks: ' Stored ',
       slideId: ' SLIDE-1 ',
+      specimenId: ' SPECIMEN-1 ',
     });
 
     expect(
@@ -254,6 +279,12 @@ describe('archive form helpers', () => {
       expect.objectContaining({
         archivePositionId: 'POSITION-1',
         slideId: 'SLIDE-1',
+      }),
+    );
+    expect(buildArchiveSpecimenRequest(archiveForm, 'POSITION-1')).toEqual(
+      expect.objectContaining({
+        archivePositionId: 'POSITION-1',
+        specimenId: 'SPECIMEN-1',
       }),
     );
 

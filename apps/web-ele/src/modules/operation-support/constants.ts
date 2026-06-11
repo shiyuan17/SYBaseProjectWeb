@@ -21,6 +21,7 @@ export const M5_PERMISSION_CODES = {
   REAGENT_UPDATE: 'PERM_M5_REAGENT_UPDATE',
   REAGENT_WARNING_QUERY: 'PERM_M5_REAGENT_WARNING_QUERY',
   SLIDE_ARCHIVE: 'PERM_M5_SLIDE_ARCHIVE',
+  SPECIMEN_ARCHIVE: 'PERM_M5_SPECIMEN_ARCHIVE',
 } as const;
 
 export const M5_ARCHIVE_PAGE_AUTHORITIES = [
@@ -31,6 +32,7 @@ export const M5_ARCHIVE_PAGE_AUTHORITIES = [
   M5_PERMISSION_CODES.APPLICATION_FORM_ARCHIVE,
   M5_PERMISSION_CODES.EMBEDDING_BOX_ARCHIVE,
   M5_PERMISSION_CODES.SLIDE_ARCHIVE,
+  M5_PERMISSION_CODES.SPECIMEN_ARCHIVE,
   M5_PERMISSION_CODES.ARCHIVE_QUERY,
 ] as const;
 
@@ -99,12 +101,14 @@ export const ARCHIVE_CABINET_TYPE_OPTIONS = [
   { label: '申请单柜', value: 'APPLICATION_FORM' },
   { label: '蜡块柜', value: 'EMBEDDING_BOX' },
   { label: '玻片柜', value: 'SLIDE' },
+  { label: '标本柜', value: 'SPECIMEN' },
 ] as const;
 
 export const ARCHIVE_OBJECT_TYPE_OPTIONS = [
   { label: '申请单', value: 'APPLICATION_FORM' },
   { label: '蜡块', value: 'EMBEDDING_BOX' },
   { label: '玻片', value: 'SLIDE' },
+  { label: '标本', value: 'SPECIMEN' },
 ] as const;
 
 export const MATERIAL_TYPE_OPTIONS = [

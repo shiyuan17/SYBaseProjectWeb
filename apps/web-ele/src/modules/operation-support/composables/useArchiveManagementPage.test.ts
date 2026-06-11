@@ -19,6 +19,7 @@ const {
   mockArchiveApplicationForm,
   mockArchiveEmbeddingBox,
   mockArchiveSlide,
+  mockArchiveSpecimen,
   mockBatchCreateArchiveCabinets,
   mockCreateArchiveCabinet,
   mockDeleteArchiveCabinet,
@@ -39,6 +40,7 @@ const {
   mockArchiveApplicationForm: vi.fn(),
   mockArchiveEmbeddingBox: vi.fn(),
   mockArchiveSlide: vi.fn(),
+  mockArchiveSpecimen: vi.fn(),
   mockBatchCreateArchiveCabinets: vi.fn(),
   mockCreateArchiveCabinet: vi.fn(),
   mockDeleteArchiveCabinet: vi.fn(),
@@ -75,6 +77,7 @@ vi.mock('../api/operation-support-service', () => ({
   archiveApplicationForm: mockArchiveApplicationForm,
   archiveEmbeddingBox: mockArchiveEmbeddingBox,
   archiveSlide: mockArchiveSlide,
+  archiveSpecimen: mockArchiveSpecimen,
   batchCreateArchiveCabinets: mockBatchCreateArchiveCabinets,
   createArchiveCabinet: mockCreateArchiveCabinet,
   deleteArchiveCabinet: mockDeleteArchiveCabinet,
@@ -178,6 +181,7 @@ describe('useArchiveManagementPage', () => {
       M5_PERMISSION_CODES.ARCHIVE_CABINET_UPDATE,
       M5_PERMISSION_CODES.ARCHIVE_CABINET_DELETE,
       M5_PERMISSION_CODES.APPLICATION_FORM_ARCHIVE,
+      M5_PERMISSION_CODES.SPECIMEN_ARCHIVE,
       M5_PERMISSION_CODES.ARCHIVE_QUERY,
     ];
 
@@ -215,6 +219,7 @@ describe('useArchiveManagementPage', () => {
     });
     mockArchiveEmbeddingBox.mockResolvedValue({});
     mockArchiveSlide.mockResolvedValue({});
+    mockArchiveSpecimen.mockResolvedValue({});
     mockBatchCreateArchiveCabinets.mockResolvedValue([
       createCabinet({ cabinetCode: 'CAB-B001', id: 'CABINET-B1' }),
       createCabinet({ cabinetCode: 'CAB-B002', id: 'CABINET-B2' }),
@@ -236,6 +241,7 @@ describe('useArchiveManagementPage', () => {
     mockArchiveApplicationForm.mockReset();
     mockArchiveEmbeddingBox.mockReset();
     mockArchiveSlide.mockReset();
+    mockArchiveSpecimen.mockReset();
     mockBatchCreateArchiveCabinets.mockReset();
     mockCreateArchiveCabinet.mockReset();
     mockDeleteArchiveCabinet.mockReset();
@@ -421,6 +427,51 @@ describe('useArchiveManagementPage', () => {
     });
     expect(state.archiveWorkspace.archiveForm.caseId).toBe('');
     expect(state.archiveWorkspace.archiveForm.operatorName).toBe('归档员甲');
+
+    wrapper.destroy();
+  });
+
+  it('submits specimen archive with independent permission and refreshes specimen list', async () => {
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    await state.recordWorkspace.setActiveArchiveObjectType('SPECIMEN');
+    const position = state.cabinetWorkspace.positionRows[0];
+    state.cabinetWorkspace.selectPosition(position!);
+    messageSuccessMock.mockClear();
+
+    mockListAvailableArchivePositions.mockClear();
+    mockListArchiveObjects.mockClear();
+
+    state.archiveWorkspace.openArchiveDialog('SPECIMEN');
+    state.archiveWorkspace.archiveForm.specimenId = ' SPECIMEN-1 ';
+    state.archiveWorkspace.archiveForm.remarks = ' 标本归档 ';
+
+    await state.archiveWorkspace.submitArchive();
+
+    expect(mockArchiveSpecimen).toHaveBeenCalledWith({
+      archivePositionId: 'POSITION-1',
+      operatorName: '归档员甲',
+      operatorUserId: 'USER-ARCHIVE-1',
+      remarks: '标本归档',
+      specimenId: 'SPECIMEN-1',
+      terminalCode: undefined,
+    });
+    expect(messageSuccessMock).toHaveBeenCalledWith('标本归档已完成。');
+    expect(mockListAvailableArchivePositions).toHaveBeenCalledTimes(1);
+    expect(mockListArchiveObjects).toHaveBeenCalledWith({
+      keyword: undefined,
+      objectType: 'SPECIMEN',
+      page: 1,
+      size: 20,
+    });
+    expect(state.archiveWorkspace.archiveForm.specimenId).toBe('');
+    expect(state.archiveWorkspace.archiveDialogVisible).toBe(false);
 
     wrapper.destroy();
   });

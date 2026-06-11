@@ -3,6 +3,7 @@ import type {
   ArchiveCabinetView,
   ArchiveEmbeddingBoxRequest,
   ArchiveSlideRequest,
+  ArchiveSpecimenRequest,
   BatchCreateArchiveCabinetRequest,
   CreateArchiveCabinetRequest,
   CreateMaterialLoanRequest,
@@ -50,6 +51,7 @@ export type ArchiveFormState = {
   operatorUserId: string;
   remarks: string;
   slideId: string;
+  specimenId: string;
   terminalCode: string;
 };
 
@@ -151,6 +153,7 @@ export function createArchiveFormDefaults(
     operatorUserId: operator.operatorUserId,
     remarks: '',
     slideId: '',
+    specimenId: '',
     terminalCode: '',
   };
 }
@@ -255,6 +258,9 @@ export function validateArchiveForm(options: {
   }
   if (form.objectType === 'SLIDE') {
     return form.slideId.trim() ? '' : '玻片归档必须填写玻片 ID。';
+  }
+  if (form.objectType === 'SPECIMEN') {
+    return form.specimenId.trim() ? '' : '标本归档必须填写标本 ID。';
   }
   return '';
 }
@@ -383,6 +389,20 @@ export function buildArchiveSlideRequest(
     operatorUserId: optionalText(form.operatorUserId),
     remarks: optionalText(form.remarks),
     slideId: form.slideId.trim(),
+    terminalCode: optionalText(form.terminalCode),
+  };
+}
+
+export function buildArchiveSpecimenRequest(
+  form: ArchiveFormState,
+  archivePositionId: string,
+): ArchiveSpecimenRequest {
+  return {
+    archivePositionId,
+    operatorName: form.operatorName.trim(),
+    operatorUserId: optionalText(form.operatorUserId),
+    remarks: optionalText(form.remarks),
+    specimenId: form.specimenId.trim(),
     terminalCode: optionalText(form.terminalCode),
   };
 }

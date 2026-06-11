@@ -63,6 +63,21 @@ vi.mock('element-plus', () => {
     },
   });
 
+  const ElDialog = defineComponent({
+    props: ['modelValue', 'title'],
+    emits: ['update:modelValue'],
+    setup(props, { slots }) {
+      return () =>
+        props.modelValue
+          ? h('section', [
+              h('h2', props.title),
+              slots.default?.(),
+              slots.footer?.(),
+            ])
+          : null;
+    },
+  });
+
   const ElInput = defineComponent({
     setup(_, { attrs }) {
       return () => h('input', attrs);
@@ -134,6 +149,7 @@ vi.mock('element-plus', () => {
   return {
     ElAlert,
     ElButton,
+    ElDialog,
     ElForm,
     ElFormItem,
     ElInput,
@@ -187,6 +203,10 @@ vi.mock('../components/ArchiveSubmissionPanel.vue', () => ({
   default: createMarkerComponent('archive-submission-panel'),
 }));
 
+vi.mock('../components/ArchiveSubmissionDialog.vue', () => ({
+  default: createMarkerComponent('archive-submission-dialog'),
+}));
+
 vi.mock('../components/ArchiveRecordQueryPanel.vue', () => ({
   default: createMarkerComponent('archive-record-query-panel'),
 }));
@@ -217,11 +237,14 @@ function createMockPageState() {
         operatorUserId: 'USER-1',
         remarks: '',
         slideId: '',
+        specimenId: '',
         terminalCode: '',
       }),
       archivePermissionWarning: '',
       archiveSubmitButtonText: '提交申请单归档',
       canSubmitArchive: true,
+      openArchiveDialog: vi.fn(),
+      archiveDialogVisible: ref(false),
       submitArchive: vi.fn(),
     },
     cabinetWorkspace: {
@@ -308,6 +331,10 @@ function createMockPageState() {
     capabilities: {
       canCreateCabinet: true,
       canDeleteCabinet: true,
+      canArchiveApplicationForm: true,
+      canArchiveEmbeddingBox: true,
+      canArchiveSlide: true,
+      canArchiveSpecimen: true,
       canCreateLoan: true,
       canQueryCabinets: true,
       canQueryLoans: true,
@@ -398,6 +425,27 @@ function createMockPageState() {
           loading: false,
           total: 1,
         },
+        SPECIMEN: {
+          error: '',
+          filters: {
+            keyword: '',
+            page: 1,
+            size: 20,
+          },
+          items: [
+            {
+              archiveStatus: 'IN_STORAGE',
+              caseId: 'CASE-SPECIMEN-1',
+              objectCode: 'SP-001',
+              objectId: 'SPECIMEN-1',
+              objectType: 'SPECIMEN',
+              pathologyNo: 'BL-2026-004',
+              patientName: '赵六',
+            },
+          ],
+          loading: false,
+          total: 1,
+        },
       }),
       queryArchiveObjects,
       setActiveArchiveObjectType,
@@ -457,12 +505,15 @@ describe('ArchiveManagementView', () => {
     expect(document.body.textContent).toContain('申请单归档');
     expect(document.body.textContent).toContain('蜡块归档');
     expect(document.body.textContent).toContain('玻片归档');
+    expect(document.body.textContent).toContain('标本归档');
     expect(document.body.textContent).toContain('申请单归档列表');
     expect(document.body.textContent).toContain('蜡块归档列表');
     expect(document.body.textContent).toContain('玻片归档列表');
+    expect(document.body.textContent).toContain('标本归档列表');
     expect(document.body.textContent).toContain('BL-2026-001');
     expect(document.body.textContent).toContain('BL-2026-002');
     expect(document.body.textContent).toContain('BL-2026-003');
+    expect(document.body.textContent).toContain('BL-2026-004');
     expect(document.body.textContent).toContain('pagination-1-20-1');
     expect(document.body.textContent).toContain('归档柜列表');
     expect(document.body.textContent).toContain('快速检索');
@@ -474,9 +525,11 @@ describe('ArchiveManagementView', () => {
     expect(document.body.textContent).toContain('柜子类型');
     expect(document.body.textContent).toContain('路径');
     expect(document.body.textContent).toContain('层级');
-    expect(document.body.textContent).not.toContain('标本归档');
     expect(document.body.textContent).not.toContain('借白片');
     expect(document.body.textContent).not.toContain('标本柜');
+    expect(document.body.textContent).not.toContain('archive-submission-panel');
+    expect(document.body.textContent).toContain('archive-submission-dialog');
+    expect(document.body.textContent).toContain('归档操作');
     expect(document.body.textContent).toContain('申请医生');
     expect(document.body.textContent).toContain('申请时间');
     expect(document.body.textContent).toContain('归档状态');
@@ -486,7 +539,6 @@ describe('ArchiveManagementView', () => {
     expect(document.body.textContent).toContain(
       'archive-position-workbench-panel',
     );
-    expect(document.body.textContent).toContain('archive-submission-panel');
     expect(document.body.textContent).toContain('archive-cabinet-dialog');
     expect(document.body.textContent).toContain('batch-archive-cabinet-dialog');
     expect(document.body.innerHTML).not.toContain('legacy-toolbar');
@@ -497,6 +549,17 @@ describe('ArchiveManagementView', () => {
     ).toHaveBeenCalledWith(
       'APPLICATION_FORM',
       expect.objectContaining({ loadIfNeeded: true }),
+    );
+
+    const archiveButton = [...document.querySelectorAll('button')].find(
+      (button) => button.textContent?.trim() === '归档操作',
+    );
+    expect(archiveButton).toBeTruthy();
+
+    archiveButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(state.archiveWorkspace.openArchiveDialog).toHaveBeenCalledWith(
+      'APPLICATION_FORM',
     );
 
     const createButton = [...document.querySelectorAll('button')].find(

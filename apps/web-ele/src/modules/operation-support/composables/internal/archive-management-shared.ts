@@ -6,6 +6,7 @@ export interface ArchiveManagementCapabilities {
   canArchiveApplicationForm: ComputedRef<boolean>;
   canArchiveEmbeddingBox: ComputedRef<boolean>;
   canArchiveSlide: ComputedRef<boolean>;
+  canArchiveSpecimen: ComputedRef<boolean>;
   canCreateCabinet: ComputedRef<boolean>;
   canCreateLoan: ComputedRef<boolean>;
   canQueryCabinets: ComputedRef<boolean>;

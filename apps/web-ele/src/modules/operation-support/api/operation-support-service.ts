@@ -8,6 +8,7 @@ import type {
   ArchivePositionView,
   ArchiveRecordView,
   ArchiveSlideRequest,
+  ArchiveSpecimenRequest,
   BatchCreateArchiveCabinetRequest,
   CreateArchiveCabinetRequest,
   CreateEquipmentMaintenanceLogRequest,
@@ -128,6 +129,10 @@ export async function archiveEmbeddingBox(data: ArchiveEmbeddingBoxRequest) {
 
 export async function archiveSlide(data: ArchiveSlideRequest) {
   return requestClient.post<ArchiveActionResult>('/v1/archive/slides', data);
+}
+
+export async function archiveSpecimen(data: ArchiveSpecimenRequest) {
+  return requestClient.post<ArchiveActionResult>('/v1/archive/specimens', data);
 }
 
 export async function searchArchiveRecords(params: SearchArchiveRecordsQuery) {

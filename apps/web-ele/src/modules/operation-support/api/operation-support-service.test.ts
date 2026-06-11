@@ -8,6 +8,7 @@ import {
   archiveApplicationForm,
   archiveEmbeddingBox,
   archiveSlide,
+  archiveSpecimen,
   batchCreateArchiveCabinets,
   consumeReagentStock,
   createArchiveCabinet,
@@ -214,6 +215,11 @@ describe('operation-support-service archive requests', () => {
       operatorName: '归档员',
       slideId: 'SLIDE-1',
     });
+    await archiveSpecimen({
+      archivePositionId: 'POS-4',
+      operatorName: '归档员',
+      specimenId: 'SPECIMEN-1',
+    });
     await createMaterialLoan({
       borrowedByName: '医生',
       materialId: 'SLIDE-1',
@@ -278,6 +284,15 @@ describe('operation-support-service archive requests', () => {
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       6,
+      '/v1/archive/specimens',
+      {
+        archivePositionId: 'POS-4',
+        operatorName: '归档员',
+        specimenId: 'SPECIMEN-1',
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      7,
       '/v1/material-loans',
       {
         borrowedByName: '医生',
@@ -287,7 +302,7 @@ describe('operation-support-service archive requests', () => {
       },
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
-      7,
+      8,
       '/v1/material-loans/LOAN-1/return',
       { operatorName: '归档员' },
     );

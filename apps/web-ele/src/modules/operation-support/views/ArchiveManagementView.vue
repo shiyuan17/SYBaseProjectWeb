@@ -5,13 +5,13 @@ import { ref, watch } from 'vue';
 
 import { Fallback, Page } from '@vben/common-ui';
 
-import { ElTabPane, ElTabs } from 'element-plus';
+import { ElButton, ElTabPane, ElTabs } from 'element-plus';
 
 import ArchiveCabinetDialog from '../components/ArchiveCabinetDialog.vue';
 import ArchiveCabinetTreePanel from '../components/ArchiveCabinetTreePanel.vue';
 import ArchivePositionWorkbenchPanel from '../components/ArchivePositionWorkbenchPanel.vue';
 import ArchiveRecordLegacyListPanel from '../components/ArchiveRecordLegacyListPanel.vue';
-import ArchiveSubmissionPanel from '../components/ArchiveSubmissionPanel.vue';
+import ArchiveSubmissionDialog from '../components/ArchiveSubmissionDialog.vue';
 import BatchArchiveCabinetDialog from '../components/BatchArchiveCabinetDialog.vue';
 import { useArchiveManagementPage } from '../composables/useArchiveManagementPage';
 
@@ -29,12 +29,14 @@ const archiveObjectTabs = new Set<ArchiveObjectType>([
   'APPLICATION_FORM',
   'EMBEDDING_BOX',
   'SLIDE',
+  'SPECIMEN',
 ]);
 
 const archiveObjectTabTitles = {
   APPLICATION_FORM: '申请单归档列表',
   EMBEDDING_BOX: '蜡块归档列表',
   SLIDE: '玻片归档列表',
+  SPECIMEN: '标本归档列表',
 } as const;
 
 function isArchiveObjectType(
@@ -94,21 +96,19 @@ watch(
                 (size) =>
                   recordWorkspace.setArchiveObjectSize('APPLICATION_FORM', size)
               "
-            />
-            <ArchiveSubmissionPanel
-              v-model:archive-form="archiveWorkspace.archiveForm"
-              :archive-permission-warning="
-                archiveWorkspace.archivePermissionWarning
-              "
-              :archive-submit-button-text="
-                archiveWorkspace.archiveSubmitButtonText
-              "
-              :can-submit-archive="archiveWorkspace.canSubmitArchive"
-              fixed-object-type="APPLICATION_FORM"
-              :selected-position-label="cabinetWorkspace.selectedPositionLabel"
-              :submitting="pageState.submitting"
-              @submit-archive="archiveWorkspace.submitArchive"
-            />
+            >
+              <template #extra>
+                <ElButton
+                  :disabled="!capabilities.canArchiveApplicationForm"
+                  type="primary"
+                  @click="
+                    archiveWorkspace.openArchiveDialog('APPLICATION_FORM')
+                  "
+                >
+                  归档操作
+                </ElButton>
+              </template>
+            </ArchiveRecordLegacyListPanel>
           </div>
         </ElTabPane>
 
@@ -138,21 +138,17 @@ watch(
                 (size) =>
                   recordWorkspace.setArchiveObjectSize('EMBEDDING_BOX', size)
               "
-            />
-            <ArchiveSubmissionPanel
-              v-model:archive-form="archiveWorkspace.archiveForm"
-              :archive-permission-warning="
-                archiveWorkspace.archivePermissionWarning
-              "
-              :archive-submit-button-text="
-                archiveWorkspace.archiveSubmitButtonText
-              "
-              :can-submit-archive="archiveWorkspace.canSubmitArchive"
-              fixed-object-type="EMBEDDING_BOX"
-              :selected-position-label="cabinetWorkspace.selectedPositionLabel"
-              :submitting="pageState.submitting"
-              @submit-archive="archiveWorkspace.submitArchive"
-            />
+            >
+              <template #extra>
+                <ElButton
+                  :disabled="!capabilities.canArchiveEmbeddingBox"
+                  type="primary"
+                  @click="archiveWorkspace.openArchiveDialog('EMBEDDING_BOX')"
+                >
+                  归档操作
+                </ElButton>
+              </template>
+            </ArchiveRecordLegacyListPanel>
           </div>
         </ElTabPane>
 
@@ -180,21 +176,55 @@ watch(
               @size-change="
                 (size) => recordWorkspace.setArchiveObjectSize('SLIDE', size)
               "
-            />
-            <ArchiveSubmissionPanel
-              v-model:archive-form="archiveWorkspace.archiveForm"
-              :archive-permission-warning="
-                archiveWorkspace.archivePermissionWarning
+            >
+              <template #extra>
+                <ElButton
+                  :disabled="!capabilities.canArchiveSlide"
+                  type="primary"
+                  @click="archiveWorkspace.openArchiveDialog('SLIDE')"
+                >
+                  归档操作
+                </ElButton>
+              </template>
+            </ArchiveRecordLegacyListPanel>
+          </div>
+        </ElTabPane>
+
+        <ElTabPane label="标本归档" name="SPECIMEN">
+          <div class="flex flex-col gap-4">
+            <ArchiveRecordLegacyListPanel
+              v-model:archive-object-filters="
+                recordWorkspace.objectLists.SPECIMEN.filters
               "
-              :archive-submit-button-text="
-                archiveWorkspace.archiveSubmitButtonText
+              :can-query-records="capabilities.canQueryRecords"
+              :get-archive-status-tag-type="display.getArchiveStatusTagType"
+              :get-loan-status-tag-type="display.getLoanStatusTagType"
+              :loading="recordWorkspace.objectLists.SPECIMEN.loading"
+              object-type="SPECIMEN"
+              :page="recordWorkspace.objectLists.SPECIMEN.filters.page"
+              :record-error="recordWorkspace.objectLists.SPECIMEN.error"
+              :records="recordWorkspace.objectLists.SPECIMEN.items"
+              :size="recordWorkspace.objectLists.SPECIMEN.filters.size"
+              :title="archiveObjectTabTitles.SPECIMEN"
+              :total="recordWorkspace.objectLists.SPECIMEN.total"
+              @page-change="
+                (page) => recordWorkspace.setArchiveObjectPage('SPECIMEN', page)
               "
-              :can-submit-archive="archiveWorkspace.canSubmitArchive"
-              fixed-object-type="SLIDE"
-              :selected-position-label="cabinetWorkspace.selectedPositionLabel"
-              :submitting="pageState.submitting"
-              @submit-archive="archiveWorkspace.submitArchive"
-            />
+              @query="recordWorkspace.queryArchiveObjects('SPECIMEN')"
+              @size-change="
+                (size) => recordWorkspace.setArchiveObjectSize('SPECIMEN', size)
+              "
+            >
+              <template #extra>
+                <ElButton
+                  :disabled="!capabilities.canArchiveSpecimen"
+                  type="primary"
+                  @click="archiveWorkspace.openArchiveDialog('SPECIMEN')"
+                >
+                  归档操作
+                </ElButton>
+              </template>
+            </ArchiveRecordLegacyListPanel>
           </div>
         </ElTabPane>
 
@@ -262,6 +292,16 @@ watch(
       v-model:batch-cabinet-form="cabinetWorkspace.batchCabinetForm"
       :submitting="pageState.submitting"
       @submit="cabinetWorkspace.submitBatchCabinets"
+    />
+    <ArchiveSubmissionDialog
+      v-model="archiveWorkspace.archiveDialogVisible"
+      v-model:archive-form="archiveWorkspace.archiveForm"
+      :archive-permission-warning="archiveWorkspace.archivePermissionWarning"
+      :archive-submit-button-text="archiveWorkspace.archiveSubmitButtonText"
+      :can-submit-archive="archiveWorkspace.canSubmitArchive"
+      :selected-position-label="cabinetWorkspace.selectedPositionLabel"
+      :submitting="pageState.submitting"
+      @submit-archive="archiveWorkspace.submitArchive"
     />
   </Page>
 </template>

@@ -88,6 +88,15 @@ export interface ArchiveSlideRequest {
   terminalCode?: string;
 }
 
+export interface ArchiveSpecimenRequest {
+  archivePositionId: string;
+  operatorName: string;
+  operatorUserId?: string;
+  remarks?: string;
+  specimenId: string;
+  terminalCode?: string;
+}
+
 export interface ArchiveActionResult {
   archiveLocation: string;
   archiveStatus: string;
@@ -102,7 +111,11 @@ export interface SearchArchiveRecordsQuery {
   objectType?: string;
 }
 
-export type ArchiveObjectType = 'APPLICATION_FORM' | 'EMBEDDING_BOX' | 'SLIDE';
+export type ArchiveObjectType =
+  | 'APPLICATION_FORM'
+  | 'EMBEDDING_BOX'
+  | 'SLIDE'
+  | 'SPECIMEN';
 
 export interface ArchiveObjectQuery {
   keyword?: string;

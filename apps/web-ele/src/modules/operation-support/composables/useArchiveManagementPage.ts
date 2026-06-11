@@ -33,6 +33,9 @@ export function useArchiveManagementPage() {
     canArchiveSlide: computed(() =>
       accessCodeSet.value.has(M5_PERMISSION_CODES.SLIDE_ARCHIVE),
     ),
+    canArchiveSpecimen: computed(() =>
+      accessCodeSet.value.has(M5_PERMISSION_CODES.SPECIMEN_ARCHIVE),
+    ),
     canCreateCabinet: computed(() =>
       accessCodeSet.value.has(M5_PERMISSION_CODES.ARCHIVE_CABINET_CREATE),
     ),

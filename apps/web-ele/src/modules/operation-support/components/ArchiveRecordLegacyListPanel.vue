@@ -70,6 +70,10 @@ function queryRecords() {
     :title="title"
     description="按对象分页接口展示可查询对象；旧系统当前无契约字段继续以 - 占位。"
   >
+    <template #extra>
+      <slot name="extra"></slot>
+    </template>
+
     <ElAlert
       v-if="!canQueryRecords"
       :closable="false"
@@ -170,6 +174,15 @@ function queryRecords() {
         <template #default>{{ formatNullable() }}</template>
       </ElTableColumn>
       <ElTableColumn v-if="objectType === 'SLIDE'" label="子号" min-width="90">
+        <template #default="{ row }">
+          {{ formatNullable(row.objectCode || row.objectId) }}
+        </template>
+      </ElTableColumn>
+      <ElTableColumn
+        v-if="objectType === 'SPECIMEN'"
+        label="标本编号"
+        min-width="120"
+      >
         <template #default="{ row }">
           {{ formatNullable(row.objectCode || row.objectId) }}
         </template>

@@ -23,6 +23,7 @@ export function useBorrowManagementPage() {
     canArchiveApplicationForm: computed(() => false),
     canArchiveEmbeddingBox: computed(() => false),
     canArchiveSlide: computed(() => false),
+    canArchiveSpecimen: computed(() => false),
     canCreateCabinet: computed(() => false),
     canCreateLoan: computed(() =>
       accessCodeSet.value.has(M5_PERMISSION_CODES.LOAN_CREATE),

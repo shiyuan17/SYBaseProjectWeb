@@ -10,6 +10,8 @@
 
 ## Active Work
 
+- Loop Engineering governance implemented on 2026-06-11: `docs/LOOP_ENGINEERING_RULES.md` defines Task Intake, Implementation, Review, and Triage loops; PR/Linear/Codex Goal templates include Loop Packet fields; `.github/workflows/pr-packet.yml` runs `scripts/validate-pr-packet.mjs` to reject PR bodies missing key Workflow/validation/risk/Memory fields. This partially addresses `TD-20260610-002`; reviewer judgment is still required for packet quality, Red Team substance, and human confirmation.
+- M5 specimen archive implemented on 2026-06-11: `/operation-support/archive` removes the per-tab bottom archive submission panels for application forms, wax blocks, and slides, adds top `归档操作` buttons that open a shared Element Plus archive dialog, and adds a `标本归档` tab to the right of `玻片归档`. The frontend posts specimens through sibling backend `../SYBaseProject/bl-center` `POST /api/v1/archive/specimens`, queries `GET /api/v1/archive-objects?objectType=SPECIMEN`, and uses independent permission `PERM_M5_SPECIMEN_ARCHIVE`. Specimens are archiveable objects but remain outside material-loan/借阅 material types.
 - M5 reagent inventory/template management completed on 2026-06-11: `/operation-resources/reagents` defaults to `试剂库存` and adds `试剂模板` as the second tab. The inventory tab supports inbound stock, test, consume, stock event detail, start/finish use, edit, refresh, UTF-8 BOM CSV export/import shown as “Excel”, and row-state action gating. The template tab supports keyword/type/status filters and template create/edit with reagent type, medical-order dictionary link, clone/dilution/use/threshold fields, and soft template status. Request bodies no longer send legacy reagent `operatorName` / `operatorUserId`; sibling backend resolves operators from the authenticated request.
 - M5 archive object pagination completed on 2026-06-11: `/operation-support/archive` application-form, wax-block, and slide tabs now load independent paged object lists from sibling backend `../SYBaseProject/bl-center` `GET /api/v1/archive-objects` instead of reusing `archive-records/search` as a pseudo object全集. Each tab keeps its own keyword/page/size/total/items/loading/error state; archive success refreshes the current object tab and positions. Existing archive action APIs and archive-record search remain unchanged.
 - System log management implemented on 2026-06-10: `apps/web-ele` adds `/system/logs` with 登录日志 and 操作日志 tabs, per-tab filters/pagination, detail drawer, real service methods for `/v1/system/logs/login` and `/v1/system/logs/operations`, static/backend-menu mappings for `SYS_LOG_MANAGEMENT`, and M1 permission constants `PERM_SYS_LOG_QUERY` / `PERM_SYS_LOG_DETAIL`. Sibling backend `../SYBaseProject/bl-center` owns the query/detail APIs, Flyway menu/permission/index seed, and cross-cutting operation audit.
@@ -55,6 +57,19 @@
 
 ## Validation Baseline
 
+- Latest M5 specimen archive validation in this thread:
+  - Sibling backend `../SYBaseProject`: `.\mvnw.cmd -pl bl-center "-Dtest=ArchiveWorkflowIntegrationTest,ArchiveRoleAuthorizationIntegrationTest" test` passed on 2026-06-11 (7 tests), covering `POST /api/v1/archive/specimens`, `GET /api/v1/archive-objects?objectType=SPECIMEN`, and role authorization.
+  - Frontend `pnpm test:unit apps/web-ele/src/modules/operation-support/api/operation-support-service.test.ts apps/web-ele/src/modules/operation-support/composables/useArchiveManagementPage.test.ts apps/web-ele/src/modules/operation-support/utils/archive-forms.test.ts apps/web-ele/src/modules/operation-support/views/ArchiveManagementView.test.ts` passed on 2026-06-11 (4 files, 28 tests).
+  - Frontend `pnpm lint` passed on 2026-06-11.
+  - Frontend `pnpm check:type` passed on 2026-06-11.
+  - Browser fallback validation with Playwright logged in as seeded `m1.archive` / `123456` after slider verification, reached `/operation-support/archive`, and observed `标本归档` plus `归档操作`; a follow-up stateless visit still correctly redirected to `/auth/login`, and dialog click verification was not stable enough to claim.
+- Latest Loop Engineering governance validation in this thread:
+  - `pnpm test:unit scripts/validate-pr-packet.test.mjs` passed on 2026-06-11 (1 file, 4 tests).
+  - Targeted `pnpm exec oxfmt --check` for touched governance/script/workflow files passed.
+  - Targeted `pnpm exec eslint scripts/validate-pr-packet.mjs scripts/validate-pr-packet.test.mjs` passed.
+  - Targeted `git diff --check` for touched governance/script/workflow files passed.
+  - CLI smoke `node scripts/validate-pr-packet.mjs --body-file <temp valid PR body>` passed.
+  - Full `pnpm lint` and `pnpm check:type` are blocked by unrelated dirty `operation-support` files; tracked as `TD-20260611-003`.
 - Latest M5 archive object pagination validation in this thread:
   - Frontend `pnpm lint` passed on 2026-06-11.
   - Frontend `pnpm check:type` passed on 2026-06-11.
@@ -254,7 +269,7 @@
 
 - Backend governance and memory files live in sibling repo `../SYBaseProject`.
 - M5 reagent management depends on sibling backend `../SYBaseProject/bl-center` migration `V86__extend_reagent_inventory_legacy_fields`: `reagents` is the reagent template table, `reagent_stocks` is the inventory batch table, and `reagent_stock_events` is the authoritative stock audit/event trail. Frontend `/operation-resources/reagents` calls `/api/v1/reagents`, `/api/v1/reagent-stocks`, stock action/event endpoints, and CSV-compatible Excel import/export while reusing existing M5 reagent permission codes.
-- M5 archive/borrow frontend pages depend on existing sibling backend contracts only: application-form archive, `EMBEDDING_BOX`/蜡块 archive, slide archive, archive-cabinet/position query/update, archive-record search, and material-loan pending/create/return. No backend API, DB, auth, or global error-contract change was made for the tab split.
+- M5 archive/borrow frontend pages depend on sibling backend archive contracts: application-form archive, `EMBEDDING_BOX`/蜡块 archive, slide archive, specimen archive, archive-cabinet/position query/update, archive-object pagination, archive-record search, and material-loan pending/create/return. Specimen archive uses `POST /api/v1/archive/specimens` and `GET /api/v1/archive-objects?objectType=SPECIMEN`; specimen remains outside material-loan types.
 - Backend `ApplicationPatientIdentityResolver` in `../SYBaseProject/bl-center` now normalizes display-style patient ages to leading digits when auto-creating patient registry rows, preventing DM numeric conversion failures from frontend application-number auto-create.
 - Backend application list response `GET /api/v1/applications` in `../SYBaseProject/bl-center` now exposes `items[].pathologyNo`, sourced from `pathology_cases.pathology_no`.
 - Backend technical registration list responses in `../SYBaseProject/bl-center` now include patient sex and age for this frontend display contract.

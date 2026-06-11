@@ -35,6 +35,7 @@ const archiveObjectTypes: ArchiveObjectType[] = [
   'APPLICATION_FORM',
   'EMBEDDING_BOX',
   'SLIDE',
+  'SPECIMEN',
 ];
 
 function createArchiveObjectListState(): ArchiveObjectListState {
