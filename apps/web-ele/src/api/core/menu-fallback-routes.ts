@@ -150,7 +150,7 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
         {
           component: '/modules/system-management/views/LogManagementView',
           meta: {
-            icon: 'carbon:document-audit',
+            icon: 'carbon:report',
             title: '日志管理',
           },
           name: 'LogManagement',

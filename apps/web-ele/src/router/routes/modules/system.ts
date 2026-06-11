@@ -158,7 +158,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
           import('#/modules/system-management/views/LogManagementView.vue'),
         meta: {
           authority: [M1_PERMISSION_CODES.LOG_QUERY],
-          icon: 'carbon:document-audit',
+          icon: 'carbon:report',
           title: '日志管理',
         },
       },

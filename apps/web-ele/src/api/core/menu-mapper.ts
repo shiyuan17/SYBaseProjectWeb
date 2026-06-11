@@ -11,6 +11,46 @@ type MenuTreeNode = MenuView & {
   children: MenuTreeNode[];
 };
 
+const MENU_ICON_ALIASES: Record<string, string> = {
+  'carbon:document-audit': 'carbon:report',
+};
+
+function normalizeMenuIcon(icon: null | string | undefined) {
+  const normalizedIcon = icon?.trim();
+  if (!normalizedIcon) {
+    return undefined;
+  }
+
+  return MENU_ICON_ALIASES[normalizedIcon] ?? normalizedIcon;
+}
+
+function findFallbackRouteIcon(
+  routeName: string,
+  routePath: string,
+  routes: RouteRecordStringComponent<string>[] = STATIC_FALLBACK_MENU_ROUTES,
+): string | undefined {
+  for (const route of routes) {
+    if (route.name === routeName || route.path === routePath) {
+      return normalizeMenuIcon(
+        typeof route.meta?.icon === 'string' ? route.meta.icon : undefined,
+      );
+    }
+
+    if (route.children?.length) {
+      const childIcon = findFallbackRouteIcon(
+        routeName,
+        routePath,
+        route.children,
+      );
+      if (childIcon) {
+        return childIcon;
+      }
+    }
+  }
+
+  return undefined;
+}
+
 function findMenuDefinition(
   menu: Pick<MenuView, 'componentName' | 'menuCode' | 'path'>,
 ) {
@@ -92,7 +132,10 @@ function convertMenuNode(
     component: definition.component,
     meta: {
       hideInMenu: definition.hideInMenu || undefined,
-      icon: node.icon || undefined,
+      icon:
+        normalizeMenuIcon(node.icon) ||
+        findFallbackRouteIcon(definition.routeName, definition.path) ||
+        undefined,
       order: node.sortOrder,
       title: definition.canonicalTitle ?? node.menuName,
     },

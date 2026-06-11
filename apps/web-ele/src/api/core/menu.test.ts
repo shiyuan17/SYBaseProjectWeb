@@ -93,7 +93,7 @@ describe('mapMenuViewsToRoutes', () => {
       {
         componentName: 'LogManagement',
         enabled: true,
-        icon: 'carbon:document-audit',
+        icon: 'carbon:report',
         id: 'MENU_SYS_LOG_MANAGEMENT',
         menuCode: 'SYS_LOG_MANAGEMENT',
         menuName: '日志管理',
@@ -136,6 +136,92 @@ describe('mapMenuViewsToRoutes', () => {
         component: '/modules/system-management/views/LogManagementView',
         meta: expect.objectContaining({
           keepAlive: true,
+        }),
+        name: 'LogManagement',
+        path: '/system/logs',
+      }),
+    ]);
+  });
+
+  it('falls back to the canonical frontend icon when a backend menu icon is missing', () => {
+    const routes = mapMenuViewsToRoutes([
+      {
+        componentName: 'SystemRoot',
+        enabled: true,
+        icon: 'setting',
+        id: 'MENU_SYSTEM',
+        menuCode: 'SYSTEM',
+        menuName: '系统管理',
+        menuType: 'DIRECTORY',
+        parentId: null,
+        path: '/system',
+        permissionPrefix: 'sys',
+        sortOrder: 1,
+        visible: true,
+      },
+      {
+        componentName: 'LogManagement',
+        enabled: true,
+        icon: null,
+        id: 'MENU_SYS_LOG_MANAGEMENT',
+        menuCode: 'SYS_LOG_MANAGEMENT',
+        menuName: '日志管理',
+        menuType: 'MENU',
+        parentId: 'MENU_SYSTEM',
+        path: '/system/logs',
+        permissionPrefix: 'sys:log',
+        sortOrder: 40,
+        visible: true,
+      },
+    ]);
+
+    expect(routes[0]?.children).toEqual([
+      expect.objectContaining({
+        meta: expect.objectContaining({
+          icon: 'carbon:report',
+        }),
+        name: 'LogManagement',
+        path: '/system/logs',
+      }),
+    ]);
+  });
+
+  it('normalizes legacy invalid menu icon aliases from backend menu data', () => {
+    const routes = mapMenuViewsToRoutes([
+      {
+        componentName: 'SystemRoot',
+        enabled: true,
+        icon: 'setting',
+        id: 'MENU_SYSTEM',
+        menuCode: 'SYSTEM',
+        menuName: '系统管理',
+        menuType: 'DIRECTORY',
+        parentId: null,
+        path: '/system',
+        permissionPrefix: 'sys',
+        sortOrder: 1,
+        visible: true,
+      },
+      {
+        componentName: 'LogManagement',
+        enabled: true,
+        icon: 'carbon:document-audit',
+        id: 'MENU_SYS_LOG_MANAGEMENT',
+        menuCode: 'SYS_LOG_MANAGEMENT',
+        menuName: '日志管理',
+        menuType: 'MENU',
+        parentId: 'MENU_SYSTEM',
+        path: '/system/logs',
+        permissionPrefix: 'sys:log',
+        sortOrder: 40,
+        visible: true,
+      },
+    ]);
+
+    expect(routes[0]?.children).toEqual([
+      expect.objectContaining({
+        meta: expect.objectContaining({
+          icon: 'carbon:report',
         }),
         name: 'LogManagement',
         path: '/system/logs',
