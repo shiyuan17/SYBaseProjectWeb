@@ -39,6 +39,14 @@ export interface StatReportQuery {
   workloadUserId?: null | string;
 }
 
+export interface StatDashboardQuery {
+  departmentId?: null | string;
+  from?: null | string;
+  roleId?: null | string;
+  to?: null | string;
+  workloadUserId?: null | string;
+}
+
 export type MetricStatus = 'AVAILABLE' | 'PARTIAL' | 'UNAVAILABLE';
 
 export interface StatReportBreakdown {
@@ -68,4 +76,21 @@ export interface StatReportResult {
   columns: string[];
   reportCode: string;
   rows: StatReportRow[];
+}
+
+export interface StatDashboardCard {
+  indicatorCategory: StatIndicatorCategory;
+  indicatorCode: string;
+  indicatorName: string;
+  metricStatus?: MetricStatus;
+  metricUnit: string;
+  metricValue: string;
+  sourceNote?: null | string;
+}
+
+export interface StatDashboardResult {
+  operationCards: StatDashboardCard[];
+  qualityCards: StatDashboardCard[];
+  summaryCards: StatDashboardCard[];
+  workloadCards: StatDashboardCard[];
 }

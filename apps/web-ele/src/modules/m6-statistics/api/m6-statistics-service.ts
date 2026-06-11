@@ -1,4 +1,7 @@
 import type {
+  StatDashboardCard,
+  StatDashboardQuery,
+  StatDashboardResult,
   StatIndicatorView,
   StatReportQuery,
   StatReportResult,
@@ -9,6 +12,9 @@ import type {
 import { requestClient } from '#/api/request';
 
 type IndicatorListResponse = Partial<StatIndicatorView>[];
+type StatDashboardResponse = Partial<
+  Record<keyof StatDashboardResult, Partial<StatDashboardCard>[]>
+>;
 type StatReportResponse = Partial<StatReportResult>;
 type TemplateListResponse = Partial<StatReportTemplateView>[];
 
@@ -85,6 +91,33 @@ function mapStatReportRow(item: Partial<StatReportRow>): StatReportRow {
   };
 }
 
+function mapDashboardCard(
+  item: Partial<StatDashboardCard>,
+  indicatorCategory: StatDashboardCard['indicatorCategory'],
+): StatDashboardCard {
+  return {
+    indicatorCategory: item.indicatorCategory ?? indicatorCategory,
+    indicatorCode: item.indicatorCode ?? '',
+    indicatorName: item.indicatorName ?? '',
+    metricStatus: item.metricStatus,
+    metricUnit: item.metricUnit ?? '',
+    metricValue:
+      item.metricValue === null || item.metricValue === undefined
+        ? ''
+        : String(item.metricValue),
+    sourceNote: mapText(item.sourceNote),
+  };
+}
+
+function mapDashboardCards(
+  items: Partial<StatDashboardCard>[] | undefined,
+  indicatorCategory: StatDashboardCard['indicatorCategory'],
+) {
+  return Array.isArray(items)
+    ? items.map((item) => mapDashboardCard(item, indicatorCategory))
+    : [];
+}
+
 export async function listStatIndicators(category?: null | string) {
   const response = await requestClient.get<IndicatorListResponse>(
     '/v1/stat-indicators',
@@ -128,6 +161,20 @@ export async function queryStatReport(payload: StatReportQuery) {
       ? response.rows.map((item) => mapStatReportRow(item))
       : [],
   } satisfies StatReportResult;
+}
+
+export async function queryStatDashboard(payload: StatDashboardQuery = {}) {
+  const response = await requestClient.post<StatDashboardResponse>(
+    '/v1/stat-dashboard/query',
+    payload,
+  );
+
+  return {
+    operationCards: mapDashboardCards(response.operationCards, 'OPERATION'),
+    qualityCards: mapDashboardCards(response.qualityCards, 'QUALITY'),
+    summaryCards: mapDashboardCards(response.summaryCards, 'OPERATION'),
+    workloadCards: mapDashboardCards(response.workloadCards, 'WORKLOAD'),
+  } satisfies StatDashboardResult;
 }
 
 export async function exportStatReport(payload: StatReportQuery) {

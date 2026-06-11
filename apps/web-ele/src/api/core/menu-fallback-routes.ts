@@ -671,6 +671,15 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
           path: '/m6/entry',
         },
         {
+          component: '/modules/m6-statistics/views/StatisticsDashboardView',
+          meta: {
+            icon: 'carbon:dashboard',
+            title: '统计仪表盘',
+          },
+          name: 'M6StatisticsDashboard',
+          path: '/m6/dashboard',
+        },
+        {
           component: '/views/_core/fallback/MenuPlaceholderView',
           meta: {
             icon: 'carbon:chart-line',

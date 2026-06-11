@@ -581,10 +581,18 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
     {
       component: 'BasicLayout',
       componentAliases: ['M6Root'],
-      menuCodes: ['M6_STATISTICS'],
+      menuCodes: ['M6_SUPPORT', 'M6_STATISTICS'],
       path: '/m6',
       pathAliases: ['/m6'],
       routeName: 'M6Root',
+    },
+    {
+      component: '/modules/m6-statistics/views/StatisticsDashboardView',
+      componentAliases: ['M6StatisticsDashboard', 'StatisticsDashboard'],
+      menuCodes: ['M6_DASHBOARD'],
+      path: '/m6/dashboard',
+      pathAliases: ['/m6/dashboard', '/api/v1/stat-dashboard/query'],
+      routeName: 'M6StatisticsDashboard',
     },
     {
       component: '/views/_core/fallback/MenuPlaceholderView',

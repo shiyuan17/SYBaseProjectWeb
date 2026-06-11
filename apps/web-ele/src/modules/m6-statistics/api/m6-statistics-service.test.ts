@@ -8,6 +8,7 @@ import {
   exportStatReport,
   listStatIndicators,
   listStatReportTemplates,
+  queryStatDashboard,
   queryStatReport,
 } from './m6-statistics-service';
 
@@ -192,6 +193,99 @@ describe('m6-statistics-service', () => {
         data: payload,
         method: 'POST',
         responseReturn: 'body',
+      },
+    );
+  });
+
+  it('queries and normalizes statistic dashboard overview cards', async () => {
+    requestClientMock.post.mockResolvedValue({
+      operationCards: [
+        {
+          indicatorCode: 'OP_CASE_VOLUME',
+          indicatorName: '业务量',
+          metricStatus: 'AVAILABLE',
+          metricUnit: 'COUNT',
+          metricValue: 8,
+          sourceNote: 'pathology_cases',
+        },
+      ],
+      qualityCards: [
+        {
+          indicatorCode: 'QC_FROZEN_PARAFFIN_MATCH_RATE',
+          indicatorName: '冰冻石蜡符合率',
+          metricStatus: 'UNAVAILABLE',
+          sourceNote: '数据源未接入',
+        },
+      ],
+      summaryCards: [{}],
+      workloadCards: [
+        {
+          indicatorCode: 'WL_DIAGNOSTIC_TASK_COUNT',
+          indicatorName: '诊断任务数',
+          metricValue: '3',
+        },
+      ],
+    });
+
+    await expect(
+      queryStatDashboard({
+        departmentId: 'DEPT-1',
+        from: '2026-01-01T00:00:00',
+        to: '2026-12-31T23:59:59',
+      }),
+    ).resolves.toEqual({
+      operationCards: [
+        {
+          indicatorCategory: 'OPERATION',
+          indicatorCode: 'OP_CASE_VOLUME',
+          indicatorName: '业务量',
+          metricStatus: 'AVAILABLE',
+          metricUnit: 'COUNT',
+          metricValue: '8',
+          sourceNote: 'pathology_cases',
+        },
+      ],
+      qualityCards: [
+        {
+          indicatorCategory: 'QUALITY',
+          indicatorCode: 'QC_FROZEN_PARAFFIN_MATCH_RATE',
+          indicatorName: '冰冻石蜡符合率',
+          metricStatus: 'UNAVAILABLE',
+          metricUnit: '',
+          metricValue: '',
+          sourceNote: '数据源未接入',
+        },
+      ],
+      summaryCards: [
+        {
+          indicatorCategory: 'OPERATION',
+          indicatorCode: '',
+          indicatorName: '',
+          metricStatus: undefined,
+          metricUnit: '',
+          metricValue: '',
+          sourceNote: null,
+        },
+      ],
+      workloadCards: [
+        {
+          indicatorCategory: 'WORKLOAD',
+          indicatorCode: 'WL_DIAGNOSTIC_TASK_COUNT',
+          indicatorName: '诊断任务数',
+          metricStatus: undefined,
+          metricUnit: '',
+          metricValue: '3',
+          sourceNote: null,
+        },
+      ],
+    });
+
+    expect(requestClientMock.post).toHaveBeenCalledWith(
+      '/v1/stat-dashboard/query',
+      {
+        departmentId: 'DEPT-1',
+        from: '2026-01-01T00:00:00',
+        to: '2026-12-31T23:59:59',
       },
     );
   });

@@ -32,6 +32,18 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
       },
       {
         component: () =>
+          import('#/modules/m6-statistics/views/StatisticsDashboardView.vue'),
+        meta: {
+          authority: [...M6_STATISTICS_PAGE_AUTHORITIES],
+          description: '汇总展示 M6 质控、运营与工作量统计核心指标。',
+          icon: 'carbon:dashboard',
+          title: '统计仪表盘',
+        },
+        name: 'M6StatisticsDashboard',
+        path: '/m6/dashboard',
+      },
+      {
+        component: () =>
           import('#/views/_core/fallback/MenuPlaceholderView.vue'),
         meta: {
           authority: [...M6_STATISTICS_PAGE_AUTHORITIES],
