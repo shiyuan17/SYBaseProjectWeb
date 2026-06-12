@@ -45,6 +45,19 @@ function extractField(sectionBody, fieldName) {
   return fieldLine?.trim().slice(prefix.length).trim() ?? null;
 }
 
+function hasSubstantiveValue(value) {
+  if (value === null) {
+    return false;
+  }
+
+  const normalized = value.trim();
+  if (normalized.length === 0) {
+    return false;
+  }
+
+  return !/^(n\/a|na|none|not applicable)$/i.test(normalized);
+}
+
 function readPullRequestBodyFromEvent(eventPath) {
   const event = JSON.parse(readFileSync(eventPath, 'utf8'));
   return event.pull_request?.body ?? '';
@@ -73,6 +86,37 @@ export function validatePullRequestPacket(body = '') {
 
     if (fieldValue.length === 0) {
       errors.push(`Empty field: ${sectionName} > ${fieldName}`);
+    }
+  }
+
+  const dynamicWorkflowBody = extractSection(body, 'Dynamic Workflow');
+  const redTeamBody = extractSection(body, 'Red Team');
+
+  if (dynamicWorkflowBody && redTeamBody) {
+    const requiredModifiers =
+      extractField(dynamicWorkflowBody, 'Required modifiers') ?? '';
+    const attackResult = extractField(redTeamBody, 'Attack result');
+    const residualRisk = extractField(redTeamBody, 'Residual risk');
+    const checkerSource = extractField(redTeamBody, 'Checker / reviewer source');
+    const checklistMarked = redTeamBody
+      .split(/\r?\n/)
+      .some((line) => /^\s*-\s*\[[xX]\]/.test(line));
+
+    const redTeamDeclared =
+      /\bred team\b/i.test(requiredModifiers) ||
+      checklistMarked ||
+      hasSubstantiveValue(attackResult) ||
+      hasSubstantiveValue(residualRisk) ||
+      hasSubstantiveValue(checkerSource);
+
+    if (redTeamDeclared) {
+      if (!hasSubstantiveValue(attackResult)) {
+        errors.push('Red Team evidence missing: Attack result');
+      }
+
+      if (!hasSubstantiveValue(residualRisk)) {
+        errors.push('Red Team evidence missing: Residual risk');
+      }
     }
   }
 

@@ -1,0 +1,69 @@
+name: governance-quality
+
+on:
+  pull_request:
+    paths:
+      - 'AGENTS.md'
+      - 'PROJECT_STATE.md'
+      - 'TECH_DEBT.md'
+      - 'KNOWN_BUGS.md'
+      - 'DECISIONS.md'
+      - 'ARCHITECTURE.md'
+      - 'docs/**'
+      - '.github/PULL_REQUEST_TEMPLATE.md'
+      - '.github/workflows/governance-quality.yml'
+      - '.github/workflows/pr-packet.yml'
+      - 'scripts/validate-governance.mjs'
+      - 'scripts/validate-governance.test.mjs'
+      - 'scripts/validate-pr-packet.mjs'
+      - 'scripts/validate-pr-packet.test.mjs'
+      - 'package.json'
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'AGENTS.md'
+      - 'PROJECT_STATE.md'
+      - 'TECH_DEBT.md'
+      - 'KNOWN_BUGS.md'
+      - 'DECISIONS.md'
+      - 'ARCHITECTURE.md'
+      - 'docs/**'
+      - '.github/PULL_REQUEST_TEMPLATE.md'
+      - '.github/workflows/governance-quality.yml'
+      - '.github/workflows/pr-packet.yml'
+      - 'scripts/validate-governance.mjs'
+      - 'scripts/validate-governance.test.mjs'
+      - 'scripts/validate-pr-packet.mjs'
+      - 'scripts/validate-pr-packet.test.mjs'
+      - 'package.json'
+
+jobs:
+  governance-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          cache: pnpm
+          node-version: 22.18.0
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Governance check
+        run: pnpm run check:governance
+
+      - name: Governance validator tests
+        run: pnpm exec vitest run scripts/validate-governance.test.mjs scripts/validate-pr-packet.test.mjs

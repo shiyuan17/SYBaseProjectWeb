@@ -9,7 +9,7 @@
 
 ## Dynamic Workflow
 
-Choose one primary Workflow and add required modifiers. See `docs/DYNAMIC_WORKFLOW_RULES.md`.
+Choose one primary Workflow and add required modifiers. Workflow selection, required modifiers, and Red Team obligations use `docs/DYNAMIC_WORKFLOW_RULES.md` as the single source of truth. Low-risk pure docs / audit tasks may mark this section `Not applicable` with a brief reason instead of expanding a full implementation packet.
 
 - Primary Workflow: `UI / API / DB / Security / Architecture / Production Debug / Workflow-Infra`
 - Trigger signals:
@@ -18,7 +18,7 @@ Choose one primary Workflow and add required modifiers. See `docs/DYNAMIC_WORKFL
 
 ## Loop Packet
 
-Use this to describe how the task loop runs and stops. See `docs/LOOP_ENGINEERING_RULES.md`.
+Use this only when the task was actually run as a loop. `docs/LOOP_ENGINEERING_RULES.md` defines loop semantics only; worktree and Memory trigger rules still come from `docs/GIT_RULES.md` and `AGENTS.md`.
 
 - Loop Type: `Task Intake / Implementation / Review / Triage`
 - Stop Condition:
@@ -58,6 +58,7 @@ Use this to describe how the task loop runs and stops. See `docs/LOOP_ENGINEERIN
 - [ ] Tried to prove patient/report/business data can leak, corrupt, duplicate, or disappear.
 - [ ] Tried to prove errors are swallowed or users see misleading success.
 - [ ] Tried to prove rollback, fallback, or target-environment validation is missing.
+- Checker / reviewer source:
 - Attack result:
 - Residual risk:
 

@@ -39,9 +39,58 @@ const validBody = `
 - Residual risk / follow-up owner: Maintainers monitor false positives.
 `;
 
+const validDocsOnlyBody = `
+# PR Workflow Packet
+
+## Summary
+
+- Purpose: Tighten governance wording for docs-only audit tasks.
+- Impact: AGENTS.md and docs only.
+- Validation: pnpm run check:governance passed.
+- Risks: Low-risk wording drift if future docs are not kept aligned.
+
+## Dynamic Workflow
+
+- Primary Workflow: Not applicable (docs-only governance update)
+- Trigger signals: Pure docs and governance wording changes only
+- Expert Agent(s): N/A
+- Required modifiers: N/A
+
+## Dynamic Tests
+
+- Required test commands: pnpm run check:governance
+- Actual results: Passed
+- Unverified items and reasons: None
+
+## Red Team
+
+- [ ] Tried to prove the change can bypass route/menu/API permission checks.
+- [ ] Tried to prove patient/report/business data can leak, corrupt, duplicate, or disappear.
+- [ ] Tried to prove errors are swallowed or users see misleading success.
+- [ ] Tried to prove rollback, fallback, or target-environment validation is missing.
+- Checker / reviewer source:
+- Attack result:
+- Residual risk:
+
+## Memory Update Packet
+
+- Updated memory files: DECISIONS.md
+- Not updated memory files and reasons: TECH_DEBT.md, KNOWN_BUGS.md, ARCHITECTURE.md unchanged; no durable context change beyond governance decision.
+- Related memory IDs: DEC-20260612-008
+- Cross-repo memory references: N/A
+- Residual risk / follow-up owner: Maintainers monitor future governance drift.
+`;
+
 describe('validatePullRequestPacket', () => {
   it('accepts a PR body with required workflow, validation, risk, and memory fields', () => {
     const result = validatePullRequestPacket(validBody);
+
+    expect(result.isValid).toBe(true);
+    expect(result.errors).toEqual([]);
+  });
+
+  it('accepts docs-only PR bodies that mark the workflow as not applicable', () => {
+    const result = validatePullRequestPacket(validDocsOnlyBody);
 
     expect(result.isValid).toBe(true);
     expect(result.errors).toEqual([]);
@@ -81,5 +130,34 @@ describe('validatePullRequestPacket', () => {
     expect(result.isValid).toBe(false);
     expect(result.errors).toContain('Empty field: Summary > Validation');
     expect(result.errors).toContain('Empty field: Summary > Risks');
+  });
+
+  it('rejects missing red-team evidence when Red Team is declared as a required modifier', () => {
+    const result = validatePullRequestPacket(
+      validBody
+        .replace('- Attack result: Empty required packet fields are rejected.', '- Attack result:')
+        .replace(
+          '- Residual risk: Content quality still needs human review.',
+          '- Residual risk:',
+        ),
+    );
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContain('Red Team evidence missing: Attack result');
+    expect(result.errors).toContain('Red Team evidence missing: Residual risk');
+  });
+
+  it('rejects checked red-team items when evidence fields stay empty', () => {
+    const result = validatePullRequestPacket(
+      validDocsOnlyBody
+        .replace(
+          '- [ ] Tried to prove the change can bypass route/menu/API permission checks.',
+          '- [x] Tried to prove the change can bypass route/menu/API permission checks.',
+        ),
+    );
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContain('Red Team evidence missing: Attack result');
+    expect(result.errors).toContain('Red Team evidence missing: Residual risk');
   });
 });
