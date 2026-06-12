@@ -25,6 +25,9 @@ describe('m6 routes', () => {
     const qualityRoute = m6Root?.children?.find(
       (route) => route.name === 'QualityIndicatorStatistics',
     );
+    const dashboardRoute = m6Root?.children?.find(
+      (route) => route.name === 'M6StatisticsDashboard',
+    );
     const managementRoute = m6Root?.children?.find(
       (route) => route.name === 'ManagementIndicatorStatistics',
     );
@@ -36,12 +39,23 @@ describe('m6 routes', () => {
     expect(m6Root?.redirect).toBe('/m6/entry');
     expect(entryRoute?.path).toBe('/m6/entry');
     expect(entryRoute?.meta?.keepAlive).toBeUndefined();
+    expect(dashboardRoute?.path).toBe('/m6/dashboard');
+    expect(dashboardRoute?.meta?.keepAlive).toBe(true);
     expect(qualityRoute?.path).toBe('/m6/quality-indicators');
+    expect(String(qualityRoute?.component)).toContain(
+      'QualityIndicatorStatisticsView.vue',
+    );
     expect(qualityRoute?.meta?.keepAlive).toBe(true);
     expect(managementRoute?.path).toBe('/m6/management-indicators');
+    expect(String(managementRoute?.component)).toContain(
+      'ManagementIndicatorStatisticsView.vue',
+    );
     expect(managementRoute?.meta?.keepAlive).toBe(true);
     expect(statisticsRoute?.path).toBe('/m6/custom-analysis');
     expect(statisticsRoute?.meta?.keepAlive).toBe(true);
+    expect(dashboardRoute?.meta?.authority).toEqual([
+      ...M6_STATISTICS_PAGE_AUTHORITIES,
+    ]);
     expect(qualityRoute?.meta?.authority).toEqual([
       ...M6_STATISTICS_PAGE_AUTHORITIES,
     ]);
@@ -59,6 +73,7 @@ describe('m6 routes', () => {
     ]);
 
     expect(routeNames).toContain('M6Entry');
+    expect(routeNames).toContain('M6StatisticsDashboard');
     expect(routeNames).toContain('QualityIndicatorStatistics');
     expect(routeNames).toContain('ManagementIndicatorStatistics');
     expect(routeNames).toContain('CustomStatisticsAnalysis');

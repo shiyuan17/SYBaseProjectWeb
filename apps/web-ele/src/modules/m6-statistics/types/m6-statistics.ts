@@ -33,22 +33,106 @@ export interface StatReportQuery {
   departmentId?: null | string;
   from?: null | string;
   indicatorCode?: null | string;
-  operatorName?: null | string;
-  operatorUserId?: null | string;
   roleId?: null | string;
   templateCode?: null | string;
   to?: null | string;
+  workloadUserId?: null | string;
+}
+
+export type StatReportDetailType =
+  | 'CRITICAL_VALUE_REASON'
+  | 'FROZEN_TIMEOUT'
+  | 'REPORT_REVISION'
+  | 'UNQUALIFIED_SPECIMEN';
+
+export interface StatReportDetailQuery {
+  departmentId?: null | string;
+  detailType: StatReportDetailType;
+  from?: null | string;
+  indicatorCode?: null | string;
+  page?: number;
+  size?: number;
+  to?: null | string;
+}
+
+export interface StatDashboardQuery {
+  departmentId?: null | string;
+  from?: null | string;
+  roleId?: null | string;
+  to?: null | string;
+  workloadUserId?: null | string;
+}
+
+export type MetricStatus = 'AVAILABLE' | 'PARTIAL' | 'UNAVAILABLE';
+
+export interface StatReportBreakdown {
+  label: string;
+  value: string;
+}
+
+export interface StatReportTrendPoint {
+  label: string;
+  value: string;
 }
 
 export interface StatReportRow {
+  breakdowns?: StatReportBreakdown[];
+  denominator?: null | string;
   indicatorCode: string;
   indicatorName: string;
+  metricStatus?: MetricStatus;
   metricUnit: string;
   metricValue: string;
+  numerator?: null | string;
+  sourceNote?: null | string;
+  trendPoints?: StatReportTrendPoint[];
 }
 
 export interface StatReportResult {
   columns: string[];
   reportCode: string;
   rows: StatReportRow[];
+}
+
+export interface StatReportDetailItem {
+  applicationNo: string;
+  detailType: StatReportDetailType;
+  occurredAt: string;
+  pathologyNo: string;
+  reason: string;
+  sourceNote?: null | string;
+  status: string;
+}
+
+export interface StatReasonDistributionItem {
+  count: number;
+  reason: string;
+}
+
+export interface StatReportDetailResult {
+  availabilityStatus: MetricStatus;
+  detailType: StatReportDetailType;
+  items: StatReportDetailItem[];
+  page: number;
+  reasonDistribution: StatReasonDistributionItem[];
+  size: number;
+  sourceNote?: null | string;
+  total: number;
+}
+
+export interface StatDashboardCard {
+  indicatorCategory: StatIndicatorCategory;
+  indicatorCode: string;
+  indicatorName: string;
+  metricStatus?: MetricStatus;
+  metricUnit: string;
+  metricValue: string;
+  sourceNote?: null | string;
+}
+
+export interface StatDashboardResult {
+  operationCards: StatDashboardCard[];
+  qualityCards: StatDashboardCard[];
+  summaryCards: StatDashboardCard[];
+  workloadCards: StatDashboardCard[];
 }

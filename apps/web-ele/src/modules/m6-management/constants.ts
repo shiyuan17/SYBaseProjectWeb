@@ -38,6 +38,6 @@ export const M6_STATISTICS_PAGE_AUTHORITIES = [
 export const M6_ROUTE_ITEMS = [
   {
     codes: M6_STATISTICS_PAGE_AUTHORITIES,
-    path: '/m6/quality-indicators',
+    path: '/m6/dashboard',
   },
 ] as const;

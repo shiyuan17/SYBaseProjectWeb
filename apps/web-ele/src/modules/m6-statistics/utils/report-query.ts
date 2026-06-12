@@ -7,10 +7,10 @@ export interface StatReportFilterState {
   dateRange: string[];
   departmentId: string;
   indicatorCode: string;
-  operatorName: string;
-  operatorUserId: string;
   roleId: string;
   templateCode: string;
+  workloadUserId: string;
+  workloadUserName: string;
 }
 
 export function buildStatReportPayload(
@@ -22,11 +22,10 @@ export function buildStatReportPayload(
     departmentId: filters.departmentId || undefined,
     from: filters.dateRange[0] || undefined,
     indicatorCode: filters.indicatorCode || undefined,
-    operatorName: filters.operatorName || undefined,
-    operatorUserId: filters.operatorUserId || undefined,
     roleId: filters.roleId || undefined,
     templateCode: filters.templateCode || undefined,
     to: filters.dateRange[1] || undefined,
+    workloadUserId: filters.workloadUserId || undefined,
   };
 }
 

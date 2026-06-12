@@ -1,14 +1,19 @@
 import type { Mock } from 'vitest';
 
+import type { StatReportDetailQuery } from '../types/m6-statistics';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { requestClient } from '#/api/request';
 
 import {
   exportStatReport,
+  exportStatReportDetails,
   listStatIndicators,
   listStatReportTemplates,
+  queryStatDashboard,
   queryStatReport,
+  queryStatReportDetails,
 } from './m6-statistics-service';
 
 vi.mock('#/api/request', () => ({
@@ -124,26 +129,59 @@ describe('m6-statistics-service', () => {
     const reportBlob = new Blob(['csv']);
 
     requestClientMock.post.mockResolvedValue({
+      columns: ['indicatorCode', 'indicatorName', 'metricStatus'],
       rows: [
         {
+          breakdowns: [
+            {
+              label: '已发布',
+              value: '49',
+            },
+          ],
+          denominator: '50',
           indicatorCode: 'QUALITY_RATE',
           indicatorName: 'Quality rate',
+          metricStatus: 'AVAILABLE',
           metricUnit: '%',
           metricValue: '98',
+          numerator: '49',
+          sourceNote: '来自真实报告数据',
+          trendPoints: [
+            {
+              label: '2026-05',
+              value: '98',
+            },
+          ],
         },
       ],
     });
     requestClientMock.download.mockResolvedValue(reportBlob);
 
     await expect(queryStatReport(payload)).resolves.toEqual({
-      columns: [],
+      columns: ['indicatorCode', 'indicatorName', 'metricStatus'],
       reportCode: '',
       rows: [
         {
+          breakdowns: [
+            {
+              label: '已发布',
+              value: '49',
+            },
+          ],
+          denominator: '50',
           indicatorCode: 'QUALITY_RATE',
           indicatorName: 'Quality rate',
+          metricStatus: 'AVAILABLE',
           metricUnit: '%',
           metricValue: '98',
+          numerator: '49',
+          sourceNote: '来自真实报告数据',
+          trendPoints: [
+            {
+              label: '2026-05',
+              value: '98',
+            },
+          ],
         },
       ],
     });
@@ -155,6 +193,169 @@ describe('m6-statistics-service', () => {
     );
     expect(requestClientMock.download).toHaveBeenCalledWith(
       '/v1/stat-reports/export',
+      {
+        data: payload,
+        method: 'POST',
+        responseReturn: 'body',
+      },
+    );
+  });
+
+  it('queries and normalizes statistic dashboard overview cards', async () => {
+    requestClientMock.post.mockResolvedValue({
+      operationCards: [
+        {
+          indicatorCode: 'OP_CASE_VOLUME',
+          indicatorName: '业务量',
+          metricStatus: 'AVAILABLE',
+          metricUnit: 'COUNT',
+          metricValue: 8,
+          sourceNote: 'pathology_cases',
+        },
+      ],
+      qualityCards: [
+        {
+          indicatorCode: 'QC_FROZEN_PARAFFIN_MATCH_RATE',
+          indicatorName: '冰冻石蜡符合率',
+          metricStatus: 'UNAVAILABLE',
+          sourceNote: '数据源未接入',
+        },
+      ],
+      summaryCards: [{}],
+      workloadCards: [
+        {
+          indicatorCode: 'WL_DIAGNOSTIC_TASK_COUNT',
+          indicatorName: '诊断任务数',
+          metricValue: '3',
+        },
+      ],
+    });
+
+    await expect(
+      queryStatDashboard({
+        departmentId: 'DEPT-1',
+        from: '2026-01-01T00:00:00',
+        to: '2026-12-31T23:59:59',
+      }),
+    ).resolves.toEqual({
+      operationCards: [
+        {
+          indicatorCategory: 'OPERATION',
+          indicatorCode: 'OP_CASE_VOLUME',
+          indicatorName: '业务量',
+          metricStatus: 'AVAILABLE',
+          metricUnit: 'COUNT',
+          metricValue: '8',
+          sourceNote: 'pathology_cases',
+        },
+      ],
+      qualityCards: [
+        {
+          indicatorCategory: 'QUALITY',
+          indicatorCode: 'QC_FROZEN_PARAFFIN_MATCH_RATE',
+          indicatorName: '冰冻石蜡符合率',
+          metricStatus: 'UNAVAILABLE',
+          metricUnit: '',
+          metricValue: '',
+          sourceNote: '数据源未接入',
+        },
+      ],
+      summaryCards: [
+        {
+          indicatorCategory: 'OPERATION',
+          indicatorCode: '',
+          indicatorName: '',
+          metricStatus: undefined,
+          metricUnit: '',
+          metricValue: '',
+          sourceNote: null,
+        },
+      ],
+      workloadCards: [
+        {
+          indicatorCategory: 'WORKLOAD',
+          indicatorCode: 'WL_DIAGNOSTIC_TASK_COUNT',
+          indicatorName: '诊断任务数',
+          metricStatus: undefined,
+          metricUnit: '',
+          metricValue: '3',
+          sourceNote: null,
+        },
+      ],
+    });
+
+    expect(requestClientMock.post).toHaveBeenCalledWith(
+      '/v1/stat-dashboard/query',
+      {
+        departmentId: 'DEPT-1',
+        from: '2026-01-01T00:00:00',
+        to: '2026-12-31T23:59:59',
+      },
+    );
+  });
+
+  it('queries and exports statistic report details without patient-sensitive fields', async () => {
+    const payload: StatReportDetailQuery = {
+      detailType: 'REPORT_REVISION',
+      from: '2026-01-01T00:00:00',
+      page: 1,
+      size: 10,
+      to: '2026-12-31T23:59:59',
+    };
+    const detailBlob = new Blob(['detail csv']);
+
+    requestClientMock.post.mockResolvedValue({
+      availabilityStatus: 'AVAILABLE',
+      detailType: 'REPORT_REVISION',
+      items: [
+        {
+          applicationNo: 'APP-M6-001',
+          detailType: 'REPORT_REVISION',
+          occurredAt: '2026-06-01T10:00:00',
+          pathologyNo: 'BC-M6-001',
+          patientName: 'should be ignored',
+          reason: '诊断术语修正',
+          richTextContent: '<p>should be ignored</p>',
+          sourceNote: 'report_revision_requests',
+          status: 'PENDING',
+        },
+      ],
+      page: 1,
+      reasonDistribution: [{ count: 2, reason: '诊断术语修正' }],
+      size: 10,
+      sourceNote: 'report_revision_requests',
+      total: 2,
+    });
+    requestClientMock.download.mockResolvedValue(detailBlob);
+
+    await expect(queryStatReportDetails(payload)).resolves.toEqual({
+      availabilityStatus: 'AVAILABLE',
+      detailType: 'REPORT_REVISION',
+      items: [
+        {
+          applicationNo: 'APP-M6-001',
+          detailType: 'REPORT_REVISION',
+          occurredAt: '2026-06-01T10:00:00',
+          pathologyNo: 'BC-M6-001',
+          reason: '诊断术语修正',
+          sourceNote: 'report_revision_requests',
+          status: 'PENDING',
+        },
+      ],
+      page: 1,
+      reasonDistribution: [{ count: 2, reason: '诊断术语修正' }],
+      size: 10,
+      sourceNote: 'report_revision_requests',
+      total: 2,
+    });
+    await expect(exportStatReportDetails(payload)).resolves.toBe(detailBlob);
+
+    expect(requestClientMock.post).toHaveBeenCalledWith(
+      '/v1/stat-report-details/query',
+      payload,
+    );
+    expect(requestClientMock.download).toHaveBeenCalledWith(
+      '/v1/stat-report-details/export',
       {
         data: payload,
         method: 'POST',
