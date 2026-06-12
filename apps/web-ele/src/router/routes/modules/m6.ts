@@ -32,10 +32,23 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
       },
       {
         component: () =>
-          import('#/views/_core/fallback/MenuPlaceholderView.vue'),
+          import('#/modules/m6-statistics/views/StatisticsDashboardView.vue'),
         meta: {
           authority: [...M6_STATISTICS_PAGE_AUTHORITIES],
-          description: '当前页面暂未接入质控指标统计相关业务功能。',
+          description: '汇总展示 M6 质控、运营与工作量统计核心指标。',
+          icon: 'carbon:dashboard',
+          title: '统计仪表盘',
+        },
+        name: 'M6StatisticsDashboard',
+        path: '/m6/dashboard',
+      },
+      {
+        component: () =>
+          import('#/modules/m6-statistics/views/QualityIndicatorStatisticsView.vue'),
+        meta: {
+          authority: [...M6_STATISTICS_PAGE_AUTHORITIES],
+          description:
+            '展示三甲质控指标、质量安全控制指标与数据源接入口径状态。',
           icon: 'carbon:chart-line',
           title: '质控指标统计',
         },
@@ -44,10 +57,10 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
       },
       {
         component: () =>
-          import('#/views/_core/fallback/MenuPlaceholderView.vue'),
+          import('#/modules/m6-statistics/views/ManagementIndicatorStatisticsView.vue'),
         meta: {
           authority: [...M6_STATISTICS_PAGE_AUTHORITIES],
-          description: '当前页面暂未接入管理指标统计相关业务功能。',
+          description: '展示业务量、收费、物资/试剂预警与人员工作量统计口径。',
           icon: 'carbon:chart-column',
           title: '管理指标统计',
         },

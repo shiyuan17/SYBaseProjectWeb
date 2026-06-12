@@ -12,8 +12,8 @@ describe('m6 statistics report query helpers', () => {
         dateRange: ['2026-05-01T00:00:00', '2026-05-30T23:59:59'],
         departmentId: 'DEPT-1',
         indicatorCode: '',
-        operatorName: '统计员',
-        operatorUserId: '',
+        workloadUserName: '统计员',
+        workloadUserId: 'USER-1',
         roleId: 'ROLE-1',
         templateCode: 'QUALITY_MONTHLY',
       }),
@@ -22,11 +22,10 @@ describe('m6 statistics report query helpers', () => {
       departmentId: 'DEPT-1',
       from: '2026-05-01T00:00:00',
       indicatorCode: undefined,
-      operatorName: '统计员',
-      operatorUserId: undefined,
       roleId: 'ROLE-1',
       templateCode: 'QUALITY_MONTHLY',
       to: '2026-05-30T23:59:59',
+      workloadUserId: 'USER-1',
     });
   });
 

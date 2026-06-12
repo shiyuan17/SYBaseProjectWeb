@@ -581,13 +581,21 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
     {
       component: 'BasicLayout',
       componentAliases: ['M6Root'],
-      menuCodes: ['M6_STATISTICS'],
+      menuCodes: ['M6_SUPPORT', 'M6_STATISTICS'],
       path: '/m6',
       pathAliases: ['/m6'],
       routeName: 'M6Root',
     },
     {
-      component: '/views/_core/fallback/MenuPlaceholderView',
+      component: '/modules/m6-statistics/views/StatisticsDashboardView',
+      componentAliases: ['M6StatisticsDashboard', 'StatisticsDashboard'],
+      menuCodes: ['M6_DASHBOARD'],
+      path: '/m6/dashboard',
+      pathAliases: ['/m6/dashboard', '/api/v1/stat-dashboard/query'],
+      routeName: 'M6StatisticsDashboard',
+    },
+    {
+      component: '/modules/m6-statistics/views/QualityIndicatorStatisticsView',
       componentAliases: ['QualityIndicatorStatistics'],
       menuCodes: ['M6_QUALITY_INDICATORS'],
       path: '/m6/quality-indicators',
@@ -595,7 +603,8 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
       routeName: 'QualityIndicatorStatistics',
     },
     {
-      component: '/views/_core/fallback/MenuPlaceholderView',
+      component:
+        '/modules/m6-statistics/views/ManagementIndicatorStatisticsView',
       componentAliases: ['ManagementIndicatorStatistics'],
       menuCodes: ['M6_MANAGEMENT_INDICATORS'],
       path: '/m6/management-indicators',

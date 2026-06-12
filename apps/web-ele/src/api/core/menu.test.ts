@@ -949,13 +949,27 @@ describe('mapMenuViewsToRoutes', () => {
         componentName: 'M6Root',
         enabled: true,
         icon: 'm6',
-        id: 'MENU_M6_STATISTICS',
-        menuCode: 'M6_STATISTICS',
+        id: 'MENU_M6_SUPPORT',
+        menuCode: 'M6_SUPPORT',
         menuName: '数据统计与分析',
         menuType: 'DIRECTORY',
         parentId: null,
         path: '/m6',
         permissionPrefix: 'm6',
+        sortOrder: 190,
+        visible: true,
+      },
+      {
+        componentName: 'M6StatisticsDashboard',
+        enabled: true,
+        icon: 'dashboard',
+        id: 'MENU_M6_DASHBOARD',
+        menuCode: 'M6_DASHBOARD',
+        menuName: '统计仪表盘',
+        menuType: 'MENU',
+        parentId: 'MENU_M6_SUPPORT',
+        path: '/api/v1/stat-dashboard/query',
+        permissionPrefix: 'm6:dashboard',
         sortOrder: 190,
         visible: true,
       },
@@ -967,7 +981,7 @@ describe('mapMenuViewsToRoutes', () => {
         menuCode: 'M6_QUALITY_INDICATORS',
         menuName: '质控指标统计',
         menuType: 'MENU',
-        parentId: 'MENU_M6_STATISTICS',
+        parentId: 'MENU_M6_SUPPORT',
         path: '/m6/quality-indicators',
         permissionPrefix: 'm6:quality',
         sortOrder: 191,
@@ -981,7 +995,7 @@ describe('mapMenuViewsToRoutes', () => {
         menuCode: 'M6_MANAGEMENT_INDICATORS',
         menuName: '管理指标统计',
         menuType: 'MENU',
-        parentId: 'MENU_M6_STATISTICS',
+        parentId: 'MENU_M6_SUPPORT',
         path: '/m6/management-indicators',
         permissionPrefix: 'm6:management',
         sortOrder: 192,
@@ -991,13 +1005,13 @@ describe('mapMenuViewsToRoutes', () => {
         componentName: 'CustomStatisticsAnalysis',
         enabled: true,
         icon: 'custom',
-        id: 'MENU_M6_CUSTOM',
-        menuCode: 'M6_CUSTOM_ANALYSIS',
+        id: 'MENU_M6_STAT',
+        menuCode: 'M6_STAT',
         menuName: '自定义统计分析',
         menuType: 'MENU',
-        parentId: 'MENU_M6_STATISTICS',
+        parentId: 'MENU_M6_SUPPORT',
         path: '/api/v1/stat-reports/query',
-        permissionPrefix: 'm6:custom',
+        permissionPrefix: 'm6:stat',
         sortOrder: 193,
         visible: true,
       },
@@ -1007,10 +1021,19 @@ describe('mapMenuViewsToRoutes', () => {
       expect.objectContaining({
         name: 'M6Root',
         path: '/m6',
-        redirect: '/m6/quality-indicators',
+        redirect: '/m6/dashboard',
         children: [
           expect.objectContaining({
-            component: '/views/_core/fallback/MenuPlaceholderView',
+            component: '/modules/m6-statistics/views/StatisticsDashboardView',
+            meta: expect.objectContaining({
+              keepAlive: true,
+            }),
+            name: 'M6StatisticsDashboard',
+            path: '/m6/dashboard',
+          }),
+          expect.objectContaining({
+            component:
+              '/modules/m6-statistics/views/QualityIndicatorStatisticsView',
             meta: expect.objectContaining({
               keepAlive: true,
             }),
@@ -1018,7 +1041,8 @@ describe('mapMenuViewsToRoutes', () => {
             path: '/m6/quality-indicators',
           }),
           expect.objectContaining({
-            component: '/views/_core/fallback/MenuPlaceholderView',
+            component:
+              '/modules/m6-statistics/views/ManagementIndicatorStatisticsView',
             meta: expect.objectContaining({
               keepAlive: true,
             }),
@@ -1399,6 +1423,9 @@ describe('m6 route access', () => {
     const qualityRoute = m6Root?.children?.find(
       (route) => route.name === 'QualityIndicatorStatistics',
     );
+    const dashboardRoute = m6Root?.children?.find(
+      (route) => route.name === 'M6StatisticsDashboard',
+    );
     const managementRoute = m6Root?.children?.find(
       (route) => route.name === 'ManagementIndicatorStatistics',
     );
@@ -1406,9 +1433,13 @@ describe('m6 route access', () => {
       (route) => route.name === 'CustomStatisticsAnalysis',
     );
 
+    expect(dashboardRoute?.component).toBeTypeOf('function');
     expect(qualityRoute?.component).toBeTypeOf('function');
     expect(managementRoute?.component).toBeTypeOf('function');
     expect(statisticsRoute?.component).toBeTypeOf('function');
+    expect(dashboardRoute?.meta?.authority).toEqual([
+      ...M6_STATISTICS_PAGE_AUTHORITIES,
+    ]);
     expect(qualityRoute?.meta?.authority).toEqual([
       ...M6_STATISTICS_PAGE_AUTHORITIES,
     ]);
