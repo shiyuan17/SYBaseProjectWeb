@@ -23,6 +23,7 @@
 - [STATE_RULES.md](./STATE_RULES.md)
 - [ROUTER_RULES.md](./ROUTER_RULES.md)
 - [API_RULES.md](./API_RULES.md)
+- [TESTING_RULES.md](./TESTING_RULES.md)
 - [COMPATIBILITY_RULES.md](./COMPATIBILITY_RULES.md)
 - [GIT_RULES.md](./GIT_RULES.md)
 - [DYNAMIC_WORKFLOW_RULES.md](./DYNAMIC_WORKFLOW_RULES.md)
@@ -38,7 +39,7 @@
 - [plans/](./plans/README.md): 实施方案、阶段执行计划
 - [reviews/](./reviews/README.md): 审查、差距分析、健康度与对比报告
 - [reference/](./reference/README.md): 业务清单、数据库资料、分析报告
-- [templates/](./templates/): 可复用提示词与任务模板（如 Codex 任务模板、Linear 计划拆分模板）
+- [templates/](./templates/): 可复用提示词与任务模板（如 Codex 任务模板、Linear 计划拆分模板、治理模板填写范例 `workflow-packet-examples.md`）
 
 ## 维护约定
 

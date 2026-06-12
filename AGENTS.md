@@ -53,13 +53,14 @@
 6. `docs/STATE_RULES.md`
 7. `docs/ROUTER_RULES.md`
 8. `docs/API_RULES.md`
-9. `docs/COMPATIBILITY_RULES.md`
-10. `docs/GIT_RULES.md`
-11. `docs/DYNAMIC_WORKFLOW_RULES.md`
-12. `docs/LOOP_ENGINEERING_RULES.md`
-13. `docs/LINEAR_TASK.md`（条件必读：仅 Linear 任务需要读，非 Linear 任务直接跳过本项）
-14. `docs/RELEASE.md`
-15. 任务涉及模块文档与现有源码
+9. `docs/TESTING_RULES.md`
+10. `docs/COMPATIBILITY_RULES.md`
+11. `docs/GIT_RULES.md`
+12. `docs/DYNAMIC_WORKFLOW_RULES.md`
+13. `docs/LOOP_ENGINEERING_RULES.md`
+14. `docs/LINEAR_TASK.md`（条件必读：仅 Linear 任务需要读，非 Linear 任务直接跳过本项）
+15. `docs/RELEASE.md`
+16. 任务涉及模块文档与现有源码
 
 > `docs/AI-CODE-HEALTH.md` 为按需引用的质量自检附录，不在全量通读清单内；在生成或评审代码、做交付前自检时查阅其规则速查表与自检清单即可。
 
@@ -84,6 +85,7 @@
 | Pinia 状态设计 | `docs/STATE_RULES.md` |
 | 路由设计、守卫与导航元信息 | `docs/ROUTER_RULES.md` |
 | Axios、请求模型、错误处理、分页协议 | `docs/API_RULES.md` |
+| 测试分层、单测/E2E 边界、mock 契约同步 | `docs/TESTING_RULES.md` |
 | Element Plus、TailwindCSS、ECharts、交互与视觉一致性 | `docs/UI_RULES.md` |
 | 浏览器、国产环境、导出打印、字体与降级策略 | `docs/COMPATIBILITY_RULES.md` |
 | 分支、提交、PR、合并协作 | `docs/GIT_RULES.md` |
@@ -128,7 +130,7 @@
 - 成功标准: [可验证的完成条件，例如 check:governance 通过、文档点位修正]
 ```
 
-任一条件不满足（命中实现类 Workflow、黄区/红区、改运行时行为）即回到完整模板；PR 层面的对应精简规则见 `.github/PULL_REQUEST_TEMPLATE.md` 的 Fast path 说明。
+任一条件不满足（命中实现类 Workflow、黄区/红区、改运行时行为）即回到完整模板；PR 层面的对应精简规则见 `.github/PULL_REQUEST_TEMPLATE.md` 的 Fast path 说明。完整模板、Fast Path、Workflow Packet、Memory Update Packet 的已填写范例见 `docs/templates/workflow-packet-examples.md`；选主 Workflow 与叠修饰器的决策流程图见 `docs/DYNAMIC_WORKFLOW_RULES.md`「决策流程图」一节。
 
 - 主 Workflow 与修饰器的选择标准、触发条件、对应专家 Agent / 动态测试 / 动态模拟 / 红队问题，统一以 `docs/DYNAMIC_WORKFLOW_RULES.md` 为唯一来源；纯文档、闲聊或信息查询类任务可标注「主 Workflow: 不适用」并说明原因。
 - 若任务明确来源于 Linear issue，开始前应参考 `docs/LINEAR_TASK.md` 准备任务起始信息；非 Linear 任务不强制套用该模板。
@@ -313,6 +315,7 @@
 - [docs/STATE_RULES.md](./docs/STATE_RULES.md)
 - [docs/ROUTER_RULES.md](./docs/ROUTER_RULES.md)
 - [docs/API_RULES.md](./docs/API_RULES.md)
+- [docs/TESTING_RULES.md](./docs/TESTING_RULES.md)
 - [docs/UI_RULES.md](./docs/UI_RULES.md)
 - [docs/COMPATIBILITY_RULES.md](./docs/COMPATIBILITY_RULES.md)
 - [docs/GIT_RULES.md](./docs/GIT_RULES.md)

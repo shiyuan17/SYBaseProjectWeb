@@ -127,6 +127,7 @@ pnpm linear:pull
 - [docs/STATE_RULES.md](./docs/STATE_RULES.md)
 - [docs/ROUTER_RULES.md](./docs/ROUTER_RULES.md)
 - [docs/API_RULES.md](./docs/API_RULES.md)
+- [docs/TESTING_RULES.md](./docs/TESTING_RULES.md)
 - [docs/UI_RULES.md](./docs/UI_RULES.md)
 - [docs/COMPATIBILITY_RULES.md](./docs/COMPATIBILITY_RULES.md)
 - [docs/GIT_RULES.md](./docs/GIT_RULES.md)

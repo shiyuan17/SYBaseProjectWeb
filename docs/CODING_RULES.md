@@ -57,6 +57,7 @@
 - 测试至少覆盖正常路径、边界条件、失败分支
 - 缺陷修复应优先写出能复现问题的测试或最小复现步骤，再修复并证明回归通过
 - 新增校验必须覆盖无效输入；新增错误处理必须覆盖失败分支；重构必须说明行为保持不变的验证命令或对比方式
+- 测试分层（单测 / E2E 边界）、用例落位与 mock 契约同步约定见 `docs/TESTING_RULES.md`；本节只定义“何时必须补测试”的强制触发条件
 - 提交前必须完成自检，确认无明显重复、无死代码、无调试残留
 
 标准验证命令（统一使用 `pnpm`，按改动范围选择最小有效集）：
@@ -65,14 +66,14 @@
 | --- | --- | --- |
 | 代码规范 | `pnpm lint` | ESLint / oxlint 等统一校验 |
 | 类型检查 | `pnpm check:type` | `vue-tsc` 类型检查（等价 `turbo run typecheck`） |
-| 拼写检查 | `pnpm check:cspell` | cspell 校验（扫描 `**/*.{ts,tsx,vue}` 与 `**/README.md`，不覆盖其他 `*.md`） |
+| 拼写检查 | `pnpm check:cspell` | cspell 校验（扫描 `**/*.{ts,tsx,vue}`、`**/README.md`、`docs/**/*.md` 与根目录 `*.md`） |
 | 治理校验 | `pnpm run check:governance` | 校验治理文档关键约束（决策/BUG/TD 台账 ID 去重、文档索引、架构快照、`PROJECT_STATE.md` 结构、治理文档内相对链接可达性） |
 | 综合静态检查 | `pnpm check` | 循环依赖 + 依赖 + 类型 + 拼写 + 治理一次性执行 |
 | 单元测试 | `pnpm test:unit` | Vitest（`--dom`），逻辑/工具/组件 |
 | 端到端测试 | `pnpm test:e2e` | Playwright，关键链路回归 |
 | 构建 | `pnpm build` | 产物构建，发布前必过 |
 
-- `pnpm check:cspell` 的扫描范围见上表（不覆盖 `docs/` 规范与根目录记忆文件等 `*.md`，改这些文件时需自行核对拼写）。改逻辑/组件时至少跑 `pnpm lint` + `pnpm check:type` + 相关 `pnpm test:unit`
+- `pnpm check:cspell` 的扫描范围见上表（已覆盖 `docs/` 规范与根目录记忆文件）。改逻辑/组件时至少跑 `pnpm lint` + `pnpm check:type` + 相关 `pnpm test:unit`
 - 改 `AGENTS.md`、`docs/` 顶层规范、记忆文件或治理脚本时，至少补跑 `pnpm run check:governance`
 - 交付时在「验证结果」中写明实际执行的命令与结论，未执行项必须标注为未验证
 
