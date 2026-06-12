@@ -147,6 +147,38 @@ describe('validatePullRequestPacket', () => {
     expect(result.errors).toContain('Red Team evidence missing: Residual risk');
   });
 
+  it('allows fast-path PR bodies to omit the Dynamic Tests section', () => {
+    const result = validatePullRequestPacket(
+      validDocsOnlyBody.replace(/## Dynamic Tests[\s\S]*?## Red Team/, '## Red Team'),
+    );
+
+    expect(result.isValid).toBe(true);
+    expect(result.errors).toEqual([]);
+  });
+
+  it('rejects fast-path PR bodies that give no reason for not applicable', () => {
+    const result = validatePullRequestPacket(
+      validDocsOnlyBody.replace(
+        '- Primary Workflow: Not applicable (docs-only governance update)',
+        '- Primary Workflow: Not applicable',
+      ),
+    );
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContain(
+      'Fast path requires a brief reason: Primary Workflow must be "Not applicable (<reason>)"',
+    );
+  });
+
+  it('still requires the Dynamic Tests section for implementation workflows', () => {
+    const result = validatePullRequestPacket(
+      validBody.replace(/## Dynamic Tests[\s\S]*?## Red Team/, '## Red Team'),
+    );
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContain('Missing section: Dynamic Tests');
+  });
+
   it('rejects checked red-team items when evidence fields stay empty', () => {
     const result = validatePullRequestPacket(
       validDocsOnlyBody

@@ -1,6 +1,10 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, isAbsolute, relative, resolve } from 'node:path';
 
 const DECISION_ID_PATTERN = /\|\s*(DEC-\d{8}-\d{3})\s*\|/g;
+const BUG_ID_PATTERN = /\|\s*(BUG-\d{8}-\d{3})\s*\|/g;
+const TECH_DEBT_ID_PATTERN = /\|\s*(TD-\d{8}-\d{3})\s*\|/g;
+const MARKDOWN_LINK_PATTERN = /\[[^\]]*\]\(([^)\s]+)\)/g;
 const PROJECT_STATE_REQUIRED_SECTIONS = [
   '## Current State',
   '## Active Work',
@@ -31,11 +35,11 @@ function readText(path) {
   return readFileSync(path, 'utf8');
 }
 
-function collectDuplicateDecisionIds(decisionsBody) {
+function collectDuplicateLedgerIds(body, idPattern) {
   const seen = new Set();
   const duplicates = new Set();
 
-  for (const match of decisionsBody.matchAll(DECISION_ID_PATTERN)) {
+  for (const match of body.matchAll(idPattern)) {
     const id = match[1];
     if (seen.has(id)) {
       duplicates.add(id);
@@ -45,6 +49,50 @@ function collectDuplicateDecisionIds(decisionsBody) {
   }
 
   return [...duplicates].sort();
+}
+
+function isCheckableLinkTarget(target) {
+  if (/^(https?:|mailto:|#)/i.test(target)) {
+    return false;
+  }
+  // 模板占位（如 <issue url>）不做存在性检查
+  if (target.includes('<') || target.includes('>')) {
+    return false;
+  }
+  return true;
+}
+
+function collectBrokenLinks({ sourcePath, body, repoRoot, fileExists }) {
+  const errors = [];
+  const sourceDir = dirname(resolve(repoRoot, sourcePath));
+
+  for (const match of body.matchAll(MARKDOWN_LINK_PATTERN)) {
+    const rawTarget = match[1];
+    if (!isCheckableLinkTarget(rawTarget)) {
+      continue;
+    }
+
+    const targetWithoutAnchor = rawTarget.split('#')[0];
+    if (targetWithoutAnchor.length === 0) {
+      continue;
+    }
+
+    const resolvedTarget = isAbsolute(targetWithoutAnchor)
+      ? targetWithoutAnchor
+      : resolve(sourceDir, decodeURIComponent(targetWithoutAnchor));
+
+    // 跨仓引用（解析到仓库根之外）由人工/跨仓核对，不在本仓校验
+    const relativeToRoot = relative(resolve(repoRoot), resolvedTarget);
+    if (relativeToRoot.startsWith('..') || isAbsolute(relativeToRoot)) {
+      continue;
+    }
+
+    if (!fileExists(resolvedTarget)) {
+      errors.push(`Broken link in ${sourcePath}: ${rawTarget}`);
+    }
+  }
+
+  return errors;
 }
 
 function extractBulletLinks(body) {
@@ -122,13 +170,41 @@ export function validateGovernance({
   docsReadmeBody,
   architectureBody,
   projectStateBody,
+  knownBugsBody,
+  techDebtBody,
+  linkedDocuments = [],
+  repoRoot = process.cwd(),
+  fileExists = existsSync,
 } = {}) {
   const errors = [];
 
   if (decisionsBody) {
-    for (const id of collectDuplicateDecisionIds(decisionsBody)) {
+    for (const id of collectDuplicateLedgerIds(decisionsBody, DECISION_ID_PATTERN)) {
       errors.push(`Duplicate decision ID: ${id}`);
     }
+  }
+
+  if (knownBugsBody) {
+    for (const id of collectDuplicateLedgerIds(knownBugsBody, BUG_ID_PATTERN)) {
+      errors.push(`Duplicate bug ID: ${id}`);
+    }
+  }
+
+  if (techDebtBody) {
+    for (const id of collectDuplicateLedgerIds(techDebtBody, TECH_DEBT_ID_PATTERN)) {
+      errors.push(`Duplicate tech debt ID: ${id}`);
+    }
+  }
+
+  for (const document of linkedDocuments) {
+    errors.push(
+      ...collectBrokenLinks({
+        sourcePath: document.path,
+        body: document.body,
+        repoRoot,
+        fileExists,
+      }),
+    );
   }
 
   if (docsReadmeBody) {
@@ -153,6 +229,24 @@ export function validateGovernance({
   };
 }
 
+const LINK_CHECKED_DOCUMENTS = [
+  'AGENTS.md',
+  'README.md',
+  'docs/README.md',
+  'PROJECT_STATE.md',
+  'DECISIONS.md',
+  'KNOWN_BUGS.md',
+  'TECH_DEBT.md',
+  'ARCHITECTURE.md',
+  'docs/CODING_RULES.md',
+  'docs/GIT_RULES.md',
+  'docs/DYNAMIC_WORKFLOW_RULES.md',
+  'docs/LOOP_ENGINEERING_RULES.md',
+  'docs/AGENT_SKILL_ROUTING.md',
+  'docs/LINEAR_TASK.md',
+  'docs/AI-CODE-HEALTH.md',
+];
+
 function main() {
   const result = validateGovernance({
     agentsBody: readText('AGENTS.md'),
@@ -160,6 +254,12 @@ function main() {
     docsReadmeBody: readText('docs/README.md'),
     architectureBody: readText('ARCHITECTURE.md'),
     projectStateBody: readText('PROJECT_STATE.md'),
+    knownBugsBody: readText('KNOWN_BUGS.md'),
+    techDebtBody: readText('TECH_DEBT.md'),
+    linkedDocuments: LINK_CHECKED_DOCUMENTS.map((path) => ({
+      path,
+      body: readText(path),
+    })),
   });
 
   if (result.isValid) {

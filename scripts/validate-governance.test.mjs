@@ -163,4 +163,61 @@ describe('validateGovernance', () => {
       'PROJECT_STATE.md is too long: 130 lines (limit 120).',
     );
   });
+
+  it('rejects duplicate bug and tech debt IDs', () => {
+    const result = validateGovernance({
+      knownBugsBody: `
+| BUG-20260612-001 | repro | scope | workaround | Open |
+| BUG-20260612-001 | repro again | scope | workaround | Open |
+`,
+      techDebtBody: `
+| TD-20260610-002 | High | source | impact | action | Open |
+| TD-20260610-002 | High | source | impact | action | Open |
+`,
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContain('Duplicate bug ID: BUG-20260612-001');
+    expect(result.errors).toContain('Duplicate tech debt ID: TD-20260610-002');
+  });
+
+  it('rejects broken relative links in governance documents', () => {
+    const result = validateGovernance({
+      linkedDocuments: [
+        {
+          path: 'docs/README.md',
+          body: '- [MISSING.md](./MISSING.md)\n- [CODING_RULES.md](./CODING_RULES.md)',
+        },
+      ],
+      repoRoot: '/repo',
+      fileExists: (target) => target.replaceAll('\\', '/').endsWith('docs/CODING_RULES.md'),
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContain('Broken link in docs/README.md: ./MISSING.md');
+    expect(result.errors).not.toContain(
+      'Broken link in docs/README.md: ./CODING_RULES.md',
+    );
+  });
+
+  it('skips external, anchor, placeholder, and cross-repo links', () => {
+    const result = validateGovernance({
+      linkedDocuments: [
+        {
+          path: 'AGENTS.md',
+          body: [
+            '- [Linear](https://linear.app)',
+            '- [anchor](#section)',
+            '- [template](<issue url>)',
+            '- [backend](../SYBaseProject/DECISIONS.md)',
+          ].join('\n'),
+        },
+      ],
+      repoRoot: '/repo',
+      fileExists: () => false,
+    });
+
+    expect(result.isValid).toBe(true);
+    expect(result.errors).toEqual([]);
+  });
 });

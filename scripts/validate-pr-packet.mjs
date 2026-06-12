@@ -63,16 +63,51 @@ function readPullRequestBodyFromEvent(eventPath) {
   return event.pull_request?.body ?? '';
 }
 
+function resolveFastPath(body) {
+  const dynamicWorkflowBody = extractSection(body, 'Dynamic Workflow');
+  if (dynamicWorkflowBody === null) {
+    return { isFastPath: false, missingReason: false };
+  }
+
+  const primaryWorkflow =
+    extractField(dynamicWorkflowBody, 'Primary Workflow') ?? '';
+  if (!/^(not applicable|n\/a)\b/i.test(primaryWorkflow.trim())) {
+    return { isFastPath: false, missingReason: false };
+  }
+
+  const reason = primaryWorkflow
+    .trim()
+    .replace(/^(not applicable|n\/a)\b/i, '')
+    .replaceAll(/[\s():,.;—-]+/g, '');
+  return { isFastPath: true, missingReason: reason.length === 0 };
+}
+
 export function validatePullRequestPacket(body = '') {
   const errors = [];
 
-  for (const sectionName of requiredSections) {
+  // Fast path: docs-only / audit / read-only PRs mark Primary Workflow as
+  // "Not applicable (<reason>)" and may omit the Dynamic Tests block.
+  const { isFastPath, missingReason } = resolveFastPath(body);
+  if (missingReason) {
+    errors.push(
+      'Fast path requires a brief reason: Primary Workflow must be "Not applicable (<reason>)"',
+    );
+  }
+
+  const effectiveRequiredSections = isFastPath
+    ? requiredSections.filter((section) => section !== 'Dynamic Tests')
+    : requiredSections;
+  const effectiveRequiredFields = isFastPath
+    ? requiredFields.filter(([sectionName]) => sectionName !== 'Dynamic Tests')
+    : requiredFields;
+
+  for (const sectionName of effectiveRequiredSections) {
     if (extractSection(body, sectionName) === null) {
       errors.push(`Missing section: ${sectionName}`);
     }
   }
 
-  for (const [sectionName, fieldName] of requiredFields) {
+  for (const [sectionName, fieldName] of effectiveRequiredFields) {
     const sectionBody = extractSection(body, sectionName);
     if (sectionBody === null) {
       continue;

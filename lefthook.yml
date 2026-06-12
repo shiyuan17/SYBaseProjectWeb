@@ -81,5 +81,7 @@ pre-push:
       run: pnpm check:type
     check-circular:
       run: pnpm check:circular
+    check-governance:
+      run: pnpm run check:governance
     test-unit:
       run: pnpm test:unit
