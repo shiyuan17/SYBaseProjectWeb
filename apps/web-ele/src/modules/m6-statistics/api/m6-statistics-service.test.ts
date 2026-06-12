@@ -202,34 +202,38 @@ describe('m6-statistics-service', () => {
   });
 
   it('queries and normalizes statistic dashboard overview cards', async () => {
-    requestClientMock.post.mockResolvedValue({
-      operationCards: [
-        {
-          indicatorCode: 'OP_CASE_VOLUME',
-          indicatorName: '业务量',
-          metricStatus: 'AVAILABLE',
-          metricUnit: 'COUNT',
-          metricValue: 8,
-          sourceNote: 'pathology_cases',
-        },
-      ],
-      qualityCards: [
-        {
-          indicatorCode: 'QC_FROZEN_PARAFFIN_MATCH_RATE',
-          indicatorName: '冰冻石蜡符合率',
-          metricStatus: 'UNAVAILABLE',
-          sourceNote: '数据源未接入',
-        },
-      ],
-      summaryCards: [{}],
-      workloadCards: [
-        {
-          indicatorCode: 'WL_DIAGNOSTIC_TASK_COUNT',
-          indicatorName: '诊断任务数',
-          metricValue: '3',
-        },
-      ],
-    });
+    requestClientMock.post
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            indicatorCode: 'QC_FROZEN_PARAFFIN_MATCH_RATE',
+            indicatorName: '冰冻石蜡符合率',
+            metricStatus: 'UNAVAILABLE',
+            sourceNote: '数据源未接入',
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            indicatorCode: 'OP_CASE_VOLUME',
+            indicatorName: '业务量',
+            metricStatus: 'AVAILABLE',
+            metricUnit: 'COUNT',
+            metricValue: 8,
+            sourceNote: 'pathology_cases',
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            indicatorCode: 'WL_DIAGNOSTIC_TASK_COUNT',
+            indicatorName: '诊断任务数',
+            metricValue: '3',
+          },
+        ],
+      });
 
     await expect(
       queryStatDashboard({
@@ -263,11 +267,20 @@ describe('m6-statistics-service', () => {
       summaryCards: [
         {
           indicatorCategory: 'OPERATION',
-          indicatorCode: '',
-          indicatorName: '',
+          indicatorCode: 'OP_CASE_VOLUME',
+          indicatorName: '业务量',
+          metricStatus: 'AVAILABLE',
+          metricUnit: 'COUNT',
+          metricValue: '8',
+          sourceNote: 'pathology_cases',
+        },
+        {
+          indicatorCategory: 'WORKLOAD',
+          indicatorCode: 'WL_DIAGNOSTIC_TASK_COUNT',
+          indicatorName: '诊断任务数',
           metricStatus: undefined,
           metricUnit: '',
-          metricValue: '',
+          metricValue: '3',
           sourceNote: null,
         },
       ],
@@ -284,13 +297,39 @@ describe('m6-statistics-service', () => {
       ],
     });
 
-    expect(requestClientMock.post).toHaveBeenCalledWith(
-      '/v1/stat-dashboard/query',
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      1,
+      '/v1/stat-reports/query',
       {
+        category: 'QUALITY',
         departmentId: 'DEPT-1',
         from: '2026-01-01T00:00:00',
         to: '2026-12-31T23:59:59',
       },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      2,
+      '/v1/stat-reports/query',
+      {
+        category: 'OPERATION',
+        departmentId: 'DEPT-1',
+        from: '2026-01-01T00:00:00',
+        to: '2026-12-31T23:59:59',
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      3,
+      '/v1/stat-reports/query',
+      {
+        category: 'WORKLOAD',
+        departmentId: 'DEPT-1',
+        from: '2026-01-01T00:00:00',
+        to: '2026-12-31T23:59:59',
+      },
+    );
+    expect(requestClientMock.post).not.toHaveBeenCalledWith(
+      '/v1/stat-dashboard/query',
+      expect.anything(),
     );
   });
 

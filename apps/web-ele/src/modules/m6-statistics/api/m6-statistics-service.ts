@@ -15,9 +15,6 @@ import type {
 import { requestClient } from '#/api/request';
 
 type IndicatorListResponse = Partial<StatIndicatorView>[];
-type StatDashboardResponse = Partial<
-  Record<keyof StatDashboardResult, Partial<StatDashboardCard>[]>
->;
 type StatReportDetailResponse = Partial<
   Omit<StatReportDetailResult, 'items' | 'reasonDistribution'> & {
     items: Partial<StatReportDetailItem>[];
@@ -28,6 +25,13 @@ type StatReportDetailResponse = Partial<
 >;
 type StatReportResponse = Partial<StatReportResult>;
 type TemplateListResponse = Partial<StatReportTemplateView>[];
+
+const DASHBOARD_SUMMARY_INDICATOR_CODES = [
+  'OP_CASE_VOLUME',
+  'OP_BILLING_AMOUNT',
+  'QC_SPECIMEN_FIXATION_RATE',
+  'WL_DIAGNOSTIC_TASK_COUNT',
+] as const;
 
 function mapIndicator(item: Partial<StatIndicatorView>): StatIndicatorView {
   return {
@@ -65,6 +69,10 @@ function mapText(value: unknown) {
   return value === null || value === undefined ? null : String(value);
 }
 
+function mapMetricValue(value: unknown) {
+  return value === null || value === undefined ? '' : String(value);
+}
+
 function mapBreakdownItems(
   items: Partial<StatReportRow>['breakdowns'],
 ): StatReportRow['breakdowns'] {
@@ -95,7 +103,7 @@ function mapStatReportRow(item: Partial<StatReportRow>): StatReportRow {
     indicatorName: item.indicatorName ?? '',
     metricStatus: item.metricStatus,
     metricUnit: item.metricUnit ?? '',
-    metricValue: item.metricValue ?? '',
+    metricValue: mapMetricValue(item.metricValue),
     numerator: mapText(item.numerator),
     sourceNote: mapText(item.sourceNote),
     trendPoints: mapTrendPoints(item.trendPoints),
@@ -112,21 +120,38 @@ function mapDashboardCard(
     indicatorName: item.indicatorName ?? '',
     metricStatus: item.metricStatus,
     metricUnit: item.metricUnit ?? '',
-    metricValue:
-      item.metricValue === null || item.metricValue === undefined
-        ? ''
-        : String(item.metricValue),
+    metricValue: mapMetricValue(item.metricValue),
     sourceNote: mapText(item.sourceNote),
   };
 }
 
-function mapDashboardCards(
-  items: Partial<StatDashboardCard>[] | undefined,
+function mapReportRowsToDashboardCards(
+  rows: StatReportRow[] | undefined,
   indicatorCategory: StatDashboardCard['indicatorCategory'],
 ) {
-  return Array.isArray(items)
-    ? items.map((item) => mapDashboardCard(item, indicatorCategory))
+  return Array.isArray(rows)
+    ? rows.map((row) =>
+        mapDashboardCard(
+          {
+            indicatorCode: row.indicatorCode,
+            indicatorName: row.indicatorName,
+            metricStatus: row.metricStatus,
+            metricUnit: row.metricUnit,
+            metricValue: row.metricValue,
+            sourceNote: row.sourceNote,
+          },
+          indicatorCategory,
+        ),
+      )
     : [];
+}
+
+function selectSummaryCards(cards: StatDashboardCard[]) {
+  const selected = DASHBOARD_SUMMARY_INDICATOR_CODES.flatMap((indicatorCode) =>
+    cards.filter((card) => card.indicatorCode === indicatorCode).slice(0, 1),
+  );
+
+  return selected.length > 0 ? selected : cards.slice(0, 4);
 }
 
 function mapStatReportDetailItem(
@@ -201,16 +226,34 @@ export async function queryStatReport(payload: StatReportQuery) {
 }
 
 export async function queryStatDashboard(payload: StatDashboardQuery = {}) {
-  const response = await requestClient.post<StatDashboardResponse>(
-    '/v1/stat-dashboard/query',
-    payload,
+  const [qualityReport, operationReport, workloadReport] = await Promise.all([
+    queryStatReport({ ...payload, category: 'QUALITY' }),
+    queryStatReport({ ...payload, category: 'OPERATION' }),
+    queryStatReport({ ...payload, category: 'WORKLOAD' }),
+  ]);
+
+  const qualityCards = mapReportRowsToDashboardCards(
+    qualityReport.rows,
+    'QUALITY',
+  );
+  const operationCards = mapReportRowsToDashboardCards(
+    operationReport.rows,
+    'OPERATION',
+  );
+  const workloadCards = mapReportRowsToDashboardCards(
+    workloadReport.rows,
+    'WORKLOAD',
   );
 
   return {
-    operationCards: mapDashboardCards(response.operationCards, 'OPERATION'),
-    qualityCards: mapDashboardCards(response.qualityCards, 'QUALITY'),
-    summaryCards: mapDashboardCards(response.summaryCards, 'OPERATION'),
-    workloadCards: mapDashboardCards(response.workloadCards, 'WORKLOAD'),
+    operationCards,
+    qualityCards,
+    summaryCards: selectSummaryCards([
+      ...operationCards,
+      ...qualityCards,
+      ...workloadCards,
+    ]),
+    workloadCards,
   } satisfies StatDashboardResult;
 }
 

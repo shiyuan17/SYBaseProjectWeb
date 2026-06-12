@@ -454,14 +454,6 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
       routeName: 'PathologyReport',
     },
     {
-      component: '/modules/doctor-workflow/views/FrozenReportView',
-      componentAliases: ['FrozenReport'],
-      menuCodes: ['M4_FROZEN_REPORT'],
-      path: '/doctor-workflow/frozen-report',
-      pathAliases: ['/doctor-workflow/frozen-report'],
-      routeName: 'FrozenReport',
-    },
-    {
       component: '/modules/doctor-workflow/views/ReportTrackingView',
       componentAliases: ['ReportTracking'],
       menuCodes: ['M4_TRACKING'],
@@ -591,7 +583,7 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
       componentAliases: ['M6StatisticsDashboard', 'StatisticsDashboard'],
       menuCodes: ['M6_DASHBOARD'],
       path: '/m6/dashboard',
-      pathAliases: ['/m6/dashboard', '/api/v1/stat-dashboard/query'],
+      pathAliases: ['/m6/dashboard'],
       routeName: 'M6StatisticsDashboard',
     },
     {

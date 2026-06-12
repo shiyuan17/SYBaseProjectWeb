@@ -521,15 +521,6 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
           path: '/doctor-workflow/report',
         },
         {
-          component: '/modules/doctor-workflow/views/FrozenReportView',
-          meta: {
-            icon: 'carbon:snowflake',
-            title: '冰冻快速报告',
-          },
-          name: 'FrozenReport',
-          path: '/doctor-workflow/frozen-report',
-        },
-        {
           component: '/modules/doctor-workflow/views/ReportTrackingView',
           meta: {
             icon: 'carbon:search',
