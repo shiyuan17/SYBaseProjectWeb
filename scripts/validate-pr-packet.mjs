@@ -132,7 +132,10 @@ export function validatePullRequestPacket(body = '') {
       extractField(dynamicWorkflowBody, 'Required modifiers') ?? '';
     const attackResult = extractField(redTeamBody, 'Attack result');
     const residualRisk = extractField(redTeamBody, 'Residual risk');
-    const checkerSource = extractField(redTeamBody, 'Checker / reviewer source');
+    const checkerSource = extractField(
+      redTeamBody,
+      'Checker / reviewer source',
+    );
     const checklistMarked = redTeamBody
       .split(/\r?\n/)
       .some((line) => /^\s*-\s*\[[xX]\]/.test(line));

@@ -19,6 +19,7 @@ const validDocsReadmeBody = `
 - [STATE_RULES.md](./STATE_RULES.md)
 - [ROUTER_RULES.md](./ROUTER_RULES.md)
 - [API_RULES.md](./API_RULES.md)
+- [TESTING_RULES.md](./TESTING_RULES.md)
 - [COMPATIBILITY_RULES.md](./COMPATIBILITY_RULES.md)
 - [GIT_RULES.md](./GIT_RULES.md)
 - [DYNAMIC_WORKFLOW_RULES.md](./DYNAMIC_WORKFLOW_RULES.md)
@@ -39,6 +40,7 @@ const validAgentsBody = `
 - [docs/STATE_RULES.md](./docs/STATE_RULES.md)
 - [docs/ROUTER_RULES.md](./docs/ROUTER_RULES.md)
 - [docs/API_RULES.md](./docs/API_RULES.md)
+- [docs/TESTING_RULES.md](./docs/TESTING_RULES.md)
 - [docs/COMPATIBILITY_RULES.md](./docs/COMPATIBILITY_RULES.md)
 - [docs/GIT_RULES.md](./docs/GIT_RULES.md)
 - [docs/DYNAMIC_WORKFLOW_RULES.md](./docs/DYNAMIC_WORKFLOW_RULES.md)
@@ -143,7 +145,10 @@ describe('validateGovernance', () => {
 
   it('rejects PROJECT_STATE.md when required sections are missing', () => {
     const result = validateGovernance({
-      projectStateBody: validProjectStateBody.replace('## Validation Baseline', ''),
+      projectStateBody: validProjectStateBody.replace(
+        '## Validation Baseline',
+        '',
+      ),
     });
 
     expect(result.isValid).toBe(false);
@@ -153,7 +158,10 @@ describe('validateGovernance', () => {
   });
 
   it('rejects PROJECT_STATE.md when it grows beyond the line budget', () => {
-    const bloatedBody = new Array(130).fill('- history line').join('\n');
+    const bloatedBody = Array.from(
+      { length: 130 },
+      () => '- history line',
+    ).join('\n');
     const result = validateGovernance({
       projectStateBody: bloatedBody,
     });
@@ -162,6 +170,22 @@ describe('validateGovernance', () => {
     expect(result.errors).toContain(
       'PROJECT_STATE.md is too long: 130 lines (limit 120).',
     );
+  });
+
+  it('rejects ledgers that grow beyond the soft line budget', () => {
+    const bloatedLedger = `${validDecisionsBody}${Array.from({ length: 210 }, () => '| note |').join('\n')}`;
+    const result = validateGovernance({
+      decisionsBody: bloatedLedger,
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(
+      result.errors.some(
+        (error) =>
+          error.startsWith('DECISIONS.md is too long:') &&
+          error.includes('Archive resolved/historical entries'),
+      ),
+    ).toBe(true);
   });
 
   it('rejects duplicate bug and tech debt IDs', () => {
@@ -190,11 +214,14 @@ describe('validateGovernance', () => {
         },
       ],
       repoRoot: '/repo',
-      fileExists: (target) => target.replaceAll('\\', '/').endsWith('docs/CODING_RULES.md'),
+      fileExists: (target) =>
+        target.replaceAll('\\', '/').endsWith('docs/CODING_RULES.md'),
     });
 
     expect(result.isValid).toBe(false);
-    expect(result.errors).toContain('Broken link in docs/README.md: ./MISSING.md');
+    expect(result.errors).toContain(
+      'Broken link in docs/README.md: ./MISSING.md',
+    );
     expect(result.errors).not.toContain(
       'Broken link in docs/README.md: ./CODING_RULES.md',
     );

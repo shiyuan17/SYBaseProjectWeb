@@ -13,6 +13,8 @@ const PROJECT_STATE_REQUIRED_SECTIONS = [
   '## Handoff Notes',
 ];
 const PROJECT_STATE_MAX_LINES = 120;
+// 台账软上限：超限说明该归档历史/已关闭条目（迁入 docs/reviews/ 归档文件），不是删除历史
+const LEDGER_MAX_LINES = 200;
 const REQUIRED_TOP_LEVEL_DOCS = [
   'PROJECT_DIRECTORY.md',
   'CODING_RULES.md',
@@ -21,6 +23,7 @@ const REQUIRED_TOP_LEVEL_DOCS = [
   'STATE_RULES.md',
   'ROUTER_RULES.md',
   'API_RULES.md',
+  'TESTING_RULES.md',
   'COMPATIBILITY_RULES.md',
   'GIT_RULES.md',
   'DYNAMIC_WORKFLOW_RULES.md',
@@ -48,7 +51,7 @@ function collectDuplicateLedgerIds(body, idPattern) {
     seen.add(id);
   }
 
-  return [...duplicates].sort();
+  return [...duplicates].toSorted();
 }
 
 function isCheckableLinkTarget(target) {
@@ -97,24 +100,26 @@ function collectBrokenLinks({ sourcePath, body, repoRoot, fileExists }) {
 
 function extractBulletLinks(body) {
   const matches = body.match(/- \[([^\]]+)\]\(([^)]+)\)/g) ?? [];
-  return matches.map((line) => {
-    const match = line.match(/- \[([^\]]+)\]\(([^)]+)\)/);
-    return match
-      ? {
-          label: match[1],
-          target: match[2],
-        }
-      : null;
-  }).filter(Boolean);
+  return matches
+    .map((line) => {
+      const match = line.match(/- \[([^\]]+)\]\(([^)]+)\)/);
+      return match
+        ? {
+            label: match[1],
+            target: match[2],
+          }
+        : null;
+    })
+    .filter(Boolean);
 }
 
 function validateDocsIndex(docsReadmeBody) {
   const links = extractBulletLinks(docsReadmeBody);
   const linkedLabels = new Set(links.map((entry) => entry.label));
 
-  return REQUIRED_TOP_LEVEL_DOCS
-    .filter((entry) => !linkedLabels.has(entry))
-    .map((entry) => `Missing docs/README.md top-level entry: ${entry}`);
+  return REQUIRED_TOP_LEVEL_DOCS.filter(
+    (entry) => !linkedLabels.has(entry),
+  ).map((entry) => `Missing docs/README.md top-level entry: ${entry}`);
 }
 
 function validateAgentsIndex(agentsBody) {
@@ -125,17 +130,21 @@ function validateAgentsIndex(agentsBody) {
       .map((entry) => entry.label.replace(/^docs\//, '')),
   );
 
-  return REQUIRED_TOP_LEVEL_DOCS
-    .filter((entry) => !topLevelDocTargets.has(entry))
-    .map((entry) => `Missing AGENTS.md related-doc entry: docs/${entry}`);
+  return REQUIRED_TOP_LEVEL_DOCS.filter(
+    (entry) => !topLevelDocTargets.has(entry),
+  ).map((entry) => `Missing AGENTS.md related-doc entry: docs/${entry}`);
 }
 
 function validateArchitectureCurrentContract(architectureBody) {
   const errors = [];
 
   if (
-    architectureBody.includes('/m6/dashboard uses `POST /api/v1/stat-dashboard/query`') ||
-    architectureBody.includes('/m6/dashboard` uses `POST /api/v1/stat-dashboard/query`')
+    architectureBody.includes(
+      '/m6/dashboard uses `POST /api/v1/stat-dashboard/query`',
+    ) ||
+    architectureBody.includes(
+      '/m6/dashboard` uses `POST /api/v1/stat-dashboard/query`',
+    )
   ) {
     errors.push(
       'ARCHITECTURE.md still describes /m6/dashboard as using POST /api/v1/stat-dashboard/query.',
@@ -143,6 +152,19 @@ function validateArchitectureCurrentContract(architectureBody) {
   }
 
   return errors;
+}
+
+function validateLedgerSize(name, body) {
+  const lineCount = body.split(/\r?\n/).length;
+
+  if (lineCount > LEDGER_MAX_LINES) {
+    return [
+      `${name} is too long: ${lineCount} lines (limit ${LEDGER_MAX_LINES}). ` +
+        'Archive resolved/historical entries into docs/reviews/ instead of deleting them.',
+    ];
+  }
+
+  return [];
 }
 
 function validateProjectState(projectStateBody) {
@@ -179,21 +201,30 @@ export function validateGovernance({
   const errors = [];
 
   if (decisionsBody) {
-    for (const id of collectDuplicateLedgerIds(decisionsBody, DECISION_ID_PATTERN)) {
+    for (const id of collectDuplicateLedgerIds(
+      decisionsBody,
+      DECISION_ID_PATTERN,
+    )) {
       errors.push(`Duplicate decision ID: ${id}`);
     }
+    errors.push(...validateLedgerSize('DECISIONS.md', decisionsBody));
   }
 
   if (knownBugsBody) {
     for (const id of collectDuplicateLedgerIds(knownBugsBody, BUG_ID_PATTERN)) {
       errors.push(`Duplicate bug ID: ${id}`);
     }
+    errors.push(...validateLedgerSize('KNOWN_BUGS.md', knownBugsBody));
   }
 
   if (techDebtBody) {
-    for (const id of collectDuplicateLedgerIds(techDebtBody, TECH_DEBT_ID_PATTERN)) {
+    for (const id of collectDuplicateLedgerIds(
+      techDebtBody,
+      TECH_DEBT_ID_PATTERN,
+    )) {
       errors.push(`Duplicate tech debt ID: ${id}`);
     }
+    errors.push(...validateLedgerSize('TECH_DEBT.md', techDebtBody));
   }
 
   for (const document of linkedDocuments) {
@@ -245,6 +276,8 @@ const LINK_CHECKED_DOCUMENTS = [
   'docs/AGENT_SKILL_ROUTING.md',
   'docs/LINEAR_TASK.md',
   'docs/AI-CODE-HEALTH.md',
+  'docs/TESTING_RULES.md',
+  'docs/templates/workflow-packet-examples.md',
 ];
 
 function main() {

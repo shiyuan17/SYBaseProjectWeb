@@ -135,7 +135,10 @@ describe('validatePullRequestPacket', () => {
   it('rejects missing red-team evidence when Red Team is declared as a required modifier', () => {
     const result = validatePullRequestPacket(
       validBody
-        .replace('- Attack result: Empty required packet fields are rejected.', '- Attack result:')
+        .replace(
+          '- Attack result: Empty required packet fields are rejected.',
+          '- Attack result:',
+        )
         .replace(
           '- Residual risk: Content quality still needs human review.',
           '- Residual risk:',
@@ -149,7 +152,10 @@ describe('validatePullRequestPacket', () => {
 
   it('allows fast-path PR bodies to omit the Dynamic Tests section', () => {
     const result = validatePullRequestPacket(
-      validDocsOnlyBody.replace(/## Dynamic Tests[\s\S]*?## Red Team/, '## Red Team'),
+      validDocsOnlyBody.replace(
+        /## Dynamic Tests[\s\S]*?## Red Team/,
+        '## Red Team',
+      ),
     );
 
     expect(result.isValid).toBe(true);
@@ -181,11 +187,10 @@ describe('validatePullRequestPacket', () => {
 
   it('rejects checked red-team items when evidence fields stay empty', () => {
     const result = validatePullRequestPacket(
-      validDocsOnlyBody
-        .replace(
-          '- [ ] Tried to prove the change can bypass route/menu/API permission checks.',
-          '- [x] Tried to prove the change can bypass route/menu/API permission checks.',
-        ),
+      validDocsOnlyBody.replace(
+        '- [ ] Tried to prove the change can bypass route/menu/API permission checks.',
+        '- [x] Tried to prove the change can bypass route/menu/API permission checks.',
+      ),
     );
 
     expect(result.isValid).toBe(false);
