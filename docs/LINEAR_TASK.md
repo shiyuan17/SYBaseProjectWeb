@@ -4,7 +4,7 @@
 
 ## 0. Linear 同步命令（计划与 issue 维护）
 
-仓库提供以下命令同步本地计划与 Linear，配置来源为根目录 `linear-setting.json`：
+仓库提供以下命令同步本地计划与 Linear，配置来源为根目录 `linear-setting.json`（被 `.gitignore` 忽略；首次使用时复制根目录 `linear-setting.example.json` 为 `linear-setting.json` 并填入 token 与 team/project 信息）：
 
 | 命令 | 作用 |
 | --- | --- |

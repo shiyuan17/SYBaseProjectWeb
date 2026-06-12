@@ -130,8 +130,14 @@ pnpm linear:pull
 - [docs/UI_RULES.md](./docs/UI_RULES.md)
 - [docs/COMPATIBILITY_RULES.md](./docs/COMPATIBILITY_RULES.md)
 - [docs/GIT_RULES.md](./docs/GIT_RULES.md)
+- [docs/DYNAMIC_WORKFLOW_RULES.md](./docs/DYNAMIC_WORKFLOW_RULES.md)
+- [docs/LOOP_ENGINEERING_RULES.md](./docs/LOOP_ENGINEERING_RULES.md)
+- [docs/AGENT_SKILL_ROUTING.md](./docs/AGENT_SKILL_ROUTING.md)
 - [docs/LINEAR_TASK.md](./docs/LINEAR_TASK.md)
 - [docs/RELEASE.md](./docs/RELEASE.md)
+- [docs/AI-CODE-HEALTH.md](./docs/AI-CODE-HEALTH.md)
+
+> 完整文档导航（含分类目录与模板）见 [docs/README.md](./docs/README.md)。
 
 ## 后续工程建议顺序
 

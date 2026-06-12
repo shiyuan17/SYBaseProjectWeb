@@ -1,669 +1,49 @@
 # AI 健康度开发规范（AI Code Health Standard）
 
-Version: 1.0
-
----
-
-# 前言
-
-本规范用于约束 AI（Codex、Claude Code、Cursor、Copilot、OpenClaw、Gemini 等）生成代码时的行为，目标不是追求极致抽象或最少代码，而是持续产出：
-
-- 易理解
-- 易维护
-- 易测试
-- 易扩展
-- 易审查
-
-的健康代码。
-
----
+Version: 2.0（压缩版，完整示例版见 git 历史 v1.0）
 
 ## 使用边界与优先级
 
-- 本规范用于补充 AI 生成代码时的质量判断，不替代仓库内的专项规范和协作约束。
-- 规则优先级：仓库专项规范（目录、编码、Vue/TS、状态、路由、API、UI、兼容性、Git、发布等） > 本规范 > 通用实现经验。
-- 当本规范与专项规范存在表述差异时，以仓库专项规范为准，并优先保留现有模块边界、共享层契约和协作约束。
-- 本文件定位为 AI 质量补充与自检附录，不作为任务开始、Workflow 选择、worktree 决策、Memory Update 或交付字段的唯一来源。
+- 本规范是 AI 生成代码时的质量自检附录，按需引用，不在首次全量通读清单内。
+- 规则优先级：仓库专项规范（`CODING_RULES.md`、`VUE_TS_RULES.md`、`STATE_RULES.md`、`ROUTER_RULES.md`、`API_RULES.md`、`UI_RULES.md` 等） > 本规范 > 通用实现经验。
+- 与专项规范表述有差异时，以专项规范为准；不得为迎合本规范而破坏现有模块边界、共享层契约或引入新依赖（新依赖属红区，须人工确认）。
+- 本文件不作为任务开始、Workflow 选择、worktree 决策、Memory Update 或交付字段的来源。
 
----
+## 核心原则
 
-# 一、核心原则（必须遵守）
+- 显式优于隐式，清晰优于聪明，稳定优于炫技
+- 可理解性优于代码行数，可维护性优于设计模式堆砌
+- 可验证目标优于模糊执行，外科手术式修改优于顺手整理
+- 一切规则服务于降低认知负担，而非机械满足规范
 
-## 1.1 基本准则
+## 规则速查表
 
-✅ 显式优于隐式
+| 维度 | 必须 | 禁止 | 细则来源 |
+| --- | --- | --- | --- |
+| 函数 | 单一职责；单一抽象层级（业务编排不混 SQL/消息/日志细节）；可独立调用与验证 | 一个函数同时做校验+计算+持久化+通知；为减行数做形式主义拆分导致频繁跳转 | `CODING_RULES.md` |
+| 副作用 | 优先返回新对象；显式传入依赖 | 修改入参；写全局状态；依赖隐藏单例 | `STATE_RULES.md` |
+| 命名 | 函数=动词+名词（`createOrder`）；布尔=`is/has/should/can`；事件用过去式（`OrderCreated`）；变量用业务语义 | 缩写、自造术语、`data/info/tmp/flag/obj/res/result1/testData` | `CODING_RULES.md` |
+| 类型 | 公共 API 显式声明参数与返回类型；不确定时用 `unknown`；多参数优先对象参数 | 滥用 `any` 与 `as unknown as` 宽泛断言；返回不确定结构 | `VUE_TS_RULES.md` |
+| 错误处理 | 结构化错误（错误码 + 消息）；区分用户输入/权限/不存在/业务规则/系统异常 | 吞异常（空 `catch`）；`throw '字符串'` | `API_RULES.md` |
+| 文件 | 一个文件一个主题；文件名表达业务意图（`createOrder.ts`） | 新增 `utils.ts`/`common.ts`/`helper.ts`/`tools.ts` 垃圾场文件 | `PROJECT_DIRECTORY.md` |
+| 测试 | 核心逻辑可测试；覆盖业务规则、边界条件、异常路径；测试关注行为而非调用次数 | 删测试让流程通过 | `CODING_RULES.md` |
 
-✅ 清晰优于聪明
+行数仅作复杂度信号（业务编排 ≤30、算法 ≤60、UI 组件 ≤100），不是硬门槛；组件拆分口径以 `VUE_TS_RULES.md` 为准。
 
-✅ 稳定优于炫技
+运行时 schema 校验（Zod 等）仅在已有依赖的场景使用，不得为套用规范擅自引入新依赖。
 
-✅ 可理解性优于代码行数
+## AI 行为约束
 
-✅ 可维护性优于设计模式堆砌
+- 不写聪明/炫技/过度抽象代码，不为减少行数降低可读性
+- 不制造无业务意义的中间层、配置项或 speculative abstraction
+- 所有函数与命名必须表达真实业务意图
+- 优先直白实现、可维护性、可测试性、新人可读性
 
-✅ 可验证目标优于模糊执行
+## 前端语境示例（Vue 3 + TS）
 
-✅ 外科手术式修改优于顺手整理
+技术细则以 `VUE_TS_RULES.md`、`STATE_RULES.md`、`API_RULES.md` 为准。
 
----
-
-## 1.2 最终目标
-
-所有规则均服务于：
-
-降低认知负担
-
-而非机械式满足规范。
-
----
-
-# 二、函数健康度规范
-
-函数是系统健康度的最小单元。
-
----
-
-## 2.1 单一职责原则
-
-一个函数只负责一件事情。
-
-### 正例
-
-```ts
-function validateOrder(order: Order): ValidationResult;
-```
-
-```ts
-function calculatePrice(items: OrderItem[]): number;
-```
-
-### 反例
-
-```ts
-function processOrder() {
-  validate();
-  calculate();
-  save();
-  notify();
-}
-```
-
-同时承担：
-
-- 校验
-- 计算
-- 持久化
-- 消息通知
-
-违反单一职责原则。
-
----
-
-## 2.2 单一抽象层级
-
-同一个函数内不要混用：
-
-- 业务逻辑
-- 技术实现
-- 基础设施细节
-
-### 正例
-
-```ts
-async function createOrder(command: CreateOrderCommand) {
-  const order = buildOrder(command);
-
-  await orderRepository.save(order);
-
-  await eventBus.publish(new OrderCreated(order.id));
-}
-```
-
----
-
-### 反例
-
-```ts
-async function createOrder(command) {
-
-  const sql =
-    "insert into order ...";
-
-  await mysql.execute(sql);
-
-  sendKafkaMessage(...);
-
-  writeAuditLog(...);
-
-}
-```
-
-业务与实现混杂。
-
----
-
-## 2.3 无副作用原则
-
-函数应尽量保持纯净。
-
-### 禁止
-
-修改外部状态：
-
-```ts
-globalState.user = user;
-```
-
-修改入参：
-
-```ts
-function updateOrder(order) {
-  order.status = 'PAID';
-}
-```
-
----
-
-### 推荐
-
-返回新对象：
-
-```ts
-function markOrderPaid(order: Order): Order {
-  return {
-    ...order,
-    status: 'PAID',
-  };
-}
-```
-
----
-
-## 2.4 可独立测试
-
-函数必须可以：
-
-- 单独调用
-- 独立验证
-- 无环境依赖
-
----
-
-## 2.5 行数建议
-
-### 行数是参考值，不是目标
-
-以下建议仅用于提示复杂度信号，不作为强制门槛或唯一判定标准。
-
-| 类型         | 建议     |
-| ------------ | -------- |
-| 业务编排函数 | ≤ 30 行  |
-| 算法函数     | ≤ 60 行  |
-| UI组件       | ≤ 100 行 |
-| 配置文件     | 不限制   |
-
-> 行数阈值为复杂度信号，不是硬门槛；组件拆分的具体口径以 `VUE_TS_RULES.md`（“超大 SFC 必须拆分”）为准。
-
----
-
-### 禁止
-
-为了减少行数：
-
-- 过度抽象
-- 提取无意义函数
-- 拆分到无法阅读
-
----
-
-### 反例
-
-```ts
-function process() {
-  step1();
-  step2();
-  step3();
-}
-```
-
-阅读者必须不断跳转。
-
-属于形式主义拆分。
-
----
-
-# 三、命名规范
-
-命名是 AI 理解代码最重要的上下文。
-
----
-
-## 3.1 命名原则
-
-禁止：
-
-- 缩写
-- 自造术语
-- 模糊表达
-
-命名应直接体现业务意图。
-
----
-
-## 3.2 函数命名
-
-格式：
-
-```text
-动词 + 名词
-```
-
-示例：
-
-```ts
-createOrder();
-
-calculatePrice();
-
-validateUser();
-
-generateReport();
-```
-
----
-
-## 3.3 布尔变量
-
-格式：
-
-```text
-is
-has
-should
-can
-```
-
-示例：
-
-```ts
-isPaid;
-
-hasStock;
-
-shouldRetry;
-
-canDelete;
-```
-
----
-
-## 3.4 普通变量
-
-使用业务语义。
-
-```ts
-totalAmount;
-
-retryCount;
-
-paymentMethod;
-
-deliveryAddress;
-```
-
----
-
-## 3.5 事件命名
-
-使用过去式。
-
-```ts
-OrderCreated;
-
-OrderCanceled;
-
-PaymentFailed;
-```
-
----
-
-## 3.6 禁止命名
-
-```ts
-data;
-info;
-tmp;
-flag;
-obj;
-res;
-result1;
-testData;
-```
-
----
-
-# 四、类型与接口规范
-
-类型是 AI 理解系统结构的导航地图。
-
----
-
-## 4.1 禁止 Any
-
-禁止：
-
-```ts
-any;
-```
-
-必须使用：
-
-```ts
-unknown;
-```
-
-或明确类型。
-
-> 本节为通用基线；前端 `any` 的具体口径以 `VUE_TS_RULES.md`（“避免滥用 `any`、`as unknown as` 等宽泛断言”）为准。
-
----
-
-## 4.2 公共 API 显式声明
-
-### 正例
-
-```ts
-function calculateTotal(items: CartItem[]): number;
-```
-
----
-
-### 反例
-
-```ts
-function calculateTotal(items) {}
-```
-
----
-
-## 4.3 输入集中
-
-优先使用对象参数。
-
-### 推荐
-
-```ts
-createOrder({
-  userId,
-  items,
-  couponCode,
-});
-```
-
----
-
-### 避免
-
-```ts
-createOrder(userId, items, couponCode);
-```
-
----
-
-## 4.4 输出明确
-
-禁止返回不确定结构。
-
-### 推荐
-
-```ts
-type CreateOrderResult
-```
-
----
-
-## 4.5 Schema 优先
-
-> 本仓库未默认引入 Zod / Joi 等运行时 schema 校验库；本节为通用建议，落地以仓库实际依赖与 `API_RULES.md`、`VUE_TS_RULES.md` 的类型/转换约定为准，不要为套用本节而擅自引入新依赖（属红区，须人工确认）。
-
-在已采用 schema 校验的场景，优先使用：
-
-- Zod
-- Joi
-- JSON Schema
-
-统一输入校验。
-
-示例：
-
-```ts
-export const CreateOrderSchema = z.object({
-  userId: z.string(),
-  items: z.array(
-    z.object({
-      skuId: z.string(),
-      qty: z.number().int().positive(),
-    }),
-  ),
-});
-```
-
----
-
-# 五、错误处理规范
-
-错误处理是 AI 最容易失控的区域。
-
----
-
-## 5.1 禁止吞异常
-
-禁止：
-
-```ts
-try {
-} catch {}
-```
-
----
-
-## 5.2 禁止字符串异常
-
-禁止：
-
-```ts
-throw 'error';
-```
-
----
-
-## 5.3 使用结构化错误
-
-```ts
-throw new BusinessError({
-  code: 'ORDER_NOT_FOUND',
-  message: '订单不存在',
-});
-```
-
----
-
-## 5.4 错误分类
-
-| 类型         | 处理方式   |
-| ------------ | ---------- |
-| 用户输入错误 | 4xx        |
-| 权限错误     | 403        |
-| 资源不存在   | 404        |
-| 业务规则失败 | 业务错误码 |
-| 系统异常     | 日志+告警  |
-
----
-
-# 六、副作用与状态管理
-
-副作用必须可追踪。
-
----
-
-## 6.1 禁止
-
-修改全局状态：
-
-```ts
-updateGlobalState();
-```
-
-依赖隐藏单例：
-
-```ts
-CurrentUser.get();
-```
-
----
-
-## 6.2 推荐
-
-显式依赖注入：
-
-```ts
-createOrder(command, repository);
-```
-
----
-
-# 七、文件与目录规范
-
-目录结构决定系统可维护性。
-
-不得为了迎合本规范而破坏仓库现有目录边界，以及路由、状态、请求层的职责分离；涉及这些边界时，以仓库专项规范为准。
-
----
-
-## 7.1 文件原则
-
-一个文件只负责一个主题。
-
----
-
-## 7.2 文件命名
-
-文件名应表达业务意图。
-
-### 推荐
-
-```text
-createOrder.ts
-
-calculatePrice.ts
-
-validateOrder.ts
-```
-
----
-
-### 禁止
-
-```text
-utils.ts
-
-common.ts
-
-helper.ts
-
-tools.ts
-```
-
-这些文件最终都会变成垃圾场。
-
----
-
-## 7.3 推荐目录结构
-
-```text
-order/
-
-├── createOrder.ts
-├── validateOrder.ts
-├── calculatePrice.ts
-
-├── order.types.ts
-├── order.errors.ts
-
-├── order.repository.ts
-
-└── order.spec.ts
-```
-
----
-
-# 八、测试与可验证性
-
-## 8.1 测试优先
-
-AI 应优先生成：
-
-测试
-
-再生成实现。
-
----
-
-## 8.2 测试关注行为
-
-测试业务行为：
-
-```ts
-shouldCreateOrder();
-```
-
-而不是：
-
-```ts
-shouldCallFunctionTwice();
-```
-
----
-
-## 8.3 核心逻辑必须可测试
-
-必须覆盖：
-
-- 业务规则
-- 边界条件
-- 异常路径
-
----
-
-# 九、AI 行为约束（System Prompt）
-
-以下内容建议作为所有 AI 编码工具的系统规则。
-
-```markdown
-# AI 行为约束
-
-- 不写聪明代码
-- 不写炫技代码
-- 不写过度抽象代码
-- 不为了减少行数而降低可读性
-- 不制造无业务意义的中间层
-- 所有函数必须具有明确业务语义
-- 所有命名必须表达真实意图
-- 优先直白实现
-- 优先可维护性
-- 优先可测试性
-- 优先新人可读性
-```
-
----
-
-# 九补、前端语境示例（Vue 3 + TS）
-
-本规范示例偏服务端语境，下面补充本仓库（Vue 3 + Element Plus 管理台）常见场景的等价落地，技术细则仍以 `VUE_TS_RULES.md`、`STATE_RULES.md`、`API_RULES.md` 为准。
-
-## 组合式函数：单一职责 + 显式加载/错误状态
-
-### 正例
+组合式函数：单一职责 + 显式加载/错误状态，禁止 `any` + 模糊命名 + 直接透传后端结构：
 
 ```ts
 function useUserList() {
@@ -688,21 +68,7 @@ function useUserList() {
 }
 ```
 
-### 反例
-
-```ts
-function useUser() {
-  const data = ref<any>(null); // any + 模糊命名
-  async function go() {
-    data.value = (await api.get('/user/list')).data; // 直接透传后端结构，无加载/错误态
-  }
-  return { data, go };
-}
-```
-
-## ViewModel 转换：不让组件长期依赖后端原始结构
-
-### 正例
+ViewModel 转换：不让组件长期依赖后端原始结构：
 
 ```ts
 function toUserTableRow(dto: UserDTO): UserTableRow {
@@ -715,9 +81,7 @@ function toUserTableRow(dto: UserDTO): UserTableRow {
 }
 ```
 
-## 组件：无副作用、可销毁
-
-### 正例
+组件副作用可销毁（ECharts 等实例必须在卸载时释放）：
 
 ```ts
 const chart = shallowRef<EChartsType | null>(null);
@@ -725,93 +89,28 @@ onMounted(() => {
   chart.value = echarts.init(containerRef.value!);
 });
 onBeforeUnmount(() => {
-  chart.value?.dispose(); // 释放实例与监听，避免切页残留
+  chart.value?.dispose();
 });
 ```
 
----
+## 自检清单（提交前过一遍）
 
-# 十、AI 健康度自检清单
+代码质量：
 
-提交代码前必须自检。
+- [ ] 每个函数能一句话说明作用，只负责一件事，无隐藏副作用
+- [ ] 命名表达真实业务含义，无缩写与模糊命名
+- [ ] 无 `any` 滥用，公共 API 类型与返回值明确
+- [ ] 无吞异常、无字符串异常，错误码明确
+- [ ] 无无意义抽象与频繁跳转阅读，新人可在 30 秒内抓住主线
 
-## 函数
+AI 行为：
 
-- [ ] 是否能一句话说明函数作用？
-- [ ] 是否只负责一件事情？
-- [ ] 是否混用了多个抽象层级？
-- [ ] 是否存在隐藏副作用？
-- [ ] 是否容易测试？
+- [ ] 关键假设已写明；需求多解时已澄清或显式选择并说明原因
+- [ ] 需求已转成可验证成功标准
+- [ ] 每个改动可追溯到用户需求、成功标准或本次必要清理
+- [ ] 未改动无关格式、注释、命名或旧逻辑
+- [ ] 缺陷修复先复现或补回归测试；重构能证明行为不变
 
----
+## 评分模型（自检与复盘参考，非唯一判定）
 
-## 命名
-
-- [ ] 是否表达真实业务含义？
-- [ ] 是否存在缩写？
-- [ ] 是否存在模糊命名？
-
----
-
-## 类型
-
-- [ ] 是否使用了 any？
-- [ ] 是否声明了公共 API 类型？
-- [ ] 返回值是否明确？
-
----
-
-## 错误处理
-
-- [ ] 是否吞异常？
-- [ ] 是否使用结构化错误？
-- [ ] 是否具备明确错误码？
-
----
-
-## 可维护性
-
-- [ ] 相关实现是否能在较短时间内被新人快速看懂（例如 30 秒内抓住主线）？
-- [ ] 是否存在无意义抽象？
-- [ ] 是否存在频繁跳转阅读？
-- [ ] 是否降低了系统认知成本？
-
----
-
-## AI 行为
-
-- [ ] 是否存在未写明的关键假设？
-- [ ] 如果需求有多种解释，是否已经澄清或显式选择并说明原因？
-- [ ] 是否把需求转成了可验证成功标准？
-- [ ] 每个改动是否都能追溯到用户需求、成功标准或本次必要清理？
-- [ ] 是否改动了无关格式、注释、命名或旧逻辑？
-- [ ] 是否新增了无业务意义的中间层、配置项或 speculative abstraction？
-- [ ] 缺陷修复是否先复现或补回归测试，重构是否证明行为保持不变？
-
----
-
-# 健康度评分模型
-
-该评分模型用于自检、复盘和评审讨论，不作为唯一判定标准。
-
-| 维度       | 权重 |
-| ---------- | ---- |
-| 可读性     | 30%  |
-| 命名质量   | 20%  |
-| 测试能力   | 20%  |
-| 类型完整性 | 15%  |
-| 错误处理   | 15%  |
-
-总分：
-
-```text
-90~100   A 优秀
-
-80~89    B 良好
-
-70~79    C 合格
-
-60~69    D 需优化
-
-<60      F 重构
-```
+可读性 30% + 命名 20% + 测试能力 20% + 类型完整性 15% + 错误处理 15%；90+ 优秀，80+ 良好，70+ 合格，60+ 需优化，<60 建议重构。

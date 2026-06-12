@@ -66,7 +66,7 @@
 | 代码规范 | `pnpm lint` | ESLint / oxlint 等统一校验 |
 | 类型检查 | `pnpm check:type` | `vue-tsc` 类型检查（等价 `turbo run typecheck`） |
 | 拼写检查 | `pnpm check:cspell` | cspell 校验（扫描 `**/*.{ts,tsx,vue}` 与 `**/README.md`，不覆盖其他 `*.md`） |
-| 治理校验 | `pnpm run check:governance` | 校验治理文档关键约束（当前覆盖决策 ID、文档索引、架构快照、`PROJECT_STATE.md` 结构） |
+| 治理校验 | `pnpm run check:governance` | 校验治理文档关键约束（决策/BUG/TD 台账 ID 去重、文档索引、架构快照、`PROJECT_STATE.md` 结构、治理文档内相对链接可达性） |
 | 综合静态检查 | `pnpm check` | 循环依赖 + 依赖 + 类型 + 拼写 + 治理一次性执行 |
 | 单元测试 | `pnpm test:unit` | Vitest（`--dom`），逻辑/工具/组件 |
 | 端到端测试 | `pnpm test:e2e` | Playwright，关键链路回归 |

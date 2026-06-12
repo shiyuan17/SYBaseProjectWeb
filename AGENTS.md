@@ -10,18 +10,18 @@
 
 ## 快速命令
 
-统一使用 `pnpm`（Node 与 pnpm 版本约束见根 `package.json` 的 `engines`）。常用命令如下，完整验证策略见 `docs/CODING_RULES.md` 的「标准验证命令」：
+统一使用 `pnpm`（Node 与 pnpm 版本约束见根 `package.json` 的 `engines`）。验证命令的唯一维护点是 `docs/CODING_RULES.md` 的「标准验证命令」；下表仅为入口速查镜像，两处不一致时以 `CODING_RULES.md` 为准：
 
-| 用途                                          | 命令              |
-| --------------------------------------------- | ----------------- |
-| 安装依赖                                      | `pnpm install`    |
-| 启动开发（web-ele）                           | `pnpm dev:ele`    |
-| 代码规范                                      | `pnpm lint`       |
-| 类型检查                                      | `pnpm check:type` |
+| 用途                                                 | 命令              |
+| ---------------------------------------------------- | ----------------- |
+| 安装依赖                                             | `pnpm install`    |
+| 启动开发（web-ele）                                  | `pnpm dev:ele`    |
+| 代码规范                                             | `pnpm lint`       |
+| 类型检查                                             | `pnpm check:type` |
 | 综合静态检查（循环依赖 + 依赖 + 类型 + 拼写 + 治理） | `pnpm check`      |
-| 单元测试                                      | `pnpm test:unit`  |
-| 端到端测试                                    | `pnpm test:e2e`   |
-| 构建                                          | `pnpm build`      |
+| 单元测试                                             | `pnpm test:unit`  |
+| 端到端测试                                           | `pnpm test:e2e`   |
+| 构建                                                 | `pnpm build`      |
 
 > 改动逻辑或组件时，交付前至少运行 `pnpm lint` + `pnpm check:type` + 相关 `pnpm test:unit`，并在交付说明中回填结论。涉及规范、记忆文件或治理脚本改动时，额外运行 `pnpm run check:governance`。
 
@@ -57,16 +57,18 @@
 10. `docs/GIT_RULES.md`
 11. `docs/DYNAMIC_WORKFLOW_RULES.md`
 12. `docs/LOOP_ENGINEERING_RULES.md`
-13. `docs/LINEAR_TASK.md`（仅当任务来源于 Linear issue 时）
+13. `docs/LINEAR_TASK.md`（条件必读：仅 Linear 任务需要读，非 Linear 任务直接跳过本项）
 14. `docs/RELEASE.md`
-15. `docs/AI-CODE-HEALTH.md`
-16. 任务涉及模块文档与现有源码
+15. 任务涉及模块文档与现有源码
+
+> `docs/AI-CODE-HEALTH.md` 为按需引用的质量自检附录，不在全量通读清单内；在生成或评审代码、做交付前自检时查阅其规则速查表与自检清单即可。
 
 - **续接历史任务 / 接手脏工作区**：先读根目录 `PROJECT_STATE.md`、`DECISIONS.md`、`KNOWN_BUGS.md`，再结合 `git status`、agentmemory 技能与任务相关规范恢复上下文。
 
 > 无论走哪一档，涉及红区或「6. 必须升级人工确认的场景」时，相关专项文档均为必读。
 >
 > 入口收口规则：
+>
 > - Workflow 选择、强制修饰器、动态测试、Red Team、Workflow Packet 字段以 `docs/DYNAMIC_WORKFLOW_RULES.md` 为唯一来源。
 > - Worktree / Linear / 脏工作区隔离策略以 `docs/GIT_RULES.md` 第 6 节为唯一来源。
 > - 五类 Memory 文件职责、通用更新触发条件、是否需要更新的最终判定以本文件「8. AI Memory Update」为唯一来源。
@@ -115,6 +117,19 @@
 - 非目标 / 不做项: [本轮明确不处理的范围，避免顺手重构或扩展]
 ```
 
+**绿区 Fast Path（精简任务确认）**：同时满足「仅绿区改动、纯文档 / 规范审计 / 只读分析、不改运行时行为、不涉及红区与人工确认场景」时，可改用以下精简模板，无需展开完整九字段：
+
+```markdown
+## 任务确认（Fast Path）
+
+- 任务目标: [一句话]
+- 影响范围: [文件或目录]
+- 主 Workflow: 不适用（[原因]）
+- 成功标准: [可验证的完成条件，例如 check:governance 通过、文档点位修正]
+```
+
+任一条件不满足（命中实现类 Workflow、黄区/红区、改运行时行为）即回到完整模板；PR 层面的对应精简规则见 `.github/PULL_REQUEST_TEMPLATE.md` 的 Fast path 说明。
+
 - 主 Workflow 与修饰器的选择标准、触发条件、对应专家 Agent / 动态测试 / 动态模拟 / 红队问题，统一以 `docs/DYNAMIC_WORKFLOW_RULES.md` 为唯一来源；纯文档、闲聊或信息查询类任务可标注「主 Workflow: 不适用」并说明原因。
 - 若任务明确来源于 Linear issue，开始前应参考 `docs/LINEAR_TASK.md` 准备任务起始信息；非 Linear 任务不强制套用该模板。
 - **规格先行（硬约束）**：验收标准为空、缺失或存在歧义，且不同理解会改变页面行为 / 数据流 / 接口联调方式时，必须先澄清确认，不得凭推测直接进入编码（与「6. 必须升级人工确认的场景」中"无法确定业务规则"一致）。对中大型任务，应先与用户对齐验收标准与非目标，再动手实现。
@@ -155,7 +170,7 @@
 - 变更摘要：做了什么、为什么这样做
 - 影响说明：是否涉及配置、接口、兼容性、主题、路由或状态
 - 追溯说明：说明本次主要变更如何对应用户需求、成功标准或必要清理；无关改动必须说明原因
-- Workflow Packet（精简版）：本次主 Workflow、实际叠加的修饰器、启用的专家 Agent、跑过的动态测试/模拟，以及高风险任务的红队结论；完整字段以 `docs/DYNAMIC_WORKFLOW_RULES.md` 和 PR 模板为准
+- Workflow Packet（精简版）：本次主 Workflow、实际叠加的修饰器、启用的专家 Agent、跑过的动态测试/模拟，以及高风险任务的红队结论；完整字段语义与必填口径以 `docs/DYNAMIC_WORKFLOW_RULES.md` 为唯一来源，PR 模板仅为其镜像
 - 验证结果：已执行的检查、构建、测试或未验证项
 - AI Memory Update：本次更新了哪些记忆文件、哪些未更新及原因、是否存在跨仓引用
 - 风险提示：需要人工跟进的事项
@@ -222,8 +237,7 @@
 - 与用户沟通：默认使用用户当前语言
 - 代码注释与文档：遵循模块既有语言风格，无现存风格时优先中文
 - 记忆层与模板例外：根目录五类记忆文件（`PROJECT_STATE.md`、`TECH_DEBT.md`、`KNOWN_BUGS.md`、`DECISIONS.md`、`ARCHITECTURE.md`）及 `.github` PR 模板沿用其现有英文结构（表头、字段名）；条目正文语言跟随来源语境（如复现步骤、后端核对说明可用中文），不强制翻译为中文
-- 文本类文件编码：新增或修改源码、脚本、配置、文档时，默认使用 `UTF-8`，并与仓库 `.editorconfig` 中的 `charset=utf-8` 保持一致，默认采用 `UTF-8（无 BOM）`
-- 乱码与错码处理：发现乱码或疑似错码时，必须先确认原文件编码和当前工具的解码方式，再进行修改，不得在未确认前直接批量转码或覆盖保存
+- 文本类文件编码：统一 `UTF-8（无 BOM）`，完整编码规则（混用禁令、乱码处理、导出链路验证）以 `docs/CODING_RULES.md` 第 5 节为唯一来源；发现乱码时必须先确认原文件编码与解码方式，不得未确认就批量转码或覆盖保存
 - Git 提交信息：遵循 `docs/GIT_RULES.md` 中的 Conventional Commits
 - AI 自动提交粒度、风险评级与授权边界：遵循 `docs/GIT_RULES.md` 的「AI 自动提交粒度规范」；中低风险在说明分组后可自动提交，高风险必须人工确认
 - 发布说明：遵循 `docs/RELEASE.md` 中的版本与验收要求

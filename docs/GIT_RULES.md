@@ -180,7 +180,7 @@ git branch -d feature/ENG-123-user-management
 - 禁止使用 `--no-verify` 等方式绕过护栏；确有特殊情况必须说明原因并人工确认
 - 涉及红区文件的改动（红区定义以 `AGENTS.md` 第 5 节「文件操作边界」为唯一来源），除护栏外仍须执行「6. 必须升级人工确认的场景」中的人工确认（见 `AGENTS.md`）
 
-门禁覆盖矩阵（明确"哪层拦哪些"，避免"hook 通过即安全"的误解）：
+门禁覆盖矩阵（明确"哪层拦哪些"，避免"hook 通过即安全"的误解；各命令的定义与基线以 `CODING_RULES.md`「标准验证命令」为唯一来源，本矩阵只描述各层执行哪些命令）：
 
 | 校验项 | pre-commit | pre-push | CI（`frontend-quality.yml` / `governance-quality.yml` / `pr-packet.yml`） | 发布门禁（`RELEASE.md` §5） |
 | --- | --- | --- | --- | --- |
@@ -195,19 +195,11 @@ git branch -d feature/ENG-123-user-management
 | 治理校验脚本 Vitest | 否 | 否 | 是（治理路径变更时） | 否 |
 | `pnpm test:e2e` | 否 | 否 | 否 | 关键链路时 |
 
-> 注意：`pr-packet.yml` 只校验 PR 正文存在关键 Workflow Packet / Memory Update Packet 字段且非空；当 PR 声明启用了 Red Team 时，还会检查 `Attack result` 与 `Residual risk` 不为空，但仍不判断证据质量。`governance-quality.yml` 只在治理/记忆/模板路径变更时运行，负责 `check:governance` 与治理脚本测试。`cspell` 仅扫描 `**/*.{ts,tsx,vue}` 与 `**/README.md`，不覆盖 `docs/*.md` 规范与根目录记忆文件；这些文件的拼写与一致性仍须人工核对。Red Team 质量、人工确认是否真实完成等治理项仍依赖交付者和 reviewer 审查。
+> 注意：`pr-packet.yml` 只校验 PR 正文存在关键 Workflow Packet / Memory Update Packet 字段且非空；当 PR 声明启用了 Red Team 时，还会检查 `Attack result` 与 `Residual risk` 不为空，但仍不判断证据质量。`governance-quality.yml` 只在治理/记忆/模板路径变更时运行，负责 `check:governance` 与治理脚本测试。`cspell` 扫描 `**/*.{ts,tsx,vue}`、`**/README.md`、`docs/**/*.md` 与根目录 `*.md`（含五类记忆文件），新增领域术语需在 `cspell.json` 词典登记；章节一致性等非拼写问题仍须人工核对。Red Team 质量、人工确认是否真实完成等治理项仍依赖交付者和 reviewer 审查。
 
 ### 8. 动态 Workflow 剧本与红队审查
 
-PR 必须根据任务类型填写 Workflow Packet，并参考 `docs/DYNAMIC_WORKFLOW_RULES.md` 选择专家 Agent、动态测试、动态模拟、安全/数据库修饰器与红队对抗点。不得所有任务套用同一套 AI 流程：
-
-- UI 任务：启用 UI/UX + Browser 验证 Agent，执行组件/页面测试、必要 E2E、角色/视口/状态模拟
-- 接口任务：启用 API Contract Agent，对齐前后端字段、错误模型、分页、失败响应和兼容性
-- 数据库任务：叠加 DB 修饰器，引用后端迁移、回滚、种子、兼容查询或 API 回归证据
-- 权限、患者信息、报告信息：叠加 Security 修饰器，检查越权、泄露、脱敏、审计、导出和日志
-- 大文件重构、共享契约、跨层边界：启用 Architecture Agent，检查影响面、调用关系、循环依赖和兼容性
-- 生产问题：启用 Execution Driven Debug，必须先读日志、复现问题、建立反馈环、确认修复与回滚路径
-- 高风险变更：叠加 Red Team，主动攻击代码并证明是否存在绕过、数据破坏、错误吞噬或回滚缺口
+PR 必须根据任务类型填写 Workflow Packet。主 Workflow 选择、强制修饰器、专家 Agent、动态测试/模拟与 Red Team 要求以 `docs/DYNAMIC_WORKFLOW_RULES.md` 的「总规则」与「触发信号速查表」为唯一来源，本文件不再复述各 Workflow 的触发条件与剧本；不得所有任务套用同一套 AI 流程。
 
 PR 合入前还必须填写 Memory Update Packet：
 

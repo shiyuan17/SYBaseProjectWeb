@@ -9,7 +9,7 @@
 
 ## Dynamic Workflow
 
-Choose one primary Workflow and add required modifiers. Workflow selection, required modifiers, and Red Team obligations use `docs/DYNAMIC_WORKFLOW_RULES.md` as the single source of truth. Low-risk pure docs / audit tasks may mark this section `Not applicable` with a brief reason instead of expanding a full implementation packet.
+Choose one primary Workflow and add required modifiers. Workflow selection, required modifiers, and Red Team obligations use `docs/DYNAMIC_WORKFLOW_RULES.md` as the single source of truth. Fast path: low-risk pure docs / audit / read-only tasks set `Primary Workflow: Not applicable (<reason>)`; such PRs may then omit the Dynamic Tests / Dynamic Simulation / Dynamic Security / Dynamic Database / Red Team / Loop Packet blocks, as long as `Summary > Validation` records what was actually checked.
 
 - Primary Workflow: `UI / API / DB / Security / Architecture / Production Debug / Workflow-Infra`
 - Trigger signals:

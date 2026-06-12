@@ -26,6 +26,12 @@
 
 Loop Packet 不替代 Workflow Packet；它回答“这一轮如何循环和何时停”，Workflow Packet 回答“按哪类工程风险执行”。
 
+最小 Loop Packet（低风险任务适用）：
+
+- 低风险任务（绿区小改动、纯文档、规范审计、只读分析）进入 loop 时，至少写明 Loop Type、Stop Condition、Verification Command 三项即可
+- State Sink 与 Escalation Condition 可标注「默认」：默认 State Sink 为 `PROJECT_STATE.md`，默认 Escalation 为「命中红区或验证失败无法修复时暂停」
+- 命中任一实现类主 Workflow（UI / API / DB / Security / Architecture / Production Debug / Workflow-Infra）的中高风险任务仍须填写完整五字段
+
 ## Task Intake Loop
 
 用途：把用户需求、Linear issue、计划文档或故障报告变成可执行任务。
