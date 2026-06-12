@@ -162,11 +162,7 @@ async function reviewRevision(action: 'approve' | 'reject') {
     description="对已签发或已发布报告发起修订申请，并完成审批通过或驳回。"
   >
     <div class="flex flex-col gap-4">
-      <WorkflowSectionCard
-        v-if="canCreateRevision"
-        title="发起修订申请"
-        description="诊断岗可在此录入报告 ID 和修订原因，发起修订流程。"
-      >
+      <WorkflowSectionCard v-if="canCreateRevision" title="发起修订申请">
         <ElForm label-width="100px">
           <ElFormItem label="报告ID">
             <ElInput v-model="createForm.reportId" />
@@ -199,11 +195,7 @@ async function reviewRevision(action: 'approve' | 'reject') {
         </ElForm>
       </WorkflowSectionCard>
 
-      <WorkflowSectionCard
-        v-if="canReviewRevision"
-        title="审批修订申请"
-        description="签发岗可在此审批通过或驳回修订申请。"
-      >
+      <WorkflowSectionCard v-if="canReviewRevision" title="审批修订申请">
         <ElForm label-width="100px">
           <ElFormItem label="申请ID">
             <ElInput v-model="reviewForm.requestId" />

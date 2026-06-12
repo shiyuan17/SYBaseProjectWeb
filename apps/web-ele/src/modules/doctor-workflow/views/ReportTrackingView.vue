@@ -205,12 +205,12 @@ watch(
         type="error"
       />
 
-      <WorkflowSectionCard
-        title="病例查询"
-        description="支持从菜单独立进入后按病例 ID 或病理号查询报告追踪，也支持从其他页面深链进入。"
-      >
+      <WorkflowSectionCard title="病例查询">
         <ElForm inline label-width="88px">
-          <ElFormItem label="病例 ID / 病理号" required>
+          <ElFormItem label-width="132px" required>
+            <template #label>
+              <span class="whitespace-nowrap">病例 ID / 病理号</span>
+            </template>
             <ElInput
               v-model="queryCaseIdentifier"
               clearable

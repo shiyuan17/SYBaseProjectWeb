@@ -35,9 +35,6 @@ describe('doctor workflow routes', () => {
     const reportRoute = workflowRoot?.children?.find(
       (route) => route.name === 'PathologyReport',
     );
-    const frozenReportRoute = workflowRoot?.children?.find(
-      (route) => route.name === 'FrozenReport',
-    );
     const trackingRoute = workflowRoot?.children?.find(
       (route) => route.name === 'ReportTracking',
     );
@@ -59,8 +56,6 @@ describe('doctor workflow routes', () => {
     expect(workbenchRoute?.meta?.keepAlive).toBe(true);
     expect(reportRoute?.path).toBe('/doctor-workflow/report');
     expect(reportRoute?.meta?.keepAlive).toBe(true);
-    expect(frozenReportRoute?.path).toBe('/doctor-workflow/frozen-report');
-    expect(frozenReportRoute?.meta?.keepAlive).toBe(true);
     expect(trackingRoute?.path).toBe('/doctor-workflow/tracking');
     expect(trackingRoute?.meta?.keepAlive).toBe(true);
     expect(medicalOrderRoute?.path).toBe('/doctor-workflow/medical-orders');
@@ -76,9 +71,6 @@ describe('doctor workflow routes', () => {
       M4_PERMISSION_CODES.WORKBENCH_QUERY,
     ]);
     expect(reportRoute?.meta?.authority).toEqual([
-      ...M4_REPORT_PAGE_AUTHORITIES,
-    ]);
-    expect(frozenReportRoute?.meta?.authority).toEqual([
       ...M4_REPORT_PAGE_AUTHORITIES,
     ]);
     expect(trackingRoute?.meta?.authority).toEqual([

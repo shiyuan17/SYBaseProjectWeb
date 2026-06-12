@@ -215,11 +215,7 @@ async function submitComplete() {
     description="发起会诊、维护参与人、录入参与人意见并完成主持人总结。"
   >
     <div class="flex flex-col gap-4">
-      <WorkflowSectionCard
-        v-if="canCreateConsultation"
-        title="发起会诊"
-        description="诊断岗可输入病例 ID 并维护参与人列表后发起会诊。"
-      >
+      <WorkflowSectionCard v-if="canCreateConsultation" title="发起会诊">
         <ElForm label-width="100px">
           <ElFormItem label="病例ID">
             <ElInput v-model="createForm.caseId" />
@@ -267,11 +263,7 @@ async function submitComplete() {
         </ElTable>
       </WorkflowSectionCard>
 
-      <WorkflowSectionCard
-        v-if="canCommentConsultation"
-        title="录入参与人意见"
-        description="被邀请的会诊参与人可填写意见。"
-      >
+      <WorkflowSectionCard v-if="canCommentConsultation" title="录入参与人意见">
         <ElForm label-width="100px">
           <ElFormItem label="会诊ID">
             <ElInput v-model="commentForm.consultationId" />
@@ -297,11 +289,7 @@ async function submitComplete() {
         </ElForm>
       </WorkflowSectionCard>
 
-      <WorkflowSectionCard
-        v-if="canCompleteConsultation"
-        title="完成会诊"
-        description="主持人可在汇总意见后完成会诊。"
-      >
+      <WorkflowSectionCard v-if="canCompleteConsultation" title="完成会诊">
         <ElForm label-width="100px">
           <ElFormItem label="会诊ID">
             <ElInput v-model="completeForm.consultationId" />

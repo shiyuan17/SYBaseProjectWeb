@@ -398,10 +398,7 @@ watch(
         type="error"
       />
 
-      <WorkflowSectionCard
-        title="报告查询"
-        description="支持从菜单独立进入后按病例加载报告上下文；创建草稿时还需要诊断任务 ID。"
-      >
+      <WorkflowSectionCard title="报告查询">
         <ElForm inline label-width="88px">
           <ElFormItem label="病例 ID" required>
             <ElInput
@@ -510,10 +507,7 @@ watch(
           </ElForm>
         </WorkflowSectionCard>
 
-        <WorkflowSectionCard
-          title="流转操作"
-          description="按钮会按当前账号权限显示。"
-        >
+        <WorkflowSectionCard title="流转操作">
           <ElForm label-width="100px">
             <ElFormItem label="操作人">
               <ElInput

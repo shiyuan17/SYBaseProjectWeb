@@ -152,10 +152,7 @@ void loadOrders();
     description="面向医嘱执行岗和管理员的医嘱工作台，支持查询、接收、完成和取消待处理医嘱。"
   >
     <div class="flex flex-col gap-4">
-      <WorkflowSectionCard
-        title="查询条件"
-        description="按病理号和状态筛选待处理医嘱。"
-      >
+      <WorkflowSectionCard title="查询条件">
         <ElForm inline label-width="88px">
           <ElFormItem label="病理号">
             <ElInput
@@ -189,10 +186,7 @@ void loadOrders();
         </ElForm>
       </WorkflowSectionCard>
 
-      <WorkflowSectionCard
-        title="执行操作"
-        description="接收、完成和取消医嘱会使用当前登录账号。"
-      >
+      <WorkflowSectionCard title="执行操作">
         <ElForm inline label-width="80px">
           <ElFormItem label="终端">
             <ElInput
@@ -216,10 +210,7 @@ void loadOrders();
         description="暂无医嘱数据"
       />
 
-      <WorkflowSectionCard
-        title="医嘱列表"
-        :description="`当前共 ${total} 条记录，支持在表格中直接执行主动作。`"
-      >
+      <WorkflowSectionCard title="医嘱列表">
         <ElEmpty v-if="false" :description="pageError" />
         <ElTable v-else v-loading="loading" :data="orders" border>
           <ElTableColumn label="医嘱号" min-width="150" prop="orderNumber" />
