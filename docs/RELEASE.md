@@ -58,7 +58,7 @@
 
 正式发布前必须全部满足（命令统一使用 `pnpm`，详见 `CODING_RULES.md` 的「标准验证命令」）：
 
-- `pnpm check` 通过（循环依赖 + 依赖 + 类型 + 拼写）
+- `pnpm check` 通过（循环依赖 + 依赖 + 类型 + 拼写 + 治理）
 - `pnpm lint` 通过
 - `pnpm test:unit` 通过；涉及关键链路时 `pnpm test:e2e` 通过
 - `pnpm build` 成功

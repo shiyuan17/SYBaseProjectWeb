@@ -20,9 +20,14 @@
 - Red Team 修饰器：高风险、跨层、生产问题、权限/数据/报告相关任务必须叠加
 - 跨仓任务：前端 PR 必须引用后端 MR/验证结果，后端 MR 必须引用前端 PR/验证结果
 
-PR 必须填写 Workflow Packet，说明为什么选择该 Workflow、启用哪些专家 Agent、跑了哪些动态测试和模拟、红队攻击结论是什么。
+PR 必须填写 Workflow Packet，说明为什么选择该 Workflow、启用哪些专家 Agent、跑了哪些动态测试和模拟、红队攻击结论是什么。Workflow Packet 的最终字段口径以 PR 模板为镜像，但字段语义与是否必须填写由本文件决定。
 
 若任务通过 Loop Engineering 方式执行，还必须填写 `docs/LOOP_ENGINEERING_RULES.md` 定义的 Loop Packet。Loop Packet 只描述本轮闭环如何运行、何时停止、状态写到哪里；不替代本文的 Workflow 分类、修饰器、动态测试、Red Team 或 Memory Update 要求。
+
+精简适用规则：
+
+- 主 Workflow 为「不适用」的低风险纯文档、规范审计、只读分析类任务，可在交付或 PR 中使用精简 Workflow Packet：写明不适用原因、实际验证、风险与 Memory 判定即可
+- 只要命中 UI / API / DB / Security / Architecture / Production Debug / Workflow-Infra 任一实现类 Workflow，仍按完整 Workflow Packet 执行
 
 专家 Agent 可由人工角色、子 Agent 或已安装 Codex skill 承担；可选 skill 映射见 `docs/AGENT_SKILL_ROUTING.md`。该映射只补充执行方式，不改变本文对主 Workflow、强制修饰器、动态测试、Red Team 与 Memory Update 的要求。
 
@@ -61,6 +66,12 @@ PR 中必须包含以下信息：
 - 动态数据库：是否触发 DB 修饰器，后端验证链接或说明是什么
 - Red Team：攻击路径、失败/成功结论、剩余风险
 - Memory Update：更新的记忆文件、未更新文件与原因、相关记忆项 ID、跨仓引用
+
+高风险任务最低证据标准：
+
+- Red Team 至少记录 1 条攻击路径、1 个预期失败点、1 个实际结果、1 条剩余风险
+- 若任务命中 Security / DB / Production Debug / Workflow-Infra 红区场景，缺少上述任一项不得视为完成
+- 若启用 Checker，需能说明 Checker 的来源以及其主要阻塞项或放行理由
 
 ## Memory Layer
 

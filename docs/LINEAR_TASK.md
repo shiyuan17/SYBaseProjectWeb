@@ -43,7 +43,7 @@
 
 - [ ] 已阅读 issue、关联 spec 与相关现有文件
 - [ ] 已确认仓库现有实现模式（命名 / 架构 / UI 约定）
-- [ ] 已为本 issue 创建独立 `git worktree`（目录 `../SYBaseProjectWeb-worktrees/<issue-id>`，命令见 `GIT_RULES.md` 第 6 节），并已在该 worktree 内 `pnpm install`
+- [ ] 已为本 issue 创建独立 `git worktree`（目录 `../SYBaseProjectWeb-worktrees/<issue-id>`，命令见 `GIT_RULES.md` 第 6 节），并已在该 worktree 内 `pnpm install`；若命中 `GIT_RULES.md` 第 6 节低风险例外，已记录不建 worktree 的原因
 - [ ] 已查看 `git status`，工作区干净、不会影响无关改动
 - [ ] 已明确受影响的文件范围
 
