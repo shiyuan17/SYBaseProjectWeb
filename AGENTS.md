@@ -10,7 +10,7 @@
 
 ## 快速命令
 
-统一使用 `pnpm`（Node 与 pnpm 版本约束见根 `package.json` 的 `engines`）。验证命令的唯一维护点是 `docs/CODING_RULES.md` 的「标准验证命令」；下表仅为入口速查镜像，两处不一致时以 `CODING_RULES.md` 为准：
+统一使用 `pnpm`（Node 与 pnpm 版本约束见根 `package.json` 的 `engines`）。验证命令的唯一维护点是 `docs/rules/CODING_RULES.md` 的「标准验证命令」；下表仅为入口速查镜像，两处不一致时以 `CODING_RULES.md` 为准：
 
 | 用途                                                 | 命令              |
 | ---------------------------------------------------- | ----------------- |
@@ -32,8 +32,8 @@
 | 档位 | 适用场景 | 最低输出 | 最低验证 | 升级条件 |
 | --- | --- | --- | --- | --- |
 | Fast Path | 纯文档、规范审计、只读分析，不改运行时行为，不触发红区 | 精简任务确认；交付中说明 Workflow 不适用原因、验证结果、Memory 判定 | 文档 / 治理类任务至少 `pnpm run check:governance`；只读分析写明核对来源 | 需要改代码、接口、路由、权限、构建、CI、hook、发布或出现业务规则歧义 |
-| Lightweight | 低风险实现类任务，命中 UI / API / Architecture / Workflow-Infra 但未触发强制修饰器，不涉及跨层或红区 | 完整任务确认；轻量 Workflow Packet（主 Workflow、触发信号、实际验证、Memory 判定、剩余风险） | 以 `docs/CODING_RULES.md` 标准验证命令选择最小有效集 | 触发 Security / DB / Red Team / Backend Cross-check / Browser 验证，或影响共享契约、路由守卫、请求全局层、构建发布 |
-| Full | 中高风险、跨层、权限 / 数据 / 报告、生产问题、构建发布、红区、跨仓联动 | 完整任务确认；完整 Workflow Packet；必要时 Loop Packet、Red Team、Checker 与红区确认记录 | 按 `docs/DYNAMIC_WORKFLOW_RULES.md` 对应 Workflow 执行动态测试 / 模拟 / 安全或数据库证据 | 扩大到新的红区范围、验证失败无法自行修复、跨仓证据缺失或业务规则无法确定 |
+| Lightweight | 低风险实现类任务，命中 UI / API / Architecture / Workflow-Infra 但未触发强制修饰器，不涉及跨层或红区 | 完整任务确认；轻量 Workflow Packet（主 Workflow、触发信号、实际验证、Memory 判定、剩余风险） | 以 `docs/rules/CODING_RULES.md` 标准验证命令选择最小有效集 | 触发 Security / DB / Red Team / Backend Cross-check / Browser 验证，或影响共享契约、路由守卫、请求全局层、构建发布 |
+| Full | 中高风险、跨层、权限 / 数据 / 报告、生产问题、构建发布、红区、跨仓联动 | 完整任务确认；完整 Workflow Packet；必要时 Loop Packet、Red Team、Checker 与红区确认记录 | 按 `docs/rules/DYNAMIC_WORKFLOW_RULES.md` 对应 Workflow 执行动态测试 / 模拟 / 安全或数据库证据 | 扩大到新的红区范围、验证失败无法自行修复、跨仓证据缺失或业务规则无法确定 |
 
 ### 常见任务快速选择
 
@@ -46,11 +46,11 @@
 | 规则主题 | 唯一来源 |
 | --- | --- |
 | 协作入口、风险升级、文件操作边界、红区确认、交付与 Memory Update 总规则 | `AGENTS.md` |
-| Workflow 分类、强制修饰器、动态测试 / 模拟、Red Team 与 Workflow Packet 字段语义 | `docs/DYNAMIC_WORKFLOW_RULES.md` |
-| 标准验证命令、编码、通用代码质量与测试触发条件 | `docs/CODING_RULES.md` |
-| worktree、Linear、分支、提交、PR、hook 与 Git 门禁 | `docs/GIT_RULES.md` |
-| Loop Type、Stop Condition、State Sink、Escalation Condition 与 maker/checker 闭环 | `docs/LOOP_ENGINEERING_RULES.md` |
-| 外部 AI skill 推荐与回退，不改变上述强制规则 | `docs/AGENT_SKILL_ROUTING.md` |
+| Workflow 分类、强制修饰器、动态测试 / 模拟、Red Team 与 Workflow Packet 字段语义 | `docs/rules/DYNAMIC_WORKFLOW_RULES.md` |
+| 标准验证命令、编码、通用代码质量与测试触发条件 | `docs/rules/CODING_RULES.md` |
+| worktree、Linear、分支、提交、PR、hook 与 Git 门禁 | `docs/rules/GIT_RULES.md` |
+| Loop Type、Stop Condition、State Sink、Escalation Condition 与 maker/checker 闭环 | `docs/rules/LOOP_ENGINEERING_RULES.md` |
+| 外部 AI skill 推荐与回退，不改变上述强制规则 | `docs/rules/AGENT_SKILL_ROUTING.md` |
 
 ## 日志读取规则
 
@@ -73,56 +73,56 @@
 - **首次进入项目 / 中大型改动 / 跨模块或跨层（路由 + 状态 + 接口 + 主题等）改动**：按以下顺序一次性通读全部规范，建立完整上下文：
 
 1. `AGENTS.md`
-2. `docs/PROJECT_DIRECTORY.md`
-3. `docs/CODING_RULES.md`
-4. `docs/VUE_TS_RULES.md`
-5. `docs/UI_RULES.md`
-6. `docs/STATE_RULES.md`
-7. `docs/ROUTER_RULES.md`
-8. `docs/API_RULES.md`
-9. `docs/TESTING_RULES.md`
-10. `docs/COMPATIBILITY_RULES.md`
-11. `docs/GIT_RULES.md`
-12. `docs/DYNAMIC_WORKFLOW_RULES.md`
-13. `docs/LOOP_ENGINEERING_RULES.md`
-14. `docs/LINEAR_TASK.md`（条件必读：仅 Linear 任务需要读，非 Linear 任务直接跳过本项）
-15. `docs/RELEASE.md`
+2. `docs/rules/PROJECT_DIRECTORY.md`
+3. `docs/rules/CODING_RULES.md`
+4. `docs/rules/VUE_TS_RULES.md`
+5. `docs/rules/UI_RULES.md`
+6. `docs/rules/STATE_RULES.md`
+7. `docs/rules/ROUTER_RULES.md`
+8. `docs/rules/API_RULES.md`
+9. `docs/rules/TESTING_RULES.md`
+10. `docs/rules/COMPATIBILITY_RULES.md`
+11. `docs/rules/GIT_RULES.md`
+12. `docs/rules/DYNAMIC_WORKFLOW_RULES.md`
+13. `docs/rules/LOOP_ENGINEERING_RULES.md`
+14. `docs/rules/LINEAR_TASK.md`（条件必读：仅 Linear 任务需要读，非 Linear 任务直接跳过本项）
+15. `docs/rules/RELEASE.md`
 16. 任务涉及模块文档与现有源码
 
-> `docs/AI-CODE-HEALTH.md` 为按需引用的质量自检附录，不在全量通读清单内；在生成或评审代码、做交付前自检时查阅其规则速查表与自检清单即可。
+> `docs/rules/AI-CODE-HEALTH.md` 为按需引用的质量自检附录，不在全量通读清单内；在生成或评审代码、做交付前自检时查阅其规则速查表与自检清单即可。
 
-- **续接历史任务 / 接手脏工作区**：先读根目录 `PROJECT_STATE.md`、`DECISIONS.md`、`KNOWN_BUGS.md`，再结合 `git status`、agentmemory 技能与任务相关规范恢复上下文。
-  - `PROJECT_STATE.md` 只记录阶段、活跃任务和交接重点，不作为当前工作区是否脏的事实来源；工作区状态必须以本轮实时 `git status --short` 为准。
+- **续接历史任务 / 接手脏工作区**：先读 `docs/memory/PROJECT_STATE.md`、`docs/memory/DECISIONS.md`、`docs/memory/KNOWN_BUGS.md`，再结合 `git status`、agentmemory 技能与任务相关规范恢复上下文。
+  - `docs/memory/PROJECT_STATE.md` 只记录阶段、活跃任务和交接重点，不作为当前工作区是否脏的事实来源；工作区状态必须以本轮实时 `git status --short` 为准。
 
 > 无论走哪一档，涉及红区或「6. 必须升级人工确认的场景」时，相关专项文档均为必读。
 >
 > 入口收口规则：
 >
-> - Workflow 选择、强制修饰器、动态测试、Red Team、Workflow Packet 字段以 `docs/DYNAMIC_WORKFLOW_RULES.md` 为唯一来源。
-> - Worktree / Linear / 脏工作区隔离策略以 `docs/GIT_RULES.md` 第 6 节为唯一来源。
+> - Workflow 选择、强制修饰器、动态测试、Red Team、Workflow Packet 字段以 `docs/rules/DYNAMIC_WORKFLOW_RULES.md` 为唯一来源。
+> - Worktree / Linear / 脏工作区隔离策略以 `docs/rules/GIT_RULES.md` 第 6 节为唯一来源。
 > - 五类 Memory 文件职责、通用更新触发条件、是否需要更新的最终判定以本文件「8. AI Memory Update」为唯一来源。
-> - `docs/LOOP_ENGINEERING_RULES.md` 只定义 loop 的运行/停止方式，不重复定义 Workflow 分类、Memory 触发条件或 worktree 决策。
+> - `docs/rules/LOOP_ENGINEERING_RULES.md` 只定义 loop 的运行/停止方式，不重复定义 Workflow 分类、Memory 触发条件或 worktree 决策。
 
 ### 2. 规范映射表
 
 | 场景 | 必读文档 |
 | --- | --- |
-| 目录组织与模块边界 | `docs/PROJECT_DIRECTORY.md` |
-| 通用编码与测试基线 | `docs/CODING_RULES.md` |
-| Vue 3、Vite、TypeScript、组件实现 | `docs/VUE_TS_RULES.md` |
-| Pinia 状态设计 | `docs/STATE_RULES.md` |
-| 路由设计、守卫与导航元信息 | `docs/ROUTER_RULES.md` |
-| Axios、请求模型、错误处理、分页协议 | `docs/API_RULES.md` |
-| 测试分层、单测/E2E 边界、mock 契约同步 | `docs/TESTING_RULES.md` |
-| Element Plus、TailwindCSS、ECharts、交互与视觉一致性 | `docs/UI_RULES.md` |
-| 浏览器、国产环境、导出打印、字体与降级策略 | `docs/COMPATIBILITY_RULES.md` |
-| 分支、提交、PR、合并协作 | `docs/GIT_RULES.md` |
-| 任何涉及 UI / 接口 / 数据库 / 权限 / 架构重构 / 生产问题 / 构建发布的实现类任务（选主 Workflow、专家 Agent、动态测试/模拟、Red Team） | `docs/DYNAMIC_WORKFLOW_RULES.md` |
-| Loop Engineering、长期/定时/Goal/多 Agent 闭环、Triage 与 maker/checker 分离 | `docs/LOOP_ENGINEERING_RULES.md` |
-| 续接历史任务、交付前记忆层更新（状态/债务/缺陷/决策/架构） | `PROJECT_STATE.md`、`TECH_DEBT.md`、`KNOWN_BUGS.md`、`DECISIONS.md`、`ARCHITECTURE.md` |
-| Linear issue 开工与任务起始信息准备 | `docs/LINEAR_TASK.md` |
-| 环境、构建、发布与回滚 | `docs/RELEASE.md` |
-| AI 生成代码健康基线 | `docs/AI-CODE-HEALTH.md` |
+| 目录组织与模块边界 | `docs/rules/PROJECT_DIRECTORY.md` |
+| 通用编码与测试基线 | `docs/rules/CODING_RULES.md` |
+| Vue 3、Vite、TypeScript、组件实现 | `docs/rules/VUE_TS_RULES.md` |
+| Pinia 状态设计 | `docs/rules/STATE_RULES.md` |
+| 路由设计、守卫与导航元信息 | `docs/rules/ROUTER_RULES.md` |
+| Axios、请求模型、错误处理、分页协议 | `docs/rules/API_RULES.md` |
+| 测试分层、单测/E2E 边界、mock 契约同步 | `docs/rules/TESTING_RULES.md` |
+| Element Plus、TailwindCSS、ECharts、交互与视觉一致性 | `docs/rules/UI_RULES.md` |
+| 浏览器、国产环境、导出打印、字体与降级策略 | `docs/rules/COMPATIBILITY_RULES.md` |
+| 分支、提交、PR、合并协作 | `docs/rules/GIT_RULES.md` |
+| 任何涉及 UI / 接口 / 数据库 / 权限 / 架构重构 / 生产问题 / 构建发布的实现类任务（选主 Workflow、专家 Agent、动态测试/模拟、Red Team） | `docs/rules/DYNAMIC_WORKFLOW_RULES.md` |
+| Loop Engineering、长期/定时/Goal/多 Agent 闭环、Triage 与 maker/checker 分离 | `docs/rules/LOOP_ENGINEERING_RULES.md` |
+| 续接历史任务、交付前记忆层更新（状态/债务/缺陷/决策/架构） | `docs/memory/PROJECT_STATE.md`、`docs/memory/TECH_DEBT.md`、`docs/memory/KNOWN_BUGS.md`、`docs/memory/DECISIONS.md`、`docs/memory/ARCHITECTURE.md` |
+| Linear issue 开工与任务起始信息准备 | `docs/rules/LINEAR_TASK.md` |
+| 环境、构建、发布与回滚 | `docs/rules/RELEASE.md` |
+| AI 生成代码健康基线 | `docs/rules/AI-CODE-HEALTH.md` |
 
 ### 3. 后端联动检查
 
@@ -158,10 +158,10 @@
 - 成功标准: [可验证的完成条件，例如 check:governance 通过、文档点位修正]
 ```
 
-任一条件不满足（命中实现类 Workflow、黄区/红区、改运行时行为）即回到完整模板；PR 层面的对应精简规则见 `.github/PULL_REQUEST_TEMPLATE.md` 的 Fast path 说明。完整模板、Fast Path、Workflow Packet、Memory Update Packet 的已填写范例见 `docs/templates/workflow-packet-examples.md`；选主 Workflow 与叠修饰器的决策流程图见 `docs/DYNAMIC_WORKFLOW_RULES.md`「决策流程图」一节。
+任一条件不满足（命中实现类 Workflow、黄区/红区、改运行时行为）即回到完整模板；PR 层面的对应精简规则见 `.github/PULL_REQUEST_TEMPLATE.md` 的 Fast path 说明。完整模板、Fast Path、Workflow Packet、Memory Update Packet 的已填写范例见 `docs/templates/workflow-packet-examples.md`；选主 Workflow 与叠修饰器的决策流程图见 `docs/rules/DYNAMIC_WORKFLOW_RULES.md`「决策流程图」一节。
 
-- 主 Workflow 与修饰器的选择标准、触发条件、对应专家 Agent / 动态测试 / 动态模拟 / 红队问题，统一以 `docs/DYNAMIC_WORKFLOW_RULES.md` 为唯一来源；纯文档、闲聊或信息查询类任务可标注「主 Workflow: 不适用」并说明原因。
-- 若任务明确来源于 Linear issue，开始前应参考 `docs/LINEAR_TASK.md` 准备任务起始信息；非 Linear 任务不强制套用该模板。
+- 主 Workflow 与修饰器的选择标准、触发条件、对应专家 Agent / 动态测试 / 动态模拟 / 红队问题，统一以 `docs/rules/DYNAMIC_WORKFLOW_RULES.md` 为唯一来源；纯文档、闲聊或信息查询类任务可标注「主 Workflow: 不适用」并说明原因。
+- 若任务明确来源于 Linear issue，开始前应参考 `docs/rules/LINEAR_TASK.md` 准备任务起始信息；非 Linear 任务不强制套用该模板。
 - **规格先行（硬约束）**：验收标准为空、缺失或存在歧义，且不同理解会改变页面行为 / 数据流 / 接口联调方式时，必须先澄清确认，不得凭推测直接进入编码（与「6. 必须升级人工确认的场景」中"无法确定业务规则"一致）。对中大型任务，应先与用户对齐验收标准与非目标，再动手实现。
 - **最小可验证目标**：开始前必须把需求转成可验证成功标准。缺陷修复应优先复现或补回归测试；新增校验应说明无效输入如何验证；重构应说明行为保持不变的验证方式。
 - **显式假设与取舍**：若存在多个合理解释、简单方案与复杂方案的取舍，必须在任务确认或方案说明中显式列出；不同解释会改变行为时先问清，不得静默选择。
@@ -207,7 +207,7 @@
 - 变更摘要：做了什么、为什么这样做
 - 影响说明：是否涉及配置、接口、兼容性、主题、路由或状态
 - 追溯说明：说明本次主要变更如何对应用户需求、成功标准或必要清理；无关改动必须说明原因
-- Workflow Packet（精简版）：本次主 Workflow、实际叠加的修饰器、启用的专家 Agent、跑过的动态测试/模拟，以及高风险任务的红队结论；完整字段语义与必填口径以 `docs/DYNAMIC_WORKFLOW_RULES.md` 为唯一来源，PR 模板仅为其镜像
+- Workflow Packet（精简版）：本次主 Workflow、实际叠加的修饰器、启用的专家 Agent、跑过的动态测试/模拟，以及高风险任务的红队结论；完整字段语义与必填口径以 `docs/rules/DYNAMIC_WORKFLOW_RULES.md` 为唯一来源，PR 模板仅为其镜像
 - 验证结果：已执行的检查、构建、测试或未验证项
 - AI Memory Update：本次更新了哪些记忆文件、哪些未更新及原因、是否存在跨仓引用
 - 风险提示：需要人工跟进的事项
@@ -241,33 +241,33 @@
 - 建议下一步:
 ```
 
-- 续接历史任务前，先读取 `PROJECT_STATE.md`、`DECISIONS.md`、`KNOWN_BUGS.md`，再借助会话记忆恢复上下文：查阅 `agent-transcripts/` 历史会话，或使用 `handoff` / `recall` / `session-history` 等 skill，并结合本仓库当前 `git status` 与 `commit-context` 还原"上次进行到哪里"，避免重复探索或丢失关键决策
+- 续接历史任务前，先读取 `docs/memory/PROJECT_STATE.md`、`docs/memory/DECISIONS.md`、`docs/memory/KNOWN_BUGS.md`，再借助会话记忆恢复上下文：查阅 `agent-transcripts/` 历史会话，或使用 `handoff` / `recall` / `session-history` 等 skill，并结合本仓库当前 `git status` 与 `commit-context` 还原"上次进行到哪里"，避免重复探索或丢失关键决策
 
 ### 8. AI Memory Update
 
-根目录五类记忆文件是仓内长期上下文层，不替代 agentmemory、PR 描述、测试报告或 ADR：
+`docs/memory/` 下五类记忆文件是仓内长期上下文层，不替代 agentmemory、PR 描述、测试报告或 ADR；根目录同名文件仅作为兼容跳转入口：
 
-- `PROJECT_STATE.md`：当前阶段、活跃任务、最新验证状态、跨仓依赖、交接重点
-- `TECH_DEBT.md`：技术债台账，记录 ID、严重度、来源、影响、建议动作、状态
-- `KNOWN_BUGS.md`：已知问题台账，记录 ID、复现方式、影响范围、临时规避、验证状态
-- `DECISIONS.md`：决策日志，记录日期、上下文、选项、决策、理由、影响、回看条件
-- `ARCHITECTURE.md`：稳定架构快照，记录模块边界、核心依赖、跨仓接口、当前约束和禁止事项
+- `docs/memory/PROJECT_STATE.md`：当前阶段、活跃任务、最新验证状态、跨仓依赖、交接重点
+- `docs/memory/TECH_DEBT.md`：技术债台账，记录 ID、严重度、来源、影响、建议动作、状态
+- `docs/memory/KNOWN_BUGS.md`：已知问题台账，记录 ID、复现方式、影响范围、临时规避、验证状态
+- `docs/memory/DECISIONS.md`：决策日志，记录日期、上下文、选项、决策、理由、影响、回看条件
+- `docs/memory/ARCHITECTURE.md`：稳定架构快照，记录模块边界、核心依赖、跨仓接口、当前约束和禁止事项
 
 交付前 AI 必须检查本次任务是否产生以下变化，并按需更新对应记忆文件：
 
-- 项目阶段、活跃任务、验证基线或交接重点变化：更新 `PROJECT_STATE.md`
-- 发现或解决持久技术债：追加或更新 `TECH_DEBT.md`
-- 发现、复现或修复已知 bug：追加或更新 `KNOWN_BUGS.md`
-- 做出影响后续协作的技术或流程决策：追加 `DECISIONS.md`
-- 改变稳定模块边界、跨仓接口、共享约束或禁止事项：更新 `ARCHITECTURE.md`
+- 项目阶段、活跃任务、验证基线或交接重点变化：更新 `docs/memory/PROJECT_STATE.md`
+- 发现或解决持久技术债：追加或更新 `docs/memory/TECH_DEBT.md`
+- 发现、复现或修复已知 bug：追加或更新 `docs/memory/KNOWN_BUGS.md`
+- 做出影响后续协作的技术或流程决策：追加 `docs/memory/DECISIONS.md`
+- 改变稳定模块边界、跨仓接口、共享约束或禁止事项：更新 `docs/memory/ARCHITECTURE.md`
 
 更新规则：
 
 - 按需更新，不写"无变化"流水账；未更新的文件只在交付摘要和 PR Workflow Packet 中说明原因
 - 低风险纯文档、规范审计、只读分析类任务若未改变 durable context，可统一写为“无 durable context change”，无需逐文件展开冗长理由
-- `PROJECT_STATE.md` 可覆盖当前状态，保持短小、最新
-- `TECH_DEBT.md`、`KNOWN_BUGS.md`、`DECISIONS.md` 采用台账式追加或更新状态，不删除历史项
-- `ARCHITECTURE.md` 只记录稳定架构事实和边界约束，不记录临时实现细节
+- `docs/memory/PROJECT_STATE.md` 可覆盖当前状态，保持短小、最新
+- `docs/memory/TECH_DEBT.md`、`docs/memory/KNOWN_BUGS.md`、`docs/memory/DECISIONS.md` 采用台账式追加或更新状态，不删除历史项
+- `docs/memory/ARCHITECTURE.md` 只记录稳定架构事实和边界约束，不记录临时实现细节
 - 跨仓事项必须双向引用：前端记忆文件引用后端路径/验证，后端记忆文件引用前端路径/验证
 - PR 中必须填写 Memory Update Packet，并引用相关记忆项 ID，例如 `TD-20260608-001`、`BUG-20260608-001`、`DEC-20260608-001`
 
@@ -275,11 +275,11 @@
 
 - 与用户沟通：默认使用用户当前语言
 - 代码注释与文档：遵循模块既有语言风格，无现存风格时优先中文
-- 记忆层与模板例外：根目录五类记忆文件（`PROJECT_STATE.md`、`TECH_DEBT.md`、`KNOWN_BUGS.md`、`DECISIONS.md`、`ARCHITECTURE.md`）及 `.github` PR 模板沿用其现有英文结构（表头、字段名）；条目正文语言跟随来源语境（如复现步骤、后端核对说明可用中文），不强制翻译为中文
-- 文本类文件编码：统一 `UTF-8（无 BOM）`，完整编码规则（混用禁令、乱码处理、导出链路验证）以 `docs/CODING_RULES.md` 第 5 节为唯一来源；发现乱码时必须先确认原文件编码与解码方式，不得未确认就批量转码或覆盖保存
-- Git 提交信息：遵循 `docs/GIT_RULES.md` 中的 Conventional Commits
-- AI 自动提交粒度、风险评级与授权边界：遵循 `docs/GIT_RULES.md` 的「AI 自动提交粒度规范」；中低风险在说明分组后可自动提交，高风险必须人工确认
-- 发布说明：遵循 `docs/RELEASE.md` 中的版本与验收要求
+- 记忆层与模板例外：`docs/memory/` 五类记忆文件及 `.github` PR 模板沿用其现有英文结构（表头、字段名）；条目正文语言跟随来源语境（如复现步骤、后端核对说明可用中文），不强制翻译为中文
+- 文本类文件编码：统一 `UTF-8（无 BOM）`，完整编码规则（混用禁令、乱码处理、导出链路验证）以 `docs/rules/CODING_RULES.md` 第 5 节为唯一来源；发现乱码时必须先确认原文件编码与解码方式，不得未确认就批量转码或覆盖保存
+- Git 提交信息：遵循 `docs/rules/GIT_RULES.md` 中的 Conventional Commits
+- AI 自动提交粒度、风险评级与授权边界：遵循 `docs/rules/GIT_RULES.md` 的「AI 自动提交粒度规范」；中低风险在说明分组后可自动提交，高风险必须人工确认
+- 发布说明：遵循 `docs/rules/RELEASE.md` 中的版本与验收要求
 - 工程命令示例：统一使用 `pnpm`
 
 ### 10. 与工具规则的关系
@@ -297,7 +297,7 @@
 - 若当前环境没有暴露 `codegraph_*` 工具或索引不可用，降级使用 `rg` / 文件阅读 / 类型检查；不要因工具缺失阻塞任务，交付时说明已降级。
 - 若会话注入了 `rtk` 命令前缀要求但当前 shell 中 `rtk` 不可用，记录一次工具不可用并直接使用原生命令继续；不要反复重试同一不可用前缀。
 
-外部 AI skills 的选用只作为专家 Agent / 执行方法补强，具体推荐组合见 `docs/AGENT_SKILL_ROUTING.md`；不得用外部 skill 覆盖本文件、`docs/DYNAMIC_WORKFLOW_RULES.md` 或专项规范中的强制要求。
+外部 AI skills 的选用只作为专家 Agent / 执行方法补强，具体推荐组合见 `docs/rules/AGENT_SKILL_ROUTING.md`；不得用外部 skill 覆盖本文件、`docs/rules/DYNAMIC_WORKFLOW_RULES.md` 或专项规范中的强制要求。
 
 ### 11. 多 Agent 与子 Agent 协作
 
@@ -314,7 +314,7 @@
 
 - **探索阶段**：优先用只读 / 探索型子 Agent 收集上下文（代码结构、调用关系、影响面），结构性问题优先走 codegraph，纯文本检索才用 grep；探索 Agent 不得直接改动代码
 - **规划阶段**：由主 Agent 汇总探索结果，输出「4. 任务开始模板」中的任务确认，再拆分子任务
-- **并行执行**：相互独立的子任务（尤其 Linear 任务）应在各自独立 `git worktree` 中进行，互不污染工作区（worktree 规范见 `docs/GIT_RULES.md` 第 6 节）
+- **并行执行**：相互独立的子任务（尤其 Linear 任务）应在各自独立 `git worktree` 中进行，互不污染工作区（worktree 规范见 `docs/rules/GIT_RULES.md` 第 6 节）
 - **汇总核验**：子 Agent 产出必须由主 Agent 汇总、去重并完成交付前验证后才允许进入主线，不得直接把多个子 Agent 的结果未经核验拼接提交
 - **边界继承**：子 Agent 同样受绿/黄/红区与「6. 必须升级人工确认的场景」约束；涉及红区时一律升级人工确认，不因"由子 Agent 执行"而放宽
 
@@ -338,13 +338,13 @@
 
 - [ ] 已阅读本文件及相关专项规范
 - [ ] 已输出任务确认、关键假设、成功标准和非目标
-- [ ] 已选定主 Workflow 并叠加必要修饰器（依据 `docs/DYNAMIC_WORKFLOW_RULES.md`）
+- [ ] 已选定主 Workflow 并叠加必要修饰器（依据 `docs/rules/DYNAMIC_WORKFLOW_RULES.md`）
 - [ ] 已识别本次改动属于绿区、黄区还是红区
 - [ ] 每个主要变更都能追溯到用户需求、成功标准或必要清理
 - [ ] 高风险、跨层、权限/数据/报告或生产问题任务已执行 Red Team
 - [ ] 新增或修改的文本类文件编码符合 `UTF-8` 约定，乱码风险已检查
 - [ ] 已检查五类 AI 记忆文件，并按需更新或说明未更新原因
-- [ ] 如需 AI 提交，已按 `docs/GIT_RULES.md` 给出提交分组、风险评级、风险说明和回滚影响
+- [ ] 如需 AI 提交，已按 `docs/rules/GIT_RULES.md` 给出提交分组、风险评级、风险说明和回滚影响
 - [ ] 涉及高风险变更时已人工确认
 - [ ] 交付内容包含变更摘要、验证结果和风险提示
 - [ ] 如需交接，已附带完整移交摘要
@@ -352,24 +352,24 @@
 ## 关联文档
 
 - [README.md](./README.md)
-- [PROJECT_STATE.md](./PROJECT_STATE.md)
-- [TECH_DEBT.md](./TECH_DEBT.md)
-- [KNOWN_BUGS.md](./KNOWN_BUGS.md)
-- [DECISIONS.md](./DECISIONS.md)
-- [ARCHITECTURE.md](./ARCHITECTURE.md)
-- [docs/PROJECT_DIRECTORY.md](./docs/PROJECT_DIRECTORY.md)
-- [docs/CODING_RULES.md](./docs/CODING_RULES.md)
-- [docs/VUE_TS_RULES.md](./docs/VUE_TS_RULES.md)
-- [docs/STATE_RULES.md](./docs/STATE_RULES.md)
-- [docs/ROUTER_RULES.md](./docs/ROUTER_RULES.md)
-- [docs/API_RULES.md](./docs/API_RULES.md)
-- [docs/TESTING_RULES.md](./docs/TESTING_RULES.md)
-- [docs/UI_RULES.md](./docs/UI_RULES.md)
-- [docs/COMPATIBILITY_RULES.md](./docs/COMPATIBILITY_RULES.md)
-- [docs/GIT_RULES.md](./docs/GIT_RULES.md)
-- [docs/DYNAMIC_WORKFLOW_RULES.md](./docs/DYNAMIC_WORKFLOW_RULES.md)
-- [docs/LOOP_ENGINEERING_RULES.md](./docs/LOOP_ENGINEERING_RULES.md)
-- [docs/AGENT_SKILL_ROUTING.md](./docs/AGENT_SKILL_ROUTING.md)
-- [docs/LINEAR_TASK.md](./docs/LINEAR_TASK.md)
-- [docs/RELEASE.md](./docs/RELEASE.md)
-- [docs/AI-CODE-HEALTH.md](./docs/AI-CODE-HEALTH.md)
+- [PROJECT_STATE.md](./docs/memory/PROJECT_STATE.md)
+- [TECH_DEBT.md](./docs/memory/TECH_DEBT.md)
+- [KNOWN_BUGS.md](./docs/memory/KNOWN_BUGS.md)
+- [DECISIONS.md](./docs/memory/DECISIONS.md)
+- [ARCHITECTURE.md](./docs/memory/ARCHITECTURE.md)
+- [docs/rules/PROJECT_DIRECTORY.md](./docs/rules/PROJECT_DIRECTORY.md)
+- [docs/rules/CODING_RULES.md](./docs/rules/CODING_RULES.md)
+- [docs/rules/VUE_TS_RULES.md](./docs/rules/VUE_TS_RULES.md)
+- [docs/rules/STATE_RULES.md](./docs/rules/STATE_RULES.md)
+- [docs/rules/ROUTER_RULES.md](./docs/rules/ROUTER_RULES.md)
+- [docs/rules/API_RULES.md](./docs/rules/API_RULES.md)
+- [docs/rules/TESTING_RULES.md](./docs/rules/TESTING_RULES.md)
+- [docs/rules/UI_RULES.md](./docs/rules/UI_RULES.md)
+- [docs/rules/COMPATIBILITY_RULES.md](./docs/rules/COMPATIBILITY_RULES.md)
+- [docs/rules/GIT_RULES.md](./docs/rules/GIT_RULES.md)
+- [docs/rules/DYNAMIC_WORKFLOW_RULES.md](./docs/rules/DYNAMIC_WORKFLOW_RULES.md)
+- [docs/rules/LOOP_ENGINEERING_RULES.md](./docs/rules/LOOP_ENGINEERING_RULES.md)
+- [docs/rules/AGENT_SKILL_ROUTING.md](./docs/rules/AGENT_SKILL_ROUTING.md)
+- [docs/rules/LINEAR_TASK.md](./docs/rules/LINEAR_TASK.md)
+- [docs/rules/RELEASE.md](./docs/rules/RELEASE.md)
+- [docs/rules/AI-CODE-HEALTH.md](./docs/rules/AI-CODE-HEALTH.md)

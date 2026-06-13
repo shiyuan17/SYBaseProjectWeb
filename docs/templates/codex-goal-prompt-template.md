@@ -12,9 +12,9 @@ Use this template to execute exactly one Linear issue with Codex Goal. Replace p
 ## 开始前必须
 
 1. 读取 `AGENTS.md`。
-2. 读取 `docs/LINEAR_TASK.md`。
-3. 读取 `docs/DYNAMIC_WORKFLOW_RULES.md`。
-4. 读取 `docs/LOOP_ENGINEERING_RULES.md`。
+2. 读取 `docs/rules/LINEAR_TASK.md`。
+3. 读取 `docs/rules/DYNAMIC_WORKFLOW_RULES.md`。
+4. 读取 `docs/rules/LOOP_ENGINEERING_RULES.md`。
 5. 读取本 issue 命中的专项规范。
 6. 读取 Linear issue 内容与关联计划 / spec。
 7. 检查 `git status`，不得覆盖用户已有改动。
@@ -72,11 +72,11 @@ Use this template to execute exactly one Linear issue with Codex Goal. Replace p
 
 如果 issue 没有给出更具体要求，按以下默认项补齐 Loop Packet 和验证范围：
 
-- UI: 读取 `docs/UI_RULES.md`、`docs/VUE_TS_RULES.md`、相关页面/组件；默认验证 `pnpm lint`、`pnpm check:type`、相关 `pnpm test:unit`，必要时 Browser 验证桌面/移动视口；停止条件为页面状态、交互和测试证据齐备。
-- API: 读取 `docs/API_RULES.md`、前端 service/mapper/test、同级后端接口实现；默认验证相关 service/mapper 单测、`pnpm check:type`，跨仓时引用后端测试；停止条件为字段映射、错误分支和兼容策略有证据。
-- Security: 读取 `docs/ROUTER_RULES.md`、`docs/API_RULES.md`、权限/敏感数据相关实现；默认验证权限/路由/request 相关测试和 Red Team；停止条件为越权、泄露、日志/导出暴露路径已检查。
+- UI: 读取 `docs/rules/UI_RULES.md`、`docs/rules/VUE_TS_RULES.md`、相关页面/组件；默认验证 `pnpm lint`、`pnpm check:type`、相关 `pnpm test:unit`，必要时 Browser 验证桌面/移动视口；停止条件为页面状态、交互和测试证据齐备。
+- API: 读取 `docs/rules/API_RULES.md`、前端 service/mapper/test、同级后端接口实现；默认验证相关 service/mapper 单测、`pnpm check:type`，跨仓时引用后端测试；停止条件为字段映射、错误分支和兼容策略有证据。
+- Security: 读取 `docs/rules/ROUTER_RULES.md`、`docs/rules/API_RULES.md`、权限/敏感数据相关实现；默认验证权限/路由/request 相关测试和 Red Team；停止条件为越权、泄露、日志/导出暴露路径已检查。
 - Production Debug: 先读取 `.logs/` 最近日志和 `KNOWN_BUGS.md`；默认先复现，再修复，再跑回归测试；停止条件为原始故障有修复前后证据和回滚说明。
-- Workflow-Infra: 读取 `docs/GIT_RULES.md`、相关 workflow/hook/script；默认验证脚本单测、`pnpm lint`、`pnpm check:type`；停止条件为门禁行为、误伤风险和回滚方式明确。
+- Workflow-Infra: 读取 `docs/rules/GIT_RULES.md`、相关 workflow/hook/script；默认验证脚本单测、`pnpm lint`、`pnpm check:type`；停止条件为门禁行为、误伤风险和回滚方式明确。
 
 ## 交付格式
 

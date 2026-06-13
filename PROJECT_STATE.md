@@ -1,56 +1,5 @@
 # PROJECT_STATE.md
 
-## Current State
+此文件为兼容入口，长期记忆正文已迁移到 [docs/memory/PROJECT_STATE.md](./docs/memory/PROJECT_STATE.md)。
 
-- Last updated: 2026-06-13
-- Repository: `SYBaseProjectWeb`
-- Current phase: M6 statistics full-stack delivery with governance workflow executability pass (Phase E)
-- Active focus: `apps/web-ele/src/modules/m6-statistics` consumes sibling backend `../SYBaseProject/bl-center` statistics APIs. `/m6/dashboard` composes `POST /api/v1/stat-reports/query` for `QUALITY` / `OPERATION` / `WORKLOAD`; current frontend architecture must not reintroduce `POST /api/v1/stat-dashboard/query`. `POST /api/v1/stat-reports/query` uses `workloadUserId` for workload/personnel filtering and may return metric metadata such as `metricStatus`, numerator/denominator, trend/breakdown, and source notes. Quality drilldowns use `POST /api/v1/stat-report-details/query` and `/export` with non-sensitive detail rows only.
-- Backend sibling repo: `../SYBaseProject` (parallel memory files confirmed present: `PROJECT_STATE.md`, `ARCHITECTURE.md`, `DECISIONS.md`, `TECH_DEBT.md`, `KNOWN_BUGS.md`)
-
-## Active Work
-
-- Governance closure pass completed on 2026-06-12: `ARCHITECTURE.md` reflects the current M6 dashboard contract, `DECISIONS.md` duplicate IDs were reconciled, `docs/README.md` includes `LOOP_ENGINEERING_RULES.md`, `docs/STATE_RULES.md` matches the real `apps/web-ele/src/store` path, and `pnpm run check:governance` now validates those baseline invariants locally.
-- Governance Phase A/B/C closure is now active: `AGENTS.md`, `docs/DYNAMIC_WORKFLOW_RULES.md`, `docs/LOOP_ENGINEERING_RULES.md`, `docs/AI-CODE-HEALTH.md`, and the PR template explicitly separate Workflow, worktree, loop, and Memory ownership; low-risk docs/audit tasks may use simplified delivery; `.github/workflows/governance-quality.yml` runs narrow governance checks on governance-only path changes.
-- Governance audit-driven optimization (Phase D, 2026-06-12, `DEC-20260612-009`) completed: the modifier taxonomy全集 is single-sourced in `docs/DYNAMIC_WORKFLOW_RULES.md` and `docs/GIT_RULES.md` §8 is now a pointer; validation commands + UTF-8 rules single-sourced in `docs/CODING_RULES.md`; `docs/AI-CODE-HEALTH.md` compressed to a checklist and dropped from the first-read full-read list; a green-zone Fast Path was added to `AGENTS.md` + PR template (validated by `validate-pr-packet.mjs`); `validate-governance.mjs` gained BUG/TD duplicate-ID and relative-link checks; `pr-packet.yml` runs from the base ref; `cspell` covers `docs/**/*.md` and root memory files; `lefthook` pre-push runs `check:governance`. Closes `TD-20260610-002` and `TD-20260611-001`.
-- Backend `../SYBaseProject` now has symmetric governance: `scripts/ci/validate-governance.sh` + `.gitlab/ci/verify.yml` `verify_governance`, a trimmed ≤120-line `PROJECT_STATE.md`, and a de-duplicated decision ledger (backend `DEC-20260612-002` ↔ frontend `DEC-20260612-009`).
-- Governance workflow executability pass (Phase E, 2026-06-12, `DEC-20260612-010`) completed: `AGENT_SKILL_ROUTING.md` maps only actually-installed skills (Superpowers marked optional with fallbacks); `DYNAMIC_WORKFLOW_RULES.md` has a decision flowchart and a cross-repo mirror clause; filled template examples live in `docs/templates/workflow-packet-examples.md`; new `docs/TESTING_RULES.md` owns test layering and mock contract sync; ledgers have a 200-line soft budget in `check:governance`; `frontend-quality.yml` also runs `check:governance`. Backend mirror: health docs consolidated into one checklist `docs/rules/AI-CODE-HEALTH.md`, backend `DYNAMIC_WORKFLOW_RULES.md` gained a trigger quick-reference + mirror clause, `validate-governance.sh` gained the same ledger budget (backend `DEC-20260612-003`).
-- Governance ergonomics patch active on 2026-06-12: `GIT_RULES.md` now matches the real lefthook `pre-push` `check:governance`; `AGENTS.md` defines red-zone confirmation protocol plus `codegraph` / `rtk` fallback; `DYNAMIC_WORKFLOW_RULES.md` and `LOOP_ENGINEERING_RULES.md` allow lightweight packets for low-risk implementation tasks; `UI_RULES.md` points to the actual Vben style/token entrypoints instead of a nonexistent `apps/web-ele/src/styles`.
-- Governance packet-tier enforcement active on 2026-06-12 (`DEC-20260612-012`): `AGENTS.md` and the PR template expose Fast Path / Lightweight / Full as the main execution tiers; `validate-pr-packet.mjs` enforces tier-specific minimum evidence; `validate-governance.mjs` protects single-source anchors and workflow-example anchors.
-- Complex-task sub-agent collaboration governance active on 2026-06-13 (`DEC-20260613-001`): `AGENTS.md`, `docs/LOOP_ENGINEERING_RULES.md`, `docs/DYNAMIC_WORKFLOW_RULES.md`, `docs/GIT_RULES.md`, and the PR template now define when to use sub-agents, how to bound exploration / implementation / review work, and how the main Agent records merged results.
-- `pnpm run check:governance` now also protects `PROJECT_STATE.md` itself: the file must retain its required summary sections and stay within a generous line budget so future sessions can keep using it as a short first-read entrypoint.
-- Loop Engineering governance remains active: `docs/LOOP_ENGINEERING_RULES.md` defines Task Intake / Implementation / Review / Triage loops; PR/Linear/Codex Goal templates include Loop Packet fields; `.github/workflows/pr-packet.yml` still focuses on PR packet completeness and now only adds a narrow Red Team minimum-evidence check when Red Team is explicitly declared.
-- M6 statistics closure is validated for real pages and menu wiring: `/m6/dashboard`, `/m6/quality-indicators`, `/m6/management-indicators`, and `/m6/custom-analysis` map to real pages; dashboard/quality/management statistics all rely on the stable report-query contract rather than a phantom dashboard aggregate endpoint.
-- M5 operation-support work remains stable on the current contract split: `/operation-support/archive` owns application-form / wax-block / slide / specimen / cabinet / archive-record work; `/operation-support/borrow` owns slide / wax-block borrow and return work. Specimen archive uses `POST /api/v1/archive/specimens` and `GET /api/v1/archive-objects?objectType=SPECIMEN`.
-
-## Validation Baseline
-
-- Governance closure validation on 2026-06-12:
-  - `pnpm run check:governance`: passed
-  - `pnpm exec vitest run scripts/validate-governance.test.mjs scripts/validate-pr-packet.test.mjs`: passed
-- Latest M6 closure validation on 2026-06-12:
-  - Targeted M6/menu Vitest: passed
-  - `pnpm check:type`: passed
-  - `pnpm lint`: passed
-  - `pnpm build:ele`: passed
-  - Playwright desktop/mobile smoke for `/m6/dashboard`, `/m6/quality-indicators`, `/m6/management-indicators`, `/m6/custom-analysis`: passed with mocked APIs and no console errors
-  - Sibling backend `../SYBaseProject/bl-center` M6 integration / authorization / observability tests: passed
-- Historical feature-level validation details are intentionally kept out of this file now; recover them from targeted tests, `KNOWN_BUGS.md`, `TECH_DEBT.md`, PRs, or git history when needed.
-
-## Cross-Repo Dependencies
-
-- M6 statistics frontend depends on sibling backend `../SYBaseProject/bl-center` report-query contracts:
-  - `POST /api/v1/stat-reports/query`
-  - `POST /api/v1/stat-reports/export`
-  - `POST /api/v1/stat-report-details/query`
-  - `POST /api/v1/stat-report-details/export`
-- M5 archive/borrow frontend pages depend on sibling backend archive contracts for application-form / `EMBEDDING_BOX` / slide / specimen archive, archive cabinet maintenance, archive object pagination, and material-loan pending/create/return.
-- M5 reagent management depends on sibling backend reagent template / stock / stock-event contracts and keeps CSV-compatible import/export semantics.
-- Specimen workflow progression depends on sibling backend resolving workflow requests by `specimenId > specimenBarcode > specimenNo`; barcode binding remains nullable until explicit binding.
-- Cross-repo API, permission, database, patient, and report contract changes must update memory files in both repos when durable context changes.
-
-## Handoff Notes
-
-- Start future sessions by reading this file, `DECISIONS.md`, and `KNOWN_BUGS.md`, then inspect `git status`.
-- Do not rely on this file for current dirty-worktree state; always run `git status --short` and inspect relevant diffs before taking ownership of changes.
-- Keep `PROJECT_STATE.md` short and current. Long validation logs, superseded implementation history, and one-off recovery notes belong in PRs, `KNOWN_BUGS.md`, `TECH_DEBT.md`, or git history instead of growing this file again.
+新增引用请使用 `docs/memory/PROJECT_STATE.md`，不要继续引用本旧路径。

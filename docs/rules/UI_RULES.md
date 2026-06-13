@@ -1,0 +1,74 @@
+# UI_RULES.md — 界面与交互规范
+
+## 目标与适用范围
+
+本文件定义 `Element Plus + TailwindCSS + ECharts` 技术栈下的界面、交互与视觉一致性规则。
+
+- 适用对象：前端开发者、设计协作者、AI 助手
+- 适用范围：页面布局、表单、表格、弹窗、图表、主题变量、空态和错误态
+- 规范定位：统一“界面怎么搭、样式怎么管、图表怎么落地”
+
+## 强制规则
+
+### 1. 技术栈职责边界
+
+- `Element Plus` 负责中后台基础交互组件
+- `TailwindCSS` 负责布局、间距、栅格、快速样式编排与原子化补充
+- 全局样式与主题覆盖以 Vben 共享样式入口为准：`packages/styles/src/ele/index.css`、`packages/styles/src/global/index.scss`；运行时品牌与偏好覆盖在 `apps/web-ele/src/preferences.ts`、`apps/web-ele/src/preferences-branding.ts` 管理；模块局部样式放在对应模块 `styles/` 或组件内，当前不存在 `apps/web-ele/src/styles` 统一目录
+- 禁止在页面中无序堆叠内联样式、临时色值和散乱覆盖规则
+
+### 2. 设计 token
+
+- 颜色、字号、间距、圆角、阴影、层级必须有统一 token 来源
+- 设计 token 与运行时 CSS 变量优先复用 `packages/effects/hooks/src/use-design-tokens.ts`、`packages/@core/preferences/src/update-css-variables.ts` 和 Vben preferences 输出，不新增平行 token 体系
+- 不得在多个页面各自定义近似但不一致的品牌色和状态色
+- Element Plus 主题覆盖必须可追溯，禁止临时用深层选择器硬压样式
+
+### 3. 页面状态
+
+- 表单、表格、弹窗、抽屉、空态、加载态、错误态必须有统一交互预期
+- 页面首次加载、局部刷新、失败重试、空数据展示必须可区分
+- 危险操作必须具备确认与反馈机制
+
+### 4. 组件与布局
+
+- 通用页面骨架、筛选区、卡片区、详情区、图表区应优先沉淀为共享模式
+- 大型页面必须控制视觉层级，避免表单、表格、图表和操作栏互相抢焦点
+- 组件必须适配桌面端主流分辨率，并兼顾常见窄屏场景
+
+### 5. 图表规范
+
+- `ECharts` 主题注册、公共配置、默认颜色和 formatter 策略必须统一
+- 图表实例必须处理初始化、尺寸变更、自适应、销毁与重绘
+- 数据量过大时必须定义抽样、分页、虚拟滚动或降级策略
+- 图表区必须提供空态、加载态、错误态或无权限态
+
+## 推荐实践
+
+- 用页面级布局组件统一标题区、操作区、内容区和反馈区
+- 将颜色和尺寸优先映射到 token，而不是直接写字面值
+- 对表单、表格、筛选和图表建立通用使用样板
+- 为图表容器封装 `resize`、`dispose` 与容错逻辑，减少页面重复代码
+
+## 反例/禁用项
+
+- 页面里直接混写大量 `style=""`、随机十六进制色值和覆盖选择器
+- 一个页面同时出现多种按钮尺寸、表单间距、卡片边框风格
+- 图表只初始化不销毁，切页后残留监听和内存占用
+- 空白页、白屏、无反馈弹窗作为默认失败表现
+
+## 检查清单
+
+- [ ] Element Plus、TailwindCSS、ECharts 职责边界清晰
+- [ ] 设计 token、主题覆盖与样式入口统一
+- [ ] 表单、表格、弹窗、空态、加载态、错误态规则完整
+- [ ] 页面布局层级清晰，兼顾常见桌面和窄屏场景
+- [ ] 图表初始化、自适应、销毁、降级策略明确
+
+## 关联文档
+
+- [../../AGENTS.md](../../AGENTS.md)
+- [./PROJECT_DIRECTORY.md](./PROJECT_DIRECTORY.md)
+- [./VUE_TS_RULES.md](./VUE_TS_RULES.md)
+- [./COMPATIBILITY_RULES.md](./COMPATIBILITY_RULES.md)
+- [./RELEASE.md](./RELEASE.md)

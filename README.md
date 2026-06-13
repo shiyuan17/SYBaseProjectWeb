@@ -60,7 +60,7 @@ project-root
 - `apps/web-ele/src/modules/user-management/store/useUserFilterStore.ts`
 - `apps/web-ele/src/modules/user-management/components/UserStatusTag.vue`
 
-更完整说明见 [docs/PROJECT_DIRECTORY.md](./docs/PROJECT_DIRECTORY.md)。
+更完整说明见 [docs/rules/PROJECT_DIRECTORY.md](./docs/rules/PROJECT_DIRECTORY.md)。
 
 ## 推荐命令
 
@@ -121,22 +121,22 @@ pnpm linear:pull
 
 - [AGENTS.md](./AGENTS.md)
 - [docs/README.md](./docs/README.md)
-- [docs/PROJECT_DIRECTORY.md](./docs/PROJECT_DIRECTORY.md)
-- [docs/CODING_RULES.md](./docs/CODING_RULES.md)
-- [docs/VUE_TS_RULES.md](./docs/VUE_TS_RULES.md)
-- [docs/STATE_RULES.md](./docs/STATE_RULES.md)
-- [docs/ROUTER_RULES.md](./docs/ROUTER_RULES.md)
-- [docs/API_RULES.md](./docs/API_RULES.md)
-- [docs/TESTING_RULES.md](./docs/TESTING_RULES.md)
-- [docs/UI_RULES.md](./docs/UI_RULES.md)
-- [docs/COMPATIBILITY_RULES.md](./docs/COMPATIBILITY_RULES.md)
-- [docs/GIT_RULES.md](./docs/GIT_RULES.md)
-- [docs/DYNAMIC_WORKFLOW_RULES.md](./docs/DYNAMIC_WORKFLOW_RULES.md)
-- [docs/LOOP_ENGINEERING_RULES.md](./docs/LOOP_ENGINEERING_RULES.md)
-- [docs/AGENT_SKILL_ROUTING.md](./docs/AGENT_SKILL_ROUTING.md)
-- [docs/LINEAR_TASK.md](./docs/LINEAR_TASK.md)
-- [docs/RELEASE.md](./docs/RELEASE.md)
-- [docs/AI-CODE-HEALTH.md](./docs/AI-CODE-HEALTH.md)
+- [docs/rules/PROJECT_DIRECTORY.md](./docs/rules/PROJECT_DIRECTORY.md)
+- [docs/rules/CODING_RULES.md](./docs/rules/CODING_RULES.md)
+- [docs/rules/VUE_TS_RULES.md](./docs/rules/VUE_TS_RULES.md)
+- [docs/rules/STATE_RULES.md](./docs/rules/STATE_RULES.md)
+- [docs/rules/ROUTER_RULES.md](./docs/rules/ROUTER_RULES.md)
+- [docs/rules/API_RULES.md](./docs/rules/API_RULES.md)
+- [docs/rules/TESTING_RULES.md](./docs/rules/TESTING_RULES.md)
+- [docs/rules/UI_RULES.md](./docs/rules/UI_RULES.md)
+- [docs/rules/COMPATIBILITY_RULES.md](./docs/rules/COMPATIBILITY_RULES.md)
+- [docs/rules/GIT_RULES.md](./docs/rules/GIT_RULES.md)
+- [docs/rules/DYNAMIC_WORKFLOW_RULES.md](./docs/rules/DYNAMIC_WORKFLOW_RULES.md)
+- [docs/rules/LOOP_ENGINEERING_RULES.md](./docs/rules/LOOP_ENGINEERING_RULES.md)
+- [docs/rules/AGENT_SKILL_ROUTING.md](./docs/rules/AGENT_SKILL_ROUTING.md)
+- [docs/rules/LINEAR_TASK.md](./docs/rules/LINEAR_TASK.md)
+- [docs/rules/RELEASE.md](./docs/rules/RELEASE.md)
+- [docs/rules/AI-CODE-HEALTH.md](./docs/rules/AI-CODE-HEALTH.md)
 
 > 完整文档导航（含分类目录与模板）见 [docs/README.md](./docs/README.md)。
 

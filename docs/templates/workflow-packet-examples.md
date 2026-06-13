@@ -1,6 +1,6 @@
 # 治理模板填写范例
 
-本文件给出任务确认、Workflow Packet、Memory Update Packet 的**已填写范例**，用于对照学习，降低空壳模板被误填、漏填的概率。字段语义以 `AGENTS.md` 第 4 / 7 / 8 节与 `docs/DYNAMIC_WORKFLOW_RULES.md` 为唯一来源；本文只是示例，不新增任何字段要求。
+本文件给出任务确认、Workflow Packet、Memory Update Packet 的**已填写范例**，用于对照学习，降低空壳模板被误填、漏填的概率。字段语义以 `AGENTS.md` 第 4 / 7 / 8 节与 `docs/rules/DYNAMIC_WORKFLOW_RULES.md` 为唯一来源；本文只是示例，不新增任何字段要求。
 
 > 范例中的需求、文件路径、记忆项 ID 均为示意，使用时替换为真实内容，不要原样复制。
 
@@ -32,13 +32,13 @@
 
 ## 范例 2：Fast Path 任务确认（纯文档任务）
 
-场景：修正 `docs/ROUTER_RULES.md` 中一处失效的相对链接。
+场景：修正 `docs/rules/ROUTER_RULES.md` 中一处失效的相对链接。
 
 ```markdown
 ## 任务确认（Fast Path）
 
 - 任务目标: 修正 ROUTER_RULES.md 中指向已迁移文件的死链
-- 影响范围: docs/ROUTER_RULES.md
+- 影响范围: docs/rules/ROUTER_RULES.md
 - 主 Workflow: 不适用（纯文档修正，不改运行时行为）
 - 成功标准: pnpm run check:governance 通过，链接指向真实存在的文件
 ```

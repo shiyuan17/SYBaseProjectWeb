@@ -9,7 +9,7 @@
 
 ## Dynamic Workflow
 
-Choose one primary Workflow and add required modifiers. Workflow selection, required modifiers, Red Team obligations, and packet tiers use `AGENTS.md` plus `docs/DYNAMIC_WORKFLOW_RULES.md` as the single source of truth.
+Choose one primary Workflow and add required modifiers. Workflow selection, required modifiers, Red Team obligations, and packet tiers use `AGENTS.md` plus `docs/rules/DYNAMIC_WORKFLOW_RULES.md` as the single source of truth.
 
 Packet tier:
 
@@ -26,12 +26,12 @@ Packet tier:
 
 ## Loop Packet
 
-Use this only when the task was actually run as a loop. `docs/LOOP_ENGINEERING_RULES.md` defines loop semantics only; worktree and Memory trigger rules still come from `docs/GIT_RULES.md` and `AGENTS.md`.
+Use this only when the task was actually run as a loop. `docs/rules/LOOP_ENGINEERING_RULES.md` defines loop semantics only; worktree and Memory trigger rules still come from `docs/rules/GIT_RULES.md` and `AGENTS.md`.
 
 - Loop Type: `Task Intake / Implementation / Review / Triage`
 - Stop Condition:
 - Verification Command:
-- State Sink: `PROJECT_STATE.md / TECH_DEBT.md / KNOWN_BUGS.md / DECISIONS.md / ARCHITECTURE.md / Linear`
+- State Sink: `docs/memory/PROJECT_STATE.md / docs/memory/TECH_DEBT.md / docs/memory/KNOWN_BUGS.md / docs/memory/DECISIONS.md / docs/memory/ARCHITECTURE.md / Linear`
 - Escalation Condition:
 
 ## Dynamic Tests

@@ -52,9 +52,9 @@ Use this template when converting a local plan or specification into Linear issu
 ## Required Reading
 
 - `AGENTS.md`
-- `docs/LINEAR_TASK.md`
-- `docs/DYNAMIC_WORKFLOW_RULES.md`
-- `docs/LOOP_ENGINEERING_RULES.md`
+- `docs/rules/LINEAR_TASK.md`
+- `docs/rules/DYNAMIC_WORKFLOW_RULES.md`
+- `docs/rules/LOOP_ENGINEERING_RULES.md`
 - `<按任务类型补充专项规范>`
 
 ## Stop Conditions

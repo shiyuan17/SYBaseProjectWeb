@@ -12,9 +12,9 @@ Use this prompt when a local plan needs to be split into Linear issues and Codex
 ## 必读
 
 - `AGENTS.md`
-- `docs/LINEAR_TASK.md`
-- `docs/DYNAMIC_WORKFLOW_RULES.md`
-- `docs/LOOP_ENGINEERING_RULES.md`
+- `docs/rules/LINEAR_TASK.md`
+- `docs/rules/DYNAMIC_WORKFLOW_RULES.md`
+- `docs/rules/LOOP_ENGINEERING_RULES.md`
 - `docs/templates/linear-issue-template.md`
 - `docs/templates/codex-goal-prompt-template.md`
 
