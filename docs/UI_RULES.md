@@ -14,12 +14,13 @@
 
 - `Element Plus` 负责中后台基础交互组件
 - `TailwindCSS` 负责布局、间距、栅格、快速样式编排与原子化补充
-- 全局设计 token、主题变量、覆盖策略统一在 `src/styles` 管理
+- 全局样式与主题覆盖以 Vben 共享样式入口为准：`packages/styles/src/ele/index.css`、`packages/styles/src/global/index.scss`；运行时品牌与偏好覆盖在 `apps/web-ele/src/preferences.ts`、`apps/web-ele/src/preferences-branding.ts` 管理；模块局部样式放在对应模块 `styles/` 或组件内，当前不存在 `apps/web-ele/src/styles` 统一目录
 - 禁止在页面中无序堆叠内联样式、临时色值和散乱覆盖规则
 
 ### 2. 设计 token
 
 - 颜色、字号、间距、圆角、阴影、层级必须有统一 token 来源
+- 设计 token 与运行时 CSS 变量优先复用 `packages/effects/hooks/src/use-design-tokens.ts`、`packages/@core/preferences/src/update-css-variables.ts` 和 Vben preferences 输出，不新增平行 token 体系
 - 不得在多个页面各自定义近似但不一致的品牌色和状态色
 - Element Plus 主题覆盖必须可追溯，禁止临时用深层选择器硬压样式
 

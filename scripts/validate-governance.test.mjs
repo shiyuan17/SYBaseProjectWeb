@@ -80,6 +80,44 @@ const validProjectStateBody = `
 - Handoff item
 `;
 
+const governanceAnchorFixtures = {
+  agentsBody: `${validAgentsBody}
+## 一页式执行入口
+### 规范单一来源矩阵
+## 快速命令
+### 4. 任务开始模板
+红区确认协议
+### 8. AI Memory Update
+`,
+  codingRulesBody: '标准验证命令',
+  dynamicWorkflowBody: `
+主 Workflow
+轻量 Workflow Packet
+完整 Workflow Packet
+Red Team
+`,
+  gitRulesBody: `
+### 6. 工作树（Worktree）与 Linear 任务
+### 7. 自动化护栏（lefthook）
+`,
+  loopEngineeringBody: `
+## Loop Packet
+最小 Loop Packet
+`,
+  prTemplateBody: `
+Packet tier:
+Fast Path:
+Lightweight:
+Full:
+Red-zone confirmation:
+`,
+  workflowPacketExamplesBody: `
+范例 3.1：轻量 Workflow Packet
+坏例子
+修正后
+`,
+};
+
 describe('validateGovernance', () => {
   it('accepts governance docs without duplicate decision IDs or stale dashboard contract', () => {
     const result = validateGovernance({
@@ -246,5 +284,31 @@ describe('validateGovernance', () => {
 
     expect(result.isValid).toBe(true);
     expect(result.errors).toEqual([]);
+  });
+
+  it('accepts governance docs that retain the single-source anchor set', () => {
+    const result = validateGovernance({
+      ...governanceAnchorFixtures,
+      enforceGovernanceAnchors: true,
+    });
+
+    expect(result.isValid).toBe(true);
+    expect(result.errors).toEqual([]);
+  });
+
+  it('rejects governance docs when a required anchor is missing', () => {
+    const result = validateGovernance({
+      ...governanceAnchorFixtures,
+      agentsBody: governanceAnchorFixtures.agentsBody.replace(
+        '### 规范单一来源矩阵',
+        '',
+      ),
+      enforceGovernanceAnchors: true,
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContain(
+      'Missing governance anchor in AGENTS.md: ### 规范单一来源矩阵',
+    );
   });
 });

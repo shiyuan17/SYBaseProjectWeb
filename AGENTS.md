@@ -25,6 +25,33 @@
 
 > 改动逻辑或组件时，交付前至少运行 `pnpm lint` + `pnpm check:type` + 相关 `pnpm test:unit`，并在交付说明中回填结论。涉及规范、记忆文件或治理脚本改动时，额外运行 `pnpm run check:governance`。
 
+## 一页式执行入口
+
+所有任务先按风险与行为变化进入以下三档；档位只决定最低交付形式，不降低红区确认、真实验证、Memory Update 或跨仓核对要求：
+
+| 档位 | 适用场景 | 最低输出 | 最低验证 | 升级条件 |
+| --- | --- | --- | --- | --- |
+| Fast Path | 纯文档、规范审计、只读分析，不改运行时行为，不触发红区 | 精简任务确认；交付中说明 Workflow 不适用原因、验证结果、Memory 判定 | 文档 / 治理类任务至少 `pnpm run check:governance`；只读分析写明核对来源 | 需要改代码、接口、路由、权限、构建、CI、hook、发布或出现业务规则歧义 |
+| Lightweight | 低风险实现类任务，命中 UI / API / Architecture / Workflow-Infra 但未触发强制修饰器，不涉及跨层或红区 | 完整任务确认；轻量 Workflow Packet（主 Workflow、触发信号、实际验证、Memory 判定、剩余风险） | 以 `docs/CODING_RULES.md` 标准验证命令选择最小有效集 | 触发 Security / DB / Red Team / Backend Cross-check / Browser 验证，或影响共享契约、路由守卫、请求全局层、构建发布 |
+| Full | 中高风险、跨层、权限 / 数据 / 报告、生产问题、构建发布、红区、跨仓联动 | 完整任务确认；完整 Workflow Packet；必要时 Loop Packet、Red Team、Checker 与红区确认记录 | 按 `docs/DYNAMIC_WORKFLOW_RULES.md` 对应 Workflow 执行动态测试 / 模拟 / 安全或数据库证据 | 扩大到新的红区范围、验证失败无法自行修复、跨仓证据缺失或业务规则无法确定 |
+
+### 常见任务快速选择
+
+- 只读规范审计、差距分析、交付报告：通常走 Fast Path，主 Workflow 标注「不适用（只读 / 纯文档，不改运行时行为）」，写清核对来源与 `check:governance` 结果。
+- 模块内低风险 UI 文案、展示标签或局部非敏感说明调整：通常走 Lightweight，按核心改动选 UI，若不涉及布局、视口、交互或浏览器兼容，可说明未触发 Browser 验证。
+- 权限、接口契约、患者 / 报告数据、导出打印、构建发布、CI / hook、跨仓或生产问题：直接走 Full，从严叠加 Security / DB / Red Team / Backend Cross-check / Browser 验证等修饰器，并按红区规则确认。
+
+### 规范单一来源矩阵
+
+| 规则主题 | 唯一来源 |
+| --- | --- |
+| 协作入口、风险升级、文件操作边界、红区确认、交付与 Memory Update 总规则 | `AGENTS.md` |
+| Workflow 分类、强制修饰器、动态测试 / 模拟、Red Team 与 Workflow Packet 字段语义 | `docs/DYNAMIC_WORKFLOW_RULES.md` |
+| 标准验证命令、编码、通用代码质量与测试触发条件 | `docs/CODING_RULES.md` |
+| worktree、Linear、分支、提交、PR、hook 与 Git 门禁 | `docs/GIT_RULES.md` |
+| Loop Type、Stop Condition、State Sink、Escalation Condition 与 maker/checker 闭环 | `docs/LOOP_ENGINEERING_RULES.md` |
+| 外部 AI skill 推荐与回退，不改变上述强制规则 | `docs/AGENT_SKILL_ROUTING.md` |
+
 ## 日志读取规则
 
 - 后端日志固定输出到 `.logs/backend.log`
@@ -65,6 +92,7 @@
 > `docs/AI-CODE-HEALTH.md` 为按需引用的质量自检附录，不在全量通读清单内；在生成或评审代码、做交付前自检时查阅其规则速查表与自检清单即可。
 
 - **续接历史任务 / 接手脏工作区**：先读根目录 `PROJECT_STATE.md`、`DECISIONS.md`、`KNOWN_BUGS.md`，再结合 `git status`、agentmemory 技能与任务相关规范恢复上下文。
+  - `PROJECT_STATE.md` 只记录阶段、活跃任务和交接重点，不作为当前工作区是否脏的事实来源；工作区状态必须以本轮实时 `git status --short` 为准。
 
 > 无论走哪一档，涉及红区或「6. 必须升级人工确认的场景」时，相关专项文档均为必读。
 >
@@ -165,6 +193,13 @@
 - 无法从上下文确定业务规则，且不同实现会改变页面行为或接口联调方式
 - 需要执行高风险操作，如覆盖共享组件契约、删除关键页面、重写公共请求层
 
+红区确认协议：
+
+- 请求确认时必须写明：拟改范围、命中的红区原因、外部影响、验证计划、回滚或撤销方式。
+- 有效确认必须明确允许本次动作，且能对应到具体范围；笼统的“继续”“你看着办”不能覆盖权限、认证、全局请求层、构建发布等红区变更。
+- 确认只覆盖当次说明的范围；若实施中扩大到新的红区文件、权限模型、接口协议、构建/发布路径或目标环境，必须重新暂停确认。
+- 交付或 PR 中必须记录确认来源（对话、issue、评审结论或负责人）和确认覆盖范围；未取得确认的红区项只能列为未执行 / 待确认。
+
 ### 7. 输出与交接要求
 
 每次交付必须包含：
@@ -180,9 +215,11 @@
 补充口径：
 
 - 低风险纯文档、规范审计、只读分析类任务可使用**精简交付**：保留变更摘要、影响说明、验证结果、AI Memory Update、风险提示；若主 Workflow 为「不适用」，无需机械展开完整 Workflow Packet 或 Loop Packet，只需说明原因
+- 低风险实现类任务可使用**轻量交付**：保留主 Workflow、触发信号、实际验证、Memory 判定和风险提示；动态模拟、Red Team、Checker 仅在对应修饰器或风险触发时展开
 - 中高风险、跨层、权限/数据/报告、跨仓、构建发布、生产问题任务仍按完整 Packet 交付
 - 高风险任务的 Red Team 结果至少写明：攻击路径、预期失败点、实际结果、剩余风险；只写“已执行 / 无问题”不算完成
 - 若启用 Checker / maker-checker 分离，交付中必须说明 Checker 的来源（人工 / 子 Agent / reviewer）与其主要审查结论
+- 若启用子 Agent 协作，交付中必须简要说明子任务、产出来源、主 Agent 如何采纳 / 驳回 / 合并结论；高风险任务未启用 Checker 时，必须说明原因并按红区或人工确认规则暂停
 
 执行后验证是强制回路，不得只声称完成：
 
@@ -257,12 +294,23 @@
 - **文本性问题才用 grep**：字符串内容、日志文案、注释、配置字面值等纯文本匹配再用 grep / 全文搜索
 - **避免重复探索**：codegraph 已是预建索引，不要把它能直接回答的问题再委派给额外的文件阅读子任务
 - 索引存在约 1 秒写入延迟，刚改完文件不要立即查询；codegraph 结果用于结构导航，正确性仍以类型检查、测试与 lint 为准
+- 若当前环境没有暴露 `codegraph_*` 工具或索引不可用，降级使用 `rg` / 文件阅读 / 类型检查；不要因工具缺失阻塞任务，交付时说明已降级。
+- 若会话注入了 `rtk` 命令前缀要求但当前 shell 中 `rtk` 不可用，记录一次工具不可用并直接使用原生命令继续；不要反复重试同一不可用前缀。
 
 外部 AI skills 的选用只作为专家 Agent / 执行方法补强，具体推荐组合见 `docs/AGENT_SKILL_ROUTING.md`；不得用外部 skill 覆盖本文件、`docs/DYNAMIC_WORKFLOW_RULES.md` 或专项规范中的强制要求。
 
 ### 11. 多 Agent 与子 Agent 协作
 
 针对大型或可并行任务，推荐按"探索 → 规划 → 并行执行 → 汇总核验"组织协作：
+
+复杂度决策表：
+
+| 任务复杂度 | 适用场景 | 子 Agent 要求 | 汇总要求 |
+| --- | --- | --- | --- |
+| 低风险 | Fast Path、绿区小改、单文件文档或只读分析 | 默认单 Agent；不为形式合规拆分 | 交付中说明未启用原因即可 |
+| 中风险 | 单模块 UI / API / Architecture / Workflow-Infra，影响范围清楚但需要额外确认 | 可启用只读探索、专项审查或局部验证 Agent | 主 Agent 汇总发现、去重并决定是否纳入实现 |
+| 高风险 | 跨层、权限 / 数据 / 报告、生产问题、构建发布、红区或跨仓联动 | 必须启用 maker/checker 分离；Checker 可由人工、reviewer 或只读子 Agent 承担 | 主 Agent 记录 Checker 结论、阻塞项和修复 / 放行依据 |
+| 并行实现 | 多个独立模块或多个 Linear issue 可同时推进 | 可拆分多个实现子 Agent；写作用域必须互不重叠 | 主 Agent 负责最终 diff、冲突处理、统一验证和交付说明 |
 
 - **探索阶段**：优先用只读 / 探索型子 Agent 收集上下文（代码结构、调用关系、影响面），结构性问题优先走 codegraph，纯文本检索才用 grep；探索 Agent 不得直接改动代码
 - **规划阶段**：由主 Agent 汇总探索结果，输出「4. 任务开始模板」中的任务确认，再拆分子任务

@@ -55,7 +55,9 @@ function hasSubstantiveValue(value) {
     return false;
   }
 
-  return !/^(n\/a|na|none|not applicable)$/i.test(normalized);
+  return !/^(n\/a|na|none|not applicable|not triggered|omitted)$/i.test(
+    normalized,
+  );
 }
 
 function readPullRequestBodyFromEvent(eventPath) {
@@ -63,31 +65,142 @@ function readPullRequestBodyFromEvent(eventPath) {
   return event.pull_request?.body ?? '';
 }
 
-function resolveFastPath(body) {
+function splitModifiers(value) {
+  return value
+    .split(/[,/|;]/)
+    .map((entry) => entry.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function hasModifier(requiredModifiers, modifier) {
+  return splitModifiers(requiredModifiers).some(
+    (entry) => entry === modifier.toLowerCase(),
+  );
+}
+
+function resolvePacketTier(body) {
   const dynamicWorkflowBody = extractSection(body, 'Dynamic Workflow');
   if (dynamicWorkflowBody === null) {
-    return { isFastPath: false, missingReason: false };
+    return {
+      fullReasons: [],
+      isFastPath: false,
+      isFull: false,
+      isLightweight: false,
+      missingReason: false,
+    };
   }
 
   const primaryWorkflow =
     extractField(dynamicWorkflowBody, 'Primary Workflow') ?? '';
   if (!/^(not applicable|n\/a)\b/i.test(primaryWorkflow.trim())) {
-    return { isFastPath: false, missingReason: false };
+    const normalizedPrimaryWorkflow = primaryWorkflow.trim().toLowerCase();
+    const requiredModifiers =
+      extractField(dynamicWorkflowBody, 'Required modifiers') ?? '';
+    const redZoneConfirmation =
+      extractField(dynamicWorkflowBody, 'Red-zone confirmation') ?? '';
+    const fullReasons = [];
+
+    if (
+      ['db', 'security', 'production debug'].includes(
+        normalizedPrimaryWorkflow,
+      )
+    ) {
+      fullReasons.push(`primary workflow ${primaryWorkflow.trim()}`);
+    }
+
+    for (const modifier of [
+      'Security',
+      'DB',
+      'Red Team',
+      'Backend Cross-check',
+      'Browser Verification',
+    ]) {
+      if (hasModifier(requiredModifiers, modifier)) {
+        fullReasons.push(`modifier ${modifier}`);
+      }
+    }
+
+    if (hasSubstantiveValue(redZoneConfirmation)) {
+      fullReasons.push('red-zone confirmation');
+    }
+
+    return {
+      fullReasons,
+      isFastPath: false,
+      isFull: fullReasons.length > 0,
+      isLightweight: fullReasons.length === 0,
+      missingReason: false,
+    };
   }
 
   const reason = primaryWorkflow
     .trim()
     .replace(/^(not applicable|n\/a)\b/i, '')
     .replaceAll(/[\s():,.;—-]+/g, '');
-  return { isFastPath: true, missingReason: reason.length === 0 };
+  return {
+    fullReasons: [],
+    isFastPath: true,
+    isFull: false,
+    isLightweight: false,
+    missingReason: reason.length === 0,
+  };
+}
+
+function collectFullEvidenceRequirements(body) {
+  const dynamicWorkflowBody = extractSection(body, 'Dynamic Workflow');
+  if (dynamicWorkflowBody === null) {
+    return [];
+  }
+
+  const primaryWorkflow = (
+    extractField(dynamicWorkflowBody, 'Primary Workflow') ?? ''
+  )
+    .trim()
+    .toLowerCase();
+  const requiredModifiers =
+    extractField(dynamicWorkflowBody, 'Required modifiers') ?? '';
+  const redZoneConfirmation =
+    extractField(dynamicWorkflowBody, 'Red-zone confirmation') ?? '';
+  const requirements = [];
+
+  if (
+    primaryWorkflow === 'security' ||
+    hasModifier(requiredModifiers, 'Security')
+  ) {
+    requirements.push('Dynamic Security');
+  }
+
+  if (primaryWorkflow === 'db' || hasModifier(requiredModifiers, 'DB')) {
+    requirements.push('Dynamic Database');
+  }
+
+  if (hasModifier(requiredModifiers, 'Backend Cross-check')) {
+    requirements.push('Cross-Repo Evidence');
+  }
+
+  if (hasModifier(requiredModifiers, 'Browser Verification')) {
+    requirements.push('Dynamic Simulation');
+  }
+
+  if (
+    ['security', 'db', 'production debug'].includes(primaryWorkflow) ||
+    hasModifier(requiredModifiers, 'Red Team') ||
+    hasSubstantiveValue(redZoneConfirmation)
+  ) {
+    requirements.push('Red Team');
+  }
+
+  return [...new Set(requirements)];
 }
 
 export function validatePullRequestPacket(body = '') {
   const errors = [];
 
-  // Fast path: docs-only / audit / read-only PRs mark Primary Workflow as
-  // "Not applicable (<reason>)" and may omit the Dynamic Tests block.
-  const { isFastPath, missingReason } = resolveFastPath(body);
+  // Packet tiers:
+  // - Fast Path may omit implementation-only evidence blocks.
+  // - Lightweight keeps core validation and memory fields.
+  // - Full requires the evidence sections implied by high-risk workflows/modifiers.
+  const { isFastPath, isFull, missingReason } = resolvePacketTier(body);
   if (missingReason) {
     errors.push(
       'Fast path requires a brief reason: Primary Workflow must be "Not applicable (<reason>)"',
@@ -124,21 +237,33 @@ export function validatePullRequestPacket(body = '') {
     }
   }
 
+  if (isFull) {
+    for (const sectionName of collectFullEvidenceRequirements(body)) {
+      if (extractSection(body, sectionName) === null) {
+        errors.push(`Full packet evidence missing section: ${sectionName}`);
+      }
+    }
+  }
+
   const dynamicWorkflowBody = extractSection(body, 'Dynamic Workflow');
   const redTeamBody = extractSection(body, 'Red Team');
 
-  if (dynamicWorkflowBody && redTeamBody) {
+  if (dynamicWorkflowBody) {
     const requiredModifiers =
       extractField(dynamicWorkflowBody, 'Required modifiers') ?? '';
-    const attackResult = extractField(redTeamBody, 'Attack result');
-    const residualRisk = extractField(redTeamBody, 'Residual risk');
-    const checkerSource = extractField(
-      redTeamBody,
-      'Checker / reviewer source',
-    );
-    const checklistMarked = redTeamBody
-      .split(/\r?\n/)
-      .some((line) => /^\s*-\s*\[[xX]\]/.test(line));
+    const attackResult =
+      redTeamBody === null ? null : extractField(redTeamBody, 'Attack result');
+    const residualRisk =
+      redTeamBody === null ? null : extractField(redTeamBody, 'Residual risk');
+    const checkerSource =
+      redTeamBody === null
+        ? null
+        : extractField(redTeamBody, 'Checker / reviewer source');
+    const checklistMarked =
+      redTeamBody !== null &&
+      redTeamBody
+        .split(/\r?\n/)
+        .some((line) => /^\s*-\s*\[[xX]\]/.test(line));
 
     const redTeamDeclared =
       /\bred team\b/i.test(requiredModifiers) ||
@@ -148,6 +273,10 @@ export function validatePullRequestPacket(body = '') {
       hasSubstantiveValue(checkerSource);
 
     if (redTeamDeclared) {
+      if (redTeamBody === null) {
+        errors.push('Red Team evidence missing: section');
+      }
+
       if (!hasSubstantiveValue(attackResult)) {
         errors.push('Red Team evidence missing: Attack result');
       }

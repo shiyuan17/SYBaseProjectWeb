@@ -33,6 +33,43 @@ const REQUIRED_TOP_LEVEL_DOCS = [
   'RELEASE.md',
   'AI-CODE-HEALTH.md',
 ];
+const REQUIRED_GOVERNANCE_ANCHORS = {
+  'AGENTS.md': [
+    '## 一页式执行入口',
+    '### 规范单一来源矩阵',
+    '## 快速命令',
+    '### 4. 任务开始模板',
+    '红区确认协议',
+    '### 8. AI Memory Update',
+  ],
+  'docs/CODING_RULES.md': ['标准验证命令'],
+  'docs/DYNAMIC_WORKFLOW_RULES.md': [
+    '主 Workflow',
+    '轻量 Workflow Packet',
+    '完整 Workflow Packet',
+    'Red Team',
+  ],
+  'docs/GIT_RULES.md': [
+    '### 6. 工作树（Worktree）与 Linear 任务',
+    '### 7. 自动化护栏（lefthook）',
+  ],
+  'docs/LOOP_ENGINEERING_RULES.md': [
+    '## Loop Packet',
+    '最小 Loop Packet',
+  ],
+  '.github/PULL_REQUEST_TEMPLATE.md': [
+    'Packet tier:',
+    'Fast Path:',
+    'Lightweight:',
+    'Full:',
+    'Red-zone confirmation:',
+  ],
+  'docs/templates/workflow-packet-examples.md': [
+    '范例 3.1：轻量 Workflow Packet',
+    '坏例子',
+    '修正后',
+  ],
+};
 
 function readText(path) {
   return readFileSync(path, 'utf8');
@@ -186,10 +223,36 @@ function validateProjectState(projectStateBody) {
   return errors;
 }
 
+function validateGovernanceAnchors(documentsByPath) {
+  const errors = [];
+
+  for (const [path, anchors] of Object.entries(REQUIRED_GOVERNANCE_ANCHORS)) {
+    const body = documentsByPath[path];
+    if (typeof body !== 'string') {
+      errors.push(`Missing governance anchor source: ${path}`);
+      continue;
+    }
+
+    for (const anchor of anchors) {
+      if (!body.includes(anchor)) {
+        errors.push(`Missing governance anchor in ${path}: ${anchor}`);
+      }
+    }
+  }
+
+  return errors;
+}
+
 export function validateGovernance({
   agentsBody,
+  codingRulesBody,
   decisionsBody,
+  dynamicWorkflowBody,
   docsReadmeBody,
+  gitRulesBody,
+  loopEngineeringBody,
+  prTemplateBody,
+  workflowPacketExamplesBody,
   architectureBody,
   projectStateBody,
   knownBugsBody,
@@ -197,6 +260,7 @@ export function validateGovernance({
   linkedDocuments = [],
   repoRoot = process.cwd(),
   fileExists = existsSync,
+  enforceGovernanceAnchors = false,
 } = {}) {
   const errors = [];
 
@@ -254,6 +318,21 @@ export function validateGovernance({
     errors.push(...validateProjectState(projectStateBody));
   }
 
+  if (enforceGovernanceAnchors) {
+    errors.push(
+      ...validateGovernanceAnchors({
+        '.github/PULL_REQUEST_TEMPLATE.md': prTemplateBody,
+        'AGENTS.md': agentsBody,
+        'docs/CODING_RULES.md': codingRulesBody,
+        'docs/DYNAMIC_WORKFLOW_RULES.md': dynamicWorkflowBody,
+        'docs/GIT_RULES.md': gitRulesBody,
+        'docs/LOOP_ENGINEERING_RULES.md': loopEngineeringBody,
+        'docs/templates/workflow-packet-examples.md':
+          workflowPacketExamplesBody,
+      }),
+    );
+  }
+
   return {
     errors,
     isValid: errors.length === 0,
@@ -269,6 +348,7 @@ const LINK_CHECKED_DOCUMENTS = [
   'KNOWN_BUGS.md',
   'TECH_DEBT.md',
   'ARCHITECTURE.md',
+  '.github/PULL_REQUEST_TEMPLATE.md',
   'docs/CODING_RULES.md',
   'docs/GIT_RULES.md',
   'docs/DYNAMIC_WORKFLOW_RULES.md',
@@ -283,12 +363,21 @@ const LINK_CHECKED_DOCUMENTS = [
 function main() {
   const result = validateGovernance({
     agentsBody: readText('AGENTS.md'),
+    codingRulesBody: readText('docs/CODING_RULES.md'),
     decisionsBody: readText('DECISIONS.md'),
+    dynamicWorkflowBody: readText('docs/DYNAMIC_WORKFLOW_RULES.md'),
     docsReadmeBody: readText('docs/README.md'),
+    gitRulesBody: readText('docs/GIT_RULES.md'),
+    loopEngineeringBody: readText('docs/LOOP_ENGINEERING_RULES.md'),
+    prTemplateBody: readText('.github/PULL_REQUEST_TEMPLATE.md'),
+    workflowPacketExamplesBody: readText(
+      'docs/templates/workflow-packet-examples.md',
+    ),
     architectureBody: readText('ARCHITECTURE.md'),
     projectStateBody: readText('PROJECT_STATE.md'),
     knownBugsBody: readText('KNOWN_BUGS.md'),
     techDebtBody: readText('TECH_DEBT.md'),
+    enforceGovernanceAnchors: true,
     linkedDocuments: LINK_CHECKED_DOCUMENTS.map((path) => ({
       path,
       body: readText(path),
