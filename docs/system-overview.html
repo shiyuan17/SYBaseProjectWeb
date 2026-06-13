@@ -1,0 +1,2336 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SYBaseProject 系统现状总览报告</title>
+    <style>
+      :root {
+        --bg: #f6f8fb;
+        --panel: #fff;
+        --panel-soft: #f0f5ff;
+        --text: #172033;
+        --muted: #5f6b7a;
+        --line: #d9e1ec;
+        --brand: #1f6feb;
+        --brand-dark: #164ca5;
+        --warn: #a15c00;
+        --danger: #a0182b;
+        --ok: #0c6b47;
+        --code: #102a43;
+        --shadow: 0 14px 40px rgb(20 36 58 / 8%);
+
+        color-scheme: light;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family:
+          'Segoe UI', 'Microsoft YaHei', 'PingFang SC', Arial, sans-serif;
+        line-height: 1.65;
+        color: var(--text);
+        background: var(--bg);
+      }
+
+      a {
+        color: var(--brand-dark);
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      .page {
+        display: grid;
+        grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+        min-height: 100vh;
+      }
+
+      aside {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        padding: 24px 18px;
+        overflow: auto;
+        background: #fff;
+        border-right: 1px solid var(--line);
+      }
+
+      main {
+        width: 100%;
+        max-width: 1280px;
+        padding: 32px;
+      }
+
+      .hero {
+        padding: 34px;
+        margin-bottom: 22px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+      }
+
+      .hero h1 {
+        margin: 0 0 14px;
+        font-size: clamp(28px, 4vw, 46px);
+        line-height: 1.15;
+      }
+
+      .hero p {
+        max-width: 980px;
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .meta-grid,
+      .summary-grid,
+      .risk-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 14px;
+        margin: 20px 0;
+      }
+
+      .metric,
+      .note {
+        padding: 16px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+      }
+
+      .metric strong {
+        display: block;
+        font-size: 24px;
+        line-height: 1.2;
+      }
+
+      .metric span,
+      .note span {
+        display: block;
+        margin-top: 6px;
+        color: var(--muted);
+      }
+
+      .section {
+        margin: 18px 0;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+      }
+
+      .section > summary {
+        padding: 18px 22px;
+        font-weight: 700;
+        color: var(--code);
+        cursor: pointer;
+        list-style: none;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .section > summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .section > summary::before {
+        display: inline-block;
+        margin-right: 10px;
+        color: var(--brand);
+        content: '▾';
+      }
+
+      .section:not([open]) > summary::before {
+        content: '▸';
+      }
+
+      .section-body {
+        padding: 22px;
+      }
+
+      h2,
+      h3,
+      h4 {
+        color: var(--code);
+        letter-spacing: 0;
+      }
+
+      h2 {
+        margin: 0 0 16px;
+        font-size: 24px;
+      }
+
+      h3 {
+        margin: 24px 0 10px;
+        font-size: 19px;
+      }
+
+      h4 {
+        margin: 18px 0 8px;
+        font-size: 16px;
+      }
+
+      p {
+        margin: 0 0 12px;
+      }
+
+      ul,
+      ol {
+        padding-left: 22px;
+        margin-top: 8px;
+      }
+
+      li + li {
+        margin-top: 6px;
+      }
+
+      table {
+        width: 100%;
+        margin: 14px 0 22px;
+        border-collapse: collapse;
+        background: #fff;
+      }
+
+      th,
+      td {
+        padding: 10px 12px;
+        vertical-align: top;
+        text-align: left;
+        border: 1px solid var(--line);
+      }
+
+      th {
+        font-weight: 700;
+        color: var(--code);
+        background: #eef4fb;
+      }
+
+      code {
+        padding: 1px 5px;
+        font-family: 'Cascadia Code', Consolas, monospace;
+        font-size: 0.94em;
+        color: #1d3557;
+        background: #eef4fb;
+        border: 1px solid #dbe6f3;
+        border-radius: 4px;
+      }
+
+      .diagram {
+        padding: 14px;
+        margin: 16px 0 24px;
+        overflow: auto;
+        background: #fff;
+        border: 1px solid var(--line);
+      }
+
+      pre.mermaid {
+        min-width: 720px;
+        margin: 0;
+      }
+
+      .toc-title {
+        margin: 0 0 12px;
+        font-weight: 800;
+      }
+
+      #toc {
+        font-size: 14px;
+      }
+
+      #toc ol {
+        padding-left: 0;
+        margin: 0;
+        list-style: none;
+      }
+
+      #toc li {
+        margin: 5px 0;
+      }
+
+      #toc li.toc-h3 {
+        padding-left: 14px;
+      }
+
+      #toc a {
+        display: block;
+        padding: 4px 8px;
+        color: #31425a;
+        border-radius: 6px;
+      }
+
+      #toc a:hover {
+        text-decoration: none;
+        background: var(--panel-soft);
+      }
+
+      .tag {
+        display: inline-block;
+        padding: 2px 8px;
+        font-size: 12px;
+        color: #31425a;
+        white-space: nowrap;
+        background: #f7fbff;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+      }
+
+      .tag.ok {
+        color: var(--ok);
+        background: #eefbf6;
+        border-color: #b7ead6;
+      }
+
+      .tag.warn {
+        color: var(--warn);
+        background: #fff8ea;
+        border-color: #f0d39a;
+      }
+
+      .tag.danger {
+        color: var(--danger);
+        background: #fff1f3;
+        border-color: #f2b5c0;
+      }
+
+      .callout {
+        padding: 14px 16px;
+        margin: 14px 0 20px;
+        background: #f2f7ff;
+        border-left: 4px solid var(--brand);
+      }
+
+      .callout.warning {
+        background: #fff8ea;
+        border-left-color: var(--warn);
+      }
+
+      .callout.danger {
+        background: #fff1f3;
+        border-left-color: var(--danger);
+      }
+
+      .small {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      @media (max-width: 980px) {
+        .page {
+          display: block;
+        }
+
+        aside {
+          position: static;
+          height: auto;
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        main {
+          padding: 18px;
+        }
+      }
+
+      @media print {
+        aside {
+          display: none;
+        }
+
+        .page {
+          display: block;
+        }
+
+        main {
+          max-width: none;
+          padding: 0;
+        }
+
+        .section {
+          box-shadow: none;
+          break-inside: avoid;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <aside>
+        <p class="toc-title">目录</p>
+        <nav id="toc" aria-label="自动生成目录"></nav>
+      </aside>
+
+      <main>
+        <header class="hero">
+          <h1>SYBaseProject 系统现状总览报告</h1>
+          <p>
+            本报告基于前端仓库 <code>SYBaseProjectWeb</code> 与同级后端仓库
+            <code>SYBaseProject</code> 的静态源码、治理文档、路由、API
+            service、后端 Controller
+            和数据库迁移进行梳理。它用于帮助团队建立当前系统全貌、识别业务链路和状态边界，并沉淀后续治理风险。
+          </p>
+          <div class="meta-grid">
+            <div class="metric">
+              <strong>2026-06-13</strong>
+              <span>报告生成日期</span>
+            </div>
+            <div class="metric">
+              <strong>Vue 3 + Vben</strong>
+              <span>前端主技术栈</span>
+            </div>
+            <div class="metric">
+              <strong>Spring Boot 3</strong>
+              <span>后端主技术栈</span>
+            </div>
+            <div class="metric">
+              <strong>约 93 个迁移文件</strong>
+              <span>后端数据库演进规模</span>
+            </div>
+          </div>
+          <p class="small">
+            说明：本报告不代表生产环境实时健康状态；未运行完整
+            dead-code、性能压测或接口契约自动比对，因此风险章节将“确认问题”和“候选风险信号”分开表述。
+          </p>
+        </header>
+
+        <details class="section" open>
+          <summary>01 报告范围与证据</summary>
+          <div class="section-body">
+            <h2>报告范围与证据</h2>
+            <p>
+              本次分析覆盖前端应用、后端服务、数据库模型、外部集成、核心业务流程、状态机、页面功能、数据流和风险信号。由于任务要求输出
+              HTML 报告，本次未修改运行时代码、路由、store、API 契约或构建配置。
+            </p>
+            <table>
+              <thead>
+                <tr>
+                  <th>证据类别</th>
+                  <th>主要来源</th>
+                  <th>用途</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>前端工程</td>
+                  <td>
+                    <code>package.json</code
+                    >、<code>apps/web-ele/package.json</code>、<code>main.ts</code>、<code
+                      >bootstrap.ts</code
+                    >
+                  </td>
+                  <td>确认 monorepo、启动链路、依赖栈和应用装配方式。</td>
+                </tr>
+                <tr>
+                  <td>前端路由与页面</td>
+                  <td><code>apps/web-ele/src/router/routes/modules/*</code></td>
+                  <td>
+                    识别模块入口、页面列表、跳转关系、菜单权限和兼容路由。
+                  </td>
+                </tr>
+                <tr>
+                  <td>前端 API</td>
+                  <td>
+                    <code>apps/web-ele/src/api/request.ts</code>、<code
+                      >apps/web-ele/src/modules/**/api</code
+                    >
+                  </td>
+                  <td>
+                    确认统一请求客户端、认证头、错误处理、业务 endpoint 分组。
+                  </td>
+                </tr>
+                <tr>
+                  <td>后端工程</td>
+                  <td>
+                    <code>../SYBaseProject/pom.xml</code>、<code
+                      >../SYBaseProject/bl-center/pom.xml</code
+                    >
+                  </td>
+                  <td>
+                    确认 Java 17、Spring Boot 3、多模块、MyBatis
+                    Plus、Flyway、达梦驱动等。
+                  </td>
+                </tr>
+                <tr>
+                  <td>后端接口</td>
+                  <td>
+                    <code
+                      >../SYBaseProject/bl-center/src/main/java/**/controller</code
+                    >
+                  </td>
+                  <td>
+                    按 Controller 和 Mapping 识别业务
+                    API，核对前端服务消费路径。
+                  </td>
+                </tr>
+                <tr>
+                  <td>数据库</td>
+                  <td>
+                    <code
+                      >../SYBaseProject/bl-center/src/main/resources/db/migration</code
+                    >、<code
+                      >../SYBaseProject/bl-center/src/main/java/db/migration</code
+                    >
+                  </td>
+                  <td>识别核心业务表、状态字段、历史兼容迁移和技术债信号。</td>
+                </tr>
+                <tr>
+                  <td>治理与长期上下文</td>
+                  <td>
+                    <code>AGENTS.md</code
+                    >、<code>docs/*.md</code>、根目录记忆文件
+                  </td>
+                  <td>
+                    约束报告交付口径、Workflow、验证和 Memory Update 判定。
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <details class="section" open>
+          <summary>02 系统整体架构</summary>
+          <div class="section-body">
+            <h2>系统整体架构</h2>
+            <p>
+              当前系统是“前端 Vben 管理端 + 后端 Spring Boot 多中心服务 +
+              达梦数据库 +
+              外部系统网关”的业务平台。前端负责模块化页面、权限菜单、交互工作台和
+              API 适配；后端以
+              <code>auth-center</code>、<code>user-center</code>、<code
+                >bl-center</code
+              >
+              分离认证、用户和业务能力；数据库通过 Flyway
+              迁移维护业务表和兼容性演进。
+            </p>
+
+            <div class="diagram">
+              <pre class="mermaid">
+flowchart LR
+  U["用户/医技/医生/管理员"] --> B["浏览器管理端<br/>apps/web-ele"]
+  B --> R["Vue Router<br/>菜单权限/守卫/兼容跳转"]
+  B --> S["Pinia/Vben Stores<br/>token/user/access codes/preferences"]
+  B --> C["业务模块<br/>M1-M6/通知/看板"]
+  C --> Q["RequestClient<br/>Authorization + Accept-Language<br/>SUCCESS 响应解包"]
+  Q --> P1["开发代理<br/>/api/v1/auth -> localhost:8081"]
+  Q --> P2["开发代理<br/>/api/v1 -> localhost:8080"]
+  P1 --> AUTH["auth-center<br/>登录/令牌/认证"]
+  P2 --> BL["bl-center<br/>业务接口/流程/统计"]
+  P2 --> USER["user-center<br/>用户/角色/权限"]
+  AUTH --> DB["达梦数据库<br/>Flyway 迁移"]
+  USER --> DB
+  BL --> DB
+  BL --> G1["外部网关<br/>临床申请/计费/历史报告/标签打印/技术标记"]
+  BL --> G2["文件与媒体<br/>取材图片/导出下载"]
+  BL --> OBS["监控观测<br/>Actuator/Micrometer/Prometheus/Loki/Grafana"]
+              </pre>
+            </div>
+
+            <h3>前端架构</h3>
+            <p>
+              前端仓库是 Vben Admin monorepo，主应用位于
+              <code>apps/web-ele</code>。启动链路为
+              <code>main.ts</code> 初始化偏好命名空间和兼容迁移，再动态加载
+              <code>bootstrap.ts</code> 注册组件适配器、表单适配器、Element Plus
+              loading、Vben
+              loading、i18n、Pinia、权限指令、Tippy、Router、Motion 和动态标题。
+            </p>
+            <table>
+              <thead>
+                <tr>
+                  <th>层次</th>
+                  <th>现状</th>
+                  <th>说明</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>应用壳</td>
+                  <td>
+                    <code>main.ts</code>、<code>bootstrap.ts</code>、Vben
+                    packages
+                  </td>
+                  <td>
+                    统一承载偏好、样式、布局、指令、路由、国际化和 store
+                    初始化。
+                  </td>
+                </tr>
+                <tr>
+                  <td>业务模块</td>
+                  <td><code>src/modules/&lt;domain&gt;</code></td>
+                  <td>
+                    按 M1-M6、通知、看板等领域组织
+                    views、components、api、types、utils。
+                  </td>
+                </tr>
+                <tr>
+                  <td>请求层</td>
+                  <td><code>src/api/request.ts</code></td>
+                  <td>
+                    统一 baseURL、Bearer token、语言头、响应 envelope
+                    解包、未认证处理和全局错误提示。
+                  </td>
+                </tr>
+                <tr>
+                  <td>状态层</td>
+                  <td>
+                    Vben stores + <code>src/store/auth.ts</code> + 少量模块
+                    store
+                  </td>
+                  <td>
+                    认证流程由本地 auth store 编排，通知中心有独立
+                    store；多数页面状态位于组件或 composable。
+                  </td>
+                </tr>
+                <tr>
+                  <td>路由层</td>
+                  <td><code>src/router/routes/modules</code></td>
+                  <td>
+                    每个业务域有独立 route module，meta
+                    中包含权限码、图标、标题、菜单隐藏策略。
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h3>后端架构</h3>
+            <p>
+              后端同级仓库 <code>SYBaseProject</code> 是 Java 17 与 Spring Boot
+              3 Maven 多模块工程。业务核心在 <code>bl-center</code>，公共能力在
+              <code>common-core</code
+              >、<code>common-security</code>、<code>common-web</code>，认证和用户能力分别位于
+              <code>auth-center</code> 与 <code>user-center</code>。
+            </p>
+            <table>
+              <thead>
+                <tr>
+                  <th>后端模块</th>
+                  <th>职责</th>
+                  <th>关键技术/约束</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>auth-center</code></td>
+                  <td>认证、登录、令牌与会话相关能力。</td>
+                  <td>前端开发代理将 <code>/api/v1/auth</code> 指向 8081。</td>
+                </tr>
+                <tr>
+                  <td><code>user-center</code></td>
+                  <td>用户、角色、权限基础能力。</td>
+                  <td>与菜单、权限码、系统管理页面共同组成鉴权基础。</td>
+                </tr>
+                <tr>
+                  <td><code>bl-center</code></td>
+                  <td>
+                    M1-M6 业务 API、流程编排、统计、档案、通知、外部集成网关。
+                  </td>
+                  <td>
+                    Spring Web、Validation、Actuator、Cache、JDBC、MyBatis
+                    Plus、Flyway、达梦驱动。
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>common/*</code></td>
+                  <td>核心模型、安全、Web、测试公共能力。</td>
+                  <td>约束跨模块复用边界。</td>
+                </tr>
+                <tr>
+                  <td><code>tools/app-cli</code></td>
+                  <td>工程工具或命令行辅助。</td>
+                  <td>不在前端运行链路内。</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h3>数据库</h3>
+            <p>
+              数据库侧使用 Flyway
+              管理迁移，目标数据库为达梦。迁移文件覆盖认证、用户、菜单权限、M2
+              临床送检、M3 制片、M4 诊断、M5 档案借阅与资源、M6
+              统计集成、通知中心和操作日志。迁移中存在多处
+              <code>reconcile</code>、<code>relax</code>、<code>ensure</code>
+              类脚本，说明系统经历了历史数据兼容和字段约束调整。
+            </p>
+            <table>
+              <thead>
+                <tr>
+                  <th>数据域</th>
+                  <th>核心表</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>认证与系统管理</td>
+                  <td>
+                    <code>users</code
+                    >、<code>roles</code>、<code>permissions</code>、<code>menus</code>、<code>user_roles</code>、<code>role_permissions</code>、<code>role_menus</code>、<code>auth_access_tokens</code>、<code>operation_logs</code>、<code
+                      >user_login_logs</code
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td>主数据</td>
+                  <td>
+                    <code>department_dict</code
+                    >、<code>body_part_dict</code>、<code>medical_order_dict_*</code>、<code>medical_order_charge_items</code>、<code>medical_order_packages</code>、<code>sampling_templates</code>、<code>sampling_guidelines</code>、<code
+                      >numbering_rules</code
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td>M2 临床送检</td>
+                  <td>
+                    <code>applications</code
+                    >、<code>patients</code>、<code>specimens</code>、<code>specimen_collection_records</code>、<code>specimen_fixation_records</code>、<code>transport_orders</code>、<code>transport_order_items</code>、<code>specimen_receipts</code>、<code
+                      >workflow_events</code
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td>M3 制片</td>
+                  <td>
+                    <code>technical_specimen_registrations</code
+                    >、<code>technical_pending_tasks</code>、<code>samplings</code>、<code>sampling_blocks</code>、<code>dehydration_batches</code>、<code>embeddings</code>、<code>embedding_boxes</code>、<code>slicings</code>、<code>slides</code>、<code>slide_stainings</code>、<code
+                      >rework_orders</code
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td>M4 诊断</td>
+                  <td>
+                    <code>pathology_cases</code
+                    >、<code>diagnostic_tasks</code>、<code>pathology_reports</code>、<code>report_versions</code>、<code>medical_orders</code>、<code>report_revision_requests</code>、<code
+                      >consultation_cases</code
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td>M5 运营支持</td>
+                  <td>
+                    <code>archive_cabinets</code
+                    >、<code>archive_positions</code>、<code>specimen_storage_records</code>、<code>material_loans</code>、<code>reagents</code>、<code>reagent_stocks</code>、<code>reagent_stock_events</code>、<code
+                      >equipment_records</code
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td>M6 统计集成</td>
+                  <td>
+                    <code>integration_tasks</code
+                    >、<code>billing_records</code>、<code>historical_import_jobs</code>、<code>historical_reports</code>、<code>stat_indicator_definitions</code>、<code>stat_report_templates</code>、<code
+                      >stat_export_jobs</code
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td>通知中心</td>
+                  <td>
+                    <code>message_topics</code
+                    >、<code>role_message_subscriptions</code>、<code>user_notifications</code>、<code
+                      >user_notification_preferences</code
+                    >
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h3>第三方服务与外部系统</h3>
+            <p>
+              后端以 Gateway
+              抽象对接外部系统，目前静态源码中可见临床申请、计费、历史报告、标签打印、技术标记等网关，同时存在对应
+              Stub 实现。监控侧包含 Prometheus、Loki、Grafana、Alloy
+              等线索；Redis、MQ、Elasticsearch、AI、storage
+              等基础设施目录有占位或预留迹象。
+            </p>
+            <table>
+              <thead>
+                <tr>
+                  <th>外部能力</th>
+                  <th>当前形态</th>
+                  <th>业务影响</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>临床申请系统</td>
+                  <td><code>ClinicalApplicationGateway</code> + Stub</td>
+                  <td>支撑 M2 申请导入、患者信息查找和送检数据入口。</td>
+                </tr>
+                <tr>
+                  <td>计费系统</td>
+                  <td><code>BillingGateway</code> + Stub</td>
+                  <td>支撑医嘱计费、确认、M6 收费统计和对账。</td>
+                </tr>
+                <tr>
+                  <td>历史报告系统</td>
+                  <td><code>HistoricalReportGateway</code> + Stub</td>
+                  <td>支撑历史报告导入、查询、版本追踪和统计。</td>
+                </tr>
+                <tr>
+                  <td>标签打印/条码</td>
+                  <td><code>LabelPrintGateway</code> + Stub</td>
+                  <td>支撑标本标签批次、补打、切片标签打印等流程。</td>
+                </tr>
+                <tr>
+                  <td>技术标记</td>
+                  <td><code>TechnicalMarkingGateway</code> + Stub</td>
+                  <td>支撑 M3 制片流程中的外部设备或标记能力。</td>
+                </tr>
+                <tr>
+                  <td>监控观测</td>
+                  <td>Actuator、Micrometer、Prometheus、Loki、Grafana</td>
+                  <td>支撑业务接口、计费集成和运行指标观测。</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <details class="section" open>
+          <summary>03 模块现状</summary>
+          <div class="section-body">
+            <h2>模块现状</h2>
+            <p>
+              前端模块以业务域划分，<code>specimen-workflow</code> 与
+              <code>technical-workflow</code> 规模最大，分别承载 M2 和 M3
+              的主要工作台。后端业务模块集中在 <code>bl-center</code>，通过
+              Controller 暴露 REST API，通过 application service 组织用例，通过
+              migration 维护业务数据结构。
+            </p>
+
+            <h3>前端模块规模</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>模块</th>
+                  <th>文件数</th>
+                  <th>页面</th>
+                  <th>API</th>
+                  <th>组件</th>
+                  <th>说明</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>specimen-workflow</code></td>
+                  <td>204</td>
+                  <td>26</td>
+                  <td>25</td>
+                  <td>70</td>
+                  <td>
+                    M2
+                    临床送检，覆盖申请、登记、固定、转运、接收、追踪、异常和条码绑定。
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>technical-workflow</code></td>
+                  <td>100</td>
+                  <td>27</td>
+                  <td>2</td>
+                  <td>44</td>
+                  <td>
+                    M3
+                    制片，覆盖病理接收、技术登记、取材、脱水、包埋、切片、染色、医嘱、返工和追踪。
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>system-management</code></td>
+                  <td>59</td>
+                  <td>12</td>
+                  <td>4</td>
+                  <td>25</td>
+                  <td>
+                    M1
+                    系统管理，覆盖用户、角色、科室、字典、医嘱、模板、配置、编号、日志。
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>operation-support</code></td>
+                  <td>62</td>
+                  <td>10</td>
+                  <td>2</td>
+                  <td>26</td>
+                  <td>
+                    M5
+                    档案借阅、设备和试剂耗材；危化品、医疗废物当前为占位入口。
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>doctor-workflow</code></td>
+                  <td>31</td>
+                  <td>11</td>
+                  <td>2</td>
+                  <td>7</td>
+                  <td>
+                    M4
+                    诊断，覆盖分配、诊断工作台、报告、追踪、医嘱、修订和会诊。
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>m6-statistics</code></td>
+                  <td>13</td>
+                  <td>7</td>
+                  <td>2</td>
+                  <td>0</td>
+                  <td>
+                    M6 当前统计报表模块，使用
+                    <code>/v1/stat-reports/query</code>
+                    聚合质量、运营和工作量指标。
+                  </td>
+                </tr>
+                <tr>
+                  <td><code>m6-management</code></td>
+                  <td>11</td>
+                  <td>5</td>
+                  <td>2</td>
+                  <td>0</td>
+                  <td>M6 入口和历史集成/计费相关遗留或过渡能力仍存在。</td>
+                </tr>
+                <tr>
+                  <td><code>notification-center</code></td>
+                  <td>9</td>
+                  <td>1</td>
+                  <td>2</td>
+                  <td>0</td>
+                  <td>用户通知、未读数、已读、归档和通知偏好。</td>
+                </tr>
+                <tr>
+                  <td><code>dashboard</code></td>
+                  <td>30</td>
+                  <td>2</td>
+                  <td>9</td>
+                  <td>10</td>
+                  <td>首页看板和内部聚合入口，连接业务流程快捷跳转。</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h3>后端模块说明</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>领域</th>
+                  <th>主要 Controller/API</th>
+                  <th>主要持久化对象</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>M1 系统管理</td>
+                  <td>
+                    system users、roles、menus、permissions、departments、body
+                    parts、medical order dicts、sampling
+                    templates、configs、numbering rules、logs
+                  </td>
+                  <td>
+                    用户、角色、菜单权限、主数据、系统配置、编号规则、登录和操作日志。
+                  </td>
+                </tr>
+                <tr>
+                  <td>M2 临床送检</td>
+                  <td>
+                    applications、clinical-applications、specimens、specimen-verifications、specimen-fixations、transport-orders、specimen-receipts、specimen-removals
+                  </td>
+                  <td>
+                    申请单、患者、标本、固定记录、转运单、接收记录、流程事件。
+                  </td>
+                </tr>
+                <tr>
+                  <td>M3 制片</td>
+                  <td>
+                    technical-specimen-registrations、technical-tasks、grossings、dehydration-batches、embeddings、slicings、slide-stainings、rework-orders
+                  </td>
+                  <td>
+                    技术登记、任务池、取材、包埋盒、切片、玻片、染色、返工和媒体资产。
+                  </td>
+                </tr>
+                <tr>
+                  <td>M4 诊断</td>
+                  <td>
+                    diagnostic-tasks、pathology-cases、pathology-reports、medical-orders、report-revision-requests、consultations
+                  </td>
+                  <td>
+                    病例、诊断任务、病理报告、报告版本、医嘱、修订申请、会诊参与人。
+                  </td>
+                </tr>
+                <tr>
+                  <td>M5 运营支持</td>
+                  <td>
+                    archive-cabinets、archive-records、archive-objects、material-loans、reagents、reagent-stocks、equipment-records
+                  </td>
+                  <td>
+                    档案柜位、归档对象、借阅记录、试剂模板、库存批次、库存事件、设备维护。
+                  </td>
+                </tr>
+                <tr>
+                  <td>M6 统计集成</td>
+                  <td>
+                    integration tasks、billing records、historical reports、stat
+                    indicators、stat templates、stat reports、stat report
+                    details
+                  </td>
+                  <td>
+                    集成任务、计费记录、历史报告、统计指标、统计模板、导出任务。
+                  </td>
+                </tr>
+                <tr>
+                  <td>通知中心</td>
+                  <td>
+                    my notifications、unread count、read/archive、preferences
+                  </td>
+                  <td>消息主题、角色订阅、用户通知、用户偏好。</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <details class="section" open>
+          <summary>04 业务流程分析</summary>
+          <div class="section-body">
+            <h2>业务流程分析</h2>
+            <p>
+              系统围绕病理业务全流程组织：M1 提供基础配置和权限，M2
+              采集临床送检并形成病例/标本，M3 完成制片处理，M4
+              完成诊断、报告和医嘱，M5 支撑档案、借阅、设备与耗材，M6
+              进行统计、集成和历史数据分析，通知中心贯穿各模块提供消息触达。
+            </p>
+
+            <h3>全局业务主链路</h3>
+            <div class="diagram">
+              <pre class="mermaid">
+flowchart LR
+  M1["M1 系统管理<br/>用户/角色/字典/模板/配置/编号"] --> M2["M2 临床送检<br/>申请/登记/固定/转运/接收"]
+  M2 --> M3["M3 制片管理<br/>技术登记/取材/脱水/包埋/切片/染色"]
+  M3 --> M4["M4 诊断管理<br/>任务/工作台/报告/医嘱/会诊/修订"]
+  M4 --> M5["M5 运营支持<br/>归档/借阅/试剂/设备"]
+  M2 --> M6["M6 统计分析<br/>质控/运营/工作量/导出"]
+  M3 --> M6
+  M4 --> M6
+  M5 --> M6
+  M1 --> N["通知中心<br/>主题/订阅/未读/偏好"]
+  M2 --> N
+  M3 --> N
+  M4 --> N
+  M5 --> N
+              </pre>
+            </div>
+
+            <h3>认证与访问流程</h3>
+            <p>
+              用户登录后，前端保存 access token，并并行获取用户信息与 access
+              codes。后续请求统一携带 Bearer token 和语言头；认证失败时清除
+              token 或进入登录过期流程。菜单由后端返回并与前端
+              fallback/component definition 对齐。
+            </p>
+            <div class="diagram">
+              <pre class="mermaid">
+sequenceDiagram
+  participant User as 用户
+  participant Web as web-ele
+  participant AuthStore as auth store
+  participant Auth as auth-center
+  participant BL as bl/user API
+  participant Router as Vue Router
+
+  User->>Web: 输入账号密码
+  Web->>AuthStore: authLogin(params)
+  AuthStore->>Auth: POST /v1/auth/login
+  Auth-->>AuthStore: accessToken
+  par 获取用户信息
+    AuthStore->>Auth: GET /v1/auth/me
+  and 获取权限码
+    AuthStore->>Auth: GET /v1/auth/access-codes
+  end
+  AuthStore->>Web: 写入 user/accessCodes/token
+  Web->>BL: GET /v1/menus
+  BL-->>Web: 菜单树
+  Web->>Router: 导航到默认首页或 redirect
+              </pre>
+            </div>
+
+            <h3>M1 系统管理流程</h3>
+            <p>
+              M1
+              是其他业务模块的主数据和权限底座。管理员维护用户、角色、科室、部位、医嘱字典、收费、套餐、取材模板、取材规范、系统配置和编号规则，后端将这些配置用于权限控制、业务表单选项、编号生成和审计查询。
+            </p>
+            <div class="diagram">
+              <pre class="mermaid">
+flowchart TD
+  A["管理员进入 /system"] --> B["用户/角色/权限维护"]
+  A --> C["科室/部位/医嘱字典维护"]
+  A --> D["收费/套餐/模板/规范维护"]
+  A --> E["系统配置/编号规则"]
+  A --> F["登录日志/操作日志查询"]
+  B --> G["菜单与 access codes 生效"]
+  C --> H["M2-M4 表单与业务选项"]
+  D --> H
+  E --> I["申请号/病理号/标本号生成"]
+  F --> J["审计与追责"]
+              </pre>
+            </div>
+
+            <h3>M2 临床送检流程</h3>
+            <p>
+              M2
+              从临床申请或人工录入开始，经过申请登记、患者/标本信息维护、标签打印与条码绑定、固定核对、转运交接、病理接收，最终进入
+              M3
+              技术登记或追踪异常处理。其核心对象包括申请单、患者、标本、转运单和流程事件。
+            </p>
+            <div class="diagram">
+              <pre class="mermaid">
+flowchart LR
+  A["临床申请导入<br/>/v1/clinical-applications/import"] --> B["申请登记工作台"]
+  B --> C["患者/申请信息保存"]
+  C --> D["标本登记<br/>/v1/specimens/register"]
+  D --> E["标签打印/补打<br/>label batch"]
+  E --> F["条码绑定/确认"]
+  F --> G["固定核对<br/>start/complete verification"]
+  G --> H["固定开始/完成"]
+  H --> I["转运单创建/打印"]
+  I --> J["交接/出库"]
+  J --> K["病理接收<br/>按单或条码接收"]
+  K --> L["技术登记待处理"]
+  G --> X["追踪与异常处理"]
+  J --> X
+  K --> X
+              </pre>
+            </div>
+
+            <h3>M3 制片流程</h3>
+            <p>
+              M3
+              以病理接收和技术登记为入口，生成技术任务池。常规处理链路包括取材、脱水、包埋、切片、质控、染色和出片；同时支持冰冻、常规/特检/免疫组化/细胞学医嘱工作站、返工和技术追踪。切片环节存在“先打印后切片”和合并打印组能力。
+            </p>
+            <div class="diagram">
+              <pre class="mermaid">
+flowchart LR
+  A["病理接收"] --> B["技术登记<br/>病例材料核对/媒体资产"]
+  B --> C["任务池<br/>assign/claim/release/priority"]
+  C --> D["取材工作站<br/>grossings"]
+  D --> E["脱水批次<br/>create/start/complete"]
+  E --> F["包埋<br/>start/confirm/complete"]
+  F --> G["切片<br/>slide print/merge group/complete"]
+  G --> H["玻片质控"]
+  H --> I["染色出片<br/>start/complete"]
+  I --> J["诊断待处理"]
+  C --> K["冰冻/医嘱/IHC/细胞学/液基"]
+  J --> R["返工单"]
+  R --> C
+              </pre>
+            </div>
+
+            <h3>M4 诊断流程</h3>
+            <p>
+              M4
+              以诊断任务为入口，支持任务分配、医生接收、诊断工作台、报告草稿、提交、审核、签发、发布、追踪、医嘱执行、报告修订和会诊。报告是该域中最关键的状态对象，涉及患者和病理报告信息，属于高敏感业务数据。
+            </p>
+            <div class="diagram">
+              <pre class="mermaid">
+flowchart LR
+  A["诊断任务池<br/>pending"] --> B["分配/接收"]
+  B --> C["诊断工作台<br/>病例/材料/报告上下文"]
+  C --> D["报告草稿"]
+  D --> E["提交审核"]
+  E --> F["审核通过"]
+  E --> D2["退回修改"]
+  D2 --> D
+  F --> G["签发"]
+  G --> H["发布"]
+  C --> I["病理医嘱<br/>创建/接收/完成/取消"]
+  H --> J["报告追踪"]
+  H --> K["报告修订申请"]
+  C --> L["会诊创建/评论/完成"]
+              </pre>
+            </div>
+
+            <h3>M5 运营支持流程</h3>
+            <p>
+              M5
+              承接业务完成后的实体管理，包括申请单、包埋盒、玻片、标本归档，档案柜位维护，材料借阅归还，试剂耗材库存批次、库存事件、预警、导入导出，以及仪器设备档案和维护记录。
+            </p>
+            <div class="diagram">
+              <pre class="mermaid">
+flowchart LR
+  A["归档对象<br/>申请单/包埋盒/玻片/标本"] --> B["选择档案柜位"]
+  B --> C["生成存储记录"]
+  C --> D["档案检索"]
+  D --> E["借阅申请"]
+  E --> F["借出"]
+  F --> G["归还"]
+  H["试剂模板"] --> I["库存批次"]
+  I --> J["检测/启用/消耗/停用"]
+  J --> K["库存事件与预警"]
+  L["设备档案"] --> M["维护记录/预警"]
+              </pre>
+            </div>
+
+            <h3>M6 统计与集成流程</h3>
+            <p>
+              M6 面向质控、运营、工作量和自定义报表。当前前端统计看板通过
+              <code>/v1/stat-reports/query</code> 分别查询
+              QUALITY、OPERATION、WORKLOAD；测试中对旧
+              <code>/v1/stat-dashboard/query</code>
+              做了负向断言，表示生产服务不应调用旧
+              endpoint。历史报告、计费、集成任务和导出任务构成统计数据来源与输出链路。
+            </p>
+            <div class="diagram">
+              <pre class="mermaid">
+flowchart LR
+  A["业务表<br/>M2/M3/M4/M5"] --> B["统计指标定义"]
+  C["外部计费/历史报告"] --> D["集成任务"]
+  D --> E["计费记录/历史报告"]
+  B --> F["统计模板"]
+  E --> G["报表查询<br/>/v1/stat-reports/query"]
+  A --> G
+  G --> H["质量/运营/工作量卡片"]
+  G --> I["明细查询<br/>/v1/stat-report-details/query"]
+  G --> J["CSV 导出"]
+  I --> J
+              </pre>
+            </div>
+
+            <h3>通知中心流程</h3>
+            <p>
+              通知中心以消息主题、角色订阅、用户通知和用户偏好为核心。前端提供通知列表、未读数、单条已读、全部已读、单条归档、批量归档和偏好维护。该流程适合承载任务待办、异常提醒、库存预警和系统消息。
+            </p>
+            <div class="diagram">
+              <pre class="mermaid">
+flowchart LR
+  A["业务事件<br/>任务/异常/库存/系统"] --> B["消息主题 message_topics"]
+  B --> C["角色订阅 role_message_subscriptions"]
+  C --> D["用户通知 user_notifications"]
+  E["用户偏好 user_notification_preferences"] --> D
+  D --> F["未读数"]
+  D --> G["通知列表"]
+  G --> H["标记已读/全部已读"]
+  G --> I["归档/批量归档"]
+              </pre>
+            </div>
+          </div>
+        </details>
+
+        <details class="section" open>
+          <summary>05 状态机分析</summary>
+          <div class="section-body">
+            <h2>状态机分析</h2>
+            <p>
+              静态扫描到的状态词覆盖
+              <code>DRAFT</code
+              >、<code>SUBMITTED</code>、<code>PENDING</code>、<code>IN_PROGRESS</code>、<code>COMPLETED</code>、<code>VERIFIED</code>、<code>FIXED</code>、<code>IN_TRANSIT</code>、<code>RECEIVED</code>、<code>REVIEWED</code>、<code>SIGNED</code>、<code>PUBLISHED</code>、<code>AVAILABLE</code>、<code
+                >LOW_STOCK</code
+              >
+              等。以下状态机按核心业务对象归纳，实际落库字段和接口校验应以后端领域服务为准。
+            </p>
+
+            <h3>申请与标本状态机</h3>
+            <div class="diagram">
+              <pre class="mermaid">
+stateDiagram-v2
+  [*] --> Draft: 创建申请
+  Draft --> Submitted: 提交/登记
+  Submitted --> Registered: 标本登记
+  Registered --> Unbound: 待条码绑定
+  Unbound --> Registered: 条码绑定
+  Registered --> Verifying: 开始核对
+  Verifying --> Verified: 核对完成
+  Verified --> Fixing: 开始固定
+  Fixing --> Fixed: 固定完成
+  Fixed --> CheckedIn: 院内交接/入库确认
+  CheckedIn --> InTransit: 转运出库
+  InTransit --> Received: 病理接收
+  Received --> TechnicalPending: 进入技术登记
+  Verifying --> Rejected: 核对异常
+  InTransit --> Returned: 退回/异常
+  Received --> Removed: 标本取走确认
+              </pre>
+            </div>
+
+            <h3>技术任务状态机</h3>
+            <div class="diagram">
+              <pre class="mermaid">
+stateDiagram-v2
+  [*] --> Pending: 任务生成
+  Pending --> Assigned: 分配
+  Pending --> InProgress: 认领/开始
+  Assigned --> InProgress: 接收/开始
+  InProgress --> Completed: 完成
+  InProgress --> Pending: 释放
+  InProgress --> Cancelled: 取消
+  Completed --> Rework: 返工申请
+  Rework --> Pending: 返工执行
+  Completed --> [*]
+              </pre>
+            </div>
+
+            <h3>包埋状态机</h3>
+            <div class="diagram">
+              <pre class="mermaid">
+stateDiagram-v2
+  [*] --> Pending: 待包埋
+  Pending --> InProgress: 开始包埋
+  InProgress --> ConfirmPending: EMBEDDING_CONFIRM_PENDING
+  ConfirmPending --> Completed: 确认完成
+  ConfirmPending --> Cancelled: 取消
+  InProgress --> Cancelled: 取消
+  Completed --> [*]
+              </pre>
+            </div>
+
+            <h3>病理报告状态机</h3>
+            <div class="diagram">
+              <pre class="mermaid">
+stateDiagram-v2
+  [*] --> Draft: 创建/保存草稿
+  Draft --> Submitted: 提交审核
+  Submitted --> Reviewed: 审核通过
+  Submitted --> Draft: 审核退回
+  Reviewed --> Signed: 签发
+  Signed --> Published: 发布
+  Published --> RevisionPending: 修订申请
+  RevisionPending --> Draft: 修订批准
+  RevisionPending --> Published: 修订驳回
+  Published --> [*]
+              </pre>
+            </div>
+
+            <h3>医嘱与会诊状态机</h3>
+            <div class="diagram">
+              <pre class="mermaid">
+stateDiagram-v2
+  state "病理医嘱" as OrderFlow {
+    [*] --> Pending
+    Pending --> InProgress: 接收/执行
+    InProgress --> Completed: 完成
+    Pending --> Cancelled: 取消
+    InProgress --> Cancelled: 取消
+  }
+  state "会诊" as ConsultationFlow {
+    [*] --> Draft
+    Draft --> Submitted: 创建
+    Submitted --> InProgress: 参与人评论
+    InProgress --> Completed: 完成
+  }
+              </pre>
+            </div>
+
+            <h3>库存与借阅状态机</h3>
+            <div class="diagram">
+              <pre class="mermaid">
+stateDiagram-v2
+  state "试剂库存" as ReagentStock {
+    [*] --> Available: 入库
+    Available --> Tested: 检测
+    Tested --> InUse: 启用
+    InUse --> LowStock: 库存低于阈值
+    InUse --> Finished: 停用/用尽
+    Available --> Unavailable: 禁用/过期
+    LowStock --> Finished: 用尽
+  }
+  state "材料借阅" as MaterialLoan {
+    [*] --> Pending: 借阅申请
+    Pending --> InUse: 借出
+    InUse --> Returned: 归还
+    Returned --> [*]
+  }
+              </pre>
+            </div>
+
+            <h3>集成任务状态机</h3>
+            <div class="diagram">
+              <pre class="mermaid">
+stateDiagram-v2
+  [*] --> Pending: 创建集成任务
+  Pending --> InProgress: 开始执行
+  InProgress --> Success: 成功
+  InProgress --> Failed: 失败
+  Failed --> RetryPending: 等待重试
+  RetryPending --> InProgress: 重试
+  Failed --> ManualRequired: 人工处理
+  Success --> [*]
+  ManualRequired --> [*]
+              </pre>
+            </div>
+          </div>
+        </details>
+
+        <details class="section" open>
+          <summary>06 页面与功能分析</summary>
+          <div class="section-body">
+            <h2>页面与功能分析</h2>
+            <p>
+              页面入口主要由后端菜单、前端 fallback routes 与 route module
+              共同决定。每个业务根路径通常提供一个隐藏入口页，再通过菜单或工作台跳转到具体功能页。部分兼容路由会
+              redirect 到新工作台，以保留旧链接能力。
+            </p>
+
+            <h3>页面列表</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>模块</th>
+                  <th>路径</th>
+                  <th>功能入口/说明</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>M2 临床送检</td>
+                  <td>
+                    <code>/workflow/entry</code
+                    >、<code>/workflow/submission-registration</code>、<code>/workflow/application-registration-workbench</code>、<code>/workflow/fixation-transport</code>、<code>/workflow/pathology-receipt</code>、<code
+                      >/workflow/tracking-exception</code
+                    >
+                  </td>
+                  <td>
+                    申请登记、标本采集、固定转运、病理接收、追踪异常。旧路径
+                    <code>application-list</code
+                    >、<code>specimen-management</code>、<code
+                      >clinical-register</code
+                    >
+                    等通过 redirect 兼容。
+                  </td>
+                </tr>
+                <tr>
+                  <td>M3 制片</td>
+                  <td>
+                    <code>/technical-workflow/entry</code
+                    >、<code>/technical-workflow/specimen-registration</code>、<code>/technical-workflow/tasks</code>、<code>/technical-workflow/frozen</code>、<code>/technical-workflow/grossing</code>、<code>/technical-workflow/dehydration</code>、<code>/technical-workflow/embedding</code>、<code>/technical-workflow/slicing</code>、<code>/technical-workflow/staining</code>、<code>/technical-workflow/routine-orders</code>、<code>/technical-workflow/special-orders</code>、<code>/technical-workflow/ihc</code>、<code>/technical-workflow/cytology</code>、<code>/technical-workflow/liquid-cytology</code>、<code>/technical-workflow/rework</code>、<code
+                      >/technical-workflow/tracking</code
+                    >
+                  </td>
+                  <td>
+                    技术登记、任务池、制片各工作站、返工和追踪。该模块也注册了
+                    <code>/workflow/pathology-receipt</code> 作为病理接收入口。
+                  </td>
+                </tr>
+                <tr>
+                  <td>M4 诊断</td>
+                  <td>
+                    <code>/doctor-workflow/entry</code
+                    >、<code>/doctor-workflow/assignment</code>、<code>/doctor-workflow/workbench</code>、<code>/doctor-workflow/report</code>、<code>/doctor-workflow/tracking</code>、<code>/doctor-workflow/medical-orders</code>、<code>/doctor-workflow/revision</code>、<code
+                      >/doctor-workflow/consultation</code
+                    >
+                  </td>
+                  <td>
+                    诊断分配、诊断工作台、报告、追踪、医嘱执行、报告修订和会诊。
+                  </td>
+                </tr>
+                <tr>
+                  <td>M5 运营支持</td>
+                  <td>
+                    <code>/operation-support/entry</code
+                    >、<code>/operation-support/archive</code>、<code>/operation-support/borrow</code>、<code>/operation-resources/entry</code>、<code>/operation-resources/equipment</code>、<code>/operation-resources/reagents</code>、<code>/operation-resources/hazardous-chemicals</code>、<code
+                      >/operation-resources/medical-waste</code
+                    >
+                  </td>
+                  <td>
+                    档案、借阅、设备、试剂；危化品和医疗废物是菜单占位页。
+                  </td>
+                </tr>
+                <tr>
+                  <td>M6 统计分析</td>
+                  <td>
+                    <code>/m6/entry</code
+                    >、<code>/m6/dashboard</code>、<code>/m6/quality-indicators</code>、<code>/m6/management-indicators</code>、<code
+                      >/m6/custom-analysis</code
+                    >
+                  </td>
+                  <td>统计仪表盘、质控指标、管理指标、自定义统计分析。</td>
+                </tr>
+                <tr>
+                  <td>M1 系统管理</td>
+                  <td>
+                    <code>/system/users</code
+                    >、<code>/system/roles</code>、<code>/system/departments</code>、<code>/system/body-parts</code>、<code>/system/medical-order-dicts</code>、<code>/system/medical-order-charges</code>、<code>/system/medical-order-packages</code>、<code>/system/sampling-templates</code>、<code>/system/sampling-guidelines</code>、<code>/system/configs</code>、<code>/system/numbering-rules</code>、<code
+                      >/system/logs</code
+                    >
+                  </td>
+                  <td>用户角色、主数据、系统配置、编号规则和日志。</td>
+                </tr>
+                <tr>
+                  <td>通知与个人中心</td>
+                  <td><code>/notifications</code>、<code>/profile</code></td>
+                  <td>通知中心、用户资料和偏好。</td>
+                </tr>
+                <tr>
+                  <td>看板</td>
+                  <td><code>/dashboard</code></td>
+                  <td>首页看板和业务快捷入口。</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h3>页面跳转关系</h3>
+            <div class="diagram">
+              <pre class="mermaid">
+flowchart TD
+  Login["登录页"] --> Home["默认首页/看板"]
+  Home --> M2Entry["/workflow/entry"]
+  Home --> M3Entry["/technical-workflow/entry"]
+  Home --> M4Entry["/doctor-workflow/entry"]
+  Home --> M5Entry["/operation-support/entry"]
+  Home --> M6Entry["/m6/entry"]
+  Home --> System["/system/users"]
+  M2Entry --> Submission["申请与登记"]
+  Submission --> Fixation["固定与转运"]
+  Fixation --> Receipt["病理接收"]
+  Receipt --> TechRegistration["技术登记"]
+  TechRegistration --> TechnicalTasks["技术任务池"]
+  TechnicalTasks --> Grossing["取材"]
+  Grossing --> Dehydration["脱水"]
+  Dehydration --> Embedding["包埋"]
+  Embedding --> Slicing["切片"]
+  Slicing --> Staining["染色"]
+  Staining --> Diagnosis["诊断工作台"]
+  Diagnosis --> Report["病理报告"]
+  Report --> Archive["归档/借阅"]
+  Report --> M6["统计分析"]
+  M2Entry --> Tracking["标本追踪"]
+  M3Entry --> TechTracking["技术追踪"]
+  M4Entry --> ReportTracking["报告追踪"]
+  Home --> Notifications["通知中心"]
+              </pre>
+            </div>
+
+            <h3>功能入口类型</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>入口类型</th>
+                  <th>示例</th>
+                  <th>说明</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>菜单入口</td>
+                  <td>系统管理、M2-M6 根菜单</td>
+                  <td>由后端菜单和前端路由 meta 权限共同控制可见性。</td>
+                </tr>
+                <tr>
+                  <td>模块入口页</td>
+                  <td>
+                    <code>/workflow/entry</code
+                    >、<code>/technical-workflow/entry</code>、<code
+                      >/m6/entry</code
+                    >
+                  </td>
+                  <td>通常隐藏在菜单中，用作工作台汇总入口或快捷入口。</td>
+                </tr>
+                <tr>
+                  <td>工作台内部跳转</td>
+                  <td>从技术任务池进入取材、包埋、切片等工作站</td>
+                  <td>依赖任务状态、对象 ID 和查询参数。</td>
+                </tr>
+                <tr>
+                  <td>兼容路由</td>
+                  <td>
+                    <code>/workflow/application-list</code>、<code
+                      >/workflow/specimen-receipt</code
+                    >
+                  </td>
+                  <td>通过 redirect 保持旧路径和外部链接兼容。</td>
+                </tr>
+                <tr>
+                  <td>通知入口</td>
+                  <td><code>/notifications</code></td>
+                  <td>可从布局、个人中心或提醒组件进入。</td>
+                </tr>
+                <tr>
+                  <td>占位入口</td>
+                  <td>危化品、医疗废物</td>
+                  <td>菜单存在，但业务页面暂未接入。</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <details class="section" open>
+          <summary>07 数据流分析</summary>
+          <div class="section-body">
+            <h2>数据流分析</h2>
+            <p>
+              典型数据流从用户操作开始，进入 Vue 页面和模块
+              composable/service，经统一 RequestClient 调用后端 Controller，后端
+              application service
+              执行业务规则并写入数据库，同时可能生成流程事件、通知、导出任务或监控指标。
+            </p>
+
+            <h3>用户操作到数据库写入</h3>
+            <div class="diagram">
+              <pre class="mermaid">
+sequenceDiagram
+  participant U as 用户
+  participant V as Vue 页面/组件
+  participant C as composable 或模块 service
+  participant Q as RequestClient
+  participant API as Backend Controller
+  participant App as Application Service
+  participant Repo as Repository/Mapper
+  participant DB as 达梦数据库
+  participant Msg as workflow_events/user_notifications
+
+  U->>V: 点击保存/提交/完成
+  V->>C: 校验表单并组装 ViewModel
+  C->>Q: 调用业务 API
+  Q->>API: HTTP /api/v1/*
+  API->>App: DTO 转 Command
+  App->>Repo: 执行业务规则与持久化
+  Repo->>DB: INSERT/UPDATE/SELECT
+  App->>Msg: 写流程事件或通知
+  API-->>Q: Result envelope
+  Q-->>C: data 解包
+  C-->>V: 更新页面状态
+  V-->>U: 成功/失败/空态反馈
+              </pre>
+            </div>
+
+            <h3>API 调用分组</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>前端调用域</th>
+                  <th>主要路径</th>
+                  <th>数据落点</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>认证与菜单</td>
+                  <td>
+                    <code>/v1/auth/login</code
+                    >、<code>/v1/auth/me</code>、<code>/v1/auth/access-codes</code>、<code
+                      >/v1/menus</code
+                    >
+                  </td>
+                  <td>token、用户信息、权限码、菜单树。</td>
+                </tr>
+                <tr>
+                  <td>M2 临床送检</td>
+                  <td>
+                    <code>/v1/applications</code
+                    >、<code>/v1/specimens/register</code>、<code>/v1/specimen-verifications</code>、<code>/v1/specimen-fixations</code>、<code>/v1/transport-orders</code>、<code
+                      >/v1/specimen-receipts</code
+                    >
+                  </td>
+                  <td>申请、标本、固定、转运、接收、流程事件。</td>
+                </tr>
+                <tr>
+                  <td>M3 制片</td>
+                  <td>
+                    <code>/v1/technical-specimen-registrations</code
+                    >、<code>/v1/technical-tasks</code>、<code>/v1/grossings</code>、<code>/v1/dehydration-batches</code>、<code>/v1/embeddings</code>、<code>/v1/slicings</code>、<code
+                      >/v1/slide-stainings</code
+                    >
+                  </td>
+                  <td>技术登记、任务、取材、脱水、包埋、切片、染色。</td>
+                </tr>
+                <tr>
+                  <td>M4 诊断</td>
+                  <td>
+                    <code>/v1/diagnostic-tasks</code
+                    >、<code>/v1/pathology-cases</code>、<code>/v1/pathology-reports</code>、<code>/v1/medical-orders</code>、<code>/v1/report-revision-requests</code>、<code
+                      >/v1/consultations</code
+                    >
+                  </td>
+                  <td>诊断任务、病例、报告、报告版本、医嘱、会诊。</td>
+                </tr>
+                <tr>
+                  <td>M5 运营支持</td>
+                  <td>
+                    <code>/v1/archive-*</code
+                    >、<code>/v1/material-loans</code>、<code>/v1/reagents</code>、<code>/v1/reagent-stocks</code>、<code
+                      >/v1/equipment-records</code
+                    >
+                  </td>
+                  <td>归档记录、借阅、试剂模板、库存事件、设备维护。</td>
+                </tr>
+                <tr>
+                  <td>M6 统计</td>
+                  <td>
+                    <code>/v1/stat-indicators</code
+                    >、<code>/v1/stat-report-templates</code>、<code>/v1/stat-reports/query</code>、<code>/v1/stat-report-details/query</code>、<code
+                      >/v1/stat-reports/export</code
+                    >
+                  </td>
+                  <td>指标定义、统计结果、明细结果、导出文件。</td>
+                </tr>
+                <tr>
+                  <td>通知</td>
+                  <td>
+                    <code>/v1/my/notifications</code
+                    >、<code>/v1/my/notifications/unread-count</code>、<code
+                      >/v1/my/notification-preferences</code
+                    >
+                  </td>
+                  <td>用户通知、未读数、通知偏好。</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h3>消息与事件流转</h3>
+            <p>
+              当前代码可见两类业务消息载体：一类是
+              <code>workflow_events</code>
+              记录流程追踪，一类是通知中心表记录用户消息和偏好。后端基础设施目录中有
+              MQ
+              预留线索，但本次静态证据未确认有生产消息队列参与主链路，因此报告按“数据库事件与通知表”为当前事实。
+            </p>
+            <div class="diagram">
+              <pre class="mermaid">
+flowchart LR
+  A["业务操作<br/>登记/核对/转运/接收/任务/报告/库存"] --> B["应用服务"]
+  B --> C["业务主表更新"]
+  B --> D["workflow_events<br/>流程追踪"]
+  B --> E["user_notifications<br/>用户消息"]
+  E --> F["未读数查询"]
+  E --> G["通知列表"]
+  C --> H["统计查询"]
+  C --> I["导出任务"]
+  B --> J["Micrometer/日志<br/>观测指标"]
+              </pre>
+            </div>
+
+            <h3>敏感数据流</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>数据类型</th>
+                  <th>出现位置</th>
+                  <th>风险控制点</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>患者信息</td>
+                  <td>申请登记、技术登记、诊断工作台、统计明细</td>
+                  <td>
+                    前端不应在 URL、日志、错误弹窗或未授权导出中暴露；M6
+                    明细测试已体现去除患者敏感字段的约束。
+                  </td>
+                </tr>
+                <tr>
+                  <td>病理报告</td>
+                  <td>报告草稿、审核、签发、发布、追踪、修订</td>
+                  <td>
+                    后端权限码和前端菜单权限需一致；报告版本与修订状态必须可追踪。
+                  </td>
+                </tr>
+                <tr>
+                  <td>操作审计</td>
+                  <td>登录日志、操作日志、流程事件、库存事件</td>
+                  <td>
+                    关键操作需要保留操作者、时间、对象和结果，避免只更新主表而缺少审计线索。
+                  </td>
+                </tr>
+                <tr>
+                  <td>导出文件</td>
+                  <td>系统用户、收费项目、标本取走、统计报表、库存</td>
+                  <td>需要稳定文件名、编码、权限校验和长耗时反馈。</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <details class="section" open>
+          <summary>08 风险分析</summary>
+          <div class="section-body">
+            <h2>风险分析</h2>
+            <p>
+              以下风险分为确认风险、静态候选风险和治理建议。确认风险来自本次已核对的源码事实；候选风险需要后续专项
+              dead-code、调用关系、契约测试或运行时验证进一步确认。
+            </p>
+
+            <div class="risk-grid">
+              <div class="note">
+                <strong
+                  ><span class="tag danger">确认风险</span>
+                  病理接收路由重复注册</strong
+                >
+                <span
+                  ><code>/workflow/pathology-receipt</code> 和
+                  <code>PathologyReceipt</code> 同时出现在 M2 与 M3 route
+                  module，需确认 Vue Router
+                  当前合并策略和菜单来源，避免名称冲突、keep-alive
+                  或权限判断不一致。</span
+                >
+              </div>
+              <div class="note">
+                <strong
+                  ><span class="tag warn">确认风险</span>
+                  占位页面进入菜单</strong
+                >
+                <span
+                  >危化品、医疗废物路由已存在但指向
+                  <code>MenuPlaceholderView</code
+                  >。如果权限已开放，用户会看到未接入页面。</span
+                >
+              </div>
+              <div class="note">
+                <strong
+                  ><span class="tag warn">候选风险</span> 外部网关仍为
+                  Stub</strong
+                >
+                <span
+                  >临床申请、计费、历史报告、标签打印、技术标记均有 Stub
+                  实现。上线前需明确哪些环境使用真实适配器。</span
+                >
+              </div>
+              <div class="note">
+                <strong
+                  ><span class="tag warn">候选风险</span>
+                  历史兼容迁移较多</strong
+                >
+                <span
+                  >多处 <code>relax</code>、<code>reconcile</code>、<code
+                    >ensure</code
+                  >
+                  迁移说明数据库历史兼容压力大，状态字段和 nullable
+                  字段需重点回归。</span
+                >
+              </div>
+            </div>
+
+            <h3>未使用代码与遗留入口</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>风险点</th>
+                  <th>证据</th>
+                  <th>影响</th>
+                  <th>建议</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>占位功能页</td>
+                  <td>
+                    <code>/operation-resources/hazardous-chemicals</code>、<code
+                      >/operation-resources/medical-waste</code
+                    >
+                  </td>
+                  <td>菜单可见但业务不可用，容易形成验收缺口。</td>
+                  <td>
+                    在需求、菜单权限或发布说明中明确“预留入口”；未接入前限制角色可见性。
+                  </td>
+                </tr>
+                <tr>
+                  <td>M6 过渡模块并存</td>
+                  <td>
+                    <code>m6-management</code> 与
+                    <code>m6-statistics</code> 同时存在，route 仍从
+                    <code>m6-management</code> 引入入口和权限常量。
+                  </td>
+                  <td>统计入口、历史集成和新统计报表边界可能随演进漂移。</td>
+                  <td>
+                    后续做 M6 模块边界专项梳理，明确 legacy、current、to-remove
+                    清单。
+                  </td>
+                </tr>
+                <tr>
+                  <td>兼容 redirect 路由较多</td>
+                  <td>M2 中多个旧路径 redirect 到新工作台。</td>
+                  <td>
+                    保留旧链接有价值，但长期会增加路由和菜单定义维护成本。
+                  </td>
+                  <td>标注兼容期限，补充路由去重和路径冲突测试。</td>
+                </tr>
+                <tr>
+                  <td>Demo/看板入口需确认定位</td>
+                  <td><code>/dashboard</code> 与 dashboard 模块保留。</td>
+                  <td>如果属于演示或临时看板，可能和正式 M6 看板语义重叠。</td>
+                  <td>
+                    确认 dashboard
+                    是运营首页还是历史演示页，必要时合并入口说明。
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h3>重复逻辑风险</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>类别</th>
+                  <th>表现</th>
+                  <th>风险</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>路由与菜单定义重复</td>
+                  <td>
+                    route module、menu fallback routes、component definitions
+                    同时维护路径、名称、权限和别名。
+                  </td>
+                  <td>
+                    路径、权限码、标题或组件引用可能出现漂移，尤其是兼容路由和跨模块入口。
+                  </td>
+                </tr>
+                <tr>
+                  <td>状态映射重复</td>
+                  <td>
+                    前端各模块对状态码、标签、筛选项和后端状态字符串进行多处映射。
+                  </td>
+                  <td>同一状态在列表、详情、看板、追踪中显示不一致。</td>
+                </tr>
+                <tr>
+                  <td>操作人解析与审计字段重复</td>
+                  <td>
+                    后端多个 Controller/Service 需要解析 userId、operatorName
+                    并写入业务记录。
+                  </td>
+                  <td>遗漏审计字段会造成流程追踪断点。</td>
+                </tr>
+                <tr>
+                  <td>导出下载处理重复</td>
+                  <td>M1、M2、M5、M6 均有 CSV/下载类能力。</td>
+                  <td>文件名、编码、错误提示和权限处理可能不一致。</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h3>状态不一致风险</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>对象</th>
+                  <th>风险说明</th>
+                  <th>重点验证</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>标本与条码</td>
+                  <td>
+                    迁移中存在放宽 <code>specimens.barcode</code> nullable
+                    的脚本，标本可能处于已登记但未绑定条码状态。
+                  </td>
+                  <td>
+                    登记、补打、绑定、解绑、按条码接收、追踪查询的状态一致性。
+                  </td>
+                </tr>
+                <tr>
+                  <td>病例与标本关系</td>
+                  <td>
+                    多处迁移放宽
+                    <code>case_id</code>
+                    相关字段，历史数据可能没有完整病例关联。
+                  </td>
+                  <td>
+                    技术登记、诊断工作台、统计报表对缺失 case 关系的兜底。
+                  </td>
+                </tr>
+                <tr>
+                  <td>包埋确认状态</td>
+                  <td>
+                    包埋存在 <code>EMBEDDING_CONFIRM_PENDING</code> 中间状态。
+                  </td>
+                  <td>
+                    取消、重复完成、刷新后状态恢复、切片入口是否只接受完成态。
+                  </td>
+                </tr>
+                <tr>
+                  <td>切片打印与合并组</td>
+                  <td>切片支持先打印后切片和合并打印组。</td>
+                  <td>
+                    打印失败、合并组取消、重复打印、切片完成与玻片状态的幂等性。
+                  </td>
+                </tr>
+                <tr>
+                  <td>报告与修订</td>
+                  <td>报告发布后可进入修订申请，版本与当前报告状态需同步。</td>
+                  <td>修订批准/驳回、版本回溯、统计明细敏感字段脱敏。</td>
+                </tr>
+                <tr>
+                  <td>统计口径</td>
+                  <td>
+                    dashboard 使用
+                    <code>/v1/stat-reports/query</code> 分类别查询，旧 endpoint
+                    仅作为负向测试断言。
+                  </td>
+                  <td>
+                    避免未来把
+                    <code>/v1/stat-dashboard/query</code> 误恢复到生产调用。
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h3>潜在技术债</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>技术债信号</th>
+                  <th>影响范围</th>
+                  <th>治理建议</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>specimen-workflow</code> 模块体量最大</td>
+                  <td>M2 申请、标本、固定、转运、接收、追踪。</td>
+                  <td>
+                    按工作台继续拆分 composable、service、mapper
+                    和测试夹具；避免页面继续承载跨流程逻辑。
+                  </td>
+                </tr>
+                <tr>
+                  <td>数据库兼容迁移堆积</td>
+                  <td>标本、病例、技术流程、M6、库存。</td>
+                  <td>
+                    建立迁移风险清单，补充历史数据样本回归，明确字段 nullable
+                    的业务含义。
+                  </td>
+                </tr>
+                <tr>
+                  <td>外部服务 Stub 未完成真实集成</td>
+                  <td>计费、临床申请、历史报告、打印、技术标记。</td>
+                  <td>
+                    按环境建立 gateway readiness 表，联调前禁止把 Stub
+                    行为作为真实系统承诺。
+                  </td>
+                </tr>
+                <tr>
+                  <td>权限定义跨前后端分散</td>
+                  <td>
+                    route meta、menu component definitions、后端
+                    <code>@RequirePermission</code>。
+                  </td>
+                  <td>
+                    建立权限矩阵校验脚本或契约报告，尤其覆盖隐藏菜单但可直达 URL
+                    的场景。
+                  </td>
+                </tr>
+                <tr>
+                  <td>统计与看板口径边界需要沉淀</td>
+                  <td>M6 dashboard、dashboard 模块、历史集成、导出。</td>
+                  <td>
+                    为 QUALITY、OPERATION、WORKLOAD
+                    指标补充数据来源、刷新频率和不可用状态说明。
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <details class="section" open>
+          <summary>09 API 与持久化概览</summary>
+          <div class="section-body">
+            <h2>API 与持久化概览</h2>
+            <p>
+              前端 API service 基本按业务模块内聚，后端在
+              <code>bl-center</code> 暴露大量 <code>/api/v1</code> REST
+              endpoint。本报告不逐条列出所有
+              endpoint，而按业务域、数据对象和状态流转归纳。
+            </p>
+            <div class="diagram">
+              <pre class="mermaid">
+flowchart TD
+  API["/api/v1 REST API"] --> SYS["系统管理 API"]
+  API --> M2["M2 送检 API"]
+  API --> M3["M3 制片 API"]
+  API --> M4["M4 诊断 API"]
+  API --> M5["M5 运营 API"]
+  API --> M6["M6 统计 API"]
+  API --> NOTI["通知 API"]
+  SYS --> D1["users/roles/permissions/menus/master data"]
+  M2 --> D2["applications/specimens/transport/receipts/workflow_events"]
+  M3 --> D3["technical_tasks/samplings/embeddings/slicings/slides"]
+  M4 --> D4["diagnostic_tasks/pathology_reports/medical_orders/consultations"]
+  M5 --> D5["archive/material_loans/reagents/equipment"]
+  M6 --> D6["integration/billing/history/stat templates/export jobs"]
+  NOTI --> D7["topics/subscriptions/user_notifications/preferences"]
+              </pre>
+            </div>
+
+            <h3>请求模型</h3>
+            <ul>
+              <li>
+                前端统一使用 <code>RequestClient</code>，默认
+                <code>responseReturn: data</code>。
+              </li>
+              <li>
+                响应 envelope 以 <code>code</code>、<code>data</code>、<code
+                  >SUCCESS</code
+                >
+                解包。
+              </li>
+              <li>
+                刷新 token 被禁用，认证失败执行本地 token
+                清理或登录过期弹窗/跳转。
+              </li>
+              <li>
+                开发代理将 <code>/api/v1/auth</code> 转到 8081，其余
+                <code>/api/v1</code> 转到 8080。
+              </li>
+              <li>
+                下载使用 <code>requestClient.download</code> 或 body
+                response，用于 CSV/导出类场景。
+              </li>
+            </ul>
+
+            <h3>持久化模型特点</h3>
+            <ul>
+              <li>
+                业务主表与流程事件并存，例如 M2 使用
+                <code>workflow_events</code> 补充追踪。
+              </li>
+              <li>
+                多模块共享状态词，但状态字段分散在不同表内，适合后续建立统一状态词典。
+              </li>
+              <li>
+                兼容迁移显示历史数据存在缺列、非空约束不兼容或唯一约束变化，需要以样本数据做回归。
+              </li>
+              <li>
+                M6
+                统计表与业务主表分离，支持模板、指标和导出任务，但统计口径需要明确数据来源。
+              </li>
+              <li>
+                通知中心采用数据库表落地，不依赖已确认的运行时 MQ 主链路。
+              </li>
+            </ul>
+          </div>
+        </details>
+
+        <details class="section" open>
+          <summary>10 系统现状总结</summary>
+          <div class="section-body">
+            <h2>系统现状总结</h2>
+            <div class="summary-grid">
+              <div class="note">
+                <strong
+                  ><span class="tag ok">完整度</span> 业务主链路已成型</strong
+                >
+                <span
+                  >M1-M6、通知中心、统计和运营支持均有前端页面、后端 API
+                  和数据库结构支撑，病理全流程雏形完整。</span
+                >
+              </div>
+              <div class="note">
+                <strong
+                  ><span class="tag ok">工程化</span> 前后端边界清晰</strong
+                >
+                <span
+                  >前端按业务模块组织，后端按多中心和 DDD
+                  分层组织，统一请求客户端和 Controller/API 边界较清楚。</span
+                >
+              </div>
+              <div class="note">
+                <strong
+                  ><span class="tag warn">演进压力</span>
+                  历史兼容痕迹明显</strong
+                >
+                <span
+                  >数据库迁移和兼容路由较多，说明系统在快速迭代中持续修正字段、约束和入口。</span
+                >
+              </div>
+              <div class="note">
+                <strong
+                  ><span class="tag danger">重点风险</span>
+                  状态与权限需治理</strong
+                >
+                <span
+                  >跨模块状态码、路由/菜单/权限、外部
+                  Stub、敏感数据导出是后续上线前应优先收敛的风险。</span
+                >
+              </div>
+            </div>
+
+            <p>
+              总体判断：当前系统已经从“页面原型”进入“业务流程平台”阶段，核心业务对象和跨模块链路都已具备实现基础。M2
+              与 M3 是最复杂、最需要治理的模块；M4
+              涉及报告和患者敏感数据，是权限、审计与版本一致性的重点；M5 与 M6
+              正在从支撑能力向正式运营能力扩展。后续建议优先处理路由重复、占位入口、外部
+              Stub
+              readiness、状态词典和权限矩阵自动校验，再逐步治理大型模块和历史迁移债务。
+            </p>
+
+            <h3>建议优先级</h3>
+            <ol>
+              <li>
+                修正或确认 <code>PathologyReceipt</code> 重复 route name/path
+                的设计意图，并补充路由合并测试。
+              </li>
+              <li>
+                建立前后端权限矩阵，核对 route meta、菜单、component definitions
+                和后端 <code>@RequirePermission</code>。
+              </li>
+              <li>
+                为核心对象建立状态词典：标本、技术任务、包埋、报告、医嘱、库存、集成任务。
+              </li>
+              <li>
+                为外部 Gateway 建立环境 readiness 清单，区分
+                Stub、联调、生产适配器。
+              </li>
+              <li>
+                对 M2/M3 大模块做专项复杂度和重复逻辑扫描，先抽离稳定
+                mapper、状态映射和测试夹具。
+              </li>
+            </ol>
+          </div>
+        </details>
+
+        <details class="section">
+          <summary>附录 证据文件清单</summary>
+          <div class="section-body">
+            <h2>附录：证据文件清单</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>文件/目录</th>
+                  <th>用途</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <code>AGENTS.md</code
+                    >、<code>docs/PROJECT_DIRECTORY.md</code>、<code>docs/CODING_RULES.md</code>、<code>docs/API_RULES.md</code>、<code
+                      >docs/DYNAMIC_WORKFLOW_RULES.md</code
+                    >
+                  </td>
+                  <td>报告任务协作、目录、编码、API 和 Workflow 约束。</td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>PROJECT_STATE.md</code
+                    >、<code>DECISIONS.md</code>、<code>ARCHITECTURE.md</code>
+                  </td>
+                  <td>前端长期上下文、架构快照和决策背景。</td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>apps/web-ele/src/main.ts</code
+                    >、<code>apps/web-ele/src/bootstrap.ts</code>、<code>apps/web-ele/src/api/request.ts</code>、<code
+                      >apps/web-ele/src/store/auth.ts</code
+                    >
+                  </td>
+                  <td>前端启动、请求、认证状态和全局装配。</td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>apps/web-ele/src/router/routes/modules/*.ts</code>
+                  </td>
+                  <td>页面、导航、权限、兼容跳转和功能入口。</td>
+                </tr>
+                <tr>
+                  <td><code>apps/web-ele/src/modules/**/api/*.ts</code></td>
+                  <td>前端业务 API 消费路径和数据流。</td>
+                </tr>
+                <tr>
+                  <td>
+                    <code
+                      >apps/web-ele/src/modules/m6-statistics/api/m6-statistics-service.test.ts</code
+                    >
+                  </td>
+                  <td>
+                    核对 M6 dashboard 使用
+                    <code>/v1/stat-reports/query</code>，旧
+                    <code>/v1/stat-dashboard/query</code> 是负向断言。
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <code>../SYBaseProject/pom.xml</code>、<code
+                      >../SYBaseProject/bl-center/pom.xml</code
+                    >
+                  </td>
+                  <td>后端工程结构、Java/Spring Boot/数据库/监控依赖。</td>
+                </tr>
+                <tr>
+                  <td>
+                    <code
+                      >../SYBaseProject/bl-center/src/main/java/**/controller</code
+                    >
+                  </td>
+                  <td>后端 REST API 和业务模块边界。</td>
+                </tr>
+                <tr>
+                  <td>
+                    <code
+                      >../SYBaseProject/bl-center/src/main/java/com/company/bl/application/gateway</code
+                    >、<code
+                      >../SYBaseProject/bl-center/src/main/java/com/company/bl/infrastructure/integration</code
+                    >
+                  </td>
+                  <td>外部系统 Gateway 与 Stub 实现。</td>
+                </tr>
+                <tr>
+                  <td>
+                    <code
+                      >../SYBaseProject/bl-center/src/main/resources/db/migration</code
+                    >、<code
+                      >../SYBaseProject/bl-center/src/main/java/db/migration</code
+                    >
+                  </td>
+                  <td>数据库表、字段、状态和历史兼容迁移。</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+      </main>
+    </div>
+
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+
+      mermaid.initialize({
+        startOnLoad: true,
+        securityLevel: 'strict',
+        theme: 'default',
+        flowchart: {
+          htmlLabels: true,
+          curve: 'basis',
+        },
+      });
+
+      const toc = document.querySelector('#toc');
+      const headings = [...document.querySelectorAll('main h2, main h3')];
+      const usedIds = new Set();
+
+      function slugify(text) {
+        const base = text
+          .trim()
+          .toLowerCase()
+          .replace(/[^\p{L}\p{N}]+/gu, '-')
+          .replace(/^-+|-+$/g, '');
+        return base || 'section';
+      }
+
+      function uniqueId(text) {
+        let id = slugify(text);
+        let index = 2;
+        while (usedIds.has(id)) {
+          id = `${slugify(text)}-${index}`;
+          index += 1;
+        }
+        usedIds.add(id);
+        return id;
+      }
+
+      const list = document.createElement('ol');
+      headings.forEach((heading) => {
+        if (!heading.id) {
+          heading.id = uniqueId(heading.textContent || '');
+        }
+        const item = document.createElement('li');
+        item.className = heading.tagName === 'H3' ? 'toc-h3' : 'toc-h2';
+        const link = document.createElement('a');
+        link.href = `#${heading.id}`;
+        link.textContent = heading.textContent || '';
+        item.appendChild(link);
+        list.appendChild(item);
+      });
+      toc?.appendChild(list);
+    </script>
+  </body>
+</html>
