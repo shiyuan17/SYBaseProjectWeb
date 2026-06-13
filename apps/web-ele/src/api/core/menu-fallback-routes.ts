@@ -323,16 +323,19 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
       },
       name: 'TechnicalWorkflowRoot',
       path: '/technical-workflow',
-      redirect: '/workflow/pathology-receipt',
+      redirect: '/technical-workflow/entry',
       children: [
         {
-          component: '/modules/specimen-workflow/views/SpecimenReceiptView',
+          component:
+            '/modules/technical-workflow/views/TechnicalWorkflowEntryView',
           meta: {
-            icon: 'carbon:archive',
-            title: '标本接收工作台',
+            hideInBreadcrumb: true,
+            hideInMenu: true,
+            hideInTab: true,
+            title: '技术流程入口',
           },
-          name: 'PathologyReceipt',
-          path: '/workflow/pathology-receipt',
+          name: 'TechnicalWorkflowEntry',
+          path: '/technical-workflow/entry',
         },
         {
           component:

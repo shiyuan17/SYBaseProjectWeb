@@ -1,3 +1,5 @@
+import type { RouteRecordStringComponent } from '@vben/types';
+
 import type { MenuView } from '#/modules/system-management/types/system-management';
 
 import { describe, expect, it } from 'vitest';
@@ -30,6 +32,15 @@ import technicalWorkflowRoutes from '#/router/routes/modules/technical-workflow'
 import workflowRoutes from '#/router/routes/modules/workflow';
 
 import { getBackendFirstMenuRoutes, mapMenuViewsToRoutes } from './menu-mapper';
+
+function collectMenuRoutes(
+  routes: RouteRecordStringComponent<string>[],
+): RouteRecordStringComponent<string>[] {
+  return routes.flatMap((route) => [
+    route,
+    ...collectMenuRoutes(route.children ?? []),
+  ]);
+}
 
 describe('mapMenuViewsToRoutes', () => {
   it('converts legacy M1 menu definitions into canonical frontend routes', () => {
@@ -627,6 +638,95 @@ describe('mapMenuViewsToRoutes', () => {
     ]);
   });
 
+  it('deduplicates backend PathologyReceipt menus to the canonical M2 route', () => {
+    const routes = mapMenuViewsToRoutes([
+      {
+        componentName: 'WorkflowRoot',
+        enabled: true,
+        icon: 'flow',
+        id: 'MENU_M2_WORKFLOW',
+        menuCode: 'M2_WORKFLOW',
+        menuName: '临床送检',
+        menuType: 'DIRECTORY',
+        parentId: null,
+        path: '/workflow',
+        permissionPrefix: 'm2',
+        sortOrder: 100,
+        visible: true,
+      },
+      {
+        componentName: 'PathologyReceipt',
+        enabled: true,
+        icon: 'archive',
+        id: 'MENU_M2_RECEIPT',
+        menuCode: 'M2_RECEIPT',
+        menuName: '标本接收',
+        menuType: 'MENU',
+        parentId: 'MENU_M2_WORKFLOW',
+        path: '/workflow/pathology-receipt',
+        permissionPrefix: 'm2:receipt',
+        sortOrder: 120,
+        visible: true,
+      },
+      {
+        componentName: 'TechnicalWorkflowRoot',
+        enabled: true,
+        icon: 'operations',
+        id: 'MENU_M3_WORKFLOW',
+        menuCode: 'M3_WORKFLOW',
+        menuName: '制片管理',
+        menuType: 'DIRECTORY',
+        parentId: null,
+        path: '/technical-workflow',
+        permissionPrefix: 'm3',
+        sortOrder: 130,
+        visible: true,
+      },
+      {
+        componentName: 'PathologyReceipt',
+        enabled: true,
+        icon: 'archive',
+        id: 'MENU_M3_RECEIPT_DUPLICATE',
+        menuCode: 'M2_RECEIPT',
+        menuName: '标本接收',
+        menuType: 'MENU',
+        parentId: 'MENU_M3_WORKFLOW',
+        path: '/workflow/pathology-receipt',
+        permissionPrefix: 'm2:receipt',
+        sortOrder: 120,
+        visible: true,
+      },
+      {
+        componentName: 'TechnicalSpecimenRegistration',
+        enabled: true,
+        icon: 'table',
+        id: 'MENU_M3_SPECIMEN_REGISTRATION',
+        menuCode: 'M3_SPECIMEN_REGISTRATION',
+        menuName: '检查登记',
+        menuType: 'MENU',
+        parentId: 'MENU_M3_WORKFLOW',
+        path: '/technical-workflow/specimen-registration',
+        permissionPrefix: 'm2:receipt',
+        sortOrder: 121,
+        visible: true,
+      },
+    ]);
+    const allRoutes = collectMenuRoutes(routes);
+
+    expect(
+      allRoutes.filter((route) => route.name === 'PathologyReceipt'),
+    ).toEqual([
+      expect.objectContaining({
+        path: '/workflow/pathology-receipt',
+      }),
+    ]);
+    expect(
+      routes
+        .find((route) => route.name === 'TechnicalWorkflowRoot')
+        ?.children?.map((route) => route.name),
+    ).toEqual(['TechnicalSpecimenRegistration']);
+  });
+
   it('converts M4 doctor workflow menu definitions into canonical frontend routes', () => {
     const routes = mapMenuViewsToRoutes([
       {
@@ -1074,7 +1174,7 @@ describe('getBackendFirstMenuRoutes', () => {
 
     const routes = await getBackendFirstMenuRoutes(async () => backendRoutes);
 
-    expect(routes).toBe(backendRoutes);
+    expect(routes).toStrictEqual(backendRoutes);
     expect(routes[0]?.children).toEqual([
       expect.objectContaining({
         meta: expect.objectContaining({
@@ -1088,6 +1188,7 @@ describe('getBackendFirstMenuRoutes', () => {
 
   it('falls back to static routes when backend menu routes are empty', async () => {
     const routes = await getBackendFirstMenuRoutes(async () => []);
+    const allRoutes = collectMenuRoutes(routes);
 
     expect(routes).toEqual(
       expect.arrayContaining([
@@ -1149,6 +1250,12 @@ describe('getBackendFirstMenuRoutes', () => {
         }),
       ]),
     );
+    expect(
+      allRoutes.filter((route) => route.name === 'PathologyReceipt'),
+    ).toHaveLength(1);
+    expect(
+      routes.find((route) => route.name === 'TechnicalWorkflowRoot')?.redirect,
+    ).toBe('/technical-workflow/specimen-registration');
   });
 
   it('falls back to static routes when backend menu loading fails', async () => {
@@ -1257,9 +1364,6 @@ describe('technical workflow route access', () => {
     const workflowRoot = technicalWorkflowRoutes.find(
       (route) => route.name === 'TechnicalWorkflowRoot',
     );
-    const receiptRoute = workflowRoot?.children?.find(
-      (route) => route.name === 'PathologyReceipt',
-    );
     const tasksRoute = workflowRoot?.children?.find(
       (route) => route.name === 'TechnicalTasks',
     );
@@ -1271,12 +1375,16 @@ describe('technical workflow route access', () => {
     );
 
     expect(tasksRoute?.component).toBeTypeOf('function');
-    expect(receiptRoute?.component).toBeTypeOf('function');
     expect(frozenRoute?.component).toBeTypeOf('function');
     expect(trackingRoute?.component).toBeTypeOf('function');
-    expect(receiptRoute?.meta?.authority).toEqual([
+    expect(
+      workflowRoot?.children?.some(
+        (route) => route.name === 'PathologyReceipt',
+      ),
+    ).toBe(false);
+    expect(workflowRoot?.meta?.authority).toContain(
       M2_PERMISSION_CODES.SPECIMEN_RECEIVE,
-    ]);
+    );
     expect(tasksRoute?.meta?.authority).toEqual([
       M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY,
     ]);

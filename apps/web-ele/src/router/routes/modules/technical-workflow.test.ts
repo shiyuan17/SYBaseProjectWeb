@@ -13,9 +13,6 @@ describe('technical workflow routes', () => {
     const tasksRoute = workflowRoot?.children?.find(
       (route) => route.name === 'TechnicalTasks',
     );
-    const receiptRoute = workflowRoot?.children?.find(
-      (route) => route.name === 'PathologyReceipt',
-    );
     const specimenRegistrationRoute = workflowRoot?.children?.find(
       (route) => route.name === 'TechnicalSpecimenRegistration',
     );
@@ -48,12 +45,11 @@ describe('technical workflow routes', () => {
     expect(workflowRoot?.meta?.authority).toContain(
       M2_PERMISSION_CODES.SPECIMEN_RECEIVE,
     );
-    expect(receiptRoute?.path).toBe('/workflow/pathology-receipt');
-    expect(receiptRoute?.meta?.keepAlive).toBe(true);
-    expect(receiptRoute?.meta?.title).toBe('标本接收工作台');
-    expect(receiptRoute?.meta?.authority).toEqual([
-      M2_PERMISSION_CODES.SPECIMEN_RECEIVE,
-    ]);
+    expect(
+      workflowRoot?.children?.some(
+        (route) => route.name === 'PathologyReceipt',
+      ),
+    ).toBe(false);
     expect(specimenRegistrationRoute?.path).toBe(
       '/technical-workflow/specimen-registration',
     );

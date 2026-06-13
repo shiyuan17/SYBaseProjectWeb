@@ -162,16 +162,53 @@ function hasUsableRoutes(routes: RouteRecordStringComponent<string>[]) {
   });
 }
 
+function dedupeRoutesByName(
+  routes: RouteRecordStringComponent<string>[],
+  seenNames = new Set<string>(),
+): RouteRecordStringComponent<string>[] {
+  const result: RouteRecordStringComponent<string>[] = [];
+
+  for (const route of routes) {
+    const routeName = route.name?.toString();
+
+    if (routeName && seenNames.has(routeName)) {
+      continue;
+    }
+
+    if (routeName) {
+      seenNames.add(routeName);
+    }
+
+    const children = route.children
+      ? dedupeRoutesByName(route.children, seenNames)
+      : route.children;
+    const firstVisibleChild =
+      children?.find((child) => !child.meta?.hideInMenu) ?? children?.[0];
+
+    result.push({
+      ...route,
+      ...(children ? { children } : {}),
+      ...(children ? { redirect: firstVisibleChild?.path } : {}),
+    });
+  }
+
+  return result;
+}
+
 export function mapMenuViewsToRoutes(
   menus: MenuView[],
 ): RouteRecordStringComponent<string>[] {
-  return applyKeepAliveToTabRoutes(
-    buildMenuTree(menus)
-      .map((menu) => convertMenuNode(menu))
-      .filter(
-        (route): route is RouteRecordStringComponent<string> => route !== null,
-      ),
-  );
+  const routes = buildMenuTree(menus)
+    .map((menu) => convertMenuNode(menu))
+    .filter(
+      (route): route is RouteRecordStringComponent<string> => route !== null,
+    );
+
+  return applyKeepAliveToTabRoutes(dedupeRoutesByName(routes));
+}
+
+export function getStaticFallbackMenuRoutes() {
+  return dedupeRoutesByName(STATIC_FALLBACK_MENU_ROUTES);
 }
 
 export async function getBackendFirstMenuRoutes(
@@ -181,11 +218,11 @@ export async function getBackendFirstMenuRoutes(
     const backendRoutes = await fetchMenuRoutes();
 
     if (hasUsableRoutes(backendRoutes)) {
-      return backendRoutes;
+      return dedupeRoutesByName(backendRoutes);
     }
   } catch {
-    return STATIC_FALLBACK_MENU_ROUTES;
+    return getStaticFallbackMenuRoutes();
   }
 
-  return STATIC_FALLBACK_MENU_ROUTES;
+  return getStaticFallbackMenuRoutes();
 }
