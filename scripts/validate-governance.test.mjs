@@ -10,7 +10,14 @@ const validDecisionsBody = `
 `;
 
 const validDocsReadmeBody = `
-## 顶层规范文档
+## 核心入口
+
+- [rules/README.md](./rules/README.md): 项目级规范正文索引
+- [memory/README.md](./memory/README.md): 长期记忆文件索引
+`;
+
+const validRulesReadmeBody = `
+## 工程基础
 
 - [PROJECT_DIRECTORY.md](./PROJECT_DIRECTORY.md)
 - [CODING_RULES.md](./CODING_RULES.md)
@@ -30,25 +37,40 @@ const validDocsReadmeBody = `
 - [AI-CODE-HEALTH.md](./AI-CODE-HEALTH.md)
 `;
 
+const validMemoryReadmeBody = `
+## 记忆文件
+
+- [PROJECT_STATE.md](./PROJECT_STATE.md)
+- [TECH_DEBT.md](./TECH_DEBT.md)
+- [KNOWN_BUGS.md](./KNOWN_BUGS.md)
+- [DECISIONS.md](./DECISIONS.md)
+- [ARCHITECTURE.md](./ARCHITECTURE.md)
+`;
+
 const validAgentsBody = `
 ## 关联文档
 
-- [docs/PROJECT_DIRECTORY.md](./docs/PROJECT_DIRECTORY.md)
-- [docs/CODING_RULES.md](./docs/CODING_RULES.md)
-- [docs/VUE_TS_RULES.md](./docs/VUE_TS_RULES.md)
-- [docs/UI_RULES.md](./docs/UI_RULES.md)
-- [docs/STATE_RULES.md](./docs/STATE_RULES.md)
-- [docs/ROUTER_RULES.md](./docs/ROUTER_RULES.md)
-- [docs/API_RULES.md](./docs/API_RULES.md)
-- [docs/TESTING_RULES.md](./docs/TESTING_RULES.md)
-- [docs/COMPATIBILITY_RULES.md](./docs/COMPATIBILITY_RULES.md)
-- [docs/GIT_RULES.md](./docs/GIT_RULES.md)
-- [docs/DYNAMIC_WORKFLOW_RULES.md](./docs/DYNAMIC_WORKFLOW_RULES.md)
-- [docs/LOOP_ENGINEERING_RULES.md](./docs/LOOP_ENGINEERING_RULES.md)
-- [docs/AGENT_SKILL_ROUTING.md](./docs/AGENT_SKILL_ROUTING.md)
-- [docs/LINEAR_TASK.md](./docs/LINEAR_TASK.md)
-- [docs/RELEASE.md](./docs/RELEASE.md)
-- [docs/AI-CODE-HEALTH.md](./docs/AI-CODE-HEALTH.md)
+- [PROJECT_STATE.md](./docs/memory/PROJECT_STATE.md)
+- [TECH_DEBT.md](./docs/memory/TECH_DEBT.md)
+- [KNOWN_BUGS.md](./docs/memory/KNOWN_BUGS.md)
+- [DECISIONS.md](./docs/memory/DECISIONS.md)
+- [ARCHITECTURE.md](./docs/memory/ARCHITECTURE.md)
+- [docs/rules/PROJECT_DIRECTORY.md](./docs/rules/PROJECT_DIRECTORY.md)
+- [docs/rules/CODING_RULES.md](./docs/rules/CODING_RULES.md)
+- [docs/rules/VUE_TS_RULES.md](./docs/rules/VUE_TS_RULES.md)
+- [docs/rules/UI_RULES.md](./docs/rules/UI_RULES.md)
+- [docs/rules/STATE_RULES.md](./docs/rules/STATE_RULES.md)
+- [docs/rules/ROUTER_RULES.md](./docs/rules/ROUTER_RULES.md)
+- [docs/rules/API_RULES.md](./docs/rules/API_RULES.md)
+- [docs/rules/TESTING_RULES.md](./docs/rules/TESTING_RULES.md)
+- [docs/rules/COMPATIBILITY_RULES.md](./docs/rules/COMPATIBILITY_RULES.md)
+- [docs/rules/GIT_RULES.md](./docs/rules/GIT_RULES.md)
+- [docs/rules/DYNAMIC_WORKFLOW_RULES.md](./docs/rules/DYNAMIC_WORKFLOW_RULES.md)
+- [docs/rules/LOOP_ENGINEERING_RULES.md](./docs/rules/LOOP_ENGINEERING_RULES.md)
+- [docs/rules/AGENT_SKILL_ROUTING.md](./docs/rules/AGENT_SKILL_ROUTING.md)
+- [docs/rules/LINEAR_TASK.md](./docs/rules/LINEAR_TASK.md)
+- [docs/rules/RELEASE.md](./docs/rules/RELEASE.md)
+- [docs/rules/AI-CODE-HEALTH.md](./docs/rules/AI-CODE-HEALTH.md)
 `;
 
 const validArchitectureBody = `
@@ -124,6 +146,8 @@ describe('validateGovernance', () => {
       agentsBody: validAgentsBody,
       decisionsBody: validDecisionsBody,
       docsReadmeBody: validDocsReadmeBody,
+      rulesReadmeBody: validRulesReadmeBody,
+      memoryReadmeBody: validMemoryReadmeBody,
       architectureBody: validArchitectureBody,
       projectStateBody: validProjectStateBody,
     });
@@ -144,6 +168,20 @@ describe('validateGovernance', () => {
   it('rejects missing docs index entries', () => {
     const result = validateGovernance({
       docsReadmeBody: validDocsReadmeBody.replace(
+        '- [rules/README.md](./rules/README.md): 项目级规范正文索引\n',
+        '',
+      ),
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContain(
+      'Missing docs/README.md rules index entry: ./rules/README.md',
+    );
+  });
+
+  it('rejects missing rules index entries', () => {
+    const result = validateGovernance({
+      rulesReadmeBody: validRulesReadmeBody.replace(
         '- [LOOP_ENGINEERING_RULES.md](./LOOP_ENGINEERING_RULES.md)\n',
         '',
       ),
@@ -151,21 +189,35 @@ describe('validateGovernance', () => {
 
     expect(result.isValid).toBe(false);
     expect(result.errors).toContain(
-      'Missing docs/README.md top-level entry: LOOP_ENGINEERING_RULES.md',
+      'Missing docs/rules/README.md entry: LOOP_ENGINEERING_RULES.md',
     );
   });
 
-  it('rejects missing AGENTS.md related-doc entries', () => {
+  it('rejects missing memory index entries', () => {
     const result = validateGovernance({
-      agentsBody: validAgentsBody.replace(
-        '- [docs/LOOP_ENGINEERING_RULES.md](./docs/LOOP_ENGINEERING_RULES.md)\n',
+      memoryReadmeBody: validMemoryReadmeBody.replace(
+        '- [TECH_DEBT.md](./TECH_DEBT.md)\n',
         '',
       ),
     });
 
     expect(result.isValid).toBe(false);
     expect(result.errors).toContain(
-      'Missing AGENTS.md related-doc entry: docs/LOOP_ENGINEERING_RULES.md',
+      'Missing docs/memory/README.md entry: TECH_DEBT.md',
+    );
+  });
+
+  it('rejects missing AGENTS.md related-doc entries', () => {
+    const result = validateGovernance({
+      agentsBody: validAgentsBody.replace(
+        '- [docs/rules/LOOP_ENGINEERING_RULES.md](./docs/rules/LOOP_ENGINEERING_RULES.md)\n',
+        '',
+      ),
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContain(
+      'Missing AGENTS.md related-doc entry: docs/rules/LOOP_ENGINEERING_RULES.md',
     );
   });
 
@@ -248,7 +300,7 @@ describe('validateGovernance', () => {
       linkedDocuments: [
         {
           path: 'docs/README.md',
-          body: '- [MISSING.md](./MISSING.md)\n- [CODING_RULES.md](./CODING_RULES.md)',
+      body: '- [MISSING.md](./MISSING.md)\n- [CODING_RULES.md](./CODING_RULES.md)',
         },
       ],
       repoRoot: '/repo',
@@ -290,6 +342,7 @@ describe('validateGovernance', () => {
     const result = validateGovernance({
       ...governanceAnchorFixtures,
       enforceGovernanceAnchors: true,
+      fileExists: () => true,
     });
 
     expect(result.isValid).toBe(true);
@@ -304,11 +357,27 @@ describe('validateGovernance', () => {
         '',
       ),
       enforceGovernanceAnchors: true,
+      fileExists: () => true,
     });
 
     expect(result.isValid).toBe(false);
     expect(result.errors).toContain(
       'Missing governance anchor in AGENTS.md: ### 规范单一来源矩阵',
+    );
+  });
+
+  it('rejects missing compatibility stubs when anchors are enforced', () => {
+    const result = validateGovernance({
+      ...governanceAnchorFixtures,
+      enforceGovernanceAnchors: true,
+      repoRoot: '/repo',
+      fileExists: (target) =>
+        !target.replaceAll('\\', '/').endsWith('/docs/CODING_RULES.md'),
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContain(
+      'Missing compatibility rule stub: docs/CODING_RULES.md',
     );
   });
 });

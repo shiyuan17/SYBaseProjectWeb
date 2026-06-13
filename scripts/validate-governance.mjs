@@ -15,7 +15,7 @@ const PROJECT_STATE_REQUIRED_SECTIONS = [
 const PROJECT_STATE_MAX_LINES = 120;
 // 台账软上限：超限说明该归档历史/已关闭条目（迁入 docs/reviews/ 归档文件），不是删除历史
 const LEDGER_MAX_LINES = 200;
-const REQUIRED_TOP_LEVEL_DOCS = [
+const REQUIRED_RULE_DOCS = [
   'PROJECT_DIRECTORY.md',
   'CODING_RULES.md',
   'VUE_TS_RULES.md',
@@ -33,6 +33,13 @@ const REQUIRED_TOP_LEVEL_DOCS = [
   'RELEASE.md',
   'AI-CODE-HEALTH.md',
 ];
+const REQUIRED_MEMORY_DOCS = [
+  'PROJECT_STATE.md',
+  'TECH_DEBT.md',
+  'KNOWN_BUGS.md',
+  'DECISIONS.md',
+  'ARCHITECTURE.md',
+];
 const REQUIRED_GOVERNANCE_ANCHORS = {
   'AGENTS.md': [
     '## 一页式执行入口',
@@ -42,18 +49,18 @@ const REQUIRED_GOVERNANCE_ANCHORS = {
     '红区确认协议',
     '### 8. AI Memory Update',
   ],
-  'docs/CODING_RULES.md': ['标准验证命令'],
-  'docs/DYNAMIC_WORKFLOW_RULES.md': [
+  'docs/rules/CODING_RULES.md': ['标准验证命令'],
+  'docs/rules/DYNAMIC_WORKFLOW_RULES.md': [
     '主 Workflow',
     '轻量 Workflow Packet',
     '完整 Workflow Packet',
     'Red Team',
   ],
-  'docs/GIT_RULES.md': [
+  'docs/rules/GIT_RULES.md': [
     '### 6. 工作树（Worktree）与 Linear 任务',
     '### 7. 自动化护栏（lefthook）',
   ],
-  'docs/LOOP_ENGINEERING_RULES.md': [
+  'docs/rules/LOOP_ENGINEERING_RULES.md': [
     '## Loop Packet',
     '最小 Loop Packet',
   ],
@@ -152,24 +159,83 @@ function extractBulletLinks(body) {
 
 function validateDocsIndex(docsReadmeBody) {
   const links = extractBulletLinks(docsReadmeBody);
+  const linkedTargets = new Set(links.map((entry) => entry.target));
+
+  const errors = [];
+  if (!linkedTargets.has('./rules/README.md')) {
+    errors.push('Missing docs/README.md rules index entry: ./rules/README.md');
+  }
+  if (!linkedTargets.has('./memory/README.md')) {
+    errors.push(
+      'Missing docs/README.md memory index entry: ./memory/README.md',
+    );
+  }
+
+  return errors;
+}
+
+function validateRulesIndex(rulesReadmeBody) {
+  const links = extractBulletLinks(rulesReadmeBody);
   const linkedLabels = new Set(links.map((entry) => entry.label));
 
-  return REQUIRED_TOP_LEVEL_DOCS.filter(
-    (entry) => !linkedLabels.has(entry),
-  ).map((entry) => `Missing docs/README.md top-level entry: ${entry}`);
+  return REQUIRED_RULE_DOCS.filter((entry) => !linkedLabels.has(entry)).map(
+    (entry) => `Missing docs/rules/README.md entry: ${entry}`,
+  );
+}
+
+function validateMemoryIndex(memoryReadmeBody) {
+  const links = extractBulletLinks(memoryReadmeBody);
+  const linkedLabels = new Set(links.map((entry) => entry.label));
+
+  return REQUIRED_MEMORY_DOCS.filter((entry) => !linkedLabels.has(entry)).map(
+    (entry) => `Missing docs/memory/README.md entry: ${entry}`,
+  );
 }
 
 function validateAgentsIndex(agentsBody) {
   const links = extractBulletLinks(agentsBody);
-  const topLevelDocTargets = new Set(
+  const ruleDocTargets = new Set(
     links
-      .filter((entry) => entry.target.startsWith('./docs/'))
-      .map((entry) => entry.label.replace(/^docs\//, '')),
+      .filter((entry) => entry.target.startsWith('./docs/rules/'))
+      .map((entry) => entry.label.replace(/^docs\/rules\//, '')),
+  );
+  const memoryDocTargets = new Set(
+    links
+      .filter((entry) => entry.target.startsWith('./docs/memory/'))
+      .map((entry) => entry.label),
   );
 
-  return REQUIRED_TOP_LEVEL_DOCS.filter(
-    (entry) => !topLevelDocTargets.has(entry),
-  ).map((entry) => `Missing AGENTS.md related-doc entry: docs/${entry}`);
+  const errors = REQUIRED_RULE_DOCS.filter(
+    (entry) => !ruleDocTargets.has(entry),
+  ).map((entry) => `Missing AGENTS.md related-doc entry: docs/rules/${entry}`);
+
+  errors.push(
+    ...REQUIRED_MEMORY_DOCS.filter(
+      (entry) => !memoryDocTargets.has(entry),
+    ).map((entry) => `Missing AGENTS.md related-doc entry: docs/memory/${entry}`),
+  );
+
+  return errors;
+}
+
+function validateCompatibilityStubs({ repoRoot, fileExists }) {
+  const errors = [];
+
+  for (const entry of REQUIRED_RULE_DOCS) {
+    const legacyPath = resolve(repoRoot, 'docs', entry);
+    if (!fileExists(legacyPath)) {
+      errors.push(`Missing compatibility rule stub: docs/${entry}`);
+    }
+  }
+
+  for (const entry of REQUIRED_MEMORY_DOCS) {
+    const legacyPath = resolve(repoRoot, entry);
+    if (!fileExists(legacyPath)) {
+      errors.push(`Missing compatibility memory stub: ${entry}`);
+    }
+  }
+
+  return errors;
 }
 
 function validateArchitectureCurrentContract(architectureBody) {
@@ -249,6 +315,8 @@ export function validateGovernance({
   decisionsBody,
   dynamicWorkflowBody,
   docsReadmeBody,
+  rulesReadmeBody,
+  memoryReadmeBody,
   gitRulesBody,
   loopEngineeringBody,
   prTemplateBody,
@@ -306,6 +374,14 @@ export function validateGovernance({
     errors.push(...validateDocsIndex(docsReadmeBody));
   }
 
+  if (rulesReadmeBody) {
+    errors.push(...validateRulesIndex(rulesReadmeBody));
+  }
+
+  if (memoryReadmeBody) {
+    errors.push(...validateMemoryIndex(memoryReadmeBody));
+  }
+
   if (agentsBody) {
     errors.push(...validateAgentsIndex(agentsBody));
   }
@@ -323,14 +399,15 @@ export function validateGovernance({
       ...validateGovernanceAnchors({
         '.github/PULL_REQUEST_TEMPLATE.md': prTemplateBody,
         'AGENTS.md': agentsBody,
-        'docs/CODING_RULES.md': codingRulesBody,
-        'docs/DYNAMIC_WORKFLOW_RULES.md': dynamicWorkflowBody,
-        'docs/GIT_RULES.md': gitRulesBody,
-        'docs/LOOP_ENGINEERING_RULES.md': loopEngineeringBody,
+        'docs/rules/CODING_RULES.md': codingRulesBody,
+        'docs/rules/DYNAMIC_WORKFLOW_RULES.md': dynamicWorkflowBody,
+        'docs/rules/GIT_RULES.md': gitRulesBody,
+        'docs/rules/LOOP_ENGINEERING_RULES.md': loopEngineeringBody,
         'docs/templates/workflow-packet-examples.md':
           workflowPacketExamplesBody,
       }),
     );
+    errors.push(...validateCompatibilityStubs({ repoRoot, fileExists }));
   }
 
   return {
@@ -343,40 +420,49 @@ const LINK_CHECKED_DOCUMENTS = [
   'AGENTS.md',
   'README.md',
   'docs/README.md',
+  'docs/rules/README.md',
+  'docs/memory/README.md',
   'PROJECT_STATE.md',
   'DECISIONS.md',
   'KNOWN_BUGS.md',
   'TECH_DEBT.md',
   'ARCHITECTURE.md',
   '.github/PULL_REQUEST_TEMPLATE.md',
-  'docs/CODING_RULES.md',
-  'docs/GIT_RULES.md',
-  'docs/DYNAMIC_WORKFLOW_RULES.md',
-  'docs/LOOP_ENGINEERING_RULES.md',
-  'docs/AGENT_SKILL_ROUTING.md',
-  'docs/LINEAR_TASK.md',
-  'docs/AI-CODE-HEALTH.md',
-  'docs/TESTING_RULES.md',
+  'docs/rules/CODING_RULES.md',
+  'docs/rules/GIT_RULES.md',
+  'docs/rules/DYNAMIC_WORKFLOW_RULES.md',
+  'docs/rules/LOOP_ENGINEERING_RULES.md',
+  'docs/rules/AGENT_SKILL_ROUTING.md',
+  'docs/rules/LINEAR_TASK.md',
+  'docs/rules/AI-CODE-HEALTH.md',
+  'docs/rules/TESTING_RULES.md',
+  'docs/memory/PROJECT_STATE.md',
+  'docs/memory/DECISIONS.md',
+  'docs/memory/KNOWN_BUGS.md',
+  'docs/memory/TECH_DEBT.md',
+  'docs/memory/ARCHITECTURE.md',
   'docs/templates/workflow-packet-examples.md',
 ];
 
 function main() {
   const result = validateGovernance({
     agentsBody: readText('AGENTS.md'),
-    codingRulesBody: readText('docs/CODING_RULES.md'),
-    decisionsBody: readText('DECISIONS.md'),
-    dynamicWorkflowBody: readText('docs/DYNAMIC_WORKFLOW_RULES.md'),
+    codingRulesBody: readText('docs/rules/CODING_RULES.md'),
+    decisionsBody: readText('docs/memory/DECISIONS.md'),
+    dynamicWorkflowBody: readText('docs/rules/DYNAMIC_WORKFLOW_RULES.md'),
     docsReadmeBody: readText('docs/README.md'),
-    gitRulesBody: readText('docs/GIT_RULES.md'),
-    loopEngineeringBody: readText('docs/LOOP_ENGINEERING_RULES.md'),
+    rulesReadmeBody: readText('docs/rules/README.md'),
+    memoryReadmeBody: readText('docs/memory/README.md'),
+    gitRulesBody: readText('docs/rules/GIT_RULES.md'),
+    loopEngineeringBody: readText('docs/rules/LOOP_ENGINEERING_RULES.md'),
     prTemplateBody: readText('.github/PULL_REQUEST_TEMPLATE.md'),
     workflowPacketExamplesBody: readText(
       'docs/templates/workflow-packet-examples.md',
     ),
-    architectureBody: readText('ARCHITECTURE.md'),
-    projectStateBody: readText('PROJECT_STATE.md'),
-    knownBugsBody: readText('KNOWN_BUGS.md'),
-    techDebtBody: readText('TECH_DEBT.md'),
+    architectureBody: readText('docs/memory/ARCHITECTURE.md'),
+    projectStateBody: readText('docs/memory/PROJECT_STATE.md'),
+    knownBugsBody: readText('docs/memory/KNOWN_BUGS.md'),
+    techDebtBody: readText('docs/memory/TECH_DEBT.md'),
     enforceGovernanceAnchors: true,
     linkedDocuments: LINK_CHECKED_DOCUMENTS.map((path) => ({
       path,
