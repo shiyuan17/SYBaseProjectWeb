@@ -7,14 +7,16 @@
 ## 文档清单
 
 - [UNDERSTAND_ANYTHING_ANALYSIS_ZH.md](./UNDERSTAND_ANYTHING_ANALYSIS_ZH.md)
+- [agent-workflow-structure-map.md](./agent-workflow-structure-map.md)
 - [detailed_list/README.md](./detailed_list/README.md)
 - [database/README.md](./database/README.md)
 
 ## 推荐阅读顺序
 
-1. 先看 [detailed_list/README.md](./detailed_list/README.md) 了解业务模块全貌。
-2. 再看 [database/README.md](./database/README.md) 获取数据库资料入口。
-3. 需要快速理解当前前端结构时，再看 [UNDERSTAND_ANYTHING_ANALYSIS_ZH.md](./UNDERSTAND_ANYTHING_ANALYSIS_ZH.md)。
+1. 需要理解外部 AI Agent 工作流目录与本仓事实目录关系时，先看 [agent-workflow-structure-map.md](./agent-workflow-structure-map.md)。
+2. 了解业务模块全貌时，看 [detailed_list/README.md](./detailed_list/README.md)。
+3. 获取数据库资料入口时，看 [database/README.md](./database/README.md)。
+4. 需要快速理解当前前端结构时，再看 [UNDERSTAND_ANYTHING_ANALYSIS_ZH.md](./UNDERSTAND_ANYTHING_ANALYSIS_ZH.md)。
 
 ## 与其他目录的关系
 

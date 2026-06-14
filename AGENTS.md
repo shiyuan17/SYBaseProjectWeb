@@ -245,7 +245,7 @@
 
 ### 8. AI Memory Update
 
-`docs/memory/` 下五类记忆文件是仓内长期上下文层，不替代 agentmemory、PR 描述、测试报告或 ADR；根目录同名文件仅作为兼容跳转入口：
+`docs/memory/` 下五类记忆文件是仓内长期上下文层，不替代 agentmemory、PR 描述、测试报告或 ADR：
 
 - `docs/memory/PROJECT_STATE.md`：当前阶段、活跃任务、最新验证状态、跨仓依赖、交接重点
 - `docs/memory/TECH_DEBT.md`：技术债台账，记录 ID、严重度、来源、影响、建议动作、状态

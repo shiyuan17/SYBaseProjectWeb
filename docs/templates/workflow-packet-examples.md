@@ -189,5 +189,5 @@
 ## 关联文档
 
 - [../../AGENTS.md](../../AGENTS.md) §4 任务开始模板、§7 输出与交接要求、§8 AI Memory Update
-- [../DYNAMIC_WORKFLOW_RULES.md](../DYNAMIC_WORKFLOW_RULES.md) Workflow Packet 字段语义与决策流程图
+- [../rules/DYNAMIC_WORKFLOW_RULES.md](../rules/DYNAMIC_WORKFLOW_RULES.md) Workflow Packet 字段语义与决策流程图
 - [../../.github/PULL_REQUEST_TEMPLATE.md](../../.github/PULL_REQUEST_TEMPLATE.md) PR 层字段镜像

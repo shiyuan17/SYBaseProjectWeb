@@ -7,7 +7,7 @@
 - 核心规范正文统一放在 [rules/](./rules/README.md)。
 - 长期记忆正文统一放在 [memory/](./memory/README.md)。
 - 专题资料继续按验收、计划、审查、参考和模板分类归档。
-- 旧的 `docs/*.md` 同名规范文件和根目录五类记忆文件仅保留为兼容跳转，不再作为正文维护点。
+- 旧的 `docs/*.md` 同名规范入口和根目录五类记忆入口已删除，不再作为维护点。
 
 ## 阅读顺序
 
@@ -26,7 +26,7 @@
 - [acceptance/](./acceptance/README.md): 验收、交付、PR 说明、测试手册、现场 SOP
 - [plans/](./plans/README.md): 实施方案、阶段执行计划
 - [reviews/](./reviews/README.md): 审查、差距分析、健康度与对比报告
-- [reference/](./reference/README.md): 业务清单、数据库资料、分析报告
+- [reference/](./reference/README.md): 业务清单、数据库资料、分析报告、AI 工作流结构映射
 - [templates/](./templates/): 可复用提示词与任务模板（如 Codex 任务模板、Linear 计划拆分模板、治理模板填写范例 `workflow-packet-examples.md`）
 
 ## 维护约定
