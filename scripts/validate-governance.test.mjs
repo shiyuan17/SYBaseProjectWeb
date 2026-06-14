@@ -50,11 +50,11 @@ const validMemoryReadmeBody = `
 const validAgentsBody = `
 ## 关联文档
 
-- [PROJECT_STATE.md](./docs/memory/PROJECT_STATE.md)
-- [TECH_DEBT.md](./docs/memory/TECH_DEBT.md)
-- [KNOWN_BUGS.md](./docs/memory/KNOWN_BUGS.md)
-- [DECISIONS.md](./docs/memory/DECISIONS.md)
-- [ARCHITECTURE.md](./docs/memory/ARCHITECTURE.md)
+- [docs/memory/PROJECT_STATE.md](./docs/memory/PROJECT_STATE.md)
+- [docs/memory/TECH_DEBT.md](./docs/memory/TECH_DEBT.md)
+- [docs/memory/KNOWN_BUGS.md](./docs/memory/KNOWN_BUGS.md)
+- [docs/memory/DECISIONS.md](./docs/memory/DECISIONS.md)
+- [docs/memory/ARCHITECTURE.md](./docs/memory/ARCHITECTURE.md)
 - [docs/rules/PROJECT_DIRECTORY.md](./docs/rules/PROJECT_DIRECTORY.md)
 - [docs/rules/CODING_RULES.md](./docs/rules/CODING_RULES.md)
 - [docs/rules/VUE_TS_RULES.md](./docs/rules/VUE_TS_RULES.md)
@@ -300,7 +300,7 @@ describe('validateGovernance', () => {
       linkedDocuments: [
         {
           path: 'docs/README.md',
-      body: '- [MISSING.md](./MISSING.md)\n- [CODING_RULES.md](./CODING_RULES.md)',
+          body: '- [MISSING.md](./MISSING.md)\n- [CODING_RULES.md](./CODING_RULES.md)',
         },
       ],
       repoRoot: '/repo',
@@ -366,18 +366,21 @@ describe('validateGovernance', () => {
     );
   });
 
-  it('rejects missing compatibility stubs when anchors are enforced', () => {
+  it('accepts removed compatibility stubs when anchors are enforced', () => {
     const result = validateGovernance({
       ...governanceAnchorFixtures,
       enforceGovernanceAnchors: true,
       repoRoot: '/repo',
-      fileExists: (target) =>
-        !target.replaceAll('\\', '/').endsWith('/docs/CODING_RULES.md'),
+      fileExists: (target) => {
+        const normalized = target.replaceAll('\\', '/');
+        return (
+          !normalized.endsWith('/docs/CODING_RULES.md') &&
+          !normalized.endsWith('/TECH_DEBT.md')
+        );
+      },
     });
 
-    expect(result.isValid).toBe(false);
-    expect(result.errors).toContain(
-      'Missing compatibility rule stub: docs/CODING_RULES.md',
-    );
+    expect(result.isValid).toBe(true);
+    expect(result.errors).toEqual([]);
   });
 });

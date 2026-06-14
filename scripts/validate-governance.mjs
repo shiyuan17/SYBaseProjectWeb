@@ -202,7 +202,7 @@ function validateAgentsIndex(agentsBody) {
   const memoryDocTargets = new Set(
     links
       .filter((entry) => entry.target.startsWith('./docs/memory/'))
-      .map((entry) => entry.label),
+      .map((entry) => entry.label.replace(/^docs\/memory\//, '')),
   );
 
   const errors = REQUIRED_RULE_DOCS.filter(
@@ -210,30 +210,10 @@ function validateAgentsIndex(agentsBody) {
   ).map((entry) => `Missing AGENTS.md related-doc entry: docs/rules/${entry}`);
 
   errors.push(
-    ...REQUIRED_MEMORY_DOCS.filter(
-      (entry) => !memoryDocTargets.has(entry),
-    ).map((entry) => `Missing AGENTS.md related-doc entry: docs/memory/${entry}`),
+    ...REQUIRED_MEMORY_DOCS.filter((entry) => !memoryDocTargets.has(entry)).map(
+      (entry) => `Missing AGENTS.md related-doc entry: docs/memory/${entry}`,
+    ),
   );
-
-  return errors;
-}
-
-function validateCompatibilityStubs({ repoRoot, fileExists }) {
-  const errors = [];
-
-  for (const entry of REQUIRED_RULE_DOCS) {
-    const legacyPath = resolve(repoRoot, 'docs', entry);
-    if (!fileExists(legacyPath)) {
-      errors.push(`Missing compatibility rule stub: docs/${entry}`);
-    }
-  }
-
-  for (const entry of REQUIRED_MEMORY_DOCS) {
-    const legacyPath = resolve(repoRoot, entry);
-    if (!fileExists(legacyPath)) {
-      errors.push(`Missing compatibility memory stub: ${entry}`);
-    }
-  }
 
   return errors;
 }
@@ -407,7 +387,6 @@ export function validateGovernance({
           workflowPacketExamplesBody,
       }),
     );
-    errors.push(...validateCompatibilityStubs({ repoRoot, fileExists }));
   }
 
   return {
@@ -422,11 +401,6 @@ const LINK_CHECKED_DOCUMENTS = [
   'docs/README.md',
   'docs/rules/README.md',
   'docs/memory/README.md',
-  'PROJECT_STATE.md',
-  'DECISIONS.md',
-  'KNOWN_BUGS.md',
-  'TECH_DEBT.md',
-  'ARCHITECTURE.md',
   '.github/PULL_REQUEST_TEMPLATE.md',
   'docs/rules/CODING_RULES.md',
   'docs/rules/GIT_RULES.md',
