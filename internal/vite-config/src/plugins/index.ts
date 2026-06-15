@@ -14,7 +14,6 @@ import viteVueJsx from '@vitejs/plugin-vue-jsx';
 import { visualizer as viteVisualizerPlugin } from 'rollup-plugin-visualizer';
 import viteDtsPlugin from 'unplugin-dts/vite';
 import viteCompressPlugin from 'vite-plugin-compression';
-import { VitePWA } from 'vite-plugin-pwa';
 import viteVueDevTools from 'vite-plugin-vue-devtools';
 
 import { viteArchiverPlugin } from './archiver';
@@ -165,8 +164,9 @@ async function loadApplicationPlugins(
     },
     {
       condition: pwa,
-      plugins: () =>
-        VitePWA({
+      plugins: async () => {
+        const { VitePWA } = await import('vite-plugin-pwa');
+        return VitePWA({
           injectRegister: false,
           workbox: {
             globPatterns: [],
@@ -178,7 +178,8 @@ async function loadApplicationPlugins(
             theme_color: '#ffffff',
             ...pwaOptions?.manifest,
           },
-        }),
+        });
+      },
     },
     {
       condition: isBuild && !!compress,
