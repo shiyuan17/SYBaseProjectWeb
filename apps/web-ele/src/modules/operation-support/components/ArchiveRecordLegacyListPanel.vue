@@ -4,6 +4,8 @@ import type {
   ArchiveRecordView,
 } from '../types/operation-support';
 
+import { computed } from 'vue';
+
 import {
   ElAlert,
   ElButton,
@@ -21,7 +23,6 @@ import {
   formatMaterialLoanStatus,
   formatNullable,
 } from '../utils/format';
-import OperationSectionCard from './OperationSectionCard.vue';
 
 type ArchiveRecordFiltersState = {
   keyword: string;
@@ -29,7 +30,7 @@ type ArchiveRecordFiltersState = {
   size: number;
 };
 
-defineProps<{
+const props = defineProps<{
   canQueryRecords: boolean;
   getArchiveStatusTagType: (
     status?: null | string,
@@ -42,14 +43,15 @@ defineProps<{
   page: number;
   recordError: string;
   records: ArchiveRecordView[];
+  selectable?: boolean;
   size: number;
-  title: string;
   total: number;
 }>();
 
 const emit = defineEmits<{
   (event: 'pageChange', page: number): void;
   (event: 'query'): void;
+  (event: 'selectionChange', records: ArchiveRecordView[]): void;
   (event: 'sizeChange', size: number): void;
 }>();
 
@@ -63,17 +65,14 @@ const archiveObjectFilters = defineModel<ArchiveRecordFiltersState>(
 function queryRecords() {
   emit('query');
 }
+
+const showSelection = computed(() => props.selectable !== false);
 </script>
 
 <template>
-  <OperationSectionCard
-    :title="title"
-    description="按对象分页接口展示可查询对象；旧系统当前无契约字段继续以 - 占位。"
+  <section
+    class="flex min-h-0 flex-1 flex-col rounded-lg border border-border bg-card p-4 shadow-sm"
   >
-    <template #extra>
-      <slot name="extra"></slot>
-    </template>
-
     <ElAlert
       v-if="!canQueryRecords"
       :closable="false"
@@ -113,133 +112,143 @@ function queryRecords() {
         >
           查询
         </ElButton>
+        <slot name="extra"></slot>
       </ElFormItem>
     </ElForm>
 
-    <ElTable
-      v-loading="loading"
-      border
-      class="mt-4"
-      :data="records"
-      height="520"
-      row-key="objectId"
-    >
-      <ElTableColumn type="selection" width="34" />
-      <ElTableColumn label="序" type="index" width="42" />
-      <ElTableColumn label="病理号" min-width="120" prop="pathologyNo" />
-      <ElTableColumn label="病人姓名" min-width="110" prop="patientName" />
-      <ElTableColumn label="病人ID" min-width="120" prop="caseId" />
-      <ElTableColumn
-        v-if="objectType === 'APPLICATION_FORM'"
-        label="申请医生"
-        min-width="100"
+    <div class="mt-4 flex min-h-0 flex-1 flex-col">
+      <ElTable
+        v-loading="loading"
+        border
+        class="flex-1"
+        :data="records"
+        height="100%"
+        row-key="objectId"
+        @selection-change="
+          (rows: ArchiveRecordView[]) => emit('selectionChange', rows)
+        "
       >
-        <template #default>{{ formatNullable() }}</template>
-      </ElTableColumn>
-      <ElTableColumn
-        v-if="objectType === 'APPLICATION_FORM'"
-        label="申请时间"
-        min-width="170"
-      >
-        <template #default>{{ formatNullable() }}</template>
-      </ElTableColumn>
-      <ElTableColumn
-        v-if="objectType === 'EMBEDDING_BOX'"
-        label="子号"
-        min-width="80"
-      >
-        <template #default="{ row }">
-          {{ formatNullable(row.objectCode || row.objectId) }}
-        </template>
-      </ElTableColumn>
-      <ElTableColumn
-        v-if="objectType === 'EMBEDDING_BOX'"
-        label="当前状态"
-        min-width="110"
-      >
-        <template #default>{{ formatNullable() }}</template>
-      </ElTableColumn>
-      <ElTableColumn
-        v-if="objectType === 'EMBEDDING_BOX'"
-        label="取材人"
-        min-width="120"
-      >
-        <template #default>{{ formatNullable() }}</template>
-      </ElTableColumn>
-      <ElTableColumn
-        v-if="objectType === 'EMBEDDING_BOX'"
-        label="包埋人"
-        min-width="150"
-      >
-        <template #default>{{ formatNullable() }}</template>
-      </ElTableColumn>
-      <ElTableColumn v-if="objectType === 'SLIDE'" label="子号" min-width="90">
-        <template #default="{ row }">
-          {{ formatNullable(row.objectCode || row.objectId) }}
-        </template>
-      </ElTableColumn>
-      <ElTableColumn
-        v-if="objectType === 'SPECIMEN'"
-        label="标本编号"
-        min-width="120"
-      >
-        <template #default="{ row }">
-          {{ formatNullable(row.objectCode || row.objectId) }}
-        </template>
-      </ElTableColumn>
-      <ElTableColumn
-        v-if="objectType === 'SLIDE'"
-        label="切片人"
-        min-width="160"
-      >
-        <template #default>{{ formatNullable() }}</template>
-      </ElTableColumn>
-      <ElTableColumn label="归档状态" min-width="110">
-        <template #default="{ row }">
-          <ElTag :type="getArchiveStatusTagType(row.archiveStatus)">
-            {{ formatArchiveStorageStatus(row.archiveStatus) }}
-          </ElTag>
-        </template>
-      </ElTableColumn>
-      <ElTableColumn label="归档柜" min-width="90">
-        <template #default>{{ formatNullable() }}</template>
-      </ElTableColumn>
-      <ElTableColumn label="归档路径" min-width="160">
-        <template #default="{ row }">
-          {{ formatNullable(row.archiveLocation) }}
-        </template>
-      </ElTableColumn>
-      <ElTableColumn label="归档人" min-width="110">
-        <template #default="{ row }">
-          {{ formatNullable(row.storedByName) }}
-        </template>
-      </ElTableColumn>
-      <ElTableColumn label="归档时间" min-width="170">
-        <template #default="{ row }">
-          {{ formatNullable(row.archivedAt) }}
-        </template>
-      </ElTableColumn>
-      <ElTableColumn label="图像路径" min-width="140">
-        <template #default>{{ formatNullable() }}</template>
-      </ElTableColumn>
-      <ElTableColumn label="图像名" min-width="120">
-        <template #default>{{ formatNullable() }}</template>
-      </ElTableColumn>
-      <ElTableColumn label="图像服务器名" min-width="150">
-        <template #default>{{ formatNullable() }}</template>
-      </ElTableColumn>
-      <ElTableColumn label="借阅状态" min-width="110">
-        <template #default="{ row }">
-          <ElTag
-            v-if="row.loanStatus"
-            :type="getLoanStatusTagType(row.loanStatus)"
-          >
-            {{ formatMaterialLoanStatus(row.loanStatus) }}
-          </ElTag>
-          <span v-else>{{ formatNullable() }}</span>
-        </template>
-      </ElTableColumn>
-    </ElTable>
+        <ElTableColumn v-if="showSelection" type="selection" width="34" />
+        <ElTableColumn label="序" type="index" width="42" />
+        <ElTableColumn label="病理号" min-width="120" prop="pathologyNo" />
+        <ElTableColumn label="病人姓名" min-width="110" prop="patientName" />
+        <ElTableColumn label="病人ID" min-width="120" prop="caseId" />
+        <ElTableColumn
+          v-if="objectType === 'APPLICATION_FORM'"
+          label="申请医生"
+          min-width="100"
+        >
+          <template #default>{{ formatNullable() }}</template>
+        </ElTableColumn>
+        <ElTableColumn
+          v-if="objectType === 'APPLICATION_FORM'"
+          label="申请时间"
+          min-width="170"
+        >
+          <template #default>{{ formatNullable() }}</template>
+        </ElTableColumn>
+        <ElTableColumn
+          v-if="objectType === 'EMBEDDING_BOX'"
+          label="子号"
+          min-width="80"
+        >
+          <template #default="{ row }">
+            {{ formatNullable(row.objectCode || row.objectId) }}
+          </template>
+        </ElTableColumn>
+        <ElTableColumn
+          v-if="objectType === 'EMBEDDING_BOX'"
+          label="当前状态"
+          min-width="110"
+        >
+          <template #default>{{ formatNullable() }}</template>
+        </ElTableColumn>
+        <ElTableColumn
+          v-if="objectType === 'EMBEDDING_BOX'"
+          label="取材人"
+          min-width="120"
+        >
+          <template #default>{{ formatNullable() }}</template>
+        </ElTableColumn>
+        <ElTableColumn
+          v-if="objectType === 'EMBEDDING_BOX'"
+          label="包埋人"
+          min-width="150"
+        >
+          <template #default>{{ formatNullable() }}</template>
+        </ElTableColumn>
+        <ElTableColumn
+          v-if="objectType === 'SLIDE'"
+          label="子号"
+          min-width="90"
+        >
+          <template #default="{ row }">
+            {{ formatNullable(row.objectCode || row.objectId) }}
+          </template>
+        </ElTableColumn>
+        <ElTableColumn
+          v-if="objectType === 'SPECIMEN'"
+          label="标本编号"
+          min-width="120"
+        >
+          <template #default="{ row }">
+            {{ formatNullable(row.objectCode || row.objectId) }}
+          </template>
+        </ElTableColumn>
+        <ElTableColumn
+          v-if="objectType === 'SLIDE'"
+          label="切片人"
+          min-width="160"
+        >
+          <template #default>{{ formatNullable() }}</template>
+        </ElTableColumn>
+        <ElTableColumn label="归档状态" min-width="110">
+          <template #default="{ row }">
+            <ElTag :type="getArchiveStatusTagType(row.archiveStatus)">
+              {{ formatArchiveStorageStatus(row.archiveStatus) }}
+            </ElTag>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn label="归档柜" min-width="90">
+          <template #default>{{ formatNullable() }}</template>
+        </ElTableColumn>
+        <ElTableColumn label="归档路径" min-width="160">
+          <template #default="{ row }">
+            {{ formatNullable(row.archiveLocation) }}
+          </template>
+        </ElTableColumn>
+        <ElTableColumn label="归档人" min-width="110">
+          <template #default="{ row }">
+            {{ formatNullable(row.storedByName) }}
+          </template>
+        </ElTableColumn>
+        <ElTableColumn label="归档时间" min-width="170">
+          <template #default="{ row }">
+            {{ formatNullable(row.archivedAt) }}
+          </template>
+        </ElTableColumn>
+        <ElTableColumn label="图像路径" min-width="140">
+          <template #default>{{ formatNullable() }}</template>
+        </ElTableColumn>
+        <ElTableColumn label="图像名" min-width="120">
+          <template #default>{{ formatNullable() }}</template>
+        </ElTableColumn>
+        <ElTableColumn label="图像服务器名" min-width="150">
+          <template #default>{{ formatNullable() }}</template>
+        </ElTableColumn>
+        <ElTableColumn label="借阅状态" min-width="110">
+          <template #default="{ row }">
+            <ElTag
+              v-if="row.loanStatus"
+              :type="getLoanStatusTagType(row.loanStatus)"
+            >
+              {{ formatMaterialLoanStatus(row.loanStatus) }}
+            </ElTag>
+            <span v-else>{{ formatNullable() }}</span>
+          </template>
+        </ElTableColumn>
+      </ElTable>
+    </div>
 
     <div class="mt-4 flex justify-end">
       <ElPagination
@@ -253,5 +262,5 @@ function queryRecords() {
         @size-change="(nextSize: number) => emit('sizeChange', nextSize)"
       />
     </div>
-  </OperationSectionCard>
+  </section>
 </template>

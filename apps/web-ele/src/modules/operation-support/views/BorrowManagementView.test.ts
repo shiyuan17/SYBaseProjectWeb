@@ -64,8 +64,44 @@ vi.mock('element-plus', () => {
   });
 
   const ElInput = defineComponent({
-    setup(_, { attrs }) {
-      return () => h('input', attrs);
+    props: ['modelValue'],
+    emits: ['update:modelValue'],
+    setup(props, { attrs, emit }) {
+      return () =>
+        h('input', {
+          ...attrs,
+          value: props.modelValue,
+          onInput: (event: Event) =>
+            emit('update:modelValue', (event.target as HTMLInputElement).value),
+        });
+    },
+  });
+
+  const ElOption = defineComponent({
+    props: ['label'],
+    setup(props) {
+      return () => h('option', props.label);
+    },
+  });
+
+  const ElSelect = defineComponent({
+    props: ['modelValue'],
+    emits: ['update:modelValue'],
+    setup(props, { attrs, emit, slots }) {
+      return () =>
+        h(
+          'select',
+          {
+            ...attrs,
+            value: props.modelValue,
+            onChange: (event: Event) =>
+              emit(
+                'update:modelValue',
+                (event.target as HTMLSelectElement).value,
+              ),
+          },
+          slots.default?.(),
+        );
     },
   });
 
@@ -91,7 +127,11 @@ vi.mock('element-plus', () => {
   const ElTabPane = defineComponent({
     props: ['label'],
     setup(props, { slots }) {
-      return () => h('section', [h('h3', props.label), slots.default?.()]);
+      return () =>
+        h('section', [
+          h('button', { role: 'tab' }, props.label),
+          slots.default?.(),
+        ]);
     },
   });
 
@@ -107,6 +147,8 @@ vi.mock('element-plus', () => {
     ElForm,
     ElFormItem,
     ElInput,
+    ElOption,
+    ElSelect,
     ElTabPane,
     ElTable,
     ElTableColumn,
@@ -122,18 +164,6 @@ function createMarkerComponent(label: string) {
     },
   });
 }
-
-vi.mock('../components/ArchiveLoanCreatePanel.vue', () => ({
-  default: createMarkerComponent('archive-loan-create-panel'),
-}));
-
-vi.mock('../components/ArchiveLoanPendingPanel.vue', () => ({
-  default: createMarkerComponent('archive-loan-pending-panel'),
-}));
-
-vi.mock('../components/ArchivePositionWorkbenchPanel.vue', () => ({
-  default: createMarkerComponent('archive-position-workbench-panel'),
-}));
 
 vi.mock('../components/ArchiveReturnDialog.vue', () => ({
   default: createMarkerComponent('archive-return-dialog'),
@@ -276,16 +306,44 @@ describe('BorrowManagementView', () => {
     expect(document.body.textContent).toContain('最迟归还时间');
     expect(document.body.textContent).toContain('归还操作人');
     expect(document.body.textContent).toContain('借片人身份证');
-    expect(document.body.textContent).toContain('archive-loan-create-panel');
-    expect(document.body.textContent).toContain('archive-loan-pending-panel');
-    expect(document.body.textContent).toContain(
-      'archive-position-workbench-panel',
-    );
+    expect(document.body.textContent).toContain('提交借出');
+    expect(document.body.textContent).toContain('查询待归还');
+    expect(document.body.textContent).toContain('查询柜位');
     expect(document.body.textContent).toContain('archive-return-dialog');
     expect(document.body.innerHTML).not.toContain('legacy-toolbar');
     expect(document.body.innerHTML).not.toContain('legacy-grid-table');
     expect(document.body.innerHTML).not.toContain('legacy-status-cell');
     expect(state.loanWorkspace.loanForm.materialType).toBe('EMBEDDING_BOX');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('does not render secondary section titles in borrow tabs', () => {
+    const state = createMockPageState();
+    mockUseBorrowManagementPage.mockReturnValue(state);
+
+    const { app, root } = mountView();
+
+    expect(document.body.textContent).toContain('蜡块借记');
+    expect(document.body.textContent).toContain('玻片借记');
+    expect(document.body.textContent).toContain('待归还/归还');
+    expect(document.body.textContent).not.toContain('蜡块借记列表');
+    expect(document.body.textContent).not.toContain('玻片借记列表');
+    expect(document.body.textContent).not.toContain(
+      '按现有借阅待归还契约展示列表',
+    );
+    expect(document.body.textContent).not.toContain('柜位查询与选择');
+    expect(document.body.textContent).not.toContain(
+      '按归档柜或柜体类型查询柜位',
+    );
+    expect(document.body.textContent).not.toContain('待归还与归还');
+    expect(document.body.textContent).not.toContain(
+      '查询当前借出中材料，并从列表中发起归还。',
+    );
+    expect(document.body.textContent).not.toContain('蜡块借出登记');
+    expect(document.body.textContent).not.toContain('玻片借出登记');
+    expect(document.body.textContent).not.toContain('登记材料借出信息');
 
     app.unmount();
     root.remove();

@@ -18,6 +18,7 @@ import OperationSectionCard from './OperationSectionCard.vue';
 defineProps<{
   canCreateLoan: boolean;
   fixedMaterialType?: string;
+  hideHeader?: boolean;
   submitting: boolean;
 }>();
 
@@ -34,6 +35,7 @@ const loanForm = defineModel<LoanFormState>('loanForm', {
   <OperationSectionCard
     :title="`${formatMaterialType(fixedMaterialType || loanForm.materialType)}借出登记`"
     description="登记材料借出信息，后端会基于已归档材料记录校验材料是否可借出。"
+    :hide-header="hideHeader"
   >
     <ElAlert
       v-if="!canCreateLoan"

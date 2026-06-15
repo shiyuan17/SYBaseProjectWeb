@@ -55,6 +55,20 @@ export type ArchiveFormState = {
   terminalCode: string;
 };
 
+export type ArchiveApplicationFormSelection = {
+  applicationNo?: null | string;
+  archivedAt?: null | string;
+  archiveLocation?: null | string;
+  archiveStatus?: null | string;
+  caseId: string;
+  objectCode?: null | string;
+  objectId: string;
+  objectType: string;
+  pathologyNo?: null | string;
+  patientName?: null | string;
+  storedByName?: null | string;
+};
+
 export type LoanFormState = {
   borrowedByName: string;
   borrowedByUserId: string;
@@ -232,6 +246,7 @@ export function validateArchiveForm(options: {
   form: ArchiveFormState;
   hasSelectedPosition: boolean;
   permissionWarning: string;
+  selectedApplicationFormRecordCount?: number;
 }) {
   const {
     canArchiveObjectType,
@@ -239,6 +254,7 @@ export function validateArchiveForm(options: {
     form,
     hasSelectedPosition,
     permissionWarning,
+    selectedApplicationFormRecordCount = 0,
   } = options;
 
   if (!canArchiveObjectType) {
@@ -251,7 +267,9 @@ export function validateArchiveForm(options: {
     return '请填写归档操作人。';
   }
   if (form.objectType === 'APPLICATION_FORM') {
-    return form.caseId.trim() ? '' : '申请单归档必须填写病例 ID。';
+    return selectedApplicationFormRecordCount > 0
+      ? ''
+      : '请先勾选至少一条申请单记录。';
   }
   if (form.objectType === 'EMBEDDING_BOX') {
     return form.embeddingBoxId.trim() ? '' : '蜡块归档必须填写蜡块 ID。';
@@ -363,6 +381,23 @@ export function buildArchiveApplicationFormRequest(
     remarks: optionalText(form.remarks),
     terminalCode: optionalText(form.terminalCode),
   };
+}
+
+export function buildArchiveApplicationFormRequests(
+  records: ArchiveApplicationFormSelection[],
+  form: ArchiveFormState,
+  archivePositionId: string,
+) {
+  return records.map((record) => ({
+    archivePositionId,
+    caseId: record.caseId.trim(),
+    fileName: optionalText(form.fileName),
+    fileUrl: optionalText(form.fileUrl),
+    operatorName: form.operatorName.trim(),
+    operatorUserId: optionalText(form.operatorUserId),
+    remarks: optionalText(form.remarks),
+    terminalCode: optionalText(form.terminalCode),
+  }));
 }
 
 export function buildArchiveEmbeddingBoxRequest(

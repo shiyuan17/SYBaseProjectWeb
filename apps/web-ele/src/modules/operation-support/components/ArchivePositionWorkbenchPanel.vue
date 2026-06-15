@@ -27,6 +27,7 @@ defineProps<{
   getPositionStatusTagType: (
     status: string,
   ) => 'danger' | 'info' | 'primary' | 'success' | 'warning';
+  hideHeader?: boolean;
   loading: boolean;
   positionError: string;
   positionRows: PositionWorkbenchRow[];
@@ -55,6 +56,7 @@ const cabinetType = defineModel<string>('cabinetType', { required: true });
   <OperationSectionCard
     title="柜位查询与选择"
     description="按归档柜或柜体类型查询柜位，并为归档或替代归还选择当前可用柜位。"
+    :hide-header="hideHeader"
   >
     <template v-if="!canQueryCabinets">
       <ElAlert :closable="false" type="warning">

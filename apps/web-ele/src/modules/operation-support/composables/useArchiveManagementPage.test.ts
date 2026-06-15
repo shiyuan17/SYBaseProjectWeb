@@ -401,16 +401,53 @@ describe('useArchiveManagementPage', () => {
     mockListAvailableArchivePositions.mockClear();
     mockListArchiveObjects.mockClear();
 
-    state.archiveWorkspace.archiveForm.caseId = ' CASE-1 ';
-    state.archiveWorkspace.archiveForm.fileName = ' scan.pdf ';
+    expect(state.archiveWorkspace.archiveDialogVisible).toBe(false);
+
+    state.archiveWorkspace.openArchiveDialog('APPLICATION_FORM');
+
+    expect(messageWarningMock).toHaveBeenCalledWith(
+      '请先勾选至少一条申请单记录。',
+    );
+    expect(state.archiveWorkspace.archiveDialogVisible).toBe(false);
+
+    state.recordWorkspace.setSelectedApplicationFormRecords([
+      {
+        caseId: ' CASE-1 ',
+        objectId: 'OBJECT-1',
+        objectType: 'APPLICATION_FORM',
+        pathologyNo: 'BL-2026-001',
+        patientName: '张三',
+      },
+      {
+        caseId: ' CASE-2 ',
+        objectId: 'OBJECT-2',
+        objectType: 'APPLICATION_FORM',
+        pathologyNo: 'BL-2026-002',
+        patientName: '李四',
+      },
+    ]);
     state.archiveWorkspace.archiveForm.remarks = ' 已归档 ';
+
+    state.archiveWorkspace.openArchiveDialog('APPLICATION_FORM');
+
+    expect(state.archiveWorkspace.applicationFormDialogVisible).toBe(true);
 
     await state.archiveWorkspace.submitArchive();
 
-    expect(mockArchiveApplicationForm).toHaveBeenCalledWith({
+    expect(mockArchiveApplicationForm).toHaveBeenNthCalledWith(1, {
       archivePositionId: 'POSITION-1',
       caseId: 'CASE-1',
-      fileName: 'scan.pdf',
+      fileName: undefined,
+      fileUrl: undefined,
+      operatorName: '归档员甲',
+      operatorUserId: 'USER-ARCHIVE-1',
+      remarks: '已归档',
+      terminalCode: undefined,
+    });
+    expect(mockArchiveApplicationForm).toHaveBeenNthCalledWith(2, {
+      archivePositionId: 'POSITION-1',
+      caseId: 'CASE-2',
+      fileName: undefined,
       fileUrl: undefined,
       operatorName: '归档员甲',
       operatorUserId: 'USER-ARCHIVE-1',
@@ -425,8 +462,97 @@ describe('useArchiveManagementPage', () => {
       page: 1,
       size: 20,
     });
-    expect(state.archiveWorkspace.archiveForm.caseId).toBe('');
+    expect(state.archiveWorkspace.applicationFormDialogVisible).toBe(false);
+    expect(state.recordWorkspace.selectedApplicationFormRecords).toEqual([]);
     expect(state.archiveWorkspace.archiveForm.operatorName).toBe('归档员甲');
+
+    wrapper.destroy();
+  });
+
+  it('stops application-form archive submission at the first failed record', async () => {
+    mockArchiveApplicationForm
+      .mockResolvedValueOnce({
+        archiveLocation: 'CAB-01-L1-S1',
+        archiveStatus: 'IN_STORAGE',
+        caseId: 'CASE-1',
+        objectId: 'OBJECT-1',
+        objectType: 'APPLICATION_FORM',
+      })
+      .mockRejectedValueOnce(new Error('第二条失败'));
+
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    const position = state.cabinetWorkspace.positionRows[0];
+    state.cabinetWorkspace.selectPosition(position!);
+    messageSuccessMock.mockClear();
+    messageErrorMock.mockClear();
+    mockListAvailableArchivePositions.mockClear();
+    mockListArchiveObjects.mockClear();
+
+    state.recordWorkspace.setSelectedApplicationFormRecords([
+      {
+        caseId: 'CASE-1',
+        objectId: 'OBJECT-1',
+        objectType: 'APPLICATION_FORM',
+        pathologyNo: 'BL-2026-001',
+        patientName: '张三',
+      },
+      {
+        caseId: 'CASE-2',
+        objectId: 'OBJECT-2',
+        objectType: 'APPLICATION_FORM',
+        pathologyNo: 'BL-2026-002',
+        patientName: '李四',
+      },
+      {
+        caseId: 'CASE-3',
+        objectId: 'OBJECT-3',
+        objectType: 'APPLICATION_FORM',
+        pathologyNo: 'BL-2026-003',
+        patientName: '王五',
+      },
+    ]);
+    state.archiveWorkspace.archiveForm.remarks = ' 逐条归档 ';
+    state.archiveWorkspace.openArchiveDialog('APPLICATION_FORM');
+
+    await state.archiveWorkspace.submitArchive();
+
+    expect(mockArchiveApplicationForm).toHaveBeenCalledTimes(2);
+    expect(mockArchiveApplicationForm).toHaveBeenNthCalledWith(1, {
+      archivePositionId: 'POSITION-1',
+      caseId: 'CASE-1',
+      fileName: undefined,
+      fileUrl: undefined,
+      operatorName: '归档员甲',
+      operatorUserId: 'USER-ARCHIVE-1',
+      remarks: '逐条归档',
+      terminalCode: undefined,
+    });
+    expect(mockArchiveApplicationForm).toHaveBeenNthCalledWith(2, {
+      archivePositionId: 'POSITION-1',
+      caseId: 'CASE-2',
+      fileName: undefined,
+      fileUrl: undefined,
+      operatorName: '归档员甲',
+      operatorUserId: 'USER-ARCHIVE-1',
+      remarks: '逐条归档',
+      terminalCode: undefined,
+    });
+    expect(state.archiveWorkspace.applicationFormDialogVisible).toBe(true);
+    expect(state.recordWorkspace.selectedApplicationFormRecords).toHaveLength(
+      3,
+    );
+    expect(mockListAvailableArchivePositions).not.toHaveBeenCalled();
+    expect(mockListArchiveObjects).not.toHaveBeenCalled();
+    expect(messageErrorMock).toHaveBeenCalledWith(
+      '申请单 BL-2026-002 归档失败：第二条失败',
+    );
 
     wrapper.destroy();
   });

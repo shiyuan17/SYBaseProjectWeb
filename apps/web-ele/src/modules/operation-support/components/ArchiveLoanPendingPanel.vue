@@ -33,6 +33,7 @@ defineProps<{
   getLoanStatusTagType: (
     status?: null | string,
   ) => 'danger' | 'info' | 'primary' | 'success' | 'warning';
+  hideHeader?: boolean;
   loading: boolean;
   loanError: string;
   pendingLoans: MaterialLoanView[];
@@ -52,6 +53,7 @@ const loanFilters = defineModel<LoanFiltersState>('loanFilters', {
   <OperationSectionCard
     title="待归还与归还"
     description="查询当前借出中材料，并从列表中发起归还。"
+    :hide-header="hideHeader"
   >
     <ElAlert
       v-if="loanError"

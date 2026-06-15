@@ -198,10 +198,7 @@ function toggleExpandAll() {
 </script>
 
 <template>
-  <OperationSectionCard
-    title="归档柜列表"
-    description="按归档类型、柜体和号段展示柜位结构；新增、批量添加、修改和删除均走真实接口。"
-  >
+  <OperationSectionCard title="归档柜列表">
     <ElAlert
       v-if="!canQueryCabinets"
       :closable="false"

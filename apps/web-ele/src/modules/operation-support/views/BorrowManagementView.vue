@@ -50,13 +50,13 @@ watch(
               :loan-error="loanWorkspace.loanError"
               material-type="EMBEDDING_BOX"
               :pending-loans="loanWorkspace.pendingLoans"
-              title="蜡块借记列表"
               @load-loans="loanWorkspace.loadLoans"
             />
             <ArchiveLoanCreatePanel
               v-model:loan-form="loanWorkspace.loanForm"
               :can-create-loan="capabilities.canCreateLoan"
               fixed-material-type="EMBEDDING_BOX"
+              hide-header
               :submitting="pageState.submitting"
               @submit-loan="loanWorkspace.submitLoan"
             />
@@ -73,13 +73,13 @@ watch(
               :loan-error="loanWorkspace.loanError"
               material-type="SLIDE"
               :pending-loans="loanWorkspace.pendingLoans"
-              title="玻片借记列表"
               @load-loans="loanWorkspace.loadLoans"
             />
             <ArchiveLoanCreatePanel
               v-model:loan-form="loanWorkspace.loanForm"
               :can-create-loan="capabilities.canCreateLoan"
               fixed-material-type="SLIDE"
+              hide-header
               :submitting="pageState.submitting"
               @submit-loan="loanWorkspace.submitLoan"
             />
@@ -103,6 +103,7 @@ watch(
               :selected-position="cabinetWorkspace.selectedPosition"
               :selected-position-code="cabinetWorkspace.selectedPositionCode"
               :selected-position-label="cabinetWorkspace.selectedPositionLabel"
+              hide-header
               @clear-selected-position="cabinetWorkspace.clearSelectedPosition"
               @load-positions="cabinetWorkspace.loadPositions"
               @select-position="cabinetWorkspace.selectPosition"
@@ -116,6 +117,7 @@ watch(
               :loading="loanWorkspace.loading"
               :loan-error="loanWorkspace.loanError"
               :pending-loans="loanWorkspace.pendingLoans"
+              hide-header
               @load-loans="loanWorkspace.loadLoans"
               @open-return-dialog="loanWorkspace.openReturnDialog"
             />

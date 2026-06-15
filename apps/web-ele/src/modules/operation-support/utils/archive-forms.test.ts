@@ -143,6 +143,7 @@ describe('archive form helpers', () => {
         form: archiveForm,
         hasSelectedPosition: true,
         permissionWarning: '',
+        selectedApplicationFormRecordCount: 1,
       }),
     ).toBe('');
 

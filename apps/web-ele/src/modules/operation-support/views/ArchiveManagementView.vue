@@ -7,9 +7,9 @@ import { Fallback, Page } from '@vben/common-ui';
 
 import { ElButton, ElTabPane, ElTabs } from 'element-plus';
 
+import ApplicationFormArchiveDialog from '../components/ApplicationFormArchiveDialog.vue';
 import ArchiveCabinetDialog from '../components/ArchiveCabinetDialog.vue';
 import ArchiveCabinetTreePanel from '../components/ArchiveCabinetTreePanel.vue';
-import ArchivePositionWorkbenchPanel from '../components/ArchivePositionWorkbenchPanel.vue';
 import ArchiveRecordLegacyListPanel from '../components/ArchiveRecordLegacyListPanel.vue';
 import ArchiveSubmissionDialog from '../components/ArchiveSubmissionDialog.vue';
 import BatchArchiveCabinetDialog from '../components/BatchArchiveCabinetDialog.vue';
@@ -31,13 +31,6 @@ const archiveObjectTabs = new Set<ArchiveObjectType>([
   'SLIDE',
   'SPECIMEN',
 ]);
-
-const archiveObjectTabTitles = {
-  APPLICATION_FORM: '申请单归档列表',
-  EMBEDDING_BOX: '蜡块归档列表',
-  SLIDE: '玻片归档列表',
-  SPECIMEN: '标本归档列表',
-} as const;
 
 function isArchiveObjectType(
   objectType: 'CABINET' | ArchiveObjectType,
@@ -68,10 +61,15 @@ watch(
   </div>
 
   <Page v-else :show-header="false">
-    <div class="flex flex-col gap-4">
-      <ElTabs v-model="activeArchiveTab" class="operation-support-tabs">
+    <div class="archive-management-page flex min-h-0 flex-1 flex-col">
+      <ElTabs
+        v-model="activeArchiveTab"
+        class="operation-support-tabs archive-management-tabs flex min-h-0 flex-1 flex-col"
+      >
         <ElTabPane label="申请单归档" name="APPLICATION_FORM">
-          <div class="flex flex-col gap-4">
+          <div
+            class="archive-management-tab-panel flex min-h-0 flex-1 flex-col"
+          >
             <ArchiveRecordLegacyListPanel
               v-model:archive-object-filters="
                 recordWorkspace.objectLists.APPLICATION_FORM.filters
@@ -84,14 +82,17 @@ watch(
               :page="recordWorkspace.objectLists.APPLICATION_FORM.filters.page"
               :record-error="recordWorkspace.objectLists.APPLICATION_FORM.error"
               :records="recordWorkspace.objectLists.APPLICATION_FORM.items"
+              selectable
               :size="recordWorkspace.objectLists.APPLICATION_FORM.filters.size"
-              :title="archiveObjectTabTitles.APPLICATION_FORM"
               :total="recordWorkspace.objectLists.APPLICATION_FORM.total"
               @page-change="
                 (page) =>
                   recordWorkspace.setArchiveObjectPage('APPLICATION_FORM', page)
               "
               @query="recordWorkspace.queryArchiveObjects('APPLICATION_FORM')"
+              @selection-change="
+                recordWorkspace.setSelectedApplicationFormRecords
+              "
               @size-change="
                 (size) =>
                   recordWorkspace.setArchiveObjectSize('APPLICATION_FORM', size)
@@ -99,7 +100,10 @@ watch(
             >
               <template #extra>
                 <ElButton
-                  :disabled="!capabilities.canArchiveApplicationForm"
+                  :disabled="
+                    !capabilities.canArchiveApplicationForm ||
+                    recordWorkspace.selectedApplicationFormRecords.length === 0
+                  "
                   type="primary"
                   @click="
                     archiveWorkspace.openArchiveDialog('APPLICATION_FORM')
@@ -113,7 +117,9 @@ watch(
         </ElTabPane>
 
         <ElTabPane label="蜡块归档" name="EMBEDDING_BOX">
-          <div class="flex flex-col gap-4">
+          <div
+            class="archive-management-tab-panel flex min-h-0 flex-1 flex-col"
+          >
             <ArchiveRecordLegacyListPanel
               v-model:archive-object-filters="
                 recordWorkspace.objectLists.EMBEDDING_BOX.filters
@@ -126,8 +132,8 @@ watch(
               :page="recordWorkspace.objectLists.EMBEDDING_BOX.filters.page"
               :record-error="recordWorkspace.objectLists.EMBEDDING_BOX.error"
               :records="recordWorkspace.objectLists.EMBEDDING_BOX.items"
+              :selectable="false"
               :size="recordWorkspace.objectLists.EMBEDDING_BOX.filters.size"
-              :title="archiveObjectTabTitles.EMBEDDING_BOX"
               :total="recordWorkspace.objectLists.EMBEDDING_BOX.total"
               @page-change="
                 (page) =>
@@ -153,7 +159,9 @@ watch(
         </ElTabPane>
 
         <ElTabPane label="玻片归档" name="SLIDE">
-          <div class="flex flex-col gap-4">
+          <div
+            class="archive-management-tab-panel flex min-h-0 flex-1 flex-col"
+          >
             <ArchiveRecordLegacyListPanel
               v-model:archive-object-filters="
                 recordWorkspace.objectLists.SLIDE.filters
@@ -166,8 +174,8 @@ watch(
               :page="recordWorkspace.objectLists.SLIDE.filters.page"
               :record-error="recordWorkspace.objectLists.SLIDE.error"
               :records="recordWorkspace.objectLists.SLIDE.items"
+              :selectable="false"
               :size="recordWorkspace.objectLists.SLIDE.filters.size"
-              :title="archiveObjectTabTitles.SLIDE"
               :total="recordWorkspace.objectLists.SLIDE.total"
               @page-change="
                 (page) => recordWorkspace.setArchiveObjectPage('SLIDE', page)
@@ -191,7 +199,9 @@ watch(
         </ElTabPane>
 
         <ElTabPane label="标本归档" name="SPECIMEN">
-          <div class="flex flex-col gap-4">
+          <div
+            class="archive-management-tab-panel flex min-h-0 flex-1 flex-col"
+          >
             <ArchiveRecordLegacyListPanel
               v-model:archive-object-filters="
                 recordWorkspace.objectLists.SPECIMEN.filters
@@ -204,8 +214,8 @@ watch(
               :page="recordWorkspace.objectLists.SPECIMEN.filters.page"
               :record-error="recordWorkspace.objectLists.SPECIMEN.error"
               :records="recordWorkspace.objectLists.SPECIMEN.items"
+              :selectable="false"
               :size="recordWorkspace.objectLists.SPECIMEN.filters.size"
-              :title="archiveObjectTabTitles.SPECIMEN"
               :total="recordWorkspace.objectLists.SPECIMEN.total"
               @page-change="
                 (page) => recordWorkspace.setArchiveObjectPage('SPECIMEN', page)
@@ -229,7 +239,9 @@ watch(
         </ElTabPane>
 
         <ElTabPane label="归档柜列表" name="CABINET">
-          <div class="flex flex-col gap-4">
+          <div
+            class="archive-management-tab-panel flex min-h-0 flex-1 flex-col"
+          >
             <ArchiveCabinetTreePanel
               :cabinets="cabinetWorkspace.cabinets"
               :can-create-cabinet="capabilities.canCreateCabinet"
@@ -249,26 +261,6 @@ watch(
               "
               @open-edit-cabinet-dialog="cabinetWorkspace.openEditCabinetDialog"
               @toggle-cabinet-status="cabinetWorkspace.toggleCabinetStatus"
-            />
-
-            <ArchivePositionWorkbenchPanel
-              v-model:cabinet-id="cabinetWorkspace.positionFilters.cabinetId"
-              v-model:cabinet-type="
-                cabinetWorkspace.positionFilters.cabinetType
-              "
-              :cabinets="cabinetWorkspace.cabinets"
-              :can-query-cabinets="capabilities.canQueryCabinets"
-              :get-position-status-tag-type="display.getPositionStatusTagType"
-              :loading="cabinetWorkspace.loading.positions"
-              :position-error="cabinetWorkspace.positionError"
-              :position-rows="cabinetWorkspace.positionRows"
-              :position-summary="cabinetWorkspace.positionSummary"
-              :selected-position="cabinetWorkspace.selectedPosition"
-              :selected-position-code="cabinetWorkspace.selectedPositionCode"
-              :selected-position-label="cabinetWorkspace.selectedPositionLabel"
-              @clear-selected-position="cabinetWorkspace.clearSelectedPosition"
-              @load-positions="cabinetWorkspace.loadPositions"
-              @select-position="cabinetWorkspace.selectPosition"
             />
           </div>
         </ElTabPane>
@@ -303,5 +295,27 @@ watch(
       :submitting="pageState.submitting"
       @submit-archive="archiveWorkspace.submitArchive"
     />
+    <ApplicationFormArchiveDialog
+      v-model="archiveWorkspace.applicationFormDialogVisible"
+      v-model:remarks="archiveWorkspace.archiveForm.remarks"
+      :archive-permission-warning="archiveWorkspace.archivePermissionWarning"
+      :get-archive-status-tag-type="display.getArchiveStatusTagType"
+      :selected-position-label="cabinetWorkspace.selectedPositionLabel"
+      :selected-records="recordWorkspace.selectedApplicationFormRecords"
+      :submitting="pageState.submitting"
+      @submit-archive="archiveWorkspace.submitArchive"
+    />
   </Page>
 </template>
+
+<style scoped>
+:deep(.archive-management-tabs > .el-tabs__content) {
+  flex: 1;
+  min-height: 0;
+}
+
+:deep(.archive-management-tabs > .el-tabs__content > .el-tab-pane) {
+  height: 100%;
+  min-height: 0;
+}
+</style>

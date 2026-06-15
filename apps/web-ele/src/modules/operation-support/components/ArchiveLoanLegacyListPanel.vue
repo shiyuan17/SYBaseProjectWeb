@@ -31,7 +31,6 @@ const props = defineProps<{
   loanError: string;
   materialType?: 'EMBEDDING_BOX' | 'SLIDE';
   pendingLoans: MaterialLoanView[];
-  title: string;
 }>();
 
 const emit = defineEmits<{
@@ -58,7 +57,7 @@ function queryLoans() {
 
 <template>
   <OperationSectionCard
-    :title="title"
+    hide-header
     description="按现有借阅待归还契约展示列表；截图中暂未返回的旧系统字段以 - 占位。"
   >
     <ElAlert

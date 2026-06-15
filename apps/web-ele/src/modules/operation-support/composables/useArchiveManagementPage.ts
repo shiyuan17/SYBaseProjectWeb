@@ -95,6 +95,10 @@ export function useArchiveManagementPage() {
   const recordWorkspaceState = useArchiveRecordWorkspace({ capabilities });
   const archiveWorkspaceState = useArchiveSubmissionWorkspace({
     capabilities,
+    clearSelectedApplicationFormRecords:
+      recordWorkspaceState.clearSelectedApplicationFormRecords,
+    getSelectedApplicationFormRecords:
+      recordWorkspaceState.getSelectedApplicationFormRecords,
     mutationState,
     operatorContext,
     refreshArchiveWorkspace,
