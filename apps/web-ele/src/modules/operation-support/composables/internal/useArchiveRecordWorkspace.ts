@@ -5,7 +5,7 @@ import type {
 } from '../../types/operation-support';
 import type { ArchiveManagementCapabilities } from './archive-management-shared';
 
-import { reactive, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 
 import { listArchiveObjects } from '../../api/operation-support-service';
 import { getOperationSupportPageErrorMessage } from '../../utils/error';
@@ -70,6 +70,10 @@ export function useArchiveRecordWorkspace(
 
   const activeObjectType = ref<ArchiveObjectType>('APPLICATION_FORM');
   const objectLists = reactive(createArchiveObjectLists());
+  const selectedApplicationFormRecords = ref<ArchiveRecordView[]>([]);
+  const selectedApplicationFormRecordIds = computed(() =>
+    selectedApplicationFormRecords.value.map((record) => record.objectId),
+  );
   const requestVersionByType = new Map<ArchiveObjectType, number>();
 
   function getObjectList(objectType: ArchiveObjectType) {
@@ -111,6 +115,15 @@ export function useArchiveRecordWorkspace(
       objectList.filters.size = page.size;
       objectList.total = page.total;
       objectList.loaded = true;
+
+      if (objectType === 'APPLICATION_FORM') {
+        selectedApplicationFormRecords.value =
+          selectedApplicationFormRecords.value.filter((selectedRecord) =>
+            objectList.items.some(
+              (record) => record.objectId === selectedRecord.objectId,
+            ),
+          );
+      }
     } catch (error) {
       if (requestVersionByType.get(objectType) === requestVersion) {
         objectList.error = getOperationSupportPageErrorMessage(error);
@@ -169,14 +182,31 @@ export function useArchiveRecordWorkspace(
     await loadArchiveObjects(activeObjectType.value);
   }
 
+  function setSelectedApplicationFormRecords(records: ArchiveRecordView[]) {
+    selectedApplicationFormRecords.value = [...records];
+  }
+
+  function clearSelectedApplicationFormRecords() {
+    selectedApplicationFormRecords.value = [];
+  }
+
+  function getSelectedApplicationFormRecords() {
+    return [...selectedApplicationFormRecords.value];
+  }
+
   return {
     activeObjectType,
+    clearSelectedApplicationFormRecords,
+    getSelectedApplicationFormRecords,
     loadArchiveObjects,
     objectLists,
     queryArchiveObjects,
     refreshCurrentArchiveObjects,
+    selectedApplicationFormRecordIds,
+    selectedApplicationFormRecords,
     setActiveArchiveObjectType,
     setArchiveObjectPage,
     setArchiveObjectSize,
+    setSelectedApplicationFormRecords,
   };
 }

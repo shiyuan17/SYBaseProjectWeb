@@ -1,7 +1,10 @@
 import type { ComputedRef } from 'vue';
 
 import type { ArchiveObjectType } from '../../types/operation-support';
-import type { ArchiveFormState } from '../../utils/archive-forms';
+import type {
+  ArchiveApplicationFormSelection,
+  ArchiveFormState,
+} from '../../utils/archive-forms';
 import type { PositionWorkbenchRow } from '../../utils/archive-workbench';
 import type {
   ArchiveManagementCapabilities,
@@ -20,7 +23,7 @@ import {
   archiveSpecimen,
 } from '../../api/operation-support-service';
 import {
-  buildArchiveApplicationFormRequest,
+  buildArchiveApplicationFormRequests,
   buildArchiveEmbeddingBoxRequest,
   buildArchiveSlideRequest,
   buildArchiveSpecimenRequest,
@@ -34,6 +37,8 @@ interface UseArchiveSubmissionWorkspaceOptions {
   mutationState: ArchiveMutationState;
   operatorContext: ArchiveOperatorContext;
   refreshArchiveWorkspace: () => Promise<void>;
+  clearSelectedApplicationFormRecords: () => void;
+  getSelectedApplicationFormRecords: () => ArchiveApplicationFormSelection[];
   selectedPosition: ComputedRef<null | PositionWorkbenchRow>;
 }
 
@@ -42,6 +47,8 @@ export function useArchiveSubmissionWorkspace(
 ) {
   const {
     capabilities,
+    clearSelectedApplicationFormRecords,
+    getSelectedApplicationFormRecords,
     mutationState,
     operatorContext,
     refreshArchiveWorkspace,
@@ -51,6 +58,7 @@ export function useArchiveSubmissionWorkspace(
   const archiveForm = reactive<ArchiveFormState>(
     createArchiveFormDefaults(operatorContext.getCurrentOperatorDefaults()),
   );
+  const applicationFormDialogVisible = ref(false);
   const archiveDialogVisible = ref(false);
 
   const archiveSubmitButtonText = computed(() => {
@@ -154,6 +162,10 @@ export function useArchiveSubmissionWorkspace(
       form: archiveForm,
       hasSelectedPosition: Boolean(selectedPosition.value),
       permissionWarning: archivePermissionWarning.value,
+      selectedApplicationFormRecordCount:
+        archiveForm.objectType === 'APPLICATION_FORM'
+          ? getSelectedApplicationFormRecords().length
+          : 0,
     });
     if (validationMessage) {
       ElMessage.warning(validationMessage);
@@ -172,6 +184,16 @@ export function useArchiveSubmissionWorkspace(
   }
 
   function openArchiveDialog(objectType: ArchiveObjectType) {
+    if (objectType === 'APPLICATION_FORM') {
+      if (getSelectedApplicationFormRecords().length === 0) {
+        ElMessage.warning('请先勾选至少一条申请单记录。');
+        return;
+      }
+
+      applicationFormDialogVisible.value = true;
+      return;
+    }
+
     archiveForm.objectType = objectType;
     archiveDialogVisible.value = true;
   }
@@ -185,12 +207,30 @@ export function useArchiveSubmissionWorkspace(
 
     try {
       if (archiveForm.objectType === 'APPLICATION_FORM') {
-        await archiveApplicationForm(
-          buildArchiveApplicationFormRequest(
-            archiveForm,
-            selectedPosition.value.id,
-          ),
+        const selectedApplicationFormRecords =
+          getSelectedApplicationFormRecords();
+        const requests = buildArchiveApplicationFormRequests(
+          selectedApplicationFormRecords,
+          archiveForm,
+          selectedPosition.value.id,
         );
+
+        for (const [index, request] of requests.entries()) {
+          try {
+            await archiveApplicationForm(request);
+          } catch (error) {
+            const record = selectedApplicationFormRecords[index];
+            const recordLabel =
+              record?.pathologyNo?.trim() ||
+              record?.patientName?.trim() ||
+              request.caseId;
+            throw new Error(
+              `申请单 ${recordLabel} 归档失败：${getOperationSupportPageErrorMessage(error)}`,
+              { cause: error },
+            );
+          }
+        }
+
         ElMessage.success('申请单归档已完成。');
       } else if (archiveForm.objectType === 'EMBEDDING_BOX') {
         await archiveEmbeddingBox(
@@ -216,6 +256,8 @@ export function useArchiveSubmissionWorkspace(
 
       resetArchiveForm();
       archiveDialogVisible.value = false;
+      applicationFormDialogVisible.value = false;
+      clearSelectedApplicationFormRecords();
       await refreshArchiveWorkspace();
     } catch (error) {
       ElMessage.error(getOperationSupportPageErrorMessage(error));
@@ -225,6 +267,7 @@ export function useArchiveSubmissionWorkspace(
   }
 
   return {
+    applicationFormDialogVisible,
     archiveDialogVisible,
     archiveForm,
     archivePermissionWarning,

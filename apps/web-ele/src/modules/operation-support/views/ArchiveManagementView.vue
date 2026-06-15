@@ -7,6 +7,7 @@ import { Fallback, Page } from '@vben/common-ui';
 
 import { ElButton, ElTabPane, ElTabs } from 'element-plus';
 
+import ApplicationFormArchiveDialog from '../components/ApplicationFormArchiveDialog.vue';
 import ArchiveCabinetDialog from '../components/ArchiveCabinetDialog.vue';
 import ArchiveCabinetTreePanel from '../components/ArchiveCabinetTreePanel.vue';
 import ArchivePositionWorkbenchPanel from '../components/ArchivePositionWorkbenchPanel.vue';
@@ -84,6 +85,7 @@ watch(
               :page="recordWorkspace.objectLists.APPLICATION_FORM.filters.page"
               :record-error="recordWorkspace.objectLists.APPLICATION_FORM.error"
               :records="recordWorkspace.objectLists.APPLICATION_FORM.items"
+              selectable
               :size="recordWorkspace.objectLists.APPLICATION_FORM.filters.size"
               :title="archiveObjectTabTitles.APPLICATION_FORM"
               :total="recordWorkspace.objectLists.APPLICATION_FORM.total"
@@ -92,6 +94,9 @@ watch(
                   recordWorkspace.setArchiveObjectPage('APPLICATION_FORM', page)
               "
               @query="recordWorkspace.queryArchiveObjects('APPLICATION_FORM')"
+              @selection-change="
+                recordWorkspace.setSelectedApplicationFormRecords
+              "
               @size-change="
                 (size) =>
                   recordWorkspace.setArchiveObjectSize('APPLICATION_FORM', size)
@@ -99,7 +104,10 @@ watch(
             >
               <template #extra>
                 <ElButton
-                  :disabled="!capabilities.canArchiveApplicationForm"
+                  :disabled="
+                    !capabilities.canArchiveApplicationForm ||
+                    recordWorkspace.selectedApplicationFormRecords.length === 0
+                  "
                   type="primary"
                   @click="
                     archiveWorkspace.openArchiveDialog('APPLICATION_FORM')
@@ -126,6 +134,7 @@ watch(
               :page="recordWorkspace.objectLists.EMBEDDING_BOX.filters.page"
               :record-error="recordWorkspace.objectLists.EMBEDDING_BOX.error"
               :records="recordWorkspace.objectLists.EMBEDDING_BOX.items"
+              :selectable="false"
               :size="recordWorkspace.objectLists.EMBEDDING_BOX.filters.size"
               :title="archiveObjectTabTitles.EMBEDDING_BOX"
               :total="recordWorkspace.objectLists.EMBEDDING_BOX.total"
@@ -166,6 +175,7 @@ watch(
               :page="recordWorkspace.objectLists.SLIDE.filters.page"
               :record-error="recordWorkspace.objectLists.SLIDE.error"
               :records="recordWorkspace.objectLists.SLIDE.items"
+              :selectable="false"
               :size="recordWorkspace.objectLists.SLIDE.filters.size"
               :title="archiveObjectTabTitles.SLIDE"
               :total="recordWorkspace.objectLists.SLIDE.total"
@@ -204,6 +214,7 @@ watch(
               :page="recordWorkspace.objectLists.SPECIMEN.filters.page"
               :record-error="recordWorkspace.objectLists.SPECIMEN.error"
               :records="recordWorkspace.objectLists.SPECIMEN.items"
+              :selectable="false"
               :size="recordWorkspace.objectLists.SPECIMEN.filters.size"
               :title="archiveObjectTabTitles.SPECIMEN"
               :total="recordWorkspace.objectLists.SPECIMEN.total"
@@ -300,6 +311,16 @@ watch(
       :archive-submit-button-text="archiveWorkspace.archiveSubmitButtonText"
       :can-submit-archive="archiveWorkspace.canSubmitArchive"
       :selected-position-label="cabinetWorkspace.selectedPositionLabel"
+      :submitting="pageState.submitting"
+      @submit-archive="archiveWorkspace.submitArchive"
+    />
+    <ApplicationFormArchiveDialog
+      v-model="archiveWorkspace.applicationFormDialogVisible"
+      v-model:remarks="archiveWorkspace.archiveForm.remarks"
+      :archive-permission-warning="archiveWorkspace.archivePermissionWarning"
+      :get-archive-status-tag-type="display.getArchiveStatusTagType"
+      :selected-position-label="cabinetWorkspace.selectedPositionLabel"
+      :selected-records="recordWorkspace.selectedApplicationFormRecords"
       :submitting="pageState.submitting"
       @submit-archive="archiveWorkspace.submitArchive"
     />

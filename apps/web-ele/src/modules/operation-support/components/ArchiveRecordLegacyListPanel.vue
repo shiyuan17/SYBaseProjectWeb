@@ -4,6 +4,8 @@ import type {
   ArchiveRecordView,
 } from '../types/operation-support';
 
+import { computed } from 'vue';
+
 import {
   ElAlert,
   ElButton,
@@ -29,7 +31,7 @@ type ArchiveRecordFiltersState = {
   size: number;
 };
 
-defineProps<{
+const props = defineProps<{
   canQueryRecords: boolean;
   getArchiveStatusTagType: (
     status?: null | string,
@@ -42,6 +44,7 @@ defineProps<{
   page: number;
   recordError: string;
   records: ArchiveRecordView[];
+  selectable?: boolean;
   size: number;
   title: string;
   total: number;
@@ -50,6 +53,7 @@ defineProps<{
 const emit = defineEmits<{
   (event: 'pageChange', page: number): void;
   (event: 'query'): void;
+  (event: 'selectionChange', records: ArchiveRecordView[]): void;
   (event: 'sizeChange', size: number): void;
 }>();
 
@@ -63,6 +67,8 @@ const archiveObjectFilters = defineModel<ArchiveRecordFiltersState>(
 function queryRecords() {
   emit('query');
 }
+
+const showSelection = computed(() => props.selectable !== false);
 </script>
 
 <template>
@@ -123,8 +129,11 @@ function queryRecords() {
       :data="records"
       height="520"
       row-key="objectId"
+      @selection-change="
+        (rows: ArchiveRecordView[]) => emit('selectionChange', rows)
+      "
     >
-      <ElTableColumn type="selection" width="34" />
+      <ElTableColumn v-if="showSelection" type="selection" width="34" />
       <ElTableColumn label="序" type="index" width="42" />
       <ElTableColumn label="病理号" min-width="120" prop="pathologyNo" />
       <ElTableColumn label="病人姓名" min-width="110" prop="patientName" />

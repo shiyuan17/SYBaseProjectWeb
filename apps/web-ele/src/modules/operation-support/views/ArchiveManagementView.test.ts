@@ -111,12 +111,18 @@ vi.mock('element-plus', () => {
 
   const ElTable = defineComponent({
     props: ['data'],
-    setup(props, { attrs, slots }) {
+    emits: ['selection-change'],
+    setup(props, { attrs, emit, slots }) {
       return () =>
-        h('div', attrs, [
-          slots.default?.(),
-          h('pre', JSON.stringify(props.data ?? [])),
-        ]);
+        h(
+          'div',
+          {
+            ...attrs,
+            onSelectionChange: (rows: unknown[]) =>
+              emit('selection-change', rows),
+          },
+          [slots.default?.(), h('pre', JSON.stringify(props.data ?? []))],
+        );
     },
   });
 
@@ -207,6 +213,41 @@ vi.mock('../components/ArchiveSubmissionDialog.vue', () => ({
   default: createMarkerComponent('archive-submission-dialog'),
 }));
 
+vi.mock('../components/ApplicationFormArchiveDialog.vue', () => ({
+  default: defineComponent({
+    props: [
+      'modelValue',
+      'selectedRecords',
+      'selectedPositionLabel',
+      'submitting',
+      'archivePermissionWarning',
+    ],
+    emits: ['update:modelValue', 'submitArchive'],
+    setup(props, { emit }) {
+      return () =>
+        (props.modelValue as { value?: boolean })?.value
+          ? h('section', { 'data-testid': 'application-form-archive-dialog' }, [
+              'application-form-archive-dialog',
+              h('div', `selected-position-${props.selectedPositionLabel}`),
+              h(
+                'pre',
+                { 'data-testid': 'application-form-selected-records' },
+                JSON.stringify(props.selectedRecords ?? []),
+              ),
+              h(
+                'button',
+                {
+                  type: 'button',
+                  onClick: () => emit('submitArchive'),
+                },
+                '保存申请单归档',
+              ),
+            ])
+          : null;
+    },
+  }),
+}));
+
 vi.mock('../components/ArchiveRecordQueryPanel.vue', () => ({
   default: createMarkerComponent('archive-record-query-panel'),
 }));
@@ -243,7 +284,9 @@ function createMockPageState() {
       archivePermissionWarning: '',
       archiveSubmitButtonText: '提交申请单归档',
       canSubmitArchive: true,
+      applicationFormDialogVisible: ref(false),
       openArchiveDialog: vi.fn(),
+      openApplicationFormArchiveDialog: vi.fn(),
       archiveDialogVisible: ref(false),
       submitArchive: vi.fn(),
     },
@@ -447,7 +490,23 @@ function createMockPageState() {
           total: 1,
         },
       }),
+      selectedApplicationFormRecords: [
+        {
+          applicationNo: 'APP-001',
+          archiveLocation: 'CAB-01-L1-S1',
+          archiveStatus: 'IN_STORAGE',
+          archivedAt: '2026-06-11 10:00:00',
+          caseId: 'CASE-APP-1',
+          objectCode: 'APP-001',
+          objectId: 'CASE-APP-1',
+          objectType: 'APPLICATION_FORM',
+          pathologyNo: 'BL-2026-001',
+          patientName: '张三',
+          storedByName: '归档员甲',
+        },
+      ],
       queryArchiveObjects,
+      setSelectedApplicationFormRecords: vi.fn(),
       setActiveArchiveObjectType,
       setArchiveObjectPage,
       setArchiveObjectSize,
@@ -500,6 +559,8 @@ describe('ArchiveManagementView', () => {
     const state = createMockPageState();
     mockUseArchiveManagementPage.mockReturnValue(state);
 
+    state.archiveWorkspace.applicationFormDialogVisible.value = false;
+
     const { app, root } = mountView();
 
     expect(document.body.textContent).toContain('申请单归档');
@@ -529,6 +590,7 @@ describe('ArchiveManagementView', () => {
     expect(document.body.textContent).not.toContain('标本柜');
     expect(document.body.textContent).not.toContain('archive-submission-panel');
     expect(document.body.textContent).toContain('archive-submission-dialog');
+    expect(document.body.textContent).not.toContain('保存申请单归档');
     expect(document.body.textContent).toContain('归档操作');
     expect(document.body.textContent).toContain('申请医生');
     expect(document.body.textContent).toContain('申请时间');
@@ -583,6 +645,83 @@ describe('ArchiveManagementView', () => {
     expect(
       state.cabinetWorkspace.openBatchCreateCabinetDialog,
     ).toHaveBeenCalledTimes(1);
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('disables application-form archive action without selected records and renders dedicated dialog data when visible', async () => {
+    const state = createMockPageState();
+    state.recordWorkspace.selectedApplicationFormRecords = [];
+    state.archiveWorkspace.applicationFormDialogVisible.value = false;
+    mockUseArchiveManagementPage.mockReturnValue(state);
+
+    const { app, root } = mountView();
+
+    const archiveButton = [...document.querySelectorAll('button')].find(
+      (button) => button.textContent?.trim() === '归档操作',
+    ) as HTMLButtonElement | undefined;
+
+    expect(archiveButton).toBeTruthy();
+    expect(archiveButton?.disabled).toBe(true);
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('shows dedicated application-form archive dialog with externally selected records', async () => {
+    const state = createMockPageState();
+    state.recordWorkspace.selectedApplicationFormRecords = [
+      {
+        applicationNo: 'APP-001',
+        archiveLocation: 'CAB-01-L1-S1',
+        archiveStatus: 'IN_STORAGE',
+        archivedAt: '2026-06-11 10:00:00',
+        caseId: 'CASE-APP-1',
+        objectCode: 'APP-001',
+        objectId: 'CASE-APP-1',
+        objectType: 'APPLICATION_FORM',
+        pathologyNo: 'BL-2026-001',
+        patientName: '张三',
+        storedByName: '归档员甲',
+      },
+      {
+        applicationNo: 'APP-002',
+        archiveLocation: '',
+        archiveStatus: 'NOT_ARCHIVED',
+        archivedAt: '',
+        caseId: 'CASE-APP-2',
+        objectCode: 'APP-002',
+        objectId: 'CASE-APP-2',
+        objectType: 'APPLICATION_FORM',
+        pathologyNo: 'BL-2026-002',
+        patientName: '李四',
+        storedByName: '',
+      },
+    ];
+    state.archiveWorkspace.applicationFormDialogVisible.value = true;
+    mockUseArchiveManagementPage.mockReturnValue(state);
+
+    const { app, root } = mountView();
+
+    expect(document.body.textContent).toContain(
+      'application-form-archive-dialog',
+    );
+    expect(document.body.textContent).toContain('selected-position-未选择柜位');
+    expect(document.body.textContent).toContain('BL-2026-001');
+    expect(document.body.textContent).toContain('BL-2026-002');
+
+    const archiveButton = [...document.querySelectorAll('button')].find(
+      (button) => button.textContent?.trim() === '归档操作',
+    ) as HTMLButtonElement | undefined;
+    expect(archiveButton?.disabled).toBe(false);
+
+    const saveButton = [...document.querySelectorAll('button')].find(
+      (button) => button.textContent?.trim() === '保存申请单归档',
+    );
+    saveButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(state.archiveWorkspace.submitArchive).toHaveBeenCalledTimes(1);
 
     app.unmount();
     root.remove();
