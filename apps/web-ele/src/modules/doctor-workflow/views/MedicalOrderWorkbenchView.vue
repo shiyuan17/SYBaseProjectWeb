@@ -87,6 +87,25 @@ function canCancelOrder(row: PendingMedicalOrderItem) {
   return canCancel.value && row.status === 'PENDING';
 }
 
+function formatBillingStatus(value?: null | string) {
+  const labels: Record<string, string> = {
+    BILLED: '已计费',
+    CHARGED: '已收费',
+    PAID: '已收费',
+    PENDING: '待收费',
+    REFUNDED: '已退费',
+    SETTLED: '已收费',
+    SUCCESS: '已收费',
+    UNBILLED: '未收费',
+    UNCHARGED: '未收费',
+  };
+  const normalizedValue = value?.trim().toUpperCase();
+  if (!normalizedValue) {
+    return formatNullable(value);
+  }
+  return labels[normalizedValue] ?? formatNullable(value);
+}
+
 async function loadOrders() {
   loading.value = true;
   pageError.value = '';
@@ -186,25 +205,6 @@ void loadOrders();
         </ElForm>
       </WorkflowSectionCard>
 
-      <WorkflowSectionCard title="执行操作">
-        <ElForm inline label-width="80px">
-          <ElFormItem label="终端">
-            <ElInput
-              v-model="actionForm.terminalCode"
-              placeholder="终端编码"
-              style="width: 180px"
-            />
-          </ElFormItem>
-          <ElFormItem label="备注">
-            <ElInput
-              v-model="actionForm.remarks"
-              placeholder="备注"
-              style="width: 260px"
-            />
-          </ElFormItem>
-        </ElForm>
-      </WorkflowSectionCard>
-
       <ElEmpty
         v-if="!loading && !pageError && orders.length === 0"
         description="暂无医嘱数据"
@@ -213,7 +213,6 @@ void loadOrders();
       <WorkflowSectionCard title="医嘱列表">
         <ElEmpty v-if="false" :description="pageError" />
         <ElTable v-else v-loading="loading" :data="orders" border>
-          <ElTableColumn label="医嘱号" min-width="150" prop="orderNumber" />
           <ElTableColumn label="病理号" min-width="140" prop="pathologyNo" />
           <ElTableColumn label="患者" min-width="120" prop="patientName" />
           <ElTableColumn label="类型" min-width="130">
@@ -229,7 +228,7 @@ void loadOrders();
           </ElTableColumn>
           <ElTableColumn label="收费状态" min-width="120">
             <template #default="{ row }">
-              {{ formatNullable(row.billingStatus) }}
+              {{ formatBillingStatus(row.billingStatus) }}
             </template>
           </ElTableColumn>
           <ElTableColumn label="开单医生" min-width="140">

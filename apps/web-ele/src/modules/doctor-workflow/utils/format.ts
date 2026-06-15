@@ -55,13 +55,17 @@ const MEDICAL_ORDER_STATUS_LABELS: Record<string, string> = {
   ACCEPTED: '已接收',
   CANCELLED: '已取消',
   COMPLETED: '已完成',
+  FAILED: '执行失败',
+  IN_PROGRESS: '执行中',
   PENDING: '待处理',
+  PROCESSING: '处理中',
 };
 
 const MEDICAL_ORDER_TYPE_LABELS: Record<string, string> = {
   IMMUNOHISTOCHEMISTRY: '免疫组化',
   OTHER: '其他',
   RE_STAIN: '重染',
+  ROUTINE: '常规',
   SPECIAL_STAIN: '特殊染色',
 };
 

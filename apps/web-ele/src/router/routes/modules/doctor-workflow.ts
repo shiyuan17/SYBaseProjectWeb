@@ -8,6 +8,7 @@ import {
   M4_REVISION_PAGE_AUTHORITIES,
 } from '#/modules/doctor-workflow/constants';
 import { applyKeepAliveToTabRoutes } from '#/router/routes/keep-alive';
+import { withRouteComponentReloadRetry } from '#/router/routes/lazy-load';
 
 const DOCTOR_WORKFLOW_AUTHORITIES = [
   M4_PERMISSION_CODES.DIAG_TASK_QUERY,
@@ -70,8 +71,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/doctor-workflow/assignment',
       },
       {
-        component: () =>
-          import('#/modules/doctor-workflow/views/DiagnosisWorkbenchView.vue'),
+        component: withRouteComponentReloadRetry(
+          () =>
+            import('#/modules/doctor-workflow/views/DiagnosisWorkbenchView.vue'),
+          'DiagnosisWorkbench',
+        ),
         meta: {
           authority: [M4_PERMISSION_CODES.WORKBENCH_QUERY],
           icon: 'carbon:workspace',

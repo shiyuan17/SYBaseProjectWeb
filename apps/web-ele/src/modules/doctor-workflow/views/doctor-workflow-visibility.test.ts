@@ -943,6 +943,44 @@ describe('doctor workflow view visibility', () => {
     wrapper.unmount();
   });
 
+  it('renders medical order workstation list with localized display columns', async () => {
+    mockAccessStore.accessCodes = [M4_PERMISSION_CODES.MEDICAL_ORDER_QUERY];
+    listPendingMedicalOrdersMock.mockResolvedValue({
+      ...pendingMedicalOrderPageFixture,
+      items: [
+        {
+          ...pendingMedicalOrderPageFixture.items[0]!,
+          billingStatus: 'SUCCESS',
+          orderType: 'ROUTINE',
+          status: 'IN_PROGRESS',
+        },
+      ],
+      total: 1,
+    });
+
+    const wrapper = await mountView(MedicalOrderWorkbenchView);
+
+    expect(listPendingMedicalOrdersMock).toHaveBeenCalledWith({
+      page: 1,
+      pathologyNo: undefined,
+      size: 50,
+      status: undefined,
+    });
+    expect(wrapper.text()).not.toContain('执行操作');
+    expect(wrapper.text()).not.toContain('医嘱号');
+    expect(wrapper.text()).not.toContain('MO-001');
+    expect(wrapper.text()).toContain('类型');
+    expect(wrapper.text()).toContain('状态');
+    expect(wrapper.text()).toContain('收费状态');
+    expect(wrapper.text()).toContain('常规');
+    expect(wrapper.text()).toContain('执行中');
+    expect(wrapper.text()).toContain('已收费');
+    expect(wrapper.text()).not.toContain('ROUTINE');
+    expect(wrapper.text()).not.toContain('IN_PROGRESS');
+    expect(wrapper.text()).not.toContain('SUCCESS');
+    wrapper.unmount();
+  });
+
   it('completes accepted medical order in medical order workstation', async () => {
     mockAccessStore.accessCodes = [
       M4_PERMISSION_CODES.MEDICAL_ORDER_QUERY,
