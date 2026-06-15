@@ -2,17 +2,17 @@ import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const requiredSections = [
-  'Summary',
-  'Dynamic Workflow',
-  'Dynamic Tests',
-  'Memory Update Packet',
-];
+const coreRequiredSections = ['Summary', 'Dynamic Workflow'];
 
-const requiredFields = [
+const coreRequiredFields = [
   ['Summary', 'Validation'],
   ['Summary', 'Risks'],
   ['Dynamic Workflow', 'Primary Workflow'],
+];
+
+const fullRequiredSections = ['Dynamic Tests', 'Memory Update Packet'];
+
+const fullRequiredFields = [
   ['Dynamic Tests', 'Actual results'],
   ['Memory Update Packet', 'Updated memory files'],
   ['Memory Update Packet', 'Not updated memory files and reasons'],
@@ -60,6 +60,30 @@ function hasSubstantiveValue(value) {
   );
 }
 
+function hasSubstantiveMemoryJudgment(sectionBody) {
+  if (sectionBody === null) {
+    return false;
+  }
+
+  const memoryField =
+    extractField(sectionBody, 'Memory') ??
+    extractField(sectionBody, 'Judgment') ??
+    extractField(sectionBody, 'Memory judgment');
+  if (hasSubstantiveValue(memoryField)) {
+    return true;
+  }
+
+  const updatedMemoryFiles = extractField(sectionBody, 'Updated memory files');
+  const notUpdatedMemoryFiles = extractField(
+    sectionBody,
+    'Not updated memory files and reasons',
+  );
+  return (
+    hasSubstantiveValue(updatedMemoryFiles) ||
+    hasSubstantiveValue(notUpdatedMemoryFiles)
+  );
+}
+
 function readPullRequestBodyFromEvent(eventPath) {
   const event = JSON.parse(readFileSync(eventPath, 'utf8'));
   return event.pull_request?.body ?? '';
@@ -101,9 +125,7 @@ function resolvePacketTier(body) {
     const fullReasons = [];
 
     if (
-      ['db', 'security', 'production debug'].includes(
-        normalizedPrimaryWorkflow,
-      )
+      ['db', 'production debug', 'security'].includes(normalizedPrimaryWorkflow)
     ) {
       fullReasons.push(`primary workflow ${primaryWorkflow.trim()}`);
     }
@@ -183,7 +205,7 @@ function collectFullEvidenceRequirements(body) {
   }
 
   if (
-    ['security', 'db', 'production debug'].includes(primaryWorkflow) ||
+    ['db', 'production debug', 'security'].includes(primaryWorkflow) ||
     hasModifier(requiredModifiers, 'Red Team') ||
     hasSubstantiveValue(redZoneConfirmation)
   ) {
@@ -207,20 +229,13 @@ export function validatePullRequestPacket(body = '') {
     );
   }
 
-  const effectiveRequiredSections = isFastPath
-    ? requiredSections.filter((section) => section !== 'Dynamic Tests')
-    : requiredSections;
-  const effectiveRequiredFields = isFastPath
-    ? requiredFields.filter(([sectionName]) => sectionName !== 'Dynamic Tests')
-    : requiredFields;
-
-  for (const sectionName of effectiveRequiredSections) {
+  for (const sectionName of coreRequiredSections) {
     if (extractSection(body, sectionName) === null) {
       errors.push(`Missing section: ${sectionName}`);
     }
   }
 
-  for (const [sectionName, fieldName] of effectiveRequiredFields) {
+  for (const [sectionName, fieldName] of coreRequiredFields) {
     const sectionBody = extractSection(body, sectionName);
     if (sectionBody === null) {
       continue;
@@ -234,6 +249,40 @@ export function validatePullRequestPacket(body = '') {
 
     if (fieldValue.length === 0) {
       errors.push(`Empty field: ${sectionName} > ${fieldName}`);
+    }
+  }
+
+  if (isFull) {
+    for (const sectionName of fullRequiredSections) {
+      if (extractSection(body, sectionName) === null) {
+        errors.push(`Missing section: ${sectionName}`);
+      }
+    }
+
+    for (const [sectionName, fieldName] of fullRequiredFields) {
+      const sectionBody = extractSection(body, sectionName);
+      if (sectionBody === null) {
+        continue;
+      }
+
+      const fieldValue = extractField(sectionBody, fieldName);
+      if (fieldValue === null) {
+        errors.push(`Missing field: ${sectionName} > ${fieldName}`);
+        continue;
+      }
+
+      if (fieldValue.length === 0) {
+        errors.push(`Empty field: ${sectionName} > ${fieldName}`);
+      }
+    }
+  } else {
+    const memoryUpdateBody = extractSection(body, 'Memory Update Packet');
+    if (!hasSubstantiveMemoryJudgment(memoryUpdateBody)) {
+      errors.push(
+        isFastPath
+          ? 'Fast path requires one-line memory judgment in Memory Update Packet'
+          : 'Lightweight packet requires memory judgment in Memory Update Packet',
+      );
     }
   }
 
@@ -261,9 +310,7 @@ export function validatePullRequestPacket(body = '') {
         : extractField(redTeamBody, 'Checker / reviewer source');
     const checklistMarked =
       redTeamBody !== null &&
-      redTeamBody
-        .split(/\r?\n/)
-        .some((line) => /^\s*-\s*\[[xX]\]/.test(line));
+      redTeamBody.split(/\r?\n/).some((line) => /^\s*-\s*\[[xX]\]/.test(line));
 
     const redTeamDeclared =
       /\bred team\b/i.test(requiredModifiers) ||

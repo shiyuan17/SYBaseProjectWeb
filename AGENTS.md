@@ -23,7 +23,7 @@
 | 端到端测试                                           | `pnpm test:e2e`   |
 | 构建                                                 | `pnpm build`      |
 
-> 改动逻辑或组件时，交付前至少运行 `pnpm lint` + `pnpm check:type` + 相关 `pnpm test:unit`，并在交付说明中回填结论。涉及规范、记忆文件或治理脚本改动时，额外运行 `pnpm run check:governance`。
+> 改动逻辑或组件时，交付前按影响面运行最小有效验证：优先选择相关 `pnpm test:unit`、`pnpm check:type`、`pnpm lint` 的必要组合，并在交付说明中回填真实结论。涉及规范、记忆文件或治理脚本改动时，额外运行 `pnpm run check:governance`。
 
 ## 一页式执行入口
 
@@ -31,14 +31,14 @@
 
 | 档位 | 适用场景 | 最低输出 | 最低验证 | 升级条件 |
 | --- | --- | --- | --- | --- |
-| Fast Path | 纯文档、规范审计、只读分析，不改运行时行为，不触发红区 | 精简任务确认；交付中说明 Workflow 不适用原因、验证结果、Memory 判定 | 文档 / 治理类任务至少 `pnpm run check:governance`；只读分析写明核对来源 | 需要改代码、接口、路由、权限、构建、CI、hook、发布或出现业务规则歧义 |
-| Lightweight | 低风险实现类任务，命中 UI / API / Architecture / Workflow-Infra 但未触发强制修饰器，不涉及跨层或红区 | 完整任务确认；轻量 Workflow Packet（主 Workflow、触发信号、实际验证、Memory 判定、剩余风险） | 以 `docs/rules/CODING_RULES.md` 标准验证命令选择最小有效集 | 触发 Security / DB / Red Team / Backend Cross-check / Browser 验证，或影响共享契约、路由守卫、请求全局层、构建发布 |
+| Fast Path | 纯文档、规范审计、只读分析、测试-only、低风险静态文案，不改运行时行为，不触发红区 | 精简任务确认；交付中说明 Workflow 不适用原因、验证结果、Memory 一句话判定 | 文档 / 治理类任务至少 `pnpm run check:governance`；只读分析写明核对来源；测试-only 跑对应测试 | 需要改接口、路由、权限、构建、CI、hook、发布或出现业务规则歧义 |
+| Lightweight | 低风险实现类任务，命中 UI / API / Architecture / Workflow-Infra 但未触发强制修饰器，不涉及跨层或红区 | 完整任务确认；轻量 Workflow Packet（主 Workflow、触发信号、实际验证、Memory 判定、剩余风险）；动态测试可并入验证结果 | 以 `docs/rules/CODING_RULES.md` 标准验证命令选择最小有效集 | 触发 Security / DB / Red Team / Backend Cross-check / Browser 验证，或影响共享契约、路由守卫、请求全局层、构建发布 |
 | Full | 中高风险、跨层、权限 / 数据 / 报告、生产问题、构建发布、红区、跨仓联动 | 完整任务确认；完整 Workflow Packet；必要时 Loop Packet、Red Team、Checker 与红区确认记录 | 按 `docs/rules/DYNAMIC_WORKFLOW_RULES.md` 对应 Workflow 执行动态测试 / 模拟 / 安全或数据库证据 | 扩大到新的红区范围、验证失败无法自行修复、跨仓证据缺失或业务规则无法确定 |
 
 ### 常见任务快速选择
 
 - 只读规范审计、差距分析、交付报告：通常走 Fast Path，主 Workflow 标注「不适用（只读 / 纯文档，不改运行时行为）」，写清核对来源与 `check:governance` 结果。
-- 模块内低风险 UI 文案、展示标签或局部非敏感说明调整：通常走 Lightweight，按核心改动选 UI，若不涉及布局、视口、交互或浏览器兼容，可说明未触发 Browser 验证。
+- 模块内低风险 UI 文案、展示标签、测试-only 或局部非布局样式微调：通常走 Fast Path 或 Lightweight；若不涉及布局、视口、交互、权限可见性或浏览器兼容，可说明未触发 Browser 验证。
 - 权限、接口契约、患者 / 报告数据、导出打印、构建发布、CI / hook、跨仓或生产问题：直接走 Full，从严叠加 Security / DB / Red Team / Backend Cross-check / Browser 验证等修饰器，并按红区规则确认。
 
 ### 规范单一来源矩阵
@@ -223,7 +223,7 @@
 
 执行后验证是强制回路，不得只声称完成：
 
-- 凡涉及逻辑、组件、接口或构建的改动，交付前必须**实际运行**相关验证命令（见「快速命令」与 `CODING_RULES.md` 标准验证命令），并在「验证结果」中粘贴真实结论
+- 凡涉及逻辑、组件、接口或构建的改动，交付前必须**实际运行**最小有效验证命令（见「快速命令」与 `CODING_RULES.md` 标准验证命令），并在「验证结果」中粘贴真实结论；CI 仍作为全量兜底，不要求低风险本地重复 CI 的完整命令集
 - 验证失败时必须先修复再重新验证，形成「执行 → 验证 → 修复」闭环，未通过不得宣称完成
 - 确实未运行某项验证时，必须在「验证结果」中显式标注为"未验证"并说明原因，不得默认略过
 - 禁止以"本地能跑""应该没问题"等推测替代实际验证
@@ -253,7 +253,7 @@
 - `docs/memory/DECISIONS.md`：决策日志，记录日期、上下文、选项、决策、理由、影响、回看条件
 - `docs/memory/ARCHITECTURE.md`：稳定架构快照，记录模块边界、核心依赖、跨仓接口、当前约束和禁止事项
 
-交付前 AI 必须检查本次任务是否产生以下变化，并按需更新对应记忆文件：
+交付前 AI 必须判断本次任务是否产生以下变化，并按需更新对应记忆文件；低风险 Fast Path / Lightweight 若未产生持久上下文，可统一写为“no durable context change”，无需逐文件展开：
 
 - 项目阶段、活跃任务、验证基线或交接重点变化：更新 `docs/memory/PROJECT_STATE.md`
 - 发现或解决持久技术债：追加或更新 `docs/memory/TECH_DEBT.md`

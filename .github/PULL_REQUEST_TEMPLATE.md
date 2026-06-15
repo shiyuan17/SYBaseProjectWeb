@@ -1,5 +1,13 @@
 # PR Workflow Packet
 
+Choose the smallest packet tier that matches the change. Workflow selection, required modifiers, Red Team obligations, and packet tiers use `AGENTS.md` plus `docs/rules/DYNAMIC_WORKFLOW_RULES.md` as the source of truth.
+
+Packet tier:
+
+- Fast Path: pure docs, audit, read-only analysis, test-only, or low-risk static wording with no runtime behavior change.
+- Lightweight: low-risk implementation with no forced Security / DB / Red Team / Backend Cross-check / Browser Verification modifier.
+- Full: required for Security / DB / Production Debug, Red Team / Backend Cross-check / Browser Verification, red-zone, cross-layer, permissions/data/report, build/release, or production issues.
+
 ## Summary
 
 - Purpose:
@@ -9,20 +17,31 @@
 
 ## Dynamic Workflow
 
-Choose one primary Workflow and add required modifiers. Workflow selection, required modifiers, Red Team obligations, and packet tiers use `AGENTS.md` plus `docs/rules/DYNAMIC_WORKFLOW_RULES.md` as the single source of truth.
-
-Packet tier:
-
-- Fast Path: low-risk pure docs / audit / read-only tasks set `Primary Workflow: Not applicable (<reason>)`; Dynamic Tests / Simulation / Security / Database / Red Team / Loop / Cross-Repo blocks may be omitted when `Summary > Validation` records the actual check.
-- Lightweight: low-risk implementation tasks with no forced modifiers keep Summary, Dynamic Workflow, Dynamic Tests, and Memory Update Packet; mark non-triggered Simulation / Security / Database / Red Team / Loop / Cross-Repo blocks as omitted or not applicable.
-- Full: required for Security / DB / Production Debug, Red Team / Backend Cross-check / Browser Verification, red-zone, cross-layer, permissions/data/report, build/release, or production issues.
-
-- Primary Workflow: `UI / API / DB / Security / Architecture / Production Debug / Workflow-Infra`
+- Primary Workflow: `Not applicable (<reason>) / UI / API / DB / Security / Architecture / Production Debug / Workflow-Infra`
 - Trigger signals:
-- Expert Agent(s):
-- Sub-agent collaboration: `Not used / <subtasks + source + how main agent handled results>`
-- Required modifiers: `Security / DB / Red Team / Backend Cross-check / Browser Verification`
+- Required modifiers: `None / Security / DB / Red Team / Backend Cross-check / Browser Verification`
 - Red-zone confirmation: `Not triggered / <source + approved scope + rollback or verification note>`
+
+## Memory Update Packet
+
+- Memory: `no durable context change / <updated files + memory IDs + cross-repo references>`
+
+---
+
+## Lightweight Details
+
+Use only for low-risk implementation tasks when the Summary validation line is not enough to understand the evidence.
+
+- Dynamic tests:
+- Unverified items and reasons:
+- Expert Agent(s): `Not used / <role>`
+- Sub-agent collaboration: `Not used / <subtasks + source + how main agent handled results>`
+
+---
+
+## Full Packet Evidence
+
+Use the blocks below only when the packet tier is Full or when a reviewer asks for extra evidence.
 
 ## Loop Packet
 
@@ -76,9 +95,7 @@ Use this only when the task was actually run as a loop. `docs/rules/LOOP_ENGINEE
 - Backend evidence:
 - Linked PR/MR:
 
-## Memory Update Packet
-
-Required before merge. Update memory files only when the task changes durable context; list skipped files with reasons.
+## Full Memory Details
 
 - Updated memory files:
 - Not updated memory files and reasons:

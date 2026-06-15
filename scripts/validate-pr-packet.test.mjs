@@ -74,11 +74,7 @@ const validDocsOnlyBody = `
 
 ## Memory Update Packet
 
-- Updated memory files: DECISIONS.md
-- Not updated memory files and reasons: TECH_DEBT.md, KNOWN_BUGS.md, ARCHITECTURE.md unchanged; no durable context change beyond governance decision.
-- Related memory IDs: DEC-20260612-008
-- Cross-repo memory references: N/A
-- Residual risk / follow-up owner: Maintainers monitor future governance drift.
+- Memory: DECISIONS.md updated for governance decision DEC-20260612-008.
 `;
 
 const validLightweightBody = `
@@ -107,11 +103,7 @@ const validLightweightBody = `
 
 ## Memory Update Packet
 
-- Updated memory files: None
-- Not updated memory files and reasons: No durable context change.
-- Related memory IDs: N/A
-- Cross-repo memory references: N/A
-- Residual risk / follow-up owner: None
+- Memory: no durable context change.
 `;
 
 const validFullSecurityBody = `
@@ -254,6 +246,18 @@ describe('validatePullRequestPacket', () => {
     expect(result.errors).toEqual([]);
   });
 
+  it('allows lightweight PR bodies to omit the Dynamic Tests section when validation summarizes the evidence', () => {
+    const result = validatePullRequestPacket(
+      validLightweightBody.replace(
+        /## Dynamic Tests[\s\S]*?## Memory Update Packet/,
+        '## Memory Update Packet',
+      ),
+    );
+
+    expect(result.isValid).toBe(true);
+    expect(result.errors).toEqual([]);
+  });
+
   it('rejects fast-path PR bodies that give no reason for not applicable', () => {
     const result = validatePullRequestPacket(
       validDocsOnlyBody.replace(
@@ -268,7 +272,7 @@ describe('validatePullRequestPacket', () => {
     );
   });
 
-  it('still requires the Dynamic Tests section for implementation workflows', () => {
+  it('still requires the Dynamic Tests section for full implementation workflows', () => {
     const result = validatePullRequestPacket(
       validBody.replace(/## Dynamic Tests[\s\S]*?## Red Team/, '## Red Team'),
     );
@@ -291,10 +295,27 @@ describe('validatePullRequestPacket', () => {
     );
   });
 
+  it('rejects fast-path PR bodies with no memory judgment', () => {
+    const result = validatePullRequestPacket(
+      validDocsOnlyBody.replace(
+        '- Memory: DECISIONS.md updated for governance decision DEC-20260612-008.',
+        '- Memory:',
+      ),
+    );
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContain(
+      'Fast path requires one-line memory judgment in Memory Update Packet',
+    );
+  });
+
   it('rejects browser-verification packets that omit simulation evidence', () => {
     const result = validatePullRequestPacket(
       validLightweightBody
-        .replace('- Required modifiers: N/A', '- Required modifiers: Browser Verification')
+        .replace(
+          '- Required modifiers: N/A',
+          '- Required modifiers: Browser Verification',
+        )
         .replace(
           '- Validation: pnpm test:unit -- StatusLabel passed.',
           '- Validation: pnpm test:unit -- StatusLabel passed; browser check recorded.',

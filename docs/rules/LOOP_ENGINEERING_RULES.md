@@ -10,11 +10,13 @@
 
 边界收口：
 
-- 是否需要 Loop Packet，由任务执行方式决定；不是所有低风险任务都必须为了形式合规补完整 Loop Packet
+- 是否需要 Loop Packet，由任务执行方式决定；普通一次性任务默认不启用 Loop Packet，低风险任务不得为了形式合规补 Loop
 - Worktree / Linear / 脏工作区隔离规则不在本文件定义，统一引用 `docs/rules/GIT_RULES.md` 第 6 节
 - 五类 Memory 文件职责与通用触发条件不在本文件定义，统一引用 `AGENTS.md` 第 8 节
 
 ## Loop Packet
+
+Loop 是显式 opt-in：只有长期、多轮、生产故障、复杂并行、定期 Triage、maker/checker 闭环或用户明确要求以 loop 方式执行时，才填写本节。普通 Fast Path / Lightweight 任务只按 `AGENTS.md` 和 `DYNAMIC_WORKFLOW_RULES.md` 交付即可。
 
 每个进入 loop 的任务都必须明确以下字段，并映射到已有 Workflow Packet：
 
