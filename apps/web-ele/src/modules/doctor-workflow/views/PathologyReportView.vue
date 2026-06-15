@@ -345,7 +345,9 @@ function searchReportContext() {
     path: '/doctor-workflow/report',
     query: {
       caseId: normalizedCaseId || undefined,
-      pathologyNo: normalizedCaseId ? normalizedPathologyNo || undefined : normalizedPathologyNo,
+      pathologyNo: normalizedCaseId
+        ? normalizedPathologyNo || undefined
+        : normalizedPathologyNo,
       reportId: normalizedReportId || undefined,
     },
   });

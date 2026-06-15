@@ -167,7 +167,8 @@ function goToReport() {
     query: {
       caseId: tracking.value.caseSummary.caseId,
       pathologyNo: tracking.value.caseSummary.pathologyNo ?? undefined,
-      reportId: tracking.value.reportLifecycle.currentReport?.reportId ?? undefined,
+      reportId:
+        tracking.value.reportLifecycle.currentReport?.reportId ?? undefined,
     },
   });
 }
@@ -191,6 +192,9 @@ function nodeTagType(status?: null | string) {
     case 'IN_PROGRESS': {
       return 'warning';
     }
+    case 'CANCELLED': {
+      return 'danger';
+    }
     case 'COMPLETED':
     case 'IN_STORAGE':
     case 'PRINTED':
@@ -201,9 +205,6 @@ function nodeTagType(status?: null | string) {
     case 'SIGNED':
     case 'SUBMITTED': {
       return 'success';
-    }
-    case 'CANCELLED': {
-      return 'danger';
     }
     default: {
       return 'info';
@@ -281,7 +282,10 @@ watch(
         </ElForm>
       </WorkflowSectionCard>
 
-      <WorkflowSectionCard title="病例摘要" description="当前病例、患者、申请单与归档总览。">
+      <WorkflowSectionCard
+        title="病例摘要"
+        description="当前病例、患者、申请单与归档总览。"
+      >
         <template v-if="tracking" #extra>
           <div class="flex flex-wrap gap-2">
             <ElButton
@@ -291,11 +295,7 @@ watch(
             >
               进入诊断工作台
             </ElButton>
-            <ElButton
-              v-if="canOpenReport"
-              type="success"
-              @click="goToReport"
-            >
+            <ElButton v-if="canOpenReport" type="success" @click="goToReport">
               进入报告
             </ElButton>
             <ElButton
@@ -330,7 +330,9 @@ watch(
               {{ formatNullable(tracking.caseSummary.patientName) }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="性别 / 年龄">
-              {{ `${formatNullable(tracking.caseSummary.patientGender)} / ${formatNullable(tracking.caseSummary.patientAge)}` }}
+              {{
+                `${formatNullable(tracking.caseSummary.patientGender)} / ${formatNullable(tracking.caseSummary.patientAge)}`
+              }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="申请类型">
               {{ formatApplicationType(tracking.caseSummary.applicationType) }}
@@ -339,7 +341,9 @@ watch(
               {{ formatNullable(tracking.caseSummary.caseStatus) }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="送检科室">
-              {{ formatNullable(tracking.caseSummary.submittingDepartmentName) }}
+              {{
+                formatNullable(tracking.caseSummary.submittingDepartmentName)
+              }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="送检医生">
               {{ formatNullable(tracking.caseSummary.submittingDoctorName) }}
@@ -348,7 +352,11 @@ watch(
               {{ formatDateTime(tracking.caseSummary.applicationDate) }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="待修订">
-              <ElTag :type="tracking.caseSummary.hasPendingRevision ? 'warning' : 'info'">
+              <ElTag
+                :type="
+                  tracking.caseSummary.hasPendingRevision ? 'warning' : 'info'
+                "
+              >
                 {{ tracking.caseSummary.hasPendingRevision ? '是' : '否' }}
               </ElTag>
             </ElDescriptionsItem>
@@ -359,7 +367,9 @@ watch(
               {{ formatNullable(tracking.applicationForm?.archiveLocation) }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="申请医生">
-              {{ formatNullable(tracking.applicationForm?.applicantDoctorName) }}
+              {{
+                formatNullable(tracking.applicationForm?.applicantDoctorName)
+              }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="申请备注" :span="2">
               {{ formatNullable(tracking.applicationForm?.remarks) }}
@@ -399,7 +409,8 @@ watch(
                       {{ formatNullable(node.title) }}
                     </div>
                     <div class="mt-1 text-xs text-muted-foreground">
-                      {{ formatDateTime(node.occurredAt) }} / {{ formatNullable(node.operatorName) }}
+                      {{ formatDateTime(node.occurredAt) }} /
+                      {{ formatNullable(node.operatorName) }}
                     </div>
                   </div>
                   <ElTag :type="nodeTagType(node.status)">
@@ -446,11 +457,16 @@ watch(
             :name="specimen.specimenId"
           >
             <template #title>
-              <div class="flex min-w-0 flex-1 flex-wrap items-center gap-2 pr-4">
+              <div
+                class="flex min-w-0 flex-1 flex-wrap items-center gap-2 pr-4"
+              >
                 <span class="font-medium text-foreground">
                   {{ specimenCollapseTitle(specimen) }}
                 </span>
-                <ElTag size="small" :type="nodeTagType(specimen.specimenStatus)">
+                <ElTag
+                  size="small"
+                  :type="nodeTagType(specimen.specimenStatus)"
+                >
                   {{ formatNullable(specimen.specimenStatus) }}
                 </ElTag>
                 <ElTag size="small" type="info">
@@ -547,7 +563,10 @@ watch(
                     <ElTag size="small" type="info">
                       包埋盒 {{ formatNullable(block.embeddingBoxNo) }}
                     </ElTag>
-                    <ElTag size="small" :type="nodeTagType(block.archiveStatus)">
+                    <ElTag
+                      size="small"
+                      :type="nodeTagType(block.archiveStatus)"
+                    >
                       {{ formatArchiveStatus(block.archiveStatus) }}
                     </ElTag>
                   </div>
@@ -594,7 +613,9 @@ watch(
                     </ElDescriptionsItem>
                   </ElDescriptions>
 
-                  <div class="mt-4 rounded-lg border border-border/70 bg-background p-3">
+                  <div
+                    class="mt-4 rounded-lg border border-border/70 bg-background p-3"
+                  >
                     <h6 class="mb-3 text-sm font-semibold text-foreground">
                       蜡块级事件
                     </h6>
@@ -639,7 +660,10 @@ watch(
                         <h6 class="text-sm font-semibold text-foreground">
                           玻片 {{ formatNullable(slide.slideNo) }}
                         </h6>
-                        <ElTag size="small" :type="nodeTagType(slide.slideStatus)">
+                        <ElTag
+                          size="small"
+                          :type="nodeTagType(slide.slideStatus)"
+                        >
                           {{ formatNullable(slide.slideStatus) }}
                         </ElTag>
                         <ElTag size="small" type="info">
@@ -745,25 +769,53 @@ watch(
             <h4 class="mb-3 text-sm font-semibold text-foreground">当前报告</h4>
             <ElDescriptions :column="2" border size="small">
               <ElDescriptionsItem label="报告号">
-                {{ formatNullable(tracking.reportLifecycle.currentReport?.reportNo) }}
+                {{
+                  formatNullable(
+                    tracking.reportLifecycle.currentReport?.reportNo,
+                  )
+                }}
               </ElDescriptionsItem>
               <ElDescriptionsItem label="状态">
-                {{ formatReportStatus(tracking.reportLifecycle.currentReport?.reportStatus) }}
+                {{
+                  formatReportStatus(
+                    tracking.reportLifecycle.currentReport?.reportStatus,
+                  )
+                }}
               </ElDescriptionsItem>
               <ElDescriptionsItem label="版本号">
-                {{ formatNullable(tracking.reportLifecycle.currentReport?.versionNo) }}
+                {{
+                  formatNullable(
+                    tracking.reportLifecycle.currentReport?.versionNo,
+                  )
+                }}
               </ElDescriptionsItem>
               <ElDescriptionsItem label="签发时间">
-                {{ formatDateTime(tracking.reportLifecycle.currentReport?.signedAt) }}
+                {{
+                  formatDateTime(
+                    tracking.reportLifecycle.currentReport?.signedAt,
+                  )
+                }}
               </ElDescriptionsItem>
               <ElDescriptionsItem label="发布时间">
-                {{ formatDateTime(tracking.reportLifecycle.currentReport?.publishedAt) }}
+                {{
+                  formatDateTime(
+                    tracking.reportLifecycle.currentReport?.publishedAt,
+                  )
+                }}
               </ElDescriptionsItem>
               <ElDescriptionsItem label="签发人">
-                {{ formatNullable(tracking.reportLifecycle.currentReport?.signedByName) }}
+                {{
+                  formatNullable(
+                    tracking.reportLifecycle.currentReport?.signedByName,
+                  )
+                }}
               </ElDescriptionsItem>
               <ElDescriptionsItem label="最终诊断" :span="2">
-                {{ formatNullable(tracking.reportLifecycle.currentReport?.finalDiagnosis) }}
+                {{
+                  formatNullable(
+                    tracking.reportLifecycle.currentReport?.finalDiagnosis,
+                  )
+                }}
               </ElDescriptionsItem>
             </ElDescriptions>
           </section>
@@ -786,16 +838,30 @@ watch(
                   {{ formatDiagnosticTaskStatus(row.taskStatus) }}
                 </template>
               </ElTableColumn>
-              <ElTableColumn label="责任医生" min-width="120" prop="diagnosisDoctorName" />
+              <ElTableColumn
+                label="责任医生"
+                min-width="120"
+                prop="diagnosisDoctorName"
+              />
             </ElTable>
           </section>
 
-          <section class="rounded-lg border border-border bg-background p-4 xl:col-span-2">
+          <section
+            class="rounded-lg border border-border bg-background p-4 xl:col-span-2"
+          >
             <h4 class="mb-3 text-sm font-semibold text-foreground">版本链</h4>
-            <ElTable :data="tracking.reportLifecycle.versions" border size="small">
+            <ElTable
+              :data="tracking.reportLifecycle.versions"
+              border
+              size="small"
+            >
               <ElTableColumn label="版本 ID" min-width="160" prop="versionId" />
               <ElTableColumn label="版本号" min-width="90" prop="versionNo" />
-              <ElTableColumn label="状态" min-width="100" prop="versionStatus" />
+              <ElTableColumn
+                label="状态"
+                min-width="100"
+                prop="versionStatus"
+              />
               <ElTableColumn label="签发时间" min-width="180">
                 <template #default="{ row }">
                   {{ formatDateTime(row.signedAt) }}
@@ -816,10 +882,22 @@ watch(
 
           <section class="rounded-lg border border-border bg-background p-4">
             <h4 class="mb-3 text-sm font-semibold text-foreground">修订</h4>
-            <ElTable :data="tracking.reportLifecycle.revisions" border size="small">
+            <ElTable
+              :data="tracking.reportLifecycle.revisions"
+              border
+              size="small"
+            >
               <ElTableColumn label="修订单" min-width="140" prop="requestId" />
-              <ElTableColumn label="状态" min-width="100" prop="requestStatus" />
-              <ElTableColumn label="申请人" min-width="120" prop="requestedByName" />
+              <ElTableColumn
+                label="状态"
+                min-width="100"
+                prop="requestStatus"
+              />
+              <ElTableColumn
+                label="申请人"
+                min-width="120"
+                prop="requestedByName"
+              />
               <ElTableColumn label="申请时间" min-width="180">
                 <template #default="{ row }">
                   {{ formatDateTime(row.requestedAt) }}
@@ -830,17 +908,35 @@ watch(
 
           <section class="rounded-lg border border-border bg-background p-4">
             <h4 class="mb-3 text-sm font-semibold text-foreground">会诊</h4>
-            <ElTable :data="tracking.reportLifecycle.consultations" border size="small">
-              <ElTableColumn label="会诊单" min-width="140" prop="consultationId" />
+            <ElTable
+              :data="tracking.reportLifecycle.consultations"
+              border
+              size="small"
+            >
+              <ElTableColumn
+                label="会诊单"
+                min-width="140"
+                prop="consultationId"
+              />
               <ElTableColumn label="状态" min-width="100" prop="status" />
-              <ElTableColumn label="发起人" min-width="120" prop="requestedByName" />
+              <ElTableColumn
+                label="发起人"
+                min-width="120"
+                prop="requestedByName"
+              />
               <ElTableColumn label="会诊意见" min-width="220" prop="opinion" />
             </ElTable>
           </section>
 
-          <section class="rounded-lg border border-border bg-background p-4 xl:col-span-2">
+          <section
+            class="rounded-lg border border-border bg-background p-4 xl:col-span-2"
+          >
             <h4 class="mb-3 text-sm font-semibold text-foreground">医嘱</h4>
-            <ElTable :data="tracking.reportLifecycle.medicalOrders" border size="small">
+            <ElTable
+              :data="tracking.reportLifecycle.medicalOrders"
+              border
+              size="small"
+            >
               <ElTableColumn label="内容" min-width="240" prop="orderContent" />
               <ElTableColumn label="类型" min-width="120">
                 <template #default="{ row }">
@@ -852,7 +948,11 @@ watch(
                   {{ formatMedicalOrderStatus(row.status) }}
                 </template>
               </ElTableColumn>
-              <ElTableColumn label="开单医生" min-width="120" prop="doctorName" />
+              <ElTableColumn
+                label="开单医生"
+                min-width="120"
+                prop="doctorName"
+              />
               <ElTableColumn label="医嘱时间" min-width="180">
                 <template #default="{ row }">
                   {{ formatDateTime(row.orderDate) }}

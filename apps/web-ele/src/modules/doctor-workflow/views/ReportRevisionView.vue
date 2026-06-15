@@ -510,9 +510,7 @@ function canApproveRow(row: Extract<RevisionRow, { rowType: 'revision' }>) {
                   </ElDropdownMenu>
                 </template>
               </ElDropdown>
-              <span v-else class="text-sm text-muted-foreground"
-                >无可用操作</span
-              >
+              <span v-else class="text-sm text-muted-foreground">无可用操作</span>
             </template>
           </ElTableColumn>
         </ElTable>

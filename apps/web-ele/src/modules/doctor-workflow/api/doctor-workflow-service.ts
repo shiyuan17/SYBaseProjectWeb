@@ -1,9 +1,9 @@
 import type {
   AssignDiagnosticTaskRequest,
-  CaseReportVersionSummary,
   CaseLifecycleApplicationFormView,
   CaseLifecycleSummaryView,
   CaseLifecycleTrackingView,
+  CaseReportVersionSummary,
   CommentConsultationParticipantRequest,
   CompleteConsultationRequest,
   ConsultationOperationResult,
