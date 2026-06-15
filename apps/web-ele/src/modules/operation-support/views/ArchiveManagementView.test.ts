@@ -291,6 +291,7 @@ function createMockPageState() {
       canSubmitArchive: true,
       applicationFormDialogVisible: ref(false),
       openArchiveDialog: vi.fn(),
+      openApplicationFormArchiveDialog: vi.fn(),
       archiveDialogVisible: ref(false),
       submitArchive: vi.fn(),
     },

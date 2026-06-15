@@ -39,6 +39,8 @@ interface UseArchiveSubmissionWorkspaceOptions {
   mutationState: ArchiveMutationState;
   operatorContext: ArchiveOperatorContext;
   refreshArchiveWorkspace: () => Promise<void>;
+  clearSelectedApplicationFormRecords: () => void;
+  getSelectedApplicationFormRecords: () => ArchiveApplicationFormSelection[];
   selectedPosition: ComputedRef<null | PositionWorkbenchRow>;
 }
 
