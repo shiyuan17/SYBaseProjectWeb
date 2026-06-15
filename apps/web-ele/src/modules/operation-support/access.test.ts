@@ -12,7 +12,7 @@ import {
 import { M5_PERMISSION_CODES } from './constants';
 
 describe('operation support access helpers', () => {
-  it('routes archive-only users to archive entry and denies reagent equipment workstations', () => {
+  it('routes archive-only users to archive entry while allowing borrow-page record queries only', () => {
     const archiveCodes = [
       M5_PERMISSION_CODES.ARCHIVE_CABINET_QUERY,
       M5_PERMISSION_CODES.APPLICATION_FORM_ARCHIVE,
@@ -24,7 +24,14 @@ describe('operation support access helpers', () => {
     );
     expect(getOperationResourceEntryPath(archiveCodes)).toBeNull();
     expect(canViewArchivePage(archiveCodes)).toBe(true);
-    expect(canViewBorrowPage(archiveCodes)).toBe(false);
+    expect(canViewBorrowPage(archiveCodes)).toBe(true);
+
+    const borrowCapabilities = getBorrowManagementCapabilities(archiveCodes);
+    expect(borrowCapabilities.canViewPage).toBe(true);
+    expect(borrowCapabilities.canCreateLoan).toBe(false);
+    expect(borrowCapabilities.canQueryLoans).toBe(false);
+    expect(borrowCapabilities.canReturnLoan).toBe(false);
+    expect(borrowCapabilities.canQueryCabinets).toBe(true);
 
     const reagentCapabilities = getReagentLedgerCapabilities(archiveCodes);
     expect(reagentCapabilities.canViewPage).toBe(false);
