@@ -16,6 +16,7 @@ const PROJECT_STATE_MAX_LINES = 120;
 // 台账软上限：超限说明该归档历史/已关闭条目（迁入 docs/reviews/ 归档文件），不是删除历史
 const LEDGER_MAX_LINES = 200;
 const REQUIRED_RULE_DOCS = [
+  'QUICKSTART.md',
   'PROJECT_DIRECTORY.md',
   'CODING_RULES.md',
   'VUE_TS_RULES.md',
@@ -45,9 +46,15 @@ const REQUIRED_GOVERNANCE_ANCHORS = {
     '## 一页式执行入口',
     '### 规范单一来源矩阵',
     '## 快速命令',
+    '三层阅读路径',
     '### 4. 任务开始模板',
     '红区确认协议',
     '### 8. AI Memory Update',
+  ],
+  'docs/rules/QUICKSTART.md': [
+    '## 三层阅读路径',
+    '## 场景最小阅读',
+    '## 协作底座（底座层分包）',
   ],
   'docs/rules/CODING_RULES.md': ['标准验证命令'],
   'docs/rules/DYNAMIC_WORKFLOW_RULES.md': [
@@ -269,6 +276,25 @@ function validateProjectState(projectStateBody) {
   return errors;
 }
 
+const FORBIDDEN_PATH_LITERAL = 'docs/rules/docs/rules';
+
+function collectForbiddenPathLiterals(documents = []) {
+  const errors = [];
+
+  for (const document of documents) {
+    if (
+      typeof document?.body === 'string' &&
+      document.body.includes(FORBIDDEN_PATH_LITERAL)
+    ) {
+      errors.push(
+        `Forbidden doubled docs/rules path in ${document.path}: ${FORBIDDEN_PATH_LITERAL}`,
+      );
+    }
+  }
+
+  return errors;
+}
+
 function validateGovernanceAnchors(documentsByPath) {
   const errors = [];
 
@@ -299,6 +325,7 @@ export function validateGovernance({
   memoryReadmeBody,
   gitRulesBody,
   loopEngineeringBody,
+  quickstartBody,
   prTemplateBody,
   workflowPacketExamplesBody,
   architectureBody,
@@ -374,6 +401,22 @@ export function validateGovernance({
     errors.push(...validateProjectState(projectStateBody));
   }
 
+  const documentsForPathLiteralScan = [
+    ...(linkedDocuments ?? []),
+    agentsBody ? { path: 'AGENTS.md', body: agentsBody } : null,
+    projectStateBody
+      ? { path: 'docs/memory/PROJECT_STATE.md', body: projectStateBody }
+      : null,
+    decisionsBody
+      ? { path: 'docs/memory/DECISIONS.md', body: decisionsBody }
+      : null,
+    docsReadmeBody ? { path: 'docs/README.md', body: docsReadmeBody } : null,
+    rulesReadmeBody
+      ? { path: 'docs/rules/README.md', body: rulesReadmeBody }
+      : null,
+  ].filter(Boolean);
+  errors.push(...collectForbiddenPathLiterals(documentsForPathLiteralScan));
+
   if (enforceGovernanceAnchors) {
     errors.push(
       ...validateGovernanceAnchors({
@@ -383,6 +426,7 @@ export function validateGovernance({
         'docs/rules/DYNAMIC_WORKFLOW_RULES.md': dynamicWorkflowBody,
         'docs/rules/GIT_RULES.md': gitRulesBody,
         'docs/rules/LOOP_ENGINEERING_RULES.md': loopEngineeringBody,
+        'docs/rules/QUICKSTART.md': quickstartBody,
         'docs/templates/workflow-packet-examples.md':
           workflowPacketExamplesBody,
       }),
@@ -406,7 +450,9 @@ const LINK_CHECKED_DOCUMENTS = [
   'docs/rules/GIT_RULES.md',
   'docs/rules/DYNAMIC_WORKFLOW_RULES.md',
   'docs/rules/LOOP_ENGINEERING_RULES.md',
+  'docs/rules/QUICKSTART.md',
   'docs/rules/AGENT_SKILL_ROUTING.md',
+  'docs/rules/QUICKSTART.md',
   'docs/rules/LINEAR_TASK.md',
   'docs/rules/AI-CODE-HEALTH.md',
   'docs/rules/TESTING_RULES.md',
@@ -429,6 +475,7 @@ function main() {
     memoryReadmeBody: readText('docs/memory/README.md'),
     gitRulesBody: readText('docs/rules/GIT_RULES.md'),
     loopEngineeringBody: readText('docs/rules/LOOP_ENGINEERING_RULES.md'),
+    quickstartBody: readText('docs/rules/QUICKSTART.md'),
     prTemplateBody: readText('.github/PULL_REQUEST_TEMPLATE.md'),
     workflowPacketExamplesBody: readText(
       'docs/templates/workflow-packet-examples.md',

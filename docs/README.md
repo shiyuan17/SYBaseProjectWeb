@@ -12,9 +12,10 @@
 ## 阅读顺序
 
 1. 先阅读 [../AGENTS.md](../AGENTS.md)。
-2. 按需阅读 [rules/](./rules/README.md) 中的核心规范。
-3. 续接历史任务或交付前 Memory Update 时阅读 [memory/](./memory/README.md)。
-4. 再进入对应分类目录查找实施方案、验收材料、评审报告或参考资料。
+2. 首次进入或不确定最少读哪些规范时，阅读 [rules/QUICKSTART.md](./rules/QUICKSTART.md)。
+3. 按需阅读 [rules/](./rules/README.md) 中的核心规范。
+4. 续接历史任务或交付前 Memory Update 时阅读 [memory/](./memory/README.md)。
+5. 再进入对应分类目录查找实施方案、验收材料、评审报告或参考资料。
 
 ## 核心入口
 

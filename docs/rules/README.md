@@ -4,6 +4,8 @@
 
 本目录是项目级核心规范正文的唯一维护位置。仓库根目录 `AGENTS.md` 仍是协作入口；旧的 `docs/*.md` 同名入口已删除。
 
+**首次进入或不确定最少读哪些规范时，先读 [QUICKSTART.md](./QUICKSTART.md)。**
+
 ## 工程基础
 
 - [PROJECT_DIRECTORY.md](./PROJECT_DIRECTORY.md): 项目目录与模块边界
@@ -21,6 +23,7 @@
 
 ## 协作治理
 
+- [QUICKSTART.md](./QUICKSTART.md): 首次进入与中大型任务的最小阅读路径
 - [GIT_RULES.md](./GIT_RULES.md): 分支、提交、PR、hook 与 Git 门禁
 - [DYNAMIC_WORKFLOW_RULES.md](./DYNAMIC_WORKFLOW_RULES.md): Workflow、修饰器、动态测试与 Red Team
 - [LOOP_ENGINEERING_RULES.md](./LOOP_ENGINEERING_RULES.md): Loop Engineering 协作规则

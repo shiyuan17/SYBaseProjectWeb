@@ -31,6 +31,7 @@ const validRulesReadmeBody = `
 - [GIT_RULES.md](./GIT_RULES.md)
 - [DYNAMIC_WORKFLOW_RULES.md](./DYNAMIC_WORKFLOW_RULES.md)
 - [LOOP_ENGINEERING_RULES.md](./LOOP_ENGINEERING_RULES.md)
+- [QUICKSTART.md](./QUICKSTART.md)
 - [AGENT_SKILL_ROUTING.md](./AGENT_SKILL_ROUTING.md)
 - [LINEAR_TASK.md](./LINEAR_TASK.md)
 - [RELEASE.md](./RELEASE.md)
@@ -67,6 +68,7 @@ const validAgentsBody = `
 - [docs/rules/GIT_RULES.md](./docs/rules/GIT_RULES.md)
 - [docs/rules/DYNAMIC_WORKFLOW_RULES.md](./docs/rules/DYNAMIC_WORKFLOW_RULES.md)
 - [docs/rules/LOOP_ENGINEERING_RULES.md](./docs/rules/LOOP_ENGINEERING_RULES.md)
+- [docs/rules/QUICKSTART.md](./docs/rules/QUICKSTART.md)
 - [docs/rules/AGENT_SKILL_ROUTING.md](./docs/rules/AGENT_SKILL_ROUTING.md)
 - [docs/rules/LINEAR_TASK.md](./docs/rules/LINEAR_TASK.md)
 - [docs/rules/RELEASE.md](./docs/rules/RELEASE.md)
@@ -107,6 +109,7 @@ const governanceAnchorFixtures = {
 ## 一页式执行入口
 ### 规范单一来源矩阵
 ## 快速命令
+三层阅读路径
 ### 4. 任务开始模板
 红区确认协议
 ### 8. AI Memory Update
@@ -125,6 +128,11 @@ Red Team
   loopEngineeringBody: `
 ## Loop Packet
 最小 Loop Packet
+`,
+  quickstartBody: `
+## 三层阅读路径
+## 场景最小阅读
+## 协作底座（底座层分包）
 `,
   prTemplateBody: `
 Packet tier:
@@ -363,6 +371,18 @@ describe('validateGovernance', () => {
     expect(result.isValid).toBe(false);
     expect(result.errors).toContain(
       'Missing governance anchor in AGENTS.md: ### 规范单一来源矩阵',
+    );
+  });
+
+  it('rejects doubled docs/rules path literals in scanned governance documents', () => {
+    const result = validateGovernance({
+      projectStateBody:
+        'See docs/rules/docs/rules/DYNAMIC_WORKFLOW_RULES.md for details.',
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContain(
+      'Forbidden doubled docs/rules path in docs/memory/PROJECT_STATE.md: docs/rules/docs/rules',
     );
   });
 

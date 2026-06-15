@@ -46,6 +46,7 @@
 | 规则主题 | 唯一来源 |
 | --- | --- |
 | 协作入口、风险升级、文件操作边界、红区确认、交付与 Memory Update 总规则 | `AGENTS.md` |
+| 首次进入 / 中大型任务的最小阅读路径（场景 → 最少文档） | `docs/rules/QUICKSTART.md` |
 | Workflow 分类、强制修饰器、动态测试 / 模拟、Red Team 与 Workflow Packet 字段语义 | `docs/rules/DYNAMIC_WORKFLOW_RULES.md` |
 | 标准验证命令、编码、通用代码质量与测试触发条件 | `docs/rules/CODING_RULES.md` |
 | worktree、Linear、分支、提交、PR、hook 与 Git 门禁 | `docs/rules/GIT_RULES.md` |
@@ -69,30 +70,18 @@
 阅读采用分级策略，避免在小改动上空转，同时保证关键改动有足够上下文：
 
 - **始终必读**：`AGENTS.md` 本文件，以及下方「2. 规范映射表」中本次任务场景命中的文档。
-- **日常任务（绿区小改动 / 纯文档 / 规范审计）**：读 `AGENTS.md` + 映射表命中的专项文档即可开工；不要求为低风险任务机械通读所有规范。
-- **首次进入项目 / 中大型改动 / 跨模块或跨层（路由 + 状态 + 接口 + 主题等）改动**：按以下顺序一次性通读全部规范，建立完整上下文：
-
-1. `AGENTS.md`
-2. `docs/rules/PROJECT_DIRECTORY.md`
-3. `docs/rules/CODING_RULES.md`
-4. `docs/rules/VUE_TS_RULES.md`
-5. `docs/rules/UI_RULES.md`
-6. `docs/rules/STATE_RULES.md`
-7. `docs/rules/ROUTER_RULES.md`
-8. `docs/rules/API_RULES.md`
-9. `docs/rules/TESTING_RULES.md`
-10. `docs/rules/COMPATIBILITY_RULES.md`
-11. `docs/rules/GIT_RULES.md`
-12. `docs/rules/DYNAMIC_WORKFLOW_RULES.md`
-13. `docs/rules/LOOP_ENGINEERING_RULES.md`
-14. `docs/rules/LINEAR_TASK.md`（条件必读：仅 Linear 任务需要读，非 Linear 任务直接跳过本项）
-15. `docs/rules/RELEASE.md`
-16. 任务涉及模块文档与现有源码
-
-> `docs/rules/AI-CODE-HEALTH.md` 为按需引用的质量自检附录，不在全量通读清单内；在生成或评审代码、做交付前自检时查阅其规则速查表与自检清单即可。
-
-- **续接历史任务 / 接手脏工作区**：先读 `docs/memory/PROJECT_STATE.md`、`docs/memory/DECISIONS.md`、`docs/memory/KNOWN_BUGS.md`，再结合 `git status`、agentmemory 技能与任务相关规范恢复上下文。
+- **日常任务（绿区小改动 / 纯文档 / 规范审计）**：读 `AGENTS.md` + 映射表命中的专项文档即可开工；不要求机械通读全部规范。
+- **首次进入项目**：按 **三层阅读路径** 建立上下文（场景映射与最少验证见 `docs/rules/QUICKSTART.md`）：
+  1. **入口层（开工前）**：`AGENTS.md`（「一页式执行入口」+「规范映射表」）→ `docs/memory/PROJECT_STATE.md` → `docs/memory/DECISIONS.md` → `docs/memory/KNOWN_BUGS.md` → `docs/rules/QUICKSTART.md`。
+  2. **任务层（动手前）**：按 `QUICKSTART.md`「场景最小阅读」补齐 **2–4 份** 专项规范 + 任务涉及模块源码；不得跳过与本次改动直接相关的专项文档。
+  3. **底座层（首次跨层 / 共享层 / 发布前）**：在任务层基础上，通读 `QUICKSTART.md`「协作底座」中命中的子包；至少读完 **协作子包**（`CODING_RULES.md`、`GIT_RULES.md`、`DYNAMIC_WORKFLOW_RULES.md`）；触碰 store / 路由 / 接口 / 浏览器能力时再读对应横切文档。
+- **中大型改动 / 跨模块或跨层（路由 + 状态 + 接口 + 主题等）**：完成入口层 + 底座层 + 映射表命中的全部专项文档 + 任务涉及模块文档与现有源码；**不得**在未读 `GIT_RULES.md`、`DYNAMIC_WORKFLOW_RULES.md` 与命中横切文档前修改共享层或红区。
+- **续接历史任务 / 接手脏工作区**：先读 `docs/memory/PROJECT_STATE.md`、`docs/memory/DECISIONS.md`、`docs/memory/KNOWN_BUGS.md`，再结合 `git status`、agentmemory 技能与任务相关规范恢复上下文；若任务场景发生变化，回到 `QUICKSTART.md` 补读任务层文档，不必重复通读已掌握的底座子包。
   - `docs/memory/PROJECT_STATE.md` 只记录阶段、活跃任务和交接重点，不作为当前工作区是否脏的事实来源；工作区状态必须以本轮实时 `git status --short` 为准。
+
+> `docs/rules/AI-CODE-HEALTH.md` 为按需引用的质量自检附录，不在默认通读清单内；在生成或评审代码、做交付前自检时查阅其规则速查表与自检清单即可。
+>
+> 原「一次性通读 16 份规范」清单已由 `docs/rules/QUICKSTART.md` 的场景表与底座分包取代；需要完整路径索引时以 `docs/rules/README.md` 为准，按场景增量阅读，不得为形式合规空转通读无关文档。
 
 > 无论走哪一档，涉及红区或「6. 必须升级人工确认的场景」时，相关专项文档均为必读。
 >
@@ -107,6 +96,7 @@
 
 | 场景 | 必读文档 |
 | --- | --- |
+| 首次进入项目、中大型任务起步、不确定最少读哪些规范 | `docs/rules/QUICKSTART.md` |
 | 目录组织与模块边界 | `docs/rules/PROJECT_DIRECTORY.md` |
 | 通用编码与测试基线 | `docs/rules/CODING_RULES.md` |
 | Vue 3、Vite、TypeScript、组件实现 | `docs/rules/VUE_TS_RULES.md` |
@@ -357,6 +347,7 @@
 - [KNOWN_BUGS.md](./docs/memory/KNOWN_BUGS.md)
 - [DECISIONS.md](./docs/memory/DECISIONS.md)
 - [ARCHITECTURE.md](./docs/memory/ARCHITECTURE.md)
+- [docs/rules/QUICKSTART.md](./docs/rules/QUICKSTART.md)
 - [docs/rules/PROJECT_DIRECTORY.md](./docs/rules/PROJECT_DIRECTORY.md)
 - [docs/rules/CODING_RULES.md](./docs/rules/CODING_RULES.md)
 - [docs/rules/VUE_TS_RULES.md](./docs/rules/VUE_TS_RULES.md)
