@@ -14,7 +14,10 @@ import {
   ElTag,
 } from 'element-plus';
 
-import { MATERIAL_TYPE_OPTIONS } from '../constants';
+import {
+  MATERIAL_LOAN_STATUS_OPTIONS,
+  MATERIAL_TYPE_OPTIONS,
+} from '../constants';
 import {
   formatMaterialLoanStatus,
   formatMaterialType,
@@ -24,6 +27,7 @@ import OperationSectionCard from './OperationSectionCard.vue';
 
 type LoanFiltersState = {
   keyword: string;
+  loanStatus: string;
   materialType: string;
 };
 
@@ -88,6 +92,16 @@ const loanFilters = defineModel<LoanFiltersState>('loanFilters', {
             />
           </ElSelect>
         </ElFormItem>
+        <ElFormItem label="借阅状态">
+          <ElSelect v-model="loanFilters.loanStatus" style="width: 160px">
+            <ElOption
+              v-for="option in MATERIAL_LOAN_STATUS_OPTIONS"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            />
+          </ElSelect>
+        </ElFormItem>
         <ElFormItem label="关键字">
           <ElInput
             v-model="loanFilters.keyword"
@@ -103,7 +117,7 @@ const loanFilters = defineModel<LoanFiltersState>('loanFilters', {
             type="primary"
             @click="emit('loadLoans')"
           >
-            查询待归还
+            查询借阅
           </ElButton>
         </ElFormItem>
       </ElForm>
@@ -148,9 +162,20 @@ const loanFilters = defineModel<LoanFiltersState>('loanFilters', {
             {{ formatNullable(row.borrowPurpose) }}
           </template>
         </ElTableColumn>
+        <ElTableColumn label="归还时间" min-width="180">
+          <template #default="{ row }">
+            {{ formatNullable(row.returnedAt) }}
+          </template>
+        </ElTableColumn>
+        <ElTableColumn label="归还操作人" min-width="130">
+          <template #default="{ row }">
+            {{ formatNullable(row.returnedByName) }}
+          </template>
+        </ElTableColumn>
         <ElTableColumn fixed="right" label="操作" min-width="110">
           <template #default="{ row }">
             <ElButton
+              v-if="row.loanStatus === 'BORROWED'"
               :disabled="!canReturnLoan"
               link
               type="primary"
@@ -158,6 +183,9 @@ const loanFilters = defineModel<LoanFiltersState>('loanFilters', {
             >
               归还
             </ElButton>
+            <span v-else class="text-[var(--el-text-color-secondary)]">
+              -
+            </span>
           </template>
         </ElTableColumn>
       </ElTable>

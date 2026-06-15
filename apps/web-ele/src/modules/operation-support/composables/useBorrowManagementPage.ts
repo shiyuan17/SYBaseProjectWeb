@@ -8,6 +8,7 @@ import {
   M5_PERMISSION_CODES,
 } from '../constants';
 import {
+  getArchiveStatusTagType,
   getLoanStatusTagType,
   getPositionStatusTagType,
 } from '../utils/archive-workbench';
@@ -34,7 +35,12 @@ export function useBorrowManagementPage() {
     canQueryLoans: computed(() =>
       accessCodeSet.value.has(M5_PERMISSION_CODES.LOAN_QUERY),
     ),
-    canQueryRecords: computed(() => false),
+    canQueryRecords: computed(() =>
+      accessCodeSet.value.has(M5_PERMISSION_CODES.ARCHIVE_QUERY),
+    ),
+    canRegisterLoanAbnormal: computed(() =>
+      accessCodeSet.value.has(M5_PERMISSION_CODES.LOAN_ABNORMAL_REGISTER),
+    ),
     canReturnLoan: computed(() =>
       accessCodeSet.value.has(M5_PERMISSION_CODES.LOAN_RETURN),
     ),
@@ -88,6 +94,9 @@ export function useBorrowManagementPage() {
     if (capabilities.canQueryLoans.value) {
       tasks.push(loanWorkspaceState.loadLoans());
     }
+    if (capabilities.canQueryRecords.value) {
+      tasks.push(loanWorkspaceState.loadMaterialObjects());
+    }
 
     if (tasks.length > 0) {
       await Promise.all(tasks);
@@ -110,6 +119,9 @@ export function useBorrowManagementPage() {
     if (capabilities.canQueryLoans.value) {
       tasks.push(loanWorkspaceState.loadLoans());
     }
+    if (capabilities.canQueryRecords.value) {
+      tasks.push(loanWorkspaceState.loadMaterialObjects());
+    }
 
     if (tasks.length > 0) {
       await Promise.all(tasks);
@@ -122,6 +134,7 @@ export function useBorrowManagementPage() {
     cabinetWorkspace: reactive(cabinetWorkspaceState),
     capabilities: reactive(capabilities),
     display: {
+      getArchiveStatusTagType,
       getLoanStatusTagType,
       getPositionStatusTagType,
     },

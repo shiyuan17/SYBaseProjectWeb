@@ -19,6 +19,7 @@ import {
 } from 'element-plus';
 
 import {
+  formatArchiveObjectStatus,
   formatArchiveStorageStatus,
   formatMaterialLoanStatus,
   formatNullable,
@@ -71,7 +72,7 @@ const showSelection = computed(() => props.selectable !== false);
 
 <template>
   <section
-    class="flex min-h-0 flex-1 flex-col rounded-lg border border-border bg-card p-4 shadow-sm"
+    class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-card p-4 shadow-sm"
   >
     <ElAlert
       v-if="!canQueryRecords"
@@ -116,7 +117,7 @@ const showSelection = computed(() => props.selectable !== false);
       </ElFormItem>
     </ElForm>
 
-    <div class="mt-4 flex min-h-0 flex-1 flex-col">
+    <div class="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden">
       <ElTable
         v-loading="loading"
         border
@@ -128,7 +129,12 @@ const showSelection = computed(() => props.selectable !== false);
           (rows: ArchiveRecordView[]) => emit('selectionChange', rows)
         "
       >
-        <ElTableColumn v-if="showSelection" type="selection" width="34" />
+        <ElTableColumn
+          v-if="showSelection"
+          align="center"
+          type="selection"
+          width="48"
+        />
         <ElTableColumn label="序" type="index" width="42" />
         <ElTableColumn label="病理号" min-width="120" prop="pathologyNo" />
         <ElTableColumn label="病人姓名" min-width="110" prop="patientName" />
@@ -138,14 +144,18 @@ const showSelection = computed(() => props.selectable !== false);
           label="申请医生"
           min-width="100"
         >
-          <template #default>{{ formatNullable() }}</template>
+          <template #default="{ row }">
+            {{ formatNullable(row.applicantDoctorName) }}
+          </template>
         </ElTableColumn>
         <ElTableColumn
           v-if="objectType === 'APPLICATION_FORM'"
           label="申请时间"
           min-width="170"
         >
-          <template #default>{{ formatNullable() }}</template>
+          <template #default="{ row }">
+            {{ formatNullable(row.applicationDate) }}
+          </template>
         </ElTableColumn>
         <ElTableColumn
           v-if="objectType === 'EMBEDDING_BOX'"
@@ -161,21 +171,51 @@ const showSelection = computed(() => props.selectable !== false);
           label="当前状态"
           min-width="110"
         >
-          <template #default>{{ formatNullable() }}</template>
+          <template #default="{ row }">
+            {{ formatArchiveObjectStatus(row.objectStatus) }}
+          </template>
         </ElTableColumn>
         <ElTableColumn
           v-if="objectType === 'EMBEDDING_BOX'"
           label="取材人"
           min-width="120"
         >
-          <template #default>{{ formatNullable() }}</template>
+          <template #default="{ row }">
+            {{ formatNullable(row.sampledByName) }}
+          </template>
         </ElTableColumn>
         <ElTableColumn
           v-if="objectType === 'EMBEDDING_BOX'"
           label="包埋人"
           min-width="150"
         >
-          <template #default>{{ formatNullable() }}</template>
+          <template #default="{ row }">
+            {{ formatNullable(row.slicedByName) }}
+            <div
+              v-if="row.slicedAt"
+              class="text-xs text-[var(--el-text-color-secondary)]"
+            >
+              {{ row.slicedAt }}
+            </div>
+          </template>
+        </ElTableColumn>
+        <ElTableColumn
+          v-if="objectType === 'SPECIMEN'"
+          label="当前状态"
+          min-width="110"
+        >
+          <template #default="{ row }">
+            {{ formatNullable(row.objectStatus) }}
+          </template>
+        </ElTableColumn>
+        <ElTableColumn
+          v-if="objectType === 'SPECIMEN'"
+          label="内容描述人"
+          min-width="120"
+        >
+          <template #default="{ row }">
+            {{ formatNullable(row.contentDescribedByName) }}
+          </template>
         </ElTableColumn>
         <ElTableColumn
           v-if="objectType === 'SLIDE'"
@@ -236,7 +276,7 @@ const showSelection = computed(() => props.selectable !== false);
         <ElTableColumn label="图像服务器名" min-width="150">
           <template #default>{{ formatNullable() }}</template>
         </ElTableColumn>
-        <ElTableColumn label="借阅状态" min-width="110">
+        <ElTableColumn fixed="right" label="借阅状态" width="110">
           <template #default="{ row }">
             <ElTag
               v-if="row.loanStatus"

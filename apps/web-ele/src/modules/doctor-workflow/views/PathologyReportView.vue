@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import type {
+  CaseReportVersionSummary,
   DiagnosticTaskActionRequest,
   RejectPathologyReportRequest,
-  SavePathologyReportDraftRequest,
 } from '../types/doctor-workflow';
 
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, nextTick, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
@@ -14,30 +14,35 @@ import { useAccessStore } from '@vben/stores';
 import {
   ElAlert,
   ElButton,
-  ElDescriptions,
-  ElDescriptionsItem,
   ElEmpty,
   ElForm,
   ElFormItem,
   ElInput,
   ElMessage,
+  ElTable,
+  ElTableColumn,
   ElTag,
 } from 'element-plus';
 
 import {
-  createPathologyReport,
-  getDiagnosticWorkbench,
+  issueFormalReportVersions,
+  listCaseReportVersions,
+  printFormalReportVersions,
   publishPathologyReport,
+  recallFormalReportVersions,
   rejectPathologyReport,
   reviewPathologyReport,
-  savePathologyReportDraft,
   signPathologyReport,
-  submitPathologyReport,
 } from '../api/doctor-workflow-service';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { M4_PERMISSION_CODES } from '../constants';
 import { getDoctorWorkflowPageErrorMessage } from '../utils/error';
-import { formatNullable, formatReportStatus } from '../utils/format';
+import {
+  formatDateTime,
+  formatReportDeliveryStatus,
+  formatReportPrintStatus,
+  formatReportStatus,
+} from '../utils/format';
 import { firstQueryParam } from '../utils/route';
 
 const route = useRoute();
@@ -47,29 +52,24 @@ const accessStore = useAccessStore();
 const loading = ref(false);
 const saving = ref(false);
 const pageError = ref('');
-const activeReportId = ref('');
-const reportStatus = ref<null | string>(null);
-const reportNo = ref<null | string>(null);
-const versionNo = ref<null | number>(null);
 const queryCaseId = ref('');
-const queryTaskId = ref('');
+const queryPathologyNo = ref('');
 const queryReportId = ref('');
+const reportRows = ref<CaseReportVersionSummary[]>([]);
+const selectedRows = ref<CaseReportVersionSummary[]>([]);
+const selectedVersionIds = ref<string[]>([]);
+const reportTableRef = ref<InstanceType<typeof ElTable> | null>(null);
 
-const caseId = computed(() => firstQueryParam(route.query.caseId));
-const taskId = computed(() => firstQueryParam(route.query.taskId));
-const reportIdFromRoute = computed(() => firstQueryParam(route.query.reportId));
 const isCurrentReportRoute = computed(
   () =>
     route.name === 'PathologyReport' ||
     route.path === '/doctor-workflow/report',
 );
+const caseId = computed(() => firstQueryParam(route.query.caseId));
+const pathologyNo = computed(() => firstQueryParam(route.query.pathologyNo));
+const reportIdFromRoute = computed(() => firstQueryParam(route.query.reportId));
+const caseIdentifier = computed(() => caseId.value || pathologyNo.value);
 const accessCodeSet = computed(() => new Set(accessStore.accessCodes));
-const canCreateDraft = computed(() =>
-  accessCodeSet.value.has(M4_PERMISSION_CODES.REPORT_CREATE),
-);
-const canSubmit = computed(() =>
-  accessCodeSet.value.has(M4_PERMISSION_CODES.REPORT_SUBMIT),
-);
 const canReview = computed(() =>
   accessCodeSet.value.has(M4_PERMISSION_CODES.REPORT_REVIEW),
 );
@@ -81,248 +81,213 @@ const canPublish = computed(() =>
 );
 
 const form = reactive({
-  clinicalDiagnosis: '',
-  finalDiagnosis: '',
-  grossExam: '',
-  microscopicExam: '',
   operatorName: '',
   rejectReason: '',
-  remarks: '',
-  richTextContent: '',
-  terminalCode: '',
 });
 
 const actionPayload = computed<DiagnosticTaskActionRequest>(() => ({
   operatorName: form.operatorName,
-  remarks: form.remarks || undefined,
-  terminalCode: form.terminalCode || undefined,
 }));
 
 function ensureOperator() {
-  if (!form.operatorName) {
+  if (!form.operatorName.trim()) {
     ElMessage.warning('请填写操作人姓名');
     return false;
   }
   return true;
 }
 
-function ensureReport() {
-  if (!activeReportId.value) {
-    ElMessage.warning('请先创建报告草稿');
+function resetSelection() {
+  selectedRows.value = [];
+  selectedVersionIds.value = [];
+}
+
+function resetPageState() {
+  pageError.value = '';
+  reportRows.value = [];
+  resetSelection();
+}
+
+function isSingleSelectionActionAvailable(
+  action: 'publish' | 'reject' | 'review' | 'sign',
+) {
+  if (selectedRows.value.length === 0) {
+    ElMessage.warning('请先选择一条报告');
+    return false;
+  }
+  if (selectedRows.value.length > 1) {
+    ElMessage.warning('该操作一次只能处理一条报告');
+    return false;
+  }
+  const row = getSingleSelectedRow();
+  if (!row) {
+    return false;
+  }
+  const status = row.versionStatus;
+  const statusAllowedMap: Record<typeof action, string[]> = {
+    publish: ['SIGNED'],
+    reject: ['SUBMITTED', 'REVIEWED'],
+    review: ['SUBMITTED'],
+    sign: ['REVIEWED'],
+  };
+  if (!statusAllowedMap[action].includes(status ?? '')) {
+    const actionLabelMap: Record<typeof action, string> = {
+      publish: '发布',
+      reject: '驳回',
+      review: '审核通过',
+      sign: '签发',
+    };
+    ElMessage.warning(
+      `当前报告状态不可执行${actionLabelMap[action]}：${formatReportStatus(status)}`,
+    );
     return false;
   }
   return true;
 }
 
-function resetReportState() {
-  pageError.value = '';
-  activeReportId.value = '';
-  reportStatus.value = null;
-  reportNo.value = null;
-  versionNo.value = null;
-  form.clinicalDiagnosis = '';
-  form.finalDiagnosis = '';
-  form.grossExam = '';
-  form.microscopicExam = '';
-  form.rejectReason = '';
-  form.richTextContent = '';
+function selectRowByReportId(targetReportId: string) {
+  const row = reportRows.value.find((item) => item.reportId === targetReportId);
+  if (!row) {
+    return;
+  }
+  nextTick(() => {
+    reportTableRef.value?.clearSelection();
+    reportTableRef.value?.toggleRowSelection(row, true);
+  });
 }
 
-async function loadReportContext(targetCaseId = caseId.value) {
-  const normalizedCaseId = targetCaseId.trim();
-  if (!normalizedCaseId) {
-    resetReportState();
+async function loadReportList(targetIdentifier = caseIdentifier.value) {
+  const normalizedIdentifier = targetIdentifier.trim();
+  if (!normalizedIdentifier) {
+    resetPageState();
     return;
   }
 
-  activeReportId.value = reportIdFromRoute.value;
   loading.value = true;
   pageError.value = '';
   try {
-    const workbench = await getDiagnosticWorkbench(normalizedCaseId);
-    const currentReport = workbench.currentReport;
-
-    if (currentReport) {
-      activeReportId.value = activeReportId.value || currentReport.reportId;
-      reportNo.value = currentReport.reportNo ?? null;
-      reportStatus.value = currentReport.reportStatus ?? null;
-      versionNo.value = currentReport.versionNo ?? null;
-      form.clinicalDiagnosis = currentReport.clinicalDiagnosis ?? '';
-      form.finalDiagnosis = currentReport.finalDiagnosis ?? '';
-      form.grossExam = currentReport.grossExam ?? '';
-      form.microscopicExam = currentReport.microscopicExam ?? '';
-      form.richTextContent = currentReport.richTextContent ?? '';
-    } else {
-      activeReportId.value = '';
-      reportNo.value = null;
-      reportStatus.value = null;
-      versionNo.value = null;
-      form.clinicalDiagnosis = workbench.clinicalDiagnosis ?? '';
-      form.finalDiagnosis = '';
-      form.grossExam = '';
-      form.microscopicExam = '';
-      form.richTextContent = '';
+    const result = await listCaseReportVersions(normalizedIdentifier);
+    reportRows.value = result;
+    resetSelection();
+    if (reportIdFromRoute.value) {
+      selectRowByReportId(reportIdFromRoute.value);
     }
   } catch (error) {
-    resetReportState();
+    resetPageState();
     pageError.value = getDoctorWorkflowPageErrorMessage(error);
   } finally {
     loading.value = false;
   }
 }
 
-function searchReportContext() {
-  const normalizedCaseId = queryCaseId.value.trim();
-  if (!normalizedCaseId) {
-    ElMessage.warning('请输入病例 ID');
-    return;
-  }
-
-  const normalizedTaskId = queryTaskId.value.trim();
-  const normalizedReportId = queryReportId.value.trim();
-  void router.replace({
-    path: '/doctor-workflow/report',
-    query: {
-      caseId: normalizedCaseId,
-      taskId: normalizedTaskId || undefined,
-      reportId: normalizedReportId || undefined,
-    },
-  });
-}
-
-function handleReset() {
-  queryCaseId.value = '';
-  queryTaskId.value = '';
-  queryReportId.value = '';
-  resetReportState();
-  void router.replace({
-    path: '/doctor-workflow/report',
-    query: {},
-  });
-}
-
-async function createDraft() {
-  if (!canCreateDraft.value) {
-    ElMessage.warning('当前账号没有创建草稿权限');
-    return;
-  }
-  if (!caseId.value || !taskId.value) {
-    ElMessage.warning('创建报告草稿需要病例 ID 和诊断任务 ID');
-    return;
-  }
-  if (!ensureOperator()) {
-    return;
-  }
-
-  saving.value = true;
-  try {
-    const result = await createPathologyReport({
-      caseId: caseId.value,
-      clinicalDiagnosis: form.clinicalDiagnosis,
-      finalDiagnosis: form.finalDiagnosis,
-      grossExam: form.grossExam,
-      microscopicExam: form.microscopicExam,
-      operatorName: form.operatorName,
-      remarks: form.remarks || undefined,
-      richTextContent: form.richTextContent,
-      taskId: taskId.value,
-      terminalCode: form.terminalCode || undefined,
-    });
-    activeReportId.value = result.reportId;
-    reportNo.value = result.reportNo ?? null;
-    reportStatus.value = result.reportStatus ?? null;
-    versionNo.value = result.versionNo ?? null;
-    ElMessage.success('报告草稿已创建');
-    await router.replace({
-      path: '/doctor-workflow/report',
-      query: {
-        ...route.query,
-        reportId: result.reportId,
-      },
-    });
-  } catch (error) {
-    ElMessage.error(getDoctorWorkflowPageErrorMessage(error));
-  } finally {
-    saving.value = false;
-  }
-}
-
-async function saveDraft() {
-  if (!canCreateDraft.value) {
-    ElMessage.warning('当前账号没有保存草稿权限');
-    return;
-  }
-  if (!ensureReport() || !ensureOperator()) {
-    return;
-  }
-
-  const payload: SavePathologyReportDraftRequest = {
-    clinicalDiagnosis: form.clinicalDiagnosis,
-    finalDiagnosis: form.finalDiagnosis,
-    grossExam: form.grossExam,
-    microscopicExam: form.microscopicExam,
-    operatorName: form.operatorName,
-    remarks: form.remarks || undefined,
-    richTextContent: form.richTextContent,
-    terminalCode: form.terminalCode || undefined,
-  };
-
-  saving.value = true;
-  try {
-    const result = await savePathologyReportDraft(
-      activeReportId.value,
-      payload,
-    );
-    reportStatus.value = result.reportStatus ?? null;
-    versionNo.value = result.versionNo ?? null;
-    ElMessage.success('报告草稿已保存');
-  } catch (error) {
-    ElMessage.error(getDoctorWorkflowPageErrorMessage(error));
-  } finally {
-    saving.value = false;
-  }
-}
-
-async function runReportAction(
-  action: 'publish' | 'review' | 'sign' | 'submit',
+function collectBatchActionSummaryMessage(
+  actionLabel: string,
+  successLabel: string,
+  successCount: number,
+  failureCount: number,
 ) {
+  if (failureCount > 0 && successCount > 0) {
+    return `${actionLabel}完成：${successLabel}${successCount} 条，跳过 ${failureCount} 条`;
+  }
+  if (failureCount > 0) {
+    return `${actionLabel}未完成：共跳过 ${failureCount} 条`;
+  }
+  return `${actionLabel}完成：${successLabel}${successCount} 条`;
+}
+
+function handleSelectionChange(rows: CaseReportVersionSummary[]) {
+  selectedRows.value = rows;
+  selectedVersionIds.value = rows.map((item) => item.versionId);
+}
+
+function getSingleSelectedRow() {
+  return selectedRows.value[0] ?? null;
+}
+
+async function runFormalReportBatchAction(
+  action: 'issue' | 'print' | 'recall',
+) {
+  if (!canPublish.value) {
+    ElMessage.warning('当前账号没有批量报告操作权限');
+    return;
+  }
+  if (selectedVersionIds.value.length === 0) {
+    ElMessage.warning('请先勾选报告列表');
+    return;
+  }
+
+  const actionMap = {
+    issue: issueFormalReportVersions,
+    print: printFormalReportVersions,
+    recall: recallFormalReportVersions,
+  };
+  const labelMap = {
+    issue: ['发放', '成功'],
+    print: ['打印', '成功'],
+    recall: ['回收', '成功'],
+  } as const;
+
+  saving.value = true;
+  try {
+    const result = await actionMap[action]({
+      versionIds: selectedVersionIds.value,
+    });
+    ElMessage.success(
+      collectBatchActionSummaryMessage(
+        labelMap[action][0],
+        labelMap[action][1],
+        result.successCount,
+        result.failureCount,
+      ),
+    );
+    if (caseIdentifier.value) {
+      await loadReportList(caseIdentifier.value);
+    }
+  } catch (error) {
+    ElMessage.error(getDoctorWorkflowPageErrorMessage(error));
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function runLifecycleAction(action: 'publish' | 'review' | 'sign') {
   const permissionMap = {
     publish: canPublish.value,
     review: canReview.value,
     sign: canSign.value,
-    submit: canSubmit.value,
   };
   const actionLabelMap = {
     publish: '发布',
     review: '审核',
     sign: '签发',
-    submit: '提交',
   };
 
   if (!permissionMap[action]) {
     ElMessage.warning(`当前账号没有${actionLabelMap[action]}权限`);
     return;
   }
-  if (!ensureReport() || !ensureOperator()) {
+  if (!ensureOperator() || !isSingleSelectionActionAvailable(action)) {
     return;
   }
 
+  const row = getSingleSelectedRow();
+  if (!row) {
+    return;
+  }
   const actionMap = {
     publish: publishPathologyReport,
     review: reviewPathologyReport,
     sign: signPathologyReport,
-    submit: submitPathologyReport,
   };
 
   saving.value = true;
   try {
-    const result = await actionMap[action](
-      activeReportId.value,
-      actionPayload.value,
-    );
-    reportStatus.value = result.reportStatus ?? null;
-    versionNo.value = result.versionNo ?? null;
+    await actionMap[action](row.reportId, actionPayload.value);
     ElMessage.success('报告状态已更新');
+    if (caseIdentifier.value) {
+      await loadReportList(caseIdentifier.value);
+      selectRowByReportId(row.reportId);
+    }
   } catch (error) {
     ElMessage.error(getDoctorWorkflowPageErrorMessage(error));
   } finally {
@@ -335,26 +300,31 @@ async function rejectReport() {
     ElMessage.warning('当前账号没有驳回权限');
     return;
   }
-  if (!ensureReport() || !ensureOperator()) {
+  if (!ensureOperator() || !isSingleSelectionActionAvailable('reject')) {
     return;
   }
-  if (!form.rejectReason) {
+  if (!form.rejectReason.trim()) {
     ElMessage.warning('请填写驳回原因');
     return;
   }
 
+  const row = getSingleSelectedRow();
+  if (!row) {
+    return;
+  }
   const payload: RejectPathologyReportRequest = {
     operatorName: form.operatorName,
     rejectReason: form.rejectReason,
-    terminalCode: form.terminalCode || undefined,
   };
 
   saving.value = true;
   try {
-    const result = await rejectPathologyReport(activeReportId.value, payload);
-    reportStatus.value = result.reportStatus ?? null;
-    versionNo.value = result.versionNo ?? null;
+    await rejectPathologyReport(row.reportId, payload);
     ElMessage.success('报告已驳回');
+    if (caseIdentifier.value) {
+      await loadReportList(caseIdentifier.value);
+      selectRowByReportId(row.reportId);
+    }
   } catch (error) {
     ElMessage.error(getDoctorWorkflowPageErrorMessage(error));
   } finally {
@@ -362,22 +332,55 @@ async function rejectReport() {
   }
 }
 
+function searchReportContext() {
+  const normalizedCaseId = queryCaseId.value.trim();
+  const normalizedPathologyNo = queryPathologyNo.value.trim();
+  if (!normalizedCaseId && !normalizedPathologyNo) {
+    ElMessage.warning('请输入病例 ID 或病理号');
+    return;
+  }
+
+  const normalizedReportId = queryReportId.value.trim();
+  void router.replace({
+    path: '/doctor-workflow/report',
+    query: {
+      caseId: normalizedCaseId || undefined,
+      pathologyNo: normalizedCaseId ? normalizedPathologyNo || undefined : normalizedPathologyNo,
+      reportId: normalizedReportId || undefined,
+    },
+  });
+}
+
+function handleReset() {
+  queryCaseId.value = '';
+  queryPathologyNo.value = '';
+  queryReportId.value = '';
+  form.operatorName = '';
+  form.rejectReason = '';
+  resetPageState();
+  void router.replace({
+    path: '/doctor-workflow/report',
+    query: {},
+  });
+}
+
 watch(
-  [isCurrentReportRoute, caseId, taskId, reportIdFromRoute],
-  ([isActive, currentCaseId, currentTaskId, currentReportId]) => {
+  [isCurrentReportRoute, caseId, pathologyNo, reportIdFromRoute],
+  ([isActive, currentCaseId, currentPathologyNo, currentReportId]) => {
     if (!isActive) {
       return;
     }
 
     queryCaseId.value = currentCaseId;
-    queryTaskId.value = currentTaskId;
+    queryPathologyNo.value = currentPathologyNo;
     queryReportId.value = currentReportId;
 
-    if (!currentCaseId) {
-      resetReportState();
+    const currentIdentifier = currentCaseId || currentPathologyNo;
+    if (!currentIdentifier) {
+      resetPageState();
       return;
     }
-    void loadReportContext(currentCaseId);
+    void loadReportList(currentIdentifier);
   },
   { immediate: true },
 );
@@ -386,12 +389,12 @@ watch(
 <template>
   <Page
     :show-header="false"
-    title="报告编辑与流转"
-    description="创建草稿、保存正文，并完成提交、审核、驳回、签发、发布闭环。"
+    title="报告列表与流转"
+    description="按病例或病理号查询报告列表，并完成审核、驳回、签发、发布以及打印、发放、回收。"
   >
     <div class="flex flex-col gap-4">
       <ElAlert
-        v-if="false"
+        v-if="pageError"
         :closable="false"
         :title="pageError"
         show-icon
@@ -400,7 +403,7 @@ watch(
 
       <WorkflowSectionCard title="报告查询">
         <ElForm inline label-width="88px">
-          <ElFormItem label="病例 ID" required>
+          <ElFormItem label="病例 ID">
             <ElInput
               v-model="queryCaseId"
               clearable
@@ -409,11 +412,11 @@ watch(
               @keyup.enter="searchReportContext"
             />
           </ElFormItem>
-          <ElFormItem label="任务 ID">
+          <ElFormItem label="病理号">
             <ElInput
-              v-model="queryTaskId"
+              v-model="queryPathologyNo"
               clearable
-              placeholder="创建草稿时必填"
+              placeholder="请输入病理号"
               style="width: 220px"
               @keyup.enter="searchReportContext"
             />
@@ -422,167 +425,171 @@ watch(
             <ElInput
               v-model="queryReportId"
               clearable
-              placeholder="已有报告可直接带入"
+              placeholder="用于定位指定报告"
               style="width: 220px"
               @keyup.enter="searchReportContext"
             />
           </ElFormItem>
+          <ElFormItem label="操作人">
+            <ElInput
+              v-model="form.operatorName"
+              clearable
+              placeholder="请输入操作人姓名"
+              style="width: 220px"
+            />
+          </ElFormItem>
+          <ElFormItem v-if="canReview" label="驳回原因">
+            <ElInput
+              v-model="form.rejectReason"
+              clearable
+              placeholder="驳回时必填"
+              style="width: 220px"
+            />
+          </ElFormItem>
           <ElFormItem>
-            <ElButton
-              :loading="loading"
-              type="primary"
-              @click="searchReportContext"
-            >
-              查询
-            </ElButton>
-            <ElButton @click="handleReset">重置</ElButton>
+            <div class="flex flex-wrap gap-2">
+              <ElButton
+                :loading="loading"
+                type="primary"
+                @click="searchReportContext"
+              >
+                查询
+              </ElButton>
+              <ElButton @click="handleReset">重置</ElButton>
+              <ElButton
+                v-if="canReview"
+                :loading="saving"
+                @click="runLifecycleAction('review')"
+              >
+                审核通过
+              </ElButton>
+              <ElButton
+                v-if="canReview"
+                :loading="saving"
+                type="danger"
+                @click="rejectReport"
+              >
+                驳回
+              </ElButton>
+              <ElButton
+                v-if="canSign"
+                :loading="saving"
+                @click="runLifecycleAction('sign')"
+              >
+                签发
+              </ElButton>
+              <ElButton
+                v-if="canPublish"
+                :loading="saving"
+                @click="runLifecycleAction('publish')"
+              >
+                发布
+              </ElButton>
+            </div>
           </ElFormItem>
         </ElForm>
       </WorkflowSectionCard>
 
-      <WorkflowSectionCard title="报告上下文">
+      <WorkflowSectionCard title="报告列表">
+        <template v-if="caseIdentifier && canPublish" #extra>
+          <div class="flex flex-wrap gap-2">
+            <ElButton
+              :disabled="selectedVersionIds.length === 0"
+              :loading="saving"
+              @click="runFormalReportBatchAction('print')"
+            >
+              打印
+            </ElButton>
+            <ElButton
+              :disabled="selectedVersionIds.length === 0"
+              :loading="saving"
+              type="primary"
+              @click="runFormalReportBatchAction('issue')"
+            >
+              发放
+            </ElButton>
+            <ElButton
+              :disabled="selectedVersionIds.length === 0"
+              :loading="saving"
+              type="danger"
+              @click="runFormalReportBatchAction('recall')"
+            >
+              回收
+            </ElButton>
+          </div>
+        </template>
         <ElEmpty
-          v-if="!caseId"
-          description="请输入病例 ID 查询报告上下文，或从诊断平台工作站、报告追踪页进入。"
+          v-if="!caseIdentifier"
+          description="请输入病例 ID 或病理号查询报告列表，或从报告追踪页进入。"
         />
-        <ElDescriptions v-else :column="4" border>
-          <ElDescriptionsItem label="病例ID">
-            {{ formatNullable(caseId) }}
-          </ElDescriptionsItem>
-          <ElDescriptionsItem label="任务ID">
-            {{ formatNullable(taskId) }}
-          </ElDescriptionsItem>
-          <ElDescriptionsItem label="报告号">
-            {{ formatNullable(reportNo) }}
-          </ElDescriptionsItem>
-          <ElDescriptionsItem label="版本">
-            {{ formatNullable(versionNo) }}
-          </ElDescriptionsItem>
-          <ElDescriptionsItem label="报告状态">
-            <ElTag type="info">{{ formatReportStatus(reportStatus) }}</ElTag>
-          </ElDescriptionsItem>
-          <ElDescriptionsItem label="报告ID" :span="3">
-            {{ formatNullable(activeReportId) }}
-          </ElDescriptionsItem>
-        </ElDescriptions>
+        <ElTable
+          v-else
+          ref="reportTableRef"
+          :data="reportRows"
+          border
+          row-key="versionId"
+          @selection-change="handleSelectionChange"
+        >
+          <ElTableColumn type="selection" width="48" />
+          <ElTableColumn label="版本号" min-width="96" prop="versionNo" />
+          <ElTableColumn label="报告号" min-width="140" prop="reportNo" />
+          <ElTableColumn label="生命周期状态" min-width="120">
+            <template #default="{ row }">
+              <ElTag type="info">
+                {{ formatReportStatus(row.versionStatus) }}
+              </ElTag>
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="提交时间" min-width="180">
+            <template #default="{ row }">
+              {{ formatDateTime(row.submittedAt) }}
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="审核时间" min-width="180">
+            <template #default="{ row }">
+              {{ formatDateTime(row.reviewedAt) }}
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="签发时间" min-width="180">
+            <template #default="{ row }">
+              {{ formatDateTime(row.signedAt) }}
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="发布时间" min-width="180">
+            <template #default="{ row }">
+              {{ formatDateTime(row.publishedAt) }}
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="打印状态" min-width="120">
+            <template #default="{ row }">
+              {{ formatReportPrintStatus(row.printStatus) }}
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="打印时间" min-width="180">
+            <template #default="{ row }">
+              {{ formatDateTime(row.printedAt) }}
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="发放状态" min-width="120">
+            <template #default="{ row }">
+              {{ formatReportDeliveryStatus(row.deliveryStatus) }}
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="发放时间" min-width="180">
+            <template #default="{ row }">
+              {{ formatDateTime(row.issuedAt) }}
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="回收时间" min-width="180">
+            <template #default="{ row }">
+              {{ formatDateTime(row.recalledAt) }}
+            </template>
+          </ElTableColumn>
+          <template #empty>
+            <ElEmpty description="当前病例暂无报告" />
+          </template>
+        </ElTable>
       </WorkflowSectionCard>
-
-      <template v-if="caseId">
-        <WorkflowSectionCard title="报告正文">
-          <ElForm label-width="100px">
-            <ElFormItem label="临床诊断">
-              <ElInput
-                v-model="form.clinicalDiagnosis"
-                maxlength="500"
-                show-word-limit
-                type="textarea"
-              />
-            </ElFormItem>
-            <ElFormItem label="大体所见">
-              <ElInput v-model="form.grossExam" :rows="4" type="textarea" />
-            </ElFormItem>
-            <ElFormItem label="镜下所见">
-              <ElInput
-                v-model="form.microscopicExam"
-                :rows="4"
-                type="textarea"
-              />
-            </ElFormItem>
-            <ElFormItem label="最终诊断">
-              <ElInput
-                v-model="form.finalDiagnosis"
-                :rows="4"
-                maxlength="2000"
-                show-word-limit
-                type="textarea"
-              />
-            </ElFormItem>
-            <ElFormItem label="富文本正文">
-              <ElInput
-                v-model="form.richTextContent"
-                :rows="6"
-                type="textarea"
-              />
-            </ElFormItem>
-          </ElForm>
-        </WorkflowSectionCard>
-
-        <WorkflowSectionCard title="流转操作">
-          <ElForm label-width="100px">
-            <ElFormItem label="操作人">
-              <ElInput
-                v-model="form.operatorName"
-                placeholder="请输入操作人姓名"
-              />
-            </ElFormItem>
-            <ElFormItem label="终端编码">
-              <ElInput v-model="form.terminalCode" placeholder="终端编码" />
-            </ElFormItem>
-            <ElFormItem label="备注">
-              <ElInput v-model="form.remarks" type="textarea" />
-            </ElFormItem>
-            <ElFormItem v-if="canReview" label="驳回原因">
-              <ElInput v-model="form.rejectReason" type="textarea" />
-            </ElFormItem>
-            <ElFormItem>
-              <div class="flex flex-wrap gap-2">
-                <ElButton
-                  v-if="canCreateDraft"
-                  :loading="saving"
-                  type="primary"
-                  @click="createDraft"
-                >
-                  创建草稿
-                </ElButton>
-                <ElButton
-                  v-if="canCreateDraft"
-                  :loading="saving"
-                  type="success"
-                  @click="saveDraft"
-                >
-                  保存草稿
-                </ElButton>
-                <ElButton
-                  v-if="canSubmit"
-                  :loading="saving"
-                  @click="runReportAction('submit')"
-                >
-                  提交
-                </ElButton>
-                <ElButton
-                  v-if="canReview"
-                  :loading="saving"
-                  @click="runReportAction('review')"
-                >
-                  审核通过
-                </ElButton>
-                <ElButton
-                  v-if="canReview"
-                  :loading="saving"
-                  type="danger"
-                  @click="rejectReport"
-                >
-                  驳回
-                </ElButton>
-                <ElButton
-                  v-if="canSign"
-                  :loading="saving"
-                  @click="runReportAction('sign')"
-                >
-                  签发
-                </ElButton>
-                <ElButton
-                  v-if="canPublish"
-                  :loading="saving"
-                  @click="runReportAction('publish')"
-                >
-                  发布
-                </ElButton>
-              </div>
-            </ElFormItem>
-          </ElForm>
-        </WorkflowSectionCard>
-      </template>
     </div>
   </Page>
 </template>

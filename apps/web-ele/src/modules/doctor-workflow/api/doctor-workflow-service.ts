@@ -1,5 +1,9 @@
 import type {
   AssignDiagnosticTaskRequest,
+  CaseReportVersionSummary,
+  CaseLifecycleApplicationFormView,
+  CaseLifecycleSummaryView,
+  CaseLifecycleTrackingView,
   CommentConsultationParticipantRequest,
   CompleteConsultationRequest,
   ConsultationOperationResult,
@@ -8,6 +12,16 @@ import type {
   CreateReportRevisionRequest,
   DiagnosticTaskActionRequest,
   DiagnosticWorkbenchView,
+  FormalReportVersionBatchActionRequest,
+  FormalReportVersionBatchActionResult,
+  FormalReportVersionSummary,
+  LifecycleBlockView,
+  LifecycleKeyFact,
+  LifecycleNodeView,
+  LifecycleReportView,
+  LifecycleSlideView,
+  LifecycleSpecimenView,
+  LifecycleStageGroupView,
   MedicalOrderActionRequest,
   MedicalOrderBillingItemResult,
   MedicalOrderBillingRequest,
@@ -40,6 +54,42 @@ type MedicalOrderPackagePageResponse = Partial<
 type MedicalOrderBillingResultResponse = Partial<MedicalOrderBillingResult>;
 type DiagnosticWorkbenchResponse = Partial<DiagnosticWorkbenchView>;
 type ReportTrackingResponse = Partial<ReportTrackingView>;
+type CaseLifecycleTrackingResponse = {
+  applicationForm?: null | Partial<CaseLifecycleApplicationFormView>;
+  caseSummary?: Partial<CaseLifecycleSummaryView>;
+  overallTimeline?: LifecycleStageGroupResponse[];
+  reportLifecycle?: Partial<LifecycleReportView> & {
+    consultations?: DiagnosticWorkbenchView['consultations'];
+    currentReport?: DiagnosticWorkbenchView['currentReport'];
+    diagnosticTasks?: DiagnosticWorkbenchView['diagnosticTasks'];
+    medicalOrders?: DiagnosticWorkbenchView['medicalOrders'];
+    revisions?: DiagnosticWorkbenchView['revisions'];
+    versions?: ReportTrackingView['versions'];
+  };
+  specimens?: LifecycleSpecimenResponse[];
+};
+type CaseReportVersionSummaryResponse = Partial<CaseReportVersionSummary>;
+type FormalReportVersionSummaryResponse = Partial<FormalReportVersionSummary>;
+type FormalReportVersionBatchActionResultResponse =
+  Partial<FormalReportVersionBatchActionResult>;
+type LifecycleKeyFactResponse = Partial<LifecycleKeyFact>;
+type LifecycleNodeResponse = Partial<LifecycleNodeView> & {
+  keyFacts?: LifecycleKeyFactResponse[];
+};
+type LifecycleStageGroupResponse = Partial<LifecycleStageGroupView> & {
+  nodes?: LifecycleNodeResponse[];
+};
+type LifecycleSlideResponse = Partial<LifecycleSlideView> & {
+  slideEvents?: LifecycleNodeResponse[];
+};
+type LifecycleBlockResponse = Partial<LifecycleBlockView> & {
+  blockEvents?: LifecycleNodeResponse[];
+  slides?: LifecycleSlideResponse[];
+};
+type LifecycleSpecimenResponse = Partial<LifecycleSpecimenView> & {
+  blocks?: LifecycleBlockResponse[];
+  specimenEvents?: LifecycleNodeResponse[];
+};
 
 export function mapPendingDiagnosticTaskPageResponse(
   response: PendingDiagnosticTaskPageResponse,
@@ -123,7 +173,22 @@ export function mapDiagnosticWorkbenchResponse(
     clinicalHistory: response.clinicalHistory ?? null,
     clinicalSubmissionRequirements:
       response.clinicalSubmissionRequirements ?? null,
-    consultations: response.consultations ?? [],
+    consultations: Array.isArray(response.consultations)
+      ? response.consultations.map((item) => ({
+          ...item,
+          participants: Array.isArray(item.participants)
+            ? item.participants.map((participant) => ({
+                commentedAt: participant.commentedAt ?? null,
+                draftedByName: participant.draftedByName ?? null,
+                opinion: participant.opinion ?? null,
+                participantId: participant.participantId ?? '',
+                participantName: participant.participantName ?? null,
+                participantRole: participant.participantRole ?? null,
+                participantUserId: participant.participantUserId ?? null,
+              }))
+            : [],
+        }))
+      : [],
     currentReport: response.currentReport ?? null,
     deliveredAt: response.deliveredAt ?? null,
     detachedAt: response.detachedAt ?? null,
@@ -166,7 +231,22 @@ export function mapReportTrackingResponse(
     applicationNo: response.applicationNo ?? null,
     caseId: response.caseId ?? '',
     caseStatus: response.caseStatus ?? null,
-    consultations: response.consultations ?? [],
+    consultations: Array.isArray(response.consultations)
+      ? response.consultations.map((item) => ({
+          ...item,
+          participants: Array.isArray(item.participants)
+            ? item.participants.map((participant) => ({
+                commentedAt: participant.commentedAt ?? null,
+                draftedByName: participant.draftedByName ?? null,
+                opinion: participant.opinion ?? null,
+                participantId: participant.participantId ?? '',
+                participantName: participant.participantName ?? null,
+                participantRole: participant.participantRole ?? null,
+                participantUserId: participant.participantUserId ?? null,
+              }))
+            : [],
+        }))
+      : [],
     currentDraftVersionNo: response.currentDraftVersionNo ?? null,
     currentReport: response.currentReport ?? null,
     diagnosticTasks: response.diagnosticTasks ?? [],
@@ -178,6 +258,243 @@ export function mapReportTrackingResponse(
     patientName: response.patientName ?? null,
     revisions: response.revisions ?? [],
     versions: response.versions ?? [],
+  };
+}
+
+function mapLifecycleKeyFactResponse(
+  response: LifecycleKeyFactResponse,
+): LifecycleKeyFact {
+  return {
+    label: response.label ?? '',
+    value: response.value ?? null,
+  };
+}
+
+function mapLifecycleNodeResponse(
+  response: LifecycleNodeResponse,
+): LifecycleNodeView {
+  return {
+    eventContent: response.eventContent ?? null,
+    keyFacts: Array.isArray(response.keyFacts)
+      ? response.keyFacts.map((item) => mapLifecycleKeyFactResponse(item))
+      : [],
+    nodeCode: response.nodeCode ?? null,
+    occurredAt: response.occurredAt ?? null,
+    operatorName: response.operatorName ?? null,
+    stageCode: response.stageCode ?? null,
+    status: response.status ?? null,
+    title: response.title ?? null,
+  };
+}
+
+function mapLifecycleStageGroupResponse(
+  response: LifecycleStageGroupResponse,
+): LifecycleStageGroupView {
+  return {
+    nodes: Array.isArray(response.nodes)
+      ? response.nodes.map((item) => mapLifecycleNodeResponse(item))
+      : [],
+    stageCode: response.stageCode ?? null,
+    stageTitle: response.stageTitle ?? null,
+  };
+}
+
+function mapLifecycleSlideResponse(
+  response: LifecycleSlideResponse,
+): LifecycleSlideView {
+  return {
+    archiveLocation: response.archiveLocation ?? null,
+    archiveStatus: response.archiveStatus ?? null,
+    embeddingBoxId: response.embeddingBoxId ?? null,
+    loanStatus: response.loanStatus ?? null,
+    printedAt: response.printedAt ?? null,
+    qcEvaluatedAt: response.qcEvaluatedAt ?? null,
+    qcEvaluatorName: response.qcEvaluatorName ?? null,
+    qcResult: response.qcResult ?? null,
+    qualityStatus: response.qualityStatus ?? null,
+    reworkReason: response.reworkReason ?? null,
+    reworkStatus: response.reworkStatus ?? null,
+    slideEvents: Array.isArray(response.slideEvents)
+      ? response.slideEvents.map((item) => mapLifecycleNodeResponse(item))
+      : [],
+    slideId: response.slideId ?? '',
+    slideNo: response.slideNo ?? null,
+    slideStatus: response.slideStatus ?? null,
+    slicedAt: response.slicedAt ?? null,
+    slicedByName: response.slicedByName ?? null,
+    specimenId: response.specimenId ?? null,
+    stainedAt: response.stainedAt ?? null,
+    stainedByName: response.stainedByName ?? null,
+  };
+}
+
+function mapLifecycleBlockResponse(
+  response: LifecycleBlockResponse,
+): LifecycleBlockView {
+  return {
+    archiveLocation: response.archiveLocation ?? null,
+    archiveStatus: response.archiveStatus ?? null,
+    blockCode: response.blockCode ?? null,
+    blockEvents: Array.isArray(response.blockEvents)
+      ? response.blockEvents.map((item) => mapLifecycleNodeResponse(item))
+      : [],
+    blockId: response.blockId ?? '',
+    description: response.description ?? null,
+    embeddedByName: response.embeddedByName ?? null,
+    embeddingBoxNo: response.embeddingBoxNo ?? null,
+    embeddingEndedAt: response.embeddingEndedAt ?? null,
+    embeddingRemarks: response.embeddingRemarks ?? null,
+    embeddingStartedAt: response.embeddingStartedAt ?? null,
+    evaluationLevel: response.evaluationLevel ?? null,
+    grossDescription: response.grossDescription ?? null,
+    loanStatus: response.loanStatus ?? null,
+    sampledAt: response.sampledAt ?? null,
+    sampledByName: response.sampledByName ?? null,
+    samplingEvaluation: response.samplingEvaluation ?? null,
+    sliceNotice: response.sliceNotice ?? null,
+    slides: Array.isArray(response.slides)
+      ? response.slides.map((item) => mapLifecycleSlideResponse(item))
+      : [],
+    specimenId: response.specimenId ?? null,
+    specimenName: response.specimenName ?? null,
+  };
+}
+
+function mapLifecycleSpecimenResponse(
+  response: LifecycleSpecimenResponse,
+): LifecycleSpecimenView {
+  return {
+    archiveLocation: response.archiveLocation ?? null,
+    archiveStatus: response.archiveStatus ?? null,
+    barcode: response.barcode ?? null,
+    blocks: Array.isArray(response.blocks)
+      ? response.blocks.map((item) => mapLifecycleBlockResponse(item))
+      : [],
+    checkedInAt: response.checkedInAt ?? null,
+    confirmedAt: response.confirmedAt ?? null,
+    contentDescribedByName: response.contentDescribedByName ?? null,
+    createdAt: response.createdAt ?? null,
+    fixedAt: response.fixedAt ?? null,
+    loanStatus: response.loanStatus ?? null,
+    receiptStatus: response.receiptStatus ?? null,
+    receivedAt: response.receivedAt ?? null,
+    removalAt: response.removalAt ?? null,
+    specimenEvents: Array.isArray(response.specimenEvents)
+      ? response.specimenEvents.map((item) => mapLifecycleNodeResponse(item))
+      : [],
+    specimenId: response.specimenId ?? '',
+    specimenName: response.specimenName ?? null,
+    specimenNo: response.specimenNo ?? null,
+    specimenStatus: response.specimenStatus ?? null,
+  };
+}
+
+export function mapCaseLifecycleTrackingResponse(
+  response: CaseLifecycleTrackingResponse,
+): CaseLifecycleTrackingView {
+  return {
+    applicationForm: response.applicationForm
+      ? {
+          applicantDoctorName:
+            response.applicationForm.applicantDoctorName ?? null,
+          applicationDate: response.applicationForm.applicationDate ?? null,
+          archiveLocation: response.applicationForm.archiveLocation ?? null,
+          archiveStatus: response.applicationForm.archiveStatus ?? null,
+          imageUrl: response.applicationForm.imageUrl ?? null,
+          remarks: response.applicationForm.remarks ?? null,
+        }
+      : null,
+    caseSummary: {
+      applicationDate: response.caseSummary?.applicationDate ?? null,
+      applicationNo: response.caseSummary?.applicationNo ?? null,
+      applicationType: response.caseSummary?.applicationType ?? null,
+      caseId: response.caseSummary?.caseId ?? '',
+      caseStatus: response.caseSummary?.caseStatus ?? null,
+      currentStage: response.caseSummary?.currentStage ?? null,
+      hasPendingRevision: response.caseSummary?.hasPendingRevision ?? false,
+      pathologyNo: response.caseSummary?.pathologyNo ?? null,
+      patientAge: response.caseSummary?.patientAge ?? null,
+      patientGender: response.caseSummary?.patientGender ?? null,
+      patientName: response.caseSummary?.patientName ?? null,
+      submittingDepartmentName:
+        response.caseSummary?.submittingDepartmentName ?? null,
+      submittingDoctorName: response.caseSummary?.submittingDoctorName ?? null,
+    },
+    overallTimeline: Array.isArray(response.overallTimeline)
+      ? response.overallTimeline.map((item) =>
+          mapLifecycleStageGroupResponse(item),
+        )
+      : [],
+    reportLifecycle: {
+      consultations: response.reportLifecycle?.consultations ?? [],
+      currentReport: response.reportLifecycle?.currentReport ?? null,
+      diagnosticTasks: response.reportLifecycle?.diagnosticTasks ?? [],
+      medicalOrders: response.reportLifecycle?.medicalOrders ?? [],
+      revisions: response.reportLifecycle?.revisions ?? [],
+      versions: response.reportLifecycle?.versions ?? [],
+    },
+    specimens: Array.isArray(response.specimens)
+      ? response.specimens.map((item) => mapLifecycleSpecimenResponse(item))
+      : [],
+  };
+}
+
+export function mapFormalReportVersionSummary(
+  response: FormalReportVersionSummaryResponse,
+): FormalReportVersionSummary {
+  return {
+    deliveryStatus: response.deliveryStatus ?? null,
+    issuedAt: response.issuedAt ?? null,
+    printStatus: response.printStatus ?? null,
+    printedAt: response.printedAt ?? null,
+    publishedAt: response.publishedAt ?? null,
+    recalledAt: response.recalledAt ?? null,
+    reportId: response.reportId ?? '',
+    reportNo: response.reportNo ?? null,
+    signedAt: response.signedAt ?? null,
+    signedByName: response.signedByName ?? null,
+    versionId: response.versionId ?? '',
+    versionNo: response.versionNo ?? null,
+    versionStatus: response.versionStatus ?? null,
+  };
+}
+
+export function mapCaseReportVersionSummary(
+  response: CaseReportVersionSummaryResponse,
+): CaseReportVersionSummary {
+  return {
+    deliveryStatus: response.deliveryStatus ?? null,
+    issuedAt: response.issuedAt ?? null,
+    printStatus: response.printStatus ?? null,
+    printedAt: response.printedAt ?? null,
+    publishedAt: response.publishedAt ?? null,
+    recalledAt: response.recalledAt ?? null,
+    reportId: response.reportId ?? '',
+    reportNo: response.reportNo ?? null,
+    reviewedAt: response.reviewedAt ?? null,
+    signedAt: response.signedAt ?? null,
+    signedByName: response.signedByName ?? null,
+    submittedAt: response.submittedAt ?? null,
+    versionId: response.versionId ?? '',
+    versionNo: response.versionNo ?? null,
+    versionStatus: response.versionStatus ?? null,
+  };
+}
+
+export function mapFormalReportVersionBatchActionResult(
+  response: FormalReportVersionBatchActionResultResponse,
+): FormalReportVersionBatchActionResult {
+  return {
+    failureCount: response.failureCount ?? 0,
+    items: Array.isArray(response.items)
+      ? response.items.map((item) => ({
+          message: item.message ?? null,
+          success: item.success ?? false,
+          versionId: item.versionId ?? '',
+        }))
+      : [],
+    successCount: response.successCount ?? 0,
+    totalCount: response.totalCount ?? 0,
   };
 }
 
@@ -320,6 +637,27 @@ export async function getReportTracking(caseId: string) {
   return mapReportTrackingResponse(response);
 }
 
+export async function getCaseLifecycleTracking(caseId: string) {
+  const response = await requestClient.get<CaseLifecycleTrackingResponse>(
+    `/v1/pathology-cases/${caseId}/lifecycle-tracking`,
+  );
+  return mapCaseLifecycleTrackingResponse(response ?? {});
+}
+
+export async function listFormalReportVersions(caseId: string) {
+  const response = await requestClient.get<
+    FormalReportVersionSummaryResponse[]
+  >(`/v1/pathology-cases/${caseId}/formal-report-versions`);
+  return (response ?? []).map((item) => mapFormalReportVersionSummary(item));
+}
+
+export async function listCaseReportVersions(caseIdentifier: string) {
+  const response = await requestClient.get<CaseReportVersionSummaryResponse[]>(
+    `/v1/pathology-cases/${caseIdentifier}/report-versions`,
+  );
+  return (response ?? []).map((item) => mapCaseReportVersionSummary(item));
+}
+
 export async function createPathologyReport(data: PathologyReportDraft) {
   return requestClient.post<PathologyReportOperationResult>(
     '/v1/pathology-reports',
@@ -385,6 +723,39 @@ export async function publishPathologyReport(
     `/v1/pathology-reports/${reportId}/publish`,
     data,
   );
+}
+
+export async function printFormalReportVersions(
+  data: FormalReportVersionBatchActionRequest,
+) {
+  const response =
+    await requestClient.post<FormalReportVersionBatchActionResultResponse>(
+      '/v1/pathology-reports/formal-versions/print',
+      data,
+    );
+  return mapFormalReportVersionBatchActionResult(response ?? {});
+}
+
+export async function issueFormalReportVersions(
+  data: FormalReportVersionBatchActionRequest,
+) {
+  const response =
+    await requestClient.post<FormalReportVersionBatchActionResultResponse>(
+      '/v1/pathology-reports/formal-versions/issue',
+      data,
+    );
+  return mapFormalReportVersionBatchActionResult(response ?? {});
+}
+
+export async function recallFormalReportVersions(
+  data: FormalReportVersionBatchActionRequest,
+) {
+  const response =
+    await requestClient.post<FormalReportVersionBatchActionResultResponse>(
+      '/v1/pathology-reports/formal-versions/recall',
+      data,
+    );
+  return mapFormalReportVersionBatchActionResult(response ?? {});
 }
 
 export async function createReportRevisionRequest(

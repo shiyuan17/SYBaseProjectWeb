@@ -1,6 +1,7 @@
 import type {
   ArchiveCabinetView,
   ArchivePositionView,
+  ArchiveRecordView,
   MaterialLoanView,
 } from '../types/operation-support';
 
@@ -16,9 +17,11 @@ const {
   messageWarningMock,
   mockAccessStore,
   mockCreateMaterialLoan,
+  mockCreateMaterialLoanAbnormalRecord,
   mockListArchiveCabinets,
+  mockListArchiveObjects,
   mockListAvailableArchivePositions,
-  mockListPendingMaterialLoans,
+  mockListMaterialLoans,
   mockReturnMaterialLoan,
   mockUserStore,
 } = vi.hoisted(() => ({
@@ -29,9 +32,11 @@ const {
     accessCodes: [] as string[],
   },
   mockCreateMaterialLoan: vi.fn(),
+  mockCreateMaterialLoanAbnormalRecord: vi.fn(),
   mockListArchiveCabinets: vi.fn(),
+  mockListArchiveObjects: vi.fn(),
   mockListAvailableArchivePositions: vi.fn(),
-  mockListPendingMaterialLoans: vi.fn(),
+  mockListMaterialLoans: vi.fn(),
   mockReturnMaterialLoan: vi.fn(),
   mockUserStore: {
     userInfo: {
@@ -56,9 +61,11 @@ vi.mock('element-plus', () => ({
 
 vi.mock('../api/operation-support-service', () => ({
   createMaterialLoan: mockCreateMaterialLoan,
+  createMaterialLoanAbnormalRecord: mockCreateMaterialLoanAbnormalRecord,
   listArchiveCabinets: mockListArchiveCabinets,
+  listArchiveObjects: mockListArchiveObjects,
   listAvailableArchivePositions: mockListAvailableArchivePositions,
-  listPendingMaterialLoans: mockListPendingMaterialLoans,
+  listMaterialLoans: mockListMaterialLoans,
   returnMaterialLoan: mockReturnMaterialLoan,
 }));
 
@@ -109,6 +116,27 @@ function createLoan(
   };
 }
 
+function createArchiveRecord(
+  overrides: Partial<ArchiveRecordView> = {},
+): ArchiveRecordView {
+  return {
+    archiveLocation: 'CAB-01-L1-S1',
+    archiveStatus: 'IN_STORAGE',
+    borrowedAt: null,
+    borrowedByName: null,
+    caseId: 'CASE-1',
+    loanStatus: null,
+    objectCode: 'SLIDE-NO-1',
+    objectId: 'SLIDE-1',
+    objectType: 'SLIDE',
+    pathologyNo: 'BL-2026-001',
+    patientName: '患者甲',
+    storedAt: '2026-06-15 10:00:00',
+    storedByName: '归档员甲',
+    ...overrides,
+  };
+}
+
 function createHarness() {
   let state: null | ReturnType<typeof useBorrowManagementPage> = null;
 
@@ -152,14 +180,27 @@ describe('useBorrowManagementPage', () => {
   beforeEach(() => {
     mockAccessStore.accessCodes = [
       M5_PERMISSION_CODES.ARCHIVE_CABINET_QUERY,
+      M5_PERMISSION_CODES.ARCHIVE_QUERY,
       M5_PERMISSION_CODES.LOAN_CREATE,
+      M5_PERMISSION_CODES.LOAN_ABNORMAL_REGISTER,
       M5_PERMISSION_CODES.LOAN_QUERY,
       M5_PERMISSION_CODES.LOAN_RETURN,
     ];
 
     mockListArchiveCabinets.mockResolvedValue([createCabinet()]);
+    mockListArchiveObjects.mockResolvedValue({
+      items: [createArchiveRecord()],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
     mockListAvailableArchivePositions.mockResolvedValue([createPosition()]);
-    mockListPendingMaterialLoans.mockResolvedValue([createLoan()]);
+    mockListMaterialLoans.mockResolvedValue([createLoan()]);
+    mockCreateMaterialLoanAbnormalRecord.mockResolvedValue({
+      id: 'ABNORMAL-1',
+      materialId: 'SLIDE-1',
+      materialType: 'SLIDE',
+    });
     mockCreateMaterialLoan.mockResolvedValue(createLoan());
     mockReturnMaterialLoan.mockResolvedValue(
       createLoan({ loanStatus: 'RETURNED' }),
@@ -171,9 +212,11 @@ describe('useBorrowManagementPage', () => {
     messageSuccessMock.mockReset();
     messageWarningMock.mockReset();
     mockCreateMaterialLoan.mockReset();
+    mockCreateMaterialLoanAbnormalRecord.mockReset();
     mockListArchiveCabinets.mockReset();
+    mockListArchiveObjects.mockReset();
     mockListAvailableArchivePositions.mockReset();
-    mockListPendingMaterialLoans.mockReset();
+    mockListMaterialLoans.mockReset();
     mockReturnMaterialLoan.mockReset();
     mockAccessStore.accessCodes = [];
     document.body.innerHTML = '';
@@ -191,12 +234,20 @@ describe('useBorrowManagementPage', () => {
 
     expect(state.capabilities.canViewBorrowPage).toBe(true);
     expect(state.capabilities.canViewArchivePage).toBe(true);
+    expect(state.loanWorkspace.materialObjectPage.items).toHaveLength(1);
     expect(state.loanWorkspace.pendingLoans).toHaveLength(1);
     expect(state.cabinetWorkspace.positionRows).toHaveLength(4);
     expect(mockListArchiveCabinets).toHaveBeenCalledTimes(1);
-    expect(mockListAvailableArchivePositions).toHaveBeenCalledTimes(1);
-    expect(mockListPendingMaterialLoans).toHaveBeenCalledWith({
+    expect(mockListArchiveObjects).toHaveBeenCalledWith({
       keyword: undefined,
+      objectType: 'EMBEDDING_BOX',
+      page: 1,
+      size: 20,
+    });
+    expect(mockListAvailableArchivePositions).toHaveBeenCalledTimes(1);
+    expect(mockListMaterialLoans).toHaveBeenCalledWith({
+      keyword: undefined,
+      loanStatus: 'BORROWED',
       materialType: undefined,
     });
 
@@ -213,10 +264,15 @@ describe('useBorrowManagementPage', () => {
     }
 
     mockListAvailableArchivePositions.mockClear();
-    mockListPendingMaterialLoans.mockClear();
+    mockListArchiveObjects.mockClear();
+    mockListMaterialLoans.mockClear();
 
-    state.loanWorkspace.loanForm.materialId = ' SLIDE-1 ';
+    state.loanWorkspace.selectMaterialRecord(createArchiveRecord());
+    state.loanWorkspace.openBorrowDialog();
     state.loanWorkspace.loanForm.borrowedByName = ' 张三 ';
+    state.loanWorkspace.loanForm.borrowerPhone = ' 13800000000 ';
+    state.loanWorkspace.loanForm.borrowerUnit = ' 外院 ';
+    state.loanWorkspace.loanForm.depositAmount = ' 100 ';
     state.loanWorkspace.loanForm.borrowPurpose = ' 会诊 ';
 
     await state.loanWorkspace.submitLoan();
@@ -229,12 +285,136 @@ describe('useBorrowManagementPage', () => {
       materialType: 'SLIDE',
       operatorName: '归档员甲',
       operatorUserId: 'USER-ARCHIVE-1',
-      remarks: undefined,
+      remarks: '借阅人电话：13800000000\n借阅人单位：外院\n押金：100',
       terminalCode: undefined,
     });
-    expect(messageSuccessMock).toHaveBeenCalledWith('材料借出已登记。');
+    expect(messageSuccessMock).toHaveBeenCalledWith(
+      '借记完成：成功 1 条，跳过 0 条，失败 0 条。',
+    );
     expect(mockListAvailableArchivePositions).toHaveBeenCalledTimes(1);
-    expect(mockListPendingMaterialLoans).toHaveBeenCalledTimes(1);
+    expect(mockListArchiveObjects).toHaveBeenCalledTimes(1);
+    expect(mockListMaterialLoans).toHaveBeenCalledTimes(1);
+
+    wrapper.destroy();
+  });
+
+  it('submits batch borrow for selected valid materials and skips invalid rows', async () => {
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    mockListAvailableArchivePositions.mockClear();
+    mockListArchiveObjects.mockClear();
+    mockListMaterialLoans.mockClear();
+
+    state.loanWorkspace.setSelectedMaterialRecords([
+      createArchiveRecord({ objectId: 'SLIDE-1', objectType: 'SLIDE' }),
+      createArchiveRecord({
+        objectId: 'SLIDE-2',
+        objectType: 'SLIDE',
+        loanStatus: 'BORROWED',
+      }),
+      createArchiveRecord({
+        archiveStatus: 'ARCHIVED',
+        objectId: 'SLIDE-3',
+        objectType: 'SLIDE',
+      }),
+    ]);
+    state.loanWorkspace.openBorrowDialog();
+    state.loanWorkspace.loanForm.borrowedByName = '张三';
+
+    await state.loanWorkspace.submitLoan();
+
+    expect(mockCreateMaterialLoan).toHaveBeenCalledTimes(1);
+    expect(mockCreateMaterialLoan).toHaveBeenCalledWith(
+      expect.objectContaining({
+        materialId: 'SLIDE-1',
+        materialType: 'SLIDE',
+      }),
+    );
+    expect(messageWarningMock).toHaveBeenCalledWith(
+      '借记完成：成功 1 条，跳过 2 条，失败 0 条。跳过原因：已借出、非在库。',
+    );
+    expect(mockListArchiveObjects).toHaveBeenCalledTimes(1);
+    expect(mockListMaterialLoans).toHaveBeenCalledTimes(1);
+
+    wrapper.destroy();
+  });
+
+  it('queries material loans with selected loan status', async () => {
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    mockListMaterialLoans.mockClear();
+    state.loanWorkspace.loanFilters.keyword = ' BL-2026 ';
+    state.loanWorkspace.loanFilters.loanStatus = 'RETURNED';
+    state.loanWorkspace.loanFilters.materialType = 'SLIDE';
+
+    await state.loanWorkspace.loadLoans();
+
+    expect(mockListMaterialLoans).toHaveBeenCalledWith({
+      keyword: 'BL-2026',
+      loanStatus: 'RETURNED',
+      materialType: 'SLIDE',
+    });
+
+    wrapper.destroy();
+  });
+
+  it('queries archive objects for the active borrow material type', async () => {
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    mockListArchiveObjects.mockClear();
+    state.loanWorkspace.setActiveMaterialType('SLIDE');
+    state.loanWorkspace.materialObjectFilters.keyword = ' BL-2026 ';
+
+    await state.loanWorkspace.queryMaterialObjects();
+
+    expect(mockListArchiveObjects).toHaveBeenCalledWith({
+      keyword: 'BL-2026',
+      objectType: 'SLIDE',
+      page: 1,
+      size: 20,
+    });
+
+    wrapper.destroy();
+  });
+
+  it('keeps current loan status filter when refreshing after return', async () => {
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    state.loanWorkspace.loanFilters.loanStatus = 'RETURNED';
+    state.loanWorkspace.openReturnDialog(state.loanWorkspace.pendingLoans[0]!);
+    mockListMaterialLoans.mockClear();
+
+    await state.loanWorkspace.submitReturn();
+
+    expect(mockListMaterialLoans).toHaveBeenCalledWith({
+      keyword: undefined,
+      loanStatus: 'RETURNED',
+      materialType: undefined,
+    });
 
     wrapper.destroy();
   });
@@ -253,7 +433,7 @@ describe('useBorrowManagementPage', () => {
     );
     state.loanWorkspace.openReturnDialog(state.loanWorkspace.pendingLoans[0]!);
     mockListAvailableArchivePositions.mockClear();
-    mockListPendingMaterialLoans.mockClear();
+    mockListMaterialLoans.mockClear();
 
     await state.loanWorkspace.submitReturn();
 
@@ -264,9 +444,209 @@ describe('useBorrowManagementPage', () => {
       remarks: undefined,
       terminalCode: undefined,
     });
-    expect(messageSuccessMock).toHaveBeenCalledWith('材料归还已完成。');
+    expect(messageSuccessMock).toHaveBeenCalledWith(
+      '归还完成：成功 1 条，跳过 0 条，失败 0 条。',
+    );
     expect(mockListAvailableArchivePositions).toHaveBeenCalledTimes(1);
-    expect(mockListPendingMaterialLoans).toHaveBeenCalledTimes(1);
+    expect(mockListMaterialLoans).toHaveBeenCalledTimes(1);
+
+    wrapper.destroy();
+  });
+
+  it('opens return dialog from a selected borrowed material row', async () => {
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    state.loanWorkspace.selectMaterialRecord(
+      createArchiveRecord({ loanStatus: 'BORROWED' }),
+    );
+    state.loanWorkspace.openSelectedReturnDialog();
+
+    expect(state.loanWorkspace.returningLoan?.loanId).toBe('LOAN-1');
+    expect(state.loanWorkspace.returningLoans).toHaveLength(1);
+
+    wrapper.destroy();
+  });
+
+  it('submits batch return for selected borrowed materials', async () => {
+    mockListMaterialLoans.mockResolvedValue([
+      createLoan({ loanId: 'LOAN-1', materialId: 'SLIDE-1' }),
+      createLoan({ loanId: 'LOAN-2', materialId: 'SLIDE-2' }),
+    ]);
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    mockListAvailableArchivePositions.mockClear();
+    mockListArchiveObjects.mockClear();
+    mockListMaterialLoans.mockClear();
+
+    state.loanWorkspace.setSelectedMaterialRecords([
+      createArchiveRecord({ loanStatus: 'BORROWED', objectId: 'SLIDE-1' }),
+      createArchiveRecord({ loanStatus: 'BORROWED', objectId: 'SLIDE-2' }),
+      createArchiveRecord({ loanStatus: null, objectId: 'SLIDE-3' }),
+    ]);
+    state.loanWorkspace.openSelectedReturnDialog();
+
+    await state.loanWorkspace.submitReturn();
+
+    expect(mockReturnMaterialLoan).toHaveBeenCalledTimes(2);
+    expect(mockReturnMaterialLoan).toHaveBeenNthCalledWith(
+      1,
+      'LOAN-1',
+      expect.objectContaining({ operatorName: '归档员甲' }),
+    );
+    expect(mockReturnMaterialLoan).toHaveBeenNthCalledWith(
+      2,
+      'LOAN-2',
+      expect.objectContaining({ operatorName: '归档员甲' }),
+    );
+    expect(messageWarningMock).toHaveBeenCalledWith(
+      '归还完成：成功 2 条，跳过 1 条，失败 0 条。跳过原因：非借已。',
+    );
+
+    wrapper.destroy();
+  });
+
+  it('warns when returning without a borrowed selected material row', async () => {
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    state.loanWorkspace.selectMaterialRecord(createArchiveRecord());
+    state.loanWorkspace.openSelectedReturnDialog();
+
+    expect(messageWarningMock).toHaveBeenCalledWith(
+      '请选择借阅状态为借已的材料。',
+    );
+    expect(state.loanWorkspace.returningLoan).toBeNull();
+
+    wrapper.destroy();
+  });
+
+  it('submits abnormal record for selected material', async () => {
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    mockListArchiveObjects.mockClear();
+    mockListAvailableArchivePositions.mockClear();
+    mockListMaterialLoans.mockClear();
+
+    state.loanWorkspace.selectMaterialRecord(
+      createArchiveRecord({ loanStatus: 'BORROWED' }),
+    );
+    state.loanWorkspace.openAbnormalDialog();
+    state.loanWorkspace.abnormalForm.abnormalReason = ' 玻片破损 ';
+    state.loanWorkspace.abnormalForm.borrowerPhone = ' 13900000000 ';
+
+    await state.loanWorkspace.submitAbnormalRecord();
+
+    expect(mockCreateMaterialLoanAbnormalRecord).toHaveBeenCalledWith({
+      abnormalReason: '玻片破损',
+      borrowedAt: undefined,
+      borrowedContent: 'SLIDE-NO-1',
+      borrowedSlideNo: 'SLIDE-NO-1',
+      borrowerIdentityNo: undefined,
+      borrowerName: undefined,
+      borrowerPhone: '13900000000',
+      borrowerRelationship: undefined,
+      borrowerUnit: undefined,
+      contactResult: undefined,
+      contacted: false,
+      depositAmount: undefined,
+      expectedReturnAt: undefined,
+      loanId: 'LOAN-1',
+      materialId: 'SLIDE-1',
+      materialType: 'SLIDE',
+      returnAbnormalInfo: undefined,
+      slideCount: 1,
+      terminalCode: undefined,
+    });
+    expect(messageSuccessMock).toHaveBeenCalledWith(
+      '异常登记完成：成功 1 条，跳过 0 条，失败 0 条。',
+    );
+    expect(mockListAvailableArchivePositions).toHaveBeenCalledTimes(1);
+    expect(mockListArchiveObjects).toHaveBeenCalledTimes(1);
+    expect(mockListMaterialLoans).toHaveBeenCalledTimes(1);
+
+    wrapper.destroy();
+  });
+
+  it('submits batch abnormal records and keeps processing after one failure', async () => {
+    mockListMaterialLoans.mockResolvedValue([
+      createLoan({ loanId: 'LOAN-1', materialId: 'SLIDE-1' }),
+      createLoan({ loanId: 'LOAN-2', materialId: 'SLIDE-2' }),
+    ]);
+    mockCreateMaterialLoanAbnormalRecord
+      .mockRejectedValueOnce(new Error('failed once'))
+      .mockResolvedValueOnce({
+        id: 'ABNORMAL-2',
+        materialId: 'SLIDE-2',
+        materialType: 'SLIDE',
+      });
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    mockListArchiveObjects.mockClear();
+    mockListAvailableArchivePositions.mockClear();
+    mockListMaterialLoans.mockClear();
+
+    state.loanWorkspace.setSelectedMaterialRecords([
+      createArchiveRecord({ loanStatus: 'BORROWED', objectId: 'SLIDE-1' }),
+      createArchiveRecord({
+        loanStatus: 'BORROWED',
+        objectCode: 'SLIDE-NO-2',
+        objectId: 'SLIDE-2',
+      }),
+    ]);
+    state.loanWorkspace.openAbnormalDialog();
+    state.loanWorkspace.abnormalForm.abnormalReason = '玻片破损';
+
+    await state.loanWorkspace.submitAbnormalRecord();
+
+    expect(mockCreateMaterialLoanAbnormalRecord).toHaveBeenCalledTimes(2);
+    expect(mockCreateMaterialLoanAbnormalRecord).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        loanId: 'LOAN-1',
+        materialId: 'SLIDE-1',
+      }),
+    );
+    expect(mockCreateMaterialLoanAbnormalRecord).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        loanId: 'LOAN-2',
+        materialId: 'SLIDE-2',
+      }),
+    );
+    expect(messageErrorMock).toHaveBeenCalledWith(
+      '异常登记完成：成功 1 条，跳过 0 条，失败 1 条。',
+    );
+    expect(mockListArchiveObjects).toHaveBeenCalledTimes(1);
+    expect(mockListMaterialLoans).toHaveBeenCalledTimes(1);
 
     wrapper.destroy();
   });

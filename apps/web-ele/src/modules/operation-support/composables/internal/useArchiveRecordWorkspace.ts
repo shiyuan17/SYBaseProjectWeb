@@ -38,6 +38,16 @@ const archiveObjectTypes: ArchiveObjectType[] = [
   'SPECIMEN',
 ];
 
+function createSelectedRecordsByType() {
+  const recordsByType = {} as Record<ArchiveObjectType, ArchiveRecordView[]>;
+
+  for (const objectType of archiveObjectTypes) {
+    recordsByType[objectType] = [];
+  }
+
+  return recordsByType;
+}
+
 function createArchiveObjectListState(): ArchiveObjectListState {
   return {
     error: '',
@@ -70,7 +80,17 @@ export function useArchiveRecordWorkspace(
 
   const activeObjectType = ref<ArchiveObjectType>('APPLICATION_FORM');
   const objectLists = reactive(createArchiveObjectLists());
-  const selectedApplicationFormRecords = ref<ArchiveRecordView[]>([]);
+  const selectedRecordsByType = reactive(createSelectedRecordsByType());
+  const selectedApplicationFormRecords = computed(
+    () => selectedRecordsByType.APPLICATION_FORM,
+  );
+  const selectedEmbeddingBoxRecords = computed(
+    () => selectedRecordsByType.EMBEDDING_BOX,
+  );
+  const selectedSlideRecords = computed(() => selectedRecordsByType.SLIDE);
+  const selectedSpecimenRecords = computed(
+    () => selectedRecordsByType.SPECIMEN,
+  );
   const selectedApplicationFormRecordIds = computed(() =>
     selectedApplicationFormRecords.value.map((record) => record.objectId),
   );
@@ -116,14 +136,12 @@ export function useArchiveRecordWorkspace(
       objectList.total = page.total;
       objectList.loaded = true;
 
-      if (objectType === 'APPLICATION_FORM') {
-        selectedApplicationFormRecords.value =
-          selectedApplicationFormRecords.value.filter((selectedRecord) =>
-            objectList.items.some(
-              (record) => record.objectId === selectedRecord.objectId,
-            ),
-          );
-      }
+      const nextRecordById = new Map(
+        objectList.items.map((record) => [record.objectId, record]),
+      );
+      selectedRecordsByType[objectType] = selectedRecordsByType[objectType]
+        .map((selectedRecord) => nextRecordById.get(selectedRecord.objectId))
+        .filter((record): record is ArchiveRecordView => record !== undefined);
     } catch (error) {
       if (requestVersionByType.get(objectType) === requestVersion) {
         objectList.error = getOperationSupportPageErrorMessage(error);
@@ -183,20 +201,37 @@ export function useArchiveRecordWorkspace(
   }
 
   function setSelectedApplicationFormRecords(records: ArchiveRecordView[]) {
-    selectedApplicationFormRecords.value = [...records];
+    setSelectedArchiveObjectRecords('APPLICATION_FORM', records);
   }
 
   function clearSelectedApplicationFormRecords() {
-    selectedApplicationFormRecords.value = [];
+    clearSelectedArchiveObjectRecords('APPLICATION_FORM');
   }
 
   function getSelectedApplicationFormRecords() {
-    return [...selectedApplicationFormRecords.value];
+    return getSelectedArchiveObjectRecords('APPLICATION_FORM');
+  }
+
+  function setSelectedArchiveObjectRecords(
+    objectType: ArchiveObjectType,
+    records: ArchiveRecordView[],
+  ) {
+    selectedRecordsByType[objectType] = [...records];
+  }
+
+  function clearSelectedArchiveObjectRecords(objectType: ArchiveObjectType) {
+    selectedRecordsByType[objectType] = [];
+  }
+
+  function getSelectedArchiveObjectRecords(objectType: ArchiveObjectType) {
+    return [...selectedRecordsByType[objectType]];
   }
 
   return {
     activeObjectType,
+    clearSelectedArchiveObjectRecords,
     clearSelectedApplicationFormRecords,
+    getSelectedArchiveObjectRecords,
     getSelectedApplicationFormRecords,
     loadArchiveObjects,
     objectLists,
@@ -204,9 +239,14 @@ export function useArchiveRecordWorkspace(
     refreshCurrentArchiveObjects,
     selectedApplicationFormRecordIds,
     selectedApplicationFormRecords,
+    selectedEmbeddingBoxRecords,
+    selectedRecordsByType,
+    selectedSlideRecords,
+    selectedSpecimenRecords,
     setActiveArchiveObjectType,
     setArchiveObjectPage,
     setArchiveObjectSize,
+    setSelectedArchiveObjectRecords,
     setSelectedApplicationFormRecords,
   };
 }

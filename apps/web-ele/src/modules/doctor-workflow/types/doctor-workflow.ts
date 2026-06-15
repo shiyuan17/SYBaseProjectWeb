@@ -125,6 +125,42 @@ export interface CurrentReportSummary {
   versionNo?: null | number;
 }
 
+export interface FormalReportVersionSummary {
+  deliveryStatus?: null | string;
+  issuedAt?: null | string;
+  printStatus?: null | string;
+  printedAt?: null | string;
+  publishedAt?: null | string;
+  recalledAt?: null | string;
+  reportId: string;
+  reportNo?: null | string;
+  reviewedAt?: null | string;
+  signedAt?: null | string;
+  signedByName?: null | string;
+  submittedAt?: null | string;
+  versionId: string;
+  versionNo?: null | number;
+  versionStatus?: null | string;
+}
+
+export interface CaseReportVersionSummary {
+  deliveryStatus?: null | string;
+  issuedAt?: null | string;
+  printStatus?: null | string;
+  printedAt?: null | string;
+  publishedAt?: null | string;
+  recalledAt?: null | string;
+  reportId: string;
+  reportNo?: null | string;
+  reviewedAt?: null | string;
+  signedAt?: null | string;
+  signedByName?: null | string;
+  submittedAt?: null | string;
+  versionId: string;
+  versionNo?: null | number;
+  versionStatus?: null | string;
+}
+
 export interface DiagnosticReportPrintPreviewField {
   class?: string;
   label: string;
@@ -294,9 +330,20 @@ export interface ConsultationSummary {
   hostName?: null | string;
   opinion?: null | string;
   participantCount?: null | number;
+  participants?: ConsultationParticipantSummary[];
   requestedAt?: null | string;
   requestedByName?: null | string;
   status?: null | string;
+}
+
+export interface ConsultationParticipantSummary {
+  commentedAt?: null | string;
+  draftedByName?: null | string;
+  opinion?: null | string;
+  participantId: string;
+  participantName?: null | string;
+  participantRole?: null | string;
+  participantUserId?: null | string;
 }
 
 export interface HistoricalPathologySummary {
@@ -415,6 +462,138 @@ export interface ReportTrackingView {
   versions: ReportVersionSummary[];
 }
 
+export interface LifecycleKeyFact {
+  label: string;
+  value?: null | string;
+}
+
+export interface LifecycleNodeView {
+  eventContent?: null | string;
+  keyFacts: LifecycleKeyFact[];
+  nodeCode?: null | string;
+  occurredAt?: null | string;
+  operatorName?: null | string;
+  stageCode?: null | string;
+  status?: null | string;
+  title?: null | string;
+}
+
+export interface LifecycleStageGroupView {
+  nodes: LifecycleNodeView[];
+  stageCode?: null | string;
+  stageTitle?: null | string;
+}
+
+export interface CaseLifecycleSummaryView {
+  applicationDate?: null | string;
+  applicationNo?: null | string;
+  applicationType?: null | string;
+  caseId: string;
+  caseStatus?: null | string;
+  currentStage?: null | string;
+  hasPendingRevision: boolean;
+  pathologyNo?: null | string;
+  patientAge?: null | string;
+  patientGender?: null | string;
+  patientName?: null | string;
+  submittingDepartmentName?: null | string;
+  submittingDoctorName?: null | string;
+}
+
+export interface CaseLifecycleApplicationFormView {
+  applicantDoctorName?: null | string;
+  applicationDate?: null | string;
+  archiveLocation?: null | string;
+  archiveStatus?: null | string;
+  imageUrl?: null | string;
+  remarks?: null | string;
+}
+
+export interface LifecycleSlideView {
+  archiveLocation?: null | string;
+  archiveStatus?: null | string;
+  embeddingBoxId?: null | string;
+  loanStatus?: null | string;
+  printedAt?: null | string;
+  qcEvaluatedAt?: null | string;
+  qcEvaluatorName?: null | string;
+  qcResult?: null | string;
+  qualityStatus?: null | string;
+  reworkReason?: null | string;
+  reworkStatus?: null | string;
+  slideEvents: LifecycleNodeView[];
+  slideId: string;
+  slideNo?: null | string;
+  slideStatus?: null | string;
+  slicedAt?: null | string;
+  slicedByName?: null | string;
+  specimenId?: null | string;
+  stainedAt?: null | string;
+  stainedByName?: null | string;
+}
+
+export interface LifecycleBlockView {
+  archiveLocation?: null | string;
+  archiveStatus?: null | string;
+  blockCode?: null | string;
+  blockEvents: LifecycleNodeView[];
+  blockId: string;
+  description?: null | string;
+  embeddedByName?: null | string;
+  embeddingBoxNo?: null | string;
+  embeddingEndedAt?: null | string;
+  embeddingRemarks?: null | string;
+  embeddingStartedAt?: null | string;
+  evaluationLevel?: null | string;
+  grossDescription?: null | string;
+  loanStatus?: null | string;
+  sampledAt?: null | string;
+  sampledByName?: null | string;
+  samplingEvaluation?: null | string;
+  sliceNotice?: null | string;
+  slides: LifecycleSlideView[];
+  specimenId?: null | string;
+  specimenName?: null | string;
+}
+
+export interface LifecycleSpecimenView {
+  archiveLocation?: null | string;
+  archiveStatus?: null | string;
+  barcode?: null | string;
+  blocks: LifecycleBlockView[];
+  checkedInAt?: null | string;
+  confirmedAt?: null | string;
+  contentDescribedByName?: null | string;
+  createdAt?: null | string;
+  fixedAt?: null | string;
+  loanStatus?: null | string;
+  receivedAt?: null | string;
+  receiptStatus?: null | string;
+  removalAt?: null | string;
+  specimenEvents: LifecycleNodeView[];
+  specimenId: string;
+  specimenName?: null | string;
+  specimenNo?: null | string;
+  specimenStatus?: null | string;
+}
+
+export interface LifecycleReportView {
+  consultations: ConsultationSummary[];
+  currentReport: CurrentReportSummary | null;
+  diagnosticTasks: PendingDiagnosticTaskItem[];
+  medicalOrders: MedicalOrderSummary[];
+  revisions: RevisionRequestSummary[];
+  versions: ReportVersionSummary[];
+}
+
+export interface CaseLifecycleTrackingView {
+  applicationForm: CaseLifecycleApplicationFormView | null;
+  caseSummary: CaseLifecycleSummaryView;
+  overallTimeline: LifecycleStageGroupView[];
+  reportLifecycle: LifecycleReportView;
+  specimens: LifecycleSpecimenView[];
+}
+
 export interface PathologyReportDraft extends DiagnosticTaskActionRequest {
   caseId: string;
   clinicalDiagnosis?: string;
@@ -486,6 +665,25 @@ export interface PathologyReportOperationResult {
   reportStatus?: null | string;
   versionNo?: null | number;
   versionStatus?: null | string;
+}
+
+export interface FormalReportVersionBatchActionRequest {
+  remarks?: string;
+  terminalCode?: string;
+  versionIds: string[];
+}
+
+export interface FormalReportVersionBatchActionItemResult {
+  message?: null | string;
+  success: boolean;
+  versionId: string;
+}
+
+export interface FormalReportVersionBatchActionResult {
+  failureCount: number;
+  items: FormalReportVersionBatchActionItemResult[];
+  successCount: number;
+  totalCount: number;
 }
 
 export interface CreateReportRevisionRequest extends DiagnosticTaskActionRequest {

@@ -20,6 +20,22 @@ export interface ArchivePositionView {
   slotNo: number;
 }
 
+export type ArchiveCabinetNodeType = 'AREA' | 'CABINET' | 'DRAWER';
+
+export interface ArchiveCabinetNodeView {
+  cabinetId?: null | string;
+  cabinetType?: null | string;
+  capacity: number;
+  id: string;
+  layerNo?: null | number;
+  nodeCode: string;
+  nodeType: ArchiveCabinetNodeType;
+  parentId?: null | string;
+  pathLocation?: null | string;
+  remainingCapacity: number;
+  remarks?: null | string;
+}
+
 export interface CreateArchiveCabinetRequest {
   cabinetCode: string;
   cabinetName: string;
@@ -43,9 +59,21 @@ export interface BatchCreateArchiveCabinetRequest {
   numberWidth: number;
   operatorName: string;
   operatorUserId?: string;
+  parentId?: string;
   remarks?: string;
   slotCountPerLayer: number;
   startNo: number;
+  terminalCode?: string;
+}
+
+export interface CreateArchiveCabinetNodeRequest {
+  cabinetType?: string;
+  capacity: number;
+  nodeCode: string;
+  nodeType: ArchiveCabinetNodeType;
+  parentId?: string;
+  pathLocation?: string;
+  remarks?: string;
   terminalCode?: string;
 }
 
@@ -55,6 +83,15 @@ export interface UpdateArchiveCabinetRequest {
   locationDescription?: string;
   operatorName: string;
   operatorUserId?: string;
+  remarks?: string;
+  terminalCode?: string;
+}
+
+export interface UpdateArchiveCabinetNodeRequest {
+  cabinetType?: string;
+  capacity: number;
+  nodeCode: string;
+  pathLocation?: string;
   remarks?: string;
   terminalCode?: string;
 }
@@ -97,6 +134,18 @@ export interface ArchiveSpecimenRequest {
   terminalCode?: string;
 }
 
+export interface BatchArchiveObjectRequest {
+  archiveCabinetId: string;
+  objectIds: string[];
+  remarks?: string;
+  terminalCode?: string;
+}
+
+export interface BatchArchiveSpecimenRequest extends BatchArchiveObjectRequest {
+  archiveExpiresAt?: string;
+  archiveReminderDays?: number;
+}
+
 export interface ArchiveActionResult {
   archiveLocation: string;
   archiveStatus: string;
@@ -126,18 +175,30 @@ export interface ArchiveObjectQuery {
 
 export interface ArchiveRecordView {
   applicationNo?: null | string;
+  applicantDoctorName?: null | string;
+  applicationDate?: null | string;
   archiveLocation?: null | string;
+  archivePositionId?: null | string;
   archiveStatus?: null | string;
   archivedAt?: null | string;
   borrowedAt?: null | string;
   borrowedByName?: null | string;
   caseId: string;
+  contentDescribedByName?: null | string;
+  archiveExpiresAt?: null | string;
+  archiveReminderDays?: null | number;
   loanStatus?: null | string;
   objectCode?: null | string;
   objectId: string;
   objectType: string;
+  objectStatus?: null | string;
   pathologyNo?: null | string;
   patientName?: null | string;
+  sampledAt?: null | string;
+  sampledByName?: null | string;
+  slicedAt?: null | string;
+  slicedByName?: null | string;
+  storedAt?: null | string;
   storedByName?: null | string;
 }
 
@@ -150,6 +211,7 @@ export interface ArchiveObjectPage {
 
 export interface MaterialLoanQuery {
   keyword?: string;
+  loanStatus?: string;
   materialType?: string;
 }
 
@@ -163,6 +225,41 @@ export interface CreateMaterialLoanRequest {
   operatorUserId?: string;
   remarks?: string;
   terminalCode?: string;
+}
+
+export interface CreateMaterialLoanAbnormalRecordRequest {
+  abnormalReason: string;
+  borrowedAt?: string;
+  borrowedContent?: string;
+  borrowedSlideNo?: string;
+  borrowerIdentityNo?: string;
+  borrowerName?: string;
+  borrowerPhone?: string;
+  borrowerRelationship?: string;
+  borrowerUnit?: string;
+  contactResult?: string;
+  contacted?: boolean;
+  depositAmount?: number | string;
+  expectedReturnAt?: string;
+  loanId?: string;
+  materialId: string;
+  materialType: string;
+  returnAbnormalInfo?: string;
+  slideCount?: number;
+  terminalCode?: string;
+}
+
+export interface MaterialLoanAbnormalRecordView {
+  abnormalReason: string;
+  caseId: string;
+  contactResult?: null | string;
+  contacted?: boolean;
+  id: string;
+  loanId?: null | string;
+  materialId: string;
+  materialType: string;
+  registeredAt?: null | string;
+  registeredByName?: null | string;
 }
 
 export interface ReturnMaterialLoanRequest {

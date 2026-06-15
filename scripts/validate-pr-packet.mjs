@@ -97,9 +97,7 @@ function splitModifiers(value) {
 }
 
 function hasModifier(requiredModifiers, modifier) {
-  return splitModifiers(requiredModifiers).some(
-    (entry) => entry === modifier.toLowerCase(),
-  );
+  return splitModifiers(requiredModifiers).includes(modifier.toLowerCase());
 }
 
 function resolvePacketTier(body) {

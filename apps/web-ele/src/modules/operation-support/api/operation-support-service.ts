@@ -1,6 +1,7 @@
 import type {
   ArchiveActionResult,
   ArchiveApplicationFormRequest,
+  ArchiveCabinetNodeView,
   ArchiveCabinetView,
   ArchiveEmbeddingBoxRequest,
   ArchiveObjectPage,
@@ -9,16 +10,21 @@ import type {
   ArchiveRecordView,
   ArchiveSlideRequest,
   ArchiveSpecimenRequest,
+  BatchArchiveObjectRequest,
+  BatchArchiveSpecimenRequest,
   BatchCreateArchiveCabinetRequest,
+  CreateArchiveCabinetNodeRequest,
   CreateArchiveCabinetRequest,
   CreateEquipmentMaintenanceLogRequest,
   CreateEquipmentRecordRequest,
+  CreateMaterialLoanAbnormalRecordRequest,
   CreateMaterialLoanRequest,
   CreateReagentRequest,
   CreateReagentStockRequest,
   EquipmentMaintenanceLogView,
   EquipmentRecordView,
   EquipmentWarningView,
+  MaterialLoanAbnormalRecordView,
   MaterialLoanQuery,
   MaterialLoanView,
   ReagentStockActionRequest,
@@ -29,6 +35,7 @@ import type {
   ReagentWarningView,
   ReturnMaterialLoanRequest,
   SearchArchiveRecordsQuery,
+  UpdateArchiveCabinetNodeRequest,
   UpdateArchiveCabinetRequest,
   UpdateEquipmentRecordRequest,
   UpdateReagentRequest,
@@ -68,8 +75,25 @@ export async function listArchiveCabinets() {
   );
 }
 
+export async function listArchiveCabinetNodes() {
+  return normalizeArrayResult(
+    await requestClient.get<ArchiveCabinetNodeView[] | null>(
+      '/v1/archive-cabinet-nodes',
+    ),
+  );
+}
+
 export async function createArchiveCabinet(data: CreateArchiveCabinetRequest) {
   return requestClient.post<ArchiveCabinetView>('/v1/archive-cabinets', data);
+}
+
+export async function createArchiveCabinetNode(
+  data: CreateArchiveCabinetNodeRequest,
+) {
+  return requestClient.post<ArchiveCabinetNodeView>(
+    '/v1/archive-cabinet-nodes',
+    data,
+  );
 }
 
 export async function batchCreateArchiveCabinets(
@@ -89,6 +113,16 @@ export async function updateArchiveCabinet(
 ) {
   return requestPatch<ArchiveCabinetView>(
     `/v1/archive-cabinets/${cabinetId}`,
+    data,
+  );
+}
+
+export async function updateArchiveCabinetNode(
+  nodeId: string,
+  data: UpdateArchiveCabinetNodeRequest,
+) {
+  return requestPatch<ArchiveCabinetNodeView>(
+    `/v1/archive-cabinet-nodes/${nodeId}`,
     data,
   );
 }
@@ -135,6 +169,35 @@ export async function archiveSpecimen(data: ArchiveSpecimenRequest) {
   return requestClient.post<ArchiveActionResult>('/v1/archive/specimens', data);
 }
 
+export async function batchArchiveEmbeddingBoxes(
+  data: BatchArchiveObjectRequest,
+) {
+  return normalizeArrayResult(
+    await requestClient.post<ArchiveActionResult[] | null>(
+      '/v1/archive/embedding-boxes/batch',
+      data,
+    ),
+  );
+}
+
+export async function batchArchiveSlides(data: BatchArchiveObjectRequest) {
+  return normalizeArrayResult(
+    await requestClient.post<ArchiveActionResult[] | null>(
+      '/v1/archive/slides/batch',
+      data,
+    ),
+  );
+}
+
+export async function batchArchiveSpecimens(data: BatchArchiveSpecimenRequest) {
+  return normalizeArrayResult(
+    await requestClient.post<ArchiveActionResult[] | null>(
+      '/v1/archive/specimens/batch',
+      data,
+    ),
+  );
+}
+
 export async function searchArchiveRecords(params: SearchArchiveRecordsQuery) {
   return normalizeArrayResult(
     await requestClient.get<ArchiveRecordView[] | null>(
@@ -159,6 +222,14 @@ export async function listArchiveObjects(params: ArchiveObjectQuery) {
   return normalizeArchiveObjectPage(page, normalizedParams);
 }
 
+export async function listMaterialLoans(params: MaterialLoanQuery) {
+  return normalizeArrayResult(
+    await requestClient.get<MaterialLoanView[] | null>('/v1/material-loans', {
+      params,
+    }),
+  );
+}
+
 export async function listPendingMaterialLoans(params: MaterialLoanQuery) {
   return normalizeArrayResult(
     await requestClient.get<MaterialLoanView[] | null>(
@@ -172,6 +243,15 @@ export async function listPendingMaterialLoans(params: MaterialLoanQuery) {
 
 export async function createMaterialLoan(data: CreateMaterialLoanRequest) {
   return requestClient.post<MaterialLoanView>('/v1/material-loans', data);
+}
+
+export async function createMaterialLoanAbnormalRecord(
+  data: CreateMaterialLoanAbnormalRecordRequest,
+) {
+  return requestClient.post<MaterialLoanAbnormalRecordView>(
+    '/v1/material-loans/abnormal-records',
+    data,
+  );
 }
 
 export async function returnMaterialLoan(

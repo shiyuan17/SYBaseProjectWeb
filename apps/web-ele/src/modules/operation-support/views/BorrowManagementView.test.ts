@@ -56,6 +56,27 @@ vi.mock('element-plus', () => {
     },
   });
 
+  const ElDialog = defineComponent({
+    props: ['modelValue', 'title'],
+    setup(props, { slots }) {
+      return () => h('div', [props.title, slots.default?.(), slots.footer?.()]);
+    },
+  });
+
+  const ElDatePicker = defineComponent({
+    props: ['modelValue'],
+    emits: ['update:modelValue'],
+    setup(props, { attrs, emit }) {
+      return () =>
+        h('input', {
+          ...attrs,
+          value: props.modelValue,
+          onInput: (event: Event) =>
+            emit('update:modelValue', (event.target as HTMLInputElement).value),
+        });
+    },
+  });
+
   const ElFormItem = defineComponent({
     props: ['label'],
     setup(props, { slots }) {
@@ -76,6 +97,8 @@ vi.mock('element-plus', () => {
         });
     },
   });
+
+  const ElInputNumber = ElInput;
 
   const ElOption = defineComponent({
     props: ['label'],
@@ -102,6 +125,25 @@ vi.mock('element-plus', () => {
           },
           slots.default?.(),
         );
+    },
+  });
+
+  const ElPagination = defineComponent({
+    setup() {
+      return () => h('nav', 'pagination');
+    },
+  });
+
+  const ElRadio = defineComponent({
+    props: ['value'],
+    setup(props, { slots }) {
+      return () => h('label', [String(props.value), slots.default?.()]);
+    },
+  });
+
+  const ElRadioGroup = defineComponent({
+    setup(_, { slots }) {
+      return () => h('div', slots.default?.());
     },
   });
 
@@ -144,10 +186,16 @@ vi.mock('element-plus', () => {
   return {
     ElAlert,
     ElButton,
+    ElDatePicker,
+    ElDialog,
     ElForm,
     ElFormItem,
     ElInput,
+    ElInputNumber,
     ElOption,
+    ElPagination,
+    ElRadio,
+    ElRadioGroup,
     ElSelect,
     ElTabPane,
     ElTable,
@@ -205,25 +253,58 @@ function createMockPageState() {
       canCreateLoan: true,
       canQueryCabinets: true,
       canQueryLoans: true,
+      canQueryRecords: true,
+      canRegisterLoanAbnormal: true,
       canReturnLoan: true,
       canViewBorrowPage: true,
     },
     display: {
+      getArchiveStatusTagType: vi.fn(() => 'success'),
       getLoanStatusTagType: vi.fn(() => 'warning'),
       getPositionStatusTagType: vi.fn(() => 'success'),
     },
     loanWorkspace: {
+      abnormalDialogVisible: false,
+      abnormalForm: reactive({
+        abnormalReason: '',
+        borrowedAt: '',
+        borrowedContent: '',
+        borrowedSlideNo: '',
+        borrowerIdentityNo: '',
+        borrowerName: '',
+        borrowerPhone: '',
+        borrowerRelationship: '',
+        borrowerUnit: '',
+        contactResult: '',
+        contacted: false,
+        depositAmount: '',
+        expectedReturnAt: '',
+        loanId: '',
+        materialId: '',
+        materialType: 'SLIDE',
+        returnAbnormalInfo: '',
+        slideCount: 1,
+        terminalCode: '',
+      }),
+      archiveObjectError: '',
+      archiveObjectLoading: false,
+      borrowDialogVisible: false,
+      loadMaterialObjects: vi.fn(),
       loadLoans: vi.fn(),
       loading: false,
       loanError: '',
       loanFilters: reactive({
         keyword: '',
+        loanStatus: 'BORROWED',
         materialType: '',
       }),
       loanForm: reactive({
+        borrowerPhone: '',
+        borrowerUnit: '',
         borrowPurpose: '',
         borrowedByName: '',
         borrowedByUserId: '',
+        depositAmount: '',
         materialId: '',
         materialType: 'SLIDE',
         operatorName: '归档员甲',
@@ -231,8 +312,21 @@ function createMockPageState() {
         remarks: '',
         terminalCode: '',
       }),
+      materialObjectFilters: reactive({
+        keyword: '',
+        page: 1,
+        size: 20,
+      }),
+      materialObjectPage: reactive({
+        items: [],
+        total: 0,
+      }),
+      openAbnormalDialog: vi.fn(),
+      openBorrowDialog: vi.fn(),
       openReturnDialog: vi.fn(),
+      openSelectedReturnDialog: vi.fn(),
       pendingLoans: [],
+      queryMaterialObjects: vi.fn(),
       returnDialogVisible: false,
       returnForm: reactive({
         operatorName: '归档员甲',
@@ -241,7 +335,16 @@ function createMockPageState() {
         terminalCode: '',
       }),
       returningLoan: null,
+      returningLoans: [],
+      selectMaterialRecord: vi.fn(),
+      selectedMaterialRecords: [],
+      selectedMaterialSummary: '',
       selectedReturnPositionDescription: '默认归还到原始归档柜位',
+      setActiveMaterialType: vi.fn(),
+      setMaterialObjectPage: vi.fn(),
+      setMaterialObjectSize: vi.fn(),
+      setSelectedMaterialRecords: vi.fn(),
+      submitAbnormalRecord: vi.fn(),
       submitLoan: vi.fn(),
       submitReturn: vi.fn(),
     },
@@ -302,18 +405,25 @@ describe('BorrowManagementView', () => {
     expect(document.body.textContent).toContain('玻片借记');
     expect(document.body.textContent).toContain('待归还/归还');
     expect(document.body.textContent).not.toContain('借白片');
-    expect(document.body.textContent).toContain('符合对比');
-    expect(document.body.textContent).toContain('最迟归还时间');
+    expect(document.body.textContent).toContain('借记');
+    expect(document.body.textContent).toContain('异常登记');
+    expect(document.body.textContent).toContain('材料号');
     expect(document.body.textContent).toContain('归还操作人');
     expect(document.body.textContent).toContain('借片人身份证');
-    expect(document.body.textContent).toContain('提交借出');
-    expect(document.body.textContent).toContain('查询待归还');
+    expect(document.body.textContent).not.toContain('提交借出');
+    expect(document.body.textContent).toContain('借阅状态');
+    expect(document.body.textContent).toContain('已归还');
+    expect(document.body.textContent).toContain('查询借阅');
     expect(document.body.textContent).toContain('查询柜位');
     expect(document.body.textContent).toContain('archive-return-dialog');
+    expect(document.body.textContent).not.toContain('当前选中柜位');
+    expect(document.body.textContent).not.toContain('暂未选择柜位');
     expect(document.body.innerHTML).not.toContain('legacy-toolbar');
     expect(document.body.innerHTML).not.toContain('legacy-grid-table');
     expect(document.body.innerHTML).not.toContain('legacy-status-cell');
-    expect(state.loanWorkspace.loanForm.materialType).toBe('EMBEDDING_BOX');
+    expect(state.loanWorkspace.setActiveMaterialType).toHaveBeenCalledWith(
+      'EMBEDDING_BOX',
+    );
 
     app.unmount();
     root.remove();
@@ -356,7 +466,9 @@ describe('BorrowManagementView', () => {
 
     const { app, root } = mountView();
 
-    expect(document.body.textContent).toContain('当前账号缺少借阅查询权限');
+    expect(document.body.textContent).toContain(
+      '当前账号缺少待归还列表查询权限',
+    );
 
     app.unmount();
     root.remove();

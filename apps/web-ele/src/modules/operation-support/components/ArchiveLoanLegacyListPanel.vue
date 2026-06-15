@@ -19,6 +19,7 @@ import OperationSectionCard from './OperationSectionCard.vue';
 
 type LoanFiltersState = {
   keyword: string;
+  loanStatus: string;
   materialType: string;
 };
 
@@ -51,6 +52,7 @@ const visibleLoans = computed(() =>
 
 function queryLoans() {
   loanFilters.value.materialType = props.materialType ?? '';
+  loanFilters.value.loanStatus = 'BORROWED';
   emit('loadLoans');
 }
 </script>

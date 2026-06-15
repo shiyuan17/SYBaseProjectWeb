@@ -9,24 +9,31 @@ import {
   archiveEmbeddingBox,
   archiveSlide,
   archiveSpecimen,
+  batchArchiveEmbeddingBoxes,
+  batchArchiveSlides,
+  batchArchiveSpecimens,
   batchCreateArchiveCabinets,
   consumeReagentStock,
   createArchiveCabinet,
+  createArchiveCabinetNode,
   createEquipmentMaintenanceLog,
   createEquipmentRecord,
   createMaterialLoan,
+  createMaterialLoanAbnormalRecord,
   createReagent,
   createReagentStock,
   deleteArchiveCabinet,
   exportReagentStocks,
   finishUsingReagentStock,
   importReagentStocks,
+  listArchiveCabinetNodes,
   listArchiveCabinets,
   listArchiveObjects,
   listAvailableArchivePositions,
   listEquipmentMaintenanceLogs,
   listEquipmentRecords,
   listEquipmentWarnings,
+  listMaterialLoans,
   listPendingMaterialLoans,
   listReagents,
   listReagentStockEvents,
@@ -38,6 +45,7 @@ import {
   startUsingReagentStock,
   testReagentStock,
   updateArchiveCabinet,
+  updateArchiveCabinetNode,
   updateEquipmentRecord,
   updateReagent,
   updateReagentStock,
@@ -83,6 +91,8 @@ describe('operation-support-service archive requests', () => {
       .mockResolvedValueOnce({
         items: [
           {
+            applicantDoctorName: '申请医生甲',
+            applicationDate: '2026-06-15',
             caseId: 'CASE-1',
             objectId: 'SLIDE-1',
             objectType: 'SLIDE',
@@ -133,6 +143,8 @@ describe('operation-support-service archive requests', () => {
     expect(page).toEqual({
       items: [
         {
+          applicantDoctorName: '申请医生甲',
+          applicationDate: '2026-06-15',
           caseId: 'CASE-1',
           objectId: 'SLIDE-1',
           objectType: 'SLIDE',
@@ -155,8 +167,10 @@ describe('operation-support-service archive requests', () => {
     requestClientMock.get.mockResolvedValue([]);
 
     await listArchiveCabinets();
+    await listArchiveCabinetNodes();
     await listAvailableArchivePositions({ cabinetId: 'CAB-1' });
     await searchArchiveRecords({ keyword: 'BL-1', objectType: 'SLIDE' });
+    await listMaterialLoans({ loanStatus: 'RETURNED', materialType: 'SLIDE' });
     await listPendingMaterialLoans({ materialType: 'SLIDE' });
 
     expect(requestClientMock.get).toHaveBeenNthCalledWith(
@@ -165,16 +179,25 @@ describe('operation-support-service archive requests', () => {
     );
     expect(requestClientMock.get).toHaveBeenNthCalledWith(
       2,
+      '/v1/archive-cabinet-nodes',
+    );
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      3,
       '/v1/archive-positions/available',
       { params: { cabinetId: 'CAB-1' } },
     );
     expect(requestClientMock.get).toHaveBeenNthCalledWith(
-      3,
+      4,
       '/v1/archive-records/search',
       { params: { keyword: 'BL-1', objectType: 'SLIDE' } },
     );
     expect(requestClientMock.get).toHaveBeenNthCalledWith(
-      4,
+      5,
+      '/v1/material-loans',
+      { params: { loanStatus: 'RETURNED', materialType: 'SLIDE' } },
+    );
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      6,
       '/v1/material-loans/pending',
       { params: { materialType: 'SLIDE' } },
     );
@@ -192,13 +215,22 @@ describe('operation-support-service archive requests', () => {
     await batchCreateArchiveCabinets({
       cabinetCodePrefix: 'CAB-B',
       cabinetNamePrefix: '批量柜',
-      cabinetType: 'STANDARD',
+      cabinetType: 'APPLICATION_FORM',
       count: 2,
       layerCount: 1,
       numberWidth: 3,
       operatorName: '归档员',
+      parentId: 'NODE-AREA-1',
       slotCountPerLayer: 10,
       startNo: 1,
+    });
+    await createArchiveCabinetNode({
+      cabinetType: 'SLIDE',
+      capacity: 5,
+      nodeCode: 'CAB-NODE-1',
+      nodeType: 'CABINET',
+      parentId: 'NODE-AREA-1',
+      pathLocation: '2F',
     });
     await archiveApplicationForm({
       archivePositionId: 'POS-1',
@@ -220,11 +252,31 @@ describe('operation-support-service archive requests', () => {
       operatorName: '归档员',
       specimenId: 'SPECIMEN-1',
     });
+    await batchArchiveEmbeddingBoxes({
+      archiveCabinetId: 'CABINET-1',
+      objectIds: ['BOX-1', 'BOX-2'],
+      remarks: '批量蜡块',
+    });
+    await batchArchiveSlides({
+      archiveCabinetId: 'CABINET-1',
+      objectIds: ['SLIDE-1'],
+    });
+    await batchArchiveSpecimens({
+      archiveCabinetId: 'CABINET-1',
+      archiveExpiresAt: '2026-06-30T18:00:00',
+      archiveReminderDays: 1,
+      objectIds: ['SPECIMEN-1'],
+    });
     await createMaterialLoan({
       borrowedByName: '医生',
       materialId: 'SLIDE-1',
       materialType: 'SLIDE',
       operatorName: '归档员',
+    });
+    await createMaterialLoanAbnormalRecord({
+      abnormalReason: '玻片破损',
+      materialId: 'SLIDE-1',
+      materialType: 'SLIDE',
     });
     await returnMaterialLoan('LOAN-1', { operatorName: '归档员' });
 
@@ -246,17 +298,30 @@ describe('operation-support-service archive requests', () => {
       {
         cabinetCodePrefix: 'CAB-B',
         cabinetNamePrefix: '批量柜',
-        cabinetType: 'STANDARD',
+        cabinetType: 'APPLICATION_FORM',
         count: 2,
         layerCount: 1,
         numberWidth: 3,
         operatorName: '归档员',
+        parentId: 'NODE-AREA-1',
         slotCountPerLayer: 10,
         startNo: 1,
       },
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       3,
+      '/v1/archive-cabinet-nodes',
+      {
+        cabinetType: 'SLIDE',
+        capacity: 5,
+        nodeCode: 'CAB-NODE-1',
+        nodeType: 'CABINET',
+        parentId: 'NODE-AREA-1',
+        pathLocation: '2F',
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      4,
       '/v1/archive/application-forms',
       {
         archivePositionId: 'POS-1',
@@ -265,7 +330,7 @@ describe('operation-support-service archive requests', () => {
       },
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
-      4,
+      5,
       '/v1/archive/embedding-boxes',
       {
         archivePositionId: 'POS-2',
@@ -274,7 +339,7 @@ describe('operation-support-service archive requests', () => {
       },
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
-      5,
+      6,
       '/v1/archive/slides',
       {
         archivePositionId: 'POS-3',
@@ -283,7 +348,7 @@ describe('operation-support-service archive requests', () => {
       },
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
-      6,
+      7,
       '/v1/archive/specimens',
       {
         archivePositionId: 'POS-4',
@@ -292,7 +357,34 @@ describe('operation-support-service archive requests', () => {
       },
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
-      7,
+      8,
+      '/v1/archive/embedding-boxes/batch',
+      {
+        archiveCabinetId: 'CABINET-1',
+        objectIds: ['BOX-1', 'BOX-2'],
+        remarks: '批量蜡块',
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      9,
+      '/v1/archive/slides/batch',
+      {
+        archiveCabinetId: 'CABINET-1',
+        objectIds: ['SLIDE-1'],
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      10,
+      '/v1/archive/specimens/batch',
+      {
+        archiveCabinetId: 'CABINET-1',
+        archiveExpiresAt: '2026-06-30T18:00:00',
+        archiveReminderDays: 1,
+        objectIds: ['SPECIMEN-1'],
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      11,
       '/v1/material-loans',
       {
         borrowedByName: '医生',
@@ -302,7 +394,16 @@ describe('operation-support-service archive requests', () => {
       },
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
-      8,
+      12,
+      '/v1/material-loans/abnormal-records',
+      {
+        abnormalReason: '玻片破损',
+        materialId: 'SLIDE-1',
+        materialType: 'SLIDE',
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      13,
       '/v1/material-loans/LOAN-1/return',
       { operatorName: '归档员' },
     );
@@ -314,14 +415,36 @@ describe('operation-support-service archive requests', () => {
       cabinetStatus: 'DISABLED',
       operatorName: '归档员',
     });
+    await updateArchiveCabinetNode('NODE-1', {
+      cabinetType: 'SLIDE',
+      capacity: 10,
+      nodeCode: 'CAB-1',
+      pathLocation: '2F',
+      remarks: '更新',
+    });
 
-    expect(requestClientMock.request).toHaveBeenCalledWith(
+    expect(requestClientMock.request).toHaveBeenNthCalledWith(
+      1,
       '/v1/archive-cabinets/CAB-1',
       {
         data: {
           cabinetName: '柜1',
           cabinetStatus: 'DISABLED',
           operatorName: '归档员',
+        },
+        method: 'PATCH',
+      },
+    );
+    expect(requestClientMock.request).toHaveBeenNthCalledWith(
+      2,
+      '/v1/archive-cabinet-nodes/NODE-1',
+      {
+        data: {
+          cabinetType: 'SLIDE',
+          capacity: 10,
+          nodeCode: 'CAB-1',
+          pathLocation: '2F',
+          remarks: '更新',
         },
         method: 'PATCH',
       },

@@ -1,4 +1,5 @@
 import {
+  ARCHIVE_CABINET_NODE_TYPE_OPTIONS,
   ARCHIVE_CABINET_STATUS_OPTIONS,
   ARCHIVE_CABINET_TYPE_OPTIONS,
   ARCHIVE_OBJECT_TYPE_OPTIONS,
@@ -38,6 +39,10 @@ export function formatArchiveCabinetType(value?: null | string) {
   return findOptionLabel(ARCHIVE_CABINET_TYPE_OPTIONS, value);
 }
 
+export function formatArchiveCabinetNodeType(value?: null | string) {
+  return findOptionLabel(ARCHIVE_CABINET_NODE_TYPE_OPTIONS, value);
+}
+
 export function formatArchiveObjectType(value?: null | string) {
   return findOptionLabel(ARCHIVE_OBJECT_TYPE_OPTIONS, value);
 }
@@ -51,7 +56,17 @@ export function formatMaterialType(value?: null | string) {
 }
 
 export function formatArchiveStorageStatus(value?: null | string) {
+  if (value === null || value === undefined || value === '') {
+    return '未归档';
+  }
   return findOptionLabel(ARCHIVE_STORAGE_STATUS_OPTIONS, value);
+}
+
+export function formatArchiveObjectStatus(value?: null | string) {
+  if (value === 'ACTIVE') {
+    return '启用';
+  }
+  return formatNullable(value);
 }
 
 export function formatMaterialLoanStatus(value?: null | string) {

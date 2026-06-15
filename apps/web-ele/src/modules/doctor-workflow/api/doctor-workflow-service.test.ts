@@ -19,19 +19,29 @@ import {
   createPathologyReport,
   createReportRevisionRequest,
   executeMedicalOrderBilling,
+  getCaseLifecycleTracking,
   getDiagnosticWorkbench,
   getReportTracking,
+  issueFormalReportVersions,
+  listCaseReportVersions,
+  listFormalReportVersions,
   listMedicalOrderDicts,
   listMedicalOrderPackagesPage,
   listPendingDiagnosticTasks,
   listPendingMedicalOrders,
+  mapCaseLifecycleTrackingResponse,
+  mapCaseReportVersionSummary,
   mapDiagnosticWorkbenchResponse,
+  mapFormalReportVersionBatchActionResult,
+  mapFormalReportVersionSummary,
   mapMedicalOrderBillingResponse,
   mapMedicalOrderPackagePageResponse,
   mapPendingDiagnosticTaskPageResponse,
   mapPendingMedicalOrderPageResponse,
   mapReportTrackingResponse,
+  printFormalReportVersions,
   publishPathologyReport,
+  recallFormalReportVersions,
   rejectPathologyReport,
   rejectReportRevisionRequest,
   reviewPathologyReport,
@@ -147,13 +157,39 @@ describe('doctor-workflow-service mappers', () => {
     expect(
       mapDiagnosticWorkbenchResponse({
         caseId: 'CASE-001',
+        consultations: [
+          {
+            consultationId: 'CONS-001',
+            participants: [
+              {
+                commentedAt: '2026-06-15T10:00:00',
+                draftedByName: '会诊医生甲',
+                opinion: '建议补充免疫组化',
+                participantId: 'PART-001',
+                participantName: '会诊医生甲',
+                participantRole: 'EXPERT',
+                participantUserId: 'USER-EXPERT',
+              },
+            ],
+          },
+        ],
         pathologyNo: 'BL-001',
       }),
     ).toMatchObject({
       blocks: [],
       caseId: 'CASE-001',
       chargeItems: [],
-      consultations: [],
+      consultations: [
+        {
+          consultationId: 'CONS-001',
+          participants: [
+            {
+              participantId: 'PART-001',
+              participantUserId: 'USER-EXPERT',
+            },
+          ],
+        },
+      ],
       currentReport: null,
       diagnosticTasks: [],
       hasPendingRevision: false,
@@ -228,9 +264,34 @@ describe('doctor-workflow-service mappers', () => {
   });
 
   it('normalizes report tracking arrays and version numbers', () => {
-    expect(mapReportTrackingResponse({ caseId: 'CASE-001' })).toMatchObject({
+    expect(
+      mapReportTrackingResponse({
+        caseId: 'CASE-001',
+        consultations: [
+          {
+            consultationId: 'CONS-001',
+            participants: [
+              {
+                participantId: 'PART-001',
+                participantUserId: 'USER-EXPERT',
+              },
+            ],
+          },
+        ],
+      }),
+    ).toMatchObject({
       caseId: 'CASE-001',
-      consultations: [],
+      consultations: [
+        {
+          consultationId: 'CONS-001',
+          participants: [
+            {
+              participantId: 'PART-001',
+              participantUserId: 'USER-EXPERT',
+            },
+          ],
+        },
+      ],
       currentDraftVersionNo: null,
       currentReport: null,
       diagnosticTasks: [],
@@ -240,6 +301,192 @@ describe('doctor-workflow-service mappers', () => {
       medicalOrders: [],
       revisions: [],
       versions: [],
+    });
+  });
+
+  it('normalizes lifecycle tracking arrays and missing nested fields', () => {
+    expect(
+      mapCaseLifecycleTrackingResponse({
+        caseSummary: {
+          caseId: 'CASE-001',
+          pathologyNo: 'BL-001',
+        },
+      }),
+    ).toMatchObject({
+      applicationForm: null,
+      caseSummary: {
+        caseId: 'CASE-001',
+        hasPendingRevision: false,
+        pathologyNo: 'BL-001',
+      },
+      overallTimeline: [],
+      reportLifecycle: {
+        consultations: [],
+        currentReport: null,
+        diagnosticTasks: [],
+        medicalOrders: [],
+        revisions: [],
+        versions: [],
+      },
+      specimens: [],
+    });
+  });
+
+  it('maps lifecycle tracking nested stage and object trees', () => {
+    expect(
+      mapCaseLifecycleTrackingResponse({
+        applicationForm: {
+          archiveStatus: 'IN_STORAGE',
+        },
+        caseSummary: {
+          caseId: 'CASE-001',
+        },
+        overallTimeline: [
+          {
+            nodes: [
+              {
+                keyFacts: [{ label: '节点', value: '值' }],
+                status: 'COMPLETED',
+                title: '申请创建',
+              },
+            ],
+            stageCode: 'APPLICATION',
+            stageTitle: '申请创建',
+          },
+        ],
+        specimens: [
+          {
+            blocks: [
+              {
+                blockEvents: [{ keyFacts: [], title: '取材' }],
+                blockId: 'BLOCK-1',
+                slides: [
+                  {
+                    slideEvents: [{ keyFacts: [], title: '切片' }],
+                    slideId: 'SLIDE-1',
+                  },
+                ],
+              },
+            ],
+            specimenEvents: [{ keyFacts: [], title: '标本创建' }],
+            specimenId: 'SPEC-1',
+          },
+        ],
+      }),
+    ).toMatchObject({
+      applicationForm: {
+        archiveStatus: 'IN_STORAGE',
+      },
+      overallTimeline: [
+        {
+          nodes: [
+            {
+              keyFacts: [{ label: '节点', value: '值' }],
+              title: '申请创建',
+            },
+          ],
+          stageCode: 'APPLICATION',
+        },
+      ],
+      specimens: [
+        {
+          blocks: [
+            {
+              blockEvents: [{ title: '取材' }],
+              blockId: 'BLOCK-1',
+              slides: [
+                { slideEvents: [{ title: '切片' }], slideId: 'SLIDE-1' },
+              ],
+            },
+          ],
+          specimenEvents: [{ title: '标本创建' }],
+          specimenId: 'SPEC-1',
+        },
+      ],
+    });
+  });
+
+  it('normalizes formal report version items and batch action results', () => {
+    expect(
+      mapFormalReportVersionSummary({
+        deliveryStatus: 'ISSUED',
+        reportId: 'REPORT-1',
+        reportNo: 'RPT-001',
+        versionId: 'RV-1',
+        versionNo: 2,
+        versionStatus: 'PUBLISHED',
+      }),
+    ).toEqual({
+      deliveryStatus: 'ISSUED',
+      issuedAt: null,
+      printStatus: null,
+      printedAt: null,
+      publishedAt: null,
+      recalledAt: null,
+      reportId: 'REPORT-1',
+      reportNo: 'RPT-001',
+      signedAt: null,
+      signedByName: null,
+      versionId: 'RV-1',
+      versionNo: 2,
+      versionStatus: 'PUBLISHED',
+    });
+
+    expect(
+      mapFormalReportVersionBatchActionResult({
+        items: [
+          {
+            message: '报告已发放',
+            success: true,
+            versionId: 'RV-1',
+          },
+        ],
+        successCount: 1,
+        totalCount: 1,
+      }),
+    ).toEqual({
+      failureCount: 0,
+      items: [
+        {
+          message: '报告已发放',
+          success: true,
+          versionId: 'RV-1',
+        },
+      ],
+      successCount: 1,
+      totalCount: 1,
+    });
+  });
+
+  it('normalizes case report version items', () => {
+    expect(
+      mapCaseReportVersionSummary({
+        deliveryStatus: 'PENDING',
+        printStatus: 'UNPRINTED',
+        reportId: 'REPORT-1',
+        reportNo: 'RPT-001',
+        reviewedAt: '2026-06-15T09:50:00',
+        submittedAt: '2026-06-15T09:30:00',
+        versionId: 'RV-1',
+        versionNo: 2,
+        versionStatus: 'REVIEWED',
+      }),
+    ).toEqual({
+      deliveryStatus: 'PENDING',
+      issuedAt: null,
+      printStatus: 'UNPRINTED',
+      printedAt: null,
+      publishedAt: null,
+      recalledAt: null,
+      reportId: 'REPORT-1',
+      reportNo: 'RPT-001',
+      reviewedAt: '2026-06-15T09:50:00',
+      signedAt: null,
+      signedByName: null,
+      submittedAt: '2026-06-15T09:30:00',
+      versionId: 'RV-1',
+      versionNo: 2,
+      versionStatus: 'REVIEWED',
     });
   });
 });
@@ -461,16 +708,36 @@ describe('doctor-workflow-service requests', () => {
   it('queries diagnostic aggregate endpoints', async () => {
     requestClientMock.get
       .mockResolvedValueOnce({ caseId: 'CASE-1' })
-      .mockResolvedValueOnce({ caseId: 'CASE-1' });
+      .mockResolvedValueOnce({ caseSummary: { caseId: 'CASE-1' } })
+      .mockResolvedValueOnce({ caseId: 'CASE-1' })
+      .mockResolvedValueOnce([{ reportId: 'REPORT-1', versionId: 'RV-1' }])
+      .mockResolvedValueOnce([{ reportId: 'REPORT-1', versionId: 'RV-1' }]);
 
     await expect(getDiagnosticWorkbench('CASE-1')).resolves.toMatchObject({
       caseId: 'CASE-1',
       diagnosticTasks: [],
     });
+    await expect(getCaseLifecycleTracking('CASE-1')).resolves.toMatchObject({
+      caseSummary: {
+        caseId: 'CASE-1',
+      },
+    });
     await expect(getReportTracking('CASE-1')).resolves.toMatchObject({
       caseId: 'CASE-1',
       versions: [],
     });
+    await expect(listFormalReportVersions('CASE-1')).resolves.toMatchObject([
+      {
+        reportId: 'REPORT-1',
+        versionId: 'RV-1',
+      },
+    ]);
+    await expect(listCaseReportVersions('CASE-1')).resolves.toMatchObject([
+      {
+        reportId: 'REPORT-1',
+        versionId: 'RV-1',
+      },
+    ]);
 
     expect(requestClientMock.get).toHaveBeenNthCalledWith(
       1,
@@ -478,7 +745,19 @@ describe('doctor-workflow-service requests', () => {
     );
     expect(requestClientMock.get).toHaveBeenNthCalledWith(
       2,
+      '/v1/pathology-cases/CASE-1/lifecycle-tracking',
+    );
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      3,
       '/v1/pathology-cases/CASE-1/report-tracking',
+    );
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      4,
+      '/v1/pathology-cases/CASE-1/formal-report-versions',
+    );
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      5,
+      '/v1/pathology-cases/CASE-1/report-versions',
     );
   });
 
@@ -555,6 +834,46 @@ describe('doctor-workflow-service requests', () => {
       7,
       '/v1/pathology-reports/REPORT-1/publish',
       { operatorName: '发布员' },
+    );
+  });
+
+  it('posts formal report batch action endpoints with exact paths', async () => {
+    requestClientMock.post.mockResolvedValue({
+      items: [{ success: true, versionId: 'RV-1' }],
+      successCount: 1,
+      totalCount: 1,
+    });
+
+    await printFormalReportVersions({ versionIds: ['RV-1'] });
+    await issueFormalReportVersions({
+      remarks: '批量发放',
+      versionIds: ['RV-1'],
+    });
+    await recallFormalReportVersions({
+      terminalCode: 'TERM-1',
+      versionIds: ['RV-1'],
+    });
+
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      1,
+      '/v1/pathology-reports/formal-versions/print',
+      { versionIds: ['RV-1'] },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      2,
+      '/v1/pathology-reports/formal-versions/issue',
+      {
+        remarks: '批量发放',
+        versionIds: ['RV-1'],
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      3,
+      '/v1/pathology-reports/formal-versions/recall',
+      {
+        terminalCode: 'TERM-1',
+        versionIds: ['RV-1'],
+      },
     );
   });
 

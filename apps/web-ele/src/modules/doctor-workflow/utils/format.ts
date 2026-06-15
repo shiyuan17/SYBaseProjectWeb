@@ -51,6 +51,68 @@ const REPORT_STATUS_LABELS: Record<string, string> = {
   SUBMITTED: '已提交',
 };
 
+const REVISION_STATUS_LABELS: Record<string, string> = {
+  APPROVED: '已通过',
+  PENDING: '待审批',
+  REJECTED: '已驳回',
+};
+
+const CONSULTATION_STATUS_LABELS: Record<string, string> = {
+  COMPLETED: '已完成',
+  IN_PROGRESS: '进行中',
+  PENDING: '待开始',
+};
+
+const REPORT_DELIVERY_STATUS_LABELS: Record<string, string> = {
+  ISSUED: '已发放',
+  PENDING: '待发放',
+  RECALLED: '已回收',
+};
+
+const REPORT_PRINT_STATUS_LABELS: Record<string, string> = {
+  PRINTED: '已打印',
+  UNPRINTED: '未打印',
+};
+
+const LIFECYCLE_NODE_STATUS_LABELS: Record<string, string> = {
+  ACCEPTED: '已接收',
+  ASSIGNED: '已分派',
+  BORROWED: '已借阅',
+  CANCELLED: '已取消',
+  COMPLETED: '已完成',
+  CONFIRMED: '已确认',
+  FIXED: '已固定',
+  IN_PROGRESS: '进行中',
+  IN_STORAGE: '已归档',
+  PENDING: '未发生',
+  PRINTED: '已打印',
+  PUBLISHED: '已发布',
+  RECEIVED: '已签收',
+  RECALLED: '已回收',
+  REGISTERED: '已创建',
+  REVIEWED: '已复核',
+  RETURNED: '已归还',
+  SIGNED: '已签发',
+  STARTED: '已开始',
+  STORED: '已入库',
+  SUBMITTED: '已提交',
+  VERIFIED: '已确认',
+};
+
+const ARCHIVE_STATUS_LABELS: Record<string, string> = {
+  BORROWED: '借出中',
+  IN_STORAGE: '已归档',
+  NOT_ARCHIVED: '未归档',
+  PENDING: '未归档',
+  RETURNED: '已归还',
+};
+
+const LOAN_STATUS_LABELS: Record<string, string> = {
+  BORROWED: '借出中',
+  NONE: '未借阅',
+  RETURNED: '已归还',
+};
+
 const MEDICAL_ORDER_STATUS_LABELS: Record<string, string> = {
   ACCEPTED: '已接收',
   CANCELLED: '已取消',
@@ -119,6 +181,55 @@ export function formatReportStatus(value?: null | string) {
     return EMPTY_TEXT;
   }
   return REPORT_STATUS_LABELS[value] ?? value;
+}
+
+export function formatRevisionStatus(value?: null | string) {
+  if (!value) {
+    return EMPTY_TEXT;
+  }
+  return REVISION_STATUS_LABELS[value] ?? value;
+}
+
+export function formatConsultationStatus(value?: null | string) {
+  if (!value) {
+    return EMPTY_TEXT;
+  }
+  return CONSULTATION_STATUS_LABELS[value] ?? value;
+}
+
+export function formatReportDeliveryStatus(value?: null | string) {
+  if (!value) {
+    return EMPTY_TEXT;
+  }
+  return REPORT_DELIVERY_STATUS_LABELS[value] ?? value;
+}
+
+export function formatReportPrintStatus(value?: null | string) {
+  if (!value) {
+    return EMPTY_TEXT;
+  }
+  return REPORT_PRINT_STATUS_LABELS[value] ?? value;
+}
+
+export function formatLifecycleNodeStatus(value?: null | string) {
+  if (!value) {
+    return EMPTY_TEXT;
+  }
+  return LIFECYCLE_NODE_STATUS_LABELS[value] ?? value;
+}
+
+export function formatArchiveStatus(value?: null | string) {
+  if (!value) {
+    return EMPTY_TEXT;
+  }
+  return ARCHIVE_STATUS_LABELS[value] ?? value;
+}
+
+export function formatLoanStatus(value?: null | string) {
+  if (!value) {
+    return EMPTY_TEXT;
+  }
+  return LOAN_STATUS_LABELS[value] ?? value;
 }
 
 export function formatMedicalOrderStatus(value?: null | string) {

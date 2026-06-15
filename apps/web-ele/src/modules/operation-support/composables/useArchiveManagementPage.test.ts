@@ -17,17 +17,22 @@ const {
   messageWarningMock,
   mockAccessStore,
   mockArchiveApplicationForm,
-  mockArchiveEmbeddingBox,
-  mockArchiveSlide,
-  mockArchiveSpecimen,
+  mockBatchArchiveEmbeddingBoxes,
+  mockBatchArchiveSlides,
+  mockBatchArchiveSpecimens,
   mockBatchCreateArchiveCabinets,
+  mockCreateMaterialLoan,
   mockCreateArchiveCabinet,
+  mockCreateArchiveCabinetNode,
   mockDeleteArchiveCabinet,
   mockListArchiveCabinets,
+  mockListArchiveCabinetNodes,
   mockListArchiveObjects,
   mockListAvailableArchivePositions,
+  mockListMaterialLoans,
   mockSearchArchiveRecords,
   mockUpdateArchiveCabinet,
+  mockUpdateArchiveCabinetNode,
   mockUserStore,
 } = vi.hoisted(() => ({
   messageErrorMock: vi.fn(),
@@ -38,17 +43,22 @@ const {
     accessCodes: [] as string[],
   },
   mockArchiveApplicationForm: vi.fn(),
-  mockArchiveEmbeddingBox: vi.fn(),
-  mockArchiveSlide: vi.fn(),
-  mockArchiveSpecimen: vi.fn(),
+  mockBatchArchiveEmbeddingBoxes: vi.fn(),
+  mockBatchArchiveSlides: vi.fn(),
+  mockBatchArchiveSpecimens: vi.fn(),
   mockBatchCreateArchiveCabinets: vi.fn(),
+  mockCreateMaterialLoan: vi.fn(),
   mockCreateArchiveCabinet: vi.fn(),
+  mockCreateArchiveCabinetNode: vi.fn(),
   mockDeleteArchiveCabinet: vi.fn(),
   mockListArchiveCabinets: vi.fn(),
+  mockListArchiveCabinetNodes: vi.fn(),
   mockListArchiveObjects: vi.fn(),
   mockListAvailableArchivePositions: vi.fn(),
+  mockListMaterialLoans: vi.fn(),
   mockSearchArchiveRecords: vi.fn(),
   mockUpdateArchiveCabinet: vi.fn(),
+  mockUpdateArchiveCabinetNode: vi.fn(),
   mockUserStore: {
     userInfo: {
       realName: '归档员甲',
@@ -75,17 +85,22 @@ vi.mock('element-plus', () => ({
 
 vi.mock('../api/operation-support-service', () => ({
   archiveApplicationForm: mockArchiveApplicationForm,
-  archiveEmbeddingBox: mockArchiveEmbeddingBox,
-  archiveSlide: mockArchiveSlide,
-  archiveSpecimen: mockArchiveSpecimen,
+  batchArchiveEmbeddingBoxes: mockBatchArchiveEmbeddingBoxes,
+  batchArchiveSlides: mockBatchArchiveSlides,
+  batchArchiveSpecimens: mockBatchArchiveSpecimens,
   batchCreateArchiveCabinets: mockBatchCreateArchiveCabinets,
+  createMaterialLoan: mockCreateMaterialLoan,
   createArchiveCabinet: mockCreateArchiveCabinet,
+  createArchiveCabinetNode: mockCreateArchiveCabinetNode,
   deleteArchiveCabinet: mockDeleteArchiveCabinet,
   listArchiveCabinets: mockListArchiveCabinets,
+  listArchiveCabinetNodes: mockListArchiveCabinetNodes,
   listArchiveObjects: mockListArchiveObjects,
   listAvailableArchivePositions: mockListAvailableArchivePositions,
+  listMaterialLoans: mockListMaterialLoans,
   searchArchiveRecords: mockSearchArchiveRecords,
   updateArchiveCabinet: mockUpdateArchiveCabinet,
+  updateArchiveCabinetNode: mockUpdateArchiveCabinetNode,
 }));
 
 import { useArchiveManagementPage } from './useArchiveManagementPage';
@@ -118,6 +133,22 @@ function createPosition(
     positionCode: 'CAB-01-L1-S1',
     positionStatus: 'AVAILABLE',
     slotNo: 1,
+    ...overrides,
+  };
+}
+
+function createCabinetNode(overrides = {}) {
+  return {
+    cabinetId: 'CABINET-1',
+    cabinetType: 'APPLICATION_FORM',
+    capacity: 4,
+    id: 'NODE-CABINET-1',
+    nodeCode: 'CAB-01',
+    nodeType: 'CABINET',
+    parentId: 'NODE-AREA-1',
+    pathLocation: 'B1 走廊',
+    remainingCapacity: 1,
+    remarks: '可用',
     ...overrides,
   };
 }
@@ -181,11 +212,27 @@ describe('useArchiveManagementPage', () => {
       M5_PERMISSION_CODES.ARCHIVE_CABINET_UPDATE,
       M5_PERMISSION_CODES.ARCHIVE_CABINET_DELETE,
       M5_PERMISSION_CODES.APPLICATION_FORM_ARCHIVE,
+      M5_PERMISSION_CODES.EMBEDDING_BOX_ARCHIVE,
+      M5_PERMISSION_CODES.SLIDE_ARCHIVE,
       M5_PERMISSION_CODES.SPECIMEN_ARCHIVE,
       M5_PERMISSION_CODES.ARCHIVE_QUERY,
+      M5_PERMISSION_CODES.LOAN_CREATE,
+      M5_PERMISSION_CODES.LOAN_QUERY,
     ];
 
     mockListArchiveCabinets.mockResolvedValue([createCabinet()]);
+    mockListArchiveCabinetNodes.mockResolvedValue([
+      createCabinetNode({
+        cabinetId: null,
+        capacity: 0,
+        id: 'NODE-AREA-1',
+        nodeCode: '申请单',
+        nodeType: 'AREA',
+        parentId: null,
+        remainingCapacity: 1,
+      }),
+      createCabinetNode(),
+    ]);
     mockListArchiveObjects.mockImplementation(
       async ({
         objectType,
@@ -208,6 +255,7 @@ describe('useArchiveManagementPage', () => {
       }),
     );
     mockListAvailableArchivePositions.mockResolvedValue([createPosition()]);
+    mockListMaterialLoans.mockResolvedValue([]);
     mockSearchArchiveRecords.mockResolvedValue([createRecord()]);
 
     mockArchiveApplicationForm.mockResolvedValue({
@@ -217,19 +265,28 @@ describe('useArchiveManagementPage', () => {
       objectId: 'OBJECT-1',
       objectType: 'APPLICATION_FORM',
     });
-    mockArchiveEmbeddingBox.mockResolvedValue({});
-    mockArchiveSlide.mockResolvedValue({});
-    mockArchiveSpecimen.mockResolvedValue({});
+    mockBatchArchiveEmbeddingBoxes.mockResolvedValue([]);
+    mockBatchArchiveSlides.mockResolvedValue([]);
+    mockBatchArchiveSpecimens.mockResolvedValue([]);
     mockBatchCreateArchiveCabinets.mockResolvedValue([
       createCabinet({ cabinetCode: 'CAB-B001', id: 'CABINET-B1' }),
       createCabinet({ cabinetCode: 'CAB-B002', id: 'CABINET-B2' }),
     ]);
+    mockCreateMaterialLoan.mockResolvedValue({
+      caseId: 'CASE-BOX-1',
+      loanId: 'LOAN-1',
+      loanStatus: 'BORROWED',
+      materialId: 'BOX-1',
+      materialType: 'EMBEDDING_BOX',
+    });
     mockCreateArchiveCabinet.mockResolvedValue(createCabinet());
+    mockCreateArchiveCabinetNode.mockResolvedValue(createCabinetNode());
     mockDeleteArchiveCabinet.mockResolvedValue(undefined);
     messageBoxConfirmMock.mockResolvedValue('confirm');
     mockUpdateArchiveCabinet.mockResolvedValue(
       createCabinet({ cabinetStatus: 'DISABLED' }),
     );
+    mockUpdateArchiveCabinetNode.mockResolvedValue(createCabinetNode());
   });
 
   afterEach(() => {
@@ -239,17 +296,22 @@ describe('useArchiveManagementPage', () => {
     messageWarningMock.mockReset();
 
     mockArchiveApplicationForm.mockReset();
-    mockArchiveEmbeddingBox.mockReset();
-    mockArchiveSlide.mockReset();
-    mockArchiveSpecimen.mockReset();
+    mockBatchArchiveEmbeddingBoxes.mockReset();
+    mockBatchArchiveSlides.mockReset();
+    mockBatchArchiveSpecimens.mockReset();
     mockBatchCreateArchiveCabinets.mockReset();
+    mockCreateMaterialLoan.mockReset();
     mockCreateArchiveCabinet.mockReset();
+    mockCreateArchiveCabinetNode.mockReset();
     mockDeleteArchiveCabinet.mockReset();
     mockListArchiveCabinets.mockReset();
+    mockListArchiveCabinetNodes.mockReset();
     mockListArchiveObjects.mockReset();
     mockListAvailableArchivePositions.mockReset();
+    mockListMaterialLoans.mockReset();
     mockSearchArchiveRecords.mockReset();
     mockUpdateArchiveCabinet.mockReset();
+    mockUpdateArchiveCabinetNode.mockReset();
 
     mockAccessStore.accessCodes = [];
     mockUserStore.userInfo = {
@@ -271,6 +333,7 @@ describe('useArchiveManagementPage', () => {
 
     expect(state.capabilities.canViewArchivePage).toBe(true);
     expect(state.cabinetWorkspace.cabinets).toHaveLength(1);
+    expect(state.cabinetWorkspace.cabinetNodes).toHaveLength(2);
     expect(
       state.recordWorkspace.objectLists.APPLICATION_FORM.items,
     ).toHaveLength(1);
@@ -295,6 +358,7 @@ describe('useArchiveManagementPage', () => {
     expect(state.cabinetWorkspace.selectedPositionLabel).toBe('CAB-01-L1-S1');
     expect(messageSuccessMock).toHaveBeenCalledWith('已选择柜位 CAB-01-L1-S1');
     expect(mockListArchiveCabinets).toHaveBeenCalledTimes(1);
+    expect(mockListArchiveCabinetNodes).toHaveBeenCalledTimes(1);
     expect(mockListAvailableArchivePositions).toHaveBeenCalledWith({
       cabinetId: undefined,
       cabinetType: undefined,
@@ -372,12 +436,58 @@ describe('useArchiveManagementPage', () => {
     expect(state.cabinetWorkspace.cabinetForm.locationDescription).toBe(
       'B1 走廊',
     );
+    expect(state.cabinetWorkspace.cabinetForm.nodeCode).toBe('CAB-01');
     expect(state.cabinetWorkspace.cabinetForm.operatorName).toBe('归档员甲');
 
     state.cabinetWorkspace.openCreateCabinetDialog();
     expect(state.cabinetWorkspace.cabinetDialogMode).toBe('create');
     expect(state.cabinetWorkspace.cabinetForm.cabinetCode).toBe('');
+    expect(state.cabinetWorkspace.cabinetForm.nodeType).toBe('CABINET');
     expect(state.cabinetWorkspace.cabinetForm.operatorName).toBe('归档员甲');
+
+    wrapper.destroy();
+  });
+
+  it('creates an archive cabinet node and refreshes node data', async () => {
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    state.cabinetWorkspace.openCreateCabinetDialog();
+    Object.assign(state.cabinetWorkspace.cabinetForm, {
+      cabinetType: 'SLIDE',
+      capacity: 8,
+      nodeCode: ' CAB-NODE-1 ',
+      nodeType: 'CABINET',
+      parentId: ' NODE-AREA-1 ',
+      pathLocation: ' 2F ',
+      remarks: ' 新增节点 ',
+    });
+
+    mockListArchiveCabinets.mockClear();
+    mockListArchiveCabinetNodes.mockClear();
+    mockListAvailableArchivePositions.mockClear();
+
+    await state.cabinetWorkspace.submitCabinet();
+
+    expect(mockCreateArchiveCabinetNode).toHaveBeenCalledWith({
+      cabinetType: 'SLIDE',
+      capacity: 8,
+      nodeCode: 'CAB-NODE-1',
+      nodeType: 'CABINET',
+      parentId: 'NODE-AREA-1',
+      pathLocation: '2F',
+      remarks: '新增节点',
+      terminalCode: undefined,
+    });
+    expect(messageSuccessMock).toHaveBeenCalledWith('归档柜节点已创建。');
+    expect(mockListArchiveCabinets).toHaveBeenCalledTimes(1);
+    expect(mockListArchiveCabinetNodes).toHaveBeenCalledTimes(1);
+    expect(mockListAvailableArchivePositions).toHaveBeenCalledTimes(1);
 
     wrapper.destroy();
   });
@@ -557,7 +667,7 @@ describe('useArchiveManagementPage', () => {
     wrapper.destroy();
   });
 
-  it('submits specimen archive with independent permission and refreshes specimen list', async () => {
+  it('submits selected specimen records through batch archive and refreshes specimen list', async () => {
     const wrapper = mountComposable();
     await flushComposable();
 
@@ -567,25 +677,34 @@ describe('useArchiveManagementPage', () => {
     }
 
     await state.recordWorkspace.setActiveArchiveObjectType('SPECIMEN');
-    const position = state.cabinetWorkspace.positionRows[0];
-    state.cabinetWorkspace.selectPosition(position!);
     messageSuccessMock.mockClear();
 
     mockListAvailableArchivePositions.mockClear();
     mockListArchiveObjects.mockClear();
 
+    state.recordWorkspace.setSelectedArchiveObjectRecords('SPECIMEN', [
+      {
+        caseId: 'CASE-1',
+        objectId: ' SPECIMEN-1 ',
+        objectType: 'SPECIMEN',
+        pathologyNo: 'BL-2026-001',
+        patientName: '张三',
+      },
+    ]);
     state.archiveWorkspace.openArchiveDialog('SPECIMEN');
-    state.archiveWorkspace.archiveForm.specimenId = ' SPECIMEN-1 ';
+    state.archiveWorkspace.archiveForm.archiveCabinetId = 'CABINET-1';
+    state.archiveWorkspace.archiveForm.archiveExpiresAt = '2026-06-30T18:00:00';
+    state.archiveWorkspace.archiveForm.archiveReminderDays = 1;
     state.archiveWorkspace.archiveForm.remarks = ' 标本归档 ';
 
     await state.archiveWorkspace.submitArchive();
 
-    expect(mockArchiveSpecimen).toHaveBeenCalledWith({
-      archivePositionId: 'POSITION-1',
-      operatorName: '归档员甲',
-      operatorUserId: 'USER-ARCHIVE-1',
+    expect(mockBatchArchiveSpecimens).toHaveBeenCalledWith({
+      archiveCabinetId: 'CABINET-1',
+      archiveExpiresAt: '2026-06-30T18:00:00',
+      archiveReminderDays: 1,
+      objectIds: ['SPECIMEN-1'],
       remarks: '标本归档',
-      specimenId: 'SPECIMEN-1',
       terminalCode: undefined,
     });
     expect(messageSuccessMock).toHaveBeenCalledWith('标本归档已完成。');
@@ -596,8 +715,148 @@ describe('useArchiveManagementPage', () => {
       page: 1,
       size: 20,
     });
-    expect(state.archiveWorkspace.archiveForm.specimenId).toBe('');
-    expect(state.archiveWorkspace.archiveDialogVisible).toBe(false);
+    expect(state.archiveWorkspace.archiveForm.archiveCabinetId).toBe('');
+    expect(state.archiveWorkspace.physicalArchiveDialogVisible).toBe(false);
+    expect(state.recordWorkspace.selectedSpecimenRecords).toHaveLength(0);
+
+    wrapper.destroy();
+  });
+
+  it('keeps selected physical records when batch archive fails', async () => {
+    mockBatchArchiveEmbeddingBoxes.mockRejectedValueOnce(new Error('柜位不足'));
+
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    await state.recordWorkspace.setActiveArchiveObjectType('EMBEDDING_BOX');
+    state.recordWorkspace.setSelectedArchiveObjectRecords('EMBEDDING_BOX', [
+      {
+        caseId: 'CASE-BOX-1',
+        objectId: 'BOX-1',
+        objectType: 'EMBEDDING_BOX',
+        pathologyNo: 'BL-2026-002',
+      },
+    ]);
+    state.archiveWorkspace.openArchiveDialog('EMBEDDING_BOX');
+    state.archiveWorkspace.archiveForm.archiveCabinetId = 'CABINET-1';
+
+    mockListAvailableArchivePositions.mockClear();
+    mockListArchiveObjects.mockClear();
+
+    await state.archiveWorkspace.submitArchive();
+
+    expect(mockBatchArchiveEmbeddingBoxes).toHaveBeenCalledWith({
+      archiveCabinetId: 'CABINET-1',
+      objectIds: ['BOX-1'],
+      remarks: undefined,
+      terminalCode: undefined,
+    });
+    expect(messageErrorMock).toHaveBeenCalledWith('柜位不足');
+    expect(state.archiveWorkspace.physicalArchiveDialogVisible).toBe(true);
+    expect(state.recordWorkspace.selectedEmbeddingBoxRecords).toHaveLength(1);
+    expect(mockListAvailableArchivePositions).not.toHaveBeenCalled();
+    expect(mockListArchiveObjects).not.toHaveBeenCalled();
+
+    wrapper.destroy();
+  });
+
+  it('opens archive-page borrow dialog for selected embedding boxes and refreshes selected rows with latest state', async () => {
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    await state.recordWorkspace.setActiveArchiveObjectType('EMBEDDING_BOX');
+    const selectedRecord = createRecord({
+      archiveStatus: 'IN_STORAGE',
+      loanStatus: 'NONE',
+      objectCode: 'A1',
+      objectId: 'BOX-1',
+      objectType: 'EMBEDDING_BOX',
+      pathologyNo: 'BL-2026-010',
+    });
+
+    state.recordWorkspace.setSelectedArchiveObjectRecords('EMBEDDING_BOX', [
+      selectedRecord,
+      createRecord({
+        archiveStatus: 'IN_STORAGE',
+        loanStatus: 'BORROWED',
+        objectCode: 'A2',
+        objectId: 'BOX-2',
+        objectType: 'EMBEDDING_BOX',
+      }),
+      createRecord({
+        archiveStatus: 'NOT_ARCHIVED',
+        loanStatus: 'NONE',
+        objectCode: 'A3',
+        objectId: 'BOX-3',
+        objectType: 'EMBEDDING_BOX',
+      }),
+    ]);
+
+    state.loanWorkspace.openBorrowDialogForRecords(
+      'EMBEDDING_BOX',
+      state.recordWorkspace.selectedEmbeddingBoxRecords,
+    );
+    state.loanWorkspace.loanForm.borrowedByName = ' 张三 ';
+
+    expect(state.loanWorkspace.borrowDialogVisible).toBe(true);
+    expect(state.loanWorkspace.loanForm.materialType).toBe('EMBEDDING_BOX');
+    expect(state.loanWorkspace.loanForm.materialId).toBe('BOX-1');
+
+    mockListAvailableArchivePositions.mockClear();
+    mockListArchiveCabinetNodes.mockClear();
+    mockListArchiveObjects.mockClear();
+    mockListArchiveObjects.mockResolvedValueOnce({
+      items: [
+        {
+          ...selectedRecord,
+          borrowedByName: '张三',
+          loanStatus: 'BORROWED',
+        },
+      ],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+
+    await state.loanWorkspace.submitLoan();
+
+    expect(mockCreateMaterialLoan).toHaveBeenCalledTimes(1);
+    expect(mockCreateMaterialLoan).toHaveBeenCalledWith(
+      expect.objectContaining({
+        borrowedByName: '张三',
+        materialId: 'BOX-1',
+        materialType: 'EMBEDDING_BOX',
+      }),
+    );
+    expect(messageWarningMock).toHaveBeenCalledWith(
+      '借记完成：成功 1 条，跳过 2 条，失败 0 条。跳过原因：已借出、非在库。',
+    );
+    expect(mockListArchiveCabinetNodes).toHaveBeenCalledTimes(1);
+    expect(mockListAvailableArchivePositions).toHaveBeenCalledTimes(1);
+    expect(mockListArchiveObjects).toHaveBeenCalledWith({
+      keyword: undefined,
+      objectType: 'EMBEDDING_BOX',
+      page: 1,
+      size: 20,
+    });
+    expect(state.loanWorkspace.borrowDialogVisible).toBe(false);
+    expect(state.recordWorkspace.selectedEmbeddingBoxRecords).toEqual([
+      expect.objectContaining({
+        borrowedByName: '张三',
+        loanStatus: 'BORROWED',
+        objectId: 'BOX-1',
+      }),
+    ]);
 
     wrapper.destroy();
   });
@@ -614,6 +873,7 @@ describe('useArchiveManagementPage', () => {
     const cabinet = state.cabinetWorkspace.cabinets[0];
 
     mockListArchiveCabinets.mockClear();
+    mockListArchiveCabinetNodes.mockClear();
     mockListAvailableArchivePositions.mockClear();
 
     await state.cabinetWorkspace.toggleCabinetStatus(cabinet!);
@@ -628,6 +888,7 @@ describe('useArchiveManagementPage', () => {
     });
     expect(messageSuccessMock).toHaveBeenCalledWith('归档柜已停用。');
     expect(mockListArchiveCabinets).toHaveBeenCalledTimes(1);
+    expect(mockListArchiveCabinetNodes).toHaveBeenCalledTimes(1);
     expect(mockListAvailableArchivePositions).toHaveBeenCalledTimes(1);
 
     wrapper.destroy();
@@ -649,6 +910,7 @@ describe('useArchiveManagementPage', () => {
       cabinetCodePrefix: ' CAB-B ',
       cabinetNamePrefix: ' 批量柜 ',
       count: 2,
+      parentId: 'NODE-AREA-1',
       layerCount: 1,
       numberWidth: 3,
       slotCountPerLayer: 10,
@@ -656,6 +918,7 @@ describe('useArchiveManagementPage', () => {
     });
 
     mockListArchiveCabinets.mockClear();
+    mockListArchiveCabinetNodes.mockClear();
     mockListAvailableArchivePositions.mockClear();
 
     await state.cabinetWorkspace.submitBatchCabinets();
@@ -663,13 +926,14 @@ describe('useArchiveManagementPage', () => {
     expect(mockBatchCreateArchiveCabinets).toHaveBeenCalledWith({
       cabinetCodePrefix: 'CAB-B',
       cabinetNamePrefix: '批量柜',
-      cabinetType: 'STANDARD',
+      cabinetType: 'APPLICATION_FORM',
       count: 2,
       layerCount: 1,
       locationDescription: undefined,
       numberWidth: 3,
       operatorName: '归档员甲',
       operatorUserId: 'USER-ARCHIVE-1',
+      parentId: 'NODE-AREA-1',
       remarks: undefined,
       slotCountPerLayer: 10,
       startNo: 1,
@@ -678,6 +942,7 @@ describe('useArchiveManagementPage', () => {
     expect(messageSuccessMock).toHaveBeenCalledWith('已批量新增 2 个归档柜。');
     expect(state.cabinetWorkspace.batchCabinetDialogVisible).toBe(false);
     expect(mockListArchiveCabinets).toHaveBeenCalledTimes(1);
+    expect(mockListArchiveCabinetNodes).toHaveBeenCalledTimes(1);
     expect(mockListAvailableArchivePositions).toHaveBeenCalledTimes(1);
 
     wrapper.destroy();
@@ -695,6 +960,7 @@ describe('useArchiveManagementPage', () => {
     const cabinet = state.cabinetWorkspace.cabinets[0];
 
     mockListArchiveCabinets.mockClear();
+    mockListArchiveCabinetNodes.mockClear();
     mockListAvailableArchivePositions.mockClear();
 
     await state.cabinetWorkspace.deleteCabinet(cabinet!);
@@ -703,6 +969,7 @@ describe('useArchiveManagementPage', () => {
     expect(mockDeleteArchiveCabinet).toHaveBeenCalledWith('CABINET-1');
     expect(messageSuccessMock).toHaveBeenCalledWith('归档柜已删除。');
     expect(mockListArchiveCabinets).toHaveBeenCalledTimes(1);
+    expect(mockListArchiveCabinetNodes).toHaveBeenCalledTimes(1);
     expect(mockListAvailableArchivePositions).toHaveBeenCalledTimes(1);
 
     wrapper.destroy();

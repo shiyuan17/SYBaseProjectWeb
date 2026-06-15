@@ -39,7 +39,6 @@ defineProps<{
   };
   selectedPosition: null | PositionWorkbenchRow;
   selectedPositionCode: string;
-  selectedPositionLabel: string;
 }>();
 
 const emit = defineEmits<{
@@ -166,34 +165,6 @@ const cabinetType = defineModel<string>('cabinetType', { required: true });
           >
             {{ positionSummary.disabled }}
           </div>
-        </div>
-      </div>
-
-      <div
-        class="mt-4 rounded-lg border border-dashed border-[var(--el-border-color)] p-4"
-      >
-        <div class="flex items-start justify-between gap-4">
-          <div>
-            <div class="text-sm text-[var(--el-text-color-secondary)]">
-              当前选中柜位
-            </div>
-            <div class="mt-2 text-base font-medium">
-              {{ selectedPositionLabel }}
-            </div>
-            <div class="mt-1 text-sm text-[var(--el-text-color-secondary)]">
-              <template v-if="selectedPosition">
-                {{ selectedPosition.cabinetCode }} / 第
-                {{ selectedPosition.layerNo }} 层 / 第
-                {{ selectedPosition.slotNo }} 位
-              </template>
-              <template v-else>
-                暂未选择柜位，可在下表中从“可用”柜位执行选择。
-              </template>
-            </div>
-          </div>
-          <ElTag v-if="selectedPosition" type="success">
-            可直接用于归档 / 替代归还
-          </ElTag>
         </div>
       </div>
 

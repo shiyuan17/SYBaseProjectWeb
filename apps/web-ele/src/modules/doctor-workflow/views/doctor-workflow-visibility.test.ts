@@ -1,8 +1,8 @@
 import type {
+  CaseLifecycleTrackingView,
   DiagnosticWorkbenchView,
   PendingDiagnosticTaskPage,
   PendingMedicalOrderPage,
-  ReportTrackingView as ReportTrackingData,
 } from '../types/doctor-workflow';
 
 import { createApp, defineComponent, h, nextTick } from 'vue';
@@ -14,12 +14,19 @@ import { M4_PERMISSION_CODES } from '../constants';
 const {
   acceptMedicalOrderMock,
   acceptDiagnosticTaskMock,
+  approveReportRevisionRequestMock,
   assignDiagnosticTaskMock,
   cancelMedicalOrderMock,
+  commentConsultationParticipantMock,
   completeMedicalOrderMock,
+  completeConsultationMock,
+  createConsultationMock,
   createMedicalOrderMock,
+  createReportRevisionRequestMock,
+  getCaseLifecycleTrackingMock,
   getDiagnosticWorkbenchMock,
-  getReportTrackingMock,
+  issueFormalReportVersionsMock,
+  listCaseReportVersionsMock,
   listMedicalOrderDictsMock,
   listMedicalOrderPackagesPageMock,
   listSystemUsersMock,
@@ -29,23 +36,43 @@ const {
   mockRoute,
   mockRouter,
   mockUserStore,
+  printFormalReportVersionsMock,
+  rejectReportRevisionRequestMock,
+  recallFormalReportVersionsMock,
   startDiagnosticTaskMock,
 } = vi.hoisted(() => ({
   acceptMedicalOrderMock:
     vi.fn<(orderId: string, data: unknown) => Promise<unknown>>(),
   acceptDiagnosticTaskMock:
     vi.fn<(taskId: string, data: unknown) => Promise<unknown>>(),
+  approveReportRevisionRequestMock:
+    vi.fn<(requestId: string, data: unknown) => Promise<unknown>>(),
   assignDiagnosticTaskMock:
     vi.fn<(taskId: string, data: unknown) => Promise<unknown>>(),
   cancelMedicalOrderMock:
     vi.fn<(orderId: string, data: unknown) => Promise<unknown>>(),
+  commentConsultationParticipantMock:
+    vi.fn<
+      (
+        consultationId: string,
+        participantId: string,
+        data: unknown,
+      ) => Promise<unknown>
+    >(),
   completeMedicalOrderMock:
     vi.fn<(orderId: string, data: unknown) => Promise<unknown>>(),
+  completeConsultationMock:
+    vi.fn<(consultationId: string, data: unknown) => Promise<unknown>>(),
+  createConsultationMock: vi.fn<(data: unknown) => Promise<unknown>>(),
   createMedicalOrderMock: vi.fn<(data: unknown) => Promise<unknown>>(),
+  createReportRevisionRequestMock: vi.fn<(data: unknown) => Promise<unknown>>(),
+  getCaseLifecycleTrackingMock:
+    vi.fn<(caseId: string) => Promise<CaseLifecycleTrackingView>>(),
   getDiagnosticWorkbenchMock:
     vi.fn<(caseId: string) => Promise<DiagnosticWorkbenchView>>(),
-  getReportTrackingMock:
-    vi.fn<(caseId: string) => Promise<ReportTrackingData>>(),
+  issueFormalReportVersionsMock:
+    vi.fn<(payload: unknown) => Promise<unknown>>(),
+  listCaseReportVersionsMock: vi.fn<(caseId: string) => Promise<unknown[]>>(),
   listMedicalOrderDictsMock: vi.fn<() => Promise<unknown[]>>(),
   listMedicalOrderPackagesPageMock:
     vi.fn<(query: unknown) => Promise<unknown>>(),
@@ -72,6 +99,12 @@ const {
       userId: 'USER-CURRENT',
     },
   },
+  printFormalReportVersionsMock:
+    vi.fn<(payload: unknown) => Promise<unknown>>(),
+  rejectReportRevisionRequestMock:
+    vi.fn<(requestId: string, data: unknown) => Promise<unknown>>(),
+  recallFormalReportVersionsMock:
+    vi.fn<(payload: unknown) => Promise<unknown>>(),
   startDiagnosticTaskMock:
     vi.fn<(taskId: string, data: unknown) => Promise<unknown>>(),
 }));
@@ -111,25 +144,29 @@ vi.mock('@vben/stores', () => ({
 vi.mock('../api/doctor-workflow-service', () => ({
   acceptMedicalOrder: acceptMedicalOrderMock,
   acceptDiagnosticTask: acceptDiagnosticTaskMock,
-  approveReportRevisionRequest: vi.fn(),
+  approveReportRevisionRequest: approveReportRevisionRequestMock,
   assignDiagnosticTask: assignDiagnosticTaskMock,
   cancelMedicalOrder: cancelMedicalOrderMock,
-  commentConsultationParticipant: vi.fn(),
+  commentConsultationParticipant: commentConsultationParticipantMock,
   completeMedicalOrder: completeMedicalOrderMock,
-  completeConsultation: vi.fn(),
-  createConsultation: vi.fn(),
+  completeConsultation: completeConsultationMock,
+  createConsultation: createConsultationMock,
   createMedicalOrder: createMedicalOrderMock,
   createPathologyReport: vi.fn(),
-  createReportRevisionRequest: vi.fn(),
+  createReportRevisionRequest: createReportRevisionRequestMock,
+  getCaseLifecycleTracking: getCaseLifecycleTrackingMock,
   getDiagnosticWorkbench: getDiagnosticWorkbenchMock,
-  getReportTracking: getReportTrackingMock,
+  issueFormalReportVersions: issueFormalReportVersionsMock,
+  listCaseReportVersions: listCaseReportVersionsMock,
   listMedicalOrderDicts: listMedicalOrderDictsMock,
   listMedicalOrderPackagesPage: listMedicalOrderPackagesPageMock,
   listPendingMedicalOrders: listPendingMedicalOrdersMock,
   listPendingDiagnosticTasks: listPendingDiagnosticTasksMock,
   publishPathologyReport: vi.fn(),
+  printFormalReportVersions: printFormalReportVersionsMock,
+  recallFormalReportVersions: recallFormalReportVersionsMock,
   rejectPathologyReport: vi.fn(),
-  rejectReportRevisionRequest: vi.fn(),
+  rejectReportRevisionRequest: rejectReportRevisionRequestMock,
   reviewPathologyReport: vi.fn(),
   savePathologyReportDraft: vi.fn(),
   signPathologyReport: vi.fn(),
@@ -219,7 +256,39 @@ const workbenchFixture: DiagnosticWorkbenchView = {
   caseStatus: 'IN_DIAGNOSIS',
   chargeItems: [],
   clinicalDiagnosis: '临床诊断',
-  consultations: [],
+  consultations: [
+    {
+      completedAt: null,
+      consultationId: 'CONSULT-001',
+      consultationType: 'MDT',
+      hostName: '主持人甲',
+      opinion: null,
+      participantCount: 2,
+      participants: [
+        {
+          commentedAt: null,
+          draftedByName: null,
+          opinion: null,
+          participantId: 'CP-001',
+          participantName: '当前分派员',
+          participantRole: 'MEMBER',
+          participantUserId: 'USER-CURRENT',
+        },
+        {
+          commentedAt: '2026-06-15T10:30:00',
+          draftedByName: '主持人甲',
+          opinion: '已补充意见',
+          participantId: 'CP-002',
+          participantName: '会诊医生乙',
+          participantRole: 'MEMBER',
+          participantUserId: 'USER-OTHER',
+        },
+      ],
+      requestedAt: '2026-06-15T09:30:00',
+      requestedByName: '申请医生甲',
+      status: 'IN_PROGRESS',
+    },
+  ],
   currentReport: {
     finalDiagnosis: '最终诊断',
     reportId: 'REPORT-001',
@@ -249,30 +318,109 @@ const workbenchFixture: DiagnosticWorkbenchView = {
   recentEvents: [],
   remarkSections: [],
   reportTraces: [],
-  revisions: [],
+  revisions: [
+    {
+      approvedVersionNo: null,
+      currentVersionNo: 1,
+      rejectReason: null,
+      reportId: 'REPORT-001',
+      requestId: 'REVISION-001',
+      requestedAt: '2026-06-15T09:00:00',
+      requestedByName: '申请医生甲',
+      requestReason: '补充镜下诊断描述',
+      requestStatus: 'PENDING',
+      reviewedAt: null,
+      reviewedByName: null,
+    },
+  ],
   slides: [],
   specimens: [],
 };
 
-const trackingFixture: ReportTrackingData = {
-  caseId: 'CASE-001',
-  consultations: [],
-  currentDraftVersionNo: 1,
-  currentReport: {
-    finalDiagnosis: '最终诊断',
+const trackingFixture: CaseLifecycleTrackingView = {
+  applicationForm: {
+    applicantDoctorName: '送检医生甲',
+    applicationDate: '2026-06-15T08:00:00',
+    archiveLocation: null,
+    archiveStatus: null,
+    imageUrl: null,
+    remarks: null,
+  },
+  caseSummary: {
+    applicationDate: '2026-06-15T08:00:00',
+    applicationNo: 'APP-001',
+    applicationType: 'ROUTINE',
+    caseId: 'CASE-001',
+    caseStatus: 'IN_DIAGNOSIS',
+    currentStage: 'SIGNED',
+    hasPendingRevision: false,
+    pathologyNo: 'PATH-001',
+    patientAge: '35岁',
+    patientGender: '男',
+    patientName: '张三',
+    submittingDepartmentName: '外科',
+    submittingDoctorName: '送检医生甲',
+  },
+  overallTimeline: [],
+  reportLifecycle: {
+    consultations: [],
+    currentReport: {
+      finalDiagnosis: '最终诊断',
+      reportId: 'REPORT-001',
+      reportNo: 'RPT-001',
+      reportStatus: 'SIGNED',
+      versionNo: 1,
+    },
+    diagnosticTasks: [],
+    medicalOrders: [],
+    revisions: [],
+    versions: [],
+  },
+  specimens: [],
+};
+
+const formalReportVersionsFixture = [
+  {
+    deliveryStatus: 'PENDING',
+    printStatus: 'UNPRINTED',
     reportId: 'REPORT-001',
     reportNo: 'RPT-001',
-    reportStatus: 'SIGNED',
+    reviewedAt: null,
+    signedAt: '2026-06-15T10:00:00',
+    submittedAt: '2026-06-15T09:30:00',
+    versionId: 'RV-1',
     versionNo: 1,
+    versionStatus: 'SUBMITTED',
   },
-  diagnosticTasks: [],
-  events: [],
-  hasPendingRevision: false,
-  medicalOrders: [],
-  pathologyNo: 'PATH-001',
-  revisions: [],
-  versions: [],
-};
+  {
+    deliveryStatus: 'PENDING',
+    printStatus: 'UNPRINTED',
+    reportId: 'REPORT-001',
+    reportNo: 'RPT-001',
+    reviewedAt: '2026-06-15T09:50:00',
+    signedAt: null,
+    submittedAt: '2026-06-15T09:30:00',
+    versionId: 'RV-2',
+    versionNo: 2,
+    versionStatus: 'REVIEWED',
+  },
+  {
+    deliveryStatus: 'ISSUED',
+    issuedAt: '2026-06-15T11:00:00',
+    printStatus: 'PRINTED',
+    printedAt: '2026-06-15T10:30:00',
+    publishedAt: '2026-06-15T10:40:00',
+    recalledAt: null,
+    reportId: 'REPORT-001',
+    reportNo: 'RPT-001',
+    reviewedAt: '2026-06-15T09:50:00',
+    signedAt: '2026-06-15T10:00:00',
+    submittedAt: '2026-06-15T09:30:00',
+    versionId: 'RV-3',
+    versionNo: 3,
+    versionStatus: 'PUBLISHED',
+  },
+];
 
 const pendingMedicalOrderPageFixture: PendingMedicalOrderPage = {
   items: [
@@ -373,28 +521,74 @@ function resetTestState() {
   mockRouter.replace.mockReset();
   acceptMedicalOrderMock.mockReset();
   acceptDiagnosticTaskMock.mockReset();
+  approveReportRevisionRequestMock.mockReset();
   assignDiagnosticTaskMock.mockReset();
   cancelMedicalOrderMock.mockReset();
+  commentConsultationParticipantMock.mockReset();
   completeMedicalOrderMock.mockReset();
+  completeConsultationMock.mockReset();
+  createConsultationMock.mockReset();
   createMedicalOrderMock.mockReset();
+  createReportRevisionRequestMock.mockReset();
+  issueFormalReportVersionsMock.mockReset();
+  listCaseReportVersionsMock.mockReset();
   listMedicalOrderDictsMock.mockReset();
   listMedicalOrderPackagesPageMock.mockReset();
   listSystemUsersMock.mockReset();
   listPendingDiagnosticTasksMock.mockReset();
   listPendingMedicalOrdersMock.mockReset();
   getDiagnosticWorkbenchMock.mockReset();
-  getReportTrackingMock.mockReset();
+  getCaseLifecycleTrackingMock.mockReset();
   startDiagnosticTaskMock.mockReset();
   mockUserStore.userInfo = {
     realName: '当前分派员',
     userId: 'USER-CURRENT',
   };
+  printFormalReportVersionsMock.mockReset();
+  rejectReportRevisionRequestMock.mockReset();
+  recallFormalReportVersionsMock.mockReset();
   acceptMedicalOrderMock.mockResolvedValue({});
   acceptDiagnosticTaskMock.mockResolvedValue({});
+  approveReportRevisionRequestMock.mockResolvedValue({
+    approvedVersionNo: 2,
+    caseId: 'CASE-001',
+    reportId: 'REPORT-001',
+    requestId: 'REVISION-001',
+    requestStatus: 'APPROVED',
+  });
   assignDiagnosticTaskMock.mockResolvedValue({});
   cancelMedicalOrderMock.mockResolvedValue({});
+  commentConsultationParticipantMock.mockResolvedValue({
+    caseId: 'CASE-001',
+    consultationId: 'CONSULT-001',
+    status: 'IN_PROGRESS',
+  });
   completeMedicalOrderMock.mockResolvedValue({});
+  completeConsultationMock.mockResolvedValue({
+    caseId: 'CASE-001',
+    consultationId: 'CONSULT-001',
+    status: 'COMPLETED',
+  });
+  createConsultationMock.mockResolvedValue({
+    caseId: 'CASE-001',
+    consultationId: 'CONSULT-002',
+    status: 'IN_PROGRESS',
+  });
   createMedicalOrderMock.mockResolvedValue({});
+  createReportRevisionRequestMock.mockResolvedValue({
+    approvedVersionNo: null,
+    caseId: 'CASE-001',
+    reportId: 'REPORT-001',
+    requestId: 'REVISION-002',
+    requestStatus: 'PENDING',
+  });
+  issueFormalReportVersionsMock.mockResolvedValue({
+    failureCount: 0,
+    items: [{ success: true, versionId: 'RV-1' }],
+    successCount: 1,
+    totalCount: 1,
+  });
+  listCaseReportVersionsMock.mockResolvedValue([]);
   listMedicalOrderDictsMock.mockResolvedValue([]);
   listMedicalOrderPackagesPageMock.mockResolvedValue({
     items: [],
@@ -413,7 +607,26 @@ function resetTestState() {
     pendingMedicalOrderPageFixture,
   );
   getDiagnosticWorkbenchMock.mockResolvedValue(workbenchFixture);
-  getReportTrackingMock.mockResolvedValue(trackingFixture);
+  getCaseLifecycleTrackingMock.mockResolvedValue(trackingFixture);
+  printFormalReportVersionsMock.mockResolvedValue({
+    failureCount: 0,
+    items: [{ success: true, versionId: 'RV-1' }],
+    successCount: 1,
+    totalCount: 1,
+  });
+  rejectReportRevisionRequestMock.mockResolvedValue({
+    approvedVersionNo: null,
+    caseId: 'CASE-001',
+    reportId: 'REPORT-001',
+    requestId: 'REVISION-001',
+    requestStatus: 'REJECTED',
+  });
+  recallFormalReportVersionsMock.mockResolvedValue({
+    failureCount: 0,
+    items: [{ success: true, versionId: 'RV-1' }],
+    successCount: 1,
+    totalCount: 1,
+  });
   startDiagnosticTaskMock.mockResolvedValue({});
 }
 
@@ -471,6 +684,7 @@ async function mountView(component: object) {
       expect(button).toBeTruthy();
       button?.click();
     },
+    documentText: () => document.body.textContent ?? '',
     buttonTexts: () =>
       [...root.querySelectorAll('button')].map(
         (button) => button.textContent?.trim() ?? '',
@@ -490,6 +704,21 @@ async function mountView(component: object) {
       const button = buttons[index];
       expect(button).toBeTruthy();
       return button?.hasAttribute('disabled') ?? false;
+    },
+    setInputValue: (placeholder: string, value: string, index = 0) => {
+      const inputs = [
+        ...root.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+          'input, textarea',
+        ),
+      ].filter((item) => item.getAttribute('placeholder') === placeholder);
+      const input = inputs[index];
+      expect(input).toBeTruthy();
+      if (!input) {
+        return;
+      }
+      input.value = value;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
     },
     root,
     text: () => root.textContent ?? '',
@@ -795,45 +1024,120 @@ describe('doctor workflow view visibility', () => {
     wrapper.unmount();
   });
 
-  it('shows only review actions for report review role', async () => {
+  it('shows review-only actions on the report list page', async () => {
     mockRoute.query = {
       caseId: 'CASE-001',
     };
     mockAccessStore.accessCodes = [M4_PERMISSION_CODES.REPORT_REVIEW];
+    listCaseReportVersionsMock.mockResolvedValue(formalReportVersionsFixture);
 
     const wrapper = await mountView(PathologyReportView);
 
+    expect(listCaseReportVersionsMock).toHaveBeenCalledWith('CASE-001');
+    expect(wrapper.text()).toContain('报告列表');
+    expect(wrapper.text()).toContain('已提交');
+    expect(wrapper.text()).toContain('已审核');
+    expect(wrapper.text()).toContain('已发布');
+    expect(wrapper.text()).toContain('未打印');
+    expect(wrapper.text()).toContain('已发放');
+    expect(wrapper.text()).toContain('2026-06-15 10:30:00');
+    expect(wrapper.text()).toContain('病理号');
     expect(wrapper.buttonTexts()).toContain('审核通过');
     expect(wrapper.buttonTexts()).toContain('驳回');
+    expect(wrapper.buttonTexts()).not.toContain('签发');
+    expect(wrapper.buttonTexts()).not.toContain('发布');
+    expect(wrapper.buttonTexts()).not.toContain('打印');
+    expect(wrapper.buttonTexts()).not.toContain('发放');
+    expect(wrapper.buttonTexts()).not.toContain('回收');
+    expect(wrapper.text()).not.toContain('任务 ID');
+    expect(wrapper.text()).not.toContain('报告正文');
+    expect(wrapper.text()).not.toContain('流转操作');
+  });
+
+  it('shows lifecycle and distribution actions for publish users without draft editor controls', async () => {
+    mockRoute.query = {
+      caseId: 'CASE-001',
+      pathologyNo: 'PATH-001',
+      reportId: 'REPORT-001',
+    };
+    mockAccessStore.accessCodes = [
+      M4_PERMISSION_CODES.REPORT_REVIEW,
+      M4_PERMISSION_CODES.REPORT_SIGN,
+      M4_PERMISSION_CODES.REPORT_PUBLISH,
+    ];
+    listCaseReportVersionsMock.mockResolvedValue(formalReportVersionsFixture);
+
+    const wrapper = await mountView(PathologyReportView);
+
+    expect(wrapper.buttonTexts()).toContain('打印');
+    expect(wrapper.buttonTexts()).toContain('发放');
+    expect(wrapper.buttonTexts()).toContain('回收');
+    expect(wrapper.buttonTexts()).toContain('审核通过');
+    expect(wrapper.buttonTexts()).toContain('驳回');
+    expect(wrapper.buttonTexts()).toContain('签发');
+    expect(wrapper.buttonTexts()).toContain('发布');
     expect(wrapper.buttonTexts()).not.toContain('创建草稿');
     expect(wrapper.buttonTexts()).not.toContain('保存草稿');
     expect(wrapper.buttonTexts()).not.toContain('提交');
-    expect(wrapper.buttonTexts()).not.toContain('签发');
-    expect(wrapper.buttonTexts()).not.toContain('发布');
+    wrapper.unmount();
   });
 
-  it('splits revision create and approve sections by permission', async () => {
+  it('shows revision workbench actions from the row dropdown based on permission', async () => {
     mockAccessStore.accessCodes = [M4_PERMISSION_CODES.REVISION_REQUEST_CREATE];
     const createWrapper = await mountView(ReportRevisionView);
-    expect(createWrapper.buttonTexts()).toContain('发起修订');
-    expect(createWrapper.buttonTexts()).not.toContain('审批通过');
+    createWrapper.setInputValue('请输入病例 ID 或病理号', 'CASE-001');
+    createWrapper.clickButton('查询');
+    await flushAsyncWork();
+    expect(getDiagnosticWorkbenchMock).toHaveBeenCalledWith('CASE-001');
+    expect(createWrapper.text()).toContain('当前报告');
+    expect(createWrapper.text()).toContain('修订申请');
+    expect(
+      createWrapper.buttonTexts().filter((text) => text === '操作'),
+    ).toHaveLength(1);
+    createWrapper.clickButton('操作');
+    await flushAsyncWork();
+    expect(createWrapper.documentText()).toContain('发起修订申请');
+    expect(createWrapper.documentText()).not.toContain('审批通过');
+    expect(createWrapper.documentText()).not.toContain('审批驳回');
     createWrapper.unmount();
 
     mockAccessStore.accessCodes = [M4_PERMISSION_CODES.REVISION_APPROVE];
     const reviewWrapper = await mountView(ReportRevisionView);
-    expect(reviewWrapper.buttonTexts()).toContain('审批通过');
-    expect(reviewWrapper.buttonTexts()).toContain('审批驳回');
-    expect(reviewWrapper.buttonTexts()).not.toContain('发起修订');
+    reviewWrapper.setInputValue('请输入病例 ID 或病理号', 'CASE-001');
+    reviewWrapper.clickButton('查询');
+    await flushAsyncWork();
+    expect(
+      reviewWrapper.buttonTexts().filter((text) => text === '操作'),
+    ).toHaveLength(1);
+    reviewWrapper.clickButton('操作');
+    await flushAsyncWork();
+    expect(reviewWrapper.documentText()).toContain('审批通过');
+    expect(reviewWrapper.documentText()).toContain('审批驳回');
+    expect(reviewWrapper.documentText()).not.toContain('发起修订申请');
+    reviewWrapper.unmount();
   });
 
-  it('splits consultation sections by permission', async () => {
+  it('shows consultation workbench actions from the row dropdown based on permission', async () => {
     mockAccessStore.accessCodes = [M4_PERMISSION_CODES.CONSULTATION_COMMENT];
 
     const wrapper = await mountView(ConsultationWorkstationView);
+    wrapper.setInputValue('请输入病例 ID 或病理号', 'CASE-001');
+    wrapper.clickButton('查询');
+    await flushAsyncWork();
 
-    expect(wrapper.buttonTexts()).toContain('保存意见');
-    expect(wrapper.buttonTexts()).not.toContain('发起会诊');
-    expect(wrapper.buttonTexts()).not.toContain('完成会诊');
+    expect(getDiagnosticWorkbenchMock).toHaveBeenCalledWith('CASE-001');
+    expect(wrapper.text()).toContain('当前病例');
+    expect(wrapper.text()).toContain('会诊记录');
+    expect(wrapper.text()).toContain('进行中');
+    expect(
+      wrapper.buttonTexts().filter((text) => text === '操作'),
+    ).toHaveLength(1);
+    wrapper.clickButton('操作');
+    await flushAsyncWork();
+    expect(wrapper.documentText()).toContain('录入参与人意见');
+    expect(wrapper.documentText()).toContain('完成会诊');
+    expect(wrapper.documentText()).not.toContain('发起会诊');
+    wrapper.unmount();
   });
 
   it('hides the report entry action for tracking-only users', async () => {
@@ -844,33 +1148,34 @@ describe('doctor workflow view visibility', () => {
 
     const wrapper = await mountView(ReportTrackingView);
 
-    expect(getReportTrackingMock).toHaveBeenCalledWith('CASE-001');
+    expect(getCaseLifecycleTrackingMock).toHaveBeenCalledWith('CASE-001');
     expect(wrapper.text()).toContain('病例查询');
     expect(wrapper.buttonTexts()).not.toContain('进入报告');
     wrapper.unmount();
   });
 
-  it('opens medical order workstation and cancels pending order from tracking view', async () => {
+  it('opens medical order workstation from lifecycle tracking view without direct cancel action', async () => {
     mockRoute.query = {
       caseId: 'CASE-001',
     };
     mockAccessStore.accessCodes = [
       M4_PERMISSION_CODES.REPORT_TRACKING_QUERY,
       M4_PERMISSION_CODES.MEDICAL_ORDER_QUERY,
-      M4_PERMISSION_CODES.MEDICAL_ORDER_CANCEL,
     ];
-    getReportTrackingMock.mockResolvedValue({
+    getCaseLifecycleTrackingMock.mockResolvedValue({
       ...trackingFixture,
-      medicalOrders: [
-        {
-          orderId: 'ORDER-003',
-          orderDate: '2026-05-26T10:15:30',
-          orderNumber: 'MO-003',
-          orderType: 'SPECIAL_STAIN',
-          pathologyNo: 'PATH-001',
-          status: 'PENDING',
-        },
-      ],
+      reportLifecycle: {
+        ...trackingFixture.reportLifecycle,
+        medicalOrders: [
+          {
+            orderDate: '2026-05-26T10:15:30',
+            orderId: 'ORDER-003',
+            orderType: 'SPECIAL_STAIN',
+            pathologyNo: 'PATH-001',
+            status: 'PENDING',
+          },
+        ],
+      },
     });
 
     const wrapper = await mountView(ReportTrackingView);
@@ -888,21 +1193,7 @@ describe('doctor workflow view visibility', () => {
       },
     });
 
-    wrapper.clickButton('取消');
-    await flushAsyncWork();
-
-    expect(cancelMedicalOrderMock).toHaveBeenCalledWith(
-      'ORDER-003',
-      expect.objectContaining({
-        remarks: '从报告追踪页取消医嘱',
-      }),
-    );
-    expect(cancelMedicalOrderMock.mock.calls[0]?.[1]).not.toHaveProperty(
-      'operatorName',
-    );
-    expect(cancelMedicalOrderMock.mock.calls[0]?.[1]).not.toHaveProperty(
-      'operatorUserId',
-    );
+    expect(wrapper.buttonTexts()).not.toContain('取消');
     wrapper.unmount();
   });
 

@@ -1,6 +1,9 @@
 import type { ComputedRef } from 'vue';
 
-import type { ArchiveObjectType } from '../../types/operation-support';
+import type {
+  ArchiveObjectType,
+  ArchiveRecordView,
+} from '../../types/operation-support';
 import type {
   ArchiveApplicationFormSelection,
   ArchiveFormState,
@@ -18,23 +21,29 @@ import { ElMessage } from 'element-plus';
 
 import {
   archiveApplicationForm,
-  archiveEmbeddingBox,
-  archiveSlide,
-  archiveSpecimen,
+  batchArchiveEmbeddingBoxes,
+  batchArchiveSlides,
+  batchArchiveSpecimens,
 } from '../../api/operation-support-service';
 import {
   buildArchiveApplicationFormRequests,
-  buildArchiveEmbeddingBoxRequest,
-  buildArchiveSlideRequest,
-  buildArchiveSpecimenRequest,
+  buildBatchArchiveObjectRequest,
+  buildBatchArchiveSpecimenRequest,
   createArchiveFormDefaults,
   validateArchiveForm as getArchiveFormValidationMessage,
+  validateBatchArchiveForm as getBatchArchiveFormValidationMessage,
 } from '../../utils/archive-forms';
 import { getOperationSupportPageErrorMessage } from '../../utils/error';
 
+type PhysicalArchiveObjectType = Exclude<ArchiveObjectType, 'APPLICATION_FORM'>;
+
 interface UseArchiveSubmissionWorkspaceOptions {
   capabilities: ArchiveManagementCapabilities;
+  clearSelectedArchiveObjectRecords: (objectType: ArchiveObjectType) => void;
   clearSelectedApplicationFormRecords: () => void;
+  getSelectedArchiveObjectRecords: (
+    objectType: ArchiveObjectType,
+  ) => ArchiveRecordView[];
   getSelectedApplicationFormRecords: () => ArchiveApplicationFormSelection[];
   mutationState: ArchiveMutationState;
   operatorContext: ArchiveOperatorContext;
@@ -47,7 +56,9 @@ export function useArchiveSubmissionWorkspace(
 ) {
   const {
     capabilities,
+    clearSelectedArchiveObjectRecords,
     clearSelectedApplicationFormRecords,
+    getSelectedArchiveObjectRecords,
     getSelectedApplicationFormRecords,
     mutationState,
     operatorContext,
@@ -60,6 +71,7 @@ export function useArchiveSubmissionWorkspace(
   );
   const applicationFormDialogVisible = ref(false);
   const archiveDialogVisible = ref(false);
+  const physicalArchiveDialogVisible = ref(false);
 
   const archiveSubmitButtonText = computed(() => {
     if (archiveForm.objectType === 'EMBEDDING_BOX') {
@@ -130,6 +142,9 @@ export function useArchiveSubmissionWorkspace(
   watch(
     () => archiveForm.objectType,
     () => {
+      archiveForm.archiveExpiresAt = '';
+      archiveForm.archiveCabinetId = '';
+      archiveForm.archiveReminderDays = null;
       archiveForm.caseId = '';
       archiveForm.embeddingBoxId = '';
       archiveForm.fileName = '';
@@ -174,6 +189,33 @@ export function useArchiveSubmissionWorkspace(
     return true;
   }
 
+  function validateBatchArchiveForm(objectType: ArchiveObjectType) {
+    const validationMessage = getBatchArchiveFormValidationMessage({
+      canArchiveObjectType: getArchivePermissionForObjectType(objectType),
+      canQueryCabinets: capabilities.canQueryCabinets.value,
+      form: archiveForm,
+      hasSelectedCabinet: Boolean(archiveForm.archiveCabinetId),
+      objectType,
+      permissionWarning: archivePermissionWarning.value,
+      selectedRecordCount: getSelectedArchiveObjectRecords(objectType).length,
+    });
+    if (validationMessage) {
+      ElMessage.warning(validationMessage);
+      return false;
+    }
+    return true;
+  }
+
+  function isPhysicalArchiveObjectType(
+    objectType: string,
+  ): objectType is PhysicalArchiveObjectType {
+    return (
+      objectType === 'EMBEDDING_BOX' ||
+      objectType === 'SLIDE' ||
+      objectType === 'SPECIMEN'
+    );
+  }
+
   function resetArchiveForm() {
     const objectType = archiveForm.objectType;
     Object.assign(
@@ -194,12 +236,24 @@ export function useArchiveSubmissionWorkspace(
       return;
     }
 
+    if (getSelectedArchiveObjectRecords(objectType).length === 0) {
+      ElMessage.warning('请先勾选至少一条归档记录。');
+      return;
+    }
+
     archiveForm.objectType = objectType;
-    archiveDialogVisible.value = true;
+    physicalArchiveDialogVisible.value = true;
   }
 
   async function submitArchive() {
-    if (!validateArchiveForm() || !selectedPosition.value) {
+    const archiveObjectType = archiveForm.objectType;
+    if (archiveForm.objectType === 'APPLICATION_FORM') {
+      if (!validateArchiveForm() || !selectedPosition.value) {
+        return;
+      }
+    } else if (!isPhysicalArchiveObjectType(archiveObjectType)) {
+      return;
+    } else if (!validateBatchArchiveForm(archiveObjectType)) {
       return;
     }
 
@@ -207,12 +261,16 @@ export function useArchiveSubmissionWorkspace(
 
     try {
       if (archiveForm.objectType === 'APPLICATION_FORM') {
+        const archivePosition = selectedPosition.value;
+        if (!archivePosition) {
+          return;
+        }
         const selectedApplicationFormRecords =
           getSelectedApplicationFormRecords();
         const requests = buildArchiveApplicationFormRequests(
           selectedApplicationFormRecords,
           archiveForm,
-          selectedPosition.value.id,
+          archivePosition.id,
         );
 
         for (const [index, request] of requests.entries()) {
@@ -232,23 +290,29 @@ export function useArchiveSubmissionWorkspace(
         }
 
         ElMessage.success('申请单归档已完成。');
-      } else if (archiveForm.objectType === 'EMBEDDING_BOX') {
-        await archiveEmbeddingBox(
-          buildArchiveEmbeddingBoxRequest(
+      } else if (archiveObjectType === 'EMBEDDING_BOX') {
+        await batchArchiveEmbeddingBoxes(
+          buildBatchArchiveObjectRequest(
+            getSelectedArchiveObjectRecords('EMBEDDING_BOX'),
             archiveForm,
-            selectedPosition.value.id,
           ),
         );
         ElMessage.success('蜡块归档已完成。');
       } else {
-        if (archiveForm.objectType === 'SLIDE') {
-          await archiveSlide(
-            buildArchiveSlideRequest(archiveForm, selectedPosition.value.id),
+        if (archiveObjectType === 'SLIDE') {
+          await batchArchiveSlides(
+            buildBatchArchiveObjectRequest(
+              getSelectedArchiveObjectRecords('SLIDE'),
+              archiveForm,
+            ),
           );
           ElMessage.success('玻片归档已完成。');
-        } else {
-          await archiveSpecimen(
-            buildArchiveSpecimenRequest(archiveForm, selectedPosition.value.id),
+        } else if (archiveObjectType === 'SPECIMEN') {
+          await batchArchiveSpecimens(
+            buildBatchArchiveSpecimenRequest(
+              getSelectedArchiveObjectRecords('SPECIMEN'),
+              archiveForm,
+            ),
           );
           ElMessage.success('标本归档已完成。');
         }
@@ -257,7 +321,11 @@ export function useArchiveSubmissionWorkspace(
       resetArchiveForm();
       archiveDialogVisible.value = false;
       applicationFormDialogVisible.value = false;
+      physicalArchiveDialogVisible.value = false;
       clearSelectedApplicationFormRecords();
+      if (isPhysicalArchiveObjectType(archiveObjectType)) {
+        clearSelectedArchiveObjectRecords(archiveObjectType);
+      }
       await refreshArchiveWorkspace();
     } catch (error) {
       ElMessage.error(getOperationSupportPageErrorMessage(error));
@@ -274,6 +342,7 @@ export function useArchiveSubmissionWorkspace(
     archiveSubmitButtonText,
     canSubmitArchive,
     openArchiveDialog,
+    physicalArchiveDialogVisible,
     submitArchive,
   };
 }

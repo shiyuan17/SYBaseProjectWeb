@@ -5,8 +5,9 @@ import { Fallback, Page } from '@vben/common-ui';
 
 import { ElTabPane, ElTabs } from 'element-plus';
 
-import ArchiveLoanCreatePanel from '../components/ArchiveLoanCreatePanel.vue';
-import ArchiveLoanLegacyListPanel from '../components/ArchiveLoanLegacyListPanel.vue';
+import ArchiveLoanAbnormalDialog from '../components/ArchiveLoanAbnormalDialog.vue';
+import ArchiveLoanBorrowDialog from '../components/ArchiveLoanBorrowDialog.vue';
+import ArchiveLoanMaterialListPanel from '../components/ArchiveLoanMaterialListPanel.vue';
 import ArchiveLoanPendingPanel from '../components/ArchiveLoanPendingPanel.vue';
 import ArchivePositionWorkbenchPanel from '../components/ArchivePositionWorkbenchPanel.vue';
 import ArchiveReturnDialog from '../components/ArchiveReturnDialog.vue';
@@ -22,7 +23,10 @@ watch(
   activeBorrowTab,
   (materialType) => {
     if (borrowMaterialTabs.has(materialType)) {
-      loanWorkspace.loanForm.materialType = materialType;
+      loanWorkspace.setActiveMaterialType(
+        materialType as 'EMBEDDING_BOX' | 'SLIDE',
+      );
+      void loanWorkspace.loadMaterialObjects();
     }
   },
   { immediate: true },
@@ -42,46 +46,60 @@ watch(
       <ElTabs v-model="activeBorrowTab" class="operation-support-tabs">
         <ElTabPane label="蜡块借记" name="EMBEDDING_BOX">
           <div class="flex flex-col gap-4">
-            <ArchiveLoanLegacyListPanel
-              v-model:loan-filters="loanWorkspace.loanFilters"
-              :can-query-loans="capabilities.canQueryLoans"
-              :get-loan-status-tag-type="display.getLoanStatusTagType"
-              :loading="loanWorkspace.loading"
-              :loan-error="loanWorkspace.loanError"
-              material-type="EMBEDDING_BOX"
-              :pending-loans="loanWorkspace.pendingLoans"
-              @load-loans="loanWorkspace.loadLoans"
-            />
-            <ArchiveLoanCreatePanel
-              v-model:loan-form="loanWorkspace.loanForm"
+            <ArchiveLoanMaterialListPanel
+              v-model:material-object-filters="
+                loanWorkspace.materialObjectFilters
+              "
               :can-create-loan="capabilities.canCreateLoan"
-              fixed-material-type="EMBEDDING_BOX"
-              hide-header
-              :submitting="pageState.submitting"
-              @submit-loan="loanWorkspace.submitLoan"
+              :can-query-records="capabilities.canQueryRecords"
+              :can-register-loan-abnormal="capabilities.canRegisterLoanAbnormal"
+              :can-return-loan="capabilities.canReturnLoan"
+              :get-archive-status-tag-type="display.getArchiveStatusTagType"
+              :get-loan-status-tag-type="display.getLoanStatusTagType"
+              :loading="loanWorkspace.archiveObjectLoading"
+              :page="loanWorkspace.materialObjectFilters.page"
+              :record-error="loanWorkspace.archiveObjectError"
+              :records="loanWorkspace.materialObjectPage.items"
+              :selected-records="loanWorkspace.selectedMaterialRecords"
+              :size="loanWorkspace.materialObjectFilters.size"
+              :total="loanWorkspace.materialObjectPage.total"
+              @borrow="loanWorkspace.openBorrowDialog"
+              @page-change="loanWorkspace.setMaterialObjectPage"
+              @query="loanWorkspace.queryMaterialObjects"
+              @register-abnormal="loanWorkspace.openAbnormalDialog"
+              @return="loanWorkspace.openSelectedReturnDialog"
+              @selection-change="loanWorkspace.setSelectedMaterialRecords"
+              @size-change="loanWorkspace.setMaterialObjectSize"
             />
           </div>
         </ElTabPane>
 
         <ElTabPane label="玻片借记" name="SLIDE">
           <div class="flex flex-col gap-4">
-            <ArchiveLoanLegacyListPanel
-              v-model:loan-filters="loanWorkspace.loanFilters"
-              :can-query-loans="capabilities.canQueryLoans"
-              :get-loan-status-tag-type="display.getLoanStatusTagType"
-              :loading="loanWorkspace.loading"
-              :loan-error="loanWorkspace.loanError"
-              material-type="SLIDE"
-              :pending-loans="loanWorkspace.pendingLoans"
-              @load-loans="loanWorkspace.loadLoans"
-            />
-            <ArchiveLoanCreatePanel
-              v-model:loan-form="loanWorkspace.loanForm"
+            <ArchiveLoanMaterialListPanel
+              v-model:material-object-filters="
+                loanWorkspace.materialObjectFilters
+              "
               :can-create-loan="capabilities.canCreateLoan"
-              fixed-material-type="SLIDE"
-              hide-header
-              :submitting="pageState.submitting"
-              @submit-loan="loanWorkspace.submitLoan"
+              :can-query-records="capabilities.canQueryRecords"
+              :can-register-loan-abnormal="capabilities.canRegisterLoanAbnormal"
+              :can-return-loan="capabilities.canReturnLoan"
+              :get-archive-status-tag-type="display.getArchiveStatusTagType"
+              :get-loan-status-tag-type="display.getLoanStatusTagType"
+              :loading="loanWorkspace.archiveObjectLoading"
+              :page="loanWorkspace.materialObjectFilters.page"
+              :record-error="loanWorkspace.archiveObjectError"
+              :records="loanWorkspace.materialObjectPage.items"
+              :selected-records="loanWorkspace.selectedMaterialRecords"
+              :size="loanWorkspace.materialObjectFilters.size"
+              :total="loanWorkspace.materialObjectPage.total"
+              @borrow="loanWorkspace.openBorrowDialog"
+              @page-change="loanWorkspace.setMaterialObjectPage"
+              @query="loanWorkspace.queryMaterialObjects"
+              @register-abnormal="loanWorkspace.openAbnormalDialog"
+              @return="loanWorkspace.openSelectedReturnDialog"
+              @selection-change="loanWorkspace.setSelectedMaterialRecords"
+              @size-change="loanWorkspace.setMaterialObjectSize"
             />
           </div>
         </ElTabPane>
@@ -102,7 +120,6 @@ watch(
               :position-summary="cabinetWorkspace.positionSummary"
               :selected-position="cabinetWorkspace.selectedPosition"
               :selected-position-code="cabinetWorkspace.selectedPositionCode"
-              :selected-position-label="cabinetWorkspace.selectedPositionLabel"
               hide-header
               @clear-selected-position="cabinetWorkspace.clearSelectedPosition"
               @load-positions="cabinetWorkspace.loadPositions"
@@ -129,13 +146,33 @@ watch(
     <ArchiveReturnDialog
       v-model="loanWorkspace.returnDialogVisible"
       v-model:return-form="loanWorkspace.returnForm"
+      :material-summary="loanWorkspace.selectedMaterialSummary"
       :returning-loan="loanWorkspace.returningLoan"
+      :selected-count="loanWorkspace.returningLoans.length"
       :selected-position-label="cabinetWorkspace.selectedPositionLabel"
       :selected-return-position-description="
         loanWorkspace.selectedReturnPositionDescription
       "
       :submitting="pageState.submitting"
       @submit="loanWorkspace.submitReturn"
+    />
+
+    <ArchiveLoanBorrowDialog
+      v-model="loanWorkspace.borrowDialogVisible"
+      v-model:loan-form="loanWorkspace.loanForm"
+      :material-summary="loanWorkspace.selectedMaterialSummary"
+      :selected-count="loanWorkspace.selectedMaterialRecords.length"
+      :submitting="pageState.submitting"
+      @submit="loanWorkspace.submitLoan"
+    />
+
+    <ArchiveLoanAbnormalDialog
+      v-model="loanWorkspace.abnormalDialogVisible"
+      v-model:abnormal-form="loanWorkspace.abnormalForm"
+      :material-summary="loanWorkspace.selectedMaterialSummary"
+      :selected-count="loanWorkspace.selectedMaterialRecords.length"
+      :submitting="pageState.submitting"
+      @submit="loanWorkspace.submitAbnormalRecord"
     />
   </Page>
 </template>

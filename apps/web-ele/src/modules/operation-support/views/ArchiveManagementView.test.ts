@@ -1,10 +1,26 @@
-import { createApp, defineComponent, h, reactive, ref } from 'vue';
+import type { ArchiveRecordView } from '../types/operation-support';
+
+import {
+  createApp,
+  defineComponent,
+  h,
+  inject,
+  provide,
+  reactive,
+  ref,
+} from 'vue';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { mockUseArchiveManagementPage } = vi.hoisted(() => ({
   mockUseArchiveManagementPage: vi.fn(),
 }));
+
+function getVisibleModelValue(modelValue: unknown) {
+  return typeof modelValue === 'object' && modelValue !== null
+    ? (modelValue as { value?: boolean }).value
+    : modelValue;
+}
 
 vi.mock('@vben/common-ui', () => ({
   Fallback: defineComponent({
@@ -89,6 +105,12 @@ vi.mock('element-plus', () => {
     },
   });
 
+  const ElInputNumber = defineComponent({
+    setup(_, { attrs }) {
+      return () => h('input', { ...attrs, type: 'number' });
+    },
+  });
+
   const ElPagination = defineComponent({
     props: ['currentPage', 'pageSize', 'total'],
     emits: ['current-change', 'size-change'],
@@ -114,27 +136,56 @@ vi.mock('element-plus', () => {
     },
   });
 
+  const ElTreeSelect = defineComponent({
+    setup(_, { attrs }) {
+      return () => h('select', attrs);
+    },
+  });
+
   const ElTable = defineComponent({
     props: ['data'],
     emits: ['selection-change'],
     setup(props, { attrs, emit, slots }) {
+      provide('elTableRows', () => props.data ?? []);
       return () =>
         h(
           'div',
           {
             ...attrs,
-            onSelectionChange: (rows: unknown[]) =>
-              emit('selection-change', rows),
+            class: ['mock-el-table', attrs.class],
+            onSelectionChange: (event: CustomEvent<unknown[]> | unknown[]) =>
+              emit(
+                'selection-change',
+                Array.isArray(event) ? event : (event.detail ?? []),
+              ),
           },
-          [slots.default?.(), h('pre', JSON.stringify(props.data ?? []))],
+          slots.default?.(),
         );
     },
   });
 
   const ElTableColumn = defineComponent({
-    props: ['label'],
-    setup(props) {
-      return () => h('span', props.label);
+    props: ['label', 'prop', 'type'],
+    setup(props, { slots }) {
+      const getRows = inject<() => unknown[]>('elTableRows', () => []);
+      return () =>
+        props.type === 'selection'
+          ? h('span', { 'data-column-type': 'selection' }, '选择')
+          : h('span', [
+              props.label,
+              ...getRows().map((row) => {
+                if (slots.default) {
+                  return slots.default({ row });
+                }
+                if (!props.prop || typeof row !== 'object' || row === null) {
+                  return '';
+                }
+                const value = (row as Record<string, unknown>)[props.prop];
+                return value === null || value === undefined
+                  ? ''
+                  : String(value);
+              }),
+            ]);
     },
   });
 
@@ -164,6 +215,7 @@ vi.mock('element-plus', () => {
     ElForm,
     ElFormItem,
     ElInput,
+    ElInputNumber,
     ElOption,
     ElPagination,
     ElSelect,
@@ -172,6 +224,7 @@ vi.mock('element-plus', () => {
     ElTableColumn,
     ElTabs,
     ElTag,
+    ElTreeSelect,
   };
 });
 
@@ -230,7 +283,7 @@ vi.mock('../components/ApplicationFormArchiveDialog.vue', () => ({
     emits: ['update:modelValue', 'submitArchive'],
     setup(props, { emit }) {
       return () =>
-        (props.modelValue as { value?: boolean })?.value
+        getVisibleModelValue(props.modelValue)
           ? h('section', { 'data-testid': 'application-form-archive-dialog' }, [
               'application-form-archive-dialog',
               h('div', `selected-position-${props.selectedPositionLabel}`),
@@ -246,6 +299,59 @@ vi.mock('../components/ApplicationFormArchiveDialog.vue', () => ({
                   onClick: () => emit('submitArchive'),
                 },
                 '保存申请单归档',
+              ),
+            ])
+          : null;
+    },
+  }),
+}));
+
+vi.mock('../components/ArchiveLoanBorrowDialog.vue', () => ({
+  default: defineComponent({
+    props: ['modelValue', 'materialSummary', 'selectedCount'],
+    emits: ['submit'],
+    setup(props, { emit }) {
+      return () =>
+        getVisibleModelValue(props.modelValue)
+          ? h('section', { 'data-testid': 'archive-loan-borrow-dialog' }, [
+              'archive-loan-borrow-dialog',
+              h('div', `borrow-summary-${props.materialSummary}`),
+              h('div', `borrow-selected-${props.selectedCount}`),
+              h(
+                'button',
+                {
+                  type: 'button',
+                  onClick: () => emit('submit'),
+                },
+                '保存借记',
+              ),
+            ])
+          : null;
+    },
+  }),
+}));
+
+vi.mock('../components/PhysicalArchiveDialog.vue', () => ({
+  default: defineComponent({
+    props: ['modelValue', 'objectType', 'selectedRecords'],
+    emits: ['submitArchive'],
+    setup(props, { emit }) {
+      return () =>
+        getVisibleModelValue(props.modelValue)
+          ? h('section', { 'data-testid': 'physical-archive-dialog' }, [
+              'physical-archive-dialog',
+              h('div', `physical-object-type-${props.objectType}`),
+              h(
+                'div',
+                `physical-selected-${props.selectedRecords?.length ?? 0}`,
+              ),
+              h(
+                'button',
+                {
+                  type: 'button',
+                  onClick: () => emit('submitArchive'),
+                },
+                '保存物理归档',
               ),
             ])
           : null;
@@ -290,6 +396,7 @@ function createMockPageState() {
       archiveSubmitButtonText: '提交申请单归档',
       canSubmitArchive: true,
       applicationFormDialogVisible: ref(false),
+      physicalArchiveDialogVisible: ref(false),
       openArchiveDialog: vi.fn(),
       openApplicationFormArchiveDialog: vi.fn(),
       archiveDialogVisible: ref(false),
@@ -300,13 +407,14 @@ function createMockPageState() {
       batchCabinetForm: reactive({
         cabinetCodePrefix: '',
         cabinetNamePrefix: '',
-        cabinetType: 'STANDARD',
+        cabinetType: 'APPLICATION_FORM',
         count: 1,
         layerCount: 1,
         locationDescription: '',
         numberWidth: 3,
         operatorName: '归档员甲',
         operatorUserId: 'USER-1',
+        parentId: '',
         remarks: '',
         slotCountPerLayer: 10,
         startNo: 1,
@@ -317,19 +425,64 @@ function createMockPageState() {
       cabinetDialogVisible: ref(false),
       cabinetError: '',
       cabinetForm: reactive({
+        capacity: 4,
         cabinetCode: '',
         cabinetName: '',
         cabinetStatus: 'ACTIVE',
-        cabinetType: 'STANDARD',
+        cabinetType: 'APPLICATION_FORM',
         layerCount: 2,
         locationDescription: '',
+        nodeCode: '',
+        nodeType: 'CABINET',
         operatorName: '归档员甲',
         operatorUserId: 'USER-1',
+        parentId: '',
+        pathLocation: '',
+        remainingCapacity: 4,
         remarks: '',
         slotCountPerLayer: 2,
         terminalCode: '',
       }),
       cabinetPositionRulePreview: 'CAB-01-L1-S1',
+      cabinetNodes: [
+        {
+          cabinetId: null,
+          cabinetType: 'APPLICATION_FORM',
+          capacity: 0,
+          id: 'NODE-AREA-1',
+          nodeCode: '申请单',
+          nodeType: 'AREA',
+          parentId: null,
+          pathLocation: '库房A',
+          remainingCapacity: 4,
+          remarks: '',
+        },
+        {
+          cabinetId: 'CABINET-1',
+          cabinetType: 'STANDARD',
+          capacity: 4,
+          id: 'NODE-CABINET-1',
+          nodeCode: 'CAB-01',
+          nodeType: 'CABINET',
+          parentId: 'NODE-AREA-1',
+          pathLocation: 'B1',
+          remainingCapacity: 2,
+          remarks: '可用',
+        },
+        {
+          cabinetId: 'CABINET-1',
+          cabinetType: 'STANDARD',
+          capacity: 2,
+          id: 'NODE-DRAWER-1',
+          layerNo: 1,
+          nodeCode: '1-2',
+          nodeType: 'DRAWER',
+          parentId: 'NODE-CABINET-1',
+          pathLocation: 'B1',
+          remainingCapacity: 1,
+          remarks: '',
+        },
+      ],
       cabinets: [
         {
           cabinetCode: 'CAB-01',
@@ -347,20 +500,23 @@ function createMockPageState() {
       clearSelectedPosition: vi.fn(),
       isEditingCabinet: false,
       loadCabinets: vi.fn(),
+      loadCabinetNodes: vi.fn(),
       loadPositions: vi.fn(),
       loading: reactive({
         cabinets: false,
+        cabinetNodes: false,
         positions: false,
       }),
       openCreateCabinetDialog,
       openBatchCreateCabinetDialog,
       openEditCabinetDialog: vi.fn(),
+      openEditCabinetNodeDialog: vi.fn(),
       positionError: '',
       positionFilters: reactive({
         cabinetId: '',
         cabinetType: '',
       }),
-      positionRows: [],
+      positionRows: [] as never[],
       positionSummary: {
         available: 0,
         disabled: 0,
@@ -401,6 +557,27 @@ function createMockPageState() {
     pageState: {
       submitting: false,
     },
+    loanWorkspace: {
+      borrowDialogVisible: ref(false),
+      loanForm: reactive({
+        borrowerPhone: '',
+        borrowerUnit: '',
+        borrowPurpose: '',
+        borrowedByName: '',
+        borrowedByUserId: '',
+        depositAmount: '',
+        materialId: '',
+        materialType: 'EMBEDDING_BOX',
+        operatorName: '归档员甲',
+        operatorUserId: 'USER-1',
+        remarks: '',
+        terminalCode: '',
+      }),
+      openBorrowDialogForRecords: vi.fn(),
+      selectedMaterialRecords: [] as ArchiveRecordView[],
+      selectedMaterialSummary: '',
+      submitLoan: vi.fn(),
+    },
     recordWorkspace: {
       activeObjectType: ref('APPLICATION_FORM'),
       objectLists: reactive({
@@ -414,6 +591,8 @@ function createMockPageState() {
           items: [
             {
               applicationNo: 'APP-001',
+              applicantDoctorName: '申请医生甲',
+              applicationDate: '2026-06-15',
               archiveLocation: 'CAB-01-L1-S1',
               archiveStatus: 'IN_STORAGE',
               archivedAt: '2026-06-11 10:00:00',
@@ -440,8 +619,10 @@ function createMockPageState() {
             {
               archiveStatus: 'NOT_ARCHIVED',
               caseId: 'CASE-BOX-1',
+              loanStatus: 'NONE',
               objectCode: 'A1',
               objectId: 'BOX-1',
+              objectStatus: 'ACTIVE',
               objectType: 'EMBEDDING_BOX',
               pathologyNo: 'BL-2026-002',
               patientName: '李四',
@@ -495,9 +676,17 @@ function createMockPageState() {
           total: 1,
         },
       }),
+      selectedRecordsByType: reactive({
+        APPLICATION_FORM: [] as ArchiveRecordView[],
+        EMBEDDING_BOX: [] as ArchiveRecordView[],
+        SLIDE: [] as ArchiveRecordView[],
+        SPECIMEN: [] as ArchiveRecordView[],
+      }),
       selectedApplicationFormRecords: [
         {
           applicationNo: 'APP-001',
+          applicantDoctorName: '申请医生甲',
+          applicationDate: '2026-06-15',
           archiveLocation: 'CAB-01-L1-S1',
           archiveStatus: 'IN_STORAGE',
           archivedAt: '2026-06-11 10:00:00',
@@ -510,8 +699,12 @@ function createMockPageState() {
           storedByName: '归档员甲',
         },
       ],
+      selectedEmbeddingBoxRecords: [] as ArchiveRecordView[],
+      selectedSlideRecords: [] as ArchiveRecordView[],
+      selectedSpecimenRecords: [] as ArchiveRecordView[],
       queryArchiveObjects,
       setSelectedApplicationFormRecords: vi.fn(),
+      setSelectedArchiveObjectRecords: vi.fn(),
       setActiveArchiveObjectType,
       setArchiveObjectPage,
       setArchiveObjectSize,
@@ -579,10 +772,12 @@ describe('ArchiveManagementView', () => {
     expect(document.body.textContent).not.toContain(
       '按对象分页接口展示可查询对象',
     );
-    expect(document.body.textContent).toContain('BL-2026-001');
-    expect(document.body.textContent).toContain('BL-2026-002');
-    expect(document.body.textContent).toContain('BL-2026-003');
-    expect(document.body.textContent).toContain('BL-2026-004');
+    expect(document.body.textContent).toContain('申请医生甲');
+    expect(document.body.textContent).toContain('2026-06-15');
+    expect(document.body.textContent).toContain('当前状态启用');
+    expect(document.body.textContent).toContain('未归档');
+    expect(document.body.textContent).toContain('未借阅');
+    expect(document.body.textContent).not.toContain('当前状态ACTIVE');
     expect(document.body.textContent).toContain('pagination-1-20-1');
     expect(document.body.textContent).toContain('归档柜列表');
     expect(document.body.textContent).not.toContain(
@@ -592,12 +787,15 @@ describe('ArchiveManagementView', () => {
     expect(document.body.textContent).toContain('快速检索');
     expect(document.body.textContent).toContain('不限类型');
     expect(document.body.textContent).toContain('标准柜');
+    expect(document.body.textContent).toContain('申请单');
     expect(document.body.textContent).toContain('展开/折叠');
     expect(document.body.textContent).toContain('批量添加');
     expect(document.body.textContent).toContain('ROOT');
     expect(document.body.textContent).toContain('柜子类型');
     expect(document.body.textContent).toContain('路径');
     expect(document.body.textContent).toContain('层级');
+    expect(document.body.textContent).toContain('总容量');
+    expect(document.body.textContent).toContain('剩余容量');
     expect(document.body.textContent).not.toContain('借白片');
     expect(document.body.textContent).not.toContain('标本柜');
     expect(document.body.textContent).not.toContain('archive-submission-panel');
@@ -686,6 +884,8 @@ describe('ArchiveManagementView', () => {
     state.recordWorkspace.selectedApplicationFormRecords = [
       {
         applicationNo: 'APP-001',
+        applicantDoctorName: '申请医生甲',
+        applicationDate: '2026-06-15',
         archiveLocation: 'CAB-01-L1-S1',
         archiveStatus: 'IN_STORAGE',
         archivedAt: '2026-06-11 10:00:00',
@@ -699,6 +899,8 @@ describe('ArchiveManagementView', () => {
       },
       {
         applicationNo: 'APP-002',
+        applicantDoctorName: '申请医生乙',
+        applicationDate: '2026-06-16',
         archiveLocation: '',
         archiveStatus: 'NOT_ARCHIVED',
         archivedAt: '',
@@ -722,6 +924,10 @@ describe('ArchiveManagementView', () => {
     expect(document.body.textContent).toContain('selected-position-未选择柜位');
     expect(document.body.textContent).toContain('BL-2026-001');
     expect(document.body.textContent).toContain('BL-2026-002');
+    expect(document.body.textContent).toContain('申请医生甲');
+    expect(document.body.textContent).toContain('申请医生乙');
+    expect(document.body.textContent).toContain('2026-06-15');
+    expect(document.body.textContent).toContain('2026-06-16');
 
     const archiveButton = [...document.querySelectorAll('button')].find(
       (button) => button.textContent?.trim() === '归档操作',
@@ -749,6 +955,107 @@ describe('ArchiveManagementView', () => {
 
     expect(document.body.textContent).toContain('当前账号缺少归档记录查询权限');
     expect(document.body.textContent).toContain('当前账号缺少归档柜查询权限');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('wires physical archive selections and borrow actions while keeping specimen archive-only', () => {
+    const state = createMockPageState();
+    const embeddingBoxRecord =
+      state.recordWorkspace.objectLists.EMBEDDING_BOX.items[0]!;
+    const slideRecord = state.recordWorkspace.objectLists.SLIDE.items[0]!;
+    const specimenRecord = state.recordWorkspace.objectLists.SPECIMEN.items[0]!;
+    state.recordWorkspace.selectedEmbeddingBoxRecords = [embeddingBoxRecord];
+    state.recordWorkspace.selectedSlideRecords = [slideRecord];
+    state.recordWorkspace.selectedSpecimenRecords = [specimenRecord];
+    mockUseArchiveManagementPage.mockReturnValue(state);
+
+    const { app, root } = mountView();
+
+    const borrowButtons = [...document.querySelectorAll('button')].filter(
+      (button) => button.textContent?.trim() === '借记',
+    );
+    expect(borrowButtons).toHaveLength(2);
+
+    const tables = [...document.querySelectorAll('.mock-el-table')];
+    for (const table of tables.slice(1, 4)) {
+      const selectionColumn = table.querySelector(
+        '[data-column-type="selection"]',
+      );
+      const indexTextOffset = table.textContent?.indexOf('序') ?? -1;
+      const selectionTextOffset = table.textContent?.indexOf('选择') ?? -1;
+
+      expect(selectionColumn).not.toBeNull();
+      expect(selectionTextOffset).toBeGreaterThanOrEqual(0);
+      expect(indexTextOffset).toBeGreaterThan(selectionTextOffset);
+    }
+
+    tables[1]?.dispatchEvent(
+      new CustomEvent('selection-change', {
+        bubbles: true,
+        detail: [embeddingBoxRecord],
+      }),
+    );
+    tables[2]?.dispatchEvent(
+      new CustomEvent('selection-change', {
+        bubbles: true,
+        detail: [slideRecord],
+      }),
+    );
+    tables[3]?.dispatchEvent(
+      new CustomEvent('selection-change', {
+        bubbles: true,
+        detail: [specimenRecord],
+      }),
+    );
+
+    expect(
+      state.recordWorkspace.setSelectedArchiveObjectRecords,
+    ).toHaveBeenCalledWith('EMBEDDING_BOX', expect.any(Array));
+    expect(
+      state.recordWorkspace.setSelectedArchiveObjectRecords,
+    ).toHaveBeenCalledWith('SLIDE', expect.any(Array));
+    expect(
+      state.recordWorkspace.setSelectedArchiveObjectRecords,
+    ).toHaveBeenCalledWith('SPECIMEN', expect.any(Array));
+
+    borrowButtons[0]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    borrowButtons[1]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(
+      state.loanWorkspace.openBorrowDialogForRecords,
+    ).toHaveBeenNthCalledWith(1, 'EMBEDDING_BOX', [embeddingBoxRecord]);
+    expect(
+      state.loanWorkspace.openBorrowDialogForRecords,
+    ).toHaveBeenNthCalledWith(2, 'SLIDE', [slideRecord]);
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('renders archive-page borrow dialog and submits through loan workspace', () => {
+    const state = createMockPageState();
+    state.loanWorkspace.borrowDialogVisible.value = true;
+    state.loanWorkspace.selectedMaterialRecords = [
+      state.recordWorkspace.objectLists.EMBEDDING_BOX.items[0]!,
+      state.recordWorkspace.objectLists.EMBEDDING_BOX.items[0]!,
+    ];
+    state.loanWorkspace.selectedMaterialSummary = '2 条：A1、A2';
+    mockUseArchiveManagementPage.mockReturnValue(state);
+
+    const { app, root } = mountView();
+
+    expect(document.body.textContent).toContain('archive-loan-borrow-dialog');
+    expect(document.body.textContent).toContain('borrow-summary-2 条：A1、A2');
+    expect(document.body.textContent).toContain('borrow-selected-2');
+
+    const saveButton = [...document.querySelectorAll('button')].find(
+      (button) => button.textContent?.trim() === '保存借记',
+    );
+    saveButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(state.loanWorkspace.submitLoan).toHaveBeenCalledTimes(1);
 
     app.unmount();
     root.remove();

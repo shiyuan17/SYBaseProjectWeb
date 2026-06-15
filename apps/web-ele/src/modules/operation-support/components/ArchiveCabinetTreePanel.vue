@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import type { ArchiveCabinetView } from '../types/operation-support';
-import type { PositionWorkbenchRow } from '../utils/archive-workbench';
+import type {
+  ArchiveCabinetNodeView,
+  ArchiveCabinetView,
+} from '../types/operation-support';
 
 import { computed, ref } from 'vue';
 
@@ -16,10 +18,12 @@ import {
 } from 'element-plus';
 
 import { ARCHIVE_CABINET_TYPE_OPTIONS } from '../constants';
-import { formatArchiveCabinetType, formatNullable } from '../utils/format';
+import {
+  formatArchiveCabinetNodeType,
+  formatArchiveCabinetType,
+  formatNullable,
+} from '../utils/format';
 import OperationSectionCard from './OperationSectionCard.vue';
-
-type CabinetTreeNodeType = 'cabinet' | 'range' | 'root' | 'type';
 
 type CabinetTreeNode = {
   cabinet?: ArchiveCabinetView;
@@ -28,30 +32,32 @@ type CabinetTreeNode = {
   children?: CabinetTreeNode[];
   code: string;
   id: string;
-  level: string;
-  nodeType: CabinetTreeNodeType;
+  node?: ArchiveCabinetNodeView;
+  nodeType: 'AREA' | 'CABINET' | 'DRAWER' | 'ROOT';
   path?: string;
   remainingCapacity?: number;
   remarks?: null | string;
 };
 
 const props = defineProps<{
+  cabinetNodes: ArchiveCabinetNodeView[];
   cabinets: ArchiveCabinetView[];
   canCreateCabinet: boolean;
   canDeleteCabinet: boolean;
   canQueryCabinets: boolean;
   canUpdateCabinet: boolean;
   loading: boolean;
-  positionRows: PositionWorkbenchRow[];
 }>();
 
 const emit = defineEmits<{
   (event: 'deleteCabinet', cabinet: ArchiveCabinetView): void;
   (event: 'loadCabinets'): void;
+  (event: 'loadCabinetNodes'): void;
   (event: 'loadPositions'): void;
   (event: 'openBatchCreateCabinetDialog'): void;
   (event: 'openCreateCabinetDialog'): void;
   (event: 'openEditCabinetDialog', cabinet: ArchiveCabinetView): void;
+  (event: 'openEditCabinetNodeDialog', node: ArchiveCabinetNodeView): void;
   (event: 'toggleCabinetStatus', cabinet: ArchiveCabinetView): void;
 }>();
 
@@ -67,68 +73,39 @@ const quickTypeOptions = computed(() => [
   })),
 ]);
 
-const positionRowsByCabinetId = computed(() => {
-  const groups = new Map<string, PositionWorkbenchRow[]>();
-  for (const row of props.positionRows) {
-    const rows = groups.get(row.cabinetId) ?? [];
-    rows.push(row);
-    groups.set(row.cabinetId, rows);
-  }
-  return groups;
-});
-
-const filteredCabinets = computed(() =>
-  props.cabinets.filter(
-    (cabinet) =>
+const filteredNodes = computed(() =>
+  props.cabinetNodes.filter(
+    (node) =>
       !selectedCabinetType.value ||
-      cabinet.cabinetType === selectedCabinetType.value,
+      node.cabinetType === selectedCabinetType.value,
   ),
 );
 
 const treeRows = computed<CabinetTreeNode[]>(() => {
-  const typeNodes: CabinetTreeNode[] = [];
-
-  for (const option of ARCHIVE_CABINET_TYPE_OPTIONS) {
-    const cabinets = filteredCabinets.value.filter(
-      (cabinet) => cabinet.cabinetType === option.value,
-    );
-    if (cabinets.length === 0) {
-      continue;
-    }
-    const children = cabinets.map((cabinet) => createCabinetNode(cabinet));
-    const capacity = children.reduce(
-      (sum, node) => sum + (node.capacity ?? 0),
-      0,
-    );
-    const remainingCapacity = children.reduce(
-      (sum, node) => sum + (node.remainingCapacity ?? 0),
-      0,
-    );
-    typeNodes.push({
-      cabinetType: option.value,
-      capacity,
-      children,
-      code: getCabinetTypeTreeLabel(option.label),
-      id: `type-${option.value}`,
-      level: '区域',
-      nodeType: 'type',
-      path: '-',
-      remainingCapacity,
-      remarks: '-',
-    });
+  const nodesByParentId = new Map<string, ArchiveCabinetNodeView[]>();
+  for (const node of filteredNodes.value) {
+    const parentKey = node.parentId || 'ROOT';
+    const siblings = nodesByParentId.get(parentKey) ?? [];
+    siblings.push(node);
+    nodesByParentId.set(parentKey, siblings);
   }
+
+  const children: CabinetTreeNode[] = buildNodeRows(nodesByParentId, 'ROOT');
 
   return [
     {
-      capacity: typeNodes.reduce((sum, node) => sum + (node.capacity ?? 0), 0),
-      children: typeNodes,
+      capacity: children.reduce<number>(
+        (sum: number, node: CabinetTreeNode) => sum + (node.capacity ?? 0),
+        0,
+      ),
+      children,
       code: 'ROOT',
       id: 'ROOT',
-      level: '-',
-      nodeType: 'root',
+      nodeType: 'ROOT',
       path: '-',
-      remainingCapacity: typeNodes.reduce(
-        (sum, node) => sum + (node.remainingCapacity ?? 0),
+      remainingCapacity: children.reduce<number>(
+        (sum: number, node: CabinetTreeNode) =>
+          sum + (node.remainingCapacity ?? 0),
         0,
       ),
       remarks: '-',
@@ -140,54 +117,36 @@ function getCabinetTypeTreeLabel(label: string) {
   return label === '标准柜' ? label : label.replace(/柜$/, '');
 }
 
-function createCabinetNode(cabinet: ArchiveCabinetView): CabinetTreeNode {
-  const rows = positionRowsByCabinetId.value.get(cabinet.id) ?? [];
-  const remainingCapacity = rows.filter(
-    (row) => row.positionStatus === 'AVAILABLE',
-  ).length;
-
-  return {
-    cabinet,
-    cabinetType: cabinet.cabinetType,
-    capacity: cabinet.capacity,
-    children: createRangeNodes(cabinet, rows),
-    code: cabinet.cabinetCode,
-    id: `cabinet-${cabinet.id}`,
-    level: '柜子',
-    nodeType: 'cabinet',
-    path: formatNullable(cabinet.locationDescription),
-    remainingCapacity,
-    remarks: cabinet.remarks ?? '-',
-  };
-}
-
-function createRangeNodes(
-  cabinet: ArchiveCabinetView,
-  rows: PositionWorkbenchRow[],
-) {
-  return Array.from({ length: cabinet.layerCount }, (_, index) => {
-    const layerNo = index + 1;
-    const startSlot = index * cabinet.slotCountPerLayer + 1;
-    const endSlot = startSlot + cabinet.slotCountPerLayer - 1;
-    const layerRows = rows.filter((row) => row.layerNo === layerNo);
-    return {
-      cabinetType: cabinet.cabinetType,
-      capacity: cabinet.slotCountPerLayer,
-      code: `${startSlot}-${endSlot}`,
-      id: `range-${cabinet.id}-${layerNo}`,
-      level: '抽屉',
-      nodeType: 'range',
-      path: `${formatArchiveCabinetType(cabinet.cabinetType)}，${cabinet.cabinetName}`,
-      remainingCapacity: layerRows.filter(
-        (row) => row.positionStatus === 'AVAILABLE',
-      ).length,
-      remarks: '-',
-    } satisfies CabinetTreeNode;
-  });
+function buildNodeRows(
+  nodesByParentId: Map<string, ArchiveCabinetNodeView[]>,
+  parentId: string,
+): CabinetTreeNode[] {
+  return (nodesByParentId.get(parentId) ?? [])
+    .toSorted((left, right) => left.nodeCode.localeCompare(right.nodeCode))
+    .map((node) => {
+      const cabinet =
+        node.cabinetId && node.nodeType === 'CABINET'
+          ? props.cabinets.find((item) => item.id === node.cabinetId)
+          : undefined;
+      return {
+        cabinet,
+        cabinetType: node.cabinetType ?? undefined,
+        capacity: node.capacity,
+        children: buildNodeRows(nodesByParentId, node.id),
+        code: node.nodeCode,
+        id: node.id,
+        node,
+        nodeType: node.nodeType,
+        path: node.pathLocation ?? '-',
+        remainingCapacity: node.remainingCapacity,
+        remarks: node.remarks ?? '-',
+      } satisfies CabinetTreeNode;
+    });
 }
 
 function refreshAll() {
   emit('loadCabinets');
+  emit('loadCabinetNodes');
   emit('loadPositions');
 }
 
@@ -215,7 +174,10 @@ function toggleExpandAll() {
         <ElButton @click="toggleExpandAll">展开/折叠</ElButton>
       </ElFormItem>
       <ElFormItem label="快速检索">
-        <ElSelect v-model="selectedCabinetType" class="w-[180px]">
+        <ElSelect
+          v-model="selectedCabinetType"
+          class="w-[220px] min-w-[220px] flex-none"
+        >
           <ElOption
             v-for="option in quickTypeOptions"
             :key="option.value"
@@ -273,7 +235,7 @@ function toggleExpandAll() {
       </ElTableColumn>
       <ElTableColumn label="层级" min-width="100">
         <template #default="{ row }">
-          {{ row.level }}
+          {{ formatArchiveCabinetNodeType(row.nodeType) }}
         </template>
       </ElTableColumn>
       <ElTableColumn label="总容量" min-width="110">
@@ -293,16 +255,18 @@ function toggleExpandAll() {
       </ElTableColumn>
       <ElTableColumn fixed="right" label="操作" min-width="190">
         <template #default="{ row }">
-          <template v-if="row.nodeType === 'cabinet' && row.cabinet">
+          <template v-if="row.nodeType !== 'ROOT' && row.node">
             <ElButton
               :disabled="!canUpdateCabinet"
               link
               size="small"
               type="primary"
-              @click="emit('openEditCabinetDialog', row.cabinet)"
+              @click="emit('openEditCabinetNodeDialog', row.node)"
             >
               修改
             </ElButton>
+          </template>
+          <template v-if="row.nodeType === 'CABINET' && row.cabinet">
             <ElButton
               :disabled="!canDeleteCabinet"
               link
@@ -322,7 +286,7 @@ function toggleExpandAll() {
               {{ row.cabinet.cabinetStatus === 'DISABLED' ? '启用' : '停用' }}
             </ElButton>
           </template>
-          <span v-else>-</span>
+          <span v-if="row.nodeType === 'ROOT'">-</span>
         </template>
       </ElTableColumn>
     </ElTable>

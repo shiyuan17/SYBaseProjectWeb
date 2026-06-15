@@ -93,7 +93,14 @@ const remarks = defineModel<string>('remarks', { required: true });
             </template>
           </ElTableColumn>
           <ElTableColumn label="申请医生" min-width="120">
-            <template #default>{{ formatNullable() }}</template>
+            <template #default="{ row }">
+              {{ formatNullable(row.applicantDoctorName) }}
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="申请时间" min-width="140">
+            <template #default="{ row }">
+              {{ formatNullable(row.applicationDate) }}
+            </template>
           </ElTableColumn>
         </ElTable>
       </div>

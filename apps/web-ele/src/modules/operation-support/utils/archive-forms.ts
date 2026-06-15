@@ -1,13 +1,21 @@
 import type {
   ArchiveApplicationFormRequest,
+  ArchiveCabinetNodeType,
+  ArchiveCabinetNodeView,
   ArchiveCabinetView,
   ArchiveEmbeddingBoxRequest,
+  ArchiveObjectType,
   ArchiveSlideRequest,
   ArchiveSpecimenRequest,
+  BatchArchiveObjectRequest,
+  BatchArchiveSpecimenRequest,
   BatchCreateArchiveCabinetRequest,
+  CreateArchiveCabinetNodeRequest,
   CreateArchiveCabinetRequest,
+  CreateMaterialLoanAbnormalRecordRequest,
   CreateMaterialLoanRequest,
   ReturnMaterialLoanRequest,
+  UpdateArchiveCabinetNodeRequest,
   UpdateArchiveCabinetRequest,
 } from '../types/operation-support';
 
@@ -16,10 +24,16 @@ export type CabinetFormState = {
   cabinetName: string;
   cabinetStatus: string;
   cabinetType: string;
+  capacity: number;
   layerCount: number;
   locationDescription: string;
+  nodeCode: string;
+  nodeType: ArchiveCabinetNodeType;
   operatorName: string;
   operatorUserId: string;
+  parentId: string;
+  pathLocation: string;
+  remainingCapacity: number;
   remarks: string;
   slotCountPerLayer: number;
   terminalCode: string;
@@ -35,6 +49,7 @@ export type BatchCabinetFormState = {
   numberWidth: number;
   operatorName: string;
   operatorUserId: string;
+  parentId: string;
   remarks: string;
   slotCountPerLayer: number;
   startNo: number;
@@ -42,11 +57,14 @@ export type BatchCabinetFormState = {
 };
 
 export type ArchiveFormState = {
+  archiveCabinetId: string;
+  archiveExpiresAt: string;
+  archiveReminderDays: null | number;
   caseId: string;
   embeddingBoxId: string;
   fileName: string;
   fileUrl: string;
-  objectType: string;
+  objectType: ArchiveObjectType;
   operatorName: string;
   operatorUserId: string;
   remarks: string;
@@ -63,16 +81,23 @@ export type ArchiveApplicationFormSelection = {
   caseId: string;
   objectCode?: null | string;
   objectId: string;
-  objectType: string;
+  objectType: ArchiveObjectType | string;
   pathologyNo?: null | string;
   patientName?: null | string;
   storedByName?: null | string;
 };
 
+export type ArchivePhysicalSelection = {
+  objectId: string;
+};
+
 export type LoanFormState = {
   borrowedByName: string;
   borrowedByUserId: string;
+  borrowerPhone: string;
+  borrowerUnit: string;
   borrowPurpose: string;
+  depositAmount: string;
   materialId: string;
   materialType: string;
   operatorName: string;
@@ -85,6 +110,28 @@ export type ReturnFormState = {
   operatorName: string;
   operatorUserId: string;
   remarks: string;
+  terminalCode: string;
+};
+
+export type MaterialLoanAbnormalFormState = {
+  abnormalReason: string;
+  borrowedAt: string;
+  borrowedContent: string;
+  borrowedSlideNo: string;
+  borrowerIdentityNo: string;
+  borrowerName: string;
+  borrowerPhone: string;
+  borrowerRelationship: string;
+  borrowerUnit: string;
+  contacted: boolean;
+  contactResult: string;
+  depositAmount: string;
+  expectedReturnAt: string;
+  loanId: string;
+  materialId: string;
+  materialType: string;
+  returnAbnormalInfo: string;
+  slideCount: number;
   terminalCode: string;
 };
 
@@ -101,14 +148,20 @@ export function createCabinetFormDefaults(
   operator: OperatorDefaults,
 ): CabinetFormState {
   return {
+    capacity: 10,
     cabinetCode: '',
     cabinetName: '',
     cabinetStatus: 'ACTIVE',
-    cabinetType: 'STANDARD',
+    cabinetType: 'APPLICATION_FORM',
     layerCount: 1,
     locationDescription: '',
+    nodeCode: '',
+    nodeType: 'CABINET',
     operatorName: operator.operatorName,
     operatorUserId: operator.operatorUserId,
+    parentId: '',
+    pathLocation: '',
+    remainingCapacity: 10,
     remarks: '',
     slotCountPerLayer: 10,
     terminalCode: '',
@@ -121,13 +174,14 @@ export function createBatchCabinetFormDefaults(
   return {
     cabinetCodePrefix: '',
     cabinetNamePrefix: '',
-    cabinetType: 'STANDARD',
+    cabinetType: 'APPLICATION_FORM',
     count: 1,
     layerCount: 1,
     locationDescription: '',
     numberWidth: 3,
     operatorName: operator.operatorName,
     operatorUserId: operator.operatorUserId,
+    parentId: '',
     remarks: '',
     slotCountPerLayer: 10,
     startNo: 1,
@@ -140,16 +194,48 @@ export function createCabinetFormStateFromCabinet(
   operator: OperatorDefaults,
 ): CabinetFormState {
   return {
+    capacity: cabinet.capacity,
     cabinetCode: cabinet.cabinetCode,
     cabinetName: cabinet.cabinetName,
     cabinetStatus: cabinet.cabinetStatus,
     cabinetType: cabinet.cabinetType,
     layerCount: cabinet.layerCount,
     locationDescription: cabinet.locationDescription ?? '',
+    nodeCode: cabinet.cabinetCode,
+    nodeType: 'CABINET',
     operatorName: operator.operatorName,
     operatorUserId: operator.operatorUserId,
+    parentId: '',
+    pathLocation: cabinet.locationDescription ?? '',
+    remainingCapacity: 0,
     remarks: cabinet.remarks ?? '',
     slotCountPerLayer: cabinet.slotCountPerLayer,
+    terminalCode: '',
+  };
+}
+
+export function createCabinetFormStateFromNode(
+  node: ArchiveCabinetNodeView,
+  operator: OperatorDefaults,
+): CabinetFormState {
+  const capacity = node.capacity;
+  return {
+    capacity,
+    cabinetCode: node.nodeCode,
+    cabinetName: node.nodeCode,
+    cabinetStatus: 'ACTIVE',
+    cabinetType: node.cabinetType ?? 'APPLICATION_FORM',
+    layerCount: 1,
+    locationDescription: node.pathLocation ?? '',
+    nodeCode: node.nodeCode,
+    nodeType: node.nodeType,
+    operatorName: operator.operatorName,
+    operatorUserId: operator.operatorUserId,
+    parentId: node.parentId ?? '',
+    pathLocation: node.pathLocation ?? '',
+    remainingCapacity: node.remainingCapacity,
+    remarks: node.remarks ?? '',
+    slotCountPerLayer: Math.max(1, capacity),
     terminalCode: '',
   };
 }
@@ -158,6 +244,9 @@ export function createArchiveFormDefaults(
   operator: OperatorDefaults,
 ): ArchiveFormState {
   return {
+    archiveCabinetId: '',
+    archiveExpiresAt: '',
+    archiveReminderDays: null,
     caseId: '',
     embeddingBoxId: '',
     fileName: '',
@@ -176,14 +265,41 @@ export function createLoanFormDefaults(
   operator: OperatorDefaults,
 ): LoanFormState {
   return {
+    borrowerPhone: '',
+    borrowerUnit: '',
     borrowPurpose: '',
     borrowedByName: '',
     borrowedByUserId: '',
+    depositAmount: '',
     materialId: '',
     materialType: 'SLIDE',
     operatorName: operator.operatorName,
     operatorUserId: operator.operatorUserId,
     remarks: '',
+    terminalCode: '',
+  };
+}
+
+export function createMaterialLoanAbnormalFormDefaults(): MaterialLoanAbnormalFormState {
+  return {
+    abnormalReason: '',
+    borrowedAt: '',
+    borrowedContent: '',
+    borrowedSlideNo: '',
+    borrowerIdentityNo: '',
+    borrowerName: '',
+    borrowerPhone: '',
+    borrowerRelationship: '',
+    borrowerUnit: '',
+    contactResult: '',
+    contacted: false,
+    depositAmount: '',
+    expectedReturnAt: '',
+    loanId: '',
+    materialId: '',
+    materialType: 'SLIDE',
+    returnAbnormalInfo: '',
+    slideCount: 1,
     terminalCode: '',
   };
 }
@@ -203,17 +319,26 @@ export function validateCabinetForm(
   form: CabinetFormState,
   mode: 'create' | 'edit' | null,
 ) {
-  if (!form.cabinetName.trim()) {
-    return '请填写归档柜名称。';
+  if (!form.nodeCode.trim()) {
+    return '请填写编号。';
   }
-  if (!form.operatorName.trim()) {
+  if (mode === 'edit' && !form.operatorName.trim()) {
     return '请填写操作人。';
   }
-  if (mode === 'create' && !form.cabinetCode.trim()) {
-    return '新增归档柜时必须填写归档柜编号。';
+  if (!['AREA', 'CABINET', 'DRAWER'].includes(form.nodeType)) {
+    return '请选择节点类型。';
   }
-  if (form.layerCount < 1 || form.slotCountPerLayer < 1) {
-    return '层数和每层柜位数必须大于 0。';
+  if (form.nodeType === 'CABINET' && !form.cabinetType.trim()) {
+    return '柜子节点必须选择柜子类型。';
+  }
+  if (form.nodeType === 'DRAWER' && !form.parentId.trim()) {
+    return '抽屉节点必须选择父柜子。';
+  }
+  if (form.nodeType !== 'AREA' && form.capacity < 1) {
+    return '总容量必须大于 0。';
+  }
+  if (mode === 'edit' && form.capacity < 0) {
+    return '总容量不能小于 0。';
   }
   return '';
 }
@@ -283,6 +408,47 @@ export function validateArchiveForm(options: {
   return '';
 }
 
+export function validateBatchArchiveForm(options: {
+  canArchiveObjectType: boolean;
+  canQueryCabinets: boolean;
+  form: ArchiveFormState;
+  hasSelectedCabinet: boolean;
+  objectType: ArchiveObjectType;
+  permissionWarning: string;
+  selectedRecordCount: number;
+}) {
+  const {
+    canArchiveObjectType,
+    canQueryCabinets,
+    form,
+    hasSelectedCabinet,
+    objectType,
+    permissionWarning,
+    selectedRecordCount,
+  } = options;
+
+  if (!canArchiveObjectType) {
+    return permissionWarning;
+  }
+  if (!canQueryCabinets || !hasSelectedCabinet) {
+    return '请选择归档框编号。';
+  }
+  if (selectedRecordCount <= 0) {
+    return '请先勾选至少一条归档记录。';
+  }
+  if (!form.operatorName.trim()) {
+    return '请填写归档操作人。';
+  }
+  if (
+    objectType === 'SPECIMEN' &&
+    form.archiveReminderDays !== null &&
+    form.archiveReminderDays < 0
+  ) {
+    return '剩余几天提醒不能小于 0。';
+  }
+  return '';
+}
+
 export function validateLoanForm(form: LoanFormState, canCreateLoan: boolean) {
   if (!canCreateLoan) {
     return '当前账号缺少借出权限。';
@@ -295,6 +461,22 @@ export function validateLoanForm(form: LoanFormState, canCreateLoan: boolean) {
   }
   if (!form.operatorName.trim()) {
     return '请填写借出操作人。';
+  }
+  return '';
+}
+
+export function validateMaterialLoanAbnormalForm(
+  form: MaterialLoanAbnormalFormState,
+  canRegisterLoanAbnormal: boolean,
+) {
+  if (!canRegisterLoanAbnormal) {
+    return '当前账号缺少异常登记权限。';
+  }
+  if (!form.materialId.trim()) {
+    return '请先选择需要登记异常的材料。';
+  }
+  if (!form.abnormalReason.trim()) {
+    return '请填写异常原因。';
   }
   return '';
 }
@@ -346,9 +528,26 @@ export function buildBatchCreateCabinetRequest(
     numberWidth: form.numberWidth,
     operatorName: form.operatorName.trim(),
     operatorUserId: optionalText(form.operatorUserId),
+    parentId: optionalText(form.parentId),
     remarks: optionalText(form.remarks),
     slotCountPerLayer: form.slotCountPerLayer,
     startNo: form.startNo,
+    terminalCode: optionalText(form.terminalCode),
+  };
+}
+
+export function buildCreateCabinetNodeRequest(
+  form: CabinetFormState,
+): CreateArchiveCabinetNodeRequest {
+  return {
+    cabinetType:
+      form.nodeType === 'CABINET' ? optionalText(form.cabinetType) : undefined,
+    capacity: form.nodeType === 'AREA' ? 0 : form.capacity,
+    nodeCode: form.nodeCode.trim(),
+    nodeType: form.nodeType,
+    parentId: optionalText(form.parentId),
+    pathLocation: optionalText(form.pathLocation),
+    remarks: optionalText(form.remarks),
     terminalCode: optionalText(form.terminalCode),
   };
 }
@@ -362,6 +561,20 @@ export function buildUpdateCabinetRequest(
     locationDescription: optionalText(form.locationDescription),
     operatorName: form.operatorName.trim(),
     operatorUserId: optionalText(form.operatorUserId),
+    remarks: optionalText(form.remarks),
+    terminalCode: optionalText(form.terminalCode),
+  };
+}
+
+export function buildUpdateCabinetNodeRequest(
+  form: CabinetFormState,
+): UpdateArchiveCabinetNodeRequest {
+  return {
+    cabinetType:
+      form.nodeType === 'CABINET' ? optionalText(form.cabinetType) : undefined,
+    capacity: form.nodeType === 'AREA' ? 0 : form.capacity,
+    nodeCode: form.nodeCode.trim(),
+    pathLocation: optionalText(form.pathLocation),
     remarks: optionalText(form.remarks),
     terminalCode: optionalText(form.terminalCode),
   };
@@ -442,9 +655,44 @@ export function buildArchiveSpecimenRequest(
   };
 }
 
+export function buildBatchArchiveObjectRequest(
+  records: ArchivePhysicalSelection[],
+  form: ArchiveFormState,
+  archiveCabinetId = form.archiveCabinetId,
+): BatchArchiveObjectRequest {
+  return {
+    archiveCabinetId,
+    objectIds: records.map((record) => record.objectId.trim()),
+    remarks: optionalText(form.remarks),
+    terminalCode: optionalText(form.terminalCode),
+  };
+}
+
+export function buildBatchArchiveSpecimenRequest(
+  records: ArchivePhysicalSelection[],
+  form: ArchiveFormState,
+  archiveCabinetId = form.archiveCabinetId,
+): BatchArchiveSpecimenRequest {
+  return {
+    ...buildBatchArchiveObjectRequest(records, form, archiveCabinetId),
+    archiveExpiresAt: optionalText(form.archiveExpiresAt),
+    archiveReminderDays:
+      form.archiveReminderDays === null ? undefined : form.archiveReminderDays,
+  };
+}
+
 export function buildCreateMaterialLoanRequest(
   form: LoanFormState,
 ): CreateMaterialLoanRequest {
+  const loanRemarks = [
+    form.remarks.trim(),
+    form.borrowerPhone.trim() ? `借阅人电话：${form.borrowerPhone.trim()}` : '',
+    form.borrowerUnit.trim() ? `借阅人单位：${form.borrowerUnit.trim()}` : '',
+    form.depositAmount.trim() ? `押金：${form.depositAmount.trim()}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+
   return {
     borrowPurpose: optionalText(form.borrowPurpose),
     borrowedByName: form.borrowedByName.trim(),
@@ -453,7 +701,33 @@ export function buildCreateMaterialLoanRequest(
     materialType: form.materialType,
     operatorName: form.operatorName.trim(),
     operatorUserId: optionalText(form.operatorUserId),
-    remarks: optionalText(form.remarks),
+    remarks: optionalText(loanRemarks),
+    terminalCode: optionalText(form.terminalCode),
+  };
+}
+
+export function buildCreateMaterialLoanAbnormalRecordRequest(
+  form: MaterialLoanAbnormalFormState,
+): CreateMaterialLoanAbnormalRecordRequest {
+  return {
+    abnormalReason: form.abnormalReason.trim(),
+    borrowedAt: optionalText(form.borrowedAt),
+    borrowedContent: optionalText(form.borrowedContent),
+    borrowedSlideNo: optionalText(form.borrowedSlideNo),
+    borrowerIdentityNo: optionalText(form.borrowerIdentityNo),
+    borrowerName: optionalText(form.borrowerName),
+    borrowerPhone: optionalText(form.borrowerPhone),
+    borrowerRelationship: optionalText(form.borrowerRelationship),
+    borrowerUnit: optionalText(form.borrowerUnit),
+    contactResult: optionalText(form.contactResult),
+    contacted: form.contacted,
+    depositAmount: optionalText(form.depositAmount),
+    expectedReturnAt: optionalText(form.expectedReturnAt),
+    loanId: optionalText(form.loanId),
+    materialId: form.materialId.trim(),
+    materialType: form.materialType,
+    returnAbnormalInfo: optionalText(form.returnAbnormalInfo),
+    slideCount: form.slideCount,
     terminalCode: optionalText(form.terminalCode),
   };
 }

@@ -12,6 +12,7 @@ export interface ArchiveManagementCapabilities {
   canQueryCabinets: ComputedRef<boolean>;
   canQueryLoans: ComputedRef<boolean>;
   canQueryRecords: ComputedRef<boolean>;
+  canRegisterLoanAbnormal: ComputedRef<boolean>;
   canReturnLoan: ComputedRef<boolean>;
   canUpdateCabinet: ComputedRef<boolean>;
   canViewArchivePage: ComputedRef<boolean>;

@@ -1,5 +1,8 @@
 <script setup lang="ts">
+import type { ArchiveCabinetNodeView } from '../types/operation-support';
 import type { BatchCabinetFormState } from '../utils/archive-forms';
+
+import { computed } from 'vue';
 
 import {
   ElAlert,
@@ -11,11 +14,13 @@ import {
   ElInputNumber,
   ElOption,
   ElSelect,
+  ElTreeSelect,
 } from 'element-plus';
 
-import { ARCHIVE_CABINET_TYPE_OPTIONS } from '../constants';
+import { ARCHIVE_CABINET_CREATE_TYPE_OPTIONS } from '../constants';
 
-defineProps<{
+const props = defineProps<{
+  cabinetNodes: ArchiveCabinetNodeView[];
   submitting: boolean;
 }>();
 
@@ -30,15 +35,34 @@ const batchCabinetForm = defineModel<BatchCabinetFormState>(
     required: true,
   },
 );
+
+const parentNodeOptions = computed(() =>
+  props.cabinetNodes
+    .filter((node) => node.nodeType === 'AREA')
+    .map((node) => ({
+      label: node.nodeCode,
+      value: node.id,
+    })),
+);
 </script>
 
 <template>
   <ElDialog v-model="dialogVisible" title="批量添加归档柜" width="720px">
     <ElForm label-width="118px">
+      <ElFormItem label="父节点">
+        <ElTreeSelect
+          v-model="batchCabinetForm.parentId"
+          check-strictly
+          clearable
+          :data="parentNodeOptions"
+          node-key="value"
+          placeholder="ROOT"
+        />
+      </ElFormItem>
       <ElFormItem label="柜子类型" required>
         <ElSelect v-model="batchCabinetForm.cabinetType">
           <ElOption
-            v-for="option in ARCHIVE_CABINET_TYPE_OPTIONS"
+            v-for="option in ARCHIVE_CABINET_CREATE_TYPE_OPTIONS"
             :key="option.value"
             :label="option.label"
             :value="option.value"

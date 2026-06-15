@@ -15,6 +15,7 @@ import {
   getToggleCabinetActionLabel,
 } from '../utils/archive-workbench';
 import { useArchiveCabinetWorkspace } from './internal/useArchiveCabinetWorkspace';
+import { useArchiveLoanWorkspace } from './internal/useArchiveLoanWorkspace';
 import { useArchiveRecordWorkspace } from './internal/useArchiveRecordWorkspace';
 import { useArchiveSubmissionWorkspace } from './internal/useArchiveSubmissionWorkspace';
 
@@ -53,6 +54,9 @@ export function useArchiveManagementPage() {
     ),
     canQueryRecords: computed(() =>
       accessCodeSet.value.has(M5_PERMISSION_CODES.ARCHIVE_QUERY),
+    ),
+    canRegisterLoanAbnormal: computed(() =>
+      accessCodeSet.value.has(M5_PERMISSION_CODES.LOAN_ABNORMAL_REGISTER),
     ),
     canReturnLoan: computed(() =>
       accessCodeSet.value.has(M5_PERMISSION_CODES.LOAN_RETURN),
@@ -93,10 +97,21 @@ export function useArchiveManagementPage() {
     operatorContext,
   });
   const recordWorkspaceState = useArchiveRecordWorkspace({ capabilities });
+  const loanWorkspaceState = useArchiveLoanWorkspace({
+    capabilities,
+    mutationState,
+    operatorContext,
+    refreshArchiveWorkspace,
+    selectedPosition: cabinetWorkspaceState.selectedPosition,
+  });
   const archiveWorkspaceState = useArchiveSubmissionWorkspace({
     capabilities,
+    clearSelectedArchiveObjectRecords:
+      recordWorkspaceState.clearSelectedArchiveObjectRecords,
     clearSelectedApplicationFormRecords:
       recordWorkspaceState.clearSelectedApplicationFormRecords,
+    getSelectedArchiveObjectRecords:
+      recordWorkspaceState.getSelectedArchiveObjectRecords,
     getSelectedApplicationFormRecords:
       recordWorkspaceState.getSelectedApplicationFormRecords,
     mutationState,
@@ -109,7 +124,10 @@ export function useArchiveManagementPage() {
     const tasks: Array<Promise<unknown>> = [];
 
     if (capabilities.canQueryCabinets.value) {
-      tasks.push(cabinetWorkspaceState.loadPositions());
+      tasks.push(
+        cabinetWorkspaceState.loadPositions(),
+        cabinetWorkspaceState.loadCabinetNodes(),
+      );
     }
     if (capabilities.canQueryRecords.value) {
       tasks.push(recordWorkspaceState.refreshCurrentArchiveObjects());
@@ -130,6 +148,7 @@ export function useArchiveManagementPage() {
     if (capabilities.canQueryCabinets.value) {
       tasks.push(
         cabinetWorkspaceState.loadCabinets(),
+        cabinetWorkspaceState.loadCabinetNodes(),
         cabinetWorkspaceState.loadPositions(),
       );
     }
@@ -155,6 +174,7 @@ export function useArchiveManagementPage() {
       getPositionStatusTagType,
       getToggleCabinetActionLabel,
     },
+    loanWorkspace: reactive(loanWorkspaceState),
     pageState: reactive(mutationState),
     recordWorkspace: reactive(recordWorkspaceState),
   };

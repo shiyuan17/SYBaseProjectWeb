@@ -14,6 +14,7 @@ export const M5_PERMISSION_CODES = {
   LOAN_CREATE: 'PERM_M5_LOAN_CREATE',
   LOAN_QUERY: 'PERM_M5_LOAN_QUERY',
   LOAN_RETURN: 'PERM_M5_LOAN_RETURN',
+  LOAN_ABNORMAL_REGISTER: 'PERM_M5_LOAN_ABNORMAL_REGISTER',
   REAGENT_CREATE: 'PERM_M5_REAGENT_CREATE',
   REAGENT_QUERY: 'PERM_M5_REAGENT_QUERY',
   REAGENT_STOCK_QUERY: 'PERM_M5_REAGENT_STOCK_QUERY',
@@ -37,9 +38,11 @@ export const M5_ARCHIVE_PAGE_AUTHORITIES = [
 ] as const;
 
 export const M5_BORROW_PAGE_AUTHORITIES = [
+  M5_PERMISSION_CODES.ARCHIVE_QUERY,
   M5_PERMISSION_CODES.LOAN_CREATE,
   M5_PERMISSION_CODES.LOAN_RETURN,
   M5_PERMISSION_CODES.LOAN_QUERY,
+  M5_PERMISSION_CODES.LOAN_ABNORMAL_REGISTER,
 ] as const;
 
 export const M5_OPERATION_SUPPORT_AUTHORITIES = [
@@ -98,10 +101,25 @@ export const ARCHIVE_CABINET_STATUS_OPTIONS = [
 
 export const ARCHIVE_CABINET_TYPE_OPTIONS = [
   { label: '标准柜', value: 'STANDARD' },
-  { label: '申请单柜', value: 'APPLICATION_FORM' },
-  { label: '蜡块柜', value: 'EMBEDDING_BOX' },
-  { label: '玻片柜', value: 'SLIDE' },
-  { label: '标本柜', value: 'SPECIMEN' },
+  { label: '申请单', value: 'APPLICATION_FORM' },
+  { label: '蜡块', value: 'EMBEDDING_BOX' },
+  { label: '玻片', value: 'SLIDE' },
+  { label: '标本', value: 'SPECIMEN' },
+  { label: '试管', value: 'TEST_TUBE' },
+] as const;
+
+export const ARCHIVE_CABINET_CREATE_TYPE_OPTIONS = [
+  { label: '申请单', value: 'APPLICATION_FORM' },
+  { label: '蜡块', value: 'EMBEDDING_BOX' },
+  { label: '玻片', value: 'SLIDE' },
+  { label: '标本', value: 'SPECIMEN' },
+  { label: '试管', value: 'TEST_TUBE' },
+] as const;
+
+export const ARCHIVE_CABINET_NODE_TYPE_OPTIONS = [
+  { label: '区域', value: 'AREA' },
+  { label: '柜子', value: 'CABINET' },
+  { label: '抽屉', value: 'DRAWER' },
 ] as const;
 
 export const ARCHIVE_OBJECT_TYPE_OPTIONS = [
@@ -123,11 +141,13 @@ export const ARCHIVE_POSITION_STATUS_OPTIONS = [
 ] as const;
 
 export const ARCHIVE_STORAGE_STATUS_OPTIONS = [
+  { label: '未归档', value: 'NOT_ARCHIVED' },
   { label: '在库', value: 'IN_STORAGE' },
   { label: '已借出', value: 'BORROWED' },
 ] as const;
 
 export const MATERIAL_LOAN_STATUS_OPTIONS = [
+  { label: '未借阅', value: 'NONE' },
   { label: '借出中', value: 'BORROWED' },
   { label: '已归还', value: 'RETURNED' },
 ] as const;
