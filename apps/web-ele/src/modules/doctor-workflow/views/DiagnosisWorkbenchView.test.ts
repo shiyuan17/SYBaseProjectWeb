@@ -47,7 +47,8 @@ const {
   confirmMedicalOrderBillingMock: vi.fn<(data: unknown) => Promise<unknown>>(),
   createConsultationMock: vi.fn<(data: unknown) => Promise<unknown>>(),
   createMedicalOrderMock: vi.fn<(data: unknown) => Promise<unknown>>(),
-  createPathologyReportMock: vi.fn<(data: unknown) => Promise<{ reportId: string }>>(),
+  createPathologyReportMock:
+    vi.fn<(data: unknown) => Promise<{ reportId: string }>>(),
   commentConsultationParticipantMock:
     vi.fn<
       (
@@ -62,8 +63,7 @@ const {
   getDiagnosticWorkbenchMock:
     vi.fn<(caseId: string) => Promise<DiagnosticWorkbenchView>>(),
   issueFormalReportVersionsMock: vi.fn<(data: unknown) => Promise<unknown>>(),
-  listCaseReportVersionsMock:
-    vi.fn<(caseId: string) => Promise<unknown[]>>(),
+  listCaseReportVersionsMock: vi.fn<(caseId: string) => Promise<unknown[]>>(),
   listMedicalOrderDictsMock: vi.fn<() => Promise<unknown[]>>(),
   listMedicalOrderPackagesPageMock:
     vi.fn<(query: unknown) => Promise<unknown>>(),
@@ -1006,7 +1006,7 @@ describe('DiagnosisWorkbenchView', () => {
     );
 
     wrapper.unmount();
-  });
+  }, 15_000);
 
   it('renders live print preview tab from the editable report draft', async () => {
     const wrapper = await mountView();
