@@ -475,26 +475,17 @@ async function runReportAction(
   try {
     const reportId = await ensureWorkbenchReport();
     switch (action) {
-      case 'save': {
-        await savePathologyReportDraft(reportId, buildDraftPayload());
-        ElMessage.success('报告草稿已暂存');
-        break;
-      }
-      case 'submit': {
-        await savePathologyReportDraft(reportId, buildDraftPayload());
-        await submitPathologyReport(reportId, {
-          operatorName: getOperatorName(),
-          operatorUserId: getOperatorUserId(),
-        });
-        ElMessage.success('报告已提交初步');
-        break;
-      }
       case 'review': {
         await reviewPathologyReport(reportId, {
           operatorName: getOperatorName(),
           operatorUserId: getOperatorUserId(),
         });
         ElMessage.success('报告已复核');
+        break;
+      }
+      case 'save': {
+        await savePathologyReportDraft(reportId, buildDraftPayload());
+        ElMessage.success('报告草稿已暂存');
         break;
       }
       case 'sign': {
@@ -518,6 +509,15 @@ async function runReportAction(
         };
         await issueFormalReportVersions(issuePayload);
         ElMessage.success('报告已签发并提交发放');
+        break;
+      }
+      case 'submit': {
+        await savePathologyReportDraft(reportId, buildDraftPayload());
+        await submitPathologyReport(reportId, {
+          operatorName: getOperatorName(),
+          operatorUserId: getOperatorUserId(),
+        });
+        ElMessage.success('报告已提交初步');
         break;
       }
     }
@@ -745,7 +745,7 @@ onBeforeUnmount(() => {
         >
           复核
         </ElButton>
-        <div class="flex items-center gap-2">
+        <div class="flex shrink-0 items-center gap-2">
           <ElButton
             :disabled="reportOperating || !canSignReport"
             data-testid="workbench-report-sign"
@@ -756,7 +756,7 @@ onBeforeUnmount(() => {
           </ElButton>
           <ElSelect
             v-model="reportIssueMode"
-            class="w-[150px]"
+            class="w-[150px] shrink-0"
             data-testid="workbench-report-issue-mode"
             size="small"
           >
@@ -908,6 +908,10 @@ onBeforeUnmount(() => {
 
 .diagnosis-capture-section {
   border-radius: 6px;
+}
+
+:deep(.el-select[data-testid='workbench-report-issue-mode']) {
+  min-width: 150px;
 }
 
 @media (width < 1280px) {

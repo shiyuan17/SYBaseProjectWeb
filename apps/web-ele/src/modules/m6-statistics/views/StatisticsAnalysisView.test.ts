@@ -741,7 +741,7 @@ describe('StatisticsAnalysisView', () => {
     await flushView();
 
     expect(document.body.textContent).toContain('质量与安全控制');
-    expect(document.body.textContent).toContain('医疗质量指标');
+    expect(document.body.textContent).not.toContain('统计报表工作台描述');
 
     const workloadTabButton = [...root.querySelectorAll('button')].find(
       (button) => button.textContent?.includes('工作量报表'),
@@ -790,7 +790,6 @@ describe('StatisticsAnalysisView', () => {
       }),
     );
     expect(document.body.textContent).toContain('指标明细');
-    expect(document.body.textContent).toContain('明细口径');
     expect(document.body.textContent).toContain('SP-M6-001');
     expect(document.body.textContent).toContain('导出明细 CSV');
 

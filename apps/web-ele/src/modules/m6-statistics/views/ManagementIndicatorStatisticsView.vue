@@ -1,11 +1,8 @@
 <script setup lang="ts">
 import type {
-  MetricStatus,
   StatReportQuery,
   StatReportResult,
-  StatReportRow,
 } from '../types/m6-statistics';
-
 import type { RoleView } from '#/modules/system-management/types/system-management';
 
 import { computed, onMounted, reactive, ref } from 'vue';
@@ -40,12 +37,13 @@ import {
   queryStatReport,
 } from '../api/m6-statistics-service';
 import { buildStatReportFileName } from '../utils/report-query';
+import {
+  buildDisplayRows,
+  metricStatusLabel,
+  metricStatusTagType,
+} from '../utils/report-workbench';
 
 type PeriodMode = 'month' | 'quarter' | 'year';
-
-interface DisplayStatReportRow extends StatReportRow {
-  metricValueText: string;
-}
 
 const route = useRoute();
 const userStore = useUserStore();
@@ -81,13 +79,6 @@ const roleOptions = computed(() =>
 );
 
 const pageTitle = computed(() => String(route.meta.title || '管理指标统计'));
-const pageDescription = computed(() =>
-  String(
-    route.meta.description ||
-      '展示业务量、收费、物资/试剂预警与人员工作量统计口径。',
-  ),
-);
-
 const operationRows = computed(() =>
   buildDisplayRows(operationReport.value?.rows ?? []),
 );
@@ -130,49 +121,6 @@ function buildDefaultDateRange(mode: PeriodMode) {
     formatDateTime(new Date(year, month, 1, 0, 0, 0)),
     formatDateTime(new Date(year, month + 1, 0, 23, 59, 59)),
   ];
-}
-
-function metricStatusLabel(status?: MetricStatus) {
-  if (status === 'AVAILABLE') {
-    return '可用';
-  }
-  if (status === 'PARTIAL') {
-    return '部分可用';
-  }
-  if (status === 'UNAVAILABLE') {
-    return '不可用';
-  }
-  return '未知';
-}
-
-function metricStatusTagType(status?: MetricStatus) {
-  if (status === 'AVAILABLE') {
-    return 'success';
-  }
-  if (status === 'PARTIAL') {
-    return 'warning';
-  }
-  if (status === 'UNAVAILABLE') {
-    return 'info';
-  }
-  return undefined;
-}
-
-function displayMetric(row: StatReportRow) {
-  if (row.metricStatus === 'UNAVAILABLE') {
-    return '未接入';
-  }
-  return row.metricUnit
-    ? `${row.metricValue} ${row.metricUnit}`
-    : row.metricValue;
-}
-
-function buildDisplayRows(rows: StatReportRow[]): DisplayStatReportRow[] {
-  return rows.map((row) => ({
-    ...row,
-    metricValue: displayMetric(row),
-    metricValueText: displayMetric(row),
-  }));
 }
 
 function downloadBlob(blob: Blob, fileName: string) {
@@ -278,12 +226,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <Page :show-header="false" :title="pageTitle" :description="pageDescription">
+  <Page :show-header="false" :title="pageTitle">
     <div class="flex flex-col gap-4">
-      <DashboardSectionCard
-        title="查询条件"
-        description="支持业务量、收费、物资/试剂预警、绩效与人员工作量统计筛选。"
-      >
+      <DashboardSectionCard title="查询条件">
         <ElForm inline label-width="90px">
           <ElFormItem label="统计周期">
             <ElSegmented
@@ -291,13 +236,6 @@ onMounted(() => {
               :options="periodOptions"
               @change="handlePeriodModeChange"
             />
-            <span
-              v-for="item in periodOptions"
-              :key="item.value"
-              class="ml-2 text-xs text-muted-foreground"
-            >
-              {{ item.label }}
-            </span>
           </ElFormItem>
           <ElFormItem label="时间范围">
             <ElDatePicker
@@ -358,21 +296,12 @@ onMounted(() => {
       <ElSkeleton v-if="loading" :rows="8" animated />
 
       <div v-else class="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <DashboardSectionCard
-          title="运营指标"
-          description="覆盖业务量分类、收费分析、物资/试剂预警和综合工作量。"
-        >
-          <div class="mb-3 flex flex-wrap gap-2 text-sm text-muted-foreground">
-            <span>业务量分类</span>
-            <span>收费分析</span>
-            <span>物资/试剂预警</span>
-            <span>绩效/工作量统计</span>
-          </div>
+        <DashboardSectionCard title="运营指标">
           <ElTable v-if="operationRows.length > 0" :data="operationRows" border>
             <ElTableColumn
               label="指标名称"
               min-width="180"
-              prop="indicatorName"
+              prop="displayIndicatorName"
             />
             <ElTableColumn label="结果" min-width="140" prop="metricValue" />
             <ElTableColumn label="状态" min-width="120">
@@ -385,7 +314,7 @@ onMounted(() => {
             <ElTableColumn
               label="数据来源与口径"
               min-width="240"
-              prop="sourceNote"
+              prop="displaySourceNote"
               show-overflow-tooltip
             />
           </ElTable>
@@ -400,15 +329,12 @@ onMounted(() => {
           </div>
         </DashboardSectionCard>
 
-        <DashboardSectionCard
-          title="工作量指标"
-          description="按角色、人员和科室筛选诊断任务、医嘱执行与综合工作量。"
-        >
+        <DashboardSectionCard title="工作量指标">
           <ElTable v-if="workloadRows.length > 0" :data="workloadRows" border>
             <ElTableColumn
               label="指标名称"
               min-width="180"
-              prop="indicatorName"
+              prop="displayIndicatorName"
             />
             <ElTableColumn label="结果" min-width="140" prop="metricValue" />
             <ElTableColumn label="状态" min-width="120">
@@ -421,7 +347,7 @@ onMounted(() => {
             <ElTableColumn
               label="数据来源与口径"
               min-width="240"
-              prop="sourceNote"
+              prop="displaySourceNote"
               show-overflow-tooltip
             />
           </ElTable>

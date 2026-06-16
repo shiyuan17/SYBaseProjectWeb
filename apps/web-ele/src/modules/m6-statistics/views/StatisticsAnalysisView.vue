@@ -90,12 +90,6 @@ const detailPagination = reactive({
 });
 
 const pageTitle = computed(() => String(route.meta.title || '统计报表工作台'));
-const pageDescription = computed(() =>
-  String(
-    route.meta.description ||
-      '面向医疗质量分析报表的统一统计工作台，支持工作量、质控、冰冻、报告更改与不合格标本分析。',
-  ),
-);
 
 const activeTabConfig = computed(() => getReportWorkbenchTab(activeTab.value));
 const availableTemplates = computed(() =>
@@ -383,12 +377,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <Page :show-header="false" :title="pageTitle" :description="pageDescription">
+  <Page :show-header="false" :title="pageTitle">
     <div class="flex flex-col gap-4">
-      <DashboardSectionCard
-        title="报表工作台"
-        description="按附件医疗质量分析报表组织为单入口多 tab，跨模块流程增强另行实施。"
-      >
+      <DashboardSectionCard title="报表工作台">
         <ElSegmented
           v-model="activeTab"
           :options="
@@ -398,9 +389,6 @@ onMounted(async () => {
             }))
           "
         />
-        <p class="mt-3 text-sm text-muted-foreground">
-          {{ activeTabConfig.description }}
-        </p>
       </DashboardSectionCard>
 
       <DashboardSectionCard title="查询条件">
@@ -431,10 +419,7 @@ onMounted(async () => {
         <ReportMetricCards :rows="topMetricRows" />
 
         <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          <DashboardSectionCard
-            title="趋势/对比图"
-            description="优先使用后端 trendPoints，未返回时按当前指标结果生成对比图。"
-          >
+          <DashboardSectionCard title="趋势/对比图">
             <ReportChartPanel
               empty-text="当前指标暂无趋势图数据"
               :loading="loading"
@@ -442,10 +427,7 @@ onMounted(async () => {
             />
           </DashboardSectionCard>
 
-          <DashboardSectionCard
-            title="原因/状态分布"
-            description="优先使用后端 breakdowns，未返回时展示指标可用性状态分布。"
-          >
+          <DashboardSectionCard title="原因/状态分布">
             <ReportChartPanel
               empty-text="当前指标暂无分布图数据"
               :loading="loading"
@@ -454,10 +436,7 @@ onMounted(async () => {
           </DashboardSectionCard>
         </div>
 
-        <DashboardSectionCard
-          title="报表结果"
-          description="当前结果以 M6 后端统计口径返回值为准。"
-        >
+        <DashboardSectionCard title="报表结果">
           <ReportResultTable
             :active-tab="activeTab"
             :detail-enabled="activeTabConfig.detailEnabled"

@@ -188,9 +188,27 @@ describe('StatisticsDashboardView', () => {
     expect(document.body.textContent).toContain('运营指标');
     expect(document.body.textContent).toContain('工作量指标');
     expect(document.body.textContent).toContain('收费金额');
-    expect(document.body.textContent).toContain('128.00 CNY');
+    expect(document.body.textContent).toContain('128.00 元');
     expect(document.body.textContent).toContain('冰冻石蜡符合率');
     expect(document.body.textContent).toContain('不可用');
+
+    const qualityGrid = document.querySelector(
+      '[data-testid="dashboard-quality-grid"]',
+    );
+    const operationGrid = document.querySelector(
+      '[data-testid="dashboard-operation-grid"]',
+    );
+    const workloadGrid = document.querySelector(
+      '[data-testid="dashboard-workload-grid"]',
+    );
+
+    expect(qualityGrid?.className).toContain('grid');
+    expect(qualityGrid?.className).toContain('md:grid-cols-2');
+    expect(qualityGrid?.className).toContain('2xl:grid-cols-3');
+    expect(operationGrid?.className).toContain('grid');
+    expect(operationGrid?.className).toContain('md:grid-cols-2');
+    expect(workloadGrid?.className).toContain('grid');
+    expect(workloadGrid?.className).toContain('md:grid-cols-2');
 
     app.unmount();
     root.remove();

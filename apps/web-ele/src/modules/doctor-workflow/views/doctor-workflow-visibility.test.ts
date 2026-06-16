@@ -786,6 +786,24 @@ describe('doctor workflow view visibility', () => {
     wrapper.unmount();
   });
 
+  it('keeps the diagnosis workbench issue-mode select wide enough beside the sign button', async () => {
+    mockAccessStore.accessCodes = [
+      M4_PERMISSION_CODES.WORKBENCH_QUERY,
+      M4_PERMISSION_CODES.REPORT_SIGN,
+    ];
+
+    const wrapper = await mountView(DiagnosisWorkbenchView);
+    const issueModeSelect = wrapper.root.querySelector<HTMLElement>(
+      '[data-testid="workbench-report-issue-mode"]',
+    );
+
+    expect(issueModeSelect).toBeTruthy();
+    expect(issueModeSelect?.classList.contains('w-[150px]')).toBe(true);
+    expect(issueModeSelect?.classList.contains('shrink-0')).toBe(true);
+
+    wrapper.unmount();
+  });
+
   it('renders assignment application type and specimen without English fallbacks', async () => {
     listPendingDiagnosticTasksMock.mockResolvedValue({
       items: [

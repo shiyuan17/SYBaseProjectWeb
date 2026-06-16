@@ -22,7 +22,7 @@ defineProps<{
     >
       <div class="flex items-start justify-between gap-3">
         <span class="text-sm text-muted-foreground">
-          {{ row.indicatorName }}
+          {{ row.displayIndicatorName }}
         </span>
         <ElTag :type="metricStatusTagType(row.metricStatus)">
           {{ metricStatusLabel(row.metricStatus) }}
@@ -30,9 +30,6 @@ defineProps<{
       </div>
       <div class="mt-3 text-2xl font-semibold">
         {{ row.metricValueText }}
-      </div>
-      <div class="mt-2 text-xs text-muted-foreground">
-        {{ row.sourceNote || '统计来源未标注' }}
       </div>
     </div>
   </div>

@@ -14,6 +14,8 @@ import {
   filterRowsForTab,
   filterTemplatesForTab,
   KEY_QUALITY_INDICATORS,
+  localizeIndicatorName,
+  localizeSourceNote,
   mergeWorkloadReports,
   normalizeQualityGroup,
   normalizeWorkbenchTab,
@@ -230,13 +232,28 @@ describe('report-workbench', () => {
         metricUnit: 'PERCENT',
         metricValue: '90.00',
         numerator: '9',
+        sourceNote: 'specimens',
       },
     ]);
     expect(rows[0]?.metricValueText).toBe('90.00%');
+    expect(rows[0]?.displayIndicatorName).toBe('标本规范化固定率');
+    expect(rows[0]?.displaySourceNote).toBe('按标本数据统计');
     expect(buildTrendChartOption(rows)).toBeTruthy();
     expect(buildBreakdownChartOption(rows)).toBeTruthy();
     expect(splitQualityRows(rows, 'medical')).toEqual(rows);
     expect(filterRowsForTab(rows, getTab(1))).toEqual(rows);
+  });
+
+  it('localizes visible indicator and source text', () => {
+    expect(
+      localizeIndicatorName(
+        'QC_CRITICAL_VALUE_COUNT',
+        'Critical Value Count',
+      ),
+    ).toBe('危急值数量');
+    expect(localizeSourceNote('diagnostic_tasks / medical_orders')).toBe(
+      '按诊断任务与医嘱执行综合统计',
+    );
   });
 
   it('builds detail summary and workload merge', () => {

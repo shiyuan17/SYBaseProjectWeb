@@ -41,7 +41,7 @@ const emit = defineEmits<{
 <template>
   <ElDrawer
     :model-value="detailDrawerVisible"
-    :title="`指标明细 - ${activeDetailIndicator?.indicatorName ?? ''}`"
+    :title="`指标明细 - ${activeDetailIndicator?.displayIndicatorName ?? activeDetailIndicator?.indicatorName ?? ''}`"
     size="780px"
     @update:model-value="(value) => !value && emit('close')"
   >
@@ -49,10 +49,10 @@ const emit = defineEmits<{
       <div class="flex items-start justify-between gap-3">
         <div>
           <div class="text-sm font-medium">
-            {{ activeDetailIndicator?.indicatorName }}
-          </div>
-          <div class="text-xs text-muted-foreground">
-            {{ detailResult?.sourceNote || '等待明细加载' }}
+            {{
+              activeDetailIndicator?.displayIndicatorName ??
+              activeDetailIndicator?.indicatorName
+            }}
           </div>
         </div>
         <ElButton :loading="detailExportLoading" @click="emit('export')">
@@ -100,13 +100,14 @@ const emit = defineEmits<{
               </ElTag>
             </template>
           </ElTableColumn>
-          <ElTableColumn
-            label="原因/说明"
-            min-width="240"
-            prop="reason"
-            show-overflow-tooltip
-          />
-        </ElTable>
+            <ElTableColumn
+              label="原因/说明"
+              min-width="240"
+              prop="reason"
+              show-overflow-tooltip
+            />
+            <template #empty />
+          </ElTable>
         <ElEmpty v-else description="当前筛选条件下暂无明细记录" />
         <div class="flex justify-end">
           <ElPagination

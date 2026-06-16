@@ -325,6 +325,7 @@ describe('QualityIndicatorStatisticsView', () => {
     expect(document.body.textContent).not.toContain('状态分布');
     expect(document.body.textContent).not.toContain('分子/分母');
     expect(document.body.textContent).not.toContain('数据来源与口径');
+    expect(document.body.textContent).not.toContain('质控指标统计描述');
 
     app.unmount();
     root.remove();
@@ -348,9 +349,6 @@ describe('QualityIndicatorStatisticsView', () => {
       }),
     );
     expect(document.body.textContent).toContain('质控明细');
-    expect(document.body.textContent).toContain(
-      '代理口径：按标本固定状态与不合格原因统计。',
-    );
     expect(document.body.textContent).toContain('纳入病例');
     expect(document.body.textContent).toContain('通过');
     expect(document.body.textContent).toContain('未通过');

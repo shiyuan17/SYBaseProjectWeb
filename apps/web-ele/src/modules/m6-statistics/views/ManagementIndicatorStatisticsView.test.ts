@@ -277,15 +277,10 @@ describe('ManagementIndicatorStatisticsView', () => {
       }),
     );
     expect(document.body.textContent).toContain('管理指标统计');
-    expect(document.body.textContent).toContain('月度');
-    expect(document.body.textContent).toContain('季度');
-    expect(document.body.textContent).toContain('年度');
-    expect(document.body.textContent).toContain('业务量分类');
-    expect(document.body.textContent).toContain('收费分析');
-    expect(document.body.textContent).toContain('物资/试剂预警');
-    expect(document.body.textContent).toContain('绩效/工作量统计');
     expect(document.body.textContent).toContain('病例量');
-    expect(document.body.textContent).toContain('128.00 CNY');
+    expect(document.body.textContent).toContain('128.00 元');
+    expect(document.body.textContent).toContain('按病理病例统计');
+    expect(document.body.textContent).toContain('按诊断任务与医嘱执行综合统计');
     expect(document.body.textContent).toContain('试剂库存预警');
     expect(document.body.textContent).toContain('诊断任务数');
     expect(document.body.textContent).toContain('导出运营 CSV');

@@ -43,6 +43,8 @@ export interface ReportWorkbenchFilterState {
 }
 
 export interface DisplayStatReportRow extends StatReportRow {
+  displayIndicatorName: string;
+  displaySourceNote: string;
   metricValueText: string;
 }
 
@@ -173,6 +175,87 @@ export const qualityGroupOptions = [
   { label: '医疗质量指标', value: 'medical' },
 ];
 
+const INDICATOR_NAME_MAP: Record<string, string> = {
+  OP_BILLING_AMOUNT: '收费金额',
+  OP_CASE_VOLUME: '病例量',
+  OP_PERFORMANCE_WORKLOAD: '绩效工作量',
+  OP_REAGENT_STOCK_ALERT: '试剂库存预警',
+  QC_CANCELLED_REVIEW_COUNT: '取消复检数',
+  QC_CLINICAL_MATCH_RATE: '临床诊断符合率',
+  QC_CONSULTATION_MATCH_RATE: '会诊符合率',
+  QC_CRITICAL_VALUE_COUNT: '危急值数量',
+  QC_CRITICAL_VALUE_REASON_ANALYSIS_COUNT: '危急值原因分析',
+  QC_CRITICAL_VALUE_REPORT_TIMELINESS_RATE: '危急值上报及时率',
+  QC_CYTOLOGY_MATCH_RATE: '细胞学符合率',
+  QC_DIAGNOSIS_TIMELINESS_RATE: '诊断及时率',
+  QC_FIRST_LINE_MATCH_RATE: '初诊符合率',
+  QC_FROZEN_DIAGNOSIS_TIMEOUT_COUNT: '冰冻诊断超时数',
+  QC_FROZEN_DIAGNOSIS_TIMELINESS_RATE: '冰冻诊断及时率',
+  QC_FROZEN_GROSSING_TIMEOUT_COUNT: '冰冻取材超时数',
+  QC_FROZEN_PARAFFIN_MATCH_RATE: '冰冻石蜡符合率',
+  QC_FROZEN_SLICING_TIMEOUT_COUNT: '冰冻切片超时数',
+  QC_FROZEN_TIMEOUT_COUNT: '冰冻超时数',
+  QC_GROSSING_QUALITY_COUNT: '取材质控异常数',
+  QC_REPORT_CHANGE_COUNT: '更改报告数量',
+  QC_REPORT_CHANGE_DOCTOR_COUNT: '更改报告医生数',
+  QC_REPORT_MODIFICATION_REASON_COUNT: '修改原因分析',
+  QC_REPORT_RELEASE_DAYS: '报告发布天数',
+  QC_REPORT_REVISION_REASON_COUNT: '修订原因分析',
+  QC_SPECIMEN_FIXATION_RATE: '标本规范化固定率',
+  QC_SPECIMEN_PROCESS_HOURS: '标本处理时长',
+  QC_TECHNICAL_QUALITY_COUNT: '技术质控异常数',
+  QC_UNQUALIFIED_SPECIMEN_COUNT: '不合格标本数量',
+  QC_UNQUALIFIED_SPECIMEN_RATE: '不合格标本占比',
+  QC_UNQUALIFIED_SPECIMEN_REASON_COUNT: '不合格原因分析',
+  WL_DIAGNOSTIC_TASK_COUNT: '诊断任务数',
+  WL_MEDICAL_ORDER_COUNT: '医嘱执行数',
+};
+
+const SOURCE_NOTE_MAP: Record<string, string> = {
+  billing_records: '按收费记录统计',
+  diagnostic_tasks: '按诊断任务统计',
+  'diagnostic_tasks / medical_orders': '按诊断任务与医嘱执行综合统计',
+  'pathology_reports / pathology_cases': '按病理报告与病例统计',
+  pathology_cases: '按病理病例统计',
+  medical_orders: '按医嘱执行统计',
+  reagent_stocks: '按试剂库存统计',
+  'report_versions + report_revision_requests': '按报告版本与修订申请统计',
+  specimens: '按标本数据统计',
+  qualified_flag: '按标本合格标记统计',
+  unqualified_reason: '按不合格原因统计',
+};
+
+const PHRASE_MAP: Array<[RegExp, string]> = [
+  [/Critical Value/gi, '危急值'],
+  [/Frozen Diagnosis Timeliness Rate/gi, '冰冻诊断及时率'],
+  [/Frozen Diagnosis Timeliness/gi, '冰冻诊断及时率'],
+  [/Frozen Diagnosis/gi, '冰冻诊断'],
+  [/Frozen Timeout/gi, '冰冻超时'],
+  [/Reason Analysis/gi, '原因分析'],
+  [/Timeliness Rate/gi, '及时率'],
+  [/COUNT/gi, '例'],
+  [/PERCENT/gi, '%'],
+  [/CNY/gi, '元'],
+  [/RMB/gi, '元'],
+  [/\bSIGNED\b/g, '已签发'],
+  [/\bPASS\b/g, '通过'],
+  [/\bFAIL\b/g, '未通过'],
+  [/\bAVAILABLE\b/g, '可用'],
+  [/\bPARTIAL\b/g, '部分可用'],
+  [/\bUNAVAILABLE\b/g, '不可用'],
+  [/\bpathology_cases\b/g, '病理病例'],
+  [/\bbilling_records\b/g, '收费记录'],
+  [/\bdiagnostic_tasks\b/g, '诊断任务'],
+  [/\bmedical_orders\b/g, '医嘱执行'],
+  [/\breagent_stocks\b/g, '试剂库存'],
+  [/\bspecimens\b/g, '标本'],
+  [/\bpathology_reports\b/g, '病理报告'],
+  [/\breport_versions\b/g, '报告版本'],
+  [/\breport_revision_requests\b/g, '报告修订申请'],
+  [/\brequest_reason\b/g, '申请原因'],
+  [/\bversion_status\b/g, '版本状态'],
+];
+
 function pad(value: number) {
   return String(value).padStart(2, '0');
 }
@@ -279,6 +362,36 @@ export function detailStatusTagType(
   return 'info';
 }
 
+function localizeFreeText(value?: null | string) {
+  let text = value?.trim() ?? '';
+  if (!text) {
+    return '';
+  }
+  for (const [pattern, replacement] of PHRASE_MAP) {
+    text = text.replace(pattern, replacement);
+  }
+  return text;
+}
+
+export function localizeIndicatorName(
+  indicatorCode: string,
+  indicatorName?: null | string,
+) {
+  return INDICATOR_NAME_MAP[indicatorCode] || localizeFreeText(indicatorName) || indicatorCode;
+}
+
+export function localizeSourceNote(sourceNote?: null | string) {
+  const text = sourceNote?.trim() ?? '';
+  if (!text) {
+    return '';
+  }
+  return SOURCE_NOTE_MAP[text] || localizeFreeText(text);
+}
+
+export function localizeBreakdownLabel(label: string) {
+  return localizeFreeText(label);
+}
+
 function parseMetricNumber(row: StatReportRow) {
   const value = Number(row.metricValue);
   return Number.isFinite(value) ? value : 0;
@@ -310,8 +423,23 @@ export function buildDisplayRows(
 ): DisplayStatReportRow[] {
   return rows.map((row) => ({
     ...row,
+    breakdowns: row.breakdowns?.map((item) => ({
+      ...item,
+      label: localizeBreakdownLabel(item.label),
+    })),
+    displayIndicatorName: localizeIndicatorName(
+      row.indicatorCode,
+      row.indicatorName,
+    ),
+    displaySourceNote: localizeSourceNote(row.sourceNote),
+    indicatorName: localizeIndicatorName(row.indicatorCode, row.indicatorName),
     metricValue: displayMetric(row),
     metricValueText: displayMetric(row),
+    sourceNote: localizeSourceNote(row.sourceNote),
+    trendPoints: row.trendPoints?.map((item) => ({
+      ...item,
+      label: localizeBreakdownLabel(item.label),
+    })),
   }));
 }
 
@@ -355,7 +483,9 @@ export function buildTrendChartOption(
     tooltip: { trigger: 'axis' },
     xAxis: {
       axisLabel: { interval: 0, rotate: 24 },
-      data: chartRows.map((row) => row.indicatorName),
+      data: chartRows.map((row) =>
+        localizeIndicatorName(row.indicatorCode, row.indicatorName),
+      ),
       type: 'category',
     },
     yAxis: { type: 'value' },

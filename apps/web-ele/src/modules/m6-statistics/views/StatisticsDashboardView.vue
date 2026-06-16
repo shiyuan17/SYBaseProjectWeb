@@ -23,6 +23,9 @@ import DashboardSectionCard from '#/modules/dashboard/components/DashboardSectio
 import DepartmentSelect from '#/modules/system-management/components/DepartmentSelect.vue';
 
 import { queryStatDashboard } from '../api/m6-statistics-service';
+import {
+  localizeIndicatorName,
+} from '../utils/report-workbench';
 
 const route = useRoute();
 
@@ -37,11 +40,6 @@ const filters = reactive({
 });
 
 const pageTitle = computed(() => String(route.meta.title || '统计仪表盘'));
-const pageDescription = computed(() =>
-  String(
-    route.meta.description || '汇总展示 M6 质控、运营与工作量统计核心指标。',
-  ),
-);
 
 const summaryCards = computed(() => dashboard.value?.summaryCards ?? []);
 const qualityCards = computed(() => dashboard.value?.qualityCards ?? []);
@@ -57,7 +55,18 @@ function buildPayload() {
 }
 
 function formatMetric(card: StatDashboardCard) {
-  return [card.metricValue || '-', card.metricUnit].filter(Boolean).join(' ');
+  const metricValue = card.metricValue?.trim() || '-';
+  const metricUnit = card.metricUnit.trim().toUpperCase();
+  if (metricUnit === 'PERCENT' || metricUnit === '%') {
+    return `${metricValue}%`;
+  }
+  if (metricUnit === 'COUNT') {
+    return `${metricValue} 例`;
+  }
+  if (metricUnit === 'CNY' || metricUnit === 'RMB') {
+    return `${metricValue} 元`;
+  }
+  return [metricValue, card.metricUnit].filter(Boolean).join(' ');
 }
 
 function metricStatusLabel(status: StatDashboardCard['metricStatus']) {
@@ -120,12 +129,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <Page :show-header="false" :title="pageTitle" :description="pageDescription">
+  <Page :show-header="false" :title="pageTitle">
     <div class="flex flex-col gap-4">
-      <DashboardSectionCard
-        title="筛选条件"
-        description="按时间范围和送检科室收窄仪表盘统计口径。"
-      >
+      <DashboardSectionCard title="筛选条件">
         <ElForm inline label-width="90px">
           <ElFormItem label="时间范围">
             <ElDatePicker
@@ -162,10 +168,7 @@ onMounted(() => {
       <ElSkeleton v-if="loading" :rows="8" animated />
 
       <template v-else-if="dashboard">
-        <DashboardSectionCard
-          title="核心概览"
-          description="面向科室管理的关键统计结果。"
-        >
+        <DashboardSectionCard title="核心概览">
           <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
             <div
               v-for="card in summaryCards"
@@ -174,7 +177,7 @@ onMounted(() => {
             >
               <div class="flex items-start justify-between gap-2">
                 <div class="text-sm text-muted-foreground">
-                  {{ card.indicatorName }}
+                  {{ localizeIndicatorName(card.indicatorCode, card.indicatorName) }}
                 </div>
                 <ElTag :type="metricStatusType(card.metricStatus)" size="small">
                   {{ metricStatusLabel(card.metricStatus) }}
@@ -183,27 +186,24 @@ onMounted(() => {
               <div class="mt-3 text-2xl font-semibold text-foreground">
                 {{ formatMetric(card) }}
               </div>
-              <div class="mt-2 text-xs text-muted-foreground">
-                {{ card.sourceNote || '统计来源未标注' }}
-              </div>
             </div>
           </div>
         </DashboardSectionCard>
 
         <div class="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <DashboardSectionCard
-            title="质控指标"
-            description="无法确认口径的指标以不可用状态展示。"
-          >
-            <div class="flex flex-col gap-3">
+          <DashboardSectionCard title="质控指标">
+            <div
+              class="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3"
+              data-testid="dashboard-quality-grid"
+            >
               <div
                 v-for="card in qualityCards"
                 :key="`quality-${card.indicatorCode}`"
-                class="rounded border border-border p-3"
+                class="min-h-28 rounded border border-border bg-card/80 p-3 lg:min-h-32 lg:p-4"
               >
                 <div class="flex items-center justify-between gap-2">
-                  <div class="font-medium text-foreground">
-                    {{ card.indicatorName }}
+                  <div class="text-sm font-medium leading-5 text-foreground">
+                    {{ localizeIndicatorName(card.indicatorCode, card.indicatorName) }}
                   </div>
                   <ElTag
                     :type="metricStatusType(card.metricStatus)"
@@ -212,57 +212,48 @@ onMounted(() => {
                     {{ metricStatusLabel(card.metricStatus) }}
                   </ElTag>
                 </div>
-                <div class="mt-2 text-xl font-semibold">
+                <div class="mt-2 text-xl font-semibold leading-none lg:text-2xl">
                   {{ formatMetric(card) }}
-                </div>
-                <div class="mt-1 text-xs text-muted-foreground">
-                  {{ card.sourceNote || '统计来源未标注' }}
                 </div>
               </div>
             </div>
           </DashboardSectionCard>
 
-          <DashboardSectionCard
-            title="运营指标"
-            description="病例量、收费和试剂预警等运营概览。"
-          >
-            <div class="flex flex-col gap-3">
+          <DashboardSectionCard title="运营指标">
+            <div
+              class="grid grid-cols-1 gap-3 md:grid-cols-2"
+              data-testid="dashboard-operation-grid"
+            >
               <div
                 v-for="card in operationCards"
                 :key="`operation-${card.indicatorCode}`"
-                class="rounded border border-border p-3"
+                class="min-h-28 rounded border border-border bg-card/80 p-3 lg:min-h-32 lg:p-4"
               >
-                <div class="text-sm text-muted-foreground">
-                  {{ card.indicatorName }}
+                <div class="text-sm leading-5 text-muted-foreground">
+                  {{ localizeIndicatorName(card.indicatorCode, card.indicatorName) }}
                 </div>
-                <div class="mt-2 text-xl font-semibold">
+                <div class="mt-2 text-xl font-semibold leading-none lg:text-2xl">
                   {{ formatMetric(card) }}
-                </div>
-                <div class="mt-1 text-xs text-muted-foreground">
-                  {{ card.sourceNote || '统计来源未标注' }}
                 </div>
               </div>
             </div>
           </DashboardSectionCard>
 
-          <DashboardSectionCard
-            title="工作量指标"
-            description="按当前筛选条件汇总人员和医嘱工作量。"
-          >
-            <div class="flex flex-col gap-3">
+          <DashboardSectionCard title="工作量指标">
+            <div
+              class="grid grid-cols-1 gap-3 md:grid-cols-2"
+              data-testid="dashboard-workload-grid"
+            >
               <div
                 v-for="card in workloadCards"
                 :key="`workload-${card.indicatorCode}`"
-                class="rounded border border-border p-3"
+                class="min-h-28 rounded border border-border bg-card/80 p-3 lg:min-h-32 lg:p-4"
               >
-                <div class="text-sm text-muted-foreground">
-                  {{ card.indicatorName }}
+                <div class="text-sm leading-5 text-muted-foreground">
+                  {{ localizeIndicatorName(card.indicatorCode, card.indicatorName) }}
                 </div>
-                <div class="mt-2 text-xl font-semibold">
+                <div class="mt-2 text-xl font-semibold leading-none lg:text-2xl">
                   {{ formatMetric(card) }}
-                </div>
-                <div class="mt-1 text-xs text-muted-foreground">
-                  {{ card.sourceNote || '统计来源未标注' }}
                 </div>
               </div>
             </div>

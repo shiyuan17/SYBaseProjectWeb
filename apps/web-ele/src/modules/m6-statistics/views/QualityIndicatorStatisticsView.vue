@@ -2,12 +2,10 @@
 import type {
   MetricStatus,
   StatIndicatorView,
-  StatReportDetailItem,
   StatReportDetailQuery,
   StatReportDetailResult,
   StatReportQuery,
   StatReportResult,
-  StatReportRow,
 } from '../types/m6-statistics';
 
 import { computed, onMounted, reactive, ref } from 'vue';
@@ -44,12 +42,15 @@ import {
   queryStatReportDetails,
 } from '../api/m6-statistics-service';
 import { buildStatReportFileName } from '../utils/report-query';
+import {
+  buildDisplayRows,
+  detailStatusLabel,
+  detailStatusTagType,
+  metricStatusLabel,
+  metricStatusTagType,
+} from '../utils/report-workbench';
 
 type PeriodMode = 'month' | 'quarter' | 'year';
-
-interface DisplayStatReportRow extends StatReportRow {
-  metricValueText: string;
-}
 
 const route = useRoute();
 
@@ -85,13 +86,6 @@ const periodOptions = [
 ];
 
 const pageTitle = computed(() => String(route.meta.title || '质控指标统计'));
-const pageDescription = computed(() =>
-  String(
-    route.meta.description ||
-      '展示三甲质控指标、质量安全控制指标与数据源接入口径状态。',
-  ),
-);
-
 const qualityIndicators = computed(() =>
   indicators.value.filter((item) => item.indicatorCategory === 'QUALITY'),
 );
@@ -162,81 +156,6 @@ function buildDefaultDateRange(mode: PeriodMode) {
     formatDateTime(new Date(year, month, 1, 0, 0, 0)),
     formatDateTime(new Date(year, month + 1, 0, 23, 59, 59)),
   ];
-}
-
-function metricStatusLabel(status?: MetricStatus) {
-  if (status === 'AVAILABLE') {
-    return '可用';
-  }
-  if (status === 'PARTIAL') {
-    return '部分可用';
-  }
-  if (status === 'UNAVAILABLE') {
-    return '不可用';
-  }
-  return '未知';
-}
-
-function metricStatusTagType(status?: MetricStatus) {
-  if (status === 'AVAILABLE') {
-    return 'success';
-  }
-  if (status === 'PARTIAL') {
-    return 'warning';
-  }
-  if (status === 'UNAVAILABLE') {
-    return 'info';
-  }
-  return undefined;
-}
-
-function displayMetric(row: StatReportRow) {
-  if (row.metricStatus === 'UNAVAILABLE') {
-    return '未接入';
-  }
-  const metricValue = row.metricValue.trim();
-  if (!metricValue) {
-    return '-';
-  }
-  const metricUnit = row.metricUnit.trim().toUpperCase();
-  if (metricUnit === 'PERCENT' || metricUnit === '%') {
-    return `${metricValue}%`;
-  }
-  if (metricUnit === 'COUNT') {
-    return `${metricValue} 例`;
-  }
-  if (metricUnit === 'CNY' || metricUnit === 'RMB') {
-    return `${metricValue} 元`;
-  }
-  return row.metricUnit ? `${metricValue} ${row.metricUnit}` : metricValue;
-}
-
-function buildDisplayRows(rows: StatReportRow[]): DisplayStatReportRow[] {
-  return rows.map((row) => ({
-    ...row,
-    metricValue: displayMetric(row),
-    metricValueText: displayMetric(row),
-  }));
-}
-
-function detailStatusLabel(status: StatReportDetailItem['detailStatus']) {
-  if (status === 'PASS') {
-    return '通过';
-  }
-  if (status === 'FAIL') {
-    return '未通过';
-  }
-  return '记录';
-}
-
-function detailStatusTagType(status: StatReportDetailItem['detailStatus']) {
-  if (status === 'PASS') {
-    return 'success';
-  }
-  if (status === 'FAIL') {
-    return 'danger';
-  }
-  return 'info';
 }
 
 function downloadBlob(blob: Blob, fileName: string) {
@@ -328,7 +247,9 @@ async function loadDetails() {
   }
 }
 
-async function handleOpenDetails(row?: StatReportRow) {
+async function handleOpenDetails(
+  row?: (typeof rows.value)[number],
+) {
   activeDetailIndicatorCode.value = row?.indicatorCode ?? filters.indicatorCode;
   activeDetailTitle.value = row?.indicatorName ?? activeIndicatorName.value;
   detailPagination.page = 1;
@@ -407,7 +328,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <Page :show-header="false" :title="pageTitle" :description="pageDescription">
+  <Page :show-header="false" :title="pageTitle">
     <div class="flex flex-col gap-4">
       <DashboardSectionCard title="查询条件">
         <ElForm inline label-width="90px">
@@ -474,7 +395,7 @@ onMounted(async () => {
           <ElTableColumn
             label="指标名称"
             min-width="240"
-            prop="indicatorName"
+            prop="displayIndicatorName"
           />
           <ElTableColumn label="结果" min-width="140" prop="metricValue" />
           <ElTableColumn label="状态" min-width="120">
@@ -505,9 +426,6 @@ onMounted(async () => {
             <div>
               <div class="text-sm font-medium">
                 {{ activeDetailTitle || activeIndicatorName }}
-              </div>
-              <div class="text-xs text-muted-foreground">
-                {{ detailResult?.sourceNote || '等待质控明细加载' }}
               </div>
             </div>
             <ElButton
