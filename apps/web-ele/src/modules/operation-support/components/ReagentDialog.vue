@@ -72,7 +72,11 @@ function formatAuditValue(value?: null | string) {
     width="880px"
   >
     <div class="reagent-dialog__toolbar">
-      <ElButton :loading="props.submitting" type="primary" @click="emit('submit')">
+      <ElButton
+        :loading="props.submitting"
+        type="primary"
+        @click="emit('submit')"
+      >
         保存
       </ElButton>
       <ElButton @click="dialogVisible = false">退出</ElButton>
@@ -83,10 +87,16 @@ function formatAuditValue(value?: null | string) {
         <ElFormItem class="reagent-dialog__name" label="试剂名称" required>
           <ElInput v-model="reagentForm.reagentName" />
         </ElFormItem>
-        <div class="reagent-dialog__required-tip">带 <span>*</span> 为必填项</div>
+        <div class="reagent-dialog__required-tip">
+          带 <span>*</span> 为必填项
+        </div>
 
         <ElFormItem label="试剂类型" required>
-          <ElSelect v-model="reagentForm.reagentType" clearable placeholder="请选择">
+          <ElSelect
+            v-model="reagentForm.reagentType"
+            clearable
+            placeholder="请选择"
+          >
             <ElOption
               v-for="option in REAGENT_TYPE_OPTIONS"
               :key="option.value"
@@ -117,7 +127,11 @@ function formatAuditValue(value?: null | string) {
         </div>
 
         <ElFormItem label="稀释比例">
-          <ElSelect v-model="reagentForm.dilutionRatio" clearable placeholder="请选择">
+          <ElSelect
+            v-model="reagentForm.dilutionRatio"
+            clearable
+            placeholder="请选择"
+          >
             <ElOption
               v-for="option in REAGENT_DILUTION_OPTIONS"
               :key="option.value"
@@ -128,7 +142,11 @@ function formatAuditValue(value?: null | string) {
         </ElFormItem>
         <div class="reagent-dialog__pair">
           <ElFormItem label="试剂用途" required>
-            <ElSelect v-model="reagentForm.reagentUsage" clearable placeholder="请选择">
+            <ElSelect
+              v-model="reagentForm.reagentUsage"
+              clearable
+              placeholder="请选择"
+            >
               <ElOption
                 v-for="option in REAGENT_USAGE_OPTIONS"
                 :key="option.value"
@@ -176,9 +194,14 @@ function formatAuditValue(value?: null | string) {
         </div>
 
         <ElFormItem label="订购阈值">
-          <ElInputNumber v-model="reagentForm.defaultLowStockThreshold" :min="0" />
+          <ElInputNumber
+            v-model="reagentForm.defaultLowStockThreshold"
+            :min="0"
+          />
         </ElFormItem>
-        <div class="reagent-dialog__text-tip">当库存数量小于等于阈值时，提示用户</div>
+        <div class="reagent-dialog__text-tip">
+          当库存数量小于等于阈值时，提示用户
+        </div>
 
         <ElFormItem label="临期阈值(天)">
           <ElInputNumber v-model="reagentForm.defaultNearExpiryDays" :min="0" />
@@ -190,7 +213,9 @@ function formatAuditValue(value?: null | string) {
         <ElFormItem label="可染数量">
           <ElInputNumber v-model="reagentForm.stainCapacity" :min="0" />
         </ElFormItem>
-        <div class="reagent-dialog__text-tip">预计每瓶可染色的数量（同时用于计算每次消耗量）</div>
+        <div class="reagent-dialog__text-tip">
+          预计每瓶可染色的数量（同时用于计算每次消耗量）
+        </div>
 
         <ElFormItem label="染色阈值">
           <ElInputNumber v-model="reagentForm.stainThreshold" :min="0" />
@@ -205,17 +230,33 @@ function formatAuditValue(value?: null | string) {
         <div></div>
 
         <ElFormItem label="新增人">
-          <ElInput :model-value="formatAuditValue(props.reagentAuditInfo?.createdByName)" readonly />
+          <ElInput
+            :model-value="
+              formatAuditValue(props.reagentAuditInfo?.createdByName)
+            "
+            readonly
+          />
         </ElFormItem>
         <ElFormItem label="新增时间">
-          <ElInput :model-value="formatAuditValue(props.reagentAuditInfo?.createdAt)" readonly />
+          <ElInput
+            :model-value="formatAuditValue(props.reagentAuditInfo?.createdAt)"
+            readonly
+          />
         </ElFormItem>
 
         <ElFormItem label="最后修改人">
-          <ElInput :model-value="formatAuditValue(props.reagentAuditInfo?.updatedByName)" readonly />
+          <ElInput
+            :model-value="
+              formatAuditValue(props.reagentAuditInfo?.updatedByName)
+            "
+            readonly
+          />
         </ElFormItem>
         <ElFormItem label="最后修改时间">
-          <ElInput :model-value="formatAuditValue(props.reagentAuditInfo?.updatedAt)" readonly />
+          <ElInput
+            :model-value="formatAuditValue(props.reagentAuditInfo?.updatedAt)"
+            readonly
+          />
         </ElFormItem>
       </div>
     </ElForm>
@@ -224,8 +265,8 @@ function formatAuditValue(value?: null | string) {
 
 <style scoped>
 .reagent-dialog :deep(.el-dialog__header) {
-  border-bottom: 1px solid var(--el-border-color);
   padding: 10px 16px;
+  border-bottom: 1px solid var(--el-border-color);
 }
 
 .reagent-dialog :deep(.el-dialog__title) {
@@ -272,8 +313,8 @@ function formatAuditValue(value?: null | string) {
   display: flex;
   align-items: center;
   min-height: 32px;
-  color: var(--el-text-color-secondary);
   font-size: 13px;
+  color: var(--el-text-color-secondary);
 }
 
 .reagent-dialog__required-tip span {
@@ -293,9 +334,9 @@ function formatAuditValue(value?: null | string) {
 
 .reagent-dialog__hint,
 .reagent-dialog__text-tip {
-  color: var(--el-text-color-secondary);
   font-size: 12px;
   line-height: 1.5;
+  color: var(--el-text-color-secondary);
 }
 
 .reagent-dialog__inline-actions {

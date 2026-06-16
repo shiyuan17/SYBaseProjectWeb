@@ -463,9 +463,7 @@ async function ensureWorkbenchReport() {
   return created.reportId;
 }
 
-async function runReportAction(
-  action: 'review' | 'save' | 'sign' | 'submit',
-) {
+async function runReportAction(action: 'review' | 'save' | 'sign' | 'submit') {
   if (!workbench.value) {
     ElMessage.warning('请先选择病例');
     return;
@@ -721,7 +719,9 @@ onBeforeUnmount(() => {
         @update:task-type="filters.taskType = $event"
       />
 
-      <section class="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card px-4 py-3 shadow-sm">
+      <section
+        class="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card px-4 py-3 shadow-sm"
+      >
         <ElButton
           :disabled="reportOperating || !canSaveDraft"
           data-testid="workbench-report-save"

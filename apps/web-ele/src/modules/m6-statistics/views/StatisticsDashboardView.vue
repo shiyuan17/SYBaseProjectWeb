@@ -23,9 +23,7 @@ import DashboardSectionCard from '#/modules/dashboard/components/DashboardSectio
 import DepartmentSelect from '#/modules/system-management/components/DepartmentSelect.vue';
 
 import { queryStatDashboard } from '../api/m6-statistics-service';
-import {
-  localizeIndicatorName,
-} from '../utils/report-workbench';
+import { localizeIndicatorName } from '../utils/report-workbench';
 
 const route = useRoute();
 
@@ -177,7 +175,12 @@ onMounted(() => {
             >
               <div class="flex items-start justify-between gap-2">
                 <div class="text-sm text-muted-foreground">
-                  {{ localizeIndicatorName(card.indicatorCode, card.indicatorName) }}
+                  {{
+                    localizeIndicatorName(
+                      card.indicatorCode,
+                      card.indicatorName,
+                    )
+                  }}
                 </div>
                 <ElTag :type="metricStatusType(card.metricStatus)" size="small">
                   {{ metricStatusLabel(card.metricStatus) }}
@@ -203,7 +206,12 @@ onMounted(() => {
               >
                 <div class="flex items-center justify-between gap-2">
                   <div class="text-sm font-medium leading-5 text-foreground">
-                    {{ localizeIndicatorName(card.indicatorCode, card.indicatorName) }}
+                    {{
+                      localizeIndicatorName(
+                        card.indicatorCode,
+                        card.indicatorName,
+                      )
+                    }}
                   </div>
                   <ElTag
                     :type="metricStatusType(card.metricStatus)"
@@ -212,7 +220,9 @@ onMounted(() => {
                     {{ metricStatusLabel(card.metricStatus) }}
                   </ElTag>
                 </div>
-                <div class="mt-2 text-xl font-semibold leading-none lg:text-2xl">
+                <div
+                  class="mt-2 text-xl font-semibold leading-none lg:text-2xl"
+                >
                   {{ formatMetric(card) }}
                 </div>
               </div>
@@ -230,9 +240,16 @@ onMounted(() => {
                 class="min-h-28 rounded border border-border bg-card/80 p-3 lg:min-h-32 lg:p-4"
               >
                 <div class="text-sm leading-5 text-muted-foreground">
-                  {{ localizeIndicatorName(card.indicatorCode, card.indicatorName) }}
+                  {{
+                    localizeIndicatorName(
+                      card.indicatorCode,
+                      card.indicatorName,
+                    )
+                  }}
                 </div>
-                <div class="mt-2 text-xl font-semibold leading-none lg:text-2xl">
+                <div
+                  class="mt-2 text-xl font-semibold leading-none lg:text-2xl"
+                >
                   {{ formatMetric(card) }}
                 </div>
               </div>
@@ -250,9 +267,16 @@ onMounted(() => {
                 class="min-h-28 rounded border border-border bg-card/80 p-3 lg:min-h-32 lg:p-4"
               >
                 <div class="text-sm leading-5 text-muted-foreground">
-                  {{ localizeIndicatorName(card.indicatorCode, card.indicatorName) }}
+                  {{
+                    localizeIndicatorName(
+                      card.indicatorCode,
+                      card.indicatorName,
+                    )
+                  }}
                 </div>
-                <div class="mt-2 text-xl font-semibold leading-none lg:text-2xl">
+                <div
+                  class="mt-2 text-xl font-semibold leading-none lg:text-2xl"
+                >
                   {{ formatMetric(card) }}
                 </div>
               </div>

@@ -387,9 +387,9 @@ function findButton(label: string) {
 }
 
 function findSelectByLabel(dialog: HTMLElement, label: string) {
-  return [...dialog.querySelectorAll('label')].find((item) =>
-    item.textContent?.includes(label),
-  )?.querySelector('select') as HTMLSelectElement | undefined;
+  return [...dialog.querySelectorAll('label')]
+    .find((item) => item.textContent?.includes(label))
+    ?.querySelector('select') as HTMLSelectElement | undefined;
 }
 
 describe('ReagentLedgerView', () => {
@@ -620,7 +620,9 @@ describe('ReagentLedgerView', () => {
     const plusOneYearButton = [...dialog!.querySelectorAll('button')].find(
       (button) => button.textContent?.trim() === '+1年',
     );
-    plusOneYearButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    plusOneYearButton?.dispatchEvent(
+      new MouseEvent('click', { bubbles: true }),
+    );
     await flushView();
 
     findButton('保存')?.dispatchEvent(

@@ -377,7 +377,11 @@ export function localizeIndicatorName(
   indicatorCode: string,
   indicatorName?: null | string,
 ) {
-  return INDICATOR_NAME_MAP[indicatorCode] || localizeFreeText(indicatorName) || indicatorCode;
+  return (
+    INDICATOR_NAME_MAP[indicatorCode] ||
+    localizeFreeText(indicatorName) ||
+    indicatorCode
+  );
 }
 
 export function localizeSourceNote(sourceNote?: null | string) {

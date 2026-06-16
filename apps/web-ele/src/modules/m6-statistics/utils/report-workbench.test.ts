@@ -246,10 +246,7 @@ describe('report-workbench', () => {
 
   it('localizes visible indicator and source text', () => {
     expect(
-      localizeIndicatorName(
-        'QC_CRITICAL_VALUE_COUNT',
-        'Critical Value Count',
-      ),
+      localizeIndicatorName('QC_CRITICAL_VALUE_COUNT', 'Critical Value Count'),
     ).toBe('危急值数量');
     expect(localizeSourceNote('diagnostic_tasks / medical_orders')).toBe(
       '按诊断任务与医嘱执行综合统计',

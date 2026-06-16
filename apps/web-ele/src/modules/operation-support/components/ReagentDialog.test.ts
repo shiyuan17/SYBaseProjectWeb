@@ -67,8 +67,7 @@ vi.mock('element-plus', () => {
     ElFormItem: defineComponent({
       props: ['label'],
       setup(props, { slots }) {
-        return () =>
-          h('label', [h('span', props.label), slots.default?.()]);
+        return () => h('label', [h('span', props.label), slots.default?.()]);
       },
     }),
     ElInput: createModelComponent('input'),

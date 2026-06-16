@@ -100,14 +100,14 @@ const emit = defineEmits<{
               </ElTag>
             </template>
           </ElTableColumn>
-            <ElTableColumn
-              label="原因/说明"
-              min-width="240"
-              prop="reason"
-              show-overflow-tooltip
-            />
-            <template #empty />
-          </ElTable>
+          <ElTableColumn
+            label="原因/说明"
+            min-width="240"
+            prop="reason"
+            show-overflow-tooltip
+          />
+          <template #empty></template>
+        </ElTable>
         <ElEmpty v-else description="当前筛选条件下暂无明细记录" />
         <div class="flex justify-end">
           <ElPagination

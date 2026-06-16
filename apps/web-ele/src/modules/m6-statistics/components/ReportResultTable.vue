@@ -44,7 +44,11 @@ const emit = defineEmits<{
   </div>
   <ElTable v-if="rows.length > 0" :data="rows" border>
     <ElTableColumn label="指标编码" min-width="190" prop="indicatorCode" />
-    <ElTableColumn label="指标名称" min-width="240" prop="displayIndicatorName" />
+    <ElTableColumn
+      label="指标名称"
+      min-width="240"
+      prop="displayIndicatorName"
+    />
     <ElTableColumn label="结果" min-width="140" prop="metricValue" />
     <ElTableColumn label="状态" min-width="120">
       <template #default="{ row }">

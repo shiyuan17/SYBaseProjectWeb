@@ -110,7 +110,8 @@ function getFormEnabled(status: string) {
 
 function createGeneratedReagentCode() {
   const now = new Date();
-  const pad = (value: number, length = 2) => String(value).padStart(length, '0');
+  const pad = (value: number, length = 2) =>
+    String(value).padStart(length, '0');
   const timestamp = [
     now.getFullYear(),
     pad(now.getMonth() + 1),
@@ -528,8 +529,9 @@ export function buildCreateReagentRequest(
     remarks: optionalText(form.remarks),
     specification: optionalText(form.specification),
     templateStatus:
-      REAGENT_TEMPLATE_STATUS_OPTIONS.find((option) => option.value === form.status)
-        ?.value ?? 'ENABLED',
+      REAGENT_TEMPLATE_STATUS_OPTIONS.find(
+        (option) => option.value === form.status,
+      )?.value ?? 'ENABLED',
     stainCapacity: optionalNumber(form.stainCapacity),
     stainThreshold: optionalNumber(form.stainThreshold),
     unit: optionalText(form.unit),

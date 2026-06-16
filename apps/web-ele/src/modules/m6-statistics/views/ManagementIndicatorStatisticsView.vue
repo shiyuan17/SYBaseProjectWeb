@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import type {
-  StatReportQuery,
-  StatReportResult,
-} from '../types/m6-statistics';
+import type { StatReportQuery, StatReportResult } from '../types/m6-statistics';
+
 import type { RoleView } from '#/modules/system-management/types/system-management';
 
 import { computed, onMounted, reactive, ref } from 'vue';

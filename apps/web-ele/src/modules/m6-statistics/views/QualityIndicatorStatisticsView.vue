@@ -247,9 +247,7 @@ async function loadDetails() {
   }
 }
 
-async function handleOpenDetails(
-  row?: (typeof rows.value)[number],
-) {
+async function handleOpenDetails(row?: (typeof rows.value)[number]) {
   activeDetailIndicatorCode.value = row?.indicatorCode ?? filters.indicatorCode;
   activeDetailTitle.value = row?.indicatorName ?? activeIndicatorName.value;
   detailPagination.page = 1;
