@@ -390,6 +390,26 @@ export interface ReagentView {
   validityDays?: null | number;
 }
 
+export interface MedicalOrderDictItemOption {
+  categoryId: string;
+  categoryName: string;
+  enabled: boolean;
+  id: string;
+  orderItemCode: string;
+  orderItemName: string;
+}
+
+export interface MedicalOrderDictCategoryNode {
+  categoryCode: string;
+  categoryName: string;
+  children: MedicalOrderDictCategoryNode[];
+  enabled: boolean;
+  id: string;
+  items: MedicalOrderDictItemOption[];
+  parentId: null | string;
+  sortOrder: number;
+}
+
 export interface CreateReagentRequest {
   applicationDilution?: string;
   cloneNo?: string;

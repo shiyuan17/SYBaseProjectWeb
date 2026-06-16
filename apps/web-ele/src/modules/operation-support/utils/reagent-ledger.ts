@@ -1,33 +1,36 @@
 import type {
   CreateReagentRequest,
   CreateReagentStockRequest,
+  MedicalOrderDictCategoryNode,
+  MedicalOrderDictItemOption,
   ReagentStockView,
   ReagentView,
   UpdateReagentRequest,
   UpdateReagentStockRequest,
 } from '../types/operation-support';
 
-import { REAGENT_TYPE_OPTIONS } from '../constants';
+import {
+  REAGENT_TEMPLATE_STATUS_OPTIONS,
+  REAGENT_TYPE_OPTIONS,
+} from '../constants';
 
 export type ReagentFormState = {
-  applicationDilution: string;
   cloneNo: string;
   defaultLowStockThreshold?: number;
   defaultNearExpiryDays?: number;
   defaultStockThreshold?: number;
-  enabled: boolean;
+  dilutionRatio: string;
   manufacturer: string;
   orderDictItemId: string;
   reagentCode: string;
   reagentName: string;
   reagentType: string;
   reagentUsage: string;
-  recommendedDilution: string;
   remarks: string;
   specification: string;
   stainCapacity?: number;
   stainThreshold?: number;
-  templateStatus: string;
+  status: string;
   unit: string;
   validityDays?: number;
 };
@@ -69,6 +72,16 @@ export interface ReagentTemplateTreeGroup {
   label: string;
 }
 
+export interface ReagentMedicalOrderOption {
+  categoryId: string;
+  categoryName: string;
+  id: string;
+  keywordText: string;
+  label: string;
+  orderItemCode: string;
+  orderItemName: string;
+}
+
 function optionalText(value: string) {
   return value.trim() || undefined;
 }
@@ -87,6 +100,29 @@ function toDisplayText(value?: null | string) {
   return value?.trim() || '-';
 }
 
+function resolveFormStatus(row: ReagentView) {
+  return row.templateStatus ?? (row.enabled ? 'ENABLED' : 'DISABLED');
+}
+
+function getFormEnabled(status: string) {
+  return status === 'ENABLED';
+}
+
+function createGeneratedReagentCode() {
+  const now = new Date();
+  const pad = (value: number, length = 2) => String(value).padStart(length, '0');
+  const timestamp = [
+    now.getFullYear(),
+    pad(now.getMonth() + 1),
+    pad(now.getDate()),
+    pad(now.getHours()),
+    pad(now.getMinutes()),
+    pad(now.getSeconds()),
+  ].join('');
+  const randomSuffix = pad(Math.floor(Math.random() * 1000), 3);
+  return `RG-${timestamp}${randomSuffix}`;
+}
+
 function getReagentTypeLabel(value?: null | string) {
   return (
     REAGENT_TYPE_OPTIONS.find((option) => option.value === value)?.label ??
@@ -97,52 +133,108 @@ function getReagentTypeLabel(value?: null | string) {
 
 export function createReagentFormDefaults(): ReagentFormState {
   return {
-    applicationDilution: '',
     cloneNo: '',
+    dilutionRatio: '',
     defaultLowStockThreshold: undefined,
     defaultNearExpiryDays: undefined,
     defaultStockThreshold: undefined,
-    enabled: true,
     manufacturer: '',
     orderDictItemId: '',
-    reagentCode: '',
+    reagentCode: createGeneratedReagentCode(),
     reagentName: '',
     reagentType: '',
     reagentUsage: '',
-    recommendedDilution: '',
     remarks: '',
+    status: 'ENABLED',
     specification: '',
     stainCapacity: undefined,
     stainThreshold: undefined,
-    templateStatus: 'ENABLED',
     unit: '',
     validityDays: undefined,
   };
 }
 
+export function flattenMedicalOrderDictItems(
+  nodes: MedicalOrderDictCategoryNode[],
+  keyword = '',
+): ReagentMedicalOrderOption[] {
+  const normalizedKeyword = keyword.trim().toLowerCase();
+  const options: ReagentMedicalOrderOption[] = [];
+
+  const visit = (node: MedicalOrderDictCategoryNode) => {
+    for (const item of node.items ?? []) {
+      appendMedicalOrderOption(options, node, item, normalizedKeyword);
+    }
+    for (const child of node.children ?? []) {
+      visit(child);
+    }
+  };
+
+  for (const node of nodes) {
+    visit(node);
+  }
+
+  return options.toSorted((left, right) =>
+    left.label.localeCompare(right.label, 'zh-CN'),
+  );
+}
+
+function appendMedicalOrderOption(
+  options: ReagentMedicalOrderOption[],
+  category: MedicalOrderDictCategoryNode,
+  item: MedicalOrderDictItemOption,
+  normalizedKeyword: string,
+) {
+  if (!item.enabled) {
+    return;
+  }
+
+  const keywordText = [
+    category.categoryName,
+    item.orderItemCode,
+    item.orderItemName,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  if (normalizedKeyword && !keywordText.includes(normalizedKeyword)) {
+    return;
+  }
+
+  options.push({
+    categoryId: category.id,
+    categoryName: category.categoryName,
+    id: item.id,
+    keywordText,
+    label: `${item.orderItemName}（${toDisplayText(item.orderItemCode)}）`,
+    orderItemCode: item.orderItemCode,
+    orderItemName: item.orderItemName,
+  });
+}
+
 export function createReagentFormStateFromRow(
   row: ReagentView,
 ): ReagentFormState {
+  const dilutionRatio =
+    row.recommendedDilution?.trim() || row.applicationDilution?.trim() || '';
   return {
-    applicationDilution: row.applicationDilution ?? '',
     cloneNo: row.cloneNo ?? '',
+    dilutionRatio,
     defaultLowStockThreshold: toOptionalNumber(row.defaultLowStockThreshold),
     defaultNearExpiryDays: row.defaultNearExpiryDays ?? undefined,
     defaultStockThreshold: toOptionalNumber(row.defaultStockThreshold),
-    enabled: row.enabled,
     manufacturer: row.manufacturer ?? '',
     orderDictItemId: row.orderDictItemId ?? '',
     reagentCode: row.reagentCode,
     reagentName: row.reagentName,
     reagentType: row.reagentType ?? '',
     reagentUsage: row.reagentUsage ?? '',
-    recommendedDilution: row.recommendedDilution ?? '',
     remarks: row.remarks ?? '',
+    status: resolveFormStatus(row),
     specification: row.specification ?? '',
     stainCapacity: toOptionalNumber(row.stainCapacity),
     stainThreshold: toOptionalNumber(row.stainThreshold),
-    templateStatus:
-      row.templateStatus ?? (row.enabled ? 'ENABLED' : 'DISABLED'),
     unit: row.unit ?? '',
     validityDays: row.validityDays ?? undefined,
   };
@@ -371,7 +463,7 @@ export function validateReagentForm(form: ReagentFormState, isCreate: boolean) {
     return '请填写试剂名称';
   }
   if (isCreate && !form.reagentCode) {
-    return '新增试剂需要填写试剂编码';
+    return '新增试剂编码生成失败，请关闭弹窗后重试';
   }
   if (
     form.defaultStockThreshold !== undefined &&
@@ -420,24 +512,26 @@ export function buildCreateReagentRequest(
   form: ReagentFormState,
 ): CreateReagentRequest {
   return {
-    applicationDilution: optionalText(form.applicationDilution),
+    applicationDilution: optionalText(form.dilutionRatio),
     cloneNo: optionalText(form.cloneNo),
     defaultLowStockThreshold: optionalNumber(form.defaultLowStockThreshold),
     defaultNearExpiryDays: optionalNumber(form.defaultNearExpiryDays),
     defaultStockThreshold: optionalNumber(form.defaultStockThreshold),
-    enabled: form.templateStatus === 'ENABLED',
+    enabled: getFormEnabled(form.status),
     manufacturer: optionalText(form.manufacturer),
     orderDictItemId: optionalText(form.orderDictItemId),
     reagentCode: form.reagentCode,
     reagentName: form.reagentName,
     reagentType: optionalText(form.reagentType),
     reagentUsage: optionalText(form.reagentUsage),
-    recommendedDilution: optionalText(form.recommendedDilution),
+    recommendedDilution: optionalText(form.dilutionRatio),
     remarks: optionalText(form.remarks),
     specification: optionalText(form.specification),
+    templateStatus:
+      REAGENT_TEMPLATE_STATUS_OPTIONS.find((option) => option.value === form.status)
+        ?.value ?? 'ENABLED',
     stainCapacity: optionalNumber(form.stainCapacity),
     stainThreshold: optionalNumber(form.stainThreshold),
-    templateStatus: form.templateStatus,
     unit: optionalText(form.unit),
     validityDays: optionalNumber(form.validityDays),
   };

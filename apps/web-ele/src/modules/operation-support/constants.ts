@@ -177,6 +177,29 @@ export const REAGENT_TEMPLATE_STATUS_OPTIONS = [
   { label: '删除', value: 'DELETED' },
 ] as const;
 
+export const REAGENT_USAGE_OPTIONS = [
+  { label: '免疫组化', value: '免疫组化' },
+  { label: '基因检测', value: '基因检测' },
+  { label: '特殊染色', value: '特殊染色' },
+  { label: '常规染色', value: '常规染色' },
+  { label: '其他', value: '其他' },
+] as const;
+
+export const REAGENT_UNIT_OPTIONS = [
+  { label: '微升', value: '微升' },
+  { label: '毫升', value: '毫升' },
+  { label: '升', value: '升' },
+] as const;
+
+export const REAGENT_DILUTION_OPTIONS = [
+  { label: '无', value: '无' },
+  { label: '1:25~50', value: '1:25~50' },
+  { label: '1:50~100', value: '1:50~100' },
+  { label: '1:100~200', value: '1:100~200' },
+  { label: '1:200~300', value: '1:200~300' },
+  { label: '1:300~400', value: '1:300~400' },
+] as const;
+
 export const REAGENT_STOCK_STATUS_OPTIONS = [
   { label: '入库', value: 'IN_STOCK' },
   { label: '已测试', value: 'TESTED' },

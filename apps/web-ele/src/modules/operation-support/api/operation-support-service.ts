@@ -30,6 +30,7 @@ import type {
   MaterialLoanAbnormalRecordView,
   MaterialLoanQuery,
   MaterialLoanView,
+  MedicalOrderDictCategoryNode,
   MedicalWastePrintSpecimenBatchRequest,
   MedicalWastePrintSpecimenBatchResult,
   MedicalWasteReagentBagView,
@@ -332,6 +333,14 @@ export async function updateReagent(
   data: UpdateReagentRequest,
 ) {
   return requestPatch<ReagentView>(`/v1/reagents/${reagentId}`, data);
+}
+
+export async function listMedicalOrderDicts() {
+  return normalizeArrayResult(
+    await requestClient.get<MedicalOrderDictCategoryNode[] | null>(
+      '/v1/medical-order-dicts',
+    ),
+  );
 }
 
 export async function listReagentStocks(params: {

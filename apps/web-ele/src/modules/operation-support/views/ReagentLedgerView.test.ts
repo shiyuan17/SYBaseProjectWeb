@@ -25,6 +25,7 @@ const {
   mockExportReagentStocks,
   mockFinishUsingReagentStock,
   mockImportReagentStocks,
+  mockListMedicalOrderDicts,
   mockListReagents,
   mockListReagentStockEvents,
   mockListReagentStocks,
@@ -46,6 +47,7 @@ const {
   mockExportReagentStocks: vi.fn(),
   mockFinishUsingReagentStock: vi.fn(),
   mockImportReagentStocks: vi.fn(),
+  mockListMedicalOrderDicts: vi.fn(),
   mockListReagents: vi.fn(),
   mockListReagentStockEvents: vi.fn(),
   mockListReagentStocks: vi.fn(),
@@ -102,14 +104,28 @@ function createModelComponent(tag = 'div') {
   return defineComponent({
     props: ['modelValue'],
     emits: ['update:modelValue'],
-    setup(props, { attrs, slots }) {
+    setup(props, { attrs, emit, slots }) {
       return () =>
         h(
           tag,
           {
             ...attrs,
             ...(tag === 'input' || tag === 'select'
-              ? { value: props.modelValue ?? '' }
+              ? {
+                  onChange: (event: Event) =>
+                    emit(
+                      'update:modelValue',
+                      (event.target as HTMLInputElement | HTMLSelectElement)
+                        .value,
+                    ),
+                  onInput: (event: Event) =>
+                    emit(
+                      'update:modelValue',
+                      (event.target as HTMLInputElement | HTMLSelectElement)
+                        .value,
+                    ),
+                  value: props.modelValue ?? '',
+                }
               : {}),
           },
           slots.default?.(),
@@ -179,17 +195,18 @@ vi.mock('element-plus', () => {
       return () =>
         h('div', [
           props.data?.map((row: { batchNo?: string; id: string }) =>
-            h(
-              'button',
-              {
-                type: 'button',
-                'data-row-id': row.id,
-                onClick: () => emit('current-change', row),
-              },
-              row.batchNo ?? row.id,
-            ),
+            h('div', { 'data-row-id': row.id }, [
+              h(
+                'button',
+                {
+                  type: 'button',
+                  onClick: () => emit('current-change', row),
+                },
+                row.batchNo ?? row.id,
+              ),
+              slots.default?.({ row }),
+            ]),
           ),
-          slots.default?.(),
         ]);
     },
   });
@@ -229,7 +246,16 @@ vi.mock('element-plus', () => {
     ElDialog,
     ElDrawer,
     ElForm: createModelComponent('form'),
-    ElFormItem: createModelComponent('div'),
+    ElFormItem: defineComponent({
+      props: ['label'],
+      setup(props, { slots }) {
+        return () =>
+          h('label', [
+            props.label ? h('span', props.label) : null,
+            slots.default?.(),
+          ]);
+      },
+    }),
     ElInput: createModelComponent('input'),
     ElInputNumber: createModelComponent('input'),
     ElMessage: {
@@ -238,9 +264,9 @@ vi.mock('element-plus', () => {
       warning: messageWarningMock,
     },
     ElOption: defineComponent({
-      props: ['label'],
+      props: ['label', 'value'],
       setup(props) {
-        return () => h('option', props.label);
+        return () => h('option', { value: props.value }, props.label);
       },
     }),
     ElRadio: defineComponent({
@@ -319,6 +345,7 @@ vi.mock('../api/operation-support-service', () => ({
   exportReagentStocks: mockExportReagentStocks,
   finishUsingReagentStock: mockFinishUsingReagentStock,
   importReagentStocks: mockImportReagentStocks,
+  listMedicalOrderDicts: mockListMedicalOrderDicts,
   listReagents: mockListReagents,
   listReagentStockEvents: mockListReagentStockEvents,
   listReagentStocks: mockListReagentStocks,
@@ -359,6 +386,12 @@ function findButton(label: string) {
   ) as HTMLButtonElement | undefined;
 }
 
+function findSelectByLabel(dialog: HTMLElement, label: string) {
+  return [...dialog.querySelectorAll('label')].find((item) =>
+    item.textContent?.includes(label),
+  )?.querySelector('select') as HTMLSelectElement | undefined;
+}
+
 describe('ReagentLedgerView', () => {
   beforeEach(() => {
     mockAccessStore.accessCodes = [
@@ -373,6 +406,8 @@ describe('ReagentLedgerView', () => {
     mockListReagents.mockResolvedValue([
       {
         applicationDilution: '1:100',
+        createdAt: '2026-06-16 09:00:00',
+        createdByName: '试剂员甲',
         enabled: true,
         id: 'REAGENT-1',
         manufacturer: 'Lab Maker',
@@ -386,7 +421,29 @@ describe('ReagentLedgerView', () => {
         stainThreshold: 10,
         templateStatus: 'ENABLED',
         unit: '瓶',
+        updatedAt: '2026-06-16 10:00:00',
+        updatedByName: '试剂员乙',
         validityDays: 365,
+      },
+    ]);
+    mockListMedicalOrderDicts.mockResolvedValue([
+      {
+        categoryCode: 'IHC',
+        categoryName: '免疫组化',
+        children: [],
+        enabled: true,
+        id: 'CAT-1',
+        items: [
+          {
+            categoryId: 'CAT-1',
+            enabled: true,
+            id: 'ODI-1',
+            orderItemCode: 'ODI_IHC_CK',
+            orderItemName: 'CK',
+          },
+        ],
+        parentId: null,
+        sortOrder: 1,
       },
     ]);
     mockListReagentStocks.mockResolvedValue([
@@ -430,6 +487,7 @@ describe('ReagentLedgerView', () => {
       mockExportReagentStocks,
       mockFinishUsingReagentStock,
       mockImportReagentStocks,
+      mockListMedicalOrderDicts,
       mockListReagents,
       mockListReagentStockEvents,
       mockListReagentStocks,
@@ -474,6 +532,7 @@ describe('ReagentLedgerView', () => {
     expect(findButton('新增试剂模板')).toBeTruthy();
     expect(findButton('刷新')).toBeTruthy();
     expect(mockListReagents).toHaveBeenCalledTimes(1);
+    expect(mockListMedicalOrderDicts).toHaveBeenCalledTimes(1);
     expect(mockListReagentStocks).toHaveBeenCalledTimes(1);
 
     app.unmount();
@@ -484,8 +543,9 @@ describe('ReagentLedgerView', () => {
     const { app, root } = mountView();
     await flushView();
 
+    expect(findButton('开始使用')?.disabled).toBe(true);
     document
-      .querySelector('[data-row-id="STOCK-1"]')
+      .querySelector('[data-row-id="STOCK-1"] button')
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flushView();
 
@@ -513,7 +573,78 @@ describe('ReagentLedgerView', () => {
     );
     await flushView();
 
-    expect(document.body.textContent).toContain('试剂模板维护');
+    expect(document.body.textContent).toContain('新增试剂模板');
+    expect(document.body.textContent).toContain('保存');
+    expect(document.body.textContent).toContain('退出');
+    expect(document.body.textContent).toContain('输入字母可搜索');
+    expect(document.body.textContent).toContain('微升');
+    expect(document.body.textContent).toContain('免疫组化');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('loads medical order options in template dialog and submits generated reagent code plus mapped fields', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    findButton('新增试剂模板')?.dispatchEvent(
+      new MouseEvent('click', { bubbles: true }),
+    );
+    await flushView();
+
+    const dialog = [...document.querySelectorAll('section')].find(
+      (section) =>
+        section.querySelector('h2')?.textContent?.trim() === '新增试剂模板',
+    ) as HTMLElement | undefined;
+    expect(dialog).toBeTruthy();
+    const inputs = [...dialog!.querySelectorAll('input')];
+    inputs[0]!.value = 'CK 抗体';
+    inputs[0]!.dispatchEvent(new Event('input', { bubbles: true }));
+
+    const selectMapping = [
+      ['试剂类型', 'IMMUNO_WORKING_SOLUTION'],
+      ['对应医嘱', 'ODI-1'],
+      ['稀释比例', '1:100~200'],
+      ['试剂用途', '免疫组化'],
+      ['试剂状态', 'ENABLED'],
+      ['试剂单位', '微升'],
+    ] as const;
+    selectMapping.forEach(([label, value]) => {
+      const select = findSelectByLabel(dialog!, label);
+      expect(select).toBeTruthy();
+      select!.value = value;
+      select!.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    const plusOneYearButton = [...dialog!.querySelectorAll('button')].find(
+      (button) => button.textContent?.trim() === '+1年',
+    );
+    plusOneYearButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushView();
+
+    findButton('保存')?.dispatchEvent(
+      new MouseEvent('click', { bubbles: true }),
+    );
+    await flushView();
+
+    expect(mockCreateReagent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        applicationDilution: '1:100~200',
+        enabled: true,
+        orderDictItemId: 'ODI-1',
+        reagentName: 'CK 抗体',
+        reagentType: 'IMMUNO_WORKING_SOLUTION',
+        reagentUsage: '免疫组化',
+        recommendedDilution: '1:100~200',
+        templateStatus: 'ENABLED',
+        unit: '微升',
+        validityDays: 365,
+      }),
+    );
+    expect(mockCreateReagent.mock.calls[0]?.[0]?.reagentCode).toMatch(
+      /^RG-\d{14}\d{3}$/,
+    );
 
     app.unmount();
     root.remove();

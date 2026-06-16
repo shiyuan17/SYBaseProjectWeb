@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type {
+  MedicalOrderDictCategoryNode,
   ReagentStockEventView,
   ReagentStockView,
   ReagentView,
@@ -41,6 +42,7 @@ import {
   exportReagentStocks,
   finishUsingReagentStock,
   importReagentStocks,
+  listMedicalOrderDicts,
   listReagents,
   listReagentStockEvents,
   listReagentStocks,
@@ -76,6 +78,7 @@ import {
   createReagentFormStateFromRow,
   createReagentStockFormDefaults,
   createReagentStockFormStateFromRow,
+  flattenMedicalOrderDictItems,
   getStockStatusTagType,
   validateReagentForm,
   validateReagentStockForm,
@@ -91,6 +94,7 @@ const capabilities = computed(() =>
 const activeTab = ref<'STOCK' | 'TEMPLATE'>('STOCK');
 const loading = reactive({
   events: false,
+  medicalOrders: false,
   reagents: false,
   stocks: false,
 });
@@ -109,6 +113,10 @@ const actionDialog = reactive({
 });
 const eventsDialogVisible = ref(false);
 const importInputRef = ref<HTMLInputElement>();
+const medicalOrderDicts = ref<MedicalOrderDictCategoryNode[]>([]);
+const medicalOrderOptions = computed(() =>
+  flattenMedicalOrderDictItems(medicalOrderDicts.value),
+);
 
 const reagentDialogVisible = computed({
   get: () => editingReagent.value !== null,
@@ -237,6 +245,17 @@ async function loadReagents() {
   }
 }
 
+async function loadMedicalOrderDicts() {
+  loading.medicalOrders = true;
+  try {
+    medicalOrderDicts.value = await listMedicalOrderDicts();
+  } catch (error) {
+    ElMessage.error(getOperationSupportPageErrorMessage(error));
+  } finally {
+    loading.medicalOrders = false;
+  }
+}
+
 async function loadStocks() {
   if (!capabilities.value.canQueryStocks) {
     stocks.value = [];
@@ -262,7 +281,7 @@ async function loadStocks() {
 }
 
 async function refreshPage() {
-  await Promise.all([loadReagents(), loadStocks()]);
+  await Promise.all([loadReagents(), loadStocks(), loadMedicalOrderDicts()]);
 }
 
 async function submitReagent() {
@@ -905,6 +924,9 @@ void refreshPage();
     <ReagentDialog
       v-model="reagentDialogVisible"
       v-model:reagent-form="reagentForm"
+      :reagent-audit-info="editingReagent"
+      :medical-order-options="medicalOrderOptions"
+      :medical-orders-loading="loading.medicalOrders"
       :is-editing-reagent="isEditingReagent"
       :submitting="submitting"
       @submit="submitReagent"

@@ -70,8 +70,8 @@ describe('reagent ledger helpers', () => {
   it('creates default and draft reagent states', () => {
     expect(createReagentFormDefaults()).toEqual(
       expect.objectContaining({
-        reagentCode: '',
-        templateStatus: 'ENABLED',
+        reagentCode: expect.stringMatching(/^RG-\d{14}\d{3}$/),
+        status: 'ENABLED',
       }),
     );
     expect(createDraftReagentView()).toEqual(
@@ -99,9 +99,11 @@ describe('reagent ledger helpers', () => {
     expect(createReagentFormStateFromRow(createReagent())).toEqual(
       expect.objectContaining({
         defaultLowStockThreshold: 5,
+        dilutionRatio: '',
         orderDictItemId: 'ODI_IHC_CK',
         reagentCode: 'RG-1',
         reagentType: 'IMMUNO_WORKING_SOLUTION',
+        status: 'ENABLED',
       }),
     );
     expect(createReagentStockFormStateFromRow(createStock())).toEqual(
@@ -118,7 +120,6 @@ describe('reagent ledger helpers', () => {
 
     expect(validateReagentForm(reagentForm, true)).toBeTruthy();
     Object.assign(reagentForm, {
-      reagentCode: 'RG-1',
       reagentName: 'Hematoxylin',
     });
     expect(validateReagentForm(reagentForm, true)).toBe('');
@@ -140,27 +141,38 @@ describe('reagent ledger helpers', () => {
     const form = createReagentFormDefaults();
     Object.assign(form, {
       defaultNearExpiryDays: 30,
+      dilutionRatio: '1:100~200',
       manufacturer: '',
       orderDictItemId: 'ODI_IHC_CK',
       reagentCode: 'RG-1',
       reagentName: 'Hematoxylin',
       reagentType: 'IMMUNO_WORKING_SOLUTION',
       remarks: 'Ready',
+      reagentUsage: '免疫组化',
+      status: 'ENABLED',
+      unit: '微升',
     });
 
     expect(buildCreateReagentRequest(form)).toEqual({
+      applicationDilution: '1:100~200',
+      cloneNo: undefined,
       defaultLowStockThreshold: undefined,
       defaultNearExpiryDays: 30,
       enabled: true,
       manufacturer: undefined,
       orderDictItemId: 'ODI_IHC_CK',
+      recommendedDilution: '1:100~200',
       reagentType: 'IMMUNO_WORKING_SOLUTION',
-      templateStatus: 'ENABLED',
+      reagentUsage: '免疫组化',
       remarks: 'Ready',
       reagentCode: 'RG-1',
       reagentName: 'Hematoxylin',
       specification: undefined,
-      unit: undefined,
+      stainCapacity: undefined,
+      stainThreshold: undefined,
+      templateStatus: 'ENABLED',
+      unit: '微升',
+      validityDays: undefined,
     });
     expect(buildUpdateReagentRequest(form)).toEqual(
       expect.not.objectContaining({
