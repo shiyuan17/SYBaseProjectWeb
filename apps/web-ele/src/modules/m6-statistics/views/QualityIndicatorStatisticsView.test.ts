@@ -1,4 +1,4 @@
-import { createApp, defineComponent, h, nextTick } from 'vue';
+import { cloneVNode, createApp, defineComponent, h, nextTick } from 'vue';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -97,7 +97,21 @@ vi.mock('element-plus', () => ({
       return () => h('option', props.label);
     },
   }),
-  ElSegmented: passthroughComponent(),
+  ElSegmented: defineComponent({
+    props: ['options'],
+    setup(props, { attrs }) {
+      return () =>
+        h(
+          'div',
+          attrs,
+          Array.isArray(props.options)
+            ? props.options.map((item: { label?: string }) =>
+                h('span', item.label ?? ''),
+              )
+            : [],
+        );
+    },
+  }),
   ElSelect: passthroughComponent('select'),
   ElSkeleton: defineComponent({
     setup() {
@@ -107,33 +121,36 @@ vi.mock('element-plus', () => ({
   ElTable: defineComponent({
     props: ['data'],
     setup(props, { slots }) {
+      const renderColumns = (row: Record<string, unknown>) =>
+        (slots.default?.() ?? []).map((column, index) =>
+          cloneVNode(column, {
+            key: `${String(row.indicatorCode ?? row.pathologyNo ?? index)}-${index}`,
+            row,
+          }),
+        );
       return () =>
         h('table', [
           h(
             'tbody',
             (props.data ?? []).map((row: Record<string, unknown>) =>
-              h('tr', [
-                h('td', row.indicatorName as string),
-                h('td', row.pathologyNo as string),
-                h('td', row.reason as string),
-                h('td', row.metricValue as string),
-                h('td', row.metricStatus as string),
-                h('td', row.sourceNote as string),
-                slots.default?.({ row }),
-              ]),
+              h('tr', renderColumns(row)),
             ),
           ),
-          slots.default?.(),
         ]);
     },
   }),
   ElTableColumn: defineComponent({
-    props: ['label'],
+    props: ['label', 'prop', 'row'],
     setup(props, { slots }) {
       return () =>
-        h('span', [
-          props.label ? String(props.label) : '',
-          slots.default?.({ row: {} }),
+        h('td', [
+          props.label ? h('strong', String(props.label)) : null,
+          slots.default?.({ row: props.row }) ??
+            String(
+              props.prop && props.row && typeof props.row === 'object'
+                ? (props.row as Record<string, unknown>)[props.prop as string] ?? ''
+                : '',
+            ),
         ]);
     },
   }),
@@ -245,23 +262,32 @@ describe('QualityIndicatorStatisticsView', () => {
     });
     mockQueryStatReportDetails.mockResolvedValue({
       availabilityStatus: 'AVAILABLE',
-      detailType: 'REPORT_REVISION',
+      eligibleCount: 2,
+      failCount: 1,
+      indicatorCode: 'QC_SPECIMEN_FIXATION_RATE',
       items: [
         {
           applicationNo: 'APP-M6-001',
-          detailType: 'REPORT_REVISION',
+          detailStatus: 'PASS',
           occurredAt: '2026-06-01T10:00:00',
           pathologyNo: 'BC-M6-001',
-          reason: '诊断术语修正',
-          sourceNote: 'report_revision_requests',
-          status: 'PENDING',
+          reason: '固定完成且无不合格原因',
+          specimenNo: 'SP-M6-001',
+        },
+        {
+          applicationNo: 'APP-M6-002',
+          detailStatus: 'FAIL',
+          occurredAt: '2026-06-01T11:00:00',
+          pathologyNo: 'BC-M6-002',
+          reason: '固定未完成',
+          specimenNo: 'SP-M6-002',
         },
       ],
       page: 1,
-      reasonDistribution: [{ count: 1, reason: '诊断术语修正' }],
+      passCount: 1,
       size: 10,
-      sourceNote: 'report_revision_requests',
-      total: 1,
+      sourceNote: '代理口径：按标本固定状态与不合格原因统计。',
+      total: 2,
     });
   });
 
@@ -274,7 +300,7 @@ describe('QualityIndicatorStatisticsView', () => {
     document.body.innerHTML = '';
   });
 
-  it('renders quality overview filters, status summary, source notes and query payload', async () => {
+  it('renders quality overview filters and query payload', async () => {
     const { app, root } = mountView();
     await flushView();
 
@@ -287,19 +313,22 @@ describe('QualityIndicatorStatisticsView', () => {
     expect(document.body.textContent).toContain('季度');
     expect(document.body.textContent).toContain('年度');
     expect(document.body.textContent).toContain('指标筛选');
-    expect(document.body.textContent).toContain('状态分布');
     expect(document.body.textContent).toContain('标本规范化固定率');
+    expect(document.body.textContent).toContain('90.00%');
     expect(document.body.textContent).toContain('可用');
     expect(document.body.textContent).toContain('冰冻石蜡符合率');
+    expect(document.body.textContent).toContain('未接入');
     expect(document.body.textContent).toContain('不可用');
-    expect(document.body.textContent).toContain('数据源未接入');
     expect(document.body.textContent).toContain('导出 CSV');
+    expect(document.body.textContent).not.toContain('状态分布');
+    expect(document.body.textContent).not.toContain('分子/分母');
+    expect(document.body.textContent).not.toContain('数据来源与口径');
 
     app.unmount();
     root.remove();
   });
 
-  it('opens quality detail drawer with reason distribution, pagination and export action', async () => {
+  it('opens quality detail drawer with summary cards and detail rows', async () => {
     const { app, root } = mountView();
     await flushView();
 
@@ -311,16 +340,19 @@ describe('QualityIndicatorStatisticsView', () => {
 
     expect(mockQueryStatReportDetails).toHaveBeenCalledWith(
       expect.objectContaining({
-        detailType: 'REPORT_REVISION',
+        indicatorCode: 'QC_SPECIMEN_FIXATION_RATE',
         page: 1,
         size: 10,
       }),
     );
     expect(document.body.textContent).toContain('质控明细');
-    expect(document.body.textContent).toContain('原因分布');
-    expect(document.body.textContent).toContain('诊断术语修正');
-    expect(document.body.textContent).toContain('BC-M6-001');
-    expect(document.body.textContent).toContain('分页 1/10 共 1 条');
+    expect(document.body.textContent).toContain('代理口径：按标本固定状态与不合格原因统计。');
+    expect(document.body.textContent).toContain('纳入病例');
+    expect(document.body.textContent).toContain('通过');
+    expect(document.body.textContent).toContain('未通过');
+    expect(document.body.textContent).toContain('SP-M6-001');
+    expect(document.body.textContent).toContain('固定未完成');
+    expect(document.body.textContent).toContain('分页 1/10 共 2 条');
     expect(document.body.textContent).toContain('导出明细 CSV');
 
     app.unmount();

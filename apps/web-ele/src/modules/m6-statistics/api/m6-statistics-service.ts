@@ -16,11 +16,8 @@ import { requestClient } from '#/api/request';
 
 type IndicatorListResponse = Partial<StatIndicatorView>[];
 type StatReportDetailResponse = Partial<
-  Omit<StatReportDetailResult, 'items' | 'reasonDistribution'> & {
+  Omit<StatReportDetailResult, 'items'> & {
     items: Partial<StatReportDetailItem>[];
-    reasonDistribution: Partial<
-      StatReportDetailResult['reasonDistribution'][number]
-    >[];
   }
 >;
 type StatReportResponse = Partial<StatReportResult>;
@@ -159,25 +156,12 @@ function mapStatReportDetailItem(
 ): StatReportDetailItem {
   return {
     applicationNo: item.applicationNo ?? '',
-    detailType: (item.detailType ??
-      'REPORT_REVISION') as StatReportDetailItem['detailType'],
-    occurredAt: item.occurredAt ?? '',
+    detailStatus: (item.detailStatus ?? 'INFO') as StatReportDetailItem['detailStatus'],
+    occurredAt: mapText(item.occurredAt),
     pathologyNo: item.pathologyNo ?? '',
     reason: item.reason ?? '',
-    sourceNote: mapText(item.sourceNote),
-    status: item.status ?? '',
+    specimenNo: mapText(item.specimenNo),
   };
-}
-
-function mapReasonDistribution(
-  items: StatReportDetailResponse['reasonDistribution'],
-): StatReportDetailResult['reasonDistribution'] {
-  return Array.isArray(items)
-    ? items.map((item) => ({
-        count: Number(item?.count ?? 0),
-        reason: item?.reason ?? '',
-      }))
-    : [];
 }
 
 export async function listStatIndicators(category?: null | string) {
@@ -259,19 +243,20 @@ export async function queryStatDashboard(payload: StatDashboardQuery = {}) {
 
 export async function queryStatReportDetails(payload: StatReportDetailQuery) {
   const response = await requestClient.post<StatReportDetailResponse>(
-    '/v1/stat-report-details/query',
+    '/v1/stat-reports/details/query',
     payload,
   );
 
   return {
     availabilityStatus: response.availabilityStatus ?? 'UNAVAILABLE',
-    detailType: (response.detailType ??
-      payload.detailType) as StatReportDetailResult['detailType'],
+    eligibleCount: Number(response.eligibleCount ?? 0),
+    failCount: Number(response.failCount ?? 0),
+    indicatorCode: response.indicatorCode ?? payload.indicatorCode,
     items: Array.isArray(response.items)
       ? response.items.map((item) => mapStatReportDetailItem(item))
       : [],
     page: response.page ?? payload.page ?? 1,
-    reasonDistribution: mapReasonDistribution(response.reasonDistribution),
+    passCount: Number(response.passCount ?? 0),
     size: response.size ?? payload.size ?? 20,
     sourceNote: mapText(response.sourceNote),
     total: Number(response.total ?? 0),
@@ -287,7 +272,7 @@ export async function exportStatReport(payload: StatReportQuery) {
 }
 
 export async function exportStatReportDetails(payload: StatReportDetailQuery) {
-  return requestClient.download('/v1/stat-report-details/export', {
+  return requestClient.download('/v1/stat-reports/details/export', {
     data: payload,
     method: 'POST',
     responseReturn: 'body',

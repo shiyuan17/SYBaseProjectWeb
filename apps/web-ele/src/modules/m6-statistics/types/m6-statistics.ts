@@ -39,17 +39,12 @@ export interface StatReportQuery {
   workloadUserId?: null | string;
 }
 
-export type StatReportDetailType =
-  | 'CRITICAL_VALUE_REASON'
-  | 'FROZEN_TIMEOUT'
-  | 'REPORT_REVISION'
-  | 'UNQUALIFIED_SPECIMEN';
+export type StatReportDetailStatus = 'FAIL' | 'INFO' | 'PASS';
 
 export interface StatReportDetailQuery {
   departmentId?: null | string;
-  detailType: StatReportDetailType;
   from?: null | string;
-  indicatorCode?: null | string;
+  indicatorCode: string;
   page?: number;
   size?: number;
   to?: null | string;
@@ -96,25 +91,21 @@ export interface StatReportResult {
 
 export interface StatReportDetailItem {
   applicationNo: string;
-  detailType: StatReportDetailType;
-  occurredAt: string;
+  detailStatus: StatReportDetailStatus;
+  occurredAt?: null | string;
   pathologyNo: string;
   reason: string;
-  sourceNote?: null | string;
-  status: string;
-}
-
-export interface StatReasonDistributionItem {
-  count: number;
-  reason: string;
+  specimenNo?: null | string;
 }
 
 export interface StatReportDetailResult {
   availabilityStatus: MetricStatus;
-  detailType: StatReportDetailType;
+  eligibleCount: number;
+  failCount: number;
+  indicatorCode: string;
   items: StatReportDetailItem[];
   page: number;
-  reasonDistribution: StatReasonDistributionItem[];
+  passCount: number;
   size: number;
   sourceNote?: null | string;
   total: number;

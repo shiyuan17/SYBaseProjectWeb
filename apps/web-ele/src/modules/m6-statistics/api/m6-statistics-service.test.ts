@@ -335,8 +335,8 @@ describe('m6-statistics-service', () => {
 
   it('queries and exports statistic report details without patient-sensitive fields', async () => {
     const payload: StatReportDetailQuery = {
-      detailType: 'REPORT_REVISION',
       from: '2026-01-01T00:00:00',
+      indicatorCode: 'QC_SPECIMEN_FIXATION_RATE',
       page: 1,
       size: 10,
       to: '2026-12-31T23:59:59',
@@ -345,56 +345,58 @@ describe('m6-statistics-service', () => {
 
     requestClientMock.post.mockResolvedValue({
       availabilityStatus: 'AVAILABLE',
-      detailType: 'REPORT_REVISION',
+      eligibleCount: 2,
+      failCount: 1,
+      indicatorCode: 'QC_SPECIMEN_FIXATION_RATE',
       items: [
         {
           applicationNo: 'APP-M6-001',
-          detailType: 'REPORT_REVISION',
+          detailStatus: 'PASS',
           occurredAt: '2026-06-01T10:00:00',
           pathologyNo: 'BC-M6-001',
           patientName: 'should be ignored',
-          reason: '诊断术语修正',
+          reason: '固定完成且无不合格原因',
           richTextContent: '<p>should be ignored</p>',
-          sourceNote: 'report_revision_requests',
-          status: 'PENDING',
+          specimenNo: 'SP-M6-001',
         },
       ],
       page: 1,
-      reasonDistribution: [{ count: 2, reason: '诊断术语修正' }],
+      passCount: 1,
       size: 10,
-      sourceNote: 'report_revision_requests',
+      sourceNote: '代理口径：按标本固定状态与不合格原因统计。',
       total: 2,
     });
     requestClientMock.download.mockResolvedValue(detailBlob);
 
     await expect(queryStatReportDetails(payload)).resolves.toEqual({
       availabilityStatus: 'AVAILABLE',
-      detailType: 'REPORT_REVISION',
+      eligibleCount: 2,
+      failCount: 1,
+      indicatorCode: 'QC_SPECIMEN_FIXATION_RATE',
       items: [
         {
           applicationNo: 'APP-M6-001',
-          detailType: 'REPORT_REVISION',
+          detailStatus: 'PASS',
           occurredAt: '2026-06-01T10:00:00',
           pathologyNo: 'BC-M6-001',
-          reason: '诊断术语修正',
-          sourceNote: 'report_revision_requests',
-          status: 'PENDING',
+          reason: '固定完成且无不合格原因',
+          specimenNo: 'SP-M6-001',
         },
       ],
       page: 1,
-      reasonDistribution: [{ count: 2, reason: '诊断术语修正' }],
+      passCount: 1,
       size: 10,
-      sourceNote: 'report_revision_requests',
+      sourceNote: '代理口径：按标本固定状态与不合格原因统计。',
       total: 2,
     });
     await expect(exportStatReportDetails(payload)).resolves.toBe(detailBlob);
 
     expect(requestClientMock.post).toHaveBeenCalledWith(
-      '/v1/stat-report-details/query',
+      '/v1/stat-reports/details/query',
       payload,
     );
     expect(requestClientMock.download).toHaveBeenCalledWith(
-      '/v1/stat-report-details/export',
+      '/v1/stat-reports/details/export',
       {
         data: payload,
         method: 'POST',

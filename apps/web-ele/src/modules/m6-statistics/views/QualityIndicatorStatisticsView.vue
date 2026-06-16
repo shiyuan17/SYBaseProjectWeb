@@ -2,9 +2,9 @@
 import type {
   MetricStatus,
   StatIndicatorView,
+  StatReportDetailItem,
   StatReportDetailQuery,
   StatReportDetailResult,
-  StatReportDetailType,
   StatReportQuery,
   StatReportResult,
   StatReportRow,
@@ -47,6 +47,10 @@ import { buildStatReportFileName } from '../utils/report-query';
 
 type PeriodMode = 'month' | 'quarter' | 'year';
 
+interface DisplayStatReportRow extends StatReportRow {
+  metricValueText: string;
+}
+
 const route = useRoute();
 
 const loading = ref(false);
@@ -57,8 +61,8 @@ const detailLoading = ref(false);
 const pageError = ref('');
 const indicators = ref<StatIndicatorView[]>([]);
 const report = ref<null | StatReportResult>(null);
-const activeDetailType = ref<StatReportDetailType>('REPORT_REVISION');
-const activeDetailTitle = ref('报告修订明细');
+const activeDetailIndicatorCode = ref('');
+const activeDetailTitle = ref('');
 const detailResult = ref<null | StatReportDetailResult>(null);
 
 const filters = reactive({
@@ -92,36 +96,33 @@ const qualityIndicators = computed(() =>
   indicators.value.filter((item) => item.indicatorCategory === 'QUALITY'),
 );
 
-const rows = computed(() => report.value?.rows ?? []);
+const rows = computed(() => buildDisplayRows(report.value?.rows ?? []));
 
-const statusSummary = computed(() => {
-  const summary: Record<MetricStatus, number> = {
-    AVAILABLE: 0,
-    PARTIAL: 0,
-    UNAVAILABLE: 0,
-  };
-  for (const row of rows.value) {
-    if (row.metricStatus) {
-      summary[row.metricStatus] += 1;
-    }
+const activeIndicatorName = computed(() => {
+  if (!activeDetailIndicatorCode.value) {
+    return '';
   }
-  return summary;
+  return (
+    rows.value.find(
+      (item) => item.indicatorCode === activeDetailIndicatorCode.value,
+    )?.indicatorName ?? activeDetailIndicatorCode.value
+  );
 });
 
-const statusSummaryItems = computed(() => [
+const detailSummaryItems = computed(() => [
   {
-    count: statusSummary.value.AVAILABLE,
-    label: '可用',
+    count: detailResult.value?.eligibleCount ?? 0,
+    label: '纳入病例',
     status: 'AVAILABLE' as MetricStatus,
   },
   {
-    count: statusSummary.value.PARTIAL,
-    label: '部分可用',
-    status: 'PARTIAL' as MetricStatus,
+    count: detailResult.value?.passCount ?? 0,
+    label: '通过',
+    status: 'AVAILABLE' as MetricStatus,
   },
   {
-    count: statusSummary.value.UNAVAILABLE,
-    label: '不可用',
+    count: detailResult.value?.failCount ?? 0,
+    label: '未通过',
     status: 'UNAVAILABLE' as MetricStatus,
   },
 ]);
@@ -193,32 +194,49 @@ function displayMetric(row: StatReportRow) {
   if (row.metricStatus === 'UNAVAILABLE') {
     return '未接入';
   }
-  return row.metricUnit
-    ? `${row.metricValue} ${row.metricUnit}`
-    : row.metricValue;
+  const metricValue = row.metricValue.trim();
+  if (!metricValue) {
+    return '-';
+  }
+  const metricUnit = row.metricUnit.trim().toUpperCase();
+  if (metricUnit === 'PERCENT' || metricUnit === '%') {
+    return `${metricValue}%`;
+  }
+  if (metricUnit === 'COUNT') {
+    return `${metricValue} 例`;
+  }
+  if (metricUnit === 'CNY' || metricUnit === 'RMB') {
+    return `${metricValue} 元`;
+  }
+  return row.metricUnit ? `${metricValue} ${row.metricUnit}` : metricValue;
 }
 
-function detailTypeLabel(detailType: StatReportDetailType) {
-  const labels: Record<StatReportDetailType, string> = {
-    CRITICAL_VALUE_REASON: '危急值原因',
-    FROZEN_TIMEOUT: '冰冻超时',
-    REPORT_REVISION: '报告修订',
-    UNQUALIFIED_SPECIMEN: '不合格标本',
-  };
-  return labels[detailType];
+function buildDisplayRows(rows: StatReportRow[]): DisplayStatReportRow[] {
+  return rows.map((row) => ({
+    ...row,
+    metricValue: displayMetric(row),
+    metricValueText: displayMetric(row),
+  }));
 }
 
-function resolveDetailType(row?: StatReportRow): StatReportDetailType {
-  if (row?.indicatorCode === 'QC_UNQUALIFIED_SPECIMEN_COUNT') {
-    return 'UNQUALIFIED_SPECIMEN';
+function detailStatusLabel(status: StatReportDetailItem['detailStatus']) {
+  if (status === 'PASS') {
+    return '通过';
   }
-  if (row?.indicatorCode === 'QC_FROZEN_PARAFFIN_MATCH_RATE') {
-    return 'FROZEN_TIMEOUT';
+  if (status === 'FAIL') {
+    return '未通过';
   }
-  if (row?.indicatorCode === 'QC_CRITICAL_VALUE_REASON_COUNT') {
-    return 'CRITICAL_VALUE_REASON';
+  return '记录';
+}
+
+function detailStatusTagType(status: StatReportDetailItem['detailStatus']) {
+  if (status === 'PASS') {
+    return 'success';
   }
-  return 'REPORT_REVISION';
+  if (status === 'FAIL') {
+    return 'danger';
+  }
+  return 'info';
 }
 
 function downloadBlob(blob: Blob, fileName: string) {
@@ -230,8 +248,8 @@ function downloadBlob(blob: Blob, fileName: string) {
   URL.revokeObjectURL(url);
 }
 
-function buildDetailFileName(detailType: StatReportDetailType) {
-  return `${detailType.toLowerCase()}-quality-detail.csv`;
+function buildDetailFileName(indicatorCode: string) {
+  return `${indicatorCode.toLowerCase()}-quality-detail.csv`;
 }
 
 function buildPayload(): StatReportQuery {
@@ -249,9 +267,8 @@ function buildDetailPayload(): StatReportDetailQuery {
   const [from, to] = filters.dateRange;
   return {
     departmentId: filters.departmentId || null,
-    detailType: activeDetailType.value,
     from: from || null,
-    indicatorCode: filters.indicatorCode || null,
+    indicatorCode: activeDetailIndicatorCode.value,
     page: detailPagination.page,
     size: detailPagination.size,
     to: to || null,
@@ -294,6 +311,10 @@ async function handleExport() {
 }
 
 async function loadDetails() {
+  if (!activeDetailIndicatorCode.value) {
+    detailResult.value = null;
+    return;
+  }
   detailLoading.value = true;
   try {
     detailResult.value = await queryStatReportDetails(buildDetailPayload());
@@ -308,10 +329,11 @@ async function loadDetails() {
 }
 
 async function handleOpenDetails(row?: StatReportRow) {
-  activeDetailType.value = resolveDetailType(row);
-  activeDetailTitle.value = `${detailTypeLabel(activeDetailType.value)}明细`;
+  activeDetailIndicatorCode.value = row?.indicatorCode ?? filters.indicatorCode;
+  activeDetailTitle.value = row?.indicatorName ?? activeIndicatorName.value;
   detailPagination.page = 1;
   detailDrawerVisible.value = true;
+  detailResult.value = null;
   await loadDetails();
 }
 
@@ -327,11 +349,14 @@ async function handleDetailSizeChange(size: number) {
 }
 
 async function handleExportDetails() {
+  if (!activeDetailIndicatorCode.value) {
+    return;
+  }
   detailExportLoading.value = true;
   try {
     const result = await exportStatReportDetails(buildDetailPayload());
     if (result instanceof Blob) {
-      downloadBlob(result, buildDetailFileName(activeDetailType.value));
+      downloadBlob(result, buildDetailFileName(activeDetailIndicatorCode.value));
       ElMessage.success('明细导出成功');
     }
   } catch (error) {
@@ -383,7 +408,6 @@ onMounted(async () => {
     <div class="flex flex-col gap-4">
       <DashboardSectionCard
         title="查询条件"
-        description="支持月度、季度、年度与自定义时间范围，所有结果以 M6 后端统计口径为准。"
       >
         <ElForm inline label-width="90px">
           <ElFormItem label="统计周期">
@@ -441,31 +465,7 @@ onMounted(async () => {
       </DashboardSectionCard>
 
       <DashboardSectionCard
-        title="状态分布"
-        description="缺少精确数据源的指标明确标记为不可用，不用近似口径冒充真实结果。"
-      >
-        <div class="grid gap-3 md:grid-cols-3">
-          <div
-            v-for="item in statusSummaryItems"
-            :key="item.status"
-            class="rounded border border-border bg-card px-4 py-3"
-          >
-            <div class="flex items-center justify-between gap-3">
-              <span class="text-sm text-muted-foreground">{{
-                item.label
-              }}</span>
-              <ElTag :type="metricStatusTagType(item.status)">
-                {{ metricStatusLabel(item.status) }}
-              </ElTag>
-            </div>
-            <div class="mt-3 text-2xl font-semibold">{{ item.count }}</div>
-          </div>
-        </div>
-      </DashboardSectionCard>
-
-      <DashboardSectionCard
         title="质控指标总览"
-        description="展示三甲十三项质控指标及质量安全控制指标的结果、状态和来源说明。"
       >
         <p v-if="pageError" class="mb-3 text-sm text-destructive">
           {{ pageError }}
@@ -473,20 +473,11 @@ onMounted(async () => {
         <ElSkeleton v-if="loading" :rows="8" animated />
         <ElTable v-else-if="rows.length > 0" :data="rows" border>
           <ElTableColumn
-            label="指标编码"
-            min-width="190"
-            prop="indicatorCode"
-          />
-          <ElTableColumn
             label="指标名称"
             min-width="240"
             prop="indicatorName"
           />
-          <ElTableColumn label="结果" min-width="140">
-            <template #default="{ row }">
-              {{ displayMetric(row) }}
-            </template>
-          </ElTableColumn>
+          <ElTableColumn label="结果" min-width="140" prop="metricValue" />
           <ElTableColumn label="状态" min-width="120">
             <template #default="{ row }">
               <ElTag :type="metricStatusTagType(row.metricStatus)">
@@ -494,17 +485,6 @@ onMounted(async () => {
               </ElTag>
             </template>
           </ElTableColumn>
-          <ElTableColumn label="分子/分母" min-width="140">
-            <template #default="{ row }">
-              {{ row.numerator ?? '-' }} / {{ row.denominator ?? '-' }}
-            </template>
-          </ElTableColumn>
-          <ElTableColumn
-            label="数据来源与口径"
-            min-width="320"
-            prop="sourceNote"
-            show-overflow-tooltip
-          />
           <ElTableColumn fixed="right" label="操作" width="120">
             <template #default="{ row }">
               <ElButton link type="primary" @click="handleOpenDetails(row)">
@@ -518,15 +498,20 @@ onMounted(async () => {
 
       <ElDrawer
         v-model="detailDrawerVisible"
-        :title="`质控明细 - ${activeDetailTitle}`"
+        :title="`质控明细 - ${activeDetailTitle || activeIndicatorName}`"
         size="760px"
       >
         <div class="flex flex-col gap-4">
-          <div class="flex items-center justify-between gap-3">
+          <div class="flex items-start justify-between gap-3">
             <div>
-              <div class="text-sm font-medium">原因分布</div>
+              <div class="text-sm font-medium">
+                {{ activeDetailTitle || activeIndicatorName }}
+              </div>
               <div class="text-xs text-muted-foreground">
-                {{ detailResult?.sourceNote || '等待明细查询结果' }}
+                {{
+                  detailResult?.sourceNote ||
+                  '等待质控明细加载'
+                }}
               </div>
             </div>
             <ElButton
@@ -537,24 +522,21 @@ onMounted(async () => {
             </ElButton>
           </div>
 
-          <div
-            v-if="detailResult?.reasonDistribution.length"
-            class="grid gap-2 md:grid-cols-2"
-          >
+          <div class="grid gap-3 md:grid-cols-3">
             <div
-              v-for="item in detailResult.reasonDistribution"
-              :key="item.reason"
-              class="rounded border border-border px-3 py-2"
+              v-for="item in detailSummaryItems"
+              :key="item.label"
+              class="rounded border border-border bg-card px-4 py-3"
             >
-              <div class="text-sm">{{ item.reason }}</div>
-              <div class="text-lg font-semibold">{{ item.count }}</div>
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-sm text-muted-foreground">{{ item.label }}</span>
+                <ElTag :type="metricStatusTagType(item.status)">
+                  {{ metricStatusLabel(item.status) }}
+                </ElTag>
+              </div>
+              <div class="mt-3 text-2xl font-semibold">{{ item.count }}</div>
             </div>
           </div>
-          <ElEmpty
-            v-else-if="detailResult?.availabilityStatus === 'UNAVAILABLE'"
-            :description="detailResult.sourceNote || '明细数据源未接入'"
-          />
-          <ElEmpty v-else description="当前筛选条件下暂无原因分布" />
 
           <ElSkeleton v-if="detailLoading" :rows="5" animated />
           <template v-else>
@@ -574,21 +556,29 @@ onMounted(async () => {
                 prop="applicationNo"
               />
               <ElTableColumn
+                label="标本号"
+                min-width="140"
+                prop="specimenNo"
+              />
+              <ElTableColumn
                 label="发生时间"
                 min-width="180"
                 prop="occurredAt"
               />
               <ElTableColumn
-                label="原因"
+                label="结论"
+                min-width="120"
+              >
+                <template #default="{ row }">
+                  <ElTag :type="detailStatusTagType(row.detailStatus)">
+                    {{ detailStatusLabel(row.detailStatus) }}
+                  </ElTag>
+                </template>
+              </ElTableColumn>
+              <ElTableColumn
+                label="原因/说明"
                 min-width="220"
                 prop="reason"
-                show-overflow-tooltip
-              />
-              <ElTableColumn label="状态" min-width="120" prop="status" />
-              <ElTableColumn
-                label="来源"
-                min-width="200"
-                prop="sourceNote"
                 show-overflow-tooltip
               />
             </ElTable>
