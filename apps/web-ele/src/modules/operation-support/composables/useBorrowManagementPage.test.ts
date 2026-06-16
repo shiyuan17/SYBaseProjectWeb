@@ -348,6 +348,84 @@ describe('useBorrowManagementPage', () => {
     wrapper.destroy();
   });
 
+  it('opens embedding-box borrow dialog for not-archived wax blocks', async () => {
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    state.loanWorkspace.setActiveMaterialType('EMBEDDING_BOX');
+    state.loanWorkspace.setSelectedMaterialRecords([
+      createArchiveRecord({
+        archiveStatus: 'NOT_ARCHIVED',
+        loanStatus: null,
+        objectCode: 'A8',
+        objectId: 'BOX-1',
+        objectType: 'EMBEDDING_BOX',
+      }),
+    ]);
+
+    state.loanWorkspace.openBorrowDialog('EMBEDDING_BOX');
+
+    expect(state.loanWorkspace.borrowDialogVisible).toBe(true);
+    expect(state.loanWorkspace.borrowDialogMode).toBe('EMBEDDING_BOX');
+    expect(state.loanWorkspace.loanForm.materialId).toBe('BOX-1');
+
+    wrapper.destroy();
+  });
+
+  it('submits not-archived wax block borrow without non-storage skip', async () => {
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    mockListAvailableArchivePositions.mockClear();
+    mockListArchiveObjects.mockClear();
+    mockListMaterialLoans.mockClear();
+
+    state.loanWorkspace.setActiveMaterialType('EMBEDDING_BOX');
+    state.loanWorkspace.setSelectedMaterialRecords([
+      createArchiveRecord({
+        archiveStatus: 'NOT_ARCHIVED',
+        loanStatus: null,
+        objectCode: 'A8',
+        objectId: 'BOX-1',
+        objectType: 'EMBEDDING_BOX',
+      }),
+      createArchiveRecord({
+        archiveStatus: 'NOT_ARCHIVED',
+        loanStatus: 'BORROWED',
+        objectCode: 'A9',
+        objectId: 'BOX-2',
+        objectType: 'EMBEDDING_BOX',
+      }),
+    ]);
+    state.loanWorkspace.openBorrowDialog('EMBEDDING_BOX');
+    state.loanWorkspace.loanForm.borrowedByName = '张三';
+
+    await state.loanWorkspace.submitLoan();
+
+    expect(mockCreateMaterialLoan).toHaveBeenCalledTimes(1);
+    expect(mockCreateMaterialLoan).toHaveBeenCalledWith(
+      expect.objectContaining({
+        materialId: 'BOX-1',
+        materialType: 'EMBEDDING_BOX',
+      }),
+    );
+    expect(messageWarningMock).toHaveBeenCalledWith(
+      '借记完成：成功 1 条，跳过 1 条，失败 0 条。跳过原因：已借出。',
+    );
+
+    wrapper.destroy();
+  });
+
   it('queries material loans with selected loan status', async () => {
     const wrapper = mountComposable();
     await flushComposable();

@@ -418,6 +418,8 @@ watch(
 }
 
 :deep(.archive-management-tabs > .el-tabs__content > .el-tab-pane) {
+  display: flex;
+  flex-direction: column;
   height: 100%;
   min-height: 0;
 }

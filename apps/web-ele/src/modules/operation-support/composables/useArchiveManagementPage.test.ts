@@ -838,16 +838,28 @@ describe('useArchiveManagementPage', () => {
           borrowedByName: '张三',
           loanStatus: 'BORROWED',
         },
+        {
+          archiveStatus: 'NOT_ARCHIVED',
+          borrowedByName: '张三',
+          caseId: 'CASE-3',
+          loanStatus: 'BORROWED',
+          objectCode: 'A3',
+          objectId: 'BOX-3',
+          objectType: 'EMBEDDING_BOX',
+          pathologyNo: 'BL-2026-003',
+          patientName: '患者丙',
+        },
       ],
       page: 1,
       size: 20,
-      total: 1,
+      total: 2,
     });
 
     await state.loanWorkspace.submitLoan();
 
-    expect(mockCreateMaterialLoan).toHaveBeenCalledTimes(1);
-    expect(mockCreateMaterialLoan).toHaveBeenCalledWith(
+    expect(mockCreateMaterialLoan).toHaveBeenCalledTimes(2);
+    expect(mockCreateMaterialLoan).toHaveBeenNthCalledWith(
+      1,
       expect.objectContaining({
         borrowerPhone: '13800000000',
         borrowerUnit: '外借单位',
@@ -858,8 +870,20 @@ describe('useArchiveManagementPage', () => {
         remarks: '借记备注',
       }),
     );
+    expect(mockCreateMaterialLoan).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        borrowerPhone: '13800000000',
+        borrowerUnit: '外借单位',
+        borrowedByName: '张三',
+        depositAmount: '66',
+        materialId: 'BOX-3',
+        materialType: 'EMBEDDING_BOX',
+        remarks: '借记备注',
+      }),
+    );
     expect(messageWarningMock).toHaveBeenCalledWith(
-      '借记完成：成功 1 条，跳过 2 条，失败 0 条。跳过原因：已借出、非在库。',
+      '借记完成：成功 2 条，跳过 1 条，失败 0 条。跳过原因：已借出。',
     );
     expect(mockListArchiveCabinetNodes).toHaveBeenCalledTimes(1);
     expect(mockListAvailableArchivePositions).toHaveBeenCalledTimes(1);
@@ -875,6 +899,11 @@ describe('useArchiveManagementPage', () => {
         borrowedByName: '张三',
         loanStatus: 'BORROWED',
         objectId: 'BOX-1',
+      }),
+      expect.objectContaining({
+        borrowedByName: '张三',
+        loanStatus: 'BORROWED',
+        objectId: 'BOX-3',
       }),
     ]);
 

@@ -239,6 +239,19 @@ vi.mock('../components/EmbeddingBoxBorrowDialog.vue', () => ({
   default: createMarkerComponent('embedding-box-borrow-dialog'),
 }));
 
+vi.mock('../components/ArchiveLoanMaterialListPanel.vue', () => ({
+  default: defineComponent({
+    emits: ['borrow'],
+    setup(_, { emit }) {
+      return () =>
+        h('button', {
+          type: 'button',
+          onClick: () => emit('borrow'),
+        }, 'mock-material-borrow');
+    },
+  }),
+}));
+
 vi.mock('../composables/useBorrowManagementPage', () => ({
   useBorrowManagementPage: () => mockUseBorrowManagementPage(),
 }));
@@ -479,25 +492,29 @@ describe('BorrowManagementView', () => {
     expect(document.body.textContent).toContain('玻片借记');
     expect(document.body.textContent).toContain('白片借记');
     expect(document.body.textContent).toContain('待归还/归还');
-    expect(document.body.textContent).toContain('借白片');
-    expect(document.body.textContent).toContain('借记');
-    expect(document.body.textContent).toContain('异常登记');
-    expect(document.body.textContent).toContain('材料号');
-    expect(document.body.textContent).toContain('归还操作人');
-    expect(document.body.textContent).toContain('借片人身份证');
-    expect(document.body.textContent).not.toContain('提交借出');
-    expect(document.body.textContent).toContain('借阅状态');
-    expect(document.body.textContent).toContain('已归还');
-    expect(document.body.textContent).toContain('查询借阅');
-    expect(document.body.textContent).toContain('查询柜位');
     expect(document.body.textContent).toContain('archive-return-dialog');
     expect(document.body.textContent).toContain('embedding-box-borrow-dialog');
-    expect(document.body.textContent).not.toContain('当前选中柜位');
-    expect(document.body.textContent).not.toContain('暂未选择柜位');
-    expect(document.body.innerHTML).not.toContain('legacy-toolbar');
-    expect(document.body.innerHTML).not.toContain('legacy-grid-table');
-    expect(document.body.innerHTML).not.toContain('legacy-status-cell');
+    expect(document.body.textContent).toContain('mock-material-borrow');
     expect(state.loanWorkspace.setActiveMaterialType).toHaveBeenCalledWith(
+      'EMBEDDING_BOX',
+    );
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('uses embedding-box borrow mode for wax block tab', () => {
+    const state = createMockPageState();
+    mockUseBorrowManagementPage.mockReturnValue(state);
+
+    const { app, root } = mountView();
+
+    const borrowButtons = [...document.querySelectorAll('button')].filter(
+      (button) => button.textContent?.includes('mock-material-borrow'),
+    );
+    borrowButtons[0]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(state.loanWorkspace.openBorrowDialog).toHaveBeenCalledWith(
       'EMBEDDING_BOX',
     );
 

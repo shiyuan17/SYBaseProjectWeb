@@ -342,6 +342,16 @@ export function useArchiveLoanWorkspace(
     );
   }
 
+  function isRecordBorrowable(record: ArchiveRecordView, mode: BorrowDialogMode) {
+    if (record.loanStatus === 'BORROWED') {
+      return false;
+    }
+    if (mode === 'EMBEDDING_BOX') {
+      return true;
+    }
+    return record.archiveStatus === 'IN_STORAGE';
+  }
+
   function showBatchResult(actionName: string, result: BatchOperationResult) {
     const skipReasons = [...new Set(result.skipped.map((item) => item.reason))];
     const reasonText =
@@ -364,10 +374,8 @@ export function useArchiveLoanWorkspace(
       ElMessage.warning('请先选择需要借记的材料。');
       return;
     }
-    const borrowableRecords = records.filter(
-      (record) =>
-        record.archiveStatus === 'IN_STORAGE' &&
-        record.loanStatus !== 'BORROWED',
+    const borrowableRecords = records.filter((record) =>
+      isRecordBorrowable(record, mode),
     );
     if (borrowableRecords.length === 0) {
       ElMessage.warning('所选材料没有可借记记录。');
@@ -466,12 +474,12 @@ export function useArchiveLoanWorkspace(
       successCount: 0,
     };
     const borrowableRecords = selectedRecords.filter((record) => {
-      if (record.archiveStatus !== 'IN_STORAGE') {
-        result.skipped.push({ reason: '非在库', record });
-        return false;
-      }
       if (record.loanStatus === 'BORROWED') {
         result.skipped.push({ reason: '已借出', record });
+        return false;
+      }
+      if (!isRecordBorrowable(record, borrowDialogMode.value)) {
+        result.skipped.push({ reason: '非在库', record });
         return false;
       }
       return true;

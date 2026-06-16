@@ -126,7 +126,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
       },
       {
         component: () =>
-          import('#/views/_core/fallback/MenuPlaceholderView.vue'),
+          import('#/modules/operation-support/views/MedicalWasteManagementView.vue'),
         meta: {
           authority: [...M5_RESOURCE_PAGE_AUTHORITIES],
           description: '维护人体标本与药物试剂医疗废物袋打印、交接记录。',

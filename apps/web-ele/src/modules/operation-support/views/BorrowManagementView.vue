@@ -52,10 +52,15 @@ watch(
   </div>
 
   <Page v-else :show-header="false">
-    <div class="flex flex-col gap-4">
-      <ElTabs v-model="activeBorrowTab" class="operation-support-tabs">
+    <div
+      class="borrow-management-page flex min-h-0 flex-1 flex-col overflow-hidden"
+    >
+      <ElTabs
+        v-model="activeBorrowTab"
+        class="operation-support-tabs borrow-management-tabs flex min-h-0 flex-1 flex-col"
+      >
         <ElTabPane label="蜡块借记" name="EMBEDDING_BOX">
-          <div class="flex flex-col gap-4">
+          <div class="borrow-management-tab-panel flex min-h-0 flex-1 flex-col">
             <ArchiveLoanMaterialListPanel
               v-model:material-object-filters="
                 loanWorkspace.materialObjectFilters
@@ -73,7 +78,7 @@ watch(
               :selected-records="loanWorkspace.selectedMaterialRecords"
               :size="loanWorkspace.materialObjectFilters.size"
               :total="loanWorkspace.materialObjectPage.total"
-              @borrow="loanWorkspace.openBorrowDialog"
+              @borrow="loanWorkspace.openBorrowDialog('EMBEDDING_BOX')"
               @page-change="loanWorkspace.setMaterialObjectPage"
               @query="loanWorkspace.queryMaterialObjects"
               @register-abnormal="loanWorkspace.openAbnormalDialog"
@@ -85,7 +90,7 @@ watch(
         </ElTabPane>
 
         <ElTabPane label="玻片借记" name="SLIDE">
-          <div class="flex flex-col gap-4">
+          <div class="borrow-management-tab-panel flex min-h-0 flex-1 flex-col">
             <ArchiveLoanMaterialListPanel
               v-model:material-object-filters="
                 loanWorkspace.materialObjectFilters
@@ -115,7 +120,7 @@ watch(
         </ElTabPane>
 
         <ElTabPane label="白片借记" name="WHITE_SLIDE">
-          <div class="flex flex-col gap-4">
+          <div class="borrow-management-tab-panel flex min-h-0 flex-1 flex-col">
             <WhiteSlideBorrowListPanel
               v-model:filters="whiteSlideWorkspace.filters"
               :can-create="capabilities.canCreateWhiteSlideLoan"
@@ -134,7 +139,9 @@ watch(
         </ElTabPane>
 
         <ElTabPane label="待归还/归还" name="PENDING">
-          <div class="flex flex-col gap-4">
+          <div
+            class="borrow-management-tab-panel flex min-h-0 flex-1 flex-col gap-4"
+          >
             <ArchivePositionWorkbenchPanel
               v-model:cabinet-id="cabinetWorkspace.positionFilters.cabinetId"
               v-model:cabinet-type="
@@ -234,3 +241,21 @@ watch(
     />
   </Page>
 </template>
+
+<style scoped>
+:deep(.borrow-management-tabs > .el-tabs__content) {
+  flex: 1;
+  min-height: 0;
+}
+
+:deep(.borrow-management-tabs > .el-tabs__content > .el-tab-pane) {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.borrow-management-page {
+  height: calc(100vh - 112px);
+}
+</style>
