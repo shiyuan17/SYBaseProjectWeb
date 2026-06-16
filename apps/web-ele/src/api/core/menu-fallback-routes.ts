@@ -623,15 +623,6 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
           path: '/operation-resources/reagents',
         },
         {
-          component: '/views/_core/fallback/MenuPlaceholderView',
-          meta: {
-            icon: 'carbon:warning-alt',
-            title: '危化品管理',
-          },
-          name: 'HazardousChemicalsManagement',
-          path: '/operation-resources/hazardous-chemicals',
-        },
-        {
           component:
             '/modules/operation-support/views/MedicalWasteManagementView',
           meta: {

@@ -928,20 +928,6 @@ describe('mapMenuViewsToRoutes', () => {
         visible: true,
       },
       {
-        componentName: 'HazardousChemicalsManagement',
-        enabled: true,
-        icon: 'hazard',
-        id: 'MENU_M5_HAZARD',
-        menuCode: 'M5_HAZARDOUS_CHEMICALS',
-        menuName: '危化品管理',
-        menuType: 'MENU',
-        parentId: 'MENU_M5_RESOURCE',
-        path: '/operation-resources/hazardous-chemicals',
-        permissionPrefix: 'm5:hazardous',
-        sortOrder: 173,
-        visible: true,
-      },
-      {
         componentName: 'MedicalWasteManagement',
         enabled: true,
         icon: 'waste',
@@ -998,13 +984,6 @@ describe('mapMenuViewsToRoutes', () => {
               }),
               name: 'ReagentConsumableManagement',
               path: '/operation-resources/reagents',
-            }),
-            expect.objectContaining({
-              meta: expect.objectContaining({
-                keepAlive: true,
-              }),
-              name: 'HazardousChemicalsManagement',
-              path: '/operation-resources/hazardous-chemicals',
             }),
             expect.objectContaining({
               meta: expect.objectContaining({
@@ -1460,9 +1439,6 @@ describe('operation support route access', () => {
     const equipmentRoute = resourceRoot?.children?.find(
       (route) => route.name === 'EquipmentManagement',
     );
-    const hazardousRoute = resourceRoot?.children?.find(
-      (route) => route.name === 'HazardousChemicalsManagement',
-    );
     const wasteRoute = resourceRoot?.children?.find(
       (route) => route.name === 'MedicalWasteManagement',
     );
@@ -1471,7 +1447,6 @@ describe('operation support route access', () => {
     expect(borrowRoute?.component).toBeTypeOf('function');
     expect(reagentRoute?.component).toBeTypeOf('function');
     expect(equipmentRoute?.component).toBeTypeOf('function');
-    expect(hazardousRoute?.component).toBeTypeOf('function');
     expect(wasteRoute?.component).toBeTypeOf('function');
     expect(archiveRoute?.meta?.authority).toEqual([
       ...M5_ARCHIVE_PAGE_AUTHORITIES,
@@ -1484,9 +1459,6 @@ describe('operation support route access', () => {
     ]);
     expect(equipmentRoute?.meta?.authority).toEqual([
       ...M5_EQUIPMENT_PAGE_AUTHORITIES,
-    ]);
-    expect(hazardousRoute?.meta?.authority).toEqual([
-      ...M5_RESOURCE_PAGE_AUTHORITIES,
     ]);
     expect(wasteRoute?.meta?.authority).toEqual([
       ...M5_RESOURCE_PAGE_AUTHORITIES,

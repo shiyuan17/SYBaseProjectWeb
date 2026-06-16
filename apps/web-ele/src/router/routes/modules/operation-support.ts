@@ -114,18 +114,6 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
       },
       {
         component: () =>
-          import('#/views/_core/fallback/MenuPlaceholderView.vue'),
-        meta: {
-          authority: [...M5_RESOURCE_PAGE_AUTHORITIES],
-          description: '当前页面暂未接入危化品管理相关业务功能。',
-          icon: 'carbon:warning-alt',
-          title: '危化品管理',
-        },
-        name: 'HazardousChemicalsManagement',
-        path: '/operation-resources/hazardous-chemicals',
-      },
-      {
-        component: () =>
           import('#/modules/operation-support/views/MedicalWasteManagementView.vue'),
         meta: {
           authority: [...M5_RESOURCE_PAGE_AUTHORITIES],

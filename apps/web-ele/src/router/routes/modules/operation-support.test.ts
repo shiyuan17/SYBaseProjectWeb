@@ -59,9 +59,6 @@ describe('operation support routes', () => {
     const reagentRoute = resourceRoot?.children?.find(
       (route) => route.name === 'ReagentConsumableManagement',
     );
-    const hazardousRoute = resourceRoot?.children?.find(
-      (route) => route.name === 'HazardousChemicalsManagement',
-    );
     const wasteRoute = resourceRoot?.children?.find(
       (route) => route.name === 'MedicalWasteManagement',
     );
@@ -74,10 +71,6 @@ describe('operation support routes', () => {
     expect(equipmentRoute?.meta?.keepAlive).toBe(true);
     expect(reagentRoute?.path).toBe('/operation-resources/reagents');
     expect(reagentRoute?.meta?.keepAlive).toBe(true);
-    expect(hazardousRoute?.path).toBe(
-      '/operation-resources/hazardous-chemicals',
-    );
-    expect(hazardousRoute?.meta?.keepAlive).toBe(true);
     expect(wasteRoute?.path).toBe('/operation-resources/medical-waste');
     expect(wasteRoute?.meta?.keepAlive).toBe(true);
     expect(wasteRoute?.meta?.description).toBe(
@@ -88,9 +81,6 @@ describe('operation support routes', () => {
     ]);
     expect(equipmentRoute?.meta?.authority).toEqual([
       ...M5_EQUIPMENT_PAGE_AUTHORITIES,
-    ]);
-    expect(hazardousRoute?.meta?.authority).toEqual([
-      ...M5_RESOURCE_PAGE_AUTHORITIES,
     ]);
     expect(wasteRoute?.meta?.authority).toEqual([
       ...M5_RESOURCE_PAGE_AUTHORITIES,
