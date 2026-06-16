@@ -333,6 +333,68 @@ describe('m6-statistics-service', () => {
     );
   });
 
+  it('keeps breakdowns in report rows for quality analysis charts', async () => {
+    requestClientMock.post.mockResolvedValue({
+      rows: [
+        {
+          breakdowns: [
+            {
+              label: '原因A',
+              value: '2',
+            },
+          ],
+          indicatorCode: 'QC_SPECIMEN_FIXATION_RATE',
+          indicatorName: 'Specimen fixation',
+          metricStatus: 'PARTIAL',
+          metricUnit: 'PERCENT',
+          metricValue: '80.00',
+          sourceNote: 'quality source',
+          trendPoints: [
+            {
+              label: '2026-06',
+              value: '80.00',
+            },
+          ],
+        },
+      ],
+    });
+
+    await expect(
+      queryStatReport({
+        category: 'QUALITY',
+        from: '2026-06-01T00:00:00',
+        to: '2026-06-30T23:59:59',
+      }),
+    ).resolves.toEqual({
+      columns: [],
+      reportCode: '',
+      rows: [
+        {
+          breakdowns: [
+            {
+              label: '原因A',
+              value: '2',
+            },
+          ],
+          denominator: null,
+          indicatorCode: 'QC_SPECIMEN_FIXATION_RATE',
+          indicatorName: 'Specimen fixation',
+          metricStatus: 'PARTIAL',
+          metricUnit: 'PERCENT',
+          metricValue: '80.00',
+          numerator: null,
+          sourceNote: 'quality source',
+          trendPoints: [
+            {
+              label: '2026-06',
+              value: '80.00',
+            },
+          ],
+        },
+      ],
+    });
+  });
+
   it('queries and exports statistic report details without patient-sensitive fields', async () => {
     const payload: StatReportDetailQuery = {
       from: '2026-01-01T00:00:00',

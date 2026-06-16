@@ -698,7 +698,7 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
           component: '/modules/m6-statistics/views/StatisticsAnalysisView',
           meta: {
             icon: 'carbon:chart-line',
-            title: '自定义统计分析',
+            title: '统计报表工作台',
           },
           name: 'CustomStatisticsAnalysis',
           path: '/m6/custom-analysis',

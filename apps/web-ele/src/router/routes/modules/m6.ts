@@ -73,9 +73,9 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         meta: {
           authority: [...M6_STATISTICS_PAGE_AUTHORITIES],
           description:
-            '面向自定义统计分析场景的正式报表入口，支持按模板或单指标查询并导出 CSV。',
+            '面向医疗质量分析报表的统一工作台，支持工作量、质控、冰冻、报告更改与不合格标本分析。',
           icon: 'carbon:chart-line',
-          title: '自定义统计分析',
+          title: '统计报表工作台',
         },
         name: 'CustomStatisticsAnalysis',
         path: '/m6/custom-analysis',

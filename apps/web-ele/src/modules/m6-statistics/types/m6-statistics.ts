@@ -33,6 +33,7 @@ export interface StatReportQuery {
   departmentId?: null | string;
   from?: null | string;
   indicatorCode?: null | string;
+  periodMode?: null | string;
   roleId?: null | string;
   templateCode?: null | string;
   to?: null | string;
