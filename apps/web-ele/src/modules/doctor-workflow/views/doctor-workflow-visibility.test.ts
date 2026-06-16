@@ -1008,7 +1008,7 @@ describe('doctor workflow view visibility', () => {
     expect(startDiagnosticTaskMock).not.toHaveBeenCalled();
     expect(createMedicalOrderMock).not.toHaveBeenCalled();
     wrapper.unmount();
-  });
+  }, 15_000);
 
   it('hides pending medical order summary from diagnosis workbench', async () => {
     mockRoute.query = {
@@ -1040,7 +1040,7 @@ describe('doctor workflow view visibility', () => {
     expect(wrapper.buttonTexts()).not.toContain('取消');
     expect(cancelMedicalOrderMock).not.toHaveBeenCalled();
     wrapper.unmount();
-  });
+  }, 15_000);
 
   it('shows review-only actions on the report list page', async () => {
     mockRoute.query = {

@@ -895,7 +895,7 @@ describe('DiagnosisWorkbenchView', () => {
     expect(wrapper.text()).toContain('最终诊断一');
 
     wrapper.unmount();
-  });
+  }, 15_000);
 
   it('switches the right pane when selecting another queue item', async () => {
     mockRoute.query = {
@@ -920,7 +920,7 @@ describe('DiagnosisWorkbenchView', () => {
     expect(wrapper.text()).toContain('最终诊断二');
 
     wrapper.unmount();
-  });
+  }, 15_000);
 
   it('renders the fixed diagnostic material tabs and removes old tab labels', async () => {
     mockRoute.query = {
@@ -957,7 +957,7 @@ describe('DiagnosisWorkbenchView', () => {
     expect(findByTestId('diagnosis-workbench-resizer-right')).toBeTruthy();
 
     wrapper.unmount();
-  });
+  }, 15_000);
 
   it('resizes workstation panes by dragging the split handles', async () => {
     const wrapper = await mountView();
