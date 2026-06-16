@@ -356,7 +356,10 @@ async function handleExportDetails() {
   try {
     const result = await exportStatReportDetails(buildDetailPayload());
     if (result instanceof Blob) {
-      downloadBlob(result, buildDetailFileName(activeDetailIndicatorCode.value));
+      downloadBlob(
+        result,
+        buildDetailFileName(activeDetailIndicatorCode.value),
+      );
       ElMessage.success('明细导出成功');
     }
   } catch (error) {
@@ -406,9 +409,7 @@ onMounted(async () => {
 <template>
   <Page :show-header="false" :title="pageTitle" :description="pageDescription">
     <div class="flex flex-col gap-4">
-      <DashboardSectionCard
-        title="查询条件"
-      >
+      <DashboardSectionCard title="查询条件">
         <ElForm inline label-width="90px">
           <ElFormItem label="统计周期">
             <ElSegmented
@@ -464,9 +465,7 @@ onMounted(async () => {
         </ElForm>
       </DashboardSectionCard>
 
-      <DashboardSectionCard
-        title="质控指标总览"
-      >
+      <DashboardSectionCard title="质控指标总览">
         <p v-if="pageError" class="mb-3 text-sm text-destructive">
           {{ pageError }}
         </p>
@@ -508,10 +507,7 @@ onMounted(async () => {
                 {{ activeDetailTitle || activeIndicatorName }}
               </div>
               <div class="text-xs text-muted-foreground">
-                {{
-                  detailResult?.sourceNote ||
-                  '等待质控明细加载'
-                }}
+                {{ detailResult?.sourceNote || '等待质控明细加载' }}
               </div>
             </div>
             <ElButton
@@ -529,7 +525,9 @@ onMounted(async () => {
               class="rounded border border-border bg-card px-4 py-3"
             >
               <div class="flex items-center justify-between gap-3">
-                <span class="text-sm text-muted-foreground">{{ item.label }}</span>
+                <span class="text-sm text-muted-foreground">{{
+                  item.label
+                }}</span>
                 <ElTag :type="metricStatusTagType(item.status)">
                   {{ metricStatusLabel(item.status) }}
                 </ElTag>
@@ -555,20 +553,13 @@ onMounted(async () => {
                 min-width="160"
                 prop="applicationNo"
               />
-              <ElTableColumn
-                label="标本号"
-                min-width="140"
-                prop="specimenNo"
-              />
+              <ElTableColumn label="标本号" min-width="140" prop="specimenNo" />
               <ElTableColumn
                 label="发生时间"
                 min-width="180"
                 prop="occurredAt"
               />
-              <ElTableColumn
-                label="结论"
-                min-width="120"
-              >
+              <ElTableColumn label="结论" min-width="120">
                 <template #default="{ row }">
                   <ElTag :type="detailStatusTagType(row.detailStatus)">
                     {{ detailStatusLabel(row.detailStatus) }}

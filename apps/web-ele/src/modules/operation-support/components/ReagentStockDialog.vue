@@ -408,8 +408,8 @@ watch(
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid var(--el-border-color);
   padding-bottom: 12px;
+  border-bottom: 1px solid var(--el-border-color);
 }
 
 .reagent-stock-dialog__toolbar-title {
@@ -424,14 +424,14 @@ watch(
 
 .reagent-stock-dialog__body {
   display: grid;
-  gap: 20px;
   grid-template-columns: 280px minmax(0, 1fr);
+  gap: 20px;
 }
 
 .reagent-stock-dialog__template-panel {
+  padding: 12px;
   border: 1px solid var(--el-border-color);
   border-radius: 8px;
-  padding: 12px;
 }
 
 .reagent-stock-dialog__panel-title {
@@ -442,9 +442,9 @@ watch(
 
 .reagent-stock-dialog__template-tree {
   margin-top: 12px;
+  background: var(--el-fill-color-blank);
   border: 1px solid var(--el-border-color-lighter);
   border-radius: 6px;
-  background: var(--el-fill-color-blank);
 }
 
 .reagent-stock-dialog__template-group {
@@ -457,42 +457,42 @@ watch(
 
 .reagent-stock-dialog__template-group-label {
   margin-bottom: 8px;
-  color: var(--el-text-color-secondary);
   font-size: 12px;
   font-weight: 600;
+  color: var(--el-text-color-secondary);
 }
 
 .reagent-stock-dialog__template-item {
   display: flex;
-  width: 100%;
   flex-direction: column;
-  align-items: flex-start;
   gap: 2px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  background: transparent;
+  align-items: flex-start;
+  width: 100%;
   padding: 8px 10px;
   text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
 }
 
 .reagent-stock-dialog__template-item:hover {
-  border-color: var(--el-color-primary-light-7);
   background: var(--el-color-primary-light-9);
+  border-color: var(--el-color-primary-light-7);
 }
 
 .reagent-stock-dialog__template-item.is-active {
-  border-color: var(--el-color-primary);
   background: var(--el-color-primary-light-9);
+  border-color: var(--el-color-primary);
 }
 
 .reagent-stock-dialog__template-item-name {
-  color: var(--el-text-color-primary);
   font-weight: 600;
+  color: var(--el-text-color-primary);
 }
 
 .reagent-stock-dialog__template-item-meta {
-  color: var(--el-text-color-secondary);
   font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 
 .reagent-stock-dialog__empty {
@@ -507,15 +507,15 @@ watch(
 
 .reagent-stock-dialog__status-row {
   display: flex;
-  align-items: center;
   gap: 16px;
+  align-items: center;
   margin-bottom: 14px;
 }
 
 .reagent-stock-dialog__status-label {
   min-width: 40px;
-  color: var(--el-text-color-regular);
   font-weight: 600;
+  color: var(--el-text-color-regular);
 }
 
 .reagent-stock-dialog__status-group {
@@ -525,11 +525,11 @@ watch(
 }
 
 .reagent-stock-dialog__template-summary {
+  padding: 14px 16px;
   margin-bottom: 16px;
+  background: var(--el-fill-color-light);
   border: 1px solid var(--el-border-color-lighter);
   border-radius: 8px;
-  background: var(--el-fill-color-light);
-  padding: 14px 16px;
 }
 
 .reagent-stock-dialog__summary-line {
@@ -539,20 +539,20 @@ watch(
 }
 
 .reagent-stock-dialog__summary-label {
-  color: var(--el-text-color-regular);
   font-weight: 600;
+  color: var(--el-text-color-regular);
 }
 
 .reagent-stock-dialog__summary-value {
-  color: var(--el-color-primary-dark-2);
   font-size: 18px;
   font-weight: 700;
+  color: var(--el-color-primary-dark-2);
 }
 
 .reagent-stock-dialog__summary-grid {
   display: grid;
-  gap: 12px 24px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 24px;
 }
 
 .reagent-stock-dialog__summary-item {
@@ -562,14 +562,14 @@ watch(
 }
 
 .reagent-stock-dialog__summary-item-label {
-  color: var(--el-text-color-secondary);
   flex: none;
+  color: var(--el-text-color-secondary);
 }
 
 .reagent-stock-dialog__form-grid {
   display: grid;
-  gap: 0 16px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
 }
 
 .reagent-stock-dialog__form-column {

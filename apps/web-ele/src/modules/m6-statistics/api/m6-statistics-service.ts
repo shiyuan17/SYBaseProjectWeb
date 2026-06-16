@@ -156,7 +156,8 @@ function mapStatReportDetailItem(
 ): StatReportDetailItem {
   return {
     applicationNo: item.applicationNo ?? '',
-    detailStatus: (item.detailStatus ?? 'INFO') as StatReportDetailItem['detailStatus'],
+    detailStatus: (item.detailStatus ??
+      'INFO') as StatReportDetailItem['detailStatus'],
     occurredAt: mapText(item.occurredAt),
     pathologyNo: item.pathologyNo ?? '',
     reason: item.reason ?? '',

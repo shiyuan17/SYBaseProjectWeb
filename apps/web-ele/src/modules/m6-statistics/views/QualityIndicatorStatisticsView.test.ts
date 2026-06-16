@@ -148,7 +148,9 @@ vi.mock('element-plus', () => ({
           slots.default?.({ row: props.row }) ??
             String(
               props.prop && props.row && typeof props.row === 'object'
-                ? (props.row as Record<string, unknown>)[props.prop as string] ?? ''
+                ? ((props.row as Record<string, unknown>)[
+                    props.prop as string
+                  ] ?? '')
                 : '',
             ),
         ]);
@@ -346,7 +348,9 @@ describe('QualityIndicatorStatisticsView', () => {
       }),
     );
     expect(document.body.textContent).toContain('质控明细');
-    expect(document.body.textContent).toContain('代理口径：按标本固定状态与不合格原因统计。');
+    expect(document.body.textContent).toContain(
+      '代理口径：按标本固定状态与不合格原因统计。',
+    );
     expect(document.body.textContent).toContain('纳入病例');
     expect(document.body.textContent).toContain('通过');
     expect(document.body.textContent).toContain('未通过');
