@@ -445,6 +445,7 @@ export function mapFormalReportVersionSummary(
   return {
     deliveryStatus: response.deliveryStatus ?? null,
     issuedAt: response.issuedAt ?? null,
+    plannedIssueAt: response.plannedIssueAt ?? null,
     printStatus: response.printStatus ?? null,
     printedAt: response.printedAt ?? null,
     publishedAt: response.publishedAt ?? null,
@@ -465,6 +466,7 @@ export function mapCaseReportVersionSummary(
   return {
     deliveryStatus: response.deliveryStatus ?? null,
     issuedAt: response.issuedAt ?? null,
+    plannedIssueAt: response.plannedIssueAt ?? null,
     printStatus: response.printStatus ?? null,
     printedAt: response.printedAt ?? null,
     publishedAt: response.publishedAt ?? null,

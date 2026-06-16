@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import type {
+  DiagnosisWorkbenchReportDraftValue,
   DiagnosticReportPrintPreview,
   DiagnosticWorkbenchView,
+  FormalReportVersionBatchActionRequest,
   PendingDiagnosticTaskItem,
 } from '../types/doctor-workflow';
 import type { DiagnosisWorkbenchQueueQuickFilter } from '../utils/workbench-view';
@@ -10,21 +12,30 @@ import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
+import { useAccessStore, useUserStore } from '@vben/stores';
 
-import { ElAlert, ElMessage } from 'element-plus';
+import { ElAlert, ElButton, ElMessage, ElOption, ElSelect } from 'element-plus';
 
 import WorkbenchCapturedImagePanel from '#/modules/shared/components/WorkbenchCapturedImagePanel.vue';
 
 import {
+  createPathologyReport,
   getDiagnosticWorkbench,
+  issueFormalReportVersions,
+  listCaseReportVersions,
   listPendingDiagnosticTasks,
+  reviewPathologyReport,
+  savePathologyReportDraft,
+  signPathologyReport,
+  submitPathologyReport,
 } from '../api/doctor-workflow-service';
+import DiagnosisWorkbenchConsultationPane from '../components/DiagnosisWorkbenchConsultationPane.vue';
 import DiagnosisWorkbenchDetailPane from '../components/DiagnosisWorkbenchDetailPane.vue';
 import DiagnosisWorkbenchMedicalOrderPane from '../components/DiagnosisWorkbenchMedicalOrderPane.vue';
 import DiagnosisWorkbenchQueueTable from '../components/DiagnosisWorkbenchQueueTable.vue';
 import DiagnosisWorkbenchReportEditor from '../components/DiagnosisWorkbenchReportEditor.vue';
 import DiagnosisWorkbenchToolbar from '../components/DiagnosisWorkbenchToolbar.vue';
-import { DEFAULT_PAGE_SIZE } from '../constants';
+import { DEFAULT_PAGE_SIZE, M4_PERMISSION_CODES } from '../constants';
 import { getDoctorWorkflowPageErrorMessage } from '../utils/error';
 import { firstQueryParam } from '../utils/route';
 import {
@@ -51,6 +62,8 @@ const diagnosisWorkbenchPaneMinWidths = {
 };
 const diagnosisWorkbenchResizerWidth = 10;
 const diagnosisWorkbenchResizeStep = 2;
+const accessStore = useAccessStore();
+const userStore = useUserStore();
 
 const route = useRoute();
 const router = useRouter();
@@ -65,8 +78,13 @@ const selectedCaseId = ref('');
 const selectedTaskId = ref('');
 const selfRouteQueryKey = ref('');
 const printPreviewVisible = ref(false);
+const reportOperating = ref(false);
 const activeQuickFilter = ref<DiagnosisWorkbenchQueueQuickFilter>('ALL');
 const assignedRange = ref<string[]>(createDefaultAssignedRange());
+const reportIssueMode = ref<'DELAY_2_HOURS' | 'DELAY_3_HOURS' | 'IMMEDIATE'>(
+  'IMMEDIATE',
+);
+const reportDraftValue = ref<DiagnosisWorkbenchReportDraftValue>({});
 const diagnosisCapturedImagesByCaseId = reactive<
   Record<string, DiagnosisCapturedImageItem[]>
 >({});
@@ -133,9 +151,26 @@ const selectedCapturedImages = computed(() =>
     : [],
 );
 const canCaptureDiagnosisImage = computed(() => Boolean(selectedCaseId.value));
+const canSaveDraft = computed(() =>
+  accessStore.accessCodes.includes(M4_PERMISSION_CODES.REPORT_CREATE),
+);
+const canSubmitReport = computed(() =>
+  accessStore.accessCodes.includes(M4_PERMISSION_CODES.REPORT_SUBMIT),
+);
+const canReviewReport = computed(() =>
+  accessStore.accessCodes.includes(M4_PERMISSION_CODES.REPORT_REVIEW),
+);
+const canSignReport = computed(() =>
+  accessStore.accessCodes.includes(M4_PERMISSION_CODES.REPORT_SIGN),
+);
 const workstationGridStyle = computed(() => ({
   gridTemplateColumns: `minmax(${diagnosisWorkbenchPaneMinWidths.queue}px, ${paneWidths.queue}fr) ${diagnosisWorkbenchResizerWidth}px minmax(${diagnosisWorkbenchPaneMinWidths.report}px, ${paneWidths.report}fr) ${diagnosisWorkbenchResizerWidth}px minmax(${diagnosisWorkbenchPaneMinWidths.materials}px, ${paneWidths.materials}fr)`,
 }));
+const issueModeOptions = [
+  { label: '立即发放', value: 'IMMEDIATE' },
+  { label: '延2小时', value: 'DELAY_2_HOURS' },
+  { label: '延3小时', value: 'DELAY_3_HOURS' },
+] as const;
 
 function validateDiagnosisImageFile(file: File) {
   if (!diagnosisImageTypes.has(file.type)) {
@@ -386,6 +421,119 @@ function refreshCurrentWorkbench() {
   void loadWorkbench(selectedCaseId.value);
 }
 
+function handleReportDraftChange(draft: DiagnosisWorkbenchReportDraftValue) {
+  reportDraftValue.value = draft;
+}
+
+function getOperatorName() {
+  return userStore.userInfo?.realName?.trim() || '当前医生';
+}
+
+function getOperatorUserId() {
+  return userStore.userInfo?.userId?.trim() || undefined;
+}
+
+function buildDraftPayload() {
+  return {
+    clinicalDiagnosis: reportDraftValue.value.clinicalDiagnosis?.trim() || '',
+    finalDiagnosis: reportDraftValue.value.finalDiagnosis?.trim() || '',
+    grossExam: reportDraftValue.value.grossExam?.trim() || '',
+    microscopicExam: reportDraftValue.value.microscopicExam?.trim() || '',
+    operatorName: getOperatorName(),
+    operatorUserId: getOperatorUserId(),
+    richTextContent: reportDraftValue.value.richTextContent?.trim() || '',
+  };
+}
+
+async function ensureWorkbenchReport() {
+  if (!workbench.value || !selectedTaskId.value) {
+    throw new Error('请先选择病例');
+  }
+  const currentReportId = workbench.value.currentReport?.reportId;
+  if (currentReportId) {
+    return currentReportId;
+  }
+
+  const created = await createPathologyReport({
+    caseId: workbench.value.caseId,
+    taskId: selectedTaskId.value,
+    ...buildDraftPayload(),
+  });
+  await loadWorkbench(workbench.value.caseId);
+  return created.reportId;
+}
+
+async function runReportAction(
+  action: 'review' | 'save' | 'sign' | 'submit',
+) {
+  if (!workbench.value) {
+    ElMessage.warning('请先选择病例');
+    return;
+  }
+
+  reportOperating.value = true;
+  try {
+    const reportId = await ensureWorkbenchReport();
+    switch (action) {
+      case 'save': {
+        await savePathologyReportDraft(reportId, buildDraftPayload());
+        ElMessage.success('报告草稿已暂存');
+        break;
+      }
+      case 'submit': {
+        await savePathologyReportDraft(reportId, buildDraftPayload());
+        await submitPathologyReport(reportId, {
+          operatorName: getOperatorName(),
+          operatorUserId: getOperatorUserId(),
+        });
+        ElMessage.success('报告已提交初步');
+        break;
+      }
+      case 'review': {
+        await reviewPathologyReport(reportId, {
+          operatorName: getOperatorName(),
+          operatorUserId: getOperatorUserId(),
+        });
+        ElMessage.success('报告已复核');
+        break;
+      }
+      case 'sign': {
+        await signPathologyReport(reportId, {
+          operatorName: getOperatorName(),
+          operatorUserId: getOperatorUserId(),
+        });
+        const latestReportVersions = await listCaseReportVersions(
+          workbench.value.caseId,
+        );
+        const currentSignedVersion = latestReportVersions.find(
+          (item) =>
+            item.reportId === reportId && item.versionStatus === 'SIGNED',
+        );
+        if (!currentSignedVersion?.versionId) {
+          throw new Error('未找到签发后的正式报告版本，暂不能发放');
+        }
+        const issuePayload: FormalReportVersionBatchActionRequest = {
+          issueMode: reportIssueMode.value,
+          versionIds: [currentSignedVersion.versionId],
+        };
+        await issueFormalReportVersions(issuePayload);
+        ElMessage.success('报告已签发并提交发放');
+        break;
+      }
+    }
+    await loadWorkbench(workbench.value.caseId);
+    await loadQueue({ forceDetailReload: true });
+  } catch (error) {
+    ElMessage.error(
+      error instanceof Error
+        ? error.message
+        : getDoctorWorkflowPageErrorMessage(error),
+    );
+  } finally {
+    reportOperating.value = false;
+  }
+}
+
 function handleReportPrintPreviewChange(
   preview: DiagnosticReportPrintPreview | null,
 ) {
@@ -573,6 +721,55 @@ onBeforeUnmount(() => {
         @update:task-type="filters.taskType = $event"
       />
 
+      <section class="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card px-4 py-3 shadow-sm">
+        <ElButton
+          :disabled="reportOperating || !canSaveDraft"
+          data-testid="workbench-report-save"
+          @click="runReportAction('save')"
+        >
+          暂存
+        </ElButton>
+        <ElButton
+          :disabled="reportOperating || !canSubmitReport"
+          data-testid="workbench-report-submit"
+          type="primary"
+          @click="runReportAction('submit')"
+        >
+          初步
+        </ElButton>
+        <ElButton
+          :disabled="reportOperating || !canReviewReport"
+          data-testid="workbench-report-review"
+          type="success"
+          @click="runReportAction('review')"
+        >
+          复核
+        </ElButton>
+        <div class="flex items-center gap-2">
+          <ElButton
+            :disabled="reportOperating || !canSignReport"
+            data-testid="workbench-report-sign"
+            type="warning"
+            @click="runReportAction('sign')"
+          >
+            签发
+          </ElButton>
+          <ElSelect
+            v-model="reportIssueMode"
+            class="w-[150px]"
+            data-testid="workbench-report-issue-mode"
+            size="small"
+          >
+            <ElOption
+              v-for="option in issueModeOptions"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            />
+          </ElSelect>
+        </div>
+      </section>
+
       <div
         ref="workstationLayoutRef"
         class="diagnosis-workbench-layout grid min-h-0 gap-3 xl:items-stretch xl:gap-0"
@@ -604,6 +801,7 @@ onBeforeUnmount(() => {
           :loading="detailLoading"
           :workbench="workbench"
           class="min-h-[360px] min-w-0 xl:h-[calc(100vh-270px)]"
+          @draft-change="handleReportDraftChange"
           @preview-change="handleReportPrintPreviewChange"
         />
 
@@ -623,6 +821,12 @@ onBeforeUnmount(() => {
           :workbench="workbench"
           class="min-h-[360px] min-w-0 xl:h-[calc(100vh-270px)] xl:overflow-auto"
         >
+          <template #consultation>
+            <DiagnosisWorkbenchConsultationPane
+              :workbench="workbench"
+              @refresh="refreshCurrentWorkbench"
+            />
+          </template>
           <template #medical-orders>
             <DiagnosisWorkbenchMedicalOrderPane
               embedded

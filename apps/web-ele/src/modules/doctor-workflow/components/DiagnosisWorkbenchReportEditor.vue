@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type {
+  DiagnosisWorkbenchReportDraftValue,
   DiagnosticReportPrintPreview,
   DiagnosticWorkbenchView,
 } from '../types/doctor-workflow';
@@ -142,6 +143,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
+  draftChange: [draft: DiagnosisWorkbenchReportDraftValue];
   previewChange: [preview: DiagnosticReportPrintPreview | null];
 }>();
 
@@ -941,6 +943,22 @@ watch(
     emit('previewChange', snapshot);
   },
   { immediate: true },
+);
+
+watch(
+  reportDraft,
+  (draft) => {
+    emit('draftChange', {
+      clinicalDiagnosis: draft.clinicalDiagnosis,
+      finalDiagnosis: draft.finalDiagnosis,
+      grossExam: draft.grossExam,
+      microscopicExam: draft.microscopicExam,
+      reportNo: draft.reportNo,
+      reportNoLabel: draft.reportNo,
+      richTextContent: '',
+    });
+  },
+  { deep: true, immediate: true },
 );
 
 watch(

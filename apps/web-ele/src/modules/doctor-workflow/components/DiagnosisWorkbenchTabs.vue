@@ -117,6 +117,10 @@ function saveRemarkSection() {
           <slot name="medical-orders"></slot>
         </ElTabPane>
 
+        <ElTabPane label="科内会诊" name="consultation">
+          <slot name="consultation"></slot>
+        </ElTabPane>
+
         <ElTabPane label="患者信息" name="patient-info">
           <div class="space-y-3">
             <ElDescriptions

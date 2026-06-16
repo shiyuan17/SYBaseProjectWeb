@@ -419,6 +419,7 @@ describe('doctor-workflow-service mappers', () => {
     ).toEqual({
       deliveryStatus: 'ISSUED',
       issuedAt: null,
+      plannedIssueAt: null,
       printStatus: null,
       printedAt: null,
       publishedAt: null,
@@ -474,6 +475,7 @@ describe('doctor-workflow-service mappers', () => {
     ).toEqual({
       deliveryStatus: 'PENDING',
       issuedAt: null,
+      plannedIssueAt: null,
       printStatus: 'UNPRINTED',
       printedAt: null,
       publishedAt: null,
@@ -846,6 +848,8 @@ describe('doctor-workflow-service requests', () => {
 
     await printFormalReportVersions({ versionIds: ['RV-1'] });
     await issueFormalReportVersions({
+      issueMode: 'DELAY_2_HOURS',
+      plannedIssueAt: '2026-06-16T12:00:00',
       remarks: '批量发放',
       versionIds: ['RV-1'],
     });
@@ -863,6 +867,8 @@ describe('doctor-workflow-service requests', () => {
       2,
       '/v1/pathology-reports/formal-versions/issue',
       {
+        issueMode: 'DELAY_2_HOURS',
+        plannedIssueAt: '2026-06-16T12:00:00',
         remarks: '批量发放',
         versionIds: ['RV-1'],
       },

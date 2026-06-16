@@ -119,6 +119,9 @@ export interface CurrentReportSummary {
   reviewedAt?: null | string;
   reviewerName?: null | string;
   richTextContent?: null | string;
+  signedVersionDeliveryStatus?: null | string;
+  signedVersionIssuedAt?: null | string;
+  signedVersionPlannedIssueAt?: null | string;
   signedAt?: null | string;
   signedByName?: null | string;
   submittedAt?: null | string;
@@ -128,6 +131,7 @@ export interface CurrentReportSummary {
 export interface FormalReportVersionSummary {
   deliveryStatus?: null | string;
   issuedAt?: null | string;
+  plannedIssueAt?: null | string;
   printStatus?: null | string;
   printedAt?: null | string;
   publishedAt?: null | string;
@@ -146,6 +150,7 @@ export interface FormalReportVersionSummary {
 export interface CaseReportVersionSummary {
   deliveryStatus?: null | string;
   issuedAt?: null | string;
+  plannedIssueAt?: null | string;
   printStatus?: null | string;
   printedAt?: null | string;
   publishedAt?: null | string;
@@ -668,6 +673,8 @@ export interface PathologyReportOperationResult {
 }
 
 export interface FormalReportVersionBatchActionRequest {
+  issueMode?: 'DELAY_2_HOURS' | 'DELAY_3_HOURS' | 'IMMEDIATE';
+  plannedIssueAt?: string;
   remarks?: string;
   terminalCode?: string;
   versionIds: string[];
@@ -712,6 +719,16 @@ export interface ConsultationParticipantInput {
 export interface CreateConsultationRequest extends DiagnosticTaskActionRequest {
   caseId: string;
   participants: ConsultationParticipantInput[];
+}
+
+export interface DiagnosisWorkbenchReportDraftValue {
+  clinicalDiagnosis?: string;
+  finalDiagnosis?: string;
+  grossExam?: string;
+  microscopicExam?: string;
+  reportNo?: string;
+  reportNoLabel?: string;
+  richTextContent?: string;
 }
 
 export interface CommentConsultationParticipantRequest extends DiagnosticTaskActionRequest {

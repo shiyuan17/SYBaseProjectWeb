@@ -18,6 +18,9 @@ defineProps<{
       :print-preview="printPreview"
       :workbench="workbench"
     >
+      <template #consultation>
+        <slot name="consultation"></slot>
+      </template>
       <template #medical-orders>
         <slot name="medical-orders"></slot>
       </template>

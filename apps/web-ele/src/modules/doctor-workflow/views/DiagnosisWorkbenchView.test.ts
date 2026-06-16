@@ -11,9 +11,15 @@ const {
   acceptDiagnosticTaskMock,
   cancelMedicalOrderMock,
   confirmMedicalOrderBillingMock,
+  createConsultationMock,
   createMedicalOrderMock,
+  createPathologyReportMock,
+  commentConsultationParticipantMock,
+  completeConsultationMock,
   executeMedicalOrderBillingMock,
   getDiagnosticWorkbenchMock,
+  issueFormalReportVersionsMock,
+  listCaseReportVersionsMock,
   listMedicalOrderDictsMock,
   listMedicalOrderPackagesPageMock,
   listPendingDiagnosticTasksMock,
@@ -21,7 +27,11 @@ const {
   mockRoute,
   mockRouter,
   mockUserStore,
+  reviewPathologyReportMock,
+  savePathologyReportDraftMock,
+  signPathologyReportMock,
   startDiagnosticTaskMock,
+  submitPathologyReportMock,
   createObjectUrlMock,
   messageErrorMock,
   messageInfoMock,
@@ -35,10 +45,25 @@ const {
   cancelMedicalOrderMock:
     vi.fn<(orderId: string, data: unknown) => Promise<unknown>>(),
   confirmMedicalOrderBillingMock: vi.fn<(data: unknown) => Promise<unknown>>(),
+  createConsultationMock: vi.fn<(data: unknown) => Promise<unknown>>(),
   createMedicalOrderMock: vi.fn<(data: unknown) => Promise<unknown>>(),
+  createPathologyReportMock: vi.fn<(data: unknown) => Promise<{ reportId: string }>>(),
+  commentConsultationParticipantMock:
+    vi.fn<
+      (
+        consultationId: string,
+        participantId: string,
+        data: unknown,
+      ) => Promise<unknown>
+    >(),
+  completeConsultationMock:
+    vi.fn<(consultationId: string, data: unknown) => Promise<unknown>>(),
   executeMedicalOrderBillingMock: vi.fn<(data: unknown) => Promise<unknown>>(),
   getDiagnosticWorkbenchMock:
     vi.fn<(caseId: string) => Promise<DiagnosticWorkbenchView>>(),
+  issueFormalReportVersionsMock: vi.fn<(data: unknown) => Promise<unknown>>(),
+  listCaseReportVersionsMock:
+    vi.fn<(caseId: string) => Promise<unknown[]>>(),
   listMedicalOrderDictsMock: vi.fn<() => Promise<unknown[]>>(),
   listMedicalOrderPackagesPageMock:
     vi.fn<(query: unknown) => Promise<unknown>>(),
@@ -62,8 +87,16 @@ const {
       userId: 'USER-CURRENT',
     },
   },
+  reviewPathologyReportMock:
+    vi.fn<(reportId: string, data: unknown) => Promise<unknown>>(),
+  savePathologyReportDraftMock:
+    vi.fn<(reportId: string, data: unknown) => Promise<unknown>>(),
+  signPathologyReportMock:
+    vi.fn<(reportId: string, data: unknown) => Promise<unknown>>(),
   startDiagnosticTaskMock:
     vi.fn<(taskId: string, data: unknown) => Promise<unknown>>(),
+  submitPathologyReportMock:
+    vi.fn<(reportId: string, data: unknown) => Promise<unknown>>(),
   createObjectUrlMock: vi.fn(),
   messageErrorMock: vi.fn(),
   messageInfoMock: vi.fn(),
@@ -121,14 +154,24 @@ vi.mock('element-plus', async (importOriginal) => {
 vi.mock('../api/doctor-workflow-service', () => ({
   acceptDiagnosticTask: acceptDiagnosticTaskMock,
   cancelMedicalOrder: cancelMedicalOrderMock,
+  commentConsultationParticipant: commentConsultationParticipantMock,
+  completeConsultation: completeConsultationMock,
   confirmMedicalOrderBilling: confirmMedicalOrderBillingMock,
+  createConsultation: createConsultationMock,
   createMedicalOrder: createMedicalOrderMock,
+  createPathologyReport: createPathologyReportMock,
   executeMedicalOrderBilling: executeMedicalOrderBillingMock,
   getDiagnosticWorkbench: getDiagnosticWorkbenchMock,
+  issueFormalReportVersions: issueFormalReportVersionsMock,
+  listCaseReportVersions: listCaseReportVersionsMock,
   listMedicalOrderDicts: listMedicalOrderDictsMock,
   listMedicalOrderPackagesPage: listMedicalOrderPackagesPageMock,
   listPendingDiagnosticTasks: listPendingDiagnosticTasksMock,
+  reviewPathologyReport: reviewPathologyReportMock,
+  savePathologyReportDraft: savePathologyReportDraftMock,
+  signPathologyReport: signPathologyReportMock,
   startDiagnosticTask: startDiagnosticTaskMock,
+  submitPathologyReport: submitPathologyReportMock,
 }));
 
 import DiagnosisWorkbenchView from './DiagnosisWorkbenchView.vue';
@@ -621,13 +664,23 @@ function resetTestState() {
   acceptDiagnosticTaskMock.mockReset();
   cancelMedicalOrderMock.mockReset();
   confirmMedicalOrderBillingMock.mockReset();
+  createConsultationMock.mockReset();
   createMedicalOrderMock.mockReset();
+  createPathologyReportMock.mockReset();
+  commentConsultationParticipantMock.mockReset();
+  completeConsultationMock.mockReset();
   executeMedicalOrderBillingMock.mockReset();
   getDiagnosticWorkbenchMock.mockReset();
+  issueFormalReportVersionsMock.mockReset();
+  listCaseReportVersionsMock.mockReset();
   listMedicalOrderDictsMock.mockReset();
   listMedicalOrderPackagesPageMock.mockReset();
   listPendingDiagnosticTasksMock.mockReset();
+  reviewPathologyReportMock.mockReset();
+  savePathologyReportDraftMock.mockReset();
+  signPathologyReportMock.mockReset();
   startDiagnosticTaskMock.mockReset();
+  submitPathologyReportMock.mockReset();
   createObjectUrlMock.mockReset();
   createObjectUrlMock.mockReturnValue('blob:diagnosis-capture');
   messageErrorMock.mockReset();
@@ -664,14 +717,50 @@ function resetTestState() {
     successCount: 1,
     totalCount: 1,
   });
+  createConsultationMock.mockResolvedValue({
+    consultationId: 'CONS-NEW',
+  });
   createMedicalOrderMock.mockResolvedValue({});
+  createPathologyReportMock.mockResolvedValue({
+    reportId: 'REPORT-CREATED',
+  });
+  commentConsultationParticipantMock.mockResolvedValue({});
+  completeConsultationMock.mockResolvedValue({});
   executeMedicalOrderBillingMock.mockResolvedValue({
     failureCount: 0,
     items: [{ billingStatus: 'SUCCESS', orderId: 'ORDER-001' }],
     successCount: 1,
     totalCount: 1,
   });
+  issueFormalReportVersionsMock.mockResolvedValue({
+    successCount: 1,
+    totalCount: 1,
+    items: [],
+  });
+  listCaseReportVersionsMock.mockImplementation(async (caseId) => {
+    if (caseId === 'CASE-002') {
+      return [
+        {
+          reportId: 'REPORT-002',
+          versionId: 'VERSION-002',
+          versionStatus: 'SIGNED',
+        },
+      ];
+    }
+
+    return [
+      {
+        reportId: 'REPORT-001',
+        versionId: 'VERSION-001',
+        versionStatus: 'SIGNED',
+      },
+    ];
+  });
   startDiagnosticTaskMock.mockResolvedValue({});
+  reviewPathologyReportMock.mockResolvedValue({});
+  savePathologyReportDraftMock.mockResolvedValue({});
+  signPathologyReportMock.mockResolvedValue({});
+  submitPathologyReportMock.mockResolvedValue({});
 }
 
 async function flushAsyncWork() {
@@ -843,6 +932,7 @@ describe('DiagnosisWorkbenchView', () => {
 
     expect(wrapper.text()).toContain('患者信息');
     expect(wrapper.text()).toContain('医嘱信息');
+    expect(wrapper.text()).toContain('科内会诊');
     expect(wrapper.text()).toContain('实时预览打印');
     expect(wrapper.text()).toContain('历史病理');
     expect(wrapper.text()).toContain('PACS检查');
@@ -859,6 +949,10 @@ describe('DiagnosisWorkbenchView', () => {
     expect(wrapper.text()).not.toContain('特检医嘱/收费');
     expect(getButtonTexts()).not.toContain('采图');
     expect(getButtonTexts()).not.toContain('医嘱');
+    expect(getButtonTexts()).toContain('暂存');
+    expect(getButtonTexts()).toContain('初步');
+    expect(getButtonTexts()).toContain('复核');
+    expect(getButtonTexts()).toContain('签发');
     expect(findByTestId('diagnosis-workbench-resizer-left')).toBeTruthy();
     expect(findByTestId('diagnosis-workbench-resizer-right')).toBeTruthy();
 
