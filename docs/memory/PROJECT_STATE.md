@@ -2,10 +2,10 @@
 
 ## Current State
 
-- Last updated: 2026-06-15
+- Last updated: 2026-06-16
 - Repository: `SYBaseProjectWeb`
 - Current phase: M6 statistics full-stack delivery with governance workflow executability pass (Phase E)
-- Active focus: `apps/web-ele/src/modules/m6-statistics` consumes sibling backend `../SYBaseProject/bl-center` statistics APIs. `/m6/dashboard` composes `POST /api/v1/stat-reports/query` for `QUALITY` / `OPERATION` / `WORKLOAD`; current frontend architecture must not reintroduce `POST /api/v1/stat-dashboard/query`. `POST /api/v1/stat-reports/query` uses `workloadUserId` for workload/personnel filtering and may return metric metadata such as `metricStatus`, numerator/denominator, trend/breakdown, and source notes. Quality drilldowns use `POST /api/v1/stat-report-details/query` and `/export` with non-sensitive detail rows only.
+- Active focus: `apps/web-ele/src/modules/m6-statistics` consumes sibling backend `../SYBaseProject/bl-center` statistics APIs. `/m6/dashboard` composes `POST /api/v1/stat-reports/query` for `QUALITY` / `OPERATION` / `WORKLOAD`; current frontend architecture must not reintroduce `POST /api/v1/stat-dashboard/query`. `POST /api/v1/stat-reports/query` uses `workloadUserId` for workload/personnel filtering and may return metric metadata such as `metricStatus`, numerator/denominator, trend/breakdown, and source notes. `/m6/quality-indicators` currently has no sibling-backend detail query/export endpoint; the frontend must not reintroduce `/api/v1/stat-report-details/*` and should present availability guidance until a real cross-repo contract is added.
 - Backend sibling repo: `../SYBaseProject` (parallel memory files confirmed present: `PROJECT_STATE.md`, `ARCHITECTURE.md`, `DECISIONS.md`, `TECH_DEBT.md`, `KNOWN_BUGS.md`)
 
 ## Active Work
@@ -23,6 +23,8 @@
 - Governance Phase F Phase 0 closure active on 2026-06-15 (`DEC-20260615-003`): repaired duplicated `docs/rules/` paths in this file; `validate-governance.mjs` now rejects that typo pattern; `docs/rules/QUICKSTART.md` replaces the mechanical 16-doc first-read list with entry/task/foundation tiers in `AGENTS.md` §1.
 - M6 statistics closure is validated for real pages and menu wiring: `/m6/dashboard`, `/m6/quality-indicators`, `/m6/management-indicators`, and `/m6/custom-analysis` map to real pages; dashboard/quality/management statistics all rely on the stable report-query contract rather than a phantom dashboard aggregate endpoint.
 - M5 operation-support work remains stable on the current contract split: `/operation-support/archive` owns application-form / wax-block / slide / specimen / cabinet / archive-record work; `/operation-support/borrow` owns slide / wax-block borrow and return work. Specimen archive uses `POST /api/v1/archive/specimens` and `GET /api/v1/archive-objects?objectType=SPECIMEN`.
+- M5 equipment management old-system alignment landed on 2026-06-16: sibling backend `../SYBaseProject/bl-center` now serves expanded equipment archive fields plus `POST /api/v1/equipment-records/batch-status`, and `/operation-resources/equipment` now uses the legacy-style wide table, rebuilt equipment dialog, batch restore/disable, and frontend export/print helpers. Browser verification could confirm the app boot path after fixing a broken placeholder medical-waste route import, but login-gated in-page device checks remain blocked by the slider captcha component in the in-app browser.
+- M5 medical waste management landed on 2026-06-16: `/operation-resources/medical-waste` is now a real `MedicalWasteManagementView` with fixed `人体标本` / `药物试剂` tabs instead of a placeholder. The page reuses `M5_RESOURCE_PAGE_AUTHORITIES`, consumes sibling backend `../SYBaseProject/bl-center` medical-waste APIs for specimen batch preview/print/destroy and reagent bag save/handover, and keeps specimen label sourcing tied to existing grossing/label data instead of adding a standalone medical-waste label master.
 
 ## Validation Baseline
 
@@ -36,6 +38,19 @@
   - `pnpm build:ele`: passed
   - Playwright desktop/mobile smoke for `/m6/dashboard`, `/m6/quality-indicators`, `/m6/management-indicators`, `/m6/custom-analysis`: passed with mocked APIs and no console errors
   - Sibling backend `../SYBaseProject/bl-center` M6 integration / authorization / observability tests: passed
+- Latest M5 equipment old-system alignment on 2026-06-16:
+  - Frontend targeted Vitest for equipment service/view/utils: passed
+  - Frontend targeted ESLint for touched equipment files: passed
+  - Frontend project `pnpm lint`: blocked by unrelated existing style-order errors in `apps/web-ele/src/modules/operation-support/components/ReagentStockDialog.vue`
+  - Frontend project `pnpm check:type`: initially passed before the browser-fix follow-up, later blocked by unrelated existing type errors in `ReagentWasteHandoverDialog.vue` and `ReagentWastePrintDialog.vue`
+  - Sibling backend `../SYBaseProject/bl-center` targeted Maven tests `OperationSupportIntegrationTest,M5SingleApiIntegrationTest`: passed
+  - Browser verification: app boot recovered after fixing the broken medical-waste route import; login-page rendering verified, but post-login equipment-page interaction remained unverified because the slider captcha could not be completed in the in-app browser automation surface
+- Latest M5 medical waste management on 2026-06-16:
+  - Frontend targeted Vitest for medical-waste view/service/access/menu/route wiring: passed
+  - Frontend targeted ESLint for touched medical-waste files: passed
+  - Frontend `pnpm check:type --filter=@vben/web-ele`: passed
+  - Sibling backend `../SYBaseProject/bl-center` targeted Maven test `MedicalWasteIntegrationTest`: passed
+  - Browser verification: route navigation to `http://localhost:5778/operation-resources/medical-waste` succeeded and confirmed the app no longer crashes on the route import, but authenticated in-page validation of tabs/dialogs remained blocked by the login slider captcha in the in-app browser
 - Historical feature-level validation details are intentionally kept out of this file now; recover them from targeted tests, `docs/memory/KNOWN_BUGS.md`, `docs/memory/TECH_DEBT.md`, PRs, or git history when needed.
 
 ## Cross-Repo Dependencies
@@ -43,10 +58,9 @@
 - M6 statistics frontend depends on sibling backend `../SYBaseProject/bl-center` report-query contracts:
   - `POST /api/v1/stat-reports/query`
   - `POST /api/v1/stat-reports/export`
-  - `POST /api/v1/stat-report-details/query`
-  - `POST /api/v1/stat-report-details/export`
 - M5 archive/borrow frontend pages depend on sibling backend archive contracts for application-form / `EMBEDDING_BOX` / slide / specimen archive, archive cabinet maintenance, archive object pagination, and material-loan pending/create/return.
 - M5 reagent management depends on sibling backend reagent template / stock / stock-event contracts and keeps CSV-compatible import/export semantics.
+- M5 medical waste management depends on sibling backend `../SYBaseProject/bl-center` `medical-waste` contracts for specimen batch list/options/preview/print/destroy and reagent bag list/save/handover, while specimen label preview data is still sourced from the grossing workflow rather than a new medical-waste label table.
 - Specimen workflow progression depends on sibling backend resolving workflow requests by `specimenId > specimenBarcode > specimenNo`; barcode binding remains nullable until explicit binding.
 - Cross-repo API, permission, database, patient, and report contract changes must update memory files in both repos when durable context changes.
 
