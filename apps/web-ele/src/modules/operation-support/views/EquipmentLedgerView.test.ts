@@ -4,7 +4,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { M5_PERMISSION_CODES } from '../constants';
 
+vi.mock('element-plus/theme-chalk/base.css', () => ({}));
+vi.mock('vue-router', () => ({
+  useRoute: () => ({
+    meta: {
+      description: '设备页面描述',
+      title: '仪器设备管理',
+    },
+  }),
+}));
+
 const {
+  downloadFileFromBlobMock,
+  mockBatchUpdateEquipmentStatus,
   messageErrorMock,
   messageSuccessMock,
   messageWarningMock,
@@ -17,6 +29,8 @@ const {
   mockUpdateEquipmentRecord,
   mockUserStore,
 } = vi.hoisted(() => ({
+  downloadFileFromBlobMock: vi.fn(),
+  mockBatchUpdateEquipmentStatus: vi.fn(),
   messageErrorMock: vi.fn(),
   messageSuccessMock: vi.fn(),
   messageWarningMock: vi.fn(),
@@ -61,6 +75,10 @@ vi.mock('@vben/stores', () => ({
   useUserStore: () => mockUserStore,
 }));
 
+vi.mock('@vben/utils', () => ({
+  downloadFileFromBlob: downloadFileFromBlobMock,
+}));
+
 function createModelComponent(tag = 'div') {
   return defineComponent({
     props: ['modelValue'],
@@ -80,13 +98,15 @@ vi.mock('element-plus', () => {
   });
 
   const ElButton = defineComponent({
+    props: ['disabled'],
     emits: ['click'],
-    setup(_, { attrs, emit, slots }) {
+    setup(props, { attrs, emit, slots }) {
       return () =>
         h(
           'button',
           {
             ...attrs,
+            disabled: props.disabled,
             type: 'button',
             onClick: (event: MouseEvent) => emit('click', event),
           },
@@ -123,10 +143,36 @@ vi.mock('element-plus', () => {
     },
   });
 
+  const ElDrawer = defineComponent({
+    props: ['modelValue', 'title'],
+    emits: ['update:modelValue'],
+    setup(props, { slots }) {
+      return () =>
+        props.modelValue
+          ? h('section', [h('h2', props.title), slots.default?.()])
+          : null;
+    },
+  });
+
   const ElTable = defineComponent({
+    props: ['data'],
     emits: ['current-change'],
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.());
+    setup(props, { slots, emit }) {
+      return () =>
+        h('div', [
+          props.data?.map((row: { equipmentCode?: string; id: string }) =>
+            h(
+              'button',
+              {
+                type: 'button',
+                'data-row-id': row.id,
+                onClick: () => emit('current-change', row),
+              },
+              row.equipmentCode ?? row.id,
+            ),
+          ),
+          slots.default?.(),
+        ]);
     },
   });
 
@@ -145,12 +191,15 @@ vi.mock('element-plus', () => {
   return {
     ElAlert,
     ElButton,
+    ElDatePicker: createModelComponent('input'),
     ElDescriptions,
     ElDescriptionsItem,
     ElDialog,
+    ElDrawer,
     ElForm: createModelComponent('form'),
     ElFormItem: createModelComponent('div'),
     ElInput: createModelComponent('input'),
+    ElInputNumber: createModelComponent('input'),
     ElMessage: {
       error: messageErrorMock,
       success: messageSuccessMock,
@@ -162,78 +211,71 @@ vi.mock('element-plus', () => {
         return () => h('option', props.label);
       },
     }),
+    ElRadio: createModelComponent('input'),
+    ElRadioGroup: createModelComponent('div'),
     ElSelect: createModelComponent('select'),
     ElTable,
     ElTableColumn,
+    ElTimePicker: createModelComponent('input'),
     ElTag,
   };
 });
 
-vi.mock('../components/OperationSectionCard.vue', () => ({
+vi.mock('../components/EquipmentDetailPanel.vue', () => ({
   default: defineComponent({
-    props: ['description', 'title'],
-    setup(props, { slots }) {
-      return () =>
-        h('section', [
-          h('h2', props.title),
-          props.description ? h('p', props.description) : null,
-          slots.extra?.(),
-          slots.default?.(),
-        ]);
-    },
-  }),
-}));
-
-function createMarkerComponent(label: string, renderWhenVisible = false) {
-  return defineComponent({
-    props: ['modelValue'],
-    setup(props) {
-      return () => {
-        if (!renderWhenVisible) {
-          return h('div', label);
-        }
-        if (props.modelValue) {
-          return h('div', label);
-        }
-        return null;
-      };
-    },
-  });
-}
-
-vi.mock('../components/EquipmentCatalogPanel.vue', () => ({
-  default: defineComponent({
-    emits: ['openCreateEquipmentDialog'],
+    emits: ['submitMaintenanceLog'],
     setup(_, { emit }) {
       return () =>
         h('div', [
-          h('div', 'equipment-catalog-panel'),
+          'equipment-detail-panel',
           h(
             'button',
             {
               type: 'button',
-              onClick: () => emit('openCreateEquipmentDialog'),
+              onClick: () => emit('submitMaintenanceLog'),
             },
-            '新增设备',
+            '提交保养',
           ),
         ]);
     },
   }),
 }));
 
-vi.mock('../components/EquipmentDetailPanel.vue', () => ({
-  default: createMarkerComponent('equipment-detail-panel'),
-}));
-
 vi.mock('../components/EquipmentWarningPanel.vue', () => ({
-  default: createMarkerComponent('equipment-warning-panel'),
+  default: defineComponent({
+    props: ['warnings'],
+    emits: ['navigateToEquipmentDetail'],
+    setup(props, { emit }) {
+      return () =>
+        h('div', [
+          'equipment-warning-panel',
+          props.warnings?.map(
+            (warning: { equipmentCode: string; equipmentId: string }) =>
+              h(
+                'button',
+                {
+                  type: 'button',
+                  onClick: () => emit('navigateToEquipmentDetail', warning),
+                },
+                `定位-${warning.equipmentCode}`,
+              ),
+          ),
+        ]);
+    },
+  }),
 }));
 
 vi.mock('../components/EquipmentDialog.vue', () => ({
-  default: createMarkerComponent('equipment-dialog', true),
+  default: defineComponent({
+    props: ['modelValue'],
+    setup(props) {
+      return () => (props.modelValue ? h('div', 'equipment-dialog') : null);
+    },
+  }),
 }));
 
 vi.mock('../api/operation-support-service', () => ({
+  batchUpdateEquipmentStatus: mockBatchUpdateEquipmentStatus,
   createEquipmentMaintenanceLog: mockCreateEquipmentMaintenanceLog,
   createEquipmentRecord: mockCreateEquipmentRecord,
   listEquipmentMaintenanceLogs: mockListEquipmentMaintenanceLogs,
@@ -251,6 +293,7 @@ function mountView() {
   const app = createApp({
     render: () => h(EquipmentLedgerView),
   });
+  app.directive('loading', {});
 
   app.mount(root);
 
@@ -266,6 +309,12 @@ async function flushView() {
   await nextTick();
 }
 
+function findButton(label: string) {
+  return [...document.querySelectorAll('button')].find(
+    (button) => button.textContent?.trim() === label,
+  ) as HTMLButtonElement | undefined;
+}
+
 describe('EquipmentLedgerView', () => {
   beforeEach(() => {
     mockAccessStore.accessCodes = [
@@ -278,14 +327,22 @@ describe('EquipmentLedgerView', () => {
 
     mockListEquipmentRecords.mockResolvedValue([
       {
+        commonlyUsed: true,
         enabledAt: '2026-01-01',
         equipmentCategory: 'PROCESSING',
         equipmentCode: 'EQ-1',
         equipmentName: 'Processor',
         equipmentStatus: 'ACTIVE',
+        managementCode: 'GL-001',
         id: 'EQUIPMENT-1',
         locationDescription: 'Lab A',
         modelNo: 'M-1',
+        price: 123,
+        productionDate: '2026-01-01',
+        purchaseDate: '2026-01-02',
+        purchaserCode: 'CG-01',
+        purchaserName: '采购员甲',
+        quantity: 1,
         nextMaintenanceAt: '2026-06-01',
         remarks: 'Ready',
       },
@@ -316,6 +373,7 @@ describe('EquipmentLedgerView', () => {
 
     mockCreateEquipmentRecord.mockResolvedValue(undefined);
     mockCreateEquipmentMaintenanceLog.mockResolvedValue(undefined);
+    mockBatchUpdateEquipmentStatus.mockResolvedValue([]);
     mockUpdateEquipmentRecord.mockResolvedValue(undefined);
   });
 
@@ -326,7 +384,9 @@ describe('EquipmentLedgerView', () => {
     mockListEquipmentMaintenanceLogs.mockReset();
     mockListEquipmentRecords.mockReset();
     mockListEquipmentWarnings.mockReset();
+    mockBatchUpdateEquipmentStatus.mockReset();
     mockUpdateEquipmentRecord.mockReset();
+    downloadFileFromBlobMock.mockReset();
     messageErrorMock.mockReset();
     messageSuccessMock.mockReset();
     messageWarningMock.mockReset();
@@ -347,26 +407,103 @@ describe('EquipmentLedgerView', () => {
     root.remove();
   });
 
-  it('renders main equipment sections and opens create dialog from toolbar', async () => {
+  it('renders toolbar actions and keeps selected-row actions disabled before selection', async () => {
     const { app, root } = mountView();
     await flushView();
 
-    expect(document.body.textContent).toContain('设备台账');
-    expect(document.body.textContent).toContain('equipment-catalog-panel');
-    expect(document.body.textContent).toContain('equipment-detail-panel');
-    expect(document.body.textContent).toContain('equipment-warning-panel');
+    expect(document.body.textContent).toContain('仪器设备管理');
     expect(mockListEquipmentRecords).toHaveBeenCalledTimes(1);
     expect(mockListEquipmentWarnings).toHaveBeenCalledTimes(1);
 
-    const createButton = [...document.querySelectorAll('button')].find(
-      (button) => button.textContent?.trim() === '新增设备',
-    );
-    expect(createButton).toBeTruthy();
+    expect(findButton('新增设备')).toBeTruthy();
+    expect(findButton('恢复')).toBeTruthy();
+    expect(findButton('禁用')).toBeTruthy();
+    expect(findButton('导出')).toBeTruthy();
+    expect(findButton('打印设备')).toBeTruthy();
+    expect(findButton('编辑设备')?.disabled).toBe(true);
+    expect(findButton('设备详情/保养')?.disabled).toBe(true);
+    expect(findButton('设备预警')).toBeTruthy();
 
-    createButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    app.unmount();
+    root.remove();
+  });
+
+  it('opens create dialog from toolbar', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    findButton('新增设备')?.dispatchEvent(
+      new MouseEvent('click', { bubbles: true }),
+    );
     await flushView();
 
     expect(document.body.textContent).toContain('equipment-dialog');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('opens detail drawer after selecting a row and loads maintenance logs', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    document
+      .querySelector('[data-row-id="EQUIPMENT-1"]')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushView();
+
+    expect(findButton('编辑设备')?.disabled).toBe(false);
+    expect(findButton('设备详情/保养')?.disabled).toBe(false);
+
+    findButton('设备详情/保养')?.dispatchEvent(
+      new MouseEvent('click', { bubbles: true }),
+    );
+    await flushView();
+
+    expect(document.body.textContent).toContain('设备详情与保养');
+    expect(document.body.textContent).toContain('equipment-detail-panel');
+    expect(mockListEquipmentMaintenanceLogs).toHaveBeenCalledWith(
+      'EQUIPMENT-1',
+    );
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('navigates from warning drawer back to the equipment list selection', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    findButton('设备预警')?.dispatchEvent(
+      new MouseEvent('click', { bubbles: true }),
+    );
+    await flushView();
+
+    expect(document.body.textContent).toContain('equipment-warning-panel');
+
+    [...document.querySelectorAll('button')]
+      .find((button) => button.textContent?.includes('定位-EQ-1'))
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushView();
+
+    expect(messageSuccessMock).toHaveBeenCalledWith('已定位到设备 EQ-1');
+    expect(mockListEquipmentRecords).toHaveBeenCalledTimes(2);
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('exports current rows', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    findButton('导出')?.dispatchEvent(
+      new MouseEvent('click', { bubbles: true }),
+    );
+    await flushView();
+
+    expect(downloadFileFromBlobMock).toHaveBeenCalledTimes(1);
+    expect(messageSuccessMock).toHaveBeenCalledWith('导出成功');
 
     app.unmount();
     root.remove();

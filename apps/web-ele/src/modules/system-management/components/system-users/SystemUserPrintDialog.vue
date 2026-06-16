@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import type { PrintLoginTagResponse } from '../../types/system-management';
 
-import { ElButton, ElDescriptions, ElDescriptionsItem, ElDialog } from 'element-plus';
 import { computed } from 'vue';
+
+import {
+  ElButton,
+  ElDescriptions,
+  ElDescriptionsItem,
+  ElDialog,
+} from 'element-plus';
 
 const props = defineProps<{
   modelValue: boolean;

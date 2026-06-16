@@ -1,4 +1,5 @@
 import type { SpecimenManagementListItem } from '../types/specimen-workflow';
+import type { CheckInBlockingStep } from '../utils/specimen-check-in';
 
 import { computed, reactive, ref } from 'vue';
 
@@ -6,6 +7,8 @@ import { useUserStore } from '@vben/stores';
 import { downloadFileFromBlob } from '@vben/utils';
 
 import { ElMessage } from 'element-plus';
+
+import { reportInlineErrorDisabled } from '#/utils/error-feedback';
 
 import {
   checkInSpecimen,
@@ -15,16 +18,19 @@ import {
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import { formatSpecimenStatus } from '../utils/format';
 import {
-  isCheckInReady as isCheckInReadyValue,
-  resolveExactMatches,
-  resolveUnavailableMessage,
-} from '../utils/specimen-check-in';
-import {
   loadOperatingRoomNameMapSafely,
   resolveOperatingRoomDisplayName,
 } from '../utils/operating-room-display';
+import {
+  isCheckInReady as isCheckInReadyValue,
+  resolveCheckInReadiness,
+  resolveExactMatches,
+  resolveUnavailableMessage,
+} from '../utils/specimen-check-in';
+import { useOperatorVerificationPrompt } from './useOperatorVerificationPrompt';
 
 const MAX_QUERY_SIZE = 100;
+const CHECK_IN_UNSAVED_STATUS_LABEL = '入库未保存';
 const EXPORT_HEADERS = [
   '序',
   '申请单',
@@ -35,6 +41,7 @@ const EXPORT_HEADERS = [
   '手术间',
   '标本名称',
   '标本状态',
+  '入库状态',
   '类型',
   '入库时间',
   '入库人',
@@ -43,8 +50,13 @@ const EXPORT_HEADERS = [
 ] as const;
 
 export type CheckInQueueItem = SpecimenManagementListItem & {
+  canCheckIn: boolean;
   checkedInAt?: null | string;
   checkedInByName?: null | string;
+  checkInDisabledReason: null | string;
+  checkInDraft: boolean;
+  checkInStatusTagType: 'danger' | 'info' | 'success' | 'warning';
+  displayCheckInStatus: string;
   queueAddedAt: string;
   queueAddedByName: string;
   queueStatus: 'FAILED' | 'PENDING' | 'SUCCESS';
@@ -52,6 +64,7 @@ export type CheckInQueueItem = SpecimenManagementListItem & {
 
 export function useSpecimenCheckInPanel() {
   const userStore = useUserStore();
+  const { verifyOperator } = useOperatorVerificationPrompt();
 
   const loading = ref(false);
   const actionLoading = ref(false);
@@ -64,6 +77,9 @@ export function useSpecimenCheckInPanel() {
   const selectedRowKeys = ref<string[]>([]);
 
   const operatorForm = reactive({
+    loginName:
+      (userStore.userInfo as undefined | { loginName?: string })?.loginName ??
+      '',
     operatorName: userStore.userInfo?.realName ?? '',
     operatorUserId: userStore.userInfo?.userId ?? '',
     remarks: '',
@@ -104,17 +120,102 @@ export function useSpecimenCheckInPanel() {
     );
   }
 
-  function buildQueueItem(row: SpecimenManagementListItem): CheckInQueueItem {
+  function resolveBlockingStatusLabel(
+    row: SpecimenManagementListItem,
+    blockingStep: CheckInBlockingStep | null,
+  ) {
+    if (blockingStep === 'CHECKED_IN') {
+      return '已入库';
+    }
+    if (blockingStep === 'RECEIPT_TERMINAL') {
+      if (row.specimenStatus === 'RECEIVED') {
+        return '已接收';
+      }
+      if (row.specimenStatus === 'REJECTED') {
+        return '已拒收';
+      }
+      if (row.specimenStatus === 'RETURNED') {
+        return '已退回';
+      }
+      return '流程已结束';
+    }
+    if (blockingStep === 'VERIFICATION') {
+      return '待核对';
+    }
+    if (blockingStep === 'FIXATION') {
+      return '待固定';
+    }
+    if (blockingStep === 'CONFIRMATION') {
+      return '待标本确认';
+    }
+    return '待处理';
+  }
+
+  function resolveCheckInTagType(
+    canCheckIn: boolean,
+    blockingStep: CheckInBlockingStep | null,
+  ) {
+    if (blockingStep === 'CHECKED_IN') {
+      return 'success' as const;
+    }
+    if (canCheckIn) {
+      return 'info' as const;
+    }
+    return 'danger' as const;
+  }
+
+  function resolveDisplayCheckInStatus(
+    row: SpecimenManagementListItem,
+    isCheckedIn: boolean,
+    canCheckIn: boolean,
+    blockingStep: CheckInBlockingStep | null,
+  ) {
+    if (blockingStep === 'RECEIPT_TERMINAL') {
+      return resolveBlockingStatusLabel(row, blockingStep);
+    }
+    if (isCheckedIn) {
+      return '已入库';
+    }
+    if (canCheckIn) {
+      return '待入库';
+    }
+    return resolveBlockingStatusLabel(row, blockingStep);
+  }
+
+  function buildQueueItem(
+    row: SpecimenManagementListItem,
+    applicationRows: SpecimenManagementListItem[] = [row],
+  ): CheckInQueueItem {
+    const readiness = resolveCheckInReadiness(row, applicationRows);
+    const isCheckedIn = row.checkInStatus === 'CHECKED_IN';
     return {
       ...row,
+      canCheckIn: readiness.canCheckIn,
+      checkedInAt: row.checkedInAt,
+      checkedInByName: row.checkedInByName,
+      checkInDraft: false,
+      checkInDisabledReason: readiness.reason,
+      checkInStatusTagType: resolveCheckInTagType(
+        readiness.canCheckIn,
+        readiness.blockingStep,
+      ),
+      displayCheckInStatus: resolveDisplayCheckInStatus(
+        row,
+        isCheckedIn,
+        readiness.canCheckIn,
+        readiness.blockingStep,
+      ),
       queueAddedAt: new Date().toISOString(),
       queueAddedByName:
         operatorForm.operatorName.trim() || userStore.userInfo?.realName || '-',
-      queueStatus: row.checkInStatus === 'CHECKED_IN' ? 'SUCCESS' : 'PENDING',
+      queueStatus: isCheckedIn ? 'SUCCESS' : 'PENDING',
     };
   }
 
-  async function upsertQueueItem(row: SpecimenManagementListItem) {
+  async function upsertQueueItem(
+    row: SpecimenManagementListItem,
+    applicationRows: SpecimenManagementListItem[] = [row],
+  ) {
     const roomNameById = await ensureOperatingRoomNameMapLoaded();
     const normalizedRow = {
       ...row,
@@ -123,15 +224,26 @@ export function useSpecimenCheckInPanel() {
     const index = queueItems.value.findIndex(
       (item) => item.specimenId === normalizedRow.specimenId,
     );
-    const nextRow = buildQueueItem(normalizedRow);
+    const nextRow = buildQueueItem(normalizedRow, applicationRows);
     if (index !== -1) {
       const existingRow = queueItems.value[index];
       if (!existingRow) {
         return nextRow;
       }
+      const shouldKeepUnsavedStatus =
+        existingRow.checkInDraft &&
+        nextRow.canCheckIn &&
+        nextRow.queueStatus !== 'SUCCESS';
       queueItems.value.splice(index, 1, {
         ...existingRow,
         ...nextRow,
+        checkInDraft: shouldKeepUnsavedStatus || nextRow.checkInDraft,
+        checkInStatusTagType: shouldKeepUnsavedStatus
+          ? 'warning'
+          : nextRow.checkInStatusTagType,
+        displayCheckInStatus: shouldKeepUnsavedStatus
+          ? CHECK_IN_UNSAVED_STATUS_LABEL
+          : nextRow.displayCheckInStatus,
         queueAddedAt: existingRow.queueAddedAt,
         queueAddedByName: existingRow.queueAddedByName,
       });
@@ -139,6 +251,31 @@ export function useSpecimenCheckInPanel() {
     }
     queueItems.value.unshift(nextRow);
     return nextRow;
+  }
+
+  async function upsertApplicationQueueItems(
+    applicationRows: SpecimenManagementListItem[],
+  ) {
+    for (const row of applicationRows.toReversed()) {
+      await upsertQueueItem(row, applicationRows);
+    }
+  }
+
+  function markQueuedSpecimenAsCheckInUnsaved(specimenId: string) {
+    const queueRow = queueItems.value.find(
+      (item) => item.specimenId === specimenId,
+    );
+    if (
+      !queueRow ||
+      !queueRow.canCheckIn ||
+      queueRow.queueStatus === 'SUCCESS'
+    ) {
+      return;
+    }
+
+    queueRow.displayCheckInStatus = CHECK_IN_UNSAVED_STATUS_LABEL;
+    queueRow.checkInDraft = true;
+    queueRow.checkInStatusTagType = 'warning';
   }
 
   function removeQueueItems(specimenIds: string[]) {
@@ -160,8 +297,11 @@ export function useSpecimenCheckInPanel() {
     selectedRowKeys.value = [];
   }
 
-  function isCheckInReady(row: SpecimenManagementListItem) {
-    return isCheckInReadyValue(row);
+  function isCheckInReady(
+    row: SpecimenManagementListItem,
+    applicationRows?: SpecimenManagementListItem[],
+  ) {
+    return isCheckInReadyValue(row, applicationRows);
   }
 
   async function loadMatchingSpecimens(keyword: string) {
@@ -174,56 +314,111 @@ export function useSpecimenCheckInPanel() {
     return result.items;
   }
 
-  function buildCheckInPayload(row: SpecimenManagementListItem) {
+  async function loadApplicationSpecimens(applicationNo: string) {
+    const result = await listSpecimens({
+      applicationNo,
+      page: 1,
+      size: MAX_QUERY_SIZE,
+    });
+
+    return result.items;
+  }
+
+  function buildCheckInPayload(
+    row: SpecimenManagementListItem,
+    operatorVerificationToken?: string,
+  ) {
     return {
       operatorName: operatorForm.operatorName.trim(),
       operatorUserId: operatorForm.operatorUserId.trim(),
+      ...(operatorVerificationToken ? { operatorVerificationToken } : {}),
       remarks: operatorForm.remarks.trim() || null,
-      specimenBarcode: row.barcode ?? '',
+      specimenBarcode: row.barcode ?? null,
+      specimenId: row.specimenId,
+      specimenNo: row.specimenNo,
       terminalCode: operatorForm.terminalCode.trim() || null,
     };
   }
 
-  function handleOperatorChange(user: null | { id: string; name: string }) {
+  function handleOperatorChange(
+    user: null | { id: string; loginName?: string; name: string },
+  ) {
     operatorForm.operatorUserId = user?.id ?? '';
     operatorForm.operatorName = user?.name ?? '';
+    operatorForm.loginName = user?.loginName ?? '';
   }
 
-  async function performCheckIn(row: SpecimenManagementListItem) {
+  function resolveSelectedOperator() {
     if (
       !operatorForm.operatorName.trim() ||
       !operatorForm.operatorUserId.trim()
     ) {
-      ElMessage.warning('缺少当前操作人信息');
-      return;
+      ElMessage.warning('请选择操作人');
+      return null;
     }
-    if (!row.barcode) {
-      ElMessage.warning('当前标本缺少条码，无法入库');
-      return;
+    return {
+      id: operatorForm.operatorUserId.trim(),
+      loginName: operatorForm.loginName.trim(),
+      name: operatorForm.operatorName.trim(),
+    };
+  }
+
+  function isCurrentUserSelected() {
+    return operatorForm.operatorUserId.trim() === userStore.userInfo?.userId;
+  }
+
+  async function resolveOperatorVerificationToken(selectedOperator: {
+    id: string;
+    loginName: string;
+    name: string;
+  }) {
+    if (isCurrentUserSelected()) {
+      return undefined;
     }
-    if (!isCheckInReady(row)) {
+    return (await verifyOperator(selectedOperator)) ?? undefined;
+  }
+
+  async function performCheckIn(
+    row: SpecimenManagementListItem,
+    operatorVerificationToken?: string,
+    applicationRows?: SpecimenManagementListItem[],
+  ) {
+    const resolvedApplicationRows =
+      applicationRows ?? (await loadApplicationSpecimens(row.applicationNo));
+    if (!isCheckInReady(row, resolvedApplicationRows)) {
       ElMessage.warning(
-        resolveUnavailableMessage([row], row.barcode || row.specimenNo),
+        resolveUnavailableMessage(
+          resolvedApplicationRows,
+          row.barcode || row.specimenNo,
+        ),
       );
       return;
     }
 
-    const queueRow = await upsertQueueItem(row);
+    const queueRow = await upsertQueueItem(row, resolvedApplicationRows);
     queueRow.queueStatus = 'PENDING';
 
     actionLoading.value = true;
-    pageError.value = '';
     try {
-      const result = await checkInSpecimen(row.barcode, buildCheckInPayload(row));
+      const result = await checkInSpecimen(
+        row.barcode || row.specimenId,
+        buildCheckInPayload(row, operatorVerificationToken),
+      );
       queueRow.checkInStatus = 'CHECKED_IN';
+      queueRow.specimenStatus = 'CHECKED_IN';
       queueRow.checkedInAt = result.checkedInAt ?? new Date().toISOString();
       queueRow.checkedInByName =
         result.checkedInByName ?? operatorForm.operatorName.trim();
+      queueRow.canCheckIn = false;
+      queueRow.checkInDisabledReason = '标本已完成入库，无需重复操作';
+      queueRow.checkInDraft = false;
+      queueRow.checkInStatusTagType = 'success';
+      queueRow.displayCheckInStatus = '已入库';
       queueRow.queueStatus = 'SUCCESS';
       ElMessage.success('标本入库成功');
     } catch (error) {
       queueRow.queueStatus = 'FAILED';
-      pageError.value = getWorkflowPageErrorMessage(error);
+      reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
     } finally {
       actionLoading.value = false;
     }
@@ -236,7 +431,6 @@ export function useSpecimenCheckInPanel() {
     }
 
     loading.value = true;
-    pageError.value = '';
     try {
       const items = await loadMatchingSpecimens(keyword);
       const exactMatches = resolveExactMatches(items, keyword);
@@ -253,8 +447,12 @@ export function useSpecimenCheckInPanel() {
       if (!row) {
         return;
       }
-      if (!isCheckInReady(row)) {
-        ElMessage.warning(resolveUnavailableMessage(exactMatches, keyword));
+      const applicationRows = await loadApplicationSpecimens(row.applicationNo);
+      await upsertApplicationQueueItems(applicationRows);
+
+      if (!isCheckInReady(row, applicationRows)) {
+        ElMessage.warning(resolveUnavailableMessage(applicationRows, keyword));
+        scanInput.value = '';
         return;
       }
 
@@ -267,14 +465,23 @@ export function useSpecimenCheckInPanel() {
         return;
       }
 
-      await upsertQueueItem(row);
-      await performCheckIn(row);
+      markQueuedSpecimenAsCheckInUnsaved(row.specimenId);
+      ElMessage.success('已加入入库未保存');
       scanInput.value = '';
     } catch (error) {
-      pageError.value = getWorkflowPageErrorMessage(error);
+      reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
     } finally {
       loading.value = false;
     }
+  }
+
+  async function handlePrimaryCheckIn() {
+    if (scanInput.value.trim()) {
+      await handleQuickCheckIn();
+      return;
+    }
+
+    await handleBatchCheckIn();
   }
 
   function handleSelectionChange(rows: CheckInQueueItem[]) {
@@ -282,7 +489,16 @@ export function useSpecimenCheckInPanel() {
   }
 
   async function handleManualCheckIn(row: CheckInQueueItem) {
-    await performCheckIn(row);
+    const selectedOperator = resolveSelectedOperator();
+    if (!selectedOperator) {
+      return;
+    }
+    const operatorVerificationToken =
+      await resolveOperatorVerificationToken(selectedOperator);
+    if (!operatorVerificationToken && !isCurrentUserSelected()) {
+      return;
+    }
+    await performCheckIn(row, operatorVerificationToken);
   }
 
   function handleRemoveRow(row: CheckInQueueItem) {
@@ -292,29 +508,66 @@ export function useSpecimenCheckInPanel() {
   function handleReset() {
     scanInput.value = '';
     clearQueue();
-    pageError.value = '';
     operatorForm.operatorName = userStore.userInfo?.realName ?? '';
     operatorForm.operatorUserId = userStore.userInfo?.userId ?? '';
+    operatorForm.loginName =
+      (userStore.userInfo as undefined | { loginName?: string })?.loginName ??
+      '';
     operatorForm.remarks = '';
     operatorForm.terminalCode = '';
     operatorForm.printerCode = '';
   }
 
   function canBatchOperate(row: CheckInQueueItem) {
-    return row.queueStatus !== 'SUCCESS';
+    return row.queueStatus !== 'SUCCESS' && row.canCheckIn;
+  }
+
+  function resolveBatchUnavailableMessage(rows: CheckInQueueItem[]) {
+    if (
+      rows.every(
+        (row) =>
+          row.queueStatus === 'SUCCESS' || row.checkInStatus === 'CHECKED_IN',
+      )
+    ) {
+      return '所选标本已完成入库，无需重复操作';
+    }
+
+    return (
+      rows.find((row) => row.checkInDisabledReason)?.checkInDisabledReason ??
+      '所选标本当前不可入库'
+    );
   }
 
   async function handleBatchCheckIn() {
-    const targets = selectedRows.value.filter((row) => canBatchOperate(row));
-    if (targets.length === 0) {
+    const selectedTargets =
+      selectedRows.value.length > 0
+        ? selectedRows.value
+        : queueItems.value.filter((row) => row.checkInDraft);
+    if (selectedTargets.length === 0) {
       ElMessage.warning('请先选择需要入库的标本');
+      return;
+    }
+
+    const targets = selectedTargets.filter((row) => canBatchOperate(row));
+    if (targets.length === 0) {
+      ElMessage.warning(resolveBatchUnavailableMessage(selectedTargets));
+      return;
+    }
+
+    const selectedOperator = resolveSelectedOperator();
+    if (!selectedOperator) {
+      return;
+    }
+    const operatorVerificationToken =
+      await resolveOperatorVerificationToken(selectedOperator);
+    if (!operatorVerificationToken && !isCurrentUserSelected()) {
       return;
     }
 
     retryLoading.value = true;
     try {
       for (const row of targets) {
-        await performCheckIn(row);
+        await performCheckIn(row, operatorVerificationToken);
       }
     } finally {
       retryLoading.value = false;
@@ -352,7 +605,6 @@ export function useSpecimenCheckInPanel() {
     }
 
     retryLoading.value = true;
-    pageError.value = '';
     try {
       await retryLabelPrint(batchNos[0] || '', {
         printerCode: operatorForm.printerCode.trim(),
@@ -361,7 +613,7 @@ export function useSpecimenCheckInPanel() {
       });
       ElMessage.success('补打已提交');
     } catch (error) {
-      pageError.value = getWorkflowPageErrorMessage(error);
+      reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
     } finally {
       retryLoading.value = false;
     }
@@ -387,6 +639,7 @@ export function useSpecimenCheckInPanel() {
         resolveExportValue(row.surgeryName),
         resolveExportValue(row.specimenName),
         resolveExportValue(formatSpecimenStatus(row.specimenStatus)),
+        resolveExportValue(row.displayCheckInStatus),
         resolveExportValue(row.specimenType),
         resolveExportValue(row.checkedInAt),
         resolveExportValue(row.checkedInByName),
@@ -406,7 +659,7 @@ export function useSpecimenCheckInPanel() {
       });
       ElMessage.success('导出成功');
     } catch (error) {
-      pageError.value = getWorkflowPageErrorMessage(error);
+      reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
     } finally {
       exportLoading.value = false;
     }
@@ -422,6 +675,7 @@ export function useSpecimenCheckInPanel() {
     handleExport,
     handleManualCheckIn,
     handleOperatorChange,
+    handlePrimaryCheckIn,
     handleQuickCheckIn,
     handleRemoveRow,
     handleReset,

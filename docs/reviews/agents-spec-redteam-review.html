@@ -1,0 +1,800 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AGENTS.md 及关联规范 — 红队评估报告</title>
+    <style>
+      :root {
+        --bg: #0f1419;
+        --panel: #1a212b;
+        --panel2: #212a36;
+        --txt: #e6edf3;
+        --muted: #9aa7b4;
+        --line: #2d3845;
+        --accent: #4ea1ff;
+        --hi: #ff5c5c;
+        --med: #ffb020;
+        --low: #6ee7b7;
+        --ok: #5ad19a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font:
+          15px/1.7 -apple-system,
+          'Segoe UI',
+          Roboto,
+          'Microsoft YaHei',
+          sans-serif;
+        color: var(--txt);
+        background: var(--bg);
+      }
+
+      header {
+        padding: 34px 28px;
+        background: linear-gradient(135deg, #13243b, #0f1419);
+        border-bottom: 1px solid var(--line);
+      }
+
+      header h1 {
+        margin: 0 0 8px;
+        font-size: 26px;
+      }
+
+      header .meta {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .wrap {
+        max-width: 1080px;
+        padding: 24px 28px 80px;
+        margin: 0 auto;
+      }
+
+      h2 {
+        padding-left: 12px;
+        margin: 38px 0 14px;
+        font-size: 20px;
+        border-left: 4px solid var(--accent);
+      }
+
+      h3 {
+        margin: 22px 0 8px;
+        font-size: 16px;
+      }
+
+      p {
+        margin: 8px 0;
+      }
+
+      code {
+        padding: 1px 6px;
+        font-family: 'Cascadia Code', Consolas, monospace;
+        font-size: 13px;
+        color: #ffd479;
+        background: #0c1118;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+      }
+
+      .card {
+        padding: 18px 20px;
+        margin: 14px 0;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin: 18px 0;
+      }
+
+      .stat {
+        padding: 16px;
+        text-align: center;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+      }
+
+      .stat .n {
+        font-size: 30px;
+        font-weight: 700;
+      }
+
+      .stat .l {
+        margin-top: 4px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      table {
+        width: 100%;
+        margin: 12px 0;
+        font-size: 14px;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 9px 11px;
+        vertical-align: top;
+        text-align: left;
+        border: 1px solid var(--line);
+      }
+
+      th {
+        color: #cdd9e5;
+        background: var(--panel2);
+      }
+
+      tr:nth-child(even) td {
+        background: #161d27;
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 2px 9px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #0f1419;
+        border-radius: 20px;
+      }
+
+      .b-hi {
+        background: var(--hi);
+      }
+
+      .b-med {
+        background: var(--med);
+      }
+
+      .b-low {
+        background: var(--low);
+      }
+
+      .b-ok {
+        background: var(--ok);
+      }
+
+      .finding {
+        border-left: 4px solid var(--line);
+      }
+
+      .finding.hi {
+        border-left-color: var(--hi);
+      }
+
+      .finding.med {
+        border-left-color: var(--med);
+      }
+
+      .finding.low {
+        border-left-color: var(--low);
+      }
+
+      .finding h3 {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .kv {
+        margin: 2px 0;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .kv b {
+        color: var(--txt);
+      }
+
+      ul {
+        padding-left: 22px;
+        margin: 6px 0;
+      }
+
+      li {
+        margin: 3px 0;
+      }
+
+      .ev {
+        padding: 10px 14px;
+        margin: 8px 0;
+        font-size: 13px;
+        color: #c8d3de;
+        background: #0c1118;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+
+      .ev .src {
+        font-family: monospace;
+        font-size: 12px;
+        color: var(--accent);
+      }
+
+      .tag {
+        padding: 1px 7px;
+        margin-right: 6px;
+        font-size: 12px;
+        color: var(--muted);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+      }
+
+      .pos {
+        border-left-color: var(--ok);
+      }
+
+      footer {
+        padding: 30px;
+        font-size: 12px;
+        color: var(--muted);
+        text-align: center;
+        border-top: 1px solid var(--line);
+      }
+
+      a {
+        color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>AGENTS.md 及关联规范 — 红队评估报告</h1>
+      <div class="meta">
+        审查角色：红队攻击审查人员（Red Team）&nbsp;·&nbsp; 审查对象：<code
+          >SYBaseProjectWeb</code
+        >
+        的 <code>AGENTS.md</code> 与 <code>docs/*_RULES.md</code> 规范体系 +
+        <code>.github</code> / <code>lefthook.yml</code> 门禁<br />
+        审查日期：2026-06-10&nbsp;·&nbsp;审查方式：全量通读 + 引用核验 +
+        与真实配置（package.json / lefthook / GitHub Actions）逐项对账
+      </div>
+    </header>
+
+    <div class="wrap">
+      <h2>0. 结论摘要（TL;DR）</h2>
+      <div class="card">
+        <p>
+          规范体系<strong>结构清晰、引用基本健康、去重设计有意识</strong>：13
+          个被引用的顶层文档全部存在，<code>lefthook.yml</code>、<code>frontend-quality.yml</code>、<code>tests/e2e/smoke/auth-router-request.spec.ts</code>、<code
+            >package.json</code
+          >
+          脚本与
+          <code>engines</code>
+          等被文档点名的工程事实<strong>全部真实且与描述一致</strong>。
+        </p>
+        <p>
+          从红队视角，<strong>最大风险不是"写错引用"，而是"规则不起作用"</strong>：绝大多数治理条款（任务确认模板、Workflow
+          Packet、Red Team、Memory
+          Update、人工确认升级）<strong>没有任何机器门禁强制执行</strong>，完全依赖
+          AI / 人的自觉，且 <code>cspell</code> 明确不扫描
+          <code>docs/*.md</code>
+          与根目录记忆文件——这意味着规范可以被静默绕过而不被任何检查拦截。其余为命名不一致、孤儿引用、重复编写等中低危治理债。
+        </p>
+      </div>
+
+      <div class="grid">
+        <div class="stat">
+          <div class="n" style="color: var(--hi)">1</div>
+          <div class="l">高危（执行性/可绕过）</div>
+        </div>
+        <div class="stat">
+          <div class="n" style="color: var(--med)">4</div>
+          <div class="l">中危（引用/冲突）</div>
+        </div>
+        <div class="stat">
+          <div class="n" style="color: var(--low)">5</div>
+          <div class="l">低危（重复/漂移）</div>
+        </div>
+        <div class="stat">
+          <div class="n" style="color: var(--ok)">3</div>
+          <div class="l">良好实践（保留）</div>
+        </div>
+      </div>
+
+      <div class="card" style="border-left: 4px solid var(--ok)">
+        <b style="color: var(--ok)">整改状态更新（2026-06-10）：</b> R-02 ~ R-10
+        已在本轮全部完成文档级修正（均为绿区改动）；R-06
+        经评估后<strong>保留</strong>（导航清单有实际价值，仅记录漂移风险）。R-01
+        涉及 CI 与 <code>package.json</code> 的 cspell
+        范围，属红区，<strong>待人工确认后再执行</strong>。下表“状态”列为最新结果。
+      </div>
+      <h2>1. 问题清单总览</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>类别</th>
+            <th>问题</th>
+            <th>位置</th>
+            <th>严重度</th>
+            <th>状态</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>R-01</td>
+            <td>不起作用</td>
+            <td>
+              治理类规则无机器门禁，可被静默绕过；cspell 不扫描 md/记忆文件
+            </td>
+            <td>AGENTS §4/§7/§8 · CI · lefthook</td>
+            <td><span class="badge b-hi">高</span></td>
+            <td>待人工确认（红区）</td>
+          </tr>
+          <tr>
+            <td>R-02</td>
+            <td>引用不当</td>
+            <td>
+              “<code>.github</code> PR/Issue 模板”引用了不存在的 Issue
+              模板（孤儿引用）
+            </td>
+            <td>AGENTS.md §9</td>
+            <td><span class="badge b-med">中</span></td>
+            <td><span class="badge b-ok">已修正</span></td>
+          </tr>
+          <tr>
+            <td>R-03</td>
+            <td>冲突/不一致</td>
+            <td>
+              第 7 个主 Workflow 命名 <code>Workflow-Infra</code> 与
+              <code>Workflow/Infra</code> 混用
+            </td>
+            <td>AGENTS §4 · DYNAMIC · PR 模板</td>
+            <td><span class="badge b-med">中</span></td>
+            <td><span class="badge b-ok">已修正</span></td>
+          </tr>
+          <tr>
+            <td>R-04</td>
+            <td>冲突/不一致</td>
+            <td>
+              红区清单在 AGENTS §5 与 GIT_RULES §7
+              各列一份且不一致（漏“浏览器兼容兜底方案”）
+            </td>
+            <td>AGENTS §5 · GIT_RULES §7</td>
+            <td><span class="badge b-med">中</span></td>
+            <td><span class="badge b-ok">已修正</span></td>
+          </tr>
+          <tr>
+            <td>R-05</td>
+            <td>不一致</td>
+            <td>
+              修饰器名称中英混用：<code>Browser 验证</code> vs
+              <code>Browser Verification</code>
+            </td>
+            <td>AGENTS/DYNAMIC · PR 模板</td>
+            <td><span class="badge b-med">中</span></td>
+            <td><span class="badge b-ok">已修正</span></td>
+          </tr>
+          <tr>
+            <td>R-06</td>
+            <td>重复编写</td>
+            <td>顶层文档清单在 4 处重复维护，存在漂移风险</td>
+            <td>AGENTS §1/§2/关联 · docs/README</td>
+            <td><span class="badge b-low">低</span></td>
+            <td>保留（导航价值）</td>
+          </tr>
+          <tr>
+            <td>R-07</td>
+            <td>重复编写</td>
+            <td>CODING_RULES 内部重复描述 cspell 扫描范围（第 63 与 69 行）</td>
+            <td>CODING_RULES.md</td>
+            <td><span class="badge b-low">低</span></td>
+            <td><span class="badge b-ok">已修正</span></td>
+          </tr>
+          <tr>
+            <td>R-08</td>
+            <td>软冲突</td>
+            <td>
+              AI-CODE-HEALTH 与 VUE_TS_RULES 在 <code>any</code> 禁令 /
+              行数阈值上口径不同
+            </td>
+            <td>AI-CODE-HEALTH §2.5/§4.1</td>
+            <td><span class="badge b-low">低</span></td>
+            <td><span class="badge b-ok">已修正</span></td>
+          </tr>
+          <tr>
+            <td>R-09</td>
+            <td>引用易误读</td>
+            <td>跨仓引用 <code>docs/rules/DB_RULES.md</code> 未加仓库限定符</td>
+            <td>DYNAMIC §DB Workflow</td>
+            <td><span class="badge b-low">低</span></td>
+            <td><span class="badge b-ok">已修正</span></td>
+          </tr>
+          <tr>
+            <td>R-10</td>
+            <td>门禁分布</td>
+            <td>
+              门禁分布不对称：lint 仅在 CI、cspell/dep/e2e 不在 CI，易产生“hook
+              过=安全”误解
+            </td>
+            <td>lefthook · CI · RELEASE §5</td>
+            <td><span class="badge b-low">低</span></td>
+            <td><span class="badge b-ok">已修正（补门禁矩阵）</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>2. 详细发现</h2>
+
+      <div class="card finding hi">
+        <h3>
+          <span class="badge b-hi">高</span> R-01 ·
+          治理规则缺乏机器门禁，可被静默绕过
+        </h3>
+        <p class="kv"><b>类别：</b>规则不起作用（红队核心关切）</p>
+        <p>
+          规范要求大量“硬约束”：任务开始必须输出<em>任务确认模板</em>（AGENTS
+          §4）、PR 必须填写 <em>Workflow Packet</em> 与
+          <em>Memory Update Packet</em>（AGENTS §7、DYNAMIC §Workflow
+          Packet）、高风险必须做
+          <em>Red Team</em>、红区必须<em>人工确认</em>（AGENTS
+          §5/§6）。但实际门禁只有：
+        </p>
+        <div class="ev">
+          <div class="src">lefthook.yml（pre-push）</div>
+          check-type → <code>pnpm check:type</code>，check-circular →
+          <code>pnpm check:circular</code>，test-unit →
+          <code>pnpm test:unit</code>
+        </div>
+        <div class="ev">
+          <div class="src">.github/workflows/frontend-quality.yml</div>
+          check:type · build:ele · test:unit · lint · check:circular（<b>无</b>
+          PR 正文/Packet 校验，<b>无</b> cspell/dep/e2e）
+        </div>
+        <div class="ev">
+          <div class="src">docs/CODING_RULES.md:63 / package.json:24</div>
+          <code>cspell lint "**/*.{ts,tsx,vue}" "**/README.md"</code> ——
+          明确<strong>不扫描</strong>
+          <code>docs/*.md</code> 规范与根目录五类记忆文件
+        </div>
+        <p>
+          <b>红队攻击路径：</b>一个 PR 完全不写 Workflow Packet、不做 Red
+          Team、不更新记忆文件、甚至在
+          <code>AGENTS.md</code>
+          里引入错别字或矛盾条款——只要类型/循环依赖/单测/lint 通过，CI 与 hook
+          都会放行，无任何拦截。即“规则写了，但没有任何执行回路保证它被遵守”。
+        </p>
+        <p>
+          <b>影响：</b
+          >这是全套规范最系统性的弱点：治理强度等同于“君子协定”，对不合作或疏忽的提交者无效，长期会导致规范与现实漂移。
+        </p>
+        <p>
+          <b>建议：</b>(1) 增加一个轻量 CI job 校验 PR 正文是否含必填 Packet
+          字段（关键词存在性即可）；(2) 将 <code>cspell</code> 扫描范围扩展到
+          <code>docs/**/*.md</code> 与根目录记忆文件，或新增 markdown lint；(3)
+          在 <code>AGENTS.md</code> 显式承认“本规范以软约束为主、机器门禁仅覆盖
+          X/Y/Z”，避免读者高估强制力。
+        </p>
+      </div>
+
+      <div class="card finding med">
+        <h3><span class="badge b-med">中</span> R-02 · “Issue 模板”孤儿引用</h3>
+        <p class="kv"><b>类别：</b>引用不当（指向不存在的产物）</p>
+        <div class="ev">
+          <div class="src">AGENTS.md §9 语言与提交约束</div>
+          “…及 <code>.github</code> PR/Issue 模板沿用其现有英文结构…”
+        </div>
+        <p>
+          <b>核验：</b><code>.github/</code> 下仅有
+          <code>PULL_REQUEST_TEMPLATE.md</code> 与
+          <code>workflows/</code>，<strong>不存在</strong>
+          <code>ISSUE_TEMPLATE</code>（已用 glob 确认 0 命中）。
+        </p>
+        <p>
+          <b>影响：</b>读者会误以为存在 Issue
+          模板并去“沿用”，造成困惑；也可能掩盖“本项目用 Linear 而非 GitHub
+          Issue”的真实流程。
+        </p>
+        <p>
+          <b>建议：</b>改为“<code>.github</code> PR 模板”，或补一个真实的
+          <code>ISSUE_TEMPLATE</code>；若 Issue 流程在 Linear，应明示。
+        </p>
+      </div>
+
+      <div class="card finding med">
+        <h3>
+          <span class="badge b-med">中</span> R-03 · 主 Workflow 名称
+          <code>Workflow-Infra</code> / <code>Workflow/Infra</code> 混用
+        </h3>
+        <p class="kv"><b>类别：</b>命名冲突 / 不一致</p>
+        <div class="ev">
+          <div class="src">DYNAMIC_WORKFLOW_RULES.md:17 / :299 / :307</div>
+          “…Production Debug、<b>Workflow/Infra</b> 之一”；章节标题
+          <b>## Workflow/Infra Workflow</b>
+        </div>
+        <div class="ev">
+          <div class="src">
+            DYNAMIC:37 · AGENTS.md:101 · PULL_REQUEST_TEMPLATE.md:14
+          </div>
+          触发信号表 / 任务确认模板 / PR 模板均写作
+          <b>Workflow-Infra</b>（连字符）
+        </div>
+        <p>
+          <b>影响：</b
+          >同一枚举项出现两种写法，破坏“同一概念全项目统一命名”（CODING_RULES
+          §1）；若未来做 PR
+          正文自动校验或脚本匹配，会因斜杠/连字符不一致而漏匹配。
+        </p>
+        <p>
+          <b>建议：</b>统一为一种（推荐连字符
+          <code>Workflow-Infra</code
+          >，与表格/模板一致），同步修正总规则与章节标题。
+        </p>
+      </div>
+
+      <div class="card finding med">
+        <h3>
+          <span class="badge b-med">中</span> R-04 · 红区清单重复定义且不一致
+        </h3>
+        <p class="kv"><b>类别：</b>重复编写 + 内容漂移</p>
+        <div class="ev">
+          <div class="src">AGENTS.md §5 文件操作边界（红区）</div>
+          权限模型、登录态、全局拦截器、构建配置、发布脚本、<b
+            >浏览器兼容兜底方案</b
+          >
+        </div>
+        <div class="ev">
+          <div class="src">GIT_RULES.md §7</div>
+          “涉及红区文件（权限模型、登录态、全局拦截器、构建配置、发布脚本）…” ——
+          <b>缺少“浏览器兼容兜底方案”</b>
+        </div>
+        <p>
+          <b>影响：</b>红区是风险分级的核心定义，被两处各自枚举一份。GIT_RULES
+          漏掉一项，已经发生事实漂移；以后只改一处会进一步扩大分歧。
+        </p>
+        <p>
+          <b>建议：</b>红区定义只在 <code>AGENTS.md §5</code> 维护，GIT_RULES
+          改为“见 AGENTS.md §5 红区定义”而不重列具体条目（与 §8
+          记忆层“唯一来源”做法保持一致）。
+        </p>
+      </div>
+
+      <div class="card finding med">
+        <h3><span class="badge b-med">中</span> R-05 · 修饰器名称中英混用</h3>
+        <p class="kv"><b>类别：</b>命名不一致</p>
+        <div class="ev">
+          <div class="src">AGENTS.md §4 / DYNAMIC 触发信号表</div>
+          强制修饰器：Security / DB / Red Team / Backend Cross-check /
+          <b>Browser 验证</b>
+        </div>
+        <div class="ev">
+          <div class="src">PULL_REQUEST_TEMPLATE.md:17</div>
+          Required modifiers: Security / DB / Red Team / Backend Cross-check /
+          <b>Browser Verification</b>
+        </div>
+        <p>
+          <b>影响：</b>同一修饰器中文档叫“Browser 验证”、PR 模板叫“Browser
+          Verification”，填写者难以一一对应，弱化可核对性。
+        </p>
+        <p>
+          <b>建议：</b>固定一种写法（PR 模板英文 + 文档中文括注，如
+          <code>Browser 验证（Browser Verification）</code>），全链路统一。
+        </p>
+      </div>
+
+      <div class="card finding low">
+        <h3>
+          <span class="badge b-low">低</span> R-06 · 顶层文档清单在 4 处重复维护
+        </h3>
+        <p class="kv"><b>类别：</b>重复编写 / 漂移风险</p>
+        <p>
+          同一份顶层规范文档列表分别出现在：<code>AGENTS.md §1 必读顺序</code
+          >、<code>AGENTS.md §2 规范映射表</code>、<code
+            >AGENTS.md 关联文档</code
+          >、<code>docs/README.md 顶层规范文档</code
+          >。新增/重命名一个规范文档需同步改 4 处。
+        </p>
+        <p>
+          <b>建议：</b>以 <code>docs/README.md</code> 为清单单一来源，AGENTS
+          其余处尽量引用而非复制完整列表（必读顺序确有排序价值可保留，但关联文档段可精简）。
+        </p>
+      </div>
+
+      <div class="card finding low">
+        <h3>
+          <span class="badge b-low">低</span> R-07 · CODING_RULES 内部重复描述
+          cspell 范围
+        </h3>
+        <p class="kv"><b>类别：</b>重复编写</p>
+        <div class="ev">
+          <div class="src">CODING_RULES.md:63</div>
+          “…cspell 校验（扫描 <code>**/*.{ts,tsx,vue}</code> 与
+          <code>**/README.md</code>，不覆盖其他 <code>*.md</code>）”
+        </div>
+        <div class="ev">
+          <div class="src">CODING_RULES.md:69</div>
+          “<code>pnpm check:cspell</code> 扫描 <code>**/*.{ts,tsx,vue}</code> 与
+          <code>**/README.md</code>，仍不覆盖其他 <code>*.md</code>…”
+        </div>
+        <p><b>建议：</b>合并为一处描述，避免两行近乎同义、未来各改一半。</p>
+      </div>
+
+      <div class="card finding low">
+        <h3>
+          <span class="badge b-low">低</span> R-08 · AI-CODE-HEALTH
+          与专项规范的软冲突
+        </h3>
+        <p class="kv"><b>类别：</b>潜在冲突（已被优先级规则形式化化解）</p>
+        <ul>
+          <li>
+            <b>any：</b>AI-CODE-HEALTH §4.1“<em>禁止</em> any，必须用
+            unknown”；VUE_TS_RULES §3 / AGENTS 健康基线只说“<em>避免滥用</em>
+            any”。硬禁 vs 软避。
+          </li>
+          <li>
+            <b>行数：</b>AI-CODE-HEALTH §2.5“UI 组件 ≤100
+            行”；VUE_TS_RULES“单个页面组件超过<em>数百行</em>…必须拆分”。阈值不同。
+          </li>
+        </ul>
+        <p>
+          <b>缓解：</b>AI-CODE-HEALTH §使用边界已明确“专项规范 &gt;
+          本规范”，且自述行数为“参考值不是目标”，冲突在形式上已被消解。<b>但</b>读者仍会因两套数字产生认知负担。
+        </p>
+        <p>
+          <b>建议：</b>在 AI-CODE-HEALTH 冲突点就地加一句“具体口径以
+          VUE_TS_RULES 为准”，降低误读。
+        </p>
+      </div>
+
+      <div class="card finding low">
+        <h3><span class="badge b-low">低</span> R-09 · 跨仓引用缺仓库限定符</h3>
+        <p class="kv"><b>类别：</b>引用易误读（路径本身存在）</p>
+        <div class="ev">
+          <div class="src">DYNAMIC_WORKFLOW_RULES.md:161</div>
+          “…对照后端 <code>docs/rules/DB_RULES.md</code> 与迁移脚本”
+        </div>
+        <p>
+          <b>核验：</b>后端 <code>SYBaseProject/docs/rules/DB_RULES.md</code>
+          <strong>确实存在</strong>，路径正确。但在前端仓库语境下写
+          <code>docs/rules/...</code> 容易被误当成本仓库路径（本仓库
+          <code>docs/</code> 下并无 <code>rules/</code>）。
+        </p>
+        <p>
+          <b>建议：</b>加仓库前缀，如
+          <code>SYBaseProject/docs/rules/DB_RULES.md</code>，与 AGENTS
+          §3“不写死绝对路径、但需明确跨仓”精神一致。
+        </p>
+      </div>
+
+      <div class="card finding low">
+        <h3>
+          <span class="badge b-low">低</span> R-10 · 门禁分布不对称，易生“hook
+          过=安全”误解
+        </h3>
+        <p class="kv"><b>类别：</b>门禁覆盖说明</p>
+        <p>
+          实际门禁分布：<code>lint</code> 仅在 CI（不在 pre-push）；<code
+            >cspell</code
+          >
+          / <code>check:dep</code> / <code>test:e2e</code> 既不在 pre-push
+          也不在 CI（仅 <code>pnpm check</code> 与 RELEASE §5
+          发布门禁覆盖）。GIT_RULES §7 已部分说明“hook
+          不覆盖完整构建/E2E/联调”，缓解了大部分风险，但未点明
+          <em>lint 不在 pre-push、cspell 不在 CI</em> 这类细节。
+        </p>
+        <p>
+          <b>建议：</b>在 GIT_RULES §7 或 CODING_RULES
+          补一张“门禁覆盖矩阵”（命令 × pre-commit / pre-push / CI /
+          发布门禁），让“哪层拦哪些”一目了然。
+        </p>
+      </div>
+
+      <h2>3. 良好实践（建议保留，不要在整改中破坏）</h2>
+
+      <div class="card finding pos">
+        <h3>
+          <span class="badge b-ok">OK</span> P-01 · 记忆更新“唯一来源”去重设计
+        </h3>
+        <p>
+          AGENTS §8 被声明为 AI Memory Update 的<strong>唯一来源</strong>，<code
+            >DYNAMIC_WORKFLOW_RULES §Memory Layer</code
+          >（“…以 AGENTS.md 第 8 节为唯一来源，本文件不再重复”）与
+          <code>GIT_RULES §8</code> 都显式
+          defer，而非各写一遍。这正是治理文档应有的去重范式，<b
+            >R-04 红区定义应照此整改</b
+          >。
+        </p>
+      </div>
+
+      <div class="card finding pos">
+        <h3><span class="badge b-ok">OK</span> P-02 · 冲突优先级被显式定义</h3>
+        <p>
+          AI-CODE-HEALTH §使用边界明确“仓库专项规范 &gt; 本规范 &gt;
+          通用经验”，并要求差异时以专项规范为准。这把 R-08
+          这类跨文档口径差异从“硬冲突”降级为“可裁决的软冲突”，是成熟的冲突治理。
+        </p>
+      </div>
+
+      <div class="card finding pos">
+        <h3>
+          <span class="badge b-ok">OK</span> P-03 ·
+          文档点名的工程事实全部真实可核对
+        </h3>
+        <p>
+          逐项对账通过：13 个顶层规范文档、<code>lefthook.yml</code> 的 4 个
+          hook 与具体命令、<code>frontend-quality.yml</code>
+          步骤、<code>tests/e2e/smoke/auth-router-request.spec.ts</code>、<code
+            >package.json</code
+          >
+          中
+          <code
+            >dev:ele/lint/check:type/check/test:unit/test:e2e/build/build:ele/check:circular/check:cspell/check:dep</code
+          >
+          脚本、<code>engines</code> 字段、<code>.logs/*</code>
+          写入行为，<strong>均与文档描述一致</strong>，未发现指向不存在脚本/文件的硬性失效引用。
+        </p>
+      </div>
+
+      <h2>4. 整改优先级建议</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>顺序</th>
+            <th>动作</th>
+            <th>对应问题</th>
+            <th>成本</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>
+              新增 PR 正文 Packet 校验 job + 扩展 cspell/新增 md lint 到 docs
+              与记忆文件；并在 AGENTS 标注真实强制边界
+            </td>
+            <td>R-01</td>
+            <td>中</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>
+              统一 <code>Workflow-Infra</code> 与
+              <code>Browser 验证</code> 命名；修正“Issue 模板”引用
+            </td>
+            <td>R-03 / R-05 / R-02</td>
+            <td>低</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>红区定义收敛到 AGENTS §5，GIT_RULES 改为引用</td>
+            <td>R-04</td>
+            <td>低</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>
+              文档清单单一来源化 + CODING_RULES 去重 + 跨仓路径加前缀 +
+              门禁覆盖矩阵 + AI-CODE-HEALTH 就地裁决注
+            </td>
+            <td>R-06~R-10</td>
+            <td>低</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p style="margin-top: 18px; font-size: 13px; color: var(--muted)">
+        说明：本报告仅做规范一致性与可执行性审查，未改动任何规范文件；所有“核验”结论均基于对仓库真实文件与配置的读取与
+        glob/grep 比对。属绿区（文档/审查产物），未触达红区。
+      </p>
+    </div>
+
+    <footer>
+      红队规范审查报告 · SYBaseProjectWeb · 生成于 2026-06-10 · 本文件位于
+      <code>docs/reviews/agents-spec-redteam-review.html</code>
+    </footer>
+  </body>
+</html>

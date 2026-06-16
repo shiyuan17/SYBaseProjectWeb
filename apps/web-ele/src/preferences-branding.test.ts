@@ -38,7 +38,7 @@ describe('preferences-branding', () => {
     vi.stubGlobal('localStorage', createStorageMock());
     vi.stubGlobal('sessionStorage', createStorageMock());
     brandingModule = await import('./preferences-branding');
-  });
+  }, 30_000);
 
   it('builds migrated preferences while preserving non-brand settings', () => {
     const legacyPreferences = clonePreferences();

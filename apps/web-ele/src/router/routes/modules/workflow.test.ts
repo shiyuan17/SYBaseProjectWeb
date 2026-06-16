@@ -1,8 +1,18 @@
+import type { RouteRecordRaw } from 'vue-router';
+
 import { describe, expect, it } from 'vitest';
 
 import { M2_PERMISSION_CODES } from '#/modules/specimen-workflow/constants';
 
+import technicalWorkflowRoutes from './technical-workflow';
 import workflowRoutes from './workflow';
+
+function collectRoutes(routes: RouteRecordRaw[]): RouteRecordRaw[] {
+  return routes.flatMap((route) => [
+    route,
+    ...collectRoutes(route.children ?? []),
+  ]);
+}
 
 describe('workflow routes', () => {
   it('registers the consolidated M2 workflow routes with hidden legacy redirects', () => {
@@ -21,6 +31,9 @@ describe('workflow routes', () => {
     const trackingRoute = workflowRoot?.children?.find(
       (route) => route.name === 'TrackingException',
     );
+    const receiptRoute = workflowRoot?.children?.find(
+      (route) => route.name === 'PathologyReceipt',
+    );
     const trackingQueryRoute = workflowRoot?.children?.find(
       (route) => route.name === 'TrackingQuery',
     );
@@ -33,13 +46,13 @@ describe('workflow routes', () => {
 
     expect(workflowRoot?.path).toBe('/workflow');
     expect(visibleRoutes?.map((route) => route.name)).toEqual([
-      'SubmissionRegistration',
       'ApplicationRegistrationWorkbench',
       'FixationTransport',
       'TrackingException',
     ]);
     expect(submissionRoute?.path).toBe('/workflow/submission-registration');
     expect(submissionRoute?.meta?.title).toBe('申请与登记');
+    expect(submissionRoute?.meta?.hideInMenu).toBe(true);
     expect(submissionRoute?.meta?.keepAlive).toBe(true);
     expect(submissionRoute?.meta?.authority).toEqual([
       M2_PERMISSION_CODES.APPLICATION_DETAIL_QUERY,
@@ -50,7 +63,7 @@ describe('workflow routes', () => {
     expect(workbenchRoute?.path).toBe(
       '/workflow/application-registration-workbench',
     );
-    expect(workbenchRoute?.meta?.title).toBe('申请登记工作台');
+    expect(workbenchRoute?.meta?.title).toBe('标本采集');
     expect(workbenchRoute?.meta?.keepAlive).toBe(true);
     expect(workbenchRoute?.meta?.authority).toEqual([
       M2_PERMISSION_CODES.APPLICATION_DETAIL_QUERY,
@@ -63,6 +76,12 @@ describe('workflow routes', () => {
     expect(fixationTransportRoute?.meta?.authority).toEqual([
       M2_PERMISSION_CODES.FIXATION_VERIFY,
       M2_PERMISSION_CODES.TRANSPORT_HANDOVER,
+    ]);
+    expect(receiptRoute?.path).toBe('/workflow/pathology-receipt');
+    expect(receiptRoute?.meta?.hideInMenu).toBe(true);
+    expect(receiptRoute?.meta?.keepAlive).toBe(true);
+    expect(receiptRoute?.meta?.authority).toEqual([
+      M2_PERMISSION_CODES.SPECIMEN_RECEIVE,
     ]);
     expect(compatibilityRoute?.path).toBe('/workflow/clinical-register');
     expect(compatibilityRoute?.meta?.title).toBe('送检登记兼容页');
@@ -77,5 +96,23 @@ describe('workflow routes', () => {
     expect(trackingQueryRoute?.meta?.title).toBe('追踪查询');
     expect(trackingQueryRoute?.meta?.hideInMenu).toBe(true);
     expect(trackingQueryRoute?.meta?.keepAlive).toBeUndefined();
+  });
+
+  it('keeps route names and component page paths unique across M2 and M3 modules', () => {
+    const routes = collectRoutes([
+      ...workflowRoutes,
+      ...technicalWorkflowRoutes,
+    ]);
+    const namedRoutes = routes.filter((route) => route.name);
+    const componentPageRoutes = routes.filter(
+      (route) => route.component && !route.redirect,
+    );
+
+    expect(namedRoutes.map((route) => route.name)).toHaveLength(
+      new Set(namedRoutes.map((route) => route.name)).size,
+    );
+    expect(componentPageRoutes.map((route) => route.path)).toHaveLength(
+      new Set(componentPageRoutes.map((route) => route.path)).size,
+    );
   });
 });

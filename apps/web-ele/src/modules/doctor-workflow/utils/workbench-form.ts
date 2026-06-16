@@ -16,14 +16,10 @@ export function createDiagnosticTaskActionDefaults(
 
 export function createMedicalOrderDefaults(
   caseId = '',
-  operatorName = '',
-  operatorUserId = '',
   terminalCode = '',
 ): CreateMedicalOrderRequest {
   return {
     caseId,
-    operatorName,
-    operatorUserId,
     orderContent: '',
     orderType: '',
     remarks: '',
@@ -39,9 +35,6 @@ export function validateMedicalOrderForm(form: CreateMedicalOrderRequest) {
   if (!form.caseId.trim()) {
     return '缺少病例 ID';
   }
-  if (!form.operatorName.trim()) {
-    return '请填写操作人姓名';
-  }
   if (!form.orderType) {
     return '请选择医嘱类型';
   }
@@ -56,8 +49,6 @@ export function buildCreateMedicalOrderRequest(
 ): CreateMedicalOrderRequest {
   return {
     caseId: form.caseId.trim(),
-    operatorName: form.operatorName.trim(),
-    operatorUserId: optionalText(form.operatorUserId),
     orderContent: form.orderContent.trim(),
     orderType: form.orderType,
     remarks: optionalText(form.remarks),
@@ -66,14 +57,10 @@ export function buildCreateMedicalOrderRequest(
 }
 
 export function buildCancelMedicalOrderRequest(options: {
-  operatorName: string;
-  operatorUserId?: string;
   remarks?: string;
   terminalCode?: string;
 }): MedicalOrderActionRequest {
   return {
-    operatorName: options.operatorName.trim(),
-    operatorUserId: optionalText(options.operatorUserId),
     remarks: optionalText(options.remarks),
     terminalCode: optionalText(options.terminalCode),
   };

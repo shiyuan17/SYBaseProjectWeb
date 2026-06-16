@@ -35,7 +35,7 @@ const canHandoverTransport = computed(() =>
   accessCodeSet.value.has(M2_PERMISSION_CODES.TRANSPORT_HANDOVER),
 );
 
-const activeTab = ref<FixationTransportTab>('verification');
+const activeTab = ref<FixationTransportTab>('binding');
 
 function resolveAvailableTab(
   preferredTab: FixationTransportTab,
@@ -55,7 +55,7 @@ function resolveAvailableTab(
   ) {
     return preferredTab;
   }
-  return canVerifyFixation.value ? 'verification' : 'transport';
+  return canVerifyFixation.value ? 'binding' : 'transport';
 }
 
 function resolveRouteInitialTab(): FixationTransportTab {
@@ -68,7 +68,7 @@ function resolveRouteInitialTab(): FixationTransportTab {
   ) {
     return route.query.tab;
   }
-  return 'verification';
+  return 'binding';
 }
 
 watch(
@@ -81,9 +81,14 @@ watch(
 </script>
 
 <template>
-  <Page>
+  <Page :show-header="false">
     <div class="flex flex-col gap-4">
       <ElTabs v-model="activeTab">
+        <ElTabPane v-if="canVerifyFixation" label="条码绑定" name="binding">
+          <WorkflowSectionCard title="条码绑定">
+            <SpecimenBarcodeBindingPanel />
+          </WorkflowSectionCard>
+        </ElTabPane>
         <ElTabPane
           v-if="canVerifyFixation"
           label="离体确认"
@@ -94,11 +99,6 @@ watch(
         <ElTabPane v-if="canVerifyFixation" label="标本固定" name="fixation">
           <WorkflowSectionCard title="标本固定">
             <SpecimenFixationTimePanel />
-          </WorkflowSectionCard>
-        </ElTabPane>
-        <ElTabPane v-if="canVerifyFixation" label="条码绑定" name="binding">
-          <WorkflowSectionCard title="条码绑定">
-            <SpecimenBarcodeBindingPanel />
           </WorkflowSectionCard>
         </ElTabPane>
         <ElTabPane

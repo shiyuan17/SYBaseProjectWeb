@@ -1,158 +1,110 @@
-import type { EquipmentRecordView } from '../types/operation-support';
-
 import { describe, expect, it } from 'vitest';
 
 import {
   buildCreateEquipmentRecordRequest,
-  buildCreateMaintenanceLogRequest,
-  buildUpdateEquipmentRecordRequest,
-  createDraftEquipmentRecordView,
+  buildEquipmentExportDocument,
+  buildEquipmentPrintDocument,
   createEquipmentFormDefaults,
   createEquipmentFormStateFromRow,
-  createMaintenanceLogFormDefaults,
-  getEquipmentStatusTagType,
-  getEquipmentWarningTagType,
   validateEquipmentForm,
-  validateMaintenanceLogForm,
 } from './equipment-ledger';
 
-function createEquipment(
-  overrides: Partial<EquipmentRecordView> = {},
-): EquipmentRecordView {
-  return {
-    enabledAt: '2026-01-01',
-    equipmentCategory: 'PROCESSING',
-    equipmentCode: 'EQ-1',
-    equipmentName: 'Processor',
-    equipmentStatus: 'ACTIVE',
-    id: 'EQUIPMENT-1',
-    locationDescription: 'Lab A',
-    modelNo: 'M-1',
-    nextMaintenanceAt: '2026-06-01',
-    remarks: 'Ready',
-    ...overrides,
-  };
-}
-
-describe('equipment ledger helpers', () => {
-  it('creates default and draft equipment states', () => {
-    expect(createEquipmentFormDefaults('Alice')).toEqual(
-      expect.objectContaining({
-        equipmentStatus: 'ACTIVE',
-        operatorName: 'Alice',
-      }),
-    );
-    expect(createMaintenanceLogFormDefaults('Alice')).toEqual(
-      expect.objectContaining({
-        maintenanceStatus: 'COMPLETED',
-        maintenanceType: 'MAINTENANCE',
-        operatorName: 'Alice',
-      }),
-    );
-    expect(createDraftEquipmentRecordView()).toEqual(
-      expect.objectContaining({
-        equipmentCode: '',
-        equipmentStatus: 'ACTIVE',
-        id: '',
-      }),
-    );
+describe('equipment-ledger utils', () => {
+  it('creates defaults for legacy equipment form', () => {
+    const form = createEquipmentFormDefaults('设备员甲');
+    expect(form.equipmentStatus).toBe('ACTIVE');
+    expect(form.quantity).toBe(1);
+    expect(form.commonlyUsed).toBe(false);
+    expect(form.operatorName).toBe('设备员甲');
   });
 
-  it('maps an existing equipment row into edit form state', () => {
+  it('maps row data into form state', () => {
+    const form = createEquipmentFormStateFromRow(
+      {
+        commonlyUsed: true,
+        currentTemperature: 23.5,
+        enabledAt: '2026-06-01T00:00:00',
+        equipmentCategory: 'MICROTOME',
+        equipmentCode: 'EQ-001',
+        equipmentName: '切片机',
+        equipmentStatus: 'ACTIVE',
+        id: '1',
+        managementCode: 'GL-001',
+        modelNo: 'M-1',
+        price: 123,
+        quantity: 2,
+        setTemperature: 24.5,
+      },
+      '设备员乙',
+    );
+
+    expect(form.equipmentCode).toBe('EQ-001');
+    expect(form.managementCode).toBe('GL-001');
+    expect(form.commonlyUsed).toBe(true);
+    expect(form.operatorName).toBe('设备员乙');
+  });
+
+  it('builds create request with expanded fields', () => {
+    const request = buildCreateEquipmentRecordRequest({
+      ...createEquipmentFormDefaults('设备员甲'),
+      commonlyUsed: true,
+      currentTemperature: 23.5,
+      depreciationMethod: '直线法',
+      equipmentCategory: 'MICROTOME',
+      equipmentCode: 'EQ-001',
+      equipmentName: '切片机',
+      factoryNo: 'FC-001',
+      managementCode: 'GL-001',
+      price: 200,
+      quantity: 2,
+      setTemperature: 24.5,
+    });
+
+    expect(request.equipmentCode).toBe('EQ-001');
+    expect(request.managementCode).toBe('GL-001');
+    expect(request.commonlyUsed).toBe(true);
+    expect(request.quantity).toBe(2);
+  });
+
+  it('validates required legacy-aligned fields', () => {
     expect(
-      createEquipmentFormStateFromRow(
-        createEquipment({
-          locationDescription: null,
-          remarks: null,
-        }),
-        'Alice',
+      validateEquipmentForm(
+        {
+          ...createEquipmentFormDefaults('设备员甲'),
+          equipmentCode: 'EQ-001',
+        },
+        true,
       ),
-    ).toEqual(
-      expect.objectContaining({
-        equipmentCode: 'EQ-1',
-        locationDescription: '',
-        operatorName: 'Alice',
-        remarks: '',
-      }),
-    );
+    ).toBe('请填写设备名称、设备状态和操作人');
   });
 
-  it('validates equipment and maintenance log forms', () => {
-    const equipmentForm = createEquipmentFormDefaults('Alice');
-
-    expect(validateEquipmentForm(equipmentForm, true)).toBeTruthy();
-    Object.assign(equipmentForm, {
-      equipmentCode: 'EQ-1',
-      equipmentName: 'Processor',
+  it('builds export and print documents', () => {
+    const rows = [
+      {
+        commonlyUsed: true,
+        equipmentCategory: 'MICROTOME',
+        equipmentCode: 'EQ-001',
+        equipmentName: '切片机',
+        equipmentStatus: 'ACTIVE',
+        id: '1',
+      },
+    ];
+    const exportHtml = buildEquipmentExportDocument({
+      categoryFormatter: () => '切片机',
+      nullableFormatter: (value) => String(value ?? '-'),
+      rows,
+      statusFormatter: () => '正常',
     });
-    expect(validateEquipmentForm(equipmentForm, true)).toBe('');
-
-    const logForm = createMaintenanceLogFormDefaults('Alice');
-    expect(
-      validateMaintenanceLogForm({
-        form: logForm,
-        hasSelectedEquipment: false,
-      }),
-    ).toBeTruthy();
-    logForm.performedAt = '2026-05-30';
-    expect(
-      validateMaintenanceLogForm({
-        form: logForm,
-        hasSelectedEquipment: true,
-      }),
-    ).toBe('');
-  });
-
-  it('builds equipment create and update requests with stable field sets', () => {
-    const form = createEquipmentFormDefaults('Alice');
-    Object.assign(form, {
-      enabledAt: '2026-01-01',
-      equipmentCode: 'EQ-1',
-      equipmentName: 'Processor',
-      locationDescription: '',
-      modelNo: 'M-1',
+    const printHtml = buildEquipmentPrintDocument({
+      categoryFormatter: () => '切片机',
+      nullableFormatter: (value) => String(value ?? '-'),
+      rows,
+      statusFormatter: () => '正常',
     });
 
-    expect(buildCreateEquipmentRecordRequest(form)).toEqual({
-      enabledAt: '2026-01-01',
-      equipmentCategory: undefined,
-      equipmentCode: 'EQ-1',
-      equipmentName: 'Processor',
-      equipmentStatus: 'ACTIVE',
-      locationDescription: undefined,
-      modelNo: 'M-1',
-      nextMaintenanceAt: undefined,
-      operatorName: 'Alice',
-      remarks: undefined,
-    });
-    expect(buildUpdateEquipmentRecordRequest(form)).toEqual(
-      expect.not.objectContaining({
-        equipmentCode: 'EQ-1',
-      }),
-    );
-  });
-
-  it('builds maintenance log requests and maps tags', () => {
-    const form = createMaintenanceLogFormDefaults('Alice');
-    Object.assign(form, {
-      description: 'Cleaned',
-      nextMaintenanceAt: '',
-      performedAt: '2026-05-30',
-      remarks: 'OK',
-    });
-
-    expect(buildCreateMaintenanceLogRequest(form)).toEqual({
-      description: 'Cleaned',
-      maintenanceStatus: 'COMPLETED',
-      maintenanceType: 'MAINTENANCE',
-      nextMaintenanceAt: undefined,
-      operatorName: 'Alice',
-      performedAt: '2026-05-30',
-      remarks: 'OK',
-    });
-    expect(getEquipmentStatusTagType('ACTIVE')).toBe('success');
-    expect(getEquipmentStatusTagType('MAINTENANCE')).toBe('warning');
-    expect(getEquipmentWarningTagType('OVERDUE')).toBe('danger');
-    expect(getEquipmentWarningTagType('DUE_SOON')).toBe('warning');
+    expect(exportHtml).toContain('资产编号');
+    expect(exportHtml).toContain('EQ-001');
+    expect(printHtml).toContain('设备档案列表');
+    expect(printHtml).toContain('window.print()');
   });
 });

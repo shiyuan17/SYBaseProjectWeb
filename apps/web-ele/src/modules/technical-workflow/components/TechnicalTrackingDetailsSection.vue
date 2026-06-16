@@ -411,8 +411,8 @@ function handleActiveTabChange(value: number | string) {
   margin-bottom: 14px;
   font-size: 14px;
   font-weight: 700;
-  color: #94a3b8;
-  background: #fff;
+  color: hsl(var(--muted-foreground));
+  background: hsl(var(--card));
   border: 2px solid var(--pending-color);
   border-radius: 999px;
 }
@@ -433,7 +433,7 @@ function handleActiveTabChange(value: number | string) {
 .tracking-flow__current-dot {
   width: 8px;
   height: 8px;
-  background: #fff;
+  background: hsl(var(--primary-foreground));
   border-radius: 999px;
 }
 

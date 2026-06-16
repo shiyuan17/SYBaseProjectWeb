@@ -2,6 +2,8 @@ import type { UploadProps, UploadRequestOptions } from 'element-plus';
 
 import type {
   GrossingBlockItemRequest,
+  GrossingEmbeddingBoxItemRequest,
+  GrossingMediaAssetUploadResponse,
   GrossingSpecimenItemRequest,
   GrossingWorkbenchContext,
   MediaAssetItem,
@@ -56,7 +58,72 @@ export type GrossingDescriptionTab =
   | 'relatedExaminations';
 
 interface UseGrossingWorkbenchOptions {
-  onSubmitted?: () => void | Promise<void>;
+  onSubmitted?: () => Promise<void> | void;
+}
+
+type GrossingEmbeddingBoxPrefix = string;
+
+interface GrossingSpecimenTabMeta {
+  key: string;
+  specimenName: string;
+  trackingLabel: string;
+}
+
+export interface GrossingEmbeddingBoxTableRow {
+  box: GrossingEmbeddingBoxItemRequest;
+  boxIndex: number;
+  specimenIndex: number;
+  specimenName: string;
+}
+
+function createSpecimenPrefix(index: number) {
+  let current = Math.max(index, 0);
+  let prefix = '';
+  do {
+    prefix = String.fromCodePoint(65 + (current % 26)) + prefix;
+    current = Math.floor(current / 26) - 1;
+  } while (current >= 0);
+  return prefix;
+}
+
+function getEmbeddingBoxPrefixRank(prefix: string) {
+  const normalizedPrefix = prefix.trim().toUpperCase();
+  let rank = 0;
+  for (const character of normalizedPrefix) {
+    const characterCode = character.codePointAt(0) ?? 0;
+    if (characterCode < 65 || characterCode > 90) {
+      return Number.MAX_SAFE_INTEGER;
+    }
+    rank = rank * 26 + characterCode - 64;
+  }
+  return rank || Number.MAX_SAFE_INTEGER;
+}
+
+function buildGeneratedEmbeddingBoxNo(
+  prefix: GrossingEmbeddingBoxPrefix,
+  sequenceNo: number,
+) {
+  return `${prefix.toUpperCase()}${sequenceNo}`;
+}
+
+function parseGeneratedEmbeddingBoxNo(embeddingBoxNo: string) {
+  const normalizedValue = embeddingBoxNo.trim().toUpperCase();
+  const scopedMatch = normalizedValue.match(/^BX-(.+)-([A-Z]+)(\d+)$/);
+  const legacyMatch =
+    scopedMatch === null ? normalizedValue.match(/^([A-Z]+)(\d+)$/) : null;
+  const match = scopedMatch ?? legacyMatch;
+  if (!match) {
+    return null;
+  }
+  const rawPrefix = scopedMatch ? scopedMatch[2] : match[1];
+  const rawSequence = scopedMatch ? scopedMatch[3] : match[2];
+  if (!rawPrefix || !rawSequence) {
+    return null;
+  }
+  return {
+    prefix: rawPrefix.toUpperCase() as GrossingEmbeddingBoxPrefix,
+    sequence: Number(rawSequence),
+  };
 }
 
 export function useGrossingWorkbench(
@@ -70,9 +137,10 @@ export function useGrossingWorkbench(
   const selectLoading = ref(false);
   const initialized = ref(false);
   const currentTask = ref<null | PendingTechnicalTaskItem>(null);
-  const workbenchContext = ref<null | GrossingWorkbenchContext>(null);
+  const workbenchContext = ref<GrossingWorkbenchContext | null>(null);
   const trackingResult = ref<null | TechnicalTrackingViewModel>(null);
   const activeSpecimenKey = ref('');
+  const selectedEmbeddingBoxSpecimenKey = ref('');
   const descriptionTab = ref<GrossingDescriptionTab>('grossDescription');
   const uploadingSpecimenKeys = ref<string[]>([]);
   const bodyPartTreeOptions = ref<BodyPartNode[]>([]);
@@ -100,6 +168,19 @@ export function useGrossingWorkbench(
     };
   }
 
+  function createEmbeddingBox(
+    sequenceNo: number,
+    embeddingBoxNo = buildGeneratedEmbeddingBoxNo('A', sequenceNo),
+  ): GrossingEmbeddingBoxItemRequest {
+    return {
+      boxName: `包埋盒 ${sequenceNo}`,
+      embeddingBoxNo,
+      embeddingRemarks: '',
+      sequenceNo,
+      status: 'PENDING',
+    };
+  }
+
   function createEmptyMediaAsset(): MediaAssetItem {
     return {
       fileName: '',
@@ -107,12 +188,18 @@ export function useGrossingWorkbench(
     };
   }
 
-  function createEmptySpecimen(): GrossingSpecimenItemRequest {
+  function createEmptySpecimen(specimenIndex = 0): GrossingSpecimenItemRequest {
     return {
       blocks: [createEmptyBlock()],
       blockCount: 1,
       bodyPartId: '',
       cutSurfaceFeature: '',
+      embeddingBoxes: [
+        createEmbeddingBox(
+          1,
+          buildGeneratedEmbeddingBoxNo(getSpecimenPrefix(specimenIndex), 1),
+        ),
+      ],
       grossDescription: '',
       marginMarking: '',
       mediaAssets: [],
@@ -128,14 +215,14 @@ export function useGrossingWorkbench(
     specimens: [createEmptySpecimen()],
     taskId: '',
   });
-  const specimenTabMetas = ref<Array<{ key: string; trackingLabel: string }>>(
-    [],
-  );
+  const specimenTabMetas = ref<GrossingSpecimenTabMeta[]>([]);
 
   const currentTaskContext = computed(() => ({
     caseId: completeForm.caseId || currentTask.value?.caseId || '',
     objectId:
-      workbenchContext.value?.task.objectId ?? currentTask.value?.objectId ?? '',
+      workbenchContext.value?.task.objectId ??
+      currentTask.value?.objectId ??
+      '',
     objectType:
       workbenchContext.value?.task.objectType ??
       currentTask.value?.objectType ??
@@ -157,6 +244,42 @@ export function useGrossingWorkbench(
     () => completeForm.specimens[activeSpecimenIndex.value] ?? null,
   );
 
+  const activeSpecimenPrefix = computed(() =>
+    getSpecimenPrefix(activeSpecimenIndex.value),
+  );
+
+  const activeSpecimenName = computed(() =>
+    getSpecimenDisplayName(activeSpecimenIndex.value),
+  );
+
+  const specimenNameOptions = computed(() =>
+    specimenTabMetas.value.map((item, index) => ({
+      label: getSpecimenDisplayName(index),
+      value: item.key,
+    })),
+  );
+
+  const selectedEmbeddingBoxSpecimenIndex = computed(() =>
+    specimenTabMetas.value.findIndex(
+      (item) => item.key === selectedEmbeddingBoxSpecimenKey.value,
+    ),
+  );
+
+  const selectedEmbeddingBoxSpecimenPrefix = computed(() =>
+    getSpecimenPrefix(selectedEmbeddingBoxSpecimenIndex.value),
+  );
+
+  const embeddingBoxRows = computed<GrossingEmbeddingBoxTableRow[]>(() =>
+    completeForm.specimens.flatMap((specimen, specimenIndex) =>
+      (specimen.embeddingBoxes ?? []).map((box, boxIndex) => ({
+        box,
+        boxIndex,
+        specimenIndex,
+        specimenName: getSpecimenDisplayName(specimenIndex),
+      })),
+    ),
+  );
+
   const enteredMediaAssets = computed(() =>
     completeForm.specimens.flatMap((specimen, specimenIndex) =>
       (specimen.mediaAssets ?? []).map((asset, assetIndex) => ({
@@ -168,9 +291,41 @@ export function useGrossingWorkbench(
     ),
   );
 
-  function createSpecimenTabMeta(trackingLabel = '') {
+  function collectTrackedEmbeddingBoxNos() {
+    const trackedNos = new Set<string>();
+    const tracking = trackingResult.value;
+    tracking?.blocks?.forEach((block) => {
+      const normalizedNo = block.embeddingBoxNo?.trim().toUpperCase();
+      if (normalizedNo) {
+        trackedNos.add(normalizedNo);
+      }
+    });
+    tracking?.embeddingBoxes?.forEach((box) => {
+      const normalizedNo = box.embeddingBoxNo?.trim().toUpperCase();
+      if (normalizedNo) {
+        trackedNos.add(normalizedNo);
+      }
+    });
+    return trackedNos;
+  }
+
+  function collectCurrentEmbeddingBoxNos() {
+    const currentNos = new Set<string>();
+    completeForm.specimens.forEach((specimen) => {
+      specimen.embeddingBoxes?.forEach((box) => {
+        const normalizedNo = box.embeddingBoxNo?.trim().toUpperCase();
+        if (normalizedNo) {
+          currentNos.add(normalizedNo);
+        }
+      });
+    });
+    return currentNos;
+  }
+
+  function createSpecimenTabMeta(trackingLabel = '', specimenName = '') {
     return {
       key: `specimen-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      specimenName,
       trackingLabel,
     };
   }
@@ -182,16 +337,34 @@ export function useGrossingWorkbench(
   function syncSpecimenTabs(
     specimens: GrossingSpecimenItemRequest[],
     trackingLabels: string[] = [],
+    specimenNames: string[] = [],
   ) {
     completeForm.specimens = specimens;
     specimenTabMetas.value = specimens.map((_, index) =>
-      createSpecimenTabMeta(trackingLabels[index] ?? ''),
+      createSpecimenTabMeta(
+        trackingLabels[index] ?? '',
+        specimenNames[index] ?? '',
+      ),
     );
     activateSpecimenAt(0);
+    selectedEmbeddingBoxSpecimenKey.value =
+      specimenTabMetas.value[0]?.key ?? '';
   }
 
   function getSpecimenTrackingLabel(index: number) {
     return specimenTabMetas.value[index]?.trackingLabel?.trim() ?? '';
+  }
+
+  function getSpecimenPrefix(index: number) {
+    return createSpecimenPrefix(Math.max(index, 0));
+  }
+
+  function getSpecimenDisplayName(index: number) {
+    if (index < 0) {
+      return '';
+    }
+    const specimenName = specimenTabMetas.value[index]?.specimenName?.trim();
+    return specimenName || getSpecimenPrefix(index);
   }
 
   function getSpecimenTabLabel(index: number) {
@@ -215,27 +388,53 @@ export function useGrossingWorkbench(
     syncSpecimenTabs([createEmptySpecimen()]);
   }
 
-  function seedSpecimensFromTracking(tracking: null | TechnicalTrackingViewModel) {
+  function seedSpecimensFromTracking(
+    tracking: null | TechnicalTrackingViewModel,
+  ) {
     if (!tracking || tracking.specimens.length === 0) {
       syncSpecimenTabs([createEmptySpecimen()]);
       return;
     }
 
+    const seededEmbeddingBoxNos = new Set<string>();
     syncSpecimenTabs(
-      tracking.specimens.map((item) => ({
-        blocks: [createEmptyBlock()],
-        blockCount: 1,
-        bodyPartId: '',
-        cutSurfaceFeature: '',
-        grossDescription: '',
-        marginMarking: '',
-        mediaAssets: [],
-        samplingTemplateId: '',
-        sizeText: '',
-        specimenId: item.specimenId,
-        specimenType: 'ROUTINE',
-      })),
+      tracking.specimens.map((item, itemIndex) => {
+        const specimenBlocks = tracking.blocks.filter(
+          (block) => block.specimenId === item.specimenId,
+        );
+        const blockCount = Math.max(specimenBlocks.length, 1);
+        const embeddingBoxes = Array.from(
+          { length: blockCount },
+          (_, index) => {
+            const embeddingBoxNo = getNextEmbeddingBoxNo(
+              getSpecimenPrefix(itemIndex),
+              seededEmbeddingBoxNos,
+              false,
+            );
+            seededEmbeddingBoxNos.add(embeddingBoxNo.toUpperCase());
+            return createEmbeddingBox(index + 1, embeddingBoxNo);
+          },
+        );
+        return {
+          blocks: Array.from({ length: blockCount }, (_, index) => ({
+            ...createEmptyBlock(),
+            blockDescription: specimenBlocks[index]?.description ?? '',
+          })),
+          blockCount,
+          bodyPartId: '',
+          cutSurfaceFeature: '',
+          embeddingBoxes,
+          grossDescription: '',
+          marginMarking: '',
+          mediaAssets: [],
+          samplingTemplateId: '',
+          sizeText: '',
+          specimenId: item.specimenId,
+          specimenType: 'ROUTINE',
+        };
+      }),
       tracking.specimens.map((item) => item.specimenNo?.trim() || ''),
+      tracking.specimens.map((item) => item.specimenName?.trim() || ''),
     );
   }
 
@@ -317,7 +516,8 @@ export function useGrossingWorkbench(
   }
 
   function addSpecimen() {
-    completeForm.specimens.push(createEmptySpecimen());
+    const specimenIndex = completeForm.specimens.length;
+    completeForm.specimens.push(createEmptySpecimen(specimenIndex));
     specimenTabMetas.value.push(createSpecimenTabMeta());
     activateSpecimenAt(completeForm.specimens.length - 1);
   }
@@ -341,15 +541,37 @@ export function useGrossingWorkbench(
     completeForm.specimens.splice(index, 1);
     specimenTabMetas.value.splice(index, 1);
     activateSpecimenAt(nextActiveIndex);
+    if (
+      !specimenTabMetas.value.some(
+        (item) => item.key === selectedEmbeddingBoxSpecimenKey.value,
+      )
+    ) {
+      selectedEmbeddingBoxSpecimenKey.value =
+        specimenTabMetas.value[nextActiveIndex]?.key ?? '';
+    }
   }
 
   function addBlock(specimenIndex: number) {
-    completeForm.specimens[specimenIndex]?.blocks.push(createEmptyBlock());
+    const specimen = completeForm.specimens[specimenIndex];
+    if (!specimen) {
+      return;
+    }
+    specimen.blocks.push(createEmptyBlock());
+    specimen.embeddingBoxes ??= [];
+    specimen.embeddingBoxes.push(
+      createEmbeddingBox(
+        specimen.embeddingBoxes.length + 1,
+        getNextEmbeddingBoxNo(getSpecimenPrefix(specimenIndex)),
+      ),
+    );
+    sortEmbeddingBoxPairs(specimen);
+    syncSpecimenBlockCount(specimen);
   }
 
   function removeBlock(specimenIndex: number, blockIndex: number) {
-    const blocks = completeForm.specimens[specimenIndex]?.blocks;
-    if (!blocks) {
+    const specimen = completeForm.specimens[specimenIndex];
+    const blocks = specimen?.blocks;
+    if (!specimen || !blocks) {
       return;
     }
     if (blocks.length === 1) {
@@ -357,6 +579,145 @@ export function useGrossingWorkbench(
       return;
     }
     blocks.splice(blockIndex, 1);
+    specimen.embeddingBoxes?.splice(blockIndex, 1);
+    sortEmbeddingBoxPairs(specimen);
+    syncSpecimenBlockCount(specimen);
+  }
+
+  function getNextEmbeddingBoxNo(
+    prefix: GrossingEmbeddingBoxPrefix,
+    additionalEmbeddingBoxNos: Set<string> = new Set(),
+    includeCurrentForm = true,
+  ) {
+    const usedSequences = new Set<number>();
+    for (const boxNo of [
+      ...collectTrackedEmbeddingBoxNos(),
+      ...(includeCurrentForm ? collectCurrentEmbeddingBoxNos() : []),
+      ...additionalEmbeddingBoxNos,
+    ]) {
+      const parsedBoxNo = parseGeneratedEmbeddingBoxNo(boxNo);
+      if (
+        parsedBoxNo?.prefix === prefix &&
+        Number.isSafeInteger(parsedBoxNo.sequence) &&
+        parsedBoxNo.sequence > 0
+      ) {
+        usedSequences.add(parsedBoxNo.sequence);
+      }
+    }
+    let nextSequence = 1;
+    while (usedSequences.has(nextSequence)) {
+      nextSequence += 1;
+    }
+    return buildGeneratedEmbeddingBoxNo(prefix, nextSequence);
+  }
+
+  function compareEmbeddingBoxPairs(
+    left: {
+      box: GrossingEmbeddingBoxItemRequest;
+      originalIndex: number;
+    },
+    right: {
+      box: GrossingEmbeddingBoxItemRequest;
+      originalIndex: number;
+    },
+  ) {
+    const leftParsed = parseGeneratedEmbeddingBoxNo(left.box.embeddingBoxNo);
+    const rightParsed = parseGeneratedEmbeddingBoxNo(right.box.embeddingBoxNo);
+
+    if (leftParsed && rightParsed) {
+      const prefixDiff =
+        getEmbeddingBoxPrefixRank(leftParsed.prefix) -
+        getEmbeddingBoxPrefixRank(rightParsed.prefix);
+      if (prefixDiff !== 0) {
+        return prefixDiff;
+      }
+      return (
+        leftParsed.sequence - rightParsed.sequence ||
+        left.originalIndex - right.originalIndex
+      );
+    }
+    if (leftParsed) {
+      return -1;
+    }
+    if (rightParsed) {
+      return 1;
+    }
+    return left.originalIndex - right.originalIndex;
+  }
+
+  function resequenceEmbeddingBoxes(
+    embeddingBoxes: GrossingEmbeddingBoxItemRequest[] | undefined,
+  ) {
+    embeddingBoxes?.forEach((box, index) => {
+      box.sequenceNo = index + 1;
+      box.boxName ||= `包埋盒 ${index + 1}`;
+    });
+  }
+
+  function sortEmbeddingBoxPairs(specimen: GrossingSpecimenItemRequest) {
+    const embeddingBoxes = specimen.embeddingBoxes;
+    if (!embeddingBoxes?.length) {
+      return;
+    }
+
+    const pairs = embeddingBoxes.map((box, index) => ({
+      block: specimen.blocks[index] ?? createEmptyBlock(),
+      box,
+      originalIndex: index,
+    }));
+    pairs.sort(compareEmbeddingBoxPairs);
+    specimen.embeddingBoxes = pairs.map((pair) => pair.box);
+    specimen.blocks = pairs.map((pair) => pair.block);
+    resequenceEmbeddingBoxes(specimen.embeddingBoxes);
+  }
+
+  function syncSpecimenBlockCount(specimen: GrossingSpecimenItemRequest) {
+    specimen.blockCount = Math.max(
+      specimen.blockCount ?? 0,
+      specimen.blocks.length,
+    );
+  }
+
+  function addEmbeddingBoxes(
+    count: number,
+    prefix: GrossingEmbeddingBoxPrefix = selectedEmbeddingBoxSpecimenPrefix.value,
+    specimenIndex = selectedEmbeddingBoxSpecimenIndex.value,
+  ) {
+    const specimen = completeForm.specimens[specimenIndex];
+    if (!specimen) {
+      ElMessage.warning('请先选择可编辑标本');
+      return;
+    }
+    specimen.embeddingBoxes ??= [];
+    for (let index = 0; index < count; index++) {
+      const nextSequenceNo = specimen.embeddingBoxes.length + 1;
+      specimen.embeddingBoxes.push(
+        createEmbeddingBox(nextSequenceNo, getNextEmbeddingBoxNo(prefix)),
+      );
+      specimen.blocks.push(createEmptyBlock());
+    }
+    sortEmbeddingBoxPairs(specimen);
+    syncSpecimenBlockCount(specimen);
+  }
+
+  function removeEmbeddingBox(
+    index: number,
+    specimenIndex = activeSpecimenIndex.value,
+  ) {
+    const specimen = completeForm.specimens[specimenIndex];
+    if (!specimen?.embeddingBoxes) {
+      return;
+    }
+    if (specimen.embeddingBoxes.length === 1) {
+      ElMessage.warning('至少保留一个包埋盒');
+      return;
+    }
+    specimen.embeddingBoxes.splice(index, 1);
+    if (specimen.blocks.length > 1) {
+      specimen.blocks.splice(index, 1);
+    }
+    sortEmbeddingBoxPairs(specimen);
+    syncSpecimenBlockCount(specimen);
   }
 
   function addMediaAsset(specimenIndex: number) {
@@ -389,6 +750,10 @@ export function useGrossingWorkbench(
   }
 
   const beforeGrossingImageUpload: UploadProps['beforeUpload'] = (file) => {
+    return validateGrossingImageFile(file);
+  };
+
+  function validateGrossingImageFile(file: File) {
     if (!grossingImageTypes.has(file.type)) {
       ElMessage.warning('仅支持 JPG、PNG、WEBP、BMP 格式的标本摄影像');
       return false;
@@ -398,7 +763,7 @@ export function useGrossingWorkbench(
       return false;
     }
     return true;
-  };
+  }
 
   function createGrossingUploadError(
     error: unknown,
@@ -415,22 +780,46 @@ export function useGrossingWorkbench(
     return uploadError;
   }
 
+  async function performGrossingImageUpload(
+    specimenIndex: number,
+    file: File,
+  ): Promise<GrossingMediaAssetUploadResponse> {
+    setSpecimenUploading(specimenIndex, true);
+    try {
+      const result = await uploadGrossingMediaAsset(file);
+      completeForm.specimens[specimenIndex]?.mediaAssets?.push({
+        fileName: result.fileName,
+        fileUrl: result.fileUrl,
+      });
+      ElMessage.success('标本摄影像上传成功');
+      return result;
+    } finally {
+      setSpecimenUploading(specimenIndex, false);
+    }
+  }
+
+  async function uploadGrossingImageFile(specimenIndex: number, file: File) {
+    if (!validateGrossingImageFile(file)) {
+      return false;
+    }
+    try {
+      await performGrossingImageUpload(specimenIndex, file);
+      return true;
+    } catch (error) {
+      ElMessage.warning(getWorkflowPageErrorMessage(error));
+      return false;
+    }
+  }
+
   function createGrossingImageUploadRequest(specimenIndex: number) {
     return async (uploadOptions: UploadRequestOptions) => {
-      setSpecimenUploading(specimenIndex, true);
       try {
-        const result = await uploadGrossingMediaAsset(uploadOptions.file);
-        completeForm.specimens[specimenIndex]?.mediaAssets?.push({
-          fileName: result.fileName,
-          fileUrl: result.fileUrl,
-        });
+        const file = uploadOptions.file as File;
+        const result = await performGrossingImageUpload(specimenIndex, file);
         uploadOptions.onSuccess(result);
-        ElMessage.success('标本摄影像上传成功');
       } catch (error) {
         uploadOptions.onError(createGrossingUploadError(error, uploadOptions));
         ElMessage.warning(getWorkflowPageErrorMessage(error));
-      } finally {
-        setSpecimenUploading(specimenIndex, false);
       }
     };
   }
@@ -450,29 +839,41 @@ export function useGrossingWorkbench(
       return;
     }
 
-    const normalizedSpecimens = completeForm.specimens.map((item) => ({
-      blocks: item.blocks.map((block) => ({
-        blockDescription: block.blockDescription?.trim() || null,
-        blockSite: block.blockSite?.trim() || null,
-        specialRequirement: block.specialRequirement?.trim() || null,
-      })),
-      blockCount: Math.max(item.blockCount ?? 0, item.blocks.length),
-      bodyPartId: item.bodyPartId?.trim() || null,
-      cutSurfaceFeature: item.cutSurfaceFeature?.trim() || null,
-      grossDescription: item.grossDescription?.trim() || null,
-      marginMarking: item.marginMarking?.trim() || null,
-      mediaAssets:
-        item.mediaAssets
-          ?.filter((asset) => asset.fileUrl.trim())
-          .map((asset) => ({
-            fileName: asset.fileName?.trim() || null,
-            fileUrl: asset.fileUrl.trim(),
-          })) ?? [],
-      samplingTemplateId: item.samplingTemplateId?.trim() || null,
-      sizeText: item.sizeText?.trim() || null,
-      specimenId: item.specimenId.trim(),
-      specimenType: item.specimenType.trim(),
-    }));
+    const normalizedSpecimens = completeForm.specimens.map((item) => {
+      const normalizedEmbeddingBoxes =
+        item.embeddingBoxes?.map((box, index) => ({
+          boxName: box.boxName?.trim() || null,
+          embeddingBoxNo: box.embeddingBoxNo.trim(),
+          embeddingRemarks: box.embeddingRemarks?.trim() || null,
+          sequenceNo: index + 1,
+          status: 'CONFIRMED' as const,
+        })) ?? [];
+
+      return {
+        blocks: item.blocks.map((block) => ({
+          blockDescription: block.blockDescription?.trim() || null,
+          blockSite: block.blockSite?.trim() || null,
+          specialRequirement: block.specialRequirement?.trim() || null,
+        })),
+        blockCount: Math.max(item.blockCount ?? 0, item.blocks.length),
+        bodyPartId: item.bodyPartId?.trim() || null,
+        cutSurfaceFeature: item.cutSurfaceFeature?.trim() || null,
+        embeddingBoxes: normalizedEmbeddingBoxes,
+        grossDescription: item.grossDescription?.trim() || null,
+        marginMarking: item.marginMarking?.trim() || null,
+        mediaAssets:
+          item.mediaAssets
+            ?.filter((asset) => asset.fileUrl.trim())
+            .map((asset) => ({
+              fileName: asset.fileName?.trim() || null,
+              fileUrl: asset.fileUrl.trim(),
+            })) ?? [],
+        samplingTemplateId: item.samplingTemplateId?.trim() || null,
+        sizeText: item.sizeText?.trim() || null,
+        specimenId: item.specimenId.trim(),
+        specimenType: item.specimenType.trim(),
+      };
+    });
 
     if (
       normalizedSpecimens.some((item) => !item.specimenId || !item.specimenType)
@@ -480,17 +881,26 @@ export function useGrossingWorkbench(
       ElMessage.warning('请补齐标本编号和标本类型');
       return;
     }
+    if (normalizedSpecimens.some((item) => item.blocks.length === 0)) {
+      ElMessage.warning('每个标本至少需要一个蜡块明细');
+      return;
+    }
     if (
-      normalizedSpecimens.some((item) =>
-        item.blocks.every(
-          (block) =>
-            !block.blockDescription &&
-            !block.blockSite &&
-            !block.specialRequirement,
-        ),
+      normalizedSpecimens.some(
+        (item) =>
+          item.embeddingBoxes.length === 0 ||
+          item.embeddingBoxes.length !== item.blocks.length ||
+          item.embeddingBoxes.some((box) => !box.embeddingBoxNo),
       )
     ) {
-      ElMessage.warning('每个标本至少需要一条有效的蜡块明细');
+      ElMessage.warning('请补齐包埋盒信息，并保持包埋盒数量与蜡块数量一致');
+      return;
+    }
+    const embeddingBoxNos = normalizedSpecimens.flatMap((item) =>
+      item.embeddingBoxes.map((box) => box.embeddingBoxNo),
+    );
+    if (new Set(embeddingBoxNos).size !== embeddingBoxNos.length) {
+      ElMessage.warning('包埋盒号不能重复');
       return;
     }
 
@@ -516,8 +926,11 @@ export function useGrossingWorkbench(
 
   return {
     activeSpecimen,
+    activeSpecimenName,
+    activeSpecimenPrefix,
     activeSpecimenKey,
     addBlock,
+    addEmbeddingBoxes,
     addMediaAsset,
     addSpecimen,
     beforeGrossingImageUpload,
@@ -528,8 +941,11 @@ export function useGrossingWorkbench(
     currentTask,
     currentTaskContext,
     descriptionTab,
+    embeddingBoxRows,
     ensureSelectOptionsLoaded,
     enteredMediaAssets,
+    getSpecimenDisplayName,
+    getSpecimenPrefix,
     getSpecimenTabLabel,
     grossingImageAccept,
     initializeWorkbench,
@@ -539,15 +955,20 @@ export function useGrossingWorkbench(
     operatorForm,
     pageError,
     removeBlock,
+    removeEmbeddingBox,
     removeMediaAsset,
     removeSpecimen,
     resetWorkbenchState,
     samplingTemplateTreeOptions,
     selectLoading,
+    selectedEmbeddingBoxSpecimenKey,
+    selectedEmbeddingBoxSpecimenPrefix,
+    specimenNameOptions,
     specimenTabMetas,
     submitGrossing,
     submitting,
     trackingResult,
+    uploadGrossingImageFile,
     workflowReferenceOptions,
     workbenchContext,
   };

@@ -28,6 +28,14 @@ export interface ApplicationCreateResult {
   id: string;
 }
 
+export interface ApplicationPatientLookupResult {
+  patientAge: null | string;
+  patientGender: null | string;
+  patientId: string;
+  patientIdentifier: string;
+  patientName: null | string;
+}
+
 export type ApplicationUpdateRequest = ApplicationCreateRequest;
 
 export interface ImportClinicalApplicationRequest {
@@ -51,7 +59,7 @@ export interface TrackingEventView {
 export interface SpecimenTrackingSummary {
   abnormalReason: null | string;
   abnormalType?: null | string;
-  barcode: string;
+  barcode: null | string;
   barcodeBindingStatus?: null | string;
   checkInStatus?: null | string;
   checkedInAt?: null | string;
@@ -111,6 +119,7 @@ export interface ApplicationDetailView {
   patientAge: null | string;
   patientGender: null | string;
   patientId: null | string;
+  patientIdentifier?: null | string;
   patientCheckStatus?: null | string;
   patientName: null | string;
   recentEvents: TrackingEventView[];
@@ -161,6 +170,7 @@ export interface ApplicationListItem {
   deletable: boolean;
   editable: boolean;
   id: string;
+  pathologyNo?: null | string;
   patientAge: null | string;
   patientGender: null | string;
   patientCheckStatus?: null | string;
@@ -435,17 +445,24 @@ export interface SpecimenVerificationRequest {
 }
 
 export interface SpecimenConfirmRequest {
+  operatorVerificationToken?: string;
   operatorName?: null | string;
   operatorUserId?: null | string;
   remarks?: null | string;
+  specimenBarcode?: null | string;
+  specimenId?: null | string;
+  specimenNo?: null | string;
   terminalCode?: null | string;
 }
 
 export interface SpecimenCheckInRequest {
+  operatorVerificationToken?: string;
   operatorName?: null | string;
   operatorUserId?: null | string;
   remarks?: null | string;
-  specimenBarcode: string;
+  specimenBarcode?: null | string;
+  specimenId?: null | string;
+  specimenNo?: null | string;
   terminalCode?: null | string;
 }
 
@@ -459,6 +476,21 @@ export interface SpecimenVerificationRecord {
   terminalCode: null | string;
   verificationType: string;
   verifiedAt: string;
+}
+
+export interface OperatorVerificationRequest {
+  loginName: string;
+  operatorName: string;
+  operatorUserId: string;
+  password: string;
+}
+
+export interface OperatorVerificationResponse {
+  expiresAt: string;
+  loginName: string;
+  operatorName: string;
+  operatorUserId: string;
+  operatorVerificationToken: string;
 }
 
 export interface ApplicationFormReprintRequest {
@@ -485,7 +517,7 @@ export interface PendingSpecimenItem {
   applicationId: string;
   applicationNo: string;
   batchAbnormalFlag?: boolean;
-  barcode: string;
+  barcode: null | string;
   checkInStatus?: null | string;
   checkedInAt?: null | string;
   checkedInByName?: null | string;
@@ -501,6 +533,7 @@ export interface PendingSpecimenItem {
   patientName: null | string;
   registeredAt: null | string;
   reminderCount?: number;
+  specimenConfirmedAt?: null | string;
   specimenId: string;
   specimenNo: string;
   specimenStatus: null | string;
@@ -523,12 +556,14 @@ export interface PendingSpecimenPage {
 export interface SpecimenFixationRequest {
   fixationLiquidType?: null | string;
   remarks?: null | string;
-  specimenBarcode: string;
+  specimenBarcode?: null | string;
+  specimenId?: null | string;
+  specimenNo?: null | string;
   terminalCode?: null | string;
 }
 
 export interface FixationResult {
-  barcode: string;
+  barcode: null | string;
   fixationCompletedAt?: null | string;
   fixationLiquidType?: null | string;
   operatorName?: null | string;
@@ -543,10 +578,12 @@ export interface TransportOrderCreateRequest {
   handoverDepartmentName: string;
   handoverUserId?: null | string;
   handoverUserName: string;
+  operatorVerificationToken?: string;
   receiverDepartmentId?: null | string;
   receiverDepartmentName: string;
   remarks?: null | string;
-  specimenBarcodes: string[];
+  specimenBarcodes?: string[];
+  specimenIds?: string[];
   terminalCode?: null | string;
 }
 
@@ -562,6 +599,7 @@ export interface TransportOrderHandoverRequest {
 }
 
 export interface TransportOrderOutboundRequest {
+  operatorVerificationToken?: string;
   outboundUserId?: null | string;
   outboundUserName: string;
   remarks?: null | string;
@@ -573,6 +611,7 @@ export type SpecimenOutboundIdentifierType = 'SPECIMEN_NO';
 export interface QuickSpecimenOutboundRequest {
   identifier: string;
   identifierType: SpecimenOutboundIdentifierType;
+  operatorVerificationToken?: string;
   outboundUserId?: null | string;
   outboundUserName: string;
   remarks?: null | string;
@@ -624,6 +663,7 @@ export interface PendingTransportOrderPage {
 
 export interface SpecimenOutboundListQuery {
   applicationId?: null | string;
+  identifier?: null | string;
   page: number;
   size: number;
   specimenNo?: null | string;
@@ -632,6 +672,9 @@ export interface SpecimenOutboundListQuery {
 export interface SpecimenOutboundListItem {
   applicationId: string;
   applicationNo: string;
+  barcode: null | string;
+  checkInStatus?: null | string;
+  fixationStatus?: null | string;
   inpatientNo: null | string;
   outboundAt: null | string;
   outboundUserName: null | string;
@@ -640,12 +683,15 @@ export interface SpecimenOutboundListItem {
   patientName: null | string;
   registeredAt: null | string;
   registeredByName: null | string;
+  specimenConfirmedAt?: null | string;
   specimenId: string;
   specimenName: string;
   specimenNo: string;
   specimenStatus: null | string;
+  submittingDepartmentId: null | string;
+  submittingDepartmentName: null | string;
   surgeryName: null | string;
-  transportOrderId: string;
+  transportOrderId: null | string;
 }
 
 export interface SpecimenOutboundPage {
@@ -662,11 +708,14 @@ export interface SpecimenReceiptItemRequest {
   reason?: null | string;
   receiptStatus: string;
   remarks?: null | string;
-  specimenBarcode: string;
+  specimenBarcode?: null | string;
+  specimenId?: null | string;
+  specimenNo?: null | string;
 }
 
 export interface SpecimenReceiptRequest {
   items: SpecimenReceiptItemRequest[];
+  logisticsStaffName: string;
   receivedByName: string;
   receivedByUserId?: null | string;
   terminalCode?: null | string;

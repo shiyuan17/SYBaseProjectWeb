@@ -33,7 +33,32 @@ type OperatingOptionsResponse = {
   buildings?: OperatingBuildingOption[];
 };
 
+type ApiErrorLike = {
+  code?: string;
+  error?: string;
+  message?: string;
+  response?: {
+    data?: {
+      code?: string;
+      error?: string;
+      message?: string;
+    };
+    status?: number;
+  };
+  status?: number;
+};
+
 let operatingOptionsPromise: null | Promise<OperatingBuildingOption[]> = null;
+
+export function buildWorkbenchLookupRequestConfig(query: WorkbenchLookupQuery) {
+  return {
+    params: {
+      queryType: query.queryType,
+      keyword: query.keyword.trim(),
+    },
+    skipErrorMessage: true,
+  };
+}
 
 function isPresent<T>(value: null | T | undefined): value is T {
   return value !== null && value !== undefined;
@@ -122,6 +147,24 @@ function normalizeRecord(
   };
 }
 
+export function isWorkbenchLookupNotFoundError(error: unknown) {
+  const apiError = error as ApiErrorLike;
+  const status = apiError.response?.status ?? apiError.status;
+  const code = apiError.response?.data?.code ?? apiError.code ?? '';
+  const message =
+    apiError.response?.data?.error ??
+    apiError.response?.data?.message ??
+    apiError.error ??
+    apiError.message ??
+    '';
+
+  return (
+    status === 404 ||
+    code === 'RESOURCE_NOT_FOUND' ||
+    message.includes('申请登记工作台记录不存在')
+  );
+}
+
 export async function lookupApplicationRegistrationWorkbenchRecord(
   query: WorkbenchLookupQuery,
 ) {
@@ -133,19 +176,12 @@ export async function lookupApplicationRegistrationWorkbenchRecord(
     const response =
       await requestClient.get<ApplicationRegistrationWorkbenchRecord>(
         '/v1/application-registration-workbench/lookup',
-        {
-          params: {
-            queryType: query.queryType,
-            keyword: query.keyword.trim(),
-          },
-        },
+        buildWorkbenchLookupRequestConfig(query),
       );
 
     return normalizeRecord(response);
   } catch (error) {
-    const status = (error as { response?: { status?: number } }).response
-      ?.status;
-    if (status === 404) {
+    if (isWorkbenchLookupNotFoundError(error)) {
       return null;
     }
     throw error;

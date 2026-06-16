@@ -19,16 +19,17 @@ import {
   listPendingFixations,
   listPendingReceipts,
   listPendingSpecimenRemovals,
-  listSpecimenOutbounds,
   listPendingTransportOrders,
+  listSpecimenOutbounds,
   listSpecimens,
   listSpecimenVerificationRecords,
   lookupApplicationForRegistration,
+  lookupApplicationPatientByIdentifier,
   mapPendingSpecimenPageResponse,
   mapSpecimenRemovalPageResponse,
   outboundTransportOrder,
-  quickOutboundSpecimen,
   printTransportOrder,
+  quickOutboundSpecimen,
   rebindSpecimenBarcode,
   receiveSpecimens,
   registerSpecimens,
@@ -59,6 +60,18 @@ describe('specimen-workflow-service mock flow', () => {
     expect(detail.specimens).toHaveLength(2);
     expect(detail.receiptAbnormalSummary).toContain('退回');
     expect(detail.unreceivedCount).toBe(2);
+  });
+
+  it('looks up patient info by identifier in mock mode', async () => {
+    const patient = await lookupApplicationPatientByIdentifier('P-001');
+
+    expect(patient).toEqual({
+      patientAge: expect.any(String),
+      patientGender: expect.any(String),
+      patientId: 'P-001',
+      patientIdentifier: 'P-001',
+      patientName: expect.any(String),
+    });
   });
 
   it('updates and logically deletes applications before downstream starts', async () => {
@@ -126,6 +139,7 @@ describe('specimen-workflow-service mock flow', () => {
       collectionScene: '病房',
       items: [
         {
+          barcode: 'BC-MOCK-FLOW-001',
           containerCount: 1,
           containerName: '福尔马林瓶',
           specimenCount: 1,
@@ -191,6 +205,15 @@ describe('specimen-workflow-service mock flow', () => {
     expect(confirmedList.items[0]?.specimenConfirmedByName).toBe('确认员甲');
     expect(confirmedList.items[0]?.checkedInByName).toBe('入库员甲');
 
+    const specimenId = confirmedList.items[0]?.specimenId ?? '';
+    expect(specimenId).toBeTruthy();
+    const specimenIdList = await listSpecimens({
+      keyword: specimenId,
+      page: 1,
+      size: 20,
+    });
+    expect(specimenIdList.items[0]?.specimenId).toBe(specimenId);
+
     const order = await createTransportOrder({
       applicationId: 'APP-001',
       handoverDepartmentId: 'DEP-WK',
@@ -218,11 +241,49 @@ describe('specimen-workflow-service mock flow', () => {
     expect(handedOrder.outboundUserName).toBe('当前登录用户');
   });
 
+  it('keeps mock registrations unbound until barcode binding', async () => {
+    const registerResult = await registerSpecimens({
+      applicationId: 'APP-001',
+      items: [
+        {
+          containerCount: 1,
+          containerName: '福尔马林瓶',
+          specimenCount: 1,
+          specimenNameStandardized: '胃窦黏膜',
+        },
+      ],
+    });
+
+    const specimen = registerResult.specimens[0];
+    expect(registerResult.labelPrintSuccess).toBe(false);
+    expect(specimen?.barcode).toBeNull();
+    expect(specimen?.barcodeBindingStatus).toBe('UNBOUND');
+    expect(specimen?.labelPrintStatus).toBe('PENDING');
+
+    const specimenId = specimen?.id ?? '';
+    const bound = await bindSpecimenBarcode(specimenId, {
+      targetBarcode: 'BC-MOCK-BIND-001',
+    });
+    expect(bound.barcode).toBe('BC-MOCK-BIND-001');
+    expect(bound.barcodeBindingStatus).toBe('BOUND');
+
+    const list = await listSpecimens({
+      keyword: 'BC-MOCK-BIND-001',
+      page: 1,
+      size: 20,
+    });
+    expect(list.items[0]).toMatchObject({
+      barcode: 'BC-MOCK-BIND-001',
+      barcodeBindingStatus: 'BOUND',
+    });
+  });
+
   it('supports direct outbound by selected outbound operator in mock mode', async () => {
     const registerResult = await registerSpecimens({
       applicationId: 'APP-001',
       items: [
         {
+          barcode: 'BC-MOCK-OUTBOUND-001',
           containerCount: 1,
           containerName: '福尔马林瓶',
           specimenCount: 1,
@@ -280,6 +341,7 @@ describe('specimen-workflow-service mock flow', () => {
       applicationId: 'APP-001',
       items: [
         {
+          barcode: 'BC-MOCK-QUICK-OUT-001',
           containerCount: 1,
           containerName: '福尔马林瓶',
           specimenCount: 1,
@@ -333,6 +395,7 @@ describe('specimen-workflow-service mock flow', () => {
       applicationId: 'APP-001',
       items: [
         {
+          barcode: 'BC-MOCK-GATE-001',
           containerCount: 1,
           containerName: '福尔马林瓶',
           specimenCount: 1,
@@ -435,6 +498,7 @@ describe('specimen-workflow-service mock flow', () => {
           specimenBarcode: 'BC-006-01',
         },
       ],
+      logisticsStaffName: '物流员甲',
       receivedByName: '接收员甲',
       receivedByUserId: 'USR-PA-01',
       terminalCode: 'TERM-REC-01',
@@ -503,7 +567,7 @@ describe('specimen-workflow-service mock flow', () => {
     expect(retryResult.allSuccessful).toBe(true);
 
     const reprintEvent = await reprintApplicationForm('APP-006', {
-      remarks: '病理接收页补打',
+      remarks: '标本接收页补打',
       terminalCode: 'TERM-REC-01',
     });
     expect(reprintEvent.eventContent).toBe('补打印申请单');

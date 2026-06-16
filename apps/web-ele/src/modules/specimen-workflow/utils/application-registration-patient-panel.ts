@@ -1,5 +1,7 @@
 import type { ApplicationRegistrationWorkbenchRecord } from '../types/application-registration-workbench';
 
+import { formatApplicationType } from './format';
+
 export type WorkbenchEditorType = 'readonly' | 'select' | 'text' | 'textarea';
 
 export type WorkbenchInfoItem = {
@@ -172,7 +174,7 @@ export function buildSummaryItems(
       editorType: 'readonly',
       key: 'specimenType',
       label: '送检类型',
-      value: formatValue(record.patientInfo.specimenType),
+      value: formatApplicationType(record.patientInfo.specimenType),
     },
     {
       editorType: 'readonly',

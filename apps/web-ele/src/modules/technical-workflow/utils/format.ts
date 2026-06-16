@@ -68,18 +68,31 @@ const specimenStatusLabels = {
   REJECTED: '已拒收',
   RETURNED: '已退回',
 } satisfies Record<string, string>;
+const specimenRegistrationStatusLabels = {
+  COMPLETED: '已登记',
+  PENDING: '待登记',
+  REGISTERED: '已登记',
+  SAVED: '已保存',
+} satisfies Record<string, string>;
 const slideStatusLabels = {
+  CREATED: '待染色',
   PENDING: '待染色',
   STAINED: '已染色',
 } satisfies Record<string, string>;
 const qualityStatusLabels = {
   CREATED: '待质控',
+  PENDING: '待质控',
   QUALIFIED: '合格',
   UNQUALIFIED: '不合格',
 } satisfies Record<string, string>;
 const evaluationResultLabels = {
   QUALIFIED: '合格',
   REWORK_REQUIRED: '需返工',
+  UNQUALIFIED: '不合格',
+} satisfies Record<string, string>;
+const embeddingEvaluationLevelLabels = {
+  EXCELLENT: '优秀',
+  QUALIFIED: '合格',
   UNQUALIFIED: '不合格',
 } satisfies Record<string, string>;
 const eventTypeLabels = {
@@ -103,6 +116,10 @@ export function formatDateTime(value?: null | string) {
 
 export function formatNullable(value?: null | string) {
   return value && value.trim() ? value : '-';
+}
+
+export function formatPendingPathologyNo(value?: null | string) {
+  return value && value.trim() ? value : '待生成';
 }
 
 export function formatTaskType(value?: null | string) {
@@ -133,6 +150,17 @@ export function formatSpecimenStatus(value?: null | string) {
   return formatMappedValue(value, specimenStatusLabels);
 }
 
+export function formatSpecimenRegistrationStatus(value?: null | string) {
+  const formattedValue = formatMappedValue(
+    value,
+    specimenRegistrationStatusLabels,
+  );
+  if (formattedValue !== value?.trim()) {
+    return formattedValue;
+  }
+  return /^[A-Z_]+$/.test(formattedValue) ? '未知状态' : formattedValue;
+}
+
 export function formatSlideStatus(value?: null | string) {
   return formatMappedValue(value, slideStatusLabels);
 }
@@ -147,6 +175,17 @@ export function formatQcType(value?: null | string) {
 
 export function formatEvaluationResult(value?: null | string) {
   return formatMappedValue(value, evaluationResultLabels);
+}
+
+export function formatEmbeddingEvaluationLevel(value?: null | string) {
+  const formattedValue = formatMappedValue(
+    value,
+    embeddingEvaluationLevelLabels,
+  );
+  if (formattedValue !== value?.trim()) {
+    return formattedValue;
+  }
+  return /^[A-Z_]+$/.test(formattedValue) ? '未知评价' : formattedValue;
 }
 
 export function formatReworkType(value?: null | string) {

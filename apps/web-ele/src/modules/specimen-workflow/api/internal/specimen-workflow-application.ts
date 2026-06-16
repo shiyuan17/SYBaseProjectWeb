@@ -4,14 +4,23 @@ import type {
   ApplicationDetailView,
   ApplicationListQuery,
   ApplicationPage,
+  ApplicationPatientLookupResult,
   ApplicationUpdateRequest,
   DuplicateApplicationCheckQuery,
   DuplicateApplicationCheckResult,
   ImportClinicalApplicationRequest,
 } from '../../types/specimen-workflow';
+import type {
+  ApplicationDetailResponse,
+  ApplicationPageResponse,
+} from './specimen-workflow-mappers';
 
 import { requestClient } from '#/api/request';
 
+import {
+  mapApplicationDetailResponse,
+  mapApplicationPageResponse,
+} from './specimen-workflow-mappers';
 import {
   createApplicationMock,
   deleteApplicationMock,
@@ -19,15 +28,10 @@ import {
   getApplicationDetailMock,
   importClinicalApplicationMock,
   listApplicationsMock,
+  lookupApplicationPatientByIdentifierMock,
   updateApplicationMock,
   USE_SPECIMEN_WORKFLOW_MOCK,
 } from './specimen-workflow-mock-gateway';
-import {
-  type ApplicationDetailResponse,
-  type ApplicationPageResponse,
-  mapApplicationDetailResponse,
-  mapApplicationPageResponse,
-} from './specimen-workflow-mappers';
 
 export async function createApplication(data: ApplicationCreateRequest) {
   if (USE_SPECIMEN_WORKFLOW_MOCK) {
@@ -86,6 +90,29 @@ export async function duplicateCheckApplications(
     '/v1/applications/duplicate-check',
     { params },
   );
+}
+
+export async function lookupApplicationPatientByIdentifier(
+  identifier: string,
+): Promise<ApplicationPatientLookupResult | null> {
+  if (USE_SPECIMEN_WORKFLOW_MOCK) {
+    return lookupApplicationPatientByIdentifierMock(identifier);
+  }
+  try {
+    return await requestClient.get<ApplicationPatientLookupResult>(
+      '/v1/applications/patient-lookup',
+      {
+        params: { identifier: identifier.trim() },
+      },
+    );
+  } catch (error) {
+    const status = (error as { response?: { status?: number } }).response
+      ?.status;
+    if (status === 404) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 export async function importClinicalApplication(

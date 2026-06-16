@@ -82,7 +82,7 @@ watch(
 </script>
 
 <template>
-  <Page>
+  <Page :show-header="false">
     <ElTabs v-model="activeTab">
       <ElTabPane
         v-if="canManageApplications"

@@ -87,6 +87,30 @@ const logForm = defineModel<MaintenanceLogFormState>('logForm', {
         <ElDescriptionsItem label="下次保养">
           {{ formatNullable(selectedEquipment.nextMaintenanceAt) }}
         </ElDescriptionsItem>
+        <ElDescriptionsItem label="归口编号">
+          {{ formatNullable(selectedEquipment.managementCode) }}
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="归口单位">
+          {{ formatNullable(selectedEquipment.managementUnit) }}
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="购置日期">
+          {{ formatNullable(selectedEquipment.purchaseDate) }}
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="购置人">
+          {{ formatNullable(selectedEquipment.purchaserName) }}
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="负责人">
+          {{ formatNullable(selectedEquipment.principalName) }}
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="使用人">
+          {{ formatNullable(selectedEquipment.userName) }}
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="厂家">
+          {{ formatNullable(selectedEquipment.manufacturer) }}
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="RFID">
+          {{ formatNullable(selectedEquipment.rfid) }}
+        </ElDescriptionsItem>
         <ElDescriptionsItem label="备注">
           {{ formatNullable(selectedEquipment.remarks) }}
         </ElDescriptionsItem>

@@ -29,8 +29,8 @@ import {
   mapApplicationListItem,
   mapSpecimenManagementItem,
   mapSpecimenTrackingSummary,
-  resolveMockOperatorContext,
   resolveApplicationForLookup,
+  resolveMockOperatorContext,
   updateApplicationFromSpecimens,
 } from './specimen-workflow-mock-core';
 
@@ -46,9 +46,7 @@ export async function registerSpecimensMock(
       'SPEC',
       getMockState().specimens.map((specimen) => specimen.id),
     );
-    const barcode =
-      normalizeText(item.barcode) ||
-      `BC-${application.id.slice(-3)}-${String(index + 1).padStart(2, '0')}-${getMockState().specimens.length + index + 1}`;
+    const barcode = normalizeText(item.barcode) || null;
     const overriddenSpecimenNo = normalizeText(
       (item as { specimenNo?: string }).specimenNo,
     );
@@ -69,11 +67,12 @@ export async function registerSpecimensMock(
       fixationStatus: 'PENDING',
       id: specimenId,
       labelPrintBatchNo,
-      labelPrintStatus: 'SUCCESS',
+      labelPrintStatus: barcode ? 'SUCCESS' : 'PENDING',
       latestTrackingAt: createdAt,
       previousBarcodes: [],
       qualityCheckResult: null,
       qualityIssueCodes: [],
+      receiptLogisticsStaffName: null,
       receiptReason: null,
       receiptRemarks: null,
       receiptStatus: null,
@@ -108,12 +107,18 @@ export async function registerSpecimensMock(
     return specimen;
   });
 
+  const allBarcodesBound = createdSpecimens.every((item) =>
+    normalizeText(item.barcode),
+  );
+
   getMockState().registrationBatches.push({
     applicationId: application.id,
     createdAt,
     labelPrintBatchNo,
-    labelPrintMessage: '标签打印成功',
-    labelPrintSuccess: true,
+    labelPrintMessage: allBarcodesBound
+      ? '标签打印成功'
+      : '待绑定条码后打印标签',
+    labelPrintSuccess: allBarcodesBound,
     registrationSnapshot: {
       collectionScene: data.collectionScene ?? null,
       operatorName: operator.operatorName,
@@ -129,8 +134,10 @@ export async function registerSpecimensMock(
 
   return {
     labelPrintBatchNo,
-    labelPrintMessage: '标签打印成功',
-    labelPrintSuccess: true,
+    labelPrintMessage: allBarcodesBound
+      ? '标签打印成功'
+      : '待绑定条码后打印标签',
+    labelPrintSuccess: allBarcodesBound,
     specimens: createdSpecimens.map((item) => mapSpecimenTrackingSummary(item)),
   };
 }
@@ -206,12 +213,12 @@ export async function listSpecimensMock(
   params: SpecimenManagementListQuery,
 ): Promise<SpecimenManagementListPage> {
   const filteredItems = getMockState()
-    .specimens
-    .map((item) => mapSpecimenManagementItem(item))
+    .specimens.map((item) => mapSpecimenManagementItem(item))
     .filter((item) => {
       const keyword = normalizeText(params.keyword);
       const matchesKeyword =
         !keyword ||
+        includesText(item.specimenId, keyword) ||
         includesText(item.applicationNo, keyword) ||
         includesText(item.patientName, keyword) ||
         includesText(item.specimenNo, keyword) ||

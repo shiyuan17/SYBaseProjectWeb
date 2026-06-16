@@ -70,7 +70,6 @@ const {
     @closed="resetDialogState"
   >
     <div class="flex max-h-[70vh] flex-col gap-4 overflow-y-auto pr-1">
-
       <ElDescriptions :column="3" border>
         <ElDescriptionsItem label="任务号">
           {{ formatNullable(currentTaskContext.taskId) }}

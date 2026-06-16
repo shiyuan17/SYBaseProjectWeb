@@ -52,7 +52,7 @@ export async function loadOperationDomainData(
     {
       description: '低库存或近效期试剂',
       id: 'operation-reagent',
-      route: '/operation-support/reagents',
+      route: '/operation-resources/reagents',
       title: '试剂预警',
       tone: reagentWarnings.length > 0 ? 'danger' : 'success',
       value: formatCount(reagentWarnings.length),
@@ -60,7 +60,7 @@ export async function loadOperationDomainData(
     {
       description: '即将到期或逾期维护设备',
       id: 'operation-equipment',
-      route: '/operation-support/equipment',
+      route: '/operation-resources/equipment',
       title: '设备预警',
       tone: equipmentWarnings.length > 0 ? 'danger' : 'success',
       value: formatCount(equipmentWarnings.length),
@@ -73,45 +73,45 @@ export async function loadOperationDomainData(
       id: item.loanId,
       route: '/operation-support/archive',
       severity: 'warning' as const,
-      source: '归档运营',
+      source: '归档与借记',
       title: item.objectCode || item.pathologyNo || item.loanId,
     })),
     ...reagentWarnings.slice(0, 2).map((item: ReagentWarningView) => ({
       description: `${item.reagentName} / ${item.warningType}`,
       id: item.stockId,
-      route: '/operation-support/reagents',
+      route: '/operation-resources/reagents',
       severity: 'danger' as const,
-      source: '归档运营',
+      source: '设备及试剂',
       title: `${item.reagentCode} / ${item.batchNo}`,
     })),
     ...equipmentWarnings.slice(0, 2).map((item: EquipmentWarningView) => ({
       description: `${item.equipmentName} / ${item.warningType}`,
       id: item.equipmentId,
-      route: '/operation-support/equipment',
+      route: '/operation-resources/equipment',
       severity: 'danger' as const,
-      source: '归档运营',
+      source: '设备及试剂',
       title: item.equipmentCode,
     })),
   ];
 
   const quickEntries: DashboardQuickEntry[] = [
     {
-      description: '查看档案与借阅管理',
+      description: '查看档案与借记管理',
       id: 'operation-entry-1',
       route: '/operation-support/archive',
       title: '归档管理',
     },
     {
-      description: '维护试剂台账和库存预警',
+      description: '维护试剂耗材和库存预警',
       id: 'operation-entry-2',
-      route: '/operation-support/reagents',
-      title: '试剂台账',
+      route: '/operation-resources/reagents',
+      title: '试剂耗材管理',
     },
     {
-      description: '查看设备台账与保养记录',
+      description: '查看仪器设备与保养记录',
       id: 'operation-entry-3',
-      route: '/operation-support/equipment',
-      title: '设备台账',
+      route: '/operation-resources/equipment',
+      title: '仪器设备管理',
     },
   ];
 
@@ -120,6 +120,6 @@ export async function loadOperationDomainData(
     cards,
     id: 'operation',
     quickEntries,
-    title: '归档运营',
+    title: '归档与借记',
   };
 }

@@ -2,7 +2,11 @@ import { computed, reactive, ref } from 'vue';
 
 import { useAccessStore, useUserStore } from '@vben/stores';
 
-import { M5_ARCHIVE_PAGE_AUTHORITIES, M5_PERMISSION_CODES } from '../constants';
+import {
+  M5_ARCHIVE_PAGE_AUTHORITIES,
+  M5_BORROW_PAGE_AUTHORITIES,
+  M5_PERMISSION_CODES,
+} from '../constants';
 import {
   getArchiveStatusTagType,
   getCabinetStatusTagType,
@@ -30,8 +34,14 @@ export function useArchiveManagementPage() {
     canArchiveSlide: computed(() =>
       accessCodeSet.value.has(M5_PERMISSION_CODES.SLIDE_ARCHIVE),
     ),
+    canArchiveSpecimen: computed(() =>
+      accessCodeSet.value.has(M5_PERMISSION_CODES.SPECIMEN_ARCHIVE),
+    ),
     canCreateCabinet: computed(() =>
       accessCodeSet.value.has(M5_PERMISSION_CODES.ARCHIVE_CABINET_CREATE),
+    ),
+    canDeleteCabinet: computed(() =>
+      accessCodeSet.value.has(M5_PERMISSION_CODES.ARCHIVE_CABINET_DELETE),
     ),
     canCreateLoan: computed(() =>
       accessCodeSet.value.has(M5_PERMISSION_CODES.LOAN_CREATE),
@@ -45,6 +55,9 @@ export function useArchiveManagementPage() {
     canQueryRecords: computed(() =>
       accessCodeSet.value.has(M5_PERMISSION_CODES.ARCHIVE_QUERY),
     ),
+    canRegisterLoanAbnormal: computed(() =>
+      accessCodeSet.value.has(M5_PERMISSION_CODES.LOAN_ABNORMAL_REGISTER),
+    ),
     canReturnLoan: computed(() =>
       accessCodeSet.value.has(M5_PERMISSION_CODES.LOAN_RETURN),
     ),
@@ -53,6 +66,9 @@ export function useArchiveManagementPage() {
     ),
     canViewArchivePage: computed(() =>
       M5_ARCHIVE_PAGE_AUTHORITIES.some((code) => accessCodeSet.value.has(code)),
+    ),
+    canViewBorrowPage: computed(() =>
+      M5_BORROW_PAGE_AUTHORITIES.some((code) => accessCodeSet.value.has(code)),
     ),
   };
 
@@ -90,6 +106,14 @@ export function useArchiveManagementPage() {
   });
   const archiveWorkspaceState = useArchiveSubmissionWorkspace({
     capabilities,
+    clearSelectedArchiveObjectRecords:
+      recordWorkspaceState.clearSelectedArchiveObjectRecords,
+    clearSelectedApplicationFormRecords:
+      recordWorkspaceState.clearSelectedApplicationFormRecords,
+    getSelectedArchiveObjectRecords:
+      recordWorkspaceState.getSelectedArchiveObjectRecords,
+    getSelectedApplicationFormRecords:
+      recordWorkspaceState.getSelectedApplicationFormRecords,
     mutationState,
     operatorContext,
     refreshArchiveWorkspace,
@@ -100,13 +124,13 @@ export function useArchiveManagementPage() {
     const tasks: Array<Promise<unknown>> = [];
 
     if (capabilities.canQueryCabinets.value) {
-      tasks.push(cabinetWorkspaceState.loadPositions());
+      tasks.push(
+        cabinetWorkspaceState.loadPositions(),
+        cabinetWorkspaceState.loadCabinetNodes(),
+      );
     }
     if (capabilities.canQueryRecords.value) {
-      tasks.push(recordWorkspaceState.loadRecords());
-    }
-    if (capabilities.canQueryLoans.value) {
-      tasks.push(loanWorkspaceState.loadLoans());
+      tasks.push(recordWorkspaceState.refreshCurrentArchiveObjects());
     }
 
     if (tasks.length > 0) {
@@ -124,14 +148,12 @@ export function useArchiveManagementPage() {
     if (capabilities.canQueryCabinets.value) {
       tasks.push(
         cabinetWorkspaceState.loadCabinets(),
+        cabinetWorkspaceState.loadCabinetNodes(),
         cabinetWorkspaceState.loadPositions(),
       );
     }
     if (capabilities.canQueryRecords.value) {
-      tasks.push(recordWorkspaceState.loadRecords());
-    }
-    if (capabilities.canQueryLoans.value) {
-      tasks.push(loanWorkspaceState.loadLoans());
+      tasks.push(recordWorkspaceState.refreshCurrentArchiveObjects());
     }
 
     if (tasks.length > 0) {

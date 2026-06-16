@@ -7,8 +7,8 @@ import type {
 import {
   ElAlert,
   ElButton,
-  ElDialog,
   ElDatePicker,
+  ElDialog,
   ElEmpty,
   ElForm,
   ElFormItem,
@@ -65,6 +65,7 @@ const {
   editableApplicationFormStatusOptions,
   handleClinicalSymptomSuggestionChange,
   handleDuplicateCheck,
+  handlePatientIdentifierLookup,
   hasDialogCapability,
   importForm,
   importingClinicalApplication,
@@ -89,7 +90,7 @@ const {
   >
     <div v-loading="loadingApplicationDetail" class="flex flex-col gap-4">
       <ElAlert
-        v-if="false"
+        v-if="pageError"
         :closable="false"
         :title="pageError"
         type="error"
@@ -135,6 +136,8 @@ const {
                   <ElInput
                     v-model="createForm.patientId"
                     placeholder="患者编号 / 门诊号 / 住院号"
+                    @blur="handlePatientIdentifierLookup"
+                    @keyup.enter="handlePatientIdentifierLookup"
                   />
                 </ElFormItem>
                 <ElFormItem label="患者姓名">

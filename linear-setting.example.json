@@ -1,0 +1,26 @@
+{
+  "linear-token": "",
+  "linear-api-url": "https://api.linear.app/graphql",
+  "linear-team-name": "<Linear team 名称，例如 Sidney>",
+  "linear-project-name": "<Linear project 名称，例如 JWBL>",
+  "linear-backend-label": "frontend",
+  "linear-labels": [
+    {
+      "name": "frontend",
+      "description": "Frontend workflow and UI tasks",
+      "color": "#0f766e"
+    }
+  ],
+  "linear-sync": {
+    "default-labels": ["frontend"]
+  },
+  "linear-plan": [
+    {
+      "phase": "Phase 1",
+      "domain": "<业务域，例如 operation-support>",
+      "title": "<计划项标题，将作为 Linear issue 标题做幂等匹配>",
+      "description": "背景：<为什么要做>\n\n验收标准：\n- <标准 1>\n- <标准 2>\n\n非目标：<本期不做的范围>",
+      "labels": ["frontend"]
+    }
+  ]
+}

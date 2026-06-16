@@ -75,7 +75,7 @@ const {
   >
     <div class="flex max-h-[72vh] flex-col gap-4 overflow-y-auto pr-1">
       <ElAlert
-        v-if="false"
+        v-if="pageError"
         :closable="false"
         :title="pageError"
         type="error"

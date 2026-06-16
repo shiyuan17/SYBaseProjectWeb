@@ -55,7 +55,7 @@ describe('task presentation helpers', () => {
       '切片工作站',
     );
     expect(formatCurrentNode(createTask({ currentNode: null }))).toBe(
-      '取材描写',
+      '取材描写工作站',
     );
     expect(formatCurrentNode(createTask({ currentNode: 'CUSTOM_NODE' }))).toBe(
       'CUSTOM_NODE',

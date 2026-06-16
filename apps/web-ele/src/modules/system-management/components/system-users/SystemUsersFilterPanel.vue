@@ -1,9 +1,18 @@
 <script setup lang="ts">
-import { ElButton, ElForm, ElFormItem, ElInput, ElOption, ElSelect } from 'element-plus';
+import { computed } from 'vue';
+
+import {
+  ElButton,
+  ElForm,
+  ElFormItem,
+  ElInput,
+  ElOption,
+  ElSelect,
+} from 'element-plus';
 
 import SystemSectionCard from '../SystemSectionCard.vue';
 
-defineProps<{
+const props = defineProps<{
   filters: {
     enabled: boolean | undefined;
     keyword: string;
@@ -14,7 +23,20 @@ defineProps<{
 const emit = defineEmits<{
   reset: [];
   search: [];
+  'update:filters': [value: { enabled: boolean | undefined; keyword: string }];
 }>();
+
+const keywordModel = computed({
+  get: () => props.filters.keyword,
+  set: (value: string) =>
+    emit('update:filters', { ...props.filters, keyword: value }),
+});
+
+const enabledModel = computed({
+  get: () => props.filters.enabled,
+  set: (value: boolean | undefined) =>
+    emit('update:filters', { ...props.filters, enabled: value }),
+});
 </script>
 
 <template>
@@ -25,7 +47,7 @@ const emit = defineEmits<{
     <ElForm inline label-width="72px">
       <ElFormItem label="关键字">
         <ElInput
-          v-model="filters.keyword"
+          v-model="keywordModel"
           clearable
           placeholder="姓名 / 登录名 / 工号"
           style="width: 240px"
@@ -34,7 +56,7 @@ const emit = defineEmits<{
       </ElFormItem>
       <ElFormItem label="状态">
         <ElSelect
-          v-model="filters.enabled"
+          v-model="enabledModel"
           clearable
           placeholder="全部状态"
           style="width: 160px"

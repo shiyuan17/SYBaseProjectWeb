@@ -18,6 +18,7 @@ defineProps<{
   archivePermissionWarning: string;
   archiveSubmitButtonText: string;
   canSubmitArchive: boolean;
+  fixedObjectType?: string;
   selectedPositionLabel: string;
   submitting: boolean;
 }>();
@@ -45,7 +46,7 @@ const archiveForm = defineModel<ArchiveFormState>('archiveForm', {
     />
 
     <ElForm label-width="110px">
-      <ElFormItem label="对象类型" required>
+      <ElFormItem v-if="!fixedObjectType" label="对象类型" required>
         <ElSelect v-model="archiveForm.objectType" style="width: 220px">
           <ElOption
             v-for="option in ARCHIVE_OBJECT_TYPE_OPTIONS"

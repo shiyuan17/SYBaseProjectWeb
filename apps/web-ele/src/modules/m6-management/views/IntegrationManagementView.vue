@@ -89,6 +89,7 @@ onMounted(() => {
 
 <template>
   <Page
+    :show-header="false"
     title="集成任务"
     description="查询临床导入、收费提交和历史导入等 M6 集成任务轨迹。"
   >

@@ -19,7 +19,7 @@ export type RawApplication = Omit<
 
 export type RawSpecimen = {
   applicationId: string;
-  barcode: string;
+  barcode: null | string;
   checkedInAt?: null | string;
   checkedInByName?: null | string;
   checkInStatus?: null | string;
@@ -40,6 +40,7 @@ export type RawSpecimen = {
   previousBarcodes: string[];
   qualityCheckResult: null | string;
   qualityIssueCodes: string[];
+  receiptLogisticsStaffName?: null | string;
   receiptReason: null | string;
   receiptRemarks: null | string;
   receiptStatus: null | string;

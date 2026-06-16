@@ -17,20 +17,20 @@
 
 ### 启动链路
 
-- [apps/web-ele/src/main.ts](../apps/web-ele/src/main.ts) 负责偏好设置初始化、命名空间迁移和应用启动
-- [apps/web-ele/src/bootstrap.ts](../apps/web-ele/src/bootstrap.ts) 负责挂载 Vue 应用、注册指令、i18n、Pinia、路由和动画插件
+- [apps/web-ele/src/main.ts](../../apps/web-ele/src/main.ts) 负责偏好设置初始化、命名空间迁移和应用启动
+- [apps/web-ele/src/bootstrap.ts](../../apps/web-ele/src/bootstrap.ts) 负责挂载 Vue 应用、注册指令、i18n、Pinia、路由和动画插件
 
 ### 路由与权限
 
-- [apps/web-ele/src/router/index.ts](../apps/web-ele/src/router/index.ts) 创建路由实例并安装守卫
-- [apps/web-ele/src/router/guard.ts](../apps/web-ele/src/router/guard.ts) 统一处理登录态、权限码、动态路由和跳转回流
-- [apps/web-ele/src/router/routes/index.ts](../apps/web-ele/src/router/routes/index.ts) 通过 `import.meta.glob` 聚合模块路由
-- [apps/web-ele/src/api/core/menu-mapper.ts](../apps/web-ele/src/api/core/menu-mapper.ts) 是菜单与后端路由映射的核心文件
+- [apps/web-ele/src/router/index.ts](../../apps/web-ele/src/router/index.ts) 创建路由实例并安装守卫
+- [apps/web-ele/src/router/guard.ts](../../apps/web-ele/src/router/guard.ts) 统一处理登录态、权限码、动态路由和跳转回流
+- [apps/web-ele/src/router/routes/index.ts](../../apps/web-ele/src/router/routes/index.ts) 通过 `import.meta.glob` 聚合模块路由
+- [apps/web-ele/src/api/core/menu-mapper.ts](../../apps/web-ele/src/api/core/menu-mapper.ts) 是菜单与后端路由映射的核心文件
 
 ### 请求与认证
 
-- [apps/web-ele/src/api/request.ts](../apps/web-ele/src/api/request.ts) 统一封装请求客户端、鉴权拦截和错误提示
-- [apps/web-ele/src/store/auth.ts](../apps/web-ele/src/store/auth.ts) 管理登录、登出、用户信息和登录后跳转
+- [apps/web-ele/src/api/request.ts](../../apps/web-ele/src/api/request.ts) 统一封装请求客户端、鉴权拦截和错误提示
+- [apps/web-ele/src/store/auth.ts](../../apps/web-ele/src/store/auth.ts) 管理登录、登出、用户信息和登录后跳转
 
 ### 业务模块
 
@@ -47,8 +47,8 @@
 
 ### Mock 联调层
 
-- [apps/backend-mock/README.md](../apps/backend-mock/README.md) 说明 mock 服务随前端一起启用
-- [apps/backend-mock/nitro.config.ts](../apps/backend-mock/nitro.config.ts) 配置了 Nitro 路由规则与跨域头
+- [apps/backend-mock/README.md](../../apps/backend-mock/README.md) 说明 mock 服务随前端一起启用
+- [apps/backend-mock/nitro.config.ts](../../apps/backend-mock/nitro.config.ts) 配置了 Nitro 路由规则与跨域头
 
 ## 重点判断
 

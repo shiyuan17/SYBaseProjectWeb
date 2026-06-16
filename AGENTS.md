@@ -8,48 +8,116 @@
 - 适用范围：需求分析、文档编写、工程初始化、组件开发、接口联调、测试补充、缺陷修复、发布准备
 - 规范定位：本文件只描述“如何协作”，不重复 Vue、TypeScript、Pinia、Vue Router、API、UI、发布细则
 
+## 快速命令
+
+统一使用 `pnpm`（Node 与 pnpm 版本约束见根 `package.json` 的 `engines`）。验证命令的唯一维护点是 `docs/rules/CODING_RULES.md` 的「标准验证命令」；下表仅为入口速查镜像，两处不一致时以 `CODING_RULES.md` 为准：
+
+| 用途                                                 | 命令              |
+| ---------------------------------------------------- | ----------------- |
+| 安装依赖                                             | `pnpm install`    |
+| 启动开发（web-ele）                                  | `pnpm dev:ele`    |
+| 代码规范                                             | `pnpm lint`       |
+| 类型检查                                             | `pnpm check:type` |
+| 综合静态检查（循环依赖 + 依赖 + 类型 + 拼写 + 治理） | `pnpm check`      |
+| 单元测试                                             | `pnpm test:unit`  |
+| 端到端测试                                           | `pnpm test:e2e`   |
+| 构建                                                 | `pnpm build`      |
+
+> 改动逻辑或组件时，交付前按影响面运行最小有效验证：优先选择相关 `pnpm test:unit`、`pnpm check:type`、`pnpm lint` 的必要组合，并在交付说明中回填真实结论。涉及规范、记忆文件或治理脚本改动时，额外运行 `pnpm run check:governance`。
+
+## 一页式执行入口
+
+所有任务先按风险与行为变化进入以下三档；档位只决定最低交付形式，不降低红区确认、真实验证、Memory Update 或跨仓核对要求：
+
+| 档位 | 适用场景 | 最低输出 | 最低验证 | 升级条件 |
+| --- | --- | --- | --- | --- |
+| Fast Path | 纯文档、规范审计、只读分析、测试-only、低风险静态文案，不改运行时行为，不触发红区 | 精简任务确认；交付中说明 Workflow 不适用原因、验证结果、Memory 一句话判定 | 文档 / 治理类任务至少 `pnpm run check:governance`；只读分析写明核对来源；测试-only 跑对应测试 | 需要改接口、路由、权限、构建、CI、hook、发布或出现业务规则歧义 |
+| Lightweight | 低风险实现类任务，命中 UI / API / Architecture / Workflow-Infra 但未触发强制修饰器，不涉及跨层或红区 | 完整任务确认；轻量 Workflow Packet（主 Workflow、触发信号、实际验证、Memory 判定、剩余风险）；动态测试可并入验证结果 | 以 `docs/rules/CODING_RULES.md` 标准验证命令选择最小有效集 | 触发 Security / DB / Red Team / Backend Cross-check / Browser 验证，或影响共享契约、路由守卫、请求全局层、构建发布 |
+| Full | 中高风险、跨层、权限 / 数据 / 报告、生产问题、构建发布、红区、跨仓联动 | 完整任务确认；完整 Workflow Packet；必要时 Loop Packet、Red Team、Checker 与红区确认记录 | 按 `docs/rules/DYNAMIC_WORKFLOW_RULES.md` 对应 Workflow 执行动态测试 / 模拟 / 安全或数据库证据 | 扩大到新的红区范围、验证失败无法自行修复、跨仓证据缺失或业务规则无法确定 |
+
+### 常见任务快速选择
+
+- 只读规范审计、差距分析、交付报告：通常走 Fast Path，主 Workflow 标注「不适用（只读 / 纯文档，不改运行时行为）」，写清核对来源与 `check:governance` 结果。
+- 模块内低风险 UI 文案、展示标签、测试-only 或局部非布局样式微调：通常走 Fast Path 或 Lightweight；若不涉及布局、视口、交互、权限可见性或浏览器兼容，可说明未触发 Browser 验证。
+- 权限、接口契约、患者 / 报告数据、导出打印、构建发布、CI / hook、跨仓或生产问题：直接走 Full，从严叠加 Security / DB / Red Team / Backend Cross-check / Browser 验证等修饰器，并按红区规则确认。
+
+### 规范单一来源矩阵
+
+| 规则主题 | 唯一来源 |
+| --- | --- |
+| 协作入口、风险升级、文件操作边界、红区确认、交付与 Memory Update 总规则 | `AGENTS.md` |
+| 首次进入 / 中大型任务的最小阅读路径（场景 → 最少文档） | `docs/rules/QUICKSTART.md` |
+| Workflow 分类、强制修饰器、动态测试 / 模拟、Red Team 与 Workflow Packet 字段语义 | `docs/rules/DYNAMIC_WORKFLOW_RULES.md` |
+| 标准验证命令、编码、通用代码质量与测试触发条件 | `docs/rules/CODING_RULES.md` |
+| worktree、Linear、分支、提交、PR、hook 与 Git 门禁 | `docs/rules/GIT_RULES.md` |
+| Loop Type、Stop Condition、State Sink、Escalation Condition 与 maker/checker 闭环 | `docs/rules/LOOP_ENGINEERING_RULES.md` |
+| 外部 AI skill 推荐与回退，不改变上述强制规则 | `docs/rules/AGENT_SKILL_ROUTING.md` |
+
+## 日志读取规则
+
+- 后端日志固定输出到 `.logs/backend.log`
+- 前端开发日志固定输出到 `.logs/frontend.log`
+- 构建日志固定输出到 `.logs/build.log`
+- 测试日志固定输出到 `.logs/test.log`
+- `pnpm dev:ele`、`pnpm build`、`pnpm test:unit` 默认会追加写入上述对应日志，并保留控制台输出
+- AI 排查问题时，必须先读取 `.logs/` 下最近日志，再修改代码
+- 修改后必须重新运行对应命令，并把新错误继续写入日志
+
 ## 强制规则
 
 ### 1. 必读顺序
 
-开始任务前，必须按以下顺序读取上下文：
+阅读采用分级策略，避免在小改动上空转，同时保证关键改动有足够上下文：
 
-1. `AGENTS.md`
-2. `docs/PROJECT_DIRECTORY.md`
-3. `docs/CODING_RULES.md`
-4. `docs/VUE_TS_RULES.md`
-5. `docs/UI_RULES.md`
-6. `docs/STATE_RULES.md`
-7. `docs/ROUTER_RULES.md`
-8. `docs/API_RULES.md`
-9. `docs/COMPATIBILITY_RULES.md`
-10. `docs/GIT_RULES.md`
-11. `docs/LINEAR_TASK.md`（仅当任务来源于 Linear issue 时）
-12. `docs/RELEASE.md`
-13. `docs/AI-CODE-HEALTH.md`
-14. 任务涉及模块文档与现有源码
+- **始终必读**：`AGENTS.md` 本文件，以及下方「2. 规范映射表」中本次任务场景命中的文档。
+- **日常任务（绿区小改动 / 纯文档 / 规范审计）**：读 `AGENTS.md` + 映射表命中的专项文档即可开工；不要求机械通读全部规范。
+- **首次进入项目**：按 **三层阅读路径** 建立上下文（场景映射与最少验证见 `docs/rules/QUICKSTART.md`）：
+  1. **入口层（开工前）**：`AGENTS.md`（「一页式执行入口」+「规范映射表」）→ `docs/memory/PROJECT_STATE.md` → `docs/memory/DECISIONS.md` → `docs/memory/KNOWN_BUGS.md` → `docs/rules/QUICKSTART.md`。
+  2. **任务层（动手前）**：按 `QUICKSTART.md`「场景最小阅读」补齐 **2–4 份** 专项规范 + 任务涉及模块源码；不得跳过与本次改动直接相关的专项文档。
+  3. **底座层（首次跨层 / 共享层 / 发布前）**：在任务层基础上，通读 `QUICKSTART.md`「协作底座」中命中的子包；至少读完 **协作子包**（`CODING_RULES.md`、`GIT_RULES.md`、`DYNAMIC_WORKFLOW_RULES.md`）；触碰 store / 路由 / 接口 / 浏览器能力时再读对应横切文档。
+- **中大型改动 / 跨模块或跨层（路由 + 状态 + 接口 + 主题等）**：完成入口层 + 底座层 + 映射表命中的全部专项文档 + 任务涉及模块文档与现有源码；**不得**在未读 `GIT_RULES.md`、`DYNAMIC_WORKFLOW_RULES.md` 与命中横切文档前修改共享层或红区。
+- **续接历史任务 / 接手脏工作区**：先读 `docs/memory/PROJECT_STATE.md`、`docs/memory/DECISIONS.md`、`docs/memory/KNOWN_BUGS.md`，再结合 `git status`、agentmemory 技能与任务相关规范恢复上下文；若任务场景发生变化，回到 `QUICKSTART.md` 补读任务层文档，不必重复通读已掌握的底座子包。
+  - `docs/memory/PROJECT_STATE.md` 只记录阶段、活跃任务和交接重点，不作为当前工作区是否脏的事实来源；工作区状态必须以本轮实时 `git status --short` 为准。
+
+> `docs/rules/AI-CODE-HEALTH.md` 为按需引用的质量自检附录，不在默认通读清单内；在生成或评审代码、做交付前自检时查阅其规则速查表与自检清单即可。
+>
+> 原「一次性通读 16 份规范」清单已由 `docs/rules/QUICKSTART.md` 的场景表与底座分包取代；需要完整路径索引时以 `docs/rules/README.md` 为准，按场景增量阅读，不得为形式合规空转通读无关文档。
+
+> 无论走哪一档，涉及红区或「6. 必须升级人工确认的场景」时，相关专项文档均为必读。
+>
+> 入口收口规则：
+>
+> - Workflow 选择、强制修饰器、动态测试、Red Team、Workflow Packet 字段以 `docs/rules/DYNAMIC_WORKFLOW_RULES.md` 为唯一来源。
+> - Worktree / Linear / 脏工作区隔离策略以 `docs/rules/GIT_RULES.md` 第 6 节为唯一来源。
+> - 五类 Memory 文件职责、通用更新触发条件、是否需要更新的最终判定以本文件「8. AI Memory Update」为唯一来源。
+> - `docs/rules/LOOP_ENGINEERING_RULES.md` 只定义 loop 的运行/停止方式，不重复定义 Workflow 分类、Memory 触发条件或 worktree 决策。
 
 ### 2. 规范映射表
 
 | 场景 | 必读文档 |
 | --- | --- |
-| 目录组织与模块边界 | `docs/PROJECT_DIRECTORY.md` |
-| 通用编码与测试基线 | `docs/CODING_RULES.md` |
-| Vue 3、Vite、TypeScript、组件实现 | `docs/VUE_TS_RULES.md` |
-| Pinia 状态设计 | `docs/STATE_RULES.md` |
-| 路由设计、守卫与导航元信息 | `docs/ROUTER_RULES.md` |
-| Axios、请求模型、错误处理、分页协议 | `docs/API_RULES.md` |
-| Element Plus、TailwindCSS、ECharts、交互与视觉一致性 | `docs/UI_RULES.md` |
-| 浏览器、国产环境、导出打印、字体与降级策略 | `docs/COMPATIBILITY_RULES.md` |
-| 分支、提交、PR、合并协作 | `docs/GIT_RULES.md` |
-| Linear issue 开工与任务起始信息准备 | `docs/LINEAR_TASK.md` |
-| 环境、构建、发布与回滚 | `docs/RELEASE.md` |
-| AI 生成代码健康基线 | `docs/AI-CODE-HEALTH.md` |
+| 首次进入项目、中大型任务起步、不确定最少读哪些规范 | `docs/rules/QUICKSTART.md` |
+| 目录组织与模块边界 | `docs/rules/PROJECT_DIRECTORY.md` |
+| 通用编码与测试基线 | `docs/rules/CODING_RULES.md` |
+| Vue 3、Vite、TypeScript、组件实现 | `docs/rules/VUE_TS_RULES.md` |
+| Pinia 状态设计 | `docs/rules/STATE_RULES.md` |
+| 路由设计、守卫与导航元信息 | `docs/rules/ROUTER_RULES.md` |
+| Axios、请求模型、错误处理、分页协议 | `docs/rules/API_RULES.md` |
+| 测试分层、单测/E2E 边界、mock 契约同步 | `docs/rules/TESTING_RULES.md` |
+| Element Plus、TailwindCSS、ECharts、交互与视觉一致性 | `docs/rules/UI_RULES.md` |
+| 浏览器、国产环境、导出打印、字体与降级策略 | `docs/rules/COMPATIBILITY_RULES.md` |
+| 分支、提交、PR、合并协作 | `docs/rules/GIT_RULES.md` |
+| 任何涉及 UI / 接口 / 数据库 / 权限 / 架构重构 / 生产问题 / 构建发布的实现类任务（选主 Workflow、专家 Agent、动态测试/模拟、Red Team） | `docs/rules/DYNAMIC_WORKFLOW_RULES.md` |
+| Loop Engineering、长期/定时/Goal/多 Agent 闭环、Triage 与 maker/checker 分离 | `docs/rules/LOOP_ENGINEERING_RULES.md` |
+| 续接历史任务、交付前记忆层更新（状态/债务/缺陷/决策/架构） | `docs/memory/PROJECT_STATE.md`、`docs/memory/TECH_DEBT.md`、`docs/memory/KNOWN_BUGS.md`、`docs/memory/DECISIONS.md`、`docs/memory/ARCHITECTURE.md` |
+| Linear issue 开工与任务起始信息准备 | `docs/rules/LINEAR_TASK.md` |
+| 环境、构建、发布与回滚 | `docs/rules/RELEASE.md` |
+| AI 生成代码健康基线 | `docs/rules/AI-CODE-HEALTH.md` |
 
 ### 3. 后端联动检查
 
-- 后端代码引用路径为 `D:\Github\JW\SYBaseProject`
-- 当任务涉及接口联调、后端字段映射、业务规则核对、问题排查或需要确认后端实现时，必须对照该路径下对应代码进行匹配，不得仅依据前端页面、临时返回数据或推测作出结论
+- 后端仓库为 `SYBaseProject`，默认与本仓库 `SYBaseProjectWeb` 同级（即同一上级目录下）；具体位置以本地实际克隆路径为准，不要在代码或文档中写死某台机器的绝对路径
+- 当任务涉及接口联调、后端字段映射、业务规则核对、问题排查或需要确认后端实现时，必须对照后端仓库对应代码进行匹配，不得仅依据前端页面、临时返回数据或推测作出结论
 
 ### 4. 任务开始模板
 
@@ -60,12 +128,33 @@
 
 - 任务目标: [对需求的理解]
 - 影响范围: [计划修改的文件、模块或页面]
+- 主 Workflow: [UI / API / DB / Security / Architecture / Production Debug / Workflow-Infra 之一]
+- 强制修饰器: [Security / DB / Red Team / Backend Cross-check / Browser 验证（Browser Verification），按风险叠加，可为空]
 - 依赖检查: [涉及的组件、接口、浏览器能力、构建配置]
 - 风险等级: [低 / 中 / 高]
 - 关键假设: [默认采用的前提]
+- 成功标准: [可验证的完成条件，例如测试、页面行为、接口契约或文档变更点]
+- 非目标 / 不做项: [本轮明确不处理的范围，避免顺手重构或扩展]
 ```
 
-- 若任务明确来源于 Linear issue，开始前应参考 `docs/LINEAR_TASK.md` 准备任务起始信息；非 Linear 任务不强制套用该模板。
+**绿区 Fast Path（精简任务确认）**：同时满足「仅绿区改动、纯文档 / 规范审计 / 只读分析、不改运行时行为、不涉及红区与人工确认场景」时，可改用以下精简模板，无需展开完整九字段：
+
+```markdown
+## 任务确认（Fast Path）
+
+- 任务目标: [一句话]
+- 影响范围: [文件或目录]
+- 主 Workflow: 不适用（[原因]）
+- 成功标准: [可验证的完成条件，例如 check:governance 通过、文档点位修正]
+```
+
+任一条件不满足（命中实现类 Workflow、黄区/红区、改运行时行为）即回到完整模板；PR 层面的对应精简规则见 `.github/PULL_REQUEST_TEMPLATE.md` 的 Fast path 说明。完整模板、Fast Path、Workflow Packet、Memory Update Packet 的已填写范例见 `docs/templates/workflow-packet-examples.md`；选主 Workflow 与叠修饰器的决策流程图见 `docs/rules/DYNAMIC_WORKFLOW_RULES.md`「决策流程图」一节。
+
+- 主 Workflow 与修饰器的选择标准、触发条件、对应专家 Agent / 动态测试 / 动态模拟 / 红队问题，统一以 `docs/rules/DYNAMIC_WORKFLOW_RULES.md` 为唯一来源；纯文档、闲聊或信息查询类任务可标注「主 Workflow: 不适用」并说明原因。
+- 若任务明确来源于 Linear issue，开始前应参考 `docs/rules/LINEAR_TASK.md` 准备任务起始信息；非 Linear 任务不强制套用该模板。
+- **规格先行（硬约束）**：验收标准为空、缺失或存在歧义，且不同理解会改变页面行为 / 数据流 / 接口联调方式时，必须先澄清确认，不得凭推测直接进入编码（与「6. 必须升级人工确认的场景」中"无法确定业务规则"一致）。对中大型任务，应先与用户对齐验收标准与非目标，再动手实现。
+- **最小可验证目标**：开始前必须把需求转成可验证成功标准。缺陷修复应优先复现或补回归测试；新增校验应说明无效输入如何验证；重构应说明行为保持不变的验证方式。
+- **显式假设与取舍**：若存在多个合理解释、简单方案与复杂方案的取舍，必须在任务确认或方案说明中显式列出；不同解释会改变行为时先问清，不得静默选择。
 
 ### 5. 文件操作边界
 
@@ -77,6 +166,7 @@
 
 补充约束：
 
+- 每个修改点都必须能追溯到用户需求、成功标准或本次修改引入的必要清理；不得顺手格式化、改写注释、重排无关代码或重构未触及的实现
 - 修改全局路由守卫、登录态持久化、权限指令、Axios 全局实例、环境变量读取逻辑前，必须明确说明外部影响
 - 不得因重构方便而绕过既有鉴权、错误处理、埋点、降级或浏览器兼容逻辑
 - 不得擅自删除已有测试、截图基线或兼容性验证记录来“让流程通过”
@@ -93,14 +183,40 @@
 - 无法从上下文确定业务规则，且不同实现会改变页面行为或接口联调方式
 - 需要执行高风险操作，如覆盖共享组件契约、删除关键页面、重写公共请求层
 
+红区确认协议：
+
+- 请求确认时必须写明：拟改范围、命中的红区原因、外部影响、验证计划、回滚或撤销方式。
+- 有效确认必须明确允许本次动作，且能对应到具体范围；笼统的“继续”“你看着办”不能覆盖权限、认证、全局请求层、构建发布等红区变更。
+- 确认只覆盖当次说明的范围；若实施中扩大到新的红区文件、权限模型、接口协议、构建/发布路径或目标环境，必须重新暂停确认。
+- 交付或 PR 中必须记录确认来源（对话、issue、评审结论或负责人）和确认覆盖范围；未取得确认的红区项只能列为未执行 / 待确认。
+
 ### 7. 输出与交接要求
 
 每次交付必须包含：
 
 - 变更摘要：做了什么、为什么这样做
 - 影响说明：是否涉及配置、接口、兼容性、主题、路由或状态
+- 追溯说明：说明本次主要变更如何对应用户需求、成功标准或必要清理；无关改动必须说明原因
+- Workflow Packet（精简版）：本次主 Workflow、实际叠加的修饰器、启用的专家 Agent、跑过的动态测试/模拟，以及高风险任务的红队结论；完整字段语义与必填口径以 `docs/rules/DYNAMIC_WORKFLOW_RULES.md` 为唯一来源，PR 模板仅为其镜像
 - 验证结果：已执行的检查、构建、测试或未验证项
+- AI Memory Update：本次更新了哪些记忆文件、哪些未更新及原因、是否存在跨仓引用
 - 风险提示：需要人工跟进的事项
+
+补充口径：
+
+- 低风险纯文档、规范审计、只读分析类任务可使用**精简交付**：保留变更摘要、影响说明、验证结果、AI Memory Update、风险提示；若主 Workflow 为「不适用」，无需机械展开完整 Workflow Packet 或 Loop Packet，只需说明原因
+- 低风险实现类任务可使用**轻量交付**：保留主 Workflow、触发信号、实际验证、Memory 判定和风险提示；动态模拟、Red Team、Checker 仅在对应修饰器或风险触发时展开
+- 中高风险、跨层、权限/数据/报告、跨仓、构建发布、生产问题任务仍按完整 Packet 交付
+- 高风险任务的 Red Team 结果至少写明：攻击路径、预期失败点、实际结果、剩余风险；只写“已执行 / 无问题”不算完成
+- 若启用 Checker / maker-checker 分离，交付中必须说明 Checker 的来源（人工 / 子 Agent / reviewer）与其主要审查结论
+- 若启用子 Agent 协作，交付中必须简要说明子任务、产出来源、主 Agent 如何采纳 / 驳回 / 合并结论；高风险任务未启用 Checker 时，必须说明原因并按红区或人工确认规则暂停
+
+执行后验证是强制回路，不得只声称完成：
+
+- 凡涉及逻辑、组件、接口或构建的改动，交付前必须**实际运行**最小有效验证命令（见「快速命令」与 `CODING_RULES.md` 标准验证命令），并在「验证结果」中粘贴真实结论；CI 仍作为全量兜底，不要求低风险本地重复 CI 的完整命令集
+- 验证失败时必须先修复再重新验证，形成「执行 → 验证 → 修复」闭环，未通过不得宣称完成
+- 确实未运行某项验证时，必须在「验证结果」中显式标注为"未验证"并说明原因，不得默认略过
+- 禁止以"本地能跑""应该没问题"等推测替代实际验证
 
 任务移交时必须提供：
 
@@ -115,15 +231,82 @@
 - 建议下一步:
 ```
 
-### 8. 语言与提交约束
+- 续接历史任务前，先读取 `docs/memory/PROJECT_STATE.md`、`docs/memory/DECISIONS.md`、`docs/memory/KNOWN_BUGS.md`，再借助会话记忆恢复上下文：查阅 `agent-transcripts/` 历史会话，或使用 `handoff` / `recall` / `session-history` 等 skill，并结合本仓库当前 `git status` 与 `commit-context` 还原"上次进行到哪里"，避免重复探索或丢失关键决策
+
+### 8. AI Memory Update
+
+`docs/memory/` 下五类记忆文件是仓内长期上下文层，不替代 agentmemory、PR 描述、测试报告或 ADR：
+
+- `docs/memory/PROJECT_STATE.md`：当前阶段、活跃任务、最新验证状态、跨仓依赖、交接重点
+- `docs/memory/TECH_DEBT.md`：技术债台账，记录 ID、严重度、来源、影响、建议动作、状态
+- `docs/memory/KNOWN_BUGS.md`：已知问题台账，记录 ID、复现方式、影响范围、临时规避、验证状态
+- `docs/memory/DECISIONS.md`：决策日志，记录日期、上下文、选项、决策、理由、影响、回看条件
+- `docs/memory/ARCHITECTURE.md`：稳定架构快照，记录模块边界、核心依赖、跨仓接口、当前约束和禁止事项
+
+交付前 AI 必须判断本次任务是否产生以下变化，并按需更新对应记忆文件；低风险 Fast Path / Lightweight 若未产生持久上下文，可统一写为“no durable context change”，无需逐文件展开：
+
+- 项目阶段、活跃任务、验证基线或交接重点变化：更新 `docs/memory/PROJECT_STATE.md`
+- 发现或解决持久技术债：追加或更新 `docs/memory/TECH_DEBT.md`
+- 发现、复现或修复已知 bug：追加或更新 `docs/memory/KNOWN_BUGS.md`
+- 做出影响后续协作的技术或流程决策：追加 `docs/memory/DECISIONS.md`
+- 改变稳定模块边界、跨仓接口、共享约束或禁止事项：更新 `docs/memory/ARCHITECTURE.md`
+
+更新规则：
+
+- 按需更新，不写"无变化"流水账；未更新的文件只在交付摘要和 PR Workflow Packet 中说明原因
+- 低风险纯文档、规范审计、只读分析类任务若未改变 durable context，可统一写为“无 durable context change”，无需逐文件展开冗长理由
+- `docs/memory/PROJECT_STATE.md` 可覆盖当前状态，保持短小、最新
+- `docs/memory/TECH_DEBT.md`、`docs/memory/KNOWN_BUGS.md`、`docs/memory/DECISIONS.md` 采用台账式追加或更新状态，不删除历史项
+- `docs/memory/ARCHITECTURE.md` 只记录稳定架构事实和边界约束，不记录临时实现细节
+- 跨仓事项必须双向引用：前端记忆文件引用后端路径/验证，后端记忆文件引用前端路径/验证
+- PR 中必须填写 Memory Update Packet，并引用相关记忆项 ID，例如 `TD-20260608-001`、`BUG-20260608-001`、`DEC-20260608-001`
+
+### 9. 语言与提交约束
 
 - 与用户沟通：默认使用用户当前语言
 - 代码注释与文档：遵循模块既有语言风格，无现存风格时优先中文
-- 文本类文件编码：新增或修改源码、脚本、配置、文档时，默认使用 `UTF-8`，并与仓库 `.editorconfig` 中的 `charset=utf-8` 保持一致，默认采用 `UTF-8（无 BOM）`
-- 乱码与错码处理：发现乱码或疑似错码时，必须先确认原文件编码和当前工具的解码方式，再进行修改，不得在未确认前直接批量转码或覆盖保存
-- Git 提交信息：遵循 `docs/GIT_RULES.md` 中的 Conventional Commits
-- 发布说明：遵循 `docs/RELEASE.md` 中的版本与验收要求
+- 记忆层与模板例外：`docs/memory/` 五类记忆文件及 `.github` PR 模板沿用其现有英文结构（表头、字段名）；条目正文语言跟随来源语境（如复现步骤、后端核对说明可用中文），不强制翻译为中文
+- 文本类文件编码：统一 `UTF-8（无 BOM）`，完整编码规则（混用禁令、乱码处理、导出链路验证）以 `docs/rules/CODING_RULES.md` 第 5 节为唯一来源；发现乱码时必须先确认原文件编码与解码方式，不得未确认就批量转码或覆盖保存
+- Git 提交信息：遵循 `docs/rules/GIT_RULES.md` 中的 Conventional Commits
+- AI 自动提交粒度、风险评级与授权边界：遵循 `docs/rules/GIT_RULES.md` 的「AI 自动提交粒度规范」；中低风险在说明分组后可自动提交，高风险必须人工确认
+- 发布说明：遵循 `docs/rules/RELEASE.md` 中的版本与验收要求
 - 工程命令示例：统一使用 `pnpm`
+
+### 10. 与工具规则的关系
+
+- 仓库内 `.cursor/rules/*`（如 `codegraph.mdc`）等属于 IDE / AI 工具的执行辅助规则，用于提升检索与编码效率
+- 工具规则不改变本协作规范的约束力：协作边界、风险分区、升级确认、交付与交接要求一律以 `AGENTS.md` 体系与 `docs/` 专项规范为准
+- 工具规则与协作规范出现冲突时，以协作规范为准
+
+工具选择优先级（提升检索效率、降低上下文消耗）：
+
+- **结构性问题优先 codegraph**：查找符号定义、调用关系（谁调用 / 调用谁）、改动影响面、签名与上下文，应优先使用 codegraph，而不是先 grep 再逐文件阅读
+- **文本性问题才用 grep**：字符串内容、日志文案、注释、配置字面值等纯文本匹配再用 grep / 全文搜索
+- **避免重复探索**：codegraph 已是预建索引，不要把它能直接回答的问题再委派给额外的文件阅读子任务
+- 索引存在约 1 秒写入延迟，刚改完文件不要立即查询；codegraph 结果用于结构导航，正确性仍以类型检查、测试与 lint 为准
+- 若当前环境没有暴露 `codegraph_*` 工具或索引不可用，降级使用 `rg` / 文件阅读 / 类型检查；不要因工具缺失阻塞任务，交付时说明已降级。
+- 若会话注入了 `rtk` 命令前缀要求但当前 shell 中 `rtk` 不可用，记录一次工具不可用并直接使用原生命令继续；不要反复重试同一不可用前缀。
+
+外部 AI skills 的选用只作为专家 Agent / 执行方法补强，具体推荐组合见 `docs/rules/AGENT_SKILL_ROUTING.md`；不得用外部 skill 覆盖本文件、`docs/rules/DYNAMIC_WORKFLOW_RULES.md` 或专项规范中的强制要求。
+
+### 11. 多 Agent 与子 Agent 协作
+
+针对大型或可并行任务，推荐按"探索 → 规划 → 并行执行 → 汇总核验"组织协作：
+
+复杂度决策表：
+
+| 任务复杂度 | 适用场景 | 子 Agent 要求 | 汇总要求 |
+| --- | --- | --- | --- |
+| 低风险 | Fast Path、绿区小改、单文件文档或只读分析 | 默认单 Agent；不为形式合规拆分 | 交付中说明未启用原因即可 |
+| 中风险 | 单模块 UI / API / Architecture / Workflow-Infra，影响范围清楚但需要额外确认 | 可启用只读探索、专项审查或局部验证 Agent | 主 Agent 汇总发现、去重并决定是否纳入实现 |
+| 高风险 | 跨层、权限 / 数据 / 报告、生产问题、构建发布、红区或跨仓联动 | 必须启用 maker/checker 分离；Checker 可由人工、reviewer 或只读子 Agent 承担 | 主 Agent 记录 Checker 结论、阻塞项和修复 / 放行依据 |
+| 并行实现 | 多个独立模块或多个 Linear issue 可同时推进 | 可拆分多个实现子 Agent；写作用域必须互不重叠 | 主 Agent 负责最终 diff、冲突处理、统一验证和交付说明 |
+
+- **探索阶段**：优先用只读 / 探索型子 Agent 收集上下文（代码结构、调用关系、影响面），结构性问题优先走 codegraph，纯文本检索才用 grep；探索 Agent 不得直接改动代码
+- **规划阶段**：由主 Agent 汇总探索结果，输出「4. 任务开始模板」中的任务确认，再拆分子任务
+- **并行执行**：相互独立的子任务（尤其 Linear 任务）应在各自独立 `git worktree` 中进行，互不污染工作区（worktree 规范见 `docs/rules/GIT_RULES.md` 第 6 节）
+- **汇总核验**：子 Agent 产出必须由主 Agent 汇总、去重并完成交付前验证后才允许进入主线，不得直接把多个子 Agent 的结果未经核验拼接提交
+- **边界继承**：子 Agent 同样受绿/黄/红区与「6. 必须升级人工确认的场景」约束；涉及红区时一律升级人工确认，不因"由子 Agent 执行"而放宽
 
 ## 推荐实践
 
@@ -144,9 +327,14 @@
 ## 检查清单
 
 - [ ] 已阅读本文件及相关专项规范
-- [ ] 已输出任务确认和关键假设
+- [ ] 已输出任务确认、关键假设、成功标准和非目标
+- [ ] 已选定主 Workflow 并叠加必要修饰器（依据 `docs/rules/DYNAMIC_WORKFLOW_RULES.md`）
 - [ ] 已识别本次改动属于绿区、黄区还是红区
+- [ ] 每个主要变更都能追溯到用户需求、成功标准或必要清理
+- [ ] 高风险、跨层、权限/数据/报告或生产问题任务已执行 Red Team
 - [ ] 新增或修改的文本类文件编码符合 `UTF-8` 约定，乱码风险已检查
+- [ ] 已检查五类 AI 记忆文件，并按需更新或说明未更新原因
+- [ ] 如需 AI 提交，已按 `docs/rules/GIT_RULES.md` 给出提交分组、风险评级、风险说明和回滚影响
 - [ ] 涉及高风险变更时已人工确认
 - [ ] 交付内容包含变更摘要、验证结果和风险提示
 - [ ] 如需交接，已附带完整移交摘要
@@ -154,15 +342,25 @@
 ## 关联文档
 
 - [README.md](./README.md)
-- [docs/PROJECT_DIRECTORY.md](./docs/PROJECT_DIRECTORY.md)
-- [docs/CODING_RULES.md](./docs/CODING_RULES.md)
-- [docs/VUE_TS_RULES.md](./docs/VUE_TS_RULES.md)
-- [docs/STATE_RULES.md](./docs/STATE_RULES.md)
-- [docs/ROUTER_RULES.md](./docs/ROUTER_RULES.md)
-- [docs/API_RULES.md](./docs/API_RULES.md)
-- [docs/UI_RULES.md](./docs/UI_RULES.md)
-- [docs/COMPATIBILITY_RULES.md](./docs/COMPATIBILITY_RULES.md)
-- [docs/GIT_RULES.md](./docs/GIT_RULES.md)
-- [docs/LINEAR_TASK.md](./docs/LINEAR_TASK.md)
-- [docs/RELEASE.md](./docs/RELEASE.md)
-- [docs/AI-CODE-HEALTH.md](./docs/AI-CODE-HEALTH.md)
+- [PROJECT_STATE.md](./docs/memory/PROJECT_STATE.md)
+- [TECH_DEBT.md](./docs/memory/TECH_DEBT.md)
+- [KNOWN_BUGS.md](./docs/memory/KNOWN_BUGS.md)
+- [DECISIONS.md](./docs/memory/DECISIONS.md)
+- [ARCHITECTURE.md](./docs/memory/ARCHITECTURE.md)
+- [docs/rules/QUICKSTART.md](./docs/rules/QUICKSTART.md)
+- [docs/rules/PROJECT_DIRECTORY.md](./docs/rules/PROJECT_DIRECTORY.md)
+- [docs/rules/CODING_RULES.md](./docs/rules/CODING_RULES.md)
+- [docs/rules/VUE_TS_RULES.md](./docs/rules/VUE_TS_RULES.md)
+- [docs/rules/STATE_RULES.md](./docs/rules/STATE_RULES.md)
+- [docs/rules/ROUTER_RULES.md](./docs/rules/ROUTER_RULES.md)
+- [docs/rules/API_RULES.md](./docs/rules/API_RULES.md)
+- [docs/rules/TESTING_RULES.md](./docs/rules/TESTING_RULES.md)
+- [docs/rules/UI_RULES.md](./docs/rules/UI_RULES.md)
+- [docs/rules/COMPATIBILITY_RULES.md](./docs/rules/COMPATIBILITY_RULES.md)
+- [docs/rules/GIT_RULES.md](./docs/rules/GIT_RULES.md)
+- [docs/rules/DYNAMIC_WORKFLOW_RULES.md](./docs/rules/DYNAMIC_WORKFLOW_RULES.md)
+- [docs/rules/LOOP_ENGINEERING_RULES.md](./docs/rules/LOOP_ENGINEERING_RULES.md)
+- [docs/rules/AGENT_SKILL_ROUTING.md](./docs/rules/AGENT_SKILL_ROUTING.md)
+- [docs/rules/LINEAR_TASK.md](./docs/rules/LINEAR_TASK.md)
+- [docs/rules/RELEASE.md](./docs/rules/RELEASE.md)
+- [docs/rules/AI-CODE-HEALTH.md](./docs/rules/AI-CODE-HEALTH.md)

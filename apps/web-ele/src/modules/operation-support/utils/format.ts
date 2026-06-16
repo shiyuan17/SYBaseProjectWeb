@@ -1,4 +1,5 @@
 import {
+  ARCHIVE_CABINET_NODE_TYPE_OPTIONS,
   ARCHIVE_CABINET_STATUS_OPTIONS,
   ARCHIVE_CABINET_TYPE_OPTIONS,
   ARCHIVE_OBJECT_TYPE_OPTIONS,
@@ -11,6 +12,8 @@ import {
   MATERIAL_LOAN_STATUS_OPTIONS,
   MATERIAL_TYPE_OPTIONS,
   REAGENT_STOCK_STATUS_OPTIONS,
+  REAGENT_TEMPLATE_STATUS_OPTIONS,
+  REAGENT_TYPE_OPTIONS,
 } from '../constants';
 
 function findOptionLabel(
@@ -36,6 +39,10 @@ export function formatArchiveCabinetType(value?: null | string) {
   return findOptionLabel(ARCHIVE_CABINET_TYPE_OPTIONS, value);
 }
 
+export function formatArchiveCabinetNodeType(value?: null | string) {
+  return findOptionLabel(ARCHIVE_CABINET_NODE_TYPE_OPTIONS, value);
+}
+
 export function formatArchiveObjectType(value?: null | string) {
   return findOptionLabel(ARCHIVE_OBJECT_TYPE_OPTIONS, value);
 }
@@ -49,18 +56,52 @@ export function formatMaterialType(value?: null | string) {
 }
 
 export function formatArchiveStorageStatus(value?: null | string) {
+  if (value === null || value === undefined || value === '') {
+    return '未归档';
+  }
   return findOptionLabel(ARCHIVE_STORAGE_STATUS_OPTIONS, value);
+}
+
+export function formatArchiveObjectStatus(value?: null | string) {
+  if (value === 'ACTIVE') {
+    return '启用';
+  }
+  return formatNullable(value);
 }
 
 export function formatMaterialLoanStatus(value?: null | string) {
   return findOptionLabel(MATERIAL_LOAN_STATUS_OPTIONS, value);
 }
 
+export function formatWhiteSlideStockStatus(value?: null | string) {
+  if (value === 'ACTIVE') {
+    return '启用';
+  }
+  if (value === 'DISABLED') {
+    return '停用';
+  }
+  return formatNullable(value);
+}
+
 export function formatReagentStockStatus(value?: null | string) {
   return findOptionLabel(REAGENT_STOCK_STATUS_OPTIONS, value);
 }
 
+export function formatReagentType(value?: null | string) {
+  return findOptionLabel(REAGENT_TYPE_OPTIONS, value);
+}
+
+export function formatReagentTemplateStatus(value?: null | string) {
+  return findOptionLabel(REAGENT_TEMPLATE_STATUS_OPTIONS, value);
+}
+
 export function formatEquipmentStatus(value?: null | string) {
+  if (value === 'ACTIVE') {
+    return '正常';
+  }
+  if (value === 'DISABLED') {
+    return '禁用';
+  }
   return findOptionLabel(EQUIPMENT_STATUS_OPTIONS, value);
 }
 

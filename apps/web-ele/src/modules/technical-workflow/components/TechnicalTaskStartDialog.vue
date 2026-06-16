@@ -127,7 +127,6 @@ watch(
     @closed="resetDialogState"
   >
     <div class="flex flex-col gap-4">
-
       <ElDescriptions :column="2" border>
         <ElDescriptionsItem label="任务号">
           {{ formatNullable(task?.id) }}

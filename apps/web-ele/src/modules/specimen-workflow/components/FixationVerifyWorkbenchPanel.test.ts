@@ -63,14 +63,14 @@ describe('FixationVerifyWorkbenchPanel', () => {
     vi.clearAllMocks();
   });
 
-  it('renders summary and the streamlined specimen id input', async () => {
+  it('renders summary and the streamlined barcode or specimen number input', async () => {
     const wrapper = await mountPanel();
 
     expect(wrapper.container.textContent).toContain('设置离体时间');
     expect(wrapper.container.textContent).toContain('全部');
     expect(wrapper.container.textContent).toContain('已离体');
     expect(wrapper.container.textContent).toContain('未设置');
-    expect(wrapper.container.textContent).toContain('标本ID');
+    expect(wrapper.container.textContent).toContain('标本条码/编号');
     expect(wrapper.container.textContent).not.toContain('标本流水号');
     expect(wrapper.container.textContent).not.toContain('查询');
     expect(wrapper.container.textContent).not.toContain('重置');
@@ -78,11 +78,11 @@ describe('FixationVerifyWorkbenchPanel', () => {
     wrapper.unmount();
   });
 
-  it('emits quick confirm for the specimen id input', async () => {
+  it('emits quick confirm for the barcode or specimen number input', async () => {
     const wrapper = await mountPanel();
 
     const specimenIdInput = wrapper.container.querySelector(
-      'input[placeholder="请输入标本ID后按回车确认"]',
+      'input[placeholder="请输入标本条码/编号后按回车确认"]',
     ) as HTMLInputElement | null;
     specimenIdInput?.dispatchEvent(
       new KeyboardEvent('keyup', { bubbles: true, key: 'Enter' }),

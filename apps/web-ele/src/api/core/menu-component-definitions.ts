@@ -2,6 +2,7 @@ export type BackendMenuComponentDefinition = {
   canonicalTitle?: string;
   component: string;
   componentAliases: string[];
+  hideInMenu?: boolean;
   menuCodes?: string[];
   path: string;
   pathAliases?: string[];
@@ -133,6 +134,22 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
       routeName: 'NumberingRules',
     },
     {
+      component: '/modules/system-management/views/LogManagementView',
+      componentAliases: [
+        'LogManagement',
+        'system/log/index',
+        'system/log-management/index',
+      ],
+      menuCodes: ['SYS_LOG_MANAGEMENT'],
+      path: '/system/logs',
+      pathAliases: [
+        '/system/logs',
+        '/api/v1/system/logs/login',
+        '/api/v1/system/logs/operations',
+      ],
+      routeName: 'LogManagement',
+    },
+    {
       component: 'BasicLayout',
       componentAliases: ['Dashboard'],
       menuCodes: ['DASHBOARD'],
@@ -173,6 +190,7 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
         'SpecimenManagement',
         'SubmissionRegistration',
       ],
+      hideInMenu: true,
       menuCodes: ['M2_APPLICATION_LIST', 'M2_CLINICAL'],
       path: '/workflow/submission-registration',
       pathAliases: [
@@ -187,7 +205,7 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
       routeName: 'SubmissionRegistration',
     },
     {
-      canonicalTitle: '申请登记工作台',
+      canonicalTitle: '标本采集',
       component:
         '/modules/specimen-workflow/views/ApplicationRegistrationWorkbenchView',
       componentAliases: ['ApplicationRegistrationWorkbench'],
@@ -216,7 +234,7 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
       routeName: 'FixationTransport',
     },
     {
-      canonicalTitle: '病理接收',
+      canonicalTitle: '标本接收工作台',
       component: '/modules/specimen-workflow/views/SpecimenReceiptView',
       componentAliases: ['PathologyReceipt', 'SpecimenReceipt'],
       menuCodes: ['M2_RECEIPT'],
@@ -251,7 +269,9 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
       routeName: 'TechnicalWorkflowRoot',
     },
     {
-      component: '/modules/technical-workflow/views/TechnicalSpecimenRegistrationView',
+      canonicalTitle: '检查登记',
+      component:
+        '/modules/technical-workflow/views/TechnicalSpecimenRegistrationView',
       componentAliases: ['TechnicalSpecimenRegistration'],
       menuCodes: ['M3_SPECIMEN_REGISTRATION'],
       path: '/technical-workflow/specimen-registration',
@@ -262,8 +282,57 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
       routeName: 'TechnicalSpecimenRegistration',
     },
     {
+      canonicalTitle: '常规医嘱工作站',
+      component:
+        '/modules/technical-workflow/views/RoutineOrderWorkstationView',
+      componentAliases: ['RoutineOrderWorkstation'],
+      menuCodes: ['M3_ROUTINE_ORDER'],
+      path: '/technical-workflow/routine-orders',
+      pathAliases: ['/technical-workflow/routine-orders'],
+      routeName: 'RoutineOrderWorkstation',
+    },
+    {
+      canonicalTitle: '特检医嘱工作站',
+      component:
+        '/modules/technical-workflow/views/SpecialOrderWorkstationView',
+      componentAliases: ['SpecialOrderWorkstation'],
+      menuCodes: ['M3_SPECIAL_ORDER'],
+      path: '/technical-workflow/special-orders',
+      pathAliases: ['/technical-workflow/special-orders'],
+      routeName: 'SpecialOrderWorkstation',
+    },
+    {
+      canonicalTitle: '免疫组化工作站',
+      component: '/modules/technical-workflow/views/IhcWorkstationView',
+      componentAliases: ['IhcWorkstation'],
+      menuCodes: ['M3_IHC'],
+      path: '/technical-workflow/ihc',
+      pathAliases: ['/technical-workflow/ihc'],
+      routeName: 'IhcWorkstation',
+    },
+    {
+      canonicalTitle: '细胞学工作站',
+      component: '/modules/technical-workflow/views/CytologyWorkstationView',
+      componentAliases: ['CytologyWorkstation'],
+      menuCodes: ['M3_CYTOLOGY'],
+      path: '/technical-workflow/cytology',
+      pathAliases: ['/technical-workflow/cytology'],
+      routeName: 'CytologyWorkstation',
+    },
+    {
+      canonicalTitle: '液基细胞学工作站',
+      component:
+        '/modules/technical-workflow/views/LiquidCytologyWorkstationView',
+      componentAliases: ['LiquidCytologyWorkstation'],
+      menuCodes: ['M3_LIQUID_CYTOLOGY'],
+      path: '/technical-workflow/liquid-cytology',
+      pathAliases: ['/technical-workflow/liquid-cytology'],
+      routeName: 'LiquidCytologyWorkstation',
+    },
+    {
       component: '/modules/technical-workflow/views/TechnicalTasksView',
       componentAliases: ['TechnicalTasks'],
+      hideInMenu: true,
       menuCodes: ['M3_TASKS'],
       path: '/technical-workflow/tasks',
       pathAliases: [
@@ -275,12 +344,14 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
     {
       component: '/modules/technical-workflow/views/FrozenWorkstationView',
       componentAliases: ['FrozenWorkstation'],
+      hideInMenu: true,
       menuCodes: ['M3_FROZEN'],
       path: '/technical-workflow/frozen',
       pathAliases: ['/technical-workflow/frozen'],
       routeName: 'FrozenWorkstation',
     },
     {
+      canonicalTitle: '取材描写工作站',
       component: '/modules/technical-workflow/views/GrossingWorkstationView',
       componentAliases: ['Grossing'],
       menuCodes: ['M3_GROSSING'],
@@ -316,6 +387,7 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
       routeName: 'SlicingWorkstation',
     },
     {
+      canonicalTitle: '染色出片工作站',
       component: '/modules/technical-workflow/views/StainingWorkstationView',
       componentAliases: ['Staining'],
       menuCodes: ['M3_STAINING'],
@@ -362,6 +434,7 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
       routeName: 'DiagnosisAssignment',
     },
     {
+      canonicalTitle: '诊断平台工作站',
       component: '/modules/doctor-workflow/views/DiagnosisWorkbenchView',
       componentAliases: ['DiagnosisWorkbench'],
       menuCodes: ['M4_WORKBENCH'],
@@ -381,14 +454,6 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
       routeName: 'PathologyReport',
     },
     {
-      component: '/modules/doctor-workflow/views/FrozenReportView',
-      componentAliases: ['FrozenReport'],
-      menuCodes: ['M4_FROZEN_REPORT'],
-      path: '/doctor-workflow/frozen-report',
-      pathAliases: ['/doctor-workflow/frozen-report'],
-      routeName: 'FrozenReport',
-    },
-    {
       component: '/modules/doctor-workflow/views/ReportTrackingView',
       componentAliases: ['ReportTracking'],
       menuCodes: ['M4_TRACKING'],
@@ -398,6 +463,18 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
         '/api/v1/pathology-cases/{id}/report-tracking',
       ],
       routeName: 'ReportTracking',
+    },
+    {
+      component: '/modules/doctor-workflow/views/MedicalOrderWorkbenchView',
+      componentAliases: ['MedicalOrderWorkbench', 'MedicalOrders'],
+      menuCodes: ['M4_MEDICAL_ORDER', 'M4_MEDICAL_ORDERS'],
+      path: '/doctor-workflow/medical-orders',
+      pathAliases: [
+        '/doctor-workflow/medical-orders',
+        '/api/v1/medical-orders/pending',
+        '/api/v1/medical-orders',
+      ],
+      routeName: 'MedicalOrderWorkbench',
     },
     {
       component: '/modules/doctor-workflow/views/ReportRevisionView',
@@ -438,68 +515,99 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
       routeName: 'ArchiveManagement',
     },
     {
+      component: '/modules/operation-support/views/BorrowManagementView',
+      componentAliases: ['BorrowManagement'],
+      menuCodes: ['M5_BORROW'],
+      path: '/operation-support/borrow',
+      pathAliases: ['/operation-support/borrow'],
+      routeName: 'BorrowManagement',
+    },
+    {
+      component: 'BasicLayout',
+      componentAliases: ['OperationResourceRoot'],
+      menuCodes: ['M5_RESOURCE'],
+      path: '/operation-resources',
+      pathAliases: ['/operation-resources'],
+      routeName: 'OperationResourceRoot',
+    },
+    {
       component: '/modules/operation-support/views/ReagentLedgerView',
-      componentAliases: ['ReagentLedger'],
-      menuCodes: ['M5_REAGENT'],
-      path: '/operation-support/reagents',
-      pathAliases: ['/operation-support/reagents', '/api/v1/reagents'],
-      routeName: 'ReagentLedger',
+      componentAliases: ['ReagentConsumableManagement', 'ReagentLedger'],
+      menuCodes: ['M5_REAGENT', 'M5_REAGENT_CONSUMABLE'],
+      path: '/operation-resources/reagents',
+      pathAliases: [
+        '/operation-resources/reagents',
+        '/operation-support/reagents',
+        '/api/v1/reagents',
+      ],
+      routeName: 'ReagentConsumableManagement',
     },
     {
       component: '/modules/operation-support/views/EquipmentLedgerView',
-      componentAliases: ['EquipmentLedger'],
-      menuCodes: ['M5_EQUIPMENT'],
-      path: '/operation-support/equipment',
+      componentAliases: ['EquipmentManagement', 'EquipmentLedger'],
+      menuCodes: ['M5_EQUIPMENT', 'M5_DEVICE'],
+      path: '/operation-resources/equipment',
       pathAliases: [
+        '/operation-resources/equipment',
         '/operation-support/equipment',
         '/api/v1/equipment-records',
       ],
-      routeName: 'EquipmentLedger',
+      routeName: 'EquipmentManagement',
+    },
+    {
+      component: '/modules/operation-support/views/MedicalWasteManagementView',
+      componentAliases: ['MedicalWasteManagement'],
+      menuCodes: ['M5_MEDICAL_WASTE'],
+      path: '/operation-resources/medical-waste',
+      pathAliases: ['/operation-resources/medical-waste'],
+      routeName: 'MedicalWasteManagement',
     },
     {
       component: 'BasicLayout',
       componentAliases: ['M6Root'],
-      menuCodes: ['M6_SUPPORT'],
+      menuCodes: ['M6_SUPPORT', 'M6_STATISTICS'],
       path: '/m6',
       pathAliases: ['/m6'],
       routeName: 'M6Root',
     },
     {
-      component: '/modules/m6-management/views/IntegrationManagementView',
-      componentAliases: ['IntegrationManagement'],
-      menuCodes: ['M6_INTEGRATION'],
-      path: '/m6/integration',
-      pathAliases: ['/m6/integration', '/api/v1/integration-tasks'],
-      routeName: 'IntegrationManagement',
+      component: '/modules/m6-statistics/views/StatisticsDashboardView',
+      componentAliases: ['M6StatisticsDashboard', 'StatisticsDashboard'],
+      menuCodes: ['M6_DASHBOARD'],
+      path: '/m6/dashboard',
+      pathAliases: ['/m6/dashboard'],
+      routeName: 'M6StatisticsDashboard',
     },
     {
-      component: '/modules/m6-management/views/BillingManagementView',
-      componentAliases: ['BillingManagement'],
-      menuCodes: ['M6_BILLING'],
-      path: '/m6/billing',
-      pathAliases: ['/m6/billing', '/api/v1/billing-records'],
-      routeName: 'BillingManagement',
+      component: '/modules/m6-statistics/views/QualityIndicatorStatisticsView',
+      componentAliases: ['QualityIndicatorStatistics'],
+      menuCodes: ['M6_QUALITY_INDICATORS'],
+      path: '/m6/quality-indicators',
+      pathAliases: ['/m6/quality-indicators'],
+      routeName: 'QualityIndicatorStatistics',
     },
     {
-      component: '/modules/m6-management/views/HistoricalReportsView',
-      componentAliases: ['HistoricalReports'],
-      menuCodes: ['M6_HISTORY'],
-      path: '/m6/history',
-      pathAliases: ['/m6/history', '/api/v1/historical-reports'],
-      routeName: 'HistoricalReports',
+      component:
+        '/modules/m6-statistics/views/ManagementIndicatorStatisticsView',
+      componentAliases: ['ManagementIndicatorStatistics'],
+      menuCodes: ['M6_MANAGEMENT_INDICATORS'],
+      path: '/m6/management-indicators',
+      pathAliases: ['/m6/management-indicators'],
+      routeName: 'ManagementIndicatorStatistics',
     },
     {
       component: '/modules/m6-statistics/views/StatisticsAnalysisView',
-      componentAliases: ['StatisticsAnalysis'],
-      menuCodes: ['M6_STAT'],
-      path: '/m6/statistics',
+      componentAliases: ['CustomStatisticsAnalysis', 'StatisticsAnalysis'],
+      menuCodes: ['M6_CUSTOM_ANALYSIS', 'M6_STAT'],
+      path: '/m6/custom-analysis',
       pathAliases: [
+        '/m6/custom-analysis',
         '/m6/statistics',
         '/api/v1/stat-indicators',
         '/api/v1/stat-report-templates',
         '/api/v1/stat-reports/query',
         '/api/v1/stat-reports/export',
       ],
-      routeName: 'StatisticsAnalysis',
+      routeName: 'CustomStatisticsAnalysis',
     },
   ];

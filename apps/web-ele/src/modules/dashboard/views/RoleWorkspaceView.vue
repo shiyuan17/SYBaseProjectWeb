@@ -71,6 +71,7 @@ async function navigateTo(
 
 <template>
   <Page
+    :show-header="false"
     title="角色工作台"
     :description="
       visibleDomainTitles

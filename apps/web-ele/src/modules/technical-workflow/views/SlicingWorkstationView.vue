@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import type {
   PendingTechnicalTaskItem,
+  SlicingSlidePrintResult,
   SlicingWorkbenchRow,
   SlicingWorkbenchView,
+  TechnicalTrackingEmbeddingRecordSummary,
   TechnicalTrackingView as TechnicalTrackingViewModel,
 } from '../types/technical-workflow';
 import type { TrackingTab } from '../utils/tracking';
@@ -10,33 +12,50 @@ import type { TrackingTab } from '../utils/tracking';
 import { computed, nextTick, reactive, ref } from 'vue';
 
 import { Page } from '@vben/common-ui';
+import { UserRoundPen } from '@vben/icons';
 
 import {
   ElAlert,
   ElButton,
-  ElCheckbox,
   ElDrawer,
   ElInput,
   ElMessage,
+  ElOption,
   ElPagination,
+  ElSelect,
   ElTable,
   ElTableColumn,
+  ElTabPane,
+  ElTabs,
   ElTag,
-  ElTooltip,
 } from 'element-plus';
 
+import { reportInlineErrorDisabled } from '#/utils/error-feedback';
+
 import {
+  cancelSlicingSlidePrintMergeGroups,
+  createSlicingSlidePrintMergeGroups,
   getSlicingWorkbench,
   getTechnicalTracking,
+  printSlicingSlideMergeGroup,
+  printSlicingSlides,
   startSlicing,
+  updateTechnicalTaskRemarks,
 } from '../api/technical-workflow-service';
+import EmbeddingQualityReviewDialog from '../components/EmbeddingQualityReviewDialog.vue';
 import SlicingProcessDialog from '../components/SlicingProcessDialog.vue';
 import SlicingQcEvaluationDialog from '../components/SlicingQcEvaluationDialog.vue';
 import TechnicalTaskStartDialog from '../components/TechnicalTaskStartDialog.vue';
 import TechnicalTrackingDetailsSection from '../components/TechnicalTrackingDetailsSection.vue';
 import TechnicalTrackingSummaryTables from '../components/TechnicalTrackingSummaryTables.vue';
-import { reportInlineErrorDisabled } from '#/utils/error-feedback';
-
+import { getWorkflowPageErrorMessage } from '../utils/error';
+import {
+  formatDateTime,
+  formatEmbeddingEvaluationLevel,
+  formatEventStatus,
+  formatNullable,
+  formatTaskStatus,
+} from '../utils/format';
 import {
   buildTrackingTreeData,
   buildWorkflowTimelineSteps,
@@ -45,13 +64,6 @@ import {
   filterTrackingTasks,
   resolveSelectedTrackingNodeId,
 } from '../utils/tracking';
-import {
-  formatDateTime,
-  formatEventStatus,
-  formatNullable,
-  formatTaskStatus,
-} from '../utils/format';
-import { getWorkflowPageErrorMessage } from '../utils/error';
 import { buildWorkstationCaseContext } from '../utils/workstation';
 
 interface SelectableTableInstance {
@@ -63,14 +75,31 @@ interface SelectableTableInstance {
   ) => void;
 }
 
+const SHIFT_REMARK_OPTIONS = ['未包埋', '包埋未完成', '其他'] as const;
+
+const APPLICATION_TYPE_LABELS: Record<string, string> = {
+  CONSULTATION: '会诊',
+  FROZEN: '冰冻',
+  ROUTINE: '常规',
+};
+
+interface PrintedSlicingSlideBatchItem {
+  result: SlicingSlidePrintResult;
+  row: SlicingWorkbenchRow;
+}
+
 const EMPTY_WORKBENCH: SlicingWorkbenchView = {
   completedPage: 1,
   completedSize: 20,
   completedTodayList: [],
   completedTotal: 0,
   pendingList: [],
+  pendingPrintList: [],
+  pendingPrintTotal: 0,
   pendingPage: 1,
   pendingSize: 20,
+  pendingSliceList: [],
+  pendingSliceTotal: 0,
   pendingTotal: 0,
   stats: {
     completedDeptTodayCount: 0,
@@ -82,20 +111,13 @@ const EMPTY_WORKBENCH: SlicingWorkbenchView = {
   },
 };
 
-const LEGACY_PLACEHOLDER_ACTIONS = [
-  '重打玻片',
-  '重新分片',
-  '重补台片',
-  '终止',
-  '手术预约',
-  '确认清零',
-] as const;
-
 const pageError = ref('');
 const loading = ref(false);
 
 const workbench = ref<SlicingWorkbenchView>(EMPTY_WORKBENCH);
+const activeTab = ref<'print' | 'slice'>('print');
 const filters = reactive({
+  applicationType: '',
   completedPage: 1,
   completedSize: 20,
   keyword: '',
@@ -104,6 +126,9 @@ const filters = reactive({
   pendingSize: 20,
   pendingTodayOnly: false,
 });
+const printing = ref(false);
+const mergingPrintGroups = ref(false);
+const cancelingPrintGroups = ref(false);
 
 const pendingTableRef = ref<null | SelectableTableInstance>(null);
 const completedTableRef = ref<null | SelectableTableInstance>(null);
@@ -113,7 +138,12 @@ const selectedCompletedRows = ref<SlicingWorkbenchRow[]>([]);
 const startDialogVisible = ref(false);
 const processDialogVisible = ref(false);
 const qcDialogVisible = ref(false);
+const embeddingQualityReviewDialogVisible = ref(false);
 const pendingAutoProcessTaskId = ref('');
+const selectedEmbeddingQualityReviewRecord =
+  ref<null | TechnicalTrackingEmbeddingRecordSummary>(null);
+const embeddingQualityReviewLoadingTaskIds = ref<string[]>([]);
+const savingShiftRemarkTaskIds = ref<string[]>([]);
 
 const trackingDrawerVisible = ref(false);
 const trackingDrawerLoading = ref(false);
@@ -144,11 +174,9 @@ const selectedWorkbenchRow = computed(() => {
   return selectedPendingRow.value ?? selectedCompletedRow.value;
 });
 
-const currentPendingTask = computed<null | PendingTechnicalTaskItem>(() => {
-  const row = selectedPendingRow.value;
-  if (!row) {
-    return null;
-  }
+function buildPendingTaskFromRow(
+  row: SlicingWorkbenchRow,
+): PendingTechnicalTaskItem {
   return {
     applicationId: row.caseId,
     applicationNo: row.pathologyNo ?? '',
@@ -182,22 +210,91 @@ const currentPendingTask = computed<null | PendingTechnicalTaskItem>(() => {
     timedOut: row.timedOut,
     timeoutRuleCode: null,
   };
-});
+}
+
+const selectedPendingTasks = computed(() =>
+  selectedPendingRows.value.map((row) => buildPendingTaskFromRow(row)),
+);
+
+const currentPendingTask = computed<null | PendingTechnicalTaskItem>(() =>
+  selectedPendingTasks.value.length === 1
+    ? (selectedPendingTasks.value[0] ?? null)
+    : null,
+);
 
 const canCompleteSlicing = computed(() => {
-  const row = selectedPendingRow.value;
-  return Boolean(
-    row &&
-      row.selectable &&
-      ['IN_PROGRESS', 'PENDING'].includes(row.taskStatus ?? ''),
+  return (
+    selectedPendingRows.value.length > 0 &&
+    selectedPendingRows.value.every(
+      (row) =>
+        row.selectable &&
+        ['IN_PROGRESS', 'PENDING'].includes(row.taskStatus ?? '') &&
+        Boolean(row.embeddingBoxId),
+    )
+  );
+});
+
+function getRowTaskIds(row: SlicingWorkbenchRow) {
+  if (row.taskIds.length > 0) {
+    return row.taskIds;
+  }
+
+  return row.taskId ? [row.taskId] : [];
+}
+
+function getSelectedUniqueTaskIds(rows: SlicingWorkbenchRow[]) {
+  return [...new Set(rows.flatMap((row) => getRowTaskIds(row)))];
+}
+
+const canMergeSlides = computed(() => {
+  return (
+    activeTab.value === 'print' &&
+    selectedPendingRows.value.length >= 2 &&
+    selectedPendingRows.value.every(
+      (row) =>
+        row.selectable &&
+        !row.mergedPrintGroup &&
+        Boolean(row.embeddingBoxId) &&
+        getRowTaskIds(row).length > 0,
+    ) &&
+    !mergingPrintGroups.value
+  );
+});
+const canCancelMergedSlides = computed(() => {
+  return (
+    activeTab.value === 'print' &&
+    selectedPendingRows.value.length > 0 &&
+    selectedPendingRows.value.every(
+      (row) =>
+        row.selectable && row.mergedPrintGroup && Boolean(row.printGroupId),
+    ) &&
+    !cancelingPrintGroups.value
+  );
+});
+const canPrintSlides = computed(() => {
+  return (
+    activeTab.value === 'print' &&
+    selectedPendingRows.value.length > 0 &&
+    selectedPendingRows.value.every(
+      (row) =>
+        row.selectable &&
+        (row.mergedPrintGroup
+          ? Boolean(row.printGroupId)
+          : Boolean(row.embeddingBoxId) && getRowTaskIds(row).length > 0),
+    ) &&
+    !printing.value
   );
 });
 const canOpenTrackingDrawer = computed(
   () => selectedWorkbenchRowCount.value === 1,
 );
 const canCreateQcEvaluation = computed(() => {
-  const row = selectedCompletedRow.value;
-  return Boolean(row && row.selectable && row.slideId);
+  return (
+    selectedCompletedRows.value.length > 0 &&
+    selectedCompletedRows.value.every(
+      (row) => row.selectable && Boolean(row.slideId),
+    )
+  );
 });
 
 const statCards = computed(() => [
@@ -285,7 +382,7 @@ function selectableWorkbenchRow(row: SlicingWorkbenchRow) {
 }
 
 function pendingRowKey(row: SlicingWorkbenchRow) {
-  return row.taskId;
+  return row.printGroupId ?? row.taskId;
 }
 
 function completedRowKey(row: SlicingWorkbenchRow) {
@@ -294,6 +391,172 @@ function completedRowKey(row: SlicingWorkbenchRow) {
 
 function getPendingRemark(row: SlicingWorkbenchRow) {
   return row.slicingRemark ?? row.sliceNotice ?? null;
+}
+
+function getEmbeddingRemarks(row: SlicingWorkbenchRow) {
+  return row.embeddingRemarks ?? row.embeddingClearRemark ?? null;
+}
+
+function formatApplicationTypeLabel(value?: null | string) {
+  if (!value) {
+    return '-';
+  }
+  return APPLICATION_TYPE_LABELS[value] ?? value;
+}
+
+function escapePrintText(value: null | number | string | undefined) {
+  return String(value ?? '-')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function buildPrintedSlicingSlideLabels(items: PrintedSlicingSlideBatchItem[]) {
+  return items.flatMap(({ result, row }) => {
+    const slideNos =
+      result.slideNos.length > 0 ? result.slideNos : [row.slideNo || '-'];
+    return slideNos.map((slideNo, index) => ({
+      embeddingBoxNo: row.embeddingBoxNo,
+      pathologyNo: row.pathologyNo,
+      patientId: row.patientId,
+      patientName: row.patientName,
+      slideNo,
+      specimenName: row.specimenName,
+      total: result.printedSlideCount || slideNos.length,
+      sequence: index + 1,
+    }));
+  });
+}
+
+function buildSlicingSlidePrintDocument(items: PrintedSlicingSlideBatchItem[]) {
+  const labels = buildPrintedSlicingSlideLabels(items);
+  return `<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>玻片打印</title>
+    <style>
+      @page { margin: 0; size: 72mm 42mm; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "SimHei", "Microsoft YaHei", sans-serif;
+        color: #111827;
+      }
+      .slide-label {
+        width: 72mm;
+        height: 42mm;
+        padding: 3mm;
+        display: grid;
+        grid-template-rows: auto auto auto auto 1fr;
+        gap: 1.1mm;
+        page-break-after: always;
+      }
+      .slide-label:last-child {
+        page-break-after: auto;
+      }
+      .primary {
+        font-size: 6mm;
+        font-weight: 700;
+        line-height: 1.1;
+        word-break: break-all;
+      }
+      .line {
+        font-size: 4mm;
+        line-height: 1.15;
+        word-break: break-word;
+      }
+      .name {
+        font-size: 5mm;
+        font-weight: 700;
+        line-height: 1.15;
+        word-break: break-word;
+      }
+    </style>
+  </head>
+  <body>
+    ${labels
+        .map(
+          (label) => `
+    <section class="slide-label">
+      <div class="primary">${escapePrintText(label.slideNo)}</div>
+      <div class="line">病理号：${escapePrintText(label.pathologyNo)}</div>
+      <div class="line">蜡块号：${escapePrintText(label.embeddingBoxNo)}</div>
+      <div class="line">患者：${escapePrintText(label.patientName)} / ${escapePrintText(label.patientId)}</div>
+      <div class="name">${escapePrintText(label.specimenName)} (${escapePrintText(label.sequence)}/${escapePrintText(label.total)})</div>
+    </section>`,
+        )
+        .join('')}
+    <script>
+      window.addEventListener('load', () => {
+        window.focus();
+        window.print();
+      });
+    </scr${'ipt'}>
+  </body>
+</html>`;
+}
+
+function writeSlicingSlidePrintDocument(
+  printWindow: Window,
+  items: PrintedSlicingSlideBatchItem[],
+) {
+  printWindow.document.open();
+  printWindow.document.write(buildSlicingSlidePrintDocument(items));
+  printWindow.document.close();
+}
+
+function getPendingDataSource() {
+  return activeTab.value === 'print'
+    ? workbench.value.pendingPrintList
+    : workbench.value.pendingSliceList;
+}
+
+function isSavingShiftRemark(row: SlicingWorkbenchRow) {
+  return savingShiftRemarkTaskIds.value.includes(row.taskId);
+}
+
+function setSavingShiftRemark(taskId: string, saving: boolean) {
+  savingShiftRemarkTaskIds.value = saving
+    ? [...new Set([...savingShiftRemarkTaskIds.value, taskId])]
+    : savingShiftRemarkTaskIds.value.filter((item) => item !== taskId);
+}
+
+function isLoadingEmbeddingQualityReview(row: SlicingWorkbenchRow) {
+  return embeddingQualityReviewLoadingTaskIds.value.includes(row.taskId);
+}
+
+function setLoadingEmbeddingQualityReview(taskId: string, loading: boolean) {
+  embeddingQualityReviewLoadingTaskIds.value = loading
+    ? [...new Set([...embeddingQualityReviewLoadingTaskIds.value, taskId])]
+    : embeddingQualityReviewLoadingTaskIds.value.filter(
+        (item) => item !== taskId,
+      );
+}
+
+function applyShiftRemarkUpdate(taskId: string, shiftRemark: null | string) {
+  workbench.value = {
+    ...workbench.value,
+    pendingList: workbench.value.pendingList.map((item) =>
+      item.taskId === taskId ? { ...item, shiftRemark } : item,
+    ),
+    completedTodayList: workbench.value.completedTodayList.map((item) =>
+      item.taskId === taskId ? { ...item, shiftRemark } : item,
+    ),
+  };
+}
+
+async function resolveTaskRemarks(row: SlicingWorkbenchRow) {
+  const trackingResult = await getTechnicalTracking(row.caseId);
+  const matchedTask = trackingResult.technicalTasks.find(
+    (item) => item.id === row.taskId,
+  );
+  if (!matchedTask) {
+    throw new Error('未找到当前切片任务备注');
+  }
+  return matchedTask.remarks ?? null;
 }
 
 function getTrackingObjectId(row: SlicingWorkbenchRow) {
@@ -309,22 +572,6 @@ function clearAllSelections() {
 
 function showSingleSelectionWarning(message: string) {
   ElMessage.warning(message);
-}
-
-function requireSelectedPendingRow() {
-  if (selectedPendingRows.value.length !== 1) {
-    showSingleSelectionWarning('请在待切列表中恰好勾选 1 行');
-    return null;
-  }
-  return selectedPendingRows.value[0];
-}
-
-function requireSelectedCompletedRow() {
-  if (selectedCompletedRows.value.length !== 1) {
-    showSingleSelectionWarning('请在今日已完成列表中恰好勾选 1 行');
-    return null;
-  }
-  return selectedCompletedRows.value[0];
 }
 
 function requireSelectedWorkbenchRow() {
@@ -343,6 +590,7 @@ async function loadWorkbench(options?: {
   pageError.value = '';
   try {
     workbench.value = await getSlicingWorkbench({
+      applicationType: filters.applicationType || undefined,
       completedPage: filters.completedPage,
       completedSize: filters.completedSize,
       keyword: filters.keyword.trim() || undefined,
@@ -356,7 +604,7 @@ async function loadWorkbench(options?: {
 
     if (options?.reopenPendingTaskId) {
       await nextTick();
-      const matchedRow = workbench.value.pendingList.find(
+      const matchedRow = workbench.value.pendingSliceList.find(
         (item) => item.taskId === options.reopenPendingTaskId,
       );
       if (matchedRow) {
@@ -380,19 +628,24 @@ async function handleQuery() {
   await loadWorkbench();
 }
 
+async function handleApplicationTypeChange() {
+  filters.pendingPage = 1;
+  filters.completedPage = 1;
+  await loadWorkbench();
+}
+
 async function toggleOverdueOnly() {
   filters.overdueOnly = !filters.overdueOnly;
   filters.pendingPage = 1;
   await loadWorkbench();
 }
 
-async function handlePendingTodayOnlyChange() {
-  filters.pendingPage = 1;
+async function handlePendingPaginationChange() {
   await loadWorkbench();
 }
 
-async function handlePendingPaginationChange() {
-  await loadWorkbench();
+function handleTabChange() {
+  clearAllSelections();
 }
 
 async function handleCompletedPaginationChange() {
@@ -416,20 +669,146 @@ function handleCompletedSelectionChange(rows: SlicingWorkbenchRow[]) {
 }
 
 function openCompleteSlicing() {
-  const row = requireSelectedPendingRow();
-  if (!row) {
+  const rows = selectedPendingRows.value;
+  if (rows.length === 0) {
+    showSingleSelectionWarning('请在待切列表中至少勾选 1 行');
     return;
   }
-  if (row.taskStatus === 'PENDING') {
+  if (!canCompleteSlicing.value) {
+    ElMessage.warning('当前勾选任务状态不支持完成切片');
+    return;
+  }
+  const row = rows[0];
+  if (rows.length === 1 && row?.taskStatus === 'PENDING') {
     pendingAutoProcessTaskId.value = row.taskId;
     startDialogVisible.value = true;
     return;
   }
-  if (row.taskStatus === 'IN_PROGRESS') {
-    processDialogVisible.value = true;
+  processDialogVisible.value = true;
+}
+
+async function handlePrintSlides() {
+  const rows = selectedPendingRows.value;
+  if (rows.length === 0) {
+    ElMessage.warning('请在玻片打印列表中至少勾选 1 行');
     return;
   }
-  ElMessage.warning('当前任务状态不支持完成切片');
+  if (!canPrintSlides.value) {
+    ElMessage.warning('当前勾选任务缺少玻片打印必要信息，无法打印玻片');
+    return;
+  }
+
+  const printWindow = window.open('', '_blank');
+  if (!printWindow) {
+    ElMessage.warning('打印窗口被浏览器拦截，请允许弹出窗口后重试');
+    return;
+  }
+
+  printing.value = true;
+  pageError.value = '';
+  try {
+    const printedItems = await Promise.all(
+      rows.map(async (row) => ({
+        result:
+          row.mergedPrintGroup && row.printGroupId
+            ? await printSlicingSlideMergeGroup({
+                printGroupId: row.printGroupId,
+                printerCode: null,
+                remarks: null,
+                terminalCode: null,
+              })
+            : await printSlicingSlides({
+                embeddingBoxId: row.embeddingBoxId,
+                mergeAdjacent: false,
+                printerCode: null,
+                remarks: null,
+                sourceSlideCount: 1,
+                taskId: getRowTaskIds(row)[0] ?? row.taskId,
+              }),
+        row,
+      })),
+    );
+    writeSlicingSlidePrintDocument(printWindow, printedItems);
+    const printedSlideCount = printedItems.reduce(
+      (total, item) => total + item.result.printedSlideCount,
+      0,
+    );
+    ElMessage.success(`玻片打印完成，已生成 ${printedSlideCount} 张玻片`);
+    await loadWorkbench();
+  } catch (error) {
+    printWindow.close();
+    pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
+  } finally {
+    printing.value = false;
+  }
+}
+
+async function handleCreatePrintMergeGroups() {
+  const rows = selectedPendingRows.value;
+  if (rows.length === 0) {
+    ElMessage.warning('请在玻片打印列表中至少勾选 1 行未打印记录');
+    return;
+  }
+  if (!canMergeSlides.value) {
+    ElMessage.warning('当前勾选记录包含已合片行或缺少蜡块信息，无法两两合片');
+    return;
+  }
+
+  mergingPrintGroups.value = true;
+  pageError.value = '';
+  try {
+    const result = await createSlicingSlidePrintMergeGroups({
+      remarks: null,
+      taskIds: getSelectedUniqueTaskIds(rows),
+      terminalCode: null,
+    });
+    if (result.printGroupIds.length === 0) {
+      ElMessage.warning('当前勾选记录没有可两两合片的组合');
+    } else {
+      ElMessage.success(`已生成 ${result.printGroupIds.length} 个合片组`);
+    }
+    await loadWorkbench();
+  } catch (error) {
+    pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
+  } finally {
+    mergingPrintGroups.value = false;
+  }
+}
+
+async function handleCancelPrintMergeGroups() {
+  const rows = selectedPendingRows.value;
+  if (rows.length === 0) {
+    ElMessage.warning('请在玻片打印列表中勾选需要取消的合片行');
+    return;
+  }
+  if (!canCancelMergedSlides.value) {
+    ElMessage.warning('取消合片只支持未打印合片行');
+    return;
+  }
+
+  cancelingPrintGroups.value = true;
+  pageError.value = '';
+  try {
+    const printGroupIds = [
+      ...new Set(
+        rows.flatMap((row) => (row.printGroupId ? [row.printGroupId] : [])),
+      ),
+    ];
+    const result = await cancelSlicingSlidePrintMergeGroups({
+      printGroupIds,
+      remarks: null,
+      terminalCode: null,
+    });
+    ElMessage.success(`已取消 ${result.printGroupIds.length} 个合片组`);
+    await loadWorkbench();
+  } catch (error) {
+    pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
+  } finally {
+    cancelingPrintGroups.value = false;
+  }
 }
 
 async function handleStartSubmitted() {
@@ -448,6 +827,66 @@ async function handleProcessSubmitted() {
   await loadWorkbench();
 }
 
+async function handleShiftRemarkSave(
+  row: SlicingWorkbenchRow,
+  value: boolean | number | string,
+) {
+  const nextShiftRemark = String(value).trim();
+  const currentShiftRemark = row.shiftRemark ?? '';
+  if (nextShiftRemark === currentShiftRemark) {
+    return;
+  }
+
+  setSavingShiftRemark(row.taskId, true);
+  try {
+    const remarks = await resolveTaskRemarks(row);
+    await updateTechnicalTaskRemarks(row.taskId, {
+      productionRemarks: nextShiftRemark || null,
+      remarks: remarks?.trim() || null,
+    });
+    applyShiftRemarkUpdate(row.taskId, nextShiftRemark || null);
+    ElMessage.success('主班备注已保存');
+  } catch (error) {
+    pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
+  } finally {
+    setSavingShiftRemark(row.taskId, false);
+  }
+}
+
+async function openEmbeddingQualityReview(row: SlicingWorkbenchRow) {
+  if (!row.embeddingBoxId) {
+    ElMessage.warning('当前缺少可评价的包埋盒记录');
+    return;
+  }
+
+  setLoadingEmbeddingQualityReview(row.taskId, true);
+  try {
+    const trackingResult = await getTechnicalTracking(row.caseId);
+    const matchedRecord =
+      trackingResult.embeddingRecords?.find(
+        (item) => item.embeddingBoxId === row.embeddingBoxId,
+      ) ??
+      trackingResult.embeddingRecords?.find(
+        (item) =>
+          item.specimenId === row.specimenId &&
+          item.pathologyNo === row.pathologyNo,
+      ) ??
+      null;
+    if (!matchedRecord) {
+      ElMessage.warning('未找到对应的包埋评价记录');
+      return;
+    }
+    selectedEmbeddingQualityReviewRecord.value = matchedRecord;
+    embeddingQualityReviewDialogVisible.value = true;
+  } catch (error) {
+    pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
+  } finally {
+    setLoadingEmbeddingQualityReview(row.taskId, false);
+  }
+}
+
 async function loadTrackingDrawerForRow(
   row: SlicingWorkbenchRow,
   mode: 'evaluation' | 'history',
@@ -461,7 +900,8 @@ async function loadTrackingDrawerForRow(
   try {
     const trackingResult = await getTechnicalTracking(row.caseId);
     trackingDrawerResult.value = trackingResult;
-    trackingDrawerActiveTab.value = mode === 'history' ? 'timeline' : 'abnormal';
+    trackingDrawerActiveTab.value =
+      mode === 'history' ? 'timeline' : 'abnormal';
     trackingDrawerSelectedNodeId.value = resolveSelectedTrackingNodeId(
       {
         objectId: getTrackingObjectId(row),
@@ -487,8 +927,12 @@ async function openTrackingDrawer(mode: 'evaluation' | 'history') {
 }
 
 function openQcEvaluation() {
-  const row = requireSelectedCompletedRow();
-  if (!row || !row.slideId) {
+  if (selectedCompletedRows.value.length === 0) {
+    showSingleSelectionWarning('请在今日已完成列表中至少勾选 1 行');
+    return;
+  }
+  if (!canCreateQcEvaluation.value) {
+    ElMessage.warning('当前勾选记录中存在不可评价的切片');
     return;
   }
   qcDialogVisible.value = true;
@@ -514,22 +958,25 @@ async function handleQcSubmitted() {
   await refreshTrackingDrawer();
 }
 
-function pendingRowClassName({
-  row,
-}: {
-  row: SlicingWorkbenchRow;
-}) {
-  return row.timedOut ? 'is-overdue-row' : '';
+async function handleEmbeddingQualityReviewSubmitted() {
+  await loadWorkbench();
+  await refreshTrackingDrawer();
+}
+
+function pendingRowClassName({ row }: { row: SlicingWorkbenchRow }) {
+  return [
+    row.timedOut ? 'is-overdue-row' : '',
+    row.mergedPrintGroup ? 'is-merged-print-group-row' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 }
 
 void loadWorkbench();
 </script>
 
 <template>
-  <Page
-    title="切片工作站"
-    description="参照旧站结构重排为顶部统计查询、左右双表和上下工具栏，保留本轮已打通的核心切片能力。"
-  >
+  <Page :show-header="false">
     <div class="legacy-slicing-workbench flex flex-col gap-4">
       <ElAlert
         v-if="pageError"
@@ -561,6 +1008,19 @@ void loadWorkbench();
               @keyup.enter="handleQuery"
             />
           </div>
+          <div class="legacy-query-bar__filter">
+            <span class="legacy-query-bar__label">类型</span>
+            <ElSelect
+              v-model="filters.applicationType"
+              class="legacy-application-type-select"
+              placeholder="全部"
+              @change="handleApplicationTypeChange"
+            >
+              <ElOption label="全部" value="" />
+              <ElOption label="常规" value="ROUTINE" />
+              <ElOption label="冰冻" value="FROZEN" />
+            </ElSelect>
+          </div>
           <div class="legacy-query-bar__actions">
             <ElButton :loading="loading" type="primary" @click="handleQuery">
               查询
@@ -589,7 +1049,32 @@ void loadWorkbench();
       </section>
 
       <section class="legacy-action-bar">
-        <div class="legacy-action-bar__left">
+        <div v-if="activeTab === 'print'" class="legacy-action-bar__left">
+          <ElButton
+            :disabled="!canMergeSlides"
+            :loading="mergingPrintGroups"
+            type="success"
+            @click="handleCreatePrintMergeGroups"
+          >
+            两两合片
+          </ElButton>
+          <ElButton
+            :disabled="!canCancelMergedSlides"
+            :loading="cancelingPrintGroups"
+            @click="handleCancelPrintMergeGroups"
+          >
+            取消合片
+          </ElButton>
+          <ElButton
+            :disabled="!canPrintSlides"
+            :loading="printing"
+            type="primary"
+            @click="handlePrintSlides"
+          >
+            打印玻片
+          </ElButton>
+        </div>
+        <div v-else class="legacy-action-bar__left">
           <ElButton
             :disabled="!canCompleteSlicing"
             type="primary"
@@ -604,26 +1089,6 @@ void loadWorkbench();
           >
             质控评价
           </ElButton>
-          <ElTooltip
-            v-for="label in LEGACY_PLACEHOLDER_ACTIONS"
-            :key="label"
-            content="待补后端能力"
-            placement="top"
-          >
-            <ElButton disabled>{{ label }}</ElButton>
-          </ElTooltip>
-        </div>
-
-        <div class="legacy-action-bar__right">
-          <ElCheckbox
-            v-model="filters.pendingTodayOnly"
-            @change="handlePendingTodayOnlyChange"
-          >
-            只看今天待切
-          </ElCheckbox>
-          <span class="legacy-selection-tip">
-            可用操作要求恰好选中 1 行
-          </span>
         </div>
       </section>
 
@@ -631,18 +1096,35 @@ void loadWorkbench();
         <article class="legacy-panel">
           <header class="legacy-panel__header">
             <div>
-              <h3 class="legacy-panel__title">待切列表</h3>
-              <p class="legacy-panel__subtitle">
-                优先承接今天待切与过期任务，完成切片后右侧列表会立即刷新。
+              <h3 class="legacy-panel__title">
+                {{ activeTab === 'print' ? '玻片打印' : '切片' }}
+              </h3>
+              <p v-if="activeTab === 'slice'" class="legacy-panel__subtitle">
+                只展示已完成玻片打印的待切任务，完成切片后右侧列表会立即刷新。
               </p>
             </div>
           </header>
+
+          <ElTabs
+            v-model="activeTab"
+            class="legacy-slicing-tabs"
+            @tab-change="handleTabChange"
+          >
+            <ElTabPane
+              :label="`玻片打印(${workbench.pendingPrintTotal})`"
+              name="print"
+            />
+            <ElTabPane
+              :label="`切片(${workbench.pendingSliceTotal})`"
+              name="slice"
+            />
+          </ElTabs>
 
           <ElTable
             ref="pendingTableRef"
             v-loading="loading"
             border
-            :data="workbench.pendingList"
+            :data="getPendingDataSource()"
             :row-class-name="pendingRowClassName"
             :row-key="pendingRowKey"
             table-layout="fixed"
@@ -653,71 +1135,198 @@ void loadWorkbench();
               width="46"
               :selectable="selectableWorkbenchRow"
             />
-            <ElTableColumn label="病人" min-width="120">
-              <template #default="{ row }">
-                <div class="font-medium text-foreground">
-                  {{ formatNullable(row.patientName) }}
-                </div>
-                <div class="mt-1 flex flex-wrap gap-2">
-                  <ElTag v-if="row.timedOut" size="small" type="danger">
-                    过期
+            <template v-if="activeTab === 'print'">
+              <ElTableColumn label="序" type="index" width="52" />
+              <ElTableColumn label="病人" min-width="120">
+                <template #default="{ row }">
+                  <div class="font-medium text-foreground">
+                    {{ formatNullable(row.patientName) }}
+                  </div>
+                  <div class="mt-1 flex flex-wrap gap-2">
+                    <ElTag v-if="row.timedOut" size="small" type="danger">
+                      过期
+                    </ElTag>
+                    <ElTag size="small" type="info">
+                      {{ formatTaskStatus(row.taskStatus) }}
+                    </ElTag>
+                  </div>
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="病人ID" min-width="130">
+                <template #default="{ row }">
+                  {{ formatNullable(row.patientId) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="病理号" min-width="150">
+                <template #default="{ row }">
+                  {{ formatNullable(row.pathologyNo) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="蜡块号" min-width="120">
+                <template #default="{ row }">
+                  <span
+                    :class="
+                      row.mergedPrintGroup
+                        ? 'legacy-merged-embedding-box-no'
+                        : ''
+                    "
+                  >
+                    {{ formatNullable(row.embeddingBoxNo) }}
+                  </span>
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="包埋备注" min-width="160">
+                <template #default="{ row }">
+                  {{ formatNullable(getEmbeddingRemarks(row)) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="切片备注" min-width="160">
+                <template #default="{ row }">
+                  {{ formatNullable(getPendingRemark(row)) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="所属标本" min-width="180">
+                <template #default="{ row }">
+                  {{ formatNullable(row.specimenName) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="送检类型" min-width="110">
+                <template #default="{ row }">
+                  {{ formatApplicationTypeLabel(row.applicationType) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="包埋操作" min-width="140">
+                <template #default="{ row }">
+                  {{ formatNullable(row.embeddingOperatorName) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="申请科室" min-width="140">
+                <template #default="{ row }">
+                  {{ formatNullable(row.submittingDepartmentName) }}
+                </template>
+              </ElTableColumn>
+            </template>
+            <template v-else>
+              <ElTableColumn label="病人" min-width="120">
+                <template #default="{ row }">
+                  <div class="font-medium text-foreground">
+                    {{ formatNullable(row.patientName) }}
+                  </div>
+                  <div class="mt-1 flex flex-wrap gap-2">
+                    <ElTag v-if="row.timedOut" size="small" type="danger">
+                      过期
+                    </ElTag>
+                    <ElTag size="small" type="info">
+                      {{ formatTaskStatus(row.taskStatus) }}
+                    </ElTag>
+                  </div>
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="病理号" min-width="150">
+                <template #default="{ row }">
+                  {{ formatNullable(row.pathologyNo) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="玻片号" min-width="140">
+                <template #default="{ row }">
+                  {{ formatNullable(row.slideNo) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="打印状态" min-width="120">
+                <template #default="{ row }">
+                  <ElTag
+                    size="small"
+                    :type="
+                      row.slidePrintStatus === 'PRINTED' ? 'success' : 'warning'
+                    "
+                  >
+                    {{
+                      row.slidePrintStatus === 'PRINTED' ? '已打印' : '待打印'
+                    }}
                   </ElTag>
-                  <ElTag size="small" type="info">
-                    {{ formatTaskStatus(row.taskStatus) }}
-                  </ElTag>
-                </div>
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="病理号" min-width="150">
-              <template #default="{ row }">
-                {{ formatNullable(row.pathologyNo) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="玻片号" min-width="140">
-              <template #default="{ row }">
-                {{ formatNullable(row.slideNo) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="取材评价" min-width="120">
-              <template #default="{ row }">
-                {{ formatNullable(row.grossingEvaluation) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="切片备注" min-width="180">
-              <template #default="{ row }">
-                {{ formatNullable(getPendingRemark(row)) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="包埋清零备注" min-width="180">
-              <template #default="{ row }">
-                {{ formatNullable(row.embeddingClearRemark) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="主班备注" min-width="160">
-              <template #default="{ row }">
-                {{ formatNullable(row.shiftRemark) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="包埋评价" min-width="120">
-              <template #default="{ row }">
-                {{ formatNullable(row.embeddingEvaluation) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="包埋操作" min-width="140">
-              <template #default="{ row }">
-                {{ formatNullable(row.embeddingOperatorName) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="所属标本" min-width="180">
-              <template #default="{ row }">
-                {{ formatNullable(row.specimenName) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="病人ID" min-width="160">
-              <template #default="{ row }">
-                {{ formatNullable(row.patientId) }}
-              </template>
-            </ElTableColumn>
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="已打印数" min-width="100">
+                <template #default="{ row }">
+                  {{ row.printedSlideCount }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="合并" min-width="100">
+                <template #default="{ row }">
+                  {{ row.combinedSlide ? '已合并' : '未合并' }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="取材评价" min-width="120">
+                <template #default="{ row }">
+                  {{ formatNullable(row.grossingEvaluation) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="切片备注" min-width="180">
+                <template #default="{ row }">
+                  {{ formatNullable(getPendingRemark(row)) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="包埋清零备注" min-width="180">
+                <template #default="{ row }">
+                  {{ formatNullable(row.embeddingClearRemark) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="主班备注" min-width="160">
+                <template #default="{ row }">
+                  <ElSelect
+                    :model-value="row.shiftRemark ?? ''"
+                    clearable
+                    :loading="isSavingShiftRemark(row)"
+                    placeholder="主班备注"
+                    size="small"
+                    @change="(value) => handleShiftRemarkSave(row, value ?? '')"
+                  >
+                    <ElOption
+                      v-for="option in SHIFT_REMARK_OPTIONS"
+                      :key="option"
+                      :label="option"
+                      :value="option"
+                    />
+                  </ElSelect>
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="包埋评价" min-width="120">
+                <template #default="{ row }">
+                  <div class="legacy-editable-cell">
+                    <span class="legacy-editable-cell__content">
+                      {{
+                        formatEmbeddingEvaluationLevel(row.embeddingEvaluation)
+                      }}
+                    </span>
+                    <ElButton
+                      aria-label="编辑包埋评价"
+                      :icon="UserRoundPen"
+                      :loading="isLoadingEmbeddingQualityReview(row)"
+                      circle
+                      size="small"
+                      text
+                      title="编辑包埋评价"
+                      @click.stop="openEmbeddingQualityReview(row)"
+                    />
+                  </div>
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="包埋操作" min-width="140">
+                <template #default="{ row }">
+                  {{ formatNullable(row.embeddingOperatorName) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="所属标本" min-width="180">
+                <template #default="{ row }">
+                  {{ formatNullable(row.specimenName) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="病人ID" min-width="160">
+                <template #default="{ row }">
+                  {{ formatNullable(row.patientId) }}
+                </template>
+              </ElTableColumn>
+            </template>
           </ElTable>
 
           <div class="legacy-panel__footer">
@@ -725,7 +1334,11 @@ void loadWorkbench();
               v-model:current-page="filters.pendingPage"
               v-model:page-size="filters.pendingSize"
               :page-sizes="[10, 20, 50, 100]"
-              :total="workbench.pendingTotal"
+              :total="
+                activeTab === 'print'
+                  ? workbench.pendingPrintTotal
+                  : workbench.pendingSliceTotal
+              "
               background
               layout="total, sizes, prev, pager, next"
               @change="handlePendingPaginationChange"
@@ -738,12 +1351,9 @@ void loadWorkbench();
             <div>
               <h3 class="legacy-panel__title">今日已完成</h3>
               <p class="legacy-panel__subtitle">
-                用于补录质控评价、查看异常记录，本轮取消完成仅保留占位。
+                用于查看今日完成切片和异常记录。
               </p>
             </div>
-            <ElTooltip content="待补后端能力" placement="top">
-              <ElButton disabled>取消完成</ElButton>
-            </ElTooltip>
           </header>
 
           <ElTable
@@ -807,7 +1417,7 @@ void loadWorkbench();
             </ElTableColumn>
             <ElTableColumn label="包埋评价" min-width="120">
               <template #default="{ row }">
-                {{ formatNullable(row.embeddingEvaluation) }}
+                {{ formatEmbeddingEvaluationLevel(row.embeddingEvaluation) }}
               </template>
             </ElTableColumn>
             <ElTableColumn label="所属标本" min-width="180">
@@ -847,13 +1457,22 @@ void loadWorkbench();
     <SlicingProcessDialog
       v-model="processDialogVisible"
       :task="currentPendingTask"
+      :tasks="selectedPendingTasks"
       @submitted="handleProcessSubmitted"
     />
 
     <SlicingQcEvaluationDialog
       v-model="qcDialogVisible"
       :row="selectedCompletedRow"
+      :rows="selectedCompletedRows"
       @submitted="handleQcSubmitted"
+    />
+
+    <EmbeddingQualityReviewDialog
+      v-model="embeddingQualityReviewDialogVisible"
+      :row="selectedEmbeddingQualityReviewRecord"
+      title="包埋评价"
+      @submitted="handleEmbeddingQualityReviewSubmitted"
     />
 
     <ElDrawer
@@ -877,7 +1496,9 @@ void loadWorkbench();
             :workflow-timeline-steps="trackingDrawerTimelineSteps"
             @node-click="handleTrackingNodeClick"
           />
-          <TechnicalTrackingSummaryTables :tracking-result="trackingDrawerResult" />
+          <TechnicalTrackingSummaryTables
+            :tracking-result="trackingDrawerResult"
+          />
         </template>
 
         <div
@@ -899,9 +1520,9 @@ void loadWorkbench();
 .legacy-header,
 .legacy-action-bar,
 .legacy-panel {
-  background: #ffffff;
-  border: 1px solid #d8e4ef;
-  box-shadow: 0 8px 24px rgb(15 23 42 / 6%);
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 8px 24px hsl(var(--foreground) / 6%);
 }
 
 .legacy-header {
@@ -917,50 +1538,50 @@ void loadWorkbench();
 .legacy-stat-card {
   min-height: 90px;
   padding: 14px 16px;
-  color: #0f172a;
-  background: linear-gradient(135deg, #f8fbff 0%, #eef5fb 100%);
-  border: 1px solid #d7e7f4;
+  color: hsl(var(--foreground));
+  background: hsl(var(--accent) / 70%);
+  border: 1px solid hsl(var(--border));
 }
 
 .legacy-stat-card[data-accent='amber'] {
-  background: linear-gradient(135deg, #fff9eb 0%, #ffeec3 100%);
-  border-color: #f3d38f;
+  background: hsl(var(--warning) / 14%);
+  border-color: hsl(var(--warning) / 34%);
 }
 
 .legacy-stat-card[data-accent='cyan'] {
-  background: linear-gradient(135deg, #f0fbff 0%, #dff4fb 100%);
-  border-color: #bee5f0;
+  background: hsl(var(--primary) / 10%);
+  border-color: hsl(var(--primary) / 24%);
 }
 
 .legacy-stat-card[data-accent='emerald'] {
-  background: linear-gradient(135deg, #f2fff9 0%, #ddf7ea 100%);
-  border-color: #b9e7cf;
+  background: hsl(var(--success) / 12%);
+  border-color: hsl(var(--success) / 32%);
 }
 
 .legacy-stat-card[data-accent='rose'] {
-  background: linear-gradient(135deg, #fff5f5 0%, #ffe1e1 100%);
-  border-color: #f5b4b4;
+  background: hsl(var(--destructive) / 12%);
+  border-color: hsl(var(--destructive) / 30%);
 }
 
 .legacy-stat-card[data-accent='sky'] {
-  background: linear-gradient(135deg, #f2f7ff 0%, #dcecff 100%);
-  border-color: #bdd6ff;
+  background: hsl(var(--primary) / 12%);
+  border-color: hsl(var(--primary) / 28%);
 }
 
 .legacy-stat-card[data-accent='slate'] {
-  background: linear-gradient(135deg, #f8fafc 0%, #eef2f7 100%);
-  border-color: #d6dfeb;
+  background: hsl(var(--muted) / 70%);
+  border-color: hsl(var(--border));
 }
 
 .legacy-stat-card[data-accent='teal'] {
-  background: linear-gradient(135deg, #effdfc 0%, #d7f5f2 100%);
-  border-color: #b3e8e1;
+  background: hsl(var(--success) / 10%);
+  border-color: hsl(var(--success) / 28%);
 }
 
 .legacy-stat-card__label {
   font-size: 13px;
   line-height: 20px;
-  color: #475569;
+  color: hsl(var(--muted-foreground));
 }
 
 .legacy-stat-card__value {
@@ -977,7 +1598,7 @@ void loadWorkbench();
   justify-content: space-between;
   padding-top: 16px;
   margin-top: 16px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid hsl(var(--border));
 }
 
 .legacy-query-bar__search {
@@ -988,10 +1609,20 @@ void loadWorkbench();
   min-width: 0;
 }
 
+.legacy-query-bar__filter {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.legacy-application-type-select {
+  width: 120px;
+}
+
 .legacy-query-bar__label {
   font-size: 13px;
   font-weight: 600;
-  color: #1e293b;
+  color: hsl(var(--foreground));
 }
 
 .legacy-query-bar__actions {
@@ -1008,17 +1639,11 @@ void loadWorkbench();
   padding: 12px 16px;
 }
 
-.legacy-action-bar__left,
-.legacy-action-bar__right {
+.legacy-action-bar__left {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   align-items: center;
-}
-
-.legacy-selection-tip {
-  font-size: 12px;
-  color: #64748b;
 }
 
 .legacy-panels {
@@ -1040,42 +1665,63 @@ void loadWorkbench();
   align-items: flex-start;
   justify-content: space-between;
   padding: 14px 16px 12px;
-  background: linear-gradient(180deg, #f8fbff 0%, #eef4fa 100%);
-  border-bottom: 1px solid #d8e4ef;
+  background: hsl(var(--accent) / 70%);
+  border-bottom: 1px solid hsl(var(--border));
 }
 
 .legacy-panel__header--right {
-  background: linear-gradient(180deg, #f9fcfb 0%, #edf7f4 100%);
+  background: hsl(var(--success) / 10%);
 }
 
 .legacy-panel__title {
   margin: 0;
   font-size: 16px;
   font-weight: 700;
-  color: #0f172a;
+  color: hsl(var(--foreground));
 }
 
 .legacy-panel__subtitle {
   margin: 4px 0 0;
   font-size: 12px;
   line-height: 18px;
-  color: #64748b;
+  color: hsl(var(--muted-foreground));
 }
 
 .legacy-panel :deep(.el-table) {
-  --el-table-header-bg-color: #f6f9fc;
-  --el-table-row-hover-bg-color: #f8fbff;
+  --el-table-header-bg-color: hsl(var(--accent));
+  --el-table-row-hover-bg-color: hsl(var(--accent-hover));
+}
+
+.legacy-slicing-tabs {
+  padding: 0 16px;
+  border-bottom: 1px solid hsl(var(--border));
 }
 
 .legacy-panel :deep(.is-overdue-row > td) {
-  background: #fff7ed;
+  background: hsl(var(--warning) / 12%);
+}
+
+.legacy-panel :deep(.is-merged-print-group-row > td) {
+  background: hsl(var(--success) / 8%);
+}
+
+.legacy-merged-embedding-box-no {
+  display: inline-flex;
+  max-width: 100%;
+  padding: 2px 8px;
+  font-weight: 700;
+  color: hsl(var(--success));
+  overflow-wrap: anywhere;
+  background: hsl(var(--success) / 12%);
+  border: 1px solid hsl(var(--success) / 28%);
+  border-radius: 4px;
 }
 
 .legacy-panel__footer {
   display: flex;
   justify-content: flex-end;
   padding: 12px 16px 16px;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid hsl(var(--border));
 }
 
 @media (max-width: 1600px) {
@@ -1098,8 +1744,8 @@ void loadWorkbench();
   }
 
   .legacy-query-bar__actions,
-  .legacy-action-bar__left,
-  .legacy-action-bar__right {
+  .legacy-query-bar__filter,
+  .legacy-action-bar__left {
     justify-content: flex-start;
   }
 

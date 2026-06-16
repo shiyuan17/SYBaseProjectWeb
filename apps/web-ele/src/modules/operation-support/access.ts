@@ -1,9 +1,12 @@
 import {
   M5_ARCHIVE_PAGE_AUTHORITIES,
+  M5_ARCHIVE_ROUTE_ITEMS,
+  M5_BORROW_PAGE_AUTHORITIES,
   M5_EQUIPMENT_PAGE_AUTHORITIES,
-  M5_OPERATION_ROUTE_ITEMS,
   M5_PERMISSION_CODES,
   M5_REAGENT_PAGE_AUTHORITIES,
+  M5_RESOURCE_PAGE_AUTHORITIES,
+  M5_RESOURCE_ROUTE_ITEMS,
 } from './constants';
 
 function hasPermission(accessCodeSet: ReadonlySet<string>, code: string) {
@@ -25,7 +28,17 @@ export function getOperationSupportEntryPath(accessCodes: string[]) {
   const accessCodeSet = createAccessCodeSet(accessCodes);
 
   return (
-    M5_OPERATION_ROUTE_ITEMS.find((item) =>
+    M5_ARCHIVE_ROUTE_ITEMS.find((item) =>
+      item.codes.some((code) => accessCodeSet.has(code)),
+    )?.path ?? null
+  );
+}
+
+export function getOperationResourceEntryPath(accessCodes: string[]) {
+  const accessCodeSet = createAccessCodeSet(accessCodes);
+
+  return (
+    M5_RESOURCE_ROUTE_ITEMS.find((item) =>
       item.codes.some((code) => accessCodeSet.has(code)),
     )?.path ?? null
   );
@@ -91,9 +104,57 @@ export function getEquipmentLedgerCapabilities(accessCodes: string[]) {
   };
 }
 
+export function getMedicalWasteCapabilities(accessCodes: string[]) {
+  const accessCodeSet = createAccessCodeSet(accessCodes);
+
+  return {
+    canViewPage: hasAnyPermission(accessCodeSet, M5_RESOURCE_PAGE_AUTHORITIES),
+  };
+}
+
 export function canViewArchivePage(accessCodes: string[]) {
   return hasAnyPermission(
     createAccessCodeSet(accessCodes),
     M5_ARCHIVE_PAGE_AUTHORITIES,
   );
+}
+
+export function canViewBorrowPage(accessCodes: string[]) {
+  return hasAnyPermission(
+    createAccessCodeSet(accessCodes),
+    M5_BORROW_PAGE_AUTHORITIES,
+  );
+}
+
+export function getBorrowManagementCapabilities(accessCodes: string[]) {
+  const accessCodeSet = createAccessCodeSet(accessCodes);
+
+  return {
+    canCreateLoan: hasPermission(
+      accessCodeSet,
+      M5_PERMISSION_CODES.LOAN_CREATE,
+    ),
+    canQueryCabinets: hasPermission(
+      accessCodeSet,
+      M5_PERMISSION_CODES.ARCHIVE_CABINET_QUERY,
+    ),
+    canQueryLoans: hasPermission(accessCodeSet, M5_PERMISSION_CODES.LOAN_QUERY),
+    canReturnLoan: hasPermission(
+      accessCodeSet,
+      M5_PERMISSION_CODES.LOAN_RETURN,
+    ),
+    canCreateWhiteSlideLoan: hasPermission(
+      accessCodeSet,
+      M5_PERMISSION_CODES.WHITE_SLIDE_CREATE,
+    ),
+    canQueryWhiteSlideLoans: hasPermission(
+      accessCodeSet,
+      M5_PERMISSION_CODES.WHITE_SLIDE_QUERY,
+    ),
+    canReturnWhiteSlideLoan: hasPermission(
+      accessCodeSet,
+      M5_PERMISSION_CODES.WHITE_SLIDE_RETURN,
+    ),
+    canViewPage: hasAnyPermission(accessCodeSet, M5_BORROW_PAGE_AUTHORITIES),
+  };
 }

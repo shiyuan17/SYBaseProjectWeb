@@ -8,9 +8,17 @@ import type {
   SpecimenRegisterResult,
   TrackingEventView,
 } from '../../types/specimen-workflow';
+import type {
+  LatestRegistrationResultResponse,
+  RegistrationResultResponse,
+} from './specimen-workflow-mappers';
 
 import { requestClient } from '#/api/request';
 
+import {
+  mapLatestRegistrationResultResponse,
+  mapRegistrationResultResponse,
+} from './specimen-workflow-mappers';
 import {
   getLatestRegistrationResultMock,
   lookupApplicationForRegistrationMock,
@@ -19,12 +27,6 @@ import {
   retryLabelPrintMock,
   USE_SPECIMEN_WORKFLOW_MOCK,
 } from './specimen-workflow-mock-gateway';
-import {
-  type LatestRegistrationResultResponse,
-  type RegistrationResultResponse,
-  mapLatestRegistrationResultResponse,
-  mapRegistrationResultResponse,
-} from './specimen-workflow-mappers';
 
 export async function registerSpecimens(
   data: SpecimenRegisterRequest,

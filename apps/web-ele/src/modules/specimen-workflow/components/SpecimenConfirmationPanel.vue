@@ -16,6 +16,12 @@ import SystemUserSelect from '#/modules/system-management/components/SystemUserS
 
 import { useSpecimenConfirmationPanel } from '../composables/useSpecimenConfirmationPanel';
 import { formatDateTime, formatNullable } from '../utils/format';
+import {
+  resolveConfirmationWorkflowRowTone,
+  resolveSpecimenWorkflowRowClassName,
+} from '../utils/specimen-workflow-row-tone';
+
+import '../styles/specimen-workflow-row-tone.css';
 
 const {
   actionLoading,
@@ -24,6 +30,8 @@ const {
   filters,
   handleConfirmRow,
   handleConfirmSelected,
+  handleClearList,
+  handleClearSelectionRows,
   handleExportExcel,
   handleOperatorChange,
   handleReset,
@@ -34,21 +42,36 @@ const {
   operatorForm,
   pageError,
   pagedItems,
+  isConfirmationUnsaved,
   retryDialogVisible,
   retryForm,
   retrySubmitting,
   retryTargetRows,
+  resolveConfirmationStatus,
   submitRetryLabel,
   summary,
   total,
   tryQuickConfirmByKeyword,
 } = useSpecimenConfirmationPanel();
+
+function resolveRowClassName({
+  row,
+}: {
+  row: (typeof pagedItems.value)[number];
+}) {
+  return resolveSpecimenWorkflowRowClassName(
+    resolveConfirmationWorkflowRowTone(row, {
+      canConfirm: canConfirm(row),
+      isDraft: isConfirmationUnsaved(row),
+    }),
+  );
+}
 </script>
 
 <template>
   <div class="flex flex-col gap-4">
     <ElAlert
-      v-if="false"
+      v-if="pageError"
       :closable="false"
       :title="pageError"
       type="error"
@@ -56,7 +79,7 @@ const {
     />
 
     <div class="flex flex-wrap items-center gap-4 text-sm">
-      <div class="font-semibold text-[color:#d6453d]">标本确认</div>
+      <div class="font-semibold text-danger">标本确认</div>
       <div>
         全部
         <span class="text-xl font-semibold text-primary">{{
@@ -103,6 +126,8 @@ const {
       >
         标本确认
       </ElButton>
+      <ElButton @click="handleClearSelectionRows">清除选择行</ElButton>
+      <ElButton @click="handleClearList">清除列表</ElButton>
       <ElButton @click="handleRetryLabel">补打标本标签</ElButton>
       <ElButton @click="handleExportExcel">导出Excel</ElButton>
       <ElButton @click="handleReset">重置</ElButton>
@@ -111,6 +136,7 @@ const {
     <ElTable
       v-loading="loading"
       :data="pagedItems"
+      :row-class-name="resolveRowClassName"
       border
       max-height="520"
       @selection-change="handleSelectionChange"
@@ -146,8 +172,16 @@ const {
       <ElTableColumn label="标本名称" min-width="180" prop="specimenName" />
       <ElTableColumn label="标本状态" min-width="120">
         <template #default="{ row }">
-          <ElTag :type="row.specimenConfirmedAt ? 'success' : 'danger'">
-            {{ row.specimenConfirmedAt ? '标本确认' : '未确认' }}
+          <ElTag
+            :type="
+              row.specimenConfirmedAt
+                ? 'success'
+                : resolveConfirmationStatus(row) === '确认未保存'
+                  ? 'warning'
+                  : 'danger'
+            "
+          >
+            {{ resolveConfirmationStatus(row) }}
           </ElTag>
         </template>
       </ElTableColumn>
@@ -181,6 +215,7 @@ const {
           <ElButton
             link
             :disabled="!canConfirm(row)"
+            :title="row.actionDisabledReason ?? ''"
             type="primary"
             @click="handleConfirmRow(row)"
           >

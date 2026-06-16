@@ -52,7 +52,7 @@ function getRiskTagType(level: WorkflowRiskCard['level']) {
         <div
           v-for="item in riskCards"
           :key="item.title"
-          class="rounded-2xl border border-white/12 bg-white/10 px-4 py-4 backdrop-blur-sm"
+          class="rounded-2xl border border-white/12 bg-card/10 px-4 py-4 backdrop-blur-sm"
         >
           <div class="flex items-center justify-between gap-3">
             <div class="text-sm text-white/78">{{ item.title }}</div>

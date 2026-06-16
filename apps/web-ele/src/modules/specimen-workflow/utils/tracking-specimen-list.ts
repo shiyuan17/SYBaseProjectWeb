@@ -110,10 +110,7 @@ export function labelTagType(status?: null | string) {
 }
 
 export function specimenTagType(row: SpecimenManagementListItem) {
-  if (
-    row.specimenStatus === 'REJECTED' ||
-    row.specimenStatus === 'RETURNED'
-  ) {
+  if (row.specimenStatus === 'REJECTED' || row.specimenStatus === 'RETURNED') {
     return 'danger';
   }
   if (
@@ -122,10 +119,7 @@ export function specimenTagType(row: SpecimenManagementListItem) {
   ) {
     return 'success';
   }
-  if (
-    row.specimenStatus === 'FIXED' ||
-    row.specimenStatus === 'VERIFIED'
-  ) {
+  if (row.specimenStatus === 'FIXED' || row.specimenStatus === 'VERIFIED') {
     return 'primary';
   }
   if (

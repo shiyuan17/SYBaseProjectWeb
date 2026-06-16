@@ -64,3 +64,7 @@ jobs:
 
       - name: Circular dependency check
         run: pnpm check:circular
+
+      # 业务改动也可能移走治理文档引用的文件，轻量治理校验兜底链接可达性
+      - name: Governance check
+        run: pnpm run check:governance

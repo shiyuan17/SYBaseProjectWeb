@@ -13,19 +13,35 @@ import {
   commentConsultationParticipant,
   completeConsultation,
   completeMedicalOrder,
+  confirmMedicalOrderBilling,
   createConsultation,
   createMedicalOrder,
   createPathologyReport,
   createReportRevisionRequest,
+  executeMedicalOrderBilling,
+  getCaseLifecycleTracking,
   getDiagnosticWorkbench,
   getReportTracking,
+  issueFormalReportVersions,
+  listCaseReportVersions,
+  listFormalReportVersions,
+  listMedicalOrderDicts,
+  listMedicalOrderPackagesPage,
   listPendingDiagnosticTasks,
   listPendingMedicalOrders,
+  mapCaseLifecycleTrackingResponse,
+  mapCaseReportVersionSummary,
   mapDiagnosticWorkbenchResponse,
+  mapFormalReportVersionBatchActionResult,
+  mapFormalReportVersionSummary,
+  mapMedicalOrderBillingResponse,
+  mapMedicalOrderPackagePageResponse,
   mapPendingDiagnosticTaskPageResponse,
   mapPendingMedicalOrderPageResponse,
   mapReportTrackingResponse,
+  printFormalReportVersions,
   publishPathologyReport,
+  recallFormalReportVersions,
   rejectPathologyReport,
   rejectReportRevisionRequest,
   reviewPathologyReport,
@@ -63,11 +79,77 @@ describe('doctor-workflow-service mappers', () => {
   });
 
   it('normalizes pending medical order pagination', () => {
-    expect(mapPendingMedicalOrderPageResponse({})).toEqual({
-      items: [],
+    expect(
+      mapPendingMedicalOrderPageResponse({
+        items: [
+          {
+            caseId: 'CASE-001',
+            orderCategoryCode: 'IHC',
+            orderCategoryId: 'CAT-IHC',
+            orderCategoryName: '免疫组化',
+            orderContent: 'CK',
+            orderId: 'ORDER-001',
+            orderItemCode: 'CK',
+            orderItemId: 'ITEM-CK',
+            orderItemName: 'CK',
+          },
+        ],
+      }),
+    ).toEqual({
+      items: [
+        {
+          caseId: 'CASE-001',
+          orderCategoryCode: 'IHC',
+          orderCategoryId: 'CAT-IHC',
+          orderCategoryName: '免疫组化',
+          orderContent: 'CK',
+          orderId: 'ORDER-001',
+          orderItemCode: 'CK',
+          orderItemId: 'ITEM-CK',
+          orderItemName: 'CK',
+        },
+      ],
       page: 1,
       size: 20,
       total: 0,
+    });
+  });
+
+  it('normalizes medical order package pagination', () => {
+    expect(mapMedicalOrderPackagePageResponse({}, 2, 50)).toEqual({
+      items: [],
+      page: 2,
+      size: 50,
+      total: 0,
+    });
+  });
+
+  it('normalizes medical order billing results', () => {
+    expect(
+      mapMedicalOrderBillingResponse({
+        items: [
+          {
+            billingRecordId: 'BR-001',
+            billingStatus: 'SUCCESS',
+            message: 'done',
+            orderId: 'ORDER-001',
+          },
+        ],
+        successCount: 1,
+        totalCount: 1,
+      }),
+    ).toEqual({
+      failureCount: 0,
+      items: [
+        {
+          billingRecordId: 'BR-001',
+          billingStatus: 'SUCCESS',
+          message: 'done',
+          orderId: 'ORDER-001',
+        },
+      ],
+      successCount: 1,
+      totalCount: 1,
     });
   });
 
@@ -75,28 +157,141 @@ describe('doctor-workflow-service mappers', () => {
     expect(
       mapDiagnosticWorkbenchResponse({
         caseId: 'CASE-001',
+        consultations: [
+          {
+            consultationId: 'CONS-001',
+            participants: [
+              {
+                commentedAt: '2026-06-15T10:00:00',
+                draftedByName: '会诊医生甲',
+                opinion: '建议补充免疫组化',
+                participantId: 'PART-001',
+                participantName: '会诊医生甲',
+                participantRole: 'EXPERT',
+                participantUserId: 'USER-EXPERT',
+              },
+            ],
+          },
+        ],
         pathologyNo: 'BL-001',
       }),
     ).toMatchObject({
       blocks: [],
       caseId: 'CASE-001',
-      consultations: [],
+      chargeItems: [],
+      consultations: [
+        {
+          consultationId: 'CONS-001',
+          participants: [
+            {
+              participantId: 'PART-001',
+              participantUserId: 'USER-EXPERT',
+            },
+          ],
+        },
+      ],
       currentReport: null,
       diagnosticTasks: [],
       hasPendingRevision: false,
+      historicalPathologies: [],
       medicalOrders: [],
+      pacsExaminations: [],
       pathologyNo: 'BL-001',
       recentEvents: [],
+      remarkSections: [],
+      reportTraces: [],
       revisions: [],
       slides: [],
       specimens: [],
     });
   });
 
+  it('preserves diagnostic workbench material tabs extension fields', () => {
+    expect(
+      mapDiagnosticWorkbenchResponse({
+        caseId: 'CASE-001',
+        chargeItems: [
+          {
+            chargedAt: '2026-06-01 11:00:00',
+            chargedByName: '收费员甲',
+            itemName: '免疫组化 CK',
+          },
+        ],
+        historicalPathologies: [
+          {
+            age: '30岁',
+            diagnosis: '历史诊断',
+            examinationNo: 'F2600039',
+            inpatientNo: 'IP-001',
+            reportTime: '2026-05-14 11:40:00',
+            submissionType: '冰冻病理',
+          },
+        ],
+        pacsExaminations: [
+          {
+            examinationNo: 'NPA250003',
+            imagingDescription: '影像描述',
+            imagingDiagnosis: '影像诊断',
+            reportStatus: '未写',
+            reportTime: '2026-05-14 12:00:00',
+            submissionType: '化验',
+          },
+        ],
+        remarkSections: [
+          {
+            content: '申请备注',
+            sectionKey: 'APPLICATION',
+            title: '申请备注',
+          },
+        ],
+        reportTraces: [
+          {
+            diagnosisInfo: '诊断信息',
+            reportDoctorName: '报告医生',
+            reportStatus: 'DRAFT',
+            reportTime: '2026-06-01 10:20:00',
+            sequenceNo: 1,
+          },
+        ],
+      }),
+    ).toMatchObject({
+      chargeItems: [{ itemName: '免疫组化 CK' }],
+      historicalPathologies: [{ examinationNo: 'F2600039' }],
+      pacsExaminations: [{ examinationNo: 'NPA250003' }],
+      remarkSections: [{ sectionKey: 'APPLICATION' }],
+      reportTraces: [{ sequenceNo: 1 }],
+    });
+  });
+
   it('normalizes report tracking arrays and version numbers', () => {
-    expect(mapReportTrackingResponse({ caseId: 'CASE-001' })).toMatchObject({
+    expect(
+      mapReportTrackingResponse({
+        caseId: 'CASE-001',
+        consultations: [
+          {
+            consultationId: 'CONS-001',
+            participants: [
+              {
+                participantId: 'PART-001',
+                participantUserId: 'USER-EXPERT',
+              },
+            ],
+          },
+        ],
+      }),
+    ).toMatchObject({
       caseId: 'CASE-001',
-      consultations: [],
+      consultations: [
+        {
+          consultationId: 'CONS-001',
+          participants: [
+            {
+              participantId: 'PART-001',
+              participantUserId: 'USER-EXPERT',
+            },
+          ],
+        },
+      ],
       currentDraftVersionNo: null,
       currentReport: null,
       diagnosticTasks: [],
@@ -106,6 +301,194 @@ describe('doctor-workflow-service mappers', () => {
       medicalOrders: [],
       revisions: [],
       versions: [],
+    });
+  });
+
+  it('normalizes lifecycle tracking arrays and missing nested fields', () => {
+    expect(
+      mapCaseLifecycleTrackingResponse({
+        caseSummary: {
+          caseId: 'CASE-001',
+          pathologyNo: 'BL-001',
+        },
+      }),
+    ).toMatchObject({
+      applicationForm: null,
+      caseSummary: {
+        caseId: 'CASE-001',
+        hasPendingRevision: false,
+        pathologyNo: 'BL-001',
+      },
+      overallTimeline: [],
+      reportLifecycle: {
+        consultations: [],
+        currentReport: null,
+        diagnosticTasks: [],
+        medicalOrders: [],
+        revisions: [],
+        versions: [],
+      },
+      specimens: [],
+    });
+  });
+
+  it('maps lifecycle tracking nested stage and object trees', () => {
+    expect(
+      mapCaseLifecycleTrackingResponse({
+        applicationForm: {
+          archiveStatus: 'IN_STORAGE',
+        },
+        caseSummary: {
+          caseId: 'CASE-001',
+        },
+        overallTimeline: [
+          {
+            nodes: [
+              {
+                keyFacts: [{ label: '节点', value: '值' }],
+                status: 'COMPLETED',
+                title: '申请创建',
+              },
+            ],
+            stageCode: 'APPLICATION',
+            stageTitle: '申请创建',
+          },
+        ],
+        specimens: [
+          {
+            blocks: [
+              {
+                blockEvents: [{ keyFacts: [], title: '取材' }],
+                blockId: 'BLOCK-1',
+                slides: [
+                  {
+                    slideEvents: [{ keyFacts: [], title: '切片' }],
+                    slideId: 'SLIDE-1',
+                  },
+                ],
+              },
+            ],
+            specimenEvents: [{ keyFacts: [], title: '标本创建' }],
+            specimenId: 'SPEC-1',
+          },
+        ],
+      }),
+    ).toMatchObject({
+      applicationForm: {
+        archiveStatus: 'IN_STORAGE',
+      },
+      overallTimeline: [
+        {
+          nodes: [
+            {
+              keyFacts: [{ label: '节点', value: '值' }],
+              title: '申请创建',
+            },
+          ],
+          stageCode: 'APPLICATION',
+        },
+      ],
+      specimens: [
+        {
+          blocks: [
+            {
+              blockEvents: [{ title: '取材' }],
+              blockId: 'BLOCK-1',
+              slides: [
+                { slideEvents: [{ title: '切片' }], slideId: 'SLIDE-1' },
+              ],
+            },
+          ],
+          specimenEvents: [{ title: '标本创建' }],
+          specimenId: 'SPEC-1',
+        },
+      ],
+    });
+  });
+
+  it('normalizes formal report version items and batch action results', () => {
+    expect(
+      mapFormalReportVersionSummary({
+        deliveryStatus: 'ISSUED',
+        reportId: 'REPORT-1',
+        reportNo: 'RPT-001',
+        versionId: 'RV-1',
+        versionNo: 2,
+        versionStatus: 'PUBLISHED',
+      }),
+    ).toEqual({
+      deliveryStatus: 'ISSUED',
+      issuedAt: null,
+      plannedIssueAt: null,
+      printStatus: null,
+      printedAt: null,
+      publishedAt: null,
+      recalledAt: null,
+      reportId: 'REPORT-1',
+      reportNo: 'RPT-001',
+      signedAt: null,
+      signedByName: null,
+      versionId: 'RV-1',
+      versionNo: 2,
+      versionStatus: 'PUBLISHED',
+    });
+
+    expect(
+      mapFormalReportVersionBatchActionResult({
+        items: [
+          {
+            message: '报告已发放',
+            success: true,
+            versionId: 'RV-1',
+          },
+        ],
+        successCount: 1,
+        totalCount: 1,
+      }),
+    ).toEqual({
+      failureCount: 0,
+      items: [
+        {
+          message: '报告已发放',
+          success: true,
+          versionId: 'RV-1',
+        },
+      ],
+      successCount: 1,
+      totalCount: 1,
+    });
+  });
+
+  it('normalizes case report version items', () => {
+    expect(
+      mapCaseReportVersionSummary({
+        deliveryStatus: 'PENDING',
+        printStatus: 'UNPRINTED',
+        reportId: 'REPORT-1',
+        reportNo: 'RPT-001',
+        reviewedAt: '2026-06-15T09:50:00',
+        submittedAt: '2026-06-15T09:30:00',
+        versionId: 'RV-1',
+        versionNo: 2,
+        versionStatus: 'REVIEWED',
+      }),
+    ).toEqual({
+      deliveryStatus: 'PENDING',
+      issuedAt: null,
+      plannedIssueAt: null,
+      printStatus: 'UNPRINTED',
+      printedAt: null,
+      publishedAt: null,
+      recalledAt: null,
+      reportId: 'REPORT-1',
+      reportNo: 'RPT-001',
+      reviewedAt: '2026-06-15T09:50:00',
+      signedAt: null,
+      signedByName: null,
+      submittedAt: '2026-06-15T09:30:00',
+      versionId: 'RV-1',
+      versionNo: 2,
+      versionStatus: 'REVIEWED',
     });
   });
 });
@@ -150,6 +533,7 @@ describe('doctor-workflow-service requests', () => {
     });
 
     await listPendingMedicalOrders({
+      orderCategoryCode: 'IHC',
       page: 1,
       pathologyNo: 'BL-001',
       size: 20,
@@ -160,6 +544,7 @@ describe('doctor-workflow-service requests', () => {
       '/v1/medical-orders/pending',
       {
         params: {
+          orderCategoryCode: 'IHC',
           page: 1,
           pathologyNo: 'BL-001',
           size: 20,
@@ -169,11 +554,53 @@ describe('doctor-workflow-service requests', () => {
     );
   });
 
+  it('queries medical order dictionaries and packages with backend paths', async () => {
+    requestClientMock.get.mockResolvedValueOnce([]).mockResolvedValueOnce({
+      items: [],
+      page: 1,
+      size: 100,
+      total: 0,
+    });
+
+    await expect(listMedicalOrderDicts()).resolves.toEqual([]);
+    await expect(
+      listMedicalOrderPackagesPage({
+        enabled: true,
+        keyword: '免疫',
+        packageType: 'IHC',
+        page: 1,
+        size: 100,
+      }),
+    ).resolves.toEqual({
+      items: [],
+      page: 1,
+      size: 100,
+      total: 0,
+    });
+
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      1,
+      '/v1/medical-order-dicts',
+    );
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      2,
+      '/v1/medical-order-packages/page',
+      {
+        params: {
+          enabled: true,
+          keyword: '免疫',
+          packageType: 'IHC',
+          page: 1,
+          size: 100,
+        },
+      },
+    );
+  });
+
   it('posts diagnostic task action endpoints with exact paths', async () => {
     await assignDiagnosticTask('TASK-1', {
       diagnosisDoctorName: '责任医生',
       diagnosisDoctorUserId: 'DOC-1',
-      operatorName: '分派员',
       primaryDoctorName: '初诊医生',
       primaryDoctorUserId: 'DOC-2',
       reviewerName: '审核医生',
@@ -188,7 +615,6 @@ describe('doctor-workflow-service requests', () => {
       {
         diagnosisDoctorName: '责任医生',
         diagnosisDoctorUserId: 'DOC-1',
-        operatorName: '分派员',
         primaryDoctorName: '初诊医生',
         primaryDoctorUserId: 'DOC-2',
         reviewerName: '审核医生',
@@ -210,54 +636,110 @@ describe('doctor-workflow-service requests', () => {
   it('posts medical order endpoints with exact paths', async () => {
     await createMedicalOrder({
       caseId: 'CASE-1',
-      operatorName: '诊断医生',
       orderContent: '补做特殊染色',
+      orderItemId: 'ITEM-TSRS-PAS',
       orderType: 'SPECIAL_STAIN',
     });
-    await acceptMedicalOrder('ORDER-1', { operatorName: '执行岗' });
-    await completeMedicalOrder('ORDER-1', { operatorName: '执行岗' });
-    await cancelMedicalOrder('ORDER-1', { operatorName: '诊断医生' });
+    await acceptMedicalOrder('ORDER-1', { terminalCode: 'TERM-1' });
+    await completeMedicalOrder('ORDER-1', { remarks: '已完成' });
+    await cancelMedicalOrder('ORDER-1', { remarks: '诊断医生取消' });
 
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       1,
       '/v1/medical-orders',
       {
         caseId: 'CASE-1',
-        operatorName: '诊断医生',
         orderContent: '补做特殊染色',
+        orderItemId: 'ITEM-TSRS-PAS',
         orderType: 'SPECIAL_STAIN',
       },
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       2,
       '/v1/medical-orders/ORDER-1/accept',
-      { operatorName: '执行岗' },
+      { terminalCode: 'TERM-1' },
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       3,
       '/v1/medical-orders/ORDER-1/complete',
-      { operatorName: '执行岗' },
+      { remarks: '已完成' },
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       4,
       '/v1/medical-orders/ORDER-1/cancel',
-      { operatorName: '诊断医生' },
+      { remarks: '诊断医生取消' },
+    );
+  });
+
+  it('posts medical order billing endpoints with exact paths', async () => {
+    requestClientMock.post.mockResolvedValue({
+      items: [{ billingStatus: 'SUCCESS', orderId: 'ORDER-1' }],
+      successCount: 1,
+      totalCount: 1,
+    });
+
+    await executeMedicalOrderBilling({
+      caseId: 'CASE-1',
+      orderIds: ['ORDER-1'],
+      remarks: '执行收费',
+    });
+    await confirmMedicalOrderBilling({
+      caseId: 'CASE-1',
+      remarks: '确认完成收费',
+    });
+
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      1,
+      '/v1/medical-orders/billing/execute',
+      {
+        caseId: 'CASE-1',
+        orderIds: ['ORDER-1'],
+        remarks: '执行收费',
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      2,
+      '/v1/medical-orders/billing/confirm',
+      {
+        caseId: 'CASE-1',
+        remarks: '确认完成收费',
+      },
     );
   });
 
   it('queries diagnostic aggregate endpoints', async () => {
     requestClientMock.get
       .mockResolvedValueOnce({ caseId: 'CASE-1' })
-      .mockResolvedValueOnce({ caseId: 'CASE-1' });
+      .mockResolvedValueOnce({ caseSummary: { caseId: 'CASE-1' } })
+      .mockResolvedValueOnce({ caseId: 'CASE-1' })
+      .mockResolvedValueOnce([{ reportId: 'REPORT-1', versionId: 'RV-1' }])
+      .mockResolvedValueOnce([{ reportId: 'REPORT-1', versionId: 'RV-1' }]);
 
     await expect(getDiagnosticWorkbench('CASE-1')).resolves.toMatchObject({
       caseId: 'CASE-1',
       diagnosticTasks: [],
     });
+    await expect(getCaseLifecycleTracking('CASE-1')).resolves.toMatchObject({
+      caseSummary: {
+        caseId: 'CASE-1',
+      },
+    });
     await expect(getReportTracking('CASE-1')).resolves.toMatchObject({
       caseId: 'CASE-1',
       versions: [],
     });
+    await expect(listFormalReportVersions('CASE-1')).resolves.toMatchObject([
+      {
+        reportId: 'REPORT-1',
+        versionId: 'RV-1',
+      },
+    ]);
+    await expect(listCaseReportVersions('CASE-1')).resolves.toMatchObject([
+      {
+        reportId: 'REPORT-1',
+        versionId: 'RV-1',
+      },
+    ]);
 
     expect(requestClientMock.get).toHaveBeenNthCalledWith(
       1,
@@ -265,7 +747,19 @@ describe('doctor-workflow-service requests', () => {
     );
     expect(requestClientMock.get).toHaveBeenNthCalledWith(
       2,
+      '/v1/pathology-cases/CASE-1/lifecycle-tracking',
+    );
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      3,
       '/v1/pathology-cases/CASE-1/report-tracking',
+    );
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      4,
+      '/v1/pathology-cases/CASE-1/formal-report-versions',
+    );
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      5,
+      '/v1/pathology-cases/CASE-1/report-versions',
     );
   });
 
@@ -342,6 +836,50 @@ describe('doctor-workflow-service requests', () => {
       7,
       '/v1/pathology-reports/REPORT-1/publish',
       { operatorName: '发布员' },
+    );
+  });
+
+  it('posts formal report batch action endpoints with exact paths', async () => {
+    requestClientMock.post.mockResolvedValue({
+      items: [{ success: true, versionId: 'RV-1' }],
+      successCount: 1,
+      totalCount: 1,
+    });
+
+    await printFormalReportVersions({ versionIds: ['RV-1'] });
+    await issueFormalReportVersions({
+      issueMode: 'DELAY_2_HOURS',
+      plannedIssueAt: '2026-06-16T12:00:00',
+      remarks: '批量发放',
+      versionIds: ['RV-1'],
+    });
+    await recallFormalReportVersions({
+      terminalCode: 'TERM-1',
+      versionIds: ['RV-1'],
+    });
+
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      1,
+      '/v1/pathology-reports/formal-versions/print',
+      { versionIds: ['RV-1'] },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      2,
+      '/v1/pathology-reports/formal-versions/issue',
+      {
+        issueMode: 'DELAY_2_HOURS',
+        plannedIssueAt: '2026-06-16T12:00:00',
+        remarks: '批量发放',
+        versionIds: ['RV-1'],
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      3,
+      '/v1/pathology-reports/formal-versions/recall',
+      {
+        terminalCode: 'TERM-1',
+        versionIds: ['RV-1'],
+      },
     );
   });
 

@@ -11,6 +11,10 @@ defineProps<{
   statCategories: StatCategoryView[];
   statScopeOptions: Array<{ label: string; value: string }>;
 }>();
+
+const emit = defineEmits<{
+  'update:statScope': [categoryId: string, value: string];
+}>();
 </script>
 
 <template>
@@ -22,9 +26,6 @@ defineProps<{
             <span class="font-medium text-foreground">
               {{ scope.row.statName }}
             </span>
-            <span class="text-xs text-muted-foreground">
-              {{ scope.row.statCode }}
-            </span>
           </div>
         </template>
       </template>
@@ -33,9 +34,12 @@ defineProps<{
       <template #default="scope">
         <ElSelect
           v-if="scope?.row"
-          v-model="authState.statScopes[scope.row.id]"
+          :model-value="authState.statScopes[scope.row.id]"
           clearable
           placeholder="请选择范围"
+          @update:model-value="
+            (value) => emit('update:statScope', scope.row.id, value)
+          "
         >
           <ElOption
             v-for="option in statScopeOptions"

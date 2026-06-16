@@ -50,6 +50,8 @@ export function createVerifyFormDefaults(
     operatorUserId: currentUserId,
     remarks: '',
     specimenBarcode: '',
+    specimenId: '',
+    specimenNo: '',
     terminalCode: '',
   };
 }
@@ -210,12 +212,16 @@ export function buildSpecimenVerificationRequest(form: {
   fixationLiquidType: string;
   remarks: string;
   specimenBarcode: string;
+  specimenId?: null | string;
+  specimenNo?: null | string;
   terminalCode: string;
 }): SpecimenFixationRequest {
   return {
     fixationLiquidType: form.fixationLiquidType.trim() || null,
     remarks: form.remarks.trim() || null,
-    specimenBarcode: form.specimenBarcode.trim(),
+    specimenBarcode: form.specimenBarcode.trim() || null,
+    specimenId: form.specimenId?.trim() || null,
+    specimenNo: form.specimenNo?.trim() || null,
     terminalCode: form.terminalCode.trim() || null,
   };
 }

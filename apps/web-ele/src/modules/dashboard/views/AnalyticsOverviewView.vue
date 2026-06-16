@@ -66,6 +66,7 @@ async function navigateTo(route?: string, query?: Record<string, string>) {
 
 <template>
   <Page
+    :show-header="false"
     title="分析页"
     description="汇总病理全流程的核心指标、运营信号与风险数据。"
   >
@@ -101,9 +102,9 @@ async function navigateTo(route?: string, query?: Record<string, string>) {
               <ElButton
                 class="!border-border !bg-background/85 !text-foreground hover:!border-primary/40 hover:!bg-primary/5"
                 plain
-                @click="navigateTo('/m6/statistics')"
+                @click="navigateTo('/m6/custom-analysis')"
               >
-                进入正式统计分析
+                进入自定义统计分析
               </ElButton>
             </div>
           </div>

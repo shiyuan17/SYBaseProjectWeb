@@ -33,22 +33,98 @@ export interface StatReportQuery {
   departmentId?: null | string;
   from?: null | string;
   indicatorCode?: null | string;
-  operatorName?: null | string;
-  operatorUserId?: null | string;
+  periodMode?: null | string;
   roleId?: null | string;
   templateCode?: null | string;
   to?: null | string;
+  workloadUserId?: null | string;
+}
+
+export type StatReportDetailStatus = 'FAIL' | 'INFO' | 'PASS';
+
+export interface StatReportDetailQuery {
+  departmentId?: null | string;
+  from?: null | string;
+  indicatorCode: string;
+  page?: number;
+  size?: number;
+  to?: null | string;
+}
+
+export interface StatDashboardQuery {
+  departmentId?: null | string;
+  from?: null | string;
+  roleId?: null | string;
+  to?: null | string;
+  workloadUserId?: null | string;
+}
+
+export type MetricStatus = 'AVAILABLE' | 'PARTIAL' | 'UNAVAILABLE';
+
+export interface StatReportBreakdown {
+  label: string;
+  value: string;
+}
+
+export interface StatReportTrendPoint {
+  label: string;
+  value: string;
 }
 
 export interface StatReportRow {
+  breakdowns?: StatReportBreakdown[];
+  denominator?: null | string;
   indicatorCode: string;
   indicatorName: string;
+  metricStatus?: MetricStatus;
   metricUnit: string;
   metricValue: string;
+  numerator?: null | string;
+  sourceNote?: null | string;
+  trendPoints?: StatReportTrendPoint[];
 }
 
 export interface StatReportResult {
   columns: string[];
   reportCode: string;
   rows: StatReportRow[];
+}
+
+export interface StatReportDetailItem {
+  applicationNo: string;
+  detailStatus: StatReportDetailStatus;
+  occurredAt?: null | string;
+  pathologyNo: string;
+  reason: string;
+  specimenNo?: null | string;
+}
+
+export interface StatReportDetailResult {
+  availabilityStatus: MetricStatus;
+  eligibleCount: number;
+  failCount: number;
+  indicatorCode: string;
+  items: StatReportDetailItem[];
+  page: number;
+  passCount: number;
+  size: number;
+  sourceNote?: null | string;
+  total: number;
+}
+
+export interface StatDashboardCard {
+  indicatorCategory: StatIndicatorCategory;
+  indicatorCode: string;
+  indicatorName: string;
+  metricStatus?: MetricStatus;
+  metricUnit: string;
+  metricValue: string;
+  sourceNote?: null | string;
+}
+
+export interface StatDashboardResult {
+  operationCards: StatDashboardCard[];
+  qualityCards: StatDashboardCard[];
+  summaryCards: StatDashboardCard[];
+  workloadCards: StatDashboardCard[];
 }

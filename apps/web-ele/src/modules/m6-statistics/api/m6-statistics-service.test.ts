@@ -1,14 +1,19 @@
 import type { Mock } from 'vitest';
 
+import type { StatReportDetailQuery } from '../types/m6-statistics';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { requestClient } from '#/api/request';
 
 import {
   exportStatReport,
+  exportStatReportDetails,
   listStatIndicators,
   listStatReportTemplates,
+  queryStatDashboard,
   queryStatReport,
+  queryStatReportDetails,
 } from './m6-statistics-service';
 
 vi.mock('#/api/request', () => ({
@@ -124,26 +129,59 @@ describe('m6-statistics-service', () => {
     const reportBlob = new Blob(['csv']);
 
     requestClientMock.post.mockResolvedValue({
+      columns: ['indicatorCode', 'indicatorName', 'metricStatus'],
       rows: [
         {
+          breakdowns: [
+            {
+              label: '已发布',
+              value: '49',
+            },
+          ],
+          denominator: '50',
           indicatorCode: 'QUALITY_RATE',
           indicatorName: 'Quality rate',
+          metricStatus: 'AVAILABLE',
           metricUnit: '%',
           metricValue: '98',
+          numerator: '49',
+          sourceNote: '来自真实报告数据',
+          trendPoints: [
+            {
+              label: '2026-05',
+              value: '98',
+            },
+          ],
         },
       ],
     });
     requestClientMock.download.mockResolvedValue(reportBlob);
 
     await expect(queryStatReport(payload)).resolves.toEqual({
-      columns: [],
+      columns: ['indicatorCode', 'indicatorName', 'metricStatus'],
       reportCode: '',
       rows: [
         {
+          breakdowns: [
+            {
+              label: '已发布',
+              value: '49',
+            },
+          ],
+          denominator: '50',
           indicatorCode: 'QUALITY_RATE',
           indicatorName: 'Quality rate',
+          metricStatus: 'AVAILABLE',
           metricUnit: '%',
           metricValue: '98',
+          numerator: '49',
+          sourceNote: '来自真实报告数据',
+          trendPoints: [
+            {
+              label: '2026-05',
+              value: '98',
+            },
+          ],
         },
       ],
     });
@@ -155,6 +193,272 @@ describe('m6-statistics-service', () => {
     );
     expect(requestClientMock.download).toHaveBeenCalledWith(
       '/v1/stat-reports/export',
+      {
+        data: payload,
+        method: 'POST',
+        responseReturn: 'body',
+      },
+    );
+  });
+
+  it('queries and normalizes statistic dashboard overview cards', async () => {
+    requestClientMock.post
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            indicatorCode: 'QC_FROZEN_PARAFFIN_MATCH_RATE',
+            indicatorName: '冰冻石蜡符合率',
+            metricStatus: 'UNAVAILABLE',
+            sourceNote: '数据源未接入',
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            indicatorCode: 'OP_CASE_VOLUME',
+            indicatorName: '业务量',
+            metricStatus: 'AVAILABLE',
+            metricUnit: 'COUNT',
+            metricValue: 8,
+            sourceNote: 'pathology_cases',
+          },
+        ],
+      })
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            indicatorCode: 'WL_DIAGNOSTIC_TASK_COUNT',
+            indicatorName: '诊断任务数',
+            metricValue: '3',
+          },
+        ],
+      });
+
+    await expect(
+      queryStatDashboard({
+        departmentId: 'DEPT-1',
+        from: '2026-01-01T00:00:00',
+        to: '2026-12-31T23:59:59',
+      }),
+    ).resolves.toEqual({
+      operationCards: [
+        {
+          indicatorCategory: 'OPERATION',
+          indicatorCode: 'OP_CASE_VOLUME',
+          indicatorName: '业务量',
+          metricStatus: 'AVAILABLE',
+          metricUnit: 'COUNT',
+          metricValue: '8',
+          sourceNote: 'pathology_cases',
+        },
+      ],
+      qualityCards: [
+        {
+          indicatorCategory: 'QUALITY',
+          indicatorCode: 'QC_FROZEN_PARAFFIN_MATCH_RATE',
+          indicatorName: '冰冻石蜡符合率',
+          metricStatus: 'UNAVAILABLE',
+          metricUnit: '',
+          metricValue: '',
+          sourceNote: '数据源未接入',
+        },
+      ],
+      summaryCards: [
+        {
+          indicatorCategory: 'OPERATION',
+          indicatorCode: 'OP_CASE_VOLUME',
+          indicatorName: '业务量',
+          metricStatus: 'AVAILABLE',
+          metricUnit: 'COUNT',
+          metricValue: '8',
+          sourceNote: 'pathology_cases',
+        },
+        {
+          indicatorCategory: 'WORKLOAD',
+          indicatorCode: 'WL_DIAGNOSTIC_TASK_COUNT',
+          indicatorName: '诊断任务数',
+          metricStatus: undefined,
+          metricUnit: '',
+          metricValue: '3',
+          sourceNote: null,
+        },
+      ],
+      workloadCards: [
+        {
+          indicatorCategory: 'WORKLOAD',
+          indicatorCode: 'WL_DIAGNOSTIC_TASK_COUNT',
+          indicatorName: '诊断任务数',
+          metricStatus: undefined,
+          metricUnit: '',
+          metricValue: '3',
+          sourceNote: null,
+        },
+      ],
+    });
+
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      1,
+      '/v1/stat-reports/query',
+      {
+        category: 'QUALITY',
+        departmentId: 'DEPT-1',
+        from: '2026-01-01T00:00:00',
+        to: '2026-12-31T23:59:59',
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      2,
+      '/v1/stat-reports/query',
+      {
+        category: 'OPERATION',
+        departmentId: 'DEPT-1',
+        from: '2026-01-01T00:00:00',
+        to: '2026-12-31T23:59:59',
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      3,
+      '/v1/stat-reports/query',
+      {
+        category: 'WORKLOAD',
+        departmentId: 'DEPT-1',
+        from: '2026-01-01T00:00:00',
+        to: '2026-12-31T23:59:59',
+      },
+    );
+    expect(requestClientMock.post).not.toHaveBeenCalledWith(
+      '/v1/stat-dashboard/query',
+      expect.anything(),
+    );
+  });
+
+  it('keeps breakdowns in report rows for quality analysis charts', async () => {
+    requestClientMock.post.mockResolvedValue({
+      rows: [
+        {
+          breakdowns: [
+            {
+              label: '原因A',
+              value: '2',
+            },
+          ],
+          indicatorCode: 'QC_SPECIMEN_FIXATION_RATE',
+          indicatorName: 'Specimen fixation',
+          metricStatus: 'PARTIAL',
+          metricUnit: 'PERCENT',
+          metricValue: '80.00',
+          sourceNote: 'quality source',
+          trendPoints: [
+            {
+              label: '2026-06',
+              value: '80.00',
+            },
+          ],
+        },
+      ],
+    });
+
+    await expect(
+      queryStatReport({
+        category: 'QUALITY',
+        from: '2026-06-01T00:00:00',
+        to: '2026-06-30T23:59:59',
+      }),
+    ).resolves.toEqual({
+      columns: [],
+      reportCode: '',
+      rows: [
+        {
+          breakdowns: [
+            {
+              label: '原因A',
+              value: '2',
+            },
+          ],
+          denominator: null,
+          indicatorCode: 'QC_SPECIMEN_FIXATION_RATE',
+          indicatorName: 'Specimen fixation',
+          metricStatus: 'PARTIAL',
+          metricUnit: 'PERCENT',
+          metricValue: '80.00',
+          numerator: null,
+          sourceNote: 'quality source',
+          trendPoints: [
+            {
+              label: '2026-06',
+              value: '80.00',
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('queries and exports statistic report details without patient-sensitive fields', async () => {
+    const payload: StatReportDetailQuery = {
+      from: '2026-01-01T00:00:00',
+      indicatorCode: 'QC_SPECIMEN_FIXATION_RATE',
+      page: 1,
+      size: 10,
+      to: '2026-12-31T23:59:59',
+    };
+    const detailBlob = new Blob(['detail csv']);
+
+    requestClientMock.post.mockResolvedValue({
+      availabilityStatus: 'AVAILABLE',
+      eligibleCount: 2,
+      failCount: 1,
+      indicatorCode: 'QC_SPECIMEN_FIXATION_RATE',
+      items: [
+        {
+          applicationNo: 'APP-M6-001',
+          detailStatus: 'PASS',
+          occurredAt: '2026-06-01T10:00:00',
+          pathologyNo: 'BC-M6-001',
+          patientName: 'should be ignored',
+          reason: '固定完成且无不合格原因',
+          richTextContent: '<p>should be ignored</p>',
+          specimenNo: 'SP-M6-001',
+        },
+      ],
+      page: 1,
+      passCount: 1,
+      size: 10,
+      sourceNote: '代理口径：按标本固定状态与不合格原因统计。',
+      total: 2,
+    });
+    requestClientMock.download.mockResolvedValue(detailBlob);
+
+    await expect(queryStatReportDetails(payload)).resolves.toEqual({
+      availabilityStatus: 'AVAILABLE',
+      eligibleCount: 2,
+      failCount: 1,
+      indicatorCode: 'QC_SPECIMEN_FIXATION_RATE',
+      items: [
+        {
+          applicationNo: 'APP-M6-001',
+          detailStatus: 'PASS',
+          occurredAt: '2026-06-01T10:00:00',
+          pathologyNo: 'BC-M6-001',
+          reason: '固定完成且无不合格原因',
+          specimenNo: 'SP-M6-001',
+        },
+      ],
+      page: 1,
+      passCount: 1,
+      size: 10,
+      sourceNote: '代理口径：按标本固定状态与不合格原因统计。',
+      total: 2,
+    });
+    await expect(exportStatReportDetails(payload)).resolves.toBe(detailBlob);
+
+    expect(requestClientMock.post).toHaveBeenCalledWith(
+      '/v1/stat-reports/details/query',
+      payload,
+    );
+    expect(requestClientMock.download).toHaveBeenCalledWith(
+      '/v1/stat-reports/details/export',
       {
         data: payload,
         method: 'POST',

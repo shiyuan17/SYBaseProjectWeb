@@ -10,9 +10,9 @@ import {
   createInputStub,
   createOptionStub,
   createSelectStub,
-  createTagStub,
   createTableColumnStub,
   createTableStub,
+  createTagStub,
 } from '../test-utils/component-stubs';
 
 const tableRowContextKey = vi.hoisted(() =>
@@ -47,6 +47,8 @@ function createDraftItem(
     receiptStatus: 'RECEIVED',
     remarks: '',
     specimenBarcode: 'BC-1',
+    specimenId: 'SPEC-1',
+    specimenNo: 'SP-1',
     ...overrides,
   };
 }

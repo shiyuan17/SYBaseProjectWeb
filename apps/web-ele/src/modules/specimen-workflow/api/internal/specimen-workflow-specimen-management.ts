@@ -18,9 +18,19 @@ import type {
   SpecimenVerificationRecord,
   SpecimenVerificationRequest,
 } from '../../types/specimen-workflow';
+import type {
+  PendingSpecimenPageResponse,
+  SpecimenManagementListPageResponse,
+  SpecimenRemovalPageResponse,
+} from './specimen-workflow-mappers';
 
 import { requestClient } from '#/api/request';
 
+import {
+  mapPendingSpecimenPageResponse,
+  mapSpecimenManagementListPageResponse,
+  mapSpecimenRemovalPageResponse,
+} from './specimen-workflow-mappers';
 import {
   bindSpecimenBarcodeMock,
   checkInSpecimenMock,
@@ -39,14 +49,6 @@ import {
   unbindSpecimenBarcodeMock,
   USE_SPECIMEN_WORKFLOW_MOCK,
 } from './specimen-workflow-mock-gateway';
-import {
-  type PendingSpecimenPageResponse,
-  type SpecimenManagementListPageResponse,
-  type SpecimenRemovalPageResponse,
-  mapPendingSpecimenPageResponse,
-  mapSpecimenManagementListPageResponse,
-  mapSpecimenRemovalPageResponse,
-} from './specimen-workflow-mappers';
 
 export async function listSpecimens(
   params: SpecimenManagementListQuery,

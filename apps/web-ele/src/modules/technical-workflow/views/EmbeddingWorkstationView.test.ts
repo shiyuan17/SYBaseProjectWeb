@@ -1,26 +1,36 @@
 import type { PendingTechnicalTaskItem } from '../types/technical-workflow';
 
-import { createApp, defineComponent, h, nextTick } from 'vue';
+import { createApp, defineComponent, h, KeepAlive, nextTick, ref } from 'vue';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   messageSuccess,
   messageWarning,
+  mockCancelEmbedding,
   mockCompleteEmbedding,
   mockGetEmbeddingWorkstationSummary,
   mockGetTechnicalTracking,
+  mockInitialOperatorRemarks,
+  mockMessageBoxConfirm,
   mockListPendingTechnicalTasks,
   mockRoute,
   mockRouter,
   mockStartEmbedding,
+  mockUpdateEmbeddingQualityReview,
+  mockUpdateTechnicalTaskRemarks,
   mockUserStore,
 } = vi.hoisted(() => ({
   messageSuccess: vi.fn(),
   messageWarning: vi.fn(),
+  mockCancelEmbedding: vi.fn(),
   mockCompleteEmbedding: vi.fn(),
   mockGetEmbeddingWorkstationSummary: vi.fn(),
   mockGetTechnicalTracking: vi.fn(),
+  mockInitialOperatorRemarks: {
+    value: '',
+  },
+  mockMessageBoxConfirm: vi.fn(),
   mockListPendingTechnicalTasks: vi.fn(),
   mockRoute: {
     query: {},
@@ -29,6 +39,8 @@ const {
     push: vi.fn(),
   },
   mockStartEmbedding: vi.fn(),
+  mockUpdateEmbeddingQualityReview: vi.fn(),
+  mockUpdateTechnicalTaskRemarks: vi.fn(),
   mockUserStore: {
     userInfo: {
       realName: '包埋技师',
@@ -54,58 +66,100 @@ vi.mock('@vben/stores', () => ({
   useUserStore: () => mockUserStore,
 }));
 
+vi.mock('@vben/icons', () => {
+  const createIcon = (name: string) =>
+    defineComponent({
+      setup() {
+        return () => h('span', { 'data-icon': name });
+      },
+    });
+
+  return {
+    Check: createIcon('Check'),
+    UserRoundPen: createIcon('UserRoundPen'),
+    X: createIcon('X'),
+  };
+});
+
 vi.mock('#/utils/error-feedback', () => ({
   reportInlineErrorDisabled: vi.fn(),
 }));
 
 vi.mock('../api/technical-workflow-service', () => ({
+  cancelEmbedding: mockCancelEmbedding,
   completeEmbedding: mockCompleteEmbedding,
   getEmbeddingWorkstationSummary: mockGetEmbeddingWorkstationSummary,
   getTechnicalTracking: mockGetTechnicalTracking,
   listPendingTechnicalTasks: mockListPendingTechnicalTasks,
   startEmbedding: mockStartEmbedding,
+  updateEmbeddingQualityReview: mockUpdateEmbeddingQualityReview,
+  updateTechnicalTaskRemarks: mockUpdateTechnicalTaskRemarks,
 }));
 
-vi.mock('../components/EmbeddingWorkstationProcessPanel.vue', () => ({
+vi.mock('../utils/operator-form', () => ({
+  assignTechnicalOperatorForm: (
+    target: {
+      operatorName: string;
+      operatorUserId: string;
+      remarks: string;
+      terminalCode: string;
+    },
+    userInfo?: { realName?: null | string; userId?: null | string },
+  ) => {
+    Object.assign(target, {
+      operatorName: userInfo?.realName ?? '',
+      operatorUserId: userInfo?.userId ?? '',
+      remarks: mockInitialOperatorRemarks.value,
+      terminalCode: '',
+    });
+  },
+  createTechnicalOperatorDefaults: (userInfo?: {
+    realName?: null | string;
+    userId?: null | string;
+  }) => ({
+    operatorName: userInfo?.realName ?? '',
+    operatorUserId: userInfo?.userId ?? '',
+    remarks: mockInitialOperatorRemarks.value,
+    terminalCode: '',
+  }),
+  normalizeTechnicalOperatorPayload: (form: {
+    remarks: string;
+    terminalCode: string;
+  }) => ({
+    remarks: form.remarks.trim() || null,
+    terminalCode: form.terminalCode.trim() || null,
+  }),
+}));
+
+vi.mock('../components/EmbeddingQualityReviewDialog.vue', () => ({
   default: defineComponent({
-    props: ['active', 'canComplete', 'selectedBlock', 'selectedTask'],
-    emits: ['cancel', 'complete'],
+    props: ['mode', 'modelValue', 'row'],
+    emits: ['draftSubmitted', 'submitted', 'update:modelValue'],
     setup(props, { emit }) {
       return () =>
-        h('section', { 'data-testid': 'process-panel' }, [
-          h('div', { 'data-testid': 'panel-task-id' }, props.selectedTask?.id ?? ''),
-          h(
-            'div',
-            { 'data-testid': 'panel-block-code' },
-            props.selectedBlock?.blockCode ?? '',
-          ),
-          h(
-            'div',
-            { 'data-testid': 'panel-active' },
-            String(props.active),
-          ),
-          h(
-            'div',
-            { 'data-testid': 'panel-can-complete' },
-            String(props.canComplete),
-          ),
-          h(
-            'button',
-            {
-              type: 'button',
-              onClick: () => emit('cancel'),
-            },
-            '取消包埋',
-          ),
-          h(
-            'button',
-            {
-              type: 'button',
-              onClick: () => emit('complete'),
-            },
-            '确认包埋完成(F9)',
-          ),
-        ]);
+        props.modelValue
+          ? h('section', { 'data-testid': 'quality-review-dialog' }, [
+              h('div', props.row?.embeddingId ?? ''),
+              h(
+                'button',
+                {
+                  type: 'button',
+                  onClick: () => {
+                    if (props.mode === 'draft') {
+                      emit('draftSubmitted', {
+                        evaluationLevel: 'UNQUALIFIED',
+                        samplingEvaluation: '不合格',
+                      });
+                      emit('update:modelValue', false);
+                      return;
+                    }
+                    emit('submitted');
+                  },
+                },
+                '保存评价',
+              ),
+            ])
+          : null;
     },
   }),
 }));
@@ -136,6 +190,26 @@ vi.mock('element-plus', () => {
     },
   });
 
+  const ElCheckbox = defineComponent({
+    props: ['indeterminate', 'modelValue'],
+    emits: ['update:modelValue'],
+    setup(props, { attrs, emit }) {
+      return () =>
+        h('input', {
+          ...attrs,
+          'aria-checked': props.indeterminate ? 'mixed' : props.modelValue,
+          checked: props.modelValue,
+          type: 'checkbox',
+          onClick: (event: MouseEvent) => event.stopPropagation(),
+          onChange: (event: Event) =>
+            emit(
+              'update:modelValue',
+              (event.target as HTMLInputElement).checked,
+            ),
+        });
+    },
+  });
+
   const ElDrawer = defineComponent({
     props: ['modelValue', 'title'],
     setup(props, { slots }) {
@@ -159,14 +233,44 @@ vi.mock('element-plus', () => {
   const ElInput = defineComponent({
     props: ['modelValue', 'placeholder'],
     emits: ['update:modelValue'],
-    setup(props, { emit }) {
+    setup(props, { attrs, emit }) {
       return () =>
         h('input', {
+          ...attrs,
           placeholder: props.placeholder,
           value: props.modelValue,
           onInput: (event: Event) =>
             emit('update:modelValue', (event.target as HTMLInputElement).value),
         });
+    },
+  });
+
+  const ElOption = defineComponent({
+    props: ['label', 'value'],
+    setup(props) {
+      return () => h('option', { value: props.value }, props.label);
+    },
+  });
+
+  const ElSelect = defineComponent({
+    props: ['modelValue', 'placeholder'],
+    emits: ['change', 'update:modelValue'],
+    setup(props, { attrs, emit, slots }) {
+      return () =>
+        h(
+          'select',
+          {
+            ...attrs,
+            'aria-label': props.placeholder,
+            value: props.modelValue,
+            onChange: (event: Event) => {
+              const value = (event.target as HTMLSelectElement).value;
+              emit('update:modelValue', value);
+              emit('change', value);
+            },
+          },
+          slots.default?.(),
+        );
     },
   });
 
@@ -179,6 +283,7 @@ vi.mock('element-plus', () => {
   return {
     ElAlert,
     ElButton,
+    ElCheckbox,
     ElDrawer,
     ElEmpty,
     ElInput,
@@ -186,6 +291,11 @@ vi.mock('element-plus', () => {
       success: messageSuccess,
       warning: messageWarning,
     },
+    ElMessageBox: {
+      confirm: mockMessageBoxConfirm,
+    },
+    ElOption,
+    ElSelect,
     ElTag,
   };
 });
@@ -223,7 +333,11 @@ function createPendingTask(
   };
 }
 
-function createTracking(caseId: string, blockCode: string, embeddingRemarks: string) {
+function createTracking(
+  caseId: string,
+  blockCode: string,
+  embeddingRemarks: string,
+) {
   return {
     blocks: [
       {
@@ -332,6 +446,31 @@ function mountView() {
   return { app, root };
 }
 
+function mountKeepAliveView() {
+  const root = document.createElement('div');
+  document.body.append(root);
+  const visible = ref(true);
+
+  const app = createApp({
+    render: () =>
+      h(KeepAlive, null, {
+        default: () =>
+          visible.value
+            ? h(EmbeddingWorkstationView, { key: 'embedding-workstation' })
+            : h('div', { key: 'placeholder' }, 'hidden'),
+      }),
+  });
+
+  app.mount(root);
+  return {
+    app,
+    root,
+    setVisible: (nextVisible: boolean) => {
+      visible.value = nextVisible;
+    },
+  };
+}
+
 function findButton(text: string) {
   const button = [...document.querySelectorAll('button')].find(
     (item) => item.textContent?.trim() === text,
@@ -340,8 +479,15 @@ function findButton(text: string) {
   return button as HTMLButtonElement;
 }
 
+function queryButton(text: string) {
+  return [...document.querySelectorAll('button')].find(
+    (item) => item.textContent?.trim() === text,
+  );
+}
+
 describe('EmbeddingWorkstationView', () => {
   beforeEach(() => {
+    mockInitialOperatorRemarks.value = '';
     mockRoute.query = {};
     mockListPendingTechnicalTasks.mockResolvedValue({
       items: [
@@ -401,6 +547,11 @@ describe('EmbeddingWorkstationView', () => {
       return createTracking('CASE-1', 'A1', '病例1包埋备注');
     });
     mockStartEmbedding.mockResolvedValue({});
+    mockCancelEmbedding.mockResolvedValue({
+      caseStatus: 'EMBEDDING',
+      taskId: 'TASK-1',
+      taskStatus: 'PENDING',
+    });
     mockCompleteEmbedding.mockResolvedValue({
       caseStatus: 'SLICING',
       embeddingBoxId: 'BOX-ID-A1',
@@ -409,18 +560,38 @@ describe('EmbeddingWorkstationView', () => {
       markingSuccess: true,
       taskId: 'TASK-1',
     });
+    mockMessageBoxConfirm.mockResolvedValue('confirm');
+    mockUpdateEmbeddingQualityReview.mockResolvedValue({
+      record: {},
+      reworkStatus: null,
+      reworkType: null,
+    });
+    mockUpdateTechnicalTaskRemarks.mockImplementation(
+      async (
+        taskId: string,
+        data: { productionRemarks?: null | string; remarks?: null | string },
+      ) => ({
+        ...createPendingTask({ id: taskId }),
+        productionRemarks: data.productionRemarks,
+        remarks: data.remarks,
+      }),
+    );
   });
 
   afterEach(() => {
     document.body.innerHTML = '';
     messageSuccess.mockReset();
     messageWarning.mockReset();
+    mockCancelEmbedding.mockReset();
     mockCompleteEmbedding.mockReset();
     mockGetEmbeddingWorkstationSummary.mockReset();
     mockGetTechnicalTracking.mockReset();
+    mockMessageBoxConfirm.mockReset();
     mockListPendingTechnicalTasks.mockReset();
     mockRouter.push.mockReset();
     mockStartEmbedding.mockReset();
+    mockUpdateEmbeddingQualityReview.mockReset();
+    mockUpdateTechnicalTaskRemarks.mockReset();
   });
 
   it('renders summary cards and pending list', async () => {
@@ -432,13 +603,207 @@ describe('EmbeddingWorkstationView', () => {
     expect(document.body.textContent).toContain('已包埋数');
     expect(document.body.textContent).toContain('3');
     expect(document.body.textContent).toContain('BL-001');
-    expect(document.body.textContent).toContain('任务备注-1');
+    expect(
+      document.querySelector<HTMLInputElement>('input[aria-label="备注"]')
+        ?.value,
+    ).toBe('任务备注-1');
+    expect(document.body.textContent).not.toContain(
+      '按病理号和病人ID筛选当前待处理包埋任务。',
+    );
+    expect(document.body.textContent).not.toContain(
+      '展示当日已包埋蜡块，可调整切片备注并核对大体所见。',
+    );
+    expect(findButton('取消包埋')).toBeTruthy();
+    expect(findButton('确认包埋完成')).toBeTruthy();
+
+    const buttonLabels = [...document.querySelectorAll('button')].map((item) =>
+      item.textContent?.trim(),
+    );
+    const taskButtonIndex = buttonLabels.indexOf('包埋任务');
+    expect(buttonLabels.indexOf('包埋历史')).toBeGreaterThan(taskButtonIndex);
+    expect(buttonLabels.indexOf('评价记录')).toBeGreaterThan(taskButtonIndex);
 
     app.unmount();
     root.remove();
   });
 
-  it('updates right-side selection and clears current state', async () => {
+  it('cancels selected confirmed embeddings back to the pending list', async () => {
+    mockGetEmbeddingWorkstationSummary.mockResolvedValue({
+      completedCount: 1,
+      completedRecords: [
+        {
+          caseId: 'CASE-DONE',
+          embeddingBoxId: 'BOX-ID-DONE',
+          embeddingBoxNo: 'BOX-DONE',
+          embeddingId: 'EMB-DONE',
+          embeddingRemarks: '最终完成备注',
+          embeddedByName: '包埋技师',
+          endedAt: '2026-06-01T12:00:00',
+          evaluationLevel: 'QUALIFIED',
+          grossDescription: '已完成大体所见',
+          pathologyNo: 'BL-DONE',
+          sampledAt: '2026-06-01T08:00:00',
+          sampledByName: '取材技师',
+          samplingBlockCode: 'DONE',
+          samplingBlockDescription: '已完成蜡块',
+          samplingBlockId: 'BLOCK-DONE',
+          samplingEvaluation: '合格',
+          sliceNotice: null,
+          specimenId: 'SPEC-DONE',
+          specimenName: '已完成标本',
+          startedAt: '2026-06-01T09:00:00',
+          taskId: 'TASK-DONE',
+          taskStatus: 'COMPLETED',
+        },
+      ],
+      pendingCount: 1,
+      pendingTasks: [
+        createPendingTask({
+          id: 'TASK-CONFIRM',
+          objectId: 'BLOCK-CONFIRM',
+          pathologyNo: 'BL-CONFIRM',
+          samplingBlockCode: 'C1',
+          startedAt: '2026-06-01T09:00:00',
+          taskStatus: 'EMBEDDING_CONFIRM_PENDING',
+        }),
+      ],
+      workDate: '2026-06-01',
+    });
+
+    const { app, root } = mountView();
+    await flushView();
+
+    const cancelButton = findButton('取消包埋');
+    expect(cancelButton.disabled).toBe(false);
+    expect(
+      document.querySelector<HTMLInputElement>(
+        'input[aria-label="选择已包埋蜡块 DONE"]',
+      )?.disabled,
+    ).toBe(true);
+
+    cancelButton.click();
+    await flushView();
+
+    expect(mockMessageBoxConfirm).toHaveBeenCalledWith(
+      '确定取消选中的 1 条包埋确认待完成任务，并打回待包埋列表吗？',
+      '取消包埋',
+      {
+        cancelButtonText: '取消',
+        confirmButtonText: '确定',
+        type: 'warning',
+      },
+    );
+    expect(mockCancelEmbedding).toHaveBeenCalledWith({
+      remarks: null,
+      taskId: 'TASK-CONFIRM',
+      terminalCode: null,
+    });
+    expect(mockCompleteEmbedding).not.toHaveBeenCalled();
+    expect(messageSuccess).toHaveBeenCalledWith(
+      '已取消包埋，任务已打回待包埋列表',
+    );
+    expect(mockGetEmbeddingWorkstationSummary).toHaveBeenCalledTimes(2);
+    expect(mockListPendingTechnicalTasks).toHaveBeenCalledTimes(2);
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('moves embedding-confirm-pending tasks into the right-side block list', async () => {
+    const confirmedTask = createPendingTask({
+      caseId: 'CASE-CONFIRM',
+      id: 'TASK-CONFIRM',
+      objectId: 'BLOCK-CONFIRM',
+      pathologyNo: 'BL-CONFIRM',
+      remarks: '确认待完成备注',
+      samplingBlockCode: 'C1',
+      samplingBlockDescription: '确认待完成蜡块',
+      startedAt: '2026-06-01T09:00:00',
+      taskStatus: 'EMBEDDING_CONFIRM_PENDING',
+    });
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [
+        createPendingTask({
+          pathologyNo: 'BL-PENDING',
+        }),
+      ],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+    mockGetEmbeddingWorkstationSummary.mockResolvedValue({
+      completedCount: 0,
+      completedRecords: [],
+      pendingCount: 1,
+      pendingTasks: [confirmedTask],
+      workDate: '2026-06-01',
+    });
+
+    const { app, root } = mountView();
+    await flushView();
+
+    const tables = document.querySelectorAll('table');
+    expect(tables[0]?.textContent).toContain('BL-PENDING');
+    expect(tables[0]?.textContent).not.toContain('BL-CONFIRM');
+    expect(tables[1]?.textContent).toContain('BL-CONFIRM');
+    expect(tables[1]?.textContent).toContain('包埋确认待完成');
+
+    const sliceNoticeSelect = document.querySelector(
+      'select[aria-label="切片备注"]',
+    ) as HTMLSelectElement;
+    expect(sliceNoticeSelect).toBeTruthy();
+    sliceNoticeSelect.value = '皮肤';
+    sliceNoticeSelect.dispatchEvent(new Event('change'));
+    await flushView();
+
+    document
+      .querySelector<HTMLButtonElement>('button[aria-label="编辑取材评价"]')!
+      .click();
+    await flushView();
+    findButton('保存评价').click();
+    await flushView();
+
+    expect(mockUpdateEmbeddingQualityReview).not.toHaveBeenCalled();
+    expect(tables[1]?.textContent).toContain('不合格');
+
+    findButton('确认包埋完成').click();
+    await flushView();
+
+    expect(mockCompleteEmbedding).toHaveBeenCalledWith(
+      expect.objectContaining({
+        evaluationLevel: 'UNQUALIFIED',
+        remarks: '确认待完成备注',
+        samplingBlockId: 'BLOCK-CONFIRM',
+        samplingEvaluation: '不合格',
+        sliceNotice: '皮肤',
+        taskId: 'TASK-CONFIRM',
+      }),
+    );
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('refreshes workstation data when the cached tab is reactivated', async () => {
+    const { app, root, setVisible } = mountKeepAliveView();
+    await flushView();
+
+    expect(mockGetEmbeddingWorkstationSummary).toHaveBeenCalledTimes(1);
+    expect(mockListPendingTechnicalTasks).toHaveBeenCalledTimes(1);
+
+    setVisible(false);
+    await flushView();
+    setVisible(true);
+    await flushView();
+
+    expect(mockGetEmbeddingWorkstationSummary).toHaveBeenCalledTimes(2);
+    expect(mockListPendingTechnicalTasks).toHaveBeenCalledTimes(2);
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('warns and keeps current state when clearing with pending tasks', async () => {
     const { app, root } = mountView();
     await flushView();
 
@@ -447,21 +812,149 @@ describe('EmbeddingWorkstationView', () => {
     (rows[1] as HTMLTableRowElement).click();
     await flushView();
 
-    expect(
-      document.querySelector('[data-testid="panel-task-id"]')?.textContent,
-    ).toBe('TASK-2');
-    expect(
-      document.querySelector('[data-testid="panel-block-code"]')?.textContent,
-    ).toBe('B2');
+    findButton('包埋历史').click();
+    await flushView();
     expect(document.body.textContent).toContain('病例2包埋备注');
+    expect(document.body.textContent).toContain('汇总备注');
 
     findButton('确认清零').click();
     await flushView();
 
+    expect(messageWarning).toHaveBeenCalledWith('还有待处理的数据');
+    expect(mockMessageBoxConfirm).not.toHaveBeenCalled();
+    expect(document.body.textContent).toContain('病例2包埋备注');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('confirms clearing when the pending list is empty', async () => {
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
+    mockGetEmbeddingWorkstationSummary.mockResolvedValue({
+      completedCount: 3,
+      completedRecords: [],
+      pendingCount: 0,
+      pendingTasks: [],
+      workDate: '2026-06-01',
+    });
+
+    const { app, root } = mountView();
+    await flushView();
+
+    findButton('确认清零').click();
+    await flushView();
+
+    expect(messageWarning).not.toHaveBeenCalledWith('还有待处理的数据');
+    expect(mockMessageBoxConfirm).toHaveBeenCalledWith(
+      '确认今日包埋工作已完成了吗？',
+      '确认清零',
+      {
+        cancelButtonText: '取消',
+        confirmButtonText: '确定',
+        type: 'info',
+      },
+    );
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('supports checkbox selection on pending and completed lists', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    const selectAllPending = document.querySelector<HTMLInputElement>(
+      'input[aria-label="选择全部待包埋任务"]',
+    );
+    const pendingB2 = document.querySelector<HTMLInputElement>(
+      'input[aria-label="选择待包埋任务 B2"]',
+    );
+    const selectAllCompleted = document.querySelector<HTMLInputElement>(
+      'input[aria-label="选择全部已包埋蜡块"]',
+    );
+    const completedX1 = document.querySelector<HTMLInputElement>(
+      'input[aria-label="选择已包埋蜡块 X1"]',
+    );
+
+    expect(selectAllPending).toBeTruthy();
+    expect(pendingB2).toBeTruthy();
+    expect(selectAllCompleted).toBeTruthy();
+    expect(completedX1).toBeTruthy();
+
+    pendingB2!.click();
+    await flushView();
+    expect(pendingB2!.checked).toBe(true);
+    expect(selectAllPending!.getAttribute('aria-checked')).toBe('mixed');
+
+    findButton('包埋历史').click();
+    await flushView();
+    expect(document.body.textContent).toContain('病例1包埋备注');
+
+    selectAllPending!.click();
+    await flushView();
+    expect(selectAllPending!.checked).toBe(true);
+
+    selectAllCompleted!.click();
+    await flushView();
+    expect(selectAllCompleted!.checked).toBe(true);
+    expect(completedX1!.checked).toBe(true);
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('edits pending task remarks and shift remarks inline', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
     expect(
-      document.querySelector('[data-testid="panel-task-id"]')?.textContent,
-    ).toBe('');
-    expect(document.body.textContent).toContain('当前病例暂无已包埋记录');
+      document.querySelector<HTMLButtonElement>(
+        'button[aria-label="编辑备注"]',
+      ),
+    ).toBeNull();
+    expect(
+      document.querySelector<HTMLButtonElement>(
+        'button[aria-label="编辑主班备注"]',
+      ),
+    ).toBeNull();
+
+    const remarksInput = document.querySelector<HTMLInputElement>(
+      'input[aria-label="备注"]',
+    );
+    expect(remarksInput).toBeTruthy();
+    expect(remarksInput!.value).toBe('任务备注-1');
+    remarksInput!.value = '复核备注';
+    remarksInput!.dispatchEvent(new Event('input'));
+    remarksInput!.dispatchEvent(new FocusEvent('blur'));
+    await flushView();
+
+    expect(mockUpdateTechnicalTaskRemarks).toHaveBeenCalledWith('TASK-1', {
+      productionRemarks: '主班备注-1',
+      remarks: '复核备注',
+    });
+
+    const shiftRemarkSelect = document.querySelector<HTMLSelectElement>(
+      'select[aria-label="主班备注"]',
+    );
+    expect(shiftRemarkSelect).toBeTruthy();
+    expect(
+      [...shiftRemarkSelect!.querySelectorAll('option')].some(
+        (option) => option.value === '主班备注-1',
+      ),
+    ).toBe(true);
+    shiftRemarkSelect!.value = '未脱钙';
+    shiftRemarkSelect!.dispatchEvent(new Event('change'));
+    await flushView();
+
+    expect(mockUpdateTechnicalTaskRemarks).toHaveBeenLastCalledWith('TASK-1', {
+      productionRemarks: '未脱钙',
+      remarks: '复核备注',
+    });
 
     app.unmount();
     root.remove();
@@ -489,7 +982,44 @@ describe('EmbeddingWorkstationView', () => {
     root.remove();
   });
 
-  it('keeps start and complete embedding on the existing API chain', async () => {
+  it('edits completed embedding slice notice and opens quality review dialog', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    expect(document.body.textContent).toContain('已包埋蜡块列表');
+    expect(document.body.textContent).toContain('汇总蜡块');
+    expect(findButton('确认包埋完成')).toBeTruthy();
+    expect(queryButton('保存')).toBeUndefined();
+    expect(
+      document.querySelector<HTMLInputElement>('input[placeholder="大体所见"]')
+        ?.value,
+    ).toBe('汇总大体所见');
+
+    const sliceNoticeSelect = document.querySelector(
+      'select[aria-label="切片备注"]',
+    ) as HTMLSelectElement;
+    expect(sliceNoticeSelect).toBeTruthy();
+    sliceNoticeSelect.value = '皮肤';
+    sliceNoticeSelect.dispatchEvent(new Event('change'));
+    await flushView();
+
+    expect(mockUpdateEmbeddingQualityReview).toHaveBeenCalledWith('EMB-X1', {
+      evaluationLevel: 'QUALIFIED',
+      samplingEvaluation: '汇总评价',
+      sliceNotice: '皮肤',
+    });
+
+    document
+      .querySelector<HTMLButtonElement>('button[aria-label="编辑取材评价"]')!
+      .click();
+    await flushView();
+    expect(document.body.textContent).toContain('保存评价');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('confirms selected embedding from the top action without completing it', async () => {
     const { app, root } = mountView();
     await flushView();
 
@@ -501,20 +1031,151 @@ describe('EmbeddingWorkstationView', () => {
       taskId: 'TASK-1',
       terminalCode: null,
     });
+    expect(mockCompleteEmbedding).not.toHaveBeenCalled();
+    expect(mockGetEmbeddingWorkstationSummary).toHaveBeenCalledTimes(2);
+    expect(mockListPendingTechnicalTasks).toHaveBeenCalledTimes(2);
+    expect(messageSuccess).toHaveBeenCalledWith(
+      '已确认包埋，状态已更新为包埋确认待完成',
+    );
 
-    findButton('确认包埋完成(F9)').click();
+    app.unmount();
+    root.remove();
+  });
+
+  it('confirms all selected pending embeddings from the top action', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    document
+      .querySelector<HTMLInputElement>(
+        'input[aria-label="选择全部待包埋任务"]',
+      )!
+      .click();
+    await flushView();
+    findButton('确认包埋').click();
+    await flushView();
+
+    expect(mockStartEmbedding).toHaveBeenCalledTimes(2);
+    expect(mockStartEmbedding).toHaveBeenNthCalledWith(1, {
+      remarks: null,
+      taskId: 'TASK-1',
+      terminalCode: null,
+    });
+    expect(mockStartEmbedding).toHaveBeenNthCalledWith(2, {
+      remarks: null,
+      taskId: 'TASK-2',
+      terminalCode: null,
+    });
+    expect(mockCompleteEmbedding).not.toHaveBeenCalled();
+    expect(messageSuccess).toHaveBeenCalledWith(
+      '已确认包埋 2 条任务，状态已更新为包埋确认待完成',
+    );
+    expect(mockGetEmbeddingWorkstationSummary).toHaveBeenCalledTimes(2);
+    expect(mockListPendingTechnicalTasks).toHaveBeenCalledTimes(2);
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('completes confirmed embedding from the completed-list action', async () => {
+    mockGetEmbeddingWorkstationSummary.mockResolvedValue({
+      completedCount: 0,
+      completedRecords: [],
+      pendingCount: 1,
+      pendingTasks: [
+        createPendingTask({
+          startedAt: '2026-06-01T09:00:00',
+          taskStatus: 'EMBEDDING_CONFIRM_PENDING',
+        }),
+      ],
+      workDate: '2026-06-01',
+    });
+
+    const { app, root } = mountView();
+    await flushView();
+
+    findButton('确认包埋完成').click();
+    await flushView();
+
+    expect(mockStartEmbedding).not.toHaveBeenCalled();
+    expect(mockCompleteEmbedding).toHaveBeenCalledWith(
+      expect.objectContaining({
+        evaluationLevel: 'QUALIFIED',
+        remarks: '任务备注-1',
+        samplingBlockId: 'BLOCK-1',
+        samplingEvaluation: '合格',
+        taskId: 'TASK-1',
+      }),
+    );
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('completes an in-progress selected embedding without starting it again', async () => {
+    mockGetEmbeddingWorkstationSummary.mockResolvedValue({
+      completedCount: 0,
+      completedRecords: [],
+      pendingCount: 1,
+      pendingTasks: [
+        createPendingTask({
+          startedAt: '2026-06-01T09:00:00',
+          taskStatus: 'IN_PROGRESS',
+        }),
+      ],
+      workDate: '2026-06-01',
+    });
+
+    const { app, root } = mountView();
+    await flushView();
+
+    findButton('确认包埋完成').click();
+    await flushView();
+
+    expect(mockStartEmbedding).not.toHaveBeenCalled();
+    expect(mockCompleteEmbedding).toHaveBeenCalledWith(
+      expect.objectContaining({
+        evaluationLevel: 'QUALIFIED',
+        remarks: '任务备注-1',
+        samplingBlockId: 'BLOCK-1',
+        samplingEvaluation: '合格',
+        taskId: 'TASK-1',
+      }),
+    );
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('falls back to operator remarks when the pending task has no remarks', async () => {
+    mockInitialOperatorRemarks.value = '右侧操作备注';
+    mockGetEmbeddingWorkstationSummary.mockResolvedValue({
+      completedCount: 0,
+      completedRecords: [],
+      pendingCount: 1,
+      pendingTasks: [
+        createPendingTask({
+          remarks: null,
+          startedAt: '2026-06-01T09:00:00',
+          taskStatus: 'EMBEDDING_CONFIRM_PENDING',
+        }),
+      ],
+      workDate: '2026-06-01',
+    });
+
+    const { app, root } = mountView();
+    await flushView();
+
+    findButton('确认包埋完成').click();
     await flushView();
 
     expect(mockCompleteEmbedding).toHaveBeenCalledWith(
       expect.objectContaining({
-        blockCount: 1,
-        remarks: null,
+        remarks: '右侧操作备注',
         samplingBlockId: 'BLOCK-1',
         taskId: 'TASK-1',
-        terminalCode: null,
       }),
     );
-    expect(messageSuccess).toHaveBeenCalled();
 
     app.unmount();
     root.remove();

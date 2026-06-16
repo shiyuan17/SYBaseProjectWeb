@@ -6,12 +6,14 @@
 
 ## 文档清单
 
+- [agents-spec-redteam-review.html](./agents-spec-redteam-review.html)
 - [clinical-submission-blsysnew-comparison.html](./clinical-submission-blsysnew-comparison.html)
 - [clinical-submission-legacy-gap-analysis.html](./clinical-submission-legacy-gap-analysis.html)
 - [clinical-submission-process.html](./clinical-submission-process.html)
 - [clinical-submission-workflow-review.html](./clinical-submission-workflow-review.html)
 - [frontend-system-audit-review.html](./frontend-system-audit-review.html)
 - [full-process-audit-review.html](./full-process-audit-review.html)
+- [loop-dynamic-workflow-ai-collab-audit-2026-06-13.html](./loop-dynamic-workflow-ai-collab-audit-2026-06-13.html)
 - [project-code-health-checklist.html](./project-code-health-checklist.html)
 - [technical-workflow-legacy-gap-analysis.html](./technical-workflow-legacy-gap-analysis.html)
 

@@ -275,37 +275,39 @@ describe('useApplicationRegistrationWorkbenchSpecimens', () => {
   });
 
   it('resets dictionary selection when the filtered result no longer contains the active system or part', async () => {
-    mockListSpecimenDictionaryGroups.mockImplementation(async (keyword = '') => {
-      if (keyword.trim() === '宫颈') {
+    mockListSpecimenDictionaryGroups.mockImplementation(
+      async (keyword = '') => {
+        if (keyword.trim() === '宫颈') {
+          return [
+            {
+              subParts: [
+                {
+                  partId: 'P-3',
+                  partName: '宫颈',
+                  specimens: ['宫颈活检组织'],
+                },
+              ],
+              systemId: 'S-2',
+              systemName: '妇科',
+            },
+          ];
+        }
+
         return [
           {
             subParts: [
               {
-                partId: 'P-3',
-                partName: '宫颈',
-                specimens: ['宫颈活检组织'],
+                partId: 'P-1',
+                partName: '胃',
+                specimens: ['胃组织', '胃切缘'],
               },
             ],
-            systemId: 'S-2',
-            systemName: '妇科',
+            systemId: 'S-1',
+            systemName: '消化',
           },
         ];
-      }
-
-      return [
-        {
-          subParts: [
-            {
-              partId: 'P-1',
-              partName: '胃',
-              specimens: ['胃组织', '胃切缘'],
-            },
-          ],
-          systemId: 'S-1',
-          systemName: '消化',
-        },
-      ];
-    });
+      },
+    );
 
     const wrapper = mountComposable();
     await flushComposable();

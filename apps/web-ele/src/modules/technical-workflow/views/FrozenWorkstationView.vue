@@ -5,9 +5,7 @@ import type {
 } from '#/modules/frozen-workflow/types/frozen-workflow';
 
 import { computed, reactive, ref, watch } from 'vue';
-
-import { reportInlineErrorDisabled } from '#/utils/error-feedback';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
 import { useUserStore } from '@vben/stores';
@@ -33,11 +31,11 @@ import {
   getFrozenSessionDetail,
   getFrozenTechnicalWorkbench,
 } from '#/modules/frozen-workflow/api/frozen-workflow-service';
+import { reportInlineErrorDisabled } from '#/utils/error-feedback';
 
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 
 const route = useRoute();
-const router = useRouter();
 const userStore = useUserStore();
 
 const loading = ref(false);
@@ -124,7 +122,9 @@ async function loadWorkbench() {
     pageError.value =
       error instanceof Error ? error.message : '冰冻工作台加载失败';
     reportInlineErrorDisabled(error, (currentError) =>
-      currentError instanceof Error ? currentError.message : '冰冻工作台加载失败',
+      currentError instanceof Error
+        ? currentError.message
+        : '冰冻工作台加载失败',
     );
   } finally {
     loading.value = false;
@@ -188,19 +188,6 @@ async function runCurrentAction() {
   }
 }
 
-function openDoctorSide() {
-  if (!selectedDetail.value) {
-    ElMessage.warning('请先选择冰冻会话');
-    return;
-  }
-  void router.push({
-    path: '/doctor-workflow/frozen-report',
-    query: {
-      sessionId: selectedDetail.value.id,
-    },
-  });
-}
-
 watch(selectedSessionId, (value) => {
   void loadDetail(value);
 });
@@ -222,7 +209,7 @@ void loadWorkbench();
 </script>
 
 <template>
-  <Page>
+  <Page :show-header="false">
     <div class="flex flex-col gap-4">
       <WorkflowSectionCard
         title="超时提醒"
@@ -300,7 +287,7 @@ void loadWorkbench();
 
         <WorkflowSectionCard
           title="会话详情"
-          description="技术侧只操作接收、取材、切片，后续快速报告与冰石对比由医生侧承接。"
+          description="技术侧只操作接收、取材、切片。"
         >
           <ElEmpty v-if="!selectedDetail" description="请选择冰冻会话" />
           <template v-else>
@@ -350,9 +337,6 @@ void loadWorkbench();
                     @click="runCurrentAction"
                   >
                     {{ currentActionLabel }}
-                  </ElButton>
-                  <ElButton type="warning" @click="openDoctorSide">
-                    进入冰冻报告
                   </ElButton>
                 </div>
               </ElFormItem>

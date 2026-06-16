@@ -47,12 +47,13 @@ import {
   mapSpecimenRemovalItem,
   mapSpecimenTrackingSummary,
   refreshTransportOrderStatus,
+  resolveMockOperatorContext,
   resolveSpecimenByBarcode,
   resolveSpecimenByIdentifier,
+  resolveSpecimenByPreferredIdentifier,
   resolveSpecimenCheckInStatus,
   resolveSpecimensBySpecimenNo,
   resolveSpecimenVerificationStatus,
-  resolveMockOperatorContext,
   updateApplicationFromSpecimens,
 } from './specimen-workflow-mock-core';
 
@@ -121,7 +122,7 @@ export async function startSpecimenVerificationMock(
   });
   appendVerificationRecord({
     applicationId: specimen.applicationId,
-    barcode: specimen.barcode,
+    barcode: normalizeText(specimen.barcode),
     operatorName: operator.operatorName,
     operatorUserId: operator.operatorUserId,
     remarks: data.remarks ?? '开始核对',
@@ -166,7 +167,7 @@ export async function completeSpecimenVerificationMock(
   });
   appendVerificationRecord({
     applicationId: specimen.applicationId,
-    barcode: specimen.barcode,
+    barcode: normalizeText(specimen.barcode),
     operatorName: operator.operatorName,
     operatorUserId: operator.operatorUserId,
     remarks: data.remarks ?? '完成核对',
@@ -183,7 +184,7 @@ export async function completeSpecimenVerificationMock(
 export async function startFixationMock(
   data: SpecimenFixationRequest,
 ): Promise<FixationResult> {
-  const specimen = resolveSpecimenByIdentifier(data.specimenBarcode);
+  const specimen = resolveSpecimenByPreferredIdentifier(data);
   assertSpecimenNotInReceiptTerminalState(specimen, '开始固定');
   if (!isSpecimenVerified(specimen)) {
     throw new Error(`标本 ${specimen.barcode} 尚未完成核对`);
@@ -214,7 +215,7 @@ export async function startFixationMock(
   });
   appendVerificationRecord({
     applicationId: specimen.applicationId,
-    barcode: specimen.barcode,
+    barcode: normalizeText(specimen.barcode),
     operatorName: operator.operatorName,
     operatorUserId: operator.operatorUserId,
     remarks: data.remarks ?? '开始固定',
@@ -226,7 +227,7 @@ export async function startFixationMock(
   });
   updateApplicationFromSpecimens(specimen.applicationId);
   return {
-    barcode: specimen.barcode,
+    barcode: normalizeText(specimen.barcode),
     fixationCompletedAt: specimen.fixationCompletedAt,
     fixationLiquidType: specimen.fixationLiquidType,
     operatorName: operator.operatorName,
@@ -239,7 +240,7 @@ export async function startFixationMock(
 export async function completeFixationMock(
   data: SpecimenFixationRequest,
 ): Promise<FixationResult> {
-  const specimen = resolveSpecimenByIdentifier(data.specimenBarcode);
+  const specimen = resolveSpecimenByPreferredIdentifier(data);
   assertSpecimenNotInReceiptTerminalState(specimen, '完成固定');
   if (!isSpecimenVerified(specimen)) {
     throw new Error(`标本 ${specimen.barcode} 尚未完成核对`);
@@ -279,7 +280,7 @@ export async function completeFixationMock(
   });
   appendVerificationRecord({
     applicationId: specimen.applicationId,
-    barcode: specimen.barcode,
+    barcode: normalizeText(specimen.barcode),
     operatorName: operator.operatorName,
     operatorUserId: operator.operatorUserId,
     remarks: data.remarks ?? '固定完成',
@@ -291,7 +292,7 @@ export async function completeFixationMock(
   });
   updateApplicationFromSpecimens(specimen.applicationId);
   return {
-    barcode: specimen.barcode,
+    barcode: normalizeText(specimen.barcode),
     fixationCompletedAt: specimen.fixationCompletedAt,
     fixationLiquidType: specimen.fixationLiquidType,
     operatorName: specimen.fixationOperatorName,
@@ -425,15 +426,16 @@ export async function receiveSpecimensMock(
   const eventTime = createTimestamp();
 
   data.items.forEach((item) => {
-    const specimen = resolveSpecimenByIdentifier(item.specimenBarcode);
+    const specimen = resolveSpecimenByPreferredIdentifier(item);
     if (!order.specimenIds.includes(specimen.id)) {
       throw new Error(
-        `标本 ${item.specimenBarcode} 不属于转运单 ${order.transportOrderNo}`,
+        `标本 ${item.specimenId ?? item.specimenBarcode ?? item.specimenNo} 不属于转运单 ${order.transportOrderNo}`,
       );
     }
     specimen.containerCount = item.containerCount ?? specimen.containerCount;
     specimen.qualityCheckResult = item.qualityCheckResult;
     specimen.qualityIssueCodes = [...(item.qualityIssueCodes ?? [])];
+    specimen.receiptLogisticsStaffName = data.logisticsStaffName;
     specimen.receiptStatus = item.receiptStatus;
     specimen.receiptReason = item.reason ?? null;
     specimen.receiptRemarks = item.remarks ?? null;
@@ -461,7 +463,7 @@ export async function receiveSpecimensMock(
     ) {
       appendVerificationRecord({
         applicationId: specimen.applicationId,
-        barcode: specimen.barcode,
+        barcode: normalizeText(specimen.barcode),
         operatorName: data.receivedByName,
         operatorUserId: data.receivedByUserId ?? null,
         remarks: item.reason ?? item.remarks ?? '接收异常核对',
@@ -487,7 +489,7 @@ export async function directReceiveSpecimensMock(
   const touchedApplications = new Set<string>();
 
   data.items.forEach((item) => {
-    const specimen = resolveSpecimenByIdentifier(item.specimenBarcode);
+    const specimen = resolveSpecimenByPreferredIdentifier(item);
     specimen.containerCount = item.containerCount ?? specimen.containerCount;
     specimen.qualityCheckResult = item.qualityCheckResult;
     specimen.qualityIssueCodes = [...(item.qualityIssueCodes ?? [])];
@@ -555,7 +557,7 @@ export async function bindSpecimenBarcodeMock(
   });
   appendVerificationRecord({
     applicationId: specimen.applicationId,
-    barcode: specimen.barcode,
+    barcode: normalizeText(specimen.barcode),
     operatorName: operator.operatorName,
     operatorUserId: operator.operatorUserId,
     remarks: data.remarks ?? null,
@@ -575,7 +577,7 @@ export async function rebindSpecimenBarcodeMock(
 ): Promise<SpecimenTrackingSummary> {
   const specimen = resolveSpecimenByIdentifier(identifier);
   assertSpecimenNotInReceiptTerminalState(specimen, '重绑条码');
-  const oldBarcode = specimen.barcode;
+  const oldBarcode = normalizeText(specimen.barcode);
   const eventTime = createTimestamp();
   const operator = resolveMockOperatorContext();
   specimen.previousBarcodes = oldBarcode
@@ -598,7 +600,7 @@ export async function rebindSpecimenBarcodeMock(
   });
   appendVerificationRecord({
     applicationId: specimen.applicationId,
-    barcode: specimen.barcode,
+    barcode: normalizeText(specimen.barcode),
     operatorName: operator.operatorName,
     operatorUserId: operator.operatorUserId,
     remarks: data.remarks ?? `旧条码 ${oldBarcode} 更正为 ${specimen.barcode}`,
@@ -623,7 +625,7 @@ export async function unbindSpecimenBarcodeMock(
   }
 
   const operator = resolveMockOperatorContext();
-  const oldBarcode = specimen.barcode;
+  const oldBarcode = normalizeText(specimen.barcode);
   const eventTime = createTimestamp();
   specimen.previousBarcodes = oldBarcode
     ? [...new Set([...specimen.previousBarcodes, oldBarcode])]
@@ -663,7 +665,11 @@ export async function confirmSpecimenMock(
   identifier: string,
   data: SpecimenConfirmRequest,
 ): Promise<SpecimenTrackingSummary> {
-  const specimen = resolveSpecimenByIdentifier(identifier);
+  const specimen = resolveSpecimenByPreferredIdentifier({
+    specimenBarcode: data.specimenBarcode ?? identifier,
+    specimenId: data.specimenId,
+    specimenNo: data.specimenNo,
+  });
   assertSpecimenNotInReceiptTerminalState(specimen, '标本确认');
   if (specimen.fixationStatus !== 'COMPLETED') {
     throw new Error(`标本 ${specimen.barcode} 需在固定完成后才能确认`);
@@ -693,7 +699,7 @@ export async function confirmSpecimenMock(
   });
   appendVerificationRecord({
     applicationId: specimen.applicationId,
-    barcode: specimen.barcode,
+    barcode: normalizeText(specimen.barcode),
     operatorName: operator.operatorName,
     operatorUserId: operator.operatorUserId,
     remarks: data.remarks ?? null,
@@ -711,7 +717,11 @@ export async function checkInSpecimenMock(
   identifier: string,
   data: SpecimenCheckInRequest,
 ): Promise<SpecimenTrackingSummary> {
-  const specimen = resolveSpecimenByIdentifier(identifier);
+  const specimen = resolveSpecimenByPreferredIdentifier({
+    specimenBarcode: data.specimenBarcode ?? identifier,
+    specimenId: data.specimenId,
+    specimenNo: data.specimenNo,
+  });
   assertSpecimenNotInReceiptTerminalState(specimen, '标本入库');
   if (!specimen.specimenConfirmedAt) {
     throw new Error(`标本 ${specimen.barcode} 需在确认后才能入库`);
@@ -742,7 +752,7 @@ export async function checkInSpecimenMock(
   });
   appendVerificationRecord({
     applicationId: specimen.applicationId,
-    barcode: specimen.barcode,
+    barcode: normalizeText(specimen.barcode),
     operatorName: operator.operatorName,
     operatorUserId: operator.operatorUserId,
     remarks: data.remarks ?? '执行标本入库',

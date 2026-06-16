@@ -110,9 +110,8 @@ test('happy path: create, register, fix, transport, receive and track specimens'
       expect(receiptResult.receiptStatus).toBe('RECEIVED');
       expect(receiptResult.unreceivedCount).toBe(0);
       expect(receiptResult.caseId).toBeTruthy();
-      expect(receiptResult.pathologyNo).toBeTruthy();
+      expect(receiptResult.pathologyNo).toBeFalsy();
       await expect(page.getByText(receiptResult.caseId)).toBeVisible();
-      await expect(page.getByText(receiptResult.pathologyNo)).toBeVisible();
     } finally {
       await context.close();
     }

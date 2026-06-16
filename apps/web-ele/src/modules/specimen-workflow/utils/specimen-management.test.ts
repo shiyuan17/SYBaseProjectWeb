@@ -155,6 +155,8 @@ describe('specimen management helpers', () => {
       fixationLiquidType: '10% formalin',
       remarks: 'Verify',
       specimenBarcode: 'BC-1',
+      specimenId: null,
+      specimenNo: null,
       terminalCode: 'TERM-1',
     });
   });

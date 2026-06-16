@@ -25,6 +25,19 @@ describe('page.vue', () => {
     expect(wrapper.text()).toContain('Test Description');
   });
 
+  it('does not render header when showHeader is false', () => {
+    const wrapper = mount(Page, {
+      props: {
+        description: 'Test Description',
+        showHeader: false,
+        title: 'Test Title',
+      },
+    });
+
+    expect(wrapper.text()).not.toContain('Test Title');
+    expect(wrapper.text()).not.toContain('Test Description');
+  });
+
   it('renders default slot content', () => {
     const wrapper = mount(Page, {
       slots: {

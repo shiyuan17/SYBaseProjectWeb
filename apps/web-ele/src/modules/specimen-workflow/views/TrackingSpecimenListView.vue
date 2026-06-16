@@ -85,7 +85,7 @@ function goToReceiptHandling() {
 <template>
   <div class="flex flex-col gap-4">
     <ElAlert
-      v-if="false"
+      v-if="pageError"
       :closable="false"
       :title="pageError"
       type="error"
@@ -193,7 +193,7 @@ function goToReceiptHandling() {
         >
           <div class="mb-3 flex justify-end">
             <ElButton link type="primary" @click="goToReceiptHandling">
-              回到病理接收处理
+              回到标本接收处理
             </ElButton>
           </div>
           <div class="flex flex-col gap-3">

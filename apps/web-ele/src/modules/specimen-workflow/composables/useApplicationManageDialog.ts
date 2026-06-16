@@ -25,6 +25,7 @@ import {
   duplicateCheckApplications,
   getApplicationDetail,
   importClinicalApplication,
+  lookupApplicationPatientByIdentifier,
   updateApplication,
 } from '../api/specimen-workflow-service';
 import {
@@ -58,6 +59,8 @@ type ApplicationManageDialogEmit = {
   ): void;
   (event: 'update:modelValue', value: boolean): void;
 };
+
+type PatientLookupStatus = 'failed' | 'idle' | 'matched' | 'missing';
 
 export function useApplicationManageDialog(
   props: ApplicationManageDialogProps,
@@ -131,6 +134,9 @@ export function useApplicationManageDialog(
   const duplicateSuggestedAction = ref('ALLOW');
   const duplicateConfirmed = ref(false);
   const clinicalSymptomSuggestion = ref('');
+  const patientLookupLoading = ref(false);
+  const patientLookupStatus = ref<PatientLookupStatus>('idle');
+  const lastResolvedIdentifier = ref('');
   const workflowReferenceOptions = ref(createEmptyWorkflowReferenceOptions());
 
   const createForm = reactive<ApplicationCreateRequest>(
@@ -153,6 +159,8 @@ export function useApplicationManageDialog(
     duplicateCheckMessage.value = '';
     duplicateSuggestedAction.value = 'ALLOW';
     duplicateConfirmed.value = false;
+    patientLookupStatus.value = 'idle';
+    lastResolvedIdentifier.value = '';
   }
 
   function resetImportForm() {
@@ -177,7 +185,7 @@ export function useApplicationManageDialog(
       externalOrderNo: detail.externalOrderNo,
       patientAge: detail.patientAge,
       patientGender: detail.patientGender,
-      patientId: detail.patientId,
+      patientId: detail.patientIdentifier ?? detail.patientId,
       patientName: detail.patientName,
       remarks: detail.remarks,
       sourceHospitalId: detail.sourceHospitalId,
@@ -187,6 +195,7 @@ export function useApplicationManageDialog(
       thirdPartySource: detail.thirdPartySource,
     });
     clinicalSymptomSuggestion.value = detail.clinicalSymptom ?? '';
+    lastResolvedIdentifier.value = createForm.patientId?.trim() ?? '';
   }
 
   async function loadApplicationForEdit() {
@@ -218,6 +227,52 @@ export function useApplicationManageDialog(
   function handleClinicalSymptomSuggestionChange(value: string) {
     clinicalSymptomSuggestion.value = value;
     createForm.clinicalSymptom = value || null;
+  }
+
+  async function handlePatientIdentifierLookup() {
+    const normalizedIdentifier = createForm.patientId?.trim() ?? '';
+    if (!normalizedIdentifier) {
+      patientLookupStatus.value = 'idle';
+      lastResolvedIdentifier.value = '';
+      return null;
+    }
+    if (!canCreateApplication.value) {
+      return null;
+    }
+    if (
+      !patientLookupLoading.value &&
+      patientLookupStatus.value !== 'failed' &&
+      normalizedIdentifier === lastResolvedIdentifier.value
+    ) {
+      return null;
+    }
+
+    patientLookupLoading.value = true;
+    try {
+      const patient =
+        await lookupApplicationPatientByIdentifier(normalizedIdentifier);
+      if (!patient) {
+        patientLookupStatus.value = 'missing';
+        lastResolvedIdentifier.value = normalizedIdentifier;
+        ElMessage.warning('未找到对应患者，保存申请单时将自动创建');
+        return null;
+      }
+
+      createForm.patientId = patient.patientIdentifier ?? normalizedIdentifier;
+      createForm.patientName = patient.patientName ?? null;
+      createForm.patientGender = patient.patientGender ?? null;
+      createForm.patientAge = patient.patientAge ?? null;
+      patientLookupStatus.value = 'matched';
+      lastResolvedIdentifier.value = createForm.patientId?.trim() ?? '';
+      return patient;
+    } catch (error) {
+      patientLookupStatus.value = 'failed';
+      lastResolvedIdentifier.value = '';
+      ElMessage.warning(getWorkflowPageErrorMessage(error));
+      return null;
+    } finally {
+      patientLookupLoading.value = false;
+    }
   }
 
   function confirmDuplicateWarning() {
@@ -373,6 +428,21 @@ export function useApplicationManageDialog(
   }
 
   watch(
+    () => createForm.patientId,
+    (value) => {
+      const normalizedIdentifier = value?.trim() ?? '';
+      if (!normalizedIdentifier) {
+        patientLookupStatus.value = 'idle';
+        lastResolvedIdentifier.value = '';
+        return;
+      }
+      if (normalizedIdentifier !== lastResolvedIdentifier.value) {
+        patientLookupStatus.value = 'idle';
+      }
+    },
+  );
+
+  watch(
     () => [
       createForm.patientId,
       createForm.patientName,
@@ -433,12 +503,16 @@ export function useApplicationManageDialog(
     editableApplicationFormStatusOptions,
     handleClinicalSymptomSuggestionChange,
     handleDuplicateCheck,
+    handlePatientIdentifierLookup,
     hasDialogCapability,
     importForm,
     importingClinicalApplication,
     isEditMode,
+    lastResolvedIdentifier,
     loadingApplicationDetail,
     pageError,
+    patientLookupLoading,
+    patientLookupStatus,
     resetCreateForm,
     resetImportForm,
     submitCreateApplication,

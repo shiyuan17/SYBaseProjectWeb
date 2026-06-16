@@ -10,6 +10,7 @@ const WORKFLOW_AUTHORITIES = [
   M2_PERMISSION_CODES.SPECIMEN_REGISTER,
   M2_PERMISSION_CODES.FIXATION_VERIFY,
   M2_PERMISSION_CODES.TRANSPORT_HANDOVER,
+  M2_PERMISSION_CODES.SPECIMEN_RECEIVE,
   M2_PERMISSION_CODES.SPECIMEN_TRACKING_QUERY,
 ];
 
@@ -63,6 +64,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
           import('#/modules/specimen-workflow/views/SubmissionRegistrationView.vue'),
         meta: {
           authority: SUBMISSION_WORKBENCH_AUTHORITIES,
+          hideInMenu: true,
           icon: 'carbon:list-boxes',
           title: '申请与登记',
         },
@@ -75,7 +77,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         meta: {
           authority: SUBMISSION_WORKBENCH_AUTHORITIES,
           icon: 'carbon:workspace',
-          title: '申请登记工作台',
+          title: '标本采集',
         },
         name: 'ApplicationRegistrationWorkbench',
         path: '/workflow/application-registration-workbench',
@@ -173,7 +175,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
           authority: [M2_PERMISSION_CODES.SPECIMEN_RECEIVE],
           hideInMenu: true,
           icon: 'carbon:archive',
-          title: '病理接收',
+          title: '标本接收工作站',
         },
         name: 'PathologyReceipt',
         path: '/workflow/pathology-receipt',
@@ -185,7 +187,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
           hideInMenu: true,
           hideInTab: true,
           icon: 'carbon:archive',
-          title: '标本接收',
+          title: '标本接收工作站',
         },
         name: 'SpecimenReceipt',
         path: '/workflow/specimen-receipt',

@@ -2,6 +2,7 @@ export interface PendingTechnicalTaskQuery {
   applicationNo?: null | string;
   createdFrom?: null | string;
   createdTo?: null | string;
+  includeAllStatuses?: boolean;
   keyword?: null | string;
   objectType?: null | string;
   page: number;
@@ -11,6 +12,7 @@ export interface PendingTechnicalTaskQuery {
   priority?: null | string;
   size: number;
   taskStatus?: null | string;
+  taskId?: null | string;
   taskType?: null | string;
   timedOutOnly?: boolean;
 }
@@ -63,11 +65,14 @@ export interface TechnicalWorkflowRouteMeta {
 export interface PendingTechnicalTaskItem {
   applicationId: string;
   applicationNo: string;
+  patientId?: null | string;
+  patientName?: null | string;
   caseId: string;
   completedAt: null | string;
   createdAt: null | string;
   deadlineAt: null | string;
   id: string;
+  objectDisplayNo?: null | string;
   objectId: null | string;
   objectType: null | string;
   pathologyNo: null | string;
@@ -154,11 +159,15 @@ export interface PendingTechnicalTaskPage {
   total: number;
 }
 
+export type TechnicalSpecimenRegistrationStatus = 'COMPLETED' | 'PENDING';
+
 export interface PendingTechnicalSpecimenRegistrationQuery {
+  applicationType?: null | string;
   keyword?: null | string;
   page: number;
   receivedFrom?: null | string;
   receivedTo?: null | string;
+  registrationStatus?: TechnicalSpecimenRegistrationStatus;
   size: number;
 }
 
@@ -170,6 +179,8 @@ export interface PendingTechnicalSpecimenRegistrationItem {
   checkItem: null | string;
   inpatientNo: null | string;
   pathologyNo: null | string;
+  patientAge: null | string;
+  patientGender: null | string;
   patientId: null | string;
   patientName: null | string;
   receivedAt: null | string;
@@ -187,11 +198,19 @@ export interface PendingTechnicalSpecimenRegistrationPage {
 }
 
 export interface TechnicalSpecimenRegistrationMaterial {
+  evaluationItems: string[];
+  frozen: boolean;
+  specimenBarcode: null | string;
   specimenId: null | string;
   sequenceNo: number;
   sourcePart: null | string;
+  specimenSize: null | string;
   specimenName: null | string;
   specimenType: null | string;
+  tissueCount: number;
+  verificationCompletedAt: null | string;
+  verificationStatus: null | string;
+  verifiedByName: null | string;
 }
 
 export interface TechnicalSpecimenRegistrationCheckItem {
@@ -271,10 +290,14 @@ export interface TechnicalSpecimenRegistrationWorkspace {
 }
 
 export interface SaveTechnicalSpecimenRegistrationMaterialItem {
+  evaluationItems?: string[];
+  frozen?: boolean;
   sourcePart?: null | string;
   specimenId?: null | string;
+  specimenSize?: null | string;
   specimenName?: null | string;
   specimenType?: null | string;
+  tissueCount?: number;
 }
 
 export interface SaveTechnicalSpecimenRegistrationMaterialsRequest {
@@ -292,7 +315,14 @@ export interface DeleteTechnicalSpecimenRegistrationMediaAssetResult {
   deleted: boolean;
 }
 
+export interface TechnicalSpecimenRegistrationMaterialVerificationRequest {
+  remarks?: null | string;
+  terminalCode?: null | string;
+}
+
 export interface CompleteTechnicalSpecimenRegistrationRequest {
+  applicationType?: null | string;
+  pathologyNo?: null | string;
   remarks?: null | string;
   terminalCode?: null | string;
 }
@@ -460,7 +490,10 @@ export interface GrossingWorkbenchContext {
   checkItems: TechnicalSpecimenRegistrationCheckItem[];
   clinicalDiagnosis: null | string;
   clinicalHistory: null | string;
+  clinicalSubmissionRequirements: null | string;
   contextSummary: null | string;
+  externalPathologyDiagnosis: null | string;
+  infectiousAndPastHistorySummary: null | string;
   mediaAssets: GrossingWorkbenchMediaAsset[];
   relatedExaminations: null | string;
   task: GrossingWorkbenchTaskSummary;
@@ -504,6 +537,12 @@ export interface TechnicalTaskPriorityRequest {
   terminalCode?: null | string;
 }
 
+export interface TechnicalTaskRemarksRequest {
+  productionRemarks?: null | string;
+  remarks?: null | string;
+  terminalCode?: null | string;
+}
+
 export interface TaskOperationResult {
   caseId: string;
   caseStatus: null | string;
@@ -529,11 +568,22 @@ export interface GrossingBlockItemRequest {
   specialRequirement?: null | string;
 }
 
+export type GrossingEmbeddingBoxStatus = 'CONFIRMED' | 'PENDING';
+
+export interface GrossingEmbeddingBoxItemRequest {
+  boxName?: null | string;
+  embeddingBoxNo: string;
+  embeddingRemarks?: null | string;
+  sequenceNo: number;
+  status: GrossingEmbeddingBoxStatus;
+}
+
 export interface GrossingSpecimenItemRequest {
   blocks: GrossingBlockItemRequest[];
   blockCount?: null | number;
   bodyPartId?: null | string;
   cutSurfaceFeature?: null | string;
+  embeddingBoxes?: GrossingEmbeddingBoxItemRequest[];
   grossDescription?: null | string;
   marginMarking?: null | string;
   mediaAssets?: MediaAssetItem[];
@@ -605,12 +655,29 @@ export interface EmbeddingResult {
   taskId: string;
 }
 
+export interface EmbeddingQualityReviewRequest {
+  evaluationLevel?: null | string;
+  notifiedGrossingOperator?: boolean;
+  remarks?: null | string;
+  samplingEvaluation?: null | string;
+  sliceNotice?: null | string;
+  terminalCode?: null | string;
+  treatmentAction?: 'OTHER' | 'REGROSSING' | null;
+  treatmentRemark?: null | string;
+  unqualifiedReasons?: string[];
+}
+
+export interface EmbeddingQualityReviewResult {
+  record: TechnicalTrackingEmbeddingRecordSummary;
+  reworkStatus: null | string;
+  reworkType: null | string;
+}
+
 export interface SlicingCompleteRequest {
   deviceCode?: null | string;
   embeddingBoxId: string;
   qualityIssue?: null | string;
   remarks?: null | string;
-  slideCount: number;
   sliceCountPerSlide?: null | number;
   sliceThickness?: null | string;
   taskId: string;
@@ -625,6 +692,7 @@ export interface SlicingResult {
 }
 
 export interface SlicingWorkbenchQuery {
+  applicationType?: null | string;
   completedPage: number;
   completedSize: number;
   keyword?: null | string;
@@ -632,6 +700,48 @@ export interface SlicingWorkbenchQuery {
   pendingPage: number;
   pendingSize: number;
   pendingTodayOnly?: boolean;
+}
+
+export interface SlicingSlidePrintRequest {
+  embeddingBoxId: string;
+  mergeAdjacent: boolean;
+  printerCode?: null | string;
+  remarks?: null | string;
+  sourceSlideCount: number;
+  taskId: string;
+  terminalCode?: null | string;
+}
+
+export interface SlicingSlidePrintResult {
+  merged: boolean;
+  printedSlideCount: number;
+  slideIds: string[];
+  slideNos: string[];
+  slicingId: string;
+  taskId: string;
+}
+
+export interface SlicingSlidePrintMergeGroupRequest {
+  remarks?: null | string;
+  taskIds: string[];
+  terminalCode?: null | string;
+}
+
+export interface SlicingSlidePrintMergeGroupCancelRequest {
+  printGroupIds: string[];
+  remarks?: null | string;
+  terminalCode?: null | string;
+}
+
+export interface SlicingSlidePrintMergeGroupPrintRequest {
+  printGroupId: string;
+  printerCode?: null | string;
+  remarks?: null | string;
+  terminalCode?: null | string;
+}
+
+export interface SlicingSlidePrintMergeGroupResult {
+  printGroupIds: string[];
 }
 
 export interface SlicingWorkbenchStats {
@@ -644,28 +754,39 @@ export interface SlicingWorkbenchStats {
 }
 
 export interface SlicingWorkbenchRow {
+  applicationType?: null | string;
   caseId: string;
+  combinedSlide: boolean;
   completedAt?: null | string;
   embeddingBoxId: string;
+  embeddingBoxIds: string[];
+  embeddingBoxNo?: null | string;
   embeddingClearRemark?: null | string;
+  embeddingRemarks?: null | string;
   embeddingEvaluation?: null | string;
   embeddingOperatorName?: null | string;
   grossingEvaluation?: null | string;
   pathologyNo?: null | string;
   patientId?: null | string;
   patientName?: null | string;
+  printGroupId?: null | string;
   selectable: boolean;
   shiftRemark?: null | string;
   slideId?: null | string;
   slideNo?: null | string;
+  slidePrintStatus?: null | string;
   sliceNotice?: null | string;
   slicingOperatorName?: null | string;
   slicingRemark?: null | string;
   specimenId?: null | string;
   specimenName?: null | string;
+  submittingDepartmentName?: null | string;
   taskId: string;
+  taskIds: string[];
   taskStatus?: null | string;
   timedOut: boolean;
+  mergedPrintGroup: boolean;
+  printedSlideCount: number;
 }
 
 export interface SlicingWorkbenchView {
@@ -674,8 +795,12 @@ export interface SlicingWorkbenchView {
   completedTodayList: SlicingWorkbenchRow[];
   completedTotal: number;
   pendingList: SlicingWorkbenchRow[];
+  pendingPrintList: SlicingWorkbenchRow[];
+  pendingPrintTotal: number;
   pendingPage: number;
   pendingSize: number;
+  pendingSliceList: SlicingWorkbenchRow[];
+  pendingSliceTotal: number;
   pendingTotal: number;
   stats: SlicingWorkbenchStats;
 }

@@ -4,6 +4,8 @@ import type { ReceiptWorkbenchRow } from '../utils/specimen-receipt-workbench';
 import { watch } from 'vue';
 import { useRoute } from 'vue-router';
 
+import { Page } from '@vben/common-ui';
+
 import {
   ElAlert,
   ElButton,
@@ -16,21 +18,28 @@ import {
   ElTag,
 } from 'element-plus';
 
-import { Page } from '@vben/common-ui';
-
 import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
 
 import SpecimenReceiptDirectDrawer from '../components/SpecimenReceiptDirectDrawer.vue';
+import SpecimenReceiptReceiveDialog from '../components/SpecimenReceiptReceiveDialog.vue';
 import { useSpecimenReceiptWorkbench } from '../composables/useSpecimenReceiptWorkbench';
 import { formatDateTime, formatNullable } from '../utils/format';
 import {
+  isReceiptWorkbenchRowReceivable,
   resolveReceiptWorkbenchStatusLabel,
   resolveReceiptWorkbenchStatusTagType,
 } from '../utils/specimen-receipt-workbench';
+import {
+  resolveReceiptWorkflowRowTone,
+  resolveSpecimenWorkflowRowClassName,
+} from '../utils/specimen-workflow-row-tone';
+
+import '../styles/specimen-workflow-row-tone.css';
 
 const route = useRoute();
 const {
   batchRetryResult,
+  closeReceiveDialog,
   directReceiveDialogVisible,
   directReceiveForm,
   directReceiveItems,
@@ -42,16 +51,21 @@ const {
   handleExportExcel,
   handleOperatorChange,
   handleQueueSpecimen,
+  handleReceiveUserChange,
   handleReceiveSelected,
   handleRemoveDirectReceiveRow,
   handleRetryLabel,
   handleSelectionChange,
   lookupLoading,
+  openReceiveDialog,
   openDirectReceiveDrawer,
   operatorForm,
   pageError,
   queueItems,
+  receiveDialogVisible,
+  receiveForm,
   receiveLoading,
+  receiveSummary,
   receivedCount,
   retryDialogVisible,
   retryForm,
@@ -59,6 +73,7 @@ const {
   retryTargetRows,
   scanInput,
   selectedCount,
+  selectedRowCount,
   submitDirectReceive,
   submitRetryLabel,
 } = useSpecimenReceiptWorkbench();
@@ -73,18 +88,10 @@ function normalizeQueryValue(value: unknown) {
   return '';
 }
 
-function resolveRowClassName({
-  row,
-}: {
-  row: ReceiptWorkbenchRow;
-}) {
-  if (row.queueStatus === 'SUCCESS') {
-    return 'receipt-success-row';
-  }
-  if (row.queueStatus === 'FAILED') {
-    return 'receipt-failed-row';
-  }
-  return '';
+function resolveRowClassName({ row }: { row: ReceiptWorkbenchRow }) {
+  return resolveSpecimenWorkflowRowClassName(
+    resolveReceiptWorkflowRowTone(row),
+  );
 }
 
 watch(
@@ -105,10 +112,10 @@ watch(
 </script>
 
 <template>
-  <Page>
+  <Page :show-header="false">
     <div class="flex flex-col gap-4">
       <ElAlert
-        v-if="false"
+        v-if="pageError"
         :closable="false"
         :title="pageError"
         type="error"
@@ -116,7 +123,7 @@ watch(
       />
 
       <div class="flex flex-wrap items-center gap-4 text-sm">
-        <div class="font-semibold text-[color:#d6453d]">标本签收</div>
+        <div class="font-semibold text-danger">标本签收</div>
         <div>
           全部
           <span class="text-xl font-semibold text-primary">{{
@@ -151,13 +158,13 @@ watch(
           :disabled="selectedCount === 0"
           :loading="receiveLoading"
           type="primary"
-          @click="handleReceiveSelected"
+          @click="openReceiveDialog"
         >
           标本签收
         </ElButton>
         <ElButton @click="openDirectReceiveDrawer">异常接收</ElButton>
         <ElButton
-          :disabled="selectedCount === 0"
+          :disabled="selectedRowCount === 0"
           @click="handleClearSelectionRows"
         >
           清除选择行
@@ -185,7 +192,11 @@ watch(
         row-key="specimenId"
         @selection-change="handleSelectionChange"
       >
-        <ElTableColumn type="selection" width="42" />
+        <ElTableColumn
+          :selectable="isReceiptWorkbenchRowReceivable"
+          type="selection"
+          width="42"
+        />
         <ElTableColumn label="序" width="60">
           <template #default="{ $index }">
             {{ $index + 1 }}
@@ -216,7 +227,9 @@ watch(
         <ElTableColumn label="标本名称" min-width="160" prop="specimenName" />
         <ElTableColumn label="标本状态" min-width="120">
           <template #default="{ row }">
-            <ElTag :type="resolveReceiptWorkbenchStatusTagType(row.queueStatus)">
+            <ElTag
+              :type="resolveReceiptWorkbenchStatusTagType(row.queueStatus)"
+            >
               {{ resolveReceiptWorkbenchStatusLabel(row.queueStatus) }}
             </ElTag>
           </template>
@@ -263,6 +276,16 @@ watch(
       @direct-receive-user-change="handleDirectReceiveUserChange"
       @remove-row="handleRemoveDirectReceiveRow"
       @submit="submitDirectReceive"
+    />
+
+    <SpecimenReceiptReceiveDialog
+      v-model="receiveDialogVisible"
+      v-model:form="receiveForm"
+      :submitting="receiveLoading"
+      :summary="receiveSummary"
+      @close="closeReceiveDialog"
+      @receive-user-change="handleReceiveUserChange"
+      @submit="handleReceiveSelected"
     />
 
     <ElDialog
@@ -321,7 +344,9 @@ watch(
           <div class="grid gap-3 text-sm md:grid-cols-2">
             <div>批次号：{{ batchRetryResult.labelPrintBatchNo }}</div>
             <div>
-              结果：{{ batchRetryResult.allSuccessful ? '全部成功' : '部分成功' }}
+              结果：{{
+                batchRetryResult.allSuccessful ? '全部成功' : '部分成功'
+              }}
             </div>
             <div>成功数：{{ batchRetryResult.successCount }}</div>
             <div>失败数：{{ batchRetryResult.failedCount }}</div>
@@ -346,20 +371,3 @@ watch(
     </ElDialog>
   </Page>
 </template>
-
-<style scoped>
-:deep(.receipt-success-row td) {
-  background: #0f8a14 !important;
-  color: #ffffff;
-}
-
-:deep(.receipt-success-row .el-tag) {
-  --el-tag-bg-color: #ffffff;
-  --el-tag-border-color: #ffffff;
-  --el-tag-text-color: #0f8a14;
-}
-
-:deep(.receipt-failed-row td) {
-  background: #fff7ed !important;
-}
-</style>

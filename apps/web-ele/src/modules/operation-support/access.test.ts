@@ -2,14 +2,18 @@ import { describe, expect, it } from 'vitest';
 
 import {
   canViewArchivePage,
+  canViewBorrowPage,
+  getBorrowManagementCapabilities,
   getEquipmentLedgerCapabilities,
+  getMedicalWasteCapabilities,
+  getOperationResourceEntryPath,
   getOperationSupportEntryPath,
   getReagentLedgerCapabilities,
 } from './access';
 import { M5_PERMISSION_CODES } from './constants';
 
 describe('operation support access helpers', () => {
-  it('routes archive-only users to archive entry and denies reagent equipment workstations', () => {
+  it('routes archive-only users to archive entry while allowing borrow-page record queries only', () => {
     const archiveCodes = [
       M5_PERMISSION_CODES.ARCHIVE_CABINET_QUERY,
       M5_PERMISSION_CODES.APPLICATION_FORM_ARCHIVE,
@@ -19,7 +23,16 @@ describe('operation support access helpers', () => {
     expect(getOperationSupportEntryPath(archiveCodes)).toBe(
       '/operation-support/archive',
     );
+    expect(getOperationResourceEntryPath(archiveCodes)).toBeNull();
     expect(canViewArchivePage(archiveCodes)).toBe(true);
+    expect(canViewBorrowPage(archiveCodes)).toBe(true);
+
+    const borrowCapabilities = getBorrowManagementCapabilities(archiveCodes);
+    expect(borrowCapabilities.canViewPage).toBe(true);
+    expect(borrowCapabilities.canCreateLoan).toBe(false);
+    expect(borrowCapabilities.canQueryLoans).toBe(false);
+    expect(borrowCapabilities.canReturnLoan).toBe(false);
+    expect(borrowCapabilities.canQueryCabinets).toBe(true);
 
     const reagentCapabilities = getReagentLedgerCapabilities(archiveCodes);
     expect(reagentCapabilities.canViewPage).toBe(false);
@@ -30,6 +43,27 @@ describe('operation support access helpers', () => {
     expect(equipmentCapabilities.canViewPage).toBe(false);
     expect(equipmentCapabilities.canCreateEquipment).toBe(false);
     expect(equipmentCapabilities.canCreateMaintenanceLog).toBe(false);
+  });
+
+  it('routes borrow-only users to borrow entry and denies archive page access', () => {
+    const borrowCodes = [
+      M5_PERMISSION_CODES.LOAN_CREATE,
+      M5_PERMISSION_CODES.LOAN_QUERY,
+      M5_PERMISSION_CODES.LOAN_RETURN,
+    ];
+
+    expect(getOperationSupportEntryPath(borrowCodes)).toBe(
+      '/operation-support/borrow',
+    );
+    expect(canViewArchivePage(borrowCodes)).toBe(false);
+    expect(canViewBorrowPage(borrowCodes)).toBe(true);
+
+    const borrowCapabilities = getBorrowManagementCapabilities(borrowCodes);
+    expect(borrowCapabilities.canViewPage).toBe(true);
+    expect(borrowCapabilities.canCreateLoan).toBe(true);
+    expect(borrowCapabilities.canQueryLoans).toBe(true);
+    expect(borrowCapabilities.canReturnLoan).toBe(true);
+    expect(borrowCapabilities.canQueryCabinets).toBe(false);
   });
 
   it('grants reagent and equipment maintenance capabilities to reagent device manager permissions', () => {
@@ -47,8 +81,9 @@ describe('operation support access helpers', () => {
       M5_PERMISSION_CODES.EQUIPMENT_WARNING_QUERY,
     ];
 
-    expect(getOperationSupportEntryPath(reagentDeviceCodes)).toBe(
-      '/operation-support/reagents',
+    expect(getOperationSupportEntryPath(reagentDeviceCodes)).toBeNull();
+    expect(getOperationResourceEntryPath(reagentDeviceCodes)).toBe(
+      '/operation-resources/equipment',
     );
 
     const reagentCapabilities =
@@ -66,26 +101,35 @@ describe('operation support access helpers', () => {
     expect(equipmentCapabilities.canUpdateEquipment).toBe(true);
     expect(equipmentCapabilities.canCreateMaintenanceLog).toBe(true);
     expect(equipmentCapabilities.canQueryWarnings).toBe(true);
+    expect(getMedicalWasteCapabilities(reagentDeviceCodes).canViewPage).toBe(
+      true,
+    );
   });
 
   it('allows warning-only entry into the matching workstation', () => {
     expect(
-      getOperationSupportEntryPath([M5_PERMISSION_CODES.REAGENT_WARNING_QUERY]),
-    ).toBe('/operation-support/reagents');
+      getOperationResourceEntryPath([
+        M5_PERMISSION_CODES.REAGENT_WARNING_QUERY,
+      ]),
+    ).toBe('/operation-resources/reagents');
     expect(
       getReagentLedgerCapabilities([M5_PERMISSION_CODES.REAGENT_WARNING_QUERY])
         .canViewPage,
     ).toBe(true);
 
     expect(
-      getOperationSupportEntryPath([
+      getOperationResourceEntryPath([
         M5_PERMISSION_CODES.EQUIPMENT_WARNING_QUERY,
       ]),
-    ).toBe('/operation-support/equipment');
+    ).toBe('/operation-resources/equipment');
     expect(
       getEquipmentLedgerCapabilities([
         M5_PERMISSION_CODES.EQUIPMENT_WARNING_QUERY,
       ]).canViewPage,
+    ).toBe(true);
+    expect(
+      getMedicalWasteCapabilities([M5_PERMISSION_CODES.EQUIPMENT_WARNING_QUERY])
+        .canViewPage,
     ).toBe(true);
   });
 });

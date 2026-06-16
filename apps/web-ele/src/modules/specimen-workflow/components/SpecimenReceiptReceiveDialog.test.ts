@@ -1,7 +1,6 @@
 import type {
-  ReceiptDraftItem,
-  ReceiptOperatorForm,
-  TransportReceiptGroup,
+  ReceiptConfirmForm,
+  ReceiptConfirmSummary,
 } from '../utils/specimen-receipt';
 
 import { createApp, h, nextTick, reactive, ref } from 'vue';
@@ -9,19 +8,14 @@ import { createApp, h, nextTick, reactive, ref } from 'vue';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  createAlertStub,
   createButtonStub,
-  createDescriptionsItemStub,
   createDialogStub,
   createInputStub,
   createPassthroughStub,
 } from '../test-utils/component-stubs';
 
 vi.mock('element-plus', () => ({
-  ElAlert: createAlertStub(),
   ElButton: createButtonStub(),
-  ElDescriptions: createPassthroughStub(),
-  ElDescriptionsItem: createDescriptionsItemStub(),
   ElDialog: createDialogStub(),
   ElForm: createPassthroughStub('form'),
   ElFormItem: createPassthroughStub(),
@@ -33,49 +27,19 @@ vi.mock('#/modules/system-management/components/SystemUserSelect.vue', () => ({
     emits: ['change', 'update:modelValue'],
     props: ['modelValue', 'placeholder', 'selectedLabel'],
     template:
-      "<button type=\"button\" @click=\"$emit('change', { id: 'USER-2', name: '李医生' })\">选择接收人</button>",
-  },
-}));
-
-vi.mock('./SpecimenReceiptDraftTable.vue', () => ({
-  default: {
-    props: ['items'],
-    template: '<div>{{ items[0]?.specimenBarcode }}</div>',
+      "<button type=\"button\" @click=\"$emit('change', { id: 'USER-2', name: '李医生' })\">选择签收人员</button>",
   },
 }));
 
 import SpecimenReceiptReceiveDialog from './SpecimenReceiptReceiveDialog.vue';
 
-function createGroup(
-  overrides: Partial<TransportReceiptGroup> = {},
-): TransportReceiptGroup {
+function createSummary(
+  overrides: Partial<ReceiptConfirmSummary> = {},
+): ReceiptConfirmSummary {
   return {
-    applicationId: 'APP-1',
-    applicationNo: 'AP-001',
-    barcodes: ['BC-1'],
-    batchAbnormalFlag: true,
-    items: [{ barcode: 'BC-1' }] as TransportReceiptGroup['items'],
-    latestTrackingAt: '2026-05-31T09:00:00',
-    patientName: '张三',
-    reminderCount: 2,
-    transportOrderId: 'TO-1',
-    unreceivedCount: 1,
-    ...overrides,
-  };
-}
-
-function createDraftItem(
-  overrides: Partial<ReceiptDraftItem> = {},
-): ReceiptDraftItem {
-  return {
-    containerCount: 1,
-    key: 1,
-    qualityCheckResult: 'PASSED',
-    qualityIssueCodes: [],
-    reason: '',
-    receiptStatus: 'RECEIVED',
-    remarks: '',
-    specimenBarcode: 'BC-1',
+    applicationCount: 1,
+    patientCount: 1,
+    specimenCount: 2,
     ...overrides,
   };
 }
@@ -87,20 +51,19 @@ async function mountDialog() {
   const receiveUserChangeMock = vi.fn();
   const submitMock = vi.fn();
   const visible = ref(true);
-  const form = reactive<ReceiptOperatorForm>({
+  const form = reactive<ReceiptConfirmForm>({
+    logisticsStaffName: '',
     receivedByName: 'Test User',
     receivedByUserId: 'USER-1',
-    terminalCode: '',
   });
 
   const app = createApp({
     render() {
       return h(SpecimenReceiptReceiveDialog, {
         form,
-        items: [createDraftItem()],
         modelValue: visible.value,
-        selectedGroup: createGroup(),
         submitting: false,
+        summary: createSummary(),
         'onUpdate:modelValue': (value: boolean) => {
           visible.value = value;
         },
@@ -132,15 +95,16 @@ describe('SpecimenReceiptReceiveDialog', () => {
     vi.clearAllMocks();
   });
 
-  it('renders selected group details and warning content', async () => {
+  it('renders summary and confirm fields', async () => {
     const wrapper = await mountDialog();
 
-    expect(wrapper.container.textContent).toContain('接收标本');
-    expect(wrapper.container.textContent).toContain('TO-1');
-    expect(wrapper.container.textContent).toContain('AP-001');
-    expect(wrapper.container.textContent).toContain('张三');
-    expect(wrapper.container.textContent).toContain('当前批次含异常标记');
-    expect(wrapper.container.textContent).toContain('BC-1');
+    expect(wrapper.container.textContent).toContain('标本签收');
+    expect(wrapper.container.textContent).toContain('提示信息');
+    expect(wrapper.container.textContent).toContain('1 个申请单');
+    expect(wrapper.container.textContent).toContain('1 个病人');
+    expect(wrapper.container.textContent).toContain('2 个标本');
+    expect(wrapper.container.textContent).toContain('物流人员');
+    expect(wrapper.container.textContent).toContain('签收人员');
 
     wrapper.unmount();
   });
@@ -153,10 +117,10 @@ describe('SpecimenReceiptReceiveDialog', () => {
     ];
 
     buttons
-      .find((button) => button.textContent?.includes('选择接收人'))
+      .find((button) => button.textContent?.includes('选择签收人员'))
       ?.click();
     buttons.find((button) => button.textContent?.includes('取消'))?.click();
-    buttons.find((button) => button.textContent?.includes('提交接收'))?.click();
+    buttons.find((button) => button.textContent?.includes('确认'))?.click();
     await nextTick();
 
     expect(wrapper.receiveUserChangeMock).toHaveBeenCalledWith({

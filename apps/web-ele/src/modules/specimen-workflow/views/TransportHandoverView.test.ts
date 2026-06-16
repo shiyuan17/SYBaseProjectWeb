@@ -5,17 +5,34 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import TransportHandoverView from './TransportHandoverView.vue';
 
 const {
+  createTransportOrderMock,
   listSpecimenOutboundsMock,
   loadOperatingRoomNameMapSafelyMock,
   outboundTransportOrderMock,
   quickOutboundSpecimenMock,
+  verifyOperatorMock,
   warningMock,
 } = vi.hoisted(() => ({
+  createTransportOrderMock: vi.fn(async () => ({
+    applicationId: 'APP-002',
+    handedOverAt: null,
+    handoverUserName: 'Test User',
+    id: 'TO-CREATED-001',
+    outboundUserId: null,
+    outboundUserName: null,
+    receiverUserName: null,
+    status: 'PENDING',
+    toBeTransportedAt: '2026-05-26 10:00:00',
+    transportOrderNo: 'TR-20260526-CREATED',
+  })),
   listSpecimenOutboundsMock: vi.fn(async () => ({
     items: [
       {
         applicationId: 'APP-002',
         applicationNo: 'M2-20260526-002',
+        barcode: 'BC-TR-001',
+        checkInStatus: 'CHECKED_IN',
+        fixationStatus: 'COMPLETED',
         inpatientNo: 'ZY-002',
         outboundAt: null,
         outboundUserName: null,
@@ -24,6 +41,7 @@ const {
         patientName: 'Alice',
         registeredAt: '2026-05-26 09:30:00',
         registeredByName: '登记员甲',
+        specimenConfirmedAt: '2026-05-26 09:10:00',
         specimenId: 'SP-002',
         specimenName: '甲状腺组织',
         specimenNo: 'SP-TR-001',
@@ -31,13 +49,35 @@ const {
         surgeryName: 'OR-102',
         transportOrderId: 'TO-002',
       },
+      {
+        applicationId: 'APP-002',
+        applicationNo: 'M2-20260526-002',
+        barcode: 'BC-TR-002',
+        checkInStatus: 'NOT_CHECKED_IN',
+        fixationStatus: 'COMPLETED',
+        inpatientNo: 'ZY-002',
+        outboundAt: null,
+        outboundUserName: null,
+        patientGender: '女',
+        patientId: 'PAT-002',
+        patientName: 'Alice',
+        registeredAt: '2026-05-26 09:35:00',
+        registeredByName: '登记员甲',
+        specimenConfirmedAt: '2026-05-26 09:12:00',
+        specimenId: 'SP-002-2',
+        specimenName: '甲状腺峡部组织',
+        specimenNo: 'SP-TR-002',
+        specimenStatus: 'FIXED',
+        surgeryName: 'OR-102',
+        transportOrderId: null,
+      },
     ],
     page: 1,
     size: 20,
-    total: 1,
+    total: 2,
   })),
-  loadOperatingRoomNameMapSafelyMock: vi.fn(async () =>
-    new Map([['OR-102', '惠侨楼 - 手术室 2']]),
+  loadOperatingRoomNameMapSafelyMock: vi.fn(
+    async () => new Map([['OR-102', '惠侨楼 - 手术室 2']]),
   ),
   outboundTransportOrderMock: vi.fn(async () => ({
     applicationId: 'APP-002',
@@ -63,6 +103,7 @@ const {
     toBeTransportedAt: '2026-05-26 10:11:00',
     transportOrderNo: 'TR-20260526-NEW',
   })),
+  verifyOperatorMock: vi.fn(async () => 'TOKEN-VERIFY'),
   warningMock: vi.fn(),
 }));
 
@@ -76,6 +117,7 @@ const { mockRoute } = vi.hoisted(() => ({
 
 const { mockUserInfo } = vi.hoisted(() => ({
   mockUserInfo: {
+    loginName: 'test-user',
     realName: 'Test User',
     userId: 'USER-001',
   },
@@ -127,14 +169,21 @@ vi.mock('../utils/operating-room-display', () => ({
   loadOperatingRoomNameMapSafely: loadOperatingRoomNameMapSafelyMock,
   normalizeOperatingRoomDisplayValue: vi.fn(
     (roomMap: ReadonlyMap<string, string>, value?: null | string) =>
-      value ? roomMap.get(value) ?? value : '',
+      value ? (roomMap.get(value) ?? value) : '',
   ),
 }));
 
 vi.mock('../api/specimen-workflow-service', () => ({
+  createTransportOrder: createTransportOrderMock,
   listSpecimenOutbounds: listSpecimenOutboundsMock,
   outboundTransportOrder: outboundTransportOrderMock,
   quickOutboundSpecimen: quickOutboundSpecimenMock,
+}));
+
+vi.mock('../composables/useOperatorVerificationPrompt', () => ({
+  useOperatorVerificationPrompt: () => ({
+    verifyOperator: verifyOperatorMock,
+  }),
 }));
 
 function mountView() {
@@ -160,9 +209,127 @@ async function flush() {
 describe('TransportHandoverView', () => {
   afterEach(() => {
     document.body.innerHTML = '';
+    mockRoute.query = {
+      applicationId: 'APP-002',
+    };
+    mockUserInfo.loginName = 'test-user';
     mockUserInfo.realName = 'Test User';
     mockUserInfo.userId = 'USER-001';
     vi.clearAllMocks();
+  });
+
+  it('keeps the outbound list empty when no route context is provided', async () => {
+    mockRoute.query = {};
+
+    const { app, container } = mountView();
+    await flush();
+
+    expect(listSpecimenOutboundsMock).not.toHaveBeenCalled();
+    expect(container.textContent).toMatch(/全部\s*0/);
+
+    app.unmount();
+  });
+
+  it('expands a scanned specimen identifier to its application specimens and only drafts the exact match', async () => {
+    mockRoute.query = {};
+    listSpecimenOutboundsMock.mockResolvedValueOnce({
+      items: [
+        {
+          applicationId: 'APP-002',
+          applicationNo: 'M2-20260526-002',
+          barcode: 'BC-TR-001',
+          checkInStatus: 'CHECKED_IN',
+          fixationStatus: 'COMPLETED',
+          inpatientNo: 'ZY-002',
+          outboundAt: null,
+          outboundUserName: null,
+          patientGender: '女',
+          patientId: 'PAT-002',
+          patientName: 'Alice',
+          registeredAt: '2026-05-26 09:30:00',
+          registeredByName: '登记员甲',
+          specimenConfirmedAt: '2026-05-26 09:10:00',
+          specimenId: 'SP-002',
+          specimenName: '甲状腺组织',
+          specimenNo: 'SP-TR-001',
+          specimenStatus: 'CHECKED_IN',
+          surgeryName: 'OR-102',
+          transportOrderId: 'TO-002',
+        },
+        {
+          applicationId: 'APP-002',
+          applicationNo: 'M2-20260526-002',
+          barcode: 'BC-TR-002',
+          checkInStatus: 'CHECKED_IN',
+          fixationStatus: 'COMPLETED',
+          inpatientNo: 'ZY-002',
+          outboundAt: null,
+          outboundUserName: null,
+          patientGender: '女',
+          patientId: 'PAT-002',
+          patientName: 'Alice',
+          registeredAt: '2026-05-26 09:35:00',
+          registeredByName: '登记员甲',
+          specimenConfirmedAt: '2026-05-26 09:12:00',
+          specimenId: 'SP-002-2',
+          specimenName: '甲状腺峡部组织',
+          specimenNo: 'SP-TR-002',
+          specimenStatus: 'CHECKED_IN',
+          surgeryName: 'OR-102',
+          transportOrderId: 'TO-SIBLING',
+        },
+      ],
+      page: 1,
+      size: 20,
+      total: 2,
+    });
+
+    const { app, container } = mountView();
+    await flush();
+
+    const specimenNoInput = container.querySelector(
+      'input[placeholder="请输入标本条码/编号"]',
+    ) as HTMLInputElement | null;
+    specimenNoInput!.value = 'BC-TR-001';
+    specimenNoInput!.dispatchEvent(new Event('input', { bubbles: true }));
+    specimenNoInput!.dispatchEvent(
+      new KeyboardEvent('keyup', {
+        bubbles: true,
+        code: 'Enter',
+        key: 'Enter',
+      }),
+    );
+    await flush();
+
+    expect(listSpecimenOutboundsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ identifier: 'BC-TR-001' }),
+    );
+    expect(container.textContent).toMatch(/全部\s*2/);
+    expect(container.textContent).toContain('SP-TR-001');
+    expect(container.textContent).toContain('SP-TR-002');
+    expect(container.textContent).toContain('出库未保存');
+    expect(container.textContent).toContain('待出库');
+
+    const transportButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('转运'),
+    ) as HTMLButtonElement | undefined;
+    expect(transportButton?.disabled).toBe(false);
+    transportButton!.click();
+    await flush();
+
+    expect(outboundTransportOrderMock).toHaveBeenCalledTimes(1);
+    expect(outboundTransportOrderMock).toHaveBeenCalledWith('TO-002', {
+      outboundUserId: 'USER-001',
+      outboundUserName: 'Test User',
+      remarks: null,
+      terminalCode: null,
+    });
+    expect(outboundTransportOrderMock).not.toHaveBeenCalledWith(
+      'TO-SIBLING',
+      expect.anything(),
+    );
+
+    app.unmount();
   });
 
   it('renders the specimen outbound workspace, keeps hidden route filtering, and removes legacy controls', async () => {
@@ -185,12 +352,14 @@ describe('TransportHandoverView', () => {
     expect(container.textContent).not.toContain('批量打印');
     expect(container.textContent).not.toContain('批量交接');
     expect(container.textContent).not.toContain('最近操作结果');
+    expect(container.textContent).toContain('清除列表');
     expect(container.textContent).not.toContain('转运单号');
     expect(container.textContent).not.toContain('交接科室');
     expect(container.textContent).not.toContain('接收科室');
     expect(container.textContent).not.toContain('操作');
 
     const expectedHeaders = [
+      '',
       '序号',
       '申请单',
       '标本编号',
@@ -200,30 +369,146 @@ describe('TransportHandoverView', () => {
       '手术间',
       '标本名称',
       '标本状态',
+      '出库状态',
       '添加时间',
       '添加人',
       '病人ID',
       '出库时间',
       '出库人',
     ];
-    const headerTexts = [
-      ...container.querySelectorAll('thead th'),
-    ].map((element) => element.textContent?.replace(/\s+/g, '') ?? '');
+    const headerTexts = [...container.querySelectorAll('thead th')].map(
+      (element) => element.textContent?.replaceAll(/\s+/g, '') ?? '',
+    );
     expect(headerTexts).toEqual(expectedHeaders);
 
     app.unmount();
   });
 
-  it('submits outbound directly when specimen serial search matches one pending specimen', async () => {
+  it('displays already transported specimens while keeping them non-operable', async () => {
+    listSpecimenOutboundsMock.mockResolvedValueOnce({
+      items: [
+        {
+          applicationId: 'APP-002',
+          applicationNo: 'M2-20260526-002',
+          barcode: 'BC-TR-001',
+          checkInStatus: 'CHECKED_IN',
+          fixationStatus: 'COMPLETED',
+          inpatientNo: 'ZY-002',
+          outboundAt: null,
+          outboundUserName: null,
+          patientGender: '女',
+          patientId: 'PAT-002',
+          patientName: 'Alice',
+          registeredAt: '2026-05-26 09:30:00',
+          registeredByName: '登记员甲',
+          specimenConfirmedAt: '2026-05-26 09:10:00',
+          specimenId: 'SP-002',
+          specimenName: '甲状腺组织',
+          specimenNo: 'SP-TR-001',
+          specimenStatus: 'CHECKED_IN',
+          surgeryName: 'OR-102',
+          transportOrderId: 'TO-002',
+        },
+        {
+          applicationId: 'APP-002',
+          applicationNo: 'M2-20260526-002',
+          barcode: 'BC-TR-002',
+          checkInStatus: 'CHECKED_IN',
+          fixationStatus: 'COMPLETED',
+          inpatientNo: 'ZY-002',
+          outboundAt: null,
+          outboundUserName: null,
+          patientGender: '女',
+          patientId: 'PAT-002',
+          patientName: 'Alice',
+          registeredAt: '2026-05-26 09:35:00',
+          registeredByName: '登记员甲',
+          specimenConfirmedAt: '2026-05-26 09:12:00',
+          specimenId: 'SP-002-2',
+          specimenName: '甲状腺峡部组织',
+          specimenNo: 'SP-TR-002',
+          specimenStatus: 'IN_TRANSIT',
+          surgeryName: 'OR-102',
+          transportOrderId: 'TO-002',
+        },
+      ],
+      page: 1,
+      size: 20,
+      total: 2,
+    });
+
+    const { app, container } = mountView();
+    await flush();
+
+    expect(container.textContent).toMatch(/全部\s*2/);
+    expect(container.textContent).toContain('SP-TR-001');
+    expect(container.textContent).toContain('SP-TR-002');
+    expect(container.textContent).toContain('已出库');
+
+    app.unmount();
+  });
+
+  it('marks the matched specimen as unsaved on scan and submits after clicking transport', async () => {
     const { app, container } = mountView();
     await flush();
 
     vi.clearAllMocks();
+    listSpecimenOutboundsMock.mockResolvedValueOnce({
+      items: [
+        {
+          applicationId: 'APP-002',
+          applicationNo: 'M2-20260526-002',
+          barcode: 'BC-TR-001',
+          checkInStatus: 'CHECKED_IN',
+          fixationStatus: 'COMPLETED',
+          inpatientNo: 'ZY-002',
+          outboundAt: null,
+          outboundUserName: null,
+          patientGender: '女',
+          patientId: 'PAT-002',
+          patientName: 'Alice',
+          registeredAt: '2026-05-26 09:30:00',
+          registeredByName: '登记员甲',
+          specimenConfirmedAt: '2026-05-26 09:10:00',
+          specimenId: 'SP-002',
+          specimenName: '甲状腺组织',
+          specimenNo: 'SP-TR-001',
+          specimenStatus: 'CHECKED_IN',
+          surgeryName: 'OR-102',
+          transportOrderId: 'TO-002',
+        },
+        {
+          applicationId: 'APP-002',
+          applicationNo: 'M2-20260526-002',
+          barcode: 'BC-TR-002',
+          checkInStatus: 'NOT_CHECKED_IN',
+          fixationStatus: 'COMPLETED',
+          inpatientNo: 'ZY-002',
+          outboundAt: null,
+          outboundUserName: null,
+          patientGender: '女',
+          patientId: 'PAT-002',
+          patientName: 'Alice',
+          registeredAt: '2026-05-26 09:35:00',
+          registeredByName: '登记员甲',
+          specimenConfirmedAt: '2026-05-26 09:12:00',
+          specimenId: 'SP-002-2',
+          specimenName: '甲状腺峡部组织',
+          specimenNo: 'SP-TR-002',
+          specimenStatus: 'FIXED',
+          surgeryName: 'OR-102',
+          transportOrderId: null,
+        },
+      ],
+      page: 1,
+      size: 20,
+      total: 2,
+    });
 
     const specimenNoInput = container.querySelector(
-      'input[placeholder="请输入标本流水号"]',
+      'input[placeholder="请输入标本条码/编号"]',
     ) as HTMLInputElement | null;
-    specimenNoInput!.value = 'SP-TR-001';
+    specimenNoInput!.value = 'BC-TR-001';
     specimenNoInput!.dispatchEvent(new Event('input', { bubbles: true }));
     specimenNoInput!.dispatchEvent(
       new KeyboardEvent('keyup', {
@@ -235,20 +520,207 @@ describe('TransportHandoverView', () => {
     await flush();
 
     expect(listSpecimenOutboundsMock).toHaveBeenCalledWith(
-      expect.objectContaining({ specimenNo: 'SP-TR-001' }),
+      expect.objectContaining({ identifier: 'BC-TR-001' }),
     );
+    expect(container.textContent).toContain('出库未保存');
+    expect(outboundTransportOrderMock).not.toHaveBeenCalled();
+    expect(quickOutboundSpecimenMock).not.toHaveBeenCalled();
+    expect(warningMock).not.toHaveBeenCalled();
+
+    const transportButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('转运'),
+    ) as HTMLButtonElement | undefined;
+    expect(transportButton?.disabled).toBe(false);
+    transportButton!.click();
+    await flush();
+
+    expect(verifyOperatorMock).not.toHaveBeenCalled();
     expect(outboundTransportOrderMock).toHaveBeenCalledWith('TO-002', {
       outboundUserId: 'USER-001',
       outboundUserName: 'Test User',
       remarks: null,
       terminalCode: null,
     });
-    expect(warningMock).not.toHaveBeenCalled();
+    expect(container.textContent).toContain('SP-TR-001');
+    expect(container.textContent).toContain('SP-TR-002');
+    expect(container.textContent).toContain('已出库');
+    expect(container.textContent).not.toContain('出库未保存');
+    expect(container.textContent).toMatch(/已选\s*0/);
+    expect(transportButton!.disabled).toBe(true);
+
+    const clearListButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('清除列表'),
+    );
+    clearListButton?.click();
+    await flush();
+
+    expect(container.textContent).not.toContain('SP-TR-001');
 
     app.unmount();
   });
 
-  it('quick outbounds by specimen serial number when the list is empty', async () => {
+  it('creates a transport order for an unbound specimen with specimen ids', async () => {
+    const { app, container } = mountView();
+    await flush();
+
+    vi.clearAllMocks();
+    listSpecimenOutboundsMock.mockResolvedValueOnce({
+      items: [
+        {
+          applicationId: 'APP-003',
+          applicationNo: 'M2-20260526-003',
+          barcode: null,
+          checkInStatus: 'CHECKED_IN',
+          fixationStatus: 'COMPLETED',
+          inpatientNo: 'ZY-003',
+          outboundAt: null,
+          outboundUserName: null,
+          patientGender: '女',
+          patientId: 'PAT-003',
+          patientName: 'Carol',
+          registeredAt: '2026-05-26 09:40:00',
+          registeredByName: '登记员乙',
+          specimenConfirmedAt: '2026-05-26 09:20:00',
+          specimenId: 'SP-UNBOUND-ID',
+          specimenName: '未绑定条码标本',
+          specimenNo: 'SP-UNBOUND',
+          specimenStatus: 'CHECKED_IN',
+          submittingDepartmentId: 'DEPT-SURGERY',
+          submittingDepartmentName: '外科',
+          surgeryName: 'OR-102',
+          transportOrderId: null,
+        },
+      ],
+      page: 1,
+      size: 20,
+      total: 1,
+    } as unknown as Awaited<ReturnType<typeof listSpecimenOutboundsMock>>);
+
+    const specimenNoInput = container.querySelector(
+      'input[placeholder="请输入标本条码/编号"]',
+    ) as HTMLInputElement | null;
+    specimenNoInput!.value = 'SP-UNBOUND';
+    specimenNoInput!.dispatchEvent(new Event('input', { bubbles: true }));
+    specimenNoInput!.dispatchEvent(
+      new KeyboardEvent('keyup', {
+        bubbles: true,
+        code: 'Enter',
+        key: 'Enter',
+      }),
+    );
+    await flush();
+
+    const transportButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('转运'),
+    ) as HTMLButtonElement | undefined;
+    expect(transportButton?.disabled).toBe(false);
+    transportButton!.click();
+    await flush();
+
+    expect(createTransportOrderMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        applicationId: 'APP-003',
+        specimenBarcodes: [],
+        specimenIds: ['SP-UNBOUND-ID'],
+      }),
+    );
+    expect(outboundTransportOrderMock).toHaveBeenCalledWith('TO-CREATED-001', {
+      outboundUserId: 'USER-001',
+      outboundUserName: 'Test User',
+      remarks: null,
+      terminalCode: null,
+    });
+    expect(warningMock).not.toHaveBeenCalledWith(
+      expect.stringContaining('缺少条码'),
+    );
+
+    app.unmount();
+  });
+
+  it('shows the matched specimen reason when the scanned specimen is not outbound-ready', async () => {
+    const { app, container } = mountView();
+    await flush();
+
+    vi.clearAllMocks();
+    listSpecimenOutboundsMock.mockResolvedValueOnce({
+      items: [
+        {
+          applicationId: 'APP-002',
+          applicationNo: 'M2-20260526-002',
+          barcode: 'BC-TR-002',
+          checkInStatus: 'NOT_CHECKED_IN',
+          fixationStatus: 'COMPLETED',
+          inpatientNo: 'ZY-002',
+          outboundAt: null,
+          outboundUserName: null,
+          patientGender: '女',
+          patientId: 'PAT-002',
+          patientName: 'Alice',
+          registeredAt: '2026-05-26 09:35:00',
+          registeredByName: '登记员甲',
+          specimenConfirmedAt: '2026-05-26 09:12:00',
+          specimenId: 'SP-002-2',
+          specimenName: '甲状腺峡部组织',
+          specimenNo: 'SP-TR-002',
+          specimenStatus: 'FIXED',
+          surgeryName: 'OR-102',
+          transportOrderId: null,
+        },
+        {
+          applicationId: 'APP-002',
+          applicationNo: 'M2-20260526-002',
+          barcode: 'BC-TR-001',
+          checkInStatus: 'CHECKED_IN',
+          fixationStatus: 'COMPLETED',
+          inpatientNo: 'ZY-002',
+          outboundAt: null,
+          outboundUserName: null,
+          patientGender: '女',
+          patientId: 'PAT-002',
+          patientName: 'Alice',
+          registeredAt: '2026-05-26 09:30:00',
+          registeredByName: '登记员甲',
+          specimenConfirmedAt: '2026-05-26 09:10:00',
+          specimenId: 'SP-002',
+          specimenName: '甲状腺组织',
+          specimenNo: 'SP-TR-001',
+          specimenStatus: 'CHECKED_IN',
+          surgeryName: 'OR-102',
+          transportOrderId: 'TO-002',
+        },
+      ],
+      page: 1,
+      size: 20,
+      total: 2,
+    });
+
+    const specimenNoInput = container.querySelector(
+      'input[placeholder="请输入标本条码/编号"]',
+    ) as HTMLInputElement | null;
+    specimenNoInput!.value = 'SP-TR-002';
+    specimenNoInput!.dispatchEvent(new Event('input', { bubbles: true }));
+    specimenNoInput!.dispatchEvent(
+      new KeyboardEvent('keyup', {
+        bubbles: true,
+        code: 'Enter',
+        key: 'Enter',
+      }),
+    );
+    await flush();
+
+    expect(listSpecimenOutboundsMock).toHaveBeenCalledWith(
+      expect.objectContaining({ identifier: 'SP-TR-002' }),
+    );
+    expect(outboundTransportOrderMock).not.toHaveBeenCalled();
+    expect(quickOutboundSpecimenMock).not.toHaveBeenCalled();
+    expect(warningMock).toHaveBeenCalledWith(
+      '标本 SP-TR-002 尚未完成入库，不能出库',
+    );
+
+    app.unmount();
+  });
+
+  it('warns and does not quick outbound when the list is empty', async () => {
     const { app, container } = mountView();
     await flush();
 
@@ -261,7 +733,7 @@ describe('TransportHandoverView', () => {
     });
 
     const specimenNoInput = container.querySelector(
-      'input[placeholder="请输入标本流水号"]',
+      'input[placeholder="请输入标本条码/编号"]',
     ) as HTMLInputElement | null;
     specimenNoInput!.value = 'SP-NOT-FOUND';
     specimenNoInput!.dispatchEvent(new Event('input', { bubbles: true }));
@@ -275,18 +747,11 @@ describe('TransportHandoverView', () => {
     await flush();
 
     expect(listSpecimenOutboundsMock).toHaveBeenCalledWith(
-      expect.objectContaining({ specimenNo: 'SP-NOT-FOUND' }),
+      expect.objectContaining({ identifier: 'SP-NOT-FOUND' }),
     );
-    expect(quickOutboundSpecimenMock).toHaveBeenCalledWith({
-      identifier: 'SP-NOT-FOUND',
-      identifierType: 'SPECIMEN_NO',
-      outboundUserId: 'USER-001',
-      outboundUserName: 'Test User',
-      remarks: null,
-      terminalCode: null,
-    });
+    expect(quickOutboundSpecimenMock).not.toHaveBeenCalled();
     expect(outboundTransportOrderMock).not.toHaveBeenCalled();
-    expect(warningMock).not.toHaveBeenCalled();
+    expect(warningMock).toHaveBeenCalledWith('未找到可出库标本：SP-NOT-FOUND');
 
     app.unmount();
   });
@@ -301,6 +766,9 @@ describe('TransportHandoverView', () => {
         {
           applicationId: 'APP-003',
           applicationNo: 'M2-20260526-003',
+          barcode: 'BC-MULTI-1',
+          checkInStatus: 'CHECKED_IN',
+          fixationStatus: 'COMPLETED',
           inpatientNo: 'ZY-003',
           outboundAt: null,
           outboundUserName: null,
@@ -309,6 +777,7 @@ describe('TransportHandoverView', () => {
           patientName: 'Bob',
           registeredAt: '2026-05-26 10:10:00',
           registeredByName: '登记员乙',
+          specimenConfirmedAt: '2026-05-26 09:50:00',
           specimenId: 'SP-003',
           specimenName: '淋巴结',
           specimenNo: 'SP-MULTI',
@@ -319,6 +788,9 @@ describe('TransportHandoverView', () => {
         {
           applicationId: 'APP-004',
           applicationNo: 'M2-20260526-004',
+          barcode: 'BC-MULTI-2',
+          checkInStatus: 'CHECKED_IN',
+          fixationStatus: 'COMPLETED',
           inpatientNo: 'ZY-004',
           outboundAt: null,
           outboundUserName: null,
@@ -327,6 +799,7 @@ describe('TransportHandoverView', () => {
           patientName: 'Carol',
           registeredAt: '2026-05-26 10:20:00',
           registeredByName: '登记员丙',
+          specimenConfirmedAt: '2026-05-26 10:00:00',
           specimenId: 'SP-004',
           specimenName: '甲状旁腺',
           specimenNo: 'SP-MULTI',
@@ -341,7 +814,7 @@ describe('TransportHandoverView', () => {
     });
 
     const specimenNoInput = container.querySelector(
-      'input[placeholder="请输入标本流水号"]',
+      'input[placeholder="请输入标本条码/编号"]',
     ) as HTMLInputElement | null;
     specimenNoInput!.value = 'SP-MULTI';
     specimenNoInput!.dispatchEvent(new Event('input', { bubbles: true }));
@@ -355,7 +828,7 @@ describe('TransportHandoverView', () => {
     await flush();
 
     expect(listSpecimenOutboundsMock).toHaveBeenCalledWith(
-      expect.objectContaining({ specimenNo: 'SP-MULTI' }),
+      expect.objectContaining({ identifier: 'SP-MULTI' }),
     );
     expect(outboundTransportOrderMock).not.toHaveBeenCalled();
     expect(warningMock).not.toHaveBeenCalled();
@@ -363,7 +836,8 @@ describe('TransportHandoverView', () => {
     app.unmount();
   });
 
-  it('blocks direct and quick outbound when outbound operator is not selected', async () => {
+  it('blocks transport when outbound operator is not selected', async () => {
+    mockUserInfo.loginName = '';
     mockUserInfo.realName = '';
     mockUserInfo.userId = '';
 
@@ -372,14 +846,37 @@ describe('TransportHandoverView', () => {
 
     vi.clearAllMocks();
     listSpecimenOutboundsMock.mockResolvedValueOnce({
-      items: [],
+      items: [
+        {
+          applicationId: 'APP-002',
+          applicationNo: 'M2-20260526-002',
+          barcode: 'BC-NO-OPERATOR',
+          checkInStatus: 'CHECKED_IN',
+          fixationStatus: 'COMPLETED',
+          inpatientNo: 'ZY-002',
+          outboundAt: null,
+          outboundUserName: null,
+          patientGender: '女',
+          patientId: 'PAT-002',
+          patientName: 'Alice',
+          registeredAt: '2026-05-26 09:30:00',
+          registeredByName: '登记员甲',
+          specimenConfirmedAt: '2026-05-26 09:10:00',
+          specimenId: 'SP-002',
+          specimenName: '甲状腺组织',
+          specimenNo: 'SP-NO-OPERATOR',
+          specimenStatus: 'CHECKED_IN',
+          surgeryName: 'OR-102',
+          transportOrderId: 'TO-002',
+        },
+      ],
       page: 1,
       size: 20,
-      total: 0,
+      total: 1,
     });
 
     const specimenNoInput = container.querySelector(
-      'input[placeholder="请输入标本流水号"]',
+      'input[placeholder="请输入标本条码/编号"]',
     ) as HTMLInputElement | null;
     specimenNoInput!.value = 'SP-NO-OPERATOR';
     specimenNoInput!.dispatchEvent(new Event('input', { bubbles: true }));
@@ -393,11 +890,19 @@ describe('TransportHandoverView', () => {
     await flush();
 
     expect(listSpecimenOutboundsMock).toHaveBeenCalledWith(
-      expect.objectContaining({ specimenNo: 'SP-NO-OPERATOR' }),
+      expect.objectContaining({ identifier: 'SP-NO-OPERATOR' }),
     );
-    expect(warningMock).toHaveBeenCalledWith('请选择出库人');
+    const transportButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('转运'),
+    ) as HTMLButtonElement | undefined;
+    expect(transportButton?.disabled).toBe(false);
+    transportButton!.click();
+    await flush();
+
+    expect(warningMock).toHaveBeenCalledWith('请选择操作人');
     expect(outboundTransportOrderMock).not.toHaveBeenCalled();
     expect(quickOutboundSpecimenMock).not.toHaveBeenCalled();
+    expect(verifyOperatorMock).not.toHaveBeenCalled();
 
     app.unmount();
   });

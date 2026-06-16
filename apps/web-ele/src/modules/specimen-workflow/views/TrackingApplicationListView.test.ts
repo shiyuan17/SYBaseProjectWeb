@@ -27,13 +27,13 @@ const {
   mockListApplications,
   mockPush,
 } = vi.hoisted(() => ({
-    mockAccessStore: {
-      accessCodes: ['PERM_APPLICATION_DETAIL_QUERY'] as string[],
-    },
-    mockGetApplicationTracking: vi.fn(),
-    mockListApplications: vi.fn(),
-    mockPush: vi.fn(),
-  }));
+  mockAccessStore: {
+    accessCodes: ['PERM_APPLICATION_DETAIL_QUERY'] as string[],
+  },
+  mockGetApplicationTracking: vi.fn(),
+  mockListApplications: vi.fn(),
+  mockPush: vi.fn(),
+}));
 
 vi.mock('@vben/stores', () => ({
   useAccessStore: () => mockAccessStore,
@@ -297,7 +297,9 @@ describe('TrackingApplicationListView', () => {
     expect(root.textContent).not.toContain('送检科室');
     expect(root.textContent).not.toContain('申请类型');
     expect(root.textContent).not.toContain('表单状态');
-    expect(root.textContent).toContain('支持按申请单号、患者姓名和申请日期筛选。');
+    expect(root.textContent).toContain(
+      '支持按申请单号、患者姓名和申请日期筛选。',
+    );
 
     app.unmount();
   });
@@ -329,7 +331,7 @@ describe('TrackingApplicationListView', () => {
     expect(root.querySelector('[data-tab-name="SPEC-003"]')?.textContent).toBe(
       'SP-003',
     );
-    expect(root.textContent).toContain('回到病理接收处理');
+    expect(root.textContent).toContain('回到标本接收处理');
     expect(root.textContent).toContain('异常类型：已拒收');
     expect(root.textContent).toContain('质控结果：不合格');
     expect(root.textContent).toContain('问题代码：CONTAINER_DAMAGE');
@@ -362,9 +364,9 @@ describe('TrackingApplicationListView', () => {
       triggerKey: 1,
     });
 
-    const receiptButton = [...root.querySelectorAll<HTMLButtonElement>('button')].find(
-      (button) => button.textContent?.includes('回到病理接收处理'),
-    );
+    const receiptButton = [
+      ...root.querySelectorAll<HTMLButtonElement>('button'),
+    ].find((button) => button.textContent?.includes('回到标本接收处理'));
     receiptButton?.click();
     await flushAll();
 
@@ -436,6 +438,16 @@ describe('TrackingApplicationListView', () => {
     expect(emptySpecimenPanel?.textContent ?? '').toContain(
       '该标本暂无追踪事件',
     );
+
+    app.unmount();
+  });
+
+  it('shows the page error when loading the tracking application list fails', async () => {
+    mockListApplications.mockRejectedValue(new Error('申请单追踪列表加载失败'));
+
+    const { app, root } = await mountView();
+
+    expect(root.textContent).toContain('申请单追踪列表加载失败');
 
     app.unmount();
   });

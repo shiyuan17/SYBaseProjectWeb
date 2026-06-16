@@ -286,11 +286,31 @@ export function createTimelineItemStub(): FunctionalComponent<StubProps> {
 
 export function createTableStub(rowContextKey: symbol): Component {
   return {
-    props: ['data', 'height', 'maxHeight'],
+    props: ['data', 'height', 'maxHeight', 'rowClassName'],
     setup(
-      props: { data?: unknown; height?: unknown; maxHeight?: unknown },
+      props: {
+        data?: unknown;
+        height?: unknown;
+        maxHeight?: unknown;
+        rowClassName?: unknown;
+      },
       { slots }: SlotContext,
     ) {
+      function resolveRowClassName(
+        row: Record<string, unknown>,
+        index: number,
+      ) {
+        if (typeof props.rowClassName !== 'function') {
+          return '';
+        }
+        return String(
+          props.rowClassName({
+            row,
+            rowIndex: index,
+          }) ?? '',
+        );
+      }
+
       return () =>
         h(
           'div',
@@ -306,6 +326,10 @@ export function createTableStub(rowContextKey: symbol): Component {
             h(
               createRowProviderStub(rowContextKey),
               {
+                class: resolveRowClassName(
+                  row as Record<string, unknown>,
+                  index,
+                ),
                 index,
                 key: index,
                 row: row as Record<string, unknown>,

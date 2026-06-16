@@ -45,7 +45,7 @@ export function buildSpecimenAbnormalDetails(
     }
     return [
       {
-        barcode: specimen.barcode,
+        barcode: specimen.barcode ?? '',
         id: specimen.id,
         qualityCheckResult,
         qualityIssueCodes,

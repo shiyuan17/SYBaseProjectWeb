@@ -6,14 +6,17 @@ export interface ArchiveManagementCapabilities {
   canArchiveApplicationForm: ComputedRef<boolean>;
   canArchiveEmbeddingBox: ComputedRef<boolean>;
   canArchiveSlide: ComputedRef<boolean>;
+  canArchiveSpecimen: ComputedRef<boolean>;
   canCreateCabinet: ComputedRef<boolean>;
   canCreateLoan: ComputedRef<boolean>;
   canQueryCabinets: ComputedRef<boolean>;
   canQueryLoans: ComputedRef<boolean>;
   canQueryRecords: ComputedRef<boolean>;
+  canRegisterLoanAbnormal: ComputedRef<boolean>;
   canReturnLoan: ComputedRef<boolean>;
   canUpdateCabinet: ComputedRef<boolean>;
   canViewArchivePage: ComputedRef<boolean>;
+  canViewBorrowPage: ComputedRef<boolean>;
 }
 
 export interface ArchiveOperatorContext {

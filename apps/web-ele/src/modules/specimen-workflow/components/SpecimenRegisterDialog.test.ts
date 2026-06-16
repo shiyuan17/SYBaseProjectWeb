@@ -186,11 +186,18 @@ async function flushAll() {
   await nextTick();
 }
 
-async function mountDialog(
-  latestResult: LatestSpecimenRegistrationResult = buildLatestRegistrationResult(),
-) {
-  mockGetApplicationDetail.mockResolvedValue(buildApplicationDetail());
-  mockGetLatestRegistrationResult.mockResolvedValue(latestResult);
+async function mountDialog(options?: {
+  detailError?: Error;
+  latestResult?: LatestSpecimenRegistrationResult;
+}) {
+  if (options?.detailError) {
+    mockGetApplicationDetail.mockRejectedValue(options.detailError);
+  } else {
+    mockGetApplicationDetail.mockResolvedValue(buildApplicationDetail());
+  }
+  mockGetLatestRegistrationResult.mockResolvedValue(
+    options?.latestResult ?? buildLatestRegistrationResult(),
+  );
   mockLoadWorkflowReferenceOptionsSafely.mockResolvedValue({
     clinicalSymptoms: [],
     collectionModes: [],
@@ -298,7 +305,7 @@ describe('SpecimenRegisterDialog', () => {
       registrationSnapshot: null,
       specimens: [],
     };
-    const { app, root } = await mountDialog(latestResult);
+    const { app, root } = await mountDialog({ latestResult });
 
     expect(root.textContent).not.toContain('最近一次登记存在异常标本');
     expect(inputByPlaceholder(root, '用于标签打印').value).toBe('');
@@ -309,6 +316,16 @@ describe('SpecimenRegisterDialog', () => {
       ...root.querySelectorAll<HTMLInputElement>('input'),
     ].find((input) => input.disabled);
     expect(operatorInput?.value).toBe('当前登录人');
+
+    app.unmount();
+  });
+
+  it('shows the page error when loading application detail fails', async () => {
+    const { app, root } = await mountDialog({
+      detailError: new Error('申请单详情加载失败'),
+    });
+
+    expect(root.textContent).toContain('申请单详情加载失败');
 
     app.unmount();
   });

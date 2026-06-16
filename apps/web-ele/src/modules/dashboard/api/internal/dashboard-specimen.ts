@@ -17,6 +17,10 @@ import { M2_PERMISSION_CODES } from '#/modules/specimen-workflow/constants';
 
 import { formatCount, hasAnyPermission } from './dashboard-shared';
 
+function formatSpecimenAlertTitle(item: PendingSpecimenItem) {
+  return item.specimenNo || item.barcode || item.applicationNo || '待处理标本';
+}
+
 export async function loadSpecimenDomainData(
   accessCodes: string[],
 ): Promise<DashboardDomainData | null> {
@@ -87,15 +91,15 @@ export async function loadSpecimenDomainData(
       route: '/workflow/fixation-transport',
       severity: 'warning' as const,
       source: '临床送检',
-      title: item.specimenNo || item.barcode,
+      title: formatSpecimenAlertTitle(item),
     })),
     ...receipts.items.slice(0, 3).map((item: PendingSpecimenItem) => ({
-      description: `申请单 ${item.applicationNo} 尚未完成病理接收`,
+      description: `申请单 ${item.applicationNo} 尚未完成标本接收`,
       id: `receipt-${item.specimenId}`,
       route: '/workflow/pathology-receipt',
       severity: 'warning' as const,
       source: '临床送检',
-      title: item.specimenNo || item.barcode,
+      title: formatSpecimenAlertTitle(item),
     })),
   ];
 

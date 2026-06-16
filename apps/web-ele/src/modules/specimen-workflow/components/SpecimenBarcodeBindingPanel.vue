@@ -24,6 +24,7 @@ const {
   buildingOptions,
   canBind,
   canExportExcel,
+  canPrintBoundBarcodes,
   canPreprint,
   canRetryLabel,
   canUnbind,
@@ -31,6 +32,7 @@ const {
   handleBindBarcode,
   handleExportExcel,
   handlePreprintBarcodes,
+  handlePrintBoundBarcodes,
   handleReset,
   handleRetryLabel,
   handleSearch,
@@ -63,7 +65,7 @@ const {
     />
 
     <div class="flex flex-wrap items-center gap-4 text-sm">
-      <div class="font-semibold text-[color:#d6453d]">条码绑定</div>
+      <div class="font-semibold text-danger">条码绑定</div>
       <div>
         全部
         <span class="text-xl font-semibold text-primary">{{
@@ -141,6 +143,12 @@ const {
       <ElButton :disabled="!canRetryLabel" @click="handleRetryLabel">
         补打标本标签
       </ElButton>
+      <ElButton
+        :disabled="!canPrintBoundBarcodes"
+        @click="handlePrintBoundBarcodes"
+      >
+        打印
+      </ElButton>
       <ElButton :disabled="!canExportExcel" @click="handleExportExcel">
         导出 Excel
       </ElButton>
@@ -166,6 +174,11 @@ const {
       </ElTableColumn>
       <ElTableColumn label="申请单" min-width="120" prop="applicationNo" />
       <ElTableColumn label="标本编号" min-width="120" prop="specimenNo" />
+      <ElTableColumn label="标本条码" min-width="160">
+        <template #default="{ row }">
+          {{ formatNullable(row.barcode) }}
+        </template>
+      </ElTableColumn>
       <ElTableColumn label="性别" min-width="80">
         <template #default="{ row }">
           {{ formatNullable(row.patientGender) }}
@@ -177,11 +190,6 @@ const {
         </template>
       </ElTableColumn>
       <ElTableColumn label="标本名称" min-width="180" prop="specimenName" />
-      <ElTableColumn label="标本条码" min-width="160">
-        <template #default="{ row }">
-          {{ formatNullable(row.barcode) }}
-        </template>
-      </ElTableColumn>
       <ElTableColumn label="类型" min-width="100">
         <template #default="{ row }">
           {{ formatNullable(row.specimenType) }}
@@ -229,7 +237,9 @@ const {
     width="760px"
   >
     <div class="flex flex-col gap-4">
-      <section class="rounded-lg border border-border bg-card px-4 py-4 shadow-sm">
+      <section
+        class="rounded-lg border border-border bg-card px-4 py-4 shadow-sm"
+      >
         <div class="mb-4 text-base font-semibold text-foreground">补打范围</div>
         <div class="grid gap-3 text-sm md:grid-cols-2">
           <div>涉及标本数：{{ retryTargetRows.length }}</div>
@@ -239,7 +249,9 @@ const {
         </div>
       </section>
 
-      <section class="rounded-lg border border-border bg-card px-4 py-4 shadow-sm">
+      <section
+        class="rounded-lg border border-border bg-card px-4 py-4 shadow-sm"
+      >
         <ElForm label-width="96px">
           <div class="grid gap-4 md:grid-cols-2">
             <ElFormItem label="操作人" required>
@@ -282,7 +294,11 @@ const {
     <template #footer>
       <div class="flex justify-end gap-2">
         <ElButton @click="retryDialogVisible = false">取消</ElButton>
-        <ElButton :loading="retrySubmitting" type="primary" @click="submitRetryLabel">
+        <ElButton
+          :loading="retrySubmitting"
+          type="primary"
+          @click="submitRetryLabel"
+        >
           提交补打
         </ElButton>
       </div>

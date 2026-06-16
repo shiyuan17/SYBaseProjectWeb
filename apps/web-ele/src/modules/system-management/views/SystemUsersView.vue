@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { Page } from '@vben/common-ui';
 
-import SystemLoadError from '../components/SystemLoadError.vue';
 import SystemUserDialog from '../components/system-users/SystemUserDialog.vue';
 import SystemUserLogDrawer from '../components/system-users/SystemUserLogDrawer.vue';
 import SystemUserPrintDialog from '../components/system-users/SystemUserPrintDialog.vue';
 import SystemUserRoleDialog from '../components/system-users/SystemUserRoleDialog.vue';
 import SystemUsersFilterPanel from '../components/system-users/SystemUsersFilterPanel.vue';
 import SystemUsersTablePanel from '../components/system-users/SystemUsersTablePanel.vue';
+import SystemLoadError from '../components/SystemLoadError.vue';
 import { useSystemUsersPage } from '../composables/useSystemUsersPage';
 
 const {
@@ -58,6 +58,7 @@ const {
 
 <template>
   <Page
+    :show-header="false"
     title="系统用户"
     description="维护系统用户、角色分配、登录日志、导入导出与登录标签，用户编码和登录标签编码由系统自动生成。"
   >
@@ -74,6 +75,7 @@ const {
         :yes-no-options="YES_NO_OPTIONS"
         @reset="handleReset"
         @search="handleSearch"
+        @update:filters="Object.assign(filters, $event)"
       />
 
       <SystemUsersTablePanel
@@ -93,6 +95,7 @@ const {
         @reload="loadInitialData"
         @roles="openRoleDialog"
         @toggle-enabled="toggleUserEnabled"
+        @update:filters="Object.assign(filters, $event)"
       />
     </div>
 
@@ -103,6 +106,7 @@ const {
       :user-form="userForm"
       @department-change="handleDepartmentChange"
       @submit="submitUserForm"
+      @update:user-form="Object.assign(userForm, $event)"
     />
 
     <SystemUserRoleDialog
@@ -123,6 +127,7 @@ const {
       :log-loading="logLoading"
       :log-pagination="logPagination"
       @reload="loadLoginLogs"
+      @update:log-pagination="Object.assign(logPagination, $event)"
     />
 
     <SystemUserPrintDialog

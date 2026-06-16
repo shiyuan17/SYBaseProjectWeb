@@ -1,31 +1,62 @@
 import type {
   ArchiveActionResult,
   ArchiveApplicationFormRequest,
+  ArchiveCabinetNodeView,
   ArchiveCabinetView,
   ArchiveEmbeddingBoxRequest,
+  ArchiveObjectPage,
+  ArchiveObjectQuery,
   ArchivePositionView,
   ArchiveRecordView,
   ArchiveSlideRequest,
+  ArchiveSpecimenRequest,
+  BatchArchiveObjectRequest,
+  BatchArchiveSpecimenRequest,
+  BatchCreateArchiveCabinetRequest,
+  BatchUpdateEquipmentStatusRequest,
+  CreateArchiveCabinetNodeRequest,
   CreateArchiveCabinetRequest,
   CreateEquipmentMaintenanceLogRequest,
   CreateEquipmentRecordRequest,
+  CreateMaterialLoanAbnormalRecordRequest,
   CreateMaterialLoanRequest,
+  CreateMedicalWasteReagentBagRequest,
   CreateReagentRequest,
   CreateReagentStockRequest,
+  CreateWhiteSlideLoanRequest,
   EquipmentMaintenanceLogView,
   EquipmentRecordView,
   EquipmentWarningView,
+  MaterialLoanAbnormalRecordView,
   MaterialLoanQuery,
   MaterialLoanView,
+  MedicalOrderDictCategoryNode,
+  MedicalWastePrintSpecimenBatchRequest,
+  MedicalWastePrintSpecimenBatchResult,
+  MedicalWasteReagentBagView,
+  MedicalWasteReagentHandoverRequest,
+  MedicalWasteSpecimenBatchView,
+  MedicalWasteSpecimenLabelView,
+  MedicalWasteSpecimenOptionsView,
+  MedicalWasteSpecimenPreviewRequest,
+  ReagentStockActionRequest,
+  ReagentStockEventView,
+  ReagentStockImportResult,
   ReagentStockView,
   ReagentView,
   ReagentWarningView,
   ReturnMaterialLoanRequest,
+  ReturnWhiteSlideLoanRequest,
   SearchArchiveRecordsQuery,
+  UpdateArchiveCabinetNodeRequest,
   UpdateArchiveCabinetRequest,
   UpdateEquipmentRecordRequest,
   UpdateReagentRequest,
   UpdateReagentStockRequest,
+  WhiteSlideLoanQuery,
+  WhiteSlideLoanView,
+  WhiteSlideStockQuery,
+  WhiteSlideStockView,
 } from '../types/operation-support';
 
 import { requestClient } from '#/api/request';
@@ -41,6 +72,18 @@ export function normalizeArrayResult<T>(value: null | T[] | undefined): T[] {
   return Array.isArray(value) ? value : [];
 }
 
+function normalizeArchiveObjectPage(
+  value: ArchiveObjectPage | null | Partial<ArchiveObjectPage> | undefined,
+  fallback: Required<Pick<ArchiveObjectQuery, 'objectType' | 'page' | 'size'>>,
+): ArchiveObjectPage {
+  return {
+    items: normalizeArrayResult(value?.items),
+    page: typeof value?.page === 'number' ? value.page : fallback.page,
+    size: typeof value?.size === 'number' ? value.size : fallback.size,
+    total: typeof value?.total === 'number' ? value.total : 0,
+  };
+}
+
 export async function listArchiveCabinets() {
   return normalizeArrayResult(
     await requestClient.get<ArchiveCabinetView[] | null>(
@@ -49,8 +92,36 @@ export async function listArchiveCabinets() {
   );
 }
 
+export async function listArchiveCabinetNodes() {
+  return normalizeArrayResult(
+    await requestClient.get<ArchiveCabinetNodeView[] | null>(
+      '/v1/archive-cabinet-nodes',
+    ),
+  );
+}
+
 export async function createArchiveCabinet(data: CreateArchiveCabinetRequest) {
   return requestClient.post<ArchiveCabinetView>('/v1/archive-cabinets', data);
+}
+
+export async function createArchiveCabinetNode(
+  data: CreateArchiveCabinetNodeRequest,
+) {
+  return requestClient.post<ArchiveCabinetNodeView>(
+    '/v1/archive-cabinet-nodes',
+    data,
+  );
+}
+
+export async function batchCreateArchiveCabinets(
+  data: BatchCreateArchiveCabinetRequest,
+) {
+  return normalizeArrayResult(
+    await requestClient.post<ArchiveCabinetView[] | null>(
+      '/v1/archive-cabinets/batch',
+      data,
+    ),
+  );
 }
 
 export async function updateArchiveCabinet(
@@ -61,6 +132,22 @@ export async function updateArchiveCabinet(
     `/v1/archive-cabinets/${cabinetId}`,
     data,
   );
+}
+
+export async function updateArchiveCabinetNode(
+  nodeId: string,
+  data: UpdateArchiveCabinetNodeRequest,
+) {
+  return requestPatch<ArchiveCabinetNodeView>(
+    `/v1/archive-cabinet-nodes/${nodeId}`,
+    data,
+  );
+}
+
+export async function deleteArchiveCabinet(cabinetId: string) {
+  return requestClient.request<unknown>(`/v1/archive-cabinets/${cabinetId}`, {
+    method: 'DELETE',
+  });
 }
 
 export async function listAvailableArchivePositions(params: {
@@ -95,12 +182,68 @@ export async function archiveSlide(data: ArchiveSlideRequest) {
   return requestClient.post<ArchiveActionResult>('/v1/archive/slides', data);
 }
 
+export async function archiveSpecimen(data: ArchiveSpecimenRequest) {
+  return requestClient.post<ArchiveActionResult>('/v1/archive/specimens', data);
+}
+
+export async function batchArchiveEmbeddingBoxes(
+  data: BatchArchiveObjectRequest,
+) {
+  return normalizeArrayResult(
+    await requestClient.post<ArchiveActionResult[] | null>(
+      '/v1/archive/embedding-boxes/batch',
+      data,
+    ),
+  );
+}
+
+export async function batchArchiveSlides(data: BatchArchiveObjectRequest) {
+  return normalizeArrayResult(
+    await requestClient.post<ArchiveActionResult[] | null>(
+      '/v1/archive/slides/batch',
+      data,
+    ),
+  );
+}
+
+export async function batchArchiveSpecimens(data: BatchArchiveSpecimenRequest) {
+  return normalizeArrayResult(
+    await requestClient.post<ArchiveActionResult[] | null>(
+      '/v1/archive/specimens/batch',
+      data,
+    ),
+  );
+}
+
 export async function searchArchiveRecords(params: SearchArchiveRecordsQuery) {
   return normalizeArrayResult(
     await requestClient.get<ArchiveRecordView[] | null>(
       '/v1/archive-records/search',
       { params },
     ),
+  );
+}
+
+export async function listArchiveObjects(params: ArchiveObjectQuery) {
+  const normalizedParams = {
+    ...params,
+    page: params.page ?? 1,
+    size: params.size ?? 20,
+  };
+
+  const page = await requestClient.get<ArchiveObjectPage | null>(
+    '/v1/archive-objects',
+    { params: normalizedParams },
+  );
+
+  return normalizeArchiveObjectPage(page, normalizedParams);
+}
+
+export async function listMaterialLoans(params: MaterialLoanQuery) {
+  return normalizeArrayResult(
+    await requestClient.get<MaterialLoanView[] | null>('/v1/material-loans', {
+      params,
+    }),
   );
 }
 
@@ -119,6 +262,15 @@ export async function createMaterialLoan(data: CreateMaterialLoanRequest) {
   return requestClient.post<MaterialLoanView>('/v1/material-loans', data);
 }
 
+export async function createMaterialLoanAbnormalRecord(
+  data: CreateMaterialLoanAbnormalRecordRequest,
+) {
+  return requestClient.post<MaterialLoanAbnormalRecordView>(
+    '/v1/material-loans/abnormal-records',
+    data,
+  );
+}
+
 export async function returnMaterialLoan(
   loanId: string,
   data: ReturnMaterialLoanRequest,
@@ -129,9 +281,43 @@ export async function returnMaterialLoan(
   );
 }
 
+export async function listWhiteSlideStocks(params: WhiteSlideStockQuery) {
+  return normalizeArrayResult(
+    await requestClient.get<null | WhiteSlideStockView[]>(
+      '/v1/white-slide-stocks',
+      { params },
+    ),
+  );
+}
+
+export async function listWhiteSlideLoans(params: WhiteSlideLoanQuery) {
+  return normalizeArrayResult(
+    await requestClient.get<null | WhiteSlideLoanView[]>(
+      '/v1/white-slide-loans',
+      { params },
+    ),
+  );
+}
+
+export async function createWhiteSlideLoan(data: CreateWhiteSlideLoanRequest) {
+  return requestClient.post<WhiteSlideLoanView>('/v1/white-slide-loans', data);
+}
+
+export async function returnWhiteSlideLoan(
+  loanId: string,
+  data: ReturnWhiteSlideLoanRequest,
+) {
+  return requestClient.post<WhiteSlideLoanView>(
+    `/v1/white-slide-loans/${loanId}/return`,
+    data,
+  );
+}
+
 export async function listReagents(params: {
   enabled?: boolean;
   keyword?: string;
+  reagentType?: string;
+  templateStatus?: string;
 }) {
   return normalizeArrayResult(
     await requestClient.get<null | ReagentView[]>('/v1/reagents', { params }),
@@ -149,8 +335,19 @@ export async function updateReagent(
   return requestPatch<ReagentView>(`/v1/reagents/${reagentId}`, data);
 }
 
+export async function listMedicalOrderDicts() {
+  return normalizeArrayResult(
+    await requestClient.get<MedicalOrderDictCategoryNode[] | null>(
+      '/v1/medical-order-dicts',
+    ),
+  );
+}
+
 export async function listReagentStocks(params: {
+  dateFrom?: string;
+  dateTo?: string;
   keyword?: string;
+  reagentType?: string;
   stockStatus?: string;
 }) {
   return normalizeArrayResult(
@@ -169,6 +366,68 @@ export async function updateReagentStock(
   data: UpdateReagentStockRequest,
 ) {
   return requestPatch<ReagentStockView>(`/v1/reagent-stocks/${stockId}`, data);
+}
+
+export async function testReagentStock(
+  stockId: string,
+  data: ReagentStockActionRequest,
+) {
+  return requestClient.post<ReagentStockView>(
+    `/v1/reagent-stocks/${stockId}/test`,
+    data,
+  );
+}
+
+export async function consumeReagentStock(
+  stockId: string,
+  data: ReagentStockActionRequest,
+) {
+  return requestClient.post<ReagentStockView>(
+    `/v1/reagent-stocks/${stockId}/consume`,
+    data,
+  );
+}
+
+export async function startUsingReagentStock(
+  stockId: string,
+  data: ReagentStockActionRequest,
+) {
+  return requestClient.post<ReagentStockView>(
+    `/v1/reagent-stocks/${stockId}/start-use`,
+    data,
+  );
+}
+
+export async function finishUsingReagentStock(
+  stockId: string,
+  data: ReagentStockActionRequest,
+) {
+  return requestClient.post<ReagentStockView>(
+    `/v1/reagent-stocks/${stockId}/finish-use`,
+    data,
+  );
+}
+
+export async function listReagentStockEvents(stockId: string) {
+  return normalizeArrayResult(
+    await requestClient.get<null | ReagentStockEventView[]>(
+      `/v1/reagent-stocks/${stockId}/events`,
+    ),
+  );
+}
+
+export async function exportReagentStocks(params: Record<string, unknown>) {
+  return requestClient.download('/v1/reagent-stocks/export', {
+    params,
+    responseReturn: 'body',
+  });
+}
+
+export async function importReagentStocks(file: File) {
+  return requestClient.upload<ReagentStockImportResult>(
+    '/v1/reagent-stocks/import',
+    { file },
+  );
 }
 
 export async function listReagentWarnings() {
@@ -207,6 +466,17 @@ export async function updateEquipmentRecord(
   );
 }
 
+export async function batchUpdateEquipmentStatus(
+  data: BatchUpdateEquipmentStatusRequest,
+) {
+  return normalizeArrayResult(
+    await requestClient.post<EquipmentRecordView[] | null>(
+      '/v1/equipment-records/batch-status',
+      data,
+    ),
+  );
+}
+
 export async function listEquipmentMaintenanceLogs(equipmentId: string) {
   return normalizeArrayResult(
     await requestClient.get<EquipmentMaintenanceLogView[] | null>(
@@ -230,5 +500,83 @@ export async function listEquipmentWarnings() {
     await requestClient.get<EquipmentWarningView[] | null>(
       '/v1/equipment-records/warnings',
     ),
+  );
+}
+
+export async function listMedicalWasteSpecimenBatches(params: {
+  createdByName?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  keyword?: string;
+}) {
+  return normalizeArrayResult(
+    await requestClient.get<MedicalWasteSpecimenBatchView[] | null>(
+      '/v1/medical-waste/specimen-batches',
+      { params },
+    ),
+  );
+}
+
+export async function getMedicalWasteSpecimenOptions() {
+  return requestClient.get<MedicalWasteSpecimenOptionsView>(
+    '/v1/medical-waste/specimen-options',
+  );
+}
+
+export async function previewMedicalWasteSpecimenLabels(
+  data: MedicalWasteSpecimenPreviewRequest,
+) {
+  return normalizeArrayResult(
+    await requestClient.post<MedicalWasteSpecimenLabelView[] | null>(
+      '/v1/medical-waste/specimen-batches/preview-labels',
+      data,
+    ),
+  );
+}
+
+export async function printMedicalWasteSpecimenBatch(
+  data: MedicalWastePrintSpecimenBatchRequest,
+) {
+  return requestClient.post<MedicalWastePrintSpecimenBatchResult>(
+    '/v1/medical-waste/specimen-batches/print',
+    data,
+  );
+}
+
+export async function destroyMedicalWasteSpecimenBatch(batchId: string) {
+  return requestClient.post<MedicalWasteSpecimenBatchView>(
+    `/v1/medical-waste/specimen-batches/${batchId}/destroy`,
+  );
+}
+
+export async function listMedicalWasteReagentBags(params: {
+  dateFrom?: string;
+  dateTo?: string;
+  keyword?: string;
+}) {
+  return normalizeArrayResult(
+    await requestClient.get<MedicalWasteReagentBagView[] | null>(
+      '/v1/medical-waste/reagent-bags',
+      { params },
+    ),
+  );
+}
+
+export async function saveMedicalWasteReagentBag(
+  data: CreateMedicalWasteReagentBagRequest,
+) {
+  return requestClient.post<MedicalWasteReagentBagView>(
+    '/v1/medical-waste/reagent-bags',
+    data,
+  );
+}
+
+export async function handoverMedicalWasteReagentBag(
+  bagId: string,
+  data: MedicalWasteReagentHandoverRequest,
+) {
+  return requestClient.post<MedicalWasteReagentBagView>(
+    `/v1/medical-waste/reagent-bags/${bagId}/handover`,
+    data,
   );
 }

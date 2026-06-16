@@ -4,10 +4,10 @@ import type {
   PendingMedicalOrderItem,
 } from '../types/doctor-workflow';
 
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, reactive, ref } from 'vue';
 
 import { Page } from '@vben/common-ui';
-import { useAccessStore, useUserStore } from '@vben/stores';
+import { useAccessStore } from '@vben/stores';
 
 import {
   ElButton,
@@ -39,7 +39,6 @@ import {
 } from '../utils/format';
 
 const accessStore = useAccessStore();
-const userStore = useUserStore();
 
 const loading = ref(false);
 const operating = ref(false);
@@ -53,15 +52,11 @@ const queryForm = reactive({
 });
 
 const actionForm = reactive<MedicalOrderActionRequest>({
-  operatorName: '',
-  operatorUserId: '',
   remarks: '',
   terminalCode: '',
 });
 
 const accessCodeSet = computed(() => new Set(accessStore.accessCodes));
-const currentUserId = computed(() => userStore.userInfo?.userId ?? '');
-const currentUserName = computed(() => userStore.userInfo?.realName ?? '');
 const canAccept = computed(() =>
   accessCodeSet.value.has(M4_PERMISSION_CODES.MEDICAL_ORDER_ACCEPT),
 );
@@ -92,6 +87,25 @@ function canCancelOrder(row: PendingMedicalOrderItem) {
   return canCancel.value && row.status === 'PENDING';
 }
 
+function formatBillingStatus(value?: null | string) {
+  const labels: Record<string, string> = {
+    BILLED: '已计费',
+    CHARGED: '已收费',
+    PAID: '已收费',
+    PENDING: '待收费',
+    REFUNDED: '已退费',
+    SETTLED: '已收费',
+    SUCCESS: '已收费',
+    UNBILLED: '未收费',
+    UNCHARGED: '未收费',
+  };
+  const normalizedValue = value?.trim().toUpperCase();
+  if (!normalizedValue) {
+    return formatNullable(value);
+  }
+  return labels[normalizedValue] ?? formatNullable(value);
+}
+
 async function loadOrders() {
   loading.value = true;
   pageError.value = '';
@@ -113,27 +127,13 @@ async function loadOrders() {
   }
 }
 
-function ensureOperator() {
-  if (!actionForm.operatorName.trim()) {
-    ElMessage.warning('请填写操作人姓名');
-    return false;
-  }
-  return true;
-}
-
 async function runOrderAction(
   action: 'accept' | 'cancel' | 'complete',
   row: PendingMedicalOrderItem,
 ) {
-  if (!ensureOperator()) {
-    return;
-  }
-
   operating.value = true;
   try {
     const payload: MedicalOrderActionRequest = {
-      operatorName: actionForm.operatorName.trim(),
-      operatorUserId: actionForm.operatorUserId?.trim() || undefined,
       remarks: actionForm.remarks?.trim() || undefined,
       terminalCode: actionForm.terminalCode?.trim() || undefined,
     };
@@ -161,32 +161,17 @@ function handleReset() {
   void loadOrders();
 }
 
-watch(
-  [currentUserId, currentUserName],
-  ([userId, userName]) => {
-    if (!actionForm.operatorUserId && userId) {
-      actionForm.operatorUserId = userId;
-    }
-    if (!actionForm.operatorName && userName) {
-      actionForm.operatorName = userName;
-    }
-  },
-  { immediate: true },
-);
-
 void loadOrders();
 </script>
 
 <template>
   <Page
+    :show-header="false"
     title="病理医嘱执行"
     description="面向医嘱执行岗和管理员的医嘱工作台，支持查询、接收、完成和取消待处理医嘱。"
   >
     <div class="flex flex-col gap-4">
-      <WorkflowSectionCard
-        title="查询条件"
-        description="按病理号和状态筛选待处理医嘱。"
-      >
+      <WorkflowSectionCard title="查询条件">
         <ElForm inline label-width="88px">
           <ElFormItem label="病理号">
             <ElInput
@@ -220,47 +205,14 @@ void loadOrders();
         </ElForm>
       </WorkflowSectionCard>
 
-      <WorkflowSectionCard
-        title="执行操作"
-        description="接收、完成和取消医嘱会使用统一操作人信息。"
-      >
-        <ElForm inline label-width="80px">
-          <ElFormItem label="操作人">
-            <ElInput
-              v-model="actionForm.operatorName"
-              placeholder="请输入操作人姓名"
-              style="width: 220px"
-            />
-          </ElFormItem>
-          <ElFormItem label="终端">
-            <ElInput
-              v-model="actionForm.terminalCode"
-              placeholder="终端编码"
-              style="width: 180px"
-            />
-          </ElFormItem>
-          <ElFormItem label="备注">
-            <ElInput
-              v-model="actionForm.remarks"
-              placeholder="备注"
-              style="width: 260px"
-            />
-          </ElFormItem>
-        </ElForm>
-      </WorkflowSectionCard>
-
       <ElEmpty
         v-if="!loading && !pageError && orders.length === 0"
         description="暂无医嘱数据"
       />
 
-      <WorkflowSectionCard
-        title="医嘱列表"
-        :description="`当前共 ${total} 条记录，支持在表格中直接执行主动作。`"
-      >
+      <WorkflowSectionCard title="医嘱列表">
         <ElEmpty v-if="false" :description="pageError" />
         <ElTable v-else v-loading="loading" :data="orders" border>
-          <ElTableColumn label="医嘱号" min-width="150" prop="orderNumber" />
           <ElTableColumn label="病理号" min-width="140" prop="pathologyNo" />
           <ElTableColumn label="患者" min-width="120" prop="patientName" />
           <ElTableColumn label="类型" min-width="130">
@@ -276,7 +228,7 @@ void loadOrders();
           </ElTableColumn>
           <ElTableColumn label="收费状态" min-width="120">
             <template #default="{ row }">
-              {{ formatNullable(row.billingStatus) }}
+              {{ formatBillingStatus(row.billingStatus) }}
             </template>
           </ElTableColumn>
           <ElTableColumn label="开单医生" min-width="140">

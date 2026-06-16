@@ -4,17 +4,23 @@ import { ElButton, ElInput, ElTable, ElTableColumn, ElTag } from 'element-plus';
 import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
 
 import { useSpecimenCheckInPanel } from '../composables/useSpecimenCheckInPanel';
+import { formatDateTime, formatNullable } from '../utils/format';
 import {
-  formatCheckInStatus,
-  formatDateTime,
-  formatNullable,
-} from '../utils/format';
+  resolveCheckInWorkflowRowTone,
+  resolveSpecimenWorkflowRowClassName,
+} from '../utils/specimen-workflow-row-tone';
+
+import '../styles/specimen-workflow-row-tone.css';
+
 const {
   actionLoading,
+  clearQueue,
   exportLoading,
+  formatSpecimenStatus,
   handleExport,
   handleManualCheckIn,
   handleOperatorChange,
+  handlePrimaryCheckIn,
   handleQuickCheckIn,
   handleRemoveRow,
   handleReset,
@@ -28,12 +34,22 @@ const {
   scanInput,
   selectedCount,
 } = useSpecimenCheckInPanel();
+
+function resolveRowClassName({
+  row,
+}: {
+  row: (typeof queueItems.value)[number];
+}) {
+  return resolveSpecimenWorkflowRowClassName(
+    resolveCheckInWorkflowRowTone(row),
+  );
+}
 </script>
 
 <template>
   <div class="flex flex-col gap-4">
     <div class="flex flex-wrap items-center gap-4 text-sm">
-      <div class="font-semibold text-[color:#d6453d]">标本入库</div>
+      <div class="font-semibold text-danger">标本入库</div>
       <div>
         全部
         <span class="text-xl font-semibold text-primary">{{
@@ -71,15 +87,16 @@ const {
         />
       </div>
       <ElButton
-        :loading="actionLoading"
+        :loading="actionLoading || retryLoading"
         type="primary"
-        @click="handleQuickCheckIn"
+        @click="handlePrimaryCheckIn"
       >
         标本入库
       </ElButton>
       <ElButton :loading="retryLoading" @click="handleRetryLabelPrint">
         补打标本标签
       </ElButton>
+      <ElButton @click="clearQueue">清除列表</ElButton>
       <ElButton @click="handleReset">重置</ElButton>
       <ElButton :loading="exportLoading" @click="handleExport">
         导出Excel
@@ -89,6 +106,7 @@ const {
     <ElTable
       v-loading="loading"
       :data="queueItems"
+      :row-class-name="resolveRowClassName"
       border
       row-key="specimenId"
       @selection-change="handleSelectionChange"
@@ -112,8 +130,13 @@ const {
       <ElTableColumn label="标本名称" min-width="140" prop="specimenName" />
       <ElTableColumn label="标本状态" min-width="120">
         <template #default="{ row }">
-          <ElTag :type="row.queueStatus === 'SUCCESS' ? 'success' : 'warning'">
-            {{ formatCheckInStatus(row.checkInStatus) }}
+          {{ formatSpecimenStatus(row.specimenStatus) }}
+        </template>
+      </ElTableColumn>
+      <ElTableColumn label="入库状态" min-width="120">
+        <template #default="{ row }">
+          <ElTag :type="row.checkInStatusTagType">
+            {{ row.displayCheckInStatus }}
           </ElTag>
         </template>
       </ElTableColumn>
@@ -143,7 +166,8 @@ const {
           <div class="flex items-center gap-2">
             <ElButton
               link
-              :disabled="row.queueStatus === 'SUCCESS'"
+              :disabled="row.queueStatus === 'SUCCESS' || !row.canCheckIn"
+              :title="row.canCheckIn ? '' : row.checkInDisabledReason || ''"
               type="primary"
               @click="handleManualCheckIn(row)"
             >

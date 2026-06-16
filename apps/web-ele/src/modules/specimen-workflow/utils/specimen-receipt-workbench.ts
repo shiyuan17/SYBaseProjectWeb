@@ -7,24 +7,30 @@ import type {
 import { formatDateTime, formatNullable } from './format';
 import { resolveOperatingRoomDisplayName } from './operating-room-display';
 
-export type ReceiptWorkbenchQueueStatus = 'FAILED' | 'PENDING' | 'SUCCESS';
+export type ReceiptWorkbenchDisplayStatus =
+  | 'FAILED'
+  | 'OUT_OF_SCOPE'
+  | 'PENDING'
+  | 'RECEIVED'
+  | 'SUCCESS';
 
 export type ReceiptWorkbenchApplicationContext = {
   patientGender: null | string;
   patientId: null | string;
 };
 
-export type ReceiptWorkbenchRow = SpecimenManagementListItem &
-  PendingSpecimenItem & {
+export type ReceiptWorkbenchRow = Partial<PendingSpecimenItem> &
+  SpecimenManagementListItem & {
+    canReceive: boolean;
+    inpatientNo: string;
     patientGenderLabel: string;
     patientIdLabel: string;
     queueAddedAt: string;
     queueAddedByName: string;
-    queueStatus: ReceiptWorkbenchQueueStatus;
+    queueStatus: ReceiptWorkbenchDisplayStatus;
     receivedAt: null | string;
     receivedByName: string;
     surgeryName: string;
-    inpatientNo: string;
   };
 
 export const RECEIPT_WORKBENCH_MAX_QUERY_SIZE = 500;
@@ -56,14 +62,45 @@ export function resolveReceiptWorkbenchExactMatches(
   );
 }
 
+function resolveHistoricalReceiptStatus(specimen: SpecimenManagementListItem) {
+  const receiptStatus =
+    (
+      specimen as SpecimenManagementListItem & {
+        receiptStatus?: null | string;
+      }
+    ).receiptStatus ?? null;
+  if (normalizeText(receiptStatus)) {
+    return receiptStatus;
+  }
+
+  return normalizeText(specimen.specimenStatus).toUpperCase() === 'RECEIVED'
+    ? 'RECEIVED'
+    : null;
+}
+
+function resolveReceiptWorkbenchQueueStatus(
+  specimen: SpecimenManagementListItem,
+  pending?: null | PendingSpecimenItem,
+): ReceiptWorkbenchDisplayStatus {
+  if (pending?.transportOrderId?.trim()) {
+    return 'PENDING';
+  }
+
+  return resolveHistoricalReceiptStatus(specimen)?.trim().toUpperCase() ===
+    'RECEIVED'
+    ? 'RECEIVED'
+    : 'OUT_OF_SCOPE';
+}
+
 export function createReceiptWorkbenchRow(
   specimen: SpecimenManagementListItem,
-  pending: PendingSpecimenItem,
-  applicationContext: ReceiptWorkbenchApplicationContext | null,
+  pending: null | PendingSpecimenItem,
+  applicationContext: null | ReceiptWorkbenchApplicationContext,
   workbenchRecord: ApplicationRegistrationWorkbenchRecord | null,
   queueAddedByName: string,
   roomNameById: ReadonlyMap<string, string> = new Map(),
 ): ReceiptWorkbenchRow {
+  const queueStatus = resolveReceiptWorkbenchQueueStatus(specimen, pending);
   const surgeryName = resolveOperatingRoomDisplayName(
     roomNameById,
     workbenchRecord?.surgeryInfo.roomId,
@@ -71,20 +108,83 @@ export function createReceiptWorkbenchRow(
   );
 
   return {
-    ...specimen,
-    ...pending,
+    abnormalFlag: pending?.abnormalFlag ?? specimen.abnormalFlag,
+    abnormalType: pending?.abnormalType ?? specimen.abnormalType ?? null,
+    applicationId: specimen.applicationId,
+    applicationNo: specimen.applicationNo,
+    barcode: specimen.barcode ?? pending?.barcode ?? '',
+    batchAbnormalFlag: pending?.batchAbnormalFlag ?? false,
+    canReceive: queueStatus === 'PENDING',
+    checkInStatus: pending?.checkInStatus ?? specimen.checkInStatus ?? null,
+    checkedInAt: pending?.checkedInAt ?? specimen.checkedInAt ?? null,
+    checkedInByName:
+      pending?.checkedInByName ?? specimen.checkedInByName ?? null,
+    containerCount: pending?.containerCount ?? specimen.containerCount,
+    containerName: pending?.containerName ?? specimen.containerName,
+    fixationCompletedAt:
+      pending?.fixationCompletedAt ?? specimen.fixationCompletedAt ?? null,
+    fixationLiquidType:
+      pending?.fixationLiquidType ?? specimen.fixationLiquidType ?? null,
+    fixationOperatorName:
+      pending?.fixationOperatorName ?? specimen.fixationOperatorName ?? null,
+    fixationOperatorUserId:
+      pending?.fixationOperatorUserId ??
+      specimen.fixationOperatorUserId ??
+      null,
+    fixationStartedAt:
+      pending?.fixationStartedAt ?? specimen.fixationStartedAt ?? null,
+    fixationStatus: pending?.fixationStatus ?? specimen.fixationStatus,
     inpatientNo: normalizeText(workbenchRecord?.patientInfo.inpatientNo),
+    labelPrintBatchNo: specimen.labelPrintBatchNo,
+    labelPrintStatus: specimen.labelPrintStatus,
+    latestTrackingAt:
+      pending?.latestTrackingAt ?? specimen.latestTrackingAt ?? null,
     patientGenderLabel: normalizeGenderLabel(
       applicationContext?.patientGender ?? workbenchRecord?.patientInfo.gender,
     ),
     patientIdLabel: normalizeText(applicationContext?.patientId),
+    patientName: pending?.patientName ?? specimen.patientName,
     queueAddedAt: new Date().toISOString(),
     queueAddedByName: normalizeText(queueAddedByName) || '-',
-    queueStatus: 'PENDING',
+    queueStatus,
     receivedAt: null,
     receivedByName: '',
+    recentNode: specimen.recentNode ?? null,
+    registeredAt: pending?.registeredAt ?? specimen.registeredAt,
+    registrationOperatorName: specimen.registrationOperatorName ?? null,
+    reminderCount: pending?.reminderCount ?? 0,
+    roomId: specimen.roomId ?? null,
+    specimenConfirmedAt: specimen.specimenConfirmedAt ?? null,
+    specimenConfirmedByName: specimen.specimenConfirmedByName ?? null,
+    specimenConfirmedByUserId: specimen.specimenConfirmedByUserId ?? null,
+    specimenCount: specimen.specimenCount,
+    specimenId: specimen.specimenId,
+    specimenName: specimen.specimenName,
+    specimenNo: specimen.specimenNo,
+    specimenRemovalAt: specimen.specimenRemovalAt ?? null,
+    specimenSite: specimen.specimenSite,
+    specimenStatus: pending?.specimenStatus ?? specimen.specimenStatus,
+    specimenType: specimen.specimenType,
+    submittingDepartmentId:
+      pending?.submittingDepartmentId ?? specimen.submittingDepartmentId,
+    submittingDepartmentName:
+      pending?.submittingDepartmentName ?? specimen.submittingDepartmentName,
     surgeryName,
+    transportOrderId: pending?.transportOrderId ?? null,
+    unreceivedCount: pending?.unreceivedCount ?? 0,
+    verificationCompletedAt:
+      pending?.verificationCompletedAt ??
+      specimen.verificationCompletedAt ??
+      null,
+    verificationStartedAt:
+      pending?.verificationStartedAt ?? specimen.verificationStartedAt ?? null,
+    verificationStatus:
+      pending?.verificationStatus ?? specimen.verificationStatus ?? null,
   };
+}
+
+export function isReceiptWorkbenchRowReceivable(row: ReceiptWorkbenchRow) {
+  return row.canReceive && row.queueStatus !== 'SUCCESS';
 }
 
 export function buildReceiptWorkbenchExportHeaders() {
@@ -128,25 +228,37 @@ export function buildReceiptWorkbenchExportRows(rows: ReceiptWorkbenchRow[]) {
 }
 
 export function resolveReceiptWorkbenchStatusLabel(
-  status: ReceiptWorkbenchQueueStatus,
+  status: ReceiptWorkbenchDisplayStatus,
 ) {
   if (status === 'SUCCESS') {
     return '接收';
   }
+  if (status === 'RECEIVED') {
+    return '已接收';
+  }
   if (status === 'FAILED') {
     return '签收失败';
   }
-  return '待接收';
+  if (status === 'OUT_OF_SCOPE') {
+    return '不在待签收范围';
+  }
+  return '待签收';
 }
 
 export function resolveReceiptWorkbenchStatusTagType(
-  status: ReceiptWorkbenchQueueStatus,
+  status: ReceiptWorkbenchDisplayStatus,
 ) {
   if (status === 'SUCCESS') {
     return 'success' as const;
   }
+  if (status === 'RECEIVED') {
+    return 'info' as const;
+  }
   if (status === 'FAILED') {
     return 'danger' as const;
+  }
+  if (status === 'OUT_OF_SCOPE') {
+    return undefined;
   }
   return 'warning' as const;
 }

@@ -21,14 +21,19 @@ const FROZEN_CHAIN: TechnicalWorkflowChainType = 'FROZEN';
 const EXCEPTION_CHAIN: TechnicalWorkflowChainType = 'EXCEPTION';
 
 export const TECHNICAL_WORKFLOW_ROUTE_META: Record<
+  | 'CYTOLOGY'
   | 'DEHYDRATION'
   | 'EMBEDDING'
   | 'ENTRY'
   | 'FROZEN'
   | 'GROSSING'
+  | 'IHC'
+  | 'LIQUID_CYTOLOGY'
   | 'REWORK'
-  | 'SPECIMEN_REGISTRATION'
+  | 'ROUTINE_ORDER'
   | 'SLICING'
+  | 'SPECIAL_ORDER'
+  | 'SPECIMEN_REGISTRATION'
   | 'STAINING'
   | 'TASKS'
   | 'TRACKING',
@@ -81,7 +86,7 @@ export const TECHNICAL_WORKFLOW_ROUTE_META: Record<
     key: 'GROSSING',
     name: 'GrossingWorkstation',
     path: '/technical-workflow/grossing',
-    title: '取材描写',
+    title: '取材描写工作站',
   },
   REWORK: {
     authorityCode: M3_PERMISSION_CODES.REWORK,
@@ -101,7 +106,7 @@ export const TECHNICAL_WORKFLOW_ROUTE_META: Record<
     key: 'SPECIMEN_REGISTRATION',
     name: 'TechnicalSpecimenRegistration',
     path: '/technical-workflow/specimen-registration',
-    title: '标本登记',
+    title: '检查登记',
   },
   SLICING: {
     authorityCode: M3_PERMISSION_CODES.SLICING,
@@ -121,7 +126,57 @@ export const TECHNICAL_WORKFLOW_ROUTE_META: Record<
     key: 'STAINING',
     name: 'StainingWorkstation',
     path: '/technical-workflow/staining',
-    title: '染色出片',
+    title: '染色出片工作站',
+  },
+  ROUTINE_ORDER: {
+    authorityCode: M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY,
+    chain: REGULAR_CHAIN,
+    icon: 'carbon:document-tasks',
+    isVisibleInMenu: true,
+    key: 'ROUTINE_ORDER',
+    name: 'RoutineOrderWorkstation',
+    path: '/technical-workflow/routine-orders',
+    title: '常规医嘱工作站',
+  },
+  SPECIAL_ORDER: {
+    authorityCode: M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY,
+    chain: REGULAR_CHAIN,
+    icon: 'carbon:document-requirements',
+    isVisibleInMenu: true,
+    key: 'SPECIAL_ORDER',
+    name: 'SpecialOrderWorkstation',
+    path: '/technical-workflow/special-orders',
+    title: '特检医嘱工作站',
+  },
+  IHC: {
+    authorityCode: M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY,
+    chain: REGULAR_CHAIN,
+    icon: 'carbon:chemistry',
+    isVisibleInMenu: true,
+    key: 'IHC',
+    name: 'IhcWorkstation',
+    path: '/technical-workflow/ihc',
+    title: '免疫组化工作站',
+  },
+  CYTOLOGY: {
+    authorityCode: M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY,
+    chain: REGULAR_CHAIN,
+    icon: 'carbon:microscope',
+    isVisibleInMenu: true,
+    key: 'CYTOLOGY',
+    name: 'CytologyWorkstation',
+    path: '/technical-workflow/cytology',
+    title: '细胞学工作站',
+  },
+  LIQUID_CYTOLOGY: {
+    authorityCode: M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY,
+    chain: REGULAR_CHAIN,
+    icon: 'lucide:droplets',
+    isVisibleInMenu: true,
+    key: 'LIQUID_CYTOLOGY',
+    name: 'LiquidCytologyWorkstation',
+    path: '/technical-workflow/liquid-cytology',
+    title: '液基细胞学工作站',
   },
   TASKS: {
     authorityCode: M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY,
@@ -168,6 +223,7 @@ export const TECHNICAL_TASK_TYPE_OPTIONS = [
 export const TECHNICAL_TASK_STATUS_OPTIONS = [
   { label: '待处理', value: 'PENDING' },
   { label: '处理中', value: 'IN_PROGRESS' },
+  { label: '包埋确认待完成', value: 'EMBEDDING_CONFIRM_PENDING' },
   { label: '已完成', value: 'COMPLETED' },
 ] as const;
 
@@ -184,6 +240,15 @@ export const TECHNICAL_OBJECT_TYPE_OPTIONS = [
   { label: '包埋盒', value: 'EMBEDDING_BOX' },
   { label: '玻片', value: 'SLIDE' },
 ] as const;
+
+export const GROSSING_EMBEDDING_BOX_PREFIX_OPTIONS = [
+  { label: 'A', value: 'A' },
+  { label: 'B', value: 'B' },
+  { label: 'C', value: 'C' },
+] as const;
+
+export type GrossingEmbeddingBoxPrefix =
+  (typeof GROSSING_EMBEDDING_BOX_PREFIX_OPTIONS)[number]['value'];
 
 export const REWORK_TYPE_OPTIONS = [
   { label: '重染', value: 'RESTAIN' },

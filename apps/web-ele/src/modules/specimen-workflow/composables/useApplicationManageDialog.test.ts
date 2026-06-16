@@ -11,6 +11,7 @@ const {
   mockDuplicateCheckApplications,
   mockGetApplicationDetail,
   mockImportClinicalApplication,
+  mockLookupApplicationPatientByIdentifier,
   mockLoadWorkflowReferenceOptionsSafely,
   mockUpdateApplication,
 } = vi.hoisted(() => ({
@@ -24,6 +25,7 @@ const {
   mockDuplicateCheckApplications: vi.fn(),
   mockGetApplicationDetail: vi.fn(),
   mockImportClinicalApplication: vi.fn(),
+  mockLookupApplicationPatientByIdentifier: vi.fn(),
   mockLoadWorkflowReferenceOptionsSafely: vi.fn(),
   mockUpdateApplication: vi.fn(),
 }));
@@ -52,6 +54,8 @@ vi.mock('../api/specimen-workflow-service', () => ({
   duplicateCheckApplications: mockDuplicateCheckApplications,
   getApplicationDetail: mockGetApplicationDetail,
   importClinicalApplication: mockImportClinicalApplication,
+  lookupApplicationPatientByIdentifier:
+    mockLookupApplicationPatientByIdentifier,
   updateApplication: mockUpdateApplication,
 }));
 
@@ -76,6 +80,7 @@ function buildApplicationDetail() {
     patientAge: '45',
     patientGender: 'M',
     patientId: 'PAT-001',
+    patientIdentifier: 'PATIENT-NO-001',
     patientName: '张三',
     recentEvents: [],
     remarks: null,
@@ -152,6 +157,7 @@ async function flushComposable() {
 describe('useApplicationManageDialog', () => {
   beforeEach(() => {
     mockAccessStore.accessCodes = [
+      'PERM_APPLICATION_CREATE',
       'PERM_APPLICATION_UPDATE',
       'PERM_WORKFLOW_REFERENCE_QUERY',
     ];
@@ -163,6 +169,7 @@ describe('useApplicationManageDialog', () => {
     mockLoadWorkflowReferenceOptionsSafely.mockResolvedValue({
       clinicalSymptoms: [],
     });
+    mockLookupApplicationPatientByIdentifier.mockResolvedValue(null);
     mockUpdateApplication.mockResolvedValue({ id: 'APP-EDIT-001' });
   });
 
@@ -176,6 +183,7 @@ describe('useApplicationManageDialog', () => {
     mockDuplicateCheckApplications.mockReset();
     mockGetApplicationDetail.mockReset();
     mockImportClinicalApplication.mockReset();
+    mockLookupApplicationPatientByIdentifier.mockReset();
     mockLoadWorkflowReferenceOptionsSafely.mockReset();
     mockUpdateApplication.mockReset();
   });
@@ -196,6 +204,7 @@ describe('useApplicationManageDialog', () => {
     expect(state.isEditMode.value).toBe(true);
     expect(state.activeTab.value).toBe('create');
     expect(state.createForm.patientName).toBe('张三');
+    expect(state.createForm.patientId).toBe('PATIENT-NO-001');
 
     await state.submitCreateApplication('save');
     await flushComposable();
@@ -204,7 +213,7 @@ describe('useApplicationManageDialog', () => {
       applicationDate: '2026-05-28',
       applicationType: 'ROUTINE',
       externalOrderNo: null,
-      patientId: 'PAT-001',
+      patientId: 'PATIENT-NO-001',
       patientName: '张三',
     });
     expect(mockUpdateApplication).toHaveBeenCalledWith(
@@ -223,6 +232,60 @@ describe('useApplicationManageDialog', () => {
       args: [{ applicationId: 'APP-EDIT-001', mode: 'save' }],
       event: 'submitted',
     });
+
+    wrapper.destroy();
+  });
+
+  it('looks up patient by identifier and fills patient fields', async () => {
+    mockLookupApplicationPatientByIdentifier.mockResolvedValue({
+      patientAge: '30',
+      patientGender: 'F',
+      patientId: 'PAT-LOOKUP-001',
+      patientIdentifier: 'PATIENT-NO-LOOKUP',
+      patientName: '王小王',
+    });
+
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    state.createForm.patientId = 'INPATIENT-001';
+    await state.handlePatientIdentifierLookup();
+    await flushComposable();
+
+    expect(mockLookupApplicationPatientByIdentifier).toHaveBeenCalledWith(
+      'INPATIENT-001',
+    );
+    expect(state.createForm.patientId).toBe('PATIENT-NO-LOOKUP');
+    expect(state.createForm.patientName).toBe('王小王');
+    expect(state.createForm.patientGender).toBe('F');
+    expect(state.createForm.patientAge).toBe('30');
+    expect(state.patientLookupStatus.value).toBe('matched');
+
+    wrapper.destroy();
+  });
+
+  it('does not query patient info without create permission', async () => {
+    mockAccessStore.accessCodes = ['PERM_APPLICATION_UPDATE'];
+
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    state.createForm.patientId = 'PATIENT-NO-LOCKED';
+    await state.handlePatientIdentifierLookup();
+    await flushComposable();
+
+    expect(mockLookupApplicationPatientByIdentifier).not.toHaveBeenCalled();
+    expect(state.patientLookupStatus.value).toBe('idle');
 
     wrapper.destroy();
   });

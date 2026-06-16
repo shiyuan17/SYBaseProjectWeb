@@ -163,6 +163,7 @@ onMounted(loadData);
 
 <template>
   <Page
+    :show-header="false"
     title="科室字典"
     description="维护科室层级、排序和启停状态，编码由系统自动生成并在详情中展示。"
   >

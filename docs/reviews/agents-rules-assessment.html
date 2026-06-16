@@ -1,0 +1,817 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AGENTS.md 及协作规范评估报告</title>
+    <style>
+      :root {
+        --bg: #0f1419;
+        --panel: #161b22;
+        --panel-2: #1c232c;
+        --border: #2a323d;
+        --text: #e6edf3;
+        --muted: #9aa7b4;
+        --accent: #58a6ff;
+        --green: #3fb950;
+        --yellow: #d29922;
+        --red: #f85149;
+        --purple: #bc8cff;
+        --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei',
+          'PingFang SC', Roboto, Helvetica, Arial, sans-serif;
+        background: linear-gradient(180deg, #0d1117 0%, #0f1419 100%);
+        color: var(--text);
+        line-height: 1.7;
+      }
+      .wrap {
+        max-width: 1040px;
+        margin: 0 auto;
+        padding: 40px 24px 80px;
+      }
+      header.hero {
+        background:
+          radial-gradient(120% 120% at 0% 0%, #1f6feb33 0%, transparent 55%),
+          var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 36px 32px;
+        box-shadow: var(--shadow);
+      }
+      .hero h1 {
+        margin: 0 0 8px;
+        font-size: 28px;
+        letter-spacing: 0.3px;
+      }
+      .hero .sub {
+        color: var(--muted);
+        font-size: 15px;
+      }
+      .meta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 22px;
+        margin-top: 18px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .meta-row b {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .scorecard {
+        display: grid;
+        grid-template-columns: 160px 1fr;
+        gap: 28px;
+        align-items: center;
+        margin: 28px 0;
+        padding: 24px 28px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+      }
+      .gauge {
+        position: relative;
+        width: 160px;
+        height: 160px;
+      }
+      .gauge svg {
+        transform: rotate(-90deg);
+      }
+      .gauge .num {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+      .gauge .num .grade {
+        font-size: 40px;
+        font-weight: 700;
+        line-height: 1;
+      }
+      .gauge .num .pts {
+        font-size: 13px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+      .dims {
+        display: grid;
+        gap: 12px;
+      }
+      .dim {
+        display: grid;
+        grid-template-columns: 130px 1fr 48px;
+        align-items: center;
+        gap: 12px;
+        font-size: 14px;
+      }
+      .bar {
+        height: 9px;
+        border-radius: 6px;
+        background: #222b35;
+        overflow: hidden;
+      }
+      .bar > span {
+        display: block;
+        height: 100%;
+        border-radius: 6px;
+      }
+
+      h2.section {
+        font-size: 20px;
+        margin: 40px 0 14px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+      }
+      h3 {
+        font-size: 16px;
+        margin: 24px 0 10px;
+        color: var(--accent);
+      }
+      p {
+        margin: 10px 0;
+      }
+      .muted {
+        color: var(--muted);
+      }
+
+      .grid2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      @media (max-width: 720px) {
+        .grid2 {
+          grid-template-columns: 1fr;
+        }
+        .scorecard {
+          grid-template-columns: 1fr;
+          justify-items: center;
+        }
+        .dim {
+          grid-template-columns: 100px 1fr 42px;
+        }
+      }
+
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px 18px;
+      }
+      .card h4 {
+        margin: 0 0 10px;
+        font-size: 15px;
+      }
+      ul {
+        margin: 8px 0;
+        padding-left: 20px;
+      }
+      li {
+        margin: 5px 0;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 12px 0;
+        font-size: 14px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border);
+        vertical-align: top;
+      }
+      th {
+        color: var(--muted);
+        font-weight: 600;
+        background: var(--panel-2);
+      }
+      tr:hover td {
+        background: #1a2029;
+      }
+
+      .badge {
+        display: inline-block;
+        padding: 2px 9px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .b-high {
+        background: #f8514922;
+        color: var(--red);
+        border: 1px solid #f8514955;
+      }
+      .b-mid {
+        background: #d2992222;
+        color: var(--yellow);
+        border: 1px solid #d2992255;
+      }
+      .b-low {
+        background: #58a6ff22;
+        color: var(--accent);
+        border: 1px solid #58a6ff55;
+      }
+      .b-ok {
+        background: #3fb95022;
+        color: var(--green);
+        border: 1px solid #3fb95055;
+      }
+
+      .finding {
+        border-left: 3px solid var(--border);
+        padding: 14px 18px;
+        margin: 14px 0;
+        background: var(--panel);
+        border-radius: 0 10px 10px 0;
+      }
+      .finding.high {
+        border-left-color: var(--red);
+      }
+      .finding.mid {
+        border-left-color: var(--yellow);
+      }
+      .finding.low {
+        border-left-color: var(--accent);
+      }
+      .finding .ftitle {
+        font-weight: 600;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .finding .floc {
+        font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+        font-size: 12.5px;
+        color: var(--purple);
+      }
+      .finding p {
+        margin: 8px 0 0;
+        font-size: 14px;
+      }
+      .finding .fix {
+        margin-top: 8px;
+        font-size: 13.5px;
+        color: var(--muted);
+      }
+      .finding .fix b {
+        color: var(--green);
+      }
+
+      code {
+        font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+        background: #1c232c;
+        padding: 1px 6px;
+        border-radius: 5px;
+        font-size: 13px;
+        color: #e6edf3;
+      }
+
+      .toc {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 18px 0 8px;
+      }
+      .toc a {
+        font-size: 13px;
+        color: var(--accent);
+        text-decoration: none;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 4px 12px;
+        background: var(--panel);
+      }
+      .toc a:hover {
+        border-color: var(--accent);
+      }
+
+      .pill {
+        font-size: 12px;
+        padding: 2px 8px;
+        border-radius: 6px;
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        color: var(--muted);
+      }
+      footer {
+        margin-top: 50px;
+        padding-top: 20px;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header class="hero">
+        <h1>AGENTS.md 及协作规范评估报告</h1>
+        <div class="sub">
+          对 <code>AGENTS.md</code> 与 <code>docs/</code> 下 12
+          个专项规范的结构、完整性、一致性与可执行性评估
+        </div>
+        <div class="meta-row">
+          <span><b>项目</b>：SYBaseProjectWeb</span>
+          <span><b>评估范围</b>：1 份主规范 + 12 份专项文档</span>
+          <span><b>评估日期</b>：2026-06-02</span>
+          <span><b>方法</b>：逐文档审阅 + 交叉引用核对 + 文件系统校验</span>
+        </div>
+      </header>
+
+      <div class="toc">
+        <a href="#summary">总体结论</a>
+        <a href="#strengths">优势</a>
+        <a href="#findings">问题清单</a>
+        <a href="#perdoc">逐文档评分</a>
+        <a href="#reco">改进建议</a>
+      </div>
+
+      <!-- ===== SCORECARD ===== -->
+      <section class="scorecard" id="summary">
+        <div class="gauge">
+          <svg width="160" height="160" viewBox="0 0 160 160">
+            <circle
+              cx="80"
+              cy="80"
+              r="68"
+              fill="none"
+              stroke="#222b35"
+              stroke-width="14"
+            />
+            <circle
+              cx="80"
+              cy="80"
+              r="68"
+              fill="none"
+              stroke="#3fb950"
+              stroke-width="14"
+              stroke-linecap="round"
+              stroke-dasharray="427"
+              stroke-dashoffset="77"
+            />
+          </svg>
+          <div class="num">
+            <div class="grade" style="color: var(--green)">B+</div>
+            <div class="pts">82 / 100</div>
+          </div>
+        </div>
+        <div class="dims">
+          <div class="dim">
+            <span>结构一致性</span>
+            <div class="bar">
+              <span style="width: 95%; background: var(--green)"></span>
+            </div>
+            <span>95</span>
+          </div>
+          <div class="dim">
+            <span>覆盖完整性</span>
+            <div class="bar">
+              <span style="width: 92%; background: var(--green)"></span>
+            </div>
+            <span>92</span>
+          </div>
+          <div class="dim">
+            <span>引用一致性</span>
+            <div class="bar">
+              <span style="width: 62%; background: var(--yellow)"></span>
+            </div>
+            <span>62</span>
+          </div>
+          <div class="dim">
+            <span>可执行/落地</span>
+            <div class="bar">
+              <span style="width: 70%; background: var(--yellow)"></span>
+            </div>
+            <span>70</span>
+          </div>
+          <div class="dim">
+            <span>AI 友好度</span>
+            <div class="bar">
+              <span style="width: 78%; background: var(--accent)"></span>
+            </div>
+            <span>78</span>
+          </div>
+        </div>
+      </section>
+
+      <p>
+        规范体系<b>整体质量良好</b>：12 份专项文档采用统一骨架（目标与适用范围 /
+        强制规则 / 推荐实践 / 反例 / 检查清单 /
+        关联文档），覆盖了前端工程从目录、编码、组件、状态、路由、接口、UI、兼容性到
+        Git
+        与发布的完整链路，内容专业、约束清晰、风险分区（绿/黄/红）明确，是一套成熟度较高的协作规范。扣分主要集中在<b>交叉引用一致性</b>与<b>规则可落地性</b>两方面：存在文件名大小写不匹配、工单系统命名混用（JIRA
+        vs Linear）、硬编码绝对路径、"必读顺序"过重难以实际执行等问题。
+      </p>
+
+      <!-- ===== STRENGTHS ===== -->
+      <h2 class="section" id="strengths">一、核心优势</h2>
+      <div class="grid2">
+        <div class="card">
+          <h4>✅ 文档结构高度统一</h4>
+          <p class="muted">
+            每份规范都遵循「目标与适用范围 → 强制规则 → 推荐实践 → 反例/禁用项 →
+            检查清单 → 关联文档」六段式骨架，可预测、易检索、便于 AI 与人对齐。
+          </p>
+        </div>
+        <div class="card">
+          <h4>✅ 风险分区机制清晰</h4>
+          <p class="muted">
+            AGENTS.md 用「绿区/黄区/红区」+「必须升级人工确认场景」明确了 AI
+            的修改边界，把权限模型、登录态、全局拦截器、构建发布等高危区域显式锁定。
+          </p>
+        </div>
+        <div class="card">
+          <h4>✅ 覆盖面完整且分层合理</h4>
+          <p class="muted">
+            从目录边界到发布回滚，专项文档各司其职，AGENTS.md
+            只管"如何协作"、不重复技术细则，定位准确，避免了规则冗余冲突。
+          </p>
+        </div>
+        <div class="card">
+          <h4>✅ 交付与交接要求具体</h4>
+          <p class="muted">
+            强制要求"变更摘要/影响说明/验证结果/风险提示"四要素与标准化"移交摘要"模板，对多
+            Agent / 人机协作的连续性非常友好。
+          </p>
+        </div>
+        <div class="card">
+          <h4>✅ 编码与中文环境约束到位</h4>
+          <p class="muted">
+            UTF-8（无 BOM）、乱码处理、CSV/TXT
+            导出编码、日期时区显式化等约束，精准命中了中文管理台 +
+            国产环境的真实痛点。
+          </p>
+        </div>
+        <div class="card">
+          <h4>✅ AI 行为约束专章</h4>
+          <p class="muted">
+            ai-code-health.md 设有"AI 行为约束（System
+            Prompt）"与自检清单、评分模型，且明确"行数为参考值非硬门槛"，避免了形式主义拆分。
+          </p>
+        </div>
+      </div>
+
+      <!-- ===== FINDINGS ===== -->
+      <h2 class="section" id="findings">二、问题清单（按严重度排序）</h2>
+
+      <div class="finding high">
+        <div class="ftitle">
+          <span class="badge b-high">高</span>
+          文件名大小写不匹配，链接在大小写敏感系统会失效
+        </div>
+        <div class="floc">
+          AGENTS.md L29 / L168、docs/README.md L30 → 引用
+          <code>docs/AI-CODE-HEALTH.md</code>
+        </div>
+        <p>
+          磁盘上实际文件（git 跟踪名）为
+          <code>docs/ai-code-health.md</code>（全小写）。Windows
+          大小写不敏感本地可用，但在 Linux
+          CI、大小写敏感的部署环境或文档站点上，链接与"必读顺序"引用都会 404。
+        </p>
+        <div class="fix">
+          <b>建议</b>：统一为单一casing。要么把文件重命名为
+          <code>AI-CODE-HEALTH.md</code>（与映射表/必读列表保持一致），要么把
+          AGENTS.md L29、L168 与 README L30 的引用改为
+          <code>ai-code-health.md</code
+          >。推荐前者（与其他全大写规范文件命名风格一致）。
+        </div>
+      </div>
+
+      <div class="finding high">
+        <div class="ftitle">
+          <span class="badge b-high">高</span> 工单系统命名混用：Linear 与 JIRA
+          并存
+        </div>
+        <div class="floc">
+          GIT_RULES.md L30-32（<code>feature/JIRA-123-...</code>）vs AGENTS.md
+          L27 / LINEAR_TASK.md（Linear issue <code>ENG-123</code>）
+        </div>
+        <p>
+          项目协作流程以 <b>Linear</b> 为准（存在 LINEAR_TASK.md 模板、AGENTS
+          必读列表也指向它），但 GIT_RULES 的分支命名示例仍使用
+          <code>JIRA-123 / JIRA-456 / JIRA-789</code
+          >。会导致分支命名与工单号风格不一致，AI 容易照抄错误前缀。
+        </p>
+        <div class="fix">
+          <b>建议</b>：将 GIT_RULES 示例统一为 Linear 风格（如
+          <code>feature/ENG-123-user-management</code
+          >），或明确说明"工单前缀以实际使用的工单系统为准"。
+        </div>
+      </div>
+
+      <div class="finding mid">
+        <div class="ftitle">
+          <span class="badge b-mid">中</span>
+          "必读顺序"过重，缺少分级，实际难以每次执行
+        </div>
+        <div class="floc">AGENTS.md L13-30（强制规则 1）</div>
+        <p>
+          要求每个任务开始前按顺序读取 13+
+          份文档。对于"加一行注释"这类绿区小改动，逐份通读不现实，且与紧随其后的"规范映射表（按场景必读）"在精神上存在张力——映射表本身已是更高效的按需路径。强制全量必读会被实际工作流忽略，削弱规范权威性。
+        </p>
+        <div class="fix">
+          <b>建议</b>：改为分级策略——"首次进入项目/大型改动：通读；日常任务：读
+          AGENTS.md +
+          映射表命中的文档"。把映射表提升为默认入口，必读全量降级为"建议一次性熟悉"。
+        </div>
+      </div>
+
+      <div class="finding mid">
+        <div class="ftitle">
+          <span class="badge b-mid">中</span>
+          硬编码后端绝对路径，机器/协作者相关
+        </div>
+        <div class="floc">
+          AGENTS.md L51（<code>D:\Github\JW\SYBaseProject</code>）
+        </div>
+        <p>
+          后端联动检查直接写死本机绝对路径，换机器、换协作者或 CI
+          环境即失效，也假设了后端与前端在同一磁盘同级目录。
+        </p>
+        <div class="fix">
+          <b>建议</b>：改为相对描述或可配置约定（如"后端仓库
+          <code>SYBaseProject</code
+          >，默认与本仓库同级"），并补充"路径以本地实际克隆位置为准"。
+        </div>
+      </div>
+
+      <div class="finding mid">
+        <div class="ftitle">
+          <span class="badge b-mid">中</span>
+          规范未纳入实际质量命令，可执行性偏弱
+        </div>
+        <div class="floc">
+          CODING_RULES 测试与自检 / RELEASE 质量门禁（仅提及
+          <code>pnpm build</code>）
+        </div>
+        <p>
+          规范大量使用"必须补充验证""自检通过"等定性表述，但除
+          <code>pnpm build</code> 外，未给出本仓库实际的 lint / typecheck /
+          单测命令（如 <code>pnpm lint</code>、<code>pnpm test</code
+          >、<code>vue-tsc</code>）。AI
+          与新人无法把"自检"落到具体命令，门禁可被空泛地"宣称通过"。
+        </p>
+        <div class="fix">
+          <b>建议</b>：在 CODING_RULES / RELEASE
+          中补一节"标准验证命令"，列出仓库真实可执行的校验命令清单及触发场景。
+        </div>
+      </div>
+
+      <div class="finding low">
+        <div class="ftitle">
+          <span class="badge b-low">低</span> ai-code-health.md
+          存在错码/排版残留
+        </div>
+        <div class="floc">ai-code-health.md L13（<code>易测试--</code>）</div>
+        <p>
+          前言列表项 "易测试" 后多出一个游离的 <code>--</code>，疑似 Markdown
+          编辑残留，影响渲染整洁度。
+        </p>
+        <div class="fix">
+          <b>建议</b>：删除多余的
+          <code>--</code>，与同列表其他项（易理解/易维护/易扩展/易审查）对齐。
+        </div>
+      </div>
+
+      <div class="finding low">
+        <div class="ftitle">
+          <span class="badge b-low">低</span> AI
+          健康度示例与前端栈技术取向不完全契合
+        </div>
+        <div class="floc">
+          ai-code-health.md（Schema 优先 Zod/Joi、依赖注入
+          repository、Kafka/MySQL 示例）
+        </div>
+        <p>
+          该文档示例偏后端/服务端语境（订单、SQL、Kafka、repository 注入、Zod
+          校验）。本仓库是 Vue 3 + Element Plus
+          前端管理台，部分示例对前端开发者的迁移成本较高。文档已声明"专项规范优先级高于本规范"，冲突风险可控，但贴合度可提升。
+        </p>
+        <div class="fix">
+          <b>建议</b>：补充 1-2
+          个前端语境的正/反例（如组合式函数单一职责、ViewModel
+          转换、组件无副作用），降低理解成本。
+        </div>
+      </div>
+
+      <div class="finding low">
+        <div class="ftitle">
+          <span class="badge b-low">低</span> 未提及 CodeGraph / Cursor
+          工具链约定
+        </div>
+        <div class="floc">AGENTS.md（无 .cursor/rules 或 codegraph 引用）</div>
+        <p>
+          仓库已配置 <code>.cursor/rules/codegraph.mdc</code> 等 AI 工具规则，但
+          AGENTS.md 未提及其存在与适用关系。多套 AI
+          规则并存时，缺少"它们之间如何协同/优先级"的说明。
+        </p>
+        <div class="fix">
+          <b>建议</b>：在 AGENTS.md 关联文档或"语言与提交约束"附近，简述与
+          <code>.cursor/rules</code>
+          工具规则的关系（工具规则为执行辅助，协作约束以 AGENTS 体系为准）。
+        </div>
+      </div>
+
+      <!-- ===== PER DOC ===== -->
+      <h2 class="section" id="perdoc">三、逐文档评分</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>文档</th>
+            <th>定位</th>
+            <th>状态</th>
+            <th>评分</th>
+            <th>备注</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>AGENTS.md</code></td>
+            <td>协作主规范</td>
+            <td><span class="badge b-mid">待修</span></td>
+            <td>83</td>
+            <td>结构优秀；必读过重、硬编码路径、casing 引用问题</td>
+          </tr>
+          <tr>
+            <td><code>PROJECT_DIRECTORY.md</code></td>
+            <td>目录与模块边界</td>
+            <td><span class="badge b-ok">良好</span></td>
+            <td>92</td>
+            <td>边界与命名约定清晰，反例到位</td>
+          </tr>
+          <tr>
+            <td><code>CODING_RULES.md</code></td>
+            <td>通用编码基线</td>
+            <td><span class="badge b-ok">良好</span></td>
+            <td>88</td>
+            <td>编码/中文约束强；缺实际验证命令</td>
+          </tr>
+          <tr>
+            <td><code>VUE_TS_RULES.md</code></td>
+            <td>Vue3 + TS</td>
+            <td><span class="badge b-ok">良好</span></td>
+            <td>90</td>
+            <td>组件/组合式/类型分层清晰</td>
+          </tr>
+          <tr>
+            <td><code>UI_RULES.md</code></td>
+            <td>EP/Tailwind/ECharts</td>
+            <td><span class="badge b-ok">良好</span></td>
+            <td>89</td>
+            <td>token、状态、图表生命周期完整</td>
+          </tr>
+          <tr>
+            <td><code>STATE_RULES.md</code></td>
+            <td>Pinia 状态</td>
+            <td><span class="badge b-ok">良好</span></td>
+            <td>90</td>
+            <td>状态分层与并发策略明确</td>
+          </tr>
+          <tr>
+            <td><code>ROUTER_RULES.md</code></td>
+            <td>Vue Router</td>
+            <td><span class="badge b-ok">良好</span></td>
+            <td>90</td>
+            <td>守卫边界、meta 收敛清晰</td>
+          </tr>
+          <tr>
+            <td><code>API_RULES.md</code></td>
+            <td>Axios 接口层</td>
+            <td><span class="badge b-ok">良好</span></td>
+            <td>90</td>
+            <td>DTO/VM 分层、错误分类完整</td>
+          </tr>
+          <tr>
+            <td><code>COMPATIBILITY_RULES.md</code></td>
+            <td>兼容/国产环境</td>
+            <td><span class="badge b-ok">良好</span></td>
+            <td>91</td>
+            <td>导出/打印/编码门禁专业</td>
+          </tr>
+          <tr>
+            <td><code>GIT_RULES.md</code></td>
+            <td>分支/提交/PR</td>
+            <td><span class="badge b-mid">待修</span></td>
+            <td>80</td>
+            <td>Git Flow 完整；JIRA/Linear 命名混用</td>
+          </tr>
+          <tr>
+            <td><code>LINEAR_TASK.md</code></td>
+            <td>任务起始模板</td>
+            <td><span class="badge b-ok">良好</span></td>
+            <td>88</td>
+            <td>模板实用，验收/回滚齐全</td>
+          </tr>
+          <tr>
+            <td><code>RELEASE.md</code></td>
+            <td>发布与回滚</td>
+            <td><span class="badge b-ok">良好</span></td>
+            <td>90</td>
+            <td>环境矩阵、门禁、回滚分层清晰</td>
+          </tr>
+          <tr>
+            <td><code>ai-code-health.md</code></td>
+            <td>AI 代码健康度</td>
+            <td><span class="badge b-mid">待修</span></td>
+            <td>78</td>
+            <td>体系完整；casing、错码、示例偏后端</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- ===== RECO ===== -->
+      <h2 class="section" id="reco">四、改进建议（按优先级）</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>优先级</th>
+            <th>动作</th>
+            <th>涉及文件</th>
+            <th>收益</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge b-high">P0</span></td>
+            <td>统一 AI 健康度文件名大小写，修正所有引用</td>
+            <td>AGENTS.md、docs/README.md、ai-code-health.md</td>
+            <td>消除跨平台链接断裂</td>
+          </tr>
+          <tr>
+            <td><span class="badge b-high">P0</span></td>
+            <td>GIT_RULES 分支命名示例统一为 Linear 前缀</td>
+            <td>GIT_RULES.md</td>
+            <td>工单/分支命名一致</td>
+          </tr>
+          <tr>
+            <td><span class="badge b-mid">P1</span></td>
+            <td>"必读顺序"改为分级（全量熟悉 vs 按映射表按需）</td>
+            <td>AGENTS.md</td>
+            <td>提升规则可执行性</td>
+          </tr>
+          <tr>
+            <td><span class="badge b-mid">P1</span></td>
+            <td>后端路径改为可配置/相对约定</td>
+            <td>AGENTS.md</td>
+            <td>跨机器/CI 可用</td>
+          </tr>
+          <tr>
+            <td><span class="badge b-mid">P1</span></td>
+            <td>补"标准验证命令"清单（lint/typecheck/test/build）</td>
+            <td>CODING_RULES.md、RELEASE.md</td>
+            <td>让自检/门禁可落地</td>
+          </tr>
+          <tr>
+            <td><span class="badge b-low">P2</span></td>
+            <td>清理 <code>易测试--</code> 错码；补前端语境示例</td>
+            <td>ai-code-health.md</td>
+            <td>渲染整洁、贴合栈</td>
+          </tr>
+          <tr>
+            <td><span class="badge b-low">P2</span></td>
+            <td>说明与 <code>.cursor/rules</code> 工具规则的协同关系</td>
+            <td>AGENTS.md</td>
+            <td>多套 AI 规则不冲突</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 class="section">五、结论</h2>
+      <p>
+        这是一套<b>结构成熟、覆盖完整、风险意识强</b>的前端协作规范体系，足以支撑多
+        Agent
+        与人机协作的日常开发。当前主要短板不在"写得对不对"，而在"<b>引用一致性</b>"与"<b>可落地性</b>"——只需修复少量交叉引用缺陷（文件名
+        casing、JIRA/Linear、硬编码路径）并把抽象门禁绑定到具体命令，整体即可从
+        <b>B+（82）</b> 提升至 <b>A 级</b>。建议优先处理两项 P0，可在一次小型
+        <code>docs/*</code> 提交内完成且风险极低。
+      </p>
+
+      <footer>
+        本报告基于对仓库内 1 份主规范与 12
+        份专项文档的逐份审阅、交叉引用核对及文件系统校验生成。评分为定性评估辅助，仅用于改进讨论，不作为唯一判定标准。<br />
+        生成位置：<code>docs/reviews/agents-rules-assessment.html</code> ·
+        评估日期：2026-06-02
+      </footer>
+    </div>
+  </body>
+</html>

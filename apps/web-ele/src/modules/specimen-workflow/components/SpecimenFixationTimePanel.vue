@@ -19,6 +19,12 @@ import {
   formatFixationStatus,
   formatNullable,
 } from '../utils/format';
+import {
+  resolveFixationWorkflowRowTone,
+  resolveSpecimenWorkflowRowClassName,
+} from '../utils/specimen-workflow-row-tone';
+
+import '../styles/specimen-workflow-row-tone.css';
 
 const {
   batchRetryResult,
@@ -26,6 +32,7 @@ const {
   getSpecimenRemovalTime,
   handleClearList,
   handleClearSelectionRows,
+  handleConfirmFixation,
   handleCompleteFixationByScan,
   handleExportExcel,
   handleRetryLabel,
@@ -44,12 +51,22 @@ const {
   submitRetryLabel,
   workflowReferenceOptions,
 } = useSpecimenFixationTimePanel();
+
+function resolveRowClassName({
+  row,
+}: {
+  row: (typeof queueItems.value)[number];
+}) {
+  return resolveSpecimenWorkflowRowClassName(
+    resolveFixationWorkflowRowTone(row),
+  );
+}
 </script>
 
 <template>
   <div class="flex flex-col gap-4">
     <ElAlert
-      v-if="false"
+      v-if="pageError"
       :closable="false"
       :title="pageError"
       type="error"
@@ -57,7 +74,7 @@ const {
     />
 
     <div class="flex flex-wrap items-center gap-3 text-sm">
-      <div class="font-semibold text-[color:#d6453d]">设置固定时间</div>
+      <div class="font-semibold text-danger">设置固定时间</div>
       <div>
         全部
         <span class="text-xl font-semibold text-primary">{{
@@ -76,7 +93,7 @@ const {
       <ElInput
         v-model="scanInput"
         clearable
-        placeholder="流水号 / 标本ID"
+        placeholder="请输入标本号或条码"
         style="width: 260px"
         @keyup.enter="handleCompleteFixationByScan"
       />
@@ -86,6 +103,20 @@ const {
         placeholder="请选择固定液类型"
         style="width: 220px"
       />
+      <ElButton
+        :loading="loading"
+        type="primary"
+        @click="handleCompleteFixationByScan"
+      >
+        查询
+      </ElButton>
+      <ElButton
+        :loading="loading"
+        type="success"
+        @click="handleConfirmFixation"
+      >
+        确认固定
+      </ElButton>
       <ElButton @click="handleClearSelectionRows">清除选择行</ElButton>
       <ElButton @click="handleClearList">清除列表</ElButton>
       <ElButton @click="handleRetryLabel">补打标本标签</ElButton>
@@ -95,6 +126,7 @@ const {
     <ElTable
       v-loading="loading"
       :data="queueItems"
+      :row-class-name="resolveRowClassName"
       border
       row-key="specimenId"
       @selection-change="handleSelectionChange"

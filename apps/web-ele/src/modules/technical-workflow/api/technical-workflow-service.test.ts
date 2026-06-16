@@ -1,46 +1,61 @@
 import type { Mock } from 'vitest';
 
+import type { TechnicalSpecimenRegistrationMaterial } from '../types/technical-workflow';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { requestClient } from '#/api/request';
 
 import {
   assignTechnicalTask,
+  cancelEmbedding,
+  cancelSlicingSlidePrintMergeGroups,
+  cancelTechnicalSpecimenRegistrationMaterialVerification,
   claimTechnicalTask,
+  completeDehydration,
   completeDehydrationBatch,
-  completeTechnicalSpecimenRegistration,
   completeEmbedding,
   completeGrossing,
   completeSlicing,
   completeSlideStaining,
+  completeTechnicalSpecimenRegistration,
   createDehydrationBatch,
   createReworkOrder,
+  createSlicingSlidePrintMergeGroups,
   createSlideQcEvaluation,
   executeReworkOrder,
   getEmbeddingWorkstationSummary,
   getGrossingWorkbenchContext,
   getSlicingWorkbench,
   getTechnicalSpecimenRegistrationApplicationWorkbench,
-  getTechnicalTracking,
   getTechnicalSpecimenRegistrationDetail,
+  getTechnicalTracking,
   listPendingTechnicalSpecimenRegistrations,
   listPendingTechnicalTasks,
+  listTechnicalSpecimenRegistrations,
   mapEmbeddingWorkstationSummaryResponse,
   mapGrossingWorkbenchContextResponse,
   mapPendingTechnicalSpecimenRegistrationPageResponse,
   mapPendingTechnicalTaskPageResponse,
   mapSlicingWorkbenchResponse,
   mapTechnicalSpecimenRegistrationDetailResponse,
+  mapTechnicalSpecimenRegistrationWorkspaceResponse,
   mapTechnicalTrackingResponse,
+  printSlicingSlideMergeGroup,
+  printSlicingSlides,
   releaseTechnicalTask,
   saveTechnicalSpecimenRegistrationApplicationWorkbenchPatientInfo,
   saveTechnicalSpecimenRegistrationDetailSections,
+  startDehydration,
   startDehydrationBatch,
   startEmbedding,
   startGrossing,
   startSlicing,
   startSlideStaining,
+  updateEmbeddingQualityReview,
   updateTechnicalTaskPriority,
+  updateTechnicalTaskRemarks,
+  verifyTechnicalSpecimenRegistrationMaterial,
 } from './technical-workflow-service';
 
 vi.mock('#/api/request', () => ({
@@ -123,7 +138,10 @@ describe('technical-workflow-service mappers', () => {
       checkItems: [],
       clinicalDiagnosis: null,
       clinicalHistory: null,
+      clinicalSubmissionRequirements: null,
       contextSummary: null,
+      externalPathologyDiagnosis: null,
+      infectiousAndPastHistorySummary: null,
       mediaAssets: [],
       relatedExaminations: null,
       task: {
@@ -163,32 +181,83 @@ describe('technical-workflow-service mappers', () => {
       completedTotal: 0,
       pendingList: [
         {
+          applicationType: null,
           caseId: 'CASE-1',
+          combinedSlide: false,
           completedAt: null,
           embeddingBoxId: '',
+          embeddingBoxIds: [],
+          embeddingBoxNo: null,
           embeddingClearRemark: null,
+          embeddingRemarks: null,
           embeddingEvaluation: null,
           embeddingOperatorName: null,
           grossingEvaluation: null,
           pathologyNo: null,
           patientId: null,
           patientName: null,
+          printGroupId: null,
           selectable: false,
           shiftRemark: null,
           slideId: null,
           slideNo: null,
+          slidePrintStatus: null,
           sliceNotice: null,
           slicingOperatorName: null,
           slicingRemark: null,
           specimenId: null,
           specimenName: null,
+          submittingDepartmentName: null,
           taskId: 'TASK-1',
+          taskIds: [],
           taskStatus: null,
           timedOut: false,
+          mergedPrintGroup: false,
+          printedSlideCount: 0,
         },
       ],
+      pendingPrintList: [
+        {
+          applicationType: null,
+          caseId: 'CASE-1',
+          combinedSlide: false,
+          completedAt: null,
+          embeddingBoxId: '',
+          embeddingBoxIds: [],
+          embeddingBoxNo: null,
+          embeddingClearRemark: null,
+          embeddingRemarks: null,
+          embeddingEvaluation: null,
+          embeddingOperatorName: null,
+          grossingEvaluation: null,
+          pathologyNo: null,
+          patientId: null,
+          patientName: null,
+          printGroupId: null,
+          selectable: false,
+          shiftRemark: null,
+          slideId: null,
+          slideNo: null,
+          slidePrintStatus: null,
+          sliceNotice: null,
+          slicingOperatorName: null,
+          slicingRemark: null,
+          specimenId: null,
+          specimenName: null,
+          submittingDepartmentName: null,
+          taskId: 'TASK-1',
+          taskIds: [],
+          taskStatus: null,
+          timedOut: false,
+          mergedPrintGroup: false,
+          printedSlideCount: 0,
+        },
+      ],
+      pendingPrintTotal: 0,
       pendingPage: 1,
       pendingSize: 20,
+      pendingSliceList: [],
+      pendingSliceTotal: 0,
       pendingTotal: 0,
       stats: {
         completedDeptTodayCount: 0,
@@ -198,6 +267,41 @@ describe('technical-workflow-service mappers', () => {
         pendingTodayCount: 3,
         pendingTomorrowCount: 0,
       },
+    });
+  });
+
+  it('maps slicing workbench print row embedding fields', () => {
+    expect(
+      mapSlicingWorkbenchResponse({
+        pendingPrintList: [
+          {
+            caseId: 'CASE-1',
+            combinedSlide: false,
+            embeddingBoxId: 'BOX-1',
+            embeddingBoxIds: ['BOX-1', 'BOX-2'],
+            embeddingBoxNo: 'A1',
+            embeddingRemarks: '包埋备注',
+            mergedPrintGroup: true,
+            printGroupId: 'GROUP-1',
+            printedSlideCount: 0,
+            selectable: true,
+            submittingDepartmentName: '急诊科',
+            taskId: 'TASK-1',
+            taskIds: ['TASK-1', 'TASK-2'],
+            timedOut: false,
+          },
+        ],
+      }).pendingPrintList[0],
+    ).toMatchObject({
+      embeddingBoxId: 'BOX-1',
+      embeddingBoxIds: ['BOX-1', 'BOX-2'],
+      embeddingBoxNo: 'A1',
+      embeddingRemarks: '包埋备注',
+      mergedPrintGroup: true,
+      printGroupId: 'GROUP-1',
+      submittingDepartmentName: '急诊科',
+      taskId: 'TASK-1',
+      taskIds: ['TASK-1', 'TASK-2'],
     });
   });
 
@@ -230,6 +334,70 @@ describe('technical-workflow-service mappers', () => {
       registrationStatus: null,
       submittingDepartmentName: null,
     });
+  });
+
+  it('normalizes specimen registration material defaults and extended fields', () => {
+    const materials: Partial<TechnicalSpecimenRegistrationMaterial>[] = [
+      {
+        sequenceNo: 1,
+        sourcePart: '左甲状腺',
+        specimenBarcode: 'BC-1',
+        specimenId: 'SP-1',
+        specimenName: '组织块',
+      },
+      {
+        evaluationItems: ['密封不严'],
+        frozen: true,
+        sequenceNo: 2,
+        sourcePart: '右甲状腺',
+        specimenBarcode: 'BC-2',
+        specimenId: 'SP-2',
+        specimenName: '细胞样本',
+        specimenSize: '大标本',
+        specimenType: '细胞学',
+        tissueCount: 3,
+        verificationCompletedAt: '2026-06-02T11:30:00',
+        verificationStatus: 'VERIFIED',
+        verifiedByName: 'Receiver A',
+      },
+    ];
+
+    expect(
+      mapTechnicalSpecimenRegistrationWorkspaceResponse({
+        materials: materials as TechnicalSpecimenRegistrationMaterial[],
+      }).materials,
+    ).toEqual([
+      {
+        evaluationItems: [],
+        frozen: false,
+        sequenceNo: 1,
+        sourcePart: '左甲状腺',
+        specimenBarcode: 'BC-1',
+        specimenId: 'SP-1',
+        specimenName: '组织块',
+        specimenSize: '小标本',
+        specimenType: '活体',
+        tissueCount: 1,
+        verificationCompletedAt: null,
+        verificationStatus: 'UNVERIFIED',
+        verifiedByName: null,
+      },
+      {
+        evaluationItems: ['密封不严'],
+        frozen: true,
+        sequenceNo: 2,
+        sourcePart: '右甲状腺',
+        specimenBarcode: 'BC-2',
+        specimenId: 'SP-2',
+        specimenName: '细胞样本',
+        specimenSize: '大标本',
+        specimenType: '细胞学',
+        tissueCount: 3,
+        verificationCompletedAt: '2026-06-02T11:30:00',
+        verificationStatus: 'VERIFIED',
+        verifiedByName: 'Receiver A',
+      },
+    ]);
   });
 
   it('normalizes embedding workstation summary arrays', () => {
@@ -306,15 +474,15 @@ describe('technical-workflow-service requests', () => {
       workDate: '2026-06-01',
     });
 
-    await expect(
-      getEmbeddingWorkstationSummary('2026-06-01'),
-    ).resolves.toEqual({
-      completedCount: 1,
-      completedRecords: [],
-      pendingCount: 2,
-      pendingTasks: [],
-      workDate: '2026-06-01',
-    });
+    await expect(getEmbeddingWorkstationSummary('2026-06-01')).resolves.toEqual(
+      {
+        completedCount: 1,
+        completedRecords: [],
+        pendingCount: 2,
+        pendingTasks: [],
+        workDate: '2026-06-01',
+      },
+    );
 
     expect(requestClientMock.get).toHaveBeenCalledWith(
       '/v1/embeddings/workstation-summary',
@@ -344,6 +512,7 @@ describe('technical-workflow-service requests', () => {
     });
     await getTechnicalSpecimenRegistrationDetail('CASE-001');
     await completeTechnicalSpecimenRegistration('CASE-001', {
+      applicationType: 'CONSULTATION',
       remarks: '登记完成',
       terminalCode: 'T-1',
     });
@@ -366,8 +535,43 @@ describe('technical-workflow-service requests', () => {
     expect(requestClientMock.post).toHaveBeenCalledWith(
       '/v1/technical-specimen-registrations/CASE-001/complete',
       {
+        applicationType: 'CONSULTATION',
         remarks: '登记完成',
         terminalCode: 'T-1',
+      },
+    );
+  });
+
+  it('queries technical specimen registrations by registration status', async () => {
+    requestClientMock.get.mockResolvedValueOnce({
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
+
+    await listTechnicalSpecimenRegistrations({
+      applicationType: 'ROUTINE',
+      keyword: 'BL-001',
+      page: 1,
+      receivedFrom: '2026-06-01',
+      receivedTo: '2026-06-03',
+      registrationStatus: 'COMPLETED',
+      size: 20,
+    });
+
+    expect(requestClientMock.get).toHaveBeenCalledWith(
+      '/v1/technical-specimen-registrations',
+      {
+        params: {
+          applicationType: 'ROUTINE',
+          keyword: 'BL-001',
+          page: 1,
+          receivedFrom: '2026-06-01',
+          receivedTo: '2026-06-03',
+          registrationStatus: 'COMPLETED',
+          size: 20,
+        },
       },
     );
   });
@@ -556,6 +760,10 @@ describe('technical-workflow-service requests', () => {
     await updateTechnicalTaskPriority('TASK-4', {
       priority: 'PRIORITY',
     });
+    await updateTechnicalTaskRemarks('TASK-5', {
+      productionRemarks: '未脱钙',
+      remarks: '复核备注',
+    });
 
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       1,
@@ -586,6 +794,16 @@ describe('technical-workflow-service requests', () => {
       '/v1/technical-tasks/TASK-4/priority',
       {
         priority: 'PRIORITY',
+      },
+    );
+    expect(requestClientMock.request).toHaveBeenCalledWith(
+      '/v1/technical-tasks/TASK-5/remarks',
+      {
+        data: {
+          productionRemarks: '未脱钙',
+          remarks: '复核备注',
+        },
+        method: 'PATCH',
       },
     );
   });
@@ -622,6 +840,15 @@ describe('technical-workflow-service requests', () => {
       specimens: [
         {
           blocks: [{ blockDescription: 'A1' }],
+          embeddingBoxes: [
+            {
+              boxName: '包埋盒 1',
+              embeddingBoxNo: 'A1',
+              embeddingRemarks: '骨髓',
+              sequenceNo: 1,
+              status: 'CONFIRMED',
+            },
+          ],
           specimenId: 'SPEC-1',
           specimenType: 'ROUTINE',
         },
@@ -647,6 +874,15 @@ describe('technical-workflow-service requests', () => {
         specimens: [
           {
             blocks: [{ blockDescription: 'A1' }],
+            embeddingBoxes: [
+              {
+                boxName: '包埋盒 1',
+                embeddingBoxNo: 'A1',
+                embeddingRemarks: '骨髓',
+                sequenceNo: 1,
+                status: 'CONFIRMED',
+              },
+            ],
             specimenId: 'SPEC-1',
             specimenType: 'ROUTINE',
           },
@@ -692,8 +928,68 @@ describe('technical-workflow-service requests', () => {
     );
   });
 
+  it('posts task-level dehydration endpoints with exact paths', async () => {
+    await startDehydration({
+      taskId: 'TASK-DEHYDRATION-1',
+      terminalCode: 'TERM-1',
+    });
+    await completeDehydration({
+      remarks: '脱水完成',
+      taskId: 'TASK-DEHYDRATION-1',
+    });
+
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      1,
+      '/v1/dehydrations/start',
+      {
+        taskId: 'TASK-DEHYDRATION-1',
+        terminalCode: 'TERM-1',
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      2,
+      '/v1/dehydrations/complete',
+      {
+        remarks: '脱水完成',
+        taskId: 'TASK-DEHYDRATION-1',
+      },
+    );
+  });
+
+  it('posts specimen registration material verification endpoints with exact paths', async () => {
+    requestClientMock.post.mockResolvedValue({
+      actionFlags: {},
+      materials: [],
+    });
+
+    await verifyTechnicalSpecimenRegistrationMaterial('CASE-1', 'SP-1', {
+      terminalCode: 'T-M3-SPEC-REG',
+    });
+    await cancelTechnicalSpecimenRegistrationMaterialVerification(
+      'CASE-1',
+      'SP-1',
+      {
+        terminalCode: 'T-M3-SPEC-REG',
+      },
+    );
+
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      1,
+      '/v1/technical-specimen-registrations/CASE-1/materials/SP-1/verify',
+      { terminalCode: 'T-M3-SPEC-REG' },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      2,
+      '/v1/technical-specimen-registrations/CASE-1/materials/SP-1/cancel-verification',
+      { terminalCode: 'T-M3-SPEC-REG' },
+    );
+  });
+
   it('posts embedding endpoints with exact paths', async () => {
     await startEmbedding({
+      taskId: 'TASK-EMB',
+    });
+    await cancelEmbedding({
       taskId: 'TASK-EMB',
     });
     await completeEmbedding({
@@ -711,11 +1007,56 @@ describe('technical-workflow-service requests', () => {
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       2,
+      '/v1/embeddings/cancel',
+      {
+        taskId: 'TASK-EMB',
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      3,
       '/v1/embeddings/complete',
       {
         blockCount: 1,
         samplingBlockId: 'BLOCK-1',
         taskId: 'TASK-EMB',
+      },
+    );
+  });
+
+  it('patches embedding quality review with exact path and payload', async () => {
+    requestClientMock.request.mockResolvedValue({
+      record: {
+        embeddingId: 'EMB-1',
+      },
+      reworkStatus: 'COMPLETED',
+      reworkType: 'REGROSSING',
+    });
+
+    await updateEmbeddingQualityReview('EMB 1', {
+      evaluationLevel: 'UNQUALIFIED',
+      notifiedGrossingOperator: true,
+      samplingEvaluation: '取材评价调整',
+      sliceNotice: '皮肤',
+      terminalCode: 'T-EMB',
+      treatmentAction: 'REGROSSING',
+      treatmentRemark: '重新取材',
+      unqualifiedReasons: ['组织过厚'],
+    });
+
+    expect(requestClientMock.request).toHaveBeenCalledWith(
+      '/v1/embeddings/EMB%201/quality-review',
+      {
+        data: {
+          evaluationLevel: 'UNQUALIFIED',
+          notifiedGrossingOperator: true,
+          samplingEvaluation: '取材评价调整',
+          sliceNotice: '皮肤',
+          terminalCode: 'T-EMB',
+          treatmentAction: 'REGROSSING',
+          treatmentRemark: '重新取材',
+          unqualifiedReasons: ['组织过厚'],
+        },
+        method: 'PATCH',
       },
     );
   });
@@ -726,8 +1067,29 @@ describe('technical-workflow-service requests', () => {
     });
     await completeSlicing({
       embeddingBoxId: 'BOX-1',
-      slideCount: 2,
       taskId: 'TASK-SLI',
+    });
+    await printSlicingSlides({
+      embeddingBoxId: 'BOX-1',
+      mergeAdjacent: true,
+      sourceSlideCount: 4,
+      taskId: 'TASK-SLI',
+    });
+    await createSlicingSlidePrintMergeGroups({
+      remarks: '两两合片',
+      taskIds: ['TASK-A1', 'TASK-A2'],
+      terminalCode: 'TERM-1',
+    });
+    await cancelSlicingSlidePrintMergeGroups({
+      printGroupIds: ['GROUP-1'],
+      remarks: '取消合片',
+      terminalCode: 'TERM-1',
+    });
+    await printSlicingSlideMergeGroup({
+      printGroupId: 'GROUP-1',
+      printerCode: 'PRINTER-1',
+      remarks: '打印合片',
+      terminalCode: 'TERM-1',
     });
 
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
@@ -742,8 +1104,45 @@ describe('technical-workflow-service requests', () => {
       '/v1/slicings/complete',
       {
         embeddingBoxId: 'BOX-1',
-        slideCount: 2,
         taskId: 'TASK-SLI',
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      3,
+      '/v1/slicings/slide-print',
+      {
+        embeddingBoxId: 'BOX-1',
+        mergeAdjacent: true,
+        sourceSlideCount: 4,
+        taskId: 'TASK-SLI',
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      4,
+      '/v1/slicings/slide-print-merge-groups',
+      {
+        remarks: '两两合片',
+        taskIds: ['TASK-A1', 'TASK-A2'],
+        terminalCode: 'TERM-1',
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      5,
+      '/v1/slicings/slide-print-merge-groups/cancel',
+      {
+        printGroupIds: ['GROUP-1'],
+        remarks: '取消合片',
+        terminalCode: 'TERM-1',
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      6,
+      '/v1/slicings/slide-print-merge-groups/print',
+      {
+        printGroupId: 'GROUP-1',
+        printerCode: 'PRINTER-1',
+        remarks: '打印合片',
+        terminalCode: 'TERM-1',
       },
     );
   });
@@ -758,6 +1157,7 @@ describe('technical-workflow-service requests', () => {
     await getSlicingWorkbench({
       completedPage: 2,
       completedSize: 10,
+      applicationType: 'ROUTINE',
       keyword: 'BL-001',
       overdueOnly: true,
       pendingPage: 1,
@@ -771,6 +1171,7 @@ describe('technical-workflow-service requests', () => {
         params: {
           completedPage: 2,
           completedSize: 10,
+          applicationType: 'ROUTINE',
           keyword: 'BL-001',
           overdueOnly: true,
           pendingPage: 1,

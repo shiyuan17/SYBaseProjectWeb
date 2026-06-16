@@ -12,6 +12,7 @@ export {
   Bell,
   Bold,
   BookOpenText,
+  Camera,
   Check,
   ChevronDown,
   ChevronLeft,

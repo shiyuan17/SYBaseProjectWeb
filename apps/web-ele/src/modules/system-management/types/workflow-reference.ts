@@ -8,6 +8,7 @@ export interface WorkflowReferenceOptionsResponse {
   collectionModes: WorkflowReferenceOption[];
   containerNames: WorkflowReferenceOption[];
   cutSurfaceFeatures: WorkflowReferenceOption[];
+  embeddingRemarks: WorkflowReferenceOption[];
   fixationLiquidTypes: WorkflowReferenceOption[];
   marginMarkings: WorkflowReferenceOption[];
   specimenImageSizes: WorkflowReferenceOption[];

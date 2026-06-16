@@ -23,6 +23,8 @@ import {
   ElInput,
   ElInputNumber,
   ElMessage,
+  ElOption,
+  ElSelect,
   ElSwitch,
   ElTable,
   ElTableColumn,
@@ -44,7 +46,14 @@ import SystemSectionCard from '../components/SystemSectionCard.vue';
 import SystemStatusTag from '../components/SystemStatusTag.vue';
 import { M1_PERMISSION_CODES } from '../constants';
 import { getSystemPageErrorMessage } from '../utils/error';
-import { formatNullable } from '../utils/format';
+import {
+  formatMedicalOrderCategoryCode,
+  formatMedicalOrderExecutionScope,
+  formatMedicalOrderType,
+  formatNullable,
+  MEDICAL_ORDER_EXECUTION_SCOPE_OPTIONS,
+  MEDICAL_ORDER_TYPE_OPTIONS,
+} from '../utils/format';
 import {
   buildMedicalOrderCategorySubmitPayload,
   buildMedicalOrderItemSubmitPayload,
@@ -99,6 +108,17 @@ const expandedKeys = computed(() => getTreeExpandedKeys(filteredTree.value));
 const selectedCategory = computed(() =>
   findTreeNodeById(treeData.value, selectedCategoryId.value),
 );
+
+function formatMedicalOrderCategoryName(categoryId?: null | string) {
+  if (!categoryId) {
+    return '-';
+  }
+
+  return (
+    findTreeNodeById(treeData.value, categoryId)?.categoryName ??
+    formatNullable(categoryId)
+  );
+}
 
 async function loadData() {
   loading.value = true;
@@ -266,6 +286,7 @@ onMounted(loadData);
 
 <template>
   <Page
+    :show-header="false"
     title="医嘱字典"
     description="维护医嘱分类、条目、默认内容、执行范围和启停状态，相关编码由系统自动生成。"
   >
@@ -327,7 +348,9 @@ onMounted(loadData);
           </template>
           <ElDescriptions v-if="selectedCategory" :column="2" border>
             <ElDescriptionsItem label="分类编码">
-              {{ selectedCategory.categoryCode }}
+              {{
+                formatMedicalOrderCategoryCode(selectedCategory.categoryCode)
+              }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="分类名称">
               {{ selectedCategory.categoryName }}
@@ -379,12 +402,14 @@ onMounted(loadData);
             />
             <ElTableColumn label="医嘱类型" min-width="120">
               <template #default="scope">
-                {{ formatNullable(scope?.row?.orderType) }}
+                {{ formatMedicalOrderType(scope?.row?.orderType) }}
               </template>
             </ElTableColumn>
             <ElTableColumn label="执行范围" min-width="120">
               <template #default="scope">
-                {{ formatNullable(scope?.row?.executionScope) }}
+                {{
+                  formatMedicalOrderExecutionScope(scope?.row?.executionScope)
+                }}
               </template>
             </ElTableColumn>
             <ElTableColumn label="状态" width="90">
@@ -468,16 +493,43 @@ onMounted(loadData);
     >
       <ElForm label-width="96px">
         <ElFormItem label="所属分类">
-          <ElInput v-model="itemForm.categoryId" disabled />
+          <ElInput
+            :model-value="formatMedicalOrderCategoryName(itemForm.categoryId)"
+            disabled
+          />
         </ElFormItem>
         <ElFormItem label="条目名称" required>
           <ElInput v-model="itemForm.orderItemName" />
         </ElFormItem>
         <ElFormItem label="医嘱类型">
-          <ElInput v-model="itemForm.orderType" />
+          <ElSelect
+            v-model="itemForm.orderType"
+            clearable
+            placeholder="请选择医嘱类型"
+            style="width: 100%"
+          >
+            <ElOption
+              v-for="option in MEDICAL_ORDER_TYPE_OPTIONS"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            />
+          </ElSelect>
         </ElFormItem>
         <ElFormItem label="执行范围">
-          <ElInput v-model="itemForm.executionScope" />
+          <ElSelect
+            v-model="itemForm.executionScope"
+            clearable
+            placeholder="请选择执行范围"
+            style="width: 100%"
+          >
+            <ElOption
+              v-for="option in MEDICAL_ORDER_EXECUTION_SCOPE_OPTIONS"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            />
+          </ElSelect>
         </ElFormItem>
         <ElFormItem label="默认内容">
           <ElInput v-model="itemForm.defaultContent" type="textarea" />

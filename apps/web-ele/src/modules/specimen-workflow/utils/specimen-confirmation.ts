@@ -10,10 +10,12 @@ export type CachedApplicationContext = {
 };
 
 export type ConfirmationListRow = SpecimenManagementListItem & {
+  actionDisabledReason: null | string;
   inpatientNo: string;
   patientGenderLabel: string;
   registrationOperatorName: string;
   registrationTime: null | string;
+  sceneMatched: boolean;
   surgeryName: string;
 };
 
@@ -61,16 +63,41 @@ export function isReceiptLocked(row: SpecimenManagementListItem) {
 }
 
 export function isVisibleInConfirmationScene(row: SpecimenManagementListItem) {
-  return (
-    row.fixationStatus === 'COMPLETED' &&
-    row.verificationStatus === 'VERIFIED' &&
-    row.checkInStatus !== 'CHECKED_IN' &&
-    !isReceiptLocked(row)
-  );
+  return resolveConfirmationSceneMismatchReason(row) === null;
+}
+
+export function resolveConfirmationSceneMismatchReason(
+  row: SpecimenManagementListItem,
+) {
+  if (normalizeText(row.fixationStatus) === 'COMPLETED') {
+    if (normalizeText(row.verificationStatus) === 'VERIFIED') {
+      if (normalizeText(row.checkInStatus) === 'CHECKED_IN') {
+        return '标本已完成入库，无需重复确认';
+      }
+
+      return isReceiptLocked(row)
+        ? '标本已接收、拒收或退回，不能进行标本确认'
+        : null;
+    }
+
+    return '标本尚未完成核对，不能进行标本确认';
+  }
+
+  return '标本尚未完成固定，不能进行标本确认';
 }
 
 export function canConfirm(row: ConfirmationListRow) {
-  return !row.specimenConfirmedAt;
+  return resolveConfirmActionDisabledReason(row) === null;
+}
+
+export function resolveConfirmActionDisabledReason(
+  row: ConfirmationListRow | SpecimenManagementListItem,
+) {
+  if (row.specimenConfirmedAt) {
+    return '标本已确认';
+  }
+
+  return resolveConfirmationSceneMismatchReason(row);
 }
 
 export function canRetryLabel(row: ConfirmationListRow) {
@@ -98,28 +125,15 @@ export function resolveUnavailableMessage(
 ) {
   const exactMatches = resolveExactMatches(items, keyword);
   const targetItems = exactMatches.length > 0 ? exactMatches : items;
+  const mismatchItem = targetItems.find((item) =>
+    resolveConfirmationSceneMismatchReason(item),
+  );
 
-  if (
-    targetItems.some(
-      (item) => normalizeText(item.fixationStatus) !== 'COMPLETED',
-    )
-  ) {
-    return '标本尚未完成固定，不能进行标本确认';
-  }
-  if (
-    targetItems.some(
-      (item) => normalizeText(item.verificationStatus) !== 'VERIFIED',
-    )
-  ) {
-    return '标本尚未完成核对，不能进行标本确认';
-  }
-  if (
-    targetItems.some((item) => normalizeText(item.checkInStatus) === 'CHECKED_IN')
-  ) {
-    return '标本已完成入库，无需重复确认';
-  }
-  if (targetItems.some((item) => isReceiptLocked(item))) {
-    return '标本已接收、拒收或退回，不能进行标本确认';
+  if (mismatchItem) {
+    return (
+      resolveConfirmationSceneMismatchReason(mismatchItem) ??
+      '未找到可确认的标本'
+    );
   }
 
   return '未找到可确认的标本';
@@ -131,8 +145,10 @@ export function enhanceRow(
   workbenchRecord: ApplicationRegistrationWorkbenchRecord | null,
   roomNameById: ReadonlyMap<string, string> = new Map(),
 ): ConfirmationListRow {
+  const sceneMismatchReason = resolveConfirmationSceneMismatchReason(row);
   return {
     ...row,
+    actionDisabledReason: resolveConfirmActionDisabledReason(row),
     inpatientNo: formatValue(workbenchRecord?.patientInfo.inpatientNo),
     patientGenderLabel: normalizeGenderLabel(
       applicationContext?.patientGender ?? workbenchRecord?.patientInfo.gender,
@@ -143,6 +159,7 @@ export function enhanceRow(
       formatValue(workbenchRecord?.surgeryInfo.fixationPerson),
     registrationTime:
       row.registeredAt ?? workbenchRecord?.surgeryInfo.fixationTime ?? null,
+    sceneMatched: sceneMismatchReason === null,
     surgeryName: resolveOperatingRoomDisplayName(
       roomNameById,
       workbenchRecord?.surgeryInfo.roomId,
@@ -204,9 +221,7 @@ export function buildExportHeaders() {
   ];
 }
 
-export function buildExportRows(
-  rows: ConfirmationListRow[],
-) {
+export function buildExportRows(rows: ConfirmationListRow[]) {
   return rows.map((row, index) => [
     String(index + 1),
     row.applicationNo,

@@ -18,12 +18,12 @@ import {
   ElMessage,
 } from 'element-plus';
 
+import { reportInlineErrorDisabled } from '#/utils/error-feedback';
+
 import {
   completeDehydrationBatch,
   startDehydrationBatch,
 } from '../api/technical-workflow-service';
-import { reportInlineErrorDisabled } from '#/utils/error-feedback';
-
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import { formatBatchStatus } from '../utils/format';
 import {
@@ -180,7 +180,6 @@ watch(
     @closed="resetDialogState"
   >
     <div class="flex flex-col gap-4">
-
       <ElForm label-width="96px">
         <TechnicalOperatorFields
           :form="operatorForm"

@@ -11,7 +11,7 @@ import {
 
 type ReceiptResult = {
   caseId: string;
-  pathologyNo: string;
+  pathologyNo: null | string;
   receiptStatus: string;
   unreceivedCount: number;
 };

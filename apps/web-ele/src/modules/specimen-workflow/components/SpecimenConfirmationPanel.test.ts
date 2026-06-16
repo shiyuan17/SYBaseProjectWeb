@@ -15,6 +15,7 @@ import {
 const { rowContextKey } = vi.hoisted(() => ({
   rowContextKey: Symbol('row-context'),
 }));
+const pageErrorTextMock = { value: '' };
 
 const mockHandleClearList = vi.fn();
 const mockHandleClearSelectionRows = vi.fn();
@@ -29,6 +30,8 @@ const mockHandleSelectionChange = vi.fn();
 const mockSubmitRetryLabel = vi.fn();
 const mockTryQuickConfirmByKeyword = vi.fn();
 const mockCanConfirm = vi.fn(() => true);
+const mockIsConfirmationUnsaved = vi.fn(() => false);
+const mockResolveConfirmationStatus = vi.fn(() => '标本确认');
 
 vi.mock('element-plus', () => ({
   ElAlert: createPassthroughStub(),
@@ -106,12 +109,14 @@ vi.mock('../composables/useSpecimenConfirmationPanel', () => ({
       handleSelectionChange: mockHandleSelectionChange,
       loading: ref(false),
       operatorForm,
-      pageError: ref(''),
+      pageError: ref(pageErrorTextMock.value),
       pagedItems: ref([row]),
+      isConfirmationUnsaved: mockIsConfirmationUnsaved,
       retryDialogVisible: ref(false),
       retryForm,
       retrySubmitting: ref(false),
       retryTargetRows: ref([row]),
+      resolveConfirmationStatus: mockResolveConfirmationStatus,
       submitRetryLabel: mockSubmitRetryLabel,
       summary: ref({
         allCount: 1,
@@ -148,6 +153,7 @@ async function flush() {
 describe('SpecimenConfirmationPanel', () => {
   afterEach(() => {
     document.body.innerHTML = '';
+    pageErrorTextMock.value = '';
     vi.clearAllMocks();
   });
 
@@ -158,9 +164,12 @@ describe('SpecimenConfirmationPanel', () => {
     expect(container.textContent).toContain('标本确认');
     expect(container.textContent).toContain('Test User');
     expect(container.textContent).toContain('Actual User');
+    expect(
+      container.querySelector('.specimen-workflow-row--completed'),
+    ).not.toBeNull();
     expect(container.textContent).not.toContain('终端编号');
-    expect(container.textContent).not.toContain('清除选择行');
-    expect(container.textContent).not.toContain('清除列表');
+    expect(container.textContent).toContain('清除选择行');
+    expect(container.textContent).toContain('清除列表');
 
     const confirmButtons = [...container.querySelectorAll('button')].filter(
       (button) => button.textContent?.trim() === '标本确认',
@@ -172,6 +181,26 @@ describe('SpecimenConfirmationPanel', () => {
       expect.objectContaining({
         specimenId: 'SPEC-001',
       }),
+    );
+
+    const clearListButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('清除列表'),
+    );
+    clearListButton?.click();
+    await flush();
+
+    expect(mockHandleClearList).toHaveBeenCalledTimes(1);
+
+    app.unmount();
+  });
+
+  it('shows the translated business error when pageError exists', async () => {
+    pageErrorTextMock.value = '标本尚未完成固定，不能进行标本确认。';
+    const { app, container } = mountView();
+    await flush();
+
+    expect(container.textContent).toContain(
+      '标本尚未完成固定，不能进行标本确认。',
     );
 
     app.unmount();

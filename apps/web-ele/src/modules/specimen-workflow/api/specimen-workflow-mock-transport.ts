@@ -6,8 +6,8 @@ import type {
   SpecimenOutboundPage,
   TransportOrderCreateRequest,
   TransportOrderHandoverRequest,
-  TransportOrderOutboundRequest,
   TransportOrderOperatorRequest,
+  TransportOrderOutboundRequest,
   TransportOrderView,
 } from '../types/specimen-workflow';
 import type { RawTransportOrder } from './specimen-workflow-mock-state';
@@ -40,6 +40,32 @@ import {
 } from './specimen-workflow-mock-core';
 
 export { resetMockState };
+
+function assertSpecimenTransportReady(specimenId: string) {
+  const specimen = getMockState().specimens.find(
+    (item) => item.id === specimenId,
+  );
+  if (!specimen) {
+    throw new Error(`未找到标本: ${specimenId}`);
+  }
+  assertSpecimenNotInReceiptTerminalState(specimen, '出库');
+  if (specimen.specimenStatus === 'IN_TRANSIT') {
+    throw new Error('标本已完成出库，无需重复操作');
+  }
+  if (specimen.fixationStatus !== 'COMPLETED') {
+    throw new Error(`标本 ${specimen.specimenNo} 尚未固定完成`);
+  }
+  if (!specimen.specimenConfirmedAt) {
+    throw new Error(`标本 ${specimen.specimenNo} 尚未完成标本确认`);
+  }
+  if (
+    !isSpecimenCheckedIn(specimen) ||
+    specimen.specimenStatus !== 'CHECKED_IN'
+  ) {
+    throw new Error(`标本 ${specimen.specimenNo} 尚未完成标本入库`);
+  }
+  return specimen;
+}
 
 async function listPendingTransportOrdersMock(
   params: PendingTransportOrderQuery,
@@ -80,18 +106,43 @@ async function listPendingTransportOrdersMock(
 async function listSpecimenOutboundsMock(
   params: SpecimenOutboundListQuery,
 ): Promise<SpecimenOutboundPage> {
+  const specimenNo = normalizeText(params.specimenNo);
+  const identifier = normalizeText(params.identifier);
+  let exactSpecimenMatches = [] as ReturnType<
+    typeof resolveSpecimensBySpecimenNo
+  >;
+  if (specimenNo) {
+    exactSpecimenMatches = resolveSpecimensBySpecimenNo(specimenNo);
+  } else if (identifier) {
+    exactSpecimenMatches = getMockState().specimens.filter(
+      (item) =>
+        normalizeText(item.specimenNo) === identifier ||
+        normalizeText(item.barcode) === identifier,
+    );
+  }
+  const hasExplicitSpecimenIdentifier = Boolean(specimenNo || identifier);
+  const exactSpecimenMatchIds = new Set(
+    exactSpecimenMatches.map((item) => item.id),
+  );
+  const resolvedApplicationId =
+    normalizeText(params.applicationId) ||
+    (exactSpecimenMatches.length === 1
+      ? (exactSpecimenMatches[0]?.applicationId ?? '')
+      : '');
   const filteredItems = getMockState()
     .specimens.filter((item) => {
       const application = getApplicationById(item.applicationId);
       const order = getTransportOrderBySpecimenId(item.id);
+      const isCheckedInCandidate =
+        item.specimenStatus === 'CHECKED_IN' && isSpecimenCheckedIn(item);
 
-      return (
-        Boolean(order) &&
-        (!normalizeText(params.applicationId) ||
-          application.id === params.applicationId) &&
-        (!normalizeText(params.specimenNo) ||
-          item.specimenNo === params.specimenNo)
-      );
+      if (hasExplicitSpecimenIdentifier && exactSpecimenMatches.length !== 1) {
+        return exactSpecimenMatchIds.has(item.id);
+      }
+
+      return resolvedApplicationId
+        ? application.id === resolvedApplicationId
+        : Boolean(order) || isCheckedInCandidate;
     })
     .toSorted((left, right) => {
       const leftOrder = getTransportOrderBySpecimenId(left.id);
@@ -123,25 +174,31 @@ async function createTransportOrderMock(
 ): Promise<TransportOrderView> {
   const application = getApplicationById(data.applicationId);
   const eventTime = createTimestamp();
-  const specimenIds = data.specimenBarcodes.map((barcode) => {
-    const specimen = resolveSpecimenByIdentifier(barcode);
+  const specimenIdentifiers =
+    data.specimenIds && data.specimenIds.length > 0
+      ? data.specimenIds
+      : (data.specimenBarcodes ?? []);
+  if (specimenIdentifiers.length === 0) {
+    throw new Error('请至少选择一条标本');
+  }
+  const specimenIds = specimenIdentifiers.map((identifier) => {
+    const specimen = resolveSpecimenByIdentifier(identifier);
     assertSpecimenNotInReceiptTerminalState(specimen, '创建转运单');
     if (specimen.applicationId !== application.id) {
-      throw new Error(`标本 ${barcode} 不属于当前申请单`);
+      throw new Error(`标本 ${identifier} 不属于当前申请单`);
     }
     if (specimen.fixationStatus !== 'COMPLETED') {
-      throw new Error(`标本 ${barcode} 尚未固定完成`);
+      throw new Error(`标本 ${identifier} 尚未固定完成`);
     }
     if (!specimen.specimenConfirmedAt) {
-      throw new Error(`标本 ${barcode} 尚未完成标本确认`);
+      throw new Error(`标本 ${identifier} 尚未完成标本确认`);
     }
     if (!isSpecimenCheckedIn(specimen)) {
-      throw new Error(`标本 ${barcode} 尚未完成标本入库`);
+      throw new Error(`标本 ${identifier} 尚未完成标本入库`);
     }
     if (getActiveTransportOrderBySpecimenId(specimen.id)) {
-      throw new Error(`标本 ${barcode} 已存在转运单`);
+      throw new Error(`标本 ${identifier} 已存在转运单`);
     }
-    specimen.specimenStatus = 'IN_TRANSIT';
     specimen.latestTrackingAt = eventTime;
     return specimen.id;
   });
@@ -294,12 +351,7 @@ async function outboundTransportOrderMock(
   order.remarks = data.remarks ?? order.remarks;
   order.terminalCode = data.terminalCode ?? order.terminalCode;
   order.specimenIds.forEach((specimenId) => {
-    const specimen = getMockState().specimens.find(
-      (item) => item.id === specimenId,
-    );
-    if (!specimen) {
-      return;
-    }
+    const specimen = assertSpecimenTransportReady(specimenId);
     specimen.latestTrackingAt = eventTime;
     specimen.specimenStatus = 'IN_TRANSIT';
     appendWorkflowEvent({
@@ -328,13 +380,16 @@ async function quickOutboundSpecimenMock(
     throw new Error(`未找到标本: ${data.identifier}`);
   }
   if (specimens.length > 1) {
-    throw new Error(`标本流水号 ${data.identifier} 匹配到多条记录，无法自动出库`);
+    throw new Error(
+      `标本流水号 ${data.identifier} 匹配到多条记录，无法自动出库`,
+    );
   }
 
   const [specimen] = specimens;
   if (!specimen) {
     throw new Error(`未找到标本: ${data.identifier}`);
   }
+  assertSpecimenTransportReady(specimen.id);
 
   const activeOrder = getActiveTransportOrderBySpecimenId(specimen.id);
   if (activeOrder) {
@@ -356,7 +411,8 @@ async function quickOutboundSpecimenMock(
     receiverDepartmentId: 'DEPT_PATH',
     receiverDepartmentName: '病理科',
     remarks: data.remarks ?? null,
-    specimenBarcodes: [specimen.barcode],
+    specimenBarcodes: [],
+    specimenIds: [specimen.id],
     terminalCode: data.terminalCode ?? null,
   });
   return outboundTransportOrderMock(createdOrder.id, {
@@ -373,6 +429,6 @@ export {
   listPendingTransportOrdersMock,
   listSpecimenOutboundsMock,
   outboundTransportOrderMock,
-  quickOutboundSpecimenMock,
   printTransportOrderMock,
+  quickOutboundSpecimenMock,
 };

@@ -32,10 +32,19 @@
         margin: 0;
         color: var(--ink);
         background:
-          radial-gradient(circle at top left, rgba(15, 118, 110, 0.12), transparent 28%),
-          radial-gradient(circle at top right, rgba(37, 99, 235, 0.1), transparent 24%),
+          radial-gradient(
+            circle at top left,
+            rgba(15, 118, 110, 0.12),
+            transparent 28%
+          ),
+          radial-gradient(
+            circle at top right,
+            rgba(37, 99, 235, 0.1),
+            transparent 24%
+          ),
           linear-gradient(180deg, #edf3f9 0%, var(--bg) 42%, #f8fbfe 100%);
-        font-family: 'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', Arial, sans-serif;
+        font-family:
+          'Microsoft YaHei', 'PingFang SC', 'Noto Sans SC', Arial, sans-serif;
         line-height: 1.7;
       }
 
@@ -347,7 +356,8 @@
           <div class="eyebrow">Clinical Submission Comparison</div>
           <h1>临床送检对比分析</h1>
           <p class="lead">
-            以当前仓库 `SYBaseProjectWeb` 的临床送检工作流为主线，对比旧项目 `BlSysNew`
+            以当前仓库 `SYBaseProjectWeb` 的临床送检工作流为主线，对比旧项目
+            `BlSysNew`
             的申请管理、标本接收、检查登记与新检查登记入口，重点说明流程组织、功能覆盖、操作方式和路由入口的差异。
           </p>
           <div class="tag-row">
@@ -360,7 +370,9 @@
         <aside class="hero-side" aria-label="摘要">
           <div class="metric">
             <strong>4 + 4</strong>
-            <span>当前仓库 4 个主入口；旧项目 4 个可见入口（含新检查登记）。</span>
+            <span
+              >当前仓库 4 个主入口；旧项目 4 个可见入口（含新检查登记）。</span
+            >
           </div>
           <div class="metric">
             <strong>页签 / 抽屉</strong>
@@ -378,15 +390,24 @@
         <div class="grid grid-3">
           <div class="card">
             <h3>SYBaseProjectWeb</h3>
-            <p>将临床送检收敛为 `申请与登记`、`固定与转运`、`病理接收`、`追踪与异常` 四个连续工作台，并保留兼容路由。</p>
+            <p>
+              将临床送检收敛为
+              `申请与登记`、`固定与转运`、`病理接收`、`追踪与异常`
+              四个连续工作台，并保留兼容路由。
+            </p>
           </div>
           <div class="card">
             <h3>BlSysNew</h3>
-            <p>以 `申请管理`、`标本接收`、`检查登记`、`新检查登记` 四个独立页面承载临床送检，操作更偏手工填表与本地 CRUD。</p>
+            <p>
+              以 `申请管理`、`标本接收`、`检查登记`、`新检查登记`
+              四个独立页面承载临床送检，操作更偏手工填表与本地 CRUD。
+            </p>
           </div>
           <div class="card">
             <h3>核心差异</h3>
-            <p>当前仓库强调上下文传递、追踪闭环和操作约束；旧项目强调快速录入、局部维护和即时结果回显。</p>
+            <p>
+              当前仓库强调上下文传递、追踪闭环和操作约束；旧项目强调快速录入、局部维护和即时结果回显。
+            </p>
           </div>
         </div>
       </section>
@@ -461,7 +482,9 @@
               <tr>
                 <td>固定 / 转运</td>
                 <td>独立子页签承接固定核对、条码绑定、确认、入库、转运。</td>
-                <td>没有独立固定/转运工作台，主要通过登记页里的固定情况字段承接。</td>
+                <td>
+                  没有独立固定/转运工作台，主要通过登记页里的固定情况字段承接。
+                </td>
                 <td>这是最明显的流程差异点。</td>
               </tr>
               <tr>
@@ -494,7 +517,9 @@
             <h3>SYBaseProjectWeb</h3>
             <ul>
               <li>以工作台、页签、抽屉、结果面板组织流程。</li>
-              <li>通过路由 query 传递 `applicationId`、`barcode`、`tab` 等上下文。</li>
+              <li>
+                通过路由 query 传递 `applicationId`、`barcode`、`tab` 等上下文。
+              </li>
               <li>按钮和入口按权限码显隐，保留隐藏兼容路由。</li>
               <li>更强调“先定位上下文，再做动作”。</li>
             </ul>
@@ -530,23 +555,34 @@
             <tbody>
               <tr>
                 <td><code>/workflow/submission-registration</code></td>
-                <td><code>/register/apply</code> + <code>/register/record</code> + <code>/register/new-record</code></td>
-                <td>当前仓库把申请和登记合并成工作台；旧项目保留多个独立入口。</td>
+                <td>
+                  <code>/register/apply</code> + <code>/register/record</code> +
+                  <code>/register/new-record</code>
+                </td>
+                <td>
+                  当前仓库把申请和登记合并成工作台；旧项目保留多个独立入口。
+                </td>
               </tr>
               <tr>
                 <td><code>/workflow/fixation-transport</code></td>
                 <td>无对应独立页面</td>
-                <td>当前仓库新增了完整的固定/转运承接；旧项目只在登记页保留固定情况字段。</td>
+                <td>
+                  当前仓库新增了完整的固定/转运承接；旧项目只在登记页保留固定情况字段。
+                </td>
               </tr>
               <tr>
                 <td><code>/workflow/pathology-receipt</code></td>
                 <td><code>/register/receive</code></td>
-                <td>两边都存在接收能力，但当前仓库更强调分组接收与直收分流。</td>
+                <td>
+                  两边都存在接收能力，但当前仓库更强调分组接收与直收分流。
+                </td>
               </tr>
               <tr>
                 <td><code>/workflow/tracking-exception</code></td>
                 <td>无对应独立页面</td>
-                <td>当前仓库把追踪与异常独立出来，旧项目主要靠列表和详情承接。</td>
+                <td>
+                  当前仓库把追踪与异常独立出来，旧项目主要靠列表和详情承接。
+                </td>
               </tr>
               <tr>
                 <td>兼容路由</td>
@@ -563,26 +599,35 @@
         <div class="grid grid-3">
           <div class="card">
             <h3>当前仓库优势</h3>
-            <p>流程更完整，入口更统一，适合做临床送检主链路的标准化和追踪闭环。</p>
+            <p>
+              流程更完整，入口更统一，适合做临床送检主链路的标准化和追踪闭环。
+            </p>
           </div>
           <div class="card">
             <h3>旧项目特点</h3>
-            <p>页面更直接，上手快，适合作为轻量录入系统，但流程约束和追踪能力较弱。</p>
+            <p>
+              页面更直接，上手快，适合作为轻量录入系统，但流程约束和追踪能力较弱。
+            </p>
           </div>
           <div class="card">
             <h3>建议</h3>
-            <p>若要迁移或对齐，优先保留旧系统的直观录入优势，同时补齐当前仓库的固定、转运、追踪闭环。</p>
+            <p>
+              若要迁移或对齐，优先保留旧系统的直观录入优势，同时补齐当前仓库的固定、转运、追踪闭环。
+            </p>
           </div>
         </div>
 
         <div class="note">
           <strong>源文件依据</strong>
-          当前仓库主要参考 `apps/web-ele/src/modules/specimen-workflow/*` 与 `docs/M1_M2_WORKFLOW_IMPLEMENTATION_PLAN.md`；
-          旧项目主要参考 `src/router.js`、`src/views/register/*` 与 `docs/FEATURE_LIST.md`。
+          当前仓库主要参考 `apps/web-ele/src/modules/specimen-workflow/*` 与
+          `docs/M1_M2_WORKFLOW_IMPLEMENTATION_PLAN.md`； 旧项目主要参考
+          `src/router.js`、`src/views/register/*` 与 `docs/FEATURE_LIST.md`。
         </div>
       </section>
 
-      <p class="footer">本文件为对比分析文档，不修改任何业务接口、权限、路由或数据库。</p>
+      <p class="footer">
+        本文件为对比分析文档，不修改任何业务接口、权限、路由或数据库。
+      </p>
     </main>
   </body>
 </html>

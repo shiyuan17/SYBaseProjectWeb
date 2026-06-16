@@ -15,12 +15,8 @@ describe('doctor workflow workbench form helpers', () => {
       remarks: '',
       terminalCode: '',
     });
-    expect(
-      createMedicalOrderDefaults('CASE-1', 'Alice', 'USER-1', 'TERM-1'),
-    ).toEqual({
+    expect(createMedicalOrderDefaults('CASE-1', 'TERM-1')).toEqual({
       caseId: 'CASE-1',
-      operatorName: 'Alice',
-      operatorUserId: 'USER-1',
       orderContent: '',
       orderType: '',
       remarks: '',
@@ -29,7 +25,7 @@ describe('doctor workflow workbench form helpers', () => {
   });
 
   it('validates required medical order fields in submit order', () => {
-    const form = createMedicalOrderDefaults('', 'Alice');
+    const form = createMedicalOrderDefaults('');
 
     expect(validateMedicalOrderForm(form)).toBe('缺少病例 ID');
 
@@ -44,12 +40,7 @@ describe('doctor workflow workbench form helpers', () => {
   });
 
   it('builds trimmed create and cancel request payloads', () => {
-    const form = createMedicalOrderDefaults(
-      ' CASE-1 ',
-      ' Alice ',
-      ' USER-1 ',
-      ' ',
-    );
+    const form = createMedicalOrderDefaults(' CASE-1 ', ' ');
     Object.assign(form, {
       orderContent: ' Special stain ',
       orderType: 'SPECIAL_STAIN',
@@ -58,8 +49,6 @@ describe('doctor workflow workbench form helpers', () => {
 
     expect(buildCreateMedicalOrderRequest(form)).toEqual({
       caseId: 'CASE-1',
-      operatorName: 'Alice',
-      operatorUserId: 'USER-1',
       orderContent: 'Special stain',
       orderType: 'SPECIAL_STAIN',
       remarks: 'Please process',
@@ -67,14 +56,10 @@ describe('doctor workflow workbench form helpers', () => {
     });
     expect(
       buildCancelMedicalOrderRequest({
-        operatorName: ' Alice ',
-        operatorUserId: '',
         remarks: ' From workbench ',
         terminalCode: ' TERM-1 ',
       }),
     ).toEqual({
-      operatorName: 'Alice',
-      operatorUserId: undefined,
       remarks: 'From workbench',
       terminalCode: 'TERM-1',
     });

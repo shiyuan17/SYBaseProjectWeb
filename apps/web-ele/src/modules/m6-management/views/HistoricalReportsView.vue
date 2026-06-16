@@ -174,6 +174,7 @@ onMounted(() => {
 
 <template>
   <Page
+    :show-header="false"
     title="历史报告"
     description="发起历史报告导入任务，并查询导入作业与历史报告结果。"
   >

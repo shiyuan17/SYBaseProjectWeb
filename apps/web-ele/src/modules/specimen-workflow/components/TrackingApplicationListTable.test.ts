@@ -33,11 +33,12 @@ function createItem(
     applicationType: 'ROUTINE',
     createdAt: '2026-05-22T08:00:00',
     deletable: false,
-    currentNode: 'SPECIMEN_COLLECTION',
+    currentNode: 'DIAGNOSIS_ASSIGN',
     editable: false,
     id: 'APP-001',
     latestLabelPrintStatus: 'SUCCESS',
     operationDisabledReason: null,
+    pathologyNo: 'BL202606080001',
     patientAge: '42',
     patientGender: 'F',
     patientName: '张三',
@@ -94,6 +95,9 @@ describe('TrackingApplicationListTable', () => {
 
     expect(wrapper.container.textContent).toContain('APP-001');
     expect(wrapper.container.textContent).toContain('AP-001');
+    expect(wrapper.container.textContent).toContain('BL202606080001');
+    expect(wrapper.container.textContent).toContain('诊断分配');
+    expect(wrapper.container.textContent).not.toContain('DIAGNOSIS_ASSIGN');
     expect(wrapper.container.textContent).toContain('详情');
 
     wrapper.unmount();

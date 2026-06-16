@@ -244,13 +244,15 @@ describe('useSpecimenManagementVerify', () => {
     }
 
     state.verifyForm.specimenBarcode = ' ';
+    state.verifyForm.specimenId = ' ';
+    state.verifyForm.specimenNo = ' ';
     await state.submitVerify();
 
     state.verifyForm.specimenBarcode = 'BC-001';
     state.verifyForm.operatorName = ' ';
     await state.submitVerify();
 
-    expect(messageWarningMock).toHaveBeenNthCalledWith(1, '缺少标本条码');
+    expect(messageWarningMock).toHaveBeenNthCalledWith(1, '缺少标本标识');
     expect(messageWarningMock).toHaveBeenNthCalledWith(2, '请选择核验人');
     expect(mockStartFixation).not.toHaveBeenCalled();
     expect(mockCompleteFixation).not.toHaveBeenCalled();
@@ -289,9 +291,11 @@ describe('useSpecimenManagementVerify', () => {
       fixationLiquidType: 'FORMALIN',
       remarks: '需要立即处理',
       specimenBarcode: 'BC-001',
+      specimenId: 'SPEC-1',
+      specimenNo: 'SP-001',
       terminalCode: 'TERM-01',
     });
-    expect(messageSuccessMock).toHaveBeenCalledWith('条码 BC-001 已开始核验');
+    expect(messageSuccessMock).toHaveBeenCalledWith('标本 BC-001 已开始核验');
     expect(wrapper.loadSpecimens).toHaveBeenCalledTimes(1);
     expect(mockGetApplicationDetail).toHaveBeenCalledTimes(2);
     expect(wrapper.detailRow.value).toEqual(

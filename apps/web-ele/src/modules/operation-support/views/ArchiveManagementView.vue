@@ -1,21 +1,21 @@
 <script setup lang="ts">
+import type { ArchiveObjectType } from '../types/operation-support';
+
+import { computed, ref, unref, watch } from 'vue';
+
 import { Fallback, Page } from '@vben/common-ui';
 
-import { ElAlert, ElButton, ElTable, ElTableColumn, ElTag } from 'element-plus';
+import { ElButton, ElTabPane, ElTabs } from 'element-plus';
 
+import ApplicationFormArchiveDialog from '../components/ApplicationFormArchiveDialog.vue';
 import ArchiveCabinetDialog from '../components/ArchiveCabinetDialog.vue';
-import ArchiveLoanWorkbenchPanel from '../components/ArchiveLoanWorkbenchPanel.vue';
-import ArchivePositionWorkbenchPanel from '../components/ArchivePositionWorkbenchPanel.vue';
-import ArchiveRecordQueryPanel from '../components/ArchiveRecordQueryPanel.vue';
-import ArchiveReturnDialog from '../components/ArchiveReturnDialog.vue';
-import ArchiveSubmissionPanel from '../components/ArchiveSubmissionPanel.vue';
-import OperationSectionCard from '../components/OperationSectionCard.vue';
+import ArchiveCabinetTreePanel from '../components/ArchiveCabinetTreePanel.vue';
+import ArchiveLoanBorrowDialog from '../components/ArchiveLoanBorrowDialog.vue';
+import ArchiveRecordLegacyListPanel from '../components/ArchiveRecordLegacyListPanel.vue';
+import ArchiveSubmissionDialog from '../components/ArchiveSubmissionDialog.vue';
+import BatchArchiveCabinetDialog from '../components/BatchArchiveCabinetDialog.vue';
+import PhysicalArchiveDialog from '../components/PhysicalArchiveDialog.vue';
 import { useArchiveManagementPage } from '../composables/useArchiveManagementPage';
-import {
-  formatArchiveCabinetStatus,
-  formatArchiveCabinetType,
-  formatNullable,
-} from '../utils/format';
 
 const {
   archiveWorkspace,
@@ -26,6 +26,42 @@ const {
   pageState,
   recordWorkspace,
 } = useArchiveManagementPage();
+
+const activeArchiveTab = ref<'CABINET' | ArchiveObjectType>('APPLICATION_FORM');
+const archiveObjectTabs = new Set<ArchiveObjectType>([
+  'APPLICATION_FORM',
+  'EMBEDDING_BOX',
+  'SLIDE',
+  'SPECIMEN',
+]);
+const activePhysicalArchiveObjectType = computed<ArchiveObjectType>(() =>
+  unref(recordWorkspace.activeObjectType),
+);
+const selectedPhysicalArchiveRecords = computed(
+  () =>
+    recordWorkspace.selectedRecordsByType[
+      activePhysicalArchiveObjectType.value
+    ],
+);
+
+function isArchiveObjectType(
+  objectType: 'CABINET' | ArchiveObjectType,
+): objectType is ArchiveObjectType {
+  return archiveObjectTabs.has(objectType as ArchiveObjectType);
+}
+
+watch(
+  activeArchiveTab,
+  (objectType) => {
+    if (isArchiveObjectType(objectType)) {
+      archiveWorkspace.archiveForm.objectType = objectType;
+      void recordWorkspace.setActiveArchiveObjectType(objectType, {
+        loadIfNeeded: true,
+      });
+    }
+  },
+  { immediate: true },
+);
 </script>
 
 <template>
@@ -36,222 +72,280 @@ const {
     <Fallback status="403" />
   </div>
 
-  <Page
-    v-else
-    title="归档管理"
-    description="统一处理申请单、蜡块、玻片归档，以及借出、待归还和归还工作站。"
-  >
-    <div class="flex flex-col gap-4">
-      <ElAlert :closable="false" title="医生工作台状态回流" type="info">
-        <template #default>
-          申请单归档后，医生工作台会通过既有接口回流
-          `applicationFormArchiveStatus`、`applicationFormArchiveLocation` 与
-          `applicationFormImageUrl`； 蜡块、玻片借出与归还后，医生工作台中的
-          `archiveStatus`、`archiveLocation` 与 `loanStatus`
-          会随着后端聚合结果刷新。
-        </template>
-      </ElAlert>
-
-      <ElAlert
-        :closable="false"
-        title="柜位编码规则：${cabinetCode}-L${layerNo}-S${slotNo}"
-        type="info"
+  <Page v-else :show-header="false">
+    <div
+      class="archive-management-page flex min-h-0 flex-1 flex-col overflow-hidden"
+    >
+      <ElTabs
+        v-model="activeArchiveTab"
+        class="operation-support-tabs archive-management-tabs flex min-h-0 flex-1 flex-col"
       >
-        <template #default>
-          柜位查询会展示完整柜位视图：可用柜位可直接选择，未返回的活动柜位视为“已占用”，停用归档柜下的柜位统一标记为“已停用”。
-        </template>
-      </ElAlert>
-
-      <OperationSectionCard
-        title="归档柜工作站"
-        description="查看、创建、编辑归档柜，并执行启用或停用。"
-      >
-        <template #extra>
-          <ElButton
-            :disabled="!capabilities.canCreateCabinet"
-            :title="
-              capabilities.canCreateCabinet
-                ? undefined
-                : '当前账号缺少归档柜新增权限'
-            "
-            type="primary"
-            @click="cabinetWorkspace.openCreateCabinetDialog"
+        <ElTabPane label="申请单归档" name="APPLICATION_FORM">
+          <div
+            class="archive-management-tab-panel flex min-h-0 flex-1 flex-col"
           >
-            新增归档柜
-          </ElButton>
-        </template>
+            <ArchiveRecordLegacyListPanel
+              v-model:archive-object-filters="
+                recordWorkspace.objectLists.APPLICATION_FORM.filters
+              "
+              :can-query-records="capabilities.canQueryRecords"
+              :get-archive-status-tag-type="display.getArchiveStatusTagType"
+              :get-loan-status-tag-type="display.getLoanStatusTagType"
+              :loading="recordWorkspace.objectLists.APPLICATION_FORM.loading"
+              object-type="APPLICATION_FORM"
+              :page="recordWorkspace.objectLists.APPLICATION_FORM.filters.page"
+              :record-error="recordWorkspace.objectLists.APPLICATION_FORM.error"
+              :records="recordWorkspace.objectLists.APPLICATION_FORM.items"
+              selectable
+              :size="recordWorkspace.objectLists.APPLICATION_FORM.filters.size"
+              :total="recordWorkspace.objectLists.APPLICATION_FORM.total"
+              @page-change="
+                (page) =>
+                  recordWorkspace.setArchiveObjectPage('APPLICATION_FORM', page)
+              "
+              @query="recordWorkspace.queryArchiveObjects('APPLICATION_FORM')"
+              @selection-change="
+                recordWorkspace.setSelectedApplicationFormRecords
+              "
+              @size-change="
+                (size) =>
+                  recordWorkspace.setArchiveObjectSize('APPLICATION_FORM', size)
+              "
+            >
+              <template #extra>
+                <ElButton
+                  :disabled="
+                    !capabilities.canArchiveApplicationForm ||
+                    recordWorkspace.selectedApplicationFormRecords.length === 0
+                  "
+                  type="primary"
+                  @click="
+                    archiveWorkspace.openArchiveDialog('APPLICATION_FORM')
+                  "
+                >
+                  归档操作
+                </ElButton>
+              </template>
+            </ArchiveRecordLegacyListPanel>
+          </div>
+        </ElTabPane>
 
-        <ElAlert
-          v-if="!capabilities.canQueryCabinets"
-          :closable="false"
-          type="warning"
-        >
-          <template #title>
-            当前账号缺少归档柜查询权限，无法查看归档柜与柜位工作站。
-          </template>
-        </ElAlert>
-
-        <template v-else>
-          <ElAlert
-            v-if="cabinetWorkspace.cabinetError"
-            :closable="false"
-            class="mb-4"
-            :title="cabinetWorkspace.cabinetError"
-            show-icon
-            type="error"
-          />
-
-          <ElAlert
-            v-if="
-              !capabilities.canCreateCabinet || !capabilities.canUpdateCabinet
-            "
-            :closable="false"
-            class="mb-4"
-            type="warning"
+        <ElTabPane label="蜡块归档" name="EMBEDDING_BOX">
+          <div
+            class="archive-management-tab-panel flex min-h-0 flex-1 flex-col"
           >
-            <template #title>
-              当前账号具备归档柜查询权限，但部分维护能力受限。
-            </template>
-            <template #default>
-              <span v-if="!capabilities.canCreateCabinet"
-                >未授权新增归档柜。</span
-              >
-              <span
-                v-if="
-                  !capabilities.canCreateCabinet &&
-                  !capabilities.canUpdateCabinet
-                "
-              >
-              </span>
-              <span v-if="!capabilities.canUpdateCabinet"
-                >未授权更新或启停归档柜。</span
-              >
-            </template>
-          </ElAlert>
+            <ArchiveRecordLegacyListPanel
+              v-model:archive-object-filters="
+                recordWorkspace.objectLists.EMBEDDING_BOX.filters
+              "
+              :can-query-records="capabilities.canQueryRecords"
+              :get-archive-status-tag-type="display.getArchiveStatusTagType"
+              :get-loan-status-tag-type="display.getLoanStatusTagType"
+              :loading="recordWorkspace.objectLists.EMBEDDING_BOX.loading"
+              object-type="EMBEDDING_BOX"
+              :page="recordWorkspace.objectLists.EMBEDDING_BOX.filters.page"
+              :record-error="recordWorkspace.objectLists.EMBEDDING_BOX.error"
+              :records="recordWorkspace.objectLists.EMBEDDING_BOX.items"
+              selectable
+              :size="recordWorkspace.objectLists.EMBEDDING_BOX.filters.size"
+              :total="recordWorkspace.objectLists.EMBEDDING_BOX.total"
+              @page-change="
+                (page) =>
+                  recordWorkspace.setArchiveObjectPage('EMBEDDING_BOX', page)
+              "
+              @query="recordWorkspace.queryArchiveObjects('EMBEDDING_BOX')"
+              @selection-change="
+                (records) =>
+                  recordWorkspace.setSelectedArchiveObjectRecords(
+                    'EMBEDDING_BOX',
+                    records,
+                  )
+              "
+              @size-change="
+                (size) =>
+                  recordWorkspace.setArchiveObjectSize('EMBEDDING_BOX', size)
+              "
+            >
+              <template #extra>
+                <ElButton
+                  :disabled="
+                    !capabilities.canArchiveEmbeddingBox ||
+                    recordWorkspace.selectedEmbeddingBoxRecords.length === 0
+                  "
+                  type="primary"
+                  @click="archiveWorkspace.openArchiveDialog('EMBEDDING_BOX')"
+                >
+                  归档操作
+                </ElButton>
+                <ElButton
+                  :disabled="
+                    !capabilities.canCreateLoan ||
+                    recordWorkspace.selectedEmbeddingBoxRecords.length === 0
+                  "
+                  @click="
+                    loanWorkspace.openBorrowDialogForRecordsWithMode(
+                      'EMBEDDING_BOX',
+                      recordWorkspace.selectedEmbeddingBoxRecords,
+                      'GENERIC',
+                    )
+                  "
+                >
+                  借记
+                </ElButton>
+              </template>
+            </ArchiveRecordLegacyListPanel>
+          </div>
+        </ElTabPane>
 
-          <ElTable
-            v-loading="cabinetWorkspace.loading.cabinets"
-            :data="cabinetWorkspace.cabinets"
-            border
+        <ElTabPane label="玻片归档" name="SLIDE">
+          <div
+            class="archive-management-tab-panel flex min-h-0 flex-1 flex-col"
           >
-            <ElTableColumn
-              label="归档柜编号"
-              min-width="150"
-              prop="cabinetCode"
+            <ArchiveRecordLegacyListPanel
+              v-model:archive-object-filters="
+                recordWorkspace.objectLists.SLIDE.filters
+              "
+              :can-query-records="capabilities.canQueryRecords"
+              :get-archive-status-tag-type="display.getArchiveStatusTagType"
+              :get-loan-status-tag-type="display.getLoanStatusTagType"
+              :loading="recordWorkspace.objectLists.SLIDE.loading"
+              object-type="SLIDE"
+              :page="recordWorkspace.objectLists.SLIDE.filters.page"
+              :record-error="recordWorkspace.objectLists.SLIDE.error"
+              :records="recordWorkspace.objectLists.SLIDE.items"
+              selectable
+              :size="recordWorkspace.objectLists.SLIDE.filters.size"
+              :total="recordWorkspace.objectLists.SLIDE.total"
+              @page-change="
+                (page) => recordWorkspace.setArchiveObjectPage('SLIDE', page)
+              "
+              @query="recordWorkspace.queryArchiveObjects('SLIDE')"
+              @selection-change="
+                (records) =>
+                  recordWorkspace.setSelectedArchiveObjectRecords(
+                    'SLIDE',
+                    records,
+                  )
+              "
+              @size-change="
+                (size) => recordWorkspace.setArchiveObjectSize('SLIDE', size)
+              "
+            >
+              <template #extra>
+                <ElButton
+                  :disabled="
+                    !capabilities.canArchiveSlide ||
+                    recordWorkspace.selectedSlideRecords.length === 0
+                  "
+                  type="primary"
+                  @click="archiveWorkspace.openArchiveDialog('SLIDE')"
+                >
+                  归档操作
+                </ElButton>
+                <ElButton
+                  :disabled="
+                    !capabilities.canCreateLoan ||
+                    recordWorkspace.selectedSlideRecords.length === 0
+                  "
+                  @click="
+                    loanWorkspace.openBorrowDialogForRecordsWithMode(
+                      'SLIDE',
+                      recordWorkspace.selectedSlideRecords,
+                      'GENERIC',
+                    )
+                  "
+                >
+                  借记
+                </ElButton>
+              </template>
+            </ArchiveRecordLegacyListPanel>
+          </div>
+        </ElTabPane>
+
+        <ElTabPane label="标本归档" name="SPECIMEN">
+          <div
+            class="archive-management-tab-panel flex min-h-0 flex-1 flex-col"
+          >
+            <ArchiveRecordLegacyListPanel
+              v-model:archive-object-filters="
+                recordWorkspace.objectLists.SPECIMEN.filters
+              "
+              :can-query-records="capabilities.canQueryRecords"
+              :get-archive-status-tag-type="display.getArchiveStatusTagType"
+              :get-loan-status-tag-type="display.getLoanStatusTagType"
+              :loading="recordWorkspace.objectLists.SPECIMEN.loading"
+              object-type="SPECIMEN"
+              :page="recordWorkspace.objectLists.SPECIMEN.filters.page"
+              :record-error="recordWorkspace.objectLists.SPECIMEN.error"
+              :records="recordWorkspace.objectLists.SPECIMEN.items"
+              selectable
+              :size="recordWorkspace.objectLists.SPECIMEN.filters.size"
+              :total="recordWorkspace.objectLists.SPECIMEN.total"
+              @page-change="
+                (page) => recordWorkspace.setArchiveObjectPage('SPECIMEN', page)
+              "
+              @query="recordWorkspace.queryArchiveObjects('SPECIMEN')"
+              @selection-change="
+                (records) =>
+                  recordWorkspace.setSelectedArchiveObjectRecords(
+                    'SPECIMEN',
+                    records,
+                  )
+              "
+              @size-change="
+                (size) => recordWorkspace.setArchiveObjectSize('SPECIMEN', size)
+              "
+            >
+              <template #extra>
+                <ElButton
+                  :disabled="
+                    !capabilities.canArchiveSpecimen ||
+                    recordWorkspace.selectedSpecimenRecords.length === 0
+                  "
+                  type="primary"
+                  @click="archiveWorkspace.openArchiveDialog('SPECIMEN')"
+                >
+                  归档操作
+                </ElButton>
+              </template>
+            </ArchiveRecordLegacyListPanel>
+          </div>
+        </ElTabPane>
+
+        <ElTabPane label="归档柜列表" name="CABINET">
+          <div
+            class="archive-management-tab-panel flex min-h-0 flex-1 flex-col"
+          >
+            <ArchiveCabinetTreePanel
+              :cabinet-nodes="cabinetWorkspace.cabinetNodes"
+              :cabinets="cabinetWorkspace.cabinets"
+              :can-create-cabinet="capabilities.canCreateCabinet"
+              :can-delete-cabinet="capabilities.canDeleteCabinet"
+              :can-query-cabinets="capabilities.canQueryCabinets"
+              :can-update-cabinet="capabilities.canUpdateCabinet"
+              :loading="
+                cabinetWorkspace.loading.cabinets ||
+                cabinetWorkspace.loading.cabinetNodes
+              "
+              @delete-cabinet="cabinetWorkspace.deleteCabinet"
+              @load-cabinets="cabinetWorkspace.loadCabinets"
+              @load-cabinet-nodes="cabinetWorkspace.loadCabinetNodes"
+              @load-positions="cabinetWorkspace.loadPositions"
+              @open-batch-create-cabinet-dialog="
+                cabinetWorkspace.openBatchCreateCabinetDialog
+              "
+              @open-create-cabinet-dialog="
+                cabinetWorkspace.openCreateCabinetDialog
+              "
+              @open-edit-cabinet-dialog="cabinetWorkspace.openEditCabinetDialog"
+              @open-edit-cabinet-node-dialog="
+                cabinetWorkspace.openEditCabinetNodeDialog
+              "
+              @toggle-cabinet-status="cabinetWorkspace.toggleCabinetStatus"
             />
-            <ElTableColumn
-              label="归档柜名称"
-              min-width="180"
-              prop="cabinetName"
-            />
-            <ElTableColumn label="柜体类型" min-width="120">
-              <template #default="{ row }">
-                {{ formatArchiveCabinetType(row.cabinetType) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="容量" min-width="120">
-              <template #default="{ row }">
-                {{ row.layerCount }} 层 × {{ row.slotCountPerLayer }} 位 =
-                {{ row.capacity }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="状态" min-width="100">
-              <template #default="{ row }">
-                <ElTag :type="display.getCabinetStatusTagType(row.cabinetStatus)">
-                  {{ formatArchiveCabinetStatus(row.cabinetStatus) }}
-                </ElTag>
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="位置说明" min-width="180">
-              <template #default="{ row }">
-                {{ formatNullable(row.locationDescription) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="备注" min-width="180">
-              <template #default="{ row }">
-                {{ formatNullable(row.remarks) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn fixed="right" label="操作" min-width="170">
-              <template #default="{ row }">
-                <div class="flex items-center gap-2">
-                  <ElButton
-                    :disabled="!capabilities.canUpdateCabinet"
-                    link
-                    type="primary"
-                    @click="cabinetWorkspace.openEditCabinetDialog(row)"
-                  >
-                    编辑
-                  </ElButton>
-                  <ElButton
-                    :disabled="!capabilities.canUpdateCabinet"
-                    link
-                    type="primary"
-                    @click="cabinetWorkspace.toggleCabinetStatus(row)"
-                  >
-                    {{ display.getToggleCabinetActionLabel(row.cabinetStatus) }}
-                  </ElButton>
-                </div>
-              </template>
-            </ElTableColumn>
-          </ElTable>
-        </template>
-      </OperationSectionCard>
-
-      <ArchivePositionWorkbenchPanel
-        v-model:cabinet-id="cabinetWorkspace.positionFilters.cabinetId"
-        v-model:cabinet-type="cabinetWorkspace.positionFilters.cabinetType"
-        :cabinets="cabinetWorkspace.cabinets"
-        :can-query-cabinets="capabilities.canQueryCabinets"
-        :get-position-status-tag-type="display.getPositionStatusTagType"
-        :loading="cabinetWorkspace.loading.positions"
-        :position-error="cabinetWorkspace.positionError"
-        :position-rows="cabinetWorkspace.positionRows"
-        :position-summary="cabinetWorkspace.positionSummary"
-        :selected-position="cabinetWorkspace.selectedPosition"
-        :selected-position-code="cabinetWorkspace.selectedPositionCode"
-        :selected-position-label="cabinetWorkspace.selectedPositionLabel"
-        @clear-selected-position="cabinetWorkspace.clearSelectedPosition"
-        @load-positions="cabinetWorkspace.loadPositions"
-        @select-position="cabinetWorkspace.selectPosition"
-      />
-
-      <ArchiveSubmissionPanel
-        v-model:archive-form="archiveWorkspace.archiveForm"
-        :archive-permission-warning="archiveWorkspace.archivePermissionWarning"
-        :archive-submit-button-text="archiveWorkspace.archiveSubmitButtonText"
-        :can-submit-archive="archiveWorkspace.canSubmitArchive"
-        :selected-position-label="cabinetWorkspace.selectedPositionLabel"
-        :submitting="pageState.submitting"
-        @submit-archive="archiveWorkspace.submitArchive"
-      />
-
-      <ArchiveRecordQueryPanel
-        v-model:record-filters="recordWorkspace.recordFilters"
-        :can-query-records="capabilities.canQueryRecords"
-        :get-archive-status-tag-type="display.getArchiveStatusTagType"
-        :get-loan-status-tag-type="display.getLoanStatusTagType"
-        :loading="recordWorkspace.loading"
-        :record-error="recordWorkspace.recordError"
-        :records="recordWorkspace.records"
-        @load-records="recordWorkspace.loadRecords"
-      />
-
-      <ArchiveLoanWorkbenchPanel
-        v-model:loan-filters="loanWorkspace.loanFilters"
-        v-model:loan-form="loanWorkspace.loanForm"
-        :can-create-loan="capabilities.canCreateLoan"
-        :can-query-loans="capabilities.canQueryLoans"
-        :can-return-loan="capabilities.canReturnLoan"
-        :get-loan-status-tag-type="display.getLoanStatusTagType"
-        :loading="loanWorkspace.loading"
-        :loan-error="loanWorkspace.loanError"
-        :pending-loans="loanWorkspace.pendingLoans"
-        :submitting="pageState.submitting"
-        @load-loans="loanWorkspace.loadLoans"
-        @open-return-dialog="loanWorkspace.openReturnDialog"
-        @submit-loan="loanWorkspace.submitLoan"
-      />
+          </div>
+        </ElTabPane>
+      </ElTabs>
     </div>
 
     <ArchiveCabinetDialog
@@ -262,21 +356,75 @@ const {
       :cabinet-position-rule-preview="
         cabinetWorkspace.cabinetPositionRulePreview
       "
+      :cabinet-nodes="cabinetWorkspace.cabinetNodes"
       :is-editing-cabinet="cabinetWorkspace.isEditingCabinet"
       :submitting="pageState.submitting"
       @submit="cabinetWorkspace.submitCabinet"
     />
-
-    <ArchiveReturnDialog
-      v-model="loanWorkspace.returnDialogVisible"
-      v-model:return-form="loanWorkspace.returnForm"
-      :returning-loan="loanWorkspace.returningLoan"
-      :selected-position-label="cabinetWorkspace.selectedPositionLabel"
-      :selected-return-position-description="
-        loanWorkspace.selectedReturnPositionDescription
-      "
+    <BatchArchiveCabinetDialog
+      v-model="cabinetWorkspace.batchCabinetDialogVisible"
+      v-model:batch-cabinet-form="cabinetWorkspace.batchCabinetForm"
+      :cabinet-nodes="cabinetWorkspace.cabinetNodes"
       :submitting="pageState.submitting"
-      @submit="loanWorkspace.submitReturn"
+      @submit="cabinetWorkspace.submitBatchCabinets"
+    />
+    <ArchiveSubmissionDialog
+      v-model="archiveWorkspace.archiveDialogVisible"
+      v-model:archive-form="archiveWorkspace.archiveForm"
+      :archive-permission-warning="archiveWorkspace.archivePermissionWarning"
+      :archive-submit-button-text="archiveWorkspace.archiveSubmitButtonText"
+      :can-submit-archive="archiveWorkspace.canSubmitArchive"
+      :selected-position-label="cabinetWorkspace.selectedPositionLabel"
+      :submitting="pageState.submitting"
+      @submit-archive="archiveWorkspace.submitArchive"
+    />
+    <ApplicationFormArchiveDialog
+      v-model="archiveWorkspace.applicationFormDialogVisible"
+      v-model:archive-cabinet-id="archiveWorkspace.archiveForm.archiveCabinetId"
+      v-model:remarks="archiveWorkspace.archiveForm.remarks"
+      :archive-permission-warning="archiveWorkspace.archivePermissionWarning"
+      :cabinets="cabinetWorkspace.cabinets"
+      :get-archive-status-tag-type="display.getArchiveStatusTagType"
+      :selected-records="recordWorkspace.selectedApplicationFormRecords"
+      :submitting="pageState.submitting"
+      @submit-archive="archiveWorkspace.submitArchive"
+    />
+    <PhysicalArchiveDialog
+      v-model="archiveWorkspace.physicalArchiveDialogVisible"
+      v-model:archive-form="archiveWorkspace.archiveForm"
+      :archive-permission-warning="archiveWorkspace.archivePermissionWarning"
+      :cabinets="cabinetWorkspace.cabinets"
+      :get-archive-status-tag-type="display.getArchiveStatusTagType"
+      :object-type="activePhysicalArchiveObjectType"
+      :selected-records="selectedPhysicalArchiveRecords"
+      :submitting="pageState.submitting"
+      @submit-archive="archiveWorkspace.submitArchive"
+    />
+    <ArchiveLoanBorrowDialog
+      v-model="loanWorkspace.borrowDialogVisible"
+      v-model:loan-form="loanWorkspace.loanForm"
+      :material-summary="loanWorkspace.selectedMaterialSummary"
+      :selected-count="loanWorkspace.selectedMaterialRecords.length"
+      :submitting="pageState.submitting"
+      @submit="loanWorkspace.submitLoan"
     />
   </Page>
 </template>
+
+<style scoped>
+:deep(.archive-management-tabs > .el-tabs__content) {
+  flex: 1;
+  min-height: 0;
+}
+
+:deep(.archive-management-tabs > .el-tabs__content > .el-tab-pane) {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.archive-management-page {
+  height: calc(100vh - 112px);
+}
+</style>

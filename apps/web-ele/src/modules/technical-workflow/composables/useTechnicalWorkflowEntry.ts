@@ -5,9 +5,8 @@ import { computed, onMounted, ref } from 'vue';
 
 import { useAccessStore } from '@vben/stores';
 
-import { reportInlineErrorDisabled } from '#/utils/error-feedback';
-
 import { M2_PERMISSION_CODES } from '#/modules/specimen-workflow/constants';
+import { reportInlineErrorDisabled } from '#/utils/error-feedback';
 
 import {
   listPendingTechnicalSpecimenRegistrations,
@@ -148,8 +147,8 @@ export function useTechnicalWorkflowEntry() {
 
     if (!canAccessAnyM3.value) {
       return canAccessSpecimenRegistration.value
-        ? '当前账号可处理病理接收与接收后标本登记流程，可先完成登记再进入后续技术工位。'
-        : '当前账号仅开通病理接收入口，可先从接收页进入并等待后续技术权限开通。';
+        ? '当前账号可处理标本接收与接收后标本登记流程，可先完成登记再进入后续技术工位。'
+        : '当前账号仅开通标本接收入口，可先从接收页进入并等待后续技术权限开通。';
     }
 
     if (pendingSpecimenRegistrationCount.value > 0) {
@@ -184,7 +183,7 @@ export function useTechnicalWorkflowEntry() {
       pendingSpecimenRegistrationCount.value = registrationResult.total;
     } catch (error) {
       pageError.value = getWorkflowPageErrorMessage(error);
-    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
+      reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
     } finally {
       loading.value = false;
     }

@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { UserLoginLog } from '../../types/system-management';
 
-import { ElDrawer, ElPagination, ElTable, ElTableColumn } from 'element-plus';
 import { computed } from 'vue';
+
+import { ElDrawer, ElPagination, ElTable, ElTableColumn } from 'element-plus';
 
 import { formatDateTime, formatNullable } from '../../utils/format';
 
@@ -20,12 +21,27 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   reload: [];
+  'update:logPagination': [
+    value: { page: number; size: number; total: number },
+  ];
   'update:modelValue': [value: boolean];
 }>();
 
 const drawerVisible = computed({
   get: () => props.modelValue,
   set: (value: boolean) => emit('update:modelValue', value),
+});
+
+const currentPageModel = computed({
+  get: () => props.logPagination.page,
+  set: (value: number) =>
+    emit('update:logPagination', { ...props.logPagination, page: value }),
+});
+
+const pageSizeModel = computed({
+  get: () => props.logPagination.size,
+  set: (value: number) =>
+    emit('update:logPagination', { ...props.logPagination, size: value }),
 });
 </script>
 
@@ -61,8 +77,8 @@ const drawerVisible = computed({
 
     <div class="mt-4 flex justify-end">
       <ElPagination
-        v-model:current-page="logPagination.page"
-        v-model:page-size="logPagination.size"
+        v-model:current-page="currentPageModel"
+        v-model:page-size="pageSizeModel"
         :total="logPagination.total"
         background
         layout="total, prev, pager, next"

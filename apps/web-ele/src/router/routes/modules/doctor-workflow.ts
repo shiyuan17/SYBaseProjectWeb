@@ -8,6 +8,7 @@ import {
   M4_REVISION_PAGE_AUTHORITIES,
 } from '#/modules/doctor-workflow/constants';
 import { applyKeepAliveToTabRoutes } from '#/router/routes/keep-alive';
+import { withRouteComponentReloadRetry } from '#/router/routes/lazy-load';
 
 const DOCTOR_WORKFLOW_AUTHORITIES = [
   M4_PERMISSION_CODES.DIAG_TASK_QUERY,
@@ -70,12 +71,15 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/doctor-workflow/assignment',
       },
       {
-        component: () =>
-          import('#/modules/doctor-workflow/views/DiagnosisWorkbenchView.vue'),
+        component: withRouteComponentReloadRetry(
+          () =>
+            import('#/modules/doctor-workflow/views/DiagnosisWorkbenchView.vue'),
+          'DiagnosisWorkbench',
+        ),
         meta: {
           authority: [M4_PERMISSION_CODES.WORKBENCH_QUERY],
           icon: 'carbon:workspace',
-          title: '诊断工作台',
+          title: '诊断平台工作站',
         },
         name: 'DiagnosisWorkbench',
         path: '/doctor-workflow/workbench',
@@ -90,17 +94,6 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         },
         name: 'PathologyReport',
         path: '/doctor-workflow/report',
-      },
-      {
-        component: () =>
-          import('#/modules/doctor-workflow/views/FrozenReportView.vue'),
-        meta: {
-          authority: [...M4_REPORT_PAGE_AUTHORITIES],
-          icon: 'carbon:snowflake',
-          title: '冰冻快速报告',
-        },
-        name: 'FrozenReport',
-        path: '/doctor-workflow/frozen-report',
       },
       {
         component: () =>

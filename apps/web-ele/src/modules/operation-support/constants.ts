@@ -1,6 +1,7 @@
 export const M5_PERMISSION_CODES = {
   APPLICATION_FORM_ARCHIVE: 'PERM_M5_APPLICATION_FORM_ARCHIVE',
   ARCHIVE_CABINET_CREATE: 'PERM_M5_ARCHIVE_CABINET_CREATE',
+  ARCHIVE_CABINET_DELETE: 'PERM_M5_ARCHIVE_CABINET_DELETE',
   ARCHIVE_CABINET_QUERY: 'PERM_M5_ARCHIVE_CABINET_QUERY',
   ARCHIVE_CABINET_UPDATE: 'PERM_M5_ARCHIVE_CABINET_UPDATE',
   ARCHIVE_QUERY: 'PERM_M5_ARCHIVE_QUERY',
@@ -13,6 +14,7 @@ export const M5_PERMISSION_CODES = {
   LOAN_CREATE: 'PERM_M5_LOAN_CREATE',
   LOAN_QUERY: 'PERM_M5_LOAN_QUERY',
   LOAN_RETURN: 'PERM_M5_LOAN_RETURN',
+  LOAN_ABNORMAL_REGISTER: 'PERM_M5_LOAN_ABNORMAL_REGISTER',
   REAGENT_CREATE: 'PERM_M5_REAGENT_CREATE',
   REAGENT_QUERY: 'PERM_M5_REAGENT_QUERY',
   REAGENT_STOCK_QUERY: 'PERM_M5_REAGENT_STOCK_QUERY',
@@ -20,19 +22,38 @@ export const M5_PERMISSION_CODES = {
   REAGENT_UPDATE: 'PERM_M5_REAGENT_UPDATE',
   REAGENT_WARNING_QUERY: 'PERM_M5_REAGENT_WARNING_QUERY',
   SLIDE_ARCHIVE: 'PERM_M5_SLIDE_ARCHIVE',
+  SPECIMEN_ARCHIVE: 'PERM_M5_SPECIMEN_ARCHIVE',
+  WHITE_SLIDE_CREATE: 'PERM_M5_WHITE_SLIDE_CREATE',
+  WHITE_SLIDE_QUERY: 'PERM_M5_WHITE_SLIDE_QUERY',
+  WHITE_SLIDE_RETURN: 'PERM_M5_WHITE_SLIDE_RETURN',
 } as const;
 
 export const M5_ARCHIVE_PAGE_AUTHORITIES = [
   M5_PERMISSION_CODES.ARCHIVE_CABINET_QUERY,
   M5_PERMISSION_CODES.ARCHIVE_CABINET_CREATE,
   M5_PERMISSION_CODES.ARCHIVE_CABINET_UPDATE,
+  M5_PERMISSION_CODES.ARCHIVE_CABINET_DELETE,
   M5_PERMISSION_CODES.APPLICATION_FORM_ARCHIVE,
   M5_PERMISSION_CODES.EMBEDDING_BOX_ARCHIVE,
   M5_PERMISSION_CODES.SLIDE_ARCHIVE,
+  M5_PERMISSION_CODES.SPECIMEN_ARCHIVE,
+  M5_PERMISSION_CODES.ARCHIVE_QUERY,
+] as const;
+
+export const M5_BORROW_PAGE_AUTHORITIES = [
   M5_PERMISSION_CODES.ARCHIVE_QUERY,
   M5_PERMISSION_CODES.LOAN_CREATE,
   M5_PERMISSION_CODES.LOAN_RETURN,
   M5_PERMISSION_CODES.LOAN_QUERY,
+  M5_PERMISSION_CODES.LOAN_ABNORMAL_REGISTER,
+  M5_PERMISSION_CODES.WHITE_SLIDE_QUERY,
+  M5_PERMISSION_CODES.WHITE_SLIDE_CREATE,
+  M5_PERMISSION_CODES.WHITE_SLIDE_RETURN,
+] as const;
+
+export const M5_OPERATION_SUPPORT_AUTHORITIES = [
+  ...M5_ARCHIVE_PAGE_AUTHORITIES,
+  ...M5_BORROW_PAGE_AUTHORITIES,
 ] as const;
 
 export const M5_REAGENT_PAGE_AUTHORITIES = [
@@ -52,18 +73,30 @@ export const M5_EQUIPMENT_PAGE_AUTHORITIES = [
   M5_PERMISSION_CODES.EQUIPMENT_WARNING_QUERY,
 ] as const;
 
-export const M5_OPERATION_ROUTE_ITEMS = [
+export const M5_RESOURCE_PAGE_AUTHORITIES = [
+  ...M5_EQUIPMENT_PAGE_AUTHORITIES,
+  ...M5_REAGENT_PAGE_AUTHORITIES,
+] as const;
+
+export const M5_ARCHIVE_ROUTE_ITEMS = [
   {
     codes: M5_ARCHIVE_PAGE_AUTHORITIES,
     path: '/operation-support/archive',
   },
   {
-    codes: M5_REAGENT_PAGE_AUTHORITIES,
-    path: '/operation-support/reagents',
+    codes: M5_BORROW_PAGE_AUTHORITIES,
+    path: '/operation-support/borrow',
   },
+];
+
+export const M5_RESOURCE_ROUTE_ITEMS = [
   {
     codes: M5_EQUIPMENT_PAGE_AUTHORITIES,
-    path: '/operation-support/equipment',
+    path: '/operation-resources/equipment',
+  },
+  {
+    codes: M5_REAGENT_PAGE_AUTHORITIES,
+    path: '/operation-resources/reagents',
   },
 ] as const;
 
@@ -74,19 +107,36 @@ export const ARCHIVE_CABINET_STATUS_OPTIONS = [
 
 export const ARCHIVE_CABINET_TYPE_OPTIONS = [
   { label: '标准柜', value: 'STANDARD' },
-  { label: '申请单柜', value: 'APPLICATION_FORM' },
-  { label: '蜡块柜', value: 'EMBEDDING_BOX' },
-  { label: '玻片柜', value: 'SLIDE' },
+  { label: '申请单', value: 'APPLICATION_FORM' },
+  { label: '蜡块', value: 'EMBEDDING_BOX' },
+  { label: '玻片', value: 'SLIDE' },
+  { label: '标本', value: 'SPECIMEN' },
+  { label: '试管', value: 'TEST_TUBE' },
+] as const;
+
+export const ARCHIVE_CABINET_CREATE_TYPE_OPTIONS = [
+  { label: '申请单', value: 'APPLICATION_FORM' },
+  { label: '蜡块', value: 'EMBEDDING_BOX' },
+  { label: '玻片', value: 'SLIDE' },
+  { label: '标本', value: 'SPECIMEN' },
+  { label: '试管', value: 'TEST_TUBE' },
+] as const;
+
+export const ARCHIVE_CABINET_NODE_TYPE_OPTIONS = [
+  { label: '区域', value: 'AREA' },
+  { label: '柜子', value: 'CABINET' },
+  { label: '抽屉', value: 'DRAWER' },
 ] as const;
 
 export const ARCHIVE_OBJECT_TYPE_OPTIONS = [
   { label: '申请单', value: 'APPLICATION_FORM' },
-  { label: '包埋盒', value: 'EMBEDDING_BOX' },
+  { label: '蜡块', value: 'EMBEDDING_BOX' },
   { label: '玻片', value: 'SLIDE' },
+  { label: '标本', value: 'SPECIMEN' },
 ] as const;
 
 export const MATERIAL_TYPE_OPTIONS = [
-  { label: '包埋盒', value: 'EMBEDDING_BOX' },
+  { label: '蜡块', value: 'EMBEDDING_BOX' },
   { label: '玻片', value: 'SLIDE' },
 ] as const;
 
@@ -97,11 +147,13 @@ export const ARCHIVE_POSITION_STATUS_OPTIONS = [
 ] as const;
 
 export const ARCHIVE_STORAGE_STATUS_OPTIONS = [
+  { label: '未归档', value: 'NOT_ARCHIVED' },
   { label: '在库', value: 'IN_STORAGE' },
   { label: '已借出', value: 'BORROWED' },
 ] as const;
 
 export const MATERIAL_LOAN_STATUS_OPTIONS = [
+  { label: '未借阅', value: 'NONE' },
   { label: '借出中', value: 'BORROWED' },
   { label: '已归还', value: 'RETURNED' },
 ] as const;
@@ -111,11 +163,49 @@ export const REAGENT_ENABLED_OPTIONS = [
   { label: '停用', value: false },
 ] as const;
 
-export const REAGENT_STOCK_STATUS_OPTIONS = [
-  { label: '在用', value: 'ACTIVE' },
-  { label: '耗尽', value: 'DEPLETED' },
+export const REAGENT_TYPE_OPTIONS = [
+  { label: '免疫组化工作液', value: 'IMMUNO_WORKING_SOLUTION' },
+  { label: '免疫组化浓缩液', value: 'IMMUNO_CONCENTRATE' },
+  { label: '基因突变检测试剂', value: 'GENE_MUTATION_TEST' },
+  { label: '免疫组化稀释液', value: 'IMMUNO_DILUENT' },
+  { label: '特殊染色试剂', value: 'SPECIAL_STAIN' },
+] as const;
+
+export const REAGENT_TEMPLATE_STATUS_OPTIONS = [
+  { label: '启用', value: 'ENABLED' },
   { label: '停用', value: 'DISABLED' },
-  { label: '过期', value: 'EXPIRED' },
+  { label: '删除', value: 'DELETED' },
+] as const;
+
+export const REAGENT_USAGE_OPTIONS = [
+  { label: '免疫组化', value: '免疫组化' },
+  { label: '基因检测', value: '基因检测' },
+  { label: '特殊染色', value: '特殊染色' },
+  { label: '常规染色', value: '常规染色' },
+  { label: '其他', value: '其他' },
+] as const;
+
+export const REAGENT_UNIT_OPTIONS = [
+  { label: '微升', value: '微升' },
+  { label: '毫升', value: '毫升' },
+  { label: '升', value: '升' },
+] as const;
+
+export const REAGENT_DILUTION_OPTIONS = [
+  { label: '无', value: '无' },
+  { label: '1:25~50', value: '1:25~50' },
+  { label: '1:50~100', value: '1:50~100' },
+  { label: '1:100~200', value: '1:100~200' },
+  { label: '1:200~300', value: '1:200~300' },
+  { label: '1:300~400', value: '1:300~400' },
+] as const;
+
+export const REAGENT_STOCK_STATUS_OPTIONS = [
+  { label: '入库', value: 'IN_STOCK' },
+  { label: '已测试', value: 'TESTED' },
+  { label: '使用中', value: 'IN_USE' },
+  { label: '已用完', value: 'FINISHED' },
+  { label: '停用', value: 'DISABLED' },
 ] as const;
 
 export const EQUIPMENT_STATUS_OPTIONS = [

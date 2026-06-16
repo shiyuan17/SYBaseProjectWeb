@@ -15,6 +15,7 @@ const SYSTEM_QUERY_AUTHORITIES = [
   M1_PERMISSION_CODES.GUIDELINE_QUERY,
   M1_PERMISSION_CODES.CONFIG_QUERY,
   M1_PERMISSION_CODES.NUMBERING_QUERY,
+  M1_PERMISSION_CODES.LOG_QUERY,
 ];
 
 const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
@@ -148,6 +149,17 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
           authority: [M1_PERMISSION_CODES.NUMBERING_QUERY],
           icon: 'carbon:list-numbered',
           title: '编号规则',
+        },
+      },
+      {
+        name: 'LogManagement',
+        path: '/system/logs',
+        component: () =>
+          import('#/modules/system-management/views/LogManagementView.vue'),
+        meta: {
+          authority: [M1_PERMISSION_CODES.LOG_QUERY],
+          icon: 'carbon:report',
+          title: '日志管理',
         },
       },
     ],

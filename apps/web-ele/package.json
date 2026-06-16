@@ -46,6 +46,7 @@
     "vue-router": "catalog:"
   },
   "devDependencies": {
+    "@vben/vite-config": "workspace:*",
     "unplugin-element-plus": "catalog:"
   }
 }

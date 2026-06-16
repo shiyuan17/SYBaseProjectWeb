@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { SpecimenOutboundListItem } from '../types/specimen-workflow';
+import type { SpecimenOutboundDisplayItem } from '../utils/transport-handover';
 
 import { ElTable, ElTableColumn, ElTag } from 'element-plus';
 
@@ -8,21 +8,32 @@ import {
   formatNullable,
   formatSpecimenStatus,
 } from '../utils/format';
+import {
+  resolveOutboundWorkflowRowTone,
+  resolveSpecimenWorkflowRowClassName,
+} from '../utils/specimen-workflow-row-tone';
+import { canSelectSpecimenOutboundRow } from '../utils/transport-handover';
+
+import '../styles/specimen-workflow-row-tone.css';
 
 defineProps<{
-  items: SpecimenOutboundListItem[];
+  items: SpecimenOutboundDisplayItem[];
   loading: boolean;
   page: number;
   size: number;
 }>();
 
+const emit = defineEmits<{
+  selectionChange: [rows: SpecimenOutboundDisplayItem[]];
+}>();
+
 function resolveSpecimenStatusTagType(status?: null | string) {
   switch (status) {
-    case 'IN_TRANSIT': {
-      return 'success';
-    }
     case 'CHECKED_IN': {
       return 'warning';
+    }
+    case 'IN_TRANSIT': {
+      return 'success';
     }
     case 'RECEIVED': {
       return 'primary';
@@ -32,10 +43,28 @@ function resolveSpecimenStatusTagType(status?: null | string) {
     }
   }
 }
+
+function resolveRowClassName({ row }: { row: SpecimenOutboundDisplayItem }) {
+  return resolveSpecimenWorkflowRowClassName(
+    resolveOutboundWorkflowRowTone(row),
+  );
+}
 </script>
 
 <template>
-  <ElTable v-loading="loading" :data="items" border row-key="specimenId">
+  <ElTable
+    v-loading="loading"
+    :data="items"
+    :row-class-name="resolveRowClassName"
+    border
+    row-key="specimenId"
+    @selection-change="emit('selectionChange', $event)"
+  >
+    <ElTableColumn
+      :selectable="canSelectSpecimenOutboundRow"
+      type="selection"
+      width="48"
+    />
     <ElTableColumn label="序号" width="72">
       <template #default="{ $index }">
         {{ (page - 1) * size + $index + 1 }}
@@ -72,6 +101,16 @@ function resolveSpecimenStatusTagType(status?: null | string) {
       <template #default="{ row }">
         <ElTag :type="resolveSpecimenStatusTagType(row.specimenStatus)">
           {{ formatSpecimenStatus(row.specimenStatus) }}
+        </ElTag>
+      </template>
+    </ElTableColumn>
+    <ElTableColumn label="出库状态" min-width="120">
+      <template #default="{ row }">
+        <ElTag
+          :title="row.outboundDisabledReason || undefined"
+          :type="row.outboundStatusTagType"
+        >
+          {{ row.displayOutboundStatus }}
         </ElTag>
       </template>
     </ElTableColumn>

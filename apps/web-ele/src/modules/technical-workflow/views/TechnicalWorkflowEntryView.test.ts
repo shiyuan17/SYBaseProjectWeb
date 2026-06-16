@@ -9,17 +9,16 @@ const {
   mockListPendingTechnicalSpecimenRegistrations,
   mockListPendingTechnicalTasks,
   mockRouter,
-} =
-  vi.hoisted(() => ({
-    mockAccessStore: {
-      accessCodes: [] as string[],
-    },
-    mockListPendingTechnicalSpecimenRegistrations: vi.fn(),
-    mockListPendingTechnicalTasks: vi.fn(),
-    mockRouter: {
-      push: vi.fn(),
-    },
-  }));
+} = vi.hoisted(() => ({
+  mockAccessStore: {
+    accessCodes: [] as string[],
+  },
+  mockListPendingTechnicalSpecimenRegistrations: vi.fn(),
+  mockListPendingTechnicalTasks: vi.fn(),
+  mockRouter: {
+    push: vi.fn(),
+  },
+}));
 
 vi.mock('vue-router', () => ({
   useRouter: () => mockRouter,
@@ -240,7 +239,7 @@ describe('TechnicalWorkflowEntryView', () => {
     const { app, root } = mountView();
     await flushView();
 
-    findButton('打开病理接收').click();
+    findButton('打开标本接收').click();
     findButton('进入任务池').click();
     await flushView();
 

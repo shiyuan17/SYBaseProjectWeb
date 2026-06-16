@@ -11,6 +11,46 @@ type MenuTreeNode = MenuView & {
   children: MenuTreeNode[];
 };
 
+const MENU_ICON_ALIASES: Record<string, string> = {
+  'carbon:document-audit': 'carbon:report',
+};
+
+function normalizeMenuIcon(icon: null | string | undefined) {
+  const normalizedIcon = icon?.trim();
+  if (!normalizedIcon) {
+    return undefined;
+  }
+
+  return MENU_ICON_ALIASES[normalizedIcon] ?? normalizedIcon;
+}
+
+function findFallbackRouteIcon(
+  routeName: string,
+  routePath: string,
+  routes: RouteRecordStringComponent<string>[] = STATIC_FALLBACK_MENU_ROUTES,
+): string | undefined {
+  for (const route of routes) {
+    if (route.name === routeName || route.path === routePath) {
+      return normalizeMenuIcon(
+        typeof route.meta?.icon === 'string' ? route.meta.icon : undefined,
+      );
+    }
+
+    if (route.children?.length) {
+      const childIcon = findFallbackRouteIcon(
+        routeName,
+        routePath,
+        route.children,
+      );
+      if (childIcon) {
+        return childIcon;
+      }
+    }
+  }
+
+  return undefined;
+}
+
 function findMenuDefinition(
   menu: Pick<MenuView, 'componentName' | 'menuCode' | 'path'>,
 ) {
@@ -91,7 +131,11 @@ function convertMenuNode(
   const route: RouteRecordStringComponent<string> = {
     component: definition.component,
     meta: {
-      icon: node.icon || undefined,
+      hideInMenu: definition.hideInMenu || undefined,
+      icon:
+        normalizeMenuIcon(node.icon) ||
+        findFallbackRouteIcon(definition.routeName, definition.path) ||
+        undefined,
       order: node.sortOrder,
       title: definition.canonicalTitle ?? node.menuName,
     },
@@ -100,8 +144,10 @@ function convertMenuNode(
   };
 
   if (children.length > 0) {
+    const firstVisibleChild =
+      children.find((child) => !child.meta?.hideInMenu) ?? children[0];
     route.children = children;
-    route.redirect = children[0]?.path;
+    route.redirect = firstVisibleChild?.path;
   }
 
   return route;
@@ -116,16 +162,53 @@ function hasUsableRoutes(routes: RouteRecordStringComponent<string>[]) {
   });
 }
 
+function dedupeRoutesByName(
+  routes: RouteRecordStringComponent<string>[],
+  seenNames = new Set<string>(),
+): RouteRecordStringComponent<string>[] {
+  const result: RouteRecordStringComponent<string>[] = [];
+
+  for (const route of routes) {
+    const routeName = route.name?.toString();
+
+    if (routeName && seenNames.has(routeName)) {
+      continue;
+    }
+
+    if (routeName) {
+      seenNames.add(routeName);
+    }
+
+    const children = route.children
+      ? dedupeRoutesByName(route.children, seenNames)
+      : route.children;
+    const firstVisibleChild =
+      children?.find((child) => !child.meta?.hideInMenu) ?? children?.[0];
+
+    result.push({
+      ...route,
+      ...(children ? { children } : {}),
+      ...(children ? { redirect: firstVisibleChild?.path } : {}),
+    });
+  }
+
+  return result;
+}
+
 export function mapMenuViewsToRoutes(
   menus: MenuView[],
 ): RouteRecordStringComponent<string>[] {
-  return applyKeepAliveToTabRoutes(
-    buildMenuTree(menus)
-      .map((menu) => convertMenuNode(menu))
-      .filter(
-        (route): route is RouteRecordStringComponent<string> => route !== null,
-      ),
-  );
+  const routes = buildMenuTree(menus)
+    .map((menu) => convertMenuNode(menu))
+    .filter(
+      (route): route is RouteRecordStringComponent<string> => route !== null,
+    );
+
+  return applyKeepAliveToTabRoutes(dedupeRoutesByName(routes));
+}
+
+export function getStaticFallbackMenuRoutes() {
+  return dedupeRoutesByName(STATIC_FALLBACK_MENU_ROUTES);
 }
 
 export async function getBackendFirstMenuRoutes(
@@ -135,11 +218,11 @@ export async function getBackendFirstMenuRoutes(
     const backendRoutes = await fetchMenuRoutes();
 
     if (hasUsableRoutes(backendRoutes)) {
-      return backendRoutes;
+      return dedupeRoutesByName(backendRoutes);
     }
   } catch {
-    return STATIC_FALLBACK_MENU_ROUTES;
+    return getStaticFallbackMenuRoutes();
   }
 
-  return STATIC_FALLBACK_MENU_ROUTES;
+  return getStaticFallbackMenuRoutes();
 }

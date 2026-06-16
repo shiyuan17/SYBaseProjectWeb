@@ -16,6 +16,8 @@ import { useUserStore } from '@vben/stores';
 
 import { ElMessage } from 'element-plus';
 
+import { reportInlineErrorDisabled } from '#/utils/error-feedback';
+
 import {
   assignTechnicalTask,
   claimTechnicalTask,
@@ -35,8 +37,6 @@ import {
   TECHNICAL_TASK_STATUS_OPTIONS,
   TECHNICAL_TASK_TYPE_OPTIONS,
 } from '../constants';
-import { reportInlineErrorDisabled } from '#/utils/error-feedback';
-
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import { useTechnicalWorkflowNavigation } from '../utils/navigation';
 
@@ -419,7 +419,7 @@ void loadPendingData();
 </script>
 
 <template>
-  <Page>
+  <Page :show-header="false">
     <div class="flex flex-col gap-4">
       <TechnicalTaskStatsGrid :items="taskStats" />
 

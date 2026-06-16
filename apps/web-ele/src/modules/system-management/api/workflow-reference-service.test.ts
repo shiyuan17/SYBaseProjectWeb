@@ -32,6 +32,7 @@ describe('workflow-reference-service', () => {
         collectionModes: [{ label: '手术', value: 'SURGERY' }],
         containerNames: [{ label: '标本瓶', value: '' }],
         cutSurfaceFeatures: [{ label: '灰白', value: '' }],
+        embeddingRemarks: [{ label: '骨髓', value: '' }],
         marginMarkings: [{ label: '上缘墨染', value: '' }],
         specimenImageSizes: [{ label: '3.2x2.1x1.0cm', value: '' }],
       }),
@@ -40,6 +41,7 @@ describe('workflow-reference-service', () => {
       collectionModes: [{ label: '手术', value: 'SURGERY' }],
       containerNames: [{ label: '标本瓶', value: '标本瓶' }],
       cutSurfaceFeatures: [{ label: '灰白', value: '灰白' }],
+      embeddingRemarks: [{ label: '骨髓', value: '骨髓' }],
       fixationLiquidTypes: [
         { label: '10% 中性福尔马林', value: 'FORMALIN' },
         { label: '酒精', value: 'ETHANOL' },
@@ -86,6 +88,15 @@ describe('workflow-reference-service', () => {
         { label: '质硬', value: '质硬' },
         { label: '坏死', value: '坏死' },
       ],
+      embeddingRemarks: [
+        { label: '骨髓', value: '骨髓' },
+        { label: '皮肤组织', value: '皮肤组织' },
+        { label: '脱钙', value: '脱钙' },
+        { label: '粘膜活检', value: '粘膜活检' },
+        { label: '补取', value: '补取' },
+        { label: '前列腺穿刺', value: '前列腺穿刺' },
+        { label: '其他', value: '其他' },
+      ],
       fixationLiquidTypes: [
         { label: '10% 中性福尔马林', value: 'FORMALIN' },
         { label: '酒精', value: 'ETHANOL' },
@@ -129,6 +140,9 @@ describe('workflow-reference-service', () => {
       ]),
       cutSurfaceFeatures: expect.arrayContaining([
         { label: '灰白', value: '灰白' },
+      ]),
+      embeddingRemarks: expect.arrayContaining([
+        { label: '骨髓', value: '骨髓' },
       ]),
       fixationLiquidTypes: expect.arrayContaining([
         { label: '10% 中性福尔马林', value: 'FORMALIN' },

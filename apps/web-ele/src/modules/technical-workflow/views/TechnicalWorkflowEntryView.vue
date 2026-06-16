@@ -5,7 +5,6 @@ import { useRouter } from 'vue-router';
 
 import { Fallback, Page } from '@vben/common-ui';
 
-
 import TechnicalWorkflowGuideSection from '../components/TechnicalWorkflowGuideSection.vue';
 import TechnicalWorkflowHeroSection from '../components/TechnicalWorkflowHeroSection.vue';
 import TechnicalWorkflowWorkspaceSection from '../components/TechnicalWorkflowWorkspaceSection.vue';
@@ -19,8 +18,7 @@ import {
 
 const router = useRouter();
 const navigation = useTechnicalWorkflowNavigation(router);
-const badgeClass =
-  'rounded-full border border-white/15 bg-white/10 px-3 py-1.5';
+const badgeClass = 'rounded-full border border-white/15 bg-card/10 px-3 py-1.5';
 
 const {
   abnormalItems,
@@ -41,7 +39,10 @@ const {
 } = useTechnicalWorkflowEntry();
 
 function goToCurrentWorkflow() {
-  if (pendingSpecimenRegistrationCount.value > 0 && canAccessSpecimenRegistration.value) {
+  if (
+    pendingSpecimenRegistrationCount.value > 0 &&
+    canAccessSpecimenRegistration.value
+  ) {
     return navigation.goToSpecimenRegistration();
   }
   if (!currentWorkingBucket.value) {
@@ -102,6 +103,7 @@ function goToReworkEntry() {
   </div>
   <Page
     v-else
+    :show-header="false"
     title="制片生产入口"
     description="围绕常规制片主链、冰冻工作台和异常闭环组织入口，让 M3 从任务调度到返工追踪保持连续。"
   >
@@ -110,7 +112,6 @@ function goToReworkEntry() {
         :badge-class="badgeClass"
         :risk-cards="riskCards"
       />
-
 
       <TechnicalWorkflowGuideSection
         :current-working-bucket="currentWorkingBucket"

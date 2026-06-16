@@ -23,14 +23,14 @@ import {
   ElTag,
 } from 'element-plus';
 
+import { reportInlineErrorDisabled } from '#/utils/error-feedback';
+
 import { getTechnicalTracking } from '../api/technical-workflow-service';
 import ReworkCreateDialog from '../components/ReworkCreateDialog.vue';
 import ReworkExecuteDialog from '../components/ReworkExecuteDialog.vue';
 import TechnicalCaseContextPanel from '../components/TechnicalCaseContextPanel.vue';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { TASK_TYPE_TITLE_MAP } from '../constants';
-import { reportInlineErrorDisabled } from '#/utils/error-feedback';
-
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import {
   formatDateTime,
@@ -205,9 +205,8 @@ if (queryForm.caseId) {
 </script>
 
 <template>
-  <Page>
+  <Page :show-header="false">
     <div class="flex flex-col gap-4">
-
       <div class="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)_360px]">
         <WorkflowSectionCard
           title="异常入口"

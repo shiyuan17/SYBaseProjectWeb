@@ -9,6 +9,7 @@ import {
   buildReceiptSubmissionRequest,
   buildTransportReceiptGroups,
   countDerivedAbnormalReceiptItems,
+  createDefaultReceiptConfirmFormState,
   createDefaultReceiptFormState,
   createReceiptDraftItem,
   createReceiptDraftItemsFromGroup,
@@ -71,6 +72,11 @@ describe('specimen receipt helpers', () => {
       receivedByUserId: 'U-1',
       terminalCode: '',
     });
+    expect(createDefaultReceiptConfirmFormState('张三', 'U-1')).toEqual({
+      logisticsStaffName: '',
+      receivedByName: '张三',
+      receivedByUserId: 'U-1',
+    });
     expect(createReceiptDraftItem('BC-1')).toEqual(
       expect.objectContaining({
         containerCount: 1,
@@ -78,6 +84,8 @@ describe('specimen receipt helpers', () => {
         qualityCheckResult: 'PASSED',
         receiptStatus: 'RECEIVED',
         specimenBarcode: 'BC-1',
+        specimenId: '',
+        specimenNo: '',
       }),
     );
     expect(isReceiptDraftDerivedAbnormal(createReceiptDraftItem('BC-1'))).toBe(
@@ -109,6 +117,7 @@ describe('specimen receipt helpers', () => {
         latestTrackingAt: '2026-05-31T10:00:00',
         reminderCount: 2,
         specimenId: 'SPEC-2',
+        specimenNo: 'SP-2',
       }),
       createPendingSpecimenItem({
         barcode: 'BC-3',
@@ -135,6 +144,8 @@ describe('specimen receipt helpers', () => {
         key: 2000,
         patientName: '张三',
         specimenBarcode: 'BC-1',
+        specimenId: 'SPEC-1',
+        specimenNo: 'SP-1',
       }),
       expect.objectContaining({
         applicationNo: 'NO-1',
@@ -142,6 +153,8 @@ describe('specimen receipt helpers', () => {
         key: 2000,
         patientName: '张三',
         specimenBarcode: 'BC-2',
+        specimenId: 'SPEC-2',
+        specimenNo: 'SP-2',
       }),
     ]);
     expect(pickLatestTrackingAt('2026-05-31T09:00:00', null)).toBe(
@@ -154,6 +167,11 @@ describe('specimen receipt helpers', () => {
       receivedByName: ' 张三 ',
       receivedByUserId: ' U-1 ',
       terminalCode: ' T-1 ',
+    };
+    const receiveForm = {
+      logisticsStaffName: ' 物流员甲 ',
+      receivedByName: ' 张三 ',
+      receivedByUserId: ' U-1 ',
     };
     const items = [
       {
@@ -184,12 +202,15 @@ describe('specimen receipt helpers', () => {
       receiptStatus: 'REJECTED',
       remarks: '备注',
       specimenBarcode: 'BC-1',
+      specimenId: null,
+      specimenNo: null,
     });
-    expect(buildReceiptSubmissionRequest('TO-1', form, items)).toEqual({
+    expect(buildReceiptSubmissionRequest('TO-1', receiveForm, items)).toEqual({
       items: [normalizeReceiptItem(items[0]!)],
+      logisticsStaffName: '物流员甲',
       receivedByName: '张三',
       receivedByUserId: 'U-1',
-      terminalCode: 'T-1',
+      terminalCode: null,
       transportOrderId: 'TO-1',
     });
     expect(buildDirectReceiptSubmissionRequest(form, items)).toEqual({
@@ -198,10 +219,8 @@ describe('specimen receipt helpers', () => {
       receivedByUserId: 'U-1',
       terminalCode: 'T-1',
     });
-    expect(
-      buildApplicationFormReprintRequest(' T-1 ', 'TO-1'),
-    ).toEqual({
-      remarks: '病理接收页补打印申请单，转运单：TO-1',
+    expect(buildApplicationFormReprintRequest(' T-1 ', 'TO-1')).toEqual({
+      remarks: '标本接收页补打印申请单，转运单：TO-1',
       terminalCode: 'T-1',
     });
   });
@@ -232,12 +251,23 @@ describe('specimen receipt helpers', () => {
     expect(
       validateReceiptItems([
         {
-          ...createReceiptDraftItem('BC-1'),
+          ...createReceiptDraftItem('', {
+            specimenId: 'SPEC-1',
+            specimenNo: 'SP-1',
+          }),
           reason: '',
           receiptStatus: 'REJECTED',
         },
       ]),
     ).toContain('填写原因');
     expect(validateReceiptItems([createReceiptDraftItem('BC-1')])).toBe('');
+    expect(
+      validateReceiptItems([
+        createReceiptDraftItem('', {
+          specimenId: 'SPEC-1',
+          specimenNo: 'SP-1',
+        }),
+      ]),
+    ).toBe('');
   });
 });

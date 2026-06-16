@@ -103,11 +103,11 @@ export async function loadDoctorDomainData(
       title: '诊断分配',
     },
     {
-      description: '按病例进入诊断工作台',
+      description: '按病例进入诊断平台工作站',
       highlight: true,
       id: 'doctor-entry-2',
       route: '/doctor-workflow/workbench',
-      title: '诊断工作台',
+      title: '诊断平台工作站',
     },
     {
       description: '查看报告追踪与修订',

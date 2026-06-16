@@ -19,9 +19,9 @@ import {
   ElSelect,
 } from 'element-plus';
 
-import { executeReworkOrder } from '../api/technical-workflow-service';
 import { reportInlineErrorDisabled } from '#/utils/error-feedback';
 
+import { executeReworkOrder } from '../api/technical-workflow-service';
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import {
   assignTechnicalOperatorForm,
@@ -119,7 +119,6 @@ watch(
     @closed="resetDialogState"
   >
     <div class="flex flex-col gap-4">
-
       <ElForm label-width="96px">
         <TechnicalOperatorFields
           :form="operatorForm"

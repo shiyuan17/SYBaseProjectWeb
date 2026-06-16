@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   isCheckInReady,
   isVisibleInCheckInScene,
+  resolveCheckInReadiness,
   resolveUnavailableMessage,
 } from './specimen-check-in';
 
@@ -50,7 +51,71 @@ describe('specimen check-in helpers', () => {
     ).toBe(false);
   });
 
+  it('returns a structured readiness result for the current specimen blocker', () => {
+    expect(
+      resolveCheckInReadiness(createRowFixture({ specimenConfirmedAt: null })),
+    ).toMatchObject({
+      blockingSpecimenNos: ['SP-1'],
+      blockingStep: 'CONFIRMATION',
+      canCheckIn: false,
+      reason: '标本 SP-1 尚未完成标本确认，不能入库',
+    });
+
+    expect(
+      resolveCheckInReadiness(
+        createRowFixture({ verificationStatus: 'PENDING' }),
+      ),
+    ).toMatchObject({
+      blockingSpecimenNos: ['SP-1'],
+      blockingStep: 'VERIFICATION',
+      canCheckIn: false,
+      reason: '标本 SP-1 尚未完成核对，不能入库',
+    });
+
+    expect(
+      resolveCheckInReadiness(createRowFixture({ fixationStatus: 'PENDING' })),
+    ).toMatchObject({
+      blockingSpecimenNos: ['SP-1'],
+      blockingStep: 'FIXATION',
+      canCheckIn: false,
+      reason: '标本 SP-1 尚未完成固定，不能入库',
+    });
+  });
+
+  it('does not let sibling specimens block the current specimen', () => {
+    expect(
+      resolveCheckInReadiness(createRowFixture(), [
+        createRowFixture(),
+        createRowFixture({
+          barcode: 'BC-2',
+          specimenConfirmedAt: null,
+          specimenId: 'SPEC-2',
+          specimenNo: 'SP-2',
+        }),
+      ]),
+    ).toMatchObject({
+      blockingSpecimenNos: [],
+      blockingStep: null,
+      canCheckIn: true,
+      reason: null,
+    });
+  });
+
   it('explains why a specimen cannot be checked in', () => {
+    expect(
+      resolveUnavailableMessage(
+        [
+          createRowFixture(),
+          createRowFixture({
+            barcode: 'BC-2',
+            specimenId: 'SPEC-2',
+            specimenNo: 'SP-2',
+            specimenConfirmedAt: null,
+          }),
+        ],
+        'SP-1',
+      ),
+    ).toBe('未找到可入库标本');
     expect(
       resolveUnavailableMessage(
         [createRowFixture({ checkInStatus: 'CHECKED_IN' })],
@@ -62,19 +127,19 @@ describe('specimen check-in helpers', () => {
         [createRowFixture({ specimenConfirmedAt: null })],
         'SP-1',
       ),
-    ).toBe('标本尚未完成标本确认，不能入库');
+    ).toBe('标本 SP-1 尚未完成标本确认，不能入库');
     expect(
       resolveUnavailableMessage(
         [createRowFixture({ fixationStatus: 'PENDING' })],
         'SP-1',
       ),
-    ).toBe('标本尚未完成固定，不能入库');
+    ).toBe('标本 SP-1 尚未完成固定，不能入库');
     expect(
       resolveUnavailableMessage(
         [createRowFixture({ verificationStatus: 'PENDING' })],
         'SP-1',
       ),
-    ).toBe('标本尚未完成核对，不能入库');
+    ).toBe('标本 SP-1 尚未完成核对，不能入库');
     expect(
       resolveUnavailableMessage(
         [createRowFixture({ specimenStatus: 'RECEIVED' })],

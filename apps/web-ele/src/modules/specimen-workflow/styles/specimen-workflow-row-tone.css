@@ -1,0 +1,47 @@
+.specimen-workflow-row--actionable > td {
+  background: hsl(var(--primary) / 8%) !important;
+}
+
+.specimen-workflow-row--draft > td {
+  background: hsl(var(--warning) / 14%) !important;
+}
+
+.specimen-workflow-row--in-progress > td {
+  background: hsl(var(--warning) / 10%) !important;
+}
+
+.specimen-workflow-row--completed > td {
+  background: hsl(var(--success) / 12%) !important;
+}
+
+.specimen-workflow-row--blocked > td {
+  background: hsl(var(--muted) / 70%) !important;
+}
+
+.specimen-workflow-row--failed > td {
+  background: hsl(var(--destructive) / 12%) !important;
+}
+
+.specimen-workflow-row--actionable > td:first-child {
+  box-shadow: inset 3px 0 0 hsl(var(--primary));
+}
+
+.specimen-workflow-row--draft > td:first-child {
+  box-shadow: inset 3px 0 0 hsl(var(--warning));
+}
+
+.specimen-workflow-row--in-progress > td:first-child {
+  box-shadow: inset 3px 0 0 hsl(var(--warning));
+}
+
+.specimen-workflow-row--completed > td:first-child {
+  box-shadow: inset 3px 0 0 hsl(var(--success));
+}
+
+.specimen-workflow-row--blocked > td:first-child {
+  box-shadow: inset 3px 0 0 hsl(var(--border));
+}
+
+.specimen-workflow-row--failed > td:first-child {
+  box-shadow: inset 3px 0 0 hsl(var(--destructive));
+}

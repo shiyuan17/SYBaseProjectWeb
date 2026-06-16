@@ -23,12 +23,12 @@ import {
   ElSelect,
 } from 'element-plus';
 
+import { reportInlineErrorDisabled } from '#/utils/error-feedback';
+
 import {
   createDehydrationBatch,
   getTechnicalTracking,
 } from '../api/technical-workflow-service';
-import { reportInlineErrorDisabled } from '#/utils/error-feedback';
-
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import {
   formatCaseStatus,
@@ -45,6 +45,7 @@ import TechnicalOperatorFields from './TechnicalOperatorFields.vue';
 const props = defineProps<{
   modelValue: boolean;
   task: null | PendingTechnicalTaskItem;
+  tasks?: PendingTechnicalTaskItem[];
 }>();
 
 const emit = defineEmits<{
@@ -84,6 +85,16 @@ const currentTaskContext = computed(() => ({
   taskId: props.task?.id ?? '',
 }));
 
+const selectedTasks = computed(() => {
+  if (props.tasks && props.tasks.length > 0) {
+    return props.tasks;
+  }
+  if (props.task) {
+    return [props.task];
+  }
+  return [];
+});
+
 function parseSamplingBlockIds() {
   const manualIds = createForm.samplingBlockIdsText
     .split(/[\s,，]+/)
@@ -93,16 +104,17 @@ function parseSamplingBlockIds() {
 }
 
 function resetDialogState() {
+  const firstTask = selectedTasks.value[0] ?? null;
+  const selectedBlockIds = selectedTasks.value
+    .filter((item) => item.objectType === 'SAMPLING_BLOCK' && item.objectId)
+    .map((item) => item.objectId as string);
   pageError.value = '';
   trackingResult.value = null;
   assignTechnicalOperatorForm(operatorForm, userStore.userInfo ?? undefined);
   createForm.basketNo = '';
-  createForm.caseId = props.task?.caseId ?? '';
+  createForm.caseId = firstTask?.caseId ?? '';
   createForm.deviceNo = '';
-  createForm.selectedSamplingBlockIds =
-    props.task?.objectType === 'SAMPLING_BLOCK' && props.task.objectId
-      ? [props.task.objectId]
-      : [];
+  createForm.selectedSamplingBlockIds = [...new Set(selectedBlockIds)];
   createForm.samplingBlockIdsText =
     createForm.selectedSamplingBlockIds.join('\n');
 }
@@ -196,7 +208,6 @@ watch(
     @closed="resetDialogState"
   >
     <div class="flex flex-col gap-4">
-
       <ElDescriptions :column="3" border>
         <ElDescriptionsItem label="任务号">
           {{ formatNullable(currentTaskContext.taskId) }}

@@ -198,7 +198,11 @@ onMounted(async () => {
 </script>
 
 <template>
-  <Page title="通知中心" description="集中查看、筛选和处理个人站内通知。">
+  <Page
+    :show-header="false"
+    title="通知中心"
+    description="集中查看、筛选和处理个人站内通知。"
+  >
     <div class="flex flex-col gap-4">
       <ElCard shadow="never">
         <div

@@ -37,19 +37,7 @@ export const M6_STATISTICS_PAGE_AUTHORITIES = [
 
 export const M6_ROUTE_ITEMS = [
   {
-    codes: M6_INTEGRATION_PAGE_AUTHORITIES,
-    path: '/m6/integration',
-  },
-  {
-    codes: M6_BILLING_PAGE_AUTHORITIES,
-    path: '/m6/billing',
-  },
-  {
-    codes: M6_HISTORY_PAGE_AUTHORITIES,
-    path: '/m6/history',
-  },
-  {
     codes: M6_STATISTICS_PAGE_AUTHORITIES,
-    path: '/m6/statistics',
+    path: '/m6/dashboard',
   },
 ] as const;

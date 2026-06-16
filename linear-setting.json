@@ -1,6 +1,68 @@
 {
   "linear-token": "",
   "linear-api-url": "https://api.linear.app/graphql",
+  "linear-team-name": "Sidney",
   "linear-project-name": "JWBL",
-  "linear-backend-label": "frontend"
+  "linear-backend-label": "frontend",
+  "linear-labels": [
+    {
+      "name": "frontend",
+      "description": "Frontend workflow and UI tasks",
+      "color": "#0f766e",
+      "id": "d2b4703c-6f3c-4ae8-b8e6-2bcddb1b2baf"
+    }
+  ],
+  "linear-sync": {
+    "default-labels": [
+      "frontend"
+    ]
+  },
+  "linear-plan": [
+    {
+      "phase": "Phase 1",
+      "domain": "operation-support",
+      "title": "归档管理按旧系统入口重组为 tabs",
+      "description": "背景：旧系统将申请单归档、蜡块归档、玻片归档、归档柜和归档记录拆成多个入口，当前前端归档管理页仍是纵向工作台，现场用户迁移时不易对应旧入口。\n\n验收标准：\n- `/operation-support/archive` 使用 tabs 组织申请单归档、蜡块归档、玻片归档、归档柜/柜位、归档记录。\n- 申请单、蜡块、玻片归档继续复用现有 `/v1/archive/application-forms`、`/v1/archive/embedding-boxes`、`/v1/archive/slides` 契约。\n- UI 显示“蜡块”，接口值仍沿用 `EMBEDDING_BOX`，不新增后端契约。\n- 归档柜、柜位选择、归档记录查询能力不回退，无权限态正常展示。\n- 补充归档页组件测试。\n\n非目标：不实现标本归档、拍照归档管理、扫码、打印或导出。",
+      "labels": [
+        "frontend"
+      ]
+    },
+    {
+      "phase": "Phase 1",
+      "domain": "operation-support",
+      "title": "借记管理接入蜡块与玻片借出归还 tabs",
+      "description": "背景：`/operation-support/borrow` 当前仍是占位页，但后端已提供材料借出、待归还查询和归还接口，需要把旧系统借记入口迁移为真实工作台。\n\n验收标准：\n- `/operation-support/borrow` 不再展示占位页，页面标题保持“借记管理”。\n- 页面使用 tabs 组织玻片借记、蜡块借记、待归还/归还。\n- 玻片和蜡块借出复用 `POST /v1/material-loans`，待归还复用 `GET /v1/material-loans/pending`，归还复用 `POST /v1/material-loans/{id}/return`。\n- 按钮和字段使用“借出、归还、待归还”等动作文案。\n- 归还支持选择替代柜位；没有归档柜查询权限时给出明确提示。\n- 补充借记页组件与组合式函数测试。\n\n非目标：不实现借白片、扫码、打印、导出或设备外设接入。",
+      "labels": [
+        "frontend"
+      ]
+    },
+    {
+      "phase": "Phase 1",
+      "domain": "operation-support",
+      "title": "拆分归档与借记入口权限及路由测试",
+      "description": "背景：归档管理与借记管理现在是两个真实菜单页，旧实现将借记页复用归档权限集合，可能导致只有借记权限的用户入口跳转错误。\n\n验收标准：\n- 归档页权限只包含归档柜、申请单归档、蜡块归档、玻片归档和归档记录查询相关权限。\n- 借记页权限只包含借出、归还、待归还查询相关权限。\n- `/operation-support/entry` 能按当前账号权限跳转到首个可访问页面；只有借记权限时进入 `/operation-support/borrow`。\n- 路由标题、菜单映射和 keep-alive 行为稳定。\n- 补充 access、route、menu mapper 相关测试。\n\n非目标：不修改全局权限模型、登录态、路由守卫或 Axios 拦截器。",
+      "labels": [
+        "frontend"
+      ]
+    },
+    {
+      "phase": "Phase 1",
+      "domain": "operation-support",
+      "title": "归档与借记旧系统缺口调研",
+      "description": "背景：截图中还包含标本归档、拍照归档管理、借白片、扫码、打印、导出等旧系统入口，但当前前后端公开契约未覆盖这些真实能力。\n\n验收标准：\n- 对标本归档、拍照归档管理、借白片、扫码、打印、导出形成前后端契约清单。\n- 明确每个缺口是否需要后端接口、数据库迁移、外设兼容或仅前端展示。\n- 输出后续 Linear 拆分建议和非目标说明。\n- 本任务不得把缺口混入本期归档/借记 tabs 实现。\n\n非目标：不直接实现新后端接口、DB 迁移、设备 SDK 或文件导出能力。",
+      "labels": [
+        "frontend"
+      ]
+    }
+  ],
+  "linear-team": {
+    "id": "ca0ba9fa-d4f0-45f8-8db7-878947b149ff",
+    "key": "SID",
+    "name": "Sidney"
+  },
+  "linear-project": {
+    "id": "62b8398e-7534-4b54-82b9-b3d042826d92",
+    "name": "JWBL",
+    "slugId": "e41404512a99"
+  }
 }

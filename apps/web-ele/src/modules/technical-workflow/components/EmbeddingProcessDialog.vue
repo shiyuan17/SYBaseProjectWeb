@@ -22,10 +22,10 @@ import {
   ElSelect,
 } from 'element-plus';
 
-import { completeEmbedding } from '../api/technical-workflow-service';
-import { EVALUATION_LEVEL_OPTIONS } from '../constants';
 import { reportInlineErrorDisabled } from '#/utils/error-feedback';
 
+import { completeEmbedding } from '../api/technical-workflow-service';
+import { EVALUATION_LEVEL_OPTIONS } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import { formatNullable, formatObjectType } from '../utils/format';
 import {
@@ -157,7 +157,6 @@ watch(
     @closed="resetDialogState"
   >
     <div class="flex flex-col gap-4">
-
       <ElDescriptions :column="2" border>
         <ElDescriptionsItem label="任务号">
           {{ formatNullable(currentTaskContext.taskId) }}

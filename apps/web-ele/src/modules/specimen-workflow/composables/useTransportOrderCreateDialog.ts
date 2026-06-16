@@ -13,9 +13,10 @@ import {
   getApplicationDetail,
 } from '../api/specimen-workflow-service';
 import { getWorkflowPageErrorMessage } from '../utils/error';
+import { useOperatorVerificationPrompt } from './useOperatorVerificationPrompt';
 
 type DepartmentOption = null | { id: string; name: string };
-type UserOption = null | { id: string; name: string };
+type UserOption = null | { id: string; loginName?: string; name: string };
 
 export function useTransportOrderCreateDialog(options: {
   initialApplicationId: Ref<string>;
@@ -25,6 +26,7 @@ export function useTransportOrderCreateDialog(options: {
   updateModelValue: (value: boolean) => void;
 }) {
   const userStore = useUserStore();
+  const { verifyOperator } = useOperatorVerificationPrompt();
 
   const pageError = ref('');
   const createLoading = ref(false);
@@ -34,12 +36,16 @@ export function useTransportOrderCreateDialog(options: {
     applicationId: '',
     handoverDepartmentId: '',
     handoverDepartmentName: '',
+    handoverLoginName:
+      (userStore.userInfo as undefined | { loginName?: string })?.loginName ??
+      '',
     handoverUserId: userStore.userInfo?.userId ?? '',
     handoverUserName: userStore.userInfo?.realName ?? '',
     receiverDepartmentId: '',
     receiverDepartmentName: '',
     remarks: '',
     selectedSpecimenBarcodes: [] as string[],
+    selectedSpecimenIds: [] as string[],
     specimenBarcodesText: '',
     terminalCode: '',
   });
@@ -76,10 +82,21 @@ export function useTransportOrderCreateDialog(options: {
   }
 
   const mergedSpecimenBarcodes = computed(() => {
-    const selected = createForm.selectedSpecimenBarcodes;
+    const selectedSpecimenIdSet = new Set(createForm.selectedSpecimenIds);
+    const selected =
+      applicationDetail.value?.specimens
+        .filter((item) => selectedSpecimenIdSet.has(item.id))
+        .map((item) => item.barcode?.trim() ?? '')
+        .filter(Boolean) ?? createForm.selectedSpecimenBarcodes;
     const manual = splitSpecimenBarcodes(createForm.specimenBarcodesText);
     return [...new Set([...selected, ...manual])];
   });
+
+  const mergedSpecimenIds = computed(() => [
+    ...new Set(
+      createForm.selectedSpecimenIds.map((item) => item.trim()).filter(Boolean),
+    ),
+  ]);
 
   function isEligibleSpecimen(
     specimen: ApplicationDetailView['specimens'][number],
@@ -101,6 +118,7 @@ export function useTransportOrderCreateDialog(options: {
   function clearApplicationContext() {
     applicationDetail.value = null;
     createForm.selectedSpecimenBarcodes = [];
+    createForm.selectedSpecimenIds = [];
     pageError.value = '';
   }
 
@@ -109,12 +127,16 @@ export function useTransportOrderCreateDialog(options: {
       applicationId: options.initialApplicationId.value.trim(),
       handoverDepartmentId: '',
       handoverDepartmentName: '',
+      handoverLoginName:
+        (userStore.userInfo as undefined | { loginName?: string })?.loginName ??
+        '',
       handoverUserId: userStore.userInfo?.userId ?? '',
       handoverUserName: userStore.userInfo?.realName ?? '',
       receiverDepartmentId: '',
       receiverDepartmentName: '',
       remarks: '',
       selectedSpecimenBarcodes: [],
+      selectedSpecimenIds: [],
       specimenBarcodesText: '',
       terminalCode: '',
     });
@@ -142,10 +164,14 @@ export function useTransportOrderCreateDialog(options: {
         return;
       }
       applicationDetail.value = detail;
+      createForm.selectedSpecimenIds = detail.specimens
+        .filter((item) => isEligibleSpecimen(item))
+        .map((item) => item.id)
+        .filter(Boolean);
       createForm.selectedSpecimenBarcodes = detail.specimens
         .filter((item) => isEligibleSpecimen(item))
-        .map((item) => item.barcode)
-        .filter((barcode) => barcode.length > 0);
+        .map((item) => item.barcode?.trim() ?? '')
+        .filter(Boolean);
     } catch (error) {
       if (createForm.applicationId.trim() === applicationId) {
         clearApplicationContext();
@@ -206,6 +232,7 @@ export function useTransportOrderCreateDialog(options: {
 
   async function submitCreate() {
     const specimenBarcodes = mergedSpecimenBarcodes.value;
+    const specimenIds = mergedSpecimenIds.value;
     if (!createForm.applicationId.trim()) {
       ElMessage.warning('请填写申请单编号');
       return;
@@ -218,11 +245,15 @@ export function useTransportOrderCreateDialog(options: {
       ElMessage.warning('请选择交接人');
       return;
     }
+    if (!createForm.handoverLoginName.trim()) {
+      ElMessage.warning('交接人缺少登录账号');
+      return;
+    }
     if (!createForm.receiverDepartmentId.trim()) {
       ElMessage.warning('请选择接收科室');
       return;
     }
-    if (specimenBarcodes.length === 0) {
+    if (specimenIds.length === 0 && specimenBarcodes.length === 0) {
       ElMessage.warning('请至少选择一条标本');
       return;
     }
@@ -230,16 +261,26 @@ export function useTransportOrderCreateDialog(options: {
     createLoading.value = true;
     pageError.value = '';
     try {
+      const operatorVerificationToken = await verifyOperator({
+        id: createForm.handoverUserId.trim(),
+        loginName: createForm.handoverLoginName.trim(),
+        name: createForm.handoverUserName.trim(),
+      });
+      if (!operatorVerificationToken) {
+        return;
+      }
       await createTransportOrder({
         applicationId: createForm.applicationId.trim(),
         handoverDepartmentId: createForm.handoverDepartmentId.trim() || null,
         handoverDepartmentName: createForm.handoverDepartmentName.trim(),
         handoverUserId: createForm.handoverUserId.trim() || null,
         handoverUserName: createForm.handoverUserName.trim(),
+        operatorVerificationToken,
         receiverDepartmentId: createForm.receiverDepartmentId.trim() || null,
         receiverDepartmentName: createForm.receiverDepartmentName.trim(),
         remarks: createForm.remarks.trim() || null,
         specimenBarcodes,
+        specimenIds,
         terminalCode: createForm.terminalCode.trim() || null,
       });
       ElMessage.success('转运单创建成功');
@@ -269,6 +310,7 @@ export function useTransportOrderCreateDialog(options: {
   function handleHandoverUserChange(user: UserOption) {
     createForm.handoverUserId = user?.id ?? '';
     createForm.handoverUserName = user?.name ?? '';
+    createForm.handoverLoginName = user?.loginName ?? '';
   }
 
   watch(
@@ -299,6 +341,7 @@ export function useTransportOrderCreateDialog(options: {
     handleReceiverDepartmentChange,
     loadApplicationContext,
     mergedSpecimenBarcodes,
+    mergedSpecimenIds,
     pageError,
     resolveSpecimenClinicalSymptom,
     resolveSpecimenCollectionMode,

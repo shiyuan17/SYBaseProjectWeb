@@ -1,52 +1,63 @@
 import type {
-  ApplicationRegistrationWorkbenchRecord,
-  SaveApplicationRegistrationPatientInfoRequest,
-} from '#/modules/specimen-workflow/types/application-registration-workbench';
-
-import type {
   BatchOperatorRequest,
   CompleteDehydrationBatchRequest,
   CompleteTechnicalSpecimenRegistrationRequest,
+  CompleteTechnicalSpecimenRegistrationResult,
   CreateDehydrationBatchRequest,
   CreateReworkOrderRequest,
   CreateSlideQcEvaluationRequest,
-  DeleteTechnicalSpecimenRegistrationMediaAssetResult,
   DehydrationBatchResult,
+  DeleteTechnicalSpecimenRegistrationMediaAssetResult,
   EmbeddingCompleteRequest,
-  EmbeddingWorkstationSummary,
+  EmbeddingQualityReviewRequest,
+  EmbeddingQualityReviewResult,
   EmbeddingResult,
+  EmbeddingWorkstationSummary,
   ExecuteReworkOrderRequest,
   GrossingCompleteRequest,
-  GrossingWorkbenchContext,
   GrossingMediaAssetUploadResponse,
   GrossingResult,
-  PendingTechnicalTaskPage,
+  GrossingWorkbenchContext,
+  PendingTechnicalSpecimenRegistrationItem,
   PendingTechnicalSpecimenRegistrationPage,
   PendingTechnicalSpecimenRegistrationQuery,
+  PendingTechnicalTaskPage,
   PendingTechnicalTaskQuery,
   ReworkOrderResult,
   SaveTechnicalSpecimenRegistrationDetailSectionsRequest,
   SaveTechnicalSpecimenRegistrationMaterialsRequest,
   SlicingCompleteRequest,
+  SlicingResult,
+  SlicingSlidePrintMergeGroupCancelRequest,
+  SlicingSlidePrintMergeGroupPrintRequest,
+  SlicingSlidePrintMergeGroupRequest,
+  SlicingSlidePrintMergeGroupResult,
+  SlicingSlidePrintRequest,
+  SlicingSlidePrintResult,
   SlicingWorkbenchQuery,
   SlicingWorkbenchRow,
   SlicingWorkbenchStats,
   SlicingWorkbenchView,
-  SlicingResult,
   SlideQcEvaluationResult,
   SlideStainingCompleteRequest,
   SlideStainingResult,
   TaskOperationResult,
+  TechnicalSpecimenRegistrationDetail,
+  TechnicalSpecimenRegistrationMaterialVerificationRequest,
+  TechnicalSpecimenRegistrationWorkspace,
   TechnicalTaskAssignRequest,
   TechnicalTaskClaimRequest,
   TechnicalTaskPriorityRequest,
   TechnicalTaskReleaseRequest,
+  TechnicalTaskRemarksRequest,
   TechnicalTaskStartRequest,
-  CompleteTechnicalSpecimenRegistrationResult,
-  TechnicalSpecimenRegistrationDetail,
-  TechnicalSpecimenRegistrationWorkspace,
   TechnicalTrackingView,
 } from '../types/technical-workflow';
+
+import type {
+  ApplicationRegistrationWorkbenchRecord,
+  SaveApplicationRegistrationPatientInfoRequest,
+} from '#/modules/specimen-workflow/types/application-registration-workbench';
 
 import { requestClient } from '#/api/request';
 
@@ -66,6 +77,8 @@ type SlicingWorkbenchResponse = Partial<
 > & {
   completedTodayList?: Array<Partial<SlicingWorkbenchRow>>;
   pendingList?: Array<Partial<SlicingWorkbenchRow>>;
+  pendingPrintList?: Array<Partial<SlicingWorkbenchRow>>;
+  pendingSliceList?: Array<Partial<SlicingWorkbenchRow>>;
   stats?: Partial<SlicingWorkbenchStats>;
 };
 type GrossingWorkbenchContextResponse = Partial<
@@ -73,6 +86,11 @@ type GrossingWorkbenchContextResponse = Partial<
 > & {
   tracking?: Partial<TechnicalTrackingView>;
 };
+
+const DEFAULT_TECHNICAL_SPECIMEN_TYPE = '活体';
+const DEFAULT_TECHNICAL_SPECIMEN_SIZE = '小标本';
+const DEFAULT_TECHNICAL_TISSUE_COUNT = 1;
+const DEFAULT_TECHNICAL_VERIFICATION_STATUS = 'UNVERIFIED';
 
 function mapApplicationRegistrationWorkbenchRecordResponse(
   response: ApplicationRegistrationWorkbenchRecordResponse,
@@ -196,28 +214,39 @@ function mapSlicingWorkbenchRow(
   response: Partial<SlicingWorkbenchRow>,
 ): SlicingWorkbenchRow {
   return {
+    applicationType: response.applicationType ?? null,
     caseId: response.caseId ?? '',
+    combinedSlide: response.combinedSlide ?? false,
     completedAt: response.completedAt ?? null,
     embeddingBoxId: response.embeddingBoxId ?? '',
+    embeddingBoxIds: response.embeddingBoxIds ?? [],
+    embeddingBoxNo: response.embeddingBoxNo ?? null,
     embeddingClearRemark: response.embeddingClearRemark ?? null,
+    embeddingRemarks: response.embeddingRemarks ?? null,
     embeddingEvaluation: response.embeddingEvaluation ?? null,
     embeddingOperatorName: response.embeddingOperatorName ?? null,
     grossingEvaluation: response.grossingEvaluation ?? null,
     pathologyNo: response.pathologyNo ?? null,
     patientId: response.patientId ?? null,
     patientName: response.patientName ?? null,
+    printGroupId: response.printGroupId ?? null,
     selectable: response.selectable ?? false,
     shiftRemark: response.shiftRemark ?? null,
     slideId: response.slideId ?? null,
     slideNo: response.slideNo ?? null,
+    slidePrintStatus: response.slidePrintStatus ?? null,
     sliceNotice: response.sliceNotice ?? null,
     slicingOperatorName: response.slicingOperatorName ?? null,
     slicingRemark: response.slicingRemark ?? null,
     specimenId: response.specimenId ?? null,
     specimenName: response.specimenName ?? null,
+    submittingDepartmentName: response.submittingDepartmentName ?? null,
     taskId: response.taskId ?? '',
+    taskIds: response.taskIds ?? [],
     taskStatus: response.taskStatus ?? null,
     timedOut: response.timedOut ?? false,
+    mergedPrintGroup: response.mergedPrintGroup ?? false,
+    printedSlideCount: response.printedSlideCount ?? 0,
   };
 }
 
@@ -227,13 +256,25 @@ export function mapSlicingWorkbenchResponse(
   return {
     completedPage: response.completedPage ?? 1,
     completedSize: response.completedSize ?? 20,
-    completedTodayList: (response.completedTodayList ?? []).map(
-      mapSlicingWorkbenchRow,
+    completedTodayList: (response.completedTodayList ?? []).map((row) =>
+      mapSlicingWorkbenchRow(row),
     ),
     completedTotal: response.completedTotal ?? 0,
-    pendingList: (response.pendingList ?? []).map(mapSlicingWorkbenchRow),
+    pendingList: (response.pendingList ?? []).map((row) =>
+      mapSlicingWorkbenchRow(row),
+    ),
+    pendingPrintList: (
+      response.pendingPrintList ??
+      response.pendingList ??
+      []
+    ).map((row) => mapSlicingWorkbenchRow(row)),
+    pendingPrintTotal: response.pendingPrintTotal ?? response.pendingTotal ?? 0,
     pendingPage: response.pendingPage ?? 1,
     pendingSize: response.pendingSize ?? 20,
+    pendingSliceList: (response.pendingSliceList ?? []).map((row) =>
+      mapSlicingWorkbenchRow(row),
+    ),
+    pendingSliceTotal: response.pendingSliceTotal ?? 0,
     pendingTotal: response.pendingTotal ?? 0,
     stats: {
       completedDeptTodayCount: response.stats?.completedDeptTodayCount ?? 0,
@@ -278,7 +319,12 @@ export function mapGrossingWorkbenchContextResponse(
     checkItems: response.checkItems ?? [],
     clinicalDiagnosis: response.clinicalDiagnosis ?? null,
     clinicalHistory: response.clinicalHistory ?? null,
+    clinicalSubmissionRequirements:
+      response.clinicalSubmissionRequirements ?? null,
     contextSummary: response.contextSummary ?? null,
+    externalPathologyDiagnosis: response.externalPathologyDiagnosis ?? null,
+    infectiousAndPastHistorySummary:
+      response.infectiousAndPastHistorySummary ?? null,
     mediaAssets: response.mediaAssets ?? [],
     relatedExaminations: response.relatedExaminations ?? null,
     task: {
@@ -295,10 +341,35 @@ export function mapPendingTechnicalSpecimenRegistrationPageResponse(
   response: PendingTechnicalSpecimenRegistrationPageResponse,
 ): PendingTechnicalSpecimenRegistrationPage {
   return {
-    items: response.items ?? [],
+    items: (response.items ?? []).map((item) =>
+      mapPendingTechnicalSpecimenRegistrationItem(item),
+    ),
     page: response.page ?? 1,
     size: response.size ?? 20,
     total: response.total ?? 0,
+  };
+}
+
+function mapPendingTechnicalSpecimenRegistrationItem(
+  response: Partial<PendingTechnicalSpecimenRegistrationItem>,
+): PendingTechnicalSpecimenRegistrationItem {
+  return {
+    applicationId: response.applicationId ?? '',
+    applicationNo: response.applicationNo ?? '',
+    applicationType: response.applicationType ?? null,
+    caseId: response.caseId ?? '',
+    checkItem: response.checkItem ?? null,
+    inpatientNo: response.inpatientNo ?? null,
+    pathologyNo: response.pathologyNo ?? null,
+    patientAge: response.patientAge ?? null,
+    patientGender: response.patientGender ?? null,
+    patientId: response.patientId ?? null,
+    patientName: response.patientName ?? null,
+    receivedAt: response.receivedAt ?? null,
+    registeredAt: response.registeredAt ?? null,
+    registeredByName: response.registeredByName ?? null,
+    registrationStatus: response.registrationStatus ?? null,
+    submittingDepartmentName: response.submittingDepartmentName ?? null,
   };
 }
 
@@ -314,11 +385,20 @@ export function mapTechnicalSpecimenRegistrationDetailResponse(
     clinicalDiagnosis: response.clinicalDiagnosis ?? null,
     inpatientNo: response.inpatientNo ?? null,
     materials: (response.materials ?? []).map((item) => ({
+      evaluationItems: item.evaluationItems ?? [],
+      frozen: item.frozen ?? false,
       sequenceNo: item.sequenceNo ?? 0,
       sourcePart: item.sourcePart ?? null,
+      specimenBarcode: item.specimenBarcode ?? null,
       specimenId: item.specimenId ?? null,
+      specimenSize: item.specimenSize ?? DEFAULT_TECHNICAL_SPECIMEN_SIZE,
       specimenName: item.specimenName ?? null,
-      specimenType: item.specimenType ?? null,
+      specimenType: item.specimenType ?? DEFAULT_TECHNICAL_SPECIMEN_TYPE,
+      tissueCount: item.tissueCount ?? DEFAULT_TECHNICAL_TISSUE_COUNT,
+      verificationCompletedAt: item.verificationCompletedAt ?? null,
+      verificationStatus:
+        item.verificationStatus ?? DEFAULT_TECHNICAL_VERIFICATION_STATUS,
+      verifiedByName: item.verifiedByName ?? null,
     })),
     pathologyNo: response.pathologyNo ?? null,
     patientId: response.patientId ?? null,
@@ -339,13 +419,11 @@ export function mapTechnicalSpecimenRegistrationWorkspaceResponse(
     actionFlags: {
       canCompleteRegistration:
         response.actionFlags?.canCompleteRegistration ?? false,
-      canDeleteMediaAssets:
-        response.actionFlags?.canDeleteMediaAssets ?? false,
+      canDeleteMediaAssets: response.actionFlags?.canDeleteMediaAssets ?? false,
       canSaveDetailSections:
         response.actionFlags?.canSaveDetailSections ?? false,
       canSaveMaterials: response.actionFlags?.canSaveMaterials ?? false,
-      canUploadMediaAssets:
-        response.actionFlags?.canUploadMediaAssets ?? false,
+      canUploadMediaAssets: response.actionFlags?.canUploadMediaAssets ?? false,
     },
     basicInfo: {
       applicationNo: response.basicInfo?.applicationNo ?? null,
@@ -379,11 +457,20 @@ export function mapTechnicalSpecimenRegistrationWorkspaceResponse(
         response.detailSections?.labAndImagingExaminations ?? null,
     },
     materials: (response.materials ?? []).map((item) => ({
+      evaluationItems: item.evaluationItems ?? [],
+      frozen: item.frozen ?? false,
       sequenceNo: item.sequenceNo ?? 0,
       sourcePart: item.sourcePart ?? null,
+      specimenBarcode: item.specimenBarcode ?? null,
       specimenId: item.specimenId ?? null,
+      specimenSize: item.specimenSize ?? DEFAULT_TECHNICAL_SPECIMEN_SIZE,
       specimenName: item.specimenName ?? null,
-      specimenType: item.specimenType ?? null,
+      specimenType: item.specimenType ?? DEFAULT_TECHNICAL_SPECIMEN_TYPE,
+      tissueCount: item.tissueCount ?? DEFAULT_TECHNICAL_TISSUE_COUNT,
+      verificationCompletedAt: item.verificationCompletedAt ?? null,
+      verificationStatus:
+        item.verificationStatus ?? DEFAULT_TECHNICAL_VERIFICATION_STATUS,
+      verifiedByName: item.verifiedByName ?? null,
     })),
     mediaAssets: (response.mediaAssets ?? []).map((item) => ({
       assetId: item.assetId ?? '',
@@ -391,22 +478,26 @@ export function mapTechnicalSpecimenRegistrationWorkspaceResponse(
       fileName: item.fileName ?? null,
       fileUrl: item.fileUrl ?? '',
     })),
-    pendingSummary: response.pendingSummary ?? {
-      applicationId: '',
-      applicationNo: '',
-      applicationType: null,
-      caseId: '',
-      checkItem: null,
-      inpatientNo: null,
-      pathologyNo: null,
-      patientId: null,
-      patientName: null,
-      receivedAt: null,
-      registeredAt: null,
-      registeredByName: null,
-      registrationStatus: null,
-      submittingDepartmentName: null,
-    },
+    pendingSummary: response.pendingSummary
+      ? mapPendingTechnicalSpecimenRegistrationItem(response.pendingSummary)
+      : {
+          applicationId: '',
+          applicationNo: '',
+          applicationType: null,
+          caseId: '',
+          checkItem: null,
+          inpatientNo: null,
+          pathologyNo: null,
+          patientAge: null,
+          patientGender: null,
+          patientId: null,
+          patientName: null,
+          receivedAt: null,
+          registeredAt: null,
+          registeredByName: null,
+          registrationStatus: null,
+          submittingDepartmentName: null,
+        },
   };
 }
 
@@ -438,33 +529,50 @@ export async function getEmbeddingWorkstationSummary(workDate?: string) {
 export async function listPendingTechnicalSpecimenRegistrations(
   params: PendingTechnicalSpecimenRegistrationQuery,
 ) {
-  const response = await requestClient.get<PendingTechnicalSpecimenRegistrationPageResponse>(
-    '/v1/technical-specimen-registrations/pending',
-    { params },
-  );
+  const response =
+    await requestClient.get<PendingTechnicalSpecimenRegistrationPageResponse>(
+      '/v1/technical-specimen-registrations/pending',
+      { params },
+    );
+  return mapPendingTechnicalSpecimenRegistrationPageResponse(response);
+}
+
+export async function listTechnicalSpecimenRegistrations(
+  params: PendingTechnicalSpecimenRegistrationQuery,
+) {
+  const response =
+    await requestClient.get<PendingTechnicalSpecimenRegistrationPageResponse>(
+      '/v1/technical-specimen-registrations',
+      { params },
+    );
   return mapPendingTechnicalSpecimenRegistrationPageResponse(response);
 }
 
 export async function getTechnicalSpecimenRegistrationDetail(caseId: string) {
-  const response = await requestClient.get<TechnicalSpecimenRegistrationDetailResponse>(
-    `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}`,
-  );
+  const response =
+    await requestClient.get<TechnicalSpecimenRegistrationDetailResponse>(
+      `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}`,
+    );
   return mapTechnicalSpecimenRegistrationDetailResponse(response);
 }
 
-export async function getTechnicalSpecimenRegistrationWorkspace(caseId: string) {
-  const response = await requestClient.get<TechnicalSpecimenRegistrationWorkspaceResponse>(
-    `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/workspace`,
-  );
+export async function getTechnicalSpecimenRegistrationWorkspace(
+  caseId: string,
+) {
+  const response =
+    await requestClient.get<TechnicalSpecimenRegistrationWorkspaceResponse>(
+      `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/workspace`,
+    );
   return mapTechnicalSpecimenRegistrationWorkspaceResponse(response);
 }
 
 export async function getTechnicalSpecimenRegistrationApplicationWorkbench(
   caseId: string,
 ) {
-  const response = await requestClient.get<ApplicationRegistrationWorkbenchRecordResponse>(
-    `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/application-workbench`,
-  );
+  const response =
+    await requestClient.get<ApplicationRegistrationWorkbenchRecordResponse>(
+      `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/application-workbench`,
+    );
   return mapApplicationRegistrationWorkbenchRecordResponse(response);
 }
 
@@ -487,10 +595,37 @@ export async function saveTechnicalSpecimenRegistrationMaterials(
   caseId: string,
   data: SaveTechnicalSpecimenRegistrationMaterialsRequest,
 ) {
-  const response = await requestClient.put<TechnicalSpecimenRegistrationWorkspaceResponse>(
-    `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/materials`,
-    data,
-  );
+  const response =
+    await requestClient.put<TechnicalSpecimenRegistrationWorkspaceResponse>(
+      `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/materials`,
+      data,
+    );
+  return mapTechnicalSpecimenRegistrationWorkspaceResponse(response);
+}
+
+export async function verifyTechnicalSpecimenRegistrationMaterial(
+  caseId: string,
+  specimenId: string,
+  data: TechnicalSpecimenRegistrationMaterialVerificationRequest,
+) {
+  const response =
+    await requestClient.post<TechnicalSpecimenRegistrationWorkspaceResponse>(
+      `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/materials/${encodeURIComponent(specimenId)}/verify`,
+      data,
+    );
+  return mapTechnicalSpecimenRegistrationWorkspaceResponse(response);
+}
+
+export async function cancelTechnicalSpecimenRegistrationMaterialVerification(
+  caseId: string,
+  specimenId: string,
+  data: TechnicalSpecimenRegistrationMaterialVerificationRequest,
+) {
+  const response =
+    await requestClient.post<TechnicalSpecimenRegistrationWorkspaceResponse>(
+      `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/materials/${encodeURIComponent(specimenId)}/cancel-verification`,
+      data,
+    );
   return mapTechnicalSpecimenRegistrationWorkspaceResponse(response);
 }
 
@@ -498,13 +633,14 @@ export async function saveTechnicalSpecimenRegistrationDetailSections(
   caseId: string,
   data: SaveTechnicalSpecimenRegistrationDetailSectionsRequest,
 ) {
-  const response = await requestClient.request<TechnicalSpecimenRegistrationWorkspaceResponse>(
-    `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/detail-sections`,
-    {
-      data,
-      method: 'PATCH',
-    },
-  );
+  const response =
+    await requestClient.request<TechnicalSpecimenRegistrationWorkspaceResponse>(
+      `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/detail-sections`,
+      {
+        data,
+        method: 'PATCH',
+      },
+    );
   return mapTechnicalSpecimenRegistrationWorkspaceResponse(response);
 }
 
@@ -512,7 +648,9 @@ export async function uploadTechnicalSpecimenRegistrationMediaAsset(
   caseId: string,
   file: File,
 ) {
-  return requestClient.upload<TechnicalSpecimenRegistrationWorkspace['mediaAssets'][number]>(
+  return requestClient.upload<
+    TechnicalSpecimenRegistrationWorkspace['mediaAssets'][number]
+  >(
     `/v1/technical-specimen-registrations/${encodeURIComponent(caseId)}/media-assets`,
     { file },
   );
@@ -577,6 +715,19 @@ export async function updateTechnicalTaskPriority(
   );
 }
 
+export async function updateTechnicalTaskRemarks(
+  taskId: string,
+  data: TechnicalTaskRemarksRequest,
+) {
+  return requestClient.request<PendingTechnicalTaskPage['items'][number]>(
+    `/v1/technical-tasks/${encodeURIComponent(taskId)}/remarks`,
+    {
+      data,
+      method: 'PATCH',
+    },
+  );
+}
+
 export async function startGrossing(data: TechnicalTaskStartRequest) {
   return requestClient.post<TaskOperationResult>('/v1/grossings/start', data);
 }
@@ -628,12 +779,43 @@ export async function completeDehydrationBatch(
   );
 }
 
+export async function startDehydration(data: TechnicalTaskStartRequest) {
+  return requestClient.post<TaskOperationResult>(
+    '/v1/dehydrations/start',
+    data,
+  );
+}
+
+export async function completeDehydration(data: TechnicalTaskStartRequest) {
+  return requestClient.post<TaskOperationResult>(
+    '/v1/dehydrations/complete',
+    data,
+  );
+}
+
 export async function startEmbedding(data: TechnicalTaskStartRequest) {
   return requestClient.post<TaskOperationResult>('/v1/embeddings/start', data);
 }
 
+export async function cancelEmbedding(data: TechnicalTaskStartRequest) {
+  return requestClient.post<TaskOperationResult>('/v1/embeddings/cancel', data);
+}
+
 export async function completeEmbedding(data: EmbeddingCompleteRequest) {
   return requestClient.post<EmbeddingResult>('/v1/embeddings/complete', data);
+}
+
+export async function updateEmbeddingQualityReview(
+  embeddingId: string,
+  data: EmbeddingQualityReviewRequest,
+) {
+  return requestClient.request<EmbeddingQualityReviewResult>(
+    `/v1/embeddings/${encodeURIComponent(embeddingId)}/quality-review`,
+    {
+      data,
+      method: 'PATCH',
+    },
+  );
 }
 
 export async function startSlicing(data: TechnicalTaskStartRequest) {
@@ -642,6 +824,40 @@ export async function startSlicing(data: TechnicalTaskStartRequest) {
 
 export async function completeSlicing(data: SlicingCompleteRequest) {
   return requestClient.post<SlicingResult>('/v1/slicings/complete', data);
+}
+
+export async function printSlicingSlides(data: SlicingSlidePrintRequest) {
+  return requestClient.post<SlicingSlidePrintResult>(
+    '/v1/slicings/slide-print',
+    data,
+  );
+}
+
+export async function createSlicingSlidePrintMergeGroups(
+  data: SlicingSlidePrintMergeGroupRequest,
+) {
+  return requestClient.post<SlicingSlidePrintMergeGroupResult>(
+    '/v1/slicings/slide-print-merge-groups',
+    data,
+  );
+}
+
+export async function cancelSlicingSlidePrintMergeGroups(
+  data: SlicingSlidePrintMergeGroupCancelRequest,
+) {
+  return requestClient.post<SlicingSlidePrintMergeGroupResult>(
+    '/v1/slicings/slide-print-merge-groups/cancel',
+    data,
+  );
+}
+
+export async function printSlicingSlideMergeGroup(
+  data: SlicingSlidePrintMergeGroupPrintRequest,
+) {
+  return requestClient.post<SlicingSlidePrintResult>(
+    '/v1/slicings/slide-print-merge-groups/print',
+    data,
+  );
 }
 
 export async function getSlicingWorkbench(params: SlicingWorkbenchQuery) {

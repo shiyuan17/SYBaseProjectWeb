@@ -3,8 +3,8 @@ import type {
   LatestSpecimenRegistrationResult,
   PendingSpecimenItem,
   PendingTransportOrderItem,
-  SpecimenOutboundListItem,
   SpecimenManagementListItem,
+  SpecimenOutboundListItem,
   SpecimenReceiptResult,
   SpecimenRemovalConfirmRequest,
   SpecimenRemovalConfirmResult,
@@ -39,12 +39,10 @@ export function getMockState(): MockState {
   return state;
 }
 
-export function resolveMockOperatorContext(
-  operator?: {
-    operatorName?: null | string;
-    operatorUserId?: null | string;
-  },
-) {
+export function resolveMockOperatorContext(operator?: {
+  operatorName?: null | string;
+  operatorUserId?: null | string;
+}) {
   const operatorName =
     normalizeText(operator?.operatorName) || DEFAULT_MOCK_OPERATOR_NAME;
   const operatorUserId =
@@ -107,6 +105,40 @@ export function resolveSpecimensBySpecimenNo(specimenNo: string) {
   );
 }
 
+export function resolveSpecimenByPreferredIdentifier(data: {
+  specimenBarcode?: null | string;
+  specimenId?: null | string;
+  specimenNo?: null | string;
+}) {
+  const specimenId = normalizeText(data.specimenId);
+  if (specimenId) {
+    return resolveSpecimenByIdentifier(specimenId);
+  }
+
+  const specimenBarcode = normalizeText(data.specimenBarcode);
+  if (specimenBarcode) {
+    return resolveSpecimenByIdentifier(specimenBarcode);
+  }
+
+  const specimenNo = normalizeText(data.specimenNo);
+  if (specimenNo) {
+    const matchedSpecimens = resolveSpecimensBySpecimenNo(specimenNo);
+    if (matchedSpecimens.length === 0) {
+      throw new Error(`未找到标本: ${specimenNo}`);
+    }
+    if (matchedSpecimens.length > 1) {
+      throw new Error(`标本流水号 ${specimenNo} 匹配到多条记录`);
+    }
+    const matchedSpecimen = matchedSpecimens[0];
+    if (!matchedSpecimen) {
+      throw new Error(`未找到标本: ${specimenNo}`);
+    }
+    return matchedSpecimen;
+  }
+
+  throw new Error('缺少标本 ID、条码或标本编号');
+}
+
 export function applySpecimenRemovalConfirmation(
   specimen: RawSpecimen,
   data: Pick<SpecimenRemovalConfirmRequest, 'remarks' | 'terminalCode'>,
@@ -136,7 +168,7 @@ export function applySpecimenRemovalConfirmation(
     specimenNo: specimen.specimenNo,
   });
   return {
-    barcode: specimen.barcode,
+    barcode: specimen.barcode ?? '',
     operatorName,
     specimenId: specimen.id,
     specimenRemovalAt: eventTime,
@@ -156,10 +188,12 @@ export function findTransportOrderById(transportOrderId: string) {
 
 export function getTransportOrderBySpecimenId(specimenId: string) {
   return (
-    state.transportOrders.find(
-      (item) =>
-        item.specimenIds.includes(specimenId) && item.status !== 'CANCELLED',
-    ) ?? null
+    state.transportOrders
+      .toReversed()
+      .find(
+        (item) =>
+          item.specimenIds.includes(specimenId) && item.status !== 'CANCELLED',
+      ) ?? null
   );
 }
 
@@ -303,7 +337,7 @@ export function mapSpecimenTrackingSummary(
   return {
     abnormalReason: specimen.receiptReason ?? specimen.receiptRemarks ?? null,
     abnormalType: resolveSpecimenAbnormalType(specimen),
-    barcode: specimen.barcode,
+    barcode: normalizeText(specimen.barcode) || null,
     barcodeBindingStatus: resolveSpecimenBarcodeBindingStatus(specimen),
     checkInStatus: resolveSpecimenCheckInStatus(specimen),
     checkedInAt: specimen.checkedInAt ?? null,
@@ -345,7 +379,7 @@ export function mapSpecimenManagementItem(
     abnormalType: resolveSpecimenAbnormalType(specimen),
     applicationId: application.id,
     applicationNo: application.applicationNo,
-    barcode: specimen.barcode,
+    barcode: specimen.barcode ?? '',
     barcodeBindingStatus: resolveSpecimenBarcodeBindingStatus(specimen),
     buildingId: null,
     checkInStatus: resolveSpecimenCheckInStatus(specimen),
@@ -396,7 +430,7 @@ export function mapSpecimenRemovalItem(
     abnormalFlag: isSpecimenAbnormal(specimen),
     applicationId: application.id,
     applicationNo: application.applicationNo,
-    barcode: specimen.barcode,
+    barcode: specimen.barcode ?? '',
     confirmedAt: specimen.specimenRemovalAt ?? null,
     containerCount: specimen.containerCount,
     containerName: specimen.containerName,
@@ -423,27 +457,29 @@ export function mapSpecimenOutboundItem(
   const application = getApplicationById(specimen.applicationId);
   const order = getTransportOrderBySpecimenId(specimen.id);
 
-  if (!order) {
-    throw new Error(`标本 ${specimen.specimenNo} 未关联转运单`);
-  }
-
   return {
     applicationId: application.id,
     applicationNo: application.applicationNo,
+    barcode: specimen.barcode ?? '',
+    checkInStatus: resolveSpecimenCheckInStatus(specimen),
+    fixationStatus: specimen.fixationStatus,
     inpatientNo: normalizeText(application.applicationNo) || null,
-    outboundAt: order.handedOverAt,
-    outboundUserName: order.outboundUserName ?? null,
+    outboundAt: order?.handedOverAt ?? null,
+    outboundUserName: order?.outboundUserName ?? null,
     patientGender: application.patientGender ?? null,
     patientId: application.patientId ?? null,
     patientName: application.patientName,
     registeredAt: specimen.registeredAt,
     registeredByName: '系统导入',
+    specimenConfirmedAt: specimen.specimenConfirmedAt ?? null,
     specimenId: specimen.id,
     specimenName: specimen.specimenName,
     specimenNo: specimen.specimenNo,
     specimenStatus: specimen.specimenStatus,
+    submittingDepartmentId: application.submittingDepartmentId,
+    submittingDepartmentName: application.submittingDepartmentName,
     surgeryName: application.submittingDepartmentName ?? null,
-    transportOrderId: order.id,
+    transportOrderId: order?.id ?? null,
   };
 }
 
@@ -460,7 +496,7 @@ export function mapPendingSpecimenItem(
     applicationId: application.id,
     applicationNo: application.applicationNo,
     batchAbnormalFlag: batchMetrics?.batchAbnormalFlag ?? false,
-    barcode: specimen.barcode,
+    barcode: specimen.barcode ?? '',
     checkInStatus: resolveSpecimenCheckInStatus(specimen),
     checkedInAt: specimen.checkedInAt ?? null,
     checkedInByName: specimen.checkedInByName ?? null,
@@ -791,6 +827,10 @@ export function mapApplicationTrackingView(
     deletable: operationState.deletable,
     editable: operationState.editable,
     fixationCompletedAt,
+    patientIdentifier:
+      normalizeText(application.patientIdentifier) ||
+      normalizeText(application.patientId) ||
+      null,
     patientCheckStatus: application.patientCheckStatus ?? 'UNKNOWN',
     operationDisabledReason: operationState.operationDisabledReason,
     receiptAbnormalSummary: buildReceiptAbnormalSummary(specimens),
@@ -893,7 +933,7 @@ export function createReceiptResult(
   return {
     batchAbnormalFlag: batchMetrics.batchAbnormalFlag,
     caseId: `CASE-${application.applicationNo.slice(-4)}`,
-    pathologyNo: `PA-${application.applicationNo.slice(-4)}`,
+    pathologyNo: null,
     receiptAbnormalSummary: buildReceiptAbnormalSummary(specimens),
     receiptStatus:
       resolveApplicationStatus(application, specimens) ?? 'SUBMITTED',

@@ -6,16 +6,26 @@ import {
   buildArchiveApplicationFormRequest,
   buildArchiveEmbeddingBoxRequest,
   buildArchiveSlideRequest,
+  buildArchiveSpecimenRequest,
+  buildBatchArchiveObjectRequest,
+  buildBatchArchiveSpecimenRequest,
+  buildBatchCreateCabinetRequest,
+  buildCreateCabinetNodeRequest,
   buildCreateCabinetRequest,
   buildCreateMaterialLoanRequest,
   buildReturnMaterialLoanRequest,
+  buildUpdateCabinetNodeRequest,
   buildUpdateCabinetRequest,
   createArchiveFormDefaults,
+  createBatchCabinetFormDefaults,
   createCabinetFormDefaults,
   createCabinetFormStateFromCabinet,
+  createCabinetFormStateFromNode,
   createLoanFormDefaults,
   createReturnFormDefaults,
   validateArchiveForm,
+  validateBatchArchiveForm,
+  validateBatchCabinetForm,
   validateCabinetForm,
   validateLoanForm,
   validateReturnForm,
@@ -47,9 +57,19 @@ describe('archive form helpers', () => {
     expect(createCabinetFormDefaults(operator)).toEqual(
       expect.objectContaining({
         cabinetStatus: 'ACTIVE',
-        cabinetType: 'STANDARD',
+        cabinetType: 'APPLICATION_FORM',
+        nodeType: 'CABINET',
         operatorName: 'Alice',
         slotCountPerLayer: 10,
+      }),
+    );
+    expect(createBatchCabinetFormDefaults(operator)).toEqual(
+      expect.objectContaining({
+        cabinetType: 'APPLICATION_FORM',
+        count: 1,
+        numberWidth: 3,
+        operatorName: 'Alice',
+        startNo: 1,
       }),
     );
     expect(createArchiveFormDefaults(operator)).toEqual(
@@ -64,9 +84,11 @@ describe('archive form helpers', () => {
         operatorName: 'Alice',
       }),
     );
-    expect(createReturnFormDefaults(operator)).toEqual(
-      expect.objectContaining(operator),
-    );
+    expect(createReturnFormDefaults(operator)).toEqual({
+      operatorName: 'Alice',
+      remarks: '',
+      terminalCode: '',
+    });
   });
 
   it('maps an existing cabinet to edit form state', () => {
@@ -89,14 +111,66 @@ describe('archive form helpers', () => {
     );
   });
 
+  it('maps an existing cabinet node to node edit form state', () => {
+    expect(
+      createCabinetFormStateFromNode(
+        {
+          cabinetId: 'CABINET-1',
+          cabinetType: 'SLIDE',
+          capacity: 20,
+          id: 'NODE-1',
+          nodeCode: 'CAB-01',
+          nodeType: 'CABINET',
+          parentId: 'AREA-1',
+          pathLocation: '2F',
+          remainingCapacity: 18,
+          remarks: null,
+        },
+        operator,
+      ),
+    ).toEqual(
+      expect.objectContaining({
+        capacity: 20,
+        cabinetType: 'SLIDE',
+        nodeCode: 'CAB-01',
+        nodeType: 'CABINET',
+        parentId: 'AREA-1',
+        pathLocation: '2F',
+        remainingCapacity: 18,
+        remarks: '',
+      }),
+    );
+  });
+
   it('validates required cabinet and archive fields', () => {
     const cabinetForm = createCabinetFormDefaults(operator);
 
     expect(validateCabinetForm(cabinetForm, 'create')).toBeTruthy();
 
-    cabinetForm.cabinetCode = ' CAB-01 ';
-    cabinetForm.cabinetName = ' Cabinet 1 ';
+    cabinetForm.nodeCode = ' CAB-01 ';
+    cabinetForm.capacity = 10;
+    cabinetForm.operatorName = '';
     expect(validateCabinetForm(cabinetForm, 'create')).toBe('');
+    expect(validateCabinetForm(cabinetForm, 'edit')).toBe('请填写操作人。');
+    cabinetForm.operatorName = 'Alice';
+
+    cabinetForm.nodeType = 'DRAWER';
+    cabinetForm.parentId = '';
+    expect(validateCabinetForm(cabinetForm, 'create')).toBe(
+      '抽屉节点必须选择父柜子。',
+    );
+
+    const batchForm = createBatchCabinetFormDefaults(operator);
+    expect(validateBatchCabinetForm(batchForm)).toBeTruthy();
+    Object.assign(batchForm, {
+      cabinetCodePrefix: ' CAB-B ',
+      cabinetNamePrefix: ' 批量柜 ',
+      count: 2,
+      layerCount: 1,
+      slotCountPerLayer: 10,
+      startNo: 1,
+    });
+    expect(validateBatchCabinetForm(batchForm)).toBe('');
 
     const archiveForm = createArchiveFormDefaults(operator);
 
@@ -105,18 +179,43 @@ describe('archive form helpers', () => {
         canArchiveObjectType: true,
         canQueryCabinets: true,
         form: archiveForm,
-        hasSelectedPosition: true,
+        hasSelectedCabinet: true,
         permissionWarning: '',
       }),
     ).toBeTruthy();
 
+    archiveForm.archiveCabinetId = 'CABINET-1';
     archiveForm.caseId = 'CASE-1';
     expect(
       validateArchiveForm({
         canArchiveObjectType: true,
         canQueryCabinets: true,
         form: archiveForm,
-        hasSelectedPosition: true,
+        hasSelectedCabinet: true,
+        permissionWarning: '',
+        selectedApplicationFormRecordCount: 1,
+      }),
+    ).toBe('');
+
+    archiveForm.objectType = 'SPECIMEN';
+    archiveForm.caseId = '';
+    expect(
+      validateArchiveForm({
+        canArchiveObjectType: true,
+        canQueryCabinets: true,
+        form: archiveForm,
+        hasSelectedCabinet: true,
+        permissionWarning: '',
+      }),
+    ).toBe('标本归档必须填写标本 ID。');
+
+    archiveForm.specimenId = 'SPECIMEN-1';
+    expect(
+      validateArchiveForm({
+        canArchiveObjectType: true,
+        canQueryCabinets: true,
+        form: archiveForm,
+        hasSelectedCabinet: true,
         permissionWarning: '',
       }),
     ).toBe('');
@@ -126,6 +225,7 @@ describe('archive form helpers', () => {
     const loanForm = createLoanFormDefaults(operator);
 
     expect(validateLoanForm(loanForm, false)).toBeTruthy();
+    expect(loanForm.depositAmount).toBe('10');
 
     loanForm.materialId = 'SLIDE-1';
     loanForm.borrowedByName = 'Bob';
@@ -145,6 +245,7 @@ describe('archive form helpers', () => {
     Object.assign(cabinetForm, {
       cabinetCode: ' CAB-01 ',
       cabinetName: ' Cabinet 1 ',
+      nodeCode: ' CAB-01 ',
       layerCount: 2,
       locationDescription: ' ',
       remarks: ' Ready ',
@@ -155,7 +256,7 @@ describe('archive form helpers', () => {
     expect(buildCreateCabinetRequest(cabinetForm)).toEqual({
       cabinetCode: 'CAB-01',
       cabinetName: 'Cabinet 1',
-      cabinetType: 'STANDARD',
+      cabinetType: 'APPLICATION_FORM',
       layerCount: 2,
       locationDescription: undefined,
       operatorName: 'Alice',
@@ -171,6 +272,50 @@ describe('archive form helpers', () => {
         remarks: 'Ready',
       }),
     );
+    expect(buildCreateCabinetNodeRequest(cabinetForm)).toEqual({
+      cabinetType: 'APPLICATION_FORM',
+      capacity: 10,
+      nodeCode: 'CAB-01',
+      nodeType: 'CABINET',
+      parentId: undefined,
+      pathLocation: undefined,
+      remarks: 'Ready',
+      terminalCode: 'TERM-1',
+    });
+    expect(buildUpdateCabinetNodeRequest(cabinetForm)).toEqual({
+      cabinetType: 'APPLICATION_FORM',
+      capacity: 10,
+      nodeCode: 'CAB-01',
+      pathLocation: undefined,
+      remarks: 'Ready',
+      terminalCode: 'TERM-1',
+    });
+
+    const batchForm = createBatchCabinetFormDefaults(operator);
+    Object.assign(batchForm, {
+      cabinetCodePrefix: ' CAB-B ',
+      cabinetNamePrefix: ' 批量柜 ',
+      locationDescription: ' 2F ',
+      parentId: ' AREA-1 ',
+      remarks: ' ',
+      terminalCode: ' TERM-B ',
+    });
+    expect(buildBatchCreateCabinetRequest(batchForm)).toEqual({
+      cabinetCodePrefix: 'CAB-B',
+      cabinetNamePrefix: '批量柜',
+      cabinetType: 'APPLICATION_FORM',
+      count: 1,
+      layerCount: 1,
+      locationDescription: '2F',
+      numberWidth: 3,
+      operatorName: 'Alice',
+      operatorUserId: 'USER-1',
+      parentId: 'AREA-1',
+      remarks: undefined,
+      slotCountPerLayer: 10,
+      startNo: 1,
+      terminalCode: 'TERM-B',
+    });
   });
 
   it('builds archive, loan, and return requests without changing api contracts', () => {
@@ -182,6 +327,7 @@ describe('archive form helpers', () => {
       fileUrl: ' ',
       remarks: ' Stored ',
       slideId: ' SLIDE-1 ',
+      specimenId: ' SPECIMEN-1 ',
     });
 
     expect(
@@ -191,8 +337,6 @@ describe('archive form helpers', () => {
       caseId: 'CASE-1',
       fileName: 'scan.pdf',
       fileUrl: undefined,
-      operatorName: 'Alice',
-      operatorUserId: 'USER-1',
       remarks: 'Stored',
       terminalCode: undefined,
     });
@@ -208,31 +352,120 @@ describe('archive form helpers', () => {
         slideId: 'SLIDE-1',
       }),
     );
+    expect(buildArchiveSpecimenRequest(archiveForm, 'POSITION-1')).toEqual(
+      expect.objectContaining({
+        archivePositionId: 'POSITION-1',
+        specimenId: 'SPECIMEN-1',
+      }),
+    );
 
     const loanForm = createLoanFormDefaults(operator);
     Object.assign(loanForm, {
       borrowPurpose: ' Review ',
       borrowedByName: ' Bob ',
       borrowedByUserId: ' ',
+      borrowerPhone: ' 13800000000 ',
+      borrowerUnit: ' 外院 ',
+      depositAmount: ' 88 ',
       materialId: ' SLIDE-1 ',
+      remarks: ' 备注 ',
     });
 
     expect(buildCreateMaterialLoanRequest(loanForm)).toEqual(
       expect.objectContaining({
         borrowedByName: 'Bob',
         borrowedByUserId: undefined,
+        borrowerPhone: '13800000000',
+        borrowerUnit: '外院',
         borrowPurpose: 'Review',
+        depositAmount: '88',
         materialId: 'SLIDE-1',
+        remarks: '备注',
       }),
     );
     expect(
       buildReturnMaterialLoanRequest(createReturnFormDefaults(operator)),
     ).toEqual({
       archivePositionId: undefined,
-      operatorName: 'Alice',
-      operatorUserId: 'USER-1',
       remarks: undefined,
       terminalCode: undefined,
+    });
+  });
+
+  it('validates and builds physical batch archive requests', () => {
+    const archiveForm = createArchiveFormDefaults(operator);
+    Object.assign(archiveForm, {
+      archiveCabinetId: ' CABINET-1 ',
+      archiveExpiresAt: '2026-06-30T18:00:00',
+      archiveReminderDays: 1,
+      objectType: 'SPECIMEN',
+      remarks: ' 标本批量归档 ',
+      terminalCode: ' TERM-1 ',
+    });
+
+    expect(
+      validateBatchArchiveForm({
+        canArchiveObjectType: true,
+        canQueryCabinets: true,
+        form: archiveForm,
+        hasSelectedCabinet: false,
+        objectType: 'SPECIMEN',
+        permissionWarning: '',
+        selectedRecordCount: 1,
+      }),
+    ).toBe('请选择归档框编号。');
+
+    archiveForm.archiveReminderDays = -1;
+    expect(
+      validateBatchArchiveForm({
+        canArchiveObjectType: true,
+        canQueryCabinets: true,
+        form: archiveForm,
+        hasSelectedCabinet: true,
+        objectType: 'SPECIMEN',
+        permissionWarning: '',
+        selectedRecordCount: 1,
+      }),
+    ).toBe('剩余几天提醒不能小于 0。');
+
+    archiveForm.archiveReminderDays = 1;
+    expect(
+      validateBatchArchiveForm({
+        canArchiveObjectType: true,
+        canQueryCabinets: true,
+        form: archiveForm,
+        hasSelectedCabinet: true,
+        objectType: 'SPECIMEN',
+        permissionWarning: '',
+        selectedRecordCount: 1,
+      }),
+    ).toBe('');
+
+    expect(
+      buildBatchArchiveObjectRequest(
+        [{ objectId: ' BOX-1 ' }, { objectId: ' BOX-2 ' }],
+        archiveForm,
+        'CABINET-1',
+      ),
+    ).toEqual({
+      archiveCabinetId: 'CABINET-1',
+      objectIds: ['BOX-1', 'BOX-2'],
+      remarks: '标本批量归档',
+      terminalCode: 'TERM-1',
+    });
+    expect(
+      buildBatchArchiveSpecimenRequest(
+        [{ objectId: ' SPECIMEN-1 ' }],
+        archiveForm,
+        'CABINET-1',
+      ),
+    ).toEqual({
+      archiveCabinetId: 'CABINET-1',
+      archiveExpiresAt: '2026-06-30T18:00:00',
+      archiveReminderDays: 1,
+      objectIds: ['SPECIMEN-1'],
+      remarks: '标本批量归档',
+      terminalCode: 'TERM-1',
     });
   });
 });
