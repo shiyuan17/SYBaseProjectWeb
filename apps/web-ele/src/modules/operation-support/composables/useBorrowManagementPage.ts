@@ -14,6 +14,7 @@ import {
 } from '../utils/archive-workbench';
 import { useArchiveCabinetWorkspace } from './internal/useArchiveCabinetWorkspace';
 import { useArchiveLoanWorkspace } from './internal/useArchiveLoanWorkspace';
+import { useWhiteSlideLoanWorkspace } from './internal/useWhiteSlideLoanWorkspace';
 
 export function useBorrowManagementPage() {
   const accessStore = useAccessStore();
@@ -29,6 +30,9 @@ export function useBorrowManagementPage() {
     canCreateLoan: computed(() =>
       accessCodeSet.value.has(M5_PERMISSION_CODES.LOAN_CREATE),
     ),
+    canCreateWhiteSlideLoan: computed(() =>
+      accessCodeSet.value.has(M5_PERMISSION_CODES.WHITE_SLIDE_CREATE),
+    ),
     canQueryCabinets: computed(() =>
       accessCodeSet.value.has(M5_PERMISSION_CODES.ARCHIVE_CABINET_QUERY),
     ),
@@ -38,11 +42,17 @@ export function useBorrowManagementPage() {
     canQueryRecords: computed(() =>
       accessCodeSet.value.has(M5_PERMISSION_CODES.ARCHIVE_QUERY),
     ),
+    canQueryWhiteSlideLoans: computed(() =>
+      accessCodeSet.value.has(M5_PERMISSION_CODES.WHITE_SLIDE_QUERY),
+    ),
     canRegisterLoanAbnormal: computed(() =>
       accessCodeSet.value.has(M5_PERMISSION_CODES.LOAN_ABNORMAL_REGISTER),
     ),
     canReturnLoan: computed(() =>
       accessCodeSet.value.has(M5_PERMISSION_CODES.LOAN_RETURN),
+    ),
+    canReturnWhiteSlideLoan: computed(() =>
+      accessCodeSet.value.has(M5_PERMISSION_CODES.WHITE_SLIDE_RETURN),
     ),
     canUpdateCabinet: computed(() => false),
     canViewArchivePage: computed(() =>
@@ -84,6 +94,11 @@ export function useBorrowManagementPage() {
     refreshArchiveWorkspace: refreshBorrowWorkspace,
     selectedPosition: cabinetWorkspaceState.selectedPosition,
   });
+  const whiteSlideWorkspaceState = useWhiteSlideLoanWorkspace({
+    capabilities,
+    mutationState,
+    operatorContext,
+  });
 
   async function refreshBorrowWorkspace() {
     const tasks: Array<Promise<unknown>> = [];
@@ -96,6 +111,9 @@ export function useBorrowManagementPage() {
     }
     if (capabilities.canQueryRecords.value) {
       tasks.push(loanWorkspaceState.loadMaterialObjects());
+    }
+    if (capabilities.canQueryWhiteSlideLoans.value) {
+      tasks.push(whiteSlideWorkspaceState.reloadAll());
     }
 
     if (tasks.length > 0) {
@@ -122,6 +140,9 @@ export function useBorrowManagementPage() {
     if (capabilities.canQueryRecords.value) {
       tasks.push(loanWorkspaceState.loadMaterialObjects());
     }
+    if (capabilities.canQueryWhiteSlideLoans.value) {
+      tasks.push(whiteSlideWorkspaceState.reloadAll());
+    }
 
     if (tasks.length > 0) {
       await Promise.all(tasks);
@@ -140,5 +161,6 @@ export function useBorrowManagementPage() {
     },
     loanWorkspace: reactive(loanWorkspaceState),
     pageState: reactive(mutationState),
+    whiteSlideWorkspace: reactive(whiteSlideWorkspaceState),
   };
 }

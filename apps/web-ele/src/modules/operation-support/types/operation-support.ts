@@ -101,8 +101,6 @@ export interface ArchiveApplicationFormRequest {
   caseId: string;
   fileName?: string;
   fileUrl?: string;
-  operatorName: string;
-  operatorUserId?: string;
   remarks?: string;
   terminalCode?: string;
 }
@@ -110,16 +108,12 @@ export interface ArchiveApplicationFormRequest {
 export interface ArchiveEmbeddingBoxRequest {
   archivePositionId: string;
   embeddingBoxId: string;
-  operatorName: string;
-  operatorUserId?: string;
   remarks?: string;
   terminalCode?: string;
 }
 
 export interface ArchiveSlideRequest {
   archivePositionId: string;
-  operatorName: string;
-  operatorUserId?: string;
   remarks?: string;
   slideId: string;
   terminalCode?: string;
@@ -127,8 +121,6 @@ export interface ArchiveSlideRequest {
 
 export interface ArchiveSpecimenRequest {
   archivePositionId: string;
-  operatorName: string;
-  operatorUserId?: string;
   remarks?: string;
   specimenId: string;
   terminalCode?: string;
@@ -218,7 +210,10 @@ export interface MaterialLoanQuery {
 export interface CreateMaterialLoanRequest {
   borrowedByName: string;
   borrowedByUserId?: string;
+  borrowerPhone?: string;
+  borrowerUnit?: string;
   borrowPurpose?: string;
+  depositAmount?: number | string;
   materialId: string;
   materialType: string;
   operatorName: string;
@@ -264,8 +259,6 @@ export interface MaterialLoanAbnormalRecordView {
 
 export interface ReturnMaterialLoanRequest {
   archivePositionId?: string;
-  operatorName: string;
-  operatorUserId?: string;
   remarks?: string;
   terminalCode?: string;
 }
@@ -275,8 +268,11 @@ export interface MaterialLoanView {
   approvedByName?: null | string;
   borrowedAt?: null | string;
   borrowedByName?: null | string;
+  borrowerPhone?: null | string;
+  borrowerUnit?: null | string;
   borrowPurpose?: null | string;
   caseId: string;
+  depositAmount?: null | number | string;
   loanId: string;
   loanStatus: string;
   materialId: string;
@@ -287,6 +283,82 @@ export interface MaterialLoanView {
   remarks?: null | string;
   returnedAt?: null | string;
   returnedByName?: null | string;
+}
+
+export interface WhiteSlideStockView {
+  id: string;
+  quantityAvailable: number;
+  quantityBorrowed: number;
+  remarks?: null | string;
+  specification?: null | string;
+  status: string;
+  stockCode: string;
+  stockNo: string;
+}
+
+export interface WhiteSlideLoanQuery {
+  keyword?: string;
+  loanStatus?: string;
+}
+
+export interface WhiteSlideStockQuery {
+  keyword?: string;
+  status?: string;
+}
+
+export interface WhiteSlideLoanView {
+  amount?: null | number | string;
+  borrowerIdentityNo?: null | string;
+  borrowerName: string;
+  borrowerPhone?: null | string;
+  borrowerUnit?: null | string;
+  caseId?: null | string;
+  embeddingBoxNo?: null | string;
+  id: string;
+  loanNo: string;
+  loanStatus: string;
+  loanedAt?: null | string;
+  operatorName?: null | string;
+  pathologyNo?: null | string;
+  patientName?: null | string;
+  quantity: number;
+  remarks?: null | string;
+  returnedAt?: null | string;
+  returnedByName?: null | string;
+  saveDirectPrint: boolean;
+  slicePurpose?: null | string;
+  sliceThickness?: null | string;
+  stockCode: string;
+  stockId: string;
+  stockNo: string;
+  unitPrice?: null | number | string;
+  waxBlockUsage?: null | string;
+}
+
+export interface CreateWhiteSlideLoanRequest {
+  amount?: number | string;
+  borrowerIdentityNo?: string;
+  borrowerName: string;
+  borrowerPhone?: string;
+  borrowerUnit?: string;
+  caseId?: string;
+  embeddingBoxNo?: string;
+  pathologyNo?: string;
+  patientName?: string;
+  quantity: number;
+  remarks?: string;
+  saveDirectPrint?: boolean;
+  slicePurpose?: string;
+  sliceThickness?: string;
+  stockId: string;
+  terminalCode?: string;
+  unitPrice?: number | string;
+  waxBlockUsage?: string;
+}
+
+export interface ReturnWhiteSlideLoanRequest {
+  remarks?: string;
+  terminalCode?: string;
 }
 
 export interface ReagentView {
@@ -459,6 +531,32 @@ export interface EquipmentRecordView {
   locationDescription?: null | string;
   modelNo?: null | string;
   nextMaintenanceAt?: null | string;
+  quantity?: null | number;
+  purchaseDate?: null | string;
+  purchaserName?: null | string;
+  purchaserCode?: null | string;
+  managementUnit?: null | string;
+  managementCode?: null | string;
+  useUnit?: null | string;
+  principalCode?: null | string;
+  principalName?: null | string;
+  userName?: null | string;
+  productionDate?: null | string;
+  warrantyEndDate?: null | string;
+  factoryNo?: null | string;
+  depreciationMethod?: null | string;
+  serviceLifeYears?: null | number;
+  price?: null | number | string;
+  manufacturer?: null | string;
+  portNo?: null | string;
+  ipAddress?: null | string;
+  commonStartupTime?: null | string;
+  commonShutdownTime?: null | string;
+  commonUsageContent?: null | string;
+  commonlyUsed?: boolean;
+  setTemperature?: null | number | string;
+  currentTemperature?: null | number | string;
+  rfid?: null | string;
   remarks?: null | string;
 }
 
@@ -471,6 +569,32 @@ export interface CreateEquipmentRecordRequest {
   locationDescription?: string;
   modelNo?: string;
   nextMaintenanceAt?: string;
+  quantity?: number;
+  purchaseDate?: string;
+  purchaserName?: string;
+  purchaserCode?: string;
+  managementUnit?: string;
+  managementCode?: string;
+  useUnit?: string;
+  principalCode?: string;
+  principalName?: string;
+  userName?: string;
+  productionDate?: string;
+  warrantyEndDate?: string;
+  factoryNo?: string;
+  depreciationMethod?: string;
+  serviceLifeYears?: number;
+  price?: number | string;
+  manufacturer?: string;
+  portNo?: string;
+  ipAddress?: string;
+  commonStartupTime?: string;
+  commonShutdownTime?: string;
+  commonUsageContent?: string;
+  commonlyUsed: boolean;
+  setTemperature?: number | string;
+  currentTemperature?: number | string;
+  rfid?: string;
   operatorName: string;
   operatorUserId?: string;
   remarks?: string;
@@ -511,4 +635,99 @@ export interface EquipmentWarningView {
   equipmentStatus: string;
   nextMaintenanceAt?: null | string;
   warningType: string;
+}
+
+export interface BatchUpdateEquipmentStatusRequest {
+  equipmentIds: string[];
+  equipmentStatus: 'ACTIVE' | 'DISABLED';
+}
+
+export interface MedicalWasteOptionItem {
+  label: string;
+  value: string;
+}
+
+export interface MedicalWasteSpecimenOptionsView {
+  grossingOperators: MedicalWasteOptionItem[];
+  grossingPeriods: MedicalWasteOptionItem[];
+  grossingStations: MedicalWasteOptionItem[];
+}
+
+export interface MedicalWasteSpecimenPreviewRequest {
+  bagName: string;
+  grossingDate: string;
+  grossingOperatorName: string;
+  grossingPeriod: string;
+  grossingStationName: string;
+}
+
+export interface MedicalWasteSpecimenLabelView {
+  patientId?: null | string;
+  patientName?: null | string;
+  pathologyNo?: null | string;
+  sourceLabelId: string;
+  specimenName?: null | string;
+}
+
+export interface MedicalWasteSpecimenBatchView {
+  bagName: string;
+  destroyAction?: null | string;
+  destroyedAt?: null | string;
+  destroyedByName?: null | string;
+  grossingAction?: null | string;
+  grossingDate?: null | string;
+  grossingOperatorName?: null | string;
+  grossingPeriod?: null | string;
+  grossingStationName?: null | string;
+  id: string;
+  labelCount: number;
+  printedAt?: null | string;
+  printedByName?: null | string;
+  weightKg?: null | number | string;
+}
+
+export interface MedicalWastePrintSpecimenBatchRequest extends MedicalWasteSpecimenPreviewRequest {
+  weightKg?: number | string;
+}
+
+export interface MedicalWastePrintSpecimenBatchResult {
+  batch: MedicalWasteSpecimenBatchView;
+  labels: MedicalWasteSpecimenLabelView[];
+  printSubtitle?: null | string;
+  printTitle?: null | string;
+}
+
+export interface MedicalWasteReagentBagView {
+  bagName: string;
+  createdAt?: null | string;
+  createdByName?: null | string;
+  createdInfo?: null | string;
+  handedOverAt?: null | string;
+  handedOverByName?: null | string;
+  handoverInfo?: null | string;
+  handoverRemarks?: null | string;
+  id: string;
+  printedAt?: null | string;
+  printedByName?: null | string;
+  remarks?: null | string;
+  source?: null | string;
+  volumeMl?: null | number | string;
+  wasteType?: null | string;
+  weightKg?: null | number | string;
+}
+
+export interface CreateMedicalWasteReagentBagRequest {
+  bagName: string;
+  id?: string;
+  remarks?: string;
+  source?: string;
+  volumeMl?: number | string;
+  wasteType: string;
+  weightKg?: number | string;
+}
+
+export interface MedicalWasteReagentHandoverRequest {
+  handedOverAt: string;
+  handedOverByName: string;
+  handoverRemarks?: string;
 }

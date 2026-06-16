@@ -73,6 +73,16 @@ export function formatMaterialLoanStatus(value?: null | string) {
   return findOptionLabel(MATERIAL_LOAN_STATUS_OPTIONS, value);
 }
 
+export function formatWhiteSlideStockStatus(value?: null | string) {
+  if (value === 'ACTIVE') {
+    return '启用';
+  }
+  if (value === 'DISABLED') {
+    return '停用';
+  }
+  return formatNullable(value);
+}
+
 export function formatReagentStockStatus(value?: null | string) {
   return findOptionLabel(REAGENT_STOCK_STATUS_OPTIONS, value);
 }
@@ -86,6 +96,12 @@ export function formatReagentTemplateStatus(value?: null | string) {
 }
 
 export function formatEquipmentStatus(value?: null | string) {
+  if (value === 'ACTIVE') {
+    return '正常';
+  }
+  if (value === 'DISABLED') {
+    return '禁用';
+  }
   return findOptionLabel(EQUIPMENT_STATUS_OPTIONS, value);
 }
 

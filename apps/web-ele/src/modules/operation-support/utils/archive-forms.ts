@@ -108,7 +108,6 @@ export type LoanFormState = {
 
 export type ReturnFormState = {
   operatorName: string;
-  operatorUserId: string;
   remarks: string;
   terminalCode: string;
 };
@@ -270,7 +269,7 @@ export function createLoanFormDefaults(
     borrowPurpose: '',
     borrowedByName: '',
     borrowedByUserId: '',
-    depositAmount: '',
+    depositAmount: '10',
     materialId: '',
     materialType: 'SLIDE',
     operatorName: operator.operatorName,
@@ -309,7 +308,6 @@ export function createReturnFormDefaults(
 ): ReturnFormState {
   return {
     operatorName: operator.operatorName,
-    operatorUserId: operator.operatorUserId,
     remarks: '',
     terminalCode: '',
   };
@@ -369,7 +367,7 @@ export function validateArchiveForm(options: {
   canArchiveObjectType: boolean;
   canQueryCabinets: boolean;
   form: ArchiveFormState;
-  hasSelectedPosition: boolean;
+  hasSelectedCabinet: boolean;
   permissionWarning: string;
   selectedApplicationFormRecordCount?: number;
 }) {
@@ -377,7 +375,7 @@ export function validateArchiveForm(options: {
     canArchiveObjectType,
     canQueryCabinets,
     form,
-    hasSelectedPosition,
+    hasSelectedCabinet,
     permissionWarning,
     selectedApplicationFormRecordCount = 0,
   } = options;
@@ -385,8 +383,8 @@ export function validateArchiveForm(options: {
   if (!canArchiveObjectType) {
     return permissionWarning;
   }
-  if (!canQueryCabinets || !hasSelectedPosition) {
-    return '请先在柜位工作站中选择一个可用柜位。';
+  if (!canQueryCabinets || !hasSelectedCabinet) {
+    return '请选择归档框编号。';
   }
   if (!form.operatorName.trim()) {
     return '请填写归档操作人。';
@@ -492,9 +490,6 @@ export function validateReturnForm(options: {
   if (!options.hasReturningLoan) {
     return '请先选择待归还记录。';
   }
-  if (!options.form.operatorName.trim()) {
-    return '请填写归还操作人。';
-  }
   return '';
 }
 
@@ -589,8 +584,6 @@ export function buildArchiveApplicationFormRequest(
     caseId: form.caseId.trim(),
     fileName: optionalText(form.fileName),
     fileUrl: optionalText(form.fileUrl),
-    operatorName: form.operatorName.trim(),
-    operatorUserId: optionalText(form.operatorUserId),
     remarks: optionalText(form.remarks),
     terminalCode: optionalText(form.terminalCode),
   };
@@ -606,8 +599,6 @@ export function buildArchiveApplicationFormRequests(
     caseId: record.caseId.trim(),
     fileName: optionalText(form.fileName),
     fileUrl: optionalText(form.fileUrl),
-    operatorName: form.operatorName.trim(),
-    operatorUserId: optionalText(form.operatorUserId),
     remarks: optionalText(form.remarks),
     terminalCode: optionalText(form.terminalCode),
   }));
@@ -620,8 +611,6 @@ export function buildArchiveEmbeddingBoxRequest(
   return {
     archivePositionId,
     embeddingBoxId: form.embeddingBoxId.trim(),
-    operatorName: form.operatorName.trim(),
-    operatorUserId: optionalText(form.operatorUserId),
     remarks: optionalText(form.remarks),
     terminalCode: optionalText(form.terminalCode),
   };
@@ -633,8 +622,6 @@ export function buildArchiveSlideRequest(
 ): ArchiveSlideRequest {
   return {
     archivePositionId,
-    operatorName: form.operatorName.trim(),
-    operatorUserId: optionalText(form.operatorUserId),
     remarks: optionalText(form.remarks),
     slideId: form.slideId.trim(),
     terminalCode: optionalText(form.terminalCode),
@@ -647,8 +634,6 @@ export function buildArchiveSpecimenRequest(
 ): ArchiveSpecimenRequest {
   return {
     archivePositionId,
-    operatorName: form.operatorName.trim(),
-    operatorUserId: optionalText(form.operatorUserId),
     remarks: optionalText(form.remarks),
     specimenId: form.specimenId.trim(),
     terminalCode: optionalText(form.terminalCode),
@@ -684,24 +669,18 @@ export function buildBatchArchiveSpecimenRequest(
 export function buildCreateMaterialLoanRequest(
   form: LoanFormState,
 ): CreateMaterialLoanRequest {
-  const loanRemarks = [
-    form.remarks.trim(),
-    form.borrowerPhone.trim() ? `借阅人电话：${form.borrowerPhone.trim()}` : '',
-    form.borrowerUnit.trim() ? `借阅人单位：${form.borrowerUnit.trim()}` : '',
-    form.depositAmount.trim() ? `押金：${form.depositAmount.trim()}` : '',
-  ]
-    .filter(Boolean)
-    .join('\n');
-
   return {
     borrowPurpose: optionalText(form.borrowPurpose),
     borrowedByName: form.borrowedByName.trim(),
     borrowedByUserId: optionalText(form.borrowedByUserId),
+    borrowerPhone: optionalText(form.borrowerPhone),
+    borrowerUnit: optionalText(form.borrowerUnit),
+    depositAmount: optionalText(form.depositAmount),
     materialId: form.materialId.trim(),
     materialType: form.materialType,
     operatorName: form.operatorName.trim(),
     operatorUserId: optionalText(form.operatorUserId),
-    remarks: optionalText(loanRemarks),
+    remarks: optionalText(form.remarks),
     terminalCode: optionalText(form.terminalCode),
   };
 }
@@ -738,8 +717,6 @@ export function buildReturnMaterialLoanRequest(
 ): ReturnMaterialLoanRequest {
   return {
     archivePositionId,
-    operatorName: form.operatorName.trim(),
-    operatorUserId: optionalText(form.operatorUserId),
     remarks: optionalText(form.remarks),
     terminalCode: optionalText(form.terminalCode),
   };

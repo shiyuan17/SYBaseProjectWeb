@@ -50,6 +50,23 @@ vi.mock('element-plus', () => {
     },
   });
 
+  const ElCheckbox = defineComponent({
+    props: ['modelValue'],
+    emits: ['update:modelValue'],
+    setup(props, { emit }) {
+      return () =>
+        h('input', {
+          checked: Boolean(props.modelValue),
+          type: 'checkbox',
+          onChange: (event: Event) =>
+            emit(
+              'update:modelValue',
+              (event.target as HTMLInputElement).checked,
+            ),
+        });
+    },
+  });
+
   const ElForm = defineComponent({
     setup(_, { attrs, slots }) {
       return () => h('form', attrs, slots.default?.());
@@ -186,6 +203,7 @@ vi.mock('element-plus', () => {
   return {
     ElAlert,
     ElButton,
+    ElCheckbox,
     ElDatePicker,
     ElDialog,
     ElForm,
@@ -215,6 +233,10 @@ function createMarkerComponent(label: string) {
 
 vi.mock('../components/ArchiveReturnDialog.vue', () => ({
   default: createMarkerComponent('archive-return-dialog'),
+}));
+
+vi.mock('../components/EmbeddingBoxBorrowDialog.vue', () => ({
+  default: createMarkerComponent('embedding-box-borrow-dialog'),
 }));
 
 vi.mock('../composables/useBorrowManagementPage', () => ({
@@ -251,11 +273,14 @@ function createMockPageState() {
     },
     capabilities: {
       canCreateLoan: true,
+      canCreateWhiteSlideLoan: true,
       canQueryCabinets: true,
       canQueryLoans: true,
       canQueryRecords: true,
+      canQueryWhiteSlideLoans: true,
       canRegisterLoanAbnormal: true,
       canReturnLoan: true,
+      canReturnWhiteSlideLoan: true,
       canViewBorrowPage: true,
     },
     display: {
@@ -289,6 +314,7 @@ function createMockPageState() {
       archiveObjectError: '',
       archiveObjectLoading: false,
       borrowDialogVisible: false,
+      borrowDialogMode: 'EMBEDDING_BOX',
       loadMaterialObjects: vi.fn(),
       loadLoans: vi.fn(),
       loading: false,
@@ -330,7 +356,6 @@ function createMockPageState() {
       returnDialogVisible: false,
       returnForm: reactive({
         operatorName: '归档员甲',
-        operatorUserId: 'USER-1',
         remarks: '',
         terminalCode: '',
       }),
@@ -350,6 +375,55 @@ function createMockPageState() {
     },
     pageState: {
       submitting: false,
+    },
+    whiteSlideWorkspace: {
+      borrowDialogVisible: false,
+      borrowForm: reactive({
+        amount: null,
+        borrowerIdentityNo: '',
+        borrowerName: '',
+        borrowerPhone: '',
+        borrowerUnit: '',
+        caseId: '',
+        embeddingBoxNo: '',
+        pathologyNo: '',
+        patientName: '',
+        quantity: 1,
+        remarks: '',
+        saveDirectPrint: false,
+        slicePurpose: '',
+        sliceThickness: '',
+        stockId: 'WS-STOCK-DEFAULT',
+        stockNo: 'WS-DEFAULT',
+        terminalCode: '',
+        unitPrice: null,
+        waxBlockUsage: '',
+      }),
+      calculatedAmount: null,
+      filters: reactive({
+        keyword: '',
+        loanStatus: 'BORROWED',
+        stockStatus: 'ACTIVE',
+      }),
+      listError: '',
+      loading: false,
+      loans: [],
+      openBorrowDialog: vi.fn(),
+      openReturnDialog: vi.fn(),
+      printDraftLoan: vi.fn(),
+      printLoan: vi.fn(),
+      query: vi.fn(),
+      reloadAll: vi.fn(),
+      returnDialogVisible: false,
+      returnForm: reactive({
+        remarks: '',
+        terminalCode: '',
+      }),
+      selectedLoan: null,
+      selectedStock: null,
+      stocks: [],
+      submitBorrow: vi.fn(),
+      submitReturn: vi.fn(),
     },
   };
 }
@@ -403,8 +477,9 @@ describe('BorrowManagementView', () => {
 
     expect(document.body.textContent).toContain('蜡块借记');
     expect(document.body.textContent).toContain('玻片借记');
+    expect(document.body.textContent).toContain('白片借记');
     expect(document.body.textContent).toContain('待归还/归还');
-    expect(document.body.textContent).not.toContain('借白片');
+    expect(document.body.textContent).toContain('借白片');
     expect(document.body.textContent).toContain('借记');
     expect(document.body.textContent).toContain('异常登记');
     expect(document.body.textContent).toContain('材料号');
@@ -416,6 +491,7 @@ describe('BorrowManagementView', () => {
     expect(document.body.textContent).toContain('查询借阅');
     expect(document.body.textContent).toContain('查询柜位');
     expect(document.body.textContent).toContain('archive-return-dialog');
+    expect(document.body.textContent).toContain('embedding-box-borrow-dialog');
     expect(document.body.textContent).not.toContain('当前选中柜位');
     expect(document.body.textContent).not.toContain('暂未选择柜位');
     expect(document.body.innerHTML).not.toContain('legacy-toolbar');
@@ -423,6 +499,21 @@ describe('BorrowManagementView', () => {
     expect(document.body.innerHTML).not.toContain('legacy-status-cell');
     expect(state.loanWorkspace.setActiveMaterialType).toHaveBeenCalledWith(
       'EMBEDDING_BOX',
+    );
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('falls back to generic borrow dialog for non-embedding-box mode', () => {
+    const state = createMockPageState();
+    state.loanWorkspace.borrowDialogMode = 'GENERIC';
+    mockUseBorrowManagementPage.mockReturnValue(state);
+
+    const { app, root } = mountView();
+
+    expect(document.body.textContent).not.toContain(
+      'embedding-box-borrow-dialog',
     );
 
     app.unmount();
@@ -437,6 +528,7 @@ describe('BorrowManagementView', () => {
 
     expect(document.body.textContent).toContain('蜡块借记');
     expect(document.body.textContent).toContain('玻片借记');
+    expect(document.body.textContent).toContain('白片借记');
     expect(document.body.textContent).toContain('待归还/归还');
     expect(document.body.textContent).not.toContain('蜡块借记列表');
     expect(document.body.textContent).not.toContain('玻片借记列表');

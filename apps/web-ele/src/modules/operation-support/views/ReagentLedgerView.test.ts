@@ -1,4 +1,4 @@
-import { createApp, defineComponent, h, nextTick } from 'vue';
+import { createApp, defineComponent, h, inject, nextTick, provide } from 'vue';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -102,11 +102,23 @@ function createModelComponent(tag = 'div') {
   return defineComponent({
     props: ['modelValue'],
     emits: ['update:modelValue'],
-    setup(_, { attrs, slots }) {
-      return () => h(tag, attrs, slots.default?.());
+    setup(props, { attrs, slots }) {
+      return () =>
+        h(
+          tag,
+          {
+            ...attrs,
+            ...(tag === 'input' || tag === 'select'
+              ? { value: props.modelValue ?? '' }
+              : {}),
+          },
+          slots.default?.(),
+        );
     },
   });
 }
+
+const radioGroupKey = Symbol('radio-group');
 
 vi.mock('element-plus', () => {
   const ElAlert = defineComponent({
@@ -231,6 +243,48 @@ vi.mock('element-plus', () => {
         return () => h('option', props.label);
       },
     }),
+    ElRadio: defineComponent({
+      props: ['label'],
+      setup(props, { slots }) {
+        const group = inject<{
+          modelValue: unknown;
+          update: (value: unknown) => void;
+        }>(radioGroupKey);
+        return () =>
+          h(
+            'button',
+            {
+              'data-radio-label': props.label,
+              type: 'button',
+              onClick: () => group?.update(props.label),
+            },
+            slots.default?.(),
+          );
+      },
+    }),
+    ElRadioGroup: defineComponent({
+      props: ['modelValue'],
+      emits: ['update:modelValue'],
+      setup(props, { emit, slots }) {
+        provide(radioGroupKey, {
+          modelValue: props.modelValue,
+          update: (value: unknown) => emit('update:modelValue', value),
+        });
+        return () =>
+          h(
+            'div',
+            {
+              'data-radio-group-value': String(props.modelValue ?? ''),
+            },
+            slots.default?.(),
+          );
+      },
+    }),
+    ElScrollbar: defineComponent({
+      setup(_, { attrs, slots }) {
+        return () => h('div', attrs, slots.default?.());
+      },
+    }),
     ElSelect: createModelComponent('select'),
     ElSwitch: createModelComponent('button'),
     ElTabPane: defineComponent({
@@ -318,13 +372,21 @@ describe('ReagentLedgerView', () => {
 
     mockListReagents.mockResolvedValue([
       {
+        applicationDilution: '1:100',
         enabled: true,
         id: 'REAGENT-1',
+        manufacturer: 'Lab Maker',
         orderItemName: 'CK',
         reagentCode: 'RG-1',
         reagentName: 'CK Working Solution',
+        recommendedDilution: '1:200',
         reagentType: 'IMMUNO_WORKING_SOLUTION',
+        specification: '200ml',
+        stainCapacity: 100,
+        stainThreshold: 10,
         templateStatus: 'ENABLED',
+        unit: '瓶',
+        validityDays: 365,
       },
     ]);
     mockListReagentStocks.mockResolvedValue([
@@ -452,6 +514,61 @@ describe('ReagentLedgerView', () => {
     await flushView();
 
     expect(document.body.textContent).toContain('试剂模板维护');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('renders redesigned stock dialog and prefills stock fields from template selection', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    findButton('试剂入库')?.dispatchEvent(
+      new MouseEvent('click', { bubbles: true }),
+    );
+    await flushView();
+
+    expect(document.body.textContent).toContain('新增试剂库存信息');
+    expect(document.body.textContent).toContain('试剂模板');
+    expect(document.body.textContent).toContain('所属模板');
+    expect(document.body.textContent).toContain('保存');
+    expect(document.body.textContent).toContain('退出');
+    expect(document.body.textContent).toContain('入库');
+    expect(document.body.textContent).toContain('已测试');
+    expect(document.body.textContent).toContain('使用中');
+
+    const templateButton = [...document.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('CK Working Solution'),
+    );
+    expect(templateButton).toBeTruthy();
+
+    templateButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushView();
+
+    expect(
+      document.querySelector('[data-testid="selected-template-name"]')
+        ?.textContent,
+    ).toContain('CK Working Solution');
+    expect(
+      document.querySelector('[data-testid="selected-template-code"]')
+        ?.textContent,
+    ).toContain('RG-1');
+    expect(
+      document.querySelector('[data-testid="selected-template-order"]')
+        ?.textContent,
+    ).toContain('CK');
+
+    const recommendedInput = document.querySelector(
+      '[data-testid="stock-form-recommended-dilution"]',
+    ) as HTMLInputElement | null;
+    const applicationInput = document.querySelector(
+      '[data-testid="stock-form-application-dilution"]',
+    ) as HTMLInputElement | null;
+
+    expect(recommendedInput).toBeTruthy();
+    expect(applicationInput).toBeTruthy();
+    expect(recommendedInput?.value).toBe('1:200');
+    expect(applicationInput?.value).toBe('1:100');
 
     app.unmount();
     root.remove();

@@ -22,9 +22,13 @@ import {
   createMaterialLoanAbnormalRecord,
   createReagent,
   createReagentStock,
+  createWhiteSlideLoan,
   deleteArchiveCabinet,
+  destroyMedicalWasteSpecimenBatch,
   exportReagentStocks,
   finishUsingReagentStock,
+  getMedicalWasteSpecimenOptions,
+  handoverMedicalWasteReagentBag,
   importReagentStocks,
   listArchiveCabinetNodes,
   listArchiveCabinets,
@@ -34,13 +38,21 @@ import {
   listEquipmentRecords,
   listEquipmentWarnings,
   listMaterialLoans,
+  listMedicalWasteReagentBags,
+  listMedicalWasteSpecimenBatches,
   listPendingMaterialLoans,
   listReagents,
   listReagentStockEvents,
   listReagentStocks,
   listReagentWarnings,
+  listWhiteSlideLoans,
+  listWhiteSlideStocks,
   normalizeArrayResult,
+  previewMedicalWasteSpecimenLabels,
+  printMedicalWasteSpecimenBatch,
   returnMaterialLoan,
+  returnWhiteSlideLoan,
+  saveMedicalWasteReagentBag,
   searchArchiveRecords,
   startUsingReagentStock,
   testReagentStock,
@@ -203,6 +215,50 @@ describe('operation-support-service archive requests', () => {
     );
   });
 
+  it('calls white slide endpoints with exact paths', async () => {
+    requestClientMock.get.mockResolvedValue([]);
+
+    await listWhiteSlideStocks({ keyword: 'WS', status: 'ACTIVE' });
+    await listWhiteSlideLoans({ keyword: 'BL-1', loanStatus: 'BORROWED' });
+    await createWhiteSlideLoan({
+      borrowerName: '张三',
+      patientName: '患者甲',
+      quantity: 2,
+      slicePurpose: '会诊',
+      sliceThickness: '4um',
+      stockId: 'WS-STOCK-DEFAULT',
+    });
+    await returnWhiteSlideLoan('WSL-1', { remarks: '归还完成' });
+
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      1,
+      '/v1/white-slide-stocks',
+      { params: { keyword: 'WS', status: 'ACTIVE' } },
+    );
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      2,
+      '/v1/white-slide-loans',
+      { params: { keyword: 'BL-1', loanStatus: 'BORROWED' } },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      1,
+      '/v1/white-slide-loans',
+      {
+        borrowerName: '张三',
+        patientName: '患者甲',
+        quantity: 2,
+        slicePurpose: '会诊',
+        sliceThickness: '4um',
+        stockId: 'WS-STOCK-DEFAULT',
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      2,
+      '/v1/white-slide-loans/WSL-1/return',
+      { remarks: '归还完成' },
+    );
+  });
+
   it('posts archive actions and material loans', async () => {
     await createArchiveCabinet({
       cabinetCode: 'CAB-1',
@@ -235,21 +291,17 @@ describe('operation-support-service archive requests', () => {
     await archiveApplicationForm({
       archivePositionId: 'POS-1',
       caseId: 'CASE-1',
-      operatorName: '归档员',
     });
     await archiveEmbeddingBox({
       archivePositionId: 'POS-2',
       embeddingBoxId: 'BOX-1',
-      operatorName: '归档员',
     });
     await archiveSlide({
       archivePositionId: 'POS-3',
-      operatorName: '归档员',
       slideId: 'SLIDE-1',
     });
     await archiveSpecimen({
       archivePositionId: 'POS-4',
-      operatorName: '归档员',
       specimenId: 'SPECIMEN-1',
     });
     await batchArchiveEmbeddingBoxes({
@@ -269,16 +321,20 @@ describe('operation-support-service archive requests', () => {
     });
     await createMaterialLoan({
       borrowedByName: '医生',
+      borrowerPhone: '13800000000',
+      borrowerUnit: '外院',
+      depositAmount: '10',
       materialId: 'SLIDE-1',
       materialType: 'SLIDE',
       operatorName: '归档员',
+      remarks: '借记备注',
     });
     await createMaterialLoanAbnormalRecord({
       abnormalReason: '玻片破损',
       materialId: 'SLIDE-1',
       materialType: 'SLIDE',
     });
-    await returnMaterialLoan('LOAN-1', { operatorName: '归档员' });
+    await returnMaterialLoan('LOAN-1', { remarks: 'returned to archive' });
 
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       1,
@@ -326,7 +382,6 @@ describe('operation-support-service archive requests', () => {
       {
         archivePositionId: 'POS-1',
         caseId: 'CASE-1',
-        operatorName: '归档员',
       },
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
@@ -335,7 +390,6 @@ describe('operation-support-service archive requests', () => {
       {
         archivePositionId: 'POS-2',
         embeddingBoxId: 'BOX-1',
-        operatorName: '归档员',
       },
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
@@ -343,7 +397,6 @@ describe('operation-support-service archive requests', () => {
       '/v1/archive/slides',
       {
         archivePositionId: 'POS-3',
-        operatorName: '归档员',
         slideId: 'SLIDE-1',
       },
     );
@@ -352,7 +405,6 @@ describe('operation-support-service archive requests', () => {
       '/v1/archive/specimens',
       {
         archivePositionId: 'POS-4',
-        operatorName: '归档员',
         specimenId: 'SPECIMEN-1',
       },
     );
@@ -388,9 +440,13 @@ describe('operation-support-service archive requests', () => {
       '/v1/material-loans',
       {
         borrowedByName: '医生',
+        borrowerPhone: '13800000000',
+        borrowerUnit: '外院',
+        depositAmount: '10',
         materialId: 'SLIDE-1',
         materialType: 'SLIDE',
         operatorName: '归档员',
+        remarks: '借记备注',
       },
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
@@ -405,7 +461,7 @@ describe('operation-support-service archive requests', () => {
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       13,
       '/v1/material-loans/LOAN-1/return',
-      { operatorName: '归档员' },
+      { remarks: 'returned to archive' },
     );
   });
 
@@ -653,12 +709,14 @@ describe('operation-support-service equipment requests', () => {
 
   it('creates and patches equipment records and maintenance logs', async () => {
     await createEquipmentRecord({
+      commonlyUsed: false,
       equipmentCode: 'EQ-1',
       equipmentName: '设备',
       equipmentStatus: 'ACTIVE',
       operatorName: '设备员',
     });
     await updateEquipmentRecord('EQ-1', {
+      commonlyUsed: false,
       equipmentName: '设备2',
       equipmentStatus: 'MAINTENANCE',
       operatorName: '设备员',
@@ -677,6 +735,7 @@ describe('operation-support-service equipment requests', () => {
         equipmentCode: 'EQ-1',
         equipmentName: '设备',
         equipmentStatus: 'ACTIVE',
+        commonlyUsed: false,
         operatorName: '设备员',
       },
     );
@@ -684,6 +743,7 @@ describe('operation-support-service equipment requests', () => {
       '/v1/equipment-records/EQ-1',
       {
         data: {
+          commonlyUsed: false,
           equipmentName: '设备2',
           equipmentStatus: 'MAINTENANCE',
           operatorName: '设备员',
@@ -699,6 +759,149 @@ describe('operation-support-service equipment requests', () => {
         maintenanceType: 'MAINTENANCE',
         operatorName: '设备员',
         performedAt: '2026-05-22T10:00:00',
+      },
+    );
+  });
+});
+
+describe('operation-support-service medical waste requests', () => {
+  it('calls specimen medical waste endpoints with exact paths', async () => {
+    requestClientMock.get.mockResolvedValueOnce([]).mockResolvedValueOnce({
+      grossingOperators: [],
+      grossingPeriods: [],
+      grossingStations: [],
+    });
+    requestClientMock.post.mockResolvedValueOnce([]).mockResolvedValueOnce({
+      batch: {
+        bagName: 'HB-01',
+        id: 'BATCH-1',
+        labelCount: 1,
+      },
+      labels: [],
+      printTitle: 'HB-01',
+    });
+
+    await listMedicalWasteSpecimenBatches({
+      createdByName: '张三',
+      dateFrom: '2026-06-01',
+      dateTo: '2026-06-16',
+      keyword: 'HB',
+    });
+    await getMedicalWasteSpecimenOptions();
+    await previewMedicalWasteSpecimenLabels({
+      bagName: 'HB-01',
+      grossingDate: '2026-06-16',
+      grossingOperatorName: '张三',
+      grossingPeriod: 'AM',
+      grossingStationName: '取材台A',
+    });
+    await printMedicalWasteSpecimenBatch({
+      bagName: 'HB-01',
+      grossingDate: '2026-06-16',
+      grossingOperatorName: '张三',
+      grossingPeriod: 'AM',
+      grossingStationName: '取材台A',
+      weightKg: 1.2,
+    });
+    await destroyMedicalWasteSpecimenBatch('BATCH-1');
+
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      1,
+      '/v1/medical-waste/specimen-batches',
+      {
+        params: {
+          createdByName: '张三',
+          dateFrom: '2026-06-01',
+          dateTo: '2026-06-16',
+          keyword: 'HB',
+        },
+      },
+    );
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      2,
+      '/v1/medical-waste/specimen-options',
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      1,
+      '/v1/medical-waste/specimen-batches/preview-labels',
+      {
+        bagName: 'HB-01',
+        grossingDate: '2026-06-16',
+        grossingOperatorName: '张三',
+        grossingPeriod: 'AM',
+        grossingStationName: '取材台A',
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      2,
+      '/v1/medical-waste/specimen-batches/print',
+      {
+        bagName: 'HB-01',
+        grossingDate: '2026-06-16',
+        grossingOperatorName: '张三',
+        grossingPeriod: 'AM',
+        grossingStationName: '取材台A',
+        weightKg: 1.2,
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      3,
+      '/v1/medical-waste/specimen-batches/BATCH-1/destroy',
+    );
+  });
+
+  it('calls reagent medical waste endpoints with exact paths', async () => {
+    requestClientMock.get.mockResolvedValueOnce([]);
+    requestClientMock.post.mockResolvedValue({});
+
+    await listMedicalWasteReagentBags({
+      dateFrom: '2026-06-01',
+      dateTo: '2026-06-16',
+      keyword: 'DW',
+    });
+    await saveMedicalWasteReagentBag({
+      bagName: 'DW-01',
+      remarks: '备注',
+      source: '病理室',
+      volumeMl: 50,
+      wasteType: 'DRUG',
+      weightKg: 1.5,
+    });
+    await handoverMedicalWasteReagentBag('BAG-1', {
+      handedOverAt: '2026-06-16T09:00:00',
+      handedOverByName: '李四',
+      handoverRemarks: '完成交接',
+    });
+
+    expect(requestClientMock.get).toHaveBeenCalledWith(
+      '/v1/medical-waste/reagent-bags',
+      {
+        params: {
+          dateFrom: '2026-06-01',
+          dateTo: '2026-06-16',
+          keyword: 'DW',
+        },
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      1,
+      '/v1/medical-waste/reagent-bags',
+      {
+        bagName: 'DW-01',
+        remarks: '备注',
+        source: '病理室',
+        volumeMl: 50,
+        wasteType: 'DRUG',
+        weightKg: 1.5,
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      2,
+      '/v1/medical-waste/reagent-bags/BAG-1/handover',
+      {
+        handedOverAt: '2026-06-16T09:00:00',
+        handedOverByName: '李四',
+        handoverRemarks: '完成交接',
       },
     );
   });

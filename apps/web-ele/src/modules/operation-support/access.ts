@@ -5,6 +5,7 @@ import {
   M5_EQUIPMENT_PAGE_AUTHORITIES,
   M5_PERMISSION_CODES,
   M5_REAGENT_PAGE_AUTHORITIES,
+  M5_RESOURCE_PAGE_AUTHORITIES,
   M5_RESOURCE_ROUTE_ITEMS,
 } from './constants';
 
@@ -103,6 +104,14 @@ export function getEquipmentLedgerCapabilities(accessCodes: string[]) {
   };
 }
 
+export function getMedicalWasteCapabilities(accessCodes: string[]) {
+  const accessCodeSet = createAccessCodeSet(accessCodes);
+
+  return {
+    canViewPage: hasAnyPermission(accessCodeSet, M5_RESOURCE_PAGE_AUTHORITIES),
+  };
+}
+
 export function canViewArchivePage(accessCodes: string[]) {
   return hasAnyPermission(
     createAccessCodeSet(accessCodes),
@@ -133,6 +142,18 @@ export function getBorrowManagementCapabilities(accessCodes: string[]) {
     canReturnLoan: hasPermission(
       accessCodeSet,
       M5_PERMISSION_CODES.LOAN_RETURN,
+    ),
+    canCreateWhiteSlideLoan: hasPermission(
+      accessCodeSet,
+      M5_PERMISSION_CODES.WHITE_SLIDE_CREATE,
+    ),
+    canQueryWhiteSlideLoans: hasPermission(
+      accessCodeSet,
+      M5_PERMISSION_CODES.WHITE_SLIDE_QUERY,
+    ),
+    canReturnWhiteSlideLoan: hasPermission(
+      accessCodeSet,
+      M5_PERMISSION_CODES.WHITE_SLIDE_RETURN,
     ),
     canViewPage: hasAnyPermission(accessCodeSet, M5_BORROW_PAGE_AUTHORITIES),
   };

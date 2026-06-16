@@ -275,18 +275,20 @@ vi.mock('../components/ApplicationFormArchiveDialog.vue', () => ({
   default: defineComponent({
     props: [
       'modelValue',
+      'archiveCabinetId',
+      'cabinets',
       'selectedRecords',
-      'selectedPositionLabel',
       'submitting',
       'archivePermissionWarning',
     ],
-    emits: ['update:modelValue', 'submitArchive'],
+    emits: ['update:modelValue', 'update:archiveCabinetId', 'submitArchive'],
     setup(props, { emit }) {
       return () =>
         getVisibleModelValue(props.modelValue)
           ? h('section', { 'data-testid': 'application-form-archive-dialog' }, [
               'application-form-archive-dialog',
-              h('div', `selected-position-${props.selectedPositionLabel}`),
+              h('div', `selected-cabinet-${props.archiveCabinetId ?? ''}`),
+              h('div', `application-cabinets-${props.cabinets?.length ?? 0}`),
               h(
                 'pre',
                 { 'data-testid': 'application-form-selected-records' },
@@ -380,6 +382,9 @@ function createMockPageState() {
   return {
     archiveWorkspace: {
       archiveForm: reactive({
+        archiveCabinetId: '',
+        archiveExpiresAt: '',
+        archiveReminderDays: null,
         caseId: '',
         embeddingBoxId: '',
         fileName: '',
@@ -559,6 +564,7 @@ function createMockPageState() {
     },
     loanWorkspace: {
       borrowDialogVisible: ref(false),
+      borrowDialogMode: 'GENERIC',
       loanForm: reactive({
         borrowerPhone: '',
         borrowerUnit: '',
@@ -574,6 +580,7 @@ function createMockPageState() {
         terminalCode: '',
       }),
       openBorrowDialogForRecords: vi.fn(),
+      openBorrowDialogForRecordsWithMode: vi.fn(),
       selectedMaterialRecords: [] as ArchiveRecordView[],
       selectedMaterialSummary: '',
       submitLoan: vi.fn(),
@@ -921,7 +928,8 @@ describe('ArchiveManagementView', () => {
     expect(document.body.textContent).toContain(
       'application-form-archive-dialog',
     );
-    expect(document.body.textContent).toContain('selected-position-未选择柜位');
+    expect(document.body.textContent).toContain('selected-cabinet-');
+    expect(document.body.textContent).toContain('application-cabinets-1');
     expect(document.body.textContent).toContain('BL-2026-001');
     expect(document.body.textContent).toContain('BL-2026-002');
     expect(document.body.textContent).toContain('申请医生甲');
@@ -1024,11 +1032,16 @@ describe('ArchiveManagementView', () => {
     borrowButtons[1]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
     expect(
-      state.loanWorkspace.openBorrowDialogForRecords,
-    ).toHaveBeenNthCalledWith(1, 'EMBEDDING_BOX', [embeddingBoxRecord]);
+      state.loanWorkspace.openBorrowDialogForRecordsWithMode,
+    ).toHaveBeenNthCalledWith(
+      1,
+      'EMBEDDING_BOX',
+      [embeddingBoxRecord],
+      'GENERIC',
+    );
     expect(
-      state.loanWorkspace.openBorrowDialogForRecords,
-    ).toHaveBeenNthCalledWith(2, 'SLIDE', [slideRecord]);
+      state.loanWorkspace.openBorrowDialogForRecordsWithMode,
+    ).toHaveBeenNthCalledWith(2, 'SLIDE', [slideRecord], 'GENERIC');
 
     app.unmount();
     root.remove();

@@ -80,6 +80,9 @@ describe('operation support routes', () => {
     expect(hazardousRoute?.meta?.keepAlive).toBe(true);
     expect(wasteRoute?.path).toBe('/operation-resources/medical-waste');
     expect(wasteRoute?.meta?.keepAlive).toBe(true);
+    expect(wasteRoute?.meta?.description).toBe(
+      '维护人体标本与药物试剂医疗废物袋打印、交接记录。',
+    );
     expect(reagentRoute?.meta?.authority).toEqual([
       ...M5_REAGENT_PAGE_AUTHORITIES,
     ]);

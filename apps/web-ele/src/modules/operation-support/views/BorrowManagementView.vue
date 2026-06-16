@@ -11,10 +11,20 @@ import ArchiveLoanMaterialListPanel from '../components/ArchiveLoanMaterialListP
 import ArchiveLoanPendingPanel from '../components/ArchiveLoanPendingPanel.vue';
 import ArchivePositionWorkbenchPanel from '../components/ArchivePositionWorkbenchPanel.vue';
 import ArchiveReturnDialog from '../components/ArchiveReturnDialog.vue';
+import EmbeddingBoxBorrowDialog from '../components/EmbeddingBoxBorrowDialog.vue';
+import WhiteSlideBorrowDialog from '../components/WhiteSlideBorrowDialog.vue';
+import WhiteSlideBorrowListPanel from '../components/WhiteSlideBorrowListPanel.vue';
+import WhiteSlideReturnDialog from '../components/WhiteSlideReturnDialog.vue';
 import { useBorrowManagementPage } from '../composables/useBorrowManagementPage';
 
-const { cabinetWorkspace, capabilities, display, loanWorkspace, pageState } =
-  useBorrowManagementPage();
+const {
+  cabinetWorkspace,
+  capabilities,
+  display,
+  loanWorkspace,
+  pageState,
+  whiteSlideWorkspace,
+} = useBorrowManagementPage();
 
 const activeBorrowTab = ref('EMBEDDING_BOX');
 const borrowMaterialTabs = new Set(['EMBEDDING_BOX', 'SLIDE']);
@@ -104,6 +114,25 @@ watch(
           </div>
         </ElTabPane>
 
+        <ElTabPane label="白片借记" name="WHITE_SLIDE">
+          <div class="flex flex-col gap-4">
+            <WhiteSlideBorrowListPanel
+              v-model:filters="whiteSlideWorkspace.filters"
+              :can-create="capabilities.canCreateWhiteSlideLoan"
+              :can-query="capabilities.canQueryWhiteSlideLoans"
+              :can-return="capabilities.canReturnWhiteSlideLoan"
+              :loading="whiteSlideWorkspace.loading"
+              :loans="whiteSlideWorkspace.loans"
+              :selected-loan-id="whiteSlideWorkspace.selectedLoan?.id ?? null"
+              @borrow="whiteSlideWorkspace.openBorrowDialog"
+              @print="whiteSlideWorkspace.printLoan"
+              @query="whiteSlideWorkspace.query"
+              @return="whiteSlideWorkspace.openReturnDialog"
+              @select="whiteSlideWorkspace.selectLoan"
+            />
+          </div>
+        </ElTabPane>
+
         <ElTabPane label="待归还/归还" name="PENDING">
           <div class="flex flex-col gap-4">
             <ArchivePositionWorkbenchPanel
@@ -157,7 +186,18 @@ watch(
       @submit="loanWorkspace.submitReturn"
     />
 
+    <EmbeddingBoxBorrowDialog
+      v-if="loanWorkspace.borrowDialogMode === 'EMBEDDING_BOX'"
+      v-model="loanWorkspace.borrowDialogVisible"
+      v-model:loan-form="loanWorkspace.loanForm"
+      :selected-count="loanWorkspace.selectedMaterialRecords.length"
+      :selected-records="loanWorkspace.selectedMaterialRecords"
+      :submitting="pageState.submitting"
+      @submit="loanWorkspace.submitLoan"
+    />
+
     <ArchiveLoanBorrowDialog
+      v-else
       v-model="loanWorkspace.borrowDialogVisible"
       v-model:loan-form="loanWorkspace.loanForm"
       :material-summary="loanWorkspace.selectedMaterialSummary"
@@ -173,6 +213,24 @@ watch(
       :selected-count="loanWorkspace.selectedMaterialRecords.length"
       :submitting="pageState.submitting"
       @submit="loanWorkspace.submitAbnormalRecord"
+    />
+
+    <WhiteSlideBorrowDialog
+      v-model="whiteSlideWorkspace.borrowDialogVisible"
+      v-model:form="whiteSlideWorkspace.borrowForm"
+      :calculated-amount="whiteSlideWorkspace.calculatedAmount"
+      :stocks="whiteSlideWorkspace.stocks"
+      :submitting="pageState.submitting"
+      @print="whiteSlideWorkspace.printDraftLoan"
+      @submit="whiteSlideWorkspace.submitBorrow"
+    />
+
+    <WhiteSlideReturnDialog
+      v-model="whiteSlideWorkspace.returnDialogVisible"
+      v-model:form="whiteSlideWorkspace.returnForm"
+      :loan="whiteSlideWorkspace.selectedLoan"
+      :submitting="pageState.submitting"
+      @submit="whiteSlideWorkspace.submitReturn"
     />
   </Page>
 </template>

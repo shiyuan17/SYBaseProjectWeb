@@ -13,6 +13,7 @@ import { useRoute } from 'vue-router';
 
 import { Fallback, Page } from '@vben/common-ui';
 import { useAccessStore, useUserStore } from '@vben/stores';
+import { downloadFileFromBlob } from '@vben/utils';
 
 import {
   ElAlert,
@@ -31,6 +32,7 @@ import {
 
 import { getEquipmentLedgerCapabilities } from '../access';
 import {
+  batchUpdateEquipmentStatus,
   createEquipmentMaintenanceLog,
   createEquipmentRecord,
   listEquipmentMaintenanceLogs,
@@ -45,6 +47,8 @@ import { EQUIPMENT_STATUS_OPTIONS } from '../constants';
 import {
   buildCreateEquipmentRecordRequest,
   buildCreateMaintenanceLogRequest,
+  buildEquipmentExportDocument,
+  buildEquipmentPrintDocument,
   buildUpdateEquipmentRecordRequest,
   createDraftEquipmentRecordView,
   createEquipmentFormDefaults,
@@ -82,6 +86,7 @@ const submitting = ref(false);
 const pageError = ref('');
 const equipmentRecords = ref<EquipmentRecordView[]>([]);
 const selectedEquipment = ref<EquipmentRecordView | null>(null);
+const selectedRows = ref<EquipmentRecordView[]>([]);
 const logs = ref(awaitSafeLogs());
 const warnings = ref<EquipmentWarningView[]>([]);
 const editingEquipment = ref<EquipmentRecordView | null>(null);
@@ -115,13 +120,7 @@ const logForm = reactive<MaintenanceLogFormState>(
 );
 
 const isEditingEquipment = computed(() => Boolean(editingEquipment.value?.id));
-const pageTitle = computed(() => String(route.meta.title || '设备台账'));
-const pageDescription = computed(() =>
-  String(
-    route.meta.description ||
-      '维护设备台账、保养记录，并跟踪 DUE_SOON 与 OVERDUE 预警。',
-  ),
-);
+const pageTitle = computed(() => String(route.meta.title || '仪器设备管理'));
 
 function getDefaultOperatorName() {
   return currentOperatorName.value;
@@ -145,7 +144,6 @@ function syncSelectedEquipment() {
   if (!selectedEquipment.value) {
     return;
   }
-
   selectedEquipment.value =
     equipmentRecords.value.find(
       (item) => item.id === selectedEquipment.value?.id,
@@ -156,6 +154,7 @@ async function loadEquipmentRecords() {
   if (!capabilities.value.canQueryEquipment) {
     equipmentRecords.value = [];
     selectedEquipment.value = null;
+    selectedRows.value = [];
     return;
   }
 
@@ -179,7 +178,6 @@ async function loadWarnings() {
     warnings.value = [];
     return;
   }
-
   loading.warnings = true;
   try {
     warnings.value = await listEquipmentWarnings();
@@ -193,11 +191,9 @@ async function loadWarnings() {
 async function selectEquipment(row: EquipmentRecordView | null) {
   selectedEquipment.value = row;
   logs.value = [];
-
   if (!row || !capabilities.value.canQueryEquipment) {
     return;
   }
-
   loading.logs = true;
   try {
     logs.value = await listEquipmentMaintenanceLogs(row.id);
@@ -208,11 +204,8 @@ async function selectEquipment(row: EquipmentRecordView | null) {
   }
 }
 
-function scrollToEquipmentTable() {
-  document.querySelector('#equipment-main-table')?.scrollIntoView({
-    behavior: 'smooth',
-    block: 'start',
-  });
+function handleSelectionChange(rows: EquipmentRecordView[]) {
+  selectedRows.value = rows;
 }
 
 function openCreateEquipmentDialog() {
@@ -220,74 +213,28 @@ function openCreateEquipmentDialog() {
     ElMessage.warning('当前账号没有设备档案维护权限');
     return;
   }
-
   editingEquipment.value = createDraftEquipmentRecordView();
   resetEquipmentForm();
 }
 
-function openEditEquipmentDialog(row: EquipmentRecordView) {
-  if (!capabilities.value.canUpdateEquipment) {
-    ElMessage.warning('当前账号没有设备档案维护权限');
+function openEditSelectedEquipmentDialog() {
+  if (!selectedEquipment.value || !capabilities.value.canUpdateEquipment) {
     return;
   }
-
-  editingEquipment.value = row;
+  editingEquipment.value = selectedEquipment.value;
   Object.assign(
     equipmentForm,
-    createEquipmentFormStateFromRow(row, getDefaultOperatorName()),
+    createEquipmentFormStateFromRow(
+      selectedEquipment.value,
+      getDefaultOperatorName(),
+    ),
   );
-}
-
-function openEditSelectedEquipmentDialog() {
-  if (!selectedEquipment.value) {
-    return;
-  }
-
-  openEditEquipmentDialog(selectedEquipment.value);
-}
-
-async function openEquipmentDetailDrawer() {
-  if (!selectedEquipment.value) {
-    return;
-  }
-
-  equipmentDetailDrawerVisible.value = true;
-  await selectEquipment(selectedEquipment.value);
-}
-
-function openEquipmentWarningDrawer() {
-  equipmentWarningDrawerVisible.value = true;
-}
-
-async function navigateToEquipmentDetail(warning: EquipmentWarningView) {
-  if (!capabilities.value.canQueryEquipment) {
-    ElMessage.warning('当前账号没有设备档案查询权限，无法打开设备详情');
-    return;
-  }
-
-  equipmentFilters.keyword = warning.equipmentCode;
-  equipmentFilters.equipmentStatus = '';
-  await loadEquipmentRecords();
-
-  const matchedEquipment = equipmentRecords.value.find(
-    (item) => item.id === warning.equipmentId,
-  );
-  if (!matchedEquipment) {
-    ElMessage.warning('未找到对应设备，请刷新后重试');
-    return;
-  }
-
-  equipmentWarningDrawerVisible.value = false;
-  await selectEquipment(matchedEquipment);
-  scrollToEquipmentTable();
-  ElMessage.success(`已定位到设备 ${warning.equipmentCode}`);
 }
 
 async function submitEquipment() {
   if (!editingEquipment.value) {
     return;
   }
-
   const validationMessage = validateEquipmentForm(
     equipmentForm,
     !editingEquipment.value.id,
@@ -353,6 +300,70 @@ async function submitMaintenanceLog() {
   }
 }
 
+async function handleBatchStatusUpdate(equipmentStatus: 'ACTIVE' | 'DISABLED') {
+  if (selectedRows.value.length === 0) {
+    ElMessage.warning('请先勾选设备');
+    return;
+  }
+  try {
+    await batchUpdateEquipmentStatus({
+      equipmentIds: selectedRows.value.map((item) => item.id),
+      equipmentStatus,
+    });
+    ElMessage.success(
+      equipmentStatus === 'ACTIVE' ? '设备已恢复' : '设备已禁用',
+    );
+    await Promise.all([loadEquipmentRecords(), loadWarnings()]);
+  } catch (error) {
+    ElMessage.error(getOperationSupportPageErrorMessage(error));
+  }
+}
+
+function handleExportEquipment() {
+  const rows =
+    selectedRows.value.length > 0 ? selectedRows.value : equipmentRecords.value;
+  if (rows.length === 0) {
+    ElMessage.warning('当前没有可导出的设备数据');
+    return;
+  }
+  const html = buildEquipmentExportDocument({
+    categoryFormatter: (value) => String(formatEquipmentCategory(value)),
+    nullableFormatter: formatNullable,
+    rows,
+    statusFormatter: (value) => String(formatEquipmentStatus(value)),
+  });
+  const blob = new Blob([`\uFEFF${html}`], {
+    type: 'application/vnd.ms-excel;charset=utf-8',
+  });
+  downloadFileFromBlob({
+    fileName: `仪器设备-${new Date().toISOString().slice(0, 10)}.xls`,
+    source: blob,
+  });
+  ElMessage.success('导出成功');
+}
+
+function handlePrintEquipment() {
+  if (selectedRows.value.length === 0) {
+    ElMessage.warning('请先勾选需要打印的设备');
+    return;
+  }
+  const printWindow = window.open('', '_blank', 'width=1200,height=860');
+  if (!printWindow) {
+    ElMessage.warning('打印窗口被浏览器拦截，请允许弹窗后重试');
+    return;
+  }
+  printWindow.document.open();
+  printWindow.document.write(
+    buildEquipmentPrintDocument({
+      categoryFormatter: (value) => String(formatEquipmentCategory(value)),
+      nullableFormatter: formatNullable,
+      rows: selectedRows.value,
+      statusFormatter: (value) => String(formatEquipmentStatus(value)),
+    }),
+  );
+  printWindow.document.close();
+}
+
 async function refreshEquipmentPage() {
   await Promise.all([loadEquipmentRecords(), loadWarnings()]);
   if (selectedEquipment.value) {
@@ -360,9 +371,36 @@ async function refreshEquipmentPage() {
   }
 }
 
+async function openEquipmentDetailDrawer() {
+  if (!selectedEquipment.value) {
+    return;
+  }
+  equipmentDetailDrawerVisible.value = true;
+  await selectEquipment(selectedEquipment.value);
+}
+
+function openEquipmentWarningDrawer() {
+  equipmentWarningDrawerVisible.value = true;
+}
+
+async function navigateToEquipmentDetail(warning: EquipmentWarningView) {
+  equipmentFilters.keyword = warning.equipmentCode;
+  equipmentFilters.equipmentStatus = '';
+  await loadEquipmentRecords();
+  const matchedEquipment = equipmentRecords.value.find(
+    (item) => item.id === warning.equipmentId,
+  );
+  if (!matchedEquipment) {
+    ElMessage.warning('未找到对应设备，请刷新后重试');
+    return;
+  }
+  equipmentWarningDrawerVisible.value = false;
+  await selectEquipment(matchedEquipment);
+  ElMessage.success(`已定位到设备 ${warning.equipmentCode}`);
+}
+
 async function initializePage() {
   const tasks: Promise<void>[] = [];
-
   if (capabilities.value.canQueryEquipment) {
     tasks.push(loadEquipmentRecords());
   }
@@ -370,7 +408,6 @@ async function initializePage() {
     tasks.push(loadWarnings());
   }
   resetLogForm();
-
   await Promise.all(tasks);
 }
 
@@ -384,12 +421,7 @@ void initializePage();
   >
     <Fallback status="403" />
   </div>
-  <Page
-    v-else
-    :show-header="false"
-    :title="pageTitle"
-    :description="pageDescription"
-  >
+  <Page v-else :show-header="false" :title="pageTitle">
     <div class="flex flex-col gap-4">
       <ElAlert
         v-if="pageError"
@@ -400,53 +432,7 @@ void initializePage();
       />
 
       <section class="rounded-lg border border-border bg-card shadow-sm">
-        <div class="border-b border-border px-4 py-3">
-          <ElForm class="flex flex-wrap items-end gap-x-4 gap-y-3" inline>
-            <ElFormItem label="关键字" label-width="72px">
-              <ElInput
-                v-model="equipmentFilters.keyword"
-                clearable
-                placeholder="编码/名称"
-                style="width: 220px"
-                @keyup.enter="loadEquipmentRecords"
-              />
-            </ElFormItem>
-            <ElFormItem label="状态" label-width="56px">
-              <ElSelect
-                v-model="equipmentFilters.equipmentStatus"
-                clearable
-                placeholder="全部"
-                style="width: 160px"
-              >
-                <ElOption
-                  v-for="option in EQUIPMENT_STATUS_OPTIONS"
-                  :key="option.value"
-                  :label="option.label"
-                  :value="option.value"
-                />
-              </ElSelect>
-            </ElFormItem>
-            <ElFormItem>
-              <ElButton
-                :disabled="!capabilities.canQueryEquipment"
-                :loading="loading.equipment"
-                type="primary"
-                @click="loadEquipmentRecords"
-              >
-                查询
-              </ElButton>
-            </ElFormItem>
-          </ElForm>
-        </div>
-
         <div class="flex flex-wrap gap-2 border-b border-border px-4 py-3">
-          <ElButton
-            :disabled="!capabilities.canQueryEquipment"
-            :loading="loading.equipment || loading.warnings"
-            @click="refreshEquipmentPage"
-          >
-            刷新
-          </ElButton>
           <ElButton
             v-if="capabilities.canCreateEquipment"
             type="primary"
@@ -454,6 +440,21 @@ void initializePage();
           >
             新增设备
           </ElButton>
+          <ElButton
+            v-if="capabilities.canUpdateEquipment"
+            @click="handleBatchStatusUpdate('ACTIVE')"
+          >
+            恢复
+          </ElButton>
+          <ElButton
+            v-if="capabilities.canUpdateEquipment"
+            @click="handleBatchStatusUpdate('DISABLED')"
+          >
+            禁用
+          </ElButton>
+          <ElButton @click="loadEquipmentRecords">查询</ElButton>
+          <ElButton @click="handleExportEquipment">导出</ElButton>
+          <ElButton @click="handlePrintEquipment">打印设备</ElButton>
           <ElButton
             v-if="capabilities.canUpdateEquipment"
             :disabled="!selectedEquipment"
@@ -476,70 +477,176 @@ void initializePage();
           </ElButton>
         </div>
 
+        <div class="border-b border-border px-4 py-3">
+          <ElForm class="flex flex-wrap items-end gap-x-4 gap-y-3" inline>
+            <ElFormItem label="关键字" label-width="72px">
+              <ElInput
+                v-model="equipmentFilters.keyword"
+                clearable
+                placeholder="资产编号/归口编号/设备名称"
+                style="width: 280px"
+                @keyup.enter="loadEquipmentRecords"
+              />
+            </ElFormItem>
+            <ElFormItem label="状态" label-width="56px">
+              <ElSelect
+                v-model="equipmentFilters.equipmentStatus"
+                clearable
+                placeholder="全部"
+                style="width: 160px"
+              >
+                <ElOption
+                  v-for="option in EQUIPMENT_STATUS_OPTIONS"
+                  :key="option.value"
+                  :label="
+                    option.value === 'ACTIVE'
+                      ? '正常'
+                      : option.value === 'DISABLED'
+                        ? '禁用'
+                        : option.label
+                  "
+                  :value="option.value"
+                />
+              </ElSelect>
+            </ElFormItem>
+            <ElFormItem>
+              <ElButton
+                :disabled="!capabilities.canQueryEquipment"
+                :loading="loading.equipment"
+                type="primary"
+                @click="loadEquipmentRecords"
+              >
+                查询
+              </ElButton>
+            </ElFormItem>
+            <ElFormItem>
+              <ElButton
+                :loading="loading.equipment"
+                @click="refreshEquipmentPage"
+              >
+                刷新
+              </ElButton>
+            </ElFormItem>
+          </ElForm>
+        </div>
+
         <div class="px-4 py-4">
-          <ElAlert
-            v-if="!capabilities.canQueryEquipment"
-            :closable="false"
-            title="当前账号没有设备档案查询权限，仅可使用已开放的维护或预警能力。"
-            type="warning"
-          />
-          <ElTable
-            v-else
-            id="equipment-main-table"
-            v-loading="loading.equipment"
-            :data="equipmentRecords"
-            border
-            highlight-current-row
-            @current-change="selectEquipment"
-          >
-            <ElTableColumn
-              label="设备编码"
-              min-width="140"
-              prop="equipmentCode"
-            />
-            <ElTableColumn
-              label="设备名称"
-              min-width="180"
-              prop="equipmentName"
-            />
-            <ElTableColumn label="类别" min-width="120">
-              <template #default="{ row }">
-                {{ formatEquipmentCategory(row.equipmentCategory) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="型号" min-width="120">
-              <template #default="{ row }">
-                {{ formatNullable(row.modelNo) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="状态" min-width="110">
-              <template #default="{ row }">
-                <ElTag :type="getEquipmentStatusTagType(row.equipmentStatus)">
-                  {{ formatEquipmentStatus(row.equipmentStatus) }}
-                </ElTag>
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="启用日期" min-width="160">
-              <template #default="{ row }">
-                {{ formatNullable(row.enabledAt) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="下次保养" min-width="160">
-              <template #default="{ row }">
-                {{ formatNullable(row.nextMaintenanceAt) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="存放位置" min-width="160">
-              <template #default="{ row }">
-                {{ formatNullable(row.locationDescription) }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="备注" min-width="180">
-              <template #default="{ row }">
-                {{ formatNullable(row.remarks) }}
-              </template>
-            </ElTableColumn>
-          </ElTable>
+          <div class="overflow-x-auto">
+            <ElTable
+              id="equipment-main-table"
+              v-loading="loading.equipment"
+              :data="equipmentRecords"
+              border
+              highlight-current-row
+              @current-change="selectEquipment"
+              @selection-change="handleSelectionChange"
+            >
+              <ElTableColumn type="selection" width="48" />
+              <ElTableColumn label="序" type="index" width="56" />
+              <ElTableColumn
+                label="资产编号"
+                min-width="140"
+                prop="equipmentCode"
+              />
+              <ElTableColumn
+                label="设备名称"
+                min-width="200"
+                prop="equipmentName"
+              />
+              <ElTableColumn label="归口编号" min-width="140">
+                <template #default="{ row }">
+                  {{ formatNullable(row.managementCode) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="机型" min-width="160">
+                <template #default="{ row }">
+                  {{ formatNullable(row.modelNo) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="设备数量" min-width="96">
+                <template #default="{ row }">
+                  {{ formatNullable(row.quantity) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="状态" min-width="96">
+                <template #default="{ row }">
+                  <ElTag :type="getEquipmentStatusTagType(row.equipmentStatus)">
+                    {{ formatEquipmentStatus(row.equipmentStatus) }}
+                  </ElTag>
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="仪器类型" min-width="120">
+                <template #default="{ row }">
+                  {{ formatEquipmentCategory(row.equipmentCategory) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="出厂编号" min-width="140">
+                <template #default="{ row }">
+                  {{ formatNullable(row.factoryNo) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="使用年限" min-width="96">
+                <template #default="{ row }">
+                  {{ formatNullable(row.serviceLifeYears) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="折旧方法" min-width="120">
+                <template #default="{ row }">
+                  {{ formatNullable(row.depreciationMethod) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="启用日期" min-width="140">
+                <template #default="{ row }">
+                  {{ formatNullable(row.enabledAt) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="出厂日期" min-width="120">
+                <template #default="{ row }">
+                  {{ formatNullable(row.productionDate) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="是否常用" min-width="96">
+                <template #default="{ row }">
+                  {{ row.commonlyUsed ? '是' : '否' }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="归口单位" min-width="160">
+                <template #default="{ row }">
+                  {{ formatNullable(row.managementUnit) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="使用人姓名" min-width="140">
+                <template #default="{ row }">
+                  {{ formatNullable(row.userName) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="购置日期" min-width="120">
+                <template #default="{ row }">
+                  {{ formatNullable(row.purchaseDate) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="金额" min-width="120">
+                <template #default="{ row }">
+                  {{ formatNullable(row.price) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="存放地点" min-width="180">
+                <template #default="{ row }">
+                  {{ formatNullable(row.locationDescription) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="购置人姓名" min-width="140">
+                <template #default="{ row }">
+                  {{ formatNullable(row.purchaserName) }}
+                </template>
+              </ElTableColumn>
+              <ElTableColumn label="购置人编号" min-width="140">
+                <template #default="{ row }">
+                  {{ formatNullable(row.purchaserCode) }}
+                </template>
+              </ElTableColumn>
+            </ElTable>
+          </div>
         </div>
       </section>
     </div>

@@ -632,7 +632,8 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
           path: '/operation-resources/hazardous-chemicals',
         },
         {
-          component: '/views/_core/fallback/MenuPlaceholderView',
+          component:
+            '/modules/operation-support/views/MedicalWasteManagementView',
           meta: {
             icon: 'carbon:trash-can',
             title: '医疗废物管理',

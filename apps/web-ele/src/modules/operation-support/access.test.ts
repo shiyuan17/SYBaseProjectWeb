@@ -5,6 +5,7 @@ import {
   canViewBorrowPage,
   getBorrowManagementCapabilities,
   getEquipmentLedgerCapabilities,
+  getMedicalWasteCapabilities,
   getOperationResourceEntryPath,
   getOperationSupportEntryPath,
   getReagentLedgerCapabilities,
@@ -100,6 +101,9 @@ describe('operation support access helpers', () => {
     expect(equipmentCapabilities.canUpdateEquipment).toBe(true);
     expect(equipmentCapabilities.canCreateMaintenanceLog).toBe(true);
     expect(equipmentCapabilities.canQueryWarnings).toBe(true);
+    expect(getMedicalWasteCapabilities(reagentDeviceCodes).canViewPage).toBe(
+      true,
+    );
   });
 
   it('allows warning-only entry into the matching workstation', () => {
@@ -122,6 +126,10 @@ describe('operation support access helpers', () => {
       getEquipmentLedgerCapabilities([
         M5_PERMISSION_CODES.EQUIPMENT_WARNING_QUERY,
       ]).canViewPage,
+    ).toBe(true);
+    expect(
+      getMedicalWasteCapabilities([M5_PERMISSION_CODES.EQUIPMENT_WARNING_QUERY])
+        .canViewPage,
     ).toBe(true);
   });
 });

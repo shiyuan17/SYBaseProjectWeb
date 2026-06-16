@@ -24,6 +24,7 @@ import {
   batchArchiveEmbeddingBoxes,
   batchArchiveSlides,
   batchArchiveSpecimens,
+  listAvailableArchivePositions,
 } from '../../api/operation-support-service';
 import {
   buildArchiveApplicationFormRequests,
@@ -175,7 +176,7 @@ export function useArchiveSubmissionWorkspace(
       ),
       canQueryCabinets: capabilities.canQueryCabinets.value,
       form: archiveForm,
-      hasSelectedPosition: Boolean(selectedPosition.value),
+      hasSelectedCabinet: Boolean(archiveForm.archiveCabinetId),
       permissionWarning: archivePermissionWarning.value,
       selectedApplicationFormRecordCount:
         archiveForm.objectType === 'APPLICATION_FORM'
@@ -225,6 +226,19 @@ export function useArchiveSubmissionWorkspace(
     );
   }
 
+  function syncApplicationFormArchiveCabinetId() {
+    if (archiveForm.objectType !== 'APPLICATION_FORM') {
+      return;
+    }
+
+    if (
+      selectedPosition.value?.cabinetId &&
+      !archiveForm.archiveCabinetId.trim()
+    ) {
+      archiveForm.archiveCabinetId = selectedPosition.value.cabinetId;
+    }
+  }
+
   function openArchiveDialog(objectType: ArchiveObjectType) {
     if (objectType === 'APPLICATION_FORM') {
       if (getSelectedApplicationFormRecords().length === 0) {
@@ -232,6 +246,7 @@ export function useArchiveSubmissionWorkspace(
         return;
       }
 
+      syncApplicationFormArchiveCabinetId();
       applicationFormDialogVisible.value = true;
       return;
     }
@@ -248,7 +263,7 @@ export function useArchiveSubmissionWorkspace(
   async function submitArchive() {
     const archiveObjectType = archiveForm.objectType;
     if (archiveForm.objectType === 'APPLICATION_FORM') {
-      if (!validateArchiveForm() || !selectedPosition.value) {
+      if (!validateArchiveForm()) {
         return;
       }
     } else if (!isPhysicalArchiveObjectType(archiveObjectType)) {
@@ -261,8 +276,11 @@ export function useArchiveSubmissionWorkspace(
 
     try {
       if (archiveForm.objectType === 'APPLICATION_FORM') {
-        const archivePosition = selectedPosition.value;
+        const [archivePosition] = await listAvailableArchivePositions({
+          cabinetId: archiveForm.archiveCabinetId.trim(),
+        });
         if (!archivePosition) {
+          ElMessage.warning('所选归档框暂无可用柜位，请重新选择。');
           return;
         }
         const selectedApplicationFormRecords =

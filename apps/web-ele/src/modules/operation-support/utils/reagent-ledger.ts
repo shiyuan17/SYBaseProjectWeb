@@ -7,6 +7,8 @@ import type {
   UpdateReagentStockRequest,
 } from '../types/operation-support';
 
+import { REAGENT_TYPE_OPTIONS } from '../constants';
+
 export type ReagentFormState = {
   applicationDilution: string;
   cloneNo: string;
@@ -53,6 +55,20 @@ export type ReagentStockFormState = {
   validityDays?: number;
 };
 
+export interface ReagentTemplateTreeItem {
+  id: string;
+  keywordText: string;
+  label: string;
+  metaLabel: string;
+  reagent: ReagentView;
+}
+
+export interface ReagentTemplateTreeGroup {
+  children: ReagentTemplateTreeItem[];
+  id: string;
+  label: string;
+}
+
 function optionalText(value: string) {
   return value.trim() || undefined;
 }
@@ -65,6 +81,18 @@ function toOptionalNumber(value?: null | number | string) {
   return value === null || value === undefined || value === ''
     ? undefined
     : Number(value);
+}
+
+function toDisplayText(value?: null | string) {
+  return value?.trim() || '-';
+}
+
+function getReagentTypeLabel(value?: null | string) {
+  return (
+    REAGENT_TYPE_OPTIONS.find((option) => option.value === value)?.label ??
+    value ??
+    '未分类'
+  );
 }
 
 export function createReagentFormDefaults(): ReagentFormState {
@@ -172,6 +200,108 @@ export function createReagentStockFormStateFromRow(
     testReminderThreshold: row.testReminderThreshold ?? undefined,
     validityDays: row.validityDays ?? undefined,
   };
+}
+
+export function buildReagentTemplateTree(
+  reagents: ReagentView[],
+  keyword = '',
+): ReagentTemplateTreeGroup[] {
+  const normalizedKeyword = keyword.trim().toLowerCase();
+  const groups = new Map<string, ReagentTemplateTreeGroup>();
+
+  for (const reagent of reagents) {
+    const keywordText = [
+      reagent.reagentCode,
+      reagent.reagentName,
+      reagent.orderItemName,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+
+    if (normalizedKeyword && !keywordText.includes(normalizedKeyword)) {
+      continue;
+    }
+
+    const groupId = reagent.reagentType?.trim() || 'UNCLASSIFIED';
+    const existingGroup = groups.get(groupId);
+    const item: ReagentTemplateTreeItem = {
+      id: reagent.id,
+      keywordText,
+      label: reagent.reagentName,
+      metaLabel: `${reagent.reagentCode} / ${toDisplayText(reagent.orderItemName)}`,
+      reagent,
+    };
+
+    if (existingGroup) {
+      existingGroup.children.push(item);
+      continue;
+    }
+
+    groups.set(groupId, {
+      children: [item],
+      id: groupId,
+      label: getReagentTypeLabel(reagent.reagentType),
+    });
+  }
+
+  return [...groups.values()]
+    .map((group) => ({
+      ...group,
+      children: group.children.toSorted((left, right) =>
+        left.label.localeCompare(right.label, 'zh-CN'),
+      ),
+    }))
+    .toSorted((left, right) => left.label.localeCompare(right.label, 'zh-CN'));
+}
+
+export function applyReagentTemplateToStockForm(
+  form: ReagentStockFormState,
+  reagent: ReagentView,
+  options: {
+    overwriteEmptyOnly: boolean;
+  },
+) {
+  const assignOptionalText = (
+    key: keyof Pick<
+      ReagentStockFormState,
+      'applicationDilution' | 'recommendedDilution'
+    >,
+    value?: null | string,
+  ) => {
+    const normalizedValue = value?.trim() || '';
+    if (!normalizedValue) {
+      return;
+    }
+    if (options.overwriteEmptyOnly && form[key].trim()) {
+      return;
+    }
+    form[key] = normalizedValue;
+  };
+
+  const assignOptionalNumber = (
+    key: keyof Pick<
+      ReagentStockFormState,
+      'stainCapacity' | 'stainThreshold' | 'validityDays'
+    >,
+    value?: null | number | string,
+  ) => {
+    const normalizedValue = toOptionalNumber(value);
+    if (normalizedValue === undefined) {
+      return;
+    }
+    if (options.overwriteEmptyOnly && form[key] !== undefined) {
+      return;
+    }
+    form[key] = normalizedValue;
+  };
+
+  form.reagentId = reagent.id;
+  assignOptionalText('recommendedDilution', reagent.recommendedDilution);
+  assignOptionalText('applicationDilution', reagent.applicationDilution);
+  assignOptionalNumber('stainCapacity', reagent.stainCapacity);
+  assignOptionalNumber('stainThreshold', reagent.stainThreshold);
+  assignOptionalNumber('validityDays', reagent.validityDays);
 }
 
 export function createDraftReagentView(): ReagentView {

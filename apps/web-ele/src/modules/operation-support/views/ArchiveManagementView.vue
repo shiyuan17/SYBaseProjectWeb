@@ -183,9 +183,10 @@ watch(
                     recordWorkspace.selectedEmbeddingBoxRecords.length === 0
                   "
                   @click="
-                    loanWorkspace.openBorrowDialogForRecords(
+                    loanWorkspace.openBorrowDialogForRecordsWithMode(
                       'EMBEDDING_BOX',
                       recordWorkspace.selectedEmbeddingBoxRecords,
+                      'GENERIC',
                     )
                   "
                 >
@@ -247,9 +248,10 @@ watch(
                     recordWorkspace.selectedSlideRecords.length === 0
                   "
                   @click="
-                    loanWorkspace.openBorrowDialogForRecords(
+                    loanWorkspace.openBorrowDialogForRecordsWithMode(
                       'SLIDE',
                       recordWorkspace.selectedSlideRecords,
+                      'GENERIC',
                     )
                   "
                 >
@@ -378,10 +380,11 @@ watch(
     />
     <ApplicationFormArchiveDialog
       v-model="archiveWorkspace.applicationFormDialogVisible"
+      v-model:archive-cabinet-id="archiveWorkspace.archiveForm.archiveCabinetId"
       v-model:remarks="archiveWorkspace.archiveForm.remarks"
       :archive-permission-warning="archiveWorkspace.archivePermissionWarning"
+      :cabinets="cabinetWorkspace.cabinets"
       :get-archive-status-tag-type="display.getArchiveStatusTagType"
-      :selected-position-label="cabinetWorkspace.selectedPositionLabel"
       :selected-records="recordWorkspace.selectedApplicationFormRecords"
       :submitting="pageState.submitting"
       @submit-archive="archiveWorkspace.submitArchive"

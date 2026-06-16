@@ -50,6 +50,7 @@ interface UseArchiveLoanWorkspaceOptions {
 }
 
 type BorrowMaterialType = 'EMBEDDING_BOX' | 'SLIDE';
+type BorrowDialogMode = 'EMBEDDING_BOX' | 'GENERIC';
 type BatchSkipItem = {
   reason: string;
   record: ArchiveRecordView;
@@ -85,6 +86,7 @@ export function useArchiveLoanWorkspace(
   const archiveObjectError = ref('');
   const archiveObjectLoading = ref(false);
   const borrowDialogVisible = ref(false);
+  const borrowDialogMode = ref<BorrowDialogMode>('GENERIC');
   const abnormalDialogVisible = ref(false);
   const loading = ref(false);
   const loanError = ref('');
@@ -142,9 +144,6 @@ export function useArchiveLoanWorkspace(
       if (!loanForm.operatorName && operatorName) {
         loanForm.operatorName = operatorName;
       }
-      if (!returnForm.operatorName && operatorName) {
-        returnForm.operatorName = operatorName;
-      }
     },
     { immediate: true },
   );
@@ -154,9 +153,6 @@ export function useArchiveLoanWorkspace(
     (operatorUserId) => {
       if (!loanForm.operatorUserId && operatorUserId) {
         loanForm.operatorUserId = operatorUserId;
-      }
-      if (!returnForm.operatorUserId && operatorUserId) {
-        returnForm.operatorUserId = operatorUserId;
       }
     },
     { immediate: true },
@@ -173,6 +169,7 @@ export function useArchiveLoanWorkspace(
 
   function closeBorrowDialog() {
     borrowDialogVisible.value = false;
+    borrowDialogMode.value = 'GENERIC';
     resetLoanForm();
   }
 
@@ -361,7 +358,7 @@ export function useArchiveLoanWorkspace(
     ElMessage.success(message);
   }
 
-  function openBorrowDialog() {
+  function openBorrowDialog(mode: BorrowDialogMode = 'GENERIC') {
     const records = selectedMaterialRecords.value;
     if (records.length === 0) {
       ElMessage.warning('请先选择需要借记的材料。');
@@ -383,6 +380,10 @@ export function useArchiveLoanWorkspace(
     );
     loanForm.materialType = activeMaterialType.value;
     loanForm.materialId = borrowableRecords[0]?.objectId ?? '';
+    if (mode === 'EMBEDDING_BOX') {
+      loanForm.borrowPurpose = '';
+    }
+    borrowDialogMode.value = mode;
     borrowDialogVisible.value = true;
   }
 
@@ -390,9 +391,21 @@ export function useArchiveLoanWorkspace(
     materialType: BorrowMaterialType,
     records: ArchiveRecordView[],
   ) {
+    openBorrowDialogForRecordsWithMode(
+      materialType,
+      records,
+      materialType === 'EMBEDDING_BOX' ? 'EMBEDDING_BOX' : 'GENERIC',
+    );
+  }
+
+  function openBorrowDialogForRecordsWithMode(
+    materialType: BorrowMaterialType,
+    records: ArchiveRecordView[],
+    mode: BorrowDialogMode,
+  ) {
     setActiveMaterialType(materialType);
     setSelectedMaterialRecords(records);
-    openBorrowDialog();
+    openBorrowDialog(mode);
   }
 
   function openSelectedReturnDialog() {
@@ -604,6 +617,7 @@ export function useArchiveLoanWorkspace(
     archiveObjectError,
     archiveObjectLoading,
     borrowDialogVisible,
+    borrowDialogMode,
     closeAbnormalDialog,
     closeBorrowDialog,
     loadLoans,
@@ -617,6 +631,7 @@ export function useArchiveLoanWorkspace(
     openAbnormalDialog,
     openBorrowDialog,
     openBorrowDialogForRecords,
+    openBorrowDialogForRecordsWithMode,
     openReturnDialog,
     openSelectedReturnDialog,
     pendingLoans,

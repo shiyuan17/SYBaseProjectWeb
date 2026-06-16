@@ -58,8 +58,13 @@ const returnForm = defineModel<ReturnFormState>('returnForm', {
           </div>
         </div>
       </ElFormItem>
-      <ElFormItem label="操作人" required>
-        <ElInput v-model="returnForm.operatorName" />
+      <ElFormItem label="归还操作人">
+        <span>{{ formatNullable(returnForm.operatorName) }}</span>
+      </ElFormItem>
+      <ElFormItem label="归还时间">
+        <div class="text-[var(--el-text-color-secondary)]">
+          确认归还后自动记录当前时间
+        </div>
       </ElFormItem>
       <ElFormItem label="终端编码">
         <ElInput v-model="returnForm.terminalCode" />

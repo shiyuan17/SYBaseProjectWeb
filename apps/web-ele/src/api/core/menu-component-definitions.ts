@@ -563,7 +563,7 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
       routeName: 'HazardousChemicalsManagement',
     },
     {
-      component: '/views/_core/fallback/MenuPlaceholderView',
+      component: '/modules/operation-support/views/MedicalWasteManagementView',
       componentAliases: ['MedicalWasteManagement'],
       menuCodes: ['M5_MEDICAL_WASTE'],
       path: '/operation-resources/medical-waste',

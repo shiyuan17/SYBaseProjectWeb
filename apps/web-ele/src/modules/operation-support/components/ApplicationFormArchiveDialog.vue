@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import type { ArchiveRecordView } from '../types/operation-support';
+import type {
+  ArchiveCabinetView,
+  ArchiveRecordView,
+} from '../types/operation-support';
 
 import {
   ElAlert,
@@ -8,6 +11,8 @@ import {
   ElForm,
   ElFormItem,
   ElInput,
+  ElOption,
+  ElSelect,
   ElTable,
   ElTableColumn,
   ElTag,
@@ -17,10 +22,10 @@ import { formatArchiveStorageStatus, formatNullable } from '../utils/format';
 
 defineProps<{
   archivePermissionWarning: string;
+  cabinets: ArchiveCabinetView[];
   getArchiveStatusTagType: (
     status?: null | string,
   ) => 'danger' | 'info' | 'primary' | 'success' | 'warning';
-  selectedPositionLabel: string;
   selectedRecords: ArchiveRecordView[];
   submitting: boolean;
 }>();
@@ -31,6 +36,9 @@ const emit = defineEmits<{
 
 const visible = defineModel<boolean>({ required: true });
 const remarks = defineModel<string>('remarks', { required: true });
+const archiveCabinetId = defineModel<string>('archiveCabinetId', {
+  required: true,
+});
 </script>
 
 <template>
@@ -55,7 +63,20 @@ const remarks = defineModel<string>('remarks', { required: true });
         label-width="96px"
       >
         <ElFormItem label="归档柜编号" required>
-          <ElInput :model-value="selectedPositionLabel" readonly />
+          <ElSelect
+            v-model="archiveCabinetId"
+            filterable
+            placeholder="请选择归档框"
+            style="width: 220px"
+          >
+            <ElOption
+              v-for="cabinet in cabinets"
+              :key="cabinet.id"
+              :disabled="cabinet.cabinetStatus === 'DISABLED'"
+              :label="cabinet.cabinetCode"
+              :value="cabinet.id"
+            />
+          </ElSelect>
         </ElFormItem>
         <ElFormItem label="备注">
           <ElInput v-model="remarks" placeholder="请输入备注" />

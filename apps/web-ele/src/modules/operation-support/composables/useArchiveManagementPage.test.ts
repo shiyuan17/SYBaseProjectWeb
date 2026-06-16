@@ -541,16 +541,20 @@ describe('useArchiveManagementPage', () => {
     state.archiveWorkspace.openArchiveDialog('APPLICATION_FORM');
 
     expect(state.archiveWorkspace.applicationFormDialogVisible).toBe(true);
+    expect(state.archiveWorkspace.archiveForm.archiveCabinetId).toBe(
+      'CABINET-1',
+    );
 
     await state.archiveWorkspace.submitArchive();
 
+    expect(mockListAvailableArchivePositions).toHaveBeenNthCalledWith(1, {
+      cabinetId: 'CABINET-1',
+    });
     expect(mockArchiveApplicationForm).toHaveBeenNthCalledWith(1, {
       archivePositionId: 'POSITION-1',
       caseId: 'CASE-1',
       fileName: undefined,
       fileUrl: undefined,
-      operatorName: '归档员甲',
-      operatorUserId: 'USER-ARCHIVE-1',
       remarks: '已归档',
       terminalCode: undefined,
     });
@@ -559,13 +563,15 @@ describe('useArchiveManagementPage', () => {
       caseId: 'CASE-2',
       fileName: undefined,
       fileUrl: undefined,
-      operatorName: '归档员甲',
-      operatorUserId: 'USER-ARCHIVE-1',
       remarks: '已归档',
       terminalCode: undefined,
     });
     expect(messageSuccessMock).toHaveBeenCalledWith('申请单归档已完成。');
-    expect(mockListAvailableArchivePositions).toHaveBeenCalledTimes(1);
+    expect(mockListAvailableArchivePositions).toHaveBeenNthCalledWith(2, {
+      cabinetId: undefined,
+      cabinetType: undefined,
+    });
+    expect(mockListAvailableArchivePositions).toHaveBeenCalledTimes(2);
     expect(mockListArchiveObjects).toHaveBeenCalledWith({
       keyword: undefined,
       objectType: 'APPLICATION_FORM',
@@ -630,17 +636,21 @@ describe('useArchiveManagementPage', () => {
     ]);
     state.archiveWorkspace.archiveForm.remarks = ' 逐条归档 ';
     state.archiveWorkspace.openArchiveDialog('APPLICATION_FORM');
+    expect(state.archiveWorkspace.archiveForm.archiveCabinetId).toBe(
+      'CABINET-1',
+    );
 
     await state.archiveWorkspace.submitArchive();
 
+    expect(mockListAvailableArchivePositions).toHaveBeenNthCalledWith(1, {
+      cabinetId: 'CABINET-1',
+    });
     expect(mockArchiveApplicationForm).toHaveBeenCalledTimes(2);
     expect(mockArchiveApplicationForm).toHaveBeenNthCalledWith(1, {
       archivePositionId: 'POSITION-1',
       caseId: 'CASE-1',
       fileName: undefined,
       fileUrl: undefined,
-      operatorName: '归档员甲',
-      operatorUserId: 'USER-ARCHIVE-1',
       remarks: '逐条归档',
       terminalCode: undefined,
     });
@@ -649,8 +659,6 @@ describe('useArchiveManagementPage', () => {
       caseId: 'CASE-2',
       fileName: undefined,
       fileUrl: undefined,
-      operatorName: '归档员甲',
-      operatorUserId: 'USER-ARCHIVE-1',
       remarks: '逐条归档',
       terminalCode: undefined,
     });
@@ -658,7 +666,10 @@ describe('useArchiveManagementPage', () => {
     expect(state.recordWorkspace.selectedApplicationFormRecords).toHaveLength(
       3,
     );
-    expect(mockListAvailableArchivePositions).not.toHaveBeenCalled();
+    expect(mockListAvailableArchivePositions).toHaveBeenCalledTimes(1);
+    expect(mockListAvailableArchivePositions).toHaveBeenCalledWith({
+      cabinetId: 'CABINET-1',
+    });
     expect(mockListArchiveObjects).not.toHaveBeenCalled();
     expect(messageErrorMock).toHaveBeenCalledWith(
       '申请单 BL-2026-002 归档失败：第二条失败',
@@ -807,8 +818,13 @@ describe('useArchiveManagementPage', () => {
       state.recordWorkspace.selectedEmbeddingBoxRecords,
     );
     state.loanWorkspace.loanForm.borrowedByName = ' 张三 ';
+    state.loanWorkspace.loanForm.borrowerPhone = ' 13800000000 ';
+    state.loanWorkspace.loanForm.borrowerUnit = ' 外借单位 ';
+    state.loanWorkspace.loanForm.depositAmount = ' 66 ';
+    state.loanWorkspace.loanForm.remarks = ' 借记备注 ';
 
     expect(state.loanWorkspace.borrowDialogVisible).toBe(true);
+    expect(state.loanWorkspace.borrowDialogMode).toBe('EMBEDDING_BOX');
     expect(state.loanWorkspace.loanForm.materialType).toBe('EMBEDDING_BOX');
     expect(state.loanWorkspace.loanForm.materialId).toBe('BOX-1');
 
@@ -833,9 +849,13 @@ describe('useArchiveManagementPage', () => {
     expect(mockCreateMaterialLoan).toHaveBeenCalledTimes(1);
     expect(mockCreateMaterialLoan).toHaveBeenCalledWith(
       expect.objectContaining({
+        borrowerPhone: '13800000000',
+        borrowerUnit: '外借单位',
         borrowedByName: '张三',
+        depositAmount: '66',
         materialId: 'BOX-1',
         materialType: 'EMBEDDING_BOX',
+        remarks: '借记备注',
       }),
     );
     expect(messageWarningMock).toHaveBeenCalledWith(

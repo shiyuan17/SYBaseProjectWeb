@@ -1491,6 +1491,7 @@ describe('operation support route access', () => {
     expect(wasteRoute?.meta?.authority).toEqual([
       ...M5_RESOURCE_PAGE_AUTHORITIES,
     ]);
+    expect(wasteRoute?.meta?.title).toBe('医疗废物管理');
   });
 });
 

@@ -15,6 +15,8 @@ vi.mock('vue-router', () => ({
 }));
 
 const {
+  downloadFileFromBlobMock,
+  mockBatchUpdateEquipmentStatus,
   messageErrorMock,
   messageSuccessMock,
   messageWarningMock,
@@ -27,6 +29,8 @@ const {
   mockUpdateEquipmentRecord,
   mockUserStore,
 } = vi.hoisted(() => ({
+  downloadFileFromBlobMock: vi.fn(),
+  mockBatchUpdateEquipmentStatus: vi.fn(),
   messageErrorMock: vi.fn(),
   messageSuccessMock: vi.fn(),
   messageWarningMock: vi.fn(),
@@ -69,6 +73,10 @@ vi.mock('@vben/common-ui', () => ({
 vi.mock('@vben/stores', () => ({
   useAccessStore: () => mockAccessStore,
   useUserStore: () => mockUserStore,
+}));
+
+vi.mock('@vben/utils', () => ({
+  downloadFileFromBlob: downloadFileFromBlobMock,
 }));
 
 function createModelComponent(tag = 'div') {
@@ -183,6 +191,7 @@ vi.mock('element-plus', () => {
   return {
     ElAlert,
     ElButton,
+    ElDatePicker: createModelComponent('input'),
     ElDescriptions,
     ElDescriptionsItem,
     ElDialog,
@@ -190,6 +199,7 @@ vi.mock('element-plus', () => {
     ElForm: createModelComponent('form'),
     ElFormItem: createModelComponent('div'),
     ElInput: createModelComponent('input'),
+    ElInputNumber: createModelComponent('input'),
     ElMessage: {
       error: messageErrorMock,
       success: messageSuccessMock,
@@ -201,9 +211,12 @@ vi.mock('element-plus', () => {
         return () => h('option', props.label);
       },
     }),
+    ElRadio: createModelComponent('input'),
+    ElRadioGroup: createModelComponent('div'),
     ElSelect: createModelComponent('select'),
     ElTable,
     ElTableColumn,
+    ElTimePicker: createModelComponent('input'),
     ElTag,
   };
 });
@@ -262,6 +275,7 @@ vi.mock('../components/EquipmentDialog.vue', () => ({
 }));
 
 vi.mock('../api/operation-support-service', () => ({
+  batchUpdateEquipmentStatus: mockBatchUpdateEquipmentStatus,
   createEquipmentMaintenanceLog: mockCreateEquipmentMaintenanceLog,
   createEquipmentRecord: mockCreateEquipmentRecord,
   listEquipmentMaintenanceLogs: mockListEquipmentMaintenanceLogs,
@@ -313,14 +327,22 @@ describe('EquipmentLedgerView', () => {
 
     mockListEquipmentRecords.mockResolvedValue([
       {
+        commonlyUsed: true,
         enabledAt: '2026-01-01',
         equipmentCategory: 'PROCESSING',
         equipmentCode: 'EQ-1',
         equipmentName: 'Processor',
         equipmentStatus: 'ACTIVE',
+        managementCode: 'GL-001',
         id: 'EQUIPMENT-1',
         locationDescription: 'Lab A',
         modelNo: 'M-1',
+        price: 123,
+        productionDate: '2026-01-01',
+        purchaseDate: '2026-01-02',
+        purchaserCode: 'CG-01',
+        purchaserName: '采购员甲',
+        quantity: 1,
         nextMaintenanceAt: '2026-06-01',
         remarks: 'Ready',
       },
@@ -351,6 +373,7 @@ describe('EquipmentLedgerView', () => {
 
     mockCreateEquipmentRecord.mockResolvedValue(undefined);
     mockCreateEquipmentMaintenanceLog.mockResolvedValue(undefined);
+    mockBatchUpdateEquipmentStatus.mockResolvedValue([]);
     mockUpdateEquipmentRecord.mockResolvedValue(undefined);
   });
 
@@ -361,7 +384,9 @@ describe('EquipmentLedgerView', () => {
     mockListEquipmentMaintenanceLogs.mockReset();
     mockListEquipmentRecords.mockReset();
     mockListEquipmentWarnings.mockReset();
+    mockBatchUpdateEquipmentStatus.mockReset();
     mockUpdateEquipmentRecord.mockReset();
+    downloadFileFromBlobMock.mockReset();
     messageErrorMock.mockReset();
     messageSuccessMock.mockReset();
     messageWarningMock.mockReset();
@@ -390,8 +415,11 @@ describe('EquipmentLedgerView', () => {
     expect(mockListEquipmentRecords).toHaveBeenCalledTimes(1);
     expect(mockListEquipmentWarnings).toHaveBeenCalledTimes(1);
 
-    expect(findButton('刷新')).toBeTruthy();
     expect(findButton('新增设备')).toBeTruthy();
+    expect(findButton('恢复')).toBeTruthy();
+    expect(findButton('禁用')).toBeTruthy();
+    expect(findButton('导出')).toBeTruthy();
+    expect(findButton('打印设备')).toBeTruthy();
     expect(findButton('编辑设备')?.disabled).toBe(true);
     expect(findButton('设备详情/保养')?.disabled).toBe(true);
     expect(findButton('设备预警')).toBeTruthy();
@@ -460,6 +488,22 @@ describe('EquipmentLedgerView', () => {
 
     expect(messageSuccessMock).toHaveBeenCalledWith('已定位到设备 EQ-1');
     expect(mockListEquipmentRecords).toHaveBeenCalledTimes(2);
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('exports current rows', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    findButton('导出')?.dispatchEvent(
+      new MouseEvent('click', { bubbles: true }),
+    );
+    await flushView();
+
+    expect(downloadFileFromBlobMock).toHaveBeenCalledTimes(1);
+    expect(messageSuccessMock).toHaveBeenCalledWith('导出成功');
 
     app.unmount();
     root.remove();

@@ -129,7 +129,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
           import('#/views/_core/fallback/MenuPlaceholderView.vue'),
         meta: {
           authority: [...M5_RESOURCE_PAGE_AUTHORITIES],
-          description: '当前页面暂未接入医疗废物管理相关业务功能。',
+          description: '维护人体标本与药物试剂医疗废物袋打印、交接记录。',
           icon: 'carbon:trash-can',
           title: '医疗废物管理',
         },

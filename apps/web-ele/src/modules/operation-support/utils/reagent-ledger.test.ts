@@ -3,8 +3,10 @@ import type { ReagentStockView, ReagentView } from '../types/operation-support';
 import { describe, expect, it } from 'vitest';
 
 import {
+  applyReagentTemplateToStockForm,
   buildCreateReagentRequest,
   buildCreateReagentStockRequest,
+  buildReagentTemplateTree,
   buildUpdateReagentRequest,
   buildUpdateReagentStockRequest,
   createDraftReagentStockView,
@@ -196,6 +198,114 @@ describe('reagent ledger helpers', () => {
         batchNo: 'BATCH-1',
         operatorName: 'Alice',
         reagentId: 'REAGENT-1',
+      }),
+    );
+  });
+
+  it('builds grouped template trees and filters by keyword', () => {
+    const reagents = [
+      createReagent(),
+      createReagent({
+        id: 'REAGENT-2',
+        orderItemName: 'CD22',
+        reagentCode: 'RG-2',
+        reagentName: 'CD22浓缩液',
+        reagentType: 'IMMUNO_CONCENTRATE',
+      }),
+    ];
+    const tree = buildReagentTemplateTree(reagents);
+
+    expect(tree).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          children: [
+            expect.objectContaining({
+              id: 'REAGENT-2',
+              label: 'CD22浓缩液',
+            }),
+          ],
+          id: 'IMMUNO_CONCENTRATE',
+          label: '免疫组化浓缩液',
+        }),
+        expect.objectContaining({
+          children: [
+            expect.objectContaining({
+              id: 'REAGENT-1',
+              label: 'Hematoxylin',
+            }),
+          ],
+          id: 'IMMUNO_WORKING_SOLUTION',
+          label: '免疫组化工作液',
+        }),
+      ]),
+    );
+
+    expect(buildReagentTemplateTree(reagents, 'CD22')).toEqual([
+      expect.objectContaining({
+        children: [
+          expect.objectContaining({
+            label: 'CD22浓缩液',
+          }),
+        ],
+      }),
+    ]);
+  });
+
+  it('applies template defaults without overwriting filled stock fields', () => {
+    const form = createReagentStockFormDefaults();
+    const reagent = createReagent({
+      applicationDilution: '1:100',
+      recommendedDilution: '1:200',
+      stainCapacity: 120,
+      stainThreshold: 8,
+      validityDays: 365,
+    });
+
+    applyReagentTemplateToStockForm(form, reagent, {
+      overwriteEmptyOnly: true,
+    });
+
+    expect(form).toEqual(
+      expect.objectContaining({
+        applicationDilution: '1:100',
+        recommendedDilution: '1:200',
+        reagentId: 'REAGENT-1',
+        stainCapacity: 120,
+        stainThreshold: 8,
+        validityDays: 365,
+      }),
+    );
+
+    Object.assign(form, {
+      applicationDilution: 'manual-app',
+      recommendedDilution: 'manual-rec',
+      stainCapacity: 20,
+      stainThreshold: 2,
+      validityDays: 90,
+    });
+    applyReagentTemplateToStockForm(
+      form,
+      createReagent({
+        applicationDilution: '1:400',
+        id: 'REAGENT-2',
+        recommendedDilution: '1:500',
+        stainCapacity: 999,
+        stainThreshold: 99,
+        validityDays: 730,
+      }),
+      {
+        overwriteEmptyOnly: true,
+      },
+    );
+
+    expect(form).toEqual(
+      expect.objectContaining({
+        applicationDilution: 'manual-app',
+        recommendedDilution: 'manual-rec',
+        reagentId: 'REAGENT-2',
+        stainCapacity: 20,
+        stainThreshold: 2,
+        validityDays: 90,
       }),
     );
   });

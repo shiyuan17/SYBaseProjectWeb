@@ -84,9 +84,11 @@ describe('archive form helpers', () => {
         operatorName: 'Alice',
       }),
     );
-    expect(createReturnFormDefaults(operator)).toEqual(
-      expect.objectContaining(operator),
-    );
+    expect(createReturnFormDefaults(operator)).toEqual({
+      operatorName: 'Alice',
+      remarks: '',
+      terminalCode: '',
+    });
   });
 
   it('maps an existing cabinet to edit form state', () => {
@@ -177,18 +179,19 @@ describe('archive form helpers', () => {
         canArchiveObjectType: true,
         canQueryCabinets: true,
         form: archiveForm,
-        hasSelectedPosition: true,
+        hasSelectedCabinet: true,
         permissionWarning: '',
       }),
     ).toBeTruthy();
 
+    archiveForm.archiveCabinetId = 'CABINET-1';
     archiveForm.caseId = 'CASE-1';
     expect(
       validateArchiveForm({
         canArchiveObjectType: true,
         canQueryCabinets: true,
         form: archiveForm,
-        hasSelectedPosition: true,
+        hasSelectedCabinet: true,
         permissionWarning: '',
         selectedApplicationFormRecordCount: 1,
       }),
@@ -201,7 +204,7 @@ describe('archive form helpers', () => {
         canArchiveObjectType: true,
         canQueryCabinets: true,
         form: archiveForm,
-        hasSelectedPosition: true,
+        hasSelectedCabinet: true,
         permissionWarning: '',
       }),
     ).toBe('标本归档必须填写标本 ID。');
@@ -212,7 +215,7 @@ describe('archive form helpers', () => {
         canArchiveObjectType: true,
         canQueryCabinets: true,
         form: archiveForm,
-        hasSelectedPosition: true,
+        hasSelectedCabinet: true,
         permissionWarning: '',
       }),
     ).toBe('');
@@ -222,6 +225,7 @@ describe('archive form helpers', () => {
     const loanForm = createLoanFormDefaults(operator);
 
     expect(validateLoanForm(loanForm, false)).toBeTruthy();
+    expect(loanForm.depositAmount).toBe('10');
 
     loanForm.materialId = 'SLIDE-1';
     loanForm.borrowedByName = 'Bob';
@@ -333,8 +337,6 @@ describe('archive form helpers', () => {
       caseId: 'CASE-1',
       fileName: 'scan.pdf',
       fileUrl: undefined,
-      operatorName: 'Alice',
-      operatorUserId: 'USER-1',
       remarks: 'Stored',
       terminalCode: undefined,
     });
@@ -362,23 +364,29 @@ describe('archive form helpers', () => {
       borrowPurpose: ' Review ',
       borrowedByName: ' Bob ',
       borrowedByUserId: ' ',
+      borrowerPhone: ' 13800000000 ',
+      borrowerUnit: ' 外院 ',
+      depositAmount: ' 88 ',
       materialId: ' SLIDE-1 ',
+      remarks: ' 备注 ',
     });
 
     expect(buildCreateMaterialLoanRequest(loanForm)).toEqual(
       expect.objectContaining({
         borrowedByName: 'Bob',
         borrowedByUserId: undefined,
+        borrowerPhone: '13800000000',
+        borrowerUnit: '外院',
         borrowPurpose: 'Review',
+        depositAmount: '88',
         materialId: 'SLIDE-1',
+        remarks: '备注',
       }),
     );
     expect(
       buildReturnMaterialLoanRequest(createReturnFormDefaults(operator)),
     ).toEqual({
       archivePositionId: undefined,
-      operatorName: 'Alice',
-      operatorUserId: 'USER-1',
       remarks: undefined,
       terminalCode: undefined,
     });

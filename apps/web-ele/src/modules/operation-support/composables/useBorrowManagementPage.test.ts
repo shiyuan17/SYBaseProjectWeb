@@ -278,14 +278,17 @@ describe('useBorrowManagementPage', () => {
     await state.loanWorkspace.submitLoan();
 
     expect(mockCreateMaterialLoan).toHaveBeenCalledWith({
+      borrowerPhone: '13800000000',
+      borrowerUnit: '外院',
       borrowPurpose: '会诊',
       borrowedByName: '张三',
       borrowedByUserId: undefined,
+      depositAmount: '100',
       materialId: 'SLIDE-1',
       materialType: 'SLIDE',
       operatorName: '归档员甲',
       operatorUserId: 'USER-ARCHIVE-1',
-      remarks: '借阅人电话：13800000000\n借阅人单位：外院\n押金：100',
+      remarks: undefined,
       terminalCode: undefined,
     });
     expect(messageSuccessMock).toHaveBeenCalledWith(
@@ -439,8 +442,6 @@ describe('useBorrowManagementPage', () => {
 
     expect(mockReturnMaterialLoan).toHaveBeenCalledWith('LOAN-1', {
       archivePositionId: 'POSITION-1',
-      operatorName: '归档员甲',
-      operatorUserId: 'USER-ARCHIVE-1',
       remarks: undefined,
       terminalCode: undefined,
     });
@@ -503,12 +504,20 @@ describe('useBorrowManagementPage', () => {
     expect(mockReturnMaterialLoan).toHaveBeenNthCalledWith(
       1,
       'LOAN-1',
-      expect.objectContaining({ operatorName: '归档员甲' }),
+      expect.objectContaining({
+        archivePositionId: undefined,
+        remarks: undefined,
+        terminalCode: undefined,
+      }),
     );
     expect(mockReturnMaterialLoan).toHaveBeenNthCalledWith(
       2,
       'LOAN-2',
-      expect.objectContaining({ operatorName: '归档员甲' }),
+      expect.objectContaining({
+        archivePositionId: undefined,
+        remarks: undefined,
+        terminalCode: undefined,
+      }),
     );
     expect(messageWarningMock).toHaveBeenCalledWith(
       '归还完成：成功 2 条，跳过 1 条，失败 0 条。跳过原因：非借已。',
