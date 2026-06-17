@@ -14,6 +14,7 @@ import { Page } from '@vben/common-ui';
 import {
   ElAlert,
   ElButton,
+  ElDatePicker,
   ElEmpty,
   ElInput,
   ElMessage,
@@ -34,6 +35,14 @@ import {
 } from '../api/technical-workflow-service';
 import StainingProcessDialog from '../components/StainingProcessDialog.vue';
 import TechnicalTaskStartDialog from '../components/TechnicalTaskStartDialog.vue';
+import {
+  buildCreatedDateRangeParams,
+  buildDateRangeQueryParams,
+  createDatePickerPanelDefaultValue,
+  createDateRangePickerShortcuts,
+  disableFutureDate,
+  resolveRouteDateRange,
+} from '../utils/date-range';
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import {
   formatDateTime,
@@ -92,6 +101,7 @@ const STAINING_TYPE_OPTIONS = [
 ] as const;
 
 const route = useRoute();
+const dateRangeShortcuts = createDateRangePickerShortcuts();
 
 const pageError = ref('');
 const loading = ref(false);
@@ -109,6 +119,7 @@ const pendingAutoProcessTaskId = ref('');
 const filters = reactive({
   completedPage: 1,
   completedSize: 10,
+  dateRange: resolveRouteDateRange(route.query),
   keyword:
     typeof route.query.pathologyNo === 'string' ? route.query.pathologyNo : '',
   stainingType: 'ALL',
@@ -314,7 +325,15 @@ async function appendCompletedResult(
 ) {
   completedLoading.value = true;
   try {
-    const tracking = await getTechnicalTracking(taskContext.caseId);
+    const tracking = await getTechnicalTracking(taskContext.caseId, {
+      ...buildDateRangeQueryParams(filters.dateRange),
+      workDate:
+        filters.dateRange.length === 0 &&
+        typeof route.query.workDate === 'string' &&
+        route.query.workDate.trim()
+          ? route.query.workDate
+          : undefined,
+    });
     const matchedRow =
       buildCompletedRowsFromTracking(tracking, taskContext).find(
         (row) => row.slideId === result.slideId,
@@ -359,6 +378,7 @@ async function loadPendingData(options?: {
   pageError.value = '';
   try {
     const result = await listPendingTechnicalTasks({
+      ...buildCreatedDateRangeParams(filters.dateRange),
       keyword: filters.keyword.trim() || undefined,
       page: filters.page,
       size: filters.size,
@@ -424,6 +444,9 @@ function handleRefresh() {
 
 function handleQuery() {
   filters.page = 1;
+  completedRows.value = [];
+  selectedCompletedRows.value = [];
+  filters.completedPage = 1;
   void loadPendingData();
 }
 
@@ -535,6 +558,18 @@ onBeforeUnmount(() => {
                 clearable
                 placeholder="病人ID/病理号"
                 @keyup.enter="handleQuery"
+              />
+              <ElDatePicker
+                v-model="filters.dateRange"
+                :default-value="createDatePickerPanelDefaultValue()"
+                :disabled-date="disableFutureDate"
+                :shortcuts="dateRangeShortcuts"
+                end-placeholder="结束日期"
+                range-separator="至"
+                start-placeholder="开始日期"
+                type="daterange"
+                unlink-panels
+                value-format="YYYY-MM-DD"
               />
               <ElTooltip
                 content="染色类型筛选待后端分类口径确认"

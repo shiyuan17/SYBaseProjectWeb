@@ -12,6 +12,7 @@ import { Page } from '@vben/common-ui';
 
 import {
   ElButton,
+  ElDatePicker,
   ElDescriptions,
   ElDescriptionsItem,
   ElForm,
@@ -31,6 +32,14 @@ import ReworkExecuteDialog from '../components/ReworkExecuteDialog.vue';
 import TechnicalCaseContextPanel from '../components/TechnicalCaseContextPanel.vue';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { TASK_TYPE_TITLE_MAP } from '../constants';
+import {
+  buildDateRangeQueryParams,
+  buildDateRangeRouteQuery,
+  createDatePickerPanelDefaultValue,
+  createDateRangePickerShortcuts,
+  disableFutureDate,
+  resolveRouteDateRange,
+} from '../utils/date-range';
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import {
   formatDateTime,
@@ -46,6 +55,7 @@ import { buildWorkstationCaseContext } from '../utils/workstation';
 const route = useRoute();
 const router = useRouter();
 const navigation = useTechnicalWorkflowNavigation(router);
+const dateRangeShortcuts = createDateRangePickerShortcuts();
 
 const REWORK_NEXT_TASK_MAP: Record<string, TechnicalWorkflowTaskType> = {
   REGROSSING: 'GROSSING',
@@ -69,6 +79,7 @@ const nextStep = ref<null | {
 
 const queryForm = reactive({
   caseId: typeof route.query.caseId === 'string' ? route.query.caseId : '',
+  dateRange: resolveRouteDateRange(route.query),
 });
 
 const resolvedCaseId = computed(
@@ -125,7 +136,15 @@ async function loadTracking() {
   trackingLoading.value = true;
   pageError.value = '';
   try {
-    trackingResult.value = await getTechnicalTracking(caseIdentifier);
+    trackingResult.value = await getTechnicalTracking(caseIdentifier, {
+      ...buildDateRangeQueryParams(queryForm.dateRange),
+      workDate:
+        queryForm.dateRange.length === 0 &&
+        typeof route.query.workDate === 'string' &&
+        route.query.workDate.trim()
+          ? route.query.workDate
+          : undefined,
+    });
     if (
       !deepLinkedHandled.value &&
       (route.query.taskId ||
@@ -168,6 +187,7 @@ function goToWorkstationByReworkType(reworkType?: null | string) {
   }
   void navigation.goToTaskType(taskType, {
     caseId: resolvedCaseId.value,
+    ...buildDateRangeRouteQuery(queryForm.dateRange),
     mode: 'exception',
     pathologyNo: trackingResult.value?.pathologyNo ?? undefined,
   });
@@ -179,6 +199,7 @@ function goToSuggestedNextStep() {
   }
   void navigation.goToTaskType(nextStep.value.taskType, {
     caseId: resolvedCaseId.value,
+    ...buildDateRangeRouteQuery(queryForm.dateRange),
     mode: 'exception',
     pathologyNo: trackingResult.value?.pathologyNo ?? undefined,
   });
@@ -219,6 +240,20 @@ if (queryForm.caseId) {
                 clearable
                 placeholder="请输入病例编号"
                 @keyup.enter="loadTracking"
+              />
+            </ElFormItem>
+            <ElFormItem label="工作日期">
+              <ElDatePicker
+                v-model="queryForm.dateRange"
+                :default-value="createDatePickerPanelDefaultValue()"
+                :disabled-date="disableFutureDate"
+                :shortcuts="dateRangeShortcuts"
+                end-placeholder="结束日期"
+                range-separator="至"
+                start-placeholder="开始日期"
+                type="daterange"
+                unlink-panels
+                value-format="YYYY-MM-DD"
               />
             </ElFormItem>
             <ElFormItem>

@@ -10,6 +10,7 @@ import type {
 import type { TrackingTab } from '../utils/tracking';
 
 import { computed, nextTick, reactive, ref } from 'vue';
+import { useRoute } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
 import { UserRoundPen } from '@vben/icons';
@@ -17,6 +18,7 @@ import { UserRoundPen } from '@vben/icons';
 import {
   ElAlert,
   ElButton,
+  ElDatePicker,
   ElDrawer,
   ElInput,
   ElMessage,
@@ -48,6 +50,13 @@ import SlicingQcEvaluationDialog from '../components/SlicingQcEvaluationDialog.v
 import TechnicalTaskStartDialog from '../components/TechnicalTaskStartDialog.vue';
 import TechnicalTrackingDetailsSection from '../components/TechnicalTrackingDetailsSection.vue';
 import TechnicalTrackingSummaryTables from '../components/TechnicalTrackingSummaryTables.vue';
+import {
+  buildDateRangeQueryParams,
+  createDatePickerPanelDefaultValue,
+  createDateRangePickerShortcuts,
+  disableFutureDate,
+  resolveRouteDateRange,
+} from '../utils/date-range';
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import {
   formatDateTime,
@@ -113,6 +122,8 @@ const EMPTY_WORKBENCH: SlicingWorkbenchView = {
 
 const pageError = ref('');
 const loading = ref(false);
+const route = useRoute();
+const dateRangeShortcuts = createDateRangePickerShortcuts();
 
 const workbench = ref<SlicingWorkbenchView>(EMPTY_WORKBENCH);
 const activeTab = ref<'print' | 'slice'>('print');
@@ -120,6 +131,7 @@ const filters = reactive({
   applicationType: '',
   completedPage: 1,
   completedSize: 20,
+  dateRange: resolveRouteDateRange(route.query),
   keyword: '',
   overdueOnly: false,
   pendingPage: 1,
@@ -548,8 +560,19 @@ function applyShiftRemarkUpdate(taskId: string, shiftRemark: null | string) {
   };
 }
 
+function resolveLegacyWorkDateFallback() {
+  return filters.dateRange.length === 0 &&
+    typeof route.query.workDate === 'string' &&
+    route.query.workDate.trim()
+    ? route.query.workDate
+    : undefined;
+}
+
 async function resolveTaskRemarks(row: SlicingWorkbenchRow) {
-  const trackingResult = await getTechnicalTracking(row.caseId);
+  const trackingResult = await getTechnicalTracking(row.caseId, {
+    ...buildDateRangeQueryParams(filters.dateRange),
+    workDate: resolveLegacyWorkDateFallback(),
+  });
   const matchedTask = trackingResult.technicalTasks.find(
     (item) => item.id === row.taskId,
   );
@@ -593,11 +616,13 @@ async function loadWorkbench(options?: {
       applicationType: filters.applicationType || undefined,
       completedPage: filters.completedPage,
       completedSize: filters.completedSize,
+      ...buildDateRangeQueryParams(filters.dateRange),
       keyword: filters.keyword.trim() || undefined,
       overdueOnly: filters.overdueOnly,
       pendingPage: filters.pendingPage,
       pendingSize: filters.pendingSize,
       pendingTodayOnly: filters.pendingTodayOnly,
+      workDate: resolveLegacyWorkDateFallback(),
     });
 
     clearAllSelections();
@@ -862,7 +887,10 @@ async function openEmbeddingQualityReview(row: SlicingWorkbenchRow) {
 
   setLoadingEmbeddingQualityReview(row.taskId, true);
   try {
-    const trackingResult = await getTechnicalTracking(row.caseId);
+    const trackingResult = await getTechnicalTracking(row.caseId, {
+      ...buildDateRangeQueryParams(filters.dateRange),
+      workDate: resolveLegacyWorkDateFallback(),
+    });
     const matchedRecord =
       trackingResult.embeddingRecords?.find(
         (item) => item.embeddingBoxId === row.embeddingBoxId,
@@ -898,7 +926,10 @@ async function loadTrackingDrawerForRow(
   trackingDrawerSourceRow.value = row;
 
   try {
-    const trackingResult = await getTechnicalTracking(row.caseId);
+    const trackingResult = await getTechnicalTracking(row.caseId, {
+      ...buildDateRangeQueryParams(filters.dateRange),
+      workDate: resolveLegacyWorkDateFallback(),
+    });
     trackingDrawerResult.value = trackingResult;
     trackingDrawerActiveTab.value =
       mode === 'history' ? 'timeline' : 'abnormal';
@@ -1006,6 +1037,19 @@ void loadWorkbench();
               clearable
               placeholder="请输入病人ID或病理号"
               @keyup.enter="handleQuery"
+            />
+            <ElDatePicker
+              v-model="filters.dateRange"
+              :default-value="createDatePickerPanelDefaultValue()"
+              :disabled-date="disableFutureDate"
+              :shortcuts="dateRangeShortcuts"
+              format="YYYY-MM-DD"
+              end-placeholder="结束日期"
+              range-separator="至"
+              start-placeholder="开始日期"
+              type="daterange"
+              unlink-panels
+              value-format="YYYY-MM-DD"
             />
           </div>
           <div class="legacy-query-bar__filter">

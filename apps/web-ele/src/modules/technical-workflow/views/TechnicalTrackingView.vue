@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Page } from '@vben/common-ui';
+import { ElAlert } from 'element-plus';
 
 import TechnicalTrackingDetailsSection from '../components/TechnicalTrackingDetailsSection.vue';
 import TechnicalTrackingQueryPanel from '../components/TechnicalTrackingQueryPanel.vue';
@@ -17,10 +18,12 @@ const {
   handleReset,
   loadTracking,
   loading,
+  pageError,
   selectedNode,
   selectedNodeId,
   trackingResult,
   treeData,
+  dateRange,
   workflowTimelineSteps,
 } = useTechnicalTracking();
 </script>
@@ -30,10 +33,19 @@ const {
     <div class="flex flex-col gap-4">
       <TechnicalTrackingQueryPanel
         :case-id="caseId"
+        :date-range="dateRange"
         :loading="loading"
         @query="loadTracking"
         @reset="handleReset"
         @update:case-id="caseId = $event"
+        @update:date-range="dateRange = $event"
+      />
+
+      <ElAlert
+        v-if="pageError"
+        :closable="false"
+        :title="pageError"
+        type="error"
       />
 
       <template v-if="trackingResult && context">

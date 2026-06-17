@@ -25,6 +25,7 @@ import {
   ElAlert,
   ElButton,
   ElCheckbox,
+  ElDatePicker,
   ElDrawer,
   ElEmpty,
   ElInput,
@@ -49,6 +50,15 @@ import {
 } from '../api/technical-workflow-service';
 import EmbeddingQualityReviewDialog from '../components/EmbeddingQualityReviewDialog.vue';
 import { DEFAULT_PAGE_SIZE } from '../constants';
+import {
+  buildCreatedDateRangeParams,
+  buildDateRangeQueryParams,
+  buildDateRangeRouteQuery,
+  createDatePickerPanelDefaultValue,
+  createDateRangePickerShortcuts,
+  disableFutureDate,
+  resolveRouteDateRange,
+} from '../utils/date-range';
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import {
   formatDateTime,
@@ -117,6 +127,7 @@ const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
 const navigation = useTechnicalWorkflowNavigation(router);
+const dateRangeShortcuts = createDateRangePickerShortcuts();
 
 const pageError = ref('');
 const loading = ref(false);
@@ -152,6 +163,7 @@ const selectedCompletedEmbeddingIds = ref<string[]>([]);
 const selectedPendingTaskIds = ref<string[]>([]);
 
 const filters = reactive({
+  dateRange: resolveRouteDateRange(route.query),
   keyword:
     typeof route.query.pathologyNo === 'string' ? route.query.pathologyNo : '',
   page: 1,
@@ -285,6 +297,21 @@ const selectedCompletionPendingTasks = computed(() => {
     ? [selectedCompletedEmbeddingRecord.value.pendingTask]
     : [];
 });
+
+const summaryRangeLabel = computed(() => {
+  if (filters.dateRange.length === 2) {
+    return `${filters.dateRange[0]} 至 ${filters.dateRange[1]}`;
+  }
+  return '全部日期';
+});
+
+function resolveLegacyWorkDateFallback() {
+  return filters.dateRange.length === 0 &&
+    typeof route.query.workDate === 'string' &&
+    route.query.workDate.trim()
+    ? route.query.workDate
+    : undefined;
+}
 
 function isEmbeddingCompletionPendingTask(task: PendingTechnicalTaskItem) {
   return (
@@ -494,7 +521,10 @@ async function loadTrackingForTask(task: null | PendingTechnicalTaskItem) {
   }
   trackingLoading.value = true;
   try {
-    trackingResult.value = await getTechnicalTracking(task.caseId);
+    trackingResult.value = await getTechnicalTracking(task.caseId, {
+      ...buildDateRangeQueryParams(filters.dateRange),
+      workDate: resolveLegacyWorkDateFallback(),
+    });
   } catch (error) {
     trackingResult.value = null;
     pageError.value = getWorkflowPageErrorMessage(error);
@@ -526,7 +556,10 @@ function resolvePreferredTaskId(
 async function loadSummary() {
   summaryLoading.value = true;
   try {
-    workstationSummary.value = await getEmbeddingWorkstationSummary();
+    workstationSummary.value = await getEmbeddingWorkstationSummary({
+      ...buildDateRangeQueryParams(filters.dateRange),
+      workDate: resolveLegacyWorkDateFallback(),
+    });
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
     reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
@@ -539,6 +572,7 @@ async function loadPendingData(preferredTaskId?: string) {
   loading.value = true;
   try {
     const result = await listPendingTechnicalTasks({
+      ...buildCreatedDateRangeParams(filters.dateRange),
       keyword: filters.keyword.trim() || undefined,
       page: filters.page,
       size: filters.size,
@@ -1141,6 +1175,7 @@ function handleMore() {
   }
   void navigation.goToTracking({
     caseId: selectedTask.value.caseId,
+    ...buildDateRangeRouteQuery(filters.dateRange),
     pathologyNo: selectedTask.value.pathologyNo ?? undefined,
     taskId: selectedTask.value.id,
   });
@@ -1269,7 +1304,7 @@ onBeforeUnmount(() => {
             {{ summaryLoading ? '--' : workstationSummary.pendingCount }}
           </div>
           <div class="mt-1 text-xs text-muted-foreground/70">
-            统计范围：{{ workstationSummary.workDate || '服务端当日' }}
+            统计范围：{{ summaryRangeLabel }}
           </div>
         </article>
         <article
@@ -1302,6 +1337,20 @@ onBeforeUnmount(() => {
           clearable
           placeholder="病人ID/病理号"
           @keyup.enter="handleSearch"
+        />
+        <ElDatePicker
+          v-model="filters.dateRange"
+          :default-value="createDatePickerPanelDefaultValue()"
+          :disabled-date="disableFutureDate"
+          :shortcuts="dateRangeShortcuts"
+          class="!w-[260px]"
+          format="YYYY-MM-DD"
+          end-placeholder="结束日期"
+          range-separator="至"
+          start-placeholder="开始日期"
+          type="daterange"
+          unlink-panels
+          value-format="YYYY-MM-DD"
         />
         <ElButton @click="handleSearch">查询</ElButton>
         <ElButton @click="handleMore">更多</ElButton>

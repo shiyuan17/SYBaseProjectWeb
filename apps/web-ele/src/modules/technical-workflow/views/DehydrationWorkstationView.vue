@@ -2,13 +2,13 @@
 import type { PendingTechnicalTaskItem } from '../types/technical-workflow';
 
 import { computed, reactive, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
 
 import {
-  ElBadge,
   ElButton,
+  ElDatePicker,
   ElForm,
   ElFormItem,
   ElInput,
@@ -27,9 +27,14 @@ import {
   listPendingTechnicalTasks,
   startDehydration,
 } from '../api/technical-workflow-service';
-import DehydrationBatchOperationDialog from '../components/DehydrationBatchOperationDialog.vue';
-import DehydrationCreateBatchDialog from '../components/DehydrationCreateBatchDialog.vue';
 import { DEFAULT_PAGE_SIZE } from '../constants';
+import {
+  buildCreatedDateRangeParams,
+  createDatePickerPanelDefaultValue,
+  createDateRangePickerShortcuts,
+  disableFutureDate,
+  resolveRouteDateRange,
+} from '../utils/date-range';
 import {
   buildDehydrationWorkbenchStats,
   getDehydrationTaskOperator,
@@ -37,13 +42,11 @@ import {
 } from '../utils/dehydration-workbench';
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import { formatDateTime, formatTaskStatus } from '../utils/format';
-import { useTechnicalWorkflowNavigation } from '../utils/navigation';
 
 import '#/modules/specimen-workflow/styles/specimen-workflow-row-tone.css';
 
 const route = useRoute();
-const router = useRouter();
-const navigation = useTechnicalWorkflowNavigation(router);
+const dateRangeShortcuts = createDateRangePickerShortcuts();
 
 const pageError = ref('');
 const loading = ref(false);
@@ -53,16 +56,13 @@ const pendingItems = ref<PendingTechnicalTaskItem[]>([]);
 const total = ref(0);
 const selectedTaskId = ref('');
 const selectedRows = ref<PendingTechnicalTaskItem[]>([]);
-const createBatchDialogVisible = ref(false);
-const batchOperationDialogVisible = ref(false);
-const latestBatchId = ref('');
 
 const filters = reactive({
+  dateRange: resolveRouteDateRange(route.query),
   page: 1,
   pathologyNo:
     typeof route.query.pathologyNo === 'string' ? route.query.pathologyNo : '',
   size: DEFAULT_PAGE_SIZE,
-  timedOutOnly: route.query.mode === 'exception',
 });
 
 const routeTaskId = computed(() =>
@@ -73,38 +73,26 @@ const shouldIncludeAllStatuses = computed(
 );
 const shouldInitialLoad = computed(
   () =>
+    filters.dateRange.length === 2 ||
     Boolean(filters.pathologyNo.trim()) ||
-    Boolean(routeTaskId.value) ||
-    filters.timedOutOnly,
+    Boolean(routeTaskId.value),
 );
 const currentQuery = computed(() => ({
+  ...buildCreatedDateRangeParams(filters.dateRange),
   includeAllStatuses: shouldIncludeAllStatuses.value || undefined,
   page: filters.page,
   pathologyNo: filters.pathologyNo.trim() || undefined,
   size: filters.size,
   taskId: routeTaskId.value || undefined,
   taskType: 'DEHYDRATION',
-  timedOutOnly: filters.timedOutOnly,
 }));
 
 const selectedTask = computed(
   () =>
     pendingItems.value.find((item) => item.id === selectedTaskId.value) ?? null,
 );
-const createBatchTasks = computed(() => {
-  if (selectedRows.value.length > 0) {
-    return selectedRows.value;
-  }
-  if (selectedTask.value) {
-    return [selectedTask.value];
-  }
-  return [];
-});
 const stats = computed(() =>
   buildDehydrationWorkbenchStats(pendingItems.value),
-);
-const timedOutCount = computed(
-  () => pendingItems.value.filter((item) => item.timedOut).length,
 );
 
 function getStatusTagType(task: PendingTechnicalTaskItem) {
@@ -202,10 +190,6 @@ function resolveDehydrationRowClassName({
 
 function handleSearch() {
   filters.page = 1;
-  if (!filters.pathologyNo.trim()) {
-    clearPendingData();
-    return;
-  }
   void loadPendingData();
 }
 
@@ -252,12 +236,6 @@ async function handleScanEnter() {
   }
 
   await startSingleDehydrationTask(currentTask);
-}
-
-function toggleTimedOutOnly() {
-  filters.timedOutOnly = !filters.timedOutOnly;
-  filters.page = 1;
-  void loadPendingData();
 }
 
 function ensureSelectedTask(actionLabel: string) {
@@ -380,51 +358,6 @@ async function runDehydrationTaskAction(options: {
   }
 }
 
-function openTracking(task = selectedTask.value) {
-  const nextTask = task ?? ensureSelectedTask('查看轨迹');
-  if (!nextTask) {
-    return;
-  }
-  void navigation.goToTracking({
-    caseId: nextTask.caseId,
-    objectId: nextTask.objectId ?? undefined,
-    objectType: nextTask.objectType ?? undefined,
-    pathologyNo: nextTask.pathologyNo ?? undefined,
-    taskId: nextTask.id,
-  });
-}
-
-function openCreateBatchDialog() {
-  const tasks = createBatchTasks.value;
-  if (tasks.length === 0) {
-    ensureSelectedTask('创建脱水批次');
-    return;
-  }
-
-  const caseIds = new Set(tasks.map((item) => item.caseId).filter(Boolean));
-  if (caseIds.size > 1) {
-    ElMessage.warning('创建脱水批次仅支持选择同一病例的蜡块任务');
-    return;
-  }
-
-  createBatchDialogVisible.value = true;
-}
-
-function openBatchOperationDialog() {
-  batchOperationDialogVisible.value = true;
-}
-
-function handleBatchCreated(result: { batchId: string }) {
-  latestBatchId.value = result.batchId;
-  batchOperationDialogVisible.value = true;
-  void loadPendingData();
-}
-
-function handleBatchSubmitted(result: { batchId: string }) {
-  latestBatchId.value = result.batchId;
-  void loadPendingData();
-}
-
 async function handleStartDehydration() {
   await runDehydrationTaskAction({
     actionLabel: '开始脱水',
@@ -500,22 +433,27 @@ if (shouldInitialLoad.value) {
                   @keydown.enter.prevent="handleScanEnter"
                 />
               </ElFormItem>
+              <ElFormItem class="mb-0" label="工作日期">
+                <ElDatePicker
+                  v-model="filters.dateRange"
+                  :default-value="createDatePickerPanelDefaultValue()"
+                  :disabled-date="disableFutureDate"
+                  :shortcuts="dateRangeShortcuts"
+                  class="w-[260px]"
+                  end-placeholder="结束日期"
+                  range-separator="至"
+                  start-placeholder="开始日期"
+                  type="daterange"
+                  unlink-panels
+                  value-format="YYYY-MM-DD"
+                />
+              </ElFormItem>
               <ElFormItem class="mb-0">
                 <ElButton native-type="submit" type="primary">查询</ElButton>
               </ElFormItem>
             </ElForm>
 
             <div class="flex flex-wrap items-center gap-2">
-              <ElButton
-                size="small"
-                type="primary"
-                @click="openCreateBatchDialog"
-              >
-                创建批次
-              </ElButton>
-              <ElButton size="small" @click="openBatchOperationDialog">
-                批次操作
-              </ElButton>
               <ElButton
                 :loading="startLoading"
                 size="small"
@@ -530,22 +468,7 @@ if (shouldInitialLoad.value) {
               >
                 脱水完成
               </ElButton>
-              <ElButton size="small" @click="openTracking()">脱水追踪</ElButton>
             </div>
-
-            <ElBadge
-              :value="timedOutCount"
-              :hidden="timedOutCount === 0"
-              class="ml-auto"
-            >
-              <ElButton
-                :type="filters.timedOutOnly ? 'danger' : 'default'"
-                size="small"
-                @click="toggleTimedOutOnly"
-              >
-                {{ filters.timedOutOnly ? '仅异常任务' : '异常任务' }}
-              </ElButton>
-            </ElBadge>
           </div>
         </div>
 
@@ -616,7 +539,7 @@ if (shouldInitialLoad.value) {
                 {{ formatDateTime(row.completedAt) }}
               </template>
             </ElTableColumn>
-            <ElTableColumn label="状态" min-width="110">
+            <ElTableColumn fixed="right" label="状态" width="110">
               <template #default="{ row }">
                 <ElTag :type="getStatusTagType(row)">
                   {{ formatTaskStatus(row.taskStatus) }}
@@ -639,18 +562,6 @@ if (shouldInitialLoad.value) {
         </div>
       </section>
     </div>
-
-    <DehydrationCreateBatchDialog
-      v-model="createBatchDialogVisible"
-      :task="selectedTask"
-      :tasks="createBatchTasks"
-      @created="handleBatchCreated"
-    />
-    <DehydrationBatchOperationDialog
-      v-model="batchOperationDialogVisible"
-      :initial-batch-id="latestBatchId"
-      @submitted="handleBatchSubmitted"
-    />
   </Page>
 </template>
 
