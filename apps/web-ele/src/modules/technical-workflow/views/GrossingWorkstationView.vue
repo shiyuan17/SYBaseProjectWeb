@@ -19,7 +19,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
-  Ellipsis,
   RotateCw,
   Search,
 } from '@vben/icons';
@@ -29,7 +28,7 @@ import {
   ElBadge,
   ElButton,
   ElCheckbox,
-  ElDrawer,
+  ElDatePicker,
   ElEmpty,
   ElForm,
   ElInput,
@@ -54,6 +53,11 @@ import GrossingSpecimenTabs from '../components/GrossingSpecimenTabs.vue';
 import TechnicalOperatorFields from '../components/TechnicalOperatorFields.vue';
 import { useGrossingWorkbench } from '../composables/useGrossingWorkbench';
 import { DEFAULT_PAGE_SIZE } from '../constants';
+import {
+  createDatePickerPanelDefaultValue,
+  createDateRangePickerShortcuts,
+  disableFutureDate,
+} from '../utils/date-range';
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import {
   formatCaseStatus,
@@ -156,6 +160,7 @@ type ClinicalHistoryFieldKey = (typeof CLINICAL_HISTORY_FIELDS)[number]['key'];
 type ClinicalHistoryForm = Record<ClinicalHistoryFieldKey, string>;
 
 const COMMON_GROSSING_COPY_TEXTS = ['cm', 'cm*cm', 'cm*cm*cm'] as const;
+const DEFAULT_CREATED_RANGE_LENGTH_DAYS = 1;
 
 const GROSSING_DESCRIPTION_TEMPLATES: GrossingDescriptionTemplate[] = [
   {
@@ -223,11 +228,6 @@ const DISABLED_TOOLBAR_ACTIONS = [
   { icon: undefined, label: '蜡块批量打印' },
 ] as const;
 
-const DISABLED_DATE_ACTIONS = [
-  { icon: ChevronLeft, label: '前1天' },
-  { icon: ChevronRight, label: '后1天' },
-] as const;
-
 const grossingWorkbenchPaneMinWidths = {
   queue: 320,
   template: 300,
@@ -239,6 +239,60 @@ const grossingWorkbenchResizeStep = 2;
 const route = useRoute();
 const router = useRouter();
 const navigation = useTechnicalWorkflowNavigation(router);
+const dateRangeShortcuts = createDateRangePickerShortcuts();
+
+function parseDateValue(value: string) {
+  const [yearText, monthText, dayText] = value.split('-');
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  if (!year || !month || !day) {
+    return null;
+  }
+
+  const parsed = new Date(year, month - 1, day);
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+  return parsed;
+}
+
+function formatDateValue(value: Date) {
+  const year = value.getFullYear();
+  const month = `${value.getMonth() + 1}`.padStart(2, '0');
+  const day = `${value.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatCreatedFromQueryValue(value: string) {
+  return value ? `${value}T00:00:00` : undefined;
+}
+
+function formatCreatedToQueryValue(value: string) {
+  return value ? `${value}T23:59:59` : undefined;
+}
+
+function addDays(value: Date, days: number) {
+  const next = new Date(value);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function resolveShiftableCreatedRange(range: string[]) {
+  const start = range[0] ? parseDateValue(range[0]) : null;
+  const end = range[1] ? parseDateValue(range[1]) : null;
+  if (start && end) {
+    return { end, start };
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const fallbackEnd = addDays(today, DEFAULT_CREATED_RANGE_LENGTH_DAYS - 1);
+  return {
+    end: fallbackEnd,
+    start: today,
+  };
+}
 
 const queueError = ref('');
 const loading = ref(false);
@@ -246,7 +300,6 @@ const actionLoading = ref(false);
 const pendingItems = ref<PendingTechnicalTaskItem[]>([]);
 const selectedTask = ref<null | PendingTechnicalTaskItem>(null);
 const total = ref(0);
-const moreDrawerVisible = ref(false);
 const templateSearchKeyword = ref('');
 const selectedTemplateId = ref(GROSSING_DESCRIPTION_TEMPLATES[0]?.id ?? '');
 const appendTemplateAfterApply = ref(true);
@@ -260,6 +313,7 @@ const paneWidths = reactive({
 let freezeReminderTimer: number | undefined;
 
 const filters = reactive({
+  createdRange: [] as string[],
   keyword:
     typeof route.query.pathologyNo === 'string' ? route.query.pathologyNo : '',
   page: 1,
@@ -273,13 +327,20 @@ const routeTaskId = computed(() =>
 const shouldIncludeAllStatuses = computed(
   () => Boolean(filters.keyword.trim()) || Boolean(routeTaskId.value),
 );
+const hasCreatedRange = computed(() => filters.createdRange.length === 2);
+const hasActiveQueryFilters = computed(
+  () => Boolean(filters.keyword.trim()) || hasCreatedRange.value,
+);
 const shouldInitialLoad = computed(
   () =>
+    hasCreatedRange.value ||
     Boolean(filters.keyword.trim()) ||
     Boolean(routeTaskId.value) ||
     filters.timedOutOnly,
 );
 const currentQuery = computed(() => ({
+  createdFrom: formatCreatedFromQueryValue(filters.createdRange[0] ?? ''),
+  createdTo: formatCreatedToQueryValue(filters.createdRange[1] ?? ''),
   includeAllStatuses: shouldIncludeAllStatuses.value || undefined,
   keyword: filters.keyword.trim() || undefined,
   page: filters.page,
@@ -291,7 +352,6 @@ const currentQuery = computed(() => ({
 
 const workbench = useGrossingWorkbench({
   onSubmitted: async () => {
-    moreDrawerVisible.value = false;
     await loadPendingData();
   },
 });
@@ -694,7 +754,7 @@ async function loadPendingData(preferredTaskId?: string) {
 
 async function handleQuery() {
   filters.page = 1;
-  if (!filters.keyword.trim()) {
+  if (!hasActiveQueryFilters.value) {
     pendingItems.value = [];
     total.value = 0;
     selectedTask.value = null;
@@ -721,12 +781,14 @@ async function toggleTimedOutOnly() {
   await loadPendingData();
 }
 
-function openMoreDrawer() {
-  if (!selectedTask.value) {
-    ElMessage.warning('请先从左侧列表选择任务');
-    return;
-  }
-  moreDrawerVisible.value = true;
+async function shiftCreatedDateRange(days: number) {
+  const { end, start } = resolveShiftableCreatedRange(filters.createdRange);
+  filters.createdRange = [
+    formatDateValue(addDays(start, days)),
+    formatDateValue(addDays(end, days)),
+  ];
+  filters.page = 1;
+  await loadPendingData();
 }
 
 function canOperateGrossingTask(task: null | PendingTechnicalTaskItem) {
@@ -1052,34 +1114,52 @@ if (shouldInitialLoad.value) {
               size="small"
               @keyup.enter="void handleQuery()"
             />
-            <ElButton
-              :icon="Search"
-              :loading="loading"
+            <ElDatePicker
+              v-model="filters.createdRange"
+              :default-value="createDatePickerPanelDefaultValue()"
+              :disabled-date="disableFutureDate"
+              :shortcuts="dateRangeShortcuts"
+              class="w-full sm:w-[260px]"
+              clearable
+              end-placeholder="结束日期"
+              range-separator="至"
               size="small"
-              @click="void handleQuery()"
-            >
-              查询
-            </ElButton>
+              start-placeholder="开始日期"
+              type="daterange"
+              unlink-panels
+              value-format="YYYY-MM-DD"
+            />
           </div>
 
-          <ElButton :icon="Ellipsis" size="small" @click="openMoreDrawer">
-            更多
+          <ElButton
+            :icon="ChevronLeft"
+            size="small"
+            @click="void shiftCreatedDateRange(-1)"
+          >
+            前1天
+          </ElButton>
+          <ElButton
+            :icon="ChevronRight"
+            size="small"
+            @click="void shiftCreatedDateRange(1)"
+          >
+            后1天
+          </ElButton>
+          <ElButton
+            :icon="Search"
+            :loading="loading"
+            class="grossing-query-button"
+            size="small"
+            @click="void handleQuery()"
+          >
+            查询
           </ElButton>
 
-          <ElTooltip
-            v-for="action in DISABLED_DATE_ACTIONS"
-            :key="action.label"
-            content="暂未接入日期筛选"
-            placement="top"
+          <ElBadge
+            :max="999"
+            :value="total > 0 ? total : undefined"
+            class="mr-2"
           >
-            <span class="inline-flex">
-              <ElButton :icon="action.icon" disabled size="small">
-                {{ action.label }}
-              </ElButton>
-            </span>
-          </ElTooltip>
-
-          <ElBadge :max="999" :value="total" class="mr-2">
             <ElButton size="small" @click="void handleRefresh()">
               取材任务
             </ElButton>
@@ -1312,6 +1392,23 @@ if (shouldInitialLoad.value) {
                   {{ formatGrossingTaskStatus(selectedTask.taskStatus) }}
                 </ElTag>
                 <ElButton
+                  :loading="workbench.contextLoading.value"
+                  size="small"
+                  @click="void workbench.loadWorkbenchContext()"
+                >
+                  重新加载
+                </ElButton>
+                <ElButton
+                  size="small"
+                  @click="
+                    navigation.goToTracking({
+                      caseId: selectedTask?.caseId ?? undefined,
+                    })
+                  "
+                >
+                  查看轨迹
+                </ElButton>
+                <ElButton
                   :disabled="!canOperateGrossingTask(selectedTask)"
                   :loading="workbench.submitting.value"
                   size="small"
@@ -1339,6 +1436,22 @@ if (shouldInitialLoad.value) {
               @add-embedding-boxes="workbench.addEmbeddingBoxes"
               @remove-embedding-box="workbench.removeEmbeddingBox"
             />
+
+            <section class="border-b border-border bg-muted/10 px-3 py-3">
+              <div class="mb-3">
+                <h3 class="text-sm font-semibold text-foreground">操作信息</h3>
+                <p class="mt-0.5 text-xs text-muted-foreground">
+                  当前取材任务的操作人、终端和补充说明
+                </p>
+              </div>
+              <ElForm label-width="96px">
+                <TechnicalOperatorFields
+                  :form="workbench.operatorForm"
+                  remarks-placeholder="必要时补充本次取材说明"
+                  terminal-placeholder="取材终端编码"
+                />
+              </ElForm>
+            </section>
 
             <section class="relative border-b border-border">
               <div
@@ -1438,6 +1551,45 @@ if (shouldInitialLoad.value) {
                 :upload-image-file="uploadGrossingImage"
               />
             </template>
+
+            <section class="border-t border-border bg-muted/10 px-3 py-3">
+              <div class="mb-3">
+                <h3 class="text-sm font-semibold text-foreground">
+                  标本 / 蜡块 / 影像编辑
+                </h3>
+                <p class="mt-0.5 text-xs text-muted-foreground">
+                  维护当前病例的标本、蜡块与影像资料
+                </p>
+              </div>
+              <GrossingSpecimenTabs
+                v-model:active-specimen-key="workbench.activeSpecimenKey.value"
+                :before-grossing-image-upload="
+                  workbench.beforeGrossingImageUpload
+                "
+                :body-part-tree-options="workbench.bodyPartTreeOptions.value"
+                :complete-form="workbench.completeForm"
+                :create-grossing-image-upload-request="
+                  workbench.createGrossingImageUploadRequest
+                "
+                :get-specimen-tab-label="workbench.getSpecimenTabLabel"
+                :grossing-image-accept="workbench.grossingImageAccept"
+                :is-specimen-uploading="workbench.isSpecimenUploading"
+                :label-class="workbench.labelClass"
+                :sampling-template-tree-options="
+                  workbench.samplingTemplateTreeOptions.value
+                "
+                :specimen-tab-metas="workbench.specimenTabMetas.value"
+                :workflow-reference-options="
+                  workbench.workflowReferenceOptions.value
+                "
+                @add-block="workbench.addBlock"
+                @add-media-asset="workbench.addMediaAsset"
+                @add-specimen="workbench.addSpecimen"
+                @remove-block="workbench.removeBlock"
+                @remove-media-asset="workbench.removeMediaAsset"
+                @remove-specimen="workbench.removeSpecimen"
+              />
+            </section>
           </template>
 
           <div v-else class="grid min-h-96 flex-1 place-items-center">
@@ -1610,102 +1762,6 @@ if (shouldInitialLoad.value) {
         </aside>
       </section>
     </div>
-
-    <ElDrawer
-      v-model="moreDrawerVisible"
-      :close-on-click-modal="false"
-      :title="`更多取材操作 - ${selectedPathologyNo}`"
-      size="74%"
-    >
-      <div class="flex flex-col gap-4 pb-16">
-        <section
-          class="overflow-hidden rounded-md border border-border bg-card"
-        >
-          <header
-            class="border-b border-border bg-muted/30 px-3 py-2 text-sm font-semibold text-foreground"
-          >
-            操作信息
-          </header>
-          <div class="p-3">
-            <ElForm label-width="96px">
-              <TechnicalOperatorFields
-                :form="workbench.operatorForm"
-                remarks-placeholder="必要时补充本次取材说明"
-                terminal-placeholder="取材终端编码"
-              />
-            </ElForm>
-          </div>
-        </section>
-
-        <section
-          class="overflow-hidden rounded-md border border-border bg-card"
-        >
-          <header
-            class="border-b border-border bg-muted/30 px-3 py-2 text-sm font-semibold text-foreground"
-          >
-            标本 / 蜡块 / 影像编辑
-          </header>
-          <div class="p-3">
-            <GrossingSpecimenTabs
-              v-model:active-specimen-key="workbench.activeSpecimenKey.value"
-              :before-grossing-image-upload="
-                workbench.beforeGrossingImageUpload
-              "
-              :body-part-tree-options="workbench.bodyPartTreeOptions.value"
-              :complete-form="workbench.completeForm"
-              :create-grossing-image-upload-request="
-                workbench.createGrossingImageUploadRequest
-              "
-              :get-specimen-tab-label="workbench.getSpecimenTabLabel"
-              :grossing-image-accept="workbench.grossingImageAccept"
-              :is-specimen-uploading="workbench.isSpecimenUploading"
-              :label-class="workbench.labelClass"
-              :sampling-template-tree-options="
-                workbench.samplingTemplateTreeOptions.value
-              "
-              :specimen-tab-metas="workbench.specimenTabMetas.value"
-              :workflow-reference-options="
-                workbench.workflowReferenceOptions.value
-              "
-              @add-block="workbench.addBlock"
-              @add-media-asset="workbench.addMediaAsset"
-              @add-specimen="workbench.addSpecimen"
-              @remove-block="workbench.removeBlock"
-              @remove-media-asset="workbench.removeMediaAsset"
-              @remove-specimen="workbench.removeSpecimen"
-            />
-          </div>
-        </section>
-
-        <footer
-          class="sticky bottom-0 flex justify-end gap-2 border-t border-border bg-background/95 py-3"
-        >
-          <ElButton
-            :loading="workbench.contextLoading.value"
-            @click="void workbench.loadWorkbenchContext()"
-          >
-            重新加载
-          </ElButton>
-          <ElButton
-            @click="
-              navigation.goToTracking({
-                caseId: selectedTask?.caseId ?? undefined,
-              })
-            "
-          >
-            查看轨迹
-          </ElButton>
-          <ElButton
-            :disabled="!canOperateGrossingTask(selectedTask)"
-            :loading="workbench.submitting.value"
-            type="primary"
-            @click="void workbench.submitGrossing()"
-          >
-            完成取材
-          </ElButton>
-        </footer>
-      </div>
-    </ElDrawer>
   </Page>
 </template>
 
@@ -1745,6 +1801,20 @@ if (shouldInitialLoad.value) {
 .grossing-workbench-resizer:focus-visible::before {
   width: 4px;
   background: var(--el-color-primary);
+}
+
+.grossing-query-button {
+  min-width: 72px;
+  color: var(--el-color-primary);
+  background: var(--el-color-primary-light-9);
+  border-color: var(--el-color-primary-light-5);
+}
+
+.grossing-query-button:hover,
+.grossing-query-button:focus-visible {
+  color: var(--el-color-white);
+  background: var(--el-color-primary);
+  border-color: var(--el-color-primary);
 }
 
 :global(.grossing-workbench-is-resizing),
