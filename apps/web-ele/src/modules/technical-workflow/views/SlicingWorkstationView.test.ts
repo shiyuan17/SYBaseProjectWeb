@@ -231,6 +231,7 @@ function createWorkbench(): SlicingWorkbenchView {
         grossingEvaluation: null,
         pathologyNo: 'BL-001',
         patientId: 'P-001',
+        patientIdDisplay: '08305',
         patientName: '患者甲',
         printGroupId: null,
         selectable: true,
@@ -268,6 +269,7 @@ function createWorkbench(): SlicingWorkbenchView {
         grossingEvaluation: null,
         pathologyNo: 'BL-001',
         patientId: 'P-001',
+        patientIdDisplay: '08305',
         patientName: '患者甲',
         printGroupId: null,
         selectable: true,
@@ -319,6 +321,7 @@ function createBatchPrintWorkbench(): SlicingWorkbenchView {
     embeddingBoxNo: 'A2',
     pathologyNo: 'BL-002',
     patientId: 'P-002',
+    patientIdDisplay: '08306',
     patientName: '患者乙',
     specimenName: '皮肤',
     taskId: 'TASK-2',
@@ -561,6 +564,8 @@ describe('SlicingWorkstationView', () => {
     });
     expect(writeMock).toHaveBeenCalledWith(expect.stringContaining('BL-001'));
     expect(writeMock).toHaveBeenCalledWith(expect.stringContaining('BL-002'));
+    expect(writeMock).toHaveBeenCalledWith(expect.stringContaining('08305'));
+    expect(writeMock).toHaveBeenCalledWith(expect.stringContaining('08306'));
     expect(document.body.textContent).toContain('蜡块号');
     expect(document.body.textContent).not.toContain(
       '只展示已完成玻片打印的待切任务',

@@ -63,6 +63,7 @@ import {
   formatEmbeddingEvaluationLevel,
   formatEventStatus,
   formatNullable,
+  formatPatientIdDisplay,
   formatTaskStatus,
 } from '../utils/format';
 import {
@@ -433,6 +434,7 @@ function buildPrintedSlicingSlideLabels(items: PrintedSlicingSlideBatchItem[]) {
       embeddingBoxNo: row.embeddingBoxNo,
       pathologyNo: row.pathologyNo,
       patientId: row.patientId,
+      patientIdDisplay: row.patientIdDisplay ?? row.patientId,
       patientName: row.patientName,
       slideNo,
       specimenName: row.specimenName,
@@ -496,7 +498,7 @@ function buildSlicingSlidePrintDocument(items: PrintedSlicingSlideBatchItem[]) {
       <div class="primary">${escapePrintText(label.slideNo)}</div>
       <div class="line">病理号：${escapePrintText(label.pathologyNo)}</div>
       <div class="line">蜡块号：${escapePrintText(label.embeddingBoxNo)}</div>
-      <div class="line">患者：${escapePrintText(label.patientName)} / ${escapePrintText(label.patientId)}</div>
+      <div class="line">患者：${escapePrintText(label.patientName)} / ${escapePrintText(label.patientIdDisplay)}</div>
       <div class="name">${escapePrintText(label.specimenName)} (${escapePrintText(label.sequence)}/${escapePrintText(label.total)})</div>
     </section>`,
         )
@@ -1198,7 +1200,9 @@ void loadWorkbench();
               </ElTableColumn>
               <ElTableColumn label="病人ID" min-width="130">
                 <template #default="{ row }">
-                  {{ formatNullable(row.patientId) }}
+                  {{
+                    formatPatientIdDisplay(row.patientIdDisplay, row.patientId)
+                  }}
                 </template>
               </ElTableColumn>
               <ElTableColumn label="病理号" min-width="150">
@@ -1367,7 +1371,9 @@ void loadWorkbench();
               </ElTableColumn>
               <ElTableColumn label="病人ID" min-width="160">
                 <template #default="{ row }">
-                  {{ formatNullable(row.patientId) }}
+                  {{
+                    formatPatientIdDisplay(row.patientIdDisplay, row.patientId)
+                  }}
                 </template>
               </ElTableColumn>
             </template>
@@ -1426,7 +1432,9 @@ void loadWorkbench();
             </ElTableColumn>
             <ElTableColumn label="病人ID" min-width="150">
               <template #default="{ row }">
-                {{ formatNullable(row.patientId) }}
+                {{
+                  formatPatientIdDisplay(row.patientIdDisplay, row.patientId)
+                }}
               </template>
             </ElTableColumn>
             <ElTableColumn label="病理号" min-width="150">
