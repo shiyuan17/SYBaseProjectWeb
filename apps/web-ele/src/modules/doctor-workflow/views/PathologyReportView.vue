@@ -30,8 +30,6 @@ import {
   publishPathologyReport,
   recallFormalReportVersions,
   rejectPathologyReport,
-  reviewPathologyReport,
-  signPathologyReport,
 } from '../api/doctor-workflow-service';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { M4_PERMISSION_CODES } from '../constants';
@@ -72,9 +70,6 @@ const accessCodeSet = computed(() => new Set(accessStore.accessCodes));
 const canReview = computed(() =>
   accessCodeSet.value.has(M4_PERMISSION_CODES.REPORT_REVIEW),
 );
-const canSign = computed(() =>
-  accessCodeSet.value.has(M4_PERMISSION_CODES.REPORT_SIGN),
-);
 const canPublish = computed(() =>
   accessCodeSet.value.has(M4_PERMISSION_CODES.REPORT_PUBLISH),
 );
@@ -94,9 +89,7 @@ function resetPageState() {
   resetSelection();
 }
 
-function isSingleSelectionActionAvailable(
-  action: 'publish' | 'reject' | 'review' | 'sign',
-) {
+function isSingleSelectionActionAvailable(action: 'publish' | 'reject') {
   if (selectedRows.value.length === 0) {
     ElMessage.warning('请先选择一条报告');
     return false;
@@ -113,15 +106,11 @@ function isSingleSelectionActionAvailable(
   const statusAllowedMap: Record<typeof action, string[]> = {
     publish: ['SIGNED'],
     reject: ['SUBMITTED', 'REVIEWED'],
-    review: ['SUBMITTED'],
-    sign: ['REVIEWED'],
   };
   if (!statusAllowedMap[action].includes(status ?? '')) {
     const actionLabelMap: Record<typeof action, string> = {
       publish: '发布',
       reject: '驳回',
-      review: '审核通过',
-      sign: '签发',
     };
     ElMessage.warning(
       `当前报告状态不可执行${actionLabelMap[action]}：${formatReportStatus(status)}`,
@@ -236,16 +225,12 @@ async function runFormalReportBatchAction(
   }
 }
 
-async function runLifecycleAction(action: 'publish' | 'review' | 'sign') {
+async function runLifecycleAction(action: 'publish') {
   const permissionMap = {
     publish: canPublish.value,
-    review: canReview.value,
-    sign: canSign.value,
   };
   const actionLabelMap = {
     publish: '发布',
-    review: '审核',
-    sign: '签发',
   };
 
   if (!permissionMap[action]) {
@@ -262,8 +247,6 @@ async function runLifecycleAction(action: 'publish' | 'review' | 'sign') {
   }
   const actionMap = {
     publish: publishPathologyReport,
-    review: reviewPathologyReport,
-    sign: signPathologyReport,
   };
 
   saving.value = true;
@@ -376,7 +359,7 @@ watch(
   <Page
     :show-header="false"
     title="报告列表与流转"
-    description="按病例或病理号查询报告列表，并完成审核、驳回、签发、发布以及打印、发放、回收。"
+    description="按病例或病理号查询报告列表，并完成驳回、发布以及打印、发放、回收。"
   >
     <div class="flex flex-col gap-4">
       <ElAlert
@@ -437,24 +420,10 @@ watch(
               <ElButton
                 v-if="canReview"
                 :loading="saving"
-                @click="runLifecycleAction('review')"
-              >
-                审核通过
-              </ElButton>
-              <ElButton
-                v-if="canReview"
-                :loading="saving"
                 type="danger"
                 @click="rejectReport"
               >
                 驳回
-              </ElButton>
-              <ElButton
-                v-if="canSign"
-                :loading="saving"
-                @click="runLifecycleAction('sign')"
-              >
-                签发
               </ElButton>
               <ElButton
                 v-if="canPublish"
