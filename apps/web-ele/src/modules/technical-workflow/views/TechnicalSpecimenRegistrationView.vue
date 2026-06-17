@@ -374,7 +374,7 @@ function createFallbackApplicationWorkbench(
       endoscopyDiagnosis: '',
       frozenReminder: false,
       gender: currentWorkspace.basicInfo.patientGender ?? '',
-      idNo: '',
+      idNo: currentWorkspace.basicInfo.patientIdDisplay ?? '',
       imagingResult: '',
       inpatientNo: currentWorkspace.basicInfo.inpatientNo ?? '',
       patientName: currentWorkspace.basicInfo.patientName ?? '',
