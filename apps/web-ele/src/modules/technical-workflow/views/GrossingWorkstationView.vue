@@ -25,7 +25,6 @@ import {
 
 import {
   ElAlert,
-  ElBadge,
   ElButton,
   ElCheckbox,
   ElDatePicker,
@@ -764,17 +763,6 @@ async function handleQuery() {
   await loadPendingData();
 }
 
-async function handleRefresh() {
-  if (!shouldInitialLoad.value) {
-    pendingItems.value = [];
-    total.value = 0;
-    selectedTask.value = null;
-    workbench.resetWorkbenchState(null);
-    return;
-  }
-  await loadPendingData(selectedTask.value?.id);
-}
-
 async function toggleTimedOutOnly() {
   filters.timedOutOnly = !filters.timedOutOnly;
   filters.page = 1;
@@ -1154,16 +1142,6 @@ if (shouldInitialLoad.value) {
           >
             查询
           </ElButton>
-
-          <ElBadge
-            :max="999"
-            :value="total > 0 ? total : undefined"
-            class="mr-2"
-          >
-            <ElButton size="small" @click="void handleRefresh()">
-              取材任务
-            </ElButton>
-          </ElBadge>
 
           <ElButton
             :type="filters.timedOutOnly ? 'danger' : 'default'"

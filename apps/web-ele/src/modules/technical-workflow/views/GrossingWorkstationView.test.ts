@@ -858,17 +858,16 @@ describe('GrossingWorkstationView', () => {
     app.unmount();
   });
 
-  it('places the query button before the grossing task button and marks it with the toolbar style', async () => {
+  it('keeps the query button styled in the compact toolbar', async () => {
     const { app, root } = await mountView();
 
     const queryButton = findButton(root, '查询');
-    const taskButton = findButton(root, '取材任务');
+    const toolbarButtons = [...root.querySelectorAll('button')].map((button) =>
+      button.textContent?.trim(),
+    );
 
     expect(queryButton.className).toContain('grossing-query-button');
-    expect(
-      queryButton.compareDocumentPosition(taskButton) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
+    expect(toolbarButtons).not.toContain('取材任务');
 
     app.unmount();
   });
@@ -915,7 +914,7 @@ describe('GrossingWorkstationView', () => {
     app.unmount();
   });
 
-  it('hides the grossing task badge when total is zero', async () => {
+  it('does not render the grossing task button when total is zero', async () => {
     mockListPendingTechnicalTasks.mockResolvedValue({
       items: [],
       page: 1,
@@ -929,9 +928,12 @@ describe('GrossingWorkstationView', () => {
     const badge = [...root.querySelectorAll('sup')].find(
       (element) => element.textContent === '0',
     );
+    const toolbarButtons = [...root.querySelectorAll('button')].map((button) =>
+      button.textContent?.trim(),
+    );
 
     expect(badge).toBeUndefined();
-    expect(root.textContent).toContain('取材任务');
+    expect(toolbarButtons).not.toContain('取材任务');
 
     app.unmount();
   });
