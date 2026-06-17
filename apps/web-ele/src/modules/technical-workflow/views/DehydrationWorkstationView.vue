@@ -68,9 +68,6 @@ const filters = reactive({
 const routeTaskId = computed(() =>
   typeof route.query.taskId === 'string' ? route.query.taskId : '',
 );
-const shouldIncludeAllStatuses = computed(
-  () => Boolean(filters.pathologyNo.trim()) || Boolean(routeTaskId.value),
-);
 const shouldInitialLoad = computed(
   () =>
     filters.dateRange.length === 2 ||
@@ -79,7 +76,7 @@ const shouldInitialLoad = computed(
 );
 const currentQuery = computed(() => ({
   ...buildCreatedDateRangeParams(filters.dateRange),
-  includeAllStatuses: shouldIncludeAllStatuses.value || undefined,
+  includeAllStatuses: true,
   page: filters.page,
   pathologyNo: filters.pathologyNo.trim() || undefined,
   size: filters.size,
