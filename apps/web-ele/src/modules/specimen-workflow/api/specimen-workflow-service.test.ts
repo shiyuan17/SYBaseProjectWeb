@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { getMockState } from './specimen-workflow-mock-core';
 import {
   bindSpecimenBarcode,
   checkInSpecimen,
@@ -41,7 +42,6 @@ import {
   unbindSpecimenBarcode,
   updateApplication,
 } from './specimen-workflow-service';
-import { getMockState } from './specimen-workflow-mock-core';
 
 describe('specimen-workflow-service mock flow', () => {
   beforeEach(() => {

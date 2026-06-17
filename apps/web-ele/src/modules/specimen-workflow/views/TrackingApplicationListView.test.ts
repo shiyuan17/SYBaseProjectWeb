@@ -328,14 +328,16 @@ describe('TrackingApplicationListView', () => {
 
     const { app, root } = await mountView();
 
-    const pathologyNoInput = root.querySelectorAll('input')[1] as HTMLInputElement;
+    const pathologyNoInput = root.querySelectorAll(
+      'input',
+    )[1] as HTMLInputElement;
     pathologyNoInput.value = 'BL20260522';
     pathologyNoInput.dispatchEvent(new Event('input'));
     await flushAll();
 
-    const queryButton = [...root.querySelectorAll<HTMLButtonElement>('button')].find(
-      (button) => button.textContent?.includes('查询'),
-    );
+    const queryButton = [
+      ...root.querySelectorAll<HTMLButtonElement>('button'),
+    ].find((button) => button.textContent?.includes('查询'));
     queryButton?.click();
     await flushAll();
 
@@ -345,9 +347,9 @@ describe('TrackingApplicationListView', () => {
       size: 20,
     });
 
-    const resetButton = [...root.querySelectorAll<HTMLButtonElement>('button')].find(
-      (button) => button.textContent?.includes('重置'),
-    );
+    const resetButton = [
+      ...root.querySelectorAll<HTMLButtonElement>('button'),
+    ].find((button) => button.textContent?.includes('重置'));
     resetButton?.click();
     await flushAll();
 

@@ -21,7 +21,11 @@ const emit = defineEmits<{
     description="支持按病例ID、病理号或对象ID查询对象树追踪视图。"
   >
     <ElForm class="technical-tracking-query-form" inline label-width="132px">
-      <ElFormItem class="technical-tracking-query-form__field" label="病例/病理/对象" required>
+      <ElFormItem
+        class="technical-tracking-query-form__field"
+        label="病例/病理/对象"
+        required
+      >
         <ElInput
           :model-value="caseId"
           clearable

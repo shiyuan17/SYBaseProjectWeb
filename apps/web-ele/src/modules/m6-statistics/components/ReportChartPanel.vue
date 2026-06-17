@@ -41,9 +41,7 @@ async function renderChart(option: ReportChartOption, token: number) {
     if (token !== renderToken.value) {
       return;
     }
-    chartError.value = chartInstance
-      ? ''
-      : '图表暂时无法渲染，请稍后重试';
+    chartError.value = chartInstance ? '' : '图表暂时无法渲染，请稍后重试';
   } catch {
     if (token === renderToken.value) {
       chartError.value = '图表暂时无法渲染，请稍后重试';
@@ -69,8 +67,5 @@ watch(
   <div v-if="shouldShowChart" class="rounded border border-border bg-card p-3">
     <EchartsUI ref="chartRef" height="300px" />
   </div>
-  <ElEmpty
-    v-else
-    :description="chartError || emptyText"
-  />
+  <ElEmpty v-else :description="chartError || emptyText" />
 </template>

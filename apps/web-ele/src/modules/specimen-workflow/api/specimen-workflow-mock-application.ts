@@ -186,7 +186,10 @@ export async function listApplicationsMock(
         (!normalizeText(params.applicationType) ||
           item.applicationType === params.applicationType) &&
         includesText(item.applicationNo, params.applicationNo) &&
-        includesText(mapApplicationListItem(item).pathologyNo, params.pathologyNo) &&
+        includesText(
+          mapApplicationListItem(item).pathologyNo,
+          params.pathologyNo,
+        ) &&
         includesText(item.patientName, params.patientName) &&
         (!normalizeText(params.submittingDepartmentId) ||
           item.submittingDepartmentId === params.submittingDepartmentId) &&
