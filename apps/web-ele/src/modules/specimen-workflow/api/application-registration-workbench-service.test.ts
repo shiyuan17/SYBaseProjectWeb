@@ -7,16 +7,16 @@ import type {
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  saveApplicationRegistrationPatientInfoMock,
+  saveApplicationRegistrationWorkbenchMock,
+} from './application-registration-workbench-mock';
+import {
+  buildWorkbenchLookupRequestConfig as _unusedConfig,
   buildSpecimenDictionaryRequestConfig,
   buildWorkbenchLookupRequestConfig,
   isWorkbenchLookupNotFoundError,
   normalizeSpecimenDictionaryResponse,
-  buildWorkbenchLookupRequestConfig as _unusedConfig,
 } from './application-registration-workbench-service';
-import {
-  saveApplicationRegistrationPatientInfoMock,
-  saveApplicationRegistrationWorkbenchMock,
-} from './application-registration-workbench-mock';
 const _ignore = _unusedConfig;
 void _ignore;
 
@@ -152,16 +152,13 @@ describe('application-registration-workbench-service', () => {
   });
 
   it('normalizes legacy generated idNo before saving patient info through the mock boundary', async () => {
-    const saved = await saveApplicationRegistrationPatientInfoMock(
-      'APP-001',
-      {
-        ...patientInfoPayload,
-        patientInfo: {
-          ...patientInfoPayload.patientInfo,
-          idNo: '08305',
-        },
+    const saved = await saveApplicationRegistrationPatientInfoMock('APP-001', {
+      ...patientInfoPayload,
+      patientInfo: {
+        ...patientInfoPayload.patientInfo,
+        idNo: '08305',
       },
-    );
+    });
 
     expect(saved.patientInfo.idNo).toBe('08305');
   });
