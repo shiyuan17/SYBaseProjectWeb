@@ -45,18 +45,18 @@ const emit = defineEmits<{
   <WorkflowSectionCard
     v-if="canAccessReceipt"
     title="标本接收入口"
-    description="标本接收菜单已归入制片管理，接收岗可从这里继续沿用原页面和原权限完成接收。"
+    description="标本接收已恢复为制片管理的首步菜单，接收岗可继续沿用原页面和原权限完成接收。"
   >
     <div class="rounded-2xl border border-border bg-card p-4">
       <div class="text-sm font-semibold text-foreground">进入标本接收</div>
       <div class="mt-2 text-xs text-muted-foreground">
-        页面地址仍保持
-        `/workflow/pathology-receipt`，不影响现有业务链路和外部跳转。
+        菜单入口现位于 `/technical-workflow/specimen-receipt`， 原业务页
+        `/workflow/pathology-receipt` 仍兼容现有链路和外部跳转。
       </div>
       <div class="mt-3">
         <ElButton
           type="primary"
-          @click="emit('goToPath', '/workflow/pathology-receipt')"
+          @click="emit('goToPath', '/technical-workflow/specimen-receipt')"
         >
           打开标本接收
         </ElButton>

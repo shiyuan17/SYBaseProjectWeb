@@ -9,6 +9,7 @@ import type {
 } from '../types/technical-workbench';
 
 import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
 
@@ -16,6 +17,7 @@ import {
   ElAlert,
   ElButton,
   ElCheckbox,
+  ElDatePicker,
   ElEmpty,
   ElInput,
   ElMessage,
@@ -26,9 +28,19 @@ import {
   ElTableColumn,
 } from 'element-plus';
 
+import {
+  buildDateRangeQueryParams,
+  createDatePickerPanelDefaultValue,
+  createDateRangePickerShortcuts,
+  disableFutureDate,
+  resolveRouteDateRange,
+} from '../utils/date-range';
+
 const props = defineProps<{
   config: TechnicalWorkbenchPageConfig;
 }>();
+const route = useRoute();
+const dateRangeShortcuts = createDateRangePickerShortcuts();
 
 const searchKeyword = ref('');
 const currentPage = ref(1);
@@ -36,6 +48,7 @@ const pageSize = ref(props.config.defaultPageSize);
 const selectedRows = ref<TechnicalWorkbenchRow[]>([]);
 const activeWorkday = ref(props.config.defaultWorkday);
 const activeStatus = ref(props.config.defaultStatus ?? '');
+const activeDateRange = ref<string[]>(resolveRouteDateRange(route.query));
 const remoteRows = ref<TechnicalWorkbenchRow[]>([]);
 const remoteTotal = ref(0);
 const loading = ref(false);
@@ -151,6 +164,10 @@ watch(activeStatus, () => {
   restartRemoteQuery();
 });
 
+watch(activeDateRange, () => {
+  restartRemoteQuery();
+});
+
 watch(
   () => props.config,
   (config) => {
@@ -158,6 +175,7 @@ watch(
     currentPage.value = 1;
     activeWorkday.value = config.defaultWorkday;
     activeStatus.value = config.defaultStatus ?? '';
+    activeDateRange.value = resolveRouteDateRange(route.query);
     remoteRows.value = [];
     remoteTotal.value = 0;
     selectedRows.value = [];
@@ -238,6 +256,7 @@ async function loadRemoteRows() {
   errorMessage.value = '';
   try {
     const result = await dataSource.load({
+      ...buildDateRangeQueryParams(activeDateRange.value),
       page: currentPage.value,
       pathologyNo: searchKeyword.value.trim() || undefined,
       size: pageSize.value,
@@ -347,6 +366,20 @@ onMounted(() => {
               :value="statusOption.value"
             />
           </ElSelect>
+          <ElDatePicker
+            v-if="config.showWorkDatePicker"
+            v-model="activeDateRange"
+            :default-value="createDatePickerPanelDefaultValue()"
+            :disabled-date="disableFutureDate"
+            :shortcuts="dateRangeShortcuts"
+            class="w-[260px]"
+            end-placeholder="结束日期"
+            range-separator="至"
+            start-placeholder="开始日期"
+            type="daterange"
+            unlink-panels
+            value-format="YYYY-MM-DD"
+          />
           <ElButton
             type="primary"
             class="!h-8 !rounded-sm !px-4 !text-xs"

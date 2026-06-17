@@ -1,10 +1,22 @@
 <script setup lang="ts">
-import { ElButton, ElForm, ElFormItem, ElInput } from 'element-plus';
+import {
+  ElButton,
+  ElDatePicker,
+  ElForm,
+  ElFormItem,
+  ElInput,
+} from 'element-plus';
 
+import {
+  createDatePickerPanelDefaultValue,
+  createDateRangePickerShortcuts,
+  disableFutureDate,
+} from '../utils/date-range';
 import WorkflowSectionCard from './WorkflowSectionCard.vue';
 
 defineProps<{
   caseId: string;
+  dateRange: string[];
   loading: boolean;
 }>();
 
@@ -12,7 +24,10 @@ const emit = defineEmits<{
   query: [];
   reset: [];
   'update:caseId': [value: string];
+  'update:dateRange': [value: string[]];
 }>();
+
+const dateRangeShortcuts = createDateRangePickerShortcuts();
 </script>
 
 <template>
@@ -33,6 +48,22 @@ const emit = defineEmits<{
           style="width: 320px"
           @keyup.enter="emit('query')"
           @update:model-value="emit('update:caseId', $event)"
+        />
+      </ElFormItem>
+      <ElFormItem class="technical-tracking-query-form__field" label="工作日期">
+        <ElDatePicker
+          :default-value="createDatePickerPanelDefaultValue()"
+          :disabled-date="disableFutureDate"
+          :model-value="dateRange"
+          :shortcuts="dateRangeShortcuts"
+          end-placeholder="结束日期"
+          range-separator="至"
+          start-placeholder="开始日期"
+          style="width: 260px"
+          type="daterange"
+          unlink-panels
+          value-format="YYYY-MM-DD"
+          @update:model-value="emit('update:dateRange', $event || [])"
         />
       </ElFormItem>
       <ElFormItem>

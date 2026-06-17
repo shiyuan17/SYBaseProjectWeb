@@ -20,6 +20,11 @@ import { APPLICATION_TYPE_OPTIONS } from '#/modules/specimen-workflow/constants'
 import { formatApplicationType } from '#/modules/specimen-workflow/utils/format';
 
 import {
+  createDatePickerPanelDefaultValue,
+  createDateRangePickerShortcuts,
+  disableFutureDate,
+} from '../../utils/date-range';
+import {
   formatPendingPathologyNo,
   formatSpecimenRegistrationStatus,
 } from '../../utils/format';
@@ -83,6 +88,7 @@ const currentSize = computed({
   get: () => props.size,
   set: (value: number) => emit('update:size', value),
 });
+const dateRangeShortcuts = createDateRangePickerShortcuts();
 
 const currentApplicationType = computed({
   get: () => props.applicationType,
@@ -156,11 +162,15 @@ function typeLabel(value: null | string | undefined) {
           <span class="mb-1 block">接收日期</span>
           <ElDatePicker
             v-model="receivedDateRange"
+            :default-value="createDatePickerPanelDefaultValue()"
+            :disabled-date="disableFutureDate"
+            :shortcuts="dateRangeShortcuts"
             end-placeholder="结束日期"
             range-separator="至"
             start-placeholder="开始日期"
             style="width: 100%"
             type="daterange"
+            unlink-panels
             value-format="YYYY-MM-DD"
           />
         </label>
@@ -266,9 +276,19 @@ function typeLabel(value: null | string | undefined) {
         @click="emit('select', item)"
       >
         <div class="flex items-start justify-between gap-3">
-          <div>
-            <div class="text-sm font-semibold text-foreground">
-              {{ formatPendingPathologyNo(item.pathologyNo) }}
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+              <span
+                class="rounded-full bg-card px-2 py-1 text-[11px] text-muted-foreground"
+              >
+                {{ formatSpecimenRegistrationStatus(item.registrationStatus) }}
+              </span>
+              <div
+                v-if="item.pathologyNo?.trim()"
+                class="min-w-0 text-sm font-semibold text-foreground"
+              >
+                {{ formatPendingPathologyNo(item.pathologyNo) }}
+              </div>
             </div>
             <div class="mt-1 text-xs text-muted-foreground">
               {{ item.patientName || '-' }}
@@ -285,11 +305,6 @@ function typeLabel(value: null | string | undefined) {
               </span>
             </div>
           </div>
-          <span
-            class="rounded-full bg-card px-2 py-1 text-[11px] text-muted-foreground"
-          >
-            {{ formatSpecimenRegistrationStatus(item.registrationStatus) }}
-          </span>
         </div>
       </button>
     </div>

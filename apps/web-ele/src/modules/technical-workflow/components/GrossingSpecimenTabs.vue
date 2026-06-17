@@ -11,7 +11,6 @@ import {
   ElButton,
   ElInput,
   ElInputNumber,
-  ElLink,
   ElTabPane,
   ElTabs,
   ElTreeSelect,
@@ -309,15 +308,15 @@ function handleActiveSpecimenKeyChange(value: number | string) {
               <ElInput v-model="asset.fileUrl" placeholder="影像地址" />
               <ElInput v-model="asset.fileName" placeholder="影像名称" />
             </div>
-            <ElLink
+            <a
               v-if="asset.fileUrl"
               :href="asset.fileUrl"
-              class="mt-3"
+              class="mt-3 inline-flex text-sm text-primary hover:text-primary/80"
               target="_blank"
-              type="primary"
+              rel="noreferrer"
             >
               查看影像
-            </ElLink>
+            </a>
           </section>
         </div>
       </section>

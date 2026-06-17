@@ -11,6 +11,8 @@ import type { ApplicationDetailView } from '#/modules/specimen-workflow/types/sp
 
 import { computed, nextTick, ref, watch } from 'vue';
 
+import { UserRoundPen } from '@vben/icons';
+
 import { ElButton, ElEmpty } from 'element-plus';
 
 import { APPLICATION_TYPE_OPTIONS } from '#/modules/specimen-workflow/constants';
@@ -22,10 +24,11 @@ import { formatApplicationType } from '#/modules/specimen-workflow/utils/format'
 
 import {
   formatPendingPathologyNo,
-  formatSpecimenRegistrationStatus,
+  formatRegistrationWorkspacePathologyNo,
 } from '../../utils/format';
 import {
   isTechnicalRegistrationConsultationApplicationType,
+  isTechnicalRegistrationPathologyNoPreview,
   resolveTechnicalRegistrationApplicationType,
 } from '../../utils/specimen-registration-application';
 import TechnicalSpecimenRegistrationEditableSectionCard from './TechnicalSpecimenRegistrationEditableSectionCard.vue';
@@ -189,10 +192,21 @@ const applicationSections = computed(() =>
       })
     : [],
 );
-const displayedPathologyNo = computed(
-  () =>
-    props.pathologyNoDraft?.trim() || props.workspace?.basicInfo.pathologyNo,
-);
+const workspaceHeaderPathologyNo = computed(() => {
+  const existingPathologyNo = props.workspace?.basicInfo.pathologyNo;
+  if (!existingPathologyNo?.trim()) {
+    return null;
+  }
+  if (
+    isTechnicalRegistrationPathologyNoPreview({
+      applicationType: registrationApplicationType.value,
+      existingPathologyNo,
+    })
+  ) {
+    return null;
+  }
+  return existingPathologyNo;
+});
 
 watch(
   () => props.workspace?.materials,
@@ -399,6 +413,15 @@ function openEvaluationDialog() {
   evaluationDialogVisible.value = true;
 }
 
+function openEvaluationDialogForIndex(index: number) {
+  const material = editableMaterials.value[index];
+  if (!material) {
+    return;
+  }
+  selectedMaterialIndex.value = index;
+  openEvaluationDialog();
+}
+
 function toggleEvaluationItem(item: string, checked: boolean) {
   const material = selectedMaterial.value;
   if (!material) {
@@ -575,11 +598,9 @@ function updatePathologyNoDraft(event: Event) {
               登记工作区
             </div>
             <p class="mt-1 text-xs text-muted-foreground">
-              病理号
-              {{ formatPendingPathologyNo(displayedPathologyNo) }}，当前状态
-              {{
-                formatSpecimenRegistrationStatus(
-                  workspace.basicInfo.registrationStatus,
+              病理号：{{
+                formatRegistrationWorkspacePathologyNo(
+                  workspaceHeaderPathologyNo,
                 )
               }}
             </p>
@@ -1034,10 +1055,27 @@ function updatePathologyNoDraft(event: Event) {
                   <td
                     class="border-b border-border px-3 py-3 text-muted-foreground"
                   >
-                    <span v-if="material.evaluationItems?.length">
-                      {{ material.evaluationItems.join('、') }}
-                    </span>
-                    <span v-else class="text-muted-foreground/70">未评价</span>
+                    <div class="flex min-w-[180px] items-start gap-2">
+                      <span
+                        v-if="material.evaluationItems?.length"
+                        class="flex-1 whitespace-normal break-words"
+                      >
+                        {{ material.evaluationItems.join('、') }}
+                      </span>
+                      <span v-else class="flex-1 text-muted-foreground/70">
+                        未评价
+                      </span>
+                      <ElButton
+                        :aria-label="`编辑第 ${index + 1} 个标本评价`"
+                        :data-testid="`material-evaluation-edit-${index}`"
+                        :icon="UserRoundPen"
+                        circle
+                        size="small"
+                        text
+                        title="编辑标本评价"
+                        @click="openEvaluationDialogForIndex(index)"
+                      />
+                    </div>
                   </td>
                   <td class="border-b border-border px-3 py-3">
                     <button
