@@ -29,12 +29,11 @@ import {
 import { reportInlineErrorDisabled } from '#/utils/error-feedback';
 
 import {
+  completeSlideStaining,
   getTechnicalTracking,
   listPendingTechnicalTasks,
   startSlideStaining,
 } from '../api/technical-workflow-service';
-import StainingProcessDialog from '../components/StainingProcessDialog.vue';
-import TechnicalTaskStartDialog from '../components/TechnicalTaskStartDialog.vue';
 import {
   buildCreatedDateRangeParams,
   buildDateRangeQueryParams,
@@ -55,11 +54,6 @@ import {
 
 interface TableInstance {
   clearSelection: () => void;
-  toggleRowSelection: (
-    row: StainingTaskRow,
-    selected?: boolean,
-    ignoreSelectable?: boolean,
-  ) => void;
 }
 
 interface StainingTaskRow {
@@ -112,9 +106,7 @@ const total = ref(0);
 const selectedPendingRows = ref<StainingTaskRow[]>([]);
 const selectedCompletedRows = ref<CompletedSlideRow[]>([]);
 const pendingTableRef = ref<null | TableInstance>(null);
-const startDialogVisible = ref(false);
-const processDialogVisible = ref(false);
-const pendingAutoProcessTaskId = ref('');
+const processing = ref(false);
 
 const filters = reactive({
   completedPage: 1,
@@ -155,9 +147,6 @@ const pendingRows = computed<StainingTaskRow[]>(() =>
   })),
 );
 
-const selectedPendingRow = computed(() => selectedPendingRows.value[0] ?? null);
-const selectedTask = computed(() => selectedPendingRow.value?.task ?? null);
-
 const visiblePendingRows = computed(() => pendingRows.value);
 const overdueCount = computed(
   () => pendingRows.value.filter((row) => row.task.timedOut).length,
@@ -190,11 +179,10 @@ const visibleCompletedRows = computed(() => {
   const start = (filters.completedPage - 1) * filters.completedSize;
   return completedRows.value.slice(start, start + filters.completedSize);
 });
-const canProcessSelectedTask = computed(
-  () => selectedTask.value?.taskStatus === 'IN_PROGRESS',
-);
-const canStartSelectedTask = computed(
-  () => selectedTask.value?.taskStatus === 'PENDING',
+const canProcessSelectedTasks = computed(
+  () =>
+    selectedPendingRows.value.length > 0 &&
+    selectedPendingRows.value.every((row) => isProcessableTask(row.task)),
 );
 
 function buildOperationInfo(options: {
@@ -319,6 +307,11 @@ function upsertCompletedRow(row: CompletedSlideRow) {
   filters.completedPage = 1;
 }
 
+function clearPendingSelection() {
+  selectedPendingRows.value = [];
+  pendingTableRef.value?.clearSelection();
+}
+
 async function appendCompletedResult(
   result: SlideStainingResult,
   taskContext: PendingTechnicalTaskItem,
@@ -348,32 +341,7 @@ async function appendCompletedResult(
   }
 }
 
-function selectPendingRow(row: null | StainingTaskRow, openProcess = false) {
-  if (!row) {
-    selectedPendingRows.value = [];
-    return;
-  }
-  selectedPendingRows.value = [row];
-  pendingTableRef.value?.clearSelection();
-  pendingTableRef.value?.toggleRowSelection(row, true);
-
-  if (!openProcess) {
-    return;
-  }
-  if (row.task.taskStatus === 'PENDING') {
-    pendingAutoProcessTaskId.value = row.task.id;
-    startDialogVisible.value = true;
-    return;
-  }
-  if (row.task.taskStatus === 'IN_PROGRESS') {
-    processDialogVisible.value = true;
-  }
-}
-
-async function loadPendingData(options?: {
-  openProcess?: boolean;
-  preferredTaskId?: string;
-}) {
+async function loadPendingData() {
   loading.value = true;
   pageError.value = '';
   try {
@@ -388,36 +356,7 @@ async function loadPendingData(options?: {
 
     pendingItems.value = result.items;
     total.value = result.total;
-
-    const deepLinkedTaskId =
-      typeof route.query.taskId === 'string' ? route.query.taskId : '';
-    const preferredTaskId =
-      options?.preferredTaskId ||
-      pendingAutoProcessTaskId.value ||
-      deepLinkedTaskId ||
-      selectedTask.value?.id ||
-      result.items[0]?.id;
-
-    if (preferredTaskId) {
-      const matchedRow =
-        visiblePendingRows.value.find(
-          (row) => row.task.id === preferredTaskId,
-        ) ?? null;
-      if (matchedRow) {
-        selectPendingRow(
-          matchedRow,
-          Boolean(
-            options?.openProcess ||
-            pendingAutoProcessTaskId.value ||
-            deepLinkedTaskId,
-          ),
-        );
-      } else {
-        selectPendingRow(null);
-      }
-    } else {
-      selectPendingRow(null);
-    }
+    clearPendingSelection();
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
     reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
@@ -432,10 +371,6 @@ function handlePendingSelectionChange(rows: StainingTaskRow[]) {
 
 function handleCompletedSelectionChange(rows: CompletedSlideRow[]) {
   selectedCompletedRows.value = rows;
-}
-
-function handlePendingRowClick(row: StainingTaskRow) {
-  selectPendingRow(row);
 }
 
 function handleRefresh() {
@@ -460,46 +395,120 @@ function openMoreActions() {
   ElMessage.warning('更多操作待接入');
 }
 
-function openPrimaryAction() {
-  if (selectedPendingRows.value.length > 1) {
-    ElMessage.warning('当前仅支持单张玻片染色出片，请只勾选 1 张');
-    return;
-  }
-
-  const row = selectedPendingRow.value;
-  if (!row) {
-    ElMessage.warning('请先从左侧勾选 1 张待出片玻片');
-    return;
-  }
-  if (row.task.taskStatus === 'PENDING') {
-    pendingAutoProcessTaskId.value = row.task.id;
-    startDialogVisible.value = true;
-    return;
-  }
-  if (row.task.taskStatus === 'IN_PROGRESS') {
-    processDialogVisible.value = true;
-    return;
-  }
-  ElMessage.warning('当前任务状态不支持染色出片');
+function isProcessableTask(task: PendingTechnicalTaskItem) {
+  return task.taskStatus === 'PENDING' || task.taskStatus === 'IN_PROGRESS';
 }
 
-function handleStartSubmitted() {
-  startDialogVisible.value = false;
-  const taskId = pendingAutoProcessTaskId.value;
-  pendingAutoProcessTaskId.value = '';
-  void loadPendingData({
-    openProcess: true,
-    preferredTaskId: taskId || undefined,
+function getTaskSlideId(task: PendingTechnicalTaskItem) {
+  return (task.objectId ?? '').trim();
+}
+
+function getSelectedRowsForProcessing() {
+  const rows = [...selectedPendingRows.value];
+  if (rows.length === 0) {
+    ElMessage.warning('请先从左侧勾选待出片玻片');
+    return [];
+  }
+  if (rows.some((row) => !isProcessableTask(row.task))) {
+    ElMessage.warning('当前任务状态不支持染色出片');
+    return [];
+  }
+  if (rows.some((row) => !getTaskSlideId(row.task))) {
+    ElMessage.warning('当前任务缺少玻片编号');
+    return [];
+  }
+  return rows;
+}
+
+async function completeSelectedStainingTask(row: StainingTaskRow) {
+  const task = row.task;
+  const operatorPayload = {
+    remarks: null,
+    terminalCode: null,
+  };
+
+  if (task.taskStatus === 'PENDING') {
+    await startSlideStaining({
+      ...operatorPayload,
+      taskId: task.id,
+    });
+  } else if (task.taskStatus !== 'IN_PROGRESS') {
+    throw new Error('当前任务状态不支持染色出片');
+  }
+
+  const result = await completeSlideStaining({
+    ...operatorPayload,
+    qualityIssue: null,
+    slideId: getTaskSlideId(task),
+    stainingType: 'HE',
+    taskId: task.id,
   });
+
+  return { result, task };
 }
 
-async function handleProcessSubmitted(result: SlideStainingResult) {
-  const completedTask = selectedTask.value;
-  processDialogVisible.value = false;
-  if (completedTask) {
-    await appendCompletedResult(result, completedTask);
+async function openPrimaryAction() {
+  if (processing.value) {
+    return;
   }
-  await loadPendingData();
+
+  const rows = getSelectedRowsForProcessing();
+  if (rows.length === 0) {
+    return;
+  }
+
+  processing.value = true;
+  pageError.value = '';
+  let batchErrorMessage = '';
+  try {
+    const results = await Promise.allSettled(
+      rows.map((row) => completeSelectedStainingTask(row)),
+    );
+    const succeededResults = results.filter(
+      (
+        result,
+      ): result is PromiseFulfilledResult<{
+        result: SlideStainingResult;
+        task: PendingTechnicalTaskItem;
+      }> => result.status === 'fulfilled',
+    );
+    const failedResults = results.filter(
+      (result): result is PromiseRejectedResult => result.status === 'rejected',
+    );
+
+    for (const fulfilled of succeededResults) {
+      await appendCompletedResult(fulfilled.value.result, fulfilled.value.task);
+    }
+
+    if (failedResults.length === 0) {
+      ElMessage.success(
+        rows.length === 1
+          ? '染色出片已记录'
+          : `已记录染色出片 ${rows.length} 条`,
+      );
+    } else {
+      const firstFailure = failedResults[0];
+      if (firstFailure) {
+        batchErrorMessage = getWorkflowPageErrorMessage(firstFailure.reason);
+        pageError.value = batchErrorMessage;
+        reportInlineErrorDisabled(
+          firstFailure.reason,
+          getWorkflowPageErrorMessage,
+        );
+      }
+      ElMessage.warning(
+        succeededResults.length > 0
+          ? `已记录 ${succeededResults.length} 条，${failedResults.length} 条失败`
+          : '染色出片记录失败，请重试',
+      );
+    }
+  } finally {
+    await loadPendingData();
+    if (batchErrorMessage) {
+      pageError.value = batchErrorMessage;
+    }
+    processing.value = false;
+  }
 }
 
 function handlePendingPageChange() {
@@ -545,7 +554,8 @@ onBeforeUnmount(() => {
           <div class="legacy-toolbar">
             <ElButton :loading="loading" @click="handleRefresh">刷新</ElButton>
             <ElButton
-              :disabled="!canStartSelectedTask && !canProcessSelectedTask"
+              :disabled="!canProcessSelectedTasks || processing"
+              :loading="processing"
               type="primary"
               @click="openPrimaryAction"
             >
@@ -655,7 +665,6 @@ onBeforeUnmount(() => {
               "
               :row-key="(row) => row.task.id"
               table-layout="fixed"
-              @row-click="handlePendingRowClick"
               @selection-change="handlePendingSelectionChange"
             >
               <ElTableColumn type="selection" width="42" />
@@ -868,25 +877,6 @@ onBeforeUnmount(() => {
         </section>
       </div>
     </div>
-
-    <TechnicalTaskStartDialog
-      v-model="startDialogVisible"
-      confirm-text="开始染色"
-      :submit-action="
-        (taskId, payload) => startSlideStaining({ ...payload, taskId })
-      "
-      :success-message="(task) => `任务 ${task.id} 已开始染色`"
-      :task="selectedTask"
-      terminal-placeholder="染色终端编码"
-      title="开始染色"
-      @submitted="handleStartSubmitted"
-    />
-
-    <StainingProcessDialog
-      v-model="processDialogVisible"
-      :task="selectedTask"
-      @submitted="handleProcessSubmitted"
-    />
   </Page>
 </template>
 
