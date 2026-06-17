@@ -3,20 +3,33 @@ import type {
   TechnicalTrackingView,
 } from '../types/technical-workflow';
 
-import { createApp, defineComponent, h, inject, nextTick, provide } from 'vue';
+import {
+  createApp,
+  defineComponent,
+  h,
+  inject,
+  nextTick,
+  provide,
+  ref,
+  watch,
+} from 'vue';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const tableRowsKey = Symbol('staining-table-rows');
 
 const {
+  messageSuccess,
   messageWarning,
+  mockCompleteSlideStaining,
   mockGetTechnicalTracking,
   mockListPendingTechnicalTasks,
   mockRoute,
   mockStartSlideStaining,
 } = vi.hoisted(() => ({
+  messageSuccess: vi.fn(),
   messageWarning: vi.fn(),
+  mockCompleteSlideStaining: vi.fn(),
   mockGetTechnicalTracking: vi.fn(),
   mockListPendingTechnicalTasks: vi.fn(),
   mockRoute: {
@@ -48,63 +61,10 @@ vi.mock('#/utils/error-feedback', () => ({
 }));
 
 vi.mock('../api/technical-workflow-service', () => ({
+  completeSlideStaining: mockCompleteSlideStaining,
   getTechnicalTracking: mockGetTechnicalTracking,
   listPendingTechnicalTasks: mockListPendingTechnicalTasks,
   startSlideStaining: mockStartSlideStaining,
-}));
-
-vi.mock('../components/TechnicalTaskStartDialog.vue', () => ({
-  default: defineComponent({
-    props: ['modelValue', 'task', 'title'],
-    emits: ['submitted', 'update:modelValue'],
-    setup(props, { emit }) {
-      return () =>
-        props.modelValue
-          ? h('section', { 'data-testid': 'start-dialog' }, [
-              h('h2', props.title),
-              h('div', props.task?.id ?? ''),
-              h(
-                'button',
-                {
-                  type: 'button',
-                  onClick: () => emit('submitted'),
-                },
-                '提交开始',
-              ),
-            ])
-          : null;
-    },
-  }),
-}));
-
-vi.mock('../components/StainingProcessDialog.vue', () => ({
-  default: defineComponent({
-    props: ['modelValue', 'task'],
-    emits: ['submitted', 'update:modelValue'],
-    setup(props, { emit }) {
-      return () =>
-        props.modelValue
-          ? h('section', { 'data-testid': 'process-dialog' }, [
-              h('h2', '染色处理'),
-              h('div', props.task?.id ?? ''),
-              h('div', props.task?.objectId ?? ''),
-              h(
-                'button',
-                {
-                  type: 'button',
-                  onClick: () =>
-                    emit('submitted', {
-                      caseStatus: 'DIAGNOSIS_PENDING',
-                      slideId: props.task?.objectId ?? '',
-                      taskId: props.task?.id ?? '',
-                    }),
-                },
-                '提交出片',
-              ),
-            ])
-          : null;
-    },
-  }),
 }));
 
 vi.mock('element-plus', () => {
@@ -209,36 +169,68 @@ vi.mock('element-plus', () => {
     props: ['data'],
     emits: ['row-click', 'selection-change'],
     setup(props, { emit, expose, slots }) {
+      const selectedRows = ref<unknown[]>([]);
+
       function clearSelection() {
+        selectedRows.value = [];
         emit('selection-change', []);
       }
 
       function toggleRowSelection(row: unknown, selected = true) {
-        emit('selection-change', selected ? [row] : []);
+        selectedRows.value = selected
+          ? [
+              ...selectedRows.value.filter(
+                (selectedRow) => selectedRow !== row,
+              ),
+              row,
+            ]
+          : selectedRows.value.filter((selectedRow) => selectedRow !== row);
+        emit('selection-change', selectedRows.value);
       }
 
       expose({
         clearSelection,
         toggleRowSelection,
       });
+      watch(
+        () => props.data,
+        () => {
+          selectedRows.value = [];
+          emit('selection-change', []);
+        },
+      );
       provide(tableRowsKey, () => props.data ?? []);
       return () =>
         h('div', [
           slots.default?.(),
-          ...(props.data ?? []).map((row: any) =>
-            h(
-              'button',
-              {
-                'data-testid': 'table-row',
-                type: 'button',
-                onClick: () => {
-                  emit('selection-change', [row]);
-                  emit('row-click', row);
+          ...(props.data ?? []).flatMap((row: any) => {
+            const rowId = row.task?.id ?? row.id ?? row.slideId ?? '';
+            return [
+              h(
+                'button',
+                {
+                  'data-testid': 'table-row',
+                  type: 'button',
+                  onClick: () => {
+                    emit('row-click', row);
+                  },
                 },
-              },
-              row.task?.id ?? row.id ?? row.slideId ?? '',
-            ),
-          ),
+                rowId,
+              ),
+              h(
+                'button',
+                {
+                  'data-testid': `select-row-${rowId}`,
+                  type: 'button',
+                  onClick: () => {
+                    const isSelected = selectedRows.value.includes(row);
+                    toggleRowSelection(row, !isSelected);
+                  },
+                },
+                `选择${rowId}`,
+              ),
+            ];
+          }),
         ]);
     },
   });
@@ -287,6 +279,7 @@ vi.mock('element-plus', () => {
     ElEmpty,
     ElInput,
     ElMessage: {
+      success: messageSuccess,
       warning: messageWarning,
     },
     ElOption,
@@ -388,6 +381,8 @@ async function flushView() {
   await nextTick();
   await Promise.resolve();
   await nextTick();
+  await Promise.resolve();
+  await nextTick();
 }
 
 function findButton(text: string) {
@@ -398,12 +393,28 @@ function findButton(text: string) {
   return button as HTMLButtonElement;
 }
 
+async function clickPrimaryAction() {
+  findButton('染色出片(F9)').click();
+  await flushView();
+  await flushView();
+}
+
 function findTableRow(text: string) {
   const row = [...document.querySelectorAll('[data-testid="table-row"]')].find(
     (item) => item.textContent?.trim() === text,
   );
   expect(row).toBeTruthy();
   return row as HTMLButtonElement;
+}
+
+async function selectTableRow(rowId: string) {
+  const button = document.querySelector<HTMLButtonElement>(
+    `[data-testid="select-row-${rowId}"]`,
+  );
+  expect(button).toBeTruthy();
+  button!.click();
+  await flushView();
+  return button!;
 }
 
 function hasTableRow(text: string) {
@@ -437,12 +448,19 @@ describe('StainingWorkstationView', () => {
     });
     mockGetTechnicalTracking.mockResolvedValue(createTracking());
     mockStartSlideStaining.mockResolvedValue({});
+    mockCompleteSlideStaining.mockImplementation(async (payload) => ({
+      caseStatus: 'DIAGNOSIS_PENDING',
+      slideId: payload.slideId,
+      taskId: payload.taskId,
+    }));
   });
 
   afterEach(() => {
     vi.useRealTimers();
     document.body.innerHTML = '';
+    messageSuccess.mockReset();
     messageWarning.mockReset();
+    mockCompleteSlideStaining.mockReset();
     mockGetTechnicalTracking.mockReset();
     mockListPendingTechnicalTasks.mockReset();
     mockStartSlideStaining.mockReset();
@@ -508,11 +526,18 @@ describe('StainingWorkstationView', () => {
     expect(document.body.textContent).toContain('A2');
     expect(document.body.textContent).not.toContain('SLD-action-slide-id');
 
-    findButton('染色出片(F9)').click();
-    await flushView();
+    await selectTableRow('TASK-1');
+    await clickPrimaryAction();
 
-    expect(document.body.textContent).toContain('染色处理');
-    expect(document.body.textContent).toContain('SLD-action-slide-id');
+    expect(document.body.textContent).not.toContain('染色处理');
+    expect(mockCompleteSlideStaining).toHaveBeenCalledWith({
+      qualityIssue: null,
+      remarks: null,
+      slideId: 'SLD-action-slide-id',
+      stainingType: 'HE',
+      taskId: 'TASK-1',
+      terminalCode: null,
+    });
 
     app.unmount();
     root.remove();
@@ -543,10 +568,8 @@ describe('StainingWorkstationView', () => {
     const { app, root } = mountView();
     await flushView();
 
-    findButton('染色出片(F9)').click();
-    await flushView();
-    findButton('提交出片').click();
-    await flushView();
+    await selectTableRow('TASK-1');
+    await clickPrimaryAction();
 
     expect(document.body.textContent).toContain('待质控');
     expect(document.body.textContent).toContain('待染色');
@@ -614,10 +637,8 @@ describe('StainingWorkstationView', () => {
     const { app, root } = mountView();
     await flushView();
 
-    findButton('染色出片(F9)').click();
-    await flushView();
-    findButton('提交出片').click();
-    await flushView();
+    await selectTableRow('TASK-1');
+    await clickPrimaryAction();
 
     expect(hasTableRow('SLIDE-1')).toBe(true);
     expect(hasTableRow('SLIDE-2')).toBe(false);
@@ -629,10 +650,8 @@ describe('StainingWorkstationView', () => {
     expect(document.body.textContent).toContain('SLIDE-001');
     expect(mockGetTechnicalTracking).toHaveBeenCalledTimes(1);
 
-    findButton('染色出片(F9)').click();
-    await flushView();
-    findButton('提交出片').click();
-    await flushView();
+    await selectTableRow('TASK-2');
+    await clickPrimaryAction();
 
     expect(hasTableRow('SLIDE-1')).toBe(true);
     expect(hasTableRow('SLIDE-2')).toBe(true);
@@ -657,8 +676,6 @@ describe('StainingWorkstationView', () => {
     await flushView();
 
     expect(mockListPendingTechnicalTasks).toHaveBeenLastCalledWith({
-      createdFrom: '2026-06-17T00:00:00',
-      createdTo: '2026-06-18T00:00:00',
       keyword: 'BL-ROUTE',
       page: 1,
       size: 20,
@@ -677,8 +694,6 @@ describe('StainingWorkstationView', () => {
     await flushView();
 
     expect(mockListPendingTechnicalTasks).toHaveBeenLastCalledWith({
-      createdFrom: '2026-06-17T00:00:00',
-      createdTo: '2026-06-18T00:00:00',
       keyword: 'BL-QUERY',
       page: 1,
       size: 20,
@@ -690,15 +705,36 @@ describe('StainingWorkstationView', () => {
     root.remove();
   });
 
-  it('opens start dialog by F9 and process dialog by primary action', async () => {
+  it('records selected tasks directly by F9 and primary action without dialogs', async () => {
     const { app, root } = mountView();
     await flushView();
 
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F9' }));
     await flushView();
 
-    expect(document.body.textContent).toContain('开始染色');
-    expect(document.body.textContent).toContain('TASK-1');
+    expect(messageWarning).toHaveBeenCalledWith('请先从左侧勾选待出片玻片');
+    expect(document.body.textContent).not.toContain('开始染色');
+    expect(document.body.textContent).not.toContain('染色处理');
+    expect(mockStartSlideStaining).not.toHaveBeenCalled();
+    expect(mockCompleteSlideStaining).not.toHaveBeenCalled();
+
+    await selectTableRow('TASK-1');
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F9' }));
+    await flushView();
+
+    expect(mockStartSlideStaining).toHaveBeenCalledWith({
+      remarks: null,
+      taskId: 'TASK-1',
+      terminalCode: null,
+    });
+    expect(mockCompleteSlideStaining).toHaveBeenCalledWith({
+      qualityIssue: null,
+      remarks: null,
+      slideId: 'SLD-3aa4f9b-2427-413d-bf12-080de1c4a43d',
+      stainingType: 'HE',
+      taskId: 'TASK-1',
+      terminalCode: null,
+    });
 
     app.unmount();
     root.remove();
@@ -713,11 +749,18 @@ describe('StainingWorkstationView', () => {
     const second = mountView();
     await flushView();
 
-    findButton('染色出片(F9)').click();
-    await flushView();
+    await selectTableRow('TASK-2');
+    await clickPrimaryAction();
 
-    expect(document.body.textContent).toContain('染色处理');
-    expect(document.body.textContent).toContain('TASK-2');
+    expect(document.body.textContent).not.toContain('染色处理');
+    expect(mockCompleteSlideStaining).toHaveBeenLastCalledWith({
+      qualityIssue: null,
+      remarks: null,
+      slideId: 'SLD-3aa4f9b-2427-413d-bf12-080de1c4a43d',
+      stainingType: 'HE',
+      taskId: 'TASK-2',
+      terminalCode: null,
+    });
 
     second.app.unmount();
     second.root.remove();
@@ -733,15 +776,218 @@ describe('StainingWorkstationView', () => {
     const { app, root } = mountView();
     await flushView();
 
-    findButton('染色出片(F9)').click();
-    await flushView();
-    findButton('提交出片').click();
-    await flushView();
+    await selectTableRow('TASK-1');
+    await clickPrimaryAction();
     expect(hasTableRow('SLIDE-1')).toBe(true);
 
     findButton('查询').click();
     await flushView();
     expect(hasTableRow('SLIDE-1')).toBe(false);
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('records multiple selected staining tasks in one action', async () => {
+    const firstTask = createTask({
+      id: 'TASK-1',
+      objectDisplayNo: 'SLIDE-001',
+      objectId: 'SLIDE-1',
+      taskStatus: 'IN_PROGRESS',
+    });
+    const secondTask = createTask({
+      caseId: 'CASE-2',
+      id: 'TASK-2',
+      objectDisplayNo: 'SLIDE-002',
+      objectId: 'SLIDE-2',
+      pathologyNo: 'BL-002',
+      patientId: 'P-002',
+      patientName: '患者乙',
+      taskStatus: 'PENDING',
+    });
+
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [firstTask, secondTask],
+      page: 1,
+      size: 20,
+      total: 2,
+    });
+    mockGetTechnicalTracking.mockImplementation(async (caseId: string) =>
+      caseId === 'CASE-2'
+        ? createTracking({
+            caseId: 'CASE-2',
+            pathologyNo: 'BL-002',
+            slides: [
+              {
+                embeddingBoxId: 'BOX-2',
+                qualityStatus: 'QUALIFIED',
+                slideId: 'SLIDE-2',
+                slideNo: 'SLIDE-002',
+                slideStatus: 'STAINED',
+                specimenId: 'SPEC-2',
+              },
+            ],
+          })
+        : createTracking({
+            slides: [
+              {
+                embeddingBoxId: 'BOX-1',
+                qualityStatus: 'QUALIFIED',
+                slideId: 'SLIDE-1',
+                slideNo: 'SLIDE-001',
+                slideStatus: 'STAINED',
+                specimenId: 'SPEC-1',
+              },
+            ],
+          }),
+    );
+
+    const { app, root } = mountView();
+    await flushView();
+
+    await selectTableRow('TASK-1');
+    await selectTableRow('TASK-2');
+    await clickPrimaryAction();
+
+    expect(mockStartSlideStaining).toHaveBeenCalledTimes(1);
+    expect(mockStartSlideStaining).toHaveBeenCalledWith({
+      remarks: null,
+      taskId: 'TASK-2',
+      terminalCode: null,
+    });
+    expect(mockCompleteSlideStaining).toHaveBeenCalledTimes(2);
+    expect(mockCompleteSlideStaining).toHaveBeenNthCalledWith(1, {
+      qualityIssue: null,
+      remarks: null,
+      slideId: 'SLIDE-1',
+      stainingType: 'HE',
+      taskId: 'TASK-1',
+      terminalCode: null,
+    });
+    expect(mockCompleteSlideStaining).toHaveBeenNthCalledWith(2, {
+      qualityIssue: null,
+      remarks: null,
+      slideId: 'SLIDE-2',
+      stainingType: 'HE',
+      taskId: 'TASK-2',
+      terminalCode: null,
+    });
+    expect(hasTableRow('SLIDE-1')).toBe(true);
+    expect(hasTableRow('SLIDE-2')).toBe(true);
+    expect(messageSuccess).toHaveBeenCalledWith('已记录染色出片 2 条');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('warns when selected task status or slide id cannot be processed', async () => {
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [
+        createTask({
+          id: 'TASK-DONE',
+          taskStatus: 'COMPLETED',
+        }),
+      ],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+
+    const { app, root } = mountView();
+    await flushView();
+
+    await selectTableRow('TASK-DONE');
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F9' }));
+    await flushView();
+
+    expect(messageWarning).toHaveBeenCalledWith('当前任务状态不支持染色出片');
+    expect(mockCompleteSlideStaining).not.toHaveBeenCalled();
+
+    app.unmount();
+    root.remove();
+
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [
+        createTask({
+          id: 'TASK-NO-SLIDE',
+          objectId: '',
+          taskStatus: 'IN_PROGRESS',
+        }),
+      ],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+
+    const second = mountView();
+    await flushView();
+
+    await selectTableRow('TASK-NO-SLIDE');
+    await clickPrimaryAction();
+
+    expect(messageWarning).toHaveBeenCalledWith('当前任务缺少玻片编号');
+    expect(mockCompleteSlideStaining).not.toHaveBeenCalled();
+
+    second.app.unmount();
+    second.root.remove();
+  });
+
+  it('keeps successful rows and reports partial failures', async () => {
+    const firstTask = createTask({
+      id: 'TASK-OK',
+      objectDisplayNo: 'SLIDE-OK',
+      objectId: 'SLIDE-OK',
+      taskStatus: 'IN_PROGRESS',
+    });
+    const secondTask = createTask({
+      id: 'TASK-FAIL',
+      objectDisplayNo: 'SLIDE-FAIL',
+      objectId: 'SLIDE-FAIL',
+      taskStatus: 'IN_PROGRESS',
+    });
+
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [firstTask, secondTask],
+      page: 1,
+      size: 20,
+      total: 2,
+    });
+    mockCompleteSlideStaining.mockImplementation(async (payload) => {
+      if (payload.taskId === 'TASK-FAIL') {
+        throw new Error('接口失败');
+      }
+      return {
+        caseStatus: 'DIAGNOSIS_PENDING',
+        slideId: payload.slideId,
+        taskId: payload.taskId,
+      };
+    });
+    mockGetTechnicalTracking.mockResolvedValue(
+      createTracking({
+        slides: [
+          {
+            embeddingBoxId: 'BOX-1',
+            qualityStatus: 'QUALIFIED',
+            slideId: 'SLIDE-OK',
+            slideNo: 'SLIDE-OK',
+            slideStatus: 'STAINED',
+            specimenId: 'SPEC-1',
+          },
+        ],
+      }),
+    );
+
+    const { app, root } = mountView();
+    await flushView();
+
+    await selectTableRow('TASK-OK');
+    await selectTableRow('TASK-FAIL');
+    await clickPrimaryAction();
+
+    expect(hasTableRow('SLIDE-OK')).toBe(true);
+    expect(hasTableRow('SLIDE-FAIL')).toBe(false);
+    expect(messageWarning).toHaveBeenCalledWith('已记录 1 条，1 条失败');
+    expect(document.body.textContent).toContain('接口失败');
 
     app.unmount();
     root.remove();
