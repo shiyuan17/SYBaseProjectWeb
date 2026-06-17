@@ -156,21 +156,25 @@ const currentReportStatus = computed(
 const canEditCurrentDraft = computed(
   () => !currentReportStatus.value || currentReportStatus.value === 'DRAFT',
 );
-const canSaveDraft = computed(() =>
-  accessStore.accessCodes.includes(M4_PERMISSION_CODES.REPORT_CREATE) &&
-  canEditCurrentDraft.value,
+const canSaveDraft = computed(
+  () =>
+    accessStore.accessCodes.includes(M4_PERMISSION_CODES.REPORT_CREATE) &&
+    canEditCurrentDraft.value,
 );
-const canSubmitReport = computed(() =>
-  accessStore.accessCodes.includes(M4_PERMISSION_CODES.REPORT_SUBMIT) &&
-  canEditCurrentDraft.value,
+const canSubmitReport = computed(
+  () =>
+    accessStore.accessCodes.includes(M4_PERMISSION_CODES.REPORT_SUBMIT) &&
+    canEditCurrentDraft.value,
 );
-const canReviewReport = computed(() =>
-  accessStore.accessCodes.includes(M4_PERMISSION_CODES.REPORT_REVIEW) &&
-  currentReportStatus.value === 'SUBMITTED',
+const canReviewReport = computed(
+  () =>
+    accessStore.accessCodes.includes(M4_PERMISSION_CODES.REPORT_REVIEW) &&
+    currentReportStatus.value === 'SUBMITTED',
 );
-const canSignReport = computed(() =>
-  accessStore.accessCodes.includes(M4_PERMISSION_CODES.REPORT_SIGN) &&
-  currentReportStatus.value === 'REVIEWED',
+const canSignReport = computed(
+  () =>
+    accessStore.accessCodes.includes(M4_PERMISSION_CODES.REPORT_SIGN) &&
+    currentReportStatus.value === 'REVIEWED',
 );
 const workstationGridStyle = computed(() => ({
   gridTemplateColumns: `minmax(${diagnosisWorkbenchPaneMinWidths.queue}px, ${paneWidths.queue}fr) ${diagnosisWorkbenchResizerWidth}px minmax(${diagnosisWorkbenchPaneMinWidths.report}px, ${paneWidths.report}fr) ${diagnosisWorkbenchResizerWidth}px minmax(${diagnosisWorkbenchPaneMinWidths.materials}px, ${paneWidths.materials}fr)`,

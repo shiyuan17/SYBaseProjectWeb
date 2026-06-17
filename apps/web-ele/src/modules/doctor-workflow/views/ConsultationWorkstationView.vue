@@ -555,7 +555,11 @@ async function submitBatchComment() {
     }
 
     ElMessage.success(
-      buildBatchResultMessage('批量参与人意见提交', successCount, skippedReasons),
+      buildBatchResultMessage(
+        '批量参与人意见提交',
+        successCount,
+        skippedReasons,
+      ),
     );
     batchCommentDialogVisible.value = false;
     await loadWorkbench();
@@ -966,7 +970,10 @@ async function submitBatchComplete() {
     >
       <ElForm label-width="96px">
         <ElFormItem label="已选会诊">
-          <ElInput :model-value="String(selectedConsultationRows.length)" disabled />
+          <ElInput
+            :model-value="String(selectedConsultationRows.length)"
+            disabled
+          />
         </ElFormItem>
         <ElFormItem label="意见" required>
           <ElInput
@@ -1035,7 +1042,10 @@ async function submitBatchComplete() {
     >
       <ElForm label-width="96px">
         <ElFormItem label="已选会诊">
-          <ElInput :model-value="String(selectedConsultationRows.length)" disabled />
+          <ElInput
+            :model-value="String(selectedConsultationRows.length)"
+            disabled
+          />
         </ElFormItem>
         <ElFormItem label="主持意见" required>
           <ElInput

@@ -1821,9 +1821,9 @@ describe('DiagnosisWorkbenchView', () => {
   it('blocks submitting when the current report is not a draft', async () => {
     const wrapper = await mountView();
 
-    expect(findByTestId('workbench-report-submit').hasAttribute('disabled')).toBe(
-      true,
-    );
+    expect(
+      findByTestId('workbench-report-submit').hasAttribute('disabled'),
+    ).toBe(true);
     findByTestId('workbench-report-submit').click();
     await flushAsyncWork();
 

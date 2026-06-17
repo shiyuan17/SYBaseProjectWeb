@@ -49,9 +49,9 @@ import {
   formatNullable,
   formatQualityStatus,
   formatReceiptStatus,
-  formatReworkStatus,
   formatReportStatus,
   formatRevisionStatus,
+  formatReworkStatus,
   formatSlideStatus,
   formatSpecimenStatus,
 } from '../utils/format';
@@ -253,10 +253,7 @@ watch(
 </script>
 
 <template>
-  <Page
-    :show-header="false"
-    title="病例追踪"
-  >
+  <Page :show-header="false" title="病例追踪">
     <div class="flex flex-col gap-4">
       <ElAlert
         v-if="pageError"
@@ -849,10 +846,7 @@ watch(
             >
               <ElTableColumn label="版本 ID" min-width="160" prop="versionId" />
               <ElTableColumn label="版本号" min-width="90" prop="versionNo" />
-              <ElTableColumn
-                label="状态"
-                min-width="100"
-              >
+              <ElTableColumn label="状态" min-width="100">
                 <template #default="{ row }">
                   {{ formatReportStatus(row.versionStatus) }}
                 </template>
@@ -883,10 +877,7 @@ watch(
               size="small"
             >
               <ElTableColumn label="修订单" min-width="140" prop="requestId" />
-              <ElTableColumn
-                label="状态"
-                min-width="100"
-              >
+              <ElTableColumn label="状态" min-width="100">
                 <template #default="{ row }">
                   {{ formatRevisionStatus(row.requestStatus) }}
                 </template>

@@ -749,9 +749,9 @@ async function mountView(component: object) {
       checkbox?.click();
     },
     clickTableRow: (text: string, index = 0) => {
-      const rows = [
-        ...root.querySelectorAll<HTMLTableRowElement>('tr'),
-      ].filter((item) => item.textContent?.includes(text));
+      const rows = [...root.querySelectorAll<HTMLTableRowElement>('tr')].filter(
+        (item) => item.textContent?.includes(text),
+      );
       const row = rows[index];
       expect(row).toBeTruthy();
       row?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -1273,7 +1273,9 @@ describe('doctor workflow view visibility', () => {
 
   it('submits batch consultation comments only for valid selected rows', async () => {
     mockAccessStore.accessCodes = [M4_PERMISSION_CODES.CONSULTATION_COMMENT];
-    getDiagnosticWorkbenchMock.mockResolvedValue(consultationWorkbenchBatchFixture);
+    getDiagnosticWorkbenchMock.mockResolvedValue(
+      consultationWorkbenchBatchFixture,
+    );
 
     const wrapper = await mountView(ConsultationWorkstationView);
     wrapper.setInputValue('请输入病例 ID 或病理号', 'CASE-001');
@@ -1311,7 +1313,9 @@ describe('doctor workflow view visibility', () => {
 
   it('submits batch consultation completion only for actionable rows', async () => {
     mockAccessStore.accessCodes = [M4_PERMISSION_CODES.CONSULTATION_COMPLETE];
-    getDiagnosticWorkbenchMock.mockResolvedValue(consultationWorkbenchBatchFixture);
+    getDiagnosticWorkbenchMock.mockResolvedValue(
+      consultationWorkbenchBatchFixture,
+    );
     completeConsultationMock
       .mockResolvedValueOnce({
         caseId: 'CASE-001',

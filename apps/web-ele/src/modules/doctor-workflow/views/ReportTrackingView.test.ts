@@ -334,7 +334,9 @@ describe('ReportTrackingView', () => {
     expect(wrapper.root.textContent).toContain('返工中');
     expect(wrapper.root.textContent).toContain('进行中');
     expect(wrapper.root.textContent).toContain('待审批');
-    expect(wrapper.root.textContent).not.toContain('当前病例、患者、申请单与归档总览');
+    expect(wrapper.root.textContent).not.toContain(
+      '当前病例、患者、申请单与归档总览',
+    );
     expect(wrapper.root.textContent).not.toContain(
       '固定顺序展示申请创建、标本、技术处理、诊断报告与归档借阅关键节点',
     );
@@ -356,7 +358,7 @@ describe('ReportTrackingView', () => {
   it('updates the tracking route query when searching by pathology number', async () => {
     const wrapper = await mountView();
     const input = wrapper.root.querySelector('input');
-    const buttons = Array.from(wrapper.root.querySelectorAll('button'));
+    const buttons = [...wrapper.root.querySelectorAll('button')];
     const searchButton = buttons.find(
       (button) => button.textContent?.trim() === '查询',
     );

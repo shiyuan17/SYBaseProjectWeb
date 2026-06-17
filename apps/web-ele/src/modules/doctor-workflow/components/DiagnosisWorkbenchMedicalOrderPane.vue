@@ -1120,13 +1120,13 @@ onMounted(loadCandidates);
   display: grid;
   gap: 14px;
   padding: 20px 18px 16px;
-  border: 2px solid color-mix(in srgb, var(--el-color-primary) 18%, transparent);
-  border-radius: 8px;
   background: linear-gradient(
     180deg,
     color-mix(in srgb, var(--el-color-primary) 4%, white) 0%,
     white 100%
   );
+  border: 2px solid color-mix(in srgb, var(--el-color-primary) 18%, transparent);
+  border-radius: 8px;
 }
 
 .medical-order-action-panel__title {
@@ -1137,8 +1137,8 @@ onMounted(loadCandidates);
 
 .medical-order-action-panel__controls {
   display: grid;
-  justify-items: center;
   gap: 12px;
+  justify-items: center;
 }
 
 .medical-order-action-panel__select {
@@ -1148,8 +1148,8 @@ onMounted(loadCandidates);
 .medical-order-action-panel__buttons {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
   gap: 12px;
+  justify-content: center;
 }
 
 .charge-manager-dialog {

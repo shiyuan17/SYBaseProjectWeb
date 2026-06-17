@@ -8,10 +8,10 @@ import {
   formatLoanStatus,
   formatQualityStatus,
   formatReceiptStatus,
-  formatReworkStatus,
   formatReportDeliveryStatus,
   formatReportPrintStatus,
   formatReportStatus,
+  formatReworkStatus,
   formatSlideStatus,
   formatSpecimenStatus,
 } from './format';
