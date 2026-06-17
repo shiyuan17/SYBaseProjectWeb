@@ -65,6 +65,7 @@
 - M5 reagent management depends on sibling backend reagent template / stock / stock-event contracts and keeps CSV-compatible import/export semantics.
 - M5 medical waste management depends on sibling backend `../SYBaseProject/bl-center` `medical-waste` contracts for specimen batch list/options/preview/print/destroy and reagent bag list/save/handover, while specimen label preview data is still sourced from the grossing workflow rather than a new medical-waste label table.
 - Specimen workflow progression depends on sibling backend resolving workflow requests by `specimenId > specimenBarcode > specimenNo`; barcode binding remains nullable until explicit binding.
+- System-management role displays depend on sibling backend `../SYBaseProject/bl-center` returning canonical no-prefix workflow `roleName` values for built-in `ROLE_M2_*`, `ROLE_M3_*`, and `ROLE_M4_*` roles; frontend should consume backend `roleName` directly rather than trimming `M2/M3/M4` locally.
 - Cross-repo API, permission, database, patient, and report contract changes must update memory files in both repos when durable context changes.
 
 ## Handoff Notes
