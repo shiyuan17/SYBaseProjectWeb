@@ -25,6 +25,7 @@ vi.mock('element-plus', () => ({
   ElForm: createPassthroughStub('form'),
   ElFormItem: createPassthroughStub(),
   ElInput: createInputStub(),
+  ElPagination: createPassthroughStub(),
   ElTable: createTableStub(rowContextKey),
   ElTableColumn: createTableColumnStub(rowContextKey),
   ElTag: createTagStub(),
@@ -53,10 +54,17 @@ vi.mock('../composables/useSpecimenFixationTimePanel', () => ({
     handleRetryLabel: vi.fn(),
     handleSelectionChange: vi.fn(),
     loading: ref(false),
+    pagedItems: ref([]),
+    pagination: {
+      page: 1,
+      size: 10,
+    },
     pageError: ref(pageErrorTextMock.value),
     queueItems: ref([]),
     resolveFixationLiquidLabel: vi.fn(() => '10% 中性福尔马林'),
     resolveFixationTagType: vi.fn(() => 'info'),
+    handlePageChange: vi.fn(),
+    handlePageSizeChange: vi.fn(),
     retryDialogVisible: ref(false),
     retryForm: {
       operatorName: 'Test User',
@@ -70,6 +78,7 @@ vi.mock('../composables/useSpecimenFixationTimePanel', () => ({
     scanInput: ref(''),
     selectedCount: computed(() => 0),
     submitRetryLabel: vi.fn(),
+    total: ref(0),
     workflowReferenceOptions: ref({
       clinicalSymptoms: [],
       collectionModes: [],

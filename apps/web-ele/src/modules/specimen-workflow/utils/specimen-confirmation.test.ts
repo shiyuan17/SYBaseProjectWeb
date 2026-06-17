@@ -232,6 +232,6 @@ describe('specimen confirmation helpers', () => {
     expect(rows[0]?.surgeryName).toBe('惠侨楼 - 手术室 2');
     expect(buildExportHeaders()[0]).toBe('序号');
     expect(buildExportRows(rows)[0]?.[0]).toBe('1');
-    expect(buildExportRows(rows)[0]?.[6]).toBe('惠侨楼 - 手术室 2');
+    expect(buildExportRows(rows)[0]?.[7]).toBe('惠侨楼 - 手术室 2');
   });
 });

@@ -244,7 +244,7 @@ describe('TechnicalWorkflowEntryView', () => {
     await flushView();
 
     expect(mockRouter.push).toHaveBeenCalledWith({
-      path: '/workflow/pathology-receipt',
+      path: '/technical-workflow/specimen-receipt',
       query: undefined,
     });
     expect(mockRouter.push).toHaveBeenCalledWith({

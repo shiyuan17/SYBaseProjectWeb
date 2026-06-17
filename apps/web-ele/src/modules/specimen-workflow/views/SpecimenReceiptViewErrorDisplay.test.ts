@@ -55,6 +55,7 @@ vi.mock('../composables/useSpecimenReceiptWorkbench', async () => {
     useSpecimenReceiptWorkbench: () => ({
       batchRetryResult: ref(null),
       closeReceiveDialog: vi.fn(),
+      createReceiptDatePickerDefaultValue: vi.fn(() => undefined),
       directReceiveDialogVisible: ref(false),
       directReceiveForm: reactive({
         abnormalReason: '',
@@ -98,6 +99,7 @@ vi.mock('../composables/useSpecimenReceiptWorkbench', async () => {
         totalCount: 0,
       }),
       receivedCount: ref(0),
+      receiptDateRange: ref([]),
       retryDialogVisible: ref(false),
       retryForm: reactive({
         operatorName: '当前用户',
@@ -119,6 +121,7 @@ vi.mock('../composables/useSpecimenReceiptWorkbench', async () => {
 vi.mock('element-plus', () => ({
   ElAlert: createAlertStub(),
   ElButton: createButtonStub(),
+  ElDatePicker: createInputStub(),
   ElDialog: createDialogStub(),
   ElForm: createPassthroughStub('form'),
   ElFormItem: createPassthroughStub(),

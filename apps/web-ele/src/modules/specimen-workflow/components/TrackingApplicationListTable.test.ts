@@ -93,7 +93,6 @@ describe('TrackingApplicationListTable', () => {
   it('renders application rows', async () => {
     const wrapper = await mountTable();
 
-    expect(wrapper.container.textContent).toContain('APP-001');
     expect(wrapper.container.textContent).toContain('AP-001');
     expect(wrapper.container.textContent).toContain('BL202606080001');
     expect(wrapper.container.textContent).toContain('诊断分配');

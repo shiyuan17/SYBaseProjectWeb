@@ -161,7 +161,7 @@ describe('SpecimenBarcodeBindingPanel', () => {
     expect(container.textContent).toContain('取消绑定');
     expect(container.textContent).toContain('补打标本标签');
     expect(container.textContent).toContain('打印');
-    expect(container.textContent).toContain('导出 Excel');
+    expect(container.textContent).toContain('导出Excel');
     expect(container.textContent).toContain('预打印条码');
     expect(
       container.querySelector('[data-column-label="病人ID"]'),
@@ -180,7 +180,7 @@ describe('SpecimenBarcodeBindingPanel', () => {
       (button) => button.textContent?.includes('条码绑定'),
     );
     const exportButton = [...container.querySelectorAll('button')].find(
-      (button) => button.textContent?.includes('导出 Excel'),
+      (button) => button.textContent?.includes('导出Excel'),
     );
     const boundPrintButton = [...container.querySelectorAll('button')].find(
       (button) => button.textContent?.trim() === '打印',
