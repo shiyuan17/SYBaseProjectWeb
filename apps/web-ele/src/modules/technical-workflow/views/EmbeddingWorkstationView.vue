@@ -1285,7 +1285,7 @@ onBeforeUnmount(() => {
 
 <template>
   <Page :show-header="false">
-    <div class="flex flex-col gap-4">
+    <div class="embedding-workbench flex flex-col gap-4">
       <ElAlert
         v-if="pageError"
         :closable="false"
@@ -1295,79 +1295,78 @@ onBeforeUnmount(() => {
         <template #default>{{ pageError }}</template>
       </ElAlert>
 
-      <section class="grid max-w-[560px] gap-3 sm:grid-cols-2">
-        <article
-          class="rounded-xl border border-border bg-card px-4 py-3 shadow-sm"
-        >
-          <div class="text-xs text-muted-foreground">待包埋数</div>
-          <div class="mt-1 text-2xl font-semibold text-foreground">
-            {{ summaryLoading ? '--' : workstationSummary.pendingCount }}
-          </div>
-          <div class="mt-1 text-xs text-muted-foreground/70">
-            统计范围：{{ summaryRangeLabel }}
-          </div>
-        </article>
-        <article
-          class="rounded-xl border border-border bg-card px-4 py-3 shadow-sm"
-        >
-          <div class="text-xs text-muted-foreground">已包埋数</div>
-          <div class="mt-1 text-2xl font-semibold text-emerald-600">
-            {{ summaryLoading ? '--' : workstationSummary.completedCount }}
-          </div>
-          <div class="mt-1 text-xs text-muted-foreground/70">
-            当日已完成记录实时汇总
-          </div>
-        </article>
-      </section>
+      <section class="embedding-header">
+        <div class="embedding-stats-grid">
+          <article class="embedding-stat-card" data-accent="sky">
+            <div class="embedding-stat-card__label">待包埋数</div>
+            <div class="embedding-stat-card__value">
+              {{ summaryLoading ? '--' : workstationSummary.pendingCount }}
+            </div>
+            <div class="embedding-stat-card__meta">
+              统计范围：{{ summaryRangeLabel }}
+            </div>
+          </article>
+          <article class="embedding-stat-card" data-accent="emerald">
+            <div class="embedding-stat-card__label">已包埋数</div>
+            <div class="embedding-stat-card__value">
+              {{ summaryLoading ? '--' : workstationSummary.completedCount }}
+            </div>
+            <div class="embedding-stat-card__meta">当日已完成记录实时汇总</div>
+          </article>
+        </div>
 
-      <section
-        class="flex flex-wrap items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-sm"
-      >
-        <ElButton
-          :disabled="!canConfirmSelectedTask || completeLoading"
-          :loading="completeLoading"
-          type="primary"
-          @click="handleConfirmEmbedding"
-        >
-          确认包埋
-        </ElButton>
-        <ElInput
-          v-model="filters.keyword"
-          class="max-w-[280px]"
-          clearable
-          placeholder="病人ID/病理号"
-          @keyup.enter="handleSearch"
-        />
-        <ElDatePicker
-          v-model="filters.dateRange"
-          :default-value="createDatePickerPanelDefaultValue()"
-          :disabled-date="disableFutureDate"
-          :shortcuts="dateRangeShortcuts"
-          class="!w-[260px]"
-          format="YYYY-MM-DD"
-          end-placeholder="结束日期"
-          range-separator="至"
-          start-placeholder="开始日期"
-          type="daterange"
-          unlink-panels
-          value-format="YYYY-MM-DD"
-        />
-        <ElButton @click="handleSearch">查询</ElButton>
-        <ElButton @click="handleMore">更多</ElButton>
-        <ElButton @click="handleClearCurrent">确认清零</ElButton>
-        <ElButton @click="taskDrawerVisible = true">包埋任务</ElButton>
-        <ElButton
-          :disabled="!selectedTask"
-          @click="historyDrawerVisible = true"
-        >
-          包埋历史
-        </ElButton>
-        <ElButton
-          :disabled="!selectedTask"
-          @click="evaluationDrawerVisible = true"
-        >
-          评价记录
-        </ElButton>
+        <div class="embedding-query-bar">
+          <div class="embedding-query-bar__search">
+            <span class="embedding-query-bar__label">检索</span>
+            <ElInput
+              v-model="filters.keyword"
+              clearable
+              placeholder="请输入病人ID或病理号"
+              @keyup.enter="handleSearch"
+            />
+            <ElDatePicker
+              v-model="filters.dateRange"
+              :default-value="createDatePickerPanelDefaultValue()"
+              :disabled-date="disableFutureDate"
+              :shortcuts="dateRangeShortcuts"
+              format="YYYY-MM-DD"
+              end-placeholder="结束日期"
+              range-separator="至"
+              start-placeholder="开始日期"
+              type="daterange"
+              unlink-panels
+              value-format="YYYY-MM-DD"
+            />
+          </div>
+          <div class="embedding-query-bar__actions">
+            <ElButton :loading="loading" type="primary" @click="handleSearch">
+              查询
+            </ElButton>
+            <ElButton
+              :disabled="!canConfirmSelectedTask || completeLoading"
+              :loading="completeLoading"
+              type="primary"
+              @click="handleConfirmEmbedding"
+            >
+              确认包埋
+            </ElButton>
+            <ElButton @click="handleMore">更多</ElButton>
+            <ElButton @click="handleClearCurrent">确认清零</ElButton>
+            <ElButton @click="taskDrawerVisible = true">包埋任务</ElButton>
+            <ElButton
+              :disabled="!selectedTask"
+              @click="historyDrawerVisible = true"
+            >
+              包埋历史
+            </ElButton>
+            <ElButton
+              :disabled="!selectedTask"
+              @click="evaluationDrawerVisible = true"
+            >
+              评价记录
+            </ElButton>
+          </div>
+        </div>
       </section>
 
       <section
@@ -1648,7 +1647,7 @@ onBeforeUnmount(() => {
 
             <div
               v-if="completedEmbeddingRecords.length > 0"
-              class="overflow-x-auto"
+              class="embedding-completed-table-scroll overflow-auto"
             >
               <table class="min-w-[1220px] text-left text-sm">
                 <thead class="bg-accent text-muted-foreground">
@@ -2019,3 +2018,133 @@ onBeforeUnmount(() => {
     />
   </Page>
 </template>
+
+<style scoped>
+.embedding-workbench {
+  min-height: calc(100vh - 220px);
+}
+
+.embedding-header {
+  padding: 18px;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 8px 24px hsl(var(--foreground) / 6%);
+}
+
+.embedding-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 320px));
+  gap: 12px;
+}
+
+.embedding-stat-card {
+  min-height: 90px;
+  padding: 14px 16px;
+  color: hsl(var(--foreground));
+  background: hsl(var(--accent) / 70%);
+  border: 1px solid hsl(var(--border));
+}
+
+.embedding-stat-card[data-accent='emerald'] {
+  background: hsl(var(--success) / 12%);
+  border-color: hsl(var(--success) / 32%);
+}
+
+.embedding-stat-card[data-accent='sky'] {
+  background: hsl(var(--primary) / 12%);
+  border-color: hsl(var(--primary) / 28%);
+}
+
+.embedding-stat-card__label {
+  font-size: 13px;
+  line-height: 20px;
+  color: hsl(var(--muted-foreground));
+}
+
+.embedding-stat-card__value {
+  margin-top: 10px;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.embedding-stat-card__meta {
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 18px;
+  color: hsl(var(--muted-foreground));
+}
+
+.embedding-query-bar {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 16px;
+  margin-top: 16px;
+  border-top: 1px solid hsl(var(--border));
+}
+
+.embedding-query-bar__search {
+  display: flex;
+  flex: 1;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+}
+
+.embedding-query-bar__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.embedding-query-bar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.embedding-query-bar__search :deep(.el-input) {
+  max-width: 320px;
+}
+
+.embedding-query-bar__search :deep(.el-date-editor) {
+  max-width: 360px;
+}
+
+.embedding-completed-table-scroll {
+  max-height: clamp(18rem, calc(100vh - 36rem), 34rem);
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+
+.embedding-completed-table-scroll th {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+}
+
+@media (max-width: 1280px) {
+  .embedding-query-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .embedding-query-bar__actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 960px) {
+  .embedding-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .embedding-query-bar__search {
+    flex-wrap: wrap;
+  }
+}
+</style>
