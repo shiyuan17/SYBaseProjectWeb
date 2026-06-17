@@ -524,6 +524,32 @@ describe('doctor-workflow-service requests', () => {
     );
   });
 
+  it('passes trimmed pathology number to pending diagnostic task query', async () => {
+    requestClientMock.get.mockResolvedValue({
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
+
+    await listPendingDiagnosticTasks({
+      page: 1,
+      pathologyNo: 'BL202606030001'.trim(),
+      size: 20,
+    });
+
+    expect(requestClientMock.get).toHaveBeenCalledWith(
+      '/v1/diagnostic-tasks/pending',
+      {
+        params: {
+          page: 1,
+          pathologyNo: 'BL202606030001',
+          size: 20,
+        },
+      },
+    );
+  });
+
   it('queries pending medical orders with backend query names', async () => {
     requestClientMock.get.mockResolvedValue({
       items: [],
@@ -776,28 +802,24 @@ describe('doctor-workflow-service requests', () => {
   it('posts pathology report lifecycle endpoints with exact paths', async () => {
     await createPathologyReport({
       caseId: 'CASE-1',
-      operatorName: '医生',
       taskId: 'TASK-1',
     });
     await savePathologyReportDraft('REPORT-1', {
       finalDiagnosis: '诊断',
-      operatorName: '医生',
     });
-    await submitPathologyReport('REPORT-1', { operatorName: '医生' });
-    await reviewPathologyReport('REPORT-1', { operatorName: '审核医生' });
+    await submitPathologyReport('REPORT-1', {});
+    await reviewPathologyReport('REPORT-1', {});
     await rejectPathologyReport('REPORT-1', {
-      operatorName: '审核医生',
       rejectReason: '需补充',
     });
-    await signPathologyReport('REPORT-1', { operatorName: '签发医生' });
-    await publishPathologyReport('REPORT-1', { operatorName: '发布员' });
+    await signPathologyReport('REPORT-1', {});
+    await publishPathologyReport('REPORT-1', {});
 
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       1,
       '/v1/pathology-reports',
       {
         caseId: 'CASE-1',
-        operatorName: '医生',
         taskId: 'TASK-1',
       },
     );
@@ -806,36 +828,34 @@ describe('doctor-workflow-service requests', () => {
       '/v1/pathology-reports/REPORT-1/save-draft',
       {
         finalDiagnosis: '诊断',
-        operatorName: '医生',
       },
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       3,
       '/v1/pathology-reports/REPORT-1/submit',
-      { operatorName: '医生' },
+      {},
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       4,
       '/v1/pathology-reports/REPORT-1/review',
-      { operatorName: '审核医生' },
+      {},
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       5,
       '/v1/pathology-reports/REPORT-1/reject',
       {
-        operatorName: '审核医生',
         rejectReason: '需补充',
       },
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       6,
       '/v1/pathology-reports/REPORT-1/sign',
-      { operatorName: '签发医生' },
+      {},
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       7,
       '/v1/pathology-reports/REPORT-1/publish',
-      { operatorName: '发布员' },
+      {},
     );
   });
 

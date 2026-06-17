@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type {
   CaseReportVersionSummary,
-  DiagnosticTaskActionRequest,
   RejectPathologyReportRequest,
 } from '../types/doctor-workflow';
 
@@ -81,21 +80,8 @@ const canPublish = computed(() =>
 );
 
 const form = reactive({
-  operatorName: '',
   rejectReason: '',
 });
-
-const actionPayload = computed<DiagnosticTaskActionRequest>(() => ({
-  operatorName: form.operatorName,
-}));
-
-function ensureOperator() {
-  if (!form.operatorName.trim()) {
-    ElMessage.warning('请填写操作人姓名');
-    return false;
-  }
-  return true;
-}
 
 function resetSelection() {
   selectedRows.value = [];
@@ -266,7 +252,7 @@ async function runLifecycleAction(action: 'publish' | 'review' | 'sign') {
     ElMessage.warning(`当前账号没有${actionLabelMap[action]}权限`);
     return;
   }
-  if (!ensureOperator() || !isSingleSelectionActionAvailable(action)) {
+  if (!isSingleSelectionActionAvailable(action)) {
     return;
   }
 
@@ -282,7 +268,7 @@ async function runLifecycleAction(action: 'publish' | 'review' | 'sign') {
 
   saving.value = true;
   try {
-    await actionMap[action](row.reportId, actionPayload.value);
+    await actionMap[action](row.reportId, {});
     ElMessage.success('报告状态已更新');
     if (caseIdentifier.value) {
       await loadReportList(caseIdentifier.value);
@@ -300,7 +286,7 @@ async function rejectReport() {
     ElMessage.warning('当前账号没有驳回权限');
     return;
   }
-  if (!ensureOperator() || !isSingleSelectionActionAvailable('reject')) {
+  if (!isSingleSelectionActionAvailable('reject')) {
     return;
   }
   if (!form.rejectReason.trim()) {
@@ -313,7 +299,6 @@ async function rejectReport() {
     return;
   }
   const payload: RejectPathologyReportRequest = {
-    operatorName: form.operatorName,
     rejectReason: form.rejectReason,
   };
 
@@ -357,7 +342,6 @@ function handleReset() {
   queryCaseId.value = '';
   queryPathologyNo.value = '';
   queryReportId.value = '';
-  form.operatorName = '';
   form.rejectReason = '';
   resetPageState();
   void router.replace({
@@ -430,14 +414,6 @@ watch(
               placeholder="用于定位指定报告"
               style="width: 220px"
               @keyup.enter="searchReportContext"
-            />
-          </ElFormItem>
-          <ElFormItem label="操作人">
-            <ElInput
-              v-model="form.operatorName"
-              clearable
-              placeholder="请输入操作人姓名"
-              style="width: 220px"
             />
           </ElFormItem>
           <ElFormItem v-if="canReview" label="驳回原因">

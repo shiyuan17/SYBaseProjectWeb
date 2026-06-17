@@ -337,6 +337,57 @@ const workbenchFixture: DiagnosticWorkbenchView = {
   specimens: [],
 };
 
+const consultationWorkbenchBatchFixture: DiagnosticWorkbenchView = {
+  ...workbenchFixture,
+  consultations: [
+    workbenchFixture.consultations[0]!,
+    {
+      completedAt: '2026-06-15T11:00:00',
+      consultationId: 'CONSULT-002',
+      consultationType: 'MDT',
+      hostName: '主持人乙',
+      opinion: '已完成主持意见',
+      participantCount: 1,
+      participants: [
+        {
+          commentedAt: '2026-06-15T10:45:00',
+          draftedByName: '会诊医生丙',
+          opinion: '已给出意见',
+          participantId: 'CP-003',
+          participantName: '会诊医生丙',
+          participantRole: 'MEMBER',
+          participantUserId: 'USER-OTHER-2',
+        },
+      ],
+      requestedAt: '2026-06-15T10:00:00',
+      requestedByName: '申请医生乙',
+      status: 'COMPLETED',
+    },
+    {
+      completedAt: null,
+      consultationId: 'CONSULT-003',
+      consultationType: 'MDT',
+      hostName: '主持人丙',
+      opinion: null,
+      participantCount: 1,
+      participants: [
+        {
+          commentedAt: null,
+          draftedByName: null,
+          opinion: null,
+          participantId: 'CP-004',
+          participantName: '其他医生',
+          participantRole: 'MEMBER',
+          participantUserId: 'USER-NOT-CURRENT',
+        },
+      ],
+      requestedAt: '2026-06-15T10:20:00',
+      requestedByName: '申请医生丙',
+      status: 'IN_PROGRESS',
+    },
+  ],
+};
+
 const trackingFixture: CaseLifecycleTrackingView = {
   applicationForm: {
     applicantDoctorName: '送检医生甲',
@@ -696,6 +747,14 @@ async function mountView(component: object) {
       const checkbox = checkboxes[index];
       expect(checkbox).toBeTruthy();
       checkbox?.click();
+    },
+    clickTableRow: (text: string, index = 0) => {
+      const rows = [
+        ...root.querySelectorAll<HTMLTableRowElement>('tr'),
+      ].filter((item) => item.textContent?.includes(text));
+      const row = rows[index];
+      expect(row).toBeTruthy();
+      row?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     },
     isButtonDisabled: (text: string, index = 0) => {
       const buttons = [...root.querySelectorAll('button')].filter(
@@ -1100,7 +1159,7 @@ describe('doctor workflow view visibility', () => {
     wrapper.unmount();
   });
 
-  it('shows revision workbench actions from the row dropdown based on permission', async () => {
+  it('shows revision workbench top actions and row dropdown based on permission', async () => {
     mockAccessStore.accessCodes = [M4_PERMISSION_CODES.REVISION_REQUEST_CREATE];
     const createWrapper = await mountView(ReportRevisionView);
     createWrapper.setInputValue('请输入病例 ID 或病理号', 'CASE-001');
@@ -1109,6 +1168,13 @@ describe('doctor workflow view visibility', () => {
     expect(getDiagnosticWorkbenchMock).toHaveBeenCalledWith('CASE-001');
     expect(createWrapper.text()).toContain('当前报告');
     expect(createWrapper.text()).toContain('修订申请');
+    expect(createWrapper.text()).not.toContain('最近操作结果');
+    expect(createWrapper.buttonTexts()).toContain('发起修订申请');
+    expect(createWrapper.buttonTexts()).not.toContain('审批修订申请');
+    expect(createWrapper.isButtonDisabled('发起修订申请')).toBe(true);
+    createWrapper.clickTableRow('当前报告');
+    await flushAsyncWork();
+    expect(createWrapper.isButtonDisabled('发起修订申请')).toBe(false);
     expect(
       createWrapper.buttonTexts().filter((text) => text === '操作'),
     ).toHaveLength(1);
@@ -1124,15 +1190,59 @@ describe('doctor workflow view visibility', () => {
     reviewWrapper.setInputValue('请输入病例 ID 或病理号', 'CASE-001');
     reviewWrapper.clickButton('查询');
     await flushAsyncWork();
+    expect(reviewWrapper.buttonTexts()).not.toContain('发起修订申请');
+    expect(reviewWrapper.buttonTexts()).toContain('审批修订申请');
+    expect(reviewWrapper.isButtonDisabled('审批修订申请')).toBe(true);
+    reviewWrapper.clickTableRow('修订申请');
+    await flushAsyncWork();
+    expect(reviewWrapper.isButtonDisabled('审批修订申请')).toBe(false);
     expect(
       reviewWrapper.buttonTexts().filter((text) => text === '操作'),
     ).toHaveLength(1);
-    reviewWrapper.clickButton('操作');
+    reviewWrapper.clickButton('审批修订申请');
     await flushAsyncWork();
     expect(reviewWrapper.documentText()).toContain('审批通过');
     expect(reviewWrapper.documentText()).toContain('审批驳回');
     expect(reviewWrapper.documentText()).not.toContain('发起修订申请');
     reviewWrapper.unmount();
+  });
+
+  it('hides revision top actions when the user has no revision permissions', async () => {
+    const wrapper = await mountView(ReportRevisionView);
+    wrapper.setInputValue('请输入病例 ID 或病理号', 'CASE-001');
+    wrapper.clickButton('查询');
+    await flushAsyncWork();
+
+    expect(wrapper.buttonTexts()).not.toContain('发起修订申请');
+    expect(wrapper.buttonTexts()).not.toContain('审批修订申请');
+
+    wrapper.unmount();
+  });
+
+  it('keeps the approval top action disabled for non-pending revision rows', async () => {
+    mockAccessStore.accessCodes = [M4_PERMISSION_CODES.REVISION_APPROVE];
+    getDiagnosticWorkbenchMock.mockResolvedValue({
+      ...workbenchFixture,
+      revisions: [
+        {
+          ...workbenchFixture.revisions[0]!,
+          requestStatus: 'APPROVED',
+          reviewedAt: '2026-06-15T10:00:00',
+          reviewedByName: '审批医生甲',
+        },
+      ],
+    });
+
+    const wrapper = await mountView(ReportRevisionView);
+    wrapper.setInputValue('请输入病例 ID 或病理号', 'CASE-001');
+    wrapper.clickButton('查询');
+    await flushAsyncWork();
+
+    wrapper.clickTableRow('修订申请');
+    await flushAsyncWork();
+    expect(wrapper.isButtonDisabled('审批修订申请')).toBe(true);
+
+    wrapper.unmount();
   });
 
   it('shows consultation workbench actions from the row dropdown based on permission', async () => {
@@ -1146,7 +1256,10 @@ describe('doctor workflow view visibility', () => {
     expect(getDiagnosticWorkbenchMock).toHaveBeenCalledWith('CASE-001');
     expect(wrapper.text()).toContain('当前病例');
     expect(wrapper.text()).toContain('会诊记录');
+    expect(wrapper.text()).toContain('最近操作结果');
     expect(wrapper.text()).toContain('进行中');
+    expect(wrapper.buttonTexts()).toContain('参与人意见');
+    expect(wrapper.isButtonDisabled('参与人意见')).toBe(true);
     expect(
       wrapper.buttonTexts().filter((text) => text === '操作'),
     ).toHaveLength(1);
@@ -1155,6 +1268,101 @@ describe('doctor workflow view visibility', () => {
     expect(wrapper.documentText()).toContain('录入参与人意见');
     expect(wrapper.documentText()).toContain('完成会诊');
     expect(wrapper.documentText()).not.toContain('发起会诊');
+    wrapper.unmount();
+  });
+
+  it('submits batch consultation comments only for valid selected rows', async () => {
+    mockAccessStore.accessCodes = [M4_PERMISSION_CODES.CONSULTATION_COMMENT];
+    getDiagnosticWorkbenchMock.mockResolvedValue(consultationWorkbenchBatchFixture);
+
+    const wrapper = await mountView(ConsultationWorkstationView);
+    wrapper.setInputValue('请输入病例 ID 或病理号', 'CASE-001');
+    wrapper.clickButton('查询');
+    await flushAsyncWork();
+
+    wrapper.clickCheckbox(1);
+    wrapper.clickCheckbox(2);
+    wrapper.clickCheckbox(3);
+    wrapper.clickCheckbox(4);
+    await flushAsyncWork();
+
+    expect(wrapper.isButtonDisabled('参与人意见')).toBe(false);
+    wrapper.clickButton('参与人意见');
+    await flushAsyncWork();
+    wrapper.setInputValue('请输入参与人意见', '统一批量意见');
+    wrapper.clickButton('保存意见');
+    await flushAsyncWork();
+
+    expect(commentConsultationParticipantMock).toHaveBeenCalledTimes(1);
+    expect(commentConsultationParticipantMock).toHaveBeenCalledWith(
+      'CONSULT-001',
+      'CP-001',
+      expect.objectContaining({
+        operatorName: '当前分派员',
+        opinion: '统一批量意见',
+      }),
+    );
+    expect(wrapper.documentText()).toContain('批量参与人意见提交完成 1 条');
+    expect(wrapper.documentText()).toContain('跳过 3 条');
+    expect(wrapper.documentText()).toContain('当前登录人不在会诊参与人列表中');
+    expect(wrapper.documentText()).toContain('CONSULT-001');
+    wrapper.unmount();
+  });
+
+  it('submits batch consultation completion only for actionable rows', async () => {
+    mockAccessStore.accessCodes = [M4_PERMISSION_CODES.CONSULTATION_COMPLETE];
+    getDiagnosticWorkbenchMock.mockResolvedValue(consultationWorkbenchBatchFixture);
+    completeConsultationMock
+      .mockResolvedValueOnce({
+        caseId: 'CASE-001',
+        consultationId: 'CONSULT-001',
+        status: 'COMPLETED',
+      })
+      .mockResolvedValueOnce({
+        caseId: 'CASE-001',
+        consultationId: 'CONSULT-003',
+        status: 'COMPLETED',
+      });
+
+    const wrapper = await mountView(ConsultationWorkstationView);
+    wrapper.setInputValue('请输入病例 ID 或病理号', 'CASE-001');
+    wrapper.clickButton('查询');
+    await flushAsyncWork();
+
+    wrapper.clickCheckbox(1);
+    wrapper.clickCheckbox(2);
+    wrapper.clickCheckbox(3);
+    wrapper.clickCheckbox(4);
+    await flushAsyncWork();
+
+    expect(wrapper.isButtonDisabled('完成会诊')).toBe(false);
+    wrapper.clickButton('完成会诊');
+    await flushAsyncWork();
+    wrapper.setInputValue('请输入主持意见', '统一主持意见');
+    wrapper.clickButton('完成会诊', 1);
+    await flushAsyncWork();
+
+    expect(completeConsultationMock).toHaveBeenCalledTimes(2);
+    expect(completeConsultationMock).toHaveBeenNthCalledWith(
+      1,
+      'CONSULT-001',
+      expect.objectContaining({
+        operatorName: '当前分派员',
+        opinion: '统一主持意见',
+      }),
+    );
+    expect(completeConsultationMock).toHaveBeenNthCalledWith(
+      2,
+      'CONSULT-003',
+      expect.objectContaining({
+        operatorName: '当前分派员',
+        opinion: '统一主持意见',
+      }),
+    );
+    expect(wrapper.documentText()).toContain('批量完成会诊完成 2 条');
+    expect(wrapper.documentText()).toContain('跳过 2 条');
+    expect(wrapper.documentText()).toContain('已完成会诊不可重复完成');
+    expect(wrapper.documentText()).toContain('CONSULT-003');
     wrapper.unmount();
   });
 
@@ -1260,7 +1468,7 @@ describe('doctor workflow view visibility', () => {
         {
           ...pendingMedicalOrderPageFixture.items[0]!,
           billingStatus: 'SUCCESS',
-          orderType: 'ROUTINE',
+          orderType: 'SPECIAL',
           status: 'IN_PROGRESS',
         },
       ],
@@ -1281,10 +1489,10 @@ describe('doctor workflow view visibility', () => {
     expect(wrapper.text()).toContain('类型');
     expect(wrapper.text()).toContain('状态');
     expect(wrapper.text()).toContain('收费状态');
-    expect(wrapper.text()).toContain('常规');
+    expect(wrapper.text()).toContain('特殊染色');
     expect(wrapper.text()).toContain('执行中');
     expect(wrapper.text()).toContain('已收费');
-    expect(wrapper.text()).not.toContain('ROUTINE');
+    expect(wrapper.text()).not.toContain('SPECIAL');
     expect(wrapper.text()).not.toContain('IN_PROGRESS');
     expect(wrapper.text()).not.toContain('SUCCESS');
     wrapper.unmount();

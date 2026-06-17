@@ -2,12 +2,18 @@ import { describe, expect, it } from 'vitest';
 
 import {
   formatArchiveStatus,
+  formatCaseStatus,
   formatDateTime,
   formatLifecycleNodeStatus,
   formatLoanStatus,
+  formatQualityStatus,
+  formatReceiptStatus,
+  formatReworkStatus,
   formatReportDeliveryStatus,
   formatReportPrintStatus,
   formatReportStatus,
+  formatSlideStatus,
+  formatSpecimenStatus,
 } from './format';
 
 describe('doctor-workflow format utils', () => {
@@ -35,5 +41,26 @@ describe('doctor-workflow format utils', () => {
     expect(formatArchiveStatus('PENDING')).toBe('未归档');
     expect(formatLoanStatus('NONE')).toBe('未借阅');
     expect(formatLoanStatus('BORROWED')).toBe('借出中');
+  });
+
+  it('formats report tracking case and specimen related status labels', () => {
+    expect(formatCaseStatus('SIGNED')).toBe('已签发');
+    expect(formatCaseStatus('IN_DIAGNOSIS')).toBe('诊断中');
+    expect(formatSpecimenStatus('RECEIVED')).toBe('已接收');
+    expect(formatReceiptStatus('PARTIALLY_RECEIVED')).toBe('部分接收');
+    expect(formatSlideStatus('COMPLETED')).toBe('已完成');
+    expect(formatQualityStatus('PASS')).toBe('合格');
+    expect(formatQualityStatus('REWORK_REQUIRED')).toBe('需返工');
+    expect(formatReworkStatus('IN_PROGRESS')).toBe('返工中');
+  });
+
+  it('falls back to the original value for unknown tracking statuses', () => {
+    expect(formatCaseStatus('UNKNOWN_CASE_STATUS')).toBe('UNKNOWN_CASE_STATUS');
+    expect(formatSpecimenStatus('UNKNOWN_SPECIMEN_STATUS')).toBe(
+      'UNKNOWN_SPECIMEN_STATUS',
+    );
+    expect(formatQualityStatus('UNKNOWN_QUALITY_STATUS')).toBe(
+      'UNKNOWN_QUALITY_STATUS',
+    );
   });
 });

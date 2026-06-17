@@ -5,6 +5,11 @@ export interface DiagnosticTaskActionRequest {
   terminalCode?: string;
 }
 
+export interface PathologyReportActionRequest {
+  remarks?: string;
+  terminalCode?: string;
+}
+
 export interface AssignDiagnosticTaskRequest {
   diagnosisDoctorName: string;
   diagnosisDoctorUserId: string;
@@ -599,7 +604,7 @@ export interface CaseLifecycleTrackingView {
   specimens: LifecycleSpecimenView[];
 }
 
-export interface PathologyReportDraft extends DiagnosticTaskActionRequest {
+export interface PathologyReportDraft extends PathologyReportActionRequest {
   caseId: string;
   clinicalDiagnosis?: string;
   finalDiagnosis?: string;
@@ -657,6 +662,11 @@ export type SavePathologyReportDraftRequest = Omit<
 >;
 
 export interface RejectPathologyReportRequest {
+  rejectReason: string;
+  terminalCode?: string;
+}
+
+export interface OperatorRejectPathologyReportRequest {
   operatorName: string;
   operatorUserId?: string;
   rejectReason: string;

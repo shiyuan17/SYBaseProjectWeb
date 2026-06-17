@@ -37,6 +37,8 @@ import { getDoctorWorkflowPageErrorMessage } from '../utils/error';
 import {
   formatApplicationType,
   formatArchiveStatus,
+  formatCaseStatus,
+  formatConsultationStatus,
   formatDateTime,
   formatDiagnosticTaskStatus,
   formatDiagnosticTaskType,
@@ -45,7 +47,13 @@ import {
   formatMedicalOrderStatus,
   formatMedicalOrderType,
   formatNullable,
+  formatQualityStatus,
+  formatReceiptStatus,
+  formatReworkStatus,
   formatReportStatus,
+  formatRevisionStatus,
+  formatSlideStatus,
+  formatSpecimenStatus,
 } from '../utils/format';
 import { firstQueryParam } from '../utils/route';
 
@@ -247,8 +255,7 @@ watch(
 <template>
   <Page
     :show-header="false"
-    title="报告追踪"
-    description="病例全生命周期追踪。展示申请、标本、蜡块、玻片、报告与归档借阅的完整只读链路。"
+    title="病例追踪"
   >
     <div class="flex flex-col gap-4">
       <ElAlert
@@ -282,10 +289,7 @@ watch(
         </ElForm>
       </WorkflowSectionCard>
 
-      <WorkflowSectionCard
-        title="病例摘要"
-        description="当前病例、患者、申请单与归档总览。"
-      >
+      <WorkflowSectionCard title="病例摘要">
         <template v-if="tracking" #extra>
           <div class="flex flex-wrap gap-2">
             <ElButton
@@ -324,7 +328,7 @@ watch(
               {{ formatNullable(tracking.caseSummary.applicationNo) }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="当前阶段">
-              {{ formatNullable(tracking.caseSummary.currentStage) }}
+              {{ formatCaseStatus(tracking.caseSummary.currentStage) }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="患者">
               {{ formatNullable(tracking.caseSummary.patientName) }}
@@ -338,7 +342,7 @@ watch(
               {{ formatApplicationType(tracking.caseSummary.applicationType) }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="病例状态">
-              {{ formatNullable(tracking.caseSummary.caseStatus) }}
+              {{ formatCaseStatus(tracking.caseSummary.caseStatus) }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="送检科室">
               {{
@@ -378,11 +382,7 @@ watch(
         </template>
       </WorkflowSectionCard>
 
-      <WorkflowSectionCard
-        v-if="tracking"
-        title="全局生命周期时间线"
-        description="固定顺序展示申请创建、标本、技术处理、诊断报告与归档借阅关键节点。未发生节点不会隐藏。"
-      >
+      <WorkflowSectionCard v-if="tracking" title="全局生命周期时间线">
         <div class="grid gap-4 xl:grid-cols-2">
           <section
             v-for="stage in tracking.overallTimeline"
@@ -441,11 +441,7 @@ watch(
         </div>
       </WorkflowSectionCard>
 
-      <WorkflowSectionCard
-        v-if="tracking"
-        title="对象追踪区"
-        :description="`按标本 -> 蜡块 -> 玻片分层展示，当前共 ${tracking.specimens.length} 份标本。`"
-      >
+      <WorkflowSectionCard v-if="tracking" title="对象追踪区">
         <ElEmpty
           v-if="tracking.specimens.length === 0"
           description="当前病例暂无标本层级追踪数据"
@@ -467,7 +463,7 @@ watch(
                   size="small"
                   :type="nodeTagType(specimen.specimenStatus)"
                 >
-                  {{ formatNullable(specimen.specimenStatus) }}
+                  {{ formatSpecimenStatus(specimen.specimenStatus) }}
                 </ElTag>
                 <ElTag size="small" type="info">
                   归档 {{ formatArchiveStatus(specimen.archiveStatus) }}
@@ -484,7 +480,7 @@ watch(
                   {{ formatNullable(specimen.barcode) }}
                 </ElDescriptionsItem>
                 <ElDescriptionsItem label="标本状态">
-                  {{ formatNullable(specimen.specimenStatus) }}
+                  {{ formatSpecimenStatus(specimen.specimenStatus) }}
                 </ElDescriptionsItem>
                 <ElDescriptionsItem label="借阅状态">
                   {{ formatLoanStatus(specimen.loanStatus) }}
@@ -505,7 +501,7 @@ watch(
                   {{ formatDateTime(specimen.checkedInAt) }}
                 </ElDescriptionsItem>
                 <ElDescriptionsItem label="签收状态">
-                  {{ formatNullable(specimen.receiptStatus) }}
+                  {{ formatReceiptStatus(specimen.receiptStatus) }}
                 </ElDescriptionsItem>
                 <ElDescriptionsItem label="签收时间">
                   {{ formatDateTime(specimen.receivedAt) }}
@@ -664,7 +660,7 @@ watch(
                           size="small"
                           :type="nodeTagType(slide.slideStatus)"
                         >
-                          {{ formatNullable(slide.slideStatus) }}
+                          {{ formatSlideStatus(slide.slideStatus) }}
                         </ElTag>
                         <ElTag size="small" type="info">
                           归档 {{ formatArchiveStatus(slide.archiveStatus) }}
@@ -673,10 +669,10 @@ watch(
 
                       <ElDescriptions :column="4" border size="small">
                         <ElDescriptionsItem label="玻片状态">
-                          {{ formatNullable(slide.slideStatus) }}
+                          {{ formatSlideStatus(slide.slideStatus) }}
                         </ElDescriptionsItem>
                         <ElDescriptionsItem label="质控状态">
-                          {{ formatNullable(slide.qualityStatus) }}
+                          {{ formatQualityStatus(slide.qualityStatus) }}
                         </ElDescriptionsItem>
                         <ElDescriptionsItem label="打印时间">
                           {{ formatDateTime(slide.printedAt) }}
@@ -694,7 +690,7 @@ watch(
                           {{ formatNullable(slide.stainedByName) }}
                         </ElDescriptionsItem>
                         <ElDescriptionsItem label="质控结果">
-                          {{ formatNullable(slide.qcResult) }}
+                          {{ formatQualityStatus(slide.qcResult) }}
                         </ElDescriptionsItem>
                         <ElDescriptionsItem label="质控时间">
                           {{ formatDateTime(slide.qcEvaluatedAt) }}
@@ -703,7 +699,7 @@ watch(
                           {{ formatNullable(slide.qcEvaluatorName) }}
                         </ElDescriptionsItem>
                         <ElDescriptionsItem label="返工状态">
-                          {{ formatNullable(slide.reworkStatus) }}
+                          {{ formatReworkStatus(slide.reworkStatus) }}
                         </ElDescriptionsItem>
                         <ElDescriptionsItem label="返工原因">
                           {{ formatNullable(slide.reworkReason) }}
@@ -759,11 +755,7 @@ watch(
         </ElCollapse>
       </WorkflowSectionCard>
 
-      <WorkflowSectionCard
-        v-if="tracking"
-        title="报告链区"
-        description="保留当前报告、诊断任务、版本链、修订、会诊与医嘱链路。"
-      >
+      <WorkflowSectionCard v-if="tracking" title="报告链区">
         <div class="grid gap-4 xl:grid-cols-2">
           <section class="rounded-lg border border-border bg-background p-4">
             <h4 class="mb-3 text-sm font-semibold text-foreground">当前报告</h4>
@@ -860,8 +852,11 @@ watch(
               <ElTableColumn
                 label="状态"
                 min-width="100"
-                prop="versionStatus"
-              />
+              >
+                <template #default="{ row }">
+                  {{ formatReportStatus(row.versionStatus) }}
+                </template>
+              </ElTableColumn>
               <ElTableColumn label="签发时间" min-width="180">
                 <template #default="{ row }">
                   {{ formatDateTime(row.signedAt) }}
@@ -891,8 +886,11 @@ watch(
               <ElTableColumn
                 label="状态"
                 min-width="100"
-                prop="requestStatus"
-              />
+              >
+                <template #default="{ row }">
+                  {{ formatRevisionStatus(row.requestStatus) }}
+                </template>
+              </ElTableColumn>
               <ElTableColumn
                 label="申请人"
                 min-width="120"
@@ -918,7 +916,11 @@ watch(
                 min-width="140"
                 prop="consultationId"
               />
-              <ElTableColumn label="状态" min-width="100" prop="status" />
+              <ElTableColumn label="状态" min-width="100">
+                <template #default="{ row }">
+                  {{ formatConsultationStatus(row.status) }}
+                </template>
+              </ElTableColumn>
               <ElTableColumn
                 label="发起人"
                 min-width="120"

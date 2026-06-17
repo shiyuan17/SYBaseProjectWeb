@@ -89,6 +89,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
           import('#/modules/doctor-workflow/views/PathologyReportView.vue'),
         meta: {
           authority: [...M4_REPORT_PAGE_AUTHORITIES],
+          fullPathKey: false,
           icon: 'carbon:report',
           title: '病理报告',
         },
@@ -100,6 +101,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
           import('#/modules/doctor-workflow/views/ReportTrackingView.vue'),
         meta: {
           authority: [M4_PERMISSION_CODES.REPORT_TRACKING_QUERY],
+          fullPathKey: false,
           icon: 'carbon:search',
           title: '报告追踪',
         },
@@ -111,6 +113,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
           import('#/modules/doctor-workflow/views/MedicalOrderWorkbenchView.vue'),
         meta: {
           authority: [...M4_MEDICAL_ORDER_PAGE_AUTHORITIES],
+          fullPathKey: false,
           icon: 'carbon:task-approved',
           title: '病理医嘱执行',
         },
@@ -122,6 +125,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
           import('#/modules/doctor-workflow/views/ReportRevisionView.vue'),
         meta: {
           authority: [...M4_REVISION_PAGE_AUTHORITIES],
+          fullPathKey: false,
           icon: 'carbon:document-preliminary',
           title: '报告修订',
         },
@@ -133,6 +137,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
           import('#/modules/doctor-workflow/views/ConsultationWorkstationView.vue'),
         meta: {
           authority: [...M4_CONSULTATION_PAGE_AUTHORITIES],
+          fullPathKey: false,
           icon: 'carbon:group',
           title: '会诊管理',
         },

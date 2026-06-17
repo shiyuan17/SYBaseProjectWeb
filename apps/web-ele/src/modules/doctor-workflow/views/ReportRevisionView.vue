@@ -13,8 +13,6 @@ import { useAccessStore, useUserStore } from '@vben/stores';
 
 import {
   ElButton,
-  ElDescriptions,
-  ElDescriptionsItem,
   ElDialog,
   ElDropdown,
   ElDropdownItem,
@@ -72,6 +70,7 @@ const workbench = ref<DiagnosticWorkbenchView | null>(null);
 const lastResult = ref<null | ReportRevisionOperationResult>(null);
 const createDialogVisible = ref(false);
 const reviewDialogVisible = ref(false);
+const selectedRow = ref<null | RevisionRow>(null);
 const activeCreateRow = ref<Extract<
   RevisionRow,
   { rowType: 'current-report' }
@@ -153,6 +152,18 @@ const revisionRows = computed<RevisionRow[]>(() => {
   );
 });
 
+const canCreateSelectedRevision = computed(
+  () =>
+    canCreateRevision.value && selectedRow.value?.rowType === 'current-report',
+);
+
+const canReviewSelectedRevision = computed(
+  () =>
+    selectedRow.value?.rowType === 'revision' &&
+    canApproveRow(selectedRow.value) &&
+    canReviewRevision.value,
+);
+
 function getDefaultOperatorName() {
   return userStore.userInfo?.realName?.trim() || '';
 }
@@ -176,8 +187,10 @@ async function loadWorkbench() {
   pageError.value = '';
   try {
     workbench.value = await getDiagnosticWorkbench(normalizedCaseIdentifier);
+    selectedRow.value = null;
   } catch (error) {
     workbench.value = null;
+    selectedRow.value = null;
     pageError.value = getDoctorWorkflowPageErrorMessage(error);
   } finally {
     loading.value = false;
@@ -189,6 +202,21 @@ function handleReset() {
   queryForm.status = '';
   pageError.value = '';
   workbench.value = null;
+  selectedRow.value = null;
+}
+
+function handleCurrentRowChange(row?: null | RevisionRow) {
+  selectedRow.value = row ?? null;
+}
+
+function handleRowClick(row: RevisionRow) {
+  selectedRow.value = row;
+}
+
+function getRevisionRowKey(row: RevisionRow) {
+  return row.rowType === 'current-report'
+    ? `current-${row.reportId}`
+    : `revision-${row.requestId}`;
 }
 
 function openCreateDialog(
@@ -327,6 +355,50 @@ function handleActionCommand(command: string, row: RevisionRow) {
 function canApproveRow(row: Extract<RevisionRow, { rowType: 'revision' }>) {
   return canReviewRevision.value && row.requestStatus === 'PENDING';
 }
+
+function getSelectedCurrentReportRow() {
+  if (!selectedRow.value) {
+    ElMessage.warning('请先选择记录');
+    return null;
+  }
+  if (selectedRow.value.rowType !== 'current-report') {
+    ElMessage.warning('请选择当前报告');
+    return null;
+  }
+  return selectedRow.value;
+}
+
+function getSelectedPendingRevisionRow() {
+  if (!selectedRow.value) {
+    ElMessage.warning('请先选择记录');
+    return null;
+  }
+  if (selectedRow.value.rowType !== 'revision') {
+    ElMessage.warning('请选择待审批修订申请');
+    return null;
+  }
+  if (selectedRow.value.requestStatus !== 'PENDING') {
+    ElMessage.warning('该申请不可审批');
+    return null;
+  }
+  return selectedRow.value;
+}
+
+function handleCreateSelectedRevision() {
+  const row = getSelectedCurrentReportRow();
+  if (!row) {
+    return;
+  }
+  openCreateDialog(row);
+}
+
+function handleReviewSelectedRevision(action: 'approve' | 'reject') {
+  const row = getSelectedPendingRevisionRow();
+  if (!row) {
+    return;
+  }
+  openReviewDialog(row, action);
+}
 </script>
 
 <template>
@@ -369,6 +441,43 @@ function canApproveRow(row: Extract<RevisionRow, { rowType: 'revision' }>) {
               查询
             </ElButton>
             <ElButton @click="handleReset">重置</ElButton>
+            <ElButton
+              v-if="canCreateRevision"
+              :disabled="!canCreateSelectedRevision"
+              type="primary"
+              @click="handleCreateSelectedRevision"
+            >
+              发起修订申请
+            </ElButton>
+            <ElDropdown
+              v-if="canReviewRevision"
+              @command="
+                (command) =>
+                  handleReviewSelectedRevision(
+                    command === 'reject' ? 'reject' : 'approve',
+                  )
+              "
+            >
+              <ElButton :disabled="!canReviewSelectedRevision" type="success">
+                审批修订申请
+              </ElButton>
+              <template #dropdown>
+                <ElDropdownMenu>
+                  <ElDropdownItem
+                    command="approve"
+                    :disabled="!canReviewSelectedRevision"
+                  >
+                    审批通过
+                  </ElDropdownItem>
+                  <ElDropdownItem
+                    command="reject"
+                    :disabled="!canReviewSelectedRevision"
+                  >
+                    审批驳回
+                  </ElDropdownItem>
+                </ElDropdownMenu>
+              </template>
+            </ElDropdown>
           </ElFormItem>
         </ElForm>
       </WorkflowSectionCard>
@@ -383,7 +492,16 @@ function canApproveRow(row: Extract<RevisionRow, { rowType: 'revision' }>) {
           description="当前病例暂无修订数据"
         />
         <ElEmpty v-else-if="pageError" :description="pageError" />
-        <ElTable v-else v-loading="loading" :data="revisionRows" border>
+        <ElTable
+          v-else
+          v-loading="loading"
+          :data="revisionRows"
+          border
+          highlight-current-row
+          :row-key="getRevisionRowKey"
+          @current-change="handleCurrentRowChange"
+          @row-click="handleRowClick"
+        >
           <ElTableColumn label="行类型" min-width="110">
             <template #default="{ row }">
               {{ row.rowType === 'current-report' ? '当前报告' : '修订申请' }}
@@ -515,28 +633,7 @@ function canApproveRow(row: Extract<RevisionRow, { rowType: 'revision' }>) {
           </ElTableColumn>
         </ElTable>
       </WorkflowSectionCard>
-
-      <WorkflowSectionCard title="最近操作结果">
-        <ElDescriptions :column="4" border>
-          <ElDescriptionsItem label="申请ID">
-            {{ formatNullable(lastResult?.requestId) }}
-          </ElDescriptionsItem>
-          <ElDescriptionsItem label="病例ID">
-            {{ formatNullable(lastResult?.caseId) }}
-          </ElDescriptionsItem>
-          <ElDescriptionsItem label="报告ID">
-            {{ formatNullable(lastResult?.reportId) }}
-          </ElDescriptionsItem>
-          <ElDescriptionsItem label="状态">
-            {{ formatRevisionStatus(lastResult?.requestStatus) }}
-          </ElDescriptionsItem>
-          <ElDescriptionsItem label="新版本号">
-            {{ formatNullable(lastResult?.approvedVersionNo) }}
-          </ElDescriptionsItem>
-        </ElDescriptions>
-      </WorkflowSectionCard>
     </div>
-
     <ElDialog v-model="createDialogVisible" title="发起修订申请" width="560px">
       <ElForm label-width="96px">
         <ElFormItem label="报告ID">

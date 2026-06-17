@@ -54,7 +54,6 @@ interface DraftMedicalOrderItem {
 interface MedicalOrderTableRow {
   billingStatus?: null | string;
   doctorName: string;
-  draftIndex?: number;
   key: string;
   orderContent: string;
   orderId?: string;
@@ -212,7 +211,6 @@ const medicalOrderRows = computed<MedicalOrderTableRow[]>(() => {
   }));
   const draftRows = draftItems.map((item, index) => ({
     doctorName: currentDoctorName.value,
-    draftIndex: index,
     key: item.key,
     orderContent: item.orderContent,
     orderTime: '待提交',
@@ -576,13 +574,6 @@ function addPackageItems(row: MedicalOrderPackageView) {
   enabledPackageItems.forEach((item) => addOrderItem(item, row.packageName));
 }
 
-function removeDraftItem(index?: number) {
-  if (typeof index !== 'number') {
-    return;
-  }
-  draftItems.splice(index, 1);
-}
-
 function undoLastDraftItem() {
   if (draftItems.length === 0) {
     ElMessage.warning('当前没有可撤销的医嘱');
@@ -803,44 +794,6 @@ onMounted(loadCandidates);
     "
     data-testid="diagnosis-workbench-medical-order-pane"
   >
-    <header
-      class="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3"
-    >
-      <h3 class="text-sm font-semibold text-foreground">医嘱区</h3>
-      <div class="flex flex-wrap items-center justify-end gap-2">
-        <div v-if="workbench" class="w-[220px] text-xs">
-          <ElSelect
-            v-model="selectedBlockId"
-            class="w-full"
-            :disabled="blockOptions.length === 0"
-            placeholder="请选择蜡块"
-            size="small"
-          >
-            <ElOption
-              v-for="block in blockOptions"
-              :key="block.blockId"
-              :label="getBlockLabel(block)"
-              :value="block.blockId"
-            />
-          </ElSelect>
-        </div>
-        <ElButton
-          class="m-0 w-[88px]"
-          :disabled="Boolean(chargeDisabledReason)"
-          :loading="chargeLoading"
-          size="small"
-          :title="chargeDisabledReason || '执行收费'"
-          type="success"
-          @click="executeCharge"
-        >
-          执行收费
-        </ElButton>
-        <ElButton class="m-0 w-[88px]" size="small" @click="openChargeManager">
-          收费管理
-        </ElButton>
-      </div>
-    </header>
-
     <div v-loading="loading" class="min-h-0 flex-1 overflow-auto">
       <ElEmpty v-if="!workbench" description="请先从左侧选择一个病例" />
       <div v-else class="flex min-h-0 flex-col">
@@ -852,22 +805,60 @@ onMounted(loadCandidates);
           type="warning"
         />
 
+        <section class="border-b border-border px-4 py-4">
+          <div class="medical-order-action-panel">
+            <div class="medical-order-action-panel__title">医嘱区</div>
+            <div class="medical-order-action-panel__controls">
+              <div v-if="workbench" class="medical-order-action-panel__select">
+                <ElSelect
+                  v-model="selectedBlockId"
+                  class="w-full"
+                  :disabled="blockOptions.length === 0"
+                  placeholder="请选择蜡块"
+                  size="small"
+                >
+                  <ElOption
+                    v-for="block in blockOptions"
+                    :key="block.blockId"
+                    :label="getBlockLabel(block)"
+                    :value="block.blockId"
+                  />
+                </ElSelect>
+              </div>
+              <div class="medical-order-action-panel__buttons">
+                <ElButton
+                  class="m-0 min-w-[108px]"
+                  :disabled="Boolean(chargeDisabledReason)"
+                  :loading="chargeLoading"
+                  size="small"
+                  :title="chargeDisabledReason || '执行收费'"
+                  type="success"
+                  @click="executeCharge"
+                >
+                  执行收费
+                </ElButton>
+                <ElButton
+                  class="m-0 min-w-[108px]"
+                  size="small"
+                  @click="openChargeManager"
+                >
+                  收费管理
+                </ElButton>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section class="min-h-[260px] border-b border-border">
           <div
             class="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-muted/30 px-3 py-2"
           >
-            <h4 class="text-sm font-semibold text-foreground">
-              医嘱项目: 未收费 ({{ unpaidMedicalOrderCount }}) 已收费 ({{
-                paidMedicalOrderCount
-              }})
-            </h4>
-            <div class="flex flex-wrap items-center justify-end gap-2">
-              <span
-                v-if="submitDisabledReason"
-                class="text-xs text-muted-foreground"
-              >
-                {{ submitDisabledReason }}
-              </span>
+            <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <h4 class="text-sm font-semibold text-foreground">
+                医嘱项目: 未收费 ({{ unpaidMedicalOrderCount }}) 已收费 ({{
+                  paidMedicalOrderCount
+                }})
+              </h4>
               <ElButton
                 :disabled="!canSubmit"
                 :loading="submitLoading"
@@ -879,6 +870,7 @@ onMounted(loadCandidates);
                 提交医嘱
               </ElButton>
             </div>
+            <div class="flex flex-wrap items-center justify-end gap-2"></div>
           </div>
           <ElAlert
             v-if="!canCreateMedicalOrder"
@@ -902,20 +894,6 @@ onMounted(loadCandidates);
             <ElTableColumn label="序" width="52">
               <template #default="{ row }">
                 {{ row.sequenceNo }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="删除" width="72">
-              <template #default="{ row }">
-                <ElButton
-                  v-if="row.removable"
-                  link
-                  size="small"
-                  type="danger"
-                  @click="removeDraftItem(row.draftIndex)"
-                >
-                  删除
-                </ElButton>
-                <span v-else class="text-muted-foreground">-</span>
               </template>
             </ElTableColumn>
             <ElTableColumn label="医嘱项目" min-width="180">
@@ -1136,6 +1114,42 @@ onMounted(loadCandidates);
 .medical-order-table :deep(.el-table__header th) {
   color: var(--el-text-color-primary);
   background: color-mix(in srgb, var(--el-color-primary) 12%, transparent);
+}
+
+.medical-order-action-panel {
+  display: grid;
+  gap: 14px;
+  padding: 20px 18px 16px;
+  border: 2px solid color-mix(in srgb, var(--el-color-primary) 18%, transparent);
+  border-radius: 8px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--el-color-primary) 4%, white) 0%,
+    white 100%
+  );
+}
+
+.medical-order-action-panel__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--el-text-color-primary);
+}
+
+.medical-order-action-panel__controls {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+}
+
+.medical-order-action-panel__select {
+  width: min(100%, 320px);
+}
+
+.medical-order-action-panel__buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
 }
 
 .charge-manager-dialog {

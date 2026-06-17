@@ -95,7 +95,14 @@ const trackingFixture = {
     },
   ],
   reportLifecycle: {
-    consultations: [],
+    consultations: [
+      {
+        consultationId: 'CONSULT-001',
+        opinion: '建议补充会诊意见',
+        requestedByName: '发起医生甲',
+        status: 'IN_PROGRESS',
+      },
+    ],
     currentReport: {
       finalDiagnosis: '最终诊断',
       publishedAt: '2026-06-15T12:00:00',
@@ -125,7 +132,14 @@ const trackingFixture = {
         status: 'PENDING',
       },
     ],
-    revisions: [],
+    revisions: [
+      {
+        requestId: 'REV-001',
+        requestStatus: 'PENDING',
+        requestedAt: '2026-06-15T11:30:00',
+        requestedByName: '申请医生乙',
+      },
+    ],
     versions: [
       {
         createdAt: '2026-06-15T10:00:00',
@@ -183,6 +197,7 @@ const trackingFixture = {
               slideId: 'SLIDE-001',
               slideNo: 'SL-001',
               slideStatus: 'COMPLETED',
+              reworkStatus: 'IN_PROGRESS',
               slicedAt: '2026-06-15T10:30:00',
               slicedByName: '切片医生甲',
               specimenId: 'SPEC-001',
@@ -302,6 +317,7 @@ describe('ReportTrackingView', () => {
     const wrapper = await mountView();
     await flush();
 
+    expect(wrapper.root.textContent).toContain('病例追踪');
     expect(wrapper.root.textContent).toContain('病例摘要');
     expect(wrapper.root.textContent).toContain('全局生命周期时间线');
     expect(wrapper.root.textContent).toContain('对象追踪区');
@@ -311,7 +327,57 @@ describe('ReportTrackingView', () => {
     expect(wrapper.root.textContent).toContain('蜡块 BK-001');
     expect(wrapper.root.textContent).toContain('玻片 SL-001');
     expect(wrapper.root.textContent).toContain('补做特殊染色');
+    expect(wrapper.root.textContent).toContain('已签发');
+    expect(wrapper.root.textContent).toContain('诊断中');
+    expect(wrapper.root.textContent).toContain('已接收');
+    expect(wrapper.root.textContent).toContain('合格');
+    expect(wrapper.root.textContent).toContain('返工中');
+    expect(wrapper.root.textContent).toContain('进行中');
+    expect(wrapper.root.textContent).toContain('待审批');
+    expect(wrapper.root.textContent).not.toContain('当前病例、患者、申请单与归档总览');
+    expect(wrapper.root.textContent).not.toContain(
+      '固定顺序展示申请创建、标本、技术处理、诊断报告与归档借阅关键节点',
+    );
+    expect(wrapper.root.textContent).not.toContain(
+      '按标本 -> 蜡块 -> 玻片分层展示',
+    );
+    expect(wrapper.root.textContent).not.toContain(
+      '保留当前报告、诊断任务、版本链、修订、会诊与医嘱链路',
+    );
+    expect(wrapper.root.textContent).not.toContain('SIGNED');
+    expect(wrapper.root.textContent).not.toContain('IN_DIAGNOSIS');
+    expect(wrapper.root.textContent).not.toContain('RECEIVED');
+    expect(wrapper.root.textContent).not.toContain('PASS');
     expect(wrapper.root.textContent).not.toContain('取消');
+
+    wrapper.unmount();
+  });
+
+  it('updates the tracking route query when searching by pathology number', async () => {
+    const wrapper = await mountView();
+    const input = wrapper.root.querySelector('input');
+    const buttons = Array.from(wrapper.root.querySelectorAll('button'));
+    const searchButton = buttons.find(
+      (button) => button.textContent?.trim() === '查询',
+    );
+
+    expect(input).toBeTruthy();
+    expect(searchButton).toBeTruthy();
+
+    input!.value = 'BL202605240003';
+    input!.dispatchEvent(new Event('input', { bubbles: true }));
+    await flush();
+
+    searchButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flush();
+
+    expect(mockRouter.replace).toHaveBeenCalledWith({
+      path: '/doctor-workflow/tracking',
+      query: {
+        caseId: 'BL202605240003',
+      },
+    });
+    expect(getCaseLifecycleTrackingMock).not.toHaveBeenCalled();
 
     wrapper.unmount();
   });

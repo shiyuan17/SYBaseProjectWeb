@@ -32,6 +32,7 @@ import type {
   MedicalOrderPackageView,
   MedicalOrderPagedResult,
   PathologyReportDraft,
+  PathologyReportActionRequest,
   PathologyReportOperationResult,
   PendingDiagnosticTaskPage,
   PendingDiagnosticTaskQuery,
@@ -679,7 +680,7 @@ export async function savePathologyReportDraft(
 
 export async function submitPathologyReport(
   reportId: string,
-  data: DiagnosticTaskActionRequest,
+  data: PathologyReportActionRequest,
 ) {
   return requestClient.post<PathologyReportOperationResult>(
     `/v1/pathology-reports/${reportId}/submit`,
@@ -689,7 +690,7 @@ export async function submitPathologyReport(
 
 export async function reviewPathologyReport(
   reportId: string,
-  data: DiagnosticTaskActionRequest,
+  data: PathologyReportActionRequest,
 ) {
   return requestClient.post<PathologyReportOperationResult>(
     `/v1/pathology-reports/${reportId}/review`,
@@ -709,7 +710,7 @@ export async function rejectPathologyReport(
 
 export async function signPathologyReport(
   reportId: string,
-  data: DiagnosticTaskActionRequest,
+  data: PathologyReportActionRequest,
 ) {
   return requestClient.post<PathologyReportOperationResult>(
     `/v1/pathology-reports/${reportId}/sign`,
@@ -719,7 +720,7 @@ export async function signPathologyReport(
 
 export async function publishPathologyReport(
   reportId: string,
-  data: DiagnosticTaskActionRequest,
+  data: PathologyReportActionRequest,
 ) {
   return requestClient.post<PathologyReportOperationResult>(
     `/v1/pathology-reports/${reportId}/publish`,

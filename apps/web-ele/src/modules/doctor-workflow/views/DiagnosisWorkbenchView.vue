@@ -12,7 +12,7 @@ import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
-import { useAccessStore, useUserStore } from '@vben/stores';
+import { useAccessStore } from '@vben/stores';
 
 import { ElAlert, ElButton, ElMessage, ElOption, ElSelect } from 'element-plus';
 
@@ -63,7 +63,6 @@ const diagnosisWorkbenchPaneMinWidths = {
 const diagnosisWorkbenchResizerWidth = 10;
 const diagnosisWorkbenchResizeStep = 2;
 const accessStore = useAccessStore();
-const userStore = useUserStore();
 
 const route = useRoute();
 const router = useRouter();
@@ -151,17 +150,27 @@ const selectedCapturedImages = computed(() =>
     : [],
 );
 const canCaptureDiagnosisImage = computed(() => Boolean(selectedCaseId.value));
+const currentReportStatus = computed(
+  () => workbench.value?.currentReport?.reportStatus ?? null,
+);
+const canEditCurrentDraft = computed(
+  () => !currentReportStatus.value || currentReportStatus.value === 'DRAFT',
+);
 const canSaveDraft = computed(() =>
-  accessStore.accessCodes.includes(M4_PERMISSION_CODES.REPORT_CREATE),
+  accessStore.accessCodes.includes(M4_PERMISSION_CODES.REPORT_CREATE) &&
+  canEditCurrentDraft.value,
 );
 const canSubmitReport = computed(() =>
-  accessStore.accessCodes.includes(M4_PERMISSION_CODES.REPORT_SUBMIT),
+  accessStore.accessCodes.includes(M4_PERMISSION_CODES.REPORT_SUBMIT) &&
+  canEditCurrentDraft.value,
 );
 const canReviewReport = computed(() =>
-  accessStore.accessCodes.includes(M4_PERMISSION_CODES.REPORT_REVIEW),
+  accessStore.accessCodes.includes(M4_PERMISSION_CODES.REPORT_REVIEW) &&
+  currentReportStatus.value === 'SUBMITTED',
 );
 const canSignReport = computed(() =>
-  accessStore.accessCodes.includes(M4_PERMISSION_CODES.REPORT_SIGN),
+  accessStore.accessCodes.includes(M4_PERMISSION_CODES.REPORT_SIGN) &&
+  currentReportStatus.value === 'REVIEWED',
 );
 const workstationGridStyle = computed(() => ({
   gridTemplateColumns: `minmax(${diagnosisWorkbenchPaneMinWidths.queue}px, ${paneWidths.queue}fr) ${diagnosisWorkbenchResizerWidth}px minmax(${diagnosisWorkbenchPaneMinWidths.report}px, ${paneWidths.report}fr) ${diagnosisWorkbenchResizerWidth}px minmax(${diagnosisWorkbenchPaneMinWidths.materials}px, ${paneWidths.materials}fr)`,
@@ -425,22 +434,12 @@ function handleReportDraftChange(draft: DiagnosisWorkbenchReportDraftValue) {
   reportDraftValue.value = draft;
 }
 
-function getOperatorName() {
-  return userStore.userInfo?.realName?.trim() || '当前医生';
-}
-
-function getOperatorUserId() {
-  return userStore.userInfo?.userId?.trim() || undefined;
-}
-
 function buildDraftPayload() {
   return {
     clinicalDiagnosis: reportDraftValue.value.clinicalDiagnosis?.trim() || '',
     finalDiagnosis: reportDraftValue.value.finalDiagnosis?.trim() || '',
     grossExam: reportDraftValue.value.grossExam?.trim() || '',
     microscopicExam: reportDraftValue.value.microscopicExam?.trim() || '',
-    operatorName: getOperatorName(),
-    operatorUserId: getOperatorUserId(),
     richTextContent: reportDraftValue.value.richTextContent?.trim() || '',
   };
 }
@@ -463,9 +462,41 @@ async function ensureWorkbenchReport() {
   return created.reportId;
 }
 
+function getReportActionBlockReason(
+  action: 'review' | 'save' | 'sign' | 'submit',
+) {
+  const reportStatus = currentReportStatus.value;
+  if (!reportStatus) {
+    return null;
+  }
+  switch (action) {
+    case 'review': {
+      return reportStatus === 'SUBMITTED'
+        ? null
+        : '当前报告未处于已提交状态，不能执行复核';
+    }
+    case 'save':
+    case 'submit': {
+      return reportStatus === 'DRAFT'
+        ? null
+        : '当前报告不是可编辑草稿，不能执行暂存或初步';
+    }
+    case 'sign': {
+      return reportStatus === 'REVIEWED'
+        ? null
+        : '当前报告未处于已复核状态，不能执行签发';
+    }
+  }
+}
+
 async function runReportAction(action: 'review' | 'save' | 'sign' | 'submit') {
   if (!workbench.value) {
     ElMessage.warning('请先选择病例');
+    return;
+  }
+  const blockedReason = getReportActionBlockReason(action);
+  if (blockedReason) {
+    ElMessage.warning(blockedReason);
     return;
   }
 
@@ -474,10 +505,7 @@ async function runReportAction(action: 'review' | 'save' | 'sign' | 'submit') {
     const reportId = await ensureWorkbenchReport();
     switch (action) {
       case 'review': {
-        await reviewPathologyReport(reportId, {
-          operatorName: getOperatorName(),
-          operatorUserId: getOperatorUserId(),
-        });
+        await reviewPathologyReport(reportId, {});
         ElMessage.success('报告已复核');
         break;
       }
@@ -487,10 +515,7 @@ async function runReportAction(action: 'review' | 'save' | 'sign' | 'submit') {
         break;
       }
       case 'sign': {
-        await signPathologyReport(reportId, {
-          operatorName: getOperatorName(),
-          operatorUserId: getOperatorUserId(),
-        });
+        await signPathologyReport(reportId, {});
         const latestReportVersions = await listCaseReportVersions(
           workbench.value.caseId,
         );
@@ -511,10 +536,7 @@ async function runReportAction(action: 'review' | 'save' | 'sign' | 'submit') {
       }
       case 'submit': {
         await savePathologyReportDraft(reportId, buildDraftPayload());
-        await submitPathologyReport(reportId, {
-          operatorName: getOperatorName(),
-          operatorUserId: getOperatorUserId(),
-        });
+        await submitPathologyReport(reportId, {});
         ElMessage.success('报告已提交初步');
         break;
       }
@@ -717,58 +739,62 @@ onBeforeUnmount(() => {
         @search="handleSearch"
         @update:keyword="filters.pathologyNo = $event"
         @update:task-type="filters.taskType = $event"
-      />
-
-      <section
-        class="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card px-4 py-3 shadow-sm"
       >
-        <ElButton
-          :disabled="reportOperating || !canSaveDraft"
-          data-testid="workbench-report-save"
-          @click="runReportAction('save')"
-        >
-          暂存
-        </ElButton>
-        <ElButton
-          :disabled="reportOperating || !canSubmitReport"
-          data-testid="workbench-report-submit"
-          type="primary"
-          @click="runReportAction('submit')"
-        >
-          初步
-        </ElButton>
-        <ElButton
-          :disabled="reportOperating || !canReviewReport"
-          data-testid="workbench-report-review"
-          type="success"
-          @click="runReportAction('review')"
-        >
-          复核
-        </ElButton>
-        <div class="flex shrink-0 items-center gap-2">
-          <ElButton
-            :disabled="reportOperating || !canSignReport"
-            data-testid="workbench-report-sign"
-            type="warning"
-            @click="runReportAction('sign')"
+        <template #actions>
+          <section
+            class="diagnosis-workbench-toolbar-actions flex min-w-0 w-full flex-wrap items-center justify-start gap-2 xl:w-auto xl:justify-end"
           >
-            签发
-          </ElButton>
-          <ElSelect
-            v-model="reportIssueMode"
-            class="w-[150px] shrink-0"
-            data-testid="workbench-report-issue-mode"
-            size="small"
-          >
-            <ElOption
-              v-for="option in issueModeOptions"
-              :key="option.value"
-              :label="option.label"
-              :value="option.value"
-            />
-          </ElSelect>
-        </div>
-      </section>
+            <ElButton
+              :disabled="reportOperating || !canSaveDraft"
+              data-testid="workbench-report-save"
+              @click="runReportAction('save')"
+            >
+              暂存
+            </ElButton>
+            <ElButton
+              :disabled="reportOperating || !canSubmitReport"
+              data-testid="workbench-report-submit"
+              type="primary"
+              @click="runReportAction('submit')"
+            >
+              初步
+            </ElButton>
+            <ElButton
+              :disabled="reportOperating || !canReviewReport"
+              data-testid="workbench-report-review"
+              type="success"
+              @click="runReportAction('review')"
+            >
+              复核
+            </ElButton>
+            <div
+              class="diagnosis-workbench-toolbar-actions__issue flex min-w-0 flex-wrap items-center gap-2"
+            >
+              <ElButton
+                :disabled="reportOperating || !canSignReport"
+                data-testid="workbench-report-sign"
+                type="warning"
+                @click="runReportAction('sign')"
+              >
+                签发
+              </ElButton>
+              <ElSelect
+                v-model="reportIssueMode"
+                class="diagnosis-workbench-toolbar-actions__issue-select shrink"
+                data-testid="workbench-report-issue-mode"
+                size="small"
+              >
+                <ElOption
+                  v-for="option in issueModeOptions"
+                  :key="option.value"
+                  :label="option.label"
+                  :value="option.value"
+                />
+              </ElSelect>
+            </div>
+          </section>
+        </template>
+      </DiagnosisWorkbenchToolbar>
 
       <div
         ref="workstationLayoutRef"
@@ -910,8 +936,30 @@ onBeforeUnmount(() => {
   border-radius: 6px;
 }
 
-:deep(.el-select[data-testid='workbench-report-issue-mode']) {
-  min-width: 150px;
+:deep(.diagnosis-workbench-toolbar-actions .el-button + .el-button) {
+  margin-left: 0;
+}
+
+.diagnosis-workbench-toolbar-actions__issue {
+  max-width: 100%;
+}
+
+:deep(.diagnosis-workbench-toolbar-actions__issue-select.el-select) {
+  width: 150px;
+  min-width: 120px;
+  max-width: 150px;
+}
+
+@media (width < 1280px) {
+  .diagnosis-workbench-toolbar-actions__issue {
+    width: 100%;
+  }
+
+  :deep(.diagnosis-workbench-toolbar-actions__issue-select.el-select) {
+    flex: 1 1 120px;
+    width: auto;
+    max-width: 100%;
+  }
 }
 
 @media (width < 1280px) {

@@ -959,6 +959,25 @@ describe('DiagnosisWorkbenchView', () => {
     wrapper.unmount();
   }, 15_000);
 
+  it('disables report actions that do not match the current report status', async () => {
+    const wrapper = await mountView();
+
+    expect(findByTestId('workbench-report-save').hasAttribute('disabled')).toBe(
+      true,
+    );
+    expect(
+      findByTestId('workbench-report-submit').hasAttribute('disabled'),
+    ).toBe(true);
+    expect(
+      findByTestId('workbench-report-review').hasAttribute('disabled'),
+    ).toBe(true);
+    expect(findByTestId('workbench-report-sign').hasAttribute('disabled')).toBe(
+      true,
+    );
+
+    wrapper.unmount();
+  });
+
   it('resizes workstation panes by dragging the split handles', async () => {
     const wrapper = await mountView();
     const layout = findByTestId('diagnosis-workbench-layout');
@@ -1340,6 +1359,7 @@ describe('DiagnosisWorkbenchView', () => {
     expect(orderPaneText).toContain('医嘱项目待选列表');
     expect(orderPaneText).toContain('执行收费');
     expect(orderPaneText).toContain('收费管理');
+    expect(orderPaneText).not.toContain('删除');
     expect(orderPaneText).toContain('执行中');
     expect(orderPaneText).toContain('待收费');
     expect(orderPaneText).not.toContain('IN_PROGRESS');
@@ -1612,14 +1632,17 @@ describe('DiagnosisWorkbenchView', () => {
     wrapper.unmount();
   });
 
-  it('shows why submitting medical orders is disabled before adding drafts', async () => {
+  it('keeps submit button disabled before adding medical order drafts', async () => {
     mockAccessStore.accessCodes = [
       'PERM_M4_WORKBENCH_QUERY',
       'PERM_M4_MEDICAL_ORDER_CREATE',
     ];
     const wrapper = await mountView();
 
-    expect(getOrderPaneText()).toContain('请先从下方待选列表添加医嘱草稿');
+    const submitButton = findButton('提交医嘱');
+    expect(submitButton).toBeTruthy();
+    expect(submitButton.hasAttribute('disabled')).toBe(true);
+    expect(getOrderPaneText()).not.toContain('请先从下方待选列表添加医嘱草稿');
 
     wrapper.unmount();
   });
@@ -1791,6 +1814,21 @@ describe('DiagnosisWorkbenchView', () => {
     expect(documentCloseMock).toHaveBeenCalled();
     expect(focusMock).toHaveBeenCalled();
     expect(printMock).toHaveBeenCalled();
+
+    wrapper.unmount();
+  });
+
+  it('blocks submitting when the current report is not a draft', async () => {
+    const wrapper = await mountView();
+
+    expect(findByTestId('workbench-report-submit').hasAttribute('disabled')).toBe(
+      true,
+    );
+    findByTestId('workbench-report-submit').click();
+    await flushAsyncWork();
+
+    expect(savePathologyReportDraftMock).not.toHaveBeenCalled();
+    expect(submitPathologyReportMock).not.toHaveBeenCalled();
 
     wrapper.unmount();
   });

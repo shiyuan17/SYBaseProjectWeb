@@ -43,12 +43,43 @@ const APPLICATION_TYPE_LABELS: Record<string, string> = {
   TECHNICAL_ORDER: '技术医嘱',
 };
 
+const CASE_STATUS_LABELS: Record<string, string> = {
+  ARCHIVED: '已归档',
+  CANCELLED: '已取消',
+  CLOSED: '已闭环',
+  COLLECTION: '标本采集',
+  DEHYDRATION: '脱水中',
+  DEHYDRATION_PENDING: '待脱水',
+  DIAGNOSING: '诊断中',
+  DIAGNOSIS_PENDING: '待诊断',
+  EMBEDDING: '包埋中',
+  FIXATION: '固定中',
+  GROSSING_PENDING: '待取材',
+  IN_DIAGNOSIS: '诊断中',
+  IN_TRANSIT: '转运中',
+  PUBLISHED: '已发布',
+  RECEIVED: '已接收',
+  REGISTERED: '已登记',
+  REPORT_PENDING_REVIEW: '待审核',
+  REPORT_PUBLISHED: '已发布报告',
+  REPORTING: '报告中',
+  REVIEWED: '已审核',
+  REVIEWING: '审核中',
+  SAMPLING: '取材中',
+  SIGNED: '已签发',
+  SLICING: '切片中',
+  STAINING: '染色中',
+  SUBMITTED: '已提交',
+};
+
 const REPORT_STATUS_LABELS: Record<string, string> = {
+  AMENDED: '已修订',
   DRAFT: '草稿',
   PUBLISHED: '已发布',
   REVIEWED: '已审核',
   SIGNED: '已签发',
   SUBMITTED: '已提交',
+  WITHDRAWN: '已撤回',
 };
 
 const REVISION_STATUS_LABELS: Record<string, string> = {
@@ -113,6 +144,59 @@ const LOAN_STATUS_LABELS: Record<string, string> = {
   RETURNED: '已归还',
 };
 
+const SPECIMEN_STATUS_LABELS: Record<string, string> = {
+  CHECKED_IN: '已入库',
+  FIXED: '固定完成',
+  FIXING: '固定中',
+  IN_TRANSIT: '转运中',
+  RECEIVED: '已接收',
+  REGISTERED: '已登记',
+  REJECTED: '已拒收',
+  RETURNED: '已退回',
+  VERIFIED: '已核对',
+  VERIFYING: '核对中',
+};
+
+const RECEIPT_STATUS_LABELS: Record<string, string> = {
+  PARTIALLY_RECEIVED: '部分接收',
+  RECEIVED: '已接收',
+  REJECTED: '已拒收',
+  RETURNED: '已退回',
+};
+
+const SLIDE_STATUS_LABELS: Record<string, string> = {
+  ARCHIVED: '已归档',
+  COMPLETED: '已完成',
+  CREATED: '待处理',
+  PENDING: '待处理',
+  PRINTED: '已打印',
+  QC_PENDING: '待质控',
+  READY: '待处理',
+  REWORKED: '已返工',
+  SLICED: '已切片',
+  STAINED: '已染色',
+};
+
+const QUALITY_STATUS_LABELS: Record<string, string> = {
+  CREATED: '待质控',
+  FAIL: '不合格',
+  FAILED: '不合格',
+  PASS: '合格',
+  PASSED: '合格',
+  PENDING: '待质控',
+  QUALIFIED: '合格',
+  REWORK_REQUIRED: '需返工',
+  UNQUALIFIED: '不合格',
+};
+
+const REWORK_STATUS_LABELS: Record<string, string> = {
+  COMPLETED: '已返工',
+  CREATED: '已发起',
+  IN_PROGRESS: '返工中',
+  PENDING: '待返工',
+  REWORK_REQUIRED: '需返工',
+};
+
 const MEDICAL_ORDER_STATUS_LABELS: Record<string, string> = {
   ACCEPTED: '已接收',
   CANCELLED: '已取消',
@@ -128,6 +212,7 @@ const MEDICAL_ORDER_TYPE_LABELS: Record<string, string> = {
   OTHER: '其他',
   RE_STAIN: '重染',
   ROUTINE: '常规',
+  SPECIAL: '特殊染色',
   SPECIAL_STAIN: '特殊染色',
 };
 
@@ -174,6 +259,13 @@ export function formatApplicationType(value?: null | string) {
     return EMPTY_TEXT;
   }
   return APPLICATION_TYPE_LABELS[normalizedValue] ?? value;
+}
+
+export function formatCaseStatus(value?: null | string) {
+  if (!value) {
+    return EMPTY_TEXT;
+  }
+  return CASE_STATUS_LABELS[value] ?? value;
 }
 
 export function formatReportStatus(value?: null | string) {
@@ -230,6 +322,41 @@ export function formatLoanStatus(value?: null | string) {
     return EMPTY_TEXT;
   }
   return LOAN_STATUS_LABELS[value] ?? value;
+}
+
+export function formatSpecimenStatus(value?: null | string) {
+  if (!value) {
+    return EMPTY_TEXT;
+  }
+  return SPECIMEN_STATUS_LABELS[value] ?? value;
+}
+
+export function formatReceiptStatus(value?: null | string) {
+  if (!value) {
+    return EMPTY_TEXT;
+  }
+  return RECEIPT_STATUS_LABELS[value] ?? value;
+}
+
+export function formatSlideStatus(value?: null | string) {
+  if (!value) {
+    return EMPTY_TEXT;
+  }
+  return SLIDE_STATUS_LABELS[value] ?? value;
+}
+
+export function formatQualityStatus(value?: null | string) {
+  if (!value) {
+    return EMPTY_TEXT;
+  }
+  return QUALITY_STATUS_LABELS[value] ?? value;
+}
+
+export function formatReworkStatus(value?: null | string) {
+  if (!value) {
+    return EMPTY_TEXT;
+  }
+  return REWORK_STATUS_LABELS[value] ?? value;
 }
 
 export function formatMedicalOrderStatus(value?: null | string) {

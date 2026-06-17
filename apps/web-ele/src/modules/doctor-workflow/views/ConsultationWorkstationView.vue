@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type {
+  ConsultationOperationResult,
   ConsultationParticipantInput,
   ConsultationSummary,
   DiagnosticWorkbenchView,
@@ -12,8 +13,6 @@ import { useAccessStore, useUserStore } from '@vben/stores';
 
 import {
   ElButton,
-  ElDescriptions,
-  ElDescriptionsItem,
   ElDialog,
   ElDropdown,
   ElDropdownItem,
@@ -64,15 +63,14 @@ const operating = ref(false);
 const pageError = ref('');
 const workbench = ref<DiagnosticWorkbenchView | null>(null);
 const participants = ref<ConsultationParticipantInput[]>([]);
-const lastResult = ref<null | {
-  caseId?: null | string;
-  consultationId?: null | string;
-  status?: null | string;
-}>(null);
+const selectedRows = ref<ConsultationRow[]>([]);
+const lastResult = ref<ConsultationOperationResult | null>(null);
 
 const createDialogVisible = ref(false);
 const commentDialogVisible = ref(false);
 const completeDialogVisible = ref(false);
+const batchCommentDialogVisible = ref(false);
+const batchCompleteDialogVisible = ref(false);
 const activeCreateRow = ref<Extract<
   ConsultationRow,
   { rowType: 'current-case' }
@@ -108,6 +106,20 @@ const commentForm = reactive({
 
 const completeForm = reactive({
   consultationId: '',
+  operatorName: '',
+  opinion: '',
+  remarks: '',
+  terminalCode: '',
+});
+
+const batchCommentForm = reactive({
+  operatorName: '',
+  opinion: '',
+  remarks: '',
+  terminalCode: '',
+});
+
+const batchCompleteForm = reactive({
   operatorName: '',
   opinion: '',
   remarks: '',
@@ -164,6 +176,15 @@ const participantOptions = computed(() => {
   return activeConsultationRow.value?.participants ?? [];
 });
 
+const selectedConsultationRows = computed(() =>
+  selectedRows.value.filter(
+    (row): row is Extract<ConsultationRow, { rowType: 'consultation' }> =>
+      row.rowType === 'consultation',
+  ),
+);
+
+const hasSelection = computed(() => selectedRows.value.length > 0);
+
 function getDefaultOperatorName() {
   return userStore.userInfo?.realName?.trim() || '';
 }
@@ -191,8 +212,10 @@ async function loadWorkbench() {
   pageError.value = '';
   try {
     workbench.value = await getDiagnosticWorkbench(normalizedCaseIdentifier);
+    selectedRows.value = [];
   } catch (error) {
     workbench.value = null;
+    selectedRows.value = [];
     pageError.value = getDoctorWorkflowPageErrorMessage(error);
   } finally {
     loading.value = false;
@@ -204,6 +227,7 @@ function handleReset() {
   queryForm.status = '';
   pageError.value = '';
   workbench.value = null;
+  selectedRows.value = [];
 }
 
 function addParticipant() {
@@ -257,6 +281,20 @@ function resolvePreferredParticipant(
   );
 }
 
+function resolveCurrentUserParticipant(
+  consultation: Extract<ConsultationRow, { rowType: 'consultation' }>,
+) {
+  const currentUserId = getCurrentUserId();
+  if (!currentUserId) {
+    return null;
+  }
+  return (
+    consultation.participants?.find(
+      (item) => item.participantUserId === currentUserId,
+    ) ?? null
+  );
+}
+
 function openCommentDialog(
   row: Extract<ConsultationRow, { rowType: 'consultation' }>,
 ) {
@@ -281,6 +319,34 @@ function openCompleteDialog(
   completeForm.remarks = '';
   completeForm.terminalCode = '';
   completeDialogVisible.value = true;
+}
+
+function openBatchCommentDialog() {
+  if (!hasSelection.value) {
+    ElMessage.warning('请先勾选会诊列表');
+    return;
+  }
+  batchCommentForm.operatorName = getDefaultOperatorName();
+  batchCommentForm.opinion = '';
+  batchCommentForm.remarks = '';
+  batchCommentForm.terminalCode = '';
+  batchCommentDialogVisible.value = true;
+}
+
+function openBatchCompleteDialog() {
+  if (!hasSelection.value) {
+    ElMessage.warning('请先勾选会诊列表');
+    return;
+  }
+  batchCompleteForm.operatorName = getDefaultOperatorName();
+  batchCompleteForm.opinion = '';
+  batchCompleteForm.remarks = '';
+  batchCompleteForm.terminalCode = '';
+  batchCompleteDialogVisible.value = true;
+}
+
+function handleSelectionChange(rows: ConsultationRow[]) {
+  selectedRows.value = rows;
 }
 
 function handleParticipantChange(participantId: string) {
@@ -421,6 +487,133 @@ async function submitComplete() {
     operating.value = false;
   }
 }
+
+function buildBatchResultMessage(
+  actionLabel: string,
+  successCount: number,
+  skippedReasons: string[],
+) {
+  const skippedCount = skippedReasons.length;
+  if (successCount === 0 && skippedCount === 0) {
+    return `${actionLabel}未执行`;
+  }
+  const messageParts = [`${actionLabel}完成 ${successCount} 条`];
+  if (skippedCount > 0) {
+    messageParts.push(
+      `跳过 ${skippedCount} 条`,
+      `原因：${[...new Set(skippedReasons)].join('；')}`,
+    );
+  }
+  return messageParts.join('，');
+}
+
+async function submitBatchComment() {
+  if (!batchCommentForm.opinion.trim()) {
+    ElMessage.warning('请填写意见');
+    return;
+  }
+  if (!ensureOperator(batchCommentForm.operatorName)) {
+    return;
+  }
+
+  operating.value = true;
+  const skippedReasons: string[] = [];
+  let successCount = 0;
+
+  try {
+    for (const row of selectedRows.value) {
+      if (row.rowType === 'current-case') {
+        skippedReasons.push('当前病例行不可提交参与人意见');
+        continue;
+      }
+      if (row.status === 'COMPLETED') {
+        skippedReasons.push('已完成会诊不可重复提交参与人意见');
+        continue;
+      }
+      if (!row.consultationId?.trim()) {
+        skippedReasons.push('缺少会诊ID');
+        continue;
+      }
+
+      const participant = resolveCurrentUserParticipant(row);
+      if (!participant?.participantId?.trim()) {
+        skippedReasons.push('当前登录人不在会诊参与人列表中');
+        continue;
+      }
+
+      lastResult.value = await commentConsultationParticipant(
+        row.consultationId.trim(),
+        participant.participantId.trim(),
+        {
+          operatorName: batchCommentForm.operatorName.trim(),
+          opinion: batchCommentForm.opinion.trim(),
+          remarks: batchCommentForm.remarks.trim() || undefined,
+          terminalCode: batchCommentForm.terminalCode.trim() || undefined,
+        },
+      );
+      successCount += 1;
+    }
+
+    ElMessage.success(
+      buildBatchResultMessage('批量参与人意见提交', successCount, skippedReasons),
+    );
+    batchCommentDialogVisible.value = false;
+    await loadWorkbench();
+  } catch (error) {
+    ElMessage.error(getDoctorWorkflowPageErrorMessage(error));
+  } finally {
+    operating.value = false;
+  }
+}
+
+async function submitBatchComplete() {
+  if (!batchCompleteForm.opinion.trim()) {
+    ElMessage.warning('请填写主持意见');
+    return;
+  }
+  if (!ensureOperator(batchCompleteForm.operatorName)) {
+    return;
+  }
+
+  operating.value = true;
+  const skippedReasons: string[] = [];
+  let successCount = 0;
+
+  try {
+    for (const row of selectedRows.value) {
+      if (row.rowType === 'current-case') {
+        skippedReasons.push('当前病例行不可执行完成会诊');
+        continue;
+      }
+      if (row.status === 'COMPLETED') {
+        skippedReasons.push('已完成会诊不可重复完成');
+        continue;
+      }
+      if (!row.consultationId?.trim()) {
+        skippedReasons.push('缺少会诊ID');
+        continue;
+      }
+
+      lastResult.value = await completeConsultation(row.consultationId.trim(), {
+        operatorName: batchCompleteForm.operatorName.trim(),
+        opinion: batchCompleteForm.opinion.trim(),
+        remarks: batchCompleteForm.remarks.trim() || undefined,
+        terminalCode: batchCompleteForm.terminalCode.trim() || undefined,
+      });
+      successCount += 1;
+    }
+
+    ElMessage.success(
+      buildBatchResultMessage('批量完成会诊', successCount, skippedReasons),
+    );
+    batchCompleteDialogVisible.value = false;
+    await loadWorkbench();
+  } catch (error) {
+    ElMessage.error(getDoctorWorkflowPageErrorMessage(error));
+  } finally {
+    operating.value = false;
+  }
+}
 </script>
 
 <template>
@@ -463,6 +656,20 @@ async function submitComplete() {
               查询
             </ElButton>
             <ElButton @click="handleReset">重置</ElButton>
+            <ElButton
+              v-if="canCommentConsultation"
+              :disabled="!hasSelection"
+              @click="openBatchCommentDialog"
+            >
+              参与人意见
+            </ElButton>
+            <ElButton
+              v-if="canCompleteConsultation"
+              :disabled="!hasSelection"
+              @click="openBatchCompleteDialog"
+            >
+              完成会诊
+            </ElButton>
           </ElFormItem>
         </ElForm>
       </WorkflowSectionCard>
@@ -477,7 +684,14 @@ async function submitComplete() {
           description="当前病例暂无会诊数据"
         />
         <ElEmpty v-else-if="pageError" :description="pageError" />
-        <ElTable v-else v-loading="loading" :data="consultationRows" border>
+        <ElTable
+          v-else
+          v-loading="loading"
+          :data="consultationRows"
+          border
+          @selection-change="handleSelectionChange"
+        >
+          <ElTableColumn type="selection" width="48" />
           <ElTableColumn label="行类型" min-width="110">
             <template #default="{ row }">
               {{ row.rowType === 'current-case' ? '当前病例' : '会诊记录' }}
@@ -618,7 +832,6 @@ async function submitComplete() {
         </ElDescriptions>
       </WorkflowSectionCard>
     </div>
-
     <ElDialog v-model="createDialogVisible" title="发起会诊" width="720px">
       <ElForm label-width="96px">
         <ElFormItem label="病例ID">
@@ -746,6 +959,49 @@ async function submitComplete() {
       </template>
     </ElDialog>
 
+    <ElDialog
+      v-model="batchCommentDialogVisible"
+      title="批量参与人意见"
+      width="560px"
+    >
+      <ElForm label-width="96px">
+        <ElFormItem label="已选会诊">
+          <ElInput :model-value="String(selectedConsultationRows.length)" disabled />
+        </ElFormItem>
+        <ElFormItem label="意见" required>
+          <ElInput
+            v-model="batchCommentForm.opinion"
+            :rows="4"
+            placeholder="请输入参与人意见"
+            type="textarea"
+          />
+        </ElFormItem>
+        <ElFormItem label="操作人" required>
+          <ElInput v-model="batchCommentForm.operatorName" />
+        </ElFormItem>
+        <ElFormItem label="终端编码">
+          <ElInput v-model="batchCommentForm.terminalCode" />
+        </ElFormItem>
+        <ElFormItem label="备注">
+          <ElInput
+            v-model="batchCommentForm.remarks"
+            :rows="3"
+            type="textarea"
+          />
+        </ElFormItem>
+      </ElForm>
+      <template #footer>
+        <ElButton @click="batchCommentDialogVisible = false">取消</ElButton>
+        <ElButton
+          :loading="operating"
+          type="primary"
+          @click="submitBatchComment"
+        >
+          保存意见
+        </ElButton>
+      </template>
+    </ElDialog>
+
     <ElDialog v-model="completeDialogVisible" title="完成会诊" width="560px">
       <ElForm label-width="96px">
         <ElFormItem label="会诊ID">
@@ -767,6 +1023,49 @@ async function submitComplete() {
       <template #footer>
         <ElButton @click="completeDialogVisible = false">取消</ElButton>
         <ElButton :loading="operating" type="success" @click="submitComplete">
+          完成会诊
+        </ElButton>
+      </template>
+    </ElDialog>
+
+    <ElDialog
+      v-model="batchCompleteDialogVisible"
+      title="批量完成会诊"
+      width="560px"
+    >
+      <ElForm label-width="96px">
+        <ElFormItem label="已选会诊">
+          <ElInput :model-value="String(selectedConsultationRows.length)" disabled />
+        </ElFormItem>
+        <ElFormItem label="主持意见" required>
+          <ElInput
+            v-model="batchCompleteForm.opinion"
+            :rows="4"
+            placeholder="请输入主持意见"
+            type="textarea"
+          />
+        </ElFormItem>
+        <ElFormItem label="操作人" required>
+          <ElInput v-model="batchCompleteForm.operatorName" />
+        </ElFormItem>
+        <ElFormItem label="终端编码">
+          <ElInput v-model="batchCompleteForm.terminalCode" />
+        </ElFormItem>
+        <ElFormItem label="备注">
+          <ElInput
+            v-model="batchCompleteForm.remarks"
+            :rows="3"
+            type="textarea"
+          />
+        </ElFormItem>
+      </ElForm>
+      <template #footer>
+        <ElButton @click="batchCompleteDialogVisible = false">取消</ElButton>
+        <ElButton
+          :loading="operating"
+          type="success"
+          @click="submitBatchComplete"
+        >
           完成会诊
         </ElButton>
       </template>

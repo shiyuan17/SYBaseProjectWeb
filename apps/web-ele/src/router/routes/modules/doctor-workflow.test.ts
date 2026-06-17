@@ -56,14 +56,19 @@ describe('doctor workflow routes', () => {
     expect(workbenchRoute?.meta?.keepAlive).toBe(true);
     expect(reportRoute?.path).toBe('/doctor-workflow/report');
     expect(reportRoute?.meta?.keepAlive).toBe(true);
+    expect(reportRoute?.meta?.fullPathKey).toBe(false);
     expect(trackingRoute?.path).toBe('/doctor-workflow/tracking');
     expect(trackingRoute?.meta?.keepAlive).toBe(true);
+    expect(trackingRoute?.meta?.fullPathKey).toBe(false);
     expect(medicalOrderRoute?.path).toBe('/doctor-workflow/medical-orders');
     expect(medicalOrderRoute?.meta?.keepAlive).toBe(true);
+    expect(medicalOrderRoute?.meta?.fullPathKey).toBe(false);
     expect(revisionRoute?.path).toBe('/doctor-workflow/revision');
     expect(revisionRoute?.meta?.keepAlive).toBe(true);
+    expect(revisionRoute?.meta?.fullPathKey).toBe(false);
     expect(consultationRoute?.path).toBe('/doctor-workflow/consultation');
     expect(consultationRoute?.meta?.keepAlive).toBe(true);
+    expect(consultationRoute?.meta?.fullPathKey).toBe(false);
     expect(assignmentRoute?.meta?.authority).toEqual([
       M4_PERMISSION_CODES.DIAG_TASK_QUERY,
     ]);

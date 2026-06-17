@@ -90,6 +90,9 @@ const summaryCards = computed(() => [
             <strong class="text-sm text-foreground">{{ card.value }}</strong>
           </span>
         </div>
+        <div class="flex min-w-0 w-full justify-start xl:w-auto xl:justify-end">
+          <slot name="actions"></slot>
+        </div>
       </div>
 
       <div class="flex min-w-0 flex-col gap-2">
