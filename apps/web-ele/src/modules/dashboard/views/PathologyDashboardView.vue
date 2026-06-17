@@ -191,21 +191,13 @@ function returnToWorkspace() {
               <h2>近三年各技术指标合格率</h2>
             </div>
             <div class="chart-legend">
-              <span class="chart-legend__item"
-                ><span class="chart-legend__swatch"></span>规范化固定率</span
-              >
-              <span class="chart-legend__item"
-                ><span
+              <span class="chart-legend__item"><span class="chart-legend__swatch"></span>规范化固定率</span>
+              <span class="chart-legend__item"><span
                   class="chart-legend__swatch chart-legend__swatch--teal"
-                ></span
-                >HE染色切片优良率</span
-              >
-              <span class="chart-legend__item"
-                ><span
+                ></span>HE染色切片优良率</span>
+              <span class="chart-legend__item"><span
                   class="chart-legend__swatch chart-legend__swatch--soft"
-                ></span
-                >免疫组化</span
-              >
+                ></span>免疫组化</span>
             </div>
             <div class="bar-card-grid bar-card-grid--compact">
               <div
@@ -292,9 +284,7 @@ function returnToWorkspace() {
             <div class="report-summary">
               <div class="report-summary__meta">
                 <span>结构化报告类型</span>
-                <strong
-                  >{{ screenData.reportTypesSummary.totalKinds }} 种</strong
-                >
+                <strong>{{ screenData.reportTypesSummary.totalKinds }} 种</strong>
               </div>
               <div class="report-summary__meta">
                 <span>结构化报告工作量</span>
