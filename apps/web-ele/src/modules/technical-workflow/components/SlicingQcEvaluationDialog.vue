@@ -27,7 +27,7 @@ import {
   createSlideQcEvaluation,
 } from '../api/technical-workflow-service';
 import { getWorkflowPageErrorMessage } from '../utils/error';
-import { formatNullable } from '../utils/format';
+import { formatNullable, formatPatientIdDisplay } from '../utils/format';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -242,7 +242,12 @@ watch(
           {{ formatNullable(row?.patientName) }}
         </ElDescriptionsItem>
         <ElDescriptionsItem label="病人ID">
-          {{ formatNullable(row?.patientId) }}
+          {{
+            formatPatientIdDisplay(
+              row?.patientIdDisplay ?? null,
+              row?.patientId,
+            )
+          }}
         </ElDescriptionsItem>
         <ElDescriptionsItem label="玻片号">
           {{ formatNullable(row?.slideNo) }}

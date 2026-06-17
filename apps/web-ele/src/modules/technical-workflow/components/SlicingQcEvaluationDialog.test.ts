@@ -145,6 +145,7 @@ function createRow(overrides: Partial<SlicingWorkbenchRow> = {}) {
     mergedPrintGroup: false,
     pathologyNo: 'BL-001',
     patientId: 'P-001',
+    patientIdDisplay: '08305',
     patientName: '患者甲',
     printGroupId: null,
     selectable: true,
