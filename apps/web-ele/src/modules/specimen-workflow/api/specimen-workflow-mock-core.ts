@@ -751,6 +751,7 @@ export function mapApplicationListItem(
   application: RawApplication,
 ): ApplicationListItem {
   const specimens = getSpecimensByApplicationId(application.id);
+  const pathologyNo = normalizeText(application.pathologyNo) || null;
   const latestRegisteredSpecimen = specimens.toSorted((left, right) =>
     compareNullableDateDesc(left.registeredAt, right.registeredAt),
   )[0];
@@ -776,6 +777,7 @@ export function mapApplicationListItem(
     patientGender: application.patientGender,
     patientCheckStatus: application.patientCheckStatus ?? 'UNKNOWN',
     patientName: application.patientName,
+    pathologyNo,
     receiptAbnormalSummary: buildReceiptAbnormalSummary(specimens),
     registeredSpecimenCount: specimens.length,
     reportIssued: application.reportIssued ?? false,

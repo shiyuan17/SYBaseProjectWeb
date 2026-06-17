@@ -154,6 +154,7 @@ export interface ApplicationListQuery {
   dateFrom?: null | string;
   dateTo?: null | string;
   page: number;
+  pathologyNo?: null | string;
   patientName?: null | string;
   size: number;
   submittingDepartmentId?: null | string;

@@ -41,6 +41,7 @@ import {
   unbindSpecimenBarcode,
   updateApplication,
 } from './specimen-workflow-service';
+import { getMockState } from './specimen-workflow-mock-core';
 
 describe('specimen-workflow-service mock flow', () => {
   beforeEach(() => {
@@ -60,6 +61,21 @@ describe('specimen-workflow-service mock flow', () => {
     expect(detail.specimens).toHaveLength(2);
     expect(detail.receiptAbnormalSummary).toContain('退回');
     expect(detail.unreceivedCount).toBe(2);
+  });
+
+  it('filters the mock application list by pathology number', async () => {
+    const firstApplication = getMockState().applications[0];
+    firstApplication.pathologyNo = 'BL202606030001';
+
+    const page = await listApplications({
+      page: 1,
+      pathologyNo: 'BL202606030001',
+      size: 20,
+    });
+
+    expect(page.total).toBe(1);
+    expect(page.items[0]?.id).toBe(firstApplication.id);
+    expect(page.items[0]?.pathologyNo).toBe('BL202606030001');
   });
 
   it('looks up patient info by identifier in mock mode', async () => {

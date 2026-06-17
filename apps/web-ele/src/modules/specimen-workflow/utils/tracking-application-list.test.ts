@@ -102,6 +102,7 @@ describe('tracking application list helpers', () => {
         applicationNo: ' NO-1 ',
         dateRange: ['2026-05-01', '2026-05-31'],
         page: 2,
+        pathologyNo: ' BL-001 ',
         patientName: ' 张三 ',
         size: 20,
       }),
@@ -110,6 +111,7 @@ describe('tracking application list helpers', () => {
       dateFrom: '2026-05-01',
       dateTo: '2026-05-31',
       page: 2,
+      pathologyNo: 'BL-001',
       patientName: '张三',
       size: 20,
     });

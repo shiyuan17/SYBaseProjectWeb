@@ -15,7 +15,9 @@ import workflowEventsSeedRaw from '../../../../../../mock_data/specimen-workflow
 export type RawApplication = Omit<
   ApplicationDetailView,
   'recentEvents' | 'specimens'
->;
+> & {
+  pathologyNo?: null | string;
+};
 
 export type RawSpecimen = {
   applicationId: string;

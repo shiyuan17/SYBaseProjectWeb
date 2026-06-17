@@ -91,6 +91,7 @@ const filters = reactive({
   applicationNo: '',
   dateRange: [] as string[],
   page: 1,
+  pathologyNo: '',
   patientName: '',
   size: DEFAULT_PAGE_SIZE,
 });
@@ -148,6 +149,7 @@ function handleReset() {
   filters.applicationNo = '';
   filters.dateRange = [];
   filters.page = 1;
+  filters.pathologyNo = '';
   filters.patientName = '';
   filters.size = DEFAULT_PAGE_SIZE;
   void loadApplications();
@@ -218,7 +220,7 @@ watch(
 
     <WorkflowSectionCard
       title="筛选条件"
-      description="支持按申请单号、患者姓名和申请日期筛选。"
+      description="支持按申请单号、病理号、患者姓名和申请日期筛选。"
     >
       <ElForm label-width="92px">
         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -227,6 +229,14 @@ watch(
               v-model="filters.applicationNo"
               clearable
               placeholder="模糊搜索申请单号"
+              @keyup.enter="handleSearch"
+            />
+          </ElFormItem>
+          <ElFormItem label="病理号">
+            <ElInput
+              v-model="filters.pathologyNo"
+              clearable
+              placeholder="模糊搜索病理号"
               @keyup.enter="handleSearch"
             />
           </ElFormItem>

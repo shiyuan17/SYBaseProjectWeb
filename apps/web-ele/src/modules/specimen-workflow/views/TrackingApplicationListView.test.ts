@@ -99,6 +99,7 @@ function buildApplicationRow() {
     patientAge: '42',
     patientGender: 'F',
     patientName: '张三',
+    pathologyNo: 'BL202605220001',
     registeredSpecimenCount: 3,
     status: 'SUBMITTED',
     submissionDate: '2026-05-22',
@@ -298,8 +299,63 @@ describe('TrackingApplicationListView', () => {
     expect(root.textContent).not.toContain('申请类型');
     expect(root.textContent).not.toContain('表单状态');
     expect(root.textContent).toContain(
-      '支持按申请单号、患者姓名和申请日期筛选。',
+      '支持按申请单号、病理号、患者姓名和申请日期筛选。',
     );
+
+    app.unmount();
+  });
+
+  it('submits pathologyNo in the tracking application list query and clears it on reset', async () => {
+    mockListApplications
+      .mockResolvedValueOnce({
+        items: [buildApplicationRow()],
+        page: 1,
+        size: 20,
+        total: 1,
+      })
+      .mockResolvedValueOnce({
+        items: [buildApplicationRow()],
+        page: 1,
+        size: 20,
+        total: 1,
+      })
+      .mockResolvedValue({
+        items: [buildApplicationRow()],
+        page: 1,
+        size: 20,
+        total: 1,
+      });
+
+    const { app, root } = await mountView();
+
+    const pathologyNoInput = root.querySelectorAll('input')[1] as HTMLInputElement;
+    pathologyNoInput.value = 'BL20260522';
+    pathologyNoInput.dispatchEvent(new Event('input'));
+    await flushAll();
+
+    const queryButton = [...root.querySelectorAll<HTMLButtonElement>('button')].find(
+      (button) => button.textContent?.includes('查询'),
+    );
+    queryButton?.click();
+    await flushAll();
+
+    expect(mockListApplications).toHaveBeenLastCalledWith({
+      page: 1,
+      pathologyNo: 'BL20260522',
+      size: 20,
+    });
+
+    const resetButton = [...root.querySelectorAll<HTMLButtonElement>('button')].find(
+      (button) => button.textContent?.includes('重置'),
+    );
+    resetButton?.click();
+    await flushAll();
+
+    expect(pathologyNoInput.value).toBe('');
+    expect(mockListApplications).toHaveBeenLastCalledWith({
+      page: 1,
+      size: 20,
+    });
 
     app.unmount();
   });

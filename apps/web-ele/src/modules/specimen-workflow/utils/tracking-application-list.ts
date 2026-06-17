@@ -13,6 +13,7 @@ export type TrackingApplicationListFilters = {
   applicationNo: string;
   dateRange: string[];
   page: number;
+  pathologyNo: string;
   patientName: string;
   size: number;
 };
@@ -31,6 +32,7 @@ export function buildTrackingApplicationListQuery(
     dateFrom: filters.dateRange[0] || undefined,
     dateTo: filters.dateRange[1] || undefined,
     page: filters.page,
+    pathologyNo: filters.pathologyNo.trim() || undefined,
     patientName: filters.patientName.trim() || undefined,
     size: filters.size,
   };

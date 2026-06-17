@@ -20,13 +20,13 @@ const emit = defineEmits<{
     title="病例查询"
     description="支持按病例ID、病理号或对象ID查询对象树追踪视图。"
   >
-    <ElForm inline label-width="112px">
-      <ElFormItem label="病例/病理/对象" required>
+    <ElForm class="technical-tracking-query-form" inline label-width="132px">
+      <ElFormItem class="technical-tracking-query-form__field" label="病例/病理/对象" required>
         <ElInput
           :model-value="caseId"
           clearable
           placeholder="请输入病例ID、病理号或对象ID"
-          style="width: 260px"
+          style="width: 320px"
           @keyup.enter="emit('query')"
           @update:model-value="emit('update:caseId', $event)"
         />
@@ -40,3 +40,13 @@ const emit = defineEmits<{
     </ElForm>
   </WorkflowSectionCard>
 </template>
+
+<style scoped>
+.technical-tracking-query-form :deep(.el-form-item__label) {
+  white-space: nowrap;
+}
+
+.technical-tracking-query-form__field {
+  margin-right: 20px;
+}
+</style>
