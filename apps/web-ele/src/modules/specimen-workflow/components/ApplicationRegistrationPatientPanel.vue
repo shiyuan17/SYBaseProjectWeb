@@ -2,7 +2,7 @@
 import type { ApplicationRegistrationWorkbenchRecord } from '../types/application-registration-workbench';
 import type { WorkbenchInfoItem } from '../utils/application-registration-patient-panel';
 
-import { computed, toRef } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, toRef } from 'vue';
 
 import {
   ElButton,
@@ -16,6 +16,8 @@ import { useApplicationRegistrationPatientPanel } from '../composables/useApplic
 import {
   getSectionDescriptionColumns,
   getSectionItemSpan,
+  getSummaryDescriptionColumns,
+  getSummaryItemSpan,
   getSummaryItemValueClass,
 } from '../utils/application-registration-patient-panel';
 import ApplicationRegistrationDirectEditableField from './ApplicationRegistrationDirectEditableField.vue';
@@ -74,6 +76,17 @@ const {
 
 const hasRecord = computed(() => props.record !== null);
 const isDirectEditMode = computed(() => props.editMode === 'direct');
+const panelBodyRef = ref<HTMLElement | null>(null);
+const panelWidth = ref(0);
+
+let resizeObserver: null | ResizeObserver = null;
+
+const summaryColumns = computed(() =>
+  getSummaryDescriptionColumns(panelWidth.value),
+);
+const sectionColumns = computed(() =>
+  getSectionDescriptionColumns(panelWidth.value),
+);
 
 function handleDirectFieldUpdate(item: WorkbenchInfoItem, value: string) {
   if (!props.record || !item.writeBack) {
@@ -81,6 +94,30 @@ function handleDirectFieldUpdate(item: WorkbenchInfoItem, value: string) {
   }
   emit('update:record', item.writeBack(props.record, value));
 }
+
+function updatePanelWidth() {
+  panelWidth.value = panelBodyRef.value?.clientWidth ?? 0;
+}
+
+onMounted(() => {
+  updatePanelWidth();
+  if (typeof ResizeObserver === 'undefined') {
+    return;
+  }
+
+  resizeObserver = new ResizeObserver(() => {
+    updatePanelWidth();
+  });
+
+  if (panelBodyRef.value) {
+    resizeObserver.observe(panelBodyRef.value);
+  }
+});
+
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect();
+  resizeObserver = null;
+});
 </script>
 
 <template>
@@ -119,12 +156,15 @@ function handleDirectFieldUpdate(item: WorkbenchInfoItem, value: string) {
     </template>
 
     <template v-if="hasRecord">
-      <div class="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden pr-1">
+      <div
+        ref="panelBodyRef"
+        class="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden pr-1"
+      >
         <div
-          class="overflow-hidden rounded-lg border border-border/80 bg-card shadow-sm"
+          class="shrink-0 overflow-x-auto overflow-y-hidden rounded-lg border border-border/80 bg-card shadow-sm"
         >
           <ElDescriptions
-            :column="3"
+            :column="summaryColumns"
             border
             size="small"
             class="patient-summary-descriptions"
@@ -133,7 +173,7 @@ function handleDirectFieldUpdate(item: WorkbenchInfoItem, value: string) {
               v-for="item in summaryItems"
               :key="item.key"
               :label="item.label"
-              :span="item.span ?? 1"
+              :span="getSummaryItemSpan(item, summaryColumns)"
             >
               <ApplicationRegistrationDirectEditableField
                 v-if="isDirectEditMode"
@@ -168,7 +208,7 @@ function handleDirectFieldUpdate(item: WorkbenchInfoItem, value: string) {
             </ElDivider>
 
             <ElDescriptions
-              :column="getSectionDescriptionColumns()"
+              :column="sectionColumns"
               border
               size="small"
               class="patient-section-descriptions"
@@ -178,7 +218,7 @@ function handleDirectFieldUpdate(item: WorkbenchInfoItem, value: string) {
                 :key="item.key"
                 :data-testid="`patient-item-${item.key}`"
                 :label="item.label"
-                :span="getSectionItemSpan(item)"
+                :span="getSectionItemSpan(item, sectionColumns)"
               >
                 <ApplicationRegistrationDirectEditableField
                   v-if="isDirectEditMode"
@@ -213,14 +253,16 @@ function handleDirectFieldUpdate(item: WorkbenchInfoItem, value: string) {
 }
 
 :deep(.patient-summary-descriptions .el-descriptions__label) {
-  width: 68px;
-  font-size: 10px;
+  width: 76px;
+  min-width: 76px;
+  font-size: 11px;
   white-space: nowrap;
 }
 
 :deep(.patient-summary-descriptions .el-descriptions__content) {
-  font-size: 11px;
-  line-height: 1.2;
+  min-width: 84px;
+  font-size: 12px;
+  line-height: 1.3;
   vertical-align: top;
 }
 
@@ -253,13 +295,17 @@ function handleDirectFieldUpdate(item: WorkbenchInfoItem, value: string) {
 }
 
 :deep(.patient-section-descriptions .el-descriptions__label) {
-  width: 88px;
-  font-size: 10px;
-  white-space: nowrap;
+  width: 98px;
+  min-width: 98px;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 :deep(.patient-section-descriptions .el-descriptions__content) {
-  font-size: 11px;
-  line-height: 1.25;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 </style>
