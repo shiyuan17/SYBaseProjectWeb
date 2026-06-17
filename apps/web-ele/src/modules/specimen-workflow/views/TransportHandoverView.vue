@@ -24,7 +24,6 @@ import {
   outboundTransportOrder,
 } from '../api/specimen-workflow-service';
 import SpecimenOutboundTable from '../components/SpecimenOutboundTable.vue';
-import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { useOperatorVerificationPrompt } from '../composables/useOperatorVerificationPrompt';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
@@ -253,6 +252,11 @@ function handlePageChange() {
   void loadOutbounds();
 }
 
+function handleSearch() {
+  filters.page = 1;
+  void loadOutbounds();
+}
+
 function handleSelectionChange(rows: SpecimenOutboundDisplayItem[]) {
   selectedRows.value = rows;
 }
@@ -407,81 +411,78 @@ watch(
         type="error"
         show-icon
       />
-      <WorkflowSectionCard title="标本出库">
-        <div class="flex flex-col gap-4">
-          <div class="flex flex-wrap items-center gap-4 text-sm">
-            <div>
-              全部
-              <span class="text-xl font-semibold text-primary">{{
-                total
-              }}</span>
-            </div>
-            <div>
-              已选
-              <span class="text-xl font-semibold text-primary">{{
-                selectedRows.length
-              }}</span>
-            </div>
-          </div>
-
-          <div class="flex flex-wrap items-center gap-2">
-            <ElInput
-              v-model="filters.identifier"
-              clearable
-              placeholder="请输入标本条码/编号"
-              style="width: 220px"
-              @keyup.enter="handleIdentifierQuickSearch"
-            />
-            <div class="w-[180px]">
-              <SystemUserSelect
-                v-model="outboundForm.outboundUserId"
-                :selected-label="outboundForm.outboundUserName"
-                placeholder="选择出库人"
-                @change="handleOutboundUserChange"
-              />
-            </div>
-            <ElButton
-              :disabled="
-                selectedRows.length > 0
-                  ? selectedRows.some((row) => !row.canOutbound)
-                  : pendingOutboundIds.length === 0
-              "
-              type="primary"
-              @click="handleBatchTransport"
-            >
-              转运
-            </ElButton>
-            <ElButton @click="handleClearList">清除列表</ElButton>
-            <div
-              v-if="outboundLoading"
-              class="text-sm text-[color:var(--el-color-primary)]"
-            >
-              正在执行转运...
-            </div>
-          </div>
-
-          <SpecimenOutboundTable
-            :items="items"
-            :loading="loading"
-            :page="filters.page"
-            :size="filters.size"
-            @selection-change="handleSelectionChange"
-          />
-
-          <div class="mt-4 flex justify-end">
-            <ElPagination
-              v-model:current-page="filters.page"
-              v-model:page-size="filters.size"
-              :page-sizes="[10, 20, 50, 100]"
-              :total="total"
-              background
-              layout="total, sizes, prev, pager, next"
-              @current-change="handlePageChange"
-              @size-change="handlePageChange"
-            />
-          </div>
+      <div class="flex flex-wrap items-center gap-4 text-sm">
+        <div>
+          全部
+          <span class="text-xl font-semibold text-primary">{{ total }}</span>
         </div>
-      </WorkflowSectionCard>
+        <div>
+          已选
+          <span class="text-xl font-semibold text-primary">{{
+            selectedRows.length
+          }}</span>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <ElInput
+          v-model="filters.identifier"
+          clearable
+          placeholder="请输入标本条码/编号"
+          style="width: 220px"
+          @keyup.enter="handleIdentifierQuickSearch"
+        />
+        <div class="w-[180px]">
+          <SystemUserSelect
+            v-model="outboundForm.outboundUserId"
+            :selected-label="outboundForm.outboundUserName"
+            placeholder="选择出库人"
+            @change="handleOutboundUserChange"
+          />
+        </div>
+        <ElButton :loading="loading" type="primary" @click="handleSearch">
+          查询
+        </ElButton>
+        <ElButton
+          :disabled="
+            selectedRows.length > 0
+              ? selectedRows.some((row) => !row.canOutbound)
+              : pendingOutboundIds.length === 0
+          "
+          type="primary"
+          @click="handleBatchTransport"
+        >
+          转运
+        </ElButton>
+        <ElButton @click="handleClearList">清除列表</ElButton>
+        <div
+          v-if="outboundLoading"
+          class="text-sm text-[color:var(--el-color-primary)]"
+        >
+          正在执行转运...
+        </div>
+      </div>
+
+      <SpecimenOutboundTable
+        :items="items"
+        :loading="loading"
+        :page="filters.page"
+        :size="filters.size"
+        @selection-change="handleSelectionChange"
+      />
+
+      <div class="flex justify-end">
+        <ElPagination
+          v-model:current-page="filters.page"
+          v-model:page-size="filters.size"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="total"
+          background
+          layout="total, sizes, prev, pager, next"
+          @current-change="handlePageChange"
+          @size-change="handlePageChange"
+        />
+      </div>
     </div>
   </Page>
 </template>
