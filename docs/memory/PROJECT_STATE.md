@@ -2,7 +2,7 @@
 
 ## Current State
 
-- Last updated: 2026-06-16
+- Last updated: 2026-06-17
 - Repository: `SYBaseProjectWeb`
 - Current phase: M6 statistics full-stack delivery with governance workflow executability pass (Phase E)
 - Active focus: `apps/web-ele/src/modules/m6-statistics` consumes sibling backend `../SYBaseProject/bl-center` statistics APIs. `/m6/dashboard` composes `POST /api/v1/stat-reports/query` for `QUALITY` / `OPERATION` / `WORKLOAD`; current frontend architecture must not reintroduce `POST /api/v1/stat-dashboard/query`. `POST /api/v1/stat-reports/query` uses `workloadUserId` for workload/personnel filtering, accepts `periodMode=month|quarter|year`, and may return metric metadata such as `metricStatus`, numerator/denominator, trend/breakdown, and source notes. `/m6/custom-analysis` is the single-entry statistics report workbench with tabs for workload, quality/safety, key quality, frozen timeliness, report-change, unqualified-specimen, and custom analysis reports. Current sibling backend exposes quality detail drilldown/export through `POST /api/v1/stat-reports/details/query` and `/details/export`; do not use the old mistaken `/api/v1/stat-report-details/*` path.
@@ -26,6 +26,7 @@
 - M5 operation-support work remains stable on the current contract split: `/operation-support/archive` owns application-form / wax-block / slide / specimen / cabinet / archive-record work; `/operation-support/borrow` owns slide / wax-block borrow and return work. Specimen archive uses `POST /api/v1/archive/specimens` and `GET /api/v1/archive-objects?objectType=SPECIMEN`.
 - M5 equipment management old-system alignment landed on 2026-06-16: sibling backend `../SYBaseProject/bl-center` now serves expanded equipment archive fields plus `POST /api/v1/equipment-records/batch-status`, and `/operation-resources/equipment` now uses the legacy-style wide table, rebuilt equipment dialog, batch restore/disable, and frontend export/print helpers. Browser verification could confirm the app boot path after fixing a broken placeholder medical-waste route import, but login-gated in-page device checks remain blocked by the slider captcha component in the in-app browser.
 - M5 medical waste management landed on 2026-06-16: `/operation-resources/medical-waste` is now a real `MedicalWasteManagementView` with fixed `人体标本` / `药物试剂` tabs instead of a placeholder. The page reuses `M5_RESOURCE_PAGE_AUTHORITIES`, consumes sibling backend `../SYBaseProject/bl-center` medical-waste APIs for specimen batch preview/print/destroy and reagent bag save/handover, and keeps specimen label sourcing tied to existing grossing/label data instead of adding a standalone medical-waste label master.
+- M3 制片管理日期筛选统一 landed on 2026-06-17: visible technical-workflow menu pages now align to `SpecimenReceiptView`-style `daterange` controls with empty-default range, no implicit today filter, and legacy `route.query.workDate` deep links mapped to same-day ranges. Frontend task-list pages now use shared range helpers for `createdFrom/createdToExclusive`, while slicing workbench, embedding summary, technical tracking, and pending medical orders now consume sibling backend `../SYBaseProject/bl-center` `dateFrom/dateTo` contracts. This supersedes the earlier single-day contract in `DEC-20260617-004`; mirrored backend decision is `../SYBaseProject/DECISIONS.md#DEC-20260617-005`.
 
 ## Validation Baseline
 
@@ -52,6 +53,11 @@
   - Frontend `pnpm check:type --filter=@vben/web-ele`: passed
   - Sibling backend `../SYBaseProject/bl-center` targeted Maven test `MedicalWasteIntegrationTest`: passed
   - Browser verification: route navigation to `http://localhost:5778/operation-resources/medical-waste` succeeded and confirmed the app no longer crashes on the route import, but authenticated in-page validation of tabs/dialogs remained blocked by the login slider captcha in the in-app browser
+- Latest M3 date-range unification on 2026-06-17:
+  - Frontend targeted Vitest `EmbeddingWorkstationView.test.ts`, `SlicingWorkstationView.test.ts`, `TechnicalOrderWorkstationsView.test.ts`, `ReworkWorkstationView.test.ts`, and `technical-workflow-service.test.ts`: passed (66 tests)
+  - Frontend `pnpm check:type`: blocked by unrelated pre-existing type errors in `apps/web-ele/src/modules/specimen-workflow/utils/application-registration-auto-create.ts` and `apps/web-ele/src/modules/technical-workflow/components/specimen-registration/TechnicalSpecimenRegistrationWorkspacePanel.vue`
+  - Sibling backend `../SYBaseProject/bl-center` targeted Maven tests `TechnicalWorkflowQueryEnhancementIntegrationTest`, `MedicalOrderIntegrationTest`, and `SlicingWorkbenchIntegrationTest`: passed
+  - Browser verification: local app boot and login page rendering at `http://127.0.0.1:5778/` succeeded, but authenticated page-level verification of the grossing/dehydration/slicing/medical-order/rework-tracking pages remained blocked by the login slider captcha in the in-app browser
 - Historical feature-level validation details are intentionally kept out of this file now; recover them from targeted tests, `docs/memory/KNOWN_BUGS.md`, `docs/memory/TECH_DEBT.md`, PRs, or git history when needed.
 
 ## Cross-Repo Dependencies
@@ -64,6 +70,7 @@
 - M5 archive/borrow frontend pages depend on sibling backend archive contracts for application-form / `EMBEDDING_BOX` / slide / specimen archive, archive cabinet maintenance, archive object pagination, and material-loan pending/create/return.
 - M5 reagent management depends on sibling backend reagent template / stock / stock-event contracts and keeps CSV-compatible import/export semantics.
 - M5 medical waste management depends on sibling backend `../SYBaseProject/bl-center` `medical-waste` contracts for specimen batch list/options/preview/print/destroy and reagent bag list/save/handover, while specimen label preview data is still sourced from the grossing workflow rather than a new medical-waste label table.
+- M3 visible technical-workflow date filtering now depends on sibling backend `../SYBaseProject/bl-center` honoring `dateFrom/dateTo` on technical tracking, embedding summary, slicing workbench, and pending medical orders, while legacy `workDate` survives only as deep-link compatibility input.
 - Specimen workflow progression depends on sibling backend resolving workflow requests by `specimenId > specimenBarcode > specimenNo`; barcode binding remains nullable until explicit binding.
 - System-management role displays depend on sibling backend `../SYBaseProject/bl-center` returning canonical no-prefix workflow `roleName` values for built-in `ROLE_M2_*`, `ROLE_M3_*`, and `ROLE_M4_*` roles; frontend should consume backend `roleName` directly rather than trimming `M2/M3/M4` locally.
 - Cross-repo API, permission, database, patient, and report contract changes must update memory files in both repos when durable context changes.
