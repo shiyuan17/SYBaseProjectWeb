@@ -10,8 +10,8 @@ import {
 } from './patient-info';
 
 export type CachedApplicationContext = {
-  patientId?: null | string;
   patientGender: null | string;
+  patientId?: null | string;
   submittingDoctorName: string;
 };
 

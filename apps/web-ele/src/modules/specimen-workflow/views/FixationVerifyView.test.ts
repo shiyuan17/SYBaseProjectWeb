@@ -337,9 +337,13 @@ vi.mock('../components/FixationVerifyTable.vue', () => ({
     ],
     setup(props: any, { emit }: any) {
       const formatNullable = (value: unknown) =>
-        value === null || value === undefined || value === '' ? '-' : String(value);
+        value === null || value === undefined || value === ''
+          ? '-'
+          : String(value);
       const formatDateTime = (value: unknown) =>
-        value === null || value === undefined || value === '' ? '-' : String(value);
+        value === null || value === undefined || value === ''
+          ? '-'
+          : String(value);
 
       return () =>
         h('div', { 'data-testid': 'fixation-verify-table' }, [
@@ -406,70 +410,70 @@ vi.mock('../api/specimen-workflow-service', () => ({
 
 lookupApplicationRegistrationWorkbenchRecordMock.mockImplementation(
   async ({ keyword }: { keyword: string }) => ({
-      applicationId: keyword === 'AP202605230001' ? 'APP-PENDING' : 'APP-LOOKUP',
-      contagiousSpecimen: {
-        hepatitis: false,
-        hiv: false,
-        isolation: false,
-        syphilis: false,
-        tuberculosis: false,
-      },
-      gynecologyInfo: {
-        additionalNotes: '',
-        hpvResult: null,
-        lastMenstrualPeriod: null,
+    applicationId: keyword === 'AP202605230001' ? 'APP-PENDING' : 'APP-LOOKUP',
+    contagiousSpecimen: {
+      hepatitis: false,
+      hiv: false,
+      isolation: false,
+      syphilis: false,
+      tuberculosis: false,
+    },
+    gynecologyInfo: {
+      additionalNotes: '',
+      hpvResult: null,
+      lastMenstrualPeriod: null,
+      menopause: false,
+      previousCytology: '',
+      previousTreatment: '',
+      specialConditions: {
+        abnormalBleeding: false,
+        birthControl: false,
+        hormoneReplacement: false,
+        hysterectomy: false,
+        iud: false,
+        lactation: false,
         menopause: false,
-        previousCytology: '',
-        previousTreatment: '',
-        specialConditions: {
-          abnormalBleeding: false,
-          birthControl: false,
-          hormoneReplacement: false,
-          hysterectomy: false,
-          iud: false,
-          lactation: false,
-          menopause: false,
-          other: '',
-          pregnancy: false,
-          radiotherapy: false,
-        },
+        other: '',
+        pregnancy: false,
+        radiotherapy: false,
       },
-      patientInfo: {
-        age: '51',
-        applicationDate: '2026-06-06',
-        applicationNo: keyword,
-        applyDept: '妇科',
-        applyDoctor: '王丽',
-        bedNo: '26床',
-        checkItem: '妇科病理检查',
-        clinicalDiagnosis: null,
-        clinicalHistory: null,
-        deliveryRequirement: null,
-        endoscopyDiagnosis: null,
-        frozenReminder: false,
-        gender: '女',
-        idNo: '08305',
-        imagingResult: null,
-        inpatientNo: 'ZY08305',
-        patientName: '林晓芸',
-        patientVerified: true,
-        phone: '13800008305',
-        registrationStatus: null,
-        remark: null,
-        specimenType: null,
-        wardName: '妇科病区 3A',
-      },
-      specimenItems: [],
-      surgeryInfo: {
-        buildingId: null,
-        clinicalFindings: null,
-        fixativeType: null,
-        fixationPerson: '病理科管理员',
-        fixationTime: null,
-        roomId: 'OR-102',
-        surgeryName: '离体送检',
-      },
-    }),
+    },
+    patientInfo: {
+      age: '51',
+      applicationDate: '2026-06-06',
+      applicationNo: keyword,
+      applyDept: '妇科',
+      applyDoctor: '王丽',
+      bedNo: '26床',
+      checkItem: '妇科病理检查',
+      clinicalDiagnosis: null,
+      clinicalHistory: null,
+      deliveryRequirement: null,
+      endoscopyDiagnosis: null,
+      frozenReminder: false,
+      gender: '女',
+      idNo: '08305',
+      imagingResult: null,
+      inpatientNo: 'ZY08305',
+      patientName: '林晓芸',
+      patientVerified: true,
+      phone: '13800008305',
+      registrationStatus: null,
+      remark: null,
+      specimenType: null,
+      wardName: '妇科病区 3A',
+    },
+    specimenItems: [],
+    surgeryInfo: {
+      buildingId: null,
+      clinicalFindings: null,
+      fixativeType: null,
+      fixationPerson: '病理科管理员',
+      fixationTime: null,
+      roomId: 'OR-102',
+      surgeryName: '离体送检',
+    },
+  }),
 );
 
 vi.mock('../api/application-registration-workbench-service', () => ({
@@ -539,8 +543,8 @@ describe('FixationVerifyView', () => {
       expect(container.textContent).toContain('SP202605230001');
     });
 
-    const confirmButtons = [...container.querySelectorAll('button')].filter((button) =>
-      button.textContent?.includes('离体确认'),
+    const confirmButtons = [...container.querySelectorAll('button')].filter(
+      (button) => button.textContent?.includes('离体确认'),
     );
     expect(container.textContent).toContain('离体确认');
     expect(container.textContent).toContain('全部');
@@ -557,15 +561,21 @@ describe('FixationVerifyView', () => {
     expect(container.textContent).toContain('离体时间');
     expect(container.textContent).toContain('离体操作人');
     expect(container.textContent).toContain('08305');
-    expect(container.textContent).not.toContain('1d857986-392a-4620-bc10-bf2c900001a8');
+    expect(container.textContent).not.toContain(
+      '1d857986-392a-4620-bc10-bf2c900001a8',
+    );
     expect(container.textContent).toContain('妇科病区 3A');
     expect(container.textContent).not.toContain('开始核对');
     expect(container.textContent).not.toContain('完成核对');
     expect(container.textContent).not.toContain('开始核对');
     expect(container.textContent).not.toContain('完成核对');
     expect(confirmButtons).toHaveLength(1);
-    expect(container.querySelector('[data-testid="select-row-0"]')).not.toBeNull();
-    expect(container.querySelector('[data-testid="select-row-1"]')).not.toBeNull();
+    expect(
+      container.querySelector('[data-testid="select-row-0"]'),
+    ).not.toBeNull();
+    expect(
+      container.querySelector('[data-testid="select-row-1"]'),
+    ).not.toBeNull();
 
     app.unmount();
   });
@@ -613,7 +623,9 @@ describe('FixationVerifyView', () => {
     expect(container.textContent).toContain('SP202605230001');
     expect(container.textContent).toContain('SP202605230002');
     expect(container.textContent).toContain('08305');
-    expect(container.textContent).not.toContain('1d857986-392a-4620-bc10-bf2c900001a8');
+    expect(container.textContent).not.toContain(
+      '1d857986-392a-4620-bc10-bf2c900001a8',
+    );
     expect(container.textContent).toContain('妇科病区 3A');
 
     app.unmount();
@@ -690,9 +702,7 @@ describe('FixationVerifyView', () => {
       identifierType: 'SPECIMEN_NO',
       remarks: '离体确认',
     });
-    expect(messageSuccessMock).toHaveBeenCalledWith(
-      '已完成 1 条标本离体确认',
-    );
+    expect(messageSuccessMock).toHaveBeenCalledWith('已完成 1 条标本离体确认');
 
     app.unmount();
   });

@@ -139,8 +139,9 @@ describe('FixationVerifyTable', () => {
       wrapper.container.querySelector('.specimen-workflow-row--completed'),
     ).not.toBeNull();
     expect(
-      wrapper.container.querySelector<HTMLInputElement>('input[type="checkbox"]')
-        ?.disabled,
+      wrapper.container.querySelector<HTMLInputElement>(
+        'input[type="checkbox"]',
+      )?.disabled,
     ).toBe(true);
 
     wrapper.unmount();
