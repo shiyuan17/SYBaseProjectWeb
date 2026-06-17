@@ -155,11 +155,32 @@ vi.mock('element-plus', () => {
   });
 
   const ElDatePicker = defineComponent({
-    props: ['endPlaceholder', 'modelValue', 'startPlaceholder', 'type'],
+    props: [
+      'defaultValue',
+      'endPlaceholder',
+      'modelValue',
+      'shortcuts',
+      'startPlaceholder',
+      'type',
+    ],
     emits: ['update:modelValue'],
     setup(props, { emit }) {
       return () =>
         h('input', {
+          'data-date-picker-default-value': Array.isArray(props.defaultValue)
+            ? props.defaultValue
+                .map((item) =>
+                  item instanceof Date
+                    ? item.toISOString().slice(0, 10)
+                    : String(item),
+                )
+                .join(',')
+            : '',
+          'data-date-picker-shortcuts': Array.isArray(props.shortcuts)
+            ? props.shortcuts
+                .map((item: { text: string }) => item.text)
+                .join(',')
+            : '',
           'data-date-picker-type': props.type,
           placeholder: props.startPlaceholder || props.endPlaceholder,
           value: Array.isArray(props.modelValue)
@@ -1055,6 +1076,32 @@ describe('TechnicalSpecimenRegistrationView', () => {
     root.remove();
   });
 
+  it('uses today as the default visible date when the receive date range is empty', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-17T09:00:00+08:00'));
+
+    const { app, root } = mountView();
+    try {
+      await flushView();
+
+      const datePicker = document.querySelector<HTMLInputElement>(
+        'input[data-date-picker-type="daterange"]',
+      );
+      expect(datePicker).toBeTruthy();
+      expect(datePicker?.value).toBe('');
+      expect(datePicker?.dataset.datePickerDefaultValue).toBe(
+        '2026-06-17,2026-06-17',
+      );
+      expect(datePicker?.dataset.datePickerShortcuts).toBe(
+        '今天,昨天,本周,本月',
+      );
+    } finally {
+      vi.useRealTimers();
+      app.unmount();
+      root.remove();
+    }
+  });
+
   it('keeps new display-only filters out of pending registration queries', async () => {
     const { app, root } = mountView();
     await flushView();
@@ -1197,7 +1244,8 @@ describe('TechnicalSpecimenRegistrationView', () => {
     expect(
       mockGetTechnicalSpecimenRegistrationWorkspace,
     ).toHaveBeenLastCalledWith('CASE-4');
-    expect(document.body.textContent).toContain('当前状态 已登记');
+    expect(document.body.textContent).toContain('病理号：登记生成');
+    expect(document.body.textContent).not.toContain('当前状态 已登记');
 
     app.unmount();
     root.remove();
@@ -1229,7 +1277,7 @@ describe('TechnicalSpecimenRegistrationView', () => {
       '[data-testid="specimen-row-CASE-1"]',
     );
     expect(row).toBeTruthy();
-    expect(row!.textContent).toContain('待生成');
+    expect(row!.textContent).not.toContain('待生成');
     expect(row!.textContent).not.toContain('BL-20260601-001');
     expect(row!.textContent).toContain('患者甲');
     expect(row!.textContent).toContain('待登记');
@@ -1271,11 +1319,10 @@ describe('TechnicalSpecimenRegistrationView', () => {
     const row = document.querySelector<HTMLButtonElement>(
       '[data-testid="specimen-row-CASE-1"]',
     );
-    expect(row?.textContent).toContain('待生成');
+    expect(row?.textContent).not.toContain('待生成');
+    expect(row?.textContent).toContain('待登记');
     expect(findPathologyNoInput().value).toMatch(/^BL/);
-    expect(document.body.textContent).toContain(
-      `病理号 ${findPathologyNoInput().value}`,
-    );
+    expect(document.body.textContent).toContain('病理号：登记生成');
 
     app.unmount();
     root.remove();
@@ -1285,8 +1332,9 @@ describe('TechnicalSpecimenRegistrationView', () => {
     const { app, root } = mountView();
     await flushView();
 
-    expect(document.body.textContent).toContain('当前状态 待登记');
+    expect(document.body.textContent).toContain('病理号：登记生成');
     expect(document.body.textContent).toContain('送检类型：常规');
+    expect(document.body.textContent).not.toContain('当前状态 待登记');
     expect(document.body.textContent).not.toContain('当前状态 PENDING');
     expect(document.body.textContent).not.toContain('送检类型：ROUTINE');
 
@@ -1321,9 +1369,7 @@ describe('TechnicalSpecimenRegistrationView', () => {
     const pathologyNoInput = findPathologyNoInput();
     expect(pathologyNoInput.disabled).toBe(false);
     expect(pathologyNoInput.value).toMatch(/^BL/);
-    expect(document.body.textContent).toContain(
-      `病理号 ${pathologyNoInput.value}`,
-    );
+    expect(document.body.textContent).toContain('病理号：登记生成');
 
     app.unmount();
     root.remove();
@@ -1785,6 +1831,53 @@ describe('TechnicalSpecimenRegistrationView', () => {
         materials: [
           expect.objectContaining({
             evaluationItems: ['密封不严', '自定义评价项'],
+          }),
+        ],
+      }),
+    );
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('opens evaluation dialog from the row edit icon without preselecting the material', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    expect(findButton('评价').disabled).toBe(true);
+
+    const rowEditButton = document.querySelector<HTMLButtonElement>(
+      '[data-testid="material-evaluation-edit-0"]',
+    );
+    expect(rowEditButton).toBeTruthy();
+    rowEditButton?.click();
+    await flushView();
+
+    expect(
+      document.querySelector('[data-testid="material-evaluation-dialog"]'),
+    ).toBeTruthy();
+    expect(document.body.textContent).toContain('组织块');
+
+    const defaultOption = document.querySelector<HTMLInputElement>(
+      '[data-testid="evaluation-option-福尔马林未完全浸泡"]',
+    );
+    expect(defaultOption).toBeTruthy();
+    defaultOption!.checked = true;
+    defaultOption!.dispatchEvent(new Event('change'));
+    await flushView();
+
+    findButton('确定').click();
+    await flushView();
+    findButton('保存标本修改').click();
+    await flushView();
+
+    expect(mockSaveTechnicalSpecimenRegistrationMaterials).toHaveBeenCalledWith(
+      'CASE-1',
+      expect.objectContaining({
+        materials: [
+          expect.objectContaining({
+            evaluationItems: ['福尔马林未完全浸泡'],
+            specimenId: 'SP-1',
           }),
         ],
       }),

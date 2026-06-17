@@ -468,16 +468,47 @@ vi.mock('element-plus', () => {
     },
   });
 
-  const ElDrawer = defineComponent({
-    props: ['modelValue', 'title'],
-    setup(props, { slots }) {
+  const ElDatePicker = defineComponent({
+    inheritAttrs: false,
+    props: [
+      'clearable',
+      'endPlaceholder',
+      'modelValue',
+      'shortcuts',
+      'startPlaceholder',
+      'type',
+    ],
+    emits: ['update:modelValue'],
+    setup(props, { attrs, emit }) {
       return () =>
-        props.modelValue
-          ? h('section', { 'data-testid': 'drawer' }, [
-              h('h2', String(props.title ?? '')),
-              slots.default?.(),
-            ])
-          : null;
+        h('input', {
+          ...attrs,
+          'data-shortcuts': Array.isArray(props.shortcuts)
+            ? props.shortcuts
+                .map((item: { text: string }) => item.text)
+                .join(',')
+            : '',
+          'data-testid': 'date-range-picker',
+          placeholder:
+            props.type === 'daterange'
+              ? `${String(props.startPlaceholder ?? '')} ~ ${String(props.endPlaceholder ?? '')}`
+              : '',
+          value: Array.isArray(props.modelValue)
+            ? props.modelValue.join(',')
+            : props.modelValue,
+          onInput: (event: Event) => {
+            const value = (event.target as HTMLInputElement).value;
+            emit(
+              'update:modelValue',
+              value
+                ? value
+                    .split(',')
+                    .map((item) => item.trim())
+                    .filter(Boolean)
+                : [],
+            );
+          },
+        });
     },
   });
 
@@ -523,7 +554,7 @@ vi.mock('element-plus', () => {
     ElBadge,
     ElButton: createButtonStub(),
     ElCheckbox,
-    ElDrawer,
+    ElDatePicker,
     ElEmpty: createEmptyStub(),
     ElForm: createPassthroughStub('form'),
     ElImage,
@@ -667,6 +698,17 @@ function setInputValue(
   input.dispatchEvent(new Event('input'));
 }
 
+function setDateRangeValue(root: HTMLElement, values: [string, string]) {
+  const input = root.querySelector<HTMLInputElement>(
+    'input[data-testid="date-range-picker"]',
+  );
+  if (!input) {
+    throw new Error('Missing date range picker');
+  }
+  input.value = values.join(',');
+  input.dispatchEvent(new Event('input'));
+}
+
 describe('GrossingWorkstationView', () => {
   afterEach(() => {
     document.body.innerHTML = '';
@@ -788,11 +830,14 @@ describe('GrossingWorkstationView', () => {
     );
     expect(input).toBeTruthy();
     setInputValue(input!, 'BL-002');
+    setDateRangeValue(root, ['2026-06-01', '2026-06-03']);
     findButton(root, '查询').click();
     await flushAll();
 
     expect(mockListPendingTechnicalTasks).toHaveBeenLastCalledWith(
       expect.objectContaining({
+        createdFrom: '2026-06-01T00:00:00',
+        createdTo: '2026-06-03T23:59:59',
         includeAllStatuses: true,
         keyword: 'BL-002',
         page: 1,
@@ -809,6 +854,84 @@ describe('GrossingWorkstationView', () => {
         terminalCode: 'TG-01',
       }),
     );
+
+    app.unmount();
+  });
+
+  it('places the query button before the grossing task button and marks it with the toolbar style', async () => {
+    const { app, root } = await mountView();
+
+    const queryButton = findButton(root, '查询');
+    const taskButton = findButton(root, '取材任务');
+
+    expect(queryButton.className).toContain('grossing-query-button');
+    expect(
+      queryButton.compareDocumentPosition(taskButton) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    app.unmount();
+  });
+
+  it('renders a date range picker instead of the more button and shifts the range by day', async () => {
+    const { app, root } = await mountView();
+
+    expect(
+      root.querySelector('input[data-testid="date-range-picker"]'),
+    ).toBeTruthy();
+    expect(
+      root.querySelector<HTMLInputElement>(
+        'input[data-testid="date-range-picker"]',
+      )?.dataset.shortcuts,
+    ).toBe('今天,昨天,本周,本月');
+    expect(
+      [...root.querySelectorAll('button')].some((item) =>
+        item.textContent?.includes('更多'),
+      ),
+    ).toBe(false);
+
+    mockListPendingTechnicalTasks.mockClear();
+    setDateRangeValue(root, ['2026-06-10', '2026-06-12']);
+    findButton(root, '前1天').click();
+    await flushAll();
+
+    expect(mockListPendingTechnicalTasks).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        createdFrom: '2026-06-09T00:00:00',
+        createdTo: '2026-06-11T23:59:59',
+      }),
+    );
+
+    findButton(root, '后1天').click();
+    await flushAll();
+
+    expect(mockListPendingTechnicalTasks).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        createdFrom: '2026-06-10T00:00:00',
+        createdTo: '2026-06-12T23:59:59',
+      }),
+    );
+
+    app.unmount();
+  });
+
+  it('hides the grossing task badge when total is zero', async () => {
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
+
+    const { app, root } = await mountView({});
+    await flushAll();
+
+    const badge = [...root.querySelectorAll('sup')].find(
+      (element) => element.textContent === '0',
+    );
+
+    expect(badge).toBeUndefined();
+    expect(root.textContent).toContain('取材任务');
 
     app.unmount();
   });
@@ -1169,20 +1292,13 @@ describe('GrossingWorkstationView', () => {
     app.unmount();
   });
 
-  it('opens the more drawer and submits through the preserved specimen editor', async () => {
+  it('keeps operator fields and specimen editor reachable from the main workspace', async () => {
     const { app, root } = await mountView();
 
-    findButton(root, '更多').click();
-    await flushAll();
-
+    expect(root.textContent).toContain('操作信息');
     expect(root.textContent).toContain('标本 / 蜡块 / 影像编辑');
     expect(root.textContent).toContain('technical-operator-fields');
     expect(root.textContent).toContain('grossing-specimen-tabs:specimen-1');
-
-    findButton(root, '完成取材').click();
-    await flushAll();
-
-    expect(mockSubmitGrossing).toHaveBeenCalledTimes(1);
 
     app.unmount();
   });
@@ -1232,7 +1348,8 @@ describe('GrossingWorkstationView', () => {
     const { app, root } = await mountView();
 
     expect(findButton(root, '导出Excel').disabled).toBe(true);
-    expect(findButton(root, '前1天').disabled).toBe(true);
+    expect(findButton(root, '前1天').disabled).toBe(false);
+    expect(findButton(root, '后1天').disabled).toBe(false);
 
     app.unmount();
   });
