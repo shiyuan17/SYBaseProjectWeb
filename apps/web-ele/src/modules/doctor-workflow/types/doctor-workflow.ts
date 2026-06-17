@@ -46,6 +46,7 @@ export interface PendingDiagnosticTaskItem {
   id: string;
   pathologyNo?: null | string;
   patientId?: null | string;
+  patientIdDisplay?: null | string;
   patientName?: null | string;
   primaryDoctorName?: null | string;
   primaryDoctorUserId?: null | string;
@@ -249,6 +250,8 @@ export interface MedicalOrderSummary {
   orderNumber?: null | string;
   orderType?: null | string;
   pathologyNo?: null | string;
+  patientId?: null | string;
+  patientIdDisplay?: null | string;
   patientName?: null | string;
   remarks?: null | string;
   status?: null | string;
@@ -431,6 +434,7 @@ export interface DiagnosticWorkbenchView {
   patientAge?: null | string;
   patientGender?: null | string;
   patientId?: null | string;
+  patientIdDisplay?: null | string;
   pathologyNo?: null | string;
   phone?: null | string;
   patientName?: null | string;

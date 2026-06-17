@@ -78,6 +78,64 @@ describe('doctor-workflow-service mappers', () => {
     });
   });
 
+  it('normalizes pending diagnostic task summary fields', () => {
+    expect(
+      mapPendingDiagnosticTaskPageResponse({
+        items: [
+          {
+            applicationType: 'ROUTINE',
+            blockCount: 3,
+            caseId: 'CASE-001',
+            checkItem: '切片检查',
+            id: 'TASK-001',
+            patientId: 'UUID-001',
+            patientIdDisplay: '08305',
+            pathologyNo: 'BL202606170001',
+            specimenName: '胃窦组织、胃体组织',
+            submittingDepartmentName: '消化内科',
+            taskStatus: 'PENDING',
+            taskType: 'PRIMARY',
+          },
+        ],
+      }),
+    ).toEqual({
+      items: [
+        {
+          acceptedAt: null,
+          applicationId: null,
+          applicationNo: null,
+          applicationType: 'ROUTINE',
+          assignedAt: null,
+          blockCount: 3,
+          caseId: 'CASE-001',
+          checkItem: '切片检查',
+          completedAt: null,
+          diagnosisDoctorName: null,
+          diagnosisDoctorUserId: null,
+          id: 'TASK-001',
+          pathologyNo: 'BL202606170001',
+          patientId: 'UUID-001',
+          patientIdDisplay: '08305',
+          patientName: null,
+          primaryDoctorName: null,
+          primaryDoctorUserId: null,
+          remarks: null,
+          reportPrintedAt: null,
+          reportStatus: null,
+          reviewerName: null,
+          reviewerUserId: null,
+          specimenName: '胃窦组织、胃体组织',
+          submittingDepartmentName: '消化内科',
+          taskStatus: 'PENDING',
+          taskType: 'PRIMARY',
+        },
+      ],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
+  });
+
   it('normalizes pending medical order pagination', () => {
     expect(
       mapPendingMedicalOrderPageResponse({
@@ -92,6 +150,8 @@ describe('doctor-workflow-service mappers', () => {
             orderItemCode: 'CK',
             orderItemId: 'ITEM-CK',
             orderItemName: 'CK',
+            patientId: 'UUID-001',
+            patientIdDisplay: '08305',
           },
         ],
       }),
@@ -107,6 +167,8 @@ describe('doctor-workflow-service mappers', () => {
           orderItemCode: 'CK',
           orderItemId: 'ITEM-CK',
           orderItemName: 'CK',
+          patientId: 'UUID-001',
+          patientIdDisplay: '08305',
         },
       ],
       page: 1,

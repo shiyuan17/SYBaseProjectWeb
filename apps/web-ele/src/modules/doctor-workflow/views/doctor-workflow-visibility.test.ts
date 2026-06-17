@@ -869,10 +869,16 @@ describe('doctor workflow view visibility', () => {
       items: [
         {
           applicationType: 'routine',
+          blockCount: 2,
           caseId: 'CASE-001',
+          checkItem: '切片检查与诊断',
           id: 'TASK-001',
+          patientId: 'UUID-001',
+          patientIdDisplay: '08305',
+          patientName: '张三',
           remarks: 'Auto created staining comment',
-          specimenName: null,
+          specimenName: '胃窦组织、胃体组织',
+          submittingDepartmentName: '消化内科',
           taskStatus: 'PENDING',
           taskType: 'PRIMARY',
         },
@@ -885,6 +891,12 @@ describe('doctor workflow view visibility', () => {
     const wrapper = await mountView(DiagnosisAssignmentView);
 
     expect(wrapper.text()).toContain('常规');
+    expect(wrapper.text()).toContain('08305');
+    expect(wrapper.text()).not.toContain('UUID-001');
+    expect(wrapper.text()).toContain('切片检查与诊断');
+    expect(wrapper.text()).toContain('消化内科');
+    expect(wrapper.text()).toContain('胃窦组织、胃体组织');
+    expect(wrapper.text()).toContain('2');
     expect(wrapper.text()).not.toContain('routine');
     expect(wrapper.text()).not.toContain('PRIMARY');
     expect(wrapper.text()).not.toContain('Auto created staining comment');

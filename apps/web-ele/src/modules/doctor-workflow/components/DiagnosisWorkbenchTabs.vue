@@ -75,6 +75,10 @@ function createEditableRemarkSections(sections: RemarkSectionSummary[]) {
 function saveRemarkSection() {
   ElMessage.info('当前仅支持前端编辑，暂未接入保存接口');
 }
+
+function resolvePatientIdDisplay(workbench: DiagnosticWorkbenchView) {
+  return workbench.patientIdDisplay || workbench.patientId || null;
+}
 </script>
 
 <template>
@@ -160,7 +164,7 @@ function saveRemarkSection() {
               </ElDescriptionsItem>
 
               <ElDescriptionsItem label="病人ID">
-                {{ formatNullable(workbench.patientId) }}
+                {{ formatNullable(resolvePatientIdDisplay(workbench)) }}
               </ElDescriptionsItem>
               <ElDescriptionsItem label="检查项目">
                 {{ formatNullable(workbench.checkItem) }}

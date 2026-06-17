@@ -71,6 +71,10 @@ interface BatchAssignResult {
   success: number;
 }
 
+function resolvePatientIdDisplay(row: PendingDiagnosticTaskItem) {
+  return row.patientIdDisplay || row.patientId || null;
+}
+
 const accessStore = useAccessStore();
 
 const loading = ref(false);
@@ -548,7 +552,7 @@ void loadPendingData();
             </ElTableColumn>
             <ElTableColumn label="病人ID" min-width="120">
               <template #default="{ row }">
-                {{ formatNullable(row.patientId) }}
+                {{ formatNullable(resolvePatientIdDisplay(row)) }}
               </template>
             </ElTableColumn>
             <ElTableColumn label="姓名" min-width="120">

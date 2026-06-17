@@ -96,7 +96,37 @@ export function mapPendingDiagnosticTaskPageResponse(
   response: PendingDiagnosticTaskPageResponse,
 ): PendingDiagnosticTaskPage {
   return {
-    items: response.items ?? [],
+    items: Array.isArray(response.items)
+      ? response.items.map((item) => ({
+          acceptedAt: item.acceptedAt ?? null,
+          applicationId: item.applicationId ?? null,
+          applicationNo: item.applicationNo ?? null,
+          applicationType: item.applicationType ?? null,
+          assignedAt: item.assignedAt ?? null,
+          blockCount: item.blockCount ?? null,
+          caseId: item.caseId ?? '',
+          checkItem: item.checkItem ?? null,
+          completedAt: item.completedAt ?? null,
+          diagnosisDoctorName: item.diagnosisDoctorName ?? null,
+          diagnosisDoctorUserId: item.diagnosisDoctorUserId ?? null,
+          id: item.id ?? '',
+          pathologyNo: item.pathologyNo ?? null,
+          patientId: item.patientId ?? null,
+          patientIdDisplay: item.patientIdDisplay ?? null,
+          patientName: item.patientName ?? null,
+          primaryDoctorName: item.primaryDoctorName ?? null,
+          primaryDoctorUserId: item.primaryDoctorUserId ?? null,
+          remarks: item.remarks ?? null,
+          reportPrintedAt: item.reportPrintedAt ?? null,
+          reportStatus: item.reportStatus ?? null,
+          reviewerName: item.reviewerName ?? null,
+          reviewerUserId: item.reviewerUserId ?? null,
+          specimenName: item.specimenName ?? null,
+          submittingDepartmentName: item.submittingDepartmentName ?? null,
+          taskStatus: item.taskStatus ?? null,
+          taskType: item.taskType ?? null,
+        }))
+      : [],
     page: response.page ?? 1,
     size: response.size ?? 20,
     total: response.total ?? 0,
@@ -107,7 +137,15 @@ export function mapPendingMedicalOrderPageResponse(
   response: PendingMedicalOrderPageResponse,
 ): PendingMedicalOrderPage {
   return {
-    items: response.items ?? [],
+    items: Array.isArray(response.items)
+      ? response.items.map((item) => ({
+          ...item,
+          caseId: item.caseId ?? '',
+          orderId: item.orderId ?? '',
+          patientId: item.patientId ?? null,
+          patientIdDisplay: item.patientIdDisplay ?? null,
+        }))
+      : [],
     page: response.page ?? 1,
     size: response.size ?? 20,
     total: response.total ?? 0,

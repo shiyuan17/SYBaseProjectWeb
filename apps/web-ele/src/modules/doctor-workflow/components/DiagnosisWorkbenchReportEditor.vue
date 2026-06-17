@@ -262,6 +262,9 @@ const diagnosisDoctorLabel = computed(() =>
   formatNullable(reportDraft.diagnosisDoctor),
 );
 const reportDateLabel = computed(() => formatNullable(reportDraft.reportDate));
+const workbenchPatientIdDisplay = computed(
+  () => props.workbench?.patientIdDisplay || props.workbench?.patientId || '',
+);
 const commonPathologySectionLabels = {
   finalDiagnosis: '病理诊断及建议:',
   grossExam: '肉眼所见:',
@@ -883,7 +886,7 @@ watch(
     reportDraft.patientName = draftValue(workbench?.patientName);
     reportDraft.patientGender = draftValue(workbench?.patientGender);
     reportDraft.patientAge = draftValue(workbench?.patientAge);
-    reportDraft.patientId = draftValue(workbench?.patientId);
+    reportDraft.patientId = draftValue(workbenchPatientIdDisplay.value);
     reportDraft.inpatientNo = draftValue(workbench?.inpatientNo);
     reportDraft.bedNo = draftValue(workbench?.bedNo);
     reportDraft.submittingDepartmentName = draftValue(
