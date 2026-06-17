@@ -191,13 +191,21 @@ function returnToWorkspace() {
               <h2>近三年各技术指标合格率</h2>
             </div>
             <div class="chart-legend">
-              <span class="chart-legend__item"><span class="chart-legend__swatch"></span>规范化固定率</span>
-              <span class="chart-legend__item"><span
+              <span class="chart-legend__item"
+                ><span class="chart-legend__swatch"></span>规范化固定率</span
+              >
+              <span class="chart-legend__item"
+                ><span
                   class="chart-legend__swatch chart-legend__swatch--teal"
-                ></span>HE染色切片优良率</span>
-              <span class="chart-legend__item"><span
+                ></span
+                >HE染色切片优良率</span
+              >
+              <span class="chart-legend__item"
+                ><span
                   class="chart-legend__swatch chart-legend__swatch--soft"
-                ></span>免疫组化</span>
+                ></span
+                >免疫组化</span
+              >
             </div>
             <div class="bar-card-grid bar-card-grid--compact">
               <div
@@ -284,7 +292,9 @@ function returnToWorkspace() {
             <div class="report-summary">
               <div class="report-summary__meta">
                 <span>结构化报告类型</span>
-                <strong>{{ screenData.reportTypesSummary.totalKinds }} 种</strong>
+                <strong
+                  >{{ screenData.reportTypesSummary.totalKinds }} 种</strong
+                >
               </div>
               <div class="report-summary__meta">
                 <span>结构化报告工作量</span>
@@ -544,11 +554,7 @@ function returnToWorkspace() {
   justify-content: center;
   width: 56px;
   height: 56px;
-  background: linear-gradient(
-    180deg,
-    rgb(7 34 61 / 88%),
-    rgb(4 23 44 / 90%)
-  );
+  background: linear-gradient(180deg, rgb(7 34 61 / 88%), rgb(4 23 44 / 90%));
   border: 1px solid rgb(109 190 255 / 32%);
   box-shadow: inset 0 0 20px rgb(86 180 255 / 16%);
 }
@@ -706,11 +712,7 @@ function returnToWorkspace() {
   min-width: 0;
   padding: 12px;
   overflow: hidden;
-  background: linear-gradient(
-    180deg,
-    rgb(7 28 49 / 92%),
-    rgb(4 18 34 / 88%)
-  );
+  background: linear-gradient(180deg, rgb(7 28 49 / 92%), rgb(4 18 34 / 88%));
   border: 1px solid rgb(80 142 196 / 16%);
   box-shadow:
     inset 0 0 24px rgb(65 127 186 / 12%),
@@ -751,11 +753,7 @@ function returnToWorkspace() {
   align-items: center;
   padding: 8px 14px;
   margin-bottom: 10px;
-  background: linear-gradient(
-    90deg,
-    rgb(54 93 141 / 80%),
-    rgb(20 50 85 / 20%)
-  );
+  background: linear-gradient(90deg, rgb(54 93 141 / 80%), rgb(20 50 85 / 20%));
   clip-path: polygon(0 0, 98% 0, 93% 100%, 0 100%, 3% 50%);
 }
 
@@ -908,11 +906,7 @@ function returnToWorkspace() {
 
 .metric-stack__card {
   padding: 10px;
-  background: linear-gradient(
-    180deg,
-    rgb(10 43 74 / 90%),
-    rgb(5 27 47 / 90%)
-  );
+  background: linear-gradient(180deg, rgb(10 43 74 / 90%), rgb(5 27 47 / 90%));
   border: 1px solid rgb(100 181 255 / 20%);
   animation: dashboard-card-enter 0.7s ease both;
 }
@@ -951,16 +945,8 @@ function returnToWorkspace() {
   min-height: 420px;
   overflow: hidden;
   background:
-    radial-gradient(
-      circle at 50% 42%,
-      rgb(63 175 255 / 20%),
-      transparent 34%
-    ),
-    radial-gradient(
-      ellipse at 50% 80%,
-      rgb(88 113 206 / 18%),
-      transparent 42%
-    ),
+    radial-gradient(circle at 50% 42%, rgb(63 175 255 / 20%), transparent 34%),
+    radial-gradient(ellipse at 50% 80%, rgb(88 113 206 / 18%), transparent 42%),
     linear-gradient(180deg, rgb(5 23 42 / 50%), rgb(4 16 30 / 32%));
   border: 1px solid rgb(72 131 189 / 15%);
 }
@@ -1145,11 +1131,7 @@ function returnToWorkspace() {
   font-weight: 700;
   color: #f5fbff;
   text-align: center;
-  background: linear-gradient(
-    180deg,
-    rgb(12 38 68 / 84%),
-    rgb(7 24 45 / 86%)
-  );
+  background: linear-gradient(180deg, rgb(12 38 68 / 84%), rgb(7 24 45 / 86%));
   border: 1px solid rgb(96 185 255 / 28%);
 }
 
