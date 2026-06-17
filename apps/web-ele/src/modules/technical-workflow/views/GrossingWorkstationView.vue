@@ -763,6 +763,17 @@ async function handleQuery() {
   await loadPendingData();
 }
 
+async function handleRefresh() {
+  if (!hasActiveQueryFilters.value) {
+    pendingItems.value = [];
+    total.value = 0;
+    selectedTask.value = null;
+    workbench.resetWorkbenchState(null);
+    return;
+  }
+  await loadPendingData(selectedTask.value?.id);
+}
+
 async function toggleTimedOutOnly() {
   filters.timedOutOnly = !filters.timedOutOnly;
   filters.page = 1;
