@@ -695,7 +695,14 @@ function updatePathologyNoDraft(event: Event) {
             </div>
             <div>性别：{{ fieldValue(workspace.basicInfo.patientGender) }}</div>
             <div>年龄：{{ fieldValue(workspace.basicInfo.patientAge) }}</div>
-            <div>患者 ID：{{ fieldValue(workspace.basicInfo.patientId) }}</div>
+            <div>
+              患者 ID：{{
+                fieldValue(
+                  workspace.basicInfo.patientIdDisplay ??
+                    workspace.basicInfo.patientId,
+                )
+              }}
+            </div>
             <div>住院号：{{ fieldValue(workspace.basicInfo.inpatientNo) }}</div>
             <div>
               申请单号：{{ fieldValue(workspace.basicInfo.applicationNo) }}
