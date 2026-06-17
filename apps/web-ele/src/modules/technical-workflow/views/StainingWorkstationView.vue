@@ -47,6 +47,7 @@ import {
   formatDateTime,
   formatNullable,
   formatObjectType,
+  formatPatientIdDisplay,
   formatQualityStatus,
   formatSlideStatus,
   formatTaskStatus,
@@ -124,7 +125,7 @@ const pendingRows = computed<StainingTaskRow[]>(() =>
   pendingItems.value.map((task, index) => ({
     index: index + 1,
     pathologyNo: formatNullable(task.pathologyNo),
-    patientId: formatNullable(task.patientId),
+    patientId: formatPatientIdDisplay(task.patientIdDisplay, task.patientId),
     patientName: formatNullable(task.patientName),
     slideNo: formatNullable(
       task.objectDisplayNo ??
@@ -247,7 +248,10 @@ function buildCompletedRowsFromTracking(
       pathologyNo: formatNullable(
         tracking.pathologyNo ?? taskContext.pathologyNo,
       ),
-      patientId: formatNullable(taskContext.patientId),
+      patientId: formatPatientIdDisplay(
+        taskContext.patientIdDisplay,
+        taskContext.patientId,
+      ),
       patientName: formatNullable(taskContext.patientName),
       slideId: slide.slideId,
       slideNo: formatNullable(slide.slideNo),
@@ -274,7 +278,10 @@ function buildFallbackCompletedRow(
   return {
     index: 1,
     pathologyNo: formatNullable(taskContext.pathologyNo),
-    patientId: formatNullable(taskContext.patientId),
+    patientId: formatPatientIdDisplay(
+      taskContext.patientIdDisplay,
+      taskContext.patientId,
+    ),
     patientName: formatNullable(taskContext.patientName),
     slideId: result.slideId || taskContext.objectId || result.taskId,
     slideNo: formatNullable(

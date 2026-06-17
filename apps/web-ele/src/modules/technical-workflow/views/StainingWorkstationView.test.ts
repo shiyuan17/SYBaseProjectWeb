@@ -310,6 +310,7 @@ function createTask(
     objectType: 'SLIDE',
     pathologyNo: 'BL-001',
     patientId: 'P-001',
+    patientIdDisplay: '08305',
     patientName: '患者甲',
     payload: null,
     productionRemarks: '主班备注',
@@ -594,6 +595,7 @@ describe('StainingWorkstationView', () => {
       objectId: 'SLIDE-2',
       pathologyNo: 'BL-002',
       patientId: 'P-002',
+      patientIdDisplay: '08306',
       patientName: '患者乙',
       taskStatus: 'IN_PROGRESS',
     });
@@ -802,6 +804,7 @@ describe('StainingWorkstationView', () => {
       objectId: 'SLIDE-2',
       pathologyNo: 'BL-002',
       patientId: 'P-002',
+      patientIdDisplay: '08306',
       patientName: '患者乙',
       taskStatus: 'PENDING',
     });
