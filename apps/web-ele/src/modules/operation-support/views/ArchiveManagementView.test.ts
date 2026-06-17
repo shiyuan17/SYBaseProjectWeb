@@ -608,7 +608,8 @@ function createMockPageState() {
               objectId: 'CASE-APP-1',
               objectType: 'APPLICATION_FORM',
               pathologyNo: 'BL-2026-001',
-              patientId: 'PAT-APP-1',
+              patientId: 'UUID-APP-1',
+              patientIdDisplay: '08305',
               patientName: '张三',
               storedByName: '归档员甲',
             },
@@ -786,7 +787,8 @@ describe('ArchiveManagementView', () => {
     );
     expect(document.body.textContent).toContain('申请医生甲');
     expect(document.body.textContent).toContain('2026-06-15');
-    expect(document.body.textContent).toContain('PAT-APP-1');
+    expect(document.body.textContent).toContain('08305');
+    expect(document.body.textContent).not.toContain('UUID-APP-1');
     expect(document.body.textContent).toContain('当前状态启用');
     expect(document.body.textContent).toContain('未归档');
     expect(document.body.textContent).toContain('未借阅');

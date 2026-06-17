@@ -244,10 +244,14 @@ vi.mock('../components/ArchiveLoanMaterialListPanel.vue', () => ({
     emits: ['borrow'],
     setup(_, { emit }) {
       return () =>
-        h('button', {
-          type: 'button',
-          onClick: () => emit('borrow'),
-        }, 'mock-material-borrow');
+        h(
+          'button',
+          {
+            type: 'button',
+            onClick: () => emit('borrow'),
+          },
+          'mock-material-borrow',
+        );
     },
   }),
 }));
@@ -509,10 +513,10 @@ describe('BorrowManagementView', () => {
 
     const { app, root } = mountView();
 
-    const borrowButtons = [...document.querySelectorAll('button')].filter(
+    const borrowButton = [...document.querySelectorAll('button')].find(
       (button) => button.textContent?.includes('mock-material-borrow'),
     );
-    borrowButtons[0]?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    borrowButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
     expect(state.loanWorkspace.openBorrowDialog).toHaveBeenCalledWith(
       'EMBEDDING_BOX',

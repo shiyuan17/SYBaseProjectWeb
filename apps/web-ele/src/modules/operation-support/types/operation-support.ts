@@ -188,6 +188,7 @@ export interface ArchiveRecordView {
   pathologyNo?: null | string;
   patientGender?: null | string;
   patientId?: null | string;
+  patientIdDisplay?: null | string;
   patientName?: null | string;
   sampledAt?: null | string;
   sampledByName?: null | string;
@@ -286,6 +287,7 @@ export interface MaterialLoanView {
   pathologyNo?: null | string;
   patientGender?: null | string;
   patientId?: null | string;
+  patientIdDisplay?: null | string;
   patientName?: null | string;
   remarks?: null | string;
   returnedAt?: null | string;
@@ -727,6 +729,7 @@ export interface MedicalWasteSpecimenPreviewRequest {
 
 export interface MedicalWasteSpecimenLabelView {
   patientId?: null | string;
+  patientIdDisplay?: null | string;
   patientName?: null | string;
   pathologyNo?: null | string;
   sourceLabelId: string;

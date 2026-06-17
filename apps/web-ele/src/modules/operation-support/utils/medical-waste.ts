@@ -86,7 +86,7 @@ function buildSpecimenLabelRows(labels: MedicalWasteSpecimenLabelView[]) {
     .map(
       (label) => `
         <tr>
-          <td>${escapeHtml(label.patientId || '-')}</td>
+          <td>${escapeHtml(label.patientIdDisplay || label.patientId || '-')}</td>
           <td>${escapeHtml(label.patientName || '-')}</td>
           <td>${escapeHtml(label.pathologyNo || '-')}</td>
           <td>${escapeHtml(label.specimenName || '-')}</td>
