@@ -255,11 +255,14 @@ export interface MedicalOrderSummary {
 }
 
 export interface PendingMedicalOrderQuery {
+  dateFrom?: string;
+  dateTo?: string;
   orderCategoryCode?: string;
   page: number;
   pathologyNo?: string;
   size: number;
   status?: string;
+  workDate?: string;
 }
 
 export interface PendingMedicalOrderItem extends MedicalOrderSummary {

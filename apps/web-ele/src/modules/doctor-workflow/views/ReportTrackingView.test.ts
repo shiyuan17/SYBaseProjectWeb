@@ -351,6 +351,7 @@ describe('ReportTrackingView', () => {
     ].map((element) => element.textContent?.trim());
     expect(nodeTitleTexts).not.toContain('申请创建');
     expect(wrapper.root.textContent).not.toContain('APPLICATION');
+    expect(wrapper.root.textContent).not.toContain('ROUTINE');
     expect(wrapper.root.textContent).not.toContain('SIGNED');
     expect(wrapper.root.textContent).not.toContain('IN_DIAGNOSIS');
     expect(wrapper.root.textContent).not.toContain('RECEIVED');

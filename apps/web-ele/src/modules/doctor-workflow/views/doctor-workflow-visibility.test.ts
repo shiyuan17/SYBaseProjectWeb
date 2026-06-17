@@ -505,7 +505,7 @@ const pendingMedicalOrderPageFixture: PendingMedicalOrderPage = {
       orderType: 'IMMUNOHISTOCHEMISTRY',
       pathologyNo: 'PATH-002',
       patientName: '李四',
-      status: 'ACCEPTED',
+      status: 'IN_PROGRESS',
     },
   ],
   page: 1,
@@ -790,6 +790,7 @@ async function mountView(component: object) {
 
 describe('doctor workflow view visibility', () => {
   beforeEach(() => {
+    document.body.innerHTML = '';
     resetTestState();
   });
 
@@ -1207,6 +1208,42 @@ describe('doctor workflow view visibility', () => {
     reviewWrapper.unmount();
   });
 
+  it('submits report revision with implicit report id and current user operator', async () => {
+    mockAccessStore.accessCodes = [M4_PERMISSION_CODES.REVISION_REQUEST_CREATE];
+
+    const wrapper = await mountView(ReportRevisionView);
+    wrapper.setInputValue('请输入病例 ID 或病理号', 'CASE-001');
+    wrapper.clickButton('查询');
+    await flushAsyncWork();
+
+    wrapper.clickTableRow('当前报告');
+    await flushAsyncWork();
+    wrapper.clickButton('发起修订申请');
+    await flushAsyncWork();
+
+    expect(wrapper.documentText()).toContain('修订原因');
+    expect(wrapper.documentText()).toContain('备注');
+    expect(wrapper.documentText()).not.toContain('操作人');
+    expect(wrapper.documentText()).not.toContain('终端编码');
+    expect(wrapper.root.querySelectorAll('textarea')).toHaveLength(2);
+    expect(
+      wrapper.root.querySelectorAll('input[disabled], textarea[disabled]'),
+    ).toHaveLength(0);
+
+    wrapper.setInputValue('请输入修订原因', '补充镜下诊断描述');
+    wrapper.setInputValue('请输入备注（选填）', '补充说明');
+    wrapper.clickButton('提交');
+    await flushAsyncWork();
+
+    expect(createReportRevisionRequestMock).toHaveBeenCalledWith({
+      operatorName: '当前分派员',
+      remarks: '补充说明',
+      reportId: 'REPORT-001',
+      requestReason: '补充镜下诊断描述',
+    });
+    wrapper.unmount();
+  });
+
   it('hides revision top actions when the user has no revision permissions', async () => {
     const wrapper = await mountView(ReportRevisionView);
     wrapper.setInputValue('请输入病例 ID 或病理号', 'CASE-001');
@@ -1502,7 +1539,7 @@ describe('doctor workflow view visibility', () => {
     wrapper.unmount();
   });
 
-  it('completes accepted medical order in medical order workstation', async () => {
+  it('completes in-progress medical order in medical order workstation', async () => {
     mockAccessStore.accessCodes = [
       M4_PERMISSION_CODES.MEDICAL_ORDER_QUERY,
       M4_PERMISSION_CODES.MEDICAL_ORDER_COMPLETE,
@@ -1534,6 +1571,61 @@ describe('doctor workflow view visibility', () => {
     expect(completeMedicalOrderMock.mock.calls[0]?.[1]).not.toHaveProperty(
       'operatorUserId',
     );
+    wrapper.unmount();
+  });
+
+  it('enables complete only for in-progress or legacy accepted medical orders', async () => {
+    mockAccessStore.accessCodes = [
+      M4_PERMISSION_CODES.MEDICAL_ORDER_QUERY,
+      M4_PERMISSION_CODES.MEDICAL_ORDER_COMPLETE,
+    ];
+    listPendingMedicalOrdersMock.mockResolvedValue({
+      ...pendingMedicalOrderPageFixture,
+      items: [
+        {
+          ...pendingMedicalOrderPageFixture.items[0]!,
+          orderId: 'ORDER-PENDING',
+          orderNumber: 'MO-PENDING',
+          status: 'PENDING',
+        },
+        {
+          ...pendingMedicalOrderPageFixture.items[1]!,
+          orderId: 'ORDER-IN-PROGRESS',
+          orderNumber: 'MO-INPROGRESS',
+          status: 'IN_PROGRESS',
+        },
+        {
+          ...pendingMedicalOrderPageFixture.items[1]!,
+          orderId: 'ORDER-ACCEPTED',
+          orderNumber: 'MO-ACCEPTED',
+          status: 'ACCEPTED',
+        },
+        {
+          ...pendingMedicalOrderPageFixture.items[1]!,
+          orderId: 'ORDER-COMPLETED',
+          orderNumber: 'MO-COMPLETED',
+          status: 'COMPLETED',
+          completedAt: '2026-05-26T09:20:00',
+        },
+        {
+          ...pendingMedicalOrderPageFixture.items[1]!,
+          orderId: 'ORDER-CANCELLED',
+          orderNumber: 'MO-CANCELLED',
+          status: 'CANCELLED',
+        },
+      ],
+      total: 5,
+    });
+
+    const wrapper = await mountView(MedicalOrderWorkbenchView);
+
+    expect(wrapper.buttonTexts().filter((text) => text === '完成')).toHaveLength(5);
+    expect(wrapper.isButtonDisabled('完成', 0)).toBe(true);
+    expect(wrapper.isButtonDisabled('完成', 1)).toBe(false);
+    expect(wrapper.isButtonDisabled('完成', 2)).toBe(false);
+    expect(wrapper.isButtonDisabled('完成', 3)).toBe(true);
+    expect(wrapper.isButtonDisabled('完成', 4)).toBe(true);
+
     wrapper.unmount();
   });
 
