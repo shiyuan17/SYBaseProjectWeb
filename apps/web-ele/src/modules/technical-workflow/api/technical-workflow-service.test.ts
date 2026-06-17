@@ -132,6 +132,7 @@ describe('technical-workflow-service mappers', () => {
         inpatientNo: null,
         pathologyNo: null,
         patientId: null,
+        patientIdDisplay: null,
         patientName: null,
         submittingDepartmentName: null,
       },
@@ -195,6 +196,7 @@ describe('technical-workflow-service mappers', () => {
           grossingEvaluation: null,
           pathologyNo: null,
           patientId: null,
+          patientIdDisplay: null,
           patientName: null,
           printGroupId: null,
           selectable: false,
@@ -232,6 +234,7 @@ describe('technical-workflow-service mappers', () => {
           grossingEvaluation: null,
           pathologyNo: null,
           patientId: null,
+          patientIdDisplay: null,
           patientName: null,
           printGroupId: null,
           selectable: false,
@@ -326,6 +329,7 @@ describe('technical-workflow-service mappers', () => {
       materials: [],
       pathologyNo: null,
       patientId: null,
+      patientIdDisplay: null,
       patientName: null,
       receivedAt: null,
       registeredAt: null,
@@ -407,6 +411,78 @@ describe('technical-workflow-service mappers', () => {
       pendingCount: 0,
       pendingTasks: [],
       workDate: null,
+    });
+  });
+
+  it('maps patientIdDisplay with fallback for technical workflow payloads', () => {
+    expect(
+      mapPendingTechnicalSpecimenRegistrationPageResponse({
+        items: [
+          {
+            applicationId: 'APP-1',
+            applicationNo: 'APP-001',
+            applicationType: 'ROUTINE',
+            caseId: 'CASE-1',
+            checkItem: null,
+            inpatientNo: null,
+            pathologyNo: null,
+            patientAge: null,
+            patientGender: null,
+            patientId: 'UUID-1',
+            patientIdDisplay: '08305',
+            patientName: null,
+            receivedAt: null,
+            registeredAt: null,
+            registeredByName: null,
+            registrationStatus: null,
+            submittingDepartmentName: null,
+          },
+        ],
+      }).items[0],
+    ).toMatchObject({
+      patientId: 'UUID-1',
+      patientIdDisplay: '08305',
+    });
+
+    expect(
+      mapTechnicalSpecimenRegistrationWorkspaceResponse({
+        basicInfo: {
+          applicationNo: null,
+          applicationType: null,
+          fixationTime: null,
+          inpatientNo: null,
+          pathologyNo: null,
+          patientAge: null,
+          patientGender: null,
+          patientId: 'UUID-2',
+          patientIdDisplay: '08306',
+          patientName: null,
+          registrationStatus: null,
+          specimenRemovalTime: null,
+          submissionDate: null,
+          submittingDepartmentName: null,
+          submittingDoctorName: null,
+        },
+      }).basicInfo,
+    ).toMatchObject({
+      patientId: 'UUID-2',
+      patientIdDisplay: '08306',
+    });
+
+    expect(
+      mapSlicingWorkbenchResponse({
+        pendingList: [
+          {
+            caseId: 'CASE-2',
+            patientId: 'UUID-3',
+            patientIdDisplay: '08307',
+            taskId: 'TASK-2',
+          },
+        ],
+      }).pendingList[0],
+    ).toMatchObject({
+      patientId: 'UUID-3',
+      patientIdDisplay: '08307',
     });
   });
 });

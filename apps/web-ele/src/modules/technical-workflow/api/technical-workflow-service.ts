@@ -229,6 +229,7 @@ function mapSlicingWorkbenchRow(
     grossingEvaluation: response.grossingEvaluation ?? null,
     pathologyNo: response.pathologyNo ?? null,
     patientId: response.patientId ?? null,
+    patientIdDisplay: response.patientIdDisplay ?? response.patientId ?? null,
     patientName: response.patientName ?? null,
     printGroupId: response.printGroupId ?? null,
     selectable: response.selectable ?? false,
@@ -313,6 +314,10 @@ export function mapGrossingWorkbenchContextResponse(
       inpatientNo: response.caseSummary?.inpatientNo ?? null,
       pathologyNo: response.caseSummary?.pathologyNo ?? null,
       patientId: response.caseSummary?.patientId ?? null,
+      patientIdDisplay:
+        response.caseSummary?.patientIdDisplay ??
+        response.caseSummary?.patientId ??
+        null,
       patientName: response.caseSummary?.patientName ?? null,
       submittingDepartmentName:
         response.caseSummary?.submittingDepartmentName ?? null,
@@ -365,6 +370,7 @@ function mapPendingTechnicalSpecimenRegistrationItem(
     patientAge: response.patientAge ?? null,
     patientGender: response.patientGender ?? null,
     patientId: response.patientId ?? null,
+    patientIdDisplay: response.patientIdDisplay ?? response.patientId ?? null,
     patientName: response.patientName ?? null,
     receivedAt: response.receivedAt ?? null,
     registeredAt: response.registeredAt ?? null,
@@ -403,6 +409,7 @@ export function mapTechnicalSpecimenRegistrationDetailResponse(
     })),
     pathologyNo: response.pathologyNo ?? null,
     patientId: response.patientId ?? null,
+    patientIdDisplay: response.patientIdDisplay ?? response.patientId ?? null,
     patientName: response.patientName ?? null,
     receivedAt: response.receivedAt ?? null,
     registeredAt: response.registeredAt ?? null,
@@ -435,6 +442,10 @@ export function mapTechnicalSpecimenRegistrationWorkspaceResponse(
       patientAge: response.basicInfo?.patientAge ?? null,
       patientGender: response.basicInfo?.patientGender ?? null,
       patientId: response.basicInfo?.patientId ?? null,
+      patientIdDisplay:
+        response.basicInfo?.patientIdDisplay ??
+        response.basicInfo?.patientId ??
+        null,
       patientName: response.basicInfo?.patientName ?? null,
       registrationStatus: response.basicInfo?.registrationStatus ?? null,
       specimenRemovalTime: response.basicInfo?.specimenRemovalTime ?? null,
@@ -492,6 +503,7 @@ export function mapTechnicalSpecimenRegistrationWorkspaceResponse(
           patientAge: null,
           patientGender: null,
           patientId: null,
+          patientIdDisplay: null,
           patientName: null,
           receivedAt: null,
           registeredAt: null,

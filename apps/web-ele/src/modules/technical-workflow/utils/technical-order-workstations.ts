@@ -1,9 +1,21 @@
 import type { TechnicalWorkbenchPageConfig } from '../types/technical-workbench';
 
+import { formatPatientIdDisplay } from './format';
 import {
   createMedicalOrderWorkstationDataSource,
   TECHNICAL_ORDER_CATEGORY_CODES,
 } from './medical-order-workstation';
+
+function toOptionalString(value: unknown) {
+  return typeof value === 'string' ? value : undefined;
+}
+
+function formatTechnicalOrderPatientId(row: Record<string, unknown>) {
+  return formatPatientIdDisplay(
+    toOptionalString(row.patientIdDisplay),
+    toOptionalString(row.patientId),
+  );
+}
 
 const PENDING_ORDER_STATUS_OPTIONS = [
   { label: '待确认', value: 'PENDING' },
@@ -23,7 +35,12 @@ export const ROUTINE_ORDER_WORKSTATION_CONFIG: TechnicalWorkbenchPageConfig = {
     { key: 'wardNo', label: '住院号', minWidth: 96 },
     { key: 'outpatientNo', label: '门诊号', minWidth: 96 },
     { key: 'blockNo', label: '蜡块号', width: 86 },
-    { key: 'patientId', label: '病人ID', minWidth: 98 },
+    {
+      formatter: formatTechnicalOrderPatientId,
+      key: 'patientId',
+      label: '病人ID',
+      minWidth: 98,
+    },
     { key: 'patientName', label: '病人姓名', minWidth: 100 },
     { key: 'checkItem', label: '检查项目', minWidth: 130 },
     { key: 'doctorTime', label: '医嘱时间', minWidth: 160 },
@@ -102,7 +119,12 @@ export const SPECIAL_ORDER_WORKSTATION_CONFIG: TechnicalWorkbenchPageConfig = {
     },
     { key: 'pathologyNo', label: '病理号', minWidth: 132 },
     { key: 'wardNo', label: '住院号', minWidth: 100 },
-    { key: 'patientId', label: '病人ID', minWidth: 100 },
+    {
+      formatter: formatTechnicalOrderPatientId,
+      key: 'patientId',
+      label: '病人ID',
+      minWidth: 100,
+    },
     { key: 'patientName', label: '病人姓名', minWidth: 100 },
     { key: 'checkItem', label: '检查项目', minWidth: 120 },
     { key: 'remark', label: '备注', minWidth: 120 },
@@ -177,7 +199,12 @@ export const IHC_WORKSTATION_CONFIG: TechnicalWorkbenchPageConfig = {
       label: '序',
       width: 56,
     },
-    { key: 'patientId', label: '病人ID', minWidth: 100 },
+    {
+      formatter: formatTechnicalOrderPatientId,
+      key: 'patientId',
+      label: '病人ID',
+      minWidth: 100,
+    },
     { key: 'pathologyNo', label: '原病理号', minWidth: 132 },
     { key: 'slideNo', label: '病理号', minWidth: 110 },
     { key: 'patientName', label: '病人', minWidth: 90 },
@@ -252,7 +279,12 @@ export const CYTOLOGY_WORKSTATION_CONFIG: TechnicalWorkbenchPageConfig = {
     { key: 'sampleType', label: '送检类型', minWidth: 120 },
     { key: 'pathologyNo', label: '病理号', minWidth: 132 },
     { key: 'patientName', label: '病人', minWidth: 90 },
-    { key: 'patientId', label: '病人ID', minWidth: 100 },
+    {
+      formatter: formatTechnicalOrderPatientId,
+      key: 'patientId',
+      label: '病人ID',
+      minWidth: 100,
+    },
     { key: 'flowStatus', label: '流程状态', minWidth: 100 },
     { key: 'printedBlocks', label: '已打蜡块', minWidth: 96, align: 'center' },
     { key: 'printedSlides', label: '已打玻片', minWidth: 96, align: 'center' },
@@ -320,7 +352,12 @@ export const LIQUID_CYTOLOGY_WORKSTATION_CONFIG: TechnicalWorkbenchPageConfig =
         align: 'center',
       },
       { key: 'flowStatus', label: '流程状态', minWidth: 100 },
-      { key: 'patientId', label: '病人ID', minWidth: 100 },
+      {
+        formatter: formatTechnicalOrderPatientId,
+        key: 'patientId',
+        label: '病人ID',
+        minWidth: 100,
+      },
       { key: 'submitDept', label: '送检科室', minWidth: 120 },
       { key: 'receiverName', label: '接收人', minWidth: 90 },
       { key: 'releaseUser', label: '出片人', minWidth: 90 },

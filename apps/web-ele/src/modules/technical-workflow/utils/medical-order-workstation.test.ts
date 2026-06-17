@@ -90,6 +90,22 @@ describe('medical-order-workstation mapper', () => {
     expect(row.searchableText).toContain('he染色');
   });
 
+  it('prefers application workbench idNo for patient ID display', () => {
+    const row = mapMedicalOrderToTechnicalWorkbenchRow(
+      createOrder({
+        patientId: 'UUID-001',
+        patientIdDisplay: '08305',
+      }),
+      'routine',
+    );
+
+    expect(row).toMatchObject({
+      patientId: 'UUID-001',
+      patientIdDisplay: '08305',
+    });
+    expect(row.searchableText).toContain('08305');
+  });
+
   it('maps special medical orders to confirmation and release columns', () => {
     const row = mapMedicalOrderToTechnicalWorkbenchRow(
       createOrder({

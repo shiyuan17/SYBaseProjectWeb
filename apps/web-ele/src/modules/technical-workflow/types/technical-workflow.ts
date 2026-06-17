@@ -69,6 +69,7 @@ export interface PendingTechnicalTaskItem {
   applicationId: string;
   applicationNo: string;
   patientId?: null | string;
+  patientIdDisplay?: null | string;
   patientName?: null | string;
   caseId: string;
   completedAt: null | string;
@@ -185,6 +186,7 @@ export interface PendingTechnicalSpecimenRegistrationItem {
   patientAge: null | string;
   patientGender: null | string;
   patientId: null | string;
+  patientIdDisplay: null | string;
   patientName: null | string;
   receivedAt: null | string;
   registeredAt: null | string;
@@ -232,6 +234,7 @@ export interface TechnicalSpecimenRegistrationDetail {
   materials: TechnicalSpecimenRegistrationMaterial[];
   pathologyNo: null | string;
   patientId: null | string;
+  patientIdDisplay: null | string;
   patientName: null | string;
   receivedAt: null | string;
   registeredAt: null | string;
@@ -250,6 +253,7 @@ export interface TechnicalSpecimenRegistrationBasicInfo {
   patientAge: null | string;
   patientGender: null | string;
   patientId: null | string;
+  patientIdDisplay: null | string;
   patientName: null | string;
   registrationStatus: null | string;
   specimenRemovalTime: null | string;
@@ -475,6 +479,7 @@ export interface GrossingWorkbenchCaseSummary {
   inpatientNo: null | string;
   pathologyNo: null | string;
   patientId: null | string;
+  patientIdDisplay: null | string;
   patientName: null | string;
   submittingDepartmentName: null | string;
 }
@@ -774,6 +779,7 @@ export interface SlicingWorkbenchRow {
   grossingEvaluation?: null | string;
   pathologyNo?: null | string;
   patientId?: null | string;
+  patientIdDisplay?: null | string;
   patientName?: null | string;
   printGroupId?: null | string;
   selectable: boolean;

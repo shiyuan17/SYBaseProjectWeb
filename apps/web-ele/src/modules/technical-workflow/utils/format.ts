@@ -142,6 +142,13 @@ export function formatNullable(value?: null | string) {
   return value && value.trim() ? value : '-';
 }
 
+export function formatPatientIdDisplay(
+  patientIdDisplay?: null | string,
+  patientId?: null | string,
+) {
+  return formatNullable(patientIdDisplay?.trim() || patientId?.trim() || null);
+}
+
 export function formatPendingPathologyNo(value?: null | string) {
   return value && value.trim() ? value : '待生成';
 }
