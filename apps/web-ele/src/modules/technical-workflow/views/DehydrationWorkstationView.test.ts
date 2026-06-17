@@ -96,7 +96,10 @@ vi.mock('element-plus', () => {
           placeholder: props.placeholder,
           value: props.modelValue,
           onInput: (event: Event) =>
-            emit('update:modelValue', (event.target as HTMLInputElement).value),
+            emit(
+              'update:modelValue',
+              (event.target as HTMLInputElement).value.split(','),
+            ),
         });
     },
   });
@@ -167,22 +170,29 @@ vi.mock('element-plus', () => {
   });
 
   const ElTableColumn = defineComponent({
-    props: ['label', 'type'],
+    props: ['fixed', 'label', 'type'],
     setup(props, { slots }) {
       const getRows = inject<() => PendingTechnicalTaskItem[]>(
         tableRowsKey,
         () => [],
       );
       return () =>
-        h('section', { 'data-column-label': props.label ?? props.type ?? '' }, [
-          props.label ? h('strong', String(props.label)) : null,
-          ...getRows().map((row, index) => {
-            const cellContent = slots.default
-              ? slots.default({ $index: index, row })
-              : '';
-            return h('div', cellContent);
-          }),
-        ]);
+        h(
+          'section',
+          {
+            'data-column-fixed': props.fixed,
+            'data-column-label': props.label ?? props.type ?? '',
+          },
+          [
+            props.label ? h('strong', String(props.label)) : null,
+            ...getRows().map((row, index) => {
+              const cellContent = slots.default
+                ? slots.default({ $index: index, row })
+                : '';
+              return h('div', cellContent);
+            }),
+          ],
+        );
     },
   });
 
@@ -274,6 +284,15 @@ function scanPathologyNo(pathologyNo: string) {
   );
 }
 
+function setWorkDateRange(dateRange: [string, string]) {
+  const input = document.querySelector<HTMLInputElement>(
+    '[data-testid="work-date-picker"]',
+  );
+  expect(input).toBeTruthy();
+  input!.value = dateRange.join(',');
+  input!.dispatchEvent(new InputEvent('input', { bubbles: true }));
+}
+
 function mountView(query?: Record<string, string>) {
   query ??= { pathologyNo: 'BL-001' };
   mockRoute.query = query;
@@ -324,6 +343,8 @@ describe('DehydrationWorkstationView', () => {
     const { app } = mountView({});
     await flushView();
 
+    setWorkDateRange(['2026-06-17', '2026-06-17']);
+    await flushView();
     const queryButton = findButton('查询');
     queryButton.click();
     await flushView();
@@ -332,6 +353,7 @@ describe('DehydrationWorkstationView', () => {
       expect.objectContaining({
         createdFrom: '2026-06-17T00:00:00',
         createdTo: '2026-06-18T00:00:00',
+        includeAllStatuses: true,
         pathologyNo: undefined,
         taskType: 'DEHYDRATION',
       }),
@@ -360,6 +382,11 @@ describe('DehydrationWorkstationView', () => {
     expect(document.body.textContent).not.toContain('批次操作');
     expect(document.body.textContent).not.toContain('脱水追踪');
     expect(document.body.textContent).not.toContain('异常任务');
+    expect(
+      document.querySelector(
+        '[data-column-label="状态"][data-column-fixed="right"]',
+      ),
+    ).toBeTruthy();
     expect(document.querySelector('[data-column-label="操作"]')).toBeFalsy();
 
     app.unmount();
@@ -433,8 +460,6 @@ describe('DehydrationWorkstationView', () => {
     expect(mockListPendingTechnicalTasks).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
-        createdFrom: '2026-06-17T00:00:00',
-        createdTo: '2026-06-18T00:00:00',
         includeAllStatuses: true,
         pathologyNo: 'BL-SCAN',
         taskType: 'DEHYDRATION',
