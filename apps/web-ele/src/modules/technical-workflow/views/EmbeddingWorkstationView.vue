@@ -2122,11 +2122,11 @@ onBeforeUnmount(() => {
 }
 
 .embedding-completed-table-scroll th {
-  background: hsl(var(--accent));
-  box-shadow: inset 0 -1px 0 hsl(var(--border));
   position: sticky;
   top: 0;
   z-index: 30;
+  background: hsl(var(--accent));
+  box-shadow: inset 0 -1px 0 hsl(var(--border));
 }
 
 .embedding-completed-table-scroll th.sticky {
