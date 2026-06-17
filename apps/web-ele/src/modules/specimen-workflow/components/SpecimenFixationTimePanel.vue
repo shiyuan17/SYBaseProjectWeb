@@ -6,6 +6,7 @@ import {
   ElForm,
   ElFormItem,
   ElInput,
+  ElPagination,
   ElTable,
   ElTableColumn,
   ElTag,
@@ -35,9 +36,13 @@ const {
   handleConfirmFixation,
   handleCompleteFixationByScan,
   handleExportExcel,
+  handlePageChange,
+  handlePageSizeChange,
   handleRetryLabel,
   handleSelectionChange,
   loading,
+  pagedItems,
+  pagination,
   pageError,
   queueItems,
   resolveFixationLiquidLabel,
@@ -49,6 +54,7 @@ const {
   scanInput,
   selectedCount,
   submitRetryLabel,
+  total,
   workflowReferenceOptions,
 } = useSpecimenFixationTimePanel();
 
@@ -74,7 +80,6 @@ function resolveRowClassName({
     />
 
     <div class="flex flex-wrap items-center gap-3 text-sm">
-      <div class="font-semibold text-danger">设置固定时间</div>
       <div>
         全部
         <span class="text-xl font-semibold text-primary">{{
@@ -125,16 +130,17 @@ function resolveRowClassName({
 
     <ElTable
       v-loading="loading"
-      :data="queueItems"
+      :data="pagedItems"
       :row-class-name="resolveRowClassName"
       border
+      max-height="520"
       row-key="specimenId"
       @selection-change="handleSelectionChange"
     >
       <ElTableColumn type="selection" width="42" />
       <ElTableColumn label="序" width="60">
         <template #default="{ $index }">
-          {{ $index + 1 }}
+          {{ (pagination.page - 1) * pagination.size + $index + 1 }}
         </template>
       </ElTableColumn>
       <ElTableColumn label="申请单" min-width="130" prop="applicationNo" />
@@ -147,6 +153,11 @@ function resolveRowClassName({
       <ElTableColumn label="住院号" min-width="120">
         <template #default="{ row }">
           {{ formatNullable(row.inpatientNo) }}
+        </template>
+      </ElTableColumn>
+      <ElTableColumn label="病区" min-width="140">
+        <template #default="{ row }">
+          {{ formatNullable(row.wardName) }}
         </template>
       </ElTableColumn>
       <ElTableColumn label="性别" min-width="80">
@@ -208,6 +219,19 @@ function resolveRowClassName({
         </template>
       </ElTableColumn>
     </ElTable>
+
+    <div class="flex justify-end">
+      <ElPagination
+        v-model:current-page="pagination.page"
+        v-model:page-size="pagination.size"
+        :page-sizes="[10, 20, 50, 100]"
+        :total="total"
+        background
+        layout="total, sizes, prev, pager, next"
+        @current-change="handlePageChange"
+        @size-change="handlePageSizeChange"
+      />
+    </div>
   </div>
 
   <ElDialog

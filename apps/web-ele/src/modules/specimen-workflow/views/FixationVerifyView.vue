@@ -1,11 +1,13 @@
 <script setup lang="ts">
+import type { ApplicationRegistrationWorkbenchRecord } from '../types/application-registration-workbench';
 import type {
+  ApplicationDetailView,
   SpecimenManagementListItem,
   SpecimenRemovalSummary,
 } from '../types/specimen-workflow';
 import type { RemovalDisplayRow } from '../utils/specimen-removal-display';
 
-import { nextTick, reactive, ref, watch } from 'vue';
+import { computed, nextTick, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
@@ -18,6 +20,7 @@ import {
   ElPagination,
 } from 'element-plus';
 
+import { lookupApplicationRegistrationWorkbenchRecord } from '../api/application-registration-workbench-service';
 import {
   confirmSpecimenRemoval,
   confirmSpecimenRemovalByIdentifier,
@@ -26,13 +29,13 @@ import {
 } from '../api/specimen-workflow-service';
 import FixationVerifyTable from '../components/FixationVerifyTable.vue';
 import FixationVerifyWorkbenchPanel from '../components/FixationVerifyWorkbenchPanel.vue';
-import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import {
   loadOperatingRoomNameMapSafely,
   normalizeOperatingRoomDisplayValue,
 } from '../utils/operating-room-display';
+import { resolveWorkflowPatientInfo } from '../utils/patient-info';
 import {
   canConfirmRemoval as canConfirmRemovalValue,
   mapSpecimenManagementItemToRemovalDisplayRow,
@@ -51,6 +54,9 @@ const route = useRoute();
 type QuickConfirmIdentifierType = 'BARCODE' | 'SPECIMEN_NO';
 type FixationVerifyWorkbenchPanelRef = {
   focusQuickInput: () => void;
+};
+type RemovalApplicationContext = {
+  applicationDetail: ApplicationDetailView;
 };
 type QuickConfirmResolution =
   | {
@@ -80,15 +86,26 @@ const workbenchPanelRef = ref<FixationVerifyWorkbenchPanelRef | null>(null);
 const specimenIdQuickInput = ref('');
 const pendingItemsSource = ref<RemovalDisplayRow[]>([]);
 const pendingItems = ref<RemovalDisplayRow[]>([]);
+const selectedRemovalRows = ref<RemovalDisplayRow[]>([]);
 const summary = ref<SpecimenRemovalSummary>({ ...emptySummary });
 const total = ref(0);
 const operatingRoomNameMap = ref<ReadonlyMap<string, string>>(new Map());
+const applicationContextCache = reactive(
+  new Map<string, null | RemovalApplicationContext>(),
+);
 const confirmedRemovalItemCache = reactive(
   new Map<string, RemovalDisplayRow>(),
+);
+const workbenchRecordCache = reactive(
+  new Map<string, ApplicationRegistrationWorkbenchRecord | null>(),
 );
 const quickActionLoading = reactive({
   specimenId: false,
 });
+const selectedActionableRemovalCount = computed(
+  () =>
+    selectedRemovalRows.value.filter((row) => canConfirmRemoval(row)).length,
+);
 
 let routeSyncToken = 0;
 const APPLICATION_EXPANSION_SIZE = 500;
@@ -136,15 +153,77 @@ async function ensureOperatingRoomNameMapLoaded() {
   return operatingRoomNameMap.value;
 }
 
-function normalizeApplicationRemovalItem(
+function normalizeText(value?: null | string) {
+  return value?.trim() ?? '';
+}
+
+async function ensureApplicationContext(applicationId: string) {
+  const normalizedApplicationId = normalizeText(applicationId);
+  if (!normalizedApplicationId) {
+    return null;
+  }
+  if (applicationContextCache.has(normalizedApplicationId)) {
+    return applicationContextCache.get(normalizedApplicationId) ?? null;
+  }
+
+  try {
+    const applicationDetail = await getApplicationDetail(
+      normalizedApplicationId,
+    );
+    const context = { applicationDetail };
+    applicationContextCache.set(normalizedApplicationId, context);
+    return context;
+  } catch {
+    applicationContextCache.set(normalizedApplicationId, null);
+    return null;
+  }
+}
+
+async function ensureWorkbenchRecord(applicationNo: string) {
+  const normalizedApplicationNo = normalizeText(applicationNo);
+  if (!normalizedApplicationNo) {
+    return null;
+  }
+  if (workbenchRecordCache.has(normalizedApplicationNo)) {
+    return workbenchRecordCache.get(normalizedApplicationNo) ?? null;
+  }
+
+  try {
+    const record = await lookupApplicationRegistrationWorkbenchRecord({
+      keyword: normalizedApplicationNo,
+      queryType: 'APPLICATION_NO',
+    });
+    workbenchRecordCache.set(normalizedApplicationNo, record);
+    return record;
+  } catch {
+    workbenchRecordCache.set(normalizedApplicationNo, null);
+    return null;
+  }
+}
+
+async function normalizeApplicationRemovalItem(
   row: SpecimenManagementListItem,
-): RemovalDisplayRow {
+): Promise<RemovalDisplayRow> {
+  const [applicationContext, workbenchRecord] = await Promise.all([
+    ensureApplicationContext(row.applicationId),
+    ensureWorkbenchRecord(row.applicationNo),
+  ]);
+  const patientInfo = resolveWorkflowPatientInfo(row, {
+    applicationDetail: applicationContext?.applicationDetail ?? null,
+    patientGender: applicationContext?.applicationDetail.patientGender ?? null,
+    patientId: applicationContext?.applicationDetail.patientId ?? null,
+    workbenchRecord,
+  });
+
   return {
     ...mapSpecimenManagementItemToRemovalDisplayRow(row),
+    inpatientNo: patientInfo.inpatientNo,
+    patientIdLabel: patientInfo.patientIdLabel,
     surgeryName: normalizeOperatingRoomDisplayValue(
       operatingRoomNameMap.value,
       row.surgeryName,
     ),
+    wardName: patientInfo.wardName,
   };
 }
 
@@ -195,6 +274,11 @@ function syncVisibleRemovalItems(rows: RemovalDisplayRow[]) {
     rows,
   );
   pendingItems.value = mergeConfirmedRemovalItems(pendingItemsSource.value);
+  selectedRemovalRows.value = selectedRemovalRows.value.filter((selectedRow) =>
+    pendingItems.value.some(
+      (item) => item.specimenId === selectedRow.specimenId,
+    ),
+  );
   summary.value = buildSummary(pendingItems.value);
   total.value = pendingItems.value.length;
 }
@@ -202,6 +286,7 @@ function syncVisibleRemovalItems(rows: RemovalDisplayRow[]) {
 function clearVisibleRemovalItems() {
   pendingItemsSource.value = [];
   pendingItems.value = [];
+  selectedRemovalRows.value = [];
   summary.value = { ...emptySummary };
   total.value = 0;
   confirmedRemovalItemCache.clear();
@@ -211,6 +296,15 @@ function clearVisibleRemovalItems() {
 function upsertConfirmedRemovalItem(item: RemovalDisplayRow) {
   confirmedRemovalItemCache.set(item.specimenId, item);
   pendingItems.value = mergeConfirmedRemovalItems(pendingItemsSource.value);
+  selectedRemovalRows.value = selectedRemovalRows.value
+    .map((selectedRow) =>
+      selectedRow.specimenId === item.specimenId ? item : selectedRow,
+    )
+    .filter((selectedRow) =>
+      pendingItems.value.some(
+        (row) => row.specimenId === selectedRow.specimenId,
+      ),
+    );
   summary.value = buildSummary(pendingItems.value);
   total.value = pendingItems.value.length;
 }
@@ -220,6 +314,7 @@ async function loadPendingData() {
   if (!applicationNo) {
     pendingItemsSource.value = [];
     pendingItems.value = [];
+    selectedRemovalRows.value = [];
     summary.value = { ...emptySummary };
     total.value = 0;
     return;
@@ -235,17 +330,24 @@ async function loadPendingData() {
       size: APPLICATION_EXPANSION_SIZE,
     });
     syncVisibleRemovalItems(
-      result.items.map((item) => normalizeApplicationRemovalItem(item)),
+      await Promise.all(
+        result.items.map((item) => normalizeApplicationRemovalItem(item)),
+      ),
     );
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
     pendingItemsSource.value = [];
     pendingItems.value = [];
+    selectedRemovalRows.value = [];
     summary.value = { ...emptySummary };
     total.value = 0;
   } finally {
     loading.value = false;
   }
+}
+
+function handleSelectionChange(rows: RemovalDisplayRow[]) {
+  selectedRemovalRows.value = rows;
 }
 
 function resolveQuickConfirmExactMatch(
@@ -380,7 +482,7 @@ async function submitQuickConfirm() {
       remarks: '离体确认',
     });
 
-    const sourceRow = normalizeApplicationRemovalItem(
+    const sourceRow = await normalizeApplicationRemovalItem(
       readyTarget.matchedSpecimen,
     );
     upsertConfirmedRemovalItem(
@@ -403,50 +505,64 @@ async function submitQuickConfirm() {
   }
 }
 
-async function submitConfirmRemoval(row: RemovalDisplayRow) {
+async function confirmRemovalRow(row: RemovalDisplayRow) {
   const specimenBarcode = row.barcode?.trim() ?? '';
   const specimenNo = row.specimenNo.trim();
+  return specimenBarcode
+    ? confirmSpecimenRemoval({
+        remarks: '离体确认',
+        specimenBarcode,
+      })
+    : confirmSpecimenRemovalByIdentifier({
+        identifier: specimenNo,
+        identifierType: 'SPECIMEN_NO',
+        remarks: '离体确认',
+      });
+}
 
-  if (!specimenBarcode && !specimenNo) {
-    ElMessage.warning('请先录入或扫描标本标识');
+async function submitBatchConfirmRemoval() {
+  const actionableRows = selectedRemovalRows.value.filter((row) =>
+    canConfirmRemoval(row),
+  );
+
+  if (actionableRows.length === 0) {
+    ElMessage.warning('请先选择待离体确认的标本');
     return;
   }
 
   try {
-    await ElMessageBox.confirm('确认该标本已离体吗？', '离体确认', {
-      cancelButtonText: '取消',
-      confirmButtonText: '确认',
-      type: 'warning',
-    });
+    await ElMessageBox.confirm(
+      `确认选中的 ${actionableRows.length} 条标本已离体吗？`,
+      '离体确认',
+      {
+        cancelButtonText: '取消',
+        confirmButtonText: '确认',
+        type: 'warning',
+      },
+    );
   } catch {
     return;
   }
 
   actionLoading.value = true;
   pageError.value = '';
+
   try {
-    const result = specimenBarcode
-      ? await confirmSpecimenRemoval({
-          remarks: '离体确认',
-          specimenBarcode,
-        })
-      : await confirmSpecimenRemovalByIdentifier({
-          identifier: specimenNo,
-          identifierType: 'SPECIMEN_NO',
-          remarks: '离体确认',
-        });
-    upsertConfirmedRemovalItem(
-      toRemovalDisplayRow({
-        ...row,
-        confirmedAt: result.specimenRemovalAt,
-        specimenRemovalAt: result.specimenRemovalAt,
-        specimenRemovalOperatorName: result.operatorName,
-      }),
-    );
-    pendingItems.value = mergeConfirmedRemovalItems(pendingItemsSource.value);
-    summary.value = buildSummary(pendingItems.value);
-    total.value = pendingItems.value.length;
-    ElMessage.success(`标本 ${specimenBarcode || specimenNo} 已完成离体确认`);
+    for (const row of actionableRows) {
+      const result = await confirmRemovalRow(row);
+
+      upsertConfirmedRemovalItem(
+        toRemovalDisplayRow({
+          ...row,
+          confirmedAt: result.specimenRemovalAt,
+          patientIdLabel: row.patientIdLabel,
+          specimenRemovalAt: result.specimenRemovalAt,
+          specimenRemovalOperatorName: result.operatorName,
+        }),
+      );
+    }
+
+    ElMessage.success(`已完成 ${actionableRows.length} 条标本离体确认`);
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
   } finally {
@@ -511,43 +627,49 @@ watch(
         show-icon
       />
 
-      <WorkflowSectionCard
-        title="离体确认"
-        description="支持按标本条码/编号回车快速确认，并可在列表中逐条完成离体确认。"
+      <FixationVerifyWorkbenchPanel
+        ref="workbenchPanelRef"
+        v-model:specimen-id-quick-input="specimenIdQuickInput"
+        :quick-action-loading="quickActionLoading"
+        :summary="summary"
+        @quick-confirm="submitQuickConfirm"
       >
-        <FixationVerifyWorkbenchPanel
-          ref="workbenchPanelRef"
-          v-model:specimen-id-quick-input="specimenIdQuickInput"
-          :quick-action-loading="quickActionLoading"
-          :summary="summary"
-          @quick-confirm="submitQuickConfirm"
-        />
-
-        <FixationVerifyTable
-          :action-loading="actionLoading"
-          :can-confirm-removal="canConfirmRemoval"
-          :format-removal-status="formatRemovalStatus"
-          :items="pendingItems"
-          :loading="loading"
-          :page="filters.page"
-          :size="filters.size"
-          @confirm-removal="submitConfirmRemoval"
-        />
-
-        <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
+        <template #actions>
+          <ElButton
+            :disabled="selectedActionableRemovalCount === 0"
+            :loading="actionLoading"
+            type="primary"
+            @click="submitBatchConfirmRemoval"
+          >
+            离体确认
+          </ElButton>
           <ElButton @click="clearVisibleRemovalItems">清除列表</ElButton>
-          <ElPagination
-            v-model:current-page="filters.page"
-            v-model:page-size="filters.size"
-            :page-sizes="[10, 20, 50, 100]"
-            :total="total"
-            background
-            layout="total, sizes, prev, pager, next"
-            @current-change="loadPendingData"
-            @size-change="loadPendingData"
-          />
-        </div>
-      </WorkflowSectionCard>
+        </template>
+      </FixationVerifyWorkbenchPanel>
+
+      <FixationVerifyTable
+        :action-loading="actionLoading"
+        :can-confirm-removal="canConfirmRemoval"
+        :format-removal-status="formatRemovalStatus"
+        :items="pendingItems"
+        :loading="loading"
+        :page="filters.page"
+        :size="filters.size"
+        @selection-change="handleSelectionChange"
+      />
+
+      <div class="flex justify-end">
+        <ElPagination
+          v-model:current-page="filters.page"
+          v-model:page-size="filters.size"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="total"
+          background
+          layout="total, sizes, prev, pager, next"
+          @current-change="loadPendingData"
+          @size-change="loadPendingData"
+        />
+      </div>
     </div>
   </Page>
 </template>

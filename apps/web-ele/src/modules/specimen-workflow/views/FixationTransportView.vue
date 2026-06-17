@@ -11,7 +11,6 @@ import SpecimenBarcodeBindingPanel from '../components/SpecimenBarcodeBindingPan
 import SpecimenCheckInPanel from '../components/SpecimenCheckInPanel.vue';
 import SpecimenConfirmationPanel from '../components/SpecimenConfirmationPanel.vue';
 import SpecimenFixationTimePanel from '../components/SpecimenFixationTimePanel.vue';
-import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { M2_PERMISSION_CODES } from '../constants';
 import FixationVerifyView from './FixationVerifyView.vue';
 import TransportHandoverView from './TransportHandoverView.vue';
@@ -85,9 +84,7 @@ watch(
     <div class="flex flex-col gap-4">
       <ElTabs v-model="activeTab">
         <ElTabPane v-if="canVerifyFixation" label="条码绑定" name="binding">
-          <WorkflowSectionCard title="条码绑定">
-            <SpecimenBarcodeBindingPanel />
-          </WorkflowSectionCard>
+          <SpecimenBarcodeBindingPanel />
         </ElTabPane>
         <ElTabPane
           v-if="canVerifyFixation"
@@ -97,23 +94,17 @@ watch(
           <FixationVerifyView embedded />
         </ElTabPane>
         <ElTabPane v-if="canVerifyFixation" label="标本固定" name="fixation">
-          <WorkflowSectionCard title="标本固定">
-            <SpecimenFixationTimePanel />
-          </WorkflowSectionCard>
+          <SpecimenFixationTimePanel />
         </ElTabPane>
         <ElTabPane
           v-if="canVerifyFixation"
           label="标本确认"
           name="confirmation"
         >
-          <WorkflowSectionCard title="标本确认">
-            <SpecimenConfirmationPanel />
-          </WorkflowSectionCard>
+          <SpecimenConfirmationPanel />
         </ElTabPane>
         <ElTabPane v-if="canVerifyFixation" label="标本入库" name="check-in">
-          <WorkflowSectionCard title="标本入库">
-            <SpecimenCheckInPanel />
-          </WorkflowSectionCard>
+          <SpecimenCheckInPanel />
         </ElTabPane>
         <ElTabPane
           v-if="canHandoverTransport"
