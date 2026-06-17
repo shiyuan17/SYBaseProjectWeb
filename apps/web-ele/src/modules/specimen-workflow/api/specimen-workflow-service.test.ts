@@ -65,6 +65,10 @@ describe('specimen-workflow-service mock flow', () => {
 
   it('filters the mock application list by pathology number', async () => {
     const firstApplication = getMockState().applications[0];
+    expect(firstApplication).toBeDefined();
+    if (!firstApplication) {
+      return;
+    }
     firstApplication.pathologyNo = 'BL202606030001';
 
     const page = await listApplications({

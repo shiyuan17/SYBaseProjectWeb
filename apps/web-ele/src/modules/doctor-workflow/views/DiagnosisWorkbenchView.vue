@@ -784,7 +784,7 @@ onBeforeUnmount(() => {
               </ElButton>
               <ElSelect
                 v-model="reportIssueMode"
-                class="diagnosis-workbench-toolbar-actions__issue-select shrink"
+                class="diagnosis-workbench-toolbar-actions__issue-select w-[150px] shrink-0"
                 data-testid="workbench-report-issue-mode"
                 size="small"
               >

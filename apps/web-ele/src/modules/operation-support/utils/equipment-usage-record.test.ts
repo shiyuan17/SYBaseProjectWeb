@@ -32,7 +32,6 @@ describe('equipment-usage-record utils', () => {
       equipmentId: 'EQ-ID-1',
       equipmentName: '生物显微镜',
       equipmentStatus: 'ACTIVE',
-      id: 'EQ-ID-1',
       locationDescription: '镜检室',
     });
     expect(form.equipmentId).toBe('EQ-ID-1');

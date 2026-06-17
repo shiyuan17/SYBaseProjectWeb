@@ -1,21 +1,9 @@
 import type {
   CreateEquipmentUsageRecordRequest,
-  EquipmentRecordView,
+  EquipmentCommonDeviceView,
 } from '../types/operation-support';
 
 import dayjs from 'dayjs';
-
-export type EquipmentCommonDeviceView = Pick<
-  EquipmentRecordView,
-  | 'equipmentCategory'
-  | 'equipmentCode'
-  | 'equipmentName'
-  | 'equipmentStatus'
-  | 'id'
-  | 'locationDescription'
-> & {
-  equipmentId: string;
-};
 
 export type EquipmentUsageRecordFormState = {
   commonlyUsed: boolean;
@@ -31,6 +19,8 @@ export type EquipmentUsageRecordFormState = {
   startedAt: string;
   usageContent: string;
 };
+
+export type { EquipmentCommonDeviceView };
 
 function formatDefaultDateTime(hour: number) {
   return dayjs()

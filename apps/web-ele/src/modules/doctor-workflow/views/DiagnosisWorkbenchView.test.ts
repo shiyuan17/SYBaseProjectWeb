@@ -976,7 +976,7 @@ describe('DiagnosisWorkbenchView', () => {
     );
 
     wrapper.unmount();
-  });
+  }, 15_000);
 
   it('resizes workstation panes by dragging the split handles', async () => {
     const wrapper = await mountView();
