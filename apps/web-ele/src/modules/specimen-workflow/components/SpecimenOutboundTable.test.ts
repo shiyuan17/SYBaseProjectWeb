@@ -38,7 +38,8 @@ function createRow(
     outboundStatusTagType: 'info',
     outboundUserName: null,
     patientGender: '女',
-    patientId: 'PAT-001',
+    patientId: 'UUID-001',
+    patientIdDisplay: '08305',
     patientName: '张三',
     registeredAt: '2026-06-08 09:00:00',
     registeredByName: '登记员',
@@ -127,6 +128,8 @@ describe('SpecimenOutboundTable', () => {
     ).not.toBeNull();
     expect(wrapper.container.textContent).toContain('待出库');
     expect(wrapper.container.textContent).toContain('出库未保存');
+    expect(wrapper.container.textContent).toContain('08305');
+    expect(wrapper.container.textContent).not.toContain('UUID-001');
 
     wrapper.unmount();
   });

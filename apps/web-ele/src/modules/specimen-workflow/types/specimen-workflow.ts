@@ -119,6 +119,7 @@ export interface ApplicationDetailView {
   patientAge: null | string;
   patientGender: null | string;
   patientId: null | string;
+  patientIdDisplay?: null | string;
   patientIdentifier?: null | string;
   patientCheckStatus?: null | string;
   patientName: null | string;
@@ -263,6 +264,7 @@ export interface SpecimenManagementListItem {
   latestTrackingAt: null | string;
   patientGender?: null | string;
   patientId?: null | string;
+  patientIdDisplay?: null | string;
   patientName: null | string;
   recentNode?: null | string;
   registeredAt: null | string;
@@ -687,6 +689,7 @@ export interface SpecimenOutboundListItem {
   outboundUserName: null | string;
   patientGender: null | string;
   patientId: null | string;
+  patientIdDisplay?: null | string;
   patientName: null | string;
   registeredAt: null | string;
   registeredByName: null | string;

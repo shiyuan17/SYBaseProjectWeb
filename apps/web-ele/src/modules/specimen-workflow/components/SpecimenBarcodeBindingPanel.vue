@@ -15,6 +15,13 @@ import {
 import { useSpecimenBarcodeBindingPanel } from '../composables/useSpecimenBarcodeBindingPanel';
 import { formatDateTime, formatNullable } from '../utils/format';
 
+function resolvePatientIdDisplay(row: {
+  patientId?: null | string;
+  patientIdDisplay?: null | string;
+}) {
+  return row.patientIdDisplay || row.patientId || null;
+}
+
 const {
   actionLoading,
   buildingOptions,
@@ -202,7 +209,7 @@ const {
       </ElTableColumn>
       <ElTableColumn label="病人ID" min-width="140">
         <template #default="{ row }">
-          {{ formatNullable(row.patientId) }}
+          {{ formatNullable(resolvePatientIdDisplay(row)) }}
         </template>
       </ElTableColumn>
       <ElTableColumn label="姓名" min-width="120">

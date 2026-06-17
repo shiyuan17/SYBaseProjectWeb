@@ -49,6 +49,10 @@ function resolveRowClassName({ row }: { row: SpecimenOutboundDisplayItem }) {
     resolveOutboundWorkflowRowTone(row),
   );
 }
+
+function resolvePatientIdDisplay(row: SpecimenOutboundDisplayItem) {
+  return row.patientIdDisplay || row.patientId || null;
+}
 </script>
 
 <template>
@@ -132,7 +136,7 @@ function resolveRowClassName({ row }: { row: SpecimenOutboundDisplayItem }) {
     </ElTableColumn>
     <ElTableColumn label="病人ID" min-width="140">
       <template #default="{ row }">
-        {{ formatNullable(row.patientId) }}
+        {{ formatNullable(resolvePatientIdDisplay(row)) }}
       </template>
     </ElTableColumn>
     <ElTableColumn label="出库时间" min-width="180">

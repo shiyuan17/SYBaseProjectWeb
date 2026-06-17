@@ -53,7 +53,8 @@ vi.mock('../composables/useSpecimenBarcodeBindingPanel', () => ({
       applicationNo: 'M2-001',
       barcode: null,
       patientGender: '女',
-      patientId: 'P-001',
+      patientId: 'UUID-001',
+      patientIdDisplay: '08305',
       patientName: 'Alice',
       registeredAt: '2026-05-20 08:00:00',
       registrationOperatorName: '李护士',
@@ -175,6 +176,8 @@ describe('SpecimenBarcodeBindingPanel', () => {
       '标本条码',
     ]);
     expect(container.textContent).toContain('李护士');
+    expect(container.textContent).toContain('08305');
+    expect(container.textContent).not.toContain('UUID-001');
 
     const bindButton = [...container.querySelectorAll('button')].find(
       (button) => button.textContent?.includes('条码绑定'),

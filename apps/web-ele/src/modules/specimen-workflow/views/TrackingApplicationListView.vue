@@ -385,7 +385,11 @@ watch(
               {{ formatNullable(detailTracking?.patientName) }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="患者标识">
-              {{ formatNullable(detailTracking?.patientId) }}
+              {{
+                formatNullable(
+                  detailTracking?.patientIdDisplay || detailTracking?.patientId,
+                )
+              }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="送检科室">
               {{ formatNullable(detailTracking?.submittingDepartmentName) }}

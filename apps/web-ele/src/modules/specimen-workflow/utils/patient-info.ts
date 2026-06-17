@@ -8,6 +8,7 @@ export type PatientInfoSourceContext = {
   applicationDetail?: ApplicationDetailView | null;
   patientGender?: null | string;
   patientId?: null | string;
+  patientIdDisplay?: null | string;
   workbenchRecord?: ApplicationRegistrationWorkbenchRecord | null;
 };
 
@@ -34,11 +35,13 @@ export function normalizePatientGenderLabel(value?: null | string) {
 }
 
 export function resolvePatientIdLabel(
-  row: Pick<SpecimenManagementListItem, 'patientId'>,
+  row: Pick<SpecimenManagementListItem, 'patientId' | 'patientIdDisplay'>,
   context: PatientInfoSourceContext,
 ) {
   return (
     normalizePatientInfoText(context.workbenchRecord?.patientInfo.idNo) ||
+    normalizePatientInfoText(context.patientIdDisplay) ||
+    normalizePatientInfoText(row.patientIdDisplay) ||
     normalizePatientInfoText(context.applicationDetail?.patientId) ||
     normalizePatientInfoText(context.patientId) ||
     normalizePatientInfoText(row.patientId)
@@ -76,7 +79,7 @@ export function resolvePatientGenderDisplay(
 export function resolveWorkflowPatientInfo(
   row: Pick<
     SpecimenManagementListItem,
-    'inpatientNo' | 'patientGender' | 'patientId'
+    'inpatientNo' | 'patientGender' | 'patientId' | 'patientIdDisplay'
   >,
   context: PatientInfoSourceContext,
 ): ResolvedWorkflowPatientInfo {

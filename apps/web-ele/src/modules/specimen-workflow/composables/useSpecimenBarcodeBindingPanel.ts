@@ -48,6 +48,10 @@ function normalizeText(value?: null | string) {
   return value?.trim() ?? '';
 }
 
+function resolvePatientIdDisplay(row: SpecimenManagementListItem) {
+  return normalizeText(row.patientIdDisplay) || normalizeText(row.patientId);
+}
+
 function createEmptySummary(): SpecimenManagementListSummary {
   return {
     abnormalCount: 0,
@@ -386,7 +390,7 @@ export function useSpecimenBarcodeBindingPanel() {
       formatNullable(row.specimenType),
       formatDateTime(row.registeredAt),
       formatNullable(row.registrationOperatorName),
-      formatNullable(row.patientId),
+      formatNullable(resolvePatientIdDisplay(row)),
       formatNullable(row.patientName),
     ]);
   }
@@ -489,7 +493,7 @@ export function useSpecimenBarcodeBindingPanel() {
         '-',
       idNo:
         normalizeText(record?.patientInfo.idNo) ||
-        normalizeText(row.patientId) ||
+        resolvePatientIdDisplay(row) ||
         row.applicationNo,
       patientName:
         normalizeText(record?.patientInfo.patientName) ||

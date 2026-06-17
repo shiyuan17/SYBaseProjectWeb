@@ -23,4 +23,16 @@ describe('patient-info', () => {
       ),
     ).toBe('08305');
   });
+
+  it('uses patientIdDisplay before falling back to internal patientId', () => {
+    expect(
+      resolvePatientIdLabel(
+        {
+          patientId: '1d857986-392a-4620-bc10-bf2c900001a8',
+          patientIdDisplay: '08305',
+        },
+        {},
+      ),
+    ).toBe('08305');
+  });
 });
