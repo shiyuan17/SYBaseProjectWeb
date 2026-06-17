@@ -48,6 +48,10 @@ const emit = defineEmits<{
 
 const specimenCount = computed(() => props.labels.length);
 
+function resolvePatientIdDisplay(row: MedicalWasteSpecimenLabelView) {
+  return row.patientIdDisplay || row.patientId || null;
+}
+
 function updateForm(patch: Partial<SpecimenPrintForm>) {
   emit('update:form', {
     ...props.form,
@@ -176,7 +180,7 @@ const weightKgModel = computed({
     >
       <ElTableColumn label="病人ID" min-width="160">
         <template #default="{ row }">
-          {{ formatNullable(row.patientId) }}
+          {{ formatNullable(resolvePatientIdDisplay(row)) }}
         </template>
       </ElTableColumn>
       <ElTableColumn label="病人姓名" min-width="140">
