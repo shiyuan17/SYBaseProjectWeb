@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import AnalyticsOverviewView from '#/modules/dashboard/views/AnalyticsOverviewView.vue';
+import PathologyDashboardView from '#/modules/dashboard/views/PathologyDashboardView.vue';
 </script>
 
 <template>
-  <AnalyticsOverviewView />
+  <PathologyDashboardView />
 </template>
