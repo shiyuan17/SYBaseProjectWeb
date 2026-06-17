@@ -105,6 +105,14 @@ const REPORT_PRINT_STATUS_LABELS: Record<string, string> = {
   UNPRINTED: '未打印',
 };
 
+const LIFECYCLE_STAGE_LABELS: Record<string, string> = {
+  APPLICATION: '申请创建',
+  ARCHIVE: '归档借阅',
+  REPORT: '诊断报告',
+  SPECIMEN: '标本',
+  TECHNICAL: '技术处理',
+};
+
 const LIFECYCLE_NODE_STATUS_LABELS: Record<string, string> = {
   ACCEPTED: '已接收',
   ASSIGNED: '已分派',
@@ -301,6 +309,20 @@ export function formatReportPrintStatus(value?: null | string) {
     return EMPTY_TEXT;
   }
   return REPORT_PRINT_STATUS_LABELS[value] ?? value;
+}
+
+export function formatLifecycleStage(
+  title?: null | string,
+  stageCode?: null | string,
+) {
+  const normalizedTitle = title?.trim();
+  if (normalizedTitle) {
+    return normalizedTitle;
+  }
+  if (!stageCode) {
+    return EMPTY_TEXT;
+  }
+  return LIFECYCLE_STAGE_LABELS[stageCode] ?? stageCode;
 }
 
 export function formatLifecycleNodeStatus(value?: null | string) {

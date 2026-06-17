@@ -5,6 +5,7 @@ import {
   formatCaseStatus,
   formatDateTime,
   formatLifecycleNodeStatus,
+  formatLifecycleStage,
   formatLoanStatus,
   formatQualityStatus,
   formatReceiptStatus,
@@ -37,6 +38,8 @@ describe('doctor-workflow format utils', () => {
   it('formats lifecycle and archive related status labels', () => {
     expect(formatLifecycleNodeStatus('PENDING')).toBe('未发生');
     expect(formatLifecycleNodeStatus('IN_STORAGE')).toBe('已归档');
+    expect(formatLifecycleStage('', 'APPLICATION')).toBe('申请创建');
+    expect(formatLifecycleStage(undefined, 'TECHNICAL')).toBe('技术处理');
     expect(formatArchiveStatus('IN_STORAGE')).toBe('已归档');
     expect(formatArchiveStatus('PENDING')).toBe('未归档');
     expect(formatLoanStatus('NONE')).toBe('未借阅');

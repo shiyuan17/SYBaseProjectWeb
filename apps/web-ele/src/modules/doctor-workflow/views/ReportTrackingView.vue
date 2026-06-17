@@ -43,6 +43,7 @@ import {
   formatDiagnosticTaskStatus,
   formatDiagnosticTaskType,
   formatLifecycleNodeStatus,
+  formatLifecycleStage,
   formatLoanStatus,
   formatMedicalOrderStatus,
   formatMedicalOrderType,
@@ -232,6 +233,19 @@ function specimenCollapseTitle(item: LifecycleSpecimenView) {
   ].join(' / ');
 }
 
+function shouldShowNodeTitle(
+  nodeTitle?: null | string,
+  stageTitle?: null | string,
+  stageCode?: null | string,
+) {
+  const normalizedNodeTitle = nodeTitle?.trim();
+  if (!normalizedNodeTitle) {
+    return false;
+  }
+  const normalizedStageTitle = formatLifecycleStage(stageTitle, stageCode);
+  return normalizedNodeTitle !== normalizedStageTitle;
+}
+
 watch(
   [isCurrentTrackingRoute, caseId],
   ([isActive, value]) => {
@@ -386,13 +400,10 @@ watch(
             :key="stage.stageCode ?? stage.stageTitle ?? 'stage'"
             class="rounded-lg border border-border/70 bg-muted/20 p-4"
           >
-            <header class="mb-3 flex items-center justify-between gap-3">
+            <header class="mb-3">
               <h4 class="text-sm font-semibold text-foreground">
-                {{ formatNullable(stage.stageTitle) }}
+                {{ formatLifecycleStage(stage.stageTitle, stage.stageCode) }}
               </h4>
-              <span class="text-xs text-muted-foreground">
-                {{ formatNullable(stage.stageCode) }}
-              </span>
             </header>
             <div class="flex flex-col gap-3">
               <article
@@ -402,10 +413,30 @@ watch(
               >
                 <div class="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <div class="text-sm font-medium text-foreground">
+                    <div
+                      v-if="
+                        shouldShowNodeTitle(
+                          node.title,
+                          stage.stageTitle,
+                          stage.stageCode,
+                        )
+                      "
+                      class="text-sm font-medium text-foreground"
+                    >
                       {{ formatNullable(node.title) }}
                     </div>
-                    <div class="mt-1 text-xs text-muted-foreground">
+                    <div
+                      :class="
+                        shouldShowNodeTitle(
+                          node.title,
+                          stage.stageTitle,
+                          stage.stageCode,
+                        )
+                          ? 'mt-1'
+                          : ''
+                      "
+                      class="text-xs text-muted-foreground"
+                    >
                       {{ formatDateTime(node.occurredAt) }} /
                       {{ formatNullable(node.operatorName) }}
                     </div>

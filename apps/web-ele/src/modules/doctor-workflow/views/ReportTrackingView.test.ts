@@ -346,6 +346,11 @@ describe('ReportTrackingView', () => {
     expect(wrapper.root.textContent).not.toContain(
       '保留当前报告、诊断任务、版本链、修订、会诊与医嘱链路',
     );
+    const nodeTitleTexts = [
+      ...wrapper.root.querySelectorAll('.text-sm.font-medium.text-foreground'),
+    ].map((element) => element.textContent?.trim());
+    expect(nodeTitleTexts).not.toContain('申请创建');
+    expect(wrapper.root.textContent).not.toContain('APPLICATION');
     expect(wrapper.root.textContent).not.toContain('SIGNED');
     expect(wrapper.root.textContent).not.toContain('IN_DIAGNOSIS');
     expect(wrapper.root.textContent).not.toContain('RECEIVED');
