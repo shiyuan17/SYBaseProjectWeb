@@ -61,8 +61,9 @@ vi.mock('@vben/common-ui', () => ({
 
 vi.mock('@vben/plugins/echarts', () => ({
   EchartsUI: defineComponent({
-    setup() {
-      return () => h('div', 'chart');
+    inheritAttrs: false,
+    setup(_, { attrs }: { attrs: Record<string, unknown> }) {
+      return () => h('div', attrs, 'chart');
     },
   }),
   useEcharts: () => ({
@@ -289,10 +290,10 @@ function mountView() {
 }
 
 async function flushView() {
-  await nextTick();
-  await Promise.resolve();
-  await Promise.resolve();
-  await nextTick();
+  for (let index = 0; index < 8; index += 1) {
+    await nextTick();
+    await Promise.resolve();
+  }
 }
 
 function buildMockReport(category: string) {
@@ -729,6 +730,7 @@ describe('StatisticsAnalysisView', () => {
     expect(document.body.textContent).toContain('病例量');
     expect(document.body.textContent).toContain('诊断任务数');
     expect(document.body.textContent).toContain('导出 CSV');
+    expect(mockRenderEcharts).toHaveBeenCalled();
 
     app.unmount();
     root.remove();
@@ -1019,6 +1021,78 @@ describe('StatisticsAnalysisView', () => {
     clickSpy.mockRestore();
     revokeSpy.mockRestore();
     createSpy.mockRestore();
+    app.unmount();
+    root.remove();
+  });
+
+  it('shows explicit empty states instead of blank chart containers when no chart data is available', async () => {
+    mockQueryStatReport.mockImplementation((payload: { category: string }) => {
+      if (payload.category === 'OPERATION') {
+        return Promise.resolve({
+          columns: [],
+          reportCode: 'OPERATION',
+          rows: [
+            {
+              indicatorCode: 'OP_CASE_VOLUME',
+              indicatorName: '病例量',
+              metricStatus: 'UNAVAILABLE',
+              metricUnit: 'COUNT',
+              metricValue: '0',
+              sourceNote: 'pathology_cases',
+              trendPoints: [],
+            },
+          ],
+        });
+      }
+      if (payload.category === 'WORKLOAD') {
+        return Promise.resolve({
+          columns: [],
+          reportCode: 'WORKLOAD',
+          rows: [
+            {
+              indicatorCode: 'WL_DIAGNOSTIC_TASK_COUNT',
+              indicatorName: '诊断任务数',
+              metricStatus: 'UNAVAILABLE',
+              metricUnit: 'COUNT',
+              metricValue: '0',
+              sourceNote: 'diagnostic_tasks',
+              trendPoints: [],
+            },
+          ],
+        });
+      }
+      return Promise.resolve({
+        columns: [],
+        reportCode: 'QUALITY',
+        rows: [],
+      });
+    });
+
+    const { app, root } = mountView();
+    await flushView();
+
+    expect(document.body.textContent).toContain('当前指标暂无趋势图数据');
+    expect(mockRenderEcharts).toHaveBeenCalledTimes(1);
+    expect(mockRenderEcharts).toHaveBeenCalledWith(
+      expect.objectContaining({
+        series: expect.any(Array),
+      }),
+    );
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('falls back to a visible chart error message when chart rendering cannot initialize', async () => {
+    mockRenderEcharts.mockResolvedValueOnce(null);
+
+    const { app, root } = mountView();
+    await flushView();
+
+    expect(mockRenderEcharts).toHaveBeenCalled();
+    expect(document.body.textContent).toContain('图表暂时无法渲染，请稍后重试');
+    expect(root.textContent).not.toContain('chart');
+
     app.unmount();
     root.remove();
   });
