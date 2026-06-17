@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Page } from '@vben/common-ui';
+
 import { ElAlert } from 'element-plus';
 
 import TechnicalTrackingDetailsSection from '../components/TechnicalTrackingDetailsSection.vue';
