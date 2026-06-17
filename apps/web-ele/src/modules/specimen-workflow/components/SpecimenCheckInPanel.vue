@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import { ElButton, ElInput, ElTable, ElTableColumn, ElTag } from 'element-plus';
+import {
+  ElButton,
+  ElInput,
+  ElPagination,
+  ElTable,
+  ElTableColumn,
+  ElTag,
+} from 'element-plus';
 
 import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
 
@@ -20,6 +27,8 @@ const {
   handleExport,
   handleManualCheckIn,
   handleOperatorChange,
+  handlePageChange,
+  handlePageSizeChange,
   handlePrimaryCheckIn,
   handleQuickCheckIn,
   handleRemoveRow,
@@ -28,11 +37,14 @@ const {
   handleSelectionChange,
   loading,
   operatorForm,
+  pagedItems,
+  pagination,
   pendingCount,
   queueItems,
   retryLoading,
   scanInput,
   selectedCount,
+  total,
 } = useSpecimenCheckInPanel();
 
 function resolveRowClassName({
@@ -49,7 +61,6 @@ function resolveRowClassName({
 <template>
   <div class="flex flex-col gap-4">
     <div class="flex flex-wrap items-center gap-4 text-sm">
-      <div class="font-semibold text-danger">标本入库</div>
       <div>
         全部
         <span class="text-xl font-semibold text-primary">{{
@@ -105,22 +116,36 @@ function resolveRowClassName({
 
     <ElTable
       v-loading="loading"
-      :data="queueItems"
+      :data="pagedItems"
       :row-class-name="resolveRowClassName"
       border
+      max-height="520"
       row-key="specimenId"
       @selection-change="handleSelectionChange"
     >
       <ElTableColumn type="selection" width="38" />
-      <ElTableColumn label="序" type="index" width="60" />
+      <ElTableColumn label="序" width="60">
+        <template #default="{ $index }">
+          {{ (pagination.page - 1) * pagination.size + $index + 1 }}
+        </template>
+      </ElTableColumn>
       <ElTableColumn label="申请单" min-width="120" prop="applicationNo" />
       <ElTableColumn label="标本编号" min-width="130" prop="specimenNo" />
       <ElTableColumn label="姓名" min-width="110" prop="patientName" />
       <ElTableColumn label="住院号" min-width="110">
-        <template #default> - </template>
+        <template #default="{ row }">
+          {{ formatNullable(row.inpatientNoLabel) }}
+        </template>
+      </ElTableColumn>
+      <ElTableColumn label="病区" min-width="140">
+        <template #default="{ row }">
+          {{ formatNullable(row.wardName) }}
+        </template>
       </ElTableColumn>
       <ElTableColumn label="性别" min-width="90">
-        <template #default> - </template>
+        <template #default="{ row }">
+          {{ formatNullable(row.patientGenderLabel) }}
+        </template>
       </ElTableColumn>
       <ElTableColumn label="手术间" min-width="120">
         <template #default="{ row }">
@@ -161,6 +186,11 @@ function resolveRowClassName({
         </template>
       </ElTableColumn>
       <ElTableColumn label="添加人" min-width="120" prop="queueAddedByName" />
+      <ElTableColumn label="病人ID" min-width="140">
+        <template #default="{ row }">
+          {{ formatNullable(row.patientIdLabel) }}
+        </template>
+      </ElTableColumn>
       <ElTableColumn fixed="right" label="操作" width="150">
         <template #default="{ row }">
           <div class="flex items-center gap-2">
@@ -181,10 +211,22 @@ function resolveRowClassName({
       </ElTableColumn>
     </ElTable>
 
-    <div class="text-sm text-muted-foreground">
-      已入库
-      {{ queueItems.filter((item) => item.queueStatus === 'SUCCESS').length }}
-      条， 待处理 {{ pendingCount }} 条
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div class="text-sm text-muted-foreground">
+        已入库
+        {{ queueItems.filter((item) => item.queueStatus === 'SUCCESS').length }}
+        条，待处理 {{ pendingCount }} 条
+      </div>
+      <ElPagination
+        v-model:current-page="pagination.page"
+        v-model:page-size="pagination.size"
+        :page-sizes="[10, 20, 50, 100]"
+        :total="total"
+        background
+        layout="total, sizes, prev, pager, next"
+        @current-change="handlePageChange"
+        @size-change="handlePageSizeChange"
+      />
     </div>
   </div>
 </template>

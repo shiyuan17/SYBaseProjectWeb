@@ -9,6 +9,7 @@ import { Page } from '@vben/common-ui';
 import {
   ElAlert,
   ElButton,
+  ElDatePicker,
   ElDialog,
   ElForm,
   ElFormItem,
@@ -33,10 +34,15 @@ import {
   resolveReceiptWorkflowRowTone,
   resolveSpecimenWorkflowRowClassName,
 } from '../utils/specimen-workflow-row-tone';
+import {
+  createDateRangePickerShortcuts,
+  disableFutureDate,
+} from '#/modules/technical-workflow/utils/date-range';
 
 import '../styles/specimen-workflow-row-tone.css';
 
 const route = useRoute();
+const dateRangeShortcuts = createDateRangePickerShortcuts();
 const {
   batchRetryResult,
   closeReceiveDialog,
@@ -50,6 +56,7 @@ const {
   handleDirectReceiveUserChange,
   handleExportExcel,
   handleOperatorChange,
+  handleQueryPendingReceipts,
   handleQueueSpecimen,
   handleReceiveUserChange,
   handleReceiveSelected,
@@ -62,6 +69,7 @@ const {
   operatorForm,
   pageError,
   queueItems,
+  createReceiptDatePickerDefaultValue,
   receiveDialogVisible,
   receiveForm,
   receiveLoading,
@@ -71,6 +79,7 @@ const {
   retryForm,
   retrySubmitting,
   retryTargetRows,
+  receiptDateRange,
   scanInput,
   selectedCount,
   selectedRowCount,
@@ -146,6 +155,26 @@ watch(
           style="width: 240px"
           @keyup.enter="handleQueueSpecimen"
         />
+        <ElDatePicker
+          v-model="receiptDateRange"
+          :default-value="createReceiptDatePickerDefaultValue()"
+          :disabled-date="disableFutureDate"
+          :shortcuts="dateRangeShortcuts"
+          :unlink-panels="true"
+          end-placeholder="结束日期"
+          range-separator="至"
+          start-placeholder="开始日期"
+          style="width: 260px"
+          type="daterange"
+          value-format="YYYY-MM-DD"
+        />
+        <ElButton
+          :loading="lookupLoading"
+          type="primary"
+          @click="handleQueryPendingReceipts"
+        >
+          查询
+        </ElButton>
         <div class="w-[180px]">
           <SystemUserSelect
             v-model="operatorForm.operatorUserId"
@@ -212,6 +241,11 @@ watch(
         <ElTableColumn label="住院号" min-width="120">
           <template #default="{ row }">
             {{ formatNullable(row.inpatientNo) }}
+          </template>
+        </ElTableColumn>
+        <ElTableColumn label="病区" min-width="140">
+          <template #default="{ row }">
+            {{ formatNullable(row.wardName) }}
           </template>
         </ElTableColumn>
         <ElTableColumn label="性别" min-width="80">
