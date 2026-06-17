@@ -829,6 +829,21 @@ function findByTestId<T extends HTMLElement = HTMLElement>(testId: string) {
   return element;
 }
 
+async function selectReportStyleOption(label: string) {
+  findByTestId('report-style-select').click();
+  await flushAsyncWork();
+
+  const option = [
+    ...document.body.querySelectorAll<HTMLElement>(
+      '.el-select-dropdown__item',
+    ),
+  ].find((item) => item.textContent?.includes(label));
+  expect(option).toBeTruthy();
+
+  option!.click();
+  await flushAsyncWork();
+}
+
 async function clickMaterialTab(label: string) {
   const tab = [
     ...document.querySelectorAll<HTMLElement>('.el-tabs__item, [role="tab"]'),
@@ -1029,6 +1044,7 @@ describe('DiagnosisWorkbenchView', () => {
 
   it('renders live print preview tab from the editable report draft', async () => {
     const wrapper = await mountView();
+    await selectReportStyleOption('所见即所得模板');
     const patientNameEditor = document.querySelector<HTMLInputElement>(
       '#report-meta-patientName',
     );
@@ -1098,6 +1114,7 @@ describe('DiagnosisWorkbenchView', () => {
 
   it('renders editable report preview content in the middle pane', async () => {
     const wrapper = await mountView();
+    await selectReportStyleOption('所见即所得模板');
     const phoneEditor =
       document.querySelector<HTMLInputElement>('#report-meta-phone');
     const patientNameEditor = document.querySelector<HTMLInputElement>(
@@ -1142,22 +1159,62 @@ describe('DiagnosisWorkbenchView', () => {
 
     expect(reportStyleSelect).toBeTruthy();
     expect(document.body.textContent).toContain('默认模板');
+    expect(document.body.textContent).toContain('大体所见');
+    expect(document.body.textContent).toContain('镜下所见');
+    expect(document.body.textContent).toContain('病理诊断');
+    expect(document.body.textContent).toContain('临床符合');
+    expect(document.body.textContent).toContain('未标记诊断符合');
+    for (const flagLabel of ['阳性', '阴性', '签发', '复核']) {
+      expect(document.body.textContent).toContain(flagLabel);
+    }
+
+    reportStyleSelect!.click();
+    await flushAsyncWork();
+    const styleDropdownText = document.body.textContent ?? '';
+    expect(styleDropdownText).toContain('默认模板');
+    expect(styleDropdownText).toContain('所见即所得模板');
+
+    await selectReportStyleOption('所见即所得模板');
+    expect(document.body.textContent).toContain('所见即所得模板');
     expect(document.body.textContent).toContain('病理检查报告单');
 
-    const selectReportStyle = async (label: string) => {
-      reportStyleSelect!.click();
+    const openSelectOptions = async (testId: string) => {
+      const selectRoot = document.querySelector<HTMLElement>(
+        `[data-testid="${testId}"]`,
+      );
+      expect(selectRoot).toBeTruthy();
+      selectRoot!.click();
       await flushAsyncWork();
-
-      const option = [
-        ...document.body.querySelectorAll<HTMLElement>(
-          '.el-select-dropdown__item',
-        ),
-      ].find((item) => item.textContent?.includes(label));
-      expect(option).toBeTruthy();
-
-      option!.click();
+      const text = document.body.textContent ?? '';
+      document.body.click();
       await flushAsyncWork();
+      return text;
     };
+
+    await selectReportStyleOption('默认模板');
+    const clinicalDropdownText = await openSelectOptions(
+      'classic-clinical-match-select',
+    );
+    for (const option of [
+      '未标记临床符合',
+      '临床符合',
+      '临床不符合',
+      '不宜对比',
+    ]) {
+      expect(clinicalDropdownText).toContain(option);
+    }
+
+    const diagnosisDropdownText = await openSelectOptions(
+      'classic-diagnosis-match-select',
+    );
+    for (const option of [
+      '未标记诊断符合',
+      '诊断符合',
+      '诊断基本符合',
+      '诊断不符合',
+    ]) {
+      expect(diagnosisDropdownText).toContain(option);
+    }
 
     const reportStyleAssertions = [
       ['南海人民医院STR报告', 'STR位点'],
@@ -1171,7 +1228,7 @@ describe('DiagnosisWorkbenchView', () => {
     ] as const;
 
     for (const [styleLabel, templateMarker] of reportStyleAssertions) {
-      await selectReportStyle(styleLabel);
+      await selectReportStyleOption(styleLabel);
       expect(document.body.textContent).toContain(styleLabel);
       expect(document.body.textContent).toContain(templateMarker);
     }
@@ -1252,6 +1309,7 @@ describe('DiagnosisWorkbenchView', () => {
       (file) => `blob:${(file as File).name}`,
     );
     const wrapper = await mountView();
+    await selectReportStyleOption('所见即所得模板');
 
     expect(getButtonTexts()).not.toContain('采图');
     await clickMaterialTab('患者信息');
@@ -1767,6 +1825,7 @@ describe('DiagnosisWorkbenchView', () => {
       print: printMock,
     } as unknown as Window);
     const wrapper = await mountView();
+    await selectReportStyleOption('所见即所得模板');
     const patientNameEditor = document.querySelector<HTMLInputElement>(
       '#report-meta-patientName',
     );

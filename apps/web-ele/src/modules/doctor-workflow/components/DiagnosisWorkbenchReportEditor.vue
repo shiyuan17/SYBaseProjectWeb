@@ -1918,18 +1918,20 @@ function handlePrint() {
                   </ElSelect>
                 </div>
                 <div class="classic-report-status-spacer"></div>
-                <ElCheckboxGroup
-                  v-model="classicReportFlags"
-                  class="classic-report-flags"
-                >
-                  <ElCheckbox
+                <div class="classic-report-flags">
+                  <label
                     v-for="option in classicReportFlagOptions"
                     :key="option"
-                    :value="option"
+                    class="classic-report-flag"
                   >
+                    <input
+                      v-model="classicReportFlags"
+                      type="checkbox"
+                      :value="option"
+                    />
                     {{ option }}
-                  </ElCheckbox>
-                </ElCheckboxGroup>
+                  </label>
+                </div>
               </aside>
             </section>
           </section>
@@ -2886,13 +2888,21 @@ function handlePrint() {
   font-weight: 600;
 }
 
-.classic-report-flags :deep(.el-checkbox) {
+.classic-report-flag {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
   height: 20px;
-  margin-right: 0;
 }
 
-.classic-report-flags :deep(.el-checkbox:first-child) {
+.classic-report-flag:first-child {
   color: #f00;
+}
+
+.classic-report-flag input {
+  width: 13px;
+  height: 13px;
+  margin: 0;
 }
 
 .report-footer-field {
