@@ -14,6 +14,7 @@ const {
   mockCreateSlicingSlidePrintMergeGroups,
   mockPrintSlicingSlideMergeGroup,
   mockPrintSlicingSlides,
+  mockRoute,
   mockStartSlicing,
   mockUpdateTechnicalTaskRemarks,
 } = vi.hoisted(() => ({
@@ -23,8 +24,15 @@ const {
   mockCreateSlicingSlidePrintMergeGroups: vi.fn(),
   mockPrintSlicingSlideMergeGroup: vi.fn(),
   mockPrintSlicingSlides: vi.fn(),
+  mockRoute: {
+    query: {},
+  } as { query: Record<string, string> },
   mockStartSlicing: vi.fn(),
   mockUpdateTechnicalTaskRemarks: vi.fn(),
+}));
+
+vi.mock('vue-router', () => ({
+  useRoute: () => mockRoute,
 }));
 
 vi.mock('@vben/common-ui', () => ({
@@ -128,6 +136,7 @@ vi.mock('element-plus', () => {
     ElAlert: simple('section'),
     ElButton: simple('button'),
     ElCheckbox: simple('label'),
+    ElDatePicker: simple('input'),
     ElDrawer: simple('section'),
     ElInput: simple('input'),
     ElInputNumber: simple('input'),
@@ -370,6 +379,9 @@ function mountView() {
 describe('SlicingWorkstationView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-17T09:00:00'));
+    mockRoute.query = {};
     document.body.innerHTML = '';
     mockGetSlicingWorkbench.mockResolvedValue(createWorkbench());
     mockGetTechnicalTracking.mockResolvedValue({
@@ -413,8 +425,43 @@ describe('SlicingWorkstationView', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it('queries workbench without date filters by default', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    expect(mockGetSlicingWorkbench).toHaveBeenCalledWith(
+      expect.not.objectContaining({
+        dateFrom: expect.any(String),
+        dateTo: expect.any(String),
+        workDate: expect.any(String),
+      }),
+    );
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('uses route workDate when querying workbench from deep link', async () => {
+    mockRoute.query = { workDate: '2026-06-01' };
+
+    const { app, root } = mountView();
+    await flushView();
+
+    expect(mockGetSlicingWorkbench).toHaveBeenCalledWith(
+      expect.objectContaining({
+        dateFrom: '2026-06-01',
+        dateTo: '2026-06-01',
+        workDate: undefined,
+      }),
+    );
+
+    app.unmount();
+    root.remove();
   });
 
   it('hides placeholder actions while keeping the primary slicing flow visible', async () => {

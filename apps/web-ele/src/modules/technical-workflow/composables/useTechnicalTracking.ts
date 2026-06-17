@@ -102,18 +102,15 @@ export function useTechnicalTracking() {
     loading.value = true;
     pageError.value = '';
     try {
-      trackingResult.value = await getTechnicalTracking(
-        normalizedCaseId,
-        {
-          ...buildDateRangeQueryParams(dateRange.value),
-          workDate:
-            dateRange.value.length === 0 &&
-            typeof route.query.workDate === 'string' &&
-            route.query.workDate.trim()
-              ? route.query.workDate
-              : undefined,
-        },
-      );
+      trackingResult.value = await getTechnicalTracking(normalizedCaseId, {
+        ...buildDateRangeQueryParams(dateRange.value),
+        workDate:
+          dateRange.value.length === 0 &&
+          typeof route.query.workDate === 'string' &&
+          route.query.workDate.trim()
+            ? route.query.workDate
+            : undefined,
+      });
       activeTab.value = resolveInitialTrackingTab(route.query.tab);
       selectedNodeId.value = resolveSelectedTrackingNodeId(
         {

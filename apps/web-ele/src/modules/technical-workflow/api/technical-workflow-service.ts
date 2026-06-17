@@ -53,6 +53,7 @@ import type {
   TechnicalTaskStartRequest,
   TechnicalTrackingView,
 } from '../types/technical-workflow';
+import type { DateRangeQueryParams } from '../utils/date-range';
 
 import type {
   ApplicationRegistrationWorkbenchRecord,
@@ -60,8 +61,6 @@ import type {
 } from '#/modules/specimen-workflow/types/application-registration-workbench';
 
 import { requestClient } from '#/api/request';
-
-import type { DateRangeQueryParams } from '../utils/date-range';
 
 type PendingTechnicalTaskPageResponse = Partial<PendingTechnicalTaskPage>;
 type PendingTechnicalSpecimenRegistrationPageResponse =
@@ -526,10 +525,10 @@ export async function getTechnicalTracking(
   };
   const response =
     queryParams.dateFrom || queryParams.dateTo || queryParams.workDate
-    ? await requestClient.get<TechnicalTrackingResponse>(url, {
-        params: queryParams,
-      })
-    : await requestClient.get<TechnicalTrackingResponse>(url);
+      ? await requestClient.get<TechnicalTrackingResponse>(url, {
+          params: queryParams,
+        })
+      : await requestClient.get<TechnicalTrackingResponse>(url);
   return mapTechnicalTrackingResponse(response);
 }
 

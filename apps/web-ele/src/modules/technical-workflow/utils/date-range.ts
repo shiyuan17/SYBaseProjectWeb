@@ -48,7 +48,10 @@ export function createDateRangePickerShortcuts(): DateRangeShortcut[] {
       text: '本周',
       value: () => {
         const today = dayjs();
-        return [resolveWeekStart(today).toDate(), today.startOf('day').toDate()];
+        return [
+          resolveWeekStart(today).toDate(),
+          today.startOf('day').toDate(),
+        ];
       },
     },
     {
@@ -130,7 +133,9 @@ export function resolveRouteDateRange(query: {
   workDate?: unknown;
 }) {
   const dateFrom =
-    typeof query.dateFrom === 'string' ? normalizeDateValue(query.dateFrom) : '';
+    typeof query.dateFrom === 'string'
+      ? normalizeDateValue(query.dateFrom)
+      : '';
   const dateTo =
     typeof query.dateTo === 'string' ? normalizeDateValue(query.dateTo) : '';
   if (dateFrom && dateTo) {
@@ -138,7 +143,9 @@ export function resolveRouteDateRange(query: {
   }
 
   const workDate =
-    typeof query.workDate === 'string' ? normalizeDateValue(query.workDate) : '';
+    typeof query.workDate === 'string'
+      ? normalizeDateValue(query.workDate)
+      : '';
   return workDate ? [workDate, workDate] : [];
 }
 

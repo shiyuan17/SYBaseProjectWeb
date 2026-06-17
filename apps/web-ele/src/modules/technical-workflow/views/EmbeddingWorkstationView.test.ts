@@ -223,6 +223,21 @@ vi.mock('element-plus', () => {
     },
   });
 
+  const ElDatePicker = defineComponent({
+    props: ['modelValue', 'placeholder'],
+    emits: ['update:modelValue'],
+    setup(props, { emit }) {
+      return () =>
+        h('input', {
+          'data-testid': 'work-date-picker',
+          placeholder: props.placeholder,
+          value: props.modelValue,
+          onInput: (event: Event) =>
+            emit('update:modelValue', (event.target as HTMLInputElement).value),
+        });
+    },
+  });
+
   const ElEmpty = defineComponent({
     props: ['description'],
     setup(props) {
@@ -285,6 +300,7 @@ vi.mock('element-plus', () => {
     ElButton,
     ElCheckbox,
     ElDrawer,
+    ElDatePicker,
     ElEmpty,
     ElInput,
     ElMessage: {
@@ -487,6 +503,8 @@ function queryButton(text: string) {
 
 describe('EmbeddingWorkstationView', () => {
   beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-17T09:00:00'));
     mockInitialOperatorRemarks.value = '';
     mockRoute.query = {};
     mockListPendingTechnicalTasks.mockResolvedValue({
@@ -579,6 +597,7 @@ describe('EmbeddingWorkstationView', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     document.body.innerHTML = '';
     messageSuccess.mockReset();
     messageWarning.mockReset();
@@ -615,6 +634,9 @@ describe('EmbeddingWorkstationView', () => {
     );
     expect(findButton('取消包埋')).toBeTruthy();
     expect(findButton('确认包埋完成')).toBeTruthy();
+    expect(
+      document.querySelector('[data-testid="work-date-picker"]'),
+    ).toBeTruthy();
 
     const buttonLabels = [...document.querySelectorAll('button')].map((item) =>
       item.textContent?.trim(),
@@ -622,6 +644,22 @@ describe('EmbeddingWorkstationView', () => {
     const taskButtonIndex = buttonLabels.indexOf('包埋任务');
     expect(buttonLabels.indexOf('包埋历史')).toBeGreaterThan(taskButtonIndex);
     expect(buttonLabels.indexOf('评价记录')).toBeGreaterThan(taskButtonIndex);
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('uses empty date range by default and does not send date filters initially', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    expect(mockGetEmbeddingWorkstationSummary).toHaveBeenCalledWith({});
+    expect(mockListPendingTechnicalTasks).toHaveBeenCalledWith(
+      expect.not.objectContaining({
+        createdFrom: expect.any(String),
+        createdTo: expect.any(String),
+      }),
+    );
 
     app.unmount();
     root.remove();

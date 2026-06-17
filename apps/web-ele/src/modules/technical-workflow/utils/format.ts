@@ -132,7 +132,9 @@ export function buildWorkDateRange(workDate?: null | string) {
   }
   return {
     createdFrom: `${normalizedWorkDate}T00:00:00`,
-    createdTo: dayjs(normalizedWorkDate).add(1, 'day').format('YYYY-MM-DD[T]00:00:00'),
+    createdTo: dayjs(normalizedWorkDate)
+      .add(1, 'day')
+      .format('YYYY-MM-DD[T]00:00:00'),
   };
 }
 
@@ -144,9 +146,7 @@ export function formatPendingPathologyNo(value?: null | string) {
   return value && value.trim() ? value : '待生成';
 }
 
-export function formatRegistrationWorkspacePathologyNo(
-  value?: null | string,
-) {
+export function formatRegistrationWorkspacePathologyNo(value?: null | string) {
   return value && value.trim() ? value : '登记生成';
 }
 

@@ -13,12 +13,19 @@ import SpecialOrderWorkstationView from './SpecialOrderWorkstationView.vue';
 
 const tableRowsKey = Symbol('technical-order-workstation-table-rows');
 
-const { messageInfo } = vi.hoisted(() => ({
+const { messageInfo, mockRoute } = vi.hoisted(() => ({
   messageInfo: vi.fn(),
+  mockRoute: {
+    query: {},
+  } as { query: Record<string, string> },
 }));
 
 vi.mock('../../doctor-workflow/api/doctor-workflow-service', () => ({
   listPendingMedicalOrders: vi.fn(),
+}));
+
+vi.mock('vue-router', () => ({
+  useRoute: () => mockRoute,
 }));
 
 vi.mock('@vben/common-ui', () => ({
@@ -82,6 +89,26 @@ vi.mock('element-plus', () => {
           }),
           slots.default?.(),
         ]);
+    },
+  });
+
+  const ElDatePicker = defineComponent({
+    props: ['modelValue', 'placeholder', 'shortcuts'],
+    emits: ['update:modelValue'],
+    setup(props, { emit }) {
+      return () =>
+        h('input', {
+          'data-shortcuts': Array.isArray(props.shortcuts)
+            ? props.shortcuts
+                .map((item: { text: string }) => item.text)
+                .join(',')
+            : '',
+          'data-testid': 'work-date-picker',
+          placeholder: props.placeholder,
+          value: props.modelValue,
+          onInput: (event: Event) =>
+            emit('update:modelValue', (event.target as HTMLInputElement).value),
+        });
     },
   });
 
@@ -215,6 +242,7 @@ vi.mock('element-plus', () => {
     ElAlert,
     ElButton,
     ElCheckbox,
+    ElDatePicker,
     ElEmpty,
     ElInput,
     ElMessage: {
@@ -282,12 +310,15 @@ async function flushAsyncUpdates() {
 
 describe('technical order workstation views', () => {
   beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-17T09:00:00'));
     listPendingMedicalOrdersMock.mockResolvedValue(
       createPendingMedicalOrderPage(),
     );
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     document.body.innerHTML = '';
     messageInfo.mockReset();
     listPendingMedicalOrdersMock.mockReset();
@@ -331,10 +362,17 @@ describe('technical order workstation views', () => {
       expect(wrapper.root.textContent).toContain(actionLabel);
       expect(wrapper.root.textContent).toContain(columnLabel);
       expect(wrapper.root.textContent).toContain(`BL-${orderCategoryCode}`);
+      expect(
+        wrapper.root.querySelector<HTMLInputElement>(
+          '[data-testid="work-date-picker"]',
+        )?.dataset.shortcuts,
+      ).toBe('今天,昨天,本周,本月');
       if (orderCategoryCode === 'ROUTINE,EXAM,CGRS,BLOCK,QP') {
         expect(wrapper.root.textContent).toContain('收费状态');
       }
       expect(listPendingMedicalOrdersMock).toHaveBeenCalledWith({
+        dateFrom: undefined,
+        dateTo: undefined,
         orderCategoryCode,
         page: 1,
         pathologyNo: undefined,
@@ -380,6 +418,8 @@ describe('technical order workstation views', () => {
     expect(wrapper.root.textContent).toContain('已收费');
     expect(wrapper.root.textContent).toContain('2026-06-08 00:00:00');
     expect(listPendingMedicalOrdersMock).toHaveBeenCalledWith({
+      dateFrom: undefined,
+      dateTo: undefined,
       orderCategoryCode: 'ROUTINE,EXAM,CGRS,BLOCK,QP',
       page: 1,
       pathologyNo: undefined,
@@ -416,6 +456,8 @@ describe('technical order workstation views', () => {
     await flushAsyncUpdates();
 
     expect(listPendingMedicalOrdersMock).toHaveBeenLastCalledWith({
+      dateFrom: undefined,
+      dateTo: undefined,
       orderCategoryCode: 'ROUTINE,EXAM,CGRS,BLOCK,QP',
       page: 1,
       pathologyNo: 'BL-202606050001',
@@ -447,6 +489,8 @@ describe('technical order workstation views', () => {
     await flushAsyncUpdates();
 
     expect(listPendingMedicalOrdersMock).toHaveBeenLastCalledWith({
+      dateFrom: undefined,
+      dateTo: undefined,
       orderCategoryCode: 'IHC',
       page: 1,
       pathologyNo: undefined,
@@ -460,6 +504,8 @@ describe('technical order workstation views', () => {
     await flushAsyncUpdates();
 
     expect(listPendingMedicalOrdersMock).toHaveBeenLastCalledWith({
+      dateFrom: undefined,
+      dateTo: undefined,
       orderCategoryCode: 'IHC',
       page: 2,
       pathologyNo: undefined,
@@ -515,5 +561,42 @@ describe('technical order workstation views', () => {
     expect(messageInfo).toHaveBeenCalledWith('确认功能待接入');
 
     wrapper.unmount();
+  });
+
+  it('shows work date picker only on the 4 targeted medical-order workstations', async () => {
+    const routine = renderView(RoutineOrderWorkstationView);
+    await flushAsyncUpdates();
+    expect(
+      routine.root.querySelector('[data-testid="work-date-picker"]'),
+    ).toBeTruthy();
+    routine.unmount();
+
+    const special = renderView(SpecialOrderWorkstationView);
+    await flushAsyncUpdates();
+    expect(
+      special.root.querySelector('[data-testid="work-date-picker"]'),
+    ).toBeTruthy();
+    special.unmount();
+
+    const ihc = renderView(IhcWorkstationView);
+    await flushAsyncUpdates();
+    expect(
+      ihc.root.querySelector('[data-testid="work-date-picker"]'),
+    ).toBeTruthy();
+    ihc.unmount();
+
+    const liquid = renderView(LiquidCytologyWorkstationView);
+    await flushAsyncUpdates();
+    expect(
+      liquid.root.querySelector('[data-testid="work-date-picker"]'),
+    ).toBeTruthy();
+    liquid.unmount();
+
+    const cytology = renderView(CytologyWorkstationView);
+    await flushAsyncUpdates();
+    expect(
+      cytology.root.querySelector('[data-testid="work-date-picker"]'),
+    ).toBeTruthy();
+    cytology.unmount();
   });
 });

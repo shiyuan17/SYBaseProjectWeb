@@ -133,6 +133,21 @@ vi.mock('element-plus', () => {
     },
   });
 
+  const ElDatePicker = defineComponent({
+    props: ['modelValue', 'placeholder'],
+    emits: ['update:modelValue'],
+    setup(props, { emit }) {
+      return () =>
+        h('input', {
+          'data-testid': 'work-date-picker',
+          placeholder: props.placeholder,
+          value: props.modelValue,
+          onInput: (event: Event) =>
+            emit('update:modelValue', (event.target as HTMLInputElement).value),
+        });
+    },
+  });
+
   const ElInput = defineComponent({
     props: ['modelValue', 'placeholder'],
     emits: ['keyup', 'update:modelValue'],
@@ -268,6 +283,7 @@ vi.mock('element-plus', () => {
   return {
     ElAlert,
     ElButton,
+    ElDatePicker,
     ElEmpty,
     ElInput,
     ElMessage: {
@@ -410,6 +426,8 @@ function mountView() {
 
 describe('StainingWorkstationView', () => {
   beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-17T09:00:00'));
     mockRoute.query = {};
     mockListPendingTechnicalTasks.mockResolvedValue({
       items: [createTask()],
@@ -422,6 +440,7 @@ describe('StainingWorkstationView', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     document.body.innerHTML = '';
     messageWarning.mockReset();
     mockGetTechnicalTracking.mockReset();
@@ -638,6 +657,8 @@ describe('StainingWorkstationView', () => {
     await flushView();
 
     expect(mockListPendingTechnicalTasks).toHaveBeenLastCalledWith({
+      createdFrom: '2026-06-17T00:00:00',
+      createdTo: '2026-06-18T00:00:00',
       keyword: 'BL-ROUTE',
       page: 1,
       size: 20,
@@ -656,6 +677,8 @@ describe('StainingWorkstationView', () => {
     await flushView();
 
     expect(mockListPendingTechnicalTasks).toHaveBeenLastCalledWith({
+      createdFrom: '2026-06-17T00:00:00',
+      createdTo: '2026-06-18T00:00:00',
       keyword: 'BL-QUERY',
       page: 1,
       size: 20,
@@ -698,5 +721,29 @@ describe('StainingWorkstationView', () => {
 
     second.app.unmount();
     second.root.remove();
+  });
+
+  it('clears session completed rows when re-querying', async () => {
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [createTask({ objectId: 'SLIDE-1', taskStatus: 'IN_PROGRESS' })],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+    const { app, root } = mountView();
+    await flushView();
+
+    findButton('染色出片(F9)').click();
+    await flushView();
+    findButton('提交出片').click();
+    await flushView();
+    expect(hasTableRow('SLIDE-1')).toBe(true);
+
+    findButton('查询').click();
+    await flushView();
+    expect(hasTableRow('SLIDE-1')).toBe(false);
+
+    app.unmount();
+    root.remove();
   });
 });

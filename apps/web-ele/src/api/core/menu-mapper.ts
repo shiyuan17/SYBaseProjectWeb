@@ -53,7 +53,7 @@ function findFallbackRouteIcon(
 
 function findMenuDefinition(
   menu: Pick<MenuView, 'componentName' | 'menuCode' | 'path'>,
-  parentMenu?: Pick<MenuView, 'menuCode'> | null,
+  parentMenu?: null | Pick<MenuView, 'menuCode'>,
 ) {
   const normalizedParentMenuCode = parentMenu?.menuCode?.trim().toLowerCase();
   if (

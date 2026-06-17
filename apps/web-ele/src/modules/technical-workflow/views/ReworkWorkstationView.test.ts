@@ -137,6 +137,21 @@ vi.mock('element-plus', () => {
     },
   });
 
+  const ElDatePicker = defineComponent({
+    props: ['modelValue', 'placeholder'],
+    emits: ['update:modelValue'],
+    setup(props, { emit }) {
+      return () =>
+        h('input', {
+          'data-testid': 'work-date-picker',
+          placeholder: props.placeholder,
+          value: props.modelValue,
+          onInput: (event: Event) =>
+            emit('update:modelValue', (event.target as HTMLInputElement).value),
+        });
+    },
+  });
+
   const ElDescriptions = passthrough();
   const ElDescriptionsItem = passthrough();
   const ElForm = passthrough('form');
@@ -197,6 +212,7 @@ vi.mock('element-plus', () => {
   return {
     ElAlert,
     ElButton,
+    ElDatePicker,
     ElDescriptions,
     ElDescriptionsItem,
     ElForm,
@@ -265,6 +281,8 @@ function findButton(text: string) {
 
 describe('ReworkWorkstationView', () => {
   beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-17T09:00:00'));
     mockRoute.query = {
       caseId: 'BL-001',
       mode: 'exception',
@@ -273,6 +291,7 @@ describe('ReworkWorkstationView', () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     document.body.innerHTML = '';
     messageWarning.mockReset();
     mockGetTechnicalTracking.mockReset();
@@ -283,7 +302,9 @@ describe('ReworkWorkstationView', () => {
     const { app, root } = mountView();
     await flushView();
 
-    expect(mockGetTechnicalTracking).toHaveBeenCalledWith('BL-001');
+    expect(mockGetTechnicalTracking).toHaveBeenCalledWith('BL-001', {
+      workDate: undefined,
+    });
     expect(document.body.textContent).toContain('CASE-001');
 
     const createDialog = document.querySelector<HTMLElement>(
@@ -291,6 +312,18 @@ describe('ReworkWorkstationView', () => {
     );
     expect(createDialog?.dataset.caseId).toBe('CASE-001');
     expect(createDialog?.dataset.visible).toBe('true');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('passes workDate when loading tracking', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    expect(mockGetTechnicalTracking).toHaveBeenCalledWith('BL-001', {
+      workDate: undefined,
+    });
 
     app.unmount();
     root.remove();
