@@ -1619,7 +1619,9 @@ describe('doctor workflow view visibility', () => {
 
     const wrapper = await mountView(MedicalOrderWorkbenchView);
 
-    expect(wrapper.buttonTexts().filter((text) => text === '完成')).toHaveLength(5);
+    expect(
+      wrapper.buttonTexts().filter((text) => text === '完成'),
+    ).toHaveLength(5);
     expect(wrapper.isButtonDisabled('完成', 0)).toBe(true);
     expect(wrapper.isButtonDisabled('完成', 1)).toBe(false);
     expect(wrapper.isButtonDisabled('完成', 2)).toBe(false);

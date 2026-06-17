@@ -65,6 +65,7 @@ type ReportTemplateSectionKey =
 type ReportStyleTemplateType =
   | 'bladder'
   | 'cellDna'
+  | 'classicDefault'
   | 'colorectalGene'
   | 'default'
   | 'gastric'
@@ -181,6 +182,22 @@ const cellDnaDraft = reactive({
 });
 const selectedCellDnaOpinions = ref<string[]>([]);
 const selectedCellDnaSuggestions = ref<string[]>([]);
+const classicClinicalMatchOptions = [
+  '未标记临床符合',
+  '临床符合',
+  '临床不符合',
+  '不宜对比',
+];
+const classicDiagnosisMatchOptions = [
+  '未标记诊断符合',
+  '诊断符合',
+  '诊断基本符合',
+  '诊断不符合',
+];
+const classicReportFlagOptions = ['阳性', '阴性', '签发', '复核'];
+const classicClinicalMatchValue = ref('临床符合');
+const classicDiagnosisMatchValue = ref('未标记诊断符合');
+const classicReportFlags = ref<string[]>([]);
 const cellDnaOpinionOptions = [
   '未见DNA倍体异常细胞；未见DNA倍体异常细胞。',
   '可见大量DNA倍体异常细胞；可见大量DNA倍体异常细胞。',
@@ -258,12 +275,25 @@ const molecularReportSectionLabels = {
 const reportStyleOptions = [
   {
     accentColor: '#f00',
-    hospitalName: '南方医科大学南方医院病理科',
+    hospitalName: '',
     label: '默认模板',
+    reportTitle: '默认模板',
+    sectionLabels: {
+      finalDiagnosis: '病理诊断',
+      grossExam: '大体所见',
+      microscopicExam: '镜下所见',
+    },
+    templateType: 'classicDefault',
+    value: 'default',
+  },
+  {
+    accentColor: '#f00',
+    hospitalName: '南方医科大学南方医院病理科',
+    label: '所见即所得模板',
     reportTitle: '病理检查报告单',
     sectionLabels: commonPathologySectionLabels,
     templateType: 'default',
-    value: 'default',
+    value: 'wysiwyg-template',
   },
   {
     accentColor: '#005c99',
@@ -354,6 +384,9 @@ const activeReportStyle = computed(
     ) ?? reportStyleOptions[0],
 );
 const microscopicReportImages = computed(() => props.capturedImages);
+const isClassicDefaultReportTemplate = computed(
+  () => activeReportStyle.value.templateType === 'classicDefault',
+);
 const isDefaultReportTemplate = computed(
   () => activeReportStyle.value.templateType === 'default',
 );
@@ -1771,7 +1804,138 @@ function handlePrint() {
         data-testid="diagnosis-report-paper"
         :style="{ '--report-accent-color': activeReportStyle.accentColor }"
       >
-        <template v-if="isDefaultReportTemplate">
+        <template v-if="isClassicDefaultReportTemplate">
+          <section class="classic-report-layout">
+            <section class="classic-report-section min-h-[160px]">
+              <div class="classic-report-heading">
+                <label class="classic-report-label" for="classic-gross-editor">
+                  大体所见
+                </label>
+                <ElTooltip content="选择肉眼所见模板" placement="left">
+                  <ElButton
+                    aria-label="选择肉眼所见模板"
+                    class="report-template-button"
+                    circle
+                    :icon="TextQuote"
+                    size="small"
+                    data-testid="open-classic-gross-template"
+                    @click="openTemplateDrawer('grossExam')"
+                  />
+                </ElTooltip>
+              </div>
+              <textarea
+                id="classic-gross-editor"
+                v-model="reportDraft.grossExam"
+                class="classic-report-textarea"
+                data-testid="diagnosis-report-gross-editor"
+              ></textarea>
+            </section>
+
+            <section class="classic-report-section min-h-[210px]">
+              <div class="classic-report-heading">
+                <label
+                  class="classic-report-label"
+                  for="classic-microscopic-editor"
+                >
+                  镜下所见
+                </label>
+                <ElTooltip content="选择光镜所见模板" placement="left">
+                  <ElButton
+                    aria-label="选择光镜所见模板"
+                    class="report-template-button"
+                    circle
+                    :icon="InspectionPanel"
+                    size="small"
+                    data-testid="open-classic-microscopic-template"
+                    @click="openTemplateDrawer('microscopicExam')"
+                  />
+                </ElTooltip>
+              </div>
+              <textarea
+                id="classic-microscopic-editor"
+                v-model="reportDraft.microscopicExam"
+                class="classic-report-textarea"
+                data-testid="diagnosis-report-microscopic-editor"
+              ></textarea>
+            </section>
+
+            <section class="classic-report-diagnosis-section">
+              <div class="classic-report-diagnosis-main">
+                <div class="classic-report-heading">
+                  <label
+                    class="classic-report-label"
+                    for="classic-diagnosis-editor"
+                  >
+                    病理诊断
+                  </label>
+                  <ElTooltip content="选择病理诊断模板" placement="left">
+                    <ElButton
+                      aria-label="选择病理诊断模板"
+                      class="report-template-button"
+                      circle
+                      :icon="BookOpenText"
+                      size="small"
+                      data-testid="open-final-diagnosis-template"
+                      @click="openTemplateDrawer('finalDiagnosis')"
+                    />
+                  </ElTooltip>
+                </div>
+                <textarea
+                  id="classic-diagnosis-editor"
+                  v-model="reportDraft.finalDiagnosis"
+                  class="classic-report-textarea"
+                  data-testid="diagnosis-report-diagnosis-editor"
+                ></textarea>
+              </div>
+
+              <aside class="classic-report-status-panel">
+                <div class="classic-report-select-stack">
+                  <ElSelect
+                    v-model="classicClinicalMatchValue"
+                    aria-label="临床符合"
+                    size="small"
+                    data-testid="classic-clinical-match-select"
+                  >
+                    <ElOption
+                      v-for="option in classicClinicalMatchOptions"
+                      :key="option"
+                      :label="option"
+                      :value="option"
+                    />
+                  </ElSelect>
+                  <ElSelect
+                    v-model="classicDiagnosisMatchValue"
+                    aria-label="诊断符合"
+                    size="small"
+                    data-testid="classic-diagnosis-match-select"
+                  >
+                    <ElOption
+                      v-for="option in classicDiagnosisMatchOptions"
+                      :key="option"
+                      :label="option"
+                      :value="option"
+                    />
+                  </ElSelect>
+                </div>
+                <div class="classic-report-status-spacer"></div>
+                <ElCheckboxGroup
+                  v-model="classicReportFlags"
+                  class="classic-report-flags"
+                >
+                  <ElCheckbox
+                    v-for="option in classicReportFlagOptions"
+                    :key="option"
+                    :value="option"
+                  >
+                    {{ option }}
+                  </ElCheckbox>
+                </ElCheckboxGroup>
+              </aside>
+            </section>
+          </section>
+        </template>
+
+        <template v-else-if="isDefaultReportTemplate">
           <header
             class="grid grid-cols-[92px_minmax(0,1fr)_92px] items-end gap-2 border-b border-black p-2"
           >
@@ -2633,6 +2797,102 @@ function handlePrint() {
 
 .report-header-input {
   align-self: end;
+}
+
+.classic-report-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 680px;
+  background: #fff;
+}
+
+.classic-report-section {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-bottom: 1px solid #999;
+}
+
+.classic-report-heading {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 22px;
+  padding: 0 6px;
+  background: #c7def4;
+  border-bottom: 1px solid #9ebad6;
+}
+
+.classic-report-label {
+  font-weight: 600;
+  color: #000;
+}
+
+.classic-report-textarea {
+  display: block;
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 132px;
+  padding: 8px;
+  line-height: 1.45;
+  resize: vertical;
+  outline: none;
+  background: #fff;
+  border: 0;
+}
+
+.classic-report-diagnosis-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 240px;
+  min-height: 238px;
+}
+
+.classic-report-diagnosis-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-right: 1px solid #999;
+}
+
+.classic-report-status-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 6px;
+  background: #f2f2f2;
+}
+
+.classic-report-select-stack {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  width: 128px;
+}
+
+.classic-report-status-spacer {
+  flex: 1 1 auto;
+  min-height: 120px;
+  margin-top: 8px;
+  border: 1px solid #d0d0d0;
+}
+
+.classic-report-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: center;
+  padding-top: 6px;
+  font-weight: 600;
+}
+
+.classic-report-flags :deep(.el-checkbox) {
+  height: 20px;
+  margin-right: 0;
+}
+
+.classic-report-flags :deep(.el-checkbox:first-child) {
+  color: #f00;
 }
 
 .report-footer-field {

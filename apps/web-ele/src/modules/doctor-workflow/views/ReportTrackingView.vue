@@ -225,16 +225,19 @@ function hasMeaningfulValue(value?: null | string) {
   return Boolean(value && value.trim());
 }
 
-function formatLifecycleFactValue(label?: null | string, value?: null | string) {
+function formatLifecycleFactValue(
+  label?: null | string,
+  value?: null | string,
+) {
   switch (label?.trim()) {
-    case '申请类型': {
-      return formatApplicationType(value);
-    }
     case '当前状态': {
       return formatSpecimenStatus(value);
     }
     case '申请单归档': {
       return formatArchiveStatus(value);
+    }
+    case '申请类型': {
+      return formatApplicationType(value);
     }
     default: {
       return formatNullable(value);
