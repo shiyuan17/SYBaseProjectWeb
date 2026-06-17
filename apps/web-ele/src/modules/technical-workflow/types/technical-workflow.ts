@@ -41,6 +41,8 @@ export type TechnicalWorkflowTaskType =
 
 export interface TechnicalWorkflowDeepLinkQuery {
   caseId?: string;
+  dateFrom?: string;
+  dateTo?: string;
   mode?: TechnicalWorkflowMode;
   objectId?: string;
   objectType?: string;
@@ -54,6 +56,7 @@ export interface TechnicalWorkflowRouteMeta {
   chain: TechnicalWorkflowChainType;
   icon?: string;
   isEntry?: boolean;
+  isReceipt?: boolean;
   isTracking?: boolean;
   isVisibleInMenu?: boolean;
   key: string;
@@ -695,11 +698,14 @@ export interface SlicingWorkbenchQuery {
   applicationType?: null | string;
   completedPage: number;
   completedSize: number;
+  dateFrom?: null | string;
+  dateTo?: null | string;
   keyword?: null | string;
   overdueOnly?: boolean;
   pendingPage: number;
   pendingSize: number;
   pendingTodayOnly?: boolean;
+  workDate?: null | string;
 }
 
 export interface SlicingSlidePrintRequest {

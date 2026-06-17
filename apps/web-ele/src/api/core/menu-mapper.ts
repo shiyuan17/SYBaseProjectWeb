@@ -53,7 +53,18 @@ function findFallbackRouteIcon(
 
 function findMenuDefinition(
   menu: Pick<MenuView, 'componentName' | 'menuCode' | 'path'>,
+  parentMenu?: Pick<MenuView, 'menuCode'> | null,
 ) {
+  const normalizedParentMenuCode = parentMenu?.menuCode?.trim().toLowerCase();
+  if (
+    normalizedParentMenuCode === 'm3_workflow' &&
+    menu.menuCode.trim().toLowerCase() === 'm2_receipt'
+  ) {
+    return BACKEND_MENU_COMPONENT_DEFINITIONS.find(
+      (definition) => definition.routeName === 'TechnicalWorkflowReceipt',
+    );
+  }
+
   const normalizedComponentName = menu.componentName?.trim().toLowerCase();
   const normalizedMenuCode = menu.menuCode.trim().toLowerCase();
   const normalizedPath = menu.path.trim().toLowerCase();
@@ -113,10 +124,11 @@ function buildMenuTree(menus: MenuView[]): MenuTreeNode[] {
 
 function convertMenuNode(
   node: MenuTreeNode,
+  parentNode: MenuTreeNode | null = null,
 ): null | RouteRecordStringComponent<string> {
-  const definition = findMenuDefinition(node);
+  const definition = findMenuDefinition(node, parentNode);
   const convertedChildren = node.children
-    .map((child) => convertMenuNode(child))
+    .map((child) => convertMenuNode(child, node))
     .filter(
       (child): child is RouteRecordStringComponent<string> => child !== null,
     );

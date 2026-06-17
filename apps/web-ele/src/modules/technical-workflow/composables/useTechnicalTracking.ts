@@ -8,6 +8,10 @@ import { ElMessage } from 'element-plus';
 import { reportInlineErrorDisabled } from '#/utils/error-feedback';
 
 import { getTechnicalTracking } from '../api/technical-workflow-service';
+import {
+  buildDateRangeQueryParams,
+  resolveRouteDateRange,
+} from '../utils/date-range';
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import {
   formatDateTime,
@@ -35,6 +39,7 @@ export function useTechnicalTracking() {
   const caseId = ref(
     typeof route.query.caseId === 'string' ? route.query.caseId : '',
   );
+  const dateRange = ref<string[]>(resolveRouteDateRange(route.query));
   const trackingResult = ref<null | TechnicalTrackingView>(null);
   const activeTab = ref(resolveInitialTrackingTab(route.query.tab));
   const selectedNodeId = ref('');
@@ -97,7 +102,18 @@ export function useTechnicalTracking() {
     loading.value = true;
     pageError.value = '';
     try {
-      trackingResult.value = await getTechnicalTracking(normalizedCaseId);
+      trackingResult.value = await getTechnicalTracking(
+        normalizedCaseId,
+        {
+          ...buildDateRangeQueryParams(dateRange.value),
+          workDate:
+            dateRange.value.length === 0 &&
+            typeof route.query.workDate === 'string' &&
+            route.query.workDate.trim()
+              ? route.query.workDate
+              : undefined,
+        },
+      );
       activeTab.value = resolveInitialTrackingTab(route.query.tab);
       selectedNodeId.value = resolveSelectedTrackingNodeId(
         {
@@ -122,6 +138,7 @@ export function useTechnicalTracking() {
 
   function handleReset() {
     caseId.value = '';
+    dateRange.value = [];
     pageError.value = '';
     activeTab.value = 'timeline';
     selectedNodeId.value = '';
@@ -135,6 +152,7 @@ export function useTechnicalTracking() {
       const previousCaseId = caseId.value.trim();
 
       caseId.value = nextCaseId;
+      dateRange.value = resolveRouteDateRange(query);
       activeTab.value = resolveInitialTrackingTab(query.tab);
 
       if (!trackingResult.value) {
@@ -181,6 +199,7 @@ export function useTechnicalTracking() {
     selectedNodeId,
     trackingResult,
     treeData,
+    dateRange,
     workflowTimelineSteps,
   };
 }

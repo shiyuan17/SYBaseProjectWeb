@@ -50,3 +50,14 @@ export function withRouteComponentReloadRetry(
     }
   };
 }
+
+export function wrapGlobRouteComponentLoaders<
+  TLoader extends () => Promise<RouteComponent>,
+>(loaders: Record<string, TLoader>) {
+  return Object.fromEntries(
+    Object.entries(loaders).map(([path, loader]) => [
+      path,
+      withRouteComponentReloadRetry(loader, path),
+    ]),
+  ) as Record<string, TLoader>;
+}

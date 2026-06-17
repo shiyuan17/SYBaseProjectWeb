@@ -29,6 +29,7 @@ export const TECHNICAL_WORKFLOW_ROUTE_META: Record<
   | 'GROSSING'
   | 'IHC'
   | 'LIQUID_CYTOLOGY'
+  | 'RECEIPT'
   | 'REWORK'
   | 'ROUTINE_ORDER'
   | 'SLICING'
@@ -88,6 +89,17 @@ export const TECHNICAL_WORKFLOW_ROUTE_META: Record<
     path: '/technical-workflow/grossing',
     title: '取材描写工作站',
   },
+  RECEIPT: {
+    authorityCode: M2_PERMISSION_CODES.SPECIMEN_RECEIVE,
+    chain: REGULAR_CHAIN,
+    icon: 'carbon:archive',
+    isReceipt: true,
+    isVisibleInMenu: true,
+    key: 'RECEIPT',
+    name: 'TechnicalWorkflowReceipt',
+    path: '/technical-workflow/specimen-receipt',
+    title: '标本接收',
+  },
   REWORK: {
     authorityCode: M3_PERMISSION_CODES.REWORK,
     chain: EXCEPTION_CHAIN,
@@ -106,7 +118,7 @@ export const TECHNICAL_WORKFLOW_ROUTE_META: Record<
     key: 'SPECIMEN_REGISTRATION',
     name: 'TechnicalSpecimenRegistration',
     path: '/technical-workflow/specimen-registration',
-    title: '检查登记',
+    title: '标本登记',
   },
   SLICING: {
     authorityCode: M3_PERMISSION_CODES.SLICING,
@@ -203,13 +215,15 @@ export const TECHNICAL_WORKFLOW_ROUTE_META: Record<
 
 export const M3_WORKFLOW_ROUTE_ITEMS = Object.values(
   TECHNICAL_WORKFLOW_ROUTE_META,
-).map((item) => ({
-  chain: item.chain,
-  code: item.authorityCode,
-  key: item.key,
-  path: item.path,
-  title: item.title,
-}));
+)
+  .filter((item) => !item.isEntry && !item.isReceipt)
+  .map((item) => ({
+    chain: item.chain,
+    code: item.authorityCode,
+    key: item.key,
+    path: item.path,
+    title: item.title,
+  }));
 
 export const TECHNICAL_TASK_TYPE_OPTIONS = [
   { label: '取材', value: 'GROSSING' },

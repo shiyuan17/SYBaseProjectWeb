@@ -467,22 +467,22 @@ describe('technical-workflow-service requests', () => {
     );
   });
 
-  it('queries embedding workstation summary with optional work date', async () => {
+  it('queries embedding workstation summary with optional date range params', async () => {
     requestClientMock.get.mockResolvedValue({
       completedCount: 1,
       pendingCount: 2,
       workDate: '2026-06-01',
     });
 
-    await expect(getEmbeddingWorkstationSummary('2026-06-01')).resolves.toEqual(
-      {
-        completedCount: 1,
-        completedRecords: [],
-        pendingCount: 2,
-        pendingTasks: [],
-        workDate: '2026-06-01',
-      },
-    );
+    await expect(
+      getEmbeddingWorkstationSummary({ workDate: '2026-06-01' }),
+    ).resolves.toEqual({
+      completedCount: 1,
+      completedRecords: [],
+      pendingCount: 2,
+      pendingTasks: [],
+      workDate: '2026-06-01',
+    });
 
     expect(requestClientMock.get).toHaveBeenCalledWith(
       '/v1/embeddings/workstation-summary',
@@ -818,6 +818,24 @@ describe('technical-workflow-service requests', () => {
 
     expect(requestClientMock.get).toHaveBeenCalledWith(
       '/v1/pathology-cases/BL%2F2026%2F001/technical-tracking',
+    );
+  });
+
+  it('passes workDate when querying technical tracking', async () => {
+    requestClientMock.get.mockResolvedValue({
+      caseId: 'CASE-001',
+      pathologyNo: 'BL-001',
+    });
+
+    await getTechnicalTracking('CASE-001', { workDate: '2026-06-01' });
+
+    expect(requestClientMock.get).toHaveBeenCalledWith(
+      '/v1/pathology-cases/CASE-001/technical-tracking',
+      {
+        params: {
+          workDate: '2026-06-01',
+        },
+      },
     );
   });
 

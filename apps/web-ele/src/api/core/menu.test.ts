@@ -533,20 +533,20 @@ describe('mapMenuViewsToRoutes', () => {
       expect.objectContaining({
         name: 'TechnicalWorkflowRoot',
         path: '/technical-workflow',
-        redirect: '/workflow/pathology-receipt',
+        redirect: '/technical-workflow/specimen-receipt',
         children: [
           expect.objectContaining({
             meta: expect.objectContaining({
               keepAlive: true,
-              title: '标本接收工作台',
+              title: '标本接收',
             }),
-            name: 'PathologyReceipt',
-            path: '/workflow/pathology-receipt',
+            name: 'TechnicalWorkflowReceipt',
+            path: '/technical-workflow/specimen-receipt',
           }),
           expect.objectContaining({
             meta: expect.objectContaining({
               keepAlive: true,
-              title: '检查登记',
+              title: '标本登记',
             }),
             name: 'TechnicalSpecimenRegistration',
             path: '/technical-workflow/specimen-registration',
@@ -702,7 +702,7 @@ describe('mapMenuViewsToRoutes', () => {
         icon: 'table',
         id: 'MENU_M3_SPECIMEN_REGISTRATION',
         menuCode: 'M3_SPECIMEN_REGISTRATION',
-        menuName: '检查登记',
+        menuName: '标本登记',
         menuType: 'MENU',
         parentId: 'MENU_M3_WORKFLOW',
         path: '/technical-workflow/specimen-registration',
@@ -721,10 +721,17 @@ describe('mapMenuViewsToRoutes', () => {
       }),
     ]);
     expect(
+      allRoutes.filter((route) => route.name === 'TechnicalWorkflowReceipt'),
+    ).toEqual([
+      expect.objectContaining({
+        path: '/technical-workflow/specimen-receipt',
+      }),
+    ]);
+    expect(
       routes
         .find((route) => route.name === 'TechnicalWorkflowRoot')
         ?.children?.map((route) => route.name),
-    ).toEqual(['TechnicalSpecimenRegistration']);
+    ).toEqual(['TechnicalWorkflowReceipt', 'TechnicalSpecimenRegistration']);
   });
 
   it('converts M4 doctor workflow menu definitions into canonical frontend routes', () => {
@@ -1233,8 +1240,11 @@ describe('getBackendFirstMenuRoutes', () => {
       allRoutes.filter((route) => route.name === 'PathologyReceipt'),
     ).toHaveLength(1);
     expect(
+      allRoutes.filter((route) => route.name === 'TechnicalWorkflowReceipt'),
+    ).toHaveLength(1);
+    expect(
       routes.find((route) => route.name === 'TechnicalWorkflowRoot')?.redirect,
-    ).toBe('/technical-workflow/specimen-registration');
+    ).toBe('/technical-workflow/specimen-receipt');
   });
 
   it('falls back to static routes when backend menu loading fails', async () => {

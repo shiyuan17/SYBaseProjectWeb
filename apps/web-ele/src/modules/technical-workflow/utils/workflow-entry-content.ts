@@ -27,7 +27,7 @@ export const workflowOverviewCards: WorkflowOverviewCard[] = [
 export const workflowMapCards: WorkflowMapCard[] = [
   {
     items: [
-      '标本接收沿用原有页面与权限，不改变既有菜单地址。',
+      '标本接收沿用原有页面与权限，并恢复为制片管理的第一步菜单。',
       '接收后先进入标本登记，登记完成后才进入任务池或目标工位。',
       '技术追踪按病例回看对象树、时间线和异常闭环。',
     ],
@@ -63,8 +63,8 @@ export const workflowSteps: WorkflowChainStep[] = [
   {
     actionLabel: '打开标本接收',
     description: '接收岗完成病例接收、拒收和明细核对，让病例进入技术链起点。',
-    helperText: '当前仍沿用原页面和原权限，不改变外部跳转地址。',
-    routePath: '/workflow/pathology-receipt',
+    helperText: '制片管理菜单已恢复该入口，原业务页与外部跳转仍保持兼容。',
+    routePath: TECHNICAL_WORKFLOW_ROUTE_META.RECEIPT.path,
     title: '步骤 1: 标本接收',
   },
   {

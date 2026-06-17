@@ -61,6 +61,8 @@ import type {
 
 import { requestClient } from '#/api/request';
 
+import type { DateRangeQueryParams } from '../utils/date-range';
+
 type PendingTechnicalTaskPageResponse = Partial<PendingTechnicalTaskPage>;
 type PendingTechnicalSpecimenRegistrationPageResponse =
   Partial<PendingTechnicalSpecimenRegistrationPage>;
@@ -511,17 +513,38 @@ export async function listPendingTechnicalTasks(
   return mapPendingTechnicalTaskPageResponse(response);
 }
 
-export async function getTechnicalTracking(caseIdentifier: string) {
-  const response = await requestClient.get<TechnicalTrackingResponse>(
-    `/v1/pathology-cases/${encodeURIComponent(caseIdentifier)}/technical-tracking`,
-  );
+export async function getTechnicalTracking(
+  caseIdentifier: string,
+  params?: DateRangeQueryParams & { workDate?: string },
+) {
+  const normalizedWorkDate = params?.workDate?.trim();
+  const url = `/v1/pathology-cases/${encodeURIComponent(caseIdentifier)}/technical-tracking`;
+  const queryParams = {
+    dateFrom: params?.dateFrom?.trim() || undefined,
+    dateTo: params?.dateTo?.trim() || undefined,
+    workDate: normalizedWorkDate || undefined,
+  };
+  const response =
+    queryParams.dateFrom || queryParams.dateTo || queryParams.workDate
+    ? await requestClient.get<TechnicalTrackingResponse>(url, {
+        params: queryParams,
+      })
+    : await requestClient.get<TechnicalTrackingResponse>(url);
   return mapTechnicalTrackingResponse(response);
 }
 
-export async function getEmbeddingWorkstationSummary(workDate?: string) {
+export async function getEmbeddingWorkstationSummary(
+  params?: DateRangeQueryParams & { workDate?: string },
+) {
   const response = await requestClient.get<EmbeddingWorkstationSummaryResponse>(
     '/v1/embeddings/workstation-summary',
-    { params: { workDate } },
+    {
+      params: {
+        dateFrom: params?.dateFrom?.trim() || undefined,
+        dateTo: params?.dateTo?.trim() || undefined,
+        workDate: params?.workDate?.trim() || undefined,
+      },
+    },
   );
   return mapEmbeddingWorkstationSummaryResponse(response);
 }
@@ -863,7 +886,14 @@ export async function printSlicingSlideMergeGroup(
 export async function getSlicingWorkbench(params: SlicingWorkbenchQuery) {
   const response = await requestClient.get<SlicingWorkbenchResponse>(
     '/v1/slicings/workbench',
-    { params },
+    {
+      params: {
+        ...params,
+        dateFrom: params.dateFrom?.trim() || undefined,
+        dateTo: params.dateTo?.trim() || undefined,
+        workDate: params.workDate?.trim() || undefined,
+      },
+    },
   );
   return mapSlicingWorkbenchResponse(response);
 }

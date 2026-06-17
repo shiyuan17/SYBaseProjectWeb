@@ -114,12 +114,40 @@ export function formatDateTime(value?: null | string) {
   return value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-';
 }
 
+export function getTodayWorkDate() {
+  return dayjs().format('YYYY-MM-DD');
+}
+
+export function normalizeWorkDate(value?: null | string) {
+  if (!value?.trim()) {
+    return '';
+  }
+  return dayjs(value).format('YYYY-MM-DD');
+}
+
+export function buildWorkDateRange(workDate?: null | string) {
+  const normalizedWorkDate = normalizeWorkDate(workDate);
+  if (!normalizedWorkDate) {
+    return { createdFrom: undefined, createdTo: undefined };
+  }
+  return {
+    createdFrom: `${normalizedWorkDate}T00:00:00`,
+    createdTo: dayjs(normalizedWorkDate).add(1, 'day').format('YYYY-MM-DD[T]00:00:00'),
+  };
+}
+
 export function formatNullable(value?: null | string) {
   return value && value.trim() ? value : '-';
 }
 
 export function formatPendingPathologyNo(value?: null | string) {
   return value && value.trim() ? value : '待生成';
+}
+
+export function formatRegistrationWorkspacePathologyNo(
+  value?: null | string,
+) {
+  return value && value.trim() ? value : '登记生成';
 }
 
 export function formatTaskType(value?: null | string) {

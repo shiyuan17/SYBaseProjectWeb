@@ -6,13 +6,14 @@ import type {
 import { generateAccessible } from '@vben/access';
 
 import { BasicLayout, IFrameView } from '#/layouts';
+import { wrapGlobRouteComponentLoaders } from '#/router/routes/lazy-load';
 
 const forbiddenComponent = () => import('#/views/_core/fallback/forbidden.vue');
 
 async function generateAccess(options: GenerateMenuAndRoutesOptions) {
   const pageMap: ComponentRecordType = {
-    ...import.meta.glob('../modules/**/*.vue'),
-    ...import.meta.glob('../views/**/*.vue'),
+    ...wrapGlobRouteComponentLoaders(import.meta.glob('../modules/**/*.vue')),
+    ...wrapGlobRouteComponentLoaders(import.meta.glob('../views/**/*.vue')),
   };
 
   const layoutMap: ComponentRecordType = {

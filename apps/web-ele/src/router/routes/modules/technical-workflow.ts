@@ -1,8 +1,9 @@
-import type { RouteRecordRaw } from 'vue-router';
+import type { RouteComponent, RouteRecordRaw } from 'vue-router';
 
 import { M2_PERMISSION_CODES } from '#/modules/specimen-workflow/constants';
 import { M3_PERMISSION_CODES } from '#/modules/technical-workflow/constants';
 import { applyKeepAliveToTabRoutes } from '#/router/routes/keep-alive';
+import { withRouteComponentReloadRetry } from '#/router/routes/lazy-load';
 
 const TECHNICAL_WORKFLOW_AUTHORITIES = [
   M2_PERMISSION_CODES.SPECIMEN_RECEIVE,
@@ -16,6 +17,13 @@ const TECHNICAL_WORKFLOW_AUTHORITIES = [
   M3_PERMISSION_CODES.TECHNICAL_TRACKING_QUERY,
 ];
 
+function loadTechnicalWorkflowRouteComponent(
+  loader: () => Promise<RouteComponent>,
+  routeName: string,
+) {
+  return withRouteComponentReloadRetry(loader, routeName);
+}
+
 const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
   {
     meta: {
@@ -26,11 +34,14 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
     },
     name: 'TechnicalWorkflowRoot',
     path: '/technical-workflow',
-    redirect: '/technical-workflow/entry',
+    redirect: '/technical-workflow/specimen-receipt',
     children: [
       {
-        component: () =>
-          import('#/modules/technical-workflow/views/TechnicalWorkflowEntryView.vue'),
+        component: loadTechnicalWorkflowRouteComponent(
+          () =>
+            import('#/modules/technical-workflow/views/TechnicalWorkflowEntryView.vue'),
+          'TechnicalWorkflowEntry',
+        ),
         meta: {
           authority: TECHNICAL_WORKFLOW_AUTHORITIES,
           hideInBreadcrumb: true,
@@ -42,19 +53,39 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/technical-workflow/entry',
       },
       {
-        component: () =>
-          import('#/modules/technical-workflow/views/TechnicalSpecimenRegistrationView.vue'),
+        component: loadTechnicalWorkflowRouteComponent(
+          () =>
+            import('#/modules/specimen-workflow/views/SpecimenReceiptView.vue'),
+          'TechnicalWorkflowReceipt',
+        ),
+        meta: {
+          authority: [M2_PERMISSION_CODES.SPECIMEN_RECEIVE],
+          icon: 'carbon:archive',
+          title: '标本接收',
+        },
+        name: 'TechnicalWorkflowReceipt',
+        path: '/technical-workflow/specimen-receipt',
+      },
+      {
+        component: loadTechnicalWorkflowRouteComponent(
+          () =>
+            import('#/modules/technical-workflow/views/TechnicalSpecimenRegistrationView.vue'),
+          'TechnicalSpecimenRegistration',
+        ),
         meta: {
           authority: [M2_PERMISSION_CODES.SPECIMEN_RECEIVE],
           icon: 'carbon:data-table',
-          title: '检查登记',
+          title: '标本登记',
         },
         name: 'TechnicalSpecimenRegistration',
         path: '/technical-workflow/specimen-registration',
       },
       {
-        component: () =>
-          import('#/modules/technical-workflow/views/TechnicalTasksView.vue'),
+        component: loadTechnicalWorkflowRouteComponent(
+          () =>
+            import('#/modules/technical-workflow/views/TechnicalTasksView.vue'),
+          'TechnicalTasks',
+        ),
         meta: {
           authority: [M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY],
           hideInMenu: true,
@@ -65,8 +96,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/technical-workflow/tasks',
       },
       {
-        component: () =>
-          import('#/modules/technical-workflow/views/FrozenWorkstationView.vue'),
+        component: loadTechnicalWorkflowRouteComponent(
+          () =>
+            import('#/modules/technical-workflow/views/FrozenWorkstationView.vue'),
+          'FrozenWorkstation',
+        ),
         meta: {
           authority: [M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY],
           hideInMenu: true,
@@ -77,8 +111,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/technical-workflow/frozen',
       },
       {
-        component: () =>
-          import('#/modules/technical-workflow/views/GrossingWorkstationView.vue'),
+        component: loadTechnicalWorkflowRouteComponent(
+          () =>
+            import('#/modules/technical-workflow/views/GrossingWorkstationView.vue'),
+          'GrossingWorkstation',
+        ),
         meta: {
           authority: [M3_PERMISSION_CODES.GROSSING],
           icon: 'carbon:scan',
@@ -88,8 +125,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/technical-workflow/grossing',
       },
       {
-        component: () =>
-          import('#/modules/technical-workflow/views/DehydrationWorkstationView.vue'),
+        component: loadTechnicalWorkflowRouteComponent(
+          () =>
+            import('#/modules/technical-workflow/views/DehydrationWorkstationView.vue'),
+          'DehydrationWorkstation',
+        ),
         meta: {
           authority: [M3_PERMISSION_CODES.DEHYDRATION],
           icon: 'carbon:data-vis-4',
@@ -99,8 +139,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/technical-workflow/dehydration',
       },
       {
-        component: () =>
-          import('#/modules/technical-workflow/views/EmbeddingWorkstationView.vue'),
+        component: loadTechnicalWorkflowRouteComponent(
+          () =>
+            import('#/modules/technical-workflow/views/EmbeddingWorkstationView.vue'),
+          'EmbeddingWorkstation',
+        ),
         meta: {
           authority: [M3_PERMISSION_CODES.EMBEDDING],
           icon: 'carbon:cube',
@@ -110,8 +153,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/technical-workflow/embedding',
       },
       {
-        component: () =>
-          import('#/modules/technical-workflow/views/SlicingWorkstationView.vue'),
+        component: loadTechnicalWorkflowRouteComponent(
+          () =>
+            import('#/modules/technical-workflow/views/SlicingWorkstationView.vue'),
+          'SlicingWorkstation',
+        ),
         meta: {
           authority: [M3_PERMISSION_CODES.SLICING],
           icon: 'carbon:cut',
@@ -121,8 +167,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/technical-workflow/slicing',
       },
       {
-        component: () =>
-          import('#/modules/technical-workflow/views/StainingWorkstationView.vue'),
+        component: loadTechnicalWorkflowRouteComponent(
+          () =>
+            import('#/modules/technical-workflow/views/StainingWorkstationView.vue'),
+          'StainingWorkstation',
+        ),
         meta: {
           authority: [M3_PERMISSION_CODES.STAINING],
           icon: 'carbon:color-palette',
@@ -132,8 +181,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/technical-workflow/staining',
       },
       {
-        component: () =>
-          import('#/modules/technical-workflow/views/RoutineOrderWorkstationView.vue'),
+        component: loadTechnicalWorkflowRouteComponent(
+          () =>
+            import('#/modules/technical-workflow/views/RoutineOrderWorkstationView.vue'),
+          'RoutineOrderWorkstation',
+        ),
         meta: {
           authority: [M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY],
           icon: 'carbon:document-tasks',
@@ -143,8 +195,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/technical-workflow/routine-orders',
       },
       {
-        component: () =>
-          import('#/modules/technical-workflow/views/SpecialOrderWorkstationView.vue'),
+        component: loadTechnicalWorkflowRouteComponent(
+          () =>
+            import('#/modules/technical-workflow/views/SpecialOrderWorkstationView.vue'),
+          'SpecialOrderWorkstation',
+        ),
         meta: {
           authority: [M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY],
           icon: 'carbon:document-requirements',
@@ -154,8 +209,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/technical-workflow/special-orders',
       },
       {
-        component: () =>
-          import('#/modules/technical-workflow/views/IhcWorkstationView.vue'),
+        component: loadTechnicalWorkflowRouteComponent(
+          () =>
+            import('#/modules/technical-workflow/views/IhcWorkstationView.vue'),
+          'IhcWorkstation',
+        ),
         meta: {
           authority: [M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY],
           icon: 'carbon:chemistry',
@@ -165,8 +223,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/technical-workflow/ihc',
       },
       {
-        component: () =>
-          import('#/modules/technical-workflow/views/CytologyWorkstationView.vue'),
+        component: loadTechnicalWorkflowRouteComponent(
+          () =>
+            import('#/modules/technical-workflow/views/CytologyWorkstationView.vue'),
+          'CytologyWorkstation',
+        ),
         meta: {
           authority: [M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY],
           icon: 'carbon:microscope',
@@ -176,8 +237,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/technical-workflow/cytology',
       },
       {
-        component: () =>
-          import('#/modules/technical-workflow/views/LiquidCytologyWorkstationView.vue'),
+        component: loadTechnicalWorkflowRouteComponent(
+          () =>
+            import('#/modules/technical-workflow/views/LiquidCytologyWorkstationView.vue'),
+          'LiquidCytologyWorkstation',
+        ),
         meta: {
           authority: [M3_PERMISSION_CODES.TECHNICAL_TASK_QUERY],
           icon: 'lucide:droplets',
@@ -187,8 +251,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/technical-workflow/liquid-cytology',
       },
       {
-        component: () =>
-          import('#/modules/technical-workflow/views/ReworkWorkstationView.vue'),
+        component: loadTechnicalWorkflowRouteComponent(
+          () =>
+            import('#/modules/technical-workflow/views/ReworkWorkstationView.vue'),
+          'ReworkWorkstation',
+        ),
         meta: {
           authority: [M3_PERMISSION_CODES.REWORK],
           icon: 'carbon:renew',
@@ -198,8 +265,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/technical-workflow/rework',
       },
       {
-        component: () =>
-          import('#/modules/technical-workflow/views/TechnicalTrackingView.vue'),
+        component: loadTechnicalWorkflowRouteComponent(
+          () =>
+            import('#/modules/technical-workflow/views/TechnicalTrackingView.vue'),
+          'TechnicalTracking',
+        ),
         meta: {
           authority: [M3_PERMISSION_CODES.TECHNICAL_TRACKING_QUERY],
           icon: 'carbon:search',

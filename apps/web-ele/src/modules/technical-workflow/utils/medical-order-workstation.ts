@@ -217,6 +217,8 @@ export function createMedicalOrderWorkstationDataSource(
   return {
     async load(query: TechnicalWorkbenchDataSourceQuery) {
       const response = await listPendingMedicalOrders({
+        dateFrom: query.dateFrom,
+        dateTo: query.dateTo,
         orderCategoryCode,
         page: query.page,
         pathologyNo: query.pathologyNo,

@@ -323,7 +323,7 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
       },
       name: 'TechnicalWorkflowRoot',
       path: '/technical-workflow',
-      redirect: '/technical-workflow/entry',
+      redirect: '/technical-workflow/specimen-receipt',
       children: [
         {
           component:
@@ -338,11 +338,20 @@ export const STATIC_FALLBACK_MENU_ROUTES: RouteRecordStringComponent<string>[] =
           path: '/technical-workflow/entry',
         },
         {
+          component: '/modules/specimen-workflow/views/SpecimenReceiptView',
+          meta: {
+            icon: 'carbon:archive',
+            title: '标本接收',
+          },
+          name: 'TechnicalWorkflowReceipt',
+          path: '/technical-workflow/specimen-receipt',
+        },
+        {
           component:
             '/modules/technical-workflow/views/TechnicalSpecimenRegistrationView',
           meta: {
             icon: 'carbon:data-table',
-            title: '检查登记',
+            title: '标本登记',
           },
           name: 'TechnicalSpecimenRegistration',
           path: '/technical-workflow/specimen-registration',

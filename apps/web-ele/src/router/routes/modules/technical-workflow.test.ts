@@ -1,7 +1,15 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { M2_PERMISSION_CODES } from '#/modules/specimen-workflow/constants';
 import { M3_PERMISSION_CODES } from '#/modules/technical-workflow/constants';
+
+const { withRouteComponentReloadRetryMock } = vi.hoisted(() => ({
+  withRouteComponentReloadRetryMock: vi.fn((loader) => loader),
+}));
+
+vi.mock('#/router/routes/lazy-load', () => ({
+  withRouteComponentReloadRetry: withRouteComponentReloadRetryMock,
+}));
 
 import technicalWorkflowRoutes from './technical-workflow';
 
@@ -12,6 +20,9 @@ describe('technical workflow routes', () => {
     );
     const tasksRoute = workflowRoot?.children?.find(
       (route) => route.name === 'TechnicalTasks',
+    );
+    const receiptRoute = workflowRoot?.children?.find(
+      (route) => route.name === 'TechnicalWorkflowReceipt',
     );
     const specimenRegistrationRoute = workflowRoot?.children?.find(
       (route) => route.name === 'TechnicalSpecimenRegistration',
@@ -42,6 +53,7 @@ describe('technical workflow routes', () => {
     );
 
     expect(workflowRoot?.path).toBe('/technical-workflow');
+    expect(workflowRoot?.redirect).toBe('/technical-workflow/specimen-receipt');
     expect(workflowRoot?.meta?.authority).toContain(
       M2_PERMISSION_CODES.SPECIMEN_RECEIVE,
     );
@@ -50,11 +62,17 @@ describe('technical workflow routes', () => {
         (route) => route.name === 'PathologyReceipt',
       ),
     ).toBe(false);
+    expect(receiptRoute?.path).toBe('/technical-workflow/specimen-receipt');
+    expect(receiptRoute?.meta?.keepAlive).toBe(true);
+    expect(receiptRoute?.meta?.title).toBe('标本接收');
+    expect(receiptRoute?.meta?.authority).toEqual([
+      M2_PERMISSION_CODES.SPECIMEN_RECEIVE,
+    ]);
     expect(specimenRegistrationRoute?.path).toBe(
       '/technical-workflow/specimen-registration',
     );
     expect(specimenRegistrationRoute?.meta?.keepAlive).toBe(true);
-    expect(specimenRegistrationRoute?.meta?.title).toBe('检查登记');
+    expect(specimenRegistrationRoute?.meta?.title).toBe('标本登记');
     expect(specimenRegistrationRoute?.meta?.authority).toEqual([
       M2_PERMISSION_CODES.SPECIMEN_RECEIVE,
     ]);
@@ -125,6 +143,9 @@ describe('technical workflow routes', () => {
     const routeNames = (workflowRoot?.children ?? []).map(
       (route) => route.name,
     );
+    expect(routeNames.indexOf('TechnicalWorkflowReceipt')).toBeLessThan(
+      routeNames.indexOf('TechnicalSpecimenRegistration'),
+    );
     expect(routeNames.indexOf('StainingWorkstation')).toBeLessThan(
       routeNames.indexOf('RoutineOrderWorkstation'),
     );
@@ -144,5 +165,32 @@ describe('technical workflow routes', () => {
       (route) => route.name === 'TechnicalWorkflowEntry',
     );
     expect(entryRoute?.meta?.keepAlive).toBeUndefined();
+  });
+
+  it('wraps technical workflow lazy routes with one-time reload retry', () => {
+    expect(withRouteComponentReloadRetryMock).toHaveBeenCalledWith(
+      expect.any(Function),
+      'TechnicalWorkflowEntry',
+    );
+    expect(withRouteComponentReloadRetryMock).toHaveBeenCalledWith(
+      expect.any(Function),
+      'TechnicalWorkflowReceipt',
+    );
+    expect(withRouteComponentReloadRetryMock).toHaveBeenCalledWith(
+      expect.any(Function),
+      'TechnicalSpecimenRegistration',
+    );
+    expect(withRouteComponentReloadRetryMock).toHaveBeenCalledWith(
+      expect.any(Function),
+      'TechnicalTasks',
+    );
+    expect(withRouteComponentReloadRetryMock).toHaveBeenCalledWith(
+      expect.any(Function),
+      'GrossingWorkstation',
+    );
+    expect(withRouteComponentReloadRetryMock).toHaveBeenCalledWith(
+      expect.any(Function),
+      'TechnicalTracking',
+    );
   });
 });

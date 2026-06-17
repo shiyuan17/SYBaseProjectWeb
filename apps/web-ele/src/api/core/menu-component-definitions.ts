@@ -247,6 +247,14 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
       routeName: 'PathologyReceipt',
     },
     {
+      canonicalTitle: '标本接收',
+      component: '/modules/specimen-workflow/views/SpecimenReceiptView',
+      componentAliases: ['TechnicalWorkflowReceipt'],
+      path: '/technical-workflow/specimen-receipt',
+      pathAliases: ['/technical-workflow/specimen-receipt'],
+      routeName: 'TechnicalWorkflowReceipt',
+    },
+    {
       canonicalTitle: '追踪与异常',
       component: '/modules/specimen-workflow/views/TrackingQueryView',
       componentAliases: ['TrackingException', 'TrackingQuery'],
@@ -269,7 +277,7 @@ export const BACKEND_MENU_COMPONENT_DEFINITIONS: BackendMenuComponentDefinition[
       routeName: 'TechnicalWorkflowRoot',
     },
     {
-      canonicalTitle: '检查登记',
+      canonicalTitle: '标本登记',
       component:
         '/modules/technical-workflow/views/TechnicalSpecimenRegistrationView',
       componentAliases: ['TechnicalSpecimenRegistration'],

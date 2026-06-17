@@ -83,6 +83,11 @@ describe('workflow routes', () => {
     expect(receiptRoute?.meta?.authority).toEqual([
       M2_PERMISSION_CODES.SPECIMEN_RECEIVE,
     ]);
+    expect(
+      workflowRoot?.children?.some(
+        (route) => route.name === 'TechnicalWorkflowReceipt',
+      ),
+    ).toBe(false);
     expect(compatibilityRoute?.path).toBe('/workflow/clinical-register');
     expect(compatibilityRoute?.meta?.title).toBe('送检登记兼容页');
     expect(compatibilityRoute?.meta?.hideInMenu).toBe(true);

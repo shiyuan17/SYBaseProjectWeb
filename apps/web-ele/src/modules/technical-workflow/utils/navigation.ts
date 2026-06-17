@@ -24,6 +24,8 @@ function buildQuery(query?: TechnicalWorkflowDeepLinkQuery) {
 
   return {
     caseId: normalizeQueryValue(query.caseId),
+    dateFrom: normalizeQueryValue(query.dateFrom),
+    dateTo: normalizeQueryValue(query.dateTo),
     mode: normalizeQueryValue(query.mode),
     objectId: normalizeQueryValue(query.objectId),
     objectType: normalizeQueryValue(query.objectType),

@@ -39,6 +39,8 @@ export interface TechnicalWorkbenchMetric {
 }
 
 export interface TechnicalWorkbenchDataSourceQuery {
+  dateFrom?: string;
+  dateTo?: string;
   page: number;
   pathologyNo?: string;
   size: number;
@@ -82,6 +84,7 @@ export interface TechnicalWorkbenchPageConfig {
   queryActions?: TechnicalWorkbenchAction[];
   rows?: TechnicalWorkbenchRow[];
   searchPlaceholder: string;
+  showWorkDatePicker?: boolean;
   showPageHeader?: boolean;
   statusOptions?: TechnicalWorkbenchStatusOption[];
   title: string;
