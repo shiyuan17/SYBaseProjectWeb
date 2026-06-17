@@ -32,7 +32,7 @@ const props = defineProps<{
   workbench: DiagnosticWorkbenchView | null;
 }>();
 
-const activeTab = ref('medical-orders');
+const activeTab = ref('capture');
 const editableRemarkSections = ref<RemarkSectionSummary[]>([]);
 const patientBrief = computed(() => {
   const workbench = props.workbench;
@@ -48,7 +48,7 @@ const patientBrief = computed(() => {
 watch(
   () => props.workbench?.caseId,
   () => {
-    activeTab.value = 'medical-orders';
+    activeTab.value = 'capture';
   },
 );
 
@@ -113,6 +113,10 @@ function saveRemarkSection() {
         class="diagnosis-workbench-tabs"
         data-testid="diagnosis-workbench-tabs"
       >
+        <ElTabPane label="采图区" name="capture">
+          <slot name="capture"></slot>
+        </ElTabPane>
+
         <ElTabPane label="医嘱信息" name="medical-orders">
           <slot name="medical-orders"></slot>
         </ElTabPane>
@@ -233,7 +237,6 @@ function saveRemarkSection() {
                 {{ formatNullable(workbench.currentReport?.finalDiagnosis) }}
               </ElDescriptionsItem>
             </ElDescriptions>
-            <slot name="capture"></slot>
           </div>
         </ElTabPane>
 

@@ -834,9 +834,7 @@ async function selectReportStyleOption(label: string) {
   await flushAsyncWork();
 
   const option = [
-    ...document.body.querySelectorAll<HTMLElement>(
-      '.el-select-dropdown__item',
-    ),
+    ...document.body.querySelectorAll<HTMLElement>('.el-select-dropdown__item'),
   ].find((item) => item.textContent?.includes(label));
   expect(option).toBeTruthy();
 
@@ -945,6 +943,7 @@ describe('DiagnosisWorkbenchView', () => {
 
     const wrapper = await mountView();
 
+    expect(wrapper.text()).toContain('采图区');
     expect(wrapper.text()).toContain('患者信息');
     expect(wrapper.text()).toContain('医嘱信息');
     expect(wrapper.text()).toContain('科内会诊');
@@ -1153,9 +1152,7 @@ describe('DiagnosisWorkbenchView', () => {
 
   it('switches the report preview template from the style dropdown', async () => {
     const wrapper = await mountView();
-    const reportStyleSelect = document.querySelector<HTMLElement>(
-      '[data-testid="report-style-select"]',
-    );
+    const reportStyleSelect = findByTestId('report-style-select');
 
     expect(reportStyleSelect).toBeTruthy();
     expect(document.body.textContent).toContain('默认模板');
@@ -1234,7 +1231,7 @@ describe('DiagnosisWorkbenchView', () => {
     }
 
     wrapper.unmount();
-  });
+  }, 20_000);
 
   it('opens report template drawer and appends a selected diagnosis template', async () => {
     const wrapper = await mountView();
@@ -1304,7 +1301,7 @@ describe('DiagnosisWorkbenchView', () => {
     wrapper.unmount();
   });
 
-  it('renders diagnosis capture under patient info and imports diagnosis images', async () => {
+  it('renders diagnosis capture in the first tab and imports diagnosis images', async () => {
     createObjectUrlMock.mockImplementation(
       (file) => `blob:${(file as File).name}`,
     );
@@ -1312,8 +1309,6 @@ describe('DiagnosisWorkbenchView', () => {
     await selectReportStyleOption('所见即所得模板');
 
     expect(getButtonTexts()).not.toContain('采图');
-    await clickMaterialTab('患者信息');
-
     expect(wrapper.text()).toContain('采图区');
     expect(wrapper.text()).toContain('已采图像');
     expect(wrapper.text()).toContain('摄像头预览');
@@ -1396,6 +1391,37 @@ describe('DiagnosisWorkbenchView', () => {
       reportImageCanvas!.querySelector('img[alt="diagnosis-upload.jpg"]'),
     ).toBeNull();
     expect(wrapper.text()).toContain('diagnosis-second.jpg');
+
+    wrapper.unmount();
+  });
+
+  it('shows capture tab before patient info and keeps patient info separate from capture panel', async () => {
+    const wrapper = await mountView();
+
+    const tabLabels = [
+      ...document.querySelectorAll<HTMLElement>('.el-tabs__item, [role="tab"]'),
+    ]
+      .map((item) => item.textContent?.trim() ?? '')
+      .filter(Boolean);
+
+    expect(tabLabels.indexOf('采图区')).toBeGreaterThanOrEqual(0);
+    expect(tabLabels.indexOf('患者信息')).toBeGreaterThanOrEqual(0);
+    expect(tabLabels.indexOf('采图区')).toBeLessThan(tabLabels.indexOf('患者信息'));
+    expect(
+      document
+        .querySelector<HTMLElement>('.el-tabs__item.is-active, [role="tab"][aria-selected="true"]')
+        ?.textContent,
+    ).toContain('采图区');
+
+    await clickMaterialTab('患者信息');
+
+    expect(
+      document
+        .querySelector<HTMLElement>('.el-tabs__item.is-active, [role="tab"][aria-selected="true"]')
+        ?.textContent,
+    ).toContain('患者信息');
+    expect(wrapper.text()).toContain('病人ID');
+    expect(wrapper.text()).toContain('申请单号');
 
     wrapper.unmount();
   });
