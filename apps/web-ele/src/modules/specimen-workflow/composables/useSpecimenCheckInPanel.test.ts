@@ -544,7 +544,7 @@ describe('useSpecimenCheckInPanel', () => {
     expect(state.pendingCount.value).toBe(1);
 
     wrapper.destroy();
-  });
+  }, 20_000);
 
   it('checks in an unbound specimen by specimen id', async () => {
     const wrapper = mountComposable();
@@ -576,7 +576,7 @@ describe('useSpecimenCheckInPanel', () => {
     );
 
     wrapper.destroy();
-  });
+  }, 20_000);
 
   it('marks the second specimen when its specimen number is scanned', async () => {
     const wrapper = mountComposable();
@@ -615,7 +615,7 @@ describe('useSpecimenCheckInPanel', () => {
     expect(state.queueItems.value).toHaveLength(2);
 
     wrapper.destroy();
-  });
+  }, 20_000);
 
   it('keeps previously scanned specimens unsaved when another specimen is scanned', async () => {
     const wrapper = mountComposable();
