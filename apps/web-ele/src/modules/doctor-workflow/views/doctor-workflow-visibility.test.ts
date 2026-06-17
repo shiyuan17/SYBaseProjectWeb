@@ -1120,7 +1120,7 @@ describe('doctor workflow view visibility', () => {
     expect(wrapper.text()).toContain('已发放');
     expect(wrapper.text()).toContain('2026-06-15 10:30:00');
     expect(wrapper.text()).toContain('病理号');
-    expect(wrapper.buttonTexts()).toContain('审核通过');
+    expect(wrapper.buttonTexts()).not.toContain('审核通过');
     expect(wrapper.buttonTexts()).toContain('驳回');
     expect(wrapper.buttonTexts()).not.toContain('签发');
     expect(wrapper.buttonTexts()).not.toContain('发布');
@@ -1150,9 +1150,9 @@ describe('doctor workflow view visibility', () => {
     expect(wrapper.buttonTexts()).toContain('打印');
     expect(wrapper.buttonTexts()).toContain('发放');
     expect(wrapper.buttonTexts()).toContain('回收');
-    expect(wrapper.buttonTexts()).toContain('审核通过');
+    expect(wrapper.buttonTexts()).not.toContain('审核通过');
     expect(wrapper.buttonTexts()).toContain('驳回');
-    expect(wrapper.buttonTexts()).toContain('签发');
+    expect(wrapper.buttonTexts()).not.toContain('签发');
     expect(wrapper.buttonTexts()).toContain('发布');
     expect(wrapper.buttonTexts()).not.toContain('创建草稿');
     expect(wrapper.buttonTexts()).not.toContain('保存草稿');
