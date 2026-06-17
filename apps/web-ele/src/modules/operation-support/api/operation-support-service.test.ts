@@ -18,6 +18,7 @@ import {
   createArchiveCabinetNode,
   createEquipmentMaintenanceLog,
   createEquipmentRecord,
+  createEquipmentUsageRecord,
   createMaterialLoan,
   createMaterialLoanAbnormalRecord,
   createReagent,
@@ -34,6 +35,7 @@ import {
   listArchiveCabinets,
   listArchiveObjects,
   listAvailableArchivePositions,
+  listEquipmentCommonDevices,
   listEquipmentMaintenanceLogs,
   listEquipmentRecords,
   listEquipmentWarnings,
@@ -691,6 +693,7 @@ describe('operation-support-service equipment requests', () => {
     await listEquipmentRecords({ equipmentStatus: 'ACTIVE' });
     await listEquipmentMaintenanceLogs('EQ-1');
     await listEquipmentWarnings();
+    await listEquipmentCommonDevices();
 
     expect(requestClientMock.get).toHaveBeenNthCalledWith(
       1,
@@ -705,27 +708,41 @@ describe('operation-support-service equipment requests', () => {
       3,
       '/v1/equipment-records/warnings',
     );
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      4,
+      '/v1/equipment-usage-records/common-devices',
+    );
   });
 
-  it('creates and patches equipment records and maintenance logs', async () => {
+  it('creates and patches equipment records, usage records and maintenance logs', async () => {
     await createEquipmentRecord({
       commonlyUsed: false,
       equipmentCode: 'EQ-1',
       equipmentName: '设备',
       equipmentStatus: 'ACTIVE',
-      operatorName: '设备员',
     });
     await updateEquipmentRecord('EQ-1', {
       commonlyUsed: false,
       equipmentName: '设备2',
-      equipmentStatus: 'MAINTENANCE',
-      operatorName: '设备员',
+      equipmentStatus: 'DISABLED',
     });
     await createEquipmentMaintenanceLog('EQ-1', {
       maintenanceStatus: 'COMPLETED',
       maintenanceType: 'MAINTENANCE',
-      operatorName: '设备员',
       performedAt: '2026-05-22T10:00:00',
+    });
+    await createEquipmentUsageRecord({
+      commonlyUsed: true,
+      diagnosisCount: 3,
+      endedAt: '2026-05-22T18:00:00',
+      equipmentCategory: '显微镜',
+      equipmentCondition: '正常',
+      equipmentId: 'EQ-1',
+      equipmentName: '设备',
+      runtimeHours: 8,
+      startedAt: '2026-05-22T10:00:00',
+      usageOperatorName: '设备员甲',
+      usageContent: '常规使用',
     });
 
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
@@ -736,7 +753,6 @@ describe('operation-support-service equipment requests', () => {
         equipmentName: '设备',
         equipmentStatus: 'ACTIVE',
         commonlyUsed: false,
-        operatorName: '设备员',
       },
     );
     expect(requestClientMock.request).toHaveBeenCalledWith(
@@ -745,8 +761,7 @@ describe('operation-support-service equipment requests', () => {
         data: {
           commonlyUsed: false,
           equipmentName: '设备2',
-          equipmentStatus: 'MAINTENANCE',
-          operatorName: '设备员',
+          equipmentStatus: 'DISABLED',
         },
         method: 'PATCH',
       },
@@ -757,8 +772,24 @@ describe('operation-support-service equipment requests', () => {
       {
         maintenanceStatus: 'COMPLETED',
         maintenanceType: 'MAINTENANCE',
-        operatorName: '设备员',
         performedAt: '2026-05-22T10:00:00',
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      3,
+      '/v1/equipment-usage-records',
+      {
+        commonlyUsed: true,
+        diagnosisCount: 3,
+        endedAt: '2026-05-22T18:00:00',
+        equipmentCategory: '显微镜',
+        equipmentCondition: '正常',
+        equipmentId: 'EQ-1',
+        equipmentName: '设备',
+        runtimeHours: 8,
+        startedAt: '2026-05-22T10:00:00',
+        usageOperatorName: '设备员甲',
+        usageContent: '常规使用',
       },
     );
   });

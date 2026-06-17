@@ -18,14 +18,17 @@ import type {
   CreateArchiveCabinetRequest,
   CreateEquipmentMaintenanceLogRequest,
   CreateEquipmentRecordRequest,
+  CreateEquipmentUsageRecordRequest,
   CreateMaterialLoanAbnormalRecordRequest,
   CreateMaterialLoanRequest,
   CreateMedicalWasteReagentBagRequest,
   CreateReagentRequest,
   CreateReagentStockRequest,
   CreateWhiteSlideLoanRequest,
+  EquipmentCommonDeviceView,
   EquipmentMaintenanceLogView,
   EquipmentRecordView,
+  EquipmentUsageRecordView,
   EquipmentWarningView,
   MaterialLoanAbnormalRecordView,
   MaterialLoanQuery,
@@ -500,6 +503,23 @@ export async function listEquipmentWarnings() {
     await requestClient.get<EquipmentWarningView[] | null>(
       '/v1/equipment-records/warnings',
     ),
+  );
+}
+
+export async function listEquipmentCommonDevices() {
+  return normalizeArrayResult(
+    await requestClient.get<EquipmentCommonDeviceView[] | null>(
+      '/v1/equipment-usage-records/common-devices',
+    ),
+  );
+}
+
+export async function createEquipmentUsageRecord(
+  data: CreateEquipmentUsageRecordRequest,
+) {
+  return requestClient.post<EquipmentUsageRecordView>(
+    '/v1/equipment-usage-records',
+    data,
   );
 }
 

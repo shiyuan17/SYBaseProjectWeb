@@ -75,7 +75,28 @@ describe('equipment-ledger utils', () => {
         },
         true,
       ),
-    ).toBe('请填写设备名称、设备状态和操作人');
+    ).toBe('请填写设备名称和设备状态');
+  });
+
+  it('builds equipment requests without legacy operator fields', () => {
+    const createRequest = buildCreateEquipmentRecordRequest({
+      ...createEquipmentFormDefaults('设备员甲'),
+      equipmentCategory: '免疫组化仪',
+      equipmentCode: 'EQ-002',
+      equipmentName: '设备乙',
+      equipmentStatus: 'ACTIVE',
+    });
+    const maintenanceRequest = buildCreateEquipmentRecordRequest({
+      ...createEquipmentFormDefaults('设备员甲'),
+      equipmentCategory: '切片机',
+      equipmentCode: 'EQ-003',
+      equipmentName: '设备丙',
+      equipmentStatus: 'DISABLED',
+    });
+
+    expect(createRequest).not.toHaveProperty('operatorName');
+    expect(createRequest).not.toHaveProperty('operatorUserId');
+    expect(maintenanceRequest).not.toHaveProperty('operatorName');
   });
 
   it('builds export and print documents', () => {

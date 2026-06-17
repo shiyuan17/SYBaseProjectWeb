@@ -615,8 +615,6 @@ export interface CreateEquipmentRecordRequest {
   setTemperature?: number | string;
   currentTemperature?: number | string;
   rfid?: string;
-  operatorName: string;
-  operatorUserId?: string;
   remarks?: string;
 }
 
@@ -642,8 +640,6 @@ export interface CreateEquipmentMaintenanceLogRequest {
   maintenanceStatus: string;
   maintenanceType: string;
   nextMaintenanceAt?: string;
-  operatorName: string;
-  operatorUserId?: string;
   performedAt: string;
   remarks?: string;
 }
@@ -660,6 +656,46 @@ export interface EquipmentWarningView {
 export interface BatchUpdateEquipmentStatusRequest {
   equipmentIds: string[];
   equipmentStatus: 'ACTIVE' | 'DISABLED';
+}
+
+export interface EquipmentCommonDeviceView {
+  equipmentCategory?: null | string;
+  equipmentCode: string;
+  equipmentId: string;
+  equipmentName: string;
+  equipmentStatus: string;
+  locationDescription?: null | string;
+}
+
+export interface EquipmentUsageRecordView {
+  commonlyUsed: boolean;
+  diagnosisCount: number;
+  endedAt: string;
+  equipmentCategory: string;
+  equipmentCondition: string;
+  equipmentId?: null | string;
+  equipmentName: string;
+  id: string;
+  operatorName: string;
+  remarks?: null | string;
+  runtimeHours: number | string;
+  startedAt: string;
+  usageContent?: null | string;
+}
+
+export interface CreateEquipmentUsageRecordRequest {
+  commonlyUsed: boolean;
+  diagnosisCount: number;
+  endedAt: string;
+  equipmentCategory: string;
+  equipmentCondition: string;
+  equipmentId?: string;
+  equipmentName: string;
+  remarks?: string;
+  runtimeHours: number | string;
+  startedAt: string;
+  usageOperatorName: string;
+  usageContent?: string;
 }
 
 export interface MedicalWasteOptionItem {

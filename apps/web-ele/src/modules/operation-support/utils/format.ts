@@ -102,6 +102,9 @@ export function formatEquipmentStatus(value?: null | string) {
   if (value === 'DISABLED') {
     return '禁用';
   }
+  if (value === 'SCRAPPED' || value === 'SCRAPPED_DAMAGED') {
+    return '报废报损';
+  }
   return findOptionLabel(EQUIPMENT_STATUS_OPTIONS, value);
 }
 

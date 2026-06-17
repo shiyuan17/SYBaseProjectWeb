@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import type {
-  EquipmentRecordView,
-  EquipmentWarningView,
-} from '../types/operation-support';
+import type { EquipmentRecordView } from '../types/operation-support';
 import type {
   EquipmentFormState,
   MaintenanceLogFormState,
 } from '../utils/equipment-ledger';
+import type {
+  EquipmentCommonDeviceView,
+  EquipmentUsageRecordFormState,
+} from '../utils/equipment-usage-record';
 
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 import { Fallback, Page } from '@vben/common-ui';
@@ -35,14 +36,15 @@ import {
   batchUpdateEquipmentStatus,
   createEquipmentMaintenanceLog,
   createEquipmentRecord,
+  createEquipmentUsageRecord,
+  listEquipmentCommonDevices,
   listEquipmentMaintenanceLogs,
   listEquipmentRecords,
-  listEquipmentWarnings,
   updateEquipmentRecord,
 } from '../api/operation-support-service';
 import EquipmentDetailPanel from '../components/EquipmentDetailPanel.vue';
 import EquipmentDialog from '../components/EquipmentDialog.vue';
-import EquipmentWarningPanel from '../components/EquipmentWarningPanel.vue';
+import EquipmentUsageRecordDialog from '../components/EquipmentUsageRecordDialog.vue';
 import { EQUIPMENT_STATUS_OPTIONS } from '../constants';
 import {
   buildCreateEquipmentRecordRequest,
@@ -55,10 +57,16 @@ import {
   createEquipmentFormStateFromRow,
   createMaintenanceLogFormDefaults,
   getEquipmentStatusTagType,
-  getEquipmentWarningTagType,
   validateEquipmentForm,
   validateMaintenanceLogForm,
 } from '../utils/equipment-ledger';
+import {
+  applyEquipmentUsageCommonDevice,
+  buildCreateEquipmentUsageRecordRequest,
+  createEquipmentUsageRecordFormDefaults,
+  syncEquipmentUsageRuntimeHours,
+  validateEquipmentUsageRecordForm,
+} from '../utils/equipment-usage-record';
 import { getOperationSupportPageErrorMessage } from '../utils/error';
 import {
   formatEquipmentCategory,
@@ -80,7 +88,7 @@ const currentOperatorName = computed(
 const loading = reactive({
   equipment: false,
   logs: false,
-  warnings: false,
+  usageCommonDevices: false,
 });
 const submitting = ref(false);
 const pageError = ref('');
@@ -88,10 +96,10 @@ const equipmentRecords = ref<EquipmentRecordView[]>([]);
 const selectedEquipment = ref<EquipmentRecordView | null>(null);
 const selectedRows = ref<EquipmentRecordView[]>([]);
 const logs = ref(awaitSafeLogs());
-const warnings = ref<EquipmentWarningView[]>([]);
 const editingEquipment = ref<EquipmentRecordView | null>(null);
 const equipmentDetailDrawerVisible = ref(false);
-const equipmentWarningDrawerVisible = ref(false);
+const equipmentUsageRecordVisible = ref(false);
+const commonDevices = ref<EquipmentCommonDeviceView[]>([]);
 
 const equipmentDialogVisible = computed({
   get: () => editingEquipment.value !== null,
@@ -115,6 +123,17 @@ const equipmentForm = reactive<EquipmentFormState>(
   createEquipmentFormDefaults(getDefaultOperatorName()),
 );
 
+const equipmentUsageRecordForm = reactive<EquipmentUsageRecordFormState>(
+  createEquipmentUsageRecordFormDefaults(getDefaultOperatorName()),
+);
+
+const equipmentUsageRecordDialogForm = computed({
+  get: () => equipmentUsageRecordForm,
+  set: (value: EquipmentUsageRecordFormState) => {
+    Object.assign(equipmentUsageRecordForm, value);
+  },
+});
+
 const logForm = reactive<MaintenanceLogFormState>(
   createMaintenanceLogFormDefaults(getDefaultOperatorName()),
 );
@@ -137,6 +156,13 @@ function resetLogForm() {
   Object.assign(
     logForm,
     createMaintenanceLogFormDefaults(getDefaultOperatorName()),
+  );
+}
+
+function resetEquipmentUsageRecordForm() {
+  Object.assign(
+    equipmentUsageRecordForm,
+    createEquipmentUsageRecordFormDefaults(getDefaultOperatorName()),
   );
 }
 
@@ -173,18 +199,14 @@ async function loadEquipmentRecords() {
   }
 }
 
-async function loadWarnings() {
-  if (!capabilities.value.canQueryWarnings) {
-    warnings.value = [];
-    return;
-  }
-  loading.warnings = true;
+async function loadCommonDevices() {
+  loading.usageCommonDevices = true;
   try {
-    warnings.value = await listEquipmentWarnings();
+    commonDevices.value = await listEquipmentCommonDevices();
   } catch (error) {
     ElMessage.error(getOperationSupportPageErrorMessage(error));
   } finally {
-    loading.warnings = false;
+    loading.usageCommonDevices = false;
   }
 }
 
@@ -259,7 +281,7 @@ async function submitEquipment() {
       ElMessage.success('设备档案已创建');
     }
     equipmentDialogVisible.value = false;
-    await Promise.all([loadEquipmentRecords(), loadWarnings()]);
+    await loadEquipmentRecords();
   } catch (error) {
     ElMessage.error(getOperationSupportPageErrorMessage(error));
   } finally {
@@ -291,8 +313,41 @@ async function submitMaintenanceLog() {
     await Promise.all([
       selectEquipment(selectedEquipment.value),
       loadEquipmentRecords(),
-      loadWarnings(),
     ]);
+  } catch (error) {
+    ElMessage.error(getOperationSupportPageErrorMessage(error));
+  } finally {
+    submitting.value = false;
+  }
+}
+
+async function openEquipmentUsageRecordDialog() {
+  resetEquipmentUsageRecordForm();
+  await loadCommonDevices();
+  equipmentUsageRecordVisible.value = true;
+}
+
+function applyCommonDevice(row: EquipmentCommonDeviceView) {
+  applyEquipmentUsageCommonDevice(equipmentUsageRecordForm, row);
+}
+
+async function submitEquipmentUsageRecord() {
+  const validationMessage = validateEquipmentUsageRecordForm(
+    equipmentUsageRecordForm,
+  );
+  if (validationMessage) {
+    ElMessage.warning(validationMessage);
+    return;
+  }
+
+  submitting.value = true;
+  try {
+    syncEquipmentUsageRuntimeHours(equipmentUsageRecordForm);
+    await createEquipmentUsageRecord(
+      buildCreateEquipmentUsageRecordRequest(equipmentUsageRecordForm),
+    );
+    ElMessage.success('设备使用记录已保存');
+    equipmentUsageRecordVisible.value = false;
   } catch (error) {
     ElMessage.error(getOperationSupportPageErrorMessage(error));
   } finally {
@@ -313,7 +368,7 @@ async function handleBatchStatusUpdate(equipmentStatus: 'ACTIVE' | 'DISABLED') {
     ElMessage.success(
       equipmentStatus === 'ACTIVE' ? '设备已恢复' : '设备已禁用',
     );
-    await Promise.all([loadEquipmentRecords(), loadWarnings()]);
+    await loadEquipmentRecords();
   } catch (error) {
     ElMessage.error(getOperationSupportPageErrorMessage(error));
   }
@@ -365,7 +420,7 @@ function handlePrintEquipment() {
 }
 
 async function refreshEquipmentPage() {
-  await Promise.all([loadEquipmentRecords(), loadWarnings()]);
+  await loadEquipmentRecords();
   if (selectedEquipment.value) {
     await selectEquipment(selectedEquipment.value);
   }
@@ -379,37 +434,21 @@ async function openEquipmentDetailDrawer() {
   await selectEquipment(selectedEquipment.value);
 }
 
-function openEquipmentWarningDrawer() {
-  equipmentWarningDrawerVisible.value = true;
-}
-
-async function navigateToEquipmentDetail(warning: EquipmentWarningView) {
-  equipmentFilters.keyword = warning.equipmentCode;
-  equipmentFilters.equipmentStatus = '';
-  await loadEquipmentRecords();
-  const matchedEquipment = equipmentRecords.value.find(
-    (item) => item.id === warning.equipmentId,
-  );
-  if (!matchedEquipment) {
-    ElMessage.warning('未找到对应设备，请刷新后重试');
-    return;
-  }
-  equipmentWarningDrawerVisible.value = false;
-  await selectEquipment(matchedEquipment);
-  ElMessage.success(`已定位到设备 ${warning.equipmentCode}`);
-}
-
 async function initializePage() {
   const tasks: Promise<void>[] = [];
   if (capabilities.value.canQueryEquipment) {
     tasks.push(loadEquipmentRecords());
   }
-  if (capabilities.value.canQueryWarnings) {
-    tasks.push(loadWarnings());
-  }
   resetLogForm();
   await Promise.all(tasks);
 }
+
+watch(
+  () => [equipmentUsageRecordForm.startedAt, equipmentUsageRecordForm.endedAt],
+  () => {
+    syncEquipmentUsageRuntimeHours(equipmentUsageRecordForm);
+  },
+);
 
 void initializePage();
 </script>
@@ -470,10 +509,10 @@ void initializePage();
             设备详情/保养
           </ElButton>
           <ElButton
-            v-if="capabilities.canQueryWarnings"
-            @click="openEquipmentWarningDrawer"
+            v-if="capabilities.canUpdateEquipment"
+            @click="openEquipmentUsageRecordDialog"
           >
-            设备预警
+            设备使用记录
           </ElButton>
         </div>
 
@@ -498,13 +537,7 @@ void initializePage();
                 <ElOption
                   v-for="option in EQUIPMENT_STATUS_OPTIONS"
                   :key="option.value"
-                  :label="
-                    option.value === 'ACTIVE'
-                      ? '正常'
-                      : option.value === 'DISABLED'
-                        ? '禁用'
-                        : option.label
-                  "
+                  :label="option.label"
                   :value="option.value"
                 />
               </ElSelect>
@@ -668,22 +701,6 @@ void initializePage();
       />
     </ElDrawer>
 
-    <ElDrawer
-      v-model="equipmentWarningDrawerVisible"
-      :size="860"
-      title="设备预警"
-    >
-      <EquipmentWarningPanel
-        :can-query-equipment="capabilities.canQueryEquipment"
-        :can-query-warnings="capabilities.canQueryWarnings"
-        :get-warning-tag-type="getEquipmentWarningTagType"
-        :loading="loading.warnings"
-        :warnings="warnings"
-        @load-warnings="loadWarnings"
-        @navigate-to-equipment-detail="navigateToEquipmentDetail"
-      />
-    </ElDrawer>
-
     <EquipmentDialog
       v-model="equipmentDialogVisible"
       :equipment-form="equipmentForm"
@@ -691,6 +708,16 @@ void initializePage();
       :submitting="submitting"
       @update:equipment-form="Object.assign(equipmentForm, $event)"
       @submit="submitEquipment"
+    />
+
+    <EquipmentUsageRecordDialog
+      v-model="equipmentUsageRecordVisible"
+      v-model:usage-record-form="equipmentUsageRecordDialogForm"
+      :common-devices="commonDevices"
+      :loading-common-devices="loading.usageCommonDevices"
+      :submitting="submitting"
+      @apply-common-device="applyCommonDevice"
+      @submit="submitEquipmentUsageRecord"
     />
   </Page>
 </template>

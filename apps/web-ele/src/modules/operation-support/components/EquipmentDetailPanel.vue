@@ -151,9 +151,6 @@ const logForm = defineModel<MaintenanceLogFormState>('logForm', {
             style="width: 210px"
           />
         </ElFormItem>
-        <ElFormItem label="操作人">
-          <ElInput v-model="logForm.operatorName" style="width: 160px" />
-        </ElFormItem>
         <ElFormItem>
           <ElButton
             :loading="submitting"

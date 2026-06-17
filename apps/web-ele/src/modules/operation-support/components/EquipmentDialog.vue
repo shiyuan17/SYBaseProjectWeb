@@ -137,13 +137,7 @@ const equipmentForm = defineModel<EquipmentFormState>('equipmentForm', {
               <ElOption
                 v-for="option in EQUIPMENT_STATUS_OPTIONS"
                 :key="option.value"
-                :label="
-                  option.value === 'ACTIVE'
-                    ? '正常'
-                    : option.value === 'DISABLED'
-                      ? '禁用'
-                      : option.label
-                "
+                :label="option.label"
                 :value="option.value"
               />
             </ElSelect>

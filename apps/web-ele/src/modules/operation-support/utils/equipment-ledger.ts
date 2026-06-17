@@ -307,8 +307,8 @@ export function getEquipmentStatusTagType(status?: null | string) {
   if (status === 'ACTIVE') {
     return 'success';
   }
-  if (status === 'MAINTENANCE') {
-    return 'warning';
+  if (status === 'SCRAPPED' || status === 'SCRAPPED_DAMAGED') {
+    return 'danger';
   }
   return 'info';
 }
@@ -327,8 +327,8 @@ export function validateEquipmentForm(
   form: EquipmentFormState,
   isCreate: boolean,
 ) {
-  if (!form.equipmentName || !form.equipmentStatus || !form.operatorName) {
-    return '请填写设备名称、设备状态和操作人';
+  if (!form.equipmentName || !form.equipmentStatus) {
+    return '请填写设备名称和设备状态';
   }
   if (isCreate && !form.equipmentCode) {
     return '新增设备需要填写资产编号';
@@ -348,13 +348,8 @@ export function validateMaintenanceLogForm(options: {
   }
 
   const form = options.form;
-  if (
-    !form.maintenanceType ||
-    !form.maintenanceStatus ||
-    !form.performedAt ||
-    !form.operatorName
-  ) {
-    return '请填写维护类型、状态、执行时间和操作人';
+  if (!form.maintenanceType || !form.maintenanceStatus || !form.performedAt) {
+    return '请填写维护类型、状态和执行时间';
   }
   return '';
 }
@@ -382,7 +377,6 @@ export function buildCreateEquipmentRecordRequest(
     manufacturer: optionalText(form.manufacturer),
     modelNo: optionalText(form.modelNo),
     nextMaintenanceAt: optionalText(form.nextMaintenanceAt),
-    operatorName: form.operatorName,
     portNo: optionalText(form.portNo),
     price: optionalNumber(form.price),
     principalCode: optionalText(form.principalCode),
@@ -418,7 +412,6 @@ export function buildCreateMaintenanceLogRequest(
     maintenanceStatus: form.maintenanceStatus,
     maintenanceType: form.maintenanceType,
     nextMaintenanceAt: optionalText(form.nextMaintenanceAt),
-    operatorName: form.operatorName,
     performedAt: form.performedAt,
     remarks: optionalText(form.remarks),
   };

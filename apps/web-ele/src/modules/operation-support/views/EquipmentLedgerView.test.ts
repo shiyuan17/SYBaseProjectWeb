@@ -17,20 +17,22 @@ vi.mock('vue-router', () => ({
 const {
   downloadFileFromBlobMock,
   mockBatchUpdateEquipmentStatus,
+  mockCreateEquipmentUsageRecord,
   messageErrorMock,
   messageSuccessMock,
   messageWarningMock,
   mockAccessStore,
   mockCreateEquipmentMaintenanceLog,
   mockCreateEquipmentRecord,
+  mockListEquipmentCommonDevices,
   mockListEquipmentMaintenanceLogs,
   mockListEquipmentRecords,
-  mockListEquipmentWarnings,
   mockUpdateEquipmentRecord,
   mockUserStore,
 } = vi.hoisted(() => ({
   downloadFileFromBlobMock: vi.fn(),
   mockBatchUpdateEquipmentStatus: vi.fn(),
+  mockCreateEquipmentUsageRecord: vi.fn(),
   messageErrorMock: vi.fn(),
   messageSuccessMock: vi.fn(),
   messageWarningMock: vi.fn(),
@@ -39,9 +41,9 @@ const {
   },
   mockCreateEquipmentMaintenanceLog: vi.fn(),
   mockCreateEquipmentRecord: vi.fn(),
+  mockListEquipmentCommonDevices: vi.fn(),
   mockListEquipmentMaintenanceLogs: vi.fn(),
   mockListEquipmentRecords: vi.fn(),
-  mockListEquipmentWarnings: vi.fn(),
   mockUpdateEquipmentRecord: vi.fn(),
   mockUserStore: {
     userInfo: {
@@ -241,26 +243,36 @@ vi.mock('../components/EquipmentDetailPanel.vue', () => ({
   }),
 }));
 
-vi.mock('../components/EquipmentWarningPanel.vue', () => ({
+vi.mock('../components/EquipmentUsageRecordDialog.vue', () => ({
   default: defineComponent({
-    props: ['warnings'],
-    emits: ['navigateToEquipmentDetail'],
+    props: ['commonDevices', 'modelValue'],
+    emits: ['applyCommonDevice', 'submit'],
     setup(props, { emit }) {
       return () =>
-        h('div', [
-          'equipment-warning-panel',
-          props.warnings?.map(
-            (warning: { equipmentCode: string; equipmentId: string }) =>
+        props.modelValue
+          ? h('div', [
+              'equipment-usage-record-dialog',
+              props.commonDevices?.map(
+                (device: { equipmentCode: string; equipmentId: string }) =>
+                  h(
+                    'button',
+                    {
+                      type: 'button',
+                      onClick: () => emit('applyCommonDevice', device),
+                    },
+                    `选择-${device.equipmentCode}`,
+                  ),
+              ),
               h(
                 'button',
                 {
                   type: 'button',
-                  onClick: () => emit('navigateToEquipmentDetail', warning),
+                  onClick: () => emit('submit'),
                 },
-                `定位-${warning.equipmentCode}`,
+                '提交使用记录',
               ),
-          ),
-        ]);
+            ])
+          : null;
     },
   }),
 }));
@@ -278,9 +290,10 @@ vi.mock('../api/operation-support-service', () => ({
   batchUpdateEquipmentStatus: mockBatchUpdateEquipmentStatus,
   createEquipmentMaintenanceLog: mockCreateEquipmentMaintenanceLog,
   createEquipmentRecord: mockCreateEquipmentRecord,
+  createEquipmentUsageRecord: mockCreateEquipmentUsageRecord,
+  listEquipmentCommonDevices: mockListEquipmentCommonDevices,
   listEquipmentMaintenanceLogs: mockListEquipmentMaintenanceLogs,
   listEquipmentRecords: mockListEquipmentRecords,
-  listEquipmentWarnings: mockListEquipmentWarnings,
   updateEquipmentRecord: mockUpdateEquipmentRecord,
 }));
 
@@ -322,7 +335,6 @@ describe('EquipmentLedgerView', () => {
       M5_PERMISSION_CODES.EQUIPMENT_CREATE,
       M5_PERMISSION_CODES.EQUIPMENT_UPDATE,
       M5_PERMISSION_CODES.EQUIPMENT_MAINTENANCE_CREATE,
-      M5_PERMISSION_CODES.EQUIPMENT_WARNING_QUERY,
     ];
 
     mockListEquipmentRecords.mockResolvedValue([
@@ -360,18 +372,20 @@ describe('EquipmentLedgerView', () => {
         remarks: 'OK',
       },
     ]);
-    mockListEquipmentWarnings.mockResolvedValue([
+    mockListEquipmentCommonDevices.mockResolvedValue([
       {
         equipmentCode: 'EQ-1',
         equipmentId: 'EQUIPMENT-1',
         equipmentName: 'Processor',
+        equipmentCategory: 'PROCESSING',
         equipmentStatus: 'ACTIVE',
-        nextMaintenanceAt: '2026-06-01',
-        warningType: 'DUE_SOON',
+        id: 'EQUIPMENT-1',
+        locationDescription: 'Lab A',
       },
     ]);
 
     mockCreateEquipmentRecord.mockResolvedValue(undefined);
+    mockCreateEquipmentUsageRecord.mockResolvedValue(undefined);
     mockCreateEquipmentMaintenanceLog.mockResolvedValue(undefined);
     mockBatchUpdateEquipmentStatus.mockResolvedValue([]);
     mockUpdateEquipmentRecord.mockResolvedValue(undefined);
@@ -381,9 +395,10 @@ describe('EquipmentLedgerView', () => {
     mockAccessStore.accessCodes = [];
     mockCreateEquipmentMaintenanceLog.mockReset();
     mockCreateEquipmentRecord.mockReset();
+    mockCreateEquipmentUsageRecord.mockReset();
+    mockListEquipmentCommonDevices.mockReset();
     mockListEquipmentMaintenanceLogs.mockReset();
     mockListEquipmentRecords.mockReset();
-    mockListEquipmentWarnings.mockReset();
     mockBatchUpdateEquipmentStatus.mockReset();
     mockUpdateEquipmentRecord.mockReset();
     downloadFileFromBlobMock.mockReset();
@@ -401,7 +416,7 @@ describe('EquipmentLedgerView', () => {
 
     expect(document.body.textContent).toContain('fallback-403');
     expect(mockListEquipmentRecords).not.toHaveBeenCalled();
-    expect(mockListEquipmentWarnings).not.toHaveBeenCalled();
+    expect(mockListEquipmentCommonDevices).not.toHaveBeenCalled();
 
     app.unmount();
     root.remove();
@@ -413,7 +428,6 @@ describe('EquipmentLedgerView', () => {
 
     expect(document.body.textContent).toContain('仪器设备管理');
     expect(mockListEquipmentRecords).toHaveBeenCalledTimes(1);
-    expect(mockListEquipmentWarnings).toHaveBeenCalledTimes(1);
 
     expect(findButton('新增设备')).toBeTruthy();
     expect(findButton('恢复')).toBeTruthy();
@@ -422,7 +436,8 @@ describe('EquipmentLedgerView', () => {
     expect(findButton('打印设备')).toBeTruthy();
     expect(findButton('编辑设备')?.disabled).toBe(true);
     expect(findButton('设备详情/保养')?.disabled).toBe(true);
-    expect(findButton('设备预警')).toBeTruthy();
+    expect(findButton('设备使用记录')).toBeTruthy();
+    expect(findButton('设备预警')).toBeFalsy();
 
     app.unmount();
     root.remove();
@@ -470,24 +485,19 @@ describe('EquipmentLedgerView', () => {
     root.remove();
   });
 
-  it('navigates from warning drawer back to the equipment list selection', async () => {
+  it('opens usage record dialog and loads common devices', async () => {
     const { app, root } = mountView();
     await flushView();
 
-    findButton('设备预警')?.dispatchEvent(
+    findButton('设备使用记录')?.dispatchEvent(
       new MouseEvent('click', { bubbles: true }),
     );
     await flushView();
 
-    expect(document.body.textContent).toContain('equipment-warning-panel');
-
-    [...document.querySelectorAll('button')]
-      .find((button) => button.textContent?.includes('定位-EQ-1'))
-      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    await flushView();
-
-    expect(messageSuccessMock).toHaveBeenCalledWith('已定位到设备 EQ-1');
-    expect(mockListEquipmentRecords).toHaveBeenCalledTimes(2);
+    expect(document.body.textContent).toContain(
+      'equipment-usage-record-dialog',
+    );
+    expect(mockListEquipmentCommonDevices).toHaveBeenCalledTimes(1);
 
     app.unmount();
     root.remove();
