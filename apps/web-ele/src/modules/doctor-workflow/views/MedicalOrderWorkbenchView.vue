@@ -80,7 +80,10 @@ function canAcceptOrder(row: PendingMedicalOrderItem) {
 }
 
 function canCompleteOrder(row: PendingMedicalOrderItem) {
-  return canComplete.value && row.status === 'ACCEPTED';
+  return (
+    canComplete.value &&
+    (row.status === 'IN_PROGRESS' || row.status === 'ACCEPTED')
+  );
 }
 
 function canCancelOrder(row: PendingMedicalOrderItem) {

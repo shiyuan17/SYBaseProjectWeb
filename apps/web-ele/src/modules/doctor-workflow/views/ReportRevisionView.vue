@@ -87,11 +87,8 @@ const queryForm = reactive({
 });
 
 const createForm = reactive({
-  operatorName: '',
   remarks: '',
-  reportId: '',
   requestReason: '',
-  terminalCode: '',
 });
 
 const reviewForm = reactive({
@@ -176,6 +173,15 @@ function ensureOperator(operatorName: string) {
   return true;
 }
 
+function getCreateOperatorName() {
+  const operatorName = getDefaultOperatorName();
+  if (!operatorName) {
+    ElMessage.warning('当前登录账号缺少操作人姓名');
+    return null;
+  }
+  return operatorName;
+}
+
 async function loadWorkbench() {
   const normalizedCaseIdentifier = queryForm.caseIdentifier.trim();
   if (!normalizedCaseIdentifier) {
@@ -223,11 +229,8 @@ function openCreateDialog(
   row: Extract<RevisionRow, { rowType: 'current-report' }>,
 ) {
   activeCreateRow.value = row;
-  createForm.operatorName = getDefaultOperatorName();
   createForm.remarks = '';
-  createForm.reportId = row.reportId;
   createForm.requestReason = '';
-  createForm.terminalCode = '';
   createDialogVisible.value = true;
 }
 
@@ -249,22 +252,22 @@ async function submitCreateRevision() {
   if (!activeCreateRow.value) {
     return;
   }
-  if (!createForm.reportId.trim() || !createForm.requestReason.trim()) {
+  if (!createForm.requestReason.trim()) {
     ElMessage.warning('请填写修订原因');
     return;
   }
-  if (!ensureOperator(createForm.operatorName)) {
+  const operatorName = getCreateOperatorName();
+  if (!operatorName) {
     return;
   }
 
   operating.value = true;
   try {
     lastResult.value = await createReportRevisionRequest({
-      operatorName: createForm.operatorName.trim(),
+      operatorName,
       remarks: createForm.remarks.trim() || undefined,
-      reportId: createForm.reportId.trim(),
+      reportId: activeCreateRow.value.reportId,
       requestReason: createForm.requestReason.trim(),
-      terminalCode: createForm.terminalCode.trim() || undefined,
     });
     ElMessage.success('修订申请已发起');
     createDialogVisible.value = false;
@@ -636,24 +639,21 @@ function handleReviewSelectedRevision(action: 'approve' | 'reject') {
     </div>
     <ElDialog v-model="createDialogVisible" title="发起修订申请" width="560px">
       <ElForm label-width="96px">
-        <ElFormItem label="报告ID">
-          <ElInput v-model="createForm.reportId" disabled />
-        </ElFormItem>
         <ElFormItem label="修订原因" required>
           <ElInput
             v-model="createForm.requestReason"
             :rows="4"
+            placeholder="请输入修订原因"
             type="textarea"
           />
         </ElFormItem>
-        <ElFormItem label="操作人" required>
-          <ElInput v-model="createForm.operatorName" />
-        </ElFormItem>
-        <ElFormItem label="终端编码">
-          <ElInput v-model="createForm.terminalCode" />
-        </ElFormItem>
         <ElFormItem label="备注">
-          <ElInput v-model="createForm.remarks" :rows="3" type="textarea" />
+          <ElInput
+            v-model="createForm.remarks"
+            :rows="3"
+            placeholder="请输入备注（选填）"
+            type="textarea"
+          />
         </ElFormItem>
       </ElForm>
       <template #footer>

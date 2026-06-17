@@ -13,6 +13,8 @@ import { useAccessStore, useUserStore } from '@vben/stores';
 
 import {
   ElButton,
+  ElDescriptions,
+  ElDescriptionsItem,
   ElDialog,
   ElDropdown,
   ElDropdownItem,

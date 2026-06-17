@@ -225,6 +225,23 @@ function hasMeaningfulValue(value?: null | string) {
   return Boolean(value && value.trim());
 }
 
+function formatLifecycleFactValue(label?: null | string, value?: null | string) {
+  switch (label?.trim()) {
+    case '申请类型': {
+      return formatApplicationType(value);
+    }
+    case '当前状态': {
+      return formatSpecimenStatus(value);
+    }
+    case '申请单归档': {
+      return formatArchiveStatus(value);
+    }
+    default: {
+      return formatNullable(value);
+    }
+  }
+}
+
 function specimenCollapseTitle(item: LifecycleSpecimenView) {
   return [
     formatNullable(item.specimenNo),
@@ -454,7 +471,8 @@ watch(
                     :key="`${node.nodeCode ?? node.title ?? 'node'}-${fact.label}`"
                     class="rounded bg-muted px-2 py-1 text-xs text-foreground"
                   >
-                    {{ fact.label }}: {{ formatNullable(fact.value) }}
+                    {{ fact.label }}:
+                    {{ formatLifecycleFactValue(fact.label, fact.value) }}
                   </span>
                 </div>
                 <p
