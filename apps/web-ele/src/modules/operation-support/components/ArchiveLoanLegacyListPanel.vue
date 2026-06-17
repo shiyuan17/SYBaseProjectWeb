@@ -124,7 +124,7 @@ function queryLoans() {
           {{ formatNullable(row.patientName) }}
         </template>
       </ElTableColumn>
-      <ElTableColumn label="病人ID" min-width="100" prop="caseId" />
+      <ElTableColumn label="病人ID" min-width="100" prop="patientId" />
       <ElTableColumn label="住院号" min-width="90">
         <template #default>{{ formatNullable() }}</template>
       </ElTableColumn>

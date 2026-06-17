@@ -269,7 +269,7 @@ watch(
 
     <WorkflowSectionCard
       title="申请单列表"
-      description="列表展示申请单编号、申请单号、患者、流程节点和异常标记。"
+      description="列表展示申请单号、患者、流程节点和异常标记。"
     >
       <TrackingApplicationListTable
         :items="items"

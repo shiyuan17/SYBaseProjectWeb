@@ -4,9 +4,6 @@ import {
   ElButton,
   ElCheckbox,
   ElDatePicker,
-  ElDialog,
-  ElForm,
-  ElFormItem,
   ElInput,
   ElOption,
   ElPagination,
@@ -20,7 +17,6 @@ import { formatDateTime, formatNullable } from '../utils/format';
 
 const {
   actionLoading,
-  batchRetryResult,
   buildingOptions,
   canBind,
   canExportExcel,
@@ -42,12 +38,8 @@ const {
   pageError,
   pagedItems,
   resolveRoomLabel,
-  retryDialogVisible,
-  retryForm,
   retrySubmitting,
-  retryTargetRows,
   roomOptions,
-  submitRetryLabel,
   summary,
   targetBarcode,
   total,
@@ -65,7 +57,6 @@ const {
     />
 
     <div class="flex flex-wrap items-center gap-4 text-sm">
-      <div class="font-semibold text-danger">条码绑定</div>
       <div>
         全部
         <span class="text-xl font-semibold text-primary">{{
@@ -140,7 +131,11 @@ const {
       >
         取消绑定
       </ElButton>
-      <ElButton :disabled="!canRetryLabel" @click="handleRetryLabel">
+      <ElButton
+        :disabled="!canRetryLabel"
+        :loading="retrySubmitting"
+        @click="handleRetryLabel"
+      >
         补打标本标签
       </ElButton>
       <ElButton
@@ -150,7 +145,7 @@ const {
         打印
       </ElButton>
       <ElButton :disabled="!canExportExcel" @click="handleExportExcel">
-        导出 Excel
+        导出Excel
       </ElButton>
       <ElButton :disabled="!canPreprint" @click="handlePreprintBarcodes">
         预打印条码
@@ -173,7 +168,7 @@ const {
         </template>
       </ElTableColumn>
       <ElTableColumn label="申请单" min-width="120" prop="applicationNo" />
-      <ElTableColumn label="标本编号" min-width="120" prop="specimenNo" />
+      <ElTableColumn label="标本编号" min-width="160" prop="specimenNo" />
       <ElTableColumn label="标本条码" min-width="160">
         <template #default="{ row }">
           {{ formatNullable(row.barcode) }}
@@ -228,80 +223,4 @@ const {
       />
     </div>
   </div>
-
-  <ElDialog
-    v-model="retryDialogVisible"
-    :close-on-click-modal="false"
-    destroy-on-close
-    title="补打标本标签"
-    width="760px"
-  >
-    <div class="flex flex-col gap-4">
-      <section
-        class="rounded-lg border border-border bg-card px-4 py-4 shadow-sm"
-      >
-        <div class="mb-4 text-base font-semibold text-foreground">补打范围</div>
-        <div class="grid gap-3 text-sm md:grid-cols-2">
-          <div>涉及标本数：{{ retryTargetRows.length }}</div>
-          <div>
-            标签批次号：{{ retryTargetRows[0]?.labelPrintBatchNo || '-' }}
-          </div>
-        </div>
-      </section>
-
-      <section
-        class="rounded-lg border border-border bg-card px-4 py-4 shadow-sm"
-      >
-        <ElForm label-width="96px">
-          <div class="grid gap-4 md:grid-cols-2">
-            <ElFormItem label="操作人" required>
-              <ElInput :model-value="retryForm.operatorName" disabled />
-            </ElFormItem>
-            <ElFormItem label="打印机编号" required>
-              <ElInput
-                v-model="retryForm.printerCode"
-                placeholder="请输入打印机编号"
-              />
-            </ElFormItem>
-            <ElFormItem label="终端编号">
-              <ElInput v-model="retryForm.terminalCode" placeholder="可选" />
-            </ElFormItem>
-          </div>
-          <ElFormItem label="备注">
-            <ElInput v-model="retryForm.remarks" placeholder="补打说明" />
-          </ElFormItem>
-        </ElForm>
-      </section>
-
-      <section
-        v-if="batchRetryResult"
-        class="rounded-lg border border-border bg-card px-4 py-4 shadow-sm"
-      >
-        <div class="mb-4 text-base font-semibold text-foreground">补打结果</div>
-        <div class="grid gap-3 text-sm md:grid-cols-2">
-          <div>批次号：{{ batchRetryResult.labelPrintBatchNo }}</div>
-          <div>
-            结果：{{ batchRetryResult.allSuccessful ? '全部成功' : '部分成功' }}
-          </div>
-          <div>成功数：{{ batchRetryResult.successCount }}</div>
-          <div>失败数：{{ batchRetryResult.failedCount }}</div>
-          <div>重试数：{{ batchRetryResult.retriedCount }}</div>
-          <div>消息：{{ formatNullable(batchRetryResult.message) }}</div>
-        </div>
-      </section>
-    </div>
-
-    <template #footer>
-      <div class="flex justify-end gap-2">
-        <ElButton @click="retryDialogVisible = false">取消</ElButton>
-        <ElButton
-          :loading="retrySubmitting"
-          type="primary"
-          @click="submitRetryLabel"
-        >
-          提交补打
-        </ElButton>
-      </div>
-    </template>
-  </ElDialog>
 </template>

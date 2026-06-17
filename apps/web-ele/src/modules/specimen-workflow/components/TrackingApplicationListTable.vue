@@ -24,7 +24,6 @@ const emit = defineEmits<{
 
 <template>
   <ElTable v-loading="loading" :data="items" border>
-    <ElTableColumn label="申请单编号" min-width="220" prop="id" />
     <ElTableColumn label="申请单号" min-width="160" prop="applicationNo" />
     <ElTableColumn label="病理号" min-width="150">
       <template #default="{ row }">

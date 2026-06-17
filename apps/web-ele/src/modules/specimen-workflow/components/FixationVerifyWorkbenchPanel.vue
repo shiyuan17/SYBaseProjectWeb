@@ -84,6 +84,6 @@ defineExpose({
         @keyup.enter="emit('quickConfirm')"
       />
     </div>
-    <slot name="actions" />
+    <slot name="actions"></slot>
   </div>
 </template>

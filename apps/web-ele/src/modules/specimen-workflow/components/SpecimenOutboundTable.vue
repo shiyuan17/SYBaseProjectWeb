@@ -57,6 +57,7 @@ function resolveRowClassName({ row }: { row: SpecimenOutboundDisplayItem }) {
     :data="items"
     :row-class-name="resolveRowClassName"
     border
+    max-height="520"
     row-key="specimenId"
     @selection-change="emit('selectionChange', $event)"
   >
@@ -80,6 +81,11 @@ function resolveRowClassName({ row }: { row: SpecimenOutboundDisplayItem }) {
     <ElTableColumn label="住院号" min-width="140">
       <template #default="{ row }">
         {{ formatNullable(row.inpatientNo) }}
+      </template>
+    </ElTableColumn>
+    <ElTableColumn label="病区" min-width="140">
+      <template #default="{ row }">
+        {{ formatNullable(row.wardName) }}
       </template>
     </ElTableColumn>
     <ElTableColumn label="性别" min-width="90">

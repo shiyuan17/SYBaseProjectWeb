@@ -3,11 +3,12 @@ withDefaults(
   defineProps<{
     autoHeight?: boolean;
     description?: string;
-    title: string;
+    title?: string;
   }>(),
   {
     autoHeight: false,
     description: '',
+    title: '',
   },
 );
 </script>
@@ -20,8 +21,11 @@ withDefaults(
         : 'flex h-full min-h-0 flex-col rounded-lg border border-border bg-card p-3 shadow-sm'
     "
   >
-    <header class="mb-3 flex items-start justify-between gap-3">
-      <div>
+    <header
+      v-if="title || $slots.extra"
+      class="mb-3 flex items-start justify-between gap-3"
+    >
+      <div v-if="title">
         <h3 class="text-base font-semibold text-foreground">{{ title }}</h3>
       </div>
       <div v-if="$slots.extra" class="shrink-0">

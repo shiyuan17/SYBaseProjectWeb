@@ -158,7 +158,7 @@ function formatBorrowStatus(value?: null | string) {
           {{ formatNullable(row.patientName) }}
         </template>
       </ElTableColumn>
-      <ElTableColumn label="病人ID" min-width="120" prop="caseId" />
+      <ElTableColumn label="病人ID" min-width="120" prop="patientId" />
       <ElTableColumn label="材料号" min-width="120">
         <template #default="{ row }">
           {{ formatNullable(row.objectCode || row.objectId) }}

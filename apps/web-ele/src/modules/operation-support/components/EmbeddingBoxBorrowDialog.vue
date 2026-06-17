@@ -72,7 +72,7 @@ const loanForm = defineModel<LoanFormState>('loanForm', {
           {{ formatNullable(row.objectCode || row.objectId) }}
         </template>
       </ElTableColumn>
-      <ElTableColumn label="病人ID" min-width="130" prop="caseId" />
+      <ElTableColumn label="病人ID" min-width="130" prop="patientId" />
       <ElTableColumn label="病人姓名" min-width="120">
         <template #default="{ row }">
           {{ formatNullable(row.patientName) }}

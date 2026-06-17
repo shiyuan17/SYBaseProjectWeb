@@ -138,7 +138,7 @@ const showSelection = computed(() => props.selectable !== false);
         <ElTableColumn label="序" type="index" width="42" />
         <ElTableColumn label="病理号" min-width="120" prop="pathologyNo" />
         <ElTableColumn label="病人姓名" min-width="110" prop="patientName" />
-        <ElTableColumn label="病人ID" min-width="120" prop="caseId" />
+        <ElTableColumn label="病人ID" min-width="120" prop="patientId" />
         <ElTableColumn
           v-if="objectType === 'APPLICATION_FORM'"
           label="申请医生"
