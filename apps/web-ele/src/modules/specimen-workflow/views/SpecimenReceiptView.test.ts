@@ -37,6 +37,7 @@ vi.mock('element-plus', async () => {
       'defaultValue',
       'disabledDate',
       'modelValue',
+      'shortcuts',
       'type',
       'unlinkPanels',
     ],
@@ -67,6 +68,11 @@ vi.mock('element-plus', async () => {
           'data-date-picker-disable-future': String(
             typeof props.disabledDate === 'function',
           ),
+          'data-date-picker-shortcuts': Array.isArray(props.shortcuts)
+            ? props.shortcuts
+                .map((item: { text: string }) => item.text)
+                .join(',')
+            : '',
           'data-date-picker-disables-tomorrow': String(
             typeof props.disabledDate === 'function'
               ? props.disabledDate(new Date('2026-06-18T00:00:00+08:00'))
@@ -200,6 +206,7 @@ describe('SpecimenReceiptView', () => {
     expect(datePicker?.dataset.datePickerDisablesTomorrow).toBe('true');
     expect(datePicker?.dataset.datePickerKeepsToday).toBe('false');
     expect(datePicker?.dataset.datePickerUnlinkPanels).toBe('true');
+    expect(datePicker?.dataset.datePickerShortcuts).toBe('今天,昨天,本周,本月');
 
     app.unmount();
   });

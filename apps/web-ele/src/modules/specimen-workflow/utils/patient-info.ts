@@ -1,5 +1,8 @@
 import type { ApplicationRegistrationWorkbenchRecord } from '../types/application-registration-workbench';
-import type { ApplicationDetailView, SpecimenManagementListItem } from '../types/specimen-workflow';
+import type {
+  ApplicationDetailView,
+  SpecimenManagementListItem,
+} from '../types/specimen-workflow';
 
 export type PatientInfoSourceContext = {
   applicationDetail?: ApplicationDetailView | null;
@@ -53,7 +56,9 @@ export function resolveInpatientNoLabel(
 }
 
 export function resolveWardNameLabel(context: PatientInfoSourceContext) {
-  return normalizePatientInfoText(context.workbenchRecord?.patientInfo.wardName);
+  return normalizePatientInfoText(
+    context.workbenchRecord?.patientInfo.wardName,
+  );
 }
 
 export function resolvePatientGenderDisplay(
@@ -69,7 +74,10 @@ export function resolvePatientGenderDisplay(
 }
 
 export function resolveWorkflowPatientInfo(
-  row: Pick<SpecimenManagementListItem, 'inpatientNo' | 'patientGender' | 'patientId'>,
+  row: Pick<
+    SpecimenManagementListItem,
+    'inpatientNo' | 'patientGender' | 'patientId'
+  >,
   context: PatientInfoSourceContext,
 ): ResolvedWorkflowPatientInfo {
   return {

@@ -76,15 +76,14 @@ const {
   messageWarningMock,
 } = vi.hoisted(() => ({
   createApplicationMock: vi.fn(),
-  getSpecimenDictionaryMock:
-    vi.fn<
-      () => Promise<{
-        commonOptions: SpecimenDictionaryEntryOption[];
-        departmentFiltered: boolean;
-        entryOptions: SpecimenDictionaryEntryOption[];
-        groups: SpecimenDictionaryGroup[];
-      }>
-    >(),
+  getSpecimenDictionaryMock: vi.fn<
+    () => Promise<{
+      commonOptions: SpecimenDictionaryEntryOption[];
+      departmentFiltered: boolean;
+      entryOptions: SpecimenDictionaryEntryOption[];
+      groups: SpecimenDictionaryGroup[];
+    }>
+  >(),
   listOperatingBuildingOptionsMock:
     vi.fn<() => Promise<OperatingBuildingOption[]>>(),
   listOperatingRoomOptionsMock:

@@ -424,10 +424,7 @@ export function createTableColumnStub(rowContextKey: symbol): Component {
             ? (() => {
                 const selectable =
                   typeof props.selectable === 'function'
-                    ? props.selectable(
-                        rowContext.row,
-                        rowContext.$index,
-                      )
+                    ? props.selectable(rowContext.row, rowContext.$index)
                     : true;
                 return h('input', {
                   checked: Boolean(rowContext.isSelected),
@@ -439,7 +436,7 @@ export function createTableColumnStub(rowContextKey: symbol): Component {
                     ),
                 });
               })()
-            : slots.default?.({
+            : (slots.default?.({
                 $index: rowContext?.$index ?? 0,
                 row: rowContext?.row ?? {},
               }) ??
@@ -451,7 +448,7 @@ export function createTableColumnStub(rowContextKey: symbol): Component {
                   return value === null || value === undefined
                     ? undefined
                     : h('span', String(value));
-                })(),
+                })()),
         );
     },
   };

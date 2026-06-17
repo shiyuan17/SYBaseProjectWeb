@@ -87,7 +87,10 @@ export function useSpecimenCheckInPanel() {
     size: 20,
   });
   const applicationContextCache = reactive(
-    new Map<string, null | { patientGender: null | string; patientId: null | string }>(),
+    new Map<
+      string,
+      null | { patientGender: null | string; patientId: null | string }
+    >(),
   );
   const workbenchRecordCache = reactive(
     new Map<string, ApplicationRegistrationWorkbenchRecord | null>(),
@@ -267,7 +270,8 @@ export function useSpecimenCheckInPanel() {
       return applicationContextCache.get(normalizedApplicationId) ?? null;
     }
     try {
-      const { getApplicationDetail } = await import('../api/specimen-workflow-service');
+      const { getApplicationDetail } =
+        await import('../api/specimen-workflow-service');
       const detail = await getApplicationDetail(normalizedApplicationId);
       const context = {
         patientGender: detail.patientGender ?? null,
@@ -290,9 +294,8 @@ export function useSpecimenCheckInPanel() {
       return workbenchRecordCache.get(normalizedApplicationNo) ?? null;
     }
     try {
-      const { lookupApplicationRegistrationWorkbenchRecord } = await import(
-        '../api/application-registration-workbench-service'
-      );
+      const { lookupApplicationRegistrationWorkbenchRecord } =
+        await import('../api/application-registration-workbench-service');
       const record = await lookupApplicationRegistrationWorkbenchRecord({
         keyword: normalizedApplicationNo,
         queryType: 'APPLICATION_NO',

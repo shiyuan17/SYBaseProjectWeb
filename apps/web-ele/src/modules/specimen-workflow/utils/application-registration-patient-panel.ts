@@ -742,10 +742,7 @@ export function getSummaryDescriptionColumns(panelWidth: number) {
   return 1;
 }
 
-export function getSummaryItemSpan(
-  item: WorkbenchInfoItem,
-  columns = 3,
-) {
+export function getSummaryItemSpan(item: WorkbenchInfoItem, columns = 3) {
   return Math.min(item.span ?? 1, clampDescriptionColumns(columns));
 }
 
@@ -761,10 +758,7 @@ export function getSectionDescriptionColumns(panelWidth: number) {
   return 1;
 }
 
-export function getSectionItemSpan(
-  item: WorkbenchInfoItem,
-  columns = 3,
-) {
+export function getSectionItemSpan(item: WorkbenchInfoItem, columns = 3) {
   const normalizedColumns = clampDescriptionColumns(columns);
 
   if (item.span) {
