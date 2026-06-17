@@ -79,7 +79,6 @@ function resolveRowClassName({
     />
 
     <div class="flex flex-wrap items-center gap-4 text-sm">
-      <div class="font-semibold text-danger">标本确认</div>
       <div>
         全部
         <span class="text-xl font-semibold text-primary">{{
@@ -159,6 +158,11 @@ function resolveRowClassName({
           {{ formatNullable(row.inpatientNo) }}
         </template>
       </ElTableColumn>
+      <ElTableColumn label="病区" min-width="140">
+        <template #default="{ row }">
+          {{ formatNullable(row.wardName) }}
+        </template>
+      </ElTableColumn>
       <ElTableColumn label="性别" min-width="80">
         <template #default="{ row }">
           {{ formatNullable(row.patientGenderLabel) }}
@@ -208,6 +212,11 @@ function resolveRowClassName({
       <ElTableColumn label="添加人" min-width="120">
         <template #default="{ row }">
           {{ formatNullable(row.registrationOperatorName) }}
+        </template>
+      </ElTableColumn>
+      <ElTableColumn label="病人ID" min-width="140">
+        <template #default="{ row }">
+          {{ formatNullable(row.patientIdLabel) }}
         </template>
       </ElTableColumn>
       <ElTableColumn fixed="right" label="操作" width="110">

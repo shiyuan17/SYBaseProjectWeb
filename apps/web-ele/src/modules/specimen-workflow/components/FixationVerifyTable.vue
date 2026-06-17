@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { RemovalDisplayRow } from '../utils/specimen-removal-display';
 
-import { ElButton, ElTable, ElTableColumn, ElTag } from 'element-plus';
+import { ElTable, ElTableColumn, ElTag } from 'element-plus';
 
 import { formatDateTime, formatNullable } from '../utils/format';
 import {
@@ -22,7 +22,7 @@ defineProps<{
 }>();
 
 const emit = defineEmits<{
-  confirmRemoval: [row: RemovalDisplayRow];
+  selectionChange: [rows: RemovalDisplayRow[]];
 }>();
 
 function resolveRowClassName({ row }: { row: RemovalDisplayRow }) {
@@ -37,8 +37,19 @@ function resolveRowClassName({ row }: { row: RemovalDisplayRow }) {
     v-loading="loading"
     :data="items"
     :row-class-name="resolveRowClassName"
+    row-key="specimenId"
     border
+    max-height="520"
+    @selection-change="
+      emit('selectionChange', $event as unknown as RemovalDisplayRow[])
+    "
   >
+    <ElTableColumn
+      :selectable="canConfirmRemoval"
+      reserve-selection
+      type="selection"
+      width="56"
+    />
     <ElTableColumn label="序号" width="72">
       <template #default="{ $index }">
         {{ (page - 1) * size + $index + 1 }}
@@ -54,6 +65,11 @@ function resolveRowClassName({ row }: { row: RemovalDisplayRow }) {
     <ElTableColumn label="住院号" min-width="140">
       <template #default="{ row }">
         {{ formatNullable(row.inpatientNo) }}
+      </template>
+    </ElTableColumn>
+    <ElTableColumn label="病区" min-width="140">
+      <template #default="{ row }">
+        {{ formatNullable(row.wardName) }}
       </template>
     </ElTableColumn>
     <ElTableColumn label="性别" min-width="90">
@@ -103,20 +119,9 @@ function resolveRowClassName({ row }: { row: RemovalDisplayRow }) {
         {{ formatNullable(row.registeredByName) }}
       </template>
     </ElTableColumn>
-    <ElTableColumn fixed="right" label="操作" min-width="120">
+    <ElTableColumn label="病人ID" min-width="140">
       <template #default="{ row }">
-        <div class="flex min-h-8 items-center">
-          <ElButton
-            :loading="actionLoading"
-            :disabled="!canConfirmRemoval(row)"
-            :title="row.actionDisabledReason ?? ''"
-            link
-            type="primary"
-            @click="emit('confirmRemoval', row)"
-          >
-            离体确认
-          </ElButton>
-        </div>
+        {{ formatNullable(row.patientIdLabel) }}
       </template>
     </ElTableColumn>
   </ElTable>

@@ -49,8 +49,7 @@ defineExpose({
 </script>
 
 <template>
-  <div class="mb-4 flex flex-wrap items-center gap-4 text-sm">
-    <div class="font-semibold text-danger">设置离体时间</div>
+  <div class="flex flex-wrap items-center gap-4 text-sm">
     <div>
       全部
       <span class="text-xl font-semibold text-primary">{{
@@ -71,15 +70,12 @@ defineExpose({
     </div>
   </div>
 
-  <div class="mb-4 rounded-lg border border-border bg-accent p-4">
+  <div class="flex flex-wrap items-center gap-2">
     <div
       ref="specimenIdQuickInputContainerRef"
       v-loading="quickActionLoading.specimenId"
-      class="flex items-center gap-3"
+      class="w-[320px]"
     >
-      <div class="min-w-28 text-sm font-medium text-foreground">
-        标本条码/编号
-      </div>
       <ElInput
         ref="specimenIdQuickInputRef"
         v-model="specimenIdQuickInput"
@@ -88,5 +84,6 @@ defineExpose({
         @keyup.enter="emit('quickConfirm')"
       />
     </div>
+    <slot name="actions" />
   </div>
 </template>
