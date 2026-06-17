@@ -1,6 +1,6 @@
 import type { ApplicationRegistrationWorkbenchRecord } from '../types/application-registration-workbench';
 
-import { formatApplicationType } from './format';
+import { formatApplicationStatus, formatApplicationType } from './format';
 
 export type WorkbenchEditorType = 'readonly' | 'select' | 'text' | 'textarea';
 
@@ -27,6 +27,10 @@ export type WorkbenchSection = {
   key: string;
   title: string;
 };
+
+function clampDescriptionColumns(columns: number) {
+  return Math.max(1, Math.min(columns, 3));
+}
 
 const booleanEditorOptions = [
   { label: '是', value: 'true' },
@@ -186,7 +190,7 @@ export function buildSummaryItems(
       editorType: 'readonly',
       key: 'registrationStatus',
       label: '登记状态',
-      value: formatValue(record.patientInfo.registrationStatus),
+      value: formatApplicationStatus(record.patientInfo.registrationStatus),
     },
     {
       editorType: 'readonly',
@@ -726,17 +730,49 @@ export function buildSections(
   ];
 }
 
-export function getSectionDescriptionColumns() {
-  return 3;
+export function getSummaryDescriptionColumns(panelWidth: number) {
+  if (panelWidth >= 520) {
+    return 3;
+  }
+
+  if (panelWidth >= 320) {
+    return 2;
+  }
+
+  return 1;
 }
 
-export function getSectionItemSpan(item: WorkbenchInfoItem) {
+export function getSummaryItemSpan(
+  item: WorkbenchInfoItem,
+  columns = 3,
+) {
+  return Math.min(item.span ?? 1, clampDescriptionColumns(columns));
+}
+
+export function getSectionDescriptionColumns(panelWidth: number) {
+  if (panelWidth >= 560) {
+    return 3;
+  }
+
+  if (panelWidth >= 360) {
+    return 2;
+  }
+
+  return 1;
+}
+
+export function getSectionItemSpan(
+  item: WorkbenchInfoItem,
+  columns = 3,
+) {
+  const normalizedColumns = clampDescriptionColumns(columns);
+
   if (item.span) {
-    return item.span;
+    return Math.min(item.span, normalizedColumns);
   }
 
   if (item.editorType === 'textarea') {
-    return 2;
+    return Math.min(2, normalizedColumns);
   }
 
   return 1;

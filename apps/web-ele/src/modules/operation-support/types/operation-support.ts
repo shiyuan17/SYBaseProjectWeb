@@ -179,12 +179,15 @@ export interface ArchiveRecordView {
   contentDescribedByName?: null | string;
   archiveExpiresAt?: null | string;
   archiveReminderDays?: null | number;
+  inpatientNo?: null | string;
   loanStatus?: null | string;
   objectCode?: null | string;
   objectId: string;
   objectType: string;
   objectStatus?: null | string;
   pathologyNo?: null | string;
+  patientGender?: null | string;
+  patientId?: null | string;
   patientName?: null | string;
   sampledAt?: null | string;
   sampledByName?: null | string;
@@ -192,6 +195,7 @@ export interface ArchiveRecordView {
   slicedByName?: null | string;
   storedAt?: null | string;
   storedByName?: null | string;
+  wardName?: null | string;
 }
 
 export interface ArchiveObjectPage {
@@ -273,16 +277,20 @@ export interface MaterialLoanView {
   borrowPurpose?: null | string;
   caseId: string;
   depositAmount?: null | number | string;
+  inpatientNo?: null | string;
   loanId: string;
   loanStatus: string;
   materialId: string;
   materialType: string;
   objectCode?: null | string;
   pathologyNo?: null | string;
+  patientGender?: null | string;
+  patientId?: null | string;
   patientName?: null | string;
   remarks?: null | string;
   returnedAt?: null | string;
   returnedByName?: null | string;
+  wardName?: null | string;
 }
 
 export interface WhiteSlideStockView {

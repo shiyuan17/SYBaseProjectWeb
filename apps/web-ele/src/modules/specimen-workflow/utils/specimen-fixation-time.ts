@@ -3,8 +3,14 @@ import type { SpecimenManagementListItem } from '../types/specimen-workflow';
 
 import { formatDateTime, formatFixationStatus, formatNullable } from './format';
 import { resolveOperatingRoomDisplayName } from './operating-room-display';
+import {
+  normalizePatientGenderLabel,
+  normalizePatientInfoText,
+  resolveWorkflowPatientInfo,
+} from './patient-info';
 
 export type CachedApplicationContext = {
+  applicationDetail?: null;
   patientGender: null | string;
   patientId: null | string;
   specimenRemovalTime: null | string;
@@ -19,6 +25,7 @@ export type FixationWorkbenchRow = SpecimenManagementListItem & {
   queueAddedAt: string;
   queueAddedByName: string;
   surgeryName: string;
+  wardName: string;
 };
 
 export type FixationQueueContext = {
@@ -41,20 +48,9 @@ export const DEFAULT_FIXATION_LIQUID_TYPE = 'FORMALIN';
 
 const RECEIPT_LOCKED_STATUSES = new Set(['RECEIVED', 'REJECTED', 'RETURNED']);
 
-export function normalizeText(value?: null | string) {
-  return value?.trim() ?? '';
-}
+export const normalizeText = normalizePatientInfoText;
 
-export function normalizeGenderLabel(value: null | string | undefined) {
-  const normalizedValue = value?.trim().toUpperCase();
-  if (normalizedValue === 'F' || normalizedValue === '女') {
-    return '女';
-  }
-  if (normalizedValue === 'M' || normalizedValue === '男') {
-    return '男';
-  }
-  return value?.trim() ?? '';
-}
+export const normalizeGenderLabel = normalizePatientGenderLabel;
 
 export function resolveFixationTagType(status: null | string | undefined) {
   if (status === 'COMPLETED') {
@@ -139,17 +135,21 @@ export function buildQueueRow(
   queueContext: FixationQueueContext,
   roomNameById: ReadonlyMap<string, string> = new Map(),
 ): FixationWorkbenchRow {
+  const patientInfo = resolveWorkflowPatientInfo(row, {
+    patientGender: applicationContext?.patientGender ?? null,
+    patientId: applicationContext?.patientId ?? null,
+    workbenchRecord,
+  });
+
   return {
     ...row,
     fixationOperatorName:
       normalizeText(row.fixationOperatorName) ||
       normalizeText(workbenchRecord?.surgeryInfo.fixationPerson),
     fixationTime: row.fixationCompletedAt ?? row.fixationStartedAt ?? null,
-    inpatientNo: normalizeText(workbenchRecord?.patientInfo.inpatientNo),
-    patientGenderLabel: normalizeGenderLabel(
-      applicationContext?.patientGender ?? workbenchRecord?.patientInfo.gender,
-    ),
-    patientIdLabel: normalizeText(applicationContext?.patientId),
+    inpatientNo: patientInfo.inpatientNo,
+    patientGenderLabel: patientInfo.patientGenderLabel,
+    patientIdLabel: patientInfo.patientIdLabel,
     queueAddedAt: queueContext.queueAddedAt,
     queueAddedByName: normalizeText(queueContext.queueAddedByName) || '-',
     surgeryName: resolveOperatingRoomDisplayName(
@@ -157,6 +157,7 @@ export function buildQueueRow(
       workbenchRecord?.surgeryInfo.roomId,
       workbenchRecord?.surgeryInfo.surgeryName,
     ),
+    wardName: patientInfo.wardName,
   };
 }
 
@@ -167,6 +168,7 @@ export function buildExportHeaders() {
     '标本编号',
     '姓名',
     '住院号',
+    '病区',
     '性别',
     '手术间',
     '标本名称',
@@ -192,6 +194,7 @@ export function buildExportRows(
     row.specimenNo,
     formatNullable(row.patientName),
     formatNullable(row.inpatientNo),
+    formatNullable(row.wardName),
     formatNullable(row.patientGenderLabel),
     formatNullable(row.surgeryName),
     row.specimenName,

@@ -608,6 +608,7 @@ function createMockPageState() {
               objectId: 'CASE-APP-1',
               objectType: 'APPLICATION_FORM',
               pathologyNo: 'BL-2026-001',
+              patientId: 'PAT-APP-1',
               patientName: '张三',
               storedByName: '归档员甲',
             },
@@ -632,6 +633,7 @@ function createMockPageState() {
               objectStatus: 'ACTIVE',
               objectType: 'EMBEDDING_BOX',
               pathologyNo: 'BL-2026-002',
+              patientId: 'PAT-BOX-1',
               patientName: '李四',
             },
           ],
@@ -655,6 +657,7 @@ function createMockPageState() {
               objectId: 'SLIDE-1',
               objectType: 'SLIDE',
               pathologyNo: 'BL-2026-003',
+              patientId: 'PAT-SLIDE-1',
               patientName: '王五',
             },
           ],
@@ -676,6 +679,7 @@ function createMockPageState() {
               objectId: 'SPECIMEN-1',
               objectType: 'SPECIMEN',
               pathologyNo: 'BL-2026-004',
+              patientId: 'PAT-SPECIMEN-1',
               patientName: '赵六',
             },
           ],
@@ -702,6 +706,7 @@ function createMockPageState() {
           objectId: 'CASE-APP-1',
           objectType: 'APPLICATION_FORM',
           pathologyNo: 'BL-2026-001',
+          patientId: 'PAT-APP-1',
           patientName: '张三',
           storedByName: '归档员甲',
         },
@@ -781,6 +786,7 @@ describe('ArchiveManagementView', () => {
     );
     expect(document.body.textContent).toContain('申请医生甲');
     expect(document.body.textContent).toContain('2026-06-15');
+    expect(document.body.textContent).toContain('PAT-APP-1');
     expect(document.body.textContent).toContain('当前状态启用');
     expect(document.body.textContent).toContain('未归档');
     expect(document.body.textContent).toContain('未借阅');
@@ -901,6 +907,7 @@ describe('ArchiveManagementView', () => {
         objectId: 'CASE-APP-1',
         objectType: 'APPLICATION_FORM',
         pathologyNo: 'BL-2026-001',
+        patientId: 'PAT-APP-1',
         patientName: '张三',
         storedByName: '归档员甲',
       },
@@ -916,6 +923,7 @@ describe('ArchiveManagementView', () => {
         objectId: 'CASE-APP-2',
         objectType: 'APPLICATION_FORM',
         pathologyNo: 'BL-2026-002',
+        patientId: 'PAT-APP-2',
         patientName: '李四',
         storedByName: '',
       },

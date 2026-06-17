@@ -6,12 +6,14 @@ import type {
   SaveApplicationRegistrationWorkbenchRequest,
   SpecimenDictionaryEntryOption,
   SpecimenDictionaryGroup,
+  SpecimenDictionaryResponse,
   SpecimenPackageOption,
   WorkbenchLookupQuery,
 } from '../types/application-registration-workbench';
 
 import { requestClient } from '#/api/request';
 
+import { normalizeLegacyGeneratedPatientIdNo } from '../utils/patient-id-normalization';
 import {
   listCommonSpecimenOptions as listCommonSpecimenOptionsMock,
   listOperatingBuildingOptions as listOperatingBuildingOptionsMock,
@@ -60,8 +62,35 @@ export function buildWorkbenchLookupRequestConfig(query: WorkbenchLookupQuery) {
   };
 }
 
+export function buildSpecimenDictionaryRequestConfig(keyword = '') {
+  const normalizedKeyword = keyword.trim();
+  if (!normalizedKeyword) {
+    return undefined;
+  }
+
+  return {
+    params: {
+      keyword: normalizedKeyword,
+    },
+  };
+}
+
 function isPresent<T>(value: null | T | undefined): value is T {
   return value !== null && value !== undefined;
+}
+
+export function normalizeSpecimenDictionaryResponse(
+  response: Partial<SpecimenDictionaryResponse>,
+): SpecimenDictionaryResponse {
+  return {
+    commonOptions: response.commonOptions ?? [],
+    departmentFiltered: response.departmentFiltered ?? false,
+    entryOptions: response.entryOptions ?? [],
+    groups: (response.groups ?? []).filter(isPresent).map((group) => ({
+      ...group,
+      subParts: (group.subParts ?? []).filter(isPresent),
+    })),
+  };
 }
 
 function normalizeRecord(
@@ -115,7 +144,7 @@ function normalizeRecord(
       endoscopyDiagnosis: record.patientInfo?.endoscopyDiagnosis ?? '',
       frozenReminder: record.patientInfo?.frozenReminder ?? false,
       gender: record.patientInfo?.gender ?? '',
-      idNo: record.patientInfo?.idNo ?? '',
+      idNo: normalizeLegacyGeneratedPatientIdNo(record.patientInfo?.idNo) ?? '',
       imagingResult: record.patientInfo?.imagingResult ?? '',
       inpatientNo: record.patientInfo?.inpatientNo ?? '',
       patientName: record.patientInfo?.patientName ?? '',
@@ -143,6 +172,21 @@ function normalizeRecord(
       roomId: record.surgeryInfo?.roomId ?? '',
       specimenRemovalTime: record.surgeryInfo?.specimenRemovalTime ?? '',
       surgeryName: record.surgeryInfo?.surgeryName ?? '',
+    },
+  };
+}
+
+function normalizePatientInfoPayload<
+  T extends
+    | SaveApplicationRegistrationPatientInfoRequest
+    | SaveApplicationRegistrationWorkbenchRequest,
+>(payload: T): T {
+  return {
+    ...payload,
+    patientInfo: {
+      ...payload.patientInfo,
+      idNo:
+        normalizeLegacyGeneratedPatientIdNo(payload.patientInfo?.idNo) ?? '',
     },
   };
 }
@@ -192,14 +236,19 @@ export async function saveApplicationRegistrationWorkbench(
   applicationId: string,
   payload: SaveApplicationRegistrationWorkbenchRequest,
 ) {
+  const normalizedPayload = normalizePatientInfoPayload(payload);
+
   if (USE_APPLICATION_REGISTRATION_WORKBENCH_MOCK) {
-    return saveApplicationRegistrationWorkbenchMock(applicationId, payload);
+    return saveApplicationRegistrationWorkbenchMock(
+      applicationId,
+      normalizedPayload,
+    );
   }
 
   const response =
     await requestClient.post<ApplicationRegistrationWorkbenchRecord>(
       `/v1/application-registration-workbench/${applicationId}/save`,
-      payload,
+      normalizedPayload,
     );
 
   return normalizeRecord(response);
@@ -209,15 +258,20 @@ export async function saveApplicationRegistrationPatientInfo(
   applicationId: string,
   payload: SaveApplicationRegistrationPatientInfoRequest,
 ) {
+  const normalizedPayload = normalizePatientInfoPayload(payload);
+
   if (USE_APPLICATION_REGISTRATION_WORKBENCH_MOCK) {
-    return saveApplicationRegistrationPatientInfoMock(applicationId, payload);
+    return saveApplicationRegistrationPatientInfoMock(
+      applicationId,
+      normalizedPayload,
+    );
   }
 
   const response =
     await requestClient.request<ApplicationRegistrationWorkbenchRecord>(
       `/v1/application-registration-workbench/${applicationId}/patient-info`,
       {
-        data: payload,
+        data: normalizedPayload,
         method: 'PATCH',
       },
     );
@@ -268,23 +322,51 @@ export async function listOperatingRoomOptions(
 export async function listSpecimenDictionaryGroups(
   keyword = '',
 ): Promise<SpecimenDictionaryGroup[]> {
-  const groups = await listSpecimenDictionaryGroupsMock(keyword);
-  return groups.filter(isPresent).map((group) => ({
-    ...group,
-    subParts: group.subParts.filter(isPresent),
-  }));
+  const dictionary = await getSpecimenDictionary(keyword);
+  return dictionary.groups;
 }
 
 export async function listSpecimenDictionaryEntryOptions(
   keyword = '',
 ): Promise<SpecimenDictionaryEntryOption[]> {
-  return listSpecimenDictionaryEntryOptionsMock(keyword);
+  const dictionary = await getSpecimenDictionary(keyword);
+  return dictionary.entryOptions;
 }
 
 export async function listCommonSpecimenOptions(): Promise<
   SpecimenDictionaryEntryOption[]
 > {
-  return listCommonSpecimenOptionsMock();
+  const dictionary = await getSpecimenDictionary();
+  return dictionary.commonOptions;
+}
+
+export async function getSpecimenDictionary(
+  keyword = '',
+): Promise<SpecimenDictionaryResponse> {
+  if (USE_APPLICATION_REGISTRATION_WORKBENCH_MOCK) {
+    const [groups, entryOptions, commonOptions] = await Promise.all([
+      listSpecimenDictionaryGroupsMock(keyword),
+      listSpecimenDictionaryEntryOptionsMock(keyword),
+      listCommonSpecimenOptionsMock(),
+    ]);
+
+    return {
+      commonOptions,
+      departmentFiltered: false,
+      entryOptions,
+      groups: groups.filter(isPresent).map((group) => ({
+        ...group,
+        subParts: group.subParts.filter(isPresent),
+      })),
+    };
+  }
+
+  const response = await requestClient.get<SpecimenDictionaryResponse>(
+    '/v1/application-registration-workbench/specimen-dictionary',
+    buildSpecimenDictionaryRequestConfig(keyword),
+  );
+
+  return normalizeSpecimenDictionaryResponse(response);
 }
 
 export async function listSpecimenPackageOptions(

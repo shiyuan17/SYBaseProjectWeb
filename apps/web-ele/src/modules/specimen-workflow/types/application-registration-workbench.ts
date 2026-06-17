@@ -47,6 +47,13 @@ export interface SpecimenDictionaryEntryOption {
   systemName: string;
 }
 
+export interface SpecimenDictionaryResponse {
+  commonOptions: SpecimenDictionaryEntryOption[];
+  departmentFiltered: boolean;
+  entryOptions: SpecimenDictionaryEntryOption[];
+  groups: SpecimenDictionaryGroup[];
+}
+
 export interface SpecimenPackageItem {
   quantity: number;
   specimenName: string;

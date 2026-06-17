@@ -148,14 +148,6 @@ vi.mock('#/modules/system-management/components/SystemUserSelect.vue', () => ({
   },
 }));
 
-vi.mock('../components/WorkflowSectionCard.vue', () => ({
-  default: {
-    props: ['title', 'description'],
-    template:
-      '<section><h2>{{ title }}</h2><p v-if="description">{{ description }}</p><slot /></section>',
-  },
-}));
-
 vi.mock('element-plus', async () => {
   const actual =
     await vi.importActual<typeof import('element-plus')>('element-plus');
@@ -346,7 +338,7 @@ describe('TransportHandoverView', () => {
 
     expect(container.textContent).not.toContain('请输入申请单号');
     expect(container.textContent).not.toContain('送检科室');
-    expect(container.textContent).not.toContain('查询');
+    expect(container.textContent).toContain('查询');
     expect(container.textContent).not.toContain('重置');
     expect(container.textContent).not.toContain('创建转运单');
     expect(container.textContent).not.toContain('批量打印');
@@ -365,6 +357,7 @@ describe('TransportHandoverView', () => {
       '标本编号',
       '姓名',
       '住院号',
+      '病区',
       '性别',
       '手术间',
       '标本名称',

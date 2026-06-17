@@ -257,6 +257,7 @@ export interface SpecimenManagementListItem {
   fixationOperatorName?: null | string;
   fixationOperatorUserId?: null | string;
   fixationStartedAt?: null | string;
+  inpatientNo?: null | string;
   labelPrintBatchNo: null | string;
   labelPrintStatus: null | string;
   latestTrackingAt: null | string;
@@ -275,6 +276,7 @@ export interface SpecimenManagementListItem {
   specimenName: string;
   specimenNo: string;
   specimenRemovalAt?: null | string;
+  specimenRemovalOperatorName?: null | string;
   specimenSite: null | string;
   specimenStatus: null | string;
   specimenType: null | string;
@@ -284,6 +286,7 @@ export interface SpecimenManagementListItem {
   verificationCompletedAt?: null | string;
   verificationStartedAt?: null | string;
   verificationStatus?: null | string;
+  wardName?: null | string;
 }
 
 export interface SpecimenManagementListSummary {
@@ -317,7 +320,9 @@ export interface SpecimenRemovalItem {
   inpatientNo: null | string;
   latestTrackingAt: null | string;
   patientGender: null | string;
+  patientId?: null | string;
   patientName: null | string;
+  patientIdLabel?: string;
   registeredAt: null | string;
   labelPrintBatchNo?: null | string;
   registeredByName: null | string;
@@ -329,6 +334,7 @@ export interface SpecimenRemovalItem {
   specimenStatus: null | string;
   specimenType: null | string;
   surgeryName: null | string;
+  wardName?: null | string;
 }
 
 export interface SpecimenRemovalSummary {
@@ -693,6 +699,7 @@ export interface SpecimenOutboundListItem {
   submittingDepartmentName: null | string;
   surgeryName: null | string;
   transportOrderId: null | string;
+  wardName?: null | string;
 }
 
 export interface SpecimenOutboundPage {

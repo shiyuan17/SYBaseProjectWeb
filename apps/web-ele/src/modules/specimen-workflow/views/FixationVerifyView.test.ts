@@ -6,6 +6,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import FixationVerifyView from './FixationVerifyView.vue';
 
+const lookupApplicationRegistrationWorkbenchRecordMock = vi.hoisted(() =>
+  vi.fn(),
+);
+
 const {
   confirmMock,
   confirmSpecimenRemovalByIdentifierMock,
@@ -31,6 +35,7 @@ const {
       inpatientNo: 'ZYH-001',
       latestTrackingAt: '2026-05-23 12:44:44',
       patientGender: '女',
+      patientId: 'uuid-patient-001',
       patientName: 'Alice',
       registeredAt: '2026-05-23 12:44:44',
       registeredByName: '周永坚',
@@ -42,6 +47,7 @@ const {
       specimenStatus: 'REGISTERED',
       specimenType: '常规',
       surgeryName: 'OR-102',
+      wardName: '妇科病区 3A',
     },
     {
       abnormalFlag: false,
@@ -54,6 +60,7 @@ const {
       inpatientNo: 'ZYH-001',
       latestTrackingAt: '2026-05-23 12:45:44',
       patientGender: '女',
+      patientId: 'uuid-patient-001',
       patientName: 'Alice',
       registeredAt: '2026-05-23 12:45:44',
       registeredByName: '周永坚',
@@ -65,6 +72,7 @@ const {
       specimenStatus: 'REGISTERED',
       specimenType: '常规',
       surgeryName: 'OR-102',
+      wardName: '妇科病区 3A',
     },
   ];
 
@@ -113,8 +121,41 @@ const {
     confirmSpecimenRemovalMock: vi.fn(async ({ specimenBarcode }) =>
       confirmRemoval(specimenBarcode, 'barcode'),
     ),
-    getApplicationDetailMock: vi.fn(async () => ({
-      applicationNo: 'AP-LOOKUP-001',
+    getApplicationDetailMock: vi.fn(async (applicationId?: string) => ({
+      abnormalFlag: false,
+      applicationDate: '2026-06-06',
+      applicationFormStatus: 'IN_TRANSIT',
+      applicationNo:
+        applicationId === 'APP-PENDING' ? 'AP202605230001' : 'AP-LOOKUP-001',
+      applicationType: 'ROUTINE',
+      clinicalDiagnosis: null,
+      clinicalSymptom: null,
+      createdAt: '2026-06-06T00:00:00',
+      currentNode: 'REMOVAL',
+      deletable: false,
+      editable: false,
+      externalOrderNo: null,
+      id: applicationId ?? 'APP-LOOKUP',
+      operationDisabledReason: null,
+      patientAge: '51',
+      patientGender: '女',
+      patientId: '1d857986-392a-4620-bc10-bf2c900001a8',
+      patientName: '林晓芸',
+      recentEvents: [],
+      remarks: null,
+      sourceHospitalId: null,
+      sourceHospitalName: null,
+      specimenRemovalTime: '2026-06-08 23:20:29',
+      specimens: [],
+      status: 'IN_TRANSIT',
+      submissionDate: '2026-06-06',
+      submittingDepartmentId: 'DEPT-GYN',
+      submittingDepartmentName: '妇科',
+      submittingDoctorName: '王丽',
+      submittingDoctorUserId: 'DOC-001',
+      thirdPartySource: null,
+      updatedAt: '2026-06-08T23:20:29',
+      voided: false,
     })),
     listOperatingBuildingOptionsMock: vi.fn(async () => [
       {
@@ -164,6 +205,8 @@ const {
           labelPrintBatchNo: row.labelPrintBatchNo ?? null,
           labelPrintStatus: 'SUCCESS',
           latestTrackingAt: row.latestTrackingAt,
+          patientGender: row.patientGender,
+          patientId: row.patientId ?? null,
           patientName: row.patientName,
           recentNode: null,
           registeredAt: row.registeredAt,
@@ -173,11 +216,13 @@ const {
           specimenName: row.specimenName,
           specimenNo: row.specimenNo,
           specimenRemovalAt: row.specimenRemovalAt,
+          specimenRemovalOperatorName: row.specimenRemovalOperatorName,
           specimenSite: null,
           specimenStatus: row.specimenStatus,
           specimenType: row.specimenType,
           submittingDepartmentId: null,
           submittingDepartmentName: null,
+          wardName: row.wardName ?? null,
           verificationCompletedAt: null,
           verificationStartedAt: null,
           verificationStatus: null,
@@ -274,7 +319,70 @@ vi.mock('../components/WorkflowSectionCard.vue', () => ({
   default: {
     props: ['title', 'description'],
     template:
-      '<section><h2>{{ title }}</h2><p>{{ description }}</p><slot /></section>',
+      '<section><h2>{{ title }}</h2><p>{{ title ? description : "" }}</p><slot /></section>',
+  },
+}));
+
+vi.mock('../components/FixationVerifyTable.vue', () => ({
+  default: {
+    emits: ['selectionChange'],
+    props: [
+      'actionLoading',
+      'canConfirmRemoval',
+      'formatRemovalStatus',
+      'items',
+      'loading',
+      'page',
+      'size',
+    ],
+    setup(props: any, { emit }: any) {
+      const formatNullable = (value: unknown) =>
+        value === null || value === undefined || value === '' ? '-' : String(value);
+      const formatDateTime = (value: unknown) =>
+        value === null || value === undefined || value === '' ? '-' : String(value);
+
+      return () =>
+        h('div', { 'data-testid': 'fixation-verify-table' }, [
+          h(
+            'div',
+            '序号申请单标本编号姓名住院号病区性别手术间标本名称标本状态类型离体时间离体操作人添加时间添加人病人ID',
+          ),
+          ...(props.items ?? []).flatMap((row: any, index: number) => [
+            h(
+              'button',
+              {
+                'data-testid': `select-row-${index}`,
+                disabled: !props.canConfirmRemoval(row),
+                type: 'button',
+                onClick: () => emit('selectionChange', [row]),
+              },
+              '选中',
+            ),
+            h(
+              'div',
+              { 'data-testid': `row-${index}` },
+              [
+                String(index + 1),
+                row.applicationNo,
+                row.specimenNo,
+                formatNullable(row.patientName),
+                formatNullable(row.inpatientNo),
+                formatNullable(row.wardName),
+                formatNullable(row.patientGender),
+                formatNullable(row.surgeryName),
+                formatNullable(row.specimenName),
+                props.formatRemovalStatus(row),
+                formatNullable(row.specimenType),
+                formatDateTime(row.specimenRemovalAt),
+                formatNullable(row.specimenRemovalOperatorName),
+                formatDateTime(row.registeredAt),
+                formatNullable(row.registeredByName),
+                formatNullable(row.patientIdLabel),
+              ].join(' '),
+            ),
+          ]),
+        ]);
+    },
   },
 }));
 
@@ -296,8 +404,78 @@ vi.mock('../api/specimen-workflow-service', () => ({
   listPendingSpecimenRemovals: listPendingSpecimenRemovalsMock,
 }));
 
+lookupApplicationRegistrationWorkbenchRecordMock.mockImplementation(
+  async ({ keyword }: { keyword: string }) => ({
+      applicationId: keyword === 'AP202605230001' ? 'APP-PENDING' : 'APP-LOOKUP',
+      contagiousSpecimen: {
+        hepatitis: false,
+        hiv: false,
+        isolation: false,
+        syphilis: false,
+        tuberculosis: false,
+      },
+      gynecologyInfo: {
+        additionalNotes: '',
+        hpvResult: null,
+        lastMenstrualPeriod: null,
+        menopause: false,
+        previousCytology: '',
+        previousTreatment: '',
+        specialConditions: {
+          abnormalBleeding: false,
+          birthControl: false,
+          hormoneReplacement: false,
+          hysterectomy: false,
+          iud: false,
+          lactation: false,
+          menopause: false,
+          other: '',
+          pregnancy: false,
+          radiotherapy: false,
+        },
+      },
+      patientInfo: {
+        age: '51',
+        applicationDate: '2026-06-06',
+        applicationNo: keyword,
+        applyDept: '妇科',
+        applyDoctor: '王丽',
+        bedNo: '26床',
+        checkItem: '妇科病理检查',
+        clinicalDiagnosis: null,
+        clinicalHistory: null,
+        deliveryRequirement: null,
+        endoscopyDiagnosis: null,
+        frozenReminder: false,
+        gender: '女',
+        idNo: '08305',
+        imagingResult: null,
+        inpatientNo: 'ZY08305',
+        patientName: '林晓芸',
+        patientVerified: true,
+        phone: '13800008305',
+        registrationStatus: null,
+        remark: null,
+        specimenType: null,
+        wardName: '妇科病区 3A',
+      },
+      specimenItems: [],
+      surgeryInfo: {
+        buildingId: null,
+        clinicalFindings: null,
+        fixativeType: null,
+        fixationPerson: '病理科管理员',
+        fixationTime: null,
+        roomId: 'OR-102',
+        surgeryName: '离体送检',
+      },
+    }),
+);
+
 vi.mock('../api/application-registration-workbench-service', () => ({
   listOperatingBuildingOptions: listOperatingBuildingOptionsMock,
+  lookupApplicationRegistrationWorkbenchRecord:
+    lookupApplicationRegistrationWorkbenchRecordMock,
 }));
 
 function mountView() {
@@ -361,16 +539,13 @@ describe('FixationVerifyView', () => {
       expect(container.textContent).toContain('SP202605230001');
     });
 
-    const confirmButtons = [...container.querySelectorAll('button')].filter(
-      (button) => button.textContent?.includes('离体确认'),
+    const confirmButtons = [...container.querySelectorAll('button')].filter((button) =>
+      button.textContent?.includes('离体确认'),
     );
-
     expect(container.textContent).toContain('离体确认');
-    expect(container.textContent).toContain('设置离体时间');
     expect(container.textContent).toContain('全部');
     expect(container.textContent).toContain('已离体');
     expect(container.textContent).toContain('未设置');
-    expect(container.textContent).toContain('标本条码/编号');
     expect(container.textContent).not.toContain('标本流水号');
     expect(container.textContent).not.toContain('申请单号');
     expect(container.textContent).not.toContain('送检科室');
@@ -381,19 +556,32 @@ describe('FixationVerifyView', () => {
     expect(container.textContent).toContain('标本编号');
     expect(container.textContent).toContain('离体时间');
     expect(container.textContent).toContain('离体操作人');
+    expect(container.textContent).toContain('08305');
+    expect(container.textContent).not.toContain('1d857986-392a-4620-bc10-bf2c900001a8');
+    expect(container.textContent).toContain('妇科病区 3A');
     expect(container.textContent).not.toContain('开始核对');
     expect(container.textContent).not.toContain('完成核对');
-    expect(confirmButtons).toHaveLength(2);
+    expect(container.textContent).not.toContain('开始核对');
+    expect(container.textContent).not.toContain('完成核对');
+    expect(confirmButtons).toHaveLength(1);
+    expect(container.querySelector('[data-testid="select-row-0"]')).not.toBeNull();
+    expect(container.querySelector('[data-testid="select-row-1"]')).not.toBeNull();
 
     app.unmount();
   });
 
-  it('confirms removal and refreshes the list after submission', async () => {
+  it('confirms selected removals after submission', async () => {
     mockRoute.query = { applicationNo: 'AP202605230001' };
     const { app, container } = mountView();
     await waitForViewAssertion(() => {
       expect(container.textContent).toContain('SP202605230001');
     });
+
+    const selectionButton = container.querySelector<HTMLButtonElement>(
+      '[data-testid="select-row-0"]',
+    );
+    selectionButton?.click();
+    await flushView();
 
     const confirmButton = [...container.querySelectorAll('button')].find(
       (button) => button.textContent?.includes('离体确认'),
@@ -403,7 +591,7 @@ describe('FixationVerifyView', () => {
     await flushView();
 
     expect(confirmMock).toHaveBeenCalledWith(
-      '确认该标本已离体吗？',
+      '确认选中的 1 条标本已离体吗？',
       '离体确认',
       {
         cancelButtonText: '取消',
@@ -421,14 +609,17 @@ describe('FixationVerifyView', () => {
       page: 1,
       size: 500,
     });
+    expect(messageSuccessMock).toHaveBeenCalledWith('已完成 1 条标本离体确认');
     expect(container.textContent).toContain('SP202605230001');
     expect(container.textContent).toContain('SP202605230002');
-    expect(container.textContent).toContain('Test User');
+    expect(container.textContent).toContain('08305');
+    expect(container.textContent).not.toContain('1d857986-392a-4620-bc10-bf2c900001a8');
+    expect(container.textContent).toContain('妇科病区 3A');
 
     app.unmount();
   });
 
-  it('confirms removal by specimen number when table row has no barcode', async () => {
+  it('confirms selected removal by specimen number when table row has no barcode', async () => {
     mockRoute.query = { applicationNo: 'AP202605230001' };
     listSpecimensMock.mockResolvedValueOnce({
       items: [
@@ -480,6 +671,12 @@ describe('FixationVerifyView', () => {
       expect(container.textContent).toContain('SP202605230001');
     });
 
+    const selectionButton = container.querySelector<HTMLButtonElement>(
+      '[data-testid="select-row-0"]',
+    );
+    selectionButton?.click();
+    await flushView();
+
     const confirmButton = [...container.querySelectorAll('button')].find(
       (button) => button.textContent?.includes('离体确认'),
     );
@@ -494,8 +691,24 @@ describe('FixationVerifyView', () => {
       remarks: '离体确认',
     });
     expect(messageSuccessMock).toHaveBeenCalledWith(
-      '标本 SP202605230001 已完成离体确认',
+      '已完成 1 条标本离体确认',
     );
+
+    app.unmount();
+  });
+
+  it('disables batch confirm when no rows are selected', async () => {
+    mockRoute.query = { applicationNo: 'AP202605230001' };
+    const { app, container } = mountView();
+    await waitForViewAssertion(() => {
+      expect(container.textContent).toContain('SP202605230001');
+    });
+
+    const confirmButton = [...container.querySelectorAll('button')].find(
+      (button) => button.textContent?.includes('离体确认'),
+    ) as HTMLButtonElement | undefined;
+
+    expect(confirmButton?.disabled).toBe(true);
 
     app.unmount();
   });
@@ -528,18 +741,22 @@ describe('FixationVerifyView', () => {
         size: 500,
       });
     });
-    expect(messageSuccessMock).toHaveBeenCalledWith(
-      '标本 SP202605230001 已完成离体确认',
-    );
+    await waitForViewAssertion(() => {
+      expect(messageSuccessMock).toHaveBeenCalledWith(
+        '标本 SP202605230001 已完成离体确认',
+      );
+      expect(container.textContent).toContain('Test User');
+    });
     expect(specimenIdInput!.value).toBe('');
 
     const clearListButton = [...container.querySelectorAll('button')].find(
       (button) => button.textContent?.includes('清除列表'),
     );
     clearListButton?.click();
-    await flushView();
-
-    expect(container.textContent).not.toContain('SP202605230001');
+    await waitForViewAssertion(() => {
+      expect(container.textContent).not.toContain('SP202605230001');
+      expect(container.textContent).not.toContain('SP202605230002');
+    });
 
     app.unmount();
   });
@@ -565,9 +782,11 @@ describe('FixationVerifyView', () => {
       identifierType: 'BARCODE',
       remarks: '离体确认',
     });
-    expect(messageSuccessMock).toHaveBeenCalledWith(
-      '标本 SP-PENDING 已完成离体确认',
-    );
+    await waitForViewAssertion(() => {
+      expect(messageSuccessMock).toHaveBeenCalledWith(
+        '标本 SP-PENDING 已完成离体确认',
+      );
+    });
     expect(specimenIdInput!.value).toBe('');
 
     app.unmount();

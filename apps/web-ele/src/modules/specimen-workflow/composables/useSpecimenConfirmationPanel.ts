@@ -150,6 +150,7 @@ export function useSpecimenConfirmationPanel() {
     try {
       const detail = await getApplicationDetail(normalizedApplicationId);
       const context: CachedApplicationContext = {
+        patientId: detail.patientId ?? null,
         patientGender: detail.patientGender ?? null,
         submittingDoctorName: detail.submittingDoctorName?.trim() ?? '',
       };

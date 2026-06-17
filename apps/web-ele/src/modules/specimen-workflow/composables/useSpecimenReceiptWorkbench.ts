@@ -56,6 +56,7 @@ export function useSpecimenReceiptWorkbench() {
   const receiveDialogVisible = ref(false);
   const receiveTargetRows = ref<ReceiptWorkbenchRow[]>([]);
   const queueItems = ref<ReceiptWorkbenchRow[]>([]);
+  const receiptDateRange = ref<string[]>([]);
   const scanInput = ref('');
   const selectedRowKeys = ref<string[]>([]);
   const retryDialogVisible = ref(false);
@@ -331,11 +332,19 @@ export function useSpecimenReceiptWorkbench() {
     );
   }
 
-  async function loadPendingReceiptRows() {
+  function createReceiptDatePickerDefaultValue() {
+    const today = new Date();
+    return [today, new Date(today)] as [Date, Date];
+  }
+
+  async function loadPendingReceiptRows(dateRange: string[] = []) {
+    const [dateFrom, dateTo] = dateRange;
     lookupLoading.value = true;
     pageError.value = '';
     try {
       const pendingPage = await listPendingReceipts({
+        dateFrom: dateFrom?.trim() || undefined,
+        dateTo: dateTo?.trim() || undefined,
         page: 1,
         size: RECEIPT_WORKBENCH_MAX_QUERY_SIZE,
       });
@@ -392,6 +401,10 @@ export function useSpecimenReceiptWorkbench() {
     } finally {
       lookupLoading.value = false;
     }
+  }
+
+  async function handleQueryPendingReceipts() {
+    await loadPendingReceiptRows(receiptDateRange.value);
   }
 
   async function handleQueueSpecimen() {
@@ -870,6 +883,7 @@ export function useSpecimenReceiptWorkbench() {
     handleDirectReceiveUserChange,
     handleExportExcel,
     handleOperatorChange,
+    handleQueryPendingReceipts,
     handleQueueSpecimen,
     handleReceiveUserChange,
     handleReceiveSelected,
@@ -883,6 +897,7 @@ export function useSpecimenReceiptWorkbench() {
     operatorForm,
     pageError,
     queueItems,
+    createReceiptDatePickerDefaultValue,
     receiveDialogVisible,
     receiveForm,
     receiveLoading,
@@ -893,6 +908,7 @@ export function useSpecimenReceiptWorkbench() {
     retryForm,
     retrySubmitting,
     retryTargetRows,
+    receiptDateRange,
     scanInput,
     selectedCount,
     selectedRowCount,

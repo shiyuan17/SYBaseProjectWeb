@@ -59,6 +59,10 @@ export function useSpecimenFixationTimePanel() {
   const fixationLiquidType = ref(DEFAULT_FIXATION_LIQUID_TYPE);
   const queueItems = ref<FixationWorkbenchRow[]>([]);
   const selectedRows = ref<FixationWorkbenchRow[]>([]);
+  const pagination = reactive({
+    page: 1,
+    size: 20,
+  });
   const workflowReferenceOptions = ref(createEmptyWorkflowReferenceOptions());
 
   const workbenchRecordCache = reactive(
@@ -79,6 +83,30 @@ export function useSpecimenFixationTimePanel() {
   });
 
   const selectedCount = computed(() => selectedRows.value.length);
+  const total = computed(() => queueItems.value.length);
+  const pagedItems = computed(() => {
+    const start = (pagination.page - 1) * pagination.size;
+    return queueItems.value.slice(start, start + pagination.size);
+  });
+
+  function resetToFirstPage() {
+    pagination.page = 1;
+  }
+
+  function clearSelectionState() {
+    selectedRows.value = [];
+  }
+
+  function handlePageChange(page: number) {
+    pagination.page = page;
+    clearSelectionState();
+  }
+
+  function handlePageSizeChange(size: number) {
+    pagination.size = size;
+    pagination.page = 1;
+    clearSelectionState();
+  }
 
   function normalizeText(value?: null | string) {
     return normalizeFixationText(value);
@@ -193,7 +221,8 @@ export function useSpecimenFixationTimePanel() {
     return {
       ...baseRow,
       patientGenderLabel: normalizeGenderLabel(
-        applicationContext?.patientGender ??
+        row.patientGender ??
+          applicationContext?.patientGender ??
           workbenchRecord?.patientInfo.gender,
       ),
     };
@@ -238,7 +267,8 @@ export function useSpecimenFixationTimePanel() {
     }
 
     queueItems.value = nextRows;
-    selectedRows.value = [];
+    clearSelectionState();
+    resetToFirstPage();
   }
 
   function removeRows(specimenIds: string[]) {
@@ -249,6 +279,9 @@ export function useSpecimenFixationTimePanel() {
     selectedRows.value = selectedRows.value.filter(
       (item) => !targetSet.has(item.specimenId),
     );
+    if (pagination.page > 1 && pagedItems.value.length === 0) {
+      pagination.page = Math.max(1, pagination.page - 1);
+    }
   }
 
   function upsertQueueRow(row: FixationWorkbenchRow) {
@@ -260,6 +293,7 @@ export function useSpecimenFixationTimePanel() {
       return;
     }
     queueItems.value.unshift(row);
+    resetToFirstPage();
   }
 
   function mergeStartedFixationRow(
@@ -471,7 +505,7 @@ export function useSpecimenFixationTimePanel() {
         }
       }
     } finally {
-      selectedRows.value = [];
+      clearSelectionState();
       loading.value = false;
     }
 
@@ -502,7 +536,8 @@ export function useSpecimenFixationTimePanel() {
 
   function handleClearList() {
     queueItems.value = [];
-    selectedRows.value = [];
+    clearSelectionState();
+    resetToFirstPage();
     ElMessage.success('列表已清空');
   }
 
@@ -666,10 +701,15 @@ export function useSpecimenFixationTimePanel() {
     handleConfirmFixation,
     handleCompleteFixationByScan,
     handleExportExcel,
+    handlePageChange,
+    handlePageSizeChange,
     handleRetryLabel,
     handleSelectionChange,
     loading,
+    pagedItems,
+    pagination,
     pageError,
+    total,
     queueItems,
     resolveFixationLiquidLabel,
     resolveFixationTagType,

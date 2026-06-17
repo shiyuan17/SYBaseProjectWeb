@@ -6,7 +6,10 @@ import {
   buildSections,
   buildSummaryItems,
   getReprintApplicationIdentifier,
+  getSectionDescriptionColumns,
   getSectionItemSpan,
+  getSummaryDescriptionColumns,
+  getSummaryItemSpan,
   getSummaryItemValueClass,
 } from './application-registration-patient-panel';
 
@@ -84,14 +87,29 @@ describe('application registration patient panel helpers', () => {
     const record = createRecordFixture();
     const summaryItems = buildSummaryItems(record);
     const checkItem = summaryItems.find((item) => item.key === 'checkItem');
+    const registrationStatus = summaryItems.find(
+      (item) => item.key === 'registrationStatus',
+    );
 
     expect(summaryItems[0]?.label).toBe('申请单号');
     expect(getSummaryItemValueClass(summaryItems[0]!)).toBe(
       'text-[12px] font-semibold',
     );
+    expect(registrationStatus?.value).toBe('登记');
     expect(
       checkItem?.writeBack?.(record, '  更新项目  ').patientInfo.checkItem,
     ).toBe('更新项目');
+  });
+
+  it('maps english registration status values to Chinese labels in summary items', () => {
+    const record = createRecordFixture();
+    record.patientInfo.registrationStatus = 'RECEIVED';
+
+    const registrationStatus = buildSummaryItems(record).find(
+      (item) => item.key === 'registrationStatus',
+    );
+
+    expect(registrationStatus?.value).toBe('已接收');
   });
 
   it('builds section groups and keeps surgery/gynecology write-back stable', () => {
@@ -132,5 +150,36 @@ describe('application registration patient panel helpers', () => {
 
     expect(getReprintApplicationIdentifier(record)).toBe('AP202605280003');
     expect(getReprintApplicationIdentifier(null)).toBe('');
+  });
+
+  it('adapts description columns and spans to narrower panel widths', () => {
+    const record = createRecordFixture();
+    const summaryItems = buildSummaryItems(record);
+    const sections = buildSections(record, {
+      buildingLabel: '惠侨楼',
+      roomLabel: '手术室 2',
+    });
+    const applyDeptDoctor = summaryItems.find(
+      (item) => item.key === 'applyDeptDoctor',
+    );
+    const buildingRoom = sections
+      .find((section) => section.key === 'surgery')
+      ?.items.find((item) => item.key === 'buildingRoom');
+    const clinicalHistory = sections
+      .find((section) => section.key === 'application')
+      ?.items.find((item) => item.key === 'clinicalHistory');
+
+    expect(getSummaryDescriptionColumns(600)).toBe(3);
+    expect(getSummaryDescriptionColumns(400)).toBe(2);
+    expect(getSummaryDescriptionColumns(280)).toBe(1);
+
+    expect(getSectionDescriptionColumns(600)).toBe(3);
+    expect(getSectionDescriptionColumns(420)).toBe(2);
+    expect(getSectionDescriptionColumns(320)).toBe(1);
+
+    expect(getSummaryItemSpan(applyDeptDoctor!, 2)).toBe(2);
+    expect(getSummaryItemSpan(applyDeptDoctor!, 1)).toBe(1);
+    expect(getSectionItemSpan(buildingRoom!, 2)).toBe(2);
+    expect(getSectionItemSpan(clinicalHistory!, 1)).toBe(1);
   });
 });

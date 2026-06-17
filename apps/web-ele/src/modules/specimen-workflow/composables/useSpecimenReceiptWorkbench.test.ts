@@ -468,6 +468,63 @@ describe('useSpecimenReceiptWorkbench', () => {
     wrapper.destroy();
   });
 
+  it('queries pending receipts with the selected date range and replaces the queue', async () => {
+    const wrapper = mountComposable();
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    state.scanInput.value = 'SP-001';
+    await state.handleQueueSpecimen();
+    await flushComposable();
+    state.handleSelectionChange(state.queueItems.value);
+    expect(state.selectedRowCount.value).toBe(2);
+
+    state.receiptDateRange.value = ['2026-06-01', '2026-06-02'];
+    await state.handleQueryPendingReceipts();
+    await flushComposable();
+
+    expect(listPendingReceiptsMock).toHaveBeenLastCalledWith({
+      dateFrom: '2026-06-01',
+      dateTo: '2026-06-02',
+      page: 1,
+      size: 500,
+    });
+    expect(state.queueItems.value.map((item) => item.specimenId)).toEqual([
+      'SPEC-001',
+      'SPEC-003',
+    ]);
+    expect(state.selectedRowCount.value).toBe(0);
+
+    wrapper.destroy();
+  });
+
+  it('queries pending receipts without date filters when the date range is empty', async () => {
+    const wrapper = mountComposable();
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    state.receiptDateRange.value = [];
+    await state.handleQueryPendingReceipts();
+    await flushComposable();
+
+    expect(listPendingReceiptsMock).toHaveBeenLastCalledWith({
+      dateFrom: undefined,
+      dateTo: undefined,
+      page: 1,
+      size: 500,
+    });
+    expect(state.queueItems.value.map((item) => item.specimenId)).toEqual([
+      'SPEC-001',
+      'SPEC-003',
+    ]);
+
+    wrapper.destroy();
+  });
+
   it('expands a scanned specimen into all specimens under the same application', async () => {
     const wrapper = mountComposable();
     const state = wrapper.getState();

@@ -5,14 +5,13 @@ import type {
   WorkbenchSpecimenPrintContext,
 } from '../types/application-registration-workbench';
 import type {
-  LabelPrintRetryResult,
+  LatestSpecimenRegistrationResult,
   SpecimenManagementListItem,
   SpecimenManagementListSummary,
 } from '../types/specimen-workflow';
 
 import { computed, onMounted, reactive, ref, watch } from 'vue';
 
-import { useUserStore } from '@vben/stores';
 import { downloadFileFromBlob } from '@vben/utils';
 
 import { ElMessage, ElMessageBox } from 'element-plus';
@@ -23,6 +22,7 @@ import {
 } from '../api/application-registration-workbench-service';
 import {
   bindSpecimenBarcode,
+  getLatestRegistrationResult,
   listSpecimens,
   retryLabelPrint,
   unbindSpecimenBarcode,
@@ -76,8 +76,6 @@ function normalizeGenderLabel(value?: null | string) {
 }
 
 export function useSpecimenBarcodeBindingPanel() {
-  const userStore = useUserStore();
-
   const loading = ref(false);
   const actionLoading = ref(false);
   const retrySubmitting = ref(false);
@@ -90,10 +88,9 @@ export function useSpecimenBarcodeBindingPanel() {
   const workbenchRecordCache = reactive(
     new Map<string, ApplicationRegistrationWorkbenchRecord | null>(),
   );
-
-  const retryDialogVisible = ref(false);
-  const retryTargetRows = ref<SpecimenManagementListItem[]>([]);
-  const batchRetryResult = ref<LabelPrintRetryResult | null>(null);
+  const latestRegistrationResultCache = reactive(
+    new Map<string, LatestSpecimenRegistrationResult | null>(),
+  );
 
   const filters = reactive({
     buildingId: '',
@@ -102,14 +99,6 @@ export function useSpecimenBarcodeBindingPanel() {
     page: 1,
     roomId: '',
     size: DEFAULT_PAGE_SIZE,
-  });
-
-  const retryForm = reactive({
-    operatorName: userStore.userInfo?.realName ?? '',
-    operatorUserId: userStore.userInfo?.userId ?? '',
-    printerCode: '',
-    remarks: '',
-    terminalCode: '',
   });
 
   const roomNameById = computed(() =>
@@ -195,11 +184,6 @@ export function useSpecimenBarcodeBindingPanel() {
       filters.roomId = '';
     },
   );
-
-  function syncRetryOperatorFromCurrentUser() {
-    retryForm.operatorName = userStore.userInfo?.realName ?? '';
-    retryForm.operatorUserId = userStore.userInfo?.userId ?? '';
-  }
 
   function enhanceRows(items: SpecimenManagementListItem[]) {
     return items.map((item) => ({
@@ -331,7 +315,26 @@ export function useSpecimenBarcodeBindingPanel() {
     }
   }
 
-  function handleRetryLabel() {
+  async function ensureLatestRegistrationResult(applicationId: string) {
+    const normalizedApplicationId = normalizeText(applicationId);
+    if (!normalizedApplicationId) {
+      return null;
+    }
+    if (latestRegistrationResultCache.has(normalizedApplicationId)) {
+      return latestRegistrationResultCache.get(normalizedApplicationId) ?? null;
+    }
+
+    try {
+      const result = await getLatestRegistrationResult(normalizedApplicationId);
+      latestRegistrationResultCache.set(normalizedApplicationId, result);
+      return result;
+    } catch {
+      latestRegistrationResultCache.set(normalizedApplicationId, null);
+      return null;
+    }
+  }
+
+  async function handleRetryLabel() {
     if (selectedRows.value.length === 0) {
       ElMessage.warning('请先勾选需要补打标签的标本');
       return;
@@ -340,33 +343,27 @@ export function useSpecimenBarcodeBindingPanel() {
       ElMessage.warning('补打标本标签仅支持同一标签批次');
       return;
     }
-
-    retryTargetRows.value = [...selectedRows.value];
-    batchRetryResult.value = null;
-    syncRetryOperatorFromCurrentUser();
-    retryForm.printerCode = '';
-    retryForm.remarks = '';
-    retryForm.terminalCode = '';
-    retryDialogVisible.value = true;
-  }
-
-  async function submitRetryLabel() {
-    if (!retryBatchNo.value) {
-      ElMessage.warning('缺少标签批次号');
-      return;
-    }
-    if (!normalizeText(retryForm.printerCode)) {
-      ElMessage.warning('请输入打印机编号');
+    const applicationId = selectedRows.value[0]?.applicationId ?? '';
+    const latestResult = await ensureLatestRegistrationResult(applicationId);
+    const printerCode = normalizeText(
+      latestResult?.registrationSnapshot?.printerCode,
+    );
+    if (
+      !latestResult ||
+      latestResult.labelPrintBatchNo !== retryBatchNo.value ||
+      !printerCode
+    ) {
+      ElMessage.warning('当前批次尚未打印，请先打印');
       return;
     }
 
     retrySubmitting.value = true;
     pageError.value = '';
     try {
-      batchRetryResult.value = await retryLabelPrint(retryBatchNo.value, {
-        printerCode: normalizeText(retryForm.printerCode),
-        remarks: normalizeText(retryForm.remarks) || null,
-        terminalCode: normalizeText(retryForm.terminalCode) || null,
+      await retryLabelPrint(retryBatchNo.value, {
+        printerCode,
+        remarks: null,
+        terminalCode: null,
       });
       ElMessage.success('补打标本标签已提交');
       await loadSpecimens();
@@ -614,7 +611,6 @@ export function useSpecimenBarcodeBindingPanel() {
   return {
     actionLoading,
     allRows,
-    batchRetryResult,
     buildingOptions,
     canBind,
     canExportExcel,
@@ -636,13 +632,9 @@ export function useSpecimenBarcodeBindingPanel() {
     pageError,
     pagedItems,
     resolveRoomLabel,
-    retryDialogVisible,
-    retryForm,
     retrySubmitting,
-    retryTargetRows,
     roomOptions,
     selectedRows,
-    submitRetryLabel,
     summary,
     targetBarcode,
     total,

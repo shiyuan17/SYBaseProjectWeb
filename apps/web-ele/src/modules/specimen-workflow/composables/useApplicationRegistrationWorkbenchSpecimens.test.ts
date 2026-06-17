@@ -1,7 +1,6 @@
 import type {
   ApplicationRegistrationWorkbenchRecord,
-  SpecimenDictionaryEntryOption,
-  SpecimenDictionaryGroup,
+  SpecimenDictionaryResponse,
   SpecimenPackageOption,
 } from '../types/application-registration-workbench';
 
@@ -11,15 +10,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const {
   messageWarningMock,
-  mockListCommonSpecimenOptions,
-  mockListSpecimenDictionaryEntryOptions,
-  mockListSpecimenDictionaryGroups,
+  mockGetSpecimenDictionary,
   mockListSpecimenPackageOptions,
 } = vi.hoisted(() => ({
   messageWarningMock: vi.fn(),
-  mockListCommonSpecimenOptions: vi.fn(),
-  mockListSpecimenDictionaryEntryOptions: vi.fn(),
-  mockListSpecimenDictionaryGroups: vi.fn(),
+  mockGetSpecimenDictionary: vi.fn(),
   mockListSpecimenPackageOptions: vi.fn(),
 }));
 
@@ -30,9 +25,7 @@ vi.mock('element-plus', () => ({
 }));
 
 vi.mock('../api/application-registration-workbench-service', () => ({
-  listCommonSpecimenOptions: mockListCommonSpecimenOptions,
-  listSpecimenDictionaryEntryOptions: mockListSpecimenDictionaryEntryOptions,
-  listSpecimenDictionaryGroups: mockListSpecimenDictionaryGroups,
+  getSpecimenDictionary: mockGetSpecimenDictionary,
   listSpecimenPackageOptions: mockListSpecimenPackageOptions,
 }));
 
@@ -126,6 +119,80 @@ function createPackage(): SpecimenPackageOption {
   };
 }
 
+function createDictionaryResponse(
+  overrides: Partial<SpecimenDictionaryResponse> = {},
+): SpecimenDictionaryResponse {
+  return {
+    commonOptions: [
+      {
+        partId: 'P-1',
+        partName: '胃',
+        searchKeywords: ['胃组织'],
+        specimenName: '胃组织',
+        systemId: 'S-1',
+        systemName: '消化',
+      },
+      {
+        partId: 'P-1',
+        partName: '胃',
+        searchKeywords: ['胃切缘'],
+        specimenName: '胃切缘',
+        systemId: 'S-1',
+        systemName: '消化',
+      },
+      {
+        partId: 'P-2',
+        partName: '肠系膜',
+        searchKeywords: ['肠系膜组织'],
+        specimenName: '肠系膜组织',
+        systemId: 'S-1',
+        systemName: '消化',
+      },
+    ],
+    departmentFiltered: false,
+    entryOptions: [
+      {
+        partId: 'P-1',
+        partName: '胃',
+        searchKeywords: ['胃组织'],
+        specimenName: '胃组织',
+        systemId: 'S-1',
+        systemName: '消化',
+      },
+      {
+        partId: 'P-1',
+        partName: '胃',
+        searchKeywords: ['胃切缘'],
+        specimenName: '胃切缘',
+        systemId: 'S-1',
+        systemName: '消化',
+      },
+      {
+        partId: 'P-2',
+        partName: '肠系膜',
+        searchKeywords: ['肠系膜组织'],
+        specimenName: '肠系膜组织',
+        systemId: 'S-1',
+        systemName: '消化',
+      },
+    ],
+    groups: [
+      {
+        subParts: [
+          {
+            partId: 'P-1',
+            partName: '胃',
+            specimens: ['胃组织', '胃切缘'],
+          },
+        ],
+        systemId: 'S-1',
+        systemName: '消化',
+      },
+    ],
+    ...overrides,
+  };
+}
+
 function createHarness() {
   const currentRecord = ref<ApplicationRegistrationWorkbenchRecord | null>(
     null,
@@ -178,55 +245,14 @@ async function flushComposable() {
 
 describe('useApplicationRegistrationWorkbenchSpecimens', () => {
   beforeEach(() => {
-    mockListCommonSpecimenOptions.mockResolvedValue([
-      {
-        partId: 'P-1',
-        partName: '胃',
-        searchKeywords: ['胃组织'],
-        specimenName: '胃组织',
-        systemId: 'S-1',
-        systemName: '消化',
-      },
-      {
-        partId: 'P-1',
-        partName: '胃',
-        searchKeywords: ['胃切缘'],
-        specimenName: '胃切缘',
-        systemId: 'S-1',
-        systemName: '消化',
-      },
-      {
-        partId: 'P-2',
-        partName: '肠系膜',
-        searchKeywords: ['肠系膜组织'],
-        specimenName: '肠系膜组织',
-        systemId: 'S-1',
-        systemName: '消化',
-      },
-    ] satisfies SpecimenDictionaryEntryOption[]);
-    mockListSpecimenDictionaryEntryOptions.mockResolvedValue([]);
-    mockListSpecimenDictionaryGroups.mockResolvedValue([
-      {
-        subParts: [
-          {
-            partId: 'P-1',
-            partName: '胃',
-            specimens: ['胃组织', '胃切缘'],
-          },
-        ],
-        systemId: 'S-1',
-        systemName: '消化',
-      },
-    ] satisfies SpecimenDictionaryGroup[]);
+    mockGetSpecimenDictionary.mockResolvedValue(createDictionaryResponse());
     mockListSpecimenPackageOptions.mockResolvedValue([createPackage()]);
   });
 
   afterEach(() => {
     document.body.innerHTML = '';
     messageWarningMock.mockReset();
-    mockListCommonSpecimenOptions.mockReset();
-    mockListSpecimenDictionaryEntryOptions.mockReset();
-    mockListSpecimenDictionaryGroups.mockReset();
+    mockGetSpecimenDictionary.mockReset();
     mockListSpecimenPackageOptions.mockReset();
   });
 
@@ -274,40 +300,57 @@ describe('useApplicationRegistrationWorkbenchSpecimens', () => {
     wrapper.destroy();
   });
 
-  it('resets dictionary selection when the filtered result no longer contains the active system or part', async () => {
-    mockListSpecimenDictionaryGroups.mockImplementation(
-      async (keyword = '') => {
-        if (keyword.trim() === '宫颈') {
-          return [
+  it('resets dictionary selection when keyword switching no longer contains the active system or part', async () => {
+    mockGetSpecimenDictionary.mockImplementation(async (keyword = '') => {
+      if (keyword.trim() === '宫颈') {
+        return createDictionaryResponse({
+          commonOptions: [
+            {
+              partId: 'P-3',
+              partName: '宫颈',
+              searchKeywords: ['宫颈活检组织'],
+              specimenName: '宫颈活检组织',
+              systemId: 'S-2',
+              systemName: '妇科',
+            },
+          ],
+          departmentFiltered: true,
+          entryOptions: [
+            {
+              partId: 'P-3',
+              partName: '宫颈',
+              searchKeywords: ['宫颈活检组织'],
+              specimenName: '宫颈活检组织',
+              systemId: 'S-2',
+              systemName: '妇科',
+            },
+            {
+              partId: 'P-3',
+              partName: '宫颈',
+              searchKeywords: ['宫颈锥切标本'],
+              specimenName: '宫颈锥切标本',
+              systemId: 'S-2',
+              systemName: '妇科',
+            },
+          ],
+          groups: [
             {
               subParts: [
                 {
                   partId: 'P-3',
                   partName: '宫颈',
-                  specimens: ['宫颈活检组织'],
+                  specimens: ['宫颈活检组织', '宫颈锥切标本'],
                 },
               ],
               systemId: 'S-2',
               systemName: '妇科',
             },
-          ];
-        }
+          ],
+        });
+      }
 
-        return [
-          {
-            subParts: [
-              {
-                partId: 'P-1',
-                partName: '胃',
-                specimens: ['胃组织', '胃切缘'],
-              },
-            ],
-            systemId: 'S-1',
-            systemName: '消化',
-          },
-        ];
-      },
-    );
+      return createDictionaryResponse();
+    });
 
     const wrapper = mountComposable();
     await flushComposable();
@@ -323,6 +366,66 @@ describe('useApplicationRegistrationWorkbenchSpecimens', () => {
     expect(state.activeSystemId.value).toBe('S-2');
     expect(state.activePartId.value).toBe('P-3');
     expect(state.dictionaryGroups.value[0]?.systemName).toBe('妇科');
+
+    wrapper.destroy();
+  });
+
+  it('falls back to the backend full dictionary payload when no department filter is applied', async () => {
+    mockGetSpecimenDictionary.mockResolvedValueOnce(
+      createDictionaryResponse({
+        commonOptions: [
+          {
+            partId: 'P-9',
+            partName: '皮肤',
+            searchKeywords: ['背部黑毛痣'],
+            specimenName: '背部黑毛痣',
+            systemId: 'S-9',
+            systemName: '乳腺及皮肤',
+          },
+        ],
+        departmentFiltered: false,
+        entryOptions: [
+          {
+            partId: 'P-9',
+            partName: '皮肤',
+            searchKeywords: ['背部黑毛痣'],
+            specimenName: '背部黑毛痣',
+            systemId: 'S-9',
+            systemName: '乳腺及皮肤',
+          },
+        ],
+        groups: [
+          {
+            subParts: [
+              {
+                partId: 'P-9',
+                partName: '皮肤',
+                specimens: ['背部黑毛痣'],
+              },
+            ],
+            systemId: 'S-9',
+            systemName: '乳腺及皮肤',
+          },
+        ],
+      }),
+    );
+
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    expect(state.departmentCommonSpecimenOptions.value).toEqual([
+      expect.objectContaining({
+        partName: '皮肤',
+        specimenName: '背部黑毛痣',
+      }),
+    ]);
+    expect(state.doctorCommonSpecimenOptions.value).toEqual([]);
+    expect(state.dictionaryGroups.value).toEqual([]);
 
     wrapper.destroy();
   });

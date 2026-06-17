@@ -66,11 +66,14 @@ describe('FixationVerifyWorkbenchPanel', () => {
   it('renders summary and the streamlined barcode or specimen number input', async () => {
     const wrapper = await mountPanel();
 
-    expect(wrapper.container.textContent).toContain('设置离体时间');
     expect(wrapper.container.textContent).toContain('全部');
     expect(wrapper.container.textContent).toContain('已离体');
     expect(wrapper.container.textContent).toContain('未设置');
-    expect(wrapper.container.textContent).toContain('标本条码/编号');
+    expect(
+      wrapper.container.querySelector(
+        'input[placeholder="请输入标本条码/编号后按回车确认"]',
+      ),
+    ).not.toBeNull();
     expect(wrapper.container.textContent).not.toContain('标本流水号');
     expect(wrapper.container.textContent).not.toContain('查询');
     expect(wrapper.container.textContent).not.toContain('重置');

@@ -40,6 +40,7 @@ const applicationStatusLabels = {
   CLOSED: '已闭环',
   DRAFT: '草稿',
   IN_TRANSIT: '转运中',
+  PENDING: '待登记',
   PARTIALLY_RECEIVED: '部分接收',
   RECEIVED: '已接收',
   REJECTED: '已拒收',

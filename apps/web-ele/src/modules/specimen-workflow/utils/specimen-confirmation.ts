@@ -3,8 +3,14 @@ import type { SpecimenManagementListItem } from '../types/specimen-workflow';
 
 import { formatDateTime, formatNullable } from './format';
 import { resolveOperatingRoomDisplayName } from './operating-room-display';
+import {
+  normalizePatientGenderLabel,
+  normalizePatientInfoText,
+  resolveWorkflowPatientInfo,
+} from './patient-info';
 
 export type CachedApplicationContext = {
+  patientId?: null | string;
   patientGender: null | string;
   submittingDoctorName: string;
 };
@@ -13,10 +19,12 @@ export type ConfirmationListRow = SpecimenManagementListItem & {
   actionDisabledReason: null | string;
   inpatientNo: string;
   patientGenderLabel: string;
+  patientIdLabel: string;
   registrationOperatorName: string;
   registrationTime: null | string;
   sceneMatched: boolean;
   surgeryName: string;
+  wardName: string;
 };
 
 export type ConfirmationEnhancementProviders = {
@@ -39,24 +47,9 @@ export const RECEIPT_LOCKED_STATUSES = new Set([
   'RETURNED',
 ]);
 
-function formatValue(value: null | string | undefined) {
-  return value?.trim() ?? '';
-}
-
-function normalizeText(value?: null | string) {
-  return value?.trim() ?? '';
-}
-
-export function normalizeGenderLabel(value: null | string | undefined) {
-  const normalizedValue = value?.trim().toUpperCase();
-  if (normalizedValue === 'F' || normalizedValue === '女') {
-    return '女';
-  }
-  if (normalizedValue === 'M' || normalizedValue === '男') {
-    return '男';
-  }
-  return value?.trim() ?? '';
-}
+const formatValue = normalizePatientInfoText;
+const normalizeText = normalizePatientInfoText;
+export const normalizeGenderLabel = normalizePatientGenderLabel;
 
 export function isReceiptLocked(row: SpecimenManagementListItem) {
   return RECEIPT_LOCKED_STATUSES.has(row.specimenStatus ?? '');
@@ -146,13 +139,17 @@ export function enhanceRow(
   roomNameById: ReadonlyMap<string, string> = new Map(),
 ): ConfirmationListRow {
   const sceneMismatchReason = resolveConfirmationSceneMismatchReason(row);
+  const patientInfo = resolveWorkflowPatientInfo(row, {
+    patientGender: applicationContext?.patientGender ?? null,
+    patientId: applicationContext?.patientId ?? null,
+    workbenchRecord,
+  });
   return {
     ...row,
     actionDisabledReason: resolveConfirmActionDisabledReason(row),
-    inpatientNo: formatValue(workbenchRecord?.patientInfo.inpatientNo),
-    patientGenderLabel: normalizeGenderLabel(
-      applicationContext?.patientGender ?? workbenchRecord?.patientInfo.gender,
-    ),
+    inpatientNo: patientInfo.inpatientNo,
+    patientGenderLabel: patientInfo.patientGenderLabel,
+    patientIdLabel: patientInfo.patientIdLabel,
     registrationOperatorName:
       applicationContext?.submittingDoctorName ||
       formatValue(workbenchRecord?.patientInfo.applyDoctor) ||
@@ -165,6 +162,7 @@ export function enhanceRow(
       workbenchRecord?.surgeryInfo.roomId,
       workbenchRecord?.surgeryInfo.surgeryName,
     ),
+    wardName: patientInfo.wardName,
   };
 }
 
@@ -209,6 +207,7 @@ export function buildExportHeaders() {
     '标本编号',
     '姓名',
     '住院号',
+    '病区',
     '性别',
     '手术间',
     '标本名称',
@@ -218,6 +217,7 @@ export function buildExportHeaders() {
     '确认人',
     '添加时间',
     '添加人',
+    '病人ID',
   ];
 }
 
@@ -228,6 +228,7 @@ export function buildExportRows(rows: ConfirmationListRow[]) {
     row.specimenNo,
     formatNullable(row.patientName),
     formatNullable(row.inpatientNo),
+    formatNullable(row.wardName),
     formatNullable(row.patientGenderLabel),
     formatNullable(row.surgeryName),
     row.specimenName,
@@ -237,5 +238,6 @@ export function buildExportRows(rows: ConfirmationListRow[]) {
     formatNullable(row.specimenConfirmedByName),
     formatDateTime(row.registrationTime),
     formatNullable(row.registrationOperatorName),
+    formatNullable(row.patientIdLabel),
   ]);
 }

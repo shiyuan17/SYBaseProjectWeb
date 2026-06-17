@@ -4,7 +4,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   createButtonStub,
-  createDialogStub,
   createInputStub,
   createOptionStub,
   createPassthroughStub,
@@ -26,16 +25,12 @@ const mockHandleRetryLabel = vi.fn();
 const mockHandleSearch = vi.fn();
 const mockHandleSelectionChange = vi.fn();
 const mockHandleUnbindBarcode = vi.fn();
-const mockSubmitRetryLabel = vi.fn();
 
 vi.mock('element-plus', () => ({
   ElAlert: createPassthroughStub(),
   ElButton: createButtonStub(),
   ElCheckbox: createPassthroughStub('label'),
   ElDatePicker: createInputStub(),
-  ElDialog: createDialogStub(),
-  ElForm: createPassthroughStub('form'),
-  ElFormItem: createPassthroughStub(),
   ElInput: createInputStub(),
   ElOption: createOptionStub(),
   ElPagination: createPassthroughStub(),
@@ -53,13 +48,6 @@ vi.mock('../composables/useSpecimenBarcodeBindingPanel', () => ({
       page: 1,
       roomId: 'OR-101',
       size: 10,
-    });
-    const retryForm = reactive({
-      operatorName: 'Test User',
-      operatorUserId: 'USER-001',
-      printerCode: '',
-      remarks: '',
-      terminalCode: '',
     });
     const row = {
       applicationNo: 'M2-001',
@@ -110,10 +98,7 @@ vi.mock('../composables/useSpecimenBarcodeBindingPanel', () => ({
       pagedItems: ref([row]),
       resolveRoomLabel: (room: { buildingName: string; roomName: string }) =>
         `${room.buildingName} - ${room.roomName}`,
-      retryDialogVisible: ref(false),
-      retryForm,
       retrySubmitting: ref(false),
-      retryTargetRows: ref([row]),
       roomOptions: ref([
         {
           buildingName: '惠侨楼',
@@ -122,7 +107,6 @@ vi.mock('../composables/useSpecimenBarcodeBindingPanel', () => ({
         },
       ]),
       selectedRows: ref([row]),
-      submitRetryLabel: mockSubmitRetryLabel,
       summary: ref({
         abnormalCount: 0,
         labelPrintedCount: 0,

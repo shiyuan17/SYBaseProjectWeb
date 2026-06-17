@@ -38,6 +38,8 @@ function createRow(
     inpatientNo: 'ZYH-001',
     latestTrackingAt: '2026-05-31T09:00:00',
     patientGender: '女',
+    patientId: 'PAT-001',
+    patientIdLabel: 'ID08305',
     patientName: '张三',
     registeredAt: '2026-05-31T08:30:00',
     registeredByName: '李护士',
@@ -49,6 +51,7 @@ function createRow(
     specimenStatus: 'REGISTERED',
     specimenType: '常规',
     surgeryName: '手术室1',
+    wardName: '普外科病区 8B',
     ...overrides,
   });
 }
@@ -56,7 +59,7 @@ function createRow(
 async function mountTable(items: RemovalDisplayRow[]) {
   const container = document.createElement('div');
   document.body.append(container);
-  const confirmRemovalMock = vi.fn();
+  const selectionChangeMock = vi.fn();
 
   const app = createApp({
     render() {
@@ -69,7 +72,7 @@ async function mountTable(items: RemovalDisplayRow[]) {
         loading: false,
         page: 1,
         size: 20,
-        onConfirmRemoval: confirmRemovalMock,
+        onSelectionChange: selectionChangeMock,
       });
     },
   });
@@ -80,7 +83,7 @@ async function mountTable(items: RemovalDisplayRow[]) {
 
   return {
     container,
-    confirmRemovalMock,
+    selectionChangeMock,
     unmount() {
       app.unmount();
       container.remove();
@@ -94,27 +97,36 @@ describe('FixationVerifyTable', () => {
     vi.clearAllMocks();
   });
 
-  it('renders removal rows and confirmation action', async () => {
+  it('renders removal rows and selection action', async () => {
     const wrapper = await mountTable([createRow()]);
 
     expect(wrapper.container.textContent).toContain('AP-001');
-    expect(wrapper.container.textContent).toContain('离体确认');
+    expect(wrapper.container.textContent).toContain('ID08305');
+    expect(wrapper.container.textContent).toContain('普外科病区 8B');
     expect(
       wrapper.container.querySelector('.specimen-workflow-row--actionable'),
     ).not.toBeNull();
+    const selectionCheckbox = wrapper.container.querySelector<HTMLInputElement>(
+      'input[type="checkbox"]',
+    );
+    expect(selectionCheckbox).not.toBeNull();
+    expect(selectionCheckbox?.disabled).toBe(false);
 
-    wrapper.container.querySelector<HTMLButtonElement>('button')?.click();
+    if (selectionCheckbox) {
+      selectionCheckbox.checked = true;
+      selectionCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+    }
     await nextTick();
 
-    expect(wrapper.confirmRemovalMock).toHaveBeenCalledTimes(1);
-    expect(wrapper.confirmRemovalMock).toHaveBeenCalledWith(
+    expect(wrapper.selectionChangeMock).toHaveBeenCalledTimes(1);
+    expect(wrapper.selectionChangeMock).toHaveBeenCalledWith([
       expect.objectContaining({ specimenId: 'SPEC-1' }),
-    );
+    ]);
 
     wrapper.unmount();
   });
 
-  it('renders completed rows without confirmation action', async () => {
+  it('renders completed rows with disabled selection', async () => {
     const wrapper = await mountTable([
       createRow({
         specimenRemovalAt: '2026-05-31T08:45:00',
@@ -123,12 +135,12 @@ describe('FixationVerifyTable', () => {
     ]);
 
     expect(wrapper.container.textContent).toContain('离体');
-    expect(wrapper.container.textContent).toContain('离体确认');
     expect(
       wrapper.container.querySelector('.specimen-workflow-row--completed'),
     ).not.toBeNull();
     expect(
-      wrapper.container.querySelector<HTMLButtonElement>('button')?.disabled,
+      wrapper.container.querySelector<HTMLInputElement>('input[type="checkbox"]')
+        ?.disabled,
     ).toBe(true);
 
     wrapper.unmount();

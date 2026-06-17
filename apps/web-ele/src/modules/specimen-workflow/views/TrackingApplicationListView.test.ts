@@ -295,6 +295,8 @@ describe('TrackingApplicationListView', () => {
     expect(buttonTexts).not.toContain('创建');
     expect(buttonTexts).not.toContain('登记标本');
     expect(buttonTexts).not.toContain('追踪与异常');
+    expect(root.textContent).not.toContain('申请单编号');
+    expect(root.textContent).not.toContain('APP-TRACK-001');
     expect(root.textContent).not.toContain('送检科室');
     expect(root.textContent).not.toContain('申请类型');
     expect(root.textContent).not.toContain('表单状态');

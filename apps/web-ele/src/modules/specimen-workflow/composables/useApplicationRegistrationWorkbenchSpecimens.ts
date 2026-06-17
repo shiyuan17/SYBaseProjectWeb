@@ -14,9 +14,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { ElMessage } from 'element-plus';
 
 import {
-  listCommonSpecimenOptions,
-  listSpecimenDictionaryEntryOptions,
-  listSpecimenDictionaryGroups,
+  getSpecimenDictionary,
   listSpecimenPackageOptions,
 } from '../api/application-registration-workbench-service';
 import { getWorkflowPageErrorMessage } from '../utils/error';
@@ -168,15 +166,22 @@ export function useApplicationRegistrationWorkbenchSpecimens(options: {
 
   async function refreshDictionaryGroups() {
     const requestSequence = ++dictionaryRequestSequence;
-    const groups = await listSpecimenDictionaryGroups(dictionaryKeyword.value);
+    const dictionary = await getSpecimenDictionary(dictionaryKeyword.value);
     if (requestSequence !== dictionaryRequestSequence) {
       return;
     }
 
-    dictionaryGroups.value = filterCommonSpecimensFromDictionaryGroups(groups, [
-      ...departmentCommonSpecimenOptions.value,
-      ...doctorCommonSpecimenOptions.value,
-    ]);
+    specimenEntryOptions.value = dictionary.entryOptions;
+    commonSpecimenOptions.value = dedupeCommonSpecimenOptionsByPart(
+      dictionary.commonOptions,
+    );
+    dictionaryGroups.value = filterCommonSpecimensFromDictionaryGroups(
+      dictionary.groups,
+      [
+        ...departmentCommonSpecimenOptions.value,
+        ...doctorCommonSpecimenOptions.value,
+      ],
+    );
     syncDictionarySelection(dictionaryGroups.value);
   }
 
@@ -275,10 +280,6 @@ export function useApplicationRegistrationWorkbenchSpecimens(options: {
 
   onMounted(async () => {
     try {
-      specimenEntryOptions.value = await listSpecimenDictionaryEntryOptions();
-      commonSpecimenOptions.value = dedupeCommonSpecimenOptionsByPart(
-        await listCommonSpecimenOptions(),
-      );
       specimenPackageOptions.value = await listSpecimenPackageOptions();
       await refreshDictionaryGroups();
     } catch (error) {

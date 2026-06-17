@@ -155,7 +155,7 @@ describe('application registration workbench mock service', () => {
         clinicalDiagnosis: expect.not.stringContaining('待补充'),
         clinicalHistory: expect.not.stringContaining('待补充'),
         gender: expect.stringMatching(/男|女/),
-        idNo: expect.stringMatching(/^ID\d{5}$/),
+        idNo: expect.stringMatching(/^\d{5}$/),
         imagingResult: expect.not.stringContaining('待补充'),
         inpatientNo: expect.stringMatching(/^ZY\d{5}$/),
         patientName: expect.not.stringContaining('待补充'),

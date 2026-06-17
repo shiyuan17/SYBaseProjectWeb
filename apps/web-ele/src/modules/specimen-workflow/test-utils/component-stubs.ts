@@ -5,7 +5,7 @@ import type {
   SetupContext,
 } from 'vue';
 
-import { computed, h, inject, provide } from 'vue';
+import { computed, h, inject, provide, ref, watch } from 'vue';
 
 type StubProps = Record<string, unknown>;
 
@@ -16,7 +16,9 @@ type TabsContext = {
 
 type TableRowContext = {
   $index: number;
+  isSelected?: boolean;
   row: Record<string, unknown>;
+  toggleSelected?: (checked: boolean) => void;
 };
 
 type EmitContext = {
@@ -286,6 +288,7 @@ export function createTimelineItemStub(): FunctionalComponent<StubProps> {
 
 export function createTableStub(rowContextKey: symbol): Component {
   return {
+    emits: ['selection-change'],
     props: ['data', 'height', 'maxHeight', 'rowClassName'],
     setup(
       props: {
@@ -294,8 +297,23 @@ export function createTableStub(rowContextKey: symbol): Component {
         maxHeight?: unknown;
         rowClassName?: unknown;
       },
-      { slots }: SlotContext,
+      { emit, slots }: EmitSlotContext,
     ) {
+      const selectedRows = ref<Record<string, unknown>[]>([]);
+
+      watch(
+        () => props.data,
+        (data) => {
+          if (!Array.isArray(data)) {
+            selectedRows.value = [];
+            return;
+          }
+          selectedRows.value = selectedRows.value.filter((row) =>
+            data.includes(row),
+          );
+        },
+      );
+
       function resolveRowClassName(
         row: Record<string, unknown>,
         index: number,
@@ -309,6 +327,17 @@ export function createTableStub(rowContextKey: symbol): Component {
             rowIndex: index,
           }) ?? '',
         );
+      }
+
+      function toggleRowSelection(
+        row: Record<string, unknown>,
+        checked: boolean,
+      ) {
+        const nextSelection = selectedRows.value.filter((item) => item !== row);
+        if (checked) {
+          nextSelection.push(row);
+        }
+        emit('selection-change', nextSelection);
       }
 
       return () =>
@@ -331,8 +360,13 @@ export function createTableStub(rowContextKey: symbol): Component {
                   index,
                 ),
                 index,
+                isSelected: selectedRows.value.includes(
+                  row as Record<string, unknown>,
+                ),
                 key: index,
                 row: row as Record<string, unknown>,
+                toggleSelected: (checked: boolean) =>
+                  toggleRowSelection(row as Record<string, unknown>, checked),
               },
               () => slots.default?.(),
             ),
@@ -344,11 +378,24 @@ export function createTableStub(rowContextKey: symbol): Component {
 
 function createRowProviderStub(rowContextKey: symbol): Component {
   return {
-    props: ['row', 'index'],
-    setup(props: { index?: unknown; row?: unknown }, { slots }: SlotContext) {
+    props: ['row', 'index', 'isSelected', 'toggleSelected'],
+    setup(
+      props: {
+        index?: unknown;
+        isSelected?: unknown;
+        row?: unknown;
+        toggleSelected?: unknown;
+      },
+      { slots }: SlotContext,
+    ) {
       provide<TableRowContext>(rowContextKey, {
         $index: typeof props.index === 'number' ? props.index : 0,
+        isSelected: Boolean(props.isSelected),
         row: (props.row as Record<string, unknown>) ?? {},
+        toggleSelected:
+          typeof props.toggleSelected === 'function'
+            ? (props.toggleSelected as (checked: boolean) => void)
+            : undefined,
       });
       return () => h('div', slots.default?.());
     },
@@ -357,9 +404,14 @@ function createRowProviderStub(rowContextKey: symbol): Component {
 
 export function createTableColumnStub(rowContextKey: symbol): Component {
   return {
-    props: ['label', 'prop', 'type'],
+    props: ['label', 'prop', 'selectable', 'type'],
     setup(
-      props: { label?: unknown; prop?: unknown; type?: unknown },
+      props: {
+        label?: unknown;
+        prop?: unknown;
+        selectable?: unknown;
+        type?: unknown;
+      },
       { slots }: SlotContext,
     ) {
       const rowContext = inject<null | TableRowContext>(rowContextKey, null);
@@ -368,19 +420,38 @@ export function createTableColumnStub(rowContextKey: symbol): Component {
         h(
           'div',
           { 'data-column-label': toText(props.label || props.type) },
-          slots.default?.({
-            $index: rowContext?.$index ?? 0,
-            row: rowContext?.row ?? {},
-          }) ??
-            (() => {
-              const value =
-                props.prop && rowContext
-                  ? rowContext.row[String(props.prop)]
-                  : undefined;
-              return value === null || value === undefined
-                ? undefined
-                : h('span', String(value));
-            })(),
+          props.type === 'selection' && rowContext
+            ? (() => {
+                const selectable =
+                  typeof props.selectable === 'function'
+                    ? props.selectable(
+                        rowContext.row,
+                        rowContext.$index,
+                      )
+                    : true;
+                return h('input', {
+                  checked: Boolean(rowContext.isSelected),
+                  disabled: !selectable,
+                  type: 'checkbox',
+                  onChange: (event: Event) =>
+                    rowContext.toggleSelected?.(
+                      (event.target as HTMLInputElement).checked,
+                    ),
+                });
+              })()
+            : slots.default?.({
+                $index: rowContext?.$index ?? 0,
+                row: rowContext?.row ?? {},
+              }) ??
+                (() => {
+                  const value =
+                    props.prop && rowContext
+                      ? rowContext.row[String(props.prop)]
+                      : undefined;
+                  return value === null || value === undefined
+                    ? undefined
+                    : h('span', String(value));
+                })(),
         );
     },
   };

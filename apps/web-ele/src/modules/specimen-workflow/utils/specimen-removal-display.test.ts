@@ -53,6 +53,7 @@ describe('specimen removal display helpers', () => {
       fixationStatus: 'PENDING',
       latestTrackingAt: '2026-06-02 09:00:00',
       patientGender: '女',
+      patientId: 'INTERNAL-001',
       patientName: 'Alice',
       registeredAt: '2026-06-02 08:00:00',
       registrationOperatorName: '护士A',
@@ -60,15 +61,20 @@ describe('specimen removal display helpers', () => {
       specimenName: '右臂组织',
       specimenNo: 'SP-001',
       specimenRemovalAt: null,
+      specimenRemovalOperatorName: '护士B',
       specimenStatus: 'REGISTERED',
       specimenType: '常规',
       surgeryName: 'OR-101',
+      wardName: '普外科病区 8B',
       verificationStatus: 'PENDING',
     } as SpecimenManagementListItem);
 
     expect(row.sceneMatched).toBe(true);
     expect(row.actionDisabledReason).toBe(null);
     expect(row.patientGender).toBe('女');
+    expect(row.patientId).toBe('INTERNAL-001');
     expect(row.registeredByName).toBe('护士A');
+    expect(row.specimenRemovalOperatorName).toBe('护士B');
+    expect(row.wardName).toBe('普外科病区 8B');
   });
 });

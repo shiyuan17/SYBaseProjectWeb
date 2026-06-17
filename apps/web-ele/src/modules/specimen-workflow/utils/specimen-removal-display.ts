@@ -5,6 +5,7 @@ import type {
 
 export type RemovalDisplayRow = SpecimenRemovalItem & {
   actionDisabledReason: null | string;
+  patientIdLabel: string;
   sceneMatched: boolean;
 };
 
@@ -26,6 +27,7 @@ export function toRemovalDisplayRow(
   return {
     ...row,
     actionDisabledReason: resolveRemovalActionDisabledReason(row),
+    patientIdLabel: row.patientIdLabel?.trim() ?? row.patientId?.trim() ?? '',
     sceneMatched: canConfirmRemoval(row),
   };
 }
@@ -41,9 +43,10 @@ export function mapSpecimenManagementItemToRemovalDisplayRow(
     confirmedAt: item.specimenRemovalAt ?? null,
     containerCount: item.containerCount,
     containerName: item.containerName,
-    inpatientNo: null,
+    inpatientNo: item.inpatientNo ?? null,
     latestTrackingAt: item.latestTrackingAt,
     patientGender: item.patientGender ?? null,
+    patientId: item.patientId ?? null,
     patientName: item.patientName,
     registeredAt: item.registeredAt,
     registeredByName: item.registrationOperatorName ?? null,
@@ -51,10 +54,11 @@ export function mapSpecimenManagementItemToRemovalDisplayRow(
     specimenName: item.specimenName,
     specimenNo: item.specimenNo,
     specimenRemovalAt: item.specimenRemovalAt ?? null,
-    specimenRemovalOperatorName: null,
+    specimenRemovalOperatorName: item.specimenRemovalOperatorName ?? null,
     specimenStatus: item.specimenStatus,
     specimenType: item.specimenType,
     surgeryName: item.surgeryName ?? null,
+    wardName: item.wardName ?? null,
   };
 
   return toRemovalDisplayRow(baseRow);

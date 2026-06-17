@@ -1,4 +1,4 @@
-import { createApp, h, nextTick } from 'vue';
+import { createApp, h, nextTick, reactive } from 'vue';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -160,6 +160,11 @@ vi.mock('element-plus', async () => {
     ElButton: createButtonStub(),
     ElInput: createInputStub(),
     ElMessage: { success: vi.fn(), warning: vi.fn() },
+    ElPagination: {
+      props: ['currentPage', 'pageSize', 'total'],
+      template:
+        '<div data-testid="pagination">page:{{ currentPage }} size:{{ pageSize }} total:{{ total }}</div>',
+    },
     ElTable: createTableStub(rowContextKey),
     ElTableColumn: createTableColumnStub(rowContextKey),
     ElTag: createTagStub(),
@@ -196,6 +201,9 @@ vi.mock('../composables/useSpecimenCheckInPanel', async () => {
       checkInStatusTagType: 'success',
       displayCheckInStatus: '已入库',
       canCheckIn: false,
+      inpatientNoLabel: 'ZY-001',
+      patientGenderLabel: '女',
+      patientIdLabel: 'PAT-001',
       recentNode: 'CONFIRMATION',
       registeredAt: '2026-05-26 08:00:00',
       specimenConfirmedAt: '2026-05-26 08:50:00',
@@ -211,6 +219,7 @@ vi.mock('../composables/useSpecimenCheckInPanel', async () => {
       verificationCompletedAt: '2026-05-26 08:20:00',
       verificationStartedAt: '2026-05-26 08:15:00',
       verificationStatus: 'VERIFIED',
+      wardName: '普外科病区 8B',
     },
     {
       applicationId: 'APP-CHECKIN',
@@ -232,6 +241,9 @@ vi.mock('../composables/useSpecimenCheckInPanel', async () => {
       checkInStatusTagType: 'info',
       displayCheckInStatus: '待入库',
       canCheckIn: true,
+      inpatientNoLabel: 'ZY-001',
+      patientGenderLabel: '女',
+      patientIdLabel: 'PAT-001',
       recentNode: 'CONFIRMATION',
       registeredAt: '2026-05-26 08:02:00',
       specimenConfirmedAt: '2026-05-26 08:55:00',
@@ -247,6 +259,7 @@ vi.mock('../composables/useSpecimenCheckInPanel', async () => {
       verificationCompletedAt: '2026-05-26 08:25:00',
       verificationStartedAt: '2026-05-26 08:18:00',
       verificationStatus: 'VERIFIED',
+      wardName: '普外科病区 8B',
     },
     {
       applicationId: 'APP-CHECKIN',
@@ -268,6 +281,9 @@ vi.mock('../composables/useSpecimenCheckInPanel', async () => {
       checkInStatusTagType: 'warning',
       displayCheckInStatus: '入库未保存',
       canCheckIn: true,
+      inpatientNoLabel: 'ZY-001',
+      patientGenderLabel: '女',
+      patientIdLabel: 'PAT-001',
       recentNode: 'CONFIRMATION',
       registeredAt: '2026-05-26 08:03:00',
       specimenConfirmedAt: '2026-05-26 08:56:00',
@@ -283,6 +299,7 @@ vi.mock('../composables/useSpecimenCheckInPanel', async () => {
       verificationCompletedAt: '2026-05-26 08:26:00',
       verificationStartedAt: '2026-05-26 08:19:00',
       verificationStatus: 'VERIFIED',
+      wardName: '普外科病区 8B',
     },
     {
       applicationId: 'APP-RECEIVED',
@@ -304,6 +321,9 @@ vi.mock('../composables/useSpecimenCheckInPanel', async () => {
       checkInStatusTagType: 'danger',
       displayCheckInStatus: '已接收',
       canCheckIn: false,
+      inpatientNoLabel: 'ZY-003',
+      patientGenderLabel: '男',
+      patientIdLabel: 'PAT-003',
       recentNode: 'RECEIPT',
       registeredAt: '2026-05-26 08:10:00',
       specimenConfirmedAt: '2026-05-26 08:45:00',
@@ -319,6 +339,7 @@ vi.mock('../composables/useSpecimenCheckInPanel', async () => {
       verificationCompletedAt: '2026-05-26 08:30:00',
       verificationStartedAt: '2026-05-26 08:20:00',
       verificationStatus: 'VERIFIED',
+      wardName: '胸外科病区 3A',
     },
   ]);
 
@@ -344,6 +365,8 @@ vi.mock('../composables/useSpecimenCheckInPanel', async () => {
       handleExport: vi.fn(),
       handleManualCheckIn: vi.fn(),
       handleOperatorChange: vi.fn(),
+      handlePageChange: vi.fn(),
+      handlePageSizeChange: vi.fn(),
       handlePrimaryCheckIn: handlePrimaryCheckInMock,
       handleQuickCheckIn: vi.fn(),
       handleRemoveRow: vi.fn(),
@@ -356,6 +379,11 @@ vi.mock('../composables/useSpecimenCheckInPanel', async () => {
         operatorName: 'Test User',
         operatorUserId: 'USER-001',
       },
+      pagedItems: queueItems,
+      pagination: reactive({
+        page: 1,
+        size: 20,
+      }),
       pageError: ref(pageErrorTextMock.value),
       pendingCount: computed(() => 1),
       queueItems,
@@ -363,6 +391,7 @@ vi.mock('../composables/useSpecimenCheckInPanel', async () => {
       scanInput: ref(''),
       selectedCount: computed(() => 0),
       selectedRows: computed(() => []),
+      total: computed(() => queueItems.value.length),
     }),
   };
 });
@@ -423,6 +452,9 @@ describe('SpecimenCheckInPanel', () => {
     expect(container.textContent).toContain('M2-001');
     expect(container.textContent).toContain('SP-001-2');
     expect(container.textContent).toContain('已接收');
+    expect(container.textContent).toContain('ZY-001');
+    expect(container.textContent).toContain('普外科病区 8B');
+    expect(container.textContent).toContain('PAT-001');
     expect(container.textContent).not.toContain('Surgery');
     expect(
       container.querySelector('.specimen-workflow-row--completed'),

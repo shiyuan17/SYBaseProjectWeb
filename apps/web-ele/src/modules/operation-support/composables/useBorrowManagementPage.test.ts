@@ -108,6 +108,7 @@ function createLoan(
 ): MaterialLoanView {
   return {
     caseId: 'CASE-1',
+    patientId: 'PAT-1',
     loanId: 'LOAN-1',
     loanStatus: 'BORROWED',
     materialId: 'SLIDE-1',
@@ -130,6 +131,7 @@ function createArchiveRecord(
     objectId: 'SLIDE-1',
     objectType: 'SLIDE',
     pathologyNo: 'BL-2026-001',
+    patientId: 'PAT-1',
     patientName: '患者甲',
     storedAt: '2026-06-15 10:00:00',
     storedByName: '归档员甲',

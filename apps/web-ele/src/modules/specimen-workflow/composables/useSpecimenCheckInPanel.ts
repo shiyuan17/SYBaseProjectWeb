@@ -1,4 +1,6 @@
+import type { ApplicationRegistrationWorkbenchRecord } from '../types/application-registration-workbench';
 import type { SpecimenManagementListItem } from '../types/specimen-workflow';
+import type { ResolvedWorkflowPatientInfo } from '../utils/patient-info';
 import type { CheckInBlockingStep } from '../utils/specimen-check-in';
 
 import { computed, reactive, ref } from 'vue';
@@ -21,6 +23,7 @@ import {
   loadOperatingRoomNameMapSafely,
   resolveOperatingRoomDisplayName,
 } from '../utils/operating-room-display';
+import { resolveWorkflowPatientInfo } from '../utils/patient-info';
 import {
   isCheckInReady as isCheckInReadyValue,
   resolveCheckInReadiness,
@@ -57,9 +60,13 @@ export type CheckInQueueItem = SpecimenManagementListItem & {
   checkInDraft: boolean;
   checkInStatusTagType: 'danger' | 'info' | 'success' | 'warning';
   displayCheckInStatus: string;
+  inpatientNoLabel: string;
+  patientGenderLabel: string;
+  patientIdLabel: string;
   queueAddedAt: string;
   queueAddedByName: string;
   queueStatus: 'FAILED' | 'PENDING' | 'SUCCESS';
+  wardName: string;
 };
 
 export function useSpecimenCheckInPanel() {
@@ -75,6 +82,16 @@ export function useSpecimenCheckInPanel() {
   const queueItems = ref<CheckInQueueItem[]>([]);
   const operatingRoomNameMap = ref<ReadonlyMap<string, string>>(new Map());
   const selectedRowKeys = ref<string[]>([]);
+  const pagination = reactive({
+    page: 1,
+    size: 20,
+  });
+  const applicationContextCache = reactive(
+    new Map<string, null | { patientGender: null | string; patientId: null | string }>(),
+  );
+  const workbenchRecordCache = reactive(
+    new Map<string, ApplicationRegistrationWorkbenchRecord | null>(),
+  );
 
   const operatorForm = reactive({
     loginName:
@@ -92,6 +109,11 @@ export function useSpecimenCheckInPanel() {
       selectedRowKeys.value.includes(item.specimenId),
     ),
   );
+  const total = computed(() => queueItems.value.length);
+  const pagedItems = computed(() => {
+    const start = (pagination.page - 1) * pagination.size;
+    return queueItems.value.slice(start, start + pagination.size);
+  });
 
   const selectedCount = computed(() => selectedRows.value.length);
 
@@ -99,6 +121,25 @@ export function useSpecimenCheckInPanel() {
     () =>
       queueItems.value.filter((item) => item.queueStatus !== 'SUCCESS').length,
   );
+
+  function resetToFirstPage() {
+    pagination.page = 1;
+  }
+
+  function clearSelectionKeys() {
+    selectedRowKeys.value = [];
+  }
+
+  function handlePageChange(page: number) {
+    pagination.page = page;
+    clearSelectionKeys();
+  }
+
+  function handlePageSizeChange(size: number) {
+    pagination.size = size;
+    pagination.page = 1;
+    clearSelectionKeys();
+  }
 
   async function ensureOperatingRoomNameMapLoaded() {
     if (operatingRoomNameMap.value.size > 0) {
@@ -185,6 +226,7 @@ export function useSpecimenCheckInPanel() {
   function buildQueueItem(
     row: SpecimenManagementListItem,
     applicationRows: SpecimenManagementListItem[] = [row],
+    patientInfo?: ResolvedWorkflowPatientInfo,
   ): CheckInQueueItem {
     const readiness = resolveCheckInReadiness(row, applicationRows);
     const isCheckedIn = row.checkInStatus === 'CHECKED_IN';
@@ -205,11 +247,62 @@ export function useSpecimenCheckInPanel() {
         readiness.canCheckIn,
         readiness.blockingStep,
       ),
+      inpatientNoLabel: patientInfo?.inpatientNo ?? '',
+      patientGenderLabel: patientInfo?.patientGenderLabel ?? '',
+      patientIdLabel: patientInfo?.patientIdLabel ?? '',
       queueAddedAt: new Date().toISOString(),
       queueAddedByName:
         operatorForm.operatorName.trim() || userStore.userInfo?.realName || '-',
       queueStatus: isCheckedIn ? 'SUCCESS' : 'PENDING',
+      wardName: patientInfo?.wardName ?? '',
     };
+  }
+
+  async function ensureApplicationContext(applicationId: string) {
+    const normalizedApplicationId = applicationId.trim();
+    if (!normalizedApplicationId) {
+      return null;
+    }
+    if (applicationContextCache.has(normalizedApplicationId)) {
+      return applicationContextCache.get(normalizedApplicationId) ?? null;
+    }
+    try {
+      const { getApplicationDetail } = await import('../api/specimen-workflow-service');
+      const detail = await getApplicationDetail(normalizedApplicationId);
+      const context = {
+        patientGender: detail.patientGender ?? null,
+        patientId: detail.patientId ?? null,
+      };
+      applicationContextCache.set(normalizedApplicationId, context);
+      return context;
+    } catch {
+      applicationContextCache.set(normalizedApplicationId, null);
+      return null;
+    }
+  }
+
+  async function ensureWorkbenchRecord(applicationNo: string) {
+    const normalizedApplicationNo = applicationNo.trim();
+    if (!normalizedApplicationNo) {
+      return null;
+    }
+    if (workbenchRecordCache.has(normalizedApplicationNo)) {
+      return workbenchRecordCache.get(normalizedApplicationNo) ?? null;
+    }
+    try {
+      const { lookupApplicationRegistrationWorkbenchRecord } = await import(
+        '../api/application-registration-workbench-service'
+      );
+      const record = await lookupApplicationRegistrationWorkbenchRecord({
+        keyword: normalizedApplicationNo,
+        queryType: 'APPLICATION_NO',
+      });
+      workbenchRecordCache.set(normalizedApplicationNo, record);
+      return record;
+    } catch {
+      workbenchRecordCache.set(normalizedApplicationNo, null);
+      return null;
+    }
   }
 
   async function upsertQueueItem(
@@ -217,6 +310,15 @@ export function useSpecimenCheckInPanel() {
     applicationRows: SpecimenManagementListItem[] = [row],
   ) {
     const roomNameById = await ensureOperatingRoomNameMapLoaded();
+    const [applicationContext, workbenchRecord] = await Promise.all([
+      ensureApplicationContext(row.applicationId),
+      ensureWorkbenchRecord(row.applicationNo),
+    ]);
+    const patientInfo = resolveWorkflowPatientInfo(row, {
+      patientGender: applicationContext?.patientGender ?? null,
+      patientId: applicationContext?.patientId ?? null,
+      workbenchRecord,
+    });
     const normalizedRow = {
       ...row,
       surgeryName: normalizeSurgeryName(row, roomNameById),
@@ -224,7 +326,7 @@ export function useSpecimenCheckInPanel() {
     const index = queueItems.value.findIndex(
       (item) => item.specimenId === normalizedRow.specimenId,
     );
-    const nextRow = buildQueueItem(normalizedRow, applicationRows);
+    const nextRow = buildQueueItem(normalizedRow, applicationRows, patientInfo);
     if (index !== -1) {
       const existingRow = queueItems.value[index];
       if (!existingRow) {
@@ -250,6 +352,7 @@ export function useSpecimenCheckInPanel() {
       return queueItems.value[index] ?? nextRow;
     }
     queueItems.value.unshift(nextRow);
+    resetToFirstPage();
     return nextRow;
   }
 
@@ -286,6 +389,9 @@ export function useSpecimenCheckInPanel() {
     selectedRowKeys.value = selectedRowKeys.value.filter(
       (item) => !targetSet.has(item),
     );
+    if (pagination.page > 1 && pagedItems.value.length === 0) {
+      pagination.page = Math.max(1, pagination.page - 1);
+    }
   }
 
   function clearSelection() {
@@ -294,7 +400,8 @@ export function useSpecimenCheckInPanel() {
 
   function clearQueue() {
     queueItems.value = [];
-    selectedRowKeys.value = [];
+    clearSelectionKeys();
+    resetToFirstPage();
   }
 
   function isCheckInReady(
@@ -468,6 +575,7 @@ export function useSpecimenCheckInPanel() {
       markQueuedSpecimenAsCheckInUnsaved(row.specimenId);
       ElMessage.success('已加入入库未保存');
       scanInput.value = '';
+      resetToFirstPage();
     } catch (error) {
       reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
     } finally {
@@ -634,8 +742,8 @@ export function useSpecimenCheckInPanel() {
         resolveExportValue(row.applicationNo),
         resolveExportValue(row.specimenNo),
         resolveExportValue(row.patientName),
-        '-',
-        '-',
+        resolveExportValue(row.inpatientNoLabel),
+        resolveExportValue(row.patientGenderLabel),
         resolveExportValue(row.surgeryName),
         resolveExportValue(row.specimenName),
         resolveExportValue(formatSpecimenStatus(row.specimenStatus)),
@@ -675,6 +783,8 @@ export function useSpecimenCheckInPanel() {
     handleExport,
     handleManualCheckIn,
     handleOperatorChange,
+    handlePageChange,
+    handlePageSizeChange,
     handlePrimaryCheckIn,
     handleQuickCheckIn,
     handleRemoveRow,
@@ -684,6 +794,8 @@ export function useSpecimenCheckInPanel() {
     isCheckInReady,
     loading,
     operatorForm,
+    pagedItems,
+    pagination,
     pageError,
     pendingCount,
     queueItems,
@@ -691,5 +803,6 @@ export function useSpecimenCheckInPanel() {
     scanInput,
     selectedCount,
     selectedRows,
+    total,
   };
 }

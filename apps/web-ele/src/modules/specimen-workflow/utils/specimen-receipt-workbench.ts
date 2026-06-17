@@ -6,6 +6,11 @@ import type {
 
 import { formatDateTime, formatNullable } from './format';
 import { resolveOperatingRoomDisplayName } from './operating-room-display';
+import {
+  normalizePatientGenderLabel,
+  normalizePatientInfoText,
+  resolveWorkflowPatientInfo,
+} from './patient-info';
 
 export type ReceiptWorkbenchDisplayStatus =
   | 'FAILED'
@@ -31,24 +36,14 @@ export type ReceiptWorkbenchRow = Partial<PendingSpecimenItem> &
     receivedAt: null | string;
     receivedByName: string;
     surgeryName: string;
+    wardName: string;
   };
 
 export const RECEIPT_WORKBENCH_MAX_QUERY_SIZE = 500;
 
-function normalizeText(value?: null | string) {
-  return value?.trim() ?? '';
-}
+const normalizeText = normalizePatientInfoText;
 
-export function normalizeGenderLabel(value?: null | string) {
-  const normalizedValue = value?.trim().toUpperCase();
-  if (normalizedValue === 'F' || normalizedValue === '女') {
-    return '女';
-  }
-  if (normalizedValue === 'M' || normalizedValue === '男') {
-    return '男';
-  }
-  return value?.trim() ?? '';
-}
+export const normalizeGenderLabel = normalizePatientGenderLabel;
 
 export function resolveReceiptWorkbenchExactMatches(
   items: SpecimenManagementListItem[],
@@ -106,6 +101,11 @@ export function createReceiptWorkbenchRow(
     workbenchRecord?.surgeryInfo.roomId,
     workbenchRecord?.surgeryInfo.surgeryName,
   );
+  const patientInfo = resolveWorkflowPatientInfo(specimen, {
+    patientGender: applicationContext?.patientGender ?? null,
+    patientId: applicationContext?.patientId ?? null,
+    workbenchRecord,
+  });
 
   return {
     abnormalFlag: pending?.abnormalFlag ?? specimen.abnormalFlag,
@@ -134,15 +134,13 @@ export function createReceiptWorkbenchRow(
     fixationStartedAt:
       pending?.fixationStartedAt ?? specimen.fixationStartedAt ?? null,
     fixationStatus: pending?.fixationStatus ?? specimen.fixationStatus,
-    inpatientNo: normalizeText(workbenchRecord?.patientInfo.inpatientNo),
+    inpatientNo: patientInfo.inpatientNo,
     labelPrintBatchNo: specimen.labelPrintBatchNo,
     labelPrintStatus: specimen.labelPrintStatus,
     latestTrackingAt:
       pending?.latestTrackingAt ?? specimen.latestTrackingAt ?? null,
-    patientGenderLabel: normalizeGenderLabel(
-      applicationContext?.patientGender ?? workbenchRecord?.patientInfo.gender,
-    ),
-    patientIdLabel: normalizeText(applicationContext?.patientId),
+    patientGenderLabel: patientInfo.patientGenderLabel,
+    patientIdLabel: patientInfo.patientIdLabel,
     patientName: pending?.patientName ?? specimen.patientName,
     queueAddedAt: new Date().toISOString(),
     queueAddedByName: normalizeText(queueAddedByName) || '-',
@@ -180,6 +178,7 @@ export function createReceiptWorkbenchRow(
       pending?.verificationStartedAt ?? specimen.verificationStartedAt ?? null,
     verificationStatus:
       pending?.verificationStatus ?? specimen.verificationStatus ?? null,
+    wardName: patientInfo.wardName,
   };
 }
 
@@ -194,6 +193,7 @@ export function buildReceiptWorkbenchExportHeaders() {
     '标本编号',
     '姓名',
     '住院号',
+    '病区',
     '性别',
     '手术间',
     '标本名称',
@@ -214,6 +214,7 @@ export function buildReceiptWorkbenchExportRows(rows: ReceiptWorkbenchRow[]) {
     formatNullable(row.specimenNo),
     formatNullable(row.patientName),
     formatNullable(row.inpatientNo),
+    formatNullable(row.wardName),
     formatNullable(row.patientGenderLabel),
     formatNullable(row.surgeryName),
     formatNullable(row.specimenName),

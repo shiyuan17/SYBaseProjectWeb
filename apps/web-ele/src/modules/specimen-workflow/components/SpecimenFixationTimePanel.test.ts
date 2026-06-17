@@ -67,6 +67,12 @@ type InputProps = {
   placeholder: string;
 };
 
+type PaginationProps = {
+  currentPage?: number;
+  pageSize?: number;
+  total?: number;
+};
+
 type TableProps = {
   data: Record<string, unknown>[];
   rowClassName?: (context: {
@@ -481,6 +487,21 @@ vi.mock('element-plus', () => ({
   ElMessage: {
     success: successMock,
     warning: warningMock,
+  },
+  ElPagination: {
+    props: {
+      currentPage: { default: 1, type: Number },
+      pageSize: { default: 20, type: Number },
+      total: { default: 0, type: Number },
+    },
+    setup(props: PaginationProps) {
+      return () =>
+        h('div', { 'data-testid': 'pagination' }, [
+          `page:${props.currentPage ?? 1}`,
+          `size:${props.pageSize ?? 20}`,
+          `total:${props.total ?? 0}`,
+        ]);
+    },
   },
   ElTable: {
     props: {

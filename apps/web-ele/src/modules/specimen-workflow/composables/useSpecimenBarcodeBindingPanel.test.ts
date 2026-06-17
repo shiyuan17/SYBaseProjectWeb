@@ -7,6 +7,7 @@ const {
   buildSpecimenBatchPrintDocumentMock,
   confirmMock,
   downloadFileFromBlobMock,
+  getLatestRegistrationResultMock,
   listOperatingBuildingOptionsMock,
   listSpecimensMock,
   retryLabelPrintMock,
@@ -22,6 +23,21 @@ const {
   buildSpecimenBatchPrintDocumentMock: vi.fn(() => '<html>print</html>'),
   confirmMock: vi.fn(async () => undefined),
   downloadFileFromBlobMock: vi.fn(),
+  getLatestRegistrationResultMock: vi.fn(async (applicationId: string) => ({
+    applicationId,
+    labelPrintBatchNo: applicationId === 'APP-001' ? 'LB-001' : 'LB-002',
+    labelPrintMessage: null,
+    labelPrintSuccess: true,
+    registrationSnapshot: {
+      collectionScene: null,
+      operatorName: 'Test User',
+      operatorUserId: 'USER-001',
+      printerCode: applicationId === 'APP-001' ? 'PRN-01' : 'PRN-02',
+      remarks: null,
+      terminalCode: null,
+    },
+    specimens: [],
+  })),
   listOperatingBuildingOptionsMock: vi.fn(async () => [
     {
       buildingId: 'B001',
@@ -231,6 +247,7 @@ vi.mock('../api/application-registration-workbench-service', () => ({
 
 vi.mock('../api/specimen-workflow-service', () => ({
   bindSpecimenBarcode: bindSpecimenBarcodeMock,
+  getLatestRegistrationResult: getLatestRegistrationResultMock,
   listSpecimens: listSpecimensMock,
   retryLabelPrint: retryLabelPrintMock,
   unbindSpecimenBarcode: unbindSpecimenBarcodeMock,
@@ -304,6 +321,7 @@ async function waitForComposableAssertion(assertion: () => void) {
 
 describe('useSpecimenBarcodeBindingPanel', () => {
   beforeEach(() => {
+    getLatestRegistrationResultMock.mockClear();
     listOperatingBuildingOptionsMock.mockClear();
     listSpecimensMock.mockClear();
   });
@@ -406,7 +424,7 @@ describe('useSpecimenBarcodeBindingPanel', () => {
     wrapper.destroy();
   });
 
-  it('supports retry, export, and grouped preprint actions', async () => {
+  it('supports direct retry, export, and grouped preprint actions', async () => {
     const wrapper = mountComposable();
     await flushComposable();
 
@@ -424,13 +442,10 @@ describe('useSpecimenBarcodeBindingPanel', () => {
     });
 
     state.handleSelectionChange(state.allRows.value);
-    state.handleRetryLabel();
-    expect(state.retryDialogVisible.value).toBe(true);
-
-    state.retryForm.printerCode = 'PRN-01';
-    await state.submitRetryLabel();
+    await state.handleRetryLabel();
     await flushComposable();
 
+    expect(getLatestRegistrationResultMock).toHaveBeenCalledWith('APP-001');
     expect(retryLabelPrintMock).toHaveBeenCalledWith('LB-001', {
       printerCode: 'PRN-01',
       remarks: null,
@@ -455,6 +470,40 @@ describe('useSpecimenBarcodeBindingPanel', () => {
     expect(buildSpecimenBatchPrintDocumentMock).toHaveBeenCalledTimes(2);
     expect(windowOpenMock).toHaveBeenCalledTimes(2);
     expect(workbenchLookupMock).toHaveBeenCalledTimes(2);
+
+    wrapper.destroy();
+  });
+
+  it('warns to print first when the current batch has no historical printer', async () => {
+    getLatestRegistrationResultMock.mockResolvedValueOnce({
+      applicationId: 'APP-001',
+      labelPrintBatchNo: 'LB-001',
+      labelPrintMessage: null,
+      labelPrintSuccess: false,
+      registrationSnapshot: {
+        collectionScene: null,
+        operatorName: 'Test User',
+        operatorUserId: 'USER-001',
+        printerCode: '',
+        remarks: null,
+        terminalCode: null,
+      },
+      specimens: [],
+    });
+
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    state.handleSelectionChange(state.allRows.value);
+    await state.handleRetryLabel();
+
+    expect(warningMock).toHaveBeenCalledWith('当前批次尚未打印，请先打印');
+    expect(retryLabelPrintMock).not.toHaveBeenCalled();
 
     wrapper.destroy();
   });
