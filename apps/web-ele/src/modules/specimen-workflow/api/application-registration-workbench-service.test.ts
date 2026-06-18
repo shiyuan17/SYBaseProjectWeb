@@ -234,4 +234,63 @@ describe('application-registration-workbench-service', () => {
       ],
     });
   });
+
+  it('resolves operating rooms from the loaded system-config sourced building options', async () => {
+    vi.resetModules();
+
+    vi.doMock('#/api/request', () => ({
+      requestClient: {
+        get: vi.fn(async (url: string) => {
+          if (url === '/v1/application-registration-workbench/operating-options') {
+            return {
+              buildings: [
+                {
+                  buildingId: 'B001',
+                  buildingName: '惠侨楼',
+                  floors: 12,
+                  location: '北区',
+                  operatingRooms: [
+                    {
+                      buildingId: 'B001',
+                      cleanLevel: '百级',
+                      floor: 3,
+                      roomId: 'OR-101',
+                      roomName: '手术室 1',
+                      roomType: '洁净手术室',
+                    },
+                    {
+                      buildingId: 'B001',
+                      cleanLevel: '千级',
+                      floor: 3,
+                      roomId: 'OR-102',
+                      roomName: '手术室 2',
+                      roomType: '洁净手术室',
+                    },
+                    {
+                      buildingId: 'B001',
+                      cleanLevel: '万级',
+                      floor: 4,
+                      roomId: 'OR-103',
+                      roomName: '手术室 3',
+                      roomType: '普通手术室',
+                    },
+                  ],
+                },
+              ],
+            };
+          }
+          throw new Error(`Unexpected url: ${url}`);
+        }),
+      },
+    }));
+
+    const service = await import('./application-registration-workbench-service');
+    const rooms = await service.listOperatingRoomOptions('B001');
+
+    expect(rooms.map((room) => room.roomName)).toEqual([
+      '手术室 1',
+      '手术室 2',
+      '手术室 3',
+    ]);
+  });
 });

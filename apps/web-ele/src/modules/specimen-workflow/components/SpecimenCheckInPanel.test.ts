@@ -363,13 +363,11 @@ vi.mock('../composables/useSpecimenCheckInPanel', async () => {
       }),
       handleBatchCheckIn: vi.fn(),
       handleExport: vi.fn(),
-      handleManualCheckIn: vi.fn(),
       handleOperatorChange: vi.fn(),
       handlePageChange: vi.fn(),
       handlePageSizeChange: vi.fn(),
       handlePrimaryCheckIn: handlePrimaryCheckInMock,
       handleQuickCheckIn: vi.fn(),
-      handleRemoveRow: vi.fn(),
       handleReset: vi.fn(),
       handleRetryLabelPrint: vi.fn(),
       handleSelectionChange: vi.fn(),
@@ -477,7 +475,7 @@ describe('SpecimenCheckInPanel', () => {
     app.unmount();
   });
 
-  it('shows real specimen status and derived check-in status separately', async () => {
+  it('shows real specimen status and derived check-in status separately without per-row actions', async () => {
     const { app, container } = mountView();
     await flush();
 
@@ -486,27 +484,11 @@ describe('SpecimenCheckInPanel', () => {
     expect(container.textContent).toContain('固定完成');
     expect(container.textContent).toContain('已接收');
 
-    const buttons = [...container.querySelectorAll('button')].map((button) => ({
-      disabled: button.disabled,
-      text: button.textContent?.trim(),
-      title: button.getAttribute('title'),
-    }));
-    expect(
-      buttons.some(
-        (button) =>
-          button.text === '入库' &&
-          button.disabled &&
-          button.title === '标本已完成入库，无需重复操作',
-      ),
-    ).toBe(true);
-    expect(
-      buttons.some(
-        (button) =>
-          button.text === '入库' &&
-          button.disabled &&
-          button.title === '标本已接收、拒收或退回，不能再入库',
-      ),
-    ).toBe(true);
+    const rowButtonTexts = [...container.querySelectorAll('button')].map(
+      (button) => button.textContent?.trim(),
+    );
+    expect(rowButtonTexts).not.toContain('入库');
+    expect(rowButtonTexts).not.toContain('移除');
 
     app.unmount();
   });

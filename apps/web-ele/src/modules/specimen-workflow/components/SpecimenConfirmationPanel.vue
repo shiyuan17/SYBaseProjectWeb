@@ -28,7 +28,6 @@ const {
   batchRetryResult,
   canConfirm,
   filters,
-  handleConfirmRow,
   handleConfirmSelected,
   handleClearList,
   handleClearSelectionRows,
@@ -217,19 +216,6 @@ function resolveRowClassName({
       <ElTableColumn label="病人ID" min-width="140">
         <template #default="{ row }">
           {{ formatNullable(row.patientIdLabel) }}
-        </template>
-      </ElTableColumn>
-      <ElTableColumn fixed="right" label="操作" width="110">
-        <template #default="{ row }">
-          <ElButton
-            link
-            :disabled="!canConfirm(row)"
-            :title="row.actionDisabledReason ?? ''"
-            type="primary"
-            @click="handleConfirmRow(row)"
-          >
-            标本确认
-          </ElButton>
         </template>
       </ElTableColumn>
     </ElTable>

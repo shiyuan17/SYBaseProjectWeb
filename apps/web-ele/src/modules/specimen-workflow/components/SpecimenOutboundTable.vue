@@ -87,11 +87,6 @@ function resolvePatientIdDisplay(row: SpecimenOutboundDisplayItem) {
         {{ formatNullable(row.inpatientNo) }}
       </template>
     </ElTableColumn>
-    <ElTableColumn label="病区" min-width="140">
-      <template #default="{ row }">
-        {{ formatNullable(row.wardName) }}
-      </template>
-    </ElTableColumn>
     <ElTableColumn label="性别" min-width="90">
       <template #default="{ row }">
         {{ formatNullable(row.patientGender) }}

@@ -599,23 +599,6 @@ export function useSpecimenCheckInPanel() {
     selectedRowKeys.value = rows.map((item) => item.specimenId);
   }
 
-  async function handleManualCheckIn(row: CheckInQueueItem) {
-    const selectedOperator = resolveSelectedOperator();
-    if (!selectedOperator) {
-      return;
-    }
-    const operatorVerificationToken =
-      await resolveOperatorVerificationToken(selectedOperator);
-    if (!operatorVerificationToken && !isCurrentUserSelected()) {
-      return;
-    }
-    await performCheckIn(row, operatorVerificationToken);
-  }
-
-  function handleRemoveRow(row: CheckInQueueItem) {
-    removeQueueItems([row.specimenId]);
-  }
-
   function handleReset() {
     scanInput.value = '';
     clearQueue();
@@ -784,13 +767,11 @@ export function useSpecimenCheckInPanel() {
     formatSpecimenStatus,
     handleBatchCheckIn,
     handleExport,
-    handleManualCheckIn,
     handleOperatorChange,
     handlePageChange,
     handlePageSizeChange,
     handlePrimaryCheckIn,
     handleQuickCheckIn,
-    handleRemoveRow,
     handleReset,
     handleRetryLabelPrint,
     handleSelectionChange,

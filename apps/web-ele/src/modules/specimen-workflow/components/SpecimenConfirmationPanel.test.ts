@@ -174,14 +174,12 @@ describe('SpecimenConfirmationPanel', () => {
     const confirmButtons = [...container.querySelectorAll('button')].filter(
       (button) => button.textContent?.trim() === '标本确认',
     );
+    expect(confirmButtons.length).toBe(1);
     confirmButtons.at(-1)?.click();
     await flush();
 
-    expect(mockHandleConfirmRow).toHaveBeenCalledWith(
-      expect.objectContaining({
-        specimenId: 'SPEC-001',
-      }),
-    );
+    expect(mockHandleConfirmSelected).toHaveBeenCalledTimes(1);
+    expect(mockHandleConfirmRow).not.toHaveBeenCalled();
 
     const clearListButton = [...container.querySelectorAll('button')].find(
       (button) => button.textContent?.includes('清除列表'),

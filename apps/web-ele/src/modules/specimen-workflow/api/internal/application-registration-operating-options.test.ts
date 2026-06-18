@@ -26,6 +26,30 @@ function createEncodedOperatingOptions(): OperatingBuildingOption[] {
 }
 
 describe('normalizeOperatingBuildingOptions', () => {
+  it('keeps system-config sourced labels when the backend already returns formal names', () => {
+    const normalized = normalizeOperatingBuildingOptions([
+      {
+        buildingId: 'B001',
+        buildingName: '惠侨楼',
+        floors: 12,
+        location: '院区北侧',
+        operatingRooms: [
+          {
+            buildingId: 'B001',
+            cleanLevel: '',
+            floor: 0,
+            roomId: 'OR-102',
+            roomName: '手术室 2',
+            roomType: '',
+          },
+        ],
+      },
+    ]);
+
+    expect(normalized[0]?.buildingName).toBe('惠侨楼');
+    expect(normalized[0]?.operatingRooms[0]?.roomName).toBe('手术室 2');
+  });
+
   it('falls back to local Chinese labels when the backend only returns codes', () => {
     const normalized = normalizeOperatingBuildingOptions(
       createEncodedOperatingOptions(),

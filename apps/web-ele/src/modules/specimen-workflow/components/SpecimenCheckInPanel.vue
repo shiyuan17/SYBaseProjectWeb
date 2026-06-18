@@ -25,13 +25,11 @@ const {
   exportLoading,
   formatSpecimenStatus,
   handleExport,
-  handleManualCheckIn,
   handleOperatorChange,
   handlePageChange,
   handlePageSizeChange,
   handlePrimaryCheckIn,
   handleQuickCheckIn,
-  handleRemoveRow,
   handleReset,
   handleRetryLabelPrint,
   handleSelectionChange,
@@ -189,24 +187,6 @@ function resolveRowClassName({
       <ElTableColumn label="病人ID" min-width="140">
         <template #default="{ row }">
           {{ formatNullable(row.patientIdLabel) }}
-        </template>
-      </ElTableColumn>
-      <ElTableColumn fixed="right" label="操作" width="150">
-        <template #default="{ row }">
-          <div class="flex items-center gap-2">
-            <ElButton
-              link
-              :disabled="row.queueStatus === 'SUCCESS' || !row.canCheckIn"
-              :title="row.canCheckIn ? '' : row.checkInDisabledReason || ''"
-              type="primary"
-              @click="handleManualCheckIn(row)"
-            >
-              入库
-            </ElButton>
-            <ElButton link type="danger" @click="handleRemoveRow(row)">
-              移除
-            </ElButton>
-          </div>
         </template>
       </ElTableColumn>
     </ElTable>
