@@ -1016,9 +1016,17 @@ describe('system-management-service requests', () => {
   it('covers system-config and numbering-rule endpoints', async () => {
     requestClientMock.get
       .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        items: [],
+        systems: [],
+      })
       .mockResolvedValueOnce(undefined);
 
     await expect(service.listSystemConfigs()).resolves.toEqual([]);
+    await expect(service.getSpecimenDictionaryConfigTree()).resolves.toEqual({
+      items: [],
+      systems: [],
+    });
     await expect(service.listNumberingRules()).resolves.toEqual([]);
 
     await service.createSystemConfigCategory({
@@ -1046,6 +1054,36 @@ describe('system-management-service requests', () => {
       remarks: 'updated',
     } as never);
     await service.deleteSystemConfigItem('SCI-1');
+    await service.createSpecimenDictionaryCategory({
+      categoryName: '妇科',
+      enabled: true,
+      parentId: 'SCC_SPECIMEN_DICTIONARY',
+      sortOrder: 10,
+    } as never);
+    await service.updateSpecimenDictionaryCategory('SCC-SPEC-1', {
+      categoryCode: null,
+      categoryName: '更新妇科',
+      enabled: true,
+      parentId: 'SCC_SPECIMEN_DICTIONARY',
+      sortOrder: 11,
+    } as never);
+    await service.deleteSpecimenDictionaryCategory('SCC-SPEC-1');
+    await service.createSpecimenDictionaryItem({
+      configKey: 'specimen.dictionary.item.100',
+      departmentIds: ['DEPT-GYNE'],
+      enabled: true,
+      partCategoryId: 'SCC_SPEC_DICT_PART_301',
+      specimenName: '宫颈新标本',
+      sortOrder: 1,
+    } as never);
+    await service.updateSpecimenDictionaryItem('SCI-SPEC-1', {
+      departmentIds: ['DEPT-GYNE', 'DEPT-GENERAL'],
+      enabled: true,
+      remarks: 'updated',
+      specimenName: '宫颈更新标本',
+      sortOrder: 2,
+    } as never);
+    await service.deleteSpecimenDictionaryItem('SCI-SPEC-1');
 
     await service.updateNumberingRule('NR-1', {
       datePattern: 'yyyyMMdd',
@@ -1062,6 +1100,10 @@ describe('system-management-service requests', () => {
     );
     expect(requestClientMock.get).toHaveBeenNthCalledWith(
       2,
+      '/v1/system-configs/specimen-dictionary',
+    );
+    expect(requestClientMock.get).toHaveBeenNthCalledWith(
+      3,
       '/v1/numbering-rules',
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
@@ -1100,6 +1142,28 @@ describe('system-management-service requests', () => {
         enabled: true,
       },
     );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      3,
+      '/v1/system-configs/specimen-dictionary/categories',
+      {
+        categoryName: '妇科',
+        enabled: true,
+        parentId: 'SCC_SPECIMEN_DICTIONARY',
+        sortOrder: 10,
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      4,
+      '/v1/system-configs/specimen-dictionary/items',
+      {
+        configKey: 'specimen.dictionary.item.100',
+        departmentIds: ['DEPT-GYNE'],
+        enabled: true,
+        partCategoryId: 'SCC_SPEC_DICT_PART_301',
+        specimenName: '宫颈新标本',
+        sortOrder: 1,
+      },
+    );
     expect(requestClientMock.request).toHaveBeenNthCalledWith(
       2,
       '/v1/system-configs/items/SCI-1',
@@ -1118,6 +1182,34 @@ describe('system-management-service requests', () => {
     );
     expect(requestClientMock.request).toHaveBeenNthCalledWith(
       3,
+      '/v1/system-configs/specimen-dictionary/categories/SCC-SPEC-1',
+      {
+        data: {
+          categoryCode: null,
+          categoryName: '更新妇科',
+          enabled: true,
+          parentId: 'SCC_SPECIMEN_DICTIONARY',
+          sortOrder: 11,
+        },
+        method: 'PATCH',
+      },
+    );
+    expect(requestClientMock.request).toHaveBeenNthCalledWith(
+      4,
+      '/v1/system-configs/specimen-dictionary/items/SCI-SPEC-1',
+      {
+        data: {
+          departmentIds: ['DEPT-GYNE', 'DEPT-GENERAL'],
+          enabled: true,
+          remarks: 'updated',
+          specimenName: '宫颈更新标本',
+          sortOrder: 2,
+        },
+        method: 'PATCH',
+      },
+    );
+    expect(requestClientMock.request).toHaveBeenNthCalledWith(
+      5,
       '/v1/numbering-rules/NR-1',
       {
         data: {
@@ -1130,6 +1222,14 @@ describe('system-management-service requests', () => {
         },
         method: 'PATCH',
       },
+    );
+    expect(requestClientMock.delete).toHaveBeenNthCalledWith(
+      3,
+      '/v1/system-configs/specimen-dictionary/categories/SCC-SPEC-1',
+    );
+    expect(requestClientMock.delete).toHaveBeenNthCalledWith(
+      4,
+      '/v1/system-configs/specimen-dictionary/items/SCI-SPEC-1',
     );
   });
 });

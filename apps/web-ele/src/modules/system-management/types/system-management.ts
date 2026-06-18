@@ -300,6 +300,41 @@ export interface ConfigCategoryNode extends TreeNodeBase {
   items: ConfigItemView[];
 }
 
+export interface SpecimenDictionaryItemView {
+  departmentIds: string[];
+  enabled: boolean;
+  id: string;
+  partCategoryId: string;
+  remarks: null | string;
+  sortOrder: number;
+  specimenName: string;
+  configKey: string;
+}
+
+export interface SpecimenDictionaryPartCategoryView {
+  categoryCode: string;
+  categoryName: string;
+  enabled: boolean;
+  id: string;
+  items: SpecimenDictionaryItemView[];
+  parentId: string;
+  sortOrder: number;
+}
+
+export interface SpecimenDictionarySystemCategoryView {
+  categoryCode: string;
+  categoryName: string;
+  enabled: boolean;
+  id: string;
+  parts: SpecimenDictionaryPartCategoryView[];
+  sortOrder: number;
+}
+
+export interface SpecimenDictionaryTreeView {
+  items: SpecimenDictionaryItemView[];
+  systems: SpecimenDictionarySystemCategoryView[];
+}
+
 export interface NumberingRuleView {
   bizType: string;
   createdAt: string;
@@ -525,6 +560,35 @@ export interface UpdateConfigItemRequest {
   configValue?: null | string;
   enabled: boolean;
   remarks?: null | string;
+}
+
+export interface CreateSpecimenDictionaryCategoryRequest {
+  categoryCode?: null | string;
+  categoryName: string;
+  enabled: boolean;
+  parentId?: null | string;
+  sortOrder: number;
+}
+
+export type UpdateSpecimenDictionaryCategoryRequest =
+  CreateSpecimenDictionaryCategoryRequest;
+
+export interface CreateSpecimenDictionaryItemRequest {
+  configKey: string;
+  departmentIds: string[];
+  enabled: boolean;
+  partCategoryId: string;
+  remarks?: null | string;
+  sortOrder: number;
+  specimenName: string;
+}
+
+export interface UpdateSpecimenDictionaryItemRequest {
+  departmentIds: string[];
+  enabled: boolean;
+  remarks?: null | string;
+  sortOrder: number;
+  specimenName: string;
 }
 
 export interface UpdateNumberingRuleRequest {

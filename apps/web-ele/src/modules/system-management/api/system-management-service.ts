@@ -15,6 +15,8 @@ import type {
   CreateMedicalOrderItemRequest,
   CreatePackageRequest,
   CreateRoleRequest,
+  CreateSpecimenDictionaryCategoryRequest,
+  CreateSpecimenDictionaryItemRequest,
   CreateSystemUserRequest,
   CreateTemplateCategoryRequest,
   CreateTemplateRequest,
@@ -35,6 +37,8 @@ import type {
   PrintLoginTagResponse,
   RoleAuthorizationView,
   RoleView,
+  SpecimenDictionaryItemView,
+  SpecimenDictionaryTreeView,
   StatCategoryView,
   SystemUser,
   TemplateCategoryNode,
@@ -52,6 +56,8 @@ import type {
   UpdatePackageRequest,
   UpdateRoleAuthorizationRequest,
   UpdateRoleRequest,
+  UpdateSpecimenDictionaryCategoryRequest,
+  UpdateSpecimenDictionaryItemRequest,
   UpdateSystemUserRequest,
   UpdateTemplateCategoryRequest,
   UpdateTemplateRequest,
@@ -587,6 +593,62 @@ export async function updateSystemConfigItem(
 
 export async function deleteSystemConfigItem(id: string) {
   return requestClient.delete(`/v1/system-configs/items/${id}`);
+}
+
+export async function getSpecimenDictionaryConfigTree() {
+  return requestClient.get<SpecimenDictionaryTreeView>(
+    '/v1/system-configs/specimen-dictionary',
+  );
+}
+
+export async function createSpecimenDictionaryCategory(
+  data: CreateSpecimenDictionaryCategoryRequest,
+) {
+  return requestClient.post<ConfigCategoryNode>(
+    '/v1/system-configs/specimen-dictionary/categories',
+    data,
+  );
+}
+
+export async function updateSpecimenDictionaryCategory(
+  id: string,
+  data: UpdateSpecimenDictionaryCategoryRequest,
+) {
+  return requestPatch<ConfigCategoryNode>(
+    `/v1/system-configs/specimen-dictionary/categories/${id}`,
+    data,
+  );
+}
+
+export async function deleteSpecimenDictionaryCategory(id: string) {
+  return requestClient.delete(
+    `/v1/system-configs/specimen-dictionary/categories/${id}`,
+  );
+}
+
+export async function createSpecimenDictionaryItem(
+  data: CreateSpecimenDictionaryItemRequest,
+) {
+  return requestClient.post<SpecimenDictionaryItemView>(
+    '/v1/system-configs/specimen-dictionary/items',
+    data,
+  );
+}
+
+export async function updateSpecimenDictionaryItem(
+  id: string,
+  data: UpdateSpecimenDictionaryItemRequest,
+) {
+  return requestPatch<SpecimenDictionaryItemView>(
+    `/v1/system-configs/specimen-dictionary/items/${id}`,
+    data,
+  );
+}
+
+export async function deleteSpecimenDictionaryItem(id: string) {
+  return requestClient.delete(
+    `/v1/system-configs/specimen-dictionary/items/${id}`,
+  );
 }
 
 export async function listNumberingRules() {
