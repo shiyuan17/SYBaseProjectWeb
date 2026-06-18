@@ -55,6 +55,7 @@ export interface SamplingTemplateTreeOption {
 export type GrossingDescriptionTab =
   | 'clinicalHistory'
   | 'grossDescription'
+  | 'imageCapture'
   | 'relatedExaminations';
 
 interface UseGrossingWorkbenchOptions {
@@ -141,7 +142,7 @@ export function useGrossingWorkbench(
   const trackingResult = ref<null | TechnicalTrackingViewModel>(null);
   const activeSpecimenKey = ref('');
   const selectedEmbeddingBoxSpecimenKey = ref('');
-  const descriptionTab = ref<GrossingDescriptionTab>('grossDescription');
+  const descriptionTab = ref<GrossingDescriptionTab>('imageCapture');
   const uploadingSpecimenKeys = ref<string[]>([]);
   const bodyPartTreeOptions = ref<BodyPartNode[]>([]);
   const samplingTemplateTreeOptions = ref<SamplingTemplateTreeOption[]>([]);
@@ -381,7 +382,7 @@ export function useGrossingWorkbench(
     workbenchContext.value = null;
     trackingResult.value = null;
     pageError.value = '';
-    descriptionTab.value = 'grossDescription';
+    descriptionTab.value = 'imageCapture';
     assignTechnicalOperatorForm(operatorForm, userStore.userInfo ?? undefined);
     completeForm.caseId = task?.caseId ?? '';
     completeForm.taskId = task?.id ?? '';
@@ -832,10 +833,6 @@ export function useGrossingWorkbench(
     }
     if (!completeForm.caseId.trim()) {
       ElMessage.warning('当前缺少病例编号');
-      return;
-    }
-    if (!operatorForm.operatorName.trim()) {
-      ElMessage.warning('请先确认当前登录人');
       return;
     }
 

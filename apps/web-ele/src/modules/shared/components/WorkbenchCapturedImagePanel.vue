@@ -291,58 +291,55 @@ onBeforeUnmount(() => {
       type="file"
       @change="handleImageFileChange"
     />
-    <header
-      class="flex min-h-8 items-center justify-between gap-2 border-b border-border bg-muted/30 px-3 text-xs font-semibold text-foreground"
-    >
-      <span>已采图像</span>
-      <div class="inline-flex items-center gap-2">
-        <div
-          class="inline-flex items-center gap-2 text-xs text-muted-foreground"
-        >
-          <span>{{ cameraStatusText }}</span>
-          <ElSwitch
-            v-model="cameraPreviewEnabled"
-            :disabled="!canEdit"
-            aria-label="预览开关"
-          />
-        </div>
-        <ElTooltip content="拍照" placement="top">
-          <ElButton
-            aria-label="拍照"
-            :disabled="!canEdit || !cameraReady"
-            :icon="Camera"
-            :loading="cameraCapturing"
-            size="small"
-            title="拍照"
-            @click="void handleCaptureImage()"
-          >
-            拍照
-          </ElButton>
-        </ElTooltip>
-        <ElTooltip content="导入图片" placement="top">
-          <ElButton
-            aria-label="导入图片"
-            :disabled="!canEdit"
-            :icon="ImagePlus"
-            size="small"
-            title="导入图片"
-            @click="handleImportImage"
-          >
-            导入图片
-          </ElButton>
-        </ElTooltip>
-      </div>
-    </header>
     <div
       data-testid="workbench-captured-image-panel-body"
       :class="panelBodyClass"
     >
       <section class="mb-3 rounded-md border border-border bg-muted/20 p-3">
-        <div class="mb-2 flex items-center justify-between gap-2">
-          <span class="text-xs font-semibold text-foreground">
-            摄像头预览
-          </span>
-          <span class="text-xs text-muted-foreground">{{ previewHint }}</span>
+        <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold text-foreground">
+              摄像头预览
+            </span>
+            <span class="text-xs text-muted-foreground">{{ previewHint }}</span>
+          </div>
+          <div class="inline-flex items-center gap-2">
+            <div
+              class="inline-flex items-center gap-2 text-xs text-muted-foreground"
+            >
+              <span>{{ cameraStatusText }}</span>
+              <ElSwitch
+                v-model="cameraPreviewEnabled"
+                :disabled="!canEdit"
+                aria-label="预览开关"
+              />
+            </div>
+            <ElTooltip content="拍照" placement="top">
+              <ElButton
+                aria-label="拍照"
+                :disabled="!canEdit || !cameraReady"
+                :icon="Camera"
+                :loading="cameraCapturing"
+                size="small"
+                title="拍照"
+                @click="void handleCaptureImage()"
+              >
+                拍照
+              </ElButton>
+            </ElTooltip>
+            <ElTooltip content="导入图片" placement="top">
+              <ElButton
+                aria-label="导入图片"
+                :disabled="!canEdit"
+                :icon="ImagePlus"
+                size="small"
+                title="导入图片"
+                @click="handleImportImage"
+              >
+                导入图片
+              </ElButton>
+            </ElTooltip>
+          </div>
         </div>
         <div
           class="flex h-40 items-center justify-center overflow-hidden rounded-md border border-dashed border-border bg-slate-950"

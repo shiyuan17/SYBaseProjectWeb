@@ -69,8 +69,11 @@ const {
 });
 
 const descriptionTab = ref<
-  'clinicalHistory' | 'grossDescription' | 'relatedExaminations'
->('grossDescription');
+  | 'clinicalHistory'
+  | 'grossDescription'
+  | 'imageCapture'
+  | 'relatedExaminations'
+>('imageCapture');
 const activeSpecimenKey = ref('specimen-1');
 const selectedEmbeddingBoxSpecimenKey = ref('specimen-1');
 const completeForm = reactive({
@@ -359,14 +362,6 @@ vi.mock('../utils/navigation', () => ({
   useTechnicalWorkflowNavigation: () => mockNavigation,
 }));
 
-vi.mock('../components/TechnicalOperatorFields.vue', () => ({
-  default: defineComponent({
-    setup() {
-      return () => h('div', 'technical-operator-fields');
-    },
-  }),
-}));
-
 vi.mock('../components/GrossingSpecimenTabs.vue', () => ({
   default: defineComponent({
     props: ['activeSpecimenKey'],
@@ -637,7 +632,7 @@ async function flushAll() {
 
 async function mountView(query?: Record<string, string>) {
   mockRoute.query = query ?? { pathologyNo: 'BL-001' };
-  descriptionTab.value = 'grossDescription';
+  descriptionTab.value = 'imageCapture';
   activeSpecimenKey.value = 'specimen-1';
   selectedEmbeddingBoxSpecimenKey.value = 'specimen-1';
   completeForm.caseId = 'CASE-001';
@@ -848,12 +843,9 @@ describe('GrossingWorkstationView', () => {
     findButton(root, '取材').click();
     await flushAll();
 
-    expect(mockStartGrossing).toHaveBeenCalledWith(
-      expect.objectContaining({
-        taskId: 'TASK-001',
-        terminalCode: 'TG-01',
-      }),
-    );
+    expect(mockStartGrossing).toHaveBeenCalledWith({
+      taskId: 'TASK-001',
+    });
 
     app.unmount();
   });
@@ -1094,6 +1086,9 @@ describe('GrossingWorkstationView', () => {
   it('keeps gross description compact and exposes the new save and labeled actions', async () => {
     const { app, root } = await mountView();
 
+    findButton(root, '大体描写').click();
+    await flushAll();
+
     const grossDescriptionInput = root.querySelector<HTMLTextAreaElement>(
       'textarea[placeholder="请输入当前标本的大体描写"]',
     );
@@ -1111,9 +1106,9 @@ describe('GrossingWorkstationView', () => {
     expect(root.textContent).not.toContain('保存描述');
     expect(root.textContent).not.toContain('暂存');
     expect(root.textContent).toContain('取材模板');
-    expect(root.textContent).toContain('拍照');
-    expect(root.textContent).toContain('导入图片');
-    expect(root.textContent).toContain('已采图像');
+    expect(root.textContent).not.toContain('拍照');
+    expect(root.textContent).not.toContain('导入图片');
+    expect(root.textContent).not.toContain('已采图像');
 
     findButton(root, '保存').click();
     await flushAll();
@@ -1126,6 +1121,9 @@ describe('GrossingWorkstationView', () => {
 
   it('keeps the grossing template panel on the right and appends a selected template', async () => {
     const { app, root } = await mountView();
+
+    findButton(root, '大体描写').click();
+    await flushAll();
 
     const grossDescriptionInput = root.querySelector<HTMLTextAreaElement>(
       'textarea[placeholder="请输入当前标本的大体描写"]',
@@ -1208,6 +1206,9 @@ describe('GrossingWorkstationView', () => {
 
   it('appends a grossing template directly when double-clicking the template card', async () => {
     const { app, root } = await mountView();
+
+    findButton(root, '大体描写').click();
+    await flushAll();
 
     const grossDescriptionInput = root.querySelector<HTMLTextAreaElement>(
       'textarea[placeholder="请输入当前标本的大体描写"]',
@@ -1294,13 +1295,13 @@ describe('GrossingWorkstationView', () => {
     app.unmount();
   });
 
-  it('keeps operator fields and specimen editor reachable from the main workspace', async () => {
+  it('hides the specimen / block / image editor from the main workspace', async () => {
     const { app, root } = await mountView();
 
-    expect(root.textContent).toContain('操作信息');
-    expect(root.textContent).toContain('标本 / 蜡块 / 影像编辑');
-    expect(root.textContent).toContain('technical-operator-fields');
-    expect(root.textContent).toContain('grossing-specimen-tabs:specimen-1');
+    expect(root.textContent).not.toContain('操作信息');
+    expect(root.textContent).not.toContain('technical-operator-fields');
+    expect(root.textContent).not.toContain('标本 / 蜡块 / 影像编辑');
+    expect(root.textContent).not.toContain('grossing-specimen-tabs:specimen-1');
 
     app.unmount();
   });

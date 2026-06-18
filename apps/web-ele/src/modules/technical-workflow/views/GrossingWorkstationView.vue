@@ -29,7 +29,6 @@ import {
   ElCheckbox,
   ElDatePicker,
   ElEmpty,
-  ElForm,
   ElInput,
   ElMessage,
   ElPagination,
@@ -48,8 +47,6 @@ import {
   startGrossing,
 } from '../api/technical-workflow-service';
 import GrossingEmbeddingBoxTable from '../components/GrossingEmbeddingBoxTable.vue';
-import GrossingSpecimenTabs from '../components/GrossingSpecimenTabs.vue';
-import TechnicalOperatorFields from '../components/TechnicalOperatorFields.vue';
 import { useGrossingWorkbench } from '../composables/useGrossingWorkbench';
 import { DEFAULT_PAGE_SIZE } from '../constants';
 import {
@@ -1041,9 +1038,7 @@ async function handleStartOrContinue() {
   queueError.value = '';
   try {
     await startGrossing({
-      remarks: workbench.operatorForm.remarks.trim() || undefined,
       taskId: selectedTask.value.id,
-      terminalCode: workbench.operatorForm.terminalCode.trim() || undefined,
     });
     ElMessage.success(`任务 ${selectedTask.value.id} 已开始取材`);
     await loadPendingData(selectedTask.value.id);
@@ -1426,22 +1421,6 @@ if (shouldInitialLoad.value) {
               @remove-embedding-box="workbench.removeEmbeddingBox"
             />
 
-            <section class="border-b border-border bg-muted/10 px-3 py-3">
-              <div class="mb-3">
-                <h3 class="text-sm font-semibold text-foreground">操作信息</h3>
-                <p class="mt-0.5 text-xs text-muted-foreground">
-                  当前取材任务的操作人、终端和补充说明
-                </p>
-              </div>
-              <ElForm label-width="96px">
-                <TechnicalOperatorFields
-                  :form="workbench.operatorForm"
-                  remarks-placeholder="必要时补充本次取材说明"
-                  terminal-placeholder="取材终端编码"
-                />
-              </ElForm>
-            </section>
-
             <section class="relative border-b border-border">
               <div
                 v-if="workbench.descriptionTab.value === 'grossDescription'"
@@ -1468,6 +1447,19 @@ if (shouldInitialLoad.value) {
                 v-model="workbench.descriptionTab.value"
                 class="px-3 pb-3 pr-36"
               >
+                <ElTabPane label="采图" name="imageCapture">
+                  <div class="pt-2">
+                    <WorkbenchCapturedImagePanel
+                      :accept="workbench.grossingImageAccept"
+                      :can-edit="canEditCapturedImages"
+                      disabled-text="请先从左侧列表选择任务和可编辑标本"
+                      :items="capturedImageItems"
+                      scroll-mode="external"
+                      :upload-image-file="uploadGrossingImage"
+                    />
+                  </div>
+                </ElTabPane>
+
                 <ElTabPane label="大体描写" name="grossDescription">
                   <div class="grid gap-2 pt-2">
                     <ElInput
@@ -1526,58 +1518,6 @@ if (shouldInitialLoad.value) {
                   </div>
                 </ElTabPane>
               </ElTabs>
-            </section>
-
-            <template
-              v-if="workbench.descriptionTab.value !== 'clinicalHistory'"
-            >
-              <WorkbenchCapturedImagePanel
-                :accept="workbench.grossingImageAccept"
-                :can-edit="canEditCapturedImages"
-                disabled-text="请先从左侧列表选择任务和可编辑标本"
-                :items="capturedImageItems"
-                scroll-mode="external"
-                :upload-image-file="uploadGrossingImage"
-              />
-            </template>
-
-            <section class="border-t border-border bg-muted/10 px-3 py-3">
-              <div class="mb-3">
-                <h3 class="text-sm font-semibold text-foreground">
-                  标本 / 蜡块 / 影像编辑
-                </h3>
-                <p class="mt-0.5 text-xs text-muted-foreground">
-                  维护当前病例的标本、蜡块与影像资料
-                </p>
-              </div>
-              <GrossingSpecimenTabs
-                v-model:active-specimen-key="workbench.activeSpecimenKey.value"
-                :before-grossing-image-upload="
-                  workbench.beforeGrossingImageUpload
-                "
-                :body-part-tree-options="workbench.bodyPartTreeOptions.value"
-                :complete-form="workbench.completeForm"
-                :create-grossing-image-upload-request="
-                  workbench.createGrossingImageUploadRequest
-                "
-                :get-specimen-tab-label="workbench.getSpecimenTabLabel"
-                :grossing-image-accept="workbench.grossingImageAccept"
-                :is-specimen-uploading="workbench.isSpecimenUploading"
-                :label-class="workbench.labelClass"
-                :sampling-template-tree-options="
-                  workbench.samplingTemplateTreeOptions.value
-                "
-                :specimen-tab-metas="workbench.specimenTabMetas.value"
-                :workflow-reference-options="
-                  workbench.workflowReferenceOptions.value
-                "
-                @add-block="workbench.addBlock"
-                @add-media-asset="workbench.addMediaAsset"
-                @add-specimen="workbench.addSpecimen"
-                @remove-block="workbench.removeBlock"
-                @remove-media-asset="workbench.removeMediaAsset"
-                @remove-specimen="workbench.removeSpecimen"
-              />
             </section>
           </template>
 
