@@ -261,9 +261,9 @@ vi.mock('element-plus', () => {
               { key: `${props.label}-${index}` },
               slots.default
                 ? slots.default({ row })
-                : props.prop
+                : (props.prop
                   ? String(row[props.prop] ?? '')
-                  : '',
+                  : ''),
             ),
           ),
         ]);
