@@ -3,6 +3,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
+export type E2EAuthStrategy = 'api' | 'ui';
 export type E2ERole =
   | 'creator'
   | 'fixation'
@@ -20,10 +21,53 @@ type RoleConfig = {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const e2eRootDir = path.resolve(__dirname, '..');
+const repoRootDir = path.resolve(e2eRootDir, '..', '..');
+const webEleDir = path.join(repoRootDir, 'apps', 'web-ele');
+
+type BrowserStorageState = {
+  cookies?: unknown[];
+  origins?: Array<{
+    localStorage?: Array<{ name: string; value: string }>;
+    origin: string;
+  }>;
+};
+
+function readEnvFileValue(filePath: string, key: string) {
+  const content = fs.readFileSync(filePath, 'utf8');
+  const pattern = new RegExp(`^\\s*${key}\\s*=\\s*(.+)\\s*$`, 'm');
+  const match = content.match(pattern);
+
+  if (!match) {
+    throw new Error(`未在 ${filePath} 中找到 ${key}。`);
+  }
+
+  const rawValue = match[1]?.trim() ?? '';
+  const maybeQuoted =
+    (rawValue.startsWith('"') && rawValue.endsWith('"')) ||
+    (rawValue.startsWith("'") && rawValue.endsWith("'"));
+
+  return maybeQuoted ? rawValue.slice(1, -1) : rawValue;
+}
+
+function readWebAppVersion() {
+  const packageJsonPath = path.join(webEleDir, 'package.json');
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')) as {
+    version?: string;
+  };
+  const version = packageJson.version?.trim();
+
+  if (!version) {
+    throw new Error(`未在 ${packageJsonPath} 中找到 version。`);
+  }
+
+  return version;
+}
 
 export const e2eEnv = {
+  appRuntimeEnv: process.env.E2E_APP_ENV || 'dev',
   authBaseURL: process.env.E2E_AUTH_BASE_URL || 'http://localhost:8081',
   authDir: path.join(e2eRootDir, '.auth'),
+  authStrategy: resolveE2EAuthStrategy(),
   baseURL: process.env.E2E_BASE_URL || 'http://localhost:5778',
   blBaseURL: process.env.E2E_BL_BASE_URL || 'http://localhost:8080',
   password: process.env.E2E_PASSWORD || '123456',
@@ -61,14 +105,39 @@ export const e2eEnv = {
   } satisfies Record<E2ERole, RoleConfig>,
 } as const;
 
+const webAppNamespacePrefix = readEnvFileValue(
+  path.join(webEleDir, '.env'),
+  'VITE_APP_NAMESPACE',
+);
+const webAppVersion = readWebAppVersion();
+
 export const workflowDefaults = {
   handoverDepartmentCandidates: ['OR', '手术室', '病理技术组'],
   receiverDepartmentCandidates: ['Pathology', '病理科', '病理技术组'],
   submittingDepartmentCandidates: ['OR', '手术室', '病理技术组', '病理科'],
 };
 
+export function resolveE2EAuthStrategy(
+  value: string | undefined = process.env.E2E_AUTH_STRATEGY,
+): E2EAuthStrategy {
+  return value?.trim().toLowerCase() === 'ui' ? 'ui' : 'api';
+}
+
 export function getRoleConfig(role: E2ERole) {
   return e2eEnv.roles[role];
+}
+
+export function getAuthStorageStatePath(role: E2ERole) {
+  const roleConfig = getRoleConfig(role);
+  return path.join(e2eEnv.authDir, roleConfig.storageFile);
+}
+
+export function getWebAppStorageNamespace() {
+  return `${webAppNamespacePrefix}-${webAppVersion}-${e2eEnv.appRuntimeEnv}`;
+}
+
+export function getAccessStoreStorageKey() {
+  return `${getWebAppStorageNamespace()}-core-access`;
 }
 
 function normalizeStorageStateOrigin(origin: string, targetOrigin: string) {
@@ -90,9 +159,41 @@ function normalizeStorageStateOrigin(origin: string, targetOrigin: string) {
   return origin;
 }
 
+export function normalizeStorageStateOrigins(
+  storageState: BrowserStorageState,
+  targetOrigin: string,
+) {
+  const origins = Array.isArray(storageState.origins) ? storageState.origins : [];
+  let normalizedChanged = false;
+
+  const normalizedOrigins = origins.map((item) => {
+    const normalizedOrigin = normalizeStorageStateOrigin(
+      item.origin,
+      targetOrigin,
+    );
+
+    if (normalizedOrigin !== item.origin) {
+      normalizedChanged = true;
+    }
+
+    return {
+      ...item,
+      origin: normalizedOrigin,
+    };
+  });
+
+  if (!normalizedChanged) {
+    return storageState;
+  }
+
+  return {
+    ...storageState,
+    origins: normalizedOrigins,
+  };
+}
+
 export function getStorageStatePath(role: E2ERole) {
-  const roleConfig = getRoleConfig(role);
-  const sourcePath = path.join(e2eEnv.authDir, roleConfig.storageFile);
+  const sourcePath = getAuthStorageStatePath(role);
 
   if (!fs.existsSync(sourcePath)) {
     return sourcePath;
@@ -102,47 +203,43 @@ export function getStorageStatePath(role: E2ERole) {
 
   try {
     const raw = fs.readFileSync(sourcePath, 'utf8');
-    const parsed = JSON.parse(raw) as {
-      cookies?: unknown[];
-      origins?: Array<{
-        localStorage?: Array<{ name: string; value: string }>;
-        origin: string;
-      }>;
-    };
+    const parsed = JSON.parse(raw) as BrowserStorageState;
+    const normalized = normalizeStorageStateOrigins(parsed, targetOrigin);
 
-    const origins = Array.isArray(parsed.origins) ? parsed.origins : [];
-    if (origins.some((item) => item.origin === targetOrigin)) {
-      return sourcePath;
+    if (
+      Array.isArray(normalized.origins) &&
+      normalized.origins.some((item) => item.origin === targetOrigin)
+    ) {
+      if (normalized === parsed) {
+        return sourcePath;
+      }
+
+      const normalizedPath = path.join(
+        e2eEnv.authDir,
+        `${targetOrigin.replaceAll(/[:/\\]/gu, '_')}-${getRoleConfig(role).storageFile}`,
+      );
+
+      fs.writeFileSync(
+        normalizedPath,
+        JSON.stringify(normalized, null, 2),
+        'utf8',
+      );
+
+      return normalizedPath;
     }
 
-    const normalizedOrigins = origins.map((item) => ({
-      ...item,
-      origin: normalizeStorageStateOrigin(item.origin, targetOrigin),
-    }));
-
-    const normalizedChanged = normalizedOrigins.some(
-      (item, index) => item.origin !== origins[index]?.origin,
-    );
-
-    if (!normalizedChanged) {
+    if (normalized === parsed) {
       return sourcePath;
     }
 
     const normalizedPath = path.join(
       e2eEnv.authDir,
-      `${targetOrigin.replaceAll(/[:/\\]/gu, '_')}-${roleConfig.storageFile}`,
+      `${targetOrigin.replaceAll(/[:/\\]/gu, '_')}-${getRoleConfig(role).storageFile}`,
     );
 
     fs.writeFileSync(
       normalizedPath,
-      JSON.stringify(
-        {
-          ...parsed,
-          origins: normalizedOrigins,
-        },
-        null,
-        2,
-      ),
+      JSON.stringify(normalized, null, 2),
       'utf8',
     );
 

@@ -1,14 +1,35 @@
-import type { Browser, Page } from 'playwright/test';
+import type { APIRequestContext, Browser, Page } from 'playwright/test';
 
 import type { E2ERole } from './env';
 
 import fs from 'node:fs';
 
-import { expect } from 'playwright/test';
+import { expect, request } from 'playwright/test';
 
-import { e2eEnv, getRoleConfig, getStorageStatePath } from './env';
+import {
+  e2eEnv,
+  getAccessStoreStorageKey,
+  getAuthStorageStatePath,
+  getRoleConfig,
+} from './env';
 
-async function solveSliderCaptcha(page: Page) {
+type BrowserStorageState = {
+  cookies: unknown[];
+  origins: Array<{
+    localStorage: Array<{ name: string; value: string }>;
+    origin: string;
+  }>;
+};
+
+type AuthLoginPayload = {
+  code?: string;
+  data?: {
+    accessToken?: string;
+  };
+  message?: string;
+};
+
+export async function solveSliderCaptcha(page: Page) {
   const handle = page.locator('[name="captcha-action"]').first();
   await expect(handle).toBeVisible();
 
@@ -31,7 +52,102 @@ async function solveSliderCaptcha(page: Page) {
   await expect(page.getByText('验证通过')).toBeVisible({ timeout: 10_000 });
 }
 
-export async function loginAndSaveStorageState(
+function createAccessStoreStorageValue(accessToken: string) {
+  return JSON.stringify({
+    accessToken,
+    refreshToken: null,
+    accessCodes: [],
+    isLockScreen: false,
+  });
+}
+
+export function buildApiStorageState(origin: string, accessToken: string) {
+  return {
+    cookies: [],
+    origins: [
+      {
+        origin,
+        localStorage: [
+          {
+            name: getAccessStoreStorageKey(),
+            value: createAccessStoreStorageValue(accessToken),
+          },
+        ],
+      },
+    ],
+  } satisfies BrowserStorageState;
+}
+
+async function createAuthClient() {
+  return request.newContext({
+    baseURL: e2eEnv.authBaseURL,
+  });
+}
+
+export async function requestAccessToken(
+  authClient: APIRequestContext,
+  role: E2ERole,
+) {
+  const roleConfig = getRoleConfig(role);
+  let response;
+
+  try {
+    response = await authClient.post('/api/v1/auth/login', {
+      data: {
+        loginName: roleConfig.username,
+        password: e2eEnv.password,
+      },
+    });
+  } catch (error) {
+    throw new Error(
+      `角色 ${roleConfig.username} 登录请求失败，请确认 auth-center 可用。原始错误: ${String(error)}`,
+      { cause: error },
+    );
+  }
+
+  if (!response.ok()) {
+    throw new Error(
+      `角色 ${roleConfig.username} 登录失败，HTTP 状态 ${response.status()}。`,
+    );
+  }
+
+  const payload = (await response.json()) as AuthLoginPayload;
+
+  if (payload.code !== 'SUCCESS') {
+    throw new Error(
+      `角色 ${roleConfig.username} 登录失败，返回码 ${payload.code ?? 'UNKNOWN'}。${payload.message ? ` 原因: ${payload.message}` : ''}`,
+    );
+  }
+
+  const accessToken = payload.data?.accessToken?.trim();
+  if (!accessToken) {
+    throw new Error(`角色 ${roleConfig.username} 登录成功但未返回 accessToken。`);
+  }
+
+  return accessToken;
+}
+
+export async function saveApiStorageState(role: E2ERole) {
+  const authClient = await createAuthClient();
+
+  try {
+    const accessToken = await requestAccessToken(authClient, role);
+    fs.mkdirSync(e2eEnv.authDir, { recursive: true });
+    fs.writeFileSync(
+      getAuthStorageStatePath(role),
+      JSON.stringify(
+        buildApiStorageState(new URL(e2eEnv.baseURL).origin, accessToken),
+        null,
+        2,
+      ),
+      'utf8',
+    );
+  } finally {
+    await authClient.dispose();
+  }
+}
+
+export async function loginAndSaveStorageStateViaUi(
   browser: Browser,
   role: E2ERole,
 ) {
@@ -68,10 +184,22 @@ export async function loginAndSaveStorageState(
     });
 
     fs.mkdirSync(e2eEnv.authDir, { recursive: true });
-    await context.storageState({ path: getStorageStatePath(role) });
+    await context.storageState({ path: getAuthStorageStatePath(role) });
   } finally {
     await context.close();
   }
+}
+
+export async function loginAndSaveStorageState(
+  browser: Browser,
+  role: E2ERole,
+) {
+  if (e2eEnv.authStrategy === 'ui') {
+    await loginAndSaveStorageStateViaUi(browser, role);
+    return;
+  }
+
+  await saveApiStorageState(role);
 }
 
 export function describeRole(role: E2ERole) {

@@ -39,6 +39,8 @@
     "test:system-management:backend": "node ./scripts/test-system-management.mjs backend",
     "test:system-management:frontend": "node ./scripts/test-system-management.mjs frontend",
     "test:e2e": "playwright test -c playwright.config.ts",
+    "test:e2e:ui-auth": "cross-env E2E_AUTH_STRATEGY=ui playwright test -c playwright.config.ts --project=chromium tests/e2e/smoke/login-ui-auth.spec.ts",
+    "e2e:open": "node ./scripts/e2e/open-authenticated-page.mjs",
     "test:unit": "node ./scripts/run-with-log.mjs .logs/test.log vitest run --dom"
   },
   "devDependencies": {

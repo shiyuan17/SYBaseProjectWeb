@@ -121,7 +121,7 @@ test.describe('authenticated route smoke', () => {
     });
 
     await expect(page).not.toHaveURL(/\/auth\/login/);
-    await expect(page).toHaveURL(/\/workflow\/submission-registration/);
+    await expect(page).toHaveURL(/\/workflow\/specimen-management/);
     await expect(page).toHaveURL(/action=register/);
     await expect(page.locator('.el-tabs').first()).toBeVisible();
   });
@@ -139,7 +139,7 @@ test.describe('authenticated route smoke', () => {
     await expect(
       page.getByRole('alert').filter({
         hasText: /smoke forced application list failure/,
-      }),
+      }).first(),
     ).toBeVisible();
   });
 });
