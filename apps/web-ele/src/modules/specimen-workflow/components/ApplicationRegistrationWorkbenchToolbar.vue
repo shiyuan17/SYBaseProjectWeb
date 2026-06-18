@@ -20,7 +20,8 @@ const props = defineProps<{
   buildingId: string;
   buildingOptions: OperatingBuildingOption[];
   frozenReminder: boolean;
-  patientVerified: boolean;
+  frozenReminderDisabled?: boolean;
+  frozenReminderEnabled: boolean;
   registrationStatus: string;
   roomId: string;
   roomOptions: OperatingRoomOption[];
@@ -34,6 +35,7 @@ const emit = defineEmits<{
   save: [];
   search: [];
   'update:buildingId': [value: string];
+  'update:frozenReminderEnabled': [value: boolean];
   'update:roomId': [value: string];
   'update:searchKeyword': [value: string];
   'update:searchType': [value: WorkbenchLookupType];
@@ -58,11 +60,13 @@ const lookupTypeOptions: Array<{ label: string; value: WorkbenchLookupType }> =
         <span class="font-semibold">登记状态</span>
         <ElTag type="primary">{{ registrationStatus || '待登记' }}</ElTag>
         <ElCheckbox
-          :model-value="patientVerified"
-          disabled
-          label="患者已核对"
+          :disabled="props.frozenReminderDisabled"
+          :model-value="props.frozenReminderEnabled"
+          label="冰冻提醒"
+          @update:model-value="
+            emit('update:frozenReminderEnabled', Boolean($event))
+          "
         />
-        <ElCheckbox :model-value="frozenReminder" disabled label="冰冻提醒" />
       </div>
 
       <ElForm

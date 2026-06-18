@@ -31,7 +31,8 @@ type ToolbarStubProps = {
   buildingId: string;
   buildingOptions: OperatingBuildingOption[];
   frozenReminder: boolean;
-  patientVerified: boolean;
+  frozenReminderDisabled: boolean;
+  frozenReminderEnabled: boolean;
   registrationStatus: string;
   roomId: string;
   roomOptions: OperatingRoomOption[];
@@ -174,7 +175,8 @@ vi.mock('./ApplicationRegistrationWorkbenchToolbar.vue', () => ({
       buildingId: { default: '', type: String },
       buildingOptions: { default: () => [], type: Array },
       frozenReminder: { default: false, type: Boolean },
-      patientVerified: { default: false, type: Boolean },
+      frozenReminderDisabled: { default: false, type: Boolean },
+      frozenReminderEnabled: { default: false, type: Boolean },
       registrationStatus: { default: '', type: String },
       roomId: { default: '', type: String },
       roomOptions: { default: () => [], type: Array },
@@ -187,6 +189,7 @@ vi.mock('./ApplicationRegistrationWorkbenchToolbar.vue', () => ({
       'save',
       'search',
       'update:buildingId',
+      'update:frozenReminderEnabled',
       'update:roomId',
       'update:searchKeyword',
       'update:searchType',
@@ -196,6 +199,22 @@ vi.mock('./ApplicationRegistrationWorkbenchToolbar.vue', () => ({
         h('div', { 'data-testid': 'toolbar' }, [
           h('div', { 'data-testid': 'toolbar-building' }, props.buildingId),
           h('div', { 'data-testid': 'toolbar-room' }, props.roomId),
+          h('input', {
+            checked: props.frozenReminderEnabled,
+            'data-testid': 'toolbar-frozen-reminder',
+            disabled: props.frozenReminderDisabled,
+            onChange: (event: Event) =>
+              emit(
+                'update:frozenReminderEnabled',
+                (event.target as HTMLInputElement).checked,
+              ),
+            type: 'checkbox',
+          }),
+          h(
+            'div',
+            { 'data-testid': 'toolbar-frozen-reminder-flag' },
+            String(props.frozenReminder),
+          ),
           h(
             'div',
             { 'data-testid': 'toolbar-status' },
@@ -411,6 +430,40 @@ vi.mock('./ApplicationRegistrationPackageDialog.vue', () => ({
   },
 }));
 
+vi.mock('./FrozenReportPreviewDialog.vue', () => ({
+  default: {
+    props: {
+      detail: { default: null, type: Object },
+      modelValue: { default: false, type: Boolean },
+    },
+    emits: ['update:modelValue'],
+    setup(props: { detail: unknown; modelValue: boolean }) {
+      return () =>
+        h(
+          'div',
+          { 'data-testid': 'frozen-report-preview-dialog' },
+          JSON.stringify({
+            open: props.modelValue,
+            hasDetail: props.detail !== null,
+          }),
+        );
+    },
+  },
+}));
+
+vi.mock('../composables/useFrozenReminderWatcher', async () => {
+  const { ref } = await import('vue');
+  return {
+    useFrozenReminderWatcher: () => ({
+      closeDialog: () => undefined,
+      currentDetail: ref(null),
+      dialogVisible: ref(false),
+      lastError: ref(null),
+      pollOnce: async () => undefined,
+    }),
+  };
+});
+
 import ApplicationRegistrationWorkbenchPanel from './ApplicationRegistrationWorkbenchPanel.vue';
 
 const buildingOptionsFixture: OperatingBuildingOption[] = [
@@ -419,7 +472,32 @@ const buildingOptionsFixture: OperatingBuildingOption[] = [
     buildingName: '惠侨楼',
     floors: 12,
     location: '北区',
-    operatingRooms: [],
+    operatingRooms: [
+      {
+        buildingId: 'B001',
+        cleanLevel: '百级',
+        floor: 3,
+        roomId: 'OR-101',
+        roomName: '手术室 1',
+        roomType: '洁净手术室',
+      },
+      {
+        buildingId: 'B001',
+        cleanLevel: '千级',
+        floor: 3,
+        roomId: 'OR-102',
+        roomName: '手术室 2',
+        roomType: '洁净手术室',
+      },
+      {
+        buildingId: 'B001',
+        cleanLevel: '万级',
+        floor: 4,
+        roomId: 'OR-103',
+        roomName: '手术室 3',
+        roomType: '普通手术室',
+      },
+    ],
   },
 ];
 
@@ -429,8 +507,24 @@ const roomOptionsByBuilding: Record<string, OperatingRoomOption[]> = {
       buildingId: 'B001',
       cleanLevel: '百级',
       floor: 3,
+      roomId: 'OR-101',
+      roomName: '手术室 1',
+      roomType: '洁净手术室',
+    },
+    {
+      buildingId: 'B001',
+      cleanLevel: '百级',
+      floor: 3,
       roomId: 'OR-102',
-      roomName: '手术室二',
+      roomName: '手术室 2',
+      roomType: '洁净手术室',
+    },
+    {
+      buildingId: 'B001',
+      cleanLevel: '万级',
+      floor: 4,
+      roomId: 'OR-103',
+      roomName: '手术室 3',
       roomType: '洁净手术室',
     },
   ],
@@ -1326,6 +1420,66 @@ describe('ApplicationRegistrationWorkbenchPanel', () => {
     expect(
       wrapper.root.querySelector('[data-testid="alert"]')?.textContent,
     ).toContain('申请单已进入后续流程，不能回到工作台整体改写');
+
+    wrapper.unmount();
+  });
+
+  it('defaults the frozen reminder checkbox from patientInfo.frozenReminder', async () => {
+    const wrapper = await mountPanel({
+      lookupKeyword: '1124',
+      lookupTriggerKey: 1,
+    });
+    await wrapper.wait();
+
+    const checkbox = wrapper.root.querySelector<HTMLInputElement>(
+      '[data-testid="toolbar-frozen-reminder"]',
+    );
+    expect(checkbox).not.toBeNull();
+    expect(checkbox!.checked).toBe(false);
+    const flag = wrapper.root.querySelector(
+      '[data-testid="toolbar-frozen-reminder-flag"]',
+    );
+    expect(flag?.textContent).toBe('false');
+
+    wrapper.unmount();
+  });
+
+  it('checks the frozen reminder by default when patientInfo.frozenReminder is true', async () => {
+    lookupApplicationRegistrationWorkbenchRecordMock.mockResolvedValueOnce({
+      ...createRecordFixture(),
+      patientInfo: {
+        ...createRecordFixture().patientInfo,
+        frozenReminder: true,
+      },
+    });
+    const wrapper = await mountPanel({
+      lookupKeyword: 'FR-1',
+      lookupTriggerKey: 1,
+    });
+    await wrapper.wait();
+
+    const checkbox = wrapper.root.querySelector<HTMLInputElement>(
+      '[data-testid="toolbar-frozen-reminder"]',
+    );
+    expect(checkbox?.checked).toBe(true);
+
+    wrapper.unmount();
+  });
+
+  it('toggles frozen reminder state when the checkbox emits change', async () => {
+    const wrapper = await mountPanel({
+      lookupKeyword: '1124',
+      lookupTriggerKey: 1,
+    });
+    await wrapper.wait();
+
+    const checkbox = wrapper.root.querySelector<HTMLInputElement>(
+      '[data-testid="toolbar-frozen-reminder"]',
+    )!;
+    checkbox.checked = true;
+    checkbox.dispatchEvent(new Event('change'));
+    await wrapper.wait();
+    expect(checkbox.checked).toBe(true);
 
     wrapper.unmount();
   });

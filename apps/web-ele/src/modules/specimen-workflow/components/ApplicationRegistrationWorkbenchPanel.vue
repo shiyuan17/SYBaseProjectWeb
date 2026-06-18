@@ -1,17 +1,19 @@
 <script setup lang="ts">
 import type { ApplicationRegistrationWorkbenchRecord } from '../types/application-registration-workbench';
 
-import { computed, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 import { ElAlert, ElEmpty } from 'element-plus';
 
 import { useApplicationRegistrationWorkbench } from '../composables/useApplicationRegistrationWorkbench';
+import { useFrozenReminderWatcher } from '../composables/useFrozenReminderWatcher';
 import { formatApplicationStatus } from '../utils/format';
 import ApplicationRegistrationDictionaryPanel from './ApplicationRegistrationDictionaryPanel.vue';
 import ApplicationRegistrationPackageDialog from './ApplicationRegistrationPackageDialog.vue';
 import ApplicationRegistrationPatientPanel from './ApplicationRegistrationPatientPanel.vue';
 import ApplicationRegistrationSpecimenTable from './ApplicationRegistrationSpecimenTable.vue';
 import ApplicationRegistrationWorkbenchToolbar from './ApplicationRegistrationWorkbenchToolbar.vue';
+import FrozenReportPreviewDialog from './FrozenReportPreviewDialog.vue';
 
 const props = withDefaults(
   defineProps<{
@@ -90,6 +92,48 @@ const {
   initialTriggerKey: props.lookupTriggerKey,
 });
 
+const frozenReminderEnabled = ref(false);
+
+const frozenReminderApplication = computed(() => {
+  const record = currentRecord.value;
+  if (!record) {
+    return null;
+  }
+  return {
+    applicationId: record.applicationId,
+    applicationNo: record.patientInfo.applicationNo,
+    patientName: record.patientInfo.patientName,
+  };
+});
+
+const {
+  closeDialog: closeFrozenReportDialog,
+  currentDetail: frozenReportDetail,
+  dialogVisible: frozenReportDialogVisible,
+} = useFrozenReminderWatcher({
+  application: frozenReminderApplication,
+  enabled: frozenReminderEnabled,
+});
+
+watch(
+  () => currentRecord.value?.patientInfo.applicationNo ?? '',
+  (applicationNo, previousNo) => {
+    if (!applicationNo || applicationNo === previousNo) {
+      return;
+    }
+    frozenReminderEnabled.value =
+      currentRecord.value?.patientInfo.frozenReminder ?? false;
+  },
+  { immediate: true },
+);
+
+function handleFrozenReminderToggle(value: boolean) {
+  frozenReminderEnabled.value = value;
+  if (!value) {
+    closeFrozenReportDialog();
+  }
+}
+
 const panelClasses = computed(() =>
   props.fullHeight
     ? 'flex h-full min-h-0 flex-col gap-3 overflow-hidden'
@@ -164,7 +208,8 @@ function emitReprintApplicationForm(applicationId: string) {
         :building-id="selectedBuildingId"
         :building-options="buildingOptions"
         :frozen-reminder="currentRecord?.patientInfo.frozenReminder ?? false"
-        :patient-verified="currentRecord?.patientInfo.patientVerified ?? false"
+        :frozen-reminder-disabled="!currentRecord"
+        :frozen-reminder-enabled="frozenReminderEnabled"
         :registration-status="formattedRegistrationStatus"
         :room-id="selectedRoomId"
         :room-options="roomOptions"
@@ -175,6 +220,7 @@ function emitReprintApplicationForm(applicationId: string) {
         @save="submitWorkbenchSave"
         @search="handleSearch"
         @update:building-id="handleBuildingChange"
+        @update:frozen-reminder-enabled="handleFrozenReminderToggle"
         @update:room-id="handleRoomChange"
         @update:search-keyword="searchKeyword = $event"
         @update:search-type="handleSearchTypeChange"
@@ -255,6 +301,11 @@ function emitReprintApplicationForm(applicationId: string) {
       :preferred-dept="currentRecord?.patientInfo.applyDept ?? ''"
       @confirm="handleAppendPackageItems"
       @create-package="handleCreatePackage"
+    />
+
+    <FrozenReportPreviewDialog
+      v-model="frozenReportDialogVisible"
+      :detail="frozenReportDetail"
     />
   </div>
 </template>
