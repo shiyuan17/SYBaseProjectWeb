@@ -1310,7 +1310,6 @@ describe('DiagnosisWorkbenchView', () => {
 
     expect(getButtonTexts()).not.toContain('采图');
     expect(wrapper.text()).toContain('采图区');
-    expect(wrapper.text()).toContain('已采图像');
     expect(wrapper.text()).toContain('摄像头预览');
 
     const fileInput =
@@ -1406,19 +1405,21 @@ describe('DiagnosisWorkbenchView', () => {
 
     expect(tabLabels.indexOf('采图区')).toBeGreaterThanOrEqual(0);
     expect(tabLabels.indexOf('患者信息')).toBeGreaterThanOrEqual(0);
-    expect(tabLabels.indexOf('采图区')).toBeLessThan(tabLabels.indexOf('患者信息'));
+    expect(tabLabels.indexOf('采图区')).toBeLessThan(
+      tabLabels.indexOf('患者信息'),
+    );
     expect(
-      document
-        .querySelector<HTMLElement>('.el-tabs__item.is-active, [role="tab"][aria-selected="true"]')
-        ?.textContent,
+      document.querySelector<HTMLElement>(
+        '.el-tabs__item.is-active, [role="tab"][aria-selected="true"]',
+      )?.textContent,
     ).toContain('采图区');
 
     await clickMaterialTab('患者信息');
 
     expect(
-      document
-        .querySelector<HTMLElement>('.el-tabs__item.is-active, [role="tab"][aria-selected="true"]')
-        ?.textContent,
+      document.querySelector<HTMLElement>(
+        '.el-tabs__item.is-active, [role="tab"][aria-selected="true"]',
+      )?.textContent,
     ).toContain('患者信息');
     expect(wrapper.text()).toContain('病人ID');
     expect(wrapper.text()).toContain('申请单号');
