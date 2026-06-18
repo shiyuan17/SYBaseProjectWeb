@@ -26,7 +26,7 @@
 
 - [acceptance/](./acceptance/README.md): 验收、交付、PR 说明、测试手册、现场 SOP
 - [plans/](./plans/README.md): 实施方案、阶段执行计划
-- [reviews/](./reviews/README.md): 审查、差距分析、健康度与对比报告
+- [reviews/](./reviews/README.md): 审查、差距分析、健康度与对比报告；Memory 台账归档（`*-archive.md`、`decisions-business-detail.md`）
 - [reference/](./reference/README.md): 业务清单、数据库资料、分析报告、AI 工作流结构映射
 - [templates/](./templates/): 可复用提示词与任务模板（如 Codex 任务模板、Linear 计划拆分模板、治理模板填写范例 `workflow-packet-examples.md`）
 

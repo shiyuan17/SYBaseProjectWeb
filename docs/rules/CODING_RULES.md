@@ -57,7 +57,7 @@
 - 测试至少覆盖正常路径、边界条件、失败分支
 - 缺陷修复应优先写出能复现问题的测试或最小复现步骤，再修复并证明回归通过
 - 新增校验必须覆盖无效输入；新增错误处理必须覆盖失败分支；重构必须说明行为保持不变的验证命令或对比方式
-- 测试分层（单测 / E2E 边界）、用例落位与 mock 契约同步约定见 `docs/rules/TESTING_RULES.md`；本节只定义“何时必须补测试”的强制触发条件
+- 测试分层（单测 / E2E 边界）、用例落位与 mock 契约同步约定见 `docs/rules/FRONTEND_RULES.md`；本节只定义“何时必须补测试”的强制触发条件
 - 提交前必须完成自检，确认无明显重复、无死代码、无调试残留
 
 标准验证命令（统一使用 `pnpm`，按改动范围选择最小有效集）：
@@ -106,11 +106,12 @@
 - [ ] 兼容性影响已评估
 - [ ] 测试和自检已完成，并能对应成功标准
 
+## 附录：AI 代码健康自检（按需）
+
+交付前快速自检：命名有业务语义；无 `any`/吞异常；无 speculative 抽象；公共 API 有类型；不新增 `utils.ts` 垃圾场；缺陷修复有回归测试。细则优先级：专项规范 > 本附录。
+
 ## 关联文档
 
 - [../../AGENTS.md](../../AGENTS.md)
 - [./PROJECT_DIRECTORY.md](./PROJECT_DIRECTORY.md)
-- [./VUE_TS_RULES.md](./VUE_TS_RULES.md)
-- [./STATE_RULES.md](./STATE_RULES.md)
-- [./API_RULES.md](./API_RULES.md)
-- [./COMPATIBILITY_RULES.md](./COMPATIBILITY_RULES.md)
+- [./FRONTEND_RULES.md](./FRONTEND_RULES.md)

@@ -295,7 +295,15 @@ describe('validatePullRequestPacket', () => {
     );
   });
 
-  it('rejects fast-path PR bodies with no memory judgment', () => {
+  it('accepts fast-path PR bodies without Memory Update Packet', () => {
+    const result = validatePullRequestPacket(
+      validDocsOnlyBody.replace(/## Memory Update Packet[\s\S]*/, ''),
+    );
+
+    expect(result.isValid).toBe(true);
+  });
+
+  it('rejects fast-path PR bodies with an empty Memory Update Packet', () => {
     const result = validatePullRequestPacket(
       validDocsOnlyBody.replace(
         '- Memory: DECISIONS.md updated for governance decision DEC-20260612-008.',
@@ -305,7 +313,7 @@ describe('validatePullRequestPacket', () => {
 
     expect(result.isValid).toBe(false);
     expect(result.errors).toContain(
-      'Fast path requires one-line memory judgment in Memory Update Packet',
+      'Memory Update Packet is present but has no substantive memory judgment',
     );
   });
 

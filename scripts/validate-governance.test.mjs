@@ -21,13 +21,7 @@ const validRulesReadmeBody = `
 
 - [PROJECT_DIRECTORY.md](./PROJECT_DIRECTORY.md)
 - [CODING_RULES.md](./CODING_RULES.md)
-- [VUE_TS_RULES.md](./VUE_TS_RULES.md)
-- [UI_RULES.md](./UI_RULES.md)
-- [STATE_RULES.md](./STATE_RULES.md)
-- [ROUTER_RULES.md](./ROUTER_RULES.md)
-- [API_RULES.md](./API_RULES.md)
-- [TESTING_RULES.md](./TESTING_RULES.md)
-- [COMPATIBILITY_RULES.md](./COMPATIBILITY_RULES.md)
+- [FRONTEND_RULES.md](./FRONTEND_RULES.md)
 - [GIT_RULES.md](./GIT_RULES.md)
 - [DYNAMIC_WORKFLOW_RULES.md](./DYNAMIC_WORKFLOW_RULES.md)
 - [LOOP_ENGINEERING_RULES.md](./LOOP_ENGINEERING_RULES.md)
@@ -35,7 +29,6 @@ const validRulesReadmeBody = `
 - [AGENT_SKILL_ROUTING.md](./AGENT_SKILL_ROUTING.md)
 - [LINEAR_TASK.md](./LINEAR_TASK.md)
 - [RELEASE.md](./RELEASE.md)
-- [AI-CODE-HEALTH.md](./AI-CODE-HEALTH.md)
 `;
 
 const validMemoryReadmeBody = `
@@ -52,19 +45,13 @@ const validAgentsBody = `
 ## 关联文档
 
 - [docs/memory/PROJECT_STATE.md](./docs/memory/PROJECT_STATE.md)
+- [docs/memory/ARCHITECTURE.md](./docs/memory/ARCHITECTURE.md)
 - [docs/memory/TECH_DEBT.md](./docs/memory/TECH_DEBT.md)
 - [docs/memory/KNOWN_BUGS.md](./docs/memory/KNOWN_BUGS.md)
 - [docs/memory/DECISIONS.md](./docs/memory/DECISIONS.md)
-- [docs/memory/ARCHITECTURE.md](./docs/memory/ARCHITECTURE.md)
 - [docs/rules/PROJECT_DIRECTORY.md](./docs/rules/PROJECT_DIRECTORY.md)
 - [docs/rules/CODING_RULES.md](./docs/rules/CODING_RULES.md)
-- [docs/rules/VUE_TS_RULES.md](./docs/rules/VUE_TS_RULES.md)
-- [docs/rules/UI_RULES.md](./docs/rules/UI_RULES.md)
-- [docs/rules/STATE_RULES.md](./docs/rules/STATE_RULES.md)
-- [docs/rules/ROUTER_RULES.md](./docs/rules/ROUTER_RULES.md)
-- [docs/rules/API_RULES.md](./docs/rules/API_RULES.md)
-- [docs/rules/TESTING_RULES.md](./docs/rules/TESTING_RULES.md)
-- [docs/rules/COMPATIBILITY_RULES.md](./docs/rules/COMPATIBILITY_RULES.md)
+- [docs/rules/FRONTEND_RULES.md](./docs/rules/FRONTEND_RULES.md)
 - [docs/rules/GIT_RULES.md](./docs/rules/GIT_RULES.md)
 - [docs/rules/DYNAMIC_WORKFLOW_RULES.md](./docs/rules/DYNAMIC_WORKFLOW_RULES.md)
 - [docs/rules/LOOP_ENGINEERING_RULES.md](./docs/rules/LOOP_ENGINEERING_RULES.md)
@@ -72,7 +59,6 @@ const validAgentsBody = `
 - [docs/rules/AGENT_SKILL_ROUTING.md](./docs/rules/AGENT_SKILL_ROUTING.md)
 - [docs/rules/LINEAR_TASK.md](./docs/rules/LINEAR_TASK.md)
 - [docs/rules/RELEASE.md](./docs/rules/RELEASE.md)
-- [docs/rules/AI-CODE-HEALTH.md](./docs/rules/AI-CODE-HEALTH.md)
 `;
 
 const validArchitectureBody = `
@@ -142,7 +128,7 @@ Full:
 Red-zone confirmation:
 `,
   workflowPacketExamplesBody: `
-范例 3.1：轻量 Workflow Packet
+范例：轻量 Workflow Packet
 坏例子
 修正后
 `,

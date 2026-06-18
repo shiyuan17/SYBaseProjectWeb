@@ -275,11 +275,12 @@ export function validatePullRequestPacket(body = '') {
     }
   } else {
     const memoryUpdateBody = extractSection(body, 'Memory Update Packet');
-    if (!hasSubstantiveMemoryJudgment(memoryUpdateBody)) {
+    if (
+      memoryUpdateBody !== null &&
+      !hasSubstantiveMemoryJudgment(memoryUpdateBody)
+    ) {
       errors.push(
-        isFastPath
-          ? 'Fast path requires one-line memory judgment in Memory Update Packet'
-          : 'Lightweight packet requires memory judgment in Memory Update Packet',
+        'Memory Update Packet is present but has no substantive memory judgment',
       );
     }
   }

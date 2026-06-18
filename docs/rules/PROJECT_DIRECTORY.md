@@ -113,7 +113,4 @@ apps/web-ele/src/modules/<domain>/
 
 - [../../AGENTS.md](../../AGENTS.md)
 - [./CODING_RULES.md](./CODING_RULES.md)
-- [./VUE_TS_RULES.md](./VUE_TS_RULES.md)
-- [./STATE_RULES.md](./STATE_RULES.md)
-- [./ROUTER_RULES.md](./ROUTER_RULES.md)
-- [./UI_RULES.md](./UI_RULES.md)
+- [./FRONTEND_RULES.md](./FRONTEND_RULES.md)

@@ -24,6 +24,8 @@ Packet tier:
 
 ## Memory Update Packet
 
+Optional for Fast Path and Lightweight when there is **no durable context change**. Required for Full packets when memory files were updated.
+
 - Memory: `no durable context change / <updated files + memory IDs + cross-repo references>`
 
 ---

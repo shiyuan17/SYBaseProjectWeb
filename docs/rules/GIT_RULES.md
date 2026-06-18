@@ -250,4 +250,4 @@ PR 合入前还必须填写 Memory Update Packet：
 
 - [../../AGENTS.md](../../AGENTS.md)
 - [./RELEASE.md](./RELEASE.md)
-- [./COMPATIBILITY_RULES.md](./COMPATIBILITY_RULES.md)
+- [./FRONTEND_RULES.md](./FRONTEND_RULES.md)

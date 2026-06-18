@@ -111,6 +111,4 @@
 
 - [../../AGENTS.md](../../AGENTS.md)
 - [./GIT_RULES.md](./GIT_RULES.md)
-- [./API_RULES.md](./API_RULES.md)
-- [./UI_RULES.md](./UI_RULES.md)
-- [./COMPATIBILITY_RULES.md](./COMPATIBILITY_RULES.md)
+- [./FRONTEND_RULES.md](./FRONTEND_RULES.md)

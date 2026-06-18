@@ -4,7 +4,14 @@
 
 本目录用于归档审查、差距分析、系统体检和对比评估文档，主要回答“现状如何”“差距在哪里”“还存在哪些风险”。
 
-## 文档清单
+## Memory 与台账归档（Markdown）
+
+- [bug-archive.md](./bug-archive.md)
+- [decisions-archive.md](./decisions-archive.md)
+- [decisions-business-detail.md](./decisions-business-detail.md)
+- [tech-debt-archive.md](./tech-debt-archive.md)
+
+## 审查报告（HTML）
 
 - [agents-spec-redteam-review.html](./agents-spec-redteam-review.html)
 - [clinical-submission-blsysnew-comparison.html](./clinical-submission-blsysnew-comparison.html)
