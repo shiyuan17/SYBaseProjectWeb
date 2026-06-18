@@ -1,4 +1,12 @@
-import { createApp, defineComponent, h, nextTick, onMounted } from 'vue';
+import {
+  createApp,
+  defineComponent,
+  h,
+  inject,
+  nextTick,
+  onMounted,
+  provide,
+} from 'vue';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -30,6 +38,8 @@ vi.mock('@vben/common-ui', () => ({
 }));
 
 vi.mock('element-plus', () => {
+  const tableDataKey = Symbol('table-data');
+
   const ElButton = defineComponent({
     name: 'ElButton',
     emits: ['click'],
@@ -106,8 +116,14 @@ vi.mock('element-plus', () => {
 
   const ElFormItem = defineComponent({
     name: 'ElFormItem',
-    setup(_, { slots }) {
-      return () => h('label', slots.default?.());
+    props: {
+      label: {
+        default: '',
+        type: String,
+      },
+    },
+    setup(props, { slots }) {
+      return () => h('label', [props.label, slots.default?.()]);
     },
   });
 
@@ -213,14 +229,44 @@ vi.mock('element-plus', () => {
       },
     },
     setup(props, { slots }) {
-      return () => h('div', [JSON.stringify(props.data), slots.default?.()]);
+      provide(tableDataKey, () => props.data as Array<Record<string, unknown>>);
+      return () => h('div', slots.default?.());
     },
   });
 
   const ElTableColumn = defineComponent({
     name: 'ElTableColumn',
-    setup() {
-      return () => h('div');
+    props: {
+      label: {
+        default: '',
+        type: String,
+      },
+      prop: {
+        default: '',
+        type: String,
+      },
+    },
+    setup(props, { slots }) {
+      const getRows = inject<() => Array<Record<string, unknown>>>(
+        tableDataKey,
+        () => [],
+      );
+
+      return () =>
+        h('div', [
+          props.label ? h('div', props.label) : null,
+          ...getRows().map((row, index) =>
+            h(
+              'div',
+              { key: `${props.label}-${index}` },
+              slots.default
+                ? slots.default({ row })
+                : props.prop
+                  ? String(row[props.prop] ?? '')
+                  : '',
+            ),
+          ),
+        ]);
     },
   });
 
