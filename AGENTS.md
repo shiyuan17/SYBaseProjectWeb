@@ -6,16 +6,16 @@
 
 统一使用 `pnpm`（版本见根 `package.json` 的 `engines`）。**标准验证命令以 `docs/rules/CODING_RULES.md` 为准**：
 
-| 用途 | 命令 |
-| --- | --- |
-| 安装依赖 | `pnpm install` |
-| 启动开发（web-ele） | `pnpm dev:ele` |
-| 代码规范 | `pnpm lint` |
-| 类型检查 | `pnpm check:type` |
-| 综合静态检查 | `pnpm check` |
-| 单元测试 | `pnpm test:unit` |
-| 端到端测试 | `pnpm test:e2e` |
-| 构建 | `pnpm build` |
+| 用途                | 命令              |
+| ------------------- | ----------------- |
+| 安装依赖            | `pnpm install`    |
+| 启动开发（web-ele） | `pnpm dev:ele`    |
+| 代码规范            | `pnpm lint`       |
+| 类型检查            | `pnpm check:type` |
+| 综合静态检查        | `pnpm check`      |
+| 单元测试            | `pnpm test:unit`  |
+| 端到端测试          | `pnpm test:e2e`   |
+| 构建                | `pnpm build`      |
 
 改动逻辑或组件时，交付前按影响面运行最小有效验证。涉及规范、记忆文件或治理脚本时，额外运行 `pnpm run check:governance`。
 
@@ -36,16 +36,16 @@
 
 ### 规范单一来源矩阵
 
-| 主题 | 唯一来源 |
-| --- | --- |
-| 协作入口、风险、交付、Memory | `AGENTS.md` |
-| 最小阅读路径 | `docs/rules/QUICKSTART.md` |
-| Workflow、修饰器、Packet | `docs/rules/DYNAMIC_WORKFLOW_RULES.md` |
-| 验证命令、编码基线 | `docs/rules/CODING_RULES.md` |
-| 前端实现（Vue/UI/API/测试等） | `docs/rules/FRONTEND_RULES.md` |
-| Git、worktree、PR | `docs/rules/GIT_RULES.md` |
-| Loop Packet | `docs/rules/LOOP_ENGINEERING_RULES.md` |
-| 外部 skill | `docs/rules/AGENT_SKILL_ROUTING.md` |
+| 主题                          | 唯一来源                               |
+| ----------------------------- | -------------------------------------- |
+| 协作入口、风险、交付、Memory  | `AGENTS.md`                            |
+| 最小阅读路径                  | `docs/rules/QUICKSTART.md`             |
+| Workflow、修饰器、Packet      | `docs/rules/DYNAMIC_WORKFLOW_RULES.md` |
+| 验证命令、编码基线            | `docs/rules/CODING_RULES.md`           |
+| 前端实现（Vue/UI/API/测试等） | `docs/rules/FRONTEND_RULES.md`         |
+| Git、worktree、PR             | `docs/rules/GIT_RULES.md`              |
+| Loop Packet                   | `docs/rules/LOOP_ENGINEERING_RULES.md` |
+| 外部 skill                    | `docs/rules/AGENT_SKILL_ROUTING.md`    |
 
 ## 强制规则
 
@@ -61,18 +61,18 @@
 
 ### 2. 规范映射表
 
-| 场景 | 必读 |
-| --- | --- |
-| 首次进入 / 不确定读什么 | `QUICKSTART.md` |
-| 目录与模块边界 | `PROJECT_DIRECTORY.md` |
-| 编码与验证 | `CODING_RULES.md` |
-| 页面 / 组件 / API / 路由 / 状态 / 测试 / 兼容 | `FRONTEND_RULES.md` |
-| Git / PR | `GIT_RULES.md` |
-| 选 Workflow | `DYNAMIC_WORKFLOW_RULES.md` |
-| Loop（显式要求时） | `LOOP_ENGINEERING_RULES.md` |
-| Memory 更新 | `docs/memory/*.md` |
-| Linear | `LINEAR_TASK.md` |
-| 发布 | `RELEASE.md` |
+| 场景                                          | 必读                        |
+| --------------------------------------------- | --------------------------- |
+| 首次进入 / 不确定读什么                       | `QUICKSTART.md`             |
+| 目录与模块边界                                | `PROJECT_DIRECTORY.md`      |
+| 编码与验证                                    | `CODING_RULES.md`           |
+| 页面 / 组件 / API / 路由 / 状态 / 测试 / 兼容 | `FRONTEND_RULES.md`         |
+| Git / PR                                      | `GIT_RULES.md`              |
+| 选 Workflow                                   | `DYNAMIC_WORKFLOW_RULES.md` |
+| Loop（显式要求时）                            | `LOOP_ENGINEERING_RULES.md` |
+| Memory 更新                                   | `docs/memory/*.md`          |
+| Linear                                        | `LINEAR_TASK.md`            |
+| 发布                                          | `RELEASE.md`                |
 
 ### 3. 后端联动
 
@@ -84,6 +84,7 @@
 
 ```markdown
 ## 任务确认
+
 - 任务目标:
 - 影响范围:
 - 主 Workflow:
@@ -97,6 +98,7 @@
 
 ```markdown
 ## 任务确认（Fast Path）
+
 - 任务目标:
 - 影响范围:
 - 主 Workflow: 不适用（原因）
@@ -107,10 +109,10 @@
 
 ### 5. 文件操作边界
 
-| 区域 | 策略 |
-| --- | --- |
-| 绿区（业务模块内） | 可直接改 |
-| 黄区（共享组件、stores、路由、请求） | 先说明影响 |
+| 区域                                   | 策略         |
+| -------------------------------------- | ------------ |
+| 绿区（业务模块内）                     | 可直接改     |
+| 黄区（共享组件、stores、路由、请求）   | 先说明影响   |
 | 红区（权限、登录态、全局层、构建发布） | **人工确认** |
 
 ### 6. 必须升级人工确认

@@ -34,7 +34,7 @@ type BrowserStorageState = {
 
 function readEnvFileValue(filePath: string, key: string) {
   const content = fs.readFileSync(filePath, 'utf8');
-  const pattern = new RegExp(`^\\s*${key}\\s*=\\s*(.+)\\s*$`, 'm');
+  const pattern = new RegExp(String.raw`^\s*${key}\s*=\s*(.+)\s*$`, 'm');
   const match = content.match(pattern);
 
   if (!match) {
@@ -163,7 +163,9 @@ export function normalizeStorageStateOrigins(
   storageState: BrowserStorageState,
   targetOrigin: string,
 ) {
-  const origins = Array.isArray(storageState.origins) ? storageState.origins : [];
+  const origins = Array.isArray(storageState.origins)
+    ? storageState.origins
+    : [];
   let normalizedChanged = false;
 
   const normalizedOrigins = origins.map((item) => {

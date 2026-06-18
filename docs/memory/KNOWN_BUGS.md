@@ -6,9 +6,9 @@ Track **Open** bugs and a short tail of recently resolved items. Full resolved h
 
 ## Open Bugs
 
-| ID | Status | Summary | Impact |
-| --- | --- | --- | --- |
-| _(none)_ | — | No open bugs at last archive (2026-06-18). | — |
+| ID       | Status | Summary                                    | Impact |
+| -------- | ------ | ------------------------------------------ | ------ |
+| _(none)_ | —      | No open bugs at last archive (2026-06-18). | —      |
 
 ## Recently Resolved (summary only)
 

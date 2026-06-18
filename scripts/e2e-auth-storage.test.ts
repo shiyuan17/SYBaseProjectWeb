@@ -16,7 +16,10 @@ import {
 describe('e2e auth storage helpers', () => {
   it('builds storage state with the persisted access store key', () => {
     const accessToken = 'token-123';
-    const storageState = buildApiStorageState('http://localhost:5778', accessToken);
+    const storageState = buildApiStorageState(
+      'http://localhost:5778',
+      accessToken,
+    );
 
     expect(storageState.cookies).toEqual([]);
     expect(storageState.origins).toHaveLength(1);

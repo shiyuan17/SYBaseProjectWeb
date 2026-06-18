@@ -40,10 +40,10 @@
 
 ## 测试
 
-| 层 | 工具 | 位置 |
-| --- | --- | --- |
-| 单测 | Vitest `--dom` | 同目录 `*.test.ts` |
-| E2E | Playwright | `tests/e2e/smoke/`、业务子目录 |
+| 层   | 工具           | 位置                           |
+| ---- | -------------- | ------------------------------ |
+| 单测 | Vitest `--dom` | 同目录 `*.test.ts`             |
+| E2E  | Playwright     | `tests/e2e/smoke/`、业务子目录 |
 
 - 能在单测验证的不靠 E2E；mock 契约以后端 `SYBaseProject` 为准，变更时同步 backend-mock 与单测
 - 不得删/skip 测试过关；缺陷修复补回归测试（触发条件见 `CODING_RULES.md` §6）

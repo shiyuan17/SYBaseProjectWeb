@@ -14,6 +14,7 @@
 
 ```markdown
 ## 任务确认（Fast Path）
+
 - 任务目标: 修正 FRONTEND_RULES 死链
 - 影响范围: docs/rules/FRONTEND_RULES.md
 - 主 Workflow: 不适用（纯文档）
@@ -24,6 +25,7 @@
 
 ```markdown
 ## Workflow Packet
+
 - 主 Workflow: UI
 - 触发信号: 模块内展示文案调整
 - 动态测试: pnpm test:unit -- StatusLabel 3 passed
@@ -34,6 +36,7 @@
 
 ```markdown
 ## Memory Update Packet
+
 - Memory: 更新 DECISIONS.md DEC-…
 ```
 

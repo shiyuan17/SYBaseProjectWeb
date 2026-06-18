@@ -121,7 +121,9 @@ export async function requestAccessToken(
 
   const accessToken = payload.data?.accessToken?.trim();
   if (!accessToken) {
-    throw new Error(`角色 ${roleConfig.username} 登录成功但未返回 accessToken。`);
+    throw new Error(
+      `角色 ${roleConfig.username} 登录成功但未返回 accessToken。`,
+    );
   }
 
   return accessToken;

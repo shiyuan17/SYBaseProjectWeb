@@ -47,7 +47,7 @@
 | DEC-20260616-006 | 2026-06-16 | M6 质量指标趋势、分布与明细合同 | `/m6/custom-analysis` 质量相关 tab 优先消费后端质量指标行上的 `trendPoints` 和 `breakdowns`，并通过 `POST /api/v1/stat-reports/details/query`… |
 | DEC-20260616-007 | 2026-06-16 | M6 工作量导出与展示一致性 | `/m6/custom-analysis` 工作量 tab 的导出必须与页面当前合并结果一致，因此前端使用本地合并 rows 生成 CSV，而不是只导出单一 `WORKLOAD` 后端结果。质量与自定义统计继续使用后端 `stat-rep… |
 | DEC-20260616-008 | 2026-06-16 | M6 关键质控危急值只读统计合同 | `/m6/custom-analysis` 关键质控 tab 固定展示 `QC_FROZEN_PARAFFIN_MATCH_RATE`、`QC_CRITICAL_VALUE_COUNT`、`QC_CRITICAL_VALUE_REPORT… |
-| DEC-20260616-009 | 2026-06-16 | M6 Goal 6-8 report workbench indicators | `/m6/custom-analysis` 的冰冻时效、更改报告、不合格标本 tabs 固定消费 sibling backend `../SYBaseProject/bl-center` `V98__seed_m6_goal6_8_sta… |
+| DEC-20260616-009 | 2026-06-16 | M6 Goal 6-8 report workbench indicators | `/m6/custom-analysis` 的冰冻时效、更改报告、不合格标本 tabs 固定消费 sibling backend `../SYBaseProject/bl-center` `V98\_\_seed_m6_goal6_8_sta… |
 | DEC-20260616-003 | 2026-06-16 | M5 医疗废物管理双 Tab 与最小闭环合同 | `/operation-resources/medical-waste` 不再使用占位页，而是固定为 `人体标本` / `药物试剂` 双 Tab 的真实页面，并继续复用 `M5_RESOURCE_PAGE_AUTHORITIES`，不新增… |
 | DEC-20260616-010 | 2026-06-16 | 系统用户角色展示依赖后端无前缀角色主数据 | 系统管理里的“分配角色”弹窗、用户列表角色列、角色管理页等角色名称展示继续直接使用 sibling backend `../SYBaseProject/bl-center` `/api/v1/roles` 和 `/api/v1/syste… |
 | DEC-20260617-003 | 2026-06-17 | M2 标本下游与 M5 归档患者信息语义 | 后续流程页面中的“病人ID”一律表示患者身份标识 `patientId`，不得再回退或展示 `caseId`；标本下游患者成组信息统一按 `patientId / inpatientNo / wardName / patientGende… |

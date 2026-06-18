@@ -241,7 +241,9 @@ describe('application-registration-workbench-service', () => {
     vi.doMock('#/api/request', () => ({
       requestClient: {
         get: vi.fn(async (url: string) => {
-          if (url === '/v1/application-registration-workbench/operating-options') {
+          if (
+            url === '/v1/application-registration-workbench/operating-options'
+          ) {
             return {
               buildings: [
                 {
@@ -284,7 +286,8 @@ describe('application-registration-workbench-service', () => {
       },
     }));
 
-    const service = await import('./application-registration-workbench-service');
+    const service =
+      await import('./application-registration-workbench-service');
     const rooms = await service.listOperatingRoomOptions('B001');
 
     expect(rooms.map((room) => room.roomName)).toEqual([

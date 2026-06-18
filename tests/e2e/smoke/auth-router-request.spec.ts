@@ -137,9 +137,12 @@ test.describe('authenticated route smoke', () => {
 
     await expect(page).not.toHaveURL(/\/auth\/login/);
     await expect(
-      page.getByRole('alert').filter({
-        hasText: /smoke forced application list failure/,
-      }).first(),
+      page
+        .getByRole('alert')
+        .filter({
+          hasText: /smoke forced application list failure/,
+        })
+        .first(),
     ).toBeVisible();
   });
 });
