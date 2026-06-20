@@ -423,24 +423,30 @@ export function useGrossingWorkbench(
             blockCount,
             bodyPartId: '',
             cutSurfaceFeature: '',
-            embeddingBoxes: specimenBlocks.length > 0
-              ? specimenBlocks.map((block, index) =>
-                  createEmbeddingBox(
-                    index + 1,
-                    block.embeddingBoxNo?.trim() ||
-                      buildGeneratedEmbeddingBoxNo('A', index + 1),
-                    {
-                      boxName: block.blockCode?.trim() || `包埋盒 ${index + 1}`,
-                      embeddingRemarks: block.embeddingRemarks?.trim() ?? '',
-                      status: 'CONFIRMED',
-                    },
-                  ),
-                )
-              : [
-                  createEmbeddingBox(1, buildGeneratedEmbeddingBoxNo('A', 1), {
-                    status: 'CONFIRMED',
-                  }),
-                ],
+            embeddingBoxes:
+              specimenBlocks.length > 0
+                ? specimenBlocks.map((block, index) =>
+                    createEmbeddingBox(
+                      index + 1,
+                      block.embeddingBoxNo?.trim() ||
+                        buildGeneratedEmbeddingBoxNo('A', index + 1),
+                      {
+                        boxName:
+                          block.blockCode?.trim() || `包埋盒 ${index + 1}`,
+                        embeddingRemarks: block.embeddingRemarks?.trim() ?? '',
+                        status: 'CONFIRMED',
+                      },
+                    ),
+                  )
+                : [
+                    createEmbeddingBox(
+                      1,
+                      buildGeneratedEmbeddingBoxNo('A', 1),
+                      {
+                        status: 'CONFIRMED',
+                      },
+                    ),
+                  ],
             grossDescription,
             marginMarking: '',
             mediaAssets: [],
