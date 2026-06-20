@@ -9,6 +9,7 @@ import { ElButton, ElDialog, ElForm, ElFormItem, ElInput } from 'element-plus';
 import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
 
 defineProps<{
+  requireRectificationEffect: boolean;
   submitting: boolean;
   summary: ReceiptConfirmSummary;
 }>();
@@ -68,6 +69,19 @@ const form = defineModel<ReceiptConfirmForm>('form', {
                 :selected-label="form.receivedByName"
                 placeholder="请选择签收人员"
                 @change="emit('receiveUserChange', $event)"
+              />
+            </ElFormItem>
+            <ElFormItem
+              v-if="requireRectificationEffect"
+              label="整改效果"
+              required
+            >
+              <ElInput
+                v-model="form.rectificationEffect"
+                :rows="4"
+                maxlength="500"
+                placeholder="请填写整改效果"
+                type="textarea"
               />
             </ElFormItem>
           </div>

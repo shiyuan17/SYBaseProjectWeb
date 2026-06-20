@@ -176,7 +176,7 @@ describe('SpecimenReceiptView', () => {
 
     expect(container.textContent).not.toContain('病理接收');
     expect(container.textContent).toContain('标本签收');
-    expect(container.textContent).toContain('异常接收');
+    expect(container.textContent).toContain('拒收');
     expect(container.textContent).toContain('选择操作人');
     expect(container.textContent).toContain('补打标本标签');
     expect(container.textContent).toContain('导出Excel');

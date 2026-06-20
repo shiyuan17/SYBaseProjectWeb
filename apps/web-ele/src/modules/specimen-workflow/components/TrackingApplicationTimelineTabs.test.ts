@@ -72,6 +72,7 @@ function createEvents(): TrackingEventView[] {
       eventTime: '2026-05-24T08:00:00',
       eventType: 'ORDER_CREATED',
       nodeCode: 'TRANSPORT',
+      operatorIp: '10.0.0.1',
       operatorName: '李医生',
       specimenBarcode: 'BC-001',
       specimenId: 'SPEC-001',
@@ -84,6 +85,7 @@ function createEvents(): TrackingEventView[] {
       eventTime: '2026-05-24T08:00:00',
       eventType: 'ORDER_CREATED',
       nodeCode: 'TRANSPORT',
+      operatorIp: '10.0.0.2',
       operatorName: '王护士',
       specimenBarcode: 'BC-002',
       specimenId: 'SPEC-002',
@@ -156,13 +158,18 @@ describe('TrackingApplicationTimelineTabs', () => {
     vi.clearAllMocks();
   });
 
-  it('renders overall timeline groups', async () => {
+  it('renders overall timeline groups with structured metadata', async () => {
     const wrapper = await mountTabs();
 
     expect(wrapper.container.textContent).toContain('总时间线');
     expect(wrapper.container.textContent).toContain('公共事件');
-    expect(wrapper.container.textContent).toContain('涉及标本: 2 个');
     expect(wrapper.container.textContent).toContain('SP-001');
+    expect(wrapper.container.textContent).toContain('时间');
+    expect(wrapper.container.textContent).toContain('操作人');
+    expect(wrapper.container.textContent).toContain('IP');
+    expect(wrapper.container.textContent).toContain('事件');
+    expect(wrapper.container.textContent).not.toContain('节点:');
+    expect(wrapper.container.textContent).not.toContain('终端');
 
     wrapper.unmount();
   });

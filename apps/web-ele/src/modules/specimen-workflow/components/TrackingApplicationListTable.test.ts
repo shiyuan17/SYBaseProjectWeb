@@ -12,15 +12,32 @@ import {
 } from '../test-utils/component-stubs';
 
 const tableRowKey = vi.hoisted(() => Symbol('tracking-application-list-row'));
+const { mockClipboardWriteText, mockElMessageSuccess, mockElMessageWarning } =
+  vi.hoisted(() => ({
+    mockClipboardWriteText: vi.fn(),
+    mockElMessageSuccess: vi.fn(),
+    mockElMessageWarning: vi.fn(),
+  }));
 
 vi.mock('element-plus', () => ({
   ElButton: createButtonStub(),
+  ElMessage: {
+    success: mockElMessageSuccess,
+    warning: mockElMessageWarning,
+  },
   ElTable: createTableStub(tableRowKey),
   ElTableColumn: createTableColumnStub(tableRowKey),
   ElTag: createTagStub(),
 }));
 
 import TrackingApplicationListTable from './TrackingApplicationListTable.vue';
+
+async function flush() {
+  await Promise.resolve();
+  await nextTick();
+  await Promise.resolve();
+  await nextTick();
+}
 
 function createItem(
   overrides: Partial<ApplicationListItem> = {},
@@ -72,7 +89,7 @@ async function mountTable(props: Record<string, unknown> = {}) {
 
   app.directive('loading', {});
   app.mount(container);
-  await nextTick();
+  await flush();
 
   return {
     container,
@@ -88,6 +105,9 @@ describe('TrackingApplicationListTable', () => {
   afterEach(() => {
     document.body.innerHTML = '';
     vi.clearAllMocks();
+    vi.restoreAllMocks();
+    mockElMessageSuccess.mockReset();
+    mockElMessageWarning.mockReset();
   });
 
   it('renders application rows', async () => {
@@ -106,10 +126,54 @@ describe('TrackingApplicationListTable', () => {
     const wrapper = await mountTable();
 
     wrapper.container.querySelector<HTMLButtonElement>('button')?.click();
-    await nextTick();
+    await flush();
 
     expect(wrapper.detailMock).toHaveBeenCalledTimes(1);
     expect(wrapper.detailMock).toHaveBeenCalledWith('APP-001');
+
+    wrapper.unmount();
+  });
+
+  it('copies application, pathology and specimen identifiers from the table', async () => {
+    Object.defineProperty(globalThis.navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: mockClipboardWriteText,
+      },
+    });
+    mockClipboardWriteText.mockResolvedValue(undefined);
+
+    const wrapper = await mountTable({
+      items: [
+        createItem({
+          specimenNos: ['SP-001'],
+        }),
+      ],
+    });
+
+    const pathologyTrigger = wrapper.container.querySelector(
+      '[title="点击复制病理号"]',
+    ) as HTMLElement | null;
+    const applicationTrigger = wrapper.container.querySelector(
+      '[title="点击复制申请单号"]',
+    ) as HTMLElement | null;
+    const specimenTrigger = wrapper.container.querySelector(
+      '[title="点击复制标本编号"]',
+    ) as HTMLElement | null;
+
+    expect(pathologyTrigger).not.toBeNull();
+    expect(applicationTrigger).not.toBeNull();
+    expect(specimenTrigger).not.toBeNull();
+
+    applicationTrigger?.click();
+    pathologyTrigger?.click();
+    specimenTrigger?.click();
+    await flush();
+
+    expect(mockClipboardWriteText).toHaveBeenNthCalledWith(1, 'AP-001');
+    expect(mockClipboardWriteText).toHaveBeenNthCalledWith(2, 'BL202606080001');
+    expect(mockClipboardWriteText).toHaveBeenNthCalledWith(3, 'SP-001');
+    expect(mockElMessageSuccess).toHaveBeenCalledTimes(3);
 
     wrapper.unmount();
   });

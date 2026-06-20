@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatCurrentNode } from './format';
+import {
+  formatCurrentNode,
+  formatTrackingEventContent,
+  formatTrackingEventType,
+} from './format';
 
 describe('format', () => {
   it('formats known current node values to Chinese labels', () => {
@@ -24,5 +28,32 @@ describe('format', () => {
 
   it('falls back to the original current node value when no mapping exists', () => {
     expect(formatCurrentNode('UNKNOWN_NODE')).toBe('UNKNOWN_NODE');
+  });
+
+  it('formats known tracking event types to Chinese labels', () => {
+    expect(formatTrackingEventType('BOUND')).toBe('绑定条码');
+    expect(formatTrackingEventType('REGISTERED')).toBe('登记标本');
+    expect(formatTrackingEventType('VERIFY_MATERIAL')).toBe('核对材块');
+  });
+
+  it('localizes tracking event content and falls back to event type', () => {
+    expect(
+      formatTrackingEventContent({
+        eventContent: 'Specimen barcode bound to BD1011',
+        eventType: 'BOUND',
+      }),
+    ).toBe('绑定条码 BD1011');
+    expect(
+      formatTrackingEventContent({
+        eventContent: '创建转运单',
+        eventType: 'ORDER_CREATED',
+      }),
+    ).toBe('创建转运单');
+    expect(
+      formatTrackingEventContent({
+        eventContent: null,
+        eventType: 'ORDER_CREATED',
+      }),
+    ).toBe('创建转运单');
   });
 });

@@ -4,14 +4,18 @@ import type {
   ReceiptOperatorForm,
 } from '../utils/specimen-receipt';
 
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 
-import { ElButton, ElDrawer, ElForm, ElFormItem, ElTag } from 'element-plus';
-
-import SystemUserSelect from '#/modules/system-management/components/SystemUserSelect.vue';
-
-import { countDerivedAbnormalReceiptItems } from '../utils/specimen-receipt';
-import SpecimenReceiptDraftTable from './SpecimenReceiptDraftTable.vue';
+import {
+  ElButton,
+  ElDrawer,
+  ElForm,
+  ElFormItem,
+  ElInput,
+  ElMessage,
+  ElOption,
+  ElSelect,
+} from 'element-plus';
 
 const props = defineProps<{
   items: ReceiptDraftItem[];
@@ -26,6 +30,7 @@ const emit = defineEmits<{
   ): void;
   (event: 'removeRow', key: number): void;
   (event: 'submit'): void;
+  (event: 'reReceive'): void;
 }>();
 
 const visible = defineModel<boolean>({
@@ -36,10 +41,81 @@ const form = defineModel<ReceiptOperatorForm>('form', {
   required: true,
 });
 
-const draftItemCount = computed(() => props.items.length);
-const derivedAbnormalCount = computed(() =>
-  countDerivedAbnormalReceiptItems(props.items),
+// 预设拒收原因
+const defaultRejectReasons = [
+  '标本信息不符',
+  '标本容器破损',
+  '标本量不足',
+  '标本凝固',
+  '标本污染',
+  '条码模糊',
+  '超时送达',
+];
+
+// 自定义拒收原因输入
+const customReasonInput = ref('');
+
+// 合并后的拒收原因选项
+const rejectReasonOptions = computed(() => [
+  ...defaultRejectReasons,
+  ...form.value.customRejectReasons,
+]);
+
+// 判断是否包含已拒收的标本
+const hasRejectedItems = computed(() => {
+  return props.items.some((item) => item.receiptStatus === 'REJECTED');
+});
+
+// 初始化默认选中第一个拒收原因
+watch(
+  visible,
+  (newVisible) => {
+    const firstRejectReason = rejectReasonOptions.value[0];
+    if (newVisible && !form.value.rejectReason && firstRejectReason) {
+      form.value.rejectReason = firstRejectReason;
+    }
+  },
+  { immediate: true },
 );
+
+// 添加自定义拒收原因
+const addCustomReason = () => {
+  const reason = customReasonInput.value.trim();
+  if (!reason) {
+    ElMessage.warning('请输入自定义拒收原因');
+    return;
+  }
+  if (rejectReasonOptions.value.includes(reason)) {
+    ElMessage.warning('该拒收原因已存在');
+    return;
+  }
+  form.value.customRejectReasons.push(reason);
+  form.value.rejectReason = reason;
+  customReasonInput.value = '';
+  ElMessage.success('已添加自定义拒收原因');
+};
+
+// 提交拒收
+const submitReject = () => {
+  if (!form.value.rejectReason) {
+    ElMessage.warning('请选择拒收原因');
+    return;
+  }
+  if (!form.value.rectificationSuggestion.trim()) {
+    ElMessage.warning('请填写整改建议');
+    return;
+  }
+  emit('submit');
+};
+
+// 提交重新接收
+const submitReReceive = () => {
+  if (!form.value.rectificationEffect.trim()) {
+    ElMessage.warning('请填写整改效果');
+    return;
+  }
+  emit('reReceive');
+};
 </script>
 
 <template>
@@ -49,73 +125,74 @@ const derivedAbnormalCount = computed(() =>
     :destroy-on-close="true"
     direction="btt"
     size="56%"
-    title="异常接收"
+    title="拒收"
   >
-    <div class="flex h-full flex-col gap-4">
-      <section
-        class="grid gap-4 rounded-lg border border-border bg-card px-4 py-4 shadow-sm lg:grid-cols-[minmax(280px,420px)_1fr]"
-      >
-        <ElForm label-width="88px">
-          <ElFormItem class="mb-0" label="接收人" required>
-            <SystemUserSelect
-              v-model="form.receivedByUserId"
-              :selected-label="form.receivedByName"
-              placeholder="请选择接收人"
-              @change="emit('directReceiveUserChange', $event)"
+    <div class="flex h-full flex-col gap-6 px-6 py-4">
+      <ElForm label-width="120px" class="flex-1">
+        <ElFormItem label="自定义拒收原因">
+          <div class="flex gap-2">
+            <ElInput
+              v-model="customReasonInput"
+              placeholder="请输入自定义拒收原因"
+              class="flex-1"
             />
-          </ElFormItem>
-        </ElForm>
+            <ElButton type="primary" @click="addCustomReason"> 添加 </ElButton>
+          </div>
+        </ElFormItem>
 
-        <div
-          class="flex flex-wrap items-center justify-start gap-3 border-border lg:justify-end lg:border-l lg:pl-4"
-        >
-          <ElTag effect="plain" type="info">
-            待提交 {{ draftItemCount }} 条
-          </ElTag>
-          <ElTag
-            :type="derivedAbnormalCount > 0 ? 'danger' : 'success'"
-            effect="light"
+        <ElFormItem label="拒收原因" required>
+          <ElSelect
+            v-model="form.rejectReason"
+            placeholder="请选择拒收原因"
+            class="w-full"
           >
-            {{
-              derivedAbnormalCount > 0
-                ? `自动异常 ${derivedAbnormalCount} 条`
-                : '当前均为正常接收'
-            }}
-          </ElTag>
-          <span class="text-sm text-muted-foreground">
-            拒收、退回或质控不合格提交后会自动标记异常
-          </span>
-        </div>
-      </section>
+            <ElOption
+              v-for="reason in rejectReasonOptions"
+              :key="reason"
+              :label="reason"
+              :value="reason"
+            />
+          </ElSelect>
+        </ElFormItem>
 
-      <section
-        class="flex min-h-0 flex-1 flex-col rounded-lg border border-border bg-card px-4 py-4 shadow-sm"
-      >
-        <div class="mb-3 flex items-center justify-between gap-3">
-          <div>
-            <div class="text-base font-semibold text-foreground">接收明细</div>
-            <div class="text-sm text-muted-foreground">
-              可直接调整接收结果、质控结果和异常原因后提交
-            </div>
-          </div>
-          <div class="text-sm text-muted-foreground">
-            共 {{ draftItemCount }} 条
-          </div>
-        </div>
+        <ElFormItem label="整改建议" required>
+          <ElInput
+            v-model="form.rectificationSuggestion"
+            type="textarea"
+            :rows="4"
+            placeholder="请填写整改建议"
+          />
+        </ElFormItem>
 
-        <SpecimenReceiptDraftTable
-          :items="items"
-          max-height="420"
-          show-remove-action
-          @remove="emit('removeRow', $event)"
-        />
-      </section>
+        <ElFormItem v-if="hasRejectedItems" label="整改效果" required>
+          <ElInput
+            v-model="form.rectificationEffect"
+            type="textarea"
+            :rows="4"
+            placeholder="请填写整改效果"
+          />
+        </ElFormItem>
+      </ElForm>
 
-      <div class="flex justify-end gap-2 border-t border-border pt-2">
-        <ElButton @click="emit('close')">取消</ElButton>
-        <ElButton :loading="submitting" type="primary" @click="emit('submit')">
-          提交异常接收
+      <div class="flex justify-center gap-4 border-t border-border pt-4">
+        <ElButton
+          :loading="submitting"
+          type="warning"
+          size="large"
+          @click="submitReject"
+        >
+          拒收
         </ElButton>
+        <ElButton
+          v-if="hasRejectedItems"
+          :loading="submitting"
+          type="primary"
+          size="large"
+          @click="submitReReceive"
+        >
+          重新接收
+        </ElButton>
+        <ElButton size="large" @click="emit('close')"> 关闭 </ElButton>
       </div>
     </div>
   </ElDrawer>

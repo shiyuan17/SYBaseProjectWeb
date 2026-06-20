@@ -68,12 +68,17 @@ describe('specimen receipt helpers', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0);
 
     expect(createDefaultReceiptFormState('张三', 'U-1')).toEqual({
+      customRejectReasons: [],
       receivedByName: '张三',
       receivedByUserId: 'U-1',
+      rectificationEffect: '',
+      rectificationSuggestion: '',
+      rejectReason: '',
       terminalCode: '',
     });
     expect(createDefaultReceiptConfirmFormState('张三', 'U-1')).toEqual({
       logisticsStaffName: '',
+      rectificationEffect: '',
       receivedByName: '张三',
       receivedByUserId: 'U-1',
     });
@@ -164,12 +169,17 @@ describe('specimen receipt helpers', () => {
 
   it('builds query and submission payloads', () => {
     const form = {
+      customRejectReasons: [],
       receivedByName: ' 张三 ',
       receivedByUserId: ' U-1 ',
+      rectificationEffect: '',
+      rectificationSuggestion: '',
+      rejectReason: '',
       terminalCode: ' T-1 ',
     };
     const receiveForm = {
       logisticsStaffName: ' 物流员甲 ',
+      rectificationEffect: '',
       receivedByName: ' 张三 ',
       receivedByUserId: ' U-1 ',
     };

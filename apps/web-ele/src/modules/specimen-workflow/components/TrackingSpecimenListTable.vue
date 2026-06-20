@@ -3,6 +3,7 @@ import type { SpecimenManagementListItem } from '../types/specimen-workflow';
 
 import { ElButton, ElTable, ElTableColumn, ElTag } from 'element-plus';
 
+import CopyableIdentifier from '../../../components/CopyableIdentifier.vue';
 import {
   formatDateTime,
   formatNullable,
@@ -22,9 +23,17 @@ const emit = defineEmits<{
 
 <template>
   <ElTable v-loading="loading" :data="items" border>
-    <ElTableColumn label="标本编号" min-width="150" prop="specimenNo" />
+    <ElTableColumn label="标本编号" min-width="150">
+      <template #default="{ row }">
+        <CopyableIdentifier kind="specimenNo" :value="row.specimenNo" />
+      </template>
+    </ElTableColumn>
     <ElTableColumn label="条码" min-width="180" prop="barcode" />
-    <ElTableColumn label="关联申请单" min-width="160" prop="applicationNo" />
+    <ElTableColumn label="关联申请单" min-width="160">
+      <template #default="{ row }">
+        <CopyableIdentifier kind="applicationNo" :value="row.applicationNo" />
+      </template>
+    </ElTableColumn>
     <ElTableColumn label="患者姓名" min-width="120">
       <template #default="{ row }">
         {{ formatNullable(row.patientName) }}

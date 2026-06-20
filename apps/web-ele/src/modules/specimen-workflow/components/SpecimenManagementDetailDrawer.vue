@@ -21,6 +21,7 @@ import {
   ElTimelineItem,
 } from 'element-plus';
 
+import CopyableIdentifier from '../../../components/CopyableIdentifier.vue';
 import {
   formatCurrentNode,
   formatDateTime,
@@ -130,7 +131,7 @@ function formatContainerRatio(row: SpecimenManagementListItem) {
         </div>
         <ElDescriptions :column="2" border>
           <ElDescriptionsItem label="标本编号">
-            {{ row?.specimenNo || '-' }}
+            <CopyableIdentifier kind="specimenNo" :value="row?.specimenNo" />
           </ElDescriptionsItem>
           <ElDescriptionsItem label="条码">
             {{ row?.barcode || '-' }}
@@ -174,12 +175,13 @@ function formatContainerRatio(row: SpecimenManagementListItem) {
         </div>
         <ElDescriptions :column="2" border>
           <ElDescriptionsItem label="申请单号">
-            {{
-              formatNullable(
+            <CopyableIdentifier
+              kind="applicationNo"
+              :value="
                 props.applicationDetail?.applicationNo ??
-                  props.row?.applicationNo,
-              )
-            }}
+                props.row?.applicationNo
+              "
+            />
           </ElDescriptionsItem>
           <ElDescriptionsItem label="患者姓名">
             {{
@@ -276,7 +278,14 @@ function formatContainerRatio(row: SpecimenManagementListItem) {
             border
             class="mt-4"
           >
-            <ElTableColumn label="标本编号" min-width="140" prop="specimenNo" />
+            <ElTableColumn label="标本编号" min-width="140">
+              <template #default="{ row: latestRow }">
+                <CopyableIdentifier
+                  kind="specimenNo"
+                  :value="latestRow.specimenNo"
+                />
+              </template>
+            </ElTableColumn>
             <ElTableColumn label="条码" min-width="180" prop="barcode" />
             <ElTableColumn
               label="标本名称"

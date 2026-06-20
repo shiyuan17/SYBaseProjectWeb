@@ -780,6 +780,7 @@ export function mapApplicationListItem(
     pathologyNo,
     receiptAbnormalSummary: buildReceiptAbnormalSummary(specimens),
     registeredSpecimenCount: specimens.length,
+    specimenNos: specimens.map((s) => s.specimenNo).filter(Boolean),
     reportIssued: application.reportIssued ?? false,
     reportStatus: application.reportStatus ?? null,
     status: resolveApplicationStatus(application, specimens),

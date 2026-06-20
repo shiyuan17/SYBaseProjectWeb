@@ -53,6 +53,7 @@ async function mountDialog() {
   const visible = ref(true);
   const form = reactive<ReceiptConfirmForm>({
     logisticsStaffName: '',
+    rectificationEffect: '',
     receivedByName: 'Test User',
     receivedByUserId: 'USER-1',
   });
@@ -62,6 +63,7 @@ async function mountDialog() {
       return h(SpecimenReceiptReceiveDialog, {
         form,
         modelValue: visible.value,
+        requireRectificationEffect: false,
         submitting: false,
         summary: createSummary(),
         'onUpdate:modelValue': (value: boolean) => {
@@ -105,8 +107,45 @@ describe('SpecimenReceiptReceiveDialog', () => {
     expect(wrapper.container.textContent).toContain('2 个标本');
     expect(wrapper.container.textContent).toContain('物流人员');
     expect(wrapper.container.textContent).toContain('签收人员');
+    expect(wrapper.container.textContent).not.toContain('整改效果');
 
     wrapper.unmount();
+  });
+
+  it('renders rectification effect field when required', async () => {
+    const container = document.createElement('div');
+    document.body.append(container);
+    const visible = ref(true);
+    const form = reactive<ReceiptConfirmForm>({
+      logisticsStaffName: '',
+      rectificationEffect: '',
+      receivedByName: 'Test User',
+      receivedByUserId: 'USER-1',
+    });
+
+    const app = createApp({
+      render() {
+        return h(SpecimenReceiptReceiveDialog, {
+          form,
+          modelValue: visible.value,
+          requireRectificationEffect: true,
+          submitting: false,
+          summary: createSummary(),
+          'onUpdate:modelValue': (value: boolean) => {
+            visible.value = value;
+          },
+        });
+      },
+    });
+
+    app.mount(container);
+    await nextTick();
+
+    expect(container.textContent).toContain('整改效果');
+    expect(container.innerHTML).toContain('请填写整改效果');
+
+    app.unmount();
+    container.remove();
   });
 
   it('emits user change, close and submit actions', async () => {

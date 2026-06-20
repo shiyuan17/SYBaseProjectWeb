@@ -98,6 +98,13 @@ export function resolveCheckInWorkflowRowTone(row: CheckInQueueItem) {
 }
 
 export function resolveReceiptWorkflowRowTone(row: ReceiptWorkbenchRow) {
+  const normalizedSpecimenStatus = normalizeText(row.specimenStatus);
+  if (normalizedSpecimenStatus === 'REJECTED') {
+    return 'failed' satisfies SpecimenWorkflowRowTone;
+  }
+  if (normalizedSpecimenStatus === 'RETURNED') {
+    return 'blocked' satisfies SpecimenWorkflowRowTone;
+  }
   if (row.queueStatus === 'FAILED') {
     return 'failed' satisfies SpecimenWorkflowRowTone;
   }

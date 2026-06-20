@@ -14,6 +14,7 @@ import {
 import {
   formatDateTime,
   formatNullable,
+  formatTrackingEventContent,
   formatTrackingEventStatus,
   formatTrackingEventType,
 } from '../utils/format';
@@ -38,6 +39,20 @@ function formatAggregateContext(values: string[], multipleLabel: string) {
   }
   return `${multipleLabel}(${values.join('、')})`;
 }
+
+function formatEventSummary(values: string[]) {
+  if (values.length === 0) {
+    return '-';
+  }
+  return values.join('；');
+}
+
+function buildEventTitle(
+  eventType: null | string | undefined,
+  eventStatus: null | string | undefined,
+) {
+  return `${formatTrackingEventType(eventType)} / ${formatTrackingEventStatus(eventStatus)}`;
+}
 </script>
 
 <template>
@@ -51,40 +66,55 @@ function formatAggregateContext(values: string[], multipleLabel: string) {
         <ElTimelineItem
           v-for="group in trackingTimelineData.overallTimelineGroups"
           :key="group.key"
-          :timestamp="formatDateTime(group.eventTime)"
-          placement="top"
+          hide-timestamp
         >
-          <div class="space-y-2">
-            <div class="font-medium text-foreground">
-              {{ formatTrackingEventType(group.eventType) }} /
-              {{ formatTrackingEventStatus(group.eventStatus) }}
+          <div
+            class="rounded-lg border border-border bg-card px-4 py-3 shadow-sm"
+          >
+            <div class="mb-3 font-medium text-foreground">
+              {{ buildEventTitle(group.eventType, group.eventStatus) }}
             </div>
-            <div class="text-xs text-muted-foreground">
-              节点: {{ formatNullable(group.nodeCode) }}，
-              {{
-                group.specimenCount > 0
-                  ? `涉及标本: ${group.specimenCount} 个`
-                  : '公共事件'
-              }}
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <ElTag v-if="group.specimenCount === 0" type="info">
-                公共事件
-              </ElTag>
-              <ElTag
-                v-for="label in group.specimenLabels"
-                :key="`${group.key}-${label}`"
-                type="info"
-              >
-                {{ label }}
-              </ElTag>
-            </div>
-            <div class="text-xs text-muted-foreground">
-              操作人:
-              {{ formatAggregateContext(group.operatorNames, '多操作人') }}，
-              终端:
-              {{ formatAggregateContext(group.sourceTerminals, '多终端') }}
-            </div>
+            <dl class="grid gap-2 text-sm">
+              <div class="grid grid-cols-[4.5rem_1fr] gap-x-3">
+                <dt class="text-muted-foreground">时间</dt>
+                <dd class="text-foreground">
+                  {{ formatDateTime(group.eventTime) }}
+                </dd>
+              </div>
+              <div class="grid grid-cols-[4.5rem_1fr] gap-x-3">
+                <dt class="text-muted-foreground">操作人</dt>
+                <dd class="text-foreground">
+                  {{ formatAggregateContext(group.operatorNames, '多操作人') }}
+                </dd>
+              </div>
+              <div class="grid grid-cols-[4.5rem_1fr] gap-x-3">
+                <dt class="text-muted-foreground">IP</dt>
+                <dd class="text-foreground">
+                  {{ formatAggregateContext(group.operatorIps, '多IP') }}
+                </dd>
+              </div>
+              <div class="grid grid-cols-[4.5rem_1fr] gap-x-3">
+                <dt class="text-muted-foreground">事件</dt>
+                <dd class="text-foreground">
+                  {{ formatEventSummary(group.eventContents) }}
+                </dd>
+              </div>
+              <div class="grid grid-cols-[4.5rem_1fr] gap-x-3">
+                <dt class="text-muted-foreground">标本</dt>
+                <dd class="flex flex-wrap gap-2">
+                  <ElTag v-if="group.specimenCount === 0" type="info">
+                    公共事件
+                  </ElTag>
+                  <ElTag
+                    v-for="label in group.specimenLabels"
+                    :key="`${group.key}-${label}`"
+                    type="info"
+                  >
+                    {{ label }}
+                  </ElTag>
+                </dd>
+              </div>
+            </dl>
           </div>
         </ElTimelineItem>
       </ElTimeline>
@@ -99,19 +129,40 @@ function formatAggregateContext(values: string[], multipleLabel: string) {
         <ElTimelineItem
           v-for="(event, index) in specimen.events"
           :key="`${specimen.id}-${event.eventTime}-${event.eventType}-${index}`"
-          :timestamp="formatDateTime(event.eventTime)"
-          placement="top"
+          hide-timestamp
         >
-          <div class="space-y-1">
-            <div class="font-medium text-foreground">
-              {{ formatTrackingEventType(event.eventType) }} /
-              {{ formatTrackingEventStatus(event.eventStatus) }}
+          <div
+            class="rounded-lg border border-border bg-card px-4 py-3 shadow-sm"
+          >
+            <div class="mb-3 font-medium text-foreground">
+              {{ buildEventTitle(event.eventType, event.eventStatus) }}
             </div>
-            <div class="text-xs text-muted-foreground">
-              节点: {{ formatNullable(event.nodeCode) }}，操作人:
-              {{ formatNullable(event.operatorName) }}，终端:
-              {{ formatNullable(event.sourceTerminal) }}
-            </div>
+            <dl class="grid gap-2 text-sm">
+              <div class="grid grid-cols-[4.5rem_1fr] gap-x-3">
+                <dt class="text-muted-foreground">时间</dt>
+                <dd class="text-foreground">
+                  {{ formatDateTime(event.eventTime) }}
+                </dd>
+              </div>
+              <div class="grid grid-cols-[4.5rem_1fr] gap-x-3">
+                <dt class="text-muted-foreground">操作人</dt>
+                <dd class="text-foreground">
+                  {{ formatNullable(event.operatorName) }}
+                </dd>
+              </div>
+              <div class="grid grid-cols-[4.5rem_1fr] gap-x-3">
+                <dt class="text-muted-foreground">IP</dt>
+                <dd class="text-foreground">
+                  {{ formatNullable(event.operatorIp) }}
+                </dd>
+              </div>
+              <div class="grid grid-cols-[4.5rem_1fr] gap-x-3">
+                <dt class="text-muted-foreground">事件</dt>
+                <dd class="text-foreground">
+                  {{ formatTrackingEventContent(event) }}
+                </dd>
+              </div>
+            </dl>
           </div>
         </ElTimelineItem>
       </ElTimeline>

@@ -3,13 +3,17 @@ import type {
   TrackingEventView,
 } from '../types/specimen-workflow';
 
+import { formatTrackingEventContent } from './format';
+
 export interface OverallTimelineGroup {
+  eventContents: string[];
   eventStatus: null | string;
   eventTime: null | string;
   eventType: null | string;
   events: TrackingEventView[];
   key: string;
   nodeCode: null | string;
+  operatorIps: string[];
   operatorNames: string[];
   sourceTerminals: string[];
   specimenCount: number;
@@ -99,12 +103,14 @@ export function buildTrackingTimelineData(
     let group = overallTimelineGroupMap.get(groupKey);
     if (!group) {
       group = {
+        eventContents: [],
         eventStatus: event.eventStatus,
         eventTime: event.eventTime,
         eventType: event.eventType,
         events: [],
         key: groupKey,
         nodeCode: event.nodeCode,
+        operatorIps: [],
         operatorNames: [],
         sourceTerminals: [],
         specimenCount: 0,
@@ -117,7 +123,9 @@ export function buildTrackingTimelineData(
 
     group.events.push(event);
     pushUnique(group.operatorNames, event.operatorName);
+    pushUnique(group.operatorIps, event.operatorIp);
     pushUnique(group.sourceTerminals, event.sourceTerminal);
+    pushUnique(group.eventContents, formatTrackingEventContent(event));
 
     if (specimenId) {
       specimenTimelineMap[specimenId] ??= [];

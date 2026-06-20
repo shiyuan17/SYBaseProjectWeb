@@ -33,7 +33,6 @@ import {
   createDefaultReceiptConfirmFormState,
   createDefaultReceiptFormState,
   createReceiptDraftItem,
-  isReceiptDraftDerivedAbnormal,
   validateReceiptItems,
 } from '../utils/specimen-receipt';
 import {
@@ -104,8 +103,19 @@ export function useSpecimenReceiptWorkbench() {
       selectedRowKeys.value.includes(item.specimenId),
     ),
   );
+  const selectedRepeatReceivableRows = computed(() =>
+    selectedRows.value.filter(
+      (item) =>
+        item.canReceive &&
+        item.specimenStatus?.trim().toUpperCase() === 'REJECTED',
+    ),
+  );
   const selectedReceivableRows = computed(() =>
-    selectedRows.value.filter((item) => isReceiptWorkbenchRowReceivable(item)),
+    selectedRows.value.filter(
+      (item) =>
+        isReceiptWorkbenchRowReceivable(item) ||
+        selectedRepeatReceivableRows.value.includes(item),
+    ),
   );
   const receiveSummary = computed(() => {
     const applicationKeys = new Set<string>();
@@ -158,6 +168,7 @@ export function useSpecimenReceiptWorkbench() {
 
   function syncReceiveOperator() {
     receiveForm.logisticsStaffName = '';
+    receiveForm.rectificationEffect = '';
     receiveForm.receivedByName =
       operatorForm.operatorName.trim() || userStore.userInfo?.realName || '';
     receiveForm.receivedByUserId =
@@ -175,6 +186,10 @@ export function useSpecimenReceiptWorkbench() {
     directReceiveForm.receivedByUserId =
       operatorForm.operatorUserId.trim() || userStore.userInfo?.userId || '';
     directReceiveForm.terminalCode = '';
+    directReceiveForm.rejectReason = '';
+    directReceiveForm.rectificationSuggestion = '';
+    directReceiveForm.rectificationEffect = '';
+    directReceiveForm.customRejectReasons = [];
   }
 
   function handleSelectionChange(rows: ReceiptWorkbenchRow[]) {
@@ -513,6 +528,14 @@ export function useSpecimenReceiptWorkbench() {
       ElMessage.warning('请选择签收人员');
       return false;
     }
+    // 如果有已拒收的标本，需要填写整改效果
+    const hasRejectedItems = receiveTargetRows.value.some(
+      (row) => row.specimenStatus?.trim().toUpperCase() === 'REJECTED',
+    );
+    if (hasRejectedItems && !receiveForm.rectificationEffect.trim()) {
+      ElMessage.warning('请填写整改效果');
+      return false;
+    }
     return true;
   }
 
@@ -570,9 +593,7 @@ export function useSpecimenReceiptWorkbench() {
   }
 
   function openReceiveDialog() {
-    const targets = selectedRows.value.filter((item) =>
-      isReceiptWorkbenchRowReceivable(item),
-    );
+    const targets = selectedReceivableRows.value;
     if (targets.length === 0) {
       ElMessage.warning('请先选择待签收标本');
       return;
@@ -609,7 +630,25 @@ export function useSpecimenReceiptWorkbench() {
       return;
     }
 
-    const validationMessage = validateReceiptItems(directReceiveItems.value);
+    if (!directReceiveForm.rejectReason) {
+      ElMessage.warning('请选择拒收原因');
+      return;
+    }
+
+    if (!directReceiveForm.rectificationSuggestion.trim()) {
+      ElMessage.warning('请填写整改建议');
+      return;
+    }
+
+    // 设置所有标本为拒收状态
+    const rejectItems = directReceiveItems.value.map((item) => ({
+      ...item,
+      receiptStatus: 'REJECTED',
+      reason: `拒收原因：${directReceiveForm.rejectReason}\n整改建议：${directReceiveForm.rectificationSuggestion}`,
+      qualityCheckResult: 'PASSED',
+    }));
+
+    const validationMessage = validateReceiptItems(rejectItems);
     if (validationMessage) {
       ElMessage.warning(validationMessage);
       return;
@@ -619,14 +658,11 @@ export function useSpecimenReceiptWorkbench() {
     pageError.value = '';
     try {
       await directReceiveSpecimens(
-        buildDirectReceiptSubmissionRequest(
-          directReceiveForm,
-          directReceiveItems.value,
-        ),
+        buildDirectReceiptSubmissionRequest(directReceiveForm, rejectItems),
       );
       const receiptTime = new Date().toISOString();
       const receiptItemsByIdentifier = new Map(
-        directReceiveItems.value.flatMap((item) =>
+        rejectItems.flatMap((item) =>
           collectReceiptItemKeys(item).map((key) => [key, item] as const),
         ),
       );
@@ -641,7 +677,79 @@ export function useSpecimenReceiptWorkbench() {
 
         return {
           ...row,
-          abnormalFlag: isReceiptDraftDerivedAbnormal(matchedReceiptItem),
+          abnormalFlag: true,
+          canReceive: true, // 拒收后仍然可以重新接收
+          qualityCheckResult: matchedReceiptItem.qualityCheckResult.trim(),
+          qualityIssueCodes: matchedReceiptItem.qualityIssueCodes ?? [],
+          receivedAt: receiptTime,
+          receivedByName: directReceiveForm.receivedByName.trim(),
+          specimenStatus: matchedReceiptItem.receiptStatus.trim(),
+          queueStatus: 'SUCCESS',
+        };
+      });
+
+      directReceiveDialogVisible.value = false;
+      ElMessage.success('拒收已提交');
+    } catch (error) {
+      pageError.value = getWorkflowPageErrorMessage(error);
+    } finally {
+      directReceiveSubmitting.value = false;
+    }
+  }
+
+  // 重新接收（拒收后再次接收）
+  async function submitReReceive() {
+    if (
+      !directReceiveForm.receivedByName.trim() ||
+      !directReceiveForm.receivedByUserId.trim()
+    ) {
+      ElMessage.warning('请选择接收人');
+      return;
+    }
+
+    if (!directReceiveForm.rectificationEffect.trim()) {
+      ElMessage.warning('请填写整改效果');
+      return;
+    }
+
+    // 设置所有标本为已接收状态
+    const receiveItems = directReceiveItems.value.map((item) => ({
+      ...item,
+      receiptStatus: 'RECEIVED',
+      remarks: `整改效果：${directReceiveForm.rectificationEffect}`,
+      qualityCheckResult: 'PASSED',
+    }));
+
+    const validationMessage = validateReceiptItems(receiveItems);
+    if (validationMessage) {
+      ElMessage.warning(validationMessage);
+      return;
+    }
+
+    directReceiveSubmitting.value = true;
+    pageError.value = '';
+    try {
+      await directReceiveSpecimens(
+        buildDirectReceiptSubmissionRequest(directReceiveForm, receiveItems),
+      );
+      const receiptTime = new Date().toISOString();
+      const receiptItemsByIdentifier = new Map(
+        receiveItems.flatMap((item) =>
+          collectReceiptItemKeys(item).map((key) => [key, item] as const),
+        ),
+      );
+
+      queueItems.value = queueItems.value.map((row) => {
+        const matchedReceiptItem = collectReceiptItemKeys(row)
+          .map((key) => receiptItemsByIdentifier.get(key))
+          .find(Boolean);
+        if (!matchedReceiptItem) {
+          return row;
+        }
+
+        return {
+          ...row,
+          abnormalFlag: false,
           canReceive: false,
           qualityCheckResult: matchedReceiptItem.qualityCheckResult.trim(),
           qualityIssueCodes: matchedReceiptItem.qualityIssueCodes ?? [],
@@ -653,7 +761,7 @@ export function useSpecimenReceiptWorkbench() {
       });
 
       directReceiveDialogVisible.value = false;
-      ElMessage.success('异常接收已提交');
+      ElMessage.success('重新接收已提交');
     } catch (error) {
       pageError.value = getWorkflowPageErrorMessage(error);
     } finally {
@@ -662,8 +770,11 @@ export function useSpecimenReceiptWorkbench() {
   }
 
   async function handleReceiveSelected() {
-    const targets = receiveTargetRows.value.filter((item) =>
-      isReceiptWorkbenchRowReceivable(item),
+    const targets = receiveTargetRows.value.filter(
+      (item) =>
+        isReceiptWorkbenchRowReceivable(item) ||
+        (item.canReceive &&
+          item.specimenStatus?.trim().toUpperCase() === 'REJECTED'),
     );
     if (targets.length === 0) {
       ElMessage.warning('请先选择待签收标本');
@@ -702,6 +813,10 @@ export function useSpecimenReceiptWorkbench() {
                   specimenNo: row.specimenNo,
                 }),
                 containerCount: row.containerCount ?? 1,
+                remarks:
+                  row.specimenStatus?.trim().toUpperCase() === 'REJECTED'
+                    ? `整改效果：${receiveForm.rectificationEffect.trim()}`
+                    : '',
               })),
             ),
           );
@@ -914,6 +1029,7 @@ export function useSpecimenReceiptWorkbench() {
     selectedRowCount,
     selectedRows,
     submitDirectReceive,
+    submitReReceive,
     submitRetryLabel,
   };
 }

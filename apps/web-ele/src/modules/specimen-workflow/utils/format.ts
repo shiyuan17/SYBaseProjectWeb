@@ -1,3 +1,5 @@
+import type { TrackingEventView } from '../types/specimen-workflow';
+
 import dayjs from 'dayjs';
 
 import {
@@ -119,8 +121,11 @@ const transportStatusLabels = {
   COMPLETED: '已完成',
 } satisfies Record<string, string>;
 const trackingEventTypeLabels = {
+  BOUND: '绑定条码',
+  CANCEL_MATERIAL_VERIFICATION: '取消材块核对',
   CHECKED_IN: '执行入库',
   COMPLETED: '完成固定',
+  CREATE_MATERIAL: '创建材块',
   DIRECT_RECEIVE: '直接接收',
   HANDED_OVER: '完成交接',
   ORDER_CREATED: '创建转运单',
@@ -129,12 +134,38 @@ const trackingEventTypeLabels = {
   RECEIVED: '接收标本',
   REGISTERED: '登记标本',
   REJECTED: '拒收标本',
+  REMOVE_MATERIAL: '删除材块',
+  REBOUND: '重绑条码',
   RETRY: '标签补打',
   RETURNED: '退回标本',
   STARTED: '开始固定',
+  UNBOUND: '取消绑定条码',
   VERIFIED: '完成核对',
   VERIFYING: '开始核对',
+  VERIFY_MATERIAL: '核对材块',
 } satisfies Record<string, string>;
+
+const trackingEventContentPatterns: Array<{
+  pattern: RegExp;
+  replace: (match: RegExpMatchArray) => string;
+}> = [
+  {
+    pattern: /^Specimen barcode bound to (.+)$/i,
+    replace: (match) => `绑定条码 ${match[1]}`,
+  },
+  {
+    pattern: /^Specimen barcode rebound from (.+) to (.+)$/i,
+    replace: (match) => `重绑条码 ${match[1]} → ${match[2]}`,
+  },
+  {
+    pattern: /^Specimen barcode unbound from (.+)$/i,
+    replace: (match) => `取消条码绑定 ${match[1]}`,
+  },
+  {
+    pattern: /^Registered specimen (.+)$/i,
+    replace: (match) => `登记标本 ${match[1]}`,
+  },
+];
 const trackingEventStatusLabels = {
   FAILED: '失败',
   MATCHED: '匹配成功',
@@ -210,4 +241,31 @@ export function formatTrackingEventType(value?: null | string) {
 
 export function formatTrackingEventStatus(value?: null | string) {
   return formatMappedValue(value, trackingEventStatusLabels);
+}
+
+function localizeTrackingEventContent(value: string) {
+  const trimmed = value.trim();
+  for (const { pattern, replace } of trackingEventContentPatterns) {
+    const match = trimmed.match(pattern);
+    if (match) {
+      return replace(match);
+    }
+  }
+  if (/[\u4E00-\u9FFF]/.test(trimmed)) {
+    return trimmed;
+  }
+  return '';
+}
+
+export function formatTrackingEventContent(
+  event: Pick<TrackingEventView, 'eventContent' | 'eventType'>,
+) {
+  const content = event.eventContent?.trim();
+  if (content) {
+    const localized = localizeTrackingEventContent(content);
+    if (localized) {
+      return localized;
+    }
+  }
+  return formatTrackingEventType(event.eventType);
 }

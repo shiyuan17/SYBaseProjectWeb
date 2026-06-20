@@ -580,6 +580,99 @@ describe('FixationVerifyView', () => {
     app.unmount();
   });
 
+  it('prefers workbench room mapping when a row only carries OR code surgeryName', async () => {
+    mockRoute.query = { applicationNo: 'AP202605230001' };
+    listSpecimensMock.mockResolvedValueOnce({
+      items: [
+        {
+          abnormalFlag: false,
+          applicationId: 'APP-PENDING',
+          applicationNo: 'AP202605230001',
+          barcode: 'SP-PENDING',
+          checkInStatus: null,
+          checkedInAt: null,
+          checkedInByName: null,
+          containerCount: 1,
+          containerName: '福尔马林瓶',
+          fixationStatus: 'PENDING',
+          labelPrintBatchNo: null,
+          labelPrintStatus: 'SUCCESS',
+          latestTrackingAt: '2026-05-23 12:44:44',
+          patientName: 'Alice',
+          recentNode: null,
+          registeredAt: '2026-05-23 12:44:44',
+          specimenConfirmedAt: null,
+          specimenCount: 1,
+          specimenId: 'SPEC-PENDING',
+          specimenName: '左手背',
+          specimenNo: 'SP20260619002',
+          specimenRemovalAt: null,
+          specimenSite: null,
+          specimenStatus: 'REGISTERED',
+          specimenType: '常规',
+          submittingDepartmentId: null,
+          submittingDepartmentName: null,
+          surgeryName: '惠侨楼 - 手术室 2',
+          verificationCompletedAt: null,
+          verificationStartedAt: null,
+          verificationStatus: null,
+        },
+        {
+          abnormalFlag: false,
+          applicationId: 'APP-PENDING',
+          applicationNo: 'AP202605230001',
+          barcode: 'SP-PENDING-2',
+          checkInStatus: null,
+          checkedInAt: null,
+          checkedInByName: null,
+          containerCount: 1,
+          containerName: '福尔马林瓶',
+          fixationStatus: 'PENDING',
+          labelPrintBatchNo: null,
+          labelPrintStatus: 'SUCCESS',
+          latestTrackingAt: '2026-05-23 12:45:44',
+          patientName: 'Alice',
+          recentNode: null,
+          registeredAt: '2026-05-23 12:45:44',
+          specimenConfirmedAt: null,
+          specimenCount: 1,
+          specimenId: 'SPEC-PENDING-2',
+          specimenName: '额部黑毛痣',
+          specimenNo: 'SP20260619001',
+          specimenRemovalAt: null,
+          specimenSite: null,
+          specimenStatus: 'REGISTERED',
+          specimenType: '常规',
+          submittingDepartmentId: null,
+          submittingDepartmentName: null,
+          surgeryName: 'OR-102',
+          verificationCompletedAt: null,
+          verificationStartedAt: null,
+          verificationStatus: null,
+        },
+      ],
+      page: 1,
+      size: 500,
+      summary: {
+        abnormalCount: 0,
+        confirmedCount: 0,
+        pendingCount: 2,
+        totalCount: 2,
+      },
+      total: 2,
+    } as any);
+    const { app, container } = mountView();
+    await waitForViewAssertion(() => {
+      expect(container.textContent).toContain('左手背');
+      expect(container.textContent).toContain('额部黑毛痣');
+    });
+
+    expect(container.textContent).toContain('惠侨楼 - 手术室 2');
+    expect(container.textContent).not.toContain('OR-102');
+
+    app.unmount();
+  });
+
   it('confirms selected removals after submission', async () => {
     mockRoute.query = { applicationNo: 'AP202605230001' };
     const { app, container } = mountView();
@@ -737,12 +830,12 @@ describe('FixationVerifyView', () => {
     specimenIdInput!.dispatchEvent(
       new KeyboardEvent('keyup', { bubbles: true, key: 'Enter' }),
     );
-    await flushView();
-
-    expect(confirmSpecimenRemovalByIdentifierMock).toHaveBeenCalledWith({
-      identifier: 'SP202605230001',
-      identifierType: 'SPECIMEN_NO',
-      remarks: '离体确认',
+    await waitForViewAssertion(() => {
+      expect(confirmSpecimenRemovalByIdentifierMock).toHaveBeenCalledWith({
+        identifier: 'SP202605230001',
+        identifierType: 'SPECIMEN_NO',
+        remarks: '离体确认',
+      });
     });
     await waitForViewAssertion(() => {
       expect(listSpecimensMock).toHaveBeenCalledWith({
@@ -785,12 +878,12 @@ describe('FixationVerifyView', () => {
     specimenIdInput!.dispatchEvent(
       new KeyboardEvent('keyup', { bubbles: true, key: 'Enter' }),
     );
-    await flushView();
-
-    expect(confirmSpecimenRemovalByIdentifierMock).toHaveBeenCalledWith({
-      identifier: 'SP-PENDING',
-      identifierType: 'BARCODE',
-      remarks: '离体确认',
+    await waitForViewAssertion(() => {
+      expect(confirmSpecimenRemovalByIdentifierMock).toHaveBeenCalledWith({
+        identifier: 'SP-PENDING',
+        identifierType: 'BARCODE',
+        remarks: '离体确认',
+      });
     });
     await waitForViewAssertion(() => {
       expect(messageSuccessMock).toHaveBeenCalledWith(
@@ -864,12 +957,12 @@ describe('FixationVerifyView', () => {
     specimenIdInput!.dispatchEvent(
       new KeyboardEvent('keyup', { bubbles: true, key: 'Enter' }),
     );
-    await flushView();
-
-    expect(confirmSpecimenRemovalByIdentifierMock).toHaveBeenCalledWith({
-      identifier: 'SP-DUPLICATE',
-      identifierType: 'SPECIMEN_NO',
-      remarks: '离体确认',
+    await waitForViewAssertion(() => {
+      expect(confirmSpecimenRemovalByIdentifierMock).toHaveBeenCalledWith({
+        identifier: 'SP-DUPLICATE',
+        identifierType: 'SPECIMEN_NO',
+        remarks: '离体确认',
+      });
     });
     expect(specimenIdInput!.value).toBe('SP-DUPLICATE');
     expect(container.textContent).toContain(
@@ -1070,13 +1163,13 @@ describe('FixationVerifyView', () => {
     specimenIdInput!.dispatchEvent(
       new KeyboardEvent('keyup', { bubbles: true, key: 'Enter' }),
     );
-    await flushView();
-
-    expect(listSpecimensMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        keyword: 'SP-NOT-FOUND',
-      }),
-    );
+    await waitForViewAssertion(() => {
+      expect(listSpecimensMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          keyword: 'SP-NOT-FOUND',
+        }),
+      );
+    });
     expect(confirmSpecimenRemovalByIdentifierMock).not.toHaveBeenCalled();
     expect(messageWarningMock).toHaveBeenCalledWith(
       '未找到对应标本，请确认标本条码/编号是否正确',

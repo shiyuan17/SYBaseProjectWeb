@@ -26,6 +26,7 @@ import {
   ElPagination,
 } from 'element-plus';
 
+import CopyableIdentifier from '../../../components/CopyableIdentifier.vue';
 import {
   getApplicationTracking,
   listApplications,
@@ -359,11 +360,11 @@ watch(
           description="展示申请单状态、当前节点、表单状态与送检摘要。"
         >
           <ElDescriptions :column="2" border>
-            <ElDescriptionsItem label="申请单编号">
-              {{ detailTracking?.id || '-' }}
-            </ElDescriptionsItem>
             <ElDescriptionsItem label="申请单号">
-              {{ formatNullable(detailTracking?.applicationNo) }}
+              <CopyableIdentifier
+                kind="applicationNo"
+                :value="detailTracking?.applicationNo"
+              />
             </ElDescriptionsItem>
             <ElDescriptionsItem label="申请单状态">
               {{ formatApplicationStatus(detailTracking?.status) }}
@@ -383,13 +384,6 @@ watch(
             </ElDescriptionsItem>
             <ElDescriptionsItem label="患者姓名">
               {{ formatNullable(detailTracking?.patientName) }}
-            </ElDescriptionsItem>
-            <ElDescriptionsItem label="患者标识">
-              {{
-                formatNullable(
-                  detailTracking?.patientIdDisplay || detailTracking?.patientId,
-                )
-              }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="送检科室">
               {{ formatNullable(detailTracking?.submittingDepartmentName) }}
@@ -426,7 +420,7 @@ watch(
 
         <WorkflowSectionCard
           title="时间线事件"
-          description="展示最近追踪事件、节点、状态与操作终端。"
+          description="展示最近追踪事件的时间、操作人、IP 与事件说明。"
         >
           <TrackingApplicationTimelineTabs
             v-model="activeTimelineTab"

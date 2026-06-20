@@ -131,6 +131,7 @@ export function mapApplicationPageResponse(
     ...response,
     items: (response.items ?? []).map((item) => ({
       ...item,
+      specimenNos: item.specimenNos ?? [],
       currentNode: item.voided ? 'VOIDED' : item.currentNode,
       deletable: item.deletable ?? false,
       editable: item.editable ?? false,

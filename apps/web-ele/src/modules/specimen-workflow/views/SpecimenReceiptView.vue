@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ReceiptWorkbenchRow } from '../utils/specimen-receipt-workbench';
 
-import { watch } from 'vue';
+import { computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
@@ -31,8 +31,8 @@ import { useSpecimenReceiptWorkbench } from '../composables/useSpecimenReceiptWo
 import { formatDateTime, formatNullable } from '../utils/format';
 import {
   isReceiptWorkbenchRowReceivable,
-  resolveReceiptWorkbenchStatusLabel,
   resolveReceiptWorkbenchStatusTagType,
+  resolveSpecimenStatusLabel,
 } from '../utils/specimen-receipt-workbench';
 import {
   resolveReceiptWorkflowRowTone,
@@ -74,6 +74,7 @@ const {
   receiveForm,
   receiveLoading,
   receiveSummary,
+  receiveTargetRows,
   receivedCount,
   retryDialogVisible,
   retryForm,
@@ -86,6 +87,12 @@ const {
   submitDirectReceive,
   submitRetryLabel,
 } = useSpecimenReceiptWorkbench();
+
+const receiveRequiresRectificationEffect = computed(() =>
+  (Array.isArray(receiveTargetRows.value) ? receiveTargetRows.value : []).some(
+    (row) => row.specimenStatus?.trim().toUpperCase() === 'REJECTED',
+  ),
+);
 
 function normalizeQueryValue(value: unknown) {
   if (typeof value === 'string') {
@@ -132,7 +139,7 @@ watch(
       />
 
       <div class="flex flex-wrap items-center gap-4 text-sm">
-        <div class="font-semibold text-danger">标本签收</div>
+        <div class="font-semibold text-danger">签收</div>
         <div>
           全部
           <span class="text-xl font-semibold text-primary">{{
@@ -191,7 +198,7 @@ watch(
         >
           标本签收
         </ElButton>
-        <ElButton @click="openDirectReceiveDrawer">异常接收</ElButton>
+        <ElButton @click="openDirectReceiveDrawer">拒收</ElButton>
         <ElButton
           :disabled="selectedRowCount === 0"
           @click="handleClearSelectionRows"
@@ -262,9 +269,14 @@ watch(
         <ElTableColumn label="标本状态" min-width="120">
           <template #default="{ row }">
             <ElTag
-              :type="resolveReceiptWorkbenchStatusTagType(row.queueStatus)"
+              :type="
+                resolveReceiptWorkbenchStatusTagType(
+                  row.queueStatus,
+                  row.specimenStatus,
+                )
+              "
             >
-              {{ resolveReceiptWorkbenchStatusLabel(row.queueStatus) }}
+              {{ resolveSpecimenStatusLabel(row.specimenStatus) }}
             </ElTag>
           </template>
         </ElTableColumn>
@@ -315,6 +327,7 @@ watch(
     <SpecimenReceiptReceiveDialog
       v-model="receiveDialogVisible"
       v-model:form="receiveForm"
+      :require-rectification-effect="receiveRequiresRectificationEffect"
       :submitting="receiveLoading"
       :summary="receiveSummary"
       @close="closeReceiveDialog"

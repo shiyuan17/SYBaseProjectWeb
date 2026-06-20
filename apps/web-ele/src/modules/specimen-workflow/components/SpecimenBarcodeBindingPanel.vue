@@ -12,15 +12,9 @@ import {
   ElTableColumn,
 } from 'element-plus';
 
+import CopyableIdentifier from '../../../components/CopyableIdentifier.vue';
 import { useSpecimenBarcodeBindingPanel } from '../composables/useSpecimenBarcodeBindingPanel';
 import { formatDateTime, formatNullable } from '../utils/format';
-
-function resolvePatientIdDisplay(row: {
-  patientId?: null | string;
-  patientIdDisplay?: null | string;
-}) {
-  return row.patientIdDisplay || row.patientId || null;
-}
 
 const {
   actionLoading,
@@ -174,8 +168,16 @@ const {
           {{ (filters.page - 1) * filters.size + $index + 1 }}
         </template>
       </ElTableColumn>
-      <ElTableColumn label="申请单" min-width="120" prop="applicationNo" />
-      <ElTableColumn label="标本编号" min-width="160" prop="specimenNo" />
+      <ElTableColumn label="申请单" min-width="120">
+        <template #default="{ row }">
+          <CopyableIdentifier kind="applicationNo" :value="row.applicationNo" />
+        </template>
+      </ElTableColumn>
+      <ElTableColumn label="标本编号" min-width="160">
+        <template #default="{ row }">
+          <CopyableIdentifier kind="specimenNo" :value="row.specimenNo" />
+        </template>
+      </ElTableColumn>
       <ElTableColumn label="标本条码" min-width="160">
         <template #default="{ row }">
           {{ formatNullable(row.barcode) }}
@@ -209,7 +211,11 @@ const {
       </ElTableColumn>
       <ElTableColumn label="病人ID" min-width="140">
         <template #default="{ row }">
-          {{ formatNullable(resolvePatientIdDisplay(row)) }}
+          <CopyableIdentifier
+            kind="patientId"
+            :fallback-value="row.patientId"
+            :value="row.patientIdDisplay"
+          />
         </template>
       </ElTableColumn>
       <ElTableColumn label="姓名" min-width="120">

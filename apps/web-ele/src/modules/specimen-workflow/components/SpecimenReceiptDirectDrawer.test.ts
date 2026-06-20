@@ -10,7 +10,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   createButtonStub,
   createDialogStub,
+  createInputStub,
+  createOptionStub,
   createPassthroughStub,
+  createSelectStub,
 } from '../test-utils/component-stubs';
 
 vi.mock('element-plus', () => ({
@@ -18,25 +21,13 @@ vi.mock('element-plus', () => ({
   ElDrawer: createDialogStub(),
   ElForm: createPassthroughStub('form'),
   ElFormItem: createPassthroughStub(),
-  ElTag: createPassthroughStub(),
-}));
-
-vi.mock('#/modules/system-management/components/SystemUserSelect.vue', () => ({
-  default: {
-    emits: ['change', 'update:modelValue'],
-    props: ['modelValue', 'placeholder', 'selectedLabel'],
-    template:
-      "<button type=\"button\" @click=\"$emit('change', { id: 'USER-3', name: '王护士' })\">选择接收人</button>",
+  ElInput: createInputStub(),
+  ElMessage: {
+    success: vi.fn(),
+    warning: vi.fn(),
   },
-}));
-
-vi.mock('./SpecimenReceiptDraftTable.vue', () => ({
-  default: {
-    emits: ['remove'],
-    props: ['items'],
-    template:
-      '<div><span>{{ items.length }}</span><button type="button" @click="$emit(\'remove\', 1)">删除</button></div>',
-  },
+  ElOption: createOptionStub(),
+  ElSelect: createSelectStub(),
 }));
 
 import SpecimenReceiptDirectDrawer from './SpecimenReceiptDirectDrawer.vue';
@@ -63,13 +54,16 @@ async function mountDrawer() {
   const container = document.createElement('div');
   document.body.append(container);
   const closeMock = vi.fn();
-  const directReceiveUserChangeMock = vi.fn();
-  const removeRowMock = vi.fn();
+  const reReceiveMock = vi.fn();
   const submitMock = vi.fn();
   const visible = ref(true);
   const form = reactive<ReceiptOperatorForm>({
+    customRejectReasons: [],
     receivedByName: 'Test User',
     receivedByUserId: 'USER-1',
+    rectificationEffect: '',
+    rectificationSuggestion: '',
+    rejectReason: '',
     terminalCode: '',
   });
 
@@ -84,8 +78,7 @@ async function mountDrawer() {
           visible.value = value;
         },
         onClose: closeMock,
-        onDirectReceiveUserChange: directReceiveUserChangeMock,
-        onRemoveRow: removeRowMock,
+        onReReceive: reReceiveMock,
         onSubmit: submitMock,
       });
     },
@@ -97,8 +90,8 @@ async function mountDrawer() {
   return {
     closeMock,
     container,
-    directReceiveUserChangeMock,
-    removeRowMock,
+    form,
+    reReceiveMock,
     submitMock,
     unmount() {
       app.unmount();
@@ -116,42 +109,34 @@ describe('SpecimenReceiptDirectDrawer', () => {
   it('renders drawer content and actions', async () => {
     const wrapper = await mountDrawer();
 
-    expect(wrapper.container.textContent).toContain('异常接收');
-    expect(wrapper.container.textContent).toContain('待提交 1 条');
-    expect(wrapper.container.textContent).toContain(
-      '拒收、退回或质控不合格提交后会自动标记异常',
-    );
-    expect(wrapper.container.textContent).toContain('接收明细');
-    expect(wrapper.container.textContent).toContain('删除');
-    expect(wrapper.container.textContent).toContain('1');
+    expect(wrapper.container.textContent).toContain('拒收');
+    expect(wrapper.container.textContent).toContain('自定义拒收原因');
+    expect(wrapper.container.textContent).toContain('拒收原因');
+    expect(wrapper.container.textContent).toContain('整改建议');
+    expect(wrapper.container.textContent).toContain('关闭');
+    expect(wrapper.container.textContent).not.toContain('整改效果');
+    expect(wrapper.container.textContent).not.toContain('重新接收');
 
     wrapper.unmount();
   });
 
-  it('emits toolbar and row actions', async () => {
+  it('submits reject after filling the required fields and handles close', async () => {
     const wrapper = await mountDrawer();
+    wrapper.form.rectificationSuggestion = '请重新采集并规范送检';
+    await nextTick();
 
     const buttons = [
       ...wrapper.container.querySelectorAll<HTMLButtonElement>('button'),
     ];
 
-    buttons
-      .find((button) => button.textContent?.includes('选择接收人'))
-      ?.click();
-    buttons.find((button) => button.textContent?.includes('删除'))?.click();
-    buttons.find((button) => button.textContent?.includes('取消'))?.click();
-    buttons
-      .find((button) => button.textContent?.includes('提交异常接收'))
-      ?.click();
+    buttons.find((button) => button.textContent?.includes('拒收'))?.click();
+    buttons.find((button) => button.textContent?.includes('关闭'))?.click();
     await nextTick();
 
-    expect(wrapper.directReceiveUserChangeMock).toHaveBeenCalledWith({
-      id: 'USER-3',
-      name: '王护士',
-    });
-    expect(wrapper.removeRowMock).toHaveBeenCalledWith(1);
+    expect(wrapper.form.rejectReason).toBe('标本信息不符');
     expect(wrapper.closeMock).toHaveBeenCalledTimes(1);
     expect(wrapper.submitMock).toHaveBeenCalledTimes(1);
+    expect(wrapper.reReceiveMock).not.toHaveBeenCalled();
 
     wrapper.unmount();
   });

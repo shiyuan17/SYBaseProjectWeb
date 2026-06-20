@@ -78,12 +78,14 @@ describe('tracking-timeline', () => {
     const data = buildTrackingTimelineData(
       [
         createEvent({
+          operatorIp: '10.0.0.1',
           operatorName: 'operator-a',
           specimenBarcode: 'BC-001',
           specimenId: 'SPEC-001',
           specimenNo: 'SP-001',
         }),
         createEvent({
+          operatorIp: '10.0.0.2',
           operatorName: 'operator-b',
           sourceTerminal: 'TERMINAL-2',
           specimenBarcode: 'BC-002',
@@ -103,6 +105,8 @@ describe('tracking-timeline', () => {
 
     expect(data.overallTimelineGroups).toHaveLength(1);
     expect(data.overallTimelineGroups[0]).toMatchObject({
+      eventContents: ['REGISTER'],
+      operatorIps: ['10.0.0.1', '10.0.0.2'],
       operatorNames: ['operator-a', 'operator-b'],
       sourceTerminals: ['TERMINAL-1', 'TERMINAL-2'],
       specimenCount: 2,

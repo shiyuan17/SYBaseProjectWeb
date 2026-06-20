@@ -83,4 +83,26 @@ describe('getWorkflowPageErrorMessage', () => {
       ),
     ).toBe('当前申请单下仍有标本未完成核对、固定或标本确认，不能入库。');
   });
+
+  it('maps slicing slide print merge errors to chinese prompts', () => {
+    expect(
+      mapWorkflowEnglishErrorMessage('No mergeable slicing task pairs found'),
+    ).toBe('当前勾选记录没有可两两合片的组合。');
+    expect(
+      mapWorkflowEnglishErrorMessage(
+        'Slicing slide print merge group not found',
+      ),
+    ).toBe('未找到对应的合片组，可能已被取消或已打印。');
+    expect(
+      mapWorkflowEnglishErrorMessage('At least one merge group is required'),
+    ).toBe('请先勾选需要取消的合片组。');
+    expect(
+      mapWorkflowEnglishErrorMessage(
+        'Embedding box number is required for merging',
+      ),
+    ).toBe('勾选记录缺少蜡块号，无法两两合片。');
+    expect(
+      mapWorkflowEnglishErrorMessage('Patient ID is required for merging'),
+    ).toBe('勾选记录缺少病人ID，无法两两合片。');
+  });
 });

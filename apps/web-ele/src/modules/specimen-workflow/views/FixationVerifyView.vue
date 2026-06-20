@@ -34,6 +34,7 @@ import { getWorkflowPageErrorMessage } from '../utils/error';
 import {
   loadOperatingRoomNameMapSafely,
   normalizeOperatingRoomDisplayValue,
+  resolveOperatingRoomDisplayName,
 } from '../utils/operating-room-display';
 import { resolveWorkflowPatientInfo } from '../utils/patient-info';
 import {
@@ -219,9 +220,13 @@ async function normalizeApplicationRemovalItem(
     ...mapSpecimenManagementItemToRemovalDisplayRow(row),
     inpatientNo: patientInfo.inpatientNo,
     patientIdLabel: patientInfo.patientIdLabel,
-    surgeryName: normalizeOperatingRoomDisplayValue(
+    surgeryName: resolveOperatingRoomDisplayName(
       operatingRoomNameMap.value,
-      row.surgeryName,
+      workbenchRecord?.surgeryInfo.roomId,
+      normalizeOperatingRoomDisplayValue(
+        operatingRoomNameMap.value,
+        row.surgeryName,
+      ),
     ),
     wardName: patientInfo.wardName,
   };
@@ -452,6 +457,7 @@ async function submitQuickConfirm() {
   quickActionLoading.specimenId = true;
   pageError.value = '';
   try {
+    await ensureOperatingRoomNameMapLoaded();
     const quickConfirmTarget = await resolveQuickConfirmTarget(
       'SPECIMEN_NO',
       normalizedValue,

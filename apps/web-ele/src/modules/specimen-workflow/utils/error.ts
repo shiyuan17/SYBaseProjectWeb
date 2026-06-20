@@ -67,6 +67,26 @@ export function mapWorkflowEnglishErrorMessage(message: string) {
     return '标本ID对应多条记录，无法自动确认。';
   }
 
+  if (message === 'No mergeable slicing task pairs found') {
+    return '当前勾选记录没有可两两合片的组合。';
+  }
+
+  if (message === 'Slicing slide print merge group not found') {
+    return '未找到对应的合片组，可能已被取消或已打印。';
+  }
+
+  if (message === 'At least one merge group is required') {
+    return '请先勾选需要取消的合片组。';
+  }
+
+  if (message === 'Embedding box number is required for merging') {
+    return '勾选记录缺少蜡块号，无法两两合片。';
+  }
+
+  if (message === 'Patient ID is required for merging') {
+    return '勾选记录缺少病人ID，无法两两合片。';
+  }
+
   return message;
 }
 

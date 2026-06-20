@@ -3,6 +3,7 @@ import type { SpecimenTrackingSummary } from '../types/specimen-workflow';
 
 import { ElTable, ElTableColumn, ElTag } from 'element-plus';
 
+import CopyableIdentifier from '../../../components/CopyableIdentifier.vue';
 import {
   formatFixationStatus,
   formatLabelPrintStatus,
@@ -19,7 +20,11 @@ defineProps<{
 
 <template>
   <ElTable :data="specimens" border>
-    <ElTableColumn label="标本号" min-width="140" prop="specimenNo" />
+    <ElTableColumn label="标本号" min-width="140">
+      <template #default="{ row }">
+        <CopyableIdentifier kind="specimenNo" :value="row.specimenNo" />
+      </template>
+    </ElTableColumn>
     <ElTableColumn label="条码" min-width="180" prop="barcode" />
     <ElTableColumn label="标本名称" min-width="180" prop="specimenName" />
     <ElTableColumn label="标本类型" min-width="140">

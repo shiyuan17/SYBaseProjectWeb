@@ -183,6 +183,10 @@ export function createReceiptWorkbenchRow(
 }
 
 export function isReceiptWorkbenchRowReceivable(row: ReceiptWorkbenchRow) {
+  const normalizedStatus = row.specimenStatus?.trim().toUpperCase();
+  if (normalizedStatus === 'REJECTED') {
+    return row.canReceive;
+  }
   return row.canReceive && row.queueStatus !== 'SUCCESS';
 }
 
@@ -218,7 +222,7 @@ export function buildReceiptWorkbenchExportRows(rows: ReceiptWorkbenchRow[]) {
     formatNullable(row.patientGenderLabel),
     formatNullable(row.surgeryName),
     formatNullable(row.specimenName),
-    resolveReceiptWorkbenchStatusLabel(row.queueStatus),
+    resolveSpecimenStatusLabel(row.specimenStatus),
     formatNullable(row.specimenType),
     formatDateTime(row.receivedAt),
     formatNullable(row.receivedByName),
@@ -248,7 +252,15 @@ export function resolveReceiptWorkbenchStatusLabel(
 
 export function resolveReceiptWorkbenchStatusTagType(
   status: ReceiptWorkbenchDisplayStatus,
+  specimenStatus?: null | string,
 ) {
+  const normalizedSpecimenStatus = (specimenStatus ?? '').trim().toUpperCase();
+  if (normalizedSpecimenStatus === 'REJECTED') {
+    return 'danger' as const;
+  }
+  if (normalizedSpecimenStatus === 'RETURNED') {
+    return 'warning' as const;
+  }
   if (status === 'SUCCESS') {
     return 'success' as const;
   }
@@ -262,4 +274,30 @@ export function resolveReceiptWorkbenchStatusTagType(
     return undefined;
   }
   return 'warning' as const;
+}
+
+export function resolveSpecimenStatusLabel(status: null | string) {
+  const normalizedStatus = (status ?? '').trim().toUpperCase();
+  if (normalizedStatus === 'REGISTERED') {
+    return '已登记';
+  }
+  if (normalizedStatus === 'FIXING') {
+    return '固定中';
+  }
+  if (normalizedStatus === 'FIXED') {
+    return '固定完成';
+  }
+  if (normalizedStatus === 'IN_TRANSIT') {
+    return '转运中';
+  }
+  if (normalizedStatus === 'RECEIVED') {
+    return '已接收';
+  }
+  if (normalizedStatus === 'REJECTED') {
+    return '已拒收';
+  }
+  if (normalizedStatus === 'RETURNED') {
+    return '已退回';
+  }
+  return status ?? '-';
 }

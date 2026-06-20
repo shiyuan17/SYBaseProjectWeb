@@ -755,16 +755,18 @@ describe('useSpecimenReceiptWorkbench', () => {
       reason: '容器破损',
       receiptStatus: 'RETURNED',
     };
+    state.directReceiveForm.rejectReason = '标本容器破损';
+    state.directReceiveForm.rectificationSuggestion = '请重新采集并规范送检';
     await state.submitDirectReceive();
     await flushComposable();
 
     expect(directReceiveSpecimensMock).toHaveBeenCalledWith({
       items: [
         expect.objectContaining({
-          qualityCheckResult: 'FAILED',
+          qualityCheckResult: 'PASSED',
           qualityIssueCodes: ['CONTAINER_DAMAGE'],
-          reason: '容器破损',
-          receiptStatus: 'RETURNED',
+          reason: '拒收原因：标本容器破损\n整改建议：请重新采集并规范送检',
+          receiptStatus: 'REJECTED',
           specimenBarcode: 'BC-001',
           specimenId: 'SPEC-001',
           specimenNo: 'SP-001',
@@ -776,8 +778,162 @@ describe('useSpecimenReceiptWorkbench', () => {
     });
     expect(state.directReceiveDialogVisible.value).toBe(false);
     expect(state.queueItems.value[0]?.queueStatus).toBe('SUCCESS');
-    expect(state.queueItems.value[0]?.specimenStatus).toBe('RETURNED');
+    expect(state.queueItems.value[0]?.specimenStatus).toBe('REJECTED');
     expect(state.queueItems.value[0]?.abnormalFlag).toBe(true);
+
+    wrapper.destroy();
+  });
+
+  it('submits rejected direct receipt without requiring quality issue codes', async () => {
+    const wrapper = mountComposable();
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    state.scanInput.value = 'SP-001';
+    await state.handleQueueSpecimen();
+    await flushComposable();
+
+    state.handleSelectionChange([state.queueItems.value[0]!]);
+    state.openDirectReceiveDrawer();
+    expect(state.directReceiveDialogVisible.value).toBe(true);
+
+    state.directReceiveForm.rejectReason = '标本信息不符';
+    state.directReceiveForm.rectificationSuggestion =
+      '请补全标识信息后重新送检';
+
+    await state.submitDirectReceive();
+    await flushComposable();
+
+    expect(directReceiveSpecimensMock).toHaveBeenCalledWith({
+      items: [
+        expect.objectContaining({
+          qualityCheckResult: 'PASSED',
+          qualityIssueCodes: null,
+          reason: '拒收原因：标本信息不符\n整改建议：请补全标识信息后重新送检',
+          receiptStatus: 'REJECTED',
+          specimenBarcode: 'BC-001',
+          specimenId: 'SPEC-001',
+          specimenNo: 'SP-001',
+        }),
+      ],
+      receivedByName: 'Test User',
+      receivedByUserId: 'USER-001',
+      terminalCode: null,
+    });
+    expect(warningMock).not.toHaveBeenCalledWith(
+      '质控不合格时必须选择问题代码',
+    );
+    expect(state.directReceiveDialogVisible.value).toBe(false);
+    expect(state.queueItems.value[0]?.queueStatus).toBe('SUCCESS');
+    expect(state.queueItems.value[0]?.specimenStatus).toBe('REJECTED');
+    expect(state.queueItems.value[0]?.abnormalFlag).toBe(true);
+
+    wrapper.destroy();
+  });
+
+  it('requires rectification effect when receiving rejected specimens again', async () => {
+    const wrapper = mountComposable();
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    state.scanInput.value = 'SP-001';
+    await state.handleQueueSpecimen();
+    await flushComposable();
+
+    state.queueItems.value[0] = {
+      ...state.queueItems.value[0]!,
+      canReceive: true,
+      queueStatus: 'SUCCESS',
+      specimenStatus: 'REJECTED',
+      transportOrderId: 'TO-001',
+    };
+
+    state.handleSelectionChange([state.queueItems.value[0]!]);
+    state.openReceiveDialog();
+    state.receiveForm.logisticsStaffName = '物流员甲';
+    state.handleReceiveUserChange({
+      id: 'USER-001',
+      name: 'Test User',
+    });
+
+    await state.handleReceiveSelected();
+    await flushComposable();
+
+    expect(receiveSpecimensMock).not.toHaveBeenCalled();
+    expect(warningMock).toHaveBeenCalledWith('请填写整改效果');
+
+    wrapper.destroy();
+  });
+
+  it('submits rectification effect in remarks when receiving rejected specimens again', async () => {
+    const wrapper = mountComposable();
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    state.scanInput.value = 'SP-001';
+    await state.handleQueueSpecimen();
+    await flushComposable();
+
+    state.queueItems.value = state.queueItems.value.map((row) =>
+      row.specimenId === 'SPEC-001'
+        ? {
+            ...row,
+            canReceive: true,
+            queueStatus: 'SUCCESS',
+            specimenStatus: 'REJECTED',
+            transportOrderId: 'TO-001',
+          }
+        : row,
+    );
+
+    state.handleSelectionChange([
+      state.queueItems.value[0]!,
+      state.queueItems.value[1]!,
+    ]);
+    state.openReceiveDialog();
+    expect(state.receiveDialogVisible.value).toBe(true);
+    expect(
+      state.receiveTargetRows.value.map((item) => item.specimenId),
+    ).toEqual(['SPEC-001']);
+
+    state.receiveForm.logisticsStaffName = '物流员甲';
+    state.receiveForm.rectificationEffect = '已重新核对信息并补全标识';
+    state.handleReceiveUserChange({
+      id: 'USER-ALT',
+      name: 'Alt User',
+    });
+
+    await state.handleReceiveSelected();
+    await flushComposable();
+
+    expect(receiveSpecimensMock).toHaveBeenCalledWith({
+      items: [
+        {
+          containerCount: 1,
+          qualityCheckResult: 'PASSED',
+          qualityIssueCodes: null,
+          reason: null,
+          receiptStatus: 'RECEIVED',
+          remarks: '整改效果：已重新核对信息并补全标识',
+          specimenBarcode: 'BC-001',
+          specimenId: 'SPEC-001',
+          specimenNo: 'SP-001',
+        },
+      ],
+      logisticsStaffName: '物流员甲',
+      receivedByName: 'Alt User',
+      receivedByUserId: 'USER-ALT',
+      terminalCode: null,
+      transportOrderId: 'TO-001',
+    });
+    expect(state.queueItems.value[0]?.specimenStatus).toBe('RECEIVED');
+    expect(state.queueItems.value[0]?.queueStatus).toBe('SUCCESS');
 
     wrapper.destroy();
   });

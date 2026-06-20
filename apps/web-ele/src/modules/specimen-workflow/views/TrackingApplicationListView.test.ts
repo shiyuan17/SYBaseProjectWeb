@@ -23,6 +23,8 @@ const tabsContextKey = vi.hoisted(() => Symbol('tabs-context'));
 
 const {
   mockAccessStore,
+  mockClipboardWriteText,
+  mockElMessageSuccess,
   mockGetApplicationTracking,
   mockListApplications,
   mockPush,
@@ -30,6 +32,8 @@ const {
   mockAccessStore: {
     accessCodes: ['PERM_APPLICATION_DETAIL_QUERY'] as string[],
   },
+  mockClipboardWriteText: vi.fn(),
+  mockElMessageSuccess: vi.fn(),
   mockGetApplicationTracking: vi.fn(),
   mockListApplications: vi.fn(),
   mockPush: vi.fn(),
@@ -76,6 +80,9 @@ vi.mock('element-plus', () => {
     ElTabPane: createTabPaneStub(tabsContextKey),
     ElTable: createTableStub(tableRowKey),
     ElTableColumn: createTableColumnStub(tableRowKey),
+    ElMessage: {
+      success: mockElMessageSuccess,
+    },
     ElTabs: createTabsStub(tabsContextKey),
     ElTag: createTagStub(),
     ElTimeline: createPassthroughStub('ul'),
@@ -101,6 +108,7 @@ function buildApplicationRow() {
     patientName: '张三',
     pathologyNo: 'BL202605220001',
     registeredSpecimenCount: 3,
+    specimenNos: ['SP-001', 'SP-002', 'SP-003'],
     status: 'SUBMITTED',
     submissionDate: '2026-05-22',
     submittingDepartmentName: '普外科',
@@ -270,6 +278,8 @@ async function mountView(props?: Record<string, unknown>) {
 describe('TrackingApplicationListView', () => {
   afterEach(() => {
     mockAccessStore.accessCodes = ['PERM_APPLICATION_DETAIL_QUERY'];
+    mockClipboardWriteText.mockReset();
+    mockElMessageSuccess.mockReset();
     mockListApplications.mockReset();
     mockGetApplicationTracking.mockReset();
     mockPush.mockReset();
@@ -364,6 +374,44 @@ describe('TrackingApplicationListView', () => {
     app.unmount();
   });
 
+  it('renders specimen numbers as different color tags and copies the clicked specimen number', async () => {
+    Object.defineProperty(globalThis.navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: mockClipboardWriteText,
+      },
+    });
+    mockClipboardWriteText.mockResolvedValue(undefined);
+    mockListApplications.mockResolvedValue({
+      items: [buildApplicationRow()],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+
+    const { app, root } = await mountView();
+
+    const specimenTags = [
+      ...root.querySelectorAll<HTMLElement>('span[data-tag-type]'),
+    ].filter((tag) =>
+      ['SP-001', 'SP-002', 'SP-003'].includes(tag.textContent ?? ''),
+    );
+    expect(specimenTags).toHaveLength(3);
+    expect(specimenTags.map((tag) => tag.dataset.tagType)).toEqual([
+      'success',
+      'warning',
+      'danger',
+    ]);
+
+    specimenTags[1]?.click();
+    await flushAll();
+
+    expect(mockClipboardWriteText).toHaveBeenCalledWith('SP-002');
+    expect(mockElMessageSuccess).toHaveBeenCalledWith('标本编号已复制');
+
+    app.unmount();
+  });
+
   it('renders overall and specimen timeline tabs, with same-second multi-specimen events aggregated in the overall tab', async () => {
     mockListApplications.mockResolvedValue({
       items: [buildApplicationRow()],
@@ -401,11 +449,16 @@ describe('TrackingApplicationListView', () => {
     expect(overallPanel).not.toBeNull();
     const overallText = overallPanel?.textContent ?? '';
     expect(countText(overallText, '创建转运单 / 成功')).toBe(1);
-    expect(overallText).toContain('涉及标本: 2 个');
     expect(overallText).toContain('SP-001');
     expect(overallText).toContain('SP-002');
     expect(overallText).toContain('公共事件');
     expect(overallText).toContain('打印转运单 / 成功');
+    expect(overallText).toContain('IP');
+    expect(overallText).not.toContain('节点:');
+    expect(overallText).not.toContain('终端');
+    expect(root.textContent).not.toContain('申请单编号');
+    expect(root.textContent).not.toContain('患者标识');
+    expect(root.textContent).not.toContain('PAT-001');
 
     app.unmount();
   });

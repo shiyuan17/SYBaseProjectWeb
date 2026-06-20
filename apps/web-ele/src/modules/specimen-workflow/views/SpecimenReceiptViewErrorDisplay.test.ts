@@ -93,6 +93,7 @@ vi.mock('../composables/useSpecimenReceiptWorkbench', async () => {
         receiverUserId: 'USER-002',
       }),
       receiveLoading: ref(false),
+      receiveTargetRows: ref([]),
       receiveSummary: ref({
         failedCount: 0,
         successCount: 0,

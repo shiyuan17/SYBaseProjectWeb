@@ -49,6 +49,7 @@ export interface TrackingEventView {
   eventTime: null | string;
   eventType: null | string;
   nodeCode: null | string;
+  operatorIp?: null | string;
   operatorName: null | string;
   specimenBarcode?: null | string;
   specimenId?: null | string;
@@ -179,6 +180,7 @@ export interface ApplicationListItem {
   patientName: null | string;
   operationDisabledReason: null | string;
   registeredSpecimenCount: number;
+  specimenNos?: string[];
   reportIssued?: boolean;
   reportStatus?: null | string;
   receiptAbnormalSummary?: null | string;

@@ -148,30 +148,49 @@ describe('specimen workflow row tone helpers', () => {
       resolveReceiptWorkflowRowTone({
         canReceive: true,
         queueStatus: 'PENDING',
+        specimenStatus: 'IN_TRANSIT',
       } as never),
     ).toBe('actionable');
     expect(
       resolveReceiptWorkflowRowTone({
         canReceive: false,
         queueStatus: 'SUCCESS',
+        specimenStatus: 'RECEIVED',
       } as never),
     ).toBe('completed');
     expect(
       resolveReceiptWorkflowRowTone({
         canReceive: false,
         queueStatus: 'RECEIVED',
+        specimenStatus: 'RECEIVED',
       } as never),
     ).toBe('completed');
     expect(
       resolveReceiptWorkflowRowTone({
+        canReceive: true,
+        queueStatus: 'SUCCESS',
+        specimenStatus: 'REJECTED',
+      } as never),
+    ).toBe('failed');
+    expect(
+      resolveReceiptWorkflowRowTone({
+        canReceive: true,
+        queueStatus: 'SUCCESS',
+        specimenStatus: 'RETURNED',
+      } as never),
+    ).toBe('blocked');
+    expect(
+      resolveReceiptWorkflowRowTone({
         canReceive: false,
         queueStatus: 'FAILED',
+        specimenStatus: 'IN_TRANSIT',
       } as never),
     ).toBe('failed');
     expect(
       resolveReceiptWorkflowRowTone({
         canReceive: false,
         queueStatus: 'OUT_OF_SCOPE',
+        specimenStatus: 'IN_TRANSIT',
       } as never),
     ).toBe('blocked');
   });

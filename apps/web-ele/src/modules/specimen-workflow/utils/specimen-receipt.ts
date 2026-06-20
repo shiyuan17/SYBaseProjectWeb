@@ -32,8 +32,12 @@ export type ReceiptFilters = {
 };
 
 export type ReceiptOperatorForm = {
+  customRejectReasons: string[];
   receivedByName: string;
   receivedByUserId: string;
+  rectificationEffect: string;
+  rectificationSuggestion: string;
+  rejectReason: string;
   terminalCode: string;
 };
 
@@ -41,6 +45,7 @@ export type ReceiptConfirmForm = {
   logisticsStaffName: string;
   receivedByName: string;
   receivedByUserId: string;
+  rectificationEffect: string;
 };
 
 export type ReceiptConfirmSummary = {
@@ -71,8 +76,12 @@ export function createDefaultReceiptFormState(
   receivedByUserId: string,
 ): ReceiptOperatorForm {
   return {
+    customRejectReasons: [],
     receivedByName,
     receivedByUserId,
+    rectificationEffect: '',
+    rectificationSuggestion: '',
+    rejectReason: '',
     terminalCode: '',
   };
 }
@@ -83,6 +92,7 @@ export function createDefaultReceiptConfirmFormState(
 ): ReceiptConfirmForm {
   return {
     logisticsStaffName: '',
+    rectificationEffect: '',
     receivedByName,
     receivedByUserId,
   };

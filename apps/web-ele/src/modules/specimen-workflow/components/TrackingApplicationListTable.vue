@@ -3,6 +3,7 @@ import type { ApplicationListItem } from '../types/specimen-workflow';
 
 import { ElButton, ElTable, ElTableColumn, ElTag } from 'element-plus';
 
+import CopyableIdentifier from '../../../components/CopyableIdentifier.vue';
 import {
   formatApplicationFormStatus,
   formatApplicationType,
@@ -20,14 +21,30 @@ defineProps<{
 const emit = defineEmits<{
   detail: [applicationId: string];
 }>();
+
+const specimenTagTypes = [
+  'success',
+  'warning',
+  'danger',
+  'info',
+  'primary',
+] as const;
+
+function getSpecimenTagType(index: number) {
+  return specimenTagTypes[index % specimenTagTypes.length];
+}
 </script>
 
 <template>
   <ElTable v-loading="loading" :data="items" border>
-    <ElTableColumn label="申请单号" min-width="160" prop="applicationNo" />
+    <ElTableColumn label="申请单号" min-width="160">
+      <template #default="{ row }">
+        <CopyableIdentifier kind="applicationNo" :value="row.applicationNo" />
+      </template>
+    </ElTableColumn>
     <ElTableColumn label="病理号" min-width="150">
       <template #default="{ row }">
-        {{ formatNullable(row.pathologyNo) }}
+        <CopyableIdentifier kind="pathologyNo" :value="row.pathologyNo" />
       </template>
     </ElTableColumn>
     <ElTableColumn label="患者信息" min-width="180">
@@ -35,6 +52,22 @@ const emit = defineEmits<{
         {{ formatNullable(row.patientName) }} /
         {{ formatNullable(row.patientGender) }} /
         {{ formatNullable(row.patientAge) }}
+      </template>
+    </ElTableColumn>
+    <ElTableColumn label="标本号" min-width="180">
+      <template #default="{ row }">
+        <div class="flex flex-wrap gap-1">
+          <CopyableIdentifier
+            v-for="(specimenNo, index) in row.specimenNos"
+            :key="specimenNo"
+            class="select-none"
+            kind="specimenNo"
+            tag-size="small"
+            :tag-type="getSpecimenTagType(Number(index))"
+            :value="specimenNo"
+          />
+          <span v-if="!row.specimenNos?.length">-</span>
+        </div>
       </template>
     </ElTableColumn>
     <ElTableColumn label="送检科室" min-width="160">

@@ -18,6 +18,7 @@ import {
   ElTimelineItem,
 } from 'element-plus';
 
+import CopyableIdentifier from '../../../components/CopyableIdentifier.vue';
 import TrackingSpecimenLatestRegistrationResult from '../components/TrackingSpecimenLatestRegistrationResult.vue';
 import TrackingSpecimenListTable from '../components/TrackingSpecimenListTable.vue';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
@@ -231,7 +232,10 @@ function goToReceiptHandling() {
         >
           <ElDescriptions :column="2" border>
             <ElDescriptionsItem label="标本编号">
-              {{ detailRow?.specimenNo || '-' }}
+              <CopyableIdentifier
+                kind="specimenNo"
+                :value="detailRow?.specimenNo"
+              />
             </ElDescriptionsItem>
             <ElDescriptionsItem label="条码">
               {{ detailRow?.barcode || '-' }}
@@ -275,12 +279,13 @@ function goToReceiptHandling() {
         >
           <ElDescriptions :column="2" border>
             <ElDescriptionsItem label="申请单号">
-              {{
-                formatNullable(
+              <CopyableIdentifier
+                kind="applicationNo"
+                :value="
                   detailApplicationDetail?.applicationNo ??
-                    detailRow?.applicationNo,
-                )
-              }}
+                  detailRow?.applicationNo
+                "
+              />
             </ElDescriptionsItem>
             <ElDescriptionsItem label="患者姓名">
               {{
