@@ -3,6 +3,7 @@ import type { PendingDiagnosticTaskItem } from '../types/doctor-workflow';
 
 import { ElEmpty, ElTag } from 'element-plus';
 
+import CopyableIdentifier from '../../../components/CopyableIdentifier.vue';
 import {
   formatDiagnosticTaskStatus,
   formatDiagnosticTaskType,
@@ -67,7 +68,7 @@ const emit = defineEmits<{
           @click="emit('select', item)"
         >
           <div class="truncate text-xs font-semibold text-foreground">
-            {{ formatNullable(item.pathologyNo) }}
+            <CopyableIdentifier kind="pathologyNo" :value="item.pathologyNo" />
           </div>
           <div class="truncate text-xs text-foreground">
             {{ formatNullable(item.patientName) }}

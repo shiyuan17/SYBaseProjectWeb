@@ -22,6 +22,7 @@ import {
   ElTableColumn,
 } from 'element-plus';
 
+import CopyableIdentifier from '../../../components/CopyableIdentifier.vue';
 import {
   acceptMedicalOrder,
   cancelMedicalOrder,
@@ -216,7 +217,11 @@ void loadOrders();
       <WorkflowSectionCard title="医嘱列表">
         <ElEmpty v-if="false" :description="pageError" />
         <ElTable v-else v-loading="loading" :data="orders" border>
-          <ElTableColumn label="病理号" min-width="140" prop="pathologyNo" />
+          <ElTableColumn label="病理号" min-width="140">
+            <template #default="{ row }">
+              <CopyableIdentifier kind="pathologyNo" :value="row.pathologyNo" />
+            </template>
+          </ElTableColumn>
           <ElTableColumn label="患者" min-width="120" prop="patientName" />
           <ElTableColumn label="类型" min-width="130">
             <template #default="{ row }">

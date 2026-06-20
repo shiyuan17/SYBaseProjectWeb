@@ -20,6 +20,7 @@ import {
   ElTabs,
 } from 'element-plus';
 
+import CopyableIdentifier from '../../../components/CopyableIdentifier.vue';
 import {
   formatApplicationType,
   formatDateTime,
@@ -74,10 +75,6 @@ function createEditableRemarkSections(sections: RemarkSectionSummary[]) {
 
 function saveRemarkSection() {
   ElMessage.info('当前仅支持前端编辑，暂未接入保存接口');
-}
-
-function resolvePatientIdDisplay(workbench: DiagnosticWorkbenchView) {
-  return workbench.patientIdDisplay || workbench.patientId || null;
 }
 </script>
 
@@ -138,7 +135,10 @@ function resolvePatientIdDisplay(workbench: DiagnosticWorkbenchView) {
               size="small"
             >
               <ElDescriptionsItem label="病理编号">
-                {{ formatNullable(workbench.pathologyNo) }}
+                <CopyableIdentifier
+                  kind="pathologyNo"
+                  :value="workbench.pathologyNo"
+                />
               </ElDescriptionsItem>
               <ElDescriptionsItem label="门诊号">
                 {{ formatNullable(workbench.outpatientNo) }}
@@ -164,7 +164,11 @@ function resolvePatientIdDisplay(workbench: DiagnosticWorkbenchView) {
               </ElDescriptionsItem>
 
               <ElDescriptionsItem label="病人ID">
-                {{ formatNullable(resolvePatientIdDisplay(workbench)) }}
+                <CopyableIdentifier
+                  kind="patientId"
+                  :fallback-value="workbench.patientId"
+                  :value="workbench.patientIdDisplay"
+                />
               </ElDescriptionsItem>
               <ElDescriptionsItem label="检查项目">
                 {{ formatNullable(workbench.checkItem) }}
@@ -173,7 +177,10 @@ function resolvePatientIdDisplay(workbench: DiagnosticWorkbenchView) {
                 {{ formatDateTime(workbench.deliveredAt) }}
               </ElDescriptionsItem>
               <ElDescriptionsItem label="病理号">
-                {{ formatNullable(workbench.pathologyNo) }}
+                <CopyableIdentifier
+                  kind="pathologyNo"
+                  :value="workbench.pathologyNo"
+                />
               </ElDescriptionsItem>
 
               <ElDescriptionsItem label="临床诊断">
@@ -232,7 +239,10 @@ function resolvePatientIdDisplay(workbench: DiagnosticWorkbenchView) {
                 {{ formatReportStatus(workbench.currentReport?.reportStatus) }}
               </ElDescriptionsItem>
               <ElDescriptionsItem label="申请单号">
-                {{ formatNullable(workbench.applicationNo) }}
+                <CopyableIdentifier
+                  kind="applicationNo"
+                  :value="workbench.applicationNo"
+                />
               </ElDescriptionsItem>
               <ElDescriptionsItem label="病例ID">
                 {{ formatNullable(workbench.caseId) }}
@@ -487,7 +497,10 @@ function resolvePatientIdDisplay(workbench: DiagnosticWorkbenchView) {
             </ElTableColumn>
             <ElTableColumn label="病理号" min-width="130">
               <template #default="{ row }">
-                {{ formatNullable(row.pathologyNo ?? workbench.pathologyNo) }}
+                <CopyableIdentifier
+                  kind="pathologyNo"
+                  :value="row.pathologyNo ?? workbench.pathologyNo"
+                />
               </template>
             </ElTableColumn>
             <ElTableColumn label="蜡块号" min-width="120">

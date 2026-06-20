@@ -26,6 +26,7 @@ import {
   ElTag,
 } from 'element-plus';
 
+import CopyableIdentifier from '../../../components/CopyableIdentifier.vue';
 import { getCaseLifecycleTracking } from '../api/doctor-workflow-service';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import {
@@ -353,10 +354,16 @@ watch(
               {{ formatNullable(tracking.caseSummary.caseId) }}
             </ElDescriptionsItem>
             <ElDescriptionsItem label="病理号">
-              {{ formatNullable(tracking.caseSummary.pathologyNo) }}
+              <CopyableIdentifier
+                kind="pathologyNo"
+                :value="tracking.caseSummary.pathologyNo"
+              />
             </ElDescriptionsItem>
             <ElDescriptionsItem label="申请单号">
-              {{ formatNullable(tracking.caseSummary.applicationNo) }}
+              <CopyableIdentifier
+                kind="applicationNo"
+                :value="tracking.caseSummary.applicationNo"
+              />
             </ElDescriptionsItem>
             <ElDescriptionsItem label="当前阶段">
               {{ formatCaseStatus(tracking.caseSummary.currentStage) }}
@@ -523,7 +530,10 @@ watch(
             <div class="flex flex-col gap-4 pb-2">
               <ElDescriptions :column="4" border>
                 <ElDescriptionsItem label="标本编号">
-                  {{ formatNullable(specimen.specimenNo) }}
+                  <CopyableIdentifier
+                    kind="specimenNo"
+                    :value="specimen.specimenNo"
+                  />
                 </ElDescriptionsItem>
                 <ElDescriptionsItem label="条码">
                   {{ formatNullable(specimen.barcode) }}

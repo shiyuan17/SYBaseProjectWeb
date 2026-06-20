@@ -30,6 +30,7 @@ import {
   ElTableColumn,
 } from 'element-plus';
 
+import CopyableIdentifier from '../../../components/CopyableIdentifier.vue';
 import {
   commentConsultationParticipant,
   completeConsultation,
@@ -705,7 +706,7 @@ async function submitBatchComplete() {
           </ElTableColumn>
           <ElTableColumn label="病理号" min-width="140">
             <template #default="{ row }">
-              {{ formatNullable(row.pathologyNo) }}
+              <CopyableIdentifier kind="pathologyNo" :value="row.pathologyNo" />
             </template>
           </ElTableColumn>
           <ElTableColumn label="会诊ID" min-width="180">
@@ -788,9 +789,7 @@ async function submitBatchComplete() {
                   (row.rowType === 'consultation' &&
                     (canCommentConsultation || canCompleteConsultation))
                 "
-                @command="
-                  (command) => handleActionCommand(String(command), row)
-                "
+                @command="(command) => handleActionCommand(String(command), row)"
               >
                 <ElButton size="small" type="primary"> 操作 </ElButton>
                 <template #dropdown>
@@ -818,7 +817,9 @@ async function submitBatchComplete() {
                   </ElDropdownMenu>
                 </template>
               </ElDropdown>
-              <span v-else class="text-sm text-muted-foreground">无可用操作</span>
+              <span v-else class="text-sm text-muted-foreground">
+                无可用操作
+              </span>
             </template>
           </ElTableColumn>
         </ElTable>

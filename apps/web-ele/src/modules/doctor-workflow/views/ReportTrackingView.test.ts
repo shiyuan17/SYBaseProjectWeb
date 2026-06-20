@@ -276,6 +276,12 @@ describe('ReportTrackingView', () => {
     mockRouter.push.mockReset();
     mockRouter.replace.mockReset();
     getCaseLifecycleTrackingMock.mockReset();
+    Object.defineProperty(globalThis.navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: vi.fn().mockResolvedValue(undefined),
+      },
+    });
   });
 
   it('shows case-id-or-pathology-no guidance', async () => {
@@ -386,6 +392,40 @@ describe('ReportTrackingView', () => {
       },
     });
     expect(getCaseLifecycleTrackingMock).not.toHaveBeenCalled();
+
+    wrapper.unmount();
+  });
+
+  it('allows copying identifiers from the lifecycle summary and specimen detail sections', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(globalThis.navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText,
+      },
+    });
+    mockRoute.query = { caseId: 'CASE-001' };
+    getCaseLifecycleTrackingMock.mockResolvedValue(trackingFixture);
+
+    const wrapper = await mountView();
+    await flush();
+
+    const pathologyTrigger = wrapper.root.querySelector(
+      '[title="点击复制病理号"]',
+    ) as HTMLElement | null;
+    const specimenTrigger = wrapper.root.querySelector(
+      '[title="点击复制标本编号"]',
+    ) as HTMLElement | null;
+
+    expect(pathologyTrigger).not.toBeNull();
+    expect(specimenTrigger).not.toBeNull();
+
+    pathologyTrigger?.click();
+    specimenTrigger?.click();
+    await flush();
+
+    expect(writeText).toHaveBeenNthCalledWith(1, 'PATH-001');
+    expect(writeText).toHaveBeenNthCalledWith(2, 'SP-001');
 
     wrapper.unmount();
   });

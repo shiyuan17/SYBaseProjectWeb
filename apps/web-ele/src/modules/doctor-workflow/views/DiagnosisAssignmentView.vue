@@ -28,6 +28,7 @@ import {
 
 import { listSystemUsers } from '#/modules/system-management/api/system-management-service';
 
+import CopyableIdentifier from '../../../components/CopyableIdentifier.vue';
 import {
   assignDiagnosticTask,
   listPendingDiagnosticTasks,
@@ -69,10 +70,6 @@ interface BatchAssignResult {
   failed: number;
   skipped: number;
   success: number;
-}
-
-function resolvePatientIdDisplay(row: PendingDiagnosticTaskItem) {
-  return row.patientIdDisplay || row.patientId || null;
 }
 
 const accessStore = useAccessStore();
@@ -547,12 +544,19 @@ void loadPendingData();
             </ElTableColumn>
             <ElTableColumn label="病理号" min-width="120">
               <template #default="{ row }">
-                {{ formatNullable(row.pathologyNo) }}
+                <CopyableIdentifier
+                  kind="pathologyNo"
+                  :value="row.pathologyNo"
+                />
               </template>
             </ElTableColumn>
             <ElTableColumn label="病人ID" min-width="120">
               <template #default="{ row }">
-                {{ formatNullable(resolvePatientIdDisplay(row)) }}
+                <CopyableIdentifier
+                  kind="patientId"
+                  :fallback-value="row.patientId"
+                  :value="row.patientIdDisplay"
+                />
               </template>
             </ElTableColumn>
             <ElTableColumn label="姓名" min-width="120">
