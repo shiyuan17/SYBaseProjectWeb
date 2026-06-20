@@ -125,11 +125,11 @@ function formatOperationTitle(row: OperationLog) {
                     @keyup.enter="searchLoginLogs"
                   />
                 </ElFormItem>
-                <ElFormItem label="用户 ID">
+                <ElFormItem label="用户编码">
                   <ElInput
                     v-model="loginFilters.userId"
                     clearable
-                    placeholder="请输入用户 ID"
+                    placeholder="请输入用户编码"
                     @keyup.enter="searchLoginLogs"
                   />
                 </ElFormItem>
@@ -213,9 +213,9 @@ function formatOperationTitle(row: OperationLog) {
                   min-width="140"
                   prop="loginName"
                 />
-                <ElTableColumn label="用户 ID" min-width="180">
+                <ElTableColumn label="用户编码" min-width="140">
                   <template #default="scope">
-                    {{ formatNullable(scope?.row?.userId) }}
+                    {{ formatNullable(scope?.row?.userCode) }}
                   </template>
                 </ElTableColumn>
                 <ElTableColumn label="结果" width="100">
@@ -487,8 +487,8 @@ function formatOperationTitle(row: OperationLog) {
         <ElDescriptionsItem label="登录名">
           {{ loginDetail.loginName }}
         </ElDescriptionsItem>
-        <ElDescriptionsItem label="用户 ID">
-          {{ formatNullable(loginDetail.userId) }}
+        <ElDescriptionsItem label="用户编码">
+          {{ formatNullable(loginDetail.userCode) }}
         </ElDescriptionsItem>
         <ElDescriptionsItem label="登录结果">
           <ElTag :type="formatResultType(loginDetail.loginResult)">

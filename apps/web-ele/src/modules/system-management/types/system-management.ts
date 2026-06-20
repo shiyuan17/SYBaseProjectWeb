@@ -44,6 +44,7 @@ export interface UserLoginLog {
   loginResult: string;
   logoutAt: null | string;
   remarks: null | string;
+  userCode: null | string;
   userId: null | string;
 }
 
