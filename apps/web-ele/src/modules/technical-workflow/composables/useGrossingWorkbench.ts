@@ -172,13 +172,14 @@ export function useGrossingWorkbench(
   function createEmbeddingBox(
     sequenceNo: number,
     embeddingBoxNo = buildGeneratedEmbeddingBoxNo('A', sequenceNo),
+    overrides: Partial<GrossingEmbeddingBoxItemRequest> = {},
   ): GrossingEmbeddingBoxItemRequest {
     return {
-      boxName: `包埋盒 ${sequenceNo}`,
+      boxName: overrides.boxName ?? `包埋盒 ${sequenceNo}`,
       embeddingBoxNo,
-      embeddingRemarks: '',
+      embeddingRemarks: overrides.embeddingRemarks ?? '',
       sequenceNo,
-      status: 'PENDING',
+      status: overrides.status ?? 'PENDING',
     };
   }
 
@@ -243,6 +244,10 @@ export function useGrossingWorkbench(
 
   const activeSpecimen = computed(
     () => completeForm.specimens[activeSpecimenIndex.value] ?? null,
+  );
+
+  const isReadOnly = computed(
+    () => currentTask.value?.taskStatus === 'COMPLETED',
   );
 
   const activeSpecimenPrefix = computed(() =>
@@ -394,6 +399,60 @@ export function useGrossingWorkbench(
   ) {
     if (!tracking || tracking.specimens.length === 0) {
       syncSpecimenTabs([createEmptySpecimen()]);
+      return;
+    }
+
+    const isHistorical = currentTask.value?.taskStatus === 'COMPLETED';
+
+    if (isHistorical) {
+      syncSpecimenTabs(
+        tracking.specimens.map((item) => {
+          const specimenBlocks = tracking.blocks.filter(
+            (block) => block.specimenId === item.specimenId,
+          );
+          const blockCount = Math.max(specimenBlocks.length, 1);
+          const grossDescription =
+            specimenBlocks
+              .map((block) => block.grossDescription?.trim() ?? '')
+              .find((value) => value.length > 0) ?? '';
+          return {
+            blocks: Array.from({ length: blockCount }, (_, index) => ({
+              ...createEmptyBlock(),
+              blockDescription: specimenBlocks[index]?.description ?? '',
+            })),
+            blockCount,
+            bodyPartId: '',
+            cutSurfaceFeature: '',
+            embeddingBoxes: specimenBlocks.length > 0
+              ? specimenBlocks.map((block, index) =>
+                  createEmbeddingBox(
+                    index + 1,
+                    block.embeddingBoxNo?.trim() ||
+                      buildGeneratedEmbeddingBoxNo('A', index + 1),
+                    {
+                      boxName: block.blockCode?.trim() || `包埋盒 ${index + 1}`,
+                      embeddingRemarks: block.embeddingRemarks?.trim() ?? '',
+                      status: 'CONFIRMED',
+                    },
+                  ),
+                )
+              : [
+                  createEmbeddingBox(1, buildGeneratedEmbeddingBoxNo('A', 1), {
+                    status: 'CONFIRMED',
+                  }),
+                ],
+            grossDescription,
+            marginMarking: '',
+            mediaAssets: [],
+            samplingTemplateId: '',
+            sizeText: '',
+            specimenId: item.specimenId,
+            specimenType: 'ROUTINE',
+          };
+        }),
+        tracking.specimens.map((item) => item.specimenNo?.trim() || ''),
+        tracking.specimens.map((item) => item.specimenName?.trim() || ''),
+      );
       return;
     }
 
@@ -946,6 +1005,7 @@ export function useGrossingWorkbench(
     getSpecimenTabLabel,
     grossingImageAccept,
     initializeWorkbench,
+    isReadOnly,
     isSpecimenUploading,
     labelClass,
     loadWorkbenchContext,

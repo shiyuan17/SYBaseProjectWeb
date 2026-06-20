@@ -25,6 +25,7 @@ import {
   ElTree,
 } from 'element-plus';
 
+import CopyableIdentifier from '../../../components/CopyableIdentifier.vue';
 import {
   formatCaseStatus,
   formatDateTime,
@@ -77,7 +78,10 @@ function handleActiveTabChange(value: number | string) {
         {{ trackingResult.caseId }}
       </ElDescriptionsItem>
       <ElDescriptionsItem label="病理号">
-        {{ formatNullable(trackingResult.pathologyNo) }}
+        <CopyableIdentifier
+          kind="pathologyNo"
+          :value="trackingResult.pathologyNo"
+        />
       </ElDescriptionsItem>
       <ElDescriptionsItem label="病例状态">
         {{ formatCaseStatus(trackingResult.caseStatus) }}

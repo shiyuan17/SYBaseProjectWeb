@@ -8,6 +8,7 @@ import {
   ElTag,
 } from 'element-plus';
 
+import CopyableIdentifier from '../../../components/CopyableIdentifier.vue';
 import {
   formatDateTime,
   formatNullable,
@@ -78,7 +79,7 @@ withDefaults(
     <ElDescriptions :column="2" border>
       <ElDescriptionsItem label="任务号">{{ task.id }}</ElDescriptionsItem>
       <ElDescriptionsItem label="病理号">
-        {{ formatNullable(task.pathologyNo) }}
+        <CopyableIdentifier kind="pathologyNo" :value="task.pathologyNo" />
       </ElDescriptionsItem>
       <ElDescriptionsItem label="对象类型">
         {{ formatObjectType(task.objectType) }}

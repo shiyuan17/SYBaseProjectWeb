@@ -498,12 +498,7 @@ if (shouldInitialLoad.value) {
             </ElTableColumn>
             <ElTableColumn label="蜡块号" min-width="120">
               <template #default="{ row }">
-                {{ row.samplingBlockCode || row.objectId || '-' }}
-              </template>
-            </ElTableColumn>
-            <ElTableColumn label="蜡块名称" min-width="180">
-              <template #default="{ row }">
-                {{ row.samplingBlockDescription || '-' }}
+                {{ row.objectDisplayNo ?? row.samplingBlockCode ?? '-' }}
               </template>
             </ElTableColumn>
             <ElTableColumn label="备注" min-width="180">

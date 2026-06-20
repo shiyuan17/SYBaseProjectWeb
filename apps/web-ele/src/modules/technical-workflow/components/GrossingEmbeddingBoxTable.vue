@@ -3,10 +3,11 @@ import type { GrossingEmbeddingBoxTableRow } from '../composables/useGrossingWor
 
 import type { WorkflowReferenceOption } from '#/modules/system-management/types/workflow-reference';
 
+import { computed } from 'vue';
+
 import {
   ElButton,
   ElEmpty,
-  ElInput,
   ElOption,
   ElSelect,
   ElTable,
@@ -16,10 +17,12 @@ import {
 
 import ReferenceOptionSelect from '#/modules/system-management/components/ReferenceOptionSelect.vue';
 
-defineProps<{
+const props = defineProps<{
   canAddEmbeddingBox: boolean;
   embeddingBoxRows: GrossingEmbeddingBoxTableRow[];
   embeddingRemarkOptions: WorkflowReferenceOption[];
+  marginMarkingOptions: WorkflowReferenceOption[];
+  readOnly?: boolean;
   selectedSpecimenKey: string;
   specimenOptions: Array<{ label: string; value: string }>;
 }>();
@@ -34,6 +37,28 @@ const statusOptions = [
   { label: '待确认', value: 'PENDING' },
   { label: '已确认', value: 'CONFIRMED' },
 ] as const;
+
+const showEmbeddingBoxTable = computed(
+  () => props.embeddingBoxRows.length > 0 || props.canAddEmbeddingBox,
+);
+
+const emptyDescription = computed(() => {
+  if (props.readOnly) {
+    return '当前标本暂无包埋盒记录';
+  }
+  if (props.canAddEmbeddingBox) {
+    return '当前标本暂无包埋盒';
+  }
+  return '当前没有可编辑标本';
+});
+
+function formatStatusLabel(status?: null | string) {
+  return (
+    statusOptions.find((option) => option.value === status)?.label ??
+    status ??
+    '-'
+  );
+}
 
 function handleRemoveEmbeddingBox(row: GrossingEmbeddingBoxTableRow) {
   emit('removeEmbeddingBox', row.boxIndex, row.specimenIndex);
@@ -64,6 +89,7 @@ function formatEmbeddingBoxNo(embeddingBoxNo: string) {
         </span>
         <ElSelect
           :model-value="selectedSpecimenKey"
+          :disabled="readOnly && specimenOptions.length <= 1"
           aria-label="标本名称"
           class="w-72 min-w-[288px] flex-none"
           popper-class="grossing-specimen-select-popper"
@@ -77,36 +103,24 @@ function formatEmbeddingBoxNo(embeddingBoxNo: string) {
           />
         </ElSelect>
       </div>
-      <div class="inline-flex items-center gap-1">
+      <div v-if="canAddEmbeddingBox" class="inline-flex items-center gap-1">
         <ElTooltip content="添加 1 个包埋盒" placement="top">
           <span class="inline-flex">
-            <ElButton
-              :disabled="!canAddEmbeddingBox"
-              size="small"
-              @click="emit('addEmbeddingBoxes', 1)"
-            >
+            <ElButton size="small" @click="emit('addEmbeddingBoxes', 1)">
               +1
             </ElButton>
           </span>
         </ElTooltip>
         <ElTooltip content="添加 2 个包埋盒" placement="top">
           <span class="inline-flex">
-            <ElButton
-              :disabled="!canAddEmbeddingBox"
-              size="small"
-              @click="emit('addEmbeddingBoxes', 2)"
-            >
+            <ElButton size="small" @click="emit('addEmbeddingBoxes', 2)">
               +2
             </ElButton>
           </span>
         </ElTooltip>
         <ElTooltip content="添加 5 个包埋盒" placement="top">
           <span class="inline-flex">
-            <ElButton
-              :disabled="!canAddEmbeddingBox"
-              size="small"
-              @click="emit('addEmbeddingBoxes', 5)"
-            >
+            <ElButton size="small" @click="emit('addEmbeddingBoxes', 5)">
               +5
             </ElButton>
           </span>
@@ -114,7 +128,7 @@ function formatEmbeddingBoxNo(embeddingBoxNo: string) {
       </div>
     </header>
 
-    <div v-if="canAddEmbeddingBox" class="overflow-x-auto">
+    <div v-if="showEmbeddingBoxTable" class="overflow-x-auto">
       <ElTable
         v-if="embeddingBoxRows.length > 0"
         :data="embeddingBoxRows"
@@ -131,15 +145,6 @@ function formatEmbeddingBoxNo(embeddingBoxNo: string) {
             {{ row.specimenName || '-' }}
           </template>
         </ElTableColumn>
-        <ElTableColumn label="盒名称" min-width="120">
-          <template #default="{ row }">
-            <ElInput
-              v-model="row.box.boxName"
-              placeholder="盒名称"
-              size="small"
-            />
-          </template>
-        </ElTableColumn>
         <ElTableColumn label="盒号" min-width="72" width="80">
           <template #default="{ row }">
             <span
@@ -150,9 +155,30 @@ function formatEmbeddingBoxNo(embeddingBoxNo: string) {
             </span>
           </template>
         </ElTableColumn>
+        <ElTableColumn label="包埋盒名称" min-width="180">
+          <template #default="{ row }">
+            <span
+              v-if="readOnly"
+              class="text-sm text-foreground"
+              :title="row.box.boxName || '-'"
+            >
+              {{ row.box.boxName || '-' }}
+            </span>
+            <ReferenceOptionSelect
+              v-else
+              v-model="row.box.boxName"
+              :options="marginMarkingOptions"
+              placeholder="请选择或输入包埋盒名称"
+            />
+          </template>
+        </ElTableColumn>
         <ElTableColumn label="状态" min-width="132">
           <template #default="{ row }">
+            <span v-if="readOnly" class="text-sm text-foreground">
+              {{ formatStatusLabel(row.box.status) }}
+            </span>
             <ElSelect
+              v-else
               v-model="row.box.status"
               class="w-full"
               popper-class="grossing-status-select-popper"
@@ -169,14 +195,22 @@ function formatEmbeddingBoxNo(embeddingBoxNo: string) {
         </ElTableColumn>
         <ElTableColumn label="包埋备注" min-width="240">
           <template #default="{ row }">
+            <span
+              v-if="readOnly"
+              class="text-sm text-foreground"
+              :title="row.box.embeddingRemarks || '-'"
+            >
+              {{ row.box.embeddingRemarks || '-' }}
+            </span>
             <ReferenceOptionSelect
+              v-else
               v-model="row.box.embeddingRemarks"
               :options="embeddingRemarkOptions"
               placeholder="请选择或输入包埋备注"
             />
           </template>
         </ElTableColumn>
-        <ElTableColumn fixed="right" label="操作" width="80">
+        <ElTableColumn v-if="!readOnly" fixed="right" label="操作" width="80">
           <template #default="{ row }">
             <ElButton
               link
@@ -189,10 +223,10 @@ function formatEmbeddingBoxNo(embeddingBoxNo: string) {
           </template>
         </ElTableColumn>
       </ElTable>
-      <ElEmpty v-else description="当前标本暂无包埋盒" />
+      <ElEmpty v-else :description="emptyDescription" />
     </div>
 
-    <ElEmpty v-else description="当前没有可编辑标本" />
+    <ElEmpty v-else :description="emptyDescription" />
   </section>
 </template>
 

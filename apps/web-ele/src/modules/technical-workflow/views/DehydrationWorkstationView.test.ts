@@ -238,6 +238,7 @@ function createTask(
     createdAt: '2026-06-01T08:00:00',
     deadlineAt: null,
     id: 'TASK-1',
+    objectDisplayNo: 'A1',
     objectId: 'BLOCK-1',
     objectType: 'SAMPLING_BLOCK',
     pathologyNo: 'BL-001',
@@ -388,6 +389,68 @@ describe('DehydrationWorkstationView', () => {
       ),
     ).toBeTruthy();
     expect(document.querySelector('[data-column-label="操作"]')).toBeFalsy();
+
+    app.unmount();
+  });
+
+  it('renders embedding box number instead of internal block code', async () => {
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [
+        createTask({
+          objectDisplayNo: 'A1',
+          samplingBlockCode: 'BK20260618001',
+        }),
+      ],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+    const { app } = mountView();
+    await flushView();
+
+    expect(document.body.textContent).toContain('A1');
+    expect(document.body.textContent).not.toContain('BK20260618001');
+
+    app.unmount();
+  });
+
+  it('falls back to sampling block code when object display no is missing', async () => {
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [
+        createTask({
+          objectDisplayNo: null,
+          samplingBlockCode: 'BK-001',
+        }),
+      ],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+    const { app } = mountView();
+    await flushView();
+
+    expect(document.body.textContent).toContain('BK-001');
+
+    app.unmount();
+  });
+
+  it('renders embedding remarks in the remarks column', async () => {
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [
+        createTask({
+          embeddingRemarks: '皮肤组织',
+          productionRemarks: '优先处理',
+        }),
+      ],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+    const { app } = mountView();
+    await flushView();
+
+    expect(document.body.textContent).toContain('皮肤组织');
+    expect(document.body.textContent).not.toContain('优先处理');
 
     app.unmount();
   });

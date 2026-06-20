@@ -50,15 +50,25 @@ describe('dehydration workbench helpers', () => {
     ]);
   });
 
-  it('prefers production remarks and assigned operator when available', () => {
+  it('prefers embedding remarks, then production remarks and assigned operator when available', () => {
     const task = createTask({
       assignedToName: '王技师',
+      embeddingRemarks: '皮肤组织',
+      productionRemarks: '优先处理',
+      remarks: '普通备注',
+    });
+
+    expect(getDehydrationTaskRemark(task)).toBe('皮肤组织');
+    expect(getDehydrationTaskOperator(task)).toBe('王技师');
+  });
+
+  it('prefers production remarks when embedding remarks are absent', () => {
+    const task = createTask({
       productionRemarks: '优先处理',
       remarks: '普通备注',
     });
 
     expect(getDehydrationTaskRemark(task)).toBe('优先处理');
-    expect(getDehydrationTaskOperator(task)).toBe('王技师');
   });
 
   it('falls back to empty strings for legacy rows without operator metadata', () => {

@@ -22,12 +22,13 @@ import {
 
 import { reportInlineErrorDisabled } from '#/utils/error-feedback';
 
+import CopyableIdentifier from '../../../components/CopyableIdentifier.vue';
 import {
   createReworkOrder,
   createSlideQcEvaluation,
 } from '../api/technical-workflow-service';
 import { getWorkflowPageErrorMessage } from '../utils/error';
-import { formatNullable, formatPatientIdDisplay } from '../utils/format';
+import { formatNullable } from '../utils/format';
 
 const props = defineProps<{
   modelValue: boolean;
@@ -236,18 +237,17 @@ watch(
           {{ actionRows.length }} 张
         </ElDescriptionsItem>
         <ElDescriptionsItem label="病理号">
-          {{ formatNullable(row?.pathologyNo) }}
+          <CopyableIdentifier kind="pathologyNo" :value="row?.pathologyNo" />
         </ElDescriptionsItem>
         <ElDescriptionsItem label="病人">
           {{ formatNullable(row?.patientName) }}
         </ElDescriptionsItem>
         <ElDescriptionsItem label="病人ID">
-          {{
-            formatPatientIdDisplay(
-              row?.patientIdDisplay ?? null,
-              row?.patientId,
-            )
-          }}
+          <CopyableIdentifier
+            kind="patientId"
+            :fallback-value="row?.patientId"
+            :value="row?.patientIdDisplay"
+          />
         </ElDescriptionsItem>
         <ElDescriptionsItem label="玻片号">
           {{ formatNullable(row?.slideNo) }}

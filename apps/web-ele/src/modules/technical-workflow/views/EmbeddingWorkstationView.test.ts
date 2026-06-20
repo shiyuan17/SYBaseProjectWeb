@@ -9,6 +9,7 @@ const {
   messageWarning,
   mockCancelEmbedding,
   mockCompleteEmbedding,
+  mockConfirmEmbeddingWorkstationClear,
   mockGetEmbeddingWorkstationSummary,
   mockGetTechnicalTracking,
   mockInitialOperatorRemarks,
@@ -25,6 +26,7 @@ const {
   messageWarning: vi.fn(),
   mockCancelEmbedding: vi.fn(),
   mockCompleteEmbedding: vi.fn(),
+  mockConfirmEmbeddingWorkstationClear: vi.fn(),
   mockGetEmbeddingWorkstationSummary: vi.fn(),
   mockGetTechnicalTracking: vi.fn(),
   mockInitialOperatorRemarks: {
@@ -88,6 +90,7 @@ vi.mock('#/utils/error-feedback', () => ({
 vi.mock('../api/technical-workflow-service', () => ({
   cancelEmbedding: mockCancelEmbedding,
   completeEmbedding: mockCompleteEmbedding,
+  confirmEmbeddingWorkstationClear: mockConfirmEmbeddingWorkstationClear,
   getEmbeddingWorkstationSummary: mockGetEmbeddingWorkstationSummary,
   getTechnicalTracking: mockGetTechnicalTracking,
   listPendingTechnicalTasks: mockListPendingTechnicalTasks,
@@ -556,7 +559,16 @@ describe('EmbeddingWorkstationView', () => {
       ],
       pendingCount: 5,
       pendingTasks: [createPendingTask()],
+      dailyClear: null,
       workDate: '2026-06-01',
+    });
+    mockConfirmEmbeddingWorkstationClear.mockResolvedValue({
+      cleared: true,
+      clearStatus: 'CLEARED',
+      clearedAt: '2026-06-17T09:00:00',
+      operatorName: '包埋技师',
+      operatorUserId: 'USER-EMB-1',
+      workDate: '2026-06-17',
     });
     mockGetTechnicalTracking.mockImplementation(async (caseId: string) => {
       if (caseId === 'CASE-2') {
@@ -603,6 +615,7 @@ describe('EmbeddingWorkstationView', () => {
     messageWarning.mockReset();
     mockCancelEmbedding.mockReset();
     mockCompleteEmbedding.mockReset();
+    mockConfirmEmbeddingWorkstationClear.mockReset();
     mockGetEmbeddingWorkstationSummary.mockReset();
     mockGetTechnicalTracking.mockReset();
     mockMessageBoxConfirm.mockReset();
@@ -672,7 +685,7 @@ describe('EmbeddingWorkstationView', () => {
         {
           caseId: 'CASE-DONE',
           embeddingBoxId: 'BOX-ID-DONE',
-          embeddingBoxNo: 'BOX-DONE',
+          embeddingBoxNo: null,
           embeddingId: 'EMB-DONE',
           embeddingRemarks: '最终完成备注',
           embeddedByName: '包埋技师',
@@ -841,26 +854,26 @@ describe('EmbeddingWorkstationView', () => {
     root.remove();
   });
 
-  it('warns and keeps current state when clearing with pending tasks', async () => {
+  it('confirms clearing with pending tasks and records daily clear', async () => {
     const { app, root } = mountView();
     await flushView();
-
-    const rows = document.querySelectorAll('tbody tr');
-    expect(rows.length).toBeGreaterThan(1);
-    (rows[1] as HTMLTableRowElement).click();
-    await flushView();
-
-    findButton('包埋历史').click();
-    await flushView();
-    expect(document.body.textContent).toContain('病例2包埋备注');
-    expect(document.body.textContent).toContain('汇总备注');
 
     findButton('确认清零').click();
     await flushView();
 
-    expect(messageWarning).toHaveBeenCalledWith('还有待处理的数据');
-    expect(mockMessageBoxConfirm).not.toHaveBeenCalled();
-    expect(document.body.textContent).toContain('病例2包埋备注');
+    expect(messageWarning).not.toHaveBeenCalledWith('还有待处理的数据');
+    expect(mockMessageBoxConfirm).toHaveBeenCalledWith(
+      '确认今日包埋工作已完成了吗？',
+      '确认清零',
+      {
+        cancelButtonText: '取消',
+        confirmButtonText: '确定',
+        type: 'info',
+      },
+    );
+    expect(mockConfirmEmbeddingWorkstationClear).toHaveBeenCalledTimes(1);
+    expect(messageSuccess).toHaveBeenCalledWith('包埋技师已完成清零');
+    expect(findButton('包埋技师已完成清零').disabled).toBe(true);
 
     app.unmount();
     root.remove();
@@ -876,6 +889,7 @@ describe('EmbeddingWorkstationView', () => {
     mockGetEmbeddingWorkstationSummary.mockResolvedValue({
       completedCount: 3,
       completedRecords: [],
+      dailyClear: null,
       pendingCount: 0,
       pendingTasks: [],
       workDate: '2026-06-01',
@@ -897,6 +911,34 @@ describe('EmbeddingWorkstationView', () => {
         type: 'info',
       },
     );
+    expect(mockConfirmEmbeddingWorkstationClear).toHaveBeenCalledTimes(1);
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('disables clear button when daily clear already completed', async () => {
+    mockGetEmbeddingWorkstationSummary.mockResolvedValue({
+      completedCount: 3,
+      completedRecords: [],
+      dailyClear: {
+        cleared: true,
+        clearStatus: 'CLEARED',
+        clearedAt: '2026-06-17T08:30:00',
+        operatorName: '日结技师',
+        operatorUserId: 'USER-EMB-2',
+        workDate: '2026-06-17',
+      },
+      pendingCount: 2,
+      pendingTasks: [createPendingTask()],
+      workDate: '2026-06-17',
+    });
+
+    const { app, root } = mountView();
+    await flushView();
+
+    const clearButton = findButton('日结技师已完成清零');
+    expect(clearButton.disabled).toBe(true);
 
     app.unmount();
     root.remove();
@@ -1025,7 +1067,11 @@ describe('EmbeddingWorkstationView', () => {
     await flushView();
 
     expect(document.body.textContent).toContain('已包埋蜡块列表');
-    expect(document.body.textContent).toContain('汇总蜡块');
+    const completedDetail = document.querySelector(
+      '[data-testid="embedding-completed-detail"]',
+    );
+    expect(completedDetail?.textContent).not.toContain('汇总蜡块');
+    expect(completedDetail?.textContent).toContain('汇总标本');
     expect(findButton('确认包埋完成')).toBeTruthy();
     expect(queryButton('保存')).toBeUndefined();
     expect(
@@ -1214,6 +1260,143 @@ describe('EmbeddingWorkstationView', () => {
         taskId: 'TASK-1',
       }),
     );
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('shows short cassette labels on the completed list when object display number is present', async () => {
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
+    mockGetEmbeddingWorkstationSummary.mockResolvedValue({
+      completedCount: 0,
+      completedRecords: [],
+      pendingCount: 1,
+      pendingTasks: [
+        createPendingTask({
+          objectDisplayNo: 'A1',
+          pathologyNo: 'BL-CONFIRM',
+          samplingBlockCode: 'BK20260618001',
+          startedAt: '2026-06-01T09:00:00',
+          taskStatus: 'EMBEDDING_CONFIRM_PENDING',
+        }),
+      ],
+      workDate: '2026-06-01',
+    });
+
+    const { app, root } = mountView();
+    await flushView();
+
+    const tables = document.querySelectorAll('table');
+    expect(tables[1]?.textContent).toContain('A1');
+    expect(tables[1]?.textContent).not.toContain('BK20260618001');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('shows grossing embedding remarks on the completion-pending list', async () => {
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
+    mockGetEmbeddingWorkstationSummary.mockResolvedValue({
+      completedCount: 0,
+      completedRecords: [],
+      pendingCount: 1,
+      pendingTasks: [
+        createPendingTask({
+          embeddingRemarks: '皮肤组织',
+          remarks: null,
+          startedAt: '2026-06-01T09:00:00',
+          taskStatus: 'EMBEDDING_CONFIRM_PENDING',
+        }),
+      ],
+      workDate: '2026-06-01',
+    });
+
+    const { app, root } = mountView();
+    await flushView();
+
+    const tables = document.querySelectorAll('table');
+    expect(tables[1]?.textContent).toContain('皮肤组织');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('shows specimen and gross description for completion-pending rows', async () => {
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
+    mockGetEmbeddingWorkstationSummary.mockResolvedValue({
+      completedCount: 0,
+      completedRecords: [],
+      pendingCount: 1,
+      pendingTasks: [
+        createPendingTask({
+          grossDescription: '确认待完成大体所见',
+          samplingBlockDescription: '确认待完成蜡块',
+          specimenName: '确认待完成标本',
+          startedAt: '2026-06-01T09:00:00',
+          taskStatus: 'EMBEDDING_CONFIRM_PENDING',
+        }),
+      ],
+      workDate: '2026-06-01',
+    });
+
+    const { app, root } = mountView();
+    await flushView();
+
+    const completedDetail = document.querySelector(
+      '[data-testid="embedding-completed-detail"]',
+    );
+    expect(completedDetail?.textContent).not.toContain('确认待完成蜡块');
+    expect(completedDetail?.textContent).toContain('确认待完成标本');
+    expect(
+      document.querySelector<HTMLInputElement>('input[placeholder="大体所见"]')
+        ?.value,
+    ).toBe('确认待完成大体所见');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('persists pending remarks before confirming embedding without blur', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    const remarksInput = document.querySelector<HTMLInputElement>(
+      'input[aria-label="备注"]',
+    );
+    expect(remarksInput).toBeTruthy();
+    remarksInput!.value = '未失焦备注';
+    remarksInput!.dispatchEvent(new Event('input'));
+
+    findButton('确认包埋').click();
+    await flushView();
+
+    expect(mockUpdateTechnicalTaskRemarks).toHaveBeenCalledWith('TASK-1', {
+      productionRemarks: '主班备注-1',
+      remarks: '未失焦备注',
+    });
+    expect(mockStartEmbedding).toHaveBeenCalledWith({
+      remarks: null,
+      taskId: 'TASK-1',
+      terminalCode: null,
+    });
+    expect(
+      mockUpdateTechnicalTaskRemarks.mock.invocationCallOrder[0],
+    ).toBeLessThan(mockStartEmbedding.mock.invocationCallOrder[0]!);
 
     app.unmount();
     root.remove();

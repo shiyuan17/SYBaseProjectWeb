@@ -1,3 +1,5 @@
+import { mapWorkflowEnglishErrorMessage } from '#/modules/specimen-workflow/utils/error';
+
 type WorkflowApiErrorLike = {
   code?: string;
   error?: string;
@@ -16,12 +18,13 @@ export function getWorkflowPageErrorMessage(error: unknown) {
   const apiError = error as WorkflowApiErrorLike;
   const status = apiError.response?.status;
   const code = apiError.response?.data?.code || apiError.code || '';
-  const responseMessage =
+  const rawResponseMessage =
     apiError.response?.data?.error ||
     apiError.response?.data?.message ||
     apiError.error ||
     apiError.message ||
     '';
+  const responseMessage = mapWorkflowEnglishErrorMessage(rawResponseMessage);
 
   if (status === 401) {
     return '登录状态已失效，请重新登录后再继续操作。';

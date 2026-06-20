@@ -5,11 +5,13 @@ import { createApp, defineComponent, h, nextTick, ref } from 'vue';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const {
+  mockClipboardWriteText,
   messageSuccess,
   messageWarning,
   mockCreateReworkOrder,
   mockCreateSlideQcEvaluation,
 } = vi.hoisted(() => ({
+  mockClipboardWriteText: vi.fn(),
   messageSuccess: vi.fn(),
   messageWarning: vi.fn(),
   mockCreateReworkOrder: vi.fn(),
@@ -205,10 +207,12 @@ function findButton(root: HTMLElement, text: string) {
 describe('SlicingQcEvaluationDialog', () => {
   afterEach(() => {
     document.body.innerHTML = '';
+    mockClipboardWriteText.mockReset();
     messageSuccess.mockReset();
     messageWarning.mockReset();
     mockCreateReworkOrder.mockReset();
     mockCreateSlideQcEvaluation.mockReset();
+    vi.restoreAllMocks();
   });
 
   it('creates quality evaluations for all selected completed slides', async () => {
@@ -251,6 +255,54 @@ describe('SlicingQcEvaluationDialog', () => {
     expect(mockCreateReworkOrder).not.toHaveBeenCalled();
     expect(messageSuccess).toHaveBeenCalledWith('质控评价提交成功 2 条');
     expect(submitted).toHaveBeenCalledTimes(1);
+
+    app.unmount();
+  });
+
+  it('shows a placeholder when the selected row has no slide number', async () => {
+    const { app, root } = mountDialog([
+      createRow({
+        embeddingBoxNo: 'A1',
+        slideNo: null,
+      }),
+    ]);
+    await flushAll();
+
+    expect(root.textContent).toContain('玻片号');
+    expect(root.textContent).toContain('-');
+    expect(root.textContent).not.toContain('S-001');
+
+    app.unmount();
+  });
+
+  it('allows copying pathology number and patient identifier from the dialog summary', async () => {
+    Object.defineProperty(globalThis.navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: mockClipboardWriteText,
+      },
+    });
+    mockClipboardWriteText.mockResolvedValue(undefined);
+
+    const { app, root } = mountDialog([createRow()]);
+    await flushAll();
+
+    const pathologyTrigger = root.querySelector(
+      '[title="点击复制病理号"]',
+    ) as HTMLElement | null;
+    const patientTrigger = root.querySelector(
+      '[title="点击复制病人ID"]',
+    ) as HTMLElement | null;
+
+    expect(pathologyTrigger).not.toBeNull();
+    expect(patientTrigger).not.toBeNull();
+
+    pathologyTrigger?.click();
+    patientTrigger?.click();
+    await flushAll();
+
+    expect(mockClipboardWriteText).toHaveBeenNthCalledWith(1, 'BL-001');
+    expect(mockClipboardWriteText).toHaveBeenNthCalledWith(2, '08305');
 
     app.unmount();
   });

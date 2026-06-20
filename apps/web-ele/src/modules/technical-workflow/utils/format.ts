@@ -149,6 +149,23 @@ export function formatPatientIdDisplay(
   return formatNullable(patientIdDisplay?.trim() || patientId?.trim() || null);
 }
 
+export function formatSlicingSlideDisplayNo(
+  slideNo?: null | string,
+  embeddingBoxNo?: null | string,
+) {
+  const normalizedSlideNo = slideNo?.trim();
+  if (normalizedSlideNo) {
+    return normalizedSlideNo;
+  }
+
+  const normalizedEmbeddingBoxNo = embeddingBoxNo?.trim();
+  if (normalizedEmbeddingBoxNo) {
+    return normalizedEmbeddingBoxNo.replaceAll('+', '-');
+  }
+
+  return '-';
+}
+
 export function formatPendingPathologyNo(value?: null | string) {
   return value && value.trim() ? value : '待生成';
 }

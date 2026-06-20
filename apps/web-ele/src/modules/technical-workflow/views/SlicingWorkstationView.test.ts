@@ -3,7 +3,16 @@ import type {
   SlicingWorkbenchView,
 } from '../types/technical-workflow';
 
-import { createApp, defineComponent, h, nextTick, onMounted, watch } from 'vue';
+import {
+  createApp,
+  defineComponent,
+  h,
+  inject,
+  nextTick,
+  onMounted,
+  provide,
+  watch,
+} from 'vue';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -31,6 +40,8 @@ const {
   mockUpdateTechnicalTaskRemarks: vi.fn(),
 }));
 
+const rowContextKey = Symbol('slicing-row-context');
+
 vi.mock('vue-router', () => ({
   useRoute: () => mockRoute,
 }));
@@ -45,6 +56,16 @@ vi.mock('@vben/common-ui', () => ({
           props.description ? h('p', props.description) : null,
           slots.default?.(),
         ]);
+    },
+  }),
+}));
+
+vi.mock('@vben/stores', () => ({
+  useUserStore: () => ({
+    userInfo: {
+      realName: '测试技师',
+      userId: 'USER-001',
+      username: 'tester',
     },
   }),
 }));
@@ -165,24 +186,43 @@ vi.mock('element-plus', () => {
         });
         return () =>
           h('div', [
-            slots.default?.(),
             ...(props.data ?? []).map(
-              (row: {
-                embeddingBoxNo?: null | string;
-                embeddingRemarks?: null | string;
-                submittingDepartmentName?: null | string;
-                taskId?: string;
-              }) =>
+              (
+                row: {
+                  embeddingBoxNo?: null | string;
+                  embeddingRemarks?: null | string;
+                  submittingDepartmentName?: null | string;
+                  taskId?: string;
+                },
+                index: number,
+              ) =>
                 h(
-                  'div',
-                  [
-                    row.taskId,
-                    row.embeddingBoxNo,
-                    row.embeddingRemarks,
-                    row.submittingDepartmentName,
-                  ]
-                    .filter(Boolean)
-                    .join(' '),
+                  defineComponent({
+                    setup(_, { slots: providerSlots }) {
+                      provide(rowContextKey, {
+                        $index: index,
+                        row,
+                      });
+                      return () => h('div', providerSlots.default?.());
+                    },
+                  }),
+                  { key: index },
+                  {
+                    default: () => [
+                      slots.default?.(),
+                      h(
+                        'div',
+                        [
+                          row.taskId,
+                          row.embeddingBoxNo,
+                          row.embeddingRemarks,
+                          row.submittingDepartmentName,
+                        ]
+                          .filter(Boolean)
+                          .join(' '),
+                      ),
+                    ],
+                  },
                 ),
             ),
           ]);
@@ -191,7 +231,18 @@ vi.mock('element-plus', () => {
     ElTableColumn: defineComponent({
       props: ['label'],
       setup(props, { slots }) {
-        return () => h('section', [props.label, slots.default?.({ row: {} })]);
+        const rowContext = inject<null | { $index: number; row: unknown }>(
+          rowContextKey,
+          null,
+        );
+        return () =>
+          h('section', [
+            props.label,
+            slots.default?.({
+              $index: rowContext?.$index ?? 0,
+              row: rowContext?.row ?? {},
+            }),
+          ]);
       },
     }),
     ElTag: simple('span'),
@@ -494,6 +545,7 @@ describe('SlicingWorkstationView', () => {
     expect(document.body.textContent).not.toContain('待补后端能力');
     expect(document.body.textContent).not.toContain('重打玻片');
     expect(document.body.textContent).not.toContain('取消完成');
+    expect(document.body.textContent).not.toContain('SLIDE-001');
     const buttonTexts = [...root.querySelectorAll('button')].map(
       (button) => button.textContent ?? '',
     );
@@ -503,6 +555,40 @@ describe('SlicingWorkstationView', () => {
     expect(
       buttonTexts.findIndex((text) => text.includes('取消合片')),
     ).toBeLessThan(buttonTexts.findIndex((text) => text.includes('打印玻片')));
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('shows merged slide display number with hyphen when falling back to embedding box no', async () => {
+    const mergedWorkbench = createWorkbench();
+    mergedWorkbench.pendingSliceList = [
+      {
+        ...mergedWorkbench.pendingList[0]!,
+        embeddingBoxNo: 'A1+A2',
+        slideNo: null,
+      },
+    ];
+    mergedWorkbench.pendingSliceTotal = 1;
+    mergedWorkbench.completedTodayList = [
+      {
+        ...mergedWorkbench.pendingList[0]!,
+        completedAt: '2026-06-17T09:30:00',
+        embeddingBoxNo: 'A1+A2',
+        slideNo: null,
+        slidePrintStatus: 'PRINTED',
+        slicingOperatorName: '技师甲',
+        taskStatus: 'COMPLETED',
+      },
+    ];
+    mergedWorkbench.completedTotal = 1;
+    mockGetSlicingWorkbench.mockResolvedValue(mergedWorkbench);
+
+    const { app, root } = mountView();
+    await flushView();
+
+    expect(document.body.textContent).toContain('A1-A2');
+    expect(document.body.textContent).toContain('A1+A2');
 
     app.unmount();
     root.remove();
@@ -665,6 +751,39 @@ describe('SlicingWorkstationView', () => {
     });
     expect(mockPrintSlicingSlides).not.toHaveBeenCalled();
     expect(writeMock).toHaveBeenCalledWith(expect.stringContaining('A1+A2'));
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('allows copying patient and pathology identifiers from the slicing tables', async () => {
+    const clipboardWriteText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(globalThis.navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: clipboardWriteText,
+      },
+    });
+
+    const { app, root } = mountView();
+    await flushView();
+
+    const pathologyTrigger = root.querySelector(
+      '[title="点击复制病理号"]',
+    ) as HTMLElement | null;
+    const patientTrigger = root.querySelector(
+      '[title="点击复制病人ID"]',
+    ) as HTMLElement | null;
+
+    expect(pathologyTrigger).not.toBeNull();
+    expect(patientTrigger).not.toBeNull();
+
+    pathologyTrigger?.click();
+    patientTrigger?.click();
+    await flushView();
+
+    expect(clipboardWriteText).toHaveBeenNthCalledWith(1, 'BL-001');
+    expect(clipboardWriteText).toHaveBeenNthCalledWith(2, '08305');
 
     app.unmount();
     root.remove();

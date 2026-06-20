@@ -161,7 +161,10 @@ vi.mock('element-plus', () => {
   };
 });
 
-function mountTable() {
+function mountTable(options?: {
+  canAddEmbeddingBox?: boolean;
+  readOnly?: boolean;
+}) {
   const root = document.createElement('div');
   document.body.append(root);
   const selectedSpecimenKey = ref('specimen-1');
@@ -171,15 +174,15 @@ function mountTable() {
     setup() {
       return () =>
         h(GrossingEmbeddingBoxTable, {
-          canAddEmbeddingBox: true,
+          canAddEmbeddingBox: options?.canAddEmbeddingBox ?? true,
           embeddingBoxRows: [
             {
               box: {
                 boxName: '包埋盒 1',
                 embeddingBoxNo: 'BX-BD202606080002-A1',
-                embeddingRemarks: '',
+                embeddingRemarks: '历史备注',
                 sequenceNo: 1,
-                status: 'PENDING',
+                status: 'CONFIRMED',
               },
               boxIndex: 0,
               specimenIndex: 0,
@@ -187,6 +190,8 @@ function mountTable() {
             },
           ],
           embeddingRemarkOptions: [],
+          marginMarkingOptions: [],
+          readOnly: options?.readOnly ?? false,
           selectedSpecimenKey: selectedSpecimenKey.value,
           specimenOptions: [
             { label: '骨髓', value: 'specimen-1' },
@@ -282,6 +287,22 @@ describe('GrossingEmbeddingBoxTable', () => {
     await Promise.resolve();
 
     expect(removeEmbeddingBox).toHaveBeenCalledWith(0, 0);
+    app.unmount();
+  });
+
+  it('renders read-only embedding box rows without add or delete controls', () => {
+    const { app, root } = mountTable({
+      canAddEmbeddingBox: false,
+      readOnly: true,
+    });
+
+    expect(root.textContent).toContain('A1');
+    expect(root.textContent).toContain('已确认');
+    expect(root.textContent).toContain('历史备注');
+    expect(root.textContent).not.toContain('删除');
+    expect(root.textContent).not.toContain('+1');
+    expect(root.querySelector('[data-column-label="操作"]')).toBeNull();
+
     app.unmount();
   });
 });

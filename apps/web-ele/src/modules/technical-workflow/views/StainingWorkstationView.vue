@@ -700,7 +700,9 @@ onBeforeUnmount(() => {
                 <template #default="{ row }">
                   {{
                     formatNullable(
-                      row.task.productionRemarks ?? row.task.remarks,
+                      row.task.shiftRemark ??
+                        row.task.productionRemarks ??
+                        row.task.remarks,
                     )
                   }}
                 </template>

@@ -3,6 +3,7 @@ import type { TechnicalTrackingView } from '../types/technical-workflow';
 
 import { ElTable, ElTableColumn } from 'element-plus';
 
+import CopyableIdentifier from '../../../components/CopyableIdentifier.vue';
 import {
   formatNullable,
   formatQualityStatus,
@@ -25,7 +26,7 @@ defineProps<{
       <ElTable :data="trackingResult.specimens" border>
         <ElTableColumn label="标本号" min-width="120">
           <template #default="{ row }">
-            {{ formatNullable(row.specimenNo) }}
+            <CopyableIdentifier kind="specimenNo" :value="row.specimenNo" />
           </template>
         </ElTableColumn>
         <ElTableColumn label="标本名称" min-width="160">

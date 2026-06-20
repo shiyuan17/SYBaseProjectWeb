@@ -41,6 +41,7 @@ import {
   mapTechnicalSpecimenRegistrationDetailResponse,
   mapTechnicalSpecimenRegistrationWorkspaceResponse,
   mapTechnicalTrackingResponse,
+  mapWorkstationDailyClearResponse,
   printSlicingSlideMergeGroup,
   printSlicingSlides,
   releaseTechnicalTask,
@@ -94,6 +95,41 @@ describe('technical-workflow-service mappers', () => {
       page: 1,
       size: 20,
       total: 0,
+    });
+  });
+
+  it('preserves grossing context fields on pending technical tasks', () => {
+    expect(
+      mapPendingTechnicalTaskPageResponse({
+        items: [
+          {
+            applicationId: 'APP-1',
+            applicationNo: 'APP-1',
+            caseId: 'CASE-1',
+            completedAt: null,
+            createdAt: '2026-06-01T08:00:00',
+            deadlineAt: null,
+            grossDescription: '大体所见',
+            id: 'TASK-1',
+            objectId: 'BLOCK-1',
+            objectType: 'SAMPLING_BLOCK',
+            pathologyNo: 'BL-001',
+            payload: null,
+            remarks: null,
+            specimenId: 'SPEC-1',
+            specimenName: '胃组织',
+            startedAt: null,
+            taskStatus: 'PENDING',
+            taskType: 'EMBEDDING',
+            timedOut: false,
+            timeoutRuleCode: null,
+          },
+        ],
+      }).items[0],
+    ).toMatchObject({
+      grossDescription: '大体所见',
+      id: 'TASK-1',
+      specimenName: '胃组织',
     });
   });
 
@@ -408,9 +444,30 @@ describe('technical-workflow-service mappers', () => {
     expect(mapEmbeddingWorkstationSummaryResponse({})).toEqual({
       completedCount: 0,
       completedRecords: [],
+      dailyClear: null,
       pendingCount: 0,
       pendingTasks: [],
       workDate: null,
+    });
+  });
+
+  it('maps workstation daily clear response', () => {
+    expect(
+      mapWorkstationDailyClearResponse({
+        cleared: true,
+        clearStatus: 'CLEARED',
+        clearedAt: '2026-06-17T09:00:00',
+        operatorName: '包埋技师',
+        operatorUserId: 'USER-EMB-1',
+        workDate: '2026-06-17',
+      }),
+    ).toEqual({
+      cleared: true,
+      clearStatus: 'CLEARED',
+      clearedAt: '2026-06-17T09:00:00',
+      operatorName: '包埋技师',
+      operatorUserId: 'USER-EMB-1',
+      workDate: '2026-06-17',
     });
   });
 
@@ -555,6 +612,7 @@ describe('technical-workflow-service requests', () => {
     ).resolves.toEqual({
       completedCount: 1,
       completedRecords: [],
+      dailyClear: null,
       pendingCount: 2,
       pendingTasks: [],
       workDate: '2026-06-01',

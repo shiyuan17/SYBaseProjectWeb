@@ -9,6 +9,7 @@ import {
   ElTag,
 } from 'element-plus';
 
+import CopyableIdentifier from '../../../components/CopyableIdentifier.vue';
 import {
   formatDateTime,
   formatNullable,
@@ -61,7 +62,7 @@ const pageSize = defineModel<number>('pageSize', {
       <ElTableColumn type="selection" width="48" />
       <ElTableColumn label="病理号" min-width="140">
         <template #default="{ row }">
-          {{ formatNullable(row.pathologyNo) }}
+          <CopyableIdentifier kind="pathologyNo" :value="row.pathologyNo" />
         </template>
       </ElTableColumn>
       <ElTableColumn label="标本/对象" min-width="180">

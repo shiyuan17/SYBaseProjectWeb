@@ -89,12 +89,16 @@ export interface PendingTechnicalTaskItem {
   expectedCompletedAt?: null | string;
   remarks: null | string;
   productionRemarks?: null | string;
+  shiftRemark?: null | string;
   receivedAt?: null | string;
+  embeddingRemarks?: null | string;
+  grossDescription?: null | string;
   samplingBlockCode?: null | string;
   samplingBlockDescription?: null | string;
   stationCode?: null | string;
   stationName?: null | string;
   specimenId: null | string;
+  specimenName?: null | string;
   startedAt: null | string;
   taskStatus: null | string;
   taskType: null | string;
@@ -354,6 +358,7 @@ export interface TechnicalTrackingBlockSummary {
   blockId: string;
   description: null | string;
   embeddingBoxNo: null | string;
+  embeddingRemarks?: null | string;
   grossDescription?: null | string;
   specimenName?: null | string;
   specimenId: string;
@@ -520,6 +525,7 @@ export interface TechnicalTaskAssignRequest {
   expectedCompletedAt?: null | string;
   priority?: null | string;
   productionRemarks?: null | string;
+  shiftRemark?: null | string;
   stationCode?: null | string;
   stationName?: null | string;
   terminalCode?: null | string;
@@ -542,11 +548,13 @@ export interface TechnicalTaskReleaseRequest {
 export interface TechnicalTaskPriorityRequest {
   priority: string;
   productionRemarks?: null | string;
+  shiftRemark?: null | string;
   terminalCode?: null | string;
 }
 
 export interface TechnicalTaskRemarksRequest {
   productionRemarks?: null | string;
+  shiftRemark?: null | string;
   remarks?: null | string;
   terminalCode?: null | string;
 }
@@ -926,9 +934,19 @@ export interface WorkstationCaseContext {
   specimenCount: number;
 }
 
+export interface WorkstationDailyClear {
+  cleared: boolean;
+  clearStatus: null | string;
+  clearedAt: null | string;
+  operatorName: null | string;
+  operatorUserId: null | string;
+  workDate: null | string;
+}
+
 export interface EmbeddingWorkstationSummary {
   completedCount: number;
   completedRecords: TechnicalTrackingEmbeddingRecordSummary[];
+  dailyClear: null | WorkstationDailyClear;
   pendingCount: number;
   pendingTasks: PendingTechnicalTaskItem[];
   workDate: null | string;

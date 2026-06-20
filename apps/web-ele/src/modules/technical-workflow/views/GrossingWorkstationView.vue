@@ -320,13 +320,7 @@ const filters = reactive({
 const routeTaskId = computed(() =>
   typeof route.query.taskId === 'string' ? route.query.taskId : '',
 );
-const shouldIncludeAllStatuses = computed(
-  () => Boolean(filters.keyword.trim()) || Boolean(routeTaskId.value),
-);
 const hasCreatedRange = computed(() => filters.createdRange.length === 2);
-const hasActiveQueryFilters = computed(
-  () => Boolean(filters.keyword.trim()) || hasCreatedRange.value,
-);
 const shouldInitialLoad = computed(
   () =>
     hasCreatedRange.value ||
@@ -337,7 +331,7 @@ const shouldInitialLoad = computed(
 const currentQuery = computed(() => ({
   createdFrom: formatCreatedFromQueryValue(filters.createdRange[0] ?? ''),
   createdTo: formatCreatedToQueryValue(filters.createdRange[1] ?? ''),
-  includeAllStatuses: shouldIncludeAllStatuses.value || undefined,
+  includeAllStatuses: true,
   keyword: filters.keyword.trim() || undefined,
   page: filters.page,
   size: filters.size,
@@ -709,10 +703,6 @@ async function selectTask(taskId: string) {
   const matchedTask =
     pendingItems.value.find((item) => item.id === taskId) ?? null;
   selectedTask.value = matchedTask;
-  if (matchedTask && !canOperateGrossingTask(matchedTask)) {
-    workbench.resetWorkbenchState(matchedTask);
-    return;
-  }
   await workbench.initializeWorkbench(matchedTask);
 }
 
@@ -750,24 +740,10 @@ async function loadPendingData(preferredTaskId?: string) {
 
 async function handleQuery() {
   filters.page = 1;
-  if (!hasActiveQueryFilters.value) {
-    pendingItems.value = [];
-    total.value = 0;
-    selectedTask.value = null;
-    workbench.resetWorkbenchState(null);
-    return;
-  }
   await loadPendingData();
 }
 
 async function handleRefresh() {
-  if (!hasActiveQueryFilters.value) {
-    pendingItems.value = [];
-    total.value = 0;
-    selectedTask.value = null;
-    workbench.resetWorkbenchState(null);
-    return;
-  }
   await loadPendingData(selectedTask.value?.id);
 }
 
@@ -790,6 +766,8 @@ async function shiftCreatedDateRange(days: number) {
 function canOperateGrossingTask(task: null | PendingTechnicalTaskItem) {
   return task?.taskStatus === 'IN_PROGRESS';
 }
+
+const isGrossingReadOnly = computed(() => workbench.isReadOnly.value);
 
 async function uploadGrossingImage(file: File) {
   const specimenIndex = activeSpecimenIndex.value;
@@ -965,6 +943,9 @@ function selectTemplateSpecimen(specimenKey: string) {
 }
 
 function appendTextToActiveGrossingDescription(text: string) {
+  if (isGrossingReadOnly.value) {
+    return false;
+  }
   const specimen = workbench.activeSpecimen.value;
   if (!specimen) {
     ElMessage.warning('请先选择可编辑标本');
@@ -986,6 +967,9 @@ function copyGrossingTemplateText(text: string) {
 }
 
 function applySelectedGrossingTemplate() {
+  if (isGrossingReadOnly.value) {
+    return;
+  }
   const template = selectedGrossingTemplate.value;
   const specimen = workbench.activeSpecimen.value;
   if (!template || !specimen) {
@@ -1360,6 +1344,12 @@ if (shouldInitialLoad.value) {
                   <span>病理号: {{ selectedPathologyNo }}</span>
                 </div>
                 <div
+                  v-if="isGrossingReadOnly"
+                  class="mt-1 text-xs text-muted-foreground"
+                >
+                  当前为已完成记录，仅可查看
+                </div>
+                <div
                   class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground"
                 >
                   <span v-for="item in selectedTaskFacts" :key="item.label">
@@ -1416,6 +1406,10 @@ if (shouldInitialLoad.value) {
               :embedding-remark-options="
                 workbench.workflowReferenceOptions.value.embeddingRemarks
               "
+              :margin-marking-options="
+                workbench.workflowReferenceOptions.value.marginMarkings
+              "
+              :read-only="isGrossingReadOnly"
               :specimen-options="workbench.specimenNameOptions.value"
               @add-embedding-boxes="workbench.addEmbeddingBoxes"
               @remove-embedding-box="workbench.removeEmbeddingBox"
@@ -1427,7 +1421,9 @@ if (shouldInitialLoad.value) {
                 class="absolute right-3 top-2 z-10 flex items-center gap-2"
               >
                 <ElButton
-                  :disabled="!workbench.activeSpecimen.value"
+                  :disabled="
+                    !workbench.activeSpecimen.value || isGrossingReadOnly
+                  "
                   size="small"
                   type="primary"
                   @click="handleSaveGrossingDescription"
@@ -1435,7 +1431,9 @@ if (shouldInitialLoad.value) {
                   保存
                 </ElButton>
                 <ElButton
-                  :disabled="!workbench.activeSpecimen.value"
+                  :disabled="
+                    !workbench.activeSpecimen.value || isGrossingReadOnly
+                  "
                   size="small"
                   title="取材模板"
                   @click="focusGrossingTemplatePanel"
@@ -1452,7 +1450,11 @@ if (shouldInitialLoad.value) {
                     <WorkbenchCapturedImagePanel
                       :accept="workbench.grossingImageAccept"
                       :can-edit="canEditCapturedImages"
-                      disabled-text="请先从左侧列表选择任务和可编辑标本"
+                      :disabled-text="
+                        isGrossingReadOnly
+                          ? '已完成取材任务仅可查看历史影像'
+                          : '请先从左侧列表选择任务和可编辑标本'
+                      "
                       :items="capturedImageItems"
                       scroll-mode="external"
                       :upload-image-file="uploadGrossingImage"
@@ -1465,11 +1467,23 @@ if (shouldInitialLoad.value) {
                     <ElInput
                       v-if="workbench.activeSpecimen.value"
                       v-model="workbench.activeSpecimen.value.grossDescription"
+                      :readonly="isGrossingReadOnly"
                       :rows="6"
-                      placeholder="请输入当前标本的大体描写"
+                      :placeholder="
+                        isGrossingReadOnly
+                          ? '已完成取材的大体描写'
+                          : '请输入当前标本的大体描写'
+                      "
                       type="textarea"
                     />
-                    <ElEmpty v-else description="当前没有可编辑的标本描写" />
+                    <ElEmpty
+                      v-else
+                      :description="
+                        isGrossingReadOnly
+                          ? '当前没有可查看的标本描写'
+                          : '当前没有可编辑的标本描写'
+                      "
+                    />
                   </div>
                 </ElTabPane>
 
@@ -1486,6 +1500,7 @@ if (shouldInitialLoad.value) {
                       <ElInput
                         v-model="clinicalHistoryForm[field.key]"
                         :placeholder="field.placeholder"
+                        :readonly="isGrossingReadOnly"
                         :rows="field.rows"
                         type="textarea"
                       />
@@ -1561,6 +1576,7 @@ if (shouldInitialLoad.value) {
                 <ElButton
                   v-for="item in COMMON_GROSSING_COPY_TEXTS"
                   :key="item"
+                  :disabled="isGrossingReadOnly"
                   size="small"
                   @click="copyGrossingTemplateText(item)"
                 >
@@ -1636,7 +1652,10 @@ if (shouldInitialLoad.value) {
                       "
                       type="button"
                       @click="selectGrossingTemplate(template)"
-                      @dblclick.stop="appendGrossingTemplateDirectly(template)"
+                      @dblclick.stop="
+                        !isGrossingReadOnly &&
+                        appendGrossingTemplateDirectly(template)
+                      "
                     >
                       <div
                         class="flex items-start justify-between gap-2 text-sm font-semibold text-foreground"
@@ -1672,10 +1691,14 @@ if (shouldInitialLoad.value) {
                 {{ selectedGrossingTemplate?.content || '请选择模板' }}
               </div>
               <div class="grid grid-cols-2 gap-2">
-                <ElButton @click="applyGrossingTemplateWithMode(false)">
+                <ElButton
+                  :disabled="isGrossingReadOnly"
+                  @click="applyGrossingTemplateWithMode(false)"
+                >
                   替换当前
                 </ElButton>
                 <ElButton
+                  :disabled="isGrossingReadOnly"
                   type="primary"
                   @click="applyGrossingTemplateWithMode(true)"
                 >

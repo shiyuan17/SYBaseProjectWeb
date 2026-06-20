@@ -14,6 +14,7 @@ import { useRoute } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
 import { UserRoundPen } from '@vben/icons';
+import { useUserStore } from '@vben/stores';
 
 import {
   ElAlert,
@@ -34,8 +35,10 @@ import {
 
 import { reportInlineErrorDisabled } from '#/utils/error-feedback';
 
+import CopyableIdentifier from '../../../components/CopyableIdentifier.vue';
 import {
   cancelSlicingSlidePrintMergeGroups,
+  completeSlicing,
   createSlicingSlidePrintMergeGroups,
   getSlicingWorkbench,
   getTechnicalTracking,
@@ -63,9 +66,13 @@ import {
   formatEmbeddingEvaluationLevel,
   formatEventStatus,
   formatNullable,
-  formatPatientIdDisplay,
+  formatSlicingSlideDisplayNo,
   formatTaskStatus,
 } from '../utils/format';
+import {
+  createTechnicalOperatorDefaults,
+  normalizeTechnicalOperatorPayload,
+} from '../utils/operator-form';
 import {
   buildTrackingTreeData,
   buildWorkflowTimelineSteps,
@@ -124,6 +131,7 @@ const EMPTY_WORKBENCH: SlicingWorkbenchView = {
 const pageError = ref('');
 const loading = ref(false);
 const route = useRoute();
+const userStore = useUserStore();
 const dateRangeShortcuts = createDateRangePickerShortcuts();
 
 const workbench = ref<SlicingWorkbenchView>(EMPTY_WORKBENCH);
@@ -588,6 +596,106 @@ function getTrackingObjectId(row: SlicingWorkbenchRow) {
   return row.slideId || row.embeddingBoxId || row.specimenId || row.caseId;
 }
 
+async function directCompleteSlicing() {
+  const tasks = selectedPendingTasks.value;
+  if (tasks.length === 0) {
+    ElMessage.warning('当前缺少待处理任务');
+    return;
+  }
+  // 检查所有任务的包埋盒ID是否存在
+  if (
+    tasks.some(
+      (task) => task.objectType !== 'EMBEDDING_BOX' || !task.objectId?.trim(),
+    )
+  ) {
+    ElMessage.warning('部分任务缺少包埋盒编号，无法完成切片');
+    return;
+  }
+  // 初始化操作员表单，使用当前用户信息
+  const operatorForm = createTechnicalOperatorDefaults(
+    userStore.userInfo ?? undefined,
+  );
+  if (!operatorForm.operatorName.trim()) {
+    ElMessage.warning('请先确认当前登录人信息');
+    return;
+  }
+  // 检查任务状态
+  if (
+    tasks.some(
+      (task) => !['IN_PROGRESS', 'PENDING'].includes(task.taskStatus ?? ''),
+    )
+  ) {
+    ElMessage.warning('当前任务状态不支持完成切片');
+    return;
+  }
+
+  try {
+    const payload = normalizeTechnicalOperatorPayload(operatorForm);
+    const results = await Promise.allSettled(
+      tasks.map(async (task) => {
+        const embeddingBoxId = task.objectId?.trim();
+        if (!embeddingBoxId) {
+          throw new Error('部分任务缺少包埋盒编号，无法完成切片');
+        }
+        // 如果任务是PENDING，先开始切片
+        if (task.taskStatus === 'PENDING') {
+          await startSlicing({
+            ...payload,
+            taskId: task.id,
+          });
+        }
+        // 完成切片，使用默认参数
+        return completeSlicing({
+          ...payload,
+          deviceCode: null,
+          embeddingBoxId,
+          qualityIssue: null,
+          sliceCountPerSlide: 1,
+          sliceThickness: null,
+          taskId: task.id,
+        });
+      }),
+    );
+
+    const failedResults = results.filter(
+      (result): result is PromiseRejectedResult => result.status === 'rejected',
+    );
+    const succeededCount = results.length - failedResults.length;
+
+    if (failedResults.length === 0) {
+      const firstResult = results[0];
+      const slicingResult =
+        firstResult?.status === 'fulfilled' ? firstResult.value : null;
+      ElMessage.success(
+        tasks.length === 1 && slicingResult
+          ? `切片完成，已处理 ${slicingResult.slideIds.length} 张已打印玻片`
+          : `已完成切片 ${tasks.length} 条任务`,
+      );
+    } else {
+      const firstFailure = failedResults[0];
+      let errorMsg = '未知错误';
+      if (firstFailure?.reason) {
+        errorMsg = getWorkflowPageErrorMessage(firstFailure.reason);
+      }
+      ElMessage.warning(
+        succeededCount > 0
+          ? `已完成切片 ${succeededCount} 条任务，${failedResults.length} 条失败：${errorMsg}`
+          : `完成切片失败：${errorMsg}`,
+      );
+      if (succeededCount === 0) {
+        return;
+      }
+    }
+
+    // 刷新工作台
+    await loadWorkbench();
+  } catch (error) {
+    const errorMsg = getWorkflowPageErrorMessage(error);
+    ElMessage.error(`操作失败：${errorMsg}`);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
+  }
+}
+
 function clearAllSelections() {
   pendingTableRef.value?.clearSelection();
   completedTableRef.value?.clearSelection();
@@ -705,13 +813,7 @@ function openCompleteSlicing() {
     ElMessage.warning('当前勾选任务状态不支持完成切片');
     return;
   }
-  const row = rows[0];
-  if (rows.length === 1 && row?.taskStatus === 'PENDING') {
-    pendingAutoProcessTaskId.value = row.taskId;
-    startDialogVisible.value = true;
-    return;
-  }
-  processDialogVisible.value = true;
+  directCompleteSlicing();
 }
 
 async function handlePrintSlides() {
@@ -1200,14 +1302,19 @@ void loadWorkbench();
               </ElTableColumn>
               <ElTableColumn label="病人ID" min-width="130">
                 <template #default="{ row }">
-                  {{
-                    formatPatientIdDisplay(row.patientIdDisplay, row.patientId)
-                  }}
+                  <CopyableIdentifier
+                    kind="patientId"
+                    :fallback-value="row.patientId"
+                    :value="row.patientIdDisplay"
+                  />
                 </template>
               </ElTableColumn>
               <ElTableColumn label="病理号" min-width="150">
                 <template #default="{ row }">
-                  {{ formatNullable(row.pathologyNo) }}
+                  <CopyableIdentifier
+                    kind="pathologyNo"
+                    :value="row.pathologyNo"
+                  />
                 </template>
               </ElTableColumn>
               <ElTableColumn label="蜡块号" min-width="120">
@@ -1272,12 +1379,26 @@ void loadWorkbench();
               </ElTableColumn>
               <ElTableColumn label="病理号" min-width="150">
                 <template #default="{ row }">
-                  {{ formatNullable(row.pathologyNo) }}
+                  <CopyableIdentifier
+                    kind="pathologyNo"
+                    :value="row.pathologyNo"
+                  />
                 </template>
               </ElTableColumn>
               <ElTableColumn label="玻片号" min-width="140">
                 <template #default="{ row }">
-                  {{ formatNullable(row.slideNo) }}
+                  <span
+                    :class="
+                      row.combinedSlide ? 'legacy-merged-embedding-box-no' : ''
+                    "
+                  >
+                    {{
+                      formatSlicingSlideDisplayNo(
+                        row.slideNo,
+                        row.embeddingBoxNo,
+                      )
+                    }}
+                  </span>
                 </template>
               </ElTableColumn>
               <ElTableColumn label="打印状态" min-width="120">
@@ -1371,9 +1492,11 @@ void loadWorkbench();
               </ElTableColumn>
               <ElTableColumn label="病人ID" min-width="160">
                 <template #default="{ row }">
-                  {{
-                    formatPatientIdDisplay(row.patientIdDisplay, row.patientId)
-                  }}
+                  <CopyableIdentifier
+                    kind="patientId"
+                    :fallback-value="row.patientId"
+                    :value="row.patientIdDisplay"
+                  />
                 </template>
               </ElTableColumn>
             </template>
@@ -1432,19 +1555,32 @@ void loadWorkbench();
             </ElTableColumn>
             <ElTableColumn label="病人ID" min-width="150">
               <template #default="{ row }">
-                {{
-                  formatPatientIdDisplay(row.patientIdDisplay, row.patientId)
-                }}
+                <CopyableIdentifier
+                  kind="patientId"
+                  :fallback-value="row.patientId"
+                  :value="row.patientIdDisplay"
+                />
               </template>
             </ElTableColumn>
             <ElTableColumn label="病理号" min-width="150">
               <template #default="{ row }">
-                {{ formatNullable(row.pathologyNo) }}
+                <CopyableIdentifier
+                  kind="pathologyNo"
+                  :value="row.pathologyNo"
+                />
               </template>
             </ElTableColumn>
             <ElTableColumn label="玻片号" min-width="140">
               <template #default="{ row }">
-                {{ formatNullable(row.slideNo) }}
+                <span
+                  :class="
+                    row.combinedSlide ? 'legacy-merged-embedding-box-no' : ''
+                  "
+                >
+                  {{
+                    formatSlicingSlideDisplayNo(row.slideNo, row.embeddingBoxNo)
+                  }}
+                </span>
               </template>
             </ElTableColumn>
             <ElTableColumn label="切片操作" min-width="140">
@@ -1454,7 +1590,7 @@ void loadWorkbench();
             </ElTableColumn>
             <ElTableColumn label="切片备注" min-width="180">
               <template #default="{ row }">
-                {{ formatNullable(row.slicingRemark) }}
+                {{ formatNullable(getPendingRemark(row)) }}
               </template>
             </ElTableColumn>
             <ElTableColumn label="包埋清零备注" min-width="180">

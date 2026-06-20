@@ -127,7 +127,7 @@ const specimenTabMetas = ref([
     trackingLabel: 'SP-002',
   },
 ]);
-const currentTask = ref(null);
+const currentTask = ref<any>(null);
 const workbenchContext = ref({
   caseSummary: {
     applicationId: 'APP-001',
@@ -290,6 +290,7 @@ const workbenchState = {
   getSpecimenTabLabel: vi.fn(() => 'SP-001'),
   grossingImageAccept: 'image/jpeg',
   initializeWorkbench: mockInitializeWorkbench,
+  isReadOnly: computed(() => currentTask.value?.taskStatus === 'COMPLETED'),
   isSpecimenUploading: vi.fn(() => false),
   labelClass: 'text-sm',
   loadWorkbenchContext: mockLoadWorkbenchContext,
@@ -731,6 +732,30 @@ describe('GrossingWorkstationView', () => {
     app.unmount();
   });
 
+  it('loads active grossing tasks when query is clicked without filters', async () => {
+    const { app, root } = await mountView({});
+    mockListPendingTechnicalTasks.mockClear();
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [createTask('TASK-001', 'BL-001')],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+
+    findButton(root, '查询').click();
+    await flushAll();
+
+    expect(mockListPendingTechnicalTasks).toHaveBeenCalledWith(
+      expect.objectContaining({
+        includeAllStatuses: true,
+        keyword: undefined,
+        taskType: 'GROSSING',
+      }),
+    );
+
+    app.unmount();
+  });
+
   it('loads the legacy table and switches the selected task', async () => {
     const { app, root } = await mountView();
 
@@ -930,7 +955,7 @@ describe('GrossingWorkstationView', () => {
     app.unmount();
   });
 
-  it('shows historical task data status without loading inactive workbench on enter query', async () => {
+  it('loads completed grossing workbench in read-only mode on enter query', async () => {
     const { app, root } = await mountView({});
     mockListPendingTechnicalTasks.mockResolvedValue({
       items: [createTask('TASK-009', 'BD202606080002', 'COMPLETED')],
@@ -956,8 +981,7 @@ describe('GrossingWorkstationView', () => {
         taskType: 'GROSSING',
       }),
     );
-    expect(mockInitializeWorkbench).not.toHaveBeenCalled();
-    expect(mockResetWorkbenchState).toHaveBeenCalledWith(
+    expect(mockInitializeWorkbench).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'TASK-009',
         taskStatus: 'COMPLETED',
@@ -965,7 +989,7 @@ describe('GrossingWorkstationView', () => {
     );
     expect(root.querySelector('[data-column-label="数据状态"]')).toBeTruthy();
     expect(root.textContent).toContain('描写完成');
-    expect(root.textContent).not.toContain('技术任务未处于激活状态');
+    expect(root.textContent).toContain('当前为已完成记录，仅可查看');
 
     app.unmount();
   });

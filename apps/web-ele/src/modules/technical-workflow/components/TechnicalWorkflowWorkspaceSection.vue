@@ -6,6 +6,7 @@ import type {
 
 import { ElButton, ElSkeleton, ElTag } from 'element-plus';
 
+import CopyableIdentifier from '../../../components/CopyableIdentifier.vue';
 import {
   formatNullable,
   formatObjectType,
@@ -249,7 +250,10 @@ const emit = defineEmits<{
             <div class="flex items-start justify-between gap-3">
               <div>
                 <div class="text-sm font-semibold text-foreground">
-                  {{ formatNullable(item.pathologyNo) }}
+                  <CopyableIdentifier
+                    kind="pathologyNo"
+                    :value="item.pathologyNo"
+                  />
                 </div>
                 <div class="mt-1 text-xs text-muted-foreground">
                   {{ formatTaskType(item.taskType) }} /
@@ -284,7 +288,10 @@ const emit = defineEmits<{
             <div class="flex items-start justify-between gap-3">
               <div>
                 <div class="text-sm font-semibold text-foreground">
-                  {{ formatNullable(item.pathologyNo) }}
+                  <CopyableIdentifier
+                    kind="pathologyNo"
+                    :value="item.pathologyNo"
+                  />
                 </div>
                 <div class="mt-1 text-xs text-muted-foreground">
                   {{ formatTaskType(item.taskType) }} /

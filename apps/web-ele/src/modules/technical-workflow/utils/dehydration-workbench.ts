@@ -41,7 +41,7 @@ export function buildDehydrationWorkbenchStats(
 }
 
 export function getDehydrationTaskRemark(task: PendingTechnicalTaskItem) {
-  return task.productionRemarks || task.remarks || '';
+  return task.embeddingRemarks || task.productionRemarks || task.remarks || '';
 }
 
 export function getDehydrationTaskOperator(task: PendingTechnicalTaskItem) {

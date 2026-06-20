@@ -383,6 +383,63 @@ describe('useGrossingWorkbench', () => {
     ).toBe('A2');
   });
 
+  it('seeds historical grossing data from tracking for completed tasks', async () => {
+    mockGetGrossingWorkbenchContext.mockResolvedValue({
+      tracking: {
+        blocks: [
+          {
+            blockCode: 'BLK-READ-1',
+            blockId: 'BLOCK-READ-1',
+            description: '历史蜡块描述',
+            embeddingBoxNo: 'A1',
+            embeddingRemarks: '皮肤组织',
+            grossDescription: '已完成大体描写',
+            specimenId: 'SPEC-READ-1',
+            specimenName: '标本 A',
+          },
+        ],
+        specimens: [
+          {
+            specimenId: 'SPEC-READ-1',
+            specimenName: '标本 A',
+            specimenNo: 'SP-READ-1',
+          },
+        ],
+      },
+    });
+
+    const workbench = useGrossingWorkbench();
+    await workbench.initializeWorkbench({
+      applicationId: 'APP-1',
+      applicationNo: 'APP-1',
+      caseId: 'CASE-1',
+      id: 'TASK-READ-1',
+      objectId: 'CASE-1',
+      objectType: 'CASE',
+      pathologyNo: 'BD202606060001',
+      taskStatus: 'COMPLETED',
+      taskType: 'GROSSING',
+    } as never);
+
+    expect(workbench.isReadOnly.value).toBe(true);
+    expect(workbench.completeForm.specimens[0]?.grossDescription).toBe(
+      '已完成大体描写',
+    );
+    expect(
+      workbench.completeForm.specimens[0]?.embeddingBoxes?.[0]?.embeddingBoxNo,
+    ).toBe('A1');
+    expect(
+      workbench.completeForm.specimens[0]?.embeddingBoxes?.[0]?.status,
+    ).toBe('CONFIRMED');
+    expect(
+      workbench.completeForm.specimens[0]?.blocks[0]?.blockDescription,
+    ).toBe('历史蜡块描述');
+    expect(
+      workbench.completeForm.specimens[0]?.embeddingBoxes?.[0]
+        ?.embeddingRemarks,
+    ).toBe('皮肤组织');
+  });
+
   it('uploads grossing images directly to the selected specimen', async () => {
     mockUploadGrossingMediaAsset.mockResolvedValue({
       contentType: 'image/jpeg',

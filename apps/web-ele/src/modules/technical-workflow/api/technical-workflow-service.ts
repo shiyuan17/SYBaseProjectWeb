@@ -52,6 +52,7 @@ import type {
   TechnicalTaskRemarksRequest,
   TechnicalTaskStartRequest,
   TechnicalTrackingView,
+  WorkstationDailyClear,
 } from '../types/technical-workflow';
 import type { DateRangeQueryParams } from '../utils/date-range';
 
@@ -289,12 +290,29 @@ export function mapSlicingWorkbenchResponse(
   };
 }
 
+export function mapWorkstationDailyClearResponse(
+  response: null | Partial<WorkstationDailyClear> | undefined,
+): null | WorkstationDailyClear {
+  if (!response) {
+    return null;
+  }
+  return {
+    cleared: response.cleared ?? false,
+    clearStatus: response.clearStatus ?? null,
+    clearedAt: response.clearedAt ?? null,
+    operatorName: response.operatorName ?? null,
+    operatorUserId: response.operatorUserId ?? null,
+    workDate: response.workDate ?? null,
+  };
+}
+
 export function mapEmbeddingWorkstationSummaryResponse(
   response: EmbeddingWorkstationSummaryResponse,
 ): EmbeddingWorkstationSummary {
   return {
     completedCount: response.completedCount ?? 0,
     completedRecords: response.completedRecords ?? [],
+    dailyClear: mapWorkstationDailyClearResponse(response.dailyClear),
     pendingCount: response.pendingCount ?? 0,
     pendingTasks: response.pendingTasks ?? [],
     workDate: response.workDate ?? null,
@@ -837,6 +855,13 @@ export async function cancelEmbedding(data: TechnicalTaskStartRequest) {
 
 export async function completeEmbedding(data: EmbeddingCompleteRequest) {
   return requestClient.post<EmbeddingResult>('/v1/embeddings/complete', data);
+}
+
+export async function confirmEmbeddingWorkstationClear() {
+  const response = await requestClient.post<Partial<WorkstationDailyClear>>(
+    '/v1/embeddings/workstation-clear',
+  );
+  return mapWorkstationDailyClearResponse(response);
 }
 
 export async function updateEmbeddingQualityReview(

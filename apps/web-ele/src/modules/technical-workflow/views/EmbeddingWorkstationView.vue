@@ -41,6 +41,7 @@ import { reportInlineErrorDisabled } from '#/utils/error-feedback';
 import {
   cancelEmbedding,
   completeEmbedding,
+  confirmEmbeddingWorkstationClear,
   getEmbeddingWorkstationSummary,
   getTechnicalTracking,
   listPendingTechnicalTasks,
@@ -59,6 +60,11 @@ import {
   disableFutureDate,
   resolveRouteDateRange,
 } from '../utils/date-range';
+import {
+  getEmbeddingBlockDisplayNo,
+  getEmbeddingRecordBlockDisplayNo,
+  getEmbeddingWorkstationRemark,
+} from '../utils/embedding-workbench';
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import {
   formatDateTime,
@@ -117,6 +123,7 @@ function createEmptySummary(): EmbeddingWorkstationSummary {
   return {
     completedCount: 0,
     completedRecords: [],
+    dailyClear: null,
     pendingCount: 0,
     pendingTasks: [],
     workDate: null,
@@ -135,6 +142,7 @@ const summaryLoading = ref(false);
 const trackingLoading = ref(false);
 const completeLoading = ref(false);
 const cancelEmbeddingLoading = ref(false);
+const clearLoading = ref(false);
 
 const workstationSummary =
   ref<EmbeddingWorkstationSummary>(createEmptySummary());
@@ -305,6 +313,16 @@ const summaryRangeLabel = computed(() => {
   return '全部日期';
 });
 
+const isEmbeddingDailyCleared = computed(
+  () => workstationSummary.value.dailyClear?.cleared === true,
+);
+
+const embeddingClearButtonLabel = computed(() => {
+  const operatorName =
+    workstationSummary.value.dailyClear?.operatorName?.trim() || '';
+  return operatorName ? `${operatorName}已完成清零` : '确认清零';
+});
+
 function resolveLegacyWorkDateFallback() {
   return filters.dateRange.length === 0 &&
     typeof route.query.workDate === 'string' &&
@@ -337,22 +355,22 @@ function mapPendingTaskToEmbeddingRow(
     embeddingBoxId: '',
     embeddingBoxNo: null,
     embeddingId: `TASK-${task.id}`,
-    embeddingRemarks: task.remarks,
+    embeddingRemarks: getEmbeddingWorkstationRemark(task) || null,
     endedAt: task.startedAt,
     evaluationLevel: draft?.evaluationLevel ?? null,
-    grossDescription: null,
+    grossDescription: task.grossDescription ?? null,
     pathologyNo: task.pathologyNo,
     pendingTask: task,
     rowKind: 'completion-pending',
     sampledAt: task.sampledAt ?? null,
     sampledByName: task.sampledByName ?? null,
-    samplingBlockCode: task.samplingBlockCode ?? task.objectDisplayNo ?? null,
+    samplingBlockCode: getEmbeddingBlockDisplayNo(task),
     samplingBlockDescription: task.samplingBlockDescription ?? null,
     samplingBlockId: task.objectId ?? '',
     samplingEvaluation: draft?.samplingEvaluation ?? null,
     sliceNotice: draft?.sliceNotice ?? null,
     specimenId: task.specimenId ?? '',
-    specimenName: null,
+    specimenName: task.specimenName ?? null,
     startedAt: task.startedAt,
     taskId: task.id,
     taskStatus: task.taskStatus,
@@ -678,7 +696,7 @@ function getPendingRemarksDraft(
 ) {
   if (!isPendingRemarksEditing(item, field)) {
     return field === 'remarks'
-      ? (item.remarks ?? '')
+      ? getEmbeddingWorkstationRemark(item)
       : (item.productionRemarks ?? '');
   }
   return field === 'remarks'
@@ -752,34 +770,11 @@ function applyPendingTaskUpdate(nextTask: PendingTechnicalTaskItem) {
 }
 
 async function handlePendingRemarksSave(item: PendingTechnicalTaskItem) {
-  const nextRemarks = pendingRemarksEditor.remarks.trim();
-  const nextProductionRemarks = pendingRemarksEditor.productionRemarks.trim();
-  const currentRemarks = item.remarks ?? '';
-  const currentProductionRemarks = item.productionRemarks ?? '';
-
-  if (
-    nextRemarks === currentRemarks &&
-    nextProductionRemarks === currentProductionRemarks
-  ) {
+  if (!hasPendingRemarksChanges(item)) {
     cancelPendingRemarksEdit();
     return;
   }
-
-  setSavingPendingRemarks(item.id, true);
-  try {
-    const nextTask = await updateTechnicalTaskRemarks(item.id, {
-      productionRemarks: nextProductionRemarks || null,
-      remarks: nextRemarks || null,
-    });
-    applyPendingTaskUpdate(nextTask);
-    ElMessage.success('任务备注已保存');
-    cancelPendingRemarksEdit();
-  } catch (error) {
-    pageError.value = getWorkflowPageErrorMessage(error);
-    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
-  } finally {
-    setSavingPendingRemarks(item.id, false);
-  }
+  await persistPendingRemarksForTask(item);
 }
 
 async function savePendingRemarksEdit(
@@ -792,13 +787,80 @@ async function savePendingRemarksEdit(
   await handlePendingRemarksSave(item);
 }
 
+function resolvePendingRemarksPayload(item: PendingTechnicalTaskItem) {
+  const usesEditor = pendingRemarksEditor.taskId === item.id;
+  return {
+    productionRemarks: usesEditor
+      ? pendingRemarksEditor.productionRemarks.trim()
+      : (item.productionRemarks ?? '').trim(),
+    remarks: usesEditor
+      ? pendingRemarksEditor.remarks.trim()
+      : (item.remarks ?? '').trim(),
+  };
+}
+
+function hasPendingRemarksChanges(item: PendingTechnicalTaskItem) {
+  const nextValues = resolvePendingRemarksPayload(item);
+  return (
+    nextValues.remarks !== (item.remarks ?? '').trim() ||
+    nextValues.productionRemarks !== (item.productionRemarks ?? '').trim()
+  );
+}
+
+async function persistPendingRemarksForTask(
+  item: PendingTechnicalTaskItem,
+  options: { silent?: boolean } = {},
+) {
+  if (!hasPendingRemarksChanges(item)) {
+    return item;
+  }
+
+  const nextValues = resolvePendingRemarksPayload(item);
+  setSavingPendingRemarks(item.id, true);
+  try {
+    const nextTask = await updateTechnicalTaskRemarks(item.id, {
+      productionRemarks: nextValues.productionRemarks || null,
+      remarks: nextValues.remarks || null,
+    });
+    applyPendingTaskUpdate(nextTask);
+    if (!options.silent) {
+      ElMessage.success('任务备注已保存');
+    }
+    if (pendingRemarksEditor.taskId === item.id) {
+      cancelPendingRemarksEdit();
+    }
+    return nextTask;
+  } catch (error) {
+    pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
+    throw error;
+  } finally {
+    setSavingPendingRemarks(item.id, false);
+  }
+}
+
+async function flushPendingRemarksForTasks(tasks: PendingTechnicalTaskItem[]) {
+  for (const task of tasks) {
+    await persistPendingRemarksForTask(task, { silent: true });
+  }
+}
+
+function formatEmbeddingRowBlockNo(row: EmbeddingWorkstationRecordRow) {
+  if (row.pendingTask) {
+    return getEmbeddingBlockDisplayNo(row.pendingTask);
+  }
+  return getEmbeddingRecordBlockDisplayNo(row);
+}
+
 async function handleSearch() {
   filters.page = 1;
   await refreshWorkstation();
 }
 
 function resolveEmbeddingCompletionRemarks(task: PendingTechnicalTaskItem) {
-  return task.remarks?.trim() || operatorForm.remarks.trim() || null;
+  return (
+    getEmbeddingWorkstationRemark(task) || operatorForm.remarks.trim() || null
+  );
 }
 
 function getPendingCompletionDraft(taskId: string) {
@@ -898,8 +960,12 @@ async function handleConfirmEmbedding() {
 
   completeLoading.value = true;
   try {
+    await flushPendingRemarksForTasks(actionTasks.tasks);
+    const tasksToConfirm = actionTasks.tasks.map(
+      (task) => pendingItems.value.find((item) => item.id === task.id) ?? task,
+    );
     const results = await Promise.allSettled(
-      actionTasks.tasks.map((task) =>
+      tasksToConfirm.map((task) =>
         startEmbedding({
           ...normalizeTechnicalOperatorPayload(operatorForm),
           taskId: task.id,
@@ -1069,13 +1135,7 @@ async function handleCancelEmbedding() {
 }
 
 async function handleClearCurrent() {
-  if (
-    total.value > 0 ||
-    pendingItems.value.length > 0 ||
-    workstationSummary.value.pendingCount > 0 ||
-    workstationSummary.value.pendingTasks.length > 0
-  ) {
-    ElMessage.warning('还有待处理的数据');
+  if (isEmbeddingDailyCleared.value || clearLoading.value) {
     return;
   }
 
@@ -1088,7 +1148,28 @@ async function handleClearCurrent() {
   } catch {
     return;
   }
-  clearCurrentSelection();
+
+  clearLoading.value = true;
+  try {
+    const dailyClear = await confirmEmbeddingWorkstationClear();
+    workstationSummary.value = {
+      ...workstationSummary.value,
+      dailyClear,
+    };
+    ElMessage.success(`${dailyClear?.operatorName ?? '操作人'}已完成清零`);
+  } catch (error) {
+    const status = (error as { response?: { status?: number } }).response
+      ?.status;
+    if (status === 409) {
+      await loadSummary();
+      ElMessage.warning(getWorkflowPageErrorMessage(error));
+      return;
+    }
+    pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
+  } finally {
+    clearLoading.value = false;
+  }
 }
 
 function isSavingReview(embeddingId: string) {
@@ -1351,7 +1432,13 @@ onBeforeUnmount(() => {
               确认包埋
             </ElButton>
             <ElButton @click="handleMore">更多</ElButton>
-            <ElButton @click="handleClearCurrent">确认清零</ElButton>
+            <ElButton
+              :disabled="isEmbeddingDailyCleared || clearLoading"
+              :loading="clearLoading"
+              @click="handleClearCurrent"
+            >
+              {{ embeddingClearButtonLabel }}
+            </ElButton>
             <ElButton @click="taskDrawerVisible = true">包埋任务</ElButton>
             <ElButton
               :disabled="!selectedTask"
@@ -1422,7 +1509,7 @@ onBeforeUnmount(() => {
                   <td class="px-4 py-3">
                     <ElCheckbox
                       :model-value="selectedPendingTaskIds.includes(item.id)"
-                      :aria-label="`选择待包埋任务 ${formatNullable(item.samplingBlockCode)}`"
+                      :aria-label="`选择待包埋任务 ${formatNullable(getEmbeddingBlockDisplayNo(item))}`"
                       @click.stop
                       @update:model-value="
                         (selected) =>
@@ -1434,7 +1521,7 @@ onBeforeUnmount(() => {
                     {{ formatNullable(item.pathologyNo) }}
                   </td>
                   <td class="px-4 py-3">
-                    {{ formatNullable(item.samplingBlockCode) }}
+                    {{ formatNullable(getEmbeddingBlockDisplayNo(item)) }}
                   </td>
                   <td class="min-w-[150px] px-4 py-3" @click.stop>
                     <ElInput
@@ -1592,27 +1679,22 @@ onBeforeUnmount(() => {
 
             <div class="border-b border-border bg-accent/60 px-5 py-4">
               <div
-                class="grid gap-3 xl:grid-cols-[minmax(21rem,28rem)_minmax(0,1fr)]"
+                class="flex flex-col gap-3"
+                data-testid="embedding-completed-detail"
               >
                 <div
-                  class="grid gap-3 rounded-lg border border-border bg-card p-3 sm:grid-cols-2 xl:grid-cols-3"
+                  class="grid gap-3 rounded-lg border border-border bg-card p-3 sm:grid-cols-2"
                 >
                   <div>
                     <div class="text-xs text-muted-foreground">蜡块号</div>
                     <div class="mt-1 text-sm font-medium text-foreground">
                       {{
                         formatNullable(
-                          selectedCompletedEmbeddingRecord?.samplingBlockCode,
-                        )
-                      }}
-                    </div>
-                  </div>
-                  <div>
-                    <div class="text-xs text-muted-foreground">蜡块名称</div>
-                    <div class="mt-1 text-sm text-foreground">
-                      {{
-                        formatNullable(
-                          selectedCompletedEmbeddingRecord?.samplingBlockDescription,
+                          selectedCompletedEmbeddingRecord
+                            ? formatEmbeddingRowBlockNo(
+                                selectedCompletedEmbeddingRecord,
+                              )
+                            : null,
                         )
                       }}
                     </div>
@@ -1635,7 +1717,7 @@ onBeforeUnmount(() => {
                     :model-value="
                       selectedCompletedEmbeddingRecord?.grossDescription ?? ''
                     "
-                    :rows="3"
+                    :rows="2"
                     class="embedding-gross-description"
                     placeholder="大体所见"
                     readonly
@@ -1712,7 +1794,7 @@ onBeforeUnmount(() => {
                             item.embeddingId,
                           )
                         "
-                        :aria-label="`选择已包埋蜡块 ${formatNullable(item.samplingBlockCode)}`"
+                        :aria-label="`选择已包埋蜡块 ${formatNullable(formatEmbeddingRowBlockNo(item))}`"
                         :disabled="!item.pendingTask"
                         @click.stop
                         @update:model-value="
@@ -1728,7 +1810,7 @@ onBeforeUnmount(() => {
                       {{ formatNullable(item.pathologyNo) }}
                     </td>
                     <td class="px-4 py-3 align-top whitespace-nowrap">
-                      {{ formatNullable(item.samplingBlockCode) }}
+                      {{ formatNullable(formatEmbeddingRowBlockNo(item)) }}
                     </td>
                     <td class="min-w-[180px] px-4 py-3 align-top">
                       <span
@@ -1857,7 +1939,7 @@ onBeforeUnmount(() => {
             >
               <td class="px-4 py-3">{{ formatNullable(item.pathologyNo) }}</td>
               <td class="px-4 py-3">
-                {{ formatNullable(item.samplingBlockCode) }}
+                {{ formatNullable(getEmbeddingRecordBlockDisplayNo(item)) }}
               </td>
               <td class="px-4 py-3">
                 {{ formatNullable(item.samplingBlockDescription) }}
@@ -1938,7 +2020,7 @@ onBeforeUnmount(() => {
                     {{ formatNullable(item.pathologyNo) }}
                   </td>
                   <td class="px-4 py-3">
-                    {{ formatNullable(item.samplingBlockCode) }}
+                    {{ formatNullable(getEmbeddingBlockDisplayNo(item)) }}
                   </td>
                   <td class="px-4 py-3">{{ formatNullable(item.remarks) }}</td>
                   <td class="px-4 py-3">
@@ -1988,7 +2070,7 @@ onBeforeUnmount(() => {
                     {{ formatNullable(item.pathologyNo) }}
                   </td>
                   <td class="px-4 py-3">
-                    {{ formatNullable(item.samplingBlockCode) }}
+                    {{ formatNullable(getEmbeddingRecordBlockDisplayNo(item)) }}
                   </td>
                   <td class="px-4 py-3">
                     {{ formatNullable(item.embeddingRemarks) }}
