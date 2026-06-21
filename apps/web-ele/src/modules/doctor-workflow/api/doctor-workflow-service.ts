@@ -551,6 +551,16 @@ export async function listPendingDiagnosticTasks(
   return mapPendingDiagnosticTaskPageResponse(response);
 }
 
+export async function listAssignableDiagnosticTasks(
+  params: PendingDiagnosticTaskQuery,
+) {
+  const response = await requestClient.get<PendingDiagnosticTaskPageResponse>(
+    '/v1/diagnostic-tasks/assignment',
+    { params },
+  );
+  return mapPendingDiagnosticTaskPageResponse(response);
+}
+
 export async function listPendingMedicalOrders(
   params: PendingMedicalOrderQuery,
 ) {

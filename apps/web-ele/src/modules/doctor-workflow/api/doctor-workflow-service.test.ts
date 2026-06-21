@@ -23,6 +23,7 @@ import {
   getDiagnosticWorkbench,
   getReportTracking,
   issueFormalReportVersions,
+  listAssignableDiagnosticTasks,
   listCaseReportVersions,
   listFormalReportVersions,
   listMedicalOrderDicts,
@@ -611,6 +612,36 @@ describe('doctor-workflow-service requests', () => {
           page: 1,
           pathologyNo: 'BL202606030001',
           size: 20,
+        },
+      },
+    );
+  });
+
+  it('queries assignable diagnostic tasks with assignment endpoint', async () => {
+    requestClientMock.get.mockResolvedValue({
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    });
+
+    await listAssignableDiagnosticTasks({
+      page: 1,
+      pathologyNo: 'BL-001',
+      size: 20,
+      taskStatus: 'PENDING',
+      taskType: 'PRIMARY',
+    });
+
+    expect(requestClientMock.get).toHaveBeenCalledWith(
+      '/v1/diagnostic-tasks/assignment',
+      {
+        params: {
+          page: 1,
+          pathologyNo: 'BL-001',
+          size: 20,
+          taskStatus: 'PENDING',
+          taskType: 'PRIMARY',
         },
       },
     );

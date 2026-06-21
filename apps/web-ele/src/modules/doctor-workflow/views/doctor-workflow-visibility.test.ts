@@ -31,6 +31,7 @@ const {
   listMedicalOrderPackagesPageMock,
   listSystemUsersMock,
   listPendingMedicalOrdersMock,
+  listAssignableDiagnosticTasksMock,
   listPendingDiagnosticTasksMock,
   mockAccessStore,
   mockRoute,
@@ -79,6 +80,8 @@ const {
   listSystemUsersMock: vi.fn<(query: unknown) => Promise<unknown>>(),
   listPendingMedicalOrdersMock:
     vi.fn<(query: unknown) => Promise<PendingMedicalOrderPage>>(),
+  listAssignableDiagnosticTasksMock:
+    vi.fn<(query: unknown) => Promise<PendingDiagnosticTaskPage>>(),
   listPendingDiagnosticTasksMock:
     vi.fn<(query: unknown) => Promise<PendingDiagnosticTaskPage>>(),
   mockAccessStore: {
@@ -160,6 +163,7 @@ vi.mock('../api/doctor-workflow-service', () => ({
   listCaseReportVersions: listCaseReportVersionsMock,
   listMedicalOrderDicts: listMedicalOrderDictsMock,
   listMedicalOrderPackagesPage: listMedicalOrderPackagesPageMock,
+  listAssignableDiagnosticTasks: listAssignableDiagnosticTasksMock,
   listPendingMedicalOrders: listPendingMedicalOrdersMock,
   listPendingDiagnosticTasks: listPendingDiagnosticTasksMock,
   publishPathologyReport: vi.fn(),
@@ -586,6 +590,7 @@ function resetTestState() {
   listMedicalOrderDictsMock.mockReset();
   listMedicalOrderPackagesPageMock.mockReset();
   listSystemUsersMock.mockReset();
+  listAssignableDiagnosticTasksMock.mockReset();
   listPendingDiagnosticTasksMock.mockReset();
   listPendingMedicalOrdersMock.mockReset();
   getDiagnosticWorkbenchMock.mockReset();
@@ -648,6 +653,12 @@ function resetTestState() {
     total: 0,
   });
   listSystemUsersMock.mockResolvedValue(systemUsersFixture);
+  listAssignableDiagnosticTasksMock.mockResolvedValue({
+    items: [],
+    page: 1,
+    size: 20,
+    total: 0,
+  });
   listPendingDiagnosticTasksMock.mockResolvedValue({
     items: [],
     page: 1,
@@ -831,6 +842,68 @@ describe('doctor workflow view visibility', () => {
     assignableWrapper.unmount();
   });
 
+  it('uses assignment-wide diagnostic task query for every assignment page viewer', async () => {
+    listPendingDiagnosticTasksMock.mockResolvedValue({
+      items: [
+        {
+          caseId: 'CASE-PENDING',
+          id: 'TASK-PENDING',
+          pathologyNo: 'BL-PENDING',
+          taskStatus: 'PENDING',
+          taskType: 'PRIMARY',
+        },
+      ],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+    listAssignableDiagnosticTasksMock.mockResolvedValue({
+      items: [
+        {
+          caseId: 'CASE-ASSIGNABLE',
+          id: 'TASK-ASSIGNABLE',
+          pathologyNo: 'BL-ASSIGNABLE',
+          taskStatus: 'PENDING',
+          taskType: 'PRIMARY',
+        },
+      ],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+
+    mockAccessStore.accessCodes = [M4_PERMISSION_CODES.DIAG_TASK_QUERY];
+    const readOnlyWrapper = await mountView(DiagnosisAssignmentView);
+    expect(listAssignableDiagnosticTasksMock).toHaveBeenCalledWith({
+      page: 1,
+      pathologyNo: undefined,
+      size: 20,
+      taskStatus: undefined,
+      taskType: undefined,
+    });
+    expect(listPendingDiagnosticTasksMock).not.toHaveBeenCalled();
+    expect(readOnlyWrapper.text()).toContain('BL-ASSIGNABLE');
+    readOnlyWrapper.unmount();
+
+    listPendingDiagnosticTasksMock.mockClear();
+    listAssignableDiagnosticTasksMock.mockClear();
+    mockAccessStore.accessCodes = [
+      M4_PERMISSION_CODES.DIAG_TASK_QUERY,
+      M4_PERMISSION_CODES.ASSIGN,
+    ];
+    const assignableWrapper = await mountView(DiagnosisAssignmentView);
+    expect(listAssignableDiagnosticTasksMock).toHaveBeenCalledWith({
+      page: 1,
+      pathologyNo: undefined,
+      size: 20,
+      taskStatus: undefined,
+      taskType: undefined,
+    });
+    expect(listPendingDiagnosticTasksMock).not.toHaveBeenCalled();
+    expect(assignableWrapper.text()).toContain('BL-ASSIGNABLE');
+    assignableWrapper.unmount();
+  });
+
   it('keeps assignment filter selects wide enough to show selected text', async () => {
     const wrapper = await mountView(DiagnosisAssignmentView);
 
@@ -876,7 +949,7 @@ describe('doctor workflow view visibility', () => {
   });
 
   it('renders assignment application type and specimen without English fallbacks', async () => {
-    listPendingDiagnosticTasksMock.mockResolvedValue({
+    listAssignableDiagnosticTasksMock.mockResolvedValue({
       items: [
         {
           applicationType: 'routine',
@@ -915,7 +988,7 @@ describe('doctor workflow view visibility', () => {
   });
 
   it('assigns selected tasks to selected primary slice doctor', async () => {
-    listPendingDiagnosticTasksMock.mockResolvedValue({
+    listAssignableDiagnosticTasksMock.mockResolvedValue({
       items: [
         {
           caseId: 'CASE-001',
@@ -960,13 +1033,13 @@ describe('doctor workflow view visibility', () => {
     expect(assignDiagnosticTaskMock.mock.calls[0]?.[1]).not.toHaveProperty(
       'operatorUserId',
     );
-    expect(listPendingDiagnosticTasksMock).toHaveBeenCalledTimes(2);
+    expect(listAssignableDiagnosticTasksMock).toHaveBeenCalledTimes(2);
     expect(wrapper.isButtonDisabled('初步分片')).toBe(true);
     wrapper.unmount();
   });
 
   it('assigns selected tasks to selected reviewer slice doctor', async () => {
-    listPendingDiagnosticTasksMock.mockResolvedValue({
+    listAssignableDiagnosticTasksMock.mockResolvedValue({
       items: [
         {
           caseId: 'CASE-001',
@@ -1015,7 +1088,7 @@ describe('doctor workflow view visibility', () => {
   });
 
   it('fills required assign fields from selected doctor when task has no doctors', async () => {
-    listPendingDiagnosticTasksMock.mockResolvedValue({
+    listAssignableDiagnosticTasksMock.mockResolvedValue({
       items: [
         {
           caseId: 'CASE-001',
@@ -1048,7 +1121,7 @@ describe('doctor workflow view visibility', () => {
         reviewerUserId: 'DOC-PRIMARY',
       }),
     );
-    expect(listPendingDiagnosticTasksMock).toHaveBeenCalledTimes(2);
+    expect(listAssignableDiagnosticTasksMock).toHaveBeenCalledTimes(2);
     wrapper.unmount();
   });
 

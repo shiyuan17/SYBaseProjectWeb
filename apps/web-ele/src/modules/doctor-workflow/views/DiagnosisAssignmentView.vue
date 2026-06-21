@@ -31,7 +31,7 @@ import { listSystemUsers } from '#/modules/system-management/api/system-manageme
 import CopyableIdentifier from '../../../components/CopyableIdentifier.vue';
 import {
   assignDiagnosticTask,
-  listPendingDiagnosticTasks,
+  listAssignableDiagnosticTasks,
 } from '../api/doctor-workflow-service';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import {
@@ -193,7 +193,7 @@ async function loadPendingData() {
   pageError.value = '';
   selectedTasks.value = [];
   try {
-    const result = await listPendingDiagnosticTasks(currentQuery.value);
+    const result = await listAssignableDiagnosticTasks(currentQuery.value);
     pendingItems.value = result.items;
     total.value = result.total;
   } catch (error) {
