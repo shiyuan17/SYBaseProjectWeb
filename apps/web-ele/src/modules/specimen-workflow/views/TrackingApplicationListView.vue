@@ -154,8 +154,9 @@ async function loadLifecycleTracking(pathologyNo: null | string | undefined) {
   }
 
   try {
-    lifecycleTracking.value =
-      await getCaseLifecycleTracking(normalizedPathologyNo);
+    lifecycleTracking.value = await getCaseLifecycleTracking(
+      normalizedPathologyNo,
+    );
   } catch {
     lifecycleTracking.value = null;
     lifecycleTimelineMessage.value =

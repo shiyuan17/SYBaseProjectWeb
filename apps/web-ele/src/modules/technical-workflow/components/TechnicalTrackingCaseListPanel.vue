@@ -17,12 +17,12 @@ import {
 
 const props = defineProps<{
   emptyText?: string;
+  items: TechnicalTrackingCaseListPage['items'];
   loading?: boolean;
   page: number;
   selectedCaseId: string;
   size: number;
   total: number;
-  items: TechnicalTrackingCaseListPage['items'];
 }>();
 
 const emit = defineEmits<{

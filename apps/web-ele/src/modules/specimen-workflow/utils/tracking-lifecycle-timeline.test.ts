@@ -107,9 +107,7 @@ describe('tracking-lifecycle-timeline', () => {
       '临床送检',
       '制片管理',
     ]);
-    expect(stages[0]?.nodes.map((node) => node.title)).toEqual([
-      '离体确认',
-    ]);
+    expect(stages[0]?.nodes.map((node) => node.title)).toEqual(['离体确认']);
     expect(stages[1]?.nodes.map((node) => node.title)).toEqual([
       '标本登记',
       '报告',
@@ -127,9 +125,7 @@ describe('tracking-lifecycle-timeline', () => {
       '评价',
       '登记影像',
     ]);
-    expect(stages[1]?.nodes[0]?.facts.map((fact) => fact.value)).toContain(
-      '-',
-    );
+    expect(stages[1]?.nodes[0]?.facts.map((fact) => fact.value)).toContain('-');
     expect(
       stages[1]?.nodes[0]?.facts.some((fact) => fact.label === '不应显示'),
     ).toBe(false);

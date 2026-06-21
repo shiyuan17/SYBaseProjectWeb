@@ -184,9 +184,7 @@ function normalizeValue(value?: null | string) {
 }
 
 function collectNodes(tracking: CaseLifecycleTrackingView | null) {
-  return (
-    tracking?.overallTimeline.flatMap((stage) => stage.nodes ?? []) ?? []
-  );
+  return tracking?.overallTimeline.flatMap((stage) => stage.nodes ?? []) ?? [];
 }
 
 function findNodesByConfig(

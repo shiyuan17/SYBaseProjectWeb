@@ -203,14 +203,14 @@ async function mountTabs(props: Record<string, unknown> = {}) {
 
 function textBetween(text: string, start: string, end: string) {
   const startIndex = text.indexOf(start);
-  if (startIndex < 0) {
+  if (startIndex === -1) {
     return '';
   }
   if (!end) {
     return text.slice(startIndex);
   }
   const endIndex = text.indexOf(end, startIndex + start.length);
-  return endIndex < 0
+  return endIndex === -1
     ? text.slice(startIndex)
     : text.slice(startIndex, endIndex);
 }

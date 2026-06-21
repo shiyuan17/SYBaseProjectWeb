@@ -261,7 +261,7 @@ function resolveLifecycleNodeFactLabels(node: LifecycleNodeView) {
     return new Set(['离体操作人', '离体时间']);
   }
   if (nodeCode === 'SPECIMEN_FIXATION' || title === '标本固定') {
-    return new Set(['标本固定液', '标本固定人', '固定时间']);
+    return new Set(['固定时间', '标本固定人', '标本固定液']);
   }
   if (nodeCode === 'SPECIMEN_CONFIRMATION' || title === '标本确认') {
     return new Set(['标本确认人', '标本确认时间']);
@@ -273,56 +273,56 @@ function resolveLifecycleNodeFactLabels(node: LifecycleNodeView) {
     return new Set(['出库操作人', '出库时间']);
   }
   if (nodeCode === 'SPECIMEN_RECEIPT' || title === '标本接收') {
-    return new Set(['物流人员', '签收人员', '签收时间', '接收状态']);
+    return new Set(['接收状态', '物流人员', '签收人员', '签收时间']);
   }
   if (nodeCode === 'SPECIMEN_REGISTRATION' || title === '标本登记') {
     return new Set([
-      '登记状态',
-      '登记时间',
-      '登记人',
-      '送检类型',
-      '标本名称',
-      '类型',
       '来源部位',
+      '标本名称',
       '标本大小',
       '核对状态',
-      '评价',
+      '登记人',
       '登记影像',
+      '登记时间',
+      '登记状态',
+      '类型',
+      '评价',
+      '送检类型',
     ]);
   }
   if (nodeCode === 'GROSSING' || title === '取材描写') {
     return new Set([
-      '取材状态',
-      '取材时间',
-      '包埋盒盒号',
       '包埋备注',
+      '包埋盒盒号',
       '取材影像',
+      '取材时间',
+      '取材状态',
       '大体描写信息',
     ]);
   }
   if (nodeCode === 'DEHYDRATION' || title === '脱水') {
-    return new Set(['脱水开始时间', '脱水完成时间', '脱水状态', '脱水操作人']);
+    return new Set(['脱水完成时间', '脱水开始时间', '脱水操作人', '脱水状态']);
   }
   if (nodeCode === 'EMBEDDING' || title === '包埋') {
     return new Set([
-      '包埋状态',
-      '包埋时间',
-      '包埋人员',
       '切片备注',
+      '包埋人员',
+      '包埋时间',
+      '包埋状态',
       '取材评价',
     ]);
   }
   if (nodeCode === 'SLICING' || title === '切片') {
     return new Set([
-      '玻片打印状态',
-      '打印时间',
-      '打印操作人',
-      '完成切片时间',
       '完成切片人',
+      '完成切片时间',
+      '打印操作人',
+      '打印时间',
+      '玻片打印状态',
     ]);
   }
   if (nodeCode === 'STAINING' || title === '染色出片') {
-    return new Set(['染色出片时间', '出片操作人', '出片是否超时', '超时时长']);
+    return new Set(['出片操作人', '出片是否超时', '染色出片时间', '超时时长']);
   }
   if (nodeCode === 'DIAGNOSIS_ASSIGNMENT' || title === '诊断分配') {
     return new Set(['初诊阅片人', '签发阅片人']);
@@ -343,24 +343,24 @@ function resolveLifecycleNodeFactLabels(node: LifecycleNodeView) {
     return new Set(['发布人', '发布时间']);
   }
   if (nodeCode === 'REPORT_REVISION' || title === '修订') {
-    return new Set(['修订时间', '修订人', '驳回状态', '驳回时间', '驳回人']);
+    return new Set(['修订人', '修订时间', '驳回人', '驳回时间', '驳回状态']);
   }
   if (stageCode === 'REPORT' || title === '报告') {
     return new Set([
+      '修订人',
+      '修订时间',
       '初步阅片人',
       '初步阅片时间',
+      '发布人',
+      '发布时间',
       '复核人',
       '复核时间',
       '签发人',
       '签发时间',
       '详情报告',
-      '驳回状态',
-      '驳回时间',
       '驳回人',
-      '发布人',
-      '发布时间',
-      '修订时间',
-      '修订人',
+      '驳回时间',
+      '驳回状态',
     ]);
   }
   return null;

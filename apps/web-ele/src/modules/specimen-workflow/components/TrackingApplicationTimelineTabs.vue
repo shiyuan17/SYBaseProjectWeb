@@ -212,9 +212,7 @@ function resolveEventDetailFields(
   }
   if (
     normalizedNodeCode === 'FIXATION' &&
-    ['COMPLETE', 'COMPLETED', 'START', 'STARTED'].includes(
-      normalizedEventType,
-    )
+    ['COMPLETE', 'COMPLETED', 'START', 'STARTED'].includes(normalizedEventType)
   ) {
     return [...fixationDetailFields];
   }

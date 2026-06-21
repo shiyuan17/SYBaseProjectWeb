@@ -193,9 +193,9 @@ describe('tracking-timeline', () => {
     );
 
     expect(data.overallTimelineGroups).toHaveLength(3);
-    expect(data.overallTimelineGroups.map((group) => group.specimenIds)).toEqual(
-      [['SPEC-001'], ['SPEC-002'], ['SPEC-001']],
-    );
+    expect(
+      data.overallTimelineGroups.map((group) => group.specimenIds),
+    ).toEqual([['SPEC-001'], ['SPEC-002'], ['SPEC-001']]);
   });
 
   it('keeps public events only in the overall timeline data', () => {
