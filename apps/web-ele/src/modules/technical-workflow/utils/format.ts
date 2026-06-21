@@ -155,7 +155,7 @@ export function formatSlicingSlideDisplayNo(
 ) {
   const normalizedSlideNo = slideNo?.trim();
   if (normalizedSlideNo) {
-    return normalizedSlideNo;
+    return normalizedSlideNo.replaceAll('+', '-');
   }
 
   const normalizedEmbeddingBoxNo = embeddingBoxNo?.trim();

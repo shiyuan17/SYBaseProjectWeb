@@ -1,5 +1,6 @@
 import type {
   PendingTechnicalTaskItem,
+  TechnicalTrackingEmbeddingBoxSummary,
   TechnicalTrackingView,
 } from '../types/technical-workflow';
 
@@ -331,11 +332,20 @@ function createTracking(
   overrides: Partial<TechnicalTrackingView> = {},
 ): TechnicalTrackingView {
   const slideId = overrides.slides?.[0]?.slideId ?? 'SLIDE-1';
+  const defaultEmbeddingBoxes: TechnicalTrackingEmbeddingBoxSummary[] = [
+    {
+      embeddingBoxId: 'BOX-1',
+      embeddingBoxNo: 'A1',
+      slideCount: 1,
+      sliceNotice: null,
+      specimenId: 'SPEC-1',
+    },
+  ];
   return {
     blocks: [],
     caseId: 'CASE-1',
     caseStatus: 'DIAGNOSIS_PENDING',
-    embeddingBoxes: [],
+    embeddingBoxes: overrides.embeddingBoxes ?? defaultEmbeddingBoxes,
     events: [],
     pathologyNo: 'BL-001',
     qcEvaluations: [],
@@ -576,6 +586,102 @@ describe('StainingWorkstationView', () => {
     expect(document.body.textContent).toContain('待染色');
     expect(document.body.textContent).not.toContain('CREATED');
     expect(document.body.textContent).not.toContain('PENDING');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('prefers short display number for completed rows instead of tracking slide serial', async () => {
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [
+        createTask({
+          objectDisplayNo: 'A1',
+          objectId: 'SLIDE-1',
+          taskStatus: 'IN_PROGRESS',
+        }),
+      ],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+    mockGetTechnicalTracking.mockResolvedValue(
+      createTracking({
+        slides: [
+          {
+            embeddingBoxId: 'BOX-1',
+            qualityStatus: 'QUALIFIED',
+            slideId: 'SLIDE-1',
+            slideNo: 'SL20260619001',
+            slideStatus: 'STAINED',
+            specimenId: 'SPEC-1',
+          },
+        ],
+      }),
+    );
+
+    const { app, root } = mountView();
+    await flushView();
+
+    await selectTableRow('TASK-1');
+    await clickPrimaryAction();
+
+    expect(document.body.textContent).toContain('A1');
+    expect(document.body.textContent).not.toContain('SL20260619001');
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('shows merged short display number with hyphen in pending and completed areas', async () => {
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [
+        createTask({
+          objectDisplayNo: 'A1+A2',
+          objectId: 'SLIDE-1',
+          samplingBlockCode: 'A1+A2',
+          taskStatus: 'IN_PROGRESS',
+        }),
+      ],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+    mockGetTechnicalTracking.mockResolvedValue(
+      createTracking({
+        embeddingBoxes: [
+          {
+            embeddingBoxId: 'BOX-1',
+            embeddingBoxNo: 'A1+A2',
+            slideCount: 2,
+            sliceNotice: null,
+            specimenId: 'SPEC-1',
+          },
+        ],
+        slides: [
+          {
+            embeddingBoxId: 'BOX-1',
+            qualityStatus: 'QUALIFIED',
+            slideId: 'SLIDE-1',
+            slideNo: 'SL20260619001',
+            slideStatus: 'STAINED',
+            specimenId: 'SPEC-1',
+          },
+        ],
+      }),
+    );
+
+    const { app, root } = mountView();
+    await flushView();
+
+    expect(document.body.textContent).toContain('A1-A2');
+    expect(document.body.textContent).not.toContain('A1+A2');
+
+    await selectTableRow('TASK-1');
+    await clickPrimaryAction();
+
+    expect(document.body.textContent).toContain('A1-A2');
+    expect(document.body.textContent).not.toContain('A1+A2');
+    expect(document.body.textContent).not.toContain('SL20260619001');
 
     app.unmount();
     root.remove();

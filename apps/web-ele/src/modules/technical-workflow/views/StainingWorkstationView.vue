@@ -49,6 +49,7 @@ import {
   formatObjectType,
   formatPatientIdDisplay,
   formatQualityStatus,
+  formatSlicingSlideDisplayNo,
   formatSlideStatus,
   formatTaskStatus,
 } from '../utils/format';
@@ -127,11 +128,9 @@ const pendingRows = computed<StainingTaskRow[]>(() =>
     pathologyNo: formatNullable(task.pathologyNo),
     patientId: formatPatientIdDisplay(task.patientIdDisplay, task.patientId),
     patientName: formatNullable(task.patientName),
-    slideNo: formatNullable(
-      task.objectDisplayNo ??
-        task.samplingBlockCode ??
-        task.samplingBlockDescription ??
-        task.objectId,
+    slideNo: resolveStainingSlideDisplayNo(
+      task.objectDisplayNo ?? task.samplingBlockCode,
+      task.samplingBlockDescription,
     ),
     slideType: formatObjectType(task.objectType),
     sliceOperation: buildOperationInfo({
@@ -235,6 +234,13 @@ function findSlideTechnicalTask(
   );
 }
 
+function resolveStainingSlideDisplayNo(
+  primaryDisplayNo?: null | string,
+  fallbackDisplayNo?: null | string,
+) {
+  return formatSlicingSlideDisplayNo(primaryDisplayNo, fallbackDisplayNo);
+}
+
 function buildCompletedRowsFromTracking(
   tracking: TechnicalTrackingViewModel,
   taskContext: PendingTechnicalTaskItem,
@@ -242,6 +248,9 @@ function buildCompletedRowsFromTracking(
   return tracking.slides.map((slide, index) => {
     const slicingTask = findSlideTechnicalTask(tracking, slide, 'SLICING');
     const stainingTask = findSlideTechnicalTask(tracking, slide, 'STAINING');
+    const matchedEmbeddingBox = tracking.embeddingBoxes.find(
+      (item) => item.embeddingBoxId === slide.embeddingBoxId,
+    );
 
     return {
       index: index + 1,
@@ -254,7 +263,10 @@ function buildCompletedRowsFromTracking(
       ),
       patientName: formatNullable(taskContext.patientName),
       slideId: slide.slideId,
-      slideNo: formatNullable(slide.slideNo),
+      slideNo: resolveStainingSlideDisplayNo(
+        taskContext.objectDisplayNo ?? taskContext.samplingBlockCode,
+        matchedEmbeddingBox?.embeddingBoxNo ?? slide.slideNo,
+      ),
       slideStatus: slide.slideStatus,
       slideType: formatObjectType('SLIDE'),
       sliceOperation: buildOperationInfo({
@@ -284,11 +296,9 @@ function buildFallbackCompletedRow(
     ),
     patientName: formatNullable(taskContext.patientName),
     slideId: result.slideId || taskContext.objectId || result.taskId,
-    slideNo: formatNullable(
-      taskContext.objectDisplayNo ??
-        taskContext.samplingBlockCode ??
-        taskContext.samplingBlockDescription ??
-        taskContext.objectId,
+    slideNo: resolveStainingSlideDisplayNo(
+      taskContext.objectDisplayNo ?? taskContext.samplingBlockCode,
+      taskContext.samplingBlockDescription,
     ),
     slideStatus: 'STAINED',
     slideType: formatObjectType('SLIDE'),
