@@ -112,11 +112,15 @@ describe('TrackingApplicationListTable', () => {
 
   it('renders application rows', async () => {
     const wrapper = await mountTable();
+    const columnLabels = [
+      ...wrapper.container.querySelectorAll<HTMLElement>('[data-column-label]'),
+    ].map((column) => column.dataset.columnLabel);
 
     expect(wrapper.container.textContent).toContain('AP-001');
     expect(wrapper.container.textContent).toContain('BL202606080001');
     expect(wrapper.container.textContent).toContain('诊断分配');
     expect(wrapper.container.textContent).not.toContain('DIAGNOSIS_ASSIGN');
+    expect(columnLabels).not.toContain('表单状态');
     expect(wrapper.container.textContent).toContain('详情');
 
     wrapper.unmount();

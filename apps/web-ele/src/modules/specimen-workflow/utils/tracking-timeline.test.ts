@@ -74,7 +74,7 @@ describe('tracking-timeline', () => {
     expect(data.specimenTimelineMap['SPEC-001']).toHaveLength(1);
   });
 
-  it('aggregates multi-specimen events that share second, node, type and status', () => {
+  it('keeps different specimen scopes in separate overall groups', () => {
     const data = buildTrackingTimelineData(
       [
         createEvent({
@@ -103,30 +103,43 @@ describe('tracking-timeline', () => {
       ],
     );
 
-    expect(data.overallTimelineGroups).toHaveLength(1);
+    expect(data.overallTimelineGroups).toHaveLength(2);
     expect(data.overallTimelineGroups[0]).toMatchObject({
-      eventContents: ['REGISTER'],
-      operatorIps: ['10.0.0.1', '10.0.0.2'],
-      operatorNames: ['operator-a', 'operator-b'],
-      sourceTerminals: ['TERMINAL-1', 'TERMINAL-2'],
-      specimenCount: 2,
-      specimenIds: ['SPEC-001', 'SPEC-002'],
-      specimenLabels: ['SP-001', 'SP-002'],
+      eventContents: ['流程事件'],
+      operatorIps: ['10.0.0.1'],
+      operatorNames: ['operator-a'],
+      sourceTerminals: ['TERMINAL-1'],
+      specimenCount: 1,
+      specimenIds: ['SPEC-001'],
+      specimenLabels: ['SP-001'],
+    });
+    expect(data.overallTimelineGroups[1]).toMatchObject({
+      eventContents: ['流程事件'],
+      operatorIps: ['10.0.0.2'],
+      operatorNames: ['operator-b'],
+      sourceTerminals: ['TERMINAL-2'],
+      specimenCount: 1,
+      specimenIds: ['SPEC-002'],
+      specimenLabels: ['SP-002'],
     });
     expect(data.specimenTimelineMap['SPEC-001']).toHaveLength(1);
     expect(data.specimenTimelineMap['SPEC-002']).toHaveLength(1);
   });
 
-  it('does not merge same-second events when the event type differs', () => {
+  it('merges same-node events for the same specimen scope even when event types differ', () => {
     const data = buildTrackingTimelineData(
       [
         createEvent({
-          eventType: 'REGISTER',
+          eventContent: null,
+          eventType: 'START',
+          nodeCode: 'FIXATION',
           specimenId: 'SPEC-001',
           specimenNo: 'SP-001',
         }),
         createEvent({
-          eventType: 'ORDER_CREATED',
+          eventContent: null,
+          eventType: 'COMPLETE',
+          nodeCode: 'FIXATION',
           specimenId: 'SPEC-001',
           specimenNo: 'SP-001',
         }),
@@ -134,7 +147,55 @@ describe('tracking-timeline', () => {
       [createSpecimen()],
     );
 
-    expect(data.overallTimelineGroups).toHaveLength(2);
+    expect(data.overallTimelineGroups).toHaveLength(1);
+    expect(data.overallTimelineGroups[0]).toMatchObject({
+      eventContents: ['开始固定', '完成固定'],
+      eventStatus: 'SUCCESS',
+      nodeCode: 'FIXATION',
+      specimenIds: ['SPEC-001'],
+      specimenLabels: ['SP-001'],
+    });
+  });
+
+  it('does not merge events from different nodes or specimen scopes', () => {
+    const data = buildTrackingTimelineData(
+      [
+        createEvent({
+          eventContent: null,
+          eventType: 'START',
+          nodeCode: 'FIXATION',
+          specimenId: 'SPEC-001',
+          specimenNo: 'SP-001',
+        }),
+        createEvent({
+          eventContent: null,
+          eventType: 'COMPLETE',
+          nodeCode: 'FIXATION',
+          specimenId: 'SPEC-002',
+          specimenNo: 'SP-002',
+        }),
+        createEvent({
+          eventContent: null,
+          eventType: 'UPLOAD_MEDIA',
+          nodeCode: 'GROSSING',
+          specimenId: 'SPEC-001',
+          specimenNo: 'SP-001',
+        }),
+      ],
+      [
+        createSpecimen(),
+        createSpecimen({
+          barcode: 'BC-002',
+          id: 'SPEC-002',
+          specimenNo: 'SP-002',
+        }),
+      ],
+    );
+
+    expect(data.overallTimelineGroups).toHaveLength(3);
+    expect(data.overallTimelineGroups.map((group) => group.specimenIds)).toEqual(
+      [['SPEC-001'], ['SPEC-002'], ['SPEC-001']],
+    );
   });
 
   it('keeps public events only in the overall timeline data', () => {

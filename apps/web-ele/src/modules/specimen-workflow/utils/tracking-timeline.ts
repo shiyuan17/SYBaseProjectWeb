@@ -13,6 +13,7 @@ export interface OverallTimelineGroup {
   events: TrackingEventView[];
   key: string;
   nodeCode: null | string;
+  operatorDevices: string[];
   operatorIps: string[];
   operatorNames: string[];
   sourceTerminals: string[];
@@ -45,17 +46,16 @@ function normalizeText(value?: null | string) {
   return value?.trim() ?? '';
 }
 
-function normalizeTimelineSecond(value?: null | string) {
-  const normalized = normalizeText(value).replace(' ', 'T');
-  return normalized ? normalized.slice(0, 19) : '';
-}
-
 function pushUnique(target: string[], value?: null | string) {
   const normalized = normalizeText(value);
   if (!normalized || target.includes(normalized)) {
     return;
   }
   target.push(normalized);
+}
+
+function buildTimelineScopeKey(specimenId: string) {
+  return specimenId ? `SPECIMEN:${specimenId}` : 'PUBLIC';
 }
 
 export function getSpecimenTimelineLabel(
@@ -94,10 +94,9 @@ export function buildTrackingTimelineData(
       fallbackSpecimenAssignmentCountMap,
     );
     const groupKey = [
-      normalizeTimelineSecond(event.eventTime),
       normalizeText(event.nodeCode),
-      normalizeText(event.eventType),
       normalizeText(event.eventStatus),
+      buildTimelineScopeKey(specimenId),
     ].join('|');
 
     let group = overallTimelineGroupMap.get(groupKey);
@@ -110,6 +109,7 @@ export function buildTrackingTimelineData(
         events: [],
         key: groupKey,
         nodeCode: event.nodeCode,
+        operatorDevices: [],
         operatorIps: [],
         operatorNames: [],
         sourceTerminals: [],
@@ -124,6 +124,7 @@ export function buildTrackingTimelineData(
     group.events.push(event);
     pushUnique(group.operatorNames, event.operatorName);
     pushUnique(group.operatorIps, event.operatorIp);
+    pushUnique(group.operatorDevices, event.operatorDevice);
     pushUnique(group.sourceTerminals, event.sourceTerminal);
     pushUnique(group.eventContents, formatTrackingEventContent(event));
 

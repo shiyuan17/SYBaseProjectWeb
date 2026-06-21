@@ -5,7 +5,6 @@ import { ElButton, ElTable, ElTableColumn, ElTag } from 'element-plus';
 
 import CopyableIdentifier from '../../../components/CopyableIdentifier.vue';
 import {
-  formatApplicationFormStatus,
   formatApplicationType,
   formatCurrentNode,
   formatDate,
@@ -78,11 +77,6 @@ function getSpecimenTagType(index: number) {
     <ElTableColumn label="申请类型" min-width="120">
       <template #default="{ row }">
         {{ formatApplicationType(row.applicationType) }}
-      </template>
-    </ElTableColumn>
-    <ElTableColumn label="表单状态" min-width="120">
-      <template #default="{ row }">
-        {{ formatApplicationFormStatus(row.applicationFormStatus) }}
       </template>
     </ElTableColumn>
     <ElTableColumn label="当前节点" min-width="120">

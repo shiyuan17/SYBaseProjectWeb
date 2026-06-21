@@ -10,6 +10,8 @@ import {
   VERIFICATION_STATUS_OPTIONS,
 } from '../constants';
 
+type LabelMap = Record<string, string>;
+
 function createLabelMap(
   options: ReadonlyArray<{ label: string; value: string }>,
 ) {
@@ -32,7 +34,7 @@ const applicationTypeLabels = createLabelMap(APPLICATION_TYPE_OPTIONS);
 const fixationStatusLabels = {
   ...createLabelMap(FIXATION_STATUS_OPTIONS),
   ABNORMAL: '异常',
-} satisfies Record<string, string>;
+} satisfies LabelMap;
 const verificationStatusLabels = createLabelMap(
   VERIFICATION_STATUS_OPTIONS.filter((option) => option.value !== 'ALL'),
 );
@@ -48,15 +50,15 @@ const applicationStatusLabels = {
   REJECTED: '已拒收',
   SUBMITTED: '已提交',
   VOIDED: '已作废',
-} satisfies Record<string, string>;
+} satisfies LabelMap;
 const applicationFormStatusLabels = {
   ARCHIVED: '已归档',
   NOT_UPLOADED: '未上传',
   PENDING: '待补单',
   UPLOADED: '已上传',
   VOIDED: '已作废',
-} satisfies Record<string, string>;
-const currentNodeLabels = {
+} satisfies LabelMap;
+const currentNodeLabels: LabelMap = {
   CHECK_IN: '标本入库',
   CONFIRMATION: '标本确认',
   DEHYDRATION: '脱水',
@@ -65,8 +67,10 @@ const currentNodeLabels = {
   EMBEDDING: '包埋',
   FIXATION: '固定',
   GROSSING: '取材',
+  GROSSING_MEDIA: '取材影像',
   IN_TRANSIT: '转运中',
   LABEL_PRINT: '标签打印',
+  MEDIA_UPLOAD: '上传影像',
   MEDICAL_ORDER_CREATE: '医嘱开立',
   PARTIALLY_RECEIVED: '部分接收',
   REPORT: '报告',
@@ -86,9 +90,10 @@ const currentNodeLabels = {
   SUBMITTED: '已提交',
   TRANSPORT_HANDOVER: '转运交接',
   TRANSPORT: '转运交接',
+  UPLOAD_MEDIA: '上传影像',
   VERIFICATION: '标本核对',
   VOIDED: '已作废',
-} satisfies Record<string, string>;
+};
 const specimenStatusLabels = {
   CHECKED_IN: '已入库',
   FIXED: '固定完成',
@@ -100,31 +105,34 @@ const specimenStatusLabels = {
   RETURNED: '已退回',
   VERIFIED: '已核对',
   VERIFYING: '核对中',
-} satisfies Record<string, string>;
+} satisfies LabelMap;
 const labelPrintStatusLabels = {
   FAILED: '打印失败',
   PENDING: '待打印',
   SUCCESS: '打印成功',
-} satisfies Record<string, string>;
+} satisfies LabelMap;
 const receiptStatusLabels = {
   RECEIVED: '已接收',
   REJECTED: '已拒收',
   RETURNED: '已退回',
-} satisfies Record<string, string>;
+} satisfies LabelMap;
 const qualityCheckResultLabels = {
   FAILED: '不合格',
   PASSED: '合格',
-} satisfies Record<string, string>;
+} satisfies LabelMap;
 const transportStatusLabels = {
   ...createLabelMap(TRANSPORT_STATUS_OPTIONS),
   CANCELLED: '已取消',
   COMPLETED: '已完成',
-} satisfies Record<string, string>;
-const trackingEventTypeLabels = {
+} satisfies LabelMap;
+const trackingEventTypeLabels: LabelMap = {
   BOUND: '绑定条码',
   CANCEL_MATERIAL_VERIFICATION: '取消材块核对',
   CHECKED_IN: '执行入库',
+  COMPLETE: '完成',
   COMPLETED: '完成固定',
+  CREATE: '创建',
+  CREATED: '创建',
   CREATE_MATERIAL: '创建材块',
   DIRECT_RECEIVE: '直接接收',
   HANDED_OVER: '完成交接',
@@ -138,12 +146,14 @@ const trackingEventTypeLabels = {
   REBOUND: '重绑条码',
   RETRY: '标签补打',
   RETURNED: '退回标本',
+  START: '开始',
   STARTED: '开始固定',
   UNBOUND: '取消绑定条码',
+  UPLOAD_MEDIA: '上传影像',
   VERIFIED: '完成核对',
   VERIFYING: '开始核对',
   VERIFY_MATERIAL: '核对材块',
-} satisfies Record<string, string>;
+};
 
 const trackingEventContentPatterns: Array<{
   pattern: RegExp;
@@ -162,8 +172,8 @@ const trackingEventContentPatterns: Array<{
     replace: (match) => `取消条码绑定 ${match[1]}`,
   },
   {
-    pattern: /^Registered specimen (.+)$/i,
-    replace: (match) => `登记标本 ${match[1]}`,
+    pattern: /^Registered specimen(?: (?!null$)(.+))?$/i,
+    replace: (match) => (match[1] ? `登记标本 ${match[1]}` : '登记标本'),
   },
 ];
 const trackingEventStatusLabels = {
@@ -173,7 +183,7 @@ const trackingEventStatusLabels = {
   REJECTED: '已拒收',
   RETURNED: '已退回',
   SUCCESS: '成功',
-} satisfies Record<string, string>;
+} satisfies LabelMap;
 
 export function formatDateTime(value?: null | string) {
   return value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-';
@@ -201,6 +211,14 @@ export function formatApplicationFormStatus(value?: null | string) {
 
 export function formatCurrentNode(value?: null | string) {
   return formatMappedValue(value, currentNodeLabels);
+}
+
+export function formatTrackingNodeTitle(value?: null | string) {
+  const normalized = value?.trim();
+  if (!normalized) {
+    return '流程事件';
+  }
+  return currentNodeLabels[normalized] ?? '流程事件';
 }
 
 export function formatSpecimenStatus(value?: null | string) {
@@ -235,8 +253,28 @@ export function formatTransportStatus(value?: null | string) {
   return formatMappedValue(value, transportStatusLabels);
 }
 
-export function formatTrackingEventType(value?: null | string) {
-  return formatMappedValue(value, trackingEventTypeLabels);
+export function formatTrackingEventType(
+  value?: null | string,
+  nodeCode?: null | string,
+) {
+  const normalized = value?.trim();
+  if (!normalized) {
+    return '流程事件';
+  }
+  const normalizedNodeCode = nodeCode?.trim();
+  if (
+    normalizedNodeCode === 'FIXATION' &&
+    ['START', 'STARTED'].includes(normalized)
+  ) {
+    return '开始固定';
+  }
+  if (
+    normalizedNodeCode === 'FIXATION' &&
+    ['COMPLETE', 'COMPLETED'].includes(normalized)
+  ) {
+    return '完成固定';
+  }
+  return trackingEventTypeLabels[normalized] ?? '流程事件';
 }
 
 export function formatTrackingEventStatus(value?: null | string) {
@@ -258,7 +296,8 @@ function localizeTrackingEventContent(value: string) {
 }
 
 export function formatTrackingEventContent(
-  event: Pick<TrackingEventView, 'eventContent' | 'eventType'>,
+  event: Partial<Pick<TrackingEventView, 'nodeCode'>> &
+    Pick<TrackingEventView, 'eventContent' | 'eventType'>,
 ) {
   const content = event.eventContent?.trim();
   if (content) {
@@ -267,5 +306,5 @@ export function formatTrackingEventContent(
       return localized;
     }
   }
-  return formatTrackingEventType(event.eventType);
+  return formatTrackingEventType(event.eventType, event.nodeCode);
 }

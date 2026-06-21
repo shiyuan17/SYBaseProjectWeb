@@ -25,6 +25,7 @@ const {
   mockAccessStore,
   mockClipboardWriteText,
   mockElMessageSuccess,
+  mockGetCaseLifecycleTracking,
   mockGetApplicationTracking,
   mockListApplications,
   mockPush,
@@ -34,6 +35,7 @@ const {
   },
   mockClipboardWriteText: vi.fn(),
   mockElMessageSuccess: vi.fn(),
+  mockGetCaseLifecycleTracking: vi.fn(),
   mockGetApplicationTracking: vi.fn(),
   mockListApplications: vi.fn(),
   mockPush: vi.fn(),
@@ -60,6 +62,10 @@ vi.mock('../components/WorkflowSectionCard.vue', () => ({
 vi.mock('../api/specimen-workflow-service', () => ({
   getApplicationTracking: mockGetApplicationTracking,
   listApplications: mockListApplications,
+}));
+
+vi.mock('../../doctor-workflow/api/doctor-workflow-service', () => ({
+  getCaseLifecycleTracking: mockGetCaseLifecycleTracking,
 }));
 
 vi.mock('element-plus', () => {
@@ -249,8 +255,84 @@ function buildTrackingDetail() {
   };
 }
 
-function countText(content: string, target: string) {
-  return content.split(target).length - 1;
+function buildLifecycleTrackingDetail() {
+  return {
+    applicationForm: null,
+    caseSummary: {
+      caseId: 'CASE-001',
+      hasPendingRevision: false,
+      pathologyNo: 'BL202605220001',
+    },
+    overallTimeline: [
+      {
+        nodes: [
+          {
+            keyFacts: [
+              { label: '离体操作人', value: '离体员甲' },
+              { label: '离体时间', value: '2026-05-22T07:30:00' },
+            ],
+            nodeCode: 'SPECIMEN_REMOVAL',
+            occurredAt: '2026-05-22T07:30:00',
+            operatorName: '离体员甲',
+            stageCode: 'SPECIMEN',
+            status: 'COMPLETED',
+            title: '离体确认',
+          },
+        ],
+        stageCode: 'SPECIMEN',
+        stageTitle: '临床送检',
+      },
+      {
+        nodes: [
+          {
+            keyFacts: [
+              { label: '登记状态', value: 'COMPLETED' },
+              { label: '登记时间', value: '2026-05-22T08:00:00' },
+              { label: '登记人', value: '登记员甲' },
+            ],
+            nodeCode: 'SPECIMEN_REGISTRATION',
+            occurredAt: '2026-05-22T08:00:00',
+            operatorName: '登记员甲',
+            stageCode: 'SPECIMEN',
+            status: 'COMPLETED',
+            title: '标本登记',
+          },
+          {
+            keyFacts: [
+              { label: '初步阅片人', value: '初诊医生甲' },
+              { label: '初步阅片时间', value: '2026-05-22T10:00:00' },
+            ],
+            nodeCode: 'PRIMARY_READING',
+            occurredAt: '2026-05-22T10:00:00',
+            operatorName: '初诊医生甲',
+            stageCode: 'REPORT',
+            status: 'SUBMITTED',
+            title: '初步阅片',
+          },
+          {
+            keyFacts: [{ label: '详情报告', value: '诊断详情' }],
+            nodeCode: 'REPORT_DETAIL',
+            occurredAt: '2026-05-22T11:00:00',
+            operatorName: '签发医生甲',
+            stageCode: 'REPORT',
+            status: 'SIGNED',
+            title: '详情报告',
+          },
+        ],
+        stageCode: 'REPORT',
+        stageTitle: '报告',
+      },
+    ],
+    reportLifecycle: {
+      consultations: [],
+      currentReport: null,
+      diagnosticTasks: [],
+      medicalOrders: [],
+      revisions: [],
+      versions: [],
+    },
+    specimens: [],
+  };
 }
 
 async function flushAll() {
@@ -282,6 +364,7 @@ describe('TrackingApplicationListView', () => {
     mockElMessageSuccess.mockReset();
     mockListApplications.mockReset();
     mockGetApplicationTracking.mockReset();
+    mockGetCaseLifecycleTracking.mockReset();
     mockPush.mockReset();
     document.body.innerHTML = '';
   });
@@ -448,17 +531,131 @@ describe('TrackingApplicationListView', () => {
     const overallPanel = root.querySelector('[data-tab-panel="overall"]');
     expect(overallPanel).not.toBeNull();
     const overallText = overallPanel?.textContent ?? '';
-    expect(countText(overallText, '创建转运单 / 成功')).toBe(1);
+    expect(overallText).toContain('转运交接 / 成功');
     expect(overallText).toContain('SP-001');
     expect(overallText).toContain('SP-002');
     expect(overallText).toContain('公共事件');
-    expect(overallText).toContain('打印转运单 / 成功');
+    expect(overallText).toContain('创建转运单');
+    expect(overallText).toContain('完成交接');
+    expect(overallText).toContain('打印转运单');
     expect(overallText).toContain('IP');
     expect(overallText).not.toContain('节点:');
     expect(overallText).not.toContain('终端');
     expect(root.textContent).not.toContain('申请单编号');
     expect(root.textContent).not.toContain('患者标识');
     expect(root.textContent).not.toContain('PAT-001');
+
+    app.unmount();
+  });
+
+  it('loads and renders lifecycle timeline when report tracking permission and pathology number are available', async () => {
+    mockAccessStore.accessCodes = [
+      'PERM_APPLICATION_DETAIL_QUERY',
+      'PERM_M4_REPORT_TRACKING_QUERY',
+    ];
+    mockListApplications.mockResolvedValue({
+      items: [buildApplicationRow()],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+    mockGetApplicationTracking.mockResolvedValue(buildTrackingDetail());
+    mockGetCaseLifecycleTracking.mockResolvedValue(
+      buildLifecycleTrackingDetail(),
+    );
+
+    const { app, root } = await mountView({
+      initialApplicationId: 'APP-TRACK-001',
+      triggerKey: 1,
+    });
+
+    expect(mockGetCaseLifecycleTracking).toHaveBeenCalledWith('BL202605220001');
+    expect(root.textContent).toContain('临床送检');
+    expect(root.textContent).toContain('制片管理');
+    expect(root.textContent).toContain('离体确认');
+    expect(root.textContent).toContain('标本登记');
+    expect(root.textContent).toContain('报告');
+    expect(root.textContent).toContain('初步阅片人');
+    expect(root.textContent).toContain('详情报告');
+    expect(root.textContent).not.toContain('总时间线');
+
+    app.unmount();
+  });
+
+  it('keeps the recent-event timeline when lifecycle permission is missing', async () => {
+    mockListApplications.mockResolvedValue({
+      items: [buildApplicationRow()],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+    mockGetApplicationTracking.mockResolvedValue(buildTrackingDetail());
+
+    const { app, root } = await mountView({
+      initialApplicationId: 'APP-TRACK-001',
+      triggerKey: 1,
+    });
+
+    expect(mockGetCaseLifecycleTracking).not.toHaveBeenCalled();
+    expect(root.textContent).toContain('暂无报告追踪权限');
+    expect(root.querySelector('[data-tab-name="overall"]')?.textContent).toBe(
+      '总时间线',
+    );
+
+    app.unmount();
+  });
+
+  it('keeps the recent-event timeline when the application has no pathology number', async () => {
+    mockAccessStore.accessCodes = [
+      'PERM_APPLICATION_DETAIL_QUERY',
+      'PERM_M4_REPORT_TRACKING_QUERY',
+    ];
+    mockListApplications.mockResolvedValue({
+      items: [{ ...buildApplicationRow(), pathologyNo: null }],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+    mockGetApplicationTracking.mockResolvedValue(buildTrackingDetail());
+
+    const { app, root } = await mountView({
+      initialApplicationId: 'APP-TRACK-001',
+      triggerKey: 1,
+    });
+
+    expect(mockGetCaseLifecycleTracking).not.toHaveBeenCalled();
+    expect(root.textContent).toContain('当前申请单暂无病理号');
+    expect(root.querySelector('[data-tab-name="overall"]')?.textContent).toBe(
+      '总时间线',
+    );
+
+    app.unmount();
+  });
+
+  it('falls back to the recent-event timeline when lifecycle loading fails', async () => {
+    mockAccessStore.accessCodes = [
+      'PERM_APPLICATION_DETAIL_QUERY',
+      'PERM_M4_REPORT_TRACKING_QUERY',
+    ];
+    mockListApplications.mockResolvedValue({
+      items: [buildApplicationRow()],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+    mockGetApplicationTracking.mockResolvedValue(buildTrackingDetail());
+    mockGetCaseLifecycleTracking.mockRejectedValue(new Error('无生命周期数据'));
+
+    const { app, root } = await mountView({
+      initialApplicationId: 'APP-TRACK-001',
+      triggerKey: 1,
+    });
+
+    expect(mockGetCaseLifecycleTracking).toHaveBeenCalledWith('BL202605220001');
+    expect(root.textContent).toContain('生命周期时间线加载失败');
+    expect(root.querySelector('[data-tab-name="overall"]')?.textContent).toBe(
+      '总时间线',
+    );
 
     app.unmount();
   });
@@ -516,9 +713,10 @@ describe('TrackingApplicationListView', () => {
     const specimenPanel = root.querySelector('[data-tab-panel="SPEC-001"]');
     expect(specimenPanel).not.toBeNull();
     const specimenText = specimenPanel?.textContent ?? '';
-    expect(specimenText).toContain('创建转运单 / 成功');
-    expect(specimenText).toContain('完成交接 / 成功');
-    expect(specimenText).not.toContain('打印转运单 / 成功');
+    expect(specimenText).toContain('转运交接 / 成功');
+    expect(specimenText).toContain('创建转运单');
+    expect(specimenText).toContain('完成交接');
+    expect(specimenText).not.toContain('打印转运单');
     expect(specimenText).not.toContain('公共事件');
     expect(specimenText).not.toContain('SP-002');
 

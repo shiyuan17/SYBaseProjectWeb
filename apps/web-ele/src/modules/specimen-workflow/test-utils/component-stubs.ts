@@ -169,6 +169,24 @@ export function createDialogStub(): FunctionalComponent<StubProps> {
       : null;
 }
 
+export function createDrawerStub(): FunctionalComponent<StubProps> {
+  return (props, { slots }) =>
+    props.modelValue
+      ? h(
+          'section',
+          {
+            'data-testid': 'drawer',
+          },
+          [
+            renderOptionalText('h3', props.title),
+            slots.header?.(),
+            slots.default?.(),
+            slots.footer?.(),
+          ],
+        )
+      : null;
+}
+
 export function createAlertStub(): FunctionalComponent<StubProps> {
   return (props, { slots }) =>
     h('div', { 'data-testid': 'alert' }, [
