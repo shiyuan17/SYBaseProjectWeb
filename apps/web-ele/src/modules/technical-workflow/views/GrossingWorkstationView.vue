@@ -4,6 +4,12 @@ import type {
   WorkstationQueueItem,
 } from '../types/technical-workflow';
 
+import type {
+  MedicalOrderSummary,
+  PendingMedicalOrderItem,
+} from '#/modules/doctor-workflow/types/doctor-workflow';
+import type { MedicalOrderBlockOption } from '#/modules/shared/components/medical-order-workbench';
+
 import {
   computed,
   onBeforeUnmount,
@@ -22,12 +28,14 @@ import {
   RotateCw,
   Search,
 } from '@vben/icons';
+import { useAccessStore } from '@vben/stores';
 
 import {
   ElAlert,
   ElButton,
   ElCheckbox,
   ElDatePicker,
+  ElDrawer,
   ElEmpty,
   ElInput,
   ElMessage,
@@ -40,6 +48,9 @@ import {
   ElTooltip,
 } from 'element-plus';
 
+import { listPendingMedicalOrders } from '#/modules/doctor-workflow/api/doctor-workflow-service';
+import { M4_PERMISSION_CODES } from '#/modules/doctor-workflow/constants';
+import MedicalOrderWorkbenchPane from '#/modules/shared/components/MedicalOrderWorkbenchPane.vue';
 import WorkbenchCapturedImagePanel from '#/modules/shared/components/WorkbenchCapturedImagePanel.vue';
 
 import {
@@ -219,7 +230,6 @@ const DISABLED_TOOLBAR_ACTIONS = [
   { icon: Download, label: '导出Excel' },
   { icon: undefined, label: '标本回收' },
   { icon: undefined, label: '修改检查组' },
-  { icon: undefined, label: '特检医嘱' },
   { icon: undefined, label: '蜡块未收发标记' },
   { icon: undefined, label: '蜡块批量打印' },
 ] as const;
@@ -234,6 +244,7 @@ const grossingWorkbenchResizeStep = 2;
 
 const route = useRoute();
 const router = useRouter();
+const accessStore = useAccessStore();
 const navigation = useTechnicalWorkflowNavigation(router);
 const dateRangeShortcuts = createDateRangePickerShortcuts();
 
@@ -293,6 +304,9 @@ function resolveShiftableCreatedRange(range: string[]) {
 const queueError = ref('');
 const loading = ref(false);
 const actionLoading = ref(false);
+const medicalOrdersLoading = ref(false);
+const medicalOrderPanelVisible = ref(false);
+const medicalOrders = ref<MedicalOrderSummary[]>([]);
 const pendingItems = ref<PendingTechnicalTaskItem[]>([]);
 const selectedTask = ref<null | PendingTechnicalTaskItem>(null);
 const total = ref(0);
@@ -361,6 +375,9 @@ const queueItems = computed(() =>
 const currentPageError = computed(
   () => queueError.value || workbench.pageError.value,
 );
+const canCreateMedicalOrder = computed(() =>
+  accessStore.accessCodes.includes(M4_PERMISSION_CODES.MEDICAL_ORDER_CREATE),
+);
 const selectedCaseSummary = computed(
   () => workbench.workbenchContext.value?.caseSummary ?? null,
 );
@@ -403,6 +420,15 @@ watch(
     clinicalHistoryForm.imagingExamination = context?.relatedExaminations ?? '';
   },
   { immediate: true },
+);
+watch(
+  () => selectedTask.value?.caseId,
+  async (nextCaseId, previousCaseId) => {
+    if (!medicalOrderPanelVisible.value || nextCaseId === previousCaseId) {
+      return;
+    }
+    await loadMedicalOrders();
+  },
 );
 const capturedImageItems = computed<CapturedImageItem[]>(() => [
   ...workbench.enteredMediaAssets.value.map((asset) => ({
@@ -474,6 +500,17 @@ const canEditCapturedImages = computed(
     canOperateGrossingTask(selectedTask.value) &&
     Boolean(workbench.activeSpecimen.value) &&
     activeSpecimenIndex.value >= 0,
+);
+const medicalOrderBlockOptions = computed<MedicalOrderBlockOption[]>(() =>
+  workbench.embeddingBoxRows.value.map((row) => ({
+    blockCode: row.box.embeddingBoxNo,
+    blockId: row.box.embeddingBoxNo,
+    description:
+      row.box.embeddingRemarks?.trim() || row.specimenName?.trim() || null,
+    label: [row.box.embeddingBoxNo?.trim(), row.specimenName?.trim()]
+      .filter(Boolean)
+      .join(' '),
+  })),
 );
 const workstationGridStyle = computed(() => ({
   gridTemplateColumns: `minmax(${grossingWorkbenchPaneMinWidths.queue}px, ${paneWidths.queue}fr) ${grossingWorkbenchResizerWidth}px minmax(${grossingWorkbenchPaneMinWidths.workspace}px, ${paneWidths.workspace}fr) ${grossingWorkbenchResizerWidth}px minmax(${grossingWorkbenchPaneMinWidths.template}px, ${paneWidths.template}fr)`,
@@ -745,6 +782,82 @@ async function handleQuery() {
 
 async function handleRefresh() {
   await loadPendingData(selectedTask.value?.id);
+}
+
+function mapPendingMedicalOrderItemToSummary(
+  item: PendingMedicalOrderItem,
+): MedicalOrderSummary {
+  return {
+    acceptedAt: item.acceptedAt ?? null,
+    applicationNo: item.applicationNo ?? null,
+    billingStatus: item.billingStatus ?? null,
+    cancelledAt: item.cancelledAt ?? null,
+    caseId: item.caseId ?? null,
+    completedAt: item.completedAt ?? null,
+    doctorName: item.doctorName ?? null,
+    executionScope: item.executionScope ?? null,
+    executorName: item.executorName ?? null,
+    orderContent: item.orderContent ?? null,
+    orderDate: item.orderDate ?? null,
+    orderCategoryCode: item.orderCategoryCode ?? null,
+    orderCategoryId: item.orderCategoryId ?? null,
+    orderCategoryName: item.orderCategoryName ?? null,
+    orderId: item.orderId,
+    orderItemCode: item.orderItemCode ?? null,
+    orderItemId: item.orderItemId ?? null,
+    orderItemName: item.orderItemName ?? null,
+    orderNumber: item.orderNumber ?? null,
+    orderType: item.orderType ?? null,
+    pathologyNo: item.pathologyNo ?? null,
+    patientId: item.patientId ?? null,
+    patientIdDisplay: item.patientIdDisplay ?? null,
+    patientName: item.patientName ?? null,
+    remarks: item.remarks ?? null,
+    status: item.status ?? null,
+  };
+}
+
+async function loadMedicalOrders() {
+  const caseId = selectedTask.value?.caseId?.trim();
+  if (!caseId) {
+    medicalOrders.value = [];
+    return;
+  }
+
+  medicalOrdersLoading.value = true;
+  try {
+    const result = await listPendingMedicalOrders({
+      page: 1,
+      pathologyNo: selectedTask.value?.pathologyNo?.trim() || undefined,
+      size: 200,
+    });
+    medicalOrders.value = result.items
+      .filter((item) => item.caseId === caseId)
+      .map((item) => mapPendingMedicalOrderItemToSummary(item));
+  } catch (error) {
+    ElMessage.error(getWorkflowPageErrorMessage(error));
+    medicalOrders.value = [];
+  } finally {
+    medicalOrdersLoading.value = false;
+  }
+}
+
+async function toggleMedicalOrderPanel() {
+  if (!selectedTask.value) {
+    ElMessage.warning('请先从左侧列表选择任务');
+    return;
+  }
+  medicalOrderPanelVisible.value = !medicalOrderPanelVisible.value;
+  if (medicalOrderPanelVisible.value) {
+    await loadMedicalOrders();
+  }
+}
+
+async function handleMedicalOrderRefresh() {
+  await Promise.all([
+    loadPendingData(selectedTask.value?.id),
+    loadMedicalOrders(),
+  ]);
 }
 
 async function toggleTimedOutOnly() {
@@ -1145,6 +1258,13 @@ if (shouldInitialLoad.value) {
         <div
           class="mt-2 flex flex-wrap items-center gap-1.5 border-t border-border pt-2"
         >
+          <ElButton
+            :type="medicalOrderPanelVisible ? 'primary' : 'default'"
+            size="small"
+            @click="void toggleMedicalOrderPanel()"
+          >
+            特检医嘱
+          </ElButton>
           <ElTooltip
             v-for="action in DISABLED_TOOLBAR_ACTIONS"
             :key="action.label"
@@ -1714,6 +1834,58 @@ if (shouldInitialLoad.value) {
         </aside>
       </section>
     </div>
+
+    <ElDrawer
+      v-model="medicalOrderPanelVisible"
+      append-to-body
+      destroy-on-close
+      direction="rtl"
+      size="720px"
+      title="特检医嘱设置"
+    >
+      <template #header>
+        <div class="flex min-w-0 items-center justify-between gap-3 pr-8">
+          <div class="min-w-0">
+            <div class="text-sm font-semibold text-foreground">
+              特检医嘱设置
+            </div>
+            <div class="mt-1 text-xs text-muted-foreground">
+              {{
+                selectedTask
+                  ? `当前病例：${selectedTask.pathologyNo || '-'}`
+                  : '请先选择取材任务'
+              }}
+            </div>
+          </div>
+          <div class="flex shrink-0 items-center gap-2">
+            <ElButton
+              :loading="medicalOrdersLoading"
+              size="small"
+              @click="void handleMedicalOrderRefresh()"
+            >
+              刷新医嘱
+            </ElButton>
+            <ElButton size="small" @click="medicalOrderPanelVisible = false">
+              收起
+            </ElButton>
+          </div>
+        </div>
+      </template>
+
+      <div class="h-full min-h-0 overflow-hidden">
+        <MedicalOrderWorkbenchPane
+          embedded
+          :block-options="medicalOrderBlockOptions"
+          :can-create-medical-order="canCreateMedicalOrder"
+          :case-id="selectedTask?.caseId ?? ''"
+          :loading="medicalOrdersLoading"
+          :medical-orders="medicalOrders"
+          :pathology-no="selectedTask?.pathologyNo ?? null"
+          :readonly="isGrossingReadOnly"
+          @refresh="void handleMedicalOrderRefresh()"
+        />
+      </div>
+    </ElDrawer>
   </Page>
 </template>
 

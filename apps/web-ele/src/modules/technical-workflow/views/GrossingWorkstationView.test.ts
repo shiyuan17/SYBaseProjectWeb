@@ -13,6 +13,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   createAlertStub,
   createButtonStub,
+  createDialogStub,
+  createDrawerStub,
   createEmptyStub,
   createInputStub,
   createPassthroughStub,
@@ -29,7 +31,9 @@ const tableRowContextKey = vi.hoisted(() =>
 );
 
 const {
+  mockAccessStore,
   mockInitializeWorkbench,
+  mockListPendingMedicalOrders,
   mockListPendingTechnicalTasks,
   mockLoadWorkbenchContext,
   mockMessageSuccess,
@@ -40,7 +44,11 @@ const {
   mockStartGrossing,
   mockSubmitGrossing,
 } = vi.hoisted(() => {
+  const mockAccessStore = {
+    accessCodes: ['PERM_M4_MEDICAL_ORDER_CREATE'],
+  };
   const mockInitializeWorkbench = vi.fn();
+  const mockListPendingMedicalOrders = vi.fn();
   const mockListPendingTechnicalTasks = vi.fn();
   const mockLoadWorkbenchContext = vi.fn();
   const mockMessageSuccess = vi.fn();
@@ -55,7 +63,9 @@ const {
   const mockStartGrossing = vi.fn();
   const mockSubmitGrossing = vi.fn();
   return {
+    mockAccessStore,
     mockInitializeWorkbench,
+    mockListPendingMedicalOrders,
     mockListPendingTechnicalTasks,
     mockLoadWorkbenchContext,
     mockMessageSuccess,
@@ -350,6 +360,14 @@ vi.mock('@vben/common-ui', () => ({
   }),
 }));
 
+vi.mock('@vben/stores', () => ({
+  useAccessStore: () => mockAccessStore,
+}));
+
+vi.mock('#/modules/doctor-workflow/api/doctor-workflow-service', () => ({
+  listPendingMedicalOrders: mockListPendingMedicalOrders,
+}));
+
 vi.mock('../api/technical-workflow-service', () => ({
   listPendingTechnicalTasks: mockListPendingTechnicalTasks,
   startGrossing: mockStartGrossing,
@@ -425,6 +443,39 @@ vi.mock('../components/GrossingEmbeddingBoxTable.vue', () => ({
               onClick: () => emit('removeEmbeddingBox', 0, 0),
             },
             '删除包埋盒',
+          ),
+        ]);
+    },
+  }),
+}));
+
+vi.mock('#/modules/shared/components/MedicalOrderWorkbenchPane.vue', () => ({
+  default: defineComponent({
+    props: [
+      'blockOptions',
+      'canCreateMedicalOrder',
+      'caseId',
+      'medicalOrders',
+      'pathologyNo',
+      'readonly',
+    ],
+    emits: ['refresh'],
+    setup(props, { emit }) {
+      return () =>
+        h('section', { 'data-testid': 'grossing-medical-order-pane' }, [
+          `case:${props.caseId ?? ''}`,
+          `pathology:${props.pathologyNo ?? ''}`,
+          `readonly:${String(Boolean(props.readonly))}`,
+          `create:${String(Boolean(props.canCreateMedicalOrder))}`,
+          `blocks:${Array.isArray(props.blockOptions) ? props.blockOptions.length : 0}`,
+          `orders:${Array.isArray(props.medicalOrders) ? props.medicalOrders.length : 0}`,
+          h(
+            'button',
+            {
+              type: 'button',
+              onClick: () => emit('refresh'),
+            },
+            '刷新医嘱',
           ),
         ]);
     },
@@ -551,6 +602,8 @@ vi.mock('element-plus', () => {
     ElButton: createButtonStub(),
     ElCheckbox,
     ElDatePicker,
+    ElDialog: createDialogStub(),
+    ElDrawer: createDrawerStub(),
     ElEmpty: createEmptyStub(),
     ElForm: createPassthroughStub('form'),
     ElImage,
@@ -646,6 +699,24 @@ async function mountView(query?: Record<string, string>) {
     caseStatus: 'SAMPLING',
     taskId: 'TASK-001',
     taskStatus: 'IN_PROGRESS',
+  });
+  mockListPendingMedicalOrders.mockResolvedValue({
+    items: [
+      {
+        billingStatus: 'PENDING',
+        caseId: 'CASE-001',
+        createdAt: '2026-06-21 10:00:00',
+        doctorName: '当前医生',
+        orderContent: '免疫组化 CK（蜡块: A1 胃窦组织）',
+        pathologyNo: 'BL-001',
+        remarks: '优先处理',
+        status: 'IN_PROGRESS',
+        id: 'ORDER-001',
+      },
+    ],
+    page: 1,
+    size: 200,
+    total: 1,
   });
   mockListPendingTechnicalTasks.mockResolvedValue({
     items: [
@@ -1377,6 +1448,69 @@ describe('GrossingWorkstationView', () => {
     expect(findButton(root, '导出Excel').disabled).toBe(true);
     expect(findButton(root, '前1天').disabled).toBe(false);
     expect(findButton(root, '后1天').disabled).toBe(false);
+
+    app.unmount();
+  });
+
+  it('opens the restored medical order pane from the grossing toolbar', async () => {
+    const { app, root } = await mountView();
+
+    expect(
+      root.querySelector('[data-testid="grossing-medical-order-pane"]'),
+    ).toBeNull();
+    expect(root.querySelector('[data-testid="drawer"]')).toBeNull();
+
+    findButton(root, '特检医嘱').click();
+    await flushAll();
+
+    expect(root.querySelector('[data-testid="drawer"]')).toBeTruthy();
+    expect(root.textContent).toContain('特检医嘱设置');
+    expect(root.textContent).toContain('当前病例：BL-001');
+    const pane = root.querySelector<HTMLElement>(
+      '[data-testid="grossing-medical-order-pane"]',
+    );
+    expect(pane).toBeTruthy();
+    expect(pane?.textContent).toContain('case:CASE-001');
+    expect(pane?.textContent).toContain('pathology:BL-001');
+    expect(pane?.textContent).toContain('readonly:false');
+    expect(pane?.textContent).toContain('blocks:1');
+
+    findButton(root, '收起').click();
+    await flushAll();
+    expect(root.querySelector('[data-testid="drawer"]')).toBeNull();
+    expect(
+      root.querySelector('[data-testid="grossing-medical-order-pane"]'),
+    ).toBeNull();
+
+    app.unmount();
+  });
+
+  it('passes readonly mode to the restored medical order pane for completed tasks', async () => {
+    const { app, root } = await mountView({});
+    mockListPendingTechnicalTasks.mockResolvedValue({
+      items: [createTask('TASK-009', 'BD202606080002', 'COMPLETED')],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+    const input = root.querySelector<HTMLInputElement>(
+      'input[placeholder="病人ID / 病理号 / 姓名"]',
+    );
+    expect(input).toBeTruthy();
+    setInputValue(input!, 'BD202606080002');
+    input!.dispatchEvent(
+      new KeyboardEvent('keyup', { bubbles: true, key: 'Enter' }),
+    );
+    await flushAll();
+
+    findButton(root, '特检医嘱').click();
+    await flushAll();
+
+    const pane = root.querySelector<HTMLElement>(
+      '[data-testid="grossing-medical-order-pane"]',
+    );
+    expect(pane).toBeTruthy();
+    expect(pane?.textContent).toContain('readonly:true');
 
     app.unmount();
   });
