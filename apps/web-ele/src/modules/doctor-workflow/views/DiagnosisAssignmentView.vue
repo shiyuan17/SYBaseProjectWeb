@@ -377,10 +377,7 @@ void loadPendingData();
         type="error"
       />
 
-      <WorkflowSectionCard
-        title="诊断分片"
-        description="选择左侧用户后，勾选右侧任务进行初步分片或签发分片。"
-      >
+      <WorkflowSectionCard title="诊断分片">
         <div class="flex flex-col gap-3">
           <ElForm class="flex flex-wrap items-center gap-x-2 gap-y-1" inline>
             <ElFormItem label="任务类型">

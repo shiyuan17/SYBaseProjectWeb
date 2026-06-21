@@ -846,6 +846,17 @@ describe('doctor workflow view visibility', () => {
     wrapper.unmount();
   });
 
+  it('hides the assignment guidance copy under the diagnosis assignment title', async () => {
+    const wrapper = await mountView(DiagnosisAssignmentView);
+
+    expect(wrapper.text()).toContain('诊断分片');
+    expect(wrapper.text()).not.toContain(
+      '选择左侧用户后，勾选右侧任务进行初步分片或签发分片。',
+    );
+
+    wrapper.unmount();
+  });
+
   it('keeps the diagnosis workbench issue-mode select wide enough beside the sign button', async () => {
     mockAccessStore.accessCodes = [
       M4_PERMISSION_CODES.WORKBENCH_QUERY,

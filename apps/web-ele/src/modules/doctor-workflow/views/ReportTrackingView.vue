@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type {
   CaseLifecycleTrackingView,
+  LifecycleKeyFact,
+  LifecycleNodeView,
   LifecycleSpecimenView,
 } from '../types/doctor-workflow';
 
@@ -246,6 +248,134 @@ function formatLifecycleFactValue(
   }
 }
 
+function normalizeLifecycleNodeText(value?: null | string) {
+  return value?.trim().toUpperCase() ?? '';
+}
+
+function resolveLifecycleNodeFactLabels(node: LifecycleNodeView) {
+  const stageCode = normalizeLifecycleNodeText(node.stageCode);
+  const nodeCode = normalizeLifecycleNodeText(node.nodeCode);
+  const title = node.title?.trim() ?? '';
+
+  if (nodeCode === 'SPECIMEN_REMOVAL' || title === '离体确认') {
+    return new Set(['离体操作人', '离体时间']);
+  }
+  if (nodeCode === 'SPECIMEN_FIXATION' || title === '标本固定') {
+    return new Set(['标本固定液', '标本固定人', '固定时间']);
+  }
+  if (nodeCode === 'SPECIMEN_CONFIRMATION' || title === '标本确认') {
+    return new Set(['标本确认人', '标本确认时间']);
+  }
+  if (nodeCode === 'SPECIMEN_CHECK_IN' || title === '标本入库') {
+    return new Set(['入库操作人', '入库时间']);
+  }
+  if (nodeCode === 'SPECIMEN_OUTBOUND' || title === '标本出库') {
+    return new Set(['出库操作人', '出库时间']);
+  }
+  if (nodeCode === 'SPECIMEN_RECEIPT' || title === '标本接收') {
+    return new Set(['物流人员', '签收人员', '签收时间', '接收状态']);
+  }
+  if (nodeCode === 'SPECIMEN_REGISTRATION' || title === '标本登记') {
+    return new Set([
+      '登记状态',
+      '登记时间',
+      '登记人',
+      '送检类型',
+      '标本名称',
+      '类型',
+      '来源部位',
+      '标本大小',
+      '核对状态',
+      '评价',
+      '登记影像',
+    ]);
+  }
+  if (nodeCode === 'GROSSING' || title === '取材描写') {
+    return new Set([
+      '取材状态',
+      '取材时间',
+      '包埋盒盒号',
+      '包埋备注',
+      '取材影像',
+      '大体描写信息',
+    ]);
+  }
+  if (nodeCode === 'DEHYDRATION' || title === '脱水') {
+    return new Set(['脱水开始时间', '脱水完成时间', '脱水状态', '脱水操作人']);
+  }
+  if (nodeCode === 'EMBEDDING' || title === '包埋') {
+    return new Set([
+      '包埋状态',
+      '包埋时间',
+      '包埋人员',
+      '切片备注',
+      '取材评价',
+    ]);
+  }
+  if (nodeCode === 'SLICING' || title === '切片') {
+    return new Set([
+      '玻片打印状态',
+      '打印时间',
+      '打印操作人',
+      '完成切片时间',
+      '完成切片人',
+    ]);
+  }
+  if (nodeCode === 'STAINING' || title === '染色出片') {
+    return new Set(['染色出片时间', '出片操作人', '出片是否超时', '超时时长']);
+  }
+  if (nodeCode === 'DIAGNOSIS_ASSIGNMENT' || title === '诊断分配') {
+    return new Set(['初诊阅片人', '签发阅片人']);
+  }
+  if (nodeCode === 'PRIMARY_READING' || title === '初步阅片') {
+    return new Set(['初步阅片人', '初步阅片时间']);
+  }
+  if (nodeCode === 'REPORT_REVIEW' || title === '复核') {
+    return new Set(['复核人', '复核时间']);
+  }
+  if (nodeCode === 'REPORT_SIGN' || title === '签发') {
+    return new Set(['签发人', '签发时间']);
+  }
+  if (nodeCode === 'REPORT_DETAIL' || title === '详情报告') {
+    return new Set(['详情报告']);
+  }
+  if (nodeCode === 'REPORT_PUBLISH' || title === '发布') {
+    return new Set(['发布人', '发布时间']);
+  }
+  if (nodeCode === 'REPORT_REVISION' || title === '修订') {
+    return new Set(['修订时间', '修订人', '驳回状态', '驳回时间', '驳回人']);
+  }
+  if (stageCode === 'REPORT' || title === '报告') {
+    return new Set([
+      '初步阅片人',
+      '初步阅片时间',
+      '复核人',
+      '复核时间',
+      '签发人',
+      '签发时间',
+      '详情报告',
+      '驳回状态',
+      '驳回时间',
+      '驳回人',
+      '发布人',
+      '发布时间',
+      '修订时间',
+      '修订人',
+    ]);
+  }
+  return null;
+}
+
+function resolveLifecycleNodeFacts(
+  node: LifecycleNodeView,
+): LifecycleKeyFact[] {
+  const allowedLabels = resolveLifecycleNodeFactLabels(node);
+  if (!allowedLabels) {
+    return node.keyFacts;
+  }
+  return node.keyFacts.filter((fact) => allowedLabels.has(fact.label));
+}
+
 function specimenCollapseTitle(item: LifecycleSpecimenView) {
   return [
     formatNullable(item.specimenNo),
@@ -467,17 +597,26 @@ watch(
                       {{ formatDateTime(node.occurredAt) }} /
                       {{ formatNullable(node.operatorName) }}
                     </div>
+                    <div class="mt-1 text-xs text-muted-foreground">
+                      IP {{ formatNullable(node.operatorIp) }} / 设备
+                      <span
+                        class="inline-block max-w-80 truncate align-bottom"
+                        :title="formatNullable(node.operatorDevice)"
+                      >
+                        {{ formatNullable(node.operatorDevice) }}
+                      </span>
+                    </div>
                   </div>
                   <ElTag :type="nodeTagType(node.status)">
                     {{ formatLifecycleNodeStatus(node.status) }}
                   </ElTag>
                 </div>
                 <div
-                  v-if="node.keyFacts.length > 0"
+                  v-if="resolveLifecycleNodeFacts(node).length > 0"
                   class="mt-3 flex flex-wrap gap-2"
                 >
                   <span
-                    v-for="fact in node.keyFacts"
+                    v-for="fact in resolveLifecycleNodeFacts(node)"
                     :key="`${node.nodeCode ?? node.title ?? 'node'}-${fact.label}`"
                     class="rounded bg-muted px-2 py-1 text-xs text-foreground"
                   >
@@ -597,6 +736,21 @@ watch(
                       {{ formatNullable(row.operatorName) }}
                     </template>
                   </ElTableColumn>
+                  <ElTableColumn label="IP" min-width="140">
+                    <template #default="{ row }">
+                      {{ formatNullable(row.operatorIp) }}
+                    </template>
+                  </ElTableColumn>
+                  <ElTableColumn label="设备" min-width="220">
+                    <template #default="{ row }">
+                      <span
+                        class="block truncate"
+                        :title="formatNullable(row.operatorDevice)"
+                      >
+                        {{ formatNullable(row.operatorDevice) }}
+                      </span>
+                    </template>
+                  </ElTableColumn>
                   <ElTableColumn label="事件说明" min-width="220">
                     <template #default="{ row }">
                       {{ formatNullable(row.eventContent) }}
@@ -695,6 +849,21 @@ watch(
                       <ElTableColumn label="操作人" min-width="140">
                         <template #default="{ row }">
                           {{ formatNullable(row.operatorName) }}
+                        </template>
+                      </ElTableColumn>
+                      <ElTableColumn label="IP" min-width="140">
+                        <template #default="{ row }">
+                          {{ formatNullable(row.operatorIp) }}
+                        </template>
+                      </ElTableColumn>
+                      <ElTableColumn label="设备" min-width="220">
+                        <template #default="{ row }">
+                          <span
+                            class="block truncate"
+                            :title="formatNullable(row.operatorDevice)"
+                          >
+                            {{ formatNullable(row.operatorDevice) }}
+                          </span>
                         </template>
                       </ElTableColumn>
                       <ElTableColumn label="事件说明" min-width="220">
@@ -796,6 +965,21 @@ watch(
                           <ElTableColumn label="操作人" min-width="140">
                             <template #default="{ row }">
                               {{ formatNullable(row.operatorName) }}
+                            </template>
+                          </ElTableColumn>
+                          <ElTableColumn label="IP" min-width="140">
+                            <template #default="{ row }">
+                              {{ formatNullable(row.operatorIp) }}
+                            </template>
+                          </ElTableColumn>
+                          <ElTableColumn label="设备" min-width="220">
+                            <template #default="{ row }">
+                              <span
+                                class="block truncate"
+                                :title="formatNullable(row.operatorDevice)"
+                              >
+                                {{ formatNullable(row.operatorDevice) }}
+                              </span>
                             </template>
                           </ElTableColumn>
                           <ElTableColumn label="事件说明" min-width="220">

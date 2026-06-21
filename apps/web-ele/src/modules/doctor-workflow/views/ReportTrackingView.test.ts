@@ -82,6 +82,8 @@ const trackingFixture = {
         {
           eventContent: '申请创建完成',
           keyFacts: [{ label: '申请单号', value: 'APP-001' }],
+          operatorDevice: 'Chrome Lifecycle Browser',
+          operatorIp: '10.8.0.1',
           nodeCode: 'APPLICATION_CREATED',
           occurredAt: '2026-06-15T08:00:00',
           operatorName: '申请医生甲',
@@ -92,6 +94,28 @@ const trackingFixture = {
       ],
       stageCode: 'APPLICATION',
       stageTitle: '申请创建',
+    },
+    {
+      nodes: [
+        {
+          eventContent: '离体确认完成',
+          keyFacts: [
+            { label: '离体操作人', value: '离体员甲' },
+            { label: '离体时间', value: '2026-06-15T08:20:00' },
+            { label: '固定人', value: '固定员不应显示' },
+          ],
+          operatorDevice: 'Edge Lifecycle Browser',
+          operatorIp: '10.8.0.2',
+          nodeCode: 'SPECIMEN_REMOVAL',
+          occurredAt: '2026-06-15T08:20:00',
+          operatorName: '离体员甲',
+          stageCode: 'SPECIMEN',
+          status: 'COMPLETED',
+          title: '离体确认',
+        },
+      ],
+      stageCode: 'SPECIMEN',
+      stageTitle: '临床送检',
     },
   ],
   reportLifecycle: {
@@ -219,6 +243,8 @@ const trackingFixture = {
         {
           eventContent: '标本创建完成',
           keyFacts: [],
+          operatorDevice: 'Firefox Specimen Browser',
+          operatorIp: '10.8.1.1',
           occurredAt: '2026-06-15T08:10:00',
           operatorName: '登记员甲',
           status: 'COMPLETED',
@@ -329,7 +355,18 @@ describe('ReportTrackingView', () => {
     expect(wrapper.root.textContent).toContain('对象追踪区');
     expect(wrapper.root.textContent).toContain('报告链区');
     expect(wrapper.root.textContent).toContain('申请创建');
+    expect(wrapper.root.textContent).toContain('离体确认');
+    expect(wrapper.root.textContent).toContain('IP');
+    expect(wrapper.root.textContent).toContain('设备');
+    expect(wrapper.root.textContent).toContain('10.8.0.2');
+    expect(wrapper.root.textContent).toContain('Edge Lifecycle Browser');
+    expect(wrapper.root.textContent).toContain('离体操作人');
+    expect(wrapper.root.textContent).toContain('离体员甲');
+    expect(wrapper.root.textContent).toContain('离体时间');
+    expect(wrapper.root.textContent).not.toContain('固定员不应显示');
     expect(wrapper.root.textContent).toContain('标本创建');
+    expect(wrapper.root.textContent).toContain('10.8.1.1');
+    expect(wrapper.root.textContent).toContain('Firefox Specimen Browser');
     expect(wrapper.root.textContent).toContain('蜡块 BK-001');
     expect(wrapper.root.textContent).toContain('玻片 SL-001');
     expect(wrapper.root.textContent).toContain('补做特殊染色');
