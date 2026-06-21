@@ -1717,72 +1717,86 @@ describe('DiagnosisWorkbenchView', () => {
     slowWorkbenchTestTimeout,
   );
 
-  it('creates one medical order per package item', async () => {
-    mockAccessStore.accessCodes = [
-      'PERM_M4_WORKBENCH_QUERY',
-      'PERM_M4_MEDICAL_ORDER_CREATE',
-    ];
-    const wrapper = await mountView();
+  it(
+    'creates one medical order per package item',
+    async () => {
+      mockAccessStore.accessCodes = [
+        'PERM_M4_WORKBENCH_QUERY',
+        'PERM_M4_MEDICAL_ORDER_CREATE',
+      ];
+      const wrapper = await mountView();
 
-    const packageButton = [...document.querySelectorAll('button')].find(
-      (button) => button.textContent?.includes('【免疫组化套餐2项】'),
-    ) as HTMLElement;
-    expect(packageButton).toBeTruthy();
-    packageButton.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
-    await flushAsyncWork();
+      const packageButton = [...document.querySelectorAll('button')].find(
+        (button) => button.textContent?.includes('【免疫组化套餐2项】'),
+      ) as HTMLElement;
+      expect(packageButton).toBeTruthy();
+      packageButton.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+      await flushAsyncWork();
 
-    findButton('提交医嘱').click();
-    await flushAsyncWork();
+      findButton('提交医嘱').click();
+      await flushAsyncWork();
 
-    expect(createMedicalOrderMock).toHaveBeenCalledTimes(2);
-    expect(createMedicalOrderMock).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({
-        orderContent: '补做特殊染色（蜡块: A1 胃窦组织）',
-        orderType: 'SPECIAL_STAIN',
-      }),
-    );
-    expect(createMedicalOrderMock).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({
-        orderContent: '补做免疫组化 CK（蜡块: A1 胃窦组织）',
-        orderType: 'IMMUNOHISTOCHEMISTRY',
-      }),
-    );
+      expect(createMedicalOrderMock).toHaveBeenCalledTimes(2);
+      expect(createMedicalOrderMock).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          orderContent: '补做特殊染色（蜡块: A1 胃窦组织）',
+          orderType: 'SPECIAL_STAIN',
+        }),
+      );
+      expect(createMedicalOrderMock).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          orderContent: '补做免疫组化 CK（蜡块: A1 胃窦组织）',
+          orderType: 'IMMUNOHISTOCHEMISTRY',
+        }),
+      );
 
-    wrapper.unmount();
-  });
+      wrapper.unmount();
+    },
+    slowWorkbenchTestTimeout,
+  );
 
-  it('opens charge management dialog from the medical order pane', async () => {
-    const wrapper = await mountView();
+  it(
+    'opens charge management dialog from the medical order pane',
+    async () => {
+      const wrapper = await mountView();
 
-    findButton('收费管理').click();
-    await flushAsyncWork();
+      findButton('收费管理').click();
+      await flushAsyncWork();
 
-    expect(document.body.textContent).toContain('收费管理');
-    expect(document.body.textContent).toContain('病理号:');
-    expect(document.body.textContent).toContain('F2600036-A1');
-    expect(document.body.textContent).toContain('确认完成收费');
-    expect(document.body.textContent).toContain('确认病人出院');
-    expect(document.body.textContent).toContain('重新执行收费');
+      expect(document.body.textContent).toContain('收费管理');
+      expect(document.body.textContent).toContain('病理号:');
+      expect(document.body.textContent).toContain('F2600036-A1');
+      expect(document.body.textContent).toContain('确认完成收费');
+      expect(document.body.textContent).toContain('确认病人出院');
+      expect(document.body.textContent).toContain('重新执行收费');
 
-    wrapper.unmount();
-  });
+      wrapper.unmount();
+    },
+    slowWorkbenchTestTimeout,
+  );
 
-  it('keeps submit button disabled before adding medical order drafts', async () => {
-    mockAccessStore.accessCodes = [
-      'PERM_M4_WORKBENCH_QUERY',
-      'PERM_M4_MEDICAL_ORDER_CREATE',
-    ];
-    const wrapper = await mountView();
+  it(
+    'keeps submit button disabled before adding medical order drafts',
+    async () => {
+      mockAccessStore.accessCodes = [
+        'PERM_M4_WORKBENCH_QUERY',
+        'PERM_M4_MEDICAL_ORDER_CREATE',
+      ];
+      const wrapper = await mountView();
 
-    const submitButton = findButton('提交医嘱');
-    expect(submitButton).toBeTruthy();
-    expect(submitButton.hasAttribute('disabled')).toBe(true);
-    expect(getOrderPaneText()).not.toContain('请先从下方待选列表添加医嘱草稿');
+      const submitButton = findButton('提交医嘱');
+      expect(submitButton).toBeTruthy();
+      expect(submitButton.hasAttribute('disabled')).toBe(true);
+      expect(getOrderPaneText()).not.toContain(
+        '请先从下方待选列表添加医嘱草稿',
+      );
 
-    wrapper.unmount();
-  });
+      wrapper.unmount();
+    },
+    slowWorkbenchTestTimeout,
+  );
 
   it('executes billing for all uncharged medical orders and refreshes status', async () => {
     mockAccessStore.accessCodes = [
@@ -1859,38 +1873,42 @@ describe('DiagnosisWorkbenchView', () => {
     slowWorkbenchTestTimeout,
   );
 
-  it('confirms billing completion from charge manager and refreshes status', async () => {
-    mockAccessStore.accessCodes = [
-      'PERM_M4_WORKBENCH_QUERY',
-      'PERM_M4_MEDICAL_ORDER_CREATE',
-    ];
-    const initialWorkbench = workbenchFixtureByCaseId['CASE-001']!;
-    const chargedWorkbench: DiagnosticWorkbenchView = {
-      ...initialWorkbench,
-      medicalOrders: initialWorkbench.medicalOrders.map((item) => ({
-        ...item,
-        billingStatus: 'SUCCESS',
-      })),
-    };
-    getDiagnosticWorkbenchMock
-      .mockResolvedValueOnce(initialWorkbench)
-      .mockResolvedValueOnce(chargedWorkbench);
-    const wrapper = await mountView();
+  it(
+    'confirms billing completion from charge manager and refreshes status',
+    async () => {
+      mockAccessStore.accessCodes = [
+        'PERM_M4_WORKBENCH_QUERY',
+        'PERM_M4_MEDICAL_ORDER_CREATE',
+      ];
+      const initialWorkbench = workbenchFixtureByCaseId['CASE-001']!;
+      const chargedWorkbench: DiagnosticWorkbenchView = {
+        ...initialWorkbench,
+        medicalOrders: initialWorkbench.medicalOrders.map((item) => ({
+          ...item,
+          billingStatus: 'SUCCESS',
+        })),
+      };
+      getDiagnosticWorkbenchMock
+        .mockResolvedValueOnce(initialWorkbench)
+        .mockResolvedValueOnce(chargedWorkbench);
+      const wrapper = await mountView();
 
-    findButton('收费管理').click();
-    await flushAsyncWork();
-    findButton('确认完成收费').click();
-    await flushAsyncWork();
+      findButton('收费管理').click();
+      await flushAsyncWork();
+      findButton('确认完成收费').click();
+      await flushAsyncWork();
 
-    expect(confirmMedicalOrderBillingMock).toHaveBeenCalledWith({
-      caseId: 'CASE-001',
-      orderIds: undefined,
-      remarks: '确认完成收费',
-    });
-    expect(getOrderPaneText()).toContain('未收费 (0) 已收费 (1)');
+      expect(confirmMedicalOrderBillingMock).toHaveBeenCalledWith({
+        caseId: 'CASE-001',
+        orderIds: undefined,
+        remarks: '确认完成收费',
+      });
+      expect(getOrderPaneText()).toContain('未收费 (0) 已收费 (1)');
 
-    wrapper.unmount();
-  });
+      wrapper.unmount();
+    },
+    slowWorkbenchTestTimeout,
+  );
 
   it(
     'writes the edited report document when printing',
@@ -1964,34 +1982,42 @@ describe('DiagnosisWorkbenchView', () => {
     slowWorkbenchTestTimeout,
   );
 
-  it('blocks submitting when the current report is not a draft', async () => {
-    const wrapper = await mountView();
+  it(
+    'blocks submitting when the current report is not a draft',
+    async () => {
+      const wrapper = await mountView();
 
-    expect(
-      findByTestId('workbench-report-submit').hasAttribute('disabled'),
-    ).toBe(true);
-    findByTestId('workbench-report-submit').click();
-    await flushAsyncWork();
+      expect(
+        findByTestId('workbench-report-submit').hasAttribute('disabled'),
+      ).toBe(true);
+      findByTestId('workbench-report-submit').click();
+      await flushAsyncWork();
 
-    expect(savePathologyReportDraftMock).not.toHaveBeenCalled();
-    expect(submitPathologyReportMock).not.toHaveBeenCalled();
+      expect(savePathologyReportDraftMock).not.toHaveBeenCalled();
+      expect(submitPathologyReportMock).not.toHaveBeenCalled();
 
-    wrapper.unmount();
-  });
+      wrapper.unmount();
+    },
+    slowWorkbenchTestTimeout,
+  );
 
-  it('keeps remarks editable and shows placeholder save feedback', async () => {
-    const wrapper = await mountView();
-    const saveButton = [...document.querySelectorAll('button')].find((button) =>
-      button.textContent?.includes('保存'),
-    ) as HTMLElement;
+  it(
+    'keeps remarks editable and shows placeholder save feedback',
+    async () => {
+      const wrapper = await mountView();
+      const saveButton = [...document.querySelectorAll('button')].find(
+        (button) => button.textContent?.includes('保存'),
+      ) as HTMLElement;
 
-    saveButton.click();
-    await flushAsyncWork();
+      saveButton.click();
+      await flushAsyncWork();
 
-    expect(messageInfoMock).toHaveBeenCalledWith(
-      '当前仅支持前端编辑，暂未接入保存接口',
-    );
+      expect(messageInfoMock).toHaveBeenCalledWith(
+        '当前仅支持前端编辑，暂未接入保存接口',
+      );
 
-    wrapper.unmount();
-  });
+      wrapper.unmount();
+    },
+    slowWorkbenchTestTimeout,
+  );
 });
