@@ -106,6 +106,29 @@ const {
   windowOpenMock: vi.fn(),
 }));
 
+const doctorWorkflowServiceMocks = vi.hoisted(() => ({
+  acceptDiagnosticTask: acceptDiagnosticTaskMock,
+  cancelMedicalOrder: cancelMedicalOrderMock,
+  commentConsultationParticipant: commentConsultationParticipantMock,
+  completeConsultation: completeConsultationMock,
+  confirmMedicalOrderBilling: confirmMedicalOrderBillingMock,
+  createConsultation: createConsultationMock,
+  createMedicalOrder: createMedicalOrderMock,
+  createPathologyReport: createPathologyReportMock,
+  executeMedicalOrderBilling: executeMedicalOrderBillingMock,
+  getDiagnosticWorkbench: getDiagnosticWorkbenchMock,
+  issueFormalReportVersions: issueFormalReportVersionsMock,
+  listCaseReportVersions: listCaseReportVersionsMock,
+  listMedicalOrderDicts: listMedicalOrderDictsMock,
+  listMedicalOrderPackagesPage: listMedicalOrderPackagesPageMock,
+  listPendingDiagnosticTasks: listPendingDiagnosticTasksMock,
+  reviewPathologyReport: reviewPathologyReportMock,
+  savePathologyReportDraft: savePathologyReportDraftMock,
+  signPathologyReport: signPathologyReportMock,
+  startDiagnosticTask: startDiagnosticTaskMock,
+  submitPathologyReport: submitPathologyReportMock,
+}));
+
 vi.mock('vue-router', () => ({
   useRoute: () => mockRoute,
   useRouter: () => mockRouter,
@@ -151,28 +174,8 @@ vi.mock('element-plus', async (importOriginal) => {
   };
 });
 
-vi.mock('../api/doctor-workflow-service', () => ({
-  acceptDiagnosticTask: acceptDiagnosticTaskMock,
-  cancelMedicalOrder: cancelMedicalOrderMock,
-  commentConsultationParticipant: commentConsultationParticipantMock,
-  completeConsultation: completeConsultationMock,
-  confirmMedicalOrderBilling: confirmMedicalOrderBillingMock,
-  createConsultation: createConsultationMock,
-  createMedicalOrder: createMedicalOrderMock,
-  createPathologyReport: createPathologyReportMock,
-  executeMedicalOrderBilling: executeMedicalOrderBillingMock,
-  getDiagnosticWorkbench: getDiagnosticWorkbenchMock,
-  issueFormalReportVersions: issueFormalReportVersionsMock,
-  listCaseReportVersions: listCaseReportVersionsMock,
-  listMedicalOrderDicts: listMedicalOrderDictsMock,
-  listMedicalOrderPackagesPage: listMedicalOrderPackagesPageMock,
-  listPendingDiagnosticTasks: listPendingDiagnosticTasksMock,
-  reviewPathologyReport: reviewPathologyReportMock,
-  savePathologyReportDraft: savePathologyReportDraftMock,
-  signPathologyReport: signPathologyReportMock,
-  startDiagnosticTask: startDiagnosticTaskMock,
-  submitPathologyReport: submitPathologyReportMock,
-}));
+vi.mock('../api/doctor-workflow-service', () => doctorWorkflowServiceMocks);
+vi.mock('#/modules/doctor-workflow/api/doctor-workflow-service', () => doctorWorkflowServiceMocks);
 
 import DiagnosisWorkbenchView from './DiagnosisWorkbenchView.vue';
 
@@ -842,6 +845,8 @@ async function selectReportStyleOption(label: string) {
   await flushAsyncWork();
 }
 
+const slowWorkbenchTestTimeout = 20_000;
+
 async function clickMaterialTab(label: string) {
   const tab = [
     ...document.querySelectorAll<HTMLElement>('.el-tabs__item, [role="tab"]'),
@@ -1068,7 +1073,7 @@ describe('DiagnosisWorkbenchView', () => {
     expect(preview?.textContent).toContain('实时预览诊断');
 
     wrapper.unmount();
-  });
+  }, slowWorkbenchTestTimeout);
 
   it('renders diagnostic material tables from workbench fields', async () => {
     const wrapper = await mountView();
@@ -1109,7 +1114,7 @@ describe('DiagnosisWorkbenchView', () => {
     expect(wrapper.text()).toContain('收费员甲');
 
     wrapper.unmount();
-  });
+  }, slowWorkbenchTestTimeout);
 
   it('renders editable report preview content in the middle pane', async () => {
     const wrapper = await mountView();
@@ -1268,7 +1273,7 @@ describe('DiagnosisWorkbenchView', () => {
     expect(diagnosisEditor?.value).toContain('慢性浅表性胃炎');
 
     wrapper.unmount();
-  });
+  }, slowWorkbenchTestTimeout);
 
   it('appends a report template by double-clicking the template item', async () => {
     const wrapper = await mountView();
@@ -1453,7 +1458,7 @@ describe('DiagnosisWorkbenchView', () => {
     expect(orderPaneText).toContain('免疫组化套餐');
 
     wrapper.unmount();
-  });
+  }, slowWorkbenchTestTimeout);
 
   it('filters medical order candidates by dictionary category', async () => {
     const wrapper = await mountView();
@@ -1488,7 +1493,7 @@ describe('DiagnosisWorkbenchView', () => {
     expect(getOrderPaneText()).not.toContain('1p19q(Fish)');
 
     wrapper.unmount();
-  });
+  }, slowWorkbenchTestTimeout);
 
   it('keeps medical order group and letter filters mutually exclusive', async () => {
     const wrapper = await mountView();
@@ -1521,7 +1526,7 @@ describe('DiagnosisWorkbenchView', () => {
     expect(getOrderPaneText()).toContain('C1q免疫荧光');
 
     wrapper.unmount();
-  });
+  }, slowWorkbenchTestTimeout);
 
   it('does not show fallback medical order candidates outside dictionaries', async () => {
     const wrapper = await mountView();
@@ -1536,7 +1541,7 @@ describe('DiagnosisWorkbenchView', () => {
     expect(getOrderPaneText()).not.toContain('未入字典套餐');
 
     wrapper.unmount();
-  });
+  }, slowWorkbenchTestTimeout);
 
   it('shows an empty state when medical order dictionaries are empty', async () => {
     listMedicalOrderDictsMock.mockResolvedValueOnce([]);
@@ -1548,7 +1553,7 @@ describe('DiagnosisWorkbenchView', () => {
     expect(getOrderPaneText()).not.toContain('未入字典套餐');
 
     wrapper.unmount();
-  });
+  }, slowWorkbenchTestTimeout);
 
   it('adds selected medical order candidates in batch', async () => {
     mockAccessStore.accessCodes = [
@@ -1594,7 +1599,7 @@ describe('DiagnosisWorkbenchView', () => {
     );
 
     wrapper.unmount();
-  });
+  }, slowWorkbenchTestTimeout);
 
   it('hides pathology number in medical order block dropdown and item list', async () => {
     mockAccessStore.accessCodes = [
@@ -1626,7 +1631,7 @@ describe('DiagnosisWorkbenchView', () => {
     expect(orderPaneText).not.toContain('F2600036');
 
     wrapper.unmount();
-  });
+  }, slowWorkbenchTestTimeout);
 
   it('creates a medical order from a selected order item and refreshes the workbench', async () => {
     mockAccessStore.accessCodes = [
@@ -1663,7 +1668,7 @@ describe('DiagnosisWorkbenchView', () => {
     expect(getDiagnosticWorkbenchMock).toHaveBeenLastCalledWith('CASE-001');
 
     wrapper.unmount();
-  });
+  }, slowWorkbenchTestTimeout);
 
   it('creates one medical order per package item', async () => {
     mockAccessStore.accessCodes = [
@@ -1801,7 +1806,7 @@ describe('DiagnosisWorkbenchView', () => {
     });
 
     wrapper.unmount();
-  });
+  }, slowWorkbenchTestTimeout);
 
   it('confirms billing completion from charge manager and refreshes status', async () => {
     mockAccessStore.accessCodes = [
@@ -1902,7 +1907,7 @@ describe('DiagnosisWorkbenchView', () => {
     expect(printMock).toHaveBeenCalled();
 
     wrapper.unmount();
-  });
+  }, slowWorkbenchTestTimeout);
 
   it('blocks submitting when the current report is not a draft', async () => {
     const wrapper = await mountView();

@@ -203,7 +203,7 @@ const medicalOrderRows = computed<MedicalOrderTableRow[]>(() => {
     statusLabel: formatOrderStatus(item.status),
   }));
   const draftRows = draftItems.map((item, index) => ({
-    doctorName: currentDoctorName,
+    doctorName: currentDoctorName.value,
     key: item.key,
     orderContent: item.orderContent,
     orderTime: '待提交',
