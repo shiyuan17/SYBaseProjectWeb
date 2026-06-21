@@ -1,4 +1,8 @@
-import type { TechnicalTrackingView } from '../types/technical-workflow';
+import type {
+  TechnicalTrackingCaseListItem,
+  TechnicalTrackingCaseListPage,
+  TechnicalTrackingView,
+} from '../types/technical-workflow';
 
 import { computed, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
@@ -7,7 +11,10 @@ import { ElMessage } from 'element-plus';
 
 import { reportInlineErrorDisabled } from '#/utils/error-feedback';
 
-import { getTechnicalTracking } from '../api/technical-workflow-service';
+import {
+  getTechnicalTracking,
+  listTechnicalTrackingCases,
+} from '../api/technical-workflow-service';
 import {
   buildDateRangeQueryParams,
   resolveRouteDateRange,
@@ -35,14 +42,25 @@ export function useTechnicalTracking() {
   const route = useRoute();
 
   const pageError = ref('');
-  const loading = ref(false);
+  const listLoading = ref(false);
+  const detailLoading = ref(false);
   const caseId = ref(
     typeof route.query.caseId === 'string' ? route.query.caseId : '',
   );
   const dateRange = ref<string[]>(resolveRouteDateRange(route.query));
   const trackingResult = ref<null | TechnicalTrackingView>(null);
+  const caseList = ref<TechnicalTrackingCaseListPage>({
+    items: [],
+    page: 1,
+    size: 20,
+    total: 0,
+  });
+  const selectedCaseId = ref('');
   const activeTab = ref(resolveInitialTrackingTab(route.query.tab));
   const selectedNodeId = ref('');
+  const hasDeepLinkedCase = computed(() => Boolean(caseId.value.trim()));
+  const hasDateRange = computed(() => dateRange.value.length === 2);
+  const loading = computed(() => listLoading.value || detailLoading.value);
 
   const context = computed(() =>
     trackingResult.value
@@ -86,31 +104,46 @@ export function useTechnicalTracking() {
     ),
   );
 
+  const detailEmptyText = computed(() => {
+    if (!hasDeepLinkedCase.value && caseList.value.items.length > 1) {
+      return '请选择病例查看技术追踪详情';
+    }
+    if (!hasDeepLinkedCase.value && caseList.value.items.length === 0) {
+      return '请选择工作日期后查询命中病例';
+    }
+    return '暂无技术追踪详情';
+  });
+
   function handleNodeClick(data: { id: string }) {
     selectedNodeId.value = data.id;
   }
 
-  async function loadTracking() {
-    const normalizedCaseId = caseId.value.trim();
-    if (!normalizedCaseId) {
-      pageError.value = '请输入病例ID、病理号或对象ID';
-      trackingResult.value = null;
-      ElMessage.warning(pageError.value);
-      return;
-    }
+  function resetTrackingDetail() {
+    trackingResult.value = null;
+    selectedNodeId.value = '';
+    activeTab.value = 'timeline';
+  }
 
-    loading.value = true;
+  function buildTrackingQueryParams() {
+    return {
+      ...buildDateRangeQueryParams(dateRange.value),
+      workDate:
+        dateRange.value.length === 0 &&
+        typeof route.query.workDate === 'string' &&
+        route.query.workDate.trim()
+          ? route.query.workDate
+          : undefined,
+    };
+  }
+
+  async function loadTrackingByIdentifier(identifier: string) {
+    detailLoading.value = true;
     pageError.value = '';
     try {
-      trackingResult.value = await getTechnicalTracking(normalizedCaseId, {
-        ...buildDateRangeQueryParams(dateRange.value),
-        workDate:
-          dateRange.value.length === 0 &&
-          typeof route.query.workDate === 'string' &&
-          route.query.workDate.trim()
-            ? route.query.workDate
-            : undefined,
-      });
+      trackingResult.value = await getTechnicalTracking(
+        identifier,
+        buildTrackingQueryParams(),
+      );
       activeTab.value = resolveInitialTrackingTab(route.query.tab);
       selectedNodeId.value = resolveSelectedTrackingNodeId(
         {
@@ -129,8 +162,104 @@ export function useTechnicalTracking() {
       pageError.value = getWorkflowPageErrorMessage(error);
       reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
     } finally {
-      loading.value = false;
+      detailLoading.value = false;
     }
+  }
+
+  async function loadTrackingForCaseItem(item: TechnicalTrackingCaseListItem) {
+    selectedCaseId.value = item.caseId;
+    await loadTrackingByIdentifier(item.caseId);
+  }
+
+  async function loadTracking() {
+    const normalizedCaseId = caseId.value.trim();
+    if (normalizedCaseId) {
+      caseList.value = {
+        items: [],
+        page: 1,
+        size: caseList.value.size,
+        total: 0,
+      };
+      selectedCaseId.value = normalizedCaseId;
+      await loadTrackingByIdentifier(normalizedCaseId);
+      return;
+    }
+
+    if (!hasDateRange.value) {
+      pageError.value = '请输入病例ID、病理号或对象ID，或选择工作日期';
+      resetTrackingDetail();
+      caseList.value = {
+        items: [],
+        page: 1,
+        size: caseList.value.size,
+        total: 0,
+      };
+      selectedCaseId.value = '';
+      ElMessage.warning(pageError.value);
+      return;
+    }
+
+    listLoading.value = true;
+    pageError.value = '';
+    try {
+      const previousSelectedCaseId = selectedCaseId.value;
+      const result = await listTechnicalTrackingCases({
+        ...buildDateRangeQueryParams(dateRange.value),
+        page: caseList.value.page,
+        size: caseList.value.size,
+      });
+      caseList.value = result;
+
+      const firstCase = result.items[0];
+      if (result.items.length === 1 && firstCase) {
+        await loadTrackingForCaseItem(firstCase);
+        return;
+      }
+
+      const retainedCase = result.items.find(
+        (item) => item.caseId === previousSelectedCaseId,
+      );
+      if (retainedCase) {
+        await loadTrackingForCaseItem(retainedCase);
+        return;
+      }
+
+      selectedCaseId.value = '';
+      resetTrackingDetail();
+    } catch (error) {
+      resetTrackingDetail();
+      caseList.value = {
+        items: [],
+        page: caseList.value.page,
+        size: caseList.value.size,
+        total: 0,
+      };
+      pageError.value = getWorkflowPageErrorMessage(error);
+      reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
+    } finally {
+      listLoading.value = false;
+    }
+  }
+
+  async function handleCaseSelect(item: TechnicalTrackingCaseListItem) {
+    await loadTrackingForCaseItem(item);
+  }
+
+  async function handleCaseListPageChange(page: number) {
+    caseList.value = {
+      ...caseList.value,
+      page,
+    };
+    await loadTracking();
+  }
+
+  async function handleCaseListSizeChange(size: number) {
+    caseList.value = {
+      ...caseList.value,
+      page: 1,
+      size,
+    };
+    await loadTracking();
   }
 
   function handleReset() {
@@ -139,7 +268,14 @@ export function useTechnicalTracking() {
     pageError.value = '';
     activeTab.value = 'timeline';
     selectedNodeId.value = '';
-    trackingResult.value = null;
+    selectedCaseId.value = '';
+    caseList.value = {
+      items: [],
+      page: 1,
+      size: 20,
+      total: 0,
+    };
+    resetTrackingDetail();
   }
 
   watch(
@@ -152,15 +288,18 @@ export function useTechnicalTracking() {
       dateRange.value = resolveRouteDateRange(query);
       activeTab.value = resolveInitialTrackingTab(query.tab);
 
-      if (!trackingResult.value) {
-        if (nextCaseId) {
-          void loadTracking();
-        }
+      if (!trackingResult.value && nextCaseId) {
+        void loadTracking();
         return;
       }
 
       if (nextCaseId && nextCaseId !== previousCaseId) {
         void loadTracking();
+        return;
+      }
+
+      if (!trackingResult.value) {
+        selectedNodeId.value = '';
         return;
       }
 
@@ -183,15 +322,22 @@ export function useTechnicalTracking() {
   return {
     activeTab,
     caseId,
+    caseList,
     context,
+    detailEmptyText,
     filteredQcEvaluations,
     filteredReworks,
     filteredTasks,
+    handleCaseListPageChange,
+    handleCaseListSizeChange,
+    handleCaseSelect,
     handleNodeClick,
     handleReset,
     loadTracking,
     loading,
+    listLoading,
     pageError,
+    selectedCaseId,
     selectedNode,
     selectedNodeId,
     trackingResult,

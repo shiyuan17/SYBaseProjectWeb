@@ -33,6 +33,7 @@ import {
   listPendingTechnicalSpecimenRegistrations,
   listPendingTechnicalTasks,
   listTechnicalSpecimenRegistrations,
+  listTechnicalTrackingCases,
   mapEmbeddingWorkstationSummaryResponse,
   mapGrossingWorkbenchContextResponse,
   mapPendingTechnicalSpecimenRegistrationPageResponse,
@@ -40,6 +41,7 @@ import {
   mapSlicingWorkbenchResponse,
   mapTechnicalSpecimenRegistrationDetailResponse,
   mapTechnicalSpecimenRegistrationWorkspaceResponse,
+  mapTechnicalTrackingCaseListPageResponse,
   mapTechnicalTrackingResponse,
   mapWorkstationDailyClearResponse,
   printSlicingSlideMergeGroup,
@@ -154,6 +156,45 @@ describe('technical-workflow-service mappers', () => {
       slides: [],
       specimens: [],
       technicalTasks: [],
+    });
+  });
+
+  it('normalizes technical tracking case list arrays', () => {
+    expect(
+      mapTechnicalTrackingCaseListPageResponse({
+        items: [
+          {
+            applicationNo: null,
+            applicationType: null,
+            caseId: 'CASE-001',
+            caseStatus: null,
+            latestActivityAt: '2026-06-21T09:00:00',
+            matchedActivityTypes: ['TASK', 'QC'],
+            pathologyNo: 'BL-001',
+            patientIdDisplay: null,
+            patientName: null,
+            submittingDepartmentName: null,
+          },
+        ],
+      }),
+    ).toEqual({
+      items: [
+        {
+          applicationNo: null,
+          applicationType: null,
+          caseId: 'CASE-001',
+          caseStatus: null,
+          latestActivityAt: '2026-06-21T09:00:00',
+          matchedActivityTypes: ['TASK', 'QC'],
+          pathologyNo: 'BL-001',
+          patientIdDisplay: null,
+          patientName: null,
+          submittingDepartmentName: null,
+        },
+      ],
+      page: 1,
+      size: 20,
+      total: 0,
     });
   });
 
@@ -597,6 +638,58 @@ describe('technical-workflow-service requests', () => {
 
     expect(requestClientMock.get).toHaveBeenCalledWith(
       '/v1/pathology-cases/CASE-001/technical-tracking',
+    );
+  });
+
+  it('maps technical tracking case list through requestClient data unwrapping', async () => {
+    requestClientMock.get.mockResolvedValue({
+      items: [
+        {
+          applicationNo: null,
+          applicationType: null,
+          caseId: 'CASE-001',
+          caseStatus: null,
+          latestActivityAt: '2026-06-21T09:00:00',
+          matchedActivityTypes: ['TASK', 'EVENT'],
+          pathologyNo: 'BL-001',
+          patientIdDisplay: null,
+          patientName: null,
+          submittingDepartmentName: null,
+        },
+      ],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+
+    await expect(
+      listTechnicalTrackingCases({
+        page: 1,
+        size: 20,
+        workDate: '2026-06-21',
+      }),
+    ).resolves.toEqual({
+      items: [
+        expect.objectContaining({
+          caseId: 'CASE-001',
+          latestActivityAt: '2026-06-21T09:00:00',
+          matchedActivityTypes: ['TASK', 'EVENT'],
+        }),
+      ],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+
+    expect(requestClientMock.get).toHaveBeenCalledWith(
+      '/v1/technical-tracking/cases',
+      {
+        params: {
+          page: 1,
+          size: 20,
+          workDate: '2026-06-21',
+        },
+      },
     );
   });
 

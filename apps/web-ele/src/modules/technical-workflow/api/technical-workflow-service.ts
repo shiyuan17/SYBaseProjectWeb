@@ -51,6 +51,9 @@ import type {
   TechnicalTaskReleaseRequest,
   TechnicalTaskRemarksRequest,
   TechnicalTaskStartRequest,
+  TechnicalTrackingCaseListItem,
+  TechnicalTrackingCaseListPage,
+  TechnicalTrackingCaseListQuery,
   TechnicalTrackingView,
   WorkstationDailyClear,
 } from '../types/technical-workflow';
@@ -72,6 +75,8 @@ type TechnicalSpecimenRegistrationWorkspaceResponse =
   Partial<TechnicalSpecimenRegistrationWorkspace>;
 type ApplicationRegistrationWorkbenchRecordResponse =
   Partial<ApplicationRegistrationWorkbenchRecord>;
+type TechnicalTrackingCaseListPageResponse =
+  Partial<TechnicalTrackingCaseListPage>;
 type TechnicalTrackingResponse = Partial<TechnicalTrackingView>;
 type EmbeddingWorkstationSummaryResponse = Partial<EmbeddingWorkstationSummary>;
 type SlicingWorkbenchResponse = Partial<
@@ -209,6 +214,36 @@ export function mapTechnicalTrackingResponse(
     slides: response.slides ?? [],
     specimens: response.specimens ?? [],
     technicalTasks: response.technicalTasks ?? [],
+  };
+}
+
+function mapTechnicalTrackingCaseListItem(
+  response: Partial<TechnicalTrackingCaseListItem>,
+): TechnicalTrackingCaseListItem {
+  return {
+    applicationNo: response.applicationNo ?? null,
+    applicationType: response.applicationType ?? null,
+    caseId: response.caseId ?? '',
+    caseStatus: response.caseStatus ?? null,
+    latestActivityAt: response.latestActivityAt ?? null,
+    matchedActivityTypes: response.matchedActivityTypes ?? [],
+    pathologyNo: response.pathologyNo ?? null,
+    patientIdDisplay: response.patientIdDisplay ?? null,
+    patientName: response.patientName ?? null,
+    submittingDepartmentName: response.submittingDepartmentName ?? null,
+  };
+}
+
+export function mapTechnicalTrackingCaseListPageResponse(
+  response: TechnicalTrackingCaseListPageResponse,
+): TechnicalTrackingCaseListPage {
+  return {
+    items: (response.items ?? []).map((item) =>
+      mapTechnicalTrackingCaseListItem(item),
+    ),
+    page: response.page ?? 1,
+    size: response.size ?? 20,
+    total: response.total ?? 0,
   };
 }
 
@@ -560,6 +595,25 @@ export async function getTechnicalTracking(
         })
       : await requestClient.get<TechnicalTrackingResponse>(url);
   return mapTechnicalTrackingResponse(response);
+}
+
+export async function listTechnicalTrackingCases(
+  params: TechnicalTrackingCaseListQuery,
+) {
+  const response =
+    await requestClient.get<TechnicalTrackingCaseListPageResponse>(
+      '/v1/technical-tracking/cases',
+      {
+        params: {
+          page: params.page,
+          size: params.size,
+          dateFrom: params.dateFrom?.trim() || undefined,
+          dateTo: params.dateTo?.trim() || undefined,
+          workDate: params.workDate?.trim() || undefined,
+        },
+      },
+    );
+  return mapTechnicalTrackingCaseListPageResponse(response);
 }
 
 export async function getEmbeddingWorkstationSummary(

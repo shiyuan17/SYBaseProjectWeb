@@ -452,6 +452,34 @@ export interface TechnicalTrackingEventSummary {
   operatorName: null | string;
 }
 
+export interface TechnicalTrackingCaseListQuery {
+  dateFrom?: null | string;
+  dateTo?: null | string;
+  page: number;
+  size: number;
+  workDate?: null | string;
+}
+
+export interface TechnicalTrackingCaseListItem {
+  applicationNo: null | string;
+  applicationType: null | string;
+  caseId: string;
+  caseStatus: null | string;
+  latestActivityAt: null | string;
+  matchedActivityTypes: string[];
+  pathologyNo: null | string;
+  patientIdDisplay: null | string;
+  patientName: null | string;
+  submittingDepartmentName: null | string;
+}
+
+export interface TechnicalTrackingCaseListPage {
+  items: TechnicalTrackingCaseListItem[];
+  page: number;
+  size: number;
+  total: number;
+}
+
 export interface TechnicalTrackingView {
   blocks: TechnicalTrackingBlockSummary[];
   caseId: string;
