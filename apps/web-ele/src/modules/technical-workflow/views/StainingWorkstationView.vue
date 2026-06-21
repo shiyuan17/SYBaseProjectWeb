@@ -104,7 +104,9 @@ const loading = ref(false);
 const completedLoading = ref(false);
 const pendingItems = ref<PendingTechnicalTaskItem[]>([]);
 const completedRows = ref<CompletedSlideRow[]>([]);
+const completedHistoryRows = ref<CompletedSlideRow[]>([]);
 const total = ref(0);
+const completedTotal = ref(0);
 const selectedPendingRows = ref<StainingTaskRow[]>([]);
 const selectedCompletedRows = ref<CompletedSlideRow[]>([]);
 const pendingTableRef = ref<null | TableInstance>(null);
@@ -168,17 +170,26 @@ const pendingStats = computed(() => [
   {
     accent: 'emerald',
     label: '完成',
-    value: completedRows.value.length,
+    value: completedDisplayTotal.value,
   },
 ]);
 
-const completedPageCount = computed(() =>
-  Math.max(1, Math.ceil(completedRows.value.length / filters.completedSize)),
+const visibleCompletedRows = computed(() =>
+  mergeCompletedRows(completedRows.value, completedHistoryRows.value),
 );
-const visibleCompletedRows = computed(() => {
-  const start = (filters.completedPage - 1) * filters.completedSize;
-  return completedRows.value.slice(start, start + filters.completedSize);
+const sessionOnlyCompletedCount = computed(() => {
+  const historyIds = new Set(
+    completedHistoryRows.value.map((row) => row.slideId),
+  );
+  return completedRows.value.filter((row) => !historyIds.has(row.slideId))
+    .length;
 });
+const completedDisplayTotal = computed(
+  () => completedTotal.value + sessionOnlyCompletedCount.value,
+);
+const completedPageCount = computed(() =>
+  Math.max(1, Math.ceil(completedDisplayTotal.value / filters.completedSize)),
+);
 const canProcessSelectedTasks = computed(
   () =>
     selectedPendingRows.value.length > 0 &&
@@ -315,6 +326,52 @@ function buildFallbackCompletedRow(
   };
 }
 
+function buildCompletedRowFromTask(
+  task: PendingTechnicalTaskItem,
+  index: number,
+): CompletedSlideRow {
+  return {
+    index,
+    pathologyNo: formatNullable(task.pathologyNo),
+    patientId: formatPatientIdDisplay(task.patientIdDisplay, task.patientId),
+    patientName: formatNullable(task.patientName),
+    slideId: task.objectId || task.id,
+    slideNo: resolveStainingSlideDisplayNo(
+      task.objectDisplayNo ?? task.samplingBlockCode,
+      task.samplingBlockDescription,
+    ),
+    slideStatus: 'STAINED',
+    slideType: formatObjectType(task.objectType ?? 'SLIDE'),
+    sliceOperation: buildOperationInfo({
+      fallback: formatNullable(task.sampledByName),
+      operatedAt: task.sampledAt,
+      operatorName: task.sampledByName,
+    }),
+    stainingOperation: buildOperationInfo({
+      fallback: formatTaskStatus(task.taskStatus),
+      operatedAt: task.completedAt ?? task.startedAt,
+      operatorName: task.assignedToName,
+    }),
+  };
+}
+
+function mergeCompletedRows(
+  sessionRows: CompletedSlideRow[],
+  historyRows: CompletedSlideRow[],
+) {
+  const rows = [...sessionRows, ...historyRows];
+  const seen = new Set<string>();
+  return rows
+    .filter((row) => {
+      if (seen.has(row.slideId)) {
+        return false;
+      }
+      seen.add(row.slideId);
+      return true;
+    })
+    .map((row, index) => ({ ...row, index: index + 1 }));
+}
+
 function upsertCompletedRow(row: CompletedSlideRow) {
   completedRows.value = [
     row,
@@ -382,6 +439,45 @@ async function loadPendingData() {
   }
 }
 
+async function loadCompletedData() {
+  completedLoading.value = true;
+  try {
+    const result = await listPendingTechnicalTasks({
+      ...buildCreatedDateRangeParams(filters.dateRange),
+      keyword: filters.keyword.trim() || undefined,
+      page: filters.completedPage,
+      size: filters.completedSize,
+      taskStatus: 'COMPLETED',
+      taskType: 'STAINING',
+    });
+
+    const completedItems = result.items.filter(
+      (task) => task.taskStatus === 'COMPLETED',
+    );
+    completedHistoryRows.value = completedItems.map((task, index) =>
+      buildCompletedRowFromTask(
+        task,
+        (result.page - 1) * result.size + index + 1,
+      ),
+    );
+    completedTotal.value =
+      completedItems.length === result.items.length
+        ? result.total
+        : completedItems.length;
+    selectedCompletedRows.value = [];
+  } catch (error) {
+    pageError.value = getWorkflowPageErrorMessage(error);
+    reportInlineErrorDisabled(error, getWorkflowPageErrorMessage);
+  } finally {
+    completedLoading.value = false;
+  }
+}
+
+async function loadWorkbenchData() {
+  await loadPendingData();
+  await loadCompletedData();
+}
+
 function handlePendingSelectionChange(rows: StainingTaskRow[]) {
   selectedPendingRows.value = rows;
 }
@@ -391,7 +487,7 @@ function handleCompletedSelectionChange(rows: CompletedSlideRow[]) {
 }
 
 function handleRefresh() {
-  void loadPendingData();
+  void loadWorkbenchData();
 }
 
 function handleQuery() {
@@ -399,7 +495,7 @@ function handleQuery() {
   completedRows.value = [];
   selectedCompletedRows.value = [];
   filters.completedPage = 1;
-  void loadPendingData();
+  void loadWorkbenchData();
 }
 
 function toggleOverdueOnly() {
@@ -520,7 +616,7 @@ async function openPrimaryAction() {
       );
     }
   } finally {
-    await loadPendingData();
+    await loadWorkbenchData();
     if (batchErrorMessage) {
       pageError.value = batchErrorMessage;
     }
@@ -536,6 +632,7 @@ function handleCompletedPageChange() {
   if (filters.completedPage > completedPageCount.value) {
     filters.completedPage = completedPageCount.value;
   }
+  void loadCompletedData();
 }
 
 function handleGlobalKeydown(event: KeyboardEvent) {
@@ -548,7 +645,7 @@ function handleGlobalKeydown(event: KeyboardEvent) {
 
 onMounted(() => {
   window.addEventListener('keydown', handleGlobalKeydown);
-  void loadPendingData();
+  void loadWorkbenchData();
 });
 
 onBeforeUnmount(() => {
@@ -786,11 +883,11 @@ onBeforeUnmount(() => {
             <div>
               <h3 class="legacy-panel__title">已完成出片</h3>
               <p class="legacy-panel__subtitle">
-                展示本次页面连续完成的出片记录，切换待办不会清空。
+                按当前查询条件展示已完成出片历史，并保留本次页面连续完成记录。
               </p>
             </div>
             <div class="legacy-panel__meta legacy-panel__meta--right">
-              <span>本次完成 {{ completedRows.length }}</span>
+              <span>已完成 {{ completedDisplayTotal }}</span>
               <span>已选中（{{ selectedCompletedCount }}）</span>
             </div>
           </header>
@@ -880,14 +977,14 @@ onBeforeUnmount(() => {
               </ElTableColumn>
             </ElTable>
           </div>
-          <ElEmpty v-else description="本次暂无已完成出片记录" />
+          <ElEmpty v-else description="暂无已完成出片记录" />
 
           <div class="legacy-panel__footer">
             <ElPagination
               v-model:current-page="filters.completedPage"
               v-model:page-size="filters.completedSize"
               :page-sizes="[10, 20, 50, 100]"
-              :total="completedRows.length"
+              :total="completedDisplayTotal"
               background
               layout="total, sizes, prev, pager, next"
               @change="handleCompletedPageChange"

@@ -487,7 +487,7 @@ describe('StainingWorkstationView', () => {
     ).toBeTruthy();
     expect(document.body.textContent).toContain('待出片列表');
     expect(document.body.textContent).toContain('已完成出片');
-    expect(document.body.textContent).toContain('本次暂无已完成出片记录');
+    expect(document.body.textContent).toContain('暂无已完成出片记录');
     expect(document.body.textContent).toContain('A1');
     expect(document.body.textContent).not.toContain('SLIDE-001');
     expect(document.body.textContent).not.toContain(
@@ -783,7 +783,7 @@ describe('StainingWorkstationView', () => {
     const { app, root } = mountView();
     await flushView();
 
-    expect(mockListPendingTechnicalTasks).toHaveBeenLastCalledWith({
+    expect(mockListPendingTechnicalTasks).toHaveBeenNthCalledWith(1, {
       keyword: 'BL-ROUTE',
       page: 1,
       size: 20,
@@ -801,13 +801,72 @@ describe('StainingWorkstationView', () => {
     findButton('查询').click();
     await flushView();
 
-    expect(mockListPendingTechnicalTasks).toHaveBeenLastCalledWith({
+    expect(mockListPendingTechnicalTasks).toHaveBeenNthCalledWith(3, {
       keyword: 'BL-QUERY',
       page: 1,
       size: 20,
       taskType: 'STAINING',
       timedOutOnly: true,
     });
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('loads completed staining history with the same keyword and date filters', async () => {
+    mockRoute.query = {
+      dateFrom: '2026-06-01',
+      dateTo: '2026-06-21',
+      pathologyNo: 'BL-HISTORY',
+    };
+    mockListPendingTechnicalTasks
+      .mockResolvedValueOnce({
+        items: [],
+        page: 1,
+        size: 20,
+        total: 0,
+      })
+      .mockResolvedValueOnce({
+        items: [
+          createTask({
+            assignedToName: '出片技师甲',
+            completedAt: '2026-06-20T10:20:00',
+            id: 'TASK-STAINED-1',
+            objectDisplayNo: 'A9',
+            objectId: 'SLIDE-STAINED-1',
+            patientName: '历史患者',
+            taskStatus: 'COMPLETED',
+          }),
+        ],
+        page: 1,
+        size: 10,
+        total: 1,
+      });
+
+    const { app, root } = mountView();
+    await flushView();
+
+    expect(mockListPendingTechnicalTasks).toHaveBeenNthCalledWith(1, {
+      createdFrom: '2026-06-01T00:00:00',
+      createdTo: '2026-06-22T00:00:00',
+      keyword: 'BL-HISTORY',
+      page: 1,
+      size: 20,
+      taskType: 'STAINING',
+      timedOutOnly: false,
+    });
+    expect(mockListPendingTechnicalTasks).toHaveBeenNthCalledWith(2, {
+      createdFrom: '2026-06-01T00:00:00',
+      createdTo: '2026-06-22T00:00:00',
+      keyword: 'BL-HISTORY',
+      page: 1,
+      size: 10,
+      taskStatus: 'COMPLETED',
+      taskType: 'STAINING',
+    });
+    expect(document.body.textContent).toContain('历史患者');
+    expect(document.body.textContent).toContain('出片技师甲');
+    expect(document.body.textContent).not.toContain('本次暂无已完成出片记录');
 
     app.unmount();
     root.remove();
