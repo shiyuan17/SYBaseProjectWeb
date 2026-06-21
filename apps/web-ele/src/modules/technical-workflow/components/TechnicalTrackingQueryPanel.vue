@@ -33,13 +33,12 @@ const dateRangeShortcuts = createDateRangePickerShortcuts();
 <template>
   <WorkflowSectionCard
     title="病例查询"
-    description="支持按病例ID、病理号或对象ID查询对象树追踪视图。"
+    description="支持按病例/病理/对象精确追踪，或先按工作日期筛选病例。"
   >
     <ElForm class="technical-tracking-query-form" inline label-width="132px">
       <ElFormItem
         class="technical-tracking-query-form__field"
-        label="病例/病理/对象"
-        required
+        label="病例/病理/对象（可选）"
       >
         <ElInput
           :model-value="caseId"
