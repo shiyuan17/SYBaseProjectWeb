@@ -489,6 +489,8 @@ export interface LifecycleNodeView {
   keyFacts: LifecycleKeyFact[];
   nodeCode?: null | string;
   occurredAt?: null | string;
+  operatorDevice?: null | string;
+  operatorIp?: null | string;
   operatorName?: null | string;
   stageCode?: null | string;
   status?: null | string;

@@ -408,6 +408,8 @@ describe('doctor-workflow-service mappers', () => {
             nodes: [
               {
                 keyFacts: [{ label: '节点', value: '值' }],
+                operatorDevice: 'Chrome Lifecycle Browser',
+                operatorIp: '10.9.0.1',
                 status: 'COMPLETED',
                 title: '申请创建',
               },
@@ -444,6 +446,8 @@ describe('doctor-workflow-service mappers', () => {
           nodes: [
             {
               keyFacts: [{ label: '节点', value: '值' }],
+              operatorDevice: 'Chrome Lifecycle Browser',
+              operatorIp: '10.9.0.1',
               title: '申请创建',
             },
           ],

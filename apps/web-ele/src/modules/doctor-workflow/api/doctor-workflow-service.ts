@@ -319,6 +319,8 @@ function mapLifecycleNodeResponse(
       : [],
     nodeCode: response.nodeCode ?? null,
     occurredAt: response.occurredAt ?? null,
+    operatorDevice: response.operatorDevice ?? null,
+    operatorIp: response.operatorIp ?? null,
     operatorName: response.operatorName ?? null,
     stageCode: response.stageCode ?? null,
     status: response.status ?? null,
