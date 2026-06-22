@@ -895,7 +895,7 @@ describe('doctor-workflow-service requests', () => {
         terminationReasonLabel: '蜡块已损坏无法使用',
       },
     );
-      expect(requestClientMock.post).toHaveBeenNthCalledWith(
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
       3,
       '/v1/medical-orders/ORDER-1/qc-evaluations',
       {

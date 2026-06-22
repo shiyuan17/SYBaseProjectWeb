@@ -29,6 +29,11 @@ import {
 } from 'element-plus';
 
 import { listSystemUsers } from '#/modules/system-management/api/system-management-service';
+import {
+  createDatePickerPanelDefaultValue,
+  createDateRangePickerShortcuts,
+  disableFutureDate,
+} from '#/modules/technical-workflow/utils/date-range';
 
 import CopyableIdentifier from '../../../components/CopyableIdentifier.vue';
 import {
@@ -49,11 +54,6 @@ import {
   formatNullable,
   formatReportStatus,
 } from '../utils/format';
-import {
-  createDatePickerPanelDefaultValue,
-  createDateRangePickerShortcuts,
-  disableFutureDate,
-} from '#/modules/technical-workflow/utils/date-range';
 
 type BatchAssignRole = 'primary' | 'reviewer';
 const DEFAULT_DATE_RANGE_LENGTH_DAYS = 1;
@@ -101,12 +101,12 @@ const assignmentDoctors = ref<AssignmentDoctor[]>([]);
 const selectedDoctorId = ref('');
 const selectedTasks = ref<PendingDiagnosticTaskItem[]>([]);
 const selectedTaskId = ref('');
-const taskTableRef = ref<{
+const taskTableRef = ref<null | {
   toggleRowSelection: (
     row: PendingDiagnosticTaskItem,
     selected?: boolean,
   ) => void;
-} | null>(null);
+}>(null);
 const total = ref(0);
 
 const filters = reactive({
@@ -329,7 +329,7 @@ function handleTaskSelectionChange(rows: PendingDiagnosticTaskItem[]) {
 async function toggleTaskRowSelection(row: PendingDiagnosticTaskItem) {
   const selected = selectedTasks.value.some((item) => item.id === row.id);
   taskTableRef.value?.toggleRowSelection(row, !selected);
-  selectedTaskId.value = selected ? selectedTasks.value[0]?.id ?? '' : row.id;
+  selectedTaskId.value = selected ? (selectedTasks.value[0]?.id ?? '') : row.id;
   await nextTick();
 }
 
@@ -727,15 +727,17 @@ void loadPendingData();
 
 :deep(.assignment-doctor-row--selected td),
 :deep(.diagnosis-task-row--selected td) {
-  box-shadow: inset 0 1px 0 rgba(64, 158, 255, 0.14),
-    inset 0 -1px 0 rgba(64, 158, 255, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgb(64 158 255 / 14%),
+    inset 0 -1px 0 rgb(64 158 255 / 14%);
 }
 
 :deep(.assignment-doctor-row--selected td:first-child),
 :deep(.diagnosis-task-row--selected td:first-child) {
-  box-shadow: inset 3px 0 0 var(--el-color-primary),
-    inset 0 1px 0 rgba(64, 158, 255, 0.14),
-    inset 0 -1px 0 rgba(64, 158, 255, 0.14);
+  box-shadow:
+    inset 3px 0 0 var(--el-color-primary),
+    inset 0 1px 0 rgb(64 158 255 / 14%),
+    inset 0 -1px 0 rgb(64 158 255 / 14%);
 }
 
 :deep(.assignment-doctor-row--selected .font-medium),

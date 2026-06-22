@@ -1783,7 +1783,9 @@ describe('DiagnosisWorkbenchView', () => {
         (button) => button.textContent?.includes('【免疫组化套餐2项】'),
       ) as HTMLElement;
       expect(packageButton).toBeTruthy();
-      packageButton.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+      packageButton.dispatchEvent(
+        new MouseEvent('dblclick', { bubbles: true }),
+      );
       await flushAsyncWork();
 
       findButton('提交医嘱').click();

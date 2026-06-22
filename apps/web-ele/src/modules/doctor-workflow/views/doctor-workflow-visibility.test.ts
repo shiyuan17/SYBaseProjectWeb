@@ -221,8 +221,7 @@ vi.mock('#/modules/system-management/components/SystemUserSelect.vue', () => ({
 }));
 
 vi.mock('element-plus', async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import('element-plus')>();
+  const actual = await importOriginal<typeof import('element-plus')>();
 
   const ElDatePicker = defineComponent({
     inheritAttrs: false,
@@ -1032,7 +1031,8 @@ describe('doctor workflow view visibility', () => {
       page: 1,
     });
 
-    const previousRange = listAssignableDiagnosticTasksMock.mock.calls[0]?.[0] as {
+    const previousRange = listAssignableDiagnosticTasksMock.mock
+      .calls[0]?.[0] as {
       dateFrom: string;
       dateTo: string;
       page: number;
@@ -1051,7 +1051,9 @@ describe('doctor workflow view visibility', () => {
       dateTo: expect.any(String),
       page: 1,
     });
-    expect(listAssignableDiagnosticTasksMock.mock.calls[0]?.[0]).not.toMatchObject({
+    expect(
+      listAssignableDiagnosticTasksMock.mock.calls[0]?.[0],
+    ).not.toMatchObject({
       dateFrom: previousRange.dateFrom,
       dateTo: previousRange.dateTo,
     });

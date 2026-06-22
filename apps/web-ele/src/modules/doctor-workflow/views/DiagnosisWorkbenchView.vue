@@ -706,11 +706,14 @@ watch(
       return;
     }
 
-    filters.pathologyNo = hasExplicitRouteSelection ? routePathologyNo.value : '';
+    filters.pathologyNo = hasExplicitRouteSelection
+      ? routePathologyNo.value
+      : '';
     selectedCaseId.value = hasExplicitRouteSelection ? routeCaseId.value : '';
     selectedTaskId.value = hasExplicitRouteSelection ? routeTaskId.value : '';
     void loadQueue({
-      forceDetailReload: hasExplicitRouteSelection && Boolean(routeCaseId.value),
+      forceDetailReload:
+        hasExplicitRouteSelection && Boolean(routeCaseId.value),
       preserveRouteSelection: hasExplicitRouteSelection,
     });
   },
