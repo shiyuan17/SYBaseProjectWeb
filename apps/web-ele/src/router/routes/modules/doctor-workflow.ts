@@ -78,6 +78,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         ),
         meta: {
           authority: [M4_PERMISSION_CODES.WORKBENCH_QUERY],
+          fullPathKey: false,
           icon: 'carbon:workspace',
           title: '诊断平台工作站',
         },

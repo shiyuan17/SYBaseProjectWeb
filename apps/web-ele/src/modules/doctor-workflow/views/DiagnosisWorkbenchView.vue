@@ -110,6 +110,9 @@ const routePathologyNo = computed(() =>
   firstQueryParam(route.query.pathologyNo),
 );
 const routeTaskId = computed(() => firstQueryParam(route.query.taskId));
+const hasExplicitRouteSelection = computed(() =>
+  Boolean(routeCaseId.value || routePathologyNo.value || routeTaskId.value),
+);
 const routeQueryKey = computed(
   () => `${routeCaseId.value}|${routePathologyNo.value}|${routeTaskId.value}`,
 );
@@ -255,11 +258,10 @@ function revokeDiagnosisCaptureObjectUrls() {
 function syncRouteToSelection(task: PendingDiagnosticTaskItem) {
   const query = {
     caseId: task.caseId,
-    pathologyNo: task.pathologyNo ?? undefined,
     taskId: task.id,
   };
 
-  selfRouteQueryKey.value = `${query.caseId}|${query.pathologyNo ?? ''}|${query.taskId}`;
+  selfRouteQueryKey.value = `${query.caseId}||${query.taskId}`;
   void router.replace({
     path: '/doctor-workflow/workbench',
     query,
@@ -267,10 +269,9 @@ function syncRouteToSelection(task: PendingDiagnosticTaskItem) {
 }
 
 function createDefaultAssignedRange() {
-  const end = new Date();
-  const start = new Date(end);
-  start.setMonth(start.getMonth() - 2);
-  return [formatDateForPicker(start), formatDateForPicker(end)];
+  const today = new Date();
+  const formattedToday = formatDateForPicker(today);
+  return [formattedToday, formattedToday];
 }
 
 function formatDateForPicker(value: Date) {
@@ -357,6 +358,7 @@ async function loadQueue(
     if (nextSelection) {
       await selectQueueTask(nextSelection, {
         forceDetailReload: options.forceDetailReload,
+        syncRoute: options.preserveRouteSelection,
       });
       return;
     }
@@ -483,7 +485,7 @@ function getReportActionBlockReason(
     case 'submit': {
       return reportStatus === 'DRAFT'
         ? null
-        : '当前报告不是可编辑草稿，不能执行暂存或初步';
+        : '当前报告不是可编辑草稿，不能执行保存或初步';
     }
     case 'sign': {
       return reportStatus === 'REVIEWED'
@@ -515,7 +517,7 @@ async function runReportAction(action: 'review' | 'save' | 'sign' | 'submit') {
       }
       case 'save': {
         await savePathologyReportDraft(reportId, buildDraftPayload());
-        ElMessage.success('报告草稿已暂存');
+        ElMessage.success('报告草稿已保存');
         break;
       }
       case 'sign': {
@@ -690,10 +692,11 @@ function handleResizeKeydown(
 
 watch(
   () => ({
+    hasExplicitRouteSelection: hasExplicitRouteSelection.value,
     isActive: isCurrentWorkbenchRoute.value,
     queryKey: routeQueryKey.value,
   }),
-  ({ isActive, queryKey }) => {
+  ({ hasExplicitRouteSelection, isActive, queryKey }) => {
     if (!isActive) {
       return;
     }
@@ -703,12 +706,12 @@ watch(
       return;
     }
 
-    filters.pathologyNo = routePathologyNo.value;
-    selectedCaseId.value = routeCaseId.value;
-    selectedTaskId.value = routeTaskId.value;
+    filters.pathologyNo = hasExplicitRouteSelection ? routePathologyNo.value : '';
+    selectedCaseId.value = hasExplicitRouteSelection ? routeCaseId.value : '';
+    selectedTaskId.value = hasExplicitRouteSelection ? routeTaskId.value : '';
     void loadQueue({
-      forceDetailReload: Boolean(routeCaseId.value),
-      preserveRouteSelection: true,
+      forceDetailReload: hasExplicitRouteSelection && Boolean(routeCaseId.value),
+      preserveRouteSelection: hasExplicitRouteSelection,
     });
   },
   { immediate: true },
@@ -753,7 +756,7 @@ onBeforeUnmount(() => {
               data-testid="workbench-report-save"
               @click="runReportAction('save')"
             >
-              暂存
+              保存
             </ElButton>
             <ElButton
               :disabled="reportOperating || !canSubmitReport"

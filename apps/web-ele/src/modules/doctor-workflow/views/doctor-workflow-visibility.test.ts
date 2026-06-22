@@ -220,6 +220,56 @@ vi.mock('#/modules/system-management/components/SystemUserSelect.vue', () => ({
   }),
 }));
 
+vi.mock('element-plus', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('element-plus')>();
+
+  const ElDatePicker = defineComponent({
+    inheritAttrs: false,
+    props: [
+      'defaultValue',
+      'disabledDate',
+      'endPlaceholder',
+      'modelValue',
+      'shortcuts',
+      'startPlaceholder',
+      'type',
+      'unlinkPanels',
+    ],
+    emits: ['update:modelValue'],
+    setup(props, { attrs, emit }) {
+      return () =>
+        h('input', {
+          ...attrs,
+          placeholder:
+            props.type === 'daterange'
+              ? `${String(props.startPlaceholder ?? '')} ~ ${String(props.endPlaceholder ?? '')}`
+              : '',
+          value: Array.isArray(props.modelValue)
+            ? props.modelValue.join(',')
+            : props.modelValue,
+          onInput: (event: Event) => {
+            const value = (event.target as HTMLInputElement).value;
+            emit(
+              'update:modelValue',
+              value
+                ? value
+                    .split(',')
+                    .map((item) => item.trim())
+                    .filter(Boolean)
+                : [],
+            );
+          },
+        });
+    },
+  });
+
+  return {
+    ...actual,
+    ElDatePicker,
+  };
+});
+
 import ConsultationWorkstationView from './ConsultationWorkstationView.vue';
 import DiagnosisAssignmentView from './DiagnosisAssignmentView.vue';
 import DiagnosisWorkbenchView from './DiagnosisWorkbenchView.vue';
@@ -875,6 +925,8 @@ describe('doctor workflow view visibility', () => {
     mockAccessStore.accessCodes = [M4_PERMISSION_CODES.DIAG_TASK_QUERY];
     const readOnlyWrapper = await mountView(DiagnosisAssignmentView);
     expect(listAssignableDiagnosticTasksMock).toHaveBeenCalledWith({
+      dateFrom: undefined,
+      dateTo: undefined,
       page: 1,
       pathologyNo: undefined,
       size: 20,
@@ -893,6 +945,8 @@ describe('doctor workflow view visibility', () => {
     ];
     const assignableWrapper = await mountView(DiagnosisAssignmentView);
     expect(listAssignableDiagnosticTasksMock).toHaveBeenCalledWith({
+      dateFrom: undefined,
+      dateTo: undefined,
       page: 1,
       pathologyNo: undefined,
       size: 20,
@@ -915,6 +969,92 @@ describe('doctor workflow view visibility', () => {
     for (const item of filterSelects) {
       expect(item.classList.contains('flex-none')).toBe(true);
     }
+
+    wrapper.unmount();
+  });
+
+  it('queries assignment tasks with created date range filters', async () => {
+    const wrapper = await mountView(DiagnosisAssignmentView);
+
+    listAssignableDiagnosticTasksMock.mockClear();
+    wrapper.setInputValue('开始日期 ~ 结束日期', '2026-06-20,2026-06-21');
+    wrapper.clickButton('查询');
+    await flushAsyncWork();
+
+    expect(listAssignableDiagnosticTasksMock).toHaveBeenCalledWith({
+      dateFrom: '2026-06-20',
+      dateTo: '2026-06-21',
+      page: 1,
+      pathologyNo: undefined,
+      size: 20,
+      taskStatus: undefined,
+      taskType: undefined,
+    });
+
+    wrapper.unmount();
+  });
+
+  it('resets assignment created date filters back to empty query params', async () => {
+    const wrapper = await mountView(DiagnosisAssignmentView);
+
+    wrapper.setInputValue('开始日期 ~ 结束日期', '2026-06-20,2026-06-21');
+    wrapper.clickButton('查询');
+    await flushAsyncWork();
+
+    listAssignableDiagnosticTasksMock.mockClear();
+    wrapper.clickButton('重置');
+    await flushAsyncWork();
+
+    expect(listAssignableDiagnosticTasksMock).toHaveBeenCalledWith({
+      dateFrom: undefined,
+      dateTo: undefined,
+      page: 1,
+      pathologyNo: undefined,
+      size: 20,
+      taskStatus: undefined,
+      taskType: undefined,
+    });
+
+    wrapper.unmount();
+  });
+
+  it('shifts assignment created date range by previous and next day', async () => {
+    const wrapper = await mountView(DiagnosisAssignmentView);
+
+    listAssignableDiagnosticTasksMock.mockClear();
+    wrapper.clickButton('前1天');
+    await flushAsyncWork();
+
+    expect(listAssignableDiagnosticTasksMock).toHaveBeenCalledTimes(1);
+    expect(listAssignableDiagnosticTasksMock.mock.calls[0]?.[0]).toMatchObject({
+      dateFrom: expect.any(String),
+      dateTo: expect.any(String),
+      page: 1,
+    });
+
+    const previousRange = listAssignableDiagnosticTasksMock.mock.calls[0]?.[0] as {
+      dateFrom: string;
+      dateTo: string;
+      page: number;
+      pathologyNo?: string;
+      size: number;
+      taskStatus?: string;
+      taskType?: string;
+    };
+    listAssignableDiagnosticTasksMock.mockClear();
+
+    wrapper.clickButton('后1天');
+    await flushAsyncWork();
+
+    expect(listAssignableDiagnosticTasksMock.mock.calls[0]?.[0]).toMatchObject({
+      dateFrom: expect.any(String),
+      dateTo: expect.any(String),
+      page: 1,
+    });
+    expect(listAssignableDiagnosticTasksMock.mock.calls[0]?.[0]).not.toMatchObject({
+      dateFrom: previousRange.dateFrom,
+      dateTo: previousRange.dateTo,
+    });
 
     wrapper.unmount();
   });
@@ -1011,7 +1151,6 @@ describe('doctor workflow view visibility', () => {
 
     const wrapper = await mountView(DiagnosisAssignmentView);
     wrapper.clickButton('选择');
-    wrapper.clickCheckbox(1);
     await flushAsyncWork();
     wrapper.clickButton('初步分片');
     await flushAsyncWork();
@@ -1019,13 +1158,17 @@ describe('doctor workflow view visibility', () => {
     expect(assignDiagnosticTaskMock).toHaveBeenCalledWith(
       'TASK-001',
       expect.objectContaining({
-        diagnosisDoctorName: '责任医生甲',
-        diagnosisDoctorUserId: 'DOC-DIAG',
+        diagnosisDoctorName: '初诊医生乙',
+        diagnosisDoctorUserId: 'DOC-PRIMARY',
         primaryDoctorName: '初诊医生乙',
         primaryDoctorUserId: 'DOC-PRIMARY',
-        reviewerName: '审核医生丙',
-        reviewerUserId: 'DOC-REVIEW',
       }),
+    );
+    expect(assignDiagnosticTaskMock.mock.calls[0]?.[1]).not.toHaveProperty(
+      'reviewerName',
+    );
+    expect(assignDiagnosticTaskMock.mock.calls[0]?.[1]).not.toHaveProperty(
+      'reviewerUserId',
     );
     expect(assignDiagnosticTaskMock.mock.calls[0]?.[1]).not.toHaveProperty(
       'operatorName',
@@ -1035,6 +1178,79 @@ describe('doctor workflow view visibility', () => {
     );
     expect(listAssignableDiagnosticTasksMock).toHaveBeenCalledTimes(2);
     expect(wrapper.isButtonDisabled('初步分片')).toBe(true);
+    wrapper.unmount();
+  });
+
+  it('toggles task selection when clicking a diagnosis assignment row', async () => {
+    listAssignableDiagnosticTasksMock.mockResolvedValue({
+      items: [
+        {
+          caseId: 'CASE-001',
+          id: 'TASK-001',
+          pathologyNo: 'BD202606060001',
+          patientName: '林晓芸',
+          taskStatus: 'PENDING',
+          taskType: 'PRIMARY',
+        },
+      ],
+      page: 1,
+      size: 20,
+      total: 1,
+    });
+    mockAccessStore.accessCodes = [M4_PERMISSION_CODES.ASSIGN];
+
+    const wrapper = await mountView(DiagnosisAssignmentView);
+
+    expect(wrapper.text()).toContain('已选任务: 1');
+
+    wrapper.clickTableRow('BD202606060001');
+    await flushAsyncWork();
+    expect(wrapper.text()).toContain('已选任务: 0');
+
+    wrapper.clickTableRow('BD202606060001');
+    await flushAsyncWork();
+    expect(wrapper.text()).toContain('已选任务: 1');
+
+    wrapper.unmount();
+  });
+
+  it('defaults to selecting the first doctor and first diagnosis task row', async () => {
+    listAssignableDiagnosticTasksMock.mockResolvedValue({
+      items: [
+        {
+          caseId: 'CASE-001',
+          id: 'TASK-001',
+          pathologyNo: 'BD202606060001',
+          patientName: '林晓芸',
+          taskStatus: 'PENDING',
+          taskType: 'PRIMARY',
+        },
+        {
+          caseId: 'CASE-002',
+          id: 'TASK-002',
+          pathologyNo: 'BD202606060002',
+          patientName: '周雨桐',
+          taskStatus: 'PENDING',
+          taskType: 'PRIMARY',
+        },
+      ],
+      page: 1,
+      size: 20,
+      total: 2,
+    });
+    mockAccessStore.accessCodes = [M4_PERMISSION_CODES.ASSIGN];
+
+    const wrapper = await mountView(DiagnosisAssignmentView);
+
+    expect(wrapper.text()).toContain('当前用户: 初诊医生乙');
+    expect(wrapper.text()).toContain('已选任务: 1');
+    expect(
+      wrapper.root.querySelector('.assignment-doctor-row--selected'),
+    ).toBeTruthy();
+    expect(
+      wrapper.root.querySelector('.diagnosis-task-row--selected'),
+    ).toBeTruthy();
+
     wrapper.unmount();
   });
 
@@ -1062,7 +1278,6 @@ describe('doctor workflow view visibility', () => {
 
     const wrapper = await mountView(DiagnosisAssignmentView);
     wrapper.clickButton('选择', 1);
-    wrapper.clickCheckbox(1);
     await flushAsyncWork();
     wrapper.clickButton('签发分片');
     await flushAsyncWork();
@@ -1070,13 +1285,21 @@ describe('doctor workflow view visibility', () => {
     expect(assignDiagnosticTaskMock).toHaveBeenCalledWith(
       'TASK-001',
       expect.objectContaining({
-        diagnosisDoctorName: '责任医生甲',
-        diagnosisDoctorUserId: 'DOC-DIAG',
-        primaryDoctorName: '初诊医生乙',
-        primaryDoctorUserId: 'DOC-PRIMARY',
         reviewerName: '审核医生丙',
         reviewerUserId: 'DOC-REVIEW',
       }),
+    );
+    expect(assignDiagnosticTaskMock.mock.calls[0]?.[1]).not.toHaveProperty(
+      'diagnosisDoctorName',
+    );
+    expect(assignDiagnosticTaskMock.mock.calls[0]?.[1]).not.toHaveProperty(
+      'diagnosisDoctorUserId',
+    );
+    expect(assignDiagnosticTaskMock.mock.calls[0]?.[1]).not.toHaveProperty(
+      'primaryDoctorName',
+    );
+    expect(assignDiagnosticTaskMock.mock.calls[0]?.[1]).not.toHaveProperty(
+      'primaryDoctorUserId',
     );
     expect(assignDiagnosticTaskMock.mock.calls[0]?.[1]).not.toHaveProperty(
       'operatorName',
@@ -1087,7 +1310,7 @@ describe('doctor workflow view visibility', () => {
     wrapper.unmount();
   });
 
-  it('fills required assign fields from selected doctor when task has no doctors', async () => {
+  it('keeps reviewer fields absent when primary assignment task has no doctors', async () => {
     listAssignableDiagnosticTasksMock.mockResolvedValue({
       items: [
         {
@@ -1105,7 +1328,6 @@ describe('doctor workflow view visibility', () => {
 
     const wrapper = await mountView(DiagnosisAssignmentView);
     wrapper.clickButton('选择');
-    wrapper.clickCheckbox(1);
     await flushAsyncWork();
     wrapper.clickButton('初步分片');
     await flushAsyncWork();
@@ -1117,9 +1339,13 @@ describe('doctor workflow view visibility', () => {
         diagnosisDoctorUserId: 'DOC-PRIMARY',
         primaryDoctorName: '初诊医生乙',
         primaryDoctorUserId: 'DOC-PRIMARY',
-        reviewerName: '初诊医生乙',
-        reviewerUserId: 'DOC-PRIMARY',
       }),
+    );
+    expect(assignDiagnosticTaskMock.mock.calls[0]?.[1]).not.toHaveProperty(
+      'reviewerName',
+    );
+    expect(assignDiagnosticTaskMock.mock.calls[0]?.[1]).not.toHaveProperty(
+      'reviewerUserId',
     );
     expect(listAssignableDiagnosticTasksMock).toHaveBeenCalledTimes(2);
     wrapper.unmount();

@@ -8,6 +8,7 @@ import type {
   CompleteConsultationRequest,
   ConsultationOperationResult,
   CreateConsultationRequest,
+  CreateMedicalOrderQcEvaluationRequest,
   CreateMedicalOrderRequest,
   CreateReportRevisionRequest,
   DiagnosticTaskActionRequest,
@@ -31,6 +32,8 @@ import type {
   MedicalOrderPackagePageQuery,
   MedicalOrderPackageView,
   MedicalOrderPagedResult,
+  MedicalOrderQcEvaluationSummary,
+  MedicalOrderSlidePrintResult,
   PathologyReportActionRequest,
   PathologyReportDraft,
   PathologyReportOperationResult,
@@ -43,6 +46,7 @@ import type {
   ReportTrackingView,
   ReviewReportRevisionRequest,
   SavePathologyReportDraftRequest,
+  TerminateMedicalOrderRequest,
 } from '../types/doctor-workflow';
 
 import { requestClient } from '#/api/request';
@@ -653,6 +657,52 @@ export async function cancelMedicalOrder(
   return requestClient.post<MedicalOrderOperationResult>(
     `/v1/medical-orders/${orderId}/cancel`,
     data,
+  );
+}
+
+export async function printMedicalOrderSlide(
+  orderId: string,
+  data: MedicalOrderActionRequest,
+) {
+  return requestClient.post<MedicalOrderSlidePrintResult>(
+    `/v1/medical-orders/${orderId}/print-slide`,
+    data,
+  );
+}
+
+export async function terminateMedicalOrder(
+  orderId: string,
+  data: TerminateMedicalOrderRequest,
+) {
+  return requestClient.post<MedicalOrderOperationResult>(
+    `/v1/medical-orders/${orderId}/terminate`,
+    data,
+  );
+}
+
+export async function createMedicalOrderQcEvaluation(
+  orderId: string,
+  data: CreateMedicalOrderQcEvaluationRequest,
+) {
+  return requestClient.post<MedicalOrderQcEvaluationSummary>(
+    `/v1/medical-orders/${orderId}/qc-evaluations`,
+    {
+      caseId: data.caseId,
+      detailPayload: data.detailItems,
+      evaluationReason: data.evaluationReason,
+      grade: data.grade,
+      processingAction: data.processingAction,
+      qcAspect: data.qcAspect,
+      remarks: data.remarks,
+      terminalCode: data.terminalCode,
+      totalScore: data.totalScore,
+    },
+  );
+}
+
+export async function getLatestMedicalOrderQcEvaluation(orderId: string) {
+  return requestClient.get<MedicalOrderQcEvaluationSummary>(
+    `/v1/medical-orders/${orderId}/qc-evaluations/latest`,
   );
 }
 

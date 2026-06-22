@@ -54,6 +54,7 @@ describe('doctor workflow routes', () => {
     expect(assignmentRoute?.meta?.keepAlive).toBe(true);
     expect(workbenchRoute?.path).toBe('/doctor-workflow/workbench');
     expect(workbenchRoute?.meta?.keepAlive).toBe(true);
+    expect(workbenchRoute?.meta?.fullPathKey).toBe(false);
     expect(reportRoute?.path).toBe('/doctor-workflow/report');
     expect(reportRoute?.meta?.keepAlive).toBe(true);
     expect(reportRoute?.meta?.fullPathKey).toBe(false);

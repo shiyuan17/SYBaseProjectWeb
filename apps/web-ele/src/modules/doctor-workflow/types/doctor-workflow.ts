@@ -11,19 +11,19 @@ export interface PathologyReportActionRequest {
 }
 
 export interface AssignDiagnosticTaskRequest {
-  diagnosisDoctorName: string;
-  diagnosisDoctorUserId: string;
-  primaryDoctorName: string;
-  primaryDoctorUserId: string;
+  diagnosisDoctorName?: string;
+  diagnosisDoctorUserId?: string;
+  primaryDoctorName?: string;
+  primaryDoctorUserId?: string;
   remarks?: string;
-  reviewerName: string;
-  reviewerUserId: string;
+  reviewerName?: string;
+  reviewerUserId?: string;
   terminalCode?: string;
 }
 
 export interface PendingDiagnosticTaskQuery {
-  assignedFrom?: string;
-  assignedTo?: string;
+  dateFrom?: string;
+  dateTo?: string;
   page: number;
   pathologyNo?: string;
   size: number;
@@ -232,6 +232,12 @@ export interface MedicalOrderSummary {
   acceptedAt?: null | string;
   applicationNo?: null | string;
   billingStatus?: null | string;
+  blockNo?: null | string;
+  canConfirm?: boolean;
+  canPrint?: boolean;
+  canQc?: boolean;
+  canRelease?: boolean;
+  canTerminate?: boolean;
   cancelledAt?: null | string;
   caseId?: null | string;
   completedAt?: null | string;
@@ -253,8 +259,23 @@ export interface MedicalOrderSummary {
   patientId?: null | string;
   patientIdDisplay?: null | string;
   patientName?: null | string;
+  printedAt?: null | string;
+  printedByName?: null | string;
+  releasedAt?: null | string;
+  releasedByName?: null | string;
   remarks?: null | string;
   status?: null | string;
+  specimenNo?: null | string;
+  slideNo?: null | string;
+  targetBlockId?: null | string;
+  targetSlideId?: null | string;
+  targetSpecimenId?: null | string;
+  targetType?: null | string;
+  terminatedAt?: null | string;
+  terminatedByName?: null | string;
+  terminationReasonCode?: null | string;
+  terminationReasonLabel?: null | string;
+  terminationRemarks?: null | string;
 }
 
 export interface PendingMedicalOrderQuery {
@@ -625,10 +646,17 @@ export interface PathologyReportDraft extends PathologyReportActionRequest {
 
 export interface CreateMedicalOrderRequest {
   caseId: string;
+  blockNo?: string;
   orderContent: string;
   orderItemId?: string;
   orderType: string;
   remarks?: string;
+  slideNo?: string;
+  targetBlockId?: string;
+  targetSlideId?: string;
+  targetSpecimenId?: string;
+  targetType?: string;
+  specimenNo?: string;
   terminalCode?: string;
 }
 
@@ -642,6 +670,66 @@ export interface MedicalOrderOperationResult {
   orderId: string;
   orderNumber?: null | string;
   status?: null | string;
+}
+
+export interface MedicalOrderSlidePrintLabel {
+  blockNo?: null | string;
+  orderId: string;
+  pathologyNo?: null | string;
+  patientId?: null | string;
+  patientIdDisplay?: null | string;
+  patientName?: null | string;
+  slideNo?: null | string;
+  specimenNo?: null | string;
+  checkItem?: null | string;
+}
+
+export interface MedicalOrderSlidePrintResult {
+  orderId: string;
+  printedAt?: null | string;
+  printedByName?: null | string;
+  labels: MedicalOrderSlidePrintLabel[];
+}
+
+export interface TerminateMedicalOrderRequest extends MedicalOrderActionRequest {
+  terminationReasonCode: string;
+  terminationReasonLabel: string;
+}
+
+export interface MedicalOrderQcEvaluationScoreDetail {
+  checked?: boolean;
+  deductionGroup: string;
+  deductionSuggestion: string;
+  deductionValue: number;
+  itemName: string;
+}
+
+export interface CreateMedicalOrderQcEvaluationRequest {
+  caseId: string;
+  detailItems: MedicalOrderQcEvaluationScoreDetail[];
+  evaluationReason?: string;
+  grade: string;
+  processingAction: string;
+  qcAspect: 'GROSSING' | 'SLIDE';
+  remarks?: string;
+  reworkType?: null | string;
+  totalScore: number;
+  terminalCode?: string;
+}
+
+export interface MedicalOrderQcEvaluationSummary {
+  evaluatedAt?: null | string;
+  evaluationReason?: null | string;
+  evaluatorName?: null | string;
+  grade?: null | string;
+  orderId: string;
+  processingAction?: null | string;
+  qcAspect?: null | string;
+  qcEvaluationId: string;
+  remarks?: null | string;
+  reworkOrderId?: null | string;
+  reworkType?: null | string;
+  totalScore: number;
 }
 
 export interface MedicalOrderBillingRequest {

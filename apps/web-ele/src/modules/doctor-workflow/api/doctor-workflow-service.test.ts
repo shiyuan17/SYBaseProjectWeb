@@ -16,11 +16,13 @@ import {
   confirmMedicalOrderBilling,
   createConsultation,
   createMedicalOrder,
+  createMedicalOrderQcEvaluation,
   createPathologyReport,
   createReportRevisionRequest,
   executeMedicalOrderBilling,
   getCaseLifecycleTracking,
   getDiagnosticWorkbench,
+  getLatestMedicalOrderQcEvaluation,
   getReportTracking,
   issueFormalReportVersions,
   listAssignableDiagnosticTasks,
@@ -41,6 +43,7 @@ import {
   mapPendingMedicalOrderPageResponse,
   mapReportTrackingResponse,
   printFormalReportVersions,
+  printMedicalOrderSlide,
   publishPathologyReport,
   recallFormalReportVersions,
   rejectPathologyReport,
@@ -50,6 +53,7 @@ import {
   signPathologyReport,
   startDiagnosticTask,
   submitPathologyReport,
+  terminateMedicalOrder,
 } from './doctor-workflow-service';
 
 vi.mock('#/api/request', () => ({
@@ -626,6 +630,8 @@ describe('doctor-workflow-service requests', () => {
     });
 
     await listAssignableDiagnosticTasks({
+      dateFrom: '2026-06-20',
+      dateTo: '2026-06-21',
       page: 1,
       pathologyNo: 'BL-001',
       size: 20,
@@ -637,6 +643,8 @@ describe('doctor-workflow-service requests', () => {
       '/v1/diagnostic-tasks/assignment',
       {
         params: {
+          dateFrom: '2026-06-20',
+          dateTo: '2026-06-21',
           page: 1,
           pathologyNo: 'BL-001',
           size: 20,
@@ -791,6 +799,125 @@ describe('doctor-workflow-service requests', () => {
       4,
       '/v1/medical-orders/ORDER-1/cancel',
       { remarks: '诊断医生取消' },
+    );
+  });
+
+  it('posts routine medical order execution endpoints with exact paths', async () => {
+    requestClientMock.post.mockResolvedValueOnce({
+      labels: [
+        {
+          orderId: 'ORDER-1',
+          pathologyNo: 'BL-001',
+          patientName: '患者甲',
+          slideNo: 'SLIDE-001',
+        },
+      ],
+      orderId: 'ORDER-1',
+      printedAt: '2026-06-22T10:00:00',
+      printedByName: '技师甲',
+    });
+    requestClientMock.post.mockResolvedValueOnce({
+      orderId: 'ORDER-1',
+      status: 'TERMINATED',
+    });
+    requestClientMock.post.mockResolvedValueOnce({
+      evaluatedAt: '2026-06-22T10:30:00',
+      grade: '甲',
+      orderId: 'ORDER-1',
+      processingAction: 'FAST_TRACK',
+      qcAspect: 'SLIDE',
+      qcEvaluationId: 'QC-1',
+      totalScore: 98,
+    });
+    requestClientMock.get.mockResolvedValueOnce({
+      evaluatedAt: '2026-06-22T10:30:00',
+      grade: '甲',
+      orderId: 'ORDER-1',
+      processingAction: 'FAST_TRACK',
+      qcAspect: 'SLIDE',
+      qcEvaluationId: 'QC-1',
+      totalScore: 98,
+    });
+
+    await expect(
+      printMedicalOrderSlide('ORDER-1', {
+        terminalCode: 'TERM-PRINT',
+      }),
+    ).resolves.toMatchObject({
+      labels: [{ slideNo: 'SLIDE-001' }],
+      orderId: 'ORDER-1',
+      printedByName: '技师甲',
+    });
+    await terminateMedicalOrder('ORDER-1', {
+      remarks: '蜡块损坏',
+      terminationReasonCode: 'BLOCK_DAMAGED',
+      terminationReasonLabel: '蜡块已损坏无法使用',
+    });
+    await createMedicalOrderQcEvaluation('ORDER-1', {
+      caseId: 'CASE-1',
+      detailItems: [
+        {
+          deductionGroup: '切片评价',
+          deductionSuggestion: '重切',
+          deductionValue: 2,
+          itemName: '皱褶',
+        },
+      ],
+      evaluationReason: '皱褶',
+      grade: '甲',
+      processingAction: 'FAST_TRACK',
+      qcAspect: 'SLIDE',
+      remarks: '优先处理',
+      reworkType: 'RESLICE',
+      totalScore: 98,
+    });
+    await expect(
+      getLatestMedicalOrderQcEvaluation('ORDER-1'),
+    ).resolves.toMatchObject({
+      grade: '甲',
+      qcEvaluationId: 'QC-1',
+      totalScore: 98,
+    });
+
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      1,
+      '/v1/medical-orders/ORDER-1/print-slide',
+      {
+        terminalCode: 'TERM-PRINT',
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      2,
+      '/v1/medical-orders/ORDER-1/terminate',
+      {
+        remarks: '蜡块损坏',
+        terminationReasonCode: 'BLOCK_DAMAGED',
+        terminationReasonLabel: '蜡块已损坏无法使用',
+      },
+    );
+      expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      3,
+      '/v1/medical-orders/ORDER-1/qc-evaluations',
+      {
+        caseId: 'CASE-1',
+        detailPayload: [
+          {
+            deductionGroup: '切片评价',
+            deductionSuggestion: '重切',
+            deductionValue: 2,
+            itemName: '皱褶',
+          },
+        ],
+        evaluationReason: '皱褶',
+        grade: '甲',
+        processingAction: 'FAST_TRACK',
+        qcAspect: 'SLIDE',
+        remarks: '优先处理',
+        totalScore: 98,
+      },
+    );
+    expect(requestClientMock.get).toHaveBeenCalledWith(
+      '/v1/medical-orders/ORDER-1/qc-evaluations/latest',
     );
   });
 

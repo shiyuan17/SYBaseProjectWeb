@@ -893,10 +893,12 @@ describe('DiagnosisWorkbenchView', () => {
 
   it('selects the first queue item and loads its workbench when route query is empty', async () => {
     const wrapper = await mountView();
+    const today = new Date();
+    const expectedToday = `${today.getFullYear()}-${`${today.getMonth() + 1}`.padStart(2, '0')}-${`${today.getDate()}`.padStart(2, '0')}`;
 
     expect(listPendingDiagnosticTasksMock).toHaveBeenCalledWith({
-      assignedFrom: expect.any(String),
-      assignedTo: expect.any(String),
+      assignedFrom: expectedToday,
+      assignedTo: expectedToday,
       page: 1,
       pathologyNo: undefined,
       size: 20,
@@ -904,7 +906,7 @@ describe('DiagnosisWorkbenchView', () => {
       taskType: undefined,
     });
     expect(getDiagnosticWorkbenchMock).toHaveBeenCalledWith('CASE-001');
-    expect(mockRouter.replace).toHaveBeenCalledWith({
+    expect(mockRouter.replace).not.toHaveBeenCalledWith({
       path: '/doctor-workflow/workbench',
       query: {
         caseId: 'CASE-001',
@@ -918,6 +920,54 @@ describe('DiagnosisWorkbenchView', () => {
     wrapper.unmount();
   }, 15_000);
 
+  it(
+    'keeps the keyword empty for default menu entry',
+    async () => {
+      const wrapper = await mountView();
+      const keywordInput = document.querySelector<HTMLInputElement>(
+        'input[placeholder="病理号"]',
+      );
+
+      expect(keywordInput).toBeTruthy();
+      expect(keywordInput?.value).toBe('');
+      expect(mockRouter.replace).not.toHaveBeenCalled();
+      expect(listPendingDiagnosticTasksMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pathologyNo: undefined,
+        }),
+      );
+
+      wrapper.unmount();
+    },
+    slowWorkbenchTestTimeout,
+  );
+
+  it('restores explicit deep-link selection and keyword from route query', async () => {
+    mockRoute.query = {
+      caseId: 'CASE-002',
+      pathologyNo: 'PATH-002',
+      taskId: 'TASK-002',
+    };
+
+    const wrapper = await mountView();
+    const keywordInput = document.querySelector<HTMLInputElement>(
+      'input[placeholder="病理号"]',
+    );
+
+    expect(listPendingDiagnosticTasksMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        pathologyNo: 'PATH-002',
+      }),
+    );
+    expect(getDiagnosticWorkbenchMock).toHaveBeenCalledWith('CASE-002');
+    expect(keywordInput).toBeTruthy();
+    expect(keywordInput?.value).toBe('PATH-002');
+    expect(wrapper.text()).toContain('李四');
+    expect(wrapper.text()).toContain('最终诊断二');
+
+    wrapper.unmount();
+  }, 15_000);
+
   it('switches the right pane when selecting another queue item', async () => {
     mockRoute.query = {
       caseId: 'CASE-001',
@@ -925,6 +975,9 @@ describe('DiagnosisWorkbenchView', () => {
     };
 
     const wrapper = await mountView();
+    const keywordInput = document.querySelector<HTMLInputElement>(
+      'input[placeholder="病理号"]',
+    );
 
     await wrapper.clickByTestId('diagnosis-workbench-queue-row-TASK-002');
 
@@ -933,10 +986,10 @@ describe('DiagnosisWorkbenchView', () => {
       path: '/doctor-workflow/workbench',
       query: {
         caseId: 'CASE-002',
-        pathologyNo: 'PATH-002',
         taskId: 'TASK-002',
       },
     });
+    expect(keywordInput?.value).toBe('');
     expect(wrapper.text()).toContain('李四');
     expect(wrapper.text()).toContain('最终诊断二');
 
@@ -971,7 +1024,7 @@ describe('DiagnosisWorkbenchView', () => {
     expect(wrapper.text()).not.toContain('特检医嘱/收费');
     expect(getButtonTexts()).not.toContain('采图');
     expect(getButtonTexts()).not.toContain('医嘱');
-    expect(getButtonTexts()).toContain('暂存');
+    expect(findByTestId('workbench-report-save').textContent).toContain('保存');
     expect(getButtonTexts()).toContain('初步');
     expect(getButtonTexts()).toContain('复核');
     expect(getButtonTexts()).toContain('签发');
@@ -2005,9 +2058,12 @@ describe('DiagnosisWorkbenchView', () => {
     'keeps remarks editable and shows placeholder save feedback',
     async () => {
       const wrapper = await mountView();
-      const saveButton = [...document.querySelectorAll('button')].find(
-        (button) => button.textContent?.includes('保存'),
-      ) as HTMLElement;
+      await clickMaterialTab('备注');
+      const saveButton = [
+        ...document.querySelectorAll<HTMLElement>(
+          '.el-tab-pane button, [role="tabpanel"] button',
+        ),
+      ].find((button) => button.textContent?.includes('保存')) as HTMLElement;
 
       saveButton.click();
       await flushAsyncWork();

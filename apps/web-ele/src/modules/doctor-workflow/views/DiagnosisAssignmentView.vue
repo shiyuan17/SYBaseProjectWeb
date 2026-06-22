@@ -6,14 +6,16 @@ import type {
 
 import type { SystemUser } from '#/modules/system-management/types/system-management';
 
-import { computed, reactive, ref } from 'vue';
+import { computed, nextTick, reactive, ref } from 'vue';
 
 import { Page } from '@vben/common-ui';
+import { ChevronLeft, ChevronRight } from '@vben/icons';
 import { useAccessStore } from '@vben/stores';
 
 import {
   ElAlert,
   ElButton,
+  ElDatePicker,
   ElForm,
   ElFormItem,
   ElInput,
@@ -47,8 +49,14 @@ import {
   formatNullable,
   formatReportStatus,
 } from '../utils/format';
+import {
+  createDatePickerPanelDefaultValue,
+  createDateRangePickerShortcuts,
+  disableFutureDate,
+} from '#/modules/technical-workflow/utils/date-range';
 
 type BatchAssignRole = 'primary' | 'reviewer';
+const DEFAULT_DATE_RANGE_LENGTH_DAYS = 1;
 
 interface AssignmentDoctor {
   id: string;
@@ -66,6 +74,15 @@ interface AssignmentDoctorField {
   userId: string;
 }
 
+interface PartialAssignDoctorFields {
+  diagnosisDoctorName?: string;
+  diagnosisDoctorUserId?: string;
+  primaryDoctorName?: string;
+  primaryDoctorUserId?: string;
+  reviewerName?: string;
+  reviewerUserId?: string;
+}
+
 interface BatchAssignResult {
   failed: number;
   skipped: number;
@@ -73,6 +90,7 @@ interface BatchAssignResult {
 }
 
 const accessStore = useAccessStore();
+const dateRangeShortcuts = createDateRangePickerShortcuts();
 
 const loading = ref(false);
 const doctorsLoading = ref(false);
@@ -82,9 +100,17 @@ const pendingItems = ref<PendingDiagnosticTaskItem[]>([]);
 const assignmentDoctors = ref<AssignmentDoctor[]>([]);
 const selectedDoctorId = ref('');
 const selectedTasks = ref<PendingDiagnosticTaskItem[]>([]);
+const selectedTaskId = ref('');
+const taskTableRef = ref<{
+  toggleRowSelection: (
+    row: PendingDiagnosticTaskItem,
+    selected?: boolean,
+  ) => void;
+} | null>(null);
 const total = ref(0);
 
 const filters = reactive({
+  dateRange: [] as string[],
   page: 1,
   pathologyNo: '',
   size: DEFAULT_PAGE_SIZE,
@@ -92,7 +118,50 @@ const filters = reactive({
   taskType: '',
 });
 
+function parseDateValue(value: string) {
+  const [yearText, monthText, dayText] = value.split('-');
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  if (!year || !month || !day) {
+    return null;
+  }
+
+  const parsed = new Date(year, month - 1, day);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatDateValue(value: Date) {
+  const year = value.getFullYear();
+  const month = `${value.getMonth() + 1}`.padStart(2, '0');
+  const day = `${value.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function addDays(value: Date, days: number) {
+  const next = new Date(value);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
+function resolveShiftableDateRange(range: string[]) {
+  const start = range[0] ? parseDateValue(range[0]) : null;
+  const end = range[1] ? parseDateValue(range[1]) : null;
+  if (start && end) {
+    return { end, start };
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return {
+    end: addDays(today, DEFAULT_DATE_RANGE_LENGTH_DAYS - 1),
+    start: today,
+  };
+}
+
 const currentQuery = computed(() => ({
+  dateFrom: filters.dateRange[0] || undefined,
+  dateTo: filters.dateRange[1] || undefined,
   page: filters.page,
   pathologyNo: filters.pathologyNo.trim() || undefined,
   size: filters.size,
@@ -162,6 +231,27 @@ function countAssignedTasks(userId: string, role: BatchAssignRole) {
   return pendingItems.value.filter((item) => item[key] === userId).length;
 }
 
+function syncDefaultDoctorSelection() {
+  if (
+    selectedDoctorId.value &&
+    doctorRows.value.some((item) => item.id === selectedDoctorId.value)
+  ) {
+    return;
+  }
+  selectedDoctorId.value = doctorRows.value[0]?.id ?? '';
+}
+
+async function applyDefaultTaskSelection() {
+  await nextTick();
+  const firstTask = pendingItems.value[0];
+  if (!firstTask) {
+    selectedTaskId.value = '';
+    return;
+  }
+  selectedTaskId.value = firstTask.id;
+  taskTableRef.value?.toggleRowSelection(firstTask, true);
+}
+
 async function loadAssignmentDoctors() {
   doctorsLoading.value = true;
   try {
@@ -181,6 +271,7 @@ async function loadAssignmentDoctors() {
     ) {
       selectedDoctorId.value = '';
     }
+    syncDefaultDoctorSelection();
   } catch (error) {
     ElMessage.error(getDoctorWorkflowPageErrorMessage(error));
   } finally {
@@ -192,10 +283,12 @@ async function loadPendingData() {
   loading.value = true;
   pageError.value = '';
   selectedTasks.value = [];
+  selectedTaskId.value = '';
   try {
     const result = await listAssignableDiagnosticTasks(currentQuery.value);
     pendingItems.value = result.items;
     total.value = result.total;
+    await applyDefaultTaskSelection();
   } catch (error) {
     pageError.value = getDoctorWorkflowPageErrorMessage(error);
   } finally {
@@ -209,6 +302,7 @@ function handleSearch() {
 }
 
 function handleReset() {
+  filters.dateRange = [];
   filters.page = 1;
   filters.pathologyNo = '';
   filters.size = DEFAULT_PAGE_SIZE;
@@ -217,16 +311,30 @@ function handleReset() {
   void loadPendingData();
 }
 
+function shiftDateRange(days: number) {
+  const { end, start } = resolveShiftableDateRange(filters.dateRange);
+  filters.dateRange = [
+    formatDateValue(addDays(start, days)),
+    formatDateValue(addDays(end, days)),
+  ];
+  filters.page = 1;
+  void loadPendingData();
+}
+
 function handleTaskSelectionChange(rows: PendingDiagnosticTaskItem[]) {
   selectedTasks.value = rows;
+  selectedTaskId.value = rows[0]?.id ?? '';
+}
+
+async function toggleTaskRowSelection(row: PendingDiagnosticTaskItem) {
+  const selected = selectedTasks.value.some((item) => item.id === row.id);
+  taskTableRef.value?.toggleRowSelection(row, !selected);
+  selectedTaskId.value = selected ? selectedTasks.value[0]?.id ?? '' : row.id;
+  await nextTick();
 }
 
 function selectDoctor(row: AssignmentDoctorRow) {
   selectedDoctorId.value = row.id;
-}
-
-function hasAssignee(userId?: null | string, name?: null | string) {
-  return Boolean(userId?.trim() && name?.trim());
 }
 
 function createSelectedDoctorField(
@@ -237,21 +345,7 @@ function createSelectedDoctorField(
   return userId && name ? { name, userId } : null;
 }
 
-function resolveDoctorField(
-  userId: null | string | undefined,
-  name: null | string | undefined,
-  fallback: AssignmentDoctorField,
-): AssignmentDoctorField {
-  return hasAssignee(userId, name)
-    ? {
-        name: name?.trim() ?? '',
-        userId: userId?.trim() ?? '',
-      }
-    : fallback;
-}
-
 function buildBatchAssignPayload(
-  task: PendingDiagnosticTaskItem,
   role: BatchAssignRole,
   doctor: AssignmentDoctorRow,
 ): AssignDiagnosticTaskRequest | null {
@@ -259,36 +353,21 @@ function buildBatchAssignPayload(
   if (!selectedDoctorField) {
     return null;
   }
-  const diagnosisDoctor = resolveDoctorField(
-    task.diagnosisDoctorUserId,
-    task.diagnosisDoctorName,
-    selectedDoctorField,
-  );
-  const primaryDoctor =
+  const doctorFields: PartialAssignDoctorFields =
     role === 'primary'
-      ? selectedDoctorField
-      : resolveDoctorField(
-          task.primaryDoctorUserId,
-          task.primaryDoctorName,
-          selectedDoctorField,
-        );
-  const reviewerDoctor =
-    role === 'reviewer'
-      ? selectedDoctorField
-      : resolveDoctorField(
-          task.reviewerUserId,
-          task.reviewerName,
-          selectedDoctorField,
-        );
+      ? {
+          diagnosisDoctorName: selectedDoctorField.name,
+          diagnosisDoctorUserId: selectedDoctorField.userId,
+          primaryDoctorName: selectedDoctorField.name,
+          primaryDoctorUserId: selectedDoctorField.userId,
+        }
+      : {
+          reviewerName: selectedDoctorField.name,
+          reviewerUserId: selectedDoctorField.userId,
+        };
 
   return {
-    diagnosisDoctorName: diagnosisDoctor.name,
-    diagnosisDoctorUserId: diagnosisDoctor.userId,
-    primaryDoctorName: primaryDoctor.name,
-    primaryDoctorUserId: primaryDoctor.userId,
-    remarks: task.remarks ?? '',
-    reviewerName: reviewerDoctor.name,
-    reviewerUserId: reviewerDoctor.userId,
+    ...doctorFields,
     terminalCode: '',
   };
 }
@@ -340,7 +419,7 @@ async function submitBatchAssign(role: BatchAssignRole) {
   assigning.value = true;
   try {
     for (const task of tasks) {
-      const payload = buildBatchAssignPayload(task, role, doctor);
+      const payload = buildBatchAssignPayload(role, doctor);
       if (!payload) {
         result.skipped += 1;
         continue;
@@ -380,6 +459,32 @@ void loadPendingData();
       <WorkflowSectionCard title="诊断分片">
         <div class="flex flex-col gap-3">
           <ElForm class="flex flex-wrap items-center gap-x-2 gap-y-1" inline>
+            <ElFormItem label="创建日期">
+              <ElDatePicker
+                v-model="filters.dateRange"
+                class="w-[248px]"
+                clearable
+                :default-value="createDatePickerPanelDefaultValue()"
+                :disabled-date="disableFutureDate"
+                end-placeholder="结束日期"
+                format="YYYY-MM-DD"
+                :shortcuts="dateRangeShortcuts"
+                start-placeholder="开始日期"
+                type="daterange"
+                unlink-panels
+                value-format="YYYY-MM-DD"
+              />
+            </ElFormItem>
+            <ElFormItem>
+              <ElButton @click="shiftDateRange(-1)">
+                <ChevronLeft class="mr-1 size-4" />
+                前1天
+              </ElButton>
+              <ElButton @click="shiftDateRange(1)">
+                <ChevronRight class="mr-1 size-4" />
+                后1天
+              </ElButton>
+            </ElFormItem>
             <ElFormItem label="任务类型">
               <ElSelect
                 v-model="filters.taskType"
@@ -513,11 +618,17 @@ void loadPendingData();
           description="勾选任务后，可为左侧选中用户执行对应分片。"
         >
           <ElTable
+            ref="taskTableRef"
             v-loading="loading"
             :data="pendingItems"
             border
             height="560"
             row-key="id"
+            :row-class-name="
+              ({ row }) =>
+                row.id === selectedTaskId ? 'diagnosis-task-row--selected' : ''
+            "
+            @row-click="toggleTaskRowSelection"
             @selection-change="handleTaskSelectionChange"
           >
             <ElTableColumn type="selection" width="44" />
@@ -607,6 +718,36 @@ void loadPendingData();
 
 <style scoped>
 :deep(.assignment-doctor-row--selected) {
-  --el-table-tr-bg-color: var(--el-color-primary-light-9);
+  --el-table-tr-bg-color: color-mix(
+    in srgb,
+    var(--el-color-primary-light-9) 74%,
+    white
+  );
+}
+
+:deep(.assignment-doctor-row--selected td),
+:deep(.diagnosis-task-row--selected td) {
+  box-shadow: inset 0 1px 0 rgba(64, 158, 255, 0.14),
+    inset 0 -1px 0 rgba(64, 158, 255, 0.14);
+}
+
+:deep(.assignment-doctor-row--selected td:first-child),
+:deep(.diagnosis-task-row--selected td:first-child) {
+  box-shadow: inset 3px 0 0 var(--el-color-primary),
+    inset 0 1px 0 rgba(64, 158, 255, 0.14),
+    inset 0 -1px 0 rgba(64, 158, 255, 0.14);
+}
+
+:deep(.assignment-doctor-row--selected .font-medium),
+:deep(.diagnosis-task-row--selected .cell) {
+  color: var(--el-text-color-primary);
+}
+
+:deep(.diagnosis-task-row--selected) {
+  --el-table-tr-bg-color: color-mix(
+    in srgb,
+    var(--el-color-success-light-9) 82%,
+    white
+  );
 }
 </style>
