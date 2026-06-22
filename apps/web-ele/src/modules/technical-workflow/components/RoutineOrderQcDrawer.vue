@@ -243,8 +243,7 @@ watch(
         {{ latestEvaluation.evaluatorName ?? '-' }}
         /
         {{ latestEvaluation.totalScore }}
-        分
-        /
+        分 /
         {{ latestEvaluation.grade ?? '-' }}
         /
         {{ latestEvaluation.evaluatedAt ?? '-' }}
@@ -346,7 +345,9 @@ watch(
           <div class="text-sm font-medium">处理动作</div>
           <div class="mt-4 flex flex-col gap-3">
             <ElButton
-              :type="form.processingAction === 'FAST_REMAKE' ? 'primary' : undefined"
+              :type="
+                form.processingAction === 'FAST_REMAKE' ? 'primary' : undefined
+              "
               @click="selectProcessingAction('FAST_REMAKE')"
             >
               (快速)制片
@@ -358,7 +359,9 @@ watch(
               重新制片
             </ElButton>
             <ElButton
-              :type="form.processingAction === 'NO_ACTION' ? 'primary' : undefined"
+              :type="
+                form.processingAction === 'NO_ACTION' ? 'primary' : undefined
+              "
               @click="selectProcessingAction('NO_ACTION')"
             >
               不需要

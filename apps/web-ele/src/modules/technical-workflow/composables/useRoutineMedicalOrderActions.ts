@@ -74,7 +74,7 @@ function getCaseId(row: RoutineMedicalOrderRow) {
 function hasTargetSnapshot(row: RoutineMedicalOrderRow) {
   return Boolean(
     row.targetType &&
-      (row.targetBlockId || row.targetSlideId || row.targetSpecimenId),
+    (row.targetBlockId || row.targetSlideId || row.targetSpecimenId),
   );
 }
 
@@ -98,7 +98,9 @@ function buildBatchSummary(
   }
 
   if (successCount > 0) {
-    ElMessage.warning(`${actionLabel}成功 ${successCount} 条，失败 ${failedCount} 条`);
+    ElMessage.warning(
+      `${actionLabel}成功 ${successCount} 条，失败 ${failedCount} 条`,
+    );
     return;
   }
 

@@ -79,7 +79,8 @@ vi.mock('../components/TechnicalWorkbenchPage.vue', () => ({
             {
               'data-testid': 'select-non-printable-row',
               type: 'button',
-              onClick: () => emit('selection-change', [createNonPrintableRow()]),
+              onClick: () =>
+                emit('selection-change', [createNonPrintableRow()]),
             },
             'select-non-printable',
           ),
@@ -207,42 +208,39 @@ vi.mock('../components/RoutineOrderQcDrawer.vue', () => ({
     setup(props, { emit }) {
       return () =>
         props.modelValue
-          ? h(
-              'div',
-              [
-                h(
-                  'button',
-                  {
-                    'data-testid': 'emit-active-row-change',
-                    type: 'button',
-                    onClick: () => emit('active-row-change', createReadyRow()),
-                  },
-                  'active-row',
-                ),
-                h(
-                  'button',
-                  {
-                    'data-testid': 'submit-qc-drawer',
-                    type: 'button',
-                    onClick: () =>
-                      emit('submit', {
-                        detailItems: [],
-                        evaluationReason: '空气污染',
-                        grade: '甲',
-                        processingAction: 'FAST_REMAKE',
-                        qcAspect: 'SLIDE',
-                        remarks: '立即重打',
-                        reworkType: 'RESLICE',
-                        totalScore: 95,
-                      } satisfies Omit<
-                        CreateMedicalOrderQcEvaluationRequest,
-                        'caseId' | 'orderId'
-                      >),
-                  },
-                  'submit qc',
-                ),
-              ],
-            )
+          ? h('div', [
+              h(
+                'button',
+                {
+                  'data-testid': 'emit-active-row-change',
+                  type: 'button',
+                  onClick: () => emit('active-row-change', createReadyRow()),
+                },
+                'active-row',
+              ),
+              h(
+                'button',
+                {
+                  'data-testid': 'submit-qc-drawer',
+                  type: 'button',
+                  onClick: () =>
+                    emit('submit', {
+                      detailItems: [],
+                      evaluationReason: '空气污染',
+                      grade: '甲',
+                      processingAction: 'FAST_REMAKE',
+                      qcAspect: 'SLIDE',
+                      remarks: '立即重打',
+                      reworkType: 'RESLICE',
+                      totalScore: 95,
+                    } satisfies Omit<
+                      CreateMedicalOrderQcEvaluationRequest,
+                      'caseId' | 'orderId'
+                    >),
+                },
+                'submit qc',
+              ),
+            ])
           : null;
     },
   }),
@@ -420,7 +418,9 @@ describe('RoutineOrderWorkstationView', () => {
     await flushAll();
 
     root
-      .querySelector<HTMLButtonElement>('[data-testid="select-non-printable-row"]')
+      .querySelector<HTMLButtonElement>(
+        '[data-testid="select-non-printable-row"]',
+      )
       ?.click();
     await flushAll();
 
@@ -541,9 +541,7 @@ describe('RoutineOrderWorkstationView', () => {
     );
 
     root
-      .querySelector<HTMLButtonElement>(
-        '[data-testid="submit-qc-drawer"]',
-      )
+      .querySelector<HTMLButtonElement>('[data-testid="submit-qc-drawer"]')
       ?.click();
     await flushAll();
 

@@ -201,7 +201,10 @@ vi.mock('element-plus', async () => {
   const ElTableColumn = defineComponent({
     props: ['label'],
     setup(props, { slots }) {
-      const getRows = inject<() => TechnicalWorkbenchRow[]>(tableRowsKey, () => []);
+      const getRows = inject<() => TechnicalWorkbenchRow[]>(
+        tableRowsKey,
+        () => [],
+      );
 
       return () =>
         h('div', [
@@ -260,7 +263,9 @@ function createConfig(
     searchPlaceholder: '请输入病理号',
     showPageHeader: false,
     title: '测试工作站',
-    toolbarGroups: [[{ id: 'confirm', label: '确认', requiresSelection: true }]],
+    toolbarGroups: [
+      [{ id: 'confirm', label: '确认', requiresSelection: true }],
+    ],
     ...overrides,
   };
 }
@@ -268,7 +273,9 @@ function createConfig(
 function renderPage(
   options: {
     config?: TechnicalWorkbenchPageConfig;
-    onQueryAction?: (payload: TechnicalWorkbenchQueryActionEventPayload) => void;
+    onQueryAction?: (
+      payload: TechnicalWorkbenchQueryActionEventPayload,
+    ) => void;
     onSelectionChange?: (rows: TechnicalWorkbenchRow[]) => void;
     onToolbarAction?: (payload: unknown) => void;
   } = {},

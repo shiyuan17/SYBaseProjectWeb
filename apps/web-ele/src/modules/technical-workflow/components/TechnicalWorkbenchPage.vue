@@ -11,7 +11,14 @@ import type {
   TechnicalWorkbenchRow,
 } from '../types/technical-workbench';
 
-import { computed, getCurrentInstance, onMounted, reactive, ref, watch } from 'vue';
+import {
+  computed,
+  getCurrentInstance,
+  onMounted,
+  reactive,
+  ref,
+  watch,
+} from 'vue';
 import { useRoute } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
@@ -43,10 +50,7 @@ const props = defineProps<{
   config: TechnicalWorkbenchPageConfig;
 }>();
 const emit = defineEmits<{
-  (
-    event: 'toolbarAction',
-    payload: TechnicalWorkbenchActionEventPayload,
-  ): void;
+  (event: 'toolbarAction', payload: TechnicalWorkbenchActionEventPayload): void;
   (
     event: 'queryAction',
     payload: TechnicalWorkbenchQueryActionEventPayload,

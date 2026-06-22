@@ -77,7 +77,9 @@ vi.mock('element-plus', () => {
           {
             'data-value': props.modelValue,
           },
-          slots.default?.({ update: (value: string) => emit('update:modelValue', value) }),
+          slots.default?.({
+            update: (value: string) => emit('update:modelValue', value),
+          }),
         );
     },
   });
@@ -137,26 +139,27 @@ vi.mock('element-plus', () => {
     setup(props, { slots }) {
       return () =>
         h('div', [
-          ...(props.data ?? []).map((row: Record<string, unknown>, index: number) =>
-            h(
-              defineComponent({
-                setup(_, { slots: providerSlots }) {
-                  provide(rowContextKey, { row, $index: index });
-                  return () => h('div', providerSlots.default?.());
+          ...(props.data ?? []).map(
+            (row: Record<string, unknown>, index: number) =>
+              h(
+                defineComponent({
+                  setup(_, { slots: providerSlots }) {
+                    provide(rowContextKey, { row, $index: index });
+                    return () => h('div', providerSlots.default?.());
+                  },
+                }),
+                { key: `qc-row-${index}` },
+                {
+                  default: () => [
+                    slots.default?.(),
+                    h(
+                      'div',
+                      { 'data-testid': `qc-row-${index}` },
+                      JSON.stringify(row),
+                    ),
+                  ],
                 },
-              }),
-              { key: `qc-row-${index}` },
-              {
-                default: () => [
-                  slots.default?.(),
-                  h(
-                    'div',
-                    { 'data-testid': `qc-row-${index}` },
-                    JSON.stringify(row),
-                  ),
-                ],
-              },
-            ),
+              ),
           ),
         ]);
     },
