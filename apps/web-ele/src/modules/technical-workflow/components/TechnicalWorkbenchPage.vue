@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import type {
   TechnicalWorkbenchAction,
+  TechnicalWorkbenchActionEventPayload,
   TechnicalWorkbenchColumn,
   TechnicalWorkbenchDayTab,
   TechnicalWorkbenchFilterConfig,
   TechnicalWorkbenchPageConfig,
+  TechnicalWorkbenchPageExpose,
+  TechnicalWorkbenchQueryActionEventPayload,
   TechnicalWorkbenchRow,
 } from '../types/technical-workbench';
 
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, getCurrentInstance, onMounted, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
@@ -39,7 +42,19 @@ import {
 const props = defineProps<{
   config: TechnicalWorkbenchPageConfig;
 }>();
+const emit = defineEmits<{
+  (
+    event: 'toolbarAction',
+    payload: TechnicalWorkbenchActionEventPayload,
+  ): void;
+  (
+    event: 'queryAction',
+    payload: TechnicalWorkbenchQueryActionEventPayload,
+  ): void;
+  (event: 'selectionChange', rows: TechnicalWorkbenchRow[]): void;
+}>();
 const route = useRoute();
+const instance = getCurrentInstance();
 const dateRangeShortcuts = createDateRangePickerShortcuts();
 
 const searchKeyword = ref('');
@@ -204,8 +219,69 @@ function isActionDisabled(action: TechnicalWorkbenchAction) {
   return action.requiresSelection && selectedRows.value.length === 0;
 }
 
+function hasEventListener(name: 'query' | 'selection' | 'toolbar') {
+  const props = instance?.vnode.props;
+
+  if (!props) {
+    return false;
+  }
+
+  if (name === 'toolbar') {
+    return typeof props.onToolbarAction === 'function';
+  }
+
+  if (name === 'query') {
+    return typeof props.onQueryAction === 'function';
+  }
+
+  return typeof props.onSelectionChange === 'function';
+}
+
+function createActionPayload(
+  action: TechnicalWorkbenchAction,
+): TechnicalWorkbenchActionEventPayload {
+  return {
+    action,
+    selectedRows: [...selectedRows.value],
+  };
+}
+
+function createQueryActionPayload(
+  trigger: TechnicalWorkbenchQueryActionEventPayload['trigger'],
+  action?: TechnicalWorkbenchAction,
+): TechnicalWorkbenchQueryActionEventPayload {
+  return {
+    action,
+    dateRange: [...activeDateRange.value],
+    page: currentPage.value,
+    pageSize: pageSize.value,
+    searchKeyword: searchKeyword.value.trim(),
+    selectedRows: [...selectedRows.value],
+    status: activeStatus.value,
+    trigger,
+  };
+}
+
 function handleToolbarAction(action: TechnicalWorkbenchAction) {
   if (isActionDisabled(action)) {
+    return;
+  }
+
+  if (hasEventListener('toolbar')) {
+    emit('toolbarAction', createActionPayload(action));
+    return;
+  }
+
+  ElMessage.info(`${action.label}功能待接入`);
+}
+
+function handleQueryAction(action: TechnicalWorkbenchAction) {
+  if (isActionDisabled(action)) {
+    return;
+  }
+
+  if (hasEventListener('query')) {
+    emit('queryAction', createQueryActionPayload('action', action));
     return;
   }
 
@@ -213,6 +289,11 @@ function handleToolbarAction(action: TechnicalWorkbenchAction) {
 }
 
 function handleSearch() {
+  if (hasEventListener('query')) {
+    emit('queryAction', createQueryActionPayload('search'));
+    return;
+  }
+
   if (hasRemoteDataSource.value) {
     restartRemoteQuery();
     return;
@@ -281,10 +362,25 @@ async function loadRemoteRows() {
   }
 }
 
+async function reload() {
+  if (hasRemoteDataSource.value) {
+    await loadRemoteRows();
+  }
+}
+
 onMounted(() => {
   if (hasRemoteDataSource.value) {
     void loadRemoteRows();
   }
+});
+
+function handleSelectionChange(rows: TechnicalWorkbenchRow[]) {
+  selectedRows.value = rows;
+  emit('selectionChange', rows);
+}
+
+defineExpose<TechnicalWorkbenchPageExpose>({
+  reload,
 });
 </script>
 
@@ -392,7 +488,7 @@ onMounted(() => {
             :key="action.id"
             :disabled="isActionDisabled(action)"
             class="!h-8 !rounded-sm !px-3 !text-xs"
-            @click="handleToolbarAction(action)"
+            @click="handleQueryAction(action)"
           >
             <span>{{ action.label }}</span>
             <span
@@ -450,7 +546,7 @@ onMounted(() => {
           :data="displayRows"
           border
           size="small"
-          @selection-change="selectedRows = $event"
+          @selection-change="handleSelectionChange"
         >
           <ElTableColumn type="selection" width="44" />
           <ElTableColumn

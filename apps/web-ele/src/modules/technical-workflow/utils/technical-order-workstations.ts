@@ -20,6 +20,8 @@ function formatTechnicalOrderPatientId(row: Record<string, unknown>) {
 const PENDING_ORDER_STATUS_OPTIONS = [
   { label: '待确认', value: 'PENDING' },
   { label: '已确认', value: 'IN_PROGRESS' },
+  { label: '已出片', value: 'COMPLETED' },
+  { label: '已终止', value: 'TERMINATED' },
 ];
 
 export const ROUTINE_ORDER_WORKSTATION_CONFIG: TechnicalWorkbenchPageConfig = {
@@ -47,6 +49,7 @@ export const ROUTINE_ORDER_WORKSTATION_CONFIG: TechnicalWorkbenchPageConfig = {
     { key: 'doctorUser', label: '医嘱医生', minWidth: 100 },
     { key: 'chargeStatus', label: '收费状态', minWidth: 90 },
     { key: 'confirmedStatus', label: '确认状态', minWidth: 90 },
+    { key: 'slideNo', label: '玻片号', minWidth: 110 },
     { key: 'printStatus', label: '打印状态', minWidth: 90 },
     { key: 'printTime', label: '打印时间', minWidth: 100 },
     { key: 'releaseStatus', label: '出片状态', minWidth: 90 },

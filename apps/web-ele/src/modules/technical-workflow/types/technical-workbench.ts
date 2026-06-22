@@ -15,6 +15,22 @@ export interface TechnicalWorkbenchAction {
   tone?: 'danger' | 'default' | 'primary' | 'warning';
 }
 
+export interface TechnicalWorkbenchActionEventPayload {
+  action: TechnicalWorkbenchAction;
+  selectedRows: TechnicalWorkbenchRow[];
+}
+
+export interface TechnicalWorkbenchQueryActionEventPayload {
+  action?: TechnicalWorkbenchAction;
+  dateRange: string[];
+  page: number;
+  pageSize: number;
+  searchKeyword: string;
+  selectedRows: TechnicalWorkbenchRow[];
+  status: string;
+  trigger: 'action' | 'search';
+}
+
 export interface TechnicalWorkbenchFilterConfig {
   group?: string;
   id: string;
@@ -89,4 +105,8 @@ export interface TechnicalWorkbenchPageConfig {
   statusOptions?: TechnicalWorkbenchStatusOption[];
   title: string;
   toolbarGroups: TechnicalWorkbenchAction[][];
+}
+
+export interface TechnicalWorkbenchPageExpose {
+  reload: () => Promise<void>;
 }

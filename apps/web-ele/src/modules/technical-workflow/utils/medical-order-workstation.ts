@@ -57,6 +57,7 @@ function formatOrderStatus(value?: null | string) {
     IN_PROGRESS: '已确认',
     PENDING: '待确认',
     PROCESSING: '处理中',
+    TERMINATED: '已终止',
   };
   const normalizedValue = value?.trim().toUpperCase();
   if (!normalizedValue) {
@@ -115,11 +116,54 @@ function getCategoryName(order: PendingMedicalOrderItem) {
   return valueOrDash(order.orderCategoryName ?? order.orderType);
 }
 
+function formatRoutineConfirmedStatus(order: PendingMedicalOrderItem) {
+  const normalized = order.status?.trim().toUpperCase();
+  if (normalized === 'IN_PROGRESS' || normalized === 'COMPLETED') {
+    return '已确认';
+  }
+  if (normalized === 'TERMINATED') {
+    return '已终止';
+  }
+  return '待确认';
+}
+
+function formatRoutinePrintStatus(order: PendingMedicalOrderItem) {
+  return order.printedAt ? '已打印' : '未打印';
+}
+
+function formatRoutineReleaseStatus(order: PendingMedicalOrderItem) {
+  const normalized = order.status?.trim().toUpperCase();
+  if (normalized === 'TERMINATED') {
+    return '已终止';
+  }
+  if (order.releasedAt || normalized === 'COMPLETED') {
+    return '已出片';
+  }
+  if (order.printedAt) {
+    return '待出片';
+  }
+  if (normalized === 'IN_PROGRESS') {
+    return '待出片';
+  }
+  return '待确认';
+}
+
 function createBaseRow(order: PendingMedicalOrderItem) {
   const statusLabel = formatOrderStatus(order.status);
   return {
+    acceptedAt: order.acceptedAt ?? null,
+    applicationNo: valueOrDash(order.applicationNo),
+    blockNo: valueOrDash(order.blockNo),
+    canConfirm: Boolean(order.canConfirm),
+    canPrint: Boolean(order.canPrint),
+    canQc: Boolean(order.canQc),
+    canRelease: Boolean(order.canRelease),
+    canTerminate: Boolean(order.canTerminate),
     checkItem: getItemName(order),
     chargeStatus: formatBillingStatus(order.billingStatus),
+    completedAt: order.completedAt ?? null,
+    confirmedTime: formatOrderDate(order.acceptedAt),
+    confirmedUser: valueOrDash(order.executorName),
     doctorTime: formatOrderDate(order.orderDate),
     doctorUser: valueOrDash(order.doctorName),
     id: order.orderId,
@@ -128,8 +172,29 @@ function createBaseRow(order: PendingMedicalOrderItem) {
     patientIdDisplay: order.patientIdDisplay ?? null,
     patientName: valueOrDash(order.patientName),
     pathologyNo: valueOrDash(order.pathologyNo),
+    printTime: formatOrderDate(order.printedAt),
+    printUser: valueOrDash(order.printedByName),
+    printedAt: order.printedAt ?? null,
+    printedByName: order.printedByName ?? null,
+    releasedAt: order.releasedAt ?? null,
+    releasedByName: order.releasedByName ?? null,
+    releaseTime: formatOrderDate(order.releasedAt ?? order.completedAt),
+    releaseUser: valueOrDash(order.releasedByName),
     remark: valueOrDash(order.remarks ?? order.orderContent),
+    slideNo: valueOrDash(order.slideNo),
     statusLabel,
+    specimenNo: valueOrDash(order.specimenNo),
+    targetBlockId: order.targetBlockId ?? null,
+    targetSlideId: order.targetSlideId ?? null,
+    targetSpecimenId: order.targetSpecimenId ?? null,
+    targetType: order.targetType ?? null,
+    terminatedAt: order.terminatedAt ?? null,
+    terminatedByName: order.terminatedByName ?? null,
+    terminationReason: valueOrDash(order.terminationReasonLabel),
+    terminationReasonCode: order.terminationReasonCode ?? null,
+    terminationRemarks: valueOrDash(order.terminationRemarks),
+    terminationTime: formatOrderDate(order.terminatedAt),
+    terminationUser: valueOrDash(order.terminatedByName),
   };
 }
 
@@ -142,17 +207,17 @@ export function mapMedicalOrderToTechnicalWorkbenchRow(
   if (kind === 'routine') {
     return createRow({
       ...baseRow,
-      blockNo: EMPTY_CELL,
-      confirmedStatus: baseRow.statusLabel,
+      blockNo: valueOrDash(order.blockNo),
+      confirmedStatus: formatRoutineConfirmedStatus(order),
       note: valueOrDash(order.orderContent),
       originalPathologyNo: EMPTY_CELL,
       outpatientNo: EMPTY_CELL,
-      printStatus: '未打印',
-      printTime: EMPTY_CELL,
-      releaseStatus: baseRow.statusLabel,
-      releaseTime: EMPTY_CELL,
+      printStatus: formatRoutinePrintStatus(order),
+      printTime: formatOrderDate(order.printedAt),
+      releaseStatus: formatRoutineReleaseStatus(order),
+      releaseTime: formatOrderDate(order.releasedAt ?? order.completedAt),
       sliceMode: getCategoryName(order),
-      terminationReason: EMPTY_CELL,
+      terminationReason: valueOrDash(order.terminationReasonLabel),
       wardNo: EMPTY_CELL,
     });
   }

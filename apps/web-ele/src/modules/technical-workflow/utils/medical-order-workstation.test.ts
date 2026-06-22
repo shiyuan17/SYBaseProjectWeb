@@ -44,23 +44,50 @@ describe('medical-order-workstation mapper', () => {
   it('maps routine medical orders with stable placeholder fields', () => {
     const row = mapMedicalOrderToTechnicalWorkbenchRow(
       createOrder({
+        acceptedAt: '2026-06-22T09:00:00',
+        blockNo: 'A1',
+        canPrint: true,
+        canQc: true,
+        canRelease: false,
+        canTerminate: true,
+        executorName: '技师甲',
         orderCategoryCode: 'EXAM',
         orderCategoryName: '常规医嘱',
+        printedAt: '2026-06-22T09:30:00',
+        printedByName: '技师甲',
+        releasedAt: null,
+        releasedByName: null,
+        slideNo: 'SLIDE-001',
         status: 'IN_PROGRESS',
+        targetBlockId: 'BLOCK-1',
+        targetSlideId: 'SLIDE-ID-1',
+        targetSpecimenId: 'SPEC-1',
+        targetType: 'BLOCK',
       }),
       'routine',
     );
 
     expect(row).toMatchObject({
-      blockNo: '-',
+      blockNo: 'A1',
+      canPrint: true,
+      canQc: true,
+      canRelease: false,
+      canTerminate: true,
       chargeStatus: '-',
       checkItem: 'CK',
       confirmedStatus: '已确认',
+      confirmedTime: '2026-06-22 09:00:00',
+      confirmedUser: '技师甲',
       doctorTime: '2026-06-05 09:12:30',
       originalPathologyNo: '-',
       patientName: '王女士',
       pathologyNo: 'BL-202606050001',
-      releaseStatus: '已确认',
+      printStatus: '已打印',
+      printTime: '2026-06-22 09:30:00',
+      printUser: '技师甲',
+      releaseStatus: '待出片',
+      slideNo: 'SLIDE-001',
+      targetBlockId: 'BLOCK-1',
     });
     expect(row.searchableText).toContain('bl-202606050001');
   });
@@ -69,6 +96,10 @@ describe('medical-order-workstation mapper', () => {
     const row = mapMedicalOrderToTechnicalWorkbenchRow(
       createOrder({
         billingStatus: 'SUCCESS',
+        canRelease: true,
+        completedAt: '2026-06-22T11:20:00',
+        releasedAt: '2026-06-22T11:20:00',
+        releasedByName: '技师乙',
         orderCategoryCode: 'ROUTINE',
         orderCategoryName: '常规医嘱',
         orderContent: 'HE染色（蜡块: A1）',
@@ -84,6 +115,9 @@ describe('medical-order-workstation mapper', () => {
       checkItem: 'HE染色',
       confirmedStatus: '待确认',
       orderType: '常规医嘱',
+      releaseStatus: '已出片',
+      releaseTime: '2026-06-22 11:20:00',
+      releaseUser: '技师乙',
       sliceMode: '常规医嘱',
     });
     expect(row.searchableText).toContain('已收费');
@@ -104,6 +138,30 @@ describe('medical-order-workstation mapper', () => {
       patientIdDisplay: '08305',
     });
     expect(row.searchableText).toContain('08305');
+  });
+
+  it('maps terminated routine medical orders to terminal fields', () => {
+    const row = mapMedicalOrderToTechnicalWorkbenchRow(
+      createOrder({
+        orderCategoryCode: 'ROUTINE',
+        orderCategoryName: '常规医嘱',
+        status: 'TERMINATED',
+        terminatedAt: '2026-06-22T12:00:00',
+        terminatedByName: '技师丙',
+        terminationReasonCode: 'BLOCK_DAMAGED',
+        terminationReasonLabel: '蜡块已损坏无法使用',
+        terminationRemarks: '无法继续',
+      }),
+      'routine',
+    );
+
+    expect(row).toMatchObject({
+      releaseStatus: '已终止',
+      terminationReason: '蜡块已损坏无法使用',
+      terminationTime: '2026-06-22 12:00:00',
+      terminationUser: '技师丙',
+      terminationRemarks: '无法继续',
+    });
   });
 
   it('maps special medical orders to confirmation and release columns', () => {

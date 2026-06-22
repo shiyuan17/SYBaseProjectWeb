@@ -119,6 +119,53 @@ vi.mock('element-plus', () => {
     },
   });
 
+  const ElDialog = defineComponent({
+    props: ['modelValue', 'title'],
+    emits: ['update:modelValue'],
+    setup(props, { slots }) {
+      return () =>
+        props.modelValue
+          ? h('div', [
+              props.title ? h('h2', props.title) : null,
+              slots.default?.(),
+              slots.footer?.(),
+            ])
+          : null;
+    },
+  });
+
+  const ElDrawer = defineComponent({
+    props: ['modelValue', 'title'],
+    emits: ['update:modelValue'],
+    setup(props, { slots }) {
+      return () =>
+        props.modelValue
+          ? h('div', [
+              props.title ? h('h2', props.title) : null,
+              slots.default?.(),
+              slots.footer?.(),
+            ])
+          : null;
+    },
+  });
+
+  const ElForm = defineComponent({
+    setup(_, { slots }) {
+      return () => h('form', slots.default?.());
+    },
+  });
+
+  const ElFormItem = defineComponent({
+    props: ['label'],
+    setup(props, { slots }) {
+      return () =>
+        h('label', [
+          props.label ? h('span', props.label) : null,
+          slots.default?.(),
+        ]);
+    },
+  });
+
   const ElInput = defineComponent({
     props: ['modelValue', 'placeholder'],
     emits: ['keyup', 'update:modelValue'],
@@ -238,21 +285,55 @@ vi.mock('element-plus', () => {
     },
   });
 
+  const ElTabs = defineComponent({
+    props: ['modelValue'],
+    emits: ['update:modelValue'],
+    setup(_, { slots }) {
+      return () => h('div', slots.default?.());
+    },
+  });
+
+  const ElTabPane = defineComponent({
+    props: ['label', 'name'],
+    setup(props, { slots }) {
+      return () =>
+        h('div', [
+          props.label ? h('span', props.label) : null,
+          slots.default?.(),
+        ]);
+    },
+  });
+
+  const ElTag = defineComponent({
+    setup(_, { slots }) {
+      return () => h('span', slots.default?.());
+    },
+  });
+
   return {
     ElAlert,
     ElButton,
     ElCheckbox,
     ElDatePicker,
+    ElDialog,
+    ElDrawer,
     ElEmpty,
+    ElForm,
+    ElFormItem,
     ElInput,
     ElMessage: {
       info: messageInfo,
+      success: vi.fn(),
+      warning: vi.fn(),
     },
     ElOption,
     ElPagination,
     ElSelect,
     ElTable,
     ElTableColumn,
+    ElTabPane,
+    ElTabs,
+    ElTag,
   };
 });
 
@@ -559,6 +640,60 @@ describe('technical order workstation views', () => {
     confirmButton?.click();
 
     expect(messageInfo).toHaveBeenCalledWith('确认功能待接入');
+
+    wrapper.unmount();
+  });
+
+  it('shows routine medical order execution columns from backend fields', async () => {
+    listPendingMedicalOrdersMock.mockResolvedValueOnce({
+      items: [
+        {
+          acceptedAt: '2026-06-22T09:00:00',
+          blockNo: 'A1',
+          canConfirm: false,
+          canPrint: true,
+          canQc: true,
+          canRelease: false,
+          canTerminate: true,
+          caseId: 'CASE-001',
+          doctorName: '张医生',
+          executorName: '技师甲',
+          orderCategoryCode: 'ROUTINE',
+          orderCategoryName: '常规医嘱',
+          orderContent: 'HE染色',
+          orderDate: '2026-06-22T08:30:00',
+          orderId: 'ORDER-ROUTINE-1',
+          orderItemName: 'HE染色',
+          orderNumber: 'MO-001',
+          orderType: 'ROUTINE',
+          pathologyNo: 'BL-ROUTINE-1',
+          patientName: '患者甲',
+          printedAt: '2026-06-22T09:30:00',
+          printedByName: '技师甲',
+          remarks: '备注',
+          slideNo: 'SLIDE-001',
+          status: 'IN_PROGRESS',
+          targetBlockId: 'BLOCK-1',
+          targetSlideId: 'SLIDE-ID-1',
+          targetSpecimenId: 'SPEC-1',
+          targetType: 'BLOCK',
+          terminationReasonLabel: null,
+        },
+      ],
+      page: 1,
+      size: 30,
+      total: 1,
+    });
+
+    const wrapper = renderView(RoutineOrderWorkstationView);
+    await flushAsyncUpdates();
+
+    expect(wrapper.root.textContent).toContain('已确认');
+    expect(wrapper.root.textContent).toContain('已打印');
+    expect(wrapper.root.textContent).toContain('待出片');
+    expect(wrapper.root.textContent).toContain('SLIDE-001');
+    expect(wrapper.root.textContent).toContain('已出片');
+    expect(wrapper.root.textContent).toContain('已终止');
 
     wrapper.unmount();
   });
