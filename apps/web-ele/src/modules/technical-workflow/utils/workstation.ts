@@ -29,7 +29,7 @@ function dedupeStrings(values: Array<null | string | undefined>) {
 function sortEventsByLatestFirst<T extends { eventTime: null | string }>(
   events: T[],
 ) {
-  return [...events].sort((left, right) =>
+  return [...events].toSorted((left, right) =>
     normalizeText(right.eventTime).localeCompare(normalizeText(left.eventTime)),
   );
 }

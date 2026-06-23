@@ -112,7 +112,9 @@ const resolvedEmptyText = computed(
               </span>
               <span>申请单号：{{ formatNullable(item.applicationNo) }}</span>
               <span>
-                送检类型：{{ formatTechnicalTrackingApplicationType(item.applicationType) }}
+                送检类型：{{
+                  formatTechnicalTrackingApplicationType(item.applicationType)
+                }}
               </span>
               <span>最近活动：{{ formatDateTime(item.latestActivityAt) }}</span>
               <span class="sm:col-span-2">

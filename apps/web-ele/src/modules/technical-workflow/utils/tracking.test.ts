@@ -382,9 +382,9 @@ describe('tracking utils', () => {
       () => '技术流程事件',
     );
 
-    expect(steps.some((step) => step.content.includes('Unexpected english'))).toBe(
-      false,
-    );
+    expect(
+      steps.some((step) => step.content.includes('Unexpected english')),
+    ).toBe(false);
   });
 
   it('uses all tracking events for timeline nodes instead of truncated recent events', () => {

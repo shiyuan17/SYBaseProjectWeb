@@ -389,7 +389,7 @@ export function useRoutineMedicalOrderActions() {
       ...new Set(
         selectedRows.value
           .map((row) => row.slicingPrintGroupId?.trim())
-          .filter(Boolean),
+          .filter((value): value is string => Boolean(value)),
       ),
     ];
 

@@ -16,10 +16,10 @@ import {
 import {
   formatCaseStatus,
   formatDateTime,
-  formatTechnicalTrackingEventContent,
   formatEventStatus,
   formatEventType,
   formatNullable,
+  formatTechnicalTrackingEventContent,
 } from '../utils/format';
 import { useTechnicalWorkflowNavigation } from '../utils/navigation';
 import WorkflowSectionCard from './WorkflowSectionCard.vue';

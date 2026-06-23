@@ -234,9 +234,7 @@ function getEventNodeCode(event: TechnicalTrackingEventSummary) {
 function isCompletedEvent(event: TechnicalTrackingEventSummary) {
   return (
     event.eventStatus === 'SUCCESS' &&
-    ['COMPLETE', 'EVALUATE', 'EXECUTE', 'MARK'].includes(
-      event.eventType ?? '',
-    )
+    ['COMPLETE', 'EVALUATE', 'EXECUTE', 'MARK'].includes(event.eventType ?? '')
   );
 }
 
@@ -273,10 +271,10 @@ function buildEventsByNode(events: TechnicalTrackingEventSummary[]) {
   return eventsByNode;
 }
 
-function firstMeaningfulValue(
-  ...values: Array<null | string | undefined>
-) {
-  return values.find((value) => typeof value === 'string' && value.trim()) ?? '';
+function firstMeaningfulValue(...values: Array<null | string | undefined>) {
+  return (
+    values.find((value) => typeof value === 'string' && value.trim()) ?? ''
+  );
 }
 
 function joinMeaningfulValues(...values: Array<null | string | undefined>) {

@@ -1,6 +1,6 @@
-import dayjs from 'dayjs';
-
 import type { TechnicalTrackingEventSummary } from '../types/technical-workflow';
+
+import dayjs from 'dayjs';
 
 import { APPLICATION_TYPE_OPTIONS } from '#/modules/specimen-workflow/constants';
 
@@ -151,7 +151,7 @@ function normalizeCodeValue(value?: null | string) {
 }
 
 function containsCjkCharacter(value: string) {
-  return /[\u3400-\u9fff]/u.test(value);
+  return /[\u3400-\u9FFF]/u.test(value);
 }
 
 export function formatDateTime(value?: null | string) {

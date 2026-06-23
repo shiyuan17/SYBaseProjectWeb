@@ -70,7 +70,9 @@ const {
           @update:size="handleCaseListSizeChange"
         />
 
-        <div class="technical-tracking-layout__detail flex min-w-0 flex-col gap-4">
+        <div
+          class="technical-tracking-layout__detail flex min-w-0 flex-col gap-4"
+        >
           <template v-if="trackingResult && context">
             <TechnicalTrackingDetailsSection
               v-model:active-tab="activeTab"

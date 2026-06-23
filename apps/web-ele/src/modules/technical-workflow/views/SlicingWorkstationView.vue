@@ -67,8 +67,8 @@ import {
   formatEventStatus,
   formatNullable,
   formatSlicingSlideDisplayNo,
-  formatTechnicalTrackingEventContent,
   formatTaskStatus,
+  formatTechnicalTrackingEventContent,
 } from '../utils/format';
 import {
   createTechnicalOperatorDefaults,

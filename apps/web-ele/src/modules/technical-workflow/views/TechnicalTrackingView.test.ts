@@ -533,7 +533,9 @@ describe('TechnicalTrackingView', () => {
     await flushView();
 
     const layout = root.querySelector('.technical-tracking-layout');
-    const detailColumn = root.querySelector('.technical-tracking-layout__detail');
+    const detailColumn = root.querySelector(
+      '.technical-tracking-layout__detail',
+    );
     const caseList = root.querySelector('.technical-tracking-case-list');
     const queryForm = root.querySelector('.technical-tracking-query-form');
 

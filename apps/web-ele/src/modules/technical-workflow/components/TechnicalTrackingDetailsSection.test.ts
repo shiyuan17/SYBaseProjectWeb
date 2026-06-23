@@ -43,7 +43,11 @@ vi.mock('element-plus', () => {
   const ElDescriptionsItem = defineComponent({
     props: ['label'],
     setup(props, { slots }) {
-      return () => h('div', [props.label ? h('span', props.label) : null, slots.default?.()]);
+      return () =>
+        h('div', [
+          props.label ? h('span', props.label) : null,
+          slots.default?.(),
+        ]);
     },
   });
   const ElEmpty = defineComponent({
@@ -75,11 +79,10 @@ vi.mock('element-plus', () => {
     props: ['label', 'name'],
     setup(props, { slots }) {
       return () =>
-        h(
-          'section',
-          { 'data-tab-name': props.name },
-          [props.label ? h('h3', props.label) : null, slots.default?.()],
-        );
+        h('section', { 'data-tab-name': props.name }, [
+          props.label ? h('h3', props.label) : null,
+          slots.default?.(),
+        ]);
     },
   });
 
@@ -213,7 +216,9 @@ describe('TechnicalTrackingDetailsSection', () => {
     await flushView();
 
     expect(root.textContent).not.toContain('展示病例主状态和当前聚焦对象。');
-    expect(root.textContent).not.toContain('按照病例、标本、蜡块、包埋盒、玻片展开。');
+    expect(root.textContent).not.toContain(
+      '按照病例、标本、蜡块、包埋盒、玻片展开。',
+    );
     expect(root.textContent).not.toContain(
       '按时间线、任务返工和质控异常查看当前对象。',
     );

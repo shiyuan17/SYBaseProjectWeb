@@ -145,9 +145,9 @@ describe('formatTechnicalTrackingApplicationType', () => {
     expect(formatTechnicalTrackingApplicationType('ROUTINE')).toBe('常规');
     expect(formatTechnicalTrackingApplicationType('FROZEN')).toBe('冰冻');
     expect(formatTechnicalTrackingApplicationType('CONSULTATION')).toBe('会诊');
-    expect(formatTechnicalTrackingApplicationType('CYTOLOGY_CONSULTATION')).toBe(
-      '细胞学会诊',
-    );
+    expect(
+      formatTechnicalTrackingApplicationType('CYTOLOGY_CONSULTATION'),
+    ).toBe('细胞学会诊');
   });
 });
 
