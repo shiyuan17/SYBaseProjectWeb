@@ -105,6 +105,15 @@ const activeRow = computed(() => {
   return matched ?? props.rows[0] ?? null;
 });
 
+const activeRowHasTargetSnapshot = computed(() =>
+  Boolean(
+    activeRow.value?.targetType &&
+    (activeRow.value?.targetBlockId ||
+      activeRow.value?.targetSlideId ||
+      activeRow.value?.targetSpecimenId),
+  ),
+);
+
 const deductionRules = computed(() =>
   activeAspect.value === 'SLIDE' ? SLIDE_RULES : GROSSING_RULES,
 );
@@ -170,12 +179,23 @@ function toggleRuleItem(itemName: string) {
 }
 
 function selectProcessingAction(action: ProcessingAction) {
+  if (!activeRowHasTargetSnapshot.value && action !== 'NO_ACTION') {
+    ElMessage.warning('历史医嘱缺少目标快照，仅可保存普通质控评价');
+    return;
+  }
   form.processingAction = action;
 }
 
 function submitEvaluation() {
   if (!form.processingAction) {
     ElMessage.warning('请选择处理动作');
+    return;
+  }
+  if (
+    !activeRowHasTargetSnapshot.value &&
+    form.processingAction !== 'NO_ACTION'
+  ) {
+    ElMessage.warning('历史医嘱缺少目标快照，仅可保存普通质控评价');
     return;
   }
 
@@ -345,14 +365,16 @@ watch(
           <div class="text-sm font-medium">处理动作</div>
           <div class="mt-4 flex flex-col gap-3">
             <ElButton
+              :disabled="!activeRowHasTargetSnapshot"
               :type="
                 form.processingAction === 'FAST_REMAKE' ? 'primary' : undefined
               "
               @click="selectProcessingAction('FAST_REMAKE')"
             >
-              (快速)制片
+              立即重打
             </ElButton>
             <ElButton
+              :disabled="!activeRowHasTargetSnapshot"
               :type="form.processingAction === 'REMAKE' ? 'primary' : undefined"
               @click="selectProcessingAction('REMAKE')"
             >
@@ -364,7 +386,7 @@ watch(
               "
               @click="selectProcessingAction('NO_ACTION')"
             >
-              不需要
+              无需处理
             </ElButton>
           </div>
 

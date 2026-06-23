@@ -3,8 +3,10 @@ import type {
   MedicalOrderQcEvaluationSummary,
   MedicalOrderSlidePrintResult,
   MedicalOrderSummary,
+  PendingMedicalOrderQuery,
   TerminateMedicalOrderRequest,
 } from '../../doctor-workflow/types/doctor-workflow';
+import type { TechnicalWorkbenchQueryState } from '../types/technical-workbench';
 
 import { computed, ref } from 'vue';
 
@@ -14,10 +16,15 @@ import {
   acceptMedicalOrder,
   completeMedicalOrder,
   createMedicalOrderQcEvaluation,
+  exportRoutineMedicalOrders,
   getLatestMedicalOrderQcEvaluation,
+  mergeRoutineMedicalOrderSlides,
   printMedicalOrderSlide,
   terminateMedicalOrder,
+  unmergeRoutineMedicalOrderSlides,
 } from '../../doctor-workflow/api/doctor-workflow-service';
+import { downloadRoutineOrderBlobFile } from '../utils/routine-order-download';
+import { openRoutineOrderApplicationLabelPrintWindow } from '../utils/routine-order-label-print';
 import { openRoutineOrderPrintWindow } from '../utils/routine-order-print';
 
 export interface RoutineOrderToolbarAction {
@@ -26,6 +33,7 @@ export interface RoutineOrderToolbarAction {
 }
 
 export interface RoutineMedicalOrderRow extends Partial<MedicalOrderSummary> {
+  applicationNo?: null | string;
   blockNo?: null | string;
   canConfirm?: boolean;
   canPrint?: boolean;
@@ -34,16 +42,23 @@ export interface RoutineMedicalOrderRow extends Partial<MedicalOrderSummary> {
   canTerminate?: boolean;
   caseId?: null | string;
   checkItem?: null | string;
+  doctorTime?: null | string;
+  doctorUser?: null | string;
   id: string;
   orderId?: string;
   pathologyNo?: null | string;
   patientName?: null | string;
   releaseStatus?: null | string;
   slideNo?: null | string;
+  status?: null | string;
+  slicingMergedPrintGroup?: boolean;
+  slicingPrintGroupId?: null | string;
+  slicingTaskIds?: string[];
   targetBlockId?: null | string;
   targetSlideId?: null | string;
   targetSpecimenId?: null | string;
   targetType?: null | string;
+  terminatedAt?: null | string;
 }
 
 export type RoutineOrderQcSubmitPayload = Omit<
@@ -58,6 +73,7 @@ export interface RoutineOrderTerminationPayload {
 }
 
 interface ReloadableWorkbench {
+  getQueryState?: () => TechnicalWorkbenchQueryState;
   reload?: () => Promise<void> | void;
 }
 
@@ -71,16 +87,39 @@ function getCaseId(row: RoutineMedicalOrderRow) {
   return row.caseId?.trim() || '';
 }
 
-function hasTargetSnapshot(row: RoutineMedicalOrderRow) {
-  return Boolean(
-    row.targetType &&
-    (row.targetBlockId || row.targetSlideId || row.targetSpecimenId),
+function isTerminatedRow(row: RoutineMedicalOrderRow) {
+  return (
+    row.status?.trim().toUpperCase() === 'TERMINATED' ||
+    Boolean(row.terminatedAt?.trim())
   );
 }
 
 function normalizeRemarks(value?: null | string) {
   const normalized = value?.trim();
   return normalized || undefined;
+}
+
+function normalizeCheckItem(value?: null | string) {
+  return value?.trim() || '';
+}
+
+function getRoutineWorkstationQuery(
+  workbench: null | ReloadableWorkbench,
+): PendingMedicalOrderQuery {
+  const queryState = workbench?.getQueryState?.();
+  const dateRange = queryState?.dateRange ?? [];
+  const normalizedDateRange =
+    Array.isArray(dateRange) && dateRange.length === 2 ? dateRange : [];
+
+  return {
+    dateFrom: normalizedDateRange[0]?.trim() || undefined,
+    dateTo: normalizedDateRange[1]?.trim() || undefined,
+    page: 1,
+    pathologyNo: queryState?.searchKeyword?.trim() || undefined,
+    size: 9999,
+    status: queryState?.status?.trim() || undefined,
+    workDate: undefined,
+  };
 }
 
 function buildBatchSummary(
@@ -167,13 +206,11 @@ export function useRoutineMedicalOrderActions() {
     return false;
   }
 
-  function ensureTargetSnapshot(actionLabel: string) {
-    if (selectedRows.value.every((row) => hasTargetSnapshot(row))) {
+  function ensureRowsNotTerminated(actionLabel: string) {
+    if (selectedRows.value.every((row) => !isTerminatedRow(row))) {
       return true;
     }
-    ElMessage.warning(
-      `选中医嘱中存在缺少目标快照的历史数据，无法执行${actionLabel}`,
-    );
+    ElMessage.warning(`选中医嘱中存在不可${actionLabel}的数据，请重新选择`);
     return false;
   }
 
@@ -270,6 +307,119 @@ export function useRoutineMedicalOrderActions() {
     }
   }
 
+  function ensureRowsHaveSameCheckItem() {
+    if (selectedRows.value.length < 2) {
+      ElMessage.warning('相同项目合片至少选择 2 条医嘱');
+      return false;
+    }
+
+    const firstCheckItem = normalizeCheckItem(selectedRows.value[0]?.checkItem);
+    if (
+      !firstCheckItem ||
+      !selectedRows.value.every(
+        (row) => normalizeCheckItem(row.checkItem) === firstCheckItem,
+      )
+    ) {
+      ElMessage.warning('相同项目合片仅支持检查项目一致的医嘱');
+      return false;
+    }
+
+    return true;
+  }
+
+  function ensureMergedPrintGroupsSelected() {
+    if (
+      selectedRows.value.every((row) =>
+        Boolean(row.slicingMergedPrintGroup && row.slicingPrintGroupId),
+      )
+    ) {
+      return true;
+    }
+
+    ElMessage.warning('取消合片只支持未打印合片组');
+    return false;
+  }
+
+  async function handlePrintLabelAction() {
+    if (!ensureSelectedRows('打印申请单标签')) {
+      return;
+    }
+
+    const opened = openRoutineOrderApplicationLabelPrintWindow([
+      ...selectedRows.value,
+    ]);
+    if (!opened) {
+      ElMessage.warning('未能打开打印窗口，请检查浏览器弹窗权限');
+      return;
+    }
+
+    ElMessage.success(`打印申请单标签成功 ${selectedRows.value.length} 条`);
+    await reloadWorkbench();
+  }
+
+  async function handleMergeAction() {
+    if (!ensureSelectedRows('相同项目合片')) {
+      return;
+    }
+    if (!ensureRowsHaveSameCheckItem()) {
+      return;
+    }
+
+    submitting.value = true;
+    try {
+      await mergeRoutineMedicalOrderSlides(
+        selectedRows.value.map((row) => getOrderId(row)),
+      );
+      ElMessage.success(`相同项目合片成功 ${selectedRows.value.length} 条`);
+      await reloadWorkbench();
+    } finally {
+      submitting.value = false;
+    }
+  }
+
+  async function handleUnmergeAction() {
+    if (!ensureSelectedRows('取消合片')) {
+      return;
+    }
+    if (!ensureMergedPrintGroupsSelected()) {
+      return;
+    }
+
+    const printGroupIds = [
+      ...new Set(
+        selectedRows.value
+          .map((row) => row.slicingPrintGroupId?.trim())
+          .filter(Boolean),
+      ),
+    ];
+
+    submitting.value = true;
+    try {
+      await unmergeRoutineMedicalOrderSlides(printGroupIds);
+      ElMessage.success(`取消合片成功 ${printGroupIds.length} 组`);
+      await reloadWorkbench();
+    } finally {
+      submitting.value = false;
+    }
+  }
+
+  async function handleExportAction() {
+    submitting.value = true;
+    try {
+      const blob = await exportRoutineMedicalOrders(
+        getRoutineWorkstationQuery(workbenchRef.value),
+      );
+      downloadRoutineOrderBlobFile(
+        blob,
+        `routine-medical-orders-${new Date().toISOString().slice(0, 10)}.csv`,
+      );
+      ElMessage.success('导出成功');
+      await reloadWorkbench();
+    } finally {
+      submitting.value = false;
+    }
+  }
+
   function openTerminationDialog() {
     if (!ensureSelectedRows('终止')) {
       return;
@@ -319,15 +469,7 @@ export function useRoutineMedicalOrderActions() {
     if (!ensureSelectedRows('质控评价')) {
       return;
     }
-    if (
-      !ensureRowsCanRun(
-        (row) => Boolean(row.canQc),
-        '选中医嘱中存在不可质控评价的数据，请重新选择',
-      )
-    ) {
-      return;
-    }
-    if (!ensureTargetSnapshot('质控评价')) {
+    if (!ensureRowsNotTerminated('质控评价')) {
       return;
     }
 
@@ -373,6 +515,18 @@ export function useRoutineMedicalOrderActions() {
         await handleConfirmAction();
         return;
       }
+      case 'routine-export': {
+        await handleExportAction();
+        return;
+      }
+      case 'routine-merge': {
+        await handleMergeAction();
+        return;
+      }
+      case 'routine-print-label': {
+        await handlePrintLabelAction();
+        return;
+      }
       case 'routine-print-slide': {
         await handlePrintAction();
         return;
@@ -387,6 +541,10 @@ export function useRoutineMedicalOrderActions() {
       }
       case 'routine-stop': {
         openTerminationDialog();
+        return;
+      }
+      case 'routine-unmerge': {
+        await handleUnmergeAction();
         return;
       }
       default: {

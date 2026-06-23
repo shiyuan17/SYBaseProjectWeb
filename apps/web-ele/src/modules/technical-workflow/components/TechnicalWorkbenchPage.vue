@@ -266,6 +266,16 @@ function createQueryActionPayload(
   };
 }
 
+function getQueryState() {
+  return {
+    dateRange: [...activeDateRange.value],
+    page: currentPage.value,
+    pageSize: pageSize.value,
+    searchKeyword: searchKeyword.value.trim(),
+    status: activeStatus.value,
+  };
+}
+
 function handleToolbarAction(action: TechnicalWorkbenchAction) {
   if (isActionDisabled(action)) {
     return;
@@ -384,6 +394,7 @@ function handleSelectionChange(rows: TechnicalWorkbenchRow[]) {
 }
 
 defineExpose<TechnicalWorkbenchPageExpose>({
+  getQueryState,
   reload,
 });
 </script>

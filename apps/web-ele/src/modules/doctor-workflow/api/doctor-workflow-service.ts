@@ -145,9 +145,18 @@ export function mapPendingMedicalOrderPageResponse(
       ? response.items.map((item) => ({
           ...item,
           caseId: item.caseId ?? '',
+          inpatientNo: item.inpatientNo ?? null,
           orderId: item.orderId ?? '',
           patientId: item.patientId ?? null,
           patientIdDisplay: item.patientIdDisplay ?? null,
+          slicingMergedPrintGroup: item.slicingMergedPrintGroup ?? false,
+          slicingPrintGroupId: item.slicingPrintGroupId ?? null,
+          slicingTaskId: item.slicingTaskId ?? null,
+          slicingTaskIds: Array.isArray(item.slicingTaskIds)
+            ? item.slicingTaskIds.filter(
+                (taskId): taskId is string => typeof taskId === 'string',
+              )
+            : [],
         }))
       : [],
     page: response.page ?? 1,
@@ -573,6 +582,30 @@ export async function listPendingMedicalOrders(
     { params },
   );
   return mapPendingMedicalOrderPageResponse(response);
+}
+
+export async function mergeRoutineMedicalOrderSlides(orderIds: string[]) {
+  return requestClient.post<unknown>('/v1/medical-orders/merge-slides', {
+    orderIds,
+  });
+}
+
+export async function unmergeRoutineMedicalOrderSlides(
+  printGroupIds: string[],
+) {
+  return requestClient.post<unknown>('/v1/medical-orders/unmerge-slides', {
+    printGroupIds,
+  });
+}
+
+export async function exportRoutineMedicalOrders(
+  params: PendingMedicalOrderQuery,
+) {
+  return requestClient.download('/v1/medical-orders/export', {
+    method: 'GET',
+    params,
+    responseReturn: 'body',
+  });
 }
 
 export async function listMedicalOrderDicts() {

@@ -20,6 +20,7 @@ import {
   createPathologyReport,
   createReportRevisionRequest,
   executeMedicalOrderBilling,
+  exportRoutineMedicalOrders,
   getCaseLifecycleTracking,
   getDiagnosticWorkbench,
   getLatestMedicalOrderQcEvaluation,
@@ -42,6 +43,7 @@ import {
   mapPendingDiagnosticTaskPageResponse,
   mapPendingMedicalOrderPageResponse,
   mapReportTrackingResponse,
+  mergeRoutineMedicalOrderSlides,
   printFormalReportVersions,
   printMedicalOrderSlide,
   publishPathologyReport,
@@ -54,21 +56,25 @@ import {
   startDiagnosticTask,
   submitPathologyReport,
   terminateMedicalOrder,
+  unmergeRoutineMedicalOrderSlides,
 } from './doctor-workflow-service';
 
 vi.mock('#/api/request', () => ({
   requestClient: {
+    download: vi.fn(),
     get: vi.fn(),
     post: vi.fn(),
   },
 }));
 
 const requestClientMock = requestClient as unknown as {
+  download: Mock;
   get: Mock;
   post: Mock;
 };
 
 beforeEach(() => {
+  requestClientMock.download.mockReset();
   requestClientMock.get.mockReset();
   requestClientMock.post.mockReset();
 });
@@ -147,6 +153,7 @@ describe('doctor-workflow-service mappers', () => {
         items: [
           {
             caseId: 'CASE-001',
+            inpatientNo: 'IP-001',
             orderCategoryCode: 'IHC',
             orderCategoryId: 'CAT-IHC',
             orderCategoryName: '免疫组化',
@@ -157,6 +164,10 @@ describe('doctor-workflow-service mappers', () => {
             orderItemName: 'CK',
             patientId: 'UUID-001',
             patientIdDisplay: '08305',
+            slicingMergedPrintGroup: true,
+            slicingPrintGroupId: 'GROUP-001',
+            slicingTaskId: 'TASK-001',
+            slicingTaskIds: ['TASK-001', 'TASK-002'],
           },
         ],
       }),
@@ -164,6 +175,7 @@ describe('doctor-workflow-service mappers', () => {
       items: [
         {
           caseId: 'CASE-001',
+          inpatientNo: 'IP-001',
           orderCategoryCode: 'IHC',
           orderCategoryId: 'CAT-IHC',
           orderCategoryName: '免疫组化',
@@ -174,6 +186,10 @@ describe('doctor-workflow-service mappers', () => {
           orderItemName: 'CK',
           patientId: 'UUID-001',
           patientIdDisplay: '08305',
+          slicingMergedPrintGroup: true,
+          slicingPrintGroupId: 'GROUP-001',
+          slicingTaskId: 'TASK-001',
+          slicingTaskIds: ['TASK-001', 'TASK-002'],
         },
       ],
       page: 1,
@@ -685,6 +701,60 @@ describe('doctor-workflow-service requests', () => {
     );
   });
 
+  it('posts routine merge and unmerge endpoints with exact payloads', async () => {
+    await mergeRoutineMedicalOrderSlides(['ORDER-1', 'ORDER-2']);
+    await unmergeRoutineMedicalOrderSlides(['GROUP-1', 'GROUP-2']);
+
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      1,
+      '/v1/medical-orders/merge-slides',
+      {
+        orderIds: ['ORDER-1', 'ORDER-2'],
+      },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      2,
+      '/v1/medical-orders/unmerge-slides',
+      {
+        printGroupIds: ['GROUP-1', 'GROUP-2'],
+      },
+    );
+  });
+
+  it('exports routine medical orders with pending query params and blob download contract', async () => {
+    const exportBlob = new Blob(['csv'], { type: 'text/csv;charset=utf-8' });
+    requestClientMock.download.mockResolvedValue(exportBlob);
+
+    await expect(
+      exportRoutineMedicalOrders({
+        dateFrom: '2026-06-20',
+        dateTo: '2026-06-22',
+        page: 1,
+        pathologyNo: 'BL-001',
+        size: 20,
+        status: 'PENDING',
+        workDate: '2026-06-22',
+      }),
+    ).resolves.toBe(exportBlob);
+
+    expect(requestClientMock.download).toHaveBeenCalledWith(
+      '/v1/medical-orders/export',
+      {
+        method: 'GET',
+        params: {
+          dateFrom: '2026-06-20',
+          dateTo: '2026-06-22',
+          page: 1,
+          pathologyNo: 'BL-001',
+          size: 20,
+          status: 'PENDING',
+          workDate: '2026-06-22',
+        },
+        responseReturn: 'body',
+      },
+    );
+  });
+
   it('queries medical order dictionaries and packages with backend paths', async () => {
     requestClientMock.get.mockResolvedValueOnce([]).mockResolvedValueOnce({
       items: [],
@@ -766,10 +836,13 @@ describe('doctor-workflow-service requests', () => {
 
   it('posts medical order endpoints with exact paths', async () => {
     await createMedicalOrder({
+      blockNo: 'A1',
       caseId: 'CASE-1',
       orderContent: '补做特殊染色',
       orderItemId: 'ITEM-TSRS-PAS',
       orderType: 'SPECIAL_STAIN',
+      targetBlockId: 'BLOCK-1',
+      targetBlockNo: 'A1',
     });
     await acceptMedicalOrder('ORDER-1', { terminalCode: 'TERM-1' });
     await completeMedicalOrder('ORDER-1', { remarks: '已完成' });
@@ -779,10 +852,13 @@ describe('doctor-workflow-service requests', () => {
       1,
       '/v1/medical-orders',
       {
+        blockNo: 'A1',
         caseId: 'CASE-1',
         orderContent: '补做特殊染色',
         orderItemId: 'ITEM-TSRS-PAS',
         orderType: 'SPECIAL_STAIN',
+        targetBlockId: 'BLOCK-1',
+        targetBlockNo: 'A1',
       },
     );
     expect(requestClientMock.post).toHaveBeenNthCalledWith(

@@ -53,6 +53,7 @@ describe('medical-order-workstation mapper', () => {
         executorName: '技师甲',
         orderCategoryCode: 'EXAM',
         orderCategoryName: '常规医嘱',
+        inpatientNo: 'ZY-001',
         printedAt: '2026-06-22T09:30:00',
         printedByName: '技师甲',
         releasedAt: null,
@@ -79,6 +80,7 @@ describe('medical-order-workstation mapper', () => {
       confirmedTime: '2026-06-22 09:00:00',
       confirmedUser: '技师甲',
       doctorTime: '2026-06-05 09:12:30',
+      inpatientNo: 'ZY-001',
       originalPathologyNo: '-',
       patientName: '王女士',
       pathologyNo: 'BL-202606050001',
@@ -90,6 +92,25 @@ describe('medical-order-workstation mapper', () => {
       targetBlockId: 'BLOCK-1',
     });
     expect(row.searchableText).toContain('bl-202606050001');
+  });
+
+  it('falls back to parsing block number from order content for legacy routine rows', () => {
+    const row = mapMedicalOrderToTechnicalWorkbenchRow(
+      createOrder({
+        blockNo: null,
+        orderCategoryCode: 'ROUTINE',
+        orderCategoryName: '常规医嘱',
+        orderContent: '补做特殊染色（蜡块: A2 胃窦组织）',
+        orderItemName: '特殊染色',
+      }),
+      'routine',
+    );
+
+    expect(row).toMatchObject({
+      blockNo: 'A2 胃窦组织',
+      checkItem: '特殊染色',
+    });
+    expect(row.searchableText).toContain('a2 胃窦组织');
   });
 
   it('keeps charged HE staining orders visible in routine rows', () => {
@@ -167,6 +188,7 @@ describe('medical-order-workstation mapper', () => {
   it('maps special medical orders to confirmation and release columns', () => {
     const row = mapMedicalOrderToTechnicalWorkbenchRow(
       createOrder({
+        inpatientNo: 'ZY-009',
         orderCategoryCode: 'TSRS',
         orderCategoryName: '特检医嘱',
       }),
@@ -176,6 +198,7 @@ describe('medical-order-workstation mapper', () => {
     expect(row).toMatchObject({
       confirmAction: '待确认',
       doctorMessage: '加做',
+      inpatientNo: 'ZY-009',
       orderAction: '待确认',
       orderType: '特检医嘱',
       printStatus: '未打印',
@@ -288,6 +311,55 @@ describe('medical-order-workstation mapper', () => {
       }),
     ).resolves.toMatchObject({
       rows: [{ checkItem: 'HE染色', orderType: '常规医嘱' }],
+      total: 1,
+    });
+    expect(listPendingMedicalOrdersMock).toHaveBeenCalledWith({
+      orderCategoryCode: 'ROUTINE,EXAM,CGRS,BLOCK,QP',
+      page: 1,
+      pathologyNo: undefined,
+      size: 30,
+      status: undefined,
+    });
+  });
+
+  it('maps completed routine orders when default status filter is omitted', async () => {
+    listPendingMedicalOrdersMock.mockResolvedValue({
+      items: [
+        createOrder({
+          completedAt: '2026-06-22T11:20:00',
+          orderCategoryCode: 'ROUTINE',
+          orderCategoryName: '常规医嘱',
+          orderItemCode: 'HE',
+          orderItemName: 'HE染色',
+          orderType: 'ROUTINE',
+          releasedAt: '2026-06-22T11:20:00',
+          releasedByName: '技师乙',
+          status: 'COMPLETED',
+        }),
+      ],
+      page: 1,
+      size: 30,
+      total: 1,
+    });
+
+    const dataSource = createMedicalOrderWorkstationDataSource(
+      TECHNICAL_ORDER_CATEGORY_CODES.routine,
+      'routine',
+    );
+
+    await expect(
+      dataSource.load({
+        page: 1,
+        size: 30,
+      }),
+    ).resolves.toMatchObject({
+      rows: [
+        {
+          checkItem: 'HE染色',
+          releaseStatus: '已出片',
+          releaseTime: '2026-06-22 11:20:00',
+        },
+      ],
       total: 1,
     });
     expect(listPendingMedicalOrdersMock).toHaveBeenCalledWith({

@@ -391,6 +391,14 @@ describe('TechnicalWorkbenchPage', () => {
     });
     expect(messageInfo).not.toHaveBeenCalled();
 
+    expect(wrapper.pageRef.value?.getQueryState()).toEqual({
+      dateRange: [],
+      page: 1,
+      pageSize: 20,
+      searchKeyword: '',
+      status: '',
+    });
+
     await wrapper.pageRef.value?.reload();
     await flushAll();
 

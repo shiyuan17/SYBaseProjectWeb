@@ -9,34 +9,51 @@ import { createApp, defineComponent, h, nextTick } from 'vue';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const {
+  downloadRoutineOrderBlobFileMock,
   messageSuccess,
   messageWarning,
   mockAcceptMedicalOrder,
   mockCompleteMedicalOrder,
   mockCreateMedicalOrderQcEvaluation,
+  mockExportRoutineMedicalOrders,
   mockGetLatestMedicalOrderQcEvaluation,
+  mockMergeRoutineMedicalOrderSlides,
+  mockOpenRoutineOrderApplicationLabelPrintWindow,
   mockPrintMedicalOrderSlide,
   mockTerminateMedicalOrder,
+  mockUnmergeRoutineMedicalOrderSlides,
   reloadSpy,
 } = vi.hoisted(() => ({
+  downloadRoutineOrderBlobFileMock: vi.fn(),
   messageSuccess: vi.fn(),
   messageWarning: vi.fn(),
   mockAcceptMedicalOrder: vi.fn(),
   mockCompleteMedicalOrder: vi.fn(),
   mockCreateMedicalOrderQcEvaluation: vi.fn(),
+  mockExportRoutineMedicalOrders: vi.fn(),
   mockGetLatestMedicalOrderQcEvaluation: vi.fn(),
+  mockMergeRoutineMedicalOrderSlides: vi.fn(),
+  mockOpenRoutineOrderApplicationLabelPrintWindow: vi.fn(),
   mockPrintMedicalOrderSlide: vi.fn(),
   mockTerminateMedicalOrder: vi.fn(),
+  mockUnmergeRoutineMedicalOrderSlides: vi.fn(),
   reloadSpy: vi.fn(),
+}));
+
+vi.mock('../utils/routine-order-download', () => ({
+  downloadRoutineOrderBlobFile: downloadRoutineOrderBlobFileMock,
 }));
 
 vi.mock('../../doctor-workflow/api/doctor-workflow-service', () => ({
   acceptMedicalOrder: mockAcceptMedicalOrder,
   completeMedicalOrder: mockCompleteMedicalOrder,
   createMedicalOrderQcEvaluation: mockCreateMedicalOrderQcEvaluation,
+  exportRoutineMedicalOrders: mockExportRoutineMedicalOrders,
   getLatestMedicalOrderQcEvaluation: mockGetLatestMedicalOrderQcEvaluation,
+  mergeRoutineMedicalOrderSlides: mockMergeRoutineMedicalOrderSlides,
   printMedicalOrderSlide: mockPrintMedicalOrderSlide,
   terminateMedicalOrder: mockTerminateMedicalOrder,
+  unmergeRoutineMedicalOrderSlides: mockUnmergeRoutineMedicalOrderSlides,
 }));
 
 vi.mock('element-plus', () => ({
@@ -46,12 +63,43 @@ vi.mock('element-plus', () => ({
   },
 }));
 
+vi.mock('../utils/routine-order-print', () => ({
+  openRoutineOrderPrintWindow: (labels: Array<Record<string, unknown>>) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      return false;
+    }
+    printWindow.document.open();
+    printWindow.document.write(JSON.stringify(labels));
+    printWindow.document.close();
+    return true;
+  },
+}));
+
+vi.mock('../utils/routine-order-label-print', () => ({
+  openRoutineOrderApplicationLabelPrintWindow:
+    mockOpenRoutineOrderApplicationLabelPrintWindow,
+}));
+
 vi.mock('../components/TechnicalWorkbenchPage.vue', () => ({
   default: defineComponent({
     props: ['config'],
     emits: ['query-action', 'selection-change', 'toolbar-action'],
     setup(_, { emit, expose }) {
+      const queryState = {
+        dateRange: [] as string[],
+        searchKeyword: '',
+        status: '',
+      };
+
       expose({
+        getQueryState: () => ({
+          dateRange: [...queryState.dateRange],
+          page: 1,
+          pageSize: 30,
+          searchKeyword: queryState.searchKeyword,
+          status: queryState.status,
+        }),
         reload: reloadSpy,
       });
       return () =>
@@ -73,6 +121,24 @@ vi.mock('../components/TechnicalWorkbenchPage.vue', () => ({
               onClick: () => emit('selection-change', [createLegacyRow()]),
             },
             'select-legacy',
+          ),
+          h(
+            'button',
+            {
+              'data-testid': 'select-completed-row',
+              type: 'button',
+              onClick: () => emit('selection-change', [createCompletedRow()]),
+            },
+            'select-completed',
+          ),
+          h(
+            'button',
+            {
+              'data-testid': 'select-terminated-row',
+              type: 'button',
+              onClick: () => emit('selection-change', [createTerminatedRow()]),
+            },
+            'select-terminated',
           ),
           h(
             'button',
@@ -101,6 +167,61 @@ vi.mock('../components/TechnicalWorkbenchPage.vue', () => ({
                 ]),
             },
             'select-two-ready',
+          ),
+          h(
+            'button',
+            {
+              'data-testid': 'select-two-different-check-item-rows',
+              type: 'button',
+              onClick: () =>
+                emit('selection-change', [
+                  createReadyRow(),
+                  createReadyRow({
+                    checkItem: 'PAS染色',
+                    id: 'ORDER-3',
+                    orderId: 'ORDER-3',
+                    pathologyNo: 'BL-003',
+                    targetSlideId: 'SLIDE-3',
+                  }),
+                ]),
+            },
+            'select-two-different-check-item-rows',
+          ),
+          h(
+            'button',
+            {
+              'data-testid': 'select-merged-group-rows',
+              type: 'button',
+              onClick: () =>
+                emit('selection-change', [
+                  createReadyRow({
+                    id: 'ORDER-4',
+                    orderId: 'ORDER-4',
+                    slicingMergedPrintGroup: true,
+                    slicingPrintGroupId: 'GROUP-1',
+                  }),
+                  createReadyRow({
+                    id: 'ORDER-5',
+                    orderId: 'ORDER-5',
+                    slicingMergedPrintGroup: true,
+                    slicingPrintGroupId: 'GROUP-2',
+                  }),
+                ]),
+            },
+            'select-merged-group-rows',
+          ),
+          h(
+            'button',
+            {
+              'data-testid': 'set-export-query',
+              type: 'button',
+              onClick: () => {
+                queryState.searchKeyword = 'BL-7788';
+                queryState.status = 'IN_PROGRESS';
+                queryState.dateRange = ['2026-06-20', '2026-06-21'];
+              },
+            },
+            'set-export-query',
           ),
           h(
             'button',
@@ -156,6 +277,61 @@ vi.mock('../components/TechnicalWorkbenchPage.vue', () => ({
                 }),
             },
             '终止',
+          ),
+          h(
+            'button',
+            {
+              'data-testid': 'toolbar-print-label',
+              type: 'button',
+              onClick: () =>
+                emit('toolbar-action', {
+                  action: {
+                    id: 'routine-print-label',
+                    label: '打印申请单标签',
+                  },
+                  selectedRows: [],
+                }),
+            },
+            '打印申请单标签',
+          ),
+          h(
+            'button',
+            {
+              'data-testid': 'toolbar-merge',
+              type: 'button',
+              onClick: () =>
+                emit('toolbar-action', {
+                  action: { id: 'routine-merge', label: '相同项目合片' },
+                  selectedRows: [],
+                }),
+            },
+            '相同项目合片',
+          ),
+          h(
+            'button',
+            {
+              'data-testid': 'toolbar-unmerge',
+              type: 'button',
+              onClick: () =>
+                emit('toolbar-action', {
+                  action: { id: 'routine-unmerge', label: '取消合片' },
+                  selectedRows: [],
+                }),
+            },
+            '取消合片',
+          ),
+          h(
+            'button',
+            {
+              'data-testid': 'toolbar-export',
+              type: 'button',
+              onClick: () =>
+                emit('toolbar-action', {
+                  action: { id: 'routine-export', label: '导出Excel' },
+                  selectedRows: [],
+                }),
+            },
+            '导出Excel',
           ),
           h(
             'button',
@@ -260,12 +436,17 @@ function createReadyRow(
     canTerminate: true,
     caseId: 'CASE-1',
     checkItem: 'HE染色',
+    doctorTime: '2026-06-22 08:00:00',
+    doctorUser: '医生甲',
     id: 'ORDER-1',
     orderId: 'ORDER-1',
     pathologyNo: 'BL-001',
     patientName: '患者甲',
+    applicationNo: 'APP-001',
     releaseStatus: '待出片',
     slideNo: 'SLIDE-001',
+    slicingMergedPrintGroup: false,
+    slicingPrintGroupId: null,
     targetBlockId: 'BLOCK-1',
     targetSlideId: 'SLIDE-1',
     targetSpecimenId: 'SPEC-1',
@@ -282,6 +463,31 @@ function createLegacyRow() {
     targetSlideId: null,
     targetSpecimenId: null,
     targetType: null,
+  });
+}
+
+function createCompletedRow() {
+  return createReadyRow({
+    canConfirm: false,
+    canPrint: false,
+    canQc: false,
+    canRelease: false,
+    canTerminate: false,
+    completedAt: '2026-06-23T10:00:00',
+    releaseStatus: '已出片',
+    status: 'COMPLETED',
+  });
+}
+
+function createTerminatedRow() {
+  return createReadyRow({
+    canConfirm: false,
+    canPrint: false,
+    canQc: false,
+    canRelease: false,
+    canTerminate: false,
+    status: 'TERMINATED',
+    terminatedAt: '2026-06-23T11:00:00',
   });
 }
 
@@ -332,14 +538,19 @@ function createPrintResult(orderId: string): MedicalOrderSlidePrintResult {
 describe('RoutineOrderWorkstationView', () => {
   afterEach(() => {
     document.body.innerHTML = '';
+    downloadRoutineOrderBlobFileMock.mockReset();
     messageSuccess.mockReset();
     messageWarning.mockReset();
     mockAcceptMedicalOrder.mockReset();
     mockCompleteMedicalOrder.mockReset();
     mockCreateMedicalOrderQcEvaluation.mockReset();
+    mockExportRoutineMedicalOrders.mockReset();
     mockGetLatestMedicalOrderQcEvaluation.mockReset();
+    mockMergeRoutineMedicalOrderSlides.mockReset();
+    mockOpenRoutineOrderApplicationLabelPrintWindow.mockReset();
     mockPrintMedicalOrderSlide.mockReset();
     mockTerminateMedicalOrder.mockReset();
+    mockUnmergeRoutineMedicalOrderSlides.mockReset();
     reloadSpy.mockReset();
     vi.restoreAllMocks();
   });
@@ -442,7 +653,7 @@ describe('RoutineOrderWorkstationView', () => {
     app.unmount();
   });
 
-  it('still blocks qc for legacy orders without target snapshot', async () => {
+  it('allows qc for legacy orders without target snapshot', async () => {
     const { app, root } = mountView();
     await flushAll();
 
@@ -456,10 +667,214 @@ describe('RoutineOrderWorkstationView', () => {
       ?.click();
     await flushAll();
 
-    expect(messageWarning).toHaveBeenCalledWith(
+    expect(messageWarning).not.toHaveBeenCalledWith(
       '选中医嘱中存在缺少目标快照的历史数据，无法执行质控评价',
     );
+    expect(mockGetLatestMedicalOrderQcEvaluation).toHaveBeenCalledWith(
+      'ORDER-1',
+    );
+
+    app.unmount();
+  });
+
+  it('allows qc for completed orders that are not terminated', async () => {
+    const { app, root } = mountView();
+    await flushAll();
+
+    root
+      .querySelector<HTMLButtonElement>('[data-testid="select-completed-row"]')
+      ?.click();
+    await flushAll();
+
+    root
+      .querySelector<HTMLButtonElement>('[data-testid="toolbar-qc"]')
+      ?.click();
+    await flushAll();
+
+    expect(mockGetLatestMedicalOrderQcEvaluation).toHaveBeenCalledWith(
+      'ORDER-1',
+    );
+
+    app.unmount();
+  });
+
+  it('still blocks qc for terminated orders', async () => {
+    const { app, root } = mountView();
+    await flushAll();
+
+    root
+      .querySelector<HTMLButtonElement>('[data-testid="select-terminated-row"]')
+      ?.click();
+    await flushAll();
+
+    root
+      .querySelector<HTMLButtonElement>('[data-testid="toolbar-qc"]')
+      ?.click();
+    await flushAll();
+
+    expect(messageWarning).toHaveBeenCalledWith(
+      '选中医嘱中存在不可质控评价的数据，请重新选择',
+    );
     expect(mockGetLatestMedicalOrderQcEvaluation).not.toHaveBeenCalled();
+
+    app.unmount();
+  });
+
+  it('shows selection warning before printing routine application labels', async () => {
+    const { app, root } = mountView();
+    await flushAll();
+
+    root
+      .querySelector<HTMLButtonElement>('[data-testid="toolbar-print-label"]')
+      ?.click();
+    await flushAll();
+
+    expect(messageWarning).toHaveBeenCalledWith(
+      '请先选择需要打印申请单标签的医嘱',
+    );
+    expect(
+      mockOpenRoutineOrderApplicationLabelPrintWindow,
+    ).not.toHaveBeenCalled();
+
+    app.unmount();
+  });
+
+  it('blocks merging rows with different check items', async () => {
+    const { app, root } = mountView();
+    await flushAll();
+
+    root
+      .querySelector<HTMLButtonElement>(
+        '[data-testid="select-two-different-check-item-rows"]',
+      )
+      ?.click();
+    await flushAll();
+
+    root
+      .querySelector<HTMLButtonElement>('[data-testid="toolbar-merge"]')
+      ?.click();
+    await flushAll();
+
+    expect(messageWarning).toHaveBeenCalledWith(
+      '相同项目合片仅支持检查项目一致的医嘱',
+    );
+    expect(mockMergeRoutineMedicalOrderSlides).not.toHaveBeenCalled();
+
+    app.unmount();
+  });
+
+  it('blocks unmerge for rows outside unprinted merged groups', async () => {
+    const { app, root } = mountView();
+    await flushAll();
+
+    root
+      .querySelector<HTMLButtonElement>('[data-testid="select-ready-row"]')
+      ?.click();
+    await flushAll();
+
+    root
+      .querySelector<HTMLButtonElement>('[data-testid="toolbar-unmerge"]')
+      ?.click();
+    await flushAll();
+
+    expect(messageWarning).toHaveBeenCalledWith('取消合片只支持未打印合片组');
+    expect(mockUnmergeRoutineMedicalOrderSlides).not.toHaveBeenCalled();
+
+    app.unmount();
+  });
+
+  it('runs routine label print, merge, unmerge, and export actions then reloads', async () => {
+    mockOpenRoutineOrderApplicationLabelPrintWindow.mockReturnValue(true);
+    mockMergeRoutineMedicalOrderSlides.mockResolvedValue({
+      printGroupIds: ['GROUP-1'],
+    });
+    mockUnmergeRoutineMedicalOrderSlides.mockResolvedValue({
+      printGroupIds: ['GROUP-1', 'GROUP-2'],
+    });
+    mockExportRoutineMedicalOrders.mockResolvedValue(
+      new Blob(['csv'], { type: 'text/csv;charset=utf-8' }),
+    );
+
+    const { app, root } = mountView();
+    await flushAll();
+
+    root
+      .querySelector<HTMLButtonElement>('[data-testid="select-ready-row"]')
+      ?.click();
+    await flushAll();
+
+    root
+      .querySelector<HTMLButtonElement>('[data-testid="toolbar-print-label"]')
+      ?.click();
+    await flushAll();
+
+    expect(
+      mockOpenRoutineOrderApplicationLabelPrintWindow,
+    ).toHaveBeenCalledWith([
+      expect.objectContaining({
+        applicationNo: 'APP-001',
+        id: 'ORDER-1',
+        orderId: 'ORDER-1',
+        pathologyNo: 'BL-001',
+      }),
+    ]);
+
+    root
+      .querySelector<HTMLButtonElement>('[data-testid="select-two-ready-rows"]')
+      ?.click();
+    await flushAll();
+
+    root
+      .querySelector<HTMLButtonElement>('[data-testid="toolbar-merge"]')
+      ?.click();
+    await flushAll();
+
+    expect(mockMergeRoutineMedicalOrderSlides).toHaveBeenCalledWith([
+      'ORDER-1',
+      'ORDER-2',
+    ]);
+
+    root
+      .querySelector<HTMLButtonElement>(
+        '[data-testid="select-merged-group-rows"]',
+      )
+      ?.click();
+    await flushAll();
+
+    root
+      .querySelector<HTMLButtonElement>('[data-testid="toolbar-unmerge"]')
+      ?.click();
+    await flushAll();
+
+    expect(mockUnmergeRoutineMedicalOrderSlides).toHaveBeenCalledWith([
+      'GROUP-1',
+      'GROUP-2',
+    ]);
+
+    root
+      .querySelector<HTMLButtonElement>('[data-testid="set-export-query"]')
+      ?.click();
+    await flushAll();
+
+    root
+      .querySelector<HTMLButtonElement>('[data-testid="toolbar-export"]')
+      ?.click();
+    await flushAll();
+
+    expect(mockExportRoutineMedicalOrders).toHaveBeenCalledWith({
+      dateFrom: '2026-06-20',
+      dateTo: '2026-06-21',
+      page: 1,
+      pathologyNo: 'BL-7788',
+      size: 9999,
+      status: 'IN_PROGRESS',
+      workDate: undefined,
+    });
+    expect(downloadRoutineOrderBlobFileMock).toHaveBeenCalledWith(
+      expect.any(Blob),
+      'routine-medical-orders-2026-06-23.csv',
+    );
+    expect(reloadSpy).toHaveBeenCalledTimes(4);
 
     app.unmount();
   });

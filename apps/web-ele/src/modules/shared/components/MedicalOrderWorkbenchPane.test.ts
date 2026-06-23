@@ -333,11 +333,14 @@ describe('MedicalOrderWorkbenchPane', () => {
     await flushAll();
 
     expect(createMedicalOrderMock).toHaveBeenCalledWith({
+      blockNo: 'A1',
       caseId: 'CASE-001',
       orderContent: '补做特殊染色（蜡块: A1 胃窦组织）',
       orderItemId: 'ITEM-001',
       orderType: 'SPECIAL_STAIN',
       remarks: undefined,
+      targetBlockId: 'BOX-001',
+      targetBlockNo: 'A1',
     });
     expect(messageSuccessMock).toHaveBeenCalledWith('医嘱已提交');
     expect(refreshSpy).toHaveBeenCalledTimes(1);

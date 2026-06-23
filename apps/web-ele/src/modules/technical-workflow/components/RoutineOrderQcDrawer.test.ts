@@ -217,6 +217,9 @@ function createRow(overrides: Record<string, unknown> = {}) {
     patientName: '患者甲',
     releaseStatus: '待出片',
     slideNo: 'SLIDE-001',
+    targetBlockId: 'BLOCK-1',
+    targetSlideId: 'SLIDE-001',
+    targetType: 'BLOCK',
     ...overrides,
   };
 }
@@ -380,6 +383,61 @@ describe('RoutineOrderQcDrawer', () => {
 
     expect(messageWarning).toHaveBeenCalledWith('请选择处理动作');
     expect(submit).not.toHaveBeenCalled();
+
+    app.unmount();
+  });
+
+  it('blocks rework actions for rows without target snapshot but still allows no-action submission', async () => {
+    const { app, root, submit } = mountDrawer([
+      createRow({
+        targetBlockId: null,
+        targetSlideId: null,
+        targetType: null,
+      }),
+    ]);
+    await flushAll();
+
+    const remakeButton = findButton(root, '重新制片');
+    const urgentRemakeButton = findButton(root, '立即重打');
+    const noActionButton = findButton(root, '无需处理');
+
+    expect(remakeButton.disabled).toBe(true);
+    expect(urgentRemakeButton.disabled).toBe(true);
+    expect(noActionButton.disabled).toBe(false);
+
+    remakeButton.click();
+    urgentRemakeButton.click();
+    await flushAll();
+
+    expect(messageWarning).not.toHaveBeenCalledWith(
+      '历史医嘱缺少目标快照，仅可保存普通质控评价',
+    );
+
+    findButton(root, '空气污染').click();
+    noActionButton.click();
+    await flushAll();
+
+    findButton(root, '保存评价').click();
+    await flushAll();
+
+    expect(submit).toHaveBeenCalledWith({
+      detailItems: [
+        {
+          checked: true,
+          deductionGroup: '切片',
+          deductionSuggestion: '建议重新制片',
+          deductionValue: 5,
+          itemName: '空气污染',
+        },
+      ],
+      evaluationReason: '空气污染',
+      grade: '甲',
+      processingAction: 'NO_ACTION',
+      qcAspect: 'SLIDE',
+      remarks: '',
+      reworkType: null,
+      totalScore: 95,
+    });
 
     app.unmount();
   });

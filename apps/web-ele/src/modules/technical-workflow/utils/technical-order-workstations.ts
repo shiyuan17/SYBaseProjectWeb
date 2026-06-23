@@ -33,23 +33,14 @@ export const ROUTINE_ORDER_WORKSTATION_CONFIG: TechnicalWorkbenchPageConfig = {
       width: 56,
     },
     { key: 'pathologyNo', label: '病理号', minWidth: 132 },
-    { key: 'originalPathologyNo', label: '原病理号', minWidth: 132 },
-    { key: 'wardNo', label: '住院号', minWidth: 96 },
-    { key: 'outpatientNo', label: '门诊号', minWidth: 96 },
+    { key: 'inpatientNo', label: '住院号', minWidth: 96 },
     { key: 'blockNo', label: '蜡块号', width: 86 },
-    {
-      formatter: formatTechnicalOrderPatientId,
-      key: 'patientId',
-      label: '病人ID',
-      minWidth: 98,
-    },
     { key: 'patientName', label: '病人姓名', minWidth: 100 },
     { key: 'checkItem', label: '检查项目', minWidth: 130 },
     { key: 'doctorTime', label: '医嘱时间', minWidth: 160 },
     { key: 'doctorUser', label: '医嘱医生', minWidth: 100 },
     { key: 'chargeStatus', label: '收费状态', minWidth: 90 },
     { key: 'confirmedStatus', label: '确认状态', minWidth: 90 },
-    { key: 'slideNo', label: '玻片号', minWidth: 110 },
     { key: 'printStatus', label: '打印状态', minWidth: 90 },
     { key: 'printTime', label: '打印时间', minWidth: 100 },
     { key: 'releaseStatus', label: '出片状态', minWidth: 90 },
@@ -65,7 +56,7 @@ export const ROUTINE_ORDER_WORKSTATION_CONFIG: TechnicalWorkbenchPageConfig = {
   defaultWorkday: 'today',
   description:
     '按照旧工作站的操作顺序整理常规医嘱列表，保留高密度工具栏与单表格主视图。',
-  emptyText: '暂无待处理常规医嘱数据',
+  emptyText: '暂无常规医嘱数据',
   queryActions: [
     { id: 'routine-more', label: '更多' },
     { id: 'routine-overdue', label: '过期任务' },
@@ -121,7 +112,7 @@ export const SPECIAL_ORDER_WORKSTATION_CONFIG: TechnicalWorkbenchPageConfig = {
       width: 56,
     },
     { key: 'pathologyNo', label: '病理号', minWidth: 132 },
-    { key: 'wardNo', label: '住院号', minWidth: 100 },
+    { key: 'inpatientNo', label: '住院号', minWidth: 100 },
     {
       formatter: formatTechnicalOrderPatientId,
       key: 'patientId',
@@ -148,7 +139,7 @@ export const SPECIAL_ORDER_WORKSTATION_CONFIG: TechnicalWorkbenchPageConfig = {
   defaultWorkday: 'today',
   description:
     '延续常规医嘱页的信息密度，但突出项目类型、确认操作和撤销提醒等特检字段。',
-  emptyText: '暂无待处理特检医嘱数据',
+  emptyText: '暂无特检医嘱数据',
   queryActions: [
     { id: 'special-more', label: '更多' },
     { id: 'special-overdue', label: '过期任务' },
@@ -228,7 +219,7 @@ export const IHC_WORKSTATION_CONFIG: TechnicalWorkbenchPageConfig = {
   defaultWorkday: 'today',
   description:
     '保留 Roche / Dako 入口和待确认计数，用统一 Web 骨架承载上机、染色与出片动作。',
-  emptyText: '暂无待处理免疫组化任务',
+  emptyText: '暂无免疫组化任务',
   metrics: [
     {
       id: 'ihc-pending-confirm',
@@ -306,7 +297,7 @@ export const CYTOLOGY_WORKSTATION_CONFIG: TechnicalWorkbenchPageConfig = {
   defaultWorkday: 'today',
   description:
     '围绕细胞学送检流转组织页面，保留生成蜡块、打印蜡块和延迟固定等传统入口。',
-  emptyText: '暂无待处理细胞学任务',
+  emptyText: '暂无细胞学任务',
   queryActions: [
     {
       id: 'cytology-generate-block',
@@ -373,7 +364,7 @@ export const LIQUID_CYTOLOGY_WORKSTATION_CONFIG: TechnicalWorkbenchPageConfig =
     defaultWorkday: 'today',
     description:
       '保持液基细胞学页面的极简工具栏，只突出出片、打印玻片和过期任务入口。',
-    emptyText: '暂无待处理液基细胞学任务',
+    emptyText: '暂无液基细胞学任务',
     queryActions: [{ id: 'liquid-cytology-overdue', label: '过期任务' }],
     searchPlaceholder: '请输入病理号',
     showWorkDatePicker: true,

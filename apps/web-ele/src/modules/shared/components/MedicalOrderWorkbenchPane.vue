@@ -539,6 +539,10 @@ function buildOrderContent(item: MedicalOrderItemView) {
   return blockLabel ? `${content}（蜡块: ${blockLabel}）` : content;
 }
 
+function getSelectedBlockCode() {
+  return selectedBlock.value?.blockCode?.trim() || undefined;
+}
+
 function addOrderItem(item: MedicalOrderItemView, sourceName = '快捷模板') {
   if (props.readonly) {
     return;
@@ -782,11 +786,14 @@ async function submitDraftOrders() {
   try {
     for (const item of draftItems) {
       await createMedicalOrder({
+        blockNo: getSelectedBlockCode(),
         caseId: props.caseId,
         orderContent: item.orderContent,
         orderItemId: item.orderItemId,
         orderType: item.orderType,
         remarks: item.remarks.trim() || undefined,
+        targetBlockId: selectedBlock.value.blockId,
+        targetBlockNo: getSelectedBlockCode(),
       });
     }
     ElMessage.success('医嘱已提交');

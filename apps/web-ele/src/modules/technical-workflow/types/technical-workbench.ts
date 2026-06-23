@@ -31,6 +31,14 @@ export interface TechnicalWorkbenchQueryActionEventPayload {
   trigger: 'action' | 'search';
 }
 
+export interface TechnicalWorkbenchQueryState {
+  dateRange: string[];
+  page: number;
+  pageSize: number;
+  searchKeyword: string;
+  status: string;
+}
+
 export interface TechnicalWorkbenchFilterConfig {
   group?: string;
   id: string;
@@ -108,5 +116,6 @@ export interface TechnicalWorkbenchPageConfig {
 }
 
 export interface TechnicalWorkbenchPageExpose {
+  getQueryState: () => TechnicalWorkbenchQueryState;
   reload: () => Promise<void>;
 }

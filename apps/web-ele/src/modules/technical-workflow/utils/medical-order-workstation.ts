@@ -148,6 +148,21 @@ function formatRoutineReleaseStatus(order: PendingMedicalOrderItem) {
   return '待确认';
 }
 
+function parseLegacyBlockNo(orderContent?: null | string) {
+  const normalizedOrderContent = orderContent?.trim();
+  if (!normalizedOrderContent) {
+    return null;
+  }
+  const matched = normalizedOrderContent.match(
+    /[（(]蜡块[:：]\s*([^）)]+)[）)]/,
+  );
+  return matched?.[1]?.trim() || null;
+}
+
+function resolveRoutineBlockNo(order: PendingMedicalOrderItem) {
+  return valueOrDash(order.blockNo ?? parseLegacyBlockNo(order.orderContent));
+}
+
 function createBaseRow(order: PendingMedicalOrderItem) {
   const statusLabel = formatOrderStatus(order.status);
   return {
@@ -167,6 +182,7 @@ function createBaseRow(order: PendingMedicalOrderItem) {
     doctorTime: formatOrderDate(order.orderDate),
     doctorUser: valueOrDash(order.doctorName),
     id: order.orderId,
+    inpatientNo: valueOrDash(order.inpatientNo),
     orderType: getCategoryName(order),
     patientId: valueOrDash(order.patientId),
     patientIdDisplay: order.patientIdDisplay ?? null,
@@ -207,7 +223,7 @@ export function mapMedicalOrderToTechnicalWorkbenchRow(
   if (kind === 'routine') {
     return createRow({
       ...baseRow,
-      blockNo: valueOrDash(order.blockNo),
+      blockNo: resolveRoutineBlockNo(order),
       confirmedStatus: formatRoutineConfirmedStatus(order),
       note: valueOrDash(order.orderContent),
       originalPathologyNo: EMPTY_CELL,
@@ -218,7 +234,6 @@ export function mapMedicalOrderToTechnicalWorkbenchRow(
       releaseTime: formatOrderDate(order.releasedAt ?? order.completedAt),
       sliceMode: getCategoryName(order),
       terminationReason: valueOrDash(order.terminationReasonLabel),
-      wardNo: EMPTY_CELL,
     });
   }
 
@@ -230,7 +245,6 @@ export function mapMedicalOrderToTechnicalWorkbenchRow(
       orderAction: baseRow.statusLabel,
       printStatus: '未打印',
       revokeReminder: EMPTY_CELL,
-      wardNo: EMPTY_CELL,
     });
   }
 

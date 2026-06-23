@@ -256,6 +256,7 @@ export interface MedicalOrderSummary {
   orderNumber?: null | string;
   orderType?: null | string;
   pathologyNo?: null | string;
+  inpatientNo?: null | string;
   patientId?: null | string;
   patientIdDisplay?: null | string;
   patientName?: null | string;
@@ -267,6 +268,10 @@ export interface MedicalOrderSummary {
   status?: null | string;
   specimenNo?: null | string;
   slideNo?: null | string;
+  slicingMergedPrintGroup?: boolean;
+  slicingPrintGroupId?: null | string;
+  slicingTaskId?: null | string;
+  slicingTaskIds?: string[];
   targetBlockId?: null | string;
   targetSlideId?: null | string;
   targetSpecimenId?: null | string;
@@ -653,6 +658,7 @@ export interface CreateMedicalOrderRequest {
   remarks?: string;
   slideNo?: string;
   targetBlockId?: string;
+  targetBlockNo?: string;
   targetSlideId?: string;
   targetSpecimenId?: string;
   targetType?: string;
