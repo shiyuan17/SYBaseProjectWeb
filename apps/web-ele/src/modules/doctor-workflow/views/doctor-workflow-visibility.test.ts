@@ -1896,9 +1896,7 @@ describe('doctor workflow view visibility', () => {
   });
 
   it('shows print action only for users with print permission', async () => {
-    mockAccessStore.accessCodes = [
-      M4_PERMISSION_CODES.MEDICAL_ORDER_QUERY,
-    ];
+    mockAccessStore.accessCodes = [M4_PERMISSION_CODES.MEDICAL_ORDER_QUERY];
     const readOnlyWrapper = await mountView(MedicalOrderWorkbenchView);
 
     expect(readOnlyWrapper.buttonTexts()).not.toContain('打印玻片');

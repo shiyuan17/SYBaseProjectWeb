@@ -81,10 +81,7 @@ const STATUS_OPTIONS = [
   { label: '已取消', value: 'CANCELLED' },
 ] as const;
 
-function resolveBooleanFlag(
-  value: boolean | undefined,
-  fallback: boolean,
-) {
+function resolveBooleanFlag(value: boolean | undefined, fallback: boolean) {
   return typeof value === 'boolean' ? value : fallback;
 }
 
@@ -107,9 +104,7 @@ function canPrintOrder(row: PendingMedicalOrderItem) {
     canPrint.value &&
     resolveBooleanFlag(
       row.canPrint,
-      row.status === 'IN_PROGRESS' &&
-        !row.printedAt &&
-        !isTerminatedOrder(row),
+      row.status === 'IN_PROGRESS' && !row.printedAt && !isTerminatedOrder(row),
     )
   );
 }

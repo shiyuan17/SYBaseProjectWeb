@@ -1,10 +1,15 @@
-import type { TechnicalWorkbenchColumn, TechnicalWorkbenchRow } from '../types/technical-workbench';
+import type {
+  TechnicalWorkbenchColumn,
+  TechnicalWorkbenchRow,
+} from '../types/technical-workbench';
 
 import { describe, expect, it } from 'vitest';
 
 import { IHC_WORKSTATION_CONFIG } from './technical-order-workstations';
 
-function createRow(overrides: Partial<TechnicalWorkbenchRow> = {}): TechnicalWorkbenchRow {
+function createRow(
+  overrides: Partial<TechnicalWorkbenchRow> = {},
+): TechnicalWorkbenchRow {
   return {
     id: 'ROW-001',
     searchableText: '',
@@ -13,7 +18,9 @@ function createRow(overrides: Partial<TechnicalWorkbenchRow> = {}): TechnicalWor
 }
 
 function getIhcColumn(key: string): TechnicalWorkbenchColumn {
-  const column = IHC_WORKSTATION_CONFIG.columns.find((item) => item.key === key);
+  const column = IHC_WORKSTATION_CONFIG.columns.find(
+    (item) => item.key === key,
+  );
   expect(column).toBeDefined();
   return column!;
 }

@@ -79,7 +79,9 @@ export function buildMedicalOrderPrintDocument(
 </html>`;
 }
 
-export function openMedicalOrderPrintWindow(labels: MedicalOrderSlidePrintLabel[]) {
+export function openMedicalOrderPrintWindow(
+  labels: MedicalOrderSlidePrintLabel[],
+) {
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
     return false;

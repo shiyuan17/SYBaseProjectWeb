@@ -173,22 +173,20 @@ vi.mock('element-plus', () => {
       return () =>
         h('div', [
           slots.empty?.(),
-          ...(props.data && props.data.length > 0
-            ? props.data
-            : [{}]
-          ).map((row: Record<string, unknown>, index: number) =>
-            h(
-              defineComponent({
-                setup(_, { slots: providerSlots }) {
-                  provide(rowContextKey, { row, $index: index });
-                  return () => h('div', providerSlots.default?.());
+          ...(props.data && props.data.length > 0 ? props.data : [{}]).map(
+            (row: Record<string, unknown>, index: number) =>
+              h(
+                defineComponent({
+                  setup(_, { slots: providerSlots }) {
+                    provide(rowContextKey, { row, $index: index });
+                    return () => h('div', providerSlots.default?.());
+                  },
+                }),
+                { key: `qc-row-${index}` },
+                {
+                  default: () => slots.default?.(),
                 },
-              }),
-              { key: `qc-row-${index}` },
-              {
-                default: () => slots.default?.(),
-              },
-            ),
+              ),
           ),
         ]);
     },
@@ -437,26 +435,24 @@ describe('RoutineOrderQcDrawer', () => {
     clickButton(root, '保存评价');
     await flushAll();
 
-    expect(submit).toHaveBeenCalledWith(
-      {
-        detailItems: [
-          {
-            checked: true,
-            deductionGroup: '切片',
-            deductionSuggestion: '建议重新制片',
-            deductionValue: 5,
-            itemName: '空气污染',
-          },
-        ],
-        evaluationReason: '空气污染',
-        grade: '甲',
-        processingAction: 'FAST_REMAKE',
-        qcAspect: 'SLIDE',
-        remarks: '双切复核',
-        reworkType: 'RESLICE',
-        totalScore: 95,
-      },
-    );
+    expect(submit).toHaveBeenCalledWith({
+      detailItems: [
+        {
+          checked: true,
+          deductionGroup: '切片',
+          deductionSuggestion: '建议重新制片',
+          deductionValue: 5,
+          itemName: '空气污染',
+        },
+      ],
+      evaluationReason: '空气污染',
+      grade: '甲',
+      processingAction: 'FAST_REMAKE',
+      qcAspect: 'SLIDE',
+      remarks: '双切复核',
+      reworkType: 'RESLICE',
+      totalScore: 95,
+    });
 
     app.unmount();
   });

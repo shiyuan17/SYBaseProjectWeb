@@ -229,9 +229,7 @@ if (queryForm.caseId) {
   <Page :show-header="false">
     <div class="flex flex-col gap-4">
       <div class="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)_360px]">
-        <WorkflowSectionCard
-          title="异常入口"
-        >
+        <WorkflowSectionCard title="异常入口">
           <ElForm label-width="96px">
             <ElFormItem label="病例编号" required>
               <ElInput
@@ -293,9 +291,7 @@ if (queryForm.caseId) {
         </WorkflowSectionCard>
 
         <div class="flex flex-col gap-4">
-          <WorkflowSectionCard
-            title="当前异常处理区"
-          >
+          <WorkflowSectionCard title="当前异常处理区">
             <template v-if="trackingResult">
               <ElDescriptions :column="2" border>
                 <ElDescriptionsItem label="病例编号">
@@ -345,10 +341,7 @@ if (queryForm.caseId) {
             </div>
           </WorkflowSectionCard>
 
-          <WorkflowSectionCard
-            v-if="trackingResult"
-            title="返工单列表"
-          >
+          <WorkflowSectionCard v-if="trackingResult" title="返工单列表">
             <ElTable :data="trackingResult.reworks" border>
               <ElTableColumn
                 label="返工单号"
@@ -403,10 +396,7 @@ if (queryForm.caseId) {
             </ElTable>
           </WorkflowSectionCard>
 
-          <WorkflowSectionCard
-            v-if="trackingResult"
-            title="质控与异常记录"
-          >
+          <WorkflowSectionCard v-if="trackingResult" title="质控与异常记录">
             <ElTable :data="trackingResult.qcEvaluations" border>
               <ElTableColumn label="玻片编号" min-width="180" prop="slideId" />
               <ElTableColumn label="玻片号" min-width="140">

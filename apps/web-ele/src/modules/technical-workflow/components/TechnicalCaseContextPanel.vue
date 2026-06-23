@@ -52,9 +52,7 @@ const summaryItems = computed(() => {
 
 <template>
   <div class="flex flex-col gap-4">
-    <WorkflowSectionCard
-      title="病例概览"
-    >
+    <WorkflowSectionCard title="病例概览">
       <div v-if="context" class="grid gap-3 md:grid-cols-2">
         <article
           v-for="item in summaryItems"
@@ -70,9 +68,7 @@ const summaryItems = computed(() => {
       <ElEmpty v-else description="选中任务后显示病例概览" />
     </WorkflowSectionCard>
 
-    <WorkflowSectionCard
-      title="生产提醒"
-    >
+    <WorkflowSectionCard title="生产提醒">
       <div v-if="context?.alerts.length" class="flex flex-col gap-3">
         <ElAlert
           v-for="alert in context.alerts"
@@ -100,9 +96,7 @@ const summaryItems = computed(() => {
       <ElEmpty v-else description="当前没有需要前置提醒的异常或下一工位提示" />
     </WorkflowSectionCard>
 
-    <WorkflowSectionCard
-      title="质控与返工"
-    >
+    <WorkflowSectionCard title="质控与返工">
       <div
         v-if="context?.currentTaskSuggestions.length"
         class="flex flex-col gap-2"
@@ -118,9 +112,7 @@ const summaryItems = computed(() => {
       <ElEmpty v-else description="当前病例暂无质控或返工提醒" />
     </WorkflowSectionCard>
 
-    <WorkflowSectionCard
-      title="节点记录"
-    >
+    <WorkflowSectionCard title="节点记录">
       <ElTimeline v-if="context?.recentEvents.length">
         <ElTimelineItem
           v-for="event in context.recentEvents"
