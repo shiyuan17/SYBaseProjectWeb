@@ -1,6 +1,6 @@
-# Linear Issue Template
+# Task Item Template
 
-Use this template when converting a local plan or specification into Linear issues. Keep each issue small enough to verify independently, and treat unclear acceptance criteria as a blocker before implementation.
+Use this template when converting a local plan or specification into task items. Keep each item small enough to verify independently, and treat unclear acceptance criteria as a blocker before implementation.
 
 ## Title
 
@@ -11,11 +11,11 @@ Use this template when converting a local plan or specification into Linear issu
 ```markdown
 ## Background
 
-来自 `<计划 / spec / Linear project>`。
+来自 `<计划 / spec / issue / PR / 外部任务系统 / 其他来源>`。
 
 ## Goal
 
-本 issue 只完成：`<单一目标>`。
+本任务项只完成：`<单一目标>`。
 
 ## Acceptance Criteria
 
@@ -25,7 +25,7 @@ Use this template when converting a local plan or specification into Linear issu
 
 ## Non-goals
 
-- `<本 issue 明确不做的事项>`
+- `<本任务项明确不做的事项>`
 
 ## Impact Scope
 
@@ -45,14 +45,14 @@ Use this template when converting a local plan or specification into Linear issu
 
 - Loop Type: `<Task Intake / Implementation / Review / Triage>`
 - Stop Condition: `<可验证停止条件>`
-- Verification Command: `<本 issue 必跑命令；无则说明人工核对项>`
-- State Sink: `<PROJECT_STATE.md / TECH_DEBT.md / KNOWN_BUGS.md / DECISIONS.md / ARCHITECTURE.md / Linear>`
+- Verification Command: `<本任务项必跑命令；无则说明人工核对项>`
+- State Sink: `<PROJECT_STATE.md / TECH_DEBT.md / KNOWN_BUGS.md / DECISIONS.md / ARCHITECTURE.md>`
 - Escalation Condition: `<命中即暂停的条件>`
 
 ## Required Reading
 
 - `AGENTS.md`
-- `docs/rules/LINEAR_TASK.md`
+- `docs/rules/TASK_INTAKE.md`
 - `docs/rules/DYNAMIC_WORKFLOW_RULES.md`
 - `docs/rules/LOOP_ENGINEERING_RULES.md`
 - `<按任务类型补充专项规范>`

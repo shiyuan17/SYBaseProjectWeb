@@ -59,6 +59,7 @@
 | DEC-20260618-002 | 2026-06-18 | 手术楼/手术室选项统一改为系统配置主数据 | `标本采集` 相关页面继续调用 `GET /api/v1/application-registration-workbench/operating-options`，但该接口的语义改为读取 sibling backend `../SYBa… |
 | DEC-20260618-003 | 2026-06-18 | Specimen workbench frozen reminder UI/polling | The top "冰冻提醒" checkbox in the specimen collection workbench changes from a read-only display field to a per-session re… |
 | DEC-20260621-001 | 2026-06-21 | M3 技术追踪日期先查病例列表合同 | `/technical-workflow/tracking` 在未输入病例 ID / 病理号 / 对象 ID 时，不再强制单病例直查，而是先调用 sibling backend `../SYBaseProject/bl-center` `GET /api/v1/technical-tracking/cases` 按日期筛出命中病例列表；单条命中自动进入原详情接口，多条命中保持左侧病例列表 + 右侧详情的工作区结构，空标识且空日期仍视为无效查询。 |
+| DEC-20260623-001 | 2026-06-23 | Git 主动提交与 Tag 治理 | 仓库 Git 治理统一采用“低/中风险可主动 commit、高风险人工确认”的 AI 提交状态机，并以 `Conventional Commits 1.0.0` + `SemVer 2.0.0` + annotated tag 为基础… |
 
 ## Update Rules
 

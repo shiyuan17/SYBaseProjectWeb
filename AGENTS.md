@@ -44,6 +44,7 @@
 | 验证命令、编码基线            | `docs/rules/CODING_RULES.md`           |
 | 前端实现（Vue/UI/API/测试等） | `docs/rules/FRONTEND_RULES.md`         |
 | Git、worktree、PR             | `docs/rules/GIT_RULES.md`              |
+| 任务来源与启动                | `docs/rules/TASK_INTAKE.md`            |
 | Loop Packet                   | `docs/rules/LOOP_ENGINEERING_RULES.md` |
 | 外部 skill                    | `docs/rules/AGENT_SKILL_ROUTING.md`    |
 
@@ -71,7 +72,7 @@
 | 选 Workflow                                   | `DYNAMIC_WORKFLOW_RULES.md` |
 | Loop（显式要求时）                            | `LOOP_ENGINEERING_RULES.md` |
 | Memory 更新                                   | `docs/memory/*.md`          |
-| Linear                                        | `LINEAR_TASK.md`            |
+| 任务来源 / issue / PR / 工单                  | `TASK_INTAKE.md`            |
 | 发布                                          | `RELEASE.md`                |
 
 ### 3. 后端联动
@@ -156,7 +157,7 @@
 
 ### 9. 语言与提交
 
-默认中文沟通；UTF-8 见 `CODING_RULES.md` §5；Git 遵循 `GIT_RULES.md`；**仅用户明确要求时** commit。
+默认中文沟通；UTF-8 见 `CODING_RULES.md` §5；Git 遵循 `GIT_RULES.md`。提交权限遵循 `docs/rules/GIT_RULES.md`：低/中风险任务可按该文规则主动 commit，高风险任务必须先获人工确认；若用户明确要求“不要提交 / 只给分组 / 等我确认”，则任何风险等级都不得主动提交。
 
 ### 10. 工具与子 Agent
 
@@ -182,5 +183,5 @@
 - [docs/rules/DYNAMIC_WORKFLOW_RULES.md](./docs/rules/DYNAMIC_WORKFLOW_RULES.md)
 - [docs/rules/LOOP_ENGINEERING_RULES.md](./docs/rules/LOOP_ENGINEERING_RULES.md)
 - [docs/rules/AGENT_SKILL_ROUTING.md](./docs/rules/AGENT_SKILL_ROUTING.md)
-- [docs/rules/LINEAR_TASK.md](./docs/rules/LINEAR_TASK.md)
+- [docs/rules/TASK_INTAKE.md](./docs/rules/TASK_INTAKE.md)
 - [docs/rules/RELEASE.md](./docs/rules/RELEASE.md)

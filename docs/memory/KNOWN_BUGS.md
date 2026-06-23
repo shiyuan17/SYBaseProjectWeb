@@ -14,6 +14,7 @@ Track **Open** bugs and a short tail of recently resolved items. Full resolved h
 
 | ID | Resolved | Summary |
 | --- | --- | --- |
+| BUG-20260623-001 | Resolved | 用户反馈 `/technical-workflow/ihc` 免疫组化工作站列表把内部 UUID `patientId` 当作“病人ID”展示，且旧版列配置仍显示“病理号”“玻片序号”“打印指令回传结果”。前端已将 IHC 工位“病人ID”收口为仅展示 `patientIdDisplay`（缺失时显示 `-`，不再回退内部 `patientId`），并移除上述三列；回归测试覆盖 IHC 配置与页面渲染。 |
 | BUG-20260612-002 | Resolved | Clean SID-86 frontend worktree dev-server validation failed from `.logs/frontend.log` with Tailwind/Vite pre-transform errors resolving `tw… |
 | BUG-20260612-003 | Resolved | User-reported statistics dashboard load failure: frontend requested `POST http://localhost:5777/api/v1/stat-dashboard/query`, and backend a… |
 | BUG-20260615-001 | Resolved | 已登录后点击或进入诊断平台工作站时，Vue Router 报 `Failed to fetch dynamically imported module: http://localhost:5777/src/modules/doctor-workflow/views/Diagno… |

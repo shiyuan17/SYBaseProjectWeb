@@ -15,6 +15,12 @@ Packet tier:
 - Validation:
 - Risks:
 
+## Commit And Tag Traceability
+
+- Commits created:
+- Tags created:
+- Tag purpose / release-note link:
+
 ## Dynamic Workflow
 
 - Primary Workflow: `Not applicable (<reason>) / UI / API / DB / Security / Architecture / Production Debug / Workflow-Infra`
@@ -52,7 +58,7 @@ Use this only when the task was actually run as a loop. `docs/rules/LOOP_ENGINEE
 - Loop Type: `Task Intake / Implementation / Review / Triage`
 - Stop Condition:
 - Verification Command:
-- State Sink: `docs/memory/PROJECT_STATE.md / docs/memory/TECH_DEBT.md / docs/memory/KNOWN_BUGS.md / docs/memory/DECISIONS.md / docs/memory/ARCHITECTURE.md / Linear`
+- State Sink: `docs/memory/PROJECT_STATE.md / docs/memory/TECH_DEBT.md / docs/memory/KNOWN_BUGS.md / docs/memory/DECISIONS.md / docs/memory/ARCHITECTURE.md`
 - Escalation Condition:
 
 ## Dynamic Tests

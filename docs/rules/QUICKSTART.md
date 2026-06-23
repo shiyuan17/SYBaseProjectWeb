@@ -27,8 +27,8 @@
 | 权限 / 患者 / 报告 | `DYNAMIC_WORKFLOW_RULES` Security | Full Packet |
 | 重构 / 共享层 | `PROJECT_DIRECTORY`、`CODING_RULES`、`DYNAMIC_WORKFLOW_RULES` | `lint` + `check:type` + `check:circular` |
 | Git / PR / worktree | `GIT_RULES` | hook/CI |
+| 任务来源 / issue / PR / 工单 | `TASK_INTAKE` | 任务验收与起始信息 |
 | 发布 | `RELEASE`、`GIT_RULES` | `build` |
-| Linear | `LINEAR_TASK` | issue 验收 |
 | Loop（显式要求） | `LOOP_ENGINEERING_RULES` | Loop + Workflow Packet |
 
 ## 与 AGENTS 三档的关系

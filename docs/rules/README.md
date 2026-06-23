@@ -15,7 +15,7 @@
 - [DYNAMIC_WORKFLOW_RULES.md](./DYNAMIC_WORKFLOW_RULES.md): Workflow 与 Packet
 - [LOOP_ENGINEERING_RULES.md](./LOOP_ENGINEERING_RULES.md): Loop（显式 opt-in）
 - [AGENT_SKILL_ROUTING.md](./AGENT_SKILL_ROUTING.md): 外部 skill（精简）
-- [LINEAR_TASK.md](./LINEAR_TASK.md): Linear 任务模板
+- [TASK_INTAKE.md](./TASK_INTAKE.md): 通用任务起始模板
 - [RELEASE.md](./RELEASE.md): 发布与回滚
 
 长期上下文见 [../memory/README.md](../memory/README.md)。

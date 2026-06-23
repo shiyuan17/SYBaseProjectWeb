@@ -27,7 +27,7 @@ const validRulesReadmeBody = `
 - [LOOP_ENGINEERING_RULES.md](./LOOP_ENGINEERING_RULES.md)
 - [QUICKSTART.md](./QUICKSTART.md)
 - [AGENT_SKILL_ROUTING.md](./AGENT_SKILL_ROUTING.md)
-- [LINEAR_TASK.md](./LINEAR_TASK.md)
+- [TASK_INTAKE.md](./TASK_INTAKE.md)
 - [RELEASE.md](./RELEASE.md)
 `;
 
@@ -57,7 +57,7 @@ const validAgentsBody = `
 - [docs/rules/LOOP_ENGINEERING_RULES.md](./docs/rules/LOOP_ENGINEERING_RULES.md)
 - [docs/rules/QUICKSTART.md](./docs/rules/QUICKSTART.md)
 - [docs/rules/AGENT_SKILL_ROUTING.md](./docs/rules/AGENT_SKILL_ROUTING.md)
-- [docs/rules/LINEAR_TASK.md](./docs/rules/LINEAR_TASK.md)
+- [docs/rules/TASK_INTAKE.md](./docs/rules/TASK_INTAKE.md)
 - [docs/rules/RELEASE.md](./docs/rules/RELEASE.md)
 `;
 
@@ -108,12 +108,21 @@ const governanceAnchorFixtures = {
 Red Team
 `,
   gitRulesBody: `
-### 6. 工作树（Worktree）与 Linear 任务
+### 3.1 AI 主动提交规范
+### 3.2 Commit Message 细则
+### 3.3 Tag 规范
+### 6. 工作树（Worktree）与任务隔离
+#### 6.1 Merge-Back 完成定义
 ### 7. 自动化护栏（lefthook）
 `,
   loopEngineeringBody: `
 ## Loop Packet
 最小 Loop Packet
+`,
+  releaseBody: `
+### 1.1 版本号与 Tag 映射
+### 3.1 发布 Tag 闭环
+### 6.1 基于稳定版本 Tag 回滚
 `,
   quickstartBody: `
 ## 三层阅读路径
@@ -125,6 +134,8 @@ Packet tier:
 Fast Path:
 Lightweight:
 Full:
+Commits created:
+Tags created:
 Red-zone confirmation:
 `,
   workflowPacketExamplesBody: `
@@ -317,7 +328,7 @@ describe('validateGovernance', () => {
         {
           path: 'AGENTS.md',
           body: [
-            '- [Linear](https://linear.app)',
+            '- [External](https://example.com)',
             '- [anchor](#section)',
             '- [template](<issue url>)',
             '- [backend](../SYBaseProject/DECISIONS.md)',

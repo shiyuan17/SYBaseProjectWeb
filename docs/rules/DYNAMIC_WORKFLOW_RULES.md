@@ -47,7 +47,7 @@ flowchart TD
     Q1 -->|是| Q2{核心改动类型}
     Q2 --> UI[UI] & API[API] & DB[DB] & SEC[Security] & ARCH[Architecture] & PROD[Production Debug] & INFRA[Workflow-Infra]
     UI & API & DB & SEC & ARCH & PROD & INFRA --> MOD[按修饰器底线补叠]
-    MOD --> Q3{Linear/并行/脏工作区?}
+    MOD --> Q3{任务/并行/脏工作区?}
     Q3 -->|是| WT[独立 worktree]
     Q3 -->|否| MAIN[当前工作区]
     WT & MAIN --> Q4{红区?}

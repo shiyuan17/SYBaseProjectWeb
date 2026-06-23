@@ -12,9 +12,9 @@
 
 | 通用结构 | 本仓入口 | 本仓职责 | 维护边界 |
 | --- | --- | --- | --- |
-| `01_planner/` 规划与任务管理 | [../plans/README.md](../plans/README.md)、[../templates/](../templates/) | 阶段实施方案、专项执行计划、Codex / Linear 任务模板 | 只放计划、任务拆分和可复用提示词；不替代 `AGENTS.md` 的任务确认规则 |
+| `01_planner/` 规划与任务管理 | [../plans/README.md](../plans/README.md)、[../templates/](../templates/) | 阶段实施方案、专项执行计划、Codex / 通用任务模板 | 只放计划、任务拆分和可复用提示词；不替代 `AGENTS.md` 的任务确认规则 |
 | `02_memory/` 记忆系统 | [../memory/README.md](../memory/README.md) | 项目状态、技术债、已知缺陷、决策日志、架构快照 | 五类记忆文件职责以 [../../AGENTS.md](../../AGENTS.md) 为准，不新增平行记忆目录 |
-| `03_tools/` 工具系统 | [../../scripts/](../../scripts/)、[../../.agents/skills/](../../.agents/skills/)、[../../.github/workflows/](../../.github/workflows/) | 治理校验、日志包装、Linear 同步、项目级 skills、CI 工作流 | 工具和自动化保留在可执行位置；文档只记录入口和使用规则 |
+| `03_tools/` 工具系统 | [../../scripts/](../../scripts/)、[../../.agents/skills/](../../.agents/skills/)、[../../.github/workflows/](../../.github/workflows/) | 治理校验、日志包装、项目级 skills、CI 工作流 | 工具和自动化保留在可执行位置；文档只记录入口和使用规则 |
 | `04_knowledge/` 知识库与检索 | [README.md](./README.md)、[detailed_list/README.md](./detailed_list/README.md)、[database/README.md](./database/README.md)、[../acceptance/README.md](../acceptance/README.md) | 业务清单、数据库资料、验收材料和背景分析 | 参考资料不替代接口、数据库或业务规则的事实来源 |
 | `05_agent_core/` Agent 核心配置 | [../../AGENTS.md](../../AGENTS.md)、[../rules/DYNAMIC_WORKFLOW_RULES.md](../rules/DYNAMIC_WORKFLOW_RULES.md)、[../rules/LOOP_ENGINEERING_RULES.md](../rules/LOOP_ENGINEERING_RULES.md)、[../rules/AGENT_SKILL_ROUTING.md](../rules/AGENT_SKILL_ROUTING.md) | 协作边界、Workflow 路由、Loop Packet、skill 路由 | `AGENTS.md` 是协作入口；Workflow 分类和修饰器只在动态规则中维护 |
 | `06_evaluation/` 评估与测试 | [../../tests/](../../tests/)、[../acceptance/README.md](../acceptance/README.md)、[../templates/workflow-packet-examples.md](../templates/workflow-packet-examples.md) | 单测、E2E、验收记录、Workflow Packet 示例 | 测试命令以 [../rules/CODING_RULES.md](../rules/CODING_RULES.md) 为准，验收材料不替代真实验证 |

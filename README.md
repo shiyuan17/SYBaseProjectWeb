@@ -77,41 +77,15 @@ pnpm lint
 pnpm test:unit
 ```
 
-## Linear 计划同步
+## 任务启动与协作
 
-仓库内的 Linear 计划同步配置统一放在根目录 `linear-setting.json`，这里只保留 project、team、label 和计划项元数据，不再存放 token。
+仓库治理不再绑定特定任务平台。任务可以来自 issue、工单、卡片、PR、文档需求或会话交接，但开始实现前都应按统一起始模板补齐目标、验收标准、非目标、风险和 worktree 决策。
 
-使用前请先在仓库根目录创建 `.env.local`，或在当前终端会话中注入 `LINEAR_API_TOKEN`：
+- 通用任务起始模板：[`docs/rules/TASK_INTAKE.md`](./docs/rules/TASK_INTAKE.md)
+- worktree 隔离与 merge-back 规则：[`docs/rules/GIT_RULES.md`](./docs/rules/GIT_RULES.md)
+- Workflow / Packet 规则：[`docs/rules/DYNAMIC_WORKFLOW_RULES.md`](./docs/rules/DYNAMIC_WORKFLOW_RULES.md)
 
-```bash
-LINEAR_API_TOKEN=your_linear_token
-```
-
-PowerShell 示例：
-
-```powershell
-$env:LINEAR_API_TOKEN = "your_linear_token"
-```
-
-根目录 `.env.local` 示例：
-
-```bash
-LINEAR_API_TOKEN=your_linear_token
-```
-
-`.env.local` 已被 `.gitignore` 忽略，适合放本地私有 token。准备好 token 后，可使用以下命令维护 `JWBL` project 下的健康度计划：
-
-```bash
-pnpm linear:register
-pnpm linear:sync
-pnpm linear:pull
-```
-
-命令说明：
-
-- `pnpm linear:register`：校验 `JWBL` project、`Sidney` team 与 `frontend` 标签，缺失时自动注册标签。
-- `pnpm linear:sync`：把 `linear-setting.json` 中的计划项同步到 Linear，已存在任务按标题做幂等更新。
-- `pnpm linear:pull`：先执行注册校验，再回拉当前计划项与对应的 Linear issue 编号。
+若本地仍保留历史任务平台配置（例如被 `.gitignore` 忽略的私有文件），它们不再属于项目规范和仓库维护范围。
 
 开发环境默认保留 `apps/backend-mock`，`apps/web-ele/.env.development` 中 `VITE_NITRO_MOCK=true`，用于本地登录、菜单和基础页面联调。
 
@@ -128,7 +102,7 @@ pnpm linear:pull
 - [docs/rules/DYNAMIC_WORKFLOW_RULES.md](./docs/rules/DYNAMIC_WORKFLOW_RULES.md)
 - [docs/rules/LOOP_ENGINEERING_RULES.md](./docs/rules/LOOP_ENGINEERING_RULES.md)
 - [docs/rules/AGENT_SKILL_ROUTING.md](./docs/rules/AGENT_SKILL_ROUTING.md)
-- [docs/rules/LINEAR_TASK.md](./docs/rules/LINEAR_TASK.md)
+- [docs/rules/TASK_INTAKE.md](./docs/rules/TASK_INTAKE.md)
 - [docs/rules/RELEASE.md](./docs/rules/RELEASE.md)
 
 > 完整文档导航（含分类目录与模板）见 [docs/README.md](./docs/README.md)。

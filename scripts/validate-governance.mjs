@@ -24,7 +24,7 @@ const REQUIRED_RULE_DOCS = [
   'DYNAMIC_WORKFLOW_RULES.md',
   'LOOP_ENGINEERING_RULES.md',
   'AGENT_SKILL_ROUTING.md',
-  'LINEAR_TASK.md',
+  'TASK_INTAKE.md',
   'RELEASE.md',
 ];
 const REQUIRED_MEMORY_DOCS = [
@@ -57,8 +57,17 @@ const REQUIRED_GOVERNANCE_ANCHORS = {
     'Red Team',
   ],
   'docs/rules/GIT_RULES.md': [
-    '### 6. 工作树（Worktree）与 Linear 任务',
+    '### 3.1 AI 主动提交规范',
+    '### 3.2 Commit Message 细则',
+    '### 3.3 Tag 规范',
+    '### 6. 工作树（Worktree）与任务隔离',
+    '#### 6.1 Merge-Back 完成定义',
     '### 7. 自动化护栏（lefthook）',
+  ],
+  'docs/rules/RELEASE.md': [
+    '### 1.1 版本号与 Tag 映射',
+    '### 3.1 发布 Tag 闭环',
+    '### 6.1 基于稳定版本 Tag 回滚',
   ],
   'docs/rules/LOOP_ENGINEERING_RULES.md': [
     '## Loop Packet',
@@ -69,6 +78,8 @@ const REQUIRED_GOVERNANCE_ANCHORS = {
     'Fast Path:',
     'Lightweight:',
     'Full:',
+    'Commits created:',
+    'Tags created:',
     'Red-zone confirmation:',
   ],
   'docs/templates/workflow-packet-examples.md': [
@@ -320,6 +331,7 @@ export function validateGovernance({
   loopEngineeringBody,
   quickstartBody,
   prTemplateBody,
+  releaseBody,
   workflowPacketExamplesBody,
   architectureBody,
   projectStateBody,
@@ -420,6 +432,7 @@ export function validateGovernance({
         'docs/rules/GIT_RULES.md': gitRulesBody,
         'docs/rules/LOOP_ENGINEERING_RULES.md': loopEngineeringBody,
         'docs/rules/QUICKSTART.md': quickstartBody,
+        'docs/rules/RELEASE.md': releaseBody,
         'docs/templates/workflow-packet-examples.md':
           workflowPacketExamplesBody,
       }),
@@ -445,7 +458,7 @@ const LINK_CHECKED_DOCUMENTS = [
   'docs/rules/LOOP_ENGINEERING_RULES.md',
   'docs/rules/QUICKSTART.md',
   'docs/rules/AGENT_SKILL_ROUTING.md',
-  'docs/rules/LINEAR_TASK.md',
+  'docs/rules/TASK_INTAKE.md',
   'docs/rules/PROJECT_DIRECTORY.md',
   'docs/rules/RELEASE.md',
   'docs/rules/FRONTEND_RULES.md',
@@ -470,6 +483,7 @@ function main() {
     loopEngineeringBody: readText('docs/rules/LOOP_ENGINEERING_RULES.md'),
     quickstartBody: readText('docs/rules/QUICKSTART.md'),
     prTemplateBody: readText('.github/PULL_REQUEST_TEMPLATE.md'),
+    releaseBody: readText('docs/rules/RELEASE.md'),
     workflowPacketExamplesBody: readText(
       'docs/templates/workflow-packet-examples.md',
     ),

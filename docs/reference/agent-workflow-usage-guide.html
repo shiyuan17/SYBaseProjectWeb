@@ -746,7 +746,7 @@
               <a class="pill-link" href="#workflow">选择 Workflow</a>
               <a class="pill-link" href="#skills">搭配技能</a>
               <a class="pill-link" href="#templates">任务模板</a>
-              <a class="pill-link" href="#linear">Linear 任务</a>
+              <a class="pill-link" href="#task-source">任务来源</a>
               <a class="pill-link" href="#acceptance">验收交付</a>
             </div>
           </div>
@@ -778,7 +778,7 @@
           <a href="#during">六、执行中怎么检查</a>
           <a href="#acceptance">七、交付时怎么验收</a>
           <a href="#mistakes">八、常见错误</a>
-          <a href="#linear">九、Linear 与协作任务</a>
+          <a href="#task-source">九、任务来源与协作任务</a>
           <a href="#cheatsheet">十、一页速查</a>
         </nav>
 
@@ -1120,12 +1120,12 @@
                     <td>对照后端字段、错误码、分页和兼容分支。</td>
                   </tr>
                   <tr>
-                    <td>Linear issue</td>
+                    <td>任务来源卡片</td>
                     <td>
-                      <code>linear</code> + <code>using-git-worktrees</code>
+                      <code>using-git-worktrees</code> + 任务起始模板
                     </td>
                     <td>
-                      先核对 issue 状态、验收标准和关联资料，再为单个 issue
+                      先核对任务来源、验收标准和关联资料，再为单个任务项
                       使用独立 worktree。
                     </td>
                   </tr>
@@ -1198,19 +1198,19 @@
             </details>
 
             <details>
-              <summary>Linear issue 模板</summary>
+              <summary>任务来源模板</summary>
               <div class="details-body">
                 <div class="prompt">
                   <div class="prompt-title">复制给 AI</div>
                   <pre>
-请按 Linear issue 任务启动。
-Issue：[编号和标题]
+请按任务来源启动。
+来源：[issue / 工单 / 卡片 / PR / 文档需求 + 编号和标题]
 背景和目标：[为什么要做，做到什么程度]
-验收标准：[逐条列出；如果 issue 里已经有，请先读取/核对]
+验收标准：[逐条列出；如果来源里已经有，请先读取/核对]
 关联资料：[设计稿、后端说明、讨论结论，可为空]
-请先核对 issue 当前状态、描述、验收标准和关联资料。
+请先核对来源当前状态、描述、验收标准和关联资料。
 如果验收标准为空或有歧义，先问我，不要进入编码。
-请检查当前工作区是否有无关改动，并为这个 issue 使用独立 worktree。
+请检查当前工作区是否有无关改动，并按风险决定是否使用独立 worktree。
 请输出任务确认、主 Workflow、skills 搭配、实施计划、验证计划和需要人工确认的风险。</pre
                   >
                 </div>
@@ -1360,8 +1360,8 @@ Issue：[编号和标题]
                 <div class="check-item">
                   <span class="box"></span
                   ><span
-                    >Linear 任务先核对 issue
-                    编号、标题、状态、验收标准和关联资料。</span
+                    >任务来源先核对编号、
+                    标题、状态、验收标准和关联资料。</span
                   >
                 </div>
                 <div class="check-item">
@@ -1400,7 +1400,7 @@ Issue：[编号和标题]
                 <div class="check-item">
                   <span class="box"></span
                   ><span
-                    >Linear 任务直接在主工作区开改，未使用独立 worktree。</span
+                    >命中隔离条件的任务直接在主工作区开改，未使用独立 worktree。</span
                   >
                 </div>
                 <div class="check-item">
@@ -1434,7 +1434,7 @@ Issue：[编号和标题]
                   </li>
                   <li>验证结果：真实执行的命令和结论。</li>
                   <li>
-                    Linear 任务：说明 issue 对应分支、worktree、PR
+                    任务来源：说明对应分支、worktree、PR
                     关联和剩余待办。
                   </li>
                   <li>Memory Update：更新了什么，未更新原因是什么。</li>
@@ -1494,7 +1494,7 @@ Issue：[编号和标题]
                 <ul>
                   <li>只说“帮我优化一下”，没有目标和验收标准。</li>
                   <li>
-                    Linear 任务只给编号，没有标题、背景、验收标准或当前状态。
+                    任务来源只给编号，没有标题、背景、验收标准或当前状态。
                   </li>
                   <li>没有说明哪些行为不能改变。</li>
                   <li>把高风险任务当普通小改处理。</li>
@@ -1508,7 +1508,7 @@ Issue：[编号和标题]
                   <li>API 改动没有对照后端。</li>
                   <li>生产问题未读日志就修。</li>
                   <li>权限、登录态、拦截器改动未人工确认。</li>
-                  <li>多个无关 Linear 任务共用同一个 worktree。</li>
+                  <li>多个无关任务项共用同一个 worktree。</li>
                 </ul>
               </div>
               <div class="card">
@@ -1525,7 +1525,7 @@ Issue：[编号和标题]
                 <ul>
                   <li>接受“应该可以”但没有真实命令输出。</li>
                   <li>
-                    Linear 任务交付时没有说明 issue 状态、PR 关联和剩余待办。
+                    任务交付时没有说明来源状态、PR 关联和剩余待办。
                   </li>
                   <li>没有说明未验证项。</li>
                   <li>高风险任务没有 Red Team 或角色模拟。</li>
@@ -1535,13 +1535,13 @@ Issue：[编号和标题]
             </div>
           </section>
 
-          <section class="section" id="linear">
+          <section class="section" id="task-source">
             <div class="section-header">
               <div>
-                <h2>九、Linear 与协作任务</h2>
+                <h2>九、任务来源与协作任务</h2>
                 <p>
-                  Linear 不是单独的开发
-                  Workflow，而是任务来源和协作载体。用户要做的事是把 issue
+                  任务平台不是单独的开发
+                  Workflow，而是任务来源和协作载体。用户要做的事是把来源
                   信息、验收标准、工作区隔离和 PR 对齐讲清楚；AI 再根据内容选择
                   UI、 API、Security、Architecture 或其他 Workflow。
                 </p>
@@ -1551,21 +1551,21 @@ Issue：[编号和标题]
 
             <div class="grid two">
               <div class="card">
-                <h3>什么时候按 Linear 启动</h3>
+                <h3>什么时候按任务来源启动</h3>
                 <ul>
                   <li>
-                    任务来自 Linear issue，或需要在 issue 中追踪状态、讨论、PR
+                    任务来自 issue、工单、卡片、PR 或文档需求，且需要在来源中追踪状态、讨论、PR
                     和验收。
                   </li>
                   <li>
                     一个任务需要独立分支、独立验证记录，后续要进入 PR 评审。
                   </li>
                   <li>
-                    多个任务并行时，需要避免不同 issue 的改动混在同一个工作区。
+                    多个任务并行时，需要避免不同任务来源的改动混在同一个工作区。
                   </li>
                   <li>
                     任务要交接给其他人，需要保留
-                    issue、分支、验证和剩余风险的对应关系。
+                    来源、分支、验证和剩余风险的对应关系。
                   </li>
                 </ul>
               </div>
@@ -1573,7 +1573,7 @@ Issue：[编号和标题]
                 <h3>你需要先提供什么</h3>
                 <ul>
                   <li>
-                    Issue 编号和标题，例如
+                    来源编号和标题，例如
                     <code>ENG-123 用户管理列表筛选</code>。
                   </li>
                   <li>背景、目标和验收标准；没有验收标准时要让 AI 先澄清。</li>
@@ -1581,21 +1581,21 @@ Issue：[编号和标题]
                     关联资料，例如设计稿、接口说明、后端讨论结论或历史 PR。
                   </li>
                   <li>
-                    是否允许 AI 更新 issue 状态、评论、计划文档或 PR 描述。
+                    是否允许 AI 更新来源状态、评论、计划文档或 PR 描述。
                   </li>
                 </ul>
               </div>
             </div>
 
             <div class="prompt" style="margin-top: 16px">
-              <div class="prompt-title">Linear 启动提示词</div>
+              <div class="prompt-title">任务来源启动提示词</div>
               <pre>
-请按 Linear issue 任务启动。
-Issue：[编号和标题]
-请先读取/核对 issue 当前状态、描述、验收标准和关联资料。
+请按任务来源启动。
+来源：[issue / 工单 / 卡片 / PR / 文档需求 + 编号和标题]
+请先读取/核对来源当前状态、描述、验收标准和关联资料。
 如果验收标准为空或有歧义，先问我，不要进入编码。
-请检查当前工作区是否有无关改动，并为这个 issue 使用独立 worktree。
-请根据验收标准选择主 Workflow 和必要 skills，不要因为来自 Linear 就跳过 UI/API/Security 判断。
+请检查当前工作区是否有无关改动，并按风险决定是否使用独立 worktree。
+请根据验收标准选择主 Workflow 和必要 skills，不要因为来自某个平台就跳过 UI/API/Security 判断。
 请输出任务确认、实施计划、验证计划、PR 对齐方式和需要人工确认的风险。</pre
               >
             </div>
@@ -1613,9 +1613,9 @@ Issue：[编号和标题]
                   <tr>
                     <td>启动</td>
                     <td>
-                      AI 是否核对 issue 编号、标题、状态、验收标准和关联资料。
+                      AI 是否核对来源编号、标题、状态、验收标准和关联资料。
                     </td>
-                    <td>“先补齐 issue 起始信息，再输出任务确认。”</td>
+                    <td>“先补齐任务来源起始信息，再输出任务确认。”</td>
                   </tr>
                   <tr>
                     <td>隔离</td>
@@ -1624,14 +1624,14 @@ Issue：[编号和标题]
                       worktree、分支名和当前工作区是否有无关改动。
                     </td>
                     <td>
-                      “请先隔离工作区，不要在主工作区混改这个 Linear 任务。”
+                      “请先隔离工作区，不要在主工作区混改这个任务。”
                     </td>
                   </tr>
                   <tr>
                     <td>规划</td>
                     <td>
                       AI 是否从验收标准推导
-                      Workflow、skills、测试和风险，而不是只照 issue 标题做。
+                      Workflow、skills、测试和风险，而不是只照来源标题做。
                     </td>
                     <td>“请把每条验收标准映射到实现步骤和验证方式。”</td>
                   </tr>
@@ -1647,10 +1647,10 @@ Issue：[编号和标题]
                   <tr>
                     <td>交付</td>
                     <td>
-                      AI 是否说明 issue 状态、PR
+                      AI 是否说明来源状态、PR
                       关联、验证证据、剩余待办和未验证项。
                     </td>
-                    <td>“请按 issue 验收标准逐条回填完成证据和剩余风险。”</td>
+                    <td>“请按验收标准逐条回填完成证据和剩余风险。”</td>
                   </tr>
                 </tbody>
               </table>
@@ -1662,14 +1662,14 @@ Issue：[编号和标题]
                 <p>
                   “做一下 ENG-123。”这会让 AI
                   只按标题猜需求，也看不出是否要隔离工作区、
-                  是否有验收标准、是否需要更新 issue 或 PR。
+                  是否有验收标准、是否需要更新来源或 PR。
                 </p>
               </div>
               <div class="good">
                 <h4>推荐这样启动</h4>
                 <p>
-                  “请按 Linear issue 启动
-                  ENG-123，先核对描述和验收标准；不清楚先问我。 为这个 issue
+                  “请按任务来源启动
+                  ENG-123，先核对描述和验收标准；不清楚先问我。 如果风险命中隔离条件，
                   使用独立 worktree，并把每条验收标准映射到验证方式。”
                 </p>
               </div>
@@ -1680,7 +1680,7 @@ Issue：[编号和标题]
                 <h3>续接历史任务</h3>
                 <div class="check-item">
                   <span class="box"></span
-                  ><span>先让 AI 读取 issue 最新状态和已有讨论。</span>
+                  ><span>先让 AI 读取来源最新状态和已有讨论。</span>
                 </div>
                 <div class="check-item">
                   <span class="box"></span
@@ -1695,7 +1695,7 @@ Issue：[编号和标题]
                 <h3>并行任务</h3>
                 <div class="check-item">
                   <span class="box"></span
-                  ><span>一个 Linear issue 对应一个 worktree 和一个分支。</span>
+                  ><span>一个实现任务项对应一个 worktree 和一个分支。</span>
                 </div>
                 <div class="check-item">
                   <span class="box"></span
@@ -1710,7 +1710,7 @@ Issue：[编号和标题]
                 <h3>PR 对齐</h3>
                 <div class="check-item">
                   <span class="box"></span
-                  ><span>PR 说明要能对应 issue 目标和验收标准。</span>
+                  ><span>PR 说明要能对应任务目标和验收标准。</span>
                 </div>
                 <div class="check-item">
                   <span class="box"></span
@@ -1748,7 +1748,7 @@ Issue：[编号和标题]
                 </div>
                 <div class="check-item">
                   <span class="box"></span
-                  ><span>Linear issue 编号、标题、状态清楚吗？</span>
+                  ><span>任务来源编号、标题、状态清楚吗？</span>
                 </div>
                 <div class="check-item">
                   <span class="box"></span><span>影响范围清楚吗？</span>
@@ -1794,7 +1794,7 @@ Issue：[编号和标题]
                 </div>
                 <div class="check-item">
                   <span class="box"></span
-                  ><span>Linear 任务是否在独立 worktree？</span>
+                  ><span>任务是否按风险完成了 worktree 决策？</span>
                 </div>
                 <div class="check-item">
                   <span class="box"></span><span>是否说明正在查什么？</span>
@@ -1828,7 +1828,7 @@ Issue：[编号和标题]
                 </div>
                 <div class="check-item">
                   <span class="box"></span
-                  ><span>PR 是否关联 Linear issue？</span>
+                  ><span>PR 是否关联了对应任务来源？</span>
                 </div>
                 <div class="check-item">
                   <span class="box"></span><span>Memory Update 说明了吗？</span>
