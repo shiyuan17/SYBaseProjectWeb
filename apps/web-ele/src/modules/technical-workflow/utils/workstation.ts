@@ -26,6 +26,14 @@ function dedupeStrings(values: Array<null | string | undefined>) {
   ];
 }
 
+function sortEventsByLatestFirst<T extends { eventTime: null | string }>(
+  events: T[],
+) {
+  return [...events].sort((left, right) =>
+    normalizeText(right.eventTime).localeCompare(normalizeText(left.eventTime)),
+  );
+}
+
 function createAlert(
   id: string,
   title: string,
@@ -269,7 +277,7 @@ export function buildWorkstationCaseContext(
     pathologyNo: tracking.pathologyNo,
     pendingReworkCount: pendingReworks.length,
     progressNodes,
-    recentEvents: tracking.events.slice(0, 8),
+    recentEvents: sortEventsByLatestFirst(tracking.events).slice(0, 8),
     slideCount: tracking.slides.length,
     specimenCount: tracking.specimens.length,
   };

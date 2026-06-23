@@ -16,6 +16,7 @@ import {
 import {
   formatCaseStatus,
   formatDateTime,
+  formatTechnicalTrackingEventContent,
   formatEventStatus,
   formatEventType,
   formatNullable,
@@ -142,7 +143,7 @@ const summaryItems = computed(() => {
             </span>
           </div>
           <div class="mt-1 text-sm text-muted-foreground">
-            {{ formatNullable(event.eventContent) }}
+            {{ formatTechnicalTrackingEventContent(event) }}
           </div>
         </ElTimelineItem>
       </ElTimeline>

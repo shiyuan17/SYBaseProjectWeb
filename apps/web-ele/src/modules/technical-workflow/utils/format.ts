@@ -1,5 +1,9 @@
 import dayjs from 'dayjs';
 
+import type { TechnicalTrackingEventSummary } from '../types/technical-workflow';
+
+import { APPLICATION_TYPE_OPTIONS } from '#/modules/specimen-workflow/constants';
+
 import {
   QC_TYPE_OPTIONS,
   REWORK_TYPE_OPTIONS,
@@ -43,13 +47,20 @@ const reworkTypeLabels = {
   DEEPER_CUT: '加深切片',
   RECUT: '重切',
 } satisfies Record<string, string>;
+const applicationTypeLabels = createLabelMap(APPLICATION_TYPE_OPTIONS);
 const qcTypeLabels = createLabelMap(QC_TYPE_OPTIONS);
 const caseStatusLabels = {
   DIAGNOSIS_PENDING: '待诊断',
+  IN_DIAGNOSIS: '诊断中',
   EMBEDDING: '待切片',
   RECEIVED: '已接收',
+  REPORT_DRAFT: '报告草稿',
   REPORT_PENDING_REVIEW: '待审核',
+  REPORT_REJECTED: '报告驳回',
+  REPORT_REVIEWED: '已审核',
+  REPORT_SIGNED: '已签发',
   REPORT_PUBLISHED: '已发布报告',
+  REPORTING: '报告中',
   SAMPLING: '取材中',
   SLICING: '切片中',
   STAINING: '染色中',
@@ -77,6 +88,7 @@ const specimenRegistrationStatusLabels = {
 const slideStatusLabels = {
   CREATED: '待染色',
   PENDING: '待染色',
+  PRINTED: '已打印',
   STAINED: '已染色',
 } satisfies Record<string, string>;
 const qualityStatusLabels = {
@@ -102,13 +114,45 @@ const eventTypeLabels = {
   EVALUATE: '质控评估',
   EXECUTE: '执行返工',
   MARK: '打号',
+  SAVE_MATERIALS: '保存材料',
   START: '开始',
+  UPLOAD: '上传',
+  UPLOAD_MEDIA: '上传影像',
 } satisfies Record<string, string>;
 const eventStatusLabels = {
   FAILED: '失败',
   REWORK_REQUIRED: '需返工',
   SUCCESS: '成功',
 } satisfies Record<string, string>;
+const technicalTrackingEventContentLabels: Record<string, string> = {
+  'RECEIVED|CREATE|SUCCESS': '标本已接收',
+  'TECHNICAL_SPECIMEN_REGISTRATION|COMPLETE|SUCCESS': '技术标本登记已完成',
+  'TECHNICAL_SPECIMEN_REGISTRATION|SAVE_MATERIALS|SUCCESS':
+    '技术标本登记材料已保存',
+  'GROSSING|CREATE|SUCCESS': '取材任务已创建',
+  'GROSSING|START|SUCCESS': '取材开始',
+  'GROSSING|COMPLETE|SUCCESS': '取材完成',
+  'DEHYDRATION|CREATE_BATCH|SUCCESS': '脱水批次已创建',
+  'DEHYDRATION|START|SUCCESS': '脱水开始',
+  'DEHYDRATION|COMPLETE|SUCCESS': '脱水完成',
+  'EMBEDDING|START|SUCCESS': '包埋开始',
+  'EMBEDDING|COMPLETE|SUCCESS': '包埋完成',
+  'SLICING|START|SUCCESS': '切片开始',
+  'SLICING|SLIDE_PRINT|SUCCESS': '玻片已打印',
+  'SLICING|MARK|SUCCESS': '玻片已打号',
+  'SLICING|COMPLETE|SUCCESS': '切片完成',
+  'STAINING|START|SUCCESS': '染色开始',
+  'STAINING|COMPLETE|SUCCESS': '染色出片完成',
+  'QUALITY_CONTROL|EVALUATE|SUCCESS': '质控评估已完成',
+};
+
+function normalizeCodeValue(value?: null | string) {
+  return value?.trim().toUpperCase() ?? '';
+}
+
+function containsCjkCharacter(value: string) {
+  return /[\u3400-\u9fff]/u.test(value);
+}
 
 export function formatDateTime(value?: null | string) {
   return value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-';
@@ -172,6 +216,10 @@ export function formatPendingPathologyNo(value?: null | string) {
 
 export function formatRegistrationWorkspacePathologyNo(value?: null | string) {
   return value && value.trim() ? value : '登记生成';
+}
+
+export function formatTechnicalTrackingApplicationType(value?: null | string) {
+  return formatMappedValue(value, applicationTypeLabels);
 }
 
 export function formatTaskType(value?: null | string) {
@@ -245,9 +293,50 @@ export function formatReworkType(value?: null | string) {
 }
 
 export function formatEventType(value?: null | string) {
-  return formatMappedValue(value, eventTypeLabels);
+  const formattedValue = formatMappedValue(value, eventTypeLabels);
+  if (formattedValue !== value?.trim()) {
+    return formattedValue;
+  }
+  return /^[A-Z_]+$/.test(formattedValue) ? '流程事件' : formattedValue;
 }
 
 export function formatEventStatus(value?: null | string) {
   return formatMappedValue(value, eventStatusLabels);
+}
+
+export function formatTechnicalTrackingEventContent(
+  event: Pick<
+    TechnicalTrackingEventSummary,
+    'eventContent' | 'eventStatus' | 'eventType' | 'nodeCode'
+  >,
+) {
+  const rawContent = event.eventContent?.trim();
+  if (rawContent && containsCjkCharacter(rawContent)) {
+    return rawContent;
+  }
+
+  const structuredKey = [
+    normalizeCodeValue(event.nodeCode),
+    normalizeCodeValue(event.eventType),
+    normalizeCodeValue(event.eventStatus),
+  ].join('|');
+  const structuredContent = technicalTrackingEventContentLabels[structuredKey];
+  if (structuredContent) {
+    return structuredContent;
+  }
+
+  return '技术流程事件';
+}
+
+export function formatTrackingTreeNodeStatus(
+  type: 'CASE' | 'EMBEDDING_BOX' | 'SAMPLING_BLOCK' | 'SLIDE' | 'SPECIMEN',
+  status?: null | string,
+) {
+  if (type === 'SPECIMEN') {
+    return formatSpecimenStatus(status);
+  }
+  if (type === 'SLIDE') {
+    return formatSlideStatus(status);
+  }
+  return formatTaskStatus(status);
 }

@@ -13,6 +13,7 @@ import {
   formatDateTime,
   formatNullable,
   formatPatientIdDisplay,
+  formatTechnicalTrackingApplicationType,
 } from '../utils/format';
 
 const props = defineProps<{
@@ -49,15 +50,12 @@ const resolvedEmptyText = computed(
 
 <template>
   <section
-    class="flex min-h-[680px] flex-col rounded-2xl border border-border bg-card shadow-sm"
+    class="technical-tracking-case-list flex min-h-[620px] flex-col rounded-2xl border border-border bg-card shadow-sm"
   >
-    <div class="border-b border-border px-4 py-4">
+    <div class="border-b border-border px-4 py-3">
       <div class="flex items-start justify-between gap-3">
         <div>
           <h3 class="text-base font-semibold text-foreground">病例结果</h3>
-          <p class="mt-1 text-xs text-muted-foreground">
-            日期查询命中多个病例时，可先在左侧选择，再查看右侧技术追踪详情。
-          </p>
         </div>
         <ElButton :loading="loading" type="primary" @click="emit('search')">
           刷新
@@ -65,7 +63,7 @@ const resolvedEmptyText = computed(
       </div>
     </div>
 
-    <div class="flex-1 overflow-y-auto px-3 py-3">
+    <div class="flex-1 overflow-y-auto px-3 py-2.5">
       <div
         v-if="loading"
         class="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground"
@@ -87,7 +85,7 @@ const resolvedEmptyText = computed(
             ? 'border-sky-500 bg-primary/10 shadow-sm'
             : 'border-border bg-accent hover:border-border hover:bg-card',
         ]"
-        class="mb-3 w-full rounded-2xl border px-4 py-4 text-left transition"
+        class="mb-2.5 w-full rounded-2xl border px-4 py-3.5 text-left transition"
         type="button"
         @click="emit('select', item)"
       >
@@ -113,7 +111,9 @@ const resolvedEmptyText = computed(
                 }}
               </span>
               <span>申请单号：{{ formatNullable(item.applicationNo) }}</span>
-              <span>送检类型：{{ formatNullable(item.applicationType) }}</span>
+              <span>
+                送检类型：{{ formatTechnicalTrackingApplicationType(item.applicationType) }}
+              </span>
               <span>最近活动：{{ formatDateTime(item.latestActivityAt) }}</span>
               <span class="sm:col-span-2">
                 送检科室：{{ formatNullable(item.submittingDepartmentName) }}
@@ -124,7 +124,7 @@ const resolvedEmptyText = computed(
       </button>
     </div>
 
-    <div class="border-t border-border px-3 py-3">
+    <div class="border-t border-border px-3 py-2.5">
       <ElPagination
         v-model:current-page="currentPage"
         v-model:page-size="currentSize"

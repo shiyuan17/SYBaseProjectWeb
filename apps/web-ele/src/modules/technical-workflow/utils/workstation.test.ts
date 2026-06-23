@@ -197,4 +197,32 @@ describe('workstation utilities', () => {
     expect(context.nextFlowLabel).toBe('后续诊断流程');
     expect(context.alerts).toEqual([]);
   });
+
+  it('keeps the latest eight tracking events in reverse chronological order', () => {
+    const events = Array.from({ length: 10 }, (_, index) => ({
+      eventContent: `事件 ${index + 1}`,
+      eventStatus: 'SUCCESS',
+      eventTime: `2026-06-18T${String(8 + index).padStart(2, '0')}:00:00`,
+      eventType: 'START',
+      nodeCode: 'GROSSING',
+      operatorName: '技师',
+    }));
+
+    const context = buildWorkstationCaseContext(
+      createTracking({
+        events,
+      }),
+    );
+
+    expect(context.recentEvents.map((event) => event.eventContent)).toEqual([
+      '事件 10',
+      '事件 9',
+      '事件 8',
+      '事件 7',
+      '事件 6',
+      '事件 5',
+      '事件 4',
+      '事件 3',
+    ]);
+  });
 });

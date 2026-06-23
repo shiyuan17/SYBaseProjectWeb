@@ -67,6 +67,7 @@ import {
   formatEventStatus,
   formatNullable,
   formatSlicingSlideDisplayNo,
+  formatTechnicalTrackingEventContent,
   formatTaskStatus,
 } from '../utils/format';
 import {
@@ -395,6 +396,7 @@ const trackingDrawerTimelineSteps = computed(() =>
     formatEventStatus,
     formatNullable,
     formatTaskStatus,
+    formatTechnicalTrackingEventContent,
   ),
 );
 

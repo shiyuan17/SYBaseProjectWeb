@@ -31,11 +31,8 @@ const dateRangeShortcuts = createDateRangePickerShortcuts();
 </script>
 
 <template>
-  <WorkflowSectionCard
-    title="病例查询"
-    description="支持按病例/病理/对象精确追踪，或先按工作日期筛选病例。"
-  >
-    <ElForm class="technical-tracking-query-form" inline label-width="132px">
+  <WorkflowSectionCard title="病例查询">
+    <ElForm class="technical-tracking-query-form" inline label-width="auto">
       <ElFormItem
         class="technical-tracking-query-form__field"
         label="病例/病理/对象（可选）"
@@ -76,11 +73,27 @@ const dateRangeShortcuts = createDateRangePickerShortcuts();
 </template>
 
 <style scoped>
+.technical-tracking-query-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+}
+
+.technical-tracking-query-form :deep(.el-form-item) {
+  margin-right: 0;
+  margin-bottom: 0;
+}
+
 .technical-tracking-query-form :deep(.el-form-item__label) {
+  flex: 0 0 auto;
   white-space: nowrap;
 }
 
+.technical-tracking-query-form :deep(.el-form-item__content) {
+  min-width: 0;
+}
+
 .technical-tracking-query-form__field {
-  margin-right: 20px;
+  margin-right: 0;
 }
 </style>

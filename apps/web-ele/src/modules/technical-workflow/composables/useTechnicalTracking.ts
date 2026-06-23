@@ -25,6 +25,7 @@ import {
   formatEventStatus,
   formatNullable,
   formatTaskStatus,
+  formatTechnicalTrackingEventContent,
 } from '../utils/format';
 import {
   buildTrackingTreeData,
@@ -101,6 +102,7 @@ export function useTechnicalTracking() {
       formatEventStatus,
       formatNullable,
       formatTaskStatus,
+      formatTechnicalTrackingEventContent,
     ),
   );
 

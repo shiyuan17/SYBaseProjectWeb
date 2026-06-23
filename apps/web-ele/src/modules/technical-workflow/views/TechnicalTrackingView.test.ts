@@ -500,4 +500,48 @@ describe('TechnicalTrackingView', () => {
 
     app.unmount();
   });
+
+  it('查询区与主布局使用紧凑样式约束，避免副标题和右侧内容被挤压', async () => {
+    mockListTechnicalTrackingCases.mockResolvedValue({
+      items: [
+        createCaseListItem(),
+        createCaseListItem({
+          caseId: 'CASE-002',
+          pathologyNo: 'BL-002',
+          patientIdDisplay: '08306',
+          patientName: '患者乙',
+        }),
+      ],
+      page: 1,
+      size: 20,
+      total: 2,
+    });
+
+    const { app, root } = mountView();
+    await flushView();
+
+    expect(root.textContent).toContain('病例查询');
+    expect(root.textContent).not.toContain(
+      '支持按病例/病理/对象精确追踪，或先按工作日期筛选病例。',
+    );
+
+    const dateInput = root.querySelector<HTMLInputElement>(
+      '[data-testid="tracking-date-range"]',
+    );
+    setInputValue(dateInput!, '2026-06-21,2026-06-21');
+    findButton(root, '查询').click();
+    await flushView();
+
+    const layout = root.querySelector('.technical-tracking-layout');
+    const detailColumn = root.querySelector('.technical-tracking-layout__detail');
+    const caseList = root.querySelector('.technical-tracking-case-list');
+    const queryForm = root.querySelector('.technical-tracking-query-form');
+
+    expect(layout?.className).toContain('xl:grid-cols-[320px_minmax(0,1fr)]');
+    expect(detailColumn?.className).toContain('min-w-0');
+    expect(caseList?.className).toContain('min-h-[620px]');
+    expect(queryForm?.className).toContain('technical-tracking-query-form');
+
+    app.unmount();
+  });
 });

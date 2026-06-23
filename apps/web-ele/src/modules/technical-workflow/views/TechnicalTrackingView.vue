@@ -21,17 +21,14 @@ const {
   handleCaseListPageChange,
   handleCaseListSizeChange,
   handleCaseSelect,
-  handleNodeClick,
   handleReset,
   loadTracking,
   loading,
   listLoading,
   pageError,
   selectedCaseId,
-  selectedNode,
   selectedNodeId,
   trackingResult,
-  treeData,
   dateRange,
   workflowTimelineSteps,
 } = useTechnicalTracking();
@@ -57,7 +54,9 @@ const {
         type="error"
       />
 
-      <div class="grid gap-4 xl:grid-cols-[380px_1fr]">
+      <div
+        class="technical-tracking-layout grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]"
+      >
         <TechnicalTrackingCaseListPanel
           :items="caseList.items"
           :loading="listLoading"
@@ -71,7 +70,7 @@ const {
           @update:size="handleCaseListSizeChange"
         />
 
-        <div class="flex flex-col gap-4">
+        <div class="technical-tracking-layout__detail flex min-w-0 flex-col gap-4">
           <template v-if="trackingResult && context">
             <TechnicalTrackingDetailsSection
               v-model:active-tab="activeTab"
@@ -79,12 +78,9 @@ const {
               :filtered-qc-evaluations="filteredQcEvaluations"
               :filtered-reworks="filteredReworks"
               :filtered-tasks="filteredTasks"
-              :selected-node="selectedNode"
               :selected-node-id="selectedNodeId"
               :tracking-result="trackingResult"
-              :tree-data="treeData"
               :workflow-timeline-steps="workflowTimelineSteps"
-              @node-click="handleNodeClick"
             />
 
             <TechnicalTrackingSummaryTables :tracking-result="trackingResult" />

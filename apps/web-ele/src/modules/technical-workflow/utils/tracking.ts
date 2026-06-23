@@ -49,6 +49,19 @@ export const TRACKING_TABS: TrackingTab[] = [
 ];
 
 const TRACKING_TAB_SET = new Set<TrackingTab>(TRACKING_TABS);
+const EMPTY_TIMELINE_VALUE = '暂无记录';
+const STAINED_SLIDE_STATUS = 'STAINED';
+const STAINED_STATUS_TEXT = '已染色';
+const timelineEventTypePriority: Record<string, number> = {
+  COMPLETE: 100,
+  EVALUATE: 90,
+  EXECUTE: 80,
+  SLIDE_PRINT: 70,
+  MARK: 60,
+  START: 50,
+  CREATE_BATCH: 40,
+  CREATE: 30,
+};
 
 export function normalizeTrackingQueryValue(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
@@ -221,10 +234,148 @@ function getEventNodeCode(event: TechnicalTrackingEventSummary) {
 function isCompletedEvent(event: TechnicalTrackingEventSummary) {
   return (
     event.eventStatus === 'SUCCESS' &&
-    ['COMPLETE', 'CREATE_BATCH', 'EVALUATE', 'EXECUTE', 'MARK'].includes(
+    ['COMPLETE', 'EVALUATE', 'EXECUTE', 'MARK'].includes(
       event.eventType ?? '',
     )
   );
+}
+
+function getTimelineEventPriority(event: TechnicalTrackingEventSummary) {
+  return timelineEventTypePriority[event.eventType?.trim() ?? ''] ?? 0;
+}
+
+function compareEventForTimeline(
+  left: TechnicalTrackingEventSummary,
+  right: TechnicalTrackingEventSummary,
+) {
+  const priorityDiff =
+    getTimelineEventPriority(right) - getTimelineEventPriority(left);
+  if (priorityDiff !== 0) {
+    return priorityDiff;
+  }
+  return (right.eventTime?.trim() ?? '').localeCompare(
+    left.eventTime?.trim() ?? '',
+  );
+}
+
+function buildEventsByNode(events: TechnicalTrackingEventSummary[]) {
+  const eventsByNode = new Map<string, TechnicalTrackingEventSummary>();
+  events.forEach((event) => {
+    const nodeCode = getEventNodeCode(event);
+    if (!nodeCode) {
+      return;
+    }
+    const previousEvent = eventsByNode.get(nodeCode);
+    if (!previousEvent || compareEventForTimeline(previousEvent, event) > 0) {
+      eventsByNode.set(nodeCode, event);
+    }
+  });
+  return eventsByNode;
+}
+
+function firstMeaningfulValue(
+  ...values: Array<null | string | undefined>
+) {
+  return values.find((value) => typeof value === 'string' && value.trim()) ?? '';
+}
+
+function joinMeaningfulValues(...values: Array<null | string | undefined>) {
+  const normalizedValues = values
+    .map((value) => value?.trim() ?? '')
+    .filter(Boolean);
+  return normalizedValues.length > 0
+    ? [...new Set(normalizedValues)].join('；')
+    : '';
+}
+
+function getStainedSlides(tracking: TechnicalTrackingViewModel) {
+  return tracking.slides.filter(
+    (slide) => slide.slideStatus?.trim() === STAINED_SLIDE_STATUS,
+  );
+}
+
+function hasStainedSlides(tracking: TechnicalTrackingViewModel) {
+  return getStainedSlides(tracking).length > 0;
+}
+
+function resolveTimelineFallbackTask(
+  tracking: TechnicalTrackingViewModel,
+  nodeCode: string,
+) {
+  return tracking.technicalTasks.find((item) => item.taskType === nodeCode);
+}
+
+function resolveTimelineFallbackContent(
+  tracking: TechnicalTrackingViewModel,
+  nodeCode: string,
+  task?: TechnicalTrackingViewModel['technicalTasks'][number],
+) {
+  if (nodeCode === 'EMBEDDING') {
+    return joinMeaningfulValues(
+      tracking.embeddingBoxes[0]?.sliceNotice,
+      tracking.embeddingRecords?.[0]?.sliceNotice,
+      tracking.embeddingRecords?.[0]?.embeddingRemarks,
+    );
+  }
+  if (nodeCode === 'QUALITY_CONTROL') {
+    return joinMeaningfulValues(
+      tracking.qcEvaluations[0]?.issueDescription,
+      tracking.qcEvaluations[0]?.improvementSuggestion,
+      tracking.reworks[0]?.reason,
+    );
+  }
+  if (nodeCode === 'STAINING' && hasStainedSlides(tracking)) {
+    const stainedSlideNos = getStainedSlides(tracking)
+      .map((slide) => slide.slideNo || slide.slideId)
+      .filter(Boolean);
+    return stainedSlideNos.length > 0
+      ? `已染色玻片：${stainedSlideNos.join('、')}`
+      : STAINED_STATUS_TEXT;
+  }
+  return joinMeaningfulValues(task?.remarks);
+}
+
+function resolveTimelineFallbackOperatorName(
+  tracking: TechnicalTrackingViewModel,
+  nodeCode: string,
+  task?: TechnicalTrackingViewModel['technicalTasks'][number],
+) {
+  if (nodeCode === 'EMBEDDING') {
+    return firstMeaningfulValue(
+      tracking.embeddingRecords?.[0]?.embeddedByName,
+      task?.assignedToName,
+    );
+  }
+  if (nodeCode === 'QUALITY_CONTROL') {
+    return firstMeaningfulValue(
+      tracking.qcEvaluations[0]?.evaluatorName,
+      task?.assignedToName,
+    );
+  }
+  return firstMeaningfulValue(task?.assignedToName);
+}
+
+function resolveTimelineFallbackTime(
+  tracking: TechnicalTrackingViewModel,
+  nodeCode: string,
+  task?: TechnicalTrackingViewModel['technicalTasks'][number],
+) {
+  if (nodeCode === 'EMBEDDING') {
+    return firstMeaningfulValue(
+      tracking.embeddingRecords?.[0]?.endedAt,
+      tracking.embeddingRecords?.[0]?.startedAt,
+      task?.completedAt,
+      task?.startedAt,
+    );
+  }
+  if (nodeCode === 'QUALITY_CONTROL') {
+    return firstMeaningfulValue(
+      tracking.qcEvaluations[0]?.evaluatedAt,
+      task?.completedAt,
+      task?.startedAt,
+    );
+  }
+  return firstMeaningfulValue(task?.completedAt, task?.startedAt);
 }
 
 export function buildWorkflowTimelineSteps(
@@ -234,19 +385,13 @@ export function buildWorkflowTimelineSteps(
   formatEventStatus: (value?: null | string) => string,
   formatNullable: (value?: null | string) => string,
   formatTaskStatus: (value?: null | string) => string,
+  formatEventContent: (event: TechnicalTrackingEventSummary) => string,
 ): WorkflowTimelineStep[] {
   if (!tracking || !context) {
     return [];
   }
 
-  const eventsByNode = new Map<string, TechnicalTrackingEventSummary>();
-  context.recentEvents.forEach((event) => {
-    const nodeCode = getEventNodeCode(event);
-    if (!nodeCode || eventsByNode.has(nodeCode)) {
-      return;
-    }
-    eventsByNode.set(nodeCode, event);
-  });
+  const eventsByNode = buildEventsByNode(tracking.events);
 
   const activeTaskNode = tracking.technicalTasks.find(
     (task) =>
@@ -259,11 +404,14 @@ export function buildWorkflowTimelineSteps(
       .map((task) => task.taskType as string),
   );
   const completedEventNodeCodes = new Set(
-    context.recentEvents
+    tracking.events
       .filter((event) => isCompletedEvent(event))
       .map((event) => getEventNodeCode(event))
       .filter(Boolean),
   );
+  if (hasStainedSlides(tracking)) {
+    completedEventNodeCodes.add('STAINING');
+  }
 
   let lastCompletedIndex = -1;
   workflowStepDefinitions.forEach((step, index) => {
@@ -287,12 +435,11 @@ export function buildWorkflowTimelineSteps(
 
   return workflowStepDefinitions.map((step, index) => {
     const latestEvent = eventsByNode.get(step.nodeCode);
-    const task = tracking.technicalTasks.find(
-      (item) => item.taskType === step.nodeCode,
-    );
+    const task = resolveTimelineFallbackTask(tracking, step.nodeCode);
     const completed =
       completedNodeCodes.has(step.nodeCode) ||
-      completedEventNodeCodes.has(step.nodeCode);
+      completedEventNodeCodes.has(step.nodeCode) ||
+      index < lastCompletedIndex;
 
     let status: WorkflowTimelineStep['status'] = 'pending';
     if (completed) {
@@ -304,24 +451,46 @@ export function buildWorkflowTimelineSteps(
     let statusText = '-';
     if (latestEvent) {
       statusText = formatEventStatus(latestEvent.eventStatus);
+    } else if (step.nodeCode === 'STAINING' && hasStainedSlides(tracking)) {
+      statusText = STAINED_STATUS_TEXT;
     } else if (task) {
       statusText = formatTaskStatus(task.taskStatus);
     } else if (status === 'current') {
       statusText = '待处理';
     }
 
+    const fallbackContent = resolveTimelineFallbackContent(
+      tracking,
+      step.nodeCode,
+      task,
+    );
+    const fallbackOperatorName = resolveTimelineFallbackOperatorName(
+      tracking,
+      step.nodeCode,
+      task,
+    );
+    const fallbackTime = resolveTimelineFallbackTime(
+      tracking,
+      step.nodeCode,
+      task,
+    );
+
     return {
-      content: formatNullable(latestEvent?.eventContent ?? task?.remarks),
+      content: latestEvent
+        ? formatEventContent(latestEvent)
+        : formatNullable(fallbackContent || EMPTY_TIMELINE_VALUE),
       index: index + 1,
       nodeCode: step.nodeCode,
       operatorName: formatNullable(
-        latestEvent?.operatorName ?? task?.assignedToName,
+        (latestEvent?.operatorName ?? fallbackOperatorName) ||
+          EMPTY_TIMELINE_VALUE,
       ),
       status,
       statusText,
-      time: formatDateTime(
-        latestEvent?.eventTime ?? task?.completedAt ?? task?.startedAt,
-      ),
+      time:
+        latestEvent?.eventTime || fallbackTime
+          ? formatDateTime(latestEvent?.eventTime ?? fallbackTime)
+          : EMPTY_TIMELINE_VALUE,
       title: step.title,
     };
   });
