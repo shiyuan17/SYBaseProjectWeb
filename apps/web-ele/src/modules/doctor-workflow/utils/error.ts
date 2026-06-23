@@ -39,5 +39,9 @@ export function getDoctorWorkflowPageErrorMessage(error: unknown) {
     return responseMessage || '未找到对应的病例，请核对病例 ID 或病理号。';
   }
 
+  if (responseMessage === 'Medical order must be printed before completed') {
+    return '请先打印玻片后再出片。';
+  }
+
   return responseMessage || '数据加载失败，请稍后重试。';
 }

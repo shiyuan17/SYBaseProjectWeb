@@ -149,6 +149,7 @@ export function mapPendingMedicalOrderPageResponse(
           orderId: item.orderId ?? '',
           patientId: item.patientId ?? null,
           patientIdDisplay: item.patientIdDisplay ?? null,
+          submittingDepartmentName: item.submittingDepartmentName ?? null,
           slicingMergedPrintGroup: item.slicingMergedPrintGroup ?? false,
           slicingPrintGroupId: item.slicingPrintGroupId ?? null,
           slicingTaskId: item.slicingTaskId ?? null,

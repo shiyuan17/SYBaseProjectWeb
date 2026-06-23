@@ -260,6 +260,7 @@ export interface MedicalOrderSummary {
   patientId?: null | string;
   patientIdDisplay?: null | string;
   patientName?: null | string;
+  submittingDepartmentName?: null | string;
   printedAt?: null | string;
   printedByName?: null | string;
   releasedAt?: null | string;

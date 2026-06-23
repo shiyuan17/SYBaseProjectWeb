@@ -28,6 +28,7 @@ import {
   cancelMedicalOrder,
   completeMedicalOrder,
   listPendingMedicalOrders,
+  printMedicalOrderSlide,
 } from '../api/doctor-workflow-service';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
 import { M4_PERMISSION_CODES } from '../constants';
@@ -38,6 +39,7 @@ import {
   formatMedicalOrderType,
   formatNullable,
 } from '../utils/format';
+import { openMedicalOrderPrintWindow } from '../utils/medical-order-print';
 
 const accessStore = useAccessStore();
 
@@ -61,6 +63,9 @@ const accessCodeSet = computed(() => new Set(accessStore.accessCodes));
 const canAccept = computed(() =>
   accessCodeSet.value.has(M4_PERMISSION_CODES.MEDICAL_ORDER_ACCEPT),
 );
+const canPrint = computed(() =>
+  accessCodeSet.value.has(M4_PERMISSION_CODES.MEDICAL_ORDER_PRINT),
+);
 const canComplete = computed(() =>
   accessCodeSet.value.has(M4_PERMISSION_CODES.MEDICAL_ORDER_COMPLETE),
 );
@@ -71,19 +76,53 @@ const canCancel = computed(() =>
 const STATUS_OPTIONS = [
   { label: '全部状态', value: '' },
   { label: '待处理', value: 'PENDING' },
-  { label: '已接收', value: 'ACCEPTED' },
+  { label: '已确认', value: 'ACCEPTED' },
   { label: '已完成', value: 'COMPLETED' },
   { label: '已取消', value: 'CANCELLED' },
 ] as const;
 
+function resolveBooleanFlag(
+  value: boolean | undefined,
+  fallback: boolean,
+) {
+  return typeof value === 'boolean' ? value : fallback;
+}
+
+function isTerminatedOrder(row: PendingMedicalOrderItem) {
+  return (
+    row.status?.trim().toUpperCase() === 'TERMINATED' ||
+    Boolean(row.terminatedAt?.trim())
+  );
+}
+
 function canAcceptOrder(row: PendingMedicalOrderItem) {
-  return canAccept.value && row.status === 'PENDING';
+  return (
+    canAccept.value &&
+    resolveBooleanFlag(row.canConfirm, row.status === 'PENDING')
+  );
+}
+
+function canPrintOrder(row: PendingMedicalOrderItem) {
+  return (
+    canPrint.value &&
+    resolveBooleanFlag(
+      row.canPrint,
+      row.status === 'IN_PROGRESS' &&
+        !row.printedAt &&
+        !isTerminatedOrder(row),
+    )
+  );
 }
 
 function canCompleteOrder(row: PendingMedicalOrderItem) {
   return (
     canComplete.value &&
-    (row.status === 'IN_PROGRESS' || row.status === 'ACCEPTED')
+    resolveBooleanFlag(
+      row.canRelease,
+      row.status === 'IN_PROGRESS' &&
+        Boolean(row.printedAt) &&
+        !isTerminatedOrder(row),
+    )
   );
 }
 
@@ -110,6 +149,10 @@ function formatBillingStatus(value?: null | string) {
   return labels[normalizedValue] ?? formatNullable(value);
 }
 
+function formatPrintStatus(row: PendingMedicalOrderItem) {
+  return row.printedAt ? '已打印' : '未打印';
+}
+
 async function loadOrders() {
   loading.value = true;
   pageError.value = '';
@@ -132,7 +175,7 @@ async function loadOrders() {
 }
 
 async function runOrderAction(
-  action: 'accept' | 'cancel' | 'complete',
+  action: 'accept' | 'cancel' | 'complete' | 'print',
   row: PendingMedicalOrderItem,
 ) {
   operating.value = true;
@@ -141,15 +184,34 @@ async function runOrderAction(
       remarks: actionForm.remarks?.trim() || undefined,
       terminalCode: actionForm.terminalCode?.trim() || undefined,
     };
-    if (action === 'accept') {
-      await acceptMedicalOrder(row.orderId, payload);
-      ElMessage.success('医嘱已接收');
-    } else if (action === 'complete') {
-      await completeMedicalOrder(row.orderId, payload);
-      ElMessage.success('医嘱已完成');
-    } else {
-      await cancelMedicalOrder(row.orderId, payload);
-      ElMessage.success('医嘱已取消');
+    switch (action) {
+      case 'accept': {
+        await acceptMedicalOrder(row.orderId, payload);
+        ElMessage.success('医嘱已确认');
+        break;
+      }
+      case 'cancel': {
+        await cancelMedicalOrder(row.orderId, payload);
+        ElMessage.success('医嘱已取消');
+        break;
+      }
+      case 'complete': {
+        await completeMedicalOrder(row.orderId, payload);
+        ElMessage.success('医嘱已出片');
+        break;
+      }
+      case 'print': {
+        const result = await printMedicalOrderSlide(row.orderId, payload);
+        if (
+          result.labels.length === 0 ||
+          !openMedicalOrderPrintWindow(result.labels)
+        ) {
+          ElMessage.warning('未能打开打印窗口，请检查浏览器弹窗权限');
+        } else {
+          ElMessage.success('玻片已打印');
+        }
+        break;
+      }
     }
     await loadOrders();
   } catch (error) {
@@ -172,7 +234,7 @@ void loadOrders();
   <Page
     :show-header="false"
     title="病理医嘱执行"
-    description="面向医嘱执行岗和管理员的医嘱工作台，支持查询、接收、完成和取消待处理医嘱。"
+    description="面向医嘱执行岗和管理员的医嘱工作台，支持查询、确认、打印玻片、出片和取消待处理医嘱。"
   >
     <div class="flex flex-col gap-4">
       <WorkflowSectionCard title="查询条件">
@@ -254,17 +316,27 @@ void loadOrders();
               {{ formatDateTime(row.orderDate) }}
             </template>
           </ElTableColumn>
-          <ElTableColumn label="接收时间" min-width="180">
+          <ElTableColumn label="确认时间" min-width="180">
             <template #default="{ row }">
               {{ formatDateTime(row.acceptedAt) }}
             </template>
           </ElTableColumn>
-          <ElTableColumn label="完成时间" min-width="180">
+          <ElTableColumn label="打印状态" min-width="110">
+            <template #default="{ row }">
+              {{ formatPrintStatus(row) }}
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="打印时间" min-width="180">
+            <template #default="{ row }">
+              {{ formatDateTime(row.printedAt) }}
+            </template>
+          </ElTableColumn>
+          <ElTableColumn label="出片时间" min-width="180">
             <template #default="{ row }">
               {{ formatDateTime(row.completedAt) }}
             </template>
           </ElTableColumn>
-          <ElTableColumn fixed="right" label="操作" min-width="220">
+          <ElTableColumn fixed="right" label="操作" min-width="320">
             <template #default="{ row }">
               <div class="flex flex-wrap gap-2">
                 <ElButton
@@ -275,7 +347,16 @@ void loadOrders();
                   type="primary"
                   @click="runOrderAction('accept', row)"
                 >
-                  接收
+                  确认
+                </ElButton>
+                <ElButton
+                  v-if="canPrint"
+                  :disabled="!canPrintOrder(row)"
+                  :loading="operating"
+                  size="small"
+                  @click="runOrderAction('print', row)"
+                >
+                  打印玻片
                 </ElButton>
                 <ElButton
                   v-if="canComplete"
@@ -285,7 +366,7 @@ void loadOrders();
                   type="success"
                   @click="runOrderAction('complete', row)"
                 >
-                  完成
+                  出片
                 </ElButton>
                 <ElButton
                   v-if="canCancel"

@@ -1751,11 +1751,14 @@ describe('DiagnosisWorkbenchView', () => {
       await flushAsyncWork();
 
       expect(createMedicalOrderMock).toHaveBeenCalledWith({
+        blockNo: 'A1',
         caseId: 'CASE-001',
         orderContent: '补做特殊染色（蜡块: A1 胃窦组织）',
         orderItemId: 'ITEM-001',
         orderType: 'SPECIAL_STAIN',
         remarks: undefined,
+        targetBlockId: 'BLOCK-001',
+        targetBlockNo: 'A1',
       });
       expect(createMedicalOrderMock.mock.calls[0]?.[0]).not.toHaveProperty(
         'operatorName',
@@ -1853,38 +1856,42 @@ describe('DiagnosisWorkbenchView', () => {
     slowWorkbenchTestTimeout,
   );
 
-  it('executes billing for all uncharged medical orders and refreshes status', async () => {
-    mockAccessStore.accessCodes = [
-      'PERM_M4_WORKBENCH_QUERY',
-      'PERM_M4_MEDICAL_ORDER_CREATE',
-    ];
-    const initialWorkbench = workbenchFixtureByCaseId['CASE-001']!;
-    const chargedWorkbench: DiagnosticWorkbenchView = {
-      ...initialWorkbench,
-      medicalOrders: initialWorkbench.medicalOrders.map((item) => ({
-        ...item,
-        billingStatus: 'SUCCESS',
-      })),
-    };
-    getDiagnosticWorkbenchMock
-      .mockResolvedValueOnce(initialWorkbench)
-      .mockResolvedValueOnce(chargedWorkbench);
-    const wrapper = await mountView();
+  it(
+    'executes billing for all uncharged medical orders and refreshes status',
+    async () => {
+      mockAccessStore.accessCodes = [
+        'PERM_M4_WORKBENCH_QUERY',
+        'PERM_M4_MEDICAL_ORDER_CREATE',
+      ];
+      const initialWorkbench = workbenchFixtureByCaseId['CASE-001']!;
+      const chargedWorkbench: DiagnosticWorkbenchView = {
+        ...initialWorkbench,
+        medicalOrders: initialWorkbench.medicalOrders.map((item) => ({
+          ...item,
+          billingStatus: 'SUCCESS',
+        })),
+      };
+      getDiagnosticWorkbenchMock
+        .mockResolvedValueOnce(initialWorkbench)
+        .mockResolvedValueOnce(chargedWorkbench);
+      const wrapper = await mountView();
 
-    findButton('执行收费').click();
-    await flushAsyncWork();
+      findButton('执行收费').click();
+      await flushAsyncWork();
 
-    expect(executeMedicalOrderBillingMock).toHaveBeenCalledWith({
-      caseId: 'CASE-001',
-      orderIds: undefined,
-      remarks: '执行收费',
-    });
-    expect(getDiagnosticWorkbenchMock).toHaveBeenLastCalledWith('CASE-001');
-    expect(getOrderPaneText()).toContain('未收费 (0) 已收费 (1)');
-    expect(getOrderPaneText()).toContain('已收费');
+      expect(executeMedicalOrderBillingMock).toHaveBeenCalledWith({
+        caseId: 'CASE-001',
+        orderIds: undefined,
+        remarks: '执行收费',
+      });
+      expect(getDiagnosticWorkbenchMock).toHaveBeenLastCalledWith('CASE-001');
+      expect(getOrderPaneText()).toContain('未收费 (0) 已收费 (1)');
+      expect(getOrderPaneText()).toContain('已收费');
 
-    wrapper.unmount();
-  });
+      wrapper.unmount();
+    },
+    slowWorkbenchTestTimeout,
+  );
 
   it(
     'executes billing only for selected persisted medical orders',

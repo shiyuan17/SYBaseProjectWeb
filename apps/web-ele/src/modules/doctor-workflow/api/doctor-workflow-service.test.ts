@@ -190,6 +190,7 @@ describe('doctor-workflow-service mappers', () => {
           slicingPrintGroupId: 'GROUP-001',
           slicingTaskId: 'TASK-001',
           slicingTaskIds: ['TASK-001', 'TASK-002'],
+          submittingDepartmentName: null,
         },
       ],
       page: 1,

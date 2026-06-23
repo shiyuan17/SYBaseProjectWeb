@@ -169,6 +169,7 @@ describe('doctor workflow routes', () => {
     const routeNames = getDoctorWorkflowChildRouteNames([
       M4_PERMISSION_CODES.MEDICAL_ORDER_QUERY,
       M4_PERMISSION_CODES.MEDICAL_ORDER_ACCEPT,
+      M4_PERMISSION_CODES.MEDICAL_ORDER_PRINT,
       M4_PERMISSION_CODES.MEDICAL_ORDER_COMPLETE,
     ]);
 
@@ -176,6 +177,14 @@ describe('doctor workflow routes', () => {
     expect(routeNames).not.toContain('DiagnosisAssignment');
     expect(routeNames).not.toContain('DiagnosisWorkbench');
     expect(routeNames).not.toContain('PathologyReport');
+  });
+
+  it('shows medical order workstation for print-only execution permission', () => {
+    const routeNames = getDoctorWorkflowChildRouteNames([
+      M4_PERMISSION_CODES.MEDICAL_ORDER_PRINT,
+    ]);
+
+    expect(routeNames).toContain('MedicalOrderWorkbench');
   });
 
   it('shows only tracking page for tracking role permissions', () => {

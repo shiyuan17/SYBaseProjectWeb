@@ -37,6 +37,7 @@ const {
   mockRoute,
   mockRouter,
   mockUserStore,
+  printMedicalOrderSlideMock,
   printFormalReportVersionsMock,
   rejectReportRevisionRequestMock,
   recallFormalReportVersionsMock,
@@ -102,6 +103,8 @@ const {
       userId: 'USER-CURRENT',
     },
   },
+  printMedicalOrderSlideMock:
+    vi.fn<(orderId: string, data: unknown) => Promise<unknown>>(),
   printFormalReportVersionsMock:
     vi.fn<(payload: unknown) => Promise<unknown>>(),
   rejectReportRevisionRequestMock:
@@ -167,6 +170,7 @@ vi.mock('../api/doctor-workflow-service', () => ({
   listPendingMedicalOrders: listPendingMedicalOrdersMock,
   listPendingDiagnosticTasks: listPendingDiagnosticTasksMock,
   publishPathologyReport: vi.fn(),
+  printMedicalOrderSlide: printMedicalOrderSlideMock,
   printFormalReportVersions: printFormalReportVersionsMock,
   recallFormalReportVersions: recallFormalReportVersionsMock,
   rejectPathologyReport: vi.fn(),
@@ -531,6 +535,9 @@ const pendingMedicalOrderPageFixture: PendingMedicalOrderPage = {
     {
       acceptedAt: null,
       billingStatus: 'UNBILLED',
+      canConfirm: true,
+      canPrint: false,
+      canRelease: false,
       caseId: 'CASE-001',
       completedAt: null,
       doctorName: '当前分派员',
@@ -547,6 +554,9 @@ const pendingMedicalOrderPageFixture: PendingMedicalOrderPage = {
     {
       acceptedAt: '2026-05-26T09:10:00',
       billingStatus: 'BILLED',
+      canConfirm: false,
+      canPrint: true,
+      canRelease: false,
       caseId: 'CASE-002',
       completedAt: null,
       doctorName: '当前分派员',
@@ -644,6 +654,7 @@ function resetTestState() {
   listPendingMedicalOrdersMock.mockReset();
   getDiagnosticWorkbenchMock.mockReset();
   getCaseLifecycleTrackingMock.mockReset();
+  printMedicalOrderSlideMock.mockReset();
   startDiagnosticTaskMock.mockReset();
   mockUserStore.userInfo = {
     realName: '当前分派员',
@@ -719,6 +730,24 @@ function resetTestState() {
   );
   getDiagnosticWorkbenchMock.mockResolvedValue(workbenchFixture);
   getCaseLifecycleTrackingMock.mockResolvedValue(trackingFixture);
+  printMedicalOrderSlideMock.mockResolvedValue({
+    labels: [
+      {
+        blockNo: 'A1',
+        checkItem: 'HE染色',
+        orderId: 'ORDER-002',
+        pathologyNo: 'PATH-002',
+        patientId: 'PAT-002',
+        patientIdDisplay: '08305',
+        patientName: '李四',
+        slideNo: 'SLIDE-002',
+        specimenNo: 'SP-002',
+      },
+    ],
+    orderId: 'ORDER-002',
+    printedAt: '2026-05-26T09:12:00',
+    printedByName: '执行岗甲',
+  });
   printFormalReportVersionsMock.mockResolvedValue({
     failureCount: 0,
     items: [{ success: true, versionId: 'RV-1' }],
@@ -1788,7 +1817,7 @@ describe('doctor workflow view visibility', () => {
     wrapper.unmount();
   });
 
-  it('accepts pending medical order in medical order workstation', async () => {
+  it('confirms pending medical order in medical order workstation', async () => {
     mockAccessStore.accessCodes = [
       M4_PERMISSION_CODES.MEDICAL_ORDER_QUERY,
       M4_PERMISSION_CODES.MEDICAL_ORDER_ACCEPT,
@@ -1803,10 +1832,10 @@ describe('doctor workflow view visibility', () => {
       status: undefined,
     });
     expect(wrapper.text()).toContain('2026-05-26 09:00:00');
-    expect(wrapper.buttonTexts()).toContain('接收');
-    expect(wrapper.isButtonDisabled('接收')).toBe(false);
+    expect(wrapper.buttonTexts()).toContain('确认');
+    expect(wrapper.isButtonDisabled('确认')).toBe(false);
 
-    wrapper.clickButton('接收');
+    wrapper.clickButton('确认');
     await flushAsyncWork();
 
     expect(acceptMedicalOrderMock).toHaveBeenCalledWith(
@@ -1854,8 +1883,11 @@ describe('doctor workflow view visibility', () => {
     expect(wrapper.text()).toContain('类型');
     expect(wrapper.text()).toContain('状态');
     expect(wrapper.text()).toContain('收费状态');
+    expect(wrapper.text()).toContain('打印状态');
+    expect(wrapper.text()).toContain('打印时间');
     expect(wrapper.text()).toContain('特殊染色');
     expect(wrapper.text()).toContain('执行中');
+    expect(wrapper.text()).toContain('未打印');
     expect(wrapper.text()).toContain('已收费');
     expect(wrapper.text()).not.toContain('SPECIAL');
     expect(wrapper.text()).not.toContain('IN_PROGRESS');
@@ -1863,10 +1895,37 @@ describe('doctor workflow view visibility', () => {
     wrapper.unmount();
   });
 
-  it('completes in-progress medical order in medical order workstation', async () => {
+  it('shows print action only for users with print permission', async () => {
     mockAccessStore.accessCodes = [
       M4_PERMISSION_CODES.MEDICAL_ORDER_QUERY,
-      M4_PERMISSION_CODES.MEDICAL_ORDER_COMPLETE,
+    ];
+    const readOnlyWrapper = await mountView(MedicalOrderWorkbenchView);
+
+    expect(readOnlyWrapper.buttonTexts()).not.toContain('打印玻片');
+    readOnlyWrapper.unmount();
+
+    mockAccessStore.accessCodes = [
+      M4_PERMISSION_CODES.MEDICAL_ORDER_QUERY,
+      M4_PERMISSION_CODES.MEDICAL_ORDER_PRINT,
+    ];
+    const printableWrapper = await mountView(MedicalOrderWorkbenchView);
+
+    expect(printableWrapper.buttonTexts()).toContain('打印玻片');
+    printableWrapper.unmount();
+  });
+
+  it('prints in-progress medical order before release in medical order workstation', async () => {
+    const writeMock = vi.fn();
+    vi.spyOn(window, 'open').mockReturnValue({
+      document: {
+        close: vi.fn(),
+        open: vi.fn(),
+        write: writeMock,
+      },
+    } as unknown as Window);
+    mockAccessStore.accessCodes = [
+      M4_PERMISSION_CODES.MEDICAL_ORDER_QUERY,
+      M4_PERMISSION_CODES.MEDICAL_ORDER_PRINT,
     ];
     listPendingMedicalOrdersMock.mockResolvedValue({
       ...pendingMedicalOrderPageFixture,
@@ -1876,10 +1935,50 @@ describe('doctor workflow view visibility', () => {
 
     const wrapper = await mountView(MedicalOrderWorkbenchView);
 
-    expect(wrapper.buttonTexts()).toContain('完成');
-    expect(wrapper.isButtonDisabled('完成')).toBe(false);
+    expect(wrapper.buttonTexts()).toContain('打印玻片');
+    expect(wrapper.isButtonDisabled('打印玻片')).toBe(false);
+    expect(wrapper.buttonTexts()).not.toContain('出片');
 
-    wrapper.clickButton('完成');
+    wrapper.clickButton('打印玻片');
+    await flushAsyncWork();
+
+    expect(printMedicalOrderSlideMock).toHaveBeenCalledWith(
+      'ORDER-002',
+      expect.objectContaining({
+        remarks: undefined,
+        terminalCode: undefined,
+      }),
+    );
+    expect(writeMock).toHaveBeenCalledWith(expect.stringContaining('PATH-002'));
+    expect(listPendingMedicalOrdersMock).toHaveBeenCalledTimes(2);
+
+    wrapper.unmount();
+  });
+
+  it('releases printed in-progress medical order in medical order workstation', async () => {
+    mockAccessStore.accessCodes = [
+      M4_PERMISSION_CODES.MEDICAL_ORDER_QUERY,
+      M4_PERMISSION_CODES.MEDICAL_ORDER_COMPLETE,
+    ];
+    listPendingMedicalOrdersMock.mockResolvedValue({
+      ...pendingMedicalOrderPageFixture,
+      items: [
+        {
+          ...pendingMedicalOrderPageFixture.items[1]!,
+          canPrint: false,
+          canRelease: true,
+          printedAt: '2026-05-26T09:12:00',
+        },
+      ],
+      total: 1,
+    });
+
+    const wrapper = await mountView(MedicalOrderWorkbenchView);
+
+    expect(wrapper.buttonTexts()).toContain('出片');
+    expect(wrapper.isButtonDisabled('出片')).toBe(false);
+
+    wrapper.clickButton('出片');
     await flushAsyncWork();
 
     expect(completeMedicalOrderMock).toHaveBeenCalledWith(
@@ -1898,9 +1997,10 @@ describe('doctor workflow view visibility', () => {
     wrapper.unmount();
   });
 
-  it('enables complete only for in-progress or legacy accepted medical orders', async () => {
+  it('gates print and release actions by backend flags and print status', async () => {
     mockAccessStore.accessCodes = [
       M4_PERMISSION_CODES.MEDICAL_ORDER_QUERY,
+      M4_PERMISSION_CODES.MEDICAL_ORDER_PRINT,
       M4_PERMISSION_CODES.MEDICAL_ORDER_COMPLETE,
     ];
     listPendingMedicalOrdersMock.mockResolvedValue({
@@ -1910,24 +2010,35 @@ describe('doctor workflow view visibility', () => {
           ...pendingMedicalOrderPageFixture.items[0]!,
           orderId: 'ORDER-PENDING',
           orderNumber: 'MO-PENDING',
+          canConfirm: true,
+          canPrint: false,
+          canRelease: false,
           status: 'PENDING',
         },
         {
           ...pendingMedicalOrderPageFixture.items[1]!,
-          orderId: 'ORDER-IN-PROGRESS',
-          orderNumber: 'MO-INPROGRESS',
+          orderId: 'ORDER-PRINTABLE',
+          orderNumber: 'MO-PRINTABLE',
+          canPrint: true,
+          canRelease: false,
           status: 'IN_PROGRESS',
         },
         {
           ...pendingMedicalOrderPageFixture.items[1]!,
-          orderId: 'ORDER-ACCEPTED',
-          orderNumber: 'MO-ACCEPTED',
-          status: 'ACCEPTED',
+          orderId: 'ORDER-RELEASABLE',
+          orderNumber: 'MO-RELEASABLE',
+          canPrint: false,
+          canRelease: true,
+          printedAt: '2026-05-26T09:20:00',
+          printedByName: '执行岗乙',
+          status: 'IN_PROGRESS',
         },
         {
           ...pendingMedicalOrderPageFixture.items[1]!,
           orderId: 'ORDER-COMPLETED',
           orderNumber: 'MO-COMPLETED',
+          canPrint: false,
+          canRelease: false,
           status: 'COMPLETED',
           completedAt: '2026-05-26T09:20:00',
         },
@@ -1935,6 +2046,8 @@ describe('doctor workflow view visibility', () => {
           ...pendingMedicalOrderPageFixture.items[1]!,
           orderId: 'ORDER-CANCELLED',
           orderNumber: 'MO-CANCELLED',
+          canPrint: false,
+          canRelease: false,
           status: 'CANCELLED',
         },
       ],
@@ -1944,13 +2057,21 @@ describe('doctor workflow view visibility', () => {
     const wrapper = await mountView(MedicalOrderWorkbenchView);
 
     expect(
-      wrapper.buttonTexts().filter((text) => text === '完成'),
+      wrapper.buttonTexts().filter((text) => text === '打印玻片'),
     ).toHaveLength(5);
-    expect(wrapper.isButtonDisabled('完成', 0)).toBe(true);
-    expect(wrapper.isButtonDisabled('完成', 1)).toBe(false);
-    expect(wrapper.isButtonDisabled('完成', 2)).toBe(false);
-    expect(wrapper.isButtonDisabled('完成', 3)).toBe(true);
-    expect(wrapper.isButtonDisabled('完成', 4)).toBe(true);
+    expect(
+      wrapper.buttonTexts().filter((text) => text === '出片'),
+    ).toHaveLength(5);
+    expect(wrapper.isButtonDisabled('打印玻片', 0)).toBe(true);
+    expect(wrapper.isButtonDisabled('打印玻片', 1)).toBe(false);
+    expect(wrapper.isButtonDisabled('打印玻片', 2)).toBe(true);
+    expect(wrapper.isButtonDisabled('打印玻片', 3)).toBe(true);
+    expect(wrapper.isButtonDisabled('打印玻片', 4)).toBe(true);
+    expect(wrapper.isButtonDisabled('出片', 0)).toBe(true);
+    expect(wrapper.isButtonDisabled('出片', 1)).toBe(true);
+    expect(wrapper.isButtonDisabled('出片', 2)).toBe(false);
+    expect(wrapper.isButtonDisabled('出片', 3)).toBe(true);
+    expect(wrapper.isButtonDisabled('出片', 4)).toBe(true);
 
     wrapper.unmount();
   });
