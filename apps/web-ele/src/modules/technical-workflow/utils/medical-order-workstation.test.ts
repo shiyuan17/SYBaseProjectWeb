@@ -225,6 +225,7 @@ describe('medical-order-workstation mapper', () => {
         orderCategoryCode: 'CYTOLOGY',
         orderCategoryName: '细胞学',
         orderItemName: null,
+        submittingDepartmentName: '病理科',
       }),
       'cytology',
     );
@@ -232,6 +233,7 @@ describe('medical-order-workstation mapper', () => {
       createOrder({
         orderCategoryCode: 'LIQUID_CYTOLOGY',
         orderCategoryName: '液基细胞学',
+        submittingDepartmentName: '妇科门诊',
       }),
       'liquid-cytology',
     );
@@ -241,11 +243,30 @@ describe('medical-order-workstation mapper', () => {
       flowStatus: '待确认',
       sampleType: '细胞学',
       specimenName: 'CK（蜡块: A1）',
+      submitDept: '病理科',
     });
     expect(liquidRow).toMatchObject({
       flowStatus: '待确认',
       printedSlides: 0,
       sampleType: '液基细胞学',
+      submitDept: '妇科门诊',
+    });
+  });
+
+  it('does not fall back to internal patientId for cytology workstation display', () => {
+    const liquidRow = mapMedicalOrderToTechnicalWorkbenchRow(
+      createOrder({
+        orderCategoryCode: 'LIQUID_CYTOLOGY',
+        orderCategoryName: '液基细胞学',
+        patientId: '946db168-2158-4a71-8fe2-4de5a146f50a',
+        patientIdDisplay: null,
+      }),
+      'liquid-cytology',
+    );
+
+    expect(liquidRow).toMatchObject({
+      patientId: '946db168-2158-4a71-8fe2-4de5a146f50a',
+      patientIdDisplay: null,
     });
   });
 

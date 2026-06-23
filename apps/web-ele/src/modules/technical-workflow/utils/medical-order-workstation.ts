@@ -200,6 +200,7 @@ function createBaseRow(order: PendingMedicalOrderItem) {
     slideNo: valueOrDash(order.slideNo),
     statusLabel,
     specimenNo: valueOrDash(order.specimenNo),
+    submittingDepartmentName: order.submittingDepartmentName ?? null,
     targetBlockId: order.targetBlockId ?? null,
     targetSlideId: order.targetSlideId ?? null,
     targetSpecimenId: order.targetSpecimenId ?? null,
@@ -274,7 +275,7 @@ export function mapMedicalOrderToTechnicalWorkbenchRow(
       sampleType: getCategoryName(order),
       slideCount: 0,
       specimenName: getItemName(order),
-      submitDept: EMPTY_CELL,
+      submitDept: valueOrDash(order.submittingDepartmentName),
       tagName: valueOrDash(order.orderContent),
     });
   }
@@ -286,7 +287,7 @@ export function mapMedicalOrderToTechnicalWorkbenchRow(
     receiverName: EMPTY_CELL,
     releaseUser: EMPTY_CELL,
     sampleType: getCategoryName(order),
-    submitDept: EMPTY_CELL,
+    submitDept: valueOrDash(order.submittingDepartmentName),
   });
 }
 

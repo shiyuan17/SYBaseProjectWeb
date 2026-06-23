@@ -17,6 +17,14 @@ function formatTechnicalOrderPatientId(row: Record<string, unknown>) {
   );
 }
 
+function formatDisplayOnlyPatientId(row: Record<string, unknown>) {
+  return formatPatientIdDisplay(toOptionalString(row.patientIdDisplay));
+}
+
+function formatIhcPatientId(row: Record<string, unknown>) {
+  return formatDisplayOnlyPatientId(row);
+}
+
 const PENDING_ORDER_STATUS_OPTIONS = [
   { label: '待确认', value: 'PENDING' },
   { label: '已确认', value: 'IN_PROGRESS' },
@@ -194,22 +202,19 @@ export const IHC_WORKSTATION_CONFIG: TechnicalWorkbenchPageConfig = {
       width: 56,
     },
     {
-      formatter: formatTechnicalOrderPatientId,
+      formatter: formatIhcPatientId,
       key: 'patientId',
       label: '病人ID',
       minWidth: 100,
     },
     { key: 'pathologyNo', label: '原病理号', minWidth: 132 },
-    { key: 'slideNo', label: '病理号', minWidth: 110 },
     { key: 'patientName', label: '病人', minWidth: 90 },
     { key: 'specimenNo', label: '蜡块号', minWidth: 96 },
-    { key: 'plateNo', label: '玻片序号', minWidth: 96 },
     { key: 'confirmAction', label: '确认操作', minWidth: 90 },
     { key: 'instrumentAction', label: '上机操作', minWidth: 90 },
     { key: 'stainingAction', label: '出片操作', minWidth: 90 },
     { key: 'deviceName', label: '分配设备', minWidth: 100 },
     { key: 'doctorUser', label: '医嘱医生', minWidth: 100 },
-    { key: 'printCallbackResult', label: '打印指令回传结果', minWidth: 140 },
   ],
   dataSource: createMedicalOrderWorkstationDataSource(
     TECHNICAL_ORDER_CATEGORY_CODES.ihc,
@@ -274,7 +279,7 @@ export const CYTOLOGY_WORKSTATION_CONFIG: TechnicalWorkbenchPageConfig = {
     { key: 'pathologyNo', label: '病理号', minWidth: 132 },
     { key: 'patientName', label: '病人', minWidth: 90 },
     {
-      formatter: formatTechnicalOrderPatientId,
+      formatter: formatDisplayOnlyPatientId,
       key: 'patientId',
       label: '病人ID',
       minWidth: 100,
@@ -347,7 +352,7 @@ export const LIQUID_CYTOLOGY_WORKSTATION_CONFIG: TechnicalWorkbenchPageConfig =
       },
       { key: 'flowStatus', label: '流程状态', minWidth: 100 },
       {
-        formatter: formatTechnicalOrderPatientId,
+        formatter: formatDisplayOnlyPatientId,
         key: 'patientId',
         label: '病人ID',
         minWidth: 100,

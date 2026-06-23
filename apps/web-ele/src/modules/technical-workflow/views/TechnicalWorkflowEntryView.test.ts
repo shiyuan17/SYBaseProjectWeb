@@ -49,6 +49,12 @@ vi.mock('@vben/stores', () => ({
 }));
 
 vi.mock('#/modules/specimen-workflow/constants', () => ({
+  APPLICATION_TYPE_OPTIONS: [
+    { label: '常规', value: 'ROUTINE' },
+    { label: '冰冻', value: 'FROZEN' },
+    { label: '会诊', value: 'CONSULTATION' },
+    { label: '免疫组化', value: 'IHC' },
+  ],
   M2_PERMISSION_CODES: {
     SPECIMEN_RECEIVE: 'PERM_M2_SPECIMEN_RECEIVE',
   },

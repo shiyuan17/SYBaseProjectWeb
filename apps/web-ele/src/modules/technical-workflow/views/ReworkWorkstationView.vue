@@ -231,7 +231,6 @@ if (queryForm.caseId) {
       <div class="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)_360px]">
         <WorkflowSectionCard
           title="异常入口"
-          description="支持从病例编号直接进入，也兼容任务池和工位右侧提醒带着病例信息跳入。"
         >
           <ElForm label-width="96px">
             <ElFormItem label="病例编号" required>
@@ -296,7 +295,6 @@ if (queryForm.caseId) {
         <div class="flex flex-col gap-4">
           <WorkflowSectionCard
             title="当前异常处理区"
-            description="保留现有返工弹窗逻辑，但把病例摘要、返工列表和下一步回流动作固定在主区域。"
           >
             <template v-if="trackingResult">
               <ElDescriptions :column="2" border>
@@ -350,7 +348,6 @@ if (queryForm.caseId) {
           <WorkflowSectionCard
             v-if="trackingResult"
             title="返工单列表"
-            description="返工来源和目标工位都在当前页面直接确认，不需要再回忆对象层级。"
           >
             <ElTable :data="trackingResult.reworks" border>
               <ElTableColumn
@@ -409,7 +406,6 @@ if (queryForm.caseId) {
           <WorkflowSectionCard
             v-if="trackingResult"
             title="质控与异常记录"
-            description="返工前先核对质控问题、改进建议和评估时间。"
           >
             <ElTable :data="trackingResult.qcEvaluations" border>
               <ElTableColumn label="玻片编号" min-width="180" prop="slideId" />

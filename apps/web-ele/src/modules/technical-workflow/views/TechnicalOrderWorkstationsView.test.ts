@@ -410,7 +410,7 @@ describe('technical order workstation views', () => {
       RoutineOrderWorkstationView,
       '常规医嘱工作站',
       '确认',
-      '原病理号',
+      '住院号',
       'ROUTINE,EXAM,CGRS,BLOCK,QP',
     ],
     [SpecialOrderWorkstationView, '特检医嘱工作站', '确认', '项目类型', 'TSRS'],
@@ -545,7 +545,7 @@ describe('technical order workstation views', () => {
       size: 30,
       status: undefined,
     });
-    expect(wrapper.root.textContent).toContain('暂无待处理常规医嘱数据');
+    expect(wrapper.root.textContent).toContain('暂无常规医嘱数据');
 
     wrapper.unmount();
   });
@@ -597,6 +597,48 @@ describe('technical order workstation views', () => {
     wrapper.unmount();
   });
 
+  it('renders the ihc workstation with display patient id and without removed columns', async () => {
+    listPendingMedicalOrdersMock.mockResolvedValueOnce({
+      items: [
+        {
+          caseId: 'CASE-001',
+          doctorName: '张医生',
+          orderCategoryCode: 'IHC',
+          orderCategoryName: '免疫组化',
+          orderContent: 'CK（蜡块: A1）',
+          orderDate: '2026-06-05 09:12:30',
+          orderId: 'ORDER-IHC',
+          orderItemName: 'CK',
+          orderNumber: 'MO-001',
+          orderType: 'IHC',
+          pathologyNo: 'BL-IHC',
+          patientId: '946db168-2158-4a78-8fe2-4de5a14650a',
+          patientIdDisplay: '08305',
+          patientName: '王女士',
+          remarks: '加做',
+          status: 'PENDING',
+        },
+      ],
+      page: 1,
+      size: 100,
+      total: 1,
+    });
+
+    const wrapper = renderView(IhcWorkstationView);
+    await flushAsyncUpdates();
+
+    expect(wrapper.root.textContent).toContain('08305');
+    expect(wrapper.root.textContent).not.toContain(
+      '946db168-2158-4a78-8fe2-4de5a14650a',
+    );
+    expect(wrapper.root.textContent).not.toContain('MO-001');
+    expect(wrapper.root.textContent).not.toContain('玻片序号');
+    expect(wrapper.root.textContent).not.toContain('打印指令回传结果');
+    expect(wrapper.root.textContent).toContain('原病理号');
+
+    wrapper.unmount();
+  });
+
   it('shows failure state and retries loading medical orders', async () => {
     listPendingMedicalOrdersMock.mockRejectedValueOnce(new Error('接口异常'));
 
@@ -616,6 +658,42 @@ describe('technical order workstation views', () => {
 
     expect(wrapper.root.textContent).toContain('BL-TSRS');
     expect(listPendingMedicalOrdersMock).toHaveBeenCalledTimes(2);
+
+    wrapper.unmount();
+  });
+
+  it('keeps fallback patient id on the special workstation', async () => {
+    listPendingMedicalOrdersMock.mockResolvedValueOnce({
+      items: [
+        {
+          caseId: 'CASE-TSRS-UUID',
+          doctorName: '张医生',
+          orderCategoryCode: 'TSRS',
+          orderCategoryName: '特检',
+          orderContent: '特检项目',
+          orderDate: '2026-06-22 08:30:00',
+          orderId: 'ORDER-TSRS-UUID',
+          orderItemName: '特检项目',
+          orderNumber: 'MO-TSRS-UUID',
+          pathologyNo: 'BL-TSRS-UUID',
+          patientId: '946db168-2158-4a71-8fe2-4de5a146f50a',
+          patientIdDisplay: null,
+          patientName: '患者丁',
+          remarks: null,
+          status: 'PENDING',
+        },
+      ],
+      page: 1,
+      size: 100,
+      total: 1,
+    });
+
+    const wrapper = renderView(SpecialOrderWorkstationView);
+    await flushAsyncUpdates();
+
+    expect(wrapper.root.textContent).toContain(
+      '946db168-2158-4a71-8fe2-4de5a146f50a',
+    );
 
     wrapper.unmount();
   });
@@ -691,11 +769,113 @@ describe('technical order workstation views', () => {
     expect(wrapper.root.textContent).toContain('已确认');
     expect(wrapper.root.textContent).toContain('已打印');
     expect(wrapper.root.textContent).toContain('待出片');
-    expect(wrapper.root.textContent).toContain('SLIDE-001');
-    expect(wrapper.root.textContent).toContain('已出片');
-    expect(wrapper.root.textContent).toContain('已终止');
+    expect(wrapper.root.textContent).toContain('A1');
+    expect(wrapper.root.textContent).toContain('HE染色');
+    expect(wrapper.root.textContent).toContain('备注');
 
     wrapper.unmount();
+  });
+
+  it('shows submitting department on cytology and liquid cytology workstations', async () => {
+    listPendingMedicalOrdersMock.mockResolvedValue({
+      items: [
+        {
+          caseId: 'CASE-CYTOLOGY-001',
+          doctorName: '张医生',
+          orderCategoryCode: 'CYTOLOGY',
+          orderCategoryName: '细胞学',
+          orderContent: '细胞学检查',
+          orderDate: '2026-06-22 08:30:00',
+          orderId: 'ORDER-CYTOLOGY-001',
+          orderItemName: '细胞学检查',
+          orderNumber: 'MO-CYTOLOGY-001',
+          pathologyNo: 'BL-CYTOLOGY-001',
+          patientId: 'UUID-CYTOLOGY-001',
+          patientIdDisplay: '08305',
+          patientName: '患者甲',
+          remarks: null,
+          status: 'PENDING',
+          submittingDepartmentName: '病理科',
+        },
+      ],
+      page: 1,
+      size: 100,
+      total: 1,
+    });
+
+    const cytology = renderView(CytologyWorkstationView);
+    await flushAsyncUpdates();
+    expect(cytology.root.textContent).toContain('病理科');
+    cytology.unmount();
+
+    listPendingMedicalOrdersMock.mockResolvedValue({
+      items: [
+        {
+          caseId: 'CASE-LBC-001',
+          doctorName: '李医生',
+          orderCategoryCode: 'LIQUID_CYTOLOGY',
+          orderCategoryName: '液基细胞学',
+          orderContent: '液基细胞学检查',
+          orderDate: '2026-06-22 08:30:00',
+          orderId: 'ORDER-LBC-001',
+          orderItemName: '液基细胞学检查',
+          orderNumber: 'MO-LBC-001',
+          pathologyNo: 'BL-LBC-001',
+          patientId: 'UUID-LBC-001',
+          patientIdDisplay: '08306',
+          patientName: '患者乙',
+          remarks: null,
+          status: 'PENDING',
+          submittingDepartmentName: '妇科门诊',
+        },
+      ],
+      page: 1,
+      size: 100,
+      total: 1,
+    });
+
+    const liquid = renderView(LiquidCytologyWorkstationView);
+    await flushAsyncUpdates();
+    expect(liquid.root.textContent).toContain('妇科门诊');
+    liquid.unmount();
+  });
+
+  it('shows dash instead of internal patient id when patientIdDisplay is missing', async () => {
+    listPendingMedicalOrdersMock.mockResolvedValue({
+      items: [
+        {
+          caseId: 'CASE-LBC-UUID',
+          doctorName: '李医生',
+          orderCategoryCode: 'LIQUID_CYTOLOGY',
+          orderCategoryName: '液基细胞学',
+          orderContent: '液基细胞学检查',
+          orderDate: '2026-06-22 08:30:00',
+          orderId: 'ORDER-LBC-UUID',
+          orderItemName: '液基细胞学检查',
+          orderNumber: 'MO-LBC-UUID',
+          pathologyNo: 'BL-LBC-UUID',
+          patientId: '946db168-2158-4a71-8fe2-4de5a146f50a',
+          patientIdDisplay: null,
+          patientName: '患者丙',
+          remarks: null,
+          status: 'PENDING',
+          submittingDepartmentName: '妇科门诊',
+        },
+      ],
+      page: 1,
+      size: 100,
+      total: 1,
+    });
+
+    const liquid = renderView(LiquidCytologyWorkstationView);
+    await flushAsyncUpdates();
+
+    expect(liquid.root.textContent).not.toContain(
+      '946db168-2158-4a71-8fe2-4de5a146f50a',
+    );
+    expect(liquid.root.textContent).toContain('妇科门诊');
+
+    liquid.unmount();
   });
 
   it('shows work date picker only on the 4 targeted medical-order workstations', async () => {

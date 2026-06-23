@@ -347,4 +347,25 @@ describe('ReworkWorkstationView', () => {
     app.unmount();
     root.remove();
   });
+
+  it('does not render section subtitle copy in the rework workstation page', async () => {
+    const { app, root } = mountView();
+    await flushView();
+
+    expect(document.body.textContent).not.toContain(
+      '支持从病例编号直接进入，也兼容任务池和工位右侧提醒带着病例信息跳入。',
+    );
+    expect(document.body.textContent).not.toContain(
+      '保留现有返工弹窗逻辑，但把病例摘要、返工列表和下一步回流动作固定在主区域。',
+    );
+    expect(document.body.textContent).not.toContain(
+      '返工来源和目标工位都在当前页面直接确认，不需要再回忆对象层级。',
+    );
+    expect(document.body.textContent).not.toContain(
+      '返工前先核对质控问题、改进建议和评估时间。',
+    );
+
+    app.unmount();
+    root.remove();
+  });
 });

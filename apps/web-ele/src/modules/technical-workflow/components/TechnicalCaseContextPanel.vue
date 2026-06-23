@@ -54,7 +54,6 @@ const summaryItems = computed(() => {
   <div class="flex flex-col gap-4">
     <WorkflowSectionCard
       title="病例概览"
-      description="固定展示病例摘要、下一流向和当前生产风险。"
     >
       <div v-if="context" class="grid gap-3 md:grid-cols-2">
         <article
@@ -73,7 +72,6 @@ const summaryItems = computed(() => {
 
     <WorkflowSectionCard
       title="生产提醒"
-      description="将返工、质控和下一工位衔接信息前置显示，减少来回查找。"
     >
       <div v-if="context?.alerts.length" class="flex flex-col gap-3">
         <ElAlert
@@ -104,7 +102,6 @@ const summaryItems = computed(() => {
 
     <WorkflowSectionCard
       title="质控与返工"
-      description="汇总切片提示、返工原因与质控建议。"
     >
       <div
         v-if="context?.currentTaskSuggestions.length"
@@ -123,7 +120,6 @@ const summaryItems = computed(() => {
 
     <WorkflowSectionCard
       title="节点记录"
-      description="展示节点操作、质控、返工和流转记录。"
     >
       <ElTimeline v-if="context?.recentEvents.length">
         <ElTimelineItem
