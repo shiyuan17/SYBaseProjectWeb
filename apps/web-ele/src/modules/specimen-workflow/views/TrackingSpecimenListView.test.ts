@@ -12,11 +12,13 @@ import {
   createSelectStub,
   createTableColumnStub,
   createTableStub,
+  createTabPaneStub,
+  createTabsStub,
   createTagStub,
-  createTimelineItemStub,
 } from '../test-utils/component-stubs';
 
 const tableRowKey = vi.hoisted(() => Symbol('table-row'));
+const tabsContextKey = vi.hoisted(() => Symbol('tabs'));
 
 const {
   mockAccessStore,
@@ -76,11 +78,11 @@ vi.mock('element-plus', () => {
     ElOption: createOptionStub(),
     ElPagination: createPassthroughStub(),
     ElSelect: createSelectStub(),
+    ElTabPane: createTabPaneStub(tabsContextKey),
+    ElTabs: createTabsStub(tabsContextKey),
     ElTable: createTableStub(tableRowKey),
     ElTableColumn: createTableColumnStub(tableRowKey),
     ElTag: createTagStub(),
-    ElTimeline: createPassthroughStub('ul'),
-    ElTimelineItem: createTimelineItemStub(),
   };
 });
 
@@ -140,15 +142,53 @@ function buildApplicationDetail() {
         eventTime: '2026-05-24T08:00:00',
         eventType: 'REGISTER',
         nodeCode: 'SPECIMEN_COLLECTION',
+        operatorDevice: 'Chrome 125 / Windows',
+        operatorIp: '10.0.0.1',
         operatorName: '李医生',
+        specimenId: 'SPEC-001',
+        specimenNo: 'SP-001',
         sourceTerminal: 'TERMINAL-1',
+      },
+      {
+        eventContent: '出库完成',
+        eventStatus: 'SUCCESS',
+        eventTime: '2026-05-24T09:00:00',
+        eventType: 'HANDED_OVER',
+        nodeCode: 'TRANSPORT',
+        operatorDevice: 'Edge 126 / Windows',
+        operatorIp: '10.0.0.2',
+        operatorName: '出库员',
+        specimenId: 'SPEC-001',
+        specimenNo: 'SP-001',
+        sourceTerminal: 'TERMINAL-2',
       },
     ],
     remarks: '备注信息',
     sourceHospitalId: 'H-001',
     sourceHospitalName: '总院',
     specimenRemovalTime: '2026-05-22T07:30:00',
-    specimens: [],
+    specimens: [
+      {
+        abnormalReason: '容器破损',
+        barcode: 'BC-TRACK-001',
+        containerCount: 1,
+        containerName: '瓶1',
+        fixationStatus: 'FIXING',
+        id: 'SPEC-001',
+        labelPrintStatus: 'FAILED',
+        outboundAt: '2026-05-24T09:00:00',
+        outboundUserName: '出库员',
+        qualityCheckResult: 'FAILED',
+        qualityIssueCodes: ['CONTAINER_DAMAGE'],
+        receiptStatus: 'REJECTED',
+        specimenCount: 1,
+        specimenName: '胃组织',
+        specimenNo: 'SP-001',
+        specimenSite: '胃',
+        specimenStatus: 'REGISTERED',
+        specimenType: '常规',
+      },
+    ],
     status: 'SUBMITTED',
     submissionDate: '2026-05-22',
     submittingDepartmentId: 'DEP-001',
@@ -176,6 +216,8 @@ function buildLatestResult() {
         fixationStatus: 'FIXING',
         id: 'SPEC-001',
         labelPrintStatus: 'FAILED',
+        outboundAt: '2026-05-24T09:00:00',
+        outboundUserName: '出库员',
         qualityCheckResult: 'FAILED',
         qualityIssueCodes: ['CONTAINER_DAMAGE'],
         receiptStatus: 'REJECTED',
@@ -365,6 +407,28 @@ describe('TrackingSpecimenListView', () => {
     expect(root.textContent).toContain('标本基础信息');
     expect(root.textContent).toContain('所属申请单信息');
     expect(root.textContent).toContain('最近流程节点');
+    expect(root.textContent).toContain('临床送检');
+    for (const stage of [
+      '标本采集',
+      '离体确认',
+      '标本固定',
+      '标本确认',
+      '标本入库',
+      '标本出库',
+    ]) {
+      expect(root.textContent).toContain(stage);
+    }
+    expect(root.textContent).toContain('申请单号：AP202605220001');
+    expect(root.textContent).toContain('姓名：张三');
+    expect(root.textContent).toContain('患者ID：PAT-001');
+    expect(root.querySelector('button[data-tab-name]')?.textContent).toContain(
+      'SP-001',
+    );
+    expect(root.textContent).toContain('条码绑定：SP-001-BC-TRACK-001');
+    expect(root.textContent).toContain('IP：10.0.0.2');
+    expect(root.textContent).toContain('浏览器信息：Edge 126 / Windows');
+    expect(root.textContent).toContain('出库时间：2026-05-24 09:00:00');
+    expect(root.textContent).toContain('出库人：出库员');
     expect(root.textContent).toContain('最近标签批次结果');
     expect(root.textContent).not.toContain('去追踪与异常');
 

@@ -372,53 +372,53 @@ watch(
 }
 
 .clinical-submission-timeline__title {
-  color: hsl(var(--foreground));
+  margin: 0;
   font-size: 16px;
   font-weight: 700;
   line-height: 24px;
-  margin: 0;
+  color: hsl(var(--foreground));
 }
 
 .clinical-submission-timeline__list {
   display: flex;
   flex-direction: column;
-  list-style: none;
-  margin: 0;
   padding: 0;
+  margin: 0;
+  list-style: none;
 }
 
 .clinical-submission-timeline__item {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: 32px minmax(0, 1fr);
-  min-height: 88px;
   position: relative;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 12px;
+  min-height: 88px;
 }
 
 .clinical-submission-timeline__item:not(:last-child)::before {
-  background: var(--el-color-success);
-  bottom: -2px;
-  content: '';
-  left: 15px;
-  opacity: 0.75;
   position: absolute;
   top: 32px;
+  bottom: -2px;
+  left: 15px;
   width: 2px;
+  content: '';
+  background: var(--el-color-success);
+  opacity: 0.75;
 }
 
 .clinical-submission-timeline__marker {
-  align-items: center;
-  background: var(--el-color-success);
-  border-radius: 999px;
-  color: #fff;
+  position: relative;
+  z-index: 1;
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
   font-size: 15px;
   font-weight: 700;
-  height: 32px;
-  justify-content: center;
-  position: relative;
-  width: 32px;
-  z-index: 1;
+  color: #fff;
+  background: var(--el-color-success);
+  border-radius: 999px;
 }
 
 .clinical-submission-timeline__marker--pending {
@@ -427,64 +427,64 @@ watch(
 }
 
 .clinical-submission-timeline__content {
-  border-bottom: 1px solid hsl(var(--border));
   display: flex;
   flex-direction: column;
   gap: 10px;
   min-width: 0;
   padding: 0 0 18px;
+  border-bottom: 1px solid hsl(var(--border));
 }
 
 .clinical-submission-timeline__stage-header {
-  align-items: flex-start;
   display: flex;
   gap: 12px;
+  align-items: flex-start;
   justify-content: space-between;
 }
 
 .clinical-submission-timeline__stage-header h4 {
-  color: hsl(var(--foreground));
+  margin: 0;
   font-size: 15px;
   font-weight: 700;
   line-height: 22px;
-  margin: 0;
+  color: hsl(var(--foreground));
 }
 
 .clinical-submission-timeline__stage-header time {
-  color: hsl(var(--muted-foreground));
   display: block;
+  margin-top: 2px;
   font-size: 13px;
   line-height: 20px;
-  margin-top: 2px;
+  color: hsl(var(--muted-foreground));
 }
 
 .clinical-submission-timeline__meta,
 .clinical-submission-timeline__details {
   display: grid;
-  gap: 8px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .clinical-submission-timeline__meta {
-  color: hsl(var(--muted-foreground));
   font-size: 13px;
   line-height: 20px;
+  color: hsl(var(--muted-foreground));
 }
 
 .clinical-submission-timeline__detail {
+  min-width: 0;
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 20px;
+  color: hsl(var(--muted-foreground));
   background: hsl(var(--muted) / 45%);
   border: 1px solid hsl(var(--border));
   border-radius: 8px;
-  color: hsl(var(--muted-foreground));
-  font-size: 13px;
-  line-height: 20px;
-  min-width: 0;
-  padding: 8px 10px;
 }
 
 .clinical-submission-timeline__detail strong {
-  color: hsl(var(--foreground));
   font-weight: 600;
+  color: hsl(var(--foreground));
   overflow-wrap: anywhere;
 }
 
