@@ -10,11 +10,16 @@ defineProps<{
   printPreview: DiagnosticReportPrintPreview | null;
   workbench: DiagnosticWorkbenchView | null;
 }>();
+
+const activeTab = defineModel<string>('activeTab', {
+  default: 'capture',
+});
 </script>
 
 <template>
   <div class="flex min-h-0 flex-col">
     <DiagnosisWorkbenchTabs
+      v-model:active-tab="activeTab"
       :print-preview="printPreview"
       :workbench="workbench"
     >

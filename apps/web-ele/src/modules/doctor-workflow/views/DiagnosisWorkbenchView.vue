@@ -79,6 +79,8 @@ const selfRouteQueryKey = ref('');
 const printPreviewVisible = ref(false);
 const reportOperating = ref(false);
 const activeQuickFilter = ref<DiagnosisWorkbenchQueueQuickFilter>('ALL');
+const activeDetailTab = ref('capture');
+const pendingWorkbenchCaseId = ref('');
 const assignedRange = ref<string[]>(createDefaultAssignedRange());
 const reportIssueMode = ref<'DELAY_2_HOURS' | 'DELAY_3_HOURS' | 'IMMEDIATE'>(
   'IMMEDIATE',
@@ -290,9 +292,11 @@ function clearWorkbenchSelection() {
 async function loadWorkbench(caseId: string) {
   if (!caseId.trim()) {
     workbench.value = null;
+    pendingWorkbenchCaseId.value = '';
     return;
   }
 
+  pendingWorkbenchCaseId.value = caseId.trim();
   detailLoading.value = true;
   pageError.value = '';
   try {
@@ -302,6 +306,7 @@ async function loadWorkbench(caseId: string) {
     pageError.value = getDoctorWorkflowPageErrorMessage(error);
   } finally {
     detailLoading.value = false;
+    pendingWorkbenchCaseId.value = '';
   }
 }
 
@@ -314,6 +319,9 @@ async function selectQueueTask(
 
   selectedCaseId.value = task.caseId;
   selectedTaskId.value = task.id;
+  if (caseChanged) {
+    activeDetailTab.value = 'capture';
+  }
 
   if (options.syncRoute !== false) {
     syncRouteToSelection(task);
@@ -435,6 +443,14 @@ function refreshCurrentWorkbench() {
   }
   void loadWorkbench(selectedCaseId.value);
 }
+
+const showWorkbenchPlaceholders = computed(
+  () =>
+    detailLoading.value &&
+    Boolean(selectedCaseId.value) &&
+    pendingWorkbenchCaseId.value !== '' &&
+    pendingWorkbenchCaseId.value !== workbench.value?.caseId,
+);
 
 function handleReportDraftChange(draft: DiagnosisWorkbenchReportDraftValue) {
   reportDraftValue.value = draft;
@@ -831,7 +847,26 @@ onBeforeUnmount(() => {
           @pointerdown="handleResizePointerDown('left', $event)"
         ></button>
 
+        <section
+          v-if="showWorkbenchPlaceholders"
+          class="flex min-h-[360px] min-w-0 flex-col rounded-lg border border-border bg-card shadow-sm xl:h-[calc(100vh-270px)]"
+          data-testid="diagnosis-workbench-report-placeholder"
+        >
+          <header
+            class="flex items-center justify-between gap-3 border-b border-border px-3 py-2"
+          >
+            <h3 class="min-w-0 text-sm font-semibold text-foreground">
+              报告预览编辑
+            </h3>
+          </header>
+          <div
+            class="flex min-h-0 flex-1 items-center justify-center bg-muted/30 p-3 text-sm text-muted-foreground"
+          >
+            病例详情加载中
+          </div>
+        </section>
         <DiagnosisWorkbenchReportEditor
+          v-else
           v-model:print-preview-visible="printPreviewVisible"
           :captured-images="selectedCapturedImages"
           :loading="detailLoading"
@@ -852,7 +887,25 @@ onBeforeUnmount(() => {
           @pointerdown="handleResizePointerDown('right', $event)"
         ></button>
 
+        <section
+          v-if="showWorkbenchPlaceholders"
+          class="flex min-h-[360px] min-w-0 flex-col rounded-lg border border-border bg-card shadow-sm xl:h-[calc(100vh-270px)] xl:overflow-auto"
+          data-testid="diagnosis-workbench-detail-placeholder"
+        >
+          <header
+            class="flex items-center justify-between gap-3 border-b border-border px-4 py-3"
+          >
+            <h3 class="text-sm font-semibold text-foreground">诊断材料区</h3>
+          </header>
+          <div
+            class="flex min-h-0 flex-1 items-center justify-center px-4 py-3 text-sm text-muted-foreground"
+          >
+            病例详情加载中
+          </div>
+        </section>
         <DiagnosisWorkbenchDetailPane
+          v-else
+          v-model:active-tab="activeDetailTab"
           :print-preview="reportPrintPreview"
           :workbench="workbench"
           class="min-h-[360px] min-w-0 xl:h-[calc(100vh-270px)] xl:overflow-auto"

@@ -33,7 +33,10 @@ const props = defineProps<{
   workbench: DiagnosticWorkbenchView | null;
 }>();
 
-const activeTab = ref('capture');
+const activeTab = defineModel<string>('activeTab', {
+  default: 'capture',
+});
+const visitedTabs = ref(new Set<string>([activeTab.value || 'capture']));
 const editableRemarkSections = ref<RemarkSectionSummary[]>([]);
 const patientBrief = computed(() => {
   const workbench = props.workbench;
@@ -50,8 +53,16 @@ watch(
   () => props.workbench?.caseId,
   () => {
     activeTab.value = 'capture';
+    visitedTabs.value = new Set(['capture']);
   },
 );
+
+watch(activeTab, (tab) => {
+  if (!tab) {
+    return;
+  }
+  visitedTabs.value = new Set([...visitedTabs.value, tab]);
+});
 
 watch(
   () => props.workbench?.remarkSections,
@@ -75,6 +86,10 @@ function createEditableRemarkSections(sections: RemarkSectionSummary[]) {
 
 function saveRemarkSection() {
   ElMessage.info('当前仅支持前端编辑，暂未接入保存接口');
+}
+
+function shouldRenderTab(name: string) {
+  return visitedTabs.value.has(name);
 }
 </script>
 
@@ -115,19 +130,25 @@ function saveRemarkSection() {
         data-testid="diagnosis-workbench-tabs"
       >
         <ElTabPane label="采图区" name="capture">
-          <slot name="capture"></slot>
+          <slot v-if="shouldRenderTab('capture')" name="capture"></slot>
         </ElTabPane>
 
         <ElTabPane label="医嘱信息" name="medical-orders">
-          <slot name="medical-orders"></slot>
+          <slot
+            v-if="shouldRenderTab('medical-orders')"
+            name="medical-orders"
+          ></slot>
         </ElTabPane>
 
         <ElTabPane label="科内会诊" name="consultation">
-          <slot name="consultation"></slot>
+          <slot
+            v-if="shouldRenderTab('consultation')"
+            name="consultation"
+          ></slot>
         </ElTabPane>
 
         <ElTabPane label="患者信息" name="patient-info">
-          <div class="space-y-3">
+          <div v-if="shouldRenderTab('patient-info')" class="space-y-3">
             <ElDescriptions
               :column="2"
               border
@@ -255,109 +276,116 @@ function saveRemarkSection() {
         </ElTabPane>
 
         <ElTabPane label="实时预览打印" name="live-print-preview">
-          <ElEmpty
-            v-if="!printPreview"
-            description="请先从左侧选择病例生成报告预览"
-          />
-          <div
-            v-else
-            class="diagnosis-print-preview-scroll"
-            data-testid="diagnosis-workbench-live-print-preview"
-          >
-            <article class="diagnosis-print-preview-sheet">
-              <header class="diagnosis-print-preview-header">
-                <div class="diagnosis-print-preview-time">
-                  {{ printPreview.deliveredAt }}
-                </div>
-                <div class="min-w-0">
+          <template v-if="shouldRenderTab('live-print-preview')">
+            <ElEmpty
+              v-if="!printPreview"
+              description="请先从左侧选择病例生成报告预览"
+            />
+            <div
+              v-else
+              class="diagnosis-print-preview-scroll"
+              data-testid="diagnosis-workbench-live-print-preview"
+            >
+              <article class="diagnosis-print-preview-sheet">
+                <header class="diagnosis-print-preview-header">
+                  <div class="diagnosis-print-preview-time">
+                    {{ printPreview.deliveredAt }}
+                  </div>
+                  <div class="min-w-0">
+                    <div
+                      class="diagnosis-print-preview-hospital"
+                      :style="{ color: printPreview.accentColor }"
+                    >
+                      {{ printPreview.hospitalName }}
+                    </div>
+                    <div class="diagnosis-print-preview-title">
+                      {{ printPreview.reportTitle }}
+                    </div>
+                  </div>
+                  <div class="diagnosis-print-preview-no">
+                    {{ printPreview.reportNo }}
+                  </div>
+                </header>
+
+                <section class="diagnosis-print-preview-meta">
                   <div
-                    class="diagnosis-print-preview-hospital"
+                    v-for="field in printPreview.metaFields"
+                    :key="field.label"
+                    class="diagnosis-print-preview-field"
+                    :class="field.class"
+                  >
+                    <span class="diagnosis-print-preview-label">
+                      {{ field.label }}
+                    </span>
+                    <span class="diagnosis-print-preview-value">
+                      {{ field.value }}
+                    </span>
+                  </div>
+                </section>
+
+                <section
+                  v-for="section in printPreview.sections"
+                  :key="section.label"
+                  class="diagnosis-print-preview-section"
+                  :style="{ minHeight: `${section.minHeight}px` }"
+                >
+                  <div
+                    class="diagnosis-print-preview-section-title"
                     :style="{ color: printPreview.accentColor }"
                   >
-                    {{ printPreview.hospitalName }}
+                    {{ section.label }}
                   </div>
-                  <div class="diagnosis-print-preview-title">
-                    {{ printPreview.reportTitle }}
+                  <div class="diagnosis-print-preview-section-value">
+                    {{ section.value || ' ' }}
                   </div>
-                </div>
-                <div class="diagnosis-print-preview-no">
-                  {{ printPreview.reportNo }}
-                </div>
-              </header>
+                  <div
+                    v-if="section.images?.length"
+                    class="diagnosis-print-preview-image-stage"
+                  >
+                    <img
+                      v-for="image in section.images"
+                      :key="image.key"
+                      :alt="image.title"
+                      class="diagnosis-print-preview-image"
+                      :src="image.fileUrl"
+                      :style="{
+                        left: `${image.left}px`,
+                        top: `${image.top}px`,
+                      }"
+                      :title="image.title"
+                    />
+                  </div>
+                </section>
 
-              <section class="diagnosis-print-preview-meta">
-                <div
-                  v-for="field in printPreview.metaFields"
-                  :key="field.label"
-                  class="diagnosis-print-preview-field"
-                  :class="field.class"
-                >
-                  <span class="diagnosis-print-preview-label">
-                    {{ field.label }}
-                  </span>
-                  <span class="diagnosis-print-preview-value">
-                    {{ field.value }}
-                  </span>
+                <footer class="diagnosis-print-preview-footer">
+                  <div
+                    v-for="field in printPreview.footerFields"
+                    :key="field.label"
+                    class="diagnosis-print-preview-field"
+                  >
+                    <span class="diagnosis-print-preview-label">
+                      {{ field.label }}
+                    </span>
+                    <span class="diagnosis-print-preview-value">
+                      {{ field.value }}
+                    </span>
+                  </div>
+                </footer>
+                <div class="diagnosis-print-preview-note">
+                  {{ printPreview.note }}
                 </div>
-              </section>
-
-              <section
-                v-for="section in printPreview.sections"
-                :key="section.label"
-                class="diagnosis-print-preview-section"
-                :style="{ minHeight: `${section.minHeight}px` }"
-              >
-                <div
-                  class="diagnosis-print-preview-section-title"
-                  :style="{ color: printPreview.accentColor }"
-                >
-                  {{ section.label }}
-                </div>
-                <div class="diagnosis-print-preview-section-value">
-                  {{ section.value || ' ' }}
-                </div>
-                <div
-                  v-if="section.images?.length"
-                  class="diagnosis-print-preview-image-stage"
-                >
-                  <img
-                    v-for="image in section.images"
-                    :key="image.key"
-                    :alt="image.title"
-                    class="diagnosis-print-preview-image"
-                    :src="image.fileUrl"
-                    :style="{
-                      left: `${image.left}px`,
-                      top: `${image.top}px`,
-                    }"
-                    :title="image.title"
-                  />
-                </div>
-              </section>
-
-              <footer class="diagnosis-print-preview-footer">
-                <div
-                  v-for="field in printPreview.footerFields"
-                  :key="field.label"
-                  class="diagnosis-print-preview-field"
-                >
-                  <span class="diagnosis-print-preview-label">
-                    {{ field.label }}
-                  </span>
-                  <span class="diagnosis-print-preview-value">
-                    {{ field.value }}
-                  </span>
-                </div>
-              </footer>
-              <div class="diagnosis-print-preview-note">
-                {{ printPreview.note }}
-              </div>
-            </article>
-          </div>
+              </article>
+            </div>
+          </template>
         </ElTabPane>
 
         <ElTabPane label="历史病理" name="historical-pathology">
-          <ElTable :data="workbench.historicalPathologies" border size="small">
+          <ElTable
+            v-if="shouldRenderTab('historical-pathology')"
+            :data="workbench.historicalPathologies"
+            border
+            size="small"
+          >
             <ElTableColumn label="年龄" min-width="100" prop="age" />
             <ElTableColumn label="住院号" min-width="120" prop="inpatientNo" />
             <ElTableColumn
@@ -383,7 +411,12 @@ function saveRemarkSection() {
         </ElTabPane>
 
         <ElTabPane label="PACS检查" name="pacs-examinations">
-          <ElTable :data="workbench.pacsExaminations" border size="small">
+          <ElTable
+            v-if="shouldRenderTab('pacs-examinations')"
+            :data="workbench.pacsExaminations"
+            border
+            size="small"
+          >
             <ElTableColumn
               label="送检类型"
               min-width="110"
@@ -421,7 +454,12 @@ function saveRemarkSection() {
         </ElTabPane>
 
         <ElTabPane label="报告痕迹" name="report-traces">
-          <ElTable :data="workbench.reportTraces" border size="small">
+          <ElTable
+            v-if="shouldRenderTab('report-traces')"
+            :data="workbench.reportTraces"
+            border
+            size="small"
+          >
             <ElTableColumn label="序号" min-width="80" prop="sequenceNo" />
             <ElTableColumn
               label="报告医师"
@@ -450,7 +488,12 @@ function saveRemarkSection() {
         </ElTabPane>
 
         <ElTabPane label="蜡块" name="blocks">
-          <ElTable :data="workbench.blocks" border size="small">
+          <ElTable
+            v-if="shouldRenderTab('blocks')"
+            :data="workbench.blocks"
+            border
+            size="small"
+          >
             <ElTableColumn label="标本名称" min-width="140">
               <template #default="{ row }">
                 {{ formatNullable(row.specimenName) }}
@@ -489,7 +532,12 @@ function saveRemarkSection() {
         </ElTabPane>
 
         <ElTabPane label="切片" name="slides">
-          <ElTable :data="workbench.slides" border size="small">
+          <ElTable
+            v-if="shouldRenderTab('slides')"
+            :data="workbench.slides"
+            border
+            size="small"
+          >
             <ElTableColumn label="序号" min-width="80">
               <template #default="{ $index }">
                 {{ $index + 1 }}
@@ -542,7 +590,7 @@ function saveRemarkSection() {
         </ElTabPane>
 
         <ElTabPane label="备注" name="remarks">
-          <div class="space-y-3">
+          <div v-if="shouldRenderTab('remarks')" class="space-y-3">
             <section
               v-for="section in editableRemarkSections"
               :key="`${section.sectionKey}-${section.relatedNo ?? ''}`"
@@ -585,7 +633,12 @@ function saveRemarkSection() {
         </ElTabPane>
 
         <ElTabPane label="收费项目" name="charge-items">
-          <ElTable :data="workbench.chargeItems" border size="small">
+          <ElTable
+            v-if="shouldRenderTab('charge-items')"
+            :data="workbench.chargeItems"
+            border
+            size="small"
+          >
             <ElTableColumn label="项目名称" min-width="220" prop="itemName" />
             <ElTableColumn label="收费时间" min-width="160">
               <template #default="{ row }">
