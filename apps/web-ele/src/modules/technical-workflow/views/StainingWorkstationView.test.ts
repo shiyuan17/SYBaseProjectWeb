@@ -314,7 +314,7 @@ function createTask(
     patientIdDisplay: '08305',
     patientName: '患者甲',
     payload: null,
-    productionRemarks: '主班备注',
+    productionRemarks: '主班备注-待出片',
     remarks: '染色备注',
     sampledAt: null,
     sampledByName: null,
@@ -494,6 +494,7 @@ describe('StainingWorkstationView', () => {
       'SLD-3aa4f9b-2427-413d-bf12-080de1c4a43d',
     );
     expect(document.body.textContent).toContain('患者甲');
+    expect(document.body.textContent).toContain('主班备注-待出片');
     expect(
       [...document.querySelectorAll('.legacy-stat-card__label')].map((item) =>
         item.textContent?.trim(),
