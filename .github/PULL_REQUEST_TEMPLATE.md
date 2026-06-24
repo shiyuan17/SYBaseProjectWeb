@@ -31,6 +31,7 @@ Packet tier:
 ## Memory Update Packet
 
 Optional for Fast Path and Lightweight when there is **no durable context change**. Required for Full packets when memory files were updated.
+This PR template keeps the field visible for review. For Fast Path and Lightweight changes with no durable context change, fill `no durable context change`; ordinary non-PR delivery may omit Memory judgment as allowed by `AGENTS.md`.
 
 - Memory: `no durable context change / <updated files + memory IDs + cross-repo references>`
 

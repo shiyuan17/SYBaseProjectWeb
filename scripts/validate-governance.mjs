@@ -467,6 +467,11 @@ const LINK_CHECKED_DOCUMENTS = [
   'docs/memory/KNOWN_BUGS.md',
   'docs/memory/TECH_DEBT.md',
   'docs/memory/ARCHITECTURE.md',
+  'docs/templates/README.md',
+  'docs/templates/agents-governance-audit-prompt-template.md',
+  'docs/templates/codex-goal-prompt-template.md',
+  'docs/templates/plan-to-task-goals-prompt-template.md',
+  'docs/templates/task-item-template.md',
   'docs/templates/workflow-packet-examples.md',
 ];
 

@@ -14,7 +14,7 @@ Use this prompt when a local plan needs to be split into task items and Codex Go
 - `AGENTS.md`
 - `docs/rules/TASK_INTAKE.md`
 - `docs/rules/DYNAMIC_WORKFLOW_RULES.md`
-- `docs/rules/LOOP_ENGINEERING_RULES.md`
+- `docs/rules/LOOP_ENGINEERING_RULES.md`（仅计划或任务明确启用 loop 时必读）
 - `docs/templates/task-item-template.md`
 - `docs/templates/codex-goal-prompt-template.md`
 
@@ -30,7 +30,8 @@ Use this prompt when a local plan needs to be split into task items and Codex Go
 
 ## 拆分要求
 
-- 每个任务项必须有目标、验收标准、非目标、影响范围、Workflow Packet、Loop Packet、停止条件和验证要求。
+- 每个任务项必须有目标、验收标准、非目标、影响范围、Workflow Packet、停止条件和验证要求。
+- Loop Packet 仅在计划、任务来源或用户明确启用 loop 时填写；未启用时写 `Not used（普通任务，按 Workflow Packet 交付）`。
 - 不要把大任务只粗略拆成“前端”和“后端”。
 - 涉及权限、菜单鉴权、接口契约、后端 migration/seed、统计口径、导出或敏感数据时，从严标注风险和停止条件。
 - 计划中不明确但会影响行为或接口联调的内容，必须作为待确认项，不得替用户做业务决策。

@@ -17,7 +17,7 @@ Use this template to execute exactly one task item with Codex Goal. Replace plac
 4. 读取本任务命中的专项规范。
 5. 读取任务来源内容与关联计划 / spec。
 6. 检查 `git status`，不得覆盖用户已有改动。
-7. 如需编码，使用独立 worktree / 分支。
+7. 如需编码，按 `docs/rules/GIT_RULES.md` §6 完成 worktree 决策；命中必须使用 worktree 的条件时，使用独立 worktree / 分支。
 8. 如涉及后端接口、字段、权限、菜单、统计口径或业务规则，必须对照同级后端仓库 `SYBaseProject`。
 9. **仅当用户或任务来源明确要求 loop** 时，再读 `docs/rules/LOOP_ENGINEERING_RULES.md` 并填写 Loop Packet。
 
@@ -50,6 +50,7 @@ Use this template to execute exactly one task item with Codex Goal. Replace plac
 - Verification Command: `<本 Goal 必跑命令；无则说明人工核对项>`
 - State Sink: `<PROJECT_STATE.md / TECH_DEBT.md / KNOWN_BUGS.md / DECISIONS.md / ARCHITECTURE.md>`
 - Escalation Condition: `<命中即暂停的条件>`
+- Not used: `未启用 loop 时填写：Not used（普通任务，按 Workflow Packet 交付）`
 
 ### Stop Conditions
 
@@ -70,13 +71,7 @@ Use this template to execute exactly one task item with Codex Goal. Replace plac
 
 ## Workflow 默认补充
 
-如果任务来源没有给出更具体要求，按以下默认项补齐 Loop Packet 和验证范围：
-
-- UI: 读取 `docs/rules/FRONTEND_RULES.md`、相关页面/组件；默认验证 `pnpm lint`、`pnpm check:type`、相关 `pnpm test:unit`，必要时 Browser 验证桌面/移动视口；停止条件为页面状态、交互和测试证据齐备。
-- API: 读取 `docs/rules/FRONTEND_RULES.md`（API 节）、前端 service/mapper/test、同级后端接口实现；默认验证相关 service/mapper 单测、`pnpm check:type`，跨仓时引用后端测试；停止条件为字段映射、错误分支和兼容策略有证据。
-- Security: 读取 `docs/rules/FRONTEND_RULES.md`（路由/API 节）、权限/敏感数据相关实现；默认验证权限/路由/request 相关测试和 Red Team；停止条件为越权、泄露、日志/导出暴露路径已检查。
-- Production Debug: 先读取 `.logs/` 最近日志和 `KNOWN_BUGS.md`；默认先复现，再修复，再跑回归测试；停止条件为原始故障有修复前后证据和回滚说明。
-- Workflow-Infra: 读取 `docs/rules/GIT_RULES.md`、相关 workflow/hook/script；默认验证脚本单测、`pnpm lint`、`pnpm check:type`；停止条件为门禁行为、误伤风险和回滚方式明确。
+如果任务来源没有给出更具体要求，按 `docs/rules/QUICKSTART.md` 选择最小阅读路径，按 `docs/rules/DYNAMIC_WORKFLOW_RULES.md` 补齐 Workflow Packet、修饰器和验证范围。任务项给出的更具体要求优先。
 
 ## 交付格式
 
@@ -84,7 +79,7 @@ Use this template to execute exactly one task item with Codex Goal. Replace plac
 
 - 变更摘要
 - 影响说明
-- Loop Packet
+- Loop Packet（仅显式 loop 任务填写；未启用时写 Not used）
 - Workflow Packet
 - 验证结果
 - AI Memory Update

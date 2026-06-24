@@ -47,7 +47,7 @@ flowchart TD
     Q1 -->|是| Q2{核心改动类型}
     Q2 --> UI[UI] & API[API] & DB[DB] & SEC[Security] & ARCH[Architecture] & PROD[Production Debug] & INFRA[Workflow-Infra]
     UI & API & DB & SEC & ARCH & PROD & INFRA --> MOD[按修饰器底线补叠]
-    MOD --> Q3{任务/并行/脏工作区?}
+    MOD --> Q3{命中 worktree 必须条件或无法隔离脏改动?}
     Q3 -->|是| WT[独立 worktree]
     Q3 -->|否| MAIN[当前工作区]
     WT & MAIN --> Q4{红区?}
@@ -80,9 +80,9 @@ flowchart TD
 
 ## 各 Workflow 要点
 
-Memory 通用触发见 `AGENTS.md` §8；下表只列各 Workflow 的**强制重点**。
+Memory 是否更新以 `AGENTS.md` §8 为准；下表的 Memory 列只列常见示例，不新增触发条件。
 
-| Workflow | 典型验证 | Red Team 重点 | Memory 重点 |
+| Workflow | 典型验证 | Red Team 重点 | Memory 示例 |
 | --- | --- | --- | --- |
 | **UI** | 相关单测/E2E；共享组件补 `check:type` | 权限绕过、按钮不可达、敏感数据进弹窗/URL/导出 | PROJECT_STATE；UI 债务/bug → TECH_DEBT/KNOWN_BUGS；共享组件边界 → DECISIONS/ARCHITECTURE |
 | **API** | service/mapper 单测；跨仓引用后端 verify | DTO 直透视图、吞错误、字段错配 | 契约结论 → DECISIONS；联调缺陷 → TECH_DEBT/KNOWN_BUGS |

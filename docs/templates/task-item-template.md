@@ -41,20 +41,21 @@ Use this template when converting a local plan or specification into task items.
 - Risk Level: `<低 / 中 / 高>`
 - Human Confirmation Required: `<是 / 否；若是，说明触发点>`
 
-## Loop Packet
+## Loop Packet（仅显式 loop 任务填写）
 
 - Loop Type: `<Task Intake / Implementation / Review / Triage>`
 - Stop Condition: `<可验证停止条件>`
 - Verification Command: `<本任务项必跑命令；无则说明人工核对项>`
 - State Sink: `<PROJECT_STATE.md / TECH_DEBT.md / KNOWN_BUGS.md / DECISIONS.md / ARCHITECTURE.md>`
 - Escalation Condition: `<命中即暂停的条件>`
+- Not used: `未启用 loop 时填写：Not used（普通任务，按 Workflow Packet 交付）`
 
 ## Required Reading
 
 - `AGENTS.md`
 - `docs/rules/TASK_INTAKE.md`
 - `docs/rules/DYNAMIC_WORKFLOW_RULES.md`
-- `docs/rules/LOOP_ENGINEERING_RULES.md`
+- `docs/rules/LOOP_ENGINEERING_RULES.md`（仅显式 loop 任务必读）
 - `<按任务类型补充专项规范>`
 
 ## Stop Conditions

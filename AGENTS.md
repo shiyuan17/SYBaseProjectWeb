@@ -4,18 +4,15 @@
 
 ## 快速命令
 
-统一使用 `pnpm`（版本见根 `package.json` 的 `engines`）。**标准验证命令以 `docs/rules/CODING_RULES.md` 为准**：
+统一使用 `pnpm`（版本见根 `package.json` 的 `engines`）。本节只列高频入口，完整标准验证命令以 `docs/rules/CODING_RULES.md` 为准。
 
-| 用途                | 命令              |
-| ------------------- | ----------------- |
-| 安装依赖            | `pnpm install`    |
-| 启动开发（web-ele） | `pnpm dev:ele`    |
-| 代码规范            | `pnpm lint`       |
-| 类型检查            | `pnpm check:type` |
-| 综合静态检查        | `pnpm check`      |
-| 单元测试            | `pnpm test:unit`  |
-| 端到端测试          | `pnpm test:e2e`   |
-| 构建                | `pnpm build`      |
+| 用途                | 命令                           |
+| ------------------- | ------------------------------ |
+| 安装依赖            | `pnpm install`                 |
+| 启动开发（web-ele） | `pnpm dev:ele`                 |
+| 常规静态验证        | `pnpm lint` / `pnpm check:type` |
+| 治理文档验证        | `pnpm run check:governance`    |
+| 完整验证入口        | 见 `docs/rules/CODING_RULES.md` |
 
 改动逻辑或组件时，交付前按影响面运行最小有效验证。涉及规范、记忆文件或治理脚本时，额外运行 `pnpm run check:governance`。
 
