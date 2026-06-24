@@ -78,6 +78,8 @@ export interface SpecimenTrackingSummary {
   fixationStartedAt?: null | string;
   id: string;
   labelPrintStatus: null | string;
+  outboundAt?: null | string;
+  outboundUserName?: null | string;
   qualityCheckResult?: null | string;
   qualityIssueCodes?: string[];
   registeredAt?: null | string;

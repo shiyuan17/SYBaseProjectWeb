@@ -309,6 +309,8 @@ function mapSpecimenTrackingSummary(
     fixationOperatorName: specimen.fixationOperatorName ?? null,
     fixationOperatorUserId: specimen.fixationOperatorUserId ?? null,
     fixationStartedAt: specimen.fixationStartedAt ?? null,
+    outboundAt: specimen.outboundAt ?? null,
+    outboundUserName: specimen.outboundUserName ?? null,
     qualityCheckResult: specimen.qualityCheckResult ?? null,
     qualityIssueCodes: specimen.qualityIssueCodes ?? [],
     registeredAt: specimen.registeredAt ?? null,
