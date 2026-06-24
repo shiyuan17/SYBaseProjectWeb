@@ -552,6 +552,7 @@ describe('RoutineOrderWorkstationView', () => {
     mockTerminateMedicalOrder.mockReset();
     mockUnmergeRoutineMedicalOrderSlides.mockReset();
     reloadSpy.mockReset();
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -784,6 +785,8 @@ describe('RoutineOrderWorkstationView', () => {
   });
 
   it('runs routine label print, merge, unmerge, and export actions then reloads', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-23T09:00:00Z'));
     mockOpenRoutineOrderApplicationLabelPrintWindow.mockReturnValue(true);
     mockMergeRoutineMedicalOrderSlides.mockResolvedValue({
       printGroupIds: ['GROUP-1'],
