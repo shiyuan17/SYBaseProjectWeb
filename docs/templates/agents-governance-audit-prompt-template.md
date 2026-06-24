@@ -114,7 +114,7 @@ Use this prompt when you need an AI reviewer to perform a read-only audit of `AG
 用表格列出所有 P0/P1/P2 问题：
 
 | 优先级 | 类型 | 问题 | 证据 | 建议动作 |
-| --- | --- | --- | --- | --- |
+| ------ | ---- | ---- | ---- | -------- |
 
 ### 3. 逐文件审查
 
@@ -130,7 +130,7 @@ Use this prompt when you need an AI reviewer to perform a read-only audit of `AG
 列出跨文件重复或冲突规则：
 
 | 主题 | 涉及文件 | 当前问题 | 建议单一来源 | 处理方式 |
-| --- | --- | --- | --- | --- |
+| ---- | -------- | -------- | ------------ | -------- |
 
 ### 5. 治理改进路线图
 
