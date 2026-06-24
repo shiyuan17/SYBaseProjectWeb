@@ -321,7 +321,7 @@ describe('useArchiveManagementPage', () => {
     document.body.innerHTML = '';
   });
 
-  it('initializes archive workbench state and derives selectable positions', async () => {
+  it('initializes archive workbench state with only the default object tab loaded', async () => {
     const wrapper = mountComposable();
     await flushComposable();
 
@@ -332,8 +332,6 @@ describe('useArchiveManagementPage', () => {
     }
 
     expect(state.capabilities.canViewArchivePage).toBe(true);
-    expect(state.cabinetWorkspace.cabinets).toHaveLength(1);
-    expect(state.cabinetWorkspace.cabinetNodes).toHaveLength(2);
     expect(
       state.recordWorkspace.objectLists.APPLICATION_FORM.items,
     ).toHaveLength(1);
@@ -341,6 +339,47 @@ describe('useArchiveManagementPage', () => {
       0,
     );
     expect(state.recordWorkspace.objectLists.SLIDE.items).toHaveLength(0);
+    expect(state.recordWorkspace.objectLists.SPECIMEN.items).toHaveLength(0);
+    expect(state.cabinetWorkspace.cabinets).toHaveLength(0);
+    expect(state.cabinetWorkspace.cabinetNodes).toHaveLength(0);
+    expect(state.cabinetWorkspace.positionRows).toHaveLength(0);
+    expect(state.cabinetWorkspace.positionSummary).toEqual({
+      available: 0,
+      disabled: 0,
+      occupied: 0,
+      total: 0,
+    });
+    expect(state.cabinetWorkspace.selectedPositionLabel).toBe('未选择柜位');
+    expect(mockListArchiveCabinets).not.toHaveBeenCalled();
+    expect(mockListArchiveCabinetNodes).not.toHaveBeenCalled();
+    expect(mockListAvailableArchivePositions).not.toHaveBeenCalled();
+    expect(mockListArchiveObjects).toHaveBeenCalledWith({
+      keyword: undefined,
+      objectType: 'APPLICATION_FORM',
+      page: 1,
+      size: 20,
+    });
+
+    wrapper.destroy();
+  });
+
+  it('loads cabinet workbench data only on the first explicit request', async () => {
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    mockListArchiveCabinets.mockClear();
+    mockListArchiveCabinetNodes.mockClear();
+    mockListAvailableArchivePositions.mockClear();
+
+    await state.cabinetWorkspace.loadWorkbenchIfNeeded();
+
+    expect(state.cabinetWorkspace.cabinets).toHaveLength(1);
+    expect(state.cabinetWorkspace.cabinetNodes).toHaveLength(2);
     expect(state.cabinetWorkspace.positionRows).toHaveLength(4);
     expect(state.cabinetWorkspace.positionSummary).toEqual({
       available: 1,
@@ -348,7 +387,18 @@ describe('useArchiveManagementPage', () => {
       occupied: 3,
       total: 4,
     });
-    expect(state.cabinetWorkspace.selectedPositionLabel).toBe('未选择柜位');
+    expect(mockListArchiveCabinets).toHaveBeenCalledTimes(1);
+    expect(mockListArchiveCabinetNodes).toHaveBeenCalledTimes(1);
+    expect(mockListAvailableArchivePositions).toHaveBeenCalledWith({
+      cabinetId: undefined,
+      cabinetType: undefined,
+    });
+
+    await state.cabinetWorkspace.loadWorkbenchIfNeeded();
+
+    expect(mockListArchiveCabinets).toHaveBeenCalledTimes(1);
+    expect(mockListArchiveCabinetNodes).toHaveBeenCalledTimes(1);
+    expect(mockListAvailableArchivePositions).toHaveBeenCalledTimes(1);
 
     state.cabinetWorkspace.selectPosition(
       state.cabinetWorkspace.positionRows[0]!,
@@ -357,18 +407,6 @@ describe('useArchiveManagementPage', () => {
     expect(state.cabinetWorkspace.selectedPositionCode).toBe('CAB-01-L1-S1');
     expect(state.cabinetWorkspace.selectedPositionLabel).toBe('CAB-01-L1-S1');
     expect(messageSuccessMock).toHaveBeenCalledWith('已选择柜位 CAB-01-L1-S1');
-    expect(mockListArchiveCabinets).toHaveBeenCalledTimes(1);
-    expect(mockListArchiveCabinetNodes).toHaveBeenCalledTimes(1);
-    expect(mockListAvailableArchivePositions).toHaveBeenCalledWith({
-      cabinetId: undefined,
-      cabinetType: undefined,
-    });
-    expect(mockListArchiveObjects).toHaveBeenCalledWith({
-      keyword: undefined,
-      objectType: 'APPLICATION_FORM',
-      page: 1,
-      size: 20,
-    });
 
     wrapper.destroy();
   });
@@ -424,6 +462,8 @@ describe('useArchiveManagementPage', () => {
     if (!state) {
       throw new Error('composable state not initialized');
     }
+
+    await state.cabinetWorkspace.loadWorkbenchIfNeeded();
 
     const cabinet = state.cabinetWorkspace.cabinets[0];
 
@@ -500,6 +540,8 @@ describe('useArchiveManagementPage', () => {
     if (!state) {
       throw new Error('composable state not initialized');
     }
+
+    await state.cabinetWorkspace.loadWorkbenchIfNeeded();
 
     const position = state.cabinetWorkspace.positionRows[0];
 
@@ -603,6 +645,8 @@ describe('useArchiveManagementPage', () => {
     if (!state) {
       throw new Error('composable state not initialized');
     }
+
+    await state.cabinetWorkspace.loadWorkbenchIfNeeded();
 
     const position = state.cabinetWorkspace.positionRows[0];
     state.cabinetWorkspace.selectPosition(position!);
@@ -919,6 +963,8 @@ describe('useArchiveManagementPage', () => {
       throw new Error('composable state not initialized');
     }
 
+    await state.cabinetWorkspace.loadWorkbenchIfNeeded();
+
     const cabinet = state.cabinetWorkspace.cabinets[0];
 
     mockListArchiveCabinets.mockClear();
@@ -1005,6 +1051,8 @@ describe('useArchiveManagementPage', () => {
     if (!state) {
       throw new Error('composable state not initialized');
     }
+
+    await state.cabinetWorkspace.loadWorkbenchIfNeeded();
 
     const cabinet = state.cabinetWorkspace.cabinets[0];
 

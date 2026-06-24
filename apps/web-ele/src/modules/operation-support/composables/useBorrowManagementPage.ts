@@ -16,6 +16,12 @@ import { useArchiveCabinetWorkspace } from './internal/useArchiveCabinetWorkspac
 import { useArchiveLoanWorkspace } from './internal/useArchiveLoanWorkspace';
 import { useWhiteSlideLoanWorkspace } from './internal/useWhiteSlideLoanWorkspace';
 
+type BorrowManagementTab =
+  | 'EMBEDDING_BOX'
+  | 'PENDING'
+  | 'SLIDE'
+  | 'WHITE_SLIDE';
+
 export function useBorrowManagementPage() {
   const accessStore = useAccessStore();
   const userStore = useUserStore();
@@ -125,6 +131,24 @@ export function useBorrowManagementPage() {
     if (!capabilities.canViewBorrowPage.value) {
       return;
     }
+    await loadBorrowTabData('EMBEDDING_BOX');
+  }
+
+  async function loadBorrowTabData(tab: BorrowManagementTab) {
+    if (!capabilities.canViewBorrowPage.value) {
+      return;
+    }
+
+    if (tab === 'EMBEDDING_BOX' || tab === 'SLIDE') {
+      loanWorkspaceState.setActiveMaterialType(tab);
+      await loanWorkspaceState.loadMaterialObjects();
+      return;
+    }
+
+    if (tab === 'WHITE_SLIDE') {
+      await whiteSlideWorkspaceState.reloadAll();
+      return;
+    }
 
     const tasks: Array<Promise<unknown>> = [];
 
@@ -136,12 +160,6 @@ export function useBorrowManagementPage() {
     }
     if (capabilities.canQueryLoans.value) {
       tasks.push(loanWorkspaceState.loadLoans());
-    }
-    if (capabilities.canQueryRecords.value) {
-      tasks.push(loanWorkspaceState.loadMaterialObjects());
-    }
-    if (capabilities.canQueryWhiteSlideLoans.value) {
-      tasks.push(whiteSlideWorkspaceState.reloadAll());
     }
 
     if (tasks.length > 0) {
@@ -159,6 +177,7 @@ export function useBorrowManagementPage() {
       getLoanStatusTagType,
       getPositionStatusTagType,
     },
+    loadBorrowTabData,
     loanWorkspace: reactive(loanWorkspaceState),
     pageState: reactive(mutationState),
     whiteSlideWorkspace: reactive(whiteSlideWorkspaceState),

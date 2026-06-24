@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, defineAsyncComponent, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
@@ -7,13 +7,34 @@ import { useAccessStore } from '@vben/stores';
 
 import { ElTabPane, ElTabs } from 'element-plus';
 
-import SpecimenBarcodeBindingPanel from '../components/SpecimenBarcodeBindingPanel.vue';
-import SpecimenCheckInPanel from '../components/SpecimenCheckInPanel.vue';
-import SpecimenConfirmationPanel from '../components/SpecimenConfirmationPanel.vue';
-import SpecimenFixationTimePanel from '../components/SpecimenFixationTimePanel.vue';
 import { M2_PERMISSION_CODES } from '../constants';
-import FixationVerifyView from './FixationVerifyView.vue';
-import TransportHandoverView from './TransportHandoverView.vue';
+
+const SpecimenBarcodeBindingPanel = defineAsyncComponent(() =>
+  import('../components/SpecimenBarcodeBindingPanel.vue').then(
+    (module) => module.default,
+  ),
+);
+const SpecimenCheckInPanel = defineAsyncComponent(() =>
+  import('../components/SpecimenCheckInPanel.vue').then(
+    (module) => module.default,
+  ),
+);
+const SpecimenConfirmationPanel = defineAsyncComponent(() =>
+  import('../components/SpecimenConfirmationPanel.vue').then(
+    (module) => module.default,
+  ),
+);
+const SpecimenFixationTimePanel = defineAsyncComponent(() =>
+  import('../components/SpecimenFixationTimePanel.vue').then(
+    (module) => module.default,
+  ),
+);
+const FixationVerifyView = defineAsyncComponent(() =>
+  import('./FixationVerifyView.vue').then((module) => module.default),
+);
+const TransportHandoverView = defineAsyncComponent(() =>
+  import('./TransportHandoverView.vue').then((module) => module.default),
+);
 
 type FixationTransportTab =
   | 'binding'
@@ -35,6 +56,7 @@ const canHandoverTransport = computed(() =>
 );
 
 const activeTab = ref<FixationTransportTab>('binding');
+const loadedTabs = ref<FixationTransportTab[]>([]);
 
 function resolveAvailableTab(
   preferredTab: FixationTransportTab,
@@ -77,6 +99,20 @@ watch(
   },
   { immediate: true },
 );
+
+watch(
+  activeTab,
+  (tab) => {
+    if (!loadedTabs.value.includes(tab)) {
+      loadedTabs.value = [...loadedTabs.value, tab];
+    }
+  },
+  { immediate: true },
+);
+
+function hasLoadedTab(tab: FixationTransportTab) {
+  return loadedTabs.value.includes(tab);
+}
 </script>
 
 <template>
@@ -84,34 +120,34 @@ watch(
     <div class="flex flex-col gap-4">
       <ElTabs v-model="activeTab">
         <ElTabPane v-if="canVerifyFixation" label="条码绑定" name="binding">
-          <SpecimenBarcodeBindingPanel />
+          <SpecimenBarcodeBindingPanel v-if="hasLoadedTab('binding')" />
         </ElTabPane>
         <ElTabPane
           v-if="canVerifyFixation"
           label="离体确认"
           name="verification"
         >
-          <FixationVerifyView embedded />
+          <FixationVerifyView v-if="hasLoadedTab('verification')" embedded />
         </ElTabPane>
         <ElTabPane v-if="canVerifyFixation" label="标本固定" name="fixation">
-          <SpecimenFixationTimePanel />
+          <SpecimenFixationTimePanel v-if="hasLoadedTab('fixation')" />
         </ElTabPane>
         <ElTabPane
           v-if="canVerifyFixation"
           label="标本确认"
           name="confirmation"
         >
-          <SpecimenConfirmationPanel />
+          <SpecimenConfirmationPanel v-if="hasLoadedTab('confirmation')" />
         </ElTabPane>
         <ElTabPane v-if="canVerifyFixation" label="标本入库" name="check-in">
-          <SpecimenCheckInPanel />
+          <SpecimenCheckInPanel v-if="hasLoadedTab('check-in')" />
         </ElTabPane>
         <ElTabPane
           v-if="canHandoverTransport"
           label="标本出库"
           name="transport"
         >
-          <TransportHandoverView embedded />
+          <TransportHandoverView v-if="hasLoadedTab('transport')" embedded />
         </ElTabPane>
       </ElTabs>
     </div>

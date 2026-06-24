@@ -5,6 +5,7 @@ import {
   defineComponent,
   h,
   inject,
+  nextTick,
   provide,
   reactive,
   ref,
@@ -190,15 +191,58 @@ vi.mock('element-plus', () => {
   });
 
   const ElTabs = defineComponent({
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.());
+    props: ['modelValue'],
+    emits: ['update:modelValue'],
+    setup(props, { emit, slots }) {
+      return () => {
+        const panes = (slots.default?.() ?? []).filter(
+          (node) => typeof node.props?.name === 'string',
+        );
+
+        return h('div', [
+          h(
+            'nav',
+            { 'data-testid': 'archive-tabs' },
+            panes.map((pane) =>
+              h(
+                'button',
+                {
+                  type: 'button',
+                  'data-tab-name': pane.props?.name,
+                  'data-tab-active': String(
+                    props.modelValue === pane.props?.name,
+                  ),
+                  onClick: () => emit('update:modelValue', pane.props?.name),
+                },
+                String(pane.props?.label ?? pane.props?.name),
+              ),
+            ),
+          ),
+          ...panes.map((pane) =>
+            h(
+              'div',
+              {
+                'data-pane-active': String(
+                  props.modelValue === pane.props?.name,
+                ),
+                'data-pane-name': pane.props?.name,
+              },
+              [pane],
+            ),
+          ),
+        ]);
+      };
     },
   });
 
   const ElTabPane = defineComponent({
-    props: ['label'],
+    props: ['label', 'name'],
     setup(props, { slots }) {
-      return () => h('section', [h('h3', props.label), slots.default?.()]);
+      return () =>
+        h('section', { 'data-testid': `tab-pane-${props.name}` }, [
+          h('h3', props.label),
+          slots.default?.(),
+        ]);
     },
   });
 
@@ -378,6 +422,8 @@ function createMockPageState() {
   const queryArchiveObjects = vi.fn();
   const setArchiveObjectPage = vi.fn();
   const setArchiveObjectSize = vi.fn();
+  const loadCabinetsIfNeeded = vi.fn().mockResolvedValue(undefined);
+  const loadWorkbenchIfNeeded = vi.fn().mockResolvedValue(undefined);
 
   return {
     archiveWorkspace: {
@@ -505,8 +551,10 @@ function createMockPageState() {
       clearSelectedPosition: vi.fn(),
       isEditingCabinet: false,
       loadCabinets: vi.fn(),
+      loadCabinetsIfNeeded,
       loadCabinetNodes: vi.fn(),
       loadPositions: vi.fn(),
+      loadWorkbenchIfNeeded,
       loading: reactive({
         cabinets: false,
         cabinetNodes: false,
@@ -742,6 +790,29 @@ function mountView() {
   };
 }
 
+function findButtonByText(text: string) {
+  return [...document.querySelectorAll('button')].find(
+    (button) => button.textContent?.trim() === text,
+  );
+}
+
+async function flushView() {
+  await nextTick();
+  await Promise.resolve();
+  await nextTick();
+}
+
+async function clickTab(label: string) {
+  const button = findButtonByText(label);
+
+  if (!button) {
+    throw new Error(`tab button not found: ${label}`);
+  }
+
+  button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  await flushView();
+}
+
 describe('ArchiveManagementView', () => {
   beforeEach(() => {
     mockUseArchiveManagementPage.mockReturnValue(createMockPageState());
@@ -766,7 +837,7 @@ describe('ArchiveManagementView', () => {
     root.remove();
   });
 
-  it('renders key archive workbench sections and keeps create action wired', async () => {
+  it('renders only the default tab content on first load and defers cabinet workbench cold start', async () => {
     const state = createMockPageState();
     mockUseArchiveManagementPage.mockReturnValue(state);
 
@@ -778,42 +849,11 @@ describe('ArchiveManagementView', () => {
     expect(document.body.textContent).toContain('蜡块归档');
     expect(document.body.textContent).toContain('玻片归档');
     expect(document.body.textContent).toContain('标本归档');
-    expect(document.body.textContent).not.toContain('申请单归档列表');
-    expect(document.body.textContent).not.toContain('蜡块归档列表');
-    expect(document.body.textContent).not.toContain('玻片归档列表');
-    expect(document.body.textContent).not.toContain('标本归档列表');
-    expect(document.body.textContent).not.toContain(
-      '按对象分页接口展示可查询对象',
-    );
     expect(document.body.textContent).toContain('申请医生甲');
     expect(document.body.textContent).toContain('2026-06-15');
     expect(document.body.textContent).toContain('08305');
     expect(document.body.textContent).not.toContain('UUID-APP-1');
-    expect(document.body.textContent).toContain('当前状态启用');
-    expect(document.body.textContent).toContain('未归档');
-    expect(document.body.textContent).toContain('未借阅');
-    expect(document.body.textContent).not.toContain('当前状态ACTIVE');
     expect(document.body.textContent).toContain('pagination-1-20-1');
-    expect(document.body.textContent).toContain('归档柜列表');
-    expect(document.body.textContent).not.toContain(
-      '按归档类型、柜体和号段展示柜位结构',
-    );
-    expect(document.body.textContent).not.toContain('柜位查询与选择');
-    expect(document.body.textContent).toContain('快速检索');
-    expect(document.body.textContent).toContain('不限类型');
-    expect(document.body.textContent).toContain('标准柜');
-    expect(document.body.textContent).toContain('申请单');
-    expect(document.body.textContent).toContain('展开/折叠');
-    expect(document.body.textContent).toContain('批量添加');
-    expect(document.body.textContent).toContain('ROOT');
-    expect(document.body.textContent).toContain('柜子类型');
-    expect(document.body.textContent).toContain('路径');
-    expect(document.body.textContent).toContain('层级');
-    expect(document.body.textContent).toContain('总容量');
-    expect(document.body.textContent).toContain('剩余容量');
-    expect(document.body.textContent).not.toContain('借白片');
-    expect(document.body.textContent).not.toContain('标本柜');
-    expect(document.body.textContent).not.toContain('archive-submission-panel');
     expect(document.body.textContent).toContain('archive-submission-dialog');
     expect(document.body.textContent).not.toContain('保存申请单归档');
     expect(document.body.textContent).toContain('归档操作');
@@ -821,16 +861,15 @@ describe('ArchiveManagementView', () => {
     expect(document.body.textContent).toContain('申请时间');
     expect(document.body.textContent).toContain('归档状态');
     expect(document.body.textContent).toContain('归档路径');
-    expect(document.body.textContent).toContain('总容量');
-    expect(document.body.textContent).toContain('剩余容量');
-    expect(document.body.textContent).not.toContain(
-      'archive-position-workbench-panel',
-    );
+    expect(document.body.textContent).not.toContain('李四');
+    expect(document.body.textContent).not.toContain('快速检索');
+    expect(document.body.textContent).not.toContain('ROOT');
     expect(document.body.textContent).toContain('archive-cabinet-dialog');
     expect(document.body.textContent).toContain('batch-archive-cabinet-dialog');
     expect(document.body.innerHTML).not.toContain('legacy-toolbar');
     expect(document.body.innerHTML).not.toContain('legacy-grid-table');
     expect(document.body.innerHTML).not.toContain('legacy-status-cell');
+    expect(state.cabinetWorkspace.loadWorkbenchIfNeeded).not.toHaveBeenCalled();
     expect(
       state.recordWorkspace.setActiveArchiveObjectType,
     ).toHaveBeenCalledWith(
@@ -838,20 +877,23 @@ describe('ArchiveManagementView', () => {
       expect.objectContaining({ loadIfNeeded: true }),
     );
 
-    const archiveButton = [...document.querySelectorAll('button')].find(
-      (button) => button.textContent?.trim() === '归档操作',
-    );
+    const archiveButton = findButtonByText('归档操作');
     expect(archiveButton).toBeTruthy();
 
     archiveButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await flushView();
 
     expect(state.archiveWorkspace.openArchiveDialog).toHaveBeenCalledWith(
       'APPLICATION_FORM',
     );
 
-    const createButton = [...document.querySelectorAll('button')].find(
-      (button) => button.textContent?.trim() === '新增',
+    await clickTab('归档柜列表');
+
+    expect(state.cabinetWorkspace.loadWorkbenchIfNeeded).toHaveBeenCalledTimes(
+      1,
     );
+
+    const createButton = findButtonByText('新增');
     expect(createButton).toBeTruthy();
 
     createButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -860,9 +902,7 @@ describe('ArchiveManagementView', () => {
       state.cabinetWorkspace.openCreateCabinetDialog,
     ).toHaveBeenCalledTimes(1);
 
-    const batchButton = [...document.querySelectorAll('button')].find(
-      (button) => button.textContent?.trim() === '批量添加',
-    );
+    const batchButton = findButtonByText('批量添加');
     expect(batchButton).toBeTruthy();
 
     batchButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -870,6 +910,13 @@ describe('ArchiveManagementView', () => {
     expect(
       state.cabinetWorkspace.openBatchCreateCabinetDialog,
     ).toHaveBeenCalledTimes(1);
+
+    await clickTab('申请单归档');
+    await clickTab('归档柜列表');
+
+    expect(state.cabinetWorkspace.loadWorkbenchIfNeeded).toHaveBeenCalledTimes(
+      1,
+    );
 
     app.unmount();
     root.remove();
@@ -889,6 +936,41 @@ describe('ArchiveManagementView', () => {
 
     expect(archiveButton).toBeTruthy();
     expect(archiveButton?.disabled).toBe(true);
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('keeps visited tab content mounted after switching away and back', async () => {
+    const state = createMockPageState();
+    mockUseArchiveManagementPage.mockReturnValue(state);
+
+    const { app, root } = mountView();
+
+    expect(document.body.textContent).toContain('申请医生甲');
+    expect(document.body.textContent).not.toContain('李四');
+    expect(document.body.textContent).not.toContain('快速检索');
+
+    await clickTab('蜡块归档');
+
+    expect(document.body.textContent).toContain('申请医生甲');
+    expect(document.body.textContent).toContain('李四');
+    expect(document.body.textContent).not.toContain('快速检索');
+
+    await clickTab('归档柜列表');
+
+    expect(document.body.textContent).toContain('申请医生甲');
+    expect(document.body.textContent).toContain('李四');
+    expect(document.body.textContent).toContain('快速检索');
+
+    await clickTab('申请单归档');
+
+    expect(document.body.textContent).toContain('申请医生甲');
+    expect(document.body.textContent).toContain('李四');
+    expect(document.body.textContent).toContain('快速检索');
+    expect(state.cabinetWorkspace.loadWorkbenchIfNeeded).toHaveBeenCalledTimes(
+      1,
+    );
 
     app.unmount();
     root.remove();
@@ -963,7 +1045,7 @@ describe('ArchiveManagementView', () => {
     root.remove();
   });
 
-  it('shows permission warnings for record and cabinet query limits', () => {
+  it('shows permission warnings for record and cabinet query limits', async () => {
     const state = createMockPageState();
     state.capabilities.canQueryRecords = false;
     state.capabilities.canQueryCabinets = false;
@@ -972,13 +1054,19 @@ describe('ArchiveManagementView', () => {
     const { app, root } = mountView();
 
     expect(document.body.textContent).toContain('当前账号缺少归档记录查询权限');
+    expect(document.body.textContent).not.toContain(
+      '当前账号缺少归档柜查询权限',
+    );
+
+    await clickTab('归档柜列表');
+
     expect(document.body.textContent).toContain('当前账号缺少归档柜查询权限');
 
     app.unmount();
     root.remove();
   });
 
-  it('wires physical archive selections and borrow actions while keeping specimen archive-only', () => {
+  it('wires physical archive selections and borrow actions while keeping specimen archive-only', async () => {
     const state = createMockPageState();
     const embeddingBoxRecord =
       state.recordWorkspace.objectLists.EMBEDDING_BOX.items[0]!;
@@ -990,6 +1078,10 @@ describe('ArchiveManagementView', () => {
     mockUseArchiveManagementPage.mockReturnValue(state);
 
     const { app, root } = mountView();
+
+    await clickTab('蜡块归档');
+    await clickTab('玻片归档');
+    await clickTab('标本归档');
 
     const borrowButtons = [...document.querySelectorAll('button')].filter(
       (button) => button.textContent?.trim() === '借记',

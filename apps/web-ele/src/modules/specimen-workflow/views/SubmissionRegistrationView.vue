@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, defineAsyncComponent, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
@@ -8,8 +8,13 @@ import { useAccessStore } from '@vben/stores';
 import { ElTabPane, ElTabs } from 'element-plus';
 
 import { M2_PERMISSION_CODES } from '../constants';
-import ApplicationListView from './ApplicationListView.vue';
-import SpecimenManagementView from './SpecimenManagementView.vue';
+
+const ApplicationListView = defineAsyncComponent(() =>
+  import('./ApplicationListView.vue').then((module) => module.default),
+);
+const SpecimenManagementView = defineAsyncComponent(() =>
+  import('./SpecimenManagementView.vue').then((module) => module.default),
+);
 
 type SubmissionTab = 'applications' | 'registration';
 
@@ -28,6 +33,7 @@ const canRegisterSpecimens = computed(() =>
 );
 
 const activeTab = ref<SubmissionTab>('applications');
+const loadedTabs = ref<SubmissionTab[]>([]);
 const registrationApplicationId = ref('');
 const registrationTriggerKey = ref(0);
 
@@ -79,6 +85,20 @@ watch(
   },
   { immediate: true },
 );
+
+watch(
+  activeTab,
+  (tab) => {
+    if (!loadedTabs.value.includes(tab)) {
+      loadedTabs.value = [...loadedTabs.value, tab];
+    }
+  },
+  { immediate: true },
+);
+
+function hasLoadedTab(tab: SubmissionTab) {
+  return loadedTabs.value.includes(tab);
+}
 </script>
 
 <template>
@@ -89,7 +109,7 @@ watch(
         label="申请管理"
         name="applications"
       >
-        <ApplicationListView embedded />
+        <ApplicationListView v-if="hasLoadedTab('applications')" embedded />
       </ElTabPane>
       <ElTabPane
         v-if="canRegisterSpecimens"
@@ -97,6 +117,7 @@ watch(
         name="registration"
       >
         <SpecimenManagementView
+          v-if="hasLoadedTab('registration')"
           embedded
           :registration-application-id="registrationApplicationId"
           :registration-trigger-key="registrationTriggerKey"

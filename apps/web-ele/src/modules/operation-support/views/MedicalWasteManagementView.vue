@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { MedicalWasteSpecimenOptionsView } from '../types/operation-support';
 
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 import { Fallback, Page } from '@vben/common-ui';
@@ -23,6 +23,7 @@ const capabilities = computed(() =>
   getMedicalWasteCapabilities(accessStore.accessCodes),
 );
 const activeTab = ref<'REAGENT' | 'SPECIMEN'>('SPECIMEN');
+const loadedTabs = ref<Array<'REAGENT' | 'SPECIMEN'>>([]);
 const pageError = ref('');
 const options = ref<MedicalWasteSpecimenOptionsView>({
   grossingOperators: [],
@@ -45,6 +46,20 @@ async function loadOptions() {
 }
 
 void loadOptions();
+
+watch(
+  activeTab,
+  (tab) => {
+    if (!loadedTabs.value.includes(tab)) {
+      loadedTabs.value = [...loadedTabs.value, tab];
+    }
+  },
+  { immediate: true },
+);
+
+function hasLoadedTab(tab: 'REAGENT' | 'SPECIMEN') {
+  return loadedTabs.value.includes(tab);
+}
 </script>
 
 <template>
@@ -74,12 +89,16 @@ void loadOptions();
       <ElTabs v-model="activeTab" class="operation-support-tabs">
         <ElTabPane label="人体标本" name="SPECIMEN">
           <MedicalWasteSpecimenTab
+            v-if="hasLoadedTab('SPECIMEN')"
             :can-view-page="capabilities.canViewPage"
             :options="options"
           />
         </ElTabPane>
         <ElTabPane label="药物试剂" name="REAGENT">
-          <MedicalWasteReagentTab :current-user-name="currentUserName" />
+          <MedicalWasteReagentTab
+            v-if="hasLoadedTab('REAGENT')"
+            :current-user-name="currentUserName"
+          />
         </ElTabPane>
       </ElTabs>
     </div>

@@ -319,7 +319,9 @@ function mountView() {
 }
 
 async function flushView() {
+  await Promise.resolve();
   await nextTick();
+  await new Promise((resolve) => setTimeout(resolve, 0));
   await Promise.resolve();
   await nextTick();
 }

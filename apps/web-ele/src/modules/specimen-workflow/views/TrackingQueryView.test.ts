@@ -89,6 +89,14 @@ vi.mock('./TrackingSpecimenListView.vue', () => ({
 
 import TrackingQueryView from './TrackingQueryView.vue';
 
+async function flushAsyncRender() {
+  await Promise.resolve();
+  await nextTick();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await Promise.resolve();
+  await nextTick();
+}
+
 async function mountView() {
   const root = document.createElement('div');
   document.body.append(root);
@@ -100,7 +108,7 @@ async function mountView() {
     updated() {},
   });
   app.mount(root);
-  await nextTick();
+  await flushAsyncRender();
   return { app, root };
 }
 
@@ -118,6 +126,24 @@ describe('TrackingQueryView', () => {
     ];
 
     const { app, root } = await mountView();
+    await flushAsyncRender();
+
+    expect(
+      root.querySelector('[data-testid="tracking-application-list"]'),
+    ).not.toBeNull();
+    expect(
+      root.querySelector('[data-testid="tracking-specimen-list"]'),
+    ).toBeNull();
+    expect(
+      root.querySelector('[data-testid="applications-tab"]'),
+    ).not.toBeNull();
+    expect(root.querySelector('[data-testid="specimens-tab"]')).not.toBeNull();
+    expect(root.querySelector('h1')).toBeNull();
+
+    root
+      .querySelector<HTMLButtonElement>('[data-testid="specimens-tab"]')
+      ?.click();
+    await flushAsyncRender();
 
     expect(
       root.querySelector('[data-testid="tracking-application-list"]'),
@@ -125,17 +151,13 @@ describe('TrackingQueryView', () => {
     expect(
       root.querySelector('[data-testid="tracking-specimen-list"]'),
     ).not.toBeNull();
-    expect(
-      root.querySelector('[data-testid="applications-tab"]'),
-    ).not.toBeNull();
-    expect(root.querySelector('[data-testid="specimens-tab"]')).not.toBeNull();
-    expect(root.querySelector('h1')).toBeNull();
 
     app.unmount();
   });
 
   it('shows empty permission state instead of a blank page', async () => {
     const { app, root } = await mountView();
+    await flushAsyncRender();
 
     expect(root.textContent).toContain('当前账号只有追踪菜单权限');
     expect(root.textContent).toContain('当前账号暂无追踪列表查看权限');
@@ -168,6 +190,9 @@ describe('TrackingQueryView', () => {
     );
     expect(applicationList?.dataset.applicationId).toBe('APP-TRACK-001');
     expect(applicationList?.dataset.triggerKey).toBe('1');
+    expect(
+      root.querySelector('[data-testid="tracking-specimen-list"]'),
+    ).toBeNull();
 
     app.unmount();
   });
@@ -182,8 +207,12 @@ describe('TrackingQueryView', () => {
     };
 
     const { app, root } = await mountView();
+    await flushAsyncRender();
 
     expect(root.querySelector('[data-active-tab="specimens"]')).not.toBeNull();
+    expect(
+      root.querySelector('[data-testid="tracking-application-list"]'),
+    ).toBeNull();
     const specimenList = root.querySelector<HTMLElement>(
       '[data-testid="tracking-specimen-list"]',
     );

@@ -143,21 +143,8 @@ export function useArchiveManagementPage() {
       return;
     }
 
-    const tasks: Array<Promise<unknown>> = [];
-
-    if (capabilities.canQueryCabinets.value) {
-      tasks.push(
-        cabinetWorkspaceState.loadCabinets(),
-        cabinetWorkspaceState.loadCabinetNodes(),
-        cabinetWorkspaceState.loadPositions(),
-      );
-    }
     if (capabilities.canQueryRecords.value) {
-      tasks.push(recordWorkspaceState.refreshCurrentArchiveObjects());
-    }
-
-    if (tasks.length > 0) {
-      await Promise.all(tasks);
+      await recordWorkspaceState.refreshCurrentArchiveObjects();
     }
   }
 

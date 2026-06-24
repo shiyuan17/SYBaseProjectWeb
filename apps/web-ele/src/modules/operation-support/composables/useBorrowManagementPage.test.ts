@@ -22,6 +22,8 @@ const {
   mockListArchiveObjects,
   mockListAvailableArchivePositions,
   mockListMaterialLoans,
+  mockListWhiteSlideLoans,
+  mockListWhiteSlideStocks,
   mockReturnMaterialLoan,
   mockUserStore,
 } = vi.hoisted(() => ({
@@ -37,6 +39,8 @@ const {
   mockListArchiveObjects: vi.fn(),
   mockListAvailableArchivePositions: vi.fn(),
   mockListMaterialLoans: vi.fn(),
+  mockListWhiteSlideLoans: vi.fn(),
+  mockListWhiteSlideStocks: vi.fn(),
   mockReturnMaterialLoan: vi.fn(),
   mockUserStore: {
     userInfo: {
@@ -66,6 +70,8 @@ vi.mock('../api/operation-support-service', () => ({
   listArchiveObjects: mockListArchiveObjects,
   listAvailableArchivePositions: mockListAvailableArchivePositions,
   listMaterialLoans: mockListMaterialLoans,
+  listWhiteSlideLoans: mockListWhiteSlideLoans,
+  listWhiteSlideStocks: mockListWhiteSlideStocks,
   returnMaterialLoan: mockReturnMaterialLoan,
 }));
 
@@ -198,6 +204,8 @@ describe('useBorrowManagementPage', () => {
     });
     mockListAvailableArchivePositions.mockResolvedValue([createPosition()]);
     mockListMaterialLoans.mockResolvedValue([createLoan()]);
+    mockListWhiteSlideLoans.mockResolvedValue([]);
+    mockListWhiteSlideStocks.mockResolvedValue([]);
     mockCreateMaterialLoanAbnormalRecord.mockResolvedValue({
       id: 'ABNORMAL-1',
       materialId: 'SLIDE-1',
@@ -219,12 +227,26 @@ describe('useBorrowManagementPage', () => {
     mockListArchiveObjects.mockReset();
     mockListAvailableArchivePositions.mockReset();
     mockListMaterialLoans.mockReset();
+    mockListWhiteSlideLoans.mockReset();
+    mockListWhiteSlideStocks.mockReset();
     mockReturnMaterialLoan.mockReset();
     mockAccessStore.accessCodes = [];
     document.body.innerHTML = '';
   });
 
-  it('initializes borrow workbench data for loan permissions', async () => {
+  it('initializes only the default embedding-box tab data on first entry', async () => {
+    mockAccessStore.accessCodes = [
+      M5_PERMISSION_CODES.ARCHIVE_CABINET_QUERY,
+      M5_PERMISSION_CODES.ARCHIVE_QUERY,
+      M5_PERMISSION_CODES.LOAN_CREATE,
+      M5_PERMISSION_CODES.LOAN_ABNORMAL_REGISTER,
+      M5_PERMISSION_CODES.LOAN_QUERY,
+      M5_PERMISSION_CODES.LOAN_RETURN,
+      M5_PERMISSION_CODES.WHITE_SLIDE_QUERY,
+      M5_PERMISSION_CODES.WHITE_SLIDE_CREATE,
+      M5_PERMISSION_CODES.WHITE_SLIDE_RETURN,
+    ];
+
     const wrapper = mountComposable();
     await flushComposable();
 
@@ -233,6 +255,33 @@ describe('useBorrowManagementPage', () => {
     if (!state) {
       throw new Error('composable state not initialized');
     }
+
+    expect(mockListArchiveObjects).toHaveBeenCalledWith({
+      keyword: undefined,
+      objectType: 'EMBEDDING_BOX',
+      page: 1,
+      size: 20,
+    });
+    expect(mockListMaterialLoans).not.toHaveBeenCalled();
+    expect(mockListArchiveCabinets).not.toHaveBeenCalled();
+    expect(mockListAvailableArchivePositions).not.toHaveBeenCalled();
+    expect(mockListWhiteSlideStocks).not.toHaveBeenCalled();
+    expect(mockListWhiteSlideLoans).not.toHaveBeenCalled();
+
+    wrapper.destroy();
+  });
+
+  it('loads pending borrow workbench data on demand', async () => {
+    const wrapper = mountComposable();
+    await flushComposable();
+
+    const state = wrapper.getState();
+    expect(state).toBeTruthy();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    await state.loadBorrowTabData('PENDING');
 
     expect(state.capabilities.canViewBorrowPage).toBe(true);
     expect(state.capabilities.canViewArchivePage).toBe(true);
@@ -487,6 +536,7 @@ describe('useBorrowManagementPage', () => {
       throw new Error('composable state not initialized');
     }
 
+    await state.loadBorrowTabData('PENDING');
     state.loanWorkspace.loanFilters.loanStatus = 'RETURNED';
     state.loanWorkspace.openReturnDialog(state.loanWorkspace.pendingLoans[0]!);
     mockListMaterialLoans.mockClear();
@@ -511,6 +561,7 @@ describe('useBorrowManagementPage', () => {
       throw new Error('composable state not initialized');
     }
 
+    await state.loadBorrowTabData('PENDING');
     state.cabinetWorkspace.selectPosition(
       state.cabinetWorkspace.positionRows[0]!,
     );
@@ -543,6 +594,7 @@ describe('useBorrowManagementPage', () => {
       throw new Error('composable state not initialized');
     }
 
+    await state.loadBorrowTabData('PENDING');
     state.loanWorkspace.selectMaterialRecord(
       createArchiveRecord({ loanStatus: 'BORROWED' }),
     );
@@ -567,6 +619,7 @@ describe('useBorrowManagementPage', () => {
       throw new Error('composable state not initialized');
     }
 
+    await state.loadBorrowTabData('PENDING');
     mockListAvailableArchivePositions.mockClear();
     mockListArchiveObjects.mockClear();
     mockListMaterialLoans.mockClear();
@@ -635,6 +688,7 @@ describe('useBorrowManagementPage', () => {
       throw new Error('composable state not initialized');
     }
 
+    await state.loadBorrowTabData('PENDING');
     mockListArchiveObjects.mockClear();
     mockListAvailableArchivePositions.mockClear();
     mockListMaterialLoans.mockClear();
@@ -699,6 +753,7 @@ describe('useBorrowManagementPage', () => {
       throw new Error('composable state not initialized');
     }
 
+    await state.loadBorrowTabData('PENDING');
     mockListArchiveObjects.mockClear();
     mockListAvailableArchivePositions.mockClear();
     mockListMaterialLoans.mockClear();

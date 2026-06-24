@@ -21,26 +21,34 @@ const {
   cabinetWorkspace,
   capabilities,
   display,
+  loadBorrowTabData,
   loanWorkspace,
   pageState,
   whiteSlideWorkspace,
 } = useBorrowManagementPage();
 
-const activeBorrowTab = ref('EMBEDDING_BOX');
-const borrowMaterialTabs = new Set(['EMBEDDING_BOX', 'SLIDE']);
+type BorrowManagementTab =
+  | 'EMBEDDING_BOX'
+  | 'PENDING'
+  | 'SLIDE'
+  | 'WHITE_SLIDE';
 
-watch(
-  activeBorrowTab,
-  (materialType) => {
-    if (borrowMaterialTabs.has(materialType)) {
-      loanWorkspace.setActiveMaterialType(
-        materialType as 'EMBEDDING_BOX' | 'SLIDE',
-      );
-      void loanWorkspace.loadMaterialObjects();
-    }
-  },
-  { immediate: true },
-);
+const activeBorrowTab = ref<BorrowManagementTab>('EMBEDDING_BOX');
+const visitedBorrowTabs = ref<BorrowManagementTab[]>([activeBorrowTab.value]);
+
+watch(activeBorrowTab, (tab, previousTab) => {
+  if (!visitedBorrowTabs.value.includes(tab)) {
+    visitedBorrowTabs.value = [...visitedBorrowTabs.value, tab];
+  }
+
+  if (previousTab) {
+    void loadBorrowTabData(tab);
+  }
+});
+
+function hasVisitedBorrowTab(tab: BorrowManagementTab) {
+  return visitedBorrowTabs.value.includes(tab);
+}
 </script>
 
 <template>
@@ -60,7 +68,10 @@ watch(
         class="operation-support-tabs borrow-management-tabs flex min-h-0 flex-1 flex-col"
       >
         <ElTabPane label="蜡块借记" name="EMBEDDING_BOX">
-          <div class="borrow-management-tab-panel flex min-h-0 flex-1 flex-col">
+          <div
+            v-if="hasVisitedBorrowTab('EMBEDDING_BOX')"
+            class="borrow-management-tab-panel flex min-h-0 flex-1 flex-col"
+          >
             <ArchiveLoanMaterialListPanel
               v-model:material-object-filters="
                 loanWorkspace.materialObjectFilters
@@ -90,7 +101,10 @@ watch(
         </ElTabPane>
 
         <ElTabPane label="玻片借记" name="SLIDE">
-          <div class="borrow-management-tab-panel flex min-h-0 flex-1 flex-col">
+          <div
+            v-if="hasVisitedBorrowTab('SLIDE')"
+            class="borrow-management-tab-panel flex min-h-0 flex-1 flex-col"
+          >
             <ArchiveLoanMaterialListPanel
               v-model:material-object-filters="
                 loanWorkspace.materialObjectFilters
@@ -120,7 +134,10 @@ watch(
         </ElTabPane>
 
         <ElTabPane label="白片借记" name="WHITE_SLIDE">
-          <div class="borrow-management-tab-panel flex min-h-0 flex-1 flex-col">
+          <div
+            v-if="hasVisitedBorrowTab('WHITE_SLIDE')"
+            class="borrow-management-tab-panel flex min-h-0 flex-1 flex-col"
+          >
             <WhiteSlideBorrowListPanel
               v-model:filters="whiteSlideWorkspace.filters"
               :can-create="capabilities.canCreateWhiteSlideLoan"
@@ -140,6 +157,7 @@ watch(
 
         <ElTabPane label="待归还/归还" name="PENDING">
           <div
+            v-if="hasVisitedBorrowTab('PENDING')"
             class="borrow-management-tab-panel flex min-h-0 flex-1 flex-col gap-4"
           >
             <ArchivePositionWorkbenchPanel

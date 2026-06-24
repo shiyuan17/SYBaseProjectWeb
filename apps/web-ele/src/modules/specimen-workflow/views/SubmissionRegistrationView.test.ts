@@ -92,6 +92,14 @@ vi.mock('./SpecimenManagementView.vue', () => ({
 import SubmissionRegistrationView from './SubmissionRegistrationView.vue';
 
 describe('SubmissionRegistrationView', () => {
+  async function flushAsyncRender() {
+    await Promise.resolve();
+    await nextTick();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await Promise.resolve();
+    await nextTick();
+  }
+
   afterEach(() => {
     mockRoute.query = {};
     mockAccessStore.accessCodes = [
@@ -101,13 +109,13 @@ describe('SubmissionRegistrationView', () => {
     document.body.innerHTML = '';
   });
 
-  it('renders both tabs without an outer page title', async () => {
+  it('lazy-loads tab content and keeps visited tabs mounted', async () => {
     const root = document.createElement('div');
     document.body.append(root);
     const app = createApp(SubmissionRegistrationView);
 
     app.mount(root);
-    await nextTick();
+    await flushAsyncRender();
 
     expect(
       root.querySelector('[data-testid="applications-tab"]'),
@@ -120,7 +128,22 @@ describe('SubmissionRegistrationView', () => {
         .querySelector('[data-testid="application-list"]')
         ?.hasAttribute('data-embedded'),
     ).toBe(true);
+    expect(
+      root.querySelector('[data-testid="specimen-management"]'),
+    ).toBeNull();
     expect(root.querySelector('h1')).toBeNull();
+
+    root
+      .querySelector<HTMLButtonElement>('[data-testid="registration-tab"]')
+      ?.click();
+    await flushAsyncRender();
+
+    expect(
+      root.querySelector('[data-testid="application-list"]'),
+    ).not.toBeNull();
+    expect(
+      root.querySelector('[data-testid="specimen-management"]'),
+    ).not.toBeNull();
 
     app.unmount();
   });
@@ -136,7 +159,7 @@ describe('SubmissionRegistrationView', () => {
     const app = createApp(SubmissionRegistrationView);
 
     app.mount(root);
-    await nextTick();
+    await flushAsyncRender();
 
     expect(
       root.querySelector('[data-active-tab="registration"]'),
@@ -146,6 +169,7 @@ describe('SubmissionRegistrationView', () => {
     );
     expect(specimenManagement?.dataset.applicationId).toBe('APP-EMBEDDED');
     expect(specimenManagement?.dataset.triggerKey).toBe('1');
+    expect(root.querySelector('[data-testid="application-list"]')).toBeNull();
 
     app.unmount();
   });

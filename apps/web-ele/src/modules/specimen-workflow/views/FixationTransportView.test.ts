@@ -148,6 +148,14 @@ vi.mock('./TransportHandoverView.vue', () => ({
 import FixationTransportView from './FixationTransportView.vue';
 
 describe('FixationTransportView', () => {
+  async function flushAsyncRender() {
+    await Promise.resolve();
+    await nextTick();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await Promise.resolve();
+    await nextTick();
+  }
+
   afterEach(() => {
     mockRoute.query = {};
     mockAccessStore.accessCodes = [
@@ -159,22 +167,37 @@ describe('FixationTransportView', () => {
     document.body.innerHTML = '';
   });
 
-  it('switches tabs locally and keeps six in-page scenes', async () => {
+  it('lazy-loads tab panels and keeps visited tabs mounted locally', async () => {
     const root = document.createElement('div');
     document.body.append(root);
     const app = createApp(FixationTransportView);
 
     app.mount(root);
-    await nextTick();
+    await flushAsyncRender();
+
+    expect(
+      root.querySelector('[data-testid="barcode-binding-panel"]'),
+    ).not.toBeNull();
+    expect(root.querySelector('[data-testid="fixation-verify"]')).toBeNull();
+    expect(root.querySelector('[data-testid="transport-handover"]')).toBeNull();
+    expect(
+      root.querySelector('[data-testid="specimen-confirmation-panel"]'),
+    ).toBeNull();
+    expect(
+      root.querySelector('[data-testid="specimen-check-in-panel"]'),
+    ).toBeNull();
+    expect(
+      root.querySelector('[data-testid="fixation-time-panel"]'),
+    ).toBeNull();
 
     root
       .querySelector<HTMLButtonElement>('[data-testid="transport-tab"]')
       ?.click();
-    await nextTick();
+    await flushAsyncRender();
     root
       .querySelector<HTMLButtonElement>('[data-testid="verification-tab"]')
       ?.click();
-    await nextTick();
+    await flushAsyncRender();
 
     expect(mockRouter.replace).not.toHaveBeenCalled();
     expect(mockRouter.push).not.toHaveBeenCalled();
@@ -189,16 +212,22 @@ describe('FixationTransportView', () => {
     ).toBe('verification');
     expect(
       root.querySelector('[data-testid="fixation-time-panel"]'),
-    ).not.toBeNull();
+    ).toBeNull();
     expect(
       root.querySelector('[data-testid="barcode-binding-panel"]'),
     ).not.toBeNull();
     expect(
-      root.querySelector('[data-testid="specimen-confirmation-panel"]'),
+      root.querySelector('[data-testid="transport-handover"]'),
     ).not.toBeNull();
     expect(
-      root.querySelector('[data-testid="specimen-check-in-panel"]'),
+      root.querySelector('[data-testid="fixation-verify"]'),
     ).not.toBeNull();
+    expect(
+      root.querySelector('[data-testid="specimen-confirmation-panel"]'),
+    ).toBeNull();
+    expect(
+      root.querySelector('[data-testid="specimen-check-in-panel"]'),
+    ).toBeNull();
 
     app.unmount();
   });
@@ -209,7 +238,7 @@ describe('FixationTransportView', () => {
     const app = createApp(FixationTransportView);
 
     app.mount(root);
-    await nextTick();
+    await flushAsyncRender();
 
     expect(
       root.querySelector<HTMLElement>('[data-active-tab]')?.dataset.activeTab,
@@ -225,7 +254,7 @@ describe('FixationTransportView', () => {
     const app = createApp(FixationTransportView);
 
     app.mount(root);
-    await nextTick();
+    await flushAsyncRender();
 
     expect(
       root.querySelector<HTMLElement>('[data-active-tab]')?.dataset.activeTab,

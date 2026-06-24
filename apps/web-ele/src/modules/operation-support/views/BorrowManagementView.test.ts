@@ -1,9 +1,13 @@
-import { createApp, defineComponent, h, reactive } from 'vue';
+import { createApp, defineComponent, h, nextTick, reactive } from 'vue';
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { mockUseBorrowManagementPage } = vi.hoisted(() => ({
   mockUseBorrowManagementPage: vi.fn(),
+}));
+
+const tabsState = vi.hoisted(() => ({
+  activeName: 'EMBEDDING_BOX',
 }));
 
 vi.mock('@vben/common-ui', () => ({
@@ -178,16 +182,70 @@ vi.mock('element-plus', () => {
   });
 
   const ElTabs = defineComponent({
-    setup(_, { slots }) {
-      return () => h('div', slots.default?.());
+    props: ['modelValue'],
+    emits: ['update:modelValue'],
+    setup(props, { emit, slots }) {
+      tabsState.activeName = String(props.modelValue ?? '');
+      return () =>
+        h('div', [
+          h(
+            'button',
+            {
+              'data-testid': 'tab-embedding-box',
+              type: 'button',
+              onClick: () => {
+                tabsState.activeName = 'EMBEDDING_BOX';
+                emit('update:modelValue', 'EMBEDDING_BOX');
+              },
+            },
+            '蜡块借记',
+          ),
+          h(
+            'button',
+            {
+              'data-testid': 'tab-slide',
+              type: 'button',
+              onClick: () => {
+                tabsState.activeName = 'SLIDE';
+                emit('update:modelValue', 'SLIDE');
+              },
+            },
+            '玻片借记',
+          ),
+          h(
+            'button',
+            {
+              'data-testid': 'tab-white-slide',
+              type: 'button',
+              onClick: () => {
+                tabsState.activeName = 'WHITE_SLIDE';
+                emit('update:modelValue', 'WHITE_SLIDE');
+              },
+            },
+            '白片借记',
+          ),
+          h(
+            'button',
+            {
+              'data-testid': 'tab-pending',
+              type: 'button',
+              onClick: () => {
+                tabsState.activeName = 'PENDING';
+                emit('update:modelValue', 'PENDING');
+              },
+            },
+            '待归还/归还',
+          ),
+          h('div', { 'data-active-tab': props.modelValue }, slots.default?.()),
+        ]);
     },
   });
 
   const ElTabPane = defineComponent({
-    props: ['label'],
+    props: ['label', 'name'],
     setup(props, { slots }) {
       return () =>
-        h('section', [
+        h('section', { 'data-pane': props.name }, [
           h('button', { role: 'tab' }, props.label),
           slots.default?.(),
         ]);
@@ -244,16 +302,59 @@ vi.mock('../components/ArchiveLoanMaterialListPanel.vue', () => ({
     emits: ['borrow'],
     setup(_, { emit }) {
       return () =>
+        h('div', [
+          h('div', { 'data-testid': 'material-panel' }, 'material-panel'),
+          h(
+            'button',
+            {
+              type: 'button',
+              onClick: () => emit('borrow'),
+            },
+            'mock-material-borrow',
+          ),
+        ]);
+    },
+  }),
+}));
+
+vi.mock('../components/ArchiveLoanBorrowDialog.vue', () => ({
+  default: createMarkerComponent('archive-loan-borrow-dialog'),
+}));
+
+vi.mock('../components/ArchiveLoanAbnormalDialog.vue', () => ({
+  default: createMarkerComponent('archive-loan-abnormal-dialog'),
+}));
+
+vi.mock('../components/ArchiveLoanPendingPanel.vue', () => ({
+  default: defineComponent({
+    props: ['canQueryLoans'],
+    setup(props) {
+      return () =>
         h(
-          'button',
-          {
-            type: 'button',
-            onClick: () => emit('borrow'),
-          },
-          'mock-material-borrow',
+          'div',
+          { 'data-testid': 'pending-loan-panel' },
+          props.canQueryLoans
+            ? 'pending-loan-panel'
+            : '当前账号缺少待归还列表查询权限',
         );
     },
   }),
+}));
+
+vi.mock('../components/ArchivePositionWorkbenchPanel.vue', () => ({
+  default: createMarkerComponent('position-workbench-panel'),
+}));
+
+vi.mock('../components/WhiteSlideBorrowListPanel.vue', () => ({
+  default: createMarkerComponent('white-slide-borrow-list-panel'),
+}));
+
+vi.mock('../components/WhiteSlideBorrowDialog.vue', () => ({
+  default: createMarkerComponent('white-slide-borrow-dialog'),
+}));
+
+vi.mock('../components/WhiteSlideReturnDialog.vue', () => ({
+  default: createMarkerComponent('white-slide-return-dialog'),
 }));
 
 vi.mock('../composables/useBorrowManagementPage', () => ({
@@ -393,6 +494,7 @@ function createMockPageState() {
     pageState: {
       submitting: false,
     },
+    loadBorrowTabData: vi.fn(),
     whiteSlideWorkspace: {
       borrowDialogVisible: false,
       borrowForm: reactive({
@@ -462,6 +564,11 @@ function mountView() {
   };
 }
 
+async function flushView() {
+  await Promise.resolve();
+  await nextTick();
+}
+
 describe('BorrowManagementView', () => {
   beforeEach(() => {
     mockUseBorrowManagementPage.mockReturnValue(createMockPageState());
@@ -469,6 +576,7 @@ describe('BorrowManagementView', () => {
 
   afterEach(() => {
     mockUseBorrowManagementPage.mockReset();
+    tabsState.activeName = 'EMBEDDING_BOX';
     document.body.innerHTML = '';
   });
 
@@ -499,9 +607,55 @@ describe('BorrowManagementView', () => {
     expect(document.body.textContent).toContain('archive-return-dialog');
     expect(document.body.textContent).toContain('embedding-box-borrow-dialog');
     expect(document.body.textContent).toContain('mock-material-borrow');
-    expect(state.loanWorkspace.setActiveMaterialType).toHaveBeenCalledWith(
-      'EMBEDDING_BOX',
-    );
+
+    app.unmount();
+    root.remove();
+  });
+
+  it('renders only the current tab content on first entry and keeps visited tabs mounted', async () => {
+    const state = createMockPageState();
+    mockUseBorrowManagementPage.mockReturnValue(state);
+
+    const { app, root } = mountView();
+    await flushView();
+
+    expect(
+      root.querySelectorAll('[data-testid="material-panel"]'),
+    ).toHaveLength(1);
+    expect(root.querySelector('[data-testid="pending-loan-panel"]')).toBeNull();
+    expect(root.textContent).not.toContain('white-slide-borrow-list-panel');
+
+    root
+      .querySelector<HTMLButtonElement>('[data-testid="tab-white-slide"]')
+      ?.click();
+    await flushView();
+
+    expect(root.textContent).toContain('white-slide-borrow-list-panel');
+    expect(state.loadBorrowTabData).toHaveBeenCalledWith('WHITE_SLIDE');
+
+    root
+      .querySelector<HTMLButtonElement>('[data-testid="tab-pending"]')
+      ?.click();
+    await flushView();
+
+    expect(
+      root.querySelector('[data-testid="pending-loan-panel"]'),
+    ).not.toBeNull();
+    expect(root.textContent).toContain('white-slide-borrow-list-panel');
+    expect(state.loadBorrowTabData).toHaveBeenCalledWith('PENDING');
+
+    root
+      .querySelector<HTMLButtonElement>('[data-testid="tab-embedding-box"]')
+      ?.click();
+    await flushView();
+
+    expect(
+      root.querySelectorAll('[data-testid="material-panel"]'),
+    ).toHaveLength(1);
+    expect(root.textContent).toContain('white-slide-borrow-list-panel');
+    expect(
+      root.querySelector('[data-testid="pending-loan-panel"]'),
+    ).not.toBeNull();
 
     app.unmount();
     root.remove();
@@ -572,12 +726,16 @@ describe('BorrowManagementView', () => {
     root.remove();
   });
 
-  it('shows permission warning when loan query is limited', () => {
+  it('shows permission warning when loan query is limited', async () => {
     const state = createMockPageState();
     state.capabilities.canQueryLoans = false;
     mockUseBorrowManagementPage.mockReturnValue(state);
 
     const { app, root } = mountView();
+    root
+      .querySelector<HTMLButtonElement>('[data-testid="tab-pending"]')
+      ?.click();
+    await flushView();
 
     expect(document.body.textContent).toContain(
       '当前账号缺少待归还列表查询权限',

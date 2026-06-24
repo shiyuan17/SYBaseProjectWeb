@@ -60,6 +60,11 @@ export function useArchiveCabinetWorkspace(
     cabinetNodes: false,
     positions: false,
   });
+  const loaded = reactive({
+    cabinets: false,
+    cabinetNodes: false,
+    positions: false,
+  });
   const cabinetError = ref('');
   const cabinetNodeError = ref('');
   const positionError = ref('');
@@ -301,6 +306,7 @@ export function useArchiveCabinetWorkspace(
     if (!capabilities.canQueryCabinets.value) {
       cabinets.value = [];
       cabinetError.value = '';
+      loaded.cabinets = false;
       return;
     }
 
@@ -309,7 +315,9 @@ export function useArchiveCabinetWorkspace(
 
     try {
       cabinets.value = await listArchiveCabinets();
+      loaded.cabinets = true;
     } catch (error) {
+      loaded.cabinets = false;
       cabinetError.value = getOperationSupportPageErrorMessage(error);
     } finally {
       loading.cabinets = false;
@@ -320,6 +328,7 @@ export function useArchiveCabinetWorkspace(
     if (!capabilities.canQueryCabinets.value) {
       cabinetNodes.value = [];
       cabinetNodeError.value = '';
+      loaded.cabinetNodes = false;
       return;
     }
 
@@ -328,7 +337,9 @@ export function useArchiveCabinetWorkspace(
 
     try {
       cabinetNodes.value = await listArchiveCabinetNodes();
+      loaded.cabinetNodes = true;
     } catch (error) {
+      loaded.cabinetNodes = false;
       cabinetNodeError.value = getOperationSupportPageErrorMessage(error);
     } finally {
       loading.cabinetNodes = false;
@@ -339,6 +350,7 @@ export function useArchiveCabinetWorkspace(
     if (!capabilities.canQueryCabinets.value) {
       availablePositions.value = [];
       positionError.value = '';
+      loaded.positions = false;
       return;
     }
 
@@ -350,10 +362,46 @@ export function useArchiveCabinetWorkspace(
         cabinetId: positionFilters.cabinetId || undefined,
         cabinetType: positionFilters.cabinetType || undefined,
       });
+      loaded.positions = true;
     } catch (error) {
+      loaded.positions = false;
       positionError.value = getOperationSupportPageErrorMessage(error);
     } finally {
       loading.positions = false;
+    }
+  }
+
+  async function loadCabinetsIfNeeded() {
+    if (
+      !capabilities.canQueryCabinets.value ||
+      loaded.cabinets ||
+      loading.cabinets
+    ) {
+      return;
+    }
+
+    await loadCabinets();
+  }
+
+  async function loadWorkbenchIfNeeded() {
+    if (!capabilities.canQueryCabinets.value) {
+      return;
+    }
+
+    const tasks: Array<Promise<unknown>> = [];
+
+    if (!loaded.cabinets && !loading.cabinets) {
+      tasks.push(loadCabinets());
+    }
+    if (!loaded.cabinetNodes && !loading.cabinetNodes) {
+      tasks.push(loadCabinetNodes());
+    }
+    if (!loaded.positions && !loading.positions) {
+      tasks.push(loadPositions());
+    }
+
+    if (tasks.length > 0) {
+      await Promise.all(tasks);
     }
   }
 
@@ -522,8 +570,10 @@ export function useArchiveCabinetWorkspace(
     filteredCabinets,
     isEditingCabinet,
     loadCabinets,
+    loadCabinetsIfNeeded,
     loadCabinetNodes,
     loadPositions,
+    loadWorkbenchIfNeeded,
     loading,
     openBatchCreateCabinetDialog,
     openCreateCabinetDialog,

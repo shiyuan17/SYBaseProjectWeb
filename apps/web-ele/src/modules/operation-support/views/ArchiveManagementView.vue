@@ -34,6 +34,9 @@ const archiveObjectTabs = new Set<ArchiveObjectType>([
   'SLIDE',
   'SPECIMEN',
 ]);
+const visitedArchiveTabs = ref(
+  new Set<'CABINET' | ArchiveObjectType>([activeArchiveTab.value]),
+);
 const activePhysicalArchiveObjectType = computed<ArchiveObjectType>(() =>
   unref(recordWorkspace.activeObjectType),
 );
@@ -50,14 +53,39 @@ function isArchiveObjectType(
   return archiveObjectTabs.has(objectType as ArchiveObjectType);
 }
 
+function markArchiveTabVisited(objectType: 'CABINET' | ArchiveObjectType) {
+  if (visitedArchiveTabs.value.has(objectType)) {
+    return false;
+  }
+
+  visitedArchiveTabs.value = new Set(visitedArchiveTabs.value).add(objectType);
+  return true;
+}
+
+function hasVisitedArchiveTab(objectType: 'CABINET' | ArchiveObjectType) {
+  return visitedArchiveTabs.value.has(objectType);
+}
+
+async function openArchiveDialog(objectType: ArchiveObjectType) {
+  await cabinetWorkspace.loadCabinetsIfNeeded();
+  archiveWorkspace.openArchiveDialog(objectType);
+}
+
 watch(
   activeArchiveTab,
   (objectType) => {
+    const isFirstVisit = markArchiveTabVisited(objectType);
+
     if (isArchiveObjectType(objectType)) {
       archiveWorkspace.archiveForm.objectType = objectType;
       void recordWorkspace.setActiveArchiveObjectType(objectType, {
         loadIfNeeded: true,
       });
+      return;
+    }
+
+    if (isFirstVisit) {
+      void cabinetWorkspace.loadWorkbenchIfNeeded();
     }
   },
   { immediate: true },
@@ -82,6 +110,7 @@ watch(
       >
         <ElTabPane label="申请单归档" name="APPLICATION_FORM">
           <div
+            v-if="hasVisitedArchiveTab('APPLICATION_FORM')"
             class="archive-management-tab-panel flex min-h-0 flex-1 flex-col"
           >
             <ArchiveRecordLegacyListPanel
@@ -119,9 +148,7 @@ watch(
                     recordWorkspace.selectedApplicationFormRecords.length === 0
                   "
                   type="primary"
-                  @click="
-                    archiveWorkspace.openArchiveDialog('APPLICATION_FORM')
-                  "
+                  @click="openArchiveDialog('APPLICATION_FORM')"
                 >
                   归档操作
                 </ElButton>
@@ -132,6 +159,7 @@ watch(
 
         <ElTabPane label="蜡块归档" name="EMBEDDING_BOX">
           <div
+            v-if="hasVisitedArchiveTab('EMBEDDING_BOX')"
             class="archive-management-tab-panel flex min-h-0 flex-1 flex-col"
           >
             <ArchiveRecordLegacyListPanel
@@ -173,7 +201,7 @@ watch(
                     recordWorkspace.selectedEmbeddingBoxRecords.length === 0
                   "
                   type="primary"
-                  @click="archiveWorkspace.openArchiveDialog('EMBEDDING_BOX')"
+                  @click="openArchiveDialog('EMBEDDING_BOX')"
                 >
                   归档操作
                 </ElButton>
@@ -199,6 +227,7 @@ watch(
 
         <ElTabPane label="玻片归档" name="SLIDE">
           <div
+            v-if="hasVisitedArchiveTab('SLIDE')"
             class="archive-management-tab-panel flex min-h-0 flex-1 flex-col"
           >
             <ArchiveRecordLegacyListPanel
@@ -238,7 +267,7 @@ watch(
                     recordWorkspace.selectedSlideRecords.length === 0
                   "
                   type="primary"
-                  @click="archiveWorkspace.openArchiveDialog('SLIDE')"
+                  @click="openArchiveDialog('SLIDE')"
                 >
                   归档操作
                 </ElButton>
@@ -264,6 +293,7 @@ watch(
 
         <ElTabPane label="标本归档" name="SPECIMEN">
           <div
+            v-if="hasVisitedArchiveTab('SPECIMEN')"
             class="archive-management-tab-panel flex min-h-0 flex-1 flex-col"
           >
             <ArchiveRecordLegacyListPanel
@@ -303,7 +333,7 @@ watch(
                     recordWorkspace.selectedSpecimenRecords.length === 0
                   "
                   type="primary"
-                  @click="archiveWorkspace.openArchiveDialog('SPECIMEN')"
+                  @click="openArchiveDialog('SPECIMEN')"
                 >
                   归档操作
                 </ElButton>
@@ -314,6 +344,7 @@ watch(
 
         <ElTabPane label="归档柜列表" name="CABINET">
           <div
+            v-if="hasVisitedArchiveTab('CABINET')"
             class="archive-management-tab-panel flex min-h-0 flex-1 flex-col"
           >
             <ArchiveCabinetTreePanel

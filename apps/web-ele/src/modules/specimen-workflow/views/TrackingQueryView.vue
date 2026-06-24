@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, defineAsyncComponent, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 import { Page } from '@vben/common-ui';
@@ -8,8 +8,13 @@ import { useAccessStore } from '@vben/stores';
 import { ElAlert, ElEmpty, ElTabPane, ElTabs } from 'element-plus';
 
 import { M2_PERMISSION_CODES } from '../constants';
-import TrackingApplicationListView from './TrackingApplicationListView.vue';
-import TrackingSpecimenListView from './TrackingSpecimenListView.vue';
+
+const TrackingApplicationListView = defineAsyncComponent(() =>
+  import('./TrackingApplicationListView.vue').then((module) => module.default),
+);
+const TrackingSpecimenListView = defineAsyncComponent(() =>
+  import('./TrackingSpecimenListView.vue').then((module) => module.default),
+);
 
 type TrackingTab = 'applications' | 'specimens';
 
@@ -25,6 +30,7 @@ const canViewSpecimens = computed(() =>
 );
 
 const activeTab = ref<TrackingTab>('applications');
+const loadedTabs = ref<TrackingTab[]>([]);
 const applicationId = ref('');
 const applicationTriggerKey = ref(0);
 const barcode = ref('');
@@ -85,6 +91,20 @@ watch(
   },
   { immediate: true },
 );
+
+watch(
+  activeTab,
+  (tab) => {
+    if (!loadedTabs.value.includes(tab)) {
+      loadedTabs.value = [...loadedTabs.value, tab];
+    }
+  },
+  { immediate: true },
+);
+
+function hasLoadedTab(tab: TrackingTab) {
+  return loadedTabs.value.includes(tab);
+}
 </script>
 
 <template>
@@ -108,12 +128,14 @@ watch(
           name="applications"
         >
           <TrackingApplicationListView
+            v-if="hasLoadedTab('applications')"
             :initial-application-id="applicationId"
             :trigger-key="applicationTriggerKey"
           />
         </ElTabPane>
         <ElTabPane v-if="canViewSpecimens" label="标本列表" name="specimens">
           <TrackingSpecimenListView
+            v-if="hasLoadedTab('specimens')"
             :initial-barcode="barcode"
             :trigger-key="specimenTriggerKey"
           />
