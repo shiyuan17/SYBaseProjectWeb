@@ -14,11 +14,10 @@ import {
   ElOption,
   ElPagination,
   ElSelect,
-  ElTimeline,
-  ElTimelineItem,
 } from 'element-plus';
 
 import CopyableIdentifier from '../../../components/CopyableIdentifier.vue';
+import ClinicalSubmissionTimeline from '../components/ClinicalSubmissionTimeline.vue';
 import TrackingSpecimenLatestRegistrationResult from '../components/TrackingSpecimenLatestRegistrationResult.vue';
 import TrackingSpecimenListTable from '../components/TrackingSpecimenListTable.vue';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
@@ -314,26 +313,26 @@ function goToReceiptHandling() {
 
         <WorkflowSectionCard
           title="最近流程节点"
-          description="展示最近追踪事件和操作上下文。"
+          description="按标本分组展示临床送检阶段、操作上下文和关键信息。"
         >
-          <ElTimeline v-if="detailApplicationDetail?.recentEvents?.length">
-            <ElTimelineItem
-              v-for="(event, index) in detailApplicationDetail.recentEvents
-                .slice(-6)
-                .reverse()"
-              :key="`${event.eventTime}-${event.nodeCode}-${index}`"
-              :timestamp="formatDateTime(event.eventTime)"
-            >
-              <div class="font-medium text-foreground">
-                {{ formatCurrentNode(event.nodeCode) }} /
-                {{ formatNullable(event.eventType) }}
-              </div>
-              <div class="text-sm text-muted-foreground">
-                {{ formatNullable(event.operatorName) }}
-              </div>
-            </ElTimelineItem>
-          </ElTimeline>
-          <ElEmpty v-else description="暂无流程节点记录" />
+          <ClinicalSubmissionTimeline
+            :application-no="
+              detailApplicationDetail?.applicationNo ?? detailRow?.applicationNo
+            "
+            :application-removal-at="
+              detailApplicationDetail?.specimenRemovalTime
+            "
+            :events="detailApplicationDetail?.recentEvents ?? []"
+            :patient-id="detailApplicationDetail?.patientId"
+            :patient-name="
+              detailApplicationDetail?.patientName ?? detailRow?.patientName
+            "
+            :specimens="
+              detailApplicationDetail?.specimens?.length
+                ? detailApplicationDetail.specimens
+                : (detailLatestRegisterResult?.specimens ?? [])
+            "
+          />
         </WorkflowSectionCard>
 
         <WorkflowSectionCard

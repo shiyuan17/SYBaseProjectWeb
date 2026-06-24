@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { CaseLifecycleTrackingView } from '../../doctor-workflow/types/doctor-workflow';
 import type {
   ApplicationListItem,
   ApplicationListQuery,
@@ -28,21 +27,15 @@ import {
 } from 'element-plus';
 
 import CopyableIdentifier from '../../../components/CopyableIdentifier.vue';
-import { getCaseLifecycleTracking } from '../../doctor-workflow/api/doctor-workflow-service';
 import {
   getApplicationTracking,
   listApplications,
 } from '../api/specimen-workflow-service';
-import TrackingApplicationLifecycleTimeline from '../components/TrackingApplicationLifecycleTimeline.vue';
+import ClinicalSubmissionTimeline from '../components/ClinicalSubmissionTimeline.vue';
 import TrackingApplicationListTable from '../components/TrackingApplicationListTable.vue';
 import TrackingApplicationSpecimenTable from '../components/TrackingApplicationSpecimenTable.vue';
-import TrackingApplicationTimelineTabs from '../components/TrackingApplicationTimelineTabs.vue';
 import WorkflowSectionCard from '../components/WorkflowSectionCard.vue';
-import {
-  DEFAULT_PAGE_SIZE,
-  LIFECYCLE_TRACKING_PERMISSION,
-  M2_PERMISSION_CODES,
-} from '../constants';
+import { DEFAULT_PAGE_SIZE, M2_PERMISSION_CODES } from '../constants';
 import { getWorkflowPageErrorMessage } from '../utils/error';
 import {
   formatApplicationFormStatus,
@@ -58,13 +51,10 @@ import {
 import { buildSpecimenAbnormalDetails } from '../utils/specimen-abnormal';
 import {
   buildInitialApplicationMatch,
-  buildSpecimenTimelineTabs,
   buildTrackingApplicationListQuery,
   resolveDetailRecentEvents,
   resolveDetailSpecimens,
 } from '../utils/tracking-application-list';
-import { buildTrackingLifecycleStages } from '../utils/tracking-lifecycle-timeline';
-import { buildTrackingTimelineData } from '../utils/tracking-timeline';
 
 const props = withDefaults(
   defineProps<{
@@ -86,10 +76,6 @@ const canQueryApplications = computed(() =>
   ),
 );
 
-const canQueryLifecycleTracking = computed(() =>
-  accessStore.accessCodes.includes(LIFECYCLE_TRACKING_PERMISSION),
-);
-
 const loading = ref(false);
 const pageError = ref('');
 const items = ref<ApplicationListItem[]>([]);
@@ -98,10 +84,6 @@ const total = ref(0);
 const detailVisible = ref(false);
 const detailLoading = ref(false);
 const detailTracking = ref<null | WorkflowTrackingQueryView>(null);
-const detailApplicationRow = ref<ApplicationListItem | null>(null);
-const lifecycleTracking = ref<CaseLifecycleTrackingView | null>(null);
-const lifecycleTimelineMessage = ref('');
-const activeTimelineTab = ref('overall');
 
 const filters = reactive({
   applicationNo: '',
@@ -134,46 +116,12 @@ async function loadApplications() {
   }
 }
 
-function findApplicationRow(applicationId: string) {
-  return items.value.find((item) => item.id === applicationId) ?? null;
-}
-
-async function loadLifecycleTracking(pathologyNo: null | string | undefined) {
-  lifecycleTracking.value = null;
-  lifecycleTimelineMessage.value = '';
-  const normalizedPathologyNo = pathologyNo?.trim() ?? '';
-  if (!normalizedPathologyNo) {
-    lifecycleTimelineMessage.value =
-      '当前申请单暂无病理号，暂以最近追踪事件展示。';
-    return;
-  }
-  if (!canQueryLifecycleTracking.value) {
-    lifecycleTimelineMessage.value =
-      '当前账号暂无报告追踪权限，暂以最近追踪事件展示。';
-    return;
-  }
-
-  try {
-    lifecycleTracking.value = await getCaseLifecycleTracking(
-      normalizedPathologyNo,
-    );
-  } catch {
-    lifecycleTracking.value = null;
-    lifecycleTimelineMessage.value =
-      '生命周期时间线加载失败，暂以最近追踪事件展示。';
-  }
-}
-
 async function openDetailById(applicationId: string) {
   const normalizedApplicationId = applicationId.trim();
   if (!normalizedApplicationId) {
     return;
   }
 
-  activeTimelineTab.value = 'overall';
-  detailApplicationRow.value = findApplicationRow(normalizedApplicationId);
-  lifecycleTracking.value = null;
-  lifecycleTimelineMessage.value = '';
   detailVisible.value = true;
   detailLoading.value = true;
   pageError.value = '';
@@ -181,7 +129,6 @@ async function openDetailById(applicationId: string) {
     detailTracking.value = await getApplicationTracking(
       normalizedApplicationId,
     );
-    await loadLifecycleTracking(detailApplicationRow.value?.pathologyNo);
   } catch (error) {
     pageError.value = getWorkflowPageErrorMessage(error);
     detailVisible.value = false;
@@ -219,22 +166,6 @@ const detailAbnormalSpecimens = computed(() =>
 
 const detailReceiptTargetBarcode = computed(
   () => detailAbnormalSpecimens.value[0]?.barcode?.trim() ?? '',
-);
-
-const trackingTimelineData = computed(() =>
-  buildTrackingTimelineData(detailRecentEvents.value, detailSpecimens.value),
-);
-
-const specimenTimelineTabs = computed(() =>
-  buildSpecimenTimelineTabs(detailSpecimens.value, trackingTimelineData.value),
-);
-
-const lifecycleTimelineStages = computed(() =>
-  buildTrackingLifecycleStages(lifecycleTracking.value),
-);
-
-const shouldShowLifecycleTimeline = computed(
-  () => lifecycleTimelineStages.value.length > 0,
 );
 
 function goToReceiptHandling() {
@@ -477,29 +408,16 @@ watch(
 
         <WorkflowSectionCard
           title="时间线事件"
-          description="展示最近追踪事件的时间、操作人、IP 与事件说明。"
+          description="按标本分组展示临床送检阶段、操作上下文和关键信息。"
         >
-          <TrackingApplicationLifecycleTimeline
-            v-if="shouldShowLifecycleTimeline"
-            :stages="lifecycleTimelineStages"
+          <ClinicalSubmissionTimeline
+            :application-no="detailTracking?.applicationNo"
+            :application-removal-at="detailTracking?.specimenRemovalTime"
+            :events="detailRecentEvents"
+            :patient-id="detailTracking?.patientId"
+            :patient-name="detailTracking?.patientName"
+            :specimens="detailSpecimens"
           />
-          <template v-else>
-            <ElAlert
-              v-if="lifecycleTimelineMessage"
-              class="mb-3"
-              :closable="false"
-              :title="lifecycleTimelineMessage"
-              show-icon
-              type="info"
-            />
-            <TrackingApplicationTimelineTabs
-              v-model="activeTimelineTab"
-              :detail-recent-events-count="detailRecentEvents.length"
-              :specimens="detailSpecimens"
-              :specimen-timeline-tabs="specimenTimelineTabs"
-              :tracking-timeline-data="trackingTimelineData"
-            />
-          </template>
         </WorkflowSectionCard>
 
         <WorkflowSectionCard
