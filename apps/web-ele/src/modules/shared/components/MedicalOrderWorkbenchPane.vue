@@ -1315,10 +1315,9 @@ onMounted(loadCandidates);
 
 .medical-order-action-panel__controls {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(180px, 320px) minmax(
-      180px,
-      240px
-    ) auto;
+  grid-template-columns:
+    minmax(0, 1fr) minmax(180px, 320px) minmax(180px, 240px)
+    auto;
   gap: 12px;
   align-items: center;
 }

@@ -388,7 +388,10 @@ function returnToWorkspace() {
               class="metric-stack__card"
             >
               <div class="metric-stack__label">{{ metric.label }}</div>
-              <div class="metric-stack__value" :class="[statusClass(metric.status)]">
+              <div
+                class="metric-stack__value"
+                :class="[statusClass(metric.status)]"
+              >
                 {{ displayMetricValue(metric.value) }}
               </div>
             </article>
@@ -401,7 +404,10 @@ function returnToWorkspace() {
               class="center-stage__node"
               :style="stageNodeStyle(node)"
             >
-              <div class="center-stage__bubble" :class="[statusClass(node.status)]">
+              <div
+                class="center-stage__bubble"
+                :class="[statusClass(node.status)]"
+              >
                 {{ displayMetricValue(node.value) }}
               </div>
               <div class="center-stage__node-label">{{ node.label }}</div>
@@ -482,7 +488,8 @@ function returnToWorkspace() {
               >
                 <span class="report-grid__label">{{ item.label }}</span>
                 <strong
-                  class="report-grid__value" :class="[statusClass(item.status)]"
+                  class="report-grid__value"
+                  :class="[statusClass(item.status)]"
                 >
                   {{ displayMetricValue(item.value) }}
                 </strong>
