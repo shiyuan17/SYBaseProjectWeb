@@ -93,6 +93,11 @@ export interface BlockSummary {
   usageStatus?: null | string;
 }
 
+export interface MedicalOrderBlockSummary {
+  blockNo: string;
+  medicalOrderBlockId: string;
+}
+
 export interface SlideSummary {
   archiveLocation?: null | string;
   archiveStatus?: null | string;
@@ -456,6 +461,7 @@ export interface DiagnosticWorkbenchView {
   infectiousAndPastHistorySummary?: null | string;
   infectiousSource?: null | string;
   inpatientNo?: null | string;
+  medicalOrderBlocks: MedicalOrderBlockSummary[];
   medicalOrders: MedicalOrderSummary[];
   outpatientNo?: null | string;
   patientAge?: null | string;
@@ -665,6 +671,15 @@ export interface CreateMedicalOrderRequest {
   targetType?: string;
   specimenNo?: string;
   terminalCode?: string;
+}
+
+export interface CreateMedicalOrderBlockRequest {
+  blockNo: string;
+}
+
+export interface MedicalOrderBlockCreateResult {
+  blockNo: string;
+  medicalOrderBlockId: string;
 }
 
 export interface MedicalOrderActionRequest {

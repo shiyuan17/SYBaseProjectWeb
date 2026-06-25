@@ -504,12 +504,13 @@ const canEditCapturedImages = computed(
 const medicalOrderBlockOptions = computed<MedicalOrderBlockOption[]>(() =>
   workbench.embeddingBoxRows.value.map((row) => ({
     blockCode: row.box.embeddingBoxNo,
-    blockId: row.box.embeddingBoxNo,
     description:
       row.box.embeddingRemarks?.trim() || row.specimenName?.trim() || null,
     label: [row.box.embeddingBoxNo?.trim(), row.specimenName?.trim()]
       .filter(Boolean)
       .join(' '),
+    optionId: `EMBEDDING_BOX:${row.specimenIndex}:${row.boxIndex}:${row.box.embeddingBoxNo}`,
+    source: 'MEDICAL_ORDER_ONLY' as const,
   })),
 );
 const workstationGridStyle = computed(() => ({

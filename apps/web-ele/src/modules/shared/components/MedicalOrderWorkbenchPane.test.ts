@@ -23,6 +23,7 @@ const rowContextKey = vi.hoisted(() => Symbol('medical-order-row'));
 const {
   confirmMedicalOrderBillingMock,
   createMedicalOrderMock,
+  createMedicalOrderBlockMock,
   executeMedicalOrderBillingMock,
   listMedicalOrderDictsMock,
   listMedicalOrderPackagesPageMock,
@@ -33,6 +34,8 @@ const {
 } = vi.hoisted(() => ({
   confirmMedicalOrderBillingMock: vi.fn<(data: unknown) => Promise<unknown>>(),
   createMedicalOrderMock: vi.fn<(data: unknown) => Promise<unknown>>(),
+  createMedicalOrderBlockMock:
+    vi.fn<(caseId: string, data: unknown) => Promise<unknown>>(),
   executeMedicalOrderBillingMock: vi.fn<(data: unknown) => Promise<unknown>>(),
   listMedicalOrderDictsMock: vi.fn<() => Promise<unknown[]>>(),
   listMedicalOrderPackagesPageMock:
@@ -88,6 +91,7 @@ vi.mock('element-plus', () => ({
 vi.mock('#/modules/doctor-workflow/api/doctor-workflow-service', () => ({
   confirmMedicalOrderBilling: confirmMedicalOrderBillingMock,
   createMedicalOrder: createMedicalOrderMock,
+  createMedicalOrderBlock: createMedicalOrderBlockMock,
   executeMedicalOrderBilling: executeMedicalOrderBillingMock,
   listMedicalOrderDicts: listMedicalOrderDictsMock,
   listMedicalOrderPackagesPage: listMedicalOrderPackagesPageMock,
@@ -102,15 +106,19 @@ import MedicalOrderWorkbenchPane from './MedicalOrderWorkbenchPane.vue';
 const blockOptionsFixture: MedicalOrderBlockOption[] = [
   {
     blockCode: 'A1',
-    blockId: 'BOX-001',
     description: '胃窦组织',
     label: 'A1 胃窦组织',
+    optionId: 'CASE_BLOCK:BOX-001',
+    source: 'CASE_BLOCK',
+    targetBlockId: 'BOX-001',
   },
   {
     blockCode: 'B2',
-    blockId: 'BOX-002',
     description: '胃体组织',
     label: 'B2 胃体组织',
+    optionId: 'CASE_BLOCK:BOX-002',
+    source: 'CASE_BLOCK',
+    targetBlockId: 'BOX-002',
   },
 ];
 
@@ -224,6 +232,10 @@ function resetMocks() {
   listMedicalOrderPackagesPageMock.mockResolvedValue(packageFixture);
   createMedicalOrderMock.mockResolvedValue({
     orderId: 'ORDER-NEW',
+  });
+  createMedicalOrderBlockMock.mockResolvedValue({
+    blockNo: 'A3',
+    medicalOrderBlockId: 'MOB-001',
   });
   executeMedicalOrderBillingMock.mockResolvedValue({
     failureCount: 0,
@@ -417,6 +429,96 @@ describe('MedicalOrderWorkbenchPane', () => {
     expect(findButton(root, '提交医嘱').disabled).toBe(true);
     expect(findButton(root, '执行收费').disabled).toBe(true);
     expect(root.textContent).not.toContain('删除');
+
+    app.unmount();
+  });
+
+  it('shows pathology number label and creates a persisted medical-order-only block on enter', async () => {
+    const { app, root } = await mountPane();
+
+    expect(root.textContent).toContain('病理号：');
+    expect(root.textContent).toContain('BL-001');
+
+    const input = findByTestId(root, 'medical-order-block-input').querySelector(
+      'input',
+    ) as HTMLInputElement | null;
+    expect(input).toBeTruthy();
+
+    input!.value = 'BL-001-A3';
+    input!.dispatchEvent(new Event('input', { bubbles: true }));
+    input!.dispatchEvent(
+      new KeyboardEvent('keyup', { bubbles: true, key: 'Enter' }),
+    );
+    await flushAll();
+
+    expect(createMedicalOrderBlockMock).toHaveBeenCalledWith('CASE-001', {
+      blockNo: 'A3',
+    });
+    expect(root.textContent).toContain('A3');
+
+    app.unmount();
+  });
+
+  it('reuses existing block options for normalized manual input instead of creating duplicates', async () => {
+    const { app, root } = await mountPane();
+
+    const input = findByTestId(root, 'medical-order-block-input').querySelector(
+      'input',
+    ) as HTMLInputElement | null;
+    expect(input).toBeTruthy();
+
+    input!.value = 'BL-001-A1';
+    input!.dispatchEvent(new Event('input', { bubbles: true }));
+    input!.dispatchEvent(
+      new KeyboardEvent('keyup', { bubbles: true, key: 'Enter' }),
+    );
+    await flushAll();
+
+    expect(createMedicalOrderBlockMock).not.toHaveBeenCalled();
+
+    app.unmount();
+  });
+
+  it('submits medical orders without targetBlockId when the selected block comes from the medical-order-only pool', async () => {
+    const { app, root } = await mountPane({
+      blockOptions: [
+        ...blockOptionsFixture,
+        {
+          blockCode: 'A3',
+          description: '手工新增',
+          label: 'A3',
+          optionId: 'MEDICAL_ORDER_ONLY:MOB-001',
+          source: 'MEDICAL_ORDER_ONLY',
+        },
+      ],
+    });
+
+    const select = root.querySelector('select') as HTMLSelectElement | null;
+    expect(select).toBeTruthy();
+    select!.value = 'MEDICAL_ORDER_ONLY:MOB-001';
+    select!.dispatchEvent(new Event('change', { bubbles: true }));
+    await flushAll();
+
+    findByTestId(root, 'medical-order-candidate-item-ITEM-001')
+      .querySelector('button')
+      ?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    await flushAll();
+
+    findButton(root, '提交医嘱').click();
+    await flushAll();
+
+    expect(createMedicalOrderMock).toHaveBeenCalledWith({
+      blockNo: 'A3',
+      caseId: 'CASE-001',
+      orderContent: '补做特殊染色（蜡块: A3）',
+      orderItemId: 'ITEM-001',
+      orderType: 'SPECIAL_STAIN',
+      remarks: undefined,
+      targetBlockNo: 'A3',
+    });
+    expect(createMedicalOrderMock.mock.calls[0]?.[0]).not.toHaveProperty(
+      'targetBlockId',
+    );
 
     app.unmount();
   });

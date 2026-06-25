@@ -8,6 +8,7 @@ import type {
   CompleteConsultationRequest,
   ConsultationOperationResult,
   CreateConsultationRequest,
+  CreateMedicalOrderBlockRequest,
   CreateMedicalOrderQcEvaluationRequest,
   CreateMedicalOrderRequest,
   CreateReportRevisionRequest,
@@ -27,6 +28,7 @@ import type {
   MedicalOrderBillingItemResult,
   MedicalOrderBillingRequest,
   MedicalOrderBillingResult,
+  MedicalOrderBlockCreateResult,
   MedicalOrderCategoryNode,
   MedicalOrderOperationResult,
   MedicalOrderPackagePageQuery,
@@ -253,6 +255,12 @@ export function mapDiagnosticWorkbenchResponse(
       response.infectiousAndPastHistorySummary ?? null,
     infectiousSource: response.infectiousSource ?? null,
     inpatientNo: response.inpatientNo ?? null,
+    medicalOrderBlocks: Array.isArray(response.medicalOrderBlocks)
+      ? response.medicalOrderBlocks.map((item) => ({
+          blockNo: item.blockNo ?? '',
+          medicalOrderBlockId: item.medicalOrderBlockId ?? '',
+        }))
+      : [],
     medicalOrders: response.medicalOrders ?? [],
     outpatientNo: response.outpatientNo ?? null,
     patientAge: response.patientAge ?? null,
@@ -660,6 +668,16 @@ export async function startDiagnosticTask(
 export async function createMedicalOrder(data: CreateMedicalOrderRequest) {
   return requestClient.post<MedicalOrderOperationResult>(
     '/v1/medical-orders',
+    data,
+  );
+}
+
+export async function createMedicalOrderBlock(
+  caseId: string,
+  data: CreateMedicalOrderBlockRequest,
+) {
+  return requestClient.post<MedicalOrderBlockCreateResult>(
+    `/v1/pathology-cases/${caseId}/medical-order-blocks`,
     data,
   );
 }

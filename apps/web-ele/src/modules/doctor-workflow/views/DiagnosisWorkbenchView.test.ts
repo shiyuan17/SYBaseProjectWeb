@@ -13,6 +13,7 @@ const {
   confirmMedicalOrderBillingMock,
   createConsultationMock,
   createMedicalOrderMock,
+  createMedicalOrderBlockMock,
   createPathologyReportMock,
   commentConsultationParticipantMock,
   completeConsultationMock,
@@ -47,6 +48,8 @@ const {
   confirmMedicalOrderBillingMock: vi.fn<(data: unknown) => Promise<unknown>>(),
   createConsultationMock: vi.fn<(data: unknown) => Promise<unknown>>(),
   createMedicalOrderMock: vi.fn<(data: unknown) => Promise<unknown>>(),
+  createMedicalOrderBlockMock:
+    vi.fn<(caseId: string, data: unknown) => Promise<unknown>>(),
   createPathologyReportMock:
     vi.fn<(data: unknown) => Promise<{ reportId: string }>>(),
   commentConsultationParticipantMock:
@@ -114,6 +117,7 @@ const doctorWorkflowServiceMocks = vi.hoisted(() => ({
   confirmMedicalOrderBilling: confirmMedicalOrderBillingMock,
   createConsultation: createConsultationMock,
   createMedicalOrder: createMedicalOrderMock,
+  createMedicalOrderBlock: createMedicalOrderBlockMock,
   createPathologyReport: createPathologyReportMock,
   executeMedicalOrderBilling: executeMedicalOrderBillingMock,
   getDiagnosticWorkbench: getDiagnosticWorkbenchMock,
@@ -520,6 +524,7 @@ const workbenchFixtureByCaseId: Record<string, DiagnosticWorkbenchView> = {
         status: 'IN_PROGRESS',
       },
     ],
+    medicalOrderBlocks: [],
     outpatientNo: '',
     patientAge: '30岁1月',
     patientGender: '女',
@@ -638,6 +643,7 @@ const workbenchFixtureByCaseId: Record<string, DiagnosticWorkbenchView> = {
     hasPendingRevision: true,
     historicalPathologies: [],
     medicalOrders: [],
+    medicalOrderBlocks: [],
     pacsExaminations: [],
     pathologyNo: 'PATH-002',
     patientName: '李四',
@@ -672,6 +678,7 @@ function resetTestState() {
   confirmMedicalOrderBillingMock.mockReset();
   createConsultationMock.mockReset();
   createMedicalOrderMock.mockReset();
+  createMedicalOrderBlockMock.mockReset();
   createPathologyReportMock.mockReset();
   commentConsultationParticipantMock.mockReset();
   completeConsultationMock.mockReset();
@@ -727,6 +734,10 @@ function resetTestState() {
     consultationId: 'CONS-NEW',
   });
   createMedicalOrderMock.mockResolvedValue({});
+  createMedicalOrderBlockMock.mockResolvedValue({
+    blockNo: 'A3',
+    medicalOrderBlockId: 'MOB-001',
+  });
   createPathologyReportMock.mockResolvedValue({
     reportId: 'REPORT-CREATED',
   });
@@ -861,12 +872,34 @@ async function clickMaterialTab(label: string) {
   await flushAsyncWork();
 }
 
+function getActiveMaterialTabText() {
+  return (
+    document.querySelector<HTMLElement>(
+      '.el-tabs__item.is-active, [role="tab"][aria-selected="true"]',
+    )?.textContent ?? ''
+  );
+}
+
+async function openMedicalOrderTab() {
+  await clickMaterialTab('医嘱信息');
+}
+
 function getOrderPaneText() {
   return (
     document.querySelector(
       '[data-testid="diagnosis-workbench-medical-order-pane"]',
     )?.textContent ?? ''
   );
+}
+
+function createDeferred<T>() {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((innerResolve, innerReject) => {
+    resolve = innerResolve;
+    reject = innerReject;
+  });
+  return { promise, reject, resolve };
 }
 
 describe('DiagnosisWorkbenchView', () => {
@@ -915,7 +948,18 @@ describe('DiagnosisWorkbenchView', () => {
       },
     });
     expect(wrapper.text()).toContain('张三');
-    expect(wrapper.text()).toContain('最终诊断一');
+    expect(
+      document.querySelector(
+        '[data-testid="diagnosis-report-diagnosis-editor"]',
+      ),
+    ).toBeTruthy();
+    expect(
+      (
+        document.querySelector(
+          '[data-testid="diagnosis-report-diagnosis-editor"]',
+        ) as HTMLTextAreaElement | null
+      )?.value,
+    ).toBe('最终诊断一');
 
     wrapper.unmount();
   }, 15_000);
@@ -963,7 +1007,13 @@ describe('DiagnosisWorkbenchView', () => {
     expect(keywordInput).toBeTruthy();
     expect(keywordInput?.value).toBe('PATH-002');
     expect(wrapper.text()).toContain('李四');
-    expect(wrapper.text()).toContain('最终诊断二');
+    expect(
+      (
+        document.querySelector(
+          '[data-testid="diagnosis-report-diagnosis-editor"]',
+        ) as HTMLTextAreaElement | null
+      )?.value,
+    ).toBe('最终诊断二');
 
     wrapper.unmount();
   }, 15_000);
@@ -991,7 +1041,13 @@ describe('DiagnosisWorkbenchView', () => {
     });
     expect(keywordInput?.value).toBe('');
     expect(wrapper.text()).toContain('李四');
-    expect(wrapper.text()).toContain('最终诊断二');
+    expect(
+      (
+        document.querySelector(
+          '[data-testid="diagnosis-report-diagnosis-editor"]',
+        ) as HTMLTextAreaElement | null
+      )?.value,
+    ).toBe('最终诊断二');
 
     wrapper.unmount();
   }, 15_000);
@@ -1102,6 +1158,44 @@ describe('DiagnosisWorkbenchView', () => {
     wrapper.unmount();
   }, 15_000);
 
+  it('keeps heavy middle and right panes unmounted while workbench detail is loading', async () => {
+    const deferredWorkbench = createDeferred<DiagnosticWorkbenchView>();
+    getDiagnosticWorkbenchMock.mockReset();
+    getDiagnosticWorkbenchMock.mockReturnValueOnce(deferredWorkbench.promise);
+
+    const wrapper = await mountView();
+
+    expect(
+      document.querySelector('[data-testid="diagnosis-report-editor"]'),
+    ).toBeNull();
+    expect(
+      document.querySelector('[data-testid="diagnosis-workbench-tabs"]'),
+    ).toBeNull();
+    expect(
+      document.querySelector(
+        '[data-testid="diagnosis-workbench-report-placeholder"]',
+      ),
+    ).toBeTruthy();
+    expect(
+      document.querySelector(
+        '[data-testid="diagnosis-workbench-detail-placeholder"]',
+      ),
+    ).toBeTruthy();
+    expect(wrapper.text()).toContain('病例详情加载中');
+
+    deferredWorkbench.resolve(workbenchFixtureByCaseId['CASE-001']!);
+    await flushAsyncWork();
+
+    expect(
+      document.querySelector('[data-testid="diagnosis-report-editor"]'),
+    ).toBeTruthy();
+    expect(
+      document.querySelector('[data-testid="diagnosis-workbench-tabs"]'),
+    ).toBeTruthy();
+
+    wrapper.unmount();
+  });
+
   it(
     'renders live print preview tab from the editable report draft',
     async () => {
@@ -1147,11 +1241,6 @@ describe('DiagnosisWorkbenchView', () => {
       expect(wrapper.text()).not.toContain('诊断任务流转');
       expect(wrapper.text()).not.toContain('报告编写与流转');
       expect(wrapper.text()).not.toContain('协同与闭环');
-      expect(wrapper.text()).toContain('门诊号');
-      expect(wrapper.text()).toContain('F2600036');
-      expect(wrapper.text()).toContain('范渊旭,女,30岁1月');
-      expect(wrapper.text()).toContain('切片检查与诊断');
-      expect(wrapper.text()).toContain('1:糖尿病伴肾并发症');
       expect(wrapper.text()).not.toContain(
         '当前病例、报告状态与诊断操作集中在同一区域',
       );
@@ -1159,19 +1248,40 @@ describe('DiagnosisWorkbenchView', () => {
       expect(wrapper.text()).not.toContain('PACS影像检查');
       expect(wrapper.text()).not.toContain('东软电子病历');
       expect(wrapper.text()).not.toContain('检验报告');
+
+      await clickMaterialTab('患者信息');
+      expect(wrapper.text()).toContain('门诊号');
+      expect(wrapper.text()).toContain('F2600036');
+      expect(wrapper.text()).toContain('范渊旭,女,30岁1月');
+      expect(wrapper.text()).toContain('切片检查与诊断');
+      expect(wrapper.text()).toContain('1:糖尿病伴肾并发症');
+
+      await clickMaterialTab('历史病理');
       expect(wrapper.text()).toContain('年龄');
       expect(wrapper.text()).toContain('住院号');
       expect(wrapper.text()).toContain('检查号');
       expect(wrapper.text()).toContain('送检类型');
+
+      await clickMaterialTab('PACS检查');
       expect(wrapper.text()).toContain('影像诊断');
+
+      await clickMaterialTab('报告痕迹');
       expect(wrapper.text()).toContain('报告医师');
       expect(wrapper.text()).toContain('诊断信息');
+
+      await clickMaterialTab('蜡块');
       expect(wrapper.text()).toContain('胃窦活检组织');
       expect(wrapper.text()).toContain('蜡块使用情况');
+
+      await clickMaterialTab('切片');
       expect(wrapper.text()).toContain('2026-06-01 08:30:00');
       expect(wrapper.text()).toContain('切片人');
+
+      await clickMaterialTab('备注');
       expect(wrapper.text()).toContain('申请备注');
       expect(wrapper.text()).toContain('医嘱备注【F2600036-1】');
+
+      await clickMaterialTab('收费项目');
       expect(wrapper.text()).toContain('免疫组化 CK');
       expect(wrapper.text()).toContain('收费员甲');
 
@@ -1500,32 +1610,109 @@ describe('DiagnosisWorkbenchView', () => {
     wrapper.unmount();
   });
 
-  it(
-    'renders medical order as the first diagnostic material tab',
-    async () => {
-      const wrapper = await mountView();
+  it('resets the active detail tab to capture when switching to another case', async () => {
+    const wrapper = await mountView();
+    await openMedicalOrderTab();
 
-      expect(getButtonTexts()).not.toContain('医嘱');
-      expect(mockRouter.push).not.toHaveBeenCalled();
-      const orderPane = document.querySelector(
+    expect(getActiveMaterialTabText()).toContain('医嘱信息');
+    expect(
+      document.querySelector(
         '[data-testid="diagnosis-workbench-medical-order-pane"]',
+      ),
+    ).toBeTruthy();
+
+    await wrapper.clickByTestId('diagnosis-workbench-queue-row-TASK-002');
+
+    expect(getActiveMaterialTabText()).toContain('采图区');
+    expect(
+      document.querySelector(
+        '[data-testid="diagnosis-workbench-medical-order-pane"]',
+      ),
+    ).toBeNull();
+
+    wrapper.unmount();
+  });
+
+  it('defers medical order pane mounting and candidate loading until opening its tab', async () => {
+    const wrapper = await mountView();
+
+    expect(getButtonTexts()).not.toContain('医嘱');
+    expect(mockRouter.push).not.toHaveBeenCalled();
+    expect(
+      document.querySelector(
+        '[data-testid="diagnosis-workbench-medical-order-pane"]',
+      ),
+    ).toBeNull();
+    expect(listMedicalOrderDictsMock).not.toHaveBeenCalled();
+    expect(listMedicalOrderPackagesPageMock).not.toHaveBeenCalled();
+
+    await openMedicalOrderTab();
+
+    const orderPane = document.querySelector(
+      '[data-testid="diagnosis-workbench-medical-order-pane"]',
+    );
+    expect(orderPane).toBeTruthy();
+    expect(listMedicalOrderDictsMock).toHaveBeenCalledTimes(1);
+    expect(listMedicalOrderPackagesPageMock).toHaveBeenCalledTimes(1);
+
+    const orderPaneText = orderPane?.textContent ?? '';
+    expect(orderPaneText).toContain('医嘱区');
+    expect(orderPaneText).not.toContain('病理号: F2600036');
+    expect(orderPaneText).toContain('A1 胃窦组织');
+    expect(orderPaneText).toContain('医嘱项目: 未收费');
+    expect(orderPaneText).toContain('医嘱项目待选列表');
+    expect(orderPaneText).toContain('执行收费');
+    expect(orderPaneText).toContain('收费管理');
+    expect(orderPaneText).not.toContain('删除');
+    expect(orderPaneText).toContain('执行中');
+    expect(orderPaneText).toContain('待收费');
+    expect(orderPaneText).not.toContain('IN_PROGRESS');
+    expect(orderPaneText).not.toContain('PENDING');
+    expect(orderPaneText).toContain('特殊染色');
+    expect(orderPaneText).toContain('免疫组化套餐');
+
+    wrapper.unmount();
+  });
+
+  it(
+    'keeps unsaved diagnosis draft when refreshing the same case workbench',
+    async () => {
+      mockAccessStore.accessCodes = [
+        'PERM_M4_WORKBENCH_QUERY',
+        'PERM_M4_MEDICAL_ORDER_CREATE',
+      ];
+      const initialWorkbench = workbenchFixtureByCaseId['CASE-001']!;
+      const refreshedWorkbench: DiagnosticWorkbenchView = {
+        ...initialWorkbench,
+        medicalOrders: initialWorkbench.medicalOrders.map((item) => ({
+          ...item,
+          billingStatus: 'SUCCESS',
+        })),
+      };
+      getDiagnosticWorkbenchMock
+        .mockResolvedValueOnce(initialWorkbench)
+        .mockResolvedValueOnce(refreshedWorkbench);
+
+      const wrapper = await mountView();
+      const diagnosisEditor = document.querySelector<HTMLTextAreaElement>(
+        '[data-testid="diagnosis-report-diagnosis-editor"]',
       );
-      expect(orderPane).toBeTruthy();
-      const orderPaneText = orderPane?.textContent ?? '';
-      expect(orderPaneText).toContain('医嘱区');
-      expect(orderPaneText).not.toContain('病理号: F2600036');
-      expect(orderPaneText).toContain('A1 胃窦组织');
-      expect(orderPaneText).toContain('医嘱项目: 未收费');
-      expect(orderPaneText).toContain('医嘱项目待选列表');
-      expect(orderPaneText).toContain('执行收费');
-      expect(orderPaneText).toContain('收费管理');
-      expect(orderPaneText).not.toContain('删除');
-      expect(orderPaneText).toContain('执行中');
-      expect(orderPaneText).toContain('待收费');
-      expect(orderPaneText).not.toContain('IN_PROGRESS');
-      expect(orderPaneText).not.toContain('PENDING');
-      expect(orderPaneText).toContain('特殊染色');
-      expect(orderPaneText).toContain('免疫组化套餐');
+      expect(diagnosisEditor).toBeTruthy();
+      diagnosisEditor!.value = '未保存诊断草稿';
+      diagnosisEditor!.dispatchEvent(new Event('input'));
+      await flushAsyncWork();
+
+      await openMedicalOrderTab();
+      findButton('执行收费').click();
+      await flushAsyncWork();
+
+      expect(
+        (
+          document.querySelector(
+            '[data-testid="diagnosis-report-diagnosis-editor"]',
+          ) as HTMLTextAreaElement | null
+        )?.value,
+      ).toBe('未保存诊断草稿');
 
       wrapper.unmount();
     },
@@ -1536,6 +1723,7 @@ describe('DiagnosisWorkbenchView', () => {
     'filters medical order candidates by dictionary category',
     async () => {
       const wrapper = await mountView();
+      await openMedicalOrderTab();
 
       expect(getOrderPaneText()).toContain('免疫组化');
       expect(getOrderPaneText()).toContain('Fish');
@@ -1575,6 +1763,7 @@ describe('DiagnosisWorkbenchView', () => {
     'keeps medical order group and letter filters mutually exclusive',
     async () => {
       const wrapper = await mountView();
+      await openMedicalOrderTab();
 
       findByTestId('medical-order-template-group-FISH').click();
       await flushAsyncWork();
@@ -1612,6 +1801,7 @@ describe('DiagnosisWorkbenchView', () => {
     'does not show fallback medical order candidates outside dictionaries',
     async () => {
       const wrapper = await mountView();
+      await openMedicalOrderTab();
 
       findByTestId('medical-order-template-group-DNA').click();
       await flushAsyncWork();
@@ -1632,6 +1822,7 @@ describe('DiagnosisWorkbenchView', () => {
     async () => {
       listMedicalOrderDictsMock.mockResolvedValueOnce([]);
       const wrapper = await mountView();
+      await openMedicalOrderTab();
 
       expect(getOrderPaneText()).toContain('暂无符合条件的医嘱项目');
       expect(getOrderPaneText()).not.toContain('EGFR基因突变');
@@ -1651,6 +1842,7 @@ describe('DiagnosisWorkbenchView', () => {
         'PERM_M4_MEDICAL_ORDER_CREATE',
       ];
       const wrapper = await mountView();
+      await openMedicalOrderTab();
 
       findByTestId('medical-order-candidate-item-ITEM-001')
         .querySelector<HTMLButtonElement>('button')
@@ -1718,11 +1910,14 @@ describe('DiagnosisWorkbenchView', () => {
         ],
       });
       const wrapper = await mountView();
+      await openMedicalOrderTab();
 
       const orderPaneText = getOrderPaneText();
+      expect(orderPaneText).toContain('病理号： F2600036');
       expect(orderPaneText).toContain('A1 胃窦组织');
       expect(orderPaneText).toContain('HE 染色（蜡块: A1 胃窦组织）');
-      expect(orderPaneText).not.toContain('F2600036');
+      expect(orderPaneText).not.toContain('F2600036-A1');
+      expect(orderPaneText).not.toContain('F2600036 胃窦组织');
 
       wrapper.unmount();
     },
@@ -1737,6 +1932,7 @@ describe('DiagnosisWorkbenchView', () => {
         'PERM_M4_MEDICAL_ORDER_CREATE',
       ];
       const wrapper = await mountView();
+      await openMedicalOrderTab();
 
       const orderItemButton = [...document.querySelectorAll('button')].find(
         (button) => button.textContent?.includes('【特殊染色】'),
@@ -1774,6 +1970,53 @@ describe('DiagnosisWorkbenchView', () => {
   );
 
   it(
+    'persists manually created medical-order-only blocks across workbench refreshes',
+    async () => {
+      mockAccessStore.accessCodes = [
+        'PERM_M4_WORKBENCH_QUERY',
+        'PERM_M4_MEDICAL_ORDER_CREATE',
+      ];
+      const initialWorkbench = workbenchFixtureByCaseId['CASE-001']!;
+      const refreshedWorkbench: DiagnosticWorkbenchView = {
+        ...initialWorkbench,
+        medicalOrderBlocks: [
+          {
+            blockNo: 'A3',
+            medicalOrderBlockId: 'MOB-001',
+          },
+        ],
+      };
+      getDiagnosticWorkbenchMock
+        .mockResolvedValueOnce(initialWorkbench)
+        .mockResolvedValueOnce(refreshedWorkbench);
+
+      const wrapper = await mountView();
+      await openMedicalOrderTab();
+
+      const blockInput = document.querySelector(
+        '[data-testid="medical-order-block-input"] input',
+      ) as HTMLInputElement | null;
+      expect(blockInput).toBeTruthy();
+
+      blockInput!.value = 'A3';
+      blockInput!.dispatchEvent(new Event('input', { bubbles: true }));
+      blockInput!.dispatchEvent(
+        new KeyboardEvent('keyup', { bubbles: true, key: 'Enter' }),
+      );
+      await flushAsyncWork();
+
+      expect(createMedicalOrderBlockMock).toHaveBeenCalledWith('CASE-001', {
+        blockNo: 'A3',
+      });
+      expect(getDiagnosticWorkbenchMock).toHaveBeenLastCalledWith('CASE-001');
+      expect(getOrderPaneText()).toContain('A3');
+
+      wrapper.unmount();
+    },
+    slowWorkbenchTestTimeout,
+  );
+
+  it(
     'creates one medical order per package item',
     async () => {
       mockAccessStore.accessCodes = [
@@ -1781,6 +2024,7 @@ describe('DiagnosisWorkbenchView', () => {
         'PERM_M4_MEDICAL_ORDER_CREATE',
       ];
       const wrapper = await mountView();
+      await openMedicalOrderTab();
 
       const packageButton = [...document.querySelectorAll('button')].find(
         (button) => button.textContent?.includes('【免疫组化套餐2项】'),
@@ -1819,6 +2063,7 @@ describe('DiagnosisWorkbenchView', () => {
     'opens charge management dialog from the medical order pane',
     async () => {
       const wrapper = await mountView();
+      await openMedicalOrderTab();
 
       findButton('收费管理').click();
       await flushAsyncWork();
@@ -1843,6 +2088,7 @@ describe('DiagnosisWorkbenchView', () => {
         'PERM_M4_MEDICAL_ORDER_CREATE',
       ];
       const wrapper = await mountView();
+      await openMedicalOrderTab();
 
       const submitButton = findButton('提交医嘱');
       expect(submitButton).toBeTruthy();
@@ -1875,6 +2121,7 @@ describe('DiagnosisWorkbenchView', () => {
         .mockResolvedValueOnce(initialWorkbench)
         .mockResolvedValueOnce(chargedWorkbench);
       const wrapper = await mountView();
+      await openMedicalOrderTab();
 
       findButton('执行收费').click();
       await flushAsyncWork();
@@ -1914,6 +2161,7 @@ describe('DiagnosisWorkbenchView', () => {
         ],
       });
       const wrapper = await mountView();
+      await openMedicalOrderTab();
 
       document
         .querySelector<HTMLElement>(
@@ -1954,6 +2202,7 @@ describe('DiagnosisWorkbenchView', () => {
         .mockResolvedValueOnce(initialWorkbench)
         .mockResolvedValueOnce(chargedWorkbench);
       const wrapper = await mountView();
+      await openMedicalOrderTab();
 
       findButton('收费管理').click();
       await flushAsyncWork();

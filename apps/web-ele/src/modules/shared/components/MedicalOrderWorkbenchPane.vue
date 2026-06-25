@@ -32,6 +32,7 @@ import {
 import {
   confirmMedicalOrderBilling,
   createMedicalOrder,
+  createMedicalOrderBlock,
   executeMedicalOrderBilling,
   listMedicalOrderDicts,
   listMedicalOrderPackagesPage,
@@ -108,14 +109,16 @@ const submitLoading = ref(false);
 const chargeLoading = ref(false);
 const chargeDialogVisible = ref(false);
 const candidateError = ref('');
-const selectedBlockId = ref('');
+const selectedBlockOptionId = ref('');
 const keyword = ref('');
+const manualBlockInput = ref('');
 const activeCategoryId = ref('');
 const selectedLetter = ref('');
 const chargeActionStatus = ref('');
 const selectedCandidateKeys = ref(new Set<string>());
 const selectedMedicalOrderIds = ref(new Set<string>());
 const dictTree = ref<MedicalOrderCategoryNode[]>([]);
+const localMedicalOrderOnlyBlocks = ref<MedicalOrderBlockOption[]>([]);
 const packages = ref<MedicalOrderPackageView[]>([]);
 const draftItems = reactive<DraftMedicalOrderItem[]>([]);
 
@@ -124,8 +127,26 @@ const currentDoctorName = computed(
 );
 
 const selectedBlock = computed(() =>
-  props.blockOptions.find((item) => item.blockId === selectedBlockId.value),
+  mergedBlockOptions.value.find(
+    (item) => item.optionId === selectedBlockOptionId.value,
+  ),
 );
+const mergedBlockOptions = computed(() => {
+  const existingCodes = new Set(
+    props.blockOptions.map((item) =>
+      normalizeBlockCode(item.blockCode, props.pathologyNo),
+    ),
+  );
+  return [
+    ...props.blockOptions,
+    ...localMedicalOrderOnlyBlocks.value.filter(
+      (item) =>
+        !existingCodes.has(
+          normalizeBlockCode(item.blockCode, props.pathologyNo),
+        ),
+    ),
+  ];
+});
 const normalizedKeyword = computed(() => keyword.value.trim().toLowerCase());
 const sourceOrderItems = computed(() =>
   flattenMedicalOrderItems(dictTree.value).filter((item) => item.enabled),
@@ -348,17 +369,41 @@ watch(
   () => {
     draftItems.splice(0);
     chargeActionStatus.value = '';
+    localMedicalOrderOnlyBlocks.value = [];
     selectedMedicalOrderIds.value = new Set();
   },
 );
 
 watch(
   () => props.blockOptions,
-  (blocks) => {
-    if (blocks.some((item) => item.blockId === selectedBlockId.value)) {
+  () => {
+    if (
+      mergedBlockOptions.value.some(
+        (item) => item.optionId === selectedBlockOptionId.value,
+      )
+    ) {
       return;
     }
-    selectedBlockId.value = blocks[0]?.blockId ?? '';
+    selectedBlockOptionId.value = mergedBlockOptions.value[0]?.optionId ?? '';
+  },
+  { immediate: true },
+);
+
+watch(
+  () => props.blockOptions,
+  (blocks) => {
+    const persistedCodes = new Set(
+      blocks.map((item) =>
+        normalizeBlockCode(item.blockCode, props.pathologyNo),
+      ),
+    );
+    localMedicalOrderOnlyBlocks.value =
+      localMedicalOrderOnlyBlocks.value.filter(
+        (item) =>
+          !persistedCodes.has(
+            normalizeBlockCode(item.blockCode, props.pathologyNo),
+          ),
+      );
   },
   { immediate: true },
 );
@@ -494,6 +539,16 @@ function getBlockLabel(block: MedicalOrderBlockOption) {
   return block.label.trim();
 }
 
+function normalizeBlockCode(
+  value: null | string | undefined,
+  pathologyNo?: null | string,
+) {
+  const normalizedValue = getBlockTextLabel(value, pathologyNo)
+    .trim()
+    .toUpperCase();
+  return normalizedValue;
+}
+
 function getBlockTextLabel(
   value: null | string | undefined,
   pathologyNo?: null | string,
@@ -541,6 +596,63 @@ function buildOrderContent(item: MedicalOrderItemView) {
 
 function getSelectedBlockCode() {
   return selectedBlock.value?.blockCode?.trim() || undefined;
+}
+
+function findBlockOptionByCode(blockCode: string) {
+  return mergedBlockOptions.value.find(
+    (item) =>
+      normalizeBlockCode(item.blockCode, props.pathologyNo) === blockCode,
+  );
+}
+
+async function submitManualBlock() {
+  if (props.readonly) {
+    return;
+  }
+  if (!props.caseId) {
+    ElMessage.warning('请先从左侧选择病例');
+    return;
+  }
+  const normalizedBlockCode = normalizeBlockCode(
+    manualBlockInput.value,
+    props.pathologyNo,
+  );
+  if (!normalizedBlockCode) {
+    ElMessage.warning('请输入蜡块号');
+    return;
+  }
+  if (normalizedBlockCode.length > 64) {
+    ElMessage.warning('蜡块号长度不能超过 64 位');
+    return;
+  }
+  const existingBlock = findBlockOptionByCode(normalizedBlockCode);
+  if (existingBlock) {
+    selectedBlockOptionId.value = existingBlock.optionId;
+    manualBlockInput.value = '';
+    return;
+  }
+  try {
+    const createdBlock = await createMedicalOrderBlock(props.caseId, {
+      blockNo: normalizedBlockCode,
+    });
+    const nextOption = {
+      blockCode: createdBlock.blockNo,
+      description: null,
+      label: normalizeBlockCode(createdBlock.blockNo, props.pathologyNo),
+      optionId: `MEDICAL_ORDER_ONLY:${createdBlock.medicalOrderBlockId}`,
+      source: 'MEDICAL_ORDER_ONLY' as const,
+      targetBlockId: null,
+    };
+    localMedicalOrderOnlyBlocks.value = [
+      ...localMedicalOrderOnlyBlocks.value,
+      nextOption,
+    ];
+    selectedBlockOptionId.value = nextOption.optionId;
+    manualBlockInput.value = '';
+    emit('refresh');
+  } catch (error) {
+    ElMessage.error(getDoctorWorkflowPageErrorMessage(error));
+  }
 }
 
 function addOrderItem(item: MedicalOrderItemView, sourceName = '快捷模板') {
@@ -792,7 +904,12 @@ async function submitDraftOrders() {
         orderItemId: item.orderItemId,
         orderType: item.orderType,
         remarks: item.remarks.trim() || undefined,
-        targetBlockId: selectedBlock.value.blockId,
+        ...(selectedBlock.value.source === 'CASE_BLOCK'
+          ? {
+              targetBlockId:
+                selectedBlock.value.targetBlockId?.trim() || undefined,
+            }
+          : {}),
         targetBlockNo: getSelectedBlockCode(),
       });
     }
@@ -821,7 +938,7 @@ onMounted(loadCandidates);
       <ElEmpty v-if="!caseId" description="请先从左侧选择一个病例" />
       <div v-else class="flex min-h-0 flex-col">
         <ElAlert
-          v-if="blockOptions.length === 0"
+          v-if="mergedBlockOptions.length === 0"
           :closable="false"
           class="m-3"
           title="当前病例暂无蜡块，不能创建医嘱"
@@ -832,21 +949,41 @@ onMounted(loadCandidates);
           <div class="medical-order-action-panel">
             <div class="medical-order-action-panel__title">医嘱区</div>
             <div class="medical-order-action-panel__controls">
+              <div class="medical-order-action-panel__pathology">
+                <span class="medical-order-action-panel__pathology-label">
+                  病理号：
+                </span>
+                <span class="medical-order-action-panel__pathology-value">
+                  {{ pathologyNo || '-' }}
+                </span>
+              </div>
               <div class="medical-order-action-panel__select">
                 <ElSelect
-                  v-model="selectedBlockId"
+                  v-model="selectedBlockOptionId"
                   class="w-full"
-                  :disabled="blockOptions.length === 0"
+                  :disabled="mergedBlockOptions.length === 0"
                   placeholder="请选择蜡块"
                   size="small"
                 >
                   <ElOption
-                    v-for="block in blockOptions"
-                    :key="block.blockId"
+                    v-for="block in mergedBlockOptions"
+                    :key="block.optionId"
                     :label="getBlockLabel(block)"
-                    :value="block.blockId"
+                    :value="block.optionId"
                   />
                 </ElSelect>
+              </div>
+              <div
+                class="medical-order-action-panel__manual-input"
+                data-testid="medical-order-block-input"
+              >
+                <ElInput
+                  v-model="manualBlockInput"
+                  clearable
+                  placeholder="输入蜡块号，回车添加"
+                  size="small"
+                  @keyup.enter="submitManualBlock"
+                />
               </div>
               <div class="medical-order-action-panel__buttons">
                 <ElButton
@@ -1178,22 +1315,66 @@ onMounted(loadCandidates);
 
 .medical-order-action-panel__controls {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 320px) minmax(
+      180px,
+      240px
+    ) auto;
   gap: 12px;
-  justify-items: center;
+  align-items: center;
+}
+
+.medical-order-action-panel__pathology {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+}
+
+.medical-order-action-panel__pathology-label {
+  font-size: 13px;
+  color: var(--el-text-color-regular);
+}
+
+.medical-order-action-panel__pathology-value {
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--el-text-color-primary);
+  word-break: break-all;
 }
 
 .medical-order-action-panel__select {
-  width: min(100%, 320px);
+  width: 100%;
+}
+
+.medical-order-action-panel__manual-input {
+  width: 100%;
 }
 
 .medical-order-action-panel__buttons {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  justify-content: center;
+  justify-content: flex-end;
 }
 
 .charge-manager-dialog {
   padding: 8px 16px 16px;
+}
+
+@media (max-width: 1280px) {
+  .medical-order-action-panel__controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .medical-order-action-panel__buttons {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 900px) {
+  .medical-order-action-panel__controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 </style>

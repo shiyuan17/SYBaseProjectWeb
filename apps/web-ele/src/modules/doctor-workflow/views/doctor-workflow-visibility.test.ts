@@ -368,6 +368,7 @@ const workbenchFixture: DiagnosticWorkbenchView = {
   ],
   hasPendingRevision: false,
   historicalPathologies: [],
+  medicalOrderBlocks: [],
   medicalOrders: [],
   pacsExaminations: [],
   pathologyNo: 'PATH-001',

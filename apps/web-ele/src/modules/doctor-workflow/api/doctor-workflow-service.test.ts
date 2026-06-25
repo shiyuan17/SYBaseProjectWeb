@@ -16,6 +16,7 @@ import {
   confirmMedicalOrderBilling,
   createConsultation,
   createMedicalOrder,
+  createMedicalOrderBlock,
   createMedicalOrderQcEvaluation,
   createPathologyReport,
   createReportRevisionRequest,
@@ -257,6 +258,12 @@ describe('doctor-workflow-service mappers', () => {
             ],
           },
         ],
+        medicalOrderBlocks: [
+          {
+            blockNo: 'A3',
+            medicalOrderBlockId: 'MOB-001',
+          },
+        ],
         pathologyNo: 'BL-001',
       }),
     ).toMatchObject({
@@ -278,6 +285,12 @@ describe('doctor-workflow-service mappers', () => {
       diagnosticTasks: [],
       hasPendingRevision: false,
       historicalPathologies: [],
+      medicalOrderBlocks: [
+        {
+          blockNo: 'A3',
+          medicalOrderBlockId: 'MOB-001',
+        },
+      ],
       medicalOrders: [],
       pacsExaminations: [],
       pathologyNo: 'BL-001',
@@ -848,6 +861,9 @@ describe('doctor-workflow-service requests', () => {
     await acceptMedicalOrder('ORDER-1', { terminalCode: 'TERM-1' });
     await completeMedicalOrder('ORDER-1', { remarks: '已完成' });
     await cancelMedicalOrder('ORDER-1', { remarks: '诊断医生取消' });
+    await createMedicalOrderBlock('CASE-1', {
+      blockNo: 'A3',
+    });
 
     expect(requestClientMock.post).toHaveBeenNthCalledWith(
       1,
@@ -876,6 +892,13 @@ describe('doctor-workflow-service requests', () => {
       4,
       '/v1/medical-orders/ORDER-1/cancel',
       { remarks: '诊断医生取消' },
+    );
+    expect(requestClientMock.post).toHaveBeenNthCalledWith(
+      5,
+      '/v1/pathology-cases/CASE-1/medical-order-blocks',
+      {
+        blockNo: 'A3',
+      },
     );
   });
 

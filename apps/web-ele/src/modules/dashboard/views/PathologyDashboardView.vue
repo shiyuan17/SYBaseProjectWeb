@@ -1,20 +1,49 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import type {
+  PathologyScreenDashboardResponse,
+  PathologyScreenMetricCard,
+  PathologyScreenMetricItem,
+  PathologyScreenStatus,
+  PathologyScreenThreeYearRow,
+  PathologyScreenWorkloadRow,
+} from '../types/pathology-screen';
+
+import { computed, onMounted, ref } from 'vue';
 import { onBeforeRouteLeave, useRouter } from 'vue-router';
+
+import { Fallback } from '@vben/common-ui';
 
 import { BRAND_LOGO_SOURCE, BRAND_NAME } from '#/preferences-branding';
 
-import { pathologyScreenStaticSummary } from '../api/pathology-screen-static';
+import { queryPathologyScreenDashboard } from '../api/pathology-screen-service';
 import { useDashboardFullContent } from '../composables/useDashboardFullContent';
 
 const { restoreLayout } = useDashboardFullContent();
 
-const screenData = pathologyScreenStaticSummary;
 const router = useRouter();
 const workspaceRouteLocation = { name: 'Workspace' } as const;
 
+const loading = ref(true);
+const forbidden = ref(false);
+const loadError = ref('');
+const dashboard = ref<null | PathologyScreenDashboardResponse>(null);
+
 onBeforeRouteLeave(() => {
   restoreLayout();
+});
+
+onMounted(async () => {
+  try {
+    dashboard.value = await queryPathologyScreenDashboard();
+  } catch (error: any) {
+    if (error?.response?.status === 403) {
+      forbidden.value = true;
+    } else {
+      loadError.value = error?.message ?? '病理大屏数据加载失败';
+    }
+  } finally {
+    loading.value = false;
+  }
 });
 
 const summaryTitleParts = computed(() => {
@@ -31,26 +60,139 @@ const summaryTitleParts = computed(() => {
   };
 });
 
-function ratioClass(ratioTone: 'down' | 'neutral' | 'up') {
-  if (ratioTone === 'up') {
-    return 'text-[#63f3c2]';
+const summaryCards = computed<PathologyScreenMetricCard[]>(() => {
+  if (!dashboard.value) {
+    return [];
   }
-  if (ratioTone === 'down') {
+  return [
+    dashboard.value.summaryCards.annualCaseTotal,
+    dashboard.value.summaryCards.lastMonthCaseTotal,
+    dashboard.value.summaryCards.lastMonthReportTimelinessRate,
+  ];
+});
+
+const stageNodes = computed(() => {
+  const values = dashboard.value?.lastMonthWorkload.items ?? [];
+  const positions = [
+    { x: 212, y: 212 },
+    { x: 430, y: 142 },
+    { x: 620, y: 142 },
+    { x: 798, y: 212 },
+  ];
+  return values.map((item, index) => ({
+    ...item,
+    x: positions[index]?.x ?? 500,
+    y: positions[index]?.y ?? 212,
+  }));
+});
+
+const partialNotes = computed(() => {
+  if (!dashboard.value) {
+    return [];
+  }
+  const notes = new Map<string, string>();
+  const collectMetric = (
+    metric: PathologyScreenMetricCard | PathologyScreenMetricItem,
+  ) => {
+    if (metric.status === 'PARTIAL' || metric.status === 'UNAVAILABLE') {
+      notes.set(
+        metric.label,
+        metric.sourceNote ?? `${metric.label} 当前仅提供部分数据。`,
+      );
+    }
+  };
+  const collectSection = <
+    T extends {
+      items: any[];
+      sourceNote: null | string;
+      status: PathologyScreenStatus;
+    },
+  >(
+    title: string,
+    section: T,
+  ) => {
+    if (section.status === 'PARTIAL' || section.status === 'UNAVAILABLE') {
+      notes.set(title, section.sourceNote ?? `${title} 当前仅提供部分数据。`);
+    }
+    for (const item of section.items) {
+      if (item && typeof item === 'object' && 'status' in item) {
+        collectMetric(item as PathologyScreenMetricItem);
+      }
+      if (
+        item &&
+        typeof item === 'object' &&
+        'metrics' in item &&
+        Array.isArray(item.metrics)
+      ) {
+        for (const metric of item.metrics) {
+          collectMetric(metric);
+        }
+      }
+    }
+  };
+
+  collectMetric(dashboard.value.summaryCards.lastMonthReportTimelinessRate);
+  collectSection('签发报告修改率', dashboard.value.reportRevisionRateTrend);
+  collectSection(
+    '技术组指标合格率',
+    dashboard.value.technicalQualificationRates,
+  );
+  collectSection('诊断工作量统计', dashboard.value.diagnosisWorkloadRows);
+  collectSection(
+    '近三年各技术指标合格率',
+    dashboard.value.threeYearTechnicalRates,
+  );
+  collectSection('上月工作量', dashboard.value.lastMonthWorkload);
+  collectSection(
+    '近三年报告及时/诊断符合率',
+    dashboard.value.threeYearReportQualityRates,
+  );
+  collectSection('报告及时诊断符合率', dashboard.value.overallComplianceRates);
+  if (
+    dashboard.value.structuredReportSummary.status === 'PARTIAL' ||
+    dashboard.value.structuredReportSummary.status === 'UNAVAILABLE'
+  ) {
+    notes.set(
+      '结构化报告展示',
+      dashboard.value.structuredReportSummary.sourceNote ??
+        '结构化报告统计当前仅提供部分数据。',
+    );
+  }
+  return [...notes.entries()].map(([label, note]) => `${label}：${note}`);
+});
+
+const hasPartialBanner = computed(() => partialNotes.value.length > 0);
+
+const topTemplates = computed(
+  () => dashboard.value?.structuredReportSummary.topTemplates ?? [],
+);
+const technicalRates = computed(
+  () => dashboard.value?.technicalQualificationRates.items ?? [],
+);
+const revisionTrend = computed(
+  () => dashboard.value?.reportRevisionRateTrend.items ?? [],
+);
+const workloadRows = computed<PathologyScreenWorkloadRow[]>(
+  () => dashboard.value?.diagnosisWorkloadRows.items ?? [],
+);
+const overallRates = computed(
+  () => dashboard.value?.overallComplianceRates.items ?? [],
+);
+const threeYearTechnical = computed<PathologyScreenThreeYearRow[]>(
+  () => dashboard.value?.threeYearTechnicalRates.items ?? [],
+);
+const threeYearQuality = computed<PathologyScreenThreeYearRow[]>(
+  () => dashboard.value?.threeYearReportQualityRates.items ?? [],
+);
+
+function ratioClass(value: string) {
+  if (value.startsWith('-')) {
+    return 'text-[#91a9cc]';
+  }
+  if (value.startsWith('-') || value.startsWith('↓')) {
     return 'text-[#ff6f84]';
   }
-  return 'text-[#91a9cc]';
-}
-
-function gaugeStyle(value: number) {
-  return {
-    background: `conic-gradient(#6bf3ff 0deg ${Math.max(
-      12,
-      Math.min(360, value * 3.6),
-    )}deg, rgba(107, 243, 255, 0.12) ${Math.max(
-      12,
-      Math.min(360, value * 3.6),
-    )}deg 360deg)`,
-  };
+  return 'text-[#63f3c2]';
 }
 
 function stageNodeStyle(node: { x: number; y: number }) {
@@ -63,6 +205,20 @@ function stageNodeStyle(node: { x: number; y: number }) {
   };
 }
 
+function statusClass(status: PathologyScreenStatus) {
+  if (status === 'PARTIAL') {
+    return 'screen-status screen-status--partial';
+  }
+  if (status === 'UNAVAILABLE') {
+    return 'screen-status screen-status--unavailable';
+  }
+  return 'screen-status';
+}
+
+function displayMetricValue(value: string) {
+  return value?.trim() ? value : '--';
+}
+
 function returnToWorkspace() {
   restoreLayout();
   void router.push(workspaceRouteLocation);
@@ -70,7 +226,28 @@ function returnToWorkspace() {
 </script>
 
 <template>
-  <div class="pathology-screen">
+  <div v-if="loading" class="pathology-loading" data-testid="pathology-loading">
+    <div class="pathology-loading__card">
+      <h2>病理大屏数据加载中</h2>
+      <p>正在汇总病例、报告、技术质控与工作量指标。</p>
+    </div>
+  </div>
+
+  <div v-else-if="forbidden" class="pathology-fallback">
+    <Fallback status="403" />
+  </div>
+
+  <div
+    v-else-if="loadError"
+    class="pathology-fallback pathology-fallback--error"
+  >
+    <div class="pathology-loading__card">
+      <h2>病理大屏加载失败</h2>
+      <p>{{ loadError }}</p>
+    </div>
+  </div>
+
+  <div v-else-if="dashboard" class="pathology-screen">
     <div class="pathology-screen__grid"></div>
     <div class="pathology-screen__glow pathology-screen__glow--left"></div>
     <div class="pathology-screen__glow pathology-screen__glow--right"></div>
@@ -114,6 +291,15 @@ function returnToWorkspace() {
         </div>
       </header>
 
+      <section
+        v-if="hasPartialBanner"
+        class="pathology-warning"
+        data-testid="pathology-partial-banner"
+      >
+        <strong>部分指标暂未完全就绪</strong>
+        <p>{{ partialNotes.join('；') }}</p>
+      </section>
+
       <section class="pathology-screen__content">
         <div class="pathology-screen__column pathology-screen__column--left">
           <section class="screen-panel screen-panel--chart">
@@ -121,43 +307,21 @@ function returnToWorkspace() {
               <span class="screen-panel__spark"></span>
               <h2>签发报告修改率</h2>
             </div>
-            <div class="chart-legend">
-              <span
-                v-for="legend in screenData.topLeftLegend"
-                :key="legend"
-                class="chart-legend__item"
-              >
-                <span class="chart-legend__swatch"></span>
-                {{ legend }}
-              </span>
-            </div>
-            <div class="bar-card-grid" data-testid="pathology-top-left-chart">
+            <div class="line-list" data-testid="pathology-top-left-chart">
               <div
-                v-for="bar in screenData.topLeftBars"
-                :key="bar.label"
-                class="bar-card-grid__item"
+                v-for="item in revisionTrend"
+                :key="item.label"
+                class="line-list__item"
               >
-                <div class="bar-card-grid__bars">
-                  <div class="bar-card-grid__track">
-                    <div
-                      class="bar-card-grid__bar bar-card-grid__bar--blue"
-                    ></div>
-                    <span>{{ bar.darkValue }}</span>
-                  </div>
-                  <div class="bar-card-grid__track">
-                    <div
-                      class="bar-card-grid__bar bar-card-grid__bar--teal"
-                    ></div>
-                    <span>{{ bar.lightValue }}</span>
-                  </div>
-                  <div class="bar-card-grid__track">
-                    <div
-                      class="bar-card-grid__bar bar-card-grid__bar--soft"
-                    ></div>
-                    <span>{{ bar.tealValue }}</span>
-                  </div>
+                <div class="line-list__meta">
+                  <span>{{ item.label }}</span>
+                  <span :class="statusClass(item.status)">
+                    {{ displayMetricValue(item.value) }}
+                  </span>
                 </div>
-                <p class="bar-card-grid__label">{{ bar.label }}</p>
+                <div class="line-list__track">
+                  <div class="line-list__fill"></div>
+                </div>
               </div>
             </div>
           </section>
@@ -169,14 +333,16 @@ function returnToWorkspace() {
             </div>
             <div class="rate-list">
               <div
-                v-for="item in screenData.topLeftRateItems"
+                v-for="item in technicalRates"
                 :key="item.label"
                 class="rate-list__item"
               >
                 <div class="rate-list__row">
                   <span class="rate-list__dot"></span>
                   <span class="rate-list__label">{{ item.label }}</span>
-                  <span class="rate-list__value">{{ item.value }}</span>
+                  <span :class="statusClass(item.status)">
+                    {{ displayMetricValue(item.value) }}
+                  </span>
                 </div>
                 <div class="rate-list__line">
                   <div class="rate-list__fill"></div>
@@ -190,43 +356,26 @@ function returnToWorkspace() {
               <span class="screen-panel__spark"></span>
               <h2>近三年各技术指标合格率</h2>
             </div>
-            <div class="chart-legend">
-              <span class="chart-legend__item"><span class="chart-legend__swatch"></span>规范化固定率</span>
-              <span class="chart-legend__item"><span
-                  class="chart-legend__swatch chart-legend__swatch--teal"
-                ></span>HE染色切片优良率</span>
-              <span class="chart-legend__item"><span
-                  class="chart-legend__swatch chart-legend__swatch--soft"
-                ></span>免疫组化</span>
-            </div>
-            <div class="bar-card-grid bar-card-grid--compact">
-              <div
-                v-for="bar in screenData.bottomLeftBars"
-                :key="bar.label"
-                class="bar-card-grid__item"
+            <div class="year-grid">
+              <article
+                v-for="row in threeYearTechnical"
+                :key="row.year"
+                class="year-grid__item"
               >
-                <div class="bar-card-grid__bars">
-                  <div class="bar-card-grid__track">
-                    <div
-                      class="bar-card-grid__bar bar-card-grid__bar--blue"
-                    ></div>
-                    <span>{{ bar.darkValue }}</span>
-                  </div>
-                  <div class="bar-card-grid__track">
-                    <div
-                      class="bar-card-grid__bar bar-card-grid__bar--teal"
-                    ></div>
-                    <span>{{ bar.lightValue }}</span>
-                  </div>
-                  <div class="bar-card-grid__track">
-                    <div
-                      class="bar-card-grid__bar bar-card-grid__bar--soft"
-                    ></div>
-                    <span>{{ bar.tealValue }}</span>
+                <h3>{{ row.year }}</h3>
+                <div class="year-grid__metrics">
+                  <div
+                    v-for="metric in row.metrics"
+                    :key="metric.label"
+                    class="year-grid__metric"
+                  >
+                    <span>{{ metric.label }}</span>
+                    <strong :class="statusClass(metric.status)">
+                      {{ displayMetricValue(metric.value) }}
+                    </strong>
                   </div>
                 </div>
-                <p class="bar-card-grid__label">{{ bar.label }}</p>
-              </div>
+              </article>
             </div>
           </section>
         </div>
@@ -234,23 +383,27 @@ function returnToWorkspace() {
         <div class="pathology-screen__column pathology-screen__column--center">
           <section class="metric-stack" data-testid="pathology-metric-cards">
             <article
-              v-for="metric in screenData.centerMetrics"
+              v-for="metric in summaryCards"
               :key="metric.label"
               class="metric-stack__card"
             >
               <div class="metric-stack__label">{{ metric.label }}</div>
-              <div class="metric-stack__value">{{ metric.value }}</div>
+              <div class="metric-stack__value" :class="[statusClass(metric.status)]">
+                {{ displayMetricValue(metric.value) }}
+              </div>
             </article>
           </section>
 
           <section class="center-stage" data-testid="pathology-center-stage">
             <div
-              v-for="node in screenData.centerStageNodes"
+              v-for="node in stageNodes"
               :key="node.label"
               class="center-stage__node"
               :style="stageNodeStyle(node)"
             >
-              <div class="center-stage__bubble">{{ node.value }}</div>
+              <div class="center-stage__bubble" :class="[statusClass(node.status)]">
+                {{ displayMetricValue(node.value) }}
+              </div>
               <div class="center-stage__node-label">{{ node.label }}</div>
             </div>
 
@@ -283,111 +436,87 @@ function returnToWorkspace() {
             </div>
             <div class="report-summary">
               <div class="report-summary__meta">
-                <span>结构化报告类型</span>
-                <strong>{{ screenData.reportTypesSummary.totalKinds }} 种</strong>
+                <span>{{
+                  dashboard.structuredReportSummary.templateTypeCount.label
+                }}</span>
+                <strong
+                  :class="
+                    statusClass(
+                      dashboard.structuredReportSummary.templateTypeCount
+                        .status,
+                    )
+                  "
+                >
+                  {{
+                    displayMetricValue(
+                      dashboard.structuredReportSummary.templateTypeCount.value,
+                    )
+                  }}
+                </strong>
               </div>
               <div class="report-summary__meta">
-                <span>结构化报告工作量</span>
-                <strong>{{
-                  screenData.reportTypesSummary.totalWorkload
-                }}</strong>
+                <span>{{
+                  dashboard.structuredReportSummary.reportCount.label
+                }}</span>
+                <strong
+                  :class="
+                    statusClass(
+                      dashboard.structuredReportSummary.reportCount.status,
+                    )
+                  "
+                >
+                  {{
+                    displayMetricValue(
+                      dashboard.structuredReportSummary.reportCount.value,
+                    )
+                  }}
+                </strong>
               </div>
             </div>
             <div class="report-summary__button">结构化报告实例</div>
             <div class="report-grid report-grid--dense">
               <div
-                v-for="item in screenData.reportTypes"
+                v-for="item in topTemplates"
                 :key="item.label"
                 class="report-grid__cell"
               >
                 <span class="report-grid__label">{{ item.label }}</span>
-                <strong class="report-grid__value">{{ item.value }}</strong>
+                <strong
+                  class="report-grid__value" :class="[statusClass(item.status)]"
+                >
+                  {{ displayMetricValue(item.value) }}
+                </strong>
               </div>
             </div>
           </section>
 
-          <div class="pathology-screen__bottom-center">
-            <section class="screen-panel screen-panel--staff">
-              <div class="screen-panel__header">
-                <span class="screen-panel__spark"></span>
-                <h2>病理工作人员统计情况</h2>
-              </div>
-              <div class="staff-metrics">
-                <div
-                  v-for="metric in screenData.staffMetrics"
-                  :key="metric.label"
-                  class="staff-metrics__item"
-                >
-                  <span class="staff-metrics__label">{{ metric.label }}</span>
-                  <strong class="staff-metrics__value">
-                    {{ metric.value }}
-                    <span>{{ metric.accentValue }}</span>
-                  </strong>
-                </div>
-              </div>
-              <div class="gauge-row">
-                <div
-                  v-for="gauge in screenData.staffGauges"
-                  :key="gauge.year"
-                  class="gauge-row__item"
-                >
-                  <div class="gauge-row__ring" :style="gaugeStyle(gauge.value)">
-                    <div class="gauge-row__inner">
-                      <strong>{{ gauge.value }}</strong>
-                      <span>%</span>
-                    </div>
+          <section class="screen-panel screen-panel--trend">
+            <div class="screen-panel__header">
+              <span class="screen-panel__spark"></span>
+              <h2>近三年报告及时/诊断符合率</h2>
+            </div>
+            <div class="year-grid year-grid--wide">
+              <article
+                v-for="row in threeYearQuality"
+                :key="row.year"
+                class="year-grid__item"
+              >
+                <h3>{{ row.year }}</h3>
+                <div class="year-grid__metrics">
+                  <div
+                    v-for="metric in row.metrics"
+                    :key="metric.label"
+                    class="year-grid__metric"
+                  >
+                    <span>{{ metric.label }}</span>
+                    <strong :class="statusClass(metric.status)">
+                      {{ displayMetricValue(metric.value) }}
+                    </strong>
                   </div>
-                  <div class="gauge-row__label">{{ gauge.year }}</div>
                 </div>
-              </div>
-            </section>
-
-            <section class="screen-panel screen-panel--trend">
-              <div class="screen-panel__header">
-                <span class="screen-panel__spark"></span>
-                <h2>近三年报告及时/诊断符合率</h2>
-              </div>
-              <div class="chart-legend chart-legend--tight">
-                <span
-                  v-for="legend in screenData.bottomRightLegend"
-                  :key="legend"
-                  class="chart-legend__item"
-                >
-                  <span class="chart-legend__swatch"></span>
-                  {{ legend }}
-                </span>
-              </div>
-              <div class="bar-card-grid bar-card-grid--compact">
-                <div
-                  v-for="bar in screenData.bottomRightBars"
-                  :key="bar.label"
-                  class="bar-card-grid__item"
-                >
-                  <div class="bar-card-grid__bars">
-                    <div class="bar-card-grid__track">
-                      <div
-                        class="bar-card-grid__bar bar-card-grid__bar--lavender"
-                      ></div>
-                      <span>{{ bar.darkValue }}</span>
-                    </div>
-                    <div class="bar-card-grid__track">
-                      <div
-                        class="bar-card-grid__bar bar-card-grid__bar--violet"
-                      ></div>
-                      <span>{{ bar.lightValue }}</span>
-                    </div>
-                    <div class="bar-card-grid__track">
-                      <div
-                        class="bar-card-grid__bar bar-card-grid__bar--soft"
-                      ></div>
-                      <span>{{ bar.tealValue }}</span>
-                    </div>
-                  </div>
-                  <p class="bar-card-grid__label">{{ bar.label }}</p>
-                </div>
-              </div>
-            </section>
-          </div>
+              </article>
+            </div>
+          </section>
         </div>
 
         <div class="pathology-screen__column pathology-screen__column--right">
@@ -404,35 +533,17 @@ function returnToWorkspace() {
                 <span>环比率</span>
               </div>
               <div class="workload-table__body">
-                <div class="workload-table__marquee">
-                  <div class="workload-table__group">
-                    <div
-                      v-for="row in screenData.rightTableRows"
-                      :key="row.label"
-                      class="workload-table__row"
-                    >
-                      <span>{{ row.label }}</span>
-                      <span>{{ row.january }}</span>
-                      <span>{{ row.february }}</span>
-                      <span :class="ratioClass(row.ratioTone)">{{
-                        row.ratio
-                      }}</span>
-                    </div>
-                  </div>
-                  <div aria-hidden="true" class="workload-table__group">
-                    <div
-                      v-for="row in screenData.rightTableRows"
-                      :key="`${row.label}-loop`"
-                      class="workload-table__row"
-                    >
-                      <span>{{ row.label }}</span>
-                      <span>{{ row.january }}</span>
-                      <span>{{ row.february }}</span>
-                      <span :class="ratioClass(row.ratioTone)">{{
-                        row.ratio
-                      }}</span>
-                    </div>
-                  </div>
+                <div
+                  v-for="row in workloadRows"
+                  :key="row.label"
+                  class="workload-table__row"
+                >
+                  <span>{{ row.label }}</span>
+                  <span>{{ displayMetricValue(row.januaryCount) }}</span>
+                  <span>{{ displayMetricValue(row.februaryCount) }}</span>
+                  <span :class="ratioClass(row.momRate)">
+                    {{ row.momRate || '--' }}
+                  </span>
                 </div>
               </div>
             </div>
@@ -448,14 +559,16 @@ function returnToWorkspace() {
             </div>
             <div class="rate-list">
               <div
-                v-for="item in screenData.topRightRateItems"
+                v-for="item in overallRates"
                 :key="item.label"
                 class="rate-list__item"
               >
                 <div class="rate-list__row">
                   <span class="rate-list__dot"></span>
                   <span class="rate-list__label">{{ item.label }}</span>
-                  <span class="rate-list__value">{{ item.value }}</span>
+                  <span :class="statusClass(item.status)">
+                    {{ displayMetricValue(item.value) }}
+                  </span>
                 </div>
                 <div class="rate-list__line">
                   <div class="rate-list__fill rate-list__fill--right"></div>
@@ -470,6 +583,46 @@ function returnToWorkspace() {
 </template>
 
 <style scoped>
+.pathology-loading,
+.pathology-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+  color: #eaf6ff;
+  background:
+    radial-gradient(
+      circle at top center,
+      rgb(48 122 255 / 20%),
+      transparent 28%
+    ),
+    linear-gradient(180deg, #031226 0%, #041321 46%, #03111e 100%);
+}
+
+.pathology-loading__card {
+  max-width: 560px;
+  padding: 32px;
+  text-align: center;
+  background: linear-gradient(180deg, rgb(7 28 49 / 92%), rgb(4 18 34 / 88%));
+  border: 1px solid rgb(80 142 196 / 16%);
+  box-shadow:
+    inset 0 0 24px rgb(65 127 186 / 12%),
+    0 0 18px rgb(5 35 66 / 22%);
+}
+
+.pathology-loading__card h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #f7fcff;
+}
+
+.pathology-loading__card p {
+  margin-top: 12px;
+  font-size: 14px;
+  color: #8ec7ea;
+}
+
 .pathology-screen {
   position: relative;
   min-height: 100vh;
@@ -555,11 +708,6 @@ function returnToWorkspace() {
   object-fit: contain;
 }
 
-.pathology-screen__brand-copy {
-  display: flex;
-  flex-direction: column;
-}
-
 .pathology-screen__brand-name {
   font-size: 24px;
   font-weight: 700;
@@ -641,6 +789,25 @@ function returnToWorkspace() {
   outline: none;
 }
 
+.pathology-warning {
+  padding: 12px 16px;
+  margin-top: 14px;
+  color: #ffeab3;
+  background: linear-gradient(90deg, rgb(123 77 10 / 78%), rgb(90 58 13 / 30%));
+  border: 1px solid rgb(255 194 84 / 36%);
+}
+
+.pathology-warning strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.pathology-warning p {
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 .pathology-screen__content {
   display: grid;
   grid-template-columns: minmax(340px, 26%) minmax(720px, 48%) minmax(
@@ -659,40 +826,6 @@ function returnToWorkspace() {
   flex-direction: column;
   gap: 12px;
   min-width: 0;
-  min-height: 0;
-  overflow: visible;
-}
-
-.pathology-screen__column--left .screen-panel--chart {
-  min-height: 282px;
-}
-
-.pathology-screen__column--left .screen-panel:not(.screen-panel--chart) {
-  min-height: 333px;
-}
-
-.pathology-screen__column--center .metric-stack {
-  flex: 0 0 auto;
-}
-
-.pathology-screen__column--center .center-stage {
-  min-height: 420px;
-}
-
-.pathology-screen__column--center .screen-panel--report {
-  min-height: 318px;
-}
-
-.pathology-screen__column--center .pathology-screen__bottom-center {
-  min-height: 286px;
-}
-
-.pathology-screen__column--right .screen-panel--table {
-  min-height: 392px;
-}
-
-.pathology-screen__column--right .screen-panel--bottom {
-  min-height: 389px;
 }
 
 .screen-panel {
@@ -701,7 +834,6 @@ function returnToWorkspace() {
   flex-direction: column;
   min-width: 0;
   padding: 12px;
-  overflow: hidden;
   background: linear-gradient(180deg, rgb(7 28 49 / 92%), rgb(4 18 34 / 88%));
   border: 1px solid rgb(80 142 196 / 16%);
   box-shadow:
@@ -709,36 +841,8 @@ function returnToWorkspace() {
     0 0 18px rgb(5 35 66 / 22%);
 }
 
-.screen-panel > :not(.screen-panel__header) {
-  flex: 0 0 auto;
-}
-
-.screen-panel--table {
-  overflow: hidden;
-}
-
-.screen-panel--table > .workload-table {
-  flex: 1 1 auto;
-}
-
-.screen-panel--bottom {
-  flex: initial;
-}
-
-.screen-panel--report {
-  min-height: 318px;
-}
-
-.screen-panel--chart,
-.screen-panel--staff,
-.screen-panel--table,
-.screen-panel--trend {
-  min-height: 260px;
-}
-
 .screen-panel__header {
   display: flex;
-  flex: 0 0 auto;
   gap: 8px;
   align-items: center;
   padding: 8px 14px;
@@ -763,759 +867,362 @@ function returnToWorkspace() {
   transform: rotate(45deg);
 }
 
-.chart-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 8px;
-  font-size: 12px;
-  color: #9fc3eb;
-}
-
-.chart-legend--tight {
-  gap: 10px;
-}
-
-.chart-legend__item {
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-}
-
-.chart-legend__swatch {
-  width: 14px;
-  height: 8px;
-  background: linear-gradient(90deg, #2f8bff, #6bd0ff);
-}
-
-.chart-legend__swatch--teal {
-  background: linear-gradient(90deg, #2fd7ff, #65ffe5);
-}
-
-.chart-legend__swatch--soft {
-  background: linear-gradient(90deg, #6a86ff, #a6bcff);
-}
-
-.bar-card-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  min-height: 0;
-}
-
-.bar-card-grid--compact {
-  gap: 8px;
-}
-
-.bar-card-grid__item {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-  min-height: 0;
-}
-
-.bar-card-grid__bars {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(24px, 1fr));
-  gap: 8px;
-  align-items: end;
-  min-height: 120px;
-}
-
-.bar-card-grid--compact .bar-card-grid__bars {
-  min-height: 104px;
-}
-
-.bar-card-grid__track {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: center;
-  justify-content: flex-end;
-  min-width: 0;
-}
-
-.bar-card-grid__bar {
-  width: 16px;
-  border-radius: 999px 999px 4px 4px;
-  box-shadow: 0 0 16px rgb(55 177 255 / 28%);
-}
-
-.bar-card-grid__bar--blue {
-  height: 88px;
-  background: linear-gradient(180deg, #5eb8ff, #0e72de);
-}
-
-.bar-card-grid__bar--teal {
-  height: 38px;
-  background: linear-gradient(180deg, #6efcff, #26afb1);
-}
-
-.bar-card-grid__bar--soft {
-  height: 104px;
-  background: linear-gradient(180deg, #9bb0ff, #4c77e5);
-}
-
-.bar-card-grid__bar--lavender {
-  height: 92px;
-  background: linear-gradient(180deg, #b4c1ff, #7487ff);
-}
-
-.bar-card-grid__bar--violet {
-  height: 86px;
-  background: linear-gradient(180deg, #d0bbff, #8f7bfa);
-}
-
-.bar-card-grid__track span,
-.bar-card-grid__label {
-  font-size: 12px;
-  line-height: 1.25;
-  color: #d3ebff;
-  text-align: center;
-}
-
-.bar-card-grid__track span {
-  width: 100%;
-  min-height: 16px;
-  font-family: 'Geist Mono', monospace;
-  font-size: 11px;
-  white-space: nowrap;
-}
-
-.bar-card-grid__label {
-  font-size: 13px;
-  color: #f3fbff;
-}
-
 .metric-stack {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
 }
 
 .metric-stack__card {
-  padding: 10px;
-  background: linear-gradient(180deg, rgb(10 43 74 / 90%), rgb(5 27 47 / 90%));
-  border: 1px solid rgb(100 181 255 / 20%);
-  animation: dashboard-card-enter 0.7s ease both;
-}
-
-.metric-stack__card:nth-child(2) {
-  animation-delay: 0.08s;
-}
-
-.metric-stack__card:nth-child(3) {
-  animation-delay: 0.16s;
+  padding: 18px 16px;
+  text-align: center;
+  background: linear-gradient(180deg, rgb(7 34 61 / 88%), rgb(4 23 44 / 90%));
+  border: 1px solid rgb(109 190 255 / 24%);
 }
 
 .metric-stack__label {
-  padding: 7px 9px;
-  margin-bottom: 8px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #f2fbff;
-  background: linear-gradient(
-    90deg,
-    rgb(92 143 219 / 76%),
-    rgb(41 77 127 / 32%)
-  );
+  font-size: 14px;
+  color: #8ec7ea;
 }
 
 .metric-stack__value {
-  font-family: 'Geist Mono', monospace;
-  font-size: 30px;
-  color: #f8fdff;
-  text-align: center;
-  letter-spacing: 0.04em;
+  margin-top: 8px;
+  font-size: 28px;
+  font-weight: 700;
+  color: #f7fcff;
 }
 
 .center-stage {
   position: relative;
   min-height: 420px;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 50% 42%, rgb(63 175 255 / 20%), transparent 34%),
-    radial-gradient(ellipse at 50% 80%, rgb(88 113 206 / 18%), transparent 42%),
-    linear-gradient(180deg, rgb(5 23 42 / 50%), rgb(4 16 30 / 32%));
-  border: 1px solid rgb(72 131 189 / 15%);
 }
 
 .center-stage__node {
   position: absolute;
-  z-index: 4;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
   transform: translate(-50%, -50%);
-  animation: center-node-float 5.8s ease-in-out infinite;
-}
-
-.center-stage__node:nth-child(2) {
-  animation-delay: 0.4s;
-}
-
-.center-stage__node:nth-child(3) {
-  animation-delay: 0.8s;
-}
-
-.center-stage__node:nth-child(4) {
-  animation-delay: 1.2s;
 }
 
 .center-stage__bubble {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 86px;
-  height: 86px;
-  font-family: 'Geist Mono', monospace;
-  font-size: 17px;
+  min-width: 108px;
+  min-height: 108px;
+  padding: 12px;
+  font-size: 26px;
   font-weight: 700;
+  color: #f7fcff;
   background: radial-gradient(
     circle at 30% 30%,
-    rgb(125 202 255 / 30%),
-    rgb(11 65 120 / 92%)
+    rgb(63 157 255 / 35%),
+    rgb(4 25 45 / 95%)
   );
-  border: 2px solid rgb(120 196 255 / 72%);
+  border: 1px solid rgb(109 190 255 / 24%);
   border-radius: 999px;
-  box-shadow: 0 0 24px rgb(54 154 255 / 34%);
+  box-shadow: 0 0 24px rgb(18 93 164 / 30%);
 }
 
 .center-stage__node-label {
-  font-size: 13px;
-  color: #b8daf9;
+  font-size: 14px;
+  color: #8ec7ea;
 }
 
 .center-stage__orbit,
 .center-stage__ring {
   position: absolute;
-  top: 40%;
-  left: 50%;
-  z-index: 2;
-  border: 2px solid rgb(57 176 255 / 55%);
+  inset: 50% auto auto 50%;
+  border: 1px solid rgb(109 190 255 / 18%);
   border-radius: 999px;
   transform: translate(-50%, -50%);
 }
 
 .center-stage__orbit--one {
-  width: 330px;
-  height: 200px;
+  width: 420px;
+  height: 220px;
 }
 
 .center-stage__orbit--two {
-  width: 204px;
-  height: 326px;
+  width: 560px;
+  height: 280px;
 }
 
 .center-stage__ring {
-  width: 156px;
-  height: 156px;
-  border-color: rgb(180 224 255 / 76%);
-  box-shadow: 0 0 22px rgb(83 191 255 / 26%);
+  width: 180px;
+  height: 180px;
 }
 
 .center-stage__core {
   position: absolute;
-  top: 40%;
-  left: 50%;
-  z-index: 3;
+  inset: 50% auto auto 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 102px;
-  height: 102px;
-  background: radial-gradient(circle, #fff 0%, #ecf7ff 55%, #77bfff 100%);
+  width: 120px;
+  height: 120px;
+  background: radial-gradient(
+    circle,
+    rgb(76 175 255 / 36%),
+    rgb(3 18 34 / 96%)
+  );
   border-radius: 999px;
-  box-shadow: 0 0 22px rgb(124 215 255 / 35%);
   transform: translate(-50%, -50%);
 }
 
 .center-stage__core-mark {
-  font-size: 52px;
-  font-weight: 800;
-  line-height: 1;
-  color: #11589f;
+  font-size: 40px;
+  font-weight: 700;
+  color: #c4f6ff;
 }
 
 .center-stage__base {
   position: absolute;
-  bottom: 22px;
-  left: 50%;
-  z-index: 1;
-  width: min(660px, 78%);
-  height: 188px;
-  transform: translateX(-50%);
+  inset: auto 50% 14px auto;
+  width: 320px;
+  transform: translateX(50%);
 }
 
 .center-stage__plate {
-  position: absolute;
-  left: 50%;
+  height: 12px;
+  margin-top: 6px;
   background: linear-gradient(
-    180deg,
-    rgb(113 129 194 / 82%),
-    rgb(58 73 122 / 75%)
+    90deg,
+    rgb(44 94 156 / 18%),
+    rgb(60 163 255 / 42%),
+    rgb(44 94 156 / 18%)
   );
-  border: 1px solid rgb(165 187 255 / 28%);
-  box-shadow: 0 0 24px rgb(35 97 171 / 18%);
-  clip-path: polygon(50% 0, 100% 28%, 50% 100%, 0 28%);
-  transform: translateX(-50%);
-}
-
-.center-stage__plate--top {
-  bottom: 82px;
-  width: 70%;
-  height: 112px;
-}
-
-.center-stage__plate--middle {
-  bottom: 42px;
-  width: 84%;
-  height: 116px;
-}
-
-.center-stage__plate--bottom {
-  bottom: 0;
-  width: 100%;
-  height: 122px;
+  clip-path: polygon(8% 0, 92% 0, 100% 100%, 0 100%);
 }
 
 .center-stage__caption {
-  position: absolute;
-  bottom: 98px;
-  left: 50%;
-  font-size: 26px;
-  font-weight: 800;
-  color: #fff;
-  transform: translateX(-50%);
+  margin-top: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #f7fcff;
+  text-align: center;
 }
 
 .report-summary {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 .report-summary__meta {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: 8px;
-  font-size: 12px;
-  color: #b4d5f3;
-  border-bottom: 1px solid rgb(91 158 221 / 18%);
+  padding: 14px;
+  background: linear-gradient(180deg, rgb(7 34 61 / 72%), rgb(4 23 44 / 78%));
+  border: 1px solid rgb(109 190 255 / 20%);
+}
+
+.report-summary__meta span {
+  display: block;
+  font-size: 13px;
+  color: #8ec7ea;
 }
 
 .report-summary__meta strong {
-  font-size: 17px;
-  color: #59dbff;
+  display: block;
+  margin-top: 8px;
+  font-size: 24px;
+  color: #f7fcff;
 }
 
 .report-summary__button {
-  padding: 8px 10px;
-  margin-top: 8px;
-  margin-bottom: 8px;
-  font-size: 15px;
-  font-weight: 700;
-  color: #f5fbff;
-  text-align: center;
-  background: linear-gradient(180deg, rgb(12 38 68 / 84%), rgb(7 24 45 / 86%));
-  border: 1px solid rgb(96 185 255 / 28%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 160px;
+  padding: 8px 16px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: #b7f2ff;
+  border: 1px solid rgb(109 190 255 / 24%);
 }
 
 .report-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.report-grid--dense {
-  align-items: stretch;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .report-grid__cell {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  gap: 12px;
   justify-content: space-between;
-  min-height: 48px;
-  padding: 6px 8px;
-  overflow: hidden;
-  background: rgb(8 30 53 / 78%);
-  border: 1px solid rgb(77 134 193 / 20%);
+  padding: 10px 12px;
+  background: rgb(8 29 50 / 46%);
+  border: 1px solid rgb(109 190 255 / 12%);
 }
 
 .report-grid__label {
-  font-size: 12px;
-  line-height: 1.25;
-  color: #bfd8f2;
-  overflow-wrap: anywhere;
+  font-size: 13px;
+  color: #9fc3eb;
 }
 
 .report-grid__value {
-  font-family: 'Geist Mono', monospace;
-  font-size: 14px;
-  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  color: #f7fcff;
 }
 
-.staff-metrics {
+.line-list {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-  margin-bottom: 10px;
 }
 
-.staff-metrics__item {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.line-list__item {
+  padding: 10px 12px;
+  background: rgb(8 29 50 / 46%);
+  border: 1px solid rgb(109 190 255 / 12%);
 }
 
-.staff-metrics__label {
-  font-size: 12px;
-  color: #cae1f8;
-}
-
-.staff-metrics__value {
-  font-size: 20px;
-  color: #ff7a8a;
-}
-
-.staff-metrics__value span {
-  margin-left: 6px;
-  font-size: 14px;
-  color: #cae1f8;
-}
-
-.gauge-row {
+.line-list__meta,
+.rate-list__row,
+.workload-table__row,
+.workload-table__head {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  min-height: 106px;
-}
-
-.gauge-row__item {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
   align-items: center;
 }
 
-.gauge-row__ring {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 82px;
-  height: 82px;
-  padding: 8px;
-  border-radius: 999px;
-  box-shadow: 0 0 18px rgb(70 227 255 / 18%);
+.line-list__track,
+.rate-list__line {
+  height: 8px;
+  margin-top: 10px;
+  background: rgb(101 164 220 / 10%);
 }
 
-.gauge-row__inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
+.line-list__fill,
+.rate-list__fill {
+  width: 78%;
   height: 100%;
-  color: #fff;
-  background: #071826;
+  background: linear-gradient(90deg, #2f8bff, #63f3c2);
+}
+
+.rate-list {
+  display: grid;
+  gap: 10px;
+}
+
+.rate-list__item {
+  padding: 10px 12px;
+  background: rgb(8 29 50 / 46%);
+  border: 1px solid rgb(109 190 255 / 12%);
+}
+
+.rate-list__dot {
+  width: 8px;
+  height: 8px;
+  background: #63f3c2;
   border-radius: 999px;
 }
 
-.gauge-row__inner strong {
-  font-family: 'Geist Mono', monospace;
-  font-size: 18px;
+.rate-list__row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
 }
 
-.gauge-row__label {
+.rate-list__label {
   font-size: 13px;
-  color: #9ec7ee;
+  color: #9fc3eb;
+}
+
+.year-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.year-grid--wide {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.year-grid__item {
+  padding: 12px;
+  background: rgb(8 29 50 / 46%);
+  border: 1px solid rgb(109 190 255 / 12%);
+}
+
+.year-grid__item h3 {
+  margin-bottom: 10px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #f7fcff;
+}
+
+.year-grid__metrics {
+  display: grid;
+  gap: 8px;
+}
+
+.year-grid__metric {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #9fc3eb;
+}
+
+.year-grid__metric strong {
+  color: #f7fcff;
 }
 
 .workload-table {
   display: flex;
-  flex: 1 1 auto;
   flex-direction: column;
-  gap: 6px;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.workload-table__head,
-.workload-table__row {
-  display: grid;
-  grid-template-columns: 1.4fr 0.8fr 0.8fr 0.8fr;
   gap: 10px;
-  align-items: center;
 }
 
 .workload-table__head {
-  padding: 0 8px 8px;
-  font-size: 12px;
-  color: #9cc5eb;
-  border-bottom: 1px solid rgb(85 142 196 / 18%);
-}
-
-.workload-table__row {
-  min-height: 34px;
-  padding: 6px 8px;
+  grid-template-columns: 1.4fr repeat(3, minmax(0, 1fr));
+  padding: 10px 12px;
   font-size: 13px;
-  color: #f3faff;
-  background: rgb(12 34 58 / 62%);
-}
-
-.workload-table__row:nth-child(odd) {
-  background: rgb(14 42 70 / 75%);
+  color: #8ec7ea;
+  background: rgb(8 29 50 / 46%);
 }
 
 .workload-table__body {
-  flex: 1 1 auto;
-  min-height: 0;
-  max-height: 312px;
-  overflow: hidden;
-}
-
-.workload-table__marquee {
-  display: flex;
-  flex-direction: column;
-  animation: workload-scroll 22s linear infinite;
-  will-change: transform;
-}
-
-.workload-table__group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding-bottom: 6px;
-}
-
-.rate-list {
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-  min-height: 0;
-  overflow: visible;
-}
-
-.rate-list__item {
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: 8px;
 }
 
-.rate-list__row {
-  display: grid;
-  grid-template-columns: 16px 1fr auto;
-  gap: 10px;
-  align-items: center;
-}
-
-.rate-list__dot {
-  width: 10px;
-  height: 10px;
-  border: 1px solid rgb(111 214 255 / 76%);
-  border-radius: 999px;
-  box-shadow: 0 0 12px rgb(66 196 255 / 26%);
-}
-
-.rate-list__label {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.workload-table__row {
+  grid-template-columns: 1.4fr repeat(3, minmax(0, 1fr));
+  padding: 10px 12px;
   font-size: 13px;
-  color: #d5ebff;
-  white-space: nowrap;
+  color: #f7fcff;
+  background: rgb(8 29 50 / 46%);
+  border: 1px solid rgb(109 190 255 / 12%);
 }
 
-.rate-list__value {
-  font-family: 'Geist Mono', monospace;
-  font-size: 13px;
-  color: #f5fbff;
-  white-space: nowrap;
+.screen-status {
+  color: #f7fcff;
 }
 
-.rate-list__line {
-  height: 2px;
-  overflow: hidden;
-  background: rgb(72 140 202 / 25%);
+.screen-status--partial {
+  color: #ffd36e;
 }
 
-.rate-list__fill {
-  width: 96%;
-  height: 100%;
-  background: linear-gradient(90deg, #1f8cff, #98f8ff);
-}
-
-.rate-list__fill--right {
-  width: 98%;
-}
-
-.pathology-screen__bottom-center {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  overflow: visible;
-}
-
-@keyframes workload-scroll {
-  from {
-    transform: translateY(0);
-  }
-
-  to {
-    transform: translateY(-50%);
-  }
-}
-
-@keyframes dashboard-card-enter {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes center-node-float {
-  0%,
-  100% {
-    transform: translate(-50%, -50%);
-  }
-
-  50% {
-    transform: translate(-50%, calc(-50% - 6px));
-  }
-}
-
-@media (max-width: 1680px) {
-  .pathology-screen__canvas {
-    padding: 12px 14px 16px;
-  }
-
-  .pathology-screen__content {
-    grid-template-columns: 24% 52% 24%;
-  }
-
-  .screen-panel {
-    padding: 10px;
-  }
-
-  .metric-stack__value {
-    font-size: 28px;
-  }
-
-  .center-stage {
-    min-height: 320px;
-  }
+.screen-status--unavailable {
+  color: #91a9cc;
 }
 
 @media (max-width: 1440px) {
-  .pathology-screen__header {
-    grid-template-columns: 1fr;
-  }
-
-  .pathology-screen__title-panel,
-  .pathology-screen__header-note {
-    justify-content: flex-start;
-  }
-
   .pathology-screen__content {
     grid-template-columns: 1fr;
-    height: auto;
-    overflow: visible;
   }
 
-  .pathology-screen__canvas {
-    height: auto;
-    min-height: 100vh;
-    overflow: hidden auto;
-  }
-
-  .pathology-screen__column {
-    height: auto;
-    overflow: visible;
-  }
-
-  .pathology-screen__bottom-center {
+  .metric-stack {
     grid-template-columns: 1fr;
   }
 
-  .report-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 1100px) {
-  .metric-stack,
   .report-summary,
-  .staff-metrics,
-  .gauge-row,
-  .pathology-screen__bottom-center,
-  .bar-card-grid,
   .report-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .pathology-screen__title {
-    font-size: 30px;
-  }
-
-  .pathology-screen__title-plate {
-    min-width: 100%;
-  }
-
-  .bar-card-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 768px) {
-  .pathology-screen__canvas {
-    padding: 12px 12px 20px;
-  }
-
-  .metric-stack,
-  .report-summary,
-  .staff-metrics,
-  .gauge-row,
-  .bar-card-grid,
-  .report-grid,
-  .pathology-screen__bottom-center {
     grid-template-columns: 1fr;
-  }
-
-  .workload-table__head,
-  .workload-table__row {
-    grid-template-columns: 1.2fr 0.7fr 0.7fr 0.8fr;
-    font-size: 12px;
-  }
-
-  .center-stage {
-    min-height: 420px;
-  }
-
-  .center-stage__node {
-    transform: translate(-50%, -50%) scale(0.88);
-    animation: none;
-  }
-
-  .center-stage__base {
-    width: 86%;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .metric-stack__card,
-  .center-stage__node,
-  .workload-table__marquee {
-    animation: none;
   }
 }
 </style>

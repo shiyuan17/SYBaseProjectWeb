@@ -1,69 +1,68 @@
+export type PathologyScreenStatus = 'AVAILABLE' | 'PARTIAL' | 'UNAVAILABLE';
+
 export interface PathologyScreenMetricCard {
   label: string;
+  sourceNote: null | string;
+  status: PathologyScreenStatus;
   value: string;
 }
 
-export interface PathologyScreenBarGroup {
-  darkValue: string;
+export interface PathologyScreenMetricItem {
   label: string;
-  lightValue: string;
-  tealValue?: string;
-}
-
-export interface PathologyScreenRateItem {
-  label: string;
+  sourceNote: null | string;
+  status: PathologyScreenStatus;
   value: string;
 }
 
-export interface PathologyScreenReportTypeItem {
+export interface PathologyScreenTrendItem {
   label: string;
+  sourceNote: null | string;
+  status: PathologyScreenStatus;
   value: string;
-}
-
-export interface PathologyScreenStageNode {
-  label: string;
-  value: string;
-  x: number;
-  y: number;
 }
 
 export interface PathologyScreenWorkloadRow {
-  january: string;
+  februaryCount: string;
+  januaryCount: string;
   label: string;
-  february: string;
-  ratio: string;
-  ratioTone: 'down' | 'neutral' | 'up';
+  momRate: string;
+  sourceNote: null | string;
+  status: PathologyScreenStatus;
 }
 
-export interface PathologyScreenStaffMetric {
-  accentValue: string;
-  label: string;
-  value: string;
+export interface PathologyScreenSection<TItem> {
+  items: TItem[];
+  sourceNote: null | string;
+  status: PathologyScreenStatus;
 }
 
-export interface PathologyScreenGaugeItem {
-  label: string;
-  value: number;
+export interface PathologyScreenThreeYearRow {
+  metrics: PathologyScreenMetricItem[];
   year: string;
 }
 
-export interface PathologyScreenSummary {
-  bottomLeftBars: PathologyScreenBarGroup[];
-  bottomRightBars: PathologyScreenBarGroup[];
-  bottomRightLegend: string[];
-  centerMetrics: PathologyScreenMetricCard[];
-  centerStageNodes: PathologyScreenStageNode[];
-  reportTypes: PathologyScreenReportTypeItem[];
-  reportTypesSummary: {
-    totalKinds: string;
-    totalWorkload: string;
-  };
-  rightTableRows: PathologyScreenWorkloadRow[];
-  staffGauges: PathologyScreenGaugeItem[];
-  staffMetrics: PathologyScreenStaffMetric[];
-  title: string;
-  topLeftBars: PathologyScreenBarGroup[];
-  topLeftLegend: string[];
-  topLeftRateItems: PathologyScreenRateItem[];
-  topRightRateItems: PathologyScreenRateItem[];
+export interface PathologyScreenStructuredReportSummary {
+  reportCount: PathologyScreenMetricCard;
+  sourceNote: null | string;
+  status: PathologyScreenStatus;
+  templateTypeCount: PathologyScreenMetricCard;
+  topTemplates: PathologyScreenMetricItem[];
+}
+
+export interface PathologyScreenSummaryCards {
+  annualCaseTotal: PathologyScreenMetricCard;
+  lastMonthCaseTotal: PathologyScreenMetricCard;
+  lastMonthReportTimelinessRate: PathologyScreenMetricCard;
+}
+
+export interface PathologyScreenDashboardResponse {
+  diagnosisWorkloadRows: PathologyScreenSection<PathologyScreenWorkloadRow>;
+  lastMonthWorkload: PathologyScreenSection<PathologyScreenMetricItem>;
+  overallComplianceRates: PathologyScreenSection<PathologyScreenMetricItem>;
+  reportRevisionRateTrend: PathologyScreenSection<PathologyScreenTrendItem>;
+  structuredReportSummary: PathologyScreenStructuredReportSummary;
+  summaryCards: PathologyScreenSummaryCards;
+  technicalQualificationRates: PathologyScreenSection<PathologyScreenMetricItem>;
+  threeYearReportQualityRates: PathologyScreenSection<PathologyScreenThreeYearRow>;
+  threeYearTechnicalRates: PathologyScreenSection<PathologyScreenThreeYearRow>;
 }

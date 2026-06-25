@@ -33,10 +33,12 @@ const canCreateMedicalOrder = computed(() =>
   accessStore.accessCodes.includes(M4_PERMISSION_CODES.MEDICAL_ORDER_CREATE),
 );
 
-const blockOptions = computed<MedicalOrderBlockOption[]>(() =>
-  (props.workbench?.blocks ?? []).map((block) => ({
-    blockCode: block.blockCode,
-    blockId: block.blockId,
+const blockOptions = computed<MedicalOrderBlockOption[]>(() => [
+  ...(props.workbench?.blocks ?? []).map((block) => ({
+    blockCode: normalizeBlockLabel(
+      block.blockCode,
+      props.workbench?.pathologyNo ?? undefined,
+    ),
     description: block.description ?? block.tissueName ?? block.specimenName,
     label: [
       normalizeBlockLabel(
@@ -50,8 +52,25 @@ const blockOptions = computed<MedicalOrderBlockOption[]>(() =>
     ]
       .filter(Boolean)
       .join(' '),
+    optionId: `CASE_BLOCK:${block.blockId}`,
+    source: 'CASE_BLOCK' as const,
+    targetBlockId: block.blockId,
   })),
-);
+  ...(props.workbench?.medicalOrderBlocks ?? []).map((block) => ({
+    blockCode: normalizeBlockLabel(
+      block.blockNo,
+      props.workbench?.pathologyNo ?? undefined,
+    ),
+    description: null,
+    label: normalizeBlockLabel(
+      block.blockNo,
+      props.workbench?.pathologyNo ?? undefined,
+    ),
+    optionId: `MEDICAL_ORDER_ONLY:${block.medicalOrderBlockId}`,
+    source: 'MEDICAL_ORDER_ONLY' as const,
+    targetBlockId: null,
+  })),
+]);
 
 function normalizeBlockLabel(
   value: null | string | undefined,
