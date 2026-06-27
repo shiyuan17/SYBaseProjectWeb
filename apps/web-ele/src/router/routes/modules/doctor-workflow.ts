@@ -1,4 +1,4 @@
-import type { RouteRecordRaw } from 'vue-router';
+import type { RouteComponent, RouteRecordRaw } from 'vue-router';
 
 import {
   M4_CONSULTATION_PAGE_AUTHORITIES,
@@ -34,6 +34,13 @@ const DOCTOR_WORKFLOW_AUTHORITIES = [
   M4_PERMISSION_CODES.MEDICAL_ORDER_CANCEL,
 ];
 
+function loadDoctorWorkflowRouteComponent(
+  loader: () => Promise<RouteComponent>,
+  routeName: string,
+) {
+  return withRouteComponentReloadRetry(loader, routeName);
+}
+
 const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
   {
     meta: {
@@ -47,8 +54,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
     redirect: '/doctor-workflow/entry',
     children: [
       {
-        component: () =>
-          import('#/modules/doctor-workflow/views/DoctorWorkflowEntryView.vue'),
+        component: loadDoctorWorkflowRouteComponent(
+          () =>
+            import('#/modules/doctor-workflow/views/DoctorWorkflowEntryView.vue'),
+          'DoctorWorkflowEntry',
+        ),
         meta: {
           authority: DOCTOR_WORKFLOW_AUTHORITIES,
           hideInBreadcrumb: true,
@@ -60,8 +70,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/doctor-workflow/entry',
       },
       {
-        component: () =>
-          import('#/modules/doctor-workflow/views/DiagnosisAssignmentView.vue'),
+        component: loadDoctorWorkflowRouteComponent(
+          () =>
+            import('#/modules/doctor-workflow/views/DiagnosisAssignmentView.vue'),
+          'DiagnosisAssignment',
+        ),
         meta: {
           authority: [M4_PERMISSION_CODES.DIAG_TASK_QUERY],
           icon: 'carbon:user-multiple',
@@ -71,7 +84,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/doctor-workflow/assignment',
       },
       {
-        component: withRouteComponentReloadRetry(
+        component: loadDoctorWorkflowRouteComponent(
           () =>
             import('#/modules/doctor-workflow/views/DiagnosisWorkbenchView.vue'),
           'DiagnosisWorkbench',
@@ -86,8 +99,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/doctor-workflow/workbench',
       },
       {
-        component: () =>
-          import('#/modules/doctor-workflow/views/PathologyReportView.vue'),
+        component: loadDoctorWorkflowRouteComponent(
+          () =>
+            import('#/modules/doctor-workflow/views/PathologyReportView.vue'),
+          'PathologyReport',
+        ),
         meta: {
           authority: [...M4_REPORT_PAGE_AUTHORITIES],
           fullPathKey: false,
@@ -98,8 +114,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/doctor-workflow/report',
       },
       {
-        component: () =>
-          import('#/modules/doctor-workflow/views/ReportTrackingView.vue'),
+        component: loadDoctorWorkflowRouteComponent(
+          () =>
+            import('#/modules/doctor-workflow/views/ReportTrackingView.vue'),
+          'ReportTracking',
+        ),
         meta: {
           authority: [M4_PERMISSION_CODES.REPORT_TRACKING_QUERY],
           fullPathKey: false,
@@ -110,8 +129,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/doctor-workflow/tracking',
       },
       {
-        component: () =>
-          import('#/modules/doctor-workflow/views/MedicalOrderWorkbenchView.vue'),
+        component: loadDoctorWorkflowRouteComponent(
+          () =>
+            import('#/modules/doctor-workflow/views/MedicalOrderWorkbenchView.vue'),
+          'MedicalOrderWorkbench',
+        ),
         meta: {
           authority: [...M4_MEDICAL_ORDER_PAGE_AUTHORITIES],
           fullPathKey: false,
@@ -122,8 +144,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/doctor-workflow/medical-orders',
       },
       {
-        component: () =>
-          import('#/modules/doctor-workflow/views/ReportRevisionView.vue'),
+        component: loadDoctorWorkflowRouteComponent(
+          () =>
+            import('#/modules/doctor-workflow/views/ReportRevisionView.vue'),
+          'ReportRevision',
+        ),
         meta: {
           authority: [...M4_REVISION_PAGE_AUTHORITIES],
           fullPathKey: false,
@@ -134,8 +159,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/doctor-workflow/revision',
       },
       {
-        component: () =>
-          import('#/modules/doctor-workflow/views/ConsultationWorkstationView.vue'),
+        component: loadDoctorWorkflowRouteComponent(
+          () =>
+            import('#/modules/doctor-workflow/views/ConsultationWorkstationView.vue'),
+          'Consultation',
+        ),
         meta: {
           authority: [...M4_CONSULTATION_PAGE_AUTHORITIES],
           fullPathKey: false,

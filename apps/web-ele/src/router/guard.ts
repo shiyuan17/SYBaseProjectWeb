@@ -10,6 +10,7 @@ import { accessRoutes, coreRouteNames } from '#/router/routes';
 import { useAuthStore } from '#/store';
 
 import { generateAccess } from './access';
+import { setupDashboardLayoutGuard } from './dashboard-layout-guard';
 import {
   buildLoginRedirectQuery,
   resolvePostLoginRedirect,
@@ -141,6 +142,8 @@ function setupAccessGuard(router: Router) {
  * @param router
  */
 function createRouterGuard(router: Router) {
+  /** 病理大屏全屏布局与路由同步 */
+  setupDashboardLayoutGuard(router);
   /** 通用 */
   setupCommonGuard(router);
   /** 权限访问 */

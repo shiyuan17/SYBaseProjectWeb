@@ -1,6 +1,6 @@
 import { hasAuthority } from '@vben/utils';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   M4_CONSULTATION_PAGE_AUTHORITIES,
@@ -9,6 +9,14 @@ import {
   M4_REPORT_PAGE_AUTHORITIES,
   M4_REVISION_PAGE_AUTHORITIES,
 } from '#/modules/doctor-workflow/constants';
+
+const { withRouteComponentReloadRetryMock } = vi.hoisted(() => ({
+  withRouteComponentReloadRetryMock: vi.fn((loader) => loader),
+}));
+
+vi.mock('#/router/routes/lazy-load', () => ({
+  withRouteComponentReloadRetry: withRouteComponentReloadRetryMock,
+}));
 
 import doctorWorkflowRoutes from './doctor-workflow';
 
@@ -199,5 +207,23 @@ describe('doctor workflow routes', () => {
     expect(routeNames).not.toContain('ReportRevision');
     expect(routeNames).not.toContain('Consultation');
     expect(routeNames).not.toContain('MedicalOrderWorkbench');
+  });
+
+  it('wraps high-frequency doctor workflow pages with route reload retry', () => {
+    for (const routeName of [
+      'DoctorWorkflowEntry',
+      'DiagnosisAssignment',
+      'DiagnosisWorkbench',
+      'PathologyReport',
+      'ReportTracking',
+      'MedicalOrderWorkbench',
+      'ReportRevision',
+      'Consultation',
+    ]) {
+      expect(withRouteComponentReloadRetryMock).toHaveBeenCalledWith(
+        expect.any(Function),
+        routeName,
+      );
+    }
   });
 });

@@ -1,8 +1,16 @@
 import type { RouteRecordRaw } from 'vue-router';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { M2_PERMISSION_CODES } from '#/modules/specimen-workflow/constants';
+
+const { withRouteComponentReloadRetryMock } = vi.hoisted(() => ({
+  withRouteComponentReloadRetryMock: vi.fn((loader) => loader),
+}));
+
+vi.mock('#/router/routes/lazy-load', () => ({
+  withRouteComponentReloadRetry: withRouteComponentReloadRetryMock,
+}));
 
 import technicalWorkflowRoutes from './technical-workflow';
 import workflowRoutes from './workflow';
@@ -119,5 +127,21 @@ describe('workflow routes', () => {
     expect(componentPageRoutes.map((route) => route.path)).toHaveLength(
       new Set(componentPageRoutes.map((route) => route.path)).size,
     );
+  });
+
+  it('wraps high-frequency M2 workflow pages with route reload retry', () => {
+    for (const routeName of [
+      'WorkflowEntry',
+      'SubmissionRegistration',
+      'ApplicationRegistrationWorkbench',
+      'FixationTransport',
+      'PathologyReceipt',
+      'TrackingException',
+    ]) {
+      expect(withRouteComponentReloadRetryMock).toHaveBeenCalledWith(
+        expect.any(Function),
+        routeName,
+      );
+    }
   });
 });

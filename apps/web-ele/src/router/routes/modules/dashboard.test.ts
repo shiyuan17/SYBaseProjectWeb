@@ -1,4 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+const { withRouteComponentReloadRetryMock } = vi.hoisted(() => ({
+  withRouteComponentReloadRetryMock: vi.fn((loader) => loader),
+}));
+
+vi.mock('#/router/routes/lazy-load', () => ({
+  withRouteComponentReloadRetry: withRouteComponentReloadRetryMock,
+}));
 
 import dashboardRoutes from './dashboard';
 
@@ -26,5 +34,16 @@ describe('dashboard routes', () => {
       '/views/dashboard/workspace/index.vue',
     );
     expect(workspaceRoute?.meta?.keepAlive).toBe(true);
+  });
+
+  it('wraps high-frequency dashboard pages with route reload retry', () => {
+    expect(withRouteComponentReloadRetryMock).toHaveBeenCalledWith(
+      expect.any(Function),
+      'Analytics',
+    );
+    expect(withRouteComponentReloadRetryMock).toHaveBeenCalledWith(
+      expect.any(Function),
+      'Workspace',
+    );
   });
 });

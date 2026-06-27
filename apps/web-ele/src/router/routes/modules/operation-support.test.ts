@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   M5_ARCHIVE_PAGE_AUTHORITIES,
@@ -9,6 +9,14 @@ import {
   M5_REAGENT_PAGE_AUTHORITIES,
   M5_RESOURCE_PAGE_AUTHORITIES,
 } from '#/modules/operation-support/constants';
+
+const { withRouteComponentReloadRetryMock } = vi.hoisted(() => ({
+  withRouteComponentReloadRetryMock: vi.fn((loader) => loader),
+}));
+
+vi.mock('#/router/routes/lazy-load', () => ({
+  withRouteComponentReloadRetry: withRouteComponentReloadRetryMock,
+}));
 
 import operationSupportRoutes from './operation-support';
 
@@ -91,5 +99,22 @@ describe('operation support routes', () => {
     expect(resourceRoot?.meta?.authority).toContain(
       M5_PERMISSION_CODES.EQUIPMENT_MAINTENANCE_CREATE,
     );
+  });
+
+  it('wraps high-frequency operation support pages with route reload retry', () => {
+    for (const routeName of [
+      'OperationSupportEntry',
+      'ArchiveManagement',
+      'BorrowManagement',
+      'OperationResourceEntry',
+      'EquipmentManagement',
+      'ReagentConsumableManagement',
+      'MedicalWasteManagement',
+    ]) {
+      expect(withRouteComponentReloadRetryMock).toHaveBeenCalledWith(
+        expect.any(Function),
+        routeName,
+      );
+    }
   });
 });

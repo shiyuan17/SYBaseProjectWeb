@@ -1,4 +1,4 @@
-import type { RouteRecordRaw } from 'vue-router';
+import type { RouteComponent, RouteRecordRaw } from 'vue-router';
 
 import {
   M5_ARCHIVE_PAGE_AUTHORITIES,
@@ -9,11 +9,19 @@ import {
   M5_RESOURCE_PAGE_AUTHORITIES,
 } from '#/modules/operation-support/constants';
 import { applyKeepAliveToTabRoutes } from '#/router/routes/keep-alive';
+import { withRouteComponentReloadRetry } from '#/router/routes/lazy-load';
 
 const RESOURCE_AUTHORITIES = [
   ...M5_REAGENT_PAGE_AUTHORITIES,
   ...M5_EQUIPMENT_PAGE_AUTHORITIES,
 ];
+
+function loadOperationSupportRouteComponent(
+  loader: () => Promise<RouteComponent>,
+  routeName: string,
+) {
+  return withRouteComponentReloadRetry(loader, routeName);
+}
 
 const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
   {
@@ -28,8 +36,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
     redirect: '/operation-support/entry',
     children: [
       {
-        component: () =>
-          import('#/modules/operation-support/views/OperationSupportEntryView.vue'),
+        component: loadOperationSupportRouteComponent(
+          () =>
+            import('#/modules/operation-support/views/OperationSupportEntryView.vue'),
+          'OperationSupportEntry',
+        ),
         meta: {
           authority: [...M5_OPERATION_SUPPORT_AUTHORITIES],
           hideInBreadcrumb: true,
@@ -41,8 +52,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/operation-support/entry',
       },
       {
-        component: () =>
-          import('#/modules/operation-support/views/ArchiveManagementView.vue'),
+        component: loadOperationSupportRouteComponent(
+          () =>
+            import('#/modules/operation-support/views/ArchiveManagementView.vue'),
+          'ArchiveManagement',
+        ),
         meta: {
           authority: [...M5_ARCHIVE_PAGE_AUTHORITIES],
           icon: 'carbon:archive',
@@ -52,8 +66,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/operation-support/archive',
       },
       {
-        component: () =>
-          import('#/modules/operation-support/views/BorrowManagementView.vue'),
+        component: loadOperationSupportRouteComponent(
+          () =>
+            import('#/modules/operation-support/views/BorrowManagementView.vue'),
+          'BorrowManagement',
+        ),
         meta: {
           authority: [...M5_BORROW_PAGE_AUTHORITIES],
           icon: 'carbon:bookmark',
@@ -76,8 +93,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
     redirect: '/operation-resources/entry',
     children: [
       {
-        component: () =>
-          import('#/modules/operation-support/views/OperationResourceEntryView.vue'),
+        component: loadOperationSupportRouteComponent(
+          () =>
+            import('#/modules/operation-support/views/OperationResourceEntryView.vue'),
+          'OperationResourceEntry',
+        ),
         meta: {
           authority: RESOURCE_AUTHORITIES,
           hideInBreadcrumb: true,
@@ -89,8 +109,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/operation-resources/entry',
       },
       {
-        component: () =>
-          import('#/modules/operation-support/views/EquipmentLedgerView.vue'),
+        component: loadOperationSupportRouteComponent(
+          () =>
+            import('#/modules/operation-support/views/EquipmentLedgerView.vue'),
+          'EquipmentManagement',
+        ),
         meta: {
           authority: [...M5_EQUIPMENT_PAGE_AUTHORITIES],
           description: '维护仪器设备档案、保养记录，并跟踪设备预警。',
@@ -101,8 +124,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/operation-resources/equipment',
       },
       {
-        component: () =>
-          import('#/modules/operation-support/views/ReagentLedgerView.vue'),
+        component: loadOperationSupportRouteComponent(
+          () =>
+            import('#/modules/operation-support/views/ReagentLedgerView.vue'),
+          'ReagentConsumableManagement',
+        ),
         meta: {
           authority: [...M5_REAGENT_PAGE_AUTHORITIES],
           description: '维护试剂耗材基础信息、库存批次，并跟踪预警。',
@@ -113,8 +139,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/operation-resources/reagents',
       },
       {
-        component: () =>
-          import('#/modules/operation-support/views/MedicalWasteManagementView.vue'),
+        component: loadOperationSupportRouteComponent(
+          () =>
+            import('#/modules/operation-support/views/MedicalWasteManagementView.vue'),
+          'MedicalWasteManagement',
+        ),
         meta: {
           authority: [...M5_RESOURCE_PAGE_AUTHORITIES],
           description: '维护人体标本与药物试剂医疗废物袋打印、交接记录。',

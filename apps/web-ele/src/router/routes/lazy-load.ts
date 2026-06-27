@@ -2,6 +2,7 @@ import type { RouteComponent } from 'vue-router';
 
 interface RouteReloadRetryOptions {
   reload?: () => void;
+  shouldReload?: () => boolean;
 }
 
 const routeComponentReloadRetryPrefix = 'route-component-reload-retry:';
@@ -27,6 +28,10 @@ function reloadPage() {
   globalThis.location?.reload();
 }
 
+function shouldReloadAfterRetry(options: RouteReloadRetryOptions) {
+  return options.shouldReload?.() ?? import.meta.env.PROD;
+}
+
 export function withRouteComponentReloadRetry(
   loader: () => Promise<RouteComponent>,
   routeName: string,
@@ -38,14 +43,25 @@ export function withRouteComponentReloadRetry(
       sessionStorage.removeItem(getRouteRetryKey(routeName));
       return component;
     } catch (error) {
-      const retryKey = getRouteRetryKey(routeName);
-      if (
-        isDynamicImportFetchError(error) &&
-        sessionStorage.getItem(retryKey) !== '1'
-      ) {
-        sessionStorage.setItem(retryKey, '1');
-        (options.reload ?? reloadPage)();
+      if (!isDynamicImportFetchError(error)) {
+        throw error;
       }
+
+      const retryKey = getRouteRetryKey(routeName);
+      try {
+        const component = await loader();
+        sessionStorage.removeItem(retryKey);
+        return component;
+      } catch {
+        if (
+          shouldReloadAfterRetry(options) &&
+          sessionStorage.getItem(retryKey) !== '1'
+        ) {
+          sessionStorage.setItem(retryKey, '1');
+          (options.reload ?? reloadPage)();
+        }
+      }
+
       throw error;
     }
   };

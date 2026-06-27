@@ -1,11 +1,19 @@
 import { hasAuthority } from '@vben/utils';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   M6_PERMISSION_CODES,
   M6_STATISTICS_PAGE_AUTHORITIES,
 } from '#/modules/m6-management/constants';
+
+const { withRouteComponentReloadRetryMock } = vi.hoisted(() => ({
+  withRouteComponentReloadRetryMock: vi.fn((loader) => loader),
+}));
+
+vi.mock('#/router/routes/lazy-load', () => ({
+  withRouteComponentReloadRetry: withRouteComponentReloadRetryMock,
+}));
 
 import m6Routes from './m6';
 
@@ -77,5 +85,20 @@ describe('m6 routes', () => {
     expect(routeNames).toContain('QualityIndicatorStatistics');
     expect(routeNames).toContain('ManagementIndicatorStatistics');
     expect(routeNames).toContain('CustomStatisticsAnalysis');
+  });
+
+  it('wraps high-frequency M6 pages with route reload retry', () => {
+    for (const routeName of [
+      'M6Entry',
+      'M6StatisticsDashboard',
+      'QualityIndicatorStatistics',
+      'ManagementIndicatorStatistics',
+      'CustomStatisticsAnalysis',
+    ]) {
+      expect(withRouteComponentReloadRetryMock).toHaveBeenCalledWith(
+        expect.any(Function),
+        routeName,
+      );
+    }
   });
 });

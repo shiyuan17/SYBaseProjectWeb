@@ -1,9 +1,17 @@
-import type { RouteRecordRaw } from 'vue-router';
+import type { RouteComponent, RouteRecordRaw } from 'vue-router';
 
 import { M6_STATISTICS_PAGE_AUTHORITIES } from '#/modules/m6-management/constants';
 import { applyKeepAliveToTabRoutes } from '#/router/routes/keep-alive';
+import { withRouteComponentReloadRetry } from '#/router/routes/lazy-load';
 
 const M6_AUTHORITIES = [...M6_STATISTICS_PAGE_AUTHORITIES];
+
+function loadM6RouteComponent(
+  loader: () => Promise<RouteComponent>,
+  routeName: string,
+) {
+  return withRouteComponentReloadRetry(loader, routeName);
+}
 
 const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
   {
@@ -18,8 +26,10 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
     redirect: '/m6/entry',
     children: [
       {
-        component: () =>
-          import('#/modules/m6-management/views/M6EntryView.vue'),
+        component: loadM6RouteComponent(
+          () => import('#/modules/m6-management/views/M6EntryView.vue'),
+          'M6Entry',
+        ),
         meta: {
           authority: M6_AUTHORITIES,
           hideInBreadcrumb: true,
@@ -31,8 +41,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/m6/entry',
       },
       {
-        component: () =>
-          import('#/modules/m6-statistics/views/StatisticsDashboardView.vue'),
+        component: loadM6RouteComponent(
+          () =>
+            import('#/modules/m6-statistics/views/StatisticsDashboardView.vue'),
+          'M6StatisticsDashboard',
+        ),
         meta: {
           authority: [...M6_STATISTICS_PAGE_AUTHORITIES],
           description: '汇总展示 M6 质控、运营与工作量统计核心指标。',
@@ -43,8 +56,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/m6/dashboard',
       },
       {
-        component: () =>
-          import('#/modules/m6-statistics/views/QualityIndicatorStatisticsView.vue'),
+        component: loadM6RouteComponent(
+          () =>
+            import('#/modules/m6-statistics/views/QualityIndicatorStatisticsView.vue'),
+          'QualityIndicatorStatistics',
+        ),
         meta: {
           authority: [...M6_STATISTICS_PAGE_AUTHORITIES],
           description:
@@ -56,8 +72,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/m6/quality-indicators',
       },
       {
-        component: () =>
-          import('#/modules/m6-statistics/views/ManagementIndicatorStatisticsView.vue'),
+        component: loadM6RouteComponent(
+          () =>
+            import('#/modules/m6-statistics/views/ManagementIndicatorStatisticsView.vue'),
+          'ManagementIndicatorStatistics',
+        ),
         meta: {
           authority: [...M6_STATISTICS_PAGE_AUTHORITIES],
           description: '展示业务量、收费、物资/试剂预警与人员工作量统计口径。',
@@ -68,8 +87,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/m6/management-indicators',
       },
       {
-        component: () =>
-          import('#/modules/m6-statistics/views/StatisticsAnalysisView.vue'),
+        component: loadM6RouteComponent(
+          () =>
+            import('#/modules/m6-statistics/views/StatisticsAnalysisView.vue'),
+          'CustomStatisticsAnalysis',
+        ),
         meta: {
           authority: [...M6_STATISTICS_PAGE_AUTHORITIES],
           description:

@@ -1,7 +1,8 @@
-import type { RouteRecordRaw } from 'vue-router';
+import type { RouteComponent, RouteRecordRaw } from 'vue-router';
 
 import { M1_PERMISSION_CODES } from '#/modules/system-management/constants';
 import { applyKeepAliveToTabRoutes } from '#/router/routes/keep-alive';
+import { withRouteComponentReloadRetry } from '#/router/routes/lazy-load';
 
 const SYSTEM_QUERY_AUTHORITIES = [
   M1_PERMISSION_CODES.SYSTEM_USER_QUERY,
@@ -18,6 +19,13 @@ const SYSTEM_QUERY_AUTHORITIES = [
   M1_PERMISSION_CODES.LOG_QUERY,
 ];
 
+function loadSystemRouteComponent(
+  loader: () => Promise<RouteComponent>,
+  routeName: string,
+) {
+  return withRouteComponentReloadRetry(loader, routeName);
+}
+
 const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
   {
     meta: {
@@ -33,8 +41,10 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
       {
         name: 'SystemUsers',
         path: '/system/users',
-        component: () =>
-          import('#/modules/system-management/views/SystemUsersView.vue'),
+        component: loadSystemRouteComponent(
+          () => import('#/modules/system-management/views/SystemUsersView.vue'),
+          'SystemUsers',
+        ),
         meta: {
           authority: [M1_PERMISSION_CODES.SYSTEM_USER_QUERY],
           icon: 'carbon:user-avatar',
@@ -44,8 +54,10 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
       {
         name: 'Roles',
         path: '/system/roles',
-        component: () =>
-          import('#/modules/system-management/views/RolesView.vue'),
+        component: loadSystemRouteComponent(
+          () => import('#/modules/system-management/views/RolesView.vue'),
+          'Roles',
+        ),
         meta: {
           authority: [M1_PERMISSION_CODES.SYSTEM_ROLE_QUERY],
           icon: 'carbon:user-role',
@@ -55,8 +67,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
       {
         name: 'Departments',
         path: '/system/departments',
-        component: () =>
-          import('#/modules/system-management/views/DepartmentsView.vue'),
+        component: loadSystemRouteComponent(
+          () =>
+            import('#/modules/system-management/views/DepartmentsView.vue'),
+          'Departments',
+        ),
         meta: {
           authority: [M1_PERMISSION_CODES.DEPARTMENT_QUERY],
           icon: 'carbon:building',
@@ -66,8 +81,10 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
       {
         name: 'BodyParts',
         path: '/system/body-parts',
-        component: () =>
-          import('#/modules/system-management/views/BodyPartsView.vue'),
+        component: loadSystemRouteComponent(
+          () => import('#/modules/system-management/views/BodyPartsView.vue'),
+          'BodyParts',
+        ),
         meta: {
           authority: [M1_PERMISSION_CODES.BODY_PART_QUERY],
           icon: 'carbon:tree-view',
@@ -77,8 +94,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
       {
         name: 'MedicalOrderDicts',
         path: '/system/medical-order-dicts',
-        component: () =>
-          import('#/modules/system-management/views/MedicalOrderDictsView.vue'),
+        component: loadSystemRouteComponent(
+          () =>
+            import('#/modules/system-management/views/MedicalOrderDictsView.vue'),
+          'MedicalOrderDicts',
+        ),
         meta: {
           authority: [M1_PERMISSION_CODES.ORDER_DICT_QUERY],
           icon: 'carbon:book',
@@ -88,8 +108,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
       {
         name: 'MedicalOrderCharges',
         path: '/system/medical-order-charges',
-        component: () =>
-          import('#/modules/system-management/views/MedicalOrderChargesView.vue'),
+        component: loadSystemRouteComponent(
+          () =>
+            import('#/modules/system-management/views/MedicalOrderChargesView.vue'),
+          'MedicalOrderCharges',
+        ),
         meta: {
           authority: [M1_PERMISSION_CODES.ORDER_CHARGE_QUERY],
           icon: 'carbon:currency',
@@ -99,8 +122,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
       {
         name: 'MedicalOrderPackages',
         path: '/system/medical-order-packages',
-        component: () =>
-          import('#/modules/system-management/views/MedicalOrderPackagesView.vue'),
+        component: loadSystemRouteComponent(
+          () =>
+            import('#/modules/system-management/views/MedicalOrderPackagesView.vue'),
+          'MedicalOrderPackages',
+        ),
         meta: {
           authority: [M1_PERMISSION_CODES.PACKAGE_QUERY],
           icon: 'carbon:package',
@@ -110,8 +136,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
       {
         name: 'SamplingTemplates',
         path: '/system/sampling-templates',
-        component: () =>
-          import('#/modules/system-management/views/SamplingTemplatesView.vue'),
+        component: loadSystemRouteComponent(
+          () =>
+            import('#/modules/system-management/views/SamplingTemplatesView.vue'),
+          'SamplingTemplates',
+        ),
         meta: {
           authority: [M1_PERMISSION_CODES.TEMPLATE_QUERY],
           icon: 'carbon:document-preliminary',
@@ -121,8 +150,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
       {
         name: 'SamplingGuidelines',
         path: '/system/sampling-guidelines',
-        component: () =>
-          import('#/modules/system-management/views/SamplingGuidelinesView.vue'),
+        component: loadSystemRouteComponent(
+          () =>
+            import('#/modules/system-management/views/SamplingGuidelinesView.vue'),
+          'SamplingGuidelines',
+        ),
         meta: {
           authority: [M1_PERMISSION_CODES.GUIDELINE_QUERY],
           icon: 'carbon:rule',
@@ -132,8 +164,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
       {
         name: 'SystemConfigs',
         path: '/system/configs',
-        component: () =>
-          import('#/modules/system-management/views/SystemConfigsView.vue'),
+        component: loadSystemRouteComponent(
+          () =>
+            import('#/modules/system-management/views/SystemConfigsView.vue'),
+          'SystemConfigs',
+        ),
         meta: {
           authority: [M1_PERMISSION_CODES.CONFIG_QUERY],
           icon: 'carbon:settings-adjust',
@@ -143,8 +178,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
       {
         name: 'NumberingRules',
         path: '/system/numbering-rules',
-        component: () =>
-          import('#/modules/system-management/views/NumberingRulesView.vue'),
+        component: loadSystemRouteComponent(
+          () =>
+            import('#/modules/system-management/views/NumberingRulesView.vue'),
+          'NumberingRules',
+        ),
         meta: {
           authority: [M1_PERMISSION_CODES.NUMBERING_QUERY],
           icon: 'carbon:list-numbered',
@@ -154,8 +192,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
       {
         name: 'LogManagement',
         path: '/system/logs',
-        component: () =>
-          import('#/modules/system-management/views/LogManagementView.vue'),
+        component: loadSystemRouteComponent(
+          () =>
+            import('#/modules/system-management/views/LogManagementView.vue'),
+          'LogManagement',
+        ),
         meta: {
           authority: [M1_PERMISSION_CODES.LOG_QUERY],
           icon: 'carbon:report',

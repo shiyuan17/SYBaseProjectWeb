@@ -1,7 +1,12 @@
-import type { LocationQueryRaw, RouteRecordRaw } from 'vue-router';
+import type {
+  LocationQueryRaw,
+  RouteComponent,
+  RouteRecordRaw,
+} from 'vue-router';
 
 import { M2_PERMISSION_CODES } from '#/modules/specimen-workflow/constants';
 import { applyKeepAliveToTabRoutes } from '#/router/routes/keep-alive';
+import { withRouteComponentReloadRetry } from '#/router/routes/lazy-load';
 
 const WORKFLOW_AUTHORITIES = [
   M2_PERMISSION_CODES.APPLICATION_DETAIL_QUERY,
@@ -34,6 +39,13 @@ function redirectWithQuery(
   });
 }
 
+function loadWorkflowRouteComponent(
+  loader: () => Promise<RouteComponent>,
+  routeName: string,
+) {
+  return withRouteComponentReloadRetry(loader, routeName);
+}
+
 const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
   {
     meta: {
@@ -47,8 +59,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
     redirect: '/workflow/entry',
     children: [
       {
-        component: () =>
-          import('#/modules/specimen-workflow/views/WorkflowEntryView.vue'),
+        component: loadWorkflowRouteComponent(
+          () =>
+            import('#/modules/specimen-workflow/views/WorkflowEntryView.vue'),
+          'WorkflowEntry',
+        ),
         meta: {
           authority: WORKFLOW_AUTHORITIES,
           hideInBreadcrumb: true,
@@ -60,8 +75,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/workflow/entry',
       },
       {
-        component: () =>
-          import('#/modules/specimen-workflow/views/SubmissionRegistrationView.vue'),
+        component: loadWorkflowRouteComponent(
+          () =>
+            import('#/modules/specimen-workflow/views/SubmissionRegistrationView.vue'),
+          'SubmissionRegistration',
+        ),
         meta: {
           authority: SUBMISSION_WORKBENCH_AUTHORITIES,
           hideInMenu: true,
@@ -72,8 +90,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/workflow/submission-registration',
       },
       {
-        component: () =>
-          import('#/modules/specimen-workflow/views/ApplicationRegistrationWorkbenchView.vue'),
+        component: loadWorkflowRouteComponent(
+          () =>
+            import('#/modules/specimen-workflow/views/ApplicationRegistrationWorkbenchView.vue'),
+          'ApplicationRegistrationWorkbench',
+        ),
         meta: {
           authority: SUBMISSION_WORKBENCH_AUTHORITIES,
           icon: 'carbon:workspace',
@@ -127,8 +148,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/workflow/clinical-register',
       },
       {
-        component: () =>
-          import('#/modules/specimen-workflow/views/FixationTransportView.vue'),
+        component: loadWorkflowRouteComponent(
+          () =>
+            import('#/modules/specimen-workflow/views/FixationTransportView.vue'),
+          'FixationTransport',
+        ),
         meta: {
           authority: [
             M2_PERMISSION_CODES.FIXATION_VERIFY,
@@ -169,8 +193,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/workflow/transport-handover',
       },
       {
-        component: () =>
-          import('#/modules/specimen-workflow/views/SpecimenReceiptView.vue'),
+        component: loadWorkflowRouteComponent(
+          () =>
+            import('#/modules/specimen-workflow/views/SpecimenReceiptView.vue'),
+          'PathologyReceipt',
+        ),
         meta: {
           authority: [M2_PERMISSION_CODES.SPECIMEN_RECEIVE],
           hideInMenu: true,
@@ -193,8 +220,11 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         path: '/workflow/specimen-receipt',
       },
       {
-        component: () =>
-          import('#/modules/specimen-workflow/views/TrackingQueryView.vue'),
+        component: loadWorkflowRouteComponent(
+          () =>
+            import('#/modules/specimen-workflow/views/TrackingQueryView.vue'),
+          'TrackingException',
+        ),
         meta: {
           authority: [M2_PERMISSION_CODES.SPECIMEN_TRACKING_QUERY],
           icon: 'carbon:search',
