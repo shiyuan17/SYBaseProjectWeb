@@ -345,7 +345,9 @@ export function useApplicationRegistrationWorkbench(
     keyword: string,
     queryTypeOverride?: WorkbenchLookupType,
   ) {
-    const lookupType = queryTypeOverride ?? searchType.value;
+    const lookupType = normalizeVisibleLookupType(
+      queryTypeOverride ?? searchType.value,
+    );
     const record = await lookupApplicationRegistrationWorkbenchRecord({
       keyword,
       queryType: lookupType,
