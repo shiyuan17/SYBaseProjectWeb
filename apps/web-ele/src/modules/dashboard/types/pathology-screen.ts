@@ -66,3 +66,15 @@ export interface PathologyScreenDashboardResponse {
   threeYearReportQualityRates: PathologyScreenSection<PathologyScreenThreeYearRow>;
   threeYearTechnicalRates: PathologyScreenSection<PathologyScreenThreeYearRow>;
 }
+
+export type PathologyDashboardLoadState =
+  | 'error'
+  | 'forbidden'
+  | 'loading'
+  | 'ready';
+
+export interface PathologyDashboardSnapshot {
+  cachedAt: number;
+  dashboard: PathologyScreenDashboardResponse;
+  userId: string;
+}

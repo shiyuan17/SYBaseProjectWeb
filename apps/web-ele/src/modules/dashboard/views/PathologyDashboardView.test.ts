@@ -1,7 +1,10 @@
+import type { PathologyScreenDashboardResponse } from '../types/pathology-screen';
+
 import { createApp, defineComponent, h, nextTick } from 'vue';
 
 import { describe, expect, it, vi } from 'vitest';
 
+import { writePathologyDashboardSnapshot } from '../utils/pathology-dashboard-cache';
 import PathologyDashboardView from './PathologyDashboardView.vue';
 
 const preferenceMocks = vi.hoisted(() => {
@@ -30,6 +33,13 @@ const preferenceMocks = vi.hoisted(() => {
 
 const mockRouterPush = vi.hoisted(() => vi.fn());
 const mockQueryPathologyScreenDashboard = vi.hoisted(() => vi.fn());
+const mockUserStore = vi.hoisted(() => ({
+  userInfo: {
+    realName: '张医生',
+    userId: 'USER-001',
+    username: 'zhangsan',
+  },
+}));
 
 vi.mock('#/preferences-branding', () => ({
   BRAND_LOGO_SOURCE: '/jwbl-logo.svg',
@@ -50,6 +60,10 @@ vi.mock('@vben/common-ui', () => ({
   }),
 }));
 
+vi.mock('@vben/stores', () => ({
+  useUserStore: () => mockUserStore,
+}));
+
 vi.mock('vue-router', () => ({
   onBeforeRouteLeave: vi.fn(),
   useRouter: () => ({
@@ -66,6 +80,12 @@ function resetPreferenceMocks(
 ) {
   preferenceMocks.currentPreferences = preferences;
   preferenceMocks.updatePreferences.mockClear();
+  sessionStorage.clear();
+  mockUserStore.userInfo = {
+    realName: '张医生',
+    userId: 'USER-001',
+    username: 'zhangsan',
+  };
 }
 
 async function flushView() {
@@ -75,7 +95,9 @@ async function flushView() {
   await nextTick();
 }
 
-function buildDashboardResponse(overrides: Record<string, any> = {}) {
+function buildDashboardResponse(
+  overrides: Partial<PathologyScreenDashboardResponse> = {},
+): PathologyScreenDashboardResponse {
   return {
     summaryCards: {
       annualCaseTotal: {
@@ -286,7 +308,7 @@ function buildDashboardResponse(overrides: Record<string, any> = {}) {
       status: 'PARTIAL',
     },
     ...overrides,
-  };
+  } satisfies PathologyScreenDashboardResponse;
 }
 
 describe('PathologyDashboardView', () => {
@@ -371,6 +393,67 @@ describe('PathologyDashboardView', () => {
     }
   });
 
+  it('renders cached dashboard content immediately while a background refresh is still pending', async () => {
+    resetPreferenceMocks();
+    writePathologyDashboardSnapshot('USER-001', buildDashboardResponse());
+    mockQueryPathologyScreenDashboard.mockImplementation(
+      () =>
+        new Promise(() => {
+          // keep pending
+        }),
+    );
+
+    const root = document.createElement('div');
+    document.body.append(root);
+    const app = createApp(PathologyDashboardView);
+    app.mount(root);
+
+    try {
+      expect(
+        root.querySelector('[data-testid="pathology-loading"]'),
+      ).toBeNull();
+      expect(
+        root.querySelector('[data-testid="pathology-screen-header"]')
+          ?.textContent,
+      ).toContain('嘉维病理');
+      expect(
+        root.querySelector('[data-testid="pathology-metric-cards"]')
+          ?.textContent,
+      ).toContain('全年病例总数（例）');
+    } finally {
+      app.unmount();
+      root.remove();
+    }
+  });
+
+  it('keeps cached dashboard content visible and shows a refresh warning when the background refresh fails', async () => {
+    resetPreferenceMocks();
+    writePathologyDashboardSnapshot('USER-001', buildDashboardResponse());
+    mockQueryPathologyScreenDashboard.mockRejectedValue(new Error('刷新失败'));
+
+    const root = document.createElement('div');
+    document.body.append(root);
+    const app = createApp(PathologyDashboardView);
+    app.mount(root);
+    await flushView();
+
+    try {
+      expect(
+        root.querySelector('[data-testid="pathology-screen-header"]')
+          ?.textContent,
+      ).toContain('嘉维病理');
+      expect(root.textContent).toContain('刷新失败');
+      expect(root.textContent).toContain('最近一次结果');
+      expect(
+        root.querySelector('[data-testid="pathology-metric-cards"]')
+          ?.textContent,
+      ).toContain('全年病例总数（例）');
+    } finally {
+      app.unmount();
+      root.remove();
+    }
+  });
+
   it('renders a 403 fallback when the dashboard query is forbidden', async () => {
     resetPreferenceMocks();
     mockQueryPathologyScreenDashboard.mockRejectedValue({
@@ -393,17 +476,8 @@ describe('PathologyDashboardView', () => {
     }
   });
 
-  it('returns to the main workspace when clicking exit', async () => {
-    resetPreferenceMocks({
-      ...structuredClone(preferenceMocks.defaultPreferences),
-      app: {
-        ...preferenceMocks.defaultPreferences.app,
-        layout: 'full-content',
-      },
-      header: { hidden: true },
-      sidebar: { hidden: true },
-      tabbar: { enable: false },
-    });
+  it('enters the specimen collection home when clicking the home button', async () => {
+    resetPreferenceMocks();
     mockRouterPush.mockClear();
     mockQueryPathologyScreenDashboard.mockResolvedValue(
       buildDashboardResponse(),
@@ -417,21 +491,17 @@ describe('PathologyDashboardView', () => {
 
     try {
       const exitButton = [...root.querySelectorAll('button')].find(
-        (button) => button.textContent?.trim() === '退出',
+        (button) => button.textContent?.trim() === '首页',
       );
       expect(exitButton).toBeTruthy();
+      expect(exitButton?.getAttribute('aria-label')).toBe('进入标本采集首页');
 
       exitButton?.click();
 
-      expect(preferenceMocks.updatePreferences).toHaveBeenLastCalledWith(
-        expect.objectContaining({
-          app: expect.objectContaining({ layout: 'sidebar-nav' }),
-          header: { hidden: false },
-          sidebar: { hidden: false },
-          tabbar: { enable: true },
-        }),
-      );
-      expect(mockRouterPush).toHaveBeenCalledWith({ name: 'Workspace' });
+      expect(mockRouterPush).toHaveBeenCalledWith({
+        name: 'ApplicationRegistrationWorkbench',
+      });
+      expect(preferenceMocks.updatePreferences).not.toHaveBeenCalled();
     } finally {
       app.unmount();
       root.remove();

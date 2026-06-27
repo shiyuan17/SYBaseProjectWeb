@@ -7,7 +7,7 @@ import { computed, nextTick, ref, watch } from 'vue';
 
 import { EchartsUI, useEcharts } from '@vben/plugins/echarts';
 
-import { ElEmpty } from 'element-plus';
+import { ElEmpty, ElSkeleton } from 'element-plus';
 
 const props = defineProps<{
   emptyText: string;
@@ -64,7 +64,17 @@ watch(
 </script>
 
 <template>
-  <div v-if="shouldShowChart" class="rounded border border-border bg-card p-3">
+  <div
+    v-if="loading"
+    aria-busy="true"
+    class="min-h-[300px] rounded border border-border bg-card p-3"
+  >
+    <ElSkeleton :rows="6" animated />
+  </div>
+  <div
+    v-else-if="shouldShowChart"
+    class="rounded border border-border bg-card p-3"
+  >
     <EchartsUI ref="chartRef" height="300px" />
   </div>
   <ElEmpty v-else :description="chartError || emptyText" />

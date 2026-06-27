@@ -1,0 +1,695 @@
+.pathology-loading,
+.pathology-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+  color: #eaf6ff;
+  background:
+    radial-gradient(
+      circle at top center,
+      rgb(48 122 255 / 20%),
+      transparent 28%
+    ),
+    linear-gradient(180deg, #031226 0%, #041321 46%, #03111e 100%);
+}
+
+.pathology-loading__card {
+  max-width: 560px;
+  padding: 32px;
+  text-align: center;
+  background: linear-gradient(180deg, rgb(7 28 49 / 92%), rgb(4 18 34 / 88%));
+  border: 1px solid rgb(80 142 196 / 16%);
+  box-shadow:
+    inset 0 0 24px rgb(65 127 186 / 12%),
+    0 0 18px rgb(5 35 66 / 22%);
+}
+
+.pathology-loading__card--skeleton {
+  display: grid;
+  gap: 12px;
+}
+
+.pathology-loading__card h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #f7fcff;
+}
+
+.pathology-loading__card p {
+  margin-top: 12px;
+  font-size: 14px;
+  color: #8ec7ea;
+}
+
+.pathology-loading__skeleton {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.pathology-loading__bar {
+  height: 10px;
+  background: linear-gradient(
+    90deg,
+    rgb(66 119 173 / 24%),
+    rgb(122 203 255 / 42%),
+    rgb(66 119 173 / 24%)
+  );
+  animation: pathology-dashboard-pulse 1.6s ease-in-out infinite;
+}
+
+.pathology-loading__bar--wide {
+  width: 100%;
+}
+
+.pathology-loading__bar--narrow {
+  width: 52%;
+}
+
+.pathology-screen {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden auto;
+  color: #eaf6ff;
+  background:
+    radial-gradient(
+      circle at top center,
+      rgb(48 122 255 / 20%),
+      transparent 28%
+    ),
+    linear-gradient(180deg, #031226 0%, #041321 46%, #03111e 100%);
+}
+
+.pathology-screen__grid,
+.pathology-screen__glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.pathology-screen__grid {
+  background-image:
+    linear-gradient(rgb(38 103 179 / 8%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(38 103 179 / 8%) 1px, transparent 1px);
+  background-position: center;
+  background-size: 42px 42px;
+  opacity: 0.9;
+}
+
+.pathology-screen__glow--left {
+  background: radial-gradient(
+    circle at 14% 24%,
+    rgb(24 155 255 / 20%),
+    transparent 28%
+  );
+}
+
+.pathology-screen__glow--right {
+  background: radial-gradient(
+    circle at 87% 30%,
+    rgb(24 255 233 / 15%),
+    transparent 26%
+  );
+}
+
+.pathology-screen__canvas {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  padding: 14px 18px 18px;
+  overflow: hidden visible;
+}
+
+.pathology-screen__header {
+  display: grid;
+  grid-template-columns: minmax(0, 360px) minmax(0, 1fr) minmax(0, 180px);
+  gap: 14px;
+  align-items: center;
+  min-height: 76px;
+}
+
+.pathology-screen__brand {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.pathology-screen__brand-mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(180deg, rgb(7 34 61 / 88%), rgb(4 23 44 / 90%));
+  border: 1px solid rgb(109 190 255 / 32%);
+  box-shadow: inset 0 0 20px rgb(86 180 255 / 16%);
+}
+
+.pathology-screen__brand-mark img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+
+.pathology-screen__brand-name {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.04em;
+}
+
+.pathology-screen__title-panel {
+  display: flex;
+  justify-content: center;
+}
+
+.pathology-screen__title-plate {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  min-width: 520px;
+  padding: 6px 34px 10px;
+  background:
+    linear-gradient(180deg, rgb(14 37 65 / 96%), rgb(7 28 50 / 88%)),
+    linear-gradient(90deg, rgb(50 120 255 / 24%), transparent);
+  border: 1px solid rgb(132 194 255 / 28%);
+  box-shadow:
+    inset 0 0 32px rgb(64 158 255 / 18%),
+    0 0 32px rgb(11 92 175 / 14%);
+  clip-path: polygon(6% 0, 94% 0, 100% 22%, 94% 100%, 6% 100%, 0 22%);
+}
+
+.pathology-screen__title-line {
+  width: 82%;
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(112 213 255 / 90%),
+    transparent
+  );
+}
+
+.pathology-screen__title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: 800;
+  color: #f8fdff;
+  letter-spacing: 0.06em;
+}
+
+.pathology-screen__title-accent {
+  color: #b6efff;
+  text-shadow: 0 0 16px rgb(89 212 255 / 40%);
+}
+
+.pathology-screen__header-note {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  font-size: 14px;
+  color: #8ec7ea;
+}
+
+.pathology-screen__header-link {
+  padding: 0;
+  font: inherit;
+  color: #74dcff;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+}
+
+.pathology-screen__header-link:hover,
+.pathology-screen__header-link:focus-visible {
+  color: #b7f2ff;
+  text-shadow: 0 0 10px rgb(116 220 255 / 45%);
+  outline: none;
+}
+
+.pathology-warning,
+.pathology-refresh {
+  padding: 12px 16px;
+  margin-top: 14px;
+  border: 1px solid rgb(255 194 84 / 36%);
+}
+
+.pathology-warning {
+  color: #ffeab3;
+  background: linear-gradient(90deg, rgb(123 77 10 / 78%), rgb(90 58 13 / 30%));
+}
+
+.pathology-refresh {
+  color: #bfe7ff;
+  background: linear-gradient(90deg, rgb(16 73 124 / 72%), rgb(12 44 73 / 32%));
+  border-color: rgb(127 194 255 / 32%);
+}
+
+.pathology-warning strong,
+.pathology-refresh strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.pathology-warning p,
+.pathology-refresh p {
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.pathology-screen__content {
+  display: grid;
+  grid-template-columns: minmax(340px, 26%) minmax(720px, 48%) minmax(
+      340px,
+      26%
+    );
+  gap: 14px;
+  align-items: start;
+  min-height: calc(100vh - 108px);
+  margin-top: 14px;
+  overflow: visible;
+}
+
+.pathology-screen__column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.screen-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 12px;
+  background: linear-gradient(180deg, rgb(7 28 49 / 92%), rgb(4 18 34 / 88%));
+  border: 1px solid rgb(80 142 196 / 16%);
+  box-shadow:
+    inset 0 0 24px rgb(65 127 186 / 12%),
+    0 0 18px rgb(5 35 66 / 22%);
+}
+
+.screen-panel__header {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 14px;
+  margin-bottom: 10px;
+  background: linear-gradient(90deg, rgb(54 93 141 / 80%), rgb(20 50 85 / 20%));
+  clip-path: polygon(0 0, 98% 0, 93% 100%, 0 100%, 3% 50%);
+}
+
+.screen-panel__header h2 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #f7fcff;
+  letter-spacing: 0.04em;
+}
+
+.screen-panel__spark {
+  width: 10px;
+  height: 10px;
+  background: rgb(173 233 255 / 24%);
+  border: 1px solid rgb(214 248 255 / 70%);
+  box-shadow: 0 0 10px rgb(115 220 255 / 45%);
+  transform: rotate(45deg);
+}
+
+.metric-stack {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metric-stack__card {
+  padding: 18px 16px;
+  text-align: center;
+  background: linear-gradient(180deg, rgb(7 34 61 / 88%), rgb(4 23 44 / 90%));
+  border: 1px solid rgb(109 190 255 / 24%);
+}
+
+.metric-stack__label {
+  font-size: 14px;
+  color: #8ec7ea;
+}
+
+.metric-stack__value {
+  margin-top: 8px;
+  font-size: 28px;
+  font-weight: 700;
+  color: #f7fcff;
+}
+
+.center-stage {
+  position: relative;
+  min-height: 420px;
+  overflow: hidden;
+}
+
+.center-stage__node {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  transform: translate(-50%, -50%);
+}
+
+.center-stage__bubble {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 108px;
+  min-height: 108px;
+  padding: 12px;
+  font-size: 26px;
+  font-weight: 700;
+  color: #f7fcff;
+  background: radial-gradient(
+    circle at 30% 30%,
+    rgb(63 157 255 / 35%),
+    rgb(4 25 45 / 95%)
+  );
+  border: 1px solid rgb(109 190 255 / 24%);
+  border-radius: 999px;
+  box-shadow: 0 0 24px rgb(18 93 164 / 30%);
+}
+
+.center-stage__node-label {
+  font-size: 14px;
+  color: #8ec7ea;
+}
+
+.center-stage__orbit,
+.center-stage__ring {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  border: 1px solid rgb(109 190 255 / 18%);
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+}
+
+.center-stage__orbit--one {
+  width: 420px;
+  height: 220px;
+}
+
+.center-stage__orbit--two {
+  width: 560px;
+  height: 280px;
+}
+
+.center-stage__ring {
+  width: 180px;
+  height: 180px;
+}
+
+.center-stage__core {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 120px;
+  height: 120px;
+  background: radial-gradient(
+    circle,
+    rgb(76 175 255 / 36%),
+    rgb(3 18 34 / 96%)
+  );
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+}
+
+.center-stage__core-mark {
+  font-size: 40px;
+  font-weight: 700;
+  color: #c4f6ff;
+}
+
+.center-stage__base {
+  position: absolute;
+  inset: auto 50% 14px auto;
+  width: 320px;
+  transform: translateX(50%);
+}
+
+.center-stage__plate {
+  height: 12px;
+  margin-top: 6px;
+  background: linear-gradient(
+    90deg,
+    rgb(44 94 156 / 18%),
+    rgb(60 163 255 / 42%),
+    rgb(44 94 156 / 18%)
+  );
+  clip-path: polygon(8% 0, 92% 0, 100% 100%, 0 100%);
+}
+
+.center-stage__caption {
+  margin-top: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #f7fcff;
+  text-align: center;
+}
+
+.report-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.report-summary__meta {
+  padding: 14px;
+  background: linear-gradient(180deg, rgb(7 34 61 / 72%), rgb(4 23 44 / 78%));
+  border: 1px solid rgb(109 190 255 / 20%);
+}
+
+.report-summary__meta span {
+  display: block;
+  font-size: 13px;
+  color: #8ec7ea;
+}
+
+.report-summary__meta strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 24px;
+  color: #f7fcff;
+}
+
+.report-summary__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 160px;
+  padding: 8px 16px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: #b7f2ff;
+  border: 1px solid rgb(109 190 255 / 24%);
+}
+
+.report-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.report-grid__cell {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: rgb(8 29 50 / 46%);
+  border: 1px solid rgb(109 190 255 / 12%);
+}
+
+.report-grid__label {
+  font-size: 13px;
+  color: #9fc3eb;
+}
+
+.report-grid__value {
+  font-size: 15px;
+  font-weight: 700;
+  color: #f7fcff;
+}
+
+.line-list {
+  display: grid;
+  gap: 10px;
+}
+
+.line-list__item {
+  padding: 10px 12px;
+  background: rgb(8 29 50 / 46%);
+  border: 1px solid rgb(109 190 255 / 12%);
+}
+
+.line-list__meta,
+.rate-list__row,
+.workload-table__row,
+.workload-table__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.line-list__track,
+.rate-list__line {
+  height: 8px;
+  margin-top: 10px;
+  background: rgb(101 164 220 / 10%);
+}
+
+.line-list__fill,
+.rate-list__fill {
+  width: 78%;
+  height: 100%;
+  background: linear-gradient(90deg, #2f8bff, #63f3c2);
+}
+
+.rate-list {
+  display: grid;
+  gap: 10px;
+}
+
+.rate-list__item {
+  padding: 10px 12px;
+  background: rgb(8 29 50 / 46%);
+  border: 1px solid rgb(109 190 255 / 12%);
+}
+
+.rate-list__dot {
+  width: 8px;
+  height: 8px;
+  background: #63f3c2;
+  border-radius: 999px;
+}
+
+.rate-list__row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.rate-list__label {
+  font-size: 13px;
+  color: #9fc3eb;
+}
+
+.year-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.year-grid--wide {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.year-grid__item {
+  padding: 12px;
+  background: rgb(8 29 50 / 46%);
+  border: 1px solid rgb(109 190 255 / 12%);
+}
+
+.year-grid__item h3 {
+  margin-bottom: 10px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #f7fcff;
+}
+
+.year-grid__metrics {
+  display: grid;
+  gap: 8px;
+}
+
+.year-grid__metric {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #9fc3eb;
+}
+
+.year-grid__metric strong {
+  color: #f7fcff;
+}
+
+.workload-table {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.workload-table__head {
+  grid-template-columns: 1.4fr repeat(3, minmax(0, 1fr));
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #8ec7ea;
+  background: rgb(8 29 50 / 46%);
+}
+
+.workload-table__body {
+  display: grid;
+  gap: 8px;
+}
+
+.workload-table__row {
+  grid-template-columns: 1.4fr repeat(3, minmax(0, 1fr));
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #f7fcff;
+  background: rgb(8 29 50 / 46%);
+  border: 1px solid rgb(109 190 255 / 12%);
+}
+
+.screen-status {
+  color: #f7fcff;
+}
+
+.screen-status--partial {
+  color: #ffd36e;
+}
+
+.screen-status--unavailable {
+  color: #91a9cc;
+}
+
+@keyframes pathology-dashboard-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 1440px) {
+  .pathology-screen__content {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-stack {
+    grid-template-columns: 1fr;
+  }
+
+  .report-summary,
+  .report-grid {
+    grid-template-columns: 1fr;
+  }
+}

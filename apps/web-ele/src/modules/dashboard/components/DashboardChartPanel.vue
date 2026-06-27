@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { EchartsUIType } from '@vben/plugins/echarts';
 
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 
 import { EchartsUI, useEcharts } from '@vben/plugins/echarts';
 
@@ -30,20 +30,49 @@ const props = withDefaults(
 
 const chartRef = ref<EchartsUIType>();
 const { renderEcharts } = useEcharts(chartRef);
+const chartError = ref('');
+const renderToken = ref(0);
 
 const hasOption = computed(() => Boolean(props.option));
+const visibleError = computed(() => props.error || chartError.value);
 
-async function renderChart() {
-  if (!props.option || props.loading) {
+async function renderChart(token: number) {
+  if (!props.option || props.loading || props.error) {
     return;
   }
-  await renderEcharts(props.option);
+  for (let index = 0; index < 3; index += 1) {
+    await nextTick();
+    if (chartRef.value) {
+      break;
+    }
+  }
+  if (token !== renderToken.value || !chartRef.value) {
+    chartError.value = '图表暂时无法渲染，请稍后重试';
+    return;
+  }
+  try {
+    const chartInstance = await renderEcharts(props.option);
+    if (token === renderToken.value) {
+      chartError.value = chartInstance ? '' : '图表暂时无法渲染，请稍后重试';
+    }
+  } catch {
+    if (token === renderToken.value) {
+      chartError.value = '图表暂时无法渲染，请稍后重试';
+    }
+  }
+}
+
+function scheduleRenderChart() {
+  renderToken.value += 1;
+  chartError.value = '';
+  const token = renderToken.value;
+  void renderChart(token);
 }
 
 watch(
   () => props.option,
   () => {
-    void renderChart();
+    scheduleRenderChart();
   },
   { deep: true },
 );
@@ -52,19 +81,30 @@ watch(
   () => props.loading,
   (loading) => {
     if (!loading) {
-      void renderChart();
+      scheduleRenderChart();
     }
   },
 );
 
 onMounted(() => {
-  void renderChart();
+  scheduleRenderChart();
 });
 </script>
 
 <template>
-  <div class="relative min-h-[220px]">
+  <div
+    class="relative min-h-[220px]"
+    :aria-busy="loading ? 'true' : undefined"
+  >
     <ElSkeleton v-if="loading" :rows="6" animated />
+
+    <div
+      v-else-if="visibleError"
+      class="rounded border border-dashed border-border/80 bg-card/70 px-4 py-6"
+      role="status"
+    >
+      <ElEmpty :description="visibleError" />
+    </div>
 
     <div
       v-else-if="hasOption"
