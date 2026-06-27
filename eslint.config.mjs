@@ -12,6 +12,7 @@ export default defineConfig([
       '**/artifacts/**',
       '**/apps/**/dist/**',
       '**/dist.zip',
+      '**/xc_web.zip',
     ],
   },
   {

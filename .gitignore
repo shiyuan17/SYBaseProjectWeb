@@ -4,6 +4,7 @@ node_modules
 dist
 dist-ssr
 dist.zip
+xc_web.zip
 dist.tar
 dist.war
 .nitro
@@ -68,6 +69,10 @@ tests/reports/
 playwright-report/
 test-results/
 tests/e2e/.auth/
+# 用户操作手册：截图与捕获产物可由 pnpm manual:build 重新生成，不入库
+docs/user-manual/images/
+docs/user-manual/.capture-manifest.json
+docs/user-manual/capture-errors.log
 .understand-anything/
 .repomix/
 data/state_store.db/
@@ -77,3 +82,4 @@ artifacts/
 repomix-output.xml
 temp-eslint.json
 linear-setting.json
+apps/web-ele/dist (2).zip

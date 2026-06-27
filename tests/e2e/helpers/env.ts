@@ -5,8 +5,10 @@ import { fileURLToPath } from 'node:url';
 
 export type E2EAuthStrategy = 'api' | 'ui';
 export type E2ERole =
+  | 'admin'
   | 'creator'
   | 'fixation'
+  | 'm6'
   | 'receive'
   | 'register'
   | 'tracking'
@@ -68,10 +70,15 @@ export const e2eEnv = {
   authBaseURL: process.env.E2E_AUTH_BASE_URL || 'http://localhost:8081',
   authDir: path.join(e2eRootDir, '.auth'),
   authStrategy: resolveE2EAuthStrategy(),
-  baseURL: process.env.E2E_BASE_URL || 'http://localhost:5778',
+  baseURL: process.env.E2E_BASE_URL || 'http://localhost:5777',
   blBaseURL: process.env.E2E_BL_BASE_URL || 'http://localhost:8080',
   password: process.env.E2E_PASSWORD || '123456',
   roles: {
+    admin: {
+      key: 'admin',
+      storageFile: 'admin.json',
+      username: process.env.E2E_USER_ADMIN || 'm1.admin',
+    },
     creator: {
       key: 'creator',
       storageFile: 'creator.json',
@@ -81,6 +88,11 @@ export const e2eEnv = {
       key: 'fixation',
       storageFile: 'fixation.json',
       username: process.env.E2E_USER_FIXATION || 'm2.fixation',
+    },
+    m6: {
+      key: 'm6',
+      storageFile: 'm6.json',
+      username: process.env.E2E_USER_M6 || 'm6.admin',
     },
     receive: {
       key: 'receive',

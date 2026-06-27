@@ -93,6 +93,12 @@ interface ArchiverPluginOptions {
    * @default '.'
    */
   outputDir?: string;
+  /**
+   * zip 内根目录名
+   * @default false
+   * @description 设为字符串时，将 dist 内容放入该目录下；false 表示直接放在 zip 根目录
+   */
+  rootDir?: false | string;
 }
 
 /**

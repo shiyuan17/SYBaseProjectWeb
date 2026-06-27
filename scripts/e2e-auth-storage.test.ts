@@ -8,7 +8,9 @@ import {
   solveSliderCaptcha,
 } from '../tests/e2e/helpers/auth';
 import {
+  e2eEnv,
   getAccessStoreStorageKey,
+  getRoleConfig,
   getWebAppStorageNamespace,
   normalizeStorageStateOrigins,
 } from '../tests/e2e/helpers/env';
@@ -17,13 +19,13 @@ describe('e2e auth storage helpers', () => {
   it('builds storage state with the persisted access store key', () => {
     const accessToken = 'token-123';
     const storageState = buildApiStorageState(
-      'http://localhost:5778',
+      'http://localhost:5777',
       accessToken,
     );
 
     expect(storageState.cookies).toEqual([]);
     expect(storageState.origins).toHaveLength(1);
-    expect(storageState.origins[0]?.origin).toBe('http://localhost:5778');
+    expect(storageState.origins[0]?.origin).toBe('http://localhost:5777');
     expect(storageState.origins[0]?.localStorage).toEqual([
       {
         name: getAccessStoreStorageKey(),
@@ -35,6 +37,21 @@ describe('e2e auth storage helpers', () => {
         }),
       },
     ]);
+  });
+
+  it('defaults the local web app target to the web-ele dev port', () => {
+    expect(e2eEnv.baseURL).toBe('http://localhost:5777');
+  });
+
+  it('includes admin and m6 roles for authenticated page smoke checks', () => {
+    expect(getRoleConfig('admin')).toMatchObject({
+      storageFile: 'admin.json',
+      username: 'm1.admin',
+    });
+    expect(getRoleConfig('m6')).toMatchObject({
+      storageFile: 'm6.json',
+      username: 'm6.admin',
+    });
   });
 
   it('builds the web app namespace used by persisted stores', () => {

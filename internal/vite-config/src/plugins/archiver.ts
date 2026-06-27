@@ -15,13 +15,14 @@ export const viteArchiverPlugin = (
     apply: 'build',
     closeBundle: {
       handler() {
-        const { name = 'dist', outputDir = '.' } = options;
+        const { name = 'dist', outputDir = '.', rootDir } = options;
 
         setTimeout(async () => {
           const folderToZip = 'dist';
 
           const zipOutputDir = join(process.cwd(), outputDir);
           const zipOutputPath = join(zipOutputDir, `${name}.zip`);
+          const inZipRootDir = rootDir ?? (name === 'dist' ? false : name);
           try {
             await fsp.mkdir(zipOutputDir, { recursive: true });
           } catch {
@@ -29,7 +30,7 @@ export const viteArchiverPlugin = (
           }
 
           try {
-            await zipFolder(folderToZip, zipOutputPath);
+            await zipFolder(folderToZip, zipOutputPath, inZipRootDir);
             console.log(`Folder has been zipped to: ${zipOutputPath}`);
           } catch (error) {
             console.error('Error zipping folder:', error);
@@ -46,6 +47,7 @@ export const viteArchiverPlugin = (
 async function zipFolder(
   folderPath: string,
   outputPath: string,
+  rootDir: false | string = false,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const output = fs.createWriteStream(outputPath);
@@ -67,7 +69,7 @@ async function zipFolder(
     archive.pipe(output);
 
     // 使用 directory 方法以流的方式压缩文件夹，减少内存消耗
-    archive.directory(folderPath, false);
+    archive.directory(folderPath, rootDir);
 
     // 流式处理完成
     archive.finalize();

@@ -28,17 +28,19 @@ pnpm dev:ele
 支持以下环境变量，均可在执行命令前覆盖：
 
 ```bash
-E2E_BASE_URL=http://localhost:5778
+E2E_BASE_URL=http://localhost:5777
 E2E_AUTH_BASE_URL=http://localhost:8081
 E2E_BL_BASE_URL=http://localhost:8080
 E2E_PASSWORD=123456
 
+E2E_USER_ADMIN=m1.admin
 E2E_USER_CREATOR=m2.admin
 E2E_USER_REGISTER=m2.register
 E2E_USER_FIXATION=m2.fixation
 E2E_USER_TRANSPORT=m2.transport
 E2E_USER_RECEIVE=m2.receive
 E2E_USER_TRACKING=m2.tracking
+E2E_USER_M6=m6.admin
 ```
 
 ## 执行命令
@@ -68,12 +70,14 @@ pnpm exec playwright test -c playwright.config.ts --project=chromium --headed
 ```bash
 pnpm e2e:open -- --role register --path /workflow/submission-registration
 pnpm e2e:open -- --role receive --path /workflow/specimen-management?action=receive
+pnpm e2e:open -- --role m6 --path /analytics --base-url http://localhost:5777
 ```
 
 如只想刷新会话文件、不自动打开浏览器：
 
 ```bash
 pnpm e2e:open -- --role register --print-only
+pnpm e2e:open -- --role m6 --path /analytics --base-url http://localhost:5777 --print-only
 ```
 
 ## 设计约束

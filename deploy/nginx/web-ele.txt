@@ -10,9 +10,10 @@ upstream sybase_bl_center_upstream {
 
 server {
     listen 80;
-    server_name _;
+    server_name web-ele.local;
 
-    root /data/home/fsuser-pc/XC/online/web/xc_web;
+    # set this to the real dist path on the server
+    root /data/www/sybase/web-ele/dist;
     index index.html;
 
     client_max_body_size 100m;
@@ -50,25 +51,4 @@ server {
     location / {
         try_files $uri $uri/ /index.html;
     }
-
-    location ~* \.(?:js|css|png|jpg|jpeg|gif|ico|svg|woff2?|ttf|eot)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-        access_log off;
-    }
-
-    location ~ /\. {
-        deny all;
-        access_log off;
-        log_not_found off;
-    }
-
-    gzip on;
-    gzip_types text/plain application/javascript application/json text/css image/svg+xml;
-    gzip_min_length 256;
-    gzip_vary on;
-
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 }

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import process from 'node:process';
+import { fileURLToPath } from 'node:url';
 
 import { chromium } from 'playwright';
 
@@ -13,10 +13,10 @@ const webEleDir = path.join(repoRootDir, 'apps', 'web-ele');
 
 function parseArgs(argv) {
   const args = {
-    baseURL: process.env.E2E_BASE_URL || 'http://localhost:5778',
+    baseURL: process.env.E2E_BASE_URL || 'http://localhost:5777',
     open: true,
-    path: '/workflow/submission-registration',
-    role: 'register',
+    path: '/analytics',
+    role: 'm6',
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -51,7 +51,7 @@ function parseArgs(argv) {
 
 function readEnvFileValue(filePath, key) {
   const content = fs.readFileSync(filePath, 'utf8');
-  const pattern = new RegExp(`^\\s*${key}\\s*=\\s*(.+)\\s*$`, 'm');
+  const pattern = new RegExp(String.raw`^\s*${key}\s*=\s*(.+)\s*$`, 'm');
   const match = content.match(pattern);
 
   if (!match) {
@@ -105,8 +105,10 @@ function buildStorageState(baseURL, accessToken) {
 
 async function requestAccessToken(role) {
   const usernames = {
+    admin: process.env.E2E_USER_ADMIN || 'm1.admin',
     creator: process.env.E2E_USER_CREATOR || 'm2.admin',
     fixation: process.env.E2E_USER_FIXATION || 'm2.fixation',
+    m6: process.env.E2E_USER_M6 || 'm6.admin',
     receive: process.env.E2E_USER_RECEIVE || 'm2.receive',
     register: process.env.E2E_USER_REGISTER || 'm2.register',
     tracking: process.env.E2E_USER_TRACKING || 'm2.tracking',

@@ -1,13 +1,48 @@
 import { spawn } from 'node:child_process';
-import { createWriteStream } from 'node:fs';
+import { createWriteStream, existsSync } from 'node:fs';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 
-const [logFileArg, command, ...args] = process.argv.slice(2);
+const rawArgs = process.argv.slice(2);
+const logFileArg = rawArgs[0];
 
-if (!logFileArg || !command) {
+if (!logFileArg) {
   console.error(
-    'Usage: node ./scripts/run-with-log.mjs <log-file> <command> [...args]',
+    'Usage: node ./scripts/run-with-log.mjs <log-file> [--env KEY=VAL ...] [--] <command> [...args]',
+  );
+  process.exit(1);
+}
+
+const extraEnv = {};
+let commandStartIndex = 1;
+
+while (commandStartIndex < rawArgs.length) {
+  const token = rawArgs[commandStartIndex];
+  if (token === '--') {
+    commandStartIndex += 1;
+    break;
+  }
+  if (token === '--env') {
+    const assignment = rawArgs[commandStartIndex + 1];
+    const separatorIndex = assignment?.indexOf('=') ?? -1;
+    if (!assignment || separatorIndex <= 0) {
+      console.error('Usage: --env requires KEY=VALUE');
+      process.exit(1);
+    }
+    extraEnv[assignment.slice(0, separatorIndex)] = assignment.slice(
+      separatorIndex + 1,
+    );
+    commandStartIndex += 2;
+    continue;
+  }
+  break;
+}
+
+const [command, ...args] = rawArgs.slice(commandStartIndex);
+
+if (!command) {
+  console.error(
+    'Usage: node ./scripts/run-with-log.mjs <log-file> [--env KEY=VAL ...] [--] <command> [...args]',
   );
   process.exit(1);
 }
@@ -29,11 +64,28 @@ function quoteCommandPart(value) {
   return `"${value.replaceAll('"', '""')}"`;
 }
 
+function resolveLocalBin(commandName) {
+  const binDir = path.join(process.cwd(), 'node_modules', '.bin');
+  const extensions =
+    process.platform === 'win32' ? ['.CMD', '.cmd', '.exe', ''] : [''];
+
+  for (const extension of extensions) {
+    const candidate = path.join(binDir, `${commandName}${extension}`);
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return commandName;
+}
+
 function resolveSpawn(commandName, commandArgs) {
+  const resolvedCommand = resolveLocalBin(commandName);
+
   if (process.platform !== 'win32') {
     return {
       args: commandArgs,
-      command: commandName,
+      command: resolvedCommand,
     };
   }
 
@@ -42,7 +94,7 @@ function resolveSpawn(commandName, commandArgs) {
       '/d',
       '/s',
       '/c',
-      [commandName, ...commandArgs]
+      [resolvedCommand, ...commandArgs]
         .map((commandPart) => quoteCommandPart(commandPart))
         .join(' '),
     ],
@@ -64,7 +116,7 @@ let child;
 try {
   const spawnOptions = resolveSpawn(command, args);
   child = spawn(spawnOptions.command, spawnOptions.args, {
-    env: process.env,
+    env: { ...process.env, ...extraEnv },
     stdio: ['inherit', 'pipe', 'pipe'],
   });
 } catch (error) {
