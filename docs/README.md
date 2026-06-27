@@ -29,6 +29,7 @@
 - [reviews/](./reviews/README.md): 审查、差距分析、健康度与对比报告；Memory 台账归档（`*-archive.md`、`decisions-business-detail.md`）
 - [reference/](./reference/README.md): 业务清单、数据库资料、分析报告、AI 工作流结构映射
 - [templates/](./templates/README.md): 可复用提示词与任务模板（如 Codex 任务模板、任务拆分模板、治理模板填写范例 `workflow-packet-examples.md`）
+- [user-manual/](./user-manual/README.md): 由 Playwright 捕获截图自动生成的用户操作手册（全模块）
 
 ## 维护约定
 

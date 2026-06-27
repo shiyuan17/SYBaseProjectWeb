@@ -31,6 +31,8 @@
 
 权限/接口/患者报告/构建发布/生产问题 → Full；绿区文案或文档 → Fast Path。
 
+**Worktree 完成门槛**：一旦为任务创建独立 `git worktree`，采纳提交必须由主 Agent merge-back 到当前集成分支或任务声明的目标分支；本地目标分支未包含 merge-back 结果前，不得宣称任务完成、不得清理 worktree 或对应分支。merge-back 后在目标分支运行统一验证，再清理 worktree 与已合并分支。
+
 ### 规范单一来源矩阵
 
 | 主题                          | 唯一来源                               |
