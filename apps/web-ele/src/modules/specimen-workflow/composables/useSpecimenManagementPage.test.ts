@@ -116,7 +116,9 @@ function createRow(
   };
 }
 
-function createHarness() {
+function createHarness(
+  props: Partial<Parameters<typeof useSpecimenManagementPage>[0]> = {},
+) {
   let state: null | ReturnType<typeof useSpecimenManagementPage> = null;
 
   const Harness = defineComponent({
@@ -125,6 +127,7 @@ function createHarness() {
         embedded: false,
         registrationApplicationId: '',
         registrationTriggerKey: 0,
+        ...props,
       });
       return () => h('div');
     },
@@ -136,8 +139,10 @@ function createHarness() {
   };
 }
 
-function mountComposable() {
-  const { Harness, getState } = createHarness();
+function mountComposable(
+  props: Partial<Parameters<typeof useSpecimenManagementPage>[0]> = {},
+) {
+  const { Harness, getState } = createHarness(props);
   const root = document.createElement('div');
   document.body.append(root);
 
@@ -220,8 +225,8 @@ describe('useSpecimenManagementPage', () => {
       throw new Error('composable state not initialized');
     }
 
-    expect(state.workbenchLookupKeyword.value).toBe('APP-ID');
-    expect(state.workbenchLookupQueryType.value).toBe('AUTO');
+    expect(state.workbenchLookupKeyword.value).toBe('APP-001');
+    expect(state.workbenchLookupQueryType.value).toBe('APPLICATION_NO');
     expect(state.workbenchLookupTriggerKey.value).toBe(1);
     expect(state.filters.keyword).toBe('APP-001');
     expect(mockGetApplicationDetail).toHaveBeenCalledWith('APP-ID');
@@ -232,6 +237,29 @@ describe('useSpecimenManagementPage', () => {
         size: 20,
       }),
     );
+
+    wrapper.destroy();
+  });
+
+  it('uses embedded registration props as the single lookup source', async () => {
+    const wrapper = mountComposable({
+      embedded: true,
+      registrationApplicationId: 'APP-ID',
+      registrationTriggerKey: 1,
+    });
+    await flushComposable();
+
+    const state = wrapper.getState();
+    if (!state) {
+      throw new Error('composable state not initialized');
+    }
+
+    expect(state.workbenchLookupKeyword.value).toBe('APP-001');
+    expect(state.workbenchLookupQueryType.value).toBe('APPLICATION_NO');
+    expect(state.workbenchLookupTriggerKey.value).toBe(1);
+    expect(mockGetApplicationDetail).toHaveBeenCalledTimes(1);
+    expect(mockGetApplicationDetail).toHaveBeenCalledWith('APP-ID');
+    expect(mockListSpecimens).not.toHaveBeenCalled();
 
     wrapper.destroy();
   });

@@ -170,6 +170,44 @@ export function useSpecimenManagementPage(props: SpecimenManagementViewProps) {
     workbenchLookupTriggerKey.value += lookupState.triggerKeyDelta;
   }
 
+  async function resolveApplicationDetailById(applicationId: string) {
+    const normalizedApplicationId = applicationId.trim();
+    if (!normalizedApplicationId) {
+      return null;
+    }
+
+    if (!canQueryApplicationDetail.value) {
+      return null;
+    }
+
+    try {
+      return await getApplicationDetail(normalizedApplicationId);
+    } catch {
+      return null;
+    }
+  }
+
+  function resolveWorkbenchLookupTarget(
+    applicationId: string,
+    applicationNo?: null | string,
+  ) {
+    const normalizedApplicationId = applicationId.trim();
+    const normalizedApplicationNo = applicationNo?.trim() ?? '';
+    if (normalizedApplicationNo) {
+      return {
+        keyword: normalizedApplicationNo,
+        queryType: 'APPLICATION_NO' as const,
+      };
+    }
+    if (!normalizedApplicationId) {
+      return null;
+    }
+    return {
+      keyword: normalizedApplicationId,
+      queryType: 'AUTO' as const,
+    };
+  }
+
   function buildListQuery() {
     return buildSpecimenManagementListQuery({
       abnormalFlag: filters.abnormalFlag,
@@ -214,31 +252,43 @@ export function useSpecimenManagementPage(props: SpecimenManagementViewProps) {
   }
 
   async function applyRouteInitialFilter() {
+    if (props.embedded) {
+      return;
+    }
+
     const applicationId = normalizeRouteQueryValue(
       route.query.applicationId,
     ).trim();
-    if (applicationId && canQueryApplicationDetail.value) {
-      try {
-        const detail = await getApplicationDetail(applicationId);
-        if (!filters.keyword.trim() && detail.applicationNo?.trim()) {
-          filters.keyword = detail.applicationNo.trim();
-        }
-      } catch {
-        // ignore backfill errors
-      }
+    const detail = await resolveApplicationDetailById(applicationId);
+    if (!filters.keyword.trim() && detail?.applicationNo?.trim()) {
+      filters.keyword = detail.applicationNo.trim();
     }
     await loadSpecimens();
   }
 
   watch(
     () => [route.query.applicationId, route.query.action],
-    ([applicationId, action]) => {
+    async ([applicationId, action]) => {
+      if (props.embedded) {
+        return;
+      }
+
       const normalizedApplicationId =
         normalizeRouteQueryValue(applicationId).trim();
-      void applyRouteInitialFilter();
-      if (action === 'register' && normalizedApplicationId) {
-        triggerWorkbenchLookup(normalizedApplicationId, 'AUTO');
+      const detail = await resolveApplicationDetailById(normalizedApplicationId);
+      if (!filters.keyword.trim() && detail?.applicationNo?.trim()) {
+        filters.keyword = detail.applicationNo.trim();
       }
+      if (action === 'register' && normalizedApplicationId) {
+        const lookupTarget = resolveWorkbenchLookupTarget(
+          normalizedApplicationId,
+          detail?.applicationNo,
+        );
+        if (lookupTarget) {
+          triggerWorkbenchLookup(lookupTarget.keyword, lookupTarget.queryType);
+        }
+      }
+      await loadSpecimens();
     },
     { immediate: true },
   );
@@ -246,15 +296,24 @@ export function useSpecimenManagementPage(props: SpecimenManagementViewProps) {
   watch(
     () =>
       [props.registrationApplicationId, props.registrationTriggerKey] as const,
-    ([applicationId]) => {
+    async ([applicationId]) => {
       if (!props.embedded) {
         return;
       }
       const normalizedApplicationId = (applicationId ?? '').trim();
       if (normalizedApplicationId) {
-        triggerWorkbenchLookup(normalizedApplicationId, 'AUTO');
+        const detail =
+          await resolveApplicationDetailById(normalizedApplicationId);
+        const lookupTarget = resolveWorkbenchLookupTarget(
+          normalizedApplicationId,
+          detail?.applicationNo,
+        );
+        if (lookupTarget) {
+          triggerWorkbenchLookup(lookupTarget.keyword, lookupTarget.queryType);
+        }
       }
     },
+    { immediate: true },
   );
 
   function handleSearch() {
