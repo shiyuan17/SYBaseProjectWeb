@@ -4,7 +4,6 @@ import type { PathologyScreenDashboardResponse } from '../../types/pathology-scr
 import {
   buildPathologyDashboardStageNodes,
   buildPathologyDashboardSummaryCards,
-  buildPathologyStageNodeStyle,
   buildPathologyStatusClass,
   displayPathologyMetricValue,
 } from '../../utils/pathology-dashboard-presentation';
@@ -32,29 +31,28 @@ const props = defineProps<{
       </article>
     </section>
 
-    <section class="center-stage" data-testid="pathology-center-stage">
+    <section
+      class="center-stage center-stage--workload"
+      data-testid="pathology-center-stage"
+    >
       <div
-        v-for="node in buildPathologyDashboardStageNodes(props.dashboard)"
-        :key="node.label"
-        class="center-stage__node"
-        :style="buildPathologyStageNodeStyle(node)"
+        class="center-stage__workload-grid"
+        data-testid="pathology-workload-grid"
       >
-        <div
-          class="center-stage__bubble"
-          :class="[buildPathologyStatusClass(node.status)]"
+        <article
+          v-for="node in buildPathologyDashboardStageNodes(props.dashboard)"
+          :key="node.label"
+          class="center-stage__workload-card"
         >
-          {{ displayPathologyMetricValue(node.value) }}
-        </div>
-        <div class="center-stage__node-label">{{ node.label }}</div>
+          <span class="center-stage__workload-label">{{ node.label }}</span>
+          <strong
+            class="center-stage__workload-value"
+            :class="[buildPathologyStatusClass(node.status)]"
+          >
+            {{ displayPathologyMetricValue(node.value) }}
+          </strong>
+        </article>
       </div>
-
-      <div class="center-stage__orbit center-stage__orbit--one"></div>
-      <div class="center-stage__orbit center-stage__orbit--two"></div>
-      <div class="center-stage__ring"></div>
-      <div class="center-stage__core">
-        <div class="center-stage__core-mark">+</div>
-      </div>
-
       <div class="center-stage__base">
         <div class="center-stage__plate center-stage__plate--top"></div>
         <div class="center-stage__plate center-stage__plate--middle"></div>
@@ -79,7 +77,8 @@ const props = defineProps<{
           <strong
             :class="
               buildPathologyStatusClass(
-                props.dashboard.structuredReportSummary.templateTypeCount.status,
+                props.dashboard.structuredReportSummary.templateTypeCount
+                  .status,
               )
             "
           >
@@ -91,7 +90,9 @@ const props = defineProps<{
           </strong>
         </div>
         <div class="report-summary__meta">
-          <span>{{ props.dashboard.structuredReportSummary.reportCount.label }}</span>
+          <span>{{
+            props.dashboard.structuredReportSummary.reportCount.label
+          }}</span>
           <strong
             :class="
               buildPathologyStatusClass(

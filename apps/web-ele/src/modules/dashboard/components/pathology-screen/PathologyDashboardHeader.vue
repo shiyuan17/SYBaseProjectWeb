@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { onBeforeUnmount, onMounted, ref } from 'vue';
+
 const props = defineProps<{
   brandLogoSource: string;
   brandName: string;
@@ -10,6 +12,50 @@ const props = defineProps<{
 const emit = defineEmits<{
   exit: [];
 }>();
+
+const noteLayerRef = ref<HTMLElement>();
+const isNotePopoverOpen = ref(false);
+
+function closeNotePopover() {
+  isNotePopoverOpen.value = false;
+}
+
+function toggleNotePopover() {
+  isNotePopoverOpen.value = !isNotePopoverOpen.value;
+}
+
+function handleDocumentPointerDown(event: MouseEvent) {
+  if (!isNotePopoverOpen.value) {
+    return;
+  }
+
+  const target = event.target;
+  if (!(target instanceof Node)) {
+    return;
+  }
+
+  if (noteLayerRef.value?.contains(target)) {
+    return;
+  }
+
+  closeNotePopover();
+}
+
+function handleDocumentKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    closeNotePopover();
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('mousedown', handleDocumentPointerDown);
+  document.addEventListener('keydown', handleDocumentKeydown);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('mousedown', handleDocumentPointerDown);
+  document.removeEventListener('keydown', handleDocumentKeydown);
+});
 </script>
 
 <template>
@@ -40,6 +86,32 @@ const emit = defineEmits<{
     </div>
 
     <div class="pathology-screen__header-note">
+      <div
+        v-if="props.partialNotes.length > 0"
+        ref="noteLayerRef"
+        class="pathology-screen__note-layer"
+      >
+        <button
+          aria-label="查看指标说明"
+          class="pathology-screen__note-trigger"
+          data-testid="pathology-note-trigger"
+          :aria-expanded="isNotePopoverOpen ? 'true' : 'false'"
+          type="button"
+          @click="toggleNotePopover"
+        >
+          i
+        </button>
+
+        <section
+          v-if="isNotePopoverOpen"
+          class="pathology-screen__note-popover"
+          data-testid="pathology-note-popover"
+        >
+          <strong>部分指标暂未完全就绪</strong>
+          <p>{{ props.partialNotes.join('；') }}</p>
+        </section>
+      </div>
+
       <button
         aria-label="进入标本采集首页"
         class="pathology-screen__header-link"
@@ -50,13 +122,4 @@ const emit = defineEmits<{
       </button>
     </div>
   </header>
-
-  <section
-    v-if="props.partialNotes.length > 0"
-    class="pathology-warning"
-    data-testid="pathology-partial-banner"
-  >
-    <strong>部分指标暂未完全就绪</strong>
-    <p>{{ props.partialNotes.join('；') }}</p>
-  </section>
 </template>

@@ -360,7 +360,187 @@ describe('PathologyDashboardView', () => {
       expect(root.textContent).not.toContain('病理工作人员统计情况');
       expect(
         root.querySelector('[data-testid="pathology-partial-banner"]'),
+      ).toBeNull();
+      expect(
+        root.querySelector('[data-testid="pathology-note-trigger"]'),
       ).toBeTruthy();
+    } finally {
+      app.unmount();
+      root.remove();
+    }
+  });
+
+  it('renders a compact explanation trigger and toggles the note popover', async () => {
+    resetPreferenceMocks();
+    mockQueryPathologyScreenDashboard.mockResolvedValue(
+      buildDashboardResponse(),
+    );
+
+    const root = document.createElement('div');
+    document.body.append(root);
+    const app = createApp(PathologyDashboardView);
+    app.mount(root);
+    await flushView();
+
+    try {
+      expect(
+        root.querySelector('[data-testid="pathology-partial-banner"]'),
+      ).toBeNull();
+
+      const trigger = root.querySelector(
+        '[data-testid="pathology-note-trigger"]',
+      ) as HTMLButtonElement | null;
+
+      expect(trigger).toBeTruthy();
+      expect(trigger?.getAttribute('aria-expanded')).toBe('false');
+      expect(
+        root.querySelector('[data-testid="pathology-note-popover"]'),
+      ).toBeNull();
+
+      trigger?.click();
+      await nextTick();
+
+      expect(trigger?.getAttribute('aria-expanded')).toBe('true');
+      expect(
+        root.querySelector('[data-testid="pathology-note-popover"]'),
+      ).toBeTruthy();
+      expect(root.textContent).toContain('部分指标暂未完全就绪');
+
+      trigger?.click();
+      await nextTick();
+
+      expect(
+        root.querySelector('[data-testid="pathology-note-popover"]'),
+      ).toBeNull();
+    } finally {
+      app.unmount();
+      root.remove();
+    }
+  });
+
+  it('closes the explanation popover on escape', async () => {
+    resetPreferenceMocks();
+    mockQueryPathologyScreenDashboard.mockResolvedValue(
+      buildDashboardResponse(),
+    );
+
+    const root = document.createElement('div');
+    document.body.append(root);
+    const app = createApp(PathologyDashboardView);
+    app.mount(root);
+    await flushView();
+
+    try {
+      const trigger = root.querySelector(
+        '[data-testid="pathology-note-trigger"]',
+      ) as HTMLButtonElement | null;
+
+      expect(trigger).toBeTruthy();
+      trigger?.click();
+      await nextTick();
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      await nextTick();
+
+      expect(
+        root.querySelector('[data-testid="pathology-note-popover"]'),
+      ).toBeNull();
+    } finally {
+      app.unmount();
+      root.remove();
+    }
+  });
+
+  it('closes the explanation popover when clicking outside', async () => {
+    resetPreferenceMocks();
+    mockQueryPathologyScreenDashboard.mockResolvedValue(
+      buildDashboardResponse(),
+    );
+
+    const root = document.createElement('div');
+    document.body.append(root);
+    const app = createApp(PathologyDashboardView);
+    app.mount(root);
+    await flushView();
+
+    try {
+      const trigger = root.querySelector(
+        '[data-testid="pathology-note-trigger"]',
+      ) as HTMLButtonElement | null;
+
+      expect(trigger).toBeTruthy();
+      trigger?.click();
+      await nextTick();
+      document.body.dispatchEvent(
+        new MouseEvent('mousedown', { bubbles: true }),
+      );
+      await nextTick();
+
+      expect(
+        root.querySelector('[data-testid="pathology-note-popover"]'),
+      ).toBeNull();
+    } finally {
+      app.unmount();
+      root.remove();
+    }
+  });
+
+  it('renders duplicated revision rows when the trend list needs scrolling', async () => {
+    resetPreferenceMocks();
+    mockQueryPathologyScreenDashboard.mockResolvedValue(
+      buildDashboardResponse({
+        reportRevisionRateTrend: {
+          items: Array.from({ length: 9 }, (_, index) => ({
+            label: `2026-${String(index + 1).padStart(2, '0')}`,
+            sourceNote: 'revision',
+            status: 'AVAILABLE',
+            value: `${index}.00%`,
+          })),
+          sourceNote: 'revision trend',
+          status: 'AVAILABLE',
+        },
+      }),
+    );
+
+    const root = document.createElement('div');
+    document.body.append(root);
+    const app = createApp(PathologyDashboardView);
+    app.mount(root);
+    await flushView();
+
+    try {
+      expect(
+        root.querySelector('[data-testid="pathology-top-left-scroll"]'),
+      ).toBeTruthy();
+      expect(
+        root.querySelectorAll('[data-testid="pathology-top-left-item"]').length,
+      ).toBeGreaterThan(9);
+    } finally {
+      app.unmount();
+      root.remove();
+    }
+  });
+
+  it('renders last-month workload as a workload card grid', async () => {
+    resetPreferenceMocks();
+    mockQueryPathologyScreenDashboard.mockResolvedValue(
+      buildDashboardResponse(),
+    );
+
+    const root = document.createElement('div');
+    document.body.append(root);
+    const app = createApp(PathologyDashboardView);
+    app.mount(root);
+    await flushView();
+
+    try {
+      const workloadGrid = root.querySelector(
+        '[data-testid="pathology-workload-grid"]',
+      );
+      expect(workloadGrid).toBeTruthy();
+      expect(workloadGrid?.textContent).toContain('切片');
+      expect(workloadGrid?.textContent).toContain('脱水');
+      expect(workloadGrid?.textContent).toContain('包埋');
+      expect(workloadGrid?.textContent).toContain('报告');
     } finally {
       app.unmount();
       root.remove();

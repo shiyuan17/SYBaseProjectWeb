@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { PathologyScreenDashboardResponse } from '../../types/pathology-screen';
 
+import { computed } from 'vue';
+
 import {
   buildPathologyStatusClass,
   displayPathologyMetricValue,
@@ -9,6 +11,23 @@ import {
 const props = defineProps<{
   dashboard: PathologyScreenDashboardResponse;
 }>();
+
+const REVISION_SCROLL_THRESHOLD = 6;
+
+const shouldAutoScrollRevisionTrend = computed(
+  () =>
+    props.dashboard.reportRevisionRateTrend.items.length >
+    REVISION_SCROLL_THRESHOLD,
+);
+
+const renderedRevisionTrendItems = computed(() =>
+  shouldAutoScrollRevisionTrend.value
+    ? [
+        ...props.dashboard.reportRevisionRateTrend.items,
+        ...props.dashboard.reportRevisionRateTrend.items,
+      ]
+    : props.dashboard.reportRevisionRateTrend.items,
+);
 </script>
 
 <template>
@@ -18,20 +37,34 @@ const props = defineProps<{
         <span class="screen-panel__spark"></span>
         <h2>签发报告修改率</h2>
       </div>
-      <div class="line-list" data-testid="pathology-top-left-chart">
+      <div
+        class="line-list"
+        :class="{
+          'line-list--scrolling': shouldAutoScrollRevisionTrend,
+        }"
+        data-testid="pathology-top-left-chart"
+      >
         <div
-          v-for="item in props.dashboard.reportRevisionRateTrend.items"
-          :key="item.label"
-          class="line-list__item"
+          class="line-list__viewport"
+          data-testid="pathology-top-left-scroll"
         >
-          <div class="line-list__meta">
-            <span>{{ item.label }}</span>
-            <span :class="buildPathologyStatusClass(item.status)">
-              {{ displayPathologyMetricValue(item.value) }}
-            </span>
-          </div>
-          <div class="line-list__track">
-            <div class="line-list__fill"></div>
+          <div class="line-list__rail">
+            <div
+              v-for="(item, index) in renderedRevisionTrendItems"
+              :key="`${item.label}-${index}`"
+              class="line-list__item"
+              data-testid="pathology-top-left-item"
+            >
+              <div class="line-list__meta">
+                <span>{{ item.label }}</span>
+                <span :class="buildPathologyStatusClass(item.status)">
+                  {{ displayPathologyMetricValue(item.value) }}
+                </span>
+              </div>
+              <div class="line-list__track">
+                <div class="line-list__fill"></div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
