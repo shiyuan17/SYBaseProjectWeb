@@ -3,7 +3,8 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-export type E2EAuthStrategy = 'api' | 'ui';
+export type E2EAuthMode = 'api' | 'ui';
+export type E2EAuthStrategy = E2EAuthMode | 'api-then-ui';
 export type E2ERole =
   | 'admin'
   | 'creator'
@@ -25,6 +26,7 @@ const __dirname = path.dirname(__filename);
 const e2eRootDir = path.resolve(__dirname, '..');
 const repoRootDir = path.resolve(e2eRootDir, '..', '..');
 const webEleDir = path.join(repoRootDir, 'apps', 'web-ele');
+const defaultE2EBaseURL = 'http://localhost:5778';
 
 type BrowserStorageState = {
   cookies?: unknown[];
@@ -65,12 +67,23 @@ function readWebAppVersion() {
   return version;
 }
 
+export const handbookAuthRoles = [
+  'admin',
+  'm6',
+  'creator',
+  'register',
+  'fixation',
+  'transport',
+  'receive',
+  'tracking',
+] as const satisfies readonly E2ERole[];
+
 export const e2eEnv = {
   appRuntimeEnv: process.env.E2E_APP_ENV || 'dev',
   authBaseURL: process.env.E2E_AUTH_BASE_URL || 'http://localhost:8081',
   authDir: path.join(e2eRootDir, '.auth'),
   authStrategy: resolveE2EAuthStrategy(),
-  baseURL: process.env.E2E_BASE_URL || 'http://localhost:5777',
+  baseURL: resolveE2EBaseURL(),
   blBaseURL: process.env.E2E_BL_BASE_URL || 'http://localhost:8080',
   password: process.env.E2E_PASSWORD || '123456',
   roles: {
@@ -129,10 +142,30 @@ export const workflowDefaults = {
   submittingDepartmentCandidates: ['OR', '手术室', '病理技术组', '病理科'],
 };
 
+export function resolveE2EBaseURL(
+  value: string | undefined = process.env.E2E_BASE_URL,
+) {
+  const normalized = value?.trim();
+  return normalized || defaultE2EBaseURL;
+}
+
 export function resolveE2EAuthStrategy(
   value: string | undefined = process.env.E2E_AUTH_STRATEGY,
 ): E2EAuthStrategy {
-  return value?.trim().toLowerCase() === 'ui' ? 'ui' : 'api';
+  switch (value?.trim().toLowerCase()) {
+    case 'api': {
+      return 'api';
+    }
+    case 'ui': {
+      return 'ui';
+    }
+    case 'api-then-ui': {
+      return 'api-then-ui';
+    }
+    default: {
+      return 'api-then-ui';
+    }
+  }
 }
 
 export function getRoleConfig(role: E2ERole) {

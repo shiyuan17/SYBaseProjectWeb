@@ -275,7 +275,9 @@ export function useSpecimenManagementPage(props: SpecimenManagementViewProps) {
 
       const normalizedApplicationId =
         normalizeRouteQueryValue(applicationId).trim();
-      const detail = await resolveApplicationDetailById(normalizedApplicationId);
+      const detail = await resolveApplicationDetailById(
+        normalizedApplicationId,
+      );
       if (!filters.keyword.trim() && detail?.applicationNo?.trim()) {
         filters.keyword = detail.applicationNo.trim();
       }
@@ -302,8 +304,9 @@ export function useSpecimenManagementPage(props: SpecimenManagementViewProps) {
       }
       const normalizedApplicationId = (applicationId ?? '').trim();
       if (normalizedApplicationId) {
-        const detail =
-          await resolveApplicationDetailById(normalizedApplicationId);
+        const detail = await resolveApplicationDetailById(
+          normalizedApplicationId,
+        );
         const lookupTarget = resolveWorkbenchLookupTarget(
           normalizedApplicationId,
           detail?.applicationNo,

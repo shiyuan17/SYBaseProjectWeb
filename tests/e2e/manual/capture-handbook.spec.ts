@@ -1,19 +1,30 @@
+import type { Browser, BrowserContext, Page } from 'playwright/test';
+
 import type { E2ERole } from '../helpers/env';
 
-import { test } from 'playwright/test';
+import { expect, test } from 'playwright/test';
 
-import { openRolePage } from '../helpers/session';
-import { createWorkflowRunData } from '../specimen-workflow/helpers/test-data';
+import * as sessionHelpers from '../helpers/session';
 import { FixationTransportPage } from '../specimen-workflow/fixation-transport';
+import { createWorkflowRunData } from '../specimen-workflow/helpers/test-data';
 import { PathologyReceiptPage } from '../specimen-workflow/pathology-receipt';
 import { SubmissionRegistrationPage } from '../specimen-workflow/submission-registration';
 import { TrackingExceptionPage } from '../specimen-workflow/tracking-exception';
 import {
   capture,
+  type CaptureOptions,
+  captureStaticScene,
+  type CaptureWaitForRoleText,
+  detectAuthWarning,
+  getManifest,
+  hasAuthFailures,
   logCaptureError,
+  recordAuthFailure,
   resetManifest,
+  type StaticCaptureScene,
   tryStep,
 } from './helpers/capture';
+import * as manualSpec from './manual-spec.mjs';
 
 /**
  * 用户操作手册截图捕获脚本。
@@ -26,241 +37,35 @@ import {
  * 且 tests/e2e/.auth/*.json 已由 auth.setup 生成（pnpm test:e2e 会自动生成）。
  */
 
-type StaticPage = {
-  module: string;
-  role: E2ERole;
+test.describe.configure({ mode: 'serial' });
+
+type SessionHandle = {
+  authMode: 'api' | 'ui';
+  context: BrowserContext;
+  page: Page;
   path: string;
-  title: string;
-  /** 页面加载后等待出现的文本，用于确认渲染完成。 */
+  role: E2ERole;
   waitText?: string;
-  caption: string;
-  expected?: string;
 };
 
-const STATIC_PAGES: StaticPage[] = [
-  // 仪表盘（病理看板在 /analytics 内）
-  {
-    module: 'dashboard',
-    role: 'admin',
-    path: '/analytics',
-    title: '病理看板',
-    caption: '病理看板：汇总当日标本流转、诊断进度与异常指标。',
-    expected: '看板分左/中/右三栏展示核心指标与待办。',
-  },
-  {
-    module: 'dashboard',
-    role: 'admin',
-    path: '/workspace',
-    title: '工作台',
-    caption: '个人工作台：按当前账号岗位聚合待办与快捷入口。',
-  },
-  // M4 诊断管理
-  {
-    module: 'm4-doctor-workflow',
-    role: 'admin',
-    path: '/doctor-workflow/assignment',
-    title: '诊断分配',
-    waitText: '用户分片列表',
-    caption: '诊断分配：选择医生并对未分派任务做初步/签发分片。',
-    expected: '左侧为可分派医生，右侧为待分派诊断任务列表。',
-  },
-  {
-    module: 'm4-doctor-workflow',
-    role: 'admin',
-    path: '/doctor-workflow/workbench',
-    title: '诊断平台工作站',
-    caption: '诊断平台工作站：队列 + 报告编辑 + 资料三联布局，支持保存/初步/复核/签发/发放。',
-  },
-  {
-    module: 'm4-doctor-workflow',
-    role: 'admin',
-    path: '/doctor-workflow/report',
-    title: '病理报告',
-    caption: '病理报告列表：按病例/病理号查询，支持驳回、发布与版本打印/发放/回收。',
-  },
-  {
-    module: 'm4-doctor-workflow',
-    role: 'admin',
-    path: '/doctor-workflow/tracking',
-    title: '报告追踪',
-    caption: '报告追踪：只读展示病例全局生命周期时间线与对象追踪明细。',
-  },
-  {
-    module: 'm4-doctor-workflow',
-    role: 'admin',
-    path: '/doctor-workflow/medical-orders',
-    title: '病理医嘱执行',
-    waitText: '病理号',
-    caption: '病理医嘱执行：对医嘱做确认/打印玻片/出片/取消。',
-  },
-  {
-    module: 'm4-doctor-workflow',
-    role: 'admin',
-    path: '/doctor-workflow/revision',
-    title: '报告修订',
-    caption: '报告修订：发起修订申请并审批通过/驳回。',
-  },
-  {
-    module: 'm4-doctor-workflow',
-    role: 'admin',
-    path: '/doctor-workflow/consultation',
-    title: '会诊管理',
-    caption: '会诊管理：发起会诊、录入参与人意见、完成会诊。',
-  },
-  // M5 归档与借记
-  {
-    module: 'm5-operation-support',
-    role: 'admin',
-    path: '/operation-support/archive',
-    title: '归档管理',
-    caption: '归档管理：维护蜡块/切片/报告归档台账与位置。',
-  },
-  {
-    module: 'm5-operation-support',
-    role: 'admin',
-    path: '/operation-support/borrow',
-    title: '借记管理',
-    caption: '借记管理：登记借出、归还与逾期提醒。',
-  },
-  // M5 设备及试剂
-  {
-    module: 'm5-operation-support',
-    role: 'admin',
-    path: '/operation-resources/equipment',
-    title: '仪器设备管理',
-    caption: '仪器设备管理：设备档案、保养记录与预警。',
-  },
-  {
-    module: 'm5-operation-support',
-    role: 'admin',
-    path: '/operation-resources/reagents',
-    title: '试剂耗材管理',
-    caption: '试剂耗材管理：基础信息、库存批次与预警。',
-  },
-  {
-    module: 'm5-operation-support',
-    role: 'admin',
-    path: '/operation-resources/medical-waste',
-    title: '医疗废物管理',
-    caption: '医疗废物管理：废物袋打印与交接记录。',
-  },
-  // M6 数据统计与分析
-  {
-    module: 'm6-statistics',
-    role: 'm6',
-    path: '/m6/dashboard',
-    title: '统计仪表盘',
-    caption: '统计仪表盘：汇总 M6 质控、运营与工作量核心指标。',
-  },
-  {
-    module: 'm6-statistics',
-    role: 'm6',
-    path: '/m6/quality-indicators',
-    title: '质控指标统计',
-    caption: '质控指标统计：三甲质控、质量安全控制指标与数据源状态。',
-  },
-  {
-    module: 'm6-statistics',
-    role: 'm6',
-    path: '/m6/management-indicators',
-    title: '管理指标统计',
-    caption: '管理指标统计：业务量、收费、物资/试剂预警与人员工作量。',
-  },
-  {
-    module: 'm6-statistics',
-    role: 'm6',
-    path: '/m6/custom-analysis',
-    title: '统计报表工作台',
-    caption: '统计报表工作台：工作量/质控/冰冻/报告更改/不合格标本分析。',
-  },
-  // M1 系统管理
-  {
-    module: 'm1-system',
-    role: 'admin',
-    path: '/system/users',
-    title: '系统用户',
-    caption: '系统用户：账号创建、启停与岗位绑定。',
-  },
-  {
-    module: 'm1-system',
-    role: 'admin',
-    path: '/system/roles',
-    title: '角色授权',
-    caption: '角色授权：角色与权限码分配。',
-  },
-  {
-    module: 'm1-system',
-    role: 'admin',
-    path: '/system/departments',
-    title: '科室字典',
-    caption: '科室字典：组织架构与科室维护。',
-  },
-  {
-    module: 'm1-system',
-    role: 'admin',
-    path: '/system/body-parts',
-    title: '部位字典',
-    caption: '部位字典：取材部位分类维护。',
-  },
-  {
-    module: 'm1-system',
-    role: 'admin',
-    path: '/system/medical-order-dicts',
-    title: '医嘱字典',
-    caption: '医嘱字典：医嘱项目基础定义。',
-  },
-  {
-    module: 'm1-system',
-    role: 'admin',
-    path: '/system/medical-order-charges',
-    title: '医嘱收费',
-    caption: '医嘱收费：收费项目与价格维护。',
-  },
-  {
-    module: 'm1-system',
-    role: 'admin',
-    path: '/system/medical-order-packages',
-    title: '医嘱套餐',
-    caption: '医嘱套餐：常用医嘱组合维护。',
-  },
-  {
-    module: 'm1-system',
-    role: 'admin',
-    path: '/system/sampling-templates',
-    title: '描写模板',
-    caption: '描写模板：大体/镜下/诊断描述模板维护。',
-  },
-  {
-    module: 'm1-system',
-    role: 'admin',
-    path: '/system/sampling-guidelines',
-    title: '取材规范',
-    caption: '取材规范：取材标准操作规范维护。',
-  },
-  {
-    module: 'm1-system',
-    role: 'admin',
-    path: '/system/configs',
-    title: '系统配置',
-    caption: '系统配置：运行参数与开关维护。',
-  },
-  {
-    module: 'm1-system',
-    role: 'admin',
-    path: '/system/numbering-rules',
-    title: '编号规则',
-    caption: '编号规则：病理号/标本号等编号规则配置。',
-  },
-  {
-    module: 'm1-system',
-    role: 'admin',
-    path: '/system/logs',
-    title: '日志管理',
-    caption: '日志管理：操作日志查询与审计。',
-  },
-];
+type ManualSpecRecord = Record<string, unknown>;
 
-test.describe.configure({ mode: 'serial' });
+type StaticSceneDefaults = {
+  fullPage?: boolean;
+  module: string;
+  operations?: string;
+  path?: string;
+  pathLabel?: string;
+  role?: E2ERole;
+  roleNote?: string;
+  sectionId?: string;
+  subsectionId?: string;
+  waitForRoleText?: CaptureWaitForRoleText;
+  waitForSelector?: string;
+  waitText?: string;
+};
+
+const m2WorkflowOperatorRole = 'creator' as const;
 
 test('capture user manual screenshots', async ({ browser }) => {
   // 全模块捕获（静态页 + M2 主链 + M2 异常链）耗时较长，放宽单测超时。
@@ -270,42 +75,479 @@ test('capture user manual screenshots', async ({ browser }) => {
   await captureStaticPages(browser);
   await captureM2HappyPath(browser);
   await captureM2AbnormalPath(browser);
+
+  const authFailedSteps = getManifest().filter(
+    (step): step is NonNullable<typeof step> & { status: 'auth_failed' } =>
+      step.status === 'auth_failed',
+  );
+  expect(
+    authFailedSteps,
+    authFailedSteps.length > 0
+      ? `存在认证失败步骤：${authFailedSteps
+          .map(
+            (step) =>
+              `${step.module}/${step.name}(${step.warning ?? 'unknown'})`,
+          )
+          .join(', ')}`
+      : 'manual:capture 认证守门通过。',
+  ).toHaveLength(0);
+  expect(hasAuthFailures()).toBe(false);
 });
 
-async function captureStaticPages(browser: import('playwright/test').Browser) {
-  for (const page of STATIC_PAGES) {
-    const { context, page: p } = await openRolePage(
-      browser,
-      page.role,
-      page.path,
+async function waitForOptionalText(page: Page, waitText?: string) {
+  if (!waitText) {
+    return;
+  }
+
+  await page
+    .getByText(waitText, { exact: false })
+    .first()
+    .waitFor({ state: 'visible', timeout: 10_000 })
+    .catch(() => {});
+}
+
+async function openManualSession(
+  browser: Browser,
+  role: E2ERole,
+  path: string,
+  options: {
+    waitText?: string;
+  } = {},
+): Promise<SessionHandle> {
+  const ensured = await sessionHelpers.ensureAuthenticatedPage(
+    browser,
+    role,
+    path,
+  );
+
+  const session: SessionHandle = {
+    authMode: ensured.authMode,
+    context: ensured.context,
+    page: ensured.page,
+    path,
+    role,
+    waitText: options.waitText,
+  };
+
+  await waitForOptionalText(session.page, options.waitText);
+  return session;
+}
+
+async function recoverSession(browser: Browser, session: SessionHandle) {
+  const previousContext = session.context;
+  const recovered = await openManualSession(
+    browser,
+    session.role,
+    session.path,
+    {
+      waitText: session.waitText,
+    },
+  );
+
+  session.authMode = recovered.authMode;
+  session.context = recovered.context;
+  session.page = recovered.page;
+  await previousContext.close().catch(() => {});
+}
+
+function asRecord(value: unknown): ManualSpecRecord | undefined {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return undefined;
+  }
+  return value as ManualSpecRecord;
+}
+
+function asRecordList(value: unknown) {
+  return Array.isArray(value)
+    ? value.map((item) => asRecord(item)).filter(Boolean)
+    : [];
+}
+
+function pickString(...values: unknown[]) {
+  for (const value of values) {
+    if (typeof value !== 'string') {
+      continue;
+    }
+
+    const trimmed = value.trim();
+    if (trimmed) {
+      return trimmed;
+    }
+  }
+
+  return undefined;
+}
+
+function pickBoolean(...values: unknown[]) {
+  for (const value of values) {
+    if (typeof value === 'boolean') {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
+function pickRole(value: unknown) {
+  return typeof value === 'string' && value.trim()
+    ? (value as E2ERole)
+    : undefined;
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .replaceAll(/[^a-z0-9]+/gu, '-')
+    .replaceAll(/^-+|-+$/gu, '');
+}
+
+function normalizeWaitForRoleText(
+  value: unknown,
+): CaptureWaitForRoleText | undefined {
+  const record = asRecord(value);
+  if (!record) {
+    return undefined;
+  }
+
+  const role = pickString(record.role);
+  const name = pickString(record.name, record.text);
+  if (!role || !name) {
+    return undefined;
+  }
+
+  return {
+    exact: pickBoolean(record.exact),
+    name,
+    role: role as CaptureWaitForRoleText['role'],
+  };
+}
+
+function mergeStaticSceneDefaults(
+  base: StaticSceneDefaults,
+  source: ManualSpecRecord,
+): StaticSceneDefaults {
+  return {
+    fullPage: pickBoolean(source.fullPage, base.fullPage),
+    module: pickString(source.module, base.module) ?? base.module,
+    operations: pickString(source.operations, base.operations),
+    path: pickString(source.path, base.path),
+    pathLabel: pickString(source.pathLabel, base.pathLabel),
+    role: pickRole(source.role) ?? base.role,
+    roleNote: pickString(source.roleNote, base.roleNote),
+    sectionId: pickString(source.sectionId, base.sectionId),
+    subsectionId: pickString(source.subsectionId, base.subsectionId),
+    waitForRoleText:
+      normalizeWaitForRoleText(source.waitForRoleText) ?? base.waitForRoleText,
+    waitForSelector: pickString(source.waitForSelector, base.waitForSelector),
+    waitText: pickString(source.waitText, base.waitText),
+  };
+}
+
+function getSceneContainers(node: ManualSpecRecord) {
+  return [
+    ...asRecordList(node.captures),
+    ...asRecordList(node.captureScenes),
+    ...asRecordList(node.scenes),
+    ...asRecordList(node.staticPages),
+  ];
+}
+
+function buildStaticSceneName(
+  scene: ManualSpecRecord,
+  defaults: StaticSceneDefaults,
+  sceneIndex: number,
+) {
+  const explicitName = pickString(scene.name);
+  if (explicitName) {
+    return explicitName;
+  }
+
+  const parts = [
+    defaults.sectionId,
+    defaults.subsectionId,
+    pickString(scene.sceneId, scene.id, scene.key),
+    pickString(scene.title, scene.caption),
+    pickString(scene.path),
+    `scene-${sceneIndex + 1}`,
+  ]
+    .filter(Boolean)
+    .map((part) => slugify(part));
+
+  return parts.filter(Boolean).join('_');
+}
+
+function normalizeStaticScene(
+  scene: ManualSpecRecord,
+  defaults: StaticSceneDefaults,
+  sceneIndex: number,
+): StaticCaptureScene | undefined {
+  const sceneDefaults = mergeStaticSceneDefaults(defaults, scene);
+  const path = pickString(scene.path, sceneDefaults.path);
+  const role = pickRole(scene.role) ?? sceneDefaults.role;
+  const name = buildStaticSceneName(scene, sceneDefaults, sceneIndex);
+  const caption =
+    pickString(scene.caption, scene.title) ??
+    pickString(sceneDefaults.subsectionId, sceneDefaults.sectionId, path) ??
+    name;
+
+  if (!path || !role) {
+    logCaptureError(
+      'manual-static-spec',
+      name,
+      `静态场景缺少必填 path/role：${JSON.stringify({
+        module: sceneDefaults.module,
+        path,
+        role,
+      })}`,
     );
-    try {
-      if (page.waitText) {
-        await p
-          .getByText(page.waitText, { exact: false })
-          .first()
-          .waitFor({ state: 'visible', timeout: 10_000 })
-          .catch(() => {});
-      }
-      await capture(p, {
-        module: page.module,
-        name: pathToName(page.path),
-        caption: page.caption,
-        expected: page.expected,
-      });
-    } catch (error) {
-      logCaptureError(page.module, page.path, error);
-    } finally {
-      await context.close();
+    return undefined;
+  }
+
+  return {
+    caption,
+    expected: pickString(scene.expected),
+    fullPage: pickBoolean(scene.fullPage, sceneDefaults.fullPage),
+    module: sceneDefaults.module,
+    name,
+    operations: pickString(scene.operations, sceneDefaults.operations),
+    path,
+    pathLabel: pickString(scene.pathLabel, sceneDefaults.pathLabel, path),
+    role,
+    roleNote: pickString(scene.roleNote, sceneDefaults.roleNote),
+    sectionId: pickString(scene.sectionId, sceneDefaults.sectionId),
+    subsectionId: pickString(scene.subsectionId, sceneDefaults.subsectionId),
+    waitForRoleText:
+      normalizeWaitForRoleText(scene.waitForRoleText) ??
+      sceneDefaults.waitForRoleText,
+    waitForSelector: pickString(
+      scene.waitForSelector,
+      sceneDefaults.waitForSelector,
+    ),
+    waitText: pickString(scene.waitText, sceneDefaults.waitText),
+  };
+}
+
+function collectStaticScenesFromNode(
+  node: ManualSpecRecord,
+  defaults: StaticSceneDefaults,
+  scenes: StaticCaptureScene[],
+) {
+  for (const [sceneIndex, scene] of getSceneContainers(node).entries()) {
+    const normalized = normalizeStaticScene(scene, defaults, sceneIndex);
+    if (normalized) {
+      scenes.push(normalized);
     }
   }
 }
 
-async function captureM2HappyPath(browser: import('playwright/test').Browser) {
+function collectStaticScenesFromSection(
+  section: ManualSpecRecord,
+  defaults: StaticSceneDefaults,
+  scenes: StaticCaptureScene[],
+) {
+  const sectionDefaults = mergeStaticSceneDefaults(defaults, section);
+  sectionDefaults.sectionId =
+    pickString(
+      section.sectionId,
+      section.id,
+      section.key,
+      defaults.sectionId,
+    ) ?? sectionDefaults.sectionId;
+  collectStaticScenesFromNode(section, sectionDefaults, scenes);
+
+  for (const subsection of asRecordList(section.subsections)) {
+    const subsectionDefaults = mergeStaticSceneDefaults(
+      sectionDefaults,
+      subsection,
+    );
+    subsectionDefaults.subsectionId =
+      pickString(
+        subsection.subsectionId,
+        subsection.id,
+        subsection.key,
+        sectionDefaults.subsectionId,
+      ) ?? subsectionDefaults.subsectionId;
+    collectStaticScenesFromNode(subsection, subsectionDefaults, scenes);
+  }
+}
+
+function getLegacyStaticScenesFallback() {
+  return asRecordList(manualSpec.MANUAL_STATIC_PAGES).flatMap(
+    (page, pageIndex) => {
+      const module = pickString(page.module);
+      if (!module) {
+        return [];
+      }
+
+      const normalized = normalizeStaticScene(
+        page,
+        {
+          module,
+          role: pickRole(page.role),
+        },
+        pageIndex,
+      );
+
+      return normalized ? [normalized] : [];
+    },
+  );
+}
+
+function getStaticCaptureScenes() {
+  const moduleSpecs = asRecordList(manualSpec.MANUAL_MODULE_SPECS);
+  const staticScenes: StaticCaptureScene[] = [];
+
+  for (const moduleSpec of [...moduleSpecs].toSorted((left, right) => {
+    const leftOrder =
+      typeof left.order === 'number' ? left.order : Number(left.order ?? 0);
+    const rightOrder =
+      typeof right.order === 'number' ? right.order : Number(right.order ?? 0);
+    return leftOrder - rightOrder;
+  })) {
+    const module = pickString(moduleSpec.key, moduleSpec.module);
+    if (!module || module === 'm2-specimen-workflow') {
+      continue;
+    }
+
+    const moduleDefaults = mergeStaticSceneDefaults({ module }, moduleSpec);
+    collectStaticScenesFromNode(moduleSpec, moduleDefaults, staticScenes);
+
+    for (const section of [
+      ...asRecordList(moduleSpec.sections),
+      ...asRecordList(moduleSpec.chapters),
+    ]) {
+      collectStaticScenesFromSection(section, moduleDefaults, staticScenes);
+    }
+  }
+
+  return staticScenes.length > 0
+    ? staticScenes
+    : getLegacyStaticScenesFallback();
+}
+
+function getCaptureManifestMeta(
+  session: SessionHandle,
+  options: CaptureOptions,
+) {
+  return {
+    authMode: session.authMode,
+    caption: options.caption,
+    expected: options.expected,
+    module: options.module,
+    name: options.name,
+    operations: options.operations,
+    path: session.path,
+    pathLabel: options.pathLabel,
+    role: session.role,
+    roleNote: options.roleNote,
+    sectionId: options.sectionId,
+    subsectionId: options.subsectionId,
+  };
+}
+
+function getCaptureInvocationOptions(
+  session: SessionHandle,
+  options: CaptureOptions,
+): CaptureOptions {
+  return {
+    ...options,
+    authMode: session.authMode,
+    path: session.path,
+    role: session.role,
+  };
+}
+
+async function captureWithAuthGuard(
+  browser: Browser,
+  session: SessionHandle,
+  options: CaptureOptions,
+  captureAction: (
+    page: Page,
+    options: CaptureOptions,
+  ) => Promise<unknown> = capture,
+) {
+  session.waitText = options.waitText;
+  const firstWarning = await detectAuthWarning(session.page);
+  let pageReplaced = false;
+
+  if (firstWarning) {
+    try {
+      await recoverSession(browser, session);
+      pageReplaced = true;
+    } catch (error) {
+      recordAuthFailure({
+        ...getCaptureManifestMeta(session, options),
+        warning: `${firstWarning}；UI 兜底重试失败：${String(error)}`,
+      });
+      return { pageReplaced, skipped: true as const };
+    }
+
+    const retryWarning = await detectAuthWarning(session.page);
+    if (retryWarning) {
+      recordAuthFailure({
+        ...getCaptureManifestMeta(session, options),
+        warning: retryWarning,
+      });
+      return { pageReplaced, skipped: true as const };
+    }
+  }
+
+  await captureAction(
+    session.page,
+    getCaptureInvocationOptions(session, options),
+  );
+  return { pageReplaced, skipped: false as const };
+}
+
+async function gotoTrackingExceptionPage(page: Page) {
+  await page.goto('/workflow/tracking-exception', {
+    waitUntil: 'domcontentloaded',
+  });
+  await page
+    .getByRole('tab', { name: '申请单列表' })
+    .waitFor({ state: 'visible', timeout: 10_000 });
+}
+
+async function captureStaticPages(browser: Browser) {
+  const scenes = getStaticCaptureScenes();
+  let currentSession: SessionHandle | undefined;
+  let currentSessionKey: string | undefined;
+
+  for (const scene of scenes) {
+    const nextSessionKey = `${scene.role}::${scene.path}`;
+
+    try {
+      if (!currentSession || currentSessionKey !== nextSessionKey) {
+        await currentSession?.context.close().catch(() => {});
+        currentSession = await openManualSession(
+          browser,
+          scene.role,
+          scene.path,
+          {
+            waitText: scene.waitText,
+          },
+        );
+        currentSessionKey = nextSessionKey;
+      }
+
+      await captureWithAuthGuard(
+        browser,
+        currentSession,
+        scene,
+        captureStaticScene,
+      );
+    } catch (error) {
+      logCaptureError(scene.module, scene.name, error);
+    }
+  }
+
+  await currentSession?.context.close().catch(() => {});
+}
+
+async function captureM2HappyPath(browser: Browser) {
   const module = 'm2-specimen-workflow';
   const runData = createWorkflowRunData();
-  let transportOrderId: string | undefined;
-  let transportOrderNo: string | undefined;
+  let specimenIdentifiers: [string, string] | undefined;
 
   test.info().annotations.push({
     type: 'applicationNo',
@@ -314,22 +556,26 @@ async function captureM2HappyPath(browser: import('playwright/test').Browser) {
 
   // 1. 申请创建 + 标本登记（creator）
   {
-    const { context, page } = await openRolePage(
+    const session = await openManualSession(
       browser,
       'creator',
       '/workflow/submission-registration',
     );
     try {
-      const submissionPage = new SubmissionRegistrationPage(page);
+      let submissionPage = new SubmissionRegistrationPage(session.page);
       await tryStep(module, 'goto-submission', async () => {
         await submissionPage.goto();
       });
-      await capture(page, {
+      const listCapture = await captureWithAuthGuard(browser, session, {
         module,
         name: 'submission-list',
-        caption: '申请与登记：进入工作站后展示申请单列表，点击「创建」新建申请。',
+        caption:
+          '申请与登记：进入工作站后展示申请单列表，点击「创建」新建申请。',
         expected: '页面顶部出现「创建」按钮，列表为当前账号可见的申请单。',
       });
+      if (listCapture.pageReplaced) {
+        submissionPage = new SubmissionRegistrationPage(session.page);
+      }
 
       // POM 的 createApplicationAndOpenRegistration 会点击「创建」打开对话框、
       // 填写申请单字段并保存，随后自动进入「标本登记」对话框。这里不重复点「创建」，
@@ -337,331 +583,377 @@ async function captureM2HappyPath(browser: import('playwright/test').Browser) {
       await tryStep(module, 'create-application', async () => {
         await submissionPage.createApplicationAndOpenRegistration(runData);
       });
-      await capture(page, {
+      const formCapture = await captureWithAuthGuard(browser, session, {
         module,
         name: 'specimen-register-form',
         caption:
-          '创建申请单并进入标本登记：填写申请单号、患者信息、送检科室、送检部位等字段保存后，自动进入「标本登记」对话框。',
-        expected: '「标本登记」对话框打开，可录入打印机编号与多行标本。',
+          '创建申请单并进入标本登记：填写申请单基础信息保存后，系统切换到「标本登记」工作台。',
+        expected: '登记工作台出现「保存/确认登记」「添加标本」等操作入口。',
+        waitFor: session.page.getByRole('button', { name: '保存/确认登记' }),
       });
+      if (formCapture.pageReplaced) {
+        submissionPage = new SubmissionRegistrationPage(session.page);
+      }
 
       await tryStep(module, 'register-specimens', async () => {
-        await submissionPage.registerSpecimens(runData);
+        const registrationResult =
+          await submissionPage.registerSpecimens(runData);
+        specimenIdentifiers = [
+          registrationResult.specimens[0]?.barcode ??
+            registrationResult.specimens[0]?.specimenNo ??
+            '',
+          registrationResult.specimens[1]?.barcode ??
+            registrationResult.specimens[1]?.specimenNo ??
+            '',
+        ];
       });
-      await capture(page, {
+      await captureWithAuthGuard(browser, session, {
         module,
         name: 'specimen-register-done',
-        caption: '提交登记：点击「提交登记」后接口返回登记成功，标签打印批次号生成。',
-        expected: '提示「标本登记成功」，列表出现新建申请单。',
+        caption:
+          '提交登记：保存工作台后生成本次登记结果，标本获得真实条码与标本号。',
+        expected: '提示「保存并确认登记成功」，最新登记结果已可用于下游流转。',
       });
     } catch (error) {
       logCaptureError(module, 'happy-create-register', error);
     } finally {
-      await context.close();
+      await session.context.close();
     }
   }
 
   // 2. 固定核对 + 创建转运单（fixation）
   {
-    const { context, page } = await openRolePage(
+    const session = await openManualSession(
       browser,
-      'fixation',
+      m2WorkflowOperatorRole,
       '/workflow/fixation-verify',
     );
     try {
-      const workflowPage = new FixationTransportPage(page);
+      let workflowPage = new FixationTransportPage(session.page);
+      await tryStep(module, 'goto-verification', async () => {
+        await workflowPage.gotoVerification();
+      });
+      await captureWithAuthGuard(browser, session, {
+        module,
+        name: 'verification-workbench',
+        caption: '离体确认：输入真实标本号后执行快速确认，标本进入可固定状态。',
+        expected: '页面展示离体确认工作台，支持按标本条码/编号快速确认。',
+      });
+      await tryStep(module, 'confirm-removal', async () => {
+        await workflowPage.confirmRemoval(specimenIdentifiers?.[0] ?? '');
+        await workflowPage.confirmRemoval(specimenIdentifiers?.[1] ?? '');
+      });
+      await captureWithAuthGuard(browser, session, {
+        module,
+        name: 'verification-done',
+        caption:
+          '离体确认完成：两条标本完成离体确认后，具备进入固定流程的前置条件。',
+        expected: '提示标本已完成离体确认，下游固定流程可正常检索到标本。',
+      });
       await tryStep(module, 'goto-fixation', async () => {
         await workflowPage.gotoFixation();
       });
-      await capture(page, {
+      const listCapture = await captureWithAuthGuard(browser, session, {
         module,
         name: 'fixation-list',
-        caption: '固定核对：固定列表展示待固定标本，按条码操作「开始固定」。',
-        expected: '固定列表出现刚登记的标本条码。',
+        caption: '标本固定：输入真实条码或标本号查询，待固定标本进入固定队列。',
+        expected: '页面展示「标本固定」工作台与待处理列表。',
       });
+      if (listCapture.pageReplaced) {
+        workflowPage = new FixationTransportPage(session.page);
+      }
 
       await tryStep(module, 'start-fixation', async () => {
-        await workflowPage.startFixation(runData.barcodes[0]);
+        await workflowPage.startFixation(specimenIdentifiers?.[0] ?? '');
       });
-      await capture(page, {
+      const dialogCapture = await captureWithAuthGuard(browser, session, {
         module,
         name: 'fixation-complete-dialog',
-        caption: '完成固定：开始固定后点击「完成固定」并确认，记录固定液与时间。',
-        expected: '提示「已完成固定」，标本进入可转运状态。',
+        caption:
+          '完成固定：固定中的标本勾选后执行「确认固定」，写入固定液、固定时间与固定人。',
+        expected: '提示「已完成 1 条标本固定」，标本进入已固定状态。',
       });
+      if (dialogCapture.pageReplaced) {
+        workflowPage = new FixationTransportPage(session.page);
+      }
       await tryStep(module, 'complete-fixation', async () => {
-        await workflowPage.completeFixation(runData.barcodes[0]);
-        await workflowPage.startFixation(runData.barcodes[1]);
-        await workflowPage.completeFixation(runData.barcodes[1]);
+        await workflowPage.completeFixation(specimenIdentifiers?.[0] ?? '');
+        await workflowPage.startFixation(specimenIdentifiers?.[1] ?? '');
+        await workflowPage.completeFixation(specimenIdentifiers?.[1] ?? '');
       });
 
-      await tryStep(module, 'create-transport', async () => {
-        const order = await workflowPage.createTransportOrder([
-          ...runData.barcodes,
-        ]);
-        transportOrderId = order.id;
-        transportOrderNo = order.transportOrderNo;
+      await tryStep(module, 'goto-confirmation', async () => {
+        await workflowPage.gotoConfirmation();
       });
-      await capture(page, {
+      await captureWithAuthGuard(browser, session, {
+        module,
+        name: 'confirmation-list',
+        caption:
+          '标本确认：按申请单号/标本号/条码查询后，将待确认标本加入确认队列。',
+        expected: '页面展示「标本确认」工作台与确认状态列。',
+      });
+      await tryStep(module, 'confirm-specimens', async () => {
+        await workflowPage.confirmSpecimens(specimenIdentifiers?.[0] ?? '');
+        await workflowPage.confirmSpecimens(specimenIdentifiers?.[1] ?? '');
+      });
+      await captureWithAuthGuard(browser, session, {
+        module,
+        name: 'confirmation-done',
+        caption: '提交确认：选择确认人并通过二次校验后，标本状态更新为已确认。',
+        expected: '提示「已完成 1 条标本确认」，标本具备入库前置条件。',
+      });
+
+      await tryStep(module, 'goto-check-in', async () => {
+        await workflowPage.gotoCheckIn();
+      });
+      await captureWithAuthGuard(browser, session, {
+        module,
+        name: 'check-in-list',
+        caption:
+          '标本入库：输入真实条码或标本号后，待入库标本进入当前入库队列。',
+        expected: '页面展示「标本入库」工作台与入库状态列。',
+      });
+      await tryStep(module, 'check-in-specimens', async () => {
+        await workflowPage.checkInSpecimens(specimenIdentifiers?.[0] ?? '');
+        await workflowPage.checkInSpecimens(specimenIdentifiers?.[1] ?? '');
+      });
+      await captureWithAuthGuard(browser, session, {
+        module,
+        name: 'check-in-done',
+        caption: '提交入库：执行「标本入库」后，标本状态更新为已入库。',
+        expected: '提示「标本入库成功」，标本满足出库前置条件。',
+      });
+
+      await tryStep(module, 'goto-transport', async () => {
+        await workflowPage.gotoTransport();
+      });
+      await tryStep(module, 'create-transport', async () => {
+        await workflowPage.createTransportOrder(specimenIdentifiers?.[0] ?? '');
+      });
+      await captureWithAuthGuard(browser, session, {
         module,
         name: 'transport-order-created',
-        caption: '创建转运单：选择交接/接收科室并扫码后生成转运单号。',
-        expected: '提示「转运单创建成功」，转运列表出现新单。',
+        caption:
+          '标本出库：选择出库人后执行「转运」，系统自动创建并提交转运单。',
+        expected: '提示「标本转运成功」，标本状态更新为转运中。',
       });
     } catch (error) {
       logCaptureError(module, 'happy-fixation-transport-create', error);
     } finally {
-      await context.close();
+      await session.context.close();
     }
   }
 
-  // 3. 转运交接（transport）
+  // 3. 标本接收（receive）
   {
-    const { context, page } = await openRolePage(
+    const session = await openManualSession(
       browser,
-      'transport',
-      '/workflow/transport-handover',
-    );
-    try {
-      const workflowPage = new FixationTransportPage(page);
-      await tryStep(module, 'goto-transport', async () => {
-        await workflowPage.gotoTransport();
-      });
-      await capture(page, {
-        module,
-        name: 'transport-list',
-        caption: '标本出库：待处理转运单列表，对转运单「打印」与「交接」。',
-        expected: '列表出现刚创建的转运单号。',
-      });
-
-      await tryStep(module, 'print-transport', async () => {
-        if (transportOrderNo) {
-          await workflowPage.printTransportOrder(transportOrderNo);
-        }
-      });
-      await tryStep(module, 'handover-transport', async () => {
-        if (transportOrderNo) {
-          await workflowPage.handoverTransportOrder(transportOrderNo);
-        }
-      });
-      await capture(page, {
-        module,
-        name: 'transport-handover-done',
-        caption: '转运交接：确认打印后点击「交接」，状态变为已交接。',
-        expected: '提示「转运交接成功」，转运单进入待接收。',
-      });
-    } catch (error) {
-      logCaptureError(module, 'happy-transport-handover', error);
-    } finally {
-      await context.close();
-    }
-  }
-
-  // 4. 标本接收（receive）
-  {
-    const { context, page } = await openRolePage(
-      browser,
-      'receive',
+      m2WorkflowOperatorRole,
       '/workflow/pathology-receipt',
     );
     try {
-      const receiptPage = new PathologyReceiptPage(page);
+      let receiptPage = new PathologyReceiptPage(session.page);
       await tryStep(module, 'goto-receipt', async () => {
         await receiptPage.goto();
       });
-      await capture(page, {
+      const listCapture = await captureWithAuthGuard(browser, session, {
         module,
         name: 'receipt-list',
-        caption: '标本接收工作站：待接收转运单列表，点击「接收」打开接收对话框。',
-        expected: '列表出现已交接的转运单。',
+        caption:
+          '标本签收：输入标本 ID 查询后，当前申请单下全部待签收标本进入签收队列。',
+        expected: '页面展示「签收」工作台、签收队列及标本状态列。',
       });
+      if (listCapture.pageReplaced) {
+        receiptPage = new PathologyReceiptPage(session.page);
+      }
 
       await tryStep(module, 'receive-all', async () => {
-        if (transportOrderId) {
-          await receiptPage.receiveAll(transportOrderId);
-        }
+        await receiptPage.receiveAll(specimenIdentifiers?.[0] ?? '');
       });
-      await capture(page, {
+      await captureWithAuthGuard(browser, session, {
         module,
         name: 'receipt-result',
-        caption: '接收结果：提交接收后展示接收结果，生成病例号，未接收数为 0。',
-        expected: '提示「标本接收成功」，接收结果展示病例号。',
+        caption: '签收完成：确认签收后，所有标本进入已接收状态并生成病例号。',
+        expected: '提示「标本签收成功」，未接收数为 0。',
       });
     } catch (error) {
       logCaptureError(module, 'happy-receive', error);
     } finally {
-      await context.close();
+      await session.context.close();
     }
   }
 
-  // 5. 追踪查询（tracking）
+  // 4. 追踪查询（tracking）
   {
-    const { context, page } = await openRolePage(
+    const session = await openManualSession(
       browser,
-      'tracking',
+      m2WorkflowOperatorRole,
       '/workflow/tracking-exception',
     );
     try {
-      const trackingPage = new TrackingExceptionPage(page);
+      let trackingPage = new TrackingExceptionPage(session.page);
       await tryStep(module, 'goto-tracking', async () => {
-        await trackingPage.goto();
+        await gotoTrackingExceptionPage(session.page);
       });
-      await capture(page, {
+      const listCapture = await captureWithAuthGuard(browser, session, {
         module,
         name: 'tracking-list',
         caption: '追踪与异常：申请单列表，输入申请单号查询后点击「详情」。',
         expected: '列表可按申请单号检索到本次申请单。',
       });
+      if (listCapture.pageReplaced) {
+        trackingPage = new TrackingExceptionPage(session.page);
+      }
 
       await tryStep(module, 'open-tracking', async () => {
         await trackingPage.openApplicationTracking(runData.applicationNo);
       });
-      await capture(page, {
+      await captureWithAuthGuard(browser, session, {
         module,
         name: 'tracking-timeline',
         caption: '申请单追踪详情：展示当前节点（接收）、时间线事件与标本明细。',
-        expected: '时间线事件可见，所有标本条码均展示。',
+        expected: '时间线事件可见，所有标本条码/标本号均展示。',
+        waitText: runData.applicationNo,
       });
     } catch (error) {
       logCaptureError(module, 'happy-tracking', error);
     } finally {
-      await context.close();
+      await session.context.close();
     }
   }
 }
 
-async function captureM2AbnormalPath(browser: import('playwright/test').Browser) {
+async function captureM2AbnormalPath(browser: Browser) {
   const module = 'm2-specimen-workflow';
   const runData = createWorkflowRunData();
   const rejectReason = 'broken-container-e2e';
-  let transportOrderId: string | undefined;
-  let transportOrderNo: string | undefined;
+  let specimenIdentifiers: [string, string] | undefined;
 
-  // 复用 happy-path 前置：创建登记 + 固定 + 转运 + 交接
+  // 复用 happy-path 前置：创建登记 + 固定 + 确认 + 入库 + 出库
   {
-    const { context, page } = await openRolePage(
+    const session = await openManualSession(
       browser,
       'creator',
       '/workflow/submission-registration',
     );
     try {
-      const submissionPage = new SubmissionRegistrationPage(page);
+      const submissionPage = new SubmissionRegistrationPage(session.page);
       await tryStep(module, 'abnormal-goto-submission', async () => {
         await submissionPage.goto();
         await submissionPage.createApplicationAndOpenRegistration(runData);
-        await submissionPage.registerSpecimens(runData);
+        const registrationResult =
+          await submissionPage.registerSpecimens(runData);
+        specimenIdentifiers = [
+          registrationResult.specimens[0]?.barcode ??
+            registrationResult.specimens[0]?.specimenNo ??
+            '',
+          registrationResult.specimens[1]?.barcode ??
+            registrationResult.specimens[1]?.specimenNo ??
+            '',
+        ];
       });
     } catch (error) {
       logCaptureError(module, 'abnormal-create-register', error);
     } finally {
-      await context.close();
+      await session.context.close();
     }
   }
   {
-    const { context, page } = await openRolePage(
+    const session = await openManualSession(
       browser,
-      'fixation',
+      m2WorkflowOperatorRole,
       '/workflow/fixation-verify',
     );
     try {
-      const workflowPage = new FixationTransportPage(page);
+      const workflowPage = new FixationTransportPage(session.page);
       await tryStep(module, 'abnormal-fixation', async () => {
+        await workflowPage.gotoVerification();
+        await workflowPage.confirmRemoval(specimenIdentifiers?.[0] ?? '');
+        await workflowPage.confirmRemoval(specimenIdentifiers?.[1] ?? '');
         await workflowPage.gotoFixation();
-        await workflowPage.startFixation(runData.barcodes[0]);
-        await workflowPage.completeFixation(runData.barcodes[0]);
-        await workflowPage.startFixation(runData.barcodes[1]);
-        await workflowPage.completeFixation(runData.barcodes[1]);
-        const order = await workflowPage.createTransportOrder([
-          ...runData.barcodes,
-        ]);
-        transportOrderId = order.id;
-        transportOrderNo = order.transportOrderNo;
+        await workflowPage.startFixation(specimenIdentifiers?.[0] ?? '');
+        await workflowPage.completeFixation(specimenIdentifiers?.[0] ?? '');
+        await workflowPage.startFixation(specimenIdentifiers?.[1] ?? '');
+        await workflowPage.completeFixation(specimenIdentifiers?.[1] ?? '');
+        await workflowPage.gotoConfirmation();
+        await workflowPage.confirmSpecimens(specimenIdentifiers?.[0] ?? '');
+        await workflowPage.confirmSpecimens(specimenIdentifiers?.[1] ?? '');
+        await workflowPage.gotoCheckIn();
+        await workflowPage.checkInSpecimens(specimenIdentifiers?.[0] ?? '');
+        await workflowPage.checkInSpecimens(specimenIdentifiers?.[1] ?? '');
+        await workflowPage.gotoTransport();
+        await workflowPage.createTransportOrder(specimenIdentifiers?.[0] ?? '');
       });
     } catch (error) {
       logCaptureError(module, 'abnormal-fixation-transport', error);
     } finally {
-      await context.close();
-    }
-  }
-  {
-    const { context, page } = await openRolePage(
-      browser,
-      'transport',
-      '/workflow/transport-handover',
-    );
-    try {
-      const workflowPage = new FixationTransportPage(page);
-      await tryStep(module, 'abnormal-transport', async () => {
-        await workflowPage.gotoTransport();
-        if (transportOrderNo) {
-          await workflowPage.printTransportOrder(transportOrderNo);
-          await workflowPage.handoverTransportOrder(transportOrderNo);
-        }
-      });
-    } catch (error) {
-      logCaptureError(module, 'abnormal-transport-handover', error);
-    } finally {
-      await context.close();
+      await session.context.close();
     }
   }
 
   // 异常接收：拒收其中一条标本
   {
-    const { context, page } = await openRolePage(
+    const session = await openManualSession(
       browser,
-      'receive',
+      m2WorkflowOperatorRole,
       '/workflow/pathology-receipt',
     );
     try {
-      const receiptPage = new PathologyReceiptPage(page);
+      let receiptPage = new PathologyReceiptPage(session.page);
       await tryStep(module, 'abnormal-goto-receipt', async () => {
         await receiptPage.goto();
       });
       await tryStep(module, 'abnormal-reject', async () => {
-        if (transportOrderId) {
-          await receiptPage.rejectOneSpecimen(transportOrderId, rejectReason);
-        }
+        await receiptPage.rejectOneSpecimen(
+          specimenIdentifiers?.[0] ?? '',
+          rejectReason,
+        );
       });
-      await capture(page, {
+      const resultCapture = await captureWithAuthGuard(browser, session, {
         module,
         name: 'abnormal-receipt-result',
-        caption: '异常接收：对其中一条标本选择拒收并填写原因，提交后结果为部分接收。',
+        caption:
+          '异常接收：在签收工作台执行拒收并填写拒收原因与整改建议，结果为部分接收。',
         expected: '接收状态为 PARTIALLY_RECEIVED，未接收数为 1。',
+        waitText: rejectReason,
       });
+      if (resultCapture.pageReplaced) {
+        receiptPage = new PathologyReceiptPage(session.page);
+      }
     } catch (error) {
       logCaptureError(module, 'abnormal-receive', error);
     } finally {
-      await context.close();
+      await session.context.close();
     }
   }
 
   // 异常追踪：确认异常标记
   {
-    const { context, page } = await openRolePage(
+    const session = await openManualSession(
       browser,
-      'tracking',
+      m2WorkflowOperatorRole,
       '/workflow/tracking-exception',
     );
     try {
-      const trackingPage = new TrackingExceptionPage(page);
+      let trackingPage = new TrackingExceptionPage(session.page);
       await tryStep(module, 'abnormal-goto-tracking', async () => {
-        await trackingPage.goto();
+        await gotoTrackingExceptionPage(session.page);
         await trackingPage.openApplicationTracking(runData.applicationNo);
       });
-      await capture(page, {
+      const detailCapture = await captureWithAuthGuard(browser, session, {
         module,
         name: 'abnormal-tracking-detail',
         caption: '异常追踪详情：展示异常明细、拒收标本状态与异常原因。',
         expected: '异常标记为真，拒收标本状态为 REJECTED，展示异常原因。',
+        waitText: rejectReason,
       });
+      if (detailCapture.pageReplaced) {
+        trackingPage = new TrackingExceptionPage(session.page);
+      }
     } catch (error) {
       logCaptureError(module, 'abnormal-tracking', error);
     } finally {
-      await context.close();
+      await session.context.close();
     }
   }
-}
-
-function pathToName(p: string) {
-  return p.replace(/^\//, '').replaceAll('/', '_');
 }

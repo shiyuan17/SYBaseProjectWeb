@@ -173,14 +173,13 @@ async function completeSelectedConsultation(consultation: ConsultationSummary) {
 
 <template>
   <div class="flex flex-col gap-4">
-    <ElEmpty
-      v-if="!workbench"
-      description="请先从左侧选择病例"
-    />
+    <ElEmpty v-if="!workbench" description="请先从左侧选择病例" />
 
     <template v-else>
       <section class="rounded border border-border p-3">
-        <div class="mb-2 text-sm font-semibold text-foreground">发起会诊申请</div>
+        <div class="mb-2 text-sm font-semibold text-foreground">
+          发起会诊申请
+        </div>
         <ElForm label-width="88px">
           <ElFormItem label="会诊目的">
             <ElInput
@@ -243,7 +242,9 @@ async function completeSelectedConsultation(consultation: ConsultationSummary) {
       </section>
 
       <section class="rounded border border-border p-3">
-        <div class="mb-2 text-sm font-semibold text-foreground">填写会诊意见</div>
+        <div class="mb-2 text-sm font-semibold text-foreground">
+          填写会诊意见
+        </div>
         <ElForm label-width="88px">
           <ElFormItem label="会诊记录">
             <ElSelect
@@ -337,7 +338,10 @@ async function completeSelectedConsultation(consultation: ConsultationSummary) {
               参与人:
               {{
                 (consultation.participants ?? [])
-                  .map((item: { participantName?: null | string }) => item.participantName)
+                  .map(
+                    (item: { participantName?: null | string }) =>
+                      item.participantName,
+                  )
                   .filter(Boolean)
                   .join('、') || '-'
               }}

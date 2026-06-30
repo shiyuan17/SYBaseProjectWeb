@@ -59,7 +59,9 @@ type MedicalOrderPackagePageResponse = Partial<
   MedicalOrderPagedResult<MedicalOrderPackageView>
 >;
 
-function stripLegacyOperatorFields<T>(data: T): Omit<T, 'operatorName' | 'operatorUserId'> {
+function stripLegacyOperatorFields<T>(
+  data: T,
+): Omit<T, 'operatorName' | 'operatorUserId'> {
   const sanitized = { ...(data as Record<string, unknown>) };
   delete sanitized.operatorName;
   delete sanitized.operatorUserId;

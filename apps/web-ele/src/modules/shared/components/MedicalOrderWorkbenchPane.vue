@@ -1343,28 +1343,28 @@ onMounted(loadCandidates);
 
 .medical-order-action-panel__field-label {
   font-size: 13px;
-  color: var(--el-text-color-regular);
   line-height: 1;
+  color: var(--el-text-color-regular);
 }
 
 .medical-order-action-panel__pathology-value {
-  min-width: 0;
   flex: 1 1 auto;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--el-text-color-primary);
-  line-height: 1.35;
-  white-space: nowrap;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--el-text-color-primary);
+  white-space: nowrap;
 }
 
 .medical-order-action-panel__editor {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 12px;
-  min-width: 0;
   align-items: center;
+  min-width: 0;
 }
 
 .medical-order-action-panel__field {
@@ -1379,22 +1379,21 @@ onMounted(loadCandidates);
 }
 
 .medical-order-action-panel__select {
-  min-width: 0;
   flex: 1 1 auto;
+  min-width: 0;
 }
 
 .medical-order-action-panel__manual-input {
-  min-width: 0;
   flex: 1 1 auto;
+  min-width: 0;
 }
 
 .medical-order-action-panel__buttons {
   display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
+  flex-flow: row nowrap;
   gap: 12px;
-  justify-content: flex-start;
   align-items: center;
+  justify-content: flex-start;
 }
 
 .charge-manager-dialog {

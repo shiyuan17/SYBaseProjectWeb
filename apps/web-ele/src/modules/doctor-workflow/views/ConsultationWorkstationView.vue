@@ -747,7 +747,9 @@ async function submitBatchComplete() {
                   (row.rowType === 'consultation' &&
                     (canCommentConsultation || canCompleteConsultation))
                 "
-                @command="(command) => handleActionCommand(String(command), row)"
+                @command="
+                  (command) => handleActionCommand(String(command), row)
+                "
               >
                 <ElButton size="small" type="primary"> 操作 </ElButton>
                 <template #dropdown>

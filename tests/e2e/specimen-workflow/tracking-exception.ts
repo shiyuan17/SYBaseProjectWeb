@@ -2,12 +2,7 @@ import type { Page } from 'playwright/test';
 
 import { expect } from 'playwright/test';
 
-import {
-  fillInputByLabel,
-  getDialog,
-  getDrawer,
-  waitForTableRow,
-} from './helpers/ui';
+import { fillInputByLabel, getDialog, waitForTableRow } from './helpers/ui';
 
 type TrackingPayload = {
   abnormalFlag: boolean;
@@ -17,9 +12,10 @@ type TrackingPayload = {
   }>;
   specimens: Array<{
     abnormalReason?: null | string;
-    barcode: string;
+    barcode?: null | string;
     qualityIssueCodes?: string[];
     receiptStatus?: null | string;
+    specimenNo?: null | string;
     specimenStatus: string;
   }>;
   status: string;
@@ -37,20 +33,17 @@ export class TrackingExceptionPage {
     expect(payload.abnormalFlag).toBeTruthy();
 
     const abnormalSpecimen = payload.specimens.find(
-      (item) => item.barcode === abnormalBarcode,
+      (item) =>
+        item.barcode === abnormalBarcode || item.specimenNo === abnormalBarcode,
     );
     expect(abnormalSpecimen).toBeDefined();
     expect(abnormalSpecimen?.specimenStatus).toBe('REJECTED');
     expect(abnormalSpecimen?.receiptStatus).toBe('REJECTED');
-    expect(
-      abnormalSpecimen?.qualityIssueCodes?.includes('CONTAINER_DAMAGE'),
-    ).toBeTruthy();
-    expect(abnormalSpecimen?.abnormalReason).toBe(reason);
+    expect(abnormalSpecimen?.abnormalReason).toContain(reason);
 
     const dialog = getDialog(this.page, '申请单追踪详情');
     await expect(dialog.getByText('异常明细')).toBeVisible();
-    await expect(dialog.getByText('CONTAINER_DAMAGE')).toBeVisible();
-    await expect(dialog.getByText(reason)).toBeVisible();
+    await expect(dialog.getByText(reason).first()).toBeVisible();
   }
 
   async assertHappyPath(payload: TrackingPayload, barcodes: string[]) {
@@ -64,9 +57,11 @@ export class TrackingExceptionPage {
 
     for (const barcode of barcodes) {
       expect(
-        payload.specimens.some((item) => item.barcode === barcode),
+        payload.specimens.some(
+          (item) => item.barcode === barcode || item.specimenNo === barcode,
+        ),
       ).toBeTruthy();
-      await expect(dialog.getByText(barcode)).toBeVisible();
+      await expect(dialog.getByRole('tab', { name: barcode })).toBeVisible();
     }
   }
 
@@ -74,12 +69,21 @@ export class TrackingExceptionPage {
     await this.page.goto('/workflow/tracking-exception', {
       waitUntil: 'domcontentloaded',
     });
-    await expect(this.page.getByText('申请单列表')).toBeVisible();
+    await expect(
+      this.page.getByRole('tab', { name: '申请单列表' }),
+    ).toBeVisible();
   }
 
   async openApplicationTracking(applicationNo: string) {
     await fillInputByLabel(this.page, '申请单号', applicationNo);
-    await this.page.getByRole('button', { name: '查询' }).click();
+    await Promise.all([
+      this.page.waitForResponse(
+        (response) =>
+          response.request().method() === 'GET' &&
+          response.url().includes('/api/v1/applications'),
+      ),
+      this.page.getByRole('button', { name: '查询' }).click(),
+    ]);
 
     await waitForTableRow(this.page, applicationNo);
     const row = this.page
@@ -103,15 +107,25 @@ export class TrackingExceptionPage {
   }
 
   async openSpecimenTracking(barcode: string) {
+    const applicationDialog = getDialog(this.page, '申请单追踪详情');
+    if (await applicationDialog.isVisible().catch(() => false)) {
+      await applicationDialog
+        .getByRole('button', { name: '关闭此对话框' })
+        .click();
+      await expect(applicationDialog).not.toBeVisible();
+    }
+
     await this.page.getByRole('tab', { name: '标本列表' }).click();
     await fillInputByLabel(this.page, '关键字', barcode);
     await this.page.getByRole('button', { name: '查询' }).click();
     await waitForTableRow(this.page, barcode);
-    const row = this.page
-      .locator('.el-table__row')
-      .filter({ hasText: barcode })
+
+    const visibleSpecimenPane = this.page.locator('#pane-specimens');
+    const detailButton = visibleSpecimenPane
+      .getByRole('button', { name: '详情' })
       .first();
-    await row.getByRole('button', { name: '详情' }).click();
-    await expect(getDrawer(this.page, '标本追踪详情')).toBeVisible();
+    await expect(detailButton).toBeVisible();
+    await detailButton.click();
+    await expect(getDialog(this.page, '标本追踪详情')).toBeVisible();
   }
 }

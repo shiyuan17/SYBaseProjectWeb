@@ -865,13 +865,11 @@ export interface DiagnosisWorkbenchReportDraftValue {
   richTextContent?: string;
 }
 
-export interface CommentConsultationParticipantRequest
-  extends ConsultationActionRequest {
+export interface CommentConsultationParticipantRequest extends ConsultationActionRequest {
   opinion: string;
 }
 
-export interface CompleteConsultationRequest
-  extends ConsultationActionRequest {
+export interface CompleteConsultationRequest extends ConsultationActionRequest {
   opinion: string;
 }
 

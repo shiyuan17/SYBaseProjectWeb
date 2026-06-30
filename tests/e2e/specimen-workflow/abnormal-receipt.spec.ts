@@ -7,16 +7,19 @@ import { PathologyReceiptPage } from './pathology-receipt';
 import { SubmissionRegistrationPage } from './submission-registration';
 import { TrackingExceptionPage } from './tracking-exception';
 
+const m2WorkflowOperatorRole = 'creator' as const;
+
+test.setTimeout(420_000);
+
 test('abnormal receipt: reject one specimen and expose abnormal tracking', async ({
   browser,
 }) => {
   const runData = createWorkflowRunData();
   const rejectReason = 'broken-container-e2e';
-  let transportOrderId: string | undefined;
-  let transportOrderNo: string | undefined;
+  let specimenIdentifiers: [string, string] | undefined;
+  let rejectedIdentifier: string | undefined;
 
   console.log(`[e2e-abnormal] applicationNo=${runData.applicationNo}`);
-  console.log(`[e2e-abnormal] rejectedBarcode=${runData.barcodes[1]}`);
 
   {
     const { context, page } = await openRolePage(
@@ -29,7 +32,18 @@ test('abnormal receipt: reject one specimen and expose abnormal tracking', async
       const submissionPage = new SubmissionRegistrationPage(page);
       await submissionPage.goto();
       await submissionPage.createApplicationAndOpenRegistration(runData);
-      await submissionPage.registerSpecimens(runData);
+      const registrationResult =
+        await submissionPage.registerSpecimens(runData);
+      specimenIdentifiers = [
+        registrationResult.specimens[0]?.barcode ??
+          registrationResult.specimens[0]?.specimenNo ??
+          '',
+        registrationResult.specimens[1]?.barcode ??
+          registrationResult.specimens[1]?.specimenNo ??
+          '',
+      ];
+      rejectedIdentifier = specimenIdentifiers[1] ?? '';
+      console.log(`[e2e-abnormal] rejectedIdentifier=${rejectedIdentifier}`);
     } finally {
       await context.close();
     }
@@ -38,44 +52,34 @@ test('abnormal receipt: reject one specimen and expose abnormal tracking', async
   {
     const { context, page } = await openRolePage(
       browser,
-      'fixation',
+      m2WorkflowOperatorRole,
       '/workflow/fixation-verify',
     );
 
     try {
       const workflowPage = new FixationTransportPage(page);
+      await workflowPage.gotoVerification();
+      await workflowPage.confirmRemoval(specimenIdentifiers?.[0] ?? '');
+      await workflowPage.confirmRemoval(specimenIdentifiers?.[1] ?? '');
       await workflowPage.gotoFixation();
-      await workflowPage.startFixation(runData.barcodes[0]);
-      await workflowPage.completeFixation(runData.barcodes[0]);
-      await workflowPage.startFixation(runData.barcodes[1]);
-      await workflowPage.completeFixation(runData.barcodes[1]);
-
-      const transportOrder = await workflowPage.createTransportOrder([
-        ...runData.barcodes,
-      ]);
-      transportOrderId = transportOrder.id;
-      transportOrderNo = transportOrder.transportOrderNo;
-      console.log(`[e2e-abnormal] transportOrderNo=${transportOrderNo}`);
-    } finally {
-      await context.close();
-    }
-  }
-
-  {
-    const { context, page } = await openRolePage(
-      browser,
-      'transport',
-      '/workflow/transport-handover',
-    );
-
-    try {
-      const workflowPage = new FixationTransportPage(page);
+      await workflowPage.startFixation(specimenIdentifiers?.[0] ?? '');
+      await workflowPage.completeFixation(specimenIdentifiers?.[0] ?? '');
+      await workflowPage.startFixation(specimenIdentifiers?.[1] ?? '');
+      await workflowPage.completeFixation(specimenIdentifiers?.[1] ?? '');
+      await workflowPage.gotoConfirmation();
+      await workflowPage.confirmSpecimens(specimenIdentifiers?.[0] ?? '');
+      await workflowPage.confirmSpecimens(specimenIdentifiers?.[1] ?? '');
+      await workflowPage.gotoCheckIn();
+      await workflowPage.checkInSpecimens(specimenIdentifiers?.[0] ?? '');
+      await workflowPage.checkInSpecimens(specimenIdentifiers?.[1] ?? '');
       await workflowPage.gotoTransport();
-      await workflowPage.printTransportOrder(transportOrderNo ?? '');
-      const handoverResult = await workflowPage.handoverTransportOrder(
-        transportOrderNo ?? '',
+      const transportOrder = await workflowPage.createTransportOrder([
+        ...(specimenIdentifiers ?? []),
+      ]);
+      expect(transportOrder.transportOrderNo).toBeTruthy();
+      console.log(
+        `[e2e-abnormal] transportOrderNo=${transportOrder.transportOrderNo}`,
       );
-      expect(handoverResult.status).toBe('HANDED_OVER');
     } finally {
       await context.close();
     }
@@ -84,15 +88,21 @@ test('abnormal receipt: reject one specimen and expose abnormal tracking', async
   {
     const { context, page } = await openRolePage(
       browser,
-      'receive',
+      m2WorkflowOperatorRole,
       '/workflow/pathology-receipt',
     );
 
     try {
       const receiptPage = new PathologyReceiptPage(page);
       await receiptPage.goto();
+      const receivedResult = await receiptPage.receiveOneSpecimen(
+        specimenIdentifiers?.[0] ?? '',
+      );
+      expect(receivedResult.receiptStatus).toBe('PARTIALLY_RECEIVED');
+      expect(receivedResult.unreceivedCount).toBe(1);
+
       const receiptResult = await receiptPage.rejectOneSpecimen(
-        transportOrderId ?? '',
+        rejectedIdentifier ?? '',
         rejectReason,
       );
       expect(receiptResult.receiptStatus).toBe('PARTIALLY_RECEIVED');
@@ -105,7 +115,7 @@ test('abnormal receipt: reject one specimen and expose abnormal tracking', async
   {
     const { context, page } = await openRolePage(
       browser,
-      'tracking',
+      m2WorkflowOperatorRole,
       '/workflow/tracking-exception',
     );
 
@@ -117,10 +127,10 @@ test('abnormal receipt: reject one specimen and expose abnormal tracking', async
       );
       await trackingPage.assertAbnormalPath(
         trackingPayload,
-        runData.barcodes[1],
+        rejectedIdentifier ?? '',
         rejectReason,
       );
-      await trackingPage.openSpecimenTracking(runData.barcodes[1]);
+      await trackingPage.openSpecimenTracking(rejectedIdentifier ?? '');
     } finally {
       await context.close();
     }

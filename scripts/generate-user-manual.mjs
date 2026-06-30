@@ -1,110 +1,47 @@
 // 用户操作手册生成器。
-// 读取 docs/user-manual/.capture-manifest.json，按模块渲染 Markdown 手册。
-// 幂等：重跑覆盖 Markdown 正文，不删除 images/。
+// 读取 staging 下的截图 manifest，按共享手册元数据渲染 Markdown 手册，
+// 验证通过后再整体同步到 docs/user-manual/，避免留下半生成状态。
 //
 // 运行：pnpm manual:gen（通常由 pnpm manual:build 自动串接）。
 
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..');
 const manualRoot = path.join(repoRoot, 'docs', 'user-manual');
-const manifestPath = path.join(manualRoot, '.capture-manifest.json');
-const errorLogPath = path.join(manualRoot, 'capture-errors.log');
+const stageRoot = path.join(manualRoot, '.generated');
+const tempRenderRoot = path.join(
+  repoRoot,
+  '.codex-temp',
+  'user-manual-rendered',
+);
 
-// 模块元数据：标题、顺序、章节说明、每页主要操作列表（best-effort，用于无 POM 的静态页）。
-const MODULE_META = {
-  dashboard: {
-    title: '仪表盘',
-    order: 10,
-    intro: '病理看板与个人工作台，聚合当日标本流转、诊断进度与异常指标。',
-  },
-  'm2-specimen-workflow': {
-    title: 'M2 临床送检',
-    order: 20,
-    intro:
-      '临床标本送检全链路：申请创建 → 标本登记 → 固定核对 → 转运交接 → 标本接收 → 追踪查询，含部分接收/拒收异常链。',
-  },
-  'm4-doctor-workflow': {
-    title: 'M4 诊断管理',
-    order: 30,
-    intro:
-      '诊断分配、诊断平台工作站、病理报告、报告追踪、病理医嘱执行、报告修订、会诊管理。',
-  },
-  'm5-operation-support': {
-    title: 'M5 归档与借记 / 设备及试剂',
-    order: 40,
-    intro: '归档管理、借记管理、仪器设备、试剂耗材、医疗废物管理。',
-  },
-  'm6-statistics': {
-    title: 'M6 数据统计与分析',
-    order: 50,
-    intro: '统计仪表盘、质控指标、管理指标、统计报表工作台。',
-  },
-  'm1-system': {
-    title: 'M1 系统管理',
-    order: 60,
-    intro: '用户、角色、科室/部位字典、医嘱字典/收费/套餐、描写模板、取材规范、系统配置、编号规则、日志。',
-  },
+const defaultManualSpecCandidates = [
+  path.join(repoRoot, 'tests', 'e2e', 'manual', 'manual-spec.mjs'),
+  path.join(repoRoot, 'tests', 'e2e', 'manual', 'manual-spec.js'),
+];
+
+const STEP_PLACEHOLDERS = {
+  auth_failed:
+    '> 本节因认证失效未生成截图；请先刷新登录态后重试，详见 `capture-errors.log`。',
+  capture_failed:
+    '> 本节截图捕获失败，详见 `capture-errors.log` 排查失败原因。',
+  missing: '> 本节尚未捕获截图；请先运行 `pnpm manual:capture` 补齐。',
 };
 
-// 静态页主要操作清单（与 capture-handbook.spec.ts STATIC_PAGES 对应，供手册补全操作说明）。
-const STATIC_OPERATIONS = {
-  dashboard: {
-    '/analytics': '查看当日标本流转、诊断进度与异常指标；切换看板筛选条件。',
-    '/workspace': '查看个人岗位待办，点击快捷入口进入对应工作站。',
-  },
-  'm4-doctor-workflow': {
-    '/doctor-workflow/assignment':
-      '查询待分派任务；选择医生；勾选任务后「初步分片」或「签发分片」。',
-    '/doctor-workflow/workbench':
-      '查询队列并选择任务；编辑报告；「保存/初步/复核/签发」并选择发放模式；采图、查看医嘱/会诊/历史病理。',
-    '/doctor-workflow/report':
-      '按病例/病理号查询报告；对已审核报告「驳回」；对已签发报告「发布」；批量打印/发放/回收正式版本。',
-    '/doctor-workflow/tracking':
-      '查询病例；查看全局生命周期时间线与对象追踪明细；跳转诊断工作台/报告/医嘱。',
-    '/doctor-workflow/medical-orders':
-      '按病理号/状态查询医嘱；「确认」「打印玻片」「出片」「取消」。',
-    '/doctor-workflow/revision':
-      '查询病例；对当前报告「发起修订申请」；对修订申请「审批通过/驳回」。',
-    '/doctor-workflow/consultation':
-      '查询病例；「发起会诊」添加参与人；「录入参与人意见」；「完成会诊」。',
-  },
-  'm5-operation-support': {
-    '/operation-support/archive': '查询归档台账；登记/调整归档位置；查看归档明细。',
-    '/operation-support/borrow': '登记借出；办理归还；查看逾期提醒。',
-    '/operation-resources/equipment': '维护设备档案；登记保养记录；查看设备预警。',
-    '/operation-resources/reagents': '维护试剂耗材基础信息；登记库存批次；查看预警。',
-    '/operation-resources/medical-waste': '打印废物袋标签；登记交接记录。',
-  },
-  'm6-statistics': {
-    '/m6/dashboard': '切换时间维度查看质控、运营与工作量核心指标。',
-    '/m6/quality-indicators': '查看三甲质控、质量安全控制指标与数据源状态。',
-    '/m6/management-indicators': '查看业务量、收费、物资/试剂预警与人员工作量。',
-    '/m6/custom-analysis':
-      '选择分析维度（工作量/质控/冰冻/报告更改/不合格标本）；查询并导出报表。',
-  },
-  'm1-system': {
-    '/system/users': '新增/编辑用户；启停账号；绑定岗位。',
-    '/system/roles': '新增/编辑角色；分配权限码。',
-    '/system/departments': '维护科室组织架构树。',
-    '/system/body-parts': '维护取材部位分类字典。',
-    '/system/medical-order-dicts': '维护医嘱项目基础字典。',
-    '/system/medical-order-charges': '维护收费项目与价格。',
-    '/system/medical-order-packages': '维护常用医嘱套餐组合。',
-    '/system/sampling-templates': '维护大体/镜下/诊断描写模板。',
-    '/system/sampling-guidelines': '维护取材标准操作规范。',
-    '/system/configs': '维护运行参数与开关。',
-    '/system/numbering-rules': '配置病理号/标本号等编号规则。',
-    '/system/logs': '按条件查询操作日志。',
-  },
-};
+function ensureDir(dir) {
+  fs.mkdirSync(dir, { recursive: true });
+}
 
-function readManifest() {
+function safeReadFile(filePath) {
+  return fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : '';
+}
+
+function readManifest(manifestPath) {
   if (!fs.existsSync(manifestPath)) {
     return [];
   }
@@ -117,15 +54,95 @@ function readManifest() {
   }
 }
 
-function hasErrorLog() {
-  return fs.existsSync(errorLogPath) && fs.readFileSync(errorLogPath, 'utf8').trim().length > 0;
+function hasErrorLog(errorLogPath) {
+  return safeReadFile(errorLogPath).trim().length > 0;
 }
 
-function imageMarkdown(image) {
-  if (!image) {
-    return '> （截图捕获失败，详见 `capture-errors.log`）';
+function syncDirectory(sourceDir, targetDir) {
+  ensureDir(targetDir);
+  fs.rmSync(targetDir, { force: true, recursive: true });
+  ensureDir(targetDir);
+  fs.cpSync(sourceDir, targetDir, { recursive: true });
+}
+
+function firstNonEmptyString(...values) {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
   }
-  return `![${image}](${image})`;
+  return undefined;
+}
+
+function normalizeStringList(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => (typeof item === 'string' ? item.trim() : ''))
+      .filter(Boolean);
+  }
+  if (typeof value === 'string' && value.trim()) {
+    return [value.trim()];
+  }
+  return [];
+}
+
+function uniqueStrings(values) {
+  return [...new Set(values.filter(Boolean))];
+}
+
+function imageMarkdown(alt, image) {
+  return `![${alt}](${image})`;
+}
+
+function resolveStepStatus(step) {
+  if (step.status === 'auth_failed') {
+    return 'auth_failed';
+  }
+  if (step.status === 'capture_failed') {
+    return 'capture_failed';
+  }
+  if (step.status === 'missing') {
+    return 'missing';
+  }
+  if (typeof step.image === 'string' && step.image.trim()) {
+    return 'captured';
+  }
+  return 'missing';
+}
+
+function normalizeManifestStep(step, index) {
+  const order = Number.isFinite(step.order) ? step.order : index + 1;
+  const moduleKey = firstNonEmptyString(step.module, step.moduleKey);
+  const sectionId = firstNonEmptyString(step.sectionId, step.sectionKey);
+  const subsectionId = firstNonEmptyString(
+    step.subsectionId,
+    step.subsectionKey,
+    step.name,
+  );
+  const name = firstNonEmptyString(step.name, step.subsectionId);
+  const image = firstNonEmptyString(step.image);
+
+  return {
+    caption: firstNonEmptyString(step.caption, step.title, name, '截图'),
+    expected: firstNonEmptyString(step.expected),
+    image,
+    module: moduleKey,
+    name,
+    order,
+    path: firstNonEmptyString(step.path),
+    role: firstNonEmptyString(step.role),
+    sectionId,
+    status: resolveStepStatus(step),
+    subsectionId,
+    warning: firstNonEmptyString(step.warning),
+  };
+}
+
+function normalizeManifest(steps) {
+  return steps
+    .map((step, index) => normalizeManifestStep(step, index))
+    .filter((step) => step.module)
+    .toSorted((left, right) => left.order - right.order);
 }
 
 function groupByModule(steps) {
@@ -136,203 +153,623 @@ function groupByModule(steps) {
     }
     groups.get(step.module).push(step);
   }
-  for (const [, list] of groups) {
-    list.sort((a, b) => a.order - b.order);
-  }
   return groups;
 }
 
-function renderM2Module(steps) {
-  const lines = [];
-  lines.push(`# M2 临床送检`);
-  lines.push('');
-  lines.push(
-    '临床标本送检全链路：申请创建 → 标本登记 → 固定核对 → 转运交接 → 标本接收 → 追踪查询，含部分接收/拒收异常链。',
+async function loadManualSpecModule(candidatePaths = defaultManualSpecCandidates) {
+  for (const candidatePath of candidatePaths) {
+    if (!fs.existsSync(candidatePath)) {
+      continue;
+    }
+    return import(pathToFileURL(candidatePath).href);
+  }
+
+  throw new Error(
+    '未找到用户手册 spec 导出，请确认 tests/e2e/manual/manual-spec.mjs 已生成。',
   );
-  lines.push('');
-
-  // happy-path 步骤名为前 13 个（按捕获顺序），abnormal 为后 2 个。
-  const happy = steps.filter((s) => !s.name.startsWith('abnormal-'));
-  const abnormal = steps.filter((s) => s.name.startsWith('abnormal-'));
-
-  if (happy.length === 0) {
-    lines.push('> 本模块截图未捕获。请先运行 `pnpm manual:capture`（需本地联调环境在线）。');
-    lines.push('');
-  } else {
-    lines.push('## 主链路（正常接收）');
-    lines.push('');
-    let n = 1;
-    for (const step of happy) {
-      lines.push(`### ${n}. ${step.caption}`);
-      lines.push('');
-      if (step.expected) {
-        lines.push(`**预期结果**：${step.expected}`);
-        lines.push('');
-      }
-      lines.push(imageMarkdown(step.image));
-      lines.push('');
-      n += 1;
-    }
-  }
-
-  if (abnormal.length > 0) {
-    lines.push('## 异常链（部分接收 / 拒收）');
-    lines.push('');
-    let n = 1;
-    for (const step of abnormal) {
-      lines.push(`### ${n}. ${step.caption}`);
-      lines.push('');
-      if (step.expected) {
-        lines.push(`**预期结果**：${step.expected}`);
-        lines.push('');
-      }
-      lines.push(imageMarkdown(step.image));
-      lines.push('');
-      n += 1;
-    }
-  }
-
-  return lines.join('\n');
 }
 
-function renderStaticModule(moduleKey, steps) {
-  const meta = MODULE_META[moduleKey] ?? { title: moduleKey, intro: '' };
-  const lines = [];
-  lines.push(`# ${meta.title}`);
-  lines.push('');
-  if (meta.intro) {
-    lines.push(meta.intro);
-    lines.push('');
-  }
-  const operations = STATIC_OPERATIONS[moduleKey] ?? {};
+function getExportedModuleSpecs(specModule) {
+  const candidates = [
+    specModule?.MANUAL_HANDBOOK_SPEC?.modules,
+    specModule?.MANUAL_SPEC?.modules,
+    specModule?.MANUAL_RENDER_SPEC?.modules,
+    specModule?.MANUAL_RENDER_SPEC,
+    specModule?.MANUAL_MODULE_SPECS,
+    specModule?.default?.modules,
+    specModule?.default,
+  ];
 
-  if (steps.length === 0) {
-    lines.push('> 本模块截图未捕获。请先运行 `pnpm manual:capture`（需本地联调环境在线）。');
-    lines.push('');
-    // 仍按已知路由列出操作说明骨架。
-    for (const [route, op] of Object.entries(operations)) {
-      lines.push(`## ${route}`);
-      lines.push('');
-      lines.push(`- 主要操作：${op}`);
-      lines.push('');
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      return candidate;
     }
+  }
+
+  return [];
+}
+
+function createModuleMeta(moduleSpecs) {
+  return Object.fromEntries(
+    moduleSpecs.map((moduleSpec) => [moduleSpec.key, moduleSpec]),
+  );
+}
+
+function hasStructuredSections(moduleSpec) {
+  return (
+    Array.isArray(moduleSpec.sections) && moduleSpec.sections.length > 0
+  ) || (
+    Array.isArray(moduleSpec.chapters) && moduleSpec.chapters.length > 0
+  );
+}
+
+function normalizeSteps(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map((step) => (typeof step === 'string' ? step.trim() : ''))
+      .filter(Boolean);
+  }
+  if (typeof value === 'string' && value.trim()) {
+    return [value.trim()];
+  }
+  return [];
+}
+
+function normalizeSubsection(rawSubsection, index, section) {
+  const subsectionId = firstNonEmptyString(
+    rawSubsection.subsectionId,
+    rawSubsection.id,
+    rawSubsection.name,
+    `${section.id}-subsection-${index + 1}`,
+  );
+  const title = firstNonEmptyString(
+    rawSubsection.title,
+    rawSubsection.name,
+    rawSubsection.caption,
+    `操作节 ${index + 1}`,
+  );
+  const captureKeys = uniqueStrings([
+    subsectionId,
+    rawSubsection.name,
+    ...normalizeStringList(rawSubsection.captureNames),
+    ...normalizeStringList(rawSubsection.screenshotNames),
+    ...normalizeStringList(rawSubsection.names),
+  ]);
+
+  return {
+    captureKeys,
+    expected: firstNonEmptyString(
+      rawSubsection.expected,
+      rawSubsection.result,
+    ),
+    operations: normalizeSteps(rawSubsection.operations),
+    path: firstNonEmptyString(
+      rawSubsection.path,
+      rawSubsection.routePath,
+      section.path,
+    ),
+    pathLabel: firstNonEmptyString(rawSubsection.pathLabel),
+    role: firstNonEmptyString(rawSubsection.role, rawSubsection.actor, section.role),
+    roleNote: firstNonEmptyString(rawSubsection.roleNote),
+    steps: normalizeSteps(rawSubsection.steps ?? rawSubsection.operations),
+    subsectionId,
+    summary: firstNonEmptyString(
+      rawSubsection.summary,
+      rawSubsection.caption,
+      rawSubsection.description,
+    ),
+    title,
+  };
+}
+
+function normalizeStructuredSection(rawSection, index) {
+  const sectionId = firstNonEmptyString(
+    rawSection.sectionId,
+    rawSection.id,
+    rawSection.name,
+    `section-${index + 1}`,
+  );
+  const title = firstNonEmptyString(
+    rawSection.title,
+    rawSection.name,
+    rawSection.caption,
+    `章节 ${index + 1}`,
+  );
+  const rawSubsections = Array.isArray(rawSection.subsections)
+    ? rawSection.subsections
+    : [];
+
+  const subsections = (
+    rawSubsections.length > 0 ? rawSubsections : [rawSection]
+  ).map((rawSubsection, subsectionIndex) =>
+    normalizeSubsection(rawSubsection, subsectionIndex, {
+      id: sectionId,
+      path: firstNonEmptyString(rawSection.path, rawSubsection.path),
+      role: firstNonEmptyString(rawSection.role, rawSubsection.role),
+    }),
+  );
+
+  return {
+    matchKeys: uniqueStrings([sectionId, rawSection.name]),
+    sectionId,
+    subsections,
+    summary: firstNonEmptyString(
+      rawSection.summary,
+      rawSection.caption,
+      rawSection.description,
+    ),
+    title,
+  };
+}
+
+function normalizeLegacyStaticSections(staticPages = []) {
+  const groupedSections = new Map();
+
+  for (const [pageIndex, page] of staticPages.entries()) {
+    const sectionId = firstNonEmptyString(
+      page.sectionId,
+      page.groupId,
+      page.name,
+      `section-${pageIndex + 1}`,
+    );
+    const existingSection = groupedSections.get(sectionId);
+
+    const section =
+      existingSection ??
+      {
+        matchKeys: uniqueStrings([sectionId, page.name]),
+        sectionId,
+        subsections: [],
+        summary: firstNonEmptyString(
+          page.sectionSummary,
+          page.caption,
+          page.operations,
+        ),
+        title: firstNonEmptyString(
+          page.sectionTitle,
+          page.title,
+          page.caption,
+          `章节 ${groupedSections.size + 1}`,
+        ),
+      };
+
+    section.subsections.push(
+      normalizeSubsection(page, section.subsections.length, {
+        id: sectionId,
+        path: firstNonEmptyString(page.path),
+        role: firstNonEmptyString(page.role),
+      }),
+    );
+
+    if (!existingSection) {
+      groupedSections.set(sectionId, section);
+    }
+  }
+
+  return [...groupedSections.values()];
+}
+
+function normalizeModuleSpec(rawModuleSpec, index) {
+  const key = firstNonEmptyString(rawModuleSpec.key);
+  if (!key) {
+    return undefined;
+  }
+
+  const structuredSections = hasStructuredSections(rawModuleSpec)
+    ? (rawModuleSpec.sections ?? rawModuleSpec.chapters).map(
+        normalizeStructuredSection,
+      )
+    : normalizeLegacyStaticSections(rawModuleSpec.staticPages ?? []);
+
+  return {
+    intro: firstNonEmptyString(rawModuleSpec.intro, rawModuleSpec.description),
+    key,
+    order: Number.isFinite(rawModuleSpec.order)
+      ? rawModuleSpec.order
+      : (index + 1) * 10,
+    processSummary: firstNonEmptyString(
+      rawModuleSpec.processSummary,
+      rawModuleSpec.flowSummary,
+      rawModuleSpec.process,
+    ),
+    renderMode: firstNonEmptyString(rawModuleSpec.renderMode),
+    sections: structuredSections,
+    title: firstNonEmptyString(rawModuleSpec.title, key, '未命名模块'),
+  };
+}
+
+function normalizeModuleSpecs(moduleSpecs) {
+  return moduleSpecs
+    .map(normalizeModuleSpec)
+    .filter(Boolean)
+    .toSorted((left, right) => left.order - right.order);
+}
+
+async function resolveManualSpecs(options = {}) {
+  const moduleSpecs = Array.isArray(options.moduleSpecs)
+    ? options.moduleSpecs
+    : getExportedModuleSpecs(
+        await loadManualSpecModule(options.manualSpecCandidates),
+      );
+
+  const normalizedSpecs = normalizeModuleSpecs(moduleSpecs);
+  return {
+    moduleMeta: createModuleMeta(normalizedSpecs),
+    moduleSpecs: normalizedSpecs,
+  };
+}
+
+function renderModuleHeader(lines, spec) {
+  lines.push(`# ${spec.title}`, '');
+  if (spec.intro) {
+    lines.push(spec.intro, '');
+  }
+  if (spec.processSummary) {
+    lines.push(`流程：${spec.processSummary}`, '');
+  }
+}
+
+function renderPlaceholderLines(lines, status) {
+  lines.push(STEP_PLACEHOLDERS[status] ?? STEP_PLACEHOLDERS.missing, '');
+}
+
+function matchesSubsection(step, section, subsection) {
+  if (!step) {
+    return false;
+  }
+
+  const stepKeys = uniqueStrings([step.subsectionId, step.name]);
+  if (
+    stepKeys.length > 0 &&
+    subsection.captureKeys.some((captureKey) => stepKeys.includes(captureKey))
+  ) {
+    return true;
+  }
+
+  if (
+    step.sectionId &&
+    section.matchKeys.includes(step.sectionId) &&
+    stepKeys.length === 0 &&
+    section.subsections.length === 1
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function getSubsectionSteps(moduleSteps, section, subsection) {
+  return moduleSteps.filter((step) => matchesSubsection(step, section, subsection));
+}
+
+function renderScreenshotGroup(lines, steps) {
+  const capturedSteps = steps.filter((step) => step.status === 'captured' && step.image);
+  const hasAuthFailure = steps.some((step) => step.status === 'auth_failed');
+  const hasCaptureFailure = steps.some((step) => step.status === 'capture_failed');
+  const hasExplicitMissing = steps.some((step) => step.status === 'missing');
+
+  lines.push('截图组：', '');
+
+  if (
+    capturedSteps.length === 0 &&
+    !hasAuthFailure &&
+    !hasCaptureFailure &&
+    !hasExplicitMissing
+  ) {
+    renderPlaceholderLines(lines, 'missing');
+    return;
+  }
+
+  for (const step of capturedSteps) {
+    lines.push(imageMarkdown(step.caption, step.image), '');
+  }
+
+  if (hasAuthFailure) {
+    renderPlaceholderLines(lines, 'auth_failed');
+  }
+  if (hasCaptureFailure) {
+    renderPlaceholderLines(lines, 'capture_failed');
+  }
+  if (
+    capturedSteps.length === 0 &&
+    !hasAuthFailure &&
+    !hasCaptureFailure &&
+    hasExplicitMissing
+  ) {
+    renderPlaceholderLines(lines, 'missing');
+  }
+}
+
+function renderOperationSteps(lines, steps) {
+  if (steps.length === 0) {
+    return;
+  }
+
+  lines.push('操作步骤：');
+  for (const [index, step] of steps.entries()) {
+    lines.push(`${index + 1}. ${step}`);
+  }
+  lines.push('');
+}
+
+function renderOptionalOperations(lines, operations) {
+  if (operations.length === 0) {
+    return;
+  }
+
+  lines.push(`可选操作：${operations.join('；')}`, '');
+}
+
+function renderStaticSubsection(lines, sectionIndex, subsectionIndex, subsection, steps) {
+  lines.push(`#### ${sectionIndex + 1}.${subsectionIndex + 1} ${subsection.title}`, '');
+
+  if (subsection.summary) {
+    lines.push(subsection.summary, '');
+  }
+  if (subsection.pathLabel) {
+    lines.push(`菜单路径：${subsection.pathLabel}`, '');
+  }
+  if (subsection.path) {
+    lines.push(`页面地址：\`${subsection.path}\``, '');
+  }
+  if (subsection.role) {
+    lines.push(`适用角色：\`${subsection.role}\``, '');
+  }
+  if (subsection.roleNote) {
+    lines.push(`角色说明：${subsection.roleNote}`, '');
+  }
+
+  renderOperationSteps(lines, subsection.steps);
+  renderOptionalOperations(lines, subsection.operations ?? []);
+
+  if (subsection.expected) {
+    lines.push(`预期结果：${subsection.expected}`, '');
+  }
+
+  renderScreenshotGroup(lines, steps);
+}
+
+function renderStaticSection(lines, sectionIndex, section, moduleSteps) {
+  lines.push(`### ${sectionIndex + 1}.${section.title}`, '');
+  if (section.summary) {
+    lines.push(section.summary, '');
+  }
+
+  for (const [subsectionIndex, subsection] of section.subsections.entries()) {
+    const subsectionSteps = getSubsectionSteps(moduleSteps, section, subsection);
+    renderStaticSubsection(
+      lines,
+      sectionIndex,
+      subsectionIndex,
+      subsection,
+      subsectionSteps,
+    );
+  }
+}
+
+function renderStaticModule(spec, steps) {
+  const lines = [];
+  renderModuleHeader(lines, spec);
+
+  if (spec.sections.length === 0) {
+    renderPlaceholderLines(lines, 'missing');
     return lines.join('\n');
   }
 
-  let n = 1;
-  for (const step of steps) {
-    const route = `/${step.name.replaceAll('_', '/')}`;
-    const op = operations[route];
-    lines.push(`## ${n}. ${step.caption}`);
-    lines.push('');
-    if (op) {
-      lines.push(`- **主要操作**：${op}`);
-      lines.push('');
-    }
-    if (step.expected) {
-      lines.push(`- **预期结果**：${step.expected}`);
-      lines.push('');
-    }
-    lines.push(imageMarkdown(step.image));
-    lines.push('');
-    n += 1;
+  for (const [sectionIndex, section] of spec.sections.entries()) {
+    renderStaticSection(lines, sectionIndex, section, steps);
   }
 
   return lines.join('\n');
 }
 
-function renderReadme(moduleKeys) {
+function renderM2Step(lines, index, step) {
+  lines.push(`### ${index}.${step.caption}`, '');
+  if (step.path) {
+    lines.push(`页面路径：\`${step.path}\``, '');
+  }
+  if (step.role) {
+    lines.push(`适用角色：\`${step.role}\``, '');
+  }
+  if (step.expected) {
+    lines.push(`预期结果：${step.expected}`, '');
+  }
+
+  if (step.status === 'captured' && step.image) {
+    lines.push(imageMarkdown(step.caption, step.image), '');
+    return;
+  }
+
+  renderPlaceholderLines(lines, step.status);
+}
+
+function renderM2Group(lines, title, steps) {
+  if (steps.length === 0) {
+    return;
+  }
+
+  lines.push(`## ${title}`, '');
+  for (const [index, step] of steps.entries()) {
+    renderM2Step(lines, index + 1, step);
+  }
+}
+
+function renderM2Module(spec, steps) {
   const lines = [];
-  lines.push('# 用户操作手册');
-  lines.push('');
-  lines.push(
-    '本手册由 Playwright 驱动 `apps/web-ele` 真实页面捕获截图后自动生成，覆盖病理系统全模块。',
-  );
-  lines.push('');
-  lines.push('## 生成方式');
-  lines.push('');
-  lines.push('```bash');
-  lines.push('# 1. 启动本地联调环境（web-ele + auth-center + bl-center）');
-  lines.push('#    pnpm dev:ele');
-  lines.push('#    ./scripts/dev/run-auth-center-dev.cmd');
-  lines.push('#    ./scripts/dev/run-bl-center-dev.cmd');
-  lines.push('');
-  lines.push('# 2. 生成各岗位登录态（首次或 tests/e2e/.auth 过期时）');
-  lines.push('#    pnpm test:e2e 会自动跑 auth.setup 生成 .auth/*.json；');
-  lines.push('#    也可单独：pnpm exec playwright test -c playwright.config.ts --project=auth-setup');
-  lines.push('');
-  lines.push('# 3. 捕获截图 + 生成手册');
-  lines.push('pnpm manual:build');
-  lines.push('```');
-  lines.push('');
-  lines.push('也可分步执行：`pnpm manual:capture`（仅捕获）与 `pnpm manual:gen`（仅渲染 Markdown）。');
-  lines.push('');
-  lines.push('> M2 临床送检走真实业务链路（含真实数据流转）；其余模块为登录后静态页截图，画面可能为空态。');
-  lines.push('');
-  lines.push('## 模块索引');
-  lines.push('');
+  renderModuleHeader(lines, spec);
 
-  for (const key of moduleKeys) {
-    const meta = MODULE_META[key] ?? { title: key };
-    const file = `${key}.md`;
-    lines.push(`- [${meta.title}](${file})${meta.intro ? `：${meta.intro}` : ''}`);
-  }
-  lines.push('');
-
-  if (hasErrorLog()) {
-    lines.push('> ⚠️ 本次捕获存在失败步骤，详见 [capture-errors.log](./capture-errors.log)。');
-    lines.push('');
+  if (steps.length === 0) {
+    renderPlaceholderLines(lines, 'missing');
+    return lines.join('\n');
   }
 
-  lines.push('## 维护约定');
-  lines.push('');
-  lines.push('- 截图产物位于 `images/<module>/`（已 gitignore，可重新生成），手册正文位于各 `<module>.md`（入库）。');
-  lines.push('- 重跑 `pnpm manual:build` 会覆盖 Markdown 正文与截图，不保留历史；如需留存请手动归档。');
-  lines.push('- 捕获脚本与静态页清单维护在 `tests/e2e/manual/capture-handbook.spec.ts`；模块元数据与操作说明维护在 `scripts/generate-user-manual.mjs`。');
-  lines.push('- 新增模块页面时，同步更新上述两处的 `STATIC_PAGES` 与 `MODULE_META` / `STATIC_OPERATIONS`。');
-  lines.push('');
-  lines.push('## 与其他文档的关系');
-  lines.push('');
-  lines.push('- 联调运行前置与 E2E 约定见 [tests/e2e/README.md](../../tests/e2e/README.md)。');
-  lines.push('- 现场演练岗位 SOP 见 [docs/acceptance/phase1_5/](../acceptance/phase1_5/README.md)。');
-  lines.push('- 业务流程总览见 [docs/acceptance/M1_M6_BUSINESS_PROCESS_GUIDE.html](../acceptance/M1_M6_BUSINESS_PROCESS_GUIDE.html)。');
+  const happyPathSteps = steps.filter((step) => !step.name?.startsWith('abnormal-'));
+  const abnormalSteps = steps.filter((step) => step.name?.startsWith('abnormal-'));
+
+  renderM2Group(lines, '主链路（正常接收）', happyPathSteps);
+  renderM2Group(lines, '异常链（部分接收 / 拒收）', abnormalSteps);
 
   return lines.join('\n');
 }
 
-function main() {
-  const steps = readManifest();
-  const groups = groupByModule(steps);
+function shouldUseLegacyM2Renderer(spec) {
+  return spec.key === 'm2-specimen-workflow' && spec.sections.length === 0;
+}
 
-  // 合并：manifest 中出现的模块 + 元数据中定义的模块（保证未捕获模块也生成骨架）。
-  const moduleKeys = [
-    ...new Set([...Object.keys(MODULE_META), ...groups.keys()]),
-  ].sort((a, b) => {
-    const oa = MODULE_META[a]?.order ?? 999;
-    const ob = MODULE_META[b]?.order ?? 999;
-    return oa - ob;
-  });
+function renderModule(spec, moduleSteps) {
+  if (shouldUseLegacyM2Renderer(spec) || spec.renderMode === 'legacy-m2') {
+    return renderM2Module(spec, moduleSteps);
+  }
+  return renderStaticModule(spec, moduleSteps);
+}
 
-  fs.mkdirSync(manualRoot, { recursive: true });
+function renderReadme(moduleSpecs, hasErrors) {
+  const lines = [
+    '# 用户操作手册',
+    '',
+    '本手册由 Playwright 驱动 `apps/web-ele` 真实页面捕获截图后自动生成，按模块 SOP 结构输出页面入口、关键操作与截图组。',
+    '',
+    '## 生成方式',
+    '',
+    '```bash',
+    '# 1. 启动本地联调环境（web-ele + auth-center + bl-center）',
+    '#    pnpm dev:ele',
+    '#    ./scripts/dev/run-auth-center-dev.cmd',
+    '#    ./scripts/dev/run-bl-center-dev.cmd',
+    '',
+    '# 2. 生成各岗位登录态（首次或 tests/e2e/.auth 过期时）',
+    '#    pnpm test:e2e 会自动跑 auth.setup 生成 .auth/*.json；',
+    '#    也可单独：pnpm exec playwright test -c playwright.config.ts --project=auth-setup',
+    '',
+    '# 3. 捕获截图 + 生成手册',
+    'pnpm manual:build',
+    '```',
+    '',
+    '也可分步执行：`pnpm manual:capture`（仅捕获）与 `pnpm manual:gen`（仅渲染 Markdown）。',
+    '',
+    '## 认证刷新',
+    '',
+    '- 默认走 `api-then-ui`：先尝试 API 登录态，若检测到登录页/令牌过期/滑块页，再自动切换到 UI 滑块登录兜底。',
+    '- 可单独刷新登录态：`pnpm exec playwright test -c playwright.config.ts --project=auth-setup`。',
+    '- 如发现 `tests/e2e/.auth/*.json` 过期、总是被重定向回登录页，先重新执行 `auth-setup`；必要时删除旧 `.auth/*.json` 后再刷新。',
+    '- 如需强制回归真实登录页与滑块链路，可设置 `E2E_AUTH_STRATEGY=ui`，例如 `cross-env E2E_AUTH_STRATEGY=ui pnpm manual:capture`。',
+    '',
+    '## 产物与排障',
+    '',
+    '- `pnpm manual:capture`：更新 `docs/user-manual/.generated/.capture-manifest.json`、`docs/user-manual/.generated/images/` 与 `docs/user-manual/.generated/capture-errors.log`，不改 Markdown 正文。',
+    '- `pnpm manual:gen`：读取 `.generated/` 中间产物，生成/覆盖 `docs/user-manual/README.md` 与各模块 `<module>.md`；即使模块未捕获，也会输出 SOP 骨架页。',
+    '- `pnpm manual:build`：串行执行 `manual:capture` + `manual:gen`，用于完整重建手册。',
+    '- 排障优先看 `docs/user-manual/capture-errors.log`，再看 `test-results/`、`playwright-report/` 与 `.logs/frontend.log` / `.logs/backend.log`。若模块页只出现占位文案，先确认登录态、页面权限与捕获步骤是否成功写入 manifest。',
+    '',
+    '> M2 临床送检可继续沿用真实业务链路截图；静态模块统一按“模块 → 一级章节 → 二级操作节 → 截图组”渲染。',
+    '',
+    '## 模块索引',
+    '',
+  ];
 
-  const readme = renderReadme(moduleKeys);
-  fs.writeFileSync(path.join(manualRoot, 'README.md'), `${readme}\n`, 'utf8');
+  for (const spec of moduleSpecs) {
+    const detailParts = [];
+    if (spec.intro) {
+      detailParts.push(spec.intro);
+    }
+    if (spec.processSummary) {
+      detailParts.push(`流程：${spec.processSummary}`);
+    }
+    lines.push(
+      `- [${spec.title}](${spec.key}.md)${detailParts.length > 0 ? `：${detailParts.join(' ')}` : ''}`,
+    );
+  }
+  lines.push('');
 
-  for (const key of moduleKeys) {
-    const moduleSteps = groups.get(key) ?? [];
-    const content =
-      key === 'm2-specimen-workflow'
-        ? renderM2Module(moduleSteps)
-        : renderStaticModule(key, moduleSteps);
-    fs.writeFileSync(path.join(manualRoot, `${key}.md`), `${content}\n`, 'utf8');
+  if (hasErrors) {
+    lines.push(
+      '> ⚠️ 本次捕获存在失败步骤，详见 [capture-errors.log](./capture-errors.log)。',
+      '',
+    );
   }
 
-  const captured = steps.filter((s) => s.image).length;
-  const total = steps.length;
+  lines.push(
+    '## 维护约定',
+    '',
+    '- 截图产物位于 `images/<module>/`（已 gitignore，可重新生成），手册正文位于各 `<module>.md`（入库）。',
+    '- `pnpm manual:capture` 先写入 `docs/user-manual/.generated/`，`pnpm manual:gen` 验证并同步到正式目录，避免留下半生成状态。',
+    '- 手册元数据单一来源位于 `tests/e2e/manual/manual-spec.mjs`；新增模块页面时优先更新这里，再补必要 POM/捕获逻辑。',
+    '- `capture-handbook.spec.ts` 负责截图捕获，`generate-user-manual.mjs` 仅负责渲染与同步。',
+    '- 新增 manifest 字段时优先保持向后兼容：即使旧数据只有 `caption/name/order/image`，生成器也应继续输出手册；失败状态需通过节级占位与 `capture-errors.log` 暴露。',
+    '',
+    '## 与其他文档的关系',
+    '',
+    '- 联调运行前置与 E2E 约定见 [tests/e2e/README.md](../../tests/e2e/README.md)。',
+    '- 现场演练岗位 SOP 见 [docs/acceptance/phase1_5/](../acceptance/phase1_5/README.md)。',
+    '- 业务流程总览见 [docs/acceptance/M1_M6_BUSINESS_PROCESS_GUIDE.html](../acceptance/M1_M6_BUSINESS_PROCESS_GUIDE.html)。',
+  );
+
+  return lines.join('\n');
+}
+
+export async function generateUserManual(options = {}) {
+  const targetManualRoot = options.manualRoot ?? manualRoot;
+  const sourceStageRoot = options.stageRoot ?? stageRoot;
+  const renderRoot = options.renderRoot ?? tempRenderRoot;
+  const manifestPath = path.join(sourceStageRoot, '.capture-manifest.json');
+  const errorLogPath = path.join(sourceStageRoot, 'capture-errors.log');
+  const manifestSteps = normalizeManifest(readManifest(manifestPath));
+  const groups = groupByModule(manifestSteps);
+  const { moduleMeta, moduleSpecs } = await resolveManualSpecs(options);
+
+  fs.rmSync(renderRoot, { force: true, recursive: true });
+  ensureDir(renderRoot);
+
+  const readme = renderReadme(moduleSpecs, hasErrorLog(errorLogPath));
+  fs.writeFileSync(path.join(renderRoot, 'README.md'), `${readme}\n`, 'utf8');
+
+  for (const spec of moduleSpecs) {
+    const moduleSteps = groups.get(spec.key) ?? [];
+    const content = renderModule(spec, moduleSteps);
+    fs.writeFileSync(
+      path.join(renderRoot, `${spec.key}.md`),
+      `${content}\n`,
+      'utf8',
+    );
+  }
+
+  if (fs.existsSync(errorLogPath)) {
+    fs.copyFileSync(errorLogPath, path.join(renderRoot, 'capture-errors.log'));
+  }
+
+  const stageImagesRoot = path.join(sourceStageRoot, 'images');
+  if (fs.existsSync(stageImagesRoot)) {
+    fs.cpSync(stageImagesRoot, path.join(renderRoot, 'images'), {
+      recursive: true,
+    });
+  }
+
+  syncDirectory(renderRoot, targetManualRoot);
+  fs.rmSync(renderRoot, { force: true, recursive: true });
+
+  const captured = manifestSteps.filter(
+    (step) => step.status === 'captured' && step.image,
+  ).length;
+
+  return {
+    captured,
+    moduleKeys: moduleSpecs.map((spec) => spec.key),
+    modules: moduleMeta,
+    outputDir: targetManualRoot,
+    total: manifestSteps.length,
+  };
+}
+
+async function main() {
+  const result = await generateUserManual();
   process.stdout.write(
-    `用户操作手册已生成：${moduleKeys.length} 个模块，截图 ${captured}/${total} 步成功。` +
-      `输出目录：${path.relative(repoRoot, manualRoot)}\n`,
+    `用户操作手册已生成：${result.moduleKeys.length} 个模块，截图 ${result.captured}/${result.total} 步成功。` +
+      `输出目录：${path.relative(repoRoot, result.outputDir)}\n`,
   );
 }
 
-main();
+const scriptPath = process.argv[1] ? path.resolve(process.argv[1]) : undefined;
+
+if (scriptPath && scriptPath === __filename) {
+  await main();
+}

@@ -1,6 +1,6 @@
 import type { APIRequestContext, Browser, Page } from 'playwright/test';
 
-import type { E2ERole } from './env';
+import type { E2EAuthMode, E2EAuthStrategy, E2ERole } from './env';
 
 import fs from 'node:fs';
 
@@ -195,13 +195,25 @@ export async function loginAndSaveStorageStateViaUi(
 export async function loginAndSaveStorageState(
   browser: Browser,
   role: E2ERole,
+  authStrategy: E2EAuthStrategy = e2eEnv.authStrategy,
 ) {
-  if (e2eEnv.authStrategy === 'ui') {
+  if (authStrategy === 'ui') {
     await loginAndSaveStorageStateViaUi(browser, role);
-    return;
+    return 'ui' satisfies E2EAuthMode;
   }
 
-  await saveApiStorageState(role);
+  if (authStrategy === 'api') {
+    await saveApiStorageState(role);
+    return 'api' satisfies E2EAuthMode;
+  }
+
+  try {
+    await saveApiStorageState(role);
+    return 'api' satisfies E2EAuthMode;
+  } catch {
+    await loginAndSaveStorageStateViaUi(browser, role);
+    return 'ui' satisfies E2EAuthMode;
+  }
 }
 
 export function describeRole(role: E2ERole) {

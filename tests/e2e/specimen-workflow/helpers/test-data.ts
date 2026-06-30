@@ -1,6 +1,5 @@
 export type WorkflowRunData = {
   applicationNo: string;
-  barcodes: [string, string];
   clinicalDiagnosis: string;
   clinicalSymptom: string;
   externalOrderNo: string;
@@ -29,7 +28,6 @@ export function createWorkflowRunData(): WorkflowRunData {
 
   return {
     applicationNo: `APP-M2-E2E-${suffix}`,
-    barcodes: [`BC-M2-E2E-${suffix}-1`, `BC-M2-E2E-${suffix}-2`],
     clinicalDiagnosis: 'Papillary thyroid carcinoma',
     clinicalSymptom: 'Neck mass',
     externalOrderNo: `EXT-M2-E2E-${suffix}`,

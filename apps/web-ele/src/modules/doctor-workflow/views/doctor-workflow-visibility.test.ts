@@ -1757,18 +1757,18 @@ describe('doctor workflow view visibility', () => {
         opinion: '统一主持意见',
       }),
     );
-    expect(
-      completeConsultationMock.mock.calls[0]?.[1],
-    ).not.toHaveProperty('operatorName');
-    expect(
-      completeConsultationMock.mock.calls[0]?.[1],
-    ).not.toHaveProperty('operatorUserId');
-    expect(
-      completeConsultationMock.mock.calls[1]?.[1],
-    ).not.toHaveProperty('operatorName');
-    expect(
-      completeConsultationMock.mock.calls[1]?.[1],
-    ).not.toHaveProperty('operatorUserId');
+    expect(completeConsultationMock.mock.calls[0]?.[1]).not.toHaveProperty(
+      'operatorName',
+    );
+    expect(completeConsultationMock.mock.calls[0]?.[1]).not.toHaveProperty(
+      'operatorUserId',
+    );
+    expect(completeConsultationMock.mock.calls[1]?.[1]).not.toHaveProperty(
+      'operatorName',
+    );
+    expect(completeConsultationMock.mock.calls[1]?.[1]).not.toHaveProperty(
+      'operatorUserId',
+    );
     expect(wrapper.documentText()).toContain('批量完成会诊完成 2 条');
     expect(wrapper.documentText()).toContain('跳过 2 条');
     expect(wrapper.documentText()).toContain('已完成会诊不可重复完成');

@@ -57,6 +57,26 @@ pnpm test:e2e
 pnpm test:e2e:ui-auth
 ```
 
+也可手动指定：
+
+```bash
+cross-env E2E_AUTH_STRATEGY=ui playwright test -c playwright.config.ts --project=chromium tests/e2e/smoke/login-ui-auth.spec.ts
+```
+
+## 认证刷新
+
+- 首次执行 `pnpm test:e2e` 时，Playwright 会先跑 `auth.setup` 生成 `tests/e2e/.auth/*.json`。
+- `auth.setup` 会刷新手册与关键 E2E 需要的完整角色集合：`admin`、`m6`、`creator`、`register`、`fixation`、`transport`、`receive`、`tracking`。
+- 如页面频繁跳回登录页、手册捕获出现 `auth_failed` 占位、或怀疑登录态过期，可单独刷新：
+
+```bash
+pnpm exec playwright test -c playwright.config.ts --project=auth-setup
+```
+
+- 如仍异常，可先删除 `tests/e2e/.auth/*.json` 再重新执行上面的 `auth-setup`。
+- 默认策略是 `api-then-ui`：优先复用 API 登录态，若检测到登录页/令牌过期/滑块页，再自动切换到 UI 滑块登录兜底。
+- `E2E_AUTH_STRATEGY=ui` 只用于回归真实登录页/滑块链路，不建议作为日常手册捕获默认模式。
+
 常用附加命令：
 
 ```bash
@@ -88,6 +108,37 @@ pnpm e2e:open -- --role m6 --path /analytics --base-url http://localhost:5777 --
 - 不做数据库回滚；失败后允许残留业务数据，但后续运行仍应可继续。
 - 当前阶段不覆盖第三方导入成功链，只保留后续扩展位。
 - 失败时自动保留 `trace`、`video`、`screenshot`。
+
+## 用户手册生成
+
+Playwright 用户操作手册继续输出到 `docs/user-manual/`，但生成流程拆成两段：
+
+- `pnpm manual:capture` 将截图、`.capture-manifest.json`、`capture-errors.log` 先写入 `docs/user-manual/.generated/`
+- `pnpm manual:gen` 读取 `.generated/` 内的中间产物，渲染 Markdown 后整体同步到 `docs/user-manual/`
+- `pnpm manual:build` 串联执行以上两步
+
+常用命令：
+
+```bash
+pnpm manual:capture
+pnpm manual:gen
+pnpm manual:build
+```
+
+维护约定：
+
+- 手册模块、静态页面、文案说明统一维护在 `tests/e2e/manual/manual-spec.mjs`
+- `tests/e2e/manual/capture-handbook.spec.ts` 负责截图捕获与真实业务链路
+- `scripts/generate-user-manual.mjs` 只负责渲染与目录同步
+- 新增模块页面时，优先更新 `manual-spec.mjs`，再补必要 POM 或步骤逻辑
+- 生成器应保持向后兼容：即使某些步骤未捕获、捕获失败或认证失效，也要继续生成骨架页，并通过占位文案 + `capture-errors.log` 暴露问题
+
+## 手册排障路径
+
+- 第一步看 `docs/user-manual/capture-errors.log`：这里会记录 `capture_failed`、`auth_failed` 等失败线索。
+- 第二步看 `test-results/`、`playwright-report/`：确认是哪一步骤、哪一页失败。
+- 第三步看 `.logs/frontend.log`、`.logs/backend.log`：排查页面、鉴权、接口或联调服务异常。
+- 若某模块只生成占位文案而没有截图，优先检查登录态是否刷新、当前账号是否具备页面权限、以及捕获步骤是否成功写入 manifest。
 
 ## 失败产物
 
