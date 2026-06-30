@@ -40,7 +40,7 @@ describe('e2e auth storage helpers', () => {
   });
 
   it('defaults the local web app target to the web-ele dev port', () => {
-    expect(e2eEnv.baseURL).toBe('http://localhost:5777');
+    expect(e2eEnv.baseURL).toBe('http://localhost:5778');
   });
 
   it('includes admin and m6 roles for authenticated page smoke checks', () => {
