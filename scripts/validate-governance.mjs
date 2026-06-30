@@ -22,9 +22,11 @@ const REQUIRED_RULE_DOCS = [
   'FRONTEND_RULES.md',
   'GIT_RULES.md',
   'DYNAMIC_WORKFLOW_RULES.md',
+  'TASK_LIFECYCLE_RULES.md',
   'LOOP_ENGINEERING_RULES.md',
   'AGENT_SKILL_ROUTING.md',
   'TASK_INTAKE.md',
+  'TASK_MANAGEMENT_RULES.md',
   'RELEASE.md',
 ];
 const REQUIRED_MEMORY_DOCS = [
@@ -33,6 +35,17 @@ const REQUIRED_MEMORY_DOCS = [
   'KNOWN_BUGS.md',
   'DECISIONS.md',
   'ARCHITECTURE.md',
+];
+const REQUIRED_TEMPLATE_DOCS = [
+  'agents-governance-audit-prompt-template.md',
+  'clarification-template.md',
+  'codex-goal-prompt-template.md',
+  'handoff-template.md',
+  'plan-to-task-goals-prompt-template.md',
+  'retrospective-template.md',
+  'spec-template.md',
+  'task-item-template.md',
+  'workflow-packet-examples.md',
 ];
 const REQUIRED_GOVERNANCE_ANCHORS = {
   'AGENTS.md': [
@@ -80,7 +93,14 @@ const REQUIRED_GOVERNANCE_ANCHORS = {
     'Full:',
     'Commits created:',
     'Tags created:',
+    'Lifecycle artifacts:',
     'Red-zone confirmation:',
+  ],
+  'docs/rules/TASK_LIFECYCLE_RULES.md': [
+    '## 生命周期与 Workflow 的关系',
+    '## 阶段速查',
+    'Clarify',
+    'Retrospective',
   ],
   'docs/templates/workflow-packet-examples.md': [
     '范例：轻量 Workflow Packet',
@@ -201,6 +221,15 @@ function validateMemoryIndex(memoryReadmeBody) {
   return REQUIRED_MEMORY_DOCS.filter((entry) => !linkedLabels.has(entry)).map(
     (entry) => `Missing docs/memory/README.md entry: ${entry}`,
   );
+}
+
+function validateTemplatesIndex(templatesReadmeBody) {
+  const links = extractBulletLinks(templatesReadmeBody);
+  const linkedLabels = new Set(links.map((entry) => entry.label));
+
+  return REQUIRED_TEMPLATE_DOCS.filter(
+    (entry) => !linkedLabels.has(entry),
+  ).map((entry) => `Missing docs/templates/README.md entry: ${entry}`);
 }
 
 function validateAgentsIndex(agentsBody) {
@@ -326,10 +355,12 @@ export function validateGovernance({
   dynamicWorkflowBody,
   docsReadmeBody,
   rulesReadmeBody,
+  templatesReadmeBody,
   memoryReadmeBody,
   gitRulesBody,
   loopEngineeringBody,
   quickstartBody,
+  taskLifecycleBody,
   prTemplateBody,
   releaseBody,
   workflowPacketExamplesBody,
@@ -394,6 +425,10 @@ export function validateGovernance({
     errors.push(...validateMemoryIndex(memoryReadmeBody));
   }
 
+  if (templatesReadmeBody) {
+    errors.push(...validateTemplatesIndex(templatesReadmeBody));
+  }
+
   if (agentsBody) {
     errors.push(...validateAgentsIndex(agentsBody));
   }
@@ -419,6 +454,9 @@ export function validateGovernance({
     rulesReadmeBody
       ? { path: 'docs/rules/README.md', body: rulesReadmeBody }
       : null,
+    templatesReadmeBody
+      ? { path: 'docs/templates/README.md', body: templatesReadmeBody }
+      : null,
   ].filter(Boolean);
   errors.push(...collectForbiddenPathLiterals(documentsForPathLiteralScan));
 
@@ -433,6 +471,7 @@ export function validateGovernance({
         'docs/rules/LOOP_ENGINEERING_RULES.md': loopEngineeringBody,
         'docs/rules/QUICKSTART.md': quickstartBody,
         'docs/rules/RELEASE.md': releaseBody,
+        'docs/rules/TASK_LIFECYCLE_RULES.md': taskLifecycleBody,
         'docs/templates/workflow-packet-examples.md':
           workflowPacketExamplesBody,
       }),
@@ -455,10 +494,12 @@ const LINK_CHECKED_DOCUMENTS = [
   'docs/rules/CODING_RULES.md',
   'docs/rules/GIT_RULES.md',
   'docs/rules/DYNAMIC_WORKFLOW_RULES.md',
+  'docs/rules/TASK_LIFECYCLE_RULES.md',
   'docs/rules/LOOP_ENGINEERING_RULES.md',
   'docs/rules/QUICKSTART.md',
   'docs/rules/AGENT_SKILL_ROUTING.md',
   'docs/rules/TASK_INTAKE.md',
+  'docs/rules/TASK_MANAGEMENT_RULES.md',
   'docs/rules/PROJECT_DIRECTORY.md',
   'docs/rules/RELEASE.md',
   'docs/rules/FRONTEND_RULES.md',
@@ -469,8 +510,12 @@ const LINK_CHECKED_DOCUMENTS = [
   'docs/memory/ARCHITECTURE.md',
   'docs/templates/README.md',
   'docs/templates/agents-governance-audit-prompt-template.md',
+  'docs/templates/clarification-template.md',
   'docs/templates/codex-goal-prompt-template.md',
+  'docs/templates/handoff-template.md',
   'docs/templates/plan-to-task-goals-prompt-template.md',
+  'docs/templates/retrospective-template.md',
+  'docs/templates/spec-template.md',
   'docs/templates/task-item-template.md',
   'docs/templates/workflow-packet-examples.md',
 ];
@@ -483,10 +528,12 @@ function main() {
     dynamicWorkflowBody: readText('docs/rules/DYNAMIC_WORKFLOW_RULES.md'),
     docsReadmeBody: readText('docs/README.md'),
     rulesReadmeBody: readText('docs/rules/README.md'),
+    templatesReadmeBody: readText('docs/templates/README.md'),
     memoryReadmeBody: readText('docs/memory/README.md'),
     gitRulesBody: readText('docs/rules/GIT_RULES.md'),
     loopEngineeringBody: readText('docs/rules/LOOP_ENGINEERING_RULES.md'),
     quickstartBody: readText('docs/rules/QUICKSTART.md'),
+    taskLifecycleBody: readText('docs/rules/TASK_LIFECYCLE_RULES.md'),
     prTemplateBody: readText('.github/PULL_REQUEST_TEMPLATE.md'),
     releaseBody: readText('docs/rules/RELEASE.md'),
     workflowPacketExamplesBody: readText(

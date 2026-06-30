@@ -13,6 +13,8 @@ Use this template when converting a local plan or specification into task items.
 
 来自 `<计划 / spec / issue / PR / 外部任务系统 / 其他来源>`。
 
+若来源为本地 `backlog.json`，补充记录：`任务 ID` 与 `AI 执行单元文件路径`。
+
 ## Goal
 
 本任务项只完成：`<单一目标>`。
@@ -34,12 +36,23 @@ Use this template when converting a local plan or specification into task items.
 - Tests: `<需要新增或更新的测试>`
 - Docs / Memory: `<需要更新的文档或记忆层；无则写 N/A>`
 
-## Workflow Packet
+## Dynamic Workflow
 
-- Main Workflow: `<UI / API / DB / Security / Architecture / Production Debug / Workflow-Infra / 不适用>`
+- Primary Workflow: `<UI / API / DB / Security / Architecture / Production Debug / Workflow-Infra / 不适用>`
+- Trigger signals: `<命中路径 / 行为 / 风险信号>`
 - Required Modifiers: `<Security / DB / Red Team / Backend Cross-check / Browser Verification / 无>`
 - Risk Level: `<低 / 中 / 高>`
 - Human Confirmation Required: `<是 / 否；若是，说明触发点>`
+
+## Memory
+
+- Memory: `<no durable context change / 需更新文件 + ID / 待确认>`
+
+## Evidence
+
+- Validation commands: `<命令；无则写人工核对项>`
+- Browser / API / backend evidence: `<如需填写；无则写 N/A>`
+- Unverified items and risks: `<未验证项及原因；无则写 N/A>`
 
 ## Loop Packet（仅显式 loop 任务填写）
 
@@ -48,7 +61,7 @@ Use this template when converting a local plan or specification into task items.
 - Verification Command: `<本任务项必跑命令；无则说明人工核对项>`
 - State Sink: `<PROJECT_STATE.md / TECH_DEBT.md / KNOWN_BUGS.md / DECISIONS.md / ARCHITECTURE.md>`
 - Escalation Condition: `<命中即暂停的条件>`
-- Not used: `未启用 loop 时填写：Not used（普通任务，按 Workflow Packet 交付）`
+- Not used: `未启用 loop 时填写：Not used（普通任务，按 Dynamic Workflow 交付）`
 
 ## Required Reading
 

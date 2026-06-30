@@ -1,0 +1,9 @@
+[
+  {
+    "id": "T-001",
+    "title": "auth system",
+    "status": "todo",
+    "dependencies": [],
+    "scope": "modules/auth"
+  }
+]

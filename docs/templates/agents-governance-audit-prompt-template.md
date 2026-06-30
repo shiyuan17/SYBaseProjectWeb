@@ -11,7 +11,7 @@ Use this prompt when you need an AI reviewer to perform a read-only audit of `AG
 
 - 评估当前 AI 协作规范是否清晰、低歧义、可执行、可验证。
 - 检查 `AGENTS.md`、`docs/rules/*.md`、`docs/memory/*.md`、`docs/templates/*.md`、`docs/README.md`、`README.md` 之间是否存在职责重叠、规则冲突、索引缺失或维护入口不一致。
-- 判断规范是否能有效约束 AI 在任务启动、上下文读取、CodeGraph 使用、风险分级、红区确认、Workflow Packet、Memory Update、Git 提交、验证命令和交付输出中的行为。
+- 判断规范是否能有效约束 AI 在任务启动、上下文读取、CodeGraph 使用、风险分级、红区确认、Dynamic Workflow、Memory、Evidence、Git 提交、验证命令和交付输出中的行为。
 - 给出治理改进路线图，而不是泛泛评价。
 
 ## 工作边界
@@ -74,7 +74,7 @@ Use this prompt when you need an AI reviewer to perform a read-only audit of `AG
    - 是否能防止 AI 覆盖用户改动、误提交无关文件、跳过后端联动检查。
 
 5. **Workflow / Memory / Git 闭环**
-   - Workflow Packet 档位与 PR/Git 规则是否一致。
+   - Dynamic Workflow / Memory / Evidence 字段与 PR/Git 规则是否一致。
    - Memory Update 触发条件是否明确，是否避免把短期实现细节写入长期记忆。
    - Git 主动提交规范、worktree 例外、低/中/高风险策略是否可操作。
 

@@ -13,9 +13,11 @@
 - [QUICKSTART.md](./QUICKSTART.md): 最小阅读路径
 - [GIT_RULES.md](./GIT_RULES.md): 分支、PR、worktree、hook
 - [DYNAMIC_WORKFLOW_RULES.md](./DYNAMIC_WORKFLOW_RULES.md): Workflow 与 Packet
+- [TASK_LIFECYCLE_RULES.md](./TASK_LIFECYCLE_RULES.md): Clarify / Spec / Plan / Tasks / Execute / Verify / Review / Handoff / Retrospective
 - [LOOP_ENGINEERING_RULES.md](./LOOP_ENGINEERING_RULES.md): Loop（显式 opt-in）
 - [AGENT_SKILL_ROUTING.md](./AGENT_SKILL_ROUTING.md): 外部 skill（精简）
 - [TASK_INTAKE.md](./TASK_INTAKE.md): 通用任务起始模板
+- [TASK_MANAGEMENT_RULES.md](./TASK_MANAGEMENT_RULES.md): 本地 backlog 与 AI 执行单元规范
 - [RELEASE.md](./RELEASE.md): 发布与回滚
 
 长期上下文见 [../memory/README.md](../memory/README.md)。

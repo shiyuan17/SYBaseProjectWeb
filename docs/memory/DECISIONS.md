@@ -60,6 +60,8 @@
 | DEC-20260618-003 | 2026-06-18 | Specimen workbench frozen reminder UI/polling | The top "冰冻提醒" checkbox in the specimen collection workbench changes from a read-only display field to a per-session re… |
 | DEC-20260621-001 | 2026-06-21 | M3 技术追踪日期先查病例列表合同 | `/technical-workflow/tracking` 在未输入病例 ID / 病理号 / 对象 ID 时，不再强制单病例直查，而是先调用 sibling backend `../SYBaseProject/bl-center` `GET /api/v1/technical-tracking/cases` 按日期筛出命中病例列表；单条命中自动进入原详情接口，多条命中保持左侧病例列表 + 右侧详情的工作区结构，空标识且空日期仍视为无效查询。 |
 | DEC-20260623-001 | 2026-06-23 | Git 主动提交与 Tag 治理 | 仓库 Git 治理统一采用“低/中风险可主动 commit、高风险人工确认”的 AI 提交状态机，并以 `Conventional Commits 1.0.0` + `SemVer 2.0.0` + annotated tag 为基础… |
+| DEC-20260629-001 | 2026-06-29 | 任务生命周期治理 | `TASK_LIFECYCLE_RULES.md` 成为 Clarify / Spec / Plan / Tasks / Execute / Verify / Review / Handoff / Retrospective 的单一规则来源；现有动态 Workflow 继续负责风险分类与 Packet。 |
+| DEC-20260629-002 | 2026-06-29 | 治理规范一页式执行入口 | `AGENTS.md` 以“读什么、风险多高、能不能动、怎么验证、怎么交付”为主流程；PR 与任务模板统一使用 Summary / Lifecycle Artifacts / Dynamic Workflow / Memory / Evidence 字段。 |
 
 ## Update Rules
 

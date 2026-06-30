@@ -24,11 +24,37 @@ const validRulesReadmeBody = `
 - [FRONTEND_RULES.md](./FRONTEND_RULES.md)
 - [GIT_RULES.md](./GIT_RULES.md)
 - [DYNAMIC_WORKFLOW_RULES.md](./DYNAMIC_WORKFLOW_RULES.md)
+- [TASK_LIFECYCLE_RULES.md](./TASK_LIFECYCLE_RULES.md)
 - [LOOP_ENGINEERING_RULES.md](./LOOP_ENGINEERING_RULES.md)
 - [QUICKSTART.md](./QUICKSTART.md)
 - [AGENT_SKILL_ROUTING.md](./AGENT_SKILL_ROUTING.md)
 - [TASK_INTAKE.md](./TASK_INTAKE.md)
+- [TASK_MANAGEMENT_RULES.md](./TASK_MANAGEMENT_RULES.md)
 - [RELEASE.md](./RELEASE.md)
+`;
+
+const legacyTemplatesReadmeBody = `
+## 模板清单
+
+- [agents-governance-audit-prompt-template.md](./agents-governance-audit-prompt-template.md)
+- [codex-goal-prompt-template.md](./codex-goal-prompt-template.md)
+- [plan-to-task-goals-prompt-template.md](./plan-to-task-goals-prompt-template.md)
+- [task-item-template.md](./task-item-template.md)
+- [workflow-packet-examples.md](./workflow-packet-examples.md)
+`;
+
+const validTemplatesReadmeBody = `
+## 模板清单
+
+- [agents-governance-audit-prompt-template.md](./agents-governance-audit-prompt-template.md)
+- [clarification-template.md](./clarification-template.md)
+- [codex-goal-prompt-template.md](./codex-goal-prompt-template.md)
+- [handoff-template.md](./handoff-template.md)
+- [plan-to-task-goals-prompt-template.md](./plan-to-task-goals-prompt-template.md)
+- [retrospective-template.md](./retrospective-template.md)
+- [spec-template.md](./spec-template.md)
+- [task-item-template.md](./task-item-template.md)
+- [workflow-packet-examples.md](./workflow-packet-examples.md)
 `;
 
 const validMemoryReadmeBody = `
@@ -54,10 +80,12 @@ const validAgentsBody = `
 - [docs/rules/FRONTEND_RULES.md](./docs/rules/FRONTEND_RULES.md)
 - [docs/rules/GIT_RULES.md](./docs/rules/GIT_RULES.md)
 - [docs/rules/DYNAMIC_WORKFLOW_RULES.md](./docs/rules/DYNAMIC_WORKFLOW_RULES.md)
+- [docs/rules/TASK_LIFECYCLE_RULES.md](./docs/rules/TASK_LIFECYCLE_RULES.md)
 - [docs/rules/LOOP_ENGINEERING_RULES.md](./docs/rules/LOOP_ENGINEERING_RULES.md)
 - [docs/rules/QUICKSTART.md](./docs/rules/QUICKSTART.md)
 - [docs/rules/AGENT_SKILL_ROUTING.md](./docs/rules/AGENT_SKILL_ROUTING.md)
 - [docs/rules/TASK_INTAKE.md](./docs/rules/TASK_INTAKE.md)
+- [docs/rules/TASK_MANAGEMENT_RULES.md](./docs/rules/TASK_MANAGEMENT_RULES.md)
 - [docs/rules/RELEASE.md](./docs/rules/RELEASE.md)
 `;
 
@@ -136,8 +164,16 @@ Lightweight:
 Full:
 Commits created:
 Tags created:
+Lifecycle artifacts:
 Red-zone confirmation:
 `,
+  taskLifecycleBody: `
+## 生命周期与 Workflow 的关系
+## 阶段速查
+Clarify
+Retrospective
+`,
+  templatesReadmeBody: validTemplatesReadmeBody,
   workflowPacketExamplesBody: `
 范例：轻量 Workflow Packet
 坏例子
@@ -152,6 +188,7 @@ describe('validateGovernance', () => {
       decisionsBody: validDecisionsBody,
       docsReadmeBody: validDocsReadmeBody,
       rulesReadmeBody: validRulesReadmeBody,
+      templatesReadmeBody: validTemplatesReadmeBody,
       memoryReadmeBody: validMemoryReadmeBody,
       architectureBody: validArchitectureBody,
       projectStateBody: validProjectStateBody,
@@ -195,6 +232,45 @@ describe('validateGovernance', () => {
     expect(result.isValid).toBe(false);
     expect(result.errors).toContain(
       'Missing docs/rules/README.md entry: LOOP_ENGINEERING_RULES.md',
+    );
+  });
+
+  it('rejects missing task lifecycle governance entries', () => {
+    const result = validateGovernance({
+      ...governanceAnchorFixtures,
+      agentsBody: validAgentsBody.replace(
+        '- [docs/rules/TASK_LIFECYCLE_RULES.md](./docs/rules/TASK_LIFECYCLE_RULES.md)\n',
+        '',
+      ),
+      rulesReadmeBody: validRulesReadmeBody.replace(
+        '- [TASK_LIFECYCLE_RULES.md](./TASK_LIFECYCLE_RULES.md)\n',
+        '',
+      ),
+      templatesReadmeBody: legacyTemplatesReadmeBody,
+      prTemplateBody: governanceAnchorFixtures.prTemplateBody.replace(
+        'Lifecycle artifacts:\n',
+        '',
+      ),
+      taskLifecycleBody: undefined,
+      enforceGovernanceAnchors: true,
+      fileExists: () => true,
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContain(
+      'Missing docs/rules/README.md entry: TASK_LIFECYCLE_RULES.md',
+    );
+    expect(result.errors).toContain(
+      'Missing AGENTS.md related-doc entry: docs/rules/TASK_LIFECYCLE_RULES.md',
+    );
+    expect(result.errors).toContain(
+      'Missing docs/templates/README.md entry: clarification-template.md',
+    );
+    expect(result.errors).toContain(
+      'Missing governance anchor in .github/PULL_REQUEST_TEMPLATE.md: Lifecycle artifacts:',
+    );
+    expect(result.errors).toContain(
+      'Missing governance anchor source: docs/rules/TASK_LIFECYCLE_RULES.md',
     );
   });
 

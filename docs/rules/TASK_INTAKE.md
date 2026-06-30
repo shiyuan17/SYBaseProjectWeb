@@ -1,68 +1,51 @@
-# 任务起始模板
+# TASK_INTAKE.md — 任务启动块
 
-> 从某个任务 / issue / 工单 / 卡片 / PR / 文档需求开工时，复制本模板填写，作为本次任务的起始提示。
+从 issue、工单、卡片、PR、文档需求、本地 `backlog.json` 或口头任务开工时，用本文件把输入压成一个可执行启动块。它不替代 Workflow、Git 或生命周期细则。
 
-## 1. 任务来源
+## 启动块
 
-- 来源类型：`<issue / 工单 / 卡片 / PR / 文档需求 / 口头任务 / 其他>`
-- 编号 / 标题：`<如有则填写；无则写 N/A>`
-- 链接：`<来源链接；无则写 N/A>`
-- 关联 spec / 设计 / PR：`<链接，可选>`
+```markdown
+## Task Intake
 
-## 2. 背景与目标
+- Source: `<issue / 工单 / 卡片 / PR / 文档需求 / backlog.json / docs/tasks/*.md / 口头任务 / 其他>`
+- ID / title: `<如无写 N/A>`
+- Link: `<如无写 N/A>`
+- Goal:
+- Acceptance criteria:
+- Non-goals:
+- Impact scope:
+- Packet tier: `<Fast Path / Lightweight / Full>`
+- Primary Workflow:
+- Required modifiers:
+- Risk level: `<低 / 中 / 高>`
+- Worktree decision: `<使用 / 不使用；原因>`
+- Validation commands:
+- Stop conditions:
+```
 
-- 背景：`<为什么要做这件事>`
-- 目标：`<这次要达成什么>`
+## 使用规则
 
-## 3. 验收标准（Acceptance Criteria）
+- 来源只有编号、标题或一句模糊描述时，先回查正文、历史讨论和验收标准。
+- 验收标准为空或会改变行为时，先 Clarify；需要规格或计划时按 `TASK_LIFECYCLE_RULES.md`。
+- 来源为本地任务体系时，同时核对 `backlog.json` 条目与对应 `docs/tasks/*.md` 执行单元；字段职责见 `TASK_MANAGEMENT_RULES.md`。
+- worktree 决策只写结论和原因；创建、merge-back、清理门槛见 `GIT_RULES.md`。
+- 触发红区、权限、接口、患者/报告、构建发布、生产问题时，切到 Full 并按 `AGENTS.md` 请求人工确认。
 
-> 规格先行：验收标准为空或存在歧义时，先与需求方澄清确认，不得凭推测进入编码（见 `AGENTS.md` 第 4 节“规格先行”硬约束）。
+## 动手前检查
 
-- [ ] `<标准 1>`
-- [ ] `<标准 2>`
-- [ ] `<标准 3>`
+- [ ] 已读来源、关联 spec / 设计 / PR 和现有实现。
+- [ ] 已确认目标、验收、非目标和影响范围。
+- [ ] 已查看 `git status --short`，能区分无关改动。
+- [ ] 已按 `QUICKSTART.md` 选择最小阅读路径。
+- [ ] 已按 `DYNAMIC_WORKFLOW_RULES.md` 选择 Workflow 与修饰器。
+- [ ] 已按 `GIT_RULES.md` 完成 worktree 决策。
+- [ ] 已列出能证明成功标准的验证命令或人工核对项。
 
-## 4. 非目标（Non-goals）
+## 关联文档
 
-- `<本次明确不做的事>`
-
-## 5. 动手前检查清单
-
-- [ ] 已阅读来源描述、关联 spec 与相关现有文件
-- [ ] 已确认仓库现有实现模式（命名 / 架构 / UI 约定）
-- [ ] 若来源自带编号、标题、状态或验收标准，已先核对，不凭标题猜需求
-- [ ] 已按 `GIT_RULES.md` 第 6 节完成 worktree 决策；若需要独立 `git worktree`，已在 `../SYBaseProjectWeb-worktrees/<task-id>` 创建并完成 `pnpm install`；若命中低风险例外，已记录不建 worktree 的原因
-- [ ] 已查看 `git status`，工作区状态清楚、不会影响无关改动
-- [ ] 已明确受影响的文件范围
-
-> Worktree 完成门槛：一旦创建独立 worktree，采纳提交必须由主 Agent merge-back 到当前集成分支或任务声明的目标分支；本地目标分支未包含 merge-back 结果前，不得宣称任务完成、不得清理 worktree 或对应分支。
-
-## 6. 实施计划
-
-1. `<步骤 1>`
-2. `<步骤 2>`
-3. `<步骤 3>`
-
-## 7. 测试与验证
-
-- 验证命令：`<尽量选范围最小且有效的命令>`
-- 涉及逻辑 / 数据流 / 权限 / 集成 / 用户可见行为时，新增或更新测试。
-
-## 8. 风险与回滚
-
-- 风险：`<潜在风险>`
-- 回滚方式：`<如何回滚>`
-
-## 9. Worktree Merge-Back 验收（如适用）
-
-- [ ] 已审查 worktree diff 与提交边界，排除无关改动
-- [ ] 采纳提交已 merge-back 到当前集成分支或任务目标分支
-- [ ] 已在目标分支运行统一验证
-- [ ] merge-back 完成并验证后，已清理 worktree 与已合并分支
-- [ ] 交付说明已记录 merge-back 结果、剩余风险和清理状态
-
-## 10. 任务来源不清时的处理
-
-- 若只给编号、标题或一句模糊描述，先回查来源正文、历史讨论和验收标准
-- 若来源之间冲突，先暂停并请求人工确认，不自行拍板
-- 若任务范围扩大到运行时代码 / 共享契约 / 依赖 / 构建 / 跨仓联动，立即重新评估是否必须切换到独立 worktree
+- [../../AGENTS.md](../../AGENTS.md)
+- [./QUICKSTART.md](./QUICKSTART.md)
+- [./DYNAMIC_WORKFLOW_RULES.md](./DYNAMIC_WORKFLOW_RULES.md)
+- [./TASK_LIFECYCLE_RULES.md](./TASK_LIFECYCLE_RULES.md)
+- [./TASK_MANAGEMENT_RULES.md](./TASK_MANAGEMENT_RULES.md)
+- [./GIT_RULES.md](./GIT_RULES.md)

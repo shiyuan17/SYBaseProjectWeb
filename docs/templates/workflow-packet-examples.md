@@ -6,9 +6,9 @@
 
 | 档位 | 判断 | 填写重点 |
 | --- | --- | --- |
-| Fast Path | 纯文档 / 只读 / 不改运行时 | `Primary Workflow: Not applicable (<reason>)` + 验证 + Memory 一行 |
-| Lightweight | 低风险实现，无强制修饰器 | 主 Workflow + 触发信号 + 验证 + Memory + 剩余风险 |
-| Full | 权限/数据/跨仓/红区/修饰器 | 完整 Packet + Red Team 四要素 |
+| Fast Path | 纯文档 / 只读 / 不改运行时 | `Primary Workflow: Not applicable (<reason>)` + Summary 验证 |
+| Lightweight | 低风险实现，无强制高风险修饰器 | Dynamic Workflow + Evidence 中的验证和剩余风险 |
+| Full | 权限/数据/跨仓/红区/修饰器 | Dynamic Workflow + Full Evidence + Red Team 四要素 |
 
 ## 范例：Fast Path 任务确认
 
@@ -24,27 +24,30 @@
 ## 范例：轻量 Workflow Packet
 
 ```markdown
-## Workflow Packet
+## Dynamic Workflow
 
-- 主 Workflow: UI
-- 触发信号: 模块内展示文案调整
-- 动态测试: pnpm test:unit -- StatusLabel 3 passed
-- 剩余风险: 未跑 E2E
+- Primary Workflow: UI
+- Trigger signals: 模块内展示文案调整
+- Required modifiers: None
+- Dynamic tests / validation: pnpm test:unit -- StatusLabel 3 passed
+- Unverified items and risks: 未跑 E2E，因未改路由或关键链路
 ```
 
-## 范例：Memory Update Packet（仅 durable 变更时）
+## 范例：Memory
 
 ```markdown
-## Memory Update Packet
+## Memory
 
-- Memory: 更新 DECISIONS.md DEC-…
+- Memory: no durable context change
 ```
+
+仅 durable 变更时填写更新文件和 ID，例如：`Memory: updated DECISIONS.md DEC-20260629-001`。
 
 ## 坏例子 → 修正后
 
 坏：`Attack result: Done, no problem.`
 
-修正后：`Attack result: 无权限角色导出返回 403；剩余风险：审计落库由后端 MR 验证。`
+修正后：`Attack result: 无权限角色导出返回 403；Residual risk: 审计落库由后端 MR 验证。`
 
 ## 关联文档
 

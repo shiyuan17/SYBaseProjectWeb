@@ -5,6 +5,7 @@
 ## 原则
 
 - 先声明主 Workflow 与修饰器，再选 skill（常规 ≤1 流程 + 1 专项 + 1 验证）
+- 生命周期阶段以 `TASK_LIFECYCLE_RULES.md` 为准；skill 只辅助 Clarify / Spec / Plan / Execute / Verify / Review / Handoff / Retrospective 的产出
 - 红区 / 权限 / 患者报告 / 构建发布仍按 `AGENTS.md` 升级确认
 - 不引用未安装 skill；优先使用当前环境已安装的等价调试、审查或专项 skill 回退
 
@@ -31,6 +32,20 @@
 | Architecture | `code-simplification` | `code-review-and-quality` |
 | Production Debug | `debugging-and-error-recovery` | 回归测试（规范要求） |
 | 纯文档 | 可选 `documentation-and-adrs` | `check:governance` 等 |
+
+## 生命周期阶段映射
+
+| 阶段 | 推荐 skill / 模板 | 说明 |
+| --- | --- | --- |
+| Clarify | `brainstorming` / `grill-me` / `clarification-template.md` | 需求模糊时先澄清目标、成功标准和非目标 |
+| Spec | `api-and-interface-design`（接口类）/ `spec-template.md` | 规格写清行为、契约、边界、错误处理和验收 |
+| Plan | `writing-plans` | 多步任务进入实施前生成可执行计划 |
+| Tasks | `plan-to-task-goals-prompt-template.md` / `task-item-template.md` | 计划拆成可独立验收任务；本地落库遵守 `TASK_MANAGEMENT_RULES.md` |
+| Execute | `test-driven-development` / `debugging-and-error-recovery` | 小步实现；缺陷和复杂逻辑优先先测后改 |
+| Verify | `verification-before-completion` / `browser-testing-with-devtools` | 完成声明前输出真实命令、浏览器、接口或日志证据 |
+| Review | `code-review-and-quality` / `requesting-code-review` | 高风险、子 Agent 产出或 PR 前做合规与质量审查 |
+| Handoff | `handoff` / `handoff-template.md` | 会话暂停、换 Agent、跨天继续时保留上下文 |
+| Retrospective | `retrospective-template.md` | 重复错误或规则缺口沉淀为最小防复发动作 |
 
 ## 设计类映射
 

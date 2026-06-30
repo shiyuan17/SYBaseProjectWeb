@@ -15,6 +15,7 @@ Use this prompt when a local plan needs to be split into task items and Codex Go
 - `docs/rules/TASK_INTAKE.md`
 - `docs/rules/DYNAMIC_WORKFLOW_RULES.md`
 - `docs/rules/LOOP_ENGINEERING_RULES.md`（仅计划或任务明确启用 loop 时必读）
+- `docs/rules/TASK_MANAGEMENT_RULES.md`（仅任务需要落库到本地 backlog 体系时必读）
 - `docs/templates/task-item-template.md`
 - `docs/templates/codex-goal-prompt-template.md`
 
@@ -26,12 +27,13 @@ Use this prompt when a local plan needs to be split into task items and Codex Go
 4. 高风险前置事项单独拆成 Blocking task。
 5. 每个任务项使用 `docs/templates/task-item-template.md` 的结构。
 6. 每个任务项生成一份使用 `docs/templates/codex-goal-prompt-template.md` 的 Goal 提示词。
-7. 若任务来源平台有现成记录能力，可在输出中标注建议的标题、编号和状态同步方式；不强绑定任何平台。
+7. 若任务需要落库到本地任务体系，同时生成 `backlog.json` 条目草案和对应 AI 执行单元 Markdown 草案。
+8. 若任务来源平台有现成记录能力，可在输出中标注建议的标题、编号和状态同步方式；不强绑定任何平台。
 
 ## 拆分要求
 
-- 每个任务项必须有目标、验收标准、非目标、影响范围、Workflow Packet、停止条件和验证要求。
-- Loop Packet 仅在计划、任务来源或用户明确启用 loop 时填写；未启用时写 `Not used（普通任务，按 Workflow Packet 交付）`。
+- 每个任务项必须有目标、验收标准、非目标、影响范围、Dynamic Workflow、Memory、Evidence、停止条件和验证要求。
+- Loop Packet 仅在计划、任务来源或用户明确启用 loop 时填写；未启用时写 `Not used（普通任务，按 Dynamic Workflow 交付）`。
 - 不要把大任务只粗略拆成“前端”和“后端”。
 - 涉及权限、菜单鉴权、接口契约、后端 migration/seed、统计口径、导出或敏感数据时，从严标注风险和停止条件。
 - 计划中不明确但会影响行为或接口联调的内容，必须作为待确认项，不得替用户做业务决策。
@@ -44,6 +46,7 @@ Use this prompt when a local plan needs to be split into task items and Codex Go
 2. 任务项列表。
 3. 若任务平台已存在记录，列出对应编号、标题、链接。
 4. 若尚未建卡，说明原因并给出可复制草案。
-5. 每个任务项对应的 Codex Goal 提示词。
-6. 必须人工确认后才能进入实现的任务清单。
+5. 若落库到本地任务体系，附 `backlog.json` 条目草案和 AI 执行单元 Markdown 草案。
+6. 每个任务项对应的 Codex Goal 提示词。
+7. 必须人工确认后才能进入实现的任务清单。
 ```
