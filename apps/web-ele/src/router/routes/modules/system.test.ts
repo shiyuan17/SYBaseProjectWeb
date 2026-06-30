@@ -14,7 +14,9 @@ import systemRoutes from './system';
 
 describe('system routes', () => {
   it('registers high-frequency system routes with authorities', () => {
-    const systemRoot = systemRoutes.find((route) => route.name === 'SystemRoot');
+    const systemRoot = systemRoutes.find(
+      (route) => route.name === 'SystemRoot',
+    );
     const usersRoute = systemRoot?.children?.find(
       (route) => route.name === 'SystemUsers',
     );

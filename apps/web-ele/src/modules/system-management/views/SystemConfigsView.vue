@@ -190,7 +190,9 @@ const departmentNameById = computed(() => {
   return map;
 });
 const shouldShowConfigValueColumn = computed(() =>
-  (selectedCategory.value?.items ?? []).some((item) => !isInternalDisplayValue(item)),
+  (selectedCategory.value?.items ?? []).some(
+    (item) => !isInternalDisplayValue(item),
+  ),
 );
 
 async function loadData() {

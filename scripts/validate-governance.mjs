@@ -227,9 +227,9 @@ function validateTemplatesIndex(templatesReadmeBody) {
   const links = extractBulletLinks(templatesReadmeBody);
   const linkedLabels = new Set(links.map((entry) => entry.label));
 
-  return REQUIRED_TEMPLATE_DOCS.filter(
-    (entry) => !linkedLabels.has(entry),
-  ).map((entry) => `Missing docs/templates/README.md entry: ${entry}`);
+  return REQUIRED_TEMPLATE_DOCS.filter((entry) => !linkedLabels.has(entry)).map(
+    (entry) => `Missing docs/templates/README.md entry: ${entry}`,
+  );
 }
 
 function validateAgentsIndex(agentsBody) {

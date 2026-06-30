@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  ANALYTICS_ROUTE_NAME,
   __testables,
+  ANALYTICS_ROUTE_NAME,
   syncDashboardRouteLayout,
 } from './dashboard-layout-guard';
 

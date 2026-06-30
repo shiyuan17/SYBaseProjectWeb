@@ -18,7 +18,9 @@ function resolveErrorMessage(error: unknown) {
 }
 
 function isForbiddenError(error: unknown) {
-  return (error as { response?: { status?: number } })?.response?.status === 403;
+  return (
+    (error as { response?: { status?: number } })?.response?.status === 403
+  );
 }
 
 export function usePathologyDashboardScreen() {
@@ -32,7 +34,9 @@ export function usePathologyDashboardScreen() {
   const refreshError = ref('');
   const cachedAt = ref<null | number>(null);
 
-  const currentUserId = computed(() => userStore.userInfo?.userId?.trim() ?? '');
+  const currentUserId = computed(
+    () => userStore.userInfo?.userId?.trim() ?? '',
+  );
   const hasCachedSnapshot = computed(() => cachedAt.value !== null);
   const loadState = computed<PathologyDashboardLoadState>(() => {
     if (initialLoading.value) {

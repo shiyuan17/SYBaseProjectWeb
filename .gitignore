@@ -61,7 +61,11 @@ vite.config.ts.*
 .agent
 .agents
 .claude
-.codex
+.codex/*
+!.codex/hooks.json
+!.codex/session-summary.project.json
+!.codex/hooks/
+!.codex/hooks/**
 .codex-artifacts/
 .codegraph/
 skills-lock.json
@@ -83,3 +87,7 @@ repomix-output.xml
 temp-eslint.json
 linear-setting.json
 apps/web-ele/dist (2).zip
+/tmp
+/tests
+/docs/user-manual
+/.codex

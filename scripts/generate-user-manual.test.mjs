@@ -252,7 +252,9 @@ describe('generateUserManual', () => {
     expect(readme).toContain('流程：包埋 → 切片 → 染色 → 封片');
     expect(m3Manual).toContain('### 1.包埋工作站');
     expect(m3Manual).toContain('#### 1.1 进入包埋工作站');
-    expect(m3Manual).toContain('> 本节尚未捕获截图；请先运行 `pnpm manual:capture` 补齐。');
+    expect(m3Manual).toContain(
+      '> 本节尚未捕获截图；请先运行 `pnpm manual:capture` 补齐。',
+    );
   });
 
   it('renders structured static modules with section and subsection headings plus screenshot groups', async () => {
@@ -301,9 +303,15 @@ describe('generateUserManual', () => {
     expect(m3Manual).toContain('1. 打开包埋工作站。');
     expect(m3Manual).toContain('2. 按病理号或申请单筛选待包埋任务。');
     expect(m3Manual).toContain('可选操作：查看待处理任务；按病理号筛选');
-    expect(m3Manual).toContain('预期结果：列表展示待包埋任务，并可进入包埋处理。');
-    expect(m3Manual).toContain('![包埋工作站总览](images/m3/embedding-overview.png)');
-    expect(m3Manual).toContain('![按病理号筛选待包埋任务](images/m3/embedding-filter.png)');
+    expect(m3Manual).toContain(
+      '预期结果：列表展示待包埋任务，并可进入包埋处理。',
+    );
+    expect(m3Manual).toContain(
+      '![包埋工作站总览](images/m3/embedding-overview.png)',
+    );
+    expect(m3Manual).toContain(
+      '![按病理号筛选待包埋任务](images/m3/embedding-filter.png)',
+    );
   });
 
   it('renders auth_failed and capture_failed as subsection placeholders instead of normal screenshots', async () => {

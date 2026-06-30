@@ -62,13 +62,13 @@ async function selectSystemUser(
 
   if (optionText) {
     await expect
-      .poll(async () => readSystemUserSelectLabel(field), { timeout: 5_000 })
+      .poll(async () => readSystemUserSelectLabel(field), { timeout: 5000 })
       .toContain(optionText);
     return;
   }
 
   await expect
-    .poll(async () => readSystemUserSelectLabel(field), { timeout: 5_000 })
+    .poll(async () => readSystemUserSelectLabel(field), { timeout: 5000 })
     .not.toBe(currentLabel);
 }
 
@@ -128,107 +128,19 @@ async function readSystemUserSelectLabel(field: Locator) {
 export class FixationTransportPage {
   constructor(private readonly page: Page) {}
 
-  async gotoVerification() {
-    await this.page.goto('/workflow/fixation-verify', {
-      waitUntil: 'domcontentloaded',
-    });
-    await this.page.getByRole('tab', { name: '离体确认' }).click();
-    await expect(
-      this.page.getByPlaceholder('请输入标本条码/编号后按回车确认'),
-    ).toBeVisible();
-  }
-
-  async gotoFixation() {
-    await this.page.goto('/workflow/fixation-transport?tab=fixation', {
-      waitUntil: 'domcontentloaded',
-    });
-    await expect(this.page.getByText('标本固定')).toBeVisible();
-    await expect(
-      this.page.getByPlaceholder('请输入标本号或条码'),
-    ).toBeVisible();
-  }
-
-  async confirmRemoval(identifier: string) {
-    const quickInput = this.page
-      .getByPlaceholder('请输入标本条码/编号后按回车确认')
-      .first();
-    await quickInput.click();
-    await quickInput.fill(identifier);
-
-    const [confirmResponse] = await Promise.all([
+  async checkInSpecimens(identifier: string) {
+    await this.stageCheckIn(identifier);
+    const [checkInResponse] = await Promise.all([
       this.page.waitForResponse(
         (response) =>
           response.request().method() === 'POST' &&
-          response
-            .url()
-            .includes('/api/v1/specimen-removals/confirm-by-identifier'),
+          /\/api\/v1\/specimens\/barcodes\/.+\/check-in$/.test(response.url()),
       ),
-      quickInput.press('Enter'),
+      this.page.getByRole('button', { name: '标本入库' }).click(),
     ]);
 
-    expect(
-      confirmResponse.ok(),
-      `标本 ${identifier} 的离体确认接口返回失败。`,
-    ).toBeTruthy();
-    await waitForToast(this.page, `标本 ${identifier} 已完成离体确认`);
-  }
-
-  async gotoConfirmation() {
-    await this.page.goto('/workflow/fixation-transport?tab=confirmation', {
-      waitUntil: 'domcontentloaded',
-    });
-    await expect(
-      this.page.getByRole('tab', { name: '标本确认', selected: true }),
-    ).toBeVisible();
-    await expect(
-      this.page.getByPlaceholder('申请单号 / 标本编号 / 条码'),
-    ).toBeVisible();
-  }
-
-  async gotoCheckIn() {
-    await this.page.goto('/workflow/fixation-transport?tab=check-in', {
-      waitUntil: 'domcontentloaded',
-    });
-    await expect(
-      this.page.getByRole('tab', { name: '标本入库', selected: true }),
-    ).toBeVisible();
-    await expect(
-      this.page.getByPlaceholder('标本id / 流水号 / 条码'),
-    ).toBeVisible();
-  }
-
-  async gotoTransport() {
-    await this.page.goto('/workflow/fixation-transport?tab=transport', {
-      waitUntil: 'domcontentloaded',
-    });
-    await expect(
-      this.page.getByRole('tab', { name: '标本出库', selected: true }),
-    ).toBeVisible();
-    await expect(
-      this.page.getByPlaceholder('请输入标本条码/编号'),
-    ).toBeVisible();
-  }
-
-  async startFixation(identifier: string) {
-    const scanInput = this.page.getByPlaceholder('请输入标本号或条码').first();
-    await scanInput.click();
-    await scanInput.fill(identifier);
-
-    const [startResponse] = await Promise.all([
-      this.page.waitForResponse(
-        (response) =>
-          response.request().method() === 'POST' &&
-          response.url().includes('/api/v1/specimen-fixations/start'),
-      ),
-      this.page.getByRole('button', { name: '查询' }).click(),
-    ]);
-
-    expect(
-      startResponse.ok(),
-      `标本 ${identifier} 的开始固定接口返回失败。`,
-    ).toBeTruthy();
-    await waitForToast(this.page, '已开始固定');
-    await waitForTableRow(this.page, identifier);
+    expect(checkInResponse.ok(), '标本入库接口返回失败。').toBeTruthy();
+    await waitForToast(this.page, '标本入库成功');
   }
 
   async completeFixation(identifier: string) {
@@ -260,15 +172,29 @@ export class FixationTransportPage {
     await waitForToast(this.page, '已完成 1 条标本固定');
   }
 
-  async stageConfirmation(identifier: string) {
-    const keywordInput = this.page
-      .getByPlaceholder('申请单号 / 标本编号 / 条码')
+  async confirmRemoval(identifier: string) {
+    const quickInput = this.page
+      .getByPlaceholder('请输入标本条码/编号后按回车确认')
       .first();
-    await keywordInput.click();
-    await keywordInput.fill(identifier);
-    await keywordInput.press('Enter');
-    await waitForTableRow(this.page, identifier);
-    await keywordInput.fill('');
+    await quickInput.click();
+    await quickInput.fill(identifier);
+
+    const [confirmResponse] = await Promise.all([
+      this.page.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response
+            .url()
+            .includes('/api/v1/specimen-removals/confirm-by-identifier'),
+      ),
+      quickInput.press('Enter'),
+    ]);
+
+    expect(
+      confirmResponse.ok(),
+      `标本 ${identifier} 的离体确认接口返回失败。`,
+    ).toBeTruthy();
+    await waitForToast(this.page, `标本 ${identifier} 已完成离体确认`);
   }
 
   async confirmSpecimens(identifier: string) {
@@ -300,42 +226,6 @@ export class FixationTransportPage {
     expect(tokenResponse.ok(), '操作人校验接口返回失败。').toBeTruthy();
     expect(confirmResponse.ok(), '标本确认接口返回失败。').toBeTruthy();
     await waitForToast(this.page, '已完成 1 条标本确认');
-  }
-
-  async stageCheckIn(identifier: string) {
-    const scanInput = this.page
-      .getByPlaceholder('标本id / 流水号 / 条码')
-      .first();
-    await scanInput.click();
-    await scanInput.fill(identifier);
-    await scanInput.press('Enter');
-    await waitForTableRow(this.page, identifier);
-  }
-
-  async checkInSpecimens(identifier: string) {
-    await this.stageCheckIn(identifier);
-    const [checkInResponse] = await Promise.all([
-      this.page.waitForResponse(
-        (response) =>
-          response.request().method() === 'POST' &&
-          /\/api\/v1\/specimens\/barcodes\/.+\/check-in$/.test(response.url()),
-      ),
-      this.page.getByRole('button', { name: '标本入库' }).click(),
-    ]);
-
-    expect(checkInResponse.ok(), '标本入库接口返回失败。').toBeTruthy();
-    await waitForToast(this.page, '标本入库成功');
-  }
-
-  async stageTransport(identifier: string) {
-    const identifierInput = this.page
-      .getByPlaceholder('请输入标本条码/编号')
-      .first();
-    await identifierInput.click();
-    await identifierInput.fill(identifier);
-    await identifierInput.press('Enter');
-    await waitForTableRow(this.page, identifier);
-    await identifierInput.fill('');
   }
 
   async createTransportOrder(identifier: string | string[]) {
@@ -381,6 +271,116 @@ export class FixationTransportPage {
     await waitForToast(this.page, '标本转运成功');
     const payload = await outboundResponse.json();
     return payload.data as TransportOrderResult;
+  }
+
+  async gotoCheckIn() {
+    await this.page.goto('/workflow/fixation-transport?tab=check-in', {
+      waitUntil: 'domcontentloaded',
+    });
+    await expect(
+      this.page.getByRole('tab', { name: '标本入库', selected: true }),
+    ).toBeVisible();
+    await expect(
+      this.page.getByPlaceholder('标本id / 流水号 / 条码'),
+    ).toBeVisible();
+  }
+
+  async gotoConfirmation() {
+    await this.page.goto('/workflow/fixation-transport?tab=confirmation', {
+      waitUntil: 'domcontentloaded',
+    });
+    await expect(
+      this.page.getByRole('tab', { name: '标本确认', selected: true }),
+    ).toBeVisible();
+    await expect(
+      this.page.getByPlaceholder('申请单号 / 标本编号 / 条码'),
+    ).toBeVisible();
+  }
+
+  async gotoFixation() {
+    await this.page.goto('/workflow/fixation-transport?tab=fixation', {
+      waitUntil: 'domcontentloaded',
+    });
+    await expect(this.page.getByText('标本固定')).toBeVisible();
+    await expect(
+      this.page.getByPlaceholder('请输入标本号或条码'),
+    ).toBeVisible();
+  }
+
+  async gotoTransport() {
+    await this.page.goto('/workflow/fixation-transport?tab=transport', {
+      waitUntil: 'domcontentloaded',
+    });
+    await expect(
+      this.page.getByRole('tab', { name: '标本出库', selected: true }),
+    ).toBeVisible();
+    await expect(
+      this.page.getByPlaceholder('请输入标本条码/编号'),
+    ).toBeVisible();
+  }
+
+  async gotoVerification() {
+    await this.page.goto('/workflow/fixation-verify', {
+      waitUntil: 'domcontentloaded',
+    });
+    await this.page.getByRole('tab', { name: '离体确认' }).click();
+    await expect(
+      this.page.getByPlaceholder('请输入标本条码/编号后按回车确认'),
+    ).toBeVisible();
+  }
+
+  async stageCheckIn(identifier: string) {
+    const scanInput = this.page
+      .getByPlaceholder('标本id / 流水号 / 条码')
+      .first();
+    await scanInput.click();
+    await scanInput.fill(identifier);
+    await scanInput.press('Enter');
+    await waitForTableRow(this.page, identifier);
+  }
+
+  async stageConfirmation(identifier: string) {
+    const keywordInput = this.page
+      .getByPlaceholder('申请单号 / 标本编号 / 条码')
+      .first();
+    await keywordInput.click();
+    await keywordInput.fill(identifier);
+    await keywordInput.press('Enter');
+    await waitForTableRow(this.page, identifier);
+    await keywordInput.fill('');
+  }
+
+  async stageTransport(identifier: string) {
+    const identifierInput = this.page
+      .getByPlaceholder('请输入标本条码/编号')
+      .first();
+    await identifierInput.click();
+    await identifierInput.fill(identifier);
+    await identifierInput.press('Enter');
+    await waitForTableRow(this.page, identifier);
+    await identifierInput.fill('');
+  }
+
+  async startFixation(identifier: string) {
+    const scanInput = this.page.getByPlaceholder('请输入标本号或条码').first();
+    await scanInput.click();
+    await scanInput.fill(identifier);
+
+    const [startResponse] = await Promise.all([
+      this.page.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response.url().includes('/api/v1/specimen-fixations/start'),
+      ),
+      this.page.getByRole('button', { name: '查询' }).click(),
+    ]);
+
+    expect(
+      startResponse.ok(),
+      `标本 ${identifier} 的开始固定接口返回失败。`,
+    ).toBeTruthy();
+    await waitForToast(this.page, '已开始固定');
+    await waitForTableRow(this.page, identifier);
   }
 
   private async submitOperatorVerificationPrompt() {

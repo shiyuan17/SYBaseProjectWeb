@@ -68,8 +68,7 @@ const routes: RouteRecordRaw[] = applyKeepAliveToTabRoutes([
         name: 'Departments',
         path: '/system/departments',
         component: loadSystemRouteComponent(
-          () =>
-            import('#/modules/system-management/views/DepartmentsView.vue'),
+          () => import('#/modules/system-management/views/DepartmentsView.vue'),
           'Departments',
         ),
         meta: {

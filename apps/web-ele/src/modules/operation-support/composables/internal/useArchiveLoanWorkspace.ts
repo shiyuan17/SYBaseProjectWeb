@@ -342,7 +342,10 @@ export function useArchiveLoanWorkspace(
     );
   }
 
-  function isRecordBorrowable(record: ArchiveRecordView, mode: BorrowDialogMode) {
+  function isRecordBorrowable(
+    record: ArchiveRecordView,
+    mode: BorrowDialogMode,
+  ) {
     if (record.loanStatus === 'BORROWED') {
       return false;
     }

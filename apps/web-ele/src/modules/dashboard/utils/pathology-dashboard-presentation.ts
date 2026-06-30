@@ -5,8 +5,7 @@ import type {
   PathologyScreenStatus,
 } from '../types/pathology-screen';
 
-export interface PathologyDashboardStageNode
-  extends PathologyScreenMetricItem {
+export interface PathologyDashboardStageNode extends PathologyScreenMetricItem {
   x: number;
   y: number;
 }
@@ -149,10 +148,7 @@ export function buildPathologyStatusClass(status: PathologyScreenStatus) {
   return 'screen-status';
 }
 
-export function buildPathologyStageNodeStyle(node: {
-  x: number;
-  y: number;
-}) {
+export function buildPathologyStageNodeStyle(node: { x: number; y: number }) {
   const centeredX = 500 + (node.x - 500) * 0.82;
   const centeredY = 26 + node.y * 0.86;
 

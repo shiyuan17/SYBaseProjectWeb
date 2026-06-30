@@ -92,10 +92,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div
-    class="relative min-h-[220px]"
-    :aria-busy="loading ? 'true' : undefined"
-  >
+  <div class="relative min-h-[220px]" :aria-busy="loading ? 'true' : undefined">
     <ElSkeleton v-if="loading" :rows="6" animated />
 
     <div

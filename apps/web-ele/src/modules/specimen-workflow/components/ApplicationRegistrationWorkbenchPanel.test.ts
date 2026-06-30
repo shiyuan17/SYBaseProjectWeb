@@ -1055,9 +1055,7 @@ describe('ApplicationRegistrationWorkbenchPanel', () => {
       queryType: 'APPLICATION_NO',
     });
     expect(createApplicationMock).toHaveBeenCalledTimes(1);
-    expect(
-      wrapper.root.querySelector('[data-testid="alert"]'),
-    ).toBeNull();
+    expect(wrapper.root.querySelector('[data-testid="alert"]')).toBeNull();
     expect(
       wrapper.root.querySelector('[data-testid="patient-panel-text"]')
         ?.textContent,
@@ -1157,9 +1155,7 @@ describe('ApplicationRegistrationWorkbenchPanel', () => {
     expect(
       wrapper.root.querySelector('[data-testid="specimen-items"]')?.textContent,
     ).toBe('[]');
-    expect(
-      wrapper.root.querySelector('[data-testid="alert"]'),
-    ).toBeNull();
+    expect(wrapper.root.querySelector('[data-testid="alert"]')).toBeNull();
     expect(messageSuccessMock).not.toHaveBeenCalled();
 
     wrapper.unmount();

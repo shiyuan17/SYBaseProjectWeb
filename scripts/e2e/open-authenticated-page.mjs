@@ -71,7 +71,9 @@ function readEnvFileValue(filePath, key) {
 
 function getWebNamespace() {
   const packageJsonPath = path.join(webEleDir, 'package.json');
-  const appVersion = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')).version;
+  const appVersion = JSON.parse(
+    fs.readFileSync(packageJsonPath, 'utf8'),
+  ).version;
   const namespacePrefix = readEnvFileValue(
     path.join(webEleDir, '.env'),
     'VITE_APP_NAMESPACE',
@@ -177,7 +179,9 @@ async function main() {
   });
   const page = await context.newPage();
   await page.goto(targetUrl, { waitUntil: 'domcontentloaded' });
-  console.log('Authenticated browser opened. Close the browser window to finish.');
+  console.log(
+    'Authenticated browser opened. Close the browser window to finish.',
+  );
   await context.waitForEvent('close');
   await context.close();
   await browser.close();

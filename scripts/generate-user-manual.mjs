@@ -156,7 +156,9 @@ function groupByModule(steps) {
   return groups;
 }
 
-async function loadManualSpecModule(candidatePaths = defaultManualSpecCandidates) {
+async function loadManualSpecModule(
+  candidatePaths = defaultManualSpecCandidates,
+) {
   for (const candidatePath of candidatePaths) {
     if (!fs.existsSync(candidatePath)) {
       continue;
@@ -197,9 +199,8 @@ function createModuleMeta(moduleSpecs) {
 
 function hasStructuredSections(moduleSpec) {
   return (
-    Array.isArray(moduleSpec.sections) && moduleSpec.sections.length > 0
-  ) || (
-    Array.isArray(moduleSpec.chapters) && moduleSpec.chapters.length > 0
+    (Array.isArray(moduleSpec.sections) && moduleSpec.sections.length > 0) ||
+    (Array.isArray(moduleSpec.chapters) && moduleSpec.chapters.length > 0)
   );
 }
 
@@ -238,10 +239,7 @@ function normalizeSubsection(rawSubsection, index, section) {
 
   return {
     captureKeys,
-    expected: firstNonEmptyString(
-      rawSubsection.expected,
-      rawSubsection.result,
-    ),
+    expected: firstNonEmptyString(rawSubsection.expected, rawSubsection.result),
     operations: normalizeSteps(rawSubsection.operations),
     path: firstNonEmptyString(
       rawSubsection.path,
@@ -249,7 +247,11 @@ function normalizeSubsection(rawSubsection, index, section) {
       section.path,
     ),
     pathLabel: firstNonEmptyString(rawSubsection.pathLabel),
-    role: firstNonEmptyString(rawSubsection.role, rawSubsection.actor, section.role),
+    role: firstNonEmptyString(
+      rawSubsection.role,
+      rawSubsection.actor,
+      section.role,
+    ),
     roleNote: firstNonEmptyString(rawSubsection.roleNote),
     steps: normalizeSteps(rawSubsection.steps ?? rawSubsection.operations),
     subsectionId,
@@ -314,24 +316,22 @@ function normalizeLegacyStaticSections(staticPages = []) {
     );
     const existingSection = groupedSections.get(sectionId);
 
-    const section =
-      existingSection ??
-      {
-        matchKeys: uniqueStrings([sectionId, page.name]),
-        sectionId,
-        subsections: [],
-        summary: firstNonEmptyString(
-          page.sectionSummary,
-          page.caption,
-          page.operations,
-        ),
-        title: firstNonEmptyString(
-          page.sectionTitle,
-          page.title,
-          page.caption,
-          `章节 ${groupedSections.size + 1}`,
-        ),
-      };
+    const section = existingSection ?? {
+      matchKeys: uniqueStrings([sectionId, page.name]),
+      sectionId,
+      subsections: [],
+      summary: firstNonEmptyString(
+        page.sectionSummary,
+        page.caption,
+        page.operations,
+      ),
+      title: firstNonEmptyString(
+        page.sectionTitle,
+        page.title,
+        page.caption,
+        `章节 ${groupedSections.size + 1}`,
+      ),
+    };
 
     section.subsections.push(
       normalizeSubsection(page, section.subsections.length, {
@@ -357,7 +357,8 @@ function normalizeModuleSpec(rawModuleSpec, index) {
 
   const structuredSections = hasStructuredSections(rawModuleSpec)
     ? (rawModuleSpec.sections ?? rawModuleSpec.chapters).map(
-        normalizeStructuredSection,
+        (section, sectionIndex) =>
+          normalizeStructuredSection(section, sectionIndex),
       )
     : normalizeLegacyStaticSections(rawModuleSpec.staticPages ?? []);
 
@@ -380,7 +381,7 @@ function normalizeModuleSpec(rawModuleSpec, index) {
 
 function normalizeModuleSpecs(moduleSpecs) {
   return moduleSpecs
-    .map(normalizeModuleSpec)
+    .map((moduleSpec, index) => normalizeModuleSpec(moduleSpec, index))
     .filter(Boolean)
     .toSorted((left, right) => left.order - right.order);
 }
@@ -439,13 +440,19 @@ function matchesSubsection(step, section, subsection) {
 }
 
 function getSubsectionSteps(moduleSteps, section, subsection) {
-  return moduleSteps.filter((step) => matchesSubsection(step, section, subsection));
+  return moduleSteps.filter((step) =>
+    matchesSubsection(step, section, subsection),
+  );
 }
 
 function renderScreenshotGroup(lines, steps) {
-  const capturedSteps = steps.filter((step) => step.status === 'captured' && step.image);
+  const capturedSteps = steps.filter(
+    (step) => step.status === 'captured' && step.image,
+  );
   const hasAuthFailure = steps.some((step) => step.status === 'auth_failed');
-  const hasCaptureFailure = steps.some((step) => step.status === 'capture_failed');
+  const hasCaptureFailure = steps.some(
+    (step) => step.status === 'capture_failed',
+  );
   const hasExplicitMissing = steps.some((step) => step.status === 'missing');
 
   lines.push('截图组：', '');
@@ -500,8 +507,17 @@ function renderOptionalOperations(lines, operations) {
   lines.push(`可选操作：${operations.join('；')}`, '');
 }
 
-function renderStaticSubsection(lines, sectionIndex, subsectionIndex, subsection, steps) {
-  lines.push(`#### ${sectionIndex + 1}.${subsectionIndex + 1} ${subsection.title}`, '');
+function renderStaticSubsection(
+  lines,
+  sectionIndex,
+  subsectionIndex,
+  subsection,
+  steps,
+) {
+  lines.push(
+    `#### ${sectionIndex + 1}.${subsectionIndex + 1} ${subsection.title}`,
+    '',
+  );
 
   if (subsection.summary) {
     lines.push(subsection.summary, '');
@@ -536,7 +552,11 @@ function renderStaticSection(lines, sectionIndex, section, moduleSteps) {
   }
 
   for (const [subsectionIndex, subsection] of section.subsections.entries()) {
-    const subsectionSteps = getSubsectionSteps(moduleSteps, section, subsection);
+    const subsectionSteps = getSubsectionSteps(
+      moduleSteps,
+      section,
+      subsection,
+    );
     renderStaticSubsection(
       lines,
       sectionIndex,
@@ -603,8 +623,12 @@ function renderM2Module(spec, steps) {
     return lines.join('\n');
   }
 
-  const happyPathSteps = steps.filter((step) => !step.name?.startsWith('abnormal-'));
-  const abnormalSteps = steps.filter((step) => step.name?.startsWith('abnormal-'));
+  const happyPathSteps = steps.filter(
+    (step) => !step.name?.startsWith('abnormal-'),
+  );
+  const abnormalSteps = steps.filter((step) =>
+    step.name?.startsWith('abnormal-'),
+  );
 
   renderM2Group(lines, '主链路（正常接收）', happyPathSteps);
   renderM2Group(lines, '异常链（部分接收 / 拒收）', abnormalSteps);

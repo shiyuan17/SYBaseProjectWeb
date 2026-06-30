@@ -255,17 +255,18 @@ vi.mock('element-plus', () => {
       return () =>
         h('div', [
           props.label ? h('div', props.label) : null,
-          ...getRows().map((row, index) =>
-            h(
-              'div',
-              { key: `${props.label}-${index}` },
-              slots.default
-                ? slots.default({ row })
-                : (props.prop
-                  ? String(row[props.prop] ?? '')
-                  : ''),
-            ),
-          ),
+          ...getRows().map((row, index) => {
+            const content = (() => {
+              if (slots.default) {
+                return slots.default({ row });
+              }
+              if (props.prop) {
+                return String(row[props.prop] ?? '');
+              }
+              return '';
+            })();
+            return h('div', { key: `${props.label}-${index}` }, content);
+          }),
         ]);
     },
   });

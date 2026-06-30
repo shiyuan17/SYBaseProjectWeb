@@ -27,7 +27,7 @@ type EnsureAuthenticatedPageOptions = {
 
 async function isVisible(locator: Locator) {
   try {
-    return await locator.isVisible({ timeout: 2_000 });
+    return await locator.isVisible({ timeout: 2000 });
   } catch {
     return false;
   }

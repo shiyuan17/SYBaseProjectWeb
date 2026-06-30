@@ -130,38 +130,6 @@ export class SubmissionRegistrationPage {
     return latestRegistrationPayload.data as RegistrationResult;
   }
 
-  private async fillWorkbenchRow(
-    rowIndex: number,
-    specimenName: string,
-    specimenSite: string,
-  ) {
-    const row = this.page.locator('.el-table__row:visible').nth(rowIndex);
-    await expect(row).toBeVisible();
-
-    const specimenNameInput = row
-      .getByPlaceholder('支持中文或拼音首字母')
-      .first();
-    await specimenNameInput.click();
-    await specimenNameInput.fill(specimenName);
-    await expect(specimenNameInput).toHaveValue(specimenName);
-    await specimenNameInput.press('Tab');
-
-    const specimenSiteInput = row
-      .getByPlaceholder('支持中文或拼音首字母')
-      .last();
-    const currentSiteValue = await specimenSiteInput
-      .inputValue()
-      .catch(() => '');
-    if (currentSiteValue.trim() === specimenSite) {
-      return;
-    }
-
-    await specimenSiteInput.click();
-    await specimenSiteInput.fill(specimenSite);
-    await expect(specimenSiteInput).toHaveValue(specimenSite);
-    await specimenSiteInput.press('Tab');
-  }
-
   private async ensureWorkbenchLoaded(data: WorkflowRunData) {
     const applicationNoLocator = this.page
       .getByText(data.applicationNo)
@@ -193,5 +161,37 @@ export class SubmissionRegistrationPage {
 
     await expect(applicationNoLocator).toBeVisible({ timeout: 15_000 });
     await expect(patientNameLocator).toBeVisible({ timeout: 15_000 });
+  }
+
+  private async fillWorkbenchRow(
+    rowIndex: number,
+    specimenName: string,
+    specimenSite: string,
+  ) {
+    const row = this.page.locator('.el-table__row:visible').nth(rowIndex);
+    await expect(row).toBeVisible();
+
+    const specimenNameInput = row
+      .getByPlaceholder('支持中文或拼音首字母')
+      .first();
+    await specimenNameInput.click();
+    await specimenNameInput.fill(specimenName);
+    await expect(specimenNameInput).toHaveValue(specimenName);
+    await specimenNameInput.press('Tab');
+
+    const specimenSiteInput = row
+      .getByPlaceholder('支持中文或拼音首字母')
+      .last();
+    const currentSiteValue = await specimenSiteInput
+      .inputValue()
+      .catch(() => '');
+    if (currentSiteValue.trim() === specimenSite) {
+      return;
+    }
+
+    await specimenSiteInput.click();
+    await specimenSiteInput.fill(specimenSite);
+    await expect(specimenSiteInput).toHaveValue(specimenSite);
+    await specimenSiteInput.press('Tab');
   }
 }

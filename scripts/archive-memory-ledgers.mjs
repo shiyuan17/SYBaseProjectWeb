@@ -39,7 +39,9 @@ function parseTableRows(body, idPattern) {
   const rows = [];
   for (const line of body.split(/\r?\n/)) {
     const match = line.match(
-      new RegExp(`^\\| (${idPattern}) \\|([^|]*)\\|([^|]*)\\|([^|]*)\\|([^|]*)\\|([^|]*)\\|([^|]*)\\|`),
+      new RegExp(
+        String.raw`^\| (${idPattern}) \|([^|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|`,
+      ),
     );
     if (!match) continue;
     rows.push({
@@ -57,7 +59,7 @@ function parseTableRows(body, idPattern) {
 }
 
 function shorten(text, max = 180) {
-  const normalized = text.replace(/\s+/g, ' ').trim();
+  const normalized = text.replaceAll(/\s+/g, ' ').trim();
   if (normalized.length <= max) return normalized;
   return `${normalized.slice(0, max - 1)}…`;
 }
@@ -134,13 +136,15 @@ ${last5
 `;
 
   fs.writeFileSync(bugsPath, slim);
-  console.log(`KNOWN_BUGS slimmed: ${rows.length} archived, ${slim.split(/\r?\n/).length} lines`);
+  console.log(
+    `KNOWN_BUGS slimmed: ${rows.length} archived, ${slim.split(/\r?\n/).length} lines`,
+  );
 }
 
 function archiveDecisions() {
   const decisionsPath = path.join(ROOT, 'docs/memory/DECISIONS.md');
   const body = fs.readFileSync(decisionsPath, 'utf8');
-  const rows = parseTableRows(body, 'DEC-\\d{8}-\\d{3}');
+  const rows = parseTableRows(body, String.raw`DEC-\d{8}-\d{3}`);
 
   const archived = [];
   const active = [];
@@ -204,11 +208,6 @@ ${active
 function archiveTechDebt() {
   const debtPath = path.join(ROOT, 'docs/memory/TECH_DEBT.md');
   const body = fs.readFileSync(debtPath, 'utf8');
-  const rows = parseTableRows(body, 'TD-\\d{8}-\\d{3}').map((row) => ({
-    ...row,
-    status: row.impact.includes('Open') ? 'Open' : row.raw.includes('| Open |') ? 'Open' : 'Resolved',
-  }));
-
   // Re-parse with correct columns for TECH_DEBT format
   const debtRows = [];
   for (const line of body.split(/\r?\n/)) {

@@ -15,8 +15,8 @@ function createRoute(name: null | string): RouteLocationNormalized {
 }
 
 export function syncDashboardRouteLayout(
-  to: RouteLocationNormalizedLoaded | RouteLocationNormalized,
-  from: RouteLocationNormalizedLoaded | RouteLocationNormalized,
+  to: RouteLocationNormalized | RouteLocationNormalizedLoaded,
+  from: RouteLocationNormalized | RouteLocationNormalizedLoaded,
 ) {
   if (to.name === ANALYTICS_ROUTE_NAME) {
     applyDashboardFullContent();

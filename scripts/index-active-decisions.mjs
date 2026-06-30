@@ -22,7 +22,7 @@ for (const line of body.split(/\r?\n/)) {
 }
 
 function shorten(text, max) {
-  const normalized = text.replace(/\s+/g, ' ').trim();
+  const normalized = text.replaceAll(/\s+/g, ' ').trim();
   if (normalized.length <= max) return normalized;
   return `${normalized.slice(0, max - 1)}…`;
 }

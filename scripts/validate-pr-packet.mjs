@@ -220,7 +220,7 @@ export function validatePullRequestPacket(body = '') {
   // - Fast Path may omit implementation-only evidence blocks.
   // - Lightweight keeps core validation and memory fields.
   // - Full requires the evidence sections implied by high-risk workflows/modifiers.
-  const { isFastPath, isFull, missingReason } = resolvePacketTier(body);
+  const { isFull, missingReason } = resolvePacketTier(body);
   if (missingReason) {
     errors.push(
       'Fast path requires a brief reason: Primary Workflow must be "Not applicable (<reason>)"',

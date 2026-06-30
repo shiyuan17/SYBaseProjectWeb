@@ -4,7 +4,7 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 export type E2EAuthMode = 'api' | 'ui';
-export type E2EAuthStrategy = E2EAuthMode | 'api-then-ui';
+export type E2EAuthStrategy = 'api-then-ui' | E2EAuthMode;
 export type E2ERole =
   | 'admin'
   | 'creator'
@@ -156,11 +156,11 @@ export function resolveE2EAuthStrategy(
     case 'api': {
       return 'api';
     }
-    case 'ui': {
-      return 'ui';
-    }
     case 'api-then-ui': {
       return 'api-then-ui';
+    }
+    case 'ui': {
+      return 'ui';
     }
     default: {
       return 'api-then-ui';

@@ -193,17 +193,27 @@ export function createEquipmentFormStateFromRow(
   row: EquipmentRecordView,
   operatorName: string,
 ): EquipmentFormState {
+  const currentTemperature =
+    typeof row.currentTemperature === 'number'
+      ? row.currentTemperature
+      : Number(row.currentTemperature || 0);
+  const setTemperature =
+    typeof row.setTemperature === 'number'
+      ? row.setTemperature
+      : Number(row.setTemperature || 0);
+  let price = null;
+  if (typeof row.price === 'number') {
+    price = row.price;
+  } else if (row.price) {
+    price = Number(row.price);
+  }
+
   return {
     commonShutdownTime: row.commonShutdownTime ?? '18:00:00',
     commonStartupTime: row.commonStartupTime ?? '08:00:00',
     commonUsageContent: row.commonUsageContent ?? '',
     commonlyUsed: row.commonlyUsed ?? false,
-    currentTemperature:
-      typeof row.currentTemperature === 'number'
-        ? row.currentTemperature
-        : (row.currentTemperature
-          ? Number(row.currentTemperature)
-          : 0),
+    currentTemperature,
     depreciationMethod: row.depreciationMethod ?? '',
     enabledAt: row.enabledAt ?? '',
     equipmentCategory: row.equipmentCategory ?? '',
@@ -220,12 +230,7 @@ export function createEquipmentFormStateFromRow(
     nextMaintenanceAt: row.nextMaintenanceAt ?? '',
     operatorName,
     portNo: row.portNo ?? '',
-    price:
-      typeof row.price === 'number'
-        ? row.price
-        : (row.price
-          ? Number(row.price)
-          : null),
+    price,
     principalCode: row.principalCode ?? '',
     principalName: row.principalName ?? '',
     productionDate: row.productionDate ?? '',
@@ -236,12 +241,7 @@ export function createEquipmentFormStateFromRow(
     remarks: row.remarks ?? '',
     rfid: row.rfid ?? '',
     serviceLifeYears: row.serviceLifeYears ?? 0,
-    setTemperature:
-      typeof row.setTemperature === 'number'
-        ? row.setTemperature
-        : (row.setTemperature
-          ? Number(row.setTemperature)
-          : 0),
+    setTemperature,
     useUnit: row.useUnit ?? '',
     userName: row.userName ?? '',
     warrantyEndDate: row.warrantyEndDate ?? '',
