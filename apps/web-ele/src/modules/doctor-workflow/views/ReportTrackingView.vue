@@ -429,7 +429,7 @@ watch(
       />
 
       <WorkflowSectionCard title="病例查询">
-        <ElForm inline label-width="88px">
+        <ElForm inline label-width="88px" @submit.prevent="searchTracking">
           <ElFormItem label-width="132px" required>
             <template #label>
               <span class="whitespace-nowrap">病例 ID / 病理号</span>
@@ -439,7 +439,6 @@ watch(
               clearable
               placeholder="请输入病例 ID 或病理号"
               style="width: 260px"
-              @keyup.enter="searchTracking"
             />
           </ElFormItem>
           <ElFormItem>

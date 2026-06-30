@@ -90,7 +90,6 @@ const queryForm = reactive({
 
 const createForm = reactive({
   caseId: '',
-  operatorName: '',
   participantName: '',
   participantRole: 'MEMBER',
   participantUserId: '',
@@ -100,7 +99,6 @@ const createForm = reactive({
 
 const commentForm = reactive({
   consultationId: '',
-  operatorName: '',
   opinion: '',
   participantId: '',
   remarks: '',
@@ -109,21 +107,18 @@ const commentForm = reactive({
 
 const completeForm = reactive({
   consultationId: '',
-  operatorName: '',
   opinion: '',
   remarks: '',
   terminalCode: '',
 });
 
 const batchCommentForm = reactive({
-  operatorName: '',
   opinion: '',
   remarks: '',
   terminalCode: '',
 });
 
 const batchCompleteForm = reactive({
-  operatorName: '',
   opinion: '',
   remarks: '',
   terminalCode: '',
@@ -188,20 +183,8 @@ const selectedConsultationRows = computed(() =>
 
 const hasSelection = computed(() => selectedRows.value.length > 0);
 
-function getDefaultOperatorName() {
-  return userStore.userInfo?.realName?.trim() || '';
-}
-
 function getCurrentUserId() {
   return userStore.userInfo?.userId?.trim() || '';
-}
-
-function ensureOperator(operatorName: string) {
-  if (!operatorName.trim()) {
-    ElMessage.warning('请填写操作人姓名');
-    return false;
-  }
-  return true;
 }
 
 async function loadWorkbench() {
@@ -261,7 +244,6 @@ function openCreateDialog(
   activeCreateRow.value = row;
   participants.value = [];
   createForm.caseId = row.caseId;
-  createForm.operatorName = getDefaultOperatorName();
   createForm.participantName = '';
   createForm.participantRole = 'MEMBER';
   createForm.participantUserId = '';
@@ -304,7 +286,6 @@ function openCommentDialog(
   activeConsultationRow.value = row;
   const preferredParticipant = resolvePreferredParticipant(row);
   commentForm.consultationId = row.consultationId;
-  commentForm.operatorName = getDefaultOperatorName();
   commentForm.opinion = preferredParticipant?.opinion ?? '';
   commentForm.participantId = preferredParticipant?.participantId ?? '';
   commentForm.remarks = '';
@@ -317,7 +298,6 @@ function openCompleteDialog(
 ) {
   activeConsultationRow.value = row;
   completeForm.consultationId = row.consultationId;
-  completeForm.operatorName = getDefaultOperatorName();
   completeForm.opinion = row.opinion ?? '';
   completeForm.remarks = '';
   completeForm.terminalCode = '';
@@ -329,7 +309,6 @@ function openBatchCommentDialog() {
     ElMessage.warning('请先勾选会诊列表');
     return;
   }
-  batchCommentForm.operatorName = getDefaultOperatorName();
   batchCommentForm.opinion = '';
   batchCommentForm.remarks = '';
   batchCommentForm.terminalCode = '';
@@ -341,7 +320,6 @@ function openBatchCompleteDialog() {
     ElMessage.warning('请先勾选会诊列表');
     return;
   }
-  batchCompleteForm.operatorName = getDefaultOperatorName();
   batchCompleteForm.opinion = '';
   batchCompleteForm.remarks = '';
   batchCompleteForm.terminalCode = '';
@@ -397,15 +375,11 @@ async function submitCreateConsultation() {
     ElMessage.warning('请至少添加一名参与人');
     return;
   }
-  if (!ensureOperator(createForm.operatorName)) {
-    return;
-  }
 
   operating.value = true;
   try {
     lastResult.value = await createConsultation({
       caseId: createForm.caseId.trim(),
-      operatorName: createForm.operatorName.trim(),
       participants: participants.value,
       remarks: createForm.remarks.trim() || undefined,
       terminalCode: createForm.terminalCode.trim() || undefined,
@@ -432,9 +406,6 @@ async function submitComment() {
     ElMessage.warning('请选择参与人并填写意见');
     return;
   }
-  if (!ensureOperator(commentForm.operatorName)) {
-    return;
-  }
 
   operating.value = true;
   try {
@@ -442,7 +413,6 @@ async function submitComment() {
       commentForm.consultationId.trim(),
       commentForm.participantId.trim(),
       {
-        operatorName: commentForm.operatorName.trim(),
         opinion: commentForm.opinion.trim(),
         remarks: commentForm.remarks.trim() || undefined,
         terminalCode: commentForm.terminalCode.trim() || undefined,
@@ -466,16 +436,12 @@ async function submitComplete() {
     ElMessage.warning('请填写主持意见');
     return;
   }
-  if (!ensureOperator(completeForm.operatorName)) {
-    return;
-  }
 
   operating.value = true;
   try {
     lastResult.value = await completeConsultation(
       completeForm.consultationId.trim(),
       {
-        operatorName: completeForm.operatorName.trim(),
         opinion: completeForm.opinion.trim(),
         remarks: completeForm.remarks.trim() || undefined,
         terminalCode: completeForm.terminalCode.trim() || undefined,
@@ -515,9 +481,6 @@ async function submitBatchComment() {
     ElMessage.warning('请填写意见');
     return;
   }
-  if (!ensureOperator(batchCommentForm.operatorName)) {
-    return;
-  }
 
   operating.value = true;
   const skippedReasons: string[] = [];
@@ -548,7 +511,6 @@ async function submitBatchComment() {
         row.consultationId.trim(),
         participant.participantId.trim(),
         {
-          operatorName: batchCommentForm.operatorName.trim(),
           opinion: batchCommentForm.opinion.trim(),
           remarks: batchCommentForm.remarks.trim() || undefined,
           terminalCode: batchCommentForm.terminalCode.trim() || undefined,
@@ -578,9 +540,6 @@ async function submitBatchComplete() {
     ElMessage.warning('请填写主持意见');
     return;
   }
-  if (!ensureOperator(batchCompleteForm.operatorName)) {
-    return;
-  }
 
   operating.value = true;
   const skippedReasons: string[] = [];
@@ -602,7 +561,6 @@ async function submitBatchComplete() {
       }
 
       lastResult.value = await completeConsultation(row.consultationId.trim(), {
-        operatorName: batchCompleteForm.operatorName.trim(),
         opinion: batchCompleteForm.opinion.trim(),
         remarks: batchCompleteForm.remarks.trim() || undefined,
         terminalCode: batchCompleteForm.terminalCode.trim() || undefined,
@@ -856,9 +814,6 @@ async function submitBatchComplete() {
         <ElFormItem>
           <ElButton @click="addParticipant">添加参与人</ElButton>
         </ElFormItem>
-        <ElFormItem label="操作人" required>
-          <ElInput v-model="createForm.operatorName" />
-        </ElFormItem>
         <ElFormItem label="终端编码">
           <ElInput v-model="createForm.terminalCode" />
         </ElFormItem>
@@ -918,9 +873,6 @@ async function submitBatchComplete() {
         </ElFormItem>
         <ElFormItem label="意见" required>
           <ElInput v-model="commentForm.opinion" :rows="4" type="textarea" />
-        </ElFormItem>
-        <ElFormItem label="操作人" required>
-          <ElInput v-model="commentForm.operatorName" />
         </ElFormItem>
         <ElFormItem label="终端编码">
           <ElInput v-model="commentForm.terminalCode" />
@@ -986,9 +938,6 @@ async function submitBatchComplete() {
             type="textarea"
           />
         </ElFormItem>
-        <ElFormItem label="操作人" required>
-          <ElInput v-model="batchCommentForm.operatorName" />
-        </ElFormItem>
         <ElFormItem label="终端编码">
           <ElInput v-model="batchCommentForm.terminalCode" />
         </ElFormItem>
@@ -1019,9 +968,6 @@ async function submitBatchComplete() {
         </ElFormItem>
         <ElFormItem label="主持意见" required>
           <ElInput v-model="completeForm.opinion" :rows="4" type="textarea" />
-        </ElFormItem>
-        <ElFormItem label="操作人" required>
-          <ElInput v-model="completeForm.operatorName" />
         </ElFormItem>
         <ElFormItem label="终端编码">
           <ElInput v-model="completeForm.terminalCode" />
@@ -1057,9 +1003,6 @@ async function submitBatchComplete() {
             placeholder="请输入主持意见"
             type="textarea"
           />
-        </ElFormItem>
-        <ElFormItem label="操作人" required>
-          <ElInput v-model="batchCompleteForm.operatorName" />
         </ElFormItem>
         <ElFormItem label="终端编码">
           <ElInput v-model="batchCompleteForm.terminalCode" />

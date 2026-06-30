@@ -1240,7 +1240,6 @@ describe('doctor-workflow-service requests', () => {
     });
     await createConsultation({
       caseId: 'CASE-1',
-      operatorName: '医生',
       participants: [
         {
           participantName: '会诊医生',
@@ -1250,11 +1249,9 @@ describe('doctor-workflow-service requests', () => {
       ],
     });
     await commentConsultationParticipant('CONS-1', 'PART-1', {
-      operatorName: '会诊医生',
       opinion: '同意',
     });
     await completeConsultation('CONS-1', {
-      operatorName: '主持人',
       opinion: '完成',
     });
 
@@ -1285,7 +1282,6 @@ describe('doctor-workflow-service requests', () => {
       '/v1/consultations',
       {
         caseId: 'CASE-1',
-        operatorName: '医生',
         participants: [
           {
             participantName: '会诊医生',
@@ -1299,7 +1295,6 @@ describe('doctor-workflow-service requests', () => {
       5,
       '/v1/consultations/CONS-1/participants/PART-1/comment',
       {
-        operatorName: '会诊医生',
         opinion: '同意',
       },
     );
@@ -1307,7 +1302,6 @@ describe('doctor-workflow-service requests', () => {
       6,
       '/v1/consultations/CONS-1/complete',
       {
-        operatorName: '主持人',
         opinion: '完成',
       },
     );

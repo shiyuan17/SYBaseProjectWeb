@@ -5,6 +5,11 @@ export interface DiagnosticTaskActionRequest {
   terminalCode?: string;
 }
 
+export interface ConsultationActionRequest {
+  remarks?: string;
+  terminalCode?: string;
+}
+
 export interface PathologyReportActionRequest {
   remarks?: string;
   terminalCode?: string;
@@ -845,7 +850,7 @@ export interface ConsultationParticipantInput {
   participantUserId: string;
 }
 
-export interface CreateConsultationRequest extends DiagnosticTaskActionRequest {
+export interface CreateConsultationRequest extends ConsultationActionRequest {
   caseId: string;
   participants: ConsultationParticipantInput[];
 }
@@ -860,11 +865,13 @@ export interface DiagnosisWorkbenchReportDraftValue {
   richTextContent?: string;
 }
 
-export interface CommentConsultationParticipantRequest extends DiagnosticTaskActionRequest {
+export interface CommentConsultationParticipantRequest
+  extends ConsultationActionRequest {
   opinion: string;
 }
 
-export interface CompleteConsultationRequest extends DiagnosticTaskActionRequest {
+export interface CompleteConsultationRequest
+  extends ConsultationActionRequest {
   opinion: string;
 }
 

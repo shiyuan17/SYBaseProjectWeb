@@ -58,6 +58,13 @@ type PendingMedicalOrderPageResponse = Partial<PendingMedicalOrderPage>;
 type MedicalOrderPackagePageResponse = Partial<
   MedicalOrderPagedResult<MedicalOrderPackageView>
 >;
+
+function stripLegacyOperatorFields<T>(data: T): Omit<T, 'operatorName' | 'operatorUserId'> {
+  const sanitized = { ...(data as Record<string, unknown>) };
+  delete sanitized.operatorName;
+  delete sanitized.operatorUserId;
+  return sanitized as Omit<T, 'operatorName' | 'operatorUserId'>;
+}
 type MedicalOrderBillingResultResponse = Partial<MedicalOrderBillingResult>;
 type DiagnosticWorkbenchResponse = Partial<DiagnosticWorkbenchView>;
 type ReportTrackingResponse = Partial<ReportTrackingView>;
@@ -945,7 +952,7 @@ export async function rejectReportRevisionRequest(
 export async function createConsultation(data: CreateConsultationRequest) {
   return requestClient.post<ConsultationOperationResult>(
     '/v1/consultations',
-    data,
+    stripLegacyOperatorFields(data),
   );
 }
 
@@ -956,7 +963,7 @@ export async function commentConsultationParticipant(
 ) {
   return requestClient.post<ConsultationOperationResult>(
     `/v1/consultations/${consultationId}/participants/${participantId}/comment`,
-    data,
+    stripLegacyOperatorFields(data),
   );
 }
 
@@ -966,6 +973,6 @@ export async function completeConsultation(
 ) {
   return requestClient.post<ConsultationOperationResult>(
     `/v1/consultations/${consultationId}/complete`,
-    data,
+    stripLegacyOperatorFields(data),
   );
 }

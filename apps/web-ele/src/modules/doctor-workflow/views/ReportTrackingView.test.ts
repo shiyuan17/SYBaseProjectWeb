@@ -433,6 +433,37 @@ describe('ReportTrackingView', () => {
     wrapper.unmount();
   });
 
+  it('submits the query without native page refresh when pressing enter', async () => {
+    const wrapper = await mountView();
+    const input = wrapper.root.querySelector('input');
+    const form = wrapper.root.querySelector('form');
+
+    expect(input).toBeTruthy();
+    expect(form).toBeTruthy();
+
+    input!.value = 'BL202605240003';
+    input!.dispatchEvent(new Event('input', { bubbles: true }));
+    await flush();
+
+    const submitEvent = new Event('submit', {
+      bubbles: true,
+      cancelable: true,
+    });
+    const dispatchResult = form!.dispatchEvent(submitEvent);
+    await flush();
+
+    expect(dispatchResult).toBe(false);
+    expect(submitEvent.defaultPrevented).toBe(true);
+    expect(mockRouter.replace).toHaveBeenCalledWith({
+      path: '/doctor-workflow/tracking',
+      query: {
+        caseId: 'BL202605240003',
+      },
+    });
+
+    wrapper.unmount();
+  });
+
   it('allows copying identifiers from the lifecycle summary and specimen detail sections', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(globalThis.navigator, 'clipboard', {

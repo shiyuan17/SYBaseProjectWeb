@@ -7,8 +7,6 @@ import type {
 
 import { computed, reactive, ref } from 'vue';
 
-import { useUserStore } from '@vben/stores';
-
 import {
   ElButton,
   ElEmpty,
@@ -40,7 +38,6 @@ const emit = defineEmits<{
   refresh: [];
 }>();
 
-const userStore = useUserStore();
 const operating = ref(false);
 const participantUserIdInput = ref('');
 const selectedConsultationId = ref('');
@@ -57,13 +54,6 @@ const participantOptions = computed(() => {
   );
   return selected?.participants ?? [];
 });
-
-const currentUserName = computed(
-  () => userStore.userInfo?.realName?.trim() || '当前医生',
-);
-const currentUserId = computed(
-  () => userStore.userInfo?.userId?.trim() || '',
-);
 
 function addParticipant() {
   const participantUserId = participantUserIdInput.value.trim();
@@ -109,8 +99,6 @@ async function submitConsultation() {
   try {
     await createConsultation({
       caseId: props.workbench.caseId,
-      operatorName: currentUserName.value,
-      operatorUserId: currentUserId.value || undefined,
       participants: createParticipants.value,
       remarks: consultationForm.purpose.trim() || undefined,
     });
@@ -154,8 +142,6 @@ async function saveConsultationOpinion() {
       selectedConsultationId.value,
       consultationForm.participantId.trim(),
       {
-        operatorName: currentUserName.value,
-        operatorUserId: currentUserId.value || undefined,
         opinion: consultationForm.opinion.trim(),
       },
     );
@@ -172,8 +158,6 @@ async function completeSelectedConsultation(consultation: ConsultationSummary) {
   operating.value = true;
   try {
     await completeConsultation(consultation.consultationId, {
-      operatorName: currentUserName.value,
-      operatorUserId: currentUserId.value || undefined,
       opinion: consultation.opinion?.trim() || consultationForm.opinion.trim(),
       remarks: consultationForm.purpose.trim() || undefined,
     });

@@ -950,40 +950,49 @@ onMounted(loadCandidates);
             <div class="medical-order-action-panel__title">医嘱区</div>
             <div class="medical-order-action-panel__controls">
               <div class="medical-order-action-panel__pathology">
-                <span class="medical-order-action-panel__pathology-label">
+                <span class="medical-order-action-panel__field-label">
                   病理号：
                 </span>
                 <span class="medical-order-action-panel__pathology-value">
                   {{ pathologyNo || '-' }}
                 </span>
               </div>
-              <div class="medical-order-action-panel__select">
-                <ElSelect
-                  v-model="selectedBlockOptionId"
-                  class="w-full"
-                  :disabled="mergedBlockOptions.length === 0"
-                  placeholder="请选择蜡块"
-                  size="small"
+              <div class="medical-order-action-panel__editor">
+                <div class="medical-order-action-panel__field">
+                  <span class="medical-order-action-panel__field-label">
+                    蜡块：
+                  </span>
+                  <div class="medical-order-action-panel__select">
+                    <ElSelect
+                      v-model="selectedBlockOptionId"
+                      class="w-full"
+                      :disabled="mergedBlockOptions.length === 0"
+                      placeholder="请选择蜡块"
+                      size="small"
+                    >
+                      <ElOption
+                        v-for="block in mergedBlockOptions"
+                        :key="block.optionId"
+                        :label="getBlockLabel(block)"
+                        :value="block.optionId"
+                      />
+                    </ElSelect>
+                  </div>
+                </div>
+                <div
+                  class="medical-order-action-panel__field medical-order-action-panel__field--manual"
+                  data-testid="medical-order-block-input"
                 >
-                  <ElOption
-                    v-for="block in mergedBlockOptions"
-                    :key="block.optionId"
-                    :label="getBlockLabel(block)"
-                    :value="block.optionId"
-                  />
-                </ElSelect>
-              </div>
-              <div
-                class="medical-order-action-panel__manual-input"
-                data-testid="medical-order-block-input"
-              >
-                <ElInput
-                  v-model="manualBlockInput"
-                  clearable
-                  placeholder="输入蜡块号，回车添加"
-                  size="small"
-                  @keyup.enter="submitManualBlock"
-                />
+                  <div class="medical-order-action-panel__manual-input">
+                    <ElInput
+                      v-model="manualBlockInput"
+                      clearable
+                      placeholder="输入蜡块号，回车添加"
+                      size="small"
+                      @keyup.enter="submitManualBlock"
+                    />
+                  </div>
+                </div>
               </div>
               <div class="medical-order-action-panel__buttons">
                 <ElButton
@@ -1314,47 +1323,78 @@ onMounted(loadCandidates);
 }
 
 .medical-order-action-panel__controls {
-  display: grid;
-  grid-template-columns:
-    minmax(0, 1fr) minmax(180px, 320px) minmax(180px, 240px)
-    auto;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
-  align-items: center;
+  align-items: stretch;
 }
 
 .medical-order-action-panel__pathology {
   display: flex;
-  gap: 6px;
+  flex-direction: row;
+  gap: 10px;
   align-items: center;
   min-width: 0;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--el-color-primary) 6%, white);
+  border: 1px solid color-mix(in srgb, var(--el-color-primary) 14%, transparent);
+  border-radius: 8px;
 }
 
-.medical-order-action-panel__pathology-label {
+.medical-order-action-panel__field-label {
   font-size: 13px;
   color: var(--el-text-color-regular);
+  line-height: 1;
 }
 
 .medical-order-action-panel__pathology-value {
   min-width: 0;
-  font-size: 16px;
+  flex: 1 1 auto;
+  font-size: 18px;
   font-weight: 700;
   color: var(--el-text-color-primary);
-  word-break: break-all;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.medical-order-action-panel__editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  min-width: 0;
+  align-items: center;
+}
+
+.medical-order-action-panel__field {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.medical-order-action-panel__field--manual {
+  align-items: center;
 }
 
 .medical-order-action-panel__select {
-  width: 100%;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .medical-order-action-panel__manual-input {
-  width: 100%;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .medical-order-action-panel__buttons {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: row;
+  flex-wrap: nowrap;
   gap: 12px;
-  justify-content: flex-end;
+  justify-content: flex-start;
+  align-items: center;
 }
 
 .charge-manager-dialog {
@@ -1362,18 +1402,19 @@ onMounted(loadCandidates);
 }
 
 @media (max-width: 1280px) {
-  .medical-order-action-panel__controls {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .medical-order-action-panel__buttons {
+    overflow-x: auto;
   }
 
-  .medical-order-action-panel__buttons {
-    justify-content: flex-start;
+  .medical-order-action-panel__editor {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
 @media (max-width: 900px) {
-  .medical-order-action-panel__controls {
-    grid-template-columns: minmax(0, 1fr);
+  .medical-order-action-panel__field {
+    flex-direction: row;
+    align-items: center;
   }
 }
 </style>

@@ -1970,6 +1970,56 @@ describe('DiagnosisWorkbenchView', () => {
   );
 
   it(
+    'submits consultation requests without legacy operator fields',
+    async () => {
+      const wrapper = await mountView();
+
+      await clickMaterialTab('科内会诊');
+
+      const purposeInput = findByTestId(
+        'workbench-consultation-purpose',
+      ) as HTMLInputElement;
+      purposeInput.value = '补充会诊目的';
+      purposeInput.dispatchEvent(new Event('input', { bubbles: true }));
+      await flushAsyncWork();
+
+      const participantInput = findByTestId(
+        'workbench-consultation-participant-input',
+      ) as HTMLInputElement;
+      participantInput.value = 'DOC-CONSULT-1';
+      participantInput.dispatchEvent(new Event('input', { bubbles: true }));
+      await flushAsyncWork();
+
+      findByTestId('workbench-consultation-add-participant').click();
+      await flushAsyncWork();
+
+      findByTestId('workbench-consultation-submit').click();
+      await flushAsyncWork();
+
+      expect(createConsultationMock).toHaveBeenCalledWith({
+        caseId: 'CASE-001',
+        participants: [
+          {
+            participantName: 'DOC-CONSULT-1',
+            participantRole: 'MEMBER',
+            participantUserId: 'DOC-CONSULT-1',
+          },
+        ],
+        remarks: '补充会诊目的',
+      });
+      expect(createConsultationMock.mock.calls[0]?.[0]).not.toHaveProperty(
+        'operatorName',
+      );
+      expect(createConsultationMock.mock.calls[0]?.[0]).not.toHaveProperty(
+        'operatorUserId',
+      );
+
+      wrapper.unmount();
+    },
+    slowWorkbenchTestTimeout,
+  );
+
+  it(
     'persists manually created medical-order-only blocks across workbench refreshes',
     async () => {
       mockAccessStore.accessCodes = [

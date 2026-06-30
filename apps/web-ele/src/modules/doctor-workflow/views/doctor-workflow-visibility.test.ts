@@ -1691,10 +1691,15 @@ describe('doctor workflow view visibility', () => {
       'CONSULT-001',
       'CP-001',
       expect.objectContaining({
-        operatorName: '当前分派员',
         opinion: '统一批量意见',
       }),
     );
+    expect(
+      commentConsultationParticipantMock.mock.calls[0]?.[2],
+    ).not.toHaveProperty('operatorName');
+    expect(
+      commentConsultationParticipantMock.mock.calls[0]?.[2],
+    ).not.toHaveProperty('operatorUserId');
     expect(wrapper.documentText()).toContain('批量参与人意见提交完成 1 条');
     expect(wrapper.documentText()).toContain('跳过 3 条');
     expect(wrapper.documentText()).toContain('当前登录人不在会诊参与人列表中');
@@ -1742,7 +1747,6 @@ describe('doctor workflow view visibility', () => {
       1,
       'CONSULT-001',
       expect.objectContaining({
-        operatorName: '当前分派员',
         opinion: '统一主持意见',
       }),
     );
@@ -1750,10 +1754,21 @@ describe('doctor workflow view visibility', () => {
       2,
       'CONSULT-003',
       expect.objectContaining({
-        operatorName: '当前分派员',
         opinion: '统一主持意见',
       }),
     );
+    expect(
+      completeConsultationMock.mock.calls[0]?.[1],
+    ).not.toHaveProperty('operatorName');
+    expect(
+      completeConsultationMock.mock.calls[0]?.[1],
+    ).not.toHaveProperty('operatorUserId');
+    expect(
+      completeConsultationMock.mock.calls[1]?.[1],
+    ).not.toHaveProperty('operatorName');
+    expect(
+      completeConsultationMock.mock.calls[1]?.[1],
+    ).not.toHaveProperty('operatorUserId');
     expect(wrapper.documentText()).toContain('批量完成会诊完成 2 条');
     expect(wrapper.documentText()).toContain('跳过 2 条');
     expect(wrapper.documentText()).toContain('已完成会诊不可重复完成');
