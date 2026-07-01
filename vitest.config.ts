@@ -17,6 +17,7 @@ export default defineConfig({
     },
     exclude: [
       ...configDefaults.exclude,
+      '**/.codex/**',
       '**/e2e/**',
       '**/dist/**',
       '**/.{idea,git,cache,output,temp}/**',
