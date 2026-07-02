@@ -1,0 +1,607 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SYBaseProject 全流程整改实施计划 - 2026-07-01</title>
+    <style>
+      :root {
+        --bg: #f4f7fb;
+        --panel: #fff;
+        --panel-soft: #f8fbfd;
+        --line: #dbe4ee;
+        --text: #1f2937;
+        --muted: #5b6472;
+        --accent: #0f766e;
+        --accent-soft: #e6fffb;
+        --phase-1: #7c2d12;
+        --phase-1-bg: #fff7ed;
+        --phase-2: #92400e;
+        --phase-2-bg: #fffbeb;
+        --phase-3: #1d4ed8;
+        --phase-3-bg: #eff6ff;
+        --ok: #166534;
+        --code: #0f172a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        padding: 24px;
+        margin: 0;
+        font:
+          14px/1.68 'Microsoft YaHei',
+          'PingFang SC',
+          'Segoe UI',
+          sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(
+            circle at top right,
+            rgb(15 118 110 / 8%),
+            transparent 28%
+          ),
+          linear-gradient(180deg, #eef4f9 0%, #f7fafc 100%);
+      }
+
+      .page {
+        max-width: 1320px;
+        margin: 0 auto;
+        overflow: hidden;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        box-shadow: 0 20px 60px rgb(15 23 42 / 8%);
+      }
+
+      header {
+        padding: 30px 34px 24px;
+        color: #f8fafc;
+        background:
+          radial-gradient(
+            circle at top right,
+            rgb(45 212 191 / 18%),
+            transparent 30%
+          ),
+          linear-gradient(135deg, #102033 0%, #173754 52%, #155e75 100%);
+      }
+
+      header h1 {
+        margin: 0 0 10px;
+        font-size: 30px;
+        line-height: 1.2;
+      }
+
+      header p {
+        margin: 6px 0;
+        color: rgb(248 250 252 / 88%);
+      }
+
+      .meta {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 10px 18px;
+        margin-top: 18px;
+        font-size: 13px;
+      }
+
+      .meta strong {
+        color: #e2e8f0;
+      }
+
+      main {
+        padding: 30px 34px 42px;
+      }
+
+      h2 {
+        padding-bottom: 8px;
+        margin: 28px 0 14px;
+        font-size: 22px;
+        color: #0f172a;
+        border-bottom: 2px solid #e9eef5;
+      }
+
+      h3 {
+        margin: 20px 0 10px;
+        font-size: 18px;
+        color: #0f172a;
+      }
+
+      p,
+      li {
+        color: var(--text);
+      }
+
+      ul {
+        padding: 0;
+        margin: 8px 0 12px 20px;
+      }
+
+      .summary {
+        padding: 18px 20px;
+        background: linear-gradient(180deg, #f6fffd 0%, #fbfefe 100%);
+        border: 1px solid #d8e7e5;
+        border-radius: 14px;
+      }
+
+      .summary strong {
+        color: #0f172a;
+      }
+
+      .strategy-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
+        margin-top: 14px;
+      }
+
+      .strategy-card,
+      .appendix-card {
+        padding: 16px;
+        background: var(--panel-soft);
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+      }
+
+      .strategy-card h4,
+      .appendix-card h4 {
+        margin: 0 0 10px;
+        font-size: 15px;
+        color: #0f172a;
+      }
+
+      .phase {
+        padding: 18px 20px 20px;
+        margin-top: 18px;
+        background: #fff;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+      }
+
+      .phase--1 {
+        background: linear-gradient(180deg, #fffaf4 0%, #fff 100%);
+        border-color: #fed7aa;
+      }
+
+      .phase--2 {
+        background: linear-gradient(180deg, #fffdf3 0%, #fff 100%);
+        border-color: #fde68a;
+      }
+
+      .phase--3 {
+        background: linear-gradient(180deg, #f5f9ff 0%, #fff 100%);
+        border-color: #bfdbfe;
+      }
+
+      .phase-head {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+
+      .phase-tag {
+        display: inline-block;
+        padding: 5px 10px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        border-radius: 999px;
+      }
+
+      .phase--1 .phase-tag {
+        color: var(--phase-1);
+        background: var(--phase-1-bg);
+        border: 1px solid #fdba74;
+      }
+
+      .phase--2 .phase-tag {
+        color: var(--phase-2);
+        background: var(--phase-2-bg);
+        border: 1px solid #fcd34d;
+      }
+
+      .phase--3 .phase-tag {
+        color: var(--phase-3);
+        background: var(--phase-3-bg);
+        border: 1px solid #93c5fd;
+      }
+
+      .phase-title {
+        margin: 0;
+        font-size: 22px;
+      }
+
+      .phase-goal {
+        margin: 6px 0 14px;
+        color: var(--muted);
+      }
+
+      .phase-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 14px;
+      }
+
+      .panel {
+        padding: 14px 15px;
+        background: #fbfcfe;
+        border: 1px solid #e5ebf2;
+        border-radius: 12px;
+      }
+
+      .panel h4 {
+        margin: 0 0 8px;
+        font-size: 15px;
+        color: #0f172a;
+      }
+
+      code {
+        padding: 1px 5px;
+        font-family: Consolas, 'Courier New', monospace;
+        font-size: 0.95em;
+        color: var(--code);
+        background: #eef2f7;
+        border-radius: 6px;
+      }
+
+      table {
+        width: 100%;
+        margin-top: 12px;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 10px;
+        vertical-align: top;
+        word-break: normal;
+        overflow-wrap: anywhere;
+        border: 1px solid #dfe7ef;
+      }
+
+      th {
+        font-weight: 700;
+        color: #0f172a;
+        background: #f1f5f9;
+      }
+
+      .appendix-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 16px;
+        margin-top: 12px;
+      }
+
+      .note {
+        padding: 14px 16px;
+        margin-top: 16px;
+        color: #334155;
+        background: #f8fafc;
+        border-left: 4px solid var(--accent);
+        border-radius: 10px;
+      }
+
+      .footnote {
+        margin-top: 14px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      a {
+        color: #0f766e;
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header>
+        <h1>SYBaseProject 全流程整改实施计划</h1>
+        <p>
+          基于全流程审计报告形成的独立整改计划页面，仅承载分阶段实施计划，不复写审计问题清单。
+        </p>
+        <div class="meta">
+          <div><strong>计划日期：</strong>2026-07-01</div>
+          <div>
+            <strong>来源报告：</strong
+            ><code>full-process-audit-2026-07-01.html</code>
+          </div>
+          <div>
+            <strong>计划文件：</strong
+            ><code>full-process-remediation-plan-2026-07-01.html</code>
+          </div>
+          <div><strong>目标定位：</strong>按阶段推进全流程整改、验收与排期</div>
+        </div>
+      </header>
+
+      <main>
+        <section>
+          <h2>封面摘要</h2>
+          <div class="summary">
+            <p>
+              <strong>本计划的定位：</strong
+              >将当前“分阶段调整实施计划”单独落为独立 HTML
+              文件，不并入现有审计报告，内容只保留计划本身，不附带审计摘要。
+            </p>
+            <p>
+              <strong>执行原则：</strong
+              >先补主流程真实闭环，再补权限、审计、审批与一致性，最后收敛状态、接口和展示规范。页面内容完全以已确认计划为准，不新增新的业务结论，也不混入审计问题表。
+            </p>
+          </div>
+        </section>
+
+        <section>
+          <h2>总体策略</h2>
+          <div class="strategy-grid">
+            <div class="strategy-card">
+              <h4>策略一：先补真闭环</h4>
+              <p>
+                优先消除“前端已开放但流程不成立”与“高风险写操作无正确边界”的问题，让核心链路先真实可用。
+              </p>
+            </div>
+            <div class="strategy-card">
+              <h4>策略二：再补一致性</h4>
+              <p>
+                把统一追踪、统一审计、借阅审批与并发控制纳入第二阶段，避免系统处于“能跑但不可追、不可审”的状态。
+              </p>
+            </div>
+            <div class="strategy-card">
+              <h4>策略三：最后做治理优化</h4>
+              <p>
+                在主流程稳定后，再收敛状态模型、重复接口、展示规范和幂等策略，降低后续维护成本。
+              </p>
+            </div>
+          </div>
+          <div class="note">
+            本计划默认采用“直接补全能力”的实施路线，不走仅隐藏入口的短期止血方案；M5
+            借阅按正式审批流建设，不再收敛为纯直借模型。
+          </div>
+        </section>
+
+        <section class="phase phase--1">
+          <div class="phase-head">
+            <span class="phase-tag">第一阶段</span>
+            <h2 class="phase-title">主流程闭环补齐</h2>
+          </div>
+          <p class="phase-goal">
+            阶段目标：消除“前端已开放但流程不成立”与“高风险写操作无正确边界”的问题，让核心链路先真实可用。
+          </p>
+          <div class="phase-grid">
+            <div class="panel">
+              <h4>主要改造包</h4>
+              <ul>
+                <li>冰冻流程补全为真实后端闭环，不再允许前端依赖 mock。</li>
+                <li>技术医嘱工作站补全真实动作链。</li>
+                <li>技术任务池权限拆分并强制落后端。</li>
+              </ul>
+            </div>
+            <div class="panel">
+              <h4>关键依赖</h4>
+              <ul>
+                <li>
+                  复用现有 <code>frozen_flag</code>、病理号规则
+                  <code>FROZEN</code>、诊断任务
+                  <code>task_type=FROZEN</code>、报告表
+                  <code>frozen_diagnosis_result</code>。
+                </li>
+                <li>
+                  工作站动作接入需同步确认后端接口、状态变化、落库与日志。
+                </li>
+                <li>权限拆分需同步角色授权与服务层二次校验。</li>
+              </ul>
+            </div>
+            <div class="panel">
+              <h4>验收标准</h4>
+              <ul>
+                <li>
+                  前端冰冻工作台所有主动作均调用真实接口，移除
+                  <code>USE_FROZEN_WORKFLOW_MOCK = true</code> 依赖。
+                </li>
+                <li>四类技术医嘱工作站不再出现“功能待接入”提示。</li>
+                <li>无对应写权限的账号无法通过后端直接调用技术任务写接口。</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section class="phase phase--2">
+          <div class="phase-head">
+            <span class="phase-tag">第二阶段</span>
+            <h2 class="phase-title">
+              统一追踪、统一审计、借阅审批与并发一致性
+            </h2>
+          </div>
+          <p class="phase-goal">
+            阶段目标：把“能跑”提升为“可追、可审、可控”，解决跨模块审计断链和审批语义断层。
+          </p>
+          <div class="phase-grid">
+            <div class="panel">
+              <h4>主要改造包</h4>
+              <ul>
+                <li>补申请单主对象统一流程事件。</li>
+                <li>补正式报告分发事件链。</li>
+                <li>整理未纳入统一权限/审计体系的敏感接口。</li>
+                <li>M5 材料借阅升级为正式审批流。</li>
+                <li>补借阅和库存并发安全。</li>
+              </ul>
+            </div>
+            <div class="panel">
+              <h4>关键依赖</h4>
+              <ul>
+                <li>申请单 create / update / void 接入统一 tracking。</li>
+                <li>
+                  报告 print / issue / scheduled issue / recall 写入标准
+                  workflow event。
+                </li>
+                <li>
+                  <code>OperatorVerificationController</code> 与
+                  <code>MyNotificationController</code>
+                  要明确认证/授权/审计规则。
+                </li>
+                <li>M5 借阅需新增审批状态、审批动作、审批角色和退回路径。</li>
+                <li>归档借阅、白片借记引入版本控制、条件更新或锁策略。</li>
+              </ul>
+            </div>
+            <div class="panel">
+              <h4>验收标准</h4>
+              <ul>
+                <li>申请单与正式报告分发动作可在统一 tracking 中看到。</li>
+                <li>
+                  借阅从“申请”到“审批”到“借出/归还”具备清晰状态和权限边界。
+                </li>
+                <li>并发借出/归还不会出现库存负数、重复借出、位置状态覆盖。</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section class="phase phase--3">
+          <div class="phase-head">
+            <span class="phase-tag">第三阶段</span>
+            <h2 class="phase-title">
+              状态模型、接口收敛、展示一致性与幂等治理
+            </h2>
+          </div>
+          <p class="phase-goal">
+            阶段目标：把当前“能用但容易误解、难维护”的部分收敛成稳定模型。
+          </p>
+          <div class="phase-grid">
+            <div class="panel">
+              <h4>主要改造包</h4>
+              <ul>
+                <li>重构 M2 标本与异常状态表达。</li>
+                <li>收敛重复或未明显使用的接口。</li>
+                <li>统一“主状态”和“分发状态”的前端展示规范。</li>
+                <li>批量动作与日志正文标准化。</li>
+              </ul>
+            </div>
+            <div class="panel">
+              <h4>关键依赖</h4>
+              <ul>
+                <li>
+                  补足待接收、取消、撤回、返工等关键中间态，或引入状态历史表。
+                </li>
+                <li>
+                  评估技术登记 <code>detail</code> 与
+                  <code>workspace</code> 双轨接口，保留一条主用契约。
+                </li>
+                <li>报告内容状态与报告交付状态必须分开显示。</li>
+                <li>统一批量接口回执结构、日志正文与幂等策略。</li>
+              </ul>
+            </div>
+            <div class="panel">
+              <h4>验收标准</h4>
+              <ul>
+                <li>
+                  标本、报告、借阅的状态说明在前后端一致，且能解释撤回、取消、返工。
+                </li>
+                <li>重复接口减少，调用链更清晰。</li>
+                <li>批量动作与审计日志可直接用于排障和复盘。</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h2>附录说明</h2>
+
+          <h3>关键接口 / 模型调整</h3>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 24%">调整对象</th>
+                <th>调整内容</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>冰冻流程接口族</td>
+                <td>
+                  新增真实后端接口族，输出契约以现有前端
+                  <code>frozen-workflow</code> 类型为准。
+                </td>
+              </tr>
+              <tr>
+                <td>技术任务权限码</td>
+                <td>
+                  新增并替换现有单一
+                  <code>TECHNICAL_TASK_QUERY</code> 写操作依赖。
+                </td>
+              </tr>
+              <tr>
+                <td>统一流程追踪</td>
+                <td>
+                  申请单 workflow event 与报告分发 workflow event 接入统一
+                  tracking。
+                </td>
+              </tr>
+              <tr>
+                <td>M5 材料借阅</td>
+                <td>
+                  新增审批相关状态、接口与权限，不再让审批语义停留在库表字段层。
+                </td>
+              </tr>
+              <tr>
+                <td>并发控制</td>
+                <td>借阅与白片库存相关表增加并发控制字段或条件更新约束。</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="appendix-grid">
+            <div class="appendix-card">
+              <h4>测试与验收场景</h4>
+              <ul>
+                <li>
+                  冰冻流程：会话创建后可按接收、取材、切片、电话回报、报告确认推进，非法跳转会被后端拒绝。
+                </li>
+                <li>
+                  技术工作站：四类工作站关键动作可执行、可回显、可刷新，无权限用户调用写接口返回拒绝。
+                </li>
+                <li>
+                  统一追踪与审计：申请单 create / update / void 与报告 print /
+                  issue / recall 可在 tracking 与 operation log 中回放。
+                </li>
+                <li>
+                  M5
+                  借阅审批：申请、审批、借出、归还、异常登记全链路跑通，并发借阅只能成功一次。
+                </li>
+              </ul>
+            </div>
+            <div class="appendix-card">
+              <h4>默认假设与决策</h4>
+              <ul>
+                <li>
+                  默认按“直接补全能力”推进，不采用先隐藏入口的短期止血方案。
+                </li>
+                <li>M5 借阅按“正式审批流”建设，不再收敛为纯直借模型。</li>
+                <li>
+                  冰冻流程优先复用现有病例、标本、诊断任务、报告表与统计口径，不单独再造一套平行领域。
+                </li>
+                <li>
+                  统一 tracking 继续以现有
+                  <code>workflow_events</code>
+                  为主，不另起第二套追踪体系，除非实现时确认无法兼容。
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <p class="footnote">
+            说明：本页面依据
+            <code>full-process-audit-2026-07-01.html</code>
+            对应审计结论生成，仅保留整改计划内容，避免与审计报告正文双向漂移。
+          </p>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>

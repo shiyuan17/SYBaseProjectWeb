@@ -1,0 +1,1343 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Coding 规范体系与工作流检查报告</title>
+    <style>
+      :root {
+        --bg: #f6f7f9;
+        --surface: #fff;
+        --surface-soft: #f0f5f8;
+        --ink: #17202a;
+        --muted: #5e6a75;
+        --line: #d8e0e7;
+        --accent: #0f6b78;
+        --accent-strong: #084a54;
+        --ok: #287a46;
+        --warn: #9b5c00;
+        --danger: #af2333;
+        --p2: #5967b0;
+        --shadow: 0 8px 22px rgb(23 32 42 / 8%);
+
+        color-scheme: light;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family:
+          Inter, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Arial,
+          sans-serif;
+        line-height: 1.68;
+        color: var(--ink);
+        background: var(--bg);
+      }
+
+      header {
+        padding: 48px 24px 36px;
+        color: #fff;
+        background: #12333a;
+      }
+
+      main,
+      .header-inner {
+        width: min(1180px, calc(100vw - 40px));
+        margin: 0 auto;
+      }
+
+      .eyebrow {
+        margin: 0 0 12px;
+        font-size: 14px;
+        color: #b9d6dc;
+      }
+
+      h1 {
+        max-width: 960px;
+        margin: 0;
+        font-size: clamp(30px, 4vw, 50px);
+        line-height: 1.16;
+        text-wrap: balance;
+      }
+
+      .subtitle {
+        max-width: 940px;
+        margin: 18px 0 0;
+        font-size: 17px;
+        color: #d7e8ec;
+      }
+
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 24px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 30px;
+        padding: 4px 12px;
+        font-size: 13px;
+        color: #ecf8fa;
+        border: 1px solid rgb(255 255 255 / 26%);
+        border-radius: 999px;
+      }
+
+      main {
+        padding: 28px 0 56px;
+      }
+
+      nav,
+      section,
+      .summary-grid > article {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        box-shadow: var(--shadow);
+      }
+
+      nav {
+        padding: 18px 20px;
+        margin-bottom: 20px;
+      }
+
+      nav strong {
+        display: block;
+        margin-bottom: 8px;
+      }
+
+      nav a {
+        display: inline-block;
+        margin: 6px 14px 6px 0;
+        font-weight: 600;
+        color: var(--accent-strong);
+        text-decoration: none;
+      }
+
+      section {
+        padding: 26px;
+        margin: 20px 0;
+      }
+
+      h2 {
+        margin: 0 0 18px;
+        font-size: 26px;
+        line-height: 1.24;
+        color: var(--accent-strong);
+      }
+
+      h3 {
+        margin: 24px 0 12px;
+        font-size: 20px;
+        color: #263640;
+      }
+
+      h4 {
+        margin: 18px 0 8px;
+        font-size: 17px;
+        color: #2b3a42;
+      }
+
+      p {
+        margin: 10px 0;
+      }
+
+      ul {
+        padding-left: 22px;
+      }
+
+      li {
+        margin: 6px 0;
+      }
+
+      code {
+        padding: 2px 5px;
+        font-family: 'Cascadia Code', Consolas, monospace;
+        font-size: 0.92em;
+        color: #18323a;
+        background: #edf2f5;
+        border-radius: 4px;
+      }
+
+      table {
+        width: 100%;
+        margin: 14px 0 24px;
+        overflow-wrap: anywhere;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 10px 12px;
+        vertical-align: top;
+        text-align: left;
+        border: 1px solid var(--line);
+      }
+
+      th {
+        font-weight: 700;
+        color: #12333a;
+        background: #e7f0f3;
+      }
+
+      tbody tr:nth-child(even) {
+        background: #fbfcfd;
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 14px;
+        margin-bottom: 20px;
+      }
+
+      .summary-grid > article {
+        padding: 18px;
+      }
+
+      .metric-label {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .metric-value {
+        display: block;
+        margin-top: 6px;
+        font-size: 24px;
+        font-weight: 800;
+        color: var(--accent-strong);
+      }
+
+      .callout {
+        padding: 16px 18px;
+        margin: 16px 0;
+        background: var(--surface-soft);
+        border: 1px solid #bed9df;
+        border-radius: 8px;
+      }
+
+      .status {
+        display: inline-block;
+        padding: 3px 9px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #fff;
+        white-space: nowrap;
+        border-radius: 999px;
+      }
+
+      .p0 {
+        background: var(--danger);
+      }
+
+      .p1 {
+        background: var(--warn);
+      }
+
+      .p2 {
+        background: var(--p2);
+      }
+
+      .ok {
+        font-weight: 700;
+        color: var(--ok);
+      }
+
+      .danger {
+        font-weight: 700;
+        color: var(--danger);
+      }
+
+      .two-col {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 16px;
+      }
+
+      .compact td,
+      .compact th {
+        padding: 8px 10px;
+      }
+
+      .footer {
+        padding: 24px 0 4px;
+        font-size: 13px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      @media (max-width: 760px) {
+        section {
+          padding: 20px 16px;
+        }
+
+        table {
+          display: block;
+          overflow-x: auto;
+          white-space: normal;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="header-inner">
+        <p class="eyebrow">SYBaseProjectWeb · AI Coding Governance Audit</p>
+        <h1>AI Coding 规范体系与工作流检查报告</h1>
+        <p class="subtitle">
+          基于第一性原理审查当前项目的规范体系、需求流转、AI
+          协作、状态管理、接口约束、质量门禁和交付闭环。结论聚焦可执行性和长期稳定开发，而不是只判断“文档是否存在”。
+        </p>
+        <div class="meta">
+          <span class="pill">生成日期: 2026-07-01</span>
+          <span class="pill">仓库: D:\Github\JW\SYBaseProjectWeb</span>
+          <span class="pill">范围: 规范 / 工作流 / 门禁 / 文档体系</span>
+          <span class="pill">方式: CodeGraph + 文档通读 + 脚本核验</span>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <nav>
+        <strong>目录</strong>
+        <a href="#principles">一、第一性原理分析</a>
+        <a href="#issues">二、问题清单</a>
+        <a href="#structure">三、推荐规范体系结构</a>
+        <a href="#workflow">四、AI Coding 工作流</a>
+        <a href="#plan">五、实施计划</a>
+        <a href="#actions">六、落地建议</a>
+        <a href="#final">七、最终推荐版本</a>
+      </nav>
+
+      <div class="summary-grid">
+        <article>
+          <span class="metric-label">总体成熟度</span>
+          <span class="metric-value">中高</span>
+          <p>
+            入口、风险分级、Memory、Git、CI
+            与模板都有框架，已经超过普通项目的文档治理水平。
+          </p>
+        </article>
+        <article>
+          <span class="metric-label">最大短板</span>
+          <span class="metric-value">门禁一致性</span>
+          <p>
+            PR 模板与 PR Packet 校验器存在结构不一致，高风险 PR
+            的自动门禁可能失效或误阻塞。
+          </p>
+        </article>
+        <article>
+          <span class="metric-label">最值得保留</span>
+          <span class="metric-value">一页入口</span>
+          <p>
+            <code>AGENTS.md</code>
+            将读什么、风险、可动边界、验证、交付统一成入口，非常适合 AI 协作。
+          </p>
+        </article>
+        <article>
+          <span class="metric-label">优先改进方向</span>
+          <span class="metric-value">补专门规则</span>
+          <p>
+            补齐 API、DB、TEST、REVIEW 四类细则，并把关键规则接入脚本和 PR
+            审查。
+          </p>
+        </article>
+      </div>
+
+      <section id="scope">
+        <h2>审计范围与证据</h2>
+        <table class="compact">
+          <thead>
+            <tr>
+              <th>类别</th>
+              <th>已查看证据</th>
+              <th>关键判断</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>入口与规则</td>
+              <td>
+                <code>AGENTS.md</code>、<code>docs/rules/*.md</code>、<code
+                  >docs/templates/*.md</code
+                >
+              </td>
+              <td>
+                有单一来源矩阵、三档 Packet、红区确认、AI Memory 和 Git/worktree
+                规则。
+              </td>
+            </tr>
+            <tr>
+              <td>状态与记忆</td>
+              <td>
+                <code>docs/memory/*.md</code>、<code>backlog.json</code>、<code
+                  >docs/tasks/*.md</code
+                >
+              </td>
+              <td>
+                长期上下文较强，任务清单存在，但执行状态和验证状态不够可追踪。
+              </td>
+            </tr>
+            <tr>
+              <td>自动化门禁</td>
+              <td>
+                <code>lefthook.yml</code
+                >、<code>.github/workflows/*.yml</code>、<code
+                  >scripts/validate-*.mjs</code
+                >
+              </td>
+              <td>
+                门禁覆盖类型、构建、单测、治理、PR Packet，但 PR
+                模板和校验器结构有分歧。
+              </td>
+            </tr>
+            <tr>
+              <td>测试资产</td>
+              <td>
+                <code>vitest.config.ts</code
+                >、<code>playwright.config.ts</code>、<code
+                  >tests/e2e/README.md</code
+                >
+              </td>
+              <td>
+                有单测与 E2E 基础设施，E2E 覆盖 M2
+                关键链路，但测试规范仍散落在编码和前端规则中。
+              </td>
+            </tr>
+            <tr>
+              <td>执行命令</td>
+              <td>
+                <code>node scripts/validate-governance.mjs</code>、<code
+                  >node scripts/validate-pr-packet.mjs --body-file
+                  .github/PULL_REQUEST_TEMPLATE.md</code
+                >
+              </td>
+              <td>
+                治理校验直接运行通过；PR 模板被当前 PR 校验器判定缺少 Full
+                Packet 结构。
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="callout">
+          <strong>重要上下文:</strong>
+          当前工作区不是干净状态，存在
+          <code>backlog.json</code>
+          修改以及多份未跟踪的任务和审查文档。本报告只新增自身文件，不评价这些未读改动的业务正确性。
+        </div>
+      </section>
+
+      <section id="principles">
+        <h2>一、第一性原理分析</h2>
+        <p>
+          规范存在的根本目的不是“让流程显得专业”，而是降低协作系统的熵。中大型项目里，需求、代码、接口、数据库、测试、发布、人员和
+          AI Agent
+          同时变化，任何一个环节没有清晰边界，就会把局部不确定性扩散为全局风险。
+        </p>
+        <p>
+          对 AI Coding
+          来说，规范还承担第二个职责：把“隐性团队经验”转成可机器执行、可审查、可验证的约束。AI
+          最容易犯的不是语法错误，而是基于片段上下文编造接口、误解业务状态、扩大修改范围、跳过后端证据、把验证写成愿望。因此，一个合格的规范体系必须回答五件事：现在该读什么，哪些地方不能碰，碰了要谁确认，如何证明成功，如何把结果交给下一位人或
+          Agent。
+        </p>
+        <p>
+          当前项目已经建立了较强的治理骨架：<code>AGENTS.md</code>
+          明确了入口、三档风险、红区确认、后端联动和 Memory 规则；<code
+            >DYNAMIC_WORKFLOW_RULES.md</code
+          >
+          用 Workflow 和修饰器把任务风险转成证据要求；<code>GIT_RULES.md</code>
+          定义了 worktree、PR、AI 主动提交和 hook；<code
+            >TASK_LIFECYCLE_RULES.md</code
+          >
+          定义了 Clarify 到 Retrospective 的生命周期产物。这些设计方向是正确的。
+        </p>
+        <p>
+          底层风险在于：框架完整不等于闭环可靠。当前规则仍有三类断点。第一类是“规则和自动化不一致”，典型表现是
+          PR
+          模板与校验器字段结构不匹配。第二类是“关键专业规则过度合并”，API、DB、测试、Review
+          都有提到，但缺少足够细的契约和检查清单。第三类是“状态可追踪但不够可运营”，backlog
+          和任务文件存在，但状态转移、阻塞原因、验证证据和交付日志没有被统一校验。
+        </p>
+        <div class="two-col">
+          <div class="callout">
+            <h3>当前规范真正解决了什么</h3>
+            <ul>
+              <li>阻止 AI 在没有入口阅读和风险判定时直接编码。</li>
+              <li>把红区、权限、接口、患者报告、构建发布等场景升级为 Full。</li>
+              <li>要求跨仓接口和业务规则对照后端证据。</li>
+              <li>用 Memory 文件承接长期业务契约，避免会话上下文丢失。</li>
+              <li>用 hook、CI、PR Packet 提供基础自动化约束。</li>
+            </ul>
+          </div>
+          <div class="callout">
+            <h3>当前流程仍没有完全解决什么</h3>
+            <ul>
+              <li>API 变更如何形成可审查的契约、兼容策略和错误码说明。</li>
+              <li>数据库迁移、回滚、种子、数据修复的前后端证据格式。</li>
+              <li>单测、集成、E2E、冒烟、回归之间的强制触发矩阵。</li>
+              <li>Review 如何按严重度、证据质量、AI 产出风险进行操作。</li>
+              <li>任务从 todo 到 done 的可审计状态流和验收证据沉淀。</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="issues">
+        <h2>二、当前规范与工作流问题清单</h2>
+
+        <h3>P0：必须立即修复的问题</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>问题描述</th>
+              <th>可能后果</th>
+              <th>触发场景</th>
+              <th>优先级</th>
+              <th>建议处理方式</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                PR 模板与 PR Packet 校验器结构不一致。模板使用
+                <code>## Memory</code>、<code>## Evidence</code>、<code
+                  >### Full Evidence</code
+                >，但 <code>scripts/validate-pr-packet.mjs</code> 对 Full Packet
+                仍要求顶层 <code>## Dynamic Tests</code> 与
+                <code>## Memory Update Packet</code>。
+              </td>
+              <td>
+                高风险 PR
+                可能被错误阻塞，团队可能绕过校验；也可能为了通过校验复制旧结构，导致规范正文、模板、CI
+                三套口径分裂。
+              </td>
+              <td>
+                Security、DB、Backend Cross-check、Browser
+                Verification、红区确认、生产问题等 Full Packet PR。
+              </td>
+              <td><span class="status p0">P0</span></td>
+              <td>
+                二选一立即统一：推荐修改校验器以支持当前模板的
+                <code>Memory</code> 和
+                <code>Evidence</code> 结构，并补测试；或把 PR
+                模板回滚到校验器要求的顶层结构。修复后用一份 Security Full PR
+                fixture 跑通。
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>P1：短期需要优化的问题</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>问题描述</th>
+              <th>可能后果</th>
+              <th>触发场景</th>
+              <th>优先级</th>
+              <th>建议处理方式</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                缺少独立 API 规范。<code>FRONTEND_RULES.md</code> 提到统一
+                Axios、分页、mapper、错误处理，但没有接口命名、版本兼容、DTO
+                变更、错误码、幂等、废弃策略、跨仓证据模板。
+              </td>
+              <td>
+                AI
+                容易编造接口路径或字段，前后端字段漂移，接口签名随需求随意变化，测试只覆盖当前页面而不覆盖契约。
+              </td>
+              <td>
+                新增 service、mapper、mock、联调、统计口径、权限码、导出接口。
+              </td>
+              <td><span class="status p1">P1</span></td>
+              <td>
+                新增
+                <code>docs/rules/API_RULES.md</code
+                >，定义请求/响应/错误/兼容/证据模板，并在
+                AGENTS、QUICKSTART、DYNAMIC_WORKFLOW、PR 模板中引用。
+              </td>
+            </tr>
+            <tr>
+              <td>
+                数据库规范只有参考资料入口，没有前端仓的 DB 变更协作协议。当前
+                <code>docs/reference/database/README.md</code> 是资料索引，不是
+                migration、回滚、种子、数据修复、字段生命周期规则。
+              </td>
+              <td>
+                涉及后端 migration 时，前端只能靠口头或 memory
+                片段判断字段状态；AI 可能误把 SQL 资料当成当前生产契约。
+              </td>
+              <td>
+                字段新增、字段重命名、权限种子、统计指标种子、数据修复、回滚方案。
+              </td>
+              <td><span class="status p1">P1</span></td>
+              <td>
+                新增轻量 <code>DB_RULES.md</code>，定位为“前端仓跨 DB
+                协作协议”，明确以 sibling backend 为事实来源，要求 migration
+                ID、回滚策略、测试数据、兼容窗口、前端字段落点。
+              </td>
+            </tr>
+            <tr>
+              <td>
+                测试规范散落在
+                <code>CODING_RULES.md</code
+                >、<code>FRONTEND_RULES.md</code>、<code>RELEASE.md</code> 和
+                E2E README 中，缺少一张按变更类型决定测试层级的强制矩阵。
+              </td>
+              <td>
+                开发者和 AI
+                会用“跑了一个相关单测”替代关键链路验证；E2E、冒烟、回归、手工验收的边界不稳定。
+              </td>
+              <td>
+                缺陷修复、权限/路由、导出打印、跨仓接口、生产问题、发布前验证。
+              </td>
+              <td><span class="status p1">P1</span></td>
+              <td>
+                新增
+                <code>TEST_RULES.md</code
+                >，定义单测/集成/E2E/冒烟/回归触发条件、测试数据策略、失败产物、可接受未验证声明格式。
+              </td>
+            </tr>
+            <tr>
+              <td>
+                Review 规范不足。<code>GIT_RULES.md</code> 有 PR
+                评审规则，但没有项目级 review checklist、严重度标签、AI checker
+                角色、证据质量判断标准。
+              </td>
+              <td>
+                PR Packet 字段非空但证据空洞时可能被放行；高风险 AI 产出缺少
+                maker/checker 分离。
+              </td>
+              <td>
+                高风险 PR、子 Agent
+                产出、共享层重构、接口/权限/患者报告/发布变更。
+              </td>
+              <td><span class="status p1">P1</span></td>
+              <td>
+                新增 <code>REVIEW_RULES.md</code>，承接
+                correctness、architecture、security、performance、verification
+                五轴，要求 P0/P1/P2 发现分级和阻塞条件。
+              </td>
+            </tr>
+            <tr>
+              <td>
+                验证基线存在“长期带病运行”迹象。<code>TECH_DEBT.md</code> 多条
+                Open 项显示 full <code>pnpm lint</code> 被既有格式或脏改动阻塞。
+              </td>
+              <td>
+                “不通过测试不得交付”会变成例外驱动；AI
+                容易把未跑全量验证合理化，reviewer
+                难以判断当前失败是旧问题还是新回归。
+              </td>
+              <td>任何需要交付、发布、合并、重构、跨层变更的任务。</td>
+              <td><span class="status p1">P1</span></td>
+              <td>
+                建立“质量基线恢复”小任务，先让 <code>pnpm lint</code> 和
+                <code>pnpm check:type</code>
+                在主分支恢复绿，再允许针对性例外。例外必须绑定 TD
+                ID、失败摘要和影响范围。
+              </td>
+            </tr>
+            <tr>
+              <td>
+                任务状态模型不足。<code>backlog.json</code> 有
+                id、title、status、dependencies、scope，但缺少
+                owner、risk、packet tier、validation、blocked reason、done
+                evidence；当前多项任务仍为 <code>todo</code>。
+              </td>
+              <td>
+                新人或 AI
+                可以看到任务列表，但无法判断哪些在做、哪些阻塞、哪些已验证、哪些待
+                review。
+              </td>
+              <td>多 Agent 并行、跨天续接、计划拆解、验收收口。</td>
+              <td><span class="status p1">P1</span></td>
+              <td>
+                扩展本地任务 schema 或新增状态日志，最少加入
+                <code>status</code>
+                枚举、<code>risk</code>、<code>validation</code>、<code>handoff</code>、<code>updatedAt</code>，并用脚本校验
+                backlog 与任务文件一致。
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>P2：中长期改进的问题</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>问题描述</th>
+              <th>可能后果</th>
+              <th>触发场景</th>
+              <th>优先级</th>
+              <th>建议处理方式</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <code>ARCHITECTURE.md</code>
+                承载大量业务契约，文件已经很长，模块契约、接口事实、状态口径混在同一快照里。
+              </td>
+              <td>
+                长期会变成“大型记忆文件”，AI
+                读取成本上升，局部模块契约难以维护，过期片段不易发现。
+              </td>
+              <td>M2-M6 持续迭代、跨仓契约变更、统计指标和权限扩展。</td>
+              <td><span class="status p2">P2</span></td>
+              <td>
+                保留
+                <code>ARCHITECTURE.md</code>
+                为索引和全局边界，把模块契约逐步拆到
+                <code>docs/contracts/&lt;domain&gt;.md</code> 或模块
+                README，并由 architecture 指向。
+              </td>
+            </tr>
+            <tr>
+              <td>
+                治理文档概念较多：Fast
+                Path、Lightweight、Full、Workflow、Modifier、Packet、Lifecycle、Loop、Memory、Worktree。虽然各有职责，但新
+                Agent 学习成本高。
+              </td>
+              <td>
+                低风险任务可能被流程压重，高风险任务可能漏读某个专项文件。
+              </td>
+              <td>新人入场、非 Codex 工具接入、临时修复任务。</td>
+              <td><span class="status p2">P2</span></td>
+              <td>
+                新增一页 <code>docs/rules/WORKFLOW.md</code> 或把 QUICKSTART
+                扩成“决策树”，用 10 个问题完成路由，不重复正文规则。
+              </td>
+            </tr>
+            <tr>
+              <td>
+                PR Packet
+                校验只检查字段结构和部分非空，不检查证据质量，这是合理边界，但目前
+                reviewer 责任没有被 <code>REVIEW_RULES.md</code> 承接。
+              </td>
+              <td>
+                “Attack result:
+                已检查”这类空泛证据可能通过格式校验，质量仍靠个人经验。
+              </td>
+              <td>Full Packet、Red Team、跨仓、发布、生产问题。</td>
+              <td><span class="status p2">P2</span></td>
+              <td>
+                把“证据质量审查”写成 Review 清单，并在 PR 模板保留
+                checkbox：真实命令、真实截图/接口、真实失败点、真实剩余风险。
+              </td>
+            </tr>
+            <tr>
+              <td>
+                历史审查 HTML 很多，部分新报告未进入
+                <code>docs/reviews/README.md</code>，HTML
+                可读性强但不利于机器提取摘要。
+              </td>
+              <td>
+                AI
+                可能漏读最新审查结论，团队难以检索“当前有效结论”和“历史档案”。
+              </td>
+              <td>审查报告、验收报告、差距分析持续增加。</td>
+              <td><span class="status p2">P2</span></td>
+              <td>
+                约定每份 HTML 报告配一个 20 行以内 Markdown 摘要或在 reviews
+                README 建立“当前有效 / 历史归档”分组。
+              </td>
+            </tr>
+            <tr>
+              <td>
+                红区人工确认目前主要靠文本记录，缺少确认来源格式和可审计字段。
+              </td>
+              <td>
+                后续 reviewer
+                难以判断是谁确认、确认了什么范围、是否包含回滚和验证。
+              </td>
+              <td>
+                权限、登录态、Axios 全局层、构建发布、环境变量、跨仓契约。
+              </td>
+              <td><span class="status p2">P2</span></td>
+              <td>
+                把红区确认扩展为固定字段：确认人、时间、范围、原因、验证、回滚、范围是否扩大。
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="structure">
+        <h2>三、推荐的规范体系结构</h2>
+        <p>
+          不建议把当前体系推倒重来。当前项目已经有良好的
+          <code>AGENTS.md</code> + <code>docs/rules</code> +
+          <code>docs/memory</code>
+          分层。推荐做法是：保留入口和主干，补齐缺失专业规则，减少重复定义，把能自动化的字段接入脚本。
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>推荐文件</th>
+              <th>职责</th>
+              <th>与现有文件关系</th>
+              <th>避免混乱的边界</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>AGENTS.md</code></td>
+              <td>AI 协作入口：读什么、风险、红区、交付、Memory 总规则。</td>
+              <td>保留为最高入口。</td>
+              <td>只放决策入口和强制边界，不堆 API/DB/Test 细则。</td>
+            </tr>
+            <tr>
+              <td><code>docs/rules/QUICKSTART.md</code></td>
+              <td>最小阅读路径和场景路由。</td>
+              <td>保留，补引用新增 API/DB/TEST/REVIEW。</td>
+              <td>只回答“这次最少读什么、跑什么”。</td>
+            </tr>
+            <tr>
+              <td><code>docs/rules/WORKFLOW.md</code> 或保留现有两文件</td>
+              <td>统一解释 Clarify 到 Handoff 与 Dynamic Workflow 的关系。</td>
+              <td>
+                可作为 <code>TASK_LIFECYCLE_RULES.md</code> +
+                <code>DYNAMIC_WORKFLOW_RULES.md</code>
+                的轻量索引，不必替代它们。
+              </td>
+              <td>不要新增第三套 Packet 字段。</td>
+            </tr>
+            <tr>
+              <td><code>docs/rules/API_RULES.md</code></td>
+              <td>
+                API
+                命名、DTO/ViewModel、错误码、分页、兼容、废弃、mock、后端证据。
+              </td>
+              <td>
+                从 <code>FRONTEND_RULES.md</code> 拆出接口细则；FRONTEND
+                只保留摘要。
+              </td>
+              <td>不替代后端 API 文档，只规定前端如何消费和变更契约。</td>
+            </tr>
+            <tr>
+              <td><code>docs/rules/DB_RULES.md</code></td>
+              <td>
+                跨仓 DB
+                变更协作协议：migration、seed、回滚、数据修复、字段兼容、证据。
+              </td>
+              <td>引用 sibling backend 的 DB 规范和 migration 路径。</td>
+              <td>前端仓不维护真实 DB 规则全文，只维护协作要求。</td>
+            </tr>
+            <tr>
+              <td><code>docs/rules/CODING_RULES.md</code></td>
+              <td>通用编码、复杂度、错误处理、UTF-8、标准命令。</td>
+              <td>保留。</td>
+              <td>测试触发矩阵迁到 TEST_RULES，保留摘要和命令表。</td>
+            </tr>
+            <tr>
+              <td><code>docs/rules/FRONTEND_RULES.md</code></td>
+              <td>Vue/TS、组件、状态、路由、UI、浏览器兼容。</td>
+              <td>保留。</td>
+              <td>API 和测试细则只保留指针，避免合并版继续膨胀。</td>
+            </tr>
+            <tr>
+              <td><code>docs/rules/TEST_RULES.md</code></td>
+              <td>
+                单测、集成、E2E、冒烟、回归、手工验收、测试数据和失败产物。
+              </td>
+              <td>新增，和 <code>CODING_RULES</code> 命令表互引。</td>
+              <td>不重复写具体业务用例，只写触发条件和最低验证。</td>
+            </tr>
+            <tr>
+              <td><code>docs/rules/REVIEW_RULES.md</code></td>
+              <td>Review 角色、严重度、阻塞条件、AI checker、证据质量。</td>
+              <td>新增，<code>GIT_RULES</code> 只保留 PR 流程。</td>
+              <td>不规定 Git 分支，不替代 PR 模板。</td>
+            </tr>
+            <tr>
+              <td><code>docs/rules/GIT_RULES.md</code></td>
+              <td>分支、commit、PR、worktree、hook、merge-back。</td>
+              <td>保留。</td>
+              <td>Review 内容迁出，只保留流程和门禁。</td>
+            </tr>
+            <tr>
+              <td><code>docs/rules/RELEASE.md</code></td>
+              <td>版本、tag、发布、回滚、发布门禁。</td>
+              <td>保留。</td>
+              <td>发布测试引用 TEST_RULES，不重复测试矩阵。</td>
+            </tr>
+            <tr>
+              <td><code>docs/memory/*.md</code></td>
+              <td>长期上下文、架构契约、决策、债务、缺陷。</td>
+              <td>保留，拆分过长契约。</td>
+              <td>不写临时实现流水账。</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="workflow">
+        <h2>四、推荐的 AI Coding 工作流</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>阶段</th>
+              <th>输入</th>
+              <th>输出</th>
+              <th>AI Agent 应该做什么</th>
+              <th>人类开发者确认什么</th>
+              <th>禁止跳过的检查点</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1. Clarify</td>
+              <td>用户需求、issue、PR、backlog、口头任务、日志。</td>
+              <td>目标、验收标准、非目标、影响范围、风险初判。</td>
+              <td>
+                读取入口层，识别是否缺验收或业务规则；不清楚且会改变行为时先问。
+              </td>
+              <td>确认真实业务目标、验收边界、优先级、不可做事项。</td>
+              <td>没有验收标准不得直接编码；红区范围未确认不得动手。</td>
+            </tr>
+            <tr>
+              <td>2. Spec</td>
+              <td>澄清结果、现有实现、接口/DB/权限事实、业务规则。</td>
+              <td>
+                行为规格、接口契约、状态机、错误处理、兼容策略、验收用例。
+              </td>
+              <td>
+                对照前后端，写出输入输出和边界；涉及 API/DB/权限必须引用证据。
+              </td>
+              <td>确认业务规则、字段语义、权限边界、兼容窗口。</td>
+              <td>
+                不得编造接口；不得把 UI 展示模型当后端 DTO；不得跳过错误路径。
+              </td>
+            </tr>
+            <tr>
+              <td>3. Plan</td>
+              <td>Spec、风险等级、模块边界、工作区状态。</td>
+              <td>实施步骤、文件范围、worktree 决策、验证命令、回滚方式。</td>
+              <td>
+                最小切片，明确绿/黄/红区；评估是否需要独立 worktree 或子 Agent。
+              </td>
+              <td>确认高风险计划、红区修改、跨仓协调、发布窗口。</td>
+              <td>脏工作区未识别不得 staging；高风险提交不得自动完成。</td>
+            </tr>
+            <tr>
+              <td>4. Task</td>
+              <td>计划、backlog、依赖关系、验收点。</td>
+              <td>可独立验收的任务项，每项有 scope、依赖、风险、验证。</td>
+              <td>
+                拆成可回滚切片；给子 Agent 的任务必须限制文件/模块和停止条件。
+              </td>
+              <td>确认任务优先级、依赖顺序、是否允许并行。</td>
+              <td>不得把多个无关验收点混进一个任务或 commit。</td>
+            </tr>
+            <tr>
+              <td>5. Execute</td>
+              <td>任务项、现有代码、测试、规则。</td>
+              <td>最小 diff、相关测试、必要文档或 memory 更新。</td>
+              <td>
+                优先复用现有模式；先测后改；不扩大范围；工作中持续核对后端契约。
+              </td>
+              <td>只在红区、业务规则不明、范围扩大、无法验证时介入确认。</td>
+              <td>
+                不得误删代码、跳过 mapper、直接透传 DTO、留下 mock/debug/TODO。
+              </td>
+            </tr>
+            <tr>
+              <td>6. Verify</td>
+              <td>成功标准、改动范围、测试矩阵、运行环境。</td>
+              <td>真实命令结果、浏览器/API/日志证据、未验证项和原因。</td>
+              <td>按最小有效集执行，失败时定位根因或明确既有阻塞 TD。</td>
+              <td>确认未验证项是否可接受，关键链路是否需要人工验收。</td>
+              <td>禁止用“应该没问题”替代验证；缺陷修复必须有回归证据。</td>
+            </tr>
+            <tr>
+              <td>7. Review</td>
+              <td>diff、Spec、Plan、验证证据、PR Packet。</td>
+              <td>阻塞问题、建议项、放行理由、剩余风险。</td>
+              <td>
+                按
+                correctness、architecture、security、performance、verification
+                五轴审查；高风险使用 checker。
+              </td>
+              <td>最终确认风险接受、合并策略、发布/回滚责任。</td>
+              <td>Full Packet 的 Red Team 和跨仓证据不得只填空话。</td>
+            </tr>
+            <tr>
+              <td>8. Handoff</td>
+              <td>已完成改动、验证结果、未完成事项、风险。</td>
+              <td>交付摘要、影响范围、验证、风险、下一步、Memory 判定。</td>
+              <td>
+                把能继续工作的上下文留下；必要时更新 memory 或 agentmemory。
+              </td>
+              <td>确认是否进入验收、合并、发布或下一轮任务。</td>
+              <td>worktree 未 merge-back 不得宣称完成；未说明风险不得交付。</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="plan">
+        <h2>五、优化调整实施计划</h2>
+
+        <h3>第 1 阶段：立即修复，1 到 2 天内完成</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>具体任务</th>
+              <th>产出物</th>
+              <th>验收标准</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                修复 PR 模板与
+                <code>validate-pr-packet.mjs</code> 的结构不一致。
+              </td>
+              <td>更新后的脚本或模板、对应测试 fixture。</td>
+              <td>
+                Fast Path、Lightweight、Security Full、DB Full、Browser
+                Verification Full 五类 PR body fixture 均通过或按预期失败。
+              </td>
+            </tr>
+            <tr>
+              <td>
+                恢复或明确质量基线，收敛阻塞 full lint/typecheck 的 Open TD。
+              </td>
+              <td>质量基线清单、TD 处理 PR 或临时豁免表。</td>
+              <td>
+                <code>pnpm lint</code>、<code>pnpm check:type</code>
+                在主集成分支可稳定运行；如不能，必须有 TD ID 和影响范围。
+              </td>
+            </tr>
+            <tr>
+              <td>将红区确认字段标准化。</td>
+              <td>PR 模板与 AGENTS 小修订。</td>
+              <td>红区确认包含确认人、时间、范围、原因、验证、回滚六项。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>第 2 阶段：规范补齐，3 到 7 天内完成</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>具体任务</th>
+              <th>产出物</th>
+              <th>验收标准</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                新增
+                <code>API_RULES.md</code
+                >、<code>DB_RULES.md</code>、<code>TEST_RULES.md</code>、<code>REVIEW_RULES.md</code>。
+              </td>
+              <td>四份规则文档及索引更新。</td>
+              <td>
+                AGENTS、QUICKSTART、rules README、PR 模板均能路由到新规则；<code
+                  >check:governance</code
+                >
+                更新并通过。
+              </td>
+            </tr>
+            <tr>
+              <td>
+                调整 <code>FRONTEND_RULES.md</code> 和
+                <code>CODING_RULES.md</code> 中 API/测试重复内容。
+              </td>
+              <td>摘要化后的前端和编码规则。</td>
+              <td>单一来源清晰，无两个文件定义同一强制细则。</td>
+            </tr>
+            <tr>
+              <td>扩展本地任务状态 schema。</td>
+              <td>
+                <code>TASK_MANAGEMENT_RULES.md</code>、任务模板、backlog
+                校验脚本。
+              </td>
+              <td>
+                每个 backlog ID
+                映射任务文件，依赖存在，状态值合法，任务文件具备验收标准。
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>第 3 阶段：流程固化，1 到 2 周内完成</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>具体任务</th>
+              <th>产出物</th>
+              <th>验收标准</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>为 API/DB/TEST/REVIEW 接入 PR Packet 和 CI 轻量校验。</td>
+              <td>PR 模板字段、validate-pr-packet 新规则、测试。</td>
+              <td>
+                声明 API/DB/Security/Browser 修饰器时，缺少对应证据会被拦截。
+              </td>
+            </tr>
+            <tr>
+              <td>建立 Review 质量门禁。</td>
+              <td>Review checklist、maker/checker 示例、阻塞项模板。</td>
+              <td>高风险 PR 必须有 reviewer source 和证据质量检查。</td>
+            </tr>
+            <tr>
+              <td>拆分过长架构契约。</td>
+              <td><code>docs/contracts/</code> 或模块 README 契约文件。</td>
+              <td>
+                <code>ARCHITECTURE.md</code> 保持索引化，模块契约可按域阅读。
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>第 4 阶段：自动化与持续优化</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>具体任务</th>
+              <th>产出物</th>
+              <th>验收标准</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>自动校验 backlog 与任务文件一致性。</td>
+              <td><code>scripts/validate-tasks.mjs</code> 和 CI 接入。</td>
+              <td>缺任务文件、非法依赖、非法状态、缺验收标准会失败。</td>
+            </tr>
+            <tr>
+              <td>引入 API 合同变更检查。</td>
+              <td>接口契约摘要或 OpenAPI/类型快照检查。</td>
+              <td>新增/删除/重命名接口字段必须有 Spec、后端证据和测试。</td>
+            </tr>
+            <tr>
+              <td>建立周期治理审计。</td>
+              <td>月度治理报告、P0/P1 关闭率、基线红绿趋势。</td>
+              <td>
+                每月能回答：规则是否冲突、门禁是否有效、质量基线是否变差。
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="actions">
+        <h2>六、可直接落地的改进建议</h2>
+
+        <div class="two-col">
+          <div>
+            <h3>需要新增的规范</h3>
+            <ul>
+              <li>
+                <code>API_RULES.md</code
+                >：接口契约、DTO/ViewModel、错误码、兼容、mock、跨仓证据。
+              </li>
+              <li>
+                <code>DB_RULES.md</code>：前端仓对 DB/migration/seed/rollback
+                的跨仓协作协议。
+              </li>
+              <li>
+                <code>TEST_RULES.md</code
+                >：测试层级矩阵、测试数据、失败产物、未验证声明。
+              </li>
+              <li>
+                <code>REVIEW_RULES.md</code>：Review 五轴、严重度、AI
+                checker、证据质量。
+              </li>
+            </ul>
+          </div>
+          <div>
+            <h3>需要合并或瘦身的规范</h3>
+            <ul>
+              <li>
+                <code>FRONTEND_RULES.md</code> 中 API/测试细则改为摘要和链接。
+              </li>
+              <li>
+                <code>GIT_RULES.md</code> 中 Review 内容只保留流程，质量清单迁到
+                REVIEW_RULES。
+              </li>
+              <li>
+                <code>ARCHITECTURE.md</code>
+                中模块级长契约逐步迁到模块契约文件。
+              </li>
+              <li>
+                <code>QUICKSTART.md</code> 保留路由表，不承载新增规则正文。
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>需要强制执行的流程</h3>
+        <ul>
+          <li>
+            Full Packet 必须有对应证据 section，且 PR 模板和校验器字段一致。
+          </li>
+          <li>
+            API/DB/权限/患者报告变更必须有后端证据，证据最少包含路径、接口、字段、测试或日志。
+          </li>
+          <li>
+            缺陷修复必须提供回归测试或不可自动化的最小复现和人工验证记录。
+          </li>
+          <li>worktree 任务未 merge-back 到目标分支前不得宣称完成。</li>
+          <li>质量基线红灯时，交付必须引用 TD ID，不能只写“历史问题”。</li>
+        </ul>
+
+        <h3>可以自动化的检查</h3>
+        <ul>
+          <li>PR Packet 与模板结构一致性 fixture。</li>
+          <li>backlog ID、任务文件、依赖、状态、验收字段一致性。</li>
+          <li>
+            AGENTS/rules/templates/memory 索引完整性，当前
+            <code>validate-governance</code> 已有基础，可继续扩展。
+          </li>
+          <li>
+            声明修饰器后的证据 section 检查，例如 Backend Cross-check 必须出现
+            cross-repo evidence。
+          </li>
+          <li>
+            禁止 Full Packet 的 <code>Attack result</code>、<code
+              >Actual results</code
+            >
+            使用空泛词。
+          </li>
+        </ul>
+
+        <h3>需要人工确认的地方</h3>
+        <ul>
+          <li>
+            红区：权限、登录态、Axios
+            全局层、环境变量、CI/CD、构建发布、全局主题。
+          </li>
+          <li>业务规则：状态机、统计口径、患者/报告数据、审计、导出、回滚。</li>
+          <li>
+            高风险提交：跨仓契约、DB 迁移、生产问题、共享组件契约、批量重构。
+          </li>
+          <li>
+            接受未验证项：E2E 不可运行、后端环境不可用、浏览器验证被登录态阻塞。
+          </li>
+        </ul>
+
+        <h3>适合交给 AI Agent 的地方</h3>
+        <ul>
+          <li>入口层阅读、影响面初筛、规则路由、任务确认草稿。</li>
+          <li>模块内低风险实现、测试补齐、mapper 和格式化逻辑整理。</li>
+          <li>PR Packet 初稿、验证命令汇总、Memory 更新候选判断。</li>
+          <li>只读审查：检查 diff 是否符合规范、寻找接口/字段/测试遗漏。</li>
+          <li>治理自动化脚本和 fixture 增补，但红区脚本变更仍需人工确认。</li>
+        </ul>
+      </section>
+
+      <section id="final">
+        <h2>七、最终推荐版本</h2>
+        <div class="callout">
+          <p>
+            最适合当前项目的方案不是“大而全流程手册”，而是“一个入口、四个专业补丁、两个自动化闭环”。
+          </p>
+        </div>
+
+        <h3>最终规范骨架</h3>
+        <ul>
+          <li>
+            <code>AGENTS.md</code
+            >：继续作为最高入口，只回答读什么、风险、边界、验证、交付、Memory。
+          </li>
+          <li>
+            <code>QUICKSTART.md</code>：维护最小阅读路径，新增
+            API/DB/TEST/REVIEW 路由。
+          </li>
+          <li>
+            <code>DYNAMIC_WORKFLOW_RULES.md</code> +
+            <code>TASK_LIFECYCLE_RULES.md</code
+            >：保留，前者管风险证据，后者管需求生命周期。
+          </li>
+          <li>
+            <code>API_RULES.md</code
+            >、<code>DB_RULES.md</code>、<code>TEST_RULES.md</code>、<code>REVIEW_RULES.md</code>：补齐中大型项目与
+            AI 协作的专业缺口。
+          </li>
+          <li>
+            <code>GIT_RULES.md</code
+            >、<code>RELEASE.md</code>：保留流程和发布门禁，引用 TEST/REVIEW
+            细则。
+          </li>
+          <li>
+            <code>docs/memory/*.md</code
+            >：继续保存长期上下文，但把模块级长契约逐步拆出。
+          </li>
+        </ul>
+
+        <h3>最终工作流</h3>
+        <ol>
+          <li>每个任务先用 AGENTS 五问定位，不清楚则 Clarify。</li>
+          <li>
+            涉及接口、DB、权限、患者报告、统计口径时必须进入
+            Spec，并引用前后端证据。
+          </li>
+          <li>多步或高风险任务必须 Plan + Task 拆分，明确 worktree 和验证。</li>
+          <li>执行时只做当前验收点，保持最小 diff，测试跟随改动。</li>
+          <li>完成前 Verify，真实命令和结果写入交付或 PR。</li>
+          <li>
+            高风险、子 Agent 产出、PR 前必须 Review，质量证据由 reviewer 判断。
+          </li>
+          <li>
+            交付时写 Summary、Impact、Validation、Risks、Workflow/Memory
+            判定；需要续接则 Handoff。
+          </li>
+        </ol>
+
+        <h3>最终门禁</h3>
+        <ul>
+          <li>
+            <span class="danger">P0 门禁:</span> PR 模板和校验器必须同源，Full
+            Packet 不允许结构漂移。
+          </li>
+          <li>
+            <span class="danger">P0 门禁:</span>
+            红区无人工确认不得改，范围扩大必须重新确认。
+          </li>
+          <li>
+            <span class="danger">P1 门禁:</span>
+            API/DB/权限/患者报告变更无跨仓证据不得交付。
+          </li>
+          <li>
+            <span class="danger">P1 门禁:</span>
+            缺陷修复无回归证据不得标记完成。
+          </li>
+          <li>
+            <span class="danger">P1 门禁:</span> 主分支质量基线失败必须有 TD
+            绑定，不能长期口头豁免。
+          </li>
+        </ul>
+
+        <p>
+          以这个版本推进后，项目会保留当前治理体系的优点，同时补上最容易被 AI
+          Coding 放大的四个缺口：接口编造、DB
+          误判、测试不足、审查空心化。这样规范才不只是“看起来完整”，而是能在长期多人、多
+          Agent、多分支协作中持续降低事故率。
+        </p>
+      </section>
+
+      <p class="footer">
+        本报告为 Fast Path 治理审计产物。运行时代码未修改。直接治理校验
+        <code>node scripts/validate-governance.mjs</code> 已通过；<code
+          >pnpm run check:governance</code
+        >
+        在本地执行时超时，未产出失败明细。
+      </p>
+    </main>
+  </body>
+</html>
