@@ -19,7 +19,7 @@
 | 文件 | 负责 | 不负责 |
 | --- | --- | --- |
 | `backlog.json` | 父任务 `id`、`title`、`status`、`dependencies`、`scope`、可选 `taskDir` | 子任务明细、每轮 Goal 状态 |
-| `docs/tasks/<TASK_ID>-<slug>/README.md` | 父任务背景、总目标、总验收、非目标、不可直接执行声明 | 具体 5 分钟执行步骤 |
+| `docs/tasks/<TASK_ID>-<slug>/README.md` | 父任务背景、总目标、总验收、非目标、编排策略、完成校验 | 具体 5 分钟实现步骤 |
 | `docs/tasks/<TASK_ID>-<slug>/task.json` | 父任务和子任务状态、依赖、验证、回滚、更新时间 | 长说明、业务设计正文 |
 | `docs/tasks/<TASK_ID>-<slug>/children/*.md` | 单个可执行子目标、停止条件、验证证据、回滚计划 | 父任务总目标、无边界探索 |
 | `docs/tasks/*.md` | 历史兼容平铺任务 | 新增复杂任务、父子任务结构 |
@@ -80,7 +80,7 @@ AI 执行单元最小结构：
 
 ## 目录化任务模型
 
-目录模型用于中大型任务、Loop 任务、跨仓任务、Full 档任务和任何可能超过单轮 Codex Goal 的工作。父任务只承载上下文和总验收，不能直接交给 Goal 执行；真正可执行的是 `children/` 下的子任务。
+目录模型用于中大型任务、Loop 任务、跨仓任务、Full 档任务和任何可能超过单轮 Codex Goal 的工作。父任务可以交给 Goal，但只能作为 orchestrator 编排子任务；真正修改代码或产出业务改动的是 `children/` 下的 goal 子任务。
 
 标准结构：
 
@@ -98,7 +98,8 @@ docs/tasks/T-002-frozen-workflow-backend-closed-loop/
 ```markdown
 # T-002 冰冻流程后端真实闭环
 
-Executable: false
+Execution Mode: orchestrator
+Run Policy: single-child
 
 ## Goal
 
@@ -109,9 +110,13 @@ Executable: false
 ## Constraints
 
 ## Acceptance Criteria
+
+## Parent Completion Check
 ```
 
-父任务若缺少 `Executable: false`，不得进入 Codex Goal。父任务只能用于人类或主 Agent 选择下一个子任务。
+父任务若缺少 `Execution Mode: orchestrator`，不得进入 Codex Goal。orchestrator 只允许读取 `task.json`、选择可执行子任务、交付子任务 Goal 提示、记录状态建议和执行父任务完成校验；不得绕过子任务直接实现父任务总目标。
+
+`Run Policy` 默认 `single-child`：每轮父任务 Goal 只推进一个 `ready` 或依赖已满足的子任务，然后停止交付。只有显式声明 `Run Policy: batch` 且 `task.json.maxChildrenPerRun` 为 1 到 3 时，才允许同一轮连续推进多个子任务；batch 遇到第一个失败、阻塞、红区、timebox 超时或新缺口必须立即停止。
 
 `task.json` 最小结构：
 
@@ -120,7 +125,8 @@ Executable: false
   "id": "T-002",
   "title": "冰冻流程后端真实闭环",
   "status": "ready",
-  "executable": false,
+  "executionMode": "orchestrator",
+  "runPolicy": "single-child",
   "dependencies": [],
   "validation": ["node scripts\\validate-governance.mjs"],
   "rollback": "Revert the task directory changes.",
@@ -130,6 +136,7 @@ Executable: false
       "id": "T-002.001",
       "title": "contract inventory",
       "status": "ready",
+      "executionMode": "goal",
       "dependencies": [],
       "validation": ["node scripts\\validate-governance.mjs"],
       "rollback": "Revert this child task change.",
@@ -150,6 +157,7 @@ Executable: false
 ```markdown
 # T-002.001 Contract Inventory
 
+Execution Mode: goal
 Timebox: <= 5 minutes
 
 ## Goal
@@ -170,6 +178,7 @@ Timebox: <= 5 minutes
 硬性约束：
 
 - 一个子任务只允许一个可观察目标；标题或验收里出现多个动作时必须继续拆分。
+- 子任务必须声明 `Execution Mode: goal`，且只能由当前子任务的 Goal / Stop Condition / Verification / Rollback 控制执行边界。
 - `Stop Condition` 达成后立即停止，不能继续寻找下一个缺口。
 - `Verification Command` 必须是本子任务最小证明命令；无法自动验证时写明确人工核对项。
 - `Rollback Plan` 必须说明如何撤回本子任务改动；无法回滚时必须升级人工确认。
@@ -187,9 +196,11 @@ Timebox: <= 5 minutes
 - `blocked` 任务必须填写非空 `blockedReason`。
 - 任务详情必须包含 `Goal`、`Inputs`、`Outputs`、`Constraints`、`Acceptance Criteria`。
 - 父任务目录必须包含 `README.md`、`task.json` 和 `children/` 子任务文件。
-- 父任务必须声明 `Executable: false`，`task.json.executable` 也必须为 `false`。
+- 父任务必须声明 `Execution Mode: orchestrator`，`task.json.executionMode` 也必须为 `orchestrator`。
+- 父任务必须声明 `Run Policy: single-child` 或 `Run Policy: batch`；`batch` 必须设置 `maxChildrenPerRun` 且范围为 1 到 3。
+- 父任务 `README.md` 必须包含 `Parent Completion Check`。
 - 子任务必须放在父任务目录 `children/` 下；不得散落在 `docs/tasks/` 根目录。
-- 子任务必须包含 `Timebox: <= 5 minutes`、`Stop Condition`、`Verification Command`、`Rollback Plan`、`Non-goals`、`Evidence`。
+- 子任务必须包含 `Execution Mode: goal`、`Timebox: <= 5 minutes`、`Stop Condition`、`Verification Command`、`Rollback Plan`、`Non-goals`、`Evidence`。
 - 开始实现前必须同时核对 JSON 条目与 Markdown 执行单元，不得只读其一。
 
 ## 自动化校验
@@ -202,7 +213,7 @@ Timebox: <= 5 minutes
 - `dependencies` 不引用不存在的任务。
 - `docs/tasks/T-001-*.md` 与 backlog ID 双向一致。
 - `docs/tasks/<TASK_ID>-<slug>/README.md`、`task.json`、`children/*.md` 目录模型一致。
-- 父任务不可执行、子任务 ID、子任务必备护栏、子任务路径合法。
+- 父任务 orchestrator、runPolicy、子任务 goal、子任务 ID、子任务必备护栏、子任务路径合法。
 - 任务 Markdown 必备章节存在。
 - 推荐字段出现时类型和值合法。
 

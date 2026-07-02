@@ -26,4 +26,3 @@
 - 正式报告 print / issue / scheduled issue / recall 可在 tracking 中查看
 - tracking 能清晰区分报告主状态与分发状态
 - 批量动作不会因为部分失败而丢失成功项的追踪记录
-

@@ -21,11 +21,12 @@ Parent `README.md`:
 ```markdown
 # <TASK_ID> <Parent title>
 
-Executable: false
+Execution Mode: orchestrator
+Run Policy: single-child
 
 ## Goal
 
-<Parent outcome. This parent is not a Codex Goal execution unit.>
+<Parent outcome. This parent only orchestrates child Goal execution.>
 
 ## Inputs
 
@@ -37,13 +38,18 @@ Executable: false
 
 ## Constraints
 
-- Do not execute this parent directly with Codex Goal.
-- Execute only one child task at a time.
+- Parent Goal may select and hand off the next child task, but must not directly implement runtime changes.
+- Default to one child task per parent Goal run.
 
 ## Acceptance Criteria
 
 - [ ] Every required child task is done or explicitly cancelled.
 - [ ] Final verification and handoff evidence are recorded.
+
+## Parent Completion Check
+
+- [ ] `task.json` has no remaining `ready` / `in_progress` child tasks.
+- [ ] Parent validation command or review evidence is recorded.
 ```
 
 `task.json`:
@@ -53,7 +59,8 @@ Executable: false
   "id": "<TASK_ID>",
   "title": "<Parent title>",
   "status": "ready",
-  "executable": false,
+  "executionMode": "orchestrator",
+  "runPolicy": "single-child",
   "dependencies": [],
   "validation": ["<parent validation command or review evidence>"],
   "rollback": "<how to revert this parent directory change>",
@@ -63,6 +70,7 @@ Executable: false
       "id": "<TASK_ID>.001",
       "title": "<Child title>",
       "status": "ready",
+      "executionMode": "goal",
       "dependencies": [],
       "validation": ["<child verification command>"],
       "rollback": "<how to revert this child change>",
@@ -77,6 +85,7 @@ Child task file:
 ```markdown
 # <TASK_ID>.001 <Child title>
 
+Execution Mode: goal
 Timebox: <= 5 minutes
 
 ## Goal

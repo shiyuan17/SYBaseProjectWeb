@@ -232,7 +232,8 @@ const validTaskDirectory = {
   readmeBody: `
 # T-010 Directory Task Parent
 
-Executable: false
+Execution Mode: orchestrator
+Run Policy: single-child
 
 ## Goal
 
@@ -248,18 +249,23 @@ Coordinate child tasks.
 
 ## Constraints
 
-- Parent task is not a Codex Goal execution unit.
+- Parent task only orchestrates child Goal execution.
 
 ## Acceptance Criteria
 
 - Child tasks complete independently.
+
+## Parent Completion Check
+
+- All child tasks are done or explicitly cancelled.
 `,
   manifestBody: JSON.stringify(
     {
       id: 'T-010',
       title: 'Directory Task Parent',
       status: 'ready',
-      executable: false,
+      executionMode: 'orchestrator',
+      runPolicy: 'single-child',
       dependencies: [],
       validation: ['node scripts\\validate-governance.mjs'],
       rollback: 'Revert the parent task directory changes.',
@@ -269,6 +275,7 @@ Coordinate child tasks.
           id: 'T-010.001',
           title: 'Contract Inventory',
           status: 'ready',
+          executionMode: 'goal',
           dependencies: [],
           validation: ['node scripts\\validate-governance.mjs'],
           rollback: 'Revert this child task changes.',
@@ -285,6 +292,7 @@ Coordinate child tasks.
       body: `
 # T-010.001 Contract Inventory
 
+Execution Mode: goal
 Timebox: <= 5 minutes
 
 ## Goal
@@ -833,19 +841,19 @@ describe('validateGovernance', () => {
     expect(result.errors).toEqual([]);
   });
 
-  it('rejects directory parents that are executable Codex Goal units', () => {
+  it('rejects directory parents declared as direct goal units', () => {
     const result = validateGovernance({
       backlogBody: validTaskDirectoryBacklogBody,
       taskDirectories: [
         {
           ...validTaskDirectory,
           readmeBody: validTaskDirectory.readmeBody.replace(
-            'Executable: false',
-            'Executable: true',
+            'Execution Mode: orchestrator',
+            'Execution Mode: goal',
           ),
           manifestBody: validTaskDirectory.manifestBody.replace(
-            '"executable": false',
-            '"executable": true',
+            '"executionMode": "orchestrator"',
+            '"executionMode": "goal"',
           ),
         },
       ],
@@ -853,10 +861,79 @@ describe('validateGovernance', () => {
 
     expect(result.isValid).toBe(false);
     expect(result.errors).toContain(
-      'Task directory docs/tasks/T-010-directory-task-parent parent must declare Executable: false',
+      'Task directory docs/tasks/T-010-directory-task-parent parent must declare Execution Mode: orchestrator',
     );
     expect(result.errors).toContain(
-      'Task directory docs/tasks/T-010-directory-task-parent task.json executable must be false',
+      'Task directory docs/tasks/T-010-directory-task-parent task.json executionMode must be orchestrator',
+    );
+  });
+
+  it('rejects child tasks that are not declared as goal execution units', () => {
+    const result = validateGovernance({
+      backlogBody: validTaskDirectoryBacklogBody,
+      taskDirectories: [
+        {
+          ...validTaskDirectory,
+          manifestBody: validTaskDirectory.manifestBody.replace(
+            '"executionMode": "goal"',
+            '"executionMode": "orchestrator"',
+          ),
+          childDocuments: [
+            {
+              ...validTaskDirectory.childDocuments[0],
+              body: validTaskDirectory.childDocuments[0].body.replace(
+                'Execution Mode: goal\n',
+                '',
+              ),
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContain(
+      'Child task T-010.001 in docs/tasks/T-010-directory-task-parent task.json executionMode must be goal',
+    );
+    expect(result.errors).toContain(
+      'Child task docs/tasks/T-010-directory-task-parent/children/T-010.001-contract-inventory.md must declare Execution Mode: goal',
+    );
+  });
+
+  it('rejects unsafe batch run policies for directory parents', () => {
+    const missingLimit = JSON.parse(validTaskDirectory.manifestBody);
+    missingLimit.runPolicy = 'batch';
+    const excessiveLimit = {
+      ...missingLimit,
+      maxChildrenPerRun: 4,
+    };
+
+    const missingResult = validateGovernance({
+      backlogBody: validTaskDirectoryBacklogBody,
+      taskDirectories: [
+        {
+          ...validTaskDirectory,
+          manifestBody: JSON.stringify(missingLimit),
+        },
+      ],
+    });
+    const excessiveResult = validateGovernance({
+      backlogBody: validTaskDirectoryBacklogBody,
+      taskDirectories: [
+        {
+          ...validTaskDirectory,
+          manifestBody: JSON.stringify(excessiveLimit),
+        },
+      ],
+    });
+
+    expect(missingResult.isValid).toBe(false);
+    expect(missingResult.errors).toContain(
+      'Task directory docs/tasks/T-010-directory-task-parent task.json batch runPolicy requires maxChildrenPerRun from 1 to 3',
+    );
+    expect(excessiveResult.isValid).toBe(false);
+    expect(excessiveResult.errors).toContain(
+      'Task directory docs/tasks/T-010-directory-task-parent task.json batch runPolicy requires maxChildrenPerRun from 1 to 3',
     );
   });
 

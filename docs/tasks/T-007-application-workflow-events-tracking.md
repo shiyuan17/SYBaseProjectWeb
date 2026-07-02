@@ -26,4 +26,3 @@
 - 申请单 create / update / void 可在统一 tracking 中回放
 - tracking 中申请单事件能和后续标本、技术、报告节点串起来
 - 事件写入失败不会 silently 丢失而无人感知
-

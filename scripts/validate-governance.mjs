@@ -71,6 +71,10 @@ const TASK_DOCUMENT_REQUIRED_SECTIONS = [
   '## Constraints',
   '## Acceptance Criteria',
 ];
+const TASK_DIRECTORY_PARENT_REQUIRED_SECTIONS = [
+  ...TASK_DOCUMENT_REQUIRED_SECTIONS,
+  '## Parent Completion Check',
+];
 const CHILD_TASK_DOCUMENT_REQUIRED_SECTIONS = [
   '## Goal',
   '## Acceptance Criteria',
@@ -577,13 +581,25 @@ function validateTaskDirectories({
         }
       }
 
-      if (!/^Executable:\s*false\s*$/im.test(directory.readmeBody)) {
+      if (!/^Execution Mode:\s*orchestrator\s*$/im.test(directory.readmeBody)) {
         errors.push(
-          `Task directory ${directory.path} parent must declare Executable: false`,
+          `Task directory ${directory.path} parent must declare Execution Mode: orchestrator`,
         );
       }
 
-      for (const section of TASK_DOCUMENT_REQUIRED_SECTIONS) {
+      if (/^Executable:\s*true\s*$/im.test(directory.readmeBody)) {
+        errors.push(
+          `Task directory ${directory.path} parent must not declare Executable: true`,
+        );
+      }
+
+      if (!/^Run Policy:\s*(single-child|batch)\s*$/im.test(directory.readmeBody)) {
+        errors.push(
+          `Task directory ${directory.path} parent must declare Run Policy: single-child or batch`,
+        );
+      }
+
+      for (const section of TASK_DIRECTORY_PARENT_REQUIRED_SECTIONS) {
         if (!directory.readmeBody.includes(section)) {
           errors.push(
             `Task directory ${directory.path} README.md is missing required section: ${section}`,
@@ -614,9 +630,34 @@ function validateTaskDirectories({
       );
     }
 
-    if (manifest.executable !== false) {
+    if (manifest.executable !== undefined) {
       errors.push(
-        `Task directory ${directory.path} task.json executable must be false`,
+        `Task directory ${directory.path} task.json must use executionMode instead of executable`,
+      );
+    }
+
+    if (manifest.executionMode !== 'orchestrator') {
+      errors.push(
+        `Task directory ${directory.path} task.json executionMode must be orchestrator`,
+      );
+    }
+
+    if (!['batch', 'single-child'].includes(manifest.runPolicy)) {
+      errors.push(
+        `Task directory ${directory.path} task.json runPolicy must be single-child or batch`,
+      );
+    }
+
+    if (
+      manifest.runPolicy === 'batch' &&
+      !(
+        Number.isInteger(manifest.maxChildrenPerRun) &&
+        manifest.maxChildrenPerRun >= 1 &&
+        manifest.maxChildrenPerRun <= 3
+      )
+    ) {
+      errors.push(
+        `Task directory ${directory.path} task.json batch runPolicy requires maxChildrenPerRun from 1 to 3`,
       );
     }
 
@@ -661,6 +702,12 @@ function validateTaskDirectories({
       if (typeof child?.id === 'string' && !child.id.startsWith(`${id}.`)) {
         errors.push(
           `Child task ${child.id} in ${directory.path} must start with ${id}.`,
+        );
+      }
+
+      if (child?.executionMode !== 'goal') {
+        errors.push(
+          `Child task ${child?.id ?? '<unknown>'} in ${directory.path} task.json executionMode must be goal`,
         );
       }
     }
@@ -721,6 +768,12 @@ function validateTaskDirectories({
       if (!/^Timebox:\s*<=\s*5\s*minutes\s*$/im.test(childDocument.body)) {
         errors.push(
           `Child task ${childDocument.path} must declare Timebox: <= 5 minutes`,
+        );
+      }
+
+      if (!/^Execution Mode:\s*goal\s*$/im.test(childDocument.body)) {
+        errors.push(
+          `Child task ${childDocument.path} must declare Execution Mode: goal`,
         );
       }
 
