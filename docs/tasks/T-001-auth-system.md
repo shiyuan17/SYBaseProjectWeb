@@ -1,4 +1,4 @@
-# T-001 Auth System
+# T-001 auth system
 
 ## Goal
 

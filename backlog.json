@@ -5,5 +5,103 @@
     "status": "todo",
     "dependencies": [],
     "scope": "modules/auth"
+  },
+  {
+    "id": "T-002",
+    "title": "冰冻流程后端真实闭环",
+    "status": "todo",
+    "dependencies": [],
+    "scope": "../SYBaseProject/bl-center, apps/web-ele/src/modules/frozen-workflow"
+  },
+  {
+    "id": "T-003",
+    "title": "冰冻工作台前端接入真实接口",
+    "status": "todo",
+    "dependencies": ["T-002"],
+    "scope": "apps/web-ele/src/modules/technical-workflow/views/FrozenWorkstationView.vue"
+  },
+  {
+    "id": "T-004",
+    "title": "技术医嘱工作站后端动作契约补齐",
+    "status": "todo",
+    "dependencies": [],
+    "scope": "../SYBaseProject/bl-center, apps/web-ele/src/modules/technical-workflow"
+  },
+  {
+    "id": "T-005",
+    "title": "技术医嘱工作站前端动作接线",
+    "status": "todo",
+    "dependencies": ["T-004", "T-006"],
+    "scope": "apps/web-ele/src/modules/technical-workflow"
+  },
+  {
+    "id": "T-006",
+    "title": "技术任务池权限拆分与服务校验",
+    "status": "todo",
+    "dependencies": [],
+    "scope": "../SYBaseProject/bl-center, apps/web-ele/src/modules/technical-workflow"
+  },
+  {
+    "id": "T-007",
+    "title": "申请单统一流程事件接入 tracking",
+    "status": "todo",
+    "dependencies": [],
+    "scope": "../SYBaseProject/bl-center, apps/web-ele/src/modules/specimen-workflow"
+  },
+  {
+    "id": "T-008",
+    "title": "正式报告分发事件接入 tracking",
+    "status": "todo",
+    "dependencies": [],
+    "scope": "../SYBaseProject/bl-center, apps/web-ele/src/modules/doctor-workflow"
+  },
+  {
+    "id": "T-009",
+    "title": "敏感接口统一权限与审计治理",
+    "status": "todo",
+    "dependencies": ["T-006"],
+    "scope": "../SYBaseProject/bl-center, apps/web-ele/src/modules/notification-center"
+  },
+  {
+    "id": "T-010",
+    "title": "M5 材料借阅审批流建模与接口落地",
+    "status": "todo",
+    "dependencies": [],
+    "scope": "../SYBaseProject/bl-center, apps/web-ele/src/modules/operation-support"
+  },
+  {
+    "id": "T-011",
+    "title": "归档借阅与白片库存并发安全加固",
+    "status": "todo",
+    "dependencies": ["T-010"],
+    "scope": "../SYBaseProject/bl-center, apps/web-ele/src/modules/operation-support"
+  },
+  {
+    "id": "T-012",
+    "title": "M2 标本状态与异常流转模型重构",
+    "status": "todo",
+    "dependencies": [],
+    "scope": "../SYBaseProject/bl-center, apps/web-ele/src/modules/specimen-workflow"
+  },
+  {
+    "id": "T-013",
+    "title": "技术登记接口收敛",
+    "status": "todo",
+    "dependencies": [],
+    "scope": "../SYBaseProject/bl-center, apps/web-ele/src/modules/technical-workflow"
+  },
+  {
+    "id": "T-014",
+    "title": "主状态与分发状态展示规范统一",
+    "status": "todo",
+    "dependencies": ["T-008", "T-010", "T-012", "T-013"],
+    "scope": "../SYBaseProject/bl-center, apps/web-ele/src/modules"
+  },
+  {
+    "id": "T-015",
+    "title": "批量动作幂等与操作日志标准化",
+    "status": "todo",
+    "dependencies": ["T-008", "T-011"],
+    "scope": "../SYBaseProject/bl-center, apps/web-ele/src/modules/operation-support, apps/web-ele/src/modules/doctor-workflow"
   }
 ]
