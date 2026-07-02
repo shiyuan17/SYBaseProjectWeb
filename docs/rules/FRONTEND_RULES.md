@@ -1,6 +1,6 @@
 # FRONTEND_RULES.md — 前端实现规范（合并版）
 
-本文件为前端实现规范（Vue/TS、UI、状态、路由、API、测试、兼容）。目录边界见 `PROJECT_DIRECTORY.md`；编码与验证命令见 `CODING_RULES.md`。
+本文件为前端实现规范（Vue/TS、UI、状态、路由、兼容）。目录边界见 `PROJECT_DIRECTORY.md`；编码与验证命令见 `CODING_RULES.md`。API 与测试细则分别见 `API_RULES.md`、`TEST_RULES.md`。
 
 ## Vue / TypeScript / 组件
 
@@ -33,21 +33,14 @@
 
 ## API / 请求
 
-- 统一 Axios 实例；业务 API 放模块 `api/`
-- 分页：`page` / `size`；错误区分网络/权限/业务；页面级错误保留业务语境
-- 通过 mapper 转 ViewModel，不长期依赖后端原始结构
-- 上传/下载/导出处理文件名编码与失败反馈
+- 统一 Axios 实例；业务 API 放模块 `api/`，页面和组件不得直连请求底座
+- DTO / ViewModel / mapper / mock / 跨仓证据以 [API_RULES.md](./API_RULES.md) 为唯一细则来源
+- 涉及 migration、seed、数据修复或字段兼容时，按 [DB_RULES.md](./DB_RULES.md) 升级 Full Packet
 
 ## 测试
 
-| 层   | 工具           | 位置                           |
-| ---- | -------------- | ------------------------------ |
-| 单测 | Vitest `--dom` | 同目录 `*.test.ts`             |
-| E2E  | Playwright     | `tests/e2e/smoke/`、业务子目录 |
-
-- 能在单测验证的不靠 E2E；mock 契约以后端 `SYBaseProject` 为准，变更时同步 backend-mock 与单测
-- 不得删/skip 测试过关；缺陷修复补回归测试（触发条件见 `CODING_RULES.md` §6）
-- Workflow 对应验证组合见 `DYNAMIC_WORKFLOW_RULES.md`
+- 测试分层、触发矩阵、回归要求和不可运行命令的记录方式以 [TEST_RULES.md](./TEST_RULES.md) 为唯一细则来源
+- Workflow 对应验证组合见 `DYNAMIC_WORKFLOW_RULES.md`；交付证据必须写入 PR Packet 的 `Evidence`
 
 ## 浏览器 / 导出 / 兼容
 
@@ -61,4 +54,7 @@
 - [../../AGENTS.md](../../AGENTS.md)
 - [./PROJECT_DIRECTORY.md](./PROJECT_DIRECTORY.md)
 - [./CODING_RULES.md](./CODING_RULES.md)
+- [./API_RULES.md](./API_RULES.md)
+- [./DB_RULES.md](./DB_RULES.md)
+- [./TEST_RULES.md](./TEST_RULES.md)
 - [./DYNAMIC_WORKFLOW_RULES.md](./DYNAMIC_WORKFLOW_RULES.md)

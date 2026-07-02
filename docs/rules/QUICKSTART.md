@@ -19,12 +19,15 @@
 | 纯文档 / 只读 / 低风险文案 | `AGENTS`、本文件；治理文档改动加 `CODING_RULES` 验证表 | Workflow 细则、生命周期产物 | 对应检查或 `pnpm run check:governance` |
 | 需求模糊 / 需要规格或计划 | `TASK_LIFECYCLE_RULES`、`TASK_INTAKE` | 实现专项，直到需求清楚 | 阶段产物可执行 |
 | 本地 backlog / `docs/tasks/*.md` | `TASK_MANAGEMENT_RULES`、任务详情 | 外部平台同步规则 | backlog 与执行单元一致 |
-| 页面 / 组件 / 样式 | `PROJECT_DIRECTORY`、`FRONTEND_RULES` | 发布、DB | `lint` + `check:type` + 相关单测；布局视口按需 Browser |
+| 页面 / 组件 / 样式 | `PROJECT_DIRECTORY`、`FRONTEND_RULES`、`TEST_RULES` | 发布、DB | `lint` + `check:type` + 相关单测；布局视口按需 Browser |
 | Pinia / 路由 / 菜单 / 守卫 | `FRONTEND_RULES`；涉权限加 `DYNAMIC_WORKFLOW_RULES` | 发布 | `check:type` + 相关路由/store 测试 |
-| API / mapper / mock / 联调 | `FRONTEND_RULES`、`DYNAMIC_WORKFLOW_RULES`；跨仓读后端 | 发布 | service/mapper 单测 + 后端证据 |
-| 权限 / 患者 / 报告 / 导出 / 审计 | `DYNAMIC_WORKFLOW_RULES`、`GIT_RULES`、相关前后端实现 | Fast Path | Full Packet + Red Team 证据 |
-| 重构 / 共享层 / 构建脚本 / 环境变量 | `CODING_RULES`、`GIT_RULES`、`DYNAMIC_WORKFLOW_RULES` | 低风险例外 | `lint` + `check:type` + `check:circular` 或专项命令 |
-| Git / PR / worktree | `GIT_RULES` | 业务专项 | hook / CI / merge-back 证据 |
+| API / mapper / mock / 联调 | `API_RULES`、`TEST_RULES`、`DYNAMIC_WORKFLOW_RULES`；跨仓读后端 | 发布 | service/mapper 单测 + 后端证据 |
+| DB / migration / seed / 数据修复 | `DB_RULES`、`API_RULES`、`DYNAMIC_WORKFLOW_RULES`；跨仓读后端 | Fast Path | Full Packet + DB / Red Team 证据 |
+| 权限 / 患者 / 报告 / 导出 / 审计 | `DYNAMIC_WORKFLOW_RULES`、`API_RULES`、`TEST_RULES`、相关前后端实现 | Fast Path | Full Packet + Red Team 证据 |
+| 测试-only / 回归补充 | `TEST_RULES`、相关模块规范 | 发布、DB（未触发时） | 对应测试命令 |
+| 重构 / 共享层 / 构建脚本 / 环境变量 | `CODING_RULES`、`GIT_RULES`、`DYNAMIC_WORKFLOW_RULES`、`TEST_RULES` | 低风险例外 | `lint` + `check:type` + `check:circular` 或专项命令 |
+| Git / PR / worktree | `GIT_RULES`、需要 Review 时读 `REVIEW_RULES` | 业务专项 | hook / CI / merge-back 证据 |
+| Code Review / AI checker | `REVIEW_RULES`、变更命中的专项规范 | 实现细节（只读审查时） | Review findings + 验证证据核对 |
 | 发布 / 回滚 | `RELEASE`、`GIT_RULES`、`CODING_RULES` | Fast Path | `pnpm build` + 发布门禁 |
 | Loop（显式要求） | `LOOP_ENGINEERING_RULES` | 未启用时全部跳过 | Loop Packet + Workflow Packet |
 

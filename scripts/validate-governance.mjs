@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 
 const DECISION_ID_PATTERN = /\|\s*(DEC-\d{8}-\d{3})\s*\|/g;
@@ -20,6 +20,10 @@ const REQUIRED_RULE_DOCS = [
   'PROJECT_DIRECTORY.md',
   'CODING_RULES.md',
   'FRONTEND_RULES.md',
+  'API_RULES.md',
+  'DB_RULES.md',
+  'TEST_RULES.md',
+  'REVIEW_RULES.md',
   'GIT_RULES.md',
   'DYNAMIC_WORKFLOW_RULES.md',
   'TASK_LIFECYCLE_RULES.md',
@@ -47,6 +51,25 @@ const REQUIRED_TEMPLATE_DOCS = [
   'task-item-template.md',
   'workflow-packet-examples.md',
 ];
+const BACKLOG_ID_PATTERN = /^T-\d{3}$/;
+const BACKLOG_STATUSES = new Set([
+  'blocked',
+  'cancelled',
+  'done',
+  'in_progress',
+  'ready',
+  'review',
+  'todo',
+]);
+const BACKLOG_RISKS = new Set(['high', 'low', 'medium']);
+const BACKLOG_PACKET_TIERS = new Set(['Fast Path', 'Full', 'Lightweight']);
+const TASK_DOCUMENT_REQUIRED_SECTIONS = [
+  '## Goal',
+  '## Inputs',
+  '## Outputs',
+  '## Constraints',
+  '## Acceptance Criteria',
+];
 const REQUIRED_GOVERNANCE_ANCHORS = {
   'AGENTS.md': [
     '## 一页式执行入口',
@@ -57,6 +80,12 @@ const REQUIRED_GOVERNANCE_ANCHORS = {
     '红区确认协议',
     '### 8. AI Memory Update',
   ],
+  'docs/rules/API_RULES.md': [
+    '## 单一来源',
+    '## Mapper 与兼容',
+    '## AI Agent 禁止项',
+  ],
+  'docs/rules/DB_RULES.md': ['## 触发条件', '## 跨仓证据', '## 回滚与发布'],
   'docs/rules/QUICKSTART.md': [
     '## 三层阅读路径',
     '## 场景最小阅读',
@@ -86,6 +115,11 @@ const REQUIRED_GOVERNANCE_ANCHORS = {
     '## Loop Packet',
     '最小 Loop Packet',
   ],
+  'docs/rules/REVIEW_RULES.md': [
+    '## Review 五轴',
+    '## 阻塞条件',
+    '## 证据质量',
+  ],
   '.github/PULL_REQUEST_TEMPLATE.md': [
     'Packet tier:',
     'Fast Path:',
@@ -102,6 +136,7 @@ const REQUIRED_GOVERNANCE_ANCHORS = {
     'Clarify',
     'Retrospective',
   ],
+  'docs/rules/TEST_RULES.md': ['## 测试分层', '## 触发矩阵', '## 强制规则'],
   'docs/templates/workflow-packet-examples.md': [
     '范例：轻量 Workflow Packet',
     '坏例子',
@@ -227,9 +262,9 @@ function validateTemplatesIndex(templatesReadmeBody) {
   const links = extractBulletLinks(templatesReadmeBody);
   const linkedLabels = new Set(links.map((entry) => entry.label));
 
-  return REQUIRED_TEMPLATE_DOCS.filter(
-    (entry) => !linkedLabels.has(entry),
-  ).map((entry) => `Missing docs/templates/README.md entry: ${entry}`);
+  return REQUIRED_TEMPLATE_DOCS.filter((entry) => !linkedLabels.has(entry)).map(
+    (entry) => `Missing docs/templates/README.md entry: ${entry}`,
+  );
 }
 
 function validateAgentsIndex(agentsBody) {
@@ -309,6 +344,213 @@ function validateProjectState(projectStateBody) {
   return errors;
 }
 
+function parseBacklog(backlogBody, errors) {
+  if (!backlogBody) {
+    return [];
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(backlogBody);
+  } catch (error) {
+    errors.push(`Invalid backlog.json: ${error.message}`);
+    return [];
+  }
+
+  if (!Array.isArray(parsed)) {
+    errors.push('Invalid backlog.json: expected top-level array');
+    return [];
+  }
+
+  return parsed;
+}
+
+function collectTaskDocumentId(document) {
+  const fromPath = document.path.match(/(?:^|[\\/])(T-\d{3})-[^\\/]+\.md$/);
+  if (fromPath) {
+    return fromPath[1];
+  }
+
+  const fromHeading = document.body.match(/^#\s+(T-\d{3})\b/m);
+  return fromHeading?.[1] ?? null;
+}
+
+function extractTaskDocumentHeading(document) {
+  const heading = document.body.match(/^#\s+(T-\d{3})\s+(.+?)\s*$/m);
+  if (!heading) {
+    return null;
+  }
+
+  return {
+    id: heading[1],
+    title: heading[2].trim(),
+  };
+}
+
+function hasIsoLikeDate(value) {
+  return /^\d{4}-\d{2}-\d{2}(?:[T ][0-2]\d:[0-5]\d(?::[0-5]\d)?(?:Z|[+-][0-2]\d:[0-5]\d)?)?$/.test(
+    value,
+  );
+}
+
+function validateBacklogAndTasks({ backlogBody, taskDocuments = [] } = {}) {
+  const errors = [];
+  const backlogEntries = parseBacklog(backlogBody, errors);
+  const seenIds = new Set();
+  const backlogIds = new Set();
+  const backlogEntriesById = new Map();
+
+  for (const entry of backlogEntries) {
+    const id = entry?.id;
+    if (typeof id !== 'string' || !BACKLOG_ID_PATTERN.test(id)) {
+      errors.push(`Invalid backlog task ID: ${id} (expected T-001 style)`);
+      continue;
+    }
+
+    if (seenIds.has(id)) {
+      errors.push(`Duplicate backlog task ID: ${id}`);
+    }
+    seenIds.add(id);
+    backlogIds.add(id);
+    backlogEntriesById.set(id, entry);
+
+    if (typeof entry.title !== 'string' || entry.title.trim().length === 0) {
+      errors.push(`Missing backlog title for ${id}`);
+    }
+
+    if (!BACKLOG_STATUSES.has(entry.status)) {
+      errors.push(`Invalid backlog status for ${id}: ${entry.status}`);
+    }
+
+    if (!Array.isArray(entry.dependencies)) {
+      errors.push(`Invalid backlog dependencies for ${id}: expected array`);
+    }
+
+    if (typeof entry.scope !== 'string' || entry.scope.trim().length === 0) {
+      errors.push(`Missing backlog scope for ${id}`);
+    }
+
+    if (entry.risk !== undefined && !BACKLOG_RISKS.has(entry.risk)) {
+      errors.push(`Invalid backlog risk for ${id}: ${entry.risk}`);
+    }
+
+    if (
+      entry.packetTier !== undefined &&
+      !BACKLOG_PACKET_TIERS.has(entry.packetTier)
+    ) {
+      errors.push(`Invalid backlog packetTier for ${id}: ${entry.packetTier}`);
+    }
+
+    if (
+      entry.validation !== undefined &&
+      !(
+        Array.isArray(entry.validation) &&
+        entry.validation.every(
+          (item) => typeof item === 'string' && item.trim().length > 0,
+        )
+      )
+    ) {
+      errors.push(
+        `Invalid backlog validation for ${id}: expected array of commands or evidence strings`,
+      );
+    }
+
+    if (
+      entry.blockedReason !== undefined &&
+      typeof entry.blockedReason !== 'string'
+    ) {
+      errors.push(`Invalid backlog blockedReason for ${id}: expected string`);
+    }
+
+    if (
+      entry.status === 'blocked' &&
+      typeof entry.blockedReason === 'string' &&
+      entry.blockedReason.trim().length === 0
+    ) {
+      errors.push(`Blocked backlog task ${id} requires blockedReason`);
+    }
+
+    if (
+      entry.updatedAt !== undefined &&
+      (typeof entry.updatedAt !== 'string' || !hasIsoLikeDate(entry.updatedAt))
+    ) {
+      errors.push(`Invalid backlog updatedAt for ${id}: ${entry.updatedAt}`);
+    }
+  }
+
+  for (const entry of backlogEntries) {
+    if (!Array.isArray(entry?.dependencies) || typeof entry?.id !== 'string') {
+      continue;
+    }
+
+    for (const dependency of entry.dependencies) {
+      if (!backlogIds.has(dependency)) {
+        errors.push(
+          `Unknown backlog dependency for ${entry.id}: ${dependency}`,
+        );
+      }
+    }
+  }
+
+  const taskDocumentsById = new Map();
+  for (const document of taskDocuments) {
+    const id = collectTaskDocumentId(document);
+    if (!id) {
+      errors.push(`Task document has no valid ID: ${document.path}`);
+      continue;
+    }
+
+    if (taskDocumentsById.has(id)) {
+      errors.push(`Duplicate task document for ID: ${id}`);
+    }
+    taskDocumentsById.set(id, document);
+
+    if (!backlogIds.has(id)) {
+      errors.push(
+        `Task document has no backlog entry: ${id} (${document.path})`,
+      );
+    }
+
+    const heading = extractTaskDocumentHeading(document);
+    if (heading === null) {
+      errors.push(`Task document ${document.path} is missing title heading`);
+    } else {
+      if (heading.id !== id) {
+        errors.push(
+          `Task document ${document.path} heading ID mismatch: expected ${id}, found ${heading.id}`,
+        );
+      }
+
+      const backlogEntry = backlogEntriesById.get(id);
+      if (
+        backlogEntry &&
+        heading.title.trim().toLowerCase() !==
+          backlogEntry.title.trim().toLowerCase()
+      ) {
+        errors.push(
+          `Task document ${document.path} heading title mismatch for ${id}: expected "${backlogEntry.title}", found "${heading.title}"`,
+        );
+      }
+    }
+
+    for (const section of TASK_DOCUMENT_REQUIRED_SECTIONS) {
+      if (!document.body.includes(section)) {
+        errors.push(
+          `Task document ${document.path} is missing required section: ${section}`,
+        );
+      }
+    }
+  }
+
+  for (const id of backlogIds) {
+    if (!taskDocumentsById.has(id)) {
+      errors.push(`Missing task document for backlog ID: ${id}`);
+    }
+  }
+
+  return errors;
+}
+
 const FORBIDDEN_PATH_LITERAL = 'docs/rules/docs/rules';
 
 function collectForbiddenPathLiterals(documents = []) {
@@ -350,6 +592,8 @@ function validateGovernanceAnchors(documentsByPath) {
 
 export function validateGovernance({
   agentsBody,
+  apiRulesBody,
+  dbRulesBody,
   codingRulesBody,
   decisionsBody,
   dynamicWorkflowBody,
@@ -358,8 +602,10 @@ export function validateGovernance({
   templatesReadmeBody,
   memoryReadmeBody,
   gitRulesBody,
+  reviewRulesBody,
   loopEngineeringBody,
   quickstartBody,
+  testRulesBody,
   taskLifecycleBody,
   prTemplateBody,
   releaseBody,
@@ -368,6 +614,8 @@ export function validateGovernance({
   projectStateBody,
   knownBugsBody,
   techDebtBody,
+  backlogBody,
+  taskDocuments = [],
   linkedDocuments = [],
   repoRoot = process.cwd(),
   fileExists = existsSync,
@@ -441,6 +689,10 @@ export function validateGovernance({
     errors.push(...validateProjectState(projectStateBody));
   }
 
+  if (backlogBody || taskDocuments.length > 0) {
+    errors.push(...validateBacklogAndTasks({ backlogBody, taskDocuments }));
+  }
+
   const documentsForPathLiteralScan = [
     ...(linkedDocuments ?? []),
     agentsBody ? { path: 'AGENTS.md', body: agentsBody } : null,
@@ -465,13 +717,17 @@ export function validateGovernance({
       ...validateGovernanceAnchors({
         '.github/PULL_REQUEST_TEMPLATE.md': prTemplateBody,
         'AGENTS.md': agentsBody,
+        'docs/rules/API_RULES.md': apiRulesBody,
         'docs/rules/CODING_RULES.md': codingRulesBody,
+        'docs/rules/DB_RULES.md': dbRulesBody,
         'docs/rules/DYNAMIC_WORKFLOW_RULES.md': dynamicWorkflowBody,
         'docs/rules/GIT_RULES.md': gitRulesBody,
         'docs/rules/LOOP_ENGINEERING_RULES.md': loopEngineeringBody,
         'docs/rules/QUICKSTART.md': quickstartBody,
+        'docs/rules/REVIEW_RULES.md': reviewRulesBody,
         'docs/rules/RELEASE.md': releaseBody,
         'docs/rules/TASK_LIFECYCLE_RULES.md': taskLifecycleBody,
+        'docs/rules/TEST_RULES.md': testRulesBody,
         'docs/templates/workflow-packet-examples.md':
           workflowPacketExamplesBody,
       }),
@@ -492,6 +748,10 @@ const LINK_CHECKED_DOCUMENTS = [
   'docs/memory/README.md',
   '.github/PULL_REQUEST_TEMPLATE.md',
   'docs/rules/CODING_RULES.md',
+  'docs/rules/API_RULES.md',
+  'docs/rules/DB_RULES.md',
+  'docs/rules/TEST_RULES.md',
+  'docs/rules/REVIEW_RULES.md',
   'docs/rules/GIT_RULES.md',
   'docs/rules/DYNAMIC_WORKFLOW_RULES.md',
   'docs/rules/TASK_LIFECYCLE_RULES.md',
@@ -520,9 +780,28 @@ const LINK_CHECKED_DOCUMENTS = [
   'docs/templates/workflow-packet-examples.md',
 ];
 
+function collectTaskDocumentsFromDisk() {
+  const tasksDir = 'docs/tasks';
+  if (!existsSync(tasksDir)) {
+    return [];
+  }
+
+  return readdirSync(tasksDir)
+    .filter((name) => /^T-\d{3}-.*\.md$/.test(name))
+    .map((name) => {
+      const path = `${tasksDir}/${name}`;
+      return {
+        path,
+        body: readText(path),
+      };
+    });
+}
+
 function main() {
   const result = validateGovernance({
     agentsBody: readText('AGENTS.md'),
+    apiRulesBody: readText('docs/rules/API_RULES.md'),
+    dbRulesBody: readText('docs/rules/DB_RULES.md'),
     codingRulesBody: readText('docs/rules/CODING_RULES.md'),
     decisionsBody: readText('docs/memory/DECISIONS.md'),
     dynamicWorkflowBody: readText('docs/rules/DYNAMIC_WORKFLOW_RULES.md'),
@@ -531,8 +810,10 @@ function main() {
     templatesReadmeBody: readText('docs/templates/README.md'),
     memoryReadmeBody: readText('docs/memory/README.md'),
     gitRulesBody: readText('docs/rules/GIT_RULES.md'),
+    reviewRulesBody: readText('docs/rules/REVIEW_RULES.md'),
     loopEngineeringBody: readText('docs/rules/LOOP_ENGINEERING_RULES.md'),
     quickstartBody: readText('docs/rules/QUICKSTART.md'),
+    testRulesBody: readText('docs/rules/TEST_RULES.md'),
     taskLifecycleBody: readText('docs/rules/TASK_LIFECYCLE_RULES.md'),
     prTemplateBody: readText('.github/PULL_REQUEST_TEMPLATE.md'),
     releaseBody: readText('docs/rules/RELEASE.md'),
@@ -543,6 +824,8 @@ function main() {
     projectStateBody: readText('docs/memory/PROJECT_STATE.md'),
     knownBugsBody: readText('docs/memory/KNOWN_BUGS.md'),
     techDebtBody: readText('docs/memory/TECH_DEBT.md'),
+    backlogBody: readText('backlog.json'),
+    taskDocuments: collectTaskDocumentsFromDisk(),
     enforceGovernanceAnchors: true,
     linkedDocuments: LINK_CHECKED_DOCUMENTS.map((path) => ({
       path,

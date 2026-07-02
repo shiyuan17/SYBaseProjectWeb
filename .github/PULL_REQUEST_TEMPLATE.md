@@ -1,6 +1,6 @@
 # PR Workflow Packet
 
-Choose the smallest packet tier that matches the change. Workflow selection, modifiers, Red Team obligations, and packet tiers use `AGENTS.md` plus `docs/rules/DYNAMIC_WORKFLOW_RULES.md` as the source of truth.
+Choose the smallest packet tier that matches the change. Workflow selection, modifiers, Red Team obligations, and packet tiers use `AGENTS.md` plus `docs/rules/DYNAMIC_WORKFLOW_RULES.md` as the source of truth. API, DB, testing, and review evidence must follow `docs/rules/API_RULES.md`, `docs/rules/DB_RULES.md`, `docs/rules/TEST_RULES.md`, and `docs/rules/REVIEW_RULES.md` when triggered.
 
 Packet tier:
 
@@ -90,3 +90,4 @@ Use only when the task explicitly used loop.
 - [ ] Validation results are real command/browser/API outcomes, not future plans or "should pass" statements.
 - [ ] Red Team evidence is substantive when triggered.
 - [ ] Memory judgment is credible and cross-repo evidence is present when contracts require it.
+- [ ] API / DB / test / review evidence follows the corresponding rule document when those domains are touched.

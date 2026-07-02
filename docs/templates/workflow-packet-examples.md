@@ -1,6 +1,6 @@
 # 治理模板填写范例
 
-字段语义以 `AGENTS.md` 与 `DYNAMIC_WORKFLOW_RULES.md` 为准；本文仅示例，不新增字段。
+字段语义以 `AGENTS.md` 与 `DYNAMIC_WORKFLOW_RULES.md` 为准；API、DB、测试和 Review 证据分别引用 `API_RULES.md`、`DB_RULES.md`、`TEST_RULES.md`、`REVIEW_RULES.md`。本文仅示例，不新增字段。
 
 ## 档位速查
 
@@ -53,4 +53,8 @@
 
 - [../../AGENTS.md](../../AGENTS.md)
 - [../rules/DYNAMIC_WORKFLOW_RULES.md](../rules/DYNAMIC_WORKFLOW_RULES.md)
+- [../rules/API_RULES.md](../rules/API_RULES.md)
+- [../rules/DB_RULES.md](../rules/DB_RULES.md)
+- [../rules/TEST_RULES.md](../rules/TEST_RULES.md)
+- [../rules/REVIEW_RULES.md](../rules/REVIEW_RULES.md)
 - [../../.github/PULL_REQUEST_TEMPLATE.md](../../.github/PULL_REQUEST_TEMPLATE.md)

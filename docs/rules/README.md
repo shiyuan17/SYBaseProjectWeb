@@ -6,7 +6,11 @@
 
 - [PROJECT_DIRECTORY.md](./PROJECT_DIRECTORY.md): 目录与模块边界
 - [CODING_RULES.md](./CODING_RULES.md): 编码、验证命令、UTF-8、AI 自检附录
-- [FRONTEND_RULES.md](./FRONTEND_RULES.md): Vue/TS、UI、状态、路由、API、测试、兼容（合并版）
+- [FRONTEND_RULES.md](./FRONTEND_RULES.md): Vue/TS、UI、状态、路由、兼容
+- [API_RULES.md](./API_RULES.md): 接口命名、DTO/ViewModel、mapper、mock、跨仓证据
+- [DB_RULES.md](./DB_RULES.md): migration、seed、数据修复、字段兼容的跨仓协议
+- [TEST_RULES.md](./TEST_RULES.md): 单测、集成、E2E、冒烟、回归、手工验收矩阵
+- [REVIEW_RULES.md](./REVIEW_RULES.md): Review 五轴、严重度、阻塞条件、AI checker、证据质量
 
 ## 协作治理
 
