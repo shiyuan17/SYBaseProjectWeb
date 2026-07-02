@@ -27,7 +27,7 @@ Use this prompt when a local plan needs to be split into task items and Codex Go
 4. 高风险前置事项单独拆成 Blocking task。
 5. 每个任务项使用 `docs/templates/task-item-template.md` 的结构。
 6. 每个任务项生成一份使用 `docs/templates/codex-goal-prompt-template.md` 的 Goal 提示词。
-7. 若任务需要落库到本地任务体系，同时生成 `backlog.json` 条目草案和对应 AI 执行单元 Markdown 草案。
+7. 若任务需要落库到本地任务体系，同时生成 `backlog.json` 条目草案和对应 AI 执行单元 Markdown 草案；条目草案必须包含 `risk`、`packetTier`、`validation`、`blockedReason`、`updatedAt` 推荐字段。
 8. 若任务来源平台有现成记录能力，可在输出中标注建议的标题、编号和状态同步方式；不强绑定任何平台。
 
 ## 拆分要求
@@ -46,7 +46,7 @@ Use this prompt when a local plan needs to be split into task items and Codex Go
 2. 任务项列表。
 3. 若任务平台已存在记录，列出对应编号、标题、链接。
 4. 若尚未建卡，说明原因并给出可复制草案。
-5. 若落库到本地任务体系，附 `backlog.json` 条目草案和 AI 执行单元 Markdown 草案。
+5. 若落库到本地任务体系，附 `backlog.json` 条目草案和 AI 执行单元 Markdown 草案，并说明阻塞任务的 `blockedReason` 与可执行任务的 `validation`。
 6. 每个任务项对应的 Codex Goal 提示词。
 7. 必须人工确认后才能进入实现的任务清单。
 ```

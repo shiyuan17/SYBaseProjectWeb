@@ -35,20 +35,24 @@
 
 ### 规范单一来源矩阵
 
-| 主题                         | 唯一来源                               |
-| ---------------------------- | -------------------------------------- |
-| 协作入口、风险、交付、Memory | `AGENTS.md`                            |
-| 三层阅读路径与最小阅读表     | `docs/rules/QUICKSTART.md`             |
-| Workflow、修饰器、Packet     | `docs/rules/DYNAMIC_WORKFLOW_RULES.md` |
-| 可选生命周期产物             | `docs/rules/TASK_LIFECYCLE_RULES.md`   |
-| 验证命令、编码基线           | `docs/rules/CODING_RULES.md`           |
-| 前端实现                     | `docs/rules/FRONTEND_RULES.md`         |
-| Git、worktree、PR            | `docs/rules/GIT_RULES.md`              |
-| 任务来源与启动块             | `docs/rules/TASK_INTAKE.md`            |
-| 本地 backlog 与 AI 执行单元  | `docs/rules/TASK_MANAGEMENT_RULES.md`  |
-| Loop Packet                  | `docs/rules/LOOP_ENGINEERING_RULES.md` |
-| 外部 skill                   | `docs/rules/AGENT_SKILL_ROUTING.md`    |
-| 发布与回滚                   | `docs/rules/RELEASE.md`                |
+| 主题                          | 唯一来源                               |
+| ----------------------------- | -------------------------------------- |
+| 协作入口、风险、交付、Memory  | `AGENTS.md`                            |
+| 三层阅读路径与最小阅读表      | `docs/rules/QUICKSTART.md`             |
+| Workflow、修饰器、Packet      | `docs/rules/DYNAMIC_WORKFLOW_RULES.md` |
+| 可选生命周期产物              | `docs/rules/TASK_LIFECYCLE_RULES.md`   |
+| 验证命令、编码基线            | `docs/rules/CODING_RULES.md`           |
+| 前端实现                      | `docs/rules/FRONTEND_RULES.md`         |
+| API、DTO、mapper、mock、联调  | `docs/rules/API_RULES.md`              |
+| DB、migration、seed、数据修复 | `docs/rules/DB_RULES.md`               |
+| 测试分层与验证矩阵            | `docs/rules/TEST_RULES.md`             |
+| Code Review 与证据质量        | `docs/rules/REVIEW_RULES.md`           |
+| Git、worktree、PR             | `docs/rules/GIT_RULES.md`              |
+| 任务来源与启动块              | `docs/rules/TASK_INTAKE.md`            |
+| 本地 backlog 与 AI 执行单元   | `docs/rules/TASK_MANAGEMENT_RULES.md`  |
+| Loop Packet                   | `docs/rules/LOOP_ENGINEERING_RULES.md` |
+| 外部 skill                    | `docs/rules/AGENT_SKILL_ROUTING.md`    |
+| 发布与回滚                    | `docs/rules/RELEASE.md`                |
 
 ## 强制规则
 
@@ -61,18 +65,22 @@
 
 ### 2. 场景映射
 
-| 场景                                          | 必读                        |
-| --------------------------------------------- | --------------------------- |
-| 首次进入 / 不确定读什么                       | `QUICKSTART.md`             |
-| 页面 / 组件 / API / 路由 / 状态 / 测试 / 兼容 | `FRONTEND_RULES.md`         |
-| Git / PR / worktree                           | `GIT_RULES.md`              |
-| 选 Workflow / Packet                          | `DYNAMIC_WORKFLOW_RULES.md` |
-| 澄清 / Spec / Plan / Tasks / Handoff / 复盘   | `TASK_LIFECYCLE_RULES.md`   |
-| 任务来源 / issue / PR / 工单                  | `TASK_INTAKE.md`            |
-| 任务 backlog / AI 执行单元                    | `TASK_MANAGEMENT_RULES.md`  |
-| Memory 更新                                   | `docs/memory/*.md`          |
-| 发布                                          | `RELEASE.md`                |
-| Loop（显式要求时）                            | `LOOP_ENGINEERING_RULES.md` |
+| 场景                                        | 必读                        |
+| ------------------------------------------- | --------------------------- |
+| 首次进入 / 不确定读什么                     | `QUICKSTART.md`             |
+| 页面 / 组件 / 路由 / 状态 / 兼容            | `FRONTEND_RULES.md`         |
+| API / DTO / mapper / mock / 联调            | `API_RULES.md`              |
+| DB / migration / seed / 数据修复 / 字段兼容 | `DB_RULES.md`               |
+| 测试策略 / 验证矩阵 / 回归                  | `TEST_RULES.md`             |
+| Git / PR / worktree                         | `GIT_RULES.md`              |
+| Code Review / 证据质量 / AI checker         | `REVIEW_RULES.md`           |
+| 选 Workflow / Packet                        | `DYNAMIC_WORKFLOW_RULES.md` |
+| 澄清 / Spec / Plan / Tasks / Handoff / 复盘 | `TASK_LIFECYCLE_RULES.md`   |
+| 任务来源 / issue / PR / 工单                | `TASK_INTAKE.md`            |
+| 任务 backlog / AI 执行单元                  | `TASK_MANAGEMENT_RULES.md`  |
+| Memory 更新                                 | `docs/memory/*.md`          |
+| 发布                                        | `RELEASE.md`                |
+| Loop（显式要求时）                          | `LOOP_ENGINEERING_RULES.md` |
 
 ### 3. 后端联动
 
@@ -169,6 +177,10 @@ Lightweight / Full：
 - [docs/rules/PROJECT_DIRECTORY.md](./docs/rules/PROJECT_DIRECTORY.md)
 - [docs/rules/CODING_RULES.md](./docs/rules/CODING_RULES.md)
 - [docs/rules/FRONTEND_RULES.md](./docs/rules/FRONTEND_RULES.md)
+- [docs/rules/API_RULES.md](./docs/rules/API_RULES.md)
+- [docs/rules/DB_RULES.md](./docs/rules/DB_RULES.md)
+- [docs/rules/TEST_RULES.md](./docs/rules/TEST_RULES.md)
+- [docs/rules/REVIEW_RULES.md](./docs/rules/REVIEW_RULES.md)
 - [docs/rules/GIT_RULES.md](./docs/rules/GIT_RULES.md)
 - [docs/rules/DYNAMIC_WORKFLOW_RULES.md](./docs/rules/DYNAMIC_WORKFLOW_RULES.md)
 - [docs/rules/TASK_LIFECYCLE_RULES.md](./docs/rules/TASK_LIFECYCLE_RULES.md)

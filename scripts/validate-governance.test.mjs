@@ -22,6 +22,10 @@ const validRulesReadmeBody = `
 - [PROJECT_DIRECTORY.md](./PROJECT_DIRECTORY.md)
 - [CODING_RULES.md](./CODING_RULES.md)
 - [FRONTEND_RULES.md](./FRONTEND_RULES.md)
+- [API_RULES.md](./API_RULES.md)
+- [DB_RULES.md](./DB_RULES.md)
+- [TEST_RULES.md](./TEST_RULES.md)
+- [REVIEW_RULES.md](./REVIEW_RULES.md)
 - [GIT_RULES.md](./GIT_RULES.md)
 - [DYNAMIC_WORKFLOW_RULES.md](./DYNAMIC_WORKFLOW_RULES.md)
 - [TASK_LIFECYCLE_RULES.md](./TASK_LIFECYCLE_RULES.md)
@@ -78,6 +82,10 @@ const validAgentsBody = `
 - [docs/rules/PROJECT_DIRECTORY.md](./docs/rules/PROJECT_DIRECTORY.md)
 - [docs/rules/CODING_RULES.md](./docs/rules/CODING_RULES.md)
 - [docs/rules/FRONTEND_RULES.md](./docs/rules/FRONTEND_RULES.md)
+- [docs/rules/API_RULES.md](./docs/rules/API_RULES.md)
+- [docs/rules/DB_RULES.md](./docs/rules/DB_RULES.md)
+- [docs/rules/TEST_RULES.md](./docs/rules/TEST_RULES.md)
+- [docs/rules/REVIEW_RULES.md](./docs/rules/REVIEW_RULES.md)
 - [docs/rules/GIT_RULES.md](./docs/rules/GIT_RULES.md)
 - [docs/rules/DYNAMIC_WORKFLOW_RULES.md](./docs/rules/DYNAMIC_WORKFLOW_RULES.md)
 - [docs/rules/TASK_LIFECYCLE_RULES.md](./docs/rules/TASK_LIFECYCLE_RULES.md)
@@ -118,6 +126,92 @@ const validProjectStateBody = `
 - Handoff item
 `;
 
+const validBacklogBody = JSON.stringify(
+  [
+    {
+      id: 'T-001',
+      title: 'auth system',
+      status: 'todo',
+      dependencies: [],
+      scope: 'modules/auth',
+      risk: 'medium',
+      packetTier: 'Full',
+      validation: ['pnpm test:unit -- auth'],
+      blockedReason: '',
+      updatedAt: '2026-07-01',
+    },
+    {
+      id: 'T-002',
+      title: 'auth mapper tests',
+      status: 'blocked',
+      dependencies: ['T-001'],
+      scope: 'apps/web-ele/src/modules/auth',
+      risk: 'low',
+      packetTier: 'Lightweight',
+      validation: ['pnpm test:unit -- auth-mapper'],
+      blockedReason: 'Waiting for backend contract sample.',
+      updatedAt: '2026-07-01T10:00:00+08:00',
+    },
+  ],
+  null,
+  2,
+);
+
+const validTaskDocuments = [
+  {
+    path: 'docs/tasks/T-001-auth-system.md',
+    body: `
+# T-001 Auth System
+
+## Goal
+
+Implement auth.
+
+## Inputs
+
+- Backend contract
+
+## Outputs
+
+- Frontend auth flow
+
+## Constraints
+
+- Follow API_RULES.md
+
+## Acceptance Criteria
+
+- Login success returns token.
+`,
+  },
+  {
+    path: 'docs/tasks/T-002-auth-mapper-tests.md',
+    body: `
+# T-002 Auth Mapper Tests
+
+## Goal
+
+Cover auth mapper.
+
+## Inputs
+
+- T-001
+
+## Outputs
+
+- Mapper tests
+
+## Constraints
+
+- No runtime behavior change
+
+## Acceptance Criteria
+
+- Mapper handles missing optional fields.
+`,
+  },
+];
+
 const governanceAnchorFixtures = {
   agentsBody: `${validAgentsBody}
 ## 一页式执行入口
@@ -128,7 +222,17 @@ const governanceAnchorFixtures = {
 红区确认协议
 ### 8. AI Memory Update
 `,
+  apiRulesBody: `
+## 单一来源
+## Mapper 与兼容
+## AI Agent 禁止项
+`,
   codingRulesBody: '标准验证命令',
+  dbRulesBody: `
+## 触发条件
+## 跨仓证据
+## 回滚与发布
+`,
   dynamicWorkflowBody: `
 主 Workflow
 轻量 Workflow Packet
@@ -147,6 +251,11 @@ Red Team
 ## Loop Packet
 最小 Loop Packet
 `,
+  reviewRulesBody: `
+## Review 五轴
+## 阻塞条件
+## 证据质量
+`,
   releaseBody: `
 ### 1.1 版本号与 Tag 映射
 ### 3.1 发布 Tag 闭环
@@ -156,6 +265,11 @@ Red Team
 ## 三层阅读路径
 ## 场景最小阅读
 ## 协作底座（底座层分包）
+`,
+  testRulesBody: `
+## 测试分层
+## 触发矩阵
+## 强制规则
 `,
   prTemplateBody: `
 Packet tier:
@@ -192,6 +306,8 @@ describe('validateGovernance', () => {
       memoryReadmeBody: validMemoryReadmeBody,
       architectureBody: validArchitectureBody,
       projectStateBody: validProjectStateBody,
+      backlogBody: validBacklogBody,
+      taskDocuments: validTaskDocuments,
     });
 
     expect(result.isValid).toBe(true);
@@ -224,14 +340,14 @@ describe('validateGovernance', () => {
   it('rejects missing rules index entries', () => {
     const result = validateGovernance({
       rulesReadmeBody: validRulesReadmeBody.replace(
-        '- [LOOP_ENGINEERING_RULES.md](./LOOP_ENGINEERING_RULES.md)\n',
+        '- [API_RULES.md](./API_RULES.md)\n',
         '',
       ),
     });
 
     expect(result.isValid).toBe(false);
     expect(result.errors).toContain(
-      'Missing docs/rules/README.md entry: LOOP_ENGINEERING_RULES.md',
+      'Missing docs/rules/README.md entry: API_RULES.md',
     );
   });
 
@@ -456,6 +572,147 @@ describe('validateGovernance', () => {
     expect(result.isValid).toBe(false);
     expect(result.errors).toContain(
       'Forbidden doubled docs/rules path in docs/memory/PROJECT_STATE.md: docs/rules/docs/rules',
+    );
+  });
+
+  it('rejects duplicate and malformed backlog IDs', () => {
+    const result = validateGovernance({
+      backlogBody: JSON.stringify([
+        {
+          id: 'T-001',
+          title: 'auth system',
+          status: 'todo',
+          dependencies: [],
+          scope: 'modules/auth',
+        },
+        {
+          id: 'TASK-001',
+          title: 'bad id',
+          status: 'todo',
+          dependencies: [],
+          scope: 'modules/auth',
+        },
+        {
+          id: 'T-001',
+          title: 'duplicate',
+          status: 'todo',
+          dependencies: [],
+          scope: 'modules/auth',
+        },
+      ]),
+      taskDocuments: validTaskDocuments,
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContain('Duplicate backlog task ID: T-001');
+    expect(result.errors).toContain(
+      'Invalid backlog task ID: TASK-001 (expected T-001 style)',
+    );
+  });
+
+  it('rejects invalid backlog task status and dependencies', () => {
+    const backlog = JSON.parse(validBacklogBody);
+    backlog[1].status = 'waiting';
+    backlog[1].dependencies = ['T-999'];
+    const result = validateGovernance({
+      backlogBody: JSON.stringify(backlog),
+      taskDocuments: validTaskDocuments,
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContain(
+      'Invalid backlog status for T-002: waiting',
+    );
+    expect(result.errors).toContain(
+      'Unknown backlog dependency for T-002: T-999',
+    );
+  });
+
+  it('rejects missing task files and orphan task documents', () => {
+    const result = validateGovernance({
+      backlogBody: validBacklogBody,
+      taskDocuments: [
+        validTaskDocuments[0],
+        {
+          path: 'docs/tasks/T-999-orphan.md',
+          body: validTaskDocuments[1].body.replace('T-002', 'T-999'),
+        },
+      ],
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContain(
+      'Missing task document for backlog ID: T-002',
+    );
+    expect(result.errors).toContain(
+      'Task document has no backlog entry: T-999 (docs/tasks/T-999-orphan.md)',
+    );
+  });
+
+  it('rejects task documents missing required sections', () => {
+    const result = validateGovernance({
+      backlogBody: JSON.stringify([JSON.parse(validBacklogBody)[0]]),
+      taskDocuments: [
+        {
+          ...validTaskDocuments[0],
+          body: validTaskDocuments[0].body.replace(
+            '## Acceptance Criteria',
+            '',
+          ),
+        },
+      ],
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContain(
+      'Task document docs/tasks/T-001-auth-system.md is missing required section: ## Acceptance Criteria',
+    );
+  });
+
+  it('rejects task documents whose heading does not match backlog metadata', () => {
+    const result = validateGovernance({
+      backlogBody: JSON.stringify([JSON.parse(validBacklogBody)[0]]),
+      taskDocuments: [
+        {
+          ...validTaskDocuments[0],
+          body: validTaskDocuments[0].body.replace(
+            '# T-001 Auth System',
+            '# T-002 Different Title',
+          ),
+        },
+      ],
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContain(
+      'Task document docs/tasks/T-001-auth-system.md heading ID mismatch: expected T-001, found T-002',
+    );
+    expect(result.errors).toContain(
+      'Task document docs/tasks/T-001-auth-system.md heading title mismatch for T-001: expected "auth system", found "Different Title"',
+    );
+  });
+
+  it('rejects invalid optional backlog governance fields when present', () => {
+    const backlog = JSON.parse(validBacklogBody);
+    backlog[0].risk = 'urgent';
+    backlog[0].packetTier = 'Heavy';
+    backlog[0].validation = 'pnpm test:unit';
+    backlog[0].updatedAt = 'tomorrow';
+    const result = validateGovernance({
+      backlogBody: JSON.stringify(backlog),
+      taskDocuments: validTaskDocuments,
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContain('Invalid backlog risk for T-001: urgent');
+    expect(result.errors).toContain(
+      'Invalid backlog packetTier for T-001: Heavy',
+    );
+    expect(result.errors).toContain(
+      'Invalid backlog validation for T-001: expected array of commands or evidence strings',
+    );
+    expect(result.errors).toContain(
+      'Invalid backlog updatedAt for T-001: tomorrow',
     );
   });
 

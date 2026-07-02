@@ -2,7 +2,13 @@ import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const coreRequiredSections = ['Summary', 'Dynamic Workflow'];
+const coreRequiredSections = [
+  'Summary',
+  'Lifecycle Artifacts',
+  'Dynamic Workflow',
+  'Memory',
+  'Evidence',
+];
 
 const coreRequiredFields = [
   ['Summary', 'Validation'],
@@ -10,26 +16,33 @@ const coreRequiredFields = [
   ['Dynamic Workflow', 'Primary Workflow'],
 ];
 
-const fullRequiredSections = ['Dynamic Tests', 'Memory Update Packet'];
-
 const fullRequiredFields = [
-  ['Dynamic Tests', 'Actual results'],
-  ['Memory Update Packet', 'Updated memory files'],
-  ['Memory Update Packet', 'Not updated memory files and reasons'],
+  ['Full Evidence', 'Required test commands'],
+  ['Full Evidence', 'Actual results'],
 ];
 
 function extractSection(body, sectionName) {
   const lines = body.split(/\r?\n/);
-  const startIndex = lines.findIndex(
-    (line) => line.trim().toLowerCase() === `## ${sectionName}`.toLowerCase(),
-  );
+  const startIndex = lines.findIndex((line) => {
+    const heading = line.trim().match(/^(#{2,6})\s+(.+?)\s*#*$/);
+    return heading?.[2]?.trim().toLowerCase() === sectionName.toLowerCase();
+  });
   if (startIndex === -1) {
     return null;
   }
 
-  const endIndex = lines.findIndex(
-    (line, index) => index > startIndex && /^##\s+/.test(line.trim()),
-  );
+  const startHeading = lines[startIndex]
+    .trim()
+    .match(/^(#{2,6})\s+(.+?)\s*#*$/);
+  const startLevel = startHeading?.[1]?.length ?? 2;
+  const endIndex = lines.findIndex((line, index) => {
+    if (index <= startIndex) {
+      return false;
+    }
+
+    const heading = line.trim().match(/^(#{2,6})\s+(.+?)\s*#*$/);
+    return heading !== null && heading[1].length <= startLevel;
+  });
   const sectionLines = lines.slice(
     startIndex + 1,
     endIndex === -1 ? undefined : endIndex,
@@ -100,8 +113,44 @@ function hasModifier(requiredModifiers, modifier) {
   return splitModifiers(requiredModifiers).includes(modifier.toLowerCase());
 }
 
-function resolvePacketTier(body) {
+function extractDynamicWorkflowState(body) {
   const dynamicWorkflowBody = extractSection(body, 'Dynamic Workflow');
+  if (dynamicWorkflowBody === null) {
+    return {
+      dynamicWorkflowBody: null,
+      primaryWorkflow: '',
+      requiredModifiers: '',
+      redZoneConfirmation: '',
+    };
+  }
+
+  return {
+    dynamicWorkflowBody,
+    primaryWorkflow: (
+      extractField(dynamicWorkflowBody, 'Primary Workflow') ?? ''
+    )
+      .trim()
+      .toLowerCase(),
+    requiredModifiers:
+      extractField(dynamicWorkflowBody, 'Required modifiers') ?? '',
+    redZoneConfirmation:
+      extractField(dynamicWorkflowBody, 'Red-zone confirmation') ?? '',
+  };
+}
+
+function isFullPrimaryWorkflow(primaryWorkflow) {
+  return ['db', 'production debug', 'security', 'workflow-infra'].includes(
+    primaryWorkflow,
+  );
+}
+
+function resolvePacketTier(body) {
+  const {
+    dynamicWorkflowBody,
+    primaryWorkflow: normalizedPrimaryWorkflow,
+    redZoneConfirmation,
+    requiredModifiers,
+  } = extractDynamicWorkflowState(body);
   if (dynamicWorkflowBody === null) {
     return {
       fullReasons: [],
@@ -115,16 +164,9 @@ function resolvePacketTier(body) {
   const primaryWorkflow =
     extractField(dynamicWorkflowBody, 'Primary Workflow') ?? '';
   if (!/^(not applicable|n\/a)\b/i.test(primaryWorkflow.trim())) {
-    const normalizedPrimaryWorkflow = primaryWorkflow.trim().toLowerCase();
-    const requiredModifiers =
-      extractField(dynamicWorkflowBody, 'Required modifiers') ?? '';
-    const redZoneConfirmation =
-      extractField(dynamicWorkflowBody, 'Red-zone confirmation') ?? '';
     const fullReasons = [];
 
-    if (
-      ['db', 'production debug', 'security'].includes(normalizedPrimaryWorkflow)
-    ) {
+    if (isFullPrimaryWorkflow(normalizedPrimaryWorkflow)) {
       fullReasons.push(`primary workflow ${primaryWorkflow.trim()}`);
     }
 
@@ -166,51 +208,89 @@ function resolvePacketTier(body) {
   };
 }
 
-function collectFullEvidenceRequirements(body) {
-  const dynamicWorkflowBody = extractSection(body, 'Dynamic Workflow');
+function collectFullEvidenceFieldRequirements(body) {
+  const { dynamicWorkflowBody, primaryWorkflow, requiredModifiers } =
+    extractDynamicWorkflowState(body);
   if (dynamicWorkflowBody === null) {
     return [];
   }
 
-  const primaryWorkflow = (
-    extractField(dynamicWorkflowBody, 'Primary Workflow') ?? ''
-  )
-    .trim()
-    .toLowerCase();
-  const requiredModifiers =
-    extractField(dynamicWorkflowBody, 'Required modifiers') ?? '';
-  const redZoneConfirmation =
-    extractField(dynamicWorkflowBody, 'Red-zone confirmation') ?? '';
   const requirements = [];
 
   if (
     primaryWorkflow === 'security' ||
     hasModifier(requiredModifiers, 'Security')
   ) {
-    requirements.push('Dynamic Security');
+    requirements.push('Dynamic security');
   }
 
   if (primaryWorkflow === 'db' || hasModifier(requiredModifiers, 'DB')) {
-    requirements.push('Dynamic Database');
+    requirements.push('Dynamic database');
   }
 
   if (hasModifier(requiredModifiers, 'Backend Cross-check')) {
-    requirements.push('Cross-Repo Evidence');
+    requirements.push('Cross-repo evidence');
   }
 
   if (hasModifier(requiredModifiers, 'Browser Verification')) {
-    requirements.push('Dynamic Simulation');
+    requirements.push('Dynamic simulation');
+  }
+
+  return [...new Set(requirements)];
+}
+
+function requiresRedTeamEvidence(body) {
+  const {
+    dynamicWorkflowBody,
+    primaryWorkflow,
+    requiredModifiers,
+    redZoneConfirmation,
+  } = extractDynamicWorkflowState(body);
+  if (dynamicWorkflowBody === null) {
+    return false;
   }
 
   if (
     ['db', 'production debug', 'security'].includes(primaryWorkflow) ||
+    hasModifier(requiredModifiers, 'Security') ||
+    hasModifier(requiredModifiers, 'DB') ||
     hasModifier(requiredModifiers, 'Red Team') ||
     hasSubstantiveValue(redZoneConfirmation)
   ) {
-    requirements.push('Red Team');
+    return true;
   }
 
-  return [...new Set(requirements)];
+  const redTeamBody = extractSection(body, 'Red Team');
+  if (redTeamBody === null) {
+    return false;
+  }
+
+  return (
+    hasSubstantiveValue(extractField(redTeamBody, 'Attack result')) ||
+    hasSubstantiveValue(extractField(redTeamBody, 'Residual risk')) ||
+    hasSubstantiveValue(extractField(redTeamBody, 'Checker / reviewer source'))
+  );
+}
+
+function validateRequiredField({
+  errors,
+  sectionBody,
+  sectionName,
+  fieldName,
+  useSubstantiveValue = false,
+}) {
+  const fieldValue = extractField(sectionBody, fieldName);
+  if (fieldValue === null) {
+    errors.push(`Missing field: ${sectionName} > ${fieldName}`);
+    return;
+  }
+
+  const isEmpty = useSubstantiveValue
+    ? !hasSubstantiveValue(fieldValue)
+    : fieldValue.length === 0;
+  if (isEmpty) {
+    errors.push(`Empty field: ${sectionName} > ${fieldName}`);
+  }
 }
 
 export function validatePullRequestPacket(body = '') {
@@ -250,11 +330,17 @@ export function validatePullRequestPacket(body = '') {
     }
   }
 
+  const memoryBody = extractSection(body, 'Memory');
+  if (memoryBody !== null && !hasSubstantiveMemoryJudgment(memoryBody)) {
+    errors.push(
+      'Memory section is present but has no substantive memory judgment',
+    );
+  }
+
   if (isFull) {
-    for (const sectionName of fullRequiredSections) {
-      if (extractSection(body, sectionName) === null) {
-        errors.push(`Missing section: ${sectionName}`);
-      }
+    const fullEvidenceBody = extractSection(body, 'Full Evidence');
+    if (fullEvidenceBody === null) {
+      errors.push('Missing section: Full Evidence');
     }
 
     for (const [sectionName, fieldName] of fullRequiredFields) {
@@ -263,72 +349,68 @@ export function validatePullRequestPacket(body = '') {
         continue;
       }
 
-      const fieldValue = extractField(sectionBody, fieldName);
-      if (fieldValue === null) {
-        errors.push(`Missing field: ${sectionName} > ${fieldName}`);
-        continue;
-      }
-
-      if (fieldValue.length === 0) {
-        errors.push(`Empty field: ${sectionName} > ${fieldName}`);
-      }
+      validateRequiredField({
+        errors,
+        fieldName,
+        sectionBody,
+        sectionName,
+        useSubstantiveValue: true,
+      });
     }
-  } else {
-    const memoryUpdateBody = extractSection(body, 'Memory Update Packet');
-    if (
-      memoryUpdateBody !== null &&
-      !hasSubstantiveMemoryJudgment(memoryUpdateBody)
-    ) {
-      errors.push(
-        'Memory Update Packet is present but has no substantive memory judgment',
-      );
-    }
-  }
 
-  if (isFull) {
-    for (const sectionName of collectFullEvidenceRequirements(body)) {
-      if (extractSection(body, sectionName) === null) {
-        errors.push(`Full packet evidence missing section: ${sectionName}`);
+    if (fullEvidenceBody !== null) {
+      for (const fieldName of collectFullEvidenceFieldRequirements(body)) {
+        validateRequiredField({
+          errors,
+          fieldName,
+          sectionBody: fullEvidenceBody,
+          sectionName: 'Full Evidence',
+          useSubstantiveValue: true,
+        });
       }
     }
   }
 
-  const dynamicWorkflowBody = extractSection(body, 'Dynamic Workflow');
+  if (!isFull && !isFastPath) {
+    const lightweightEvidenceBody = extractSection(
+      body,
+      'Lightweight Evidence',
+    );
+    if (lightweightEvidenceBody === null) {
+      errors.push('Missing section: Lightweight Evidence');
+    } else {
+      for (const fieldName of [
+        'Dynamic tests / validation',
+        'Unverified items and reasons',
+      ]) {
+        validateRequiredField({
+          errors,
+          fieldName,
+          sectionBody: lightweightEvidenceBody,
+          sectionName: 'Lightweight Evidence',
+          useSubstantiveValue: true,
+        });
+      }
+    }
+  }
+
   const redTeamBody = extractSection(body, 'Red Team');
 
-  if (dynamicWorkflowBody) {
-    const requiredModifiers =
-      extractField(dynamicWorkflowBody, 'Required modifiers') ?? '';
-    const attackResult =
-      redTeamBody === null ? null : extractField(redTeamBody, 'Attack result');
-    const residualRisk =
-      redTeamBody === null ? null : extractField(redTeamBody, 'Residual risk');
-    const checkerSource =
-      redTeamBody === null
-        ? null
-        : extractField(redTeamBody, 'Checker / reviewer source');
-    const checklistMarked =
-      redTeamBody !== null &&
-      redTeamBody.split(/\r?\n/).some((line) => /^\s*-\s*\[[xX]\]/.test(line));
-
-    const redTeamDeclared =
-      /\bred team\b/i.test(requiredModifiers) ||
-      checklistMarked ||
-      hasSubstantiveValue(attackResult) ||
-      hasSubstantiveValue(residualRisk) ||
-      hasSubstantiveValue(checkerSource);
-
-    if (redTeamDeclared) {
-      if (redTeamBody === null) {
-        errors.push('Red Team evidence missing: section');
-      }
-
-      if (!hasSubstantiveValue(attackResult)) {
-        errors.push('Red Team evidence missing: Attack result');
-      }
-
-      if (!hasSubstantiveValue(residualRisk)) {
-        errors.push('Red Team evidence missing: Residual risk');
+  if (requiresRedTeamEvidence(body)) {
+    if (redTeamBody === null) {
+      errors.push('Missing section: Red Team');
+    } else {
+      for (const fieldName of [
+        'Attack path',
+        'Expected failure point',
+        'Attack result',
+        'Residual risk',
+        'Checker / reviewer source',
+      ]) {
+        const fieldValue = extractField(redTeamBody, fieldName);
+        if (!hasSubstantiveValue(fieldValue)) {
+          errors.push(`Red Team evidence missing: ${fieldName}`);
+        }
       }
     }
   }

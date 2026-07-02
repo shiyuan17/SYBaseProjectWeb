@@ -15,6 +15,8 @@ Use this template when converting a local plan or specification into task items.
 
 若来源为本地 `backlog.json`，补充记录：`任务 ID` 与 `AI 执行单元文件路径`。
 
+推荐同步到 `backlog.json` 的字段：`risk`、`packetTier`、`validation`、`blockedReason`、`updatedAt`（字段含义见 `docs/rules/TASK_MANAGEMENT_RULES.md`）。
+
 ## Goal
 
 本任务项只完成：`<单一目标>`。
