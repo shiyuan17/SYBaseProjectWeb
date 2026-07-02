@@ -2,12 +2,14 @@
 
 Use this template to execute exactly one task item with Codex Goal. Replace placeholders before starting the goal.
 
+For directory tasks, Codex Goal must receive a child task ID like `T-002.001`. Parent tasks such as `T-002` with `Executable: false` are planning containers and must not be executed directly.
+
 ```markdown
 目标：执行单个任务项 `<TASK_ID>`：`<标题>`。
 
 请在当前仓库中工作，并严格遵守 `AGENTS.md`。
 
-本 Goal 只处理这个任务项，不扩展到其他任务。
+本 Goal 只处理这个任务项，不扩展到其他任务。若本任务是父任务、缺少 `Stop Condition`、缺少 `Verification Command` 或缺少 `Rollback Plan`，立即停止并要求拆分/补齐，不进入实现。
 
 ## 开始前必须
 
@@ -21,12 +23,17 @@ Use this template to execute exactly one task item with Codex Goal. Replace plac
 8. 如需编码，按 `docs/rules/GIT_RULES.md` §6 完成 worktree 决策；命中必须使用 worktree 的条件时，使用独立 worktree / 分支。
 9. 如涉及后端接口、字段、权限、菜单、统计口径或业务规则，必须对照同级后端仓库 `SYBaseProject`。
 10. **仅当用户或任务来源明确要求 loop** 时，再读 `docs/rules/LOOP_ENGINEERING_RULES.md` 并填写 Loop Packet。
+11. 若任务来源为目录化任务，确认当前 ID 是 `<TASK_ID>.<NNN>` 子任务，且父任务 `README.md` / `task.json` 均声明 `executable: false`。
 
 ## 任务内容
 
 ### Goal
 
 `<粘贴任务 Goal>`
+
+### Timebox
+
+`<= 5 minutes`（目录化子任务必填；超过时必须停止并记录阻塞原因）
 
 ### Acceptance Criteria
 
@@ -65,6 +72,10 @@ Use this template to execute exactly one task item with Codex Goal. Replace plac
 
 `<粘贴任务 Stop Conditions>`
 
+### Rollback Plan
+
+`<粘贴任务 Rollback Plan；说明如何撤回本 Goal 的改动>`
+
 ### Verification
 
 `<粘贴任务 Verification>`
@@ -74,6 +85,9 @@ Use this template to execute exactly one task item with Codex Goal. Replace plac
 - 先输出 `AGENTS.md` 要求的任务确认。
 - 先读现有实现，再决定新增或复用。
 - 优先做最小可验证改动。
+- 只执行当前一个子任务；不得把父任务总目标或相邻子任务纳入本轮。
+- `Stop Condition` 达成后立即停止并交付，不继续寻找下一个缺口。
+- 发现额外缺口、新接口、新状态、新风险时，只记录到 Evidence / Handoff，不继续实现；需要时建议新建子任务。
 - 红区或停止条件命中时暂停请求人工确认。
 - 修改后实际运行验证命令；失败则先修复再重新验证。
 - 仅 durable context 变更时检查 AI Memory Update；绿区默认不写 memory。

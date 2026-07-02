@@ -212,6 +212,113 @@ Cover auth mapper.
   },
 ];
 
+const validTaskDirectoryBacklogBody = JSON.stringify(
+  [
+    {
+      id: 'T-010',
+      title: 'Directory Task Parent',
+      status: 'ready',
+      dependencies: [],
+      scope: 'docs/tasks/T-010-directory-task-parent',
+      taskDir: 'docs/tasks/T-010-directory-task-parent',
+    },
+  ],
+  null,
+  2,
+);
+
+const validTaskDirectory = {
+  path: 'docs/tasks/T-010-directory-task-parent',
+  readmeBody: `
+# T-010 Directory Task Parent
+
+Executable: false
+
+## Goal
+
+Coordinate child tasks.
+
+## Inputs
+
+- Plan
+
+## Outputs
+
+- Child tasks
+
+## Constraints
+
+- Parent task is not a Codex Goal execution unit.
+
+## Acceptance Criteria
+
+- Child tasks complete independently.
+`,
+  manifestBody: JSON.stringify(
+    {
+      id: 'T-010',
+      title: 'Directory Task Parent',
+      status: 'ready',
+      executable: false,
+      dependencies: [],
+      validation: ['node scripts\\validate-governance.mjs'],
+      rollback: 'Revert the parent task directory changes.',
+      updatedAt: '2026-07-02',
+      children: [
+        {
+          id: 'T-010.001',
+          title: 'Contract Inventory',
+          status: 'ready',
+          dependencies: [],
+          validation: ['node scripts\\validate-governance.mjs'],
+          rollback: 'Revert this child task changes.',
+          updatedAt: '2026-07-02',
+        },
+      ],
+    },
+    null,
+    2,
+  ),
+  childDocuments: [
+    {
+      path: 'docs/tasks/T-010-directory-task-parent/children/T-010.001-contract-inventory.md',
+      body: `
+# T-010.001 Contract Inventory
+
+Timebox: <= 5 minutes
+
+## Goal
+
+Record one contract inventory.
+
+## Acceptance Criteria
+
+- Inventory evidence is recorded.
+
+## Non-goals
+
+- Do not implement runtime code.
+
+## Stop Condition
+
+Inventory evidence is written or the source is missing.
+
+## Verification Command
+
+\`node scripts\\validate-governance.mjs\`
+
+## Rollback Plan
+
+Revert this child task change.
+
+## Evidence
+
+- Validation command output.
+`,
+    },
+  ],
+};
+
 const governanceAnchorFixtures = {
   agentsBody: `${validAgentsBody}
 ## 一页式执行入口
@@ -713,6 +820,95 @@ describe('validateGovernance', () => {
     );
     expect(result.errors).toContain(
       'Invalid backlog updatedAt for T-001: tomorrow',
+    );
+  });
+
+  it('accepts directory task model without requiring child tasks in root backlog', () => {
+    const result = validateGovernance({
+      backlogBody: validTaskDirectoryBacklogBody,
+      taskDirectories: [validTaskDirectory],
+    });
+
+    expect(result.isValid).toBe(true);
+    expect(result.errors).toEqual([]);
+  });
+
+  it('rejects directory parents that are executable Codex Goal units', () => {
+    const result = validateGovernance({
+      backlogBody: validTaskDirectoryBacklogBody,
+      taskDirectories: [
+        {
+          ...validTaskDirectory,
+          readmeBody: validTaskDirectory.readmeBody.replace(
+            'Executable: false',
+            'Executable: true',
+          ),
+          manifestBody: validTaskDirectory.manifestBody.replace(
+            '"executable": false',
+            '"executable": true',
+          ),
+        },
+      ],
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContain(
+      'Task directory docs/tasks/T-010-directory-task-parent parent must declare Executable: false',
+    );
+    expect(result.errors).toContain(
+      'Task directory docs/tasks/T-010-directory-task-parent task.json executable must be false',
+    );
+  });
+
+  it('rejects child tasks missing five-minute Goal guardrails', () => {
+    const result = validateGovernance({
+      backlogBody: validTaskDirectoryBacklogBody,
+      taskDirectories: [
+        {
+          ...validTaskDirectory,
+          childDocuments: [
+            {
+              ...validTaskDirectory.childDocuments[0],
+              body: validTaskDirectory.childDocuments[0].body
+                .replace('Timebox: <= 5 minutes', 'Timebox: <= 20 minutes')
+                .replace('## Stop Condition', '## Stop Notes')
+                .replace('## Verification Command', '## Verification Notes')
+                .replace('## Rollback Plan', '## Rollback Notes'),
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContain(
+      'Child task docs/tasks/T-010-directory-task-parent/children/T-010.001-contract-inventory.md must declare Timebox: <= 5 minutes',
+    );
+    expect(result.errors).toContain(
+      'Child task docs/tasks/T-010-directory-task-parent/children/T-010.001-contract-inventory.md is missing required section: ## Stop Condition',
+    );
+    expect(result.errors).toContain(
+      'Child task docs/tasks/T-010-directory-task-parent/children/T-010.001-contract-inventory.md is missing required section: ## Verification Command',
+    );
+    expect(result.errors).toContain(
+      'Child task docs/tasks/T-010-directory-task-parent/children/T-010.001-contract-inventory.md is missing required section: ## Rollback Plan',
+    );
+  });
+
+  it('rejects child task documents placed directly under docs/tasks', () => {
+    const result = validateGovernance({
+      backlogBody: JSON.stringify([]),
+      taskDocuments: [
+        {
+          path: 'docs/tasks/T-010.001-contract-inventory.md',
+          body: '# T-010.001 Contract Inventory',
+        },
+      ],
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContain(
+      'Child task document must live under a task directory children folder: docs/tasks/T-010.001-contract-inventory.md',
     );
   });
 

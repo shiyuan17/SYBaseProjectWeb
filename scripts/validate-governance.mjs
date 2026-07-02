@@ -52,6 +52,7 @@ const REQUIRED_TEMPLATE_DOCS = [
   'workflow-packet-examples.md',
 ];
 const BACKLOG_ID_PATTERN = /^T-\d{3}$/;
+const CHILD_TASK_ID_PATTERN = /^T-\d{3}\.\d{3}$/;
 const BACKLOG_STATUSES = new Set([
   'blocked',
   'cancelled',
@@ -69,6 +70,15 @@ const TASK_DOCUMENT_REQUIRED_SECTIONS = [
   '## Outputs',
   '## Constraints',
   '## Acceptance Criteria',
+];
+const CHILD_TASK_DOCUMENT_REQUIRED_SECTIONS = [
+  '## Goal',
+  '## Acceptance Criteria',
+  '## Non-goals',
+  '## Stop Condition',
+  '## Verification Command',
+  '## Rollback Plan',
+  '## Evidence',
 ];
 const REQUIRED_GOVERNANCE_ANCHORS = {
   'AGENTS.md': [
@@ -365,6 +375,16 @@ function parseBacklog(backlogBody, errors) {
   return parsed;
 }
 
+function normalizeRepoPath(path) {
+  return path.replaceAll('\\', '/').replace(/\/+$/, '');
+}
+
+function isRootChildTaskDocument(path) {
+  return /^docs\/tasks\/T-\d{3}\.\d{3}-[^/]+\.md$/.test(
+    normalizeRepoPath(path),
+  );
+}
+
 function collectTaskDocumentId(document) {
   const fromPath = document.path.match(/(?:^|[\\/])(T-\d{3})-[^\\/]+\.md$/);
   if (fromPath) {
@@ -375,8 +395,31 @@ function collectTaskDocumentId(document) {
   return fromHeading?.[1] ?? null;
 }
 
+function collectTaskDirectoryId(directory) {
+  const normalizedPath = normalizeRepoPath(directory.path ?? '');
+  const fromPath = normalizedPath.match(/(?:^|\/)(T-\d{3})-[^/]+$/);
+  if (fromPath) {
+    return fromPath[1];
+  }
+
+  const fromHeading = directory.readmeBody?.match(/^#\s+(T-\d{3})\b/m);
+  return fromHeading?.[1] ?? null;
+}
+
 function extractTaskDocumentHeading(document) {
   const heading = document.body.match(/^#\s+(T-\d{3})\s+(.+?)\s*$/m);
+  if (!heading) {
+    return null;
+  }
+
+  return {
+    id: heading[1],
+    title: heading[2].trim(),
+  };
+}
+
+function extractChildTaskDocumentHeading(document) {
+  const heading = document.body.match(/^#\s+(T-\d{3}\.\d{3})\s+(.+?)\s*$/m);
   if (!heading) {
     return null;
   }
@@ -393,7 +436,321 @@ function hasIsoLikeDate(value) {
   );
 }
 
-function validateBacklogAndTasks({ backlogBody, taskDocuments = [] } = {}) {
+function parseTaskDirectoryManifest(directory, errors) {
+  if (typeof directory.manifestBody !== 'string') {
+    errors.push(`Task directory ${directory.path} is missing task.json`);
+    return null;
+  }
+
+  try {
+    return JSON.parse(directory.manifestBody);
+  } catch (error) {
+    errors.push(`Invalid task.json in ${directory.path}: ${error.message}`);
+    return null;
+  }
+}
+
+function validateStringArrayField({ errors, fieldName, owner, value }) {
+  if (
+    !(
+      Array.isArray(value) &&
+      value.every((item) => typeof item === 'string' && item.trim().length > 0)
+    )
+  ) {
+    errors.push(`${owner} requires ${fieldName} as a non-empty string array`);
+    return false;
+  }
+
+  return true;
+}
+
+function validateTaskDirectoryManifestEntry({
+  allowedDependencyIds,
+  entry,
+  errors,
+  idPattern,
+  owner,
+}) {
+  if (typeof entry?.id !== 'string' || !idPattern.test(entry.id)) {
+    errors.push(`${owner} has invalid id: ${entry?.id}`);
+  }
+
+  if (typeof entry?.title !== 'string' || entry.title.trim().length === 0) {
+    errors.push(`${owner} requires non-empty title`);
+  }
+
+  if (!BACKLOG_STATUSES.has(entry?.status)) {
+    errors.push(`${owner} has invalid status: ${entry?.status}`);
+  }
+
+  if (!Array.isArray(entry?.dependencies)) {
+    errors.push(`${owner} requires dependencies array`);
+  } else {
+    for (const dependency of entry.dependencies) {
+      if (!allowedDependencyIds.has(dependency)) {
+        errors.push(`${owner} has unknown dependency: ${dependency}`);
+      }
+    }
+  }
+
+  validateStringArrayField({
+    errors,
+    fieldName: 'validation',
+    owner,
+    value: entry?.validation,
+  });
+
+  if (typeof entry?.rollback !== 'string' || entry.rollback.trim().length === 0) {
+    errors.push(`${owner} requires rollback`);
+  }
+
+  if (typeof entry?.updatedAt !== 'string' || !hasIsoLikeDate(entry.updatedAt)) {
+    errors.push(`${owner} has invalid updatedAt: ${entry?.updatedAt}`);
+  }
+}
+
+function validateTaskDirectories({
+  backlogEntriesById,
+  backlogIds,
+  taskDirectories = [],
+}) {
+  const errors = [];
+  const seenDirectoryIds = new Set();
+  const taskDirectoryIds = new Set();
+
+  for (const directory of taskDirectories) {
+    const normalizedPath = normalizeRepoPath(directory.path ?? '');
+    const id = collectTaskDirectoryId(directory);
+    if (!id) {
+      errors.push(`Task directory has no valid parent ID: ${directory.path}`);
+      continue;
+    }
+
+    if (seenDirectoryIds.has(id)) {
+      errors.push(`Duplicate task directory for ID: ${id}`);
+    }
+    seenDirectoryIds.add(id);
+    taskDirectoryIds.add(id);
+
+    if (!backlogIds.has(id)) {
+      errors.push(`Task directory has no backlog entry: ${id} (${directory.path})`);
+    }
+
+    const expectedPathPrefix = `docs/tasks/${id}-`;
+    if (!normalizedPath.startsWith(expectedPathPrefix)) {
+      errors.push(
+        `Task directory ${directory.path} path must start with ${expectedPathPrefix}`,
+      );
+    }
+
+    const backlogEntry = backlogEntriesById.get(id);
+    if (
+      backlogEntry?.taskDir !== undefined &&
+      normalizeRepoPath(backlogEntry.taskDir) !== normalizedPath
+    ) {
+      errors.push(
+        `Backlog taskDir mismatch for ${id}: expected ${normalizedPath}, found ${backlogEntry.taskDir}`,
+      );
+    }
+
+    if (typeof directory.readmeBody !== 'string') {
+      errors.push(`Task directory ${directory.path} is missing README.md`);
+    } else {
+      const heading = directory.readmeBody.match(/^#\s+(T-\d{3})\s+(.+?)\s*$/m);
+      if (!heading) {
+        errors.push(`Task directory ${directory.path} README.md is missing title heading`);
+      } else {
+        if (heading[1] !== id) {
+          errors.push(
+            `Task directory ${directory.path} heading ID mismatch: expected ${id}, found ${heading[1]}`,
+          );
+        }
+
+        if (
+          backlogEntry &&
+          heading[2].trim().toLowerCase() !==
+            backlogEntry.title.trim().toLowerCase()
+        ) {
+          errors.push(
+            `Task directory ${directory.path} heading title mismatch for ${id}: expected "${backlogEntry.title}", found "${heading[2].trim()}"`,
+          );
+        }
+      }
+
+      if (!/^Executable:\s*false\s*$/im.test(directory.readmeBody)) {
+        errors.push(
+          `Task directory ${directory.path} parent must declare Executable: false`,
+        );
+      }
+
+      for (const section of TASK_DOCUMENT_REQUIRED_SECTIONS) {
+        if (!directory.readmeBody.includes(section)) {
+          errors.push(
+            `Task directory ${directory.path} README.md is missing required section: ${section}`,
+          );
+        }
+      }
+    }
+
+    const manifest = parseTaskDirectoryManifest(directory, errors);
+    if (!manifest) {
+      continue;
+    }
+
+    if (manifest.id !== id) {
+      errors.push(
+        `Task directory ${directory.path} task.json id mismatch: expected ${id}, found ${manifest.id}`,
+      );
+    }
+
+    if (
+      backlogEntry &&
+      typeof manifest.title === 'string' &&
+      manifest.title.trim().toLowerCase() !==
+        backlogEntry.title.trim().toLowerCase()
+    ) {
+      errors.push(
+        `Task directory ${directory.path} task.json title mismatch for ${id}: expected "${backlogEntry.title}", found "${manifest.title}"`,
+      );
+    }
+
+    if (manifest.executable !== false) {
+      errors.push(
+        `Task directory ${directory.path} task.json executable must be false`,
+      );
+    }
+
+    const childEntries = Array.isArray(manifest.children)
+      ? manifest.children
+      : [];
+    if (!Array.isArray(manifest.children) || childEntries.length === 0) {
+      errors.push(`Task directory ${directory.path} task.json requires children`);
+    }
+
+    const childIds = new Set();
+    for (const child of childEntries) {
+      if (typeof child?.id === 'string') {
+        if (childIds.has(child.id)) {
+          errors.push(`Duplicate child task ID in ${directory.path}: ${child.id}`);
+        }
+        childIds.add(child.id);
+      }
+    }
+
+    const allowedParentDependencies = new Set([...backlogIds, ...childIds]);
+    validateTaskDirectoryManifestEntry({
+      allowedDependencyIds: allowedParentDependencies,
+      entry: manifest,
+      errors,
+      idPattern: BACKLOG_ID_PATTERN,
+      owner: `Task directory ${directory.path} task.json parent`,
+    });
+
+    const childEntriesById = new Map();
+    const allowedChildDependencies = new Set([...backlogIds, ...childIds]);
+    for (const child of childEntries) {
+      childEntriesById.set(child.id, child);
+      validateTaskDirectoryManifestEntry({
+        allowedDependencyIds: allowedChildDependencies,
+        entry: child,
+        errors,
+        idPattern: CHILD_TASK_ID_PATTERN,
+        owner: `Child task ${child?.id ?? '<unknown>'} in ${directory.path} task.json`,
+      });
+
+      if (typeof child?.id === 'string' && !child.id.startsWith(`${id}.`)) {
+        errors.push(
+          `Child task ${child.id} in ${directory.path} must start with ${id}.`,
+        );
+      }
+    }
+
+    const childDocumentsById = new Map();
+    for (const childDocument of directory.childDocuments ?? []) {
+      const normalizedChildPath = normalizeRepoPath(childDocument.path);
+      const escapedDirectoryPath = normalizedPath.replace(
+        /[.*+?^${}()|[\]\\]/g,
+        '\\$&',
+      );
+      const childPathMatch = normalizedChildPath.match(
+        new RegExp(
+          `^${escapedDirectoryPath}/children/(T-\\d{3}\\.\\d{3})-[^/]+\\.md$`,
+        ),
+      );
+      if (!childPathMatch) {
+        errors.push(
+          `Child task document path must be under ${normalizedPath}/children: ${childDocument.path}`,
+        );
+        continue;
+      }
+
+      const childId = childPathMatch[1];
+      if (childDocumentsById.has(childId)) {
+        errors.push(`Duplicate child task document for ID: ${childId}`);
+      }
+      childDocumentsById.set(childId, childDocument);
+
+      if (!childEntriesById.has(childId)) {
+        errors.push(
+          `Child task document has no task.json entry: ${childId} (${childDocument.path})`,
+        );
+      }
+
+      const heading = extractChildTaskDocumentHeading(childDocument);
+      if (heading === null) {
+        errors.push(`Child task ${childDocument.path} is missing title heading`);
+      } else {
+        if (heading.id !== childId) {
+          errors.push(
+            `Child task ${childDocument.path} heading ID mismatch: expected ${childId}, found ${heading.id}`,
+          );
+        }
+
+        const childEntry = childEntriesById.get(childId);
+        if (
+          childEntry &&
+          heading.title.trim().toLowerCase() !==
+            childEntry.title.trim().toLowerCase()
+        ) {
+          errors.push(
+            `Child task ${childDocument.path} heading title mismatch for ${childId}: expected "${childEntry.title}", found "${heading.title}"`,
+          );
+        }
+      }
+
+      if (!/^Timebox:\s*<=\s*5\s*minutes\s*$/im.test(childDocument.body)) {
+        errors.push(
+          `Child task ${childDocument.path} must declare Timebox: <= 5 minutes`,
+        );
+      }
+
+      for (const section of CHILD_TASK_DOCUMENT_REQUIRED_SECTIONS) {
+        if (!childDocument.body.includes(section)) {
+          errors.push(
+            `Child task ${childDocument.path} is missing required section: ${section}`,
+          );
+        }
+      }
+    }
+
+    for (const childId of childIds) {
+      if (!childDocumentsById.has(childId)) {
+        errors.push(`Missing child task document for ${childId} in ${directory.path}`);
+      }
+    }
+  }
+
+  return {
+    errors,
+    taskDirectoryIds,
+  };
+}
+
+function validateBacklogAndTasks({
+  backlogBody,
+  taskDirectories = [],
+  taskDocuments = [],
+} = {}) {
   const errors = [];
   const backlogEntries = parseBacklog(backlogBody, errors);
   const seenIds = new Set();
@@ -476,6 +833,14 @@ function validateBacklogAndTasks({ backlogBody, taskDocuments = [] } = {}) {
     ) {
       errors.push(`Invalid backlog updatedAt for ${id}: ${entry.updatedAt}`);
     }
+
+    if (
+      entry.taskDir !== undefined &&
+      (typeof entry.taskDir !== 'string' ||
+        !normalizeRepoPath(entry.taskDir).startsWith(`docs/tasks/${id}-`))
+    ) {
+      errors.push(`Invalid backlog taskDir for ${id}: ${entry.taskDir}`);
+    }
   }
 
   for (const entry of backlogEntries) {
@@ -494,6 +859,13 @@ function validateBacklogAndTasks({ backlogBody, taskDocuments = [] } = {}) {
 
   const taskDocumentsById = new Map();
   for (const document of taskDocuments) {
+    if (isRootChildTaskDocument(document.path)) {
+      errors.push(
+        `Child task document must live under a task directory children folder: ${document.path}`,
+      );
+      continue;
+    }
+
     const id = collectTaskDocumentId(document);
     if (!id) {
       errors.push(`Task document has no valid ID: ${document.path}`);
@@ -542,8 +914,24 @@ function validateBacklogAndTasks({ backlogBody, taskDocuments = [] } = {}) {
     }
   }
 
+  const taskDirectoryResult = validateTaskDirectories({
+    backlogEntriesById,
+    backlogIds,
+    taskDirectories,
+  });
+  errors.push(...taskDirectoryResult.errors);
+
+  for (const id of taskDirectoryResult.taskDirectoryIds) {
+    if (taskDocumentsById.has(id)) {
+      errors.push(`Task ID has both flat document and task directory: ${id}`);
+    }
+  }
+
   for (const id of backlogIds) {
-    if (!taskDocumentsById.has(id)) {
+    if (
+      !taskDocumentsById.has(id) &&
+      !taskDirectoryResult.taskDirectoryIds.has(id)
+    ) {
       errors.push(`Missing task document for backlog ID: ${id}`);
     }
   }
@@ -615,6 +1003,7 @@ export function validateGovernance({
   knownBugsBody,
   techDebtBody,
   backlogBody,
+  taskDirectories = [],
   taskDocuments = [],
   linkedDocuments = [],
   repoRoot = process.cwd(),
@@ -689,8 +1078,14 @@ export function validateGovernance({
     errors.push(...validateProjectState(projectStateBody));
   }
 
-  if (backlogBody || taskDocuments.length > 0) {
-    errors.push(...validateBacklogAndTasks({ backlogBody, taskDocuments }));
+  if (backlogBody || taskDocuments.length > 0 || taskDirectories.length > 0) {
+    errors.push(
+      ...validateBacklogAndTasks({
+        backlogBody,
+        taskDirectories,
+        taskDocuments,
+      }),
+    );
   }
 
   const documentsForPathLiteralScan = [
@@ -786,13 +1181,58 @@ function collectTaskDocumentsFromDisk() {
     return [];
   }
 
-  return readdirSync(tasksDir)
-    .filter((name) => /^T-\d{3}-.*\.md$/.test(name))
-    .map((name) => {
+  return readdirSync(tasksDir, { withFileTypes: true })
+    .filter(
+      (entry) =>
+        entry.isFile() &&
+        /^(?:T-\d{3}|T-\d{3}\.\d{3})-.*\.md$/.test(entry.name),
+    )
+    .map((entry) => {
+      const name = entry.name;
       const path = `${tasksDir}/${name}`;
       return {
         path,
         body: readText(path),
+      };
+    });
+}
+
+function collectTaskDirectoriesFromDisk() {
+  const tasksDir = 'docs/tasks';
+  if (!existsSync(tasksDir)) {
+    return [];
+  }
+
+  return readdirSync(tasksDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && /^T-\d{3}-/.test(entry.name))
+    .map((entry) => {
+      const path = `${tasksDir}/${entry.name}`;
+      const readmePath = `${path}/README.md`;
+      const manifestPath = `${path}/task.json`;
+      const childrenDir = `${path}/children`;
+      const childDocuments = existsSync(childrenDir)
+        ? readdirSync(childrenDir, { withFileTypes: true })
+            .filter(
+              (childEntry) =>
+                childEntry.isFile() &&
+                /^T-\d{3}\.\d{3}-.*\.md$/.test(childEntry.name),
+            )
+            .map((childEntry) => {
+              const childPath = `${childrenDir}/${childEntry.name}`;
+              return {
+                path: childPath,
+                body: readText(childPath),
+              };
+            })
+        : [];
+
+      return {
+        path,
+        readmeBody: existsSync(readmePath) ? readText(readmePath) : undefined,
+        manifestBody: existsSync(manifestPath)
+          ? readText(manifestPath)
+          : undefined,
+        childDocuments,
       };
     });
 }
@@ -825,6 +1265,7 @@ function main() {
     knownBugsBody: readText('docs/memory/KNOWN_BUGS.md'),
     techDebtBody: readText('docs/memory/TECH_DEBT.md'),
     backlogBody: readText('backlog.json'),
+    taskDirectories: collectTaskDirectoriesFromDisk(),
     taskDocuments: collectTaskDocumentsFromDisk(),
     enforceGovernanceAnchors: true,
     linkedDocuments: LINK_CHECKED_DOCUMENTS.map((path) => ({

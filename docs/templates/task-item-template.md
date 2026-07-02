@@ -2,6 +2,113 @@
 
 Use this template when converting a local plan or specification into task items. Keep each item small enough to verify independently, and treat unclear acceptance criteria as a blocker before implementation.
 
+New tasks should use the directory model from `docs/rules/TASK_MANAGEMENT_RULES.md`. Keep legacy flat task files only for historical compatibility.
+
+## Directory Task Template
+
+Use this structure for any parent task that needs child goals:
+
+```text
+docs/tasks/<TASK_ID>-<slug>/
+  README.md
+  task.json
+  children/
+    <TASK_ID>.001-<child-slug>.md
+```
+
+Parent `README.md`:
+
+```markdown
+# <TASK_ID> <Parent title>
+
+Executable: false
+
+## Goal
+
+<Parent outcome. This parent is not a Codex Goal execution unit.>
+
+## Inputs
+
+- <plan / audit / issue / backlog source>
+
+## Outputs
+
+- <child task set / handoff / final artifact>
+
+## Constraints
+
+- Do not execute this parent directly with Codex Goal.
+- Execute only one child task at a time.
+
+## Acceptance Criteria
+
+- [ ] Every required child task is done or explicitly cancelled.
+- [ ] Final verification and handoff evidence are recorded.
+```
+
+`task.json`:
+
+```json
+{
+  "id": "<TASK_ID>",
+  "title": "<Parent title>",
+  "status": "ready",
+  "executable": false,
+  "dependencies": [],
+  "validation": ["<parent validation command or review evidence>"],
+  "rollback": "<how to revert this parent directory change>",
+  "updatedAt": "YYYY-MM-DD",
+  "children": [
+    {
+      "id": "<TASK_ID>.001",
+      "title": "<Child title>",
+      "status": "ready",
+      "dependencies": [],
+      "validation": ["<child verification command>"],
+      "rollback": "<how to revert this child change>",
+      "updatedAt": "YYYY-MM-DD"
+    }
+  ]
+}
+```
+
+Child task file:
+
+```markdown
+# <TASK_ID>.001 <Child title>
+
+Timebox: <= 5 minutes
+
+## Goal
+
+This child task only completes: `<one observable outcome>`.
+
+## Acceptance Criteria
+
+- [ ] `<one verifiable standard>`
+
+## Non-goals
+
+- `<explicitly excluded work>`
+
+## Stop Condition
+
+`<exact condition that ends this Goal>`
+
+## Verification Command
+
+`<single command or explicit manual evidence>`
+
+## Rollback Plan
+
+`<how to revert only this child task>`
+
+## Evidence
+
+- Validation commands: `<command>`
+- Unverified items and risks: `<N/A or reason>`
+```
+
 ## Title
 
 `<Short actionable title>`
