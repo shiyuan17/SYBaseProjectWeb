@@ -2,25 +2,24 @@
 
 ## Current State
 
-- Last updated: 2026-06-18
+- Last updated: 2026-07-02
 - Repository: `SYBaseProjectWeb`
-- Phase: Active delivery across specimen-workflow, M6 statistics, operation-support, technical-workflow
-- Active focus: Specimen collection workbench (frozen reminder, operating-room options, dictionary); sibling backend `../SYBaseProject/bl-center`
+- Phase: Governance baseline convergence on top of active delivery across specimen-workflow, M6 statistics, operation-support, technical-workflow
+- Active focus: converge AI governance rules into the shared baseline, then migrate one historical large task to the directory-based parent/child Goal model; sibling backend `../SYBaseProject/bl-center`
 - Cross-repo contracts: see `docs/memory/ARCHITECTURE.md` (not duplicated here)
 
 ## Active Work
 
-- Specimen workflow: frozen reminder polling, operating-room master data via `operating-options`, application registration workbench
-- M6 statistics report workbench at `/m6/custom-analysis` (stable; dashboard composes `stat-reports/query`)
-- M3 technical-workflow daterange controls aligned with specimen receipt pattern
-- Governance P2: green-zone default skip Memory; Loop opt-in; `PROJECT_STATE` stays slim
-- Dirty worktree in repo may include in-flight specimen-workflow changes — verify with `git status`
+- Governance Phase 1: multi-Agent collaboration model, mandatory handoff closeout fields, failure learnings, and governance audit/report indexes are being converged into the shared baseline
+- Task execution model: parent `orchestrator` + child `goal` rules are defined; next step is migrating one historical large task out of the flat task model
+- Quality baseline: governance validation and typecheck have fresh pass evidence; fresh `pnpm lint` is currently blocked by `oxfmt --check` findings, `oxlint` rule violations, and an `oxlint` allocator panic recorded during lint execution
+- Runtime feature work remains active in specimen-workflow, technical-workflow, and M6 custom analysis; verify dirty-worktree truth with `git status --short`
 
 ## Validation Baseline
 
-- After governance/memory edits: `pnpm run check:governance`
+- After governance / memory edits: `pnpm exec vitest run scripts/validate-governance.test.mjs`, `node scripts/validate-governance.mjs`, `pnpm run check:governance`, `git diff --check`
 - Feature validation: targeted `pnpm test:unit` + `pnpm check:type` on touched modules
-- Full `pnpm lint` / `pnpm check:type` may be blocked by unrelated Open items in `docs/memory/TECH_DEBT.md`
+- Treat fresh `pnpm lint` failures as an open quality blocker until formatter, stylelint / oxlint findings, and allocator instability are triaged or fixed
 
 ## Cross-Repo Dependencies
 
@@ -32,6 +31,7 @@
 
 - **Entry read**: this file + `ARCHITECTURE.md`
 - **On demand**: `DECISIONS.md`（索引；契约全文 `docs/reviews/decisions-business-detail.md`）、`KNOWN_BUGS.md`、`TECH_DEBT.md` when task touches contracts, bugs, or debt
+- **Governance follow-up**: read `AGENTS.md`, `TASK_LIFECYCLE_RULES.md`, `TASK_MANAGEMENT_RULES.md`, and `FAILURE_LEARNINGS.md` before continuing task-model or handoff work
 - **Session handoff**: agentmemory `handoff` / `recall` / `session-history`, or `agent-transcripts/` — not duplicated in this file
 - **Never** use this file for dirty-worktree truth — run `git status --short`
 - Historical detail: `docs/reviews/*-archive.md`, git history, PRs

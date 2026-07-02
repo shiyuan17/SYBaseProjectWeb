@@ -13,6 +13,9 @@
 
 ## 审查报告（HTML）
 
+- [ai-coding-governance-workflow-audit-2026-07-01.html](./ai-coding-governance-workflow-audit-2026-07-01.html)
+- [ai-coding-governance-workflow-audit-2026-07-02.html](./ai-coding-governance-workflow-audit-2026-07-02.html)
+- [ai-coding-governance-workflow-audit-2026-07-02-worktree.html](./ai-coding-governance-workflow-audit-2026-07-02-worktree.html)
 - [agents-spec-redteam-review.html](./agents-spec-redteam-review.html)
 - [clinical-submission-blsysnew-comparison.html](./clinical-submission-blsysnew-comparison.html)
 - [clinical-submission-legacy-gap-analysis.html](./clinical-submission-legacy-gap-analysis.html)
@@ -26,9 +29,10 @@
 
 ## 推荐阅读顺序
 
-1. 先看 [full-process-audit-review.html](./full-process-audit-review.html) 和 [project-code-health-checklist.html](./project-code-health-checklist.html)。
-2. 涉及临床送检时，再看 `clinical-submission*` 系列文档。
-3. 涉及技术流程时，再看 [technical-workflow-legacy-gap-analysis.html](./technical-workflow-legacy-gap-analysis.html)。
+1. 先看 [ai-coding-governance-workflow-audit-2026-07-02-worktree.html](./ai-coding-governance-workflow-audit-2026-07-02-worktree.html) 和 [ai-coding-governance-workflow-audit-2026-07-02.html](./ai-coding-governance-workflow-audit-2026-07-02.html) 了解当前 AI 治理基线。
+2. 再看 [full-process-audit-review.html](./full-process-audit-review.html) 和 [project-code-health-checklist.html](./project-code-health-checklist.html) 了解全局流程与工程健康度。
+3. 涉及临床送检时，再看 `clinical-submission*` 系列文档。
+4. 涉及技术流程时，再看 [technical-workflow-legacy-gap-analysis.html](./technical-workflow-legacy-gap-analysis.html)。
 
 ## 与其他目录的关系
 

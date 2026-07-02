@@ -1,0 +1,1176 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Coding 治理审计报告（当前工作区口径）</title>
+    <style>
+      :root {
+        --bg: #f6f7f9;
+        --surface: #fff;
+        --surface-soft: #eef5f7;
+        --ink: #17202a;
+        --muted: #5e6a75;
+        --line: #d8e0e7;
+        --accent: #0f6b78;
+        --accent-strong: #084a54;
+        --ok: #287a46;
+        --warn: #9b5c00;
+        --danger: #af2333;
+        --p2: #5967b0;
+        --shadow: 0 8px 22px rgb(23 32 42 / 8%);
+
+        color-scheme: light;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family:
+          Inter, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif;
+        line-height: 1.68;
+        color: var(--ink);
+        background: var(--bg);
+      }
+
+      header {
+        padding: 48px 24px 36px;
+        color: #fff;
+        background: #12333a;
+      }
+
+      main,
+      .header-inner {
+        width: min(1180px, calc(100vw - 40px));
+        margin: 0 auto;
+      }
+
+      .eyebrow {
+        margin: 0 0 12px;
+        font-size: 14px;
+        color: #b9d6dc;
+      }
+
+      h1 {
+        max-width: 980px;
+        margin: 0;
+        font-size: clamp(30px, 4vw, 50px);
+        line-height: 1.16;
+        text-wrap: balance;
+      }
+
+      .subtitle {
+        max-width: 980px;
+        margin: 18px 0 0;
+        font-size: 17px;
+        color: #d7e8ec;
+      }
+
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 24px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        min-height: 30px;
+        padding: 4px 12px;
+        font-size: 13px;
+        color: #ecf8fa;
+        border: 1px solid rgb(255 255 255 / 26%);
+        border-radius: 999px;
+      }
+
+      main {
+        padding: 28px 0 56px;
+      }
+
+      nav,
+      section,
+      .summary-grid > article {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        box-shadow: var(--shadow);
+      }
+
+      nav {
+        padding: 18px 20px;
+        margin-bottom: 20px;
+      }
+
+      nav strong {
+        display: block;
+        margin-bottom: 8px;
+      }
+
+      nav a {
+        display: inline-block;
+        margin: 6px 14px 6px 0;
+        font-weight: 600;
+        color: var(--accent-strong);
+        text-decoration: none;
+      }
+
+      section {
+        padding: 26px;
+        margin: 20px 0;
+      }
+
+      h2 {
+        margin: 0 0 18px;
+        font-size: 26px;
+        line-height: 1.24;
+        color: var(--accent-strong);
+      }
+
+      h3 {
+        margin: 24px 0 12px;
+        font-size: 20px;
+        color: #263640;
+      }
+
+      p {
+        margin: 10px 0;
+      }
+
+      ul {
+        padding-left: 22px;
+      }
+
+      li {
+        margin: 6px 0;
+      }
+
+      code {
+        padding: 2px 5px;
+        font-family: 'Cascadia Code', Consolas, monospace;
+        font-size: 0.92em;
+        color: #18323a;
+        background: #edf2f5;
+        border-radius: 4px;
+      }
+
+      table {
+        width: 100%;
+        margin: 14px 0 24px;
+        overflow-wrap: anywhere;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 10px 12px;
+        vertical-align: top;
+        text-align: left;
+        border: 1px solid var(--line);
+      }
+
+      th {
+        font-weight: 700;
+        color: #12333a;
+        background: #e7f0f3;
+      }
+
+      tbody tr:nth-child(even) {
+        background: #fbfcfd;
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 14px;
+        margin-bottom: 20px;
+      }
+
+      .summary-grid > article {
+        padding: 18px;
+      }
+
+      .metric-label {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .metric-value {
+        display: block;
+        margin-top: 6px;
+        font-size: 24px;
+        font-weight: 800;
+        color: var(--accent-strong);
+      }
+
+      .callout {
+        padding: 16px 18px;
+        margin: 16px 0;
+        background: var(--surface-soft);
+        border: 1px solid #bed9df;
+        border-radius: 8px;
+      }
+
+      .callout.warn {
+        background: #fff8e8;
+        border-color: #e1c484;
+      }
+
+      .callout.danger-box {
+        background: #fff0f2;
+        border-color: #e0a0a8;
+      }
+
+      .status {
+        display: inline-block;
+        padding: 3px 9px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #fff;
+        white-space: nowrap;
+        border-radius: 999px;
+      }
+
+      .p0 {
+        background: var(--danger);
+      }
+
+      .p1 {
+        background: var(--warn);
+      }
+
+      .p2 {
+        background: var(--p2);
+      }
+
+      .ok {
+        font-weight: 700;
+        color: var(--ok);
+      }
+
+      .danger {
+        font-weight: 700;
+        color: var(--danger);
+      }
+
+      .muted {
+        color: var(--muted);
+      }
+
+      .two-col {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 16px;
+      }
+
+      .compact td,
+      .compact th {
+        padding: 8px 10px;
+      }
+
+      .footer {
+        padding: 24px 0 4px;
+        font-size: 13px;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      @media (max-width: 760px) {
+        section {
+          padding: 20px 16px;
+        }
+
+        table {
+          display: block;
+          overflow-x: auto;
+          white-space: normal;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="header-inner">
+        <p class="eyebrow">SYBaseProjectWeb · AI Coding Governance Audit</p>
+        <h1>AI Coding 治理审计报告（当前工作区口径）</h1>
+        <p class="subtitle">
+          本报告基于当前工作区的真实状态，从第一性原理重新审查规范体系、工作流闭环、AI
+          协作、状态管理、数据约束、质量门禁和文档可维护性。它评估的是“此刻工作区是否具备长期稳定协作能力”，不是主线已经完成治理收敛的证明。
+        </p>
+        <div class="meta">
+          <span class="pill">生成日期: 2026-07-02</span>
+          <span class="pill">当前分支: docs/governance-remediation</span>
+          <span class="pill"
+            >并行 worktree: codex/docs-governance-optimization</span
+          >
+          <span class="pill">范围: 规范 / 工作流 / 状态 / 验证 / 交付</span>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <nav>
+        <strong>目录</strong>
+        <a href="#summary">概览</a>
+        <a href="#principles">一、第一性原理分析</a>
+        <a href="#issues">二、问题清单</a>
+        <a href="#structure">三、推荐规范体系结构</a>
+        <a href="#workflow">四、推荐的 AI Coding 工作流</a>
+        <a href="#phases">五、优化调整实施计划</a>
+        <a href="#actions">六、可直接落地的改进建议</a>
+        <a href="#final">七、最终推荐版本</a>
+      </nav>
+
+      <section id="summary">
+        <h2>概览</h2>
+        <div class="callout danger-box">
+          <strong>本页的结论口径:</strong>
+          当前工作区治理校验通过，当前分支为
+          <code>docs/governance-remediation</code>，另有独立 worktree
+          <code>codex/docs-governance-optimization</code
+          >。但当前治理改动仍处于脏工作区状态，尚未提交、尚未
+          merge-back，因此报告结论属于<span class="danger">现状评估</span
+          >，不等于主线已经完成治理闭环。
+        </div>
+
+        <div class="summary-grid">
+          <article>
+            <span class="metric-label">规范完整度</span>
+            <span class="metric-value">较高</span>
+            <p>
+              规则文件已覆盖入口、API、DB、测试、Review、任务、Loop、发布与
+              Memory。
+            </p>
+          </article>
+          <article>
+            <span class="metric-label">工作流闭环度</span>
+            <span class="metric-value">中高</span>
+            <p>
+              Clarify 到 Handoff
+              的阶段已经成型，但主线采用与存量任务迁移尚未完成。
+            </p>
+          </article>
+          <article>
+            <span class="metric-label">AI 协作就绪度</span>
+            <span class="metric-value">中高</span>
+            <p>
+              多 Agent、worktree、orchestrator / goal
+              模型已建立，但仍依赖后续真实任务演练固化。
+            </p>
+          </article>
+          <article>
+            <span class="metric-label">状态可追踪性</span>
+            <span class="metric-value">中等</span>
+            <p>
+              <code>backlog.json</code> 与目录化任务规则已增强，但
+              <code>PROJECT_STATE.md</code> 仍滞后。
+            </p>
+          </article>
+          <article>
+            <span class="metric-label">质量门禁现状</span>
+            <span class="metric-value">未完全收敛</span>
+            <p>
+              治理校验与 typecheck 有 fresh pass，但本轮 fresh
+              <code>pnpm lint</code> 失败且未定位根因。
+            </p>
+          </article>
+        </div>
+
+        <h3>审计证据表</h3>
+        <table class="compact">
+          <thead>
+            <tr>
+              <th>证据项</th>
+              <th>结果</th>
+              <th>时间口径</th>
+              <th>类别</th>
+              <th>说明</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>git branch --show-current</code></td>
+              <td><span class="ok">docs/governance-remediation</span></td>
+              <td>本轮 fresh</td>
+              <td>状态事实</td>
+              <td>报告基线不是主线提交快照，而是当前工作区。</td>
+            </tr>
+            <tr>
+              <td><code>git worktree list</code></td>
+              <td><span class="ok">检测到 2 个 worktree</span></td>
+              <td>本轮 fresh</td>
+              <td>协作事实</td>
+              <td>
+                主工作区外另有 <code>codex/docs-governance-optimization</code>。
+              </td>
+            </tr>
+            <tr>
+              <td><code>git status --short</code></td>
+              <td><span class="danger">脏工作区</span></td>
+              <td>本轮 fresh</td>
+              <td>状态事实</td>
+              <td>
+                治理改动未提交，且存在无关未跟踪项
+                <code>docs/reviews/daily-adversarial-review-2026-07-02.md</code
+                >、<code>src/</code>。
+              </td>
+            </tr>
+            <tr>
+              <td>
+                <code
+                  >pnpm exec vitest run
+                  scripts/validate-governance.test.mjs</code
+                >
+              </td>
+              <td><span class="ok">通过，32/32</span></td>
+              <td>本轮 fresh</td>
+              <td>治理校验</td>
+              <td>说明治理脚本测试与新增护栏自洽。</td>
+            </tr>
+            <tr>
+              <td><code>node scripts\validate-governance.mjs</code></td>
+              <td><span class="ok">通过</span></td>
+              <td>本轮 fresh</td>
+              <td>治理校验</td>
+              <td>规则索引、模板、锚点与任务治理校验通过。</td>
+            </tr>
+            <tr>
+              <td><code>pnpm run check:governance</code></td>
+              <td><span class="ok">通过</span></td>
+              <td>本轮 fresh</td>
+              <td>治理校验</td>
+              <td>当前工作区的治理规则达到最低闭环。</td>
+            </tr>
+            <tr>
+              <td><code>pnpm check:type</code></td>
+              <td><span class="ok">通过</span></td>
+              <td>本轮 fresh</td>
+              <td>质量基线</td>
+              <td>本轮取得 fresh pass，可作为类型门禁事实。</td>
+            </tr>
+            <tr>
+              <td><code>pnpm lint</code></td>
+              <td><span class="danger">失败</span></td>
+              <td>本轮 fresh</td>
+              <td>质量基线</td>
+              <td>
+                当前输出不足以定位根因，只能确认质量门禁未完全收敛，不能虚构失败原因。
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>工作区状态快照</h3>
+        <table class="compact">
+          <thead>
+            <tr>
+              <th>观察项</th>
+              <th>当前事实</th>
+              <th>审计影响</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>当前治理改动</td>
+              <td>
+                <code>AGENTS.md</code
+                >、<code>TASK_LIFECYCLE_RULES.md</code>、治理脚本与模板均有未提交变更
+              </td>
+              <td>说明规则在工作区成立，但尚未变成团队稳定基线。</td>
+            </tr>
+            <tr>
+              <td>失败经验库</td>
+              <td>
+                <code>docs/memory/FAILURE_LEARNINGS.md</code> 为未跟踪新文件
+              </td>
+              <td>说明机制已设计好，但尚未纳入主线规则资产。</td>
+            </tr>
+            <tr>
+              <td>主状态文档</td>
+              <td><code>PROJECT_STATE.md</code> 最后更新时间仍为 2026-06-18</td>
+              <td>新规则与当前治理阶段没有同步回写到入口状态文档。</td>
+            </tr>
+            <tr>
+              <td>报告索引</td>
+              <td>
+                <code>docs/reviews/README.md</code> 未纳入最近两份 AI 治理审计
+              </td>
+              <td>文档沉淀可发现性不足，影响新人和 AI 查阅路径。</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="principles">
+        <h2>一、第一性原理分析</h2>
+        <p>
+          项目需要规范，不是因为团队喜欢“写规则”，而是因为中大型软件在多人、多
+          Agent、多分支、多 worktree
+          并行时，最容易先失控的不是代码本身，而是<span class="danger"
+            >决策边界、上下文来源和交付口径</span
+          >。没有统一规则，AI Agent
+          会编造缺失上下文，人类会在不同阶段使用不同事实源，最终把同一项工作拆成多套互不兼容的解释。
+        </p>
+        <p>
+          工作流的根本目的，也不是把
+          Clarify、Spec、Plan、Task、Verify、Review、Handoff
+          这些阶段“列出来就算完整”，而是确保每一步都能回答五个问题：输入是什么、输出是什么、谁负责、如何验证、失败后如何回滚。只有这样，规范才真正服务项目目标，而不是变成形式化负担。
+        </p>
+        <p>
+          当前项目的底层风险已经从“规则缺失”转向“规则是否被统一采用”。从工作区现状看，规则体系已明显增强：多
+          Agent 协作模型、父任务 orchestrator / 子任务
+          goal、交接强制闭环、失败经验库和治理脚本门禁都已出现。但从主线治理角度看，真正的核心风险仍是三个：
+        </p>
+        <ul>
+          <li>规则存在于工作区，不等于团队已经基于同一基线工作。</li>
+          <li>工作流闭环已经被定义，不等于存量任务和历史执行方式已经迁移。</li>
+          <li>治理校验已经通过，不等于整体质量门禁已经稳定收敛。</li>
+        </ul>
+        <div class="callout warn">
+          <strong>第一性原理结论:</strong>
+          当前项目已经接近可长期协作的治理结构，但真正阻塞不是继续新增更多规范，而是把已经正确的规则<span
+            class="danger"
+            >提交、合回、采用</span
+          >，并把存量任务切换到新的最小执行单元模型。
+        </div>
+      </section>
+
+      <section id="issues">
+        <h2>二、当前规范与工作流问题清单</h2>
+
+        <h3>P0：必须立即修复的问题</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>问题</th>
+              <th>问题描述</th>
+              <th>可能后果</th>
+              <th>触发场景</th>
+              <th>优先级</th>
+              <th>建议处理方式</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>治理基线未收敛</td>
+              <td>
+                当前工作区已出现更强治理护栏，但尚未提交、尚未
+                merge-back，主线与工作区事实可能不一致。
+              </td>
+              <td>
+                不同
+                Agent、不同工作树、不同会话会基于不同规范版本执行，导致决策漂移。
+              </td>
+              <td>
+                多 Agent 并行、从主线重新开工、使用旧文档继续执行历史任务。
+              </td>
+              <td><span class="status p0">P0</span></td>
+              <td>
+                先提交当前治理改动，再明确目标分支完成
+                merge-back，把工作区正确规则转成团队统一基线。
+              </td>
+            </tr>
+            <tr>
+              <td>交付闭环仍停留在待提交状态</td>
+              <td>
+                多
+                Agent、交接强制项、失败经验库等规则已经写入工作区，但还不能视为团队稳定采用。
+              </td>
+              <td>
+                交付时仍可能只汇报“做了什么”，不汇报“没做什么、是否
+                merge-back、是否还有阻塞”。
+              </td>
+              <td>
+                会话中断、跨天续接、worktree 交付、由另一位工程师或 AI 接手。
+              </td>
+              <td><span class="status p0">P0</span></td>
+              <td>
+                把交接模板、Memory
+                索引和治理脚本一并纳入正式提交，并在下一轮真实任务中强制演练。
+              </td>
+            </tr>
+            <tr>
+              <td>大任务 Goal 失控风险未真正消除</td>
+              <td>
+                目录化父子任务与 5 分钟 Goal
+                规则已建立，但历史平铺任务仍存在，旧任务仍可能被直接执行。
+              </td>
+              <td>Goal 循环无法停止、范围持续扩大、验证与回滚边界失效。</td>
+              <td>
+                继续直接执行历史大任务、没有拆成子任务就进入
+                loop、沿用旧平铺任务模板。
+              </td>
+              <td><span class="status p0">P0</span></td>
+              <td>
+                选择一个真实历史任务做迁移样板，把 orchestrator / goal
+                模型从规则层推进到执行层。
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>P1：短期需要优化的问题</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>问题</th>
+              <th>问题描述</th>
+              <th>可能后果</th>
+              <th>触发场景</th>
+              <th>优先级</th>
+              <th>建议处理方式</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>PROJECT_STATE.md</code> 更新滞后</td>
+              <td>
+                入口状态文档没有覆盖最新治理与任务执行模型变化，最后更新时间仍停在
+                2026-06-18。
+              </td>
+              <td>新人或 AI 先读到过期判断，再进入错误的执行路径。</td>
+              <td>新会话启动、handoff 恢复、任务澄清前只读入口层文档。</td>
+              <td><span class="status p1">P1</span></td>
+              <td>
+                在治理改动提交后，刷新阶段状态、治理重点、现行门禁与执行模型说明。
+              </td>
+            </tr>
+            <tr>
+              <td><code>docs/reviews/README.md</code> 索引不全</td>
+              <td>近期 AI 治理审计报告没有进入索引和推荐阅读路径。</td>
+              <td>
+                文档沉淀无法被团队和 AI 快速发现，重复审计和重复判断成本升高。
+              </td>
+              <td>查找历史审计结论、编写新报告、回顾治理变更时。</td>
+              <td><span class="status p1">P1</span></td>
+              <td>
+                补入本次工作区口径报告和近期治理审计，并调整推荐阅读顺序。
+              </td>
+            </tr>
+            <tr>
+              <td><code>FAILURE_LEARNINGS.md</code> 未提交</td>
+              <td>失败经验库机制已经设计好，但还只是工作区中的新文件。</td>
+              <td>
+                失败经验无法成为主线治理资产，后续容易再次重复同类误操作。
+              </td>
+              <td>
+                Goal 失控、未 merge-back
+                就宣称完成、实现者自证通过等场景再次发生时。
+              </td>
+              <td><span class="status p1">P1</span></td>
+              <td>随治理改动正式纳入主线，并给出维护口径和责任边界。</td>
+            </tr>
+            <tr>
+              <td>质量基线证据不完整</td>
+              <td>
+                治理校验与 typecheck 有 fresh pass，但 lint fresh run
+                失败；build、E2E、回归没有本轮新鲜全局证据。
+              </td>
+              <td>
+                团队容易误以为“治理通过 =
+                项目整体可交付”，忽略质量门禁尚未收敛。
+              </td>
+              <td>发布前判断、跨模块改动、回归验证不足时。</td>
+              <td><span class="status p1">P1</span></td>
+              <td>
+                单独定位 fresh lint 失败根因，并补充最小 build / E2E /
+                回归证据矩阵。
+              </td>
+            </tr>
+            <tr>
+              <td>API / DB 跨仓证据仍以规则约束为主</td>
+              <td>
+                规则已经要求跨仓证据，但当前更多依赖执行者自觉，没有强绑定到每个任务或每次交付。
+              </td>
+              <td>前后端契约漂移、字段兼容失守、DB 回滚口径缺失。</td>
+              <td>跨仓接口变更、权限调整、迁移脚本、数据修复、联调场景。</td>
+              <td><span class="status p1">P1</span></td>
+              <td>
+                把跨仓证据纳入 Spec、Review 和交付 Packet
+                的硬性字段，必要时再扩治理脚本。
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>P2：中长期改进的问题</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>问题</th>
+              <th>问题描述</th>
+              <th>可能后果</th>
+              <th>触发场景</th>
+              <th>优先级</th>
+              <th>建议处理方式</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>缺少治理健康度趋势面板</td>
+              <td>
+                当前只能看到单次审计结果，无法持续观察 P0/P1
+                关闭率、文档漂移率、门禁稳定性。
+              </td>
+              <td>治理质量只能靠人工记忆，不利于持续优化。</td>
+              <td>季度复盘、治理优先级排序、回顾规则效果时。</td>
+              <td><span class="status p2">P2</span></td>
+              <td>建立治理趋势页或轻量看板，至少跟踪门禁红绿和文档漂移。</td>
+            </tr>
+            <tr>
+              <td>架构与契约文档仍偏集中</td>
+              <td>
+                关键架构和跨仓契约仍然集中在少数入口文件，长期会增加阅读负担。
+              </td>
+              <td>新人和 AI 需要一次性吞下太多上下文，局部理解成本偏高。</td>
+              <td>跨模块改动、专项 onboarding、局部领域接手时。</td>
+              <td><span class="status p2">P2</span></td>
+              <td>
+                后续按模块契约拆出专题文档，入口文件只保留导航和高层原则。
+              </td>
+            </tr>
+            <tr>
+              <td>失败经验库需要生命周期机制</td>
+              <td>
+                当前已经有失败经验表，但还缺少状态演进、归档条件和维护责任。
+              </td>
+              <td>经验库长期膨胀、可读性下降，最终重新失去约束力。</td>
+              <td>失败条目持续累积、规则修复后仍无状态更新时。</td>
+              <td><span class="status p2">P2</span></td>
+              <td>
+                定义
+                <code>open / guarded / retired</code> 的转移条件与定期清理机制。
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="structure">
+        <h2>三、推荐的规范体系结构</h2>
+        <p>
+          当前项目不需要重新发明一套新命名体系，关键是保持单一来源并减少重复解释。推荐结构应以现有增强后的规则为准：
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>文件</th>
+              <th>职责</th>
+              <th>不应承担的内容</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>AGENTS.md</code></td>
+              <td>协作入口、风险分层、交付要求、Memory 判定、规则导航。</td>
+              <td>不重复展开所有专项规则正文。</td>
+            </tr>
+            <tr>
+              <td><code>CODING_RULES.md</code></td>
+              <td>编码基线、验证命令、格式、静态检查与最低工程要求。</td>
+              <td>不承担任务流转与交接规则。</td>
+            </tr>
+            <tr>
+              <td><code>API_RULES.md</code> / <code>DB_RULES.md</code></td>
+              <td>
+                前后端契约、DTO / mapper、兼容、迁移、seed、回滚与跨仓证据。
+              </td>
+              <td>不承担通用 Git / Handoff 流程。</td>
+            </tr>
+            <tr>
+              <td><code>TEST_RULES.md</code></td>
+              <td>单测、集成、E2E、冒烟、回归、手工验收触发矩阵。</td>
+              <td>不替代交付和审查结论。</td>
+            </tr>
+            <tr>
+              <td><code>REVIEW_RULES.md</code></td>
+              <td>
+                Review 五轴、严重度、阻塞条件、证据质量、AI checker 使用。
+              </td>
+              <td>不替代实现和验证步骤。</td>
+            </tr>
+            <tr>
+              <td><code>TASK_LIFECYCLE_RULES.md</code></td>
+              <td>
+                Clarify 到 Handoff 阶段定义、多 Agent 协作模型、收尾强制项。
+              </td>
+              <td>不重复维护 backlog 字段结构。</td>
+            </tr>
+            <tr>
+              <td><code>TASK_MANAGEMENT_RULES.md</code></td>
+              <td>
+                父任务 / 子任务 / orchestrator / goal、目录模型、5
+                分钟执行单元。
+              </td>
+              <td>不代替 Workflow 与 Review 规则。</td>
+            </tr>
+            <tr>
+              <td><code>LOOP_ENGINEERING_RULES.md</code></td>
+              <td>Loop 启用条件、Loop Packet、Goal 防失控条款。</td>
+              <td>不把所有任务都变成 loop。</td>
+            </tr>
+            <tr>
+              <td><code>GIT_RULES.md</code> / <code>RELEASE.md</code></td>
+              <td>分支、worktree、PR、merge-back、发布、回滚。</td>
+              <td>不承担业务契约解释。</td>
+            </tr>
+            <tr>
+              <td><code>docs/memory/FAILURE_LEARNINGS.md</code></td>
+              <td>沉淀可复发、可防护的失败模式和已加护栏。</td>
+              <td>
+                不记录所有普通 bug；普通缺陷进入 <code>KNOWN_BUGS.md</code>。
+              </td>
+            </tr>
+            <tr>
+              <td><code>docs/reviews/</code></td>
+              <td>存放 HTML 审计、差距分析、健康度报告与治理档案。</td>
+              <td>不作为规则正文唯一来源。</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="workflow">
+        <h2>四、推荐的 AI Coding 工作流</h2>
+        <p>
+          推荐工作流为
+          <code
+            >Clarify -&gt; Spec -&gt; Plan -&gt; Task -&gt; Execute -&gt; Verify
+            -&gt; Review -&gt; Handoff</code
+          >。其核心不是“阶段越多越好”，而是每个阶段都有清楚的输入、输出、责任边界和不可跳过检查点。
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>阶段</th>
+              <th>输入</th>
+              <th>输出</th>
+              <th>AI Agent 应做什么</th>
+              <th>人类开发者需确认什么</th>
+              <th>禁止跳过的检查点</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Clarify</td>
+              <td>需求来源、背景、已有约束、非目标线索。</td>
+              <td>澄清结论、成功标准、非目标、风险档位。</td>
+              <td>主 Agent 识别歧义、补全边界、定位需要读取的规则与模块。</td>
+              <td>需求是否真被理解，是否触发红区或跨仓。</td>
+              <td>成功标准和非目标未明确前，不得直接编码。</td>
+            </tr>
+            <tr>
+              <td>Spec</td>
+              <td>Clarify 结果、现有实现、接口与数据约束。</td>
+              <td>规格说明、行为边界、契约、验收与回滚方向。</td>
+              <td>AI 输出可执行规格，并标出跨仓证据需求。</td>
+              <td>行为是否与业务预期一致，是否接受兼容策略。</td>
+              <td>涉及 API / DB / 权限时，缺契约证据不得跳过。</td>
+            </tr>
+            <tr>
+              <td>Plan</td>
+              <td>Spec、现状代码结构、验证要求。</td>
+              <td>实现计划、文件边界、验证清单、风险处理。</td>
+              <td>主 Agent 拆出实施路径与验证方式，选择最小流程档位。</td>
+              <td>方案是否可接受，风险是否需要额外确认。</td>
+              <td>没有验证方案、回滚路径或边界说明时不得进入实现。</td>
+            </tr>
+            <tr>
+              <td>Task</td>
+              <td>Plan、backlog、任务目录模型。</td>
+              <td>父任务、子任务、依赖、执行模式、时间盒。</td>
+              <td>把任务拆成最小可验证、可回滚、5 分钟可判定的 goal 单元。</td>
+              <td>父任务是否适合作为 orchestrator，子任务是否拆得足够小。</td>
+              <td>大任务不得直接作为无边界 Goal 执行。</td>
+            </tr>
+            <tr>
+              <td>Execute</td>
+              <td>子任务、文件边界、停止条件、验证命令。</td>
+              <td>最小改动、实现证据、未解决问题。</td>
+              <td>实现 Agent 在指定边界内实现，不扩大范围。</td>
+              <td>红区改动是否需要额外确认。</td>
+              <td>发现新缺口时只能记录或拆新任务，不能默认扩范围继续做。</td>
+            </tr>
+            <tr>
+              <td>Verify</td>
+              <td>实现结果、测试命令、浏览器或接口证据。</td>
+              <td>真实命令结果、失败摘要、未验证项与原因。</td>
+              <td>测试 Agent 或主 Agent 跑最小充分验证并记录事实。</td>
+              <td>未验证项是否可接受，是否需要补跑更高层验证。</td>
+              <td>禁止用“应该通过”替代 fresh verification。</td>
+            </tr>
+            <tr>
+              <td>Review</td>
+              <td>diff、验证结果、Workflow Packet、跨仓证据。</td>
+              <td>阻塞项、风险结论、放行或返工建议。</td>
+              <td>审查 Agent 只读审查，不与实现者角色混淆。</td>
+              <td>是否接受残余风险，是否需要更高层审查。</td>
+              <td>中高风险任务不能只有实现者自证通过。</td>
+            </tr>
+            <tr>
+              <td>Handoff</td>
+              <td>实现、验证、审查与当前状态。</td>
+              <td>
+                交接摘要、已完成事项、未完成事项、Git 状态、Worktree /
+                分支状态、Merge-back 状态、续接提示词。
+              </td>
+              <td>主 Agent 汇总真实完成度，并更新需要的 Memory。</td>
+              <td>是否接受交付，是否仍存在阻塞或待确认项。</td>
+              <td>
+                未提交 git、未 merge-back、未验证、未 review、blockedReason
+                未消除时，不得宣称完成。
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>多 Agent 启用矩阵</h3>
+        <table class="compact">
+          <thead>
+            <tr>
+              <th>档位</th>
+              <th>默认组合</th>
+              <th>何时补充</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Fast Path</td>
+              <td>主 Agent</td>
+              <td>规则或文档变更多时补文档 Agent。</td>
+            </tr>
+            <tr>
+              <td>Lightweight</td>
+              <td>主 Agent + 实现 Agent</td>
+              <td>共享逻辑、较难验证或风险略高时补测试 Agent 或审查 Agent。</td>
+            </tr>
+            <tr>
+              <td>Full</td>
+              <td>主 Agent + 实现 Agent + 独立审查</td>
+              <td>
+                命中权限 / 认证 / 敏感数据时加安全 Agent；改规则或契约时加文档
+                Agent。
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="phases">
+        <h2>五、优化调整实施计划</h2>
+
+        <h3>第 1 阶段：立即修复，1–2 天</h3>
+        <table class="compact">
+          <thead>
+            <tr>
+              <th>具体任务</th>
+              <th>产出物</th>
+              <th>验收标准</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>提交当前治理改动并完成 merge-back 决策</td>
+              <td>正式 commit、目标分支合流记录</td>
+              <td>工作区正确规则不再只是本地事实。</td>
+            </tr>
+            <tr>
+              <td>刷新 <code>PROJECT_STATE.md</code> 与当前治理阶段</td>
+              <td>更新后的入口状态文档</td>
+              <td>新人和 AI 读入口层即可得到当前治理重点。</td>
+            </tr>
+            <tr>
+              <td>补全审计报告索引</td>
+              <td><code>docs/reviews/README.md</code> 新索引</td>
+              <td>近期治理审计可在索引中直接发现。</td>
+            </tr>
+            <tr>
+              <td>确认 fresh <code>pnpm lint</code> 失败根因</td>
+              <td>问题摘要或修复任务</td>
+              <td>不再停留在“只知道失败，不知道为什么”。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>第 2 阶段：规范补齐，3–7 天</h3>
+        <table class="compact">
+          <thead>
+            <tr>
+              <th>具体任务</th>
+              <th>产出物</th>
+              <th>验收标准</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>把多 Agent 协作、失败经验库、交接强制项纳入主线规则</td>
+              <td>合回后的规则正文与模板</td>
+              <td>治理脚本通过，主线规则与工作区规则一致。</td>
+            </tr>
+            <tr>
+              <td>补充跨仓证据在 Spec / Review / Packet 中的落点</td>
+              <td>规则补丁或模板增强</td>
+              <td>API / DB 变更不再只靠口头提醒。</td>
+            </tr>
+            <tr>
+              <td>梳理失败经验库维护机制</td>
+              <td>状态定义、维护规则</td>
+              <td>经验库可持续增长而不失控。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>第 3 阶段：流程固化，1–2 周</h3>
+        <table class="compact">
+          <thead>
+            <tr>
+              <th>具体任务</th>
+              <th>产出物</th>
+              <th>验收标准</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>选择真实历史任务迁移到目录化模型</td>
+              <td>父任务目录、子任务样板、执行记录</td>
+              <td>orchestrator / goal 模型在真实任务中可用。</td>
+            </tr>
+            <tr>
+              <td>用真实 PR 演练交接强制项和独立审查</td>
+              <td>一套完整 Handoff 与 Review 样例</td>
+              <td>实现者不再自证通过，交接信息完整。</td>
+            </tr>
+            <tr>
+              <td>验证 loop 防失控规则</td>
+              <td>复盘记录或失败经验更新</td>
+              <td>大任务 Goal 不再无限扩范围执行。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>第 4 阶段：自动化与持续优化</h3>
+        <table class="compact">
+          <thead>
+            <tr>
+              <th>具体任务</th>
+              <th>产出物</th>
+              <th>验收标准</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>建立治理健康度趋势面板</td>
+              <td>轻量 dashboard 或审计汇总页</td>
+              <td>P0 / P1 关闭率、文档漂移、门禁稳定性可观察。</td>
+            </tr>
+            <tr>
+              <td>联动 lint / type / governance 质量门禁</td>
+              <td>标准命令与 CI 证据矩阵</td>
+              <td>治理通过不再掩盖质量门禁缺口。</td>
+            </tr>
+            <tr>
+              <td>继续拆分架构与模块契约文档</td>
+              <td>专题契约文档与入口索引</td>
+              <td>新人和 AI 的局部进入成本下降。</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="actions">
+        <h2>六、可直接落地的改进建议</h2>
+        <div class="two-col">
+          <div>
+            <h3>需要新增的规范</h3>
+            <ul>
+              <li>失败经验库生命周期机制。</li>
+              <li>跨仓证据在交付 Packet 中的固定落点。</li>
+              <li>治理健康度趋势统计口径。</li>
+            </ul>
+
+            <h3>需要合并或收缩的规范</h3>
+            <ul>
+              <li>入口文件只保留导航和高层原则，避免与专项规则正文重复。</li>
+              <li>架构入口文档只保留导航，逐步把模块契约拆到专题文档。</li>
+            </ul>
+          </div>
+          <div>
+            <h3>需要强制执行的流程</h3>
+            <ul>
+              <li>
+                Handoff 必须写未完成事项、Git 状态、Worktree /
+                分支状态、Merge-back 状态。
+              </li>
+              <li>中高风险任务必须有独立审查，不允许实现 Agent 自证通过。</li>
+              <li>大任务必须先拆成父任务 + 5 分钟子任务，再进入 Goal。</li>
+            </ul>
+
+            <h3>可以自动化的检查</h3>
+            <ul>
+              <li>治理索引、模板字段、任务目录模型、子任务 timebox 校验。</li>
+              <li>近期审计报告索引完整性校验。</li>
+              <li>交接模板关键字段存在性校验。</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div>
+            <h3>需要人工确认的环节</h3>
+            <ul>
+              <li>权限 / 认证 / 敏感数据 / 导出等红区变更。</li>
+              <li>跨仓契约变更是否接受兼容策略。</li>
+              <li>worktree 是否可以 merge-back 与何时宣称完成。</li>
+            </ul>
+          </div>
+          <div>
+            <h3>适合交给 AI Agent 的工作</h3>
+            <ul>
+              <li>任务澄清、规则索引、任务拆解、治理校验、文档模板填充。</li>
+              <li>低风险实现、最小验证命令整理、失败模式初稿归纳。</li>
+              <li>只读审查、差距分析、报告生成与持续追踪。</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="final">
+        <h2>七、最终推荐版本</h2>
+        <p>
+          对当前项目，最适合长期使用的治理方案，不是继续扩写更多规则，而是把现有增强后的结构稳定下来，围绕以下组合执行：
+        </p>
+        <ul>
+          <li>单一来源矩阵，避免同一主题多处定义。</li>
+          <li>
+            多 Agent 分工 + 风险触发矩阵，让主
+            Agent、实现、测试、审查、文档、安全各守边界。
+          </li>
+          <li>
+            目录化父任务 + 5 分钟子任务，把 Goal
+            从“无限推进”变成“最小可验证执行单元”。
+          </li>
+          <li>
+            交接强制闭环，明确未完成事项、Git、worktree、merge-back 状态。
+          </li>
+          <li>失败经验库，把高代价重复错误变成规则与脚本护栏。</li>
+          <li>治理脚本门禁，确保规则、模板、索引和任务结构持续自洽。</li>
+          <li>
+            worktree / merge-back 完成定义，防止“局部完成”被误报成“主线完成”。
+          </li>
+        </ul>
+        <div class="callout">
+          <strong>最终结论:</strong>
+          当前项目已经接近“可长期协作的治理结构”，但关键阻塞不在新增更多规则，而在把工作区里的正确规则提交、合回、采用，并把存量任务迁到新的执行模型。
+        </div>
+      </section>
+
+      <div class="footer">
+        审计基线：当前工作区事实；未提交治理改动已纳入审计，但不视为主线已完成。
+      </div>
+    </main>
+  </body>
+</html>
