@@ -21,8 +21,7 @@ Parent `README.md`:
 ```markdown
 # <TASK_ID> <Parent title>
 
-Execution Mode: orchestrator
-Run Policy: single-child
+Execution Mode: orchestrator Run Policy: single-child
 
 ## Goal
 
@@ -85,8 +84,7 @@ Child task file:
 ```markdown
 # <TASK_ID>.001 <Child title>
 
-Execution Mode: goal
-Timebox: <= 5 minutes
+Execution Mode: goal Timebox: <= 5 minutes
 
 ## Goal
 
