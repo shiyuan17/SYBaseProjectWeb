@@ -69,6 +69,39 @@ const validMemoryReadmeBody = `
 - [KNOWN_BUGS.md](./KNOWN_BUGS.md)
 - [DECISIONS.md](./DECISIONS.md)
 - [ARCHITECTURE.md](./ARCHITECTURE.md)
+- [FAILURE_LEARNINGS.md](./FAILURE_LEARNINGS.md)
+`;
+
+const validFailureLearningsBody = `
+# FAILURE_LEARNINGS.md
+
+| ID | 日期 | 场景 | 失败模式 | 错误动作 | 根因 | 早期信号 | 正确做法 | 已加护栏 | 关联任务/PR | 状态 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| FL-20260702-001 | 2026-07-02 | Goal 执行 | Goal 无限循环 | 直接执行大任务 | 缺少停止条件 | 持续扩范围 | 拆成子任务 | 目录化任务 + 5 分钟 Goal | T-002 | guarded |
+`;
+
+const validHandoffTemplateBody = `
+# Handoff Template
+
+\`\`\`markdown
+## 交接
+
+- 当前目标：
+- 已确认需求：
+- 非目标：
+- 已完成事项：
+- 未完成事项：
+- 关键决策：
+- 涉及文件：
+- 验证情况：
+- Git 状态：
+- Worktree / 分支状态：
+- Merge-back 状态：
+- 待人工确认：
+- 已知风险：
+- 下一步建议：
+- 续接提示词：
+\`\`\`
 `;
 
 const validAgentsBody = `
@@ -79,6 +112,7 @@ const validAgentsBody = `
 - [docs/memory/TECH_DEBT.md](./docs/memory/TECH_DEBT.md)
 - [docs/memory/KNOWN_BUGS.md](./docs/memory/KNOWN_BUGS.md)
 - [docs/memory/DECISIONS.md](./docs/memory/DECISIONS.md)
+- [docs/memory/FAILURE_LEARNINGS.md](./docs/memory/FAILURE_LEARNINGS.md)
 - [docs/rules/PROJECT_DIRECTORY.md](./docs/rules/PROJECT_DIRECTORY.md)
 - [docs/rules/CODING_RULES.md](./docs/rules/CODING_RULES.md)
 - [docs/rules/FRONTEND_RULES.md](./docs/rules/FRONTEND_RULES.md)
@@ -399,10 +433,13 @@ Red-zone confirmation:
   taskLifecycleBody: `
 ## 生命周期与 Workflow 的关系
 ## 阶段速查
+## 多 Agent 协作模型
+## 收尾强制项
 Clarify
 Retrospective
 `,
   templatesReadmeBody: validTemplatesReadmeBody,
+  handoffTemplateBody: validHandoffTemplateBody,
   workflowPacketExamplesBody: `
 范例：轻量 Workflow Packet
 坏例子
@@ -419,6 +456,7 @@ describe('validateGovernance', () => {
       rulesReadmeBody: validRulesReadmeBody,
       templatesReadmeBody: validTemplatesReadmeBody,
       memoryReadmeBody: validMemoryReadmeBody,
+      failureLearningsBody: validFailureLearningsBody,
       architectureBody: validArchitectureBody,
       projectStateBody: validProjectStateBody,
       backlogBody: validBacklogBody,
@@ -508,14 +546,36 @@ describe('validateGovernance', () => {
   it('rejects missing memory index entries', () => {
     const result = validateGovernance({
       memoryReadmeBody: validMemoryReadmeBody.replace(
-        '- [TECH_DEBT.md](./TECH_DEBT.md)\n',
+        '- [FAILURE_LEARNINGS.md](./FAILURE_LEARNINGS.md)\n',
         '',
       ),
     });
 
     expect(result.isValid).toBe(false);
     expect(result.errors).toContain(
-      'Missing docs/memory/README.md entry: TECH_DEBT.md',
+      'Missing docs/memory/README.md entry: FAILURE_LEARNINGS.md',
+    );
+  });
+
+  it('rejects failure learnings files missing required headers', () => {
+    const result = validateGovernance({
+      failureLearningsBody: validFailureLearningsBody.replace('正确做法', '建议'),
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContain(
+      'FAILURE_LEARNINGS.md is missing required header: 正确做法',
+    );
+  });
+
+  it('rejects handoff templates missing closeout fields', () => {
+    const result = validateGovernance({
+      handoffTemplateBody: validHandoffTemplateBody.replace('- 未完成事项：\n', ''),
+    });
+
+    expect(result.isValid).toBe(false);
+    expect(result.errors).toContain(
+      'docs/templates/handoff-template.md is missing required field: 未完成事项：',
     );
   });
 
@@ -653,6 +713,7 @@ describe('validateGovernance', () => {
   it('accepts governance docs that retain the single-source anchor set', () => {
     const result = validateGovernance({
       ...governanceAnchorFixtures,
+      failureLearningsBody: validFailureLearningsBody,
       enforceGovernanceAnchors: true,
       fileExists: () => true,
     });
@@ -668,6 +729,10 @@ describe('validateGovernance', () => {
         '### 规范单一来源矩阵',
         '',
       ),
+      taskLifecycleBody: governanceAnchorFixtures.taskLifecycleBody.replace(
+        '## 多 Agent 协作模型\n',
+        '',
+      ),
       enforceGovernanceAnchors: true,
       fileExists: () => true,
     });
@@ -675,6 +740,9 @@ describe('validateGovernance', () => {
     expect(result.isValid).toBe(false);
     expect(result.errors).toContain(
       'Missing governance anchor in AGENTS.md: ### 规范单一来源矩阵',
+    );
+    expect(result.errors).toContain(
+      'Missing governance anchor in docs/rules/TASK_LIFECYCLE_RULES.md: ## 多 Agent 协作模型',
     );
   });
 

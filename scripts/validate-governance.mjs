@@ -39,6 +39,7 @@ const REQUIRED_MEMORY_DOCS = [
   'KNOWN_BUGS.md',
   'DECISIONS.md',
   'ARCHITECTURE.md',
+  'FAILURE_LEARNINGS.md',
 ];
 const REQUIRED_TEMPLATE_DOCS = [
   'agents-governance-audit-prompt-template.md',
@@ -147,6 +148,8 @@ const REQUIRED_GOVERNANCE_ANCHORS = {
   'docs/rules/TASK_LIFECYCLE_RULES.md': [
     '## 生命周期与 Workflow 的关系',
     '## 阶段速查',
+    '## 多 Agent 协作模型',
+    '## 收尾强制项',
     'Clarify',
     'Retrospective',
   ],
@@ -157,6 +160,26 @@ const REQUIRED_GOVERNANCE_ANCHORS = {
     '修正后',
   ],
 };
+const REQUIRED_FAILURE_LEARNINGS_HEADERS = [
+  'ID',
+  '日期',
+  '场景',
+  '失败模式',
+  '根因',
+  '正确做法',
+  '已加护栏',
+];
+const REQUIRED_HANDOFF_TEMPLATE_FIELDS = [
+  '当前目标：',
+  '已完成事项：',
+  '未完成事项：',
+  '验证情况：',
+  'Git 状态：',
+  'Worktree / 分支状态：',
+  'Merge-back 状态：',
+  '待人工确认：',
+  '续接提示词：',
+];
 
 function readText(path) {
   return readFileSync(path, 'utf8');
@@ -278,6 +301,23 @@ function validateTemplatesIndex(templatesReadmeBody) {
 
   return REQUIRED_TEMPLATE_DOCS.filter((entry) => !linkedLabels.has(entry)).map(
     (entry) => `Missing docs/templates/README.md entry: ${entry}`,
+  );
+}
+
+function validateFailureLearnings(failureLearningsBody) {
+  return REQUIRED_FAILURE_LEARNINGS_HEADERS.filter(
+    (header) => !failureLearningsBody.includes(header),
+  ).map(
+    (header) => `FAILURE_LEARNINGS.md is missing required header: ${header}`,
+  );
+}
+
+function validateHandoffTemplate(handoffTemplateBody) {
+  return REQUIRED_HANDOFF_TEMPLATE_FIELDS.filter(
+    (field) => !handoffTemplateBody.includes(field),
+  ).map(
+    (field) =>
+      `docs/templates/handoff-template.md is missing required field: ${field}`,
   );
 }
 
@@ -1042,6 +1082,8 @@ export function validateGovernance({
   rulesReadmeBody,
   templatesReadmeBody,
   memoryReadmeBody,
+  failureLearningsBody,
+  handoffTemplateBody,
   gitRulesBody,
   reviewRulesBody,
   loopEngineeringBody,
@@ -1115,8 +1157,16 @@ export function validateGovernance({
     errors.push(...validateMemoryIndex(memoryReadmeBody));
   }
 
+  if (failureLearningsBody) {
+    errors.push(...validateFailureLearnings(failureLearningsBody));
+  }
+
   if (templatesReadmeBody) {
     errors.push(...validateTemplatesIndex(templatesReadmeBody));
+  }
+
+  if (handoffTemplateBody) {
+    errors.push(...validateHandoffTemplate(handoffTemplateBody));
   }
 
   if (agentsBody) {
@@ -1216,6 +1266,7 @@ const LINK_CHECKED_DOCUMENTS = [
   'docs/memory/KNOWN_BUGS.md',
   'docs/memory/TECH_DEBT.md',
   'docs/memory/ARCHITECTURE.md',
+  'docs/memory/FAILURE_LEARNINGS.md',
   'docs/templates/README.md',
   'docs/templates/agents-governance-audit-prompt-template.md',
   'docs/templates/clarification-template.md',
@@ -1302,6 +1353,8 @@ function main() {
     rulesReadmeBody: readText('docs/rules/README.md'),
     templatesReadmeBody: readText('docs/templates/README.md'),
     memoryReadmeBody: readText('docs/memory/README.md'),
+    failureLearningsBody: readText('docs/memory/FAILURE_LEARNINGS.md'),
+    handoffTemplateBody: readText('docs/templates/handoff-template.md'),
     gitRulesBody: readText('docs/rules/GIT_RULES.md'),
     reviewRulesBody: readText('docs/rules/REVIEW_RULES.md'),
     loopEngineeringBody: readText('docs/rules/LOOP_ENGINEERING_RULES.md'),

@@ -133,13 +133,15 @@ Lightweight / Full：
 
 交付含：变更摘要、影响、验证结果、Workflow Packet（按档位）、风险。Fast Path 文档类可省略 Workflow Packet 正文，但需说明不适用原因。
 
+- 多 Agent 协作与启用矩阵见 `docs/rules/TASK_LIFECYCLE_RULES.md`；高风险默认启用独立审查，不允许实现 Agent 自证通过。
 - Loop Packet：仅用户、任务来源或计划显式要求 loop 时填写。
 - Worktree 完成门槛：一旦为任务创建独立 `git worktree`，采纳提交必须由主 Agent merge-back 到当前集成分支或任务声明的目标分支；目标分支未包含 merge-back 结果前，不得宣称完成、不得清理 worktree 或对应分支。
+- 会话结束必须说明未完成事项、Git 状态、Worktree / 分支状态、Merge-back 状态；存在这些未闭环项时不得口头宣称完成。
 - 禁止以“应该没问题”替代实际验证。
 
 ### 8. AI Memory Update
 
-五类文件：`PROJECT_STATE`、`TECH_DEBT`、`KNOWN_BUGS`、`DECISIONS`（索引 + `docs/reviews/decisions-business-detail.md`）、`ARCHITECTURE`。
+六类文件：`PROJECT_STATE`、`TECH_DEBT`、`KNOWN_BUGS`、`DECISIONS`（索引 + `docs/reviews/decisions-business-detail.md`）、`ARCHITECTURE`、`FAILURE_LEARNINGS`。
 
 默认不写：绿区 Fast Path / Lightweight 且无 durable context 变更时，不更新 memory，交付中可不写 Memory 判定。
 
@@ -150,6 +152,7 @@ Lightweight / Full：
 - 可复现缺陷或已修复 bug → `KNOWN_BUGS`
 - 影响后续行为的决策 → `DECISIONS` + `decisions-business-detail.md`
 - 模块边界/跨仓契约变化 → `ARCHITECTURE`
+- 重复出现、高代价且已形成护栏的失败模式 → `FAILURE_LEARNINGS`
 
 临时会话交接优先 agentmemory `handoff` / `recall` / `session-history`，不要把实现流水账写入 `PROJECT_STATE`。
 
@@ -173,6 +176,7 @@ Lightweight / Full：
 - [TECH_DEBT.md](./docs/memory/TECH_DEBT.md)
 - [KNOWN_BUGS.md](./docs/memory/KNOWN_BUGS.md)
 - [DECISIONS.md](./docs/memory/DECISIONS.md)
+- [FAILURE_LEARNINGS.md](./docs/memory/FAILURE_LEARNINGS.md)
 - [docs/rules/QUICKSTART.md](./docs/rules/QUICKSTART.md)
 - [docs/rules/PROJECT_DIRECTORY.md](./docs/rules/PROJECT_DIRECTORY.md)
 - [docs/rules/CODING_RULES.md](./docs/rules/CODING_RULES.md)
