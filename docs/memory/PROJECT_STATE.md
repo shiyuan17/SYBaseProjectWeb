@@ -11,7 +11,7 @@
 ## Active Work
 
 - Governance Phase 1: multi-Agent collaboration model, mandatory handoff closeout fields, failure learnings, and governance audit/report indexes are being converged into the shared baseline
-- Task execution model: parent `orchestrator` + child `goal` rules are defined; next step is migrating one historical large task out of the flat task model
+- Governance Phase 2: `T-002` is the first historical large task migrated to the parent `orchestrator` + child `goal` directory model; next step is executing `T-002.001` and validating the pattern with real work
 - Quality baseline: governance validation and typecheck have fresh pass evidence; fresh `pnpm lint` is currently blocked by `oxfmt --check` findings, `oxlint` rule violations, and an `oxlint` allocator panic recorded during lint execution
 - Runtime feature work remains active in specimen-workflow, technical-workflow, and M6 custom analysis; verify dirty-worktree truth with `git status --short`
 

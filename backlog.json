@@ -9,9 +9,18 @@
   {
     "id": "T-002",
     "title": "冰冻流程后端真实闭环",
-    "status": "todo",
+    "status": "ready",
     "dependencies": [],
-    "scope": "../SYBaseProject/bl-center, apps/web-ele/src/modules/frozen-workflow"
+    "scope": "../SYBaseProject/bl-center, apps/web-ele/src/modules/frozen-workflow",
+    "taskDir": "docs/tasks/T-002-frozen-workflow-backend-closed-loop",
+    "risk": "high",
+    "packetTier": "Full",
+    "validation": [
+      "node scripts\\validate-governance.mjs",
+      "Cross-repo backend contract evidence is recorded in the active child task handoff."
+    ],
+    "blockedReason": "",
+    "updatedAt": "2026-07-02"
   },
   {
     "id": "T-003",

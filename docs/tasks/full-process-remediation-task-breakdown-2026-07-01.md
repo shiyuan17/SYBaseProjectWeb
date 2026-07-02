@@ -4,7 +4,7 @@
 
 来自 `docs/reviews/full-process-remediation-plan-2026-07-01.html`，用于把三阶段整改计划收敛为可独立执行的本地任务项。
 
-任务元数据以 `backlog.json` 为准，单任务执行语义以 `docs/tasks/T-00x-*.md` 为准。本文件只负责阶段映射、依赖关系和建议执行顺序，不重复审计结论。
+任务元数据以 `backlog.json` 为准，单任务执行语义以 `docs/tasks/` 下的任务文件或任务目录为准。本文件只负责阶段映射、依赖关系和建议执行顺序，不重复审计结论。
 
 ## 拆分原则
 
@@ -17,7 +17,7 @@
 
 | 阶段 | 任务 ID | 任务名称 | 依赖 | 任务文件 |
 | --- | --- | --- | --- | --- |
-| 第一阶段 | `T-002` | 冰冻流程后端真实闭环 | 无 | `docs/tasks/T-002-frozen-workflow-backend-closed-loop.md` |
+| 第一阶段 | `T-002` | 冰冻流程后端真实闭环 | 无 | `docs/tasks/T-002-frozen-workflow-backend-closed-loop/README.md` |
 | 第一阶段 | `T-003` | 冰冻工作台前端接入真实接口 | `T-002` | `docs/tasks/T-003-frozen-workstation-real-api-integration.md` |
 | 第一阶段 | `T-004` | 技术医嘱工作站后端动作契约补齐 | 无 | `docs/tasks/T-004-technical-order-workstation-backend-contracts.md` |
 | 第一阶段 | `T-005` | 技术医嘱工作站前端动作接线 | `T-004`、`T-006` | `docs/tasks/T-005-technical-order-workstation-frontend-wiring.md` |
@@ -119,12 +119,12 @@
 ## 执行入口
 
 - 任务元数据：`backlog.json`
-- 第一阶段任务卡：`docs/tasks/T-002` 至 `docs/tasks/T-006`
+- 第一阶段任务卡：`docs/tasks/T-002-frozen-workflow-backend-closed-loop/` 与 `docs/tasks/T-003` 至 `docs/tasks/T-006`
 - 第二阶段任务卡：`docs/tasks/T-007` 至 `docs/tasks/T-011`
 - 第三阶段任务卡：`docs/tasks/T-012` 至 `docs/tasks/T-015`
 
 ## 备注
 
 - 本次拆分未新增计划外整改项。
-- 若后续发现某任务过大，应继续在对应 `T-00x` 下拆子任务，而不是回到实施计划页直接混写执行细节。
+- 若后续发现某任务过大，应继续在对应 `T-00x` 目录下拆子任务；`T-002` 已作为目录化父任务样板，不再回退到平铺大任务模式。
 - 如果某项依赖在实施中发生变化，应先更新 `backlog.json` 依赖关系，再调整对应任务卡。

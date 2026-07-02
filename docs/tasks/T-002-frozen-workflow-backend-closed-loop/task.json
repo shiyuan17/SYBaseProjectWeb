@@ -1,0 +1,84 @@
+{
+  "id": "T-002",
+  "title": "冰冻流程后端真实闭环",
+  "status": "ready",
+  "executionMode": "orchestrator",
+  "runPolicy": "single-child",
+  "dependencies": [],
+  "validation": [
+    "node scripts\\validate-governance.mjs",
+    "Parent handoff records cross-repo backend contract evidence for T-003."
+  ],
+  "rollback": "Revert the T-002 task directory migration and related backlog/docs updates.",
+  "updatedAt": "2026-07-02",
+  "children": [
+    {
+      "id": "T-002.001",
+      "title": "盘点现有冰冻契约与复用点",
+      "status": "ready",
+      "executionMode": "goal",
+      "dependencies": [],
+      "validation": [
+        "node scripts\\validate-governance.mjs"
+      ],
+      "rollback": "Revert the T-002.001 child task change.",
+      "updatedAt": "2026-07-02"
+    },
+    {
+      "id": "T-002.002",
+      "title": "整理冰冻接口清单草案",
+      "status": "ready",
+      "executionMode": "goal",
+      "dependencies": [
+        "T-002.001"
+      ],
+      "validation": [
+        "node scripts\\validate-governance.mjs"
+      ],
+      "rollback": "Revert the T-002.002 child task change.",
+      "updatedAt": "2026-07-02"
+    },
+    {
+      "id": "T-002.003",
+      "title": "整理状态流转与非法跳转矩阵",
+      "status": "ready",
+      "executionMode": "goal",
+      "dependencies": [
+        "T-002.002"
+      ],
+      "validation": [
+        "node scripts\\validate-governance.mjs"
+      ],
+      "rollback": "Revert the T-002.003 child task change.",
+      "updatedAt": "2026-07-02"
+    },
+    {
+      "id": "T-002.004",
+      "title": "整理权限与审计清单",
+      "status": "ready",
+      "executionMode": "goal",
+      "dependencies": [
+        "T-002.003"
+      ],
+      "validation": [
+        "node scripts\\validate-governance.mjs"
+      ],
+      "rollback": "Revert the T-002.004 child task change.",
+      "updatedAt": "2026-07-02"
+    },
+    {
+      "id": "T-002.005",
+      "title": "定义后端落地切片顺序",
+      "status": "ready",
+      "executionMode": "goal",
+      "dependencies": [
+        "T-002.004"
+      ],
+      "validation": [
+        "node scripts\\validate-governance.mjs"
+      ],
+      "rollback": "Revert the T-002.005 child task change.",
+      "updatedAt": "2026-07-02"
+    }
+  ]
+}

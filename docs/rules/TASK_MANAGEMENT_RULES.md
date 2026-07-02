@@ -98,7 +98,9 @@ docs/tasks/T-002-frozen-workflow-backend-closed-loop/
 ```markdown
 # T-002 冰冻流程后端真实闭环
 
-Execution Mode: orchestrator Run Policy: single-child
+Execution Mode: orchestrator
+
+Run Policy: single-child
 
 ## Goal
 
@@ -156,7 +158,9 @@ Execution Mode: orchestrator Run Policy: single-child
 ```markdown
 # T-002.001 Contract Inventory
 
-Execution Mode: goal Timebox: <= 5 minutes
+Execution Mode: goal
+
+Timebox: <= 5 minutes
 
 ## Goal
 
